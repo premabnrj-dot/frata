@@ -1,6 +1,9 @@
 # Frata roadmap
 
-Status: proposed · 2026-11-06 · Mockup: https://claude.ai/artifact/NvAiqDdfikTq97hFtUfFYX · Approved: pending
+Status: proposed · 2026-11-06 · Approved: pending
+Mockups: Phase A https://claude.ai/artifact/7mikx6osVqgKjs84oERW5k · Phase 1 https://claude.ai/artifact/NvAiqDdfikTq97hFtUfFYX
+
+Order (owner, 2026-11-06): Admin (A1, A2) first, then Phase 1.
 
 Goal: a small Indian fashion brand keeps more profit per delivered order, without
 a developer (`frata-planning` § North star). Each phase is usable on its own and
@@ -9,12 +12,14 @@ gets its own research, spec and mockup before it is built.
 | Phase | Name | Moves (ranked problem) | A merchant can… | Measure |
 |---|---|---|---|---|
 | 0 | Foundation | — | — (built 2026-11-06: tenancy, auth, console shell, gates) | Isolation proof green |
+| A1 | Frata admin: staff access and merchants | — (enables onboarding) | (Frata) add merchants, see setup and usage, open a merchant's console in audited support mode, staff with 2FA, activity log | First merchant onboarded by hand |
+| A2 | Plans and packages | — (the business) | (Frata) Launch/Growth/Scale with price, included orders, per-delivered-order fee, features; versions; assign/change | Every merchant on a plan version |
 | 1 | First sale | 3, 4, 5 | set up a store, add products with size × colour and size charts, publish a shop, take COD and prepaid orders, confirm them | First product live < 15 min; first real order |
 | 2 | Ship and confirm | 1 | confirm COD on WhatsApp within 5 min, ship with Shiprocket, track, work failed deliveries | RTO on confirmed vs unconfirmed COD |
 | 3 | True profit | 6, 1 | see profit per order and per delivered order; RTO by pincode; send delivered orders to Meta | Merchant can name profit per delivered order |
 | 4 | Fit and returns | 2 | run exchanges and returns with reasons; show fit feedback; size finder | Share of returns that are "size" |
 | 5 | Channels | 4, 5, 6 | sync Instagram/Facebook and Google; WhatsApp abandoned bag; campaigns on delivered orders | Delivered orders per ₹ of ad spend |
-| 6 | Run Frata | 7 | (Frata) staff console with expiring support access, billing, own domains, team invites, festive load test | 10× traffic, no error spike |
+| 6 | Run Frata | 7 | (Frata) charging merchants (Razorpay subscriptions), GST invoices, own domains, festive load test | 10× traffic, no error spike |
 
 ## Business track — start now (lead times of weeks)
 
