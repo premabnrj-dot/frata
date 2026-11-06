@@ -1,0 +1,119 @@
+---
+name: frata-architecture
+description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
+metadata:
+  version: 1.0.0
+  verified: 2026-11-06
+  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006]
+  covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
+---
+
+# Frata architecture
+
+## Layers (`check:layers`)
+
+```
+src/domains/     pure engines: money, profit, order state, host → surface. No I/O.
+src/lib/         db, tenant transaction, auth, queries, outbox, webhooks, format, env
+src/app/         routes: (console)/console, s/[host] (storefront), api/, login
+src/components/  rendering primitives: data/, layout/, ui/, nav/
+```
+
+- A page composes; it does not query. Reads are named functions in
+  `src/lib/queries/*.ts`, each `import 'server-only'` and through `withTenant`.
+- A domain never imports React, Next, Drizzle, postgres or `@/lib/*` I/O.
+- State is derived, not stored: `orderState()` reads timestamps.
+
+## Tenancy (ADR-0002) — read before any database work
+
+- `src/middleware.ts` decides the surface from the Host header
+  (`src/domains/tenancy/host.ts`). Storefront hosts are rewritten to `/s/<host>`;
+  `/s/*` on the console host is a 404.
+- Console: `requireMember(roles)` (`src/lib/auth/require-member.ts`) gives the
+  tenant id. Storefront: `tenantForHost(host)` (`src/lib/db/platform.ts`).
+  **These are the only two sources of a tenant id.**
+- Every merchant read or write: `withTenant(tenantId, tx => …)` plus an explicit
+  `where tenant_id = …`. The policy is the lock; the where is the intent and
+  the index.
+- Raw `db()` only in `src/lib/db/`, `src/lib/outbox/`, `src/app/api/webhooks/`
+  (`check:tenant` PLATFORM_SCOPE). Adding to that list needs a reason in the gate.
+
+### A new table — the checklist
+
+1. Columns in `src/lib/db/schema.ts`: `tenant_id uuid not null references
+   tenants`, indexed (composite with what pages filter on); money as
+   `money('…')` (bigint paise); enums as text + CHECK + exported const tuple.
+2. `npm run db:generate`, then a `--custom` migration that, for the table:
+   `grant select, insert, update, delete … to frata_app`;
+   `revoke all … from anon, authenticated`; `enable row level security`;
+   `create policy tenant_rows … to frata_app using (tenant_id =
+   app_current_tenant()) with check (tenant_id = app_current_tenant())`.
+3. Add the table to `scripts/verify/tenancy.sql` (a row per tenant and the
+   cross-tenant read and write checks) and run `npm run verify:tenancy`.
+4. `npm test` — `check:tenant` fails a table without RLS or a policy.
+
+## Auth
+
+- Supabase auth only (magic link, `src/app/login/`). Data never goes through
+  supabase-js or PostgREST; `anon`/`authenticated` hold no table grants.
+- Always `getUser()`, never `getSession()` (`check:layers`).
+- Signing in grants nothing; a `members` row does. Roles: owner, admin, staff
+  (`MEMBER_ROLES`); tuples `ANY_MEMBER`, `CAN_MANAGE`.
+- A layout refuses with a panel, never a redirect (frata-gotchas).
+
+## Server actions (from Ekatan)
+
+```ts
+'use server'
+export async function confirmOrder(input: unknown): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireMember(ANY_MEMBER)          // 1. who (check:actions)
+  if (!auth.ok) return { ok: false, error: auth.message }
+  const parsed = Schema.safeParse(input)                 // 2. same Zod schema as the form
+  if (!parsed.success) return { ok: false, error: 'Check the highlighted fields' }
+  try {
+    await withTenant(auth.membership.tenantId, async (tx) => {   // 3. one transaction
+      const [row] = await tx.update(orders).set({ confirmedAt: new Date() })
+        .where(and(eq(orders.id, parsed.data.id), eq(orders.tenantId, auth.membership.tenantId), isNull(orders.confirmedAt)))
+        .returning()                                     // 4. conditional = race safe
+      if (row) await enqueue(tx, { tenantId: row.tenantId, kind: 'whatsapp.utility',
+        dedupeKey: `order-confirmed:${row.id}`, payload: { orderId: row.id } })
+    })
+    revalidatePath('/console/orders')
+    return { ok: true }
+  } catch (err) {
+    console.error('[confirmOrder]', err)                 // 5. tag, log, human sentence
+    return { ok: false, error: 'We could not confirm the order. Nothing was changed.' }
+  }
+}
+```
+
+## Outside world (ADR-0006)
+
+- Outbound: `enqueue(tx, { kind, dedupeKey, payload })`; register a sender for
+  the kind in `src/app/api/cron/outbox/route.ts` (move to `src/lib/connectors/<name>/`
+  when the first one lands). Every HTTP call: `fetchWithTimeout` (`check:fetch`).
+- Inbound: `src/app/api/webhooks/<provider>/route.ts` — read `request.text()`,
+  verify the signature on that text, compute OUR key, insert with
+  `onConflictDoNothing`, answer 200. Processing reads `webhook_events where
+  processed_at is null`. List the route in `scripts/check-actions.mjs` ENTRY_POINTS.
+- Per-merchant credentials (Shiprocket tokens, Meta system user tokens) are
+  never in env; they go in a tenant table, encrypted — the design is a spec.
+
+## Money (ADR-0004)
+
+Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
+`<Money paise>` to render; `formatInr` groups in lakh/crore. Profit is
+`orderProfit()` — never a margin computed inline.
+
+## Config
+
+Server secrets in `src/lib/env.ts`, public values in `src/lib/public-env.ts`,
+`CRON_SECRET` in `src/lib/auth/cron.ts` — one reader each, every name in
+`.env.example` (`check:config`). The db connection is lazy: a build with no
+`DATABASE_URL` still compiles.
+
+## Hosting (ADR-0005)
+
+Vercel `bom1` + Supabase ap-south-1. Storefront routes set `revalidate`;
+console routes are dynamic. Cron schedules in `vercel.json` (Hobby allows daily
+only; Pro allows more). Migrations: see CLAUDE.md § Deploying.

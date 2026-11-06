@@ -1,0 +1,44 @@
+{
+  "name": "frata",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "postbuild": "node scripts/check-client-bundle.mjs",
+    "start": "next start",
+    "test": "node scripts/check-hex.mjs && node scripts/check-layers.mjs && node scripts/check-dates.mjs && node scripts/check-fetch.mjs && node scripts/check-config.mjs && node scripts/check-size.mjs && node scripts/check-tenant.mjs && node scripts/check-actions.mjs && node scripts/check-states.mjs && vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "verify:tenancy": "bash scripts/verify/tenancy.sh"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.117.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.3",
+    "lucide-react": "^1.45.0",
+    "next": "^15.5.29",
+    "postgres": "^3.4.5",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "^3.3.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^22.10.0",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "drizzle-kit": "^0.31.11",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.7"
+  }
+}

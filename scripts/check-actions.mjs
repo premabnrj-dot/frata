@@ -1,0 +1,60 @@
+#!/usr/bin/env node
+// Fails: a server action file or route handler that reaches no auth check, and is not an entry point named below with the credential it checks.
+//
+// ⚠️ WHY. A server action is a public POST endpoint whether or not any page
+// imports it, and a page's sign-in check does not cover the actions on it
+// (Next.js, "Data Security"). Every 'use server' file and every route.ts must
+// either call one of the chokepoints below — which check who is calling — or
+// be listed in ENTRY_POINTS with the credential it checks itself (a cron
+// bearer, a webhook signature, a one-time token), which must appear in it.
+// From Ekatan's performance and security baseline.
+//
+// Ownership (may THIS caller touch THIS row) is not something a grep can
+// see; the design review asks it (ekatan3d-planning, "Security").
+
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
+
+/** Functions that establish who is calling, and refuse who may not. */
+const CHOKEPOINTS = ['requireMember']
+
+/** Entry points that check their own credential: file → [what it is, a token that must appear in it]. */
+const ENTRY_POINTS = {
+  'src/app/login/actions.ts': ['magic link: only emails a link to the address given', 'signInWithOtp('],
+  'src/app/auth/callback/route.ts': ['sign-in: trades the one-time code for a session', 'exchangeCodeForSession('],
+  'src/app/api/cron/outbox/route.ts': ['Vercel Cron', 'isCronRequest('],
+  'src/app/api/webhooks/razorpay/route.ts': ['Razorpay webhook, HMAC signature over the raw body', 'verifyRazorpaySignature('],
+}
+
+const walk = dir => readdirSync(dir).flatMap(n => {
+  const p = join(dir, n).replaceAll('\\', '/')
+  return statSync(p).isDirectory() ? walk(p) : /\.(ts|tsx)$/.test(p) && !p.includes('/__tests__/') ? [p] : []
+})
+
+const failures = []
+const seen = new Set()
+for (const file of walk('src')) {
+  const text = readFileSync(file, 'utf8')
+  const isAction = /^\s*['"]use server['"]/.test(text)
+  const isRoute = /\/route\.ts$/.test(file) && file.startsWith('src/app/')
+  if (!isAction && !isRoute) continue
+  const entry = ENTRY_POINTS[file]
+  if (entry) {
+    seen.add(file)
+    if (!text.includes(entry[1])) failures.push(`${file}  listed as "${entry[0]}" but no longer contains \`${entry[1]}\` — re-check how it is protected`)
+    continue
+  }
+  if (!CHOKEPOINTS.some(c => new RegExp(`\\b${c}\\(`).test(text))) {
+    failures.push(`${file}  ${isAction ? 'server actions' : 'route handler'} with no auth check — call ${CHOKEPOINTS.slice(0, 3).join(' / ')}, or list it in scripts/check-actions.mjs with the credential it checks`)
+  }
+}
+for (const file of Object.keys(ENTRY_POINTS)) {
+  if (!seen.has(file)) failures.push(`scripts/check-actions.mjs  lists ${file}, which is gone or is no longer an entry point`)
+}
+
+if (failures.length) {
+  for (const f of failures) console.error(f)
+  console.error(`check:actions — ${failures.length} problem(s)`)
+  process.exit(1)
+}
+console.log('check:actions — clean')

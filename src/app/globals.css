@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+/* =============================================================================
+   FRATA TOKENS — the ONLY file where a colour is written as a hex.
+   scripts/check-hex.mjs fails a hex or a raw palette class anywhere else.
+
+   Console: neutral, dense, numbers first. The fashion lives in the storefront,
+   which gets its own theme tokens per merchant (frata-design-language).
+
+   --primary is INTERACTION (buttons, links, focus). --brand is the Frata mark
+   only. Wiring the brand into --primary would turn every button oxblood.
+   Borders, not shadows: only floating things (popover, menu) get a shadow.
+   Every text pair below is ≥ 4.5:1 on its background.
+   ========================================================================== */
+
+:root {
+  --background: #FAFAF9;
+  --foreground: #1C1917;
+  --card: #FFFFFF;
+  --card-foreground: #1C1917;
+  --popover: #FFFFFF;
+  --popover-foreground: #1C1917;
+  --primary: #1C1917;            /* ink */
+  --primary-foreground: #FFFFFF;
+  --secondary: #F2F1EF;
+  --secondary-foreground: #1C1917;
+  --muted: #F2F1EF;
+  --muted-foreground: #5F5A55;
+  --accent: #F2F1EF;             /* neutral hover surface, NOT the brand */
+  --accent-foreground: #1C1917;
+  --destructive: #C62A2F;
+  --destructive-foreground: #FFFFFF;
+  --border: #DEDBD7;
+  --input: #C9C5C0;              /* field edges, ≥ 3:1 */
+  --ring: #1C1917;
+  --brand: #7A1F2B;              /* oxblood — the mark, never a button */
+  --brand-foreground: #FFFFFF;
+
+  /* Status pairs: background, then the text that sits on it. */
+  --ok: #E9F6EC;      --ok-text: #1E7B52;
+  --warn: #FFF5C2;    --warn-text: #8A5000;
+  --danger: #FFEFEF;  --danger-text: #C02A2F;
+  --info: #EDF2FE;    --info-text: #3451B2;
+  --neutral: #F2F1EF; --neutral-text: #5F5A55;
+
+  --radius: 0.375rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-ok: var(--ok);
+  --color-ok-text: var(--ok-text);
+  --color-warn: var(--warn);
+  --color-warn-text: var(--warn-text);
+  --color-danger: var(--danger);
+  --color-danger-text: var(--danger-text);
+  --color-info: var(--info);
+  --color-info-text: var(--info-text);
+  --color-neutral: var(--neutral);
+  --color-neutral-text: var(--neutral-text);
+
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+
+  /* Motion. Tailwind v4 reads duration-* from --transition-duration-*, not --duration-*. */
+  --transition-duration-fast: 120ms;
+  --transition-duration-base: 200ms;
+  --transition-duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-entrance: cubic-bezier(0, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.3, 0, 1, 1);
+
+  /* Borders, not shadows. */
+  --shadow-xs: 0 0 #0000;
+  --shadow-sm: 0 0 #0000;
+  --shadow: 0 0 #0000;
+  --shadow-md: 0 0 #0000;
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  html { @apply font-sans; }
+  body { @apply bg-background text-foreground antialiased; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
