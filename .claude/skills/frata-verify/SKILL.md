@@ -2,7 +2,7 @@
 name: frata-verify
 description: Use before saying a Frata change works - to run the gates, typecheck, tests and production build, prove tenant isolation on a real Postgres, run the built app locally against that database with storefront and console Host headers, and exercise webhooks and cron with curl.
 metadata:
-  version: 1.1.0
+  version: 1.2.0
   verified: 2026-11-06
   covers: ["scripts/verify/**"]
 ---
@@ -23,16 +23,20 @@ A gate you added: plant a violation and watch it fail before trusting it.
 
 ## A throwaway Postgres (this container has PostgreSQL 16)
 
+Put it in `/var/tmp`, not the scratchpad: the sandbox resets the scratchpad's
+parent permissions and Postgres then PANICs on its own data directory.
+
 ```bash
-S=<scratchpad>/pg; B=/usr/lib/postgresql/16/bin
-mkdir -p $S && chown -R postgres $S
-su postgres -c "$B/initdb -D $S/data -A trust -U postgres && $B/pg_ctl -D $S/data -o '-p 54329 -k $S' -l $S/log start"
-psql -h localhost -p 54329 -U postgres -c "create database frata_proof"
-ADMIN_URL=postgres://postgres@localhost:54329/frata_proof npm run verify:tenancy
+D=/var/tmp/frata-pg; B=/usr/lib/postgresql/16/bin
+mkdir -p $D && chown postgres $D
+su postgres -c "$B/initdb -D $D/data -A trust -U postgres && $B/pg_ctl -D $D/data -o '-p 54330 -k $D' -l $D/log start"
+psql -h localhost -p 54330 -U postgres -c "create database frata_proof"
+ADMIN_URL=postgres://postgres@localhost:54330/frata_proof npm run verify:tenancy
+INT_DB_HOST=localhost:54330 INT_DB_NAME=frata_proof npx vitest run src/lib/admin   # Admin library, real roles
 ```
 
 `verify:tenancy` applies every `drizzle/*.sql` and runs `scripts/verify/tenancy.sql`:
-no tenant → no rows; A sees only A; the setting ends with the transaction; A
+no tenant → no rows; A sees only A; (13 checks, incl. support visits, invites, both roles' reach, no API-role EXECUTE on any app_* function; the setting ends with the transaction; A
 cannot write into B (orders, outbox); host and membership lookups; API roles
 denied; `frata_app` has no BYPASSRLS. Changed a policy? Also break it on purpose
 (e.g. disable RLS on a table) and confirm the proof fails.

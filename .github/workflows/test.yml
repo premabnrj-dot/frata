@@ -29,3 +29,12 @@ jobs:
         run: npm run verify:tenancy
         env:
           ADMIN_URL: postgres://postgres:postgres@localhost:5432/frata_proof
+      - name: Admin library on the migrated database
+        run: |
+          psql "$ADMIN_URL" -q -c "alter role frata_app password 'ci'; alter role frata_admin password 'ci';"
+          npx vitest run src/lib/admin
+        env:
+          ADMIN_URL: postgres://postgres:postgres@localhost:5432/frata_proof
+          INT_DB_HOST: localhost:5432
+          INT_DB_NAME: frata_proof
+          INT_DB_PASSWORD: ci

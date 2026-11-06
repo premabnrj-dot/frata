@@ -1,0 +1,31 @@
+import 'server-only'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
+import { ADMIN_DATABASE_URL } from '@/lib/env'
+import * as schema from './schema'
+import { parseDatabaseUrl } from './url'
+
+// =============================================================================
+// FILE: src/lib/db/admin.ts
+//
+// ADMIN'S CONNECTION, as frata_admin (ADR-0007): the only role that reads
+// across tenants, with exactly the reach drizzle/0006_admin_access.sql lists
+// (no order rows, outbox or webhooks). Imported only from src/lib/admin/**,
+// which is imported only from src/app/(admin)/** (scripts/check-tenant.mjs).
+// A small pool: Admin is a handful of staff, not shoppers.
+// =============================================================================
+
+let client: ReturnType<typeof drizzle<typeof schema>> | null = null
+
+export function adminDb() {
+  if (!client) {
+    client = drizzle(
+      postgres(parseDatabaseUrl(ADMIN_DATABASE_URL, 'frata_admin', 'ADMIN_DATABASE_URL'), { prepare: false, max: 2 }),
+      { schema },
+    )
+  }
+  return client
+}
+
+export type AdminDb = ReturnType<typeof adminDb>
+export type AdminTx = Parameters<Parameters<AdminDb['transaction']>[0]>[0]

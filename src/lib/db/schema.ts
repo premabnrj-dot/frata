@@ -9,7 +9,7 @@
 
 import { sql } from 'drizzle-orm'
 import {
-  bigint, check, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid,
+  bigint, boolean, check, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid,
 } from 'drizzle-orm/pg-core'
 
 const id = () => uuid('id').primaryKey().defaultRandom()
@@ -23,10 +23,10 @@ export const tenants = pgTable('tenants', {
   id: id(),
   slug: text('slug').notNull().unique(),
   name: text('name').notNull(),
-  /** Growth tier: launch | growth | scale. */
-  plan: text('plan').notNull().default('launch'),
+  /** Frata's own stores (the demo), shown as "Internal" in Admin. The plan is in tenant_plans. */
+  isInternal: boolean('is_internal').notNull().default(false),
   createdAt: createdAt(),
-}, (t) => [check('tenants_plan', sql`${t.plan} in ('launch','growth','scale')`)])
+})
 
 /** A storefront host — a platform subdomain or the merchant's own domain. */
 export const tenantDomains = pgTable('tenant_domains', {
@@ -101,3 +101,115 @@ export const outbox = pgTable('outbox', {
   lastError: text('last_error'),
   createdAt: createdAt(),
 }, (t) => [index('outbox_due').on(t.nextAttemptAt).where(sql`${t.sentAt} is null and ${t.deadAt} is null`), index('outbox_tenant').on(t.tenantId)])
+
+// ── Phase A: Frata admin (ADR-0007). Grants per role: drizzle/0005_admin.sql ──
+
+const at = (name: string) => timestamp(name, { withTimezone: true })
+
+export const STAFF_ROLES = ['admin', 'support'] as const
+export type StaffRole = (typeof STAFF_ROLES)[number]
+
+/** Frata staff. Platform scope: frata_app reads it only through app_access_for. */
+export const platformStaff = pgTable('platform_staff', {
+  userId: uuid('user_id').primaryKey(),
+  email: text('email').notNull(),
+  role: text('role').notNull(),
+  createdAt: createdAt(),
+  createdBy: uuid('created_by'),
+}, (t) => [check('platform_staff_role', sql`${t.role} in ('admin','support')`)])
+
+/** A store invitation, claimed at sign-in by a CONFIRMED email (app_claim_invites). */
+export const invites = pgTable('invites', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  email: text('email').notNull(),
+  role: text('role').notNull(),
+  createdBy: uuid('created_by').notNull(),
+  createdAt: createdAt(),
+  expiresAt: at('expires_at').notNull().default(sql`now() + interval '14 days'`),
+  acceptedAt: at('accepted_at'),
+  revokedAt: at('revoked_at'),
+}, (t) => [
+  index('invites_tenant').on(t.tenantId),
+  index('invites_email_open').on(t.email).where(sql`${t.acceptedAt} is null and ${t.revokedAt} is null`),
+  check('invites_role', sql`${t.role} in ('owner','admin','staff')`),
+  check('invites_email_lower', sql`${t.email} = lower(${t.email})`),
+])
+
+export const supportSessions = pgTable('support_sessions', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'restrict' }),
+  staffUserId: uuid('staff_user_id').notNull(),
+  /** Snapshot at start, so the merchant's Activity can name the visitor. */
+  staffEmail: text('staff_email').notNull(),
+  reason: text('reason').notNull(),
+  note: text('note'),
+  startedAt: at('started_at').notNull().defaultNow(),
+  expiresAt: at('expires_at').notNull(),
+  endedAt: at('ended_at'),
+}, (t) => [
+  index('support_sessions_tenant').on(t.tenantId, t.startedAt),
+  index('support_sessions_open').on(t.staffUserId).where(sql`${t.endedAt} is null`),
+  check('support_sessions_reason', sql`${t.reason} in ('setup_help','fix_problem','merchant_asked')`),
+])
+
+/** Append-only: no role has update or delete. */
+export const auditEvents = pgTable('audit_events', {
+  id: id(),
+  at: at('at').notNull().defaultNow(),
+  tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'restrict' }),
+  actorUserId: uuid('actor_user_id').notNull(),
+  actorEmail: text('actor_email'),
+  actorKind: text('actor_kind').notNull(),
+  supportSessionId: uuid('support_session_id').references(() => supportSessions.id, { onDelete: 'restrict' }),
+  action: text('action').notNull(),
+  target: text('target'),
+  detail: jsonb('detail'),
+}, (t) => [
+  index('audit_events_tenant_at').on(t.tenantId, t.at),
+  index('audit_events_at').on(t.at),
+  index('audit_events_session').on(t.supportSessionId),
+  check('audit_events_kind', sql`${t.actorKind} in ('member','staff','support')`),
+])
+
+export const plans = pgTable('plans', {
+  id: id(),
+  code: text('code').notNull().unique(),
+  name: text('name').notNull(),
+  position: integer('position').notNull(),
+}, (t) => [check('plans_code', sql`${t.code} in ('launch','growth','scale')`)])
+
+/** Never updated: a new price, fee or feature set is a new version. */
+export const planVersions = pgTable('plan_versions', {
+  id: id(),
+  planId: uuid('plan_id').notNull().references(() => plans.id, { onDelete: 'restrict' }),
+  version: integer('version').notNull(),
+  monthlyPrice: money('monthly_price').notNull(),
+  includedOrders: integer('included_orders').notNull(),
+  feeBps: integer('fee_bps').notNull(),
+  features: text('features').array().notNull().default(sql`'{}'::text[]`),
+  createdAt: createdAt(),
+  createdBy: uuid('created_by'),
+}, (t) => [
+  uniqueIndex('plan_versions_plan_version').on(t.planId, t.version),
+  check('plan_versions_features', sql`${t.features} <@ array['rto_shield','size_fit','cart_flows']::text[]`),
+  check('plan_versions_fee', sql`${t.feeBps} between 0 and 10000`),
+  check('plan_versions_numbers', sql`${t.monthlyPrice} >= 0 and ${t.includedOrders} >= 0`),
+])
+
+/** A store's plan history. The current plan is the latest row that has started (currentPlan). */
+export const tenantPlans = pgTable('tenant_plans', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'restrict' }),
+  planVersionId: uuid('plan_version_id').notNull().references(() => planVersions.id, { onDelete: 'restrict' }),
+  startsAt: at('starts_at').notNull(),
+  trialEndsAt: at('trial_ends_at'),
+  customMonthlyPrice: money('custom_monthly_price'),
+  reason: text('reason'),
+  createdBy: uuid('created_by').notNull(),
+  createdAt: createdAt(),
+}, (t) => [
+  uniqueIndex('tenant_plans_tenant_start').on(t.tenantId, t.startsAt),
+  index('tenant_plans_version').on(t.planVersionId),
+  check('tenant_plans_custom_reason', sql`${t.customMonthlyPrice} is null or ${t.reason} is not null`),
+])

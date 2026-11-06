@@ -66,6 +66,18 @@ Vercel → Deployments → latest → Redeploy (variables apply to new builds on
 Sign in at https://frata.vercel.app/login with your email, then ask an agent to
 create your tenant and owner membership (it is a plain insert; no secret).
 
+### 6. Frata Admin (Phase A)
+
+1. SQL Editor: `alter role frata_admin with password '<hex>';` — a NEW hex value
+   (`openssl rand -hex 24`), not the frata_app one.
+2. Vercel: `ADMIN_DATABASE_URL` = the Transaction pooler URI with user
+   `frata_admin.szqwveysvbbxpjhjlnwl` and that password. Type **Sensitive**,
+   **Production only** — previews share the database, and this connection reads
+   every merchant (ADR-0007).
+3. Supabase → Authentication → Sign In / Providers → Email: keep **Confirm email**
+   on. Invites are claimed only by confirmed emails.
+4. Redeploy. You are already in `platform_staff` as Admin.
+
 ## Later
 
 - `CRON_SECRET` (Sensitive) when the first cron is added to `vercel.json`.

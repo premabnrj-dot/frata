@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { ConsoleNav } from '@/components/nav/console-nav'
+import { SupportBanner } from '@/components/nav/support-banner'
+import { supportVisit } from '@/lib/queries/support'
 import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
@@ -33,10 +35,15 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       </main>
     )
   }
+  const now = new Date()
+  const visit = auth.membership.supportSessionId ? await supportVisit(auth.membership.tenantId, auth.membership.supportSessionId) : null
   return (
-    <div className="flex min-h-dvh flex-col md:flex-row">
-      <ConsoleNav storeName={auth.membership.tenantName} />
-      <main className="min-w-0 flex-1 space-y-6 p-4 md:p-6">{children}</main>
+    <div className="flex min-h-dvh flex-col">
+      {visit && <SupportBanner storeName={auth.membership.tenantName} visit={visit} now={now} />}
+      <div className="flex flex-1 flex-col md:flex-row">
+        <ConsoleNav storeName={auth.membership.tenantName} isStaff={auth.staffRole !== null} />
+        <main className="min-w-0 flex-1 space-y-6 p-4 md:p-6">{children}</main>
+      </div>
     </div>
   )
 }

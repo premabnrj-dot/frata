@@ -25,7 +25,7 @@ let client: ReturnType<typeof drizzle<typeof schema>> | null = null
 
 export function db() {
   if (!client) {
-    client = drizzle(postgres(parseDatabaseUrl(DATABASE_URL), { prepare: false, max: 10 }), { schema })
+    client = drizzle(postgres(parseDatabaseUrl(DATABASE_URL, 'frata_app'), { prepare: false, max: 10 }), { schema })
   }
   return client
 }

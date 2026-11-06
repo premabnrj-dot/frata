@@ -11,6 +11,10 @@
 //   3. EVERY TABLE in src/lib/db/schema.ts has RLS enabled and at least one
 //      policy in a drizzle/*.sql migration. A new table without them is
 //      readable by nobody (fine) or — if someone grants it later — by everyone.
+//   4. ADMIN IS FENCED (ADR-0007): the frata_admin connection (@/lib/db/admin)
+//      only from src/lib/admin/**; src/lib/admin only from src/app/(admin)/**;
+//      no 'use server' inside src/lib/admin (it would be a public endpoint);
+//      Admin never calls withTenant (a route param must never become a tenant).
 // Whether a policy is RIGHT is what scripts/verify/tenancy.sh proves on a real Postgres.
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
@@ -31,6 +35,8 @@ const code = f => readFileSync(f, 'utf8').split(/\r?\n/)
 
 const failures = []
 const RAW_DB = /from\s+['"]@\/lib\/db['"]/
+const ADMIN_DB = /from\s+['"]@\/lib\/db\/admin['"]/
+const ADMIN_LIB = /from\s+['"]@\/lib\/admin(\/[^'"]*)?['"]/
 
 for (const file of walk('src')) {
   const text = code(file)
@@ -38,6 +44,19 @@ for (const file of walk('src')) {
     // A type-only import cannot touch a row.
     const onlyTypes = [...text.matchAll(/import\s+(type\s+)?\{[^}]*\}\s+from\s+['"]@\/lib\/db['"]/g)].every(m => m[1])
     if (!onlyTypes) failures.push(`${file}  imports the raw db — read merchant rows through src/lib/queries/ (withTenant)`)
+  }
+  if (ADMIN_DB.test(text) && !file.startsWith('src/lib/admin/') && file !== 'src/lib/db/admin.ts') {
+    failures.push(`${file}  imports the admin connection — only src/lib/admin/** may (ADR-0007)`)
+  }
+  if (ADMIN_LIB.test(text) && !file.startsWith('src/app/(admin)/') && !file.startsWith('src/lib/admin/')) {
+    failures.push(`${file}  imports src/lib/admin — only Admin pages and actions may (ADR-0007)`)
+  }
+  if (file.startsWith('src/lib/admin/')) {
+    if (!/import\s+['"]server-only['"]/.test(text)) failures.push(`${file}  admin module without import 'server-only'`)
+    if (/^\s*['"]use server['"]/m.test(text)) failures.push(`${file}  'use server' in src/lib/admin turns it into a public endpoint — put actions under src/app/(admin)`)
+  }
+  if (file.startsWith('src/app/(admin)/') && /\bwithTenant\(/.test(text)) {
+    failures.push(`${file}  Admin calls withTenant — staff reach a store only through a support session (ADR-0007)`)
   }
   if (file.startsWith('src/lib/queries/')) {
     if (!/import\s+['"]server-only['"]/.test(text)) failures.push(`${file}  query file without import 'server-only'`)

@@ -2,7 +2,7 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.2.0
+  version: 1.3.0
   verified: 2026-11-06
 ---
 
@@ -26,4 +26,7 @@ metadata:
 | `duration-200` / `duration-base` does nothing | Tailwind v4 reads `--transition-duration-*`, not `--duration-*` | Use the tokens in `globals.css` |
 | vitest: `This module cannot be imported from a Client Component` | `server-only` throws outside Next | `vitest.config.ts` aliases it to its empty build |
 | A date reads 5½ hours early | Formatted on Vercel (UTC) without a zone | `src/lib/format-date.ts` only (`check:dates`) |
+| `drizzle-kit generate` → "Interactive prompts require a TTY" | It wants to ask whether a dropped column was renamed to a new one | Generate in two steps: the drop alone, then the additions |
+| Local Postgres PANIC "could not open … pg_control: Permission denied" | Data directory under the scratchpad, whose parents' permissions get reset | Use `/var/tmp/frata-pg` (frata-verify) |
+| A new definer function is callable over Supabase RPC | Postgres grants PUBLIC EXECUTE by default; drop+create resets grants | `revoke all on function … from public, anon, authenticated` every time (proof check 13) |
 | A gate flags the comment explaining it | The gate matched its own documentation | Gates skip comment lines; test a new gate on its own docs |

@@ -7,7 +7,7 @@
 
 import { existsSync } from 'node:fs'
 
-const SURFACES = ['src/app/(console)/console', 'src/app/s/[host]']
+const SURFACES = ['src/app/(console)/console', 'src/app/s/[host]', 'src/app/(admin)/admin']
 
 const failures = SURFACES.filter(dir => existsSync(dir) && !existsSync(`${dir}/error.tsx`))
   .map(dir => `${dir}  has no error.tsx — copy the nearest surface's, in this surface's language`)

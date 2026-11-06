@@ -22,3 +22,12 @@ describe('parseDatabaseUrl', () => {
     expect(() => parseDatabaseUrl('')).toThrow(/not set/)
   })
 })
+
+describe('parseDatabaseUrl roles', () => {
+  it('keeps the app off the admin role and Admin off the app role', () => {
+    const admin = 'postgresql://frata_admin.abc123:deadbeef@host:6543/postgres'
+    expect(() => parseDatabaseUrl(admin)).toThrow(/frata_app/)
+    expect(parseDatabaseUrl(admin, 'frata_admin', 'ADMIN_DATABASE_URL')).toBe(admin)
+    expect(() => parseDatabaseUrl('postgresql://frata_app.abc123:x@host:6543/postgres', 'frata_admin')).toThrow(/frata_admin/)
+  })
+})

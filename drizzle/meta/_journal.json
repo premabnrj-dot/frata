@@ -29,6 +29,27 @@
       "when": 1793980839126,
       "tag": "0003_pin_search_path",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793989382125,
+      "tag": "0004_drop_tenant_plan",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793989382950,
+      "tag": "0005_admin_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793989433417,
+      "tag": "0006_admin_access",
+      "breakpoints": true
     }
   ]
 }

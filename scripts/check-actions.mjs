@@ -12,15 +12,15 @@
 // Ownership (may THIS caller touch THIS row) is not something a grep can
 // see; the design review asks it (ekatan3d-planning, "Security").
 
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
 /** Functions that establish who is calling, and refuse who may not. */
-const CHOKEPOINTS = ['requireMember']
+const CHOKEPOINTS = ['requireMember', 'requireStaff', 'asMember']
 
 /** Entry points that check their own credential: file → [what it is, a token that must appear in it]. */
 const ENTRY_POINTS = {
-  'src/app/login/actions.ts': ['magic link: only emails a link to the address given', 'signInWithOtp('],
+  'src/app/login/actions.ts': ['magic link: only emails a link to the address given', 'sendSignInLink('],
   'src/app/auth/callback/route.ts': ['sign-in: trades the one-time code for a session', 'exchangeCodeForSession('],
   'src/app/api/cron/outbox/route.ts': ['Vercel Cron', 'isCronRequest('],
   'src/app/api/webhooks/razorpay/route.ts': ['Razorpay webhook, HMAC signature over the raw body', 'verifyRazorpaySignature('],
@@ -48,6 +48,21 @@ for (const file of walk('src')) {
     failures.push(`${file}  ${isAction ? 'server actions' : 'route handler'} with no auth check — call ${CHOKEPOINTS.slice(0, 3).join(' / ')}, or list it in scripts/check-actions.mjs with the credential it checks`)
   }
 }
+// An Admin page is guarded by its own requireStaff (layouts guard nothing below).
+for (const file of existsSync('src/app/(admin)') ? walk('src/app/(admin)') : []) {
+  if (!file.endsWith('/page.tsx')) continue
+  if (!/\brequireStaff\(/.test(readFileSync(file, 'utf8'))) {
+    failures.push(`${file}  Admin page that does not call requireStaff( itself`)
+  }
+}
+// Every console write goes through asMember, which audits support visits in the same transaction.
+for (const file of walk('src/app/(console)')) {
+  const text = readFileSync(file, 'utf8')
+  if (/^\s*['"]use server['"]/m.test(text) && !/\basMember\(/.test(text)) {
+    failures.push(`${file}  console server actions must use asMember( (support visits are audited there)`)
+  }
+}
+
 // A console page is guarded by its OWN check: Next renders the layout and the
 // page in parallel, so the layout's requireMember protects nothing below it.
 for (const file of walk('src/app/(console)')) {

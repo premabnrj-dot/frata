@@ -2,9 +2,9 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 1.1.0
+  version: 2.0.0
   verified: 2026-11-06
-  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006]
+  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
 ---
 
@@ -30,8 +30,20 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   (`src/domains/tenancy/host.ts`). Storefront hosts are rewritten to `/s/<host>`;
   `/s/*` on the console host is a 404.
 - Console: `requireMember(roles)` (`src/lib/auth/require-member.ts`) gives the
-  tenant id. Storefront: `tenantForHost(host)` (`src/lib/db/platform.ts`).
+  tenant id — a membership or an active support session, both from
+  `app_access_for`. Storefront: `tenantForHost(host)` (`src/lib/db/platform.ts`).
   **These are the only two sources of a tenant id.**
+- Console writes go through `asMember(roles, (tx, ctx) => …)`
+  (`src/lib/auth/as-member.ts`): it opens the tenant transaction and, in support
+  mode, writes the audit row in the same transaction (`check:actions`).
+- **Admin** (ADR-0007): `requireStaff(roles)` first; reads and writes through
+  `src/lib/admin/*` functions that take `StaffOk` and use `adminDb()` as
+  `frata_admin`. Never `withTenant` in Admin. A new table states its
+  `frata_admin` grants in the same migration (often: none).
+- **Definer functions** always `set search_path = ''` and
+  `revoke all on function … from public, anon, authenticated` — Postgres gives
+  PUBLIC EXECUTE by default and Supabase exposes functions over RPC. Dropping and
+  recreating one resets its grants: re-run them.
 - Every merchant read or write: `withTenant(tenantId, tx => …)` plus an explicit
   `where tenant_id = …`. The policy is the lock; the where is the intent and
   the index.

@@ -8,7 +8,7 @@
 ## What this product is
 
 A fashion-first commerce platform for small and mid-size Indian D2C brands:
-COD-heavy, Instagram-driven, no developer. One deployment, two surfaces that
+COD-heavy, Instagram-driven, no developer. One deployment, three surfaces that
 share neither a look nor a gate:
 
 - **Console** — `src/app/(console)/console/`, the merchant's back office, behind
@@ -16,6 +16,8 @@ share neither a look nor a gate:
   campaigns judged on delivered orders, channel connections.
 - **Storefront** — `src/app/s/[host]/`, a merchant's shop, public, reached by
   host (`src/middleware.ts`, `src/domains/tenancy/host.ts`). Cached.
+- **Admin** — `src/app/(admin)/admin/`, Frata staff only, behind `requireStaff`.
+  The only surface that reads across merchants (ADR-0007).
 
 **The goal:** a small Indian fashion brand keeps more profit per delivered
 order, without a developer. Work that moves none of the ranked problems in
@@ -38,7 +40,8 @@ Agents: `tenancy-auditor`, `architecture-reviewer`, `integration-researcher`,
 policy in Postgres (`drizzle/0001_tenant_isolation.sql`) and `withTenant()` in
 `src/lib/db/tenant.ts`. Merchant rows are read only through `src/lib/queries/`.
 The tenant id comes from `requireMember()` or the storefront host — never from
-a URL, a form or a body. A new table ships with its grant, RLS and policy in
+a URL, a form or a body (one named exception: starting a support session,
+ADR-0007). Cross-tenant reads only through `frata_admin` in `src/lib/admin/`. A new table ships with its grant, RLS and policy in
 the same migration. `npm run check:tenant` holds the shape;
 `npm run verify:tenancy` proves it on a real Postgres.
 
@@ -103,7 +106,7 @@ Functions run in Mumbai
 Supabase API (port 5432 is refused there): apply the SQL, then insert its row
 into `drizzle.__drizzle_migrations` (sha256 of the file, the journal's `when`).
 
-**The app connects as `frata_app`, never `postgres`.** `postgres` bypasses the
+**The app connects as `frata_app` (and Admin as `frata_admin`), never `postgres`.** `postgres` bypasses the
 policies. Environment variables live in Vercel; `.env.example` lists names only.
 
 ## Things that are deliberately absent
