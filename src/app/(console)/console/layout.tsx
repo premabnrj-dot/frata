@@ -29,8 +29,10 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     return (
       <main className="p-6">
         <Panel title={auth.reason === 'signed_out' ? 'Sign in to continue' : 'No store on this account'}
-          action={<Link href="/login" className={button({ variant: 'secondary' })}>Sign in with another email</Link>}>
-          {auth.reason === 'no_access' && 'This email is not a member of any store. Ask the store owner to invite you.'}
+          action={auth.reason === 'no_access'
+            ? <div className="flex flex-wrap justify-center gap-2"><Link href="/start" className={button()}>Start your shop</Link><Link href="/login" className={button({ variant: 'secondary' })}>Sign in with another email</Link></div>
+            : <Link href="/login" className={button({ variant: 'secondary' })}>Sign in</Link>}>
+          {auth.reason === 'no_access' && 'This email has no shop yet. Start one, or ask a shop’s owner to invite you.'}
         </Panel>
       </main>
     )

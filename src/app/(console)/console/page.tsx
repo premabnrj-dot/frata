@@ -10,7 +10,7 @@ import { SHOP_DOMAIN } from '@/lib/public-env'
 import { shopWithSettings } from '@/lib/queries/settings'
 
 /** Pages the checklist may link to. Each flips to true when its sub-phase ships (docs/plans/2026-11-06-phase-1-first-sale.md). */
-const BUILT = { products: false, settings: false, publish: false }
+const BUILT = { products: false, settings: true, publish: false }
 
 export default async function ConsoleHome() {
   const auth = await requireMember(ANY_MEMBER)

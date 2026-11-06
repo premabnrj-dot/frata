@@ -36,7 +36,7 @@ export function setupSteps(f: SetupFacts, built: BuiltPages, formatInr: (paise: 
   const hasProduct = f.productCount > 0
   const canPay = f.codOn || f.paymentsConnected
   return [
-    { key: 'shop', title: 'Name and address', done: true, href: built.settings ? '/console/settings' : null, detail: `${f.shopName} · ${f.address}` },
+    { key: 'shop', title: 'Name and address', done: true, href: built.settings ? '/console/settings/address' : null, detail: `${f.shopName} · ${f.address}` },
     {
       key: 'product', title: 'Add your first product', done: hasProduct, href: built.products ? '/console/products' : null,
       detail: hasProduct ? `${f.productCount} product${f.productCount === 1 ? '' : 's'}`
@@ -45,7 +45,7 @@ export function setupSteps(f: SetupFacts, built: BuiltPages, formatInr: (paise: 
     },
     {
       key: 'details', title: 'Business details and grievance officer', done: !!f.legalName.trim() && !!f.grievanceName.trim(),
-      href: built.settings ? '/console/settings' : null,
+      href: built.settings ? (f.legalName.trim() ? '/console/settings/contact' : '/console/settings/store') : null,
       detail: 'Your legal name, address and a grievance officer are shown on your shop, as the law asks. Razorpay checks them too.',
     },
     {

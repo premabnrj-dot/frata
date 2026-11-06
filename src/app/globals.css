@@ -122,3 +122,20 @@
 @utility animate-step-forward { animation: step-in-forward 320ms cubic-bezier(0, 0, 0, 1); }
 @utility animate-step-back { animation: step-in-back 320ms cubic-bezier(0, 0, 0, 1); }
 @utility animate-value-flash { animation: value-flash 800ms cubic-bezier(0.2, 0, 0, 1); }
+
+/* ── A merchant's shop (storefront and its previews). Fixed light paper: it is
+   their brand, not the viewer's OS theme. Accent = shop_settings.accent. ── */
+[data-store-theme] {
+  --store-paper: #F6F1EA; --store-ink: #1F1A17; --store-sub: #5A4A3C; --store-line: #E2D9CC; --store-chip: #EFE8DE;
+  --store-good: #1E6B47; --store-bad: #A8321F; --store-accent: #8A3B1F;
+  background: var(--store-paper); color: var(--store-ink);
+}
+[data-store-theme][data-accent="indigo"] { --store-accent: #2E3A63; }
+[data-store-theme][data-accent="moss"] { --store-accent: #3F5B3A; }
+[data-store-theme][data-accent="wine"] { --store-accent: #7A1F2B; }
+[data-store-theme][data-accent="ink"] { --store-accent: #1F1A17; }
+@theme inline {
+  --color-store-paper: var(--store-paper); --color-store-ink: var(--store-ink); --color-store-sub: var(--store-sub);
+  --color-store-line: var(--store-line); --color-store-chip: var(--store-chip); --color-store-good: var(--store-good);
+  --color-store-bad: var(--store-bad); --color-store-accent: var(--store-accent);
+}

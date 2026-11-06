@@ -64,6 +64,20 @@
       "when": 1793996072390,
       "tag": "0008_phase1_access",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793997893444,
+      "tag": "0009_shop_policies",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793997894301,
+      "tag": "0010_settings_access",
+      "breakpoints": true
     }
   ]
 }

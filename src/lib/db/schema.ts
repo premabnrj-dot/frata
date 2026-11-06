@@ -311,3 +311,19 @@ export const rateLimits = pgTable('rate_limits', {
   windowStart: at('window_start').notNull(),
   n: integer('n').notNull().default(0),
 }, (t) => [primaryKey({ columns: [t.key, t.windowStart] }), index('rate_limits_window').on(t.windowStart)])
+
+export const POLICY_KINDS = ['returns', 'shipping', 'privacy', 'terms', 'contact'] as const
+export type PolicyKind = (typeof POLICY_KINDS)[number]
+
+/** A policy page the merchant rewrote by hand. Absent = rendered from shop_settings (src/domains/policies/render.ts). */
+export const shopPolicies = pgTable('shop_policies', {
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull(),
+  body: text('body').notNull(),
+  updatedAt: at('updated_at').notNull().defaultNow(),
+  updatedBy: uuid('updated_by').notNull(),
+}, (t) => [
+  primaryKey({ columns: [t.tenantId, t.kind] }),
+  check('shop_policies_kind', sql`${t.kind} in ('returns','shipping','privacy','terms','contact')`),
+  check('shop_policies_body', sql`length(${t.body}) between 1 and 20000`),
+])

@@ -99,3 +99,16 @@ export async function publicPlans(): Promise<PublicPlan[]> {
     order by p.position, v.version desc`)
   return rows.map((r) => ({ code: r.code, name: r.name, monthlyPrice: Number(r.monthly_price), includedOrders: r.included_orders, feeBps: r.fee_bps, features: r.features }))
 }
+
+/** app_change_shop_address: the tenant from requireMember, the uid from getUser(); the function re-checks both. */
+export async function changeShopAddress(tenantId: string, uid: string, slug: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await db().execute(sql`select app_change_shop_address(${tenantId}::uuid, ${uid}::uuid, ${slug})`)
+    return { ok: true }
+  } catch (err) {
+    const msg = (err as { cause?: { message?: string } })?.cause?.message ?? (err instanceof Error ? err.message : '')
+    const code = ['not_owner', 'published', 'bad_slug', 'slug_taken'].find((c) => msg.includes(c))
+    if (!code) console.error('[changeShopAddress]', msg)
+    return { ok: false, error: code ?? 'unknown' }
+  }
+}

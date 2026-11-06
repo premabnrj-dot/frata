@@ -135,7 +135,7 @@ ladder 400/800/1200/1600 WebP). Import: the CSV is parsed in the browser
 `asMember` (stops when a support session ends), images through the outbox.
 ADR-0005 amended for Blob.
 
-### 1S — Settings
+### 1S — Settings (built 2026-11-06; Razorpay connect waits for PAYMENT_KEYS_SECRET and checkout, 1C)
 Nine pages, one save each, version check; policies rendered from settings;
 Razorpay connect (keys in a header to Razorpay, never a URL; logs record status
 only; owner role only); publish gate (needs a product, and COD on or Razorpay
