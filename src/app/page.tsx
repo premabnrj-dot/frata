@@ -5,6 +5,7 @@ import { FEATURE_NAMES } from '@/domains/plans/labels'
 import type { Feature } from '@/domains/plans/entitlements'
 import { publicPlans, type PublicPlan } from '@/lib/db/platform'
 import { formatInr } from '@/lib/format'
+import { FRATA_WHATSAPP_DISPLAY, frataWhatsappLink } from '@/lib/site'
 
 // =============================================================================
 // The Frata website's homepage, on the console host (frata-design-language §
@@ -142,12 +143,13 @@ export default async function Home() {
               </details>
             ))}
           </div>
-          <div className="mt-8">{start}</div>
+          <div className="mt-8 flex flex-wrap items-center gap-4">{start}<a href={frataWhatsappLink()} target="_blank" rel="noopener" className="text-sm underline">Ask us on WhatsApp</a></div>
         </section>
       </main>
 
       <footer className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 border-t border-border px-4 py-6 text-sm text-muted-foreground sm:px-8">
         <span className="font-semibold text-brand">Frata</span>
+        <a href={frataWhatsappLink()} target="_blank" rel="noopener" className="hover:text-foreground">WhatsApp us · <span className="font-mono">{FRATA_WHATSAPP_DISPLAY}</span></a>
         <span>Made in India</span>
         <Link href="/login" className="hover:text-foreground">Sign in</Link>
         <Link href="/start" className="hover:text-foreground">Start your shop</Link>

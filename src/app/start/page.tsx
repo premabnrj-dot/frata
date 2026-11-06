@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { accessFor } from '@/lib/db/platform'
 import { SHOP_DOMAIN } from '@/lib/public-env'
+import { frataWhatsappLink } from '@/lib/site'
 import { SignInFlow } from '../login/sign-in-flow'
 import { CreateShopForm } from './create-shop-form'
 
@@ -39,6 +40,7 @@ export default async function StartPage() {
           <p>Your logo, GSTIN and full address: in Settings, before your first invoice.</p>
           <p>Razorpay and its KYC: only when you want UPI and card payments. Pay on delivery works without it.</p>
           <p>A plan: when you open your shop to shoppers.</p>
+          <p className="pt-2">Stuck? <a href={frataWhatsappLink()} target="_blank" rel="noopener" className="underline">Ask us on WhatsApp</a></p>
         </aside>
       </div>
     </main>

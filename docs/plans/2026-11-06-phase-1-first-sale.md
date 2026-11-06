@@ -2,6 +2,13 @@
 Status: active (reviewed 2026-11-06; owner: "go ahead, fix the findings and start 1W") · Spec: docs/specs/2026-11-06-phase-1-first-sale.md
 Prototype: https://claude.ai/artifact/QJ3N5knGqGZniMCsZJn7Fu
 
+**Owner, 2026-11-06 (after 1W):** product import from a file is **deferred**
+(it needs the per-minute sweep, i.e. Vercel Pro, which waits). Order from
+here: **1S Settings → 1A catalogue without import → 1B → 1C → 1D**. Frata's
+support WhatsApp is +91 95603 66601 (`src/lib/site.ts`). The sign-in email
+sender and the code in the Magic Link template are set by the owner later;
+until then the link works and the code entry waits.
+
 Reviewed by `architecture-reviewer`, `tenancy-auditor` and
 `unit-economics-reviewer` on 2026-11-06. Every finding is fixed below; the
 review table at the end maps each to its fix.
@@ -92,7 +99,7 @@ Pro is on (owner call 7, moved earlier: **before 1A.5**). Senders run inside
 
 ## Sub-phases
 
-### 1W — Website and sign-up
+### 1W — Website and sign-up (built 2026-11-06)
 1. Migration 0007: existing-code fixes above; `shop_settings`, `tenant_counters`,
    `pincodes`, `rate_limits`; `app_create_shop`. tenancy.sql: A/B on the new
    tables; pincodes write refused; counters A ≠ B; child FK to B refused;
