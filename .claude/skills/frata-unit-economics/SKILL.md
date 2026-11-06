@@ -2,7 +2,7 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 1.0.0
+  version: 2.0.0
   verified: 2026-11-06
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
@@ -26,9 +26,13 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
 3. **Shopify India today** (shopify.com/in/pricing, 2026-11-06): Basic ₹1,499
    yearly / ₹1,994 monthly; Grow ₹5,599 / ₹7,447; Advanced ₹22,680 / ₹30,164;
    third-party gateway fee 2% / 1% / 0.6% on prepaid; COD exempt.
-4. **Charge on delivered orders.** A per-order fee on COD orders that return
-   makes Frata dearer than Shopify for its own target merchant. Flat ₹ per
-   delivered order by tier is the working recommendation (owner to decide).
+4. **Charge on delivered orders** (decided, owner 2026-11-06): the fee is a
+   percentage of each DELIVERED order's value — Launch 2%, Growth 1%, Scale
+   0.5% — stored as basis points on the plan version. A returned COD parcel
+   costs the merchant nothing from Frata. Compare honestly: Shopify charges
+   2/1/0.6% on prepaid orders only and nothing on COD, so on a COD-heavy
+   merchant Frata's fee is larger per order; the bundle (checkout, WhatsApp,
+   RTO tools included) has to carry the difference.
 5. **Delivered-order ad signals: model 0–2% saving**, not 5%, until a test
    shows more (Meta CAPI 7-day limit; small accounts lack event volume).
 6. **RTO**: model Frata's own controls (WhatsApp COD confirmation, pincode
@@ -55,6 +59,7 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
 | Break-even | ~471 tenants | Recompute from tier mix and delivered-order fee |
 | Funding need | ~₹3.15 cr | Recompute after the above |
 
-Tiers (decided): Launch ₹1,499/mo (~150 orders), Growth ₹4,999/mo (~1,500),
-Scale ₹14,999/mo (~5,000); all channels in every tier; RTO Shield, size/fit
-and cart flows from Growth.
+Tiers (decided): Launch ₹1,499/mo (~150 orders) + 2% of delivered order value,
+Growth ₹4,999/mo (~1,500) + 1%, Scale ₹14,999/mo (~5,000) + 0.5%; all channels
+in every tier; RTO Shield, size/fit and cart flows from Growth. Past the
+included orders the store keeps selling and is flagged.

@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 1.0.0
+  version: 1.1.0
   verified: 2026-11-06
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -64,6 +64,22 @@ micro `text-xs text-muted-foreground`.
   screen · Nothing was changed · Try again" (`error.tsx` per surface, `check:states`).
 - No `loading.tsx` in the console (Ekatan: it made search-param navigation commit
   nothing in production); use a top progress bar.
+
+## Frata Admin (owner-approved, 2026-11-06)
+
+- **Admin looks unlike the console**: dark ink navigation with a "STAFF" tag
+  (`bg-warn text-warn-text`), so no one mistakes where they are. Same tokens,
+  same tables, same Panel; only the frame differs.
+- **Support mode** is a full-width banner above every console page: whose
+  store, the reason, time left, "Back to Admin", "End now". It cannot be
+  dismissed and uses a solid dark amber with white text (≥ 4.5:1).
+- **A button that acts on a merchant names them** ("Open Kesar Studio's
+  console", "Move Kesar Studio to Scale"); cancel names the safe outcome
+  ("Stay in Admin", "Keep Growth"). Never "Continue" or "OK".
+- **A plan price is shown with its version**, and a change says what moves
+  ("orders included go from 1,500 to 5,000") before it is confirmed.
+- People who are staff and store members choose where to go after sign-in;
+  Admin always links to their own store's console and the console links back.
 
 ## Words a merchant reads
 
