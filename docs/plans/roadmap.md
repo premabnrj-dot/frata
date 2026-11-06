@@ -27,6 +27,7 @@ gets its own research, spec and mockup before it is built.
 2. Meta business verification → WhatsApp Tech Provider app review (needed by Phase 2).
 3. Shiprocket: written answer on a platform partner agreement (needed by Phase 2).
 4. Razorpay Partner Program, Aggregator type (Phase 6).
-5. Shop domain for `*.<domain>` subdomains (Phase 1, owner call 1).
+5. Shop domain: a cheap one now for `*.<domain>` subdomains, the final one before the first real merchant (owner, 2026-11-06).
 6. DLT registration (entity, sender ID, OTP template) for shopper OTP (Phase 2; weeks of lead time).
 7. Vercel Pro and Supabase Pro before any merchant takes a real order (Phase 1, owner call 7).
+8. A lawyer reads the policy templates and grievance-officer wording once (Phase 1, owner call 13).
