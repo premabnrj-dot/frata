@@ -20,6 +20,7 @@ export const LIMITS = {
   sendCodeIp: { action: 'send_code:ip', max: 20, windowSeconds: 3600 },
   verifyCodeEmail: { action: 'verify_code:email', max: 10, windowSeconds: 900 },
   createShopIp: { action: 'create_shop:ip', max: 5, windowSeconds: 3600 },
+  checkAddressUser: { action: 'check_address:user', max: 120, windowSeconds: 600 },
 } as const satisfies Record<string, Limit>
 
 /** Counts one attempt; true when it is within the limit. */

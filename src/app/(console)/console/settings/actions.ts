@@ -9,11 +9,27 @@ import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { changeShopAddress } from '@/lib/db/platform'
 import { auditEvents, shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { slugProblem } from '@/domains/signup/slug'
+import { SHOP_DOMAIN } from '@/lib/public-env'
+import { shopWithSettings } from '@/lib/queries/settings'
 
 // Settings are changed by an owner or admin (CAN_MANAGE). Each save checks the
 // section's values with the same definition the form drew (src/domains/settings/
 // sections.ts), carries the version the page loaded (two tabs never overwrite
 // each other silently), and leaves an Activity row with who changed what.
+
+/** Thrown inside the transaction so it rolls back — and no audit row records a change that never happened. */
+class VersionConflict extends Error {}
+
+/**
+ * What to log when a write fails: the database's code and reason only. drizzle's
+ * own message carries the query's parameters — a merchant's GSTIN, phones,
+ * a whole policy page — and logs are not the place for them (tenancy audit).
+ */
+function dbReason(err: unknown): string {
+  const cause = (err as { cause?: { code?: string; message?: string } })?.cause
+  if (cause) return `${cause.code ?? ''} ${cause.message ?? ''}`.trim()
+  return err instanceof Error ? err.name : 'unknown'
+}
 
 export type SaveResult =
   | { ok: true; version: number }
@@ -32,7 +48,7 @@ export async function saveSection(sectionKey: string, values: Values, version: n
         .set({ ...(columns as Partial<typeof shopSettings.$inferInsert>), version: sql`${shopSettings.version} + 1`, updatedAt: new Date() })
         .where(and(eq(shopSettings.tenantId, tenantId), eq(shopSettings.version, version)))
         .returning({ version: shopSettings.version })
-      if (!row) return null
+      if (!row) throw new VersionConflict()
       if (typeof name === 'string') await tx.update(tenants).set({ name }).where(eq(tenants.id, tenantId))
       if (!auth.membership.supportSessionId) {
         await tx.insert(auditEvents).values({ tenantId, actorUserId: auth.userId, actorEmail: auth.email, actorKind: 'member', action: `settings.${section.key}`, detail: { fields: Object.keys(parsed.patch) } })
@@ -40,11 +56,11 @@ export async function saveSection(sectionKey: string, values: Values, version: n
       return row.version
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (r.value === null) return { ok: false, conflict: true, error: 'Someone saved this page while you were editing. Reload to see their changes, then make yours again.' }
     revalidatePath('/console', 'layout')
     return { ok: true, version: r.value }
   } catch (err) {
-    console.error('[saveSection]', section.key, err instanceof Error ? err.message : err)
+    if (err instanceof VersionConflict) return { ok: false, conflict: true, error: 'Someone saved this page while you were editing. Reload to see their changes, then make yours again.' }
+    console.error('[saveSection]', section.key, dbReason(err))
     return { ok: false, error: 'We could not save. Nothing was changed. Try again in a minute.' }
   }
 }
@@ -68,7 +84,7 @@ export async function savePolicyText(kind: string, body: string | null): Promise
     revalidatePath('/console/settings/policies')
     return { ok: true }
   } catch (err) {
-    console.error('[savePolicyText]', err instanceof Error ? err.message : err)
+    console.error('[savePolicyText]', dbReason(err))
     return { ok: false, error: 'We could not save the page. Nothing was changed.' }
   }
 }
@@ -87,8 +103,11 @@ export async function changeAddress(slug: string): Promise<{ ok: true } | { ok: 
   const s = String(slug ?? '').toLowerCase()
   const problem = slugProblem(s)
   if (problem) return { ok: false, error: problem === 'reserved' ? 'That address is reserved. Try another.' : ADDRESS_ERRORS.bad_slug! }
+  const before = await shopWithSettings(auth.membership.tenantId).catch(() => null)
   const r = await changeShopAddress(auth.membership.tenantId, auth.userId, s)
   if (!r.ok) return { ok: false, error: ADDRESS_ERRORS[r.error] ?? 'We could not change the address. Nothing was changed.' }
+  // The old address must not keep showing this shop from the storefront cache.
+  if (before) revalidatePath(`/s/${before.slug}.${SHOP_DOMAIN}`)
   revalidatePath('/console', 'layout')
   return { ok: true }
 }

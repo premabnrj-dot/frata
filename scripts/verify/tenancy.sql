@@ -262,14 +262,22 @@ do $$ declare f record; begin
 end $$;
 
 -- 19. shop_policies: own tenant only. Shop address: an owner of THAT shop, before publishing.
+insert into auth.users (id, email, email_confirmed_at) values ('aaaaaaaa-0000-0000-0000-000000000005', 'staff@proof-b.test', now());
+insert into members (tenant_id, user_id, role) values ('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000005', 'staff');
 insert into shop_policies (tenant_id, kind, body, updated_by) values ('22222222-2222-2222-2222-222222222222', 'returns', 'B text', 'aaaaaaaa-0000-0000-0000-000000000002');
 begin; set local role frata_app;
 select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
-do $$ begin
+do $$ declare n int; begin
   if exists (select 1 from shop_policies) then raise exception 'FAIL: tenant A sees B policies'; end if;
   begin insert into shop_policies (tenant_id, kind, body, updated_by) values ('22222222-2222-2222-2222-222222222222', 'terms', 'x', gen_random_uuid()); raise exception 'FAIL: A wrote B policy'; exception when insufficient_privilege then null; end;
+  update shop_policies set body = 'stolen' where tenant_id = '22222222-2222-2222-2222-222222222222'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A rewrote B policy'; end if;
+  delete from shop_policies where tenant_id = '22222222-2222-2222-2222-222222222222'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A deleted B policy'; end if;
   -- 0002 owns B (claimed its invite in 10); 9999… owns A.
   begin perform app_change_shop_address('22222222-2222-2222-2222-222222222222', '99999999-9999-9999-9999-999999999999', 'stolen-b'); raise exception 'FAIL: an owner of A moved B';
+  exception when raise_exception then if sqlerrm <> 'not_owner' then raise; end if; end;
+  begin perform app_change_shop_address('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000005', 'staff-move'); raise exception 'FAIL: a staff member moved the shop';
   exception when raise_exception then if sqlerrm <> 'not_owner' then raise; end if; end;
   begin perform app_change_shop_address('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-a'); raise exception 'FAIL: moved onto a taken address';
   exception when raise_exception then if sqlerrm <> 'slug_taken' then raise; end if; end;

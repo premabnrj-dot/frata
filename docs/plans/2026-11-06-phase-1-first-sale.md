@@ -237,3 +237,14 @@ storefront chunks; npm aliases `check:tenant` and `check:actions`.
 | Host header for email redirect (arch) | `CONSOLE_HOST` |
 | `npm run check:tenant` missing (tenancy LOW) | npm aliases |
 | DPDP (arch) | checkout notice line; processor clause in merchant terms (lawyer review, call 13); abandoned-order data retention 90 days |
+
+## 1S tenancy audit (2026-11-06) — SAFE, findings handled
+
+- Logs carried query parameters (drizzle's message): settings actions now log the database code and reason only.
+- Proof case 19 now also refuses cross-tenant update/delete of `shop_policies` and a `staff` member moving the shop.
+- A version conflict rolls the transaction back, so no support audit row records a change that never happened.
+- The old address's cached storefront page is revalidated on an address change; `checkAddress` is rate limited.
+- Recorded here rather than editing an applied migration: `frata_admin` has deliberately NO grant on `shop_policies`
+  (Admin reaches a shop's pages through a support visit); `app_change_shop_address`'s `p_uid` must come from
+  `getUser()` (its only caller, `changeAddress`, uses `requireMember`); reserved words are checked in
+  `src/domains/signup/slug.ts`, as for `app_create_shop`.

@@ -19,6 +19,7 @@ export async function checkAddress(slug: string): Promise<AddressCheck> {
   const s = String(slug ?? '').toLowerCase()
   const problem = slugProblem(s)
   if (problem) return { state: problem }
+  if (!(await withinLimit(LIMITS.checkAddressUser, auth.userId))) return { state: 'taken' }
   return (await slugAvailable(s)) ? { state: 'ok' } : { state: 'taken' }
 }
 
