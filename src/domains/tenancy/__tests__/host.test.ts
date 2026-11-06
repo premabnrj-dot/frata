@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { surfaceFor } from '../host'
+import { shopSlugFromHost, surfaceFor } from '../host'
 
 describe('surfaceFor', () => {
   it('knows the console', () => {
@@ -15,5 +15,19 @@ describe('surfaceFor', () => {
   it('treats localhost as local', () => {
     expect(surfaceFor('localhost:3000', 'app.frata.in')).toEqual({ kind: 'local' })
     expect(surfaceFor(null, 'app.frata.in')).toEqual({ kind: 'local' })
+  })
+})
+
+describe('shopSlugFromHost', () => {
+  it('reads the slug of a platform address', () => {
+    expect(shopSlugFromHost('kesar.frata.store', 'frata.store')).toBe('kesar')
+    expect(shopSlugFromHost('KESAR.frata.store.', 'frata.store')).toBe('kesar')
+    expect(shopSlugFromHost('kesar.frata.store:443', 'frata.store')).toBe('kesar')
+  })
+  it('is null for own domains, the bare domain and nested labels', () => {
+    expect(shopSlugFromHost('shop.kesar.in', 'frata.store')).toBeNull()
+    expect(shopSlugFromHost('frata.store', 'frata.store')).toBeNull()
+    expect(shopSlugFromHost('a.b.frata.store', 'frata.store')).toBeNull()
+    expect(shopSlugFromHost('evilfrata.store', 'frata.store')).toBeNull()
   })
 })

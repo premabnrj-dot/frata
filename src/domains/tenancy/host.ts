@@ -21,3 +21,16 @@ export function surfaceFor(rawHost: string | null, consoleHost: string): Surface
   if (host.endsWith('.vercel.app')) return { kind: 'console' }
   return { kind: 'storefront', host }
 }
+
+/**
+ * A platform address is <slug>.<shop domain>. Returns the slug, or null for
+ * any other host (a merchant's own domain is looked up as a whole host).
+ * Only ONE label is a slug: "a.b.frata.store" is not a shop.
+ */
+export function shopSlugFromHost(host: string, shopDomain: string): string | null {
+  const h = host.toLowerCase().replace(/:\d+$/, '').replace(/\.$/, '')
+  const suffix = '.' + shopDomain.toLowerCase()
+  if (!h.endsWith(suffix)) return null
+  const slug = h.slice(0, -suffix.length)
+  return slug && !slug.includes('.') ? slug : null
+}

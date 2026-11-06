@@ -50,6 +50,20 @@
       "when": 1793989433417,
       "tag": "0006_admin_access",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793996071595,
+      "tag": "0007_phase1_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793996072390,
+      "tag": "0008_phase1_access",
+      "breakpoints": true
     }
   ]
 }

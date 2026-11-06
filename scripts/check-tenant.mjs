@@ -78,6 +78,25 @@ for (const t of tables) {
   }
 }
 
+// 5. EVERY frata_app POLICY IS TENANT-BOUND. A `using (true)` passes the RLS
+// check above yet guards nothing (tenancy-auditor, 2026-11-06). Only tables with
+// no merchant rows may have one, each with its reason. Admin policies
+// (to frata_admin) are fenced by ADR-0007 instead.
+const OPEN_FOR_APP = {
+  outbox: 'the cross-tenant sweep reads and marks due rows; inserts are tenant-checked',
+  webhook_events: 'a signed webhook arrives before its tenant is known',
+  pincodes: 'India Post reference data, the same for every shop, read-only',
+  rate_limits: 'hashed abuse counters, no tenant data',
+  plans: 'the public price list',
+  plan_versions: 'the public price list',
+}
+for (const m of sql.matchAll(/create policy\s+(\w+)\s+on\s+"?([a-z_]+)"?([\s\S]*?);/g)) {
+  const [, name, table, body] = m
+  if (!/\bto\s+[^;]*\bfrata_app\b/.test(body)) continue
+  if (/app_current_tenant\(\)/.test(body) || OPEN_FOR_APP[table]) continue
+  failures.push(`policy ${name} on ${table}  lets frata_app past without app_current_tenant() — bind it to the tenant, or add the table to OPEN_FOR_APP with why`)
+}
+
 if (failures.length) {
   for (const f of failures) console.error(f)
   console.error(`check:tenant — ${failures.length} problem(s). See .claude/skills/frata-architecture/SKILL.md § Tenancy.`)

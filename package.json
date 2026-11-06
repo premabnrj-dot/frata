@@ -12,6 +12,8 @@
     "start": "next start",
     "test": "node scripts/check-hex.mjs && node scripts/check-layers.mjs && node scripts/check-dates.mjs && node scripts/check-fetch.mjs && node scripts/check-config.mjs && node scripts/check-size.mjs && node scripts/check-tenant.mjs && node scripts/check-actions.mjs && node scripts/check-states.mjs && vitest run",
     "test:watch": "vitest",
+    "check:tenant": "node scripts/check-tenant.mjs",
+    "check:actions": "node scripts/check-actions.mjs",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "verify:tenancy": "bash scripts/verify/tenancy.sh"

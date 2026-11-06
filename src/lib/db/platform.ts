@@ -1,6 +1,8 @@
 import 'server-only'
 import { sql } from 'drizzle-orm'
 import { db } from './index'
+import { shopSlugFromHost } from '@/domains/tenancy/host'
+import { SHOP_DOMAIN } from '@/lib/public-env'
 import type { MemberRole, StaffRole } from './schema'
 
 // =============================================================================
@@ -14,10 +16,16 @@ import type { MemberRole, StaffRole } from './schema'
 //   - claim this user's invites (confirmed email only).
 // =============================================================================
 
+/**
+ * Which shop a storefront host belongs to. A platform address (<slug>.<shop
+ * domain>) is found by its slug, so changing the shop domain is an environment
+ * change; any other host is a merchant's own domain (tenant_domains).
+ */
 export async function tenantForHost(host: string): Promise<{ id: string; name: string } | null> {
-  const rows = await db().execute<{ id: string; name: string }>(
-    sql`select id, name from app_tenant_for_host(${host})`,
-  )
+  const slug = shopSlugFromHost(host, SHOP_DOMAIN)
+  const rows = slug
+    ? await db().execute<{ id: string; name: string }>(sql`select id, name from app_tenant_for_slug(${slug})`)
+    : await db().execute<{ id: string; name: string }>(sql`select id, name from app_tenant_for_host(${host})`)
   return rows[0] ?? null
 }
 

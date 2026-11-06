@@ -16,7 +16,7 @@ export async function enqueue(
   tx: Tx,
   row: { tenantId: string; kind: string; dedupeKey: string; payload: object },
 ) {
-  await tx.insert(outbox).values(row).onConflictDoNothing({ target: outbox.dedupeKey })
+  await tx.insert(outbox).values(row).onConflictDoNothing({ target: [outbox.tenantId, outbox.dedupeKey] })
 }
 
 export type OutboxRow = typeof outbox.$inferSelect

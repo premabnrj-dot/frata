@@ -1,7 +1,7 @@
 import 'server-only'
 import { asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { adminDb } from '@/lib/db/admin'
-import { invites, members, supportSessions, tenantDomains, tenantPlans, tenants } from '@/lib/db/schema'
+import { invites, members, shopSettings, supportSessions, tenantDomains, tenantPlans, tenants } from '@/lib/db/schema'
 import type { StaffOk } from '@/lib/auth/require-staff'
 import { currentPlan, usage, type PlanCode } from '@/domains/plans/entitlements'
 import { monthStartIST } from '@/domains/time/month'
@@ -108,6 +108,7 @@ export async function createMerchant(
     const [t] = await tx.insert(tenants).values({ name: m.name, slug: m.slug }).returning({ id: tenants.id })
     const id = t!.id
     await tx.insert(tenantDomains).values({ host: m.host, tenantId: id })
+    await tx.insert(shopSettings).values({ tenantId: id, supportEmail: m.ownerEmail.toLowerCase() })
     await tx.insert(invites).values({ tenantId: id, email: m.ownerEmail.toLowerCase(), role: 'owner', createdBy: staff.userId })
     const version = await latestVersion(tx, m.planCode)
     await tx.insert(tenantPlans).values({

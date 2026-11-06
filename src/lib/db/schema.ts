@@ -92,7 +92,8 @@ export const outbox = pgTable('outbox', {
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   /** e.g. whatsapp.utility, meta.capi, shiprocket.create */
   kind: text('kind').notNull(),
-  dedupeKey: text('dedupe_key').notNull().unique(),
+  /** Unique per tenant: two shops may queue the same thing. */
+  dedupeKey: text('dedupe_key').notNull(),
   payload: jsonb('payload').notNull(),
   attempts: integer('attempts').notNull().default(0),
   nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
@@ -100,7 +101,10 @@ export const outbox = pgTable('outbox', {
   deadAt: timestamp('dead_at', { withTimezone: true }),
   lastError: text('last_error'),
   createdAt: createdAt(),
-}, (t) => [index('outbox_due').on(t.nextAttemptAt).where(sql`${t.sentAt} is null and ${t.deadAt} is null`), index('outbox_tenant').on(t.tenantId)])
+}, (t) => [
+  index('outbox_due').on(t.nextAttemptAt).where(sql`${t.sentAt} is null and ${t.deadAt} is null`),
+  uniqueIndex('outbox_tenant_dedupe').on(t.tenantId, t.dedupeKey),
+])
 
 // ── Phase A: Frata admin (ADR-0007). Grants per role: drizzle/0005_admin.sql ──
 
@@ -213,3 +217,97 @@ export const tenantPlans = pgTable('tenant_plans', {
   index('tenant_plans_version').on(t.planVersionId),
   check('tenant_plans_custom_reason', sql`${t.customMonthlyPrice} is null or ${t.reason} is not null`),
 ])
+
+// ── Phase 1 (docs/plans/2026-11-06-phase-1-first-sale.md). RLS: drizzle/0008_phase1_access.sql ──
+
+export const BRAND_ACCENTS = ['oxide', 'indigo', 'moss', 'wine', 'ink'] as const
+export const DISPLAY_FONTS = ['fraunces', 'cormorant', 'inter'] as const
+export const RETURN_KINDS = ['exchange_or_refund', 'exchange_only', 'refund_only', 'none'] as const
+export const SELLS = ['women', 'men', 'kids', 'ethnic', 'accessories', 'footwear'] as const
+
+/**
+ * One row per shop: everything a merchant sets in Settings. The storefront,
+ * policy pages, checkout and invoices read it; nothing copies it. The shop's
+ * name is tenants.name and its address tenants.slug (+ the shop domain).
+ */
+export const shopSettings = pgTable('shop_settings', {
+  tenantId: uuid('tenant_id').primaryKey().references(() => tenants.id, { onDelete: 'cascade' }),
+  legalName: text('legal_name').notNull().default(''),
+  address: text('address').notNull().default(''),
+  originCountry: text('origin_country').notNull().default('India'),
+  orderPrefix: text('order_prefix').notNull().default(''),
+  supportEmail: text('support_email').notNull().default(''),
+  supportPhone: text('support_phone').notNull().default(''),
+  whatsapp: text('whatsapp').notNull().default(''),
+  instagram: text('instagram').notNull().default(''),
+  grievanceName: text('grievance_name').notNull().default(''),
+  grievanceRole: text('grievance_role').notNull().default(''),
+  grievanceEmail: text('grievance_email').notNull().default(''),
+  grievancePhone: text('grievance_phone').notNull().default(''),
+  accent: text('accent').notNull().default('oxide'),
+  displayFont: text('display_font').notNull().default('fraunces'),
+  tagline: text('tagline').notNull().default(''),
+  logoUrl: text('logo_url'),
+  sells: text('sells').array().notNull().default(sql`'{}'::text[]`),
+  returnDays: integer('return_days').notNull().default(7),
+  returnKind: text('return_kind').notNull().default('exchange_or_refund'),
+  codOn: boolean('cod_on').notNull().default(true),
+  codMin: money('cod_min').notNull().default(0),
+  codMax: money('cod_max').notNull().default(300000),
+  /** What the SHOPPER pays for Pay on delivery, shown before ordering. Not codFee (the courier's cost). */
+  codCharge: money('cod_charge').notNull().default(0),
+  codBlockedPincodes: text('cod_blocked_pincodes').array().notNull().default(sql`'{}'::text[]`),
+  shippingFlat: money('shipping_flat').notNull().default(7900),
+  freeShippingAbove: money('free_shipping_above').notNull().default(199900),
+  dispatchDays: integer('dispatch_days').notNull().default(2),
+  metroDays: integer('metro_days').notNull().default(4),
+  restDays: integer('rest_days').notNull().default(7),
+  pricesIncludeGst: boolean('prices_include_gst').notNull().default(true),
+  gstin: text('gstin'),
+  defaultHsn: text('default_hsn').notNull().default('6211'),
+  invoiceSeries: text('invoice_series').notNull().default(''),
+  /** Asked at sign-up; null for shops made before it (Admin-created). */
+  pickupPincode: text('pickup_pincode'),
+  publishedAt: at('published_at'),
+  version: integer('version').notNull().default(1),
+  updatedAt: at('updated_at').notNull().defaultNow(),
+}, (t) => [
+  check('shop_settings_accent', sql`${t.accent} in ('oxide','indigo','moss','wine','ink')`),
+  check('shop_settings_font', sql`${t.displayFont} in ('fraunces','cormorant','inter')`),
+  check('shop_settings_return_kind', sql`${t.returnKind} in ('exchange_or_refund','exchange_only','refund_only','none')`),
+  check('shop_settings_sells', sql`${t.sells} <@ array['women','men','kids','ethnic','accessories','footwear']::text[]`),
+  check('shop_settings_money', sql`${t.codMin} >= 0 and ${t.codMax} >= 0 and ${t.codCharge} >= 0 and ${t.shippingFlat} >= 0 and ${t.freeShippingAbove} >= 0`),
+  check('shop_settings_days', sql`${t.returnDays} between 0 and 60 and ${t.dispatchDays} between 0 and 30 and ${t.metroDays} between 0 and 30 and ${t.restDays} between 0 and 30`),
+  check('shop_settings_gstin', sql`${t.gstin} is null or ${t.gstin} ~ '^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$'`),
+  check('shop_settings_pickup', sql`${t.pickupPincode} is null or ${t.pickupPincode} ~ '^[1-9][0-9]{5}$'`),
+])
+
+export const COUNTER_KINDS = ['order', 'invoice'] as const
+
+/** Order numbers and invoice series: `update … returning` in the transaction that uses the number. */
+export const tenantCounters = pgTable('tenant_counters', {
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull(),
+  /** '' for order numbers; the financial year ('2026-27') for invoices. */
+  period: text('period').notNull().default(''),
+  next: integer('next').notNull().default(1),
+}, (t) => [
+  primaryKey({ columns: [t.tenantId, t.kind, t.period] }),
+  check('tenant_counters_kind', sql`${t.kind} in ('order','invoice')`),
+  check('tenant_counters_next', sql`${t.next} >= 1`),
+])
+
+/** India Post's pincode directory (data.gov.in, Open Government Data Licence). Reference data, no tenant. */
+export const pincodes = pgTable('pincodes', {
+  pincode: text('pincode').primaryKey(),
+  city: text('city').notNull(),
+  district: text('district').notNull(),
+  state: text('state').notNull(),
+}, (t) => [check('pincodes_shape', sql`${t.pincode} ~ '^[1-9][0-9]{5}$'`)])
+
+/** Fixed-window counters for abuse limits. `key` is a sha256 (of action + ip/email/phone), never the value. */
+export const rateLimits = pgTable('rate_limits', {
+  key: text('key').notNull(),
+  windowStart: at('window_start').notNull(),
+  n: integer('n').notNull().default(0),
+}, (t) => [primaryKey({ columns: [t.key, t.windowStart] }), index('rate_limits_window').on(t.windowStart)])

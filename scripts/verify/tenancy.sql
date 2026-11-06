@@ -180,4 +180,84 @@ do $$ declare f record; begin
   if exists (select 1 from pg_roles where rolname in ('frata_app','frata_admin') and rolbypassrls) then raise exception 'FAIL: an app role bypasses RLS'; end if;
 end $$;
 
-\echo 'tenancy proof — all 13 checks passed'
+-- ── Phase 1 (docs/plans/2026-11-06-phase-1-first-sale.md) ─────────────────────
+insert into auth.users (id, email, email_confirmed_at) values ('aaaaaaaa-0000-0000-0000-000000000004', 'maker@proof-c.test', now());
+insert into shop_settings (tenant_id, pickup_pincode) values
+  ('11111111-1111-1111-1111-111111111111', '452009'), ('22222222-2222-2222-2222-222222222222', '110017');
+insert into tenant_counters (tenant_id, kind, next) values ('22222222-2222-2222-2222-222222222222', 'order', 41);
+insert into pincodes (pincode, city, district, state) values ('452009', 'Indore', 'Indore', 'Madhya Pradesh');
+
+-- 14. Settings and counters: own tenant only; settings are created, never inserted by the app.
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if (select count(*) from shop_settings) <> 1 then raise exception 'FAIL: tenant A sees % settings rows', (select count(*) from shop_settings); end if;
+  update shop_settings set cod_charge = 1 where tenant_id = '22222222-2222-2222-2222-222222222222'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: tenant A edited B settings'; end if;
+  if exists (select 1 from tenant_counters) then raise exception 'FAIL: tenant A sees B counters'; end if;
+  begin insert into tenant_counters (tenant_id, kind) values ('22222222-2222-2222-2222-222222222222', 'invoice'); raise exception 'FAIL: tenant A wrote B counter'; exception when insufficient_privilege then null; end;
+  update tenant_counters set next = 1 where tenant_id = '22222222-2222-2222-2222-222222222222'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: tenant A reset B counter'; end if;
+  begin insert into shop_settings (tenant_id) values ('11111111-1111-1111-1111-111111111111'); raise exception 'FAIL: app inserts settings'; exception when insufficient_privilege then null; end;
+end $$;
+commit;
+
+-- 15. Shops and hosts: the app renames its own shop and nothing else; never makes a host or a shop.
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  update tenants set name = 'Proof A renamed' where id = '11111111-1111-1111-1111-111111111111'; get diagnostics n = row_count;
+  if n <> 1 then raise exception 'FAIL: app cannot rename its own shop'; end if;
+  begin update tenants set slug = 'stolen'; raise exception 'FAIL: app changes a slug'; exception when insufficient_privilege then null; end;
+  begin update tenants set is_internal = true; raise exception 'FAIL: app marks itself internal'; exception when insufficient_privilege then null; end;
+  begin insert into tenants (slug, name) values ('x-shop', 'X'); raise exception 'FAIL: app creates a tenant'; exception when insufficient_privilege then null; end;
+  begin insert into tenant_domains (host, tenant_id) values ('squat.frata.test', '11111111-1111-1111-1111-111111111111'); raise exception 'FAIL: app adds a host'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+
+-- 16. Reference and platform tables: pincodes read-only, rate limits writable, both tenant-free.
+begin; set local role frata_app;
+do $$ begin
+  if (select city from pincodes where pincode = '452009') <> 'Indore' then raise exception 'FAIL: pincode read'; end if;
+  begin insert into pincodes values ('110001', 'x', 'x', 'x'); raise exception 'FAIL: app writes pincodes'; exception when insufficient_privilege then null; end;
+  insert into rate_limits (key, window_start, n) values ('proof', now(), 1);
+  if (select id from app_tenant_for_slug('PROOF-A')) <> '11111111-1111-1111-1111-111111111111' then raise exception 'FAIL: slug lookup'; end if;
+end $$;
+rollback;
+
+-- 17. app_create_shop: confirmed email only, one shop a person, taken or bad addresses add nothing.
+begin; set local role frata_app;
+do $$ declare t uuid; begin
+  begin perform app_create_shop('aaaaaaaa-0000-0000-0000-000000000003', 'Squat', 'squat-shop', '452009', '{}'); raise exception 'FAIL: unconfirmed email made a shop';
+  exception when raise_exception then if sqlerrm <> 'email_unconfirmed' then raise; end if; end;
+  begin perform app_create_shop('aaaaaaaa-0000-0000-0000-000000000002', 'Second', 'second-shop', '452009', '{}'); raise exception 'FAIL: an owner made a second shop';
+  exception when raise_exception then if sqlerrm <> 'has_shop' then raise; end if; end;
+  begin perform app_create_shop('aaaaaaaa-0000-0000-0000-000000000004', 'Taken', 'proof-a', '452009', '{}'); raise exception 'FAIL: a taken address was accepted';
+  exception when raise_exception then if sqlerrm <> 'slug_taken' then raise; end if; end;
+  begin perform app_create_shop('aaaaaaaa-0000-0000-0000-000000000004', 'Bad', '-bad-', '452009', '{}'); raise exception 'FAIL: a bad address was accepted';
+  exception when raise_exception then if sqlerrm <> 'bad_slug' then raise; end if; end;
+  t := app_create_shop('aaaaaaaa-0000-0000-0000-000000000004', '  Proof C  ', 'proof-c', '452009', array['women','ethnic']);
+  begin perform app_create_shop('aaaaaaaa-0000-0000-0000-000000000004', 'Again', 'proof-d', '452009', '{}'); raise exception 'FAIL: one person made two shops';
+  exception when raise_exception then if sqlerrm <> 'has_shop' then raise; end if; end;
+  perform set_config('app.tenant_id', t::text, true);
+  if (select name from tenants) <> 'Proof C' then raise exception 'FAIL: new shop name'; end if;
+  if (select pickup_pincode from shop_settings) <> '452009' then raise exception 'FAIL: new shop settings'; end if;
+  if (select count(*) from tenant_plans) <> 1 then raise exception 'FAIL: new shop plan'; end if;
+  if (select count(*) from audit_events where action = 'shop.created') <> 1 then raise exception 'FAIL: new shop audit'; end if;
+end $$;
+rollback;
+do $$ begin
+  if exists (select 1 from members where user_id = 'aaaaaaaa-0000-0000-0000-000000000004') then raise exception 'FAIL: a refused or rolled-back creation left a member'; end if;
+end $$;
+
+-- 18. Every app_* definer function pins an empty search_path.
+do $$ declare f record; begin
+  for f in select p.oid::regprocedure as sig, p.proconfig from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+           where n.nspname = 'public' and p.proname like 'app\_%' and p.prosecdef loop
+    if not coalesce('search_path=""' = any(f.proconfig) or 'search_path=' = any(f.proconfig), false) then
+      raise exception 'FAIL: % has search_path %', f.sig, f.proconfig;
+    end if;
+  end loop;
+end $$;
+
+\echo 'tenancy proof — all 18 checks passed'
