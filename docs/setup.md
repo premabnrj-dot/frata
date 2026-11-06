@@ -42,6 +42,11 @@ change the user from `postgres.szqwveysvbbxpjhjlnwl` to
 postgresql://frata_app.szqwveysvbbxpjhjlnwl:<password>@<pooler host>:6543/postgres
 ```
 
+The user part is exactly `frata_app.szqwveysvbbxpjhjlnwl` — replace `postgres`,
+do not prefix it. The password must be the **hex** value: base64 contains `/`
+and `+`, which break the URL (the app now refuses such a URL with a message
+that never includes it — `src/lib/db/url.ts`).
+
 Vercel → frata → Settings → Environment Variables → `DATABASE_URL`,
 type **Sensitive**, Production + Preview. Never the `postgres` user: it
 bypasses every tenant policy.
