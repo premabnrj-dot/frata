@@ -1,5 +1,5 @@
 # Product model: states, categories, attributes, swatches, SEO, product page
-Status: draft · Date: 2026-11-06 · Prototype: (link in the session) · Approved: pending
+Status: approved and built · Date: 2026-11-06 · Prototype: https://claude.ai/artifact/YPKoghPrDtYzHasoJYKEXE · Approved: owner, 2026-11-06 ("go with your recommendations"; Search and sharing collapsed by default)
 
 ## Goal
 Ranked problems 3 (catalogue operations) and 5 (a shop that looks and reads

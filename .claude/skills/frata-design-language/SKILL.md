@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 2.0.0
+  version: 2.1.0
   verified: 2026-11-06
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -116,6 +116,40 @@ micro `text-xs text-muted-foreground`.
   and sheets entering, nothing over 400 ms; a step moves in from the side it
   came from; changed or autofilled values flash once; reduced motion makes
   every change instant.
+
+## Product page and catalogue (owner-approved, 2026-11-06)
+
+- **Status and availability are two things, never one badge.** Status is who
+  can FIND it, set by the merchant: Draft, Active (or Scheduled, with a
+  moment), Unlisted (link only), Archived — its own card and its own action,
+  not part of Save. Availability is whether a size and colour can be BOUGHT
+  now, derived (`src/domains/catalogue/availability.ts`): In stock, Only N
+  left (real stock, at 3 or fewer), Sold out, Pre-order · ships by <date>,
+  Made to order · ships in N–M days. The merchant sets "When it runs out" per
+  size and colour and reads "Shoppers see"; they never type an availability.
+- **Product page order**: description, photos, sizes colours and stock (with
+  each colour's family and swatch), details for its category, size chart, the
+  model, then **Search and sharing — collapsed by default**, its summary line
+  showing the address and "Made for you" or "Edited". Side: Status, Summary,
+  Organise (category, collections, tags), Ready for (what Google and Meta
+  still need, in words). Side cards are not sticky: they are taller than a
+  screen.
+- **Addresses are words** (`/console/products/linen-kurta-set`,
+  `/products/linen-kurta-set` on the shop). Once a product has been live, a
+  new address keeps the old one working as a redirect, and the field says so.
+- **Swatches**: a circle cut from the product photo (prints) or a plain
+  colour; the colour name is always written beside it, the chosen one has a
+  ring (never colour alone), a colour sold out in the chosen size is crossed
+  through but visible. The family ("Rani pink" files under Pink) is what
+  filters and feeds read.
+- **Categories come from the standard list** (Shopify's open taxonomy, pinned
+  release), searched on the server; the category decides which details are
+  asked, fields Google requires are marked "Google asks for this". Frata's
+  additions for Indian crafts and fabrics are marked · and map to the nearest
+  standard value.
+- **Collections**: hand-picked (an order you set) or filled by rules (all or
+  any) with a live "N products match now" count; a product shows the
+  hand-picked ones as toggles and the rule-based ones it is in, in words.
 
 ## Words a merchant reads
 

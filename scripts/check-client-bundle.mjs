@@ -22,12 +22,18 @@ function* files(dir) {
   }
 }
 
-let found = []
+// The 250 KB category list (src/domains/catalogue/taxonomy.ts) is read on the
+// server; a browser that needs a category asks for it. A category name only it
+// holds marks a chunk that bundled it.
+const TAXONOMY = 'Traditional & Ceremonial Clothing > Kurtas'
+
+let found = [], taxonomy = []
 try {
   for (const f of files(ROOT)) {
     const text = readFileSync(f, 'utf8')
     const hits = SENTINELS.filter(s => text.includes(s))
     if (hits.length) found.push(`${f}  (${hits.join(', ')})`)
+    if (text.includes(TAXONOMY)) taxonomy.push(f)
   }
 } catch (e) {
   console.error(`check:client-bundle — no ${ROOT} to read; run it after next build.`)
@@ -39,6 +45,13 @@ if (found.length) {
   for (const f of found) console.error('  ' + f)
   console.error('\n  A client component imports something that carries merchant costs.')
   console.error('  Compute on the server and pass the client a formatted value.')
+  process.exit(1)
+}
+if (taxonomy.length) {
+  console.error('check:client-bundle — the category list is in the browser bundle:')
+  for (const f of taxonomy) console.error('  ' + f)
+  console.error('\n  A client file imports a value from catalogue/taxonomy.ts. Import only types there;')
+  console.error('  ask the server (findCategories, categoryDetails) or use catalogue/category-id.ts.')
   process.exit(1)
 }
 console.log('check:client-bundle — clean')

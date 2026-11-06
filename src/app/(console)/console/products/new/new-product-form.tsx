@@ -18,7 +18,7 @@ export function NewProductForm() {
       start(async () => {
         const r = await createProduct({ title })
         if (!r.ok) return setError(r.error)
-        router.replace(`/console/products/${r.id}`)
+        router.replace(`/console/products/${r.handle}`)
       })
     }}>
       <Link href="/console/products" className="text-sm text-muted-foreground hover:text-foreground">← Products</Link>

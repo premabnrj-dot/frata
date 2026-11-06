@@ -99,6 +99,20 @@
       "when": 1794001181158,
       "tag": "0013_catalogue_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794003794395,
+      "tag": "0014_product_model",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1794003815871,
+      "tag": "0015_product_model_access",
+      "breakpoints": true
     }
   ]
 }

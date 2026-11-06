@@ -2,10 +2,19 @@
 
 import { useState } from 'react'
 import type { VariantInput } from '@/domains/catalogue/product-form'
+import { availability, type WhenOut } from '@/domains/catalogue/availability'
 import { combinations, groupOption, keyOf, type Option } from '@/domains/catalogue/variants'
 
 export type Cell = Omit<VariantInput, 'values'>
-export const EMPTY_CELL: Cell = { price: '', compareAt: '', cost: '', stock: '0', sku: '' }
+export const EMPTY_CELL: Cell = { price: '', compareAt: '', cost: '', stock: '0', sku: '', whenOut: 'stop', shipsBy: '', leadMin: '', leadMax: '', cap: '' }
+
+/** What shoppers see for one cell right now: derived, never typed (availability.ts). */
+export function shopperSees(c: Cell, now = new Date()) {
+  const lead = Number(c.leadMin) || null
+  return availability({ stock: Number(c.stock) || 0, whenOut: c.whenOut ?? 'stop', shipsBy: c.shipsBy || null, leadMinDays: lead, leadMaxDays: Number(c.leadMax) || lead, preorderCap: c.cap ? Number(c.cap) : null }, now)
+}
+const SEES_TONE = { in_stock: 'text-ok-text', low_stock: 'text-warn-text', sold_out: 'text-danger-text', preorder: 'text-info-text', made_to_order: 'text-info-text' } as const
+const WHEN_OUT: [WhenOut, string][] = [['stop', 'Stop selling'], ['preorder', 'Take pre-orders'], ['made_to_order', 'Make to order']]
 
 /**
  * Every size × colour, grouped by colour (collapsed past 12 rows), with "set
@@ -24,9 +33,9 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku }: {
   const g = groupOption(options)
   const groups = g < 0 ? [{ label: '', rows: combos }] : options[g]!.values.map((v) => ({ label: v, rows: combos.filter((c) => c[g] === v) }))
   const [open, setOpen] = useState<Record<string, boolean>>({})
-  const [every, setEvery] = useState({ price: '', stock: '' })
+  const [every, setEvery] = useState({ price: '', stock: '', whenOut: '' as WhenOut | '' })
   const collapse = combos.length > 12
-  const fill = (field: 'price' | 'stock', value: string, rows: string[][]) => rows.forEach((c) => onChange(keyOf(c), { [field]: value }))
+  const fill = (field: 'price' | 'stock' | 'whenOut', value: string, rows: string[][]) => rows.forEach((c) => onChange(keyOf(c), { [field]: value }))
   const err = (k: string, f: string) => errors[`v:${k}:${f}`]
 
   const rowId = new Map(combos.map((c, i) => [keyOf(c), i]))
@@ -48,18 +57,22 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku }: {
         <div className="space-y-1"><label htmlFor="every-stock" className="block text-xs font-medium">Set every stock</label>
           <div className="flex gap-1.5"><input id="every-stock" inputMode="numeric" value={every.stock} onChange={(e) => setEvery({ ...every, stock: e.target.value })} className="h-8 w-20 rounded-md border border-input bg-card px-2 font-mono text-sm" />
             <button type="button" className="h-8 rounded-md border border-border bg-card px-2.5 text-sm" disabled={!every.stock} onClick={() => fill('stock', every.stock, combos)}>Apply</button></div></div>
+        <div className="space-y-1"><label htmlFor="every-out" className="block text-xs font-medium">When any runs out</label>
+          <div className="flex gap-1.5"><select id="every-out" value={every.whenOut} onChange={(e) => setEvery({ ...every, whenOut: e.target.value as WhenOut })} className="h-8 rounded-md border border-input bg-card px-2 text-sm">
+            <option value="">Choose…</option>{WHEN_OUT.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+            <button type="button" className="h-8 rounded-md border border-border bg-card px-2.5 text-sm" disabled={!every.whenOut} onClick={() => fill('whenOut', every.whenOut, combos)}>Apply</button></div></div>
       </div>
       <div className="relative overflow-x-auto rounded-md border border-border">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr className="[&>th]:px-2 [&>th]:py-2">
-            <th>{options.map((o) => o.name).join(' / ') || 'Product'}</th><th>Price, ₹</th><th>Compare at, ₹</th><th>Your cost, ₹</th><th>Stock</th><th>SKU</th></tr></thead>
+            <th>{options.map((o) => o.name).join(' / ') || 'Product'}</th><th>Price, ₹</th><th>Compare at, ₹</th><th>Your cost, ₹</th><th>Stock</th><th>When it runs out</th><th>Shoppers see</th><th>SKU</th></tr></thead>
           {groups.map((grp) => {
             const shut = collapse && grp.label && !open[grp.label]
-            const sold = grp.rows.filter((c) => (Number((cells[keyOf(c)] ?? EMPTY_CELL).stock) || 0) === 0).length
+            const sold = grp.rows.filter((c) => !shopperSees(cells[keyOf(c)] ?? EMPTY_CELL).canBuy).length
             return (
               <tbody key={grp.label || 'all'} className="border-t border-border">
                 {grp.label && (
-                  <tr className="bg-card"><td colSpan={6} className="px-2 py-1.5">
+                  <tr className="bg-card"><td colSpan={8} className="px-2 py-1.5">
                     <button type="button" aria-expanded={!shut} className="flex w-full items-center gap-2 text-left font-medium" onClick={() => setOpen({ ...open, [grp.label]: shut ? true : false })}>
                       <span aria-hidden="true" className={`inline-block transition-transform duration-fast ${shut ? '' : 'rotate-90'}`}>›</span>{grp.label}
                       <span className="text-xs font-normal text-muted-foreground">{grp.rows.length} · {sold ? `${sold} sold out` : 'all in stock'}</span>
@@ -69,7 +82,10 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku }: {
                 {!shut && grp.rows.map((c) => {
                   const k = keyOf(c)
                   const label = c.filter((_, i) => i !== g).join(' / ') || 'This product'
-                  const rowErr = ['price', 'compareAt', 'cost', 'stock', 'sku'].map((f) => err(k, f)).find(Boolean)
+                  const rowErr = ['price', 'compareAt', 'cost', 'stock', 'sku', 'shipsBy', 'cap', 'lead'].map((f) => err(k, f)).find(Boolean)
+                  const cell = cells[k] ?? EMPTY_CELL
+                  const sees = shopperSees(cell)
+                  const i = rowId.get(k)
                   return (
                     <tr key={k} className="border-t border-border/60 [&>td]:px-2 [&>td]:py-1.5">
                       <td className="whitespace-nowrap">{label}{rowErr && <span className="block text-xs text-danger-text">{rowErr}</span>}</td>
@@ -77,6 +93,31 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku }: {
                       <td>{input(k, 'compareAt', `Compare-at price for ${c.join(' ')}`)}</td>
                       <td>{input(k, 'cost', `Your cost for ${c.join(' ')}`)}</td>
                       <td>{input(k, 'stock', `Stock for ${c.join(' ')}`, true, 'w-16')}</td>
+                      <td className="min-w-44">
+                        <label htmlFor={`out-${i}`} className="sr-only">When {c.join(' ')} runs out</label>
+                        <select id={`out-${i}`} value={cell.whenOut ?? 'stop'} onChange={(e) => onChange(k, { whenOut: e.target.value as WhenOut })} className="h-8 w-full rounded-md border border-input bg-card px-1.5 text-sm">
+                          {WHEN_OUT.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                        </select>
+                        {cell.whenOut === 'preorder' && (
+                          <div className="mt-1 flex gap-1">
+                            <label className="sr-only" htmlFor={`ships-${i}`}>Ships by, for {c.join(' ')}</label>
+                            <input id={`ships-${i}`} type="date" value={cell.shipsBy ?? ''} aria-invalid={!!err(k, 'shipsBy') || undefined} onChange={(e) => onChange(k, { shipsBy: e.target.value })} className="h-8 w-36 rounded-md border border-input bg-card px-1.5 text-xs aria-invalid:border-danger-text" />
+                            <label className="sr-only" htmlFor={`cap-${i}`}>Most pre-orders, for {c.join(' ')}</label>
+                            <input id={`cap-${i}`} inputMode="numeric" placeholder="No limit" title="Most pre-orders to take" value={cell.cap ?? ''} aria-invalid={!!err(k, 'cap') || undefined} onChange={(e) => onChange(k, { cap: e.target.value })} className="h-8 w-20 rounded-md border border-input bg-card px-1.5 font-mono text-xs aria-invalid:border-danger-text" />
+                          </div>
+                        )}
+                        {cell.whenOut === 'made_to_order' && (
+                          <div className="mt-1 flex items-center gap-1 text-xs">
+                            <label className="sr-only" htmlFor={`lmin-${i}`}>Fewest days to make, for {c.join(' ')}</label>
+                            <input id={`lmin-${i}`} inputMode="numeric" placeholder="7" value={cell.leadMin ?? ''} aria-invalid={!!err(k, 'lead') || undefined} onChange={(e) => onChange(k, { leadMin: e.target.value })} className="h-8 w-12 rounded-md border border-input bg-card px-1.5 font-mono aria-invalid:border-danger-text" />
+                            <span aria-hidden="true">–</span>
+                            <label className="sr-only" htmlFor={`lmax-${i}`}>Most days to make, for {c.join(' ')}</label>
+                            <input id={`lmax-${i}`} inputMode="numeric" placeholder="10" value={cell.leadMax ?? ''} aria-invalid={!!err(k, 'lead') || undefined} onChange={(e) => onChange(k, { leadMax: e.target.value })} className="h-8 w-12 rounded-md border border-input bg-card px-1.5 font-mono aria-invalid:border-danger-text" />
+                            <span className="text-muted-foreground">days</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className={`whitespace-nowrap text-xs ${SEES_TONE[sees.kind]}`}>{sees.label}</td>
                       <td>{input(k, 'sku', `SKU for ${c.join(' ')}`, true, 'w-40', autoSku(c))}</td>
                     </tr>
                   )
@@ -86,6 +127,7 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku }: {
           })}
         </table>
       </div>
+      <p className="text-xs text-muted-foreground">When it runs out applies once stock reaches 0: stop selling (sold out, still shown), take pre-orders with a ship-by date, or make to order with the days it takes. Shoppers see the result; you never type it.</p>
       <p className="text-xs text-muted-foreground">An empty SKU is made for you when you save (shown in grey); type your own to replace it. Your cost is never shown to shoppers. It is how Frata will work out profit on each order. Leave it empty if you do not know it yet.</p>
     </div>
   )

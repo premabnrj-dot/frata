@@ -1,0 +1,62 @@
+// =============================================================================
+// FILE: src/domains/catalogue/availability.ts
+//
+// TWO QUESTIONS, KEPT APART (owner-approved product model, 2026-11-06):
+//   status       — can shoppers FIND the product? set by the merchant.
+//   availability — can they BUY this size and colour NOW? derived here from
+//                  stock, the variant's "when it runs out" rule and dates.
+// Never stored: a stored "sold out" disagrees with stock the moment one sells.
+// Pure; `now` is passed in.
+// =============================================================================
+
+export type Status = 'draft' | 'active' | 'unlisted' | 'archived'
+export type WhenOut = 'stop' | 'preorder' | 'made_to_order'
+
+/** "Only N left" shows at or below this. Real stock only (CCPA false-urgency rule). */
+export const LOW_STOCK_AT = 3
+
+export type VariantFacts = { stock: number; whenOut: WhenOut; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; preorderCap: number | null; preordered?: number }
+export type Availability =
+  | { kind: 'in_stock'; canBuy: true; label: string; google: 'in_stock' }
+  | { kind: 'low_stock'; canBuy: true; label: string; left: number; google: 'in_stock' }
+  | { kind: 'sold_out'; canBuy: false; label: string; google: 'out_of_stock' }
+  | { kind: 'preorder'; canBuy: true; label: string; shipsBy: string; google: 'preorder'; availabilityDate: string }
+  | { kind: 'made_to_order'; canBuy: true; label: string; leadDays: [number, number]; google: 'in_stock' }
+
+const day = (iso: string) => new Date(`${iso}T00:00:00+05:30`)
+const fmt = (iso: string) => day(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })
+
+export function availability(v: VariantFacts, now: Date): Availability {
+  if (v.stock > LOW_STOCK_AT) return { kind: 'in_stock', canBuy: true, label: 'In stock', google: 'in_stock' }
+  if (v.stock > 0) return { kind: 'low_stock', canBuy: true, left: v.stock, label: `Only ${v.stock} left`, google: 'in_stock' }
+  if (v.whenOut === 'preorder' && v.shipsBy && day(v.shipsBy) > now && (v.preorderCap === null || (v.preordered ?? 0) < v.preorderCap)) {
+    return { kind: 'preorder', canBuy: true, shipsBy: v.shipsBy, label: `Pre-order · ships by ${fmt(v.shipsBy)}`, google: 'preorder', availabilityDate: `${v.shipsBy}T00:00:00+05:30` }
+  }
+  if (v.whenOut === 'made_to_order' && v.leadMinDays && v.leadMaxDays) {
+    return { kind: 'made_to_order', canBuy: true, leadDays: [v.leadMinDays, v.leadMaxDays], label: `Made to order · ships in ${v.leadMinDays}–${v.leadMaxDays} days`, google: 'in_stock' }
+  }
+  return { kind: 'sold_out', canBuy: false, label: 'Sold out', google: 'out_of_stock' }
+}
+
+/** What a product's status means for shoppers, search and feeds at this moment. */
+export function visibility(status: Status, publishAt: Date | null, now: Date) {
+  const scheduled = status === 'active' && publishAt !== null && publishAt > now
+  const live = (status === 'active' && !scheduled) || status === 'unlisted'
+  return {
+    scheduled,
+    /** Opens at its address. */
+    reachable: live,
+    /** In menus, collections, search, the sitemap, Google and Meta. */
+    listed: status === 'active' && !scheduled,
+    indexable: status === 'active' && !scheduled,
+    canBuy: live,
+    /** What a shopper gets at its address when it is not reachable. */
+    http: live ? 200 : status === 'archived' ? 301 : 404,
+  } as const
+}
+
+/** The label a merchant reads for a status (with scheduling). */
+export function statusLabel(status: Status, publishAt: Date | null, now: Date): string {
+  if (visibility(status, publishAt, now).scheduled) return 'Scheduled'
+  return { draft: 'Draft', active: 'Active', unlisted: 'Unlisted', archived: 'Archived' }[status]
+}

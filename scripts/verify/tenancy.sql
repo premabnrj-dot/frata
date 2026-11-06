@@ -336,4 +336,46 @@ do $$ begin
   if has_table_privilege('frata_admin', 'variants', 'select') or has_table_privilege('frata_admin', 'products', 'select') then raise exception 'FAIL: admin reads the catalogue directly'; end if;
 end $$;
 
-\echo 'tenancy proof — all 20 checks passed'
+-- 21. Product model: colours, attributes, collections, handle history — own shop only; history append-only.
+insert into collections (id, tenant_id, handle, title, kind) values ('ffffffff-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'festive', 'Festive', 'manual');
+insert into collection_products (tenant_id, collection_id, product_id) values ('22222222-2222-2222-2222-222222222222', 'ffffffff-0000-0000-0000-00000000000b', 'eeeeeeee-0000-0000-0000-00000000000b');
+insert into product_colours (tenant_id, product_id, value, family) values ('22222222-2222-2222-2222-222222222222', 'eeeeeeee-0000-0000-0000-00000000000b', 'Indigo', '2');
+insert into product_handle_history (tenant_id, handle, product_id) values ('22222222-2222-2222-2222-222222222222', 'old-b', 'eeeeeeee-0000-0000-0000-00000000000b');
+insert into product_attributes (tenant_id, product_id, attribute, values) values ('22222222-2222-2222-2222-222222222222', 'eeeeeeee-0000-0000-0000-00000000000b', 'fabric', '{frata:chanderi}');
+insert into product_images (id, tenant_id, product_id, base, widths, width, height) values
+  ('abababab-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', 'https://s.public.blob.vercel-storage.com/tenants/11111111-1111-1111-1111-111111111111/products/a', '{400}', 1, 1),
+  ('abababab-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'eeeeeeee-0000-0000-0000-00000000000b', 'https://s.public.blob.vercel-storage.com/tenants/22222222-2222-2222-2222-222222222222/products/b2', '{400}', 1, 1);
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if exists (select 1 from collections) or exists (select 1 from collection_products) or exists (select 1 from product_colours) or exists (select 1 from product_handle_history) then raise exception 'FAIL: A sees B product model rows'; end if;
+  begin insert into collection_products (tenant_id, collection_id, product_id) values ('11111111-1111-1111-1111-111111111111', 'ffffffff-0000-0000-0000-00000000000b', 'eeeeeeee-0000-0000-0000-00000000000a'); raise exception 'FAIL: A added to B collection';
+  exception when foreign_key_violation then null; end;
+  begin insert into product_colours (tenant_id, product_id, value) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000b', 'Red'); raise exception 'FAIL: A coloured B product';
+  exception when foreign_key_violation then null; end;
+  begin insert into product_handle_history (tenant_id, handle, product_id) values ('11111111-1111-1111-1111-111111111111', 'old-b', 'eeeeeeee-0000-0000-0000-00000000000b'); raise exception 'FAIL: A pointed a handle at B product';
+  exception when foreign_key_violation then null; end;
+  insert into product_handle_history (tenant_id, handle, product_id) values ('11111111-1111-1111-1111-111111111111', 'old-a', 'eeeeeeee-0000-0000-0000-00000000000a');
+  begin update product_handle_history set product_id = 'eeeeeeee-0000-0000-0000-00000000000a'; raise exception 'FAIL: app re-pointed an old address'; exception when insufficient_privilege then null; end;
+  begin delete from product_handle_history; raise exception 'FAIL: app deleted an old address'; exception when insufficient_privilege then null; end;
+  update collections set title = 'x'; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A renamed B collection'; end if;
+  if exists (select 1 from product_attributes) then raise exception 'FAIL: A sees B details'; end if;
+  update product_attributes set values = '{x}'; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A changed B details'; end if;
+  begin insert into product_attributes (tenant_id, product_id, attribute, values) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000b', 'fabric', '{x}'); raise exception 'FAIL: A gave B product details';
+  exception when foreign_key_violation then null; end;
+  -- A swatch crop from another shop's photo: refused by the composite key.
+  begin insert into product_colours (tenant_id, product_id, value, crop_image_id) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', 'Rust',
+    'abababab-0000-0000-0000-00000000000b'); raise exception 'FAIL: A cropped B photo';
+  exception when foreign_key_violation then null; end;
+  -- Removing a photo used as a swatch clears only the crop; the colour keeps its shop.
+  insert into product_colours (tenant_id, product_id, value, crop_image_id, crop) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', 'Indigo', 'abababab-0000-0000-0000-00000000000a', '{"x":0.5,"y":0.5,"r":0.1}');
+  delete from product_images where id = 'abababab-0000-0000-0000-00000000000a';
+  if (select crop_image_id from product_colours where value = 'Indigo') is not null then raise exception 'FAIL: crop survived its photo'; end if;
+end $$;
+rollback;
+do $$ begin
+  if has_table_privilege('frata_admin', 'collections', 'select') or has_table_privilege('frata_admin', 'product_colours', 'select') or has_table_privilege('frata_admin', 'product_attributes', 'select')
+    or has_table_privilege('frata_admin', 'collection_products', 'select') or has_table_privilege('frata_admin', 'product_handle_history', 'select') then raise exception 'FAIL: admin reads the product model directly'; end if;
+end $$;
+
+\echo 'tenancy proof — all 21 checks passed'

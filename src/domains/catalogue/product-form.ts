@@ -6,7 +6,7 @@
 // Also: whether a product is ready to show, in the merchant's words.
 // =============================================================================
 
-import { cleanOptions, combinations, keyOf, type Option } from './variants'
+import { cleanOptions, combinations, handleFor, keyOf, type Option } from './variants'
 
 /** "2,490" or "2490.50" → 249050 paise; null when it is not a price. */
 export function parseRupees(text: string): number | null {
@@ -23,16 +23,33 @@ export function rupeesText(paise: number | null): string {
   return p ? `${r}.${String(p).padStart(2, '0')}` : String(r)
 }
 
-export type VariantInput = { values: string[]; price: string; compareAt: string; cost: string; stock: string; sku: string }
+export type WhenOutInput = 'stop' | 'preorder' | 'made_to_order'
+export type VariantInput = {
+  values: string[]; price: string; compareAt: string; cost: string; stock: string; sku: string
+  whenOut?: WhenOutInput; shipsBy?: string; leadMin?: string; leadMax?: string; cap?: string
+}
+export type ColourInput = { value: string; family: string | null; hex: string | null; crop: { imageId: string; x: number; y: number; r: number } | null }
 export type ProductInput = {
   title: string; description: string; typeId: string | null; modelHeight: string; modelSize: string
   options: Option[]; variants: VariantInput[]
+  handle?: string; seoTitle?: string; seoDescription?: string; categoryId?: string | null
+  attributes?: Record<string, string[]>; colours?: ColourInput[]; tags?: string[]
 }
-export type CleanVariant = { values: string[]; price: number; compareAt: number | null; unitCost: number | null; stock: number; sku: string | null }
-export type CleanProduct = Omit<ProductInput, 'options' | 'variants'> & { options: Option[]; variants: CleanVariant[] }
+export type CleanVariant = {
+  values: string[]; price: number; compareAt: number | null; unitCost: number | null; stock: number; sku: string | null
+  whenOut: WhenOutInput; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; preorderCap: number | null
+}
+export type CleanProduct = Omit<ProductInput, 'options' | 'variants' | 'handle' | 'seoTitle' | 'seoDescription' | 'colours' | 'tags' | 'attributes' | 'categoryId'> & {
+  options: Option[]; variants: CleanVariant[]; handle: string; seoTitle: string; seoDescription: string; categoryId: string | null
+  attributes: Record<string, string[]>; colours: ColourInput[]; tags: string[]
+}
+
+export const HANDLE_SHAPE = /^[a-z0-9]([a-z0-9-]{0,98}[a-z0-9])?$/
+const DATE = /^\d{4}-\d{2}-\d{2}$/
+const isoDay = (d: Date) => new Date(d.getTime() + 330 * 60000).toISOString().slice(0, 10)
 
 /** Errors keyed "title", "options", or "v:<values>:<field>" for one grid cell. */
-export function cleanProduct(p: ProductInput): { ok: true; product: CleanProduct } | { ok: false; errors: Record<string, string> } {
+export function cleanProduct(p: ProductInput, now = new Date()): { ok: true; product: CleanProduct } | { ok: false; errors: Record<string, string> } {
   const errors: Record<string, string> = {}
   const title = p.title.trim().replace(/\s+/g, ' ')
   if (!title) errors.title = 'Your product needs a name.'
@@ -60,22 +77,52 @@ export function cleanProduct(p: ProductInput): { ok: true; product: CleanProduct
       if (sku && !/^[A-Za-z0-9._/-]{1,40}$/.test(sku)) errors[cell('sku')] = 'Letters, digits and - _ . / only.'
       else if (sku && skus.has(sku.toUpperCase())) errors[cell('sku')] = `Also used by ${skus.get(sku.toUpperCase())}.`
       if (sku) skus.set(sku.toUpperCase(), values.join(' / ') || 'this product')
-      variants.push({ values, price: price ?? 0, compareAt, unitCost, stock: Number(stockText) || 0, sku })
+      // When it runs out: pre-order needs a ship-by date within a year (Google's limit); made to order needs lead days.
+      const whenOut: WhenOutInput = v?.whenOut === 'preorder' || v?.whenOut === 'made_to_order' ? v.whenOut : 'stop'
+      let shipsBy: string | null = null, leadMinDays: number | null = null, leadMaxDays: number | null = null, preorderCap: number | null = null
+      if (whenOut === 'preorder') {
+        const d = (v?.shipsBy ?? '').trim(), today = isoDay(now), max = isoDay(new Date(now.getTime() + 365 * 86400000))
+        if (!DATE.test(d) || d <= today || d > max) errors[cell('shipsBy')] = 'A ship-by date after today, within a year.'
+        else shipsBy = d
+        const cap = (v?.cap ?? '').trim()
+        if (cap && !/^\d{1,6}$/.test(cap)) errors[cell('cap')] = 'A whole number, or empty for no limit.'
+        else preorderCap = cap ? Number(cap) : null
+      }
+      if (whenOut === 'made_to_order') {
+        const a = Number((v?.leadMin ?? '').trim()), b = Number((v?.leadMax ?? '').trim() || a)
+        if (!Number.isInteger(a) || a < 1 || a > 120 || !Number.isInteger(b) || b < a || b > 120) errors[cell('lead')] = 'Days to make it: 1 to 120, the second not below the first.'
+        else { leadMinDays = a; leadMaxDays = b }
+      }
+      variants.push({ values, price: price ?? 0, compareAt, unitCost, stock: Number(stockText) || 0, sku, whenOut, shipsBy, leadMinDays, leadMaxDays, preorderCap })
     }
   }
+  const handle = (p.handle ?? '').trim().toLowerCase() || handleFor(title)
+  if (!HANDLE_SHAPE.test(handle) || handle.includes('--')) errors.handle = 'Lowercase letters, digits and hyphens, like linen-kurta-set.'
+  const seoTitle = (p.seoTitle ?? '').trim(), seoDescription = (p.seoDescription ?? '').trim()
+  if (seoTitle.length > 200) errors.seoTitle = 'Up to 200 characters.'
+  if (seoDescription.length > 400) errors.seoDescription = 'Up to 400 characters.'
+  const tags = [...new Set((p.tags ?? []).map((t) => t.trim().replace(/\s+/g, ' ')).filter(Boolean))]
+  if (tags.length > 20 || tags.some((t) => t.length > 40)) errors.tags = 'Up to 20 tags of up to 40 characters.'
+  // Colours: only values the colour option has; a family from the standard list (checked by the caller), #rrggbb, or a crop inside the photo.
+  const colourOpt = opts.ok ? opts.options.find((o) => /^colou?rs?$/i.test(o.name)) : undefined
+  const colours = (p.colours ?? []).filter((c) => colourOpt?.values.includes(c.value)).map((c) => ({
+    value: c.value, family: c.family || null, hex: c.hex && /^#[0-9a-f]{6}$/i.test(c.hex) ? c.hex.toLowerCase() : null,
+    crop: c.crop && /^[0-9a-f-]{36}$/.test(c.crop.imageId) && [c.crop.x, c.crop.y].every((n) => n >= 0 && n <= 1) && c.crop.r >= 0.03 && c.crop.r <= 0.5 ? c.crop : null,
+  }))
   if (Object.keys(errors).length) return { ok: false, errors }
-  return { ok: true, product: { title, description: p.description.trim(), typeId: p.typeId, modelHeight: p.modelHeight.trim().slice(0, 30), modelSize: p.modelSize.trim().slice(0, 10), options: opts.ok ? opts.options : [], variants } }
+  return { ok: true, product: { title, description: p.description.trim(), typeId: p.typeId, modelHeight: p.modelHeight.trim().slice(0, 30), modelSize: p.modelSize.trim().slice(0, 10), options: opts.ok ? opts.options : [], variants,
+    handle, seoTitle, seoDescription, categoryId: p.categoryId ?? null, attributes: p.attributes ?? {}, colours, tags } }
 }
 
 export type Readiness = { label: string; ok: boolean }[]
 
 /** What a product needs before shoppers see it — shown as a list, Publish stays off until all are met. */
-export function readiness(p: { title: string; photos: number; prices: number[]; hasSizes: boolean; chartRows: number; anyStock: boolean }): Readiness {
+export function readiness(p: { title: string; photos: number; prices: number[]; hasSizes: boolean; chartRows: number; anyBuyable: boolean }): Readiness {
   return [
     { label: 'A name', ok: !!p.title.trim() },
     { label: 'At least one photo', ok: p.photos > 0 },
     { label: 'A price on every size and colour', ok: p.prices.length > 0 && p.prices.every((x) => x > 0) },
     { label: 'A size chart for its type', ok: !p.hasSizes || p.chartRows > 0 },
-    { label: 'Something in stock', ok: p.anyStock },
+    { label: 'Something shoppers can buy (in stock, or taking pre-orders)', ok: p.anyBuyable },
   ]
 }
