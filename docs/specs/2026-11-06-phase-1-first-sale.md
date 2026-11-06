@@ -1,5 +1,5 @@
 # Phase 1 — First sale
-Status: active (v3) · Date: 2026-11-06 · Prototype: https://claude.ai/artifact/QJ3N5knGqGZniMCsZJn7Fu · Approved: owner, 2026-11-06 ("approved, go with your recommendations")
+Status: active (v3; build plan reviewed 2026-11-06: docs/plans/2026-11-06-phase-1-first-sale.md) · Date: 2026-11-06 · Prototype: https://claude.ai/artifact/QJ3N5knGqGZniMCsZJn7Fu · Approved: owner, 2026-11-06 ("approved, go with your recommendations")
 (v1 canvas mockup, superseded: https://claude.ai/artifact/NvAiqDdfikTq97hFtUfFYX)
 
 ## Goal
@@ -31,7 +31,7 @@ phones, in an afternoon.
 
 ### 1A·2 Catalogue
 - Research: Shopify variant redesign (2026-10-28): options first, variants on the product page, grouped, bulk-edited. Baymard sizing: a chart per product type in cm and inches, how to measure, the model's height and size.
-- Build: variants generated from options, grouped by colour, collapsed past 12 rows; "set every price"; size chart owned by the product type (count of products shown); photos resized once at upload to 400/800/1600 px AVIF+WebP (no per-view transforms billed); a variant with orders is archived, never deleted — orders snapshot name, size, price.
+- Build: variants generated from options, grouped by colour, collapsed past 12 rows; "set every price"; size chart owned by the product type (count of products shown); photos resized once at upload to 400/800/1200/1600 px WebP (no per-view transforms billed); a variant with orders is archived, never deleted — orders snapshot name, size, price.
 - Stress: 6 × 8 = 48 variants → grouped, one transaction · two editors → save checks the loaded version, the second sees both, never a silent overwrite · 20 MB photo on slow network → resized in the browser (≤ 3 MB sent), progress, form usable · removing a size with open orders → refused with order numbers.
 
 ### 1B Storefront
