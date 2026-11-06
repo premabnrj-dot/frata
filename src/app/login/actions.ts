@@ -1,15 +1,48 @@
 'use server'
 
 import { z } from 'zod'
+import { destinationAfterSignIn } from '@/lib/auth/after-sign-in'
 import { sendSignInLink } from '@/lib/auth/send-link'
+import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
+import { clientIp } from '@/lib/http/client-ip'
+import { createServerSupabase } from '@/lib/supabase/server'
 
-// ENTRY POINT credential: none needed — it only asks Supabase to email a link
-// to the address given; access is decided by requireMember/requireStaff after sign-in.
-const Email = z.object({ email: z.email() })
+// ENTRY POINT credential: none needed — sendCode only asks Supabase to email a
+// link and a code to the address given; verifyCode proves the person holds that
+// inbox. Access is decided afterwards by requireMember/requireStaff/requireUser.
+// Both are rate limited per email and per IP (src/lib/db/rate-limit.ts).
 
-export async function sendMagicLink(_: unknown, form: FormData): Promise<{ sent: boolean; error?: string }> {
-  const parsed = Email.safeParse({ email: form.get('email') })
-  if (!parsed.success) return { sent: false, error: 'Enter a valid email address' }
-  const r = await sendSignInLink(parsed.data.email)
-  return r.sent ? { sent: true } : { sent: false, error: r.error }
+const Email = z.object({ email: z.email().max(254) })
+const Code = z.object({ email: z.email().max(254), code: z.string().regex(/^\d{6}$/) })
+
+export type SendResult = { sent: true; email: string } | { sent: false; error: string }
+
+export async function sendCode(input: { email: string }): Promise<SendResult> {
+  const parsed = Email.safeParse({ email: String(input.email ?? '').trim().toLowerCase() })
+  if (!parsed.success) return { sent: false, error: 'That does not look like an email address.' }
+  const email = parsed.data.email
+  if (!(await withinLimit(LIMITS.sendCodeIp, await clientIp())) || !(await withinLimit(LIMITS.sendCodeEmail, email))) {
+    return { sent: false, error: 'Too many sign-in emails in the last hour. Try again later.' }
+  }
+  const r = await sendSignInLink(email)
+  return r.sent ? { sent: true, email } : { sent: false, error: r.error }
+}
+
+export type VerifyResult = { ok: true; to: string } | { ok: false; error: string }
+
+export async function verifyCode(input: { email: string; code: string }): Promise<VerifyResult> {
+  const parsed = Code.safeParse({ email: String(input.email ?? '').trim().toLowerCase(), code: String(input.code ?? '').trim() })
+  if (!parsed.success) return { ok: false, error: 'The code is the 6 digits in the email.' }
+  if (!(await withinLimit(LIMITS.verifyCodeEmail, parsed.data.email))) {
+    return { ok: false, error: 'Too many tries. Ask for a new email in a few minutes.' }
+  }
+  try {
+    const supabase = await createServerSupabase()
+    const { data, error } = await supabase.auth.verifyOtp({ email: parsed.data.email, token: parsed.data.code, type: 'email' })
+    if (error || !data.user) return { ok: false, error: 'That code is wrong or has expired. Check the newest email, or ask for another.' }
+    return { ok: true, to: await destinationAfterSignIn(data.user.id) }
+  } catch (err) {
+    console.error('[verifyCode]', err instanceof Error ? err.message : err)
+    return { ok: false, error: 'We could not check the code. Try again in a minute.' }
+  }
 }

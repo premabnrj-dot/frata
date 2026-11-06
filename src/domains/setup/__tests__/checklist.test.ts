@@ -1,0 +1,28 @@
+import { describe, expect, it } from 'vitest'
+import { setupSteps, type SetupFacts } from '../checklist'
+
+const inr = (p: number) => `₹${p / 100}`
+const fresh: SetupFacts = { shopName: 'Kesar Studio', address: 'kesar.frata.store', productCount: 0, legalName: '', grievanceName: '', codOn: true, codMaxPaise: 300000, paymentsConnected: false, publishedAt: null }
+const none = { products: false, settings: false, publish: false }
+
+describe('setupSteps', () => {
+  it('a new shop: named, can take COD, nothing else done', () => {
+    const s = setupSteps(fresh, none, inr)
+    expect(s.map((x) => [x.key, x.done])).toEqual([['shop', true], ['product', false], ['details', false], ['payments', true], ['publish', false]])
+    expect(s.find((x) => x.key === 'payments')!.detail).toContain('₹3000')
+  })
+  it('never links to a page that is not built', () => {
+    expect(setupSteps(fresh, none, inr).every((x) => x.href === null)).toBe(true)
+    expect(setupSteps(fresh, { products: true, settings: true, publish: true }, inr).find((x) => x.key === 'product')!.href).toBe('/console/products')
+  })
+  it('publishing waits for a product and a way to pay', () => {
+    const built = { products: true, settings: true, publish: true }
+    expect(setupSteps(fresh, built, inr).find((x) => x.key === 'publish')!.href).toBeNull()
+    expect(setupSteps({ ...fresh, productCount: 1, codOn: false }, built, inr).find((x) => x.key === 'publish')!.detail).toBe('Needs a way to pay first.')
+    expect(setupSteps({ ...fresh, productCount: 1 }, built, inr).find((x) => x.key === 'publish')!.href).toBe('/console')
+  })
+  it('details are done only with a legal name AND a grievance officer', () => {
+    expect(setupSteps({ ...fresh, legalName: 'Kesar LLP' }, none, inr).find((x) => x.key === 'details')!.done).toBe(false)
+    expect(setupSteps({ ...fresh, legalName: 'Kesar LLP', grievanceName: 'Riya' }, none, inr).find((x) => x.key === 'details')!.done).toBe(true)
+  })
+})

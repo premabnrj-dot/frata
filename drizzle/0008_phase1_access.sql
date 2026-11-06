@@ -30,9 +30,16 @@ create or replace function app_tenant_for_slug(p_slug text)
     select t.id, t.name from public.tenants t where t.slug = lower(p_slug)
 $$;
 --> statement-breakpoint
-revoke all on function app_tenant_for_host(text), app_tenant_for_slug(text) from public, anon, authenticated;
+-- Sign-up asks "is this address free?" before a tenant exists. Answers yes/no, nothing else.
+create or replace function app_slug_available(p_slug text)
+  returns boolean
+  language sql stable security definer set search_path = '' as $$
+    select not exists (select 1 from public.tenants t where t.slug = lower(p_slug))
+$$;
 --> statement-breakpoint
-grant execute on function app_tenant_for_host(text), app_tenant_for_slug(text) to frata_app;
+revoke all on function app_tenant_for_host(text), app_tenant_for_slug(text), app_slug_available(text) from public, anon, authenticated;
+--> statement-breakpoint
+grant execute on function app_tenant_for_host(text), app_tenant_for_slug(text), app_slug_available(text) to frata_app;
 --> statement-breakpoint
 
 -- ── New tables: nothing for the API roles

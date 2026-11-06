@@ -16,11 +16,11 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
 /** Functions that establish who is calling, and refuse who may not. */
-const CHOKEPOINTS = ['requireMember', 'requireStaff', 'asMember']
+const CHOKEPOINTS = ['requireMember', 'requireStaff', 'asMember', 'requireUser', 'requireShop']
 
 /** Entry points that check their own credential: file → [what it is, a token that must appear in it]. */
 const ENTRY_POINTS = {
-  'src/app/login/actions.ts': ['magic link: only emails a link to the address given', 'sendSignInLink('],
+  'src/app/login/actions.ts': ['sign-in: emails a link and code to the address given (rate limited); the code proves the inbox', 'verifyOtp('],
   'src/app/auth/callback/route.ts': ['sign-in: trades the one-time code for a session', 'exchangeCodeForSession('],
   'src/app/api/cron/outbox/route.ts': ['Vercel Cron', 'isCronRequest('],
   'src/app/api/webhooks/razorpay/route.ts': ['Razorpay webhook, HMAC signature over the raw body', 'verifyRazorpaySignature('],
@@ -45,7 +45,7 @@ for (const file of walk('src')) {
     continue
   }
   if (!CHOKEPOINTS.some(c => new RegExp(`\\b${c}\\(`).test(text))) {
-    failures.push(`${file}  ${isAction ? 'server actions' : 'route handler'} with no auth check — call ${CHOKEPOINTS.slice(0, 3).join(' / ')}, or list it in scripts/check-actions.mjs with the credential it checks`)
+    failures.push(`${file}  ${isAction ? 'server actions' : 'route handler'} with no auth check — call ${CHOKEPOINTS.join(' / ')}, or list it in scripts/check-actions.mjs with the credential it checks`)
   }
 }
 // An Admin page is guarded by its own requireStaff (layouts guard nothing below).

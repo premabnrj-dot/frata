@@ -1,14 +1,19 @@
-import { LoginForm } from './login-form'
+import Link from 'next/link'
+import { SignInFlow } from './sign-in-flow'
 
-export default function LoginPage() {
+export const metadata = { title: 'Sign in · Frata' }
+
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ link?: string }> }) {
+  const { link } = await searchParams
   return (
     <main className="flex min-h-dvh items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-6 rounded-md border border-border bg-card p-6">
         <div>
-          <p className="text-sm font-semibold text-brand">Frata</p>
-          <h1 className="mt-1 text-xl font-semibold">Sign in to your store</h1>
+          <Link href="/" className="text-sm font-semibold text-brand">Frata</Link>
+          <h1 className="mt-1 text-xl font-semibold">Sign in to your shop</h1>
         </div>
-        <LoginForm />
+        <SignInFlow intent="signin" linkFailed={link === 'other-browser'} />
+        <p className="text-sm text-muted-foreground">New to Frata? <Link href="/start" className="underline">Start your shop</Link></p>
       </div>
     </main>
   )
