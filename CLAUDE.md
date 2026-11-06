@@ -17,6 +17,10 @@ share neither a look nor a gate:
 - **Storefront** — `src/app/s/[host]/`, a merchant's shop, public, reached by
   host (`src/middleware.ts`, `src/domains/tenancy/host.ts`). Cached.
 
+**The goal:** a small Indian fashion brand keeps more profit per delivered
+order, without a developer. Work that moves none of the ranked problems in
+`frata-planning` § North star waits.
+
 ## Which skill to load
 
 Planning anything → `frata-planning` first. Code that touches the database,
@@ -67,8 +71,10 @@ under our own idempotency key, answered at once, processed later.
 terms monthly. A fact in `frata-integrations` carries the date it was checked
 and its source; older than 90 days, recheck before building on it.
 
-**No feature is executed before its review and mockup are signed off**
-(ADR-0001). The loop is `frata-planning`.
+**Plans are phased, mockup first; nothing is built before the owner approves
+the phase's mockup, and nothing is executed before the review agents have run
+on the plan** (ADR-0001, owner 2026-11-06). Research before UX; approved rules
+go into `frata-design-language`. The loop is `frata-planning`.
 
 **A gate must not match its own documentation.** Gates skip comment lines;
 run a new gate against the file that describes it.
