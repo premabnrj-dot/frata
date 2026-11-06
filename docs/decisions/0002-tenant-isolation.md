@@ -28,5 +28,8 @@ owner: right for a single-business ERP where every reader is staff. Frata is
 multi-tenant, so the database itself must know whose row is whose.
 
 ## Proof
+On Supabase, `postgres` has BYPASSRLS (checked on project `frata`,
+2026-11-06) — the reason the app must never connect as it.
+
 `npm run check:tenant` (shape) and `npm run verify:tenancy` (behaviour, on a real
 Postgres; CI runs it on every push).

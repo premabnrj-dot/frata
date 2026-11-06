@@ -2,7 +2,7 @@
 name: frata-verify
 description: Use before saying a Frata change works - to run the gates, typecheck, tests and production build, prove tenant isolation on a real Postgres, run the built app locally against that database with storefront and console Host headers, and exercise webhooks and cron with curl.
 metadata:
-  version: 1.0.0
+  version: 1.1.0
   verified: 2026-11-06
   covers: ["scripts/verify/**"]
 ---
@@ -36,6 +36,31 @@ no tenant → no rows; A sees only A; the setting ends with the transaction; A
 cannot write into B (orders, outbox); host and membership lookups; API roles
 denied; `frata_app` has no BYPASSRLS. Changed a policy? Also break it on purpose
 (e.g. disable RLS on a table) and confirm the proof fails.
+
+## Live proof on Supabase (nothing kept)
+
+`verify:tenancy` inserts rows, so never run it on a real project. On Supabase,
+run this through `execute_sql`: it grants the switch into `frata_app` (Postgres 17
+does not give the creator SET), proves the policies, and RAISES at the end so the
+grant and the rows roll back. "PROOF PASSED (all rolled back)" as the error is
+the pass; then confirm `tenants`/`orders` counts are unchanged.
+
+```sql
+do $$ declare a uuid := gen_random_uuid(); b uuid := gen_random_uuid(); n int; begin
+  execute 'grant frata_app to postgres with inherit false, set true';
+  insert into tenants (id, slug, name) values (a,'proof-a-'||a,'A'), (b,'proof-b-'||b,'B');
+  insert into orders (tenant_id, number, payment_method, net_revenue, placed_at) values (a,1,'cod',1,now()), (b,1,'cod',1,now());
+  execute 'set local role frata_app';
+  select count(*) into n from orders; if n <> 0 then raise exception 'FAIL no-tenant sees %', n; end if;
+  perform set_config('app.tenant_id', a::text, true);
+  select count(*) into n from orders; if n <> 1 then raise exception 'FAIL A sees %', n; end if;
+  begin insert into orders (tenant_id, number, payment_method, net_revenue, placed_at) values (b,9,'cod',1,now());
+    raise exception 'FAIL A wrote into B'; exception when insufficient_privilege then null; end;
+  raise exception 'PROOF PASSED (all rolled back)';
+end $$;
+```
+
+Then `get_advisors` security and performance.
 
 ## The built app, locally
 

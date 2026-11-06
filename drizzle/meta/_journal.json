@@ -15,6 +15,20 @@
       "when": 1793979158362,
       "tag": "0001_tenant_isolation",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793980725434,
+      "tag": "0002_app_role_timeouts",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793980839126,
+      "tag": "0003_pin_search_path",
+      "breakpoints": true
     }
   ]
 }
