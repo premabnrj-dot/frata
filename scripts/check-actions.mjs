@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Fails: a server action file or route handler that reaches no auth check, and is not an entry point named below with the credential it checks.
+// Fails: a server action file or route handler that reaches no auth check, and is not an entry point named below with the credential it checks; a console page that does not call requireMember itself.
 //
 // ⚠️ WHY. A server action is a public POST endpoint whether or not any page
 // imports it, and a page's sign-in check does not cover the actions on it
@@ -48,6 +48,15 @@ for (const file of walk('src')) {
     failures.push(`${file}  ${isAction ? 'server actions' : 'route handler'} with no auth check — call ${CHOKEPOINTS.slice(0, 3).join(' / ')}, or list it in scripts/check-actions.mjs with the credential it checks`)
   }
 }
+// A console page is guarded by its OWN check: Next renders the layout and the
+// page in parallel, so the layout's requireMember protects nothing below it.
+for (const file of walk('src/app/(console)')) {
+  if (!file.endsWith('/page.tsx')) continue
+  if (!/\brequireMember\(/.test(readFileSync(file, 'utf8'))) {
+    failures.push(`${file}  console page that does not call requireMember( itself — the layout's check does not cover it`)
+  }
+}
+
 for (const file of Object.keys(ENTRY_POINTS)) {
   if (!seen.has(file)) failures.push(`scripts/check-actions.mjs  lists ${file}, which is gone or is no longer an entry point`)
 }

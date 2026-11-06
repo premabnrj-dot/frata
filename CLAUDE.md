@@ -85,7 +85,8 @@ against a throwaway Postgres (`frata-verify`). CI runs all three.
 
 ## Deploying
 
-**Push to `main`. Never `vercel deploy`.** The Vercel project builds every push;
+**Push to `main`. Never `vercel deploy`.** Vercel project `frata` (team
+`premabnrj-dots-projects`, production at frata.vercel.app) builds every push;
 `main` is production, every other branch a preview. Functions run in Mumbai
 (`bom1`, `vercel.json`) beside Supabase ap-south-1 — move one, move the other.
 

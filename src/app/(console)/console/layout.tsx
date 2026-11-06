@@ -3,26 +3,26 @@ import { ConsoleNav } from '@/components/nav/console-nav'
 import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
-import { isDatabaseConfigured } from '@/lib/env'
-import { isAuthConfigured } from '@/lib/public-env'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * Auth only, plus the shell. A refusal renders a panel rather than redirecting:
- * redirecting from a layout breaks the App Router (Ekatan, frata-gotchas).
+ * The shell, and the refusal panel. A refusal renders a panel rather than
+ * redirecting: redirecting from a layout breaks the App Router (frata-gotchas).
+ * ⚠️ This check does NOT protect the pages under it — they render in parallel.
+ * Every page calls requireMember itself.
  */
 export default async function ConsoleLayout({ children }: { children: React.ReactNode }) {
-  if (!isAuthConfigured() || !isDatabaseConfigured()) {
+  const auth = await requireMember(ANY_MEMBER)
+  if (!auth.ok && auth.reason === 'not_configured') {
     return (
       <main className="p-6">
-        <Panel title="Frata is not connected yet">
+        <Panel title={auth.message}>
           Set the Supabase and database variables listed in <code>.env.example</code> in Vercel, then redeploy.
         </Panel>
       </main>
     )
   }
-  const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) {
     return (
       <main className="p-6">

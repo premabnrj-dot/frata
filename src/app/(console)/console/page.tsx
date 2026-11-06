@@ -1,7 +1,10 @@
 import { PageHeader } from '@/components/layout/page-header'
 import { Panel } from '@/components/ui/panel'
+import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 
-export default function ConsoleHome() {
+export default async function ConsoleHome() {
+  const auth = await requireMember(ANY_MEMBER)
+  if (!auth.ok) return <Panel title={auth.message} />
   return (
     <>
       <PageHeader title="Home" />
