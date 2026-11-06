@@ -21,10 +21,12 @@ changed), deployed, and checked in the live logs before the next starts.
 
 - **Merchant data** is tenant rows behind RLS, read through `src/lib/queries/`
   inside `withTenant`, written by console actions through `asMember`.
-- **The storefront's tenant comes from the Host header only**, read by the
-  middleware alone, which rewrites a shop host to `/s/<host>/…` and answers
-  `/s/…` with 404 on every other host (image paths included; amended
-  2026-11-07, `docs/specs/2026-11-07-storefront.md` § Review findings). Pages
+- **The storefront's tenant comes from the Host header only**: the host
+  rewrite in `next.config` (`shopRewrites`) serves a shop host from
+  `/s/<host>/…`, and the middleware answers `/s/…` with 404 on every other host
+  (image paths included; amended 2026-11-07,
+  `docs/specs/2026-11-07-storefront.md` § Review findings and § After the build
+  audit). Pages
   resolve the tenant from `params.host` through one shape-checking helper and
   the cached `tenantForHost`; reading `headers()` in a layout would make every
   shop page uncacheable. Route handlers on a shop host (1C: stock, pincode)

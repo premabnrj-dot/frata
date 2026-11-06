@@ -25,8 +25,8 @@ const ENTRY_POINTS = {
   'src/app/api/cron/outbox/route.ts': ['Vercel Cron', 'isCronRequest('],
   'src/app/api/webhooks/razorpay/route.ts': ['Razorpay webhook, HMAC signature over the raw body', 'verifyRazorpaySignature('],
   // Public, read-only, cached per shop: the shop comes from the host the middleware wrote (shopFor checks its shape).
-  'src/app/s/[host]/sitemap.xml/route.ts': ['a shop\'s sitemap: public, read-only', 'shopFor('],
-  'src/app/s/[host]/robots.txt/route.ts': ['a shop\'s robots.txt: public, read-only', 'shopFor('],
+  'src/app/s/[host]/sitemap.xml/route.ts': ['a shop\'s sitemap: public, read-only', 'shopForRoute('],
+  'src/app/s/[host]/robots.txt/route.ts': ['a shop\'s robots.txt: public, read-only', 'shopForRoute('],
 }
 
 const walk = dir => readdirSync(dir).flatMap(n => {

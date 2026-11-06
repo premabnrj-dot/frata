@@ -226,3 +226,24 @@ the first 50 shops. A host rewrite in `next.config` is the fallback.
 Chromium's `--host-resolver-rules` (preview deployments are console hosts).
 
 **Header collections**: the first five by title that have products.
+
+## After the build audit (2026-11-07)
+- **The shop rewrite moved from the middleware to `next.config`**
+  (`shopRewrites` in `src/domains/tenancy/host.ts`, `beforeFiles`). With a
+  middleware rewrite Next matched the ORIGINAL path against the ISR routes and
+  rendered every shop page per request. Now the middleware only refuses `/s/`
+  on non-shop hosts and malformed hosts; on Vercel the rewrite runs in the
+  routing layer. Shop pages are `force-static` (they read only params, rule 6c).
+  Measured locally: HIT, a console save, one MISS with the new text, HIT.
+  `npm run check:payload` now also fails a page that is not served from cache,
+  and any listed page that is not a 200 (it had silently tested the console,
+  because `fetch` drops a Host header; it uses `node:http` now).
+- **robots.txt and sitemap.xml** are dynamic route handlers with their own CDN
+  header (5 minutes); an unknown host gets a `no-store` 404.
+- **Only root-level files** (favicon.ico, apple-touch-icon.png) skip the shop
+  rewrite; `/console/…` on a shop's address is the shop's 404.
+- **`codMin`/`codMax` are selected**: they are public (the Shipping policy
+  states them) and the product page needs them to say whether Pay on delivery
+  is offered. `cod_blocked_pincodes` is still never selected.
+- **Draft in preview, 404 on the shop** is checked in the Playwright run
+  (frata-verify), not a unit test.

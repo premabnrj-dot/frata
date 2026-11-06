@@ -1,16 +1,17 @@
 import { isListed } from '@/domains/storefront/listing'
 import { shopCatalogue } from '@/lib/queries/storefront'
-import { shopFor } from '../_shop'
+import { shopForRoute } from '../_shop'
 
-export const dynamic = 'force-static'
-export const revalidate = 300
-export const generateStaticParams = () => []
+// Not force-static: a 404 for an unknown host must never be cached (tenancy audit 2026-11-07). The rows are
+// cached by the loaders; the CDN keeps a real shop's answer five minutes.
+export const dynamic = 'force-dynamic'
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;')
 
 /** Home, listed products and collections, policies — from the shop's own address. Empty while opening soon. */
 export async function GET(_req: Request, { params }: { params: Promise<{ host: string }> }) {
-  const shop = await shopFor(params)
+  const shop = await shopForRoute(params)
+  if (!shop) return new Response('Not found', { status: 404, headers: { 'cache-control': 'no-store' } })
   const base = `https://${shop.host}`
   const now = new Date()
   const urls: { loc: string; lastmod?: string }[] = []
@@ -22,5 +23,5 @@ export async function GET(_req: Request, { params }: { params: Promise<{ host: s
     for (const k of ['shipping', 'returns', 'privacy', 'terms', 'contact']) urls.push({ loc: `${base}/policies/${k}` })
   }
   const body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `<url><loc>${esc(u.loc)}</loc>${u.lastmod ? `<lastmod>${u.lastmod}</lastmod>` : ''}</url>`).join('\n')}\n</urlset>\n`
-  return new Response(body, { headers: { 'content-type': 'application/xml; charset=utf-8' } })
+  return new Response(body, { headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, s-maxage=300, stale-while-revalidate=60' } })
 }

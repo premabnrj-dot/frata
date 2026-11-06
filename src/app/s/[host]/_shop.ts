@@ -6,13 +6,15 @@ import { shopIdForHost, shopSettingsFor, type StoreShop } from '@/lib/queries/st
 
 /** A shop page's shop, from the route's host (written only by the middleware, checked for shape here). 404 for anything else. */
 export async function shopFor(params: Promise<{ host: string }>): Promise<StoreShop> {
+  return (await shopForRoute(params)) ?? notFound()
+}
+
+/** The same, null for no shop: route handlers answer their own uncached 404. */
+export async function shopForRoute(params: Promise<{ host: string }>): Promise<StoreShop | null> {
   const host = shopHostParam((await params).host)
-  if (!host || !isDatabaseConfigured()) notFound()
+  if (!host || !isDatabaseConfigured()) return null
   const id = await shopIdForHost(host)
-  if (!id) notFound()
-  const shop = await shopSettingsFor(id)
-  if (!shop) notFound()
-  return shop
+  return id ? shopSettingsFor(id) : null
 }
 
 /** Links on a shop are its own paths (the middleware adds /s/<host>). */

@@ -35,31 +35,47 @@ export function shopSlugFromHost(host: string, shopDomain: string): string | nul
   return slug && !slug.includes('.') ? slug : null
 }
 
-/** Paths a shop host serves straight from public/ (its favicon, a robots image), never rewritten. */
-const ASSET = /\.(?:png|jpe?g|webp|avif|svg|ico|gif|woff2?)$/i
+/** What a host may be made of; anything else (a slash, `..`) is refused before it can shape a path. */
+const HOST_CHARS = /^[a-z0-9.-]+$/
 
 export type Route =
   | { kind: 'not_found' }
-  | { kind: 'rewrite'; path: string }
-  | { kind: 'pass' }
+  | { kind: 'shop' }
   | { kind: 'console' }
 
 /**
  * What the middleware does with one request (storefront spec § Review findings).
- * `/s/…` is internal: only the rewrite below may reach it, so on every host
- * that is not a shop it is a 404 — `localhost` included, except under `next dev`.
- * On a shop host every path is prefixed, so `/s/other/…` becomes
- * `/s/this/s/other/…`, which matches no page.
+ * A shop host passes on to the host rewrite in next.config (shopRewrites below),
+ * which prefixes every path with /s/<host> — so `/s/other/…` on a shop becomes
+ * `/s/this/s/other/…`, which matches no page. `/s/…` is internal: on every host
+ * that is not a shop it is a 404, `localhost` included, except under `next dev`.
  */
 export function routeFor(rawHost: string | null, pathname: string, consoleHost: string, dev: boolean): Route {
   const surface = surfaceFor(rawHost, consoleHost)
-  if (surface.kind === 'storefront') {
-    if (pathname.startsWith('/api/')) return { kind: 'pass' }
-    if (ASSET.test(pathname) && !pathname.startsWith('/s/')) return { kind: 'pass' }
-    return { kind: 'rewrite', path: `/s/${surface.host}${pathname === '/' ? '' : pathname}` }
-  }
+  if (surface.kind === 'storefront') return HOST_CHARS.test(surface.host) ? { kind: 'shop' } : { kind: 'not_found' }
   if (pathname === '/s' || pathname.startsWith('/s/')) return surface.kind === 'local' && dev ? { kind: 'console' } : { kind: 'not_found' }
   return { kind: 'console' }
+}
+
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+type Rewrite = { source: string; destination: string; has: { type: 'host'; value: string }[]; missing: { type: 'host'; value: string }[] }
+
+/**
+ * The shop rewrite, as next.config `beforeFiles` rewrites: a host that is not the
+ * console, a vercel.app alias or local is a shop, served from /s/<host>/…. Done
+ * by the router, not the middleware, because Next only caches a page per path
+ * when the URL it matches is the rewritten one (a middleware rewrite left every
+ * shop page rendering per request under next start; 2026-11-07). Root-level
+ * files (favicon.ico) and /api, /_next are left alone.
+ */
+export function shopRewrites(consoleHost: string): Rewrite[] {
+  const has = [{ type: 'host' as const, value: '(?<shop>[a-z0-9][a-z0-9.-]*)' }]
+  const missing = [{ type: 'host' as const, value: `(?:${esc(consoleHost.toLowerCase())}|localhost|127\\.0\\.0\\.1|.+\\.vercel\\.app)` }]
+  return [
+    { source: '/:first((?!(?:api|_next)(?:/|$))(?![^/]+\\.(?:ico|png|svg|webp|jpe?g|gif)$)[^/]+)/:rest*', destination: '/s/:shop/:first/:rest*', has, missing },
+    // Last: rules run in order on the rewritten path, so a root rule first would see its own /s/<host> again.
+    { source: '/', destination: '/s/:shop', has, missing },
+  ]
 }
 
 /** A `[host]` route param, accepted only in the exact form the middleware writes it; anything else is null (404). */

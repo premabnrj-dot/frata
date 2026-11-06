@@ -18,7 +18,8 @@ if (!existsSync('.next/prerender-manifest.json')) { console.error('check:storefr
 
 const dynamicRoutes = Object.keys(read('prerender-manifest.json').dynamicRoutes ?? {})
 const appPaths = read('server/app-paths-manifest.json')
-const shopPages = Object.keys(appPaths).filter((k) => k.startsWith('/s/[host]') && /\/(page|route)$/.test(k) && !k.includes('[...rest]'))
+// Pages only: robots.txt and sitemap.xml are dynamic on purpose (an unknown host's 404 must not be cached) and set their own CDN header.
+const shopPages = Object.keys(appPaths).filter((k) => k.startsWith('/s/[host]') && /\/page$/.test(k) && !k.includes('[...rest]'))
 for (const k of shopPages) {
   const route = k.replace(/\/(page|route)$/, '').replace(/\/\([^)]+\)/g, '') || '/'
   if (!dynamicRoutes.includes(route)) failures.push(`${route}  is not cached per path (add generateStaticParams = () => [] to its segment)`)

@@ -32,16 +32,13 @@ describe('shopSlugFromHost', () => {
   })
 })
 
-describe('routeFor: /s/ is reachable only through the rewrite', () => {
+describe('routeFor and shopRewrites: /s/ is reachable only through the rewrite', () => {
   const C = 'app.frata.in'
-  it('rewrites a shop host, image paths of /s/ included', async () => {
+  it('passes a shop host to the rewrite, refuses a malformed one', async () => {
     const { routeFor } = await import('../host')
-    expect(routeFor('kesar.frata.store', '/products/kurta', C, false)).toEqual({ kind: 'rewrite', path: '/s/kesar.frata.store/products/kurta' })
-    expect(routeFor('kesar.frata.store', '/', C, false)).toEqual({ kind: 'rewrite', path: '/s/kesar.frata.store' })
-    // Another shop's path on this shop: prefixed, so it matches no page.
-    expect(routeFor('kesar.frata.store', '/s/b.frata.store/products/x.png', C, false)).toEqual({ kind: 'rewrite', path: '/s/kesar.frata.store/s/b.frata.store/products/x.png' })
-    expect(routeFor('kesar.frata.store', '/favicon.ico', C, false)).toEqual({ kind: 'pass' })
-    expect(routeFor('kesar.frata.store', '/api/x', C, false)).toEqual({ kind: 'pass' })
+    expect(routeFor('kesar.frata.store', '/products/kurta', C, false)).toEqual({ kind: 'shop' })
+    expect(routeFor('kesar.frata.store', '/s/b.frata.store/products/x.png', C, false)).toEqual({ kind: 'shop' })
+    expect(routeFor('x/../kesar.frata.store', '/', C, false)).toEqual({ kind: 'not_found' })
   })
   it('404s /s/ on the console, vercel.app and localhost in production', async () => {
     const { routeFor } = await import('../host')
@@ -50,8 +47,22 @@ describe('routeFor: /s/ is reachable only through the rewrite', () => {
       expect(routeFor(h, '/s/b.frata.store', C, false)).toEqual({ kind: 'not_found' })
     }
     expect(routeFor('localhost:3000', '/s/b.frata.store', C, true)).toEqual({ kind: 'console' })
-    expect(routeFor(C, '/console', C, false)).toEqual({ kind: 'console' })
     expect(routeFor(C, '/style.png', C, false)).toEqual({ kind: 'console' })
+  })
+  it('rewrites every shop path under /s/<host>, root files and /api aside', async () => {
+    const { shopRewrites } = await import('../host')
+    // @ts-expect-error -- Next's compiled copy has no types; it is the matcher Next itself uses for rewrites.
+    const { pathToRegexp } = await import('next/dist/compiled/path-to-regexp')
+    const [rest, root] = shopRewrites(C)
+    const matches = (src: string, path: string) => pathToRegexp(src).test(path)
+    expect(root!.destination).toBe('/s/:shop')
+    // The rewritten root is not caught again by the rule before it (rules run in order).
+    expect(matches(root!.source, '/s/kesar.frata.store')).toBe(false)
+    for (const p of ['/products/kurta', '/s/b.frata.store/products/x.png', '/console/preview/a.png', '/policies/shipping', '/images/a.png']) expect(matches(rest!.source, p)).toBe(true)
+    for (const p of ['/favicon.ico', '/apple-touch-icon.png', '/api/x', '/_next/static/a.js']) expect(matches(rest!.source, p)).toBe(false)
+    const notShop = new RegExp(`^${rest!.missing[0]!.value}$`)
+    for (const h of [C, 'frata.vercel.app', 'frata-abc-team.vercel.app', 'localhost', '127.0.0.1']) expect(notShop.test(h)).toBe(true)
+    for (const h of ['kesar.frata.store', 'shop.brand.in', 'app.frata.in.evil.com']) expect(notShop.test(h)).toBe(false)
   })
   it('takes a host param only in normal form', async () => {
     const { shopHostParam } = await import('../host')
