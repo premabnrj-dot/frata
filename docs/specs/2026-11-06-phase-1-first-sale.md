@@ -1,5 +1,5 @@
 # Phase 1 — First sale
-Status: draft v3 · Date: 2026-11-06 · Prototype: https://claude.ai/artifact/QJ3N5knGqGZniMCsZJn7Fu · Approved: pending
+Status: active (v3) · Date: 2026-11-06 · Prototype: https://claude.ai/artifact/QJ3N5knGqGZniMCsZJn7Fu · Approved: owner, 2026-11-06 ("approved, go with your recommendations")
 (v1 canvas mockup, superseded: https://claude.ai/artifact/NvAiqDdfikTq97hFtUfFYX)
 
 ## Goal
@@ -88,7 +88,7 @@ No open fashion dataset with on-model photos is cleared for commercial use (Kagg
 ## Motion
 120 ms feedback · 200 ms small moves and exits · 320 ms screens and sheets entering · nothing over 400 ms · lists never animate on load · reduced motion = instant · CSS transitions only (View Transitions are experimental in Next.js: enhancement, never required). A screen slides from the side it came from; the bag count bumps; a confirmed order slides out with Undo; autofilled fields flash once.
 
-## Owner calls (recommendations in the prototype)
+## Owner calls — all decided (owner, 2026-11-06: "go with your recommendations")
 1. **Shop domain** — direction (owner, 2026-11-06): buy a cheap domain now for every shop's address; switch before the first real merchant. `NEXT_PUBLIC_SHOP_DOMAIN` + new `tenant_domains` rows, old ones redirect.
 2. **Prepaid** — each merchant's own Razorpay keys, encrypted, until the partner application is approved.
 3. **COD rules** — on by default, lowest/highest order value (₹3,000), blocked pincodes, a COD fee shown as its own line before ordering (₹0 default), flag > 2 COD orders per phone per day.

@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 1.1.0
+  version: 2.0.0
   verified: 2026-11-06
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -81,6 +81,42 @@ micro `text-xs text-muted-foreground`.
 - People who are staff and store members choose where to go after sign-in;
   Admin always links to their own store's console and the console links back.
 
+## Phase 1 console and website rules (owner-approved, 2026-11-06)
+
+- **Settings**: one list of sections, each a page with ONE explicit save. An
+  "Unsaved changes" bar (Save / Discard) appears on the first edit; leaving
+  with changes asks "Leave without saving?" with "Keep editing". Never
+  autosave what shoppers see or pay. Each page shows a live preview of the
+  shop beside the form. A connect action (Razorpay keys) is a button that
+  tests first, never a field the save bar saves.
+- **Derived pages say where they come from**: policy pages, the Contact page,
+  the footer and invoices read Settings; an edited policy stops following and
+  says so. A "Ready for live payments" list names what is missing, each item a
+  link to the page that fixes it.
+- **Legal words**: a shop without a GSTIN prints "Bill of supply", never "Tax
+  invoice". The grievance officer is shown wherever contacts are.
+- **One primary action per record state** (order: Confirm → Print packing
+  slip → none); everything else under "More". Destructive items in red, at
+  the bottom of the menu.
+- **Risk is a level with reasons and a next step** ("High risk · address is a
+  landmark only · Call before confirming"), never a bare score.
+- **Imports check before they write**: a summary (new, updated, left alone),
+  every problem as row · column · reason in plain words, rows-to-fix as a
+  file; a product with one bad row is left out whole. Imported products
+  arrive hidden. An empty cell never clears a value unless asked.
+- **Sign-up asks only what it uses now**: email (link and 6-digit code in one
+  email), shop name (address derived live), pickup pincode, one optional
+  question that changes what the merchant sees. A side panel on each step
+  says what is not asked yet and where it will be.
+- **The Frata website** marks every feature "Now" or "Next"; prices in rupees
+  with "+ 18% GST"; the order fee "only on delivered orders". One primary
+  action ("Start free"), no video hero, no chat widget at first paint; a
+  WhatsApp link instead.
+- **Motion**: 120 ms feedback, 200 ms small moves and exits, 320 ms screens
+  and sheets entering, nothing over 400 ms; a step moves in from the side it
+  came from; changed or autofilled values flash once; reduced motion makes
+  every change instant.
+
 ## Words a merchant reads
 
 Their words, not ours: order, delivery, return (not RTO in headings — "Returned
@@ -96,5 +132,16 @@ saving we cannot show from their own orders.
   built in: pincode delivery check, "Pay on delivery" badge, size chart and
   "find my size", the return window in words, WhatsApp order updates.
 - Phone first, touch targets ≥ 44px, images through `next/image` at quality 75.
-- Checkout: one page, phone + OTP first, address prefill. No merchant cost ever
+- Checkout: one page, at most 7 fields, phone first, pincode fills city and
+  state, labels above fields. No shopper OTP until DLT registration (Phase 2);
+  COD rules and the To confirm queue carry the risk. No merchant cost ever
   reaches this surface (ADR-0003).
+- **Sizes are buttons**, sold-out shown and still readable; Add to bag stays
+  usable and points at the missing size instead of greying out. Size guide is
+  a sheet the phone's Back closes, in cm and inches, with the model's height.
+- **Pincode answers as the sixth digit lands** (COD or not, and why), on the
+  product page, before the bag.
+- **Every charge is a line before ordering** (CCPA dark-pattern guidelines,
+  2023): shipping, the COD fee. A total that changes says so ("Price updated
+  to ₹2,690") before payment, never after.
+- A failed payment returns to a filled form, never an empty one.
