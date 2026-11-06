@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 2.1.0
+  version: 2.2.0
   verified: 2026-11-06
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -151,6 +151,19 @@ micro `text-xs text-muted-foreground`.
   any) with a live "N products match now" count; a product shows the
   hand-picked ones as toggles and the rule-based ones it is in, in words.
 
+## Storefront as built (1B, 2026-11-07)
+
+- Views in `src/components/storefront/` are the ONE rendering of a shop: the
+  shop pages, `/console/preview` and Settings' previews all use them.
+- Product page order: gallery (chosen colour's photos first) → title → price
+  (compare-at struck, "Save ₹N", never a percentage) → colour, then size →
+  "Shoppers see" line for the choice → Add to bag (never greyed out; "Pick a
+  size.") → Pay on delivery, delivery charge, dispatch and arrival days, the
+  return window → description → details → the model.
+- Cards: 4:5 cover, second photo on hover (pointer devices only), name, "From
+  ₹" when prices differ, every colour as a small swatch, one tag at most.
+- Before a shop opens every page but the policies is "Opening soon".
+
 ## Words a merchant reads
 
 Their words, not ours: order, delivery, return (not RTO in headings — "Returned
@@ -165,7 +178,9 @@ saving we cannot show from their own orders.
 - Editorial, type-led, large imagery, few colours. Indian shopper conventions
   built in: pincode delivery check, "Pay on delivery" badge, size chart and
   "find my size", the return window in words, WhatsApp order updates.
-- Phone first, touch targets ≥ 44px, images through `next/image` at quality 75.
+- Phone first, touch targets ≥ 44px. Photos from the 1A ladder (400–1600 WebP)
+  through `srcSet`/`sizes` (`src/components/storefront/photo.tsx`), the largest
+  paint eager with `fetchpriority=high`, the rest lazy; no `next/image` optimiser.
 - Checkout: one page, at most 7 fields, phone first, pincode fills city and
   state, labels above fields. No shopper OTP until DLT registration (Phase 2);
   COD rules and the To confirm queue carry the risk. No merchant cost ever
@@ -173,7 +188,9 @@ saving we cannot show from their own orders.
 - **Sizes are buttons**, sold-out shown and still readable; Add to bag stays
   usable and points at the missing size instead of greying out. Size guide is
   a sheet the phone's Back closes, in cm and inches, with the model's height.
-- **Pincode answers as the sixth digit lands** (COD or not, and why), on the
+- **Pincode answers as the sixth digit lands** (COD or not, and why) — deferred
+  by the owner 2026-11-06; until it returns in 1C the product page says delivery
+  days in words. When it comes, it is on the
   product page, before the bag.
 - **Every charge is a line before ordering** (CCPA dark-pattern guidelines,
   2023): shipping, the COD fee. A total that changes says so ("Price updated

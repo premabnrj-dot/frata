@@ -1,4 +1,6 @@
-import { renderPolicy, type Piece, type PolicyFacts, type PolicyPage } from '@/domains/policies/render'
+import { codFor, shippingFor } from '@/domains/checkout/delivery'
+import type { PolicyFacts, PolicyPage } from '@/domains/policies/render'
+import { PolicyBody, POLICY_TITLE } from '@/components/storefront/policy'
 import { orderPrefix } from '@/domains/signup/slug'
 import { gstinValid } from '@/domains/settings/sections'
 import { formatInr } from '@/lib/format'
@@ -48,16 +50,7 @@ function Missing({ children }: { children: React.ReactNode }) {
   return <span className="rounded-sm bg-danger px-1 text-danger-text">{children}</span>
 }
 
-export function Pieces({ paragraphs }: { paragraphs: Piece[][] }) {
-  return (
-    <>
-      {paragraphs.map((para, i) => (
-        <p key={i}>{para.map((p, j) => ('text' in p ? <span key={j}>{p.text}</span>
-          : p.value === null ? <Missing key={j}>add your {p.fact}</Missing> : <span key={j} className="rounded-sm bg-store-chip px-0.5">{p.value}</span>))}</p>
-      ))}
-    </>
-  )
-}
+export { Pieces } from '@/components/storefront/policy'
 
 export function FooterPreview({ f }: { f: ShopFacts }) {
   return (
@@ -101,12 +94,12 @@ export function ContactPreview({ f }: { f: ShopFacts }) {
 }
 
 export function PolicyPreview({ f, page, override }: { f: ShopFacts; page: PolicyPage; override?: string | null }) {
-  const title = { returns: 'Returns and exchanges', shipping: 'Shipping', privacy: 'Privacy', terms: 'Terms of sale', contact: 'Contact us' }[page]
+  const title = POLICY_TITLE[page]
   return (
     <Frame label={`${f.slug}.${f.shopDomain}/${page === 'contact' ? 'contact' : `policies/${page}`}`}>
       <div data-store-theme="" data-accent={f.accent} className="space-y-2.5 p-4 text-[13px] leading-relaxed">
         <b className="block text-lg font-medium" style={{ fontFamily: displayFamily(f.displayFont) }}>{title}</b>
-        {override ? override.split(/\n{2,}/).map((p, i) => <p key={i} className="whitespace-pre-line">{p}</p>) : <Pieces paragraphs={renderPolicy(page, f, inr)} />}
+        <PolicyBody page={page} facts={f} override={override} />
         {page === 'contact' && f.whatsapp && <p className="underline">Message {f.shopName} on WhatsApp</p>}
       </div>
     </Frame>
@@ -116,9 +109,10 @@ export function PolicyPreview({ f, page, override }: { f: ShopFacts; page: Polic
 /** A ₹2,490 bag to an Indore pincode, priced by the shop's own rules. */
 export function CheckoutPreview({ f }: { f: ShopFacts }) {
   const bag = 249000
-  const ship = f.shippingFlat && !(f.freeShippingAbove && bag >= f.freeShippingAbove) ? f.shippingFlat : 0
-  const codTotal = bag + ship + f.codCharge
-  const why = !f.codOn ? null : bag < f.codMin ? `Available from ${inr(f.codMin)}.` : f.codMax && codTotal > f.codMax ? `Available up to ${inr(f.codMax)}. Pay online for this bag.` : null
+  const ship = shippingFor(bag, f)
+  const cod = codFor(bag, f)
+  const codTotal = cod.offered ? cod.total : bag + ship + f.codCharge
+  const why = cod.offered || cod.reason === 'off' ? null : cod.reason === 'below_min' ? `Available from ${inr(cod.min)}.` : `Available up to ${inr(cod.max)}. Pay online for this bag.`
   return (
     <Frame label="Checkout · a ₹2,490 bag to 452018">
       <div data-store-theme="" data-accent={f.accent} className="space-y-2 p-4 text-[13px]">

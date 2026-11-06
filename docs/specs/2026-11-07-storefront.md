@@ -1,5 +1,5 @@
 # Storefront (1B): the shop shoppers see
-Status: approved to build without a mockup sign-off (owner, 2026-11-06: "continue with (1B). do not wait for my approval this time … just defer pincode check from the plan") · Date: 2026-11-07 · Review: architecture-reviewer and tenancy-auditor on this spec, findings below
+Status: approved to build without a mockup sign-off (owner, 2026-11-06: "continue with (1B). do not wait for my approval this time … just defer pincode check from the plan") · Date: 2026-11-07 · Review: architecture-reviewer and tenancy-auditor ran 2026-11-07; every finding is taken below (§ Review findings), and those decisions override the text above them
 
 ## Goal
 Ranked problems 5 (a shop that looks and reads right, without a developer) and
@@ -127,3 +127,102 @@ home with the return policy and shipping once (`seo.ts`).
 page with picker and size guide · 1B·4 home, all products, collections ·
 1B·5 policies, sitemap, robots, JSON-LD · 1B·6 console preview. Each: gates,
 typecheck, build, a Playwright run on a shop host, then push.
+
+## Review findings and decisions (2026-11-07)
+Where these differ from the sections above, these win.
+
+**Middleware and host (tenancy HIGH, arch HIGH).** The matcher becomes
+`/((?!_next/static|_next/image).*)`: image-looking paths no longer skip it.
+`/s/…` is answered 404 FIRST on every host that is not a shop, including
+`localhost` in production (only `next dev` passes it); then a shop host's
+image paths pass through to `public/`, everything else is rewritten. Every
+`[host]` page reads its host through ONE helper (`shopHostParam`) that
+refuses anything not already in `surfaceFor`'s normal form. `s/[host]/[...rest]`
+calls `notFound()` so a shop's unknown path gets the shop's 404. Unit tests
+call `middleware()` per host kind, including `/s/a/b.png` on a shop host, the
+console host and `localhost`. (Next 15.5 is patched for the
+`x-middleware-subrequest` bypass; recorded in `frata-gotchas`.)
+
+**Static per path (arch BLOCKER).** Every `[host]` segment exports
+`generateStaticParams = () => []` (and nested segments too), so Next builds
+them as ISR routes. `scripts/check-storefront-build.mjs` (postbuild) fails if
+any `/s/[host]/**` page is not in `.next/prerender-manifest.json`
+`dynamicRoutes`, and fails if a storefront page's first-load JS is over
+120 kB gzipped. (The 100 kB named above was wrong: Next 15 and React 19's
+shared script alone is ~103 kB; the product page measures ~110 kB.)
+
+**Time is never cached (arch BLOCKER).** Loaders cache RAW rows
+(`publishAt`, `shipsBy`, stock as numbers, dates as ISO strings);
+`visibility()` and `availability()` run at render, outside the cache.
+`shopCached` has a 60 s `revalidate` backstop besides its tags. `refreshShop`
+runs after the console transaction commits.
+
+**Host lookup (both HIGH).** `host:<host>` is cached 60 s and a MISS is never
+cached (a wildcard domain lets anyone mint hosts). An address change
+revalidates `host:<old>`, `host:<new>` and `shop:<t>` (and the old paths'
+layout); a new shop revalidates `host:<slug>`. A freed address is not
+re-claimable for 30 days (later, with `tenant_domains`; until then the
+address change already needs an unpublished shop, so no shopper has it).
+
+**Preview cannot leak (both HIGH).** `src/lib/queries/storefront.ts` exports
+cached `shop*` loaders and separate uncached `preview*` loaders over one
+internal core; no exported function takes a "preview" flag. A gate fails if
+`src/app/s/**` mentions `preview`, `searchParams`, `cookies(` or `headers(`, or
+if `unstable_cache` appears outside `storefront.ts`. The preview route answers
+`noindex` and `Cache-Control: private, no-store`; links come from an `href()`
+prop. A test opens a draft in preview, then gets 404 for it on the shop host.
+
+**Costs (tenancy HIGH).** Storefront loaders select named columns only; a
+bare `.select()` or `getTableColumns` in `storefront.ts` fails `check:tenant`,
+and rule 6 covers `src/components/storefront/`, `src/app/s/` and the preview
+route with every name in `scripts/cost-sentinels.mjs`. Never selected:
+`unit_cost`, `weight_grams`, `preorder_cap` (the cap's effect is computed in
+the loader), `hsn`, `pickup_pincode`, `cod_min`/`cod_max`/`cod_blocked_pincodes`
+(COD is computed into a yes/no and a reason), `invoice_series`, `default_hsn`.
+Stock reaches the page only as the derived availability. `npm run
+check:payload` seeds `unit_cost = 4242421` and fetches the HTML and `?_rsc`
+payload of home, product, collection and sitemap and fails on the number or
+any sentinel.
+
+**One rule for delivery and COD (arch HIGH).** `src/domains/checkout/delivery.ts`
+(shipping charge with free-above, COD offered with `codMin`/`codMax` and the
+reason) is read by `CheckoutPreview`, the product page and, in 1C, the quote.
+
+**One rendering of a shop (arch HIGH).** The footer and policy body move to
+`src/components/storefront/`; Settings' previews wrap them in `Frame`.
+`Pieces` has a shopper mode that leaves missing facts out.
+
+**Opening soon (arch MEDIUM)** is a route group: `s/[host]/(shop)/…` checks it
+in its layout; `s/[host]/policies/…` sits beside it. Publishing itself lands
+in 1C with checkout (the checklist accepts COD alone, so it is not "needs
+payments", it is "needs a way to order").
+
+**Archived (arch MEDIUM).** Not a redirect to home (Google reads a redirect
+to an unrelated page as a soft 404): the page says "This piece is no longer
+available" with New in below it, marked `noindex` so search drops it (Next
+cannot render a page's own data with a 404 status: `notFound()` takes no
+props). Old handle → 308
+(`permanentRedirect`). `visibility().http` says 404/308 and pages read it.
+
+**Next 15 conventions.** `robots.txt` and `sitemap.xml` are `force-static`
+route handlers under `[host]` with the 60 s revalidate; every page has
+`generateMetadata`; the picker reads `location.search` in an effect (no
+`useSearchParams`, which would drop it from the HTML); JSON-LD goes through
+one helper that escapes `<`. Canonical URLs, the sitemap and JSON-LD are built
+from the shop's own address (`slug` + shop domain), never `params.host`.
+
+**Enumeration (arch MEDIUM).** A cached per-tenant handle index (current and
+old handles) answers unknown handles with 404 before any product query.
+
+**Logs** carry the tenant id and the loader name only.
+
+**Unit economics (arch LOW).** The middleware runs on every shop request,
+CDN hits included, and each visited path re-renders at most once a minute.
+Hypothesis, checked when the first shop publishes (1C) with the
+unit-economics-reviewer: well inside Hobby/Pro included edge requests for
+the first 50 shops. A host rewrite in `next.config` is the fallback.
+
+**Testing** runs `next start` with `NEXT_PUBLIC_SHOP_DOMAIN=frata.test` and
+Chromium's `--host-resolver-rules` (preview deployments are console hosts).
+
+**Header collections**: the first five by title that have products.

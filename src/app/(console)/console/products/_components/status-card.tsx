@@ -11,7 +11,7 @@ const CHOICES: { v: Status; label: string; says: string }[] = [
   { v: 'draft', label: 'Draft', says: 'Only your team sees it.' },
   { v: 'active', label: 'Active', says: 'On your shop, in collections and search, and sent to Google and Meta.' },
   { v: 'unlisted', label: 'Unlisted', says: 'Opens from its link only: not in menus, search or Google. For a private drop or a DM.' },
-  { v: 'archived', label: 'Archived', says: 'Gone from your shop. Its address sends shoppers to your shop’s home page.' },
+  { v: 'archived', label: 'Archived', says: 'Gone from your shop. Its page says it is no longer available, with your newest pieces below.' },
 ]
 
 /** "2026-12-01T10:00" in India time ↔ an ISO moment. */
@@ -64,7 +64,7 @@ export function StatusCard({ productId, status, publishAt, ready, dirty }: { pro
           {ready.map((r) => <li key={r.label} className={r.ok ? 'text-ok-text' : 'text-warn-text'}><span aria-hidden="true">{r.ok ? '✓ ' : '• '}</span>{r.label}{r.ok ? '' : ' (missing)'}</li>)}
         </ul>
       )}
-      <p className="text-xs text-muted-foreground">{v.scheduled ? 'Shoppers get "page not found" until it goes live.' : v.listed ? 'Shoppers can find it and buy it.' : v.reachable ? 'Shoppers with the link can buy it.' : pick === 'archived' ? 'Shoppers are sent to your home page.' : 'Shoppers get "page not found".'}</p>
+      <p className="text-xs text-muted-foreground">{v.scheduled ? 'Shoppers get "page not found" until it goes live.' : v.listed ? 'Shoppers can find it and buy it.' : v.reachable ? 'Shoppers with the link can buy it.' : pick === 'archived' ? 'Shoppers read that it is no longer available.' : 'Shoppers get "page not found".'}</p>
       {changed && <Button className="w-full" disabled={pending || blocked || dirty} onClick={apply}>{pick === 'active' && !later ? 'Make it active' : pick === 'active' ? 'Schedule it' : `Set to ${CHOICES.find((c) => c.v === pick)!.label.toLowerCase()}`}</Button>}
       {changed && dirty && <p className="text-xs text-muted-foreground">Save your changes first.</p>}
       {msg && <p role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-ok-text' : 'text-danger-text'}`}>{msg.text}</p>}

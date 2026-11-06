@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postbuild": "node scripts/check-client-bundle.mjs",
+    "check:payload": "node scripts/check-payload.mjs",
+    "postbuild": "node scripts/check-client-bundle.mjs && node scripts/check-storefront-build.mjs",
     "start": "next start",
     "test": "node scripts/check-hex.mjs && node scripts/check-layers.mjs && node scripts/check-dates.mjs && node scripts/check-fetch.mjs && node scripts/check-config.mjs && node scripts/check-size.mjs && node scripts/check-tenant.mjs && node scripts/check-actions.mjs && node scripts/check-states.mjs && vitest run",
     "test:watch": "vitest",

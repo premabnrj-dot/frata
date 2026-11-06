@@ -10,6 +10,7 @@ import { attributesFor, categoryById, cleanAttributes, COLOUR_FAMILIES, searchCa
 import { handleFor, keyOf, reconcile, skuFor, uniqueSku } from '@/domains/catalogue/variants'
 import { orderPrefix } from '@/domains/signup/slug'
 import { acceptedBase, storeHost, WIDTHS, urlFor } from '@/domains/media/sizes'
+import { refreshShop } from '@/lib/queries/storefront'
 import { asMember } from '@/lib/auth/as-member'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { BLOB_READ_WRITE_TOKEN, BLOB_STORE_ID } from '@/lib/env'
@@ -75,6 +76,7 @@ export async function createProduct(input: { title: string }): Promise<Result<{ 
       return p!
     })
     if (!r.ok) return { ok: false, error: r.error }
+    refreshShop(r.tenantId, 'catalogue')
     revalidatePath('/console/products')
     return { ok: true, id: r.value.id, handle: r.value.handle }
   } catch (err) {
@@ -184,6 +186,7 @@ export async function saveProduct(productId: string, version: number, input: Pro
       return { version: row.version, handle: p.handle }
     })
     if (!r.ok) return { ok: false, error: r.error }
+    refreshShop(r.tenantId, 'catalogue')
     revalidatePath('/console/products', 'layout')
     return { ok: true, ...r.value }
   } catch (err) {
@@ -229,6 +232,7 @@ export async function setStatus(productId: string, status: Status, publishAt: st
       await memberAudit(tx, auth, `product.status.${status}`, p.title)
     })
     if (!r.ok) return { ok: false, error: r.error }
+    refreshShop(r.tenantId, 'catalogue')
     revalidatePath('/console/products', 'layout')
     return { ok: true }
   } catch (err) {
@@ -276,6 +280,7 @@ export async function attachPhotos(productId: string, photos: { base: string; wi
       await memberAudit(tx, auth, 'product.photos', productId)
     })
     if (!r.ok) return { ok: false, error: r.error }
+    refreshShop(r.tenantId, 'catalogue')
     revalidatePath('/console/products', 'layout')
     return { ok: true }
   } catch (err) {
@@ -314,6 +319,7 @@ export async function editPhoto(imageId: string, change: { move?: -1 | 1; option
       return null
     })
     if (!r.ok) return { ok: false, error: r.error }
+    refreshShop(r.tenantId, 'catalogue')
     // Delete the files only if the stored base is still exactly inside this shop's folder.
     const host = storeHost(BLOB_STORE_ID)
     if (r.value && BLOB_READ_WRITE_TOKEN && host && acceptedBase(r.value.base, host, r.value.tenantId, 'products') === r.value.base) {
@@ -341,6 +347,7 @@ export async function saveSizeChart(typeId: string, chart: Chart): Promise<Resul
       await memberAudit(tx, auth, 'size_chart.save', row.name)
     })
     if (!r.ok) return { ok: false, error: r.error }
+    refreshShop(r.tenantId, 'catalogue')
     revalidatePath('/console/products', 'layout')
     return { ok: true }
   } catch (err) {
@@ -368,6 +375,7 @@ export async function createType(name: string, copyFrom: string | null): Promise
       return row.id
     })
     if (!r.ok) return { ok: false, error: r.error }
+    refreshShop(r.tenantId, 'catalogue')
     return { ok: true, id: r.value }
   } catch (err) {
     if (err instanceof Stop) return err.result

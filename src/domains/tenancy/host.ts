@@ -34,3 +34,38 @@ export function shopSlugFromHost(host: string, shopDomain: string): string | nul
   const slug = h.slice(0, -suffix.length)
   return slug && !slug.includes('.') ? slug : null
 }
+
+/** Paths a shop host serves straight from public/ (its favicon, a robots image), never rewritten. */
+const ASSET = /\.(?:png|jpe?g|webp|avif|svg|ico|gif|woff2?)$/i
+
+export type Route =
+  | { kind: 'not_found' }
+  | { kind: 'rewrite'; path: string }
+  | { kind: 'pass' }
+  | { kind: 'console' }
+
+/**
+ * What the middleware does with one request (storefront spec § Review findings).
+ * `/s/…` is internal: only the rewrite below may reach it, so on every host
+ * that is not a shop it is a 404 — `localhost` included, except under `next dev`.
+ * On a shop host every path is prefixed, so `/s/other/…` becomes
+ * `/s/this/s/other/…`, which matches no page.
+ */
+export function routeFor(rawHost: string | null, pathname: string, consoleHost: string, dev: boolean): Route {
+  const surface = surfaceFor(rawHost, consoleHost)
+  if (surface.kind === 'storefront') {
+    if (pathname.startsWith('/api/')) return { kind: 'pass' }
+    if (ASSET.test(pathname) && !pathname.startsWith('/s/')) return { kind: 'pass' }
+    return { kind: 'rewrite', path: `/s/${surface.host}${pathname === '/' ? '' : pathname}` }
+  }
+  if (pathname === '/s' || pathname.startsWith('/s/')) return surface.kind === 'local' && dev ? { kind: 'console' } : { kind: 'not_found' }
+  return { kind: 'console' }
+}
+
+/** A `[host]` route param, accepted only in the exact form the middleware writes it; anything else is null (404). */
+export function shopHostParam(param: string): string | null {
+  let h: string
+  try { h = decodeURIComponent(param) } catch { return null }
+  const s = surfaceFor(h, '\u0000')
+  return s.kind === 'storefront' && s.host === h && /^[a-z0-9.-]{1,253}$/.test(h) ? h : null
+}

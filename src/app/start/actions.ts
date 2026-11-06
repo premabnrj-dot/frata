@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { SELLS } from '@/lib/db/schema'
 import { PINCODE_SHAPE, slugProblem } from '@/domains/signup/slug'
 import { requireUser } from '@/lib/auth/require-user'
+import { hostFor, refreshHosts } from '@/lib/queries/storefront'
 import { createShop, placeForPincode, slugAvailable } from '@/lib/db/platform'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { clientIp } from '@/lib/http/client-ip'
@@ -54,7 +55,8 @@ export async function createMyShop(input: unknown): Promise<{ ok: true } | { ok:
   if (slugProblem(slug)) return { ok: false, field: 'slug', error: SENTENCES.bad_slug! }
   if (!(await withinLimit(LIMITS.createShopIp, await clientIp()))) return { ok: false, error: 'Too many shops made from here in the last hour. Try again later.' }
   const r = await createShop({ uid: auth.userId, name, slug, pickup, sells })
-  if (r.ok) return { ok: true }
+  // Misses are not cached, but a lookup made in the same minute is: clear it for the new address.
+  if (r.ok) { refreshHosts(hostFor(slug)); return { ok: true } }
   const field = r.error === 'slug_taken' || r.error === 'bad_slug' ? 'slug' : r.error === 'bad_name' ? 'name' : r.error === 'bad_pincode' ? 'pickup' : undefined
   return { ok: false, field, hasShop: r.error === 'has_shop', error: SENTENCES[r.error] ?? 'We could not create your shop. Nothing was saved. Try again in a minute.' }
 }

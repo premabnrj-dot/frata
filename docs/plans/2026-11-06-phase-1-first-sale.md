@@ -21,12 +21,14 @@ changed), deployed, and checked in the live logs before the next starts.
 
 - **Merchant data** is tenant rows behind RLS, read through `src/lib/queries/`
   inside `withTenant`, written by console actions through `asMember`.
-- **The storefront's tenant comes from the Host header only**, through
-  `requireShop()` (`src/lib/auth/require-shop.ts`: `headers().get('host')` →
-  cached `tenantForHost`). Never from params, an argument, `.bind`, a body or a
-  page's `params.host`. The `/s/[host]` layout also checks Host = `params.host`
-  (middleware's matcher skips image-looking paths). `check:actions` lists
-  `requireShop` as a credential.
+- **The storefront's tenant comes from the Host header only**, read by the
+  middleware alone, which rewrites a shop host to `/s/<host>/…` and answers
+  `/s/…` with 404 on every other host (image paths included; amended
+  2026-11-07, `docs/specs/2026-11-07-storefront.md` § Review findings). Pages
+  resolve the tenant from `params.host` through one shape-checking helper and
+  the cached `tenantForHost`; reading `headers()` in a layout would make every
+  shop page uncacheable. Route handlers on a shop host (1C: stock, pincode)
+  use `requireShop()`, which reads the Host header.
 - **Storefront caching**: one helper, `shopCached(name, fn)` in
   `src/lib/queries/storefront.ts`; the tenant id is ALWAYS the cached function's
   first argument (so it is in the key) and in every tag. Tags are

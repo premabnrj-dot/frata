@@ -4,12 +4,12 @@ import { and, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { parseSection, sectionFor, type Values } from '@/domains/settings/sections'
 import { POLICY_PAGES } from '@/domains/policies/render'
+import { hostFor, refreshHosts, refreshShop } from '@/lib/queries/storefront'
 import { asMember } from '@/lib/auth/as-member'
 import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { changeShopAddress } from '@/lib/db/platform'
 import { auditEvents, shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { slugProblem } from '@/domains/signup/slug'
-import { SHOP_DOMAIN } from '@/lib/public-env'
 import { shopWithSettings } from '@/lib/queries/settings'
 
 // Settings are changed by an owner or admin (CAN_MANAGE). Each save checks the
@@ -56,6 +56,7 @@ export async function saveSection(sectionKey: string, values: Values, version: n
       return row.version
     })
     if (!r.ok) return { ok: false, error: r.error }
+    refreshShop(r.tenantId, 'shop')
     revalidatePath('/console', 'layout')
     return { ok: true, version: r.value }
   } catch (err) {
@@ -81,6 +82,7 @@ export async function savePolicyText(kind: string, body: string | null): Promise
       }
     })
     if (!r.ok) return { ok: false, error: r.error }
+    refreshShop(r.tenantId, 'shop')
     revalidatePath('/console/settings/policies')
     return { ok: true }
   } catch (err) {
@@ -107,7 +109,10 @@ export async function changeAddress(slug: string): Promise<{ ok: true } | { ok: 
   const r = await changeShopAddress(auth.membership.tenantId, auth.userId, s)
   if (!r.ok) return { ok: false, error: ADDRESS_ERRORS[r.error] ?? 'We could not change the address. Nothing was changed.' }
   // The old address must not keep showing this shop from the storefront cache.
-  if (before) revalidatePath(`/s/${before.slug}.${SHOP_DOMAIN}`)
+  // Both addresses' lookups and every page of the old one (storefront review 2026-11-07).
+  refreshHosts(hostFor(s), ...(before ? [hostFor(before.slug)] : []))
+  refreshShop(auth.membership.tenantId, 'shop')
+  if (before) revalidatePath(`/s/${hostFor(before.slug)}`, 'layout')
   revalidatePath('/console', 'layout')
   return { ok: true }
 }

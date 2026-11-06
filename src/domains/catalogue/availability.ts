@@ -50,8 +50,9 @@ export function visibility(status: Status, publishAt: Date | null, now: Date) {
     listed: status === 'active' && !scheduled,
     indexable: status === 'active' && !scheduled,
     canBuy: live,
-    /** What a shopper gets at its address when it is not reachable. */
-    http: live ? 200 : status === 'archived' ? 301 : 404,
+    /** What a shopper gets at its address: 200, or 404. Archived (`gone`) instead says "no longer available", noindex — never a redirect to an unrelated page, which Google reads as a soft 404 (storefront review 2026-11-07). An OLD handle is a 308, decided by the page. */
+    http: live ? 200 : 404,
+    gone: status === 'archived',
   } as const
 }
 

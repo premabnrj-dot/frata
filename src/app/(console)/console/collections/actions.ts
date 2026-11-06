@@ -4,6 +4,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { cleanRules, matches } from '@/domains/catalogue/collection-rules'
 import { handleFor } from '@/domains/catalogue/variants'
+import { refreshShop } from '@/lib/queries/storefront'
 import { asMember } from '@/lib/auth/as-member'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { auditEvents } from '@/lib/db/schema'
@@ -68,6 +69,7 @@ export async function saveCollection(id: string | null, input: CollectionInput):
       return c.handle
     })
     if (!r.ok) return { ok: false, error: r.error }
+    refreshShop(r.tenantId, 'catalogue')
     revalidatePath('/console/collections', 'layout')
     revalidatePath('/console/products', 'layout')
     return { ok: true, handle: r.value }
@@ -88,6 +90,7 @@ export async function deleteCollection(id: string): Promise<Result> {
       if (!auth.membership.supportSessionId) await tx.insert(auditEvents).values({ tenantId, actorUserId: auth.userId, actorEmail: auth.email, actorKind: 'member', action: 'collection.delete', target: row.title })
     })
     if (!r.ok) return { ok: false, error: r.error }
+    refreshShop(r.tenantId, 'catalogue')
     revalidatePath('/console/collections', 'layout')
     return { ok: true }
   } catch (err) {

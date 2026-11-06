@@ -23,7 +23,7 @@ describe('availability', () => {
 describe('visibility', () => {
   it('draft is not found; archived redirects; unlisted opens but is not listed', () => {
     expect(visibility('draft', null, now)).toMatchObject({ reachable: false, http: 404 })
-    expect(visibility('archived', null, now)).toMatchObject({ reachable: false, http: 301 })
+    expect(visibility('archived', null, now)).toMatchObject({ reachable: false, http: 404, gone: true })
     expect(visibility('unlisted', null, now)).toMatchObject({ reachable: true, listed: false, indexable: false, canBuy: true })
     expect(visibility('active', null, now)).toMatchObject({ reachable: true, listed: true, indexable: true })
   })

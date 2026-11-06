@@ -16,6 +16,7 @@
 //      no 'use server' inside src/lib/admin (it would be a public endpoint);
 //      Admin never calls withTenant (a route param must never become a tenant).
 // Whether a policy is RIGHT is what scripts/verify/tenancy.sh proves on a real Postgres.
+import { SENTINELS } from './cost-sentinels.mjs'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -59,8 +60,23 @@ for (const file of walk('src')) {
     failures.push(`${file}  Admin calls withTenant — staff reach a store only through a support session (ADR-0007)`)
   }
   // 6. A MERCHANT'S COST NEVER REACHES A SHOPPER (ADR-0003): storefront code never names it.
-  if ((file.startsWith('src/app/s/') || /^src\/lib\/queries\/storefront/.test(file) || file.startsWith('src/components/shop-preview/')) && /unit_?[cC]ost/.test(text)) {
-    failures.push(`${file}  storefront code names the merchant's unit cost — select only what a shopper sees`)
+  const shopper = file.startsWith('src/app/s/') || /^src\/lib\/queries\/storefront/.test(file) || file.startsWith('src/components/shop-preview/')
+    || file.startsWith('src/components/storefront/') || file.startsWith('src/app/(console)/console/preview/')
+  if (shopper) {
+    const named = SENTINELS.filter((x) => text.includes(x))
+    if (named.length) failures.push(`${file}  storefront code names a merchant cost (${named.join(', ')}) — select only what a shopper sees`)
+  }
+  // 6b. Storefront loaders name their columns: a bare select() would carry unit_cost along (storefront review 2026-11-07).
+  if (/^src\/lib\/queries\/storefront/.test(file) && (/\.select\(\s*\)/.test(text) || /\.selectDistinct\(\s*\)/.test(text) || /getTableColumns/.test(text))) {
+    failures.push(`${file}  storefront loader with a bare select() — name the columns a shopper sees`)
+  }
+  // 6c. Shop pages are static and shared: nothing per-request, and no preview switch (drafts would enter the shared cache).
+  if (file.startsWith('src/app/s/') && /\bpreview|searchParams|\bcookies\(|\bheaders\(|draftMode/.test(text)) {
+    failures.push(`${file}  shop page reads the request or a preview switch — pages are cached for every shopper; preview lives under /console/preview`)
+  }
+  // 6d. One cache helper: shopCached in src/lib/queries/storefront.ts puts the tenant in every key and tag.
+  if (/\bunstable_cache\b/.test(text) && !/^src\/lib\/queries\/storefront\.ts$/.test(file)) {
+    failures.push(`${file}  unstable_cache outside src/lib/queries/storefront.ts — use shopCached (tenant in key and tags)`)
   }
   if (file.startsWith('src/lib/queries/')) {
     if (!/import\s+['"]server-only['"]/.test(text)) failures.push(`${file}  query file without import 'server-only'`)

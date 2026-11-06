@@ -141,7 +141,7 @@ export const productImages = pgTable('product_images', {
 export const PRODUCT_STATUSES = ['draft', 'active', 'unlisted', 'archived'] as const
 export const WHEN_OUT = ['stop', 'preorder', 'made_to_order'] as const
 
-/** A handle a product used to have: its old address redirects (301) to the current one. Never reused in the shop. */
+/** A handle a product used to have: its old address redirects (308) to the current one. Never reused in the shop. */
 export const productHandleHistory = pgTable('product_handle_history', {
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   handle: text('handle').notNull(),

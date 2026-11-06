@@ -2,8 +2,8 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.5.0
-  verified: 2026-11-06
+  version: 1.6.0
+  verified: 2026-11-07
 ---
 
 # Frata gotchas
@@ -36,3 +36,9 @@ metadata:
 | Phone page scrolls sideways though every table sits in `overflow-x-auto` | `sr-only` labels are `position: absolute` and escape a scroll box that is not positioned | Every scroll box is `relative overflow-x-auto` |
 | A form loses its "Saved" message right after saving | The page passed `key={version}`, so `router.refresh()` re-created the form | No `key` from data that a save changes |
 | Local run tests an old build after a rebuild | `pkill -f "next start"` misses the `next-server` child; the new server hits EADDRINUSE | `pkill -f "next-server|next start"`, then check the log says Ready |
+| A shop page renders on every request though it has `revalidate` | A `[param]` segment with no `generateStaticParams` is a dynamic route in Next 15 | `export const generateStaticParams = () => []` on every segment (`check:storefront-build`) |
+| A scheduled drop never appears / a pre-order never ends | `unstable_cache` kept a value computed with the clock | Cache raw rows (ISO dates); run `visibility()`/`availability()` at render |
+| `/s/<other shop>/x.png` reaches a shop page | The middleware matcher skipped image-looking paths | Matcher `/((?!_next/static|_next/image).*)`; `routeFor` 404s `/s/` first (`src/domains/tenancy/host.ts`). Next 15.5 is patched for the `x-middleware-subrequest` bypass (CVE-2025-29927) |
+| `showModal` throws "already open" | The effect that opens a `<dialog>` depended on an `onClose` re-created each render | Open once (`[]` deps), keep the callback in a ref |
+| A page with real data cannot answer 404 | `notFound()` renders `not-found.tsx`, which gets no props | Render the page with `robots: noindex` instead (archived products) |
+| Local shop host in Playwright | Chromium resolves `*.frata.test` nowhere | `chromium.launch({ args: ['--host-resolver-rules=MAP *.frata.test 127.0.0.1:3077'] })`, build with `NEXT_PUBLIC_SHOP_DOMAIN=frata.test` |

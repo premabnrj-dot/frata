@@ -19,7 +19,7 @@ export async function asMember<T>(
   allowed: readonly MemberRole[],
   what: { action: string; target?: string; detail?: object },
   work: (tx: Tx, auth: Ok) => Promise<T>,
-): Promise<{ ok: true; value: T } | { ok: false; error: string }> {
+): Promise<{ ok: true; value: T; tenantId: string } | { ok: false; error: string }> {
   const auth = await requireMember(allowed)
   if (!auth.ok) return { ok: false, error: auth.message }
   const value = await withTenant(auth.membership.tenantId, async (tx) => {
@@ -38,5 +38,6 @@ export async function asMember<T>(
     }
     return result
   })
-  return { ok: true, value }
+  // The tenant, for work that must follow the commit (refreshShop): never taken from anywhere else.
+  return { ok: true, value, tenantId: auth.membership.tenantId }
 }

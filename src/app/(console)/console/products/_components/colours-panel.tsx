@@ -3,20 +3,15 @@
 import { useState } from 'react'
 import type { ColourInput } from '@/domains/catalogue/product-form'
 import { pick, urlFor } from '@/domains/media/sizes'
-import { clampCrop, swatchBackground, type Crop } from '@/domains/media/swatch'
+import { clampCrop, type Crop } from '@/domains/media/swatch'
+import { Swatch as ShopSwatch } from '@/components/storefront/swatch'
 import type { Photo } from './photos'
 
 export type Family = { id: string; name: string }
 
-/** A round swatch: a cut from a photo, a plain colour, or the colour's initial. The name is always written beside it elsewhere. */
+/** The shop's own swatch (src/components/storefront/swatch.tsx), from the editor's draft. */
 export function Swatch({ c, photos, d = 28 }: { c: ColourInput; photos: Photo[]; d?: number }) {
-  const img = c.crop ? photos.find((p) => p.id === c.crop!.imageId) : undefined
-  if (img && c.crop) {
-    const b = swatchBackground(c.crop, img.width, img.height, d)
-    return <span aria-hidden="true" className="inline-block shrink-0 rounded-full border border-border" style={{ width: d, height: d, backgroundImage: `url(${urlFor(img.base, pick(img.widths, 400))})`, backgroundSize: b.size, backgroundPosition: b.position }} />
-  }
-  if (c.hex) return <span aria-hidden="true" className="inline-block shrink-0 rounded-full border border-border" style={{ width: d, height: d, background: c.hex }} />
-  return <span aria-hidden="true" className="inline-grid shrink-0 place-items-center rounded-full border border-dashed border-input text-[10px] text-muted-foreground" style={{ width: d, height: d }}>{c.value.slice(0, 1)}</span>
+  return <ShopSwatch c={{ value: c.value, hex: c.hex, cropImageId: c.crop?.imageId ?? null, crop: c.crop ? { x: c.crop.x, y: c.crop.y, r: c.crop.r } : null }} images={photos} d={d} />
 }
 
 /** Each colour: the family it files under (filters, Google), and its swatch — cut from a photo (prints) or a plain colour. */

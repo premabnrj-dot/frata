@@ -85,3 +85,23 @@ export function variantUrl(base: string, options: string[], values: string[]): s
   const q = options.map((o, i) => `${encodeURIComponent(o.toLowerCase())}=${encodeURIComponent((values[i] ?? '').toLowerCase().replace(/\s+/g, '-'))}`).join('&')
   return q ? `${base}?${q}` : base
 }
+
+export type ShopLd = { name: string; url: string; logo: string | null; sameAs: string[]; returnDays: number; returnKind: string; shippingFlat: number; freeShippingAbove: number; metroDays: number; restDays: number; dispatchDays: number }
+
+/** The shop as an Organization, with its return policy and shipping once (not repeated on every product). */
+export function shopJsonLd(s: ShopLd): object {
+  const returns = s.returnKind === 'none' || s.returnDays <= 0
+    ? { '@type': 'MerchantReturnPolicy', applicableCountry: 'IN', returnPolicyCategory: 'https://schema.org/MerchantReturnNotPermitted' }
+    : { '@type': 'MerchantReturnPolicy', applicableCountry: 'IN', returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow', merchantReturnDays: s.returnDays, returnMethod: 'https://schema.org/ReturnByMail' }
+  return {
+    '@context': 'https://schema.org', '@type': 'OnlineStore', name: s.name, url: s.url, ...(s.logo ? { logo: s.logo } : {}), ...(s.sameAs.length ? { sameAs: s.sameAs } : {}),
+    hasMerchantReturnPolicy: returns,
+    hasShippingService: {
+      '@type': 'ShippingService', shippingConditions: {
+        '@type': 'ShippingConditions', shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'IN' },
+        shippingRate: { '@type': 'MonetaryAmount', value: rupees(s.shippingFlat).replace(/,/g, ''), currency: 'INR' },
+        transitTime: { '@type': 'ServicePeriod', duration: { '@type': 'QuantitativeValue', minValue: s.metroDays, maxValue: s.restDays, unitCode: 'DAY' } },
+      },
+    },
+  }
+}
