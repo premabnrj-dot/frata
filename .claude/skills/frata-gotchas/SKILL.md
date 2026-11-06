@@ -2,7 +2,7 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.4.0
+  version: 1.5.0
   verified: 2026-11-06
 ---
 
@@ -31,3 +31,8 @@ metadata:
 | Local Postgres PANIC "could not open … pg_control: Permission denied" | Data directory under the scratchpad, whose parents' permissions get reset | Use `/var/tmp/frata-pg` (frata-verify) |
 | A new definer function is callable over Supabase RPC | Postgres grants PUBLIC EXECUTE by default; drop+create resets grants | `revoke all on function … from public, anon, authenticated` every time (proof check 13) |
 | A gate flags the comment explaining it | The gate matched its own documentation | Gates skip comment lines; test a new gate on its own docs |
+| A count subquery returns 0 (or the wrong rows) | In a ONE-table select, drizzle prints `${table.id}` inside `sql` as a bare `"id"`; inside `(select … from other o where o.x = "id")` that is `o.id` | Write the outer column out in full: `"product_types"."id"` (`src/lib/queries/catalogue.ts`) |
+| "Set every price" fills only the last row | Many `onChange` calls in one event each spread the SAME stale state | Update with a function: `setD((x) => …)` |
+| Phone page scrolls sideways though every table sits in `overflow-x-auto` | `sr-only` labels are `position: absolute` and escape a scroll box that is not positioned | Every scroll box is `relative overflow-x-auto` |
+| A form loses its "Saved" message right after saving | The page passed `key={version}`, so `router.refresh()` re-created the form | No `key` from data that a save changes |
+| Local run tests an old build after a rebuild | `pkill -f "next start"` misses the `next-server` child; the new server hits EADDRINUSE | `pkill -f "next-server|next start"`, then check the log says Ready |

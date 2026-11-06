@@ -78,6 +78,20 @@
       "when": 1793997894301,
       "tag": "0010_settings_access",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793999859482,
+      "tag": "0011_catalogue",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793999860426,
+      "tag": "0012_catalogue_access",
+      "breakpoints": true
     }
   ]
 }

@@ -122,7 +122,7 @@ Pro is on (owner call 7, moved earlier: **before 1A.5**). Senders run inside
 6. Console Home checklist derived from data (product exists, payments or COD,
    published). → test.
 
-### 1A — Catalogue and import
+### 1A — Catalogue and import (catalogue built 2026-11-06; import deferred by the owner)
 Products, variant engine, editor (version check), photos on **Vercel Blob**
 (`handleUpload`: `onBeforeGenerateToken` runs `requireMember`, forces
 `tenants/<tenantId>/products/<random>`, content types, size cap; the

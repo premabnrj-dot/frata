@@ -41,7 +41,7 @@ export function setupSteps(f: SetupFacts, built: BuiltPages, formatInr: (paise: 
       key: 'product', title: 'Add your first product', done: hasProduct, href: built.products ? '/console/products' : null,
       detail: hasProduct ? `${f.productCount} product${f.productCount === 1 ? '' : 's'}`
         : built.products ? 'Photos on a model, sizes and colours, the size chart for its type. About 10 minutes.'
-        : 'Products open in the next release: photos, sizes and colours, size charts, and import from a Shopify file.',
+        : 'Products open in the next release: photos, sizes and colours and size charts.',
     },
     {
       key: 'details', title: 'Business details and grievance officer', done: !!f.legalName.trim() && !!f.grievanceName.trim(),

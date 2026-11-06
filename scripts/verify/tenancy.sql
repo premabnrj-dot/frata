@@ -294,4 +294,32 @@ do $$ begin
 end $$;
 rollback;
 
-\echo 'tenancy proof — all 19 checks passed'
+-- 20. Catalogue: own shop only, and a child row can never point at another shop's product.
+insert into product_types (id, tenant_id, name, size_chart) values
+  ('dddddddd-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'Kurta', '{"columns":[],"rows":[],"howToMeasure":""}');
+insert into products (id, tenant_id, handle, title, type_id) values
+  ('eeeeeeee-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 'a-kurta', 'A kurta', null),
+  ('eeeeeeee-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'b-kurta', 'B kurta', 'dddddddd-0000-0000-0000-00000000000b');
+insert into variants (tenant_id, product_id, option_values, price, unit_cost) values
+  ('22222222-2222-2222-2222-222222222222', 'eeeeeeee-0000-0000-0000-00000000000b', '{M}', 249000, 98000);
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if (select count(*) from products) <> 1 or exists (select 1 from variants) or exists (select 1 from product_types) then raise exception 'FAIL: tenant A sees B catalogue'; end if;
+  update variants set price = 1 where tenant_id = '22222222-2222-2222-2222-222222222222'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A repriced B'; end if;
+  -- A's own variant pointing at B's product: the composite key refuses it, RLS or not.
+  begin insert into variants (tenant_id, product_id, price) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000b', 1); raise exception 'FAIL: A attached a variant to B product';
+  exception when foreign_key_violation then null; end;
+  begin insert into product_images (tenant_id, product_id, base, widths, width, height) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000b', 'x', '{400}', 1, 1); raise exception 'FAIL: A attached a photo to B product';
+  exception when foreign_key_violation then null; end;
+  begin update products set type_id = 'dddddddd-0000-0000-0000-00000000000b' where id = 'eeeeeeee-0000-0000-0000-00000000000a'; raise exception 'FAIL: A used B size chart';
+  exception when foreign_key_violation then null; end;
+  begin insert into products (tenant_id, handle, title) values ('22222222-2222-2222-2222-222222222222', 'x', 'X'); raise exception 'FAIL: A made a product in B'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+do $$ begin
+  if has_table_privilege('frata_admin', 'variants', 'select') or has_table_privilege('frata_admin', 'products', 'select') then raise exception 'FAIL: admin reads the catalogue directly'; end if;
+end $$;
+
+\echo 'tenancy proof — all 20 checks passed'

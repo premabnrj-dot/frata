@@ -12,9 +12,9 @@ import {
   bigint, boolean, check, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid,
 } from 'drizzle-orm/pg-core'
 
-const id = () => uuid('id').primaryKey().defaultRandom()
-const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
-const money = (name: string) => bigint(name, { mode: 'number' })
+export const id = () => uuid('id').primaryKey().defaultRandom()
+export const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+export const money = (name: string) => bigint(name, { mode: 'number' })
 
 export const MEMBER_ROLES = ['owner', 'admin', 'staff'] as const
 export type MemberRole = (typeof MEMBER_ROLES)[number]
@@ -108,7 +108,7 @@ export const outbox = pgTable('outbox', {
 
 // ── Phase A: Frata admin (ADR-0007). Grants per role: drizzle/0005_admin.sql ──
 
-const at = (name: string) => timestamp(name, { withTimezone: true })
+export const at = (name: string) => timestamp(name, { withTimezone: true })
 
 export const STAFF_ROLES = ['admin', 'support'] as const
 export type StaffRole = (typeof STAFF_ROLES)[number]
@@ -223,7 +223,7 @@ export const tenantPlans = pgTable('tenant_plans', {
 export const BRAND_ACCENTS = ['oxide', 'indigo', 'moss', 'wine', 'ink'] as const
 export const DISPLAY_FONTS = ['fraunces', 'cormorant', 'inter'] as const
 export const RETURN_KINDS = ['exchange_or_refund', 'exchange_only', 'refund_only', 'none'] as const
-export const SELLS = ['women', 'men', 'kids', 'ethnic', 'accessories', 'footwear'] as const
+export { SELL_KEYS as SELLS } from '@/domains/catalogue/sell-keys'
 
 /**
  * One row per shop: everything a merchant sets in Settings. The storefront,
@@ -327,3 +327,5 @@ export const shopPolicies = pgTable('shop_policies', {
   check('shop_policies_kind', sql`${t.kind} in ('returns','shipping','privacy','terms','contact')`),
   check('shop_policies_body', sql`length(${t.body}) between 1 and 20000`),
 ])
+
+// The catalogue (1A) lives in ./schema-catalogue.ts; import its tables from there.

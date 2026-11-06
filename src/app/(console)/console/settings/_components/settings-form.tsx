@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
+import { LeaveDialog, Message, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
 import {
   BrandPreview, CheckoutPreview, ContactPreview, FooterPreview, InvoicePreview, PolicyPreview, type ShopFacts,
 } from '@/components/shop-preview/previews'
@@ -34,7 +34,6 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
   const [conflict, setConflict] = useState(false)
-  const [leaveTo, setLeaveTo] = useState<string | null>(null)
   const [pending, start] = useTransition()
   const [policyPage, setPolicyPage] = useState<PolicyPage>('returns')
 
@@ -44,22 +43,7 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
     return { ...facts, ...p, shopName: typeof p.name === 'string' && p.name ? p.name : facts.shopName }
   }, [section, values, facts])
 
-  // Leaving with changes asks first: the browser's own prompt for reload/close,
-  // ours for links inside the console.
-  useEffect(() => {
-    if (!dirty) return
-    const onUnload = (e: BeforeUnloadEvent) => { e.preventDefault() }
-    const onClick = (e: MouseEvent) => {
-      const a = (e.target as HTMLElement).closest('a')
-      if (!a || a.target === '_blank' || e.metaKey || e.ctrlKey) return
-      const href = a.getAttribute('href')
-      if (!href || href.startsWith('#') || href.startsWith('http')) return
-      e.preventDefault(); e.stopPropagation(); setLeaveTo(href)
-    }
-    window.addEventListener('beforeunload', onUnload)
-    document.addEventListener('click', onClick, true)
-    return () => { window.removeEventListener('beforeunload', onUnload); document.removeEventListener('click', onClick, true) }
-  }, [dirty])
+  const guard = useLeaveGuard(dirty)
 
   const set = (k: string, v: string | boolean) => { setValues((x) => ({ ...x, [k]: v })); setErrors((e) => { const { [k]: _, ...rest } = e; return rest }); setMessage(null) }
 
@@ -82,26 +66,12 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
 
   return (
     <div className={STORE_FONT_VARS}>
-      {dirty && (
-        <div role="region" aria-label="Unsaved changes" className="sticky top-0 z-10 mb-3 flex animate-step-forward items-center gap-3 rounded-md bg-primary px-4 py-2.5 text-primary-foreground">
-          <b className="text-sm">Unsaved changes</b>
-          <span className="flex-1" />
-          <button type="button" className="h-8 rounded-md border border-current px-3 text-sm" disabled={pending}
-            onClick={() => { setValues(saved); setErrors({}); setMessage(null) }}>Discard</button>
-          <button type="button" className="h-8 rounded-md bg-primary-foreground px-3 text-sm font-medium text-primary" disabled={pending} onClick={save}>
-            {pending ? 'Saving…' : 'Save'}
-          </button>
-        </div>
-      )}
+      {dirty && <SaveBar pending={pending} onSave={save} onDiscard={() => { setValues(saved); setErrors({}); setMessage(null) }} />}
       <Link href="/console/settings" className="text-sm text-muted-foreground hover:text-foreground">← Settings</Link>
       <h1 className="mt-1 text-2xl font-bold tracking-tight">{section.title}</h1>
       <p className="text-sm text-muted-foreground">{section.intro}</p>
-      {message && (
-        <p role={message.tone === 'ok' ? 'status' : 'alert'} className={`mt-3 rounded-md border px-3 py-2 text-sm ${message.tone === 'ok' ? 'border-ok-text/30 bg-ok text-ok-text' : 'border-danger-text/30 bg-danger text-danger-text'}`}>
-          {message.text}{conflict && <> <button type="button" className="underline" onClick={() => window.location.reload()}>Reload</button></>}
-        </p>
-      )}
-      <div className="mt-4 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <Message m={message} onReload={conflict ? () => window.location.reload() : undefined} />
+      <div className="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <form className="space-y-4" noValidate onSubmit={(e) => { e.preventDefault(); if (dirty) save() }}>
           {section.blocks.map((b) => (
             <section key={b.title} className="space-y-3 rounded-md border border-border bg-card p-4">
@@ -128,18 +98,7 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
         </aside>
       </div>
 
-      {leaveTo && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 p-4" onKeyDown={(e) => { if (e.key === 'Escape') setLeaveTo(null) }}>
-          <div role="alertdialog" aria-modal="true" aria-labelledby="leave-h" className="w-full max-w-sm animate-step-forward rounded-md border border-border bg-card p-5">
-            <h2 id="leave-h" className="font-semibold">Leave without saving?</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Your changes to {section.title} are not saved and will be lost.</p>
-            <div className="mt-4 flex justify-end gap-2">
-              <Button variant="secondary" autoFocus onClick={() => setLeaveTo(null)}>Keep editing</Button>
-              <Button variant="destructive" onClick={() => { const to = leaveTo; setSaved(values); setLeaveTo(null); router.push(to) }}>Leave</Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {guard.leaveTo && <LeaveDialog what={section.title} onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(values))} />}
     </div>
   )
 }

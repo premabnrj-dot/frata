@@ -1,0 +1,76 @@
+// =============================================================================
+// FILE: src/domains/catalogue/variants.ts
+//
+// OPTIONS → VARIANTS (Shopify's 2026 model: options first, variants derived).
+// A product has up to three options (Size, Colour…); every combination of their
+// values is one variant. Pure: the editor draws from it, the save action checks
+// with it, and both agree on what a variant is.
+// =============================================================================
+
+export const MAX_OPTIONS = 3
+export const MAX_VALUES = 30
+export const MAX_VARIANTS = 100
+
+export type Option = { name: string; values: string[] }
+
+const tidy = (s: string) => s.trim().replace(/\s+/g, ' ')
+
+/** Checks names and values; returns cleaned options or the first problem in words. */
+export function cleanOptions(options: Option[]): { ok: true; options: Option[] } | { ok: false; error: string } {
+  if (options.length > MAX_OPTIONS) return { ok: false, error: `Up to ${MAX_OPTIONS} options, like Size, Colour and Fabric.` }
+  const out: Option[] = []
+  const names = new Set<string>()
+  for (const o of options) {
+    const name = tidy(o.name)
+    if (!name) return { ok: false, error: 'Every option needs a name, like Size.' }
+    if (name.length > 30) return { ok: false, error: `“${name.slice(0, 30)}…” is too long for an option name.` }
+    if (names.has(name.toLowerCase())) return { ok: false, error: `There are two options called ${name}.` }
+    names.add(name.toLowerCase())
+    const values: string[] = []
+    const seen = new Set<string>()
+    for (const raw of o.values) {
+      const v = tidy(raw)
+      if (!v) continue
+      if (v.length > 40) return { ok: false, error: `“${v.slice(0, 40)}…” is too long for a ${name.toLowerCase()}.` }
+      if (seen.has(v.toLowerCase())) return { ok: false, error: `${name} has ${v} twice.` }
+      seen.add(v.toLowerCase()); values.push(v)
+    }
+    if (!values.length) return { ok: false, error: `Add at least one ${name.toLowerCase()}, or remove the option.` }
+    if (values.length > MAX_VALUES) return { ok: false, error: `Up to ${MAX_VALUES} values for ${name}.` }
+    out.push({ name, values })
+  }
+  const count = out.reduce((n, o) => n * o.values.length, 1)
+  if (count > MAX_VARIANTS) return { ok: false, error: `That makes ${count} sizes and colours; the most is ${MAX_VARIANTS}. Split it into two products.` }
+  return { ok: true, options: out }
+}
+
+/** Every combination, in the order shoppers see them (first option varies slowest). No options → one variant with no values. */
+export function combinations(options: Option[]): string[][] {
+  return options.reduce<string[][]>((acc, o) => acc.flatMap((c) => o.values.map((v) => [...c, v])), [[]])
+}
+
+export const keyOf = (values: readonly string[]) => values.join('\u0000')
+
+/** What a save does to the variants: which stay (matched by their values), which are new, which go. */
+export function reconcile<T extends { id: string; optionValues: string[] }>(existing: readonly T[], options: Option[]) {
+  const wanted = combinations(options)
+  const byKey = new Map(existing.map((v) => [keyOf(v.optionValues), v]))
+  const keep = wanted.filter((c) => byKey.has(keyOf(c))).map((c) => byKey.get(keyOf(c))!)
+  const add = wanted.filter((c) => !byKey.has(keyOf(c)))
+  const wantedKeys = new Set(wanted.map(keyOf))
+  const remove = existing.filter((v) => !wantedKeys.has(keyOf(v.optionValues)))
+  return { wanted, keep, add, remove }
+}
+
+/** Which option the grid groups by: a colour if there is one, else the last option. -1 with fewer than two options. */
+export function groupOption(options: readonly Option[]): number {
+  if (options.length < 2) return -1
+  const i = options.findIndex((o) => /^colou?rs?$/i.test(o.name))
+  return i >= 0 ? i : options.length - 1
+}
+
+/** A product's address in the shop: "Linen Kurta Set" → "linen-kurta-set". Up to 100 characters. */
+export function handleFor(title: string): string {
+  return title.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 100).replace(/-+$/, '')
+}

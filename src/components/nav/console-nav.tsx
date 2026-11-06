@@ -8,6 +8,7 @@ import Link from 'next/link'
  */
 const GROUPS: { label: string; items: { href: string; label: string }[] }[] = [
   { label: 'Today', items: [{ href: '/console', label: 'Home' }, { href: '/console/orders', label: 'Orders' }] },
+  { label: 'Catalogue', items: [{ href: '/console/products', label: 'Products' }] },
   { label: 'Store', items: [{ href: '/console/settings', label: 'Settings' }, { href: '/console/activity', label: 'Activity' }] },
 ]
 

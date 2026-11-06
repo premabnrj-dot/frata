@@ -10,4 +10,4 @@
 // Bare `cost` and `margin` are NOT here: `margin` is a CSS key.
 // =============================================================================
 
-export const SENTINELS = ['cogs', 'forwardShipping', 'rtoShipping', 'gatewayBps', 'platformFee', 'adCost', 'codFee']
+export const SENTINELS = ['cogs', 'forwardShipping', 'rtoShipping', 'gatewayBps', 'platformFee', 'adCost', 'codFee', 'unitCost', 'unit_cost']

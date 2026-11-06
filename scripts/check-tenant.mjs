@@ -8,7 +8,7 @@
 //   1. RAW db() ONLY IN PLATFORM CODE. Everything else reads merchant rows
 //      through src/lib/queries/, which goes through withTenant.
 //   2. EVERY QUERY FILE is server-only and calls withTenant.
-//   3. EVERY TABLE in src/lib/db/schema.ts has RLS enabled and at least one
+//   3. EVERY TABLE in src/lib/db/schema*.ts has RLS enabled and at least one
 //      policy in a drizzle/*.sql migration. A new table without them is
 //      readable by nobody (fine) or — if someone grants it later — by everyone.
 //   4. ADMIN IS FENCED (ADR-0007): the frata_admin connection (@/lib/db/admin)
@@ -58,13 +58,17 @@ for (const file of walk('src')) {
   if (file.startsWith('src/app/(admin)/') && /\bwithTenant\(/.test(text)) {
     failures.push(`${file}  Admin calls withTenant — staff reach a store only through a support session (ADR-0007)`)
   }
+  // 6. A MERCHANT'S COST NEVER REACHES A SHOPPER (ADR-0003): storefront code never names it.
+  if ((file.startsWith('src/app/s/') || /^src\/lib\/queries\/storefront/.test(file) || file.startsWith('src/components/shop-preview/')) && /unit_?[cC]ost/.test(text)) {
+    failures.push(`${file}  storefront code names the merchant's unit cost — select only what a shopper sees`)
+  }
   if (file.startsWith('src/lib/queries/')) {
     if (!/import\s+['"]server-only['"]/.test(text)) failures.push(`${file}  query file without import 'server-only'`)
     if (!/\bwithTenant\(/.test(text)) failures.push(`${file}  query file that never calls withTenant(`)
   }
 }
 
-const schema = code('src/lib/db/schema.ts')
+const schema = readdirSync('src/lib/db').filter(f => /^schema.*\.ts$/.test(f)).map(f => code(join('src/lib/db', f))).join('\n')
 const tables = [...schema.matchAll(/pgTable\(\s*'([a-z_]+)'/g)].map(m => m[1])
 const sql = readdirSync('drizzle').filter(f => f.endsWith('.sql'))
   .map(f => readFileSync(join('drizzle', f), 'utf8').split(/\r?\n/).filter(l => !l.trim().startsWith('--')).join('\n'))

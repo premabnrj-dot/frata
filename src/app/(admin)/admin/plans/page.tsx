@@ -21,7 +21,7 @@ export default async function PlansPage({ searchParams }: { searchParams: Promis
     <>
       <PageHeader title="Plans" actions={<span className="text-sm text-muted-foreground">Prices exclude GST · not charged until billing arrives in Phase 6</span>} />
       <Notice ok={ok} />
-      <div className="overflow-x-auto rounded-md border border-border bg-card">
+      <div className="relative overflow-x-auto rounded-md border border-border bg-card">
         <table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="border-b border-border text-left">

@@ -8,19 +8,21 @@ import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { formatInr } from '@/lib/format'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 import { shopWithSettings } from '@/lib/queries/settings'
+import { productCount } from '@/lib/queries/catalogue'
 
 /** Pages the checklist may link to. Each flips to true when its sub-phase ships (docs/plans/2026-11-06-phase-1-first-sale.md). */
-const BUILT = { products: false, settings: true, publish: false }
+const BUILT = { products: true, settings: true, publish: false }
 
 export default async function ConsoleHome() {
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
-  const shop = await shopWithSettings(auth.membership.tenantId).catch((err) => { console.error('[console home]', err); return null })
+  const [shop, products] = await Promise.all([shopWithSettings(auth.membership.tenantId), productCount(auth.membership.tenantId)])
+    .catch((err) => { console.error('[console home]', err instanceof Error ? err.name : err); return [null, 0] as const })
   if (!shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
 
   const address = `${shop.slug}.${SHOP_DOMAIN}`
   const steps = setupSteps({
-    shopName: shop.name, address, productCount: 0,
+    shopName: shop.name, address, productCount: products,
     legalName: shop.settings.legalName, grievanceName: shop.settings.grievanceName,
     codOn: shop.settings.codOn, codMaxPaise: shop.settings.codMax, paymentsConnected: false, publishedAt: shop.settings.publishedAt,
   }, BUILT, (p) => formatInr(paise(p)))
