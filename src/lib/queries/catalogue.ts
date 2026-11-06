@@ -2,6 +2,7 @@ import 'server-only'
 import { and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm'
 import { productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { withTenant } from '@/lib/db/tenant'
+import { shopSettings, tenants } from '@/lib/db/schema'
 
 // The console's catalogue reads (1A). Every one inside withTenant with an
 // explicit tenant where. These include the merchant's own unit cost: they are
@@ -49,7 +50,9 @@ export async function productForEdit(tenantId: string, productId: string) {
         uses: sql<number>`(select count(*)::int from ${products} p where p.type_id = "product_types"."id" and p.tenant_id = ${tenantId} and p.archived_at is null)`,
       }).from(productTypes).where(eq(productTypes.tenantId, tenantId)).orderBy(asc(productTypes.name)),
     ])
-    return { product, variants: vs, images: imgs, types }
+    const [shop] = await tx.select({ name: tenants.name, slug: tenants.slug, orderPrefix: shopSettings.orderPrefix }).from(tenants)
+      .innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
+    return { product, variants: vs, images: imgs, types, shop: shop ?? { name: '', slug: '', orderPrefix: '' } }
   })
 }
 

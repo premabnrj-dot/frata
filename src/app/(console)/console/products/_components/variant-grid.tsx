@@ -12,11 +12,13 @@ export const EMPTY_CELL: Cell = { price: '', compareAt: '', cost: '', stock: '0'
  * every price" for the common case and a cell for the rest. The cost column is
  * the merchant's own: it never leaves the console.
  */
-export function VariantGrid({ options, cells, onChange, errors }: {
+export function VariantGrid({ options, cells, onChange, errors, autoSku }: {
   options: Option[]
   cells: Record<string, Cell>
   onChange: (key: string, patch: Partial<Cell>) => void
   errors: Record<string, string>
+  /** The SKU a save will make for an empty cell, shown as its placeholder. */
+  autoSku: (values: string[]) => string
 }) {
   const combos = combinations(options)
   const g = groupOption(options)
@@ -28,11 +30,11 @@ export function VariantGrid({ options, cells, onChange, errors }: {
   const err = (k: string, f: string) => errors[`v:${k}:${f}`]
 
   const rowId = new Map(combos.map((c, i) => [keyOf(c), i]))
-  const input = (k: string, f: keyof Cell, label: string, mono = true, w = 'w-24') => (
+  const input = (k: string, f: keyof Cell, label: string, mono = true, w = 'w-24', placeholder?: string) => (
     <div>
       <label htmlFor={`${f}-${rowId.get(k)}`} className="sr-only">{label}</label>
       <input id={`${f}-${rowId.get(k)}`} value={(cells[k] ?? EMPTY_CELL)[f]} inputMode={f === 'sku' ? undefined : 'decimal'} aria-invalid={!!err(k, f) || undefined}
-        title={err(k, f)} onChange={(e) => onChange(k, { [f]: e.target.value })}
+        title={err(k, f)} placeholder={placeholder} onChange={(e) => onChange(k, { [f]: e.target.value })}
         className={`h-8 ${w} rounded-md border border-input bg-card px-2 text-sm ${mono ? 'font-mono' : ''} aria-invalid:border-danger-text aria-invalid:bg-danger`} />
     </div>
   )
@@ -75,7 +77,7 @@ export function VariantGrid({ options, cells, onChange, errors }: {
                       <td>{input(k, 'compareAt', `Compare-at price for ${c.join(' ')}`)}</td>
                       <td>{input(k, 'cost', `Your cost for ${c.join(' ')}`)}</td>
                       <td>{input(k, 'stock', `Stock for ${c.join(' ')}`, true, 'w-16')}</td>
-                      <td>{input(k, 'sku', `SKU for ${c.join(' ')}`, true, 'w-32')}</td>
+                      <td>{input(k, 'sku', `SKU for ${c.join(' ')}`, true, 'w-40', autoSku(c))}</td>
                     </tr>
                   )
                 })}
@@ -84,7 +86,7 @@ export function VariantGrid({ options, cells, onChange, errors }: {
           })}
         </table>
       </div>
-      <p className="text-xs text-muted-foreground">Your cost is never shown to shoppers. It is how Frata will work out profit on each order. Leave it empty if you do not know it yet.</p>
+      <p className="text-xs text-muted-foreground">An empty SKU is made for you when you save (shown in grey); type your own to replace it. Your cost is never shown to shoppers. It is how Frata will work out profit on each order. Leave it empty if you do not know it yet.</p>
     </div>
   )
 }

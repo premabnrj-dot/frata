@@ -74,3 +74,25 @@ export function handleFor(title: string): string {
   return title.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/&/g, ' and ')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 100).replace(/-+$/, '')
 }
+
+const code = (s: string, n: number) => s.toUpperCase().normalize('NFKD').replace(/[^A-Z0-9]/g, '').slice(0, n)
+
+/**
+ * A default SKU, made when the merchant leaves the cell empty: shop prefix,
+ * a product code from its handle, then each option value.
+ * "KS", "linen-kurta-set", ["M", "Indigo"] → "KS-LINKUR-M-IND". Once saved it
+ * stays as it is (a SKU must not change when a colour is renamed); the
+ * merchant can overwrite it any time.
+ */
+export function skuFor(prefix: string, handle: string, values: readonly string[]): string {
+  const words = handle.split('-').filter(Boolean)
+  const product = (words.length > 1 ? words.slice(0, 2).map((w) => code(w, 3)).join('') : code(words[0] ?? 'ITEM', 6)) || 'ITEM'
+  return [code(prefix, 4) || 'SKU', product, ...values.map((v) => code(v, 3) || 'X')].join('-').slice(0, 40)
+}
+
+/** Makes a SKU unique against those already taken: "KS-LINKUR-M", then "-2", "-3"… */
+export function uniqueSku(sku: string, taken: ReadonlySet<string>): string {
+  if (!taken.has(sku.toUpperCase())) return sku
+  for (let n = 2; n < 1000; n++) { const s = `${sku.slice(0, 36)}-${n}`; if (!taken.has(s.toUpperCase())) return s }
+  return `${sku.slice(0, 30)}-${Date.now() % 1e6}`
+}

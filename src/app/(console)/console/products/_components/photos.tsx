@@ -26,7 +26,15 @@ export function Photos({ productId, tenantId, photos, colours, enabled }: { prod
     const done: Uploaded[] = []
     for (const [i, f] of list.entries()) {
       try { done.push(await uploadPhoto(f, tenantId, (p) => setBusy((b) => b.map((x, j) => (j === i ? { ...x, p } : x))))) }
-      catch (e) { setError(e instanceof Error ? e.message : `${f.name} could not be uploaded.`) }
+      catch (e) {
+        const m = e instanceof Error ? e.message : ''
+        // Say what is wrong in words; the storage service's own messages are for us, not the merchant.
+        setError(/private/i.test(m) ? 'Photo storage is set to private, so shoppers could not see these photos. Frata support needs to switch it to a public store.'
+          : /network|fetch|failed to fetch/i.test(m) ? `${f.name} did not upload: the connection dropped. Try again.`
+          : m.startsWith('Vercel Blob') ? `${f.name} was refused by photo storage. Try again, or send us this: ${m.replace(/^Vercel Blob:\s*/, '').slice(0, 120)}`
+          : m || `${f.name} could not be uploaded.`)
+        console.error('[photos] upload', m)
+      }
     }
     if (done.length) {
       const r = await attachPhotos(productId, done)

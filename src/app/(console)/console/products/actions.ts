@@ -5,13 +5,14 @@ import { revalidatePath } from 'next/cache'
 import { del } from '@vercel/blob'
 import { presetsFor, cleanChart, type Chart } from '@/domains/catalogue/size-charts'
 import { cleanProduct, readiness, type ProductInput } from '@/domains/catalogue/product-form'
-import { handleFor, keyOf, reconcile } from '@/domains/catalogue/variants'
+import { handleFor, keyOf, reconcile, skuFor, uniqueSku } from '@/domains/catalogue/variants'
+import { orderPrefix } from '@/domains/signup/slug'
 import { acceptedBase, storeHost, WIDTHS, urlFor } from '@/domains/media/sizes'
 import { asMember } from '@/lib/auth/as-member'
 import { ANY_MEMBER } from '@/lib/auth/require-member'
 import { BLOB_READ_WRITE_TOKEN, BLOB_STORE_ID } from '@/lib/env'
 import type { Tx } from '@/lib/db'
-import { auditEvents, shopSettings } from '@/lib/db/schema'
+import { auditEvents, shopSettings, tenants } from '@/lib/db/schema'
 import { productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 
 // Catalogue changes (1A). Any member may edit products (staff run catalogues);
@@ -100,6 +101,18 @@ export async function saveProduct(productId: string, version: number, input: Pro
       const plan = reconcile(existing, p.options)
       // Removed sizes and colours go (no orders exist before checkout, 1C; then they are archived instead).
       if (plan.remove.length) await tx.delete(variants).where(and(eq(variants.tenantId, tenantId), inArray(variants.id, plan.remove.map((v) => v.id))))
+      // Empty SKUs get a default (skuFor), unique against every other SKU in this shop.
+      const [prod] = await tx.select({ handle: products.handle }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId)))
+      const [shop] = await tx.select({ prefix: shopSettings.orderPrefix, name: tenants.name }).from(shopSettings).innerJoin(tenants, eq(tenants.id, shopSettings.tenantId)).where(eq(shopSettings.tenantId, tenantId))
+      const others = await tx.select({ sku: variants.sku }).from(variants).where(and(eq(variants.tenantId, tenantId), sql`${variants.productId} <> ${productId}`, sql`${variants.sku} is not null`))
+      const taken = new Set(others.map((o) => o.sku!.toUpperCase()))
+      p.variants.forEach((v) => { if (v.sku) taken.add(v.sku.toUpperCase()) })
+      const prefix = orderPrefix(shop?.prefix ?? '', shop?.name ?? '')
+      for (const v of p.variants) {
+        if (v.sku) { if (others.some((o) => o.sku!.toUpperCase() === v.sku!.toUpperCase())) throw new Stop({ ok: false, error: `SKU ${v.sku} is already used by another product in your shop.` }); continue }
+        v.sku = uniqueSku(skuFor(prefix, prod?.handle ?? 'item', v.values), taken)
+        taken.add(v.sku.toUpperCase())
+      }
       const byKey = new Map(p.variants.map((v) => [keyOf(v.values), v]))
       // SKUs cleared first so two variants can swap SKUs in one save.
       await tx.update(variants).set({ sku: null }).where(and(eq(variants.tenantId, tenantId), eq(variants.productId, productId)))

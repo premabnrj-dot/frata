@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cleanOptions, combinations, groupOption, handleFor, reconcile } from '../variants'
+import { cleanOptions, combinations, groupOption, handleFor, reconcile, skuFor, uniqueSku } from '../variants'
 
 describe('cleanOptions', () => {
   it('tidies names and values and drops empty values', () => {
@@ -43,4 +43,16 @@ describe('groupOption and handleFor', () => {
     expect(groupOption([{ name: 'Size', values: [] }])).toBe(-1)
   })
   it('makes a shop address for a product', () => expect(handleFor('Linen Kurta Set — Indigo & Rust')).toBe('linen-kurta-set-indigo-and-rust'))
+})
+
+describe('default SKUs', () => {
+  it('prefix, product code, values', () => {
+    expect(skuFor('KS', 'linen-kurta-set', ['M', 'Indigo'])).toBe('KS-LINKUR-M-IND')
+    expect(skuFor('ks', 'dupatta', [])).toBe('KS-DUPATT')
+    expect(skuFor('', 'saree', ['Free size'])).toBe('SKU-SAREE-FRE')
+  })
+  it('never repeats one already taken', () => {
+    expect(uniqueSku('KS-LINKUR-M', new Set(['KS-LINKUR-M', 'KS-LINKUR-M-2']))).toBe('KS-LINKUR-M-3')
+    expect(uniqueSku('KS-A', new Set())).toBe('KS-A')
+  })
 })

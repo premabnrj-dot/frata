@@ -4,6 +4,8 @@ import { rupeesText } from '@/domains/catalogue/product-form'
 import { keyOf } from '@/domains/catalogue/variants'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { isBlobConfigured } from '@/lib/env'
+import { SHOP_DOMAIN } from '@/lib/public-env'
+import { orderPrefix } from '@/domains/signup/slug'
 import { productForEdit } from '@/lib/queries/catalogue'
 import { ProductEditor } from '../_components/product-editor'
 
@@ -29,6 +31,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       initial={{
         id: p.id, title: p.title, description: p.description, typeId: p.typeId, modelHeight: p.modelHeight, modelSize: p.modelSize,
         options: p.options.map((name, i) => ({ name, values: p.optionValues[i] ?? [] })), cells, version: p.version, published: p.publishedAt !== null,
+        handle: p.handle, skuPrefix: orderPrefix(data.shop.orderPrefix, data.shop.name), shopAddress: `${data.shop.slug}.${SHOP_DOMAIN}`,
       }}
       photos={data.images.map((i) => ({ id: i.id, base: i.base, widths: i.widths, optionValue: i.optionValue, width: i.width, height: i.height }))}
       types={data.types}
