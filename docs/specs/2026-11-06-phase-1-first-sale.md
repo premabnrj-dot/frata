@@ -17,7 +17,7 @@ phones, in an afternoon.
 ## Build order (each usable alone; each ends with tests, a production build and the live logs)
 - **1A Catalogue and look** — products, options, variant grid, size charts by type, photos, theme. The shop can be previewed.
 - **1B Storefront** — home, collection, product page, size guide, pincode check, bag. Edge-cached; stock checked live.
-- **1C Checkout and payments** — one-page checkout, COD rules, Razorpay with the merchant's keys, webhook, order page, merchant email.
+- **1C Checkout and payments** — one-page checkout, COD rules, Razorpay with the merchant's keys, webhook, order page.
 - **1D Orders** — work queue, confirm/cancel with undo, stock back on cancel, repeat-COD flags.
 
 ## Modules — research, build, stress test
@@ -48,7 +48,7 @@ phones, in an afternoon.
 - Stress: 300 to confirm → j/k/c keys, 50 a page, bulk for unflagged · confirmed by mistake → Undo, then Cancel · support visit → audit row with both names (`asMember`) · cancelled stock → back on sale, cache tag refreshed.
 
 ### 1C·N Telling people
-- Shopper: order page at an unguessable link (128-bit token) and a WhatsApp click-to-chat link to the brand. Merchant: new-order email from the outbox after commit, retried with backoff. SMS and WhatsApp API messages: Phase 2.
+- Shopper: order page at an unguessable link (128-bit token) and a WhatsApp click-to-chat link to the brand. Merchant: new orders appear in the console's "To confirm" count. **No email service in Phase 1** (owner, 2026-11-06: email waits). SMS and WhatsApp API messages: Phase 2.
 
 ## Speed budgets (production build, throttled mid Android; over budget → split, never raise)
 | Surface | Budget |
@@ -68,7 +68,7 @@ phones, in an afternoon.
 2. **Prepaid** — each merchant's own Razorpay keys, encrypted, until the partner application is approved.
 3. **COD rules** — on by default, max order value (₹3,000 suggested), blocked pincodes, flag > 2 COD orders per phone per day.
 4. **No shopper OTP yet** — start DLT registration now; OTP for COD in Phase 2.
-5. **Notifications** — order page + WhatsApp link for the shopper; new-order email for the merchant (one new dependency: an email service).
+5. **Notifications** — decided (owner, 2026-11-06): order page + WhatsApp link for the shopper; the merchant sees new orders in the console. No email service yet.
 6. **One theme** — logo, accent colour, display font.
 7. **Paid plans before a real sale** — Vercel Hobby is non-commercial; free Supabase pauses and has no backups → Vercel Pro and Supabase Pro.
 
