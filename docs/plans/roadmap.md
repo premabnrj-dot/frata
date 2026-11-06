@@ -1,7 +1,7 @@
 # Frata roadmap
 
 Status: proposed · 2026-11-06 · Approved: pending
-Mockups: Phase A https://claude.ai/artifact/7mikx6osVqgKjs84oERW5k · Phase 1 https://claude.ai/artifact/NvAiqDdfikTq97hFtUfFYX
+Mockups: Phase A https://claude.ai/artifact/7mikx6osVqgKjs84oERW5k · Phase 1 https://claude.ai/artifact/QJ3N5knGqGZniMCsZJn7Fu
 
 Order (owner, 2026-11-06): Admin (A1, A2) first, then Phase 1.
 
@@ -28,3 +28,5 @@ gets its own research, spec and mockup before it is built.
 3. Shiprocket: written answer on a platform partner agreement (needed by Phase 2).
 4. Razorpay Partner Program, Aggregator type (Phase 6).
 5. Shop domain for `*.<domain>` subdomains (Phase 1, owner call 1).
+6. DLT registration (entity, sender ID, OTP template) for shopper OTP (Phase 2; weeks of lead time).
+7. Vercel Pro and Supabase Pro before any merchant takes a real order (Phase 1, owner call 7).
