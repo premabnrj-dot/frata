@@ -2,7 +2,7 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.3.0
+  version: 1.4.0
   verified: 2026-11-06
 ---
 
@@ -19,6 +19,7 @@ metadata:
 | One request sees another merchant's tenant id | A session-level `SET` on a pooled connection | `set_config(…, true)` — transaction-local — only, in `withTenant` |
 | Console: "Something went wrong"; log `TypeError: Invalid URL` | `DATABASE_URL` password has `/`, `+`, `@` or `#` unencoded | Hex password (`openssl rand -hex 24`); `src/lib/db/url.ts` now fails without echoing the value. If a URL was ever logged, rotate the password |
 | `[db] DATABASE_URL must log in as frata_app` | User part is `postgres.<ref>` or `postgres.frata_app.<ref>` | Exactly `frata_app.<ref>` |
+| Every Admin page: "We could not load this screen"; log `(EAUTHQUERY) unsupported or invalid secret format` | `frata_admin` has no password (only frata_app was set), so Supabase's pooler refuses it | `alter role frata_admin with password '<hex>'`; same value in `ADMIN_DATABASE_URL`; Admin now shows this as a panel (`src/lib/admin/health.ts`) |
 | `prepared statement "…" already exists` | Supabase pooler in transaction mode | `postgres(url, { prepare: false })` (already in `src/lib/db/index.ts`) |
 | drizzle-kit silently skips a migration | Journal `when` not increasing | Fix `drizzle/meta/_journal.json` order |
 | Meta CAPI: every event in a batch rejected | One `event_time` older than 7 days, or in ms | Drop > 7 days before batching; seconds |
