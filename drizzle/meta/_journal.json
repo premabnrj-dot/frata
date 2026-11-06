@@ -92,6 +92,13 @@
       "when": 1793999860426,
       "tag": "0012_catalogue_access",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794001181158,
+      "tag": "0013_catalogue_indexes",
+      "breakpoints": true
     }
   ]
 }

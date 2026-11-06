@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client'
 import { MAX_UPLOAD_BYTES, PATH_SHAPE } from '@/domains/media/sizes'
-import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
+import { ANY_MEMBER, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { BLOB_READ_WRITE_TOKEN, isBlobConfigured } from '@/lib/env'
 
 // Photo uploads (ADR-0005). The browser asks for a one-time token for ONE
@@ -21,6 +21,8 @@ export async function POST(request: Request) {
       onBeforeGenerateToken: async (pathname) => {
         const m = PATH_SHAPE.exec(pathname)
         if (!m || m[1] !== auth.membership.tenantId) throw new Error('path outside this shop')
+        // The shop's logo (brand/) is a setting: owners and admins only.
+        if (m[2] === 'brand' && !(CAN_MANAGE as readonly string[]).includes(auth.membership.role)) throw new Error('brand needs an owner or admin')
         return { allowedContentTypes: ['image/webp'], maximumSizeInBytes: MAX_UPLOAD_BYTES, addRandomSuffix: false, allowOverwrite: false, cacheControlMaxAge: 31536000 }
       },
     })

@@ -81,7 +81,8 @@ export const variants = pgTable('variants', {
 }, (t) => [
   unique('variants_tenant_id_key').on(t.tenantId, t.id),
   foreignKey({ name: 'variants_product_fk', columns: [t.tenantId, t.productId], foreignColumns: [products.tenantId, products.id] }).onDelete('cascade'),
-  uniqueIndex('variants_product_options').on(t.productId, t.optionValues),
+  // tenant_id first: a unique check fires before the foreign key, so without it another shop could probe which sizes a product has (tenancy audit).
+  uniqueIndex('variants_tenant_product_options').on(t.tenantId, t.productId, t.optionValues),
   uniqueIndex('variants_tenant_sku').on(t.tenantId, t.sku).where(sql`${t.sku} is not null`),
   index('variants_tenant_product').on(t.tenantId, t.productId),
   check('variants_money', sql`${t.price} >= 0 and (${t.compareAt} is null or ${t.compareAt} >= 0) and (${t.unitCost} is null or ${t.unitCost} >= 0)`),
@@ -106,5 +107,7 @@ export const productImages = pgTable('product_images', {
 }, (t) => [
   foreignKey({ name: 'product_images_product_fk', columns: [t.tenantId, t.productId], foreignColumns: [products.tenantId, products.id] }).onDelete('cascade'),
   index('product_images_product').on(t.tenantId, t.productId, t.position),
+  // One row per uploaded photo: removing a photo deletes its files, so two rows must never share them.
+  uniqueIndex('product_images_tenant_base').on(t.tenantId, t.base),
   check('product_images_dims', sql`${t.width} > 0 and ${t.height} > 0`),
 ])

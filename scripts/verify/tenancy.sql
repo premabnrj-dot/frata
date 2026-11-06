@@ -302,12 +302,26 @@ insert into products (id, tenant_id, handle, title, type_id) values
   ('eeeeeeee-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'b-kurta', 'B kurta', 'dddddddd-0000-0000-0000-00000000000b');
 insert into variants (tenant_id, product_id, option_values, price, unit_cost) values
   ('22222222-2222-2222-2222-222222222222', 'eeeeeeee-0000-0000-0000-00000000000b', '{M}', 249000, 98000);
+insert into product_images (tenant_id, product_id, base, widths, width, height) values
+  ('22222222-2222-2222-2222-222222222222', 'eeeeeeee-0000-0000-0000-00000000000b', 'https://s.public.blob.vercel-storage.com/tenants/22222222-2222-2222-2222-222222222222/products/b', '{400}', 1, 1);
 begin; set local role frata_app;
 select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
 do $$ declare n int; begin
   if (select count(*) from products) <> 1 or exists (select 1 from variants) or exists (select 1 from product_types) then raise exception 'FAIL: tenant A sees B catalogue'; end if;
   update variants set price = 1 where tenant_id = '22222222-2222-2222-2222-222222222222'; get diagnostics n = row_count;
   if n <> 0 then raise exception 'FAIL: A repriced B'; end if;
+  if exists (select 1 from product_images) then raise exception 'FAIL: A sees B photos'; end if;
+  update product_images set base = 'x' where tenant_id = '22222222-2222-2222-2222-222222222222'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A changed B photo'; end if;
+  delete from product_images where tenant_id = '22222222-2222-2222-2222-222222222222'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A deleted B photo'; end if;
+  delete from variants where tenant_id = '22222222-2222-2222-2222-222222222222'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A deleted B variant'; end if;
+  delete from products where tenant_id = '22222222-2222-2222-2222-222222222222'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A deleted B product'; end if;
+  -- Probing B's sizes: the SAME values B has must fail as a foreign key, not as a duplicate (which would leak them).
+  begin insert into variants (tenant_id, product_id, option_values, price) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000b', '{M}', 1); raise exception 'FAIL: A attached B size';
+  exception when foreign_key_violation then null; end;
   -- A's own variant pointing at B's product: the composite key refuses it, RLS or not.
   begin insert into variants (tenant_id, product_id, price) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000b', 1); raise exception 'FAIL: A attached a variant to B product';
   exception when foreign_key_violation then null; end;

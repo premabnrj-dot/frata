@@ -6,10 +6,10 @@ import { del } from '@vercel/blob'
 import { presetsFor, cleanChart, type Chart } from '@/domains/catalogue/size-charts'
 import { cleanProduct, readiness, type ProductInput } from '@/domains/catalogue/product-form'
 import { handleFor, keyOf, reconcile } from '@/domains/catalogue/variants'
-import { PATH_SHAPE, WIDTHS, urlFor } from '@/domains/media/sizes'
+import { acceptedBase, storeHost, WIDTHS, urlFor } from '@/domains/media/sizes'
 import { asMember } from '@/lib/auth/as-member'
 import { ANY_MEMBER } from '@/lib/auth/require-member'
-import { BLOB_READ_WRITE_TOKEN } from '@/lib/env'
+import { BLOB_READ_WRITE_TOKEN, BLOB_STORE_ID } from '@/lib/env'
 import type { Tx } from '@/lib/db'
 import { auditEvents, shopSettings } from '@/lib/db/schema'
 import { productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
@@ -163,17 +163,19 @@ export async function attachPhotos(productId: string, photos: { base: string; wi
   try {
     const r = await asMember(ANY_MEMBER, { action: 'product.photos', target: productId, detail: { added: photos.length } }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
-      for (const ph of photos) {
-        let path: string
-        try { const u = new URL(ph.base); if (u.protocol !== 'https:' || !u.hostname.endsWith('.public.blob.vercel-storage.com')) throw 0; path = u.pathname.slice(1) } catch { throw new Stop({ ok: false, error: 'That photo did not come from your upload.' }) }
-        const m = PATH_SHAPE.exec(`${path}-${ph.widths[0]}.webp`)
-        if (!m || m[1] !== tenantId || m[2] !== 'products') throw new Stop({ ok: false, error: 'That photo is not in your shop’s folder.' })
+      const host = storeHost(BLOB_STORE_ID)
+      if (!host) throw new Stop({ ok: false, error: 'Photo storage is not connected.' })
+      // The stored URL is the REBUILT one from acceptedBase, never the browser's string (tenancy audit).
+      const clean = photos.map((ph) => {
+        const base = acceptedBase(ph.base, host, tenantId, 'products')
+        if (!base) throw new Stop({ ok: false, error: 'That photo is not in your shop’s folder.' })
         if (!ph.widths.length || ph.widths.some((w) => !(WIDTHS as readonly number[]).includes(w)) || !(ph.width > 0 && ph.height > 0)) throw new Stop({ ok: false, error: 'That photo’s sizes are not ones we make.' })
-      }
+        return { ...ph, base }
+      })
       const [p] = await tx.select({ id: products.id }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId)))
       if (!p) throw new Stop({ ok: false, error: 'This product is not in your shop.' })
       const last = (await tx.select({ last: sql<number>`coalesce(max(position), -1)::int` }).from(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, productId))))[0]?.last ?? -1
-      await tx.insert(productImages).values(photos.map((ph, i) => ({ tenantId, productId, base: ph.base, widths: [...ph.widths].sort((a, b) => a - b), width: Math.round(ph.width), height: Math.round(ph.height), position: last + 1 + i })))
+      await tx.insert(productImages).values(clean.map((ph, i) => ({ tenantId, productId, base: ph.base, widths: [...ph.widths].sort((a, b) => a - b), width: Math.round(ph.width), height: Math.round(ph.height), position: last + 1 + i })))
       await tx.update(products).set({ updatedAt: new Date() }).where(and(eq(products.tenantId, tenantId), eq(products.id, productId)))
       await memberAudit(tx, auth, 'product.photos', productId)
     })
@@ -216,7 +218,9 @@ export async function editPhoto(imageId: string, change: { move?: -1 | 1; option
       return null
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (r.value && BLOB_READ_WRITE_TOKEN) {
+    // Delete the files only if the stored base is still exactly inside this shop's folder.
+    const host = storeHost(BLOB_STORE_ID)
+    if (r.value && BLOB_READ_WRITE_TOKEN && host && acceptedBase(r.value.base, host, r.value.tenantId, 'products') === r.value.base) {
       await del(r.value.widths.map((w) => urlFor(r.value!.base, w)), { token: BLOB_READ_WRITE_TOKEN }).catch((e) => console.error('[editPhoto] blob delete', e instanceof Error ? e.message : e))
     }
     revalidatePath('/console/products', 'layout')

@@ -18,4 +18,6 @@ export const BLOB_READ_WRITE_TOKEN = process.env.BLOB_READ_WRITE_TOKEN ?? ''
 /** False on a fresh Vercel project with no variables yet: pages say so instead of crashing. */
 export const isDatabaseConfigured = () => DATABASE_URL !== ''
 export const isAdminDatabaseConfigured = () => ADMIN_DATABASE_URL !== ''
-export const isBlobConfigured = () => BLOB_READ_WRITE_TOKEN !== ''
+/** frata-blob's id (store_…): pins which Blob host a photo may come from. Set by connecting the store. */
+export const BLOB_STORE_ID = process.env.BLOB_STORE_ID ?? ''
+export const isBlobConfigured = () => BLOB_READ_WRITE_TOKEN !== '' && BLOB_STORE_ID !== ''
