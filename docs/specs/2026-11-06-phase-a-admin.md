@@ -32,7 +32,7 @@ change plan.
 ## Owner calls — decided 2026-11-06
 1. Entering a console: staff give a reason; the merchant is shown every visit. No owner approval until self-serve sign-up.
 2. In support mode: full owner rights; every action logged with staff + merchant + session.
-3. Per-order fee: **a percentage of each delivered order's value — Launch 2%, Growth 1%, Scale 0.5%** (owner, 2026-11-06). Stored as basis points (200/100/50) on the plan version; charged on delivered orders only.
+3. Per-order fee: **a percentage of each delivered order's value — Launch 2%, Growth 1%, Scale 0.5%** (owner, 2026-11-06). Stored as basis points (200/100/50) on the plan version; charged on **every delivered order** — included orders are a flag threshold, not free orders (owner, 2026-11-06). Base: order value excluding GST and shipping.
 4. Past included orders: the store keeps selling; flagged, next plan suggested.
 5. **Staff 2FA: not required for now** (owner). `requireStaff` is the one place to add an aal2 check later. Risk accepted: a staff member's email inbox is their Admin credential.
 6. Admin at /admin on the console host, same sign-in.

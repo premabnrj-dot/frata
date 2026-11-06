@@ -91,7 +91,7 @@ Trial end date and custom price (YAGNI suggested cutting); the `/choose` screen;
 
 ## For the owner
 
-1. Fee reading: on every delivered order (built this way, nothing is charged until Phase 6) vs only beyond the included orders.
+1. Fee reading: **decided — every delivered order** (owner, 2026-11-06).
 2. Fee base: order value excluding GST and shipping (built this way).
 3. Launch is ₹270/month dearer than Shopify Basic + a checkout app for the reviewer's illustrative shape, before any WhatsApp-tool saving.
 

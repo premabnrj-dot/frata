@@ -2,7 +2,7 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.0.0
+  version: 2.1.0
   verified: 2026-11-06
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
@@ -28,7 +28,9 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
    third-party gateway fee 2% / 1% / 0.6% on prepaid; COD exempt.
 4. **Charge on delivered orders** (decided, owner 2026-11-06): the fee is a
    percentage of each DELIVERED order's value — Launch 2%, Growth 1%, Scale
-   0.5% — stored as basis points on the plan version. A returned COD parcel
+   0.5% — on EVERY delivered order (included orders are a flag threshold,
+   not free orders), of the order value excluding GST and shipping — stored
+   as basis points on the plan version. A returned COD parcel
    costs the merchant nothing from Frata. Compare honestly: Shopify charges
    2/1/0.6% on prepaid orders only and nothing on COD, so on a COD-heavy
    merchant Frata's fee is larger per order; the bundle (checkout, WhatsApp,
