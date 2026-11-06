@@ -2,7 +2,7 @@
 name: frata-planning
 description: Use when planning any Frata feature, enhancement, redesign or connector - before writing a spec or plan, before executing one, and when closing one - to run the spec, research, design review, mockup, sign-off, plan, execute and document loop, with the review headings (UI/UX, tenancy, modularity, SSOT/DRY, YAGNI, KISS, performance, reliability, security, unit economics, blast radius).
 metadata:
-  version: 2.0.0
+  version: 2.1.0
   verified: 2026-11-06
   decisions: [ADR-0001]
 ---
@@ -67,6 +67,13 @@ Copy into the conversation and tick as you go:
 **Never start 7 before 5.** If the owner is away, stop at the mockup and say so.
 
 ## Step 2 — research
+
+**Current sources only (owner, 2026-11-06).** Every fact used in a plan comes
+from a source published or updated in the last 12 months, with that date
+written next to it. Check the page's own date, not a search snippet. If only
+an older source exists, write "no current source found" and treat the point
+as unverified — never cite it as current. Briefs to research agents say this
+in their first lines.
 
 - **Products**: name the job in one sentence, then look at how Shopify admin,
   one Indian tool (GoKwik, Shiprocket, Razorpay dashboard, Interakt) and one
