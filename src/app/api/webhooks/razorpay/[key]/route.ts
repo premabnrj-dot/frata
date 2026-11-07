@@ -17,7 +17,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ key
   try { event = JSON.parse(raw) } catch { return NextResponse.json({ error: 'bad json' }, { status: 400 }) }
   const key = razorpayEventKey(event as Parameters<typeof razorpayEventKey>[0])
   if (!key) return NextResponse.json({ ignored: true })
-  await db().insert(webhookEvents).values({ provider: 'razorpay', eventKey: `razorpay:${hook.tenantId}:${key}`, tenantId: hook.tenantId, payload: event as object })
+  await db().insert(webhookEvents).values({ provider: 'razorpay', eventKey: `razorpay:${hook.tenantId}:${key.replace(/^razorpay:/, "")}`, tenantId: hook.tenantId, payload: event as object })
     .onConflictDoNothing({ target: webhookEvents.eventKey })
   after(() => processEvents(hook.tenantId).then(() => undefined, (e) => console.error('[razorpay webhook] process', hook.tenantId, e instanceof Error ? e.name : 'error')))
   return NextResponse.json({ ok: true })

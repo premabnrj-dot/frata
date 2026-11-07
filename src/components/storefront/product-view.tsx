@@ -34,7 +34,7 @@ export function productSeo(shop: StoreShop, p: StoreProduct) {
 }
 
 /** The product page (spec § Product page). Server-rendered; the choices are one client island. */
-export function ProductView({ shop, p, now }: { shop: StoreShop; p: StoreProduct; now: Date }) {
+export function ProductView({ shop, p, now, live = false }: { shop: StoreShop; p: StoreProduct; now: Date; live?: boolean }) {
   const seo = productSeo(shop, p)
   const details = detailsOf(p)
   const gender = p.attributes['target-gender']?.[0] ? describeAttribute('target-gender')?.values.find((v) => v.id === p.attributes['target-gender']![0])?.name ?? null : null
@@ -58,7 +58,7 @@ export function ProductView({ shop, p, now }: { shop: StoreShop; p: StoreProduct
       <BuyBox title={p.title} options={p.options} values={p.optionValues} variants={p.variants} colours={p.colours} images={p.images}
         chart={p.sizeChart && p.sizeChart.rows.length ? p.sizeChart : null} model={model} now={now.toISOString()}
         delivery={{ shippingFlat: shop.shippingFlat, freeShippingAbove: shop.freeShippingAbove, codOn: shop.codOn, codMin: shop.codMin, codMax: shop.codMax, codCharge: shop.codCharge }}
-        notes={notes} taxNote={shop.pricesIncludeGst ? 'Price includes GST.' : 'GST is added at checkout.'} />
+        live={live} notes={notes} taxNote={shop.pricesIncludeGst ? 'Price includes GST.' : 'GST is added at checkout.'} />
       <div className="mt-10 grid gap-8 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] md:gap-10">
         <div className="max-w-prose space-y-3 leading-relaxed">
           {p.description && <><h2 className="text-lg font-medium">About this piece</h2>{p.description.split(/\n{2,}/).map((t, i) => <p key={i} className="whitespace-pre-line">{t}</p>)}</>}

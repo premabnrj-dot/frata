@@ -61,7 +61,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     // Abandoned online orders keep their row and lines for counts, but not the shopper's details past 90 days (spec, retention).
     await tx.update(orders).set({ customerName: '', phone: '', addressLine: '', landmark: '', erasedAt: now })
       .where(and(eq(orders.tenantId, tenantId), isNull(orders.erasedAt), isNull(orders.paidAt), isNull(orders.switchedToCodAt), eq(orders.paymentMethod, 'prepaid'),
-        sql`${orders.placedAt} < ${new Date(now.getTime() - 90 * 86_400_000)}`))
+        sql`${orders.placedAt} < ${new Date(now.getTime() - 90 * 86_400_000).toISOString()}::timestamptz`))
     if (input.method === 'prepaid' && !shop.online) return { kind: 'refused', status: 422, error: 'Online payment is not available at this shop right now. Pay on delivery instead.' }
 
     const rows = await variantRows(tx, tenantId, input.bag.map((b) => b.variantId), now, { lock: true })

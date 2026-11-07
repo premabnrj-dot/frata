@@ -40,5 +40,5 @@ export default async function ProductPage({ params }: { params: Params }) {
   const now = new Date()
   // Archived: the shopper reads that it has gone, with new pieces below; noindex drops it from search (spec § Review findings).
   if (v.gone) return <GoneView title={p.title} cat={await shopCatalogue(shop.id)} href={shopHref} now={now} />
-  return <ProductView shop={shop} p={p} now={now} />
+  return <ProductView shop={shop} p={p} now={now} live />
 }

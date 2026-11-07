@@ -16,7 +16,7 @@ import { canTakeOnline, keysFor } from '@/lib/payments/keys'
 // =============================================================================
 
 /** Units held by unpaid online orders still inside pay_by (holds are derived: checkout spec). */
-const holding = (now: Date) => sql`o.payment_method = 'prepaid' and o.paid_at is null and o.switched_to_cod_at is null and o.cancelled_at is null and o.pay_by > ${now}`
+const holding = (now: Date) => sql`o.payment_method = 'prepaid' and o.paid_at is null and o.switched_to_cod_at is null and o.cancelled_at is null and o.pay_by > ${now.toISOString()}::timestamptz`
 /** Orders that are real: paid, COD, or switched to COD — not cancelled. */
 const real = sql`o.cancelled_at is null and (o.payment_method = 'cod' or o.paid_at is not null or o.switched_to_cod_at is not null)`
 

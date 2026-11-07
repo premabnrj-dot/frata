@@ -57,7 +57,7 @@ export async function shopIdForHost(host: string): Promise<string | null> {
 // ── The shop ───────────────────────────────────────────────────────────────────
 
 export type StoreShop = PolicyFacts & DeliveryRules & {
-  id: string; slug: string; host: string; publishedAt: string | null
+  id: string; slug: string; host: string; publishedAt: string | null; orderPrefix: string
   accent: string; displayFont: string; tagline: string; logoUrl: string | null; whatsapp: string; instagram: string
   overrides: Record<string, string>; nav: { handle: string; title: string }[]
 }
@@ -65,7 +65,7 @@ export type StoreShop = PolicyFacts & DeliveryRules & {
 async function coreShop(tenantId: string): Promise<StoreShop | null> {
   return withTenant(tenantId, async (tx) => {
     const [r] = await tx.select({
-      name: tenants.name, slug: tenants.slug, publishedAt: shopSettings.publishedAt,
+      name: tenants.name, slug: tenants.slug, publishedAt: shopSettings.publishedAt, orderPrefix: shopSettings.orderPrefix,
       legalName: shopSettings.legalName, address: shopSettings.address, supportEmail: shopSettings.supportEmail, supportPhone: shopSettings.supportPhone,
       whatsapp: shopSettings.whatsapp, instagram: shopSettings.instagram,
       grievanceName: shopSettings.grievanceName, grievanceRole: shopSettings.grievanceRole, grievanceEmail: shopSettings.grievanceEmail, grievancePhone: shopSettings.grievancePhone,

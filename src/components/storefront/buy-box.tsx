@@ -10,6 +10,7 @@ import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
 import { Photo, type PhotoData } from './photo'
 import { Swatch, type SwatchColour, type SwatchImage } from './swatch'
+import { bag, openBag } from './bag-store'
 
 type Img = PhotoData & SwatchImage & { optionValue: string | null; alt: string }
 export type BuyBoxProps = {
@@ -17,6 +18,8 @@ export type BuyBoxProps = {
   chart: Chart | null; model: string | null; delivery: DeliveryRules; now: string
   /** Server-written lines in the shop's words: dispatch and delivery days, the return window, the tax note. */
   notes: string[]; taxNote: string
+  /** On the shop itself (the bag works); false in the console's preview. */
+  live?: boolean
 }
 
 const money = (p: number) => formatInr(paise(p))
@@ -61,7 +64,10 @@ export function BuyBox(p: BuyBoxProps) {
     const missing = p.options.findIndex((_, i) => picked[i] === null)
     if (missing >= 0) { setNote(`Pick a ${p.options[missing]!.toLowerCase()}.`); sizesRef.current?.querySelector('button')?.focus(); return }
     if (a && !a.canBuy) { setNote('This one is sold out. Pick another size or colour.'); return }
-    setNote('Checkout is being set up for this shop. It opens soon.')
+    if (!p.live || !v) { setNote('This is a preview: shoppers add to their bag here.'); return }
+    bag.add(v.id, 1)
+    setNote(null)
+    openBag()
   }
 
   return (

@@ -2,7 +2,7 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.6.0
+  version: 1.7.0
   verified: 2026-11-07
 ---
 
@@ -44,3 +44,4 @@ metadata:
 | `showModal` throws "already open" | The effect that opens a `<dialog>` depended on an `onClose` re-created each render | Open once (`[]` deps), keep the callback in a ref |
 | A page with real data cannot answer 404 | `notFound()` renders `not-found.tsx`, which gets no props | Render the page with `robots: noindex` instead (archived products) |
 | Local shop host in Playwright | Chromium resolves `*.frata.test` nowhere | `chromium.launch({ args: ['--host-resolver-rules=MAP *.frata.test 127.0.0.1:3077'] })`, build with `NEXT_PUBLIC_SHOP_DOMAIN=frata.test` |
+| `The "string" argument must be of type string … Received an instance of Date` | A `Date` inside a drizzle `sql` template goes to postgres.js unserialised (column helpers like `eq()` are fine) | `${d.toISOString()}::timestamptz`. The rate limiter failed OPEN on this for every call until 2026-11-07 (`src/lib/db/rate-limit.ts`) |

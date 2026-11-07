@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { displayFamily, STORE_FONT_VARS } from '@/components/shop-preview/fonts'
 import type { PolicyFacts } from '@/domains/policies/render'
 import { POLICY_TITLE } from './policy'
+import { BagButton } from './bag'
 
 export type Href = (path: string) => string
 export type ShellShop = PolicyFacts & { slug: string; accent: string; displayFont: string; tagline: string; logoUrl: string | null; whatsapp: string; instagram: string; nav: { handle: string; title: string }[] }
@@ -10,7 +11,7 @@ const waLink = (n: string) => `https://wa.me/${n.replace(/\D/g, '')}`
 const igLink = (h: string) => `https://instagram.com/${h.replace(/^@/, '')}`
 
 /** Every shop page: the theme (accent, display font), header, footer. Props only. */
-export function ShopShell({ shop, href, banner, children, gated = false }: { shop: ShellShop; href: Href; banner?: React.ReactNode; children: React.ReactNode; gated?: boolean }) {
+export function ShopShell({ shop, href, banner, children, gated = false, live = false }: { shop: ShellShop; href: Href; banner?: React.ReactNode; children: React.ReactNode; gated?: boolean; live?: boolean }) {
   return (
     <div data-store-theme="" data-accent={shop.accent} className={`${STORE_FONT_VARS} flex min-h-dvh flex-col`} style={{ '--store-display': displayFamily(shop.displayFont) } as React.CSSProperties}>
       {banner}
@@ -22,6 +23,7 @@ export function ShopShell({ shop, href, banner, children, gated = false }: { sho
           {!gated && <nav aria-label="Shop" className="-mr-2 flex gap-1 overflow-x-auto text-sm">
             <Link href={href('/products')} className="whitespace-nowrap px-2 py-2">Shop all</Link>
             {shop.nav.map((c) => <Link key={c.handle} href={href(`/collections/${c.handle}`)} className="hidden whitespace-nowrap px-2 py-2 sm:inline">{c.title}</Link>)}
+            {live && <BagButton checkoutHref={href('/checkout')} shopHref={href('/products')} />}
           </nav>}
         </div>
         {!gated && shop.nav.length > 0 && (

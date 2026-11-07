@@ -35,7 +35,7 @@ export async function withinLimit(limit: Limit, subject: string, now = new Date(
   const windowStart = new Date(Math.floor(now.getTime() / windowMs) * windowMs)
   try {
     const rows = await db().execute<{ n: number }>(sql`
-      insert into rate_limits (key, window_start, n) values (${key}, ${windowStart}, 1)
+      insert into rate_limits (key, window_start, n) values (${key}, ${windowStart.toISOString()}::timestamptz, 1)
       on conflict (key, window_start) do update set n = rate_limits.n + 1
       returning n`)
     // Old windows are swept now and then, not on every call.
