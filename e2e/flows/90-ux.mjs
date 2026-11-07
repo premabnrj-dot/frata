@@ -274,6 +274,12 @@ export default {
         await h.locator('svg .animate-draw-circle').waitFor()
         assert.equal(await h.locator('svg .animate-draw-circle').count(), 1)
         await h.getByText('Your shop is open', { exact: true }).waitFor()
+        // Closing straight after: the check gives way to what just happened, it does not linger.
+        await h.getByRole('button', { name: 'Close the shop for now' }).click(); await h.getByRole('button', { name: 'Close shop' }).click()
+        await h.getByText('Closed. Shoppers see “Opening soon”.').waitFor()
+        assert.equal(await h.locator('svg .animate-draw-circle').count(), 0, 'the check goes when the shop closes')
+        await h.getByRole('button', { name: 'Open my shop' }).click(); await h.getByRole('button', { name: 'Open it' }).click()
+        await h.locator('svg .animate-draw-circle').waitFor()
         await h.reload(); assert.equal(await h.locator('svg .animate-draw-circle').count(), 0, 'once: not on the next visit')
         assert.equal(await h.getByText('Your shop is open', { exact: true }).count(), 0)
         await hc.close()

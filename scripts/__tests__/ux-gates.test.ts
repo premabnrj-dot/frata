@@ -121,4 +121,30 @@ describe('check:motion', async () => {
     ].join('\n')
     expect(check(css, true).sort()).toEqual(['keyframes: grow animates height', 'layout: transition: height 200ms ease', 'too-long: fade 600ms (nothing over 400 ms)'].sort())
   })
+  it('catches what a line-by-line read missed: inline styles, delay-[…], long durations, all, multi-line and longhand CSS, exceptions past their own limits', () => {
+    const tsx = [
+      "<div style={{ transition: 'width 200ms ease' }} />",
+      '<div className="delay-[50ms] duration-1000 transition-[grid-template-rows]" />',
+      '<div className="duration-300 transition-opacity" />',
+    ].join('\n')
+    expect(check(tsx, false).sort()).toEqual(["layout: style transition 'width 200ms ease'", 'arbitrary: delay-[50ms]', 'arbitrary: duration-1000 (use duration-fast|base|slow)', 'layout: transition-[grid-template-rows]'].sort())
+    const css = [
+      '.a { transition: all 200ms; }',
+      '.b { transition: opacity 200ms,',
+      '  margin-top 200ms }',
+      '.c { transition-duration: 600ms; animation-duration: 0.01ms !important; }',
+      '.d { animation: 600ms ease fade; }',
+      '@keyframes draw { from { width: 0; stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }',
+      '.e { animation: draw 5s both; }',
+      '.f { animation: nav-run 1400ms linear; }',
+    ].join('\n')
+    expect(check(css, true).sort()).toEqual([
+      'layout: transition: all 200ms',
+      'layout: transition: opacity 200ms, margin-top 200ms',
+      'too-long: transition-duration: 600ms (nothing over 400 ms)',
+      'too-long: fade 600ms (nothing over 400 ms)',
+      'keyframes: draw animates width',
+      'too-long: draw 5000ms (its limit is 400 ms)',
+    ].sort())
+  })
 })

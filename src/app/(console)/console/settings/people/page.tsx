@@ -23,7 +23,7 @@ export default async function PeoplePage() {
     <div className="max-w-3xl space-y-4">
       <Link href="/console/settings" className="text-sm text-muted-foreground hover:text-foreground">← Settings</Link>
       <PageHeader title="People" />
-      <Section flush ariaLabel="People"><ul className="divide-y divide-border">
+      <Section flush ariaLabel="People"><ul data-list className="divide-y divide-border">
         {people.map((p) => {
           const role = { label: ROLE_LABEL[p.role as MemberRole] ?? p.role, tone: p.role === 'partner' ? 'info' as const : 'neutral' as const }
           const you = p.userId === auth.userId

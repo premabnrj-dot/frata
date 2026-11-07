@@ -260,8 +260,8 @@ dialog[data-dialog] {
 }
 dialog[data-dialog][open] { opacity: 1; transform: none; transition-timing-function: var(--ease-entrance); }
 @starting-style { dialog[data-dialog][open] { opacity: 0; transform: scale(0.97); } }
-/* On a phone the dialog is a sheet from the bottom, 320 ms in and out (spec U · U3; the phone's Back closes it:
-   src/components/ui/dialog.tsx). Unlayered, so it wins over the dialog's own m-auto/width/rounded utilities. */
+/* On a phone the dialog is a sheet from the bottom, 320 ms in and out (spec U · U3; Android's Back closes it, a close
+   request: src/components/ui/dialog.tsx). Unlayered, so it wins over the dialog's own m-auto/width/rounded utilities. */
 @media (max-width: 767px) {
   dialog[data-dialog] {
     margin: auto 0 0; width: 100%; max-width: none; max-height: 85dvh; border-radius: 1rem 1rem 0 0; border-bottom: 0;
@@ -277,6 +277,8 @@ dialog[data-dialog]::backdrop {
 }
 dialog[data-dialog][open]::backdrop { opacity: 1; }
 @starting-style { dialog[data-dialog][open]::backdrop { opacity: 0; } }
+/* On a phone the scrim keeps pace with the 320 ms sheet. */
+@media (max-width: 767px) { dialog[data-dialog]::backdrop { transition-duration: var(--transition-duration-slow); } }
 
 [data-toast] { transition: opacity var(--transition-duration-base) var(--ease-entrance), transform var(--transition-duration-base) var(--ease-entrance); }
 @starting-style { [data-toast] { opacity: 0; transform: translateY(12px); } }

@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils'
 
 export function Dialog({ open, onClose, title, description, children, actions, className }: {
   open: boolean
-  /** Esc, the backdrop and the safe button all call this. */
+  /** Esc, Android's Back, the backdrop and the safe button all call this. It must set `open` to false: the browser may already have closed the dialog. */
   onClose: () => void
   title: string
   description?: React.ReactNode

@@ -2,7 +2,7 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.8.0
+  version: 1.9.0
   verified: 2026-11-07
 ---
 
@@ -49,3 +49,5 @@ metadata:
 | React error #418 (hydration) on a page with an (i) tip | A `div` popover inside a `<p>` or label: the HTML parser closes the paragraph | Popovers that sit in text are `span`s (`src/components/ui/info-tip.tsx`) |
 | A dialog's safe button does not get focus | React's `autoFocus` runs at mount, and a `<dialog>`'s content mounts while it is closed | Mark it `data-autofocus`; `Dialog` focuses it after `showModal` |
 | An e2e build "fails" with no reason | `execSync`'s 1 MB output buffer kills the child | `maxBuffer: 64 MB` and the error's code printed (`e2e/stack.mjs`) |
+| A value put in `history.state` is gone after a save, or a `router.push` is undone | Next replaces the entry on a server action or `router.refresh()` without keeping custom state (`preserveCustomHistoryState: false`), and a `history.back()` that lands before a pending push is a traverse, which discards the push | Never push a history entry for a Console dialog: Android's Back already closes a modal `<dialog>` (a close request, `cancel`) — `src/components/ui/dialog.tsx` |
+| An opacity or transform read in e2e is "wrong" now and then | It read the first frame of a 120–320 ms transition | `waitForFunction` on the value, or open the context with `reducedMotion: 'reduce'` |

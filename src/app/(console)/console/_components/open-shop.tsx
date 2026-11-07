@@ -17,7 +17,7 @@ export function OpenShop({ address, open, ready, canManage }: { address: string;
     const r = await fn()
     setMsg(r.ok ? { ok: true, text: done } : { ok: false, text: r.error })
     setAsk(false)
-    if (r.ok && fn === openShop) setJustOpened(true)
+    setJustOpened(r.ok && fn === openShop)
     if (r.ok) router.refresh()
   })
   if (!canManage) return null
@@ -31,15 +31,19 @@ export function OpenShop({ address, open, ready, canManage }: { address: string;
       ) : (
         <Button disabled={!ready || pending} onClick={() => setAsk(true)}>Open my shop</Button>
       )}
-      {justOpened && open ? (
-        <div role="status" className="flex items-center gap-3">
-          <svg viewBox="0 0 56 56" width="40" height="40" fill="none" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 text-ok-mark">
-            <circle cx="28" cy="28" r="24" stroke="currentColor" pathLength={1} className="animate-draw-circle" />
-            <path d="M18 29l7 7 13-15" stroke="currentColor" pathLength={1} className="animate-draw-tick" />
-          </svg>
-          <p className="text-sm"><b className="block text-base">Your shop is open</b>Shoppers can order at <a href={`https://${address}`} target="_blank" rel="noreferrer" className="inline-flex min-h-6 items-center font-mono underline">{address}</a></p>
-        </div>
-      ) : msg && <p role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-ok-text' : 'text-danger-text'}`}>{msg.text}</p>}
+      {msg && !msg.ok && <p role="alert" className="text-sm text-danger-text">{msg.text}</p>}
+      {/* One status region that is always there, so a screen reader hears what lands in it (a region inserted with its text often is not read). */}
+      <div role="status">
+        {msg?.ok && (justOpened && open ? (
+          <div className="flex items-center gap-3">
+            <svg viewBox="0 0 56 56" width="40" height="40" fill="none" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 text-ok-mark">
+              <circle cx="28" cy="28" r="24" stroke="currentColor" pathLength={1} className="animate-draw-circle" />
+              <path d="M18 29l7 7 13-15" stroke="currentColor" pathLength={1} className="animate-draw-tick" />
+            </svg>
+            <p className="text-sm"><b className="block text-base">Your shop is open</b>Shoppers can order at <a href={`https://${address}`} target="_blank" rel="noreferrer" className="inline-flex min-h-6 items-center font-mono underline">{address}</a></p>
+          </div>
+        ) : <p className="text-sm text-ok-text">{msg.text}</p>)}
+      </div>
     </div>
   )
 }

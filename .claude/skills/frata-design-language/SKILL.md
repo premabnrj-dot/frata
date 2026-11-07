@@ -401,17 +401,22 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     becomes words ("Undo for 8 seconds").
 26. The one brand moment: "Your shop is open", a check drawn once (320 ms
     circle, 200 ms tick). No confetti, no sound.
-27. A dialog on a phone (< 768 px) is a sheet from the bottom (full width,
-    85 dvh at most, 320 ms), and **Back closes it** natively: Android's Back
-    is a close request, the same `cancel` as Esc (Chromium; Firefox 149+;
-    blink-dev intent to ship, checked 2026-11-07). Never push a history entry
-    for a dialog: Next replaces the entry on a server action or refresh
+27. A Console, Admin or partner `Dialog` on a phone (< 768 px) is a sheet
+    from the bottom (full width, 85 dvh at most, 320 ms, its scrim with it).
+    **Android's Back closes it** natively: Back is a close request, the same
+    `cancel` as Esc (Chromium, blink-dev intent to ship; Firefox 149+, Mozilla
+    bug 1966073; checked 2026-11-07). An iPhone has no Back; its edge swipe
+    leaves the page, as on any site. Never push a history entry for a
+    `Dialog`: Next replaces the entry on a server action or refresh
     (`preserveCustomHistoryState: false`) and a `back()` racing a
-    `router.push` discards the push. `Dialog` also answers `close`, for a
-    close request let through without `cancel`.
+    `router.push` discards the push. (The storefront size guide's own entry
+    is the exception: no action or navigation runs while it is open.)
+    `Dialog` also answers `close`, for a close request let through without
+    `cancel`, so its `onClose` must always set `open` to false.
 28. Lists never animate. While a move is on its way (`NavProgress`, after
     150 ms) `main#content` has `aria-busy` and its tables and `[data-list]`
-    dim to .55. Mark a list that is not a `<table>` with `data-list`.
+    dim to .55. Mark a list of records that is not a `<table>` with
+    `data-list` (activity, people, partner clients, Admin partners do).
 29. Progress bars move by `scaleX` on a full-width bar, never by `width`.
     `npm test` runs `check:motion`: a layout transition, `transition-all`, an
     arbitrary `duration-`/`ease-`/`animate-`, keyframes animating anything but

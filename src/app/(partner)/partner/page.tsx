@@ -60,7 +60,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
       <PageHeader title="Clients" actions={newStore} />
       <ViewTabs label="Client views" tabs={tabs} />
       {shown.length === 0 ? <Panel title="No store here yet" /> : (
-        <Section flush ariaLabel="Client stores"><ul className="divide-y divide-border">
+        <Section flush ariaLabel="Client stores"><ul data-list className="divide-y divide-border">
           <li aria-hidden="true" className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.2fr)_6rem_minmax(0,1fr)_7rem] gap-3 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground lg:grid">
             <span>Store</span><span>Stage</span><span>Owner</span><span>Plan</span><span className="inline-flex items-center">Your share<InfoTip about="your share">{PARTNER_TERMS.shareBps / 100}% of what Frata collects from the store, ex GST, for {PARTNER_TERMS.shareMonths} months from its first opening, while you are its partner. Removed: {PARTNER_TERMS.noticeDays} more days. Paid when Frata billing starts.</InfoTip></span><span />
           </li>
