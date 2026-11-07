@@ -1,38 +1,84 @@
 import { describe, expect, it } from 'vitest'
-import { currentMethod, isReal, needsAction, orderState, paidAfterSwitch } from '../order-state'
+import { currentMethod, isHolding, isPlaced, isStanding, needsAction, ORDER_STATES, orderState, paidAfterSwitch, queueTab, shopperState, type OrderMoments } from '../order-state'
 
 const t = (n: number) => new Date(2026, 10, n)
+/** A COD order placed on day 1, nothing else happened yet; override what did. */
+export const moments = (o: Partial<OrderMoments> = {}): OrderMoments => ({
+  placedAt: t(1), paymentMethod: 'cod', payBy: null, paidAt: null, switchedToCodAt: null, confirmedAt: null, heldAt: null, packedAt: null,
+  cancelledAt: null, shippedAt: null, ndrAt: null, deliveredAt: null, rtoInitiatedAt: null, rtoDeliveredAt: null, stockShort: false, ...o,
+})
 
 describe('orderState', () => {
   it('starts unconfirmed', () => {
-    expect(orderState({ placedAt: t(1) })).toBe('unconfirmed')
+    expect(orderState(moments())).toBe('unconfirmed')
   })
   it('reads the furthest moment reached, whatever order the webhooks came in', () => {
-    expect(orderState({ placedAt: t(1), deliveredAt: t(5), shippedAt: t(2) })).toBe('delivered')
+    expect(orderState(moments({ deliveredAt: t(5), shippedAt: t(2) }))).toBe('delivered')
   })
   it('an RTO outranks a delivery attempt', () => {
-    expect(orderState({ placedAt: t(1), shippedAt: t(2), ndrAt: t(4), rtoInitiatedAt: t(6) })).toBe('rto')
+    expect(orderState(moments({ shippedAt: t(2), ndrAt: t(4), rtoInitiatedAt: t(6) }))).toBe('rto')
+  })
+  it('held, then confirmed (confirm clears held_at), then packed; cancel outranks all of them', () => {
+    expect(orderState(moments({ heldAt: t(2) }))).toBe('held')
+    expect(orderState(moments({ confirmedAt: t(2) }))).toBe('confirmed')
+    expect(orderState(moments({ confirmedAt: t(2), heldAt: t(3) }))).toBe('held') // undo of a confirm-from-hold restores held_at
+    expect(orderState(moments({ confirmedAt: t(2), packedAt: t(3) }))).toBe('packed')
+    expect(orderState(moments({ confirmedAt: t(2), packedAt: t(3), cancelledAt: t(4) }))).toBe('cancelled')
+    expect(orderState(moments({ packedAt: t(3), shippedAt: t(4) }))).toBe('shipped')
   })
   it('queues only what a merchant must act on', () => {
+    expect(needsAction('unconfirmed')).toBe(true)
+    expect(needsAction('held')).toBe(true)
+    expect(needsAction('refund_due')).toBe(true)
     expect(needsAction('ndr')).toBe(true)
     expect(needsAction('delivered')).toBe(false)
+    expect(needsAction('packed')).toBe(false)
   })
 })
 
 describe('paying online', () => {
   const now = t(10)
+  const online = (o: Partial<OrderMoments>) => moments({ placedAt: t(9), paymentMethod: 'prepaid', payBy: t(9), ...o })
   it('waits, then is abandoned; paid is ready to pack; COD after a switch', () => {
-    expect(orderState({ placedAt: t(10), paymentMethod: 'prepaid', payBy: t(11) }, now)).toBe('awaiting_payment')
-    expect(orderState({ placedAt: t(9), paymentMethod: 'prepaid', payBy: t(9) }, now)).toBe('payment_abandoned')
-    expect(orderState({ placedAt: t(9), paymentMethod: 'prepaid', payBy: t(9), paidAt: t(9) }, now)).toBe('paid')
-    expect(orderState({ placedAt: t(9), paymentMethod: 'prepaid', payBy: t(9), switchedToCodAt: t(9) }, now)).toBe('unconfirmed')
-    expect(isReal('payment_abandoned')).toBe(false)
+    expect(orderState(online({ placedAt: t(10), payBy: t(11) }), now)).toBe('awaiting_payment')
+    expect(orderState(online({}), now)).toBe('payment_abandoned')
+    expect(orderState(online({ paidAt: t(9) }), now)).toBe('paid')
+    expect(orderState(online({ switchedToCodAt: t(9) }), now)).toBe('unconfirmed')
+    expect(isPlaced(online({}))).toBe(false)
+    expect(isPlaced(moments({ cancelledAt: t(2) }))).toBe(true) // plan usage counts a cancelled order (app_admin_order_counts)
+    expect(isPlaced(online({ cancelledAt: t(9) }))).toBe(false) // …but an online order never paid was never placed
+    expect(isHolding(online({ placedAt: t(10), payBy: t(11) }), now)).toBe(true)
+    expect(isHolding(online({ placedAt: t(10), payBy: t(11), cancelledAt: t(10) }), now)).toBe(false)
+    expect(isStanding(moments({ cancelledAt: t(2), deliveredAt: t(3) }))).toBe(false)
   })
   it('paid beats a switch to COD, and says so', () => {
-    const o = { placedAt: t(9), paymentMethod: 'prepaid', switchedToCodAt: t(9), paidAt: t(10) }
+    const o = online({ switchedToCodAt: t(9), paidAt: t(10) })
     expect(orderState(o, now)).toBe('paid')
     expect(currentMethod(o)).toBe('prepaid')
     expect(paidAfterSwitch(o)).toBe(true)
-    expect(currentMethod({ paymentMethod: 'prepaid', switchedToCodAt: t(9) })).toBe('cod')
+    expect(currentMethod({ paymentMethod: 'prepaid', paidAt: null, switchedToCodAt: t(9) })).toBe('cod')
+  })
+  it('paid but its stock sold out first: refund due, even if held; a paid order can be held', () => {
+    expect(orderState(online({ paidAt: t(9), stockShort: true }), now)).toBe('refund_due')
+    expect(orderState(online({ paidAt: t(9), stockShort: true, heldAt: t(9) }), now)).toBe('refund_due')
+    expect(orderState(online({ paidAt: t(9), heldAt: t(9) }), now)).toBe('held')
+    expect(orderState(online({ paidAt: t(9), stockShort: true, packedAt: t(10) }), now)).toBe('packed')
+  })
+})
+
+describe('the queue and the shopper', () => {
+  it('puts every state in at most one tab; refund due waits with To confirm', () => {
+    expect(queueTab('unconfirmed')).toBe('to_confirm')
+    expect(queueTab('refund_due')).toBe('to_confirm')
+    expect(queueTab('confirmed')).toBe('to_pack')
+    expect(queueTab('paid')).toBe('to_pack')
+    expect(queueTab('held')).toBe('on_hold')
+    expect(queueTab('awaiting_payment')).toBe('not_paid')
+    expect(queueTab('packed')).toBe(null)
+  })
+  it('never tells a shopper an internal word', () => {
+    for (const s of ORDER_STATES) expect(['held', 'refund_due', 'unconfirmed', 'rto', 'rto_received', 'payment_abandoned']).not.toContain(shopperState(s))
+    expect(shopperState('held')).toBe('confirming')
+    expect(shopperState('refund_due')).toBe('confirming')
   })
 })

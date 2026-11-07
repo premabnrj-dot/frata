@@ -57,7 +57,9 @@ export default {
       await p.fill('#addressLine', 'B-14, Tilak Marg'); await p.fill('#area', 'C-Scheme'); await p.selectOption('#state', 'Rajasthan')
     }
     const toCheckout = async (colour, size) => {
+      // Each checkout starts from an empty bag and no unpaid order left by an earlier step.
       await p.goto(SHOP + '/products/chanderi-kurta-set', { waitUntil: 'domcontentloaded' })
+      await p.evaluate(() => { localStorage.clear(); sessionStorage.clear() }); await p.reload({ waitUntil: 'domcontentloaded' })
       await p.getByRole('button', { name: new RegExp('^' + colour) }).click(); await p.getByRole('button', { name: size, exact: true }).click()
       await p.getByRole('button', { name: /Add to bag|Pre-order/ }).click(); await p.getByRole('dialog', { name: 'Your bag' }).waitFor()
       await p.getByRole('button', { name: 'Checkout' }).click(); await p.waitForURL(/\/checkout$/); await fill()
@@ -72,6 +74,10 @@ export default {
       assert.equal(await stock('{M,Rust}'), before - 1)
       const o = await lastOrder()
       assert.equal(o.payment_method, 'cod'); assert.equal(Number(o.total), 253900)
+      const ls = await db`select stock_taken_at, charge_taxable, charge_gst from order_lines where order_id = ${o.id}`
+      assert.ok(ls.every((l) => l.stock_taken_at), 'each line stamped when its stock was taken')
+      assert.equal(ls.reduce((a, l) => a + Number(l.charge_taxable) + Number(l.charge_gst), 0), Number(o.shipping) + Number(o.cod_charge), 'charge shares add up')
+      assert.equal(o.area, 'C-Scheme'); assert.equal(o.address_line, 'B-14, Tilak Marg'); assert.ok(o.seller_gstin !== undefined)
       const [line] = await db`select l.unit_cost, v.unit_cost as now_cost from order_lines l join variants v on v.id = l.variant_id where l.order_id = ${o.id}`
       assert.equal(line.unit_cost, line.now_cost, 'cost snapshotted from the variant'); assert.ok(line.unit_cost !== null)
       const text = (await p.textContent('article')).replace(/\s/g, '')
@@ -108,9 +114,39 @@ export default {
       assert.equal(await webhook({ event: 'payment.captured', payload: { payment: { entity: pay.payment } } }), 200)
       o = await until(async () => { const x = await lastOrder(); return x.paid_at && x })
       assert.equal(await stock('{M,Rust}'), before - 1, 'stock taken once')
+      assert.equal(Number(o.cod_charge), 0, 'the COD fee comes off: the shopper paid the online total')
+      assert.equal(Number(o.total), 249000)
+      const shares = await db`select sum(charge_taxable + charge_gst)::int s from order_lines where order_id = ${o.id}`
+      assert.equal(shares[0].s, Number(o.shipping), 'shares now cover delivery only')
+      await p.reload(); await p.getByText('Paid online').waitFor()
+      assert.equal(await p.getByText(/Keep ₹/).count(), 0, 'the shopper is not told to keep cash ready')
       await c.goto(CONSOLE + '/console/orders')
       await c.getByRole("row").filter({ hasText: `-${o.number}` }).getByText('Do not collect cash').waitFor()
       await c.screenshot({ path: t.out('console-orders'), fullPage: true })
+    })
+
+    await t.step('paid after its stock sold out: refund due for the merchant, "the shop confirms" for the shopper', async () => {
+      // An in-stock piece (Indigo S is a pre-order: no in-stock line to run short).
+      await toCheckout('Indigo', 'M'); await p.getByText('Pay online', { exact: true }).click()
+      await p.evaluate(() => { window.__rzpMode = 'dismiss' }); await p.getByRole('button', { name: /^Pay · / }).click()
+      await p.getByText(/Payment did not go through/).waitFor()
+      const o = await lastOrder()
+      // The hold lapses and the last piece goes to someone else; then the payment lands.
+      await db`update orders set pay_by = now() - interval '1 minute' where id = ${o.id}`
+      const token = await p.evaluate(() => Object.entries(sessionStorage).find(([k]) => /pending/i.test(k))?.[1])
+      assert.ok(token, 'the checkout keeps the unpaid order\'s link token')
+      const was = await stock('{M,Indigo}'); await db`update variants set stock = 0 where option_values = '{M,Indigo}'`
+      try {
+        const pay = await (await fetch(RZP + '/_test/pay', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ order_id: o.razorpay_order_id }) })).json()
+        assert.equal(await webhook({ event: 'payment.captured', payload: { payment: { entity: pay.payment } } }), 200)
+        await until(async () => (await lastOrder()).paid_at)
+        const [l] = await db`select stock_taken_at from order_lines where order_id = ${o.id}`
+        assert.equal(l.stock_taken_at, null, 'no stock was taken that was not there')
+        assert.equal(await stock('{M,Indigo}'), 0)
+        await c.goto(CONSOLE + '/console/orders'); await c.getByRole('row').filter({ hasText: `-${o.number}` }).getByText('Refund due').waitFor()
+        await p.goto(SHOP + '/orders#t=' + token); await p.getByText('Placed · the shop confirms it soon').waitFor()
+        assert.equal(await p.getByText(/refund|held/i).count(), 0, 'the shopper sees no internal word')
+      } finally { await db`update variants set stock = ${was} where option_values = '{M,Indigo}'` }
     })
 
     await t.step('price changed between looking and placing: told, nothing placed', async () => {

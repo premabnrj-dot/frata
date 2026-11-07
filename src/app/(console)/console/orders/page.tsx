@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { paise } from '@/domains/money/paise'
-import { currentMethod, isReal, orderState, paidAfterSwitch, type OrderState } from '@/domains/orders/order-state'
+import { currentMethod, isPlaced, orderState, queueTab, paidAfterSwitch, type OrderState } from '@/domains/orders/order-state'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { dateTimeIN } from '@/lib/format-date'
 import { listOrders, orderPrefixFor } from '@/lib/queries/orders'
@@ -15,6 +15,9 @@ const STATE: Record<OrderState, { label: string; tone: 'ok' | 'warn' | 'danger' 
   payment_abandoned: { label: 'Payment abandoned', tone: 'neutral' },
   paid: { label: 'Ready to pack', tone: 'info' },
   unconfirmed: { label: 'To confirm', tone: 'warn' },
+  held: { label: 'On hold', tone: 'warn' },
+  refund_due: { label: 'Refund due', tone: 'danger' },
+  packed: { label: 'Packed', tone: 'info' },
   confirmed: { label: 'Confirmed', tone: 'info' },
   cancelled: { label: 'Cancelled', tone: 'neutral' },
   shipped: { label: 'Shipped', tone: 'info' },
@@ -31,11 +34,11 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   if (!all) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const now = new Date()
   const withState = all.map((o) => ({ o, state: orderState(o, now) }))
-  const unpaid = withState.filter((x) => !isReal(x.state))
+  const unpaid = withState.filter((x) => !isPlaced(x.o))
   // Unpaid online orders are not orders yet: listed only when asked for (they never count as "To confirm").
   const showUnpaid = (await searchParams).show === 'unpaid'
-  const rows = showUnpaid ? unpaid : withState.filter((x) => isReal(x.state))
-  const toConfirm = withState.filter((x) => x.state === 'unconfirmed').length
+  const rows = showUnpaid ? unpaid : withState.filter((x) => isPlaced(x.o))
+  const toConfirm = withState.filter((x) => queueTab(x.state) === 'to_confirm').length
   const prefix = await orderPrefixFor(auth.membership.tenantId)
   return (
     <>

@@ -35,10 +35,10 @@ jobs:
           ADMIN_URL=postgres://postgres:postgres@localhost:5432/frata_backfill npm run verify:backfill
         env:
           ADMIN_URL: postgres://postgres:postgres@localhost:5432/frata_proof
-      - name: Admin library on the migrated database
+      - name: Admin library and order predicates on the migrated database
         run: |
           psql "$ADMIN_URL" -q -c "alter role frata_app password 'ci'; alter role frata_admin password 'ci';"
-          npx vitest run src/lib/admin
+          npx vitest run src/lib/admin src/lib/db src/lib/orders
         env:
           ADMIN_URL: postgres://postgres:postgres@localhost:5432/frata_proof
           INT_DB_HOST: localhost:5432

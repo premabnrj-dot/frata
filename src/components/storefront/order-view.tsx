@@ -2,20 +2,21 @@
 
 import { useEffect, useState } from 'react'
 import { pick, urlFor } from '@/domains/media/sizes'
+import type { ShopperState } from '@/domains/orders/order-state'
 import { api, dayRange, inr } from './shop-client'
 
 type View = {
-  number: number; state: string; method: 'cod' | 'prepaid'; paidAfterSwitch: boolean; canSwitchToCod: boolean
+  number: number; state: ShopperState; collect: number; method: 'cod' | 'prepaid'; paidAfterSwitch: boolean; canSwitchToCod: boolean
   subtotal: number; shipping: number; codCharge: number; total: number; firstName: string; to: string; phone: string
   arrives: { from: string; to: string } | null; returnDays: number | null; returnKind: string | null
   lines: { title: string; optionValues: string[]; qty: number; unitPrice: number; imageBase: string | null; imageWidths: number[] | null; kind: string }[]
   shop: { name: string; whatsapp: string }
 }
 
-const STATE: Record<string, string> = {
-  unconfirmed: 'Placed · the shop confirms it soon', confirmed: 'Confirmed · being packed', paid: 'Paid · being packed', awaiting_payment: 'Waiting for your payment',
-  payment_abandoned: 'Not paid · the order was not placed', cancelled: 'Cancelled', shipped: 'On its way', ndr: 'Delivery attempt failed · the courier will try again',
-  delivered: 'Delivered', rto: 'Returning to the shop', rto_received: 'Returned to the shop',
+const STATE: Record<ShopperState, string> = {
+  confirming: 'Placed · the shop confirms it soon', confirmed: 'Confirmed · being packed', paid: 'Paid · being packed', packed: 'Packed · ready to ship',
+  awaiting_payment: 'Waiting for your payment', not_paid: 'Not paid · the order was not placed', cancelled: 'Cancelled', shipped: 'On its way',
+  ndr: 'Delivery attempt failed · the courier will try again', delivered: 'Delivered', returning: 'Returning to the shop', returned: 'Returned to the shop',
 }
 
 /**
@@ -35,7 +36,7 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
   if (!v) return <p className="mx-auto max-w-lg px-4 py-16 text-center text-store-sub">Loading your order…</p>
   const num = `${prefix}-${v.number}`
   const wa = v.shop.whatsapp ? `https://wa.me/${v.shop.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Order ${num}`)}` : null
-  const placed = !['payment_abandoned', 'awaiting_payment'].includes(v.state)
+  const placed = v.state !== 'not_paid' && v.state !== 'awaiting_payment'
   const copy = () => navigator.clipboard?.writeText(window.location.href).then(() => setCopied(true), () => setCopied(false))
   return (
     <article className="mx-auto max-w-lg space-y-4 px-4 py-8">
@@ -43,7 +44,7 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
       <h1 className="text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{placed ? `Thank you${v.firstName ? `, ${v.firstName}` : ''}` : 'Your order'}</h1>
       <dl className="space-y-1 text-sm">
         <div className="flex justify-between gap-4"><dt>Order</dt><dd className="font-mono font-medium">{num}</dd></div>
-        <div className="flex justify-between gap-4"><dt>Status</dt><dd className="text-right">{STATE[v.state] ?? v.state}</dd></div>
+        <div className="flex justify-between gap-4"><dt>Status</dt><dd className="text-right">{STATE[v.state]}</dd></div>
         {v.arrives && placed && <div className="flex justify-between gap-4"><dt>Arrives</dt><dd>{dayRange(v.arrives)}</dd></div>}
       </dl>
       <ul className="divide-y divide-store-line border-y border-store-line">
@@ -58,7 +59,7 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
       <dl className="space-y-1 text-sm">
         <div className="flex justify-between"><dt>Delivery</dt><dd>{v.shipping ? inr(v.shipping) : 'Free'}</dd></div>
         {v.method === 'cod' && v.codCharge > 0 && <div className="flex justify-between"><dt>Pay on delivery fee</dt><dd>{inr(v.codCharge)}</dd></div>}
-        <div className="flex justify-between pt-1 text-base"><dt className="font-medium">{v.method === 'cod' && placed && v.state !== 'cancelled' ? `Keep ${inr(v.total)} ready` : v.method === 'prepaid' && v.state !== 'payment_abandoned' ? 'Paid online' : 'Total'}</dt>
+        <div className="flex justify-between pt-1 text-base"><dt className="font-medium">{v.collect > 0 && placed ? `Keep ${inr(v.collect)} ready` : v.method === 'prepaid' && v.state !== 'not_paid' && v.state !== 'awaiting_payment' ? 'Paid online' : 'Total'}</dt>
           <dd className="tabular-nums">{v.method === 'cod' ? 'cash or UPI' : inr(v.total)}</dd></div>
         {v.paidAfterSwitch && <p className="text-store-good">Your online payment went through: nothing to pay on delivery.</p>}
         <div className="flex justify-between text-store-sub"><dt>To</dt><dd>{v.to}{v.phone ? ` · phone ${v.phone}` : ''}</dd></div>

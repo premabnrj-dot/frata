@@ -43,6 +43,9 @@ function run(name, cmd, args, env) {
 
 export async function up({ build = true } = {}) {
   mkdirSync(OUT, { recursive: true })
+  // A stack left by an earlier run (killed, or still shutting down) holds the ports: clear it first.
+  try { sh(`pkill -f "next start -p ${PORTS.app}|e2e/fakes/" || true`) } catch {}
+  await until(async () => { try { await fetch(CONSOLE); return false } catch { return true } }, 10_000)
   const server = process.env.E2E_ADMIN_URL ? (({ protocol, username, password, host }) => `${protocol}//${username}${password ? ':' + password : ''}@${host}`)(new URL(process.env.E2E_ADMIN_URL)) : startPostgres()
   const boot = adminSql(`${server}/postgres`)
   await boot.unsafe(`drop database if exists ${DB} with (force)`); await boot.unsafe(`create database ${DB}`); await boot.end()

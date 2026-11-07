@@ -14,7 +14,7 @@
 // =============================================================================
 
 import { availability, visibility, type Status, type WhenOut } from '@/domains/catalogue/availability'
-import { taxOrder } from '@/domains/tax/gst'
+import { taxOrder, type ChargeShare } from '@/domains/tax/gst'
 import { codFor, shippingFor, type Cod, type DeliveryRules } from './delivery'
 
 export const MAX_QTY = 10
@@ -31,6 +31,8 @@ export type VariantRow = {
   held: number
   /** Pre-order units already sold (live pre-order lines). */
   preordered: number
+  /** Pre-order units not yet packed: when stock arrives, these are owed it first. */
+  owed: number
   hsn: string | null
   image: { base: string; widths: number[] } | null
 }
@@ -49,7 +51,8 @@ export type QuoteLine = {
   gross: number; gstBps: number; taxable: number; gst: number; hsn: string | null
   problem: LineProblem | null
 }
-export type MethodTotal = { codCharge: number; gst: number; total: number }
+/** What one way of paying costs. `shares`: each sold line's share of the charges (delivery, and the COD fee when paying on delivery), in `lines` order, sold lines only. */
+export type MethodTotal = { codCharge: number; gst: number; total: number; shares: ChargeShare[] }
 export type Quote = {
   lines: QuoteLine[]
   /** Sum of the sellable lines, as shown (GST inside when prices include it). */
@@ -73,7 +76,7 @@ const addDays = (iso: string, n: number) => istDate(new Date(`${iso}T00:00:00+05
 export function sellable(v: VariantRow, want: number, now: Date): { qty: number; kind: LineKind; problem: LineProblem | null } {
   const vis = visibility(v.status as Status, v.publishAt ? new Date(v.publishAt) : null, now)
   if (!vis.canBuy || v.price <= 0) return { qty: 0, kind: 'in_stock', problem: 'gone' }
-  const free = Math.max(0, v.stock - v.held)
+  const free = Math.max(0, v.stock - v.held - v.owed)
   const capLeft = v.preorderCap === null ? Number.POSITIVE_INFINITY : Math.max(0, v.preorderCap - v.preordered)
   // availability() decides the kind exactly as the product page did, from the stock a shopper can take now.
   const a = availability({ stock: free, whenOut: v.whenOut, shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays, preorderCap: v.preorderCap, preordered: v.preordered }, now)
@@ -136,8 +139,8 @@ export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Dat
   })
   return {
     lines, subtotal, shipping, merchandiseNet: tPre.lines.reduce((a, l) => a + l.taxable, 0),
-    prepaid: { codCharge: 0, gst: prepaidGst, total: total(shipping, prepaidGst) },
-    cod: { offer, codCharge, gst: codGst, total: offer.offered ? total(shipping + codCharge, codGst) : 0 },
+    prepaid: { codCharge: 0, gst: prepaidGst, total: total(shipping, prepaidGst), shares: tPre.lines.map(({ chargeTaxable, chargeGst }) => ({ chargeTaxable, chargeGst })) },
+    cod: { offer, codCharge, gst: codGst, total: offer.offered ? total(shipping + codCharge, codGst) : 0, shares: tCod.lines.map(({ chargeTaxable, chargeGst }) => ({ chargeTaxable, chargeGst })) },
     arrives: arrivalRange(lines.filter((l) => l.qty > 0), r, now),
     empty: live.length === 0, missing,
   }

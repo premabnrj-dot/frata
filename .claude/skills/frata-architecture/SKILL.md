@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.1.0
+  version: 2.1.1
   verified: 2026-11-06
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -118,7 +118,7 @@ export async function confirmOrder(input: unknown): Promise<{ ok: boolean; error
   (`where confirmed_at = $written and packed_at is null`), refused in words
   when something moved since.
 - **One home for SQL predicates.** A state test written in SQL (tabs, counts,
-  holds) lives in `src/lib/queries/order-predicates.ts` with a parity test
+  holds) lives in `src/lib/db/order-predicates.ts` with a parity test
   against `orderState()` on fixtures — never restated in a query.
 - **Operational state is a column, not jsonb.** `checkout` jsonb holds
   hypotheses for analysis; anything code branches on (stock taken, per line)

@@ -1,0 +1,64 @@
+// THE PARITY TEST: src/lib/db/order-predicates.ts against src/domains/orders/order-state.ts on the same rows of
+// a real Postgres (migrated by scripts/verify/tenancy.sh, so tenant A of the proof exists). Skipped unless
+// INT_DB_HOST is set (CI sets it). Everything it writes is rolled back.
+import { describe, expect, it } from 'vitest'
+
+const host = process.env.INT_DB_HOST
+const dbName = process.env.INT_DB_NAME ?? 'frata_proof'
+const pass = process.env.INT_DB_PASSWORD ?? 'x'
+const A = '11111111-1111-1111-1111-111111111111'
+
+/** A small seeded generator, so a failure names a case that comes back on the next run. */
+function rng(seed: number) { return () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31) }
+
+describe.skipIf(!host)('order predicates match orderState()', () => {
+  it('on 400 generated orders: state, tabs, placed, holding, standing', async () => {
+    process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
+    const { withTenant } = await import('@/lib/db/tenant')
+    const { orders, orderLines } = await import('@/lib/db/schema-orders')
+    const p = await import('@/lib/db/order-predicates')
+    const s = await import('@/domains/orders/order-state')
+    const { eq, and, sql, gte } = await import('drizzle-orm')
+    const now = new Date('2026-11-07T10:00:00Z')
+    const at = (h: number) => new Date(now.getTime() + h * 3_600_000)
+    const r = rng(7)
+    const maybe = (h: number, odds = 0.5) => (r() < odds ? at(h) : null)
+    const ROLLBACK = new Error('rollback')
+    const taken = new Map<number, boolean>()
+    await withTenant(A, async (tx) => {
+      for (let i = 0; i < 400; i++) {
+        const prepaid = r() < 0.5, packed = maybe(-1, 0.25)
+        const [o] = await tx.insert(orders).values({
+          tenantId: A, number: 900_000 + i, paymentMethod: prepaid ? 'prepaid' : 'cod', placedAt: at(-48),
+          payBy: prepaid ? (r() < 0.5 ? at(1) : at(-1)) : null, paidAt: prepaid ? maybe(-2) : maybe(-2, 0.05), switchedToCodAt: prepaid ? maybe(-3, 0.3) : null,
+          confirmedAt: maybe(-4, 0.4), heldAt: maybe(-4, 0.3), packedAt: packed, invoiceNumber: packed ? `PT/26-27/${i}` : null,
+          cancelledAt: maybe(-1, 0.15), shippedAt: maybe(0, 0.1), ndrAt: maybe(0, 0.05), deliveredAt: maybe(0, 0.05), rtoInitiatedAt: maybe(0, 0.04), rtoDeliveredAt: maybe(0, 0.03),
+        }).returning({ id: orders.id })
+        const isTaken = r() < 0.7; taken.set(900_000 + i, isTaken)
+        await tx.insert(orderLines).values({ tenantId: A, orderId: o!.id, title: 'Kurta', qty: 1, unitPrice: 100000, taxableValue: 95238, kind: 'in_stock', stockTakenAt: isTaken ? at(-3) : null })
+      }
+      const rows = await tx.select({
+        ...p.momentColumns, number: orders.number, sqlState: p.stateSql(now),
+        toConfirm: sql<boolean>`${p.inTabSql('to_confirm', now)}`, toPack: sql<boolean>`${p.inTabSql('to_pack', now)}`, onHold: sql<boolean>`${p.inTabSql('on_hold', now)}`,
+        notPaid: sql<boolean>`${p.inTabSql('not_paid', now)}`, all: sql<boolean>`${p.inTabSql('all', now)}`,
+        placed: sql<boolean>`${p.placedSql()}`, holding: sql<boolean>`${p.holdingSql(now)}`, standing: sql<boolean>`${p.standingSql()}`,
+      }).from(orders).where(and(eq(orders.tenantId, A), gte(orders.number, 900_000)))
+      expect(rows.length).toBe(400)
+      const seen = new Set<string>()
+      for (const row of rows) {
+        // stockShort's own rule, from what was generated: paid, and the in-stock line not taken.
+        expect({ number: row.number, stockShort: row.stockShort }).toEqual({ number: row.number, stockShort: !!row.paidAt && !taken.get(row.number) })
+        const state = s.orderState(row, now)
+        seen.add(state)
+        const tab = s.queueTab(state)
+        const got = { state: row.sqlState, to_confirm: row.toConfirm, to_pack: row.toPack, on_hold: row.onHold, not_paid: row.notPaid, all: row.all, placed: row.placed, holding: row.holding, standing: row.standing }
+        const want = { state, to_confirm: tab === 'to_confirm', to_pack: tab === 'to_pack', on_hold: tab === 'on_hold', not_paid: tab === 'not_paid', all: s.isPlaced(row), placed: s.isPlaced(row),
+          holding: s.isHolding(row, now), standing: s.isStanding(row) }
+        expect({ number: row.number, ...got }).toEqual({ number: row.number, ...want })
+      }
+      // The generator reached every state, so every SQL branch was compared.
+      expect([...seen].sort()).toEqual([...s.ORDER_STATES].sort())
+      throw ROLLBACK
+    }).catch((e) => { if (e !== ROLLBACK) throw e })
+  })
+})

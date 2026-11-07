@@ -1,6 +1,7 @@
 import 'server-only'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { quote, type Quote } from '@/domains/checkout/quote'
+import { charged } from '@/domains/orders/amounts'
 import type { Tx } from '@/lib/db'
 import { webhookEvents } from '@/lib/db/schema'
 import { orderLines, orders } from '@/lib/db/schema-orders'
@@ -23,17 +24,33 @@ import { HOLD_MINUTES, startPayment, takeStock, type Pay } from './place'
 
 type OrderKey = { id: string; tenantId: string }
 
-/** Record the payment once; take the stock unless the order already did (COD switch). */
+/**
+ * Record the payment once and take the stock of any line not taken yet (none, after a switch to COD: takeStock
+ * stamps per line). A capture after a switch: the shopper paid the online total, so the COD fee and its GST come
+ * off the stored order and its lines' shares (amounts.charged, from the stored rates).
+ */
 export async function markPaid(tx: Tx, o: OrderKey, p: { paymentId: string; fee?: number | null; tax?: number | null }): Promise<'paid' | 'already'> {
   const r = await tx.update(orders).set({ paidAt: sql`now()`, razorpayPaymentId: p.paymentId, ...(p.fee != null ? { gatewayFee: p.fee, gatewayTax: p.tax ?? null } : {}) })
-    .where(and(eq(orders.tenantId, o.tenantId), eq(orders.id, o.id), isNull(orders.paidAt))).returning({ checkout: orders.checkout })
+    .where(and(eq(orders.tenantId, o.tenantId), eq(orders.id, o.id), isNull(orders.paidAt)))
+    .returning({ switchedAt: orders.switchedToCodAt, codCharge: orders.codCharge, subtotal: orders.subtotal, shipping: orders.shipping, pricesIncludeGst: orders.pricesIncludeGst, checkout: orders.checkout })
   if (!r.length) {
     // Already paid (the other path won): the fee may still be news.
     if (p.fee != null) await tx.update(orders).set({ gatewayFee: p.fee, gatewayTax: p.tax ?? null }).where(and(eq(orders.tenantId, o.tenantId), eq(orders.id, o.id), isNull(orders.gatewayFee)))
     return 'already'
   }
-  const taken = (r[0]!.checkout as { stockTaken?: boolean } | null)?.stockTaken
-  if (!taken) await takeStock(tx, o.tenantId, o.id)
+  const paid = r[0]!
+  if (paid.switchedAt && Number(paid.codCharge) > 0) {
+    const lines = await tx.select({ id: orderLines.id, taxableValue: orderLines.taxableValue, gst: orderLines.gst, gstBps: orderLines.gstBps }).from(orderLines)
+      .where(and(eq(orderLines.tenantId, o.tenantId), eq(orderLines.orderId, o.id))).orderBy(orderLines.position)
+    const ls = lines.map((l) => ({ ...l, taxableValue: Number(l.taxableValue), gst: Number(l.gst) }))
+    const now = charged(ls, { subtotal: Number(paid.subtotal), shipping: Number(paid.shipping), pricesIncludeGst: paid.pricesIncludeGst }, 0)
+    // What the shopper paid is the online total they were shown; a difference is a bug to see, not to hide.
+    const shown = Number((paid.checkout as { onlineTotal?: number } | null)?.onlineTotal ?? now.total)
+    if (shown !== now.total) console.error('[markPaid] recomputed online total differs from the one shown', { order: o.id, shown, now: now.total })
+    await tx.update(orders).set({ codCharge: 0, gstTotal: now.gstTotal, total: now.total }).where(and(eq(orders.tenantId, o.tenantId), eq(orders.id, o.id)))
+    for (const [i, l] of lines.entries()) await tx.update(orderLines).set(now.shares[i]!).where(and(eq(orderLines.tenantId, o.tenantId), eq(orderLines.id, l.id)))
+  }
+  await takeStock(tx, o.tenantId, o.id)
   return 'paid'
 }
 
@@ -88,8 +105,10 @@ export async function switchToCod(tenantId: string, token: string, expectedTotal
     if (!o || o.paidAt || o.switchedAt || o.cancelledAt) return { kind: 'refused', status: 409, error: 'This order changed. Reload the page.' }
     const shop = await checkoutShop(tx, tenantId)
     if (!shop?.open) return { kind: 'refused', status: 404, error: 'This shop is not taking orders right now.' }
-    const lines = await tx.select({ variantId: orderLines.variantId, qty: orderLines.qty }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id)))
-    const bag = lines.filter((l) => l.variantId).map((l) => ({ variantId: l.variantId!, qty: l.qty }))
+    // In position order, and kept with their ids: the quote's shares come back in bag order and are written by id.
+    const lines = (await tx.select({ id: orderLines.id, variantId: orderLines.variantId, qty: orderLines.qty }).from(orderLines)
+      .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id))).orderBy(orderLines.position)).filter((l) => l.variantId)
+    const bag = lines.map((l) => ({ variantId: l.variantId!, qty: l.qty }))
     // Re-priced against today's rows, this order's own hold excluded (it is the one switching).
     const rows = (await variantRows(tx, tenantId, bag.map((b) => b.variantId), now, { lock: true }))
       .map((r) => ({ ...r, held: o.payBy && o.payBy > now ? Math.max(0, r.held - (bag.find((b) => b.variantId === r.variantId)?.qty ?? 0)) : r.held }))
@@ -97,8 +116,12 @@ export async function switchToCod(tenantId: string, token: string, expectedTotal
     if (q.lines.some((l) => l.problem) || q.subtotal !== Number(o.subtotal)) return { kind: 'changed', quote: q }
     if (!q.cod.offer.offered) return { kind: 'refused', status: 422, error: 'Pay on delivery is not offered for this order.' }
     if (q.cod.total !== expectedTotal) return { kind: 'changed', quote: q }
-    await tx.update(orders).set({ switchedToCodAt: sql`now()`, codCharge: q.cod.codCharge, gstTotal: q.cod.gst, total: q.cod.total, payBy: null })
-      .where(and(eq(orders.tenantId, tenantId), eq(orders.id, o.id), isNull(orders.paidAt), isNull(orders.switchedToCodAt)))
+    const switched = await tx.update(orders).set({ switchedToCodAt: sql`now()`, codCharge: q.cod.codCharge, gstTotal: q.cod.gst, total: q.cod.total, payBy: null })
+      .where(and(eq(orders.tenantId, tenantId), eq(orders.id, o.id), isNull(orders.paidAt), isNull(orders.switchedToCodAt))).returning({ id: orders.id })
+    // Paid or switched in the meantime (another tab, a capture): nothing more to do here (plan review 2026-11-07).
+    if (!switched.length) return { kind: 'refused', status: 409, error: 'This order was already paid or moved to Pay on delivery. Reload the page.' }
+    // Every line was re-priced unchanged (else 'changed' above), so shares[i] is lines[i]'s.
+    for (const [i, l] of lines.entries()) await tx.update(orderLines).set(q.cod.shares[i]!).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.id, l.id)))
     await takeStock(tx, tenantId, o.id)
     return { kind: 'switched', total: q.cod.total }
   })

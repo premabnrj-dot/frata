@@ -31,7 +31,16 @@ try {
         passed++; console.log(`ok   ${flow.name} › ${name}${r ? `  (${r})` : ''}`)
       },
     }
-    try { await flow.run(t) } catch (e) { failed++; console.log(`FAIL ${flow.name} › ${e.step ?? ''} ${String(e.message).split('\n')[0]}`) }
+    try { await flow.run(t) } catch (e) {
+      failed++; console.log(`FAIL ${flow.name} › ${e.step ?? ''} ${String(e.message).split('\n')[0]}`)
+      // What every open page showed at the failure, so the report says what happened, not only that it timed out.
+      let n = 0
+      for (const ctx of browser.contexts()) for (const page of ctx.pages()) {
+        const path = t.out(`FAILED-${++n}`)
+        await page.screenshot({ path, fullPage: true }).catch(() => {})
+        console.log(`     page ${n}: ${page.url()} → ${path.replace(OUT, 'e2e/.out/')}`)
+      }
+    }
     if (errors.length) { failed++; console.log(`FAIL ${flow.name} › page errors: ${errors.slice(0, 3).join(' | ')}`) }
     await browser.close()
   }

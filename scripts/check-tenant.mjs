@@ -65,7 +65,8 @@ for (const file of walk('src')) {
   const shopper = file.startsWith('src/app/s/') || shopperRead || file.startsWith('src/components/shop-preview/')
     || file.startsWith('src/components/storefront/') || file.startsWith('src/app/(console)/console/preview/') || file.startsWith('src/app/api/shop/') || file === 'src/lib/http/shop-api.ts'
   if (shopper) {
-    const named = [...SENTINELS, 'keySecret', 'webhookSecret', 'key_secret', 'webhook_secret'].filter((x) => text.includes(x))
+    // The team's side of an order (1D) never reaches a shopper: why it was cancelled, notes, who did what.
+    const named = [...SENTINELS, 'keySecret', 'webhookSecret', 'key_secret', 'webhook_secret', 'cancelReason', 'cancel_reason', 'cancelNote', 'cancel_note', 'orderNotes', 'order_notes', 'orderEvents', 'order_events'].filter((x) => text.includes(x))
     if (named.length) failures.push(`${file}  shopper code names a merchant cost or secret (${named.join(', ')}) — select only what a shopper sees`)
   }
   // 6b. Shopper reads name their columns: a bare select() or returning() would carry unit_cost along (storefront review 2026-11-07).
