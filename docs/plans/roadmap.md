@@ -19,6 +19,7 @@ gets its own research, spec and mockup before it is built.
 | 3 | True profit | 6, 1 | see profit per order and per delivered order; RTO by pincode; send delivered orders to Meta | Merchant can name profit per delivered order |
 | 4 | Fit and returns | 2 | run exchanges and returns with reasons; show fit feedback; size finder | Share of returns that are "size" |
 | 5 | Channels | 4, 5, 6 | sync Instagram/Facebook and Google; WhatsApp abandoned bag; campaigns on delivered orders | Delivered orders per ₹ of ad spend |
+| P | Partners (spec draft 2026-11-07, [mockup](https://claude.ai/artifact/TPuqJEDpbNnor97gpjJnAj)) | 3, 5 (distribution) | (partner) apply, build client stores in one workspace, hand them to the owner; (merchant) see and remove the partner; (everyone) switch stores | Stores handed over per month; share of new shops opened through a partner |
 | U | UX foundation (spec active 2026-11-07, owner approved; [mockup](https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC)) | 1, 3 (enabling) | (merchant and staff) one shell on every width, visible fields and focus, bottom bar on phones, the same calm motion; then Home as "Today" | Any page in ≤ 2 taps on a phone; 0 contrast and target failures (gates) |
 | 6 | Run Frata | 7 | (Frata) charging merchants (Razorpay subscriptions), GST invoices, own domains, festive load test | 10× traffic, no error spike |
 

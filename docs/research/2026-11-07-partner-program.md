@@ -1,6 +1,6 @@
 # Partner program: developers, designers and agencies who bring their own clients
 
-Status: research, owner input needed · Date: 2026-11-07 · Approved: pending
+Status: research · Date: 2026-11-07 · Decided (owner, 2026-11-07): merchant owns the store; 20% for 24 months; F1–F3 now → spec `docs/specs/2026-11-07-partner-foundations.md` (F1 became `partner_links`, not a `tenants` column)
 Not a spec yet. This answers *whether* and *how* to plan it, and what to lay down now.
 
 ## 0. Goal (frata-planning § North star)
