@@ -163,7 +163,7 @@ Findings taken:
 - `button-h` skips comments and matches only inside class strings.
 - The root title template is "%s · Frata".
 - Scroll padding includes the safe area.
-- An in-app move after a visit ended elsewhere now refreshes the shell. The audit's MEDIUM 1: `TenantCheck` asks `currentTenantAction` after each move, for staff only. A template does not re-render on the server for a page-only move; this was found by the new e2e step.
+- An in-app move after a visit ended elsewhere now refreshes the shell. The audit's MEDIUM 1: `TenantCheck` asks the server after each move (now `GET /api/console/tenant`), for staff only. A template does not re-render on the server for a page-only move; this was found by the new e2e step.
 - `check:tenant` resolves relative imports before matching. ~~It had read files as an array of lines, so its cost-sentinel rule never fired~~: **this claim was wrong**. The old `code()` already joined the comment-stripped lines into one string, and rule 6 worked; the re-review proved it by planting. My first change dropped comment-skipping (weakening rules 2 and 4) and was corrected the same day: resolution now runs on the comment-stripped code. Both are proven by planting.
 - The shell may import only SHELL_ACTIONS from `src/app`.
 - New e2e steps: the progress bar on a slow move, the More sheet's focus, sign-out ending a visit, an in-app move after an end elsewhere.
@@ -182,3 +182,5 @@ Deferred:
 - The progress bar animates transform only.
 - The expiry timer never re-arms faster than every 5 s.
 - e2e covers the page scrolling again after the sheet closes, closing by scrim and by link, and no "· Frata" on the shop's bag or checkout tabs.
+
+**Final check of U·2a (2026-11-07):** MERGE after one fix, which is taken. The progress bar animated `transform` while Tailwind's `scale-x-*` sets `scale`, so it crept to 64 % and then snapped; both now use `scale`. The shell rule also catches a dynamic `import()`. Shop pages with no title of their own (not-found, error) now read "Shop" instead of "Frata": accepted, since Frata stays off a shop's tabs.

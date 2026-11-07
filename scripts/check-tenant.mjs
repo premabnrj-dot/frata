@@ -49,7 +49,7 @@ const TENANT_HELPER = /from\s+['"]@\/lib\/db\/tenant['"]/
 const TENANT_IN_APP = {
   'src/app/api/shop/orders/view/route.ts': 'the shopper\'s order page: tenant from the host, order from a signed token',
 }
-const DATA_MODULE = /from\s+['"]@\/lib\/(?:queries|db|admin|auth)(?:\/[^'"]*)?['"]/
+const DATA_MODULE = /(?:from\s+|import\(\s*)['"]@\/lib\/(?:queries|db|admin|auth)(?:\/[^'"]*)?['"]/
 /** Actions the shell may import from src/app (they are endpoints, not reads), with why. */
 const SHELL_ACTIONS = { '@/app/(admin)/admin/sign-out/actions': 'Sign out: ends a live support visit (needs src/lib/admin, so it lives under Admin)' }
 /**
@@ -85,7 +85,7 @@ for (const file of walk('src')) {
     failures.push(`${file}  the shell imports a data module — hand it values from the layout (plan U · T2)`)
   }
   if (file.startsWith('src/components/shell/')) {
-    for (const m of text.matchAll(/from\s+['"](@\/app\/[^'"]+)['"]/g)) if (!(m[1] in SHELL_ACTIONS)) failures.push(`${file}  the shell imports ${m[1]} — only the actions in SHELL_ACTIONS (plan U · T2)`)
+    for (const m of text.matchAll(/(?:from\s+|import\(\s*)['"](@\/app\/[^'"]+)['"]/g)) if (!(m[1] in SHELL_ACTIONS)) failures.push(`${file}  the shell imports ${m[1]} — only the actions in SHELL_ACTIONS (plan U · T2)`)
   }
   if (file.startsWith('src/app/(admin)/') && /\bwithTenant\(/.test(text)) {
     failures.push(`${file}  Admin calls withTenant — staff reach a store only through a support session (ADR-0007)`)

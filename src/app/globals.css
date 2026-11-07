@@ -191,8 +191,9 @@
 @utility animate-step-back { animation: step-in-back 320ms cubic-bezier(0, 0, 0, 1); }
 @utility animate-value-flash { animation: value-flash 800ms cubic-bezier(0.2, 0, 0, 1); }
 /* The shell (plan U · U·2a, motion rules 22–23): the progress bar creeps to 80 % while a move is on its way;
-   the phone's More sheet rises in 320 ms. Transform only (rule 22). */
-@keyframes nav-run { from { transform: scaleX(0); } to { transform: scaleX(0.8); } }
+   the phone's More sheet rises in 320 ms. Transform and scale only (rule 22). */
+/* `scale`, the same property Tailwind's scale-x-* sets: animating transform as well would multiply the two. */
+@keyframes nav-run { from { scale: 0 1; } to { scale: 0.8 1; } }
 @keyframes sheet-in { from { transform: translateY(100%); } to { transform: none; } }
 @utility animate-nav-run { animation: nav-run 1400ms cubic-bezier(0.3, 0, 1, 1); }
 @utility animate-sheet { animation: sheet-in 320ms cubic-bezier(0, 0, 0, 1); }
