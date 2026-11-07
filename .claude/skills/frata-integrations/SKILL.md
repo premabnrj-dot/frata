@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.1.0
+  version: 1.2.0
   verified: 2026-11-07
   decisions: [ADR-0006]
 ---
@@ -93,16 +93,37 @@ in razorpay.com/docs/sitemap.xml (most read 2026-10-08, a bulk rebuild).
   Signals (RTO risk on shopper profiles), Engage (WhatsApp), Fastrr Ads [S].
   Listed on NSE/BSE 19 Aug 2026 [S].
 
-## Meta — checked 2026-11-06
+## Meta — checked 2026-11-07 (WhatsApp: integration-researcher; spec docs/specs/2026-11-07-communication.md)
 
-- **Tech Provider**: business verification, app review (demo videos), access
-  verification. Onboarding limit **10 new customers per rolling 7 days by
-  default; 200 after the three verifications**; more → Meta Business Partner [V].
-- Tech Provider customers add their own payment method; Meta bills them [V, founder].
-- WhatsApp India rates (per message, +18% GST): marketing ₹0.8631; utility and
-  authentication ₹0.115 [S, Jul 2026 card]. Service messages: from Oct 2026,
-  first 1,000 per number per month free, then billed — **vendors disagree**,
-  also on utility inside the 24 h window [S]. Check Meta's rate card.
+- **Tech Provider**: business verification, App Review (two screencasts: a message sent and received,
+  template creation), access verification. Onboarding limit **10 new customers per rolling 7 days by
+  default; 200 after the three** [V, embedded-signup/overview]. Tech Partner upgrade: ≥2,500 average daily
+  messages, ≥10 active clients, ≥90% quality [V].
+- **No credit line**: customers add their own payment method in WhatsApp Manager; Meta bills them [V,
+  solution-providers/overview]. India accounts must bill in **INR by 31 Dec 2026**, else delivery stops 1 Jan 2027 [V].
+- **Embedded Signup v4 only** (v2/v3 deprecated 15 Oct 2026; v4 is "phone number first") [V]. It returns
+  waba_id, phone_number_id and a code; the server exchanges the code for a per-customer business token
+  (lifetime not stated [U]). Then `POST /<WABA_ID>/subscribed_apps` and `POST /<PHONE_NUMBER_ID>/register`
+  with a 6-digit PIN (10 per number per 72 h) [V].
+- **New account model** (GA 23 Sep 2026): a WhatsApp account (WAAC, holds the number) plus one Messaging
+  account per partner (its id is the waba_id). **No number migration between providers**: the client shares
+  its WhatsApp account. Paths move to the WAAC id by H1 2028 [V, account-model-evolution].
+- **Coexistence** (Business app + Cloud API on one number): app 2.24.17+; history (6 months) and contacts
+  sync once, within 24 h of onboarding; app-sent messages arrive as `smb_message_echoes`; 20 mps fixed;
+  broadcast lists read-only, groups not synced, companions unlinked; disconnects after ~14 days without
+  opening the app [V]. Available in India [S only].
+- **Pricing**: per message since 1 Jul 2025. **From 1 Oct 2026 in-window utility and service messages are
+  charged**; 1,000 free service messages per number per month [V]. Free entry point: Click-to-WhatsApp ads
+  only, window up to 7 days [V]. India before GST: marketing ₹0.8631; utility, authentication, service
+  ₹0.1150 [S, watsberry 2026-10-01]. Utility/auth volume tiers per portfolio, monthly [V].
+- **Limits**: per business portfolio, shared by its numbers: 250 → 2,000 → 10,000 → 100,000 → unlimited [V].
+- **Templates**: marketing / utility / authentication; mixed content (an order update with a promo) is
+  marketing; WhatsApp may re-categorise; review up to 24 h; body ≤1024; ≤10 buttons [V].
+- **Webhooks**: `X-Hub-Signature-256` HMAC-SHA256 of the raw body with the app secret; retries up to 7 days,
+  duplicates possible; ≤3 MB; route by `phone_number_id` / `entry[].id` [V]. Media URLs live **5 minutes**
+  and need the token [V]. Usernames: webhooks carry a BSUID, and a phone number may be absent [V].
+- No agent concept in the Cloud API; policy requires a human escalation path; opt-in must name the
+  business; opt-outs honoured on or off WhatsApp [V, policy 23 Sep 2026].
 - **Conversions API**: a website event's `event_time` may be up to 7 days old;
   ONE older event fails the WHOLE request [V, Meta docs]. Send "Delivered" as a
   custom event at delivery time; drop anything over 7 days before batching.
