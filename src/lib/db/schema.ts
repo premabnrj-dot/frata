@@ -16,8 +16,8 @@ export const id = () => uuid('id').primaryKey().defaultRandom()
 export const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 export const money = (name: string) => bigint(name, { mode: 'number' })
 
-export const MEMBER_ROLES = ['owner', 'admin', 'staff'] as const
-export type MemberRole = (typeof MEMBER_ROLES)[number]
+import { MEMBER_ROLES, type MemberRole } from '@/domains/tenancy/roles'
+export { MEMBER_ROLES, type MemberRole }
 
 export const tenants = pgTable('tenants', {
   id: id(),

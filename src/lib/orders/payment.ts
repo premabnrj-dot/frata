@@ -10,6 +10,7 @@ import { tokenHash } from '@/lib/crypto/secret-box'
 import { checkoutShop, variantRows } from '@/lib/queries/checkout'
 import { keysFor, markEvent } from '@/lib/payments/keys'
 import { checkoutSignatureOk, orderPayments, toPayment } from '@/lib/payments/razorpay'
+import { refreshShop } from '@/lib/queries/storefront'
 import { HOLD_MINUTES, startPayment, takeStock, type Pay } from './place'
 
 // =============================================================================
@@ -29,7 +30,7 @@ type OrderKey = { id: string; tenantId: string }
  * stamps per line). A capture after a switch: the shopper paid the online total, so the COD fee and its GST come
  * off the stored order and its lines' shares (amounts.charged, from the stored rates).
  */
-export async function markPaid(tx: Tx, o: OrderKey, p: { paymentId: string; fee?: number | null; tax?: number | null }): Promise<'paid' | 'already'> {
+export async function markPaid(tx: Tx, o: OrderKey, p: { paymentId: string; fee?: number | null; tax?: number | null }, soldOut: string[] = []): Promise<'paid' | 'already'> {
   const r = await tx.update(orders).set({ paidAt: sql`now()`, razorpayPaymentId: p.paymentId, ...(p.fee != null ? { gatewayFee: p.fee, gatewayTax: p.tax ?? null } : {}) })
     .where(and(eq(orders.tenantId, o.tenantId), eq(orders.id, o.id), isNull(orders.paidAt)))
     .returning({ switchedAt: orders.switchedToCodAt, codCharge: orders.codCharge, subtotal: orders.subtotal, shipping: orders.shipping, pricesIncludeGst: orders.pricesIncludeGst, checkout: orders.checkout })
@@ -50,7 +51,7 @@ export async function markPaid(tx: Tx, o: OrderKey, p: { paymentId: string; fee?
     await tx.update(orders).set({ codCharge: 0, gstTotal: now.gstTotal, total: now.total }).where(and(eq(orders.tenantId, o.tenantId), eq(orders.id, o.id)))
     for (const [i, l] of lines.entries()) await tx.update(orderLines).set(now.shares[i]!).where(and(eq(orderLines.tenantId, o.tenantId), eq(orderLines.id, l.id)))
   }
-  await takeStock(tx, o.tenantId, o.id)
+  await takeStock(tx, o.tenantId, o.id, 'in_stock', soldOut)
   return 'paid'
 }
 
@@ -64,14 +65,17 @@ const byToken = async (tx: Tx, tenantId: string, token: string) => {
 
 /** The browser's Checkout reply. The signature is checked with OUR stored Razorpay order id. */
 export async function confirmPayment(tenantId: string, token: string, reply: { paymentId: string; signature: string }): Promise<{ ok: true } | { ok: false; status: 400 | 404; error: string }> {
-  return withTenant(tenantId, async (tx) => {
+  const soldOut: string[] = []
+  const r = await withTenant(tenantId, async (tx): Promise<{ ok: true } | { ok: false; status: 400 | 404; error: string }> => {
     const o = await byToken(tx, tenantId, token)
     if (!o || !o.rzp) return { ok: false, status: 404, error: 'Not found' }
     const keys = await keysFor(tx, tenantId)
     if (!keys || !checkoutSignatureOk(o.rzp, reply.paymentId, reply.signature, keys.keySecret)) return { ok: false, status: 400, error: 'We could not confirm this payment. If money left your account, the shop will see it within minutes.' }
-    await markPaid(tx, { id: o.id, tenantId }, { paymentId: reply.paymentId })
+    await markPaid(tx, { id: o.id, tenantId }, { paymentId: reply.paymentId }, soldOut)
     return { ok: true }
   })
+  if (soldOut.length) refreshShop(tenantId, 'catalogue')
+  return r
 }
 
 /** Record a failed attempt (the shopper sees the filled checkout again). */
@@ -97,10 +101,16 @@ export async function switchToCod(tenantId: string, token: string, expectedTotal
     const pays = await orderPayments(pre.keys, pre.o.rzp)
     if (pays === null) return { kind: 'refused', status: 409, error: 'We could not check with Razorpay whether your payment went through. Try again in a minute.' }
     const captured = pays.find((p) => p.status === 'captured')
-    if (captured) { await withTenant(tenantId, (tx) => markPaid(tx, { id: pre.o!.id, tenantId }, { paymentId: captured.id, fee: captured.fee, tax: captured.tax })); return { kind: 'paid' } }
+    if (captured) {
+      const soldOut: string[] = []
+      await withTenant(tenantId, (tx) => markPaid(tx, { id: pre.o!.id, tenantId }, { paymentId: captured.id, fee: captured.fee, tax: captured.tax }, soldOut))
+      if (soldOut.length) refreshShop(tenantId, 'catalogue')
+      return { kind: 'paid' }
+    }
     if (pays.some((p) => p.status === 'authorized')) return { kind: 'refused', status: 409, error: 'Your payment is still going through. Wait a moment, then check your order.' }
   }
-  return withTenant(tenantId, async (tx) => {
+  const soldOut: string[] = []
+  const r = await withTenant(tenantId, async (tx): Promise<SwitchResult> => {
     const o = await byToken(tx, tenantId, token)
     if (!o || o.paidAt || o.switchedAt || o.cancelledAt) return { kind: 'refused', status: 409, error: 'This order changed. Reload the page.' }
     const shop = await checkoutShop(tx, tenantId)
@@ -122,9 +132,11 @@ export async function switchToCod(tenantId: string, token: string, expectedTotal
     if (!switched.length) return { kind: 'refused', status: 409, error: 'This order was already paid or moved to Pay on delivery. Reload the page.' }
     // Every line was re-priced unchanged (else 'changed' above), so shares[i] is lines[i]'s.
     for (const [i, l] of lines.entries()) await tx.update(orderLines).set(q.cod.shares[i]!).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.id, l.id)))
-    await takeStock(tx, tenantId, o.id)
+    await takeStock(tx, tenantId, o.id, 'in_stock', soldOut)
     return { kind: 'switched', total: q.cod.total }
   })
+  if (soldOut.length) refreshShop(tenantId, 'catalogue')
+  return r
 }
 
 /** Try paying online again on the same order: the hold is renewed only if every line can still be sold. */
@@ -156,22 +168,26 @@ export async function retryPayment(tenantId: string, token: string, now = new Da
  * OUR stored Razorpay order id and the amount we asked for, in INR.
  */
 export async function processEvents(tenantId: string, limit = 20): Promise<number> {
-  return withTenant(tenantId, async (tx) => {
+  const soldOut: string[] = []
+  const n = await withTenant(tenantId, async (tx) => {
     const rows = await tx.select({ id: webhookEvents.id, payload: webhookEvents.payload }).from(webhookEvents)
       .where(and(eq(webhookEvents.tenantId, tenantId), isNull(webhookEvents.processedAt), eq(webhookEvents.provider, 'razorpay'))).orderBy(webhookEvents.receivedAt).limit(limit)
       .for('update', { skipLocked: true })
     for (const row of rows) {
       let error: string | null = null
       // A savepoint per event: one bad event must not abort the batch and block every later payment (audit 2026-11-07).
-      try { error = await tx.transaction((sp) => applyEvent(sp, tenantId, row.payload as Record<string, unknown>)) } catch (e) { error = e instanceof Error ? e.name : 'error' }
+      try { error = await tx.transaction((sp) => applyEvent(sp, tenantId, row.payload as Record<string, unknown>, soldOut)) } catch (e) { error = e instanceof Error ? e.name : 'error' }
       await tx.update(webhookEvents).set({ processedAt: sql`now()`, lastError: error }).where(and(eq(webhookEvents.tenantId, tenantId), eq(webhookEvents.id, row.id)))
     }
     if (rows.length) await markEvent(tx, tenantId)
     return rows.length
   })
+  // A rolled-back savepoint may have listed a variant: one refresh too many is harmless.
+  if (soldOut.length) refreshShop(tenantId, 'catalogue')
+  return n
 }
 
-async function applyEvent(tx: Tx, tenantId: string, ev: Record<string, unknown>): Promise<string | null> {
+async function applyEvent(tx: Tx, tenantId: string, ev: Record<string, unknown>, soldOut: string[]): Promise<string | null> {
   const kind = String(ev.event ?? '')
   const entity = ((ev.payload as Record<string, { entity?: Record<string, unknown> }> | undefined)?.payment?.entity) ?? null
   if (!entity) return kind === 'order.paid' ? null : 'no payment entity'
@@ -183,6 +199,6 @@ async function applyEvent(tx: Tx, tenantId: string, ev: Record<string, unknown>)
   if (kind !== 'payment.captured' && kind !== 'order.paid') return null
   const asked = Number((o.checkout as { onlineTotal?: number } | null)?.onlineTotal ?? -1)
   if (p.status !== 'captured' || p.amount !== asked || entity.currency !== 'INR') return `amount or state does not match (${p.status})`
-  await markPaid(tx, { id: o.id, tenantId }, { paymentId: p.id, fee: p.fee, tax: p.tax })
+  await markPaid(tx, { id: o.id, tenantId }, { paymentId: p.id, fee: p.fee, tax: p.tax }, soldOut)
   return null
 }

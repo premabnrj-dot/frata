@@ -6,7 +6,7 @@ import { shopSettings, tenants } from '@/lib/db/schema'
 import { productImages, products, variants } from '@/lib/db/schema-catalogue'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
-import { holdingSql, momentColumns, standingSql } from '@/lib/db/order-predicates'
+import { holdingSql, momentColumns, owedSql, standingSql } from '@/lib/db/order-predicates'
 import { canTakeOnline, keysFor } from '@/lib/payments/keys'
 
 // =============================================================================
@@ -31,9 +31,7 @@ export async function variantRows(tx: Tx, tenantId: string, ids: string[], now: 
     held: sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id
       where l.tenant_id = ${tenantId} and l.variant_id = "variants"."id" and l.kind = 'in_stock' and ${holdingSql(now, 'o')})`,
     // Units owed to pre-orders not yet packed: stock that arrives for them is not for sale (plan review 2026-11-07).
-    owed: sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id
-      where l.tenant_id = ${tenantId} and l.variant_id = "variants"."id" and l.kind = 'preorder' and l.stock_taken_at is null and o.packed_at is null and o.shipped_at is null
-        and (${standingSql('o')} or ${holdingSql(now, 'o')}))`,
+    owed: owedSql(tenantId, now),
     preordered: sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id
       where l.tenant_id = ${tenantId} and l.variant_id = "variants"."id" and l.kind = 'preorder' and (${standingSql('o')} or ${holdingSql(now, 'o')}))`,
     image: sql<{ base: string; widths: number[] } | null>`(select json_build_object('base', i.base, 'widths', i.widths) from ${productImages} i

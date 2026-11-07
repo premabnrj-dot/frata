@@ -529,4 +529,18 @@ exception when sqlstate 'P0001' then
   if sqlerrm <> 'rollback' then raise; end if;
 end $$;
 
-\echo 'tenancy proof — all 26 checks passed'
+-- 27. The erasure job's list (1D): shop ids only, for the app alone; it never returns order data.
+insert into orders (tenant_id, number, payment_method, placed_at) values ('22222222-2222-2222-2222-222222222222', 77, 'prepaid', now() - interval '100 days');
+begin; set local role frata_app;
+do $$ begin
+  if not exists (select 1 from app_shops_to_erase(now() - interval '90 days') t where t = '22222222-2222-2222-2222-222222222222') then raise exception 'FAIL: the erasure list misses a shop'; end if;
+  if (select count(*) from orders) <> 0 then raise exception 'FAIL: the job reads orders with no shop set'; end if;
+end $$;
+rollback;
+do $$ begin
+  if has_function_privilege('anon', 'app_shops_to_erase(timestamptz)', 'execute') or has_function_privilege('authenticated', 'app_shops_to_erase(timestamptz)', 'execute')
+     or has_function_privilege('service_role', 'app_shops_to_erase(timestamptz)', 'execute') then raise exception 'FAIL: API roles can list shops to erase'; end if;
+  if (select pg_get_function_result('app_shops_to_erase(timestamptz)'::regprocedure)) <> 'SETOF uuid' then raise exception 'FAIL: the erasure list returns more than ids'; end if;
+end $$;
+
+\echo 'tenancy proof — all 27 checks passed'

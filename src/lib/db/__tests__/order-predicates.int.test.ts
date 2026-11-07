@@ -18,7 +18,7 @@ describe.skipIf(!host)('order predicates match orderState()', () => {
     const { orders, orderLines } = await import('@/lib/db/schema-orders')
     const p = await import('@/lib/db/order-predicates')
     const s = await import('@/domains/orders/order-state')
-    const { eq, and, sql, gte } = await import('drizzle-orm')
+    const { eq, and, sql, gte, lt } = await import('drizzle-orm')
     const now = new Date('2026-11-07T10:00:00Z')
     const at = (h: number) => new Date(now.getTime() + h * 3_600_000)
     const r = rng(7)
@@ -42,7 +42,7 @@ describe.skipIf(!host)('order predicates match orderState()', () => {
         toConfirm: sql<boolean>`${p.inTabSql('to_confirm', now)}`, toPack: sql<boolean>`${p.inTabSql('to_pack', now)}`, onHold: sql<boolean>`${p.inTabSql('on_hold', now)}`,
         notPaid: sql<boolean>`${p.inTabSql('not_paid', now)}`, all: sql<boolean>`${p.inTabSql('all', now)}`,
         placed: sql<boolean>`${p.placedSql()}`, holding: sql<boolean>`${p.holdingSql(now)}`, standing: sql<boolean>`${p.standingSql()}`,
-      }).from(orders).where(and(eq(orders.tenantId, A), gte(orders.number, 900_000)))
+      }).from(orders).where(and(eq(orders.tenantId, A), gte(orders.number, 900_000), lt(orders.number, 900_400)))
       expect(rows.length).toBe(400)
       const seen = new Set<string>()
       for (const row of rows) {
