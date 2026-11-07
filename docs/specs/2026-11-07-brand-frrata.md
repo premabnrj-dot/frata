@@ -63,3 +63,38 @@ Skills in the same commits: `frata-design-language` (brand, the tinge, the graph
 ## Out of scope
 A marketing website; packaging print files; renaming the GitHub repo, Vercel project or Supabase project (these are
 internal names and can stay).
+
+## Review (architecture-reviewer on the plan, 2026-11-07) and how each finding landed
+
+- **One merge, not five:** the colour, the mark, the rename, the display face, the thread and the icons land together,
+  after the gates and e2e, so main never shows "Frrata" beside the old "F" or rani beside "Frata".
+- **The regression net first:** `check:name` (TypeScript's parser: strings, template text and JSX text only) was
+  written and run red (95 hits) before the rename; it fails an unused allow-list entry too. Tests:
+  `scripts/__tests__/check-name.test.ts`.
+- **Internal names kept,** each in `scripts/check-name.allow.json` with its reason: the localStorage keys, the DOM
+  event names, taxonomy value ids and handles stored in product rows, the reserved slug, the platform hosts until
+  B·4, and the HKDF salt in `secret-box.ts`, which is pinned by a known-token test (renaming it would make every stored
+  Razorpay key unreadable). `frrata` joins the reserved slugs.
+- **Nouns that did not exist:** there are no WhatsApp templates and no platform legal pages yet, so nothing to rename
+  there; new ones start with the new name. The sign-in email comes from Supabase's dashboard: **on deploy day the
+  owner sets its sender name and subject to "Frrata"** (the sign-in page tells people to look for "Frrata").
+- **Rani as text** only through `--brand-text`, which is gated on background, card, muted and accent. The two places
+  that broke this now use `--brand-text` (initials on muted) and the muted text colour (step numbers: a number is
+  never rani).
+- **The thread** has its own token (`--thread`), gated as non-text against primary, card and background in both
+  themes. It grows on hover and `:focus-visible`, never on disabled, destructive or ghost buttons; it is drawn as an
+  `::after` with a `scale` transition (`check:motion`). Working links get a thread-coloured underline, scoped to
+  `main#content a.underline`. Admin's active bar stays yellow.
+- **The tinge is a token, not a prop:** icons stroke their detail with `var(--icon-accent, currentColor)`;
+  `[data-tinge]` frames (the navs, the More sheet) set it. Nothing in `:root`, so it is off in tables by default.
+- **No second copies:** `--illo-haldi` is `var(--haldi)`; the mark's paths live once in `mark-paths.ts`; the app
+  icon is generated from them (`/frrata-icon`, `/frrata-apple-icon`), its hex held equal to the tokens by a test. Shop
+  tabs never show it (the shop layout sets an empty icon).
+- **Bricolage** is the latin subset, weight axis only (41,344 bytes; budget 48 KB), committed under
+  `src/components/shell/display/`. It loads through `SHELL_FONT_VARS` only, `--font-display` falls back to the Noto
+  stack, and `check:storefront-build` fails if a shop page's CSS or JS carries it.
+- **Accepted, unchanged:** the storefront's "wine" theme accent (#7A1F2B) is a merchant's choice and stays. The refusal
+  panels in the console and partner layouts render without `SHELL_FONT_VARS`, so their display face falls back to
+  Inter (a refusal has no page title to set).
+- **Owner's call, asked before the merge:** the reviewer wants the trademark search, frrata.in and the handles checked
+  before the name goes public.

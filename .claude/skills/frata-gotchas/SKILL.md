@@ -2,7 +2,7 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.9.0
+  version: 1.10.0
   verified: 2026-11-07
 ---
 
@@ -52,3 +52,5 @@ metadata:
 | An e2e build "fails" with no reason | `execSync`'s 1 MB output buffer kills the child | `maxBuffer: 64 MB` and the error's code printed (`e2e/stack.mjs`) |
 | A value put in `history.state` is gone after a save, or a `router.push` is undone | Next replaces the entry on a server action or `router.refresh()` without keeping custom state (`preserveCustomHistoryState: false`), and a `history.back()` that lands before a pending push is a traverse, which discards the push | Never push a history entry for a Console dialog: Android's Back already closes a modal `<dialog>` (a close request, `cancel`) — `src/components/ui/dialog.tsx` |
 | An opacity or transform read in e2e is "wrong" now and then | It read the first frame of a 120–320 ms transition | `waitForFunction` on the value, or open the context with `reducedMotion: 'reduce'` |
+| Every stored Razorpay key stops opening ("not connected") | The key-derivation salt in `src/lib/crypto/secret-box.ts` ('frata') was changed, e.g. by the rename to Frrata | Never rename it; a known-token test pins it, and `check:name` allows it by name |
+| Shoppers' bags, saved checkout forms or shortcut settings vanish | A localStorage key (`frata.bag.v1` and the like) was renamed | Keys are internal: they keep the old spelling (`scripts/check-name.allow.json`) |

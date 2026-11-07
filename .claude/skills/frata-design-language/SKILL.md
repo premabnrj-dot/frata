@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 3.6.0
+  version: 4.0.0
   verified: 2026-11-07
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -49,12 +49,13 @@ graphic appears: the website, the partner workspace, empty states there.
   stock art. One per page at most (the hero).
 - **Tokens**: `--illo-line`, `--illo-paper`, `--illo-fill`, `--illo-haldi`,
   `--illo-haldi-soft`, `--illo-indigo-soft` (globals.css, both themes). Never
-  oxblood (rule 6), never on a control, never the only sign of anything:
+  rani (rule 6), never on a control, never the only sign of anything:
   every graphic is `aria-hidden` beside words that say the same.
-- **UI icons stay lucide** (§ UX foundation rule 20). Pictograms are not icons.
+- **UI icons are frrata's own** (§ UX foundation rule 20, § Brand rule 36). Pictograms are not icons.
 - **Rule 20's "no illustrations in empty states" is superseded for the website
   and the partner workspace only** (owner, 2026-11-07): an empty state there may
-  lead with one `PictoTile`. The console and Admin keep rule 20.
+  lead with one `PictoTile`. The console may too, in a brand empty state
+  (§ Brand rule 39, owner 2026-11-07).
 - A page that sells (the website, /partners) leads with the illustration and a
   numbers strip; steps are pictogram + 1–3 words + one short line; rules and
   details are pictogram + a title + an (i) tip.
@@ -78,8 +79,12 @@ fashion lives in the storefront.** Patterns below are taken from Ekatan's admin
 
 ## Tokens (`src/app/globals.css` — the only file with a hex; `check:hex`)
 
-- `--primary` (ink) is interaction: buttons, links, focus. `--brand` (oxblood)
-  is the Frata mark only. Never wire the brand into a button.
+- `--primary` (ink) is interaction: buttons, focus. `--brand` is **rani**
+  (#D61F69, the frrata mark; brand spec 2026-11-07): never a button fill, a
+  number or a status. Rani as words is `--brand-text` only; on an ink surface,
+  `--brand-on-ink`. `--thread` is the 2 px line (§ Brand rules 33–40).
+  `--haldi` and `--neel` are for brand surfaces only (sign-in, the website,
+  drawings); the illustration haldi derives from `--haldi`.
 - `--accent`, `--muted`, `--secondary` are neutral hover surfaces.
 - Status pairs, background then text, all ≥ 4.5:1: `ok`, `warn`, `danger`,
   `info`, `neutral` → `bg-ok text-ok-text` …
@@ -321,9 +326,10 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
    sign-in pages (`[data-shell]`; the shop keeps its own). On ink surfaces
    (`data-surface="ink"`) it is paper-coloured, on the support banner
    `--support-foreground`. Every ring is ≥ 3:1 against what is around it.
-6. **Oxblood is the mark only.** On ink or dark surfaces the mark is
-   *reversed*: a paper tile with an oxblood letter. Never a button, link, focus
-   ring, status or chart colour.
+6. **Rani is the mark, and a tinge.** The mark (`<Wordmark>`, `<Monogram>`),
+   the brand moment, the thread and one detail per icon; never a button fill,
+   a focus ring, a status, a number or a chart colour (rules 33–40). On an ink
+   surface the monogram is a rani tile with white strokes.
 7. Dark tokens are written and gated but **not switched on**. They switch on
    when merchants ask, at no rework.
 
@@ -377,9 +383,10 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     height is its `size` variant (`default`, `lg`), never a className (twMerge
     keeps `md:h-9` against a caller's `h-11`). Rows and the
     bottom bar are 44–56 px on phones.
-20. Icons: lucide, monochrome, 16 px in nav (22 px in the bottom bar), `--sub`
-    until active. No coloured icon backgrounds, no illustrations in empty
-    states.
+20. Icons: frrata's own set (`src/components/icons/icon.tsx`, rule 36), 16 px
+    in nav (22 px in the bottom bar), `--sub` until active. No coloured icon
+    backgrounds. A brand empty state (rule 39) may lead with one pictogram;
+    working lists keep plain words.
 21. Indian names: Noto Sans (Devanagari, Tamil, …) is a fallback face behind
     Inter in the shell's own stack (`--font-shell` on `[data-shell]`, never on
     `html`), committed files (`next/font/local`, OFL) with `preload: false` and
@@ -399,8 +406,9 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     0 s under reduced motion, and never a sliding list.
 25. Reduced motion: every change is instant, and a countdown (the 8 s Undo)
     becomes words ("Undo for 8 seconds").
-26. The one brand moment: "Your shop is open", a check drawn once (320 ms
-    circle, 200 ms tick). No confetti, no sound.
+26. The one brand moment: "Your shop is open", a check drawn once in rani (320
+    ms circle, 200 ms tick), its words in the display face. No confetti, no
+    sound.
 27. A Console, Admin or partner `Dialog` on a phone (< 768 px) is a sheet
     from the bottom (full width, 85 dvh at most, 320 ms, its scrim with it).
     **Android's Back closes it** natively: Back is a close request, the same
@@ -448,6 +456,43 @@ Their words, not ours: order, delivery, return (not RTO in headings — "Returne
 to you" with RTO in the detail), payout, customer, product, size. "Delivery
 failed" for NDR in lists. Money is "profit", not "contribution". Never claim a
 saving we cannot show from their own orders.
+
+## Brand: frrata (owner-approved 2026-11-07; spec `docs/specs/2026-11-07-brand-frrata.md`, book https://claude.ai/artifact/S55h8hC9dYNJC2fQghjFvi)
+
+33. **The name** is "Frrata" in a sentence (capital F) and "frrata" in the
+    mark, always drawn, never typed. Said aloud it is "frata"; that is fine.
+    `check:name` fails the old name in any string, template or JSX text in
+    `src/`; internal names that must not change (storage keys, the
+    key-derivation salt, taxonomy ids, hosts until B·4) are listed in
+    `scripts/check-name.allow.json`, each with its reason.
+34. **The mark** is drawn once (`src/components/brand/mark-paths.ts`): A
+    "Thread", the first r's arm stopping a 3-unit stitch short of the second.
+    `<Wordmark thread>` (rani thread) on brand surfaces (sign-in, the website),
+    plain in working screens; `<Monogram>` in the shell (ink tile; rani tile
+    on ink). The platform icon is generated from the same paths
+    (`/frrata-icon`); a shop's tab never shows it.
+35. **Type:** Bricolage Grotesque at **600** (`font-display`, committed, shell
+    pages only, never a shop: `check:storefront-build`) for page h1s, the brand
+    moment and brand empty states; everything a merchant works with is Inter;
+    numbers are mono. 800 was too loud (owner).
+36. **Icons** are two strokes: the body in the text colour and one detail, the
+    tinge, in `var(--icon-accent, currentColor)`. The tinge is on only inside a
+    `[data-tinge]` frame (the navs, the More sheet; `--brand-on-ink` on ink).
+    In a table or beside a status badge an icon is one colour. The current
+    page's icon is drawn at 2.25.
+37. **The thread** (`--thread`, 2 px, ≥ 3:1 on ink and card): a primary button
+    carries it a third wide at its foot and the full width on hover or keyboard
+    focus (a `scale` transform, 120 ms); a secondary button on hover and focus
+    only; destructive, ghost and disabled buttons never. Also the Console's
+    active nav bar, the current view tab, the loading bar and a working link's
+    underline. Admin's active bar stays yellow (rule 8).
+38. **The running stitch**: a dashed edge (`border-dashed`) for a place to drop
+    something and for "setup steps left"; never around a card that is content.
+39. **The block print** (`block-print` utility): the mark's quarter circle and
+    circle as a repeat, a mask over `--neel` at 6%; sign-in and brand empty
+    states only, never behind a number, a table or a form you work in.
+40. **Haldi and Neel** live on brand surfaces only and are never text or a
+    control. Rani as text is `--brand-text`.
 
 ## Storefront
 
