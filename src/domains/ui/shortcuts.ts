@@ -8,7 +8,7 @@
 //   j / k move · x select · Enter open · c confirm · h hold · p print slip
 //   z undo · / search · ? the list. Never inside a field, never with a
 //   modifier, never while a dialog is open, never when the person turned
-//   single-key shortcuts off (WCAG 2.1.4) — except ? and Esc, which stay.
+//   single-key shortcuts off on this device (WCAG 2.1.4) — except ? and Esc, which stay.
 // =============================================================================
 
 export const SHORTCUTS = [
@@ -33,7 +33,7 @@ export type KeyInput = {
   target: { tag: string; editable: boolean; type?: string | null }
   /** A dialog or menu is open: it owns the keyboard. */
   modalOpen: boolean
-  /** The person turned single-key shortcuts off (kept per person). */
+  /** Single-key shortcuts are on (the person can turn them off; kept on the device). */
   enabled: boolean
 }
 

@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 3.2.1
+  version: 3.3.0
   verified: 2026-11-07
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -185,7 +185,9 @@ text 2026-07-15.
 4. **Click or tap to open, not hover** (phones have no hover): `InfoTip`
    (`src/components/ui/info-tip.tsx`) — a button named "About <field>",
    `aria-expanded`, the popover right after it, Esc / outside click / second tap
-   closes, focus stays on the button; 44 px tap target.
+   closes, focus stays on the button; a 24 px target around the 14 px mark (§ UX
+   foundation rule 19). The popover is a `span`: a tip sits inside labels and
+   paragraphs, where a `div` ends the paragraph and breaks hydration.
 5. Hover/focus tooltips (`role="tooltip"`) only name icon-only buttons and show
    truncated text in full — never on a field, never with links.
 6. Never the `title` attribute for anything a person needs.
@@ -213,7 +215,8 @@ triage, Gmail, Stripe, NN/g confirmation dialogs (2026-08-07). Spec:
    letters for the commonest actions, `z` undo, `/` search, `?` the sheet.
    Never in an input. A key whose action is risky on this row opens the record
    instead. The `?` sheet has a switch to turn single-key shortcuts off (WCAG
-   2.1.4), kept per person.
+   2.1.4), kept on the device (`localStorage`; per person when profiles exist).
+   `?` always opens the sheet, so the switch can be found.
 7. **Bulk actions skip what needs a person** and say so: "Confirmed 12.
    Skipped 2 high-risk orders — open them to decide." No bulk for destructive
    actions that need a reason.

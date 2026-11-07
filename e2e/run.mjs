@@ -33,6 +33,8 @@ try {
     }
     try { await flow.run(t) } catch (e) {
       failed++; console.log(`FAIL ${flow.name} › ${e.step ?? ''} ${String(e.message).split('\n')[0]}`)
+      // An assertion's values (actual vs expected) say what happened; a bare first line does not.
+      if (e.actual !== undefined || e.expected !== undefined) console.log(`     got ${JSON.stringify(e.actual)} · wanted ${JSON.stringify(e.expected)}`)
       // What every open page showed at the failure, so the report says what happened, not only that it timed out.
       let n = 0
       for (const ctx of browser.contexts()) for (const page of ctx.pages()) {

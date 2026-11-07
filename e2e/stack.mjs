@@ -16,7 +16,8 @@ import { CONSOLE, OUT, PORTS, SHOP_DOMAIN, adminSql, until } from './lib.mjs'
 
 const ROOT = new URL('..', import.meta.url).pathname
 const PG_DIR = '/var/tmp/frata-e2e', PG_BIN = '/usr/lib/postgresql/16/bin', DB = 'frata_e2e'
-const sh = (cmd, env = {}) => execSync(cmd, { cwd: ROOT, stdio: 'pipe', env: { ...process.env, ...env } }).toString()
+// 64 MB of output: execSync's 1 MB default kills a build that prints more, with no reason given.
+const sh = (cmd, env = {}) => execSync(cmd, { cwd: ROOT, stdio: 'pipe', maxBuffer: 64 * 1024 * 1024, env: { ...process.env, ...env } }).toString()
 const asPg = (cmd) => sh(`su postgres -c "${cmd}"`)
 
 const PUBLIC_ENV = {
@@ -65,13 +66,18 @@ export async function up({ build = true } = {}) {
   run('fake-auth', 'node', ['e2e/fakes/auth.mjs'], { PORT: String(PORTS.auth) })
   run('fake-razorpay', 'node', ['e2e/fakes/razorpay.mjs'], { PORT: String(PORTS.razorpay) })
   if (build) {
-    try { sh('npm run build', PUBLIC_ENV) } catch (e) { throw new Error('build failed:\n' + String(e.stdout ?? e).split('\n').filter((l) => /rror|check:/.test(l)).slice(0, 15).join('\n')) }
+    try { sh('npm run build', PUBLIC_ENV) } catch (e) {
+      // The lines that say why; if none match (a killed build), the log's last lines, so a failure always says something.
+      const lines = String(e.stdout ?? '') .split('\n').concat(String(e.stderr ?? '').split('\n'))
+      const why = lines.filter((l) => /rror|check:|Killed|ENOSPC|EADDRINUSE/.test(l)).slice(0, 15)
+      throw new Error(`build failed (${e.code ?? e.status ?? e.signal ?? 'no code'}): ${String(e.message).split('\n')[0]}\n` + (why.length ? why : lines.filter(Boolean).slice(-15)).join('\n'))
+    }
   }
   sh('rm -rf .next/cache')
   const host = new URL(server).host
   run('next', 'npx', ['next', 'start', '-p', String(PORTS.app)], {
     ...PUBLIC_ENV, DATABASE_URL: `postgres://frata_app:${pw}@${host}/${DB}`, ADMIN_DATABASE_URL: `postgres://frata_admin:${adminPw}@${host}/${DB}`, PAYMENT_KEYS_SECRET: 'e2e-only-secret',
-    RAZORPAY_API_BASE: `http://localhost:${PORTS.razorpay}`, BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_x_y', BLOB_STORE_ID: 'store_e2e', CRON_SECRET: 'e2e-cron',
+    RAZORPAY_API_BASE: `http://localhost:${PORTS.razorpay}`, BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_x_y', BLOB_STORE_ID: 'store_e2e', CRON_SECRET: 'e2e-cron', E2E_FIXTURES: '1',
   })
   await until(async () => { try { return (await fetch(CONSOLE)).status > 0 } catch { return false } }, 60_000)
   return { db, adminUrl }

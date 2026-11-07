@@ -24,6 +24,7 @@ const STATUS = ['ok', 'warn', 'danger', 'info', 'neutral']
 /** Tokens that are not read as text or as an edge a person must see, with why. */
 const DECORATIVE = {
   border: 'separates content (cards, table rules); never the only sign of a control (rule 2)',
+  scrim: 'the veil behind an open dialog (the ink at 45%); nothing is read on it',
 }
 
 export function pairs() {
@@ -31,7 +32,8 @@ export function pairs() {
   for (const s of SURFACES) p.push([`${s}-foreground`, s, TEXT])
   for (const s of STATUS) p.push([`${s}-text`, s, TEXT])
   p.push(['foreground', 'background', TEXT], ['muted-foreground', 'background', TEXT], ['muted-foreground', 'card', TEXT],
-    ['danger-text', 'card', TEXT], ['brand', 'card', TEXT] /* the reversed mark: oxblood letter on a paper tile */)
+    ['danger-text', 'card', TEXT], ['brand', 'card', TEXT] /* the reversed mark: oxblood letter on a paper tile */,
+    ['destructive', 'popover', TEXT], ['destructive', 'accent', TEXT] /* a danger item in a menu, and hovered */)
   p.push(['input', 'card', NONTEXT], ['input', 'background', NONTEXT], ['ring', 'background', NONTEXT], ['ring', 'card', NONTEXT],
     ['primary-foreground', 'primary', NONTEXT] /* the focus ring on ink */)
   // The support banner's ring and its End now button (white on amber) are support-foreground/support, a text pair above.
