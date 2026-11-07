@@ -41,7 +41,7 @@ export function sinceIN(at: Date | string, now: Date): string {
 }
 
 /** How long something has waited, as a count says it: "just now", "25 min", "3 h", "2 d". */
-export function waitedIN(at: Date | string, now: Date = new Date()): string {
+export function waitedIN(at: Date | string, now: Date): string {
   const d = typeof at === 'string' ? new Date(at) : at
   const min = Math.floor((now.getTime() - d.getTime()) / 60_000)
   if (min < 1) return 'just now'

@@ -45,6 +45,9 @@ describe.skipIf(!host)('todaySummary', () => {
     const phone = `9${String(Math.floor(Math.random() * 1e9)).padStart(9, '0')}`
     const trio = [] as string[]
     for (const i of [6, 7, 8]) trio.push(await add(A, i, { placedAt: new Date(`2001-01-05T0${i - 3}:00:00Z`), phone, total: 9_00 }))
+    // Three erased orders (phone '') on one day: no history, never one phone's trio (riskFactsWith's phone <> '').
+    const erased = [] as string[]
+    for (const i of [9, 10, 11]) erased.push(await add(A, i, { placedAt: new Date(`2001-01-04T0${i - 6}:00:00Z`), phone: '', total: 9_00 }))
 
     try {
     const s = await todaySummary(A, now)
@@ -61,7 +64,7 @@ describe.skipIf(!host)('todaySummary', () => {
     const bars = weekBars(s.week, now)
     expect(bars.find((b) => b.day === '2001-01-06')).toMatchObject({ orders: 1, value: 250_00 })
     expect(bars.find((b) => b.day === '2001-01-07')).toMatchObject({ orders: 1, value: 300_00 })
-    expect(bars.reduce((t, b) => t + b.orders, 0)).toBe(5) // the two above and the trio on 5 Jan
+    expect(bars.reduce((t, b) => t + b.orders, 0)).toBe(8) // the two above, the trio on 5 Jan, the erased three on 4 Jan
     // Another shop's id handed to A's risk read drops out; the whole-tab read (Home's) holds A's rows and none of B's.
     expect((await riskFactsFor(A, [bNext], now)).size).toBe(0)
     const { riskFactsWith } = await import('@/lib/queries/order-risk')
@@ -69,6 +72,7 @@ describe.skipIf(!host)('todaySummary', () => {
     expect(tab.has(aNext)).toBe(true)
     const { risk } = await import('@/domains/orders/risk')
     expect(risk(tab.get(trio[2]!)!).level).toBe('high')
+    expect(erased.map((id) => risk(tab.get(id)!).level)).not.toContain('high')
     expect(s.high! - before.high!).toBeGreaterThanOrEqual(1) // only grows with parallel runs; B's never count (above)
     expect([...bIds].some((id) => tab.has(id))).toBe(false)
     } finally {

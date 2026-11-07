@@ -108,9 +108,11 @@ export function queueTab(s: OrderState): Exclude<QueueTab, 'all'> | null {
 /**
  * When an order entered the tab it waits in, for "oldest waiting" (U·4 Home): placed (or switched to COD) for To
  * confirm, paid when a refund is due, confirmed or paid for To pack, held for On hold. Null outside the three
- * work tabs. enteredAtSql() in src/lib/db/order-predicates.ts is its twin (parity int test).
+ * work tabs. A held order paid online is On hold, so held_at wins (the state decides). Taking an order off hold
+ * clears held_at, so it re-enters To confirm at its placement. enteredAtSql() in src/lib/db/order-predicates.ts is
+ * its twin (parity int test).
  */
-export function enteredAt(o: OrderMoments, now: Date = new Date()): Date | null {
+export function enteredAt(o: OrderMoments, now: Date): Date | null {
   switch (orderState(o, now)) {
     case 'unconfirmed': return o.switchedToCodAt ?? o.placedAt
     case 'refund_due': case 'paid': return o.paidAt
