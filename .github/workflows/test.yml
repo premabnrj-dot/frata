@@ -29,6 +29,12 @@ jobs:
         run: npm run verify:tenancy
         env:
           ADMIN_URL: postgres://postgres:postgres@localhost:5432/frata_proof
+      - name: Backfill of 0019 on pre-1D orders
+        run: |
+          psql "$ADMIN_URL" -q -c "create database frata_backfill"
+          ADMIN_URL=postgres://postgres:postgres@localhost:5432/frata_backfill npm run verify:backfill
+        env:
+          ADMIN_URL: postgres://postgres:postgres@localhost:5432/frata_proof
       - name: Admin library on the migrated database
         run: |
           psql "$ADMIN_URL" -q -c "alter role frata_app password 'ci'; alter role frata_admin password 'ci';"

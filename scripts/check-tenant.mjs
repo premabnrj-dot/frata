@@ -112,11 +112,16 @@ const OPEN_FOR_APP = {
   plans: 'the public price list',
   plan_versions: 'the public price list',
 }
-for (const m of sql.matchAll(/create policy\s+(\w+)\s+on\s+"?([a-z_]+)"?([\s\S]*?);/g)) {
-  const [, name, table, body] = m
-  if (!/\bto\s+[^;]*\bfrata_app\b/.test(body)) continue
-  if (/app_current_tenant\(\)/.test(body) || OPEN_FOR_APP[table]) continue
-  failures.push(`policy ${name} on ${table}  lets frata_app past without app_current_tenant() — bind it to the tenant, or add the table to OPEN_FOR_APP with why`)
+// `alter policy` bodies count too (0018), and `app_current_tenant() is null or …` — the shape that lets a
+// query with no tenant set read every shop — is allowed only on OPEN_FOR_APP tables (tenancy audit 2026-11-07).
+for (const m of sql.matchAll(/(create|alter) policy\s+(\w+)\s+on\s+"?([a-z_]+)"?([\s\S]*?);/g)) {
+  const [, verb, name, table, body] = m
+  if (verb === 'create' && !/\bto\s+[^;]*\bfrata_app\b/.test(body)) continue
+  if (verb === 'alter' && !/\b(using|with check|to)\b/.test(body)) continue
+  if (OPEN_FOR_APP[table]) continue
+  if (verb === 'alter' && /\bto\s+[^;]*\bfrata_app\b/.test(body) && !/\busing\b/.test(body)) { failures.push(`policy ${name} on ${table}  is handed to frata_app by alter policy without its body — drop and create it, so this gate can read it`); continue }
+  if (!/app_current_tenant\(\)/.test(body)) failures.push(`policy ${name} on ${table}  lets frata_app past without app_current_tenant() — bind it to the tenant, or add the table to OPEN_FOR_APP with why`)
+  else if (/app_current_tenant\(\)\s+is\s+null/.test(body)) failures.push(`policy ${name} on ${table}  opens every shop when no tenant is set (app_current_tenant() is null) — only OPEN_FOR_APP tables may`)
 }
 
 if (failures.length) {

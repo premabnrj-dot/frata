@@ -453,4 +453,80 @@ do $$ begin
 end $$;
 rollback;
 
-\echo 'tenancy proof — all 24 checks passed'
+
+-- 25. Order history and notes (1D): none with no tenant; A reads and appends only A's; nobody edits or removes one.
+insert into order_events (tenant_id, order_id, kind, actor_kind) select tenant_id, id, 'confirmed', 'system' from orders where tenant_id = '22222222-2222-2222-2222-222222222222';
+insert into order_notes (tenant_id, order_id, body, author_user_id, author_email) select tenant_id, id, 'B note', '99999999-9999-9999-9999-999999999999', 'b@b.in' from orders where tenant_id = '22222222-2222-2222-2222-222222222222';
+begin; set local role frata_app;
+do $$ begin
+  if (select count(*) from order_events) + (select count(*) from order_notes) <> 0 then raise exception 'FAIL: order history visible with no tenant set'; end if;
+end $$;
+rollback;
+select id as b_order from orders where tenant_id = '22222222-2222-2222-2222-222222222222' limit 1 \gset
+select id as b_event from order_events where tenant_id = '22222222-2222-2222-2222-222222222222' limit 1 \gset
+insert into order_lines (tenant_id, order_id, title, qty, unit_price, taxable_value) select tenant_id, id, 'Kurta', 1, 100000, 95238 from orders where number = 1;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+select set_config('proof.b_order', :'b_order', true), set_config('proof.b_event', :'b_event', true);
+do $$ declare a_order uuid; a_event uuid; b_order uuid := current_setting('proof.b_order')::uuid; b_event uuid := current_setting('proof.b_event')::uuid; n int; begin
+  select id into a_order from orders limit 1;
+  if exists (select 1 from order_events) or exists (select 1 from order_notes) then raise exception 'FAIL: A reads B order history or notes'; end if;
+  insert into order_events (tenant_id, order_id, kind, actor_kind, actor_user_id, actor_email) values ('11111111-1111-1111-1111-111111111111', a_order, 'held', 'member', '99999999-9999-9999-9999-999999999999', 'a@a.in') returning id into a_event;
+  insert into order_notes (tenant_id, order_id, body, author_user_id, author_email) values ('11111111-1111-1111-1111-111111111111', a_order, 'call after 6', '99999999-9999-9999-9999-999999999999', 'a@a.in');
+  begin insert into order_events (tenant_id, order_id, kind, actor_kind, actor_user_id, actor_email) values ('22222222-2222-2222-2222-222222222222', a_order, 'held', 'member', '99999999-9999-9999-9999-999999999999', 'a@a.in'); raise exception 'FAIL: A wrote history under B';
+  exception when insufficient_privilege then null; end;
+  begin insert into order_notes (tenant_id, order_id, body, author_user_id, author_email) values ('11111111-1111-1111-1111-111111111111', b_order, 'x', '99999999-9999-9999-9999-999999999999', 'a@a.in'); raise exception 'FAIL: A noted B''s order';
+  exception when foreign_key_violation then null; end;
+  begin insert into order_events (tenant_id, order_id, kind, actor_kind, undoes) values ('11111111-1111-1111-1111-111111111111', a_order, 'undone', 'system', b_event); raise exception 'FAIL: A undid B''s event';
+  exception when foreign_key_violation then null; end;
+  begin insert into order_events (tenant_id, order_id, kind, actor_kind) values ('11111111-1111-1111-1111-111111111111', a_order, 'held', 'member'); raise exception 'FAIL: a member event without the member';
+  exception when check_violation then null; end;
+  begin update order_notes set body = 'changed'; raise exception 'FAIL: a note was edited';
+  exception when insufficient_privilege then null; end;
+  begin delete from order_events; raise exception 'FAIL: history was deleted';
+  exception when insufficient_privilege then null; end;
+  begin delete from orders; raise exception 'FAIL: the app deleted an order';
+  exception when insufficient_privilege then null; end;
+  begin update order_lines set qty = 2; raise exception 'FAIL: a sold line was changed';
+  exception when insufficient_privilege then null; end;
+  update order_lines set stock_taken_at = now(), charge_taxable = 0, charge_gst = 0; get diagnostics n = row_count;
+  if n <> 1 then raise exception 'FAIL: A could not stamp its own line (% rows)', n; end if;
+end $$;
+rollback;
+do $$ begin
+  if has_table_privilege('frata_admin', 'order_events', 'select') or has_table_privilege('frata_admin', 'order_notes', 'select') then raise exception 'FAIL: Frata staff can read order history or notes'; end if;
+  if has_table_privilege('anon', 'order_notes', 'select') or has_table_privilege('authenticated', 'order_events', 'select') then raise exception 'FAIL: API roles can read order history'; end if;
+  if has_function_privilege('frata_app', 'app_backfill_0019()', 'execute') then raise exception 'FAIL: the app can run the backfill'; end if;
+  if has_table_privilege('service_role', 'order_events', 'select') or has_table_privilege('service_role', 'order_notes', 'select') or has_function_privilege('service_role', 'app_backfill_0019()', 'execute') then raise exception 'FAIL: service_role reaches order history or the backfill'; end if;
+end $$;
+
+-- 26. Invoice numbers (1D): per shop, set with packing, never changed; A cannot pack B's order.
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  update orders set packed_at = now(), invoice_number = 'PA/26-27/00001';
+  begin update orders set invoice_number = 'PA/26-27/00002'; raise exception 'FAIL: an issued invoice number changed';
+  exception when check_violation then null; end;
+  begin update orders set invoice_number = null, packed_at = null; raise exception 'FAIL: an issued invoice number was removed';
+  exception when check_violation then null; end;
+  begin update orders set packed_at = now() where invoice_number is null; get diagnostics n = row_count;
+    if n > 0 then raise exception 'FAIL: packed without an invoice number'; end if;
+  exception when check_violation then null; end;
+  update orders set packed_at = now(), invoice_number = 'X' where tenant_id = '22222222-2222-2222-2222-222222222222';
+  get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A packed B''s order'; end if;
+end $$;
+rollback;
+do $$ begin
+  -- The same number in two shops is fine; twice in one shop is not.
+  update orders set packed_at = now(), invoice_number = 'SAME/26-27/0001' where id in (select distinct on (tenant_id) id from orders order by tenant_id, id);
+  if (select count(distinct tenant_id) from orders where invoice_number = 'SAME/26-27/0001') <> 2 then raise exception 'FAIL: two shops cannot use the same invoice number'; end if;
+  begin
+    insert into orders (tenant_id, number, payment_method, placed_at, packed_at, invoice_number) values ('11111111-1111-1111-1111-111111111111', 2, 'cod', now(), now(), 'SAME/26-27/0001');
+    raise exception 'FAIL: one shop issued an invoice number twice';
+  exception when unique_violation then null; end;
+  raise exception 'rollback' using errcode = 'P0001';
+exception when sqlstate 'P0001' then
+  if sqlerrm <> 'rollback' then raise; end if;
+end $$;
+
+\echo 'tenancy proof — all 26 checks passed'

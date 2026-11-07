@@ -76,6 +76,17 @@ export const orders = pgTable('orders', {
   deliveredAt: timestamp('delivered_at', { withTimezone: true }),
   rtoInitiatedAt: timestamp('rto_initiated_at', { withTimezone: true }),
   rtoDeliveredAt: timestamp('rto_delivered_at', { withTimezone: true }),
+  // ── The merchant's work (1D). Who did each, and when, is in order_events.
+  heldAt: timestamp('held_at', { withTimezone: true }),
+  /** Packing issues the invoice number (GST: at removal of goods), so the two are set together. */
+  packedAt: timestamp('packed_at', { withTimezone: true }),
+  invoiceNumber: text('invoice_number'),
+  cancelReason: text('cancel_reason'),
+  cancelNote: text('cancel_note'),
+  /** The shop's GSTIN when the order was placed (null: not registered then): the invoice reads this, never today's settings. */
+  sellerGstin: text('seller_gstin'),
+  /** The area/locality as typed, kept apart from address_line from 1D (risk reads the line alone). */
+  area: text('area').notNull().default(''),
   createdAt: createdAt(),
 }, (t) => [
   unique('orders_tenant_id_key').on(t.tenantId, t.id),
@@ -94,6 +105,10 @@ export const orders = pgTable('orders', {
   check('orders_total', sql`${t.total} = ${t.subtotal} + ${t.shipping} + ${t.codCharge} + case when ${t.pricesIncludeGst} then 0 else ${t.gstTotal} end`),
   check('orders_phone', sql`${t.phone} = '' or ${t.phone} ~ '^[6-9][0-9]{9}$'`),
   check('orders_pincode', sql`${t.pincode} = '' or ${t.pincode} ~ '^[1-9][0-9]{5}$'`),
+  uniqueIndex('orders_tenant_invoice').on(t.tenantId, t.invoiceNumber),
+  check('orders_invoice_when_packed', sql`(${t.invoiceNumber} is null) = (${t.packedAt} is null)`),
+  check('orders_invoice_length', sql`${t.invoiceNumber} is null or length(${t.invoiceNumber}) <= 16`),
+  check('orders_cancel_reason', sql`${t.cancelReason} is null or (${t.cancelledAt} is not null and ${t.cancelReason} in ('fake','customer_cancelled','unreachable','out_of_stock','cant_deliver','other'))`),
 ])
 
 /** One line of an order, as sold: a snapshot, so a later edit to the product never changes an order. */
@@ -126,6 +141,11 @@ export const orderLines = pgTable('order_lines', {
   leadMinDays: integer('lead_min_days'),
   leadMaxDays: integer('lead_max_days'),
   position: integer('position').notNull().default(0),
+  /** When this line's stock left the shelf (in_stock: placement/switch/capture; preorder: packing); null = not taken. */
+  stockTakenAt: timestamp('stock_taken_at', { withTimezone: true }),
+  /** This line's share of delivery + COD fee, taxed at its rate (composite supply). Null for orders placed before 1D. */
+  chargeTaxable: money('charge_taxable'),
+  chargeGst: money('charge_gst'),
 }, (t) => [
   foreignKey({ name: 'order_lines_order_fk', columns: [t.tenantId, t.orderId], foreignColumns: [orders.tenantId, orders.id] }).onDelete('cascade'),
   index('order_lines_order').on(t.tenantId, t.orderId),
@@ -156,3 +176,51 @@ export const paymentKeys = pgTable('payment_keys', {
   check('payment_keys_key_id', sql`${t.keyId} ~ '^rzp_(test|live)_[A-Za-z0-9]{6,40}$'`),
 ])
 
+
+/**
+ * What people did to an order (1D): append-only. Timestamps on the order say
+ * where it is; these say who did what, and survive an undo. FIELD NAMES ONLY —
+ * never an address, a phone or a note's text, so nothing here outlives an
+ * erasure. The actor's email is a snapshot from sign-in (as support_sessions).
+ */
+export const orderEvents = pgTable('order_events', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'restrict' }),
+  orderId: uuid('order_id').notNull(),
+  kind: text('kind').notNull(),
+  actorKind: text('actor_kind').notNull(),
+  actorUserId: uuid('actor_user_id'),
+  actorEmail: text('actor_email'),
+  /** edited: the names of the fields changed. */
+  fields: text('fields').array(),
+  /** cancelled: the reason code; undone: the kind undone. */
+  reason: text('reason'),
+  /** undone: the event this reverses. */
+  undoes: uuid('undoes'),
+  at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  foreignKey({ name: 'order_events_order_fk', columns: [t.tenantId, t.orderId], foreignColumns: [orders.tenantId, orders.id] }).onDelete('cascade'),
+  unique('order_events_tenant_id_key').on(t.tenantId, t.id),
+  // An undo points at an event on the same order (FK in drizzle/0020).
+  unique('order_events_order_id_key').on(t.tenantId, t.orderId, t.id),
+  index('order_events_order').on(t.tenantId, t.orderId, t.at),
+  check('order_events_kind', sql`${t.kind} in ('confirmed','held','unheld','undone','edited','packed','cancelled','note_added','printed_slip','printed_invoice')`),
+  check('order_events_actor', sql`${t.actorKind} in ('member','support','system')`),
+  // A person is named exactly when one acted.
+  check('order_events_who', sql`(${t.actorKind} = 'system') = (${t.actorUserId} is null) and (${t.actorUserId} is null) = (${t.actorEmail} is null)`),
+])
+
+/** The team's notes on an order (1D): never shown to the shopper, append-only. */
+export const orderNotes = pgTable('order_notes', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'restrict' }),
+  orderId: uuid('order_id').notNull(),
+  body: text('body').notNull(),
+  authorUserId: uuid('author_user_id').notNull(),
+  authorEmail: text('author_email').notNull(),
+  at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  foreignKey({ name: 'order_notes_order_fk', columns: [t.tenantId, t.orderId], foreignColumns: [orders.tenantId, orders.id] }).onDelete('cascade'),
+  index('order_notes_order').on(t.tenantId, t.orderId, t.at),
+  check('order_notes_body', sql`length(${t.body}) between 1 and 2000`),
+])

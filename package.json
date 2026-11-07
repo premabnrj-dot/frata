@@ -18,7 +18,8 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "verify:tenancy": "bash scripts/verify/tenancy.sh",
-    "e2e": "node e2e/run.mjs"
+    "e2e": "node e2e/run.mjs",
+    "verify:backfill": "bash scripts/verify/backfill-0019.sh"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

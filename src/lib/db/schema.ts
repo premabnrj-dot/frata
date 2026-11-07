@@ -258,9 +258,11 @@ export const shopSettings = pgTable('shop_settings', {
   check('shop_settings_days', sql`${t.returnDays} between 0 and 60 and ${t.dispatchDays} between 0 and 30 and ${t.metroDays} between 0 and 30 and ${t.restDays} between 0 and 30`),
   check('shop_settings_gstin', sql`${t.gstin} is null or ${t.gstin} ~ '^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$'`),
   check('shop_settings_pickup', sql`${t.pickupPincode} is null or ${t.pickupPincode} ~ '^[1-9][0-9]{5}$'`),
+  // The series heads the invoice number: series + '26-27/' + 5 digits must stay within GST's 16 characters (1D).
+  check('shop_settings_invoice_series', sql`length(${t.invoiceSeries}) <= 5`),
 ])
 
-export const COUNTER_KINDS = ['order', 'invoice'] as const
+export const COUNTER_KINDS = ['order', 'invoice', 'bill'] as const
 
 /** Order numbers and invoice series: `update … returning` in the transaction that uses the number. */
 export const tenantCounters = pgTable('tenant_counters', {
@@ -271,7 +273,7 @@ export const tenantCounters = pgTable('tenant_counters', {
   next: integer('next').notNull().default(1),
 }, (t) => [
   primaryKey({ columns: [t.tenantId, t.kind, t.period] }),
-  check('tenant_counters_kind', sql`${t.kind} in ('order','invoice')`),
+  check('tenant_counters_kind', sql`${t.kind} in (${sql.raw(COUNTER_KINDS.map((k) => `'${k}'`).join(','))})`),
   check('tenant_counters_next', sql`${t.next} >= 1`),
 ])
 

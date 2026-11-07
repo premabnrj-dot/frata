@@ -122,7 +122,7 @@ export const SECTIONS: readonly Section[] = [
         { key: 'defaultHsn', label: 'Default HSN code', kind: 'hsn', hint: 'Each product can have its own.' },
       ] },
       { title: 'Invoice numbers', hint: 'One series a financial year, never reused. A new series starts on 1 April.', fields: [
-        { key: 'invoiceSeries', label: 'Series prefix', kind: 'text', max: 8, hint: 'Like KS/. The year and number follow it.' },
+        { key: 'invoiceSeries', label: 'Series prefix', kind: 'text', max: 5, hint: 'Like KS/. The year and number follow it.' },
       ] },
     ],
   },
