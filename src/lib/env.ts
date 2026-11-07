@@ -11,7 +11,11 @@ import 'server-only'
 export const DATABASE_URL = process.env.DATABASE_URL ?? ''
 /** frata_admin — cross-tenant (ADR-0007). Set for Production only; previews say "not connected". */
 export const ADMIN_DATABASE_URL = process.env.ADMIN_DATABASE_URL ?? ''
-export const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET ?? ''
+/** Encrypts each shop's Razorpay secrets and signs order links (src/lib/crypto/secret-box.ts). Production only.
+ *  Changing it makes saved Razorpay secrets unreadable: those shops must reconnect. */
+export const PAYMENT_KEYS_SECRET = process.env.PAYMENT_KEYS_SECRET ?? ''
+/** Razorpay's API base. Unset in Vercel (the real API); set only by the local end-to-end test to its stand-in. */
+export const RAZORPAY_API_BASE = process.env.RAZORPAY_API_BASE || 'https://api.razorpay.com'
 /** Vercel Blob store frata-blob (ADR-0005): product photos and logos. Set by connecting the store in Vercel. */
 export const BLOB_READ_WRITE_TOKEN = process.env.BLOB_READ_WRITE_TOKEN ?? ''
 
@@ -21,3 +25,4 @@ export const isAdminDatabaseConfigured = () => ADMIN_DATABASE_URL !== ''
 /** frata-blob's id (store_…): pins which Blob host a photo may come from. Set by connecting the store. */
 export const BLOB_STORE_ID = process.env.BLOB_STORE_ID ?? ''
 export const isBlobConfigured = () => BLOB_READ_WRITE_TOKEN !== '' && BLOB_STORE_ID !== ''
+export const isPaymentsConfigured = () => PAYMENT_KEYS_SECRET !== ''

@@ -60,15 +60,17 @@ for (const file of walk('src')) {
     failures.push(`${file}  Admin calls withTenant — staff reach a store only through a support session (ADR-0007)`)
   }
   // 6. A MERCHANT'S COST NEVER REACHES A SHOPPER (ADR-0003): storefront code never names it.
-  const shopper = file.startsWith('src/app/s/') || /^src\/lib\/queries\/storefront/.test(file) || file.startsWith('src/components/shop-preview/')
-    || file.startsWith('src/components/storefront/') || file.startsWith('src/app/(console)/console/preview/')
+  // Shopper-facing code: pages, views, shop API routes and their reads (checkout review 2026-11-07 adds the API and checkout reads).
+  const shopperRead = /^src\/lib\/queries\/(storefront|checkout)/.test(file)
+  const shopper = file.startsWith('src/app/s/') || shopperRead || file.startsWith('src/components/shop-preview/')
+    || file.startsWith('src/components/storefront/') || file.startsWith('src/app/(console)/console/preview/') || file.startsWith('src/app/api/shop/')
   if (shopper) {
-    const named = SENTINELS.filter((x) => text.includes(x))
-    if (named.length) failures.push(`${file}  storefront code names a merchant cost (${named.join(', ')}) — select only what a shopper sees`)
+    const named = [...SENTINELS, 'keySecret', 'webhookSecret', 'key_secret', 'webhook_secret'].filter((x) => text.includes(x))
+    if (named.length) failures.push(`${file}  shopper code names a merchant cost or secret (${named.join(', ')}) — select only what a shopper sees`)
   }
-  // 6b. Storefront loaders name their columns: a bare select() would carry unit_cost along (storefront review 2026-11-07).
-  if (/^src\/lib\/queries\/storefront/.test(file) && (/\.select\(\s*\)/.test(text) || /\.selectDistinct\(\s*\)/.test(text) || /getTableColumns/.test(text))) {
-    failures.push(`${file}  storefront loader with a bare select() — name the columns a shopper sees`)
+  // 6b. Shopper reads name their columns: a bare select() or returning() would carry unit_cost along (storefront review 2026-11-07).
+  if ((shopperRead || file.startsWith('src/app/api/shop/')) && (/\.select\(\s*\)/.test(text) || /\.selectDistinct\(\s*\)/.test(text) || /\.returning\(\s*\)/.test(text) || /getTableColumns/.test(text))) {
+    failures.push(`${file}  shopper read with a bare select() or returning() — name the columns a shopper sees`)
   }
   // 6c. Shop pages are static and shared: nothing per-request, and no preview switch (drafts would enter the shared cache).
   if (file.startsWith('src/app/s/') && /\bpreview|searchParams|\bcookies\(|\bheaders\(|draftMode/.test(text)) {

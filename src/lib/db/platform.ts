@@ -112,3 +112,10 @@ export async function changeShopAddress(tenantId: string, uid: string, slug: str
     return { ok: false, error: code ?? 'unknown' }
   }
 }
+
+/** A Razorpay webhook's shop and its (encrypted) secret, from the key in its URL: before any tenant is known. */
+export async function paymentWebhookFor(key: string): Promise<{ tenantId: string; secretEnc: string } | null> {
+  if (!/^k_[a-f0-9]{32}$/.test(key)) return null
+  const rows = await db().execute<{ tenant_id: string; webhook_secret_enc: string }>(sql`select tenant_id, webhook_secret_enc from app_payment_webhook_for(${key})`)
+  return rows[0] ? { tenantId: rows[0].tenant_id, secretEnc: rows[0].webhook_secret_enc } : null
+}
