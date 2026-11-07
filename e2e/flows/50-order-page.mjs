@@ -7,7 +7,7 @@
 // and the phone layout. Seeds its own orders and removes them at the end.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, signedIn, until, USERS } from '../lib.mjs'
+import { todayAgo, CONSOLE, signedIn, until, USERS } from '../lib.mjs'
 
 export default {
   name: 'order-page',
@@ -20,12 +20,12 @@ export default {
     const label = (n) => `${prefix || 'KS'}-${n}`
     const H = top + 3, P = top + 4, Q = top + 5 // H: third COD today from one phone (High); P: to pack and cancel; Q: paid online, held
     await db`insert into orders (tenant_id, number, payment_method, placed_at, customer_name, phone, address_line, area, city, pincode, state, subtotal, total) values
-      (${T}, ${top + 1}, 'cod', now() - interval '50 minutes', 'Page Riya', '9822200001', 'B-14, Tilak Marg', 'C-Scheme', 'Jaipur', '302001', 'Rajasthan', 249000, 249000),
-      (${T}, ${top + 2}, 'cod', now() - interval '40 minutes', 'Page Riya', '9822200001', 'B-14, Tilak Marg', 'C-Scheme', 'Jaipur', '302001', 'Rajasthan', 249000, 249000),
-      (${T}, ${H}, 'cod', now() - interval '30 minutes', 'Page Riya', '9822200001', 'B-14, Tilak Marg', 'C-Scheme', 'Jaipur', '302001', 'Rajasthan', 249000, 249000),
-      (${T}, ${P}, 'cod', now() - interval '20 minutes', 'Page Dev', '9822200002', 'Flat 22, Shanti Nagar', 'Vaishali', 'Jaipur', '302021', 'Rajasthan', 249000, 249000)`
+      (${T}, ${top + 1}, 'cod', ${todayAgo(50)}, 'Page Riya', '9822200001', 'B-14, Tilak Marg', 'C-Scheme', 'Jaipur', '302001', 'Rajasthan', 249000, 249000),
+      (${T}, ${top + 2}, 'cod', ${todayAgo(40)}, 'Page Riya', '9822200001', 'B-14, Tilak Marg', 'C-Scheme', 'Jaipur', '302001', 'Rajasthan', 249000, 249000),
+      (${T}, ${H}, 'cod', ${todayAgo(30)}, 'Page Riya', '9822200001', 'B-14, Tilak Marg', 'C-Scheme', 'Jaipur', '302001', 'Rajasthan', 249000, 249000),
+      (${T}, ${P}, 'cod', ${todayAgo(20)}, 'Page Dev', '9822200002', 'Flat 22, Shanti Nagar', 'Vaishali', 'Jaipur', '302021', 'Rajasthan', 249000, 249000)`
     await db`insert into orders (tenant_id, number, payment_method, placed_at, paid_at, held_at, customer_name, phone, address_line, area, city, pincode, state, subtotal, total)
-      values (${T}, ${Q}, 'prepaid', now() - interval '15 minutes', now() - interval '14 minutes', now() - interval '10 minutes', 'Page Paid', '9822200003', 'Flat 9, MI Road', 'Ashok Nagar', 'Jaipur', '302001', 'Rajasthan', 249000, 249000)`
+      values (${T}, ${Q}, 'prepaid', ${todayAgo(15)}, ${todayAgo(14)}, ${todayAgo(10)}, 'Page Paid', '9822200003', 'Flat 9, MI Road', 'Ashok Nagar', 'Jaipur', '302001', 'Rajasthan', 249000, 249000)`
     // Another shop with an order number Kesar does not have: Kesar's member must see "not found", never its page.
     const OTHER = 'abababab-0000-4000-8000-00000000000a'
     await db`insert into tenants (id, slug, name) values (${OTHER}, 'flow-other-shop', 'Other Shop') on conflict do nothing`

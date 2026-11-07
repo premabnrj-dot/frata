@@ -204,9 +204,10 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
             {!landmark && !f.landmark ? <button type="button" className="mt-1 text-sm underline" onClick={() => setLandmark(true)}>Add a landmark</button>
               : <div className="mt-3"><label htmlFor="landmark" className={label}>Landmark <span className="font-normal text-store-sub">(optional)</span></label><input id="landmark" value={f.landmark} maxLength={80} onChange={(e) => set('landmark', e.target.value)} className={field} /></div>}</div>
           <div><label htmlFor="state" className={label}>State</label>
-            <select id="state" autoComplete="address-level1" value={f.state} onChange={(e) => set('state', e.target.value)} aria-invalid={!!errors.state || undefined} aria-describedby="state-err state-help" className={field}>
+            <select id="state" autoComplete="address-level1" value={f.state} onChange={(e) => set('state', e.target.value)} aria-invalid={!!errors.state || undefined} aria-describedby="state-err" className={field}>
               <option value="">Choose…</option>{STATES.map((s) => <option key={s}>{s}</option>)}</select>
-            <p id="state-help" className="mt-1 text-xs text-store-sub">City and state fill from the pincode when we know it.</p><Err k="state" /></div>
+
+            <Err k="state" /></div>
         </div>
       </fieldset>
 

@@ -2,7 +2,7 @@
 
 import { and, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { parseSection, sectionFor, type Values } from '@/domains/settings/sections'
+import { openShopErrors, parseSection, sectionFor, type Values } from '@/domains/settings/sections'
 import { POLICY_PAGES } from '@/domains/policies/render'
 import { hostFor, refreshHosts, refreshShop } from '@/lib/queries/storefront'
 import { asMember } from '@/lib/auth/as-member'
@@ -20,6 +20,7 @@ import { shopWithSettings } from '@/lib/queries/settings'
 
 /** Thrown inside the transaction so it rolls back — and no audit row records a change that never happened. */
 class VersionConflict extends Error {}
+class NeededWhenOpen extends Error { constructor(readonly errors: Record<string, string>) { super("needed when open") } }
 
 /**
  * What to log when a write fails: the database's code and reason only. drizzle's
@@ -45,6 +46,14 @@ export async function saveSection(sectionKey: string, values: Values, version: n
   try {
     const r = await asMember(section.editors, { action: `settings.${section.key}`, detail: { fields: Object.keys(parsed.patch) } }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
+      // An open shop keeps what the law asks it to show. Checked in the transaction that saves, the row locked so
+      // opening the shop at the same moment cannot slip past it.
+      if (section.key === 'contact') {
+        const [shop] = await tx.select({ publishedAt: shopSettings.publishedAt, grievanceName: shopSettings.grievanceName, grievanceEmail: shopSettings.grievanceEmail, grievancePhone: shopSettings.grievancePhone })
+          .from(shopSettings).where(eq(shopSettings.tenantId, tenantId)).for('update')
+        const needed = shop?.publishedAt ? openShopErrors(section, parsed.patch, shop) : {}
+        if (Object.keys(needed).length) throw new NeededWhenOpen(needed)
+      }
       const [row] = await tx.update(shopSettings)
         .set({ ...(columns as Partial<typeof shopSettings.$inferInsert>), version: sql`${shopSettings.version} + 1`, updatedAt: new Date() })
         .where(and(eq(shopSettings.tenantId, tenantId), eq(shopSettings.version, version)))
@@ -61,6 +70,7 @@ export async function saveSection(sectionKey: string, values: Values, version: n
     revalidatePath('/console', 'layout')
     return { ok: true, version: r.value }
   } catch (err) {
+    if (err instanceof NeededWhenOpen) return { ok: false, error: 'Some fields need a look before saving.', errors: err.errors }
     if (err instanceof VersionConflict) return { ok: false, conflict: true, error: 'Someone saved this page while you were editing. Reload to see their changes, then make yours again.' }
     console.error('[saveSection]', section.key, dbReason(err))
     return { ok: false, error: 'We could not save. Nothing was changed. Try again in a minute.' }
