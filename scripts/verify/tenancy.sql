@@ -722,4 +722,80 @@ do $$ begin
     raise exception 'FAIL: API roles reach module tables'; end if;
 end $$;
 
-\echo 'tenancy proof — all 29 checks passed'
+-- 30. WhatsApp connections (docs/specs/2026-11-07-communication.md; tenancy review in docs/plans/2026-11-07-m2.md).
+begin; set local role frata_app;
+do $$ declare n int; begin
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  insert into wa_connections (tenant_id, waba_id, phone_number_id, display_phone, coexistence, token_enc, connected_by)
+    values ('11111111-1111-1111-1111-111111111111', '100000000001', '200000000001', '+91 90000 00001', false, 'v1.x.y', '99999999-9999-9999-9999-999999999999');
+  -- one open number per shop; A cannot connect for B; a crafted id never lands
+  begin insert into wa_connections (tenant_id, waba_id, phone_number_id, display_phone, coexistence, token_enc, connected_by)
+    values ('11111111-1111-1111-1111-111111111111', '100000000009', '200000000009', '+91 9', false, 't', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: two open numbers for one shop';
+  exception when unique_violation then null; end;
+  begin insert into wa_connections (tenant_id, waba_id, phone_number_id, display_phone, coexistence, token_enc, connected_by)
+    values ('22222222-2222-2222-2222-222222222222', '100000000002', '200000000002', '+91 2', false, 't', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: A connected a number for B';
+  exception when insufficient_privilege then null; end;
+  begin insert into wa_connections (tenant_id, waba_id, phone_number_id, display_phone, coexistence, token_enc, connected_by)
+    values ('11111111-1111-1111-1111-111111111111', '1 or 1=1', '200000000003', '+91 3', false, 't', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: a crafted Meta id';
+  exception when check_violation then null; end;
+  begin update wa_connections set tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: app moved a number to another shop';
+  exception when insufficient_privilege then null; end;
+  begin update wa_connections set phone_number_id = '200000000099'; raise exception 'FAIL: app changed which number a row is';
+  exception when insufficient_privilege then null; end;
+  begin delete from wa_connections; raise exception 'FAIL: app deleted a connection';
+  exception when insufficient_privilege then null; end;
+  -- a disconnect without deleting the token fails
+  begin update wa_connections set disconnected_at = now(), disconnected_by = '99999999-9999-9999-9999-999999999999'; raise exception 'FAIL: disconnected but kept the token';
+  exception when check_violation then null; end;
+end $$;
+commit;
+-- B cannot see A's number, and cannot claim it (the number is open on A)
+begin; set local role frata_app;
+select set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+do $$ declare n int; begin
+  if exists (select 1 from wa_connections) then raise exception 'FAIL: B sees A''s WhatsApp'; end if;
+  update wa_connections set token_enc = 'stolen'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: B changed A''s token'; end if;
+  begin insert into wa_connections (tenant_id, waba_id, phone_number_id, display_phone, coexistence, token_enc, connected_by)
+    values ('22222222-2222-2222-2222-222222222222', '100000000002', '200000000001', '+91 1', false, 't', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: B claimed A''s open number';
+  exception when unique_violation then null; end;
+  begin insert into wa_connections (tenant_id, waba_id, phone_number_id, display_phone, coexistence, token_enc, connected_by)
+    values ('22222222-2222-2222-2222-222222222222', '100000000001', '200000000002', '+91 1', false, 't', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: B claimed A''s open account';
+  exception when unique_violation then null; end;
+end $$;
+commit;
+-- Routing: open rows only, digits only, tenant id only; a closed A plus an open B routes to B
+begin; set local role frata_app;
+do $$ begin
+  if app_tenant_for_wa('200000000001') is distinct from '11111111-1111-1111-1111-111111111111' then raise exception 'FAIL: number does not route to A'; end if;
+  if app_tenant_for_waba('100000000001') is distinct from '11111111-1111-1111-1111-111111111111' then raise exception 'FAIL: account does not route to A'; end if;
+  if app_tenant_for_wa('200000000001 or true') is not null or app_tenant_for_wa('') is not null then raise exception 'FAIL: a crafted id routed'; end if;
+  if app_tenant_for_wa('299999999999') is not null then raise exception 'FAIL: an unknown number routed'; end if;
+end $$;
+commit;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+update wa_connections set disconnected_at = now(), disconnected_by = '99999999-9999-9999-9999-999999999999', token_enc = null;
+commit;
+begin; set local role frata_app;
+do $$ begin
+  if app_tenant_for_wa('200000000001') is not null then raise exception 'FAIL: a closed number still routes'; end if;
+end $$;
+select set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+insert into wa_connections (tenant_id, waba_id, phone_number_id, display_phone, coexistence, token_enc, connected_by)
+  values ('22222222-2222-2222-2222-222222222222', '100000000001', '200000000001', '+91 90000 00001', true, 'v1.b.b', '99999999-9999-9999-9999-999999999999');
+commit;
+begin; set local role frata_app;
+do $$ begin
+  if app_tenant_for_wa('200000000001') is distinct from '22222222-2222-2222-2222-222222222222' then raise exception 'FAIL: the reconnected number does not route to B'; end if;
+end $$;
+commit;
+do $$ begin
+  if has_table_privilege('frata_admin', 'wa_connections', 'select') then raise exception 'FAIL: staff read a shop''s WhatsApp'; end if;
+  if has_table_privilege('anon', 'wa_connections', 'select') or has_table_privilege('authenticated', 'wa_connections', 'select') or has_table_privilege('service_role', 'wa_connections', 'select') then
+    raise exception 'FAIL: API roles reach wa_connections'; end if;
+  if has_function_privilege('anon', 'app_tenant_for_wa(text)', 'execute') or has_function_privilege('authenticated', 'app_tenant_for_waba(text)', 'execute') or has_function_privilege('frata_admin', 'app_tenant_for_wa(text)', 'execute') then
+    raise exception 'FAIL: the WhatsApp routing reaches other roles'; end if;
+end $$;
+
+\echo 'tenancy proof — all 30 checks passed'
