@@ -83,7 +83,7 @@ export default async function SettingsPage() {
           </Section>
           <Section>
             <h2 className="text-section font-semibold">Coming later</h2>
-            <p className="text-sm text-muted-foreground">Razorpay for UPI and cards arrives with checkout. Your own domain, team invitations, email templates and your Frata plan and bills come in later releases.</p>
+            <p className="text-sm text-muted-foreground">Your own domain, team invitations, email templates and your Frata plan and bills come in later releases.</p>
           </Section>
         </aside>
       </div>

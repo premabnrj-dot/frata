@@ -1,5 +1,6 @@
 'use client'
 
+import { InfoTip } from '@/components/ui/info-tip'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -138,26 +139,25 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
             <label htmlFor="desc" className="block font-semibold">Description <span className="text-sm font-normal text-muted-foreground">(optional)</span></label>
             <textarea id="desc" rows={4} maxLength={5000} value={d.description} onChange={(e) => set({ description: e.target.value })} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm" placeholder="Fabric, fit, care. Shoppers read this before the size chart." />
           </Section>
-          <Section><h2 className="text-section font-semibold">Photos</h2><Photos productId={id} tenantId={tenantId} photos={photos} colours={colourOpt?.values ?? []} enabled={blobReady} /></Section>
+          <Section><h2 className="flex items-center text-section font-semibold">Photos<InfoTip about="photos">The first is the cover: show the piece on a person. A large photo is fine; it is resized before it uploads.</InfoTip></h2><Photos productId={id} tenantId={tenantId} photos={photos} colours={colourOpt?.values ?? []} enabled={blobReady} /></Section>
           <Section>
-            <div><h2 className="text-section font-semibold">Sizes, colours and stock</h2><p className="text-xs text-muted-foreground">Price, stock and SKU live here; what shoppers see is worked out from them.</p></div>
+            <h2 className="text-section font-semibold">Sizes, colours and stock</h2>
             <OptionsEditor options={d.options} onChange={(options) => set({ options })} error={errors.options} />
             {colourOpt && colourOpt.values.length > 0 && <ColoursPanel values={colourOpt.values} colours={d.colours} onChange={(colours) => set({ colours })} photos={photos} families={families} />}
             {combos.length > 0 && <VariantGrid options={opts} cells={d.cells} errors={errors} autoSku={(values) => skuFor(shop.skuPrefix, d.handle || defaults.handle, values)}
               onChange={(k, patch) => { setD((x) => ({ ...x, cells: { ...x.cells, [k]: { ...(x.cells[k] ?? EMPTY_CELL), ...patch } } })); setMsg(null) }} />}
           </Section>
           <Section>
-            <div><h2 className="text-section font-semibold">Details</h2>{d.category && <p className="text-xs text-muted-foreground">Asked for by its category, {d.category.name}.</p>}</div>
+            <h2 className="flex items-center text-section font-semibold">Details<InfoTip about="details">Asked for by the product’s category. Shoppers filter by them, and Google and Meta read them. Values marked · are Frata’s, for Indian crafts and fabrics; each is sent to Google as its nearest standard value.</InfoTip></h2>
             <DetailsPanel attributes={d.category?.attributes ?? []} values={d.attributes} onChange={(attributes) => set({ attributes })} />
           </Section>
           <Section><h2 className="text-section font-semibold">Size chart</h2><SizeChartPanel types={types} typeId={d.typeId} onType={(typeId) => set({ typeId })} /></Section>
           <Section>
-            <h2 className="text-section font-semibold">The model in the photos</h2>
+            <h2 className="flex items-center text-section font-semibold">The model in the photos<InfoTip about="the model">Shown under the photos: shoppers judge their size by it.</InfoTip></h2>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1"><label htmlFor="mh" className="block text-sm font-medium">Height <span className="font-normal text-muted-foreground">(optional)</span></label><input id="mh" value={d.modelHeight} maxLength={30} placeholder="5 ft 6 in" onChange={(e) => set({ modelHeight: e.target.value })} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
               <div className="space-y-1"><label htmlFor="ms" className="block text-sm font-medium">Wears <span className="font-normal text-muted-foreground">(optional)</span></label><input id="ms" value={d.modelSize} maxLength={10} placeholder="S" onChange={(e) => set({ modelSize: e.target.value })} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
             </div>
-            <p className="text-xs text-muted-foreground">Shown under the photos: shoppers judge their size by it.</p>
           </Section>
           <SeoPanel handle={d.handle} onHandle={(handle) => set({ handle })} seoTitle={d.seoTitle} onSeoTitle={(seoTitle) => set({ seoTitle })} seoDescription={d.seoDescription} onSeoDescription={(seoDescription) => set({ seoDescription })}
             defaults={defaults} address={shop.address} cover={photos[0]} everLive={everLive} errors={errors} />

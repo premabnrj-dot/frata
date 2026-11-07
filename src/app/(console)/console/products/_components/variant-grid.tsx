@@ -1,5 +1,6 @@
 'use client'
 
+import { InfoTip } from '@/components/ui/info-tip'
 import { useState } from 'react'
 import type { VariantInput } from '@/domains/catalogue/product-form'
 import { availability, type WhenOut } from '@/domains/catalogue/availability'
@@ -69,7 +70,7 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku }: {
         {/* On a phone each size and colour becomes a card of labelled fields (data-rows="form", rule 15). */}
         <table data-rows="form" role="table" aria-label="Sizes, colours and stock" className="w-full text-sm">
           <thead role="rowgroup" className="bg-muted/50 text-left text-xs text-muted-foreground"><tr role="row" className="[&>th]:px-2 [&>th]:py-2">
-            <th role="columnheader">{options.map((o) => o.name).join(' / ') || 'Product'}</th><th role="columnheader">Price, ₹</th><th role="columnheader">Compare at, ₹</th><th role="columnheader">Your cost, ₹</th><th role="columnheader">Stock</th><th role="columnheader">When it runs out</th><th role="columnheader">Shoppers see</th><th role="columnheader">SKU</th></tr></thead>
+            <th role="columnheader">{options.map((o) => o.name).join(' / ') || 'Product'}</th><th role="columnheader">Price, ₹</th><th role="columnheader">Compare at, ₹</th><th role="columnheader"><span className="inline-flex items-center">Your cost, ₹<InfoTip about="your cost">Never shown to shoppers. It is how Frata works out profit on each order. Leave it empty if you do not know it yet.</InfoTip></span></th><th role="columnheader">Stock</th><th role="columnheader"><span className="inline-flex items-center">When it runs out<InfoTip about="when it runs out">Once stock reaches 0: stop selling (sold out, still shown), take pre-orders with a ship-by date, or make to order in the days it takes.</InfoTip></span></th><th role="columnheader">Shoppers see</th><th role="columnheader"><span className="inline-flex items-center">SKU<InfoTip about="the SKU">An empty SKU is made for you when you save (shown in grey). Type your own to replace it.</InfoTip></span></th></tr></thead>
           {groups.map((grp) => {
             const shut = collapse && grp.label && !open[grp.label]
             const sold = grp.rows.filter((c) => !shopperSees(cells[keyOf(c)] ?? EMPTY_CELL, now).canBuy).length
@@ -131,8 +132,6 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku }: {
           })}
         </table>
       </div>
-      <p className="text-xs text-muted-foreground">When it runs out applies once stock reaches 0: stop selling (sold out, still shown), take pre-orders with a ship-by date, or make to order with the days it takes. Shoppers see the result; you never type it.</p>
-      <p className="text-xs text-muted-foreground">An empty SKU is made for you when you save (shown in grey); type your own to replace it. Your cost is never shown to shoppers. It is how Frata will work out profit on each order. Leave it empty if you do not know it yet.</p>
     </div>
   )
 }

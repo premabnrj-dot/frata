@@ -1,5 +1,6 @@
 'use client'
 
+import { InfoTip } from '@/components/ui/info-tip'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
@@ -54,7 +55,7 @@ export function OnlinePayments({ status, support, available, now }: { status: St
             <div className="space-y-1"><label htmlFor="key-id" className="block text-sm font-medium">Key ID</label>
               <input id="key-id" value={keyId} onChange={(e) => setKeyId(e.target.value)} autoComplete="off" spellCheck={false} placeholder="rzp_live_…" aria-invalid={err?.field === 'keyId' || undefined}
                 className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /></div>
-            <div className="space-y-1"><label htmlFor="key-secret" className="block text-sm font-medium">Key secret</label>
+            <div className="space-y-1"><div className="flex items-center"><label htmlFor="key-secret" className="text-sm font-medium">Key secret</label><InfoTip about="the key secret">Checked with Razorpay before saving: wrong keys are refused and nothing changes. Saved keys are encrypted and never shown again.</InfoTip></div>
               <input id="key-secret" type="password" value={secret} onChange={(e) => setSecret(e.target.value)} autoComplete="off" placeholder={status ? 'Saved — paste a new one to change it' : ''} aria-invalid={err?.field === 'keySecret' || undefined}
                 className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /></div>
             <p className="text-xs text-muted-foreground">Razorpay → Account &amp; Settings → API keys. The secret is shown there once: generate a new pair if you do not have it.</p>
@@ -62,7 +63,6 @@ export function OnlinePayments({ status, support, available, now }: { status: St
               <Button disabled={pending || !keyId || !secret} onClick={connect}>{pending ? 'Checking with Razorpay…' : status ? 'Test and save new keys' : 'Test and connect'}</Button>
               {status && <span className="text-sm text-muted-foreground">Connected: <span className="font-mono">{status.keyId}</span></span>}
             </div>
-            <p className="text-xs text-muted-foreground">The keys are checked with Razorpay before saving; wrong keys are refused and nothing changes. Saved keys are encrypted and never shown again.</p>
           </>
         )}
         {err && <p role="alert" className="text-sm text-danger-text">{err.text}</p>}

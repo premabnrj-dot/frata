@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formValues, gstinValid, missingForLivePayments, normaliseMobile, parseSection, sectionFor, SECTIONS } from '../sections'
+import { formValues, gstinValid, missingForLivePayments, normaliseMobile, openShopErrors, parseSection, sectionFor, SECTIONS } from '../sections'
 
 const s = (k: string) => sectionFor(k)!
 
@@ -73,5 +73,26 @@ describe('missingForLivePayments', () => {
   it('names what is missing and where it is fixed', () => {
     expect(missingForLivePayments({ ...full, grievancePhone: '', legalName: '' })).toEqual([
       { label: 'Legal business name', section: 'store' }, { label: 'Grievance officer', section: 'contact' }])
+  })
+})
+
+describe('cleaner screens (design-language § Labels, info tips and help text)', () => {
+  it('no section needs more than three (i) tips: more means the labels are unclear', () => {
+    for (const s of SECTIONS) {
+      const tips = s.blocks.reduce((n, b) => n + (b.tip ? 1 : 0) + b.fields.filter((f) => f.tip).length, 0)
+      expect(tips, s.key).toBeLessThanOrEqual(3)
+    }
+  })
+  it('a visible line under a field is one short line', () => {
+    for (const f of SECTIONS.flatMap((s) => s.blocks.flatMap((b) => b.fields))) if (f.hint) expect(f.hint.length, f.key).toBeLessThanOrEqual(110)
+  })
+})
+
+describe('an open shop keeps its grievance officer', () => {
+  it('emptying a grievance field is an error the action raises only when the shop is open', () => {
+    const contact = s('contact')
+    expect(openShopErrors(contact, { grievanceName: '', grievanceEmail: 'care@x.in' })).toEqual({ grievanceName: expect.stringMatching(/grievance officer/) })
+    expect(openShopErrors(contact, { grievanceName: 'Riya', grievanceEmail: 'care@x.in', grievancePhone: '9000000001' })).toEqual({})
+    expect(openShopErrors(s('store'), { name: '' })).toEqual({})
   })
 })
