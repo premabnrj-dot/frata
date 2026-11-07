@@ -33,7 +33,7 @@ export function ColoursPanel({ values, colours, onChange, photos, families }: { 
                 <select id={`fam-${v}`} value={c.family ?? ''} onChange={(e) => put({ ...c, family: e.target.value || null })} className="h-8 rounded-md border border-input bg-card px-1.5 text-sm">
                   <option value="">Family…</option>{families.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
                 </select>
-                <button type="button" className="ml-auto text-xs underline" aria-expanded={editing === v} onClick={() => setEditing(editing === v ? null : v)}>{editing === v ? 'Done' : 'Swatch'}</button>
+                <button type="button" className="ml-auto inline-flex min-h-6 items-center text-xs underline" aria-expanded={editing === v} onClick={() => setEditing(editing === v ? null : v)}>{editing === v ? 'Done' : 'Swatch'}</button>
               </div>
               {editing === v && <SwatchEditor c={c} photos={photos.filter((p) => !p.optionValue || p.optionValue === v)} onChange={put} />}
             </li>
@@ -53,7 +53,7 @@ function SwatchEditor({ c, photos, onChange }: { c: ColourInput; photos: Photo[]
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2">Plain colour
           <input type="color" value={c.hex ?? '#888888'} onChange={(e) => onChange({ ...c, hex: e.target.value, crop: null })} className="h-8 w-10 cursor-pointer rounded border border-input bg-card" /></label>
-        {(c.hex || c.crop) && <button type="button" className="text-xs underline" onClick={() => onChange({ ...c, hex: null, crop: null })}>No swatch</button>}
+        {(c.hex || c.crop) && <button type="button" className="inline-flex min-h-6 items-center text-xs underline" onClick={() => onChange({ ...c, hex: null, crop: null })}>No swatch</button>}
       </div>
       {photos.length === 0 ? <p className="text-xs text-muted-foreground">Add a photo of this colour to cut a swatch from it.</p> : (
         <div className="space-y-2">

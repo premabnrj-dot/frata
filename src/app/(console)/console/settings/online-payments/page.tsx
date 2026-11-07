@@ -1,10 +1,10 @@
-import Link from 'next/link'
 import { Panel } from '@/components/ui/panel'
 import { requireMember } from '@/lib/auth/require-member'
 import { isPaymentsConfigured } from '@/lib/env'
 import { CONSOLE_HOST } from '@/lib/public-env'
 import { paymentStatusFor } from '@/lib/queries/payments'
 import { OnlinePayments } from './online-payments'
+import { BackLink } from '@/components/layout/page-header'
 
 export const metadata = { title: 'Online payments' }
 
@@ -17,7 +17,7 @@ export default async function OnlinePaymentsPage() {
   const webhookUrl = status.connected ? `https://${CONSOLE_HOST}/api/webhooks/razorpay/${status.webhookKey}` : null
   return (
     <div className="max-w-3xl space-y-4">
-      <Link href="/console/settings" className="text-sm text-muted-foreground hover:text-foreground">← Settings</Link>
+      <BackLink href="/console/settings" label="Settings" />
       <h1 className="text-2xl font-bold tracking-tight">Online payments</h1>
       <OnlinePayments
         status={status.connected ? { keyId: status.keyId, mode: status.mode, webhookSeenAt: status.webhookSeenAt?.toISOString() ?? null, lastEventAt: status.lastEventAt?.toISOString() ?? null, problem: status.problem, webhookUrl: webhookUrl!,

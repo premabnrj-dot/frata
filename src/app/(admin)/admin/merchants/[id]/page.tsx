@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Money, Numeric } from '@/components/data/numeric'
+import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Button, button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
@@ -14,6 +15,7 @@ import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dateTimeIN, dayIN, sinceIN } from '@/lib/format-date'
 import { formatPercent } from '@/lib/format'
 import { resendOwnerLinkAction } from './actions'
+import { Section } from '@/components/layout/section'
 
 /** The tab names the merchant ("Kesar Studio · Frata Admin"). */
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -39,31 +41,23 @@ export default async function MerchantPage({ params, searchParams }: { params: P
 
   return (
     <>
-      <div className="space-y-1">
-        <Link href="/admin/merchants" className="text-sm text-muted-foreground hover:underline">Merchants</Link>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">{m.tenant.name}</h1>
-            {cur ? <Badge tone="info">{cur.name}</Badge> : <Badge tone="danger">No plan</Badge>}
-            {m.tenant.isInternal && <Badge>Internal</Badge>}
-            {!owner && <Badge tone="warn">Owner not signed in yet</Badge>}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href={`/admin/merchants/${id}/plan`} className={button({ variant: 'secondary' })}>Change plan</Link>
-            <Link href={`/admin/merchants/${id}/support`} className={button()}>Open {m.tenant.name}&apos;s console</Link>
-          </div>
-        </div>
-      </div>
+      <PageHeader title={m.tenant.name} back={{ href: '/admin/merchants', label: 'Merchants' }}
+        badges={<>{cur ? <Badge tone="info">{cur.name}</Badge> : <Badge tone="danger">No plan</Badge>}{m.tenant.isInternal && <Badge>Internal</Badge>}{!owner && <Badge tone="warn">Owner not signed in yet</Badge>}</>}
+        meta={<>{m.host && <span className="font-mono">{m.host}</span>}{m.host && ' · '}added {dayIN(m.tenant.createdAt)} · <Numeric>{m.ordersThisMonth.toLocaleString('en-IN')}</Numeric> orders this month</>}
+        actions={<>
+          <Link href={`/admin/merchants/${id}/plan`} className={button({ variant: 'secondary' })}>Change plan</Link>
+          {/* Names the merchant (§ Frata Admin); a long name wraps inside the button instead of overflowing it. */}
+          <Link href={`/admin/merchants/${id}/support`} className={`${button()} h-auto min-h-10 max-w-full whitespace-normal py-2 text-left [overflow-wrap:anywhere] md:min-h-9`}>Open {m.tenant.name}&apos;s console</Link>
+        </>} />
       <Notice ok={sp.ok} error={sp.error} />
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
         <div className="min-w-0 flex-1 space-y-4">
-          <section className="space-y-3 rounded-md border border-border bg-card p-5">
-            <h2 className="text-[15px] font-semibold">Team</h2>
+          <Section title="Team">
             {m.members.length === 0 && <p className="text-sm text-muted-foreground">No one has signed in yet.</p>}
             {m.members.map((x) => (
               <div key={x.userId} className="flex items-center justify-between text-sm">
-                <span>{x.email ?? 'Unknown'} {x.lastSignInAt && <span className="text-muted-foreground">· signed in {sinceIN(x.lastSignInAt)}</span>}</span>
+                <span className="min-w-0 [overflow-wrap:anywhere]">{x.email ?? 'Unknown'} {x.lastSignInAt && <span className="text-muted-foreground">· signed in {sinceIN(x.lastSignInAt)}</span>}</span>
                 <Badge>{x.role[0]!.toUpperCase() + x.role.slice(1)}</Badge>
               </div>
             ))}
@@ -74,15 +68,14 @@ export default async function MerchantPage({ params, searchParams }: { params: P
                 <Button type="submit" variant="secondary">Resend sign-in link</Button>
               </form>
             )}
-          </section>
+          </Section>
 
-          <section className="space-y-3 rounded-md border border-border bg-card p-5">
-            <h2 className="text-[15px] font-semibold">Support visits</h2>
+          <Section title="Support visits">
             <p className="text-sm text-muted-foreground">{m.tenant.name} sees the same list in their console&apos;s Activity.</p>
             {m.sessions.length === 0 ? <p className="text-sm text-muted-foreground">None yet.</p> : (
               <div className="divide-y divide-border text-sm">
                 {m.sessions.map((s) => (
-                  <div key={s.id} className="grid grid-cols-[150px_1fr_1fr] gap-2 py-2">
+                  <div key={s.id} className="grid grid-cols-1 gap-x-2 gap-y-0.5 py-2 sm:grid-cols-[150px_minmax(0,1fr)_minmax(0,1fr)]">
                     <span className="text-muted-foreground">{dateTimeIN(s.startedAt)}</span>
                     <span>{s.staffEmail}</span>
                     <span>{SUPPORT_REASON_LABEL[s.reason as SupportReason]}{s.note ? ` · ${s.note}` : ''}</span>
@@ -90,12 +83,11 @@ export default async function MerchantPage({ params, searchParams }: { params: P
                 ))}
               </div>
             )}
-          </section>
+          </Section>
         </div>
 
         <aside className="w-full space-y-4 lg:w-80">
-          <section className="space-y-2 rounded-md border border-border bg-card p-5 text-sm">
-            <h2 className="text-[15px] font-semibold">Plan and usage</h2>
+          <Section title="Plan and usage" className="text-sm">
             {cur ? (
               <>
                 <div className="flex justify-between"><span>{cur.name} <span className="text-xs text-muted-foreground">· version {cur.v.version}</span></span><Money paise={paise(cur.tp.customMonthlyPrice ?? cur.v.monthlyPrice)} />/mo</div>
@@ -108,12 +100,7 @@ export default async function MerchantPage({ params, searchParams }: { params: P
                 <p className="text-muted-foreground">On this plan since {dayIN(cur.tp.startsAt)}. Not charged yet: billing comes in Phase 6.</p>
               </>
             ) : <p className="text-danger-text">No plan. Choose one with Change plan.</p>}
-          </section>
-          <section className="space-y-1 rounded-md border border-border bg-card p-5 text-sm">
-            <h2 className="text-[15px] font-semibold">Facts</h2>
-            {m.host && <p>Shop · <span className="font-mono">{m.host}</span></p>}
-            <p>Added · {dayIN(m.tenant.createdAt)}</p>
-          </section>
+          </Section>
         </aside>
       </div>
     </>

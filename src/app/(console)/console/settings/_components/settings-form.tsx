@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo, useState, useTransition } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LeaveDialog, Message, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
 import {
@@ -12,6 +11,8 @@ import { POLICY_PAGES, type PolicyPage } from '@/domains/policies/render'
 import { draftPatch, sectionFor, type Field, type Values } from '@/domains/settings/sections'
 import { saveSection } from '../actions'
 import { PolicyPages } from './policy-pages'
+import { Section } from '@/components/layout/section'
+import { BackLink } from '@/components/layout/page-header'
 
 /**
  * One settings page: the fields its section defines, ONE explicit save, an
@@ -67,20 +68,20 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
   return (
     <div className={STORE_FONT_VARS}>
       {dirty && <SaveBar pending={pending} onSave={save} onDiscard={() => { setValues(saved); setErrors({}); setMessage(null) }} />}
-      <Link href="/console/settings" className="text-sm text-muted-foreground hover:text-foreground">← Settings</Link>
+      <BackLink href="/console/settings" label="Settings" />
       <h1 className="mt-1 text-2xl font-bold tracking-tight">{section.title}</h1>
       <p className="text-sm text-muted-foreground">{section.intro}</p>
       <Message m={message} onReload={conflict ? () => window.location.reload() : undefined} />
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <form className="space-y-4" noValidate onSubmit={(e) => { e.preventDefault(); if (dirty) save() }}>
           {section.blocks.map((b) => (
-            <section key={b.title} className="space-y-3 rounded-md border border-border bg-card p-4">
-              <h2 className="font-semibold">{b.title}</h2>
+            <Section key={b.title}>
+              <h2 className="text-section font-semibold">{b.title}</h2>
               {b.hint && <p className="-mt-1 text-sm text-muted-foreground">{b.hint}</p>}
               <div className="grid gap-3 sm:grid-cols-2">
                 {b.fields.map((f) => <FieldInput key={f.key} f={f} value={values[f.key]} error={errors[f.key]} onChange={(v) => set(f.key, v)} />)}
               </div>
-            </section>
+            </Section>
           ))}
           {section.key === 'policies' && <PolicyPages facts={preview} overrides={overrides} selected={policyPage} onSelect={setPolicyPage} pagesDirty={dirty} />}
           <button type="submit" hidden />

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { visibility, type Status } from '@/domains/catalogue/availability'
 import type { Readiness } from '@/domains/catalogue/product-form'
 import { setStatus } from '../actions'
+import { Section } from '@/components/layout/section'
 
 const CHOICES: { v: Status; label: string; says: string }[] = [
   { v: 'draft', label: 'Draft', says: 'Only your team sees it.' },
@@ -40,8 +41,8 @@ export function StatusCard({ productId, status, publishAt, ready, dirty }: { pro
   })
 
   return (
-    <section aria-labelledby="status-h" className="space-y-3 rounded-md border border-border bg-card p-4">
-      <h2 id="status-h" className="font-semibold">Status</h2>
+    <Section labelledBy="status-h">
+      <h2 id="status-h" className="text-section font-semibold">Status</h2>
       <fieldset className="space-y-1.5">
         <legend className="sr-only">Who can find this product</legend>
         {CHOICES.map((c) => (
@@ -53,7 +54,7 @@ export function StatusCard({ productId, status, publishAt, ready, dirty }: { pro
       </fieldset>
       {pick === 'active' && (
         <div className="space-y-1.5 text-sm">
-          <label className="flex items-center gap-2"><input type="checkbox" checked={later} onChange={(e) => setLater(e.target.checked)} /> Go live later (a scheduled drop)</label>
+          <label className="flex min-h-6 items-center gap-2"><input type="checkbox" checked={later} onChange={(e) => setLater(e.target.checked)} /> Go live later (a scheduled drop)</label>
           {later && <div className="space-y-1"><label htmlFor="publish-at" className="block text-xs font-medium">From, India time</label>
             <input id="publish-at" type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-2 text-sm" />
             <p className="text-xs text-muted-foreground">Hidden until then; it appears by itself.</p></div>}
@@ -68,6 +69,6 @@ export function StatusCard({ productId, status, publishAt, ready, dirty }: { pro
       {changed && <Button className="w-full" disabled={pending || blocked || dirty} onClick={apply}>{pick === 'active' && !later ? 'Make it active' : pick === 'active' ? 'Schedule it' : `Set to ${CHOICES.find((c) => c.v === pick)!.label.toLowerCase()}`}</Button>}
       {changed && dirty && <p className="text-xs text-muted-foreground">Save your changes first.</p>}
       {msg && <p role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-ok-text' : 'text-danger-text'}`}>{msg.text}</p>}
-    </section>
+    </Section>
   )
 }

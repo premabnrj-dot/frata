@@ -37,7 +37,8 @@ export const MEASURE = ({ phone }) => {
   const targets = []
   for (const el of document.querySelectorAll(INTER)) {
     if (!visible(el) || srOnly(el) || disabled(el)) continue
-    const r = el.getBoundingClientRect()
+    // A radio or checkbox inside its <label> is as big as the label: the label is its target too.
+    const r = (el.type === 'radio' || el.type === 'checkbox') && el.closest('label') ? el.closest('label').getBoundingClientRect() : el.getBoundingClientRect()
     const inline = el.tagName === 'A' && getComputedStyle(el).display === 'inline' && /^(P|LI|SPAN|TD|DD|LABEL)$/.test(el.parentElement?.tagName)
     if (!inline && (r.width < 23 || r.height < 23)) targets.push(`${desc(el)} ${Math.round(r.width)}×${Math.round(r.height)}`)
   }
@@ -65,7 +66,8 @@ export const MEASURE = ({ phone }) => {
   const shadowEdge = [...document.body.querySelectorAll('*')].filter((el) => { const s = getComputedStyle(el); return s.boxShadow !== 'none' && visible(el) && parseFloat(s.borderTopWidth) === 0 && parseFloat(s.borderLeftWidth) === 0 && !el.matches(INTER) }).slice(0, 3).map(desc)
 
   // Nav: exactly one current item in the visible nav (rule 9). Hidden navs (the other width's) do not count.
-  const current = [...document.querySelectorAll('nav [aria-current="page"]')].filter((a) => visible(a) && !a.closest('[aria-label="Sections"],[aria-label="Pages"],[aria-label="Filter by status"]'))
+  // Only the shell's navs (sidebar, its foot, the bottom bar): a page's own view tabs also mark aria-current.
+  const current = [...document.querySelectorAll('nav:is([aria-label="Console"], [aria-label="Admin"], [aria-label$=": more"]) [aria-current="page"]')].filter(visible)
 
   // 2.4.1 bypass: the first focusable is a skip link to the content.
   const first = [...document.querySelectorAll(INTER)].find((el) => !disabled(el) && (visible(el) || el.matches('a[href^="#"]')))
@@ -90,7 +92,9 @@ export const FOCUS = () => {
   // The ring is drawn outside the element (offset 2 px): measure it against the first opaque background around it.
   let bg = [255, 255, 255, 1]
   for (let e = el.parentElement; e; e = e.parentElement) { const c = rgb(getComputedStyle(e).backgroundColor); if (c[3] >= 1) { bg = c; break } }
-  const s = getComputedStyle(el)
+  // The ring may be drawn on the field's wrapper (focus-within, for a field with a prefix or an icon).
+  const ringOf = (e) => { const t = getComputedStyle(e); return t.outlineStyle !== 'none' && parseFloat(t.outlineWidth) >= 2 ? t : null }
+  const s = ringOf(el) ?? (el.parentElement && ringOf(el.parentElement)) ?? getComputedStyle(el)
   const width = s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 2
   const contrast = width ? ratio(rgb(s.outlineColor), bg) : 0
   const ring = width && contrast >= 3
@@ -102,3 +106,33 @@ export const FOCUS = () => {
 
 /** WCAG 1.4.12 text spacing, applied to the whole page. */
 export const TEXT_SPACING = '* { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important } p { margin-bottom: 2em !important }'
+
+/**
+ * WCAG 1.4.12 with the text-spacing override on: does any element's box overlap a sibling's (text running into
+ * text)? Absolute, fixed and sr-only elements, and anything inside a scroller or clipped on purpose, are left out.
+ */
+export const OVERLAP = () => {
+  const hits = []
+  // Inline boxes that wrap overlap by geometry, not by mistake: only block-level siblings are compared.
+  const skip = (el) => { const s = getComputedStyle(el); return s.display.startsWith('inline') || s.display === 'contents' || s.position === 'absolute' || s.position === 'fixed' || s.position === 'sticky' || s.display === 'none' || s.visibility === 'hidden' || /(hidden|clip)/.test(s.overflow) || (parseFloat(s.width) <= 1 && parseFloat(s.height) <= 1) }
+  for (const parent of document.querySelectorAll('main *')) {
+    const kids = [...parent.children].filter((k) => !skip(k) && k.getBoundingClientRect().height > 0)
+    for (let i = 1; i < kids.length; i++) {
+      const a = kids[i - 1].getBoundingClientRect(), b = kids[i].getBoundingClientRect()
+      const x = Math.min(a.right, b.right) - Math.max(a.left, b.left), y = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)
+      if (x > 2 && y > 2 && kids[i - 1].textContent.trim() && kids[i].textContent.trim()) hits.push(`${kids[i - 1].tagName.toLowerCase()} / ${kids[i].tagName.toLowerCase()} "${kids[i].textContent.trim().slice(0, 30)}"`)
+      if (hits.length > 3) return hits
+    }
+  }
+  return hits
+}
+
+/** Reduced motion: the longest transition or animation on the page, in ms (it must be ≤ 0.01). */
+export const LONGEST_MOTION = () => {
+  let max = 0
+  for (const el of document.querySelectorAll('*')) {
+    const s = getComputedStyle(el)
+    for (const d of [...s.transitionDuration.split(','), ...s.animationDuration.split(',')]) max = Math.max(max, parseFloat(d) * (d.trim().endsWith('ms') ? 1 : 1000) || 0)
+  }
+  return max
+}

@@ -6,6 +6,7 @@ import { Panel } from '@/components/ui/panel'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 import { createMerchantAction } from './actions'
+import { Section } from '@/components/layout/section'
 
 export const metadata = { title: 'Add merchant' }
 
@@ -23,7 +24,7 @@ export default async function NewMerchantPage({ searchParams }: { searchParams: 
       </div>
       <Notice error={error} />
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <form action={createMerchantAction} className="w-full max-w-xl space-y-4 rounded-md border border-border bg-card p-6">
+        <Section className="w-full max-w-xl"><form action={createMerchantAction} className="space-y-4">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="name" className="text-sm font-medium">Brand name</label>
             <input id="name" name="name" required className={field} />
@@ -61,9 +62,9 @@ export default async function NewMerchantPage({ searchParams }: { searchParams: 
             <Link href="/admin/merchants" className={button({ variant: 'secondary' })}>Cancel</Link>
             <Button type="submit">Add merchant and email the owner</Button>
           </div>
-        </form>
+        </form></Section>
         <aside className="max-w-sm space-y-3 text-sm leading-relaxed text-muted-foreground">
-          <h2 className="text-base font-semibold text-foreground">What happens</h2>
+          <h2 className="text-section font-semibold text-foreground">What happens</h2>
           <p>The store is created with its shop address and plan. The owner gets an email with a sign-in link; the store shows &quot;Owner not signed in yet&quot; until they use it.</p>
           <p>You can open the store&apos;s console straight away to set it up. That is a support visit, and the owner will see it.</p>
         </aside>

@@ -70,7 +70,7 @@ export function Message({ m, onReload }: { m: { tone: 'ok' | 'error'; text: stri
   if (!m) return null
   return (
     <p role={m.tone === 'ok' ? 'status' : 'alert'} className={`mt-3 rounded-md border px-3 py-2 text-sm ${m.tone === 'ok' ? 'border-ok-text/30 bg-ok text-ok-text' : 'border-danger-text/30 bg-danger text-danger-text'}`}>
-      {m.text}{onReload && <> <button type="button" className="underline" onClick={onReload}>Reload</button></>}
+      {m.text}{onReload && <> <button type="button" className="inline-flex min-h-6 items-center underline" onClick={onReload}>Reload</button></>}
     </p>
   )
 }

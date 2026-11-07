@@ -1,4 +1,4 @@
-import { DataTable, DataTableHead, DataTableRow } from '@/components/data/data-table'
+import { DataTable, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { PageHeader } from '@/components/layout/page-header'
 import { Panel } from '@/components/ui/panel'
 import { listActivity } from '@/lib/admin/activity'
@@ -20,10 +20,10 @@ export default async function ActivityPage() {
           <tbody>
             {rows.map(({ e, store }) => (
               <DataTableRow key={e.id}>
-                <td className="whitespace-nowrap text-muted-foreground">{dateTimeIN(e.at)}</td>
-                <td>{e.actorEmail ?? e.actorUserId}{e.actorKind === 'support' && <span className="text-muted-foreground"> · support visit</span>}</td>
-                <td>{store ?? '—'}</td>
-                <td><span className="font-mono text-xs">{e.action}</span>{e.target && <span> · {e.target}</span>}</td>
+                <Td cell="f" className="whitespace-nowrap text-muted-foreground">{dateTimeIN(e.at)}</Td>
+                <Td cell="a">{e.actorEmail ?? e.actorUserId}{e.actorKind === 'support' && <span className="text-muted-foreground"> · support visit</span>}</Td>
+                <Td cell="c">{store ?? '—'}</Td>
+                <Td cell="e"><span className="font-mono text-xs">{e.action}</span>{e.target && <span> · {e.target}</span>}</Td>
               </DataTableRow>
             ))}
           </tbody>

@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { DataTable, DataTableHead, DataTableRow } from '@/components/data/data-table'
+import { DataTable, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
+import { Pager } from '@/components/data/pager'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
@@ -51,17 +52,14 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const first = (page - 1) * ORDERS_PAGE + 1
   const at = (p: number) => `/console/orders${showUnpaid || p > 1 ? `?${new URLSearchParams({ ...(showUnpaid ? { show: 'unpaid' } : {}), ...(p > 1 ? { page: String(p) } : {}) })}` : ''}`
   const prefix = await orderPrefixFor(tenantId)
-  const pager = pages > 1 && rows.length > 0 && (
-    <nav aria-label="Pages" className="mt-3 flex items-center gap-3 text-sm">
-      <span className="text-muted-foreground">Showing <Numeric>{first.toLocaleString('en-IN')}–{(first + rows.length - 1).toLocaleString('en-IN')}</Numeric> of <Numeric>{total.toLocaleString('en-IN')}</Numeric>, newest first</span>
-      {page > 1 && <Link href={at(page - 1)} className="underline">Newer</Link>}
-      {page < pages && <Link href={at(page + 1)} className="underline">Older</Link>}
-    </nav>
+  const pager = rows.length > 0 && (
+    <Pager first={first} shown={rows.length} total={total} suffix="newest first" prevLabel="Newer" nextLabel="Older"
+      prevHref={page > 1 ? at(page - 1) : undefined} nextHref={page < pages ? at(page + 1) : undefined} />
   )
   return (
     <>
       <PageHeader title="Orders" />
-      <p className="-mt-2 mb-3 text-sm text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         {counts.to_confirm ? <><Numeric>{counts.to_confirm.toLocaleString('en-IN')}</Numeric> to confirm. </> : null}
         {showUnpaid ? <Link href="/console/orders" className="underline">Back to orders</Link>
           : counts.not_paid ? <Link href="/console/orders?show=unpaid" className="underline"><Numeric>{counts.not_paid.toLocaleString('en-IN')}</Numeric> online order{counts.not_paid === 1 ? '' : 's'} not paid</Link> : null}
@@ -69,7 +67,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
       {rows.length === 0 ? (
         <Panel title={showUnpaid ? 'No unpaid online orders' : 'No orders yet'}>{showUnpaid ? 'Online orders that were never paid show here; they hold stock for 20 minutes, then let it go.' : 'Orders from your shop appear here as they are placed. Pay on delivery orders wait for you to confirm them.'}</Panel>
       ) : (
-        <DataTable>
+        <DataTable label="Orders">
           <DataTableHead>
             <th>Order</th><th>Customer</th><th>Placed</th><th>Payment</th><th>Status</th><th className="text-right">Total</th>
           </DataTableHead>
@@ -79,13 +77,13 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
               const method = currentMethod(o)
               return (
                 <DataTableRow key={o.id} dimmed={s.tone === 'neutral'}>
-                  <td className="font-mono">{prefix}-{o.number}</td>
-                  <td>{o.customerName ? <Name>{o.customerName}</Name> : '—'}<span className="block text-xs text-muted-foreground">{[o.city, `${o.items} item${o.items === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}</span></td>
-                  <td className="whitespace-nowrap text-muted-foreground">{dateTimeIN(o.placedAt)}</td>
-                  <td>{method === 'cod' ? 'Pay on delivery' : o.paidAt ? 'Paid online' : 'Online, not paid'}
-                    {paidAfterSwitch(o) && <Badge tone="danger" className="ml-1.5">Do not collect cash</Badge>}</td>
-                  <td><Badge tone={s.tone}>{s.label}</Badge></td>
-                  <td className="text-right"><Money paise={paise(o.total)} /></td>
+                  <Td cell="a" className="font-mono font-medium">{prefix}-{o.number}</Td>
+                  <Td cell="c"><span className="line-clamp-2">{o.customerName ? <Name>{o.customerName}</Name> : '—'}</span><span className="block text-xs text-muted-foreground">{[o.city, `${o.items} item${o.items === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}</span></Td>
+                  <Td cell="f" className="whitespace-nowrap text-xs text-muted-foreground md:text-sm">{dateTimeIN(o.placedAt)}</Td>
+                  <Td cell="e" className="text-xs md:text-sm">{method === 'cod' ? 'Pay on delivery' : o.paidAt ? 'Paid online' : 'Online, not paid'}
+                    {paidAfterSwitch(o) && <Badge tone="danger" className="ml-1.5">Do not collect cash</Badge>}</Td>
+                  <Td cell="d"><Badge tone={s.tone}>{s.label}</Badge></Td>
+                  <Td cell="b" className="text-right"><Money paise={paise(o.total)} /></Td>
                 </DataTableRow>
               )
             })}

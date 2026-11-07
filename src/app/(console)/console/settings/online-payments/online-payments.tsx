@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { connectRazorpay, disconnectRazorpay } from './actions'
+import { Section } from '@/components/layout/section'
 
 type Status = { keyId: string; mode: 'test' | 'live'; webhookSeenAt: string | null; lastEventAt: string | null; problem: string | null; webhookUrl: string; webhookSecret: string | null } | null
 
@@ -22,7 +23,6 @@ export function OnlinePayments({ status, support, available }: { status: Status;
   const [done, setDone] = useState<string | null>(null)
   const [confirm, setConfirm] = useState(false)
   const [pending, start] = useTransition()
-  const box = 'space-y-3 rounded-md border border-border bg-card p-4'
   const badge = !status ? <Badge>Not connected</Badge> : status.problem ? <Badge tone="danger">Needs attention</Badge> : !status.webhookSeenAt ? <Badge tone="warn">Needs one step</Badge> : status.mode === 'test' ? <Badge tone="info">Test mode</Badge> : <Badge tone="ok">Live</Badge>
 
   const connect = () => start(async () => {
@@ -40,14 +40,14 @@ export function OnlinePayments({ status, support, available }: { status: Status;
 
   return (
     <>
-      <section className={box}>
-        <div className="flex items-center justify-between gap-3"><h2 className="font-semibold">Razorpay</h2>{badge}</div>
+      <Section>
+        <div className="flex items-center justify-between gap-3"><h2 className="text-section font-semibold">Razorpay</h2>{badge}</div>
         <p className="text-sm text-muted-foreground">Shoppers pay by UPI, card or netbanking into your own Razorpay account. Razorpay settles to your bank; Frata never holds your money.</p>
         {status?.problem && <p role="alert" className="rounded-md bg-danger p-3 text-sm text-danger-text">{status.problem}</p>}
-      </section>
+      </Section>
 
-      <section className={box}>
-        <h2 className="font-semibold">1 · Your keys</h2>
+      <Section>
+        <h2 className="text-section font-semibold">1 · Your keys</h2>
         {support ? <p className="text-sm text-muted-foreground">Only the shop’s owner can connect or change Razorpay keys — not Frata support.</p> : !available ? <p className="text-sm text-muted-foreground">Online payments are not switched on for Frata yet.</p> : (
           <>
             <div className="space-y-1"><label htmlFor="key-id" className="block text-sm font-medium">Key ID</label>
@@ -66,11 +66,11 @@ export function OnlinePayments({ status, support, available }: { status: Status;
         )}
         {err && <p role="alert" className="text-sm text-danger-text">{err.text}</p>}
         {done && <p role="status" className="text-sm text-ok-text">{done}</p>}
-      </section>
+      </Section>
 
       {status && (
-        <section className={box}>
-          <h2 className="font-semibold">2 · Tell Razorpay where to send payments</h2>
+        <Section>
+          <h2 className="text-section font-semibold">2 · Tell Razorpay where to send payments</h2>
           <p className="text-sm text-muted-foreground">Done once, in your Razorpay dashboard: Account &amp; Settings → Webhooks → Add new webhook. If a shopper pays and closes the page, this is how your shop learns the order is paid.</p>
           <ol className="space-y-3 text-sm">
             <li><span className="font-medium">Webhook URL</span>
@@ -83,14 +83,14 @@ export function OnlinePayments({ status, support, available }: { status: Status;
           </ol>
           <p className="text-sm">{status.webhookSeenAt ? <Badge tone="ok">Working · last event {ago(status.lastEventAt ?? status.webhookSeenAt)}</Badge> : <Badge>Waiting for Razorpay’s first event…</Badge>}</p>
           {status.mode === 'test' && <p className="text-xs text-muted-foreground">Test keys (rzp_test_) let you try Razorpay, but an open shop offers online payment only with live keys and a webhook that has worked.</p>}
-        </section>
+        </Section>
       )}
 
       {status && !support && (
         <section className="rounded-md border border-border p-4 text-sm">
           {confirm
-            ? <div className="flex flex-wrap items-center gap-3"><span>Disconnect Razorpay? Shoppers can then pay on delivery only. Past orders are kept.</span><Button variant="secondary" disabled={pending} onClick={disconnect}>Disconnect</Button><button type="button" className="underline" onClick={() => setConfirm(false)}>Keep it</button></div>
-            : <button type="button" className="text-danger-text underline" onClick={() => setConfirm(true)}>Disconnect Razorpay</button>}
+            ? <div className="flex flex-wrap items-center gap-3"><span>Disconnect Razorpay? Shoppers can then pay on delivery only. Past orders are kept.</span><Button variant="secondary" disabled={pending} onClick={disconnect}>Disconnect</Button><button type="button" className="inline-flex min-h-6 items-center underline" onClick={() => setConfirm(false)}>Keep it</button></div>
+            : <button type="button" className="inline-flex min-h-6 items-center text-danger-text underline" onClick={() => setConfirm(true)}>Disconnect Razorpay</button>}
         </section>
       )}
     </>

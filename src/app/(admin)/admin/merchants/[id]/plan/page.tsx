@@ -10,6 +10,7 @@ import { listPlans } from '@/lib/admin/plans'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { formatPercent } from '@/lib/format'
 import { changePlanAction } from './actions'
+import { Section } from '@/components/layout/section'
 
 export const metadata = { title: 'Change plan' }
 
@@ -25,7 +26,7 @@ export default async function ChangePlanPage({ params, searchParams }: { params:
   const { error } = await searchParams
   const cur = m.current
   return (
-    <form action={changePlanAction} className="mx-auto max-w-xl space-y-5 rounded-lg border border-border bg-card p-6">
+    <Section className="mx-auto max-w-xl"><form action={changePlanAction} className="space-y-5">
       <h1 className="text-xl font-semibold">Change {m.tenant.name}&apos;s plan</h1>
       <Notice error={error} />
       <input type="hidden" name="tenantId" value={id} />
@@ -70,6 +71,6 @@ export default async function ChangePlanPage({ params, searchParams }: { params:
         <Link href={`/admin/merchants/${id}`} className={button({ variant: 'secondary' })}>Keep {cur?.name ?? 'as it is'}</Link>
         <Button type="submit">Move {m.tenant.name}</Button>
       </div>
-    </form>
+    </form></Section>
   )
 }

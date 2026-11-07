@@ -12,7 +12,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { CONSOLE, SHOP, USERS, signedIn, until } from '../lib.mjs'
-import { FOCUS, MEASURE, TEXT_SPACING } from '../ux-measure.mjs'
+import { FOCUS, LONGEST_MOTION, MEASURE, OVERLAP, TEXT_SPACING } from '../ux-measure.mjs'
 import { KNOWN } from '../ux-known.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
@@ -93,10 +93,23 @@ export default {
 
       await t.step('text spacing (WCAG 1.4.12) causes no sideways scroll', async () => {
         const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 390, height: 844 } })
-        for (const [page, path] of [['console-orders', '/console/orders'], ['console-settings', '/console/settings']]) {
+        for (const [page, path] of [['console-orders', '/console/orders'], ['console-settings', '/console/settings'], ['console-products', '/console/products']]) {
           const p = await ctx.newPage(); await p.goto(CONSOLE + path); await p.addStyleTag({ content: TEXT_SPACING })
           const wide = await p.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)
           if (wide) fail('text-spacing', page, '390', 'page scrolls sideways')
+          const overlaps = await p.evaluate(OVERLAP)
+          if (overlaps.length) fail('text-overlap', page, '390', overlaps.join('; '))
+          await p.close()
+        }
+        await ctx.close()
+      })
+
+      await t.step('reduced motion: nothing on a page moves longer than 0.01 ms (U·3)', async () => {
+        const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' })
+        for (const [page, path] of [['console-home', '/console'], ['console-orders', '/console/orders'], ['console-product', '/console/products/chanderi-kurta-set']]) {
+          const p = await ctx.newPage(); await p.goto(CONSOLE + path)
+          const ms = await p.evaluate(LONGEST_MOTION)
+          if (ms > 0.011) fail('reduced-motion', page, '390', `${ms} ms`)
           await p.close()
         }
         await ctx.close()

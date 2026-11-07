@@ -4,6 +4,7 @@ import { SUPPORT_REASON_LABEL, type SupportReason } from '@/domains/support/sess
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { dateTimeIN } from '@/lib/format-date'
 import { storeActivity } from '@/lib/queries/activity'
+import { Section } from '@/components/layout/section'
 
 export const metadata = { title: 'Activity' }
 
@@ -15,8 +16,7 @@ export default async function ActivityPage() {
   return (
     <>
       <PageHeader title="Activity" />
-      <section className="space-y-3 rounded-md border border-border bg-card p-5">
-        <h2 className="text-[15px] font-semibold">Visits from Frata support</h2>
+      <Section title="Visits from Frata support">
         {visits.length === 0 ? <p className="text-sm text-muted-foreground">Frata support has not been in your console.</p> : (
           <ul className="divide-y divide-border text-sm">
             {visits.map((v) => {
@@ -31,7 +31,7 @@ export default async function ActivityPage() {
             })}
           </ul>
         )}
-      </section>
+      </Section>
     </>
   )
 }
