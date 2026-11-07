@@ -1,5 +1,7 @@
 // Addresses, people and test keys shared by the flows (e2e/lib.mjs) and the fakes (e2e/fakes/*): no imports, so a fake starts without Playwright.
-export const PORTS = { app: 3077, razorpay: 4010, auth: 54399, pg: 54340 }
+export const PORTS = { app: 3077, razorpay: 4010, auth: 54399, pg: 54340, meta: 4020 }
+/** Frrata's Meta app in the local test: a stand-in Graph API (e2e/fakes/meta.mjs) knows these. */
+export const META = { appId: '1234567890', appSecret: 'e2e-meta-app-secret', configId: '9876543210', verifyToken: 'e2e-verify-token' }
 export const SHOP_DOMAIN = 'frata.test'
 export const SHOP = `http://kesar-studio.${SHOP_DOMAIN}`
 export const CONSOLE = `http://localhost:${PORTS.app}`

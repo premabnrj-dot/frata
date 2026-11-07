@@ -70,6 +70,9 @@ WhatsApp account with Frata instead.
 ## Design (mockup to come: Apps › Messages setup, the order's WhatsApp card, Inbox list and thread)
 
 ### C1 · Connect (Console › Apps › Messages)
+> Built 2026-11-07; facts rechecked the same day (ES v5 exists, v4 used; no payment field; Business app numbers are
+> never registered). See docs/plans/2026-11-07-m2.md § C1 as built.
+
 1. **Before:** one screen and two choices, each with a pictogram:
    - **"I use the WhatsApp Business app on this number"** (recommended for most brands): coexistence.
      Keep the app; chats from the last 6 months come across. An (i) tip lists what changes (broadcast lists

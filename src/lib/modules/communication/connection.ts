@@ -84,3 +84,6 @@ export async function refreshHealth(tenantId: string, now: Date): Promise<'ok' |
   }).where(and(eq(waConnections.id, t.row.id), eq(waConnections.tenantId, tenantId), isNull(waConnections.disconnectedAt))))
   return 'ok'
 }
+
+/** The shop's open connection for a page (no token), read in its own transaction. */
+export const shopConnection = (tenantId: string) => withTenant(tenantId, (tx) => connectionFor(tx, tenantId))

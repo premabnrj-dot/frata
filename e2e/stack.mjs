@@ -12,7 +12,7 @@
 import { execSync, spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, openSync } from 'node:fs'
-import { CONSOLE, OUT, PORTS, SHOP_DOMAIN, adminSql, until } from './lib.mjs'
+import { CONSOLE, META, OUT, PORTS, SHOP_DOMAIN, adminSql, until } from './lib.mjs'
 
 const ROOT = new URL('..', import.meta.url).pathname
 const PG_DIR = '/var/tmp/frata-e2e', PG_BIN = '/usr/lib/postgresql/16/bin', DB = 'frata_e2e'
@@ -23,6 +23,7 @@ const asPg = (cmd) => sh(`su postgres -c "${cmd}"`)
 const PUBLIC_ENV = {
   NEXT_PUBLIC_SHOP_DOMAIN: SHOP_DOMAIN, NEXT_PUBLIC_CONSOLE_HOST: 'localhost',
   NEXT_PUBLIC_SUPABASE_URL: `http://localhost:${PORTS.auth}`, NEXT_PUBLIC_SUPABASE_ANON_KEY: 'local-anon',
+  NEXT_PUBLIC_META_APP_ID: META.appId, NEXT_PUBLIC_WA_CONFIG_ID: META.configId,
 }
 
 function startPostgres() {
@@ -65,6 +66,7 @@ export async function up({ build = true } = {}) {
 
   run('fake-auth', 'node', ['e2e/fakes/auth.mjs'], { PORT: String(PORTS.auth) })
   run('fake-razorpay', 'node', ['e2e/fakes/razorpay.mjs'], { PORT: String(PORTS.razorpay) })
+  run('fake-meta', 'node', ['e2e/fakes/meta.mjs'], { PORT: String(PORTS.meta) })
   if (build) {
     try { sh('npm run build', PUBLIC_ENV) } catch (e) {
       // The lines that say why; if none match (a killed build), the log's last lines, so a failure always says something.
@@ -78,6 +80,7 @@ export async function up({ build = true } = {}) {
   run('next', 'npx', ['next', 'start', '-p', String(PORTS.app)], {
     ...PUBLIC_ENV, DATABASE_URL: `postgres://frata_app:${pw}@${host}/${DB}`, ADMIN_DATABASE_URL: `postgres://frata_admin:${adminPw}@${host}/${DB}`, PAYMENT_KEYS_SECRET: 'e2e-only-secret',
     RAZORPAY_API_BASE: `http://localhost:${PORTS.razorpay}`, BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_x_y', BLOB_STORE_ID: 'store_e2e', CRON_SECRET: 'e2e-cron', E2E_FIXTURES: '1',
+    META_APP_SECRET: META.appSecret, WA_VERIFY_TOKEN: META.verifyToken, META_GRAPH_BASE: `http://localhost:${PORTS.meta}`,
   })
   await until(async () => { try { return (await fetch(CONSOLE)).status > 0 } catch { return false } }, 60_000)
   return { db, adminUrl }

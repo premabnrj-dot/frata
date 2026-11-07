@@ -2,7 +2,7 @@ import 'server-only'
 import type { Tx } from '@/lib/db'
 import type { MemberRole } from '@/lib/db/schema'
 import { MODULES, type ModuleKey } from '@/domains/modules/registry'
-import { shopModules } from '@/lib/queries/modules'
+import { shopModules, type ShopModules } from '@/lib/queries/modules'
 import { asMember } from './as-member'
 import { requireMember, type MemberResult } from './require-member'
 
@@ -15,6 +15,24 @@ import { requireMember, type MemberResult } from './require-member'
 
 type Ok = Extract<MemberResult, { ok: true }>
 
+/** The words for a module this shop cannot use now (one place, read by asModule and moduleGate). */
+function refusal(module: ModuleKey, a: ShopModules['access'][ModuleKey]): string {
+  const name = MODULES[module].name
+  return a.why === 'paused' ? `${name} is paused by Frrata. We're on it.`
+    : a.why === 'needs' && a.needs ? (a.held ? `${MODULES[a.needs].name} is paused by Frrata. We're on it.` : `Turn on ${MODULES[a.needs].name} first.`)
+    : a.why === 'not_granted' ? `${name} isn't in your plan.`
+    : a.why === 'next' ? `${name} is coming soon.` : `Turn on ${name} in Apps.`
+}
+
+/** The same question before a module calls the outside world (Meta, Shiprocket), which never happens inside a
+ *  transaction. Its write still goes through asModule, which asks again. */
+export async function moduleGate(module: ModuleKey, allowed: readonly MemberRole[]): Promise<{ ok: true; auth: Ok } | { ok: false; error: string }> {
+  const auth = await requireMember(allowed)
+  if (!auth.ok) return { ok: false, error: auth.message }
+  const a = (await shopModules(auth.membership.tenantId, new Date().toISOString())).access[module]
+  return a.usable ? { ok: true, auth } : { ok: false, error: refusal(module, a) }
+}
+
 export async function asModule<T>(
   module: ModuleKey,
   allowed: readonly MemberRole[],
@@ -25,13 +43,6 @@ export async function asModule<T>(
   if (!auth.ok) return { ok: false, error: auth.message }
   const { access } = await shopModules(auth.membership.tenantId, new Date().toISOString())
   const a = access[module]
-  if (!a.usable) {
-    const name = MODULES[module].name
-    const why = a.why === 'paused' ? `${name} is paused by Frrata. We're on it.`
-      : a.why === 'needs' && a.needs ? `Turn on ${MODULES[a.needs].name} first.`
-      : a.why === 'not_granted' ? `${name} isn't in your plan.`
-      : a.why === 'next' ? `${name} is coming soon.` : `Turn on ${name} in Apps.`
-    return { ok: false, error: why }
-  }
+  if (!a.usable) return { ok: false, error: refusal(module, a) }
   return asMember(allowed, what, work)
 }
