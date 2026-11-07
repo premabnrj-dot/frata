@@ -27,8 +27,9 @@ export type OrderCosts = {
   rtoShipping: Paise
   /** Courier COD handling fee; 0 for prepaid. */
   codFee: Paise
-  /** Payment gateway fee in basis points of netRevenue; 0 for COD. */
-  gatewayBps: number
+  /** What the gateway charged on this payment, its GST included (Razorpay's payment `fee`, which includes `tax`); 0 for COD.
+   * Not bps of net revenue: Razorpay charges on the gross total, plus 18% GST (unit-economics review 2026-11-07). */
+  gatewayFee: Paise
   /** Packaging, labels, inserts. Spent whether or not it is delivered. */
   packaging: Paise
   /** Ad spend attributed to this order. Spent whether or not it is delivered. */
@@ -45,7 +46,7 @@ export function orderProfit(c: OrderCosts, deliveryProbability: number): OrderPr
   }
   const sunk = c.forwardShipping + c.packaging + c.adCost
   const ifDelivered = paise(
-    c.netRevenue - c.cogs - sunk - c.codFee - applyBps(c.netRevenue, c.gatewayBps) - c.platformFee,
+    c.netRevenue - c.cogs - sunk - c.codFee - c.gatewayFee - c.platformFee,
   )
   // The goods come back, so COGS is not lost; a fashion return is often not
   // resaleable at full value, which is the caller's to model in `cogs` later.
@@ -58,4 +59,10 @@ export function orderProfit(c: OrderCosts, deliveryProbability: number): OrderPr
 export function contributionPer100(profit: Paise, netRevenue: Paise): number {
   if (netRevenue === 0) return 0
   return Math.round((profit / netRevenue) * 100 * 100) / 100
+}
+
+/** Until the payment lands, an estimate of the gateway's fee: `bps` of the gross total, plus 18% GST on the fee. */
+export function estimateGatewayFee(grossTotal: Paise, bps: number): Paise {
+  const fee = applyBps(grossTotal, bps)
+  return paise(fee + Math.round(fee * 0.18))
 }

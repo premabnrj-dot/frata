@@ -1,4 +1,4 @@
-import { codFor, shippingFor } from '@/domains/checkout/delivery'
+import { codFor, codWhyNot, shippingFor } from '@/domains/checkout/delivery'
 import type { PolicyFacts, PolicyPage } from '@/domains/policies/render'
 import { PolicyBody, POLICY_TITLE } from '@/components/storefront/policy'
 import { orderPrefix } from '@/domains/signup/slug'
@@ -112,7 +112,7 @@ export function CheckoutPreview({ f }: { f: ShopFacts }) {
   const ship = shippingFor(bag, f)
   const cod = codFor(bag, f)
   const codTotal = cod.offered ? cod.total : bag + ship + f.codCharge
-  const why = cod.offered || cod.reason === 'off' ? null : cod.reason === 'below_min' ? `Available from ${inr(cod.min)}.` : `Available up to ${inr(cod.max)}. Pay online for this bag.`
+  const why = cod.offered || cod.reason === 'off' ? null : codWhyNot(cod, inr)
   return (
     <Frame label="Checkout · a ₹2,490 bag to 452018">
       <div data-store-theme="" data-accent={f.accent} className="space-y-2 p-4 text-[13px]">

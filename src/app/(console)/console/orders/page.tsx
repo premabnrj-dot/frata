@@ -11,6 +11,9 @@ import { dateTimeIN } from '@/lib/format-date'
 import { listOrders } from '@/lib/queries/orders'
 
 const STATE: Record<OrderState, { label: string; tone: 'ok' | 'warn' | 'danger' | 'info' | 'neutral' }> = {
+  awaiting_payment: { label: 'Paying now', tone: 'neutral' },
+  payment_abandoned: { label: 'Payment abandoned', tone: 'neutral' },
+  paid: { label: 'Ready to pack', tone: 'info' },
   unconfirmed: { label: 'To confirm', tone: 'warn' },
   confirmed: { label: 'Confirmed', tone: 'info' },
   cancelled: { label: 'Cancelled', tone: 'neutral' },

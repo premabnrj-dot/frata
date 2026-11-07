@@ -1,0 +1,147 @@
+// =============================================================================
+// FILE: src/domains/checkout/quote.ts
+//
+// THE PRICE OF A BAG — the one calculation for the bag, the checkout, placing
+// the order and the order record (checkout spec, SSOT). The browser sends
+// variant ids and quantities only; everything here comes from the server's
+// rows. Pure: `now` is passed in.
+//
+// What can be sold right now (architecture review: holds are DERIVED):
+//   in stock  = stock − units held by unpaid online orders still inside pay_by
+//   pre-order = cap − pre-orders already taken (no cap: no limit)
+// A line is one kind; a bag asking for more than can be sold is cut down and
+// says so on the line.
+// =============================================================================
+
+import { availability, visibility, type Status, type WhenOut } from '@/domains/catalogue/availability'
+import { taxOrder } from '@/domains/tax/gst'
+import { codFor, shippingFor, type Cod, type DeliveryRules } from './delivery'
+
+export const MAX_QTY = 10
+export const MAX_LINES = 20
+
+export type BagLine = { variantId: string; qty: number }
+
+/** One variant as the server read it, with what is held and taken against it. */
+export type VariantRow = {
+  variantId: string; productId: string; handle: string; title: string; status: string; publishAt: string | null
+  options: string[]; values: string[]; sku: string | null; price: number; compareAt: number | null
+  stock: number; whenOut: WhenOut; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; preorderCap: number | null
+  /** Units held by unpaid online orders inside their 20 minutes. */
+  held: number
+  /** Pre-order units already sold (live pre-order lines). */
+  preordered: number
+  hsn: string | null
+  image: { base: string; widths: number[] } | null
+}
+
+export type ShopRules = DeliveryRules & {
+  pricesIncludeGst: boolean; registered: boolean
+  dispatchDays: number; metroDays: number; restDays: number
+}
+
+export type LineKind = 'in_stock' | 'preorder' | 'made_to_order'
+export type LineProblem = 'gone' | 'sold_out' | 'reduced'
+export type QuoteLine = {
+  variantId: string; productId: string; handle: string; title: string; options: string[]; values: string[]; sku: string | null
+  image: { base: string; widths: number[] } | null; unitPrice: number; compareAt: number | null
+  requested: number; qty: number; kind: LineKind; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null
+  gross: number; gstBps: number; taxable: number; gst: number; hsn: string | null
+  problem: LineProblem | null
+}
+export type MethodTotal = { codCharge: number; gst: number; total: number }
+export type Quote = {
+  lines: QuoteLine[]
+  /** Sum of the sellable lines, as shown (GST inside when prices include it). */
+  subtotal: number; shipping: number
+  /** The lines' taxable value: Frata's fee base and the merchandise net. */
+  merchandiseNet: number
+  prepaid: MethodTotal
+  cod: MethodTotal & { offer: Cod }
+  arrives: { from: string; to: string } | null
+  /** Nothing to buy (every line gone or sold out). */
+  empty: boolean
+  /** Bag ids that are no longer this shop's variants (deleted, or never were): the bag drops them and says so. */
+  missing: string[]
+}
+
+const DAY = 86_400_000
+const istDate = (t: number) => new Date(t + 330 * 60_000).toISOString().slice(0, 10)
+const addDays = (iso: string, n: number) => istDate(new Date(`${iso}T00:00:00+05:30`).getTime() + n * DAY)
+
+/** How many of `want` can be sold of this variant now, and as what. */
+export function sellable(v: VariantRow, want: number, now: Date): { qty: number; kind: LineKind; problem: LineProblem | null } {
+  const vis = visibility(v.status as Status, v.publishAt ? new Date(v.publishAt) : null, now)
+  if (!vis.canBuy || v.price <= 0) return { qty: 0, kind: 'in_stock', problem: 'gone' }
+  const free = Math.max(0, v.stock - v.held)
+  const capLeft = v.preorderCap === null ? Number.POSITIVE_INFINITY : Math.max(0, v.preorderCap - v.preordered)
+  // availability() decides the kind exactly as the product page did, from the stock a shopper can take now.
+  const a = availability({ stock: free, whenOut: v.whenOut, shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays, preorderCap: v.preorderCap, preordered: v.preordered }, now)
+  const cut = (n: number, kind: LineKind) => ({ qty: Math.min(want, n), kind, problem: n < want ? ('reduced' as const) : null })
+  if (a.kind === 'in_stock' || a.kind === 'low_stock') return cut(free, 'in_stock')
+  if (a.kind === 'preorder') return capLeft > 0 ? cut(capLeft, 'preorder') : { qty: 0, kind: 'preorder', problem: 'sold_out' }
+  if (a.kind === 'made_to_order') return cut(MAX_QTY, 'made_to_order')
+  return { qty: 0, kind: 'in_stock', problem: 'sold_out' }
+}
+
+/** The arrival range for a set of lines: the latest line decides (dispatch + metro…rest days; pre-orders from their date). */
+export function arrivalRange(lines: Pick<QuoteLine, 'kind' | 'shipsBy' | 'leadMinDays' | 'leadMaxDays'>[], r: Pick<ShopRules, 'dispatchDays' | 'metroDays' | 'restDays'>, now: Date): { from: string; to: string } | null {
+  if (!lines.length) return null
+  const today = istDate(now.getTime())
+  let from = today, to = today
+  for (const l of lines) {
+    const start = l.kind === 'preorder' && l.shipsBy ? l.shipsBy : today
+    const makeMin = l.kind === 'made_to_order' ? l.leadMinDays ?? 0 : 0, makeMax = l.kind === 'made_to_order' ? l.leadMaxDays ?? makeMin : 0
+    const f = addDays(start, makeMin + r.dispatchDays + r.metroDays), t = addDays(start, makeMax + r.dispatchDays + r.restDays)
+    if (f > from) from = f
+    if (t > to) to = t
+  }
+  return { from, to }
+}
+
+/** Price a bag. Unknown variant ids come back as `gone` lines; quantities are clamped to 1…MAX_QTY. */
+export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Date, pincode?: string | null): Quote {
+  const byId = new Map(rows.map((v) => [v.variantId, v]))
+  const seen = new Set<string>()
+  const missing: string[] = []
+  const draft = bag.slice(0, MAX_LINES).flatMap((b) => {
+    if (seen.has(b.variantId)) return []
+    seen.add(b.variantId)
+    const v = byId.get(b.variantId)
+    const requested = Math.max(1, Math.min(MAX_QTY, Math.floor(b.qty) || 1))
+    if (!v) { missing.push(b.variantId); return [] }
+    const s = sellable(v, requested, now)
+    return [{ v, requested, ...s }]
+  })
+  const live = draft.filter((d) => d.qty > 0)
+  const subtotal = live.reduce((a, d) => a + d.v.price * d.qty, 0)
+  const shipping = live.length ? shippingFor(subtotal, r) : 0
+  const offer = codFor(subtotal, r, pincode)
+  const codCharge = offer.offered ? offer.charge : 0
+  const tax = (charges: number) => taxOrder(live.map((d) => ({ gross: d.v.price * d.qty, unitPrice: d.v.price, hsn: d.v.hsn })), charges, { registered: r.registered, pricesIncludeGst: r.pricesIncludeGst })
+  const tPre = tax(shipping), tCod = tax(shipping + codCharge)
+  const linesGst = tPre.lines.reduce((a, l) => a + l.gst, 0)
+  const total = (charges: number, gst: number) => subtotal + charges + (r.pricesIncludeGst ? 0 : gst)
+  const prepaidGst = linesGst + tPre.chargesGst, codGst = linesGst + tCod.chargesGst
+
+  let li = 0
+  const lines: QuoteLine[] = draft.map((d) => {
+    const t = d.qty > 0 ? tPre.lines[li++]! : { bps: 0, taxable: 0, gst: 0 }
+    return {
+      variantId: d.v.variantId, productId: d.v.productId, handle: d.v.handle, title: d.v.title, options: d.v.options, values: d.v.values, sku: d.v.sku,
+      image: d.v.image, unitPrice: d.v.price, compareAt: d.v.compareAt, requested: d.requested, qty: d.qty, kind: d.kind,
+      shipsBy: d.kind === 'preorder' ? d.v.shipsBy : null, leadMinDays: d.kind === 'made_to_order' ? d.v.leadMinDays : null, leadMaxDays: d.kind === 'made_to_order' ? d.v.leadMaxDays : null,
+      gross: d.v.price * d.qty, gstBps: t.bps, taxable: t.taxable, gst: t.gst, hsn: d.v.hsn, problem: d.problem,
+    }
+  })
+  return {
+    lines, subtotal, shipping, merchandiseNet: tPre.lines.reduce((a, l) => a + l.taxable, 0),
+    prepaid: { codCharge: 0, gst: prepaidGst, total: total(shipping, prepaidGst) },
+    cod: { offer, codCharge, gst: codGst, total: offer.offered ? total(shipping + codCharge, codGst) : 0 },
+    arrives: arrivalRange(lines.filter((l) => l.qty > 0), r, now),
+    empty: live.length === 0, missing,
+  }
+}
+
+/** The total the shopper is asked to pay for a method (0 when that method is not offered). */
+export const totalFor = (q: Quote, method: 'cod' | 'prepaid') => (method === 'cod' ? q.cod.total : q.prepaid.total)

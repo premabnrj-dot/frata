@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { fromRupees, paise } from '@/domains/money/paise'
-import { contributionPer100, orderProfit, type OrderCosts } from '../profit'
+import { contributionPer100, estimateGatewayFee, orderProfit, type OrderCosts } from '../profit'
 
 // A ₹1,000 COD kurta: the shape of a typical order, not a benchmark.
 const cod: OrderCosts = {
@@ -9,7 +9,7 @@ const cod: OrderCosts = {
   forwardShipping: fromRupees(70),
   rtoShipping: fromRupees(60),
   codFee: fromRupees(30),
-  gatewayBps: 0,
+  gatewayFee: paise(0),
   packaging: fromRupees(20),
   adCost: fromRupees(250),
   platformFee: fromRupees(10),
@@ -26,9 +26,13 @@ describe('orderProfit', () => {
     // 0.8 × 270 + 0.2 × −430 = 130
     expect(orderProfit(cod, 0.8).expected).toBe(fromRupees(130))
   })
-  it('charges the gateway on prepaid revenue', () => {
-    const prepaid = { ...cod, codFee: paise(0), gatewayBps: 200 }
+  it('takes the gateway fee as Razorpay charged it', () => {
+    const prepaid = { ...cod, codFee: paise(0), gatewayFee: fromRupees(20) }
     expect(orderProfit(prepaid, 1).ifDelivered).toBe(fromRupees(280)) // 270 + 30 COD − 20 gateway
+  })
+  it('estimates the gateway fee on the gross total, with 18% GST on the fee', () => {
+    // ₹2,490 at 2%: ₹49.80 + ₹8.96 GST = ₹58.76 (unit-economics review 2026-11-07)
+    expect(estimateGatewayFee(fromRupees(2490), 200)).toBe(5876)
   })
   it('refuses a probability outside 0..1', () => {
     expect(() => orderProfit(cod, 1.2)).toThrow()

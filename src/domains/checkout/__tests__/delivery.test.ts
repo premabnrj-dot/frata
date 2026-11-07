@@ -14,5 +14,7 @@ describe('delivery', () => {
     expect(codFor(40000, r)).toEqual({ offered: false, reason: 'below_min', min: 50000 })
     expect(codFor(299000, r)).toEqual({ offered: false, reason: 'above_max', max: 300000 })
     expect(codFor(249000, { ...r, codOn: false })).toEqual({ offered: false, reason: 'off' })
+    expect(codFor(249000, { ...r, codBlockedPincodes: ['302001'] }, '302001')).toEqual({ offered: false, reason: 'blocked_pincode', pincode: '302001' })
+    expect(codFor(249000, { ...r, codBlockedPincodes: ['302001'] }, '302002').offered).toBe(true)
   })
 })

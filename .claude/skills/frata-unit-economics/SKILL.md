@@ -2,8 +2,8 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.1.0
-  verified: 2026-11-06
+  version: 2.2.0
+  verified: 2026-11-07
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
 
@@ -34,7 +34,15 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
    costs the merchant nothing from Frata. Compare honestly: Shopify charges
    2/1/0.6% on prepaid orders only and nothing on COD, so on a COD-heavy
    merchant Frata's fee is larger per order; the bundle (checkout, WhatsApp,
-   RTO tools included) has to carry the difference.
+   RTO tools included) has to carry the difference. The fee base is the
+   order's `merchandise_net` (the lines' taxable value), never `net_revenue`
+   (which includes delivery and the COD fee) — unit-economics review 2026-11-07.
+4b. **The gateway's fee is what it charged, in paise** (2026-11-07): Razorpay
+   charges on the GROSS total and adds 18% GST to its fee, so `orderProfit`
+   takes `gatewayFee: Paise` from the captured payment (`orders.gateway_fee`,
+   which includes `gateway_tax`), and `estimateGatewayFee(total, bps)` until
+   it lands. On a ₹2,490 kurta at 2% that is ₹58.76, not the ₹47.43 a bps of
+   net revenue gave (understated ₹11.33 per prepaid order).
 5. **Delivered-order ad signals: model 0–2% saving**, not 5%, until a test
    shows more (Meta CAPI 7-day limit; small accounts lack event volume).
 6. **RTO**: model Frata's own controls (WhatsApp COD confirmation, pincode
