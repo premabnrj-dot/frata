@@ -1,5 +1,5 @@
 # M2·1 Communication: connect WhatsApp, order messages, a team inbox
-Status: draft · Date: 2026-11-07 · Mockup: pending · Approved: owner chose Communication as the first module (2026-11-07); spec pending
+Status: draft · Date: 2026-11-07 · Mockup: https://claude.ai/artifact/GuKHwcfZDU47yrZbK4AjR9 (screens 4–11) · Approved: owner chose Communication as the first module (2026-11-07); spec pending
 Depends on: `docs/specs/2026-11-07-modules-foundation.md` (it is the first module in the registry).
 Facts: § Facts used. All checked 2026-11-07 against Meta's docs by `integration-researcher`.
 
@@ -259,7 +259,7 @@ status, the server-side ids on connect, a private media route, `canSeeChats`, co
 4. **Access verification.** Until all three are done: 10 new merchants per 7 days.
 5. **Vercel Pro** (per-minute cron) before C2 goes to real shoppers.
 
-## Owner calls
+## Owner calls: decided 2026-11-07, as recommended (see docs/plans/2026-11-07-m2.md § Owner calls)
 1. **Seats:** Messages in every plan (recommended). Team members per tier, e.g. Launch 3 · Growth 10 · Scale 25,
    with extra seats as an add-on (Wati charges +$39 per user), or unlimited like Interakt?
 2. **Order updates opt-in at checkout:** ticked by default with the shop named (common in India; DPDP

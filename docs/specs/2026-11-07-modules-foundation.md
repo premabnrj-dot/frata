@@ -1,5 +1,5 @@
 # M2·0 Modules foundation: Apps, packages and add-ons
-Status: draft · Date: 2026-11-07 · Mockup: pending · Approved: owner chose M2 and "tiers plus add-ons" (2026-11-07); spec pending
+Status: draft · Date: 2026-11-07 · Mockup: https://claude.ai/artifact/GuKHwcfZDU47yrZbK4AjR9 (screens 1–3) · Approved: owner chose M2 and "tiers plus add-ons" (2026-11-07); spec pending
 Research: `docs/research/2026-11-07-fashion-modules-and-next-milestone.md` § 3
 
 ## Goal
@@ -118,7 +118,7 @@ else.**
 ## Out of scope
 Charging (Phase 6). Third-party modules. Per-module usage metering beyond what vendors bill.
 
-## Owner calls
+## Owner calls: decided 2026-11-07, as recommended (see docs/plans/2026-11-07-m2.md § Owner calls)
 1. Add-on list and prices (proposed: True Profit, Marketplace export, Reviews & UGC, Assisted DM orders;
    prices from `unit-economics-reviewer`).
 2. Is Messages (Communication) **in every plan** (recommended: messaging is how COD gets confirmed, which is
