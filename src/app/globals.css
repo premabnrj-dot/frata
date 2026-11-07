@@ -165,6 +165,10 @@
   /* The shell's stack: Inter, then Noto for Indic names (src/components/shell/fonts.ts). */
   [data-shell] { --font-shell: var(--font-inter), var(--font-noto-deva), var(--font-noto-beng), var(--font-noto-guru), var(--font-noto-taml), system-ui, sans-serif; font-family: var(--font-shell); }
   [data-script] { line-height: 1.8; }
+  /* The document keeps the scroll (A7): keep a focused or scrolled-to element clear of the sticky support banner
+     and of the phone's fixed bottom bar. */
+  html:has([data-support-banner]) { scroll-padding-top: 3.5rem; }
+  @media (max-width: 767px) { html:has([data-shell] main#content) { scroll-padding-bottom: 5rem; } }
   [data-shell] :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
   [data-shell] [data-surface="ink"] :focus-visible { outline-color: var(--primary-foreground); }
   [data-shell] [data-support-banner] :focus-visible { outline-color: var(--support-foreground); }
