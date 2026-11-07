@@ -158,6 +158,7 @@ export default {
         }
         await p.goto(CONSOLE + '/console')
         assert.equal((await p.locator('[data-tile="to_confirm"]').getAttribute('aria-label')).split(', ')[1], '7', "Home's To confirm tile counts merchant-1's, as the pill does")
+        assert.ok((await p.locator('[data-next-order]').innerText()).includes('Other shop 1·'), "the next order is merchant-1's own")
         const bannerH = await p.evaluate(() => document.querySelector('[data-support-banner]')?.getBoundingClientRect().height ?? 0)
         if (bannerH > 64) fail('support-banner-height', 'support-console-home', '390', `${Math.round(bannerH)} px`)
         await p.getByRole('button', { name: 'End now' }).click()

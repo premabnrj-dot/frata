@@ -65,11 +65,12 @@ export async function todaySummary(tenantId: string, now: Date): Promise<TodaySu
       .from(orders).where(and(eq(orders.tenantId, tenantId), standingSql(), gte(orders.placedAt, istDayStart(now, -6))))
       .groupBy(day)
 
-    // Risk last, in a savepoint: a timeout rolls back only the savepoint (and its SET LOCAL), not the read.
+    // Risk LAST, in a savepoint: a timeout rolls back only the savepoint (and its SET LOCAL), not the read. On
+    // success the 2 s limit stays for the rest of the transaction, so keep this the last statement.
     const facts = await tx.transaction(async (sp) => {
       await sp.execute(sql.raw(`set local statement_timeout = ${RISK_TIMEOUT_MS}`))
       return riskFactsWith(sp, tenantId, { tab: 'to_confirm' }, now)
-    }).catch((err) => { console.error('[today] risk', err instanceof Error ? err.name : err); return null })
+    }).catch((err) => { console.error('[today] risk', err instanceof Error ? err.name : 'error'); return null })
     const levels = facts ? new Map([...facts].map(([id, f]) => [id, risk(f).level])) : null
 
     const next: NextOrder | null = n ? {

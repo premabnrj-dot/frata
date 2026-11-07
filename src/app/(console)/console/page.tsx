@@ -27,13 +27,13 @@ export default async function ConsoleHome() {
   if (!auth.ok) return <Panel title={auth.message} />
   const tenantId = auth.membership.tenantId, canManage = auth.membership.role !== 'staff'
   const now = new Date()
-  const setup = await setupFor(tenantId).catch((err) => { console.error('[console home]', err instanceof Error ? err.name : err); return null })
+  const setup = await setupFor(tenantId).catch((err) => { console.error('[console home]', err instanceof Error ? err.name : 'error'); return null })
   if (!setup) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   // A failed summary is a page of "Couldn't count", never of zeros.
-  const s = setup.open ? await todaySummary(tenantId, now).catch((err) => { console.error('[today]', err instanceof Error ? err.name : err); return null }) : null
+  const s = setup.open ? await todaySummary(tenantId, now).catch((err) => { console.error('[today]', err instanceof Error ? err.name : 'error'); return null }) : null
 
   return (
-    <OpenMoment address={setup.address} header={<PageHeader title={setup.open ? 'Today' : 'Home'}
+    <OpenMoment key={tenantId} address={setup.address} header={<PageHeader title={setup.open ? 'Today' : 'Home'}
       meta={<>{setup.name} · <span className="font-mono">{setup.address}</span>{setup.open ? ` · ${todayLongIN(now)}` : ''}</>} />}>
       {setup.open ? <Today s={s} setup={setup} now={now} /> : <Checklist setup={setup} canManage={canManage} />}
     </OpenMoment>
