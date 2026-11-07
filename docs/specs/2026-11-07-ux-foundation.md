@@ -1,5 +1,5 @@
 # UX foundation (U): one shell, brand, colour and motion for Console and Admin
-Status: draft (awaiting owner sign-off) · Date: 2026-11-07 · Mockup: MOCKUP_URL · Approved: pending
+Status: draft (awaiting owner sign-off) · Date: 2026-11-07 · Mockup: https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC · Approved: pending
 
 Research: `docs/research/2026-11-07-ux-foundation.md` (current sources only,
 each dated). The phases are U0–U4. Each is usable on its own and gets its own
@@ -46,9 +46,8 @@ never mistake one for the other.
 | F7 | Low | Controls are 36 px tall on phones (passes WCAG 2.5.8's 24 px, below 44–48 px phone guidance) | 36 px |
 | F8 | Low | No dark tokens; `lucide-react` installed and unused | 0 |
 
-Stress-test results (300 orders, long, Devanagari and Tamil names, crore
-totals, 320 px, 200 % zoom, forced colours, slow 4G with 4× CPU) are in
-§ Stress test below and in the mockup.
+The live stress test added S1–S15 (§ Stress test), including **one bug that
+hides orders to confirm once a shop passes 100 orders** (S1).
 
 ## Research (see the research file for every source and date)
 
@@ -240,7 +239,75 @@ is written into 1D·3; U4 follows 1D·4b.
 
 ## Stress test
 
-STRESS_RESULTS
+Run on the committed e2e stack (production build, throwaway Postgres) on
+2026-11-07.
+
+**Seed:**
+- the shop renamed to 46 characters;
+- 300 orders across every state, with names that are long or in Devanagari,
+  Tamil, Gurmukhi and Bengali, and totals of ₹1,23,45,678, ₹99,99,999 and ₹0;
+- 60 products with 140-character and Hindi titles, some with no photo;
+- 60 merchants;
+- a live support session.
+
+**Run:**
+- widths 320, 390, 768 and 1280, plus 640 px to emulate 1280 at 200 %;
+- dark, forced colours and reduced motion;
+- Tab ×15 on three pages;
+- CPU 4× with fast 4G and slow 4G.
+
+Screenshots are in the mockup.
+
+| # | Severity | Screen · width | What | Measured | Goes to |
+|---|---|---|---|---|---|
+| S1 | **High (a bug)** | Orders · all | `listOrders(tenantId, limit = 100)` caps the list, and "to confirm" is counted from the capped list; no pager, no "of N" | **14 shown, 43 real**; 200 orders unreachable | Fix now (call 7); 1D·4b replaces |
+| S2 | High | Orders · all | Rows are not links; the keyboard reaches nothing in `<main>` | 0 focusable, 100 rows | 1D·4b |
+| S3 | High | Orders · 320–768 | Table scrolls sideways inside itself; Status and Total off-screen first | 286 of 797 px visible at 320 | U2 phone rows |
+| S4 | High | Product editor · 390 | Chip ×, quick-add, photo arrows far under 24 px; arrows 1.94:1 when disabled | 8×20, 10×16, 20×16 px | U1 (24 px hit area) |
+| S5 | Medium | Orders · all | `DataTableRow dimmed` uses opacity .6 → text below contrast | 2.59–2.73:1 on 51 runs | U1 (dim with `--muted-foreground`) |
+| S6 | Medium | Products · 390 | Long title squeezes its column to ~60 px; row ~430 px tall | table 457 in 356 px | U2 phone rows |
+| S7 | Medium | Product editor | Title input is the h1; cut mid-word; the h1's text is the label "Product title" | — | U2 `RecordHeader` |
+| S8 | Medium | Admin merchant + support · 390 | Page scrolls sideways (visits grid has a fixed 150 px column); long-name button wraps | 397 in 390 | U2 |
+| S9 | Medium | Support banner · 390 | Takes 16 % of the screen | 128 of 800 px | U2 one-line banner on phones, still not dismissable |
+| S10 | Medium | Focus · all | Visible on 15/15 stops, but 1 px at 50 % ink | ≈ 3:1 | U1: 2 px solid, 2 px offset |
+| S11 | Medium | Home · all | 300 orders, Home shows only a finished checklist; "16 products" vs "All 47" | — | U4; label "16 active" |
+| S12 | Low | Admin merchants | 20 px name links; "Open console" wraps at 1280; text sort (Brand 12 before Brand 2); a no-match search offers "Add the first merchant" | 35–39 targets < 24 px | U2 |
+| S13 | Low | Admin plans | Money and counts left-aligned; 15 px "Edit" links | 56×15 | U2 |
+| S14 | Low | Titles | Most pages "Frata"; every product "Product · Frata" | 7 of 10 | U2 |
+| S15 | Low | Dark, forced colours | Dark changes nothing; forced colours readable, but badges lose fills and the nav has no current-page cue | 0 rules | U1, U2 |
+
+**Passed:**
+- No page-level sideways scroll except S8.
+- Reduced motion is honoured.
+- Lakh and crore grouping is correct.
+- All five Indic scripts render.
+
+**Speed:** `/console/orders` (100 rows, 390 px, CPU 4×) gave first paint at
+708 ms on fast 4G and 1.76 s on slow 4G, with 118 kB JS, 180 kB of HTML
+decoded and 1,160 DOM nodes. The server and database were local, so U0 keeps
+this as the baseline and production will be slower. 1D's 50-row pages cut the
+HTML.
+
+**Taken into U1/U2 from this:**
+- Dim with colour, not opacity.
+- Every target has a 24 px hit area (padding, not a bigger icon), and the U0
+  flow asserts it.
+- Focus is 2 px solid ink with a 2 px offset (Blade moved to a 4 px ring,
+  2026-11-06).
+- `DataTable` gains a phone layout under 768 px:
+  - line 1 holds the link and the right-aligned figure;
+  - line 2 holds who, where and the badges;
+  - the whole row is one 56 px target.
+- A compact support banner on phones.
+- `RecordHeader` wraps a long title to two lines.
+- A natural sort and a correct no-match state in Admin.
+- Numbers right-aligned everywhere, including Admin plans.
+
+**Proposed for 1D·4b (its plan is not changed until you approve):**
+- counts from predicates, never from a capped list;
+- 50 rows a page with `Pager` and "1–50 of 300";
+- rows as links;
+- the phone row layout.
 
 ## Owner calls (recommendation first)
 
@@ -254,6 +321,8 @@ STRESS_RESULTS
 5. Home "Today" once the shop is open: **yes, as U4 after the queue**, or keep
    the checklist.
 6. Phone controls: **40 px under 768 px, 36 px above**, or 44 px, or keep 36 px.
+7. The orders-count bug (S1): **fix now as its own one-file commit** (a count
+   query of its own plus "Showing the newest 100 of N"), or leave it for 1D·4b.
 
 ## Practices to record in skills on approval (rule 6)
 
