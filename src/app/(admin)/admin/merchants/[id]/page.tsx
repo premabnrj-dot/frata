@@ -18,7 +18,7 @@ import { resendOwnerLinkAction } from './actions'
 import { Section } from '@/components/layout/section'
 import { MerchantTabs } from './tabs'
 
-/** The tab names the merchant ("Kesar Studio · Frata Admin"). */
+/** The tab names the merchant ("Kesar Studio · Frrata Admin"). */
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
   const { id } = await params
@@ -47,7 +47,7 @@ export default async function MerchantPage({ params, searchParams }: { params: P
         meta={<>{m.host && <span className="font-mono">{m.host}</span>}{m.host && ' · '}added {dayIN(m.tenant.createdAt)} · <Numeric>{m.ordersThisMonth.toLocaleString('en-IN')}</Numeric> orders this month</>}
         actions={<>
           <Link href={`/admin/merchants/${id}/plan`} className={button({ variant: 'secondary' })}>Change plan</Link>
-          {/* Names the merchant (§ Frata Admin); a long name wraps inside the button instead of overflowing it. */}
+          {/* Names the merchant (§ Frrata Admin); a long name wraps inside the button instead of overflowing it. */}
           <Link href={`/admin/merchants/${id}/support`} className={button({ size: 'wrap' })}>Open {m.tenant.name}&apos;s console</Link>
         </>} />
       <MerchantTabs id={id} on="overview" />

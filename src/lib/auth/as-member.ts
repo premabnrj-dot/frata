@@ -8,7 +8,7 @@ import { requireMember, type MemberResult } from './require-member'
 // FILE: src/lib/auth/as-member.ts
 //
 // EVERY CONSOLE WRITE GOES THROUGH HERE (check:actions). It checks the member,
-// opens the tenant transaction, runs the work, and — when the person is Frata
+// opens the tenant transaction, runs the work, and — when the person is Frrata
 // support on a visit — writes the audit row in the SAME transaction, so a
 // support change can never land without its record (owner call 2, ADR-0007).
 // =============================================================================

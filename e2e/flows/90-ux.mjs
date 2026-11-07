@@ -68,7 +68,7 @@ export default {
         if (m.current !== 1) fail('nav-current', page, label, `${m.current} marked`)
         if (!m.skip) fail('skip-link', page, label, 'first focusable is not "Skip to content"')
         if (label === '1280') {
-          if (!/ · /.test(m.title) || /^Product · Frata$/.test(m.title)) fail('title', page, label, `"${m.title}"`)
+          if (!/ · /.test(m.title) || /^Product · Fr+ata$/i.test(m.title)) fail('title', page, label, `"${m.title}"`)
           if (m.shadowEdge.length) fail('shadow-edge', page, label, m.shadowEdge.join('; '))
         }
         await p.screenshot({ path: t.out(`${page}-${label}`), fullPage: false })
@@ -226,9 +226,9 @@ export default {
         const [audit] = await db`select detail from audit_events where action = 'support.end' order by at desc limit 1`
         assert.deepEqual(audit?.detail, { by: 'sign-out' })
         await fc.close()
-        // A shop's tabs are the shop's: no "· Frata" on the bag or checkout (impact review U·2a).
+        // A shop's tabs are the shop's: no "· Frrata" (nor the old "Frata") on the bag or checkout (impact review U·2a).
         const sc = await t.browser.newContext(); const sp = await sc.newPage()
-        for (const path of ['/bag', '/checkout']) { await sp.goto(SHOP + path); assert.ok(!/Frata/.test(await sp.title()), `${path} title: ${await sp.title()}`) }
+        for (const path of ['/bag', '/checkout']) { await sp.goto(SHOP + path); assert.ok(!/fr+ata/i.test(await sp.title()), `${path} title: ${await sp.title()}`) }
         await sc.close()
       })
 
@@ -318,6 +318,15 @@ export default {
         assert.equal(await h.locator('svg .animate-draw-circle').count(), 0, 'once: not on the next visit')
         assert.equal(await h.getByText('Your shop is open', { exact: true }).count(), 0)
         await hc.close()
+      })
+
+      await t.step('the frrata icon: the platform serves it; a shop tab never wears it (brand rule 34)', async () => {
+        const ctx = await t.browser.newContext(); const p = await ctx.newPage()
+        const r = await p.request.get(CONSOLE + '/frrata-icon?v=1'); assert.equal(r.status(), 200); assert.match(r.headers()['content-type'] ?? '', /image\/png/)
+        await p.goto(CONSOLE + '/login'); assert.match(await p.locator('link[rel="icon"]').first().getAttribute('href'), /^\/frrata-icon/)
+        await p.goto(SHOP + '/'); const shopIcons = await p.locator('link[rel="icon"]').evaluateAll((ls) => ls.map((l) => l.getAttribute('href')))
+        assert.ok(!shopIcons.some((h) => /frrata/.test(h ?? '')), `a shop's icon links: ${JSON.stringify(shopIcons)}`)
+        await ctx.close()
       })
 
       await t.step('Indic fonts download only when a name needs them, and never on the shop (plan U · A4)', async () => {

@@ -26,7 +26,7 @@ function Share({ c }: { c: ClientRow }) {
   return <span><span className="font-mono">{PARTNER_TERMS.shareBps / 100}%</span> until <span className="font-mono">{c.removedAt ? dayIN(w.endsAt) : monthYearIN(w.endsAt)}</span></span>
 }
 
-/** Partner workspace › Clients (approved mockup screens 5, 5b, 5c). Frata's facts per store, never its orders. */
+/** Partner workspace › Clients (approved mockup screens 5, 5b, 5c). Frrata's facts per store, never its orders. */
 export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const auth = await requirePartner()
   if (!auth.ok) return <Panel title={auth.message} />
@@ -62,7 +62,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
       {shown.length === 0 ? <Panel title="No store here yet" /> : (
         <Section flush ariaLabel="Client stores"><ul data-list className="divide-y divide-border">
           <li aria-hidden="true" className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.2fr)_6rem_minmax(0,1fr)_7rem] gap-3 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground lg:grid">
-            <span>Store</span><span>Stage</span><span>Owner</span><span>Plan</span><span className="inline-flex items-center">Your share<InfoTip about="your share">{PARTNER_TERMS.shareBps / 100}% of what Frata collects from the store, ex GST, for {PARTNER_TERMS.shareMonths} months from its first opening, while you are its partner. Removed: {PARTNER_TERMS.noticeDays} more days. Paid when Frata billing starts.</InfoTip></span><span />
+            <span>Store</span><span>Stage</span><span>Owner</span><span>Plan</span><span className="inline-flex items-center">Your share<InfoTip about="your share">{PARTNER_TERMS.shareBps / 100}% of what Frrata collects from the store, ex GST, for {PARTNER_TERMS.shareMonths} months from its first opening, while you are its partner. Removed: {PARTNER_TERMS.noticeDays} more days. Paid when Frrata billing starts.</InfoTip></span><span />
           </li>
           {shown.map(({ c, stage }) => (
             <li key={c.tenantId} className={`grid gap-x-3 gap-y-1 px-4 py-3 text-sm lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.2fr)_6rem_minmax(0,1fr)_7rem] lg:items-center ${stage === 'ended' ? 'text-muted-foreground' : ''}`}>

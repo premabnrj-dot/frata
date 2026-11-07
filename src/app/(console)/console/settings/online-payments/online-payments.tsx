@@ -44,13 +44,13 @@ export function OnlinePayments({ status, support, available, now }: { status: St
     <>
       <Section>
         <div className="flex items-center justify-between gap-3"><h2 className="text-section font-semibold">Razorpay</h2>{badge}</div>
-        <p className="text-sm text-muted-foreground">Shoppers pay by UPI, card or netbanking into your own Razorpay account. Razorpay settles to your bank; Frata never holds your money.</p>
+        <p className="text-sm text-muted-foreground">Shoppers pay by UPI, card or netbanking into your own Razorpay account. Razorpay settles to your bank; Frrata never holds your money.</p>
         {status?.problem && <p role="alert" className="rounded-md bg-danger p-3 text-sm text-danger-text">{status.problem}</p>}
       </Section>
 
       <Section>
         <h2 className="text-section font-semibold">1 · Your keys</h2>
-        {support ? <p className="text-sm text-muted-foreground">Only the shop’s owner can connect or change Razorpay keys — not Frata support.</p> : !available ? <p className="text-sm text-muted-foreground">Online payments are not switched on for Frata yet.</p> : (
+        {support ? <p className="text-sm text-muted-foreground">Only the shop’s owner can connect or change Razorpay keys — not Frrata support.</p> : !available ? <p className="text-sm text-muted-foreground">Online payments are not switched on for Frrata yet.</p> : (
           <>
             <div className="space-y-1"><label htmlFor="key-id" className="block text-sm font-medium">Key ID</label>
               <input id="key-id" value={keyId} onChange={(e) => setKeyId(e.target.value)} autoComplete="off" spellCheck={false} placeholder="rzp_live_…" aria-invalid={err?.field === 'keyId' || undefined}
@@ -90,7 +90,7 @@ export function OnlinePayments({ status, support, available, now }: { status: St
       {status && !support && (
         <Section className="text-sm">
           {confirm
-            ? <div className="flex flex-wrap items-center gap-3"><span>Disconnect Razorpay? Shoppers can then pay on delivery only. Past orders are kept.</span><Button variant="secondary" disabled={pending} onClick={disconnect}>Disconnect</Button><button type="button" className="inline-flex min-h-6 items-center underline" onClick={() => setConfirm(false)}>Keep it</button></div>
+            ? <div className="flex flex-wrap items-center gap-3"><span>Disconnect Razorpay? Shoppers can then pay on delivery only. Past orders are kept.</span><Button variant="secondary" className="after:hidden" /* undoes something: no thread (brand rule 37) */ disabled={pending} onClick={disconnect}>Disconnect</Button><button type="button" className="inline-flex min-h-6 items-center underline" onClick={() => setConfirm(false)}>Keep it</button></div>
             : <button type="button" className="inline-flex min-h-6 items-center text-danger-text underline" onClick={() => setConfirm(true)}>Disconnect Razorpay</button>}
         </Section>
       )}

@@ -64,7 +64,7 @@ export function CreateShopForm({ shopDomain }: { shopDomain: string }) {
   return (
     <div className="space-y-5">
       <div className="h-1 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-        <div className="h-full w-full origin-left bg-brand transition-transform duration-slow ease-standard" style={{ transform: `scaleX(${stepNo / 3})` }} />
+        <div className="h-full w-full origin-left bg-thread transition-transform duration-slow ease-standard" style={{ transform: `scaleX(${stepNo / 3})` }} />
       </div>
       <p className="text-xs text-muted-foreground">Step <span className="font-mono">{stepNo}</span> of <span className="font-mono">3</span></p>
 

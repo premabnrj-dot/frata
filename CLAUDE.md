@@ -1,4 +1,4 @@
-# Frata — LLM context file
+# Frrata — LLM context file
 
 > **This file holds RULES, not history.** It loads before every task. A fact
 > belongs here only if it is a rule an agent must obey and a script cannot check.
@@ -7,7 +7,8 @@
 
 ## What this product is
 
-A fashion-first commerce platform for small and mid-size Indian D2C brands:
+**Frrata** (formerly Frata; internal names such as the repo, `frata_app` and the Vercel and Supabase projects keep the
+old spelling) is a fashion-first commerce platform for small and mid-size Indian D2C brands:
 COD-heavy, Instagram-driven, no developer. One deployment, three surfaces that
 share neither a look nor a gate:
 
@@ -86,7 +87,7 @@ run a new gate against the file that describes it.
 ## Before you commit
 
 ```bash
-npm test          # check:hex layers dates fetch config size tenant actions states contrast scale voice motion clock modules, then vitest
+npm test          # check:hex layers dates fetch config size tenant actions states contrast scale voice motion clock modules name, then vitest
 npm run typecheck
 ```
 

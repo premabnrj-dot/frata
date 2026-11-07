@@ -7,6 +7,7 @@ import { frataWhatsappLink } from '@/lib/site'
 import { SignInFlow } from '../login/sign-in-flow'
 import { CreateShopForm } from './create-shop-form'
 import { SHELL_FONT_VARS } from '@/components/shell/fonts'
+import { Wordmark } from '@/components/brand/wordmark'
 
 export const metadata = { title: 'Start your shop' }
 export const dynamic = 'force-dynamic'
@@ -23,14 +24,14 @@ export default async function StartPage() {
   return (
     <main data-shell className={`min-h-dvh bg-background ${SHELL_FONT_VARS}`}>
       <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-8">
-        <Link href="/" className="text-base font-semibold text-brand">Frata</Link>
+        <Link href="/" aria-label="Frrata home" className="inline-flex min-h-6 items-center"><Wordmark thread label={null} className="h-5" /></Link>
         {!auth.ok && <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">Sign in</Link>}
       </header>
       <div className="mx-auto grid max-w-4xl gap-10 px-4 py-10 sm:px-8 md:grid-cols-[minmax(0,1fr)_260px]">
         <div className="max-w-md">
           {auth.ok ? <CreateShopForm shopDomain={SHOP_DOMAIN} /> : (
             <div className="space-y-4">
-              <h1 className="text-2xl font-semibold tracking-tight">Start your shop</h1>
+              <h1 className="font-display text-2xl font-semibold tracking-tight">Start your shop</h1>
               <SignInFlow intent="start" />
             </div>
           )}

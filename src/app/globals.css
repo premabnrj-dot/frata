@@ -1,14 +1,17 @@
 @import "tailwindcss";
 
 /* =============================================================================
-   FRATA TOKENS — the ONLY file where a colour is written as a hex.
+   FRRATA TOKENS — the ONLY file where a colour is written as a hex.
    scripts/check-hex.mjs fails a hex or a raw palette class anywhere else.
 
    Console: neutral, dense, numbers first. The fashion lives in the storefront,
    which gets its own theme tokens per merchant (frata-design-language).
 
-   --primary is INTERACTION (buttons, links, focus). --brand is the Frata mark
-   only. Wiring the brand into --primary would turn every button oxblood.
+   --primary is INTERACTION (buttons, focus). --brand is rani, the frrata mark
+   (brand spec 2026-11-07): never a button fill, a number or a status. It shows
+   as a TINGE: --thread (the 2 px line under a primary button, the current tab,
+   the loading bar, a link's underline) and one detail per icon (--icon-accent,
+   set only inside [data-tinge] frames). Rani as text is --brand-text only.
    Borders, not shadows: only floating things (popover, menu) get a shadow.
    Every text pair below is ≥ 4.5:1 on its background; field edges, focus and
    status marks are ≥ 3:1 — in light and in dark. scripts/check-contrast.mjs
@@ -36,8 +39,14 @@
   --input: #8C857F;              /* FIELD EDGE: fields, selects, checkboxes, switches, secondary buttons (3.64:1) */
   --ring: #1C1917;
   --scrim: color-mix(in srgb, var(--foreground) 45%, transparent); /* behind a dialog: the ink at 45%, in both themes */
-  --brand: #7A1F2B;              /* oxblood — the mark, never a button */
+  --brand: #D61F69;              /* rani — the mark and brand moments; never a button fill, a number or a status */
   --brand-foreground: #FFFFFF;
+  --brand-text: #A8124F;         /* rani as words (rani deep): the only way the brand colour is text */
+  --brand-on-ink: #FF4F93;       /* rani on an ink surface (the monogram's thread, an icon's tinge on ink) */
+  --thread: #D61F69;             /* THE THREAD: a 2 px line, never text (≥ 3:1 on primary and card) */
+  /* Brand-surface companions (sign-in, the website, empty-state drawings): never on a control, never text. */
+  --haldi: #F2B233;
+  --neel: #23307A;
 
   /* Status pairs: background, then the text that sits on it. */
   --ok: #E9F6EC;      --ok-text: #1E7B52;
@@ -50,9 +59,9 @@
   /* The support-mode banner (ADR-0007) and nothing else. */
   --support: #8A5000; --support-foreground: #FFFFFF;
   /* ILLUSTRATION — pictograms and spot illustrations only (frata-design-language § Graphic language).
-     Ink line on paper, one warm fill, two accents. Never on a control, never oxblood, never the only sign of anything. */
+     Ink line on paper, one warm fill, two accents. Never on a control, never rani, never the only sign of anything. */
   --illo-line: #1C1917; --illo-paper: #FFFFFF; --illo-fill: #EFEBE5;
-  --illo-haldi: #E8B04B; --illo-haldi-soft: #FBEFD2; --illo-indigo-soft: #DCE3F5;
+  --illo-haldi: var(--haldi); --illo-haldi-soft: #FBEFD2; --illo-indigo-soft: #DCE3F5;
 
   --radius: 0.375rem;
 }
@@ -79,8 +88,13 @@
   --border: #34302C;
   --input: #6E6760;
   --ring: #EDEAE6;
-  --brand: #E0828D;
+  --brand: #FF4F93;
   --brand-foreground: #141211;
+  --brand-text: #FF7DAE;
+  --brand-on-ink: #A8124F;       /* dark: the "ink" surface is light */
+  --thread: #D61F69;
+  --haldi: #D9A440;
+  --neel: #A9B5F4;
   --ok: #0F2A1C;      --ok-text: #7FD3A6;
   --warn: #33290A;    --warn-text: #F2C14E;
   --danger: #3A1416;  --danger-text: #F59A9C;
@@ -89,7 +103,7 @@
   --ok-mark: #7FD3A6; --warn-mark: #F2C14E; --danger-mark: #F59A9C; --info-mark: #A3B6F5;
   --support: #8A5000; --support-foreground: #FFFFFF;
   --illo-line: #EDEAE6; --illo-paper: #1C1A18; --illo-fill: #2A2623;
-  --illo-haldi: #D9A440; --illo-haldi-soft: #3A3018; --illo-indigo-soft: #222B44;
+  --illo-haldi: var(--haldi); --illo-haldi-soft: #3A3018; --illo-indigo-soft: #222B44;
 }
 
 @theme inline {
@@ -114,6 +128,11 @@
   --color-ring: var(--ring);
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
+  --color-brand-text: var(--brand-text);
+  --color-brand-on-ink: var(--brand-on-ink);
+  --color-thread: var(--thread);
+  --color-haldi: var(--haldi);
+  --color-neel: var(--neel);
   --color-ok: var(--ok);
   --color-ok-text: var(--ok-text);
   --color-warn: var(--warn);
@@ -143,6 +162,7 @@
 
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains);
+  --font-display: var(--font-display-stack);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -167,6 +187,15 @@
   --shadow-crop: 0 0 0 1px rgb(0 0 0 / 0.5), 0 0 0 999px rgb(0 0 0 / 0.35);
 }
 
+/* THE BLOCK PRINT (brand spec, chapter 5): a repeat tile from the mark's quarter circle (the r's arm) and circle
+   (the a's bowl), like a Bagru block. Brand surfaces only (sign-in, brand empty states), at 5%, never behind text
+   you work with. A mask over a token, so it follows the theme. */
+@utility block-print {
+  position: relative; isolation: isolate;
+  &::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0.06; background: var(--block-print-ink, var(--neel));
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48' fill='none' stroke='black' stroke-width='3'%3E%3Ccircle cx='24' cy='24' r='8'/%3E%3Cpath d='M0 24a24 24 0 0 1 24-24M24 48a24 24 0 0 1 24-24'/%3E%3C/svg%3E") repeat 0 0 / 48px 48px; }
+}
+
 @layer base {
   * { @apply border-border outline-ring/50; }
   html { @apply font-sans; }
@@ -178,6 +207,8 @@
      Scoped so the storefront keeps its own (frata-design-language § UX foundation rule 5). */
   /* The shell's stack: Inter, then Noto for Indic names (src/components/shell/fonts.ts). */
   [data-shell] { --font-shell: var(--font-inter), var(--font-noto-deva), var(--font-noto-beng), var(--font-noto-guru), var(--font-noto-taml), system-ui, sans-serif; font-family: var(--font-shell); }
+  /* The display face (page titles, the brand moment): Bricolage, then the same Indic fallbacks, since a title can be a name. */
+  [data-shell] { --font-display-stack: var(--font-bricolage), var(--font-noto-deva), var(--font-noto-beng), var(--font-noto-guru), var(--font-noto-taml), var(--font-inter), system-ui, sans-serif; }
   [data-script] { line-height: 1.8; }
   /* TABLES ON A PHONE BECOME ROWS (rule 15; src/components/data/data-table.tsx): one DOM, reflowed. */
   @media (max-width: 767px) {
@@ -208,6 +239,12 @@
      and of the phone's fixed bottom bar. */
   html:has([data-support-banner]) { scroll-padding-top: 3.5rem; }
   @media (max-width: 767px) { html:has([data-shell] main#content) { scroll-padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px)); } }
+  /* THE TINGE (brand spec, chapter 4): one detail per icon in rani, only inside a frame that asks for it
+     (data-tinge: the navs and the More sheet). Outside one, icons are one colour: in a table, colour means status. */
+  [data-tinge] { --icon-accent: var(--brand); }
+  [data-surface="ink"] [data-tinge], [data-surface="ink"][data-tinge] { --icon-accent: var(--brand-on-ink); }
+  /* A link in a working page: ink words, a thread-coloured underline (brand spec, chapter 5). */
+  [data-shell] main#content a.underline { text-decoration-color: var(--thread); text-decoration-thickness: 1.5px; }
   [data-shell] :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
   [data-shell] [data-surface="ink"] :focus-visible { outline-color: var(--primary-foreground); }
   [data-shell] [data-support-banner] :focus-visible { outline-color: var(--support-foreground); }

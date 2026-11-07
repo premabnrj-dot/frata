@@ -24,7 +24,7 @@ export default async function SupportStartPage({ params }: { params: Promise<{ i
   return (
     <Section className="mx-auto max-w-lg"><form action={startSupportAction} className="space-y-5">
       <div className="space-y-1">
-        <h1 className="text-xl font-semibold">Open {m.tenant.name}&apos;s console as Frata support</h1>
+        <h1 className="text-xl font-semibold">Open {m.tenant.name}&apos;s console as Frrata support</h1>
         <p className="text-sm text-muted-foreground">{owner?.email ?? 'The owner'} sees this visit in {m.tenant.name}&apos;s activity. Everything you change is recorded with your name and this reason.</p>
       </div>
       <input type="hidden" name="tenantId" value={id} />

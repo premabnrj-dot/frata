@@ -12,7 +12,7 @@ const RETURN_WORDS: Record<string, (d: number) => string | null> = {
   exchange_or_refund: (d) => `${d}-day returns and exchanges`, exchange_only: (d) => `${d}-day exchanges`, refund_only: (d) => `${d}-day returns`, none: () => 'No returns on this shop',
 }
 
-/** Details named from the taxonomy (and Frata's additions), in the merchant's chosen order. */
+/** Details named from the taxonomy (and Frrata's additions), in the merchant's chosen order. */
 export function detailsOf(p: Pick<StoreProduct, 'attributes'>): { name: string; value: string }[] {
   return Object.entries(p.attributes).flatMap(([h, ids]) => {
     const a = describeAttribute(h)

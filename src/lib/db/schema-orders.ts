@@ -28,7 +28,7 @@ export const orders = pgTable('orders', {
   pricesIncludeGst: boolean('prices_include_gst').notNull().default(true),
   /** What the customer pays, excluding GST: what profit.ts reads. Derived, never written. */
   netRevenue: money('net_revenue').generatedAlwaysAs(sql`total - gst_total`),
-  /** The lines' taxable value: the base of Frata's delivered-order fee (not shipping, not the COD fee). */
+  /** The lines' taxable value: the base of Frrata's delivered-order fee (not shipping, not the COD fee). */
   merchandiseNet: money('merchandise_net').notNull().default(0),
   /** From the lines' cost snapshot; null when any line's cost is unknown (unknown is not ₹0). */
   cogs: money('cogs'),

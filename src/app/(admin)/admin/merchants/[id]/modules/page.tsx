@@ -75,7 +75,7 @@ export default async function MerchantModulesPage({ params, searchParams }: { pa
                   {canChange && addon && (a.how === 'trial' || a.how === 'add_on') && (
                     <form action={endAddonAction}>
                       <input type="hidden" name="tenantId" value={id} /><input type="hidden" name="module" value={k} /><input type="hidden" name="addonId" value={addon} />
-                      <Button type="submit" variant="secondary">End {a.how === 'trial' ? 'trial' : 'add-on'}</Button>
+                      <Button type="submit" variant="secondary" className="after:hidden">End {a.how === 'trial' ? 'trial' : 'add-on'}</Button>
                     </form>
                   )}
                 </Td>

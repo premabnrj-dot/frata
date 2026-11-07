@@ -141,14 +141,14 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
           </Section>
           <Section><h2 className="flex items-center text-section font-semibold">Photos<InfoTip about="photos">The first is the cover: show the piece on a person. A large photo is fine; it is resized before it uploads.</InfoTip></h2><Photos productId={id} tenantId={tenantId} photos={photos} colours={colourOpt?.values ?? []} enabled={blobReady} /></Section>
           <Section>
-            <h2 className="flex items-center text-section font-semibold">Sizes, colours and stock<InfoTip about="sizes, colours and stock">Your cost is never shown to shoppers: it is how Frata works out profit on each order. When it runs out applies at 0 stock: stop selling, take pre-orders, or make to order. An empty SKU is made for you when you save.</InfoTip></h2>
+            <h2 className="flex items-center text-section font-semibold">Sizes, colours and stock<InfoTip about="sizes, colours and stock">Your cost is never shown to shoppers: it is how Frrata works out profit on each order. When it runs out applies at 0 stock: stop selling, take pre-orders, or make to order. An empty SKU is made for you when you save.</InfoTip></h2>
             <OptionsEditor options={d.options} onChange={(options) => set({ options })} error={errors.options} />
             {colourOpt && colourOpt.values.length > 0 && <ColoursPanel values={colourOpt.values} colours={d.colours} onChange={(colours) => set({ colours })} photos={photos} families={families} />}
             {combos.length > 0 && <VariantGrid options={opts} cells={d.cells} errors={errors} autoSku={(values) => skuFor(shop.skuPrefix, d.handle || defaults.handle, values)}
               onChange={(k, patch) => { setD((x) => ({ ...x, cells: { ...x.cells, [k]: { ...(x.cells[k] ?? EMPTY_CELL), ...patch } } })); setMsg(null) }} />}
           </Section>
           <Section>
-            <h2 className="flex items-center text-section font-semibold">Details<InfoTip about="details">Asked for by the product’s category. Shoppers filter by them, and Google and Meta read them. Values marked · are Frata’s, for Indian crafts and fabrics; each is sent to Google as its nearest standard value.</InfoTip></h2>
+            <h2 className="flex items-center text-section font-semibold">Details<InfoTip about="details">Asked for by the product’s category. Shoppers filter by them, and Google and Meta read them. Values marked · are Frrata’s, for Indian crafts and fabrics; each is sent to Google as its nearest standard value.</InfoTip></h2>
             <DetailsPanel attributes={d.category?.attributes ?? []} values={d.attributes} onChange={(attributes) => set({ attributes })} />
           </Section>
           <Section><h2 className="text-section font-semibold">Size chart</h2><SizeChartPanel types={types} typeId={d.typeId} onType={(typeId) => set({ typeId })} /></Section>

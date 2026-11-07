@@ -25,7 +25,7 @@ import { join, relative } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const DIRS = ['src/app/(console)', 'src/app/(admin)', 'src/app/(partner)', 'src/app/login', 'src/app/start', 'src/app/choose', 'src/app/handover', 'src/app/partners',
-  'src/components/shell', 'src/components/data', 'src/components/layout', 'src/components/nav', 'src/components/ui', 'src/app/globals.css']
+  'src/components/shell', 'src/components/brand', 'src/components/icons', 'src/components/data', 'src/components/layout', 'src/components/nav', 'src/components/ui', 'src/app/globals.css']
 const MOVING = ['opacity', 'transform', 'scale', 'translate', 'rotate']
 const LIMIT_MS = 400
 /** Keyframes allowed to animate something else, or for longer than 400 ms: what each may animate, for how long, and why. */

@@ -190,7 +190,7 @@ export async function editContact(tx: Tx, tenantId: string, actor: Actor, orderI
 /**
  * Cancel, with a reason. "Put stock back" returns exactly the lines whose stock was taken (per line), and says
  * which variants came back from 0 so the caller refreshes the shop. A paid order says what to refund in Razorpay
- * (Frata refunds nothing itself). An issued invoice stays, shown cancelled; its number is never reused.
+ * (Frrata refunds nothing itself). An issued invoice stays, shown cancelled; its number is never reused.
  */
 export async function cancel(tx: Tx, tenantId: string, actor: Actor, orderId: string, c0: { reason: CancelReason; note?: string; restock: boolean }, now = new Date()):
   Promise<Done<{ refund: number; backInStock: string[] }>> {

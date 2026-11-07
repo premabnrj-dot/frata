@@ -10,11 +10,11 @@ export async function listStaff(staff: StaffOk) {
   return adminDb().select().from(platformStaff).orderBy(asc(platformStaff.email))
 }
 
-/** Adds someone who has signed in to Frata at least once with a confirmed email. */
+/** Adds someone who has signed in to Frrata at least once with a confirmed email. */
 export async function addStaff(staff: StaffOk, email: string, role: StaffRole): Promise<{ ok: true } | { error: string }> {
   const rows = await adminDb().execute<{ id: string | null }>(sql`select app_find_confirmed_user(${email}) as id`)
   const userId = rows[0]?.id
-  if (!userId) return { error: 'No one with that email has signed in to Frata yet. Ask them to sign in once, then add them.' }
+  if (!userId) return { error: 'No one with that email has signed in to Frrata yet. Ask them to sign in once, then add them.' }
   return adminDb().transaction(async (tx) => {
     const added = await tx.insert(platformStaff).values({ userId, email: email.toLowerCase(), role, createdBy: staff.userId })
       .onConflictDoNothing().returning({ userId: platformStaff.userId })

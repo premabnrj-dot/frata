@@ -14,7 +14,7 @@ import { orderLines, orders } from '@/lib/db/schema-orders'
 //
 // WHAT THE PACKING SLIP AND THE INVOICE PRINT (1D·5), for orders of ONE shop,
 // found by number inside the tenant transaction the caller opened (asMember,
-// so a Frata support visit that opens a document is audited — documents carry
+// so a Frrata support visit that opens a document is audited — documents carry
 // the shopper's full address). Read exactly as stored at placement and
 // packing: prices, rates, shares of the charges, the seller's GSTIN.
 // Here, not in src/lib/queries/: it takes the caller's transaction, because

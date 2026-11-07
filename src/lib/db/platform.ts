@@ -33,7 +33,7 @@ export type Membership = {
   tenantId: string
   tenantName: string
   role: MemberRole
-  /** Set when this access is a Frata support visit, not a membership. */
+  /** Set when this access is a Frrata support visit, not a membership. */
   supportSessionId: string | null
 }
 
@@ -87,7 +87,7 @@ export async function createShop(p: { uid: string; name: string; slug: string; p
   }
 }
 
-// ── The Frata website: the public price list (plans are readable by frata_app) ─
+// ── The Frrata website: the public price list (plans are readable by frata_app) ─
 
 export type PublicPlan = { code: string; name: string; monthlyPrice: number; includedOrders: number; feeBps: number; features: string[] }
 

@@ -10,8 +10,8 @@ import { requireMember, ANY_MEMBER } from '@/lib/auth/require-member'
 
 export const dynamic = 'force-dynamic'
 
-/** Tab titles "Merchants · Frata Admin" (rule 11). */
-export const metadata: Metadata = { title: { template: '%s · Frata Admin', default: 'Frata Admin' } }
+/** Tab titles "Merchants · Frrata Admin" (rule 11). */
+export const metadata: Metadata = { title: { template: '%s · Frrata Admin', default: 'Frrata Admin' } }
 
 /** The frame and the refusal. ⚠️ It guards nothing below: every page calls requireStaff itself. */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -19,7 +19,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!staff.ok) {
     return (
       <main data-shell className="p-6">
-        <Panel title={staff.reason === 'not_configured' ? staff.message : 'Frata Admin is for Frata staff'}
+        <Panel title={staff.reason === 'not_configured' ? staff.message : 'Frrata Admin is for Frrata staff'}
           action={<Link href="/console" className={button({ variant: 'secondary' })}>Go to your console</Link>}>
           {staff.reason === 'not_configured' && <>Set <code>ADMIN_DATABASE_URL</code> in Vercel (Production), then redeploy.</>}
         </Panel>
@@ -49,7 +49,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const activity: NavItem = { href: '/admin/activity', label: 'Activity', icon: 'activity' }
   const foot: NavItem[] = ownStore ? [{ href: '/console', label: `${ownStore} console`, icon: 'external' }] : []
   return (
-    <AppShell ink title="Frata Admin" tag="STAFF" navLabel="Admin" groups={[{ label: 'Merchants', items: [merchants, partnersItem, plans, modulesItem] }, { label: 'Frata', items: [staffItem, activity] }]}
+    <AppShell ink title="Frrata Admin" tag="STAFF" navLabel="Admin" groups={[{ label: 'Merchants', items: [merchants, partnersItem, plans, modulesItem] }, { label: 'Frrata', items: [staffItem, activity] }]}
       tabs={[merchants, plans, staffItem]} more={[partnersItem, modulesItem, activity]} foot={foot} email={staff.email}>
       {children}
     </AppShell>

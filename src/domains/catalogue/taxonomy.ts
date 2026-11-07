@@ -6,7 +6,7 @@
 // scripts/data/taxonomy.mjs from tag v2026-10). Fixed: merchants pick, never
 // edit; a new release is adopted on purpose. Each category brings the
 // attributes it asks for, and maps to a Google category for feeds.
-// Frata adds what Indian fashion needs and the standard lacks (occasion, more
+// Frrata adds what Indian fashion needs and the standard lacks (occasion, more
 // crafts and fabrics, fit, what a set includes), each mapped to the nearest
 // standard value so Google and Meta still read it. Pure (data only).
 // =============================================================================
@@ -70,7 +70,7 @@ const FRATA_ATTRIBUTES: Attribute[] = [
 ]
 const SETS: Attribute = { handle: 'frata-set-includes', name: 'Set includes', frata: true, values: ['Kurta only', 'Kurta and dupatta', 'Kurta and pants', 'Kurta, pants and dupatta', 'Sari and blouse piece', 'Lehenga, blouse and dupatta'].map((n) => ({ id: `frata:${n.toLowerCase().replace(/[^a-z]+/g, '-')}`, name: n, frata: true })) }
 
-/** The details a category asks for: its standard attributes (with Frata values added), then Frata's own. */
+/** The details a category asks for: its standard attributes (with Frrata values added), then Frrata's own. */
 export function attributesFor(categoryId: string | null): Attribute[] {
   const c = categoryById(categoryId)
   if (!c) return []
@@ -103,7 +103,7 @@ export function cleanAttributes(categoryId: string | null, sent: Record<string, 
   return out
 }
 
-/** Any attribute by handle, with Frata's added values (for naming a saved value outside a category). */
+/** Any attribute by handle, with Frrata's added values (for naming a saved value outside a category). */
 export function describeAttribute(handle: string): Attribute | null {
   const own = [...FRATA_ATTRIBUTES, SETS].find((a) => a.handle === handle)
   if (own) return own

@@ -36,7 +36,7 @@ export type MemberResult =
 
 export const requireMember = cache(async (allowed: readonly MemberRole[]): Promise<MemberResult> => {
   if (!isAuthConfigured() || !isDatabaseConfigured()) {
-    return { ok: false, reason: 'not_configured', message: 'Frata is not connected yet' }
+    return { ok: false, reason: 'not_configured', message: 'Frrata is not connected yet' }
   }
   const supabase = await createServerSupabase()
   const { data: { user } } = await supabase.auth.getUser()

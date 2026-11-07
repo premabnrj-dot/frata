@@ -10,7 +10,7 @@ import { frataWhatsappLink } from '@/lib/site'
 
 export const metadata = { title: 'Your details' }
 
-/** What Frata holds about the partner. Changes after approval go through Frata (WhatsApp), so they are on record. */
+/** What Frrata holds about the partner. Changes after approval go through Frrata (WhatsApp), so they are on record. */
 export default async function PartnerDetailsPage() {
   const auth = await requirePartner()
   if (!auth.ok) return <Panel title={auth.message} />

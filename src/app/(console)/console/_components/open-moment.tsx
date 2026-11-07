@@ -28,11 +28,11 @@ export function OpenMoment({ address, header, children }: { address: string; hea
       <div role="status" className={just ? undefined : 'sr-only'}>
         {just && (
           <Section className="flex items-center gap-3 space-y-0">
-            <svg viewBox="0 0 56 56" width="40" height="40" fill="none" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 text-ok-mark">
+            <svg viewBox="0 0 56 56" width="40" height="40" fill="none" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 text-brand">
               <circle cx="28" cy="28" r="24" stroke="currentColor" pathLength={1} className="animate-draw-circle" />
               <path d="M18 29l7 7 13-15" stroke="currentColor" pathLength={1} className="animate-draw-tick" />
             </svg>
-            <p className="text-sm"><b className="block text-base">Your shop is open</b>Shoppers can order at <a href={`https://${address}`} target="_blank" rel="noreferrer" className="inline-flex min-h-6 items-center font-mono underline">{address}</a></p>
+            <p className="text-sm"><b className="block font-display text-xl font-semibold tracking-tight">Your shop is open</b>Shoppers can order at <a href={`https://${address}`} target="_blank" rel="noreferrer" className="inline-flex min-h-6 items-center font-mono underline">{address}</a></p>
           </Section>
         )}
       </div>

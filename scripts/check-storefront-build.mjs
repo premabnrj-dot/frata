@@ -29,7 +29,11 @@ const build = read('app-build-manifest.json').pages ?? {}
 const sizes = new Map()
 const gz = (f) => sizes.get(f) ?? sizes.set(f, gzipSync(readFileSync(join('.next', f))).length).get(f)
 for (const [k, files] of Object.entries(build)) {
-  if (!k.startsWith('/s/[host]') || !k.endsWith('/page')) continue
+  if (!k.startsWith('/s/[host]')) continue
+  // The shell's display face never reaches a shop (brand spec: shops wear their own type; src/components/shell/fonts.ts):
+  // every shop key, layouts and error pages included.
+  for (const f of files) if (/\.(css|js)$/.test(f) && /bricolage/i.test(readFileSync(join('.next', f), 'utf8'))) failures.push(`${k}  loads the shell's display face (Bricolage) through ${f}`)
+  if (!k.endsWith('/page')) continue
   const kb = files.filter((f) => f.endsWith('.js')).reduce((a, f) => a + gz(f), 0) / 1024
   if (kb > BUDGET_KB) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${BUDGET_KB} kB) — split what the first paint does not need`)
 }

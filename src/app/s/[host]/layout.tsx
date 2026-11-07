@@ -7,9 +7,10 @@ export const generateStaticParams = () => []
 // Next 15 rendered every shop page per request despite the empty generateStaticParams (tenancy audit 2026-11-07).
 export const dynamic = 'force-static'
 
-/** A shop's tabs are the shop's, never "… · Frata": this stops the root template (impact review U·2a). Its pages set
+/** A shop's tabs are the shop's, never "… · Frrata": this stops the root template (impact review U·2a). Its pages set
  * absolute titles ("Shop all | Kesar Studio"); the bag, checkout and order pages keep their plain ones. */
-export const metadata = { title: { template: '%s', default: 'Shop' } }
+// No platform icon on a shop's tab (brand spec): an empty icon until shops get their own favicon.
+export const metadata = { title: { template: '%s', default: 'Shop' }, icons: { icon: 'data:,' } }
 
 export default function ShopRoot({ children }: { children: React.ReactNode }) {
   return children

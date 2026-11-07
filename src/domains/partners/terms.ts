@@ -2,7 +2,7 @@
 // FILE: src/domains/partners/terms.ts — the partner terms, once.
 //
 // Owner, 2026-11-07: the merchant owns the store; the partner earns 20% of what
-// Frata collects from it for 24 months. O1–O3 taken as recommended (plan
+// Frrata collects from it for 24 months. O1–O3 taken as recommended (plan
 // docs/plans/2026-11-07-partners.md): the months start when the shop FIRST
 // opens, the share runs 90 days after the merchant removes the partner, and a
 // partner has at most 10 stores that have not opened yet. Each store's link

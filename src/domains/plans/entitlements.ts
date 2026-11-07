@@ -50,7 +50,7 @@ export function monthlyPrice(row: Pick<TenantPlanRow, 'planVersion' | 'customMon
   return row.customMonthlyPrice ?? row.planVersion.monthlyPrice
 }
 
-/** Frata's fee on one delivered order. A returned order is never charged. */
+/** Frrata's fee on one delivered order. A returned order is never charged. */
 export function deliveredFee(netRevenue: Paise, feeBps: number): Paise {
   return applyBps(netRevenue, feeBps)
 }

@@ -20,7 +20,7 @@ export default async function OnlinePaymentsPage() {
       <PageHeader title={'Online payments'} back={{ href: '/console/settings', label: 'Settings' }} />
       <OnlinePayments
         status={status.connected ? { keyId: status.keyId, mode: status.mode, webhookSeenAt: status.webhookSeenAt?.toISOString() ?? null, lastEventAt: status.lastEventAt?.toISOString() ?? null, problem: status.problem, webhookUrl: webhookUrl!,
-          // Never to a Frata support visit (support acts as owner; with the secret it could sign a fake payment: audit 2026-11-07).
+          // Never to a Frrata support visit (support acts as owner; with the secret it could sign a fake payment: audit 2026-11-07).
           webhookSecret: auth.membership.supportSessionId ? null : status.webhookSecret } : null}
         support={!!auth.membership.supportSessionId} available={isPaymentsConfigured()} now={new Date().toISOString()} />
     </div>

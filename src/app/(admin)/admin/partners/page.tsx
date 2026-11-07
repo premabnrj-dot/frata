@@ -59,11 +59,11 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                 {open.declineReason && <><dt className="text-muted-foreground">Declined</dt><dd>{open.declineReason}</dd></>}
                 {open.approvedAt && <><dt className="text-muted-foreground">Stores</dt><dd className="font-mono">{open.stores}</dd></>}
               </dl>
-              {view === 'review' && staff.role !== 'admin' ? <p className="text-sm text-muted-foreground">A Frata admin decides applications.</p> : view === 'review' ? (
+              {view === 'review' && staff.role !== 'admin' ? <p className="text-sm text-muted-foreground">A Frrata admin decides applications.</p> : view === 'review' ? (
                 <div className="space-y-3 border-t border-border pt-4">
                   <form action={decidePartnerAction}>
                     <input type="hidden" name="id" value={open.id} /><input type="hidden" name="decision" value="approve" />
-                    <button type="submit" className={button({ className: 'w-full' })}>Approve {open.businessName || open.name}</button>
+                    <button type="submit" className={button({ size: 'wrap', className: 'w-full justify-center text-center' })}>Approve {open.businessName || open.name}</button>
                   </form>
                   <form action={decidePartnerAction} className="space-y-2">
                     <input type="hidden" name="id" value={open.id} /><input type="hidden" name="decision" value="decline" />

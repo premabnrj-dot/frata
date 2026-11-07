@@ -5,6 +5,9 @@ let m: typeof import('../secret-box')
 beforeAll(async () => { m = await import('../secret-box') })
 
 describe('secret box', () => {
+  it('derives its keys with the salt it always had (the rename to Frrata must not touch it: every stored key would stop opening)', () => {
+    expect(m.orderToken('order-pin-1')).toBe('jMOPQ0Unjre44wFjKGZmFg')
+  })
   it('opens what it sealed, for that shop and field only', () => {
     const s = m.seal('rzp_secret_123', 'shop-a', 'key_secret')
     expect(m.open(s, 'shop-a', 'key_secret')).toBe('rzp_secret_123')

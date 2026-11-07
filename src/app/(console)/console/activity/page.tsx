@@ -8,7 +8,7 @@ import { Section } from '@/components/layout/section'
 
 export const metadata = { title: 'Activity' }
 
-/** What Frata support did in this store, and when (owner call 1: every visit is shown). */
+/** What Frrata support did in this store, and when (owner call 1: every visit is shown). */
 export default async function ActivityPage() {
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
@@ -16,14 +16,14 @@ export default async function ActivityPage() {
   return (
     <>
       <PageHeader title="Activity" />
-      <Section title="Visits from Frata support">
-        {visits.length === 0 ? <p className="text-sm text-muted-foreground">Frata support has not been in your console.</p> : (
+      <Section title="Visits from Frrata support">
+        {visits.length === 0 ? <p className="text-sm text-muted-foreground">Frrata support has not been in your console.</p> : (
           <ul data-list className="divide-y divide-border text-sm">
             {visits.map((v) => {
               const changes = events.filter((e) => e.supportSessionId === v.id && e.actorKind === 'support').length
               return (
                 <li key={v.id} className="py-2.5">
-                  <span className="font-medium">{v.staffEmail}</span> from Frata support, {dateTimeIN(v.startedAt)}
+                  <span className="font-medium">{v.staffEmail}</span> from Frrata support, {dateTimeIN(v.startedAt)}
                   {v.endedAt ? ` to ${dateTimeIN(v.endedAt)}` : ` until ${dateTimeIN(v.expiresAt)}`}, for {SUPPORT_REASON_LABEL[v.reason as SupportReason].toLowerCase()}
                   {v.note ? `: ${v.note}` : ''}. <span className="text-muted-foreground">{changes === 0 ? 'No changes.' : `${changes} change${changes === 1 ? '' : 's'}.`}</span>
                 </li>

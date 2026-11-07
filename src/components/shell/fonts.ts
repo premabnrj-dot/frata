@@ -23,5 +23,14 @@ const guru = localFont({ src: './noto/noto-sans-gurmukhi-gurmukhi-wght-normal.wo
 const taml = localFont({ src: './noto/noto-sans-tamil-tamil-wght-normal.woff2', weight: '100 900', preload: false, adjustFontFallback: false, display: 'swap', variable: '--font-noto-taml',
   declarations: [{ prop: 'unicode-range', value: 'U+0964-0965,U+0B82-0BFA,U+200C-200D,U+20B9,U+25CC' }] })
 
+/**
+ * THE DISPLAY FACE (brand spec 2026-11-07, chapter 3): Bricolage Grotesque, OFL 1.1, from
+ * @fontsource-variable/bricolage-grotesque 5.3.0 — the latin subset, weight axis only (41,344 bytes; budget 48 KB),
+ * committed like the Noto faces so a build fetches nothing for it. Used at 600 for page titles, the brand moment and
+ * brand empty states (font-display); everything a merchant works with stays Inter. Never on a shop: only shell
+ * pages carry SHELL_FONT_VARS (check:storefront-build).
+ */
+const display = localFont({ src: './display/bricolage-grotesque-latin-wght-normal.woff2', weight: '200 800', preload: true, display: 'swap', variable: '--font-bricolage' })
+
 /** Put on the shell's root element, beside data-shell: it defines the variables the stack in globals.css reads. */
-export const SHELL_FONT_VARS = `${deva.variable} ${beng.variable} ${guru.variable} ${taml.variable}`
+export const SHELL_FONT_VARS = `${deva.variable} ${beng.variable} ${guru.variable} ${taml.variable} ${display.variable}`

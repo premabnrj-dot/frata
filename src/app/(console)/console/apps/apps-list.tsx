@@ -1,12 +1,12 @@
 'use client'
 
-import { Blocks, Layers, MessageSquare, Ruler, ShieldCheck, ShoppingBag, Star, TrendingUp, Truck, type LucideIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Button, button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import { Icon, type IconName } from '@/components/icons/icon'
 import type { Offer } from '@/domains/modules/offer'
 import type { Group, ModuleKey } from '@/domains/modules/registry'
 import { setModuleAction } from './actions'
@@ -16,15 +16,15 @@ export type AppRow = {
   worksWith: { name: string; on: boolean }[]; offer: Offer; ask: string
 }
 
-const ICON: Record<ModuleKey, LucideIcon> = {
-  communication: MessageSquare, rto_shield: ShieldCheck, ship: Truck, true_profit: TrendingUp, reviews: Star,
-  marketplace_export: Layers, size_fit: Ruler, cart_flows: ShoppingBag,
+const ICON: Record<ModuleKey, IconName> = {
+  communication: 'messages', rto_shield: 'risk', ship: 'shipped', true_profit: 'profit', reviews: 'reviews',
+  marketplace_export: 'stock', size_fit: 'size', cart_flows: 'orders',
 }
 const TONE = { ok: 'ok', info: 'info', neutral: 'neutral', warn: 'warn' } as const
 
 function Tile({ k, size = 'md' }: { k: ModuleKey; size?: 'md' | 'lg' }) {
-  const I = ICON[k] ?? Blocks
-  return <span aria-hidden="true" className={`inline-grid shrink-0 place-items-center rounded-lg bg-muted ${size === 'lg' ? 'size-14' : 'size-12'}`}><I className={size === 'lg' ? 'size-7' : 'size-6'} strokeWidth={1.75} /></span>
+  // The rani tinge shows inside data-tinge only (brand rules): a tile is a brand surface, not a status.
+  return <span aria-hidden="true" data-tinge className={`inline-grid shrink-0 place-items-center rounded-lg bg-muted ${size === 'lg' ? 'size-14' : 'size-12'}`}><Icon name={ICON[k] ?? 'apps'} className="size-7" /></span>
 }
 
 function Switch({ on, label, disabled, onChange }: { on: boolean; label: string; disabled?: boolean; onChange: () => void }) {
@@ -72,7 +72,7 @@ export function AppsList({ groups, rows, canManage }: { groups: { key: Group; la
                 {list.map((r) => (
                   <li key={r.key} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
                     <Tile k={r.key} />
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-[11rem] flex-1">
                       <button type="button" onClick={() => { setError(null); setOpen(r) }} className="text-left font-semibold underline-offset-2 hover:underline">{r.name}</button>
                       <p className="text-sm text-muted-foreground">{r.job}</p>
                     </div>

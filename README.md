@@ -1,4 +1,4 @@
-# Frata
+# Frrata
 
 Fashion-first commerce for Indian D2C brands: storefront, checkout, COD,
 shipping, WhatsApp, Instagram, Meta and Google in one place, with every order

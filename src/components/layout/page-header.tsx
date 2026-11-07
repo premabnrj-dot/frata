@@ -33,7 +33,7 @@ export function PageHeader({ title, actions, back, badges, meta, titleSlot }: {
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             {titleSlot
               ? <><h1 className="sr-only">{title}</h1>{titleSlot}</>
-              : <h1 className="min-w-0 text-2xl font-bold tracking-tight [overflow-wrap:anywhere]">{title}</h1>}
+              : <h1 className="min-w-0 font-display text-2xl font-semibold tracking-tight [overflow-wrap:anywhere]">{title}</h1>}
             {badges}
           </div>
           {meta && <div className="text-sm text-muted-foreground">{meta}</div>}

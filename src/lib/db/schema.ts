@@ -24,7 +24,7 @@ export const tenants = pgTable('tenants', {
   id: id(),
   slug: text('slug').notNull().unique(),
   name: text('name').notNull(),
-  /** Frata's own stores (the demo), shown as "Internal" in Admin. The plan is in tenant_plans. */
+  /** Frrata's own stores (the demo), shown as "Internal" in Admin. The plan is in tenant_plans. */
   isInternal: boolean('is_internal').notNull().default(false),
   createdAt: createdAt(),
 })
@@ -85,14 +85,14 @@ export const outbox = pgTable('outbox', {
   uniqueIndex('outbox_tenant_dedupe').on(t.tenantId, t.dedupeKey),
 ])
 
-// ── Phase A: Frata admin (ADR-0007). Grants per role: drizzle/0005_admin.sql ──
+// ── Phase A: Frrata admin (ADR-0007). Grants per role: drizzle/0005_admin.sql ──
 
 export const at = (name: string) => timestamp(name, { withTimezone: true })
 
 export const STAFF_ROLES = ['admin', 'support'] as const
 export type StaffRole = (typeof STAFF_ROLES)[number]
 
-/** Frata staff. Platform scope: frata_app reads it only through app_access_for. */
+/** Frrata staff. Platform scope: frata_app reads it only through app_access_for. */
 export const platformStaff = pgTable('platform_staff', {
   userId: uuid('user_id').primaryKey(),
   email: text('email').notNull(),
