@@ -40,11 +40,11 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
         <form action={addStaffAction} className="flex max-w-xl flex-wrap items-end gap-2 rounded-md border border-border bg-card p-4">
           <div className="flex flex-1 flex-col gap-1.5">
             <label htmlFor="email" className="text-sm font-medium">Add by email</label>
-            <input id="email" name="email" type="email" required className="h-9 rounded-md border border-input bg-card px-3 font-mono text-sm" />
+            <input id="email" name="email" type="email" required className="h-10 md:h-9 rounded-md border border-input bg-card px-3 font-mono text-sm" />
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="role" className="text-sm font-medium">Role</label>
-            <select id="role" name="role" className="h-9 rounded-md border border-input bg-card px-2 text-sm"><option value="support">Support</option><option value="admin">Admin</option></select>
+            <select id="role" name="role" className="h-10 md:h-9 rounded-md border border-input bg-card px-2 text-sm"><option value="support">Support</option><option value="admin">Admin</option></select>
           </div>
           <Button type="submit">Add staff</Button>
           <p className="w-full text-xs text-muted-foreground">They must have signed in to Frata once with that email. Support can open merchants&apos; consoles; Admin can also edit plans and staff.</p>

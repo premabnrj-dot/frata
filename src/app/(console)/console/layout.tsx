@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ConsoleNav } from '@/components/nav/console-nav'
+import { SHELL_FONT_VARS } from '@/components/shell/fonts'
 import { SupportBanner } from '@/components/nav/support-banner'
 import { supportVisit } from '@/lib/queries/support'
 import { button } from '@/components/ui/button'
@@ -40,7 +41,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const now = new Date()
   const visit = auth.membership.supportSessionId ? await supportVisit(auth.membership.tenantId, auth.membership.supportSessionId) : null
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div data-shell className={`flex min-h-dvh flex-col ${SHELL_FONT_VARS}`}>
       {visit && <SupportBanner storeName={auth.membership.tenantName} visit={visit} now={now} />}
       <div className="flex flex-1 flex-col md:flex-row">
         <ConsoleNav storeName={auth.membership.tenantName} isStaff={auth.staffRole !== null} />

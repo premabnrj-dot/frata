@@ -18,7 +18,7 @@ const ITEMS = [
 export function AdminNav({ email, ownStore }: { email: string; ownStore: string | null }) {
   const path = usePathname()
   return (
-    <nav aria-label="Admin" className="flex flex-col gap-1 bg-primary px-3 py-4 text-primary-foreground md:w-56 md:shrink-0">
+    <nav aria-label="Admin" data-surface="ink" className="flex flex-col gap-1 bg-primary px-3 py-4 text-primary-foreground md:w-56 md:shrink-0">
       <div className="flex items-center gap-2 px-2 pb-4">
         <span className="text-sm font-bold">Frata Admin</span>
         <span className="rounded-sm bg-warn px-1.5 text-[11px] font-semibold text-warn-text">STAFF</span>

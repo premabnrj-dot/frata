@@ -8,6 +8,7 @@ import { currentMethod, orderState, paidAfterSwitch, type OrderState } from '@/d
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { dateTimeIN } from '@/lib/format-date'
 import { Money, Numeric } from '@/components/data/numeric'
+import { Name } from '@/components/data/name'
 import { listOrders, ORDERS_PAGE, orderPrefixFor, queueCounts } from '@/lib/queries/orders'
 
 const STATE: Record<OrderState, { label: string; tone: 'ok' | 'warn' | 'danger' | 'info' | 'neutral' }> = {
@@ -77,7 +78,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
               return (
                 <DataTableRow key={o.id} dimmed={s.tone === 'neutral'}>
                   <td className="font-mono">{prefix}-{o.number}</td>
-                  <td>{o.customerName || '—'}<span className="block text-xs text-muted-foreground">{[o.city, `${o.items} item${o.items === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}</span></td>
+                  <td>{o.customerName ? <Name>{o.customerName}</Name> : '—'}<span className="block text-xs text-muted-foreground">{[o.city, `${o.items} item${o.items === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}</span></td>
                   <td className="whitespace-nowrap text-muted-foreground">{dateTimeIN(o.placedAt)}</td>
                   <td>{method === 'cod' ? 'Pay on delivery' : o.paidAt ? 'Paid online' : 'Online, not paid'}
                     {paidAfterSwitch(o) && <Badge tone="danger" className="ml-1.5">Do not collect cash</Badge>}</td>

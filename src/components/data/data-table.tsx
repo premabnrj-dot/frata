@@ -17,9 +17,10 @@ export function DataTableHead({ children }: { children: React.ReactNode }) {
   )
 }
 
+/** `dimmed`: a finished row (cancelled, returned) in the secondary text colour, which keeps 4.5:1. Never opacity (rule 4). */
 export function DataTableRow({ children, dimmed = false }: { children: React.ReactNode; dimmed?: boolean }) {
   return (
-    <tr className={`border-b border-border last:border-0 hover:bg-muted/40 [&>td]:px-3 [&>td]:py-2 ${dimmed ? 'opacity-60' : ''}`}>
+    <tr className={`border-b border-border last:border-0 hover:bg-muted/40 [&>td]:px-3 [&>td]:py-2 ${dimmed ? 'text-muted-foreground' : ''}`}>
       {children}
     </tr>
   )

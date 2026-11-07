@@ -55,11 +55,11 @@ export function Photos({ productId, tenantId, photos, colours, enabled }: { prod
               {i === 0 && <span className="absolute bottom-1 left-1 rounded-sm bg-primary px-1.5 py-0.5 text-[11px] text-primary-foreground">Cover</span>}
             </div>
             <div className="flex items-center justify-between text-xs">
-              <button type="button" disabled={i === 0 || pending} aria-label="Move earlier" className="px-1 disabled:opacity-30" onClick={() => act(ph.id, { move: -1 })}>←</button>
+              <button type="button" disabled={i === 0 || pending} aria-label="Move earlier" className="inline-grid min-h-6 min-w-6 place-items-center disabled:opacity-30" onClick={() => act(ph.id, { move: -1 })}>←</button>
               {confirm === ph.id
                 ? <span className="flex gap-1"><button type="button" className="text-danger-text underline" onClick={() => act(ph.id, { remove: true })}>Remove</button><button type="button" className="underline" onClick={() => setConfirm(null)}>Keep</button></span>
                 : <button type="button" className="text-muted-foreground underline" onClick={() => setConfirm(ph.id)}>Remove</button>}
-              <button type="button" disabled={i === photos.length - 1 || pending} aria-label="Move later" className="px-1 disabled:opacity-30" onClick={() => act(ph.id, { move: 1 })}>→</button>
+              <button type="button" disabled={i === photos.length - 1 || pending} aria-label="Move later" className="inline-grid min-h-6 min-w-6 place-items-center disabled:opacity-30" onClick={() => act(ph.id, { move: 1 })}>→</button>
             </div>
             {colours.length > 0 && (
               <select aria-label="Which colour this photo shows" value={ph.optionValue ?? ''} disabled={pending} onChange={(e) => act(ph.id, { optionValue: e.target.value || null })}

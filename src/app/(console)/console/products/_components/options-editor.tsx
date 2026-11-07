@@ -36,7 +36,7 @@ export function OptionsEditor({ options, onChange, error }: { options: Option[];
             <div className="flex flex-wrap items-center gap-1.5">
               {o.values.map((v, k) => (
                 <span key={v} className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-0.5 text-sm">
-                  {v}<button type="button" aria-label={`Remove ${v}`} className="text-muted-foreground hover:text-foreground" onClick={() => set(i, { ...o, values: o.values.filter((_, j) => j !== k) })}>×</button>
+                  {v}<button type="button" aria-label={`Remove ${v}`} className="inline-grid min-h-6 min-w-6 place-items-center text-muted-foreground hover:text-foreground" onClick={() => set(i, { ...o, values: o.values.filter((_, j) => j !== k) })}>×</button>
                 </span>
               ))}
               <label htmlFor={`val-${i}`} className="sr-only">Add a {o.name || 'value'}</label>

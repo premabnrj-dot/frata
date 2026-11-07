@@ -83,7 +83,7 @@ function CropArea({ photo, crop, onChange }: { photo: Photo; crop: Crop; onChang
           if (d) { e.preventDefault(); onChange({ ...crop, x: crop.x + d[0]!, y: crop.y + d[1]! }) }
         }}>
         <img src={urlFor(photo.base, pick(photo.widths, 400))} alt="" width={W} height={H} draggable={false} className="h-full w-full object-cover" />
-        <span aria-hidden="true" className="pointer-events-none absolute rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,.5),0_0_0_999px_rgba(0,0,0,.35)]"
+        <span aria-hidden="true" className="pointer-events-none absolute rounded-full border-2 border-white shadow-crop"
           style={{ left: crop.x * W - crop.r * W, top: crop.y * H - crop.r * W, width: crop.r * 2 * W, height: crop.r * 2 * W }} />
       </div>
       <div className="space-y-1">

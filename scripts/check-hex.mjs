@@ -15,7 +15,8 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
-const ROOT = 'src'
+// `node scripts/check-hex.mjs [path]`: a path checks that file or folder alone (how a gate is run against its own fixtures).
+const ROOT = process.argv[2] ?? 'src'
 
 const EXEMPT = [
   // Where the tokens are DEFINED.
@@ -23,7 +24,8 @@ const EXEMPT = [
 ]
 
 const BAD =
-  /(?:text|bg|border|fill|stroke|ring|from|via|to)-(?:\[#[0-9a-fA-F]{3,8}\]|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3})/g
+  /(?:text|bg|border|fill|stroke|ring|from|via|to)-(?:\[#[0-9a-fA-F]{3,8}\]|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3})|(?<![a-zA-Z-])(?:rgba?|hsla?|oklch|oklab|lch|lab)\(/g
+// The second half (2026-11-07, plan U·1b): a colour function outside globals.css is a colour the tokens never see.
 
 /** Comment-only lines, in both TS and CSS. */
 function isComment(line) {
@@ -32,6 +34,7 @@ function isComment(line) {
 }
 
 function walk(dir, acc = []) {
+  if (!statSync(dir).isDirectory()) return [dir]
   for (const e of readdirSync(dir)) {
     const p = join(dir, e)
     if (statSync(p).isDirectory()) walk(p, acc)

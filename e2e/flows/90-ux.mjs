@@ -11,7 +11,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { CONSOLE, USERS, signedIn } from '../lib.mjs'
+import { CONSOLE, SHOP, USERS, signedIn } from '../lib.mjs'
 import { FOCUS, MEASURE, TEXT_SPACING } from '../ux-measure.mjs'
 import { KNOWN } from '../ux-known.mjs'
 
@@ -120,6 +120,22 @@ export default {
         await ctx.close()
       })
 
+      await t.step('Indic fonts download only when a name needs them, and never on the shop (plan U · A4)', async () => {
+        const fontsOn = async (who, url) => {
+          const ctx = who ? await signedIn(t.browser, who) : await t.browser.newContext()
+          const p = await ctx.newPage(); const got = new Set()
+          p.on('response', (r) => { if (/\.woff2(\?|$)/.test(r.url())) got.add(new URL(r.url()).pathname) })
+          await p.goto(url, { waitUntil: 'networkidle' }); await p.evaluate(() => document.fonts.ready)
+          await ctx.close(); return got
+        }
+        const latin = await fontsOn('owner', CONSOLE + '/console/settings')
+        const indic = await fontsOn('owner', CONSOLE + '/console/orders') // Devanagari, Tamil, Gurmukhi and Bengali customer names
+        const shop = await fontsOn(null, SHOP + '/')
+        const noto = [...indic].filter((f) => !latin.has(f))
+        assert.ok(noto.length >= 1 && noto.length <= 8, `orders page fetched ${noto.length} font files a Latin page does not (expected the Indic faces): ${noto.join(', ')}`)
+        assert.deepEqual([...shop].filter((f) => noto.includes(f)), [], 'the storefront downloads no Noto face')
+      })
+
       await t.step('speed baseline: /console/orders on a slow phone (printed, not asserted)', async () => {
         const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 390, height: 844 } })
         const p = await ctx.newPage(); const cdp = await ctx.newCDPSession(p)
@@ -137,7 +153,7 @@ export default {
         const unexpected = [...failures].filter(([k, f]) => !known.has(k) || f.n > known.get(k)).map(([k, f]) => `${k}${known.has(k) ? ` (worse: ${f.n} > ${known.get(k)})` : ''} — ${f.detail}`)
         const fixed = [...known.keys()].filter((k) => !failures.has(k))
         // The whole list, for a person (the runner prints only an error's first line).
-        writeFileSync(t.out('failures').replace(/\.png$/, '.txt'), [...failures].map(([k, f]) => `${known.has(k) && f.n <= known.get(k) ? 'known' : 'NEW  '} ${k}${f.n > 1 ? ` ≤ ${f.n}` : ''} — ${f.detail}`).concat(fixed.map((k) => `FIXED ${k}`)).join('\n') + '\n')
+        writeFileSync(t.out('failures').replace(/\.png$/, '.txt'), [...failures].map(([k, f]) => `${known.has(k) && f.n <= known.get(k) ? (f.n < known.get(k) ? 'LOWER' : 'known') : 'NEW  '} ${k}${f.n > 1 ? ` ≤ ${f.n}` : ''} — ${f.detail}`).concat(fixed.map((k) => `FIXED ${k}`)).join('\n') + '\n')
         assert.ok(!unexpected.length && !fixed.length,
           `${unexpected.length} new or worse, ${fixed.length} now passing (first: ${unexpected[0] ?? fixed[0]}); full list in e2e/.out/90-ux-failures.txt`)
       })

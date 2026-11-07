@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { DataTable, DataTableHead, DataTableRow } from '@/components/data/data-table'
 import { Numeric } from '@/components/data/numeric'
+import { Name } from '@/components/data/name'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
 import { button } from '@/components/ui/button'
@@ -39,7 +40,7 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
               <DataTableRow key={m.id}>
                 <td>
                   <div className="flex items-center gap-2">
-                    <Link href={`/admin/merchants/${m.id}`} className="font-medium hover:underline">{m.name}</Link>
+                    <Link href={`/admin/merchants/${m.id}`} className="font-medium hover:underline"><Name>{m.name}</Name></Link>
                     {m.isInternal && <Badge>Internal</Badge>}
                   </div>
                   {m.host && <div className="font-mono text-xs text-muted-foreground">{m.host}</div>}

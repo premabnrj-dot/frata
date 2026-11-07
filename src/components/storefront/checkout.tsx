@@ -250,7 +250,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
         {legalName || shopName} uses your name, phone and address only to deliver this order and to contact you about it. <a href={privacyHref} className="underline">Your data and how to ask for it to be deleted</a>.
       </p>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-store-line bg-store-paper px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3 shadow-[0_-6px_14px_rgba(31,26,23,.06)]">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-store-line bg-store-paper px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3 shadow-store-bar">
         <div className="mx-auto max-w-lg">
           <p className="flex justify-between text-sm"><span className="text-store-sub">{method === 'cod' ? 'Pay on delivery' : method === 'prepaid' ? 'Pay online' : 'Choose how to pay'}</span><b className="tabular-nums">{q ? inr(failed && method !== 'cod' ? failed.total : total) : '…'}</b></p>
           <button type="submit" disabled={busy || !q || q.empty || (!method && !failed)} className="mt-2 h-12 w-full rounded-sm bg-store-ink text-base font-medium text-store-paper disabled:opacity-60">{busy ? 'Placing your order…' : button}</button>

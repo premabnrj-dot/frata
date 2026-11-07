@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { AdminNav } from '@/components/nav/admin-nav'
+import { SHELL_FONT_VARS } from '@/components/shell/fonts'
 import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { adminHealth } from '@/lib/admin/health'
@@ -36,7 +37,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const own = await requireMember(ANY_MEMBER)
   const ownStore = own.ok && !own.membership.supportSessionId ? own.membership.tenantName : null
   return (
-    <div className="flex min-h-dvh flex-col md:flex-row">
+    <div data-shell className={`flex min-h-dvh flex-col md:flex-row ${SHELL_FONT_VARS}`}>
       <AdminNav email={staff.email} ownStore={ownStore} />
       <main className="min-w-0 flex-1 space-y-6 p-4 md:p-6">{children}</main>
     </div>
