@@ -48,7 +48,9 @@ export function NumberHealth({ c, needs, canManage }: { c: View; needs: Need[]; 
       </Section>
 
       {needs.length ? (
-        <Section title="Needs you" flush>
+        <section aria-labelledby="needs" className="space-y-2">
+          <h2 id="needs" className="text-section font-semibold">Needs you</h2>
+          <Section flush ariaLabel="Needs you">
           <ul className="divide-y divide-border">
             {needs.map((n) => (
               <li key={n.key} className="flex flex-wrap items-center gap-3 px-4 py-3 text-sm">
@@ -61,7 +63,8 @@ export function NumberHealth({ c, needs, canManage }: { c: View; needs: Need[]; 
               </li>
             ))}
           </ul>
-        </Section>
+          </Section>
+        </section>
       ) : <p className="text-sm text-muted-foreground">Nothing needs you. Order messages come next.</p>}
       {error && !confirm ? <p role="alert" className="text-sm text-danger-text">{error}</p> : null}
 

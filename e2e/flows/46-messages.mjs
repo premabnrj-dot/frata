@@ -54,7 +54,7 @@ export default {
     await t.step('Business app number: connected, never registered, history asked for, token sealed', async () => {
       await riya.getByRole('button', { name: /I use the WhatsApp Business app/ }).click()
       await riya.getByRole('heading', { level: 1, name: 'Messages' }).waitFor()
-      await riya.getByText('+91 98450 12345').waitFor()
+      await riya.getByText('+91 98450 12345').first().waitFor()
       await riya.getByText('WhatsApp Business app and Frrata', { exact: false }).waitFor()
       const opts = await riya.evaluate(() => window.__fbOpts)
       assert.equal(opts.extras.featureType, 'whatsapp_business_app_onboarding'); assert.equal(opts.config_id, META.configId)
@@ -116,7 +116,7 @@ export default {
       await fetch(GRAPH + '/_test/set', { method: 'POST', body: JSON.stringify({ quality: 'GREEN', currency: 'INR' }) })
       await riya.reload()
       await riya.getByRole('button', { name: /A new number/ }).click()
-      await riya.getByText('+91 90000 22222').waitFor()
+      await riya.getByText('+91 90000 22222').first().waitFor()
       await riya.getByText('Display name "Kesar Studio"').waitFor()
       const reg = (await calls()).filter((x) => x.path.endsWith('/200000000002/register'))
       assert.equal(reg.length, 1); assert.match(reg[0].body.pin, /^\d{6}$/)
@@ -131,7 +131,7 @@ export default {
       await db`insert into members (tenant_id, user_id, role) values (${KESAR}, ${S.id}, 'staff') on conflict do nothing`
       const arjun = await open('staff')
       await arjun.goto(CONSOLE + '/console/apps/communication')
-      await arjun.getByText('+91 90000 22222').waitFor()
+      await arjun.getByText('+91 90000 22222').first().waitFor()
       assert.equal(await arjun.getByRole('button', { name: 'More' }).count(), 0)
       await db`delete from members where tenant_id = ${KESAR} and user_id = ${S.id}`
     })
