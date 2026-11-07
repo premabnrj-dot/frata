@@ -16,13 +16,15 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
 /** Functions that establish who is calling, and refuse who may not. */
-const CHOKEPOINTS = ['requireMember', 'requireStaff', 'asMember', 'requireUser', 'requireShop']
+// shopRequest (src/lib/http/shop-api.ts) is requireShop plus a Zod body and a per-shop limit, for /api/shop/*.
+const CHOKEPOINTS = ['requireMember', 'requireStaff', 'asMember', 'requireUser', 'requireShop', 'shopRequest']
 
 /** Entry points that check their own credential: file → [what it is, a token that must appear in it]. */
 const ENTRY_POINTS = {
   'src/app/login/actions.ts': ['sign-in: emails a link and code to the address given (rate limited); the code proves the inbox', 'verifyOtp('],
   'src/app/auth/callback/route.ts': ['sign-in: trades the one-time code for a session', 'exchangeCodeForSession('],
   'src/app/api/cron/outbox/route.ts': ['Vercel Cron', 'isCronRequest('],
+  'src/app/api/webhooks/razorpay/[key]/route.ts': ['Razorpay webhook: HMAC of the raw body with the shop\'s own secret, found by our key', 'verifyRazorpaySignature('],
   // Public, read-only, cached per shop: the shop comes from the host the middleware wrote (shopFor checks its shape).
   'src/app/s/[host]/sitemap.xml/route.ts': ['a shop\'s sitemap: public, read-only', 'shopForRoute('],
   'src/app/s/[host]/robots.txt/route.ts': ['a shop\'s robots.txt: public, read-only', 'shopForRoute('],

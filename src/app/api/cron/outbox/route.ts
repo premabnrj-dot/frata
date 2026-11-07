@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { isCronRequest } from '@/lib/auth/cron'
 import { claimDue, markFailed, markSent, type OutboxRow } from '@/lib/outbox'
+import { shopsWithPendingEvents } from '@/lib/db/platform'
+import { processEvents } from '@/lib/orders/payment'
 
 // ENTRY POINT credential: CRON_SECRET via isCronRequest (scripts/check-actions.mjs).
 // The safety-net sweep. Connectors register a sender per `kind` as they are built;
@@ -22,5 +24,10 @@ export async function GET(request: Request) {
       await markFailed(row.id, row.attempts, err instanceof Error ? err.message : String(err))
     }
   }
-  return NextResponse.json({ claimed: rows.length, sent })
+  // Razorpay events not yet processed (each is processed at once on arrival; this is only the safety net).
+  let events = 0
+  for (const tenantId of await shopsWithPendingEvents()) {
+    events += await processEvents(tenantId, 200).catch((e) => { console.error('[cron] events', tenantId, e instanceof Error ? e.name : 'error'); return 0 })
+  }
+  return NextResponse.json({ claimed: rows.length, sent, events })
 }

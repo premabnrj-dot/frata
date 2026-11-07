@@ -21,10 +21,15 @@ export const LIMITS = {
   verifyCodeEmail: { action: 'verify_code:email', max: 10, windowSeconds: 900 },
   createShopIp: { action: 'create_shop:ip', max: 5, windowSeconds: 3600 },
   checkAddressUser: { action: 'check_address:user', max: 120, windowSeconds: 600 },
+  // Checkout (1C). Subjects are "<tenant>:<ip>" or "<tenant>:<phone>" (hashed with the action below). Mobile networks share IPs: generous per IP.
+  quoteIp: { action: 'shop_quote:ip', max: 300, windowSeconds: 600 },
+  placeOrderIp: { action: 'shop_place:ip', max: 30, windowSeconds: 3600 },
+  placeOrderPhone: { action: 'shop_place:phone', max: 5, windowSeconds: 3600 },
+  payIp: { action: 'shop_pay:ip', max: 60, windowSeconds: 600 },
 } as const satisfies Record<string, Limit>
 
-/** Counts one attempt; true when it is within the limit. */
-export async function withinLimit(limit: Limit, subject: string, now = new Date()): Promise<boolean> {
+/** Counts one attempt; true when it is within the limit. `failClosed`: refuse when the counter cannot be read (placing orders). */
+export async function withinLimit(limit: Limit, subject: string, now = new Date(), failClosed = false): Promise<boolean> {
   const key = createHash('sha256').update(`${limit.action}:${subject.trim().toLowerCase()}`).digest('hex')
   const windowMs = limit.windowSeconds * 1000
   const windowStart = new Date(Math.floor(now.getTime() / windowMs) * windowMs)
@@ -38,6 +43,6 @@ export async function withinLimit(limit: Limit, subject: string, now = new Date(
     return (rows[0]?.n ?? 0) <= limit.max
   } catch (err) {
     console.error('[withinLimit]', limit.action, err instanceof Error ? err.message : err)
-    return true
+    return !failClosed
   }
 }

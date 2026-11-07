@@ -1,0 +1,83 @@
+import 'server-only'
+import { and, eq, inArray, sql } from 'drizzle-orm'
+import type { ShopRules, VariantRow } from '@/domains/checkout/quote'
+import type { Tx } from '@/lib/db'
+import { shopSettings, tenants } from '@/lib/db/schema'
+import { productImages, products, variants } from '@/lib/db/schema-catalogue'
+import { orderLines, orders } from '@/lib/db/schema-orders'
+import { withTenant } from '@/lib/db/tenant'
+import { canTakeOnline, keysFor } from '@/lib/payments/keys'
+
+// =============================================================================
+// WHAT CHECKOUT READS (shopper-facing: check:tenant rule 6 — named columns
+// only, no merchant cost, no secret). Each function takes a tenant transaction
+// so placing an order reads under the same locks; the `…For` wrappers open
+// their own for the read-only quote and order page.
+// =============================================================================
+
+/** Units held by unpaid online orders still inside pay_by (holds are derived: checkout spec). */
+const holding = (now: Date) => sql`o.payment_method = 'prepaid' and o.paid_at is null and o.switched_to_cod_at is null and o.cancelled_at is null and o.pay_by > ${now}`
+/** Orders that are real: paid, COD, or switched to COD — not cancelled. */
+const real = sql`o.cancelled_at is null and (o.payment_method = 'cod' or o.paid_at is not null or o.switched_to_cod_at is not null)`
+
+/** The bag's variants as the quote reads them, with what is held and pre-ordered against each. */
+export async function variantRows(tx: Tx, tenantId: string, ids: string[], now: Date, opts: { lock?: boolean } = {}): Promise<VariantRow[]> {
+  const clean = [...new Set(ids.filter((x) => /^[0-9a-f-]{36}$/.test(x)))].slice(0, 20)
+  if (!clean.length) return []
+  // Place-order locks the bag's variants, in id order (no deadlocks), before anything is counted.
+  if (opts.lock) await tx.execute(sql`select id from ${variants} where tenant_id = ${tenantId} and id in ${clean} order by id for update`)
+  const [settings] = await tx.select({ defaultHsn: shopSettings.defaultHsn }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
+  const rows = await tx.select({
+    variantId: variants.id, productId: products.id, handle: products.handle, title: products.title, status: products.status, publishAt: products.publishAt,
+    options: products.options, values: variants.optionValues, sku: variants.sku, price: variants.price, compareAt: variants.compareAt, stock: variants.stock,
+    whenOut: variants.whenOut, shipsBy: variants.shipsBy, leadMinDays: variants.leadMinDays, leadMaxDays: variants.leadMaxDays, preorderCap: variants.preorderCap, hsn: products.hsn,
+    held: sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id
+      where l.tenant_id = ${tenantId} and l.variant_id = "variants"."id" and l.kind = 'in_stock' and ${holding(now)})`,
+    preordered: sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id
+      where l.tenant_id = ${tenantId} and l.variant_id = "variants"."id" and l.kind = 'preorder' and ((${real}) or (${holding(now)})))`,
+    image: sql<{ base: string; widths: number[] } | null>`(select json_build_object('base', i.base, 'widths', i.widths) from ${productImages} i
+      where i.tenant_id = ${tenantId} and i.product_id = "products"."id" order by (i.option_value = any("variants"."option_values")) desc nulls last, i.position limit 1)`,
+  }).from(variants).innerJoin(products, and(eq(products.id, variants.productId), eq(products.tenantId, tenantId)))
+    .where(and(eq(variants.tenantId, tenantId), inArray(variants.id, clean), sql`${variants.archivedAt} is null`))
+  return rows.map((r) => ({
+    ...r, price: Number(r.price), compareAt: r.compareAt === null ? null : Number(r.compareAt), whenOut: r.whenOut as VariantRow['whenOut'],
+    publishAt: r.publishAt ? r.publishAt.toISOString() : null, hsn: r.hsn ?? settings?.defaultHsn ?? null,
+  }))
+}
+
+export type CheckoutShop = ShopRules & { open: boolean; name: string; slug: string; gstin: string | null; returnDays: number; returnKind: string; whatsapp: string; online: boolean }
+
+/** The shop's checkout rules; `open` read here, inside the transaction (not the 60 s cached lookup). */
+export async function checkoutShop(tx: Tx, tenantId: string): Promise<CheckoutShop | null> {
+  const [s] = await tx.select({
+    name: tenants.name, slug: tenants.slug, publishedAt: shopSettings.publishedAt, gstin: shopSettings.gstin, pricesIncludeGst: shopSettings.pricesIncludeGst,
+    shippingFlat: shopSettings.shippingFlat, freeShippingAbove: shopSettings.freeShippingAbove, codOn: shopSettings.codOn, codMin: shopSettings.codMin, codMax: shopSettings.codMax,
+    codCharge: shopSettings.codCharge, codBlockedPincodes: shopSettings.codBlockedPincodes, dispatchDays: shopSettings.dispatchDays, metroDays: shopSettings.metroDays,
+    restDays: shopSettings.restDays, returnDays: shopSettings.returnDays, returnKind: shopSettings.returnKind, whatsapp: shopSettings.whatsapp,
+  }).from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
+  if (!s) return null
+  return {
+    ...s, open: s.publishedAt !== null, registered: !!s.gstin,
+    shippingFlat: Number(s.shippingFlat), freeShippingAbove: Number(s.freeShippingAbove), codMin: Number(s.codMin), codMax: Number(s.codMax), codCharge: Number(s.codCharge),
+    online: canTakeOnline(await keysFor(tx, tenantId)),
+  }
+}
+
+export const quoteData = (tenantId: string, ids: string[], now: Date) =>
+  withTenant(tenantId, async (tx) => ({ shop: await checkoutShop(tx, tenantId), rows: await variantRows(tx, tenantId, ids, now) }))
+
+/** What the shopper's order page shows — masked address and phone (owner call 4). Found by the link token's hash only. */
+export async function orderPage(tx: Tx, tenantId: string, tokenHash: string) {
+  const [o] = await tx.select({
+    id: orders.id, number: orders.number, paymentMethod: orders.paymentMethod, subtotal: orders.subtotal, shipping: orders.shipping, codCharge: orders.codCharge,
+    gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst, customerName: orders.customerName, phone: orders.phone, city: orders.city, pincode: orders.pincode,
+    arrivesFrom: orders.arrivesFrom, arrivesTo: orders.arrivesTo, returnDays: orders.returnDays, returnKind: orders.returnKind, placedAt: orders.placedAt, payBy: orders.payBy,
+    paidAt: orders.paidAt, switchedToCodAt: orders.switchedToCodAt, confirmedAt: orders.confirmedAt, cancelledAt: orders.cancelledAt, shippedAt: orders.shippedAt, ndrAt: orders.ndrAt,
+    deliveredAt: orders.deliveredAt, rtoInitiatedAt: orders.rtoInitiatedAt, rtoDeliveredAt: orders.rtoDeliveredAt, razorpayOrderId: orders.razorpayOrderId,
+  }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.tokenHash, tokenHash))).limit(1)
+  if (!o) return null
+  const lines = await tx.select({ title: orderLines.title, optionValues: orderLines.optionValues, qty: orderLines.qty, unitPrice: orderLines.unitPrice, imageBase: orderLines.imageBase,
+    imageWidths: orderLines.imageWidths, kind: orderLines.kind, shipsBy: orderLines.shipsBy })
+    .from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id))).orderBy(orderLines.position)
+  return { ...o, lines }
+}

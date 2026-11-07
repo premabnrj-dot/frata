@@ -119,3 +119,9 @@ export async function paymentWebhookFor(key: string): Promise<{ tenantId: string
   const rows = await db().execute<{ tenant_id: string; webhook_secret_enc: string }>(sql`select tenant_id, webhook_secret_enc from app_payment_webhook_for(${key})`)
   return rows[0] ? { tenantId: rows[0].tenant_id, secretEnc: rows[0].webhook_secret_enc } : null
 }
+
+/** Shops with Razorpay events still to process (the daily safety net; read with no tenant set, which the policy allows). */
+export async function shopsWithPendingEvents(): Promise<string[]> {
+  const rows = await db().execute<{ tenant_id: string }>(sql`select distinct tenant_id from webhook_events where processed_at is null and tenant_id is not null limit 500`)
+  return rows.map((r) => r.tenant_id)
+}
