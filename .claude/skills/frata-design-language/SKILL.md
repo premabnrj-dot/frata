@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 3.4.0
+  version: 3.4.1
   verified: 2026-11-07
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -348,7 +348,7 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     titles `text-section font-semibold`). A form that is a card is a `<Section><form>`.
     No hand-written card frames and no cards inside cards (`check:scale`).
 15. **Tables on phones become rows**, never a table that scrolls sideways. Use `DataTable` + `<Td cell>`: `a`
-    the link (`data-row-link`, the whole row's target) and `b` the figure on line 1, `c` who/where and `d` the
+    the link (`data-row-link`, the whole row's target; it never prefetches: `prefetch={false}`, or a 50-row page asks the server for 50 pages, 1D·4b 2026-11-07) and `b` the figure on line 1, `c` who/where and `d` the
     badges on line 2, `e`/`f` full lines, `hide` desktop only. An editor grid (a raw `<table>`, not a
     `DataTable`) carries `data-rows="form"`, explicit table roles, and `data-label` on each `<td>`: a card of
     labelled fields. A button whose label can be long (it names a merchant) is `size: 'wrap'`. A matrix (plans) is one `Section` per column on phones.
