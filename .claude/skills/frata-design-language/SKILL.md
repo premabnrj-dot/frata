@@ -29,8 +29,8 @@ fashion lives in the storefront.** Patterns below are taken from Ekatan's admin
 ## Type scale
 
 Page title `text-2xl font-bold tracking-tight` · section `text-xl font-semibold`
-· card (every `Section` title, Console and Admin) `text-[15px]`→ the `text-card`
-token, 15 px semibold (owner, 2026-11-07; replaces 18 px medium) · label
+· card (every `Section` title, Console and Admin) `text-section`
+(token `--text-section`, never `--text-card`, which collides with `--color-card`), 15 px semibold (owner, 2026-11-07; replaces 18 px medium) · label
 `text-sm font-medium` · body `text-sm` · micro `text-xs text-muted-foreground`.
 No other size: `check:scale` fails `text-[Npx]` in app code.
 
@@ -45,8 +45,8 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 
 ## Console patterns
 
-- **Shell**: navigation grouped by job (`src/components/nav/console-nav.tsx`);
-  a row is added when its page exists, never "coming soon". Phone: top bar;
+- **Shell**: navigation grouped by job (`AppShell`, § UX foundation); a row is
+  added when its page exists, never "coming soon". Phone: bottom bar + More;
   ≥ 768px: sidebar. Waiting counts as a warn pill.
 - **Page header**: `PageHeader` — title and at most one primary action.
 - **Lists**: `DataTable` shares chrome, not columns. Default view is a WORK
@@ -264,8 +264,11 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
 11. Every page gets "Skip to content" as its first Tab stop, the top progress
     bar (2 px ink, shown only after 150 ms), one polite live region, and a tab
     title "Orders · Kesar Studio" / "Merchants · Frata Admin".
-12. Support mode: the banner sits outside the scroll area. On phones it is one
-    line ("Support · <shop> · 22 min · End"); it is still not dismissable.
+12. Support mode: the banner is `sticky top-0` (the document keeps the scroll),
+    one line on phones ("Support · <shop> · 22 min · End"), not dismissable. The
+    bottom bar is `fixed` with safe-area insets; `scroll-padding` keeps focus
+    visible above and below; all chrome is `print:hidden`. The skip link comes
+    before the banner.
 
 **Pages and tables**
 13. Pages open with `PageHeader` (or `RecordHeader` on a detail page):
@@ -292,8 +295,10 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     until active. No coloured icon backgrounds, no illustrations in empty
     states.
 21. Indian names: Noto Sans (Devanagari, Tamil, …) is a fallback face behind
-    Inter, downloaded only when a glyph needs it, with line height 1.8 on those
-    runs. Mono has `font-variant-ligatures: none`.
+    Inter in the shell's own stack (`--font-shell` on `[data-shell]`, never on
+    `html`), `preload: false`, downloaded only when a glyph needs it. A name
+    renders through `<Name>`, which sets `data-script` from `scriptOf()` for line
+    height 1.8. Mono has `font-variant-ligatures: none`.
 
 **Motion (adds to § Phase 1 Motion)**
 22. CSS only: transitions with `@starting-style` and
