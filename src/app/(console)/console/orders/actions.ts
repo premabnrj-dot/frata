@@ -1,0 +1,90 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
+import { CANCEL_REASONS, ROLES, type OrderAction } from '@/domains/orders/work'
+import { asMember } from '@/lib/auth/as-member'
+import type { Tx } from '@/lib/db'
+import * as work from '@/lib/orders/work'
+import { refreshShop } from '@/lib/queries/storefront'
+
+// =============================================================================
+// FILE: src/app/(console)/console/orders/actions.ts
+//
+// The console's order actions (1D·4a). Each is a thin wrapper: the roles come
+// from ROLES[action] in src/domains/orders/work.ts and are checked by asMember
+// (hiding a button is never the guard); the work and its history row are
+// src/lib/orders/work.ts, in asMember's tenant transaction, with the tenant
+// from the membership — never from the caller. Who may do what:
+//   confirm, hold, unhold, undo, note, pack, print — owner, admin, staff
+//   edit address or phone, cancel                 — owner, admin
+// A support visit acts as the owner and is audited: the audit row carries the
+// order id and the NAMES of fields changed, never shopper data.
+// =============================================================================
+
+export type ActionResult<T = object> = ({ ok: true; eventId: string } & T) | { ok: false; error: string; by?: { email: string | null; at: string } }
+
+const Id = z.string().uuid()
+const notFound = { ok: false as const, error: 'Order not found.' }
+
+async function run<T extends object>(action: OrderAction, target: string, detail: object, fn: (tx: Tx, tenantId: string, actor: work.Actor) => Promise<work.Done<T>>, after?: (tenantId: string, v: T) => void): Promise<ActionResult<T>> {
+  try {
+    const r = await asMember(ROLES[action], { action: `order.${action}`, target, detail }, (tx, auth) =>
+      fn(tx, auth.membership.tenantId, { kind: auth.membership.supportSessionId ? 'support' : 'member', userId: auth.userId, email: auth.email ?? '' }))
+    if (!r.ok) return { ok: false, error: r.error }
+    const v = r.value
+    if (!v.ok) return { ok: false, error: v.error, ...(v.by ? { by: { email: v.by.email, at: v.by.at.toISOString() } } : {}) }
+    after?.(r.tenantId, v)
+    revalidatePath('/console/orders', 'layout')
+    return v
+  } catch (err) {
+    console.error(`[order.${action}]`, err instanceof Error ? err.name : 'error')
+    return { ok: false, error: 'We could not save that. Nothing was changed.' }
+  }
+}
+
+export async function confirmOrder(orderId: string) {
+  return Id.safeParse(orderId).success ? run('confirm', orderId, {}, (tx, t, a) => work.confirm(tx, t, a, orderId)) : notFound
+}
+export async function holdOrder(orderId: string) {
+  return Id.safeParse(orderId).success ? run('hold', orderId, {}, (tx, t, a) => work.hold(tx, t, a, orderId)) : notFound
+}
+export async function unholdOrder(orderId: string) {
+  return Id.safeParse(orderId).success ? run('unhold', orderId, {}, (tx, t, a) => work.unhold(tx, t, a, orderId)) : notFound
+}
+/** Undo by the event the toast or the order's Undo link holds. */
+export async function undoOrderAction(eventId: string) {
+  return Id.safeParse(eventId).success ? run('undo', eventId, {}, (tx, t, a) => work.undo(tx, t, a, eventId)) : { ok: false as const, error: 'There is nothing to undo.' }
+}
+export async function addOrderNote(orderId: string, body: string) {
+  return Id.safeParse(orderId).success && typeof body === 'string' ? run('note', orderId, {}, (tx, t, a) => work.addNote(tx, t, a, orderId, body)) : notFound
+}
+export async function packOrder(orderId: string) {
+  // Packing takes pre-orders' stock and changes what they are owed: the product pages refresh when it moved.
+  return Id.safeParse(orderId).success ? run('pack', orderId, {}, (tx, t, a) => work.pack(tx, t, a, orderId), (tenantId, v) => { if (v.preordersTaken) refreshShop(tenantId, 'catalogue') }) : notFound
+}
+
+const Phone = z.string().transform((s) => s.replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '')).pipe(z.string().regex(/^[6-9]\d{9}$/, 'A 10-digit mobile number.'))
+const Contact = z.object({
+  customerName: z.string().trim().min(2).max(80), phone: Phone, addressLine: z.string().trim().min(5).max(200), area: z.string().trim().min(2).max(120),
+  landmark: z.string().trim().max(120), pincode: z.string().regex(/^[1-9]\d{5}$/, 'A 6-digit pincode.'), city: z.string().trim().min(2).max(80), state: z.string().trim().min(2).max(60),
+}).partial().strict()
+
+export async function editOrderContact(orderId: string, input: unknown) {
+  if (!Id.safeParse(orderId).success) return notFound
+  const p = Contact.safeParse(input)
+  if (!p.success) return { ok: false as const, error: p.error.issues[0]?.message ?? 'Check the highlighted fields.' }
+  // The audit row (support visits) names the fields, never their values.
+  return run('edit', orderId, { fields: Object.keys(p.data) }, (tx, t, a) => work.editContact(tx, t, a, orderId, p.data))
+}
+
+const Cancel = z.object({ reason: z.enum(CANCEL_REASONS), note: z.string().max(500).optional(), restock: z.boolean() }).strict()
+
+export async function cancelOrder(orderId: string, input: unknown) {
+  if (!Id.safeParse(orderId).success) return notFound
+  const p = Cancel.safeParse(input)
+  if (!p.success) return { ok: false as const, error: 'Pick a reason.' }
+  return run('cancel', orderId, { reason: p.data.reason, restock: p.data.restock }, (tx, t, a) => work.cancel(tx, t, a, orderId, p.data),
+    // A piece back from 0 is buyable again: the cached shop pages show it at once.
+    (tenantId, v) => { if (v.backInStock.length) refreshShop(tenantId, 'catalogue') })
+}

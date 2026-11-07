@@ -1,16 +1,29 @@
 import { NextResponse } from 'next/server'
 import { isCronRequest } from '@/lib/auth/cron'
 import { claimDue, markFailed, markSent, type OutboxRow } from '@/lib/outbox'
-import { shopsWithPendingEvents } from '@/lib/db/platform'
+import { shopsToErase, shopsWithPendingEvents } from '@/lib/db/platform'
 import { processEvents } from '@/lib/orders/payment'
+import { ERASE_AFTER_DAYS, eraseAbandoned } from '@/lib/orders/erase'
 
 // ENTRY POINT credential: CRON_SECRET via isCronRequest (scripts/check-actions.mjs).
 // The safety-net sweep. Connectors register a sender per `kind` as they are built;
 // until one exists for a kind, its rows wait with a clear error.
 const SENDERS: Record<string, (row: OutboxRow) => Promise<void>> = {}
 
+/** One daily run, shops in sequence (Vercel Hobby allows 60 s). */
+export const maxDuration = 60
+
 export async function GET(request: Request) {
   if (!isCronRequest(request)) return new NextResponse(null, { status: 401 })
+  // First, and on its own: shopper details on online orders never paid go after 90 days (retention), shop by
+  // shop in each shop's own transaction — whatever happens to the sweeps below.
+  let erased = 0
+  try {
+    const now = new Date()
+    for (const tenantId of await shopsToErase(new Date(now.getTime() - ERASE_AFTER_DAYS * 86_400_000))) {
+      erased += await eraseAbandoned(tenantId, now).catch((e) => { console.error('[cron] erase', tenantId, e instanceof Error ? e.name : 'error'); return 0 })
+    }
+  } catch (e) { console.error('[cron] erase list', e instanceof Error ? e.name : 'error') }
   const rows = await claimDue()
   let sent = 0
   for (const row of rows) {
@@ -29,5 +42,5 @@ export async function GET(request: Request) {
   for (const tenantId of await shopsWithPendingEvents()) {
     events += await processEvents(tenantId, 200).catch((e) => { console.error('[cron] events', tenantId, e instanceof Error ? e.name : 'error'); return 0 })
   }
-  return NextResponse.json({ claimed: rows.length, sent, events })
+  return NextResponse.json({ claimed: rows.length, sent, events, erased })
 }

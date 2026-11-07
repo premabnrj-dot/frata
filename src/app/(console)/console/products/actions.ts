@@ -17,6 +17,7 @@ import { BLOB_READ_WRITE_TOKEN, BLOB_STORE_ID } from '@/lib/env'
 import type { Tx } from '@/lib/db'
 import { auditEvents, shopSettings, tenants } from '@/lib/db/schema'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
+import { archivedVariants, retireVariants } from '@/lib/catalogue/retire-variants'
 
 // Catalogue changes (1A). Any member may edit products (staff run catalogues);
 // every write goes through asMember, so a support visit is audited in the same
@@ -129,8 +130,10 @@ export async function saveProduct(productId: string, version: number, input: Pro
       const existing = await tx.select({ id: variants.id, optionValues: variants.optionValues }).from(variants)
         .where(and(eq(variants.tenantId, tenantId), eq(variants.productId, productId), isNull(variants.archivedAt)))
       const plan = reconcile(existing, p.options)
-      // Removed sizes and colours go (no orders exist before checkout, 1C; then they are archived instead).
-      if (plan.remove.length) await tx.delete(variants).where(and(eq(variants.tenantId, tenantId), inArray(variants.id, plan.remove.map((v) => v.id))))
+      // Removed sizes and colours: archived if ever ordered, deleted if not, refused with pre-orders to pack.
+      const retired = await retireVariants(tx, tenantId, plan.remove.map((v) => v.id))
+      if (!retired.ok) throw new Stop({ ok: false, error: retired.error })
+      const archived = await archivedVariants(tx, tenantId, productId)
       // Empty SKUs get a default (skuFor), unique against every other SKU in this shop.
       const [shop] = await tx.select({ prefix: shopSettings.orderPrefix, name: tenants.name }).from(shopSettings).innerJoin(tenants, eq(tenants.id, shopSettings.tenantId)).where(eq(shopSettings.tenantId, tenantId))
       const others = await tx.select({ sku: variants.sku }).from(variants).where(and(eq(variants.tenantId, tenantId), sql`${variants.productId} <> ${productId}`, sql`${variants.sku} is not null`))
@@ -152,7 +155,9 @@ export async function saveProduct(productId: string, version: number, input: Pro
           whenOut: v.whenOut, shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays, preorderCap: v.preorderCap,
         }
         const kept = plan.keep.find((k) => keyOf(k.optionValues) === keyOf(values))
+        const back = kept ? null : archived.find((a) => keyOf(a.optionValues) === keyOf(values))
         if (kept) await tx.update(variants).set(data).where(and(eq(variants.tenantId, tenantId), eq(variants.id, kept.id)))
+        else if (back) await tx.update(variants).set({ ...data, archivedAt: null }).where(and(eq(variants.tenantId, tenantId), eq(variants.id, back.id)))
         else await tx.insert(variants).values({ tenantId, productId, optionValues: values, ...data })
       }
       // A photo tagged with a colour that no longer exists shows for every colour.

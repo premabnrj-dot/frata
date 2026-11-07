@@ -125,3 +125,9 @@ export async function shopsWithPendingEvents(): Promise<string[]> {
   const rows = await db().execute<{ tenant_id: string }>(sql`select distinct tenant_id from webhook_events where processed_at is null and tenant_id is not null limit 500`)
   return rows.map((r) => r.tenant_id)
 }
+
+/** Shops with abandoned online orders past the cutoff whose shopper details are still there: ids only (drizzle/0021). */
+export async function shopsToErase(before: Date): Promise<string[]> {
+  const rows = await db().execute<{ id: string }>(sql`select app_shops_to_erase(${before.toISOString()}::timestamptz) as id`)
+  return rows.map((r) => r.id)
+}

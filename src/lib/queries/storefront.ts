@@ -8,6 +8,7 @@ import type { DeliveryRules } from '@/domains/checkout/delivery'
 import { tenantForHost } from '@/lib/db/platform'
 import { shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
+import { owedSql } from '@/lib/db/order-predicates'
 import { withTenant } from '@/lib/db/tenant'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 
@@ -107,17 +108,23 @@ export type StoreCatalogue = { products: StoreCard[]; collections: StoreCollecti
 /** A cached entry must stay well under the data cache's 2 MB: lists show at most this many products. */
 const MAX_LISTED = 600
 
-const variantCols = {
+/**
+ * A variant as the shop shows it; `owed` from the same SQL checkout reads, so the two agree. Read when the cache
+ * fills: a pre-order cancelled or packed shows on the product page at the next 60 s revalidate (checkout is always
+ * current, so nothing is ever sold twice).
+ */
+const variantCols = (tenantId: string) => ({
+  owed: owedSql(tenantId, new Date()),
   id: variants.id, productId: variants.productId, values: variants.optionValues, sku: variants.sku, price: variants.price, compareAt: variants.compareAt,
   stock: variants.stock, whenOut: variants.whenOut, shipsBy: variants.shipsBy, leadMinDays: variants.leadMinDays, leadMaxDays: variants.leadMaxDays, cap: variants.preorderCap,
-}
+})
 const imageCols = { id: productImages.id, productId: productImages.productId, base: productImages.base, widths: productImages.widths, width: productImages.width, height: productImages.height, optionValue: productImages.optionValue, alt: productImages.alt }
 const colourCols = { productId: productColours.productId, value: productColours.value, family: productColours.family, hex: productColours.hex, cropImageId: productColours.cropImageId, crop: productColours.crop }
 
-const toVariant = (v: { id: string; values: string[]; sku: string | null; price: number; compareAt: number | null; stock: number; whenOut: string; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; cap: number | null }): StoreVariant => ({
+const toVariant = (v: { id: string; values: string[]; sku: string | null; price: number; compareAt: number | null; stock: number; owed: number; whenOut: string; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; cap: number | null }): StoreVariant => ({
   id: v.id, values: v.values, sku: v.sku, price: Number(v.price), compareAt: v.compareAt === null ? null : Number(v.compareAt),
   // Shoppers learn "only N left" at LOW_STOCK_AT or below; above it, the count is not theirs to see.
-  stock: Math.min(v.stock, LOW_STOCK_AT + 1), whenOut: v.whenOut as StoreVariant['whenOut'], shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays,
+  stock: Math.min(Math.max(0, v.stock - v.owed), LOW_STOCK_AT + 1), whenOut: v.whenOut as StoreVariant['whenOut'], shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays,
   // No orders before 1C, so pre-orders are full only at a cap of 0; 1C counts them.
   preorderFull: v.cap !== null && v.cap <= 0,
 })
@@ -133,7 +140,7 @@ async function coreCatalogue(tenantId: string, drafts: boolean): Promise<StoreCa
       .orderBy(desc(sql`coalesce(${products.publishAt}, ${products.publishedAt}, ${products.createdAt})`)).limit(MAX_LISTED)
     const ids = ps.map((p) => p.id)
     const [vs, imgs, cols, attrs, colls, members] = ids.length ? await Promise.all([
-      tx.select(variantCols).from(variants).where(and(eq(variants.tenantId, tenantId), inArray(variants.productId, ids), sql`${variants.archivedAt} is null`)).orderBy(asc(variants.position)),
+      tx.select(variantCols(tenantId)).from(variants).where(and(eq(variants.tenantId, tenantId), inArray(variants.productId, ids), sql`${variants.archivedAt} is null`)).orderBy(asc(variants.position)),
       tx.select(imageCols).from(productImages).where(and(eq(productImages.tenantId, tenantId), inArray(productImages.productId, ids))).orderBy(asc(productImages.position)),
       tx.select(colourCols).from(productColours).where(and(eq(productColours.tenantId, tenantId), inArray(productColours.productId, ids))),
       tx.select({ productId: productAttributes.productId, attribute: productAttributes.attribute, values: productAttributes.values }).from(productAttributes).where(and(eq(productAttributes.tenantId, tenantId), inArray(productAttributes.productId, ids))),
@@ -187,7 +194,7 @@ async function coreProduct(tenantId: string, handle: string, drafts: boolean): P
     if (!p) return null
     const mine = <T extends { tenantId: unknown; productId: unknown }>(t: T) => and(eq(t.tenantId as never, tenantId), eq(t.productId as never, p.id))
     const [vs, imgs, cols, attrs] = await Promise.all([
-      tx.select(variantCols).from(variants).where(and(mine(variants), sql`${variants.archivedAt} is null`)).orderBy(asc(variants.position)),
+      tx.select(variantCols(tenantId)).from(variants).where(and(mine(variants), sql`${variants.archivedAt} is null`)).orderBy(asc(variants.position)),
       tx.select(imageCols).from(productImages).where(mine(productImages)).orderBy(asc(productImages.position)),
       tx.select(colourCols).from(productColours).where(mine(productColours)),
       tx.select({ attribute: productAttributes.attribute, values: productAttributes.values }).from(productAttributes).where(mine(productAttributes)),

@@ -1,7 +1,7 @@
 import 'server-only'
 import { sql, type SQL } from 'drizzle-orm'
 import type { OrderState, QueueTab } from '@/domains/orders/order-state'
-import { orders } from '@/lib/db/schema-orders'
+import { orderLines, orders } from '@/lib/db/schema-orders'
 
 // =============================================================================
 // FILE: src/lib/db/order-predicates.ts
@@ -71,3 +71,11 @@ export const holdingSql = (now: Date, a = '"orders"'): SQL =>
 
 /** isStanding(): placed and not cancelled — its lines still count against stock and pre-order caps. */
 export const standingSql = (a = '"orders"'): SQL => sql`(${c(a, 'cancelled_at')} is null and ${placedSql(a)})`
+
+/**
+ * Units of the variant at `variantCol` owed to pre-orders not yet packed: stock that arrives for them is not for
+ * sale. Read by checkout (variantRows) and the product page (storefront), so the two agree (impact review 2026-11-07).
+ */
+export const owedSql = (tenantId: string, now: Date, variantCol = '"variants"."id"'): SQL<number> => sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id
+  where l.tenant_id = ${tenantId} and l.variant_id = ${sql.raw(variantCol)} and l.kind = 'preorder' and l.stock_taken_at is null and o.packed_at is null and o.shipped_at is null
+    and (${standingSql('o')} or ${holdingSql(now, 'o')}))`

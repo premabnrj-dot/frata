@@ -13,6 +13,7 @@ import { orderToken, sha256, tokenHash } from '@/lib/crypto/secret-box'
 import { checkoutShop, variantRows } from '@/lib/queries/checkout'
 import { keysFor } from '@/lib/payments/keys'
 import { createOrder } from '@/lib/payments/razorpay'
+import { refreshShop } from '@/lib/queries/storefront'
 
 // =============================================================================
 // FILE: src/lib/orders/place.ts
@@ -46,6 +47,7 @@ export type PlaceResult =
 const requestHashOf = (i: PlaceInput) => sha256(JSON.stringify([i.address.phone, i.method, [...i.bag].map((b) => [b.variantId, b.qty]).sort()]))
 
 export async function placeOrder(tenantId: string, input: PlaceInput, now = new Date()): Promise<PlaceResult> {
+  const soldOut: string[] = []
   const placed = await withTenant(tenantId, async (tx): Promise<PlaceResult | { kind: 'new'; id: string; number: number; method: 'cod' | 'prepaid'; total: number }> => {
     // A retry of the same attempt finds its order; the same key with a different bag is not the same attempt.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${tenantId + ':' + input.idempotencyKey}, 0))`)
@@ -58,10 +60,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     }
     const shop = await checkoutShop(tx, tenantId)
     if (!shop || !shop.open) return { kind: 'refused', status: 404, error: 'This shop is not taking orders right now.' }
-    // Abandoned online orders keep their row and lines for counts, but not the shopper's details past 90 days (spec, retention).
-    await tx.update(orders).set({ customerName: '', phone: '', addressLine: '', area: '', landmark: '', erasedAt: now })
-      .where(and(eq(orders.tenantId, tenantId), isNull(orders.erasedAt), isNull(orders.paidAt), isNull(orders.switchedToCodAt), eq(orders.paymentMethod, 'prepaid'),
-        sql`${orders.placedAt} < ${new Date(now.getTime() - 90 * 86_400_000).toISOString()}::timestamptz`))
+    // Abandoned online orders lose the shopper's details after 90 days: the daily cron (src/lib/orders/erase.ts).
     if (input.method === 'prepaid' && !shop.online) return { kind: 'refused', status: 422, error: 'Online payment is not available at this shop right now. Pay on delivery instead.' }
 
     const rows = await variantRows(tx, tenantId, input.bag.map((b) => b.variantId), now, { lock: true })
@@ -104,10 +103,12 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
       taxableValue: l.taxable, gstBps: l.gstBps, gst: l.gst, hsn: l.hsn, unitCost: costs.get(l.variantId) ?? null,
       kind: l.kind, shipsBy: l.shipsBy, leadMinDays: l.leadMinDays, leadMaxDays: l.leadMaxDays, position,
     })))
-    if (cod) await takeStock(tx, tenantId, id)
+    if (cod) await takeStock(tx, tenantId, id, 'in_stock', soldOut)
     return { kind: 'new', id, number, method: input.method, total: m.total }
   })
   if (placed.kind !== 'new') return placed
+  // The last piece went: the cached product pages say sold out at once (1D gap fix).
+  if (soldOut.length) refreshShop(tenantId, 'catalogue')
   const out: Placed = { kind: 'placed', token: orderToken(placed.id), number: placed.number, method: placed.method, total: placed.total, pay: null }
   if (placed.method === 'cod') return out
   const pay = await startPayment(tenantId, placed.id)
@@ -119,21 +120,24 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
  * switch, online at capture; preorder: at packing). Each line is stamped when its stock leaves the shelf —
  * only the lines actually taken — so a second call takes nothing and a cancel puts back exactly what was taken.
  * Returns the lines that could not be covered (a capture after its hold expired and the piece sold: refund due).
+ * Variants it took to 0 are pushed onto `soldOut`, so the caller refreshes the cached shop pages after its commit.
  */
-export async function takeStock(tx: Tx, tenantId: string, orderId: string, kind: 'in_stock' | 'preorder' = 'in_stock'): Promise<{ short: number }> {
+export async function takeStock(tx: Tx, tenantId: string, orderId: string, kind: 'in_stock' | 'preorder' = 'in_stock', soldOut: string[] = []): Promise<{ short: number; taken: number }> {
   const lines = await tx.select({ id: orderLines.id, variantId: orderLines.variantId, qty: orderLines.qty }).from(orderLines)
     .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId), eq(orderLines.kind, kind), isNull(orderLines.stockTakenAt)))
-  let short = 0
+  let short = 0, taken = 0
   // Variants in id order, as variantRows locks them: no deadlock between two orders sharing pieces.
   for (const l of [...lines].sort((a, b) => String(a.variantId).localeCompare(String(b.variantId)))) {
     if (!l.variantId) { short++; continue }
     const r = await tx.update(variants).set({ stock: sql`${variants.stock} - ${l.qty}` })
-      .where(and(eq(variants.tenantId, tenantId), eq(variants.id, l.variantId), sql`${variants.stock} >= ${l.qty}`)).returning({ id: variants.id })
+      .where(and(eq(variants.tenantId, tenantId), eq(variants.id, l.variantId), sql`${variants.stock} >= ${l.qty}`)).returning({ id: variants.id, stock: variants.stock })
     if (!r.length) { short++; continue }
+    taken++
+    if (r[0]!.stock === 0) soldOut.push(l.variantId)
     await tx.update(orderLines).set({ stockTakenAt: sql`now()` })
       .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.id, l.id), isNull(orderLines.stockTakenAt)))
   }
-  return { short }
+  return { short, taken }
 }
 
 /**
