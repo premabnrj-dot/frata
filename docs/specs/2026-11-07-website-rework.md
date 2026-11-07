@@ -1,5 +1,5 @@
 # W·1 · The public pages in the Frrata identity
-Status: draft · Date: 2026-11-07 · Mockup: https://claude.ai/artifact/5XCS7xCWJj8zGS5SUpv8cf · Approved: —
+Status: active · Date: 2026-11-07 · Mockup: https://claude.ai/artifact/5XCS7xCWJj8zGS5SUpv8cf · Approved: owner, 2026-11-07 (calls 1–6 as recommended)
 
 ## Goal
 Ranked problems (1) COD/RTO losses and (6) true profit per order, told to the merchants who have them, plus partner
@@ -47,6 +47,11 @@ No current source was found for "pricing on the page converts better"; the call 
 4. "You keep ₹1,034" in the hero, tagged Next · leave profit out until Phase 3 ships it.
 5. Partners: a brand-count calculator · the single fixed example.
 6. 20% for 24 months against Framer's 50% for 12: run `unit-economics-reviewer` before any change; the mockup keeps 20%/24.
+
+## Owner direction (2026-11-07)
+**Fewer words, more pictures.** Each section says its point in one short line and shows it in a drawing, the product
+frame or a number. No reassurance paragraphs, no notes about how the page works (e.g. "Figures are read from the plans
+themselves…" goes). A heading at most 6 words; a line under it at most 12; a card at most 2 short lines.
 
 ## Plan (after sign-off; reviewers before code)
 | Task | What | Verify |
