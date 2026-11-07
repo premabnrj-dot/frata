@@ -45,7 +45,7 @@ export default async function OrdersPage() {
                   <td className="whitespace-nowrap text-muted-foreground">{dateTimeIN(o.placedAt)}</td>
                   <td><Badge tone={o.paymentMethod === 'cod' ? 'warn' : 'neutral'}>{o.paymentMethod === 'cod' ? 'COD' : 'Prepaid'}</Badge></td>
                   <td><Badge tone={s.tone}>{s.label}</Badge></td>
-                  <td className="text-right"><Money paise={paise(o.netRevenue)} /></td>
+                  <td className="text-right"><Money paise={paise(o.total)} /></td>
                 </DataTableRow>
               )
             })}

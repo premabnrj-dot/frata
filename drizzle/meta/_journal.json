@@ -113,6 +113,20 @@
       "when": 1794003815871,
       "tag": "0015_product_model_access",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794025092202,
+      "tag": "0016_checkout",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794025113933,
+      "tag": "0017_checkout_access",
+      "breakpoints": true
     }
   ]
 }

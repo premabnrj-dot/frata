@@ -10,9 +10,9 @@ insert into tenants (id, slug, name) values
   ('22222222-2222-2222-2222-222222222222', 'proof-b', 'Proof B');
 insert into tenant_domains (host, tenant_id) values ('proof-a.frata.test', '11111111-1111-1111-1111-111111111111');
 insert into members (tenant_id, user_id, role) values ('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', 'owner');
-insert into orders (tenant_id, number, payment_method, net_revenue, placed_at) values
-  ('11111111-1111-1111-1111-111111111111', 1, 'cod', 100000, now()),
-  ('22222222-2222-2222-2222-222222222222', 1, 'prepaid', 50000, now());
+insert into orders (tenant_id, number, payment_method, subtotal, total, placed_at, paid_at) values
+  ('11111111-1111-1111-1111-111111111111', 1, 'cod', 100000, 100000, now(), null),
+  ('22222222-2222-2222-2222-222222222222', 1, 'prepaid', 50000, 50000, now(), now());
 
 -- 1. No tenant set: nothing.
 begin; set local role frata_app;
@@ -44,8 +44,8 @@ begin; set local role frata_app;
 select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
 do $$ begin
   begin
-    insert into orders (tenant_id, number, payment_method, net_revenue, placed_at)
-      values ('22222222-2222-2222-2222-222222222222', 9, 'cod', 1, now());
+    insert into orders (tenant_id, number, payment_method, subtotal, total, placed_at)
+      values ('22222222-2222-2222-2222-222222222222', 9, 'cod', 1, 1, now());
     raise exception 'FAIL: tenant A wrote an order into tenant B';
   exception when insufficient_privilege then null; -- RLS violation: expected
   end;
@@ -378,4 +378,64 @@ do $$ begin
     or has_table_privilege('frata_admin', 'collection_products', 'select') or has_table_privilege('frata_admin', 'product_handle_history', 'select') then raise exception 'FAIL: admin reads the product model directly'; end if;
 end $$;
 
-\echo 'tenancy proof — all 21 checks passed'
+-- 22. Checkout: orders, lines and payment keys — own shop only; a link token from B finds nothing under A; keys unreadable to staff.
+insert into variants (id, tenant_id, product_id, option_values, price) values
+  ('cdcdcdcd-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', '{S}', 100000),
+  ('cdcdcdcd-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'eeeeeeee-0000-0000-0000-00000000000b', '{L}', 100000);
+insert into orders (id, tenant_id, number, payment_method, subtotal, total, placed_at, token_hash, idempotency_key, razorpay_order_id, phone) values
+  ('acacacac-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 9001, 'cod', 100000, 100000, now(), 'hash-b', 'key-1', 'order_B1', '9829043210');
+insert into order_lines (tenant_id, order_id, variant_id, title, qty, unit_price, taxable_value, unit_cost) values
+  ('22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-00000000000b', 'cdcdcdcd-0000-0000-0000-00000000000b', 'B kurta', 1, 100000, 95238, 40000);
+insert into payment_keys (tenant_id, key_id, key_secret_enc, webhook_secret_enc, webhook_key, mode) values
+  ('22222222-2222-2222-2222-222222222222', 'rzp_test_abcdef123456', 'enc-secret', 'enc-webhook', 'k_' || repeat('b', 32), 'test');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if exists (select 1 from orders where tenant_id <> '11111111-1111-1111-1111-111111111111') or exists (select 1 from order_lines) or exists (select 1 from payment_keys) then raise exception 'FAIL: A sees B orders, lines or keys'; end if;
+  if exists (select 1 from orders where token_hash = 'hash-b') then raise exception 'FAIL: B order link opens under A'; end if;
+  update payment_keys set key_id = 'rzp_live_stolen00' ; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A changed B keys'; end if;
+  update orders set paid_at = now() where tenant_id = '22222222-2222-2222-2222-222222222222'; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A marked B order paid'; end if;
+  -- The same idempotency key and Razorpay order id in A: allowed (unique per shop only, so nothing about B leaks).
+  insert into orders (id, tenant_id, number, payment_method, subtotal, total, placed_at, idempotency_key, razorpay_order_id) values
+    ('acacacac-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 9001, 'cod', 100000, 100000, now(), 'key-1', 'order_B1');
+  begin insert into orders (tenant_id, number, payment_method, placed_at, idempotency_key) values ('11111111-1111-1111-1111-111111111111', 9002, 'cod', now(), 'key-1'); raise exception 'FAIL: one key made two orders';
+  exception when unique_violation then null; end;
+  -- A line in A's order pointing at B's variant: the composite key refuses it.
+  begin insert into order_lines (tenant_id, order_id, variant_id, title, qty, unit_price, taxable_value) values
+    ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-00000000000a', 'cdcdcdcd-0000-0000-0000-00000000000b', 'x', 1, 1, 1); raise exception 'FAIL: A sold B variant';
+  exception when foreign_key_violation then null; end;
+  begin insert into order_lines (tenant_id, order_id, title, qty, unit_price, taxable_value) values
+    ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-00000000000b', 'x', 1, 1, 1); raise exception 'FAIL: A added a line to B order';
+  exception when foreign_key_violation then null; end;
+  begin update order_lines set qty = 2; raise exception 'FAIL: app edited a sold line'; exception when insufficient_privilege then null; end;
+  -- The total is its parts.
+  begin insert into orders (tenant_id, number, payment_method, placed_at, subtotal, shipping, total) values ('11111111-1111-1111-1111-111111111111', 9003, 'cod', now(), 100000, 7900, 100000); raise exception 'FAIL: a total that is not its parts';
+  exception when check_violation then null; end;
+end $$;
+rollback;
+do $$ declare t uuid; e text; begin
+  -- The webhook lookup: B's key gives B and its webhook secret only; a random key nothing; nobody but frata_app may call it.
+  select tenant_id, webhook_secret_enc into t, e from app_payment_webhook_for('k_' || repeat('b', 32));
+  if t <> '22222222-2222-2222-2222-222222222222' or e <> 'enc-webhook' then raise exception 'FAIL: webhook key did not find its shop'; end if;
+  if exists (select 1 from app_payment_webhook_for('k_' || repeat('c', 32))) or exists (select 1 from app_payment_webhook_for('x')) then raise exception 'FAIL: a random key found a shop'; end if;
+  if has_function_privilege('anon', 'app_payment_webhook_for(text)', 'execute') or has_function_privilege('authenticated', 'app_payment_webhook_for(text)', 'execute') then raise exception 'FAIL: anon can look up webhook keys'; end if;
+  if has_table_privilege('frata_admin', 'payment_keys', 'select') or has_table_privilege('frata_admin', 'order_lines', 'select') then raise exception 'FAIL: staff read keys or costs directly'; end if;
+end $$;
+
+-- 23. Platform tables inside a tenant: B's webhook events and outbox rows are invisible to A; with no tenant set the sweep sees all.
+insert into webhook_events (provider, event_key, tenant_id, payload) values ('razorpay', 'razorpay:b:payment.captured:pay_1', '22222222-2222-2222-2222-222222222222', '{"phone":"9829043210"}');
+insert into outbox (tenant_id, kind, dedupe_key, payload) values ('22222222-2222-2222-2222-222222222222', 'test.kind', 'b-1', '{}');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  if exists (select 1 from webhook_events where tenant_id = '22222222-2222-2222-2222-222222222222') then raise exception 'FAIL: A reads B webhook payloads'; end if;
+  if exists (select 1 from outbox where tenant_id = '22222222-2222-2222-2222-222222222222') then raise exception 'FAIL: A reads B outbox'; end if;
+end $$;
+rollback;
+begin; set local role frata_app;
+do $$ begin
+  if not exists (select 1 from webhook_events where event_key = 'razorpay:b:payment.captured:pay_1') then raise exception 'FAIL: the platform sweep cannot see events'; end if;
+end $$;
+rollback;
+
+\echo 'tenancy proof — all 23 checks passed'

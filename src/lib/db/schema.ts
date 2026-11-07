@@ -47,29 +47,7 @@ export const members = pgTable('members', {
   check('members_role', sql`${t.role} in ('owner','admin','staff')`),
 ])
 
-export const orders = pgTable('orders', {
-  id: id(),
-  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'restrict' }),
-  /** The number a customer quotes: per tenant, not global. */
-  number: integer('number').notNull(),
-  paymentMethod: text('payment_method').notNull(),
-  netRevenue: money('net_revenue').notNull(),
-  cogs: money('cogs').notNull().default(0),
-  forwardShipping: money('forward_shipping').notNull().default(0),
-  placedAt: timestamp('placed_at', { withTimezone: true }).notNull(),
-  confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
-  cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
-  shippedAt: timestamp('shipped_at', { withTimezone: true }),
-  ndrAt: timestamp('ndr_at', { withTimezone: true }),
-  deliveredAt: timestamp('delivered_at', { withTimezone: true }),
-  rtoInitiatedAt: timestamp('rto_initiated_at', { withTimezone: true }),
-  rtoDeliveredAt: timestamp('rto_delivered_at', { withTimezone: true }),
-  createdAt: createdAt(),
-}, (t) => [
-  uniqueIndex('orders_tenant_number').on(t.tenantId, t.number),
-  index('orders_tenant_placed').on(t.tenantId, t.placedAt),
-  check('orders_payment_method', sql`${t.paymentMethod} in ('cod','prepaid')`),
-])
+// Orders, their lines and a shop's payment keys: src/lib/db/schema-orders.ts.
 
 // ── Platform tables: not tenant-guarded by policy, listed in scripts/check-tenant.mjs ──
 
