@@ -47,7 +47,7 @@ export function NavProgress() {
   }, [path, search])
   return (
     <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 top-0 z-50 h-0.5 print:hidden">
-      <div className={`h-full bg-primary motion-reduce:transition-none ${state === 'run' ? 'w-4/5 animate-nav-run' : state === 'done' ? 'w-full opacity-0 transition-[width,opacity] duration-base ease-standard' : 'w-0 opacity-0'}`} />
+      <div className={`h-full w-full origin-left bg-primary motion-reduce:transition-none ${state === 'run' ? 'scale-x-[0.8] animate-nav-run' : state === 'done' ? 'scale-x-100 opacity-0 transition-[transform,opacity] duration-base ease-standard' : 'scale-x-0 opacity-0'}`} />
     </div>
   )
 }

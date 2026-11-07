@@ -53,12 +53,11 @@ const DATA_MODULE = /from\s+['"]@\/lib\/(?:queries|db|admin|auth)(?:\/[^'"]*)?['
 /** Actions the shell may import from src/app (they are endpoints, not reads), with why. */
 const SHELL_ACTIONS = { '@/app/(admin)/admin/sign-out/actions': 'Sign out: ends a live support visit (needs src/lib/admin, so it lives under Admin)' }
 /**
- * The file's text with every relative import written as its @/ path, so '../../lib/db/tenant' cannot slip past a
- * rule written for '@/lib/db/tenant' (tenancy audit of U·2a). The text is ONE string: as an array of lines,
- * `text.includes(name)` compared whole lines and the cost-sentinel rule (6) never fired (found 2026-11-07).
+ * The file's code (comment lines skipped, as code() does) with every relative import written as its @/ path, so
+ * '../../lib/db/tenant' cannot slip past a rule written for '@/lib/db/tenant' (tenancy audit of U·2a).
  */
 function source(file) {
-  return readFileSync(file, 'utf8').replace(/(from\s+|import\s*\(\s*)(['"])(\.{1,2}\/[^'"]+)\2/g, (m, pre, q, rel) =>
+  return code(file).replace(/(from\s+|import\s*\(\s*)(['"])(\.{1,2}\/[^'"]+)\2/g, (m, pre, q, rel) =>
     `${pre}${q}@/${relative('src', resolve(dirname(file), rel)).split('\\').join('/')}${q}`)
 }
 

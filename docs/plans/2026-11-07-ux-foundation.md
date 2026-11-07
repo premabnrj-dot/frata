@@ -164,7 +164,7 @@ Findings taken:
 - The root title template is "%s · Frata".
 - Scroll padding includes the safe area.
 - An in-app move after a visit ended elsewhere now refreshes the shell. The audit's MEDIUM 1: `TenantCheck` asks `currentTenantAction` after each move, for staff only. A template does not re-render on the server for a page-only move; this was found by the new e2e step.
-- `check:tenant` reads files as one string and resolves relative imports. As an array of lines, its cost-sentinel rule (ADR-0003, rule 6) had never fired; it is now proven by planting.
+- `check:tenant` resolves relative imports before matching. ~~It had read files as an array of lines, so its cost-sentinel rule never fired~~: **this claim was wrong**. The old `code()` already joined the comment-stripped lines into one string, and rule 6 worked; the re-review proved it by planting. My first change dropped comment-skipping (weakening rules 2 and 4) and was corrected the same day: resolution now runs on the comment-stripped code. Both are proven by planting.
 - The shell may import only SHELL_ACTIONS from `src/app`.
 - New e2e steps: the progress bar on a slow move, the More sheet's focus, sign-out ending a visit, an in-app move after an end elsewhere.
 
@@ -172,3 +172,13 @@ Deferred:
 - A vitest for check:tenant rule 7: the gate walks `src` itself. It is proven by planting files in the session, and a path argument comes with U·C.
 - Sign out and End now skip the leave guard (they are forms). Signal to revisit: a lost edit reported.
 - The `collections/[handle]` tab title.
+
+**Re-review of U·2a (2026-11-07):** taken.
+- The check:tenant regression is fixed, with the claim corrected above.
+- The storefront keeps its own tabs: `s/[host]/layout.tsx` sets a pass-through template, so the root template does not reach it.
+- The More sheet's scroll lock is a CSS rule (`html:has(dialog[data-more][open])`), so no close path can leave `<html>` locked. Turning the phone past 768 px closes the sheet, and a tap on the sheet's own padding no longer closes it.
+- TenantCheck reads `GET /api/console/tenant` (no-store), not a server action, and skips the first render.
+- The banner's height and `--shell-top` are one value.
+- The progress bar animates transform only.
+- The expiry timer never re-arms faster than every 5 s.
+- e2e covers the page scrolling again after the sheet closes, closing by scrim and by link, and no "· Frata" on the shop's bag or checkout tabs.

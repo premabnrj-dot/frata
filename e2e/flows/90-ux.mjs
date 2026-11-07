@@ -165,6 +165,10 @@ export default {
         }
         await q.keyboard.press('Escape'); await sheet.waitFor({ state: 'hidden' })
         assert.equal(await q.evaluate(() => document.activeElement?.textContent?.trim()), 'More', 'focus returns to More')
+        assert.notEqual(await q.evaluate(() => getComputedStyle(document.documentElement).overflow), 'hidden', 'the page scrolls again')
+        // Closing by the scrim (a tap outside the sheet) and by a link both close it too.
+        await more.click(); await sheet.waitFor(); await q.mouse.click(195, 40); await sheet.waitFor({ state: 'hidden' })
+        await more.click(); await sheet.waitFor(); await sheet.getByRole('link', { name: 'Settings' }).click(); await q.waitForURL(/\/console\/settings/); await sheet.waitFor({ state: 'hidden' })
         await pc.close()
         // Sign out during a support visit: the visit ends (audited as by sign-out) and the next page is sign-in.
         const fc = await signedIn(t.browser, 'frata', { viewport: { width: 1280, height: 800 } })
@@ -177,6 +181,10 @@ export default {
         const [audit] = await db`select detail from audit_events where action = 'support.end' order by at desc limit 1`
         assert.deepEqual(audit?.detail, { by: 'sign-out' })
         await fc.close()
+        // A shop's tabs are the shop's: no "· Frata" on the bag or checkout (impact review U·2a).
+        const sc = await t.browser.newContext(); const sp = await sc.newPage()
+        for (const path of ['/bag', '/checkout']) { await sp.goto(SHOP + path); assert.ok(!/Frata/.test(await sp.title()), `${path} title: ${await sp.title()}`) }
+        await sc.close()
       })
 
       await t.step('Indic fonts download only when a name needs them, and never on the shop (plan U · A4)', async () => {

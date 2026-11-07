@@ -73,15 +73,22 @@ export function BottomBar({ label, tabs, more, moreFoot, ink = false }: { label:
   const sheet = useRef<HTMLDialogElement>(null)
   const opener = useRef<HTMLButtonElement>(null)
   useEffect(() => { setOpen(false) }, [path])
-  // A native modal <dialog>: focus stays inside, the page behind is inert, Esc closes; focus returns to More and
-  // the page stops scrolling behind it (impact review U·2a).
+  // A native modal <dialog>: focus stays inside, the page behind is inert, Esc closes; focus returns to More. The
+  // page behind does not scroll while it is open: a CSS rule on dialog[data-more][open] (globals.css), so no path
+  // (a sign-out, a refresh to a refusal) can leave <html> locked. Turning the phone past 768 px closes it, since
+  // the sheet is phone-only (impact review U·2a).
   useEffect(() => {
     const d = sheet.current
     if (!d) return
-    if (open && !d.open) { d.showModal(); document.documentElement.style.overflow = 'hidden' }
-    if (!open && d.open) { d.close() }
-    if (!open) { document.documentElement.style.overflow = ''; }
+    if (open && !d.open) d.showModal()
+    if (!open && d.open) d.close()
   }, [open])
+  useEffect(() => {
+    const wide = window.matchMedia('(min-width: 768px)')
+    const close = () => { if (wide.matches) setOpen(false) }
+    wide.addEventListener('change', close)
+    return () => wide.removeEventListener('change', close)
+  }, [])
   const tab = (cur: boolean) => `relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs ${cur ? 'font-semibold' : ''} ${ink
     ? (cur ? 'text-primary-foreground' : 'text-primary-foreground/70') : (cur ? 'text-foreground' : 'text-muted-foreground')}`
   const bar = (cur: boolean) => cur && <span aria-hidden="true" className={`absolute inset-x-[30%] top-0 h-0.5 rounded-b ${ink ? 'bg-warn' : 'bg-primary'}`} />
@@ -100,9 +107,10 @@ export function BottomBar({ label, tabs, more, moreFoot, ink = false }: { label:
           {bar(inMore)}<Menu aria-hidden="true" className="size-[22px]" strokeWidth={1.8} />More
         </button>
       </nav>
-      <dialog ref={sheet} aria-label="More" onClose={() => { setOpen(false); document.documentElement.style.overflow = ''; opener.current?.focus() }}
+      <dialog ref={sheet} data-more aria-label="More" onClose={() => { setOpen(false); opener.current?.focus() }}
         onClick={(e) => { if (e.target === e.currentTarget) setOpen(false) }}
-        className="m-0 mt-auto w-full max-w-none animate-sheet rounded-t-xl border-t border-border bg-card p-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] text-foreground backdrop:bg-foreground/40 md:hidden">
+        className="m-0 mt-auto w-full max-w-none animate-sheet rounded-t-xl border-t border-border bg-card p-0 text-foreground backdrop:bg-foreground/40">
+        <div className="p-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)]">
         <div className="flex items-center justify-between px-3 py-1">
           <span aria-hidden="true" className="mx-auto h-1 w-9 rounded-full bg-border" />
           <button type="button" autoFocus onClick={() => setOpen(false)} aria-label="Close" className="inline-grid size-10 place-items-center rounded-md hover:bg-accent"><X aria-hidden="true" className="size-5" /></button>
@@ -114,6 +122,7 @@ export function BottomBar({ label, tabs, more, moreFoot, ink = false }: { label:
           </Link>
         ))}
         {moreFoot && <div className="mt-1 border-t border-border pt-1">{moreFoot}</div>}
+        </div>
       </dialog>
     </>
   )

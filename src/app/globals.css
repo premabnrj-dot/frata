@@ -165,6 +165,8 @@
   /* The shell's stack: Inter, then Noto for Indic names (src/components/shell/fonts.ts). */
   [data-shell] { --font-shell: var(--font-inter), var(--font-noto-deva), var(--font-noto-beng), var(--font-noto-guru), var(--font-noto-taml), system-ui, sans-serif; font-family: var(--font-shell); }
   [data-script] { line-height: 1.8; }
+  /* The phone's More sheet is open: the page behind does not scroll (src/components/shell/nav.tsx). */
+  html:has(dialog[data-more][open]) { overflow: hidden; }
   /* The document keeps the scroll (A7): keep a focused or scrolled-to element clear of the sticky support banner
      and of the phone's fixed bottom bar. */
   html:has([data-support-banner]) { scroll-padding-top: 3.5rem; }
@@ -189,13 +191,11 @@
 @utility animate-step-back { animation: step-in-back 320ms cubic-bezier(0, 0, 0, 1); }
 @utility animate-value-flash { animation: value-flash 800ms cubic-bezier(0.2, 0, 0, 1); }
 /* The shell (plan U · U·2a, motion rules 22–23): the progress bar creeps to 80 % while a move is on its way;
-   the phone's More sheet rises in 320 ms over a scrim that fades in with it. */
-@keyframes nav-run { from { width: 0; } to { width: 80%; } }
+   the phone's More sheet rises in 320 ms. Transform only (rule 22). */
+@keyframes nav-run { from { transform: scaleX(0); } to { transform: scaleX(0.8); } }
 @keyframes sheet-in { from { transform: translateY(100%); } to { transform: none; } }
-@keyframes scrim-in { from { opacity: 0; } to { opacity: 1; } }
 @utility animate-nav-run { animation: nav-run 1400ms cubic-bezier(0.3, 0, 1, 1); }
 @utility animate-sheet { animation: sheet-in 320ms cubic-bezier(0, 0, 0, 1); }
-@utility animate-sheet-scrim { animation: scrim-in 320ms cubic-bezier(0, 0, 0, 1); }
 
 /* ── A merchant's shop (storefront and its previews). Fixed light paper: it is
    their brand, not the viewer's OS theme. Accent = shop_settings.accent. ── */

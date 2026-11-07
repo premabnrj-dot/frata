@@ -10,7 +10,6 @@ import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { toConfirmCount } from '@/lib/queries/orders'
 import { supportVisit } from '@/lib/queries/support'
 import { TenantCheck } from '@/components/shell/tenant-check'
-import { currentTenantAction } from '@/app/auth/current-tenant/actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -72,7 +71,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   return (
     <AppShell title={tenantName} navLabel="Console" groups={groups} tabs={[home, orders, products]} more={[collections, settings, activity]} foot={foot}
       email={auth.email} tenantId={tenantId} banner={visit ? <SupportBanner storeName={tenantName} visit={visit} now={now} /> : undefined}>
-      <TenantCheck tenantId={tenantId} staff={auth.staffRole !== null} ask={currentTenantAction} />
+      <TenantCheck tenantId={tenantId} staff={auth.staffRole !== null} />
       {children}
     </AppShell>
   )

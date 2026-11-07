@@ -11,7 +11,8 @@ import { useEffect } from 'react'
 export function ExpiryRefresh({ ms: left }: { ms: number }) {
   const router = useRouter()
   useEffect(() => {
-    const ms = left + 500
+    // Past its time by the server but still shown (the database's clock behind the server's): wait 5 s, not 500 ms.
+    const ms = left > 0 ? left + 500 : 5000
     if (ms > 2 ** 31 - 1) return
     const t = window.setTimeout(() => router.refresh(), Math.max(0, ms))
     return () => window.clearTimeout(t)

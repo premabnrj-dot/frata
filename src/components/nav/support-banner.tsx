@@ -18,7 +18,7 @@ export function SupportBanner({ storeName, visit, now }: {
   const left = minutesLeft(visit, now)
   const why = `${SUPPORT_REASON_LABEL[visit.reason as SupportReason]}${visit.note ? ` · “${visit.note}”` : ''}`
   return (
-    <div role="status" data-support-banner className="sticky top-0 z-40 flex h-11 items-center gap-3 bg-support px-4 text-sm text-support-foreground md:px-5 print:hidden">
+    <div role="status" data-support-banner className="sticky top-0 z-40 flex h-[var(--shell-top)] items-center gap-3 bg-support px-4 text-sm text-support-foreground md:px-5 print:hidden">
       <span className="min-w-0 truncate font-semibold" title={why}>
         <span className="md:hidden">Support · </span><span className="hidden md:inline">Frata support in </span>{storeName}<span className="hidden md:inline">&apos;s console</span>
       </span>

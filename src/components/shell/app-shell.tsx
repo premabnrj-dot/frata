@@ -58,7 +58,7 @@ function Account({ email, ink }: { email: string | null; ink: boolean }) {
 export function AppShell({ ink = false, title, staffTag = false, navLabel, groups, tabs, more, foot, email, tenantId, banner, children }: ShellProps) {
   const surface = ink ? 'ink' : undefined
   return (
-    <div data-shell data-tenant={tenantId} style={{ '--shell-top': banner ? '2.75rem' : '0px' } as CSSProperties} className={`min-h-dvh bg-background ${SHELL_FONT_VARS}`}>
+    <div data-shell data-tenant={tenantId} style={{ '--shell-top': banner ? '2.75rem' : '0px' } as CSSProperties /* the banner's own height reads this too */} className={`min-h-dvh bg-background ${SHELL_FONT_VARS}`}>
       <a href="#content" className="sr-only text-sm font-medium text-foreground focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-md focus:bg-card focus:px-3 focus:py-2">Skip to content</a>
       {banner}
       <Suspense fallback={null}><NavProgress /></Suspense>
