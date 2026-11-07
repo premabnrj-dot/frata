@@ -24,7 +24,7 @@ off. Frata sells the same parts as tiers plus add-ons without code changes.
 - **Codebase:** `plan_versions.features` (text[], CHECK) and `canUse()` exist; Admin edits features per
   plan version; nothing in the console reads them yet. The outbox has a sender registry by `kind`.
 
-## Design (mockup to come: Console › Apps, a module's setup, Admin › merchant › Modules)
+## Design (mockup v2 on the frrata brand, 2026-11-07: Apps, app details, turn-off, Admin › Modules)
 
 ### 1. The registry (pure, one list)
 `src/domains/modules/registry.ts`. Each module is data:
@@ -86,6 +86,20 @@ else.**
 - Turning one on goes to its setup when it has one. Every change writes `audit_events`.
 - Partners and staff see the page read-only (CAN_MANAGE changes it).
 
+### 5b. App details before getting it (owner, 2026-11-07)
+- Every app's name in Apps (and "See details" on an add-on) opens its **details**: a dialog on desktop, a
+  bottom sheet on a phone (mockup screens 2, 2b).
+- **Contents:**
+  - icon, name and a one-line job;
+  - **What you get**: 4–6 features, each a short line, detail in (i) tips;
+  - **Works with**: its dependencies and whether they're on;
+  - **Price**: "In your plan", or the add-on price with "+ 18% GST · on your monthly Frrata bill · stop any
+    time · what you made stays"; any vendor usage named, e.g. "WhatsApp asks are billed by Meta, about ₹0.12 each";
+  - a small preview of what shoppers or the merchant will see.
+- **One primary action**, named with the price: "Add Reviews · ₹499/mo" (add-on), "Turn on Messages"
+  (included), "See Growth" (in a higher plan). "Not now" closes it.
+- Features and prices come from the registry and `addon_prices`, never typed in the page.
+
 ### 6. Admin
 - Plans: the feature checkboxes come from the registry.
 - Merchant › Modules: what's granted and how, the merchant's switches, and "Give a 30-day trial of X" (a
@@ -123,3 +137,15 @@ Charging (Phase 6). Third-party modules. Per-module usage metering beyond what v
    prices from `unit-economics-reviewer`).
 2. Is Messages (Communication) **in every plan** (recommended: messaging is how COD gets confirmed, which is
    the #1 problem), with team seats by tier and extra seats as an add-on? See the Communication spec.
+
+## Brand (coordinated with the brand session, branch claude/elegant-carson-8jygm1, 2026-11-07)
+These screens follow the frrata brand book v2:
+- ink and paper, with Rani only as a tinge: the primary button's thread, the active nav line, link underlines,
+  one detail per icon;
+- the rr monogram;
+- Bricolage 600 page titles;
+- the 24-grid icon set; module tiles are those icons on a muted tile.
+
+Status colours are unchanged. The pictograms and illustration tokens from Partners (design-language § Graphic
+language) are expected to be superseded by the brand's icon set and empty-state drawings. That is being settled
+with the brand session (message sent 2026-11-07).
