@@ -20,7 +20,7 @@ export function SupportBanner({ storeName, visit, now }: {
       <span className="ml-auto font-mono">{left} min left</span>
       <Link href={`/admin/merchants/${visit.tenantId}`} className="font-medium underline">Back to Admin</Link>
       <form action={endSupportAction}>
-        <button type="submit" className="h-8 rounded-md bg-card px-3 font-semibold text-support">End now</button>
+        <button type="submit" className="h-8 rounded-md bg-support-foreground px-3 font-semibold text-support">End now</button>
       </form>
     </div>
   )

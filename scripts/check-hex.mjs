@@ -24,13 +24,13 @@ const EXEMPT = [
 ]
 
 const BAD =
-  /(?:text|bg|border|fill|stroke|ring|from|via|to)-(?:\[#[0-9a-fA-F]{3,8}\]|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3})|(?<![a-zA-Z-])(?:rgba?|hsla?|oklch|oklab|lch|lab)\(/g
+  /(?:text|bg|border|fill|stroke|ring|from|via|to)-(?:\[#[0-9a-fA-F]{3,8}\]|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3})|(?<![a-zA-Z-])(?:rgba?|hsla?|hwb|oklch|oklab|lch|lab|color-mix)\(|-\[[^\]\s]*#[0-9a-fA-F]{3,8}\b[^\]\s]*\]/g
 // The second half (2026-11-07, plan U·1b): a colour function outside globals.css is a colour the tokens never see.
 
 /** Comment-only lines, in both TS and CSS. */
 function isComment(line) {
   const t = line.trim()
-  return t.startsWith('//') || t.startsWith('*') || t.startsWith('/*')
+  return t.startsWith('//') || t.startsWith('*') || t.startsWith('/*') || t.startsWith('{/*')
 }
 
 function walk(dir, acc = []) {

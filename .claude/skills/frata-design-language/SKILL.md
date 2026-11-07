@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 3.2.0
+  version: 3.2.1
   verified: 2026-11-07
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -242,8 +242,10 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
 4. **Dim with colour, never opacity.** A finished or cancelled row uses
    `text-muted-foreground` (≥ 4.5:1). Opacity is only for "loading", which is
    short and marked `aria-busy`.
-5. **Focus** is 2 px solid `--ring` with a 2 px offset, everywhere. On ink
-   surfaces it is paper-coloured.
+5. **Focus** is 2 px solid `--ring` with a 2 px offset in Console, Admin and the
+   sign-in pages (`[data-shell]`; the shop keeps its own). On ink surfaces
+   (`data-surface="ink"`) it is paper-coloured, on the support banner
+   `--support-foreground`. Every ring is ≥ 3:1 against what is around it.
 6. **Oxblood is the mark only.** On ink or dark surfaces the mark is
    *reversed*: a paper tile with an oxblood letter. Never a button, link, focus
    ring, status or chart colour.
@@ -289,14 +291,17 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
 
 **Targets and type**
 19. Every target is at least 24 × 24 px (WCAG 2.5.8), padded rather than a
-    bigger icon. Controls are `h-10` under 768 px and `h-9` above. Rows and the
+    bigger icon. Controls are `h-10` under 768 px and `h-9` above; a button's
+    height is its `size` variant (`default`, `lg`), never a className (twMerge
+    keeps `md:h-9` against a caller's `h-11`). Rows and the
     bottom bar are 44–56 px on phones.
 20. Icons: lucide, monochrome, 16 px in nav (22 px in the bottom bar), `--sub`
     until active. No coloured icon backgrounds, no illustrations in empty
     states.
 21. Indian names: Noto Sans (Devanagari, Tamil, …) is a fallback face behind
     Inter in the shell's own stack (`--font-shell` on `[data-shell]`, never on
-    `html`), `preload: false`, downloaded only when a glyph needs it. A name
+    `html`), committed files (`next/font/local`, OFL) with `preload: false` and
+    each script's unicode-range, downloaded only when a glyph needs it. A name
     renders through `<Name>`, which sets `data-script` from `scriptOf()` for line
     height 1.8. Mono has `font-variant-ligatures: none`.
 

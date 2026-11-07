@@ -94,7 +94,7 @@ export function CollectionEditor({ initial, products, families, attrOptions }: {
             {errors.title && <p className="text-xs text-danger-text">{errors.title}</p>}</div>
           <div className="space-y-1"><label htmlFor="c-handle" className="block text-sm font-medium">Address</label>
             <div className="flex items-center rounded-md border border-input bg-card text-sm"><span className="pl-3 font-mono text-xs text-muted-foreground">…/collections/</span>
-              <input id="c-handle" value={d.handle} maxLength={80} placeholder={handleFor(d.title) || 'festive-edit'} onChange={(e) => set({ handle: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })} className="h-9 min-w-0 flex-1 bg-transparent pr-3 font-mono text-sm outline-none" /></div>
+              <input id="c-handle" value={d.handle} maxLength={80} placeholder={handleFor(d.title) || 'festive-edit'} onChange={(e) => set({ handle: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })} className="h-10 md:h-9 min-w-0 flex-1 bg-transparent pr-3 font-mono text-sm outline-none" /></div>
             {errors.handle && <p className="text-xs text-danger-text">{errors.handle}</p>}</div>
           <div className="space-y-1"><label htmlFor="c-desc" className="block text-sm font-medium">Description <span className="font-normal text-muted-foreground">(optional, shown at the top of its page)</span></label>
             <textarea id="c-desc" rows={2} maxLength={2000} value={d.description} onChange={(e) => set({ description: e.target.value })} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm" /></div>
@@ -139,7 +139,7 @@ export function CollectionEditor({ initial, products, families, attrOptions }: {
                 {d.rules.map((r, i) => (
                   <li key={i} className="flex flex-wrap items-start gap-2 rounded-md bg-muted/50 p-2">
                     <label className="sr-only" htmlFor={`r-f-${i}`}>Rule {i + 1}</label>
-                    <select id={`r-f-${i}`} value={r.field} onChange={(e) => setRow(i, { field: e.target.value as Rule['field'], value: '', handle: undefined, label: undefined })} className="h-9 rounded-md border border-input bg-card px-1.5 text-sm">
+                    <select id={`r-f-${i}`} value={r.field} onChange={(e) => setRow(i, { field: e.target.value as Rule['field'], value: '', handle: undefined, label: undefined })} className="h-10 md:h-9 rounded-md border border-input bg-card px-1.5 text-sm">
                       {FIELDS.map(([f, l]) => <option key={f} value={f}>{l}</option>)}
                     </select>
                     <div className="min-w-48 flex-1">

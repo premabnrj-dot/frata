@@ -1,12 +1,13 @@
 import Link from 'next/link'
 import { SignInFlow } from './sign-in-flow'
+import { SHELL_FONT_VARS } from '@/components/shell/fonts'
 
 export const metadata = { title: 'Sign in · Frata' }
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ link?: string }> }) {
   const { link } = await searchParams
   return (
-    <main className="flex min-h-dvh items-center justify-center p-4">
+    <main data-shell className={`flex min-h-dvh items-center justify-center p-4 ${SHELL_FONT_VARS}`}>
       <div className="w-full max-w-sm space-y-6 rounded-md border border-border bg-card p-6">
         <div>
           <Link href="/" className="text-sm font-semibold text-brand">Frata</Link>

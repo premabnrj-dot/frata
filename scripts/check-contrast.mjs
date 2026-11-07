@@ -13,8 +13,10 @@
 // new token cannot skip the check. Store theme tokens ([data-store-theme]) are
 // the storefront's and are not read (frata-design-language § Storefront).
 // A dark block is optional; when present, it must define every light token.
+// Alpha is not read: every token is opaque hex (a token with alpha fails as "not a hex colour").
 // =============================================================================
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
+import { pathToFileURL } from 'node:url'
 
 const TEXT = 4.5, NONTEXT = 3
 const SURFACES = ['background', 'card', 'popover', 'primary', 'secondary', 'muted', 'accent', 'destructive', 'brand', 'support']
@@ -32,6 +34,7 @@ export function pairs() {
     ['danger-text', 'card', TEXT], ['brand', 'card', TEXT] /* the reversed mark: oxblood letter on a paper tile */)
   p.push(['input', 'card', NONTEXT], ['input', 'background', NONTEXT], ['ring', 'background', NONTEXT], ['ring', 'card', NONTEXT],
     ['primary-foreground', 'primary', NONTEXT] /* the focus ring on ink */)
+  // The support banner's ring and its End now button (white on amber) are support-foreground/support, a text pair above.
   for (const s of ['ok', 'warn', 'danger', 'info']) p.push([`${s}-mark`, 'card', NONTEXT], [`${s}-mark`, 'background', NONTEXT])
   return p
 }
@@ -67,7 +70,7 @@ export function check(css) {
     if (v === undefined) return null
     const ref = v.match(/^var\(--([a-z0-9-]+)\)$/)
     if (ref) { if (seen.has(k)) return null; seen.add(k); return colour(t, ref[1], seen) }
-    return /^#[0-9a-fA-F]{3,8}$/.test(v) ? v : null
+    return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v) ? v : null
   }
   const used = new Set(Object.keys(DECORATIVE))
   for (const [name, t] of themes) {
@@ -84,8 +87,9 @@ export function check(css) {
   return problems
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const file = process.argv[2] ?? 'src/app/globals.css'
+  if (!existsSync(file)) { console.error(`check:contrast — no such file: ${file}`); process.exit(2) }
   const problems = check(readFileSync(file, 'utf8'))
   if (problems.length) { console.error(`check:contrast — ${file}\n  ${problems.join('\n  ')}`); process.exit(1) }
   console.log(`check:contrast — clean (${pairs().length} pairs, light and dark)`)

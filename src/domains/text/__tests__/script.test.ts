@@ -10,6 +10,7 @@ describe('scriptOf', () => {
     expect(scriptOf('ਹਰਪ੍ਰੀਤ ਕੌਰ')).toBe('gurmukhi')
     expect(scriptOf('অনন্যা বন্দ্যোপাধ্যায়')).toBe('bengali')
     expect(scriptOf('Priya प्रिया')).toBe('devanagari')
+    expect(scriptOf('Rene\u0301e Nguyễn™ ₹')).toBe('latin')
     expect(scriptOf('李华')).toBe('other')
     expect(scriptOf('')).toBe('latin')
   })

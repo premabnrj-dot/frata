@@ -6,6 +6,7 @@ import { SHOP_DOMAIN } from '@/lib/public-env'
 import { frataWhatsappLink } from '@/lib/site'
 import { SignInFlow } from '../login/sign-in-flow'
 import { CreateShopForm } from './create-shop-form'
+import { SHELL_FONT_VARS } from '@/components/shell/fonts'
 
 export const metadata = { title: 'Start your shop · Frata' }
 export const dynamic = 'force-dynamic'
@@ -20,7 +21,7 @@ export default async function StartPage() {
     if (access?.memberships.some((m) => m.role === 'owner' && !m.supportSessionId)) redirect('/console')
   }
   return (
-    <main className="min-h-dvh bg-background">
+    <main data-shell className={`min-h-dvh bg-background ${SHELL_FONT_VARS}`}>
       <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-8">
         <Link href="/" className="text-base font-semibold text-brand">Frata</Link>
         {!auth.ok && <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">Sign in</Link>}

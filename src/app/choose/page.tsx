@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
+import { SHELL_FONT_VARS } from '@/components/shell/fonts'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,7 +13,7 @@ export default async function ChoosePage() {
   if (!member.ok) redirect('/admin')
   const own = member.all.filter((m) => !m.supportSessionId)
   return (
-    <main className="flex min-h-dvh items-center justify-center p-4">
+    <main data-shell className={`flex min-h-dvh items-center justify-center p-4 ${SHELL_FONT_VARS}`}>
       <div className="w-full max-w-md space-y-4 rounded-md border border-border bg-card p-7">
         <div className="space-y-1">
           <p className="text-sm font-bold text-brand">Frata</p>

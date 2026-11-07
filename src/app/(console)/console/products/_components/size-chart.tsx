@@ -24,7 +24,7 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
       <div className="flex flex-wrap items-end gap-2">
         <div className="space-y-1">
           <label htmlFor="type" className="block text-sm font-medium">Product type</label>
-          <select id="type" value={typeId ?? ''} onChange={(e) => { setEdit(null); onType(e.target.value || null) }} className="h-9 rounded-md border border-input bg-card px-2 text-sm">
+          <select id="type" value={typeId ?? ''} onChange={(e) => { setEdit(null); onType(e.target.value || null) }} className="h-10 md:h-9 rounded-md border border-input bg-card px-2 text-sm">
             <option value="">No type</option>
             {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
@@ -32,7 +32,7 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
         {newName === null
           ? <button type="button" className="h-9 text-sm underline" onClick={() => setNewName('')}>New type</button>
           : <form className="flex items-end gap-1.5" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await createType(newName, typeId); if (!r.ok) return setError(r.error); setNewName(null); router.refresh(); onType(r.id) }) }}>
-              <input aria-label="New type name" autoFocus value={newName} placeholder="Saree" onChange={(e) => setNewName(e.target.value)} className="h-9 w-36 rounded-md border border-input bg-card px-2 text-sm" />
+              <input aria-label="New type name" autoFocus value={newName} placeholder="Saree" onChange={(e) => setNewName(e.target.value)} className="h-10 md:h-9 w-36 rounded-md border border-input bg-card px-2 text-sm" />
               <Button type="submit" variant="secondary" disabled={pending || !newName.trim()}>{typeId ? 'Create from this chart' : 'Create'}</Button>
               <button type="button" className="text-sm underline" onClick={() => setNewName(null)}>Cancel</button>
             </form>}
@@ -62,7 +62,7 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
           <div className="relative overflow-x-auto"><table className="text-sm"><thead><tr className="[&>th]:px-1 [&>th]:py-1">
             <th className="text-left text-xs text-muted-foreground">Size</th>
             {edit.columns.map((c, i) => <th key={i}><input aria-label={`Column ${i + 1} name`} value={c} onChange={(e) => setEdit({ ...edit, columns: edit.columns.map((x, j) => (j === i ? e.target.value : x)) })} className="h-7 w-20 rounded border border-input px-1 text-xs" /></th>)}
-            <th><button type="button" className="text-xs underline" onClick={() => setEdit({ ...edit, columns: [...edit.columns, ''], rows: edit.rows.map((r) => ({ ...r, values: [...r.values, null] })) })}>+ column</button></th></tr></thead>
+            <th><button type="button" className="inline-flex min-h-6 items-center text-xs underline" onClick={() => setEdit({ ...edit, columns: [...edit.columns, ''], rows: edit.rows.map((r) => ({ ...r, values: [...r.values, null] })) })}>+ column</button></th></tr></thead>
             <tbody>{edit.rows.map((r, ri) => (
               <tr key={ri} className="[&>td]:px-1 [&>td]:py-0.5">
                 <td><input aria-label={`Row ${ri + 1} size`} value={r.size} onChange={(e) => setEdit({ ...edit, rows: edit.rows.map((x, j) => (j === ri ? { ...x, size: e.target.value } : x)) })} className="h-7 w-16 rounded border border-input px-1 text-xs" /></td>
@@ -73,7 +73,7 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
                 <td><button type="button" aria-label={`Remove ${r.size}`} className="inline-grid min-h-6 min-w-6 place-items-center text-xs text-muted-foreground" onClick={() => setEdit({ ...edit, rows: edit.rows.filter((_, j) => j !== ri) })}>×</button></td>
               </tr>
             ))}</tbody></table></div>
-          <button type="button" className="text-xs underline" onClick={() => setEdit({ ...edit, rows: [...edit.rows, { size: '', values: edit.columns.map(() => null) }] })}>+ size</button>
+          <button type="button" className="inline-flex min-h-6 items-center text-xs underline" onClick={() => setEdit({ ...edit, rows: [...edit.rows, { size: '', values: edit.columns.map(() => null) }] })}>+ size</button>
           <label htmlFor="how" className="block text-xs font-medium">How to measure</label>
           <textarea id="how" rows={2} value={edit.howToMeasure} onChange={(e) => setEdit({ ...edit, howToMeasure: e.target.value })} className="w-full rounded-md border border-input px-2 py-1 text-sm" />
           {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}

@@ -158,15 +158,16 @@
   html { @apply font-sans; }
   body { @apply bg-background text-foreground antialiased; }
   /* Order numbers and figures: no ligatures (JetBrains Mono joins -- and ->). */
-  .font-mono, code, kbd { font-variant-ligatures: none; }
+  [data-shell] :is(.font-mono, code, kbd) { font-variant-ligatures: none; }
 
   /* FOCUS in Console and Admin ([data-shell], both layouts): 2 px solid, 2 px gap; paper-coloured on ink.
      Scoped so the storefront keeps its own (frata-design-language § UX foundation rule 5). */
   /* The shell's stack: Inter, then Noto for Indic names (src/components/shell/fonts.ts). */
-  [data-shell] { font-family: var(--font-inter), var(--font-noto-deva), var(--font-noto-beng), var(--font-noto-guru), var(--font-noto-taml), system-ui, sans-serif; }
+  [data-shell] { --font-shell: var(--font-inter), var(--font-noto-deva), var(--font-noto-beng), var(--font-noto-guru), var(--font-noto-taml), system-ui, sans-serif; font-family: var(--font-shell); }
   [data-script] { line-height: 1.8; }
   [data-shell] :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
   [data-shell] [data-surface="ink"] :focus-visible { outline-color: var(--primary-foreground); }
+  [data-shell] [data-support-banner] :focus-visible { outline-color: var(--support-foreground); }
 }
 
 @media (prefers-reduced-motion: reduce) {

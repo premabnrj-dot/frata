@@ -39,6 +39,15 @@ describe('check:scale', () => {
     const byRule = Object.fromEntries(Object.entries(found).map(([key, n]) => [key.split(' · ')[1], n]))
     expect(byRule).toEqual({ 'text-px': 1, 'card-frame': 1, 'field-h9': 1 })
   })
+  it('reads a field across lines and past an => in its handlers', () => {
+    const multi = file('multi.tsx', '<input\n  value={v}\n  onChange={(e) => set(e.target.value)}\n  className="h-9 w-full"\n/>\n<select className="h-10 md:h-9"></select>\n')
+    expect(scan([multi])).toEqual({ [Object.keys(scan([multi]))[0]!]: 1 })
+    expect(Object.keys(scan([multi]))[0]).toMatch(/· field-h9$/)
+  })
+  it('refuses a path that does not exist (a typo must not pass as clean)', () => {
+    expect(() => execFileSync('node', ['scripts/check-scale.mjs', 'no/such/dir'], { stdio: 'pipe' })).toThrow()
+    expect(() => execFileSync('node', ['scripts/check-contrast.mjs', 'no/such.css'], { stdio: 'pipe' })).toThrow()
+  })
   it('the allow list only shrinks: more fails, fewer asks for the line to be lowered', () => {
     expect(compare({ 'a.tsx · text-px': 2 }, '1 a.tsx · text-px')).toEqual(['a.tsx · text-px: 2 (allowed 1)'])
     expect(compare({ 'a.tsx · text-px': 1 }, '2 a.tsx · text-px')[0]).toMatch(/now 1, lower its line/)

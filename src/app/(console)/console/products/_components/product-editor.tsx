@@ -135,8 +135,8 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
           <section className={box}>
             <h2 className="font-semibold">The model in the photos</h2>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1"><label htmlFor="mh" className="block text-sm font-medium">Height <span className="font-normal text-muted-foreground">(optional)</span></label><input id="mh" value={d.modelHeight} maxLength={30} placeholder="5 ft 6 in" onChange={(e) => set({ modelHeight: e.target.value })} className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
-              <div className="space-y-1"><label htmlFor="ms" className="block text-sm font-medium">Wears <span className="font-normal text-muted-foreground">(optional)</span></label><input id="ms" value={d.modelSize} maxLength={10} placeholder="S" onChange={(e) => set({ modelSize: e.target.value })} className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
+              <div className="space-y-1"><label htmlFor="mh" className="block text-sm font-medium">Height <span className="font-normal text-muted-foreground">(optional)</span></label><input id="mh" value={d.modelHeight} maxLength={30} placeholder="5 ft 6 in" onChange={(e) => set({ modelHeight: e.target.value })} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
+              <div className="space-y-1"><label htmlFor="ms" className="block text-sm font-medium">Wears <span className="font-normal text-muted-foreground">(optional)</span></label><input id="ms" value={d.modelSize} maxLength={10} placeholder="S" onChange={(e) => set({ modelSize: e.target.value })} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
             </div>
             <p className="text-xs text-muted-foreground">Shown under the photos: shoppers judge their size by it.</p>
           </section>

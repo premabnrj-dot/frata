@@ -75,7 +75,7 @@ export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start';
               : error}
           </p>
         </div>
-        <Button type="submit" disabled={pending} className="h-11 w-full text-base">
+        <Button type="submit" disabled={pending} size="lg" className="w-full">
           {pending ? 'Sending…' : intent === 'start' ? 'Email me a code' : 'Email me a sign-in code'}
         </Button>
         {intent === 'start' && <p className="text-xs text-muted-foreground">Free to build and preview. No card.</p>}

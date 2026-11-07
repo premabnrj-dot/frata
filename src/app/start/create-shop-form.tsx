@@ -96,7 +96,7 @@ export function CreateShopForm({ shopDomain }: { shopDomain: string }) {
             </p>
           </div>
           {error && <p role="alert" className="text-sm text-danger-text">{error.text}</p>}
-          <Button type="submit" className="h-11 w-full text-base">Continue</Button>
+          <Button type="submit" size="lg" className="w-full">Continue</Button>
         </form>
       )}
 
@@ -120,8 +120,8 @@ export function CreateShopForm({ shopDomain }: { shopDomain: string }) {
           </div>
           {error && <p role="alert" className="text-sm text-danger-text">{error.text}</p>}
           <div className="flex gap-2">
-            <Button type="button" variant="secondary" className="h-11" onClick={() => go('name', 'back')}>Back</Button>
-            <Button type="submit" className="h-11 flex-1 text-base">Continue</Button>
+            <Button type="button" variant="secondary" size="lg" onClick={() => go('name', 'back')}>Back</Button>
+            <Button type="submit" size="lg" className="flex-1">Continue</Button>
           </div>
         </form>
       )}
@@ -144,8 +144,8 @@ export function CreateShopForm({ shopDomain }: { shopDomain: string }) {
           </div>
           {error && <p role="alert" className="text-sm text-danger-text">{error.text}</p>}
           <div className="flex gap-2">
-            <Button type="button" variant="secondary" className="h-11" onClick={() => go('pickup', 'back')} disabled={pending}>Back</Button>
-            <Button type="button" className="h-11 flex-1 text-base" onClick={submit} disabled={pending}>
+            <Button type="button" variant="secondary" size="lg" onClick={() => go('pickup', 'back')} disabled={pending}>Back</Button>
+            <Button type="button" size="lg" className="flex-1" onClick={submit} disabled={pending}>
               {pending ? 'Creating your shop…' : sells.length ? 'Create my shop' : 'Skip and create my shop'}
             </Button>
           </div>

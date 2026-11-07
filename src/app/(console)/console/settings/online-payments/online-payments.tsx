@@ -52,10 +52,10 @@ export function OnlinePayments({ status, support, available }: { status: Status;
           <>
             <div className="space-y-1"><label htmlFor="key-id" className="block text-sm font-medium">Key ID</label>
               <input id="key-id" value={keyId} onChange={(e) => setKeyId(e.target.value)} autoComplete="off" spellCheck={false} placeholder="rzp_live_…" aria-invalid={err?.field === 'keyId' || undefined}
-                className="h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /></div>
+                className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /></div>
             <div className="space-y-1"><label htmlFor="key-secret" className="block text-sm font-medium">Key secret</label>
               <input id="key-secret" type="password" value={secret} onChange={(e) => setSecret(e.target.value)} autoComplete="off" placeholder={status ? 'Saved — paste a new one to change it' : ''} aria-invalid={err?.field === 'keySecret' || undefined}
-                className="h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /></div>
+                className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /></div>
             <p className="text-xs text-muted-foreground">Razorpay → Account &amp; Settings → API keys. The secret is shown there once: generate a new pair if you do not have it.</p>
             <div className="flex flex-wrap items-center gap-3">
               <Button disabled={pending || !keyId || !secret} onClick={connect}>{pending ? 'Checking with Razorpay…' : status ? 'Test and save new keys' : 'Test and connect'}</Button>

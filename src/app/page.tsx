@@ -41,7 +41,7 @@ async function plansOrNone(): Promise<PublicPlan[]> {
 
 export default async function Home() {
   const plans = await plansOrNone()
-  const start = <Link href="/start" className={button({ className: 'h-11 px-5 text-base' })}>Start your shop free</Link>
+  const start = <Link href="/start" className={button({ size: 'lg' })}>Start your shop free</Link>
   return (
     <div className="min-h-dvh bg-card">
       <header className="mx-auto flex max-w-6xl items-center gap-5 px-4 py-4 sm:px-8">

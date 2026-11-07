@@ -24,7 +24,7 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
       <form className="flex flex-wrap items-center gap-2">
         <label htmlFor="q" className="sr-only">Search merchants</label>
         <input id="q" name="q" defaultValue={sp.q} placeholder="Search by brand or shop address"
-          className="h-9 min-w-64 flex-1 rounded-md border border-input bg-card px-3 text-sm" />
+          className="h-10 md:h-9 min-w-64 flex-1 rounded-md border border-input bg-card px-3 text-sm" />
         <span className="text-sm text-muted-foreground"><Numeric>{total}</Numeric> merchants</span>
       </form>
       {rows.length === 0 ? (

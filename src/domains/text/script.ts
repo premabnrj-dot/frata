@@ -20,7 +20,9 @@ export function scriptOf(text: string): Script {
   for (const ch of text) {
     const cp = ch.codePointAt(0)!
     if (cp < 0x0250) continue // ASCII, Latin-1, Latin Extended A/B
-    if (cp >= 0x2000 && cp <= 0x206f) continue // punctuation (·, –, …)
+    if (cp >= 0x0300 && cp <= 0x036f) continue // combining accents (a decomposed é)
+    if (cp >= 0x1e00 && cp <= 0x1eff) continue // Latin Extended Additional (Vietnamese)
+    if (cp >= 0x2000 && cp <= 0x214f) continue // punctuation, currency (₹), letterlike symbols (™)
     const hit = BLOCKS.find(([, lo, hi]) => cp >= lo && cp <= hi)
     return hit ? hit[0] : 'other'
   }

@@ -75,7 +75,7 @@ export default {
           for (let i = 0; i < 15; i++) {
             await p.keyboard.press('Tab')
             const f = await p.evaluate(FOCUS)
-            if (!f.ok) { fail('focus', page, '1280', `stop ${i + 1}: ${f.what}${f.ring ? '' : ' no ring ≥ 2px'}${f.covered ? ' covered' : ''}`); break }
+            if (!f.ok) { fail('focus', page, '1280', `stop ${i + 1}: ${f.what}${f.ring ? '' : ' no ring ≥ 2 px at 3:1'}${f.covered ? ' covered' : ''}`); break }
           }
           await p.close()
         }

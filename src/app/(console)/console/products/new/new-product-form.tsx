@@ -31,7 +31,7 @@ export function NewProductForm() {
         <p role="alert" className="min-h-5 text-sm text-danger-text">{error}</p>
       </div>
       <p className="text-sm text-muted-foreground">Next: photos, sizes and colours, prices and its size chart. It stays hidden until you show it.</p>
-      <Button type="submit" disabled={pending || !title.trim()} className="h-10">{pending ? 'Creating…' : 'Continue'}</Button>
+      <Button type="submit" disabled={pending || !title.trim()}>{pending ? 'Creating…' : 'Continue'}</Button>
     </form>
   )
 }

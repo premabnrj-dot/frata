@@ -128,3 +128,20 @@ direction holds. Every finding is taken:
 | T5 pill = merchant N's count; T4 visit expiry; A1 confirm, then the pill drops (needs 1D·4b's UI) | U·2a |
 | A4 Noto network checks | U·1c |
 | A14 sibling-overlap check under text spacing | U·2b, with phone rows |
+
+**impact-reviewer on U·1 (2026-11-07):** taken before merge.
+- Button height is a `size` variant (`default` is h-10 md:h-9, `lg` is h-11): twMerge had kept `md:h-9` against callers' `h-11`, which shrank sign-in, sign-up and the website's main button on desktop.
+- The SaveBar is marked `data-surface="ink"`, and the support banner's ring and End now use `--support-foreground`. Its first ring was 1.00:1 and 2.69:1 (2.87:1 in dark); the contrast gate caught the dark case.
+- `check:scale` reads each field element across lines. Its line pattern had found 0 of 17 bare `h-9` fields, all now `h-10 md:h-9`.
+- Frames inside `src/components/**` (the primitives) are exempt; pages must use them.
+- Gates compare their own URL with `pathToFileURL` and refuse a missing path.
+- `check:hex` also catches `hwb(`, `color-mix(`, a hex inside an arbitrary `-[…]` class, and skips `{/*` comments.
+- `scriptOf` skips combining accents, Vietnamese, ₹ and ™.
+- Ligatures-off is scoped to the shell.
+- The UX flow's focus check measures the ring's colour at ≥ 3:1, not just its width.
+- Noto is served from committed files (`next/font/local`, OFL, `src/components/shell/noto/`), so builds fetch nothing for it.
+- The sign-in pages (`/login`, `/start`, `/choose`) join `[data-shell]` for focus and Noto.
+- Deferred, with reasons:
+  - `--field-strong`: checkbox and switch edges use `--input`, which is already 3:1, so a second token would be the same value.
+  - `--brand-on-ink`: the reversed mark is `--brand` on `--card`, a pair the gate holds.
+  - The Admin "needs attention" pill (T3/A9) is dropped: computing it on every Admin page means reading every merchant's plan, owner and orders, and the merchants list already shows those facts. Signal to bring it back: more than about 50 merchants.
