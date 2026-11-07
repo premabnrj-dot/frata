@@ -14,7 +14,7 @@ import { Monogram } from './monogram'
 
 export function ConsolePreview({ order }: { order: ExampleOrder | null }) {
   return (
-    <figure className="m-0 min-w-0 overflow-hidden rounded-xl bg-background text-foreground ring-1 ring-primary-foreground/15">
+    <figure className="m-0 min-w-0 overflow-hidden rounded-xl border border-primary-foreground/15 bg-background text-foreground">
       <div className="flex items-center gap-2.5 border-b border-border bg-card px-3.5 py-2.5 text-sm">
         <Monogram size={24} /><b>Kesar Studio</b>
         <span className="ml-auto rounded-sm bg-muted px-1.5 py-0.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Example shop</span>
@@ -49,7 +49,7 @@ export function ConsolePreview({ order }: { order: ExampleOrder | null }) {
 /** A partner's workspace, drawn for /partners: example clients and the share each earns (from shareExample()). */
 export function EarningsPreview({ share, brands }: { share: Paise; brands: string[] }) {
   return (
-    <figure className="m-0 min-w-0 overflow-hidden rounded-xl bg-background text-foreground ring-1 ring-primary-foreground/15">
+    <figure className="m-0 min-w-0 overflow-hidden rounded-xl border border-primary-foreground/15 bg-background text-foreground">
       <div className="flex items-center gap-2.5 border-b border-border bg-card px-3.5 py-2.5 text-sm">
         <Monogram size={24} /><b>Your clients</b>
         <span className="ml-auto rounded-sm bg-muted px-1.5 py-0.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Example</span>
