@@ -1,16 +1,20 @@
-import Link from 'next/link'
 import { PageHeader } from '@/components/layout/page-header'
-import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
-import { paise } from '@/domains/money/paise'
-import { readyToOpen, setupSteps } from '@/domains/setup/checklist'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
-import { formatInr } from '@/lib/format'
-import { SHOP_DOMAIN } from '@/lib/public-env'
-import { shopWithSettings } from '@/lib/queries/settings'
-import { activeProductCount, paymentStatusFor } from '@/lib/queries/payments'
-import { OpenShop } from './_components/open-shop'
-import { Section } from '@/components/layout/section'
+import { todayLongIN } from '@/lib/format-date'
+import { setupFor } from '@/lib/queries/settings'
+import { todaySummary } from '@/lib/queries/today'
+import { Checklist } from './_components/checklist'
+import { OpenMoment } from './_components/open-moment'
+import { Today } from './_components/today'
+
+// =============================================================================
+// FILE: src/app/(console)/console/page.tsx — Home
+//
+// Before the shop opens, the setup checklist. Once it is open, "Today" (docs/specs/2026-11-07-ux-today.md):
+// what waits, the next order, the week. OpenMoment wraps both, at the same place in the tree, so the check
+// drawn when the shop opens outlives the checklist it was opened from. One requireMember; every read takes it.
+// =============================================================================
 
 /** Home shares the layout's segment, where Next does not apply the layout's title template: the full title here. */
 export async function generateMetadata() {
@@ -18,51 +22,20 @@ export async function generateMetadata() {
   return { title: { absolute: auth.ok ? `Home · ${auth.membership.tenantName}` : 'Home · Frata' } }
 }
 
-/** Pages the checklist may link to. Each flips to true when its sub-phase ships (docs/plans/2026-11-06-phase-1-first-sale.md). */
-const BUILT = { products: true, settings: true, publish: true }
-
 export default async function ConsoleHome() {
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
-  const [shop, products, pay] = await Promise.all([shopWithSettings(auth.membership.tenantId), activeProductCount(auth.membership.tenantId), paymentStatusFor(auth.membership.tenantId)])
-    .catch((err) => { console.error('[console home]', err instanceof Error ? err.name : err); return [null, 0, null] as const })
-  if (!shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
-
-  const address = `${shop.slug}.${SHOP_DOMAIN}`
-  const steps = setupSteps({
-    shopName: shop.name, address, productCount: products,
-    legalName: shop.settings.legalName, grievanceName: shop.settings.grievanceName,
-    codOn: shop.settings.codOn, codMaxPaise: shop.settings.codMax, paymentsConnected: !!pay?.connected && pay.mode === 'live' && !!pay.webhookSeenAt, publishedAt: shop.settings.publishedAt,
-  }, BUILT, (p) => formatInr(paise(p)))
-  const done = steps.filter((s) => s.done).length
+  const tenantId = auth.membership.tenantId, canManage = auth.membership.role !== 'staff'
+  const now = new Date()
+  const setup = await setupFor(tenantId).catch((err) => { console.error('[console home]', err instanceof Error ? err.name : err); return null })
+  if (!setup) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  // A failed summary is a page of "Couldn't count", never of zeros.
+  const s = setup.open ? await todaySummary(tenantId, now).catch((err) => { console.error('[today]', err instanceof Error ? err.name : err); return null }) : null
 
   return (
-    <>
-      <PageHeader title="Home" />
-      <p className="-mt-2 text-sm text-muted-foreground">{shop.name} · <span className="font-mono">{address}</span></p>
-      <Section flush labelledBy="setup-h" className="max-w-3xl">
-        <div className="space-y-2.5 p-4">
-          <div className="flex items-baseline justify-between gap-4">
-            <h2 id="setup-h" className="text-section font-semibold">Get your shop ready to sell</h2>
-            <span className="text-sm text-muted-foreground"><span className="font-mono">{done} of {steps.length}</span> done</span>
-          </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="img" aria-label={`${done} of ${steps.length} steps done`}>
-            <div className="h-full w-full origin-left bg-ok-text transition-transform duration-slow ease-standard" style={{ transform: `scaleX(${done / steps.length})` }} />
-          </div>
-        </div>
-        <ol>
-          {steps.map((s) => (
-            <li key={s.key} className="flex items-start gap-3 border-t border-border px-4 py-3">
-              <Badge tone={s.done ? 'ok' : 'neutral'} className="mt-0.5 w-14 justify-center">{s.done ? 'Done' : 'To do'}</Badge>
-              <div className="min-w-0 flex-1">
-                <p className="font-medium">{s.href && !s.done ? <Link href={s.href} className="underline-offset-2 hover:underline">{s.title}</Link> : s.title}</p>
-                <p className="text-sm text-muted-foreground">{s.detail}</p>
-                {s.key === 'publish' && <div className="mt-2"><OpenShop address={address} open={s.done} ready={readyToOpen(steps)} canManage={auth.membership.role !== 'staff'} /></div>}
-              </div>
-            </li>
-          ))}
-        </ol>
-      </Section>
-    </>
+    <OpenMoment address={setup.address} header={<PageHeader title={setup.open ? 'Today' : 'Home'}
+      meta={<>{setup.name} · <span className="font-mono">{setup.address}</span>{setup.open ? ` · ${todayLongIN(now)}` : ''}</>} />}>
+      {setup.open ? <Today s={s} setup={setup} now={now} /> : <Checklist setup={setup} canManage={canManage} />}
+    </OpenMoment>
   )
 }

@@ -157,6 +157,7 @@ export default {
           for (const [w, h, label] of [[390, 844, '390'], [1280, 800, '1280']]) { const q = await measure(ctx, page, path, w, label, h); await q.close() }
         }
         await p.goto(CONSOLE + '/console')
+        assert.equal((await p.locator('[data-tile="to_confirm"]').getAttribute('aria-label')).split(', ')[1], '7', "Home's To confirm tile counts merchant-1's, as the pill does")
         const bannerH = await p.evaluate(() => document.querySelector('[data-support-banner]')?.getBoundingClientRect().height ?? 0)
         if (bannerH > 64) fail('support-banner-height', 'support-console-home', '390', `${Math.round(bannerH)} px`)
         await p.getByRole('button', { name: 'End now' }).click()
@@ -230,6 +231,32 @@ export default {
         await sc.close()
       })
 
+      await t.step('Home "Today" (U·4): pill, tab and tile agree; one tap opens the oldest order to confirm; Home under 1 s', async () => {
+        const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 800 } })
+        const p = await ctx.newPage(); p.on('pageerror', (e) => t.errors.push(e.message))
+        const started = Date.now(); await p.goto(CONSOLE + '/console'); const took = Date.now() - started
+        await p.getByRole('heading', { level: 1, name: 'Today' }).waitFor()
+        const tile = async (k) => Number((await p.locator(`[data-tile="${k}"]`).getAttribute('aria-label')).split(', ')[1].replace(/\D/g, ''))
+        const pill = Number((await p.locator('nav[aria-label="Console"] a[href="/console/orders"]').filter({ visible: true }).first().innerText()).match(/\d+/)?.[0] ?? 0)
+        const toConfirm = await tile('to_confirm'), toPack = await tile('to_pack'), onHold = await tile('on_hold')
+        assert.ok(toConfirm > 0, `the stress shop has orders to confirm (${toConfirm})`)
+        assert.equal(pill, toConfirm, 'the nav pill and the To confirm tile')
+        assert.match((await p.locator('[data-tile="to_confirm"]').getAttribute('aria-label')), /high risk|oldest waiting|risk unavailable/)
+        assert.ok(took < 1000 || process.env.CI, `Home in ${took} ms on the stress shop (budget 1 s)`)
+        // The oldest to confirm, as the queue lists it: the last row of its last page (newest first, nothing refund-due in the fixture).
+        const q = await ctx.newPage(); await q.goto(CONSOLE + '/console/orders?page=999')
+        const tabCount = async (label) => Number((await q.getByRole('navigation', { name: 'Order views' }).getByRole('link', { name: new RegExp(`^${label}`) }).textContent())?.replace(/\D/g, '') || 0)
+        assert.deepEqual([await tabCount('To confirm'), await tabCount('To pack'), await tabCount('On hold')], [toConfirm, toPack, onHold], 'Home and the Orders tabs')
+        const oldest = (await q.locator('tbody tr').last().locator('a[data-row-link]').innerText()).trim()
+        await q.close()
+        const next = p.locator('[data-next-order]')
+        assert.ok((await next.innerText()).includes(oldest), `the next order is the oldest waiting (${oldest})`)
+        await next.click()
+        await p.waitForURL(/\/console\/orders\/\d+$/)
+        await p.getByRole('heading', { level: 1 }).filter({ hasText: oldest }).waitFor()
+        await ctx.close()
+      })
+
       await t.step('motion (U·3): a phone dialog is a sheet that Back closes; lists dim while a view loads; the shop-open check', async () => {
         // A dialog on a phone: a sheet along the bottom; Back closes it (as Keep) without leaving or reloading the page.
         const pc = await signedIn(t.browser, 'owner', { viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' })
@@ -265,22 +292,27 @@ export default {
         await q.waitForFunction(() => Number(getComputedStyle(document.querySelector('main#content table')).opacity) < 0.7, null, { timeout: 2000 })
         await q.locator('main#content:not([aria-busy])').waitFor({ timeout: 10000 })
         await dc.close()
-        // The one brand moment: open the shop, the check is drawn once with the words.
+        // The one brand moment, from the setup page (where the shop is closed again), then from Home, whose checklist
+        // gives way to Today as the shop opens: the check is drawn once with the words, and survives that switch.
         const hc = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 800 } })
-        const h = await hc.newPage(); await h.goto(CONSOLE + '/console')
-        await h.getByRole('button', { name: 'Close the shop for now' }).click(); await h.getByRole('button', { name: 'Close shop' }).click()
-        await h.getByRole('button', { name: 'Open my shop' }).click(); await h.getByRole('button', { name: 'Open it' }).click()
-        // The check, not the interim line: "Your shop is open at …" shows first, until the refresh lands.
+        const h = await hc.newPage(); await h.goto(CONSOLE + '/console/setup')
+        const closeShop = async () => { await h.getByRole('button', { name: 'Close the shop for now' }).click(); await h.getByRole('button', { name: 'Close shop' }).click(); await h.getByText('Closed. Shoppers see “Opening soon”.').waitFor() }
+        const openShop = async () => { await h.getByRole('button', { name: 'Open my shop' }).click(); await h.getByRole('button', { name: 'Open it' }).click() }
+        await closeShop(); await openShop()
         await h.locator('svg .animate-draw-circle').waitFor()
         assert.equal(await h.locator('svg .animate-draw-circle').count(), 1)
         await h.getByText('Your shop is open', { exact: true }).waitFor()
         // Closing straight after: the check gives way to what just happened, it does not linger.
-        await h.getByRole('button', { name: 'Close the shop for now' }).click(); await h.getByRole('button', { name: 'Close shop' }).click()
-        await h.getByText('Closed. Shoppers see “Opening soon”.').waitFor()
+        await closeShop()
         assert.equal(await h.locator('svg .animate-draw-circle').count(), 0, 'the check goes when the shop closes')
-        await h.getByRole('button', { name: 'Open my shop' }).click(); await h.getByRole('button', { name: 'Open it' }).click()
+        // From Home: the checklist (the shop is closed), then Today with the check above it.
+        await h.goto(CONSOLE + '/console'); await h.getByRole('heading', { level: 2, name: 'Get your shop ready to sell' }).waitFor()
+        await openShop()
+        await h.getByRole('heading', { level: 1, name: 'Today' }).waitFor()
         await h.locator('svg .animate-draw-circle').waitFor()
-        await h.reload(); assert.equal(await h.locator('svg .animate-draw-circle').count(), 0, 'once: not on the next visit')
+        assert.equal(await h.getByText('Your shop is open', { exact: true }).count(), 1, 'the check outlives the checklist it was opened from')
+        await h.reload(); await h.getByRole('heading', { level: 1, name: 'Today' }).waitFor()
+        assert.equal(await h.locator('svg .animate-draw-circle').count(), 0, 'once: not on the next visit')
         assert.equal(await h.getByText('Your shop is open', { exact: true }).count(), 0)
         await hc.close()
       })

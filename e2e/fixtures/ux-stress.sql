@@ -74,6 +74,10 @@ select ('eeeeeeee-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid, 'merchant-'
        else 'Brand ' || i end,
   now() - (i * interval '2 days'), i % 19 = 0
 from generate_series(1, 60) i;
+-- Their settings rows (signup writes one for every real shop; without it their Home could not load). Open shops,
+-- so a support visit to merchant-1 lands on its "Today" (U·4).
+insert into shop_settings (tenant_id, published_at)
+select ('eeeeeeee-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid, now() - (i * interval '1 day') from generate_series(1, 60) i;
 insert into auth.users (id, email, email_confirmed_at, last_sign_in_at)
 select ('dddddddd-0000-0000-0000-' || lpad(i::text, 12, '0'))::uuid,
   case when i % 4 = 0 then 'founder.and.creative.director.' || i || '@verylongbrandnamehandloomsandsarees.co.in' else 'owner' || i || '@brand.in' end,

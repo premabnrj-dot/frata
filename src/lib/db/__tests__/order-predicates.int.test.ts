@@ -12,7 +12,7 @@ const A = '11111111-1111-1111-1111-111111111111'
 function rng(seed: number) { return () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31) }
 
 describe.skipIf(!host)('order predicates match orderState()', () => {
-  it('on 400 generated orders: state, tabs, placed, holding, standing', async () => {
+  it('on 400 generated orders: state, tabs, entered, placed, holding, standing', async () => {
     process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
     const { withTenant } = await import('@/lib/db/tenant')
     const { orders, orderLines } = await import('@/lib/db/schema-orders')
@@ -41,7 +41,7 @@ describe.skipIf(!host)('order predicates match orderState()', () => {
         ...p.momentColumns, number: orders.number, sqlState: p.stateSql(now),
         toConfirm: sql<boolean>`${p.inTabSql('to_confirm', now)}`, toPack: sql<boolean>`${p.inTabSql('to_pack', now)}`, onHold: sql<boolean>`${p.inTabSql('on_hold', now)}`,
         notPaid: sql<boolean>`${p.inTabSql('not_paid', now)}`, all: sql<boolean>`${p.inTabSql('all', now)}`,
-        placed: sql<boolean>`${p.placedSql()}`, holding: sql<boolean>`${p.holdingSql(now)}`, standing: sql<boolean>`${p.standingSql()}`,
+        entered: sql<string | null>`${p.enteredAtSql(now)}`, placed: sql<boolean>`${p.placedSql()}`, holding: sql<boolean>`${p.holdingSql(now)}`, standing: sql<boolean>`${p.standingSql()}`,
       }).from(orders).where(and(eq(orders.tenantId, A), gte(orders.number, 900_000), lt(orders.number, 900_400)))
       expect(rows.length).toBe(400)
       const seen = new Set<string>()
@@ -55,6 +55,8 @@ describe.skipIf(!host)('order predicates match orderState()', () => {
         const want = { state, to_confirm: tab === 'to_confirm', to_pack: tab === 'to_pack', on_hold: tab === 'on_hold', not_paid: tab === 'not_paid', all: s.isPlaced(row), placed: s.isPlaced(row),
           holding: s.isHolding(row, now), standing: s.isStanding(row) }
         expect({ number: row.number, ...got }).toEqual({ number: row.number, ...want })
+        // enteredAt (U·4): the same moment, to the millisecond.
+        expect({ number: row.number, entered: row.entered ? new Date(row.entered).getTime() : null }).toEqual({ number: row.number, entered: s.enteredAt(row, now)?.getTime() ?? null })
       }
       // The generator reached every state, so every SQL branch was compared.
       expect([...seen].sort()).toEqual([...s.ORDER_STATES].sort())

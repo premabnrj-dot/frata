@@ -105,6 +105,21 @@ export function queueTab(s: OrderState): Exclude<QueueTab, 'all'> | null {
   return null
 }
 
+/**
+ * When an order entered the tab it waits in, for "oldest waiting" (U·4 Home): placed (or switched to COD) for To
+ * confirm, paid when a refund is due, confirmed or paid for To pack, held for On hold. Null outside the three
+ * work tabs. enteredAtSql() in src/lib/db/order-predicates.ts is its twin (parity int test).
+ */
+export function enteredAt(o: OrderMoments, now: Date = new Date()): Date | null {
+  switch (orderState(o, now)) {
+    case 'unconfirmed': return o.switchedToCodAt ?? o.placedAt
+    case 'refund_due': case 'paid': return o.paidAt
+    case 'confirmed': return o.confirmedAt
+    case 'held': return o.heldAt
+    default: return null
+  }
+}
+
 // ── What a shopper is told (never the internal word: held, refund_due, a cancel reason) ──
 
 export const SHOPPER_STATES = [

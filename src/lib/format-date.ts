@@ -39,3 +39,21 @@ export function sinceIN(at: Date | string, now: Date = new Date()): string {
   if (min < 24 * 60) return `${Math.floor(min / 60)} h ago`
   return dayMonthIN(d)
 }
+
+/** How long something has waited, as a count says it: "just now", "25 min", "3 h", "2 d". */
+export function waitedIN(at: Date | string, now: Date = new Date()): string {
+  const d = typeof at === 'string' ? new Date(at) : at
+  const min = Math.floor((now.getTime() - d.getTime()) / 60_000)
+  if (min < 1) return 'just now'
+  if (min < 60) return `${min} min`
+  if (min < 24 * 60) return `${Math.floor(min / 60)} h`
+  return `${Math.floor(min / (24 * 60))} d`
+}
+
+/** "Sat": the short weekday of an IST date key ("2026-11-07"). */
+export const weekdayShortIN = (dayKey: string) =>
+  new Date(`${dayKey}T12:00:00+05:30`).toLocaleDateString('en-IN', { weekday: 'short', timeZone: IST })
+
+/** "Saturday 7 November": today, as a page header says it. */
+export const todayLongIN = (d: Date) =>
+  d.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: IST })

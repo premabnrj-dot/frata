@@ -4,20 +4,22 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { closeShop, openShop } from '../shop-actions'
+import { useOpenMoment } from './open-moment'
 
 /** Open my shop (asks once), or, when open, close it again. Orders are kept either way. */
 export function OpenShop({ address, open, ready, canManage }: { address: string; open: boolean; ready: boolean; canManage: boolean }) {
   const router = useRouter()
   const [ask, setAsk] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
-  /** The one brand moment (frata-design-language § UX foundation rule 26): only right after this person opened it. */
-  const [justOpened, setJustOpened] = useState(false)
+  /** The one brand moment (rule 26) is drawn by the page's OpenMoment, which outlives this checklist. */
+  const moment = useOpenMoment()
   const [pending, start] = useTransition()
   const run = (fn: typeof openShop, done: string) => start(async () => {
     const r = await fn()
-    setMsg(r.ok ? { ok: true, text: done } : { ok: false, text: r.error })
+    // Opening says so through the moment; closing (and any failure) says so here.
+    setMsg(r.ok ? (fn === openShop && moment ? null : { ok: true, text: done }) : { ok: false, text: r.error })
     setAsk(false)
-    setJustOpened(r.ok && fn === openShop)
+    if (r.ok) { if (fn === openShop) moment?.opened(); else moment?.closed() }
     if (r.ok) router.refresh()
   })
   if (!canManage) return null
@@ -32,18 +34,8 @@ export function OpenShop({ address, open, ready, canManage }: { address: string;
         <Button disabled={!ready || pending} onClick={() => setAsk(true)}>Open my shop</Button>
       )}
       {msg && !msg.ok && <p role="alert" className="text-sm text-danger-text">{msg.text}</p>}
-      {/* One status region that is always there, so a screen reader hears what lands in it (a region inserted with its text often is not read). */}
-      <div role="status">
-        {msg?.ok && (justOpened && open ? (
-          <div className="flex items-center gap-3">
-            <svg viewBox="0 0 56 56" width="40" height="40" fill="none" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 text-ok-mark">
-              <circle cx="28" cy="28" r="24" stroke="currentColor" pathLength={1} className="animate-draw-circle" />
-              <path d="M18 29l7 7 13-15" stroke="currentColor" pathLength={1} className="animate-draw-tick" />
-            </svg>
-            <p className="text-sm"><b className="block text-base">Your shop is open</b>Shoppers can order at <a href={`https://${address}`} target="_blank" rel="noreferrer" className="inline-flex min-h-6 items-center font-mono underline">{address}</a></p>
-          </div>
-        ) : <p className="text-sm text-ok-text">{msg.text}</p>)}
-      </div>
+      {/* One status region that is always there, so a screen reader hears what lands in it. */}
+      <div role="status">{msg?.ok && <p className="text-sm text-ok-text">{msg.text}</p>}</div>
     </div>
   )
 }
