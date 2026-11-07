@@ -18,12 +18,18 @@ export default {
     const [{ prefix }] = await db`select order_prefix as prefix from shop_settings where tenant_id = ${T}`
     const [v] = await db`select id, product_id, stock from variants where tenant_id = ${T} and option_values = '{M,Rust}'`
     const label = (n) => `${prefix || 'KS'}-${n}`
-    const H = top + 3, P = top + 4 // H: the third COD order today from one phone (High); P: an ordinary order to pack and cancel
+    const H = top + 3, P = top + 4, Q = top + 5 // H: third COD today from one phone (High); P: to pack and cancel; Q: paid online, held
     await db`insert into orders (tenant_id, number, payment_method, placed_at, customer_name, phone, address_line, area, city, pincode, state, subtotal, total) values
       (${T}, ${top + 1}, 'cod', now() - interval '50 minutes', 'Page Riya', '9822200001', 'B-14, Tilak Marg', 'C-Scheme', 'Jaipur', '302001', 'Rajasthan', 249000, 249000),
       (${T}, ${top + 2}, 'cod', now() - interval '40 minutes', 'Page Riya', '9822200001', 'B-14, Tilak Marg', 'C-Scheme', 'Jaipur', '302001', 'Rajasthan', 249000, 249000),
       (${T}, ${H}, 'cod', now() - interval '30 minutes', 'Page Riya', '9822200001', 'B-14, Tilak Marg', 'C-Scheme', 'Jaipur', '302001', 'Rajasthan', 249000, 249000),
       (${T}, ${P}, 'cod', now() - interval '20 minutes', 'Page Dev', '9822200002', 'Flat 22, Shanti Nagar', 'Vaishali', 'Jaipur', '302021', 'Rajasthan', 249000, 249000)`
+    await db`insert into orders (tenant_id, number, payment_method, placed_at, paid_at, held_at, customer_name, phone, address_line, area, city, pincode, state, subtotal, total)
+      values (${T}, ${Q}, 'prepaid', now() - interval '15 minutes', now() - interval '14 minutes', now() - interval '10 minutes', 'Page Paid', '9822200003', 'Flat 9, MI Road', 'Ashok Nagar', 'Jaipur', '302001', 'Rajasthan', 249000, 249000)`
+    // Another shop with an order number Kesar does not have: Kesar's member must see "not found", never its page.
+    const OTHER = 'abababab-0000-4000-8000-00000000000a'
+    await db`insert into tenants (id, slug, name) values (${OTHER}, 'flow-other-shop', 'Other Shop') on conflict do nothing`
+    await db`insert into orders (tenant_id, number, payment_method, placed_at, customer_name, phone, subtotal, total) values (${OTHER}, ${top + 900}, 'cod', now(), 'Someone Else', '9822209999', 100, 100)`
     const [{ id: pId }] = await db`select id from orders where tenant_id = ${T} and number = ${P}`
     await db`insert into order_lines (tenant_id, order_id, variant_id, product_id, title, option_values, sku, qty, unit_price, taxable_value, gst_bps, gst, kind, stock_taken_at)
       values (${T}, ${pId}, ${v.id}, ${v.product_id}, 'Chanderi kurta set', '{M,Rust}', 'KS-M-RUST', 1, 249000, 237143, 500, 11857, 'in_stock', now())`
@@ -69,12 +75,15 @@ export default {
         await p.getByRole('region', { name: 'Activity' }).getByText(/riya@kesarstudio\.in/).first().waitFor()
       })
 
-      await t.step('edit the address: saved, the history says which field and never the value', async () => {
+      await t.step('edit the address: a bad phone is said beside it; saved, the history names the field, never the value', async () => {
         await p.getByRole('region', { name: 'Customer' }).getByRole('button', { name: 'Edit' }).click()
         const d = p.getByRole('dialog', { name: `Who ${label(P)} goes to` }); await d.waitFor()
-        await d.getByLabel('City').fill('Ajmer'); await d.getByRole('button', { name: 'Save' }).click(); await d.waitFor({ state: 'hidden' })
+        await d.getByLabel('Mobile number').fill('12345'); await d.getByRole('button', { name: 'Save the changes' }).click()
+        await d.getByText('A 10-digit mobile number.').waitFor()
+        await d.getByLabel('Mobile number').fill('+91 98222 00002') // the same number typed another way: not a change
+        await d.getByLabel('City').fill('Ajmer'); await d.getByRole('button', { name: 'Save the changes' }).click(); await d.waitFor({ state: 'hidden' })
         await until(async () => (await order(P)).city === 'Ajmer')
-        await p.getByRole('region', { name: 'Activity' }).getByText('Changed the city').waitFor()
+        await p.getByRole('region', { name: 'Activity' }).getByText('Changed the city', { exact: true }).waitFor() // the phone did not change
         assert.equal(JSON.stringify(await db`select * from order_events where tenant_id = ${T} and order_id = ${pId}`).includes('Ajmer'), false)
       })
 
@@ -107,6 +116,21 @@ export default {
         await p.getByRole('region', { name: 'Activity' }).getByText('Cancelled · Customer cancelled').waitFor()
       })
 
+      await t.step('a held order paid online: Release from hold (not "confirm"), and its Undo puts the hold back', async () => {
+        await p.goto(CONSOLE + `/console/orders/${Q}`)
+        await p.getByRole('button', { name: 'Release from hold' }).first().click()
+        await toast(`${label(Q)} released from hold.`); await until(async () => !(await order(Q)).held_at)
+        assert.equal((await order(Q)).confirmed_at, null, 'paid online needs no confirming')
+        await p.getByRole('button', { name: 'Undo' }).click(); await until(async () => (await order(Q)).held_at)
+        await p.locator('[data-toast]', { hasText: 'Undone.' }).waitFor()
+      })
+
+      await t.step('another shop\'s real order number is "not found" here', async () => {
+        await p.goto(CONSOLE + `/console/orders/${top + 900}`)
+        await p.getByText('No such order in your shop').waitFor()
+        assert.equal(await p.getByText('Someone Else').count(), 0)
+      })
+
       await t.step('staff: no Cancel, no Edit; another number is "not found"', async () => {
         const staff = await signedIn(t.browser, 'staff'); const q = await staff.newPage()
         await q.goto(CONSOLE + `/console/orders/${top + 1}`); await q.getByRole('heading', { name: label(top + 1) }).waitFor()
@@ -131,7 +155,9 @@ export default {
     } finally {
       await owner.close()
       await db`delete from members where tenant_id = ${T} and user_id = ${USERS.staff.id}`
-      await db`delete from orders where tenant_id = ${T} and number between ${top + 1} and ${P}`
+      await db`delete from orders where tenant_id = ${T} and number between ${top + 1} and ${Q}`
+      await db`delete from orders where tenant_id = 'abababab-0000-4000-8000-00000000000a'`
+      await db`delete from tenants where id = 'abababab-0000-4000-8000-00000000000a'`
     }
   },
 }

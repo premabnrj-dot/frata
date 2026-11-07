@@ -43,7 +43,7 @@ export const TABS: { tab: QueueTab; label: string; empty: { title: string; body?
 export const RISK_LABEL = { medium: 'Medium', high: 'High' } as const
 
 /** The order's history in words (order_events: field names only, so the words never quote a value). */
-export const FIELD_LABEL: Record<string, string> = {
+const FIELD_LABEL: Record<string, string> = {
   customerName: 'name', phone: 'phone', addressLine: 'address', area: 'area', landmark: 'landmark', pincode: 'pincode', city: 'city', state: 'state',
 }
 export function eventLabel(e: { kind: string; reason: string | null; fields: string[] | null }, cancelLabel: (r: string) => string): string {
@@ -51,7 +51,7 @@ export function eventLabel(e: { kind: string; reason: string | null; fields: str
     case 'confirmed': return e.reason === 'from_hold' ? 'Confirmed (was on hold)' : 'Confirmed'
     case 'held': return 'Put on hold'
     case 'unheld': return 'Taken off hold'
-    case 'undone': return e.reason === 'held' ? 'Undid the hold' : 'Undid the confirmation'
+    case 'undone': return e.reason === 'held' ? 'Undid the hold' : e.reason === 'unheld' ? 'Put back on hold' : 'Undid the confirmation'
     case 'edited': return `Changed the ${(e.fields ?? []).map((f) => FIELD_LABEL[f] ?? f).join(', ')}`
     case 'packed': return 'Packed · invoice issued'
     case 'cancelled': return `Cancelled · ${e.reason ? cancelLabel(e.reason) : 'no reason given'}`

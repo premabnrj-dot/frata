@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { CANCEL_REASONS, ROLES, type OrderAction } from '@/domains/orders/work'
+import { Address, addressErrors } from '@/domains/checkout/address'
 import { risk } from '@/domains/orders/risk'
 import { asMember } from '@/lib/auth/as-member'
 import { requireMember } from '@/lib/auth/require-member'
@@ -68,18 +69,25 @@ export async function packOrder(orderId: string) {
   return Id.safeParse(orderId).success ? run('pack', orderId, {}, (tx, t, a) => work.pack(tx, t, a, orderId), (tenantId, v) => { if (v.preordersTaken) refreshShop(tenantId, 'catalogue') }) : notFound
 }
 
-const Phone = z.string().transform((s) => s.replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '')).pipe(z.string().regex(/^[6-9]\d{9}$/, 'A 10-digit mobile number.'))
-const Contact = z.object({
-  customerName: z.string().trim().min(2).max(80), phone: Phone, addressLine: z.string().trim().min(5).max(200), area: z.string().trim().min(2).max(120),
-  landmark: z.string().trim().max(120), pincode: z.string().regex(/^[1-9]\d{5}$/, 'A 6-digit pincode.'), city: z.string().trim().min(2).max(80), state: z.string().trim().min(2).max(60),
-}).partial().strict()
-
-export async function editOrderContact(orderId: string, input: unknown) {
+// Who it goes to: checkout's own rules (src/domains/checkout/address.ts), so an edited address is held to what a
+// shopper typed was. Partial: only the fields that changed are sent. `name` there is customerName here.
+const Contact = Address.partial().strict()
+const TO_ORDER: Record<string, string> = { name: 'customerName' }
+export async function editOrderContact(orderId: string, input: unknown): Promise<ActionResult<{ fields: string[] }> & { fieldErrors?: Record<string, string> }> {
   if (!Id.safeParse(orderId).success) return notFound
-  const p = Contact.safeParse(input)
-  if (!p.success) return { ok: false as const, error: p.error.issues[0]?.message ?? 'Check the highlighted fields.' }
+  const raw = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>
+  const { customerName, ...rest } = raw
+  const p = Contact.safeParse({ ...rest, ...(customerName !== undefined ? { name: customerName } : {}) })
+  if (!p.success) {
+    const errs = addressErrors(p.error)
+    return { ok: false, error: 'Check the fields marked below.', fieldErrors: Object.fromEntries(Object.entries(errs).map(([k, v]) => [TO_ORDER[k] ?? k, v])) }
+  }
+  // Only the fields that were sent: checkout's schema defaults landmark to '' even when partial, which would
+  // otherwise "change" it on every edit (found by e2e: "Changed the landmark, city", 2026-11-07).
+  const sent = new Set(Object.keys(raw).map((k) => (k === 'customerName' ? 'name' : k)))
+  const edit = Object.fromEntries(Object.entries(p.data).filter(([k, v]) => v !== undefined && sent.has(k)).map(([k, v]) => [TO_ORDER[k] ?? k, v])) as work.ContactEdit
   // The audit row (support visits) names the fields, never their values.
-  return run('edit', orderId, { fields: Object.keys(p.data) }, (tx, t, a) => work.editContact(tx, t, a, orderId, p.data))
+  return run('edit', orderId, { fields: Object.keys(edit) }, (tx, t, a) => work.editContact(tx, t, a, orderId, edit))
 }
 
 const Cancel = z.object({ reason: z.enum(CANCEL_REASONS), note: z.string().max(500).optional(), restock: z.boolean() }).strict()
