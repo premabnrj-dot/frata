@@ -23,10 +23,10 @@ export default {
   name: 'messages',
   async run(t) {
     const { db } = t
-    const open = async (who, opts) => { const ctx = await signedIn(t.browser, who, opts); const p = await ctx.newPage(); p.setDefaultTimeout(15_000); p.on('pageerror', (e) => t.errors.push(e.message)); return p }
+    const open = async (who, opts) => { const ctx = await signedIn(t.browser, who, opts); const p = await ctx.newPage(); p.setDefaultTimeout(15_000); p.on('pageerror', (e) => t.errors.push(e.message)); p.on('console', (m) => { if (m.type() === 'error') console.log('     console:', m.text().slice(0, 200)) }); return p }
     const riya = await open('owner')
     let sdkCode = 'code-app-0001'
-    await riya.route('https://connect.facebook.net/**', (r) => r.fulfill({ contentType: 'application/javascript', body: FAKE_SDK(sdkCode) }))
+    await riya.route('https://connect.facebook.net/**', (r) => r.fulfill({ contentType: 'application/javascript', headers: { 'access-control-allow-origin': '*' }, body: FAKE_SDK(sdkCode) }))
 
     await t.step('Apps: turn Messages on; Set up appears', async () => {
       await riya.goto(CONSOLE + '/console/apps')

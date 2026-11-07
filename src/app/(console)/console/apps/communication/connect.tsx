@@ -30,6 +30,7 @@ function loadSdk(appId: string, version: string): Promise<boolean> {
     s.src = SDK; s.async = true; s.defer = true; s.crossOrigin = 'anonymous'
     s.onerror = () => res(false)
     document.head.appendChild(s)
+    setTimeout(() => res(!!window.FB), 15_000) // a blocked or silent script never hangs the page
   })
 }
 
@@ -64,9 +65,13 @@ export function ConnectChoices({ ready, canManage, appId, configId, graphVersion
       if (!code) { setBusy(null); return } // closed or cancelled
       // The ids arrive as a message just before this; give them a moment, then send the code (it lives 30 s).
       setTimeout(async () => {
-        const res = await connectWhatsAppAction({ code, hint: hint.current })
-        if (!res.ok) { setBusy(null); setError(res.error); return }
-        router.refresh()
+        try {
+          const res = await connectWhatsAppAction({ code, hint: hint.current })
+          if (!res.ok) { setBusy(null); setError(res.error); return }
+          router.refresh()
+        } catch {
+          setBusy(null); setError('We could not reach Frrata. Nothing was saved. Try again.')
+        }
       }, 300)
     }, {
       config_id: configId, response_type: 'code', override_default_response_type: true,
