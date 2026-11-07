@@ -23,7 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
 /** The To confirm pill (U·2a): its own light count, streamed, so the shell never waits for it; no pill on failure. */
 async function ToConfirmPill({ tenantId }: { tenantId: string }) {
   const n = await toConfirmCount(tenantId).catch((err) => { console.error('[nav count]', err instanceof Error ? err.name : err); return 0 })
-  return <NavPill n={n} label="To confirm" />
+  return <NavPill n={n} label="to confirm" />
 }
 
 /**
