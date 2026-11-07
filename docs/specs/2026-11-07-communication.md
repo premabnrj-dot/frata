@@ -104,7 +104,7 @@ WhatsApp account with Frata instead.
   Never a promo inside, or Meta re-categorises it as marketing at 7.5× the price. Status follows
   `message_template_status_update` and `template_category_update`.
 - **Console › Apps › Messages › Order messages:** a switch for each message, the template preview, and
-  the estimate in rupees ("about ₹0.60 per delivered COD order, billed by Meta"). Explanation lives in (i) tips.
+  the estimate in rupees ("about ₹0.81 per delivered COD order with GST, billed by Meta": 5 messages × ₹0.1150 [S]). Explanation lives in (i) tips.
 - **Checkout:** "Get order updates on WhatsApp" with the shop's name (opt-in must name the business). Stored as
   a **consent** (purpose `order_updates`, given at checkout, withdrawable), ready for DPDP from May 2027.
 - **A reply moves the order:**
@@ -135,12 +135,12 @@ WhatsApp account with Frata instead.
   - **Assign** to a person.
   - **Close** with Undo for 8 s; a new message reopens the chat.
   - **Snooze** until a time.
-  - **"Sana is replying"** shows while another person types in the same chat, from a 20 s heartbeat row.
-  - Opening a chat sends Meta's read and typing indicator.
+  - Opening a chat marks it read on Meta. Typing presence and snooze are deferred (architecture review: YAGNI).
 - **Keys** (the queue rules, design-language § Work queues 6): `j`/`k` to move, `Enter` to open, `a` to
   assign to me, `e` to close, `/` for search, `r` to reply.
-- **Live updates:** while the tab is visible, the inbox asks a cheap "what changed since" endpoint every
-  4 s (30 s when hidden). There's no websocket on Vercel functions. Supabase Realtime is left out
+- **Live updates:** only while the Inbox tab is visible, it reads one per-shop "inbox changed at" value every
+  4 s, slowing to 15–30 s when idle, and fetches rows only when that value moves (unit-economics review:
+  polling is the main cost, about ₹43 per seat a month at 4 s). There's no websocket on Vercel functions. Supabase Realtime is left out
   because Supabase is auth only (CLAUDE.md).
 - **Who sees the inbox:** owner, admin and staff. **Partner: off by default**, the owner can allow it, because chats hold
   shopper details (tenancy review).
@@ -245,7 +245,7 @@ WhatsApp account with Frata instead.
 |---|---|---|
 | **C1 Connect** | turn on Messages, connect a number (coexistence or new), see its health | Meta app + Tech Provider set-up; works in dev mode with Frata's own test number first |
 | **C2 Order messages** | COD confirmation with a reply that confirms; shipped and delivered updates (with M2·2) | App Review (2 screencasts: send/receive, template creation) for other businesses' numbers |
-| **C3 Team inbox** | answer every chat as a team: assign, notes, quick replies, media | C1 |
+| **C3 Team inbox** | answer every chat as a team: assign, notes, quick replies, media | C2 (App Review gates both; order changed by architecture review) |
 | **C4 Automations** | away and welcome replies, auto-assign, keyword replies; Instagram DMs later | C3 |
 
 ## Prerequisites (business track, start now)
