@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { isCronRequest } from '@/lib/auth/cron'
-import { claimDue, markFailed, markSent, type OutboxRow } from '@/lib/outbox'
+import { claimDue, deferRow, markDead, markFailed, markSent, type OutboxRow } from '@/lib/outbox'
+import { outboxDecision } from '@/domains/modules/access'
+import { moduleForKind } from '@/domains/modules/registry'
+import { shopModules } from '@/lib/queries/modules'
 import { shopsToErase, shopsWithPendingEvents } from '@/lib/db/platform'
 import { processEvents } from '@/lib/orders/payment'
 import { ERASE_AFTER_DAYS, eraseAbandoned } from '@/lib/orders/erase'
@@ -29,6 +32,14 @@ export async function GET(request: Request) {
   for (const row of rows) {
     const send = SENDERS[row.kind]
     try {
+      // A module's message goes only while the module is usable for that shop (moduleAccess, read in the shop's
+      // own transaction): Frrata's pause defers it, an off switch cancels it (architecture review 2026-11-07).
+      const module = moduleForKind(row.kind)
+      if (module) {
+        const decision = outboxDecision((await shopModules(row.tenantId, new Date().toISOString())).access[module])
+        if (decision === 'defer') { await deferRow(row.id); continue }
+        if (decision === 'drop') { await markDead(row.id, `${module} is off for this shop`); continue }
+      }
       if (!send) throw new Error(`no sender for ${row.kind}`)
       await send(row)
       await markSent(row.id)

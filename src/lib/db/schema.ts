@@ -17,6 +17,7 @@ export const createdAt = () => timestamp('created_at', { withTimezone: true }).n
 export const money = (name: string) => bigint(name, { mode: 'number' })
 
 import { MEMBER_ROLES, sqlList, type MemberRole } from '@/domains/tenancy/roles'
+import { PLAN_GRANTABLE } from '@/domains/modules/registry'
 export { MEMBER_ROLES, type MemberRole }
 
 export const tenants = pgTable('tenants', {
@@ -174,7 +175,7 @@ export const planVersions = pgTable('plan_versions', {
   createdBy: uuid('created_by'),
 }, (t) => [
   uniqueIndex('plan_versions_plan_version').on(t.planId, t.version),
-  check('plan_versions_features', sql`${t.features} <@ array['rto_shield','size_fit','cart_flows']::text[]`),
+  check('plan_versions_features', sql`${t.features} <@ array[${sql.raw(sqlList(PLAN_GRANTABLE))}]::text[]`),
   check('plan_versions_fee', sql`${t.feeBps} between 0 and 10000`),
   check('plan_versions_numbers', sql`${t.monthlyPrice} >= 0 and ${t.includedOrders} >= 0`),
 ])

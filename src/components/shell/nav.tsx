@@ -1,6 +1,6 @@
 'use client'
 
-import { Activity, ExternalLink, House, LayoutGrid, Menu, ReceiptText, ShieldCheck, Shirt, SlidersHorizontal, Store, Users, CreditCard, X } from 'lucide-react'
+import { Activity, Blocks, ExternalLink, House, LayoutGrid, Menu, ReceiptText, ShieldCheck, Shirt, SlidersHorizontal, Store, Users, CreditCard, X } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
@@ -14,7 +14,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 // the server/client line). The count pill is a server-rendered slot.
 // =============================================================================
 
-const ICONS = { home: House, orders: ReceiptText, products: Shirt, collections: LayoutGrid, settings: SlidersHorizontal, activity: Activity,
+const ICONS = { home: House, orders: ReceiptText, products: Shirt, collections: LayoutGrid, settings: SlidersHorizontal, activity: Activity, apps: Blocks,
   merchants: Store, plans: CreditCard, staff: Users, admin: ShieldCheck, external: ExternalLink } as const
 export type IconName = keyof typeof ICONS
 export type NavItem = { href: string; label: string; icon: IconName; badge?: ReactNode; exact?: boolean }

@@ -3,7 +3,8 @@
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { fromRupees } from '@/domains/money/paise'
-import { FEATURES, PLAN_CODES } from '@/domains/plans/entitlements'
+import { PLAN_CODES } from '@/domains/plans/entitlements'
+import { PLAN_GRANTABLE as FEATURES } from '@/domains/modules/registry'
 import { newPlanVersion } from '@/lib/admin/plans'
 import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 

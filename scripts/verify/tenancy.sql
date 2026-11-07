@@ -640,4 +640,68 @@ do $$ declare t uuid := (select id from tenants where slug = 'proof-p'); s times
      or has_table_privilege('frata_app', 'partners', 'select') then raise exception 'FAIL: partners readable by the wrong role'; end if;
 end $$;
 
-\echo 'tenancy proof — all 28 checks passed'
+-- 29. Modules (docs/specs/2026-11-07-modules-foundation.md; tenancy review in docs/plans/2026-11-07-m2.md).
+begin; set local role frata_app;
+do $$ declare n int; begin
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  -- A switches its own module on, once; a second open switch fails; A cannot switch B's on
+  insert into tenant_modules (tenant_id, module, enabled_by) values ('11111111-1111-1111-1111-111111111111', 'communication', '99999999-9999-9999-9999-999999999999');
+  begin insert into tenant_modules (tenant_id, module, enabled_by) values ('11111111-1111-1111-1111-111111111111', 'communication', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: two open switches';
+  exception when unique_violation then null; end;
+  begin insert into tenant_modules (tenant_id, module, enabled_by) values ('22222222-2222-2222-2222-222222222222', 'communication', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: A switched on a module for B';
+  exception when insufficient_privilege then null; end;
+  begin insert into tenant_modules (tenant_id, module, enabled_by) values ('11111111-1111-1111-1111-111111111111', 'payments_magic', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: an unknown module';
+  exception when check_violation then null; end;
+  begin update tenant_modules set module = 'reviews'; raise exception 'FAIL: app changed which module a switch is';
+  exception when insufficient_privilege then null; end;
+  begin delete from tenant_modules; raise exception 'FAIL: app deleted switch history';
+  exception when insufficient_privilege then null; end;
+  -- no self-granted add-on or trial; no price or pause written by the app
+  begin insert into tenant_addons (tenant_id, module, trial_ends_at, created_by) values ('11111111-1111-1111-1111-111111111111', 'reviews', now() + interval '30 days', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: app gave itself a trial';
+  exception when insufficient_privilege then null; end;
+  begin insert into addon_prices (module, version, monthly_price) values ('reviews', 99, 0); raise exception 'FAIL: app set a price';
+  exception when insufficient_privilege then null; end;
+  begin insert into module_pauses (module, paused_by, reason) values ('communication', '99999999-9999-9999-9999-999999999999', 'x'); raise exception 'FAIL: app paused a module';
+  exception when insufficient_privilege then null; end;
+  if (select count(*) from addon_prices) <> 3 then raise exception 'FAIL: app cannot read add-on prices'; end if;
+end $$;
+commit;
+-- Frata admin grants a trial to B; A cannot see it; admin may only end it
+begin; set local role frata_admin;
+do $$ begin
+  insert into tenant_addons (tenant_id, module, trial_ends_at, created_by, reason) values ('22222222-2222-2222-2222-222222222222', 'reviews', now() + interval '30 days', 'aaaaaaaa-0000-0000-0000-000000000001', 'proof');
+  begin update tenant_addons set module = 'true_profit'; raise exception 'FAIL: admin changed a granted add-on';
+  exception when insufficient_privilege then null; end;
+  update tenant_addons set ends_at = now() + interval '1 day' where reason = 'proof';
+  begin delete from tenant_addons; raise exception 'FAIL: admin deleted an add-on';
+  exception when insufficient_privilege then null; end;
+  begin insert into tenant_addons (tenant_id, module, created_by) values ('22222222-2222-2222-2222-222222222222', 'reviews', 'aaaaaaaa-0000-0000-0000-000000000001'); raise exception 'FAIL: an add-on neither paid nor trial';
+  exception when check_violation then null; end;
+  begin insert into tenant_addons (tenant_id, module, trial_ends_at, created_by) values ('22222222-2222-2222-2222-222222222222', 'communication', now(), 'aaaaaaaa-0000-0000-0000-000000000001'); raise exception 'FAIL: a core module as an add-on';
+  exception when check_violation then null; end;
+  insert into module_pauses (module, paused_by, reason) values ('reviews', 'aaaaaaaa-0000-0000-0000-000000000001', 'proof');
+  begin insert into module_pauses (module, paused_by, reason) values ('reviews', 'aaaaaaaa-0000-0000-0000-000000000001', 'twice'); raise exception 'FAIL: two open pauses';
+  exception when unique_violation then null; end;
+end $$;
+commit;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  if exists (select 1 from tenant_addons) then raise exception 'FAIL: A sees B add-ons'; end if;
+  if not exists (select 1 from module_pauses where module = 'reviews') then raise exception 'FAIL: app cannot read pauses'; end if;
+end $$;
+commit;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+do $$ begin
+  if (select count(*) from tenant_addons) <> 1 then raise exception 'FAIL: B cannot see its add-on'; end if;
+  if exists (select 1 from tenant_modules) then raise exception 'FAIL: B sees A switches'; end if;
+end $$;
+commit;
+do $$ begin
+  if has_table_privilege('anon', 'tenant_modules', 'select') or has_table_privilege('authenticated', 'tenant_addons', 'select')
+     or has_table_privilege('service_role', 'addon_prices', 'select') or has_table_privilege('service_role', 'module_pauses', 'insert') then
+    raise exception 'FAIL: API roles reach module tables'; end if;
+end $$;
+
+\echo 'tenancy proof — all 29 checks passed'

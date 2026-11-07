@@ -17,7 +17,7 @@ import { join } from 'node:path'
 
 /** Functions that establish who is calling, and refuse who may not. */
 // shopRequest (src/lib/http/shop-api.ts) is requireShop plus a Zod body and a per-shop limit, for /api/shop/*.
-const CHOKEPOINTS = ['requireMember', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'requireShop', 'shopRequest']
+const CHOKEPOINTS = ['requireMember', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'requireShop', 'shopRequest']
 
 /** Entry points that check their own credential: file → [what it is, a token that must appear in it]. */
 const ENTRY_POINTS = {
@@ -69,8 +69,8 @@ for (const file of existsSync('src/app/(partner)') ? walk('src/app/(partner)') :
 // Every console write goes through asMember, which audits support visits in the same transaction.
 for (const file of walk('src/app/(console)')) {
   const text = readFileSync(file, 'utf8')
-  if (/^\s*['"]use server['"]/m.test(text) && !/\basMember\(/.test(text)) {
-    failures.push(`${file}  console server actions must use asMember( (support visits are audited there)`)
+  if (/^\s*['"]use server['"]/m.test(text) && !/\b(asMember|asModule)\(/.test(text)) {
+    failures.push(`${file}  console server actions must use asMember( or asModule( (support visits are audited there)`)
   }
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { fromRupees, paise } from '@/domains/money/paise'
-import { canUse, currentPlan, deliveredFee, monthlyPrice, nextPlan, usage, type PlanVersion } from '../entitlements'
+import { currentPlan, deliveredFee, monthlyPrice, nextPlan, usage, type PlanVersion } from '../entitlements'
 
 const growth: PlanVersion = { planCode: 'growth', version: 1, monthlyPrice: fromRupees(4999), includedOrders: 1500, feeBps: 100 }
 const d = (s: string) => new Date(s)
@@ -10,10 +10,6 @@ describe('entitlements', () => {
     const rows = [{ startsAt: d('2026-11-01'), id: 'a' }, { startsAt: d('2026-11-05'), id: 'b' }, { startsAt: d('2026-12-01'), id: 'c' }]
     expect(currentPlan(rows, d('2026-11-06'))?.id).toBe('b')
     expect(currentPlan(rows, d('2026-10-01'))).toBeNull()
-  })
-  it('answers features from the plan', () => {
-    expect(canUse(['rto_shield'], 'rto_shield')).toBe(true)
-    expect(canUse([], 'size_fit')).toBe(false)
   })
   it('charges 1% of a delivered ₹1,200 order on Growth', () => {
     expect(deliveredFee(fromRupees(1200), growth.feeBps)).toBe(fromRupees(12))
