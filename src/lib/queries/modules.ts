@@ -36,7 +36,7 @@ async function readFacts(tenantId: string, now: Date): Promise<ModuleFacts> {
   })
 }
 
-/** Facts and access for one shop. Cached per request (layout, page and actions share one read); `at` is an ISO time. */
+/** Facts and access for one shop. Cached per request for the same (tenant, at): pass one `at` down a render to share the read. */
 export const shopModules = cache(async (tenantId: string, at: string): Promise<ShopModules> => {
   const now = new Date(at)
   const facts = await readFacts(tenantId, now)

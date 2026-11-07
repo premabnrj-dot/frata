@@ -30,7 +30,10 @@ grant select on tenant_addons to frata_app;
 --> statement-breakpoint
 create policy tenant_read on tenant_addons for select to frata_app using (tenant_id = app_current_tenant());
 --> statement-breakpoint
-grant select on addon_prices, module_pauses to frata_app;
+grant select on addon_prices to frata_app;
+--> statement-breakpoint
+-- A shop sees whether a module is paused, never staff's reason or who paused it (tenancy audit, 2026-11-07).
+grant select (id, module, paused_at, resumed_at) on module_pauses to frata_app;
 --> statement-breakpoint
 create policy catalogue_read on addon_prices for select to frata_app, frata_admin using (true);
 --> statement-breakpoint

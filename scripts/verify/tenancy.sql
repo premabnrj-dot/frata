@@ -694,13 +694,26 @@ select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true)
 do $$ begin
   if exists (select 1 from tenant_addons) then raise exception 'FAIL: A sees B add-ons'; end if;
   if not exists (select 1 from module_pauses where module = 'reviews') then raise exception 'FAIL: app cannot read pauses'; end if;
+  begin perform reason from module_pauses; raise exception 'FAIL: a shop reads staff pause reasons';
+  exception when insufficient_privilege then null; end;
 end $$;
 commit;
 begin; set local role frata_app;
 select set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
-do $$ begin
+do $$ declare n int; begin
   if (select count(*) from tenant_addons) <> 1 then raise exception 'FAIL: B cannot see its add-on'; end if;
   if exists (select 1 from tenant_modules) then raise exception 'FAIL: B sees A switches'; end if;
+  update tenant_modules set disabled_at = now(), disabled_by = '99999999-9999-9999-9999-999999999999' where tenant_id = '11111111-1111-1111-1111-111111111111';
+  get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: B switched off A''s module'; end if;
+  insert into tenant_modules (tenant_id, module, enabled_by) values ('22222222-2222-2222-2222-222222222222', 'ship', '99999999-9999-9999-9999-999999999999');
+end $$;
+commit;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  if exists (select 1 from tenant_modules where tenant_id <> '11111111-1111-1111-1111-111111111111') then raise exception 'FAIL: A sees B switches'; end if;
+  if not exists (select 1 from tenant_modules where module = 'communication' and disabled_at is null) then raise exception 'FAIL: A''s switch was closed by B'; end if;
 end $$;
 commit;
 do $$ begin
