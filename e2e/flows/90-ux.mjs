@@ -261,7 +261,8 @@ export default {
         await cdp.send('Network.enable'); await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 900, downloadThroughput: 1e6, uploadThroughput: 1e6 })
         await q.locator('nav[aria-label="Order views"] a').first().click()
         await q.locator('main#content[aria-busy="true"]').waitFor({ timeout: 3000 })
-        assert.ok(Number(await q.locator('main#content table').first().evaluate((el) => getComputedStyle(el).opacity)) < 0.7, 'the list dims')
+        // The dim is a 120 ms fade: wait for it to land rather than read its first frame.
+        await q.waitForFunction(() => Number(getComputedStyle(document.querySelector('main#content table')).opacity) < 0.7, null, { timeout: 2000 })
         await q.locator('main#content:not([aria-busy])').waitFor({ timeout: 10000 })
         await dc.close()
         // The one brand moment: open the shop, the check is drawn once with the words.
