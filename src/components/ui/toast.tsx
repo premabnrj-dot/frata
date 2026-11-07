@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { announce } from '@/components/shell/announce'
 
 // =============================================================================
 // FILE: src/components/ui/toast.tsx
@@ -11,10 +12,9 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 // one replaces the last. The window pauses while the pointer OR focus is on the
 // toast, so there is time to reach Undo (WCAG 2.2.1). Under reduced motion the
 // emptying bar becomes the words "Undo for 8 seconds" (§ UX foundation 25).
-// Spoken through the shell's one polite live region: 1D·4b wires U·2a's
-// announce() (src/components/shell/announce) here once it is on main (agreed
-// with the U session, 2026-11-07); until then the toast is seen, not spoken,
-// and nothing but the e2e fixture uses it.
+// Spoken through the shell's ONE polite live region (announce(), src/components/
+// shell/announce.ts, U·2a) — never a region of its own; the words spoken say
+// how to undo, since a screen reader user cannot see the bar.
 // Every timer is held in a ref and cleared when a newer toast arrives, so a
 // leaving or an earlier undo's result never overwrites the toast on screen
 // (impact review 2026-11-07).
@@ -70,6 +70,7 @@ export function Toaster({ children }: { children: React.ReactNode }) {
     seq.current++
     setLeaving(false); setBusy(false)
     setToast({ ...t, id: seq.current })
+    announce(t.undo ? `${t.text} Undo for ${UNDO_MS / 1000} seconds.` : t.text)
     run(UNDO_MS)
   }, [run])
 
@@ -82,7 +83,9 @@ export function Toaster({ children }: { children: React.ReactNode }) {
     if (seq.current !== id) return
     setBusy(false)
     // Same toast, new words: no remount, so keyboard focus stays on the toast, which now says what happened.
-    setToast({ id, text: r.ok ? 'Undone.' : r.error ?? 'We could not undo that.' })
+    const said = r.ok ? 'Undone.' : r.error ?? 'We could not undo that.'
+    setToast({ id, text: said })
+    announce(said)
     box.current?.focus()
     run(4000)
   }
