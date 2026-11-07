@@ -40,6 +40,13 @@ export function NavProgress() {
     window.addEventListener(START, start)
     return () => { document.removeEventListener('click', onClick); window.removeEventListener(START, start); clear() }
   }, [])
+  // While a move runs, the page it leaves is marked busy, and its lists dim (rule 4: opacity only for loading; a
+  // screen reader hears the region is busy). Lists never move; they dim and the new one replaces them.
+  useEffect(() => {
+    const main = document.getElementById('content')
+    if (state === 'run') main?.setAttribute('aria-busy', 'true')
+    else main?.removeAttribute('aria-busy')
+  }, [state])
   useEffect(() => {
     clear()
     setState((s) => (s === 'run' ? 'done' : 'idle'))

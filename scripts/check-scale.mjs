@@ -142,7 +142,7 @@ export function compare(found, allowText) {
 
 export const walkAll = (paths) => paths.flatMap((d) => walk(d))
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const target = process.argv[2]
   if (target && !existsSync(target)) { console.error(`check:scale — no such path: ${target}`); process.exit(2) }
   const found = scan(walkAll(target ? [target] : DIRS))

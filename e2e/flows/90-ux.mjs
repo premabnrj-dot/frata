@@ -230,6 +230,54 @@ export default {
         await sc.close()
       })
 
+      await t.step('motion (U·3): a phone dialog is a sheet that Back closes; lists dim while a view loads; the shop-open check', async () => {
+        // A dialog on a phone: a sheet along the bottom; Back closes it (as Keep) without leaving or reloading the page.
+        const pc = await signedIn(t.browser, 'owner', { viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' })
+        const p = await pc.newPage(); p.on('pageerror', (e) => t.errors.push(e.message))
+        await p.goto(CONSOLE + '/console/fixtures/ui')
+        await p.evaluate(() => { window.__stayed = true })
+        const url = p.url()
+        await p.getByRole('button', { name: 'Cancel order…' }).click()
+        const d = p.getByRole('dialog', { name: 'Cancel KS-1001?' }); await d.waitFor()
+        const box = await d.boundingBox()
+        assert.ok(box && Math.abs(box.y + box.height - 844) <= 2 && box.width >= 389, `a sheet along the bottom: ${JSON.stringify(box)}`)
+        // Android's Back is a close request: requestClose() is that same request, `cancel` first.
+        const history = await p.evaluate(() => window.history.length)
+        await d.evaluate((el) => el.requestClose()); await d.waitFor({ state: 'hidden' })
+        assert.equal(p.url(), url, 'Back closed the sheet and stayed on the page')
+        assert.equal(await p.evaluate(() => window.__stayed), true, 'no reload')
+        assert.equal(await p.evaluate(() => window.history.length), history, 'no history entry of its own')
+        // A close request the browser lets through without `cancel` still reaches onClose: it opens again on the next tap.
+        await p.getByRole('button', { name: 'Cancel order…' }).click(); await d.waitFor()
+        await d.evaluate((el) => el.close()); await d.waitFor({ state: 'hidden' })
+        await p.getByRole('button', { name: 'Cancel order…' }).click(); await d.waitFor()
+        await d.getByRole('button', { name: 'Keep the order' }).click(); await d.waitFor({ state: 'hidden' })
+        assert.equal(p.url(), url)
+        await pc.close()
+        // A list while the next view loads: dimmed and busy (a slow network makes the wait visible).
+        const dc = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 800 } })
+        const q = await dc.newPage(); await q.goto(CONSOLE + '/console/orders?tab=all')
+        const cdp = await dc.newCDPSession(q)
+        await cdp.send('Network.enable'); await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 900, downloadThroughput: 1e6, uploadThroughput: 1e6 })
+        await q.locator('nav[aria-label="Order views"] a').first().click()
+        await q.locator('main#content[aria-busy="true"]').waitFor({ timeout: 3000 })
+        assert.ok(Number(await q.locator('main#content table').first().evaluate((el) => getComputedStyle(el).opacity)) < 0.7, 'the list dims')
+        await q.locator('main#content:not([aria-busy])').waitFor({ timeout: 10000 })
+        await dc.close()
+        // The one brand moment: open the shop, the check is drawn once with the words.
+        const hc = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 800 } })
+        const h = await hc.newPage(); await h.goto(CONSOLE + '/console')
+        await h.getByRole('button', { name: 'Close the shop for now' }).click(); await h.getByRole('button', { name: 'Close shop' }).click()
+        await h.getByRole('button', { name: 'Open my shop' }).click(); await h.getByRole('button', { name: 'Open it' }).click()
+        // The check, not the interim line: "Your shop is open at …" shows first, until the refresh lands.
+        await h.locator('svg .animate-draw-circle').waitFor()
+        assert.equal(await h.locator('svg .animate-draw-circle').count(), 1)
+        await h.getByText('Your shop is open', { exact: true }).waitFor()
+        await h.reload(); assert.equal(await h.locator('svg .animate-draw-circle').count(), 0, 'once: not on the next visit')
+        assert.equal(await h.getByText('Your shop is open', { exact: true }).count(), 0)
+        await hc.close()
+      })
+
       await t.step('Indic fonts download only when a name needs them, and never on the shop (plan U · A4)', async () => {
         const fontsOn = async (who, url) => {
           const ctx = who ? await signedIn(t.browser, who) : await t.browser.newContext()
