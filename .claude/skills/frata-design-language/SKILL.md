@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 4.0.1
+  version: 4.1.0
   verified: 2026-11-07
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -502,6 +502,29 @@ saving we cannot show from their own orders.
     control. Brand empty states use a `PictoTile` instead.
 40. **Haldi and Neel** live on brand surfaces only and are never text or a
     control. Rani as text is `--brand-text`.
+
+## The public pages (owner-approved W·1, 2026-11-07; spec `docs/specs/2026-11-07-website-rework.md`)
+
+41. **Fewer words, more pictures** (owner): each section makes one point, in a
+    heading of at most 6 words, a line of at most 12, a card of at most 2 short
+    lines, and shows it in a drawing, the product picture or a number. No
+    reassurance paragraphs, no notes about how the page is made. These stay
+    visible whatever the word count: "+ 18% GST" and "of each delivered order"
+    on every plan, "up to N orders a month", the partner's 90-day tail and "24
+    months, from opening", "₹0 added to the brand's price", and "Example · ex
+    GST · paid monthly once billing starts" beside partner numbers.
+42. **The frame** is `src/components/brand/site.tsx`: an ink `SiteStage` with
+    `SiteHeader` (skip link, the mark with its thread on ink, the `inverse`
+    button), the `Selvedge` (the block print as a woven edge under the stage, the
+    only place it appears), a Neel `NumberBand` of terms (paper on Neel, gated),
+    and `SiteFooter` with WhatsApp written out. /, /partners, /login and /start.
+43. **The product is shown as it is**, drawn (`ConsolePreview`,
+    `EarningsPreview`): `inert`, marked "Example", every figure from the engines
+    (`exampleOrder()` through `orderProfit()`, `shareExample()`), never typed.
+    No invented testimonials or logos.
+44. **No client script for a public page**: a choice is radio chips whose own
+    panel shows on `:checked` (the partner calculator over `shareTable()`).
+    Large ₹ figures are mono (a ₹ in the display face pulls the Devanagari file).
 
 ## Storefront
 

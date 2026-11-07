@@ -1,5 +1,6 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { fromRupees } from '@/domains/money/paise'
@@ -27,5 +28,7 @@ export async function newVersionAction(form: FormData) {
     feeBps: Math.round(p.data.feePercent * 100),
     features,
   })
+  // The public pages read prices from the plans: show the new version now, not within the hour (website spec W·1).
+  revalidatePath('/'); revalidatePath('/partners')
   redirect(`/admin/plans?ok=${encodeURIComponent(`Saved as version ${v.version}. Stores on older versions keep theirs.`)}`)
 }

@@ -13,6 +13,8 @@ export const button = cva(
         // so cancelling never looks like the brand's way forward. Disabled: none.
         primary: `bg-primary text-primary-foreground hover:bg-primary/90 ${THREAD} after:scale-x-[0.34]`,
         secondary: `border border-input bg-card hover:bg-accent ${THREAD} after:scale-x-0`,
+        // Paper on an ink stage (the website's hero, website spec W·1), with the thread.
+        inverse: `bg-primary-foreground text-primary hover:bg-primary-foreground/90 ${THREAD} after:scale-x-[0.34]`,
         ghost: 'hover:bg-accent',
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
       },

@@ -131,3 +131,16 @@ export async function shopsToErase(before: Date): Promise<string[]> {
   const rows = await db().execute<{ id: string }>(sql`select app_shops_to_erase(${before.toISOString()}::timestamptz) as id`)
   return rows.map((r) => r.id)
 }
+
+/**
+ * The plans for a public page (website spec W·1): none while the site is being built without a database, so the
+ * page shows its fallback; at runtime a failure THROWS, so the last good cached page stays instead of an hour of
+ * "no prices".
+ */
+export async function publicPlansForPage(page: string): Promise<PublicPlan[]> {
+  try { return await publicPlans() } catch (err) {
+    // NEXT_PHASE is set by Next itself while it builds (next/constants PHASE_PRODUCTION_BUILD).
+    if (process.env.NEXT_PHASE === 'phase-production-build') return []
+    console.error(`[${page}] plans`, err instanceof Error ? err.name : 'error'); throw err
+  }
+}

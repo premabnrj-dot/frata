@@ -182,9 +182,11 @@
   --shadow-sm: 0 0 #0000;
   --shadow: 0 0 #0000;
   --shadow-md: 0 0 #0000;
-  /* The two named shadows that exist: the storefront's fixed pay bar, and the swatch crop's ring and dimmed surround. */
+  /* The named shadows that exist: the storefront's fixed pay bar, the swatch crop's ring and dimmed surround, the website's product picture. */
   --shadow-store-bar: 0 -6px 14px rgb(31 26 23 / 0.06);
   --shadow-crop: 0 0 0 1px rgb(0 0 0 / 0.5), 0 0 0 999px rgb(0 0 0 / 0.35);
+  /* The website's product picture, lifted off the ink stage (website spec W·1). */
+  --shadow-float: 0 30px 60px -20px rgb(0 0 0 / 0.6);
 }
 
 /* THE BLOCK PRINT (brand spec, chapter 5): a repeat tile from the mark's quarter circle (the r's arm) and circle

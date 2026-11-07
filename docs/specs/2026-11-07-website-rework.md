@@ -53,6 +53,37 @@ No current source was found for "pricing on the page converts better"; the call 
 frame or a number. No reassurance paragraphs, no notes about how the page works (e.g. "Figures are read from the plans
 themselves…" goes). A heading at most 6 words; a line under it at most 12; a card at most 2 short lines.
 
+## Design review (architecture-reviewer on the plan, 2026-11-07, folded in)
+- **UI/UX:** one point per section, said in at most 6 words and shown in a drawing, the product frame or a number. These
+  lines stay visible: GST and "of each delivered order" on every plan card, "up to N orders a month", the partner's
+  90-day tail, "24 months from opening", "₹0 added to the brand's price", and "Example · ex GST · paid monthly once
+  billing starts" beside the partner numbers. The skip link is in the site header; the console view is `inert`, so its
+  links are not Tab stops.
+- **SSOT:**
+  - The hero order runs `EXAMPLE_ORDER` through `orderProfit()`, with the fee from Launch's `feeBps` and both "if
+    delivered" and "if it comes back". It is hidden when plans fail.
+  - The partner figures are `shareExample()` × n, shown as the engine's ₹875.80.
+  - "2 years" is derived from `shareMonths`.
+  - The Shopify-import claim goes; every "Now" names something built.
+- **Modularity / DRY:** `SiteHeader`, `SiteStage`, `Selvedge`, `SiteFooter` and `ConsolePreview` live once in
+  `src/components/brand/site.tsx` and `console-preview.tsx`; the paper-on-ink button is a `button()` variant
+  (`inverse`), its pair and paper-on-Neel gated in `check:contrast`.
+- **Performance:** no client script added. The calculator is radio chips over server-computed values (`:has(:checked)`).
+  The block print is a "selvedge" strip at the stage's edge, never behind numbers, controls or forms. Large ₹ figures are
+  mono (a ₹ in the display face would pull the Devanagari file).
+- **Reliability:** a plans read that fails at runtime throws, so the last good page stays cached; only the build (no
+  database) falls back. A new plan version revalidates `/` and `/partners`.
+- **Tenancy / security / unit economics:** n/a (platform-scope `publicPlans`, no tenant read, no action; the partner terms
+  do not change, so `unit-economics-reviewer` is not needed until call 6 changes them).
+- **Tests:** the ux net measures `/`, `/partners`, `/login` and `/start` signed out; 40-partners follows the new copy; unit
+  tests for the example order and the calculator values.
+- **Accepted gaps:**
+  - e2e builds without a database, so prices and the partner example show their fallback there; unit tests hold their
+    values.
+  - No Lighthouse tooling; the ux flow's speed step prints.
+  - No `?from=` tracking yet.
+  - **No privacy or terms page exists** although sign-up and apply collect email and phone: the owner's to write (legal).
+
 ## Plan (after sign-off; reviewers before code)
 | Task | What | Verify |
 |---|---|---|
