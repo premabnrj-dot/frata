@@ -14,7 +14,7 @@ import { down, up } from './stack.mjs'
 const arg = (k) => process.argv.find((a) => a.startsWith(k))
 const only = arg('--only')?.split('=')[1]?.split(',') ?? (process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1].split(',') : null)
 const files = readdirSync(new URL('./flows/', import.meta.url)).filter((f) => f.endsWith('.mjs')).sort()
-  .filter((f) => !only || only.includes(f.replace(/^\d+-/, '').replace('.mjs', '')) || only.includes(f.replace('.mjs', ''))))
+  .filter((f) => !only || only.includes(f.replace(/^\d+-/, '').replace('.mjs', '')) || only.includes(f.replace('.mjs', '')))
 // A filter that matches no flow is an error, never a green run of nothing.
 if (only && files.length === 0) { console.error(`--only ${only.join(',')} matches no flow in e2e/flows`); process.exit(1) }
 
