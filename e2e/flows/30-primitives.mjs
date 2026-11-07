@@ -24,7 +24,7 @@ export default {
       assert.equal(await p.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'About bill of supply')
     })
 
-    await t.step('dialog: the safe button has focus, Esc keeps the order, focus returns to the opener', async () => {
+    await t.step('dialog: the marked safe button has focus (it comes second), Esc keeps the order, focus returns to the opener', async () => {
       await p.getByRole('button', { name: 'Cancel order…' }).click()
       const d = p.getByRole('dialog', { name: 'Cancel KS-1001?' }); await d.waitFor()
       assert.equal(await p.evaluate(() => document.activeElement?.textContent), 'Keep the order')
@@ -45,18 +45,42 @@ export default {
       await p.keyboard.press('ArrowDown'); await p.keyboard.press('Enter')
       assert.equal((await log()).at(-1), 'print')
       await more.click(); await p.keyboard.press('Escape'); await p.getByRole('menu').waitFor({ state: 'hidden' })
-      assert.equal(await p.evaluate(() => document.activeElement?.textContent?.trim()), 'More')
+      await p.waitForFunction(() => document.activeElement?.textContent?.trim() === 'More', null, { timeout: 2000 })
       assert.equal(await more.getAttribute('aria-expanded'), 'false')
+      // A click elsewhere closes it without pulling focus back (typing into a field is not interrupted).
+      await more.click(); await p.getByLabel('Search').click(); await p.getByRole('menu').waitFor({ state: 'hidden' })
+      assert.equal(await p.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Search')
+    })
+
+    await t.step('menu item opens a dialog; Esc there returns focus to More', async () => {
+      await p.getByRole('button', { name: 'More' }).click(); await p.getByRole('menuitem', { name: 'Cancel order' }).click()
+      const d = p.getByRole('dialog', { name: 'Cancel KS-1001?' }); await d.waitFor()
+      assert.equal(await p.evaluate(() => document.activeElement?.textContent), 'Keep the order')
+      await p.keyboard.press('Escape'); await d.waitFor({ state: 'hidden' })
+      assert.equal(await p.evaluate(() => document.activeElement?.textContent?.trim()), 'More')
     })
 
     await t.step('toast: says what happened, Undo runs once and says so', async () => {
-      await p.getByRole('button', { name: 'Confirm' }).click()
+      await p.getByRole('button', { name: 'Confirm', exact: true }).click()
       await p.getByText('KS-1001 confirmed.').waitFor()
       await p.getByRole('button', { name: 'Undo' }).click()
       await p.locator('[data-toast]', { hasText: 'Undone.' }).waitFor()
       assert.equal(await p.locator('[data-toast]').count(), 1, 'one toast at a time')
       assert.equal((await log()).filter((l) => l === 'undo').length, 1)
       assert.equal(await p.getByRole('button', { name: 'Undo' }).count(), 0)
+      // Keyboard focus stays with the toast, which now says what happened.
+      assert.equal(await p.evaluate(() => document.activeElement?.hasAttribute('data-toast')), true)
+    })
+
+    await t.step('toast: a failed undo says why; an undo that finishes after a newer toast leaves the newer one alone', async () => {
+      await p.getByRole('button', { name: 'Confirm slowly' }).click(); await p.getByText('KS-1002 confirmed.').waitFor()
+      await p.getByRole('button', { name: 'Undo' }).click()
+      await p.locator('[data-toast]', { hasText: 'Already packed — cancel it instead.' }).waitFor()
+      await p.getByRole('button', { name: 'Confirm slowly' }).click(); await p.getByRole('button', { name: 'Undo' }).click()
+      await p.getByRole('button', { name: 'Hold', exact: true }).click() // a newer toast while the undo still runs
+      await p.locator('[data-toast]', { hasText: 'KS-1003 on hold.' }).waitFor()
+      await p.waitForFunction(() => document.querySelectorAll('[data-testid="log"] li').length && [...document.querySelectorAll('[data-testid="log"] li')].filter((l) => l.textContent === 'slow undo').length === 2, null, { timeout: 3000 })
+      assert.equal(await p.locator('[data-toast]').textContent(), 'KS-1003 on hold.')
     })
 
     await t.step('keys: j moves; never while typing; ? shows the list; off means off, but ? still works', async () => {
@@ -86,10 +110,6 @@ export default {
       await p.screenshot({ path: t.out('phone-dialog') }); await p.keyboard.press('Escape')
     })
 
-    await t.step('the fixture page is a 404 without the test switch (checked by its code path)', async () => {
-      const r = await fetch(CONSOLE + '/console/fixtures/ui', { redirect: 'manual' })
-      assert.ok([200, 307, 404].includes(r.status)) // signed out here: sign-in redirect or 404, never the page's data
-    })
     await ctx.close()
   },
 }

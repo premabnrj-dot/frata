@@ -16,7 +16,8 @@ import { CONSOLE, OUT, PORTS, SHOP_DOMAIN, adminSql, until } from './lib.mjs'
 
 const ROOT = new URL('..', import.meta.url).pathname
 const PG_DIR = '/var/tmp/frata-e2e', PG_BIN = '/usr/lib/postgresql/16/bin', DB = 'frata_e2e'
-const sh = (cmd, env = {}) => execSync(cmd, { cwd: ROOT, stdio: 'pipe', env: { ...process.env, ...env } }).toString()
+// 64 MB of output: execSync's 1 MB default kills a build that prints more, with no reason given.
+const sh = (cmd, env = {}) => execSync(cmd, { cwd: ROOT, stdio: 'pipe', maxBuffer: 64 * 1024 * 1024, env: { ...process.env, ...env } }).toString()
 const asPg = (cmd) => sh(`su postgres -c "${cmd}"`)
 
 const PUBLIC_ENV = {
@@ -69,7 +70,7 @@ export async function up({ build = true } = {}) {
       // The lines that say why; if none match (a killed build), the log's last lines, so a failure always says something.
       const lines = String(e.stdout ?? '') .split('\n').concat(String(e.stderr ?? '').split('\n'))
       const why = lines.filter((l) => /rror|check:|Killed|ENOSPC|EADDRINUSE/.test(l)).slice(0, 15)
-      throw new Error('build failed:\n' + (why.length ? why : lines.filter(Boolean).slice(-15)).join('\n'))
+      throw new Error(`build failed (${e.code ?? e.status ?? e.signal ?? 'no code'}): ${String(e.message).split('\n')[0]}\n` + (why.length ? why : lines.filter(Boolean).slice(-15)).join('\n'))
     }
   }
   sh('rm -rf .next/cache')

@@ -21,7 +21,10 @@ export function Dialog({ open, onClose, title, description, children, actions, c
   title: string
   description?: React.ReactNode
   children?: React.ReactNode
-  /** The buttons, the safe one first; give it autoFocus, so Enter never confirms what loses something. */
+  /**
+   * The buttons. Mark the SAFE one `data-autofocus`: it gets focus on open, so Enter never confirms what loses
+   * something. (React's autoFocus does nothing here: the dialog's content mounts while it is closed.)
+   */
   actions: React.ReactNode
   className?: string
 }) {
@@ -30,7 +33,7 @@ export function Dialog({ open, onClose, title, description, children, actions, c
   useEffect(() => {
     const d = ref.current
     if (!d) return
-    if (open && !d.open) d.showModal()
+    if (open && !d.open) { d.showModal(); d.querySelector<HTMLElement>('[data-autofocus]')?.focus() }
     if (!open && d.open) d.close()
   }, [open])
   return (

@@ -24,16 +24,19 @@ function Board() {
     <div className="grid gap-6">
       <ViewTabs label="Views" tabs={[{ href: '?t=a', label: 'To confirm', count: 1043, current: true }, { href: '?t=b', label: 'To pack', count: 3, current: false }, { href: '?t=c', label: 'Not paid online', count: 2, current: false, apart: true }]} />
       <p className="flex items-center gap-1">Bill of supply <InfoTip about="bill of supply">What a shop without a GSTIN gives instead of a tax invoice.</InfoTip></p>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button onClick={() => setCancel(true)}>Cancel order…</Button>
-        <Menu items={[{ label: 'Hold', onSelect: () => say('hold') }, { label: 'Print invoice', onSelect: () => say('print') }, { label: 'Cancel order', onSelect: () => say('cancel'), danger: true }]} />
+        <Menu items={[{ label: 'Hold', onSelect: () => say('hold') }, { label: 'Print invoice', onSelect: () => say('print') }, { label: 'Cancel order', onSelect: () => setCancel(true), danger: true }]} />
         <Button variant="secondary" onClick={() => toast({ text: 'KS-1001 confirmed.', undo: async () => { say('undo'); return { ok: true } } })}>Confirm</Button>
+        <Button variant="secondary" onClick={() => toast({ text: 'KS-1002 confirmed.', undo: async () => { await new Promise((r) => setTimeout(r, 800)); say('slow undo'); return { ok: false, error: 'Already packed — cancel it instead.' } } })}>Confirm slowly</Button>
+        <Button variant="secondary" onClick={() => toast({ text: 'KS-1003 on hold.' })}>Hold</Button>
       </div>
       <input aria-label="Search" placeholder="Search" className="h-10 rounded-md border border-input px-3 md:h-9" />
       <p data-testid="row">row {row}</p>
       <ol data-testid="log">{log.map((l, i) => <li key={i}>{l}</li>)}</ol>
       <Dialog open={cancel} onClose={() => { setCancel(false); say('kept') }} title="Cancel KS-1001?" description="The stock goes back. This cannot be undone."
-        actions={<><Button autoFocus variant="secondary" onClick={() => { setCancel(false); say('kept') }}>Keep the order</Button><Button variant="destructive" onClick={() => { setCancel(false); say('cancelled') }}>Cancel order</Button></>} />
+        // The safe button SECOND, so the test proves focus goes to the marked one, not merely the first.
+        actions={<><Button variant="destructive" onClick={() => { setCancel(false); say('cancelled') }}>Cancel order</Button><Button data-autofocus variant="secondary" onClick={() => { setCancel(false); say('kept') }}>Keep the order</Button></>} />
       <KeySheet open={keys} onClose={() => setKeys(false)} enabled={enabled} onEnabled={setEnabled} />
     </div>
   )

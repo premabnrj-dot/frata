@@ -23,7 +23,7 @@ export function ViewTabs({ label, tabs }: { label: string; tabs: ViewTab[] }) {
               className={cn('inline-flex min-h-10 items-center gap-2 rounded-md px-3 text-sm md:min-h-9',
                 t.current ? 'bg-accent font-semibold text-foreground' : 'text-muted-foreground hover:text-foreground')}>
               {t.label}
-              {t.count !== undefined ? <span className="rounded-sm bg-neutral px-1.5 font-mono text-xs text-neutral-text tabular-nums">{t.count.toLocaleString('en-IN')}</span> : null}
+              {t.count !== undefined ? <span className={cn('rounded-sm px-1.5 font-mono text-xs text-neutral-text tabular-nums', t.current ? 'bg-background' : 'bg-neutral')}>{t.count.toLocaleString('en-IN')}</span> : null}
             </Link>
           </li>
         ))}

@@ -35,7 +35,7 @@
   --border: #DEDBD7;
   --input: #8C857F;              /* FIELD EDGE: fields, selects, checkboxes, switches, secondary buttons (3.64:1) */
   --ring: #1C1917;
-  --scrim: rgb(31 26 23 / 0.45);       /* behind a dialog: ink at 45% */
+  --scrim: color-mix(in srgb, var(--foreground) 45%, transparent); /* behind a dialog: the ink at 45%, in both themes */
   --brand: #7A1F2B;              /* oxblood — the mark, never a button */
   --brand-foreground: #FFFFFF;
 
@@ -55,6 +55,7 @@
 
 /* DARK — written and gated, NOT switched on (owner call 2, 2026-11-07): nothing sets data-theme yet. */
 :root[data-theme="dark"] {
+  --scrim: color-mix(in srgb, #000 60%, transparent); /* dark: the ink is light, so the veil is black */
   --background: #141211;
   --foreground: #EDEAE6;
   --card: #1C1A18;

@@ -16,7 +16,7 @@ export function KeySheet({ open, onClose, enabled, onEnabled }: { open: boolean;
   return (
     <Dialog open={open} onClose={onClose} title="Keyboard shortcuts"
       description="Work through the queue without the mouse. Keys do nothing while you type in a box."
-      actions={<Button autoFocus variant="secondary" onClick={onClose}>Close</Button>}>
+      actions={<Button data-autofocus variant="secondary" onClick={onClose}>Close</Button>}>
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
         {SHORTCUTS.map((s) => (
           <div key={s.key} className="contents">
