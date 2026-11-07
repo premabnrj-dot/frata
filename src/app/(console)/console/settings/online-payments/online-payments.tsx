@@ -6,16 +6,17 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { connectRazorpay, disconnectRazorpay } from './actions'
 import { Section } from '@/components/layout/section'
+import { sinceIN } from '@/lib/format-date'
 
 type Status = { keyId: string; mode: 'test' | 'live'; webhookSeenAt: string | null; lastEventAt: string | null; problem: string | null; webhookUrl: string; webhookSecret: string | null } | null
 
-const ago = (iso: string) => {
-  const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
-  return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} days ago`
-}
 
-/** Connect (keys checked with Razorpay first), then the one webhook step, written out. */
-export function OnlinePayments({ status, support, available }: { status: Status; support: boolean; available: boolean }) {
+/**
+ * Connect (keys checked with Razorpay first), then the one webhook step, written out. `now` is the server's render
+ * time: "last event 5 min ago" is worked out from it on the server AND in the browser, so the two always match
+ * (reading the browser's own clock here threw React #418 when the minute turned between render and hydration).
+ */
+export function OnlinePayments({ status, support, available, now }: { status: Status; support: boolean; available: boolean; now: string }) {
   const router = useRouter()
   const [keyId, setKeyId] = useState(status?.keyId ?? '')
   const [secret, setSecret] = useState('')
@@ -81,7 +82,7 @@ export function OnlinePayments({ status, support, available }: { status: Status;
                 : <p className="mt-1 text-muted-foreground">Already in Razorpay (hidden since the first event arrived).</p>}</li>
             <li><span className="font-medium">Events</span>: tick <code>payment.captured</code>, <code>payment.failed</code> and <code>order.paid</code>. Save.</li>
           </ol>
-          <p className="text-sm">{status.webhookSeenAt ? <Badge tone="ok">Working · last event {ago(status.lastEventAt ?? status.webhookSeenAt)}</Badge> : <Badge>Waiting for Razorpay’s first event…</Badge>}</p>
+          <p className="text-sm">{status.webhookSeenAt ? <Badge tone="ok">Working · last event {sinceIN(status.lastEventAt ?? status.webhookSeenAt, new Date(now))}</Badge> : <Badge>Waiting for Razorpay’s first event…</Badge>}</p>
           {status.mode === 'test' && <p className="text-xs text-muted-foreground">Test keys (rzp_test_) let you try Razorpay, but an open shop offers online payment only with live keys and a webhook that has worked.</p>}
         </Section>
       )}

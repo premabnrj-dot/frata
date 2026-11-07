@@ -48,6 +48,18 @@ export default {
       assert.equal(await webhook({ event: 'x' }, 'forged'), 401)
       await until(async () => (await db`select webhook_seen_at from payment_keys`)[0].webhook_seen_at)
     })
+    await t.step('"last event" says the same on the server and in the browser (no hydration error)', async () => {
+      // A browser clock 10 minutes ahead of the server: the page once read Date.now() in both places, so the
+      // server said "just now", the browser "10 min ago", and React threw #418 (flaky at a minute boundary).
+      const fc = await signedIn(t.browser, 'owner')
+      const f = await fc.newPage(); const errs = []; f.on('pageerror', (e) => errs.push(e.message))
+      await f.clock.install({ time: Date.now() + 10 * 60_000 })
+      await f.goto(CONSOLE + '/console/settings/online-payments')
+      await f.getByText('Working · last event just now').waitFor()
+      await f.waitForLoadState('networkidle')
+      assert.deepEqual(errs, [], `page errors: ${errs.join(' | ')}`)
+      await fc.close()
+    })
 
     const ctx = await t.browser.newContext({ ...devices['Pixel 7'] })
     await ctx.route('https://checkout.razorpay.com/v1/checkout.js', (r) => r.fulfill({ contentType: 'application/javascript', body: FAKE_CHECKOUT }))
