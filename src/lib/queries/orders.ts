@@ -7,14 +7,15 @@ import { shopSettings, tenants } from '@/lib/db/schema'
 import { orderPrefix } from '@/domains/signup/slug'
 import { inTabSql, momentColumns } from '@/lib/db/order-predicates'
 import { QUEUE_TABS, type QueueTab } from '@/domains/orders/order-state'
+import { parseOrderSearch } from '@/domains/orders/search'
 
 /** Rows a page (docs/specs/2026-11-07-orders.md § 1D·1). */
 export const ORDERS_PAGE = 50
 
 /**
  * The console's order list, newest first, one page of one queue tab at a time. The tab is tested with the SAME
- * predicate queueCounts counts with (inTabSql), so a list and its count can never disagree. 1D·4b adds the
- * other tabs and search here rather than writing a second list.
+ * predicate queueCounts counts with (inTabSql), so a list and its count can never disagree; a search narrows it,
+ * and `matching` (a window count) says how many it found.
  * Filtered by tenant twice: the policy, and this where.
  */
 export async function listOrders(tenantId: string, { tab = 'all', page = 1, q = '', now }: { tab?: QueueTab; page?: number; q?: string; now: Date }) {
@@ -31,20 +32,14 @@ export async function listOrders(tenantId: string, { tab = 'all', page = 1, q = 
   )
 }
 
-/**
- * Search by order number (with or without its letters: "KS-1012", "1012"), name, or phone (any 4+ digits).
- * At most 60 characters; LIKE wildcards in what was typed are matched as text.
- */
+/** The search as SQL: name LIKE (escaped), the number, and phone digits (src/domains/orders/search.ts). */
 function searchSql(raw: string) {
-  const q = raw.trim().slice(0, 60)
+  const q = parseOrderSearch(raw)
   if (!q) return null
-  const like = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
-  const digits = q.replace(/\D/g, '')
-  const num = /^[A-Za-z]{0,6}-?\s*\d{1,9}$/.test(q) ? Number(digits) : null
   return or(
-    ilike(orders.customerName, like),
-    ...(num !== null ? [eq(orders.number, num)] : []),
-    ...(digits.length >= 4 ? [like_(orders.phone, `%${digits}%`)] : []),
+    ilike(orders.customerName, q.like),
+    ...(q.number !== null ? [eq(orders.number, q.number)] : []),
+    ...(q.phoneDigits ? [like_(orders.phone, `%${q.phoneDigits}%`)] : []),
   )
 }
 

@@ -43,23 +43,26 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const page = Number.isSafeInteger(asked) ? Math.min(Math.max(1, asked), q ? 1_000 : pagesFor(counts[tab])) : 1
   let list = await listOrders(tenantId, { tab, page, q, now }).catch((err) => { console.error('[orders]', err instanceof Error ? err.name : err); return null })
   if (!list) return fail
-  if (q && !list.length && page > 1) list = (await listOrders(tenantId, { tab, page: 1, q, now }).catch(() => [])) ?? []
+  // A search link past its last page (results shrank since): show its first page, and say so in the pager.
+  const refetched = q !== '' && !list.length && page > 1
+  if (refetched) list = (await listOrders(tenantId, { tab, page: 1, q, now }).catch(() => [])) ?? []
   const total = q ? (list[0]?.matching ?? 0) : counts[tab]
   const pages = pagesFor(total)
-  const shownPage = q && !list.length ? 1 : page
+  const shownPage = refetched ? 1 : page
 
   const prefix = await orderPrefixFor(tenantId)
-  const facts = await riskFactsFor(tenantId, list.map((o) => o.id), now).catch(() => new Map())
+  // If the risk facts cannot be read, rows say "Risk unavailable" and c opens instead of confirming: never fail open.
+  const facts = await riskFactsFor(tenantId, list.map((o) => o.id), now).catch((err) => { console.error('[orders] risk', err instanceof Error ? err.name : err); return null })
   const rows: QueueRow[] = list.map((o) => {
     const state = orderState(o, now)
     const method = currentMethod(o)
-    const f = facts.get(o.id)
+    const f = facts?.get(o.id)
     return {
       id: o.id, number: `${prefix}-${o.number}`, href: `/console/orders/${o.number}`,
       customer: o.customerName, place: [o.city, `${o.items} item${o.items === 1 ? '' : 's'}`].filter(Boolean).join(' · '),
       payment: method === 'cod' ? PAYMENT.cod : o.paidAt ? PAYMENT.paid : PAYMENT.unpaid, state: STATE[state], doNotCollect: paidAfterSwitch(o),
       // Risk is for orders still to be decided; once confirmed, packed or paid it is not news.
-      risk: f && (state === 'unconfirmed' || state === 'held') ? risk(f).level : 'low',
+      risk: state === 'unconfirmed' || state === 'held' ? (facts === null ? 'unknown' : f ? risk(f).level : 'low') : 'low',
       canConfirm: applies('confirm', state), canHold: applies('hold', state),
       total: Number(o.total), placed: dateTimeIN(o.placedAt), dimmed: STATE[state].tone === 'neutral',
     }

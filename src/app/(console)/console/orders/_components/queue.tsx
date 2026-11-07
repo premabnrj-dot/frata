@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { DataTable, DataTableBody, DataTableHead, Td } from '@/components/data/data-table'
 import { Name } from '@/components/data/name'
 import { Money } from '@/components/data/numeric'
@@ -14,7 +14,7 @@ import { useShortcuts, useShortcutsEnabled } from '@/components/ui/use-shortcuts
 import type { Paise } from '@/domains/money/paise'
 import { confirmKey } from '@/domains/ui/shortcuts'
 import { cn } from '@/lib/utils'
-import { confirmMany, confirmOrder, holdOrder, undoOrderAction } from '../actions'
+import { confirmMany, confirmOrder, holdMany, holdOrder, undoOrderAction, type BulkResult } from '../actions'
 import { RISK_LABEL, type Tone } from './labels'
 
 // =============================================================================
@@ -31,7 +31,7 @@ import { RISK_LABEL, type Tone } from './labels'
 export type QueueRow = {
   id: string; number: string; href: string; customer: string; place: string
   payment: { label: string; tone: Tone }; state: { label: string; tone: Tone }; doNotCollect: boolean
-  risk: 'low' | 'medium' | 'high'; canConfirm: boolean; canHold: boolean; total: number; placed: string; dimmed: boolean
+  risk: 'low' | 'medium' | 'high' | 'unknown'; canConfirm: boolean; canHold: boolean; total: number; placed: string; dimmed: boolean
 }
 
 function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
@@ -42,7 +42,9 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
   // No row has focus until the person moves to one: the first j lands on the FIRST row (found by e2e, 2026-11-07).
   const [at, setAt] = useState(-1)
   const [picked, setPicked] = useState<Set<string>>(new Set())
-  const [done, setDone] = useState<Record<string, string>>({}) // id → what just happened, until the page refreshes
+  const [done, setDone] = useState<Record<string, string>>({}) // id → what just happened, until the server's rows arrive
+  // Fresh rows from the server say where each order really is: the marks go (else a held row would refuse c).
+  useEffect(() => { setDone({}) }, [rows])
   const [busy, setBusy] = useState(false)
   const lastUndo = useRef<(() => Promise<{ ok: boolean; error?: string }>) | null>(null)
   // The table's rows, found inside a wrapper this component owns (DataTableBody takes no ref).
@@ -56,42 +58,57 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
     trs()[n]?.focus()
   }
   const toggle = (id: string) => setPicked((p) => { const s = new Set(p); if (s.has(id)) s.delete(id); else s.add(id); return s })
-  const undoable = (eventIds: string[]) => async () => {
-    const results = await Promise.all(eventIds.map((e) => undoOrderAction(e)))
-    const bad = results.find((r) => !r.ok)
-    setDone({}); router.refresh()
-    return bad && !bad.ok ? { ok: false, error: bad.error } : { ok: true }
+  const unmark = (ids: string[]) => setDone((d) => Object.fromEntries(Object.entries(d).filter(([k]) => !ids.includes(k))))
+  // An undo runs once: from the toast or from z, whichever comes first.
+  const undoable = (eventIds: string[], ids: string[]) => {
+    const undo = async () => {
+      if (lastUndo.current === undo) lastUndo.current = null
+      const results = await Promise.all(eventIds.map((e) => undoOrderAction(e))).catch(() => [{ ok: false as const, error: 'We could not undo that. Open the order to see where it is.' }])
+      const bad = results.find((r) => !r.ok)
+      unmark(ids); router.refresh()
+      return bad && !bad.ok ? { ok: false, error: bad.error } : { ok: true }
+    }
+    return undo
   }
+  const saving = () => { toast({ text: 'Still saving the last change…' }); return true }
 
   async function act(row: QueueRow, what: 'confirm' | 'hold') {
-    if (busy || done[row.id]) return
+    if (busy && saving()) return
+    if (done[row.id]) return
     setBusy(true); setDone((d) => ({ ...d, [row.id]: what === 'confirm' ? 'Confirmed' : 'On hold' }))
-    const r = what === 'confirm' ? await confirmOrder(row.id) : await holdOrder(row.id)
-    setBusy(false)
+    let r: Awaited<ReturnType<typeof confirmOrder>>
+    try { r = what === 'confirm' ? await confirmOrder(row.id) : await holdOrder(row.id) }
+    catch { r = { ok: false, error: 'We could not save that. Check your connection; nothing was changed.' } }
+    finally { setBusy(false) }
     if (!r.ok) {
-      setDone((d) => { const { [row.id]: _gone, ...rest } = d; return rest })
+      unmark([row.id])
       const by = (r as { by?: { email: string | null; at: string } }).by
       const who = by ? ` by ${by.email ?? 'someone'} at ${new Date(by.at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' })}` : ''
       toast({ text: `${row.number}: ${r.error}${who}.` })
       return
     }
-    const undo = undoable([r.eventId]); lastUndo.current = undo
+    const undo = undoable([r.eventId], [row.id]); lastUndo.current = undo
     toast({ text: `${row.number} ${what === 'confirm' ? 'confirmed' : 'put on hold'}.`, undo })
   }
 
-  async function bulkConfirm() {
-    const ids = rows.filter((r) => picked.has(r.id) && r.canConfirm).map((r) => r.id)
-    if (!ids.length || busy) return
+  async function bulk(what: 'confirm' | 'hold') {
+    if (busy && saving()) return
+    const ids = rows.filter((r) => picked.has(r.id) && (what === 'confirm' ? r.canConfirm : r.canHold)).map((r) => r.id)
+    if (!ids.length) { toast({ text: what === 'confirm' ? 'None of the selected orders can be confirmed.' : 'None of the selected orders can be put on hold.' }); return }
     setBusy(true)
-    const r = await confirmMany(ids)
-    setBusy(false)
+    let r: BulkResult
+    try { r = what === 'confirm' ? await confirmMany(ids) : await holdMany(ids) }
+    catch { r = { ok: false, error: 'We could not save that. Check your connection; nothing more was changed.' } }
+    finally { setBusy(false) }
     if (!r.ok) { toast({ text: r.error }); return }
-    setDone((d) => ({ ...d, ...Object.fromEntries(r.confirmed.map((c) => [c.id, 'Confirmed'])) }))
+    setDone((d) => ({ ...d, ...Object.fromEntries(r.done.map((c) => [c.id, what === 'confirm' ? 'Confirmed' : 'On hold'])) }))
     setPicked(new Set())
-    const parts = [`Confirmed ${r.confirmed.length}.`]
+    const parts = [`${what === 'confirm' ? 'Confirmed' : 'Put on hold'} ${r.done.length}.`]
     if (r.skippedHigh) parts.push(`Skipped ${r.skippedHigh} high-risk order${r.skippedHigh === 1 ? '' : 's'} — open ${r.skippedHigh === 1 ? 'it' : 'them'} to decide.`)
-    if (r.failed) parts.push(`${r.failed} could not be confirmed: they changed since.`)
-    const undo = r.confirmed.length ? undoable(r.confirmed.map((c) => c.eventId)) : undefined
+    // Each failure in its own words (the first one; the count for the rest), never a generic "changed".
+    const label = (id: string) => rows.find((x) => x.id === id)?.number ?? 'One order'
+    if (r.failed.length) parts.push(`${label(r.failed[0]!.id)}: ${r.failed[0]!.error}${r.failed.length > 1 ? ` (and ${r.failed.length - 1} more)` : ''}`)
+    const undo = r.done.length ? undoable(r.done.map((c) => c.eventId), r.done.map((c) => c.id)) : undefined
     lastUndo.current = undo ?? null
     toast({ text: parts.join(' '), undo })
   }
@@ -103,7 +120,7 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
     open: () => { const r = here(); if (r) router.push(r.href) },
     confirm: () => { const r = here(); if (!r) return; if (confirmKey(r) === 'open') router.push(r.href); else void act(r, 'confirm') },
     hold: () => { const r = here(); if (r?.canHold) void act(r, 'hold') },
-    undo: () => { if (lastUndo.current) { const u = lastUndo.current; lastUndo.current = null; void u().then((x) => toast({ text: x.ok ? 'Undone.' : x.error ?? 'We could not undo that.' })) } },
+    undo: () => { const u = lastUndo.current; if (u) void u().then((x) => toast({ text: x.ok ? 'Undone.' : x.error ?? 'We could not undo that.' })) },
     search: () => document.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
     help: () => setKeys(true),
   })
@@ -114,7 +131,8 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
       {count > 0 ? (
         <div role="region" aria-label="Selected orders" className="sticky top-[var(--shell-top,0px)] z-10 flex flex-wrap items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm">
           <span className="font-medium">{count} selected</span>
-          <Button onClick={bulkConfirm} aria-disabled={busy}>Confirm</Button>
+          <Button onClick={() => bulk('confirm')} aria-disabled={busy}>Confirm</Button>
+          <Button variant="secondary" onClick={() => bulk('hold')} aria-disabled={busy}>Hold</Button>
           <Button variant="ghost" onClick={() => setPicked(new Set())}>Clear</Button>
         </div>
       ) : null}
@@ -127,7 +145,7 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
           {rows.map((r, i) => {
             const now = done[r.id]
             return (
-              <tr key={r.id} role="row" tabIndex={i === Math.max(at, 0) ? 0 : -1} aria-selected={picked.has(r.id)} onFocus={() => setAt(i)}
+              <tr key={r.id} role="row" tabIndex={i === Math.max(at, 0) ? 0 : -1} onFocus={() => setAt(i)}
                 className={cn('border-b border-border last:border-0 hover:bg-muted/40 focus-visible:bg-accent [&>td]:px-3 [&>td]:py-2', (r.dimmed || now) && 'text-muted-foreground', picked.has(r.id) && 'bg-accent')}>
                 <Td cell="hide"><input type="checkbox" aria-label={`Select ${r.number}`} checked={picked.has(r.id)} onChange={() => toggle(r.id)} className="size-6 accent-primary" /></Td>
                 {/* No prefetch: 50 row links would be 50 server renders on every visit (found by e2e under the stress data, 2026-11-07). */}
@@ -139,7 +157,7 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
                   <Badge tone={r.payment.tone}>{r.payment.label}</Badge>
                   {r.doNotCollect ? <Badge tone="danger">Do not collect cash</Badge> : null}
                   {now ? <Badge tone="info">{now}</Badge> : <Badge tone={r.state.tone}>{r.state.label}</Badge>}
-                  {r.risk === 'low' ? null : (
+                  {r.risk === 'low' ? null : r.risk === 'unknown' ? <span className="text-xs text-muted-foreground">Risk unavailable</span> : (
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium"><span aria-hidden className={cn('size-2 rounded-full', r.risk === 'high' ? 'bg-danger-mark' : 'bg-warn-mark')} />{RISK_LABEL[r.risk]} risk</span>
                   )}
                 </span></Td>

@@ -43,5 +43,6 @@ describe('queue keys', () => {
     expect(confirmKey({ canConfirm: true, risk: 'medium' })).toBe('confirm')
     expect(confirmKey({ canConfirm: true, risk: 'high' })).toBe('open')
     expect(confirmKey({ canConfirm: false, risk: 'low' })).toBe('open')
+    expect(confirmKey({ canConfirm: true, risk: 'unknown' })).toBe('open') // risk unreadable: fail closed
   })
 })

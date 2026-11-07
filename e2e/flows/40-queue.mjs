@@ -23,7 +23,8 @@ export default {
       (${T}, ${A}, 'cod', now() - interval '30 minutes', 'Queue Aarti', '9811100001', 'B-14, Tilak Marg', 'Jaipur', 249000, 249000),
       (${T}, ${B}, 'cod', now() - interval '20 minutes', 'Queue Aarti', '9811100001', 'B-14, Tilak Marg', 'Jaipur', 249000, 249000),
       (${T}, ${C}, 'cod', now() - interval '10 minutes', 'Queue Aarti', '9811100001', 'B-14, Tilak Marg', 'Jaipur', 249000, 249000),
-      (${T}, ${D}, 'cod', now() - interval '5 minutes', 'Queue Dev', '9811100002', 'Flat 22, Shanti Nagar', 'Jaipur', 199000, 199000)`
+      (${T}, ${D}, 'cod', now() - interval '5 minutes', 'Queue Dev', ${'981110' + String(B).padStart(4, '0').slice(-4)}, 'Flat 22, Shanti Nagar', 'Jaipur', 199000, 199000)`
+    // D's phone contains B's number on purpose: searching "KS-<B>" must find B alone (review 2026-11-07).
     const state = async (n) => (await db`select confirmed_at is not null as confirmed, held_at is not null as held from orders where tenant_id = ${T} and number = ${n}`)[0]
     const owner = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 900 } })
     const p = await owner.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message))
@@ -99,10 +100,14 @@ export default {
         await p.goto(CONSOLE + '/console/orders?tab=all')
         await p.getByLabel('Search orders').fill('Queue Aarti'); await p.getByLabel('Search orders').press('Enter')
         await p.waitForURL(/q=Queue/); assert.equal(await p.locator('tbody tr').count(), 3)
-        await p.getByLabel('Search orders').fill('00002'); await p.getByLabel('Search orders').press('Enter')
-        await row(D).waitFor(); assert.equal(await p.locator('tbody tr').count(), 1)
+        await p.getByLabel('Search orders').fill('9811100001'); await p.getByLabel('Search orders').press('Enter')
+        await row(A).waitFor(); assert.equal(await p.locator('tbody tr').count(), 3) // a phone: that customer's orders
         await p.getByLabel('Search orders').fill(label(B)); await p.getByLabel('Search orders').press('Enter')
-        await row(B).waitFor(); assert.equal(await p.locator('tbody tr').count(), 1)
+        await row(B).waitFor(); assert.equal(await p.locator('tbody tr').count(), 1) // the number, not D's phone that contains it
+        // A search link past its last page (results shrank): its first page, and the pager says so.
+        await p.goto(CONSOLE + `/console/orders?tab=all&q=${encodeURIComponent('Queue Aarti')}&page=3`)
+        await row(A).waitFor(); assert.equal(await p.locator('tbody tr').count(), 3)
+        assert.equal(await p.getByText(/Showing 4–/).count(), 0)
         await p.getByLabel('Search orders').fill('nobody-like-this'); await p.getByLabel('Search orders').press('Enter')
         await p.getByText('No order matches that search').waitFor()
       })

@@ -93,23 +93,48 @@ export async function cancelOrder(orderId: string, input: unknown) {
     (tenantId, v) => { if (v.backInStock.length) refreshShop(tenantId, 'catalogue') })
 }
 
+export type BulkResult = { ok: true; done: { id: string; eventId: string }[]; skippedHigh: number; failed: { id: string; error: string }[] } | { ok: false; error: string }
+
+/** The selection's ids: uuids only, each once, at most a page. */
+const pickIds = (orderIds: unknown) => [...new Set(Array.isArray(orderIds) ? orderIds : [])].filter((x): x is string => Id.safeParse(x).success).slice(0, 50)
+
 /**
  * Confirm a selection (the queue's bulk action). Risk is worked out HERE, on the server, from the orders
  * themselves — a High-risk order is skipped and counted, never confirmed in bulk (spec § 1D·1; a person opens
- * it to decide). Each order goes through confirmOrder: its own compare-and-set, history row and audit row.
+ * it to decide). Each order goes through confirmOrder: its own compare-and-set, history row and audit row, and
+ * its own words when it cannot ("Already confirmed by …").
  */
-export async function confirmMany(orderIds: string[]): Promise<{ ok: true; confirmed: { id: string; eventId: string }[]; skippedHigh: number; failed: number } | { ok: false; error: string }> {
-  const ids = [...new Set(Array.isArray(orderIds) ? orderIds : [])].filter((x) => Id.safeParse(x).success).slice(0, 50)
-  if (!ids.length) return { ok: false, error: 'Select the orders to confirm.' }
-  const auth = await requireMember(ROLES.confirm)
-  if (!auth.ok) return { ok: false, error: auth.message }
-  const facts = await riskFactsFor(auth.membership.tenantId, ids)
-  const high = ids.filter((id) => { const f = facts.get(id); return f && risk(f).level === 'high' })
-  const confirmed: { id: string; eventId: string }[] = []
-  let failed = 0
-  for (const id of ids.filter((x) => facts.has(x) && !high.includes(x))) {
-    const r = await confirmOrder(id)
-    if (r.ok) confirmed.push({ id, eventId: r.eventId }); else failed++
+export async function confirmMany(orderIds: string[]): Promise<BulkResult> {
+  try {
+    const ids = pickIds(orderIds)
+    if (!ids.length) return { ok: false, error: 'Select the orders to confirm.' }
+    const auth = await requireMember(ROLES.confirm)
+    if (!auth.ok) return { ok: false, error: auth.message }
+    const facts = await riskFactsFor(auth.membership.tenantId, ids)
+    const high = ids.filter((id) => { const f = facts.get(id); return f && risk(f).level === 'high' })
+    const done: { id: string; eventId: string }[] = [], failed: { id: string; error: string }[] = ids.filter((x) => !facts.has(x)).map((id) => ({ id, error: 'Order not found.' }))
+    for (const id of ids.filter((x) => facts.has(x) && !high.includes(x))) {
+      const r = await confirmOrder(id)
+      if (r.ok) done.push({ id, eventId: r.eventId })
+      else { const by = (r as { by?: { email: string | null } }).by; failed.push({ id, error: by ? `${r.error} by ${by.email ?? 'someone'}` : r.error }) }
+    }
+    return { ok: true, done, skippedHigh: high.length, failed }
+  } catch (err) {
+    console.error('[order.confirmMany]', err instanceof Error ? err.name : 'error')
+    return { ok: false, error: 'We could not confirm those. Nothing more was changed.' }
   }
-  return { ok: true, confirmed, skippedHigh: high.length, failed: failed + ids.filter((x) => !facts.has(x)).length }
+}
+
+/** Put a selection on hold (the queue's bulk action), each through holdOrder. */
+export async function holdMany(orderIds: string[]): Promise<BulkResult> {
+  try {
+    const ids = pickIds(orderIds)
+    if (!ids.length) return { ok: false, error: 'Select the orders to hold.' }
+    const done: { id: string; eventId: string }[] = [], failed: { id: string; error: string }[] = []
+    for (const id of ids) { const r = await holdOrder(id); if (r.ok) done.push({ id, eventId: r.eventId }); else failed.push({ id, error: r.error }) }
+    return { ok: true, done, skippedHigh: 0, failed }
+  } catch (err) {
+    console.error('[order.holdMany]', err instanceof Error ? err.name : 'error')
+    return { ok: false, error: 'We could not hold those. Nothing more was changed.' }
+  }
 }
