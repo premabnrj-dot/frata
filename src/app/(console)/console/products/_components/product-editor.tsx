@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
@@ -24,7 +24,7 @@ import { StatusBadge } from './status-badge'
 import { StatusCard } from './status-card'
 import { EMPTY_CELL, shopperSees, VariantGrid, type Cell } from './variant-grid'
 import { Section } from '@/components/layout/section'
-import { BackLink } from '@/components/layout/page-header'
+import { PageHeader } from '@/components/layout/page-header'
 
 export type EditorProduct = {
   id: string; title: string; description: string; typeId: string | null; modelHeight: string; modelSize: string
@@ -99,24 +99,34 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
       setErrors(r.errors ?? {}); setConflict(!!r.conflict); setMsg({ tone: 'error', text: r.error })
     })
   }
-  /** Grows the title field to its text (browsers without field-sizing: content). */
-  const fit = (el: HTMLTextAreaElement | null) => { if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px` } }
+  /** Grows the title field to its text where the browser lacks `field-sizing: content` (it then sizes itself), and
+   * again when the window changes width (a rotate wraps it to more lines). */
+  const titleRef = useRef<HTMLTextAreaElement>(null)
+  const fit = (el: HTMLTextAreaElement | null) => {
+    if (!el || (typeof CSS !== 'undefined' && CSS.supports('field-sizing', 'content'))) return
+    el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`
+  }
+  useEffect(() => {
+    const el = titleRef.current; fit(el)
+    const again = () => fit(titleRef.current)
+    window.addEventListener('resize', again)
+    return () => window.removeEventListener('resize', again)
+  }, [])
   return (
     <div>
       {dirty && <SaveBar pending={pending} onSave={save} onDiscard={() => { setD(saved); setErrors({}); setMsg(null) }} />}
-      <BackLink href="/console/products" label="Products" />
-      <div className="mt-1 flex flex-wrap items-center gap-3">
-        {/* The h1 names the product for a screen reader; the field shows and edits it. A textarea, so a long title
-            wraps to the next line instead of being cut mid-word (stress test S7). One line of text: Enter does nothing. */}
-        <h1 className="sr-only">{d.title || 'New product'}</h1>
-        <div className="min-w-0 flex-1">
+      {/* PageHeader (rule 13) with the title as a field: the h1 names the product for a screen reader, the field
+          shows and edits it. A textarea, so a long title wraps to the next line instead of being cut mid-word
+          (stress test S7). One line of text: Enter does nothing, unless an input method is still composing a word. */}
+      <PageHeader title={d.title || 'New product'} back={{ href: '/console/products', label: 'Products' }}
+        badges={<StatusBadge status={status} publishAt={publishAt} />}
+        titleSlot={<div className="min-w-0 flex-1">
           <label htmlFor="title" className="sr-only">Product title</label>
           <textarea id="title" rows={1} value={d.title} maxLength={140} aria-invalid={!!errors.title || undefined} placeholder="Product title"
-            onChange={(e) => { set({ title: e.target.value.replace(/\s*\n\s*/g, ' ') }); fit(e.currentTarget) }} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }} ref={fit}
+            onChange={(e) => { set({ title: e.target.value.replace(/\s*\n\s*/g, ' ') }); fit(e.currentTarget) }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) e.preventDefault() }} ref={titleRef}
             className="-mx-2 w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-2xl font-bold tracking-tight transition-colors duration-fast hover:border-input focus:border-input focus:bg-card aria-invalid:border-danger-text block resize-none overflow-hidden [field-sizing:content] [overflow-wrap:anywhere]" />
-        </div>
-        <StatusBadge status={status} publishAt={publishAt} />
-      </div>
+        </div>} />
       {errors.title && <p className="text-sm text-danger-text">{errors.title}</p>}
       <Message m={msg} onReload={conflict ? () => window.location.reload() : undefined} />
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -171,7 +181,7 @@ function Summary({ d, cells, photos, typeName, status, publishAt, address }: { d
   const cover = photos[0]
   const colourOpt = d.options.find((o) => isColour(o.name))
   return (
-    <section aria-label="Summary" className="overflow-hidden rounded-md border border-border bg-card">
+    <Section flush ariaLabel="Summary">
       <div className="flex gap-3 p-4">
         {cover ? <img src={urlFor(cover.base, pick(cover.widths, 160))} alt="" width={64} height={80} className="h-20 w-16 shrink-0 rounded-sm bg-muted object-cover" />
           : <div className="grid h-20 w-16 shrink-0 place-items-center rounded-sm bg-muted text-xs text-muted-foreground">No photo</div>}
@@ -194,7 +204,7 @@ function Summary({ d, cells, photos, typeName, status, publishAt, address }: { d
         <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground" title={address}>{address}</span>
         <Link href={`/console/preview/products/${address.split('/products/')[1] ?? ''}`} className="inline-flex min-h-6 shrink-0 items-center underline">Preview</Link>
       </div>
-    </section>
+    </Section>
   )
 }
 

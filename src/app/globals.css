@@ -180,7 +180,7 @@
     table[data-rows] td[data-cell="hide"] { display: none !important; }
     /* The row's own link covers the row (one target); any other link or button in it stays above. */
     table[data-rows="list"] [data-row-link]::after { content: ""; position: absolute; inset: 0; }
-    table[data-rows="list"] td a:not([data-row-link]), table[data-rows="list"] td button { position: relative; z-index: 1; }
+    table[data-rows="list"] td :is(a:not([data-row-link]), button, input, select, textarea, summary, label) { position: relative; z-index: 1; }
     table[data-rows="form"] > tbody > tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem 0.75rem; padding: 0.75rem; }
     table[data-rows="form"] > tbody > tr > td { display: block; padding: 0 !important; min-width: 0; }
     table[data-rows="form"] td[data-cell="full"] { grid-column: 1 / -1; }

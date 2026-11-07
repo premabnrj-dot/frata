@@ -40,7 +40,7 @@ export default async function EditPlanPage({ params, searchParams }: { params: P
       <fieldset className="space-y-2">
         <legend className="mb-2 text-sm font-medium">Includes</legend>
         {FEATURES.map((f) => (
-          <label key={f} className="flex items-center gap-2 text-sm"><input type="checkbox" name={`feature_${f}`} defaultChecked={v.features.includes(f)} />{FEATURE_NAMES[f]}</label>
+          <label key={f} className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" name={`feature_${f}`} defaultChecked={v.features.includes(f)} />{FEATURE_NAMES[f]}</label>
         ))}
         <p className="text-xs text-muted-foreground">All channels are in every plan.</p>
       </fieldset>

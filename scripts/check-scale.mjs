@@ -23,12 +23,13 @@ const DIRS = ['src/app/(console)', 'src/app/(admin)', 'src/components/shell', 's
 export { DIRS }
 export const RULES = {
   'text-px': /\btext-\[\d+(?:\.\d+)?px\]/g,
-  'card-frame': /\brounded-(?:md|lg) border border-border bg-card p-\d/g,
+  // The card frame with or without its padding (a flush list card is a frame too; impact review U·2b).
+  'card-frame': /\brounded-(?:md|lg) border border-border bg-card\b/g,
   // field-h9 is found per JSX element (fieldTags), not per line: a className on the next line, or an `=>` in an
   // onChange, hid every case from a line pattern (impact review U·1).
 }
 const FIELD_OPEN = /<(?:input|select|textarea)\b/g
-const BUTTON_OPEN = /<Button\b|\bbutton\(\{/g
+const BUTTON_OPEN = /<Button\b|\bbutton\(/g
 /** The text of each <input>/<select>/<textarea> opening tag in a file, read up to the `>` outside braces and quotes. */
 export function fieldTags(text, open = FIELD_OPEN) {
   const tags = []
@@ -75,6 +76,8 @@ export function scan(files) {
       for (const [rule, re] of Object.entries(RULES)) {
         // The primitives (src/components/**) are where a frame is defined once; pages must use them.
         if (rule === 'card-frame' && rel.startsWith('src/components/')) continue
+        // Not cards: a floating list (absolute, shadow), a table's sideways scroller, a disclosure (<details>).
+        if (rule === 'card-frame' && /\b(?:absolute|shadow-\w+|overflow-x-auto)\b|<details\b/.test(line)) continue
         const n = (line.match(re) ?? []).length
         if (n) found[`${rel} · ${rule}`] = (found[`${rel} · ${rule}`] ?? 0) + n
       }

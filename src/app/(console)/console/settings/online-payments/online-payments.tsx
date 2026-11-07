@@ -87,11 +87,11 @@ export function OnlinePayments({ status, support, available }: { status: Status;
       )}
 
       {status && !support && (
-        <section className="rounded-md border border-border p-4 text-sm">
+        <Section className="text-sm">
           {confirm
             ? <div className="flex flex-wrap items-center gap-3"><span>Disconnect Razorpay? Shoppers can then pay on delivery only. Past orders are kept.</span><Button variant="secondary" disabled={pending} onClick={disconnect}>Disconnect</Button><button type="button" className="inline-flex min-h-6 items-center underline" onClick={() => setConfirm(false)}>Keep it</button></div>
             : <button type="button" className="inline-flex min-h-6 items-center text-danger-text underline" onClick={() => setConfirm(true)}>Disconnect Razorpay</button>}
-        </section>
+        </Section>
       )}
     </>
   )

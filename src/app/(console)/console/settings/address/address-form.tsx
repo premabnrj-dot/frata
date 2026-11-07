@@ -8,7 +8,7 @@ import { frataWhatsappLink } from '@/lib/site'
 import { checkAddress, type AddressCheck } from '@/app/start/actions'
 import { changeAddress } from '../actions'
 import { Section } from '@/components/layout/section'
-import { BackLink } from '@/components/layout/page-header'
+import { PageHeader } from '@/components/layout/page-header'
 
 const WORDS: Record<AddressCheck['state'], string> = { ok: 'Available', taken: 'Taken. Try another.', too_short: 'At least 3 letters', shape: 'Letters, digits and hyphens only', reserved: 'Reserved. Try another.' }
 
@@ -32,8 +32,7 @@ export function AddressForm({ current, shopDomain, published, support }: { curre
   const locked = published || support
   return (
     <div className="max-w-xl space-y-4">
-      <BackLink href="/console/settings" label="Settings" />
-      <h1 className="text-2xl font-bold tracking-tight">Shop address</h1>
+      <PageHeader title={'Shop address'} back={{ href: '/console/settings', label: 'Settings' }} />
       <p className="text-sm text-muted-foreground">Where shoppers find you. Share it in your Instagram bio.</p>
       <Section>
         <label htmlFor="slug" className="block text-sm font-medium">Address</label>

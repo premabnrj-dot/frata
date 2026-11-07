@@ -18,10 +18,7 @@ export default async function NewMerchantPage({ searchParams }: { searchParams: 
   const { error } = await searchParams
   return (
     <>
-      <div className="space-y-1">
-        <Link href="/admin/merchants" className="text-sm text-muted-foreground hover:underline">Merchants</Link>
-        <PageHeader title="Add a merchant" />
-      </div>
+      <PageHeader title="Add a merchant" back={{ href: '/admin/merchants', label: 'Merchants' }} />
       <Notice error={error} />
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <Section className="w-full max-w-xl"><form action={createMerchantAction} className="space-y-4">

@@ -12,7 +12,7 @@ import { draftPatch, sectionFor, type Field, type Values } from '@/domains/setti
 import { saveSection } from '../actions'
 import { PolicyPages } from './policy-pages'
 import { Section } from '@/components/layout/section'
-import { BackLink } from '@/components/layout/page-header'
+import { PageHeader } from '@/components/layout/page-header'
 
 /**
  * One settings page: the fields its section defines, ONE explicit save, an
@@ -68,8 +68,7 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
   return (
     <div className={STORE_FONT_VARS}>
       {dirty && <SaveBar pending={pending} onSave={save} onDiscard={() => { setValues(saved); setErrors({}); setMessage(null) }} />}
-      <BackLink href="/console/settings" label="Settings" />
-      <h1 className="mt-1 text-2xl font-bold tracking-tight">{section.title}</h1>
+      <PageHeader title={section.title} back={{ href: '/console/settings', label: 'Settings' }} />
       <p className="text-sm text-muted-foreground">{section.intro}</p>
       <Message m={message} onReload={conflict ? () => window.location.reload() : undefined} />
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">

@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import { BackLink, PageHeader } from '@/components/layout/page-header'
-import { DataTable, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
+import { PageHeader } from '@/components/layout/page-header'
+import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { Numeric } from '@/components/data/numeric'
 import { Badge } from '@/components/ui/badge'
 import { button } from '@/components/ui/button'
@@ -18,14 +18,13 @@ export default async function CollectionsPage() {
   const add = <><Link href="/console/collections/new?kind=auto" className={button({ variant: 'secondary' })}>Rule-based</Link><Link href="/console/collections/new" className={button()}>Add collection</Link></>
   return (
     <>
-      <BackLink href="/console/products" label="Products" />
-      <PageHeader title="Collections" actions={add} />
+      <PageHeader title="Collections" back={{ href: '/console/products', label: 'Products' }} actions={add} />
       {!rows.length ? (
         <Panel title="No collections yet">Group products for your shop’s menus: hand-pick a Festive edit, or let rules fill one (Kurtas in chanderi under ₹2,000) so new products join by themselves.</Panel>
       ) : (
         <DataTable>
           <DataTableHead><th>Collection</th><th>Filled by</th><th className="text-right">Products</th></DataTableHead>
-          <tbody>
+          <DataTableBody>
             {rows.map((r) => (
               <DataTableRow key={r.id}>
                 <Td cell="a"><Link href={`/console/collections/${r.handle}`} data-row-link className="font-medium hover:underline">{r.title}</Link><span className="block font-mono text-xs text-muted-foreground">/collections/{r.handle}</span></Td>
@@ -33,7 +32,7 @@ export default async function CollectionsPage() {
                 <Td cell="b" className="text-right"><Numeric>{r.count}</Numeric></Td>
               </DataTableRow>
             ))}
-          </tbody>
+          </DataTableBody>
         </DataTable>
       )}
     </>

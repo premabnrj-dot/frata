@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout/page-header'
-import { DataTable, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
+import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { Name } from '@/components/data/name'
 import { ViewTabs } from '@/components/ui/view-tabs'
 import { Money, Numeric } from '@/components/data/numeric'
@@ -43,7 +43,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       }))} />
       {!rows.length ? <Panel title={`No ${TABS.find(([k]) => k === status)?.[1].toLowerCase() ?? ''} products`}>Products show here when you set them to this status.</Panel> : <DataTable label="Products">
         <DataTableHead><th className="w-14"><span className="sr-only">Photo</span></th><th>Product</th><th>Status</th><th>Sizes and colours</th><th className="text-right">In stock</th><th className="text-right">Price</th></DataTableHead>
-        <tbody>
+        <DataTableBody>
           {rows.map((r) => (
             <DataTableRow key={r.id}>
               <Td cell="hide">{r.cover
@@ -57,7 +57,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                 : r.minPrice === r.maxPrice ? <Money paise={paise(r.minPrice)} /> : <><Money paise={paise(r.minPrice)} />–<Money paise={paise(r.maxPrice!)} /></>}</Td>
             </DataTableRow>
           ))}
-        </tbody>
+        </DataTableBody>
       </DataTable>}
     </>
   )

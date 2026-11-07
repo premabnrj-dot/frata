@@ -39,7 +39,7 @@ export default async function PlansPage({ searchParams }: { searchParams: Promis
                 <div className="flex justify-between gap-3 py-1.5"><dt>Fee per delivered order</dt><dd><Numeric>{formatPercent(v.feeBps / 10_000, v.feeBps % 100 === 0 ? 0 : 1)}</Numeric></dd></div>
                 <div className="flex justify-between gap-3 py-1.5"><dt>Past the included orders</dt><dd className="text-right text-muted-foreground">Keeps selling; {ps[i + 1] ? `suggest ${ps[i + 1]!.name}` : 'talk to us'}</dd></div>
                 <div className="flex justify-between gap-3 py-1.5"><dt>Includes</dt><dd className="text-right">{['All channels', ...FEATURES.filter((f) => v.features.includes(f)).map((f) => FEATURE_NAMES[f])].join(', ')}</dd></div>
-                <div className="flex justify-between gap-3 py-1.5"><dt>Stores on it now</dt><dd><Numeric>{stores.toLocaleString('en-IN')}</Numeric></dd></div>
+                <div className="flex justify-between gap-3 py-1.5"><dt>Stores on it now</dt><dd className="text-right"><Numeric>{stores.toLocaleString('en-IN')}</Numeric>{p.versions.length > 1 && <span className="text-xs text-muted-foreground"> across {p.versions.length} versions</span>}</dd></div>
               </dl>
             </Section>
           )

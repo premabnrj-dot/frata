@@ -40,6 +40,21 @@ export default {
         ['admin-merchants-nomatch', 'frata', '/admin/merchants?q=nomatchzz'],
         ['admin-merchant', 'frata', `/admin/merchants/${KESAR}`],
         ['admin-plans', 'frata', '/admin/plans'],
+        // The rest of what U·2b converted (impact review U·2b): every page measured, none only by hand.
+        ['console-collections', 'owner', '/console/collections'],
+        ['console-collection', 'owner', '/console/collections/kurtas'],
+        ['console-activity', 'owner', '/console/activity'],
+        ['console-settings-address', 'owner', '/console/settings/address'],
+        ['console-settings-payments', 'owner', '/console/settings/online-payments'],
+        ['console-product-new', 'owner', '/console/products/new'],
+        ['admin-activity', 'frata', '/admin/activity'],
+        ['admin-staff', 'frata', '/admin/staff'],
+        ['admin-merchant-new', 'frata', '/admin/merchants/new'],
+        ['admin-merchant-plan', 'frata', `/admin/merchants/${KESAR}/plan`],
+        ['admin-merchant-support', 'frata', `/admin/merchants/${M1}/support`],
+        ['admin-plan-edit', 'frata', '/admin/plans/launch'],
+        // A merchant with a very long name: its header and its "Open … console" button (impact review U·2b).
+        ['admin-merchant-long', 'frata', '/admin/merchants/eeeeeeee-0000-4000-8000-000000000005'],
       ]
       const measure = async (ctx, page, path, w, label, h = 800) => {
         const p = await ctx.newPage(); p.on('pageerror', (e) => t.errors.push(`${page} ${label}: ${e.message}`))
@@ -66,6 +81,20 @@ export default {
           for (const [page, who, path] of PAGES) await (await measure(ctxs[who], page, path, w, label, h)).close()
           for (const c of Object.values(ctxs)) await c.close()
         }
+      })
+
+      await t.step('a phone row is one target, and its other link still works (Open console over the row link)', async () => {
+        const ctx = await signedIn(t.browser, 'frata', { viewport: { width: 390, height: 844 } })
+        const p = await ctx.newPage(); await p.goto(CONSOLE + '/admin/merchants')
+        const row = p.locator('tbody tr').first()
+        await row.getByRole('link', { name: 'Open console' }).click()
+        await p.waitForURL(/\/support$/)
+        await p.goBack(); await p.waitForURL(/\/admin\/merchants$/)
+        // A tap on the row's empty part opens the merchant.
+        const box = await p.locator('tbody tr').first().boundingBox()
+        await p.mouse.click(box.x + box.width / 2, box.y + box.height - 6)
+        await p.waitForURL(/\/admin\/merchants\/[0-9a-f-]{36}$/)
+        await ctx.close()
       })
 
       await t.step('keyboard: the first 15 Tab stops show a ring and are not hidden', async () => {

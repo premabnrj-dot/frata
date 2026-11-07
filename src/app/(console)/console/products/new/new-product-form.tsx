@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { createProduct } from '../actions'
-import { BackLink } from '@/components/layout/page-header'
+import { PageHeader } from '@/components/layout/page-header'
 
 /** One field: the name. Everything else is on the product's own page, which opens next. */
 export function NewProductForm() {
@@ -21,8 +21,7 @@ export function NewProductForm() {
         router.replace(`/console/products/${r.handle}`)
       })
     }}>
-      <BackLink href="/console/products" label="Products" />
-      <h1 className="text-2xl font-bold tracking-tight">Add a product</h1>
+      <PageHeader title={'Add a product'} back={{ href: '/console/products', label: 'Products' }} />
       <div className="space-y-1.5">
         <label htmlFor="title" className="block text-sm font-medium">Name</label>
         <input id="title" autoFocus maxLength={140} value={title} placeholder="Linen kurta set" aria-invalid={!!error || undefined}

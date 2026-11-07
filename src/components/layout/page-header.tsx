@@ -38,7 +38,7 @@ export function PageHeader({ title, actions, back, badges, meta, titleSlot }: {
           </div>
           {meta && <div className="text-sm text-muted-foreground">{meta}</div>}
         </div>
-        {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
+        {actions && <div className="flex min-w-0 max-w-full flex-wrap gap-2 sm:max-w-[50%] sm:justify-end">{actions}</div>}
       </div>
     </div>
   )

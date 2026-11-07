@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { VariantInput } from '@/domains/catalogue/product-form'
 import { availability, type WhenOut } from '@/domains/catalogue/availability'
 import { combinations, groupOption, keyOf, type Option } from '@/domains/catalogue/variants'
+import { button } from '@/components/ui/button'
 
 export type Cell = Omit<VariantInput, 'values'>
 export const EMPTY_CELL: Cell = { price: '', compareAt: '', cost: '', stock: '0', sku: '', whenOut: 'stop', shipsBy: '', leadMin: '', leadMax: '', cap: '' }
@@ -52,28 +53,28 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku }: {
     <div className="space-y-3">
       <div className="flex flex-wrap items-end gap-3 rounded-md bg-muted/60 p-3">
         <div className="space-y-1"><label htmlFor="every-price" className="block text-xs font-medium">Set every price, ₹</label>
-          <div className="flex gap-1.5"><input id="every-price" inputMode="decimal" value={every.price} onChange={(e) => setEvery({ ...every, price: e.target.value })} className="h-8 w-24 rounded-md border border-input bg-card px-2 font-mono text-sm" />
-            <button type="button" className="h-8 rounded-md border border-border bg-card px-2.5 text-sm" disabled={!every.price} onClick={() => fill('price', every.price, combos)}>Apply to {combos.length}</button></div></div>
+          <div className="flex gap-1.5"><input id="every-price" inputMode="decimal" value={every.price} onChange={(e) => setEvery({ ...every, price: e.target.value })} className="h-10 md:h-9 w-24 rounded-md border border-input bg-card px-2 font-mono text-sm" />
+            <button type="button" className={button({ variant: 'secondary' })} disabled={!every.price} onClick={() => fill('price', every.price, combos)}>Apply to {combos.length}</button></div></div>
         <div className="space-y-1"><label htmlFor="every-stock" className="block text-xs font-medium">Set every stock</label>
-          <div className="flex gap-1.5"><input id="every-stock" inputMode="numeric" value={every.stock} onChange={(e) => setEvery({ ...every, stock: e.target.value })} className="h-8 w-20 rounded-md border border-input bg-card px-2 font-mono text-sm" />
-            <button type="button" className="h-8 rounded-md border border-border bg-card px-2.5 text-sm" disabled={!every.stock} onClick={() => fill('stock', every.stock, combos)}>Apply</button></div></div>
+          <div className="flex gap-1.5"><input id="every-stock" inputMode="numeric" value={every.stock} onChange={(e) => setEvery({ ...every, stock: e.target.value })} className="h-10 md:h-9 w-20 rounded-md border border-input bg-card px-2 font-mono text-sm" />
+            <button type="button" className={button({ variant: 'secondary' })} disabled={!every.stock} onClick={() => fill('stock', every.stock, combos)}>Apply</button></div></div>
         <div className="space-y-1"><label htmlFor="every-out" className="block text-xs font-medium">When any runs out</label>
-          <div className="flex gap-1.5"><select id="every-out" value={every.whenOut} onChange={(e) => setEvery({ ...every, whenOut: e.target.value as WhenOut })} className="h-8 rounded-md border border-input bg-card px-2 text-sm">
+          <div className="flex gap-1.5"><select id="every-out" value={every.whenOut} onChange={(e) => setEvery({ ...every, whenOut: e.target.value as WhenOut })} className="h-10 md:h-9 rounded-md border border-input bg-card px-2 text-sm">
             <option value="">Choose…</option>{WHEN_OUT.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
-            <button type="button" className="h-8 rounded-md border border-border bg-card px-2.5 text-sm" disabled={!every.whenOut} onClick={() => fill('whenOut', every.whenOut, combos)}>Apply</button></div></div>
+            <button type="button" className={button({ variant: 'secondary' })} disabled={!every.whenOut} onClick={() => fill('whenOut', every.whenOut, combos)}>Apply</button></div></div>
       </div>
       <div className="relative overflow-x-auto rounded-md border border-border">
         {/* On a phone each size and colour becomes a card of labelled fields (data-rows="form", rule 15). */}
-        <table data-rows="form" className="w-full text-sm">
-          <thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr className="[&>th]:px-2 [&>th]:py-2">
-            <th>{options.map((o) => o.name).join(' / ') || 'Product'}</th><th>Price, ₹</th><th>Compare at, ₹</th><th>Your cost, ₹</th><th>Stock</th><th>When it runs out</th><th>Shoppers see</th><th>SKU</th></tr></thead>
+        <table data-rows="form" role="table" aria-label="Sizes, colours and stock" className="w-full text-sm">
+          <thead role="rowgroup" className="bg-muted/50 text-left text-xs text-muted-foreground"><tr role="row" className="[&>th]:px-2 [&>th]:py-2">
+            <th role="columnheader">{options.map((o) => o.name).join(' / ') || 'Product'}</th><th role="columnheader">Price, ₹</th><th role="columnheader">Compare at, ₹</th><th role="columnheader">Your cost, ₹</th><th role="columnheader">Stock</th><th role="columnheader">When it runs out</th><th role="columnheader">Shoppers see</th><th role="columnheader">SKU</th></tr></thead>
           {groups.map((grp) => {
             const shut = collapse && grp.label && !open[grp.label]
             const sold = grp.rows.filter((c) => !shopperSees(cells[keyOf(c)] ?? EMPTY_CELL).canBuy).length
             return (
-              <tbody key={grp.label || 'all'} className="border-t border-border">
+              <tbody role="rowgroup" key={grp.label || 'all'} className="border-t border-border">
                 {grp.label && (
-                  <tr className="bg-card"><td colSpan={8} data-cell="full" className="px-2 py-1.5">
+                  <tr role="row" className="bg-card"><td role="cell" colSpan={8} data-cell="full" className="px-2 py-1.5">
                     <button type="button" aria-expanded={!shut} className="flex min-h-6 w-full items-center gap-2 text-left font-medium" onClick={() => setOpen({ ...open, [grp.label]: shut ? true : false })}>
                       <span aria-hidden="true" className={`inline-block transition-transform duration-fast ${shut ? '' : 'rotate-90'}`}>›</span>{grp.label}
                       <span className="text-xs font-normal text-muted-foreground">{grp.rows.length} · {sold ? `${sold} sold out` : 'all in stock'}</span>
@@ -88,13 +89,13 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku }: {
                   const sees = shopperSees(cell)
                   const i = rowId.get(k)
                   return (
-                    <tr key={k} className="border-t border-border/60 [&>td]:px-2 [&>td]:py-1.5">
-                      <td data-cell="full" className="font-medium md:whitespace-nowrap md:font-normal">{label}{rowErr && <span className="block text-xs text-danger-text">{rowErr}</span>}</td>
-                      <td data-label="Price, ₹">{input(k, 'price', `Price for ${c.join(' ')}`)}</td>
-                      <td data-label="Compare at, ₹">{input(k, 'compareAt', `Compare-at price for ${c.join(' ')}`)}</td>
-                      <td data-label="Your cost, ₹">{input(k, 'cost', `Your cost for ${c.join(' ')}`)}</td>
-                      <td data-label="Stock">{input(k, 'stock', `Stock for ${c.join(' ')}`, true, 'w-16')}</td>
-                      <td data-cell="full" data-label="When it runs out" className="md:min-w-44">
+                    <tr role="row" key={k} className="border-t border-border/60 [&>td]:px-2 [&>td]:py-1.5">
+                      <td role="cell" data-cell="full" className="font-medium md:whitespace-nowrap md:font-normal">{label}{rowErr && <span className="block text-xs text-danger-text">{rowErr}</span>}</td>
+                      <td role="cell" data-label="Price, ₹">{input(k, 'price', `Price for ${c.join(' ')}`)}</td>
+                      <td role="cell" data-label="Compare at, ₹">{input(k, 'compareAt', `Compare-at price for ${c.join(' ')}`)}</td>
+                      <td role="cell" data-label="Your cost, ₹">{input(k, 'cost', `Your cost for ${c.join(' ')}`)}</td>
+                      <td role="cell" data-label="Stock">{input(k, 'stock', `Stock for ${c.join(' ')}`, true, 'w-16')}</td>
+                      <td role="cell" data-cell="full" data-label="When it runs out" className="md:min-w-44">
                         <label htmlFor={`out-${i}`} className="sr-only">When {c.join(' ')} runs out</label>
                         <select id={`out-${i}`} value={cell.whenOut ?? 'stop'} onChange={(e) => onChange(k, { whenOut: e.target.value as WhenOut })} className="h-8 w-full rounded-md border border-input bg-card px-1.5 text-sm">
                           {WHEN_OUT.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -118,8 +119,8 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku }: {
                           </div>
                         )}
                       </td>
-                      <td data-label="Shoppers see" className={`whitespace-nowrap text-xs ${SEES_TONE[sees.kind]}`}>{sees.label}</td>
-                      <td data-label="SKU">{input(k, 'sku', `SKU for ${c.join(' ')}`, true, 'w-40', autoSku(c))}</td>
+                      <td role="cell" data-label="Shoppers see" className={`whitespace-nowrap text-xs ${SEES_TONE[sees.kind]}`}>{sees.label}</td>
+                      <td role="cell" data-label="SKU">{input(k, 'sku', `SKU for ${c.join(' ')}`, true, 'w-40', autoSku(c))}</td>
                     </tr>
                   )
                 })}

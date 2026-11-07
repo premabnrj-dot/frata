@@ -47,7 +47,7 @@ export default async function MerchantPage({ params, searchParams }: { params: P
         actions={<>
           <Link href={`/admin/merchants/${id}/plan`} className={button({ variant: 'secondary' })}>Change plan</Link>
           {/* Names the merchant (§ Frata Admin); a long name wraps inside the button instead of overflowing it. */}
-          <Link href={`/admin/merchants/${id}/support`} className={`${button()} h-auto min-h-10 max-w-full whitespace-normal py-2 text-left [overflow-wrap:anywhere] md:min-h-9`}>Open {m.tenant.name}&apos;s console</Link>
+          <Link href={`/admin/merchants/${id}/support`} className={button({ size: 'wrap' })}>Open {m.tenant.name}&apos;s console</Link>
         </>} />
       <Notice ok={sp.ok} error={sp.error} />
 

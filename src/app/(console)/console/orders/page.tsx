@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { DataTable, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
+import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { Pager } from '@/components/data/pager'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
@@ -71,7 +71,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           <DataTableHead>
             <th>Order</th><th>Customer</th><th>Placed</th><th>Payment</th><th>Status</th><th className="text-right">Total</th>
           </DataTableHead>
-          <tbody>
+          <DataTableBody>
             {rows.map(({ o, state }) => {
               const s = STATE[state]
               const method = currentMethod(o)
@@ -87,7 +87,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 </DataTableRow>
               )
             })}
-          </tbody>
+          </DataTableBody>
         </DataTable>
       )}
       {pager}

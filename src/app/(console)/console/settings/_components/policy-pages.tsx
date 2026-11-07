@@ -9,6 +9,7 @@ import { missingFacts, POLICY_PAGES, renderPolicy, type PolicyPage } from '@/dom
 import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
 import { savePolicyText } from '../actions'
+import { Section } from '@/components/layout/section'
 
 const inr = (p: number) => formatInr(paise(p))
 const asText = (page: PolicyPage, f: ShopFacts) =>
@@ -39,7 +40,7 @@ export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty }
   })
 
   return (
-    <section className="overflow-hidden rounded-md border border-border bg-card">
+    <Section flush>
       <div className="space-y-1 p-4">
         <h2 className="text-section font-semibold">Your five pages</h2>
         <p className="text-sm text-muted-foreground">Written from your settings, and kept in step with them. Need other words? Rewrite a page; it then stops following your settings. Have a lawyer read your pages once: these are a starting point.</p>
@@ -81,6 +82,6 @@ export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty }
           </div>
         )
       })}
-    </section>
+    </Section>
   )
 }

@@ -6,37 +6,19 @@ import { Button } from '@/components/ui/button'
 import { LeaveDialog, Message, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
 import type { Rule } from '@/domains/catalogue/collection-rules'
 import { MAX_RULES } from '@/domains/catalogue/collection-rules'
-import { parseRupees, rupeesText } from '@/domains/catalogue/product-form'
+import { type Row, toRules } from './rule-rows'
 import { handleFor } from '@/domains/catalogue/variants'
 import { CategoryPicker } from '../../products/_components/organise-card'
 import { deleteCollection, previewRules, saveCollection } from '../actions'
 import { Section } from '@/components/layout/section'
-import { BackLink } from '@/components/layout/page-header'
+import { PageHeader } from '@/components/layout/page-header'
 
-type Row = { field: Rule['field']; value: string; handle?: string; label?: string }
 export type EditorCollection = { id: string | null; title: string; handle: string; description: string; kind: 'manual' | 'auto'; matchAll: boolean; rules: Row[]; sort: string; productIds: string[] }
 export type ProductPick = { id: string; title: string; status: string }
 export type AttrOption = { handle: string; value: string; label: string }
 
 const FIELDS: [Rule['field'], string][] = [['category', 'Category is'], ['attribute', 'Detail is'], ['colour_family', 'Colour family is'], ['price_below', 'Price is below ₹'], ['price_at_least', 'Price is at least ₹'], ['in_stock', 'Can be bought now'], ['tag', 'Tag is']]
 const SORTS: [string, string][] = [['newest', 'Newest first'], ['price_low', 'Price, low to high'], ['price_high', 'Price, high to low'], ['title', 'Name, A to Z'], ['manual', 'The order you pick']]
-
-/** Rows as the server takes them: money as paise, empty rows dropped. */
-export function toRules(rows: Row[]): Rule[] {
-  return rows.flatMap((r): Rule[] => {
-    if (r.field === 'in_stock') return [{ field: 'in_stock' }]
-    if (r.field === 'price_below' || r.field === 'price_at_least') { const p = parseRupees(r.value); return p ? [{ field: r.field, value: p }] : [] }
-    if (!r.value) return []
-    if (r.field === 'attribute') return r.handle ? [{ field: 'attribute', handle: r.handle, value: r.value }] : []
-    return [{ field: r.field, value: r.value }]
-  })
-}
-export function fromRules(rules: Rule[], names: Record<string, string>): Row[] {
-  return rules.map((r) => r.field === 'in_stock' ? { field: r.field, value: '' }
-    : r.field === 'price_below' || r.field === 'price_at_least' ? { field: r.field, value: rupeesText(r.value) }
-    : r.field === 'attribute' ? { field: r.field, handle: r.handle, value: r.value }
-    : { field: r.field, value: String(r.value), label: r.field === 'category' ? names[r.value] : undefined })
-}
 
 /** A collection: name and address, then hand-picked products or rules with a live count. */
 export function CollectionEditor({ initial, products, families, attrOptions }: { initial: EditorCollection; products: ProductPick[]; families: { id: string; name: string }[]; attrOptions: AttrOption[] }) {
@@ -84,8 +66,7 @@ export function CollectionEditor({ initial, products, families, attrOptions }: {
   return (
     <div className="max-w-3xl">
       {dirty && initial.id && <SaveBar pending={pending} onSave={save} onDiscard={() => { setD(saved); setErrors({}) }} />}
-      <BackLink href="/console/collections" label="Collections" />
-      <h1 className="mt-1 text-2xl font-bold tracking-tight">{initial.id ? saved.title : 'New collection'}</h1>
+      <PageHeader title={initial.id ? saved.title : 'New collection'} back={{ href: '/console/collections', label: 'Collections' }} />
       <Message m={msg} />
       <div className="mt-4 space-y-4">
         <Section>
@@ -167,11 +148,11 @@ export function CollectionEditor({ initial, products, families, attrOptions }: {
         </Section>
         {!initial.id && <Button disabled={pending} onClick={save}>Create collection</Button>}
         {initial.id && (
-          <section className="rounded-md border border-border p-4 text-sm">
+          <Section className="text-sm">
             {confirmDelete
               ? <div className="flex flex-wrap items-center gap-3"><span>Delete {saved.title}? Products stay; only the group goes.</span><Button variant="secondary" disabled={pending} onClick={remove}>Delete</Button><button type="button" className="inline-flex min-h-6 items-center underline" onClick={() => setConfirmDelete(false)}>Keep it</button></div>
               : <button type="button" className="inline-flex min-h-6 items-center text-danger-text underline" onClick={() => setConfirmDelete(true)}>Delete this collection</button>}
-          </section>
+          </Section>
         )}
       </div>
       {guard.leaveTo && <LeaveDialog what={saved.title || 'this collection'} onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(d))} />}

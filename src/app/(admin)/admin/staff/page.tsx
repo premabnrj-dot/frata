@@ -1,4 +1,4 @@
-import { DataTable, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
+import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -24,7 +24,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
       <Notice ok={sp.ok} error={sp.error} />
       <DataTable>
         <DataTableHead><th>Email</th><th>Role</th><th>Since</th><th></th></DataTableHead>
-        <tbody>
+        <DataTableBody>
           {rows.map((r) => (
             <DataTableRow key={r.userId}>
               <Td cell="a" className="font-mono">{r.email}</Td>
@@ -37,7 +37,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
               </Td>
             </DataTableRow>
           ))}
-        </tbody>
+        </DataTableBody>
       </DataTable>
       {isAdmin && (
         <Section className="max-w-xl"><form action={addStaffAction} className="flex flex-wrap items-end gap-2">

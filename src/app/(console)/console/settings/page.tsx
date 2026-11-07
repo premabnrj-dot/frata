@@ -45,7 +45,7 @@ export default async function SettingsPage() {
       <PageHeader title="Settings" />
       <p className="-mt-2 text-sm text-muted-foreground">What you save here shows on your shop straight away.</p>
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <nav aria-label="Settings" className="overflow-hidden rounded-md border border-border bg-card">
+        <Section as="nav" flush ariaLabel="Settings">
           {SECTIONS.map((s) => (
             <Link key={s.key} href={`/console/settings/${s.key}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-4 py-3 first:border-t-0 transition-colors duration-fast hover:bg-accent">
               <span className="font-medium">{s.title}</span>
@@ -63,7 +63,7 @@ export default async function SettingsPage() {
             <Badge className="row-span-2">Edit</Badge>
             <span className="truncate font-mono text-sm text-muted-foreground">{f.slug}.{SHOP_DOMAIN}</span>
           </Link>
-        </nav>
+        </Section>
         <aside className="space-y-3">
           <Section>
             <h2 className="text-section font-semibold">Ready for live payments</h2>

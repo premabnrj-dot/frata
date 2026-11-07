@@ -48,7 +48,7 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 - **Shell**: navigation grouped by job (`AppShell`, § UX foundation); a row is
   added when its page exists, never "coming soon". Phone: bottom bar + More;
   ≥ 768px: sidebar. Waiting counts as a warn pill.
-- **Page header**: `PageHeader` — title and at most one primary action.
+- **Page header**: `PageHeader`: way back, title + badges, a meta line, at most one primary action (+ More). Details in § UX foundation rule 13.
 - **Lists**: `DataTable` shares chrome, not columns. Default view is a WORK
   QUEUE (to confirm, delivery failed), not history. Filters live in the URL,
   the server filters; 50 rows a page, numbered, never infinite scroll.
@@ -286,8 +286,9 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     No hand-written card frames and no cards inside cards (`check:scale`).
 15. **Tables on phones become rows**, never a table that scrolls sideways. Use `DataTable` + `<Td cell>`: `a`
     the link (`data-row-link`, the whole row's target) and `b` the figure on line 1, `c` who/where and `d` the
-    badges on line 2, `e`/`f` full lines, `hide` desktop only. An editor grid is `rows="form"` with
-    `<td data-label>`: a card of labelled fields. A matrix (plans) is one `Section` per column on phones.
+    badges on line 2, `e`/`f` full lines, `hide` desktop only. An editor grid (a raw `<table>`, not a
+    `DataTable`) carries `data-rows="form"`, explicit table roles, and `data-label` on each `<td>`: a card of
+    labelled fields. A button whose label can be long (it names a merchant) is `size: 'wrap'`. A matrix (plans) is one `Section` per column on phones.
     Line 1 holds the link (number or name) and the figure, right-aligned.
     Line 2 holds who, where and the badges. The whole row is one target.
 16. Every number column is right-aligned in mono, in both surfaces. Lists

@@ -89,12 +89,15 @@ export const FOCUS = () => {
   const rgb = (c) => { cx.clearRect(0, 0, 1, 1); cx.fillStyle = '#000'; cx.fillStyle = c; cx.fillRect(0, 0, 1, 1); const d = cx.getImageData(0, 0, 1, 1).data; return [d[0], d[1], d[2], d[3] / 255] }
   const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b) }
   const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05) }
-  // The ring is drawn outside the element (offset 2 px): measure it against the first opaque background around it.
-  let bg = [255, 255, 255, 1]
-  for (let e = el.parentElement; e; e = e.parentElement) { const c = rgb(getComputedStyle(e).backgroundColor); if (c[3] >= 1) { bg = c; break } }
-  // The ring may be drawn on the field's wrapper (focus-within, for a field with a prefix or an icon).
+  // The ring may be drawn on the field's wrapper (focus-within, for a field with a prefix or an icon): then it is
+  // the wrapper's ring, measured against what is around the WRAPPER (impact review U·2b).
   const ringOf = (e) => { const t = getComputedStyle(e); return t.outlineStyle !== 'none' && parseFloat(t.outlineWidth) >= 2 ? t : null }
-  const s = ringOf(el) ?? (el.parentElement && ringOf(el.parentElement)) ?? getComputedStyle(el)
+  const own = ringOf(el)
+  const holder = own ? el : (el.parentElement && el.parentElement.matches(':focus-within') && ringOf(el.parentElement) ? el.parentElement : el)
+  const s = own ?? (holder !== el ? ringOf(holder) : getComputedStyle(el))
+  // The ring is drawn outside its box (offset 2 px): measure it against the first opaque background around that box.
+  let bg = [255, 255, 255, 1]
+  for (let e = holder.parentElement; e; e = e.parentElement) { const c = rgb(getComputedStyle(e).backgroundColor); if (c[3] >= 1) { bg = c; break } }
   const width = s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 2
   const contrast = width ? ratio(rgb(s.outlineColor), bg) : 0
   const ring = width && contrast >= 3
@@ -115,7 +118,9 @@ export const OVERLAP = () => {
   const hits = []
   // Inline boxes that wrap overlap by geometry, not by mistake: only block-level siblings are compared.
   const skip = (el) => { const s = getComputedStyle(el); return s.display.startsWith('inline') || s.display === 'contents' || s.position === 'absolute' || s.position === 'fixed' || s.position === 'sticky' || s.display === 'none' || s.visibility === 'hidden' || /(hidden|clip)/.test(s.overflow) || (parseFloat(s.width) <= 1 && parseFloat(s.height) <= 1) }
-  for (const parent of document.querySelectorAll('main *')) {
+  // From main itself, so the page-level blocks are compared too. Not caught here: text clipped inside its own
+  // fixed-height box (the screenshots and the per-page measures are the check for that).
+  for (const parent of document.querySelectorAll('main, main *')) {
     const kids = [...parent.children].filter((k) => !skip(k) && k.getBoundingClientRect().height > 0)
     for (let i = 1; i < kids.length; i++) {
       const a = kids[i - 1].getBoundingClientRect(), b = kids[i].getBoundingClientRect()

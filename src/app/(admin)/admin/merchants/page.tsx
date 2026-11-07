@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { DataTable, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
+import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { Pager } from '@/components/data/pager'
 import { SearchField } from '@/components/data/search-field'
 import { Numeric } from '@/components/data/numeric'
@@ -39,7 +39,7 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
           <DataTableHead>
             <th>Merchant</th><th>Plan</th><th>Owner</th><th className="text-right">Orders this month</th><th></th>
           </DataTableHead>
-          <tbody>
+          <DataTableBody>
             {rows.map((m) => (
               <DataTableRow key={m.id}>
                 <Td cell="a">
@@ -64,7 +64,7 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
                 <Td cell="e" className="md:text-right"><Link href={`/admin/merchants/${m.id}/support`} className="inline-flex min-h-6 items-center whitespace-nowrap text-sm underline-offset-2 hover:underline">Open console</Link></Td>
               </DataTableRow>
             ))}
-          </tbody>
+          </DataTableBody>
         </DataTable>
       )}
       {rows.length > 0 && <Pager first={(page - 1) * PAGE_SIZE + 1} shown={rows.length} total={total}
