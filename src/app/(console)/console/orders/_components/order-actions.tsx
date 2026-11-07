@@ -1,8 +1,9 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button, button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Menu, type MenuItem } from '@/components/ui/menu'
 import { Toaster, useToast } from '@/components/ui/toast'
@@ -22,7 +23,9 @@ import { cancelOrder, confirmOrder, holdOrder, packOrder, undoOrderAction, unhol
 
 export type OrderActionsProps = {
   orderId: string; number: string
-  primary: 'confirm' | 'pack' | 'cancel' | null
+  primary: 'confirm' | 'pack' | 'print_slip' | 'cancel' | null
+  /** The print pages this order has now: a slip once it is placed, an invoice once packed. */
+  print: { slip: string | null; invoice: string | null }
   /** Which More items this person may use on this order now. */
   may: { hold: boolean; unhold: boolean; cancel: boolean; pack: boolean; confirm: boolean }
   /** High or unreadable risk: confirming is still allowed here (a person is looking), but it asks first. */
@@ -67,10 +70,14 @@ function Actions(p: OrderActionsProps) {
   const primary = p.primary === 'confirm' && p.may.confirm ? { label: p.heldPaid ? 'Release from hold' : 'Confirm', go: () => (p.riskWarning ? setRiskOpen(true) : void confirm()) }
     : p.primary === 'pack' && p.may.pack ? { label: 'Mark packed', go: () => void run('packed', async () => { const r = await packOrder(p.orderId); return r.ok ? { ...r, ok: true } : r }) }
     : p.primary === 'cancel' && p.may.cancel ? { label: 'Cancel and refund…', go: () => setCancelOpen(true) } : null
+  // Packed: the next thing is the slip in the parcel — a link (a page to print), not an action.
+  const printPrimary = p.primary === 'print_slip' && p.print.slip ? p.print.slip : null
 
   const items: MenuItem[] = [
     ...(p.may.hold ? [{ label: 'Put on hold', onSelect: () => void run('put on hold', () => holdOrder(p.orderId), true) }] : []),
     ...(p.may.unhold ? [{ label: 'Take off hold', onSelect: () => void run('taken off hold', () => unholdOrder(p.orderId)) }] : []),
+    ...(p.print.slip && !printPrimary ? [{ label: 'Print packing slip', href: p.print.slip }] : []),
+    ...(p.print.invoice ? [{ label: 'Print invoice', href: p.print.invoice }] : []),
     { label: 'Copy link', onSelect: () => { void navigator.clipboard?.writeText(window.location.href).then(() => toast({ text: 'Link copied.' }), () => toast({ text: 'Copy the address from the address bar.' })) } },
     ...(p.may.cancel && p.primary !== 'cancel' ? [{ label: 'Cancel order…', onSelect: () => setCancelOpen(true), danger: true }] : []),
   ]
@@ -83,7 +90,8 @@ function Actions(p: OrderActionsProps) {
     if (r) setCancelOpen(false)
   }
 
-  const primaryButton = primary ? <Button onClick={primary.go} aria-disabled={busy}>{primary.label}</Button> : null
+  const primaryButton = primary ? <Button onClick={primary.go} aria-disabled={busy}>{primary.label}</Button>
+    : printPrimary ? <Link prefetch={false} href={printPrimary} className={button()}>Print packing slip</Link> : null
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
@@ -92,7 +100,7 @@ function Actions(p: OrderActionsProps) {
       </div>
       {/* On a phone the one primary action is fixed above the bottom bar (spec 1D·2), the page padded for it. */}
       {primaryButton ? (
-        <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-20 border-t border-border bg-background px-4 py-3 md:hidden print:hidden [&>button]:w-full">
+        <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-20 border-t border-border bg-background px-4 py-3 md:hidden print:hidden [&>*]:w-full">
           {primaryButton}
         </div>
       ) : null}

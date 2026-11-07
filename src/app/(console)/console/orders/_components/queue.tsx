@@ -7,15 +7,16 @@ import { DataTable, DataTableBody, DataTableHead, Td } from '@/components/data/d
 import { Name } from '@/components/data/name'
 import { Money } from '@/components/data/numeric'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, button } from '@/components/ui/button'
 import { KeySheet } from '@/components/ui/key-sheet'
 import { Toaster, useToast } from '@/components/ui/toast'
 import { useShortcuts, useShortcutsEnabled } from '@/components/ui/use-shortcuts'
 import type { Paise } from '@/domains/money/paise'
+import { MAX_DOCUMENTS } from '@/domains/orders/documents'
 import { confirmKey } from '@/domains/ui/shortcuts'
 import { cn } from '@/lib/utils'
 import { confirmMany, confirmOrder, holdMany, holdOrder, undoOrderAction, type BulkResult } from '../actions'
-import { RISK_LABEL, type Tone } from './labels'
+import { printHref, RISK_LABEL, type Tone } from './labels'
 
 // =============================================================================
 // FILE: src/app/(console)/console/orders/_components/queue.tsx
@@ -29,9 +30,9 @@ import { RISK_LABEL, type Tone } from './labels'
 // =============================================================================
 
 export type QueueRow = {
-  id: string; number: string; href: string; customer: string; place: string
+  id: string; n: number; number: string; href: string; customer: string; place: string
   payment: { label: string; tone: Tone }; state: { label: string; tone: Tone }; doNotCollect: boolean
-  risk: 'low' | 'medium' | 'high' | 'unknown'; canConfirm: boolean; canHold: boolean; total: number; placed: string; dimmed: boolean
+  risk: 'low' | 'medium' | 'high' | 'unknown'; canConfirm: boolean; canHold: boolean; canPrint: boolean; total: number; placed: string; dimmed: boolean
 }
 
 function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
@@ -120,12 +121,15 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
     open: () => { const r = here(); if (r) router.push(r.href) },
     confirm: () => { const r = here(); if (!r) return; if (confirmKey(r) === 'open') router.push(r.href); else void act(r, 'confirm') },
     hold: () => { const r = here(); if (r?.canHold) void act(r, 'hold') },
+    print: () => { const r = here(); if (r?.canPrint) router.push(printHref('slip', [r.n])); else if (r) toast({ text: `${r.number} has no packing slip yet.` }) },
     undo: () => { const u = lastUndo.current; if (u) void u().then((x) => toast({ text: x.ok ? 'Undone.' : x.error ?? 'We could not undo that.' })) },
     search: () => document.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
     help: () => setKeys(true),
   })
 
   const count = picked.size
+  // At most a print page's worth (a queue page is 50 rows today; the cap says so if that changes).
+  const printable = rows.filter((r) => picked.has(r.id) && r.canPrint).map((r) => r.n).slice(0, MAX_DOCUMENTS)
   return (
     <>
       {count > 0 ? (
@@ -133,6 +137,8 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
           <span className="font-medium">{count} selected</span>
           <Button onClick={() => bulk('confirm')} aria-disabled={busy}>Confirm</Button>
           <Button variant="secondary" onClick={() => bulk('hold')} aria-disabled={busy}>Hold</Button>
+          {/* Slips for the selected orders that have one, in the queue's order (the print page takes at most 50). */}
+          {printable.length ? <Link prefetch={false} href={printHref('slip', printable)} className={button({ variant: 'secondary' })}>Print {printable.length === 1 ? 'slip' : `${printable.length} slips`}</Link> : null}
           <Button variant="ghost" onClick={() => setPicked(new Set())}>Clear</Button>
         </div>
       ) : null}

@@ -18,6 +18,9 @@ describe('who may do what to an order', () => {
     expect(applies('edit', 'packed')).toBe(false) // the address is on the slip
     expect(applies('cancel', 'shipped')).toBe(false) // a return, Phase 2
     expect(applies('note', 'awaiting_payment')).toBe(false) // not an order yet: nothing for erasure to meet
+    expect(applies('print', 'unconfirmed')).toBe(false) // confirm first
+    expect(applies('print', 'cancelled')).toBe(false) // never a slip for a parcel that must not go
+    expect(applies('print', 'shipped')).toBe(true) // a reprint while it is with the courier
   })
   it('every state has at most one primary action, and it always applies', () => {
     for (const s of ORDER_STATES) {
@@ -25,6 +28,7 @@ describe('who may do what to an order', () => {
       if (p === 'confirm') expect(applies('confirm', s)).toBe(true)
       if (p === 'pack') expect(applies('pack', s)).toBe(true)
       if (p === 'cancel') expect(applies('cancel', s)).toBe(true)
+      if (p === 'print_slip') expect(applies('print', s)).toBe(true)
     }
     expect(primaryAction('refund_due')).toBe('cancel')
     expect(primaryAction('delivered')).toBe(null)

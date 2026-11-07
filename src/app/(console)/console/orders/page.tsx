@@ -58,12 +58,12 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
     const method = currentMethod(o)
     const f = facts?.get(o.id)
     return {
-      id: o.id, number: `${prefix}-${o.number}`, href: `/console/orders/${o.number}`,
+      id: o.id, n: o.number, number: `${prefix}-${o.number}`, href: `/console/orders/${o.number}`,
       customer: o.customerName, place: [o.city, `${o.items} item${o.items === 1 ? '' : 's'}`].filter(Boolean).join(' · '),
       payment: method === 'cod' ? PAYMENT.cod : o.paidAt ? PAYMENT.paid : PAYMENT.unpaid, state: STATE[state], doNotCollect: paidAfterSwitch(o),
       // Risk is for orders still to be decided; once confirmed, packed or paid it is not news.
       risk: state === 'unconfirmed' || state === 'held' ? (facts === null ? 'unknown' : f ? risk(f).level : 'low') : 'low',
-      canConfirm: applies('confirm', state), canHold: applies('hold', state),
+      canConfirm: applies('confirm', state), canHold: applies('hold', state), canPrint: applies('print', state),
       total: Number(o.total), placed: dateTimeIN(o.placedAt), dimmed: STATE[state].tone === 'neutral',
     }
   })

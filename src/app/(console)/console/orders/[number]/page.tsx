@@ -16,7 +16,7 @@ import { dateTimeIN, dayMonthIN } from '@/lib/format-date'
 import { orderDetail } from '@/lib/queries/order-detail'
 import { orderPrefixFor } from '@/lib/queries/orders'
 import { AddNote, EditContact } from '../_components/contact-and-notes'
-import { eventLabel, PAYMENT, STATE } from '../_components/labels'
+import { eventLabel, PAYMENT, printHref, STATE } from '../_components/labels'
 import { OrderActions } from '../_components/order-actions'
 
 // =============================================================================
@@ -75,7 +75,8 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
       <PageHeader title={label} back={{ href: '/console/orders', label: 'Orders' }}
         badges={<><Badge tone={pay.tone}>{pay.label}</Badge><Badge tone={s.tone}>{s.label}</Badge></>}
         meta={<>Placed {dateTimeIN(o.placedAt)}{o.invoiceNumber ? <> · Invoice <span className="font-mono">{o.invoiceNumber}</span></> : null}</>}
-        actions={<OrderActions orderId={o.id} number={label} primary={primary === 'print_slip' ? null : primary} riskWarning={riskWarning} heldPaid={state === 'held' && !!o.paidAt}
+        actions={<OrderActions orderId={o.id} number={label} primary={primary}
+          print={{ slip: may('print', state, role) ? printHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? printHref('invoice', [o.number]) : null }} riskWarning={riskWarning} heldPaid={state === 'held' && !!o.paidAt}
           may={{ hold: can.hold, unhold: can.unhold, cancel: can.cancel, pack: can.pack, confirm: can.confirm }}
           refund={refund} refundLabel={formatInr(paise(refund))} stockTaken={lines.some((l) => l.stockTakenAt)} />} />
 
