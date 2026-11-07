@@ -22,8 +22,12 @@ export const MEASURE = ({ phone }) => {
   const inScroller = (el) => { for (let e = el.parentElement; e && e !== document.body; e = e.parentElement) if (/(auto|scroll|hidden|clip)/.test(getComputedStyle(e).overflowX)) return true; return false }
 
   // 1.4.10 reflow: the page itself never scrolls sideways.
-  const overflow = document.documentElement.scrollWidth > vw + 1
-    ? [...document.body.querySelectorAll('*')].filter((el) => el.getBoundingClientRect().right > vw + 1 && !inScroller(el)).slice(0, 3).map(desc) : []
+  const doc = document.documentElement
+  const mainEl = document.querySelector('main')
+  const overflow = doc.scrollWidth > vw + 1
+    ? (() => { const who = [...document.body.querySelectorAll('*')].filter((el) => el.getBoundingClientRect().right > vw + 1 && !inScroller(el)).slice(0, 3).map(desc); return who.length ? who : [`document ${doc.scrollWidth}/${vw}`] })()
+    // A main that scrolls on its own hides sideways scroll from the document: check it too.
+    : mainEl && mainEl.scrollWidth > mainEl.clientWidth + 1 && /(auto|scroll)/.test(getComputedStyle(mainEl).overflowX) ? [`main ${mainEl.scrollWidth}/${mainEl.clientWidth}`] : []
 
   // Tables on phones become rows (rule 15): no table may scroll sideways inside its frame under 768 px.
   const tableScroll = phone ? [...document.querySelectorAll('table')].filter((t) => visible(t) && t.parentElement && t.parentElement.scrollWidth > t.parentElement.clientWidth + 1).map((t) => `table ${t.parentElement.clientWidth}/${t.parentElement.scrollWidth}`) : []
@@ -67,11 +71,10 @@ export const MEASURE = ({ phone }) => {
   const first = [...document.querySelectorAll(INTER)].find((el) => !disabled(el) && (visible(el) || el.matches('a[href^="#"]')))
   const skip = !!first && first.tagName === 'A' && /^#/.test(first.getAttribute('href') ?? '') && /skip/i.test(first.textContent)
 
-  const nav = performance.getEntriesByType('navigation')[0]
   return {
     title: document.title, overflow, tableScroll, targets, contrast, shadowEdge, current: current.length, skip,
     domNodes: document.querySelectorAll('*').length,
-    fcp: Math.round(performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? 0), ttfb: nav ? Math.round(nav.responseStart - nav.startTime) : null,
+    fcp: Math.round(performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? 0),
   }
 }
 

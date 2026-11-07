@@ -4,7 +4,8 @@
 // 640 px standing for 1280 at 200 % zoom. Each failure is keyed
 // "check · page · width" and the whole set is compared with e2e/ux-known.mjs:
 // a new failure fails the flow, and so does a known one that no longer fails
-// (delete its line when you fix it). Runs last; removes its data in a finally.
+// (delete its line when you fix it). Runs last and leaves its data (the next
+// run drops the database).
 // Checks: e2e/ux-measure.mjs. Prints first paint on /console/orders at 4× CPU
 // and fast 4G as a number to watch (baseline 708 ms, 2026-11-07), not a gate.
 // =============================================================================
@@ -23,7 +24,7 @@ export default {
   async run(t) {
     const { db } = t
     const failures = new Map()
-    const fail = (check, page, width, detail) => { const k = `${check} · ${page} · ${width}`; if (!failures.has(k)) failures.set(k, detail) }
+    const fail = (check, page, width, detail, n = 1) => { const k = `${check} · ${page} · ${width}`; if (!failures.has(k)) failures.set(k, { detail, n }) }
     await db.unsafe(readFileSync(new URL('../fixtures/ux-stress.sql', import.meta.url), 'utf8'))
     const longHandle = 'stress-product-3'
     try {
@@ -40,14 +41,15 @@ export default {
         ['admin-merchant', 'frata', `/admin/merchants/${KESAR}`],
         ['admin-plans', 'frata', '/admin/plans'],
       ]
-      const measure = async (ctx, page, path, w, label) => {
+      const measure = async (ctx, page, path, w, label, h = 800) => {
         const p = await ctx.newPage(); p.on('pageerror', (e) => t.errors.push(`${page} ${label}: ${e.message}`))
+        await p.setViewportSize({ width: w, height: h })
         await p.goto(CONSOLE + path, { waitUntil: 'load' }); await p.evaluate(() => document.fonts.ready)
         const m = await p.evaluate(MEASURE, { phone: w < 768 })
         if (m.overflow.length) fail('overflow', page, label, m.overflow.join('; '))
         if (m.tableScroll.length) fail('table-scroll', page, label, m.tableScroll.join('; '))
-        if (m.targets.length) fail('target', page, label, `${m.targets.length}: ${m.targets.slice(0, 3).join('; ')}`)
-        if (m.contrast.length) fail('contrast', page, label, `${m.contrast.length}: ${m.contrast.slice(0, 3).join('; ')}`)
+        if (m.targets.length) fail('target', page, label, `${m.targets.length}: ${m.targets.slice(0, 3).join('; ')}`, m.targets.length)
+        if (m.contrast.length) fail('contrast', page, label, `${m.contrast.length}: ${m.contrast.slice(0, 3).join('; ')}`, m.contrast.length)
         if (m.current !== 1) fail('nav-current', page, label, `${m.current} marked`)
         if (!m.skip) fail('skip-link', page, label, 'first focusable is not "Skip to content"')
         if (label === '1280') {
@@ -60,8 +62,8 @@ export default {
 
       await t.step('every page × width measured (failures collected)', async () => {
         for (const [w, h, label] of WIDTHS) {
-          const ctxs = { owner: await signedIn(t.browser, 'owner', { viewport: { width: w, height: h } }), frata: await signedIn(t.browser, 'frata', { viewport: { width: w, height: h } }) }
-          for (const [page, who, path] of PAGES) await (await measure(ctxs[who], page, path, w, label)).close()
+          const ctxs = { owner: await signedIn(t.browser, 'owner', { viewport: { width: w, height: h }, reducedMotion: 'reduce' }), frata: await signedIn(t.browser, 'frata', { viewport: { width: w, height: h }, reducedMotion: 'reduce' }) }
+          for (const [page, who, path] of PAGES) await (await measure(ctxs[who], page, path, w, label, h)).close()
           for (const c of Object.values(ctxs)) await c.close()
         }
       })
@@ -95,7 +97,7 @@ export default {
       })
 
       await t.step('support mode: a visit to merchant-1 shows that shop, and ending it returns to Kesar', async () => {
-        const ctx = await signedIn(t.browser, 'frata', { viewport: { width: 390, height: 844 } })
+        const ctx = await signedIn(t.browser, 'frata', { viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' })
         const p = await ctx.newPage(); p.on('pageerror', (e) => t.errors.push(e.message))
         await p.goto(CONSOLE + `/admin/merchants/${M1}/support`)
         await p.getByRole('button', { name: /^Open .+ console$/ }).click()
@@ -105,11 +107,11 @@ export default {
         for (const [page, path] of [['support-console-home', '/console'], ['support-console-orders', '/console/orders'], ['support-admin-merchant', `/admin/merchants/${M1}`]]) {
           for (const [w, h, label] of [[390, 844, '390'], [1280, 800, '1280']]) {
             await p.setViewportSize({ width: w, height: h })
-            const q = await measure(ctx, page, path, w, label); await q.close()
+            const q = await measure(ctx, page, path, w, label, h); await q.close()
           }
         }
         await p.setViewportSize({ width: 390, height: 844 })
-        const bannerH = await p.evaluate(() => document.querySelector('[role="status"]')?.getBoundingClientRect().height ?? 0)
+        const bannerH = await p.evaluate(() => document.querySelector('[data-support-banner]')?.getBoundingClientRect().height ?? 0)
         if (bannerH > 64) fail('support-banner-height', 'support-console-home', '390', `${Math.round(bannerH)} px`)
         await p.goto(CONSOLE + '/console'); await p.getByRole('button', { name: 'End now' }).click()
         await p.waitForURL(/\/admin/)
@@ -125,29 +127,24 @@ export default {
         await cdp.send('Network.enable'); await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 150, downloadThroughput: 9 * 1024 * 1024 / 8, uploadThroughput: 1.5 * 1024 * 1024 / 8 })
         await p.goto(CONSOLE + '/console/orders', { waitUntil: 'load' })
         const m = await p.evaluate(MEASURE, { phone: true })
-        console.log(`     ux › /console/orders at 390 px, CPU 4×, fast 4G: first paint ${m.fcp} ms, ${m.domNodes} DOM nodes (baseline 708 ms, 1,160 nodes)`)
+        console.log(`     ux › /console/orders at 390 px, CPU 4×, fast 4G: first paint ${m.fcp} ms, ${m.domNodes} DOM nodes (compare spec U § Stress test)`)
         await ctx.close()
       })
 
       await t.step('the failures are exactly the known ones (e2e/ux-known.mjs)', async () => {
-        const known = new Set(KNOWN)
-        const unexpected = [...failures].filter(([k]) => !known.has(k)).map(([k, d]) => `${k} — ${d}`)
-        const fixed = KNOWN.filter((k) => !failures.has(k))
+        // A KNOWN line is "check · page · width", or "… ≤ N" for counted checks (targets, contrast): more than N is worse.
+        const known = new Map(KNOWN.map((line) => { const [k, n] = line.split(' ≤ '); return [k, n ? Number(n) : 1] }))
+        const unexpected = [...failures].filter(([k, f]) => !known.has(k) || f.n > known.get(k)).map(([k, f]) => `${k}${known.has(k) ? ` (worse: ${f.n} > ${known.get(k)})` : ''} — ${f.detail}`)
+        const fixed = [...known.keys()].filter((k) => !failures.has(k))
         // The whole list, for a person (the runner prints only an error's first line).
-        writeFileSync(t.out('failures').replace(/\.png$/, '.txt'), [...failures].map(([k, d]) => `${known.has(k) ? 'known' : 'NEW  '} ${k} — ${d}`).concat(fixed.map((k) => `FIXED ${k}`)).join('\n') + '\n')
-        assert.deepEqual({ unexpected, fixed }, { unexpected: [], fixed: [] },
-          `new failures must be fixed; fixed ones must be deleted from e2e/ux-known.mjs\n  NEW:\n    ${unexpected.join('\n    ')}\n  NOW PASSING:\n    ${fixed.join('\n    ')}`)
+        writeFileSync(t.out('failures').replace(/\.png$/, '.txt'), [...failures].map(([k, f]) => `${known.has(k) && f.n <= known.get(k) ? 'known' : 'NEW  '} ${k}${f.n > 1 ? ` ≤ ${f.n}` : ''} — ${f.detail}`).concat(fixed.map((k) => `FIXED ${k}`)).join('\n') + '\n')
+        assert.ok(!unexpected.length && !fixed.length,
+          `${unexpected.length} new or worse, ${fixed.length} now passing (first: ${unexpected[0] ?? fixed[0]}); full list in e2e/.out/90-ux-failures.txt`)
       })
     } finally {
-      // Leave the database as the seed made it (any later flow, or a re-run with --no-build).
-      await db.unsafe(`
-        update support_sessions set ended_at = coalesce(ended_at, now()) where staff_user_id = '${USERS.frata.id}';
-        delete from order_lines where order_id in (select id from orders where tenant_id::text like 'eeeeeeee%' or (tenant_id = '${KESAR}' and number between 5001 and 5300));
-        delete from orders where tenant_id::text like 'eeeeeeee%' or (tenant_id = '${KESAR}' and number between 5001 and 5300);
-        delete from variants where product_id in (select id from products where handle like 'stress-product-%');
-        delete from products where handle like 'stress-product-%';
-        update tenants set name = 'Kesar Studio' where id = '${KESAR}';
-      `).catch((e) => console.log(`     ux › cleanup left data behind: ${e.message} (the next run drops the database)`))
+      // It runs last and LEAVES its data (60 shops, users, staff, support visits with their audit rows, which
+      // ON DELETE restrict keeps): the next run drops and recreates the database. Only open visits are closed.
+      await db`update support_sessions set ended_at = coalesce(ended_at, now()) where staff_user_id = ${USERS.frata.id}`.catch(() => {})
     }
   },
 }

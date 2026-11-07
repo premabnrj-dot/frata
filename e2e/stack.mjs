@@ -74,7 +74,7 @@ export async function up({ build = true } = {}) {
     RAZORPAY_API_BASE: `http://localhost:${PORTS.razorpay}`, BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_x_y', BLOB_STORE_ID: 'store_e2e', CRON_SECRET: 'e2e-cron',
   })
   await until(async () => { try { return (await fetch(CONSOLE)).status > 0 } catch { return false } }, 60_000)
-  return { db, adminUrl, dbName: DB }
+  return { db, adminUrl }
 }
 
 export async function down(db) {

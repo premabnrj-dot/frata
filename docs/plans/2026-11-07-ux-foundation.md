@@ -93,7 +93,7 @@ direction holds. Every finding is taken:
 | # | Finding | Fix in this plan |
 |---|---|---|
 | A1 (blocker) | `queueCounts` on every page is too heavy and not cached; the layout does not re-render on soft navigation | The pill gets its own count: `toConfirmCount(tenantId)` = `count(*) where inTabSql('to_confirm', now())` (`now` taken inside, so React `cache()` is keyed on the tenant id alone). It is streamed in `<Suspense>`, so the shell never waits for it. 1D's actions add `revalidatePath('/console', 'layout')` (asked by message). U·0 step: confirm an order, then the pill drops. `tenancy-auditor` runs on it. |
-| A2 (blocker) | The committed stack cannot open Admin | U·0 adds a Frata staffer to `e2e/constants.mjs`, the fake auth, a `platform_staff` row (appended to `seed.sql`, no existing row changed), and `ADMIN_DATABASE_URL` plus the `frata_admin` password in `e2e/stack.mjs`. The 1D session is told; these are its 1D·T files. |
+| A2 (blocker) | The committed stack cannot open Admin | U·0 adds a Frata staffer to `e2e/constants.mjs` (the fake auth reads it), a `platform_staff` row in 90-ux's own fixture (`seed.sql` unchanged), and `ADMIN_DATABASE_URL` plus the `frata_admin` password in `e2e/stack.mjs`. The 1D session is told; these are its 1D·T files. |
 | A3 (blocker) | KNOWN keyed by finding id is unsound | One collecting step gathers every failure as `check · page · width` and diffs it against KNOWN, so a fixed line must be deleted. Size tolerances are ±1 px. The finding id is a comment only. U·2b's target is "only lines owned by U4 or 1D remain". |
 | A4 | Noto through `html` breaks fonts everywhere, and `subsets` does not limit what downloads | `--font-shell` is set on the AppShell root only. The Noto loaders are imported only in `src/components/shell/fonts.ts`, with `preload: false` and `adjustFontFallback: false`. A pure `scriptOf()` in `src/domains/text/script.ts` and one `<Name>` component set `data-script` (for line height 1.8). U·0 network checks: a Latin page fetches no Noto file, a Devanagari name fetches only Devanagari, and the storefront fetches none. |
 | A5 | `--text-card` collides with `--color-card` | Renamed `--text-section` (skill fixed). |
@@ -110,3 +110,21 @@ direction holds. Every finding is taken:
 | A16 | Gates | Each takes a path argument. Planted bad lines are vitest fixtures in `scripts/__tests__/`. `check:scale` is scoped to `(console)`, `(admin)` and `src/components/{shell,data,layout,nav}`. Contrast pairs are by naming convention, and a token with no pair fails. CLAUDE.md's gate list is updated. |
 | A17 | A `pageTitle()` helper | Next's `title.template` instead: "%s · Kesar Studio" from the console layout's `generateMetadata`, "%s · Frata Admin" in Admin. Each page sets a plain `title`. |
 | A18 | Two live regions | U·2a exports `announce(text)` from the shell's single region. 1D·3's Toast calls it. |
+
+**impact-reviewer on U·0 (2026-11-07):** taken.
+- Support pages are now measured at their own width; they had been labelled 1280 while measured at 390.
+- Overflow falls back to the document's width and checks a scrolling `main`.
+- Counted checks carry ceilings (`≤ N`).
+- The cleanup is described honestly: the flow runs last, keeps its data, and the next run drops the database.
+- The banner is selected by `data-support-banner`.
+- Measuring contexts use reduced motion.
+- Both guards were proven by planting: a non-local `E2E_ADMIN_URL` is refused, and the fixture is refused in another database.
+- README and `e2e-runner` are updated.
+
+**Steps that land with their task, not in U·0:**
+
+| Step | Lands with |
+|---|---|
+| T5 pill = merchant N's count; T4 visit expiry; A1 confirm, then the pill drops (needs 1D·4b's UI) | U·2a |
+| A4 Noto network checks | U·1c |
+| A14 sibling-overlap check under text spacing | U·2b, with phone rows |

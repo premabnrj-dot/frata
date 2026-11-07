@@ -19,7 +19,8 @@ Then:
    print a password, key or token from the env or logs.
 2. Read the runner's output. For each failure, give the flow, the step, and
    the first line of the error; then open its screenshot in
-   `e2e/.out/` with Read and say what the page showed.
+   `e2e/.out/` with Read and say what the page showed. For the `ux` flow,
+   read `e2e/.out/90-ux-failures.txt` and list every NEW and FIXED line.
 3. Open the phone (Pixel 7, 412 px) and desktop screenshots of every flow that
    passed and look for: text cut off or overlapping, sideways scroll, a
    button off screen, an empty state with no words, an error shown in red
