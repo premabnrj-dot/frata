@@ -198,7 +198,7 @@ Deferred:
 
 **impact-reviewer on U·2b (2026-11-07):** taken before merge.
 - The merchant button has a `wrap` size; the header's actions may wrap. A long-name merchant page is in the ux flow.
-- `button-h` matches `button(` with no arguments too.
+- `button-h` reads each element's className value (quoted, or the whole `{…}` expression). It flags a height beside `button(…)` (`` `${button()} h-11` ``, `cn(button(), 'h-11')`), a height inside `button({ className })`, and a height on `<Button>`. *(An earlier version claimed this and did not do it; the re-review proved it by planting. Every form is now a test in `ux-gates.test.ts`.)*
 - Header cells are `columnheader` and bodies `rowgroup` (`DataTableBody`); the variant grid has explicit roles.
 - The plan's untrue claims are corrected above: natural sort, RecordHeader, and "every frame".
 - The flush frames are converted, and the gate catches them.
@@ -209,3 +209,7 @@ Deferred:
 - The ux flow now measures every page U·2b converted, plus a step that taps "Open console" over a phone row's link.
 - The row overlay lifts fields, selects, summaries and labels.
 - Phone plan cards say "across N versions".
+
+**Re-review of U·2b (2026-11-07):** taken. Both gate rules now test the element's own class value: card-frame's skips are per element, and every form of button-h is planted in vitest. The title field re-fits on every title change (Discard included) before paint, in browsers without `field-sizing`. The skill is at 3.3.2.
+
+**Final check of U·2b (2026-11-07):** taken. HEIGHT now also catches `h-auto`, `h-full`, `h-fit` and `h-[…]`. The tag lookup ignores `<` in a handler. The template form (`` `${button()} h-11` ``) and `<Button disabled={n < 1} className="h-[44px]">` are planted in vitest, so the claim above is now true.

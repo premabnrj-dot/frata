@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
@@ -106,8 +106,9 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
     if (!el || (typeof CSS !== 'undefined' && CSS.supports('field-sizing', 'content'))) return
     el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`
   }
+  // After every change of the title (typing, a paste whose newline was just taken out, Discard), before paint.
+  useLayoutEffect(() => { fit(titleRef.current) }, [d.title])
   useEffect(() => {
-    const el = titleRef.current; fit(el)
     const again = () => fit(titleRef.current)
     window.addEventListener('resize', again)
     return () => window.removeEventListener('resize', again)
@@ -123,7 +124,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
         titleSlot={<div className="min-w-0 flex-1">
           <label htmlFor="title" className="sr-only">Product title</label>
           <textarea id="title" rows={1} value={d.title} maxLength={140} aria-invalid={!!errors.title || undefined} placeholder="Product title"
-            onChange={(e) => { set({ title: e.target.value.replace(/\s*\n\s*/g, ' ') }); fit(e.currentTarget) }}
+            onChange={(e) => set({ title: e.target.value.replace(/\s*\n\s*/g, ' ') })}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) e.preventDefault() }} ref={titleRef}
             className="-mx-2 w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-2xl font-bold tracking-tight transition-colors duration-fast hover:border-input focus:border-input focus:bg-card aria-invalid:border-danger-text block resize-none overflow-hidden [field-sizing:content] [overflow-wrap:anywhere]" />
         </div>} />

@@ -50,6 +50,29 @@ describe('check:scale', () => {
     const quiet = file('btn-ok.tsx', '// <Button className="h-11">\n<Button className="min-h-12 w-full" aria-label="h-1 tall">Go</Button>\n')
     expect(scan([quiet])).toEqual({})
   })
+  it('button-h: a height beside button() in a template or cn(), and never reads past the call', () => {
+    const t = file('btn-forms.tsx', [
+      '<Link className={`${button()} h-11`} />',
+      '<Link className={`${button()} h-auto min-h-10`} />',
+      "<Link className={cn(button(), 'h-11')} />",
+      '<Button disabled={n < 1} className="h-[44px]">Go</Button>',
+      "<Link className={button({ variant: 'secondary' })}>Edit</Link><input className=\"h-10 md:h-9\" /><div className=\"h-8\" />",
+      '<Button size="wrap" className="min-h-11 w-full">Open a very long merchant name console</Button>',
+    ].join('\n'))
+    expect(scan([t])).toEqual({ [Object.keys(scan([t]))[0]!]: 4 })
+    expect(Object.keys(scan([t]))[0]).toMatch(/· button-h$/)
+  })
+  it('card-frame: a flush card counts; its skips are the element\'s own classes, not the line', () => {
+    const t = file('frames.tsx', [
+      '<section className="rounded-md border border-border bg-card">flush</section>',
+      '<div className="rounded-md border border-border bg-card"><span className="absolute">x</span></div>',
+      '<ul className="absolute rounded-md border border-border bg-card shadow-md" />',
+      '<details className="group rounded-md border border-border bg-card" />',
+      '<div className="overflow-x-auto rounded-md border border-border bg-card"><table /></div>',
+    ].join('\n'))
+    expect(scan([t])).toEqual({ [Object.keys(scan([t]))[0]!]: 2 })
+    expect(Object.keys(scan([t]))[0]).toMatch(/· card-frame$/)
+  })
   it('refuses a path that does not exist (a typo must not pass as clean)', () => {
     expect(() => execFileSync('node', ['scripts/check-scale.mjs', 'no/such/dir'], { stdio: 'pipe' })).toThrow()
     expect(() => execFileSync('node', ['scripts/check-contrast.mjs', 'no/such.css'], { stdio: 'pipe' })).toThrow()
