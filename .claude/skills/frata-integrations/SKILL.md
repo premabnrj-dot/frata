@@ -2,8 +2,8 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.0.0
-  verified: 2026-11-06
+  version: 1.1.0
+  verified: 2026-11-07
   decisions: [ADR-0006]
 ---
 
@@ -29,19 +29,60 @@ the version. Full research: `docs/research/2026-11-06-market-ux-and-stack.md`.
    verification, Razorpay Aggregator) is in the **legal entity's** name — a Pvt
    Ltd before the first application (re-verifying later means downtime).
 
-## Razorpay — checked 2026-11-06
+## Razorpay — checked 2026-11-07
+
+Razorpay doc pages carry no date of their own; dates are each page's `lastmod`
+in razorpay.com/docs/sitemap.xml (most read 2026-10-08, a bulk rebuild).
 
 - Partner Program → request the **Aggregator** partner type → sub-merchant
-  onboarding APIs; sub-merchants must be activated before collecting [V].
+  onboarding APIs; sub-merchants must be activated before collecting [V, 2026-11-06].
 - Aggregator partners have owner access to sub-merchant dashboards and earn a
-  share of the platform fee when the partner key is used; rates unpublished [V/U].
+  share of the platform fee when the partner key is used; rates unpublished [V/U, 2026-11-06].
 - Route linked accounts (split settlements) only after Razorpay reviews the
-  partner's documents [V].
-- Webhooks: HMAC-SHA256 of the raw body in `X-Razorpay-Signature`; retries for
-  24 h; ~5 s response window; persistently failing webhooks are disabled [S, Razorpay blog].
+  partner's documents [V, 2026-11-06].
+- Webhooks: `X-Razorpay-Signature` = HMAC-SHA256 of the RAW body with the
+  per-webhook secret (the secret is optional in the dashboard — require one);
+  2xx within 5 s or it is retried, exponential backoff for 24 h from event
+  creation; disabled after 24 h of failures, re-enabled by hand; dedupe on
+  `x-razorpay-event-id` (at-least-once); public URL, ports 80/443, ≤ 30 URLs an
+  account [V, docs/webhooks/best-practices + validate-test, lastmod 2026-10-08].
   Implemented: `src/lib/webhooks/razorpay.ts`.
-- UPI MDR 0.4% on P2M UPI above ₹2,000 from 15 Oct 2026; small-merchant QR exemption [V].
-- Magic Checkout ~0.65–0.75% per order (competitor reference) [S].
+- Webhooks by API exist only for partners (`POST /v2/accounts/{id}/webhooks`,
+  access token). With merchant-pasted keys the MERCHANT creates the webhook in
+  their own dashboard and gives us its secret [V partner API; own-account API
+  not documented, U; 2026-11-07]. A path segment per shop is not forbidden [U].
+- Standard Checkout events to enable: `payment.captured`, `payment.failed`,
+  `order.paid` (the only order event) [V, standard/best-practices, 2026-10-08].
+- Orders API: `amount` (paise, min 100) and `currency` required; `receipt` ≤ 40
+  chars, unique; `notes` ≤ 15 pairs × 256 chars; `partial_payment` default
+  false; one successful payment per order, a late authorised one is refunded;
+  **no documented order expiry** [V, docs/api/orders/create lastmod 2026-11-04;
+  payments/orders 2026-10-29].
+- Payment signature: `hmac_sha256(OUR order_id + "|" + razorpay_payment_id,
+  key_secret)` — never the order id Checkout returns [V, standard/integration-steps, 2026-10-08].
+- Checkout `timeout` is in seconds, no documented min/max, and may overrun in a
+  background tab: the server never relies on it [V, 2026-10-08]. (Our earlier
+  "timeout under 15 min" note had no source — removed.)
+- Prefill `name`, `email`, `contact` (optional, `+91…`); `readonly`/`hidden`
+  booleans; with `callback_url` the handler is bypassed [V, 2026-10-08].
+- Capture: automatic by default; per-order `payment: { capture, capture_options:
+  { automatic_expiry_period (min 12 min) … } }` overrides the dashboard; window
+  12 min – 3 days; uncaptured payments auto-refund at normal speed (5–7 working
+  days) [V, payments/capture-settings lastmod 2026-10-29].
+- Keys: `rzp_test_` / `rzp_live_` prefixes (live needs KYC); Basic auth
+  `KEY_ID:KEY_SECRET`; a read-only check is `GET /v1/payments?count=1`; the HTTP
+  status for a wrong key is not documented [V/U, 2026-10-08].
+- Refund: `POST /v1/payments/:id/refund` (no amount = full); `speed` normal
+  (default, 5–7 working days) or optimum [V, api/refunds/create-normal, 2026-10-08].
+- UPI Collect deprecated for P2M from 28 Feb 2026; UPI Intent is the default on
+  mobile web, QR on desktop [V Razorpay / S NPCI, 2026-11-07].
+- UPI MDR 0.4% on P2M UPI above ₹2,000 (cap ₹300 at ≥ ₹75,000) was due 15 Oct
+  2026; NPCI deferred it on 13 Oct to "post Diwali", date to be notified;
+  small-merchant zero MDR is defined on UPI **QR** receipts ≤ ₹1 lakh/month and
+  may not cover online checkout [S, PayU 2026-10-15, Medianama 2026-10-13; NPCI
+  text not read]. (Corrects the 2026-11-06 note, which said "from 15 Oct 2026 [V]".)
+- Magic Checkout ~0.65–0.75% per order (competitor reference) [S, 2026-11-06].
+- No RBI/NPCI rule on cash on delivery found [U, 2026-11-07].
 
 ## Shiprocket — checked 2026-11-06
 
