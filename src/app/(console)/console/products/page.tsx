@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout/page-header'
-import { DataTable, DataTableHead, DataTableRow } from '@/components/data/data-table'
+import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
+import { Name } from '@/components/data/name'
+import { ViewTabs } from '@/components/ui/view-tabs'
 import { Money, Numeric } from '@/components/data/numeric'
 import { Badge } from '@/components/ui/badge'
 import { button } from '@/components/ui/button'
@@ -35,31 +37,27 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader title="Products" actions={<><Link href="/console/collections" className={button({ variant: 'secondary' })}>Collections</Link>{add}</>} />
-      <nav aria-label="Filter by status" className="mb-3 flex gap-1 overflow-x-auto text-sm">
-        {TABS.map(([k, label]) => {
-          const n = k ? counts[k] ?? 0 : total - (counts.archived ?? 0)
-          const on = (status ?? '') === k
-          return <Link key={k} href={k ? `/console/products?status=${k}` : '/console/products'} aria-current={on ? 'page' : undefined}
-            className={`whitespace-nowrap rounded-md px-3 py-1.5 transition-colors duration-fast ${on ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground hover:bg-accent'}`}>{label} <span className="font-mono text-xs">{n}</span></Link>
-        })}
-      </nav>
-      {!rows.length ? <Panel title={`No ${TABS.find(([k]) => k === status)?.[1].toLowerCase() ?? ''} products`}>Products show here when you set them to this status.</Panel> : <DataTable>
+      <ViewTabs label="Filter by status" tabs={TABS.map(([k, label]) => ({
+        href: k ? `/console/products?status=${k}` : '/console/products', label, current: (status ?? '') === k,
+        count: k ? counts[k] ?? 0 : total - (counts.archived ?? 0),
+      }))} />
+      {!rows.length ? <Panel title={`No ${TABS.find(([k]) => k === status)?.[1].toLowerCase() ?? ''} products`}>Products show here when you set them to this status.</Panel> : <DataTable label="Products">
         <DataTableHead><th className="w-14"><span className="sr-only">Photo</span></th><th>Product</th><th>Status</th><th>Sizes and colours</th><th className="text-right">In stock</th><th className="text-right">Price</th></DataTableHead>
-        <tbody>
+        <DataTableBody>
           {rows.map((r) => (
             <DataTableRow key={r.id}>
-              <td>{r.cover
+              <Td cell="hide">{r.cover
                 ? <img src={urlFor(r.cover.base, pick(r.cover.widths, 96))} alt="" width={40} height={50} loading="lazy" className="h-[50px] w-10 rounded-sm object-cover" />
-                : <span className="block h-[50px] w-10 rounded-sm bg-muted" aria-hidden="true" />}</td>
-              <td><Link href={`/console/products/${r.handle}`} className="font-medium hover:underline">{r.title}</Link>{r.typeName && <span className="block text-xs text-muted-foreground">{r.typeName}</span>}</td>
-              <td><StatusBadge status={r.status} publishAt={r.publishAt} /></td>
-              <td><Numeric>{r.variantCount}</Numeric></td>
-              <td className="text-right">{r.stock > 0 ? <Numeric>{r.stock}</Numeric> : <Badge tone="warn">Sold out</Badge>}</td>
-              <td className="text-right">{r.minPrice === null || r.minPrice === 0 ? <span className="text-muted-foreground">No price</span>
-                : r.minPrice === r.maxPrice ? <Money paise={paise(r.minPrice)} /> : <><Money paise={paise(r.minPrice)} />–<Money paise={paise(r.maxPrice!)} /></>}</td>
+                : <span className="block h-[50px] w-10 rounded-sm bg-muted" aria-hidden="true" />}</Td>
+              <Td cell="a"><Link href={`/console/products/${r.handle}`} data-row-link className="line-clamp-2 min-h-6 py-0.5 font-medium [overflow-wrap:anywhere] hover:underline"><Name>{r.title}</Name></Link>{r.typeName && <span className="hidden text-xs text-muted-foreground md:block">{r.typeName}</span>}</Td>
+              <Td cell="d"><StatusBadge status={r.status} publishAt={r.publishAt} /></Td>
+              <Td cell="c" className="text-xs text-muted-foreground md:text-sm md:text-foreground">{r.typeName && <span className="md:hidden">{r.typeName} · </span>}<Numeric>{r.variantCount}</Numeric><span className="md:hidden"> sizes and colours</span></Td>
+              <Td cell="e" className="text-xs md:text-right md:text-sm">{r.stock > 0 ? <><Numeric>{r.stock}</Numeric><span className="md:hidden"> in stock</span></> : <Badge tone="warn">Sold out</Badge>}</Td>
+              <Td cell="b" className="whitespace-nowrap text-right">{r.minPrice === null || r.minPrice === 0 ? <span className="text-muted-foreground">No price</span>
+                : r.minPrice === r.maxPrice ? <Money paise={paise(r.minPrice)} /> : <><Money paise={paise(r.minPrice)} />–<Money paise={paise(r.maxPrice!)} /></>}</Td>
             </DataTableRow>
           ))}
-        </tbody>
+        </DataTableBody>
       </DataTable>}
     </>
   )

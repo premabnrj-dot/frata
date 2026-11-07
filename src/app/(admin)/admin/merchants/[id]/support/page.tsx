@@ -6,6 +6,7 @@ import { DEFAULT_SUPPORT_MIN, SUPPORT_LENGTHS_MIN, SUPPORT_REASON_LABEL, SUPPORT
 import { getMerchant } from '@/lib/admin/merchants'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { startSupportAction } from './actions'
+import { Section } from '@/components/layout/section'
 
 export const metadata = { title: 'Open a console as support' }
 
@@ -21,7 +22,7 @@ export default async function SupportStartPage({ params }: { params: Promise<{ i
   if (!m) notFound()
   const owner = m.members.find((x) => x.role === 'owner')
   return (
-    <form action={startSupportAction} className="mx-auto max-w-lg space-y-5 rounded-lg border border-border bg-card p-6">
+    <Section className="mx-auto max-w-lg"><form action={startSupportAction} className="space-y-5">
       <div className="space-y-1">
         <h1 className="text-xl font-semibold">Open {m.tenant.name}&apos;s console as Frata support</h1>
         <p className="text-sm text-muted-foreground">{owner?.email ?? 'The owner'} sees this visit in {m.tenant.name}&apos;s activity. Everything you change is recorded with your name and this reason.</p>
@@ -51,6 +52,6 @@ export default async function SupportStartPage({ params }: { params: Promise<{ i
         <Link href={`/admin/merchants/${id}`} className={button({ variant: 'secondary' })}>Stay in Admin</Link>
         <Button type="submit">Open {m.tenant.name}&apos;s console</Button>
       </div>
-    </form>
+    </form></Section>
   )
 }

@@ -15,6 +15,8 @@ export const button = cva(
       size: {
         default: 'h-10 px-3 text-sm md:h-9', // 40 px on phones, 36 px from 768 px (rule 19)
         lg: 'h-11 px-5 text-base', // sign-in, sign-up and the website's one call to action
+        // A label that can be long (it names a merchant, § Frata Admin): grows to two lines instead of overflowing.
+        wrap: 'min-h-10 px-3 py-2 text-left text-sm whitespace-normal [overflow-wrap:anywhere] md:min-h-9',
       },
     },
     defaultVariants: { variant: 'primary', size: 'default' },

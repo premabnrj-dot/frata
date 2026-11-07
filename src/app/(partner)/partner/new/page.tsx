@@ -15,7 +15,7 @@ export default async function NewClientStorePage() {
     <>
       <Link href="/partner" className="text-sm text-muted-foreground hover:text-foreground">← Clients</Link>
       <PageHeader title="New client store" />
-      <Section className="max-w-md" label="New client store"><NewStoreForm shopDomain={SHOP_DOMAIN} /></Section>
+      <Section className="max-w-md" ariaLabel="New client store"><NewStoreForm shopDomain={SHOP_DOMAIN} /></Section>
     </>
   )
 }

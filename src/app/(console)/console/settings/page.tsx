@@ -11,6 +11,7 @@ import { SHOP_DOMAIN } from '@/lib/public-env'
 import { shopWithSettings } from '@/lib/queries/settings'
 import { paymentStatusFor } from '@/lib/queries/payments'
 import { shopFacts } from './_components/facts'
+import { Section } from '@/components/layout/section'
 
 export const metadata = { title: 'Settings' }
 
@@ -46,7 +47,7 @@ export default async function SettingsPage() {
       <PageHeader title="Settings" />
       <p className="-mt-2 text-sm text-muted-foreground">What you save here shows on your shop straight away.</p>
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <nav aria-label="Settings" className="overflow-hidden rounded-md border border-border bg-card">
+        <Section as="nav" flush ariaLabel="Settings">
           {SECTIONS.filter((s) => s.editors.includes(auth.membership.role)).map((s) => (
             <Link key={s.key} href={`/console/settings/${s.key}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-4 py-3 first:border-t-0 transition-colors duration-fast hover:bg-accent">
               <span className="font-medium">{s.title}</span>
@@ -69,21 +70,21 @@ export default async function SettingsPage() {
             <Badge className="row-span-2">Edit</Badge>
             <span className="truncate font-mono text-sm text-muted-foreground">{f.slug}.{SHOP_DOMAIN}</span>
           </Link>}
-        </nav>
+        </Section>
         <aside className="space-y-3">
-          <section className="space-y-2 rounded-md border border-border bg-card p-4">
-            <h2 className="font-semibold">Ready for live payments</h2>
+          <Section>
+            <h2 className="text-section font-semibold">Ready for live payments</h2>
             {missing.length ? (
               <>
                 <p className="text-sm text-muted-foreground">Razorpay checks your shop for these before it turns on live UPI and cards. The law asks for them too.</p>
                 <ul className="space-y-1 text-sm">{missing.map((m) => <li key={m.label}><Link href={`/console/settings/${m.section}`} className="text-warn-text underline">{m.label}</Link></li>)}</ul>
               </>
             ) : <p className="text-sm text-ok-text">Your business details, contacts and grievance officer are all set.</p>}
-          </section>
-          <section className="space-y-1 rounded-md border border-border bg-card p-4">
-            <h2 className="font-semibold">Coming later</h2>
+          </Section>
+          <Section>
+            <h2 className="text-section font-semibold">Coming later</h2>
             <p className="text-sm text-muted-foreground">Razorpay for UPI and cards arrives with checkout. Your own domain, team invitations, email templates and your Frata plan and bills come in later releases.</p>
-          </section>
+          </Section>
         </aside>
       </div>
     </>

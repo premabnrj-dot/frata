@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import Link from 'next/link'
 import type { Attribute } from '@/domains/catalogue/taxonomy'
 import { categoryDetails, findCategories } from '../actions'
+import { Section } from '@/components/layout/section'
 
 export type PickedCategory = { id: string; name: string; path: string; attributes: Attribute[] }
 export type CollectionChip = { id: string; title: string; kind: 'manual' | 'auto'; in: boolean }
@@ -19,8 +20,8 @@ export function OrganiseCard({ category, onCategory, collections, picked, onPick
   const auto = collections.filter((c) => c.kind === 'auto' && c.in)
   const addTag = () => { const t = tag.trim().replace(/\s+/g, ' ').slice(0, 40); if (t && !tags.includes(t) && tags.length < 20) onTags([...tags, t]); setTag('') }
   return (
-    <section aria-labelledby="org-h" className="space-y-4 rounded-md border border-border bg-card p-4">
-      <h2 id="org-h" className="font-semibold">Organise</h2>
+    <Section labelledBy="org-h">
+      <h2 id="org-h" className="text-section font-semibold">Organise</h2>
       <CategoryPicker value={category} onChange={onCategory} />
       <div className="space-y-1.5">
         <p className="text-sm font-medium">Collections</p>
@@ -42,7 +43,7 @@ export function OrganiseCard({ category, onCategory, collections, picked, onPick
         <input id="tag" value={tag} maxLength={40} placeholder="Diwali 2026, then Enter" onChange={(e) => setTag(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag() } }} onBlur={addTag}
           className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" />
       </div>
-    </section>
+    </Section>
   )
 }
 
@@ -74,7 +75,7 @@ export function CategoryPicker({ value, onChange, label = 'Category', bare = fal
       {value && !open ? (
         <div className="flex items-start justify-between gap-2 rounded-md border border-border p-2 text-sm">
           <span className="min-w-0"><span className="font-medium">{value.name}</span><span className="block truncate text-xs text-muted-foreground" title={value.path}>{crumbs(value.path)}</span></span>
-          <button type="button" className="shrink-0 text-xs underline" onClick={() => setOpen(true)}>Change</button>
+          <button type="button" className="inline-flex min-h-6 shrink-0 items-center text-xs underline" onClick={() => setOpen(true)}>Change</button>
         </div>
       ) : (
         <div className="relative">
@@ -103,7 +104,7 @@ export function CategoryPicker({ value, onChange, label = 'Category', bare = fal
         </div>
       )}
       {!bare && <p className="text-xs text-muted-foreground">From the standard list Google and Meta read. It decides which details are asked for below.</p>}
-      {value && open && <button type="button" className="text-xs underline" onClick={() => setOpen(false)}>Keep {value.name}</button>}
+      {value && open && <button type="button" className="inline-flex min-h-6 items-center text-xs underline" onClick={() => setOpen(false)}>Keep {value.name}</button>}
     </div>
   )
 }

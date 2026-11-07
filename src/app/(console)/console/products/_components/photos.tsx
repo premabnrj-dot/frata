@@ -52,13 +52,13 @@ export function Photos({ productId, tenantId, photos, colours, enabled }: { prod
           <figure key={ph.id} className="w-32 space-y-1">
             <div className="relative">
               <img src={urlFor(ph.base, pick(ph.widths, 256))} srcSet={srcSet(ph.base, ph.widths)} sizes="128px" alt="" width={128} height={160} className="h-40 w-32 rounded-sm bg-muted object-cover" />
-              {i === 0 && <span className="absolute bottom-1 left-1 rounded-sm bg-primary px-1.5 py-0.5 text-[11px] text-primary-foreground">Cover</span>}
+              {i === 0 && <span className="absolute bottom-1 left-1 rounded-sm bg-primary px-1.5 py-0.5 text-xs text-primary-foreground">Cover</span>}
             </div>
             <div className="flex items-center justify-between text-xs">
               <button type="button" disabled={i === 0 || pending} aria-label="Move earlier" className="inline-grid min-h-6 min-w-6 place-items-center disabled:opacity-30" onClick={() => act(ph.id, { move: -1 })}>←</button>
               {confirm === ph.id
-                ? <span className="flex gap-1"><button type="button" className="text-danger-text underline" onClick={() => act(ph.id, { remove: true })}>Remove</button><button type="button" className="underline" onClick={() => setConfirm(null)}>Keep</button></span>
-                : <button type="button" className="text-muted-foreground underline" onClick={() => setConfirm(ph.id)}>Remove</button>}
+                ? <span className="flex gap-1"><button type="button" className="inline-flex min-h-6 items-center text-danger-text underline" onClick={() => act(ph.id, { remove: true })}>Remove</button><button type="button" className="inline-flex min-h-6 items-center underline" onClick={() => setConfirm(null)}>Keep</button></span>
+                : <button type="button" className="inline-flex min-h-6 items-center text-muted-foreground underline" onClick={() => setConfirm(ph.id)}>Remove</button>}
               <button type="button" disabled={i === photos.length - 1 || pending} aria-label="Move later" className="inline-grid min-h-6 min-w-6 place-items-center disabled:opacity-30" onClick={() => act(ph.id, { move: 1 })}>→</button>
             </div>
             {colours.length > 0 && (

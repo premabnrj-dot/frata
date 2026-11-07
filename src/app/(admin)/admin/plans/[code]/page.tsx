@@ -9,6 +9,7 @@ import { listPlans } from '@/lib/admin/plans'
 import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import { FEATURE_NAMES } from '@/domains/plans/labels'
 import { newVersionAction } from './actions'
+import { Section } from '@/components/layout/section'
 
 export const metadata = { title: 'Edit plan' }
 
@@ -24,7 +25,7 @@ export default async function EditPlanPage({ params, searchParams }: { params: P
   const v = plan.versions[0]!
   const { error } = await searchParams
   return (
-    <form action={newVersionAction} className="mx-auto max-w-xl space-y-5 rounded-lg border border-border bg-card p-6">
+    <Section className="mx-auto max-w-xl"><form action={newVersionAction} className="space-y-5">
       <div className="space-y-1">
         <h1 className="text-xl font-semibold">Edit {plan.name}</h1>
         <p className="text-sm text-muted-foreground">Saving makes version {v.version + 1}. Stores on version {v.version} keep it until you move them.</p>
@@ -39,7 +40,7 @@ export default async function EditPlanPage({ params, searchParams }: { params: P
       <fieldset className="space-y-2">
         <legend className="mb-2 text-sm font-medium">Includes</legend>
         {FEATURES.map((f) => (
-          <label key={f} className="flex items-center gap-2 text-sm"><input type="checkbox" name={`feature_${f}`} defaultChecked={v.features.includes(f)} />{FEATURE_NAMES[f]}</label>
+          <label key={f} className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" name={`feature_${f}`} defaultChecked={v.features.includes(f)} />{FEATURE_NAMES[f]}</label>
         ))}
         <p className="text-xs text-muted-foreground">All channels are in every plan.</p>
       </fieldset>
@@ -47,6 +48,6 @@ export default async function EditPlanPage({ params, searchParams }: { params: P
         <Link href="/admin/plans" className={button({ variant: 'secondary' })}>Keep version {v.version}</Link>
         <Button type="submit">Save as version {v.version + 1}</Button>
       </div>
-    </form>
+    </form></Section>
   )
 }

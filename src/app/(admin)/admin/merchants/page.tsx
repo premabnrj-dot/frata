@@ -1,5 +1,7 @@
 import Link from 'next/link'
-import { DataTable, DataTableHead, DataTableRow } from '@/components/data/data-table'
+import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
+import { Pager } from '@/components/data/pager'
+import { SearchField } from '@/components/data/search-field'
 import { Numeric } from '@/components/data/numeric'
 import { Name } from '@/components/data/name'
 import { PageHeader } from '@/components/layout/page-header'
@@ -23,55 +25,51 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <PageHeader title="Merchants" actions={<Link href="/admin/merchants/new" className={button()}>Add merchant</Link>} />
-      <form className="flex flex-wrap items-center gap-2">
-        <label htmlFor="q" className="sr-only">Search merchants</label>
-        <input id="q" name="q" defaultValue={sp.q} placeholder="Search by brand or shop address"
-          className="h-10 md:h-9 min-w-64 flex-1 rounded-md border border-input bg-card px-3 text-sm" />
-        <span className="text-sm text-muted-foreground"><Numeric>{total}</Numeric> merchants</span>
-      </form>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <SearchField label="Search merchants" placeholder="Search by brand or shop address" value={sp.q} clearHref="/admin/merchants" />
+        <span className="text-sm text-muted-foreground"><Numeric>{total.toLocaleString('en-IN')}</Numeric> {sp.q ? 'found' : 'merchants'}</span>
+      </div>
       {rows.length === 0 ? (
-        <Panel title={sp.q ? 'No merchant matches that search' : 'No merchants yet'}
-          action={<Link href="/admin/merchants/new" className={button()}>Add the first merchant</Link>} />
+        // A search that finds nothing says so, and offers the way back, never "Add the first merchant" (rule 18).
+        sp.q
+          ? <Panel title="No merchant matches that search" action={<Link href="/admin/merchants" className={button({ variant: 'secondary' })}>Clear search</Link>}>Try a part of the brand name or the shop address.</Panel>
+          : <Panel title="No merchants yet" action={<Link href="/admin/merchants/new" className={button()}>Add the first merchant</Link>} />
       ) : (
-        <DataTable>
+        <DataTable label="Merchants">
           <DataTableHead>
             <th>Merchant</th><th>Plan</th><th>Owner</th><th className="text-right">Orders this month</th><th></th>
           </DataTableHead>
-          <tbody>
+          <DataTableBody>
             {rows.map((m) => (
               <DataTableRow key={m.id}>
-                <td>
-                  <div className="flex items-center gap-2">
-                    <Link href={`/admin/merchants/${m.id}`} className="font-medium hover:underline"><Name>{m.name}</Name></Link>
+                <Td cell="a">
+                  <div className="flex flex-wrap items-center gap-x-2">
+                    <Link href={`/admin/merchants/${m.id}`} data-row-link className="inline-flex min-h-6 min-w-6 items-center font-medium [overflow-wrap:anywhere] hover:underline"><Name>{m.name}</Name></Link>
                     {m.isInternal && <Badge>Internal</Badge>}
                   </div>
-                  {m.host && <div className="font-mono text-xs text-muted-foreground">{m.host}</div>}
-                </td>
-                <td>
+                  {m.host && <div className="truncate font-mono text-xs text-muted-foreground">{m.host}</div>}
+                </Td>
+                <Td cell="d">
                   {m.plan ? <Badge tone="info">{m.plan.name}</Badge> : <Badge tone="danger">No plan</Badge>}
-                  {m.plan?.trialEndsAt && m.plan.trialEndsAt > new Date() && <div className="text-xs text-warn-text">Trial until {dayMonthIN(m.plan.trialEndsAt)}</div>}
-                </td>
-                <td className="text-sm">
+                  {m.plan?.trialEndsAt && m.plan.trialEndsAt > new Date() && <div className="whitespace-nowrap text-xs text-warn-text">Trial until {dayMonthIN(m.plan.trialEndsAt)}</div>}
+                </Td>
+                <Td cell="c" className="text-xs md:text-sm">
                   {m.owner ? (m.owner.lastSignInAt ? <span className="text-muted-foreground">Signed in {sinceIN(m.owner.lastSignInAt)}</span> : <span className="text-warn-text">Never signed in</span>)
                     : m.pendingInvite ? <span className="text-warn-text">Owner not signed in yet</span> : <span className="text-muted-foreground">No owner</span>}
-                </td>
-                <td className="text-right">
-                  <Numeric>{m.ordersThisMonth}</Numeric>
-                  {m.over && <div className="text-xs text-warn-text">Over the plan&apos;s {m.plan?.includedOrders}</div>}
-                </td>
-                <td className="text-right"><Link href={`/admin/merchants/${m.id}/support`} className="text-sm hover:underline">Open console</Link></td>
+                </Td>
+                <Td cell="b" className="text-right">
+                  <Numeric>{m.ordersThisMonth.toLocaleString('en-IN')}</Numeric><span className="text-xs text-muted-foreground md:hidden"> orders</span>
+                  {m.over && <div className="text-xs text-warn-text">Over the plan&apos;s {m.plan?.includedOrders.toLocaleString('en-IN')}</div>}
+                </Td>
+                <Td cell="e" className="md:text-right"><Link href={`/admin/merchants/${m.id}/support`} className="inline-flex min-h-6 items-center whitespace-nowrap text-sm underline-offset-2 hover:underline">Open console</Link></Td>
               </DataTableRow>
             ))}
-          </tbody>
+          </DataTableBody>
         </DataTable>
       )}
-      {pages > 1 && (
-        <nav aria-label="Pages" className="flex items-center gap-3 text-sm">
-          <span className="text-muted-foreground"><Numeric>{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)}</Numeric> of <Numeric>{total}</Numeric></span>
-          {page > 1 && <Link href={`?page=${page - 1}${sp.q ? `&q=${encodeURIComponent(sp.q)}` : ''}`}>Previous</Link>}
-          {page < pages && <Link href={`?page=${page + 1}${sp.q ? `&q=${encodeURIComponent(sp.q)}` : ''}`}>Next</Link>}
-        </nav>
-      )}
+      {rows.length > 0 && <Pager first={(page - 1) * PAGE_SIZE + 1} shown={rows.length} total={total}
+        prevHref={page > 1 ? `?page=${page - 1}${sp.q ? `&q=${encodeURIComponent(sp.q)}` : ''}` : undefined}
+        nextHref={page < pages ? `?page=${page + 1}${sp.q ? `&q=${encodeURIComponent(sp.q)}` : ''}` : undefined} />}
     </>
   )
 }

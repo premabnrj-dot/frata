@@ -9,6 +9,7 @@ import { missingFacts, POLICY_PAGES, renderPolicy, type PolicyPage } from '@/dom
 import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
 import { savePolicyText } from '../actions'
+import { Section } from '@/components/layout/section'
 
 const inr = (p: number) => formatInr(paise(p))
 const asText = (page: PolicyPage, f: ShopFacts) =>
@@ -39,9 +40,9 @@ export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty }
   })
 
   return (
-    <section className="overflow-hidden rounded-md border border-border bg-card">
+    <Section flush>
       <div className="space-y-1 p-4">
-        <h2 className="font-semibold">Your five pages</h2>
+        <h2 className="text-section font-semibold">Your five pages</h2>
         <p className="text-sm text-muted-foreground">Written from your settings, and kept in step with them. Need other words? Rewrite a page; it then stops following your settings. Have a lawyer read your pages once: these are a starting point.</p>
       </div>
       {POLICY_PAGES.map(([k, label]) => {
@@ -54,7 +55,7 @@ export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty }
               <Badge tone={own ? 'info' : gaps.length ? 'warn' : 'ok'}>{own ? 'Your own words' : gaps.length ? 'Missing details' : 'From your settings'}</Badge>
               <span className="flex-1" />
               {editing !== k && (
-                <button type="button" className="text-sm underline" disabled={pagesDirty}
+                <button type="button" className="inline-flex min-h-6 items-center text-sm underline" disabled={pagesDirty}
                   title={pagesDirty ? 'Save or discard your other changes first' : undefined}
                   onClick={() => { onSelect(k); setEditing(k); setText(own ?? asText(k, facts)); setError(null) }}>
                   {own ? 'Edit' : 'Rewrite'}
@@ -63,7 +64,7 @@ export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty }
             </div>
             {gaps.length > 0 && <p className="mt-1 text-xs text-warn-text">Needs: {gaps.join(', ')}</p>}
             {own && editing !== k && (
-              <button type="button" className="mt-1 text-xs text-muted-foreground underline" disabled={pending} onClick={() => save(k, null)}>Follow my settings again</button>
+              <button type="button" className="inline-flex min-h-6 items-center mt-1 text-xs text-muted-foreground underline" disabled={pending} onClick={() => save(k, null)}>Follow my settings again</button>
             )}
             {editing === k && (
               <div className="mt-2 space-y-2">
@@ -81,6 +82,6 @@ export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty }
           </div>
         )
       })}
-    </section>
+    </Section>
   )
 }

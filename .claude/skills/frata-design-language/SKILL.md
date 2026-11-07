@@ -111,7 +111,7 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 - **Shell**: navigation grouped by job (`AppShell`, § UX foundation); a row is
   added when its page exists, never "coming soon". Phone: bottom bar + More;
   ≥ 768px: sidebar. Waiting counts as a warn pill.
-- **Page header**: `PageHeader` — title and at most one primary action.
+- **Page header**: `PageHeader`: way back, title + badges, a meta line, at most one primary action (+ More). Details in § UX foundation rule 13.
 - **Lists**: `DataTable` shares chrome, not columns. Default view is a WORK
   QUEUE (to confirm, delivery failed), not history. Filters live in the URL,
   the server filters; 50 rows a page, numbered, never infinite scroll.
@@ -339,13 +339,19 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     before the banner.
 
 **Pages and tables**
-13. Pages open with `PageHeader` (or `RecordHeader` on a detail page):
+13. Pages open with `PageHeader` (`src/components/layout/page-header.tsx`; on a detail page with `back`, the
+    one `BackLink`):
     breadcrumb, title + badges, one meta line, one primary action + More. A
     long title wraps to two lines, never cut mid-word. A title that is an
     input still shows the record's name as the h1's text.
-14. Below the header come `Section`s (title, optional action, `p-4 md:p-5`).
+14. Below the header come `Section`s (`src/components/layout/section.tsx`: title, optional action, `p-4 md:p-5`,
+    titles `text-section font-semibold`). A form that is a card is a `<Section><form>`.
     No hand-written card frames and no cards inside cards (`check:scale`).
-15. **Tables on phones become rows**, never a table that scrolls sideways.
+15. **Tables on phones become rows**, never a table that scrolls sideways. Use `DataTable` + `<Td cell>`: `a`
+    the link (`data-row-link`, the whole row's target) and `b` the figure on line 1, `c` who/where and `d` the
+    badges on line 2, `e`/`f` full lines, `hide` desktop only. An editor grid (a raw `<table>`, not a
+    `DataTable`) carries `data-rows="form"`, explicit table roles, and `data-label` on each `<td>`: a card of
+    labelled fields. A button whose label can be long (it names a merchant) is `size: 'wrap'`. A matrix (plans) is one `Section` per column on phones.
     Line 1 holds the link (number or name) and the figure, right-aligned.
     Line 2 holds who, where and the badges. The whole row is one target.
 16. Every number column is right-aligned in mono, in both surfaces. Lists
@@ -357,7 +363,8 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
 
 **Targets and type**
 19. Every target is at least 24 × 24 px (WCAG 2.5.8), padded rather than a
-    bigger icon. Controls are `h-10` under 768 px and `h-9` above; a button's
+    bigger icon; a text button or link is `inline-flex min-h-6 items-center` (a one-letter one also `min-w-6`);
+    quick-add words are chips, not comma-separated text. Controls are `h-10` under 768 px and `h-9` above; a button's
     height is its `size` variant (`default`, `lg`), never a className (twMerge
     keeps `md:h-9` against a caller's `h-11`). Rows and the
     bottom bar are 44–56 px on phones.

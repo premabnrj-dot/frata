@@ -3,7 +3,8 @@ import { Panel } from '@/components/ui/panel'
 import type { Rule } from '@/domains/catalogue/collection-rules'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { collectionForEdit } from '@/lib/queries/catalogue'
-import { CollectionEditor, fromRules } from '../_components/collection-editor'
+import { CollectionEditor } from '../_components/collection-editor'
+import { fromRules } from '../_components/rule-rows'
 import { categoryNames, editorData } from '../_components/data'
 
 export const metadata = { title: 'Collection' }

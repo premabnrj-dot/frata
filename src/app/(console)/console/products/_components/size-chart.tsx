@@ -34,7 +34,7 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
           : <form className="flex items-end gap-1.5" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await createType(newName, typeId); if (!r.ok) return setError(r.error); setNewName(null); router.refresh(); onType(r.id) }) }}>
               <input aria-label="New type name" autoFocus value={newName} placeholder="Saree" onChange={(e) => setNewName(e.target.value)} className="h-10 md:h-9 w-36 rounded-md border border-input bg-card px-2 text-sm" />
               <Button type="submit" variant="secondary" disabled={pending || !newName.trim()}>{typeId ? 'Create from this chart' : 'Create'}</Button>
-              <button type="button" className="text-sm underline" onClick={() => setNewName(null)}>Cancel</button>
+              <button type="button" className="inline-flex min-h-6 items-center text-sm underline" onClick={() => setNewName(null)}>Cancel</button>
             </form>}
       </div>
       {type && !edit && (
@@ -47,13 +47,13 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
           </div>
           {type.sizeChart.rows.length ? (
             <div className="relative overflow-x-auto rounded-md border border-border">
-              <table className="w-full text-sm"><thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr className="[&>th]:px-2 [&>th]:py-1.5"><th>Size</th>{type.sizeChart.columns.map((c) => <th key={c}>{c}</th>)}</tr></thead>
-                <tbody>{type.sizeChart.rows.map((r) => <tr key={r.size} className="border-t border-border [&>td]:px-2 [&>td]:py-1.5"><td className="font-medium">{r.size}</td>{r.values.map((v, i) => <td key={i} className="font-mono">{show(v)}</td>)}</tr>)}</tbody>
+              <table className="w-full table-fixed text-sm"><thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr className="[&>th]:px-1.5 [&>th]:py-1.5 [&>th]:[overflow-wrap:anywhere] md:[&>th]:px-2"><th>Size</th>{type.sizeChart.columns.map((c) => <th key={c}>{c}</th>)}</tr></thead>
+                <tbody>{type.sizeChart.rows.map((r) => <tr key={r.size} className="border-t border-border [&>td]:px-1.5 [&>td]:py-1.5 md:[&>td]:px-2"><td className="font-medium">{r.size}</td>{r.values.map((v, i) => <td key={i} className="font-mono">{show(v)}</td>)}</tr>)}</tbody>
               </table>
             </div>
           ) : <p className="text-sm text-muted-foreground">This type has no size chart.</p>}
           {type.sizeChart.howToMeasure && <p className="text-xs text-muted-foreground">{type.sizeChart.howToMeasure}</p>}
-          <button type="button" className="text-sm underline" onClick={() => setEdit(structuredClone(type.sizeChart))}>Edit the {type.name} chart</button>
+          <button type="button" className="inline-flex min-h-6 items-center text-sm underline" onClick={() => setEdit(structuredClone(type.sizeChart))}>Edit the {type.name} chart</button>
         </>
       )}
       {type && edit && (

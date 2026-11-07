@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout/page-header'
+import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
@@ -22,7 +23,7 @@ export default async function PeoplePage() {
     <div className="max-w-3xl space-y-4">
       <Link href="/console/settings" className="text-sm text-muted-foreground hover:text-foreground">← Settings</Link>
       <PageHeader title="People" />
-      <ul className="divide-y divide-border rounded-md border border-border bg-card">
+      <Section flush ariaLabel="People"><ul className="divide-y divide-border">
         {people.map((p) => {
           const role = { label: ROLE_LABEL[p.role as MemberRole] ?? p.role, tone: p.role === 'partner' ? 'info' as const : 'neutral' as const }
           const you = p.userId === auth.userId
@@ -38,7 +39,7 @@ export default async function PeoplePage() {
             </li>
           )
         })}
-      </ul>
+      </ul></Section>
     </div>
   )
 }

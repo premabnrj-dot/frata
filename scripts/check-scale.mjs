@@ -23,12 +23,15 @@ const DIRS = ['src/app/(console)', 'src/app/(admin)', 'src/components/shell', 's
 export { DIRS }
 export const RULES = {
   'text-px': /\btext-\[\d+(?:\.\d+)?px\]/g,
-  'card-frame': /\brounded-(?:md|lg) border border-border bg-card p-\d/g,
+  // The card frame with or without its padding (a flush list card is a frame too; impact review U·2b).
+  'card-frame': /\brounded-(?:md|lg) border border-border bg-card\b/,
   // field-h9 is found per JSX element (fieldTags), not per line: a className on the next line, or an `=>` in an
   // onChange, hid every case from a line pattern (impact review U·1).
 }
 const FIELD_OPEN = /<(?:input|select|textarea)\b/g
-const BUTTON_OPEN = /<Button\b|\bbutton\(\{/g
+// Any height a caller could add: h-11, h-auto, h-full, h-fit, h-[44px]. twMerge drops the variant's h-10 against each
+// and keeps md:h-9 (final check of U·2b). A long label wants size: 'wrap', not a height.
+const HEIGHT = /(?<![\w-])(?:[\w-]+:)?h-(?:\d|auto|full|fit|\[)/
 /** The text of each <input>/<select>/<textarea> opening tag in a file, read up to the `>` outside braces and quotes. */
 export function fieldTags(text, open = FIELD_OPEN) {
   const tags = []
@@ -41,7 +44,6 @@ export function fieldTags(text, open = FIELD_OPEN) {
       else if (c === '{') depth++
       else if (c === '}') depth--
       else if (c === '>' && depth === 0) break
-      else if (c === ')' && depth === 0 && text[m.index + m[0].length - 1] === '{') break
     }
     tags.push(text.slice(m.index, i + 1))
   }
@@ -56,8 +58,48 @@ function walk(p, acc = []) {
   return acc
 }
 
-/** <Button …> opening tags and button({ … }) calls. */
-export const buttonTags = (text) => fieldTags(text, BUTTON_OPEN)
+/**
+ * Every className value in a file, with the tag it sits on: the quoted string, or the whole {…} expression (braces
+ * balanced, quotes and template strings respected). A rule tests the element's own classes, never the line it is on
+ * (impact review U·2b: a per-line skip let a real card through when the line also held `absolute`).
+ */
+export function classValues(text) {
+  const out = []
+  for (const m of text.matchAll(/\bclassName=/g)) {
+    let i = m.index + m[0].length, value
+    if (text[i] === '"' || text[i] === "'") { const q = text[i]; const end = text.indexOf(q, i + 1); value = text.slice(i + 1, end) }
+    else if (text[i] === '{') {
+      let depth = 0, quote = null, j = i
+      for (; j < text.length; j++) {
+        const c = text[j]
+        if (quote) { if (c === quote && text[j - 1] !== '\\') quote = null; continue }
+        if (c === '"' || c === "'" || c === '`') quote = c
+        else if (c === '{') depth++
+        else if (c === '}' && --depth === 0) break
+      }
+      value = text.slice(i + 1, j)
+    } else continue
+    // The tag this className is on: the last `<name` followed by white space (so `n < 1` or `X<Y>` in a handler
+    // is not taken for a tag).
+    const before = text.slice(0, m.index)
+    const tags = [...before.matchAll(/<([A-Za-z][\w.]*)(?=\s)/g)]
+    out.push({ value, tag: tags.length ? tags[tags.length - 1][1] : '' })
+  }
+  return out
+}
+
+/** The expression without its button(…) calls (parens balanced): what is left is what the caller added. */
+export function withoutButtonCalls(expr) {
+  let out = '', i = 0
+  for (const m of expr.matchAll(/\bbutton\(/g)) {
+    if (m.index < i) continue
+    out += expr.slice(i, m.index)
+    let depth = 0, j = m.index + m[0].length - 1
+    for (; j < expr.length; j++) { if (expr[j] === '(') depth++; else if (expr[j] === ')' && --depth === 0) break }
+    i = j + 1
+  }
+  return out + expr.slice(i)
+}
 
 /** { "path · rule": count } for the given files. */
 export function scan(files) {
@@ -67,17 +109,23 @@ export function scan(files) {
     const text = readFileSync(file, 'utf8')
     const h9 = fieldTags(text.split(/\r?\n/).filter((l) => !isComment(l)).join('\n')).filter((t) => /\bh-9\b/.test(t) && !/\bh-10\b/.test(t)).length
     if (h9) found[`${rel} · field-h9`] = h9
-    const buttonH = buttonTags(text.split(/\r?\n/).filter((l) => !isComment(l)).join('\n'))
-      .filter((t) => [...t.matchAll(/className[=:]\s*(?:\{?\s*)?(['"`])([^'"`]*)\1/g)].some((m) => /(?<![\w-])(?:[\w-]+:)?h-\d/.test(m[2]))).length
+    const code = text.split(/\r?\n/).filter((l) => !isComment(l)).join('\n')
+    const values = classValues(code)
+    // button-h: a height on a <Button>'s className, or beside button(…) in any className expression
+    // (`${button()} h-11`, cn(button(), 'h-11')).
+    // …and a className handed INTO button({ className: 'h-8' }), which twMerge mixes the same way.
+    const intoCall = (v) => [...v.matchAll(/\bclassName:\s*(['"`])([^'"`]*)\1/g)].some((m) => HEIGHT.test(m[2]))
+    const buttonH = values.filter((v) => v.tag === 'Button' ? HEIGHT.test(v.value)
+      : /\bbutton\(/.test(v.value) && (HEIGHT.test(withoutButtonCalls(v.value)) || intoCall(v.value))).length
     if (buttonH) found[`${rel} · button-h`] = buttonH
-    for (const line of text.split(/\r?\n/)) {
-      if (isComment(line)) continue
-      for (const [rule, re] of Object.entries(RULES)) {
-        // The primitives (src/components/**) are where a frame is defined once; pages must use them.
-        if (rule === 'card-frame' && rel.startsWith('src/components/')) continue
-        const n = (line.match(re) ?? []).length
-        if (n) found[`${rel} · ${rule}`] = (found[`${rel} · ${rule}`] ?? 0) + n
-      }
+    // card-frame, per element: not in the primitives (where the frame is defined once), and not a floating list
+    // (absolute, shadow), a table's sideways scroller, or a disclosure (<details>).
+    const frames = rel.startsWith('src/components/') ? 0 : values.filter((v) => RULES['card-frame'].test(v.value) && (RULES['card-frame'].lastIndex = 0, true)
+      && !/\b(?:absolute|shadow-\w+|overflow-x-auto)\b/.test(v.value) && v.tag !== 'details').length
+    if (frames) found[`${rel} · card-frame`] = frames
+    for (const line of code.split('\n')) {
+      const n = (line.match(RULES['text-px']) ?? []).length
+      if (n) found[`${rel} · text-px`] = (found[`${rel} · text-px`] ?? 0) + n
     }
   }
   return found

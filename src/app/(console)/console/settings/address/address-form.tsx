@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { slugProblem } from '@/domains/signup/slug'
 import { frataWhatsappLink } from '@/lib/site'
 import { checkAddress, type AddressCheck } from '@/app/start/actions'
 import { changeAddress } from '../actions'
+import { Section } from '@/components/layout/section'
+import { PageHeader } from '@/components/layout/page-header'
 
 const WORDS: Record<AddressCheck['state'], string> = { ok: 'Available', taken: 'Taken. Try another.', too_short: 'At least 3 letters', shape: 'Letters, digits and hyphens only', reserved: 'Reserved. Try another.' }
 
@@ -31,10 +32,9 @@ export function AddressForm({ current, shopDomain, published, support }: { curre
   const locked = published || support
   return (
     <div className="max-w-xl space-y-4">
-      <Link href="/console/settings" className="text-sm text-muted-foreground hover:text-foreground">← Settings</Link>
-      <h1 className="text-2xl font-bold tracking-tight">Shop address</h1>
+      <PageHeader title={'Shop address'} back={{ href: '/console/settings', label: 'Settings' }} />
       <p className="text-sm text-muted-foreground">Where shoppers find you. Share it in your Instagram bio.</p>
-      <section className="space-y-3 rounded-md border border-border bg-card p-4">
+      <Section>
         <label htmlFor="slug" className="block text-sm font-medium">Address</label>
         <div className="flex items-center gap-1 rounded-md border border-input bg-card px-3 py-2 font-mono text-sm focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
           <input id="slug" value={slug} disabled={locked || pending} aria-describedby="slug-h"
@@ -57,7 +57,7 @@ export function AddressForm({ current, shopDomain, published, support }: { curre
             })}>{pending ? 'Changing…' : `Move to ${slug || '…'}.${shopDomain}`}</Button>
           </div>
         )}
-      </section>
+      </Section>
     </div>
   )
 }

@@ -25,7 +25,7 @@ export default async function PartnerDetailsPage() {
   return (
     <>
       <PageHeader title="Your details" />
-      <Section className="max-w-2xl" label="Your details">
+      <Section className="max-w-2xl" ariaLabel="Your details">
       <dl className="grid max-w-2xl grid-cols-[8rem_minmax(0,1fr)] gap-x-4 gap-y-3 text-sm">
         {rows.map(([k, v]) => <Fragment key={k}><dt className="text-muted-foreground">{k}</dt><dd className="min-w-0 break-words">{v}</dd></Fragment>)}
       </dl>

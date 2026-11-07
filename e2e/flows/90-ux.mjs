@@ -12,7 +12,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { CONSOLE, SHOP, USERS, signedIn, until } from '../lib.mjs'
-import { FOCUS, MEASURE, TEXT_SPACING } from '../ux-measure.mjs'
+import { FOCUS, LONGEST_MOTION, MEASURE, OVERLAP, TEXT_SPACING } from '../ux-measure.mjs'
 import { KNOWN } from '../ux-known.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
@@ -40,6 +40,21 @@ export default {
         ['admin-merchants-nomatch', 'frata', '/admin/merchants?q=nomatchzz'],
         ['admin-merchant', 'frata', `/admin/merchants/${KESAR}`],
         ['admin-plans', 'frata', '/admin/plans'],
+        // The rest of what U·2b converted (impact review U·2b): every page measured, none only by hand.
+        ['console-collections', 'owner', '/console/collections'],
+        ['console-collection', 'owner', '/console/collections/kurtas'],
+        ['console-activity', 'owner', '/console/activity'],
+        ['console-settings-address', 'owner', '/console/settings/address'],
+        ['console-settings-payments', 'owner', '/console/settings/online-payments'],
+        ['console-product-new', 'owner', '/console/products/new'],
+        ['admin-activity', 'frata', '/admin/activity'],
+        ['admin-staff', 'frata', '/admin/staff'],
+        ['admin-merchant-new', 'frata', '/admin/merchants/new'],
+        ['admin-merchant-plan', 'frata', `/admin/merchants/${KESAR}/plan`],
+        ['admin-merchant-support', 'frata', `/admin/merchants/${M1}/support`],
+        ['admin-plan-edit', 'frata', '/admin/plans/launch'],
+        // A merchant with a very long name: its header and its "Open … console" button (impact review U·2b).
+        ['admin-merchant-long', 'frata', '/admin/merchants/eeeeeeee-0000-4000-8000-000000000005'],
       ]
       const measure = async (ctx, page, path, w, label, h = 800) => {
         const p = await ctx.newPage(); p.on('pageerror', (e) => t.errors.push(`${page} ${label}: ${e.message}`))
@@ -68,6 +83,20 @@ export default {
         }
       })
 
+      await t.step('a phone row is one target, and its other link still works (Open console over the row link)', async () => {
+        const ctx = await signedIn(t.browser, 'frata', { viewport: { width: 390, height: 844 } })
+        const p = await ctx.newPage(); await p.goto(CONSOLE + '/admin/merchants')
+        const row = p.locator('tbody tr').first()
+        await row.getByRole('link', { name: 'Open console' }).click()
+        await p.waitForURL(/\/support$/)
+        await p.goBack(); await p.waitForURL(/\/admin\/merchants$/)
+        // A tap on the row's empty part opens the merchant.
+        const box = await p.locator('tbody tr').first().boundingBox()
+        await p.mouse.click(box.x + box.width / 2, box.y + box.height - 6)
+        await p.waitForURL(/\/admin\/merchants\/[0-9a-f-]{36}$/)
+        await ctx.close()
+      })
+
       await t.step('keyboard: the first 15 Tab stops show a ring and are not hidden', async () => {
         // After each Tab, wait for the focused element's transitions (a link fades its ring in over 120 ms; a reading
         // taken mid-fade said 1.01:1), then a frame.
@@ -93,10 +122,23 @@ export default {
 
       await t.step('text spacing (WCAG 1.4.12) causes no sideways scroll', async () => {
         const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 390, height: 844 } })
-        for (const [page, path] of [['console-orders', '/console/orders'], ['console-settings', '/console/settings']]) {
+        for (const [page, path] of [['console-orders', '/console/orders'], ['console-settings', '/console/settings'], ['console-products', '/console/products']]) {
           const p = await ctx.newPage(); await p.goto(CONSOLE + path); await p.addStyleTag({ content: TEXT_SPACING })
           const wide = await p.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)
           if (wide) fail('text-spacing', page, '390', 'page scrolls sideways')
+          const overlaps = await p.evaluate(OVERLAP)
+          if (overlaps.length) fail('text-overlap', page, '390', overlaps.join('; '))
+          await p.close()
+        }
+        await ctx.close()
+      })
+
+      await t.step('reduced motion: nothing on a page moves longer than 0.01 ms (U·3)', async () => {
+        const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' })
+        for (const [page, path] of [['console-home', '/console'], ['console-orders', '/console/orders'], ['console-product', '/console/products/chanderi-kurta-set']]) {
+          const p = await ctx.newPage(); await p.goto(CONSOLE + path)
+          const ms = await p.evaluate(LONGEST_MOTION)
+          if (ms > 0.011) fail('reduced-motion', page, '390', `${ms} ms`)
           await p.close()
         }
         await ctx.close()

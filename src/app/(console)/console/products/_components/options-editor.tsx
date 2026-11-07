@@ -31,7 +31,7 @@ export function OptionsEditor({ options, onChange, error }: { options: Option[];
               <input id={`opt-${i}`} value={o.name} maxLength={30} placeholder="Size" onChange={(e) => set(i, { ...o, name: e.target.value })}
                 className="h-8 w-40 rounded-md border border-input bg-card px-2 text-sm font-medium" />
               <span className="flex-1" />
-              <button type="button" className="text-sm text-muted-foreground underline" onClick={() => { onChange(options.filter((_, j) => j !== i)); setDrafts((d) => d.filter((_, j) => j !== i)) }}>Remove {o.name || 'option'}</button>
+              <button type="button" className="inline-flex min-h-6 items-center text-sm text-muted-foreground underline" onClick={() => { onChange(options.filter((_, j) => j !== i)); setDrafts((d) => d.filter((_, j) => j !== i)) }}>Remove {o.name || 'option'}</button>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               {o.values.map((v, k) => (
@@ -47,8 +47,9 @@ export function OptionsEditor({ options, onChange, error }: { options: Option[];
                 className="h-7 w-36 rounded-full border border-dashed border-input bg-transparent px-2.5 text-sm" />
             </div>
             {suggest.length > 0 && (
-              <p className="text-xs text-muted-foreground">Add: {suggest.map((s, k) => (
-                <button key={s} type="button" className="underline" onClick={() => set(i, { ...o, values: [...o.values, s] })}>{s}{k < suggest.length - 1 ? ',' : ''} </button>
+              // Quick-add chips, 24 px each (rule 19): they were comma-separated words 16 px tall (stress test S4).
+              <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">Add: {suggest.map((s) => (
+                <button key={s} type="button" aria-label={`Add ${s}`} className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full border border-dashed border-input px-2 text-foreground hover:bg-accent" onClick={() => set(i, { ...o, values: [...o.values, s] })}>{s}</button>
               ))}</p>
             )}
           </div>
@@ -57,9 +58,9 @@ export function OptionsEditor({ options, onChange, error }: { options: Option[];
       {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
       {options.length < MAX_OPTIONS && (
         <div className="flex flex-wrap gap-2">
-          {!options.some((o) => /^sizes?$/i.test(o.name)) && <button type="button" className="text-sm underline" onClick={() => { onChange([...options, { name: 'Size', values: ['S', 'M', 'L'] }]); setDrafts((d) => [...d, '']) }}>Add sizes</button>}
-          {!options.some((o) => /^colou?rs?$/i.test(o.name)) && <button type="button" className="text-sm underline" onClick={() => { onChange([...options, { name: 'Colour', values: [] }]); setDrafts((d) => [...d, '']) }}>Add colours</button>}
-          <button type="button" className="text-sm underline" onClick={() => { onChange([...options, { name: '', values: [] }]); setDrafts((d) => [...d, '']) }}>Add another option</button>
+          {!options.some((o) => /^sizes?$/i.test(o.name)) && <button type="button" className="inline-flex min-h-6 items-center text-sm underline" onClick={() => { onChange([...options, { name: 'Size', values: ['S', 'M', 'L'] }]); setDrafts((d) => [...d, '']) }}>Add sizes</button>}
+          {!options.some((o) => /^colou?rs?$/i.test(o.name)) && <button type="button" className="inline-flex min-h-6 items-center text-sm underline" onClick={() => { onChange([...options, { name: 'Colour', values: [] }]); setDrafts((d) => [...d, '']) }}>Add colours</button>}
+          <button type="button" className="inline-flex min-h-6 items-center text-sm underline" onClick={() => { onChange([...options, { name: '', values: [] }]); setDrafts((d) => [...d, '']) }}>Add another option</button>
         </div>
       )}
     </div>
