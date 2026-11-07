@@ -2,8 +2,8 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 3.1.0
-  verified: 2026-11-06
+  version: 3.2.0
+  verified: 2026-11-07
   covers: ["src/app/globals.css", "src/components/**"]
 ---
 
@@ -29,8 +29,10 @@ fashion lives in the storefront.** Patterns below are taken from Ekatan's admin
 ## Type scale
 
 Page title `text-2xl font-bold tracking-tight` · section `text-xl font-semibold`
-· card `text-lg font-medium` · label `text-sm font-medium` · body `text-sm` ·
-micro `text-xs text-muted-foreground`.
+· card (every `Section` title, Console and Admin) `text-[15px]`→ the `text-card`
+token, 15 px semibold (owner, 2026-11-07; replaces 18 px medium) · label
+`text-sm font-medium` · body `text-sm` · micro `text-xs text-muted-foreground`.
+No other size: `check:scale` fails `text-[Npx]` in app code.
 
 ## Numbers, dates, people
 
@@ -222,6 +224,91 @@ triage, Gmail, Stripe, NN/g confirmation dialogs (2026-08-07). Spec:
 10. **Shoppers never see internal words:** a state shown to a shopper goes
     through its shopper mapping ("Confirming your order"), never the raw value.
 
+
+## UX foundation: one Frata (owner-approved 2026-11-07, calls 1–7 as recommended)
+
+Spec `docs/specs/2026-11-07-ux-foundation.md`, mockup
+https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
+`docs/research/2026-11-07-ux-foundation.md`. These rules apply to Console AND Admin.
+
+**Colour and contrast (WCAG 2.2 AA is the bar; WCAG 3/APCA is advisory only)**
+1. Text pairs ≥ 4.5:1. Field, checkbox and switch edges, focus, and the solid
+   status marks ≥ 3:1. Both themes. `check:contrast` holds it from the tokens.
+2. `--input` is the **field edge** (3:1). `--border` is for cards and table rules
+   only, and is never the only sign that something is a control.
+3. Status has a pale pair (`bg-ok text-ok-text`) and a solid **mark**
+   (`--ok-mark` …) for the dot or square beside a word, a progress fill, and
+   later a chart series. A mark is never text, and never the status on its own.
+4. **Dim with colour, never opacity.** A finished or cancelled row uses
+   `text-muted-foreground` (≥ 4.5:1). Opacity is only for "loading", which is
+   short and marked `aria-busy`.
+5. **Focus** is 2 px solid `--ring` with a 2 px offset, everywhere. On ink
+   surfaces it is paper-coloured.
+6. **Oxblood is the mark only.** On ink or dark surfaces the mark is
+   *reversed*: a paper tile with an oxblood letter. Never a button, link, focus
+   ring, status or chart colour.
+7. Dark tokens are written and gated but **not switched on**. They switch on
+   when merchants ask, at no rework.
+
+**One shell (`AppShell`, both surfaces)**
+8. Console and Admin share one shell and every page primitive. **Admin differs
+   only in chrome**: the ink frame, the reversed mark, STAFF, and a yellow
+   active bar. Status and semantic colours never change between surfaces.
+9. Nav: groups by job. The current item gets a 3 px bar, semibold, and
+   `aria-current="page"`, never colour alone. Counts are a warn pill. An account
+   block (email, sign out, own store / Admin) shows at every width.
+10. **Phone (< 768 px): a bottom bar.** Console has Home, Orders (count),
+    Products and More; Admin has Merchants, Plans, Staff and More. Labels always
+    show under 22 px icons. Items are 56 px tall. More opens a sheet with
+    everything else. Never a sideways-scrolling strip, never a hamburger alone.
+11. Every page gets "Skip to content" as its first Tab stop, the top progress
+    bar (2 px ink, shown only after 150 ms), one polite live region, and a tab
+    title "Orders · Kesar Studio" / "Merchants · Frata Admin".
+12. Support mode: the banner sits outside the scroll area. On phones it is one
+    line ("Support · <shop> · 22 min · End"); it is still not dismissable.
+
+**Pages and tables**
+13. Pages open with `PageHeader` (or `RecordHeader` on a detail page):
+    breadcrumb, title + badges, one meta line, one primary action + More. A
+    long title wraps to two lines, never cut mid-word. A title that is an
+    input still shows the record's name as the h1's text.
+14. Below the header come `Section`s (title, optional action, `p-4 md:p-5`).
+    No hand-written card frames and no cards inside cards (`check:scale`).
+15. **Tables on phones become rows**, never a table that scrolls sideways.
+    Line 1 holds the link (number or name) and the figure, right-aligned.
+    Line 2 holds who, where and the badges. The whole row is one target.
+16. Every number column is right-aligned in mono, in both surfaces. Lists
+    sort naturally ("Brand 2" before "Brand 12").
+17. A list's count comes from its own query over every row, never from a page
+    or a capped list. A list longer than a page says "Showing 1–100 of 300".
+18. An empty search state says the search found nothing ("No merchant matches
+    that search · Clear search"). It never offers "Add the first …".
+
+**Targets and type**
+19. Every target is at least 24 × 24 px (WCAG 2.5.8), padded rather than a
+    bigger icon. Controls are `h-10` under 768 px and `h-9` above. Rows and the
+    bottom bar are 44–56 px on phones.
+20. Icons: lucide, monochrome, 16 px in nav (22 px in the bottom bar), `--sub`
+    until active. No coloured icon backgrounds, no illustrations in empty
+    states.
+21. Indian names: Noto Sans (Devanagari, Tamil, …) is a fallback face behind
+    Inter, downloaded only when a glyph needs it, with line height 1.8 on those
+    runs. Mono has `font-variant-ligatures: none`.
+
+**Motion (adds to § Phase 1 Motion)**
+22. CSS only: transitions with `@starting-style` and
+    `transition-behavior: allow-discrete`. No animation library. Animate only
+    `opacity` and `transform`.
+23. Enter and exit are a pair. Nothing leaves slower than it came. Tips take
+    120 ms; dialogs, menus and toasts 200 ms; phone sheets 320 ms.
+24. **No page transitions** until Next and React are upgraded to React 19.3's
+    `<ViewTransition>`. Then it is used only for a content-reveal crossfade,
+    with the header held still, `::view-transition { pointer-events: none }`,
+    0 s under reduced motion, and never a sliding list.
+25. Reduced motion: every change is instant, and a countdown (the 8 s Undo)
+    becomes words ("Undo for 8 seconds").
+26. The one brand moment: "Your shop is open", a check drawn once (320 ms
+    circle, 200 ms tick). No confetti, no sound.
 
 
 Their words, not ours: order, delivery, return (not RTO in headings — "Returned

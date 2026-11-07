@@ -1,5 +1,5 @@
 # UX foundation (U): one shell, brand, colour and motion for Console and Admin
-Status: draft (awaiting owner sign-off) · Date: 2026-11-07 · Mockup: https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC · Approved: pending
+Status: active (approved 2026-11-07, owner calls 1–7 as recommended) · Date: 2026-11-07 · Mockup: https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC · Approved: owner, 2026-11-07 ("go with your recommendations")
 
 Research: `docs/research/2026-11-07-ux-foundation.md` (current sources only,
 each dated). The phases are U0–U4. Each is usable on its own and gets its own
@@ -260,7 +260,7 @@ Screenshots are in the mockup.
 
 | # | Severity | Screen · width | What | Measured | Goes to |
 |---|---|---|---|---|---|
-| S1 | **High (a bug)** | Orders · all | `listOrders(tenantId, limit = 100)` caps the list, and "to confirm" is counted from the capped list; no pager, no "of N" | **14 shown, 43 real**; 200 orders unreachable | Fix now (call 7); 1D·4b replaces |
+| S1 | **High (a bug)** | Orders · all | `listOrders(tenantId, limit = 100)` caps the list, and "to confirm" is counted from the capped list; no pager, no "of N" | **14 shown, 43 real**; 200 orders unreachable | **Fixed 2026-11-07**: `queueCounts` + `listOrders` by tab and page (e2e `20-orders-count`, red without the fix); 1D·4b extends both |
 | S2 | High | Orders · all | Rows are not links; the keyboard reaches nothing in `<main>` | 0 focusable, 100 rows | 1D·4b |
 | S3 | High | Orders · 320–768 | Table scrolls sideways inside itself; Status and Total off-screen first | 286 of 797 px visible at 320 | U2 phone rows |
 | S4 | High | Product editor · 390 | Chip ×, quick-add, photo arrows far under 24 px; arrows 1.94:1 when disabled | 8×20, 10×16, 20×16 px | U1 (24 px hit area) |
@@ -309,7 +309,7 @@ HTML.
 - rows as links;
 - the phone row layout.
 
-## Owner calls (recommendation first)
+## Owner calls (all approved as recommended, 2026-11-07)
 
 1. Phone navigation: **bottom bar, Home · Orders · Products · More**, or keep
    the strip, or a menu button.
