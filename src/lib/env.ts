@@ -26,3 +26,6 @@ export const isAdminDatabaseConfigured = () => ADMIN_DATABASE_URL !== ''
 export const BLOB_STORE_ID = process.env.BLOB_STORE_ID ?? ''
 export const isBlobConfigured = () => BLOB_READ_WRITE_TOKEN !== '' && BLOB_STORE_ID !== ''
 export const isPaymentsConfigured = () => PAYMENT_KEYS_SECRET !== ''
+
+/** Test only: the e2e stack (e2e/stack.mjs) sets 1 so /console/fixtures/ui answers. Never set in Vercel. */
+export const E2E_FIXTURES = process.env.E2E_FIXTURES === '1'
