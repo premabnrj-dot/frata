@@ -281,8 +281,17 @@ triage, Gmail, Stripe, NN/g confirmation dialogs (2026-08-07). Spec:
    2.1.4), kept on the device (`localStorage`; per person when profiles exist).
    `?` always opens the sheet, so the switch can be found.
 7. **Bulk actions skip what needs a person** and say so: "Confirmed 12.
-   Skipped 2 high-risk orders — open them to decide." No bulk for destructive
-   actions that need a reason.
+   Skipped 2 high-risk orders — open them to decide." The skip is decided on
+   the server (risk is never sent by the page); each failure keeps its own
+   words ("KS-1012: Already confirmed by riya@…"), never a generic one. No bulk
+   for destructive actions that need a reason. Bulk is a desktop tool: on a
+   phone a row is one target, so selection hides.
+   - **A queue row with three or more badges** puts them on a full line of
+     their own on a phone (DataTable cell `e`), so number and name never squeeze.
+   - **Row links never prefetch** (`prefetch={false}`): a page of rows would be
+     a page of server renders on every visit.
+   - **Risk that cannot be read fails closed:** "Risk unavailable", and the
+     confirm key opens the order instead of confirming it.
 8. **Views as tabs with counts**, derived from the record's state, one search
    box; every tab has its own empty state that says what lands there.
 9. **Documents are print pages** (A4, browser print), not PDFs; the number on

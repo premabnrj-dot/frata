@@ -1,0 +1,48 @@
+import 'server-only'
+import { and, asc, desc, eq } from 'drizzle-orm'
+import { momentColumns } from '@/lib/db/order-predicates'
+import { orderEvents, orderLines, orderNotes, orders } from '@/lib/db/schema-orders'
+import { withTenant } from '@/lib/db/tenant'
+import { riskFactsFor } from './order-risk'
+
+// =============================================================================
+// FILE: src/lib/queries/order-detail.ts
+//
+// ONE ORDER FOR THE CONSOLE'S ORDER PAGE (1D·4c): the order, its lines as
+// sold, what people did (order_events — field names, never values), the
+// team's notes, and its risk facts. Found by NUMBER within the member's own
+// shop: the tenant comes from requireMember, so another shop's KS-1001 is the
+// same "not found" as a number that does not exist (tenancy audit 2026-11-07).
+// =============================================================================
+
+export async function orderDetail(tenantId: string, number: number, now = new Date()) {
+  if (!Number.isSafeInteger(number) || number < 1) return null
+  const data = await withTenant(tenantId, async (tx) => {
+    const [o] = await tx.select({
+      ...momentColumns, id: orders.id, number: orders.number,
+      subtotal: orders.subtotal, shipping: orders.shipping, codCharge: orders.codCharge, gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst,
+      customerName: orders.customerName, phone: orders.phone, addressLine: orders.addressLine, area: orders.area, landmark: orders.landmark,
+      pincode: orders.pincode, city: orders.city, state: orders.state, supplyState: orders.supplyState,
+      arrivesFrom: orders.arrivesFrom, arrivesTo: orders.arrivesTo, invoiceNumber: orders.invoiceNumber, cancelReason: orders.cancelReason, cancelNote: orders.cancelNote,
+      sellerGstin: orders.sellerGstin, erasedAt: orders.erasedAt,
+    }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.number, number))).limit(1)
+    if (!o) return null
+    const lines = await tx.select({
+      id: orderLines.id, title: orderLines.title, optionValues: orderLines.optionValues, sku: orderLines.sku, qty: orderLines.qty, unitPrice: orderLines.unitPrice,
+      imageBase: orderLines.imageBase, imageWidths: orderLines.imageWidths, kind: orderLines.kind, shipsBy: orderLines.shipsBy,
+      leadMinDays: orderLines.leadMinDays, leadMaxDays: orderLines.leadMaxDays, stockTakenAt: orderLines.stockTakenAt,
+    }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id))).orderBy(asc(orderLines.position))
+    const events = await tx.select({ id: orderEvents.id, kind: orderEvents.kind, actorKind: orderEvents.actorKind, actorEmail: orderEvents.actorEmail, fields: orderEvents.fields,
+      reason: orderEvents.reason, undoes: orderEvents.undoes, at: orderEvents.at })
+      .from(orderEvents).where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.orderId, o.id))).orderBy(desc(orderEvents.at)).limit(100)
+    const notes = await tx.select({ id: orderNotes.id, body: orderNotes.body, authorEmail: orderNotes.authorEmail, at: orderNotes.at })
+      .from(orderNotes).where(and(eq(orderNotes.tenantId, tenantId), eq(orderNotes.orderId, o.id))).orderBy(desc(orderNotes.at)).limit(100)
+    return { o, lines, events, notes }
+  })
+  if (!data) return null
+  // Risk: null when its facts cannot be read (the page then says "Risk unavailable" and fails closed).
+  const facts = await riskFactsFor(tenantId, [data.o.id], now).then((m) => m.get(data.o.id) ?? null).catch(() => null)
+  return { ...data, facts }
+}
+
+export type OrderDetail = NonNullable<Awaited<ReturnType<typeof orderDetail>>>
