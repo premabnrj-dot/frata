@@ -77,11 +77,27 @@ export const MAX_INVOICE = 16
  * `series` is the shop's prefix as set (≤ 5 characters, e.g. "KS/"); empty → the order prefix and a slash.
  * Throws past 16 characters rather than issue a number GST would refuse (the CHECK on orders refuses it too).
  */
-export function invoiceNumber(o: { series: string; orderPrefix: string; fiscalYear: string; n: number; kind: 'invoice' | 'bill' }): string {
+function compose(o: { series: string; orderPrefix: string; fiscalYear: string; n: number; kind: 'invoice' | 'bill' }): string {
   const series = o.series || `${o.orderPrefix}/`
   const sep = /[/-]$/.test(series) ? '' : '/'
   const tail = o.kind === 'bill' ? `B${String(o.n).padStart(4, '0')}` : String(o.n).padStart(5, '0')
-  const out = `${series}${sep}${o.fiscalYear}/${tail}`
-  if (out.length > MAX_INVOICE) throw new Error(`invoice number ${out} is longer than ${MAX_INVOICE} characters`)
+  return `${series}${sep}${o.fiscalYear}/${tail}`
+}
+
+/** The most a year can number, per kind, inside 16 characters: 99,999 tax invoices, 9,999 bills of supply. */
+export const MAX_IN_YEAR = { invoice: 99_999, bill: 9_999 } as const
+
+export class InvoiceNumberTooLong extends Error {}
+
+export function invoiceNumber(o: { series: string; orderPrefix: string; fiscalYear: string; n: number; kind: 'invoice' | 'bill' }): string {
+  const out = compose(o)
+  if (out.length > MAX_INVOICE) throw new InvoiceNumberTooLong(`invoice number ${out} is longer than ${MAX_INVOICE} characters`)
   return out
 }
+
+/**
+ * Whether a series leaves room for the whole year's numbers (architecture review 2026-11-07: "KESRI" made
+ * "KESRI/26-27/00001", 17 characters, and every Mark packed failed). Settings refuses a series that does not fit.
+ */
+export const seriesFits = (series: string) =>
+  (['invoice', 'bill'] as const).every((kind) => compose({ series, orderPrefix: 'XXXX', fiscalYear: '26-27', n: MAX_IN_YEAR[kind], kind }).length <= MAX_INVOICE)

@@ -22,6 +22,8 @@ import { collect, sharesOf, type StoredLine, type StoredOrder } from './amounts'
 export type DocLine = StoredLine & { title: string; optionValues: string[]; qty: number; sku: string | null; hsn: string | null; imageBase: string | null; imageWidths: number[] | null }
 export type DocOrder = StoredOrder & {
   number: string; placedAt: Date; packedAt: Date | null; invoiceNumber: string | null; sellerGstin: string | null
+  /** The seller as it was at packing; null before packing (the invoice then is not issued). */
+  sellerName: string | null; sellerAddress: string | null
   customerName: string; phone: string; addressLine: string; area: string; landmark: string; city: string; pincode: string; state: string; supplyState: string | null
 }
 export type DocShop = { name: string; legalName: string; address: string; returnAddress: string }
@@ -35,8 +37,6 @@ export type PackingSlip = {
   to: { name: string; lines: string[]; phone: string }; returnTo: string
   /** Paise to collect at the door; 0 = "Prepaid — collect nothing". No prices on a slip. */
   collect: number
-  /** Cancelled: the slip says do not ship, never "collect nothing" (impact review 1D·5). */
-  cancelled: boolean
 }
 
 /** The most a print page prints at once (a bulk print of a queue page). */
@@ -47,7 +47,7 @@ export function packingSlip(o: DocOrder, lines: DocLine[], shop: DocShop): Packi
     shop: shop.name, number: o.number,
     lines: lines.map((l) => ({ title: l.title, options: l.optionValues.join(' · '), qty: l.qty, sku: l.sku, imageBase: l.imageBase, imageWidths: l.imageWidths })),
     to: { name: o.customerName, lines: addressLines(o), phone: o.phone }, returnTo: shop.returnAddress || shop.address,
-    collect: collect(o), cancelled: !!o.cancelledAt,
+    collect: collect(o),
   }
 }
 
@@ -82,7 +82,7 @@ export function invoice(o: DocOrder, lines: DocLine[], shop: DocShop): Invoice |
   const sum = (k: keyof Pick<InvoiceLine, 'taxable' | 'cgst' | 'sgst' | 'igst' | 'total'>) => out.reduce((a, l) => a + l[k], 0)
   return {
     kind, number: o.invoiceNumber, date: o.packedAt, cancelled: !!o.cancelledAt,
-    seller: { name: shop.legalName || shop.name, address: shop.address, gstin: o.sellerGstin },
+    seller: { name: o.sellerName ?? (shop.legalName || shop.name), address: o.sellerAddress ?? shop.address, gstin: o.sellerGstin },
     buyer: { name: o.customerName, lines: addressLines(o) },
     placeOfSupply: { state: o.supplyState ?? o.state, code }, supply,
     lines: out, totals: { taxable: sum('taxable'), cgst: sum('cgst'), sgst: sum('sgst'), igst: sum('igst'), total: sum('total') },

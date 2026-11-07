@@ -13,6 +13,7 @@
 // says so on the line.
 // =============================================================================
 
+import { istDayKey } from '../time/day'
 import { availability, visibility, type Status, type WhenOut } from '@/domains/catalogue/availability'
 import { taxOrder, type ChargeShare } from '@/domains/tax/gst'
 import { codFor, shippingFor, type Cod, type DeliveryRules } from './delivery'
@@ -69,8 +70,7 @@ export type Quote = {
 }
 
 const DAY = 86_400_000
-const istDate = (t: number) => new Date(t + 330 * 60_000).toISOString().slice(0, 10)
-const addDays = (iso: string, n: number) => istDate(new Date(`${iso}T00:00:00+05:30`).getTime() + n * DAY)
+const addDays = (iso: string, n: number) => istDayKey(new Date(new Date(`${iso}T00:00:00+05:30`).getTime() + n * DAY))
 
 /** How many of `want` can be sold of this variant now, and as what. */
 export function sellable(v: VariantRow, want: number, now: Date): { qty: number; kind: LineKind; problem: LineProblem | null } {
@@ -90,7 +90,7 @@ export function sellable(v: VariantRow, want: number, now: Date): { qty: number;
 /** The arrival range for a set of lines: the latest line decides (dispatch + metro…rest days; pre-orders from their date). */
 export function arrivalRange(lines: Pick<QuoteLine, 'kind' | 'shipsBy' | 'leadMinDays' | 'leadMaxDays'>[], r: Pick<ShopRules, 'dispatchDays' | 'metroDays' | 'restDays'>, now: Date): { from: string; to: string } | null {
   if (!lines.length) return null
-  const today = istDate(now.getTime())
+  const today = istDayKey(now)
   let from = today, to = today
   for (const l of lines) {
     const start = l.kind === 'preorder' && l.shipsBy ? l.shipsBy : today

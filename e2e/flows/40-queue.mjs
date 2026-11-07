@@ -74,6 +74,14 @@ export default {
         await p.getByRole('region', { name: 'Selected orders' }).getByRole('button', { name: 'Confirm' }).click()
         await p.locator('[data-toast]', { hasText: 'Confirmed 2. Skipped 1 high-risk order — open it to decide.' }).waitFor()
         assert.deepEqual([(await state(A)).confirmed, (await state(B)).confirmed, (await state(C)).confirmed], [true, true, false])
+        // Undo the bulk confirm: one request (undoMany), both back in To confirm (impact review 2026-11-07).
+        await p.locator('[data-toast]', { hasText: 'Confirmed 2.' }).getByRole('button', { name: 'Undo' }).click()
+        await until(async () => !(await state(A)).confirmed && !(await state(B)).confirmed)
+        // Confirm them again: the next steps start from here.
+        await p.goto(CONSOLE + '/console/orders')
+        for (const n of [A, B]) await row(n).getByRole('checkbox').check()
+        await p.getByRole('region', { name: 'Selected orders' }).getByRole('button', { name: 'Confirm' }).click()
+        await until(async () => (await state(A)).confirmed && (await state(B)).confirmed)
       })
 
       await t.step('c on a high-risk order opens it instead of confirming', async () => {

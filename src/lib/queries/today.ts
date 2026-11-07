@@ -4,7 +4,7 @@ import { currentMethod, orderState, type OrderState, type QueueTab } from '@/dom
 import { risk, type Risk } from '@/domains/orders/risk'
 import { orderPrefix } from '@/domains/signup/slug'
 import { istDayStart } from '@/domains/time/day'
-import { enteredAtSql, inTabSql, momentColumns, standingSql } from '@/lib/db/order-predicates'
+import { enteredAtSql, inTabSql, momentColumns, standingSql, openSql } from '@/lib/db/order-predicates'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
@@ -50,7 +50,7 @@ export async function todaySummary(tenantId: string, now: Date): Promise<TodaySu
     const [w] = await tx.select({
       to_pack: sql<string | null>`min(${enteredAtSql(now)}) filter (where ${inTabSql('to_pack', now)})`,
       on_hold: sql<string | null>`min(${enteredAtSql(now)}) filter (where ${inTabSql('on_hold', now)})`,
-    }).from(orders).where(eq(orders.tenantId, tenantId))
+    }).from(orders).where(and(eq(orders.tenantId, tenantId), openSql())) // open orders only: the partial index (1D·7)
 
     const [n] = await tx.select({ id: orders.id, number: orders.number, customerName: orders.customerName, total: orders.total, ...momentColumns, entered: sql<string | null>`${enteredAtSql(now)}` })
       .from(orders).where(and(eq(orders.tenantId, tenantId), inTabSql('to_confirm', now)))

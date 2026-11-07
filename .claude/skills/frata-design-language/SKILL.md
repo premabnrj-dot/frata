@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 3.6.0
+  version: 3.6.1
   verified: 2026-11-07
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -116,8 +116,8 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
   QUEUE (to confirm, delivery failed), not history. Filters live in the URL,
   the server filters; 50 rows a page, numbered, never infinite scroll.
 - **Order row**: number (mono link) · placed · payment badge · status badge ·
-  value · expected profit if delivered · COD risk badge (Low/Medium/High in
-  words, never a bare score).
+  value · COD risk badge (Medium/High in words, never a bare score; Low shows
+  nothing). Profit per order waits for Phase 3, and staff never see cost.
 - **Detail**: breadcrumb, record header with number and badges, main column +
   side column of facts; cards read first, edited in place.
 - **Status** is always a `Badge` with words, never a dot alone.
@@ -160,8 +160,8 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
   link to the page that fixes it.
 - **Legal words**: a shop without a GSTIN prints "Bill of supply", never "Tax
   invoice". The grievance officer is shown wherever contacts are.
-- **One primary action per record state** (order: Confirm → Print packing
-  slip → none); everything else under "More". Destructive items in red, at
+- **One primary action per record state** (order: Confirm → Mark packed →
+  Print packing slip → none; refund due: Cancel and refund); everything else under "More". Destructive items in red, at
   the bottom of the menu.
 - **Risk is a level with reasons and a next step** ("High risk · address is a
   landmark only · Call before confirming"), never a bare score.

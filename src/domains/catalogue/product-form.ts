@@ -6,6 +6,7 @@
 // Also: whether a product is ready to show, in the merchant's words.
 // =============================================================================
 
+import { istDayKey } from '../time/day'
 import { cleanOptions, combinations, handleFor, keyOf, type Option } from './variants'
 
 /** "2,490" or "2490.50" → 249050 paise; null when it is not a price. */
@@ -46,7 +47,6 @@ export type CleanProduct = Omit<ProductInput, 'options' | 'variants' | 'handle' 
 
 export const HANDLE_SHAPE = /^[a-z0-9]([a-z0-9-]{0,98}[a-z0-9])?$/
 const DATE = /^\d{4}-\d{2}-\d{2}$/
-const isoDay = (d: Date) => new Date(d.getTime() + 330 * 60000).toISOString().slice(0, 10)
 
 /** Errors keyed "title", "options", or "v:<values>:<field>" for one grid cell. */
 export function cleanProduct(p: ProductInput, now: Date): { ok: true; product: CleanProduct } | { ok: false; errors: Record<string, string> } {
@@ -81,7 +81,7 @@ export function cleanProduct(p: ProductInput, now: Date): { ok: true; product: C
       const whenOut: WhenOutInput = v?.whenOut === 'preorder' || v?.whenOut === 'made_to_order' ? v.whenOut : 'stop'
       let shipsBy: string | null = null, leadMinDays: number | null = null, leadMaxDays: number | null = null, preorderCap: number | null = null
       if (whenOut === 'preorder') {
-        const d = (v?.shipsBy ?? '').trim(), today = isoDay(now), max = isoDay(new Date(now.getTime() + 365 * 86400000))
+        const d = (v?.shipsBy ?? '').trim(), today = istDayKey(now), max = istDayKey(new Date(now.getTime() + 365 * 86400000))
         if (!DATE.test(d) || d <= today || d > max) errors[cell('shipsBy')] = 'A ship-by date after today, within a year.'
         else shipsBy = d
         const cap = (v?.cap ?? '').trim()

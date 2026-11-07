@@ -9,6 +9,7 @@
 // =============================================================================
 
 import { EMAIL_SHAPE, PINCODE_SHAPE } from '../signup/slug'
+import { seriesFits } from '../orders/work'
 import { CAN_BUILD, type MemberRole } from '../tenancy/roles'
 
 export type FieldKind = 'text' | 'textarea' | 'email' | 'phone' | 'rupees' | 'days' | 'select' | 'switch' | 'gstin' | 'hsn' | 'pincodes'
@@ -137,7 +138,7 @@ export const SECTIONS: readonly Section[] = [
         { key: 'defaultHsn', label: 'Default HSN code', kind: 'hsn', tip: 'Each product can have its own.' },
       ] },
       { title: 'Invoice numbers', hint: 'One series a financial year, never reused. A new series starts on 1 April.', fields: [
-        { key: 'invoiceSeries', label: 'Series prefix', kind: 'text', max: 5, tip: 'Like KS/. The year and the number follow it: KS/26-27/00001.' },
+        { key: 'invoiceSeries', label: 'Series prefix', kind: 'text', max: 5, hint: 'Up to 4 characters, or 5 ending in / or -.', tip: 'Like KS/. The year and the number follow it: KS/26-27/00001.' },
       ] },
     ],
   },
@@ -213,6 +214,8 @@ function check(section: Section, values: Values): { patch: Patch; errors: Record
     }
     const s = String(raw ?? '').trim()
     if (f.required && !s) { errors[f.key] = 'Needed.'; continue }
+    // The invoice series must leave room for a whole year of numbers inside GST's 16 characters (work.ts).
+    if (f.key === 'invoiceSeries' && s && !seriesFits(s)) { errors[f.key] = 'Too long: up to 4 characters, or 5 ending in / or -.'; continue }
     if (f.max && s.length > f.max) { errors[f.key] = `Up to ${f.max} characters.`; continue }
     switch (f.kind) {
       case 'email':
@@ -277,11 +280,19 @@ export function formValues(section: Section, stored: Record<string, unknown>): V
 }
 
 /** What a merchant still has to fill before live payments — derived, never stored. Each item names its section. */
+/**
+ * THE ONE ANSWER to "does this shop have its grievance officer": a name, an email and a phone (Consumer
+ * Protection (E-Commerce) Rules; owner 2026-11-07). Read by the setup checklist and opening the shop, by live
+ * payments, and by the settings page's summary, so the three can never disagree again.
+ */
+export const grievanceComplete = (s: { grievanceName: string; grievanceEmail: string; grievancePhone: string }) =>
+  !!s.grievanceName.trim() && !!s.grievanceEmail.trim() && !!s.grievancePhone.trim()
+
 export function missingForLivePayments(s: { legalName: string; address: string; supportEmail: string; supportPhone: string; grievanceName: string; grievanceEmail: string; grievancePhone: string }): { label: string; section: SectionKey }[] {
   const out: { label: string; section: SectionKey }[] = []
   if (!s.legalName.trim()) out.push({ label: 'Legal business name', section: 'store' })
   if (!s.address.trim()) out.push({ label: 'Registered address', section: 'store' })
   if (!s.supportEmail.trim() || !s.supportPhone.trim()) out.push({ label: 'Customer care email and phone', section: 'contact' })
-  if (!s.grievanceName.trim() || !s.grievanceEmail.trim() || !s.grievancePhone.trim()) out.push({ label: 'Grievance officer', section: 'contact' })
+  if (!grievanceComplete(s)) out.push({ label: 'Grievance officer', section: 'contact' })
   return out
 }

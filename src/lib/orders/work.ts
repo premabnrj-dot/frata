@@ -1,9 +1,9 @@
 import 'server-only'
-import { and, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
+import { and, desc, eq, gt, inArray, isNotNull, isNull, notInArray, sql } from 'drizzle-orm'
 import { fiscalYear } from '@/domains/counters/fiscal-year'
 import { refundDue, type StoredOrder } from '@/domains/orders/amounts'
 import { orderState, type OrderState } from '@/domains/orders/order-state'
-import { applies, invoiceNumber, type CancelReason, type OrderAction } from '@/domains/orders/work'
+import { applies, invoiceNumber, seriesFits, type CancelReason, type OrderAction } from '@/domains/orders/work'
 import { orderPrefix } from '@/domains/signup/slug'
 import type { Tx } from '@/lib/db'
 import { momentColumns } from '@/lib/db/order-predicates'
@@ -108,6 +108,18 @@ export async function undo(tx: Tx, tenantId: string, actor: Actor, eventId: stri
   if (!e || (e.kind !== 'confirmed' && e.kind !== 'held' && e.kind !== 'unheld')) return { ok: false, error: 'There is nothing to undo.' }
   const [already] = await tx.select({ id: orderEvents.id }).from(orderEvents).where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.undoes, e.id)))
   if (already) return { ok: false, error: 'Already undone.' }
+  // Only the order's latest action is undone: after "taken off hold" someone confirmed it, and putting the hold
+  // back then left it confirmed AND held, with Confirm refused (architecture review 2026-11-07). The row is locked
+  // FIRST (current: for update), so an action committing meanwhile is seen here (impact review). A note or an
+  // address edit moves nothing an undo restores, so neither counts.
+  await current(tx, tenantId, e.orderId, now)
+  const [later] = await tx.select({ id: orderEvents.id }).from(orderEvents)
+    .where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.orderId, e.orderId), gt(orderEvents.at, e.at), notInArray(orderEvents.kind, ['note_added', 'edited']))).limit(1)
+  const changed = async (): Promise<Done> => {
+    const c = await current(tx, tenantId, e.orderId, now)
+    return { ok: false, error: c?.state === 'packed' ? 'Already packed — cancel it instead.' : 'This order changed since: open it to see what happened.' }
+  }
+  if (later) return changed()
   const at = moment(now)
   const base = and(eq(orders.tenantId, tenantId), eq(orders.id, e.orderId), isNull(orders.packedAt), isNull(orders.cancelledAt))
   const r = e.kind === 'confirmed'
@@ -115,10 +127,7 @@ export async function undo(tx: Tx, tenantId: string, actor: Actor, eventId: stri
     : e.kind === 'unheld'
       ? await tx.update(orders).set({ heldAt: at }).where(and(base, isNull(orders.heldAt))).returning({ id: orders.id })
       : await tx.update(orders).set({ heldAt: null, ...(e.reason === 'from_confirmed' ? { confirmedAt: at } : {}) }).where(and(base, eq(orders.heldAt, e.at))).returning({ id: orders.id })
-  if (!r.length) {
-    const c = await current(tx, tenantId, e.orderId, now)
-    return { ok: false, error: c?.state === 'packed' ? 'Already packed — cancel it instead.' : 'This order changed since: open it to see what happened.' }
-  }
+  if (!r.length) return changed()
   return { ok: true, eventId: await record(tx, tenantId, e.orderId, actor, 'undone', at, { undoes: e.id, reason: e.kind }) }
 }
 
@@ -145,14 +154,18 @@ export async function pack(tx: Tx, tenantId: string, actor: Actor, orderId: stri
   if (pre.short) return { ok: false, error: 'The pre-ordered pieces are not in stock yet. Add the stock when they arrive, then pack.' }
   const kind = c.o.sellerGstin ? 'invoice' : 'bill'
   const fy = fiscalYear(now)
+  const [s] = await tx.select({ series: shopSettings.invoiceSeries, prefix: shopSettings.orderPrefix, name: tenants.name, legalName: shopSettings.legalName, address: shopSettings.address }).from(tenants)
+    .innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
+  // Before the counter moves (a refusal after it would leave a gap in the numbers): a series saved before
+  // settings checked it may not leave room for the year's numbers inside GST's 16 characters.
+  if (s?.series && !seriesFits(s.series)) return { ok: false, error: 'The invoice number would be longer than GST allows (16 characters). Shorten the invoice series in Settings › Taxes and invoices, then pack.' }
   const [n] = await tx.insert(tenantCounters).values({ tenantId, kind, period: fy, next: 2 })
     .onConflictDoUpdate({ target: [tenantCounters.tenantId, tenantCounters.kind, tenantCounters.period], set: { next: sql`${tenantCounters.next} + 1` } })
     .returning({ next: tenantCounters.next })
-  const [s] = await tx.select({ series: shopSettings.invoiceSeries, prefix: shopSettings.orderPrefix, name: tenants.name }).from(tenants)
-    .innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
   const number = invoiceNumber({ series: s?.series ?? '', orderPrefix: orderPrefix(s?.prefix ?? '', s?.name ?? ''), fiscalYear: fy, n: n!.next - 1, kind })
   const at = moment(now)
-  const r = await tx.update(orders).set({ packedAt: at, invoiceNumber: number })
+  // The seller as the invoice is issued: a later change to Settings never rewrites it (architecture review 2026-11-07).
+  const r = await tx.update(orders).set({ packedAt: at, invoiceNumber: number, sellerName: s?.legalName || s?.name || '', sellerAddress: s?.address ?? '' })
     .where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId), isNull(orders.packedAt), isNull(orders.cancelledAt), isNull(orders.heldAt))).returning({ id: orders.id })
   // The row is locked (current: for update), so this cannot miss; if it ever does, the counter rolls back with it.
   if (!r.length) throw new Error('pack: order changed under its lock')

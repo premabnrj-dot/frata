@@ -8,5 +8,5 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 UNTIL=0018 bash scripts/verify/apply-migrations.sh
 psql "$ADMIN_URL" -q -v ON_ERROR_STOP=1 -v phase=before -f scripts/verify/backfill-0019.sql
-FROM=0019 bash scripts/verify/apply-migrations.sh
+FROM=0019 UNTIL=0020 bash scripts/verify/apply-migrations.sh
 psql "$ADMIN_URL" -q -v ON_ERROR_STOP=1 -v phase=after -f scripts/verify/backfill-0019.sql

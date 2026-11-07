@@ -75,6 +75,14 @@ export function currentMethod(o: Pick<OrderMoments, 'paymentMethod' | 'paidAt' |
 export const paidAfterSwitch = (o: Pick<OrderMoments, 'paidAt' | 'switchedToCodAt'>) => !!(o.paidAt && o.switchedToCodAt)
 
 /**
+ * Paid online AFTER it was packed as Pay on delivery: the slip may already be with the courier asking for cash, so
+ * the shopper can pay twice, and the issued invoice keeps its COD figures (markPaid never rewrites it). A person
+ * settles it: tell the courier, or refund the online payment (unit-economics review 2026-11-07).
+ */
+export const paidAfterPacking = (o: Pick<OrderMoments, 'paidAt' | 'switchedToCodAt' | 'packedAt'>) =>
+  !!(o.paidAt && o.switchedToCodAt && o.packedAt && o.paidAt.getTime() > o.packedAt.getTime())
+
+/**
  * A placed order: anything but an online order never paid and never switched to COD — even once cancelled
  * (the state alone cannot tell: found by the parity test, 2026-11-07). What a merchant counts and what plan
  * usage bills (`app_admin_order_counts`, drizzle/0017 — a cancelled order counts).

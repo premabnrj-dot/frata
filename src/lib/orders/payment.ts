@@ -28,19 +28,21 @@ type OrderKey = { id: string; tenantId: string }
 /**
  * Record the payment once and take the stock of any line not taken yet (none, after a switch to COD: takeStock
  * stamps per line). A capture after a switch: the shopper paid the online total, so the COD fee and its GST come
- * off the stored order and its lines' shares (amounts.charged, from the stored rates).
+ * off the stored order and its lines' shares (amounts.charged, from the stored rates) — but ONLY before packing.
+ * Once packed, its invoice is issued under its number and is never rewritten (GST Rule 46; unit-economics review
+ * 2026-11-07): the order keeps its figures and says "paid after packing" (paidAfterPacking) for a person to settle.
  */
 export async function markPaid(tx: Tx, o: OrderKey, p: { paymentId: string; fee?: number | null; tax?: number | null }, soldOut: string[] = []): Promise<'paid' | 'already'> {
   const r = await tx.update(orders).set({ paidAt: sql`now()`, razorpayPaymentId: p.paymentId, ...(p.fee != null ? { gatewayFee: p.fee, gatewayTax: p.tax ?? null } : {}) })
     .where(and(eq(orders.tenantId, o.tenantId), eq(orders.id, o.id), isNull(orders.paidAt)))
-    .returning({ switchedAt: orders.switchedToCodAt, codCharge: orders.codCharge, subtotal: orders.subtotal, shipping: orders.shipping, pricesIncludeGst: orders.pricesIncludeGst, checkout: orders.checkout })
+    .returning({ switchedAt: orders.switchedToCodAt, packedAt: orders.packedAt, codCharge: orders.codCharge, subtotal: orders.subtotal, shipping: orders.shipping, pricesIncludeGst: orders.pricesIncludeGst, checkout: orders.checkout })
   if (!r.length) {
     // Already paid (the other path won): the fee may still be news.
     if (p.fee != null) await tx.update(orders).set({ gatewayFee: p.fee, gatewayTax: p.tax ?? null }).where(and(eq(orders.tenantId, o.tenantId), eq(orders.id, o.id), isNull(orders.gatewayFee)))
     return 'already'
   }
   const paid = r[0]!
-  if (paid.switchedAt && Number(paid.codCharge) > 0) {
+  if (paid.switchedAt && Number(paid.codCharge) > 0 && !paid.packedAt) {
     const lines = await tx.select({ id: orderLines.id, taxableValue: orderLines.taxableValue, gst: orderLines.gst, gstBps: orderLines.gstBps }).from(orderLines)
       .where(and(eq(orderLines.tenantId, o.tenantId), eq(orderLines.orderId, o.id))).orderBy(orderLines.position)
     const ls = lines.map((l) => ({ ...l, taxableValue: Number(l.taxableValue), gst: Number(l.gst) }))
