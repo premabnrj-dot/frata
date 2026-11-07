@@ -20,7 +20,8 @@ describe.skipIf(!host)('todaySummary', () => {
     const { riskFactsFor } = await import('@/lib/queries/order-risk')
     const { weekBars } = await import('@/domains/orders/today')
     const now = new Date('2001-01-07T06:00:00Z') // 11:30 IST on 7 Jan 2001
-    const n = 980_000 + Math.floor(Math.random() * 9_000) * 2
+    // Above the 9xx,xxx numbers orders.int and order-risk.int use on A (one unique index per shop).
+    const n = 2_000_000 + Math.floor(Math.random() * 900_000) * 2
     const before = await todaySummary(A, now)
 
     const add = (t: string, i: number, o: Record<string, unknown>) => withTenant(t, (tx) => tx.insert(orders)
@@ -40,6 +41,10 @@ describe.skipIf(!host)('todaySummary', () => {
     await add(A, 3, { placedAt: new Date('2000-12-02T00:00:00Z'), confirmedAt: new Date('2000-12-03T00:00:00Z') })
     await add(A, 4, { placedAt: new Date('2000-12-02T00:00:00Z'), heldAt: new Date('2000-12-04T00:00:00Z') })
     await add(A, 5, { placedAt: new Date('2001-01-07T01:00:00Z'), cancelledAt: new Date('2001-01-07T02:00:00Z') })
+    // Three COD orders from one phone on one IST day: the third (and each after the third) is high risk by the rules.
+    const phone = `9${String(Math.floor(Math.random() * 1e9)).padStart(9, '0')}`
+    const trio = [] as string[]
+    for (const i of [6, 7, 8]) trio.push(await add(A, i, { placedAt: new Date(`2001-01-05T0${i - 3}:00:00Z`), phone, total: 9_00 }))
 
     try {
     const s = await todaySummary(A, now)
@@ -56,12 +61,15 @@ describe.skipIf(!host)('todaySummary', () => {
     const bars = weekBars(s.week, now)
     expect(bars.find((b) => b.day === '2001-01-06')).toMatchObject({ orders: 1, value: 250_00 })
     expect(bars.find((b) => b.day === '2001-01-07')).toMatchObject({ orders: 1, value: 300_00 })
-    expect(bars.reduce((t, b) => t + b.orders, 0)).toBe(2)
+    expect(bars.reduce((t, b) => t + b.orders, 0)).toBe(5) // the two above and the trio on 5 Jan
     // Another shop's id handed to A's risk read drops out; the whole-tab read (Home's) holds A's rows and none of B's.
     expect((await riskFactsFor(A, [bNext], now)).size).toBe(0)
     const { riskFactsWith } = await import('@/lib/queries/order-risk')
     const tab = await withTenant(A, (tx) => riskFactsWith(tx, A, { tab: 'to_confirm' }, now))
     expect(tab.has(aNext)).toBe(true)
+    const { risk } = await import('@/domains/orders/risk')
+    expect(risk(tab.get(trio[2]!)!).level).toBe('high')
+    expect(s.high! - before.high!).toBeGreaterThanOrEqual(1) // only grows with parallel runs; B's never count (above)
     expect([...bIds].some((id) => tab.has(id))).toBe(false)
     } finally {
       // Cancel this run's rows: out of every tab and the week, so the next run on the same database starts clean.

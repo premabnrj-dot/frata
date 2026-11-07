@@ -35,17 +35,17 @@ export async function riskFactsWith(tx: Tx, tenantId: string, scope: { ids: stri
   const medianCod = m && m.n >= MIN_FOR_MEDIAN && m.median !== null ? Number(m.median) : null
   const same = (a: string) => sql.raw(`(select array_agg(l.variant_id order by l.variant_id) from order_lines l where l.tenant_id = ${a}.tenant_id and l.order_id = ${a}.id)`)
   // An erased order (phone '') has no history; without this its subqueries would scan every other erased order.
-  const known = sql`"orders"."phone" <> ''`
+  const hasPhone = sql`"orders"."phone" <> ''`
   const rows = await tx.select({
     id: orders.id, total: orders.total, customerName: orders.customerName, addressLine: orders.addressLine, area: orders.area, city: orders.city, phone: orders.phone,
     paidAt: orders.paidAt, method: orders.paymentMethod, switchedAt: orders.switchedToCodAt, pincodeCity: pincodes.city,
-    sameItems: sql<number>`(select count(*)::int from orders o2 where ${known} and o2.tenant_id = ${tenantId} and o2.phone = "orders"."phone" and o2.id <> "orders"."id"
+    sameItems: sql<number>`(select count(*)::int from orders o2 where ${hasPhone} and o2.tenant_id = ${tenantId} and o2.phone = "orders"."phone" and o2.id <> "orders"."id"
       and ${standingSql('o2')} and o2.placed_at between "orders"."placed_at" - interval '24 hours' and "orders"."placed_at" and ${same('o2')} = ${same('"orders"')})`,
-    codToday: sql<number>`(select count(*)::int from orders o2 where ${known} and o2.tenant_id = ${tenantId} and o2.phone = "orders"."phone" and o2.paid_at is null
+    codToday: sql<number>`(select count(*)::int from orders o2 where ${hasPhone} and o2.tenant_id = ${tenantId} and o2.phone = "orders"."phone" and o2.paid_at is null
       and (o2.payment_method = 'cod' or o2.switched_to_cod_at is not null) and o2.placed_at <= "orders"."placed_at"
       and (o2.placed_at at time zone 'Asia/Kolkata')::date = ("orders"."placed_at" at time zone 'Asia/Kolkata')::date)`,
-    fake: sql<number>`(select count(*)::int from orders o2 where ${known} and o2.tenant_id = ${tenantId} and o2.phone = "orders"."phone" and o2.cancel_reason = 'fake' and o2.placed_at < "orders"."placed_at")`,
-    earlier: sql<number>`(select count(*)::int from orders o2 where ${known} and o2.tenant_id = ${tenantId} and o2.phone = "orders"."phone" and ${placedSql('o2')} and o2.placed_at < "orders"."placed_at")`,
+    fake: sql<number>`(select count(*)::int from orders o2 where ${hasPhone} and o2.tenant_id = ${tenantId} and o2.phone = "orders"."phone" and o2.cancel_reason = 'fake' and o2.placed_at < "orders"."placed_at")`,
+    earlier: sql<number>`(select count(*)::int from orders o2 where ${hasPhone} and o2.tenant_id = ${tenantId} and o2.phone = "orders"."phone" and ${placedSql('o2')} and o2.placed_at < "orders"."placed_at")`,
   }).from(orders).leftJoin(pincodes, eq(pincodes.pincode, orders.pincode))
     .where(and(eq(orders.tenantId, tenantId), 'ids' in scope ? inArray(orders.id, scope.ids) : inTabSql(scope.tab, now)))
   return new Map(rows.map((r) => {

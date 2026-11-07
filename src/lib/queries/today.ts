@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, eq, gte, sql } from 'drizzle-orm'
-import { orderState, type OrderState, type QueueTab } from '@/domains/orders/order-state'
+import { currentMethod, orderState, type OrderState, type QueueTab } from '@/domains/orders/order-state'
 import { risk, type Risk } from '@/domains/orders/risk'
 import { orderPrefix } from '@/domains/signup/slug'
 import { istDayStart } from '@/domains/time/day'
@@ -14,8 +14,8 @@ import { riskFactsWith } from './order-risk'
 // =============================================================================
 // FILE: src/lib/queries/today.ts
 //
-// WHAT HOME SHOWS ONCE THE SHOP IS OPEN (docs/specs/2026-11-07-ux-today.md), in ONE transaction, so the counts,
-// the oldest waits, the next order and "N high risk" describe the same moment. The counts are queueCounts'
+// WHAT HOME SHOWS ONCE THE SHOP IS OPEN (docs/specs/2026-11-07-ux-today.md), in ONE read-only repeatable-read
+// transaction (one snapshot), so the counts, the oldest waits, the next order and "N high risk" describe the same moment. The counts are queueCounts'
 // own (the nav pill and the Orders tabs read the same predicates); risk is risk() over riskFactsWith, the order
 // page's rules. Every statement names its tenant as well as running under the policy.
 //
@@ -52,7 +52,7 @@ export async function todaySummary(tenantId: string, now: Date): Promise<TodaySu
       on_hold: sql<string | null>`min(${enteredAtSql(now)}) filter (where ${inTabSql('on_hold', now)})`,
     }).from(orders).where(eq(orders.tenantId, tenantId))
 
-    const [n] = await tx.select({ id: orders.id, number: orders.number, customerName: orders.customerName, total: orders.total, ...momentColumns, entered: sql<string>`${enteredAtSql(now)}` })
+    const [n] = await tx.select({ id: orders.id, number: orders.number, customerName: orders.customerName, total: orders.total, ...momentColumns, entered: sql<string | null>`${enteredAtSql(now)}` })
       .from(orders).where(and(eq(orders.tenantId, tenantId), inTabSql('to_confirm', now)))
       .orderBy(asc(enteredAtSql(now)), asc(orders.number)).limit(1)
 
@@ -65,17 +65,24 @@ export async function todaySummary(tenantId: string, now: Date): Promise<TodaySu
       .from(orders).where(and(eq(orders.tenantId, tenantId), standingSql(), gte(orders.placedAt, istDayStart(now, -6))))
       .groupBy(day)
 
-    // Risk LAST, in a savepoint: a timeout rolls back only the savepoint (and its SET LOCAL), not the read. On
-    // success the 2 s limit stays for the rest of the transaction, so keep this the last statement.
+    // Risk last, in a savepoint: a timeout rolls back only the savepoint (and its SET LOCAL), not the read; on success
+    // the limit is put back by hand. Each of its two statements gets the 2 s, so the worst case is about 4 s.
     const facts = await tx.transaction(async (sp) => {
       await sp.execute(sql.raw(`set local statement_timeout = ${RISK_TIMEOUT_MS}`))
-      return riskFactsWith(sp, tenantId, { tab: 'to_confirm' }, now)
-    }).catch((err) => { console.error('[today] risk', err instanceof Error ? err.name : 'error'); return null })
+      const f = await riskFactsWith(sp, tenantId, { tab: 'to_confirm' }, now)
+      // SET LOCAL outlives RELEASE: put the limit back, so nothing after this inherits it (impact review U·4).
+      await sp.execute(sql.raw('set local statement_timeout to default'))
+      return f
+    }).catch((err) => {
+      // 57014 is a statement timeout (drizzle wraps the error, so its name alone says only "Error").
+      const code = (err as { cause?: { code?: string } })?.cause?.code
+      console.error('[today] risk', code === '57014' ? 'timeout' : err instanceof Error ? err.name : 'error'); return null
+    })
     const levels = facts ? new Map([...facts].map(([id, f]) => [id, risk(f).level])) : null
 
     const next: NextOrder | null = n ? {
       id: n.id, number: n.number, label: `${prefix}-${n.number}`, customerName: n.customerName, total: Number(n.total),
-      cod: !n.paidAt && (n.paymentMethod === 'cod' || !!n.switchedToCodAt), state: orderState(n, now), since: asDate(n.entered)!,
+      cod: currentMethod(n) === 'cod', state: orderState(n, now), since: asDate(n.entered) ?? n.placedAt,
       // Missing from the map (it arrived after the risk read) is unknown, never another order's level.
       risk: levels?.get(n.id) ?? null,
     } : null
@@ -86,5 +93,5 @@ export async function todaySummary(tenantId: string, now: Date): Promise<TodaySu
       high: levels ? [...levels.values()].filter((l) => l === 'high').length : null,
       week: week.map((r) => ({ day: r.day, orders: Number(r.orders), value: Number(r.value) })),
     }
-  })
+  }, { snapshot: true })
 }

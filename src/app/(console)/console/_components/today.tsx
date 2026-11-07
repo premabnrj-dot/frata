@@ -108,11 +108,14 @@ export function Today({ s, setup, now }: { s: TodaySummary | null; setup: Setup;
         </Section>
       ) : null}
 
-      {setup.left.length > 0 && (
+      {setup.left.length > 0 ? (
         <Link href="/console/setup" className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-border px-4 py-2.5 text-sm hover:border-input">
           <Badge tone="warn">{setup.left.length} setup step{setup.left.length === 1 ? '' : 's'} left</Badge>
           <span>{setup.left.map((x) => x.title).join(', ')} →</span>
         </Link>
+      ) : (
+        // The way to close the shop again lives with the checklist: always one tap from Home (impact review U·4).
+        <p className="text-sm text-muted-foreground"><Badge tone="ok">Shop open</Badge> <Link href="/console/setup" className="inline-flex min-h-6 items-center underline">Setup, or close the shop for now</Link></p>
       )}
     </div>
   )

@@ -2,7 +2,7 @@
 
 import { and, count, eq, isNull, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { readyToOpen, setupSteps } from '@/domains/setup/checklist'
+import { readyToOpen, setupSteps, BUILT_PAGES } from '@/domains/setup/checklist'
 import { asMember } from '@/lib/auth/as-member'
 import { CAN_MANAGE } from '@/lib/auth/require-member'
 import { auditEvents, shopSettings, tenants } from '@/lib/db/schema'
@@ -25,7 +25,7 @@ export async function openShop(): Promise<Result> {
       if (s.publishedAt) return null
       const [p] = await tx.select({ n: count() }).from(products).where(and(eq(products.tenantId, t), eq(products.status, 'active')))
       const steps = setupSteps({ shopName: s.name, address: hostFor(s.slug), productCount: p?.n ?? 0, legalName: s.legalName, grievanceName: s.grievanceName, codOn: s.codOn, codMaxPaise: Number(s.codMax), paymentsConnected: canTakeOnline(await keysFor(tx, t)), publishedAt: null },
-        { products: true, settings: true, publish: true }, String)
+        BUILT_PAGES, String)
       if (!readyToOpen(steps)) return `Not yet: ${steps.filter((x) => !x.done && x.key !== 'publish').map((x) => x.title.toLowerCase()).join(', ')}.`
       await tx.update(shopSettings).set({ publishedAt: sql`now()` }).where(and(eq(shopSettings.tenantId, t), isNull(shopSettings.publishedAt)))
       if (!auth.membership.supportSessionId) await tx.insert(auditEvents).values({ tenantId: t, actorUserId: auth.userId, actorEmail: auth.email, actorKind: 'member', action: 'shop.open', target: hostFor(s.slug) })

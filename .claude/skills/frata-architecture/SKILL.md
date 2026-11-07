@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.2.0
+  version: 2.3.0
   verified: 2026-11-07
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -47,6 +47,13 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - Every merchant read or write: `withTenant(tenantId, tx => …)` plus an explicit
   `where tenant_id = …`. The policy is the lock; the where is the intent and
   the index.
+- A page whose numbers must agree reads them in ONE `withTenant(…, { snapshot: true })`
+  (read-only, repeatable read: one snapshot for every statement), composing
+  `xWith(tx, tenantId, …)` readers (`queueCountsWith`, `riskFactsWith`); the
+  plain `x(tenantId, …)` wraps its `xWith` in its own `withTenant` (Home's
+  `todaySummary`, U·4). A slow optional part goes last, in a savepoint with
+  `set local statement_timeout`, put back to `default` before the savepoint
+  ends (SET LOCAL outlives RELEASE); a timeout is caught as "unavailable".
 - Raw `db()` only in `src/lib/db/`, `src/lib/outbox/`, `src/app/api/webhooks/`
   (`check:tenant` PLATFORM_SCOPE). Adding to that list needs a reason in the gate.
 

@@ -10,7 +10,7 @@ export function CopyLink({ address }: { address: string }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <code id="shop-address" className="rounded-sm bg-muted px-2 py-1 font-mono text-sm">{address}</code>
-      <Button variant="secondary" onClick={() => navigator.clipboard.writeText(url).then(() => setSaid('Copied.'), () => {
+      <Button variant="secondary" onClick={() => (navigator.clipboard?.writeText(url) ?? Promise.reject(new Error('no clipboard'))).then(() => setSaid('Copied.'), () => {
         const r = document.createRange(); r.selectNodeContents(document.getElementById('shop-address')!); const sel = getSelection(); sel?.removeAllRanges(); sel?.addRange(r)
         setSaid('Selected: copy it with your keyboard.')
       })}>Copy link</Button>

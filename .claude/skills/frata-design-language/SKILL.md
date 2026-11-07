@@ -429,10 +429,12 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     one tap to its page), three counts (To confirm, To pack, On hold; each a
     link to its tab; `CountTiles`), the last 7 days (orders placed and their
     value, cancelled left out, one `scaleY` bar per IST day), and one line for
-    setup steps still open (the checklist lives at `/console/setup`). No
+    setup steps still open, or, when none are, "Setup, or close the shop for
+    now" (the checklist lives at `/console/setup`; always one tap away). No
     suggestions or feature cards, no change-on-last-week figure, no chart
     library.
-31. A Home count is `queueCounts`' (the pill, the tabs and the tile agree); "N
+31. A Home count is `queueCounts`' and the nav pill's `toConfirmCount` reads the
+    same predicate (the pill, the tabs and the tile agree); "N
     high risk" is `risk()` over the whole tab, never a page of it. A count that
     could not be read says "Couldn't count", a risk "Risk unavailable"; never
     0. A tile that is 0 stays in place and says so ("Nothing to confirm").

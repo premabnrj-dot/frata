@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { withTenant } from '@/lib/db/tenant'
 import { paise } from '@/domains/money/paise'
-import { readyToOpen, setupSteps, type BuiltPages, type SetupStep } from '@/domains/setup/checklist'
+import { BUILT_PAGES, readyToOpen, setupSteps, type SetupStep } from '@/domains/setup/checklist'
 import { formatInr } from '@/lib/format'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 import { activeProductCount, paymentStatusFor } from './payments'
@@ -26,8 +26,6 @@ export async function policyOverrides(tenantId: string): Promise<Record<string, 
   return Object.fromEntries(rows.map((r) => [r.kind, r.body]))
 }
 
-/** Pages the checklist may link to. Each flips to true when its sub-phase ships (docs/plans/2026-11-06-phase-1-first-sale.md). */
-const BUILT: BuiltPages = { products: true, settings: true, publish: true }
 
 export type Setup = { name: string; address: string; open: boolean; steps: SetupStep[]; done: number; ready: boolean; left: SetupStep[] }
 
@@ -43,7 +41,7 @@ export async function setupFor(tenantId: string): Promise<Setup | null> {
     shopName: shop.name, address, productCount: products,
     legalName: shop.settings.legalName, grievanceName: shop.settings.grievanceName,
     codOn: shop.settings.codOn, codMaxPaise: shop.settings.codMax, paymentsConnected: !!pay?.connected && pay.mode === 'live' && !!pay.webhookSeenAt, publishedAt: shop.settings.publishedAt,
-  }, BUILT, (p) => formatInr(paise(p)))
+  }, BUILT_PAGES, (p) => formatInr(paise(p)))
   return {
     name: shop.name, address, open: !!shop.settings.publishedAt, steps, done: steps.filter((s) => s.done).length, ready: readyToOpen(steps),
     left: steps.filter((s) => !s.done && s.key !== 'publish'),

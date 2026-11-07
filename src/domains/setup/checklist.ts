@@ -34,6 +34,9 @@ export type SetupStep = {
 /** Which console pages exist, so a step links only to a real page. Grows with each sub-phase. */
 export type BuiltPages = { products: boolean; settings: boolean; publish: boolean }
 
+/** Pages the checklist may link to: each flips to true when its sub-phase ships. One copy, read by the checklist and openShop. */
+export const BUILT_PAGES: BuiltPages = { products: true, settings: true, publish: true }
+
 export function setupSteps(f: SetupFacts, built: BuiltPages, formatInr: (paise: number) => string): SetupStep[] {
   const hasProduct = f.productCount > 0
   const canPay = f.codOn || f.paymentsConnected
