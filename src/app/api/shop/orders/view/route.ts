@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   const o = data.o
   return reply({
     // Never the internal state (held, refund due) or why an order was cancelled: shopperState() only.
-    number: o.number, state: shopperState(orderState(o)), collect: collect(o), method: currentMethod(o), paidAfterSwitch: paidAfterSwitch(o), canSwitchToCod: o.paymentMethod === 'prepaid' && !o.paidAt && !o.switchedToCodAt && !o.cancelledAt,
+    number: o.number, state: shopperState(orderState(o, new Date())), collect: collect(o), method: currentMethod(o), paidAfterSwitch: paidAfterSwitch(o), canSwitchToCod: o.paymentMethod === 'prepaid' && !o.paidAt && !o.switchedToCodAt && !o.cancelledAt,
     subtotal: o.subtotal, shipping: o.shipping, codCharge: o.codCharge, gstTotal: o.gstTotal, total: o.total, pricesIncludeGst: o.pricesIncludeGst,
     firstName: o.customerName.split(' ')[0] ?? '', to: `${o.city} ${o.pincode}`.trim(), phone: maskPhone(o.phone),
     arrives: o.arrivesFrom && o.arrivesTo ? { from: o.arrivesFrom, to: o.arrivesTo } : null, returnDays: o.returnDays, returnKind: o.returnKind,

@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.2.0
+  version: 2.3.0
   verified: 2026-11-07
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -91,6 +91,16 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   check guards nothing below it: **every page and action calls
   `requireMember` itself.** It returns `not_configured` rather than throwing
   when the environment is unset.
+
+## Time in client components (2026-11-07, `check:clock`)
+
+A client component renders on the server and again in the browser. **Render never
+reads the clock**: a page passes its render time once (`<NowProvider at={now.toISOString()}>`,
+or a `now` prop) and components derive from `useNow()` (`src/components/time/now.tsx`).
+Domain functions take `now` as an argument, never a default. Event handlers and timers may
+read the real clock and mark the line `// clock-ok: <why>`. Text from two different "now"s
+differs when a minute or day turns between render and hydration: React #418 (Online
+payments, the product editor, 2026-11-07).
 
 ## Server actions (from Ekatan)
 

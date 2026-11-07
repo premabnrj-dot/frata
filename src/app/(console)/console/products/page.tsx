@@ -19,6 +19,7 @@ const TABS = [['', 'All'], ['active', 'Active'], ['draft', 'Draft'], ['unlisted'
 
 export default async function ProductsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const auth = await requireMember(ANY_MEMBER)
+  const now = new Date()
   if (!auth.ok) return <Panel title={auth.message} />
   const q = await searchParams
   const status = (TABS.find(([k]) => k && k === q.status)?.[0] || null) as Exclude<(typeof TABS)[number][0], ''> | null
@@ -50,7 +51,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                 ? <img src={urlFor(r.cover.base, pick(r.cover.widths, 96))} alt="" width={40} height={50} loading="lazy" className="h-[50px] w-10 rounded-sm object-cover" />
                 : <span className="block h-[50px] w-10 rounded-sm bg-muted" aria-hidden="true" />}</Td>
               <Td cell="a"><Link href={`/console/products/${r.handle}`} data-row-link prefetch={false} className="line-clamp-2 min-h-6 py-0.5 font-medium [overflow-wrap:anywhere] hover:underline"><Name>{r.title}</Name></Link>{r.typeName && <span className="hidden text-xs text-muted-foreground md:block">{r.typeName}</span>}</Td>
-              <Td cell="d"><StatusBadge status={r.status} publishAt={r.publishAt} /></Td>
+              <Td cell="d"><StatusBadge status={r.status} publishAt={r.publishAt} now={now} /></Td>
               <Td cell="c" className="text-xs text-muted-foreground md:text-sm md:text-foreground">{r.typeName && <span className="md:hidden">{r.typeName} · </span>}<Numeric>{r.variantCount}</Numeric><span className="md:hidden"> sizes and colours</span></Td>
               <Td cell="e" className="text-xs md:text-right md:text-sm">{r.stock > 0 ? <><Numeric>{r.stock}</Numeric><span className="md:hidden"> in stock</span></> : <Badge tone="warn">Sold out</Badge>}</Td>
               <Td cell="b" className="whitespace-nowrap text-right">{r.minPrice === null || r.minPrice === 0 ? <span className="text-muted-foreground">No price</span>

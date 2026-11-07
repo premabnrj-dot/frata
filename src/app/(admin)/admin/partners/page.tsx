@@ -38,7 +38,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
               <li key={r.id}>
                 <Link href={href(r.id)} aria-current={open?.id === r.id || undefined} className={`grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 px-4 py-3 text-sm hover:bg-accent ${open?.id === r.id ? 'bg-accent' : ''}`}>
                   <span className="truncate font-medium">{r.businessName || r.name}</span>
-                  <span className="text-muted-foreground">{sinceIN(r.appliedAt)}</span>
+                  <span className="text-muted-foreground">{sinceIN(r.appliedAt, new Date())}</span>
                   <span className="truncate text-muted-foreground">{r.name} · {r.city}</span>
                   <span className="text-right font-mono text-xs">{view === 'approved' ? `${r.stores} stores` : BRANDS_NOW.find(([k]) => k === r.brandsNow)?.[1]}</span>
                 </Link>

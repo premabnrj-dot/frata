@@ -49,7 +49,7 @@ export type OrderState = (typeof ORDER_STATES)[number]
  *   COD (chosen, or switched to) → held > confirmed > unconfirmed
  * Paid always beats a switch to COD (a capture can land after the switch). Confirm and unhold clear held_at.
  */
-export function orderState(o: OrderMoments, now: Date = new Date()): OrderState {
+export function orderState(o: OrderMoments, now: Date): OrderState {
   if (o.rtoDeliveredAt) return 'rto_received'
   if (o.rtoInitiatedAt) return 'rto'
   if (o.deliveredAt) return 'delivered'

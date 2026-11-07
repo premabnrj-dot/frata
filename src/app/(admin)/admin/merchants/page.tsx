@@ -54,7 +54,7 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
                   {m.plan?.trialEndsAt && m.plan.trialEndsAt > new Date() && <div className="whitespace-nowrap text-xs text-warn-text">Trial until {dayMonthIN(m.plan.trialEndsAt)}</div>}
                 </Td>
                 <Td cell="c" className="text-xs md:text-sm">
-                  {m.owner ? (m.owner.lastSignInAt ? <span className="text-muted-foreground">Signed in {sinceIN(m.owner.lastSignInAt)}</span> : <span className="text-warn-text">Never signed in</span>)
+                  {m.owner ? (m.owner.lastSignInAt ? <span className="text-muted-foreground">Signed in {sinceIN(m.owner.lastSignInAt, new Date())}</span> : <span className="text-warn-text">Never signed in</span>)
                     : m.pendingInvite ? <span className="text-warn-text">Owner not signed in yet</span> : <span className="text-muted-foreground">No owner</span>}
                 </Td>
                 <Td cell="b" className="text-right">

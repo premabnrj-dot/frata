@@ -31,7 +31,7 @@ export const dateTimeIN = (d: Date) =>
   d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: IST })
 
 /** How long ago, as a queue says it: "just now", "5 min ago", "2 h ago", else the day. */
-export function sinceIN(at: Date | string, now: Date = new Date()): string {
+export function sinceIN(at: Date | string, now: Date): string {
   const d = typeof at === 'string' ? new Date(at) : at
   const min = Math.floor((now.getTime() - d.getTime()) / 60_000)
   if (min < 1) return 'just now'
