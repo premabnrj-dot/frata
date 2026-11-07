@@ -1,10 +1,10 @@
 ---
 name: frata-verify
-description: Use before saying a Frata change works - to run the gates, typecheck, tests and production build, prove tenant isolation on a real Postgres, run the built app locally against that database with storefront and console Host headers, and exercise webhooks and cron with curl.
+description: Use before saying a Frata change works - to run the gates, typecheck, tests and production build, run the end-to-end browser flows (npm run e2e), check a mockup, prove tenant isolation on a real Postgres, run the built app locally against that database with storefront and console Host headers, and exercise webhooks and cron with curl.
 metadata:
-  version: 1.3.0
+  version: 1.4.0
   verified: 2026-11-06
-  covers: ["scripts/verify/**"]
+  covers: ["scripts/verify/**", "e2e/**", "scripts/check-mockup.mjs"]
 ---
 
 # Frata verify
@@ -65,6 +65,21 @@ end $$;
 ```
 
 Then `get_advisors` security and performance.
+
+## End to end (`npm run e2e`) — before saying a flow works
+
+The browser flows in `e2e/flows/` run against a local stack the runner boots
+itself (throwaway Postgres, migrations, `e2e/seed.sql`, fake auth, fake
+Razorpay, production build): `e2e/README.md`. CI runs them too. Rules:
+
+- A plan touching a flow adds or extends its flow BEFORE the change (the
+  regression net), and proves it by planting the bug and watching it go red.
+- Every bug fixed gets a step that fails without the fix.
+- Assert on the database as well as the screen when money, stock or state moves.
+- Wait on what the page shows, never a sleep; a flaky step is fixed at once
+  (2026-11-07: reading a code block before it rendered made one step flaky).
+- The `e2e-runner` agent runs it and reads the screenshots (phone and desktop).
+- Before publishing a mockup: `node scripts/check-mockup.mjs <file>`.
 
 ## The built app, locally
 

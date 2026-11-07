@@ -2,7 +2,7 @@
 name: frata-planning
 description: Use when planning any Frata feature, enhancement, redesign or connector - before writing a spec or plan, before executing one, and when closing one - to run the spec, research, design review, mockup, sign-off, plan, execute and document loop, with the review headings (UI/UX, tenancy, modularity, SSOT/DRY, YAGNI, KISS, performance, reliability, security, unit economics, blast radius).
 metadata:
-  version: 2.1.0
+  version: 2.2.0
   verified: 2026-11-06
   decisions: [ADR-0001]
 ---
@@ -11,7 +11,7 @@ metadata:
 
 No feature is executed before its review and mockup are signed off (ADR-0001).
 
-## The owner's rules (2026-11-06) — every plan obeys all four
+## The owner's rules (2026-11-06, 5–6 added 2026-11-07) — every plan obeys all six
 
 1. **Phased, mockup first.** Every plan is cut into phases a merchant could use
    on their own. Each phase opens with an HTML mockup published as an artifact
@@ -28,6 +28,18 @@ No feature is executed before its review and mockup are signed off (ADR-0001).
    finding is fixed in the plan or accepted by the owner in writing.
 4. **Stay on the product goal.** Every spec opens with which ranked problem it
    moves (§ North star) and how we will know. Work that moves none waits.
+5. **Testing, cross-module impact, tech debt, maintainability come first.**
+   A plan opens with the regression net for what it changes (e2e flows for the
+   flows it touches, unit tests for the engines) BEFORE the change; every task
+   ends with its tests and `impact-reviewer` on its diff; no task leaves a
+   second copy of a fact, a jsonb field used as state, or an untested path that
+   moves money, stock or state.
+6. **Record every accepted practice; automate every repeated chore.** Each
+   plan has a "Practices recorded in skills" section (UI/UX, performance,
+   architecture, testing) landed in the same commit, with version bumps. Work
+   done by hand twice becomes a script when it is checkable (a gate) or an
+   agent when it needs judgement (`.claude/agents/`), listed in the plan's
+   "Repetitive work → agents and scripts" table.
 
 ## North star
 
@@ -56,10 +68,12 @@ Copy into the conversation and tick as you go:
 - [ ] 2 RESEARCH  how 2–3 strong products do this job; what the codebase already has
 - [ ] 3 REVIEW    every heading below, written into the spec
 - [ ] 4 MOCKUP    HTML mockup published as an artifact, link in the spec
+                  (node scripts/check-mockup.mjs <file> first: no overflow, no errors)
 - [ ] 5 SIGN-OFF  owner approves → spec status: active; approved rules → frata-design-language
 - [ ] 5b REVIEW   agents run on the plan (rule 3); findings fixed or accepted
 - [ ] 6 PLAN      docs/plans/YYYY-MM-DD-<topic>.md: tasks, each with its verify command
-- [ ] 7 EXECUTE   task by task; run and read each verify command (frata-verify)
+- [ ] 7 EXECUTE   task by task; run and read each verify command (frata-verify);
+                  impact-reviewer on each task's diff before its commit
 - [ ] 8 DOCUMENT  skills/rules the change touched updated, version bumped
 - [ ] 9 CLOSE     spec status: built, plan status: done
 ```

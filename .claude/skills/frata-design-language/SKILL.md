@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 3.0.0
+  version: 3.1.0
   verified: 2026-11-06
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -187,6 +187,40 @@ text 2026-07-15.
 5. Hover/focus tooltips (`role="tooltip"`) only name icon-only buttons and show
    truncated text in full — never on a field, never with links.
 6. Never the `title` attribute for anything a person needs.
+
+## Work queues and records (owner-approved with 1D Orders, 2026-11-07)
+
+Research: Shopify Orders, Razorpay RTO review, Shiprocket (2026-08-24), Linear
+triage, Gmail, Stripe, NN/g confirmation dialogs (2026-08-07). Spec:
+`docs/specs/2026-11-07-orders.md`.
+
+1. **Two axes, two badges.** How something is paid and where it is in its life
+   are separate badges, never one merged label ("COD" + "To confirm").
+2. **Risk is reasons, not a score:** a level as a word + mark (never colour
+   alone), up to three reasons in plain words, ONE next step with its action
+   (Call, WhatsApp). Low shows nothing. Risk advises; it never acts.
+3. **One primary action per state** in a record's header; everything else under
+   More. The button names the outcome ("Mark packed", not "Update").
+4. **Undo for routine, a dialog for serious.** Routine, reversible actions
+   happen at once with Undo for 8 s and an Undo link left on the record. A
+   dialog only for what loses work, money or stock, its buttons naming the
+   outcome ("Cancel order", "Keep order"), a reason required where it matters.
+5. **Conflicts said in words:** "Already confirmed by Riya at 10:42" — never a
+   silent overwrite or a generic error.
+6. **Keyboard on queues:** `j`/`k` move, `x` select, `Enter` open, single
+   letters for the commonest actions, `z` undo, `/` search, `?` the sheet.
+   Never in an input. A key whose action is risky on this row opens the record
+   instead. The `?` sheet has a switch to turn single-key shortcuts off (WCAG
+   2.1.4), kept per person.
+7. **Bulk actions skip what needs a person** and say so: "Confirmed 12.
+   Skipped 2 high-risk orders — open them to decide." No bulk for destructive
+   actions that need a reason.
+8. **Views as tabs with counts**, derived from the record's state, one search
+   box; every tab has its own empty state that says what lands there.
+9. **Documents are print pages** (A4, browser print), not PDFs; the number on
+   them is issued once and reprints show the same one.
+10. **Shoppers never see internal words:** a state shown to a shopper goes
+    through its shopper mapping ("Confirming your order"), never the raw value.
 
 
 

@@ -38,3 +38,33 @@ jobs:
           INT_DB_HOST: localhost:5432
           INT_DB_NAME: frata_proof
           INT_DB_PASSWORD: ci
+
+  e2e:
+    # The browser flows in e2e/ against a throwaway Postgres (frata-verify § End to end).
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Playwright is a test tool, not an app dependency: installed here at the version cloud sessions carry.
+      - run: npm i --no-save playwright@1.63.0 && npx playwright install --with-deps chromium
+      - run: npm run e2e
+        env:
+          E2E_ADMIN_URL: postgres://postgres:postgres@localhost:5432/postgres
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-out
+          path: e2e/.out/

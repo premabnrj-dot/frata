@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.0.0
+  version: 2.1.0
   verified: 2026-11-06
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -101,6 +101,32 @@ export async function confirmOrder(input: unknown): Promise<{ ok: boolean; error
   }
 }
 ```
+
+## Record actions (1D Orders, 2026-11-07)
+
+- **Roles are passed, not hidden.** Each action's allowed roles go in its
+  `asMember([...], …)` call; a hidden button is never the guard. The table of
+  who may do what lives in the spec and is copied into the action file's header.
+- **History in the same transaction.** Every order action writes one
+  `order_events` row (append-only: `select, insert` only) inside the
+  transaction that changes the order. Timestamps say where an order is; events
+  say who did what and survive an undo.
+- **Audit rows carry no shopper data.** A support-mode `audit_events` row has
+  the record id as `target` and only the NAMES of changed fields in `detail`:
+  `frata_admin` reads that table across every shop.
+- **Undo is a compare-and-set** on the value the action wrote
+  (`where confirmed_at = $written and packed_at is null`), refused in words
+  when something moved since.
+- **One home for SQL predicates.** A state test written in SQL (tabs, counts,
+  holds) lives in `src/lib/queries/order-predicates.ts` with a parity test
+  against `orderState()` on fixtures — never restated in a query.
+- **Operational state is a column, not jsonb.** `checkout` jsonb holds
+  hypotheses for analysis; anything code branches on (stock taken, per line)
+  is a typed column.
+- **A definer function that names people takes no ids:** it reads
+  `app_current_tenant()` and returns only that shop's members.
+- **Snapshot at placement what a document needs later** (seller GSTIN, each
+  line's share of charges): a document reads the order, never today's settings.
 
 ## Outside world (ADR-0006)
 

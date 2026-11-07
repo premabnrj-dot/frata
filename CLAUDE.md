@@ -32,7 +32,8 @@ Google → `frata-integrations`. Prices, fees, margins, the business model →
 `frata-unit-economics`. Before saying something works → `frata-verify`.
 Something failing that makes no sense → `frata-gotchas`.
 Agents: `tenancy-auditor`, `architecture-reviewer`, `integration-researcher`,
-`unit-economics-reviewer`.
+`unit-economics-reviewer`, `impact-reviewer` (every task's diff: callers, test
+gaps, debt), `e2e-runner` (the browser flows in `e2e/`).
 
 ## Rules that apply to everything
 
@@ -90,7 +91,8 @@ npm run typecheck
 ```
 
 Both must pass. Changed `drizzle/` or a policy? Also `npm run verify:tenancy`
-against a throwaway Postgres (`frata-verify`). CI runs all three.
+against a throwaway Postgres (`frata-verify`). Changed a flow? `npm run e2e`.
+CI runs all of these.
 
 ## Deploying
 

@@ -17,7 +17,8 @@
     "check:actions": "node scripts/check-actions.mjs",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "verify:tenancy": "bash scripts/verify/tenancy.sh"
+    "verify:tenancy": "bash scripts/verify/tenancy.sh",
+    "e2e": "node e2e/run.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
