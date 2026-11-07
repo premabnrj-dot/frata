@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { connectionState, limitWords, needsFor, qualityWords, type HealthFacts } from '../health'
 
-const ok: HealthFacts = { displayPhone: '+91 98450 12345', verifiedName: 'Kesar Studio', coexistence: true, quality: 'GREEN', limitTier: 'TIER_250', nameStatus: 'APPROVED', paymentOk: true, currency: 'INR', tokenRejectedAt: null }
+const ok: HealthFacts = { displayPhone: '+91 98450 12345', verifiedName: 'Kesar Studio', coexistence: true, quality: 'GREEN', limitTier: 'TIER_250', nameStatus: 'APPROVED', paymentOk: true, currency: 'INR', canSend: 'AVAILABLE', tokenRejectedAt: null }
 const nov = new Date('2026-11-07T10:00:00Z')
 
 describe('needsFor', () => {
@@ -18,6 +18,10 @@ describe('needsFor', () => {
   it('non-INR billing blocks from 1 Jan 2027 (IST)', () => {
     expect(needsFor({ ...ok, currency: 'USD' }, new Date('2027-01-01T00:00:00+05:30'))[0]!.tone).toBe('danger')
     expect(needsFor({ ...ok, currency: 'USD' }, new Date('2026-12-31T23:59:00+05:30'))[0]!.tone).toBe('warn')
+  })
+  it('Meta blocking the number is the first thing after access', () => {
+    expect(needsFor({ ...ok, canSend: 'BLOCKED', paymentOk: false }, nov).map((x) => x.key)).toEqual(['blocked', 'payment'])
+    expect(needsFor({ ...ok, canSend: 'LIMITED' }, nov)[0]!.key).toBe('quality')
   })
   it('an unknown payment state is not a problem; low quality is', () => {
     expect(needsFor({ ...ok, paymentOk: null }, nov)).toEqual([])

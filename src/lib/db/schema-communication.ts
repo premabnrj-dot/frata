@@ -35,9 +35,12 @@ export const waConnections = pgTable('wa_connections', {
   quality: text('quality'),
   limitTier: text('limit_tier'),
   nameStatus: text('name_status'),
-  /** False when the account has no payment method: Meta delivers nothing until one is added. Null: not known. */
+  /** False once a send failed for the payment method (Meta error 131042, C2). Meta has no field for it [frata-integrations]. Null: not known. */
   paymentOk: boolean('payment_ok'),
+  /** The billing currency of the account (India must bill in INR by 31 Dec 2026). */
   currency: text('currency'),
+  /** Meta's health_status.can_send_message: AVAILABLE, LIMITED or BLOCKED. */
+  canSend: text('can_send'),
   /** Meta can no longer be reached with the token (expired or removed): "Reconnect". */
   tokenRejectedAt: at('token_rejected_at'),
   historySyncAt: at('history_sync_at'),

@@ -15,7 +15,7 @@ alter table wa_connections enable row level security;
 --> statement-breakpoint
 grant select, insert on wa_connections to frata_app;
 --> statement-breakpoint
-grant update (business_id, display_phone, verified_name, token_enc, disconnected_at, disconnected_by, quality, limit_tier, name_status, payment_ok, currency, token_rejected_at, history_sync_at, checked_at) on wa_connections to frata_app;
+grant update (business_id, display_phone, verified_name, token_enc, disconnected_at, disconnected_by, quality, limit_tier, name_status, payment_ok, currency, can_send, token_rejected_at, history_sync_at, checked_at) on wa_connections to frata_app;
 --> statement-breakpoint
 create policy tenant_rows on wa_connections for all to frata_app using (tenant_id = app_current_tenant()) with check (tenant_id = app_current_tenant());
 --> statement-breakpoint

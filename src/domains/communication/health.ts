@@ -13,10 +13,11 @@ export type HealthFacts = {
   nameStatus: string | null
   paymentOk: boolean | null
   currency: string | null
+  canSend: string | null
   tokenRejectedAt: Date | null
 }
 
-export type NeedKey = 'reconnect' | 'payment' | 'currency' | 'name_review' | 'name_declined' | 'quality'
+export type NeedKey = 'reconnect' | 'blocked' | 'payment' | 'currency' | 'name_review' | 'name_declined' | 'quality'
 export type Need = { key: NeedKey; tone: 'danger' | 'warn' | 'info'; badge: string; text: string; action: 'reconnect' | 'manager' | 'currency_help' | null; note?: string }
 
 /** India accounts must bill in INR by 31 Dec 2026, or delivery stops on 1 Jan 2027 (frata-integrations, checked 2026-11-07). */
@@ -27,13 +28,15 @@ export const WA_MANAGER = 'https://business.facebook.com/wa/manage/home/'
 export function needsFor(f: HealthFacts, now: Date): Need[] {
   const out: Need[] = []
   if (f.tokenRejectedAt) out.push({ key: 'reconnect', tone: 'danger', badge: 'Blocks messages', text: 'Frrata can no longer reach this number', action: 'reconnect' })
+  const cs = f.canSend?.toUpperCase()
+  if (cs === 'BLOCKED') out.push({ key: 'blocked', tone: 'danger', badge: 'Blocks messages', text: 'Meta has stopped this number sending. WhatsApp Manager says why.', action: 'manager' })
   if (f.paymentOk === false) out.push({ key: 'payment', tone: 'danger', badge: 'Blocks messages', text: 'Add a payment method in WhatsApp Manager', action: 'manager' })
   if (f.currency && f.currency.toUpperCase() !== 'INR') {
     const late = now.getTime() >= INR_DEADLINE.getTime()
     out.push({ key: 'currency', tone: late ? 'danger' : 'warn', badge: late ? 'Blocks messages' : 'By 31 Dec', text: 'Move WhatsApp billing to INR', action: 'currency_help' })
   }
   const q = f.quality?.toUpperCase()
-  if (q === 'RED') out.push({ key: 'quality', tone: 'warn', badge: 'Quality low', text: 'Fewer messages are being sent. Shoppers blocked or reported recent ones.', action: null })
+  if (cs === 'LIMITED' || q === 'RED') out.push({ key: 'quality', tone: 'warn', badge: 'Quality low', text: 'Fewer messages are being sent. Shoppers blocked or reported recent ones.', action: null })
   const n = f.nameStatus?.toUpperCase()
   if (n === 'DECLINED' || n === 'REJECTED') out.push({ key: 'name_declined', tone: 'warn', badge: 'Declined', text: `Display name ${f.verifiedName ? `"${f.verifiedName}"` : ''}`.trim(), action: 'manager' })
   else if (n === 'PENDING_REVIEW' || n === 'PENDING') out.push({ key: 'name_review', tone: 'info', badge: 'In review', text: `Display name ${f.verifiedName ? `"${f.verifiedName}"` : ''}`.trim(), action: null, note: 'Meta, up to 24 h' })

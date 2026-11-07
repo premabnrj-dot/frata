@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm'
 import { db } from './index'
 import { shopSlugFromHost } from '@/domains/tenancy/host'
 import { SHOP_DOMAIN } from '@/lib/public-env'
-import type { MemberRole, StaffRole } from './schema'
+import { webhookEvents, type MemberRole, type StaffRole } from './schema'
 
 // =============================================================================
 // FILE: src/lib/db/platform.ts
@@ -120,9 +120,9 @@ export async function paymentWebhookFor(key: string): Promise<{ tenantId: string
   return rows[0] ? { tenantId: rows[0].tenant_id, secretEnc: rows[0].webhook_secret_enc } : null
 }
 
-/** Shops with Razorpay events still to process (the daily safety net; read with no tenant set, which the policy allows). */
-export async function shopsWithPendingEvents(): Promise<string[]> {
-  const rows = await db().execute<{ tenant_id: string }>(sql`select distinct tenant_id from webhook_events where processed_at is null and tenant_id is not null limit 500`)
+/** Shops with a provider's events still to process (the daily safety net; read with no tenant set, which the policy allows). */
+export async function shopsWithPendingEvents(provider: 'razorpay' | 'whatsapp' = 'razorpay'): Promise<string[]> {
+  const rows = await db().execute<{ tenant_id: string }>(sql`select distinct tenant_id from webhook_events where processed_at is null and tenant_id is not null and provider = ${provider} limit 500`)
   return rows.map((r) => r.tenant_id)
 }
 
@@ -130,4 +130,21 @@ export async function shopsWithPendingEvents(): Promise<string[]> {
 export async function shopsToErase(before: Date): Promise<string[]> {
   const rows = await db().execute<{ id: string }>(sql`select app_shops_to_erase(${before.toISOString()}::timestamptz) as id`)
   return rows.map((r) => r.id)
+}
+
+// ── Messages (WhatsApp): which shop a webhook item is about (drizzle/0030) ──────
+/** An open connection's shop by its number or its account id. Digits only, checked here and in the function. */
+export async function tenantForWhatsApp(by: 'number' | 'account', metaId: string): Promise<string | null> {
+  if (!/^[0-9]{5,20}$/.test(metaId)) return null
+  const rows = by === 'number'
+    ? await db().execute<{ t: string | null }>(sql`select app_tenant_for_wa(${metaId}) as t`)
+    : await db().execute<{ t: string | null }>(sql`select app_tenant_for_waba(${metaId}) as t`)
+  return rows[0]?.t ?? null
+}
+
+/** Stores one verified webhook item under OUR key for its shop; false when it was already stored (a retry). */
+export async function storeWebhookEvent(provider: 'whatsapp', eventKey: string, tenantId: string, payload: object): Promise<boolean> {
+  const [row] = await db().insert(webhookEvents).values({ provider, eventKey, tenantId, payload })
+    .onConflictDoNothing({ target: webhookEvents.eventKey }).returning({ id: webhookEvents.id })
+  return !!row
 }

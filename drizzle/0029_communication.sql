@@ -17,6 +17,7 @@ CREATE TABLE "wa_connections" (
 	"name_status" text,
 	"payment_ok" boolean,
 	"currency" text,
+	"can_send" text,
 	"token_rejected_at" timestamp with time zone,
 	"history_sync_at" timestamp with time zone,
 	"checked_at" timestamp with time zone,

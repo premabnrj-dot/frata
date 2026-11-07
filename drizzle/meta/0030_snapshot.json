@@ -5302,6 +5302,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "can_send": {
+          "name": "can_send",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "token_rejected_at": {
           "name": "token_rejected_at",
           "type": "timestamp with time zone",
