@@ -7,6 +7,7 @@ import { visibility, type Status } from '@/domains/catalogue/availability'
 import type { Readiness } from '@/domains/catalogue/product-form'
 import { setStatus } from '../actions'
 import { Section } from '@/components/layout/section'
+import { useNow } from '@/components/time/now'
 
 const CHOICES: { v: Status; label: string; says: string }[] = [
   { v: 'draft', label: 'Draft', says: 'Only your team sees it.' },
@@ -31,7 +32,8 @@ export function StatusCard({ productId, status, publishAt, ready, dirty }: { pro
   const needsReady = pick === 'active' || pick === 'unlisted'
   const at = pick === 'active' && later ? fromLocal(when) : null
   const changed = pick !== status || (pick === 'active' && at !== (publishAt ? new Date(publishAt).toISOString() : null))
-  const v = visibility(pick, at ? new Date(at) : null, new Date())
+  const now = useNow()
+  const v = visibility(pick, at ? new Date(at) : null, now)
   const blocked = (needsReady && !allReady) || (pick === 'active' && later && !when)
 
   const apply = () => start(async () => {

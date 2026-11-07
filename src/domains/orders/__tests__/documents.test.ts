@@ -38,6 +38,10 @@ describe('the invoice', () => {
     expect(invoice(order({ packedAt: null, invoiceNumber: null }), lines, shop)).toBe(null)
     expect(invoice(order({ cancelledAt: new Date() }), lines, shop)).toMatchObject({ cancelled: true, number: 'KS/26-27/00001' })
   })
+  it('a cancelled order\'s slip says so, never "collect nothing"', () => {
+    expect(packingSlip(order({ cancelledAt: new Date() }), lines, shop).cancelled).toBe(true)
+    expect(packingSlip(order({}), lines, shop).cancelled).toBe(false)
+  })
   it('an order placed before 1D (no stored shares) prints the same figures', () => {
     const old = lines.map((l) => ({ ...l, chargeTaxable: null, chargeGst: null }))
     expect(invoice(order(), old, shop)!.totals).toEqual(invoice(order(), lines, shop)!.totals)

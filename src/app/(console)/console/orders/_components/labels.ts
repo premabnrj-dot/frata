@@ -59,3 +59,6 @@ export function eventLabel(e: { kind: string; reason: string | null; fields: str
     default: return e.kind.replace(/_/g, ' ')
   }
 }
+
+/** The print page for one order or a selection (numbers without the shop's prefix; at most 50 are printed). */
+export const printHref = (kind: 'slip' | 'invoice', numbers: number[]) => `/console/orders/print?kind=${kind}&n=${numbers.join(',')}`

@@ -22,12 +22,12 @@ export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start' 
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [sentAt, setSentAt] = useState<number | null>(null)
-  const [now, setNow] = useState(() => Date.now())
+  const [now, setNow] = useState(0) // read only once a code is sent (sentAt), never while the page first renders
   const [pending, start] = useTransition()
 
   useEffect(() => {
     if (!sentAt) return
-    const t = setInterval(() => setNow(Date.now()), 1000)
+    const t = setInterval(() => setNow(Date.now()), 1000) // clock-ok: a timer, after mount
     return () => clearInterval(t)
   }, [sentAt])
   const wait = sentAt ? Math.max(0, RESEND_SECONDS - Math.floor((now - sentAt) / 1000)) : 0
@@ -42,7 +42,7 @@ export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start' 
     start(async () => {
       const r = await sendCode({ email: v })
       if (!r.sent) return setError(r.error)
-      setEmail(r.email); setCode(''); setSentAt(Date.now()); setNow(Date.now()); setBack(false); setStep('code')
+      setEmail(r.email); setCode(''); setSentAt(Date.now()); setNow(Date.now()); setBack(false); setStep('code') // clock-ok: in the send handler
     })
   }
 

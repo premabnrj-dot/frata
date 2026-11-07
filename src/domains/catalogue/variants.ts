@@ -93,6 +93,7 @@ export function skuFor(prefix: string, handle: string, values: readonly string[]
 /** Makes a SKU unique against those already taken: "KS-LINKUR-M", then "-2", "-3"… */
 export function uniqueSku(sku: string, taken: ReadonlySet<string>): string {
   if (!taken.has(sku.toUpperCase())) return sku
-  for (let n = 2; n < 1000; n++) { const s = `${sku.slice(0, 36)}-${n}`; if (!taken.has(s.toUpperCase())) return s }
-  return `${sku.slice(0, 30)}-${Date.now() % 1e6}`
+  // Pure: the suffix is the first free number, never the clock (check:clock). A shop has far fewer SKUs than this.
+  for (let n = 2; n < 1_000_000; n++) { const s = `${sku.slice(0, 32)}-${n}`; if (!taken.has(s.toUpperCase())) return s }
+  throw new Error('no free SKU suffix')
 }

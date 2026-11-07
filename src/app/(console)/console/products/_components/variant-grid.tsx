@@ -5,12 +5,13 @@ import type { VariantInput } from '@/domains/catalogue/product-form'
 import { availability, type WhenOut } from '@/domains/catalogue/availability'
 import { combinations, groupOption, keyOf, type Option } from '@/domains/catalogue/variants'
 import { button } from '@/components/ui/button'
+import { useNow } from '@/components/time/now'
 
 export type Cell = Omit<VariantInput, 'values'>
 export const EMPTY_CELL: Cell = { price: '', compareAt: '', cost: '', stock: '0', sku: '', whenOut: 'stop', shipsBy: '', leadMin: '', leadMax: '', cap: '' }
 
 /** What shoppers see for one cell right now: derived, never typed (availability.ts). */
-export function shopperSees(c: Cell, now = new Date()) {
+export function shopperSees(c: Cell, now: Date) {
   const lead = Number(c.leadMin) || null
   return availability({ stock: Number(c.stock) || 0, whenOut: c.whenOut ?? 'stop', shipsBy: c.shipsBy || null, leadMinDays: lead, leadMaxDays: Number(c.leadMax) || lead, preorderCap: c.cap ? Number(c.cap) : null }, now)
 }
@@ -30,6 +31,7 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku }: {
   /** The SKU a save will make for an empty cell, shown as its placeholder. */
   autoSku: (values: string[]) => string
 }) {
+  const now = useNow()
   const combos = combinations(options)
   const g = groupOption(options)
   const groups = g < 0 ? [{ label: '', rows: combos }] : options[g]!.values.map((v) => ({ label: v, rows: combos.filter((c) => c[g] === v) }))
@@ -70,7 +72,7 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku }: {
             <th role="columnheader">{options.map((o) => o.name).join(' / ') || 'Product'}</th><th role="columnheader">Price, ₹</th><th role="columnheader">Compare at, ₹</th><th role="columnheader">Your cost, ₹</th><th role="columnheader">Stock</th><th role="columnheader">When it runs out</th><th role="columnheader">Shoppers see</th><th role="columnheader">SKU</th></tr></thead>
           {groups.map((grp) => {
             const shut = collapse && grp.label && !open[grp.label]
-            const sold = grp.rows.filter((c) => !shopperSees(cells[keyOf(c)] ?? EMPTY_CELL).canBuy).length
+            const sold = grp.rows.filter((c) => !shopperSees(cells[keyOf(c)] ?? EMPTY_CELL, now).canBuy).length
             return (
               <tbody role="rowgroup" key={grp.label || 'all'} className="border-t border-border">
                 {grp.label && (
@@ -86,7 +88,7 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku }: {
                   const label = c.filter((_, i) => i !== g).join(' / ') || 'This product'
                   const rowErr = ['price', 'compareAt', 'cost', 'stock', 'sku', 'shipsBy', 'cap', 'lead'].map((f) => err(k, f)).find(Boolean)
                   const cell = cells[k] ?? EMPTY_CELL
-                  const sees = shopperSees(cell)
+                  const sees = shopperSees(cell, now)
                   const i = rowId.get(k)
                   return (
                     <tr role="row" key={k} className="border-t border-border/60 [&>td]:px-2 [&>td]:py-1.5">

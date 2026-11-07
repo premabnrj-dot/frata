@@ -49,7 +49,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/
 const isoDay = (d: Date) => new Date(d.getTime() + 330 * 60000).toISOString().slice(0, 10)
 
 /** Errors keyed "title", "options", or "v:<values>:<field>" for one grid cell. */
-export function cleanProduct(p: ProductInput, now = new Date()): { ok: true; product: CleanProduct } | { ok: false; errors: Record<string, string> } {
+export function cleanProduct(p: ProductInput, now: Date): { ok: true; product: CleanProduct } | { ok: false; errors: Record<string, string> } {
   const errors: Record<string, string> = {}
   const title = p.title.trim().replace(/\s+/g, ' ')
   if (!title) errors.title = 'Your product needs a name.'

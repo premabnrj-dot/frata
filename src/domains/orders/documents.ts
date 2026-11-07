@@ -35,14 +35,19 @@ export type PackingSlip = {
   to: { name: string; lines: string[]; phone: string }; returnTo: string
   /** Paise to collect at the door; 0 = "Prepaid — collect nothing". No prices on a slip. */
   collect: number
+  /** Cancelled: the slip says do not ship, never "collect nothing" (impact review 1D·5). */
+  cancelled: boolean
 }
+
+/** The most a print page prints at once (a bulk print of a queue page). */
+export const MAX_DOCUMENTS = 50
 
 export function packingSlip(o: DocOrder, lines: DocLine[], shop: DocShop): PackingSlip {
   return {
     shop: shop.name, number: o.number,
     lines: lines.map((l) => ({ title: l.title, options: l.optionValues.join(' · '), qty: l.qty, sku: l.sku, imageBase: l.imageBase, imageWidths: l.imageWidths })),
     to: { name: o.customerName, lines: addressLines(o), phone: o.phone }, returnTo: shop.returnAddress || shop.address,
-    collect: collect(o),
+    collect: collect(o), cancelled: !!o.cancelledAt,
   }
 }
 

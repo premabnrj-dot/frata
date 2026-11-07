@@ -99,6 +99,16 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   `requireMember` itself.** It returns `not_configured` rather than throwing
   when the environment is unset.
 
+## Time in client components (2026-11-07, `check:clock`)
+
+A client component renders on the server and again in the browser. **Render never
+reads the clock**: a page passes its render time once (`<NowProvider at={now.toISOString()}>`,
+or a `now` prop) and components derive from `useNow()` (`src/components/time/now.tsx`).
+Domain functions take `now` as an argument, never a default. Event handlers and timers may
+read the real clock and mark the line `// clock-ok: <why>`. Text from two different "now"s
+differs when a minute or day turns between render and hydration: React #418 (Online
+payments, the product editor, 2026-11-07).
+
 ## Server actions (from Ekatan)
 
 ```ts

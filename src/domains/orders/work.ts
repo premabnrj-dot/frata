@@ -24,7 +24,7 @@ export const ROLES: Record<OrderAction, readonly MemberRole[]> = {
 }
 
 /** The states each action applies to. */
-const WHEN: Record<Exclude<OrderAction, 'undo' | 'print'>, readonly OrderState[]> = {
+const WHEN: Record<Exclude<OrderAction, 'undo'>, readonly OrderState[]> = {
   confirm: ['unconfirmed', 'held'],
   hold: ['unconfirmed', 'confirmed', 'paid'],
   unhold: ['held'],
@@ -32,11 +32,14 @@ const WHEN: Record<Exclude<OrderAction, 'undo' | 'print'>, readonly OrderState[]
   pack: ['confirmed', 'paid'],
   edit: ['unconfirmed', 'held', 'confirmed', 'paid'],
   cancel: ['unconfirmed', 'held', 'confirmed', 'paid', 'refund_due', 'packed'],
+  // The packing slip: to pick and pack, and to reprint while it is with the courier. Never once cancelled, returned
+  // or delivered (a cancelled COD slip once read "collect nothing"). The invoice is not an action: it prints
+  // whenever one was issued, a cancelled one stamped CANCELLED.
+  print: ['confirmed', 'paid', 'packed', 'shipped', 'ndr'],
 }
 
-/** Whether `action` applies to an order in `state` (roles aside). Print applies once packed; undo is checked against its event. */
+/** Whether `action` applies to an order in `state` (roles aside). Undo is checked against its event. */
 export function applies(action: OrderAction, state: OrderState): boolean {
-  if (action === 'print') return !['awaiting_payment', 'payment_abandoned'].includes(state)
   if (action === 'undo') return true
   return WHEN[action].includes(state)
 }
