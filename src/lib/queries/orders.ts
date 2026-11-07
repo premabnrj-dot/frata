@@ -6,7 +6,7 @@ import type { Tx } from '@/lib/db'
 import { withTenant } from '@/lib/db/tenant'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { orderPrefix } from '@/domains/signup/slug'
-import { inTabSql, momentColumns } from '@/lib/db/order-predicates'
+import { inTabSql, momentColumns, openSql, placedSql } from '@/lib/db/order-predicates'
 import { QUEUE_TABS, type QueueTab } from '@/domains/orders/order-state'
 import { parseOrderSearch } from '@/domains/orders/search'
 
@@ -26,8 +26,9 @@ export async function listOrders(tenantId: string, { tab = 'all', page = 1, q = 
       id: orders.id, number: orders.number, total: orders.total, customerName: orders.customerName, city: orders.city,
       ...momentColumns,
       items: sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l where l.order_id = "orders"."id" and l.tenant_id = ${tenantId})`,
-      // How many match (this tab and search), in the same query: the pager's "of N" when a search is on.
-      matching: sql<number>`(count(*) over ())::int`,
+      // How many match (this tab and search), in the same query: the pager's "of N" — only when a search is on.
+      // Without one the page reads queueCounts, and a window count would stop LIMIT from cutting the scan short.
+      matching: search ? sql<number>`(count(*) over ())::int` : sql<number>`0`,
     }).from(orders).where(and(eq(orders.tenantId, tenantId), inTabSql(tab, now), ...(search ? [search] : [])))
       .orderBy(desc(orders.placedAt), desc(orders.number)).limit(ORDERS_PAGE).offset((page - 1) * ORDERS_PAGE),
   )
@@ -58,9 +59,12 @@ export async function queueCounts(tenantId: string, now: Date): Promise<Record<Q
 /** queueCounts inside a caller's transaction (Home reads its counts, oldest waits and risk in one, U·4). */
 export async function queueCountsWith(tx: Tx, tenantId: string, now: Date): Promise<Record<QueueTab, number>> {
   const n = (tab: QueueTab) => sql<number>`(count(*) filter (where ${inTabSql(tab, now)}))::int`
-  const [r] = await tx.select(Object.fromEntries(QUEUE_TABS.map((t) => [t, n(t)])) as Record<QueueTab, ReturnType<typeof n>>)
-    .from(orders).where(eq(orders.tenantId, tenantId))
-  return Object.fromEntries(QUEUE_TABS.map((t) => [t, Number(r?.[t] ?? 0)])) as Record<QueueTab, number>
+  // The work tabs over OPEN orders only (the partial index); All is a plain count of placed orders.
+  const work = QUEUE_TABS.filter((t) => t !== 'all')
+  const [r] = await tx.select(Object.fromEntries(work.map((t) => [t, n(t)])) as Record<QueueTab, ReturnType<typeof n>>)
+    .from(orders).where(and(eq(orders.tenantId, tenantId), openSql()))
+  const [all] = await tx.select({ n: sql<number>`count(*)::int` }).from(orders).where(and(eq(orders.tenantId, tenantId), placedSql()))
+  return Object.fromEntries(QUEUE_TABS.map((t) => [t, Number(t === 'all' ? all?.n ?? 0 : r?.[t] ?? 0)])) as Record<QueueTab, number>
 }
 
 export type OrderRow = Awaited<ReturnType<typeof listOrders>>[number]

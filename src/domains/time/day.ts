@@ -1,7 +1,8 @@
 // A calendar day as India counts it (IST, UTC+5:30, no daylight saving): "today", "last 7 days" and a day's
 // bar on Home (U·4) mean this, in SQL and in code alike. The month version is month.ts.
 
-const IST_OFFSET_MS = 330 * 60_000
+/** India's offset from UTC (IST, +5:30, no daylight saving): the ONE copy (month.ts and fiscal-year.ts read it). */
+export const IST_OFFSET_MS = 330 * 60_000
 const DAY_MS = 86_400_000
 
 /** "2026-11-07": the IST date a moment falls on (the key SQL groups by: `(t at time zone 'Asia/Kolkata')::date`). */

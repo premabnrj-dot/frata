@@ -61,6 +61,19 @@ export async function unholdOrder(orderId: string) {
 export async function undoOrderAction(eventId: string) {
   return Id.safeParse(eventId).success ? run('undo', eventId, {}, (tx, t, a) => work.undo(tx, t, a, eventId)) : { ok: false as const, error: 'There is nothing to undo.' }
 }
+/**
+ * Undo a bulk action's events in ONE request (architecture review 2026-11-07: fifty client calls run one after
+ * another, each with its own render, outlasting the 8 s toast). Each still goes through undoOrderAction: its own
+ * compare-and-set, history and audit row. The first refusal is returned, in its own words.
+ */
+export async function undoMany(eventIds: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ids = pickIds(eventIds)
+  if (!ids.length) return { ok: false, error: 'There is nothing to undo.' }
+  let bad: string | null = null
+  for (const id of ids) { const r = await undoOrderAction(id); if (!r.ok && !bad) bad = r.error }
+  return bad ? { ok: false, error: bad } : { ok: true }
+}
+
 export async function addOrderNote(orderId: string, body: string) {
   return Id.safeParse(orderId).success && typeof body === 'string' ? run('note', orderId, {}, (tx, t, a) => work.addNote(tx, t, a, orderId, body)) : notFound
 }

@@ -15,7 +15,7 @@ import type { Paise } from '@/domains/money/paise'
 import { MAX_DOCUMENTS } from '@/domains/orders/documents'
 import { confirmKey } from '@/domains/ui/shortcuts'
 import { cn } from '@/lib/utils'
-import { confirmMany, confirmOrder, holdMany, holdOrder, undoOrderAction, type BulkResult } from '../actions'
+import { confirmMany, confirmOrder, holdMany, holdOrder, undoMany, undoOrderAction, type BulkResult } from '../actions'
 import { printHref, RISK_LABEL, type Tone } from './labels'
 
 // =============================================================================
@@ -64,10 +64,11 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
   const undoable = (eventIds: string[], ids: string[]) => {
     const undo = async () => {
       if (lastUndo.current === undo) lastUndo.current = null
-      const results = await Promise.all(eventIds.map((e) => undoOrderAction(e))).catch(() => [{ ok: false as const, error: 'We could not undo that. Open the order to see where it is.' }])
-      const bad = results.find((r) => !r.ok)
+      // One request for a bulk undo, never one per order (they would queue behind each other).
+      const r = await (eventIds.length === 1 ? undoOrderAction(eventIds[0]!) : undoMany(eventIds))
+        .catch(() => ({ ok: false as const, error: 'We could not undo that. Open the order to see where it is.' }))
       unmark(ids); router.refresh()
-      return bad && !bad.ok ? { ok: false, error: bad.error } : { ok: true }
+      return r.ok ? { ok: true } : { ok: false, error: r.error }
     }
     return undo
   }

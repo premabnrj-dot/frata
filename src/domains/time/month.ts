@@ -1,7 +1,7 @@
 // The start of the calendar month a moment falls in, as India counts it (IST,
 // UTC+5:30, no daylight saving). "Orders this month" means this, everywhere.
+import { IST_OFFSET_MS } from './day'
 
-const IST_OFFSET_MS = 330 * 60_000
 
 export function monthStartIST(now: Date): Date {
   const ist = new Date(now.getTime() + IST_OFFSET_MS)

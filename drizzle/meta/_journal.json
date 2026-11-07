@@ -176,6 +176,20 @@
       "when": 1794077839894,
       "tag": "0024_drop_backfill_0019",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794078276520,
+      "tag": "0025_orders_open_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794078352681,
+      "tag": "0026_orders_seller_snapshot",
+      "breakpoints": true
     }
   ]
 }

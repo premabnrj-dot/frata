@@ -14,8 +14,12 @@ phase; the detail is in its plan.
   and refund); Hold and Undo for 8 s; Cancel with a reason, putting stock back per line; edit who it goes to
   until packed; team notes; activity with who did what (field names only, never shopper data).
 - **Documents:** the packing slip (Code 128 barcode drawn locally; what to collect, or "Prepaid — collect
-  nothing", or "Cancelled — do not ship") and the tax invoice or bill of supply, numbered once at Mark packed
-  (`KESR/26-27/00001`, ≤ 16 characters), CGST + SGST inside the seller's state, IGST outside.
+  nothing"; a cancelled order gets none, and the page says why) and the tax invoice or bill of supply,
+  numbered once at Mark packed (`KESR/26-27/00001`, ≤ 16 characters; a series too long for the year is refused in
+  Settings), CGST + SGST inside the seller's state, IGST outside. The seller's name and address are stored as the
+  invoice is issued, and an issued invoice is never rewritten: a payment captured after packing is flagged on the
+  order page (tell the courier, or refund) instead.
+- **Bulk Undo** in one request, and Undo only ever reverses an order's latest action.
 - **Stock per line:** a late payment, a switch to Pay on delivery or a cancel never takes or returns stock twice;
   the product page shows what checkout can sell.
 - **Cleaner screens:** explanation behind an (i), limits, money and legal words kept visible; homepage claims

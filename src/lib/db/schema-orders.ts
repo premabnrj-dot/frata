@@ -85,6 +85,9 @@ export const orders = pgTable('orders', {
   cancelNote: text('cancel_note'),
   /** The shop's GSTIN when the order was placed (null: not registered then): the invoice reads this, never today's settings. */
   sellerGstin: text('seller_gstin'),
+  // The seller as it was at packing (1D·7): an issued invoice never follows a later change to Settings.
+  sellerName: text('seller_name'),
+  sellerAddress: text('seller_address'),
   /** The area/locality as typed, kept apart from address_line from 1D (risk reads the line alone). */
   area: text('area').notNull().default(''),
   createdAt: createdAt(),

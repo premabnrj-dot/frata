@@ -60,9 +60,18 @@ const IN: Record<Exclude<QueueTab, 'all'>, OrderState[]> = {
 }
 const list = (states: OrderState[]) => sql.raw(states.map((s) => `'${s}'`).join(','))
 
+/**
+ * Not yet packed, shipped, delivered, returned or cancelled: every work tab's states lie inside this (they are the
+ * cases stateSql reaches only after these are all null). Said first, plainly, so the planner can use the partial
+ * index orders_open_idx (drizzle/0025) instead of deriving the state of a shop's whole history (architecture
+ * review 2026-11-07: tab counts took 700 ms at 50k orders). It changes no result: the parity test holds it.
+ */
+export const openSql = (a = '"orders"'): SQL => sql.raw(['packed_at', 'shipped_at', 'ndr_at', 'delivered_at', 'cancelled_at', 'rto_initiated_at', 'rto_delivered_at']
+  .map((k) => `${a}."${k}" is null`).join(' and '))
+
 /** queueTab() in SQL; 'all' is every placed order. */
 export const inTabSql = (tab: QueueTab, now: Date, a = '"orders"'): SQL =>
-  tab === 'all' ? placedSql(a) : sql`${stateSql(now, a)} in (${list(IN[tab])})`
+  tab === 'all' ? placedSql(a) : sql`(${openSql(a)} and ${stateSql(now, a)} in (${list(IN[tab])}))`
 
 /**
  * isPlaced(): not an online order still waiting for, or never given, its payment. Cancelled orders count (plan usage).

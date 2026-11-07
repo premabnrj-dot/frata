@@ -12,6 +12,7 @@ import { requireMember } from '@/lib/auth/require-member'
 import { dayMonthLongIN } from '@/lib/format-date'
 import { documentsFor, MAX_DOCUMENTS } from '@/lib/orders/documents'
 import { formatInr } from '@/lib/format'
+import { STATE } from '../_components/labels'
 
 // =============================================================================
 // FILE: src/app/(console)/console/orders/print/page.tsx
@@ -48,9 +49,9 @@ function Slip({ o, lines, shop }: { o: DocOrder; lines: DocLine[]; shop: DocShop
         <div><p className="text-sm text-muted-foreground">{s.shop}</p><p className="font-mono text-4xl font-semibold">{s.number}</p></div>
         <Barcode value={s.number} />
       </header>
-      <div className={`border-4 p-4 text-center ${s.cancelled ? 'border-danger-text text-danger-text' : s.collect ? 'border-foreground' : 'border-muted-foreground'}`}>
-        {s.cancelled ? <p className="text-3xl font-semibold">Cancelled — do not ship</p>
-          : s.collect ? <p className="text-3xl font-semibold">Collect <Money paise={paise(s.collect)} /></p> : <p className="text-2xl font-semibold">Prepaid — collect nothing</p>}
+      {/* A cancelled order never reaches here: documentsFor prints a slip only where applies('print') (1D·7). */}
+      <div className={`border-4 p-4 text-center ${s.collect ? 'border-foreground' : 'border-muted-foreground'}`}>
+        {s.collect ? <p className="text-3xl font-semibold">Collect <Money paise={paise(s.collect)} /></p> : <p className="text-2xl font-semibold">Prepaid — collect nothing</p>}
       </div>
       <section aria-label="Deliver to" className="text-lg">
         <p className="text-xs uppercase tracking-wide text-muted-foreground">Deliver to</p>
@@ -136,7 +137,7 @@ export default async function PrintPage({ searchParams }: { searchParams: Promis
   const asked = [...new Set((sp.n ?? '').split(',').map((x) => Number(x.trim())).filter((x) => Number.isSafeInteger(x) && x > 0))]
   const numbers = asked.slice(0, MAX_DOCUMENTS)
   const r = await asMember(ROLES.print, { action: kind === 'invoice' ? 'order.print_invoice' : 'order.print_slip', detail: { count: numbers.length } }, async (tx, auth) =>
-    documentsFor(tx, auth.membership.tenantId, numbers))
+    documentsFor(tx, auth.membership.tenantId, numbers, kind))
     .catch((err) => { console.error('[print]', err instanceof Error ? err.name : err); return null })
   if (!r) return <Panel title="We could not load these documents">Nothing was changed. Try again in a minute.</Panel>
   if (!r.ok) return <Panel title={r.error} />
@@ -149,8 +150,9 @@ export default async function PrintPage({ searchParams }: { searchParams: Promis
         <h1 className="text-section font-semibold">{title}</h1>
         {docs.length ? <PrintButton /> : null}
       </div>
+      {r.value.skipped.length ? <p role="status" className="text-sm print:hidden">Not printed: {r.value.skipped.map((x) => `${x.number} (${STATE[x.state].label.toLowerCase()})`).join(', ')}. A packing slip is for an order from confirmed until it is delivered.</p> : null}
       {asked.length > numbers.length ? <p role="status" className="text-sm print:hidden">The first {MAX_DOCUMENTS} of the {asked.length} orders asked for. Print these, then the rest.</p> : null}
-      {docs.length === 0 ? <Panel title="Nothing to print">None of these orders is in your shop.</Panel>
+      {docs.length === 0 ? <Panel title="Nothing to print">{r.value.skipped.length ? 'None of these orders has a packing slip now.' : 'None of these orders is in your shop.'}</Panel>
         : docs.map(({ o, lines }) => kind === 'invoice' ? <Invoice key={o.number} o={o} lines={lines} shop={r.value.shop} /> : <Slip key={o.number} o={o} lines={lines} shop={r.value.shop} />)}
     </>
   )

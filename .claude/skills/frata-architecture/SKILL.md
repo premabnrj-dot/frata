@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.4.0
+  version: 2.5.0
   verified: 2026-11-07
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -171,8 +171,14 @@ export async function confirmOrder(input: unknown): Promise<{ ok: boolean; error
   is a typed column.
 - **A definer function that names people takes no ids:** it reads
   `app_current_tenant()` and returns only that shop's members.
-- **Snapshot at placement what a document needs later** (seller GSTIN, each
-  line's share of charges): a document reads the order, never today's settings.
+- **A read inside a caller's transaction lives beside the writers** (`src/lib/orders/`), the one exception to
+  "reads go through `src/lib/queries/`": `documentsFor` takes the `asMember` transaction so a support visit
+  that opens a document carrying the shopper's address is audited, and `check:tenant` requires a queries file
+  to open its own `withTenant`. It still filters by tenant itself, on top of the policy.
+- **Snapshot what a document needs later**, when it is issued: at placement the
+  seller GSTIN and each line's share of charges, at packing the seller's legal name
+  and address (`orders.seller_name`, `seller_address`). A document reads the order,
+  never today's settings.
 
 ## Outside world (ADR-0006)
 
