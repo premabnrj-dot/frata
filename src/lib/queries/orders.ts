@@ -1,30 +1,45 @@
 import 'server-only'
 import { cache } from 'react'
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, ilike, like as like_, or, sql } from 'drizzle-orm'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { orderPrefix } from '@/domains/signup/slug'
 import { inTabSql, momentColumns } from '@/lib/db/order-predicates'
 import { QUEUE_TABS, type QueueTab } from '@/domains/orders/order-state'
+import { parseOrderSearch } from '@/domains/orders/search'
 
-/** Rows a page. 1D's queue sets 50 (docs/specs/2026-11-07-orders.md § 1D·1); until then the page keeps 100. */
-export const ORDERS_PAGE = 100
+/** Rows a page (docs/specs/2026-11-07-orders.md § 1D·1). */
+export const ORDERS_PAGE = 50
 
 /**
  * The console's order list, newest first, one page of one queue tab at a time. The tab is tested with the SAME
- * predicate queueCounts counts with (inTabSql), so a list and its count can never disagree. 1D·4b adds the
- * other tabs and search here rather than writing a second list.
+ * predicate queueCounts counts with (inTabSql), so a list and its count can never disagree; a search narrows it,
+ * and `matching` (a window count) says how many it found.
  * Filtered by tenant twice: the policy, and this where.
  */
-export async function listOrders(tenantId: string, { tab = 'all', page = 1, now }: { tab?: QueueTab; page?: number; now: Date }) {
+export async function listOrders(tenantId: string, { tab = 'all', page = 1, q = '', now }: { tab?: QueueTab; page?: number; q?: string; now: Date }) {
+  const search = searchSql(q)
   return withTenant(tenantId, (tx) =>
     tx.select({
       id: orders.id, number: orders.number, total: orders.total, customerName: orders.customerName, city: orders.city,
       ...momentColumns,
       items: sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l where l.order_id = "orders"."id" and l.tenant_id = ${tenantId})`,
-    }).from(orders).where(and(eq(orders.tenantId, tenantId), inTabSql(tab, now)))
+      // How many match (this tab and search), in the same query: the pager's "of N" when a search is on.
+      matching: sql<number>`(count(*) over ())::int`,
+    }).from(orders).where(and(eq(orders.tenantId, tenantId), inTabSql(tab, now), ...(search ? [search] : [])))
       .orderBy(desc(orders.placedAt), desc(orders.number)).limit(ORDERS_PAGE).offset((page - 1) * ORDERS_PAGE),
+  )
+}
+
+/** The search as SQL: name LIKE (escaped), the number, and phone digits (src/domains/orders/search.ts). */
+function searchSql(raw: string) {
+  const q = parseOrderSearch(raw)
+  if (!q) return null
+  return or(
+    ilike(orders.customerName, q.like),
+    ...(q.number !== null ? [eq(orders.number, q.number)] : []),
+    ...(q.phoneDigits ? [like_(orders.phone, `%${q.phoneDigits}%`)] : []),
   )
 }
 

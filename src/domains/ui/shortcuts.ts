@@ -64,6 +64,7 @@ export function shortcutFor(e: KeyInput): ShortcutAction | null {
  * `c` on a row: confirm, except where confirming needs a person to look first. A high-risk order opens instead
  * (the same guard bulk confirm applies); anything that cannot be confirmed opens too.
  */
-export function confirmKey(row: { canConfirm: boolean; risk: 'low' | 'medium' | 'high' }): 'confirm' | 'open' {
-  return row.canConfirm && row.risk !== 'high' ? 'confirm' : 'open'
+export function confirmKey(row: { canConfirm: boolean; risk: 'low' | 'medium' | 'high' | 'unknown' }): 'confirm' | 'open' {
+  // Unknown (the risk facts could not be read) is treated as High: a person looks first (review 2026-11-07).
+  return row.canConfirm && row.risk !== 'high' && row.risk !== 'unknown' ? 'confirm' : 'open'
 }

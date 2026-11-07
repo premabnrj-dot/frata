@@ -18,7 +18,9 @@ export default {
     const p = await ctx.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message))
     // What the page counts before: under one page of orders, so the old code counted it right too.
     await p.goto(CONSOLE + '/console/orders')
-    const shown = async () => Number((await p.locator('main p').first().textContent())?.match(/([\d,]+) to confirm/)?.[1]?.replace(/,/g, '') ?? 0)
+    // The To confirm tab's own count (1D·4b: the queue's tabs, each counted over every order).
+    const tabCount = async (label) => Number((await p.getByRole('navigation', { name: 'Order views' }).getByRole('link', { name: new RegExp(`^${label}`) }).textContent())?.replace(/\D/g, '') || 0)
+    const shown = () => tabCount('To confirm')
     const before = await shown()
     // 130 COD orders waiting to be confirmed (older than anything already there), 20 confirmed, 5 online and never paid.
     await db`insert into orders (tenant_id, number, payment_method, placed_at, confirmed_at, customer_name, city, subtotal, total)
@@ -38,35 +40,36 @@ export default {
 
     try {
     await t.step('the count covers every order, not the first page', async () => {
-      await p.goto(CONSOLE + '/console/orders')
+      await p.goto(CONSOLE + '/console/orders?tab=all')
       assert.equal(await shown(), toConfirm)
-      await p.getByText(`Showing 1–100 of ${placed.toLocaleString('en-IN')}, newest first`).waitFor()
-      assert.equal(await p.locator('tbody tr').count(), 100)
-      await p.getByRole('link', { name: '5 online orders not paid' }).waitFor()
+      assert.equal(await tabCount('All'), placed)
+      await p.getByText(`Showing 1–50 of ${placed.toLocaleString('en-IN')}, newest first`).waitFor()
+      assert.equal(await p.locator('tbody tr').count(), 50)
+      assert.equal(await tabCount('Not paid online'), 5)
       assert.equal(await p.getByText('Cancelled unpaid').count(), 0)
       await p.screenshot({ path: t.out('page1'), fullPage: false })
     })
     await t.step('older orders are reachable, page by page', async () => {
-      const pages = Math.ceil(placed / 100)
+      const pages = Math.ceil(placed / 50)
       for (let n = 2; n <= pages; n++) {
         await p.getByRole('link', { name: 'Older' }).click()
-        await p.getByText(`Showing ${(n - 1) * 100 + 1}–`).waitFor()
+        await p.getByText(`Showing ${(n - 1) * 50 + 1}–`).waitFor()
       }
       assert.equal(await p.getByRole('link', { name: 'Older' }).count(), 0)
       await p.getByText(`Stress 150`).waitFor()
-      assert.equal(await p.locator('tbody tr').count(), placed - (pages - 1) * 100)
+      assert.equal(await p.locator('tbody tr').count(), placed - (pages - 1) * 50)
     })
     await t.step('unpaid online orders are listed apart and never counted to confirm', async () => {
-      await p.goto(CONSOLE + '/console/orders?show=unpaid')
+      await p.goto(CONSOLE + '/console/orders?tab=not_paid')
       await p.getByText('Unpaid 1').waitFor()
       assert.equal(await p.locator('tbody tr').count(), 5)
       assert.equal(await p.getByText('Cancelled unpaid').count(), 0)
       assert.equal(await shown(), toConfirm)
     })
     await t.step('a page number past the end or not a number shows a real page', async () => {
-      await p.goto(CONSOLE + '/console/orders?page=1e400')
-      await p.getByText('Showing 1–100 of').waitFor()
-      await p.goto(CONSOLE + '/console/orders?page=99')
+      await p.goto(CONSOLE + '/console/orders?tab=all&page=1e400')
+      await p.getByText('Showing 1–50 of').waitFor()
+      await p.goto(CONSOLE + '/console/orders?tab=all&page=99')
       await p.getByText(`Stress 150`).waitFor()
     })
     } finally {

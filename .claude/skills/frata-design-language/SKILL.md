@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 3.4.0
+  version: 3.4.1
   verified: 2026-11-07
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -281,8 +281,17 @@ triage, Gmail, Stripe, NN/g confirmation dialogs (2026-08-07). Spec:
    2.1.4), kept on the device (`localStorage`; per person when profiles exist).
    `?` always opens the sheet, so the switch can be found.
 7. **Bulk actions skip what needs a person** and say so: "Confirmed 12.
-   Skipped 2 high-risk orders — open them to decide." No bulk for destructive
-   actions that need a reason.
+   Skipped 2 high-risk orders — open them to decide." The skip is decided on
+   the server (risk is never sent by the page); each failure keeps its own
+   words ("KS-1012: Already confirmed by riya@…"), never a generic one. No bulk
+   for destructive actions that need a reason. Bulk is a desktop tool: on a
+   phone a row is one target, so selection hides.
+   - **A queue row with three or more badges** puts them on a full line of
+     their own on a phone (DataTable cell `e`), so number and name never squeeze.
+   - **Row links never prefetch** (`prefetch={false}`): a page of rows would be
+     a page of server renders on every visit.
+   - **Risk that cannot be read fails closed:** "Risk unavailable", and the
+     confirm key opens the order instead of confirming it.
 8. **Views as tabs with counts**, derived from the record's state, one search
    box; every tab has its own empty state that says what lands there.
 9. **Documents are print pages** (A4, browser print), not PDFs; the number on
@@ -348,7 +357,7 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     titles `text-section font-semibold`). A form that is a card is a `<Section><form>`.
     No hand-written card frames and no cards inside cards (`check:scale`).
 15. **Tables on phones become rows**, never a table that scrolls sideways. Use `DataTable` + `<Td cell>`: `a`
-    the link (`data-row-link`, the whole row's target) and `b` the figure on line 1, `c` who/where and `d` the
+    the link (`data-row-link`, the whole row's target; it never prefetches: `prefetch={false}`, or a 50-row page asks the server for 50 pages, 1D·4b 2026-11-07) and `b` the figure on line 1, `c` who/where and `d` the
     badges on line 2, `e`/`f` full lines, `hide` desktop only. An editor grid (a raw `<table>`, not a
     `DataTable`) carries `data-rows="form"`, explicit table roles, and `data-label` on each `<td>`: a card of
     labelled fields. A button whose label can be long (it names a merchant) is `size: 'wrap'`. A matrix (plans) is one `Section` per column on phones.

@@ -27,7 +27,7 @@ export default async function CollectionsPage() {
           <DataTableBody>
             {rows.map((r) => (
               <DataTableRow key={r.id}>
-                <Td cell="a"><Link href={`/console/collections/${r.handle}`} data-row-link className="font-medium hover:underline">{r.title}</Link><span className="block font-mono text-xs text-muted-foreground">/collections/{r.handle}</span></Td>
+                <Td cell="a"><Link href={`/console/collections/${r.handle}`} data-row-link prefetch={false} className="font-medium hover:underline">{r.title}</Link><span className="block font-mono text-xs text-muted-foreground">/collections/{r.handle}</span></Td>
                 <Td cell="d"><Badge tone={r.kind === 'auto' ? 'info' : 'neutral'}>{r.kind === 'auto' ? 'Rules' : 'Hand-picked'}</Badge></Td>
                 <Td cell="b" className="text-right"><Numeric>{r.count}</Numeric></Td>
               </DataTableRow>

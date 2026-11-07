@@ -2,7 +2,7 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.7.0
+  version: 1.8.0
   verified: 2026-11-07
 ---
 
@@ -45,3 +45,7 @@ metadata:
 | A page with real data cannot answer 404 | `notFound()` renders `not-found.tsx`, which gets no props | Render the page with `robots: noindex` instead (archived products) |
 | Local shop host in Playwright | Chromium resolves `*.frata.test` nowhere | `chromium.launch({ args: ['--host-resolver-rules=MAP *.frata.test 127.0.0.1:3077'] })`, build with `NEXT_PUBLIC_SHOP_DOMAIN=frata.test` |
 | `The "string" argument must be of type string … Received an instance of Date` | A `Date` inside a drizzle `sql` template goes to postgres.js unserialised (column helpers like `eq()` are fine) | `${d.toISOString()}::timestamptz`. The rate limiter failed OPEN on this for every call until 2026-11-07 (`src/lib/db/rate-limit.ts`) |
+| A list page is slow, or a test's `goto` never reaches load | `<Link>` prefetches every row link in view: 50 rows = 50 server renders per visit | Row links (`data-row-link`) take `prefetch={false}` (orders, products, collections; 2026-11-07) |
+| React error #418 (hydration) on a page with an (i) tip | A `div` popover inside a `<p>` or label: the HTML parser closes the paragraph | Popovers that sit in text are `span`s (`src/components/ui/info-tip.tsx`) |
+| A dialog's safe button does not get focus | React's `autoFocus` runs at mount, and a `<dialog>`'s content mounts while it is closed | Mark it `data-autofocus`; `Dialog` focuses it after `showModal` |
+| An e2e build "fails" with no reason | `execSync`'s 1 MB output buffer kills the child | `maxBuffer: 64 MB` and the error's code printed (`e2e/stack.mjs`) |

@@ -162,7 +162,8 @@ export default {
         await p.getByRole('button', { name: 'End now' }).click()
         await p.waitForURL(/\/admin/)
         await p.goto(CONSOLE + '/console/orders')
-        const kesar = Number((await p.locator('main p').first().innerText()).match(/([\d,]+) to confirm/)?.[1]?.replace(/,/g, '') ?? 0)
+        // The To confirm tab's own count (1D·4b's queue tabs replaced the "N to confirm" line).
+        const kesar = Number((await p.getByRole('navigation', { name: 'Order views' }).getByRole('link', { name: /^To confirm/ }).innerText()).replace(/\D/g, '') || 0)
         assert.equal(await pill(), kesar, 'after End, the pill is Kesar\'s own count again')
         // Expiry: a visit that runs out while the page is open refreshes it (the kept layout must not show merchant-2).
         await start('eeeeeeee-0000-4000-8000-000000000002')
@@ -246,7 +247,8 @@ export default {
         await ctx.close()
         assert.equal(notoFiles.length, 4, `four Noto faces declared in the shell: ${notoFiles.join(', ')}`)
         const latin = await fontsOn('owner', CONSOLE + '/console/settings')
-        const indic = await fontsOn('owner', CONSOLE + '/console/orders') // Devanagari, Tamil, Gurmukhi and Bengali customer names
+        // All orders (the queue opens on To confirm since 1D·4b): Devanagari, Tamil, Gurmukhi and Bengali customer names.
+        const indic = await fontsOn('owner', CONSOLE + '/console/orders?tab=all')
         const shop = await fontsOn(null, SHOP + '/')
         assert.deepEqual(notoFiles.filter((f) => latin.has(f)), [], 'a Latin-only page downloads no Noto file')
         assert.equal(notoFiles.filter((f) => indic.has(f)).length, 4, 'a page with all four scripts downloads each Noto file')

@@ -3,7 +3,8 @@
 //
 // ON A PHONE (< 768 px) A TABLE BECOMES ROWS (frata-design-language § UX foundation rule 15): one DOM, reflowed
 // by CSS in globals.css ([data-rows]). Each <Td> says where it goes: `a` the link (number or name) and `b` the
-// figure on line 1; `c` who/where and `d` the badges on line 2; `e`, `f` full-width lines below; `hide` is
+// figure on line 1 (the link carries prefetch={false}: a page of rows must not prefetch every record);
+// `c` who/where and `d` the badges on line 2; `e`, `f` full-width lines below; `hide` is
 // desktop-only. The row's link (data-row-link) makes the whole row one target. Explicit roles keep the table a
 // table for a screen reader when its display changes. `form` rows (an editor grid) become a card of labelled
 // fields instead: every <Td label> shows its column name above its field on a phone.

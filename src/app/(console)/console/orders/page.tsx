@@ -1,96 +1,99 @@
-import Link from 'next/link'
-import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { Pager } from '@/components/data/pager'
+import { SearchField } from '@/components/data/search-field'
 import { PageHeader } from '@/components/layout/page-header'
-import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
-import { paise } from '@/domains/money/paise'
-import { currentMethod, orderState, paidAfterSwitch, type OrderState } from '@/domains/orders/order-state'
+import { ViewTabs } from '@/components/ui/view-tabs'
+import { currentMethod, orderState, paidAfterSwitch, QUEUE_TABS, type QueueTab } from '@/domains/orders/order-state'
+import { risk } from '@/domains/orders/risk'
+import { applies } from '@/domains/orders/work'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { dateTimeIN } from '@/lib/format-date'
-import { Money, Numeric } from '@/components/data/numeric'
-import { Name } from '@/components/data/name'
+import { riskFactsFor } from '@/lib/queries/order-risk'
 import { listOrders, ORDERS_PAGE, orderPrefixFor, queueCounts } from '@/lib/queries/orders'
+import { PAYMENT, STATE, TABS } from './_components/labels'
+import { Queue, type QueueRow } from './_components/queue'
+
+// =============================================================================
+// FILE: src/app/(console)/console/orders/page.tsx
+//
+// THE ORDERS QUEUE (1D·4b, docs/specs/2026-11-07-orders.md § 1D·1): tabs with
+// counts over every order (queueCounts, the same predicates the list filters
+// with), one search, 50 a page, two badges per row (how it is paid, where it
+// is), risk only when Medium or High, and the queue's keys and bulk confirm
+// (./_components/queue.tsx). The view is in the address: ?tab=&q=&page=.
+// =============================================================================
 
 export const metadata = { title: 'Orders' }
 
-const STATE: Record<OrderState, { label: string; tone: 'ok' | 'warn' | 'danger' | 'info' | 'neutral' }> = {
-  awaiting_payment: { label: 'Paying now', tone: 'neutral' },
-  payment_abandoned: { label: 'Payment abandoned', tone: 'neutral' },
-  paid: { label: 'Ready to pack', tone: 'info' },
-  unconfirmed: { label: 'To confirm', tone: 'warn' },
-  held: { label: 'On hold', tone: 'warn' },
-  refund_due: { label: 'Refund due', tone: 'danger' },
-  packed: { label: 'Packed', tone: 'info' },
-  confirmed: { label: 'Confirmed', tone: 'info' },
-  cancelled: { label: 'Cancelled', tone: 'neutral' },
-  shipped: { label: 'Shipped', tone: 'info' },
-  ndr: { label: 'Delivery failed', tone: 'danger' },
-  delivered: { label: 'Delivered', tone: 'ok' },
-  rto: { label: 'Returning', tone: 'danger' },
-  rto_received: { label: 'Returned', tone: 'neutral' },
-}
+const fail = <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
 
-export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ show?: string; page?: string }> }) {
+export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ tab?: string; q?: string; page?: string }> }) {
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
   const sp = await searchParams
-  // Unpaid online orders are not orders yet: listed only when asked for (they never count as "To confirm").
-  const showUnpaid = sp.show === 'unpaid'
-  const tab = showUnpaid ? 'not_paid' : 'all'
+  const tab: QueueTab = (QUEUE_TABS as readonly string[]).includes(sp.tab ?? '') ? (sp.tab as QueueTab) : 'to_confirm'
+  const q = (sp.q ?? '').trim().slice(0, 60)
   const now = new Date()
   const tenantId = auth.membership.tenantId
   const counts = await queueCounts(tenantId, now).catch((err) => { console.error('[orders]', err instanceof Error ? err.name : err); return null })
-  if (!counts) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
-  const total = counts[tab]
-  const pages = Math.max(1, Math.ceil(total / ORDERS_PAGE))
+  if (!counts) return fail
+  // The pager's total: the tab's own count, or (searching) how many match, from the list query itself.
   const asked = Number(sp.page)
-  const page = Number.isSafeInteger(asked) ? Math.min(Math.max(1, asked), pages) : 1
-  const list = await listOrders(tenantId, { tab, page, now }).catch((err) => { console.error('[orders]', err instanceof Error ? err.name : err); return null })
-  if (!list) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
-  const rows = list.map((o) => ({ o, state: orderState(o, now) }))
-  const first = (page - 1) * ORDERS_PAGE + 1
-  const at = (p: number) => `/console/orders${showUnpaid || p > 1 ? `?${new URLSearchParams({ ...(showUnpaid ? { show: 'unpaid' } : {}), ...(p > 1 ? { page: String(p) } : {}) })}` : ''}`
+  const pagesFor = (n: number) => Math.max(1, Math.ceil(n / ORDERS_PAGE))
+  const page = Number.isSafeInteger(asked) ? Math.min(Math.max(1, asked), q ? 1_000 : pagesFor(counts[tab])) : 1
+  let list = await listOrders(tenantId, { tab, page, q, now }).catch((err) => { console.error('[orders]', err instanceof Error ? err.name : err); return null })
+  if (!list) return fail
+  // A search link past its last page (results shrank since): show its first page, and say so in the pager.
+  const refetched = q !== '' && !list.length && page > 1
+  if (refetched) list = (await listOrders(tenantId, { tab, page: 1, q, now }).catch(() => [])) ?? []
+  const total = q ? (list[0]?.matching ?? 0) : counts[tab]
+  const pages = pagesFor(total)
+  const shownPage = refetched ? 1 : page
+
   const prefix = await orderPrefixFor(tenantId)
-  const pager = rows.length > 0 && (
-    <Pager first={first} shown={rows.length} total={total} suffix="newest first" prevLabel="Newer" nextLabel="Older"
-      prevHref={page > 1 ? at(page - 1) : undefined} nextHref={page < pages ? at(page + 1) : undefined} />
-  )
+  // If the risk facts cannot be read, rows say "Risk unavailable" and c opens instead of confirming: never fail open.
+  const facts = await riskFactsFor(tenantId, list.map((o) => o.id), now).catch((err) => { console.error('[orders] risk', err instanceof Error ? err.name : err); return null })
+  const rows: QueueRow[] = list.map((o) => {
+    const state = orderState(o, now)
+    const method = currentMethod(o)
+    const f = facts?.get(o.id)
+    return {
+      id: o.id, number: `${prefix}-${o.number}`, href: `/console/orders/${o.number}`,
+      customer: o.customerName, place: [o.city, `${o.items} item${o.items === 1 ? '' : 's'}`].filter(Boolean).join(' · '),
+      payment: method === 'cod' ? PAYMENT.cod : o.paidAt ? PAYMENT.paid : PAYMENT.unpaid, state: STATE[state], doNotCollect: paidAfterSwitch(o),
+      // Risk is for orders still to be decided; once confirmed, packed or paid it is not news.
+      risk: state === 'unconfirmed' || state === 'held' ? (facts === null ? 'unknown' : f ? risk(f).level : 'low') : 'low',
+      canConfirm: applies('confirm', state), canHold: applies('hold', state),
+      total: Number(o.total), placed: dateTimeIN(o.placedAt), dimmed: STATE[state].tone === 'neutral',
+    }
+  })
+
+  const href = (p: { tab?: QueueTab; page?: number; q?: string }) => {
+    const u = new URLSearchParams()
+    const t = p.tab ?? tab
+    if (t !== 'to_confirm') u.set('tab', t)
+    if (p.q ?? q) u.set('q', p.q ?? q)
+    if ((p.page ?? 1) > 1) u.set('page', String(p.page))
+    const s = u.toString()
+    return `/console/orders${s ? `?${s}` : ''}`
+  }
+  const info = TABS.find((t) => t.tab === tab)!
   return (
     <>
       <PageHeader title="Orders" />
-      <p className="text-sm text-muted-foreground">
-        {counts.to_confirm ? <><Numeric>{counts.to_confirm.toLocaleString('en-IN')}</Numeric> to confirm. </> : null}
-        {showUnpaid ? <Link href="/console/orders" className="underline">Back to orders</Link>
-          : counts.not_paid ? <Link href="/console/orders?show=unpaid" className="underline"><Numeric>{counts.not_paid.toLocaleString('en-IN')}</Numeric> online order{counts.not_paid === 1 ? '' : 's'} not paid</Link> : null}
-      </p>
+      <ViewTabs label="Order views" tabs={TABS.map((t) => ({ href: href({ tab: t.tab, q: '' }), label: t.label, count: counts[t.tab], current: t.tab === tab, apart: t.tab === 'not_paid' }))} />
+      <SearchField label="Search orders" placeholder="Search number, name or phone" value={q} clearHref={href({ q: '' })} hidden={tab !== 'to_confirm' ? { tab } : undefined} />
       {rows.length === 0 ? (
-        <Panel title={showUnpaid ? 'No unpaid online orders' : 'No orders yet'}>{showUnpaid ? 'Online orders that were never paid show here; they hold stock for 20 minutes, then let it go.' : 'Orders from your shop appear here as they are placed. Pay on delivery orders wait for you to confirm them.'}</Panel>
+        <Panel title={q ? 'No order matches that search' : info.empty.title}>
+          {q ? <>Try the order number, the customer&apos;s name or the last digits of their phone.</> : info.empty.body ?? null}
+        </Panel>
       ) : (
-        <DataTable label="Orders">
-          <DataTableHead>
-            <th>Order</th><th>Customer</th><th>Placed</th><th>Payment</th><th>Status</th><th className="text-right">Total</th>
-          </DataTableHead>
-          <DataTableBody>
-            {rows.map(({ o, state }) => {
-              const s = STATE[state]
-              const method = currentMethod(o)
-              return (
-                <DataTableRow key={o.id} dimmed={s.tone === 'neutral'}>
-                  <Td cell="a" className="font-mono font-medium">{prefix}-{o.number}</Td>
-                  <Td cell="c"><span className="line-clamp-2">{o.customerName ? <Name>{o.customerName}</Name> : '—'}</span><span className="block text-xs text-muted-foreground">{[o.city, `${o.items} item${o.items === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}</span></Td>
-                  <Td cell="f" className="whitespace-nowrap text-xs text-muted-foreground md:text-sm">{dateTimeIN(o.placedAt)}</Td>
-                  <Td cell="e" className="text-xs md:text-sm">{method === 'cod' ? 'Pay on delivery' : o.paidAt ? 'Paid online' : 'Online, not paid'}
-                    {paidAfterSwitch(o) && <Badge tone="danger" className="ml-1.5">Do not collect cash</Badge>}</Td>
-                  <Td cell="d"><Badge tone={s.tone}>{s.label}</Badge></Td>
-                  <Td cell="b" className="text-right"><Money paise={paise(o.total)} /></Td>
-                </DataTableRow>
-              )
-            })}
-          </DataTableBody>
-        </DataTable>
+        <Queue rows={rows} label={`Orders · ${info.label}`} />
       )}
-      {pager}
+      {rows.length > 0 ? (
+        <Pager first={(shownPage - 1) * ORDERS_PAGE + 1} shown={rows.length} total={total} suffix="newest first" prevLabel="Newer" nextLabel="Older"
+          prevHref={shownPage > 1 ? href({ page: shownPage - 1 }) : undefined} nextHref={shownPage < pages ? href({ page: shownPage + 1 }) : undefined} />
+      ) : null}
     </>
   )
 }
