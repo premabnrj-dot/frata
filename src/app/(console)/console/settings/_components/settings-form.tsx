@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { InfoTip } from '@/components/ui/info-tip'
 import { LeaveDialog, Message, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
 import {
   BrandPreview, CheckoutPreview, ContactPreview, FooterPreview, InvoicePreview, PolicyPreview, type ShopFacts,
@@ -75,7 +76,7 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
         <form className="space-y-4" noValidate onSubmit={(e) => { e.preventDefault(); if (dirty) save() }}>
           {section.blocks.map((b) => (
             <Section key={b.title}>
-              <h2 className="text-section font-semibold">{b.title}</h2>
+              <h2 className="flex items-center text-section font-semibold">{b.title}{b.tip ? <InfoTip about={b.title.toLowerCase()}>{b.tip}</InfoTip> : null}</h2>
               {b.hint && <p className="-mt-1 text-sm text-muted-foreground">{b.hint}</p>}
               <div className="grid gap-3 sm:grid-cols-2">
                 {b.fields.map((f) => <FieldInput key={f.key} f={f} value={values[f.key]} error={errors[f.key]} onChange={(v) => set(f.key, v)} />)}
@@ -110,11 +111,14 @@ function FieldInput({ f, value, error, onChange }: { f: Field; value: Values[str
   const id = `f-${f.key}`
   const described = `${id}-h`
   const base = 'w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text'
-  const help = <p id={described} className={`text-xs ${error ? 'text-danger-text' : 'text-muted-foreground'}`}>{error ?? f.hint}</p>
+  // Only an error or a limit/money/legal line is said under the field; detail is behind the (i).
+  const line = error ?? f.hint
+  const help = line ? <p id={described} className={`text-xs ${error ? 'text-danger-text' : 'text-muted-foreground'}`}>{line}</p> : null
+  const tip = f.tip ? <InfoTip about={f.label.toLowerCase()}>{f.tip}</InfoTip> : null
   if (f.kind === 'switch') {
     return (
       <div className="flex items-center justify-between gap-3 sm:col-span-2">
-        <label htmlFor={id} className="text-sm font-medium">{f.label}</label>
+        <span className="flex items-center"><label htmlFor={id} className="text-sm font-medium">{f.label}</label>{tip}</span>
         <button id={id} type="button" role="switch" aria-checked={value === true} onClick={() => onChange(value !== true)}
           className="relative h-6 w-11 shrink-0 rounded-full bg-input transition-colors duration-base aria-checked:bg-ok-text">
           <span className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-card transition-transform duration-base ease-standard ${value === true ? 'translate-x-5' : ''}`} />
@@ -122,7 +126,7 @@ function FieldInput({ f, value, error, onChange }: { f: Field; value: Values[str
       </div>
     )
   }
-  const common = { id, 'aria-invalid': !!error || undefined, 'aria-describedby': described }
+  const common = { id, 'aria-invalid': !!error || undefined, 'aria-describedby': line ? described : undefined }
   const v = typeof value === 'string' ? value : ''
   let input: React.ReactNode
   if (f.kind === 'textarea' || f.kind === 'pincodes') input = <textarea {...common} rows={3} maxLength={f.max} value={v} onChange={(e) => onChange(e.target.value)} className={`${base} py-2 ${f.kind === 'pincodes' ? 'font-mono' : ''}`} />
@@ -142,7 +146,7 @@ function FieldInput({ f, value, error, onChange }: { f: Field; value: Values[str
   }
   return (
     <div className={`space-y-1 ${f.wide ? 'sm:col-span-2' : ''}`}>
-      <label htmlFor={id} className="block text-sm font-medium">{f.label}{!f.required && CAN_BE_BLANK.has(f.kind) && <span className="font-normal text-muted-foreground"> (optional)</span>}</label>
+      <div className="flex items-center"><label htmlFor={id} className="text-sm font-medium">{f.label}{!f.required && CAN_BE_BLANK.has(f.kind) && <span className="font-normal text-muted-foreground"> (optional)</span>}</label>{tip}</div>
       {input}
       {help}
     </div>

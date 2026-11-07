@@ -7,7 +7,7 @@
 // High) and removes them at the end.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, signedIn, until } from '../lib.mjs'
+import { todayAgo, CONSOLE, signedIn, until } from '../lib.mjs'
 
 export default {
   name: 'queue',
@@ -20,10 +20,10 @@ export default {
     const A = top + 1, B = top + 2, C = top + 3, D = top + 4
     // A, B, C: one phone, today, COD — C is the third: High. D: another customer, an ordinary repeat buyer.
     await db`insert into orders (tenant_id, number, payment_method, placed_at, customer_name, phone, address_line, city, subtotal, total) values
-      (${T}, ${A}, 'cod', now() - interval '30 minutes', 'Queue Aarti', '9811100001', 'B-14, Tilak Marg', 'Jaipur', 249000, 249000),
-      (${T}, ${B}, 'cod', now() - interval '20 minutes', 'Queue Aarti', '9811100001', 'B-14, Tilak Marg', 'Jaipur', 249000, 249000),
-      (${T}, ${C}, 'cod', now() - interval '10 minutes', 'Queue Aarti', '9811100001', 'B-14, Tilak Marg', 'Jaipur', 249000, 249000),
-      (${T}, ${D}, 'cod', now() - interval '5 minutes', 'Queue Dev', ${'981110' + String(B).padStart(4, '0').slice(-4)}, 'Flat 22, Shanti Nagar', 'Jaipur', 199000, 199000)`
+      (${T}, ${A}, 'cod', ${todayAgo(30)}, 'Queue Aarti', '9811100001', 'B-14, Tilak Marg', 'Jaipur', 249000, 249000),
+      (${T}, ${B}, 'cod', ${todayAgo(20)}, 'Queue Aarti', '9811100001', 'B-14, Tilak Marg', 'Jaipur', 249000, 249000),
+      (${T}, ${C}, 'cod', ${todayAgo(10)}, 'Queue Aarti', '9811100001', 'B-14, Tilak Marg', 'Jaipur', 249000, 249000),
+      (${T}, ${D}, 'cod', ${todayAgo(5)}, 'Queue Dev', ${'981110' + String(B).padStart(4, '0').slice(-4)}, 'Flat 22, Shanti Nagar', 'Jaipur', 199000, 199000)`
     // D's phone contains B's number on purpose: searching "KS-<B>" must find B alone (review 2026-11-07).
     const state = async (n) => (await db`select confirmed_at is not null as confirmed, held_at is not null as held from orders where tenant_id = ${T} and number = ${n}`)[0]
     const owner = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 900 } })
@@ -74,6 +74,14 @@ export default {
         await p.getByRole('region', { name: 'Selected orders' }).getByRole('button', { name: 'Confirm' }).click()
         await p.locator('[data-toast]', { hasText: 'Confirmed 2. Skipped 1 high-risk order — open it to decide.' }).waitFor()
         assert.deepEqual([(await state(A)).confirmed, (await state(B)).confirmed, (await state(C)).confirmed], [true, true, false])
+        // Undo the bulk confirm: one request (undoMany), both back in To confirm (impact review 2026-11-07).
+        await p.locator('[data-toast]', { hasText: 'Confirmed 2.' }).getByRole('button', { name: 'Undo' }).click()
+        await until(async () => !(await state(A)).confirmed && !(await state(B)).confirmed)
+        // Confirm them again: the next steps start from here.
+        await p.goto(CONSOLE + '/console/orders')
+        for (const n of [A, B]) await row(n).getByRole('checkbox').check()
+        await p.getByRole('region', { name: 'Selected orders' }).getByRole('button', { name: 'Confirm' }).click()
+        await until(async () => (await state(A)).confirmed && (await state(B)).confirmed)
       })
 
       await t.step('c on a high-risk order opens it instead of confirming', async () => {

@@ -53,11 +53,22 @@ describe.skipIf(!host)('order work', () => {
       await w.undo(tx, A, riya, (fromHold as { eventId: string }).eventId, later(7))
       expect(await state(a)).toBe('held')
 
+      // Only the latest action is undone: take it off hold, someone confirms, then the old Undo lands — refused, so the
+      // order is never confirmed AND held (architecture review 2026-11-07).
+      const off = await w.unhold(tx, A, riya, a, later(7.2))
+      await w.confirm(tx, A, arjun, a, later(7.4))
+      expect(await w.undo(tx, A, riya, (off as { eventId: string }).eventId, later(7.6))).toMatchObject({ ok: false, error: 'This order changed since: open it to see what happened.' })
+      expect(await state(a)).toBe('confirmed')
+      await w.hold(tx, A, riya, a, later(7.8)) // back where the next step expects it: held
+
       // Pack: only once confirmed; issues …/26-27/00001 then …02, a bill of supply on its own series; undo after packing is refused.
       expect(await w.pack(tx, A, riya, a, later(8))).toMatchObject({ ok: false })
       const c2 = await w.confirm(tx, A, riya, a, later(9))
       const packed = await w.pack(tx, A, riya, a, later(10))
       expect(packed).toMatchObject({ ok: true, invoiceNumber: expect.stringMatching(/^[A-Z]+\/26-27\/B0001$/) }) // no GSTIN on the order: a bill of supply
+      // The seller is stored as the invoice is issued (1D·7): a later change to Settings never rewrites it.
+      const [seller] = await tx.select({ name: orders.sellerName, address: orders.sellerAddress }).from(orders).where(eq(orders.id, a))
+      expect(seller!.name).toBeTruthy(); expect(seller!.address).not.toBeNull()
       expect(await w.undo(tx, A, riya, (c2 as { eventId: string }).eventId, later(11))).toMatchObject({ ok: false, error: 'Already packed — cancel it instead.' })
       const b = await order(2, { sellerGstin: '08AAAAA0000A1Z5' })
       await w.confirm(tx, A, riya, b, later(12))

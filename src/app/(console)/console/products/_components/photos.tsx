@@ -82,7 +82,6 @@ export function Photos({ productId, tenantId, photos, colours, enabled }: { prod
         ) : <p className="text-sm text-muted-foreground">Photo storage is not connected on this deployment.</p>}
       </div>
       {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
-      <p className="text-xs text-muted-foreground">Photos are resized on your phone or computer before they upload, so a large photo is fine. The first is the cover: show the piece on a person.</p>
     </div>
   )
 }

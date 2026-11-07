@@ -39,7 +39,7 @@ export async function setupFor(tenantId: string): Promise<Setup | null> {
   const address = `${shop.slug}.${SHOP_DOMAIN}`
   const steps = setupSteps({
     shopName: shop.name, address, productCount: products,
-    legalName: shop.settings.legalName, grievanceName: shop.settings.grievanceName,
+    legalName: shop.settings.legalName, grievanceName: shop.settings.grievanceName, grievanceEmail: shop.settings.grievanceEmail, grievancePhone: shop.settings.grievancePhone,
     codOn: shop.settings.codOn, codMaxPaise: shop.settings.codMax, paymentsConnected: !!pay?.connected && pay.mode === 'live' && !!pay.webhookSeenAt, publishedAt: shop.settings.publishedAt,
   }, BUILT_PAGES, (p) => formatInr(paise(p)))
   return {

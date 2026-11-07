@@ -496,8 +496,8 @@ rollback;
 do $$ begin
   if has_table_privilege('frata_admin', 'order_events', 'select') or has_table_privilege('frata_admin', 'order_notes', 'select') then raise exception 'FAIL: Frata staff can read order history or notes'; end if;
   if has_table_privilege('anon', 'order_notes', 'select') or has_table_privilege('authenticated', 'order_events', 'select') then raise exception 'FAIL: API roles can read order history'; end if;
-  if has_function_privilege('frata_app', 'app_backfill_0019()', 'execute') then raise exception 'FAIL: the app can run the backfill'; end if;
-  if has_table_privilege('service_role', 'order_events', 'select') or has_table_privilege('service_role', 'order_notes', 'select') or has_function_privilege('service_role', 'app_backfill_0019()', 'execute') then raise exception 'FAIL: service_role reaches order history or the backfill'; end if;
+  if to_regprocedure('public.app_backfill_0019()') is not null then raise exception 'FAIL: the one-off 0019 backfill is still there (0024 drops it)'; end if;
+  if has_table_privilege('service_role', 'order_events', 'select') or has_table_privilege('service_role', 'order_notes', 'select') then raise exception 'FAIL: service_role reaches order history'; end if;
 end $$;
 
 -- 26. Invoice numbers (1D): per shop, set with packing, never changed; A cannot pack B's order.

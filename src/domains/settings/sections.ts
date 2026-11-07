@@ -9,6 +9,7 @@
 // =============================================================================
 
 import { EMAIL_SHAPE, PINCODE_SHAPE } from '../signup/slug'
+import { seriesFits } from '../orders/work'
 import { CAN_BUILD, type MemberRole } from '../tenancy/roles'
 
 export type FieldKind = 'text' | 'textarea' | 'email' | 'phone' | 'rupees' | 'days' | 'select' | 'switch' | 'gstin' | 'hsn' | 'pincodes'
@@ -17,14 +18,17 @@ export type Field = {
   key: string
   label: string
   kind: FieldKind
+  /** One visible line, ONLY for a limit the person must meet, money, or legal/GST wording (design-language § Labels, info tips). */
   hint?: string
+  /** Optional detail behind an (i): a definition, why we ask, what happens later, an example. */
+  tip?: string
   required?: boolean
   max?: number
   options?: readonly (readonly [string, string])[]
   wide?: boolean
 }
 
-export type Block = { title: string; hint?: string; fields: Field[] }
+export type Block = { title: string; hint?: string; tip?: string; fields: Field[] }
 
 export type SectionKey = 'store' | 'contact' | 'brand' | 'policies' | 'payments' | 'shipping' | 'taxes'
 
@@ -48,11 +52,11 @@ export const SECTIONS: readonly Section[] = [
     blocks: [
       { title: 'Your shop', fields: [
         { key: 'name', label: 'Shop name', kind: 'text', required: true, max: 60 },
-        { key: 'orderPrefix', label: 'Order number prefix', kind: 'text', max: 4, hint: 'Orders read KS-1043. Empty: two letters of your shop’s name.' },
+        { key: 'orderPrefix', label: 'Order number prefix', kind: 'text', max: 4, tip: 'Orders read KS-1043. Left empty, two letters of your shop’s name.' },
       ] },
       { title: 'Your business', hint: LAW, fields: [
-        { key: 'legalName', label: 'Legal business name', kind: 'text', max: 120, hint: 'As registered: a sole proprietor’s name, an LLP or a company.' },
-        { key: 'originCountry', label: 'Country of origin, for products', kind: 'text', max: 40, hint: 'Each product can say otherwise.' },
+        { key: 'legalName', label: 'Legal business name', kind: 'text', max: 120, tip: 'As registered: a sole proprietor’s name, an LLP or a company.' },
+        { key: 'originCountry', label: 'Country of origin, for products', kind: 'text', max: 40, tip: 'Each product can say otherwise.' },
         { key: 'address', label: 'Registered address', kind: 'textarea', max: 400, wide: true },
       ] },
     ],
@@ -64,8 +68,8 @@ export const SECTIONS: readonly Section[] = [
       { title: 'How shoppers reach you', fields: [
         { key: 'supportEmail', label: 'Customer care email', kind: 'email', required: true },
         { key: 'supportPhone', label: 'Customer care phone', kind: 'phone' },
-        { key: 'whatsapp', label: 'WhatsApp number', kind: 'phone', hint: 'A “Message us” button on your shop and on every order page.' },
-        { key: 'instagram', label: 'Instagram handle', kind: 'text', max: 30, hint: 'Without the @.' },
+        { key: 'whatsapp', label: 'WhatsApp number', kind: 'phone', tip: 'A “Message us” button on your shop and on every order page.' },
+        { key: 'instagram', label: 'Instagram handle', kind: 'text', max: 30 },
       ] },
       { title: 'Grievance officer', hint: 'Required by law and shown on your Contact page. A complaint is acknowledged within 48 hours and resolved within a month.', fields: [
         { key: 'grievanceName', label: 'Name', kind: 'text', max: 80 },
@@ -82,7 +86,7 @@ export const SECTIONS: readonly Section[] = [
       { title: 'Look', fields: [
         { key: 'accent', label: 'Accent colour', kind: 'select', options: ACCENT_OPTIONS },
         { key: 'displayFont', label: 'Display font', kind: 'select', options: FONT_OPTIONS },
-        { key: 'tagline', label: 'One line about your brand', kind: 'text', max: 150, wide: true, hint: 'Under your logo, and when your link is shared.' },
+        { key: 'tagline', label: 'One line about your brand', kind: 'text', max: 150, wide: true, tip: 'Under your logo, and when your link is shared.' },
       ] },
     ],
   },
@@ -104,8 +108,8 @@ export const SECTIONS: readonly Section[] = [
         { key: 'codOn', label: 'Offer Pay on delivery', kind: 'switch', wide: true },
         { key: 'codMin', label: 'Lowest order value, ₹', kind: 'rupees', hint: '0 for no lower limit.' },
         { key: 'codMax', label: 'Highest order value, ₹', kind: 'rupees', hint: 'Bigger orders must be paid online. 0 for no limit.' },
-        { key: 'codCharge', label: 'Pay on delivery fee, ₹', kind: 'rupees', hint: 'Shown as its own line before the shopper orders, never added later. 0 for none.' },
-        { key: 'codBlockedPincodes', label: 'Pincodes without Pay on delivery', kind: 'pincodes', wide: true, hint: 'Separated by commas or spaces. A shopper there sees why, and can still pay online.' },
+        { key: 'codCharge', label: 'Pay on delivery fee, ₹', kind: 'rupees', hint: '0 for none.', tip: 'Shown as its own line before the shopper orders, never added later.' },
+        { key: 'codBlockedPincodes', label: 'Pincodes without Pay on delivery', kind: 'pincodes', wide: true, hint: 'Separated by commas or spaces.', tip: 'A shopper there sees why, and can still pay online.' },
       ] },
     ],
   },
@@ -117,7 +121,7 @@ export const SECTIONS: readonly Section[] = [
         { key: 'shippingFlat', label: 'Shipping charge, ₹', kind: 'rupees' },
         { key: 'freeShippingAbove', label: 'Free shipping above, ₹', kind: 'rupees', hint: '0 means never free.' },
       ] },
-      { title: 'How long it takes', hint: 'Shown on every product page with the shopper’s pincode. Courier estimates replace these with Shiprocket.', fields: [
+      { title: 'How long it takes', tip: 'Shown on every product page and at checkout, as a date range. Courier estimates replace these once Shiprocket is connected.', fields: [
         { key: 'dispatchDays', label: 'You dispatch within, days', kind: 'days' },
         { key: 'metroDays', label: 'Delivery to metros, days', kind: 'days' },
         { key: 'restDays', label: 'Delivery elsewhere, days', kind: 'days' },
@@ -131,10 +135,10 @@ export const SECTIONS: readonly Section[] = [
       { title: 'GST', fields: [
         { key: 'pricesIncludeGst', label: 'My prices include GST', kind: 'switch', wide: true },
         { key: 'gstin', label: 'GSTIN', kind: 'gstin', hint: 'Leave empty if you are not registered. Your shop then issues a bill of supply, never a “tax invoice”.' },
-        { key: 'defaultHsn', label: 'Default HSN code', kind: 'hsn', hint: 'Each product can have its own.' },
+        { key: 'defaultHsn', label: 'Default HSN code', kind: 'hsn', tip: 'Each product can have its own.' },
       ] },
       { title: 'Invoice numbers', hint: 'One series a financial year, never reused. A new series starts on 1 April.', fields: [
-        { key: 'invoiceSeries', label: 'Series prefix', kind: 'text', max: 5, hint: 'Like KS/. The year and number follow it.' },
+        { key: 'invoiceSeries', label: 'Series prefix', kind: 'text', max: 5, hint: 'Up to 4 characters, or 5 ending in / or -.', tip: 'Like KS/. The year and the number follow it: KS/26-27/00001.' },
       ] },
     ],
   },
@@ -174,6 +178,21 @@ export function parseSection(section: Section, values: Values): { ok: true; patc
   return Object.keys(errors).length ? { ok: false, errors } : { ok: true, patch }
 }
 
+/**
+ * What an OPEN shop may not take away: the grievance officer the Consumer Protection (E-Commerce) Rules ask for,
+ * shown on its Contact page. Only a field that is filled in now is held (`saved`), so a shop that opened without
+ * one of them is never locked out of saving the rest. A shop not yet open may save them empty.
+ */
+export const NEEDED_WHEN_OPEN: Partial<Record<SectionKey, readonly (readonly [string, string])[]>> = {
+  contact: [['grievanceName', 'name'], ['grievanceEmail', 'email'], ['grievancePhone', 'phone']],
+}
+
+export function openShopErrors(section: Section, patch: Patch, saved: Record<string, unknown>): Record<string, string> {
+  return Object.fromEntries((NEEDED_WHEN_OPEN[section.key] ?? [])
+    .filter(([k]) => k in patch && !String(patch[k] ?? '').trim() && String(saved[k] ?? '').trim())
+    .map(([k, what]) => [k, `Your shop is open: keep the grievance officer’s ${what}. The law asks for it on your Contact page.`]))
+}
+
 /** What the live preview shows while typing: every field that is already valid; the rest keep their saved value. */
 export function draftPatch(section: Section, values: Values): Patch {
   return check(section, values).patch
@@ -195,6 +214,8 @@ function check(section: Section, values: Values): { patch: Patch; errors: Record
     }
     const s = String(raw ?? '').trim()
     if (f.required && !s) { errors[f.key] = 'Needed.'; continue }
+    // The invoice series must leave room for a whole year of numbers inside GST's 16 characters (work.ts).
+    if (f.key === 'invoiceSeries' && s && !seriesFits(s)) { errors[f.key] = 'Too long: up to 4 characters, or 5 ending in / or -.'; continue }
     if (f.max && s.length > f.max) { errors[f.key] = `Up to ${f.max} characters.`; continue }
     switch (f.kind) {
       case 'email':
@@ -259,11 +280,19 @@ export function formValues(section: Section, stored: Record<string, unknown>): V
 }
 
 /** What a merchant still has to fill before live payments — derived, never stored. Each item names its section. */
+/**
+ * THE ONE ANSWER to "does this shop have its grievance officer": a name, an email and a phone (Consumer
+ * Protection (E-Commerce) Rules; owner 2026-11-07). Read by the setup checklist and opening the shop, by live
+ * payments, and by the settings page's summary, so the three can never disagree again.
+ */
+export const grievanceComplete = (s: { grievanceName: string; grievanceEmail: string; grievancePhone: string }) =>
+  !!s.grievanceName.trim() && !!s.grievanceEmail.trim() && !!s.grievancePhone.trim()
+
 export function missingForLivePayments(s: { legalName: string; address: string; supportEmail: string; supportPhone: string; grievanceName: string; grievanceEmail: string; grievancePhone: string }): { label: string; section: SectionKey }[] {
   const out: { label: string; section: SectionKey }[] = []
   if (!s.legalName.trim()) out.push({ label: 'Legal business name', section: 'store' })
   if (!s.address.trim()) out.push({ label: 'Registered address', section: 'store' })
   if (!s.supportEmail.trim() || !s.supportPhone.trim()) out.push({ label: 'Customer care email and phone', section: 'contact' })
-  if (!s.grievanceName.trim() || !s.grievanceEmail.trim() || !s.grievancePhone.trim()) out.push({ label: 'Grievance officer', section: 'contact' })
+  if (!grievanceComplete(s)) out.push({ label: 'Grievance officer', section: 'contact' })
   return out
 }

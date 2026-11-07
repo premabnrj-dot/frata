@@ -21,7 +21,7 @@ export const revalidate = 3600
 const NOW = [
   ['Sizes that fit', 'Size buttons with sold-out shown, a chart for each product type in cm and inches, the model’s height and size.'],
   ['Pay on delivery, on your terms', 'An order limit, pincodes you do not serve, a fee shown before ordering, and flags on repeat orders from one number.'],
-  ['A quick shop on any phone', 'Pages built to load in under two seconds on 4G. Shoppers see if you deliver to their pincode before the bag.'],
+  ['A quick shop on any phone', 'Pages built to load in under two seconds on 4G. Delivery days on every product, and the shopper’s pincode checked before they pay.'],
 ] as const
 const NEXT = [
   ['WhatsApp confirmation', 'Every Pay on delivery order confirmed on WhatsApp within minutes.'],
@@ -30,7 +30,7 @@ const NEXT = [
 ] as const
 const FAQ = [
   ['Do I need a developer?', 'No. Products, sizes, Pay on delivery rules, your logo and colours are all set in the console.'],
-  ['I sell on Shopify now. Can I move?', 'Yes. Export your products from Shopify and import the file here as it is. Your old shop keeps running until you switch.'],
+  ['I sell on Shopify now. Can I move?', 'Yes. Importing your Shopify product export is next; until then you add products in the console. Your old shop keeps running until you switch.'],
   ['Do I need Razorpay or KYC to start?', 'No. Your shop can take Pay on delivery orders without it. Connect Razorpay, with its KYC, when you want UPI and card payments.'],
   ['What happens when a COD parcel is refused?', 'You pay no Frrata fee on it. The fee is only on orders that are delivered.'],
   ['Is there a free trial? Do I need a card?', 'You build and preview your whole shop free, with no card. You choose a plan when you open your shop to shoppers.'],

@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { missingFacts, POLICY_PAGES, renderPolicy } from '@/domains/policies/render'
-import { missingForLivePayments, SECTIONS, type SectionKey } from '@/domains/settings/sections'
+import { grievanceComplete, missingForLivePayments, SECTIONS, type SectionKey } from '@/domains/settings/sections'
 import { paise } from '@/domains/money/paise'
 import { CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { formatInr } from '@/lib/format'
@@ -31,7 +31,7 @@ export default async function SettingsPage() {
 
   const summary: Record<SectionKey, string> = {
     store: `${f.shopName} · ${f.legalName || 'legal name missing'}`,
-    contact: f.grievanceName ? `${f.supportEmail} · grievance officer ${f.grievanceName}` : 'Grievance officer missing',
+    contact: grievanceComplete(f) ? `${f.supportEmail} · grievance officer ${f.grievanceName}` : f.grievanceName ? 'Grievance officer’s email or phone missing' : 'Grievance officer missing',
     brand: `${f.displayFont[0]!.toUpperCase()}${f.displayFont.slice(1)} · ${f.accent}${f.tagline ? ` · “${f.tagline.slice(0, 40)}”` : ''}`,
     policies: policyGaps ? `${policyGaps} of 5 pages are missing details` : `${f.returnKind === 'none' ? 'No returns' : `${f.returnDays}-day returns`} · 5 pages from your details`,
     payments: f.codOn ? `On, up to ${f.codMax ? inr(f.codMax) : 'any value'}${f.codCharge ? `, fee ${inr(f.codCharge)}` : ', no fee'}` : 'Off: shoppers pay online only',
@@ -83,7 +83,7 @@ export default async function SettingsPage() {
           </Section>
           <Section>
             <h2 className="text-section font-semibold">Coming later</h2>
-            <p className="text-sm text-muted-foreground">Razorpay for UPI and cards arrives with checkout. Your own domain, team invitations, email templates and your Frrata plan and bills come in later releases.</p>
+            <p className="text-sm text-muted-foreground">Your own domain, team invitations, email templates and your Frrata plan and bills come in later releases.</p>
           </Section>
         </aside>
       </div>

@@ -1,5 +1,6 @@
 'use client'
 
+import { InfoTip } from '@/components/ui/info-tip'
 import { DESCRIPTION_WARN_AT, shareCard, TITLE_WARN_AT } from '@/domains/catalogue/seo'
 import { pick, urlFor } from '@/domains/media/sizes'
 import type { Photo } from './photos'
@@ -50,9 +51,9 @@ export function SeoPanel({ handle, onHandle, seoTitle, onSeoTitle, seoDescriptio
           <p className="text-xs text-muted-foreground">{count(title.length, TITLE_WARN_AT)} characters. Empty uses the one shown.</p>
         </div>
         <div className="space-y-1">
-          <label htmlFor="seo-desc" className="block text-sm font-medium">Description</label>
+          <div className="flex items-center"><label htmlFor="seo-desc" className="text-sm font-medium">Description</label><InfoTip about="the description">Made from the product’s own facts. Google may show its own words instead.</InfoTip></div>
           <textarea id="seo-desc" rows={3} value={seoDescription} maxLength={400} placeholder={defaults.description} aria-invalid={!!errors.seoDescription || undefined} onChange={(e) => onSeoDescription(e.target.value)} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm" />
-          <p className="text-xs text-muted-foreground">{count(description.length, DESCRIPTION_WARN_AT)} characters. Made from the product’s own facts; Google may show its own words instead.</p>
+          <p className="text-xs text-muted-foreground">{count(description.length, DESCRIPTION_WARN_AT)} characters.</p>
         </div>
         <div className="space-y-1">
           <label htmlFor="handle" className="block text-sm font-medium">Address</label>

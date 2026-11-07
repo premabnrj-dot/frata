@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ORDER_STATES } from '../order-state'
-import { ACTIONS, applies, invoiceNumber, may, primaryAction, ROLES } from '../work'
+import { ACTIONS, applies, invoiceNumber, InvoiceNumberTooLong, MAX_IN_YEAR, may, primaryAction, ROLES, seriesFits } from '../work'
 
 describe('who may do what to an order', () => {
   it('staff confirm, hold, note, pack and print; only owners and admins edit or cancel', () => {
@@ -54,5 +54,16 @@ describe('a partner (approved scope: products, orders, settings, the look)', () 
     expect(may('pack', 'confirmed', 'partner')).toBe(true)
     expect(may('cancel', 'unconfirmed', 'partner')).toBe(false)
     expect(may('edit', 'unconfirmed', 'partner')).toBe(false)
+  })
+})
+
+describe('a series that fits the year', () => {
+  it('refuses what would pass 16 characters at the year\'s last number (architecture review 2026-11-07)', () => {
+    expect(seriesFits('KESR')).toBe(true) // KESR/26-27/99999 = 16
+    expect(seriesFits('KESR/')).toBe(true)
+    expect(seriesFits('KESRI')).toBe(false) // KESRI/26-27/00001 = 17: every Mark packed failed
+    expect(seriesFits('KS/')).toBe(true)
+    expect(invoiceNumber({ series: 'KESR/', orderPrefix: 'KS', fiscalYear: '26-27', n: MAX_IN_YEAR.bill, kind: 'bill' })).toBe('KESR/26-27/B9999')
+    expect(() => invoiceNumber({ series: 'KESR/', orderPrefix: 'KS', fiscalYear: '26-27', n: MAX_IN_YEAR.bill + 1, kind: 'bill' })).toThrow(InvoiceNumberTooLong)
   })
 })

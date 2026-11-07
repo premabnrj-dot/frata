@@ -11,7 +11,7 @@ const lines: DocLine[] = t.lines.map((l, i) => ({
 const gstTotal = t.lines.reduce((a, l) => a + l.gst, 0) + t.chargesGst
 const order = (o: Partial<DocOrder> = {}): DocOrder => ({
   paymentMethod: 'cod', paidAt: null, switchedToCodAt: null, cancelledAt: null, subtotal: 569000, shipping: 7900, codCharge: 4900, gstTotal, total: 581800, pricesIncludeGst: true,
-  number: 'KS-1001', placedAt: new Date('2026-11-07T05:00:00Z'), packedAt: new Date('2026-11-07T09:00:00Z'), invoiceNumber: 'KS/26-27/00001', sellerGstin: '08AAAAA0000A1Z5',
+  number: 'KS-1001', placedAt: new Date('2026-11-07T05:00:00Z'), packedAt: new Date('2026-11-07T09:00:00Z'), invoiceNumber: 'KS/26-27/00001', sellerGstin: '08AAAAA0000A1Z5', sellerName: null, sellerAddress: null,
   customerName: 'Ananya Sharma', phone: '9829043210', addressLine: 'B-14, Tilak Marg', area: 'C-Scheme', landmark: '', city: 'Jaipur', pincode: '302001', state: 'Rajasthan', supplyState: 'Rajasthan', ...o,
 })
 const shop = { name: 'Kesar Studio', legalName: 'Kesar Studio LLP', address: 'Jaipur', returnAddress: '' }
@@ -38,9 +38,10 @@ describe('the invoice', () => {
     expect(invoice(order({ packedAt: null, invoiceNumber: null }), lines, shop)).toBe(null)
     expect(invoice(order({ cancelledAt: new Date() }), lines, shop)).toMatchObject({ cancelled: true, number: 'KS/26-27/00001' })
   })
-  it('a cancelled order\'s slip says so, never "collect nothing"', () => {
-    expect(packingSlip(order({ cancelledAt: new Date() }), lines, shop).cancelled).toBe(true)
-    expect(packingSlip(order({}), lines, shop).cancelled).toBe(false)
+  it('the seller is the one stored at packing, never today\'s settings (1D·7); before 1D·7, settings', () => {
+    const issued = invoice(order({ sellerName: 'Kesar Studio LLP (old)', sellerAddress: '1 Old Road, Jaipur' }), lines, { ...shop, legalName: 'Kesar New LLP', address: 'New address' })!
+    expect(issued.seller).toMatchObject({ name: 'Kesar Studio LLP (old)', address: '1 Old Road, Jaipur' })
+    expect(invoice(order(), lines, shop)!.seller.name).toBe(shop.legalName || shop.name)
   })
   it('an order placed before 1D (no stored shares) prints the same figures', () => {
     const old = lines.map((l) => ({ ...l, chargeTaxable: null, chargeGst: null }))

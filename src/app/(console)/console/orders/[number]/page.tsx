@@ -5,7 +5,7 @@ import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { collect, paidOnline } from '@/domains/orders/amounts'
-import { currentMethod, orderState, paidAfterSwitch } from '@/domains/orders/order-state'
+import { currentMethod, orderState, paidAfterPacking, paidAfterSwitch } from '@/domains/orders/order-state'
 import { risk } from '@/domains/orders/risk'
 import { CANCEL_LABEL, may, primaryAction, type CancelReason } from '@/domains/orders/work'
 import { pick, urlFor } from '@/domains/media/sizes'
@@ -117,7 +117,8 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
             </dl>
             {/* The line the courier and the packer need, in words: never only a colour. */}
             <p className="border-t border-border pt-3 text-sm font-medium">
-              {state === 'cancelled' ? (refund ? <>Paid online, then cancelled: refund <Money paise={paise(refund)} /> in Razorpay.</> : 'Cancelled: nothing to collect.')
+              {paidAfterPacking(o) && state !== 'cancelled' ? <span className="text-danger-text">Paid online after it was packed for Pay on delivery. Tell the courier not to collect cash; if cash was collected too, refund the online payment in Razorpay. The invoice stays as issued: ask your CA whether it needs a credit note.</span>
+                : state === 'cancelled' ? (refund ? <>Paid online, then cancelled: refund <Money paise={paise(refund)} /> in Razorpay.</> : 'Cancelled: nothing to collect.')
                 : state === 'refund_due' ? <>Paid after it sold out: cancel it, then refund <Money paise={paise(refund)} /> in Razorpay.{can.cancel ? null : ' Ask an owner or admin to cancel it.'}</>
                 : state === 'delivered' ? (method === 'cod' && !o.paidAt ? <>Delivered: <Money paise={paise(Number(o.total))} /> collected by the courier.</> : 'Delivered.')
                 : state === 'rto' || state === 'rto_received' ? 'Returned to you: nothing was collected.'

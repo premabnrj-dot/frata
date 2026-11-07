@@ -111,7 +111,7 @@ export default {
         await p.getByRole('img', { name: `Barcode ${label(B)}` }).waitFor()
       })
 
-      await t.step('cancelled after packing: the invoice is stamped CANCELLED with the same number; the slip says do not ship; p refuses', async () => {
+      await t.step('cancelled after packing: the invoice is stamped CANCELLED with the same number; no slip is printed for it, and the page says why; p refuses', async () => {
         await p.goto(CONSOLE + `/console/orders/${A}`)
         await p.getByRole('button', { name: 'More' }).click(); await p.getByRole('menuitem', { name: 'Cancel order…' }).click()
         const d = p.getByRole('dialog', { name: `Cancel ${label(A)}?` }); await d.waitFor()
@@ -123,8 +123,9 @@ export default {
         await p.getByText('CANCELLED', { exact: true }).waitFor(); await p.getByText(invA, { exact: true }).waitFor()
         assert.equal(await invoiceOf(A), invA)
         await p.goto(CONSOLE + `/console/orders/print?kind=slip&n=${A}`)
-        await p.getByText('Cancelled — do not ship').waitFor()
-        assert.equal(await p.getByText('Prepaid — collect nothing').count(), 0)
+        // A typed link prints no slip for it, and says why (architecture review: the server decides, not the button).
+        await p.getByText(new RegExp(`Not printed: ${label(A)} \\(cancelled\\)`)).waitFor()
+        assert.equal(await p.getByText(/Prepaid — collect nothing|^Collect ₹/).count(), 0)
         await p.goto(CONSOLE + '/console/orders?tab=all')
         await p.getByRole('row').filter({ hasText: label(A) }).getByRole('cell').nth(2).click()
         await p.keyboard.press('p'); await p.locator('[data-toast]', { hasText: `${label(A)} has no packing slip` }).waitFor()
@@ -139,8 +140,8 @@ export default {
       await t.step('the slip at phone width: no sideways scroll', async () => {
         const phone = await signedIn(t.browser, 'owner', { viewport: { width: 390, height: 844 } })
         const q = await phone.newPage(); q.on('pageerror', (e) => t.errors.push(e.message))
-        await q.goto(CONSOLE + `/console/orders/print?kind=slip&n=${A}`)
-        await q.getByRole('img', { name: `Barcode ${label(A)}` }).waitFor()
+        await q.goto(CONSOLE + `/console/orders/print?kind=slip&n=${B}`) // A is cancelled by now: it has no slip
+        await q.getByRole('img', { name: `Barcode ${label(B)}` }).waitFor()
         const wide = await q.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
         await q.screenshot({ path: t.out('slip-phone'), fullPage: true })
         await phone.close()

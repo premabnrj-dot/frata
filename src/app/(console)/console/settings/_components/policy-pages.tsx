@@ -1,5 +1,6 @@
 'use client'
 
+import { InfoTip } from '@/components/ui/info-tip'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
@@ -42,8 +43,8 @@ export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty }
   return (
     <Section flush>
       <div className="space-y-1 p-4">
-        <h2 className="text-section font-semibold">Your five pages</h2>
-        <p className="text-sm text-muted-foreground">Written from your settings, and kept in step with them. Need other words? Rewrite a page; it then stops following your settings. Have a lawyer read your pages once: these are a starting point.</p>
+        <h2 className="flex items-center text-section font-semibold">Your five pages<InfoTip about="your five pages">Written from your settings, and kept in step with them. Rewrite a page for other words; it then stops following your settings.</InfoTip></h2>
+        <p className="text-sm text-muted-foreground">Have a lawyer read your pages once: these are a starting point.</p>
       </div>
       {POLICY_PAGES.map(([k, label]) => {
         const own = overrides[k]

@@ -1,5 +1,6 @@
 'use client'
 
+import { InfoTip } from '@/components/ui/info-tip'
 import { useState } from 'react'
 import type { ColourInput } from '@/domains/catalogue/product-form'
 import { pick, urlFor } from '@/domains/media/sizes'
@@ -21,6 +22,7 @@ export function ColoursPanel({ values, colours, onChange, photos, families }: { 
   const put = (c: ColourInput) => onChange([...colours.filter((x) => x.value !== c.value && values.includes(x.value)), c])
   return (
     <div className="space-y-2">
+      <h3 className="flex items-center text-sm font-medium">Colours<InfoTip about="colours">The family files “Rani pink” under Pink for shoppers’ filters and for Google. A print (bandhani, ikat) reads best as a swatch cut from its photo.</InfoTip></h3>
       <ul className="divide-y divide-border rounded-md border border-border">
         {values.map((v) => {
           const c = get(v)
@@ -40,7 +42,6 @@ export function ColoursPanel({ values, colours, onChange, photos, families }: { 
           )
         })}
       </ul>
-      <p className="text-xs text-muted-foreground">The family files &ldquo;Rani pink&rdquo; under Pink for shoppers’ filters and for Google. A print (bandhani, ikat) reads best as a swatch cut from its photo.</p>
     </div>
   )
 }

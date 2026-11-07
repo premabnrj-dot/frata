@@ -1,5 +1,6 @@
 'use client'
 
+import { InfoTip } from '@/components/ui/info-tip'
 import { useEffect, useId, useRef, useState } from 'react'
 import Link from 'next/link'
 import type { Attribute } from '@/domains/catalogue/taxonomy'
@@ -21,7 +22,7 @@ export function OrganiseCard({ category, onCategory, collections, picked, onPick
   const addTag = () => { const t = tag.trim().replace(/\s+/g, ' ').slice(0, 40); if (t && !tags.includes(t) && tags.length < 20) onTags([...tags, t]); setTag('') }
   return (
     <Section labelledBy="org-h">
-      <h2 id="org-h" className="text-section font-semibold">Organise</h2>
+      <h2 id="org-h" className="flex items-center text-section font-semibold">Organise<InfoTip about="the category">The category comes from the standard list Google and Meta read. It decides which details are asked for.</InfoTip></h2>
       <CategoryPicker value={category} onChange={onCategory} />
       <div className="space-y-1.5">
         <p className="text-sm font-medium">Collections</p>
@@ -103,7 +104,6 @@ export function CategoryPicker({ value, onChange, label = 'Category', bare = fal
           {busy && <p className="text-xs text-muted-foreground">Loading its details…</p>}
         </div>
       )}
-      {!bare && <p className="text-xs text-muted-foreground">From the standard list Google and Meta read. It decides which details are asked for below.</p>}
       {value && open && <button type="button" className="inline-flex min-h-6 items-center text-xs underline" onClick={() => setOpen(false)}>Keep {value.name}</button>}
     </div>
   )
