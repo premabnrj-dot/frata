@@ -16,6 +16,7 @@ import { dateTimeIN, dayIN, sinceIN } from '@/lib/format-date'
 import { formatPercent } from '@/lib/format'
 import { resendOwnerLinkAction } from './actions'
 import { Section } from '@/components/layout/section'
+import { MerchantTabs } from './tabs'
 
 /** The tab names the merchant ("Kesar Studio · Frrata Admin"). */
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -49,6 +50,7 @@ export default async function MerchantPage({ params, searchParams }: { params: P
           {/* Names the merchant (§ Frrata Admin); a long name wraps inside the button instead of overflowing it. */}
           <Link href={`/admin/merchants/${id}/support`} className={button({ size: 'wrap' })}>Open {m.tenant.name}&apos;s console</Link>
         </>} />
+      <MerchantTabs id={id} on="overview" />
       <Notice ok={sp.ok} error={sp.error} />
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start">

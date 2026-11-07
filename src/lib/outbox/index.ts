@@ -1,5 +1,5 @@
 import 'server-only'
-import { sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { db, type Tx } from '@/lib/db'
 import { outbox } from '@/lib/db/schema'
 
@@ -49,4 +49,24 @@ export async function markFailed(id: string, attempts: number, error: string) {
     update outbox set last_error = ${error.slice(0, 500)},
       dead_at = case when ${attempts} >= ${MAX_ATTEMPTS} then now() else null end
     where id = ${id}`)
+}
+
+/** A module paused by Frrata: hold the row back without spending an attempt (the claim bumped one). */
+export async function deferRow(id: string, minutes = 15) {
+  await db().execute(sql`update outbox set attempts = greatest(attempts - 1, 0),
+    next_attempt_at = now() + make_interval(mins => ${minutes}), last_error = 'paused' where id = ${id}`)
+}
+
+/** A row that must never be sent (its module was turned off): dead at once, with the reason. */
+export async function markDead(id: string, reason: string) {
+  await db().execute(sql`update outbox set dead_at = now(), last_error = ${reason.slice(0, 500)} where id = ${id}`)
+}
+
+/** Turning a module off cancels its queued rows for that shop, in the switch's own transaction. */
+export async function cancelQueued(tx: Tx, tenantId: string, kinds: readonly string[], reason: string) {
+  if (!kinds.length) return 0
+  const rows = await tx.update(outbox).set({ deadAt: new Date(), lastError: reason })
+    .where(and(eq(outbox.tenantId, tenantId), isNull(outbox.sentAt), isNull(outbox.deadAt), inArray(outbox.kind, [...kinds])))
+    .returning({ id: outbox.id })
+  return rows.length
 }

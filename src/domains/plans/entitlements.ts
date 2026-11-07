@@ -9,9 +9,10 @@
 // =============================================================================
 
 import { type Paise, applyBps } from '@/domains/money/paise'
+import type { ModuleKey } from '@/domains/modules/registry'
 
-export const FEATURES = ['rto_shield', 'size_fit', 'cart_flows'] as const
-export type Feature = (typeof FEATURES)[number]
+/** What a plan version may include: a module key (src/domains/modules/registry.ts is the one list; FEATURES retired 2026-11-07). */
+export type Feature = ModuleKey
 
 export const PLAN_CODES = ['launch', 'growth', 'scale'] as const
 export type PlanCode = (typeof PLAN_CODES)[number]
@@ -42,9 +43,6 @@ export function currentPlan<T extends { startsAt: Date }>(rows: readonly T[], no
   return best
 }
 
-export function canUse(features: readonly Feature[], feature: Feature): boolean {
-  return features.includes(feature)
-}
 
 /** What the merchant pays a month for the plan itself. */
 export function monthlyPrice(row: Pick<TenantPlanRow, 'planVersion' | 'customMonthlyPrice' | 'trialEndsAt'>, now: Date): Paise {

@@ -1,0 +1,120 @@
+'use client'
+
+import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
+import { Section } from '@/components/layout/section'
+import { Badge } from '@/components/ui/badge'
+import { Button, button } from '@/components/ui/button'
+import { Dialog } from '@/components/ui/dialog'
+import { Icon, type IconName } from '@/components/icons/icon'
+import type { Offer } from '@/domains/modules/offer'
+import type { Group, ModuleKey } from '@/domains/modules/registry'
+import { setModuleAction } from './actions'
+
+export type AppRow = {
+  key: ModuleKey; name: string; job: string; group: Group; features: string[]; usage: string | null
+  worksWith: { name: string; on: boolean }[]; offer: Offer; ask: string
+}
+
+const ICON: Record<ModuleKey, IconName> = {
+  communication: 'messages', rto_shield: 'risk', ship: 'shipped', true_profit: 'profit', reviews: 'reviews',
+  marketplace_export: 'stock', size_fit: 'size', cart_flows: 'orders',
+}
+const TONE = { ok: 'ok', info: 'info', neutral: 'neutral', warn: 'warn' } as const
+
+function Tile({ k, size = 'md' }: { k: ModuleKey; size?: 'md' | 'lg' }) {
+  // The rani tinge shows inside data-tinge only (brand rules): a tile is a brand surface, not a status.
+  return <span aria-hidden="true" data-tinge className={`inline-grid shrink-0 place-items-center rounded-lg bg-muted ${size === 'lg' ? 'size-14' : 'size-12'}`}><Icon name={ICON[k] ?? 'apps'} className="size-7" /></span>
+}
+
+function Switch({ on, label, disabled, onChange }: { on: boolean; label: string; disabled?: boolean; onChange: () => void }) {
+  return (
+    <button type="button" role="switch" aria-checked={on} aria-label={label} disabled={disabled} onClick={onChange}
+      className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors duration-fast ease-standard disabled:opacity-50 ${on ? 'border-primary bg-primary' : 'border-input bg-card'}`}>
+      <span className={`absolute size-5 rounded-full transition-transform duration-fast ease-standard ${on ? 'translate-x-6 bg-primary-foreground' : 'translate-x-1 bg-input'}`} />
+    </button>
+  )
+}
+
+/** The rows, the details dialog (a sheet on phones) and the turn-off dialog. One action per app (offer.ts). */
+export function AppsList({ groups, rows, canManage }: { groups: { key: Group; label: string }[]; rows: AppRow[]; canManage: boolean }) {
+  const router = useRouter()
+  const [open, setOpen] = useState<AppRow | null>(null)
+  const [off, setOff] = useState<AppRow | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [pending, start] = useTransition()
+  const toggle = (r: AppRow, on: boolean) => start(async () => {
+    setError(null)
+    const res = await setModuleAction({ module: r.key, on })
+    if (!res.ok) { setError(res.error); return }
+    setOff(null); setOpen(null); router.refresh()
+  })
+  const ask = (r: AppRow) => (on: boolean) => (on ? toggle(r, true) : setOff(r))
+  const action = (r: AppRow, where: 'row' | 'dialog') => {
+    const a = r.offer.action
+    if (a.kind === 'switch') return canManage ? <Switch on={a.on} label={r.name} disabled={pending} onChange={() => ask(r)(!a.on)} /> : <span className="text-sm text-muted-foreground">{a.on ? 'On' : 'Off'}</span>
+    if (where === 'row') return <Button variant="secondary" onClick={() => { setError(null); setOpen(r) }}>See details</Button>
+    if (a.kind === 'ask') return <a href={r.ask} target="_blank" rel="noopener" className={button()}>{a.label}</a>
+    if (a.kind === 'plans') return <a href="/#pricing" className={button()}>{a.label}</a>
+    return <span className="text-sm text-muted-foreground">Coming next</span>
+  }
+  return (
+    <>
+      {error && !open && !off ? <p role="alert" className="text-sm text-danger-text">{error}</p> : null}
+      {groups.map((g) => {
+        const list = rows.filter((r) => r.group === g.key)
+        if (!list.length) return null
+        return (
+          <section key={g.key} aria-labelledby={`g-${g.key}`} className="space-y-2">
+            <h2 id={`g-${g.key}`} className="text-section font-semibold">{g.label}</h2>
+            <Section flush ariaLabel={g.label}>
+              <ul className="divide-y divide-border">
+                {list.map((r) => (
+                  <li key={r.key} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+                    <Tile k={r.key} />
+                    <div className="min-w-[11rem] flex-1">
+                      <button type="button" onClick={() => { setError(null); setOpen(r) }} className="text-left font-semibold underline-offset-2 hover:underline">{r.name}</button>
+                      <p className="text-sm text-muted-foreground">{r.job}</p>
+                    </div>
+                    <Badge tone={TONE[r.offer.tone]}>{r.offer.badge}</Badge>
+                    {r.usage ? <span className="hidden text-xs text-muted-foreground md:inline">{r.usage}</span> : null}
+                    {action(r, 'row')}
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          </section>
+        )
+      })}
+
+      <Dialog open={!!open} onClose={() => setOpen(null)} title={open?.name ?? ''} className="md:w-[min(44rem,calc(100vw-2rem))]"
+        description={open?.job}
+        actions={open ? <><Button variant="secondary" data-autofocus onClick={() => setOpen(null)}>Not now</Button>{action(open, 'dialog')}</> : null}>
+        {open ? (
+          <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_15rem]">
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold">What you get</h3>
+              <ul className="space-y-2 text-sm">{open.features.map((f) => <li key={f} className="flex gap-2"><span aria-hidden="true" className="text-ok-text">✓</span>{f}</li>)}</ul>
+              {open.worksWith.length ? (
+                <p className="text-sm">Works with {open.worksWith.map((w) => <span key={w.name} className="ml-1 inline-flex items-center gap-1">{w.name}<Badge tone={w.on ? 'ok' : 'neutral'}>{w.on ? 'On' : 'Off'}</Badge></span>)}</p>
+              ) : null}
+            </div>
+            <div className="space-y-2 rounded-lg bg-muted p-4 text-sm">
+              <Badge tone={TONE[open.offer.tone]}>{open.offer.badge}</Badge>
+              <p className="font-mono text-base font-semibold">{open.offer.price}</p>
+              {open.offer.action.kind === 'ask' ? <p className="text-muted-foreground">On your monthly Frrata bill · stop any time</p> : null}
+              {open.usage ? <p className="text-muted-foreground">{open.usage}</p> : null}
+            </div>
+            {error ? <p role="alert" className="text-sm text-danger-text md:col-span-2">{error}</p> : null}
+          </div>
+        ) : null}
+      </Dialog>
+
+      <Dialog open={!!off} onClose={() => setOff(null)} title={off ? `Turn off ${off.name}?` : ''}
+        description={off ? <ul className="list-disc space-y-1 pl-5"><li>{off.name} stops for your shop.</li><li>Anything it had queued is cancelled.</li><li>What it made stays. Turn it back on any time.</li></ul> : null}
+        actions={off ? <><Button variant="secondary" data-autofocus onClick={() => setOff(null)}>Keep {off.name}</Button><Button variant="destructive" disabled={pending} onClick={() => toggle(off, false)}>Turn off {off.name}</Button></> : null}>
+        {error && off ? <p role="alert" className="text-sm text-danger-text">{error}</p> : null}
+      </Dialog>
+    </>
+  )
+}

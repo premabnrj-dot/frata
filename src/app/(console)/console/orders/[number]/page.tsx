@@ -12,6 +12,7 @@ import { pick, urlFor } from '@/domains/media/sizes'
 import { paise } from '@/domains/money/paise'
 import { formatInr } from '@/lib/format'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
+import { ModuleSlot } from '@/components/modules/slots'
 import { dateTimeIN, dayMonthIN } from '@/lib/format-date'
 import { orderDetail } from '@/lib/queries/order-detail'
 import { orderPrefixFor } from '@/lib/queries/orders'
@@ -129,6 +130,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
         </div>
 
         <div className="min-w-0 space-y-6">
+          <ModuleSlot name="order.side" ctx={{ tenantId: auth.membership.tenantId, orderId: o.id }} at={now.toISOString()} />
           <Section id="customer" title="Customer" action={can.edit && !o.erasedAt ? <EditContact orderId={o.id} number={label} contact={{ customerName: o.customerName, phone: o.phone, addressLine: o.addressLine, area: o.area, landmark: o.landmark, pincode: o.pincode, city: o.city, state: o.state }} /> : undefined}>
             {o.erasedAt ? <p className="text-sm text-muted-foreground">Removed after 90 days: this online order was never paid.</p> : (
               <div className="space-y-1 text-sm">
