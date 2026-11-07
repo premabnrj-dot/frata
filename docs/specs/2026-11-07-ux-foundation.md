@@ -151,7 +151,7 @@ expected failures, and each phase deletes the ones it fixes.
   risk"), To pack (oldest), On hold. Each links to its queue tab, and a zero
   tile stays in place saying "Nothing to confirm". Below them, last 7 days:
   orders and value placed.
-- Counts come from 1D's `queries/order-predicates.ts`, the same predicates the
+- Counts come from `queueCounts()` (src/lib/queries/orders.ts), built on `src/lib/db/order-predicates.ts`, the same predicates the
   tabs use, never a second count. Before the shop opens, today's checklist
   stays as Home. Profit tiles arrive with Phase 3, read from `profit.ts`.
 
