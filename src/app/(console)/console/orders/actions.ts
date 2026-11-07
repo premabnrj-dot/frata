@@ -35,7 +35,8 @@ async function run<T extends object>(action: OrderAction, target: string, detail
     const v = r.value
     if (!v.ok) return { ok: false, error: v.error, ...(v.by ? { by: { email: v.by.email, at: v.by.at.toISOString() } } : {}) }
     after?.(r.tenantId, v)
-    revalidatePath('/console/orders', 'layout')
+    // The whole console layout: the nav's To confirm count lives there, and layouts do not re-render on soft navigation.
+    revalidatePath('/console', 'layout')
     return v
   } catch (err) {
     console.error(`[order.${action}]`, err instanceof Error ? err.name : 'error')
