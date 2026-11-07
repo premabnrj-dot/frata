@@ -89,10 +89,12 @@ describe('cleaner screens (design-language § Labels, info tips and help text)',
 })
 
 describe('an open shop keeps its grievance officer', () => {
-  it('emptying a grievance field is an error the action raises only when the shop is open', () => {
+  it('emptying a filled-in grievance field is an error, named per field; a field already empty never locks the page', () => {
     const contact = s('contact')
-    expect(openShopErrors(contact, { grievanceName: '', grievanceEmail: 'care@x.in' })).toEqual({ grievanceName: expect.stringMatching(/grievance officer/) })
-    expect(openShopErrors(contact, { grievanceName: 'Riya', grievanceEmail: 'care@x.in', grievancePhone: '9000000001' })).toEqual({})
-    expect(openShopErrors(s('store'), { name: '' })).toEqual({})
+    const saved = { grievanceName: 'Riya', grievanceEmail: 'care@x.in', grievancePhone: '' }
+    expect(openShopErrors(contact, { grievanceName: '', grievanceEmail: '', grievancePhone: '' }, saved)).toEqual({
+      grievanceName: expect.stringMatching(/officer’s name/), grievanceEmail: expect.stringMatching(/officer’s email/) })
+    expect(openShopErrors(contact, { grievanceName: 'Riya', grievanceEmail: 'care@x.in', grievancePhone: '', supportEmail: 'new@x.in' }, saved)).toEqual({})
+    expect(openShopErrors(s('store'), { name: '' }, { name: 'Kesar' })).toEqual({})
   })
 })

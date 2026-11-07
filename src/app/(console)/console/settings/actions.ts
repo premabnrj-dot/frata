@@ -46,11 +46,13 @@ export async function saveSection(sectionKey: string, values: Values, version: n
   try {
     const r = await asMember(section.editors, { action: `settings.${section.key}`, detail: { fields: Object.keys(parsed.patch) } }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
-      // An open shop keeps what the law asks it to show (checked here, in the transaction that saves).
-      const needed = openShopErrors(section, parsed.patch)
-      if (Object.keys(needed).length) {
-        const [shop] = await tx.select({ publishedAt: shopSettings.publishedAt }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
-        if (shop?.publishedAt) throw new NeededWhenOpen(needed)
+      // An open shop keeps what the law asks it to show. Checked in the transaction that saves, the row locked so
+      // opening the shop at the same moment cannot slip past it.
+      if (section.key === 'contact') {
+        const [shop] = await tx.select({ publishedAt: shopSettings.publishedAt, grievanceName: shopSettings.grievanceName, grievanceEmail: shopSettings.grievanceEmail, grievancePhone: shopSettings.grievancePhone })
+          .from(shopSettings).where(eq(shopSettings.tenantId, tenantId)).for('update')
+        const needed = shop?.publishedAt ? openShopErrors(section, parsed.patch, shop) : {}
+        if (Object.keys(needed).length) throw new NeededWhenOpen(needed)
       }
       const [row] = await tx.update(shopSettings)
         .set({ ...(columns as Partial<typeof shopSettings.$inferInsert>), version: sql`${shopSettings.version} + 1`, updatedAt: new Date() })

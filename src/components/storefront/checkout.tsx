@@ -206,7 +206,8 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
           <div><label htmlFor="state" className={label}>State</label>
             <select id="state" autoComplete="address-level1" value={f.state} onChange={(e) => set('state', e.target.value)} aria-invalid={!!errors.state || undefined} aria-describedby="state-err" className={field}>
               <option value="">Choose…</option>{STATES.map((s) => <option key={s}>{s}</option>)}</select>
-<Err k="state" /></div>
+
+            <Err k="state" /></div>
         </div>
       </fieldset>
 

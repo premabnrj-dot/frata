@@ -40,3 +40,14 @@ export async function until(fn, ms = 5000) {
   const end = Date.now() + ms
   for (;;) { const v = await fn(); if (v) return v; if (Date.now() > end) throw new Error('timed out waiting'); await wait(150) }
 }
+
+/**
+ * A moment `minutes` ago that is still TODAY in India (risk counts "COD orders from this phone today" by the IST
+ * calendar day). Just after IST midnight, "50 minutes ago" is yesterday and a flow's three same-day orders split
+ * across two days (found by e2e at 00:16 IST, 2026-11-08). Earlier minutes stay earlier; never before midnight.
+ */
+export function todayAgo(minutes, now = Date.now()) {
+  const IST = 5.5 * 3600_000, DAY = 86_400_000
+  const midnight = Math.floor((now + IST) / DAY) * DAY - IST
+  return new Date(Math.max(now - minutes * 60_000, midnight + (120 - minutes) * 1000))
+}

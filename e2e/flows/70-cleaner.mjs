@@ -23,11 +23,11 @@ export default {
         for (const gone of ['Photos are resized on your phone', 'Price, stock and SKU live here', 'An empty SKU is made for you when you save (shown in grey); type', 'From the standard list Google and Meta read. It decides'])
           // Visible text only: a passage that moved into an (i) is still in the page, hidden until opened.
           assert.equal(await p.getByText(gone).filter({ visible: true }).count(), 0, `"${gone}" is still on the page`)
-        const tip = p.getByRole('button', { name: 'About your cost' })
+        const tip = p.getByRole('button', { name: 'About sizes, colours and stock' })
         await tip.click()
-        await p.getByText('Never shown to shoppers.').waitFor()
+        await p.getByText('Your cost is never shown to shoppers').waitFor()
         await p.keyboard.press('Escape')
-        await p.getByText('Never shown to shoppers.').waitFor({ state: 'hidden' })
+        await p.getByText('Your cost is never shown to shoppers').waitFor({ state: 'hidden' })
         await p.screenshot({ path: t.out('product-editor'), fullPage: true })
       })
 
@@ -44,7 +44,7 @@ export default {
         await p.goto(CONSOLE + '/console/settings/contact')
         await p.locator('#f-grievanceName').fill('')
         await p.getByRole('button', { name: /^Save/ }).first().click()
-        await p.getByText('Needed while your shop is open').waitFor()
+        await p.getByText('Your shop is open: keep the grievance officer’s name.').waitFor()
         const [after] = await db`select grievance_name from shop_settings where tenant_id = ${T}`
         assert.equal(after.grievance_name, before.grievance_name)
       })

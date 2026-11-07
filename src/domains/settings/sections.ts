@@ -120,7 +120,7 @@ export const SECTIONS: readonly Section[] = [
         { key: 'shippingFlat', label: 'Shipping charge, ₹', kind: 'rupees' },
         { key: 'freeShippingAbove', label: 'Free shipping above, ₹', kind: 'rupees', hint: '0 means never free.' },
       ] },
-      { title: 'How long it takes', tip: 'Shown on every product page, and worked out for the shopper’s pincode at checkout. Courier estimates replace these once Shiprocket is connected.', fields: [
+      { title: 'How long it takes', tip: 'Shown on every product page and at checkout, as a date range. Courier estimates replace these once Shiprocket is connected.', fields: [
         { key: 'dispatchDays', label: 'You dispatch within, days', kind: 'days' },
         { key: 'metroDays', label: 'Delivery to metros, days', kind: 'days' },
         { key: 'restDays', label: 'Delivery elsewhere, days', kind: 'days' },
@@ -178,14 +178,18 @@ export function parseSection(section: Section, values: Values): { ok: true; patc
 }
 
 /**
- * What an OPEN shop may not leave empty, beyond each field's own rules: the grievance officer the Consumer
- * Protection (E-Commerce) Rules ask for, shown on the Contact page. A shop not yet open may save it empty.
+ * What an OPEN shop may not take away: the grievance officer the Consumer Protection (E-Commerce) Rules ask for,
+ * shown on its Contact page. Only a field that is filled in now is held (`saved`), so a shop that opened without
+ * one of them is never locked out of saving the rest. A shop not yet open may save them empty.
  */
-export const NEEDED_WHEN_OPEN: Partial<Record<SectionKey, readonly string[]>> = { contact: ['grievanceName', 'grievanceEmail', 'grievancePhone'] }
+export const NEEDED_WHEN_OPEN: Partial<Record<SectionKey, readonly (readonly [string, string])[]>> = {
+  contact: [['grievanceName', 'name'], ['grievanceEmail', 'email'], ['grievancePhone', 'phone']],
+}
 
-export function openShopErrors(section: Section, patch: Patch): Record<string, string> {
-  return Object.fromEntries((NEEDED_WHEN_OPEN[section.key] ?? []).filter((k) => k in patch && !String(patch[k] ?? '').trim())
-    .map((k) => [k, 'Needed while your shop is open: the law asks for a grievance officer.']))
+export function openShopErrors(section: Section, patch: Patch, saved: Record<string, unknown>): Record<string, string> {
+  return Object.fromEntries((NEEDED_WHEN_OPEN[section.key] ?? [])
+    .filter(([k]) => k in patch && !String(patch[k] ?? '').trim() && String(saved[k] ?? '').trim())
+    .map(([k, what]) => [k, `Your shop is open: keep the grievance officer’s ${what}. The law asks for it on your Contact page.`]))
 }
 
 /** What the live preview shows while typing: every field that is already valid; the rest keep their saved value. */
