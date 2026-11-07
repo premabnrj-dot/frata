@@ -109,7 +109,7 @@ Until these are set, Console › Apps › Messages says "WhatsApp isn't switched
 ## Later
 
 - `CRON_SECRET` (Sensitive): the daily cron in `vercel.json` (03:17 UTC) is refused
-  without it. It is the safety net for Razorpay events; each event is also
+  without it. It is the safety net for Razorpay and WhatsApp events; each event is also
   processed the moment it arrives.
 - `PAYMENT_KEYS_SECRET` (Sensitive, Production): replace the placeholder with
   `openssl rand -base64 32` **before any merchant connects Razorpay** — changing it

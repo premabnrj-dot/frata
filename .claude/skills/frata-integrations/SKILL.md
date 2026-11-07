@@ -118,7 +118,8 @@ in razorpay.com/docs/sitemap.xml (most read 2026-10-08, a bulk rebuild).
 - Number health on `/{phone_number_id}?fields=` (and the `/{waba}/phone_numbers` edge): `display_phone_number, verified_name,
   quality_rating, code_verification_status, name_status` (beta), `status, throughput, is_on_biz_app, platform_type, health_status`
   (`can_send_message` AVAILABLE/LIMITED/BLOCKED), `whatsapp_business_manager_messaging_limit` (**`messaging_limit_tier` is
-  deprecated**) [V, manage-phone-numbers + messaging-limits + health-status, 2026-11-07].
+  deprecated**; values seen: TIER_250 [V, example]; TIER_50…TIER_UNLIMITED and UNTIERED on the WABA field [V, reference]; TIER_1K/2K/10K/100K by the
+  documented ladder [U]) [V, manage-phone-numbers + messaging-limits + health-status, 2026-11-07].
 - Cloud API number: `POST /{waba_id}/subscribed_apps` (no body) → `POST /{phone_number_id}/register`
   `{messaging_product:"whatsapp", pin:"6 digits"}`; 10 register or deregister calls per number per 72 h, then 133016 [V, 2026-11-07].
 - Coexistence number: **do NOT register**; within **24 h** `POST /{phone_number_id}/smb_app_data` `{messaging_product:"whatsapp",

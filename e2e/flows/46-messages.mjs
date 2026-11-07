@@ -81,10 +81,12 @@ export default {
       assert.equal((await hook(msg('200000000001', 'wamid.M1abcdef'))).status, 200)
       assert.equal((await hook(msg('200000000001', 'wamid.M1abcdef'))).status, 200) // Meta's retry
       assert.equal((await hook(msg('299999999999', 'wamid.N0shop00'))).status, 200)
-      const rows = await until(async () => { const r = await db`select event_key, payload, processed_at from webhook_events where provider = 'whatsapp' order by event_key`; return r.length === 3 && r.every((x) => x.processed_at) ? r : null })
+      const rows = await until(async () => { const r = await db`select event_key, payload, processed_at from webhook_events where provider = 'whatsapp' order by event_key`; return r.length === 3 ? r : null })
       assert.deepEqual(rows.map((r) => r.event_key), [
         `whatsapp:${KESAR}:200000000001:message:wamid.M1abcdef`, `whatsapp:${KESAR}:200000000001:status:wamid.S1abcdef:delivered`, `whatsapp:${KESAR}:200000000001:status:wamid.S1abcdef:read`])
-      assert.ok(rows.every((r) => !JSON.stringify(r.payload).includes('919999999999')), 'no shopper data kept before C2')
+      // Kept whole and unprocessed for the inbox (C3): Meta sends a message once.
+      assert.ok(rows.every((r) => r.processed_at === null), 'kept for the inbox')
+      assert.ok(JSON.stringify(rows[0].payload).includes('919999999999'))
       assert.equal((await db`select count(*)::int n from webhook_events where event_key like '%wamid.F0rged00%' or event_key like '%299999999999%'`)[0].n, 0)
     })
 
@@ -95,6 +97,19 @@ export default {
       await riya.reload()
       await riya.getByText('Quality low').waitFor()
       await riya.getByText('Low', { exact: true }).waitFor()
+    })
+
+    await t.step('Meta stops accepting the token: Reconnect, in words', async () => {
+      await fetch(GRAPH + '/_test/set', { method: 'POST', body: JSON.stringify({ rejectAll: true }) })
+      await riya.getByRole('button', { name: 'More' }).click()
+      await riya.getByRole('menuitem', { name: 'Check again' }).click()
+      await riya.getByText('Frrata can no longer reach this number').waitFor()
+      await riya.getByRole('button', { name: 'Reconnect' }).click()
+      await riya.getByRole('dialog', { name: /Reconnect \+91 98450 12345/ }).getByRole('button', { name: 'Not now' }).click()
+      await fetch(GRAPH + '/_test/set', { method: 'POST', body: JSON.stringify({ rejectAll: false }) })
+      await riya.getByRole('button', { name: 'More' }).click()
+      await riya.getByRole('menuitem', { name: 'Check again' }).click()
+      await until(async () => (await db`select token_rejected_at from wa_connections where tenant_id = ${KESAR} and disconnected_at is null`)[0]?.token_rejected_at === null)
     })
 
     await t.step('Disconnect: the token is deleted, Meta unsubscribed, the connect page is back', async () => {
@@ -134,6 +149,17 @@ export default {
       await arjun.getByText('+91 90000 22222').first().waitFor()
       assert.equal(await arjun.getByRole('button', { name: 'More' }).count(), 0)
       await db`delete from members where tenant_id = ${KESAR} and user_id = ${S.id}`
+    })
+
+    await t.step('Removed in Meta: only that account’s connection closes', async () => {
+      const removed = (account, time) => hook({ object: 'whatsapp_business_account', entry: [{ id: account, time, changes: [{ field: 'account_update', value: { event: 'PARTNER_REMOVED' } }] }] })
+      await removed('100000000001', 1794080000) // the old, closed account: nothing open to close
+      await removed('100000000002', 1794080100)
+      await until(async () => (await db`select count(*)::int n from wa_connections where tenant_id = ${KESAR} and disconnected_at is null`)[0].n === 0)
+      const [c] = await db`select token_enc, disconnected_by from wa_connections where tenant_id = ${KESAR} order by connected_at desc limit 1`
+      assert.equal(c.token_enc, null); assert.equal(c.disconnected_by, '00000000-0000-0000-0000-000000000000')
+      await riya.reload()
+      await riya.getByRole('heading', { level: 1, name: 'Connect WhatsApp' }).waitFor()
     })
   },
 }

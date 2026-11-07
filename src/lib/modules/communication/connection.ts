@@ -60,9 +60,10 @@ export async function saveConnection(tx: Tx, tenantId: string, userId: string, c
 export const SYSTEM_ACTOR = '00000000-0000-0000-0000-000000000000'
 
 /** Closes the open row and deletes its token. The number stays the merchant's; history stays here. */
-export async function closeConnection(tx: Tx, tenantId: string, userId: string, now: Date): Promise<Connection | null> {
+export async function closeConnection(tx: Tx, tenantId: string, userId: string, now: Date, onlyAccount?: string): Promise<Connection | null> {
+  // onlyAccount: Meta said THIS account removed Frrata; a newer connection to another account stays open.
   const [r] = await tx.update(waConnections).set({ disconnectedAt: now, disconnectedBy: userId, tokenEnc: null })
-    .where(and(eq(waConnections.tenantId, tenantId), isNull(waConnections.disconnectedAt))).returning()
+    .where(and(eq(waConnections.tenantId, tenantId), isNull(waConnections.disconnectedAt), ...(onlyAccount ? [eq(waConnections.wabaId, onlyAccount)] : []))).returning()
   return r ?? null
 }
 
@@ -72,7 +73,7 @@ export async function refreshHealth(tenantId: string, now: Date): Promise<'ok' |
   if (!t) return 'none'
   const [nums, acct] = await Promise.all([accountNumbers(t.token, t.row.wabaId), account(t.token, t.row.wabaId)])
   if (nums === 'rejected' || acct === 'rejected') {
-    await withTenant(tenantId, (tx) => tx.update(waConnections).set({ tokenRejectedAt: now, checkedAt: now }).where(and(eq(waConnections.id, t.row.id), eq(waConnections.tenantId, tenantId))))
+    await withTenant(tenantId, (tx) => tx.update(waConnections).set({ tokenRejectedAt: now, checkedAt: now }).where(and(eq(waConnections.id, t.row.id), eq(waConnections.tenantId, tenantId), isNull(waConnections.disconnectedAt))))
     return 'rejected'
   }
   if (!nums && !acct) return 'unreachable'

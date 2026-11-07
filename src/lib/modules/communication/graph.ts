@@ -3,6 +3,7 @@ import { randomInt } from 'node:crypto'
 import { fetchWithTimeout } from '@/lib/http/timeout'
 import { META_APP_SECRET, META_GRAPH_BASE } from '@/lib/env'
 import { META_APP_ID } from '@/lib/public-env'
+import { META_ID_RE } from '@/domains/communication/webhook'
 
 // =============================================================================
 // FILE: src/lib/modules/communication/graph.ts — Meta's Graph API, for Messages (C1).
@@ -14,7 +15,7 @@ import { META_APP_ID } from '@/lib/public-env'
 /** v26.0 (introduced 29 Jul 2026; v27.0 is newer but undated) — frata-integrations § Meta, checked 2026-11-07. The page's SDK init uses the same. */
 export const GRAPH_VERSION = 'v26.0'
 const TIMEOUT_MS = 8_000
-const META_ID = /^[0-9]{5,20}$/
+const META_ID = META_ID_RE
 
 type Res = { ok: true; json: Record<string, unknown> } | { ok: false; status: number; code: number | null }
 
@@ -39,7 +40,7 @@ async function graph(method: 'GET' | 'POST' | 'DELETE', path: string, token: str
 }
 
 /** Meta refused the token itself (expired, removed, or the merchant took Frrata off): "Reconnect". */
-export const tokenRejected = (r: Res) => !r.ok && (r.status === 401 || r.code === 190)
+const tokenRejected = (r: Res) => !r.ok && (r.status === 401 || r.code === 190)
 
 /** The signup code from Meta's popup, for the merchant's business token. */
 export async function exchangeCode(code: string): Promise<{ ok: true; token: string } | { ok: false }> {

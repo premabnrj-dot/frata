@@ -23,6 +23,14 @@ describe('splitWebhook', () => {
     expect(splitWebhook('nope')).toEqual([])
     expect(splitWebhook(post([{ field: 'messages', value: { metadata: meta, messages: [{ id: "x'; drop" }] } }]))).toEqual([])
   })
+  it('an account change carries the entry time, so the same event later is a new row', () => {
+    const at = (time: number) => splitWebhook({ object: 'whatsapp_business_account', entry: [{ id: '100000000001', time, changes: [{ field: 'account_update', value: { event: 'PARTNER_REMOVED' } }] }] })[0]!.at
+    expect(at(1794080000)).toBe(1794080000); expect(at(1794090000)).toBe(1794090000)
+  })
+  it('a history sync routes by its number and is kept', () => {
+    const [i] = splitWebhook(post([{ field: 'history', value: { metadata: meta, history: [{ threads: [] }] } }]))
+    expect(i).toMatchObject({ route: { by: 'number', id: '200000000001' }, field: 'history', digest: true })
+  })
   it('echoes from the Business app are their own rows', () => {
     expect(splitWebhook(post([{ field: 'smb_message_echoes', value: { metadata: meta, message_echoes: [{ id: 'wamid.E1xyz' }] } }]))[0]!.key).toBe('200000000001:echo:wamid.E1xyz')
   })

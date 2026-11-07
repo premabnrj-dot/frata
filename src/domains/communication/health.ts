@@ -52,5 +52,5 @@ export const limitWords = (tier: string | null): string | null => (tier ? TIERS[
 const QUALITY: Record<string, string> = { GREEN: 'High', YELLOW: 'Medium', RED: 'Low' }
 export const qualityWords = (q: string | null): string => (q ? QUALITY[q.toUpperCase()] ?? 'Not rated yet' : 'Not rated yet')
 
-/** The one word for the page header and the Apps row. */
+/** The one word for the page header (the Apps row shows it from C3). */
 export const connectionState = (needs: Need[]): 'connected' | 'attention' => (needs.length ? 'attention' : 'connected')

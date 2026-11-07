@@ -51,7 +51,7 @@ export default {
     await t.step('Admin: no trial of a module not built yet; a trial shows and can be ended', async () => {
       await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/modules`)
       await meera.getByRole('link', { name: 'Modules', exact: true }).first().waitFor()
-      // Every module is still Next: a trial would run out unused, so there is no trial button yet.
+      // Every module a plan or add-on grants is still Next (Messages is core): a trial would run out unused, so no trial button yet.
       assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial/ }).count(), 0)
       // A trial granted before (the row Admin writes when a module ships) shows its end and can be ended.
       await db`insert into tenant_addons (tenant_id, module, trial_ends_at, reason, created_by) values (${KESAR}, 'reviews', now() + interval '30 days', '30-day trial', ${F.id})`

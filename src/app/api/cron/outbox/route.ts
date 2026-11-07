@@ -53,7 +53,7 @@ export async function GET(request: Request) {
       await markFailed(row.id, row.attempts, err instanceof Error ? err.message : String(err))
     }
   }
-  // Razorpay events not yet processed (each is processed at once on arrival; this is only the safety net).
+  // Razorpay and WhatsApp events not yet processed (each is processed at once on arrival; this is only the safety net).
   let events = 0
   for (const tenantId of await shopsWithPendingEvents()) {
     events += await processEvents(tenantId, 200).catch((e) => { console.error('[cron] events', tenantId, e instanceof Error ? e.name : 'error'); return 0 })

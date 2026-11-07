@@ -4,7 +4,8 @@ import { Badge } from '@/components/ui/badge'
 import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { connectionState, needsFor } from '@/domains/communication/health'
-import { ANY_MEMBER, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
+import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
+import { canManageWhatsApp } from '@/domains/communication/roles'
 import { isMessagesConfigured } from '@/lib/env'
 import { shopConnection } from '@/lib/modules/communication/connection'
 import { GRAPH_VERSION } from '@/lib/modules/communication/graph'
@@ -12,7 +13,7 @@ import { META_APP_ID, WA_CONFIG_ID, isWhatsAppSignupConfigured } from '@/lib/pub
 import { shopModules } from '@/lib/queries/modules'
 import { dateTimeIN } from '@/lib/format-date'
 import { ConnectChoices } from './connect'
-import { NumberHealth } from './health'
+import { DisconnectOnly, NumberHealth } from './health'
 
 export const metadata = { title: 'Messages' }
 
@@ -23,17 +24,21 @@ export default async function MessagesSetupPage() {
   const now = new Date()
   const { access } = await shopModules(tenantId, now.toISOString())
   const back = { href: '/console/apps', label: 'Apps' }
+  const c = await shopConnection(tenantId)
+  const canManage = canManageWhatsApp(auth.membership)
   if (!access.communication.usable) {
+    // Off or paused, a connected number stays connected to Meta: it can still be disconnected here (impact review).
     return (
       <>
         <PageHeader title="Messages" back={back} />
         <Panel title={access.communication.why === 'paused' ? 'Messages is paused by Frrata. We’re on it.' : 'Turn on Messages first'}
-          action={<Link href="/console/apps" className={button({ variant: 'secondary' })}>Go to Apps</Link>} />
+          action={<Link href="/console/apps" className={button({ variant: 'secondary' })}>Go to Apps</Link>}>
+          {c ? <>{c.displayPhone} is still connected to Meta. Chats keep arriving and wait here.</> : null}
+        </Panel>
+        {c && canManage ? <DisconnectOnly displayPhone={c.displayPhone} /> : null}
       </>
     )
   }
-  const c = await shopConnection(tenantId)
-  const canManage = (CAN_MANAGE as readonly string[]).includes(auth.membership.role) && !auth.membership.supportSessionId
   if (!c) {
     const ready = isMessagesConfigured() && isWhatsAppSignupConfigured()
     return (

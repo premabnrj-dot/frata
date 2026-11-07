@@ -1,7 +1,8 @@
 import { after, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'node:crypto'
 import { META_APP_SECRET, WA_VERIFY_TOKEN } from '@/lib/env'
-import { processWhatsApp, storeWebhook, verifyMetaSignature } from '@/lib/modules/communication/webhook'
+import { verifyMetaSignature } from '@/lib/modules/communication/signature'
+import { processWhatsApp, storeWebhook } from '@/lib/modules/communication/webhook'
 
 // ENTRY POINT credential: Meta's X-Hub-Signature-256 over the raw body with Frrata's app secret (scripts/check-actions.mjs).
 // One URL for every shop: each item is routed by its own number or account id (app_tenant_for_wa / _waba),

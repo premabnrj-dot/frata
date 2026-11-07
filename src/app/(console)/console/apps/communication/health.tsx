@@ -20,7 +20,7 @@ export function NumberHealth({ c, needs, canManage }: { c: View; needs: Need[]; 
   const router = useRouter()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [confirm, setConfirm] = useState(false)
+  const [confirm, setConfirm] = useState<false | 'disconnect' | 'reconnect'>(false)
   const run = (f: () => Promise<{ ok: boolean; error?: string }>) => start(async () => {
     setError(null)
     const r = await f()
@@ -37,7 +37,7 @@ export function NumberHealth({ c, needs, canManage }: { c: View; needs: Need[]; 
             <p className="font-mono text-base font-semibold">{c.displayPhone}</p>
             <p className="text-sm text-muted-foreground">{c.verifiedName ?? 'Name not set'} · {c.coexistence ? 'WhatsApp Business app and Frrata' : 'Frrata only'}</p>
           </div>
-          {canManage ? <Menu items={[{ label: 'Check again', onSelect: () => run(checkWhatsAppAction) }, { label: 'Disconnect', onSelect: () => setConfirm(true), danger: true }]} /> : null}
+          {canManage ? <Menu items={[{ label: 'Check again', onSelect: () => run(checkWhatsAppAction) }, { label: 'Disconnect', onSelect: () => setConfirm('disconnect'), danger: true }]} /> : null}
         </div>
         <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
           <div><dt className="text-muted-foreground">Quality</dt><dd className="font-semibold">{qualityWords(c.quality)}</dd></div>
@@ -58,7 +58,7 @@ export function NumberHealth({ c, needs, canManage }: { c: View; needs: Need[]; 
                 <span className="min-w-[12rem] flex-1">{n.text}</span>
                 {n.action === 'manager' ? <a href={WA_MANAGER} target="_blank" rel="noopener noreferrer" className={button()}>Open WhatsApp Manager</a> : null}
                 {n.action === 'currency_help' ? <a href={WA_MANAGER} target="_blank" rel="noopener noreferrer">How</a> : null}
-                {n.action === 'reconnect' && canManage ? <Button variant="secondary" onClick={() => setConfirm(true)}>Reconnect</Button> : null}
+                {n.action === 'reconnect' && canManage ? <Button variant="secondary" onClick={() => setConfirm('reconnect')}>Reconnect</Button> : null}
                 {n.note ? <span className="text-xs text-muted-foreground">{n.note}</span> : null}
               </li>
             ))}
@@ -66,13 +66,27 @@ export function NumberHealth({ c, needs, canManage }: { c: View; needs: Need[]; 
           </Section>
         </section>
       ) : <p className="text-sm text-muted-foreground">Nothing needs you. Order messages come next.</p>}
+      <p className="text-sm text-muted-foreground">Chats that arrive now are kept for the team inbox, coming next.</p>
       {error && !confirm ? <p role="alert" className="text-sm text-danger-text">{error}</p> : null}
 
-      <Dialog open={confirm} onClose={() => setConfirm(false)} title={`Disconnect ${c.displayPhone}?`}
-        description="Frrata stops sending and receiving on this number. The number stays yours; connect it again any time."
-        actions={<><Button variant="secondary" className="after:hidden" data-autofocus onClick={() => setConfirm(false)}>Keep it connected</Button><Button variant="destructive" disabled={pending} onClick={() => run(disconnectWhatsAppAction)}>Disconnect</Button></>}>
+      <Dialog open={!!confirm} onClose={() => setConfirm(false)} title={confirm === 'reconnect' ? `Reconnect ${c.displayPhone}` : `Disconnect ${c.displayPhone}?`}
+        description={confirm === 'reconnect' ? 'Frrata lost access to this number. Disconnect it here, then connect it again in Meta’s window.' : 'Frrata stops sending and receiving on this number. The number stays yours; connect it again any time.'}
+        actions={<><Button variant="secondary" className="after:hidden" data-autofocus onClick={() => setConfirm(false)}>{confirm === 'reconnect' ? 'Not now' : 'Keep it connected'}</Button><Button variant={confirm === 'reconnect' ? 'primary' : 'destructive'} disabled={pending} onClick={() => run(disconnectWhatsAppAction)}>{confirm === 'reconnect' ? 'Disconnect and start again' : 'Disconnect'}</Button></>}>
         {error ? <p role="alert" className="text-sm text-danger-text">{error}</p> : null}
       </Dialog>
+    </div>
+  )
+}
+
+/** Messages is off or paused but the number is still connected: the one thing left to do is disconnect it. */
+export function DisconnectOnly({ displayPhone }: { displayPhone: string }) {
+  const router = useRouter()
+  const [pending, start] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <Button variant="secondary" disabled={pending} onClick={() => start(async () => { const r = await disconnectWhatsAppAction(); if (!r.ok) setError(r.error); else router.refresh() })}>Disconnect {displayPhone}</Button>
+      {error ? <p role="alert" className="text-sm text-danger-text">{error}</p> : null}
     </div>
   )
 }

@@ -422,7 +422,8 @@ do $$ declare t uuid; e text; begin
   if has_table_privilege('frata_admin', 'payment_keys', 'select') or has_table_privilege('frata_admin', 'order_lines', 'select') then raise exception 'FAIL: staff read keys or costs directly'; end if;
 end $$;
 
--- 23. Platform tables inside a tenant: B's webhook events and outbox rows are invisible to A; with no tenant set the sweep sees all.
+-- 23. Platform tables inside a tenant: B's webhook events and outbox rows are invisible to A. With no tenant set the
+--     sweep learns only WHICH shops have events (app_pending_event_shops, C1 audit 2026-11-07), never their rows.
 insert into webhook_events (provider, event_key, tenant_id, payload) values ('razorpay', 'razorpay:b:payment.captured:pay_1', '22222222-2222-2222-2222-222222222222', '{"phone":"9829043210"}');
 insert into outbox (tenant_id, kind, dedupe_key, payload) values ('22222222-2222-2222-2222-222222222222', 'test.kind', 'b-1', '{}');
 begin; set local role frata_app;
@@ -434,7 +435,8 @@ end $$;
 rollback;
 begin; set local role frata_app;
 do $$ begin
-  if not exists (select 1 from webhook_events where event_key = 'razorpay:b:payment.captured:pay_1') then raise exception 'FAIL: the platform sweep cannot see events'; end if;
+  if exists (select 1 from webhook_events) then raise exception 'FAIL: events readable with no shop set'; end if;
+  if not exists (select 1 from app_pending_event_shops('razorpay') x where x = '22222222-2222-2222-2222-222222222222') then raise exception 'FAIL: the platform sweep cannot find shops with events'; end if;
 end $$;
 rollback;
 
@@ -788,6 +790,28 @@ commit;
 begin; set local role frata_app;
 do $$ begin
   if app_tenant_for_wa('200000000001') is distinct from '22222222-2222-2222-2222-222222222222' then raise exception 'FAIL: the reconnected number does not route to B'; end if;
+end $$;
+commit;
+-- WhatsApp items: stored only by the definer, for the open connection's shop; nothing readable before a shop is set
+begin; set local role frata_app;
+do $$ declare t uuid; n int; begin
+  t := app_store_wa_event('number', '200000000001', '200000000001:message:wamid.P1abcdef', '{"field":"messages"}');
+  if t is distinct from '22222222-2222-2222-2222-222222222222' then raise exception 'FAIL: the item did not land on the open shop'; end if;
+  if app_store_wa_event('number', '200000000001', '200000000001:message:wamid.P1abcdef', '{}') is not null then raise exception 'FAIL: a retry stored twice'; end if;
+  if app_store_wa_event('number', '299999999999', 'x:message:wamid.P2abcdef', '{}') is not null then raise exception 'FAIL: an item for no shop was stored'; end if;
+  if app_store_wa_event('number', '200000000001', 'x'' or 1=1', '{}') is not null then raise exception 'FAIL: a crafted key was stored'; end if;
+  if (select count(*) from webhook_events) <> 0 then raise exception 'FAIL: events readable before a shop is set'; end if;
+  update webhook_events set processed_at = now(); get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: events changeable before a shop is set'; end if;
+  begin insert into webhook_events (provider, event_key, tenant_id, payload) values ('whatsapp', 'whatsapp:forged', '11111111-1111-1111-1111-111111111111', '{}'); raise exception 'FAIL: a WhatsApp item stored around the definer';
+  exception when insufficient_privilege then null; end;
+  if not exists (select 1 from app_pending_event_shops('whatsapp') x where x = '22222222-2222-2222-2222-222222222222') then raise exception 'FAIL: the sweep cannot find pending shops'; end if;
+end $$;
+commit;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  if exists (select 1 from webhook_events where provider = 'whatsapp') then raise exception 'FAIL: A reads B''s WhatsApp items'; end if;
 end $$;
 commit;
 do $$ begin
