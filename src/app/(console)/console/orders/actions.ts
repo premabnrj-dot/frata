@@ -3,7 +3,10 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { CANCEL_REASONS, ROLES, type OrderAction } from '@/domains/orders/work'
+import { risk } from '@/domains/orders/risk'
 import { asMember } from '@/lib/auth/as-member'
+import { requireMember } from '@/lib/auth/require-member'
+import { riskFactsFor } from '@/lib/queries/order-risk'
 import type { Tx } from '@/lib/db'
 import * as work from '@/lib/orders/work'
 import { refreshShop } from '@/lib/queries/storefront'
@@ -88,4 +91,25 @@ export async function cancelOrder(orderId: string, input: unknown) {
   return run('cancel', orderId, { reason: p.data.reason, restock: p.data.restock }, (tx, t, a) => work.cancel(tx, t, a, orderId, p.data),
     // A piece back from 0 is buyable again: the cached shop pages show it at once.
     (tenantId, v) => { if (v.backInStock.length) refreshShop(tenantId, 'catalogue') })
+}
+
+/**
+ * Confirm a selection (the queue's bulk action). Risk is worked out HERE, on the server, from the orders
+ * themselves — a High-risk order is skipped and counted, never confirmed in bulk (spec § 1D·1; a person opens
+ * it to decide). Each order goes through confirmOrder: its own compare-and-set, history row and audit row.
+ */
+export async function confirmMany(orderIds: string[]): Promise<{ ok: true; confirmed: { id: string; eventId: string }[]; skippedHigh: number; failed: number } | { ok: false; error: string }> {
+  const ids = [...new Set(Array.isArray(orderIds) ? orderIds : [])].filter((x) => Id.safeParse(x).success).slice(0, 50)
+  if (!ids.length) return { ok: false, error: 'Select the orders to confirm.' }
+  const auth = await requireMember(ROLES.confirm)
+  if (!auth.ok) return { ok: false, error: auth.message }
+  const facts = await riskFactsFor(auth.membership.tenantId, ids)
+  const high = ids.filter((id) => { const f = facts.get(id); return f && risk(f).level === 'high' })
+  const confirmed: { id: string; eventId: string }[] = []
+  let failed = 0
+  for (const id of ids.filter((x) => facts.has(x) && !high.includes(x))) {
+    const r = await confirmOrder(id)
+    if (r.ok) confirmed.push({ id, eventId: r.eventId }); else failed++
+  }
+  return { ok: true, confirmed, skippedHigh: high.length, failed: failed + ids.filter((x) => !facts.has(x)).length }
 }

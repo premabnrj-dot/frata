@@ -120,7 +120,7 @@ export default {
       assert.equal(shares[0].s, Number(o.shipping), 'shares now cover delivery only')
       await p.reload(); await p.getByText('Paid online').waitFor()
       assert.equal(await p.getByText(/Keep ₹/).count(), 0, 'the shopper is not told to keep cash ready')
-      await c.goto(CONSOLE + '/console/orders')
+      await c.goto(CONSOLE + '/console/orders?tab=all')
       await c.getByRole("row").filter({ hasText: `-${o.number}` }).getByText('Do not collect cash').waitFor()
       await c.screenshot({ path: t.out('console-orders'), fullPage: true })
     })

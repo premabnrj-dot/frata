@@ -49,7 +49,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
               <Td cell="hide">{r.cover
                 ? <img src={urlFor(r.cover.base, pick(r.cover.widths, 96))} alt="" width={40} height={50} loading="lazy" className="h-[50px] w-10 rounded-sm object-cover" />
                 : <span className="block h-[50px] w-10 rounded-sm bg-muted" aria-hidden="true" />}</Td>
-              <Td cell="a"><Link href={`/console/products/${r.handle}`} data-row-link className="line-clamp-2 min-h-6 py-0.5 font-medium [overflow-wrap:anywhere] hover:underline"><Name>{r.title}</Name></Link>{r.typeName && <span className="hidden text-xs text-muted-foreground md:block">{r.typeName}</span>}</Td>
+              <Td cell="a"><Link href={`/console/products/${r.handle}`} data-row-link prefetch={false} className="line-clamp-2 min-h-6 py-0.5 font-medium [overflow-wrap:anywhere] hover:underline"><Name>{r.title}</Name></Link>{r.typeName && <span className="hidden text-xs text-muted-foreground md:block">{r.typeName}</span>}</Td>
               <Td cell="d"><StatusBadge status={r.status} publishAt={r.publishAt} /></Td>
               <Td cell="c" className="text-xs text-muted-foreground md:text-sm md:text-foreground">{r.typeName && <span className="md:hidden">{r.typeName} · </span>}<Numeric>{r.variantCount}</Numeric><span className="md:hidden"> sizes and colours</span></Td>
               <Td cell="e" className="text-xs md:text-right md:text-sm">{r.stock > 0 ? <><Numeric>{r.stock}</Numeric><span className="md:hidden"> in stock</span></> : <Badge tone="warn">Sold out</Badge>}</Td>
