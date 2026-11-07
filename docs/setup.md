@@ -80,7 +80,13 @@ create your tenant and owner membership (it is a plain insert; no secret).
 
 ## Later
 
-- `CRON_SECRET` (Sensitive) when the first cron is added to `vercel.json`.
-- `RAZORPAY_WEBHOOK_SECRET` (Sensitive) from Razorpay's webhook settings.
+- `CRON_SECRET` (Sensitive): the daily cron in `vercel.json` (03:17 UTC) is refused
+  without it. It is the safety net for Razorpay events; each event is also
+  processed the moment it arrives.
+- `PAYMENT_KEYS_SECRET` (Sensitive, Production): replace the placeholder with
+  `openssl rand -base64 32` **before any merchant connects Razorpay** — changing it
+  later makes saved keys unreadable and those shops must reconnect. Each shop's
+  Razorpay webhook secret is made by Frata per shop (Settings → Online payments);
+  there is no platform-wide Razorpay secret.
 - Supabase Pro before real merchants: free projects pause after a week idle and
   have no backups. Vercel Pro too: Hobby is non-commercial.

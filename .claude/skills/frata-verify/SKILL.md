@@ -2,7 +2,7 @@
 name: frata-verify
 description: Use before saying a Frata change works - to run the gates, typecheck, tests and production build, prove tenant isolation on a real Postgres, run the built app locally against that database with storefront and console Host headers, and exercise webhooks and cron with curl.
 metadata:
-  version: 1.2.0
+  version: 1.3.0
   verified: 2026-11-06
   covers: ["scripts/verify/**"]
 ---
@@ -75,13 +75,23 @@ curl -o /dev/null -w '%{http_code}' -H 'Host: nobody.example' localhost:3123/   
 curl -o /dev/null -w '%{http_code}' -H 'Host: app.frata.in' localhost:3123/s/x  # 404
 ```
 
-Webhook with a real signature (twice — one row expected):
+Webhook with a real signature (twice — one row expected). Each shop has its own
+URL and secret (Settings → Online payments shows both until the first event):
 
 ```bash
-B='{"event":"payment.captured","payload":{"payment":{"entity":{"id":"pay_1"}}}}'
-SIG=$(printf '%s' "$B" | openssl dgst -sha256 -hmac "$SECRET" | awk '{print $2}')
-curl -X POST -H "x-razorpay-signature: $SIG" --data-raw "$B" localhost:3123/api/webhooks/razorpay
+B='{"event":"payment.captured","payload":{"payment":{"entity":{"id":"pay_1","order_id":"order_x","status":"captured","amount":249000,"currency":"INR"}}}}'
+SIG=$(printf '%s' "$B" | openssl dgst -sha256 -hmac "$SHOP_WEBHOOK_SECRET" | awk '{print $2}')
+curl -X POST -H "x-razorpay-signature: $SIG" --data-raw "$B" localhost:3123/api/webhooks/razorpay/$WEBHOOK_KEY
 ```
+
+Checkout end to end (1C): run the app with `PAYMENT_KEYS_SECRET=<any>` and
+`RAZORPAY_API_BASE` pointing at a local stand-in for Razorpay's API (keys check,
+orders, an order's payments), serve a stand-in `checkout.js` with
+`context.route('https://checkout.razorpay.com/v1/checkout.js', …)`, and reach the
+shop host with Chromium's `--host-resolver-rules`. Cover: COD, paid online, a
+dismissed payment switched to COD, a late capture after the switch (paid wins,
+stock taken once), a price change mid-checkout, a double submit. Then
+`SHOP_HOST=… PATHS="/ /checkout /bag /orders" npm run check:payload`.
 
 ## In a browser
 
