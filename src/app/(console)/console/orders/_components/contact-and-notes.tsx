@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import { cleanMobile } from '@/domains/checkout/address'
 import { STATES } from '@/domains/checkout/states'
 import { addOrderNote, editOrderContact } from '../actions'
 
@@ -28,31 +29,39 @@ export function EditContact({ orderId, number, contact }: { orderId: string; num
   const [open, setOpen] = useState(false)
   const [f, setF] = useState(contact)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
+  // The same phone typed another way ("+91 98290 43210") is not a change.
+  const same = (k: keyof Contact, v: string) => (k === 'phone' ? (cleanMobile(v) ?? v.trim()) === contact.phone : v.trim().replace(/\s+/g, ' ') === contact[k])
   async function save() {
-    const changed = Object.fromEntries(Object.entries(f).filter(([k, v]) => v.trim() !== contact[k as keyof Contact]).map(([k, v]) => [k, v.trim()]))
+    if (busy) return
+    const changed = Object.fromEntries(Object.entries(f).filter(([k, v]) => !same(k as keyof Contact, v)).map(([k, v]) => [k, v.trim()]))
     if (!Object.keys(changed).length) { setOpen(false); return }
     setBusy(true)
     const r = await editOrderContact(orderId, changed).catch(() => ({ ok: false as const, error: 'We could not save that. Check your connection; nothing was changed.' }))
     setBusy(false)
-    if (!r.ok) { setError(r.error); return }
-    setOpen(false); setError(null); router.refresh()
+    if (!r.ok) { setError(r.error); setFieldErrors(('fieldErrors' in r && r.fieldErrors) || {}); return }
+    setOpen(false); setError(null); setFieldErrors({}); router.refresh()
   }
   return (
     <>
-      <Button variant="secondary" onClick={() => { setF(contact); setError(null); setOpen(true) }}>Edit</Button>
+      <Button variant="secondary" onClick={() => { setF(contact); setError(null); setFieldErrors({}); setOpen(true) }}>Edit</Button>
       <Dialog open={open} onClose={() => setOpen(false)} title={`Who ${number} goes to`}
-        actions={<><Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Keep as it is</Button><Button onClick={save} aria-disabled={busy}>Save</Button></>}>
+        actions={<><Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Keep as it is</Button><Button onClick={save} aria-disabled={busy}>Save the changes</Button></>}>
         <div className="grid gap-3 sm:grid-cols-2">
           {FIELDS.map((x) => (
             <label key={x.key} className={`grid gap-1 text-sm ${x.key === 'addressLine' || x.key === 'customerName' ? 'sm:col-span-2' : ''}`}>
               {x.label}
               <input type={x.type ?? 'text'} inputMode={x.inputMode} value={f[x.key]} onChange={(e) => setF({ ...f, [x.key]: e.target.value })}
+                aria-invalid={fieldErrors[x.key] ? true : undefined} aria-describedby={fieldErrors[x.key] ? `err-${x.key}` : undefined}
                 className="h-10 rounded-md border border-input bg-card px-3 md:h-9" />
+              {fieldErrors[x.key] ? <span id={`err-${x.key}`} className="text-danger-text">{fieldErrors[x.key]}</span> : null}
             </label>
           ))}
           <label className="grid gap-1 text-sm">State
             <select value={f.state} onChange={(e) => setF({ ...f, state: e.target.value })} className="h-10 rounded-md border border-input bg-card px-2 md:h-9">
+              {/* A stored state off the list (or none) shows as itself, never as the first state silently. */}
+              {(STATES as readonly string[]).includes(f.state) ? null : <option value={f.state}>{f.state || 'Pick the state'}</option>}
               {STATES.map((s) => <option key={s}>{s}</option>)}
             </select>
           </label>
@@ -70,6 +79,7 @@ export function AddNote({ orderId }: { orderId: string }) {
   const [busy, setBusy] = useState(false)
   async function add(e: React.FormEvent) {
     e.preventDefault()
+    if (busy) return // a double click adds it once
     if (!body.trim()) { setError('Write the note first.'); return }
     setBusy(true)
     const r = await addOrderNote(orderId, body).catch(() => ({ ok: false as const, error: 'We could not save that note. Check your connection.' }))
