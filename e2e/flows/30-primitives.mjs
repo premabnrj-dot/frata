@@ -62,9 +62,14 @@ export default {
 
     await t.step('toast: says what happened, Undo runs once and says so', async () => {
       await p.getByRole('button', { name: 'Confirm', exact: true }).click()
-      await p.getByText('KS-1001 confirmed.').waitFor()
+      await p.locator('[data-toast]', { hasText: 'KS-1001 confirmed.' }).waitFor()
+      // Spoken through the shell's one live region (when the shell is there), with how to undo.
+      if (await p.locator('#shell-announcer').count()) await p.waitForFunction(() => document.getElementById('shell-announcer')?.textContent === 'KS-1001 confirmed. Undo for 8 seconds.', null, { timeout: 2000 })
       await p.getByRole('button', { name: 'Undo' }).click()
       await p.locator('[data-toast]', { hasText: 'Undone.' }).waitFor()
+      if (await p.locator('#shell-announcer').count()) await p.waitForFunction(() => document.getElementById('shell-announcer')?.textContent === 'Undone.', null, { timeout: 2000 })
+      // One region of ours (Next's own route announcer lives in its shadow DOM and is not counted).
+      assert.equal(await p.evaluate(() => document.querySelectorAll('[aria-live]').length), 1, 'one live region on the page')
       assert.equal(await p.locator('[data-toast]').count(), 1, 'one toast at a time')
       assert.equal((await log()).filter((l) => l === 'undo').length, 1)
       assert.equal(await p.getByRole('button', { name: 'Undo' }).count(), 0)
