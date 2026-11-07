@@ -1,14 +1,12 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { closeShop, openShop } from '../shop-actions'
 import { useOpenMoment } from './open-moment'
 
 /** Open my shop (asks once), or, when open, close it again. Orders are kept either way. */
 export function OpenShop({ address, open, ready, canManage }: { address: string; open: boolean; ready: boolean; canManage: boolean }) {
-  const router = useRouter()
   const [ask, setAsk] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   /** The one brand moment (rule 26) is drawn by the page's OpenMoment, which outlives this checklist. */
@@ -20,7 +18,8 @@ export function OpenShop({ address, open, ready, canManage }: { address: string;
     setMsg(r.ok ? (fn === openShop && moment ? null : { ok: true, text: done }) : { ok: false, text: r.error })
     setAsk(false)
     if (r.ok) { if (fn === openShop) moment?.opened(); else moment?.closed() }
-    if (r.ok) router.refresh()
+    // No router.refresh(): the action's revalidatePath already re-renders this page, and a second refresh raced it —
+    // a stale render (the shop still open) could land after the fresh one (e2e probe, 2026-11-07).
   })
   if (!canManage) return null
   return (

@@ -2,7 +2,7 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.10.0
+  version: 1.11.0
   verified: 2026-11-07
 ---
 
@@ -54,3 +54,4 @@ metadata:
 | An opacity or transform read in e2e is "wrong" now and then | It read the first frame of a 120–320 ms transition | `waitForFunction` on the value, or open the context with `reducedMotion: 'reduce'` |
 | Every stored Razorpay key stops opening ("not connected") | The key-derivation salt in `src/lib/crypto/secret-box.ts` ('frata') was changed, e.g. by the rename to Frrata | Never rename it; a known-token test pins it, and `check:name` allows it by name |
 | Shoppers' bags, saved checkout forms or shortcut settings vanish | A localStorage key (`frata.bag.v1` and the like) was renamed | Keys are internal: they keep the old spelling (`scripts/check-name.allow.json`) |
+| After an action the page shows the OLD state for a while (e.g. "Closed." beside a checklist that still says open) | The action calls `revalidatePath` (which already re-renders the current page in its response) AND the component then calls `router.refresh()`: the two renders race and the stale one can land last | Rely on the action's `revalidatePath`; drop the extra `router.refresh()` (OpenShop, 2026-11-07: an e2e probe showed the DB closed and the UI open). 24 other call sites still do both — fix each when touched |

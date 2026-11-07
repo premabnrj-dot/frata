@@ -304,8 +304,7 @@ export default {
         // Setup (and closing the shop) is reached from Home, by a tap, not by typing its address (impact review U·4).
         const h = await hc.newPage(); await h.goto(CONSOLE + '/console')
         await h.getByRole('link', { name: 'Setup, or close the shop for now' }).click(); await h.waitForURL(/\/console\/setup$/)
-        const closeShop = async () => { await h.getByRole('button', { name: 'Close the shop for now' }).click(); await h.getByRole('button', { name: 'Close shop' }).click(); await h.getByText('Closed. Shoppers see “Opening soon”.').waitFor()
-          const [r] = await db`select published_at from shop_settings where tenant_id = ${KESAR}`; console.log('PROBE closed: published_at =', r?.published_at, '· open-button visible:', await h.getByRole('button', { name: 'Open my shop' }).isVisible().catch(() => false)) }
+        const closeShop = async () => { await h.getByRole('button', { name: 'Close the shop for now' }).click(); await h.getByRole('button', { name: 'Close shop' }).click(); await h.getByText('Closed. Shoppers see “Opening soon”.').waitFor() }
         const openShop = async () => { await h.getByRole('button', { name: 'Open my shop' }).click(); await h.getByRole('button', { name: 'Open it' }).click() }
         await closeShop(); await openShop()
         await h.locator('svg .animate-draw-circle').waitFor()
