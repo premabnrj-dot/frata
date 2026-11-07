@@ -102,7 +102,7 @@ export default {
         await ctx.close()
       })
 
-      await t.step('support mode: the visited shop, its own count in the nav, and back to Kesar after End and after expiry (T4, T5)', async () => {
+      await t.step('support mode: the visited shop, its own count in the nav, and back to Kesar after End, expiry, and an end elsewhere (T4, T5)', async () => {
         const ctx = await signedIn(t.browser, 'frata', { viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' })
         const p = await ctx.newPage(); p.on('pageerror', (e) => t.errors.push(e.message))
         const pill = async () => Number((await p.locator('nav[aria-label="Console"] a[href="/console/orders"]').filter({ visible: true }).first().innerText()).match(/\d+/)?.[0] ?? 0)
@@ -129,7 +129,54 @@ export default {
         assert.equal(await pill(), 3, 'merchant-2\'s count during its visit')
         await p.locator('[data-support-banner]').waitFor({ state: 'detached', timeout: 15_000 })
         await until(async () => (await pill()) === kesar, 10_000)
+        // Ended elsewhere, then an in-app move: the kept layout must not show merchant-1 over Kesar's page (audit MEDIUM 1).
+        await start(M1)
+        await p.goto(CONSOLE + '/console')
+        assert.equal(await pill(), 7)
+        await db`update support_sessions set ended_at = now() where staff_user_id = ${USERS.frata.id} and ended_at is null`
+        await p.locator('nav[aria-label="Console"] a[href="/console/products"]').filter({ visible: true }).first().click()
+        await p.waitForURL(/\/console\/products/)
+        await p.locator('[data-support-banner]').waitFor({ state: 'detached', timeout: 10_000 })
+        await until(async () => (await pill()) === kesar, 10_000)
         await ctx.close()
+      })
+
+      await t.step('the shell: progress bar on a slow move, the More sheet keeps focus and gives it back, sign out ends a visit', async () => {
+        // Progress bar: a 900 ms network makes the move slow enough to show it (it waits 150 ms).
+        const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 800 } })
+        const p = await ctx.newPage(); await p.goto(CONSOLE + '/console')
+        const cdp = await ctx.newCDPSession(p)
+        await cdp.send('Network.enable'); await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 900, downloadThroughput: 1e6, uploadThroughput: 1e6 })
+        await p.locator('aside a[href="/console/products"]').click()
+        await p.locator('.animate-nav-run').waitFor({ timeout: 3000 })
+        await p.waitForURL(/\/console\/products/)
+        await ctx.close()
+        // The More sheet (phone): focus goes in, Tab stays in, Esc closes it and focus is back on More.
+        const pc = await signedIn(t.browser, 'owner', { viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' })
+        const q = await pc.newPage(); await q.goto(CONSOLE + '/console')
+        const more = q.locator('nav[aria-label="Console"] button', { hasText: 'More' })
+        await more.click()
+        const sheet = q.getByRole('dialog', { name: 'More' }); await sheet.waitFor()
+        // A modal dialog may let Tab leave for the browser's own controls (activeElement is then body); it must never
+        // land on the page behind it.
+        for (let i = 0; i < 12; i++) {
+          await q.keyboard.press('Tab')
+          assert.ok(await q.evaluate(() => { const a = document.activeElement; return !a || a === document.body || !!a.closest('dialog[open]') }), `Tab ${i + 1} never reaches the page behind the sheet`)
+        }
+        await q.keyboard.press('Escape'); await sheet.waitFor({ state: 'hidden' })
+        assert.equal(await q.evaluate(() => document.activeElement?.textContent?.trim()), 'More', 'focus returns to More')
+        await pc.close()
+        // Sign out during a support visit: the visit ends (audited as by sign-out) and the next page is sign-in.
+        const fc = await signedIn(t.browser, 'frata', { viewport: { width: 1280, height: 800 } })
+        const r = await fc.newPage(); await r.goto(CONSOLE + `/admin/merchants/${M1}/support`)
+        await r.getByRole('button', { name: /^Open .+ console$/ }).click(); await r.locator('[data-support-banner]').waitFor()
+        await r.locator('aside').getByRole('button', { name: 'Sign out' }).click()
+        await r.waitForURL(/\/login/)
+        const [{ open }] = await db`select count(*)::int open from support_sessions where staff_user_id = ${USERS.frata.id} and ended_at is null`
+        assert.equal(open, 0, 'signing out ends the visit')
+        const [audit] = await db`select detail from audit_events where action = 'support.end' order by at desc limit 1`
+        assert.deepEqual(audit?.detail, { by: 'sign-out' })
+        await fc.close()
       })
 
       await t.step('Indic fonts download only when a name needs them, and never on the shop (plan U · A4)', async () => {

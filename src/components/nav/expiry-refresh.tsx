@@ -3,14 +3,18 @@
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
-/** Refreshes the page (server components, the kept layout too) when a support visit runs out (plan U · T4). */
-export function ExpiryRefresh({ at }: { at: string }) {
+/**
+ * Refreshes the page (server components, the kept layout too) when a support visit runs out (plan U · T4).
+ * `ms` is the time left by the SERVER's clock, so a fast or slow phone clock cannot refresh early; each refresh
+ * renders a new `ms`, which re-arms the timer if the visit is somehow still on (impact review U·2a).
+ */
+export function ExpiryRefresh({ ms: left }: { ms: number }) {
   const router = useRouter()
   useEffect(() => {
-    const ms = new Date(at).getTime() - Date.now() + 500
+    const ms = left + 500
     if (ms > 2 ** 31 - 1) return
     const t = window.setTimeout(() => router.refresh(), Math.max(0, ms))
     return () => window.clearTimeout(t)
-  }, [at, router])
+  }, [left, router])
   return null
 }

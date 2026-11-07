@@ -40,7 +40,7 @@ export function SidebarNav({ label, groups, ink = false }: { label: string; grou
     <nav aria-label={label} className="flex flex-col gap-0.5">
       {groups.map((g) => (
         <div key={g.label} className="flex flex-col gap-0.5">
-          <p className={`px-2 pb-1 pt-3 text-xs font-medium ${ink ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>{g.label}</p>
+          {g.label && <p className={`px-2 pb-1 pt-3 text-xs font-medium ${ink ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>{g.label}</p>}
           {g.items.map((i) => {
             const cur = i.href === on
             return (
@@ -70,21 +70,24 @@ export function BottomBar({ label, tabs, more, moreFoot, ink = false }: { label:
   const on = currentHref(path, [...tabs, ...more])
   const inMore = more.some((i) => i.href === on)
   const [open, setOpen] = useState(false)
-  const sheet = useRef<HTMLDivElement>(null)
+  const sheet = useRef<HTMLDialogElement>(null)
+  const opener = useRef<HTMLButtonElement>(null)
   useEffect(() => { setOpen(false) }, [path])
+  // A native modal <dialog>: focus stays inside, the page behind is inert, Esc closes; focus returns to More and
+  // the page stops scrolling behind it (impact review U·2a).
   useEffect(() => {
-    if (!open) return
-    sheet.current?.querySelector<HTMLElement>('a,button')?.focus()
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
-    document.addEventListener('keydown', esc)
-    return () => document.removeEventListener('keydown', esc)
+    const d = sheet.current
+    if (!d) return
+    if (open && !d.open) { d.showModal(); document.documentElement.style.overflow = 'hidden' }
+    if (!open && d.open) { d.close() }
+    if (!open) { document.documentElement.style.overflow = ''; }
   }, [open])
   const tab = (cur: boolean) => `relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs ${cur ? 'font-semibold' : ''} ${ink
     ? (cur ? 'text-primary-foreground' : 'text-primary-foreground/70') : (cur ? 'text-foreground' : 'text-muted-foreground')}`
   const bar = (cur: boolean) => cur && <span aria-hidden="true" className={`absolute inset-x-[30%] top-0 h-0.5 rounded-b ${ink ? 'bg-warn' : 'bg-primary'}`} />
   return (
     <>
-      <nav aria-label={label} className={`fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t pb-[env(safe-area-inset-bottom,0px)] md:hidden print:hidden ${ink ? 'border-primary bg-primary' : 'border-border bg-card'}`}>
+      <nav aria-label={label} data-surface={ink ? 'ink' : undefined} className={`fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t pb-[env(safe-area-inset-bottom,0px)] md:hidden print:hidden ${ink ? 'border-primary bg-primary' : 'border-border bg-card'}`}>
         {tabs.map((i) => {
           const cur = i.href === on
           return (
@@ -93,27 +96,25 @@ export function BottomBar({ label, tabs, more, moreFoot, ink = false }: { label:
             </Link>
           )
         })}
-        <button type="button" aria-expanded={open} aria-current={inMore ? 'page' : undefined} onClick={() => setOpen(true)} className={tab(inMore)}>
+        <button ref={opener} type="button" aria-haspopup="dialog" aria-expanded={open} aria-current={inMore ? 'page' : undefined} onClick={() => setOpen(true)} className={tab(inMore)}>
           {bar(inMore)}<Menu aria-hidden="true" className="size-[22px]" strokeWidth={1.8} />More
         </button>
       </nav>
-      {open && (
-        <div className="fixed inset-0 z-40 flex items-end bg-foreground/40 animate-sheet-scrim md:hidden" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false) }}>
-          <div ref={sheet} role="dialog" aria-modal="true" aria-label="More" className="w-full animate-sheet rounded-t-xl border-t border-border bg-card p-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)]">
-            <div className="flex items-center justify-between px-3 py-1">
-              <span aria-hidden="true" className="mx-auto h-1 w-9 rounded-full bg-border" />
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="inline-grid size-10 place-items-center rounded-md hover:bg-accent"><X aria-hidden="true" className="size-5" /></button>
-            </div>
-            {more.map((i) => (
-              <Link key={i.href} href={i.href} aria-current={i.href === on ? 'page' : undefined} onClick={() => setOpen(false)}
-                className={`flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm hover:bg-accent ${i.href === on ? 'bg-accent font-semibold' : ''}`}>
-                <Icon name={i.icon} className="size-5 text-muted-foreground" />{i.label}
-              </Link>
-            ))}
-            {moreFoot && <div className="mt-1 border-t border-border pt-1">{moreFoot}</div>}
-          </div>
+      <dialog ref={sheet} aria-label="More" onClose={() => { setOpen(false); document.documentElement.style.overflow = ''; opener.current?.focus() }}
+        onClick={(e) => { if (e.target === e.currentTarget) setOpen(false) }}
+        className="m-0 mt-auto w-full max-w-none animate-sheet rounded-t-xl border-t border-border bg-card p-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] text-foreground backdrop:bg-foreground/40 md:hidden">
+        <div className="flex items-center justify-between px-3 py-1">
+          <span aria-hidden="true" className="mx-auto h-1 w-9 rounded-full bg-border" />
+          <button type="button" autoFocus onClick={() => setOpen(false)} aria-label="Close" className="inline-grid size-10 place-items-center rounded-md hover:bg-accent"><X aria-hidden="true" className="size-5" /></button>
         </div>
-      )}
+        {more.map((i) => (
+          <Link key={i.href} href={i.href} aria-current={i.href === on ? 'page' : undefined} onClick={() => setOpen(false)}
+            className={`flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm hover:bg-accent ${i.href === on ? 'bg-accent font-semibold' : ''}`}>
+            <Icon name={i.icon} className="size-5 text-muted-foreground" />{i.label}
+          </Link>
+        ))}
+        {moreFoot && <div className="mt-1 border-t border-border pt-1">{moreFoot}</div>}
+      </dialog>
     </>
   )
 }

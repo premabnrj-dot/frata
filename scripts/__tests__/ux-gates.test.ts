@@ -47,6 +47,8 @@ describe('check:scale', () => {
   it('fails a height class handed to a button, not its size variant', () => {
     const b = file('btn.tsx', '<Button className="h-11 w-full">Go</Button>\n<Link className={button({ className: \'h-8\' })} />\n<Button size="lg" className="w-full" />\n')
     expect(Object.entries(scan([b]) as Record<string, number>).map(([k, n]) => [k.split(' · ')[1], n])).toEqual([['button-h', 2]])
+    const quiet = file('btn-ok.tsx', '// <Button className="h-11">\n<Button className="min-h-12 w-full" aria-label="h-1 tall">Go</Button>\n')
+    expect(scan([quiet])).toEqual({})
   })
   it('refuses a path that does not exist (a typo must not pass as clean)', () => {
     expect(() => execFileSync('node', ['scripts/check-scale.mjs', 'no/such/dir'], { stdio: 'pipe' })).toThrow()

@@ -28,12 +28,12 @@ export async function startSupport(
 }
 
 /** Ends the staffer's open visit, if any. */
-export async function endSupport(staff: StaffOk, now: Date): Promise<string | null> {
+export async function endSupport(staff: StaffOk, now: Date, why?: { by: 'sign-out' }): Promise<string | null> {
   return adminDb().transaction(async (tx) => {
     const ended = await tx.update(supportSessions).set({ endedAt: now })
       .where(and(eq(supportSessions.staffUserId, staff.userId), isNull(supportSessions.endedAt)))
       .returning({ id: supportSessions.id, tenantId: supportSessions.tenantId })
-    for (const e of ended) await auditStaff(tx, staff, { tenantId: e.tenantId, action: 'support.end', supportSessionId: e.id })
+    for (const e of ended) await auditStaff(tx, staff, { tenantId: e.tenantId, action: 'support.end', supportSessionId: e.id, ...(why ? { detail: why } : {}) })
     return ended[0]?.tenantId ?? null
   })
 }

@@ -67,7 +67,8 @@ export function scan(files) {
     const text = readFileSync(file, 'utf8')
     const h9 = fieldTags(text.split(/\r?\n/).filter((l) => !isComment(l)).join('\n')).filter((t) => /\bh-9\b/.test(t) && !/\bh-10\b/.test(t)).length
     if (h9) found[`${rel} · field-h9`] = h9
-    const buttonH = [...buttonTags(text)].filter((t) => /className[^]*?\bh-\d/.test(t)).length
+    const buttonH = buttonTags(text.split(/\r?\n/).filter((l) => !isComment(l)).join('\n'))
+      .filter((t) => [...t.matchAll(/className[=:]\s*(?:\{?\s*)?(['"`])([^'"`]*)\1/g)].some((m) => /(?<![\w-])(?:[\w-]+:)?h-\d/.test(m[2]))).length
     if (buttonH) found[`${rel} · button-h`] = buttonH
     for (const line of text.split(/\r?\n/)) {
       if (isComment(line)) continue

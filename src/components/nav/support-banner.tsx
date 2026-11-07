@@ -30,7 +30,7 @@ export function SupportBanner({ storeName, visit, now }: {
       <form action={endSupportAction} className="shrink-0">
         <button type="submit" aria-label="End now" className="h-8 rounded-md bg-support-foreground px-3 font-semibold text-support">End<span className="hidden md:inline"> now</span></button>
       </form>
-      <ExpiryRefresh at={visit.expiresAt.toISOString()} />
+      <ExpiryRefresh ms={visit.expiresAt.getTime() - now.getTime()} />
     </div>
   )
 }

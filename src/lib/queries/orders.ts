@@ -30,8 +30,8 @@ export async function listOrders(tenantId: string, { tab = 'all', page = 1, now 
 
 /**
  * How many of ALL the shop's orders sit in each queue tab, in one query, from the same predicates the tabs use
- * (src/lib/db/order-predicates.ts). The one count: the Orders page reads it, and 1D·4b's tabs and nav pill and
- * U4's Home are to read it too, never a count over a list (a 100-row list once showed "14 to confirm" with 43
+ * (src/lib/db/order-predicates.ts). The Orders page reads it, and 1D·4b's tabs and U4's Home are to read it
+ * too (the nav pill has its own lighter toConfirmCount below, on the same predicate), never a count over a list (a 100-row list once showed "14 to confirm" with 43
  * waiting; stress test 2026-11-07). Each filter re-derives the state; if this goes on every page, derive once
  * in a subquery and group by it.
  */

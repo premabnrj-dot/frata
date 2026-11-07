@@ -168,7 +168,7 @@
   /* The document keeps the scroll (A7): keep a focused or scrolled-to element clear of the sticky support banner
      and of the phone's fixed bottom bar. */
   html:has([data-support-banner]) { scroll-padding-top: 3.5rem; }
-  @media (max-width: 767px) { html:has([data-shell] main#content) { scroll-padding-bottom: 5rem; } }
+  @media (max-width: 767px) { html:has([data-shell] main#content) { scroll-padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px)); } }
   [data-shell] :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
   [data-shell] [data-surface="ink"] :focus-visible { outline-color: var(--primary-foreground); }
   [data-shell] [data-support-banner] :focus-visible { outline-color: var(--support-foreground); }

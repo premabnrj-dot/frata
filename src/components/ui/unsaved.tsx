@@ -40,7 +40,7 @@ export function useLeaveGuard(dirty: boolean) {
 
 export function SaveBar({ onSave, onDiscard, pending }: { onSave: () => void; onDiscard: () => void; pending: boolean }) {
   return (
-    <div role="region" aria-label="Unsaved changes" data-surface="ink" className="sticky top-0 z-10 mb-3 flex animate-step-forward items-center gap-3 rounded-md bg-primary px-4 py-2.5 text-primary-foreground">
+    <div role="region" aria-label="Unsaved changes" data-surface="ink" className="sticky top-[var(--shell-top,0px)] z-10 mb-3 flex animate-step-forward items-center gap-3 rounded-md bg-primary px-4 py-2.5 text-primary-foreground">
       <b className="text-sm">Unsaved changes</b>
       <span className="flex-1" />
       <button type="button" className="h-8 rounded-md border border-current px-3 text-sm" disabled={pending} onClick={onDiscard}>Discard</button>

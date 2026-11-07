@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'sw
 const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains', display: 'swap' })
 
 export const metadata: Metadata = {
-  title: 'Frata',
+  title: { default: 'Frata', template: '%s · Frata' },
   description: 'Fashion commerce for Indian D2C brands: storefront, COD, shipping and WhatsApp in one place.',
 }
 

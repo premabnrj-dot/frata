@@ -18,11 +18,13 @@
 //   7. READS STAY IN src/lib/queries (plan U · T1, T2, 2026-11-07): src/app/**
 //      imports @/lib/db/tenant only from TENANT_IN_APP; the shell
 //      (src/components/shell/**) imports no data module — it is handed values,
-//      so it can never read a shop's rows under Admin.
+//      so it can never read a shop's rows under Admin; from src/app it may
+//      import only SHELL_ACTIONS (sign-out lives under Admin because it ends
+//      a support visit). Relative imports are resolved to @/ before matching.
 // Whether a policy is RIGHT is what scripts/verify/tenancy.sh proves on a real Postgres.
 import { SENTINELS } from './cost-sentinels.mjs'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
 
 /** Files that may use the raw connection, and why. */
 const PLATFORM_SCOPE = [
@@ -48,9 +50,20 @@ const TENANT_IN_APP = {
   'src/app/api/shop/orders/view/route.ts': 'the shopper\'s order page: tenant from the host, order from a signed token',
 }
 const DATA_MODULE = /from\s+['"]@\/lib\/(?:queries|db|admin|auth)(?:\/[^'"]*)?['"]/
+/** Actions the shell may import from src/app (they are endpoints, not reads), with why. */
+const SHELL_ACTIONS = { '@/app/(admin)/admin/sign-out/actions': 'Sign out: ends a live support visit (needs src/lib/admin, so it lives under Admin)' }
+/**
+ * The file's text with every relative import written as its @/ path, so '../../lib/db/tenant' cannot slip past a
+ * rule written for '@/lib/db/tenant' (tenancy audit of U·2a). The text is ONE string: as an array of lines,
+ * `text.includes(name)` compared whole lines and the cost-sentinel rule (6) never fired (found 2026-11-07).
+ */
+function source(file) {
+  return readFileSync(file, 'utf8').replace(/(from\s+|import\s*\(\s*)(['"])(\.{1,2}\/[^'"]+)\2/g, (m, pre, q, rel) =>
+    `${pre}${q}@/${relative('src', resolve(dirname(file), rel)).split('\\').join('/')}${q}`)
+}
 
 for (const file of walk('src')) {
-  const text = code(file)
+  const text = source(file)
   if (RAW_DB.test(text) && !PLATFORM_SCOPE.some(([re]) => re.test(file))) {
     // A type-only import cannot touch a row.
     const onlyTypes = [...text.matchAll(/import\s+(type\s+)?\{[^}]*\}\s+from\s+['"]@\/lib\/db['"]/g)].every(m => m[1])
@@ -71,6 +84,9 @@ for (const file of walk('src')) {
   }
   if (file.startsWith('src/components/shell/') && DATA_MODULE.test(text)) {
     failures.push(`${file}  the shell imports a data module — hand it values from the layout (plan U · T2)`)
+  }
+  if (file.startsWith('src/components/shell/')) {
+    for (const m of text.matchAll(/from\s+['"](@\/app\/[^'"]+)['"]/g)) if (!(m[1] in SHELL_ACTIONS)) failures.push(`${file}  the shell imports ${m[1]} — only the actions in SHELL_ACTIONS (plan U · T2)`)
   }
   if (file.startsWith('src/app/(admin)/') && /\bwithTenant\(/.test(text)) {
     failures.push(`${file}  Admin calls withTenant — staff reach a store only through a support session (ADR-0007)`)

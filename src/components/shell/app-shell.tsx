@@ -1,4 +1,4 @@
-import { Suspense, type ReactNode } from 'react'
+import { Suspense, type CSSProperties, type ReactNode } from 'react'
 import { signOutAction } from '@/app/(admin)/admin/sign-out/actions'
 import { ANNOUNCER_ID } from './announce'
 import { SHELL_FONT_VARS } from './fonts'
@@ -12,7 +12,9 @@ import { NavProgress } from './nav-progress'
 // surfaces: skip link first, then the support banner, a 224 px sidebar from
 // 768 px, a bottom bar with More below it, an account block at every width,
 // the progress bar, one polite live region. Admin differs only in chrome
-// (`ink`: the ink frame, the reversed mark, STAFF). The shell imports no data
+// (`ink`: the ink frame, the reversed mark, STAFF). --shell-top is the height
+// of what is stuck above the page (the banner): the sidebar and the SaveBar
+// sit under it. The shell imports no data
 // module (gate in check:tenant): its layout reads, and hands it plain values
 // and the count pill as a slot (plan U · T1, T2). Every page still checks
 // access itself; a layout refusal renders a Panel, never a redirect.
@@ -22,7 +24,6 @@ export type ShellProps = {
   ink?: boolean
   /** Name in the sidebar and phone top bar (the shop, or "Frata Admin"). */
   title: string
-  subtitle?: string
   /** STAFF tag, Admin only. */
   staffTag?: boolean
   navLabel: string
@@ -32,6 +33,8 @@ export type ShellProps = {
   /** Links under the nav: Preview shop, Frata Admin, the staffer's own store. */
   foot: NavItem[]
   email: string | null
+  /** The shop the shell was drawn for (Console): TenantCheck compares each page's against it. */
+  tenantId?: string
   banner?: ReactNode
   children: ReactNode
 }
@@ -52,20 +55,19 @@ function Account({ email, ink }: { email: string | null; ink: boolean }) {
   )
 }
 
-export function AppShell({ ink = false, title, subtitle, staffTag = false, navLabel, groups, tabs, more, foot, email, banner, children }: ShellProps) {
+export function AppShell({ ink = false, title, staffTag = false, navLabel, groups, tabs, more, foot, email, tenantId, banner, children }: ShellProps) {
   const surface = ink ? 'ink' : undefined
   return (
-    <div data-shell className={`min-h-dvh bg-background ${SHELL_FONT_VARS}`}>
+    <div data-shell data-tenant={tenantId} style={{ '--shell-top': banner ? '2.75rem' : '0px' } as CSSProperties} className={`min-h-dvh bg-background ${SHELL_FONT_VARS}`}>
       <a href="#content" className="sr-only text-sm font-medium text-foreground focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-md focus:bg-card focus:px-3 focus:py-2">Skip to content</a>
       {banner}
       <Suspense fallback={null}><NavProgress /></Suspense>
       <div className="md:flex">
-        <aside data-surface={surface} className={`sticky hidden w-56 shrink-0 flex-col gap-1 overflow-y-auto border-r px-2.5 py-3 md:flex print:hidden ${banner ? 'top-11 h-[calc(100dvh-2.75rem)]' : 'top-0 h-dvh'} ${ink ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card'}`}>
+        <aside data-surface={surface} className={`sticky top-[var(--shell-top)] hidden h-[calc(100dvh-var(--shell-top))] w-56 shrink-0 flex-col gap-1 overflow-y-auto border-r px-2.5 py-3 md:flex print:hidden ${ink ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card'}`}>
           <div className="flex items-center gap-2.5 px-1.5 pb-2">
             <Mark ink={ink} />
             <div className="min-w-0">
               <p className="line-clamp-2 text-sm font-semibold leading-tight" title={title}>{title}{staffTag && <span className="ml-1.5 rounded-sm bg-warn px-1.5 align-middle text-xs font-semibold text-warn-text">STAFF</span>}</p>
-              {subtitle && <p className={`truncate font-mono text-xs ${ink ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>{subtitle}</p>}
             </div>
           </div>
           <SidebarNav label={navLabel} groups={groups} ink={ink} />
@@ -81,9 +83,7 @@ export function AppShell({ ink = false, title, subtitle, staffTag = false, navLa
         </header>
         <main id="content" tabIndex={-1} className="min-w-0 flex-1 space-y-6 p-4 pb-24 outline-none md:p-6">{children}</main>
       </div>
-      <div data-surface={surface}>
-        <BottomBar label={navLabel} tabs={tabs} more={[...more, ...foot]} ink={ink} moreFoot={<Account email={email} ink={false} />} />
-      </div>
+      <BottomBar label={navLabel} tabs={tabs} more={[...more, ...foot]} ink={ink} moreFoot={<Account email={email} ink={false} />} />
       <div id={ANNOUNCER_ID} aria-live="polite" aria-atomic="true" className="sr-only" />
     </div>
   )

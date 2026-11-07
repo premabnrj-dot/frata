@@ -1,4 +1,5 @@
 import 'server-only'
+import { cache } from 'react'
 import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { availability, type WhenOut } from '@/domains/catalogue/availability'
 import { matches, type ProductFacts, type Rule } from '@/domains/catalogue/collection-rules'
@@ -45,7 +46,8 @@ export async function productCount(tenantId: string): Promise<number> {
 }
 
 /** A product's id from its handle (or an old handle, which the console then redirects). */
-export async function productIdByHandle(tenantId: string, handle: string): Promise<{ id: string; handle: string; title: string } | null> {
+/** Cached for one request: the page and its tab title both ask (impact review U·2a). */
+export const productIdByHandle = cache(async (tenantId: string, handle: string): Promise<{ id: string; handle: string; title: string } | null> => {
   return withTenant(tenantId, async (tx) => {
     const [p] = await tx.select({ id: products.id, handle: products.handle, title: products.title }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.handle, handle))).limit(1)
     if (p) return p
@@ -54,7 +56,7 @@ export async function productIdByHandle(tenantId: string, handle: string): Promi
       .where(and(eq(productHandleHistory.tenantId, tenantId), eq(productHandleHistory.handle, handle))).limit(1)
     return old ?? null
   })
-}
+})
 
 export async function productHandleById(tenantId: string, id: string): Promise<string | null> {
   const [p] = await withTenant(tenantId, (tx) => tx.select({ handle: products.handle }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, id))).limit(1))
