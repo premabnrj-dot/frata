@@ -170,6 +170,10 @@ WhatsApp account with Frata instead.
 | `wa_templates` | name, language, category, status, reason, components (a snapshot of Meta's), synced_at | A cache of Meta's, refreshed by webhook; labelled as such |
 | `typing_presence` | conversation, user, until | 20 s rows, ephemeral |
 
+**Binding review fixes:** see `docs/plans/2026-11-07-m2.md` § Review findings: the per-item webhook key with
+status, the server-side ids on connect, a private media route, `canSeeChats`, composite FKs,
+`biz_opaque_callback_data`, compare-and-set confirm, and consents keyed on (tenant, phone) as a core table.
+
 **Platform (pre-tenant):**
 - `app_tenant_for_wa(phone_number_id)` (definer): the webhook's route to a shop.
 - **Inbound:** `POST /api/webhooks/whatsapp`, listed in ENTRY_POINTS.
