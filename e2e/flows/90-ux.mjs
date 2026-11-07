@@ -11,7 +11,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { CONSOLE, SHOP, USERS, signedIn } from '../lib.mjs'
+import { CONSOLE, SHOP, USERS, signedIn, until } from '../lib.mjs'
 import { FOCUS, MEASURE, TEXT_SPACING } from '../ux-measure.mjs'
 import { KNOWN } from '../ux-known.mjs'
 
@@ -69,19 +69,25 @@ export default {
       })
 
       await t.step('keyboard: the first 15 Tab stops show a ring and are not hidden', async () => {
-        const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 800 } })
+        // After each Tab, wait for the focused element's transitions (a link fades its ring in over 120 ms; a reading
+        // taken mid-fade said 1.01:1), then a frame.
+        const settle = (p) => p.evaluate(async () => {
+          await Promise.all((document.activeElement?.getAnimations?.() ?? []).map((a) => a.finished.catch(() => {})))
+          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+        })
+        const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' })
         for (const [page, path] of [['console-orders', '/console/orders'], ['console-product', '/console/products/chanderi-kurta-set']]) {
           const p = await ctx.newPage(); await p.goto(CONSOLE + path)
           for (let i = 0; i < 15; i++) {
-            await p.keyboard.press('Tab')
+            await p.keyboard.press('Tab'); await settle(p)
             const f = await p.evaluate(FOCUS)
             if (!f.ok) { fail('focus', page, '1280', `stop ${i + 1}: ${f.what}${f.ring ? '' : ' no ring ≥ 2 px at 3:1'}${f.covered ? ' covered' : ''}`); break }
           }
           await p.close()
         }
-        const fc = await signedIn(t.browser, 'frata', { viewport: { width: 1280, height: 800 } })
+        const fc = await signedIn(t.browser, 'frata', { viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' })
         const p = await fc.newPage(); await p.goto(CONSOLE + '/admin/merchants')
-        for (let i = 0; i < 15; i++) { await p.keyboard.press('Tab'); const f = await p.evaluate(FOCUS); if (!f.ok) { fail('focus', 'admin-merchants', '1280', `stop ${i + 1}: ${f.what}`); break } }
+        for (let i = 0; i < 15; i++) { await p.keyboard.press('Tab'); await settle(p); const f = await p.evaluate(FOCUS); if (!f.ok) { fail('focus', 'admin-merchants', '1280', `stop ${i + 1}: ${f.what}`); break } }
         await fc.close(); await ctx.close()
       })
 
@@ -96,27 +102,33 @@ export default {
         await ctx.close()
       })
 
-      await t.step('support mode: a visit to merchant-1 shows that shop, and ending it returns to Kesar', async () => {
+      await t.step('support mode: the visited shop, its own count in the nav, and back to Kesar after End and after expiry (T4, T5)', async () => {
         const ctx = await signedIn(t.browser, 'frata', { viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' })
         const p = await ctx.newPage(); p.on('pageerror', (e) => t.errors.push(e.message))
-        await p.goto(CONSOLE + `/admin/merchants/${M1}/support`)
-        await p.getByRole('button', { name: /^Open .+ console$/ }).click()
-        await p.getByText(/Frata support in .+ console/).waitFor()
+        const pill = async () => Number((await p.locator('nav[aria-label="Console"] a[href="/console/orders"]').filter({ visible: true }).first().innerText()).match(/\d+/)?.[0] ?? 0)
+        const start = async (id) => { await p.goto(CONSOLE + `/admin/merchants/${id}/support`); await p.getByRole('button', { name: /^Open .+ console$/ }).click(); await p.locator('[data-support-banner]').waitFor() }
+        await start(M1)
         const [{ name }] = await db`select name from tenants where id = ${M1}`
-        assert.ok((await p.locator('body').innerText()).includes(name), 'the visited shop is named')
+        assert.ok((await p.locator('[data-support-banner]').innerText()).includes(name), 'the banner names the visited shop')
+        assert.equal(await pill(), 7, 'the pill counts merchant-1\'s orders to confirm, not Kesar\'s')
         for (const [page, path] of [['support-console-home', '/console'], ['support-console-orders', '/console/orders'], ['support-admin-merchant', `/admin/merchants/${M1}`]]) {
-          for (const [w, h, label] of [[390, 844, '390'], [1280, 800, '1280']]) {
-            await p.setViewportSize({ width: w, height: h })
-            const q = await measure(ctx, page, path, w, label, h); await q.close()
-          }
+          for (const [w, h, label] of [[390, 844, '390'], [1280, 800, '1280']]) { const q = await measure(ctx, page, path, w, label, h); await q.close() }
         }
-        await p.setViewportSize({ width: 390, height: 844 })
+        await p.goto(CONSOLE + '/console')
         const bannerH = await p.evaluate(() => document.querySelector('[data-support-banner]')?.getBoundingClientRect().height ?? 0)
         if (bannerH > 64) fail('support-banner-height', 'support-console-home', '390', `${Math.round(bannerH)} px`)
-        await p.goto(CONSOLE + '/console'); await p.getByRole('button', { name: 'End now' }).click()
+        await p.getByRole('button', { name: 'End now' }).click()
         await p.waitForURL(/\/admin/)
-        await p.goto(CONSOLE + '/console')
-        await p.getByText('Kesar Studio Handwoven', { exact: false }).first().waitFor()
+        await p.goto(CONSOLE + '/console/orders')
+        const kesar = Number((await p.locator('main p').first().innerText()).match(/([\d,]+) to confirm/)?.[1]?.replace(/,/g, '') ?? 0)
+        assert.equal(await pill(), kesar, 'after End, the pill is Kesar\'s own count again')
+        // Expiry: a visit that runs out while the page is open refreshes it (the kept layout must not show merchant-2).
+        await start('eeeeeeee-0000-4000-8000-000000000002')
+        await db`update support_sessions set expires_at = now() + interval '3 seconds' where staff_user_id = ${USERS.frata.id} and ended_at is null`
+        await p.goto(CONSOLE + '/console/orders')
+        assert.equal(await pill(), 3, 'merchant-2\'s count during its visit')
+        await p.locator('[data-support-banner]').waitFor({ state: 'detached', timeout: 15_000 })
+        await until(async () => (await pill()) === kesar, 10_000)
         await ctx.close()
       })
 
@@ -128,12 +140,20 @@ export default {
           await p.goto(url, { waitUntil: 'networkidle' }); await p.evaluate(() => document.fonts.ready)
           await ctx.close(); return got
         }
+        // The Noto files themselves, from the shell's @font-face rules (next/font/local names the families after
+        // the consts in src/components/shell/fonts.ts): exact URLs, not a count of whatever else loaded.
+        const ctx = await signedIn(t.browser, 'owner'); const q = await ctx.newPage(); await q.goto(CONSOLE + '/console/settings')
+        const notoFiles = await q.evaluate(() => [...document.styleSheets].flatMap((sh) => { try { return [...sh.cssRules] } catch { return [] } })
+          .filter((r) => r instanceof CSSFontFaceRule && /^['"]?(deva|beng|guru|taml)\b/.test(r.style.getPropertyValue('font-family')))
+          .map((r) => new URL(r.style.getPropertyValue('src').match(/url\(["']?([^"')]+)/)[1], location.href).pathname))
+        await ctx.close()
+        assert.equal(notoFiles.length, 4, `four Noto faces declared in the shell: ${notoFiles.join(', ')}`)
         const latin = await fontsOn('owner', CONSOLE + '/console/settings')
         const indic = await fontsOn('owner', CONSOLE + '/console/orders') // Devanagari, Tamil, Gurmukhi and Bengali customer names
         const shop = await fontsOn(null, SHOP + '/')
-        const noto = [...indic].filter((f) => !latin.has(f))
-        assert.ok(noto.length >= 1 && noto.length <= 8, `orders page fetched ${noto.length} font files a Latin page does not (expected the Indic faces): ${noto.join(', ')}`)
-        assert.deepEqual([...shop].filter((f) => noto.includes(f)), [], 'the storefront downloads no Noto face')
+        assert.deepEqual(notoFiles.filter((f) => latin.has(f)), [], 'a Latin-only page downloads no Noto file')
+        assert.equal(notoFiles.filter((f) => indic.has(f)).length, 4, 'a page with all four scripts downloads each Noto file')
+        assert.deepEqual(notoFiles.filter((f) => shop.has(f)), [], 'the storefront downloads no Noto file')
       })
 
       await t.step('speed baseline: /console/orders on a slow phone (printed, not asserted)', async () => {

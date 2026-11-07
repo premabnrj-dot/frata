@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { SignInFlow } from './sign-in-flow'
 import { SHELL_FONT_VARS } from '@/components/shell/fonts'
 
-export const metadata = { title: 'Sign in · Frata' }
+export const metadata = { title: 'Sign in' }
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ link?: string }> }) {
   const { link } = await searchParams

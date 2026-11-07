@@ -56,7 +56,7 @@ export function SeoPanel({ handle, onHandle, seoTitle, onSeoTitle, seoDescriptio
         </div>
         <div className="space-y-1">
           <label htmlFor="handle" className="block text-sm font-medium">Address</label>
-          <div className="flex min-w-0 items-center rounded-md border border-input bg-card text-sm aria-invalid:border-danger-text" aria-invalid={!!errors.handle || undefined}>
+          <div className="flex min-w-0 items-center rounded-md border border-input bg-card text-sm aria-invalid:border-danger-text focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring" aria-invalid={!!errors.handle || undefined}>
             <span className="shrink-0 truncate pl-3 font-mono text-xs text-muted-foreground">…/products/</span>
             <input id="handle" value={handle} maxLength={100} placeholder={defaults.handle} onChange={(e) => onHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} className="h-10 md:h-9 min-w-0 flex-1 bg-transparent pr-3 font-mono text-sm outline-none" />
           </div>

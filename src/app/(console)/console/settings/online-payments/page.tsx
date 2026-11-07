@@ -6,7 +6,7 @@ import { CONSOLE_HOST } from '@/lib/public-env'
 import { paymentStatusFor } from '@/lib/queries/payments'
 import { OnlinePayments } from './online-payments'
 
-export const metadata = { title: 'Online payments · Frata' }
+export const metadata = { title: 'Online payments' }
 
 /** Settings → Online payments: the merchant's own Razorpay account. Owner only (it moves their money). */
 export default async function OnlinePaymentsPage() {

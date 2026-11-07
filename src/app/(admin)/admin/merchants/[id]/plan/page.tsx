@@ -11,6 +11,8 @@ import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { formatPercent } from '@/lib/format'
 import { changePlanAction } from './actions'
 
+export const metadata = { title: 'Change plan' }
+
 const field = 'h-10 rounded-md border border-input bg-card px-3 text-sm'
 
 export default async function ChangePlanPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> }) {

@@ -7,6 +7,8 @@ import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 import { createMerchantAction } from './actions'
 
+export const metadata = { title: 'Add merchant' }
+
 const field = 'h-10 rounded-md border border-input bg-card px-3 text-sm'
 
 export default async function NewMerchantPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {

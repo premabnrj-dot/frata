@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from './button'
+import { startNavigation } from '@/components/shell/nav-progress'
 
 // =============================================================================
 // FILE: src/components/ui/unsaved.tsx
@@ -33,7 +34,7 @@ export function useLeaveGuard(dirty: boolean) {
   return {
     leaveTo,
     stay: () => setLeaveTo(null),
-    leave: (forget: () => void) => { const to = leaveTo; forget(); setLeaveTo(null); if (to) router.push(to) },
+    leave: (forget: () => void) => { const to = leaveTo; forget(); setLeaveTo(null); if (to) { startNavigation(); router.push(to) } },
   }
 }
 

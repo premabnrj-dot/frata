@@ -8,6 +8,10 @@ import { policyOverrides, shopWithSettings } from '@/lib/queries/settings'
 import { shopFacts, storedValues } from '../_components/facts'
 import { SettingsForm } from '../_components/settings-form'
 
+export async function generateMetadata({ params }: { params: Promise<{ section: string }> }) {
+  return { title: sectionFor((await params).section)?.title ?? 'Settings' }
+}
+
 export default async function SettingsSectionPage({ params }: { params: Promise<{ section: string }> }) {
   const auth = await requireMember(CAN_MANAGE)
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or an admin can change settings' : auth.message} />

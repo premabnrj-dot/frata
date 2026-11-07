@@ -8,7 +8,7 @@ import { Panel } from '@/components/ui/panel'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { listCollections } from '@/lib/queries/catalogue'
 
-export const metadata = { title: 'Collections · Frata' }
+export const metadata = { title: 'Collections' }
 
 export default async function CollectionsPage() {
   const auth = await requireMember(ANY_MEMBER)

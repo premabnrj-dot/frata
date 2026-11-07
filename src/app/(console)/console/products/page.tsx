@@ -11,7 +11,7 @@ import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { listProducts, statusCounts } from '@/lib/queries/catalogue'
 import { StatusBadge } from './_components/status-badge'
 
-export const metadata = { title: 'Products · Frata' }
+export const metadata = { title: 'Products' }
 
 const TABS = [['', 'All'], ['active', 'Active'], ['draft', 'Draft'], ['unlisted', 'Unlisted'], ['archived', 'Archived']] as const
 

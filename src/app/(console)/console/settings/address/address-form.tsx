@@ -36,7 +36,7 @@ export function AddressForm({ current, shopDomain, published, support }: { curre
       <p className="text-sm text-muted-foreground">Where shoppers find you. Share it in your Instagram bio.</p>
       <section className="space-y-3 rounded-md border border-border bg-card p-4">
         <label htmlFor="slug" className="block text-sm font-medium">Address</label>
-        <div className="flex items-center gap-1 rounded-md border border-input bg-card px-3 py-2 font-mono text-sm">
+        <div className="flex items-center gap-1 rounded-md border border-input bg-card px-3 py-2 font-mono text-sm focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
           <input id="slug" value={slug} disabled={locked || pending} aria-describedby="slug-h"
             onChange={(e) => { setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 30)); setMsg(null) }}
             className="min-w-0 flex-1 bg-transparent outline-none disabled:opacity-70" />

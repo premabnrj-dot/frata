@@ -9,6 +9,8 @@ import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dayIN } from '@/lib/format-date'
 import { addStaffAction, removeStaffAction } from './actions'
 
+export const metadata = { title: 'Staff' }
+
 export default async function StaffPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />

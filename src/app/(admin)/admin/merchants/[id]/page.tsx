@@ -9,11 +9,19 @@ import { paise } from '@/domains/money/paise'
 import { usage, type Feature } from '@/domains/plans/entitlements'
 import { FEATURE_NAMES } from '@/domains/plans/labels'
 import { SUPPORT_REASON_LABEL, type SupportReason } from '@/domains/support/session'
-import { getMerchant } from '@/lib/admin/merchants'
+import { getMerchant, merchantName } from '@/lib/admin/merchants'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dateTimeIN, dayIN, sinceIN } from '@/lib/format-date'
 import { formatPercent } from '@/lib/format'
 import { resendOwnerLinkAction } from './actions'
+
+/** The tab names the merchant ("Kesar Studio · Frata Admin"). */
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const staff = await requireStaff(ANY_STAFF)
+  const { id } = await params
+  if (!staff.ok || !/^[0-9a-f-]{36}$/.test(id)) return { title: 'Merchant' }
+  return { title: (await merchantName(staff, id).catch(() => null)) ?? 'Merchant' }
+}
 
 export default async function MerchantPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; error?: string }> }) {
   const staff = await requireStaff(ANY_STAFF)

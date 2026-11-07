@@ -4,6 +4,8 @@ import { SHOP_DOMAIN } from '@/lib/public-env'
 import { shopWithSettings } from '@/lib/queries/settings'
 import { AddressForm } from './address-form'
 
+export const metadata = { title: 'Shop address' }
+
 export default async function AddressPage() {
   const auth = await requireMember(CAN_MANAGE)
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or an admin can change settings' : auth.message} />

@@ -35,6 +35,13 @@ export type MerchantRow = {
   pendingInvite: string | null
 }
 
+/** A merchant's name, for the tab title of its Admin page. */
+export async function merchantName(staff: StaffOk, id: string): Promise<string | null> {
+  void staff
+  const [t] = await adminDb().select({ name: tenants.name }).from(tenants).where(eq(tenants.id, id)).limit(1)
+  return t?.name ?? null
+}
+
 export async function listMerchants(staff: StaffOk, opts: { page: number; q?: string; now: Date }): Promise<{ rows: MerchantRow[]; total: number }> {
   void staff
   const db = adminDb()

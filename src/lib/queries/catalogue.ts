@@ -45,11 +45,11 @@ export async function productCount(tenantId: string): Promise<number> {
 }
 
 /** A product's id from its handle (or an old handle, which the console then redirects). */
-export async function productIdByHandle(tenantId: string, handle: string): Promise<{ id: string; handle: string } | null> {
+export async function productIdByHandle(tenantId: string, handle: string): Promise<{ id: string; handle: string; title: string } | null> {
   return withTenant(tenantId, async (tx) => {
-    const [p] = await tx.select({ id: products.id, handle: products.handle }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.handle, handle))).limit(1)
+    const [p] = await tx.select({ id: products.id, handle: products.handle, title: products.title }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.handle, handle))).limit(1)
     if (p) return p
-    const [old] = await tx.select({ id: products.id, handle: products.handle }).from(productHandleHistory)
+    const [old] = await tx.select({ id: products.id, handle: products.handle, title: products.title }).from(productHandleHistory)
       .innerJoin(products, and(eq(products.id, productHandleHistory.productId), eq(products.tenantId, tenantId)))
       .where(and(eq(productHandleHistory.tenantId, tenantId), eq(productHandleHistory.handle, handle))).limit(1)
     return old ?? null

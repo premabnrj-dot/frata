@@ -3,7 +3,7 @@ import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { CollectionEditor } from '../_components/collection-editor'
 import { editorData } from '../_components/data'
 
-export const metadata = { title: 'New collection · Frata' }
+export const metadata = { title: 'New collection' }
 
 export default async function NewCollectionPage({ searchParams }: { searchParams: Promise<{ kind?: string }> }) {
   const auth = await requireMember(ANY_MEMBER)

@@ -10,6 +10,8 @@ import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import { FEATURE_NAMES } from '@/domains/plans/labels'
 import { newVersionAction } from './actions'
 
+export const metadata = { title: 'Edit plan' }
+
 const field = 'h-10 rounded-md border border-input bg-card px-3 font-mono text-sm'
 
 export default async function EditPlanPage({ params, searchParams }: { params: Promise<{ code: string }>; searchParams: Promise<{ error?: string }> }) {

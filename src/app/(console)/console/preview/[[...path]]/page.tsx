@@ -13,7 +13,7 @@ import { previewCatalogue, previewProduct, previewShop } from '@/lib/queries/sto
 // The merchant's own shop, as shoppers will see it — drafts and unlisted
 // pieces included, never cached, never indexed (storefront spec § Preview).
 // Same views as the shop; the tenant is the member's, from requireMember.
-export const metadata: Metadata = { title: 'Preview · Frata', robots: { index: false, follow: false } }
+export const metadata: Metadata = { title: 'Preview', robots: { index: false, follow: false } }
 export const dynamic = 'force-dynamic'
 
 const BASE = '/console/preview'

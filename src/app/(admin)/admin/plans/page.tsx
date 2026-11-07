@@ -11,6 +11,8 @@ import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dayIN } from '@/lib/format-date'
 import { formatPercent } from '@/lib/format'
 
+export const metadata = { title: 'Plans' }
+
 export default async function PlansPage({ searchParams }: { searchParams: Promise<{ ok?: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />

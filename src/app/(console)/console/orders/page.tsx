@@ -11,6 +11,8 @@ import { Money, Numeric } from '@/components/data/numeric'
 import { Name } from '@/components/data/name'
 import { listOrders, ORDERS_PAGE, orderPrefixFor, queueCounts } from '@/lib/queries/orders'
 
+export const metadata = { title: 'Orders' }
+
 const STATE: Record<OrderState, { label: string; tone: 'ok' | 'warn' | 'danger' | 'info' | 'neutral' }> = {
   awaiting_payment: { label: 'Paying now', tone: 'neutral' },
   payment_abandoned: { label: 'Payment abandoned', tone: 'neutral' },

@@ -5,6 +5,8 @@ import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { dateTimeIN } from '@/lib/format-date'
 import { storeActivity } from '@/lib/queries/activity'
 
+export const metadata = { title: 'Activity' }
+
 /** What Frata support did in this store, and when (owner call 1: every visit is shown). */
 export default async function ActivityPage() {
   const auth = await requireMember(ANY_MEMBER)

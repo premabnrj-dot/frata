@@ -8,6 +8,8 @@
 //   text-px     a pixel font size in brackets (use text-xs … text-2xl, or text-section)
 //   card-frame  the inline card frame (use <Section>)
 //   field-h9    an input, select or textarea with a bare 36 px height class (use h-10 md:h-9)
+//   button-h    a height class handed to <Button> or button() (use its size variant: twMerge
+//               drops the caller's h-* but keeps md:h-9 — impact review U·1)
 // Today's debts are listed in scripts/check-scale.allow as "count path · rule"
 // and must only shrink: more than allowed fails; fewer fails until the line is
 // lowered or deleted (U·2b empties it). Comment lines are skipped, so the rule
@@ -26,10 +28,11 @@ export const RULES = {
   // onChange, hid every case from a line pattern (impact review U·1).
 }
 const FIELD_OPEN = /<(?:input|select|textarea)\b/g
+const BUTTON_OPEN = /<Button\b|\bbutton\(\{/g
 /** The text of each <input>/<select>/<textarea> opening tag in a file, read up to the `>` outside braces and quotes. */
-export function fieldTags(text) {
+export function fieldTags(text, open = FIELD_OPEN) {
   const tags = []
-  for (const m of text.matchAll(FIELD_OPEN)) {
+  for (const m of text.matchAll(open)) {
     let depth = 0, quote = null, i = m.index + 1
     for (; i < text.length; i++) {
       const c = text[i]
@@ -38,6 +41,7 @@ export function fieldTags(text) {
       else if (c === '{') depth++
       else if (c === '}') depth--
       else if (c === '>' && depth === 0) break
+      else if (c === ')' && depth === 0 && text[m.index + m[0].length - 1] === '{') break
     }
     tags.push(text.slice(m.index, i + 1))
   }
@@ -52,6 +56,9 @@ function walk(p, acc = []) {
   return acc
 }
 
+/** <Button …> opening tags and button({ … }) calls. */
+export const buttonTags = (text) => fieldTags(text, BUTTON_OPEN)
+
 /** { "path · rule": count } for the given files. */
 export function scan(files) {
   const found = {}
@@ -60,6 +67,8 @@ export function scan(files) {
     const text = readFileSync(file, 'utf8')
     const h9 = fieldTags(text.split(/\r?\n/).filter((l) => !isComment(l)).join('\n')).filter((t) => /\bh-9\b/.test(t) && !/\bh-10\b/.test(t)).length
     if (h9) found[`${rel} · field-h9`] = h9
+    const buttonH = [...buttonTags(text)].filter((t) => /className[^]*?\bh-\d/.test(t)).length
+    if (buttonH) found[`${rel} · button-h`] = buttonH
     for (const line of text.split(/\r?\n/)) {
       if (isComment(line)) continue
       for (const [rule, re] of Object.entries(RULES)) {

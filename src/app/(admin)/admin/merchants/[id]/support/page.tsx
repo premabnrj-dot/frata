@@ -7,6 +7,8 @@ import { getMerchant } from '@/lib/admin/merchants'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { startSupportAction } from './actions'
 
+export const metadata = { title: 'Open a console as support' }
+
 const LEN_LABEL: Record<number, string> = { 30: '30 minutes', 60: '1 hour', 240: '4 hours' }
 const chip = 'flex items-center gap-2 rounded-md border border-input px-3 py-2 text-sm has-[:checked]:border-2 has-[:checked]:border-primary'
 

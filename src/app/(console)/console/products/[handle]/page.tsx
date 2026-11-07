@@ -13,7 +13,13 @@ import { SHOP_DOMAIN } from '@/lib/public-env'
 import { productForEdit, productHandleById, productIdByHandle } from '@/lib/queries/catalogue'
 import { ProductEditor } from '../_components/product-editor'
 
-export const metadata = { title: 'Product · Frata' }
+/** The tab names the product ("Linen kurta set · Kesar Studio"), never "Product" (stress test S14). */
+export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }) {
+  const auth = await requireMember(ANY_MEMBER)
+  if (!auth.ok) return { title: 'Product' }
+  const p = await productIdByHandle(auth.membership.tenantId, decodeURIComponent((await params).handle).toLowerCase()).catch(() => null)
+  return { title: p?.title ?? 'Product' }
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 

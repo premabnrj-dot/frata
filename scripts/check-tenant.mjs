@@ -15,6 +15,10 @@
 //      only from src/lib/admin/**; src/lib/admin only from src/app/(admin)/**;
 //      no 'use server' inside src/lib/admin (it would be a public endpoint);
 //      Admin never calls withTenant (a route param must never become a tenant).
+//   7. READS STAY IN src/lib/queries (plan U · T1, T2, 2026-11-07): src/app/**
+//      imports @/lib/db/tenant only from TENANT_IN_APP; the shell
+//      (src/components/shell/**) imports no data module — it is handed values,
+//      so it can never read a shop's rows under Admin.
 // Whether a policy is RIGHT is what scripts/verify/tenancy.sh proves on a real Postgres.
 import { SENTINELS } from './cost-sentinels.mjs'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
@@ -38,6 +42,12 @@ const failures = []
 const RAW_DB = /from\s+['"]@\/lib\/db['"]/
 const ADMIN_DB = /from\s+['"]@\/lib\/db\/admin['"]/
 const ADMIN_LIB = /from\s+['"]@\/lib\/admin(\/[^'"]*)?['"]/
+const TENANT_HELPER = /from\s+['"]@\/lib\/db\/tenant['"]/
+/** App files that may open withTenant themselves, with why. */
+const TENANT_IN_APP = {
+  'src/app/api/shop/orders/view/route.ts': 'the shopper\'s order page: tenant from the host, order from a signed token',
+}
+const DATA_MODULE = /from\s+['"]@\/lib\/(?:queries|db|admin|auth)(?:\/[^'"]*)?['"]/
 
 for (const file of walk('src')) {
   const text = code(file)
@@ -55,6 +65,12 @@ for (const file of walk('src')) {
   if (file.startsWith('src/lib/admin/')) {
     if (!/import\s+['"]server-only['"]/.test(text)) failures.push(`${file}  admin module without import 'server-only'`)
     if (/^\s*['"]use server['"]/m.test(text)) failures.push(`${file}  'use server' in src/lib/admin turns it into a public endpoint — put actions under src/app/(admin)`)
+  }
+  if (file.startsWith('src/app/') && TENANT_HELPER.test(text) && !(file in TENANT_IN_APP)) {
+    failures.push(`${file}  imports withTenant in app code — read through src/lib/queries (or list it in TENANT_IN_APP with why)`)
+  }
+  if (file.startsWith('src/components/shell/') && DATA_MODULE.test(text)) {
+    failures.push(`${file}  the shell imports a data module — hand it values from the layout (plan U · T2)`)
   }
   if (file.startsWith('src/app/(admin)/') && /\bwithTenant\(/.test(text)) {
     failures.push(`${file}  Admin calls withTenant — staff reach a store only through a support session (ADR-0007)`)

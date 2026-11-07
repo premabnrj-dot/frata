@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { AdminNav } from '@/components/nav/admin-nav'
-import { SHELL_FONT_VARS } from '@/components/shell/fonts'
+import type { Metadata } from 'next'
+import { AppShell } from '@/components/shell/app-shell'
+import type { NavItem } from '@/components/shell/nav'
 import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { adminHealth } from '@/lib/admin/health'
@@ -9,12 +10,15 @@ import { requireMember, ANY_MEMBER } from '@/lib/auth/require-member'
 
 export const dynamic = 'force-dynamic'
 
+/** Tab titles "Merchants · Frata Admin" (rule 11). */
+export const metadata: Metadata = { title: { template: '%s · Frata Admin', default: 'Frata Admin' } }
+
 /** The frame and the refusal. ⚠️ It guards nothing below: every page calls requireStaff itself. */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) {
     return (
-      <main className="p-6">
+      <main data-shell className="p-6">
         <Panel title={staff.reason === 'not_configured' ? staff.message : 'Frata Admin is for Frata staff'}
           action={<Link href="/console" className={button({ variant: 'secondary' })}>Go to your console</Link>}>
           {staff.reason === 'not_configured' && <>Set <code>ADMIN_DATABASE_URL</code> in Vercel (Production), then redeploy.</>}
@@ -25,7 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const health = await adminHealth(staff)
   if (!health.ok) {
     return (
-      <main className="p-6">
+      <main data-shell className="p-6">
         <Panel title={health.why === 'login_refused' ? 'Admin cannot sign in to the database' : 'Admin cannot reach the database'}>
           {health.why === 'login_refused'
             ? <>Supabase refused the <code>frata_admin</code> login. Set its password in the SQL Editor (<code>alter role frata_admin with password &apos;…&apos;</code>), use the same value in <code>ADMIN_DATABASE_URL</code> in Vercel, then redeploy. See docs/setup.md § 6.</>
@@ -36,10 +40,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
   const own = await requireMember(ANY_MEMBER)
   const ownStore = own.ok && !own.membership.supportSessionId ? own.membership.tenantName : null
+  // The same shell as the console; Admin differs only in chrome (ink, reversed mark, STAFF). No count pill (plan U · A9).
+  const merchants: NavItem = { href: '/admin/merchants', label: 'Merchants', icon: 'merchants' }
+  const plans: NavItem = { href: '/admin/plans', label: 'Plans', icon: 'plans' }
+  const staffItem: NavItem = { href: '/admin/staff', label: 'Staff', icon: 'staff' }
+  const activity: NavItem = { href: '/admin/activity', label: 'Activity', icon: 'activity' }
+  const foot: NavItem[] = ownStore ? [{ href: '/console', label: `${ownStore} console`, icon: 'external' }] : []
   return (
-    <div data-shell className={`flex min-h-dvh flex-col md:flex-row ${SHELL_FONT_VARS}`}>
-      <AdminNav email={staff.email} ownStore={ownStore} />
-      <main className="min-w-0 flex-1 space-y-6 p-4 md:p-6">{children}</main>
-    </div>
+    <AppShell ink title="Frata Admin" staffTag navLabel="Admin" groups={[{ label: 'Merchants', items: [merchants, plans] }, { label: 'Frata', items: [staffItem, activity] }]}
+      tabs={[merchants, plans, staffItem]} more={[activity]} foot={foot} email={staff.email}>
+      {children}
+    </AppShell>
   )
 }

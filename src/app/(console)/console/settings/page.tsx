@@ -12,7 +12,7 @@ import { shopWithSettings } from '@/lib/queries/settings'
 import { paymentStatusFor } from '@/lib/queries/payments'
 import { shopFacts } from './_components/facts'
 
-export const metadata = { title: 'Settings · Frata' }
+export const metadata = { title: 'Settings' }
 
 const inr = (p: number) => formatInr(paise(p))
 

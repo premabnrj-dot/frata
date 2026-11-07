@@ -93,7 +93,7 @@ export function CollectionEditor({ initial, products, families, attrOptions }: {
             <input id="c-title" value={d.title} maxLength={80} placeholder="Festive edit" aria-invalid={!!errors.title || undefined} onChange={(e) => set({ title: e.target.value })} className={field} />
             {errors.title && <p className="text-xs text-danger-text">{errors.title}</p>}</div>
           <div className="space-y-1"><label htmlFor="c-handle" className="block text-sm font-medium">Address</label>
-            <div className="flex items-center rounded-md border border-input bg-card text-sm"><span className="pl-3 font-mono text-xs text-muted-foreground">…/collections/</span>
+            <div className="flex items-center rounded-md border border-input bg-card text-sm focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring"><span className="pl-3 font-mono text-xs text-muted-foreground">…/collections/</span>
               <input id="c-handle" value={d.handle} maxLength={80} placeholder={handleFor(d.title) || 'festive-edit'} onChange={(e) => set({ handle: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })} className="h-10 md:h-9 min-w-0 flex-1 bg-transparent pr-3 font-mono text-sm outline-none" /></div>
             {errors.handle && <p className="text-xs text-danger-text">{errors.handle}</p>}</div>
           <div className="space-y-1"><label htmlFor="c-desc" className="block text-sm font-medium">Description <span className="font-normal text-muted-foreground">(optional, shown at the top of its page)</span></label>

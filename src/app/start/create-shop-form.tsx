@@ -85,7 +85,7 @@ export function CreateShopForm({ shopDomain }: { shopDomain: string }) {
           </div>
           <div className="space-y-1.5">
             <label htmlFor="slug" className="block text-sm font-medium">Shop address</label>
-            <div className="flex items-center gap-1 rounded-md bg-muted px-3 py-2.5 font-mono text-sm">
+            <div className="flex items-center gap-1 rounded-md bg-muted px-3 py-2.5 font-mono text-sm focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
               <input id="slug" value={slug} aria-describedby="slug-state" aria-invalid={error?.field === 'slug' || undefined}
                 onChange={(e) => { setSlugEdited(true); setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 30)); setError(null) }}
                 className="min-w-0 flex-1 bg-transparent outline-none" style={{ maxWidth: `${Math.max(4, slug.length + 1)}ch` }} />

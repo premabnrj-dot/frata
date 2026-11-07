@@ -1,13 +1,29 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ConsoleNav } from '@/components/nav/console-nav'
-import { SHELL_FONT_VARS } from '@/components/shell/fonts'
+import { Suspense } from 'react'
 import { SupportBanner } from '@/components/nav/support-banner'
-import { supportVisit } from '@/lib/queries/support'
+import { AppShell } from '@/components/shell/app-shell'
+import { NavPill, type NavGroup, type NavItem } from '@/components/shell/nav'
 import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
+import { toConfirmCount } from '@/lib/queries/orders'
+import { supportVisit } from '@/lib/queries/support'
 
 export const dynamic = 'force-dynamic'
+
+/** Tab titles "Orders · Kesar Studio" (rule 11): each page sets a plain title. */
+export async function generateMetadata(): Promise<Metadata> {
+  const auth = await requireMember(ANY_MEMBER)
+  const shop = auth.ok ? auth.membership.tenantName : 'Frata'
+  return { title: { template: `%s · ${shop}`, default: shop } }
+}
+
+/** The To confirm pill (U·2a): its own light count, streamed, so the shell never waits for it; no pill on failure. */
+async function ToConfirmPill({ tenantId }: { tenantId: string }) {
+  const n = await toConfirmCount(tenantId).catch((err) => { console.error('[nav count]', err instanceof Error ? err.name : err); return 0 })
+  return <NavPill n={n} label="To confirm" />
+}
 
 /**
  * The shell, and the refusal panel. A refusal renders a panel rather than
@@ -19,7 +35,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok && auth.reason === 'not_configured') {
     return (
-      <main className="p-6">
+      <main data-shell className="p-6">
         <Panel title={auth.message}>
           Set the Supabase and database variables listed in <code>.env.example</code> in Vercel, then redeploy.
         </Panel>
@@ -28,7 +44,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   }
   if (!auth.ok) {
     return (
-      <main className="p-6">
+      <main data-shell className="p-6">
         <Panel title={auth.reason === 'signed_out' ? 'Sign in to continue' : 'No store on this account'}
           action={auth.reason === 'no_access'
             ? <div className="flex flex-wrap justify-center gap-2"><Link href="/start" className={button()}>Start your shop</Link><Link href="/login" className={button({ variant: 'secondary' })}>Sign in with another email</Link></div>
@@ -39,14 +55,22 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     )
   }
   const now = new Date()
-  const visit = auth.membership.supportSessionId ? await supportVisit(auth.membership.tenantId, auth.membership.supportSessionId) : null
+  const { tenantId, tenantName, supportSessionId } = auth.membership
+  const visit = supportSessionId ? await supportVisit(tenantId, supportSessionId) : null
+  const pill = <Suspense fallback={null}><ToConfirmPill tenantId={tenantId} /></Suspense>
+  const home: NavItem = { href: '/console', label: 'Home', icon: 'home', exact: true }
+  const orders: NavItem = { href: '/console/orders', label: 'Orders', icon: 'orders', badge: pill }
+  const products: NavItem = { href: '/console/products', label: 'Products', icon: 'products' }
+  const collections: NavItem = { href: '/console/collections', label: 'Collections', icon: 'collections' }
+  const settings: NavItem = { href: '/console/settings', label: 'Settings', icon: 'settings' }
+  const activity: NavItem = { href: '/console/activity', label: 'Activity', icon: 'activity' }
+  const groups: NavGroup[] = [{ label: 'Today', items: [home, orders] }, { label: 'Catalogue', items: [products, collections] }, { label: 'Store', items: [settings, activity] }]
+  const foot: NavItem[] = [{ href: '/console/preview', label: 'Preview shop', icon: 'external' }]
+  if (auth.staffRole !== null && !supportSessionId) foot.push({ href: '/admin', label: 'Frata Admin', icon: 'admin' })
   return (
-    <div data-shell className={`flex min-h-dvh flex-col ${SHELL_FONT_VARS}`}>
-      {visit && <SupportBanner storeName={auth.membership.tenantName} visit={visit} now={now} />}
-      <div className="flex flex-1 flex-col md:flex-row">
-        <ConsoleNav storeName={auth.membership.tenantName} isStaff={auth.staffRole !== null} />
-        <main className="min-w-0 flex-1 space-y-6 p-4 md:p-6">{children}</main>
-      </div>
-    </div>
+    <AppShell title={tenantName} navLabel="Console" groups={groups} tabs={[home, orders, products]} more={[collections, settings, activity]} foot={foot}
+      email={auth.email} banner={visit ? <SupportBanner storeName={tenantName} visit={visit} now={now} /> : undefined}>
+      {children}
+    </AppShell>
   )
 }

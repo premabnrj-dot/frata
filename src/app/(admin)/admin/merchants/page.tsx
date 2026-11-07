@@ -10,6 +10,8 @@ import { listMerchants, PAGE_SIZE } from '@/lib/admin/merchants'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dayMonthIN, sinceIN } from '@/lib/format-date'
 
+export const metadata = { title: 'Merchants' }
+
 export default async function MerchantsPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />

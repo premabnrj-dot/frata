@@ -6,7 +6,7 @@ import { collectionForEdit } from '@/lib/queries/catalogue'
 import { CollectionEditor, fromRules } from '../_components/collection-editor'
 import { categoryNames, editorData } from '../_components/data'
 
-export const metadata = { title: 'Collection · Frata' }
+export const metadata = { title: 'Collection' }
 
 export default async function CollectionPage({ params }: { params: Promise<{ handle: string }> }) {
   const auth = await requireMember(ANY_MEMBER)

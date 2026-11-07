@@ -1,4 +1,5 @@
 import 'server-only'
+import { cache } from 'react'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
@@ -50,3 +51,16 @@ export async function orderPrefixFor(tenantId: string): Promise<string> {
   const [r] = await withTenant(tenantId, (tx) => tx.select({ prefix: shopSettings.orderPrefix, name: tenants.name }).from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId)))
   return orderPrefix(r?.prefix ?? '', r?.name ?? '')
 }
+
+/**
+ * The nav pill (spec U · U·2a): how many orders wait in To confirm, over all of them — the To confirm tab's own
+ * predicate, so pill and tab agree. React cache() keys it on the tenant alone for one request (the layout and a
+ * page may both ask); `now` is taken inside, so the pill and the page's tabs differ by microseconds at most.
+ */
+export const toConfirmCount = cache(async (tenantId: string): Promise<number> => {
+  const now = new Date()
+  const [r] = await withTenant(tenantId, (tx) =>
+    tx.select({ n: sql<number>`count(*)::int` }).from(orders).where(and(eq(orders.tenantId, tenantId), inTabSql('to_confirm', now))),
+  )
+  return Number(r?.n ?? 0)
+})

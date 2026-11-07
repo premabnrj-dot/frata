@@ -8,7 +8,7 @@ import { SignInFlow } from '../login/sign-in-flow'
 import { CreateShopForm } from './create-shop-form'
 import { SHELL_FONT_VARS } from '@/components/shell/fonts'
 
-export const metadata = { title: 'Start your shop · Frata' }
+export const metadata = { title: 'Start your shop' }
 export const dynamic = 'force-dynamic'
 
 // Sign-up: an email (link and code) → a shop name → a pickup pincode → one

@@ -5,6 +5,8 @@ import { listActivity } from '@/lib/admin/activity'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dateTimeIN } from '@/lib/format-date'
 
+export const metadata = { title: 'Activity' }
+
 export default async function ActivityPage() {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />

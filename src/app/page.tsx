@@ -6,6 +6,7 @@ import type { Feature } from '@/domains/plans/entitlements'
 import { publicPlans, type PublicPlan } from '@/lib/db/platform'
 import { formatInr } from '@/lib/format'
 import { FRATA_WHATSAPP_DISPLAY, frataWhatsappLink } from '@/lib/site'
+import { SHELL_FONT_VARS } from '@/components/shell/fonts'
 
 // =============================================================================
 // The Frata website's homepage, on the console host (frata-design-language §
@@ -43,7 +44,7 @@ export default async function Home() {
   const plans = await plansOrNone()
   const start = <Link href="/start" className={button({ size: 'lg' })}>Start your shop free</Link>
   return (
-    <div className="min-h-dvh bg-card">
+    <div data-shell className={`min-h-dvh bg-card ${SHELL_FONT_VARS}`}>
       <header className="mx-auto flex max-w-6xl items-center gap-5 px-4 py-4 sm:px-8">
         <span className="text-lg font-semibold text-brand">Frata</span>
         <span className="flex-1" />

@@ -11,6 +11,12 @@ import { shopWithSettings } from '@/lib/queries/settings'
 import { activeProductCount, paymentStatusFor } from '@/lib/queries/payments'
 import { OpenShop } from './_components/open-shop'
 
+/** Home shares the layout's segment, where Next does not apply the layout's title template: the full title here. */
+export async function generateMetadata() {
+  const auth = await requireMember(ANY_MEMBER)
+  return { title: { absolute: auth.ok ? `Home · ${auth.membership.tenantName}` : 'Home · Frata' } }
+}
+
 /** Pages the checklist may link to. Each flips to true when its sub-phase ships (docs/plans/2026-11-06-phase-1-first-sale.md). */
 const BUILT = { products: true, settings: true, publish: true }
 
