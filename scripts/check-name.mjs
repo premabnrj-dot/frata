@@ -46,6 +46,17 @@ export function check(source, fileName) {
   return strings(source, fileName).filter((s) => OLD.test(s.text)).map((s) => ({ line: s.line, text: s.text.trim() }))
 }
 
+/** Hits against the allow-list: what fails, and allow entries nothing used (they fail too, so the list never rots). */
+export function judge(hits, allow) {
+  const used = new Set(), problems = []
+  for (const h of hits) {
+    const i = allow.findIndex((a) => a.file === h.file && a.text === h.text)
+    if (i >= 0) used.add(i); else problems.push(`${h.file}:${h.line}  "${h.text.slice(0, 80)}"`)
+  }
+  allow.forEach((a, i) => { if (!used.has(i)) problems.push(`${ALLOW_FILE}: unused entry ${a.file} "${a.text}" (remove it)`) })
+  return problems
+}
+
 function walk(p, acc = []) {
   if (!existsSync(p)) return acc
   if (statSync(p).isDirectory()) { for (const e of readdirSync(p)) if (e !== '__tests__' && e !== 'node_modules') walk(join(p, e), acc); return acc }
@@ -56,17 +67,8 @@ function walk(p, acc = []) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const target = process.argv[2]
   const allow = existsSync(ALLOW_FILE) && !target ? JSON.parse(readFileSync(ALLOW_FILE, 'utf8')) : []
-  const used = new Set()
-  const problems = []
-  for (const f of walk(target ?? 'src')) {
-    const rel = relative('.', f).replaceAll('\\', '/')
-    for (const hit of check(readFileSync(f, 'utf8'), f)) {
-      const i = allow.findIndex((a) => a.file === rel && a.text === hit.text)
-      if (i >= 0) { used.add(i); continue }
-      problems.push(`${rel}:${hit.line}  "${hit.text.slice(0, 80)}"`)
-    }
-  }
-  allow.forEach((a, i) => { if (!used.has(i)) problems.push(`${ALLOW_FILE}: unused entry ${a.file} "${a.text}" (remove it)`) })
+  const hits = walk(target ?? 'src').flatMap((f) => { const file = relative('.', f).replaceAll('\\', '/'); return check(readFileSync(f, 'utf8'), f).map((h) => ({ ...h, file })) })
+  const problems = judge(hits, allow)
   if (problems.length) { console.error(`check:name — the product is "Frrata"; ${problems.length} old-name string(s):\n  ${problems.join('\n  ')}`); process.exit(1) }
   console.log(`check:name — clean (${allow.length} internal names allowed, each with its reason)`)
 }

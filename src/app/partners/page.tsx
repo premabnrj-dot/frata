@@ -69,7 +69,7 @@ export default async function PartnersPage() {
         <section className="mx-auto grid max-w-6xl items-center gap-10 border-t border-border px-4 py-14 sm:px-8 md:grid-cols-[1fr_1fr]">
           <div className="space-y-5">
             <p className="text-sm font-medium text-muted-foreground">For developers, designers and agencies</p>
-            <h1 className="text-[clamp(2rem,4.6vw,3.25rem)] font-bold leading-[1.05] tracking-tight">
+            <h1 className="font-display text-[clamp(2rem,4.6vw,3.25rem)] font-semibold leading-[1.05] tracking-tight">
               Build brands’ shops.<br />Earn <span className="font-mono">{T.shareBps / 100}%</span> for 2 years.
             </h1>
             <p className="text-lg text-muted-foreground">You build. The brand owns it. We pay you from our fee.</p>

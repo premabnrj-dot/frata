@@ -320,6 +320,15 @@ export default {
         await hc.close()
       })
 
+      await t.step('the frrata icon: the platform serves it; a shop tab never wears it (brand rule 34)', async () => {
+        const ctx = await t.browser.newContext(); const p = await ctx.newPage()
+        const r = await p.request.get(CONSOLE + '/frrata-icon?v=1'); assert.equal(r.status(), 200); assert.match(r.headers()['content-type'] ?? '', /image\/png/)
+        await p.goto(CONSOLE + '/login'); assert.match(await p.locator('link[rel="icon"]').first().getAttribute('href'), /^\/frrata-icon/)
+        await p.goto(SHOP + '/'); const shopIcons = await p.locator('link[rel="icon"]').evaluateAll((ls) => ls.map((l) => l.getAttribute('href')))
+        assert.ok(!shopIcons.some((h) => /frrata/.test(h ?? '')), `a shop's icon links: ${JSON.stringify(shopIcons)}`)
+        await ctx.close()
+      })
+
       await t.step('Indic fonts download only when a name needs them, and never on the shop (plan U · A4)', async () => {
         const fontsOn = async (who, url) => {
           const ctx = who ? await signedIn(t.browser, who) : await t.browser.newContext()

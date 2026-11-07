@@ -35,7 +35,9 @@ is built. We never explain the obvious.
 ## Graphic language (owner, 2026-11-07)
 
 Pictures carry the model; words label it. One drawing rule, used everywhere a
-graphic appears: the website, the partner workspace, empty states there.
+graphic appears: the website, the partner workspace, and brand empty states in
+the console (§ Brand). Haldi here is `--haldi` (the illustration token derives
+from it).
 
 - **Pictograms** (`src/components/brand/pictogram.tsx`): a 48 grid, 4 px margin,
   a **2 px ink line**, round caps and joins, paper inside, **one haldi accent
@@ -335,7 +337,7 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
 
 **One shell (`AppShell`, both surfaces)**
 8. Console and Admin share one shell and every page primitive. **Admin differs
-   only in chrome**: the ink frame, the reversed mark, STAFF, and a yellow
+   only in chrome**: the ink frame, the rani monogram tile, STAFF, and a yellow
    active bar. Status and semantic colours never change between surfaces.
 9. Nav: groups by job. The current item gets a 3 px bar, semibold, and
    `aria-current="page"`, never colour alone. Counts are a warn pill. An account
@@ -385,8 +387,10 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     bottom bar are 44–56 px on phones.
 20. Icons: frrata's own set (`src/components/icons/icon.tsx`, rule 36), 16 px
     in nav (22 px in the bottom bar), `--sub` until active. No coloured icon
-    backgrounds. A brand empty state (rule 39) may lead with one pictogram;
-    working lists keep plain words.
+    backgrounds. Utility glyphs inside primitives (the back chevron, search,
+    info, menu dots) stay lucide until redrawn in the set. A brand empty state
+    may lead with one `PictoTile` (§ Graphic language); working lists keep
+    plain words.
 21. Indian names: Noto Sans (Devanagari, Tamil, …) is a fallback face behind
     Inter in the shell's own stack (`--font-shell` on `[data-shell]`, never on
     `html`), committed files (`next/font/local`, OFL) with `preload: false` and
@@ -477,20 +481,25 @@ saving we cannot show from their own orders.
     numbers are mono. 800 was too loud (owner).
 36. **Icons** are two strokes: the body in the text colour and one detail, the
     tinge, in `var(--icon-accent, currentColor)`. The tinge is on only inside a
-    `[data-tinge]` frame (the navs, the More sheet; `--brand-on-ink` on ink).
+    `[data-tinge]` frame (today: the navs and the More sheet; `--brand-on-ink`
+    on ink). A new frame (an Apps tile grid, an icon button) opts in the same way.
     In a table or beside a status badge an icon is one colour. The current
     page's icon is drawn at 2.25.
 37. **The thread** (`--thread`, 2 px, ≥ 3:1 on ink and card): a primary button
     carries it a third wide at its foot and the full width on hover or keyboard
     focus (a `scale` transform, 120 ms); a secondary button on hover and focus
-    only; destructive, ghost and disabled buttons never. Also the Console's
+    only; destructive, ghost and disabled buttons never, nor a secondary button
+    that undoes something (Close shop, Disconnect, Delete: `after:hidden`).
+    The line sits inside the corner curve (`inset-x-1.5`); no `overflow-hidden`
+    on a button (it would clip a wrapping label). Also the Console's
     active nav bar, the current view tab, the loading bar and a working link's
     underline. Admin's active bar stays yellow (rule 8).
 38. **The running stitch**: a dashed edge (`border-dashed`) for a place to drop
     something and for "setup steps left"; never around a card that is content.
 39. **The block print** (`block-print` utility): the mark's quarter circle and
-    circle as a repeat, a mask over `--neel` at 6%; sign-in and brand empty
-    states only, never behind a number, a table or a form you work in.
+    circle as a repeat, a mask over `--neel` at 6%; the sign-in page (and the
+    website's brand bands), never behind a number, a table, a form or a
+    control. Brand empty states use a `PictoTile` instead.
 40. **Haldi and Neel** live on brand surfaces only and are never text or a
     control. Rani as text is `--brand-text`.
 

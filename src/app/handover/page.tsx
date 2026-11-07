@@ -28,7 +28,7 @@ export default async function HandoverPage({ searchParams }: { searchParams: Pro
           <div className="flex items-center gap-4">
             <PictoTile name="handover" tone="haldi" />
             <div>
-              <h1 className="text-xl font-semibold tracking-tight">{h.tenantName} is ready</h1>
+              <h1 className="font-display text-xl font-semibold tracking-tight">{h.tenantName} is ready</h1>
               <p className="text-sm text-muted-foreground">Built by {h.partnerName}</p>
             </div>
           </div>
@@ -40,7 +40,7 @@ export default async function HandoverPage({ searchParams }: { searchParams: Pro
           </dl>
           <form action={acceptHandoverAction} className="flex flex-wrap items-center gap-3">
             <input type="hidden" name="inviteId" value={h.inviteId} />
-            <button type="submit" className={button({ size: 'lg' })}>Accept {h.tenantName}</button>
+            <button type="submit" className={button({ size: 'wrap' })}>Accept {h.tenantName}</button>
             <Link href="/console" className="text-sm underline">Not now</Link>
           </form>
         </section>

@@ -14,7 +14,6 @@ import { Icon, type IconName } from '@/components/icons/icon'
 // the server/client line). The count pill is a server-rendered slot.
 // =============================================================================
 
-export type { IconName }
 export type NavItem = { href: string; label: string; icon: IconName; badge?: ReactNode; exact?: boolean }
 export type NavGroup = { label: string; items: NavItem[] }
 

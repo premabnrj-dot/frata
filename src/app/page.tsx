@@ -59,7 +59,7 @@ export default async function Home() {
       <main>
         <section className="mx-auto grid max-w-6xl items-center gap-10 border-t border-border px-4 py-14 sm:px-8 md:grid-cols-[1.1fr_0.9fr]">
           <div>
-            <h1 className="text-[clamp(2rem,4.6vw,3rem)] font-bold leading-[1.08] tracking-tight">
+            <h1 className="font-display text-[clamp(2rem,4.6vw,3rem)] font-semibold leading-[1.08] tracking-tight">
               A shop for your fashion label that <span className="text-brand-text">keeps more of every order</span> you deliver.
             </h1>
             <p className="mt-4 max-w-xl text-lg text-muted-foreground">

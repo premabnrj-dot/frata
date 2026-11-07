@@ -63,7 +63,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                 <div className="space-y-3 border-t border-border pt-4">
                   <form action={decidePartnerAction}>
                     <input type="hidden" name="id" value={open.id} /><input type="hidden" name="decision" value="approve" />
-                    <button type="submit" className={button({ className: 'w-full' })}>Approve {open.businessName || open.name}</button>
+                    <button type="submit" className={button({ size: 'wrap', className: 'w-full justify-center text-center' })}>Approve {open.businessName || open.name}</button>
                   </form>
                   <form action={decidePartnerAction} className="space-y-2">
                     <input type="hidden" name="id" value={open.id} /><input type="hidden" name="decision" value="decline" />

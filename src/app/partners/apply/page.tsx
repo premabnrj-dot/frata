@@ -23,13 +23,13 @@ export default async function ApplyPage() {
   let body: React.ReactNode
   if (!auth.ok) {
     body = (<>
-      <h1 className="text-2xl font-bold tracking-tight">Apply to be a partner</h1>
+      <h1 className="font-display text-2xl font-semibold tracking-tight">Apply to be a partner</h1>
       <p className="text-sm text-muted-foreground">Your email first. No password.</p>
       <SignInFlow intent="partner" />
     </>)
   } else if (!partner) {
     body = (<>
-      <h1 className="text-2xl font-bold tracking-tight">Apply to be a partner</h1>
+      <h1 className="font-display text-2xl font-semibold tracking-tight">Apply to be a partner</h1>
       <p className="flex items-center text-sm text-muted-foreground">Signed in as <span className="ml-1 font-mono">{auth.email}</span>
         <InfoTip about="what we ask later">PAN, bank account and GSTIN (if you have one) are asked when your first share is due.</InfoTip></p>
       <ApplyForm />
@@ -37,13 +37,13 @@ export default async function ApplyPage() {
   } else if (partner.approvedAt) {
     body = (<>
       <PictoTile name="clients" tone="haldi" />
-      <h1 className="text-2xl font-bold tracking-tight">You’re a Frrata partner</h1>
+      <h1 className="font-display text-2xl font-semibold tracking-tight">You’re a Frrata partner</h1>
       <Link href="/partner" className={button({ size: 'lg' })}>Open your workspace</Link>
     </>)
   } else if (partner.declinedAt) {
     body = (<>
       <Badge>Not approved</Badge>
-      <h1 className="text-2xl font-bold tracking-tight">We can’t approve this one</h1>
+      <h1 className="font-display text-2xl font-semibold tracking-tight">We can’t approve this one</h1>
       {partner.declineReason && <p className="text-sm">{partner.declineReason}</p>}
       <a href={frataWhatsappLink('Hi Frrata, about my partner application.')} target="_blank" rel="noopener" className="text-sm underline">Talk to us on WhatsApp</a>
     </>)
@@ -51,7 +51,7 @@ export default async function ApplyPage() {
     body = (<>
       <PictoTile name="apply" tone="haldi" />
       <div className="flex items-center gap-2"><Badge tone="warn">In review</Badge><span className="text-sm text-muted-foreground">Sent {dateTimeIN(partner.appliedAt)}</span></div>
-      <h1 className="text-2xl font-bold tracking-tight">Got it, {partner.name.split(' ')[0]}</h1>
+      <h1 className="font-display text-2xl font-semibold tracking-tight">Got it, {partner.name.split(' ')[0]}</h1>
       <p className="text-sm">We reply on WhatsApp at <span className="font-mono">{formatPhone(partner.phone)}</span> within 2 working days.</p>
       <details className="rounded-md border border-border p-3 text-sm">
         <summary className="cursor-pointer font-medium">Change my application</summary>

@@ -6,9 +6,9 @@ import type { ReactNode } from 'react'
 // frata-design-language § Graphic language. One drawing rule for all of them:
 // a 48 grid with a 4 px margin, a 2 px ink line with round caps and joins, paper
 // inside, at most ONE accent shape (haldi) and one warm fill. No gradients,
-// shadows or oxblood. Always aria-hidden: the words beside them carry the meaning.
-// UI icons stay lucide (§ UX foundation rule 20); these are for the website,
-// empty states on the partner surface and the illustrations built from them.
+// shadows or rani. Always aria-hidden: the words beside them carry the meaning.
+// UI icons are frrata's own (src/components/icons/icon.tsx); these are for the
+// website, brand empty states and the illustrations built from them.
 // =============================================================================
 
 export const PICTOGRAMS = ['store', 'build', 'handover', 'earn', 'delivered', 'clients', 'owner', 'calendar', 'shield', 'apply'] as const

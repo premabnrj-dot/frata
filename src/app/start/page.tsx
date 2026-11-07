@@ -31,7 +31,7 @@ export default async function StartPage() {
         <div className="max-w-md">
           {auth.ok ? <CreateShopForm shopDomain={SHOP_DOMAIN} /> : (
             <div className="space-y-4">
-              <h1 className="text-2xl font-semibold tracking-tight">Start your shop</h1>
+              <h1 className="font-display text-2xl font-semibold tracking-tight">Start your shop</h1>
               <SignInFlow intent="start" />
             </div>
           )}

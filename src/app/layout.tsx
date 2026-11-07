@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: { default: 'Frrata', template: '%s · Frrata' },
   description: 'Fashion commerce for Indian D2C brands: storefront, COD, shipping and WhatsApp in one place.',
   // The platform's icon (src/components/brand/app-icon.tsx); a shop's layout replaces it (a shop never wears ours).
-  icons: { icon: '/frrata-icon', apple: '/frrata-apple-icon' },
+  icons: { icon: '/frrata-icon?v=1', apple: '/frrata-apple-icon?v=1' }, // bump ?v when the mark changes (served immutable)
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

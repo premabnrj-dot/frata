@@ -19,7 +19,7 @@ export default async function ChoosePage() {
       <div className="w-full max-w-md space-y-4 rounded-md border border-border bg-card p-7">
         <div className="space-y-1">
           <Wordmark thread className="h-5" />
-          <h1 className="text-xl font-semibold">Where would you like to go?</h1>
+          <h1 className="font-display text-xl font-semibold tracking-tight">Where would you like to go?</h1>
           <p className="text-sm text-muted-foreground">Signed in as <span className="font-mono">{staff.email}</span></p>
         </div>
         <Link href="/admin" className="flex items-center gap-3 rounded-md border-2 border-primary p-4">

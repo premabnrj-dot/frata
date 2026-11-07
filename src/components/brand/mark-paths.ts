@@ -4,9 +4,9 @@
 // The wordmark is drawn, not typed (brand spec docs/specs/2026-11-07-brand-frrata.md, direction A "Thread"): a
 // geometric lowercase on a 14-unit stroke, baseline 100, x-height 54. The first r's arm runs on to within a
 // 3-unit stitch of the second r: joined, it read as "nr" or "π". Every mark in the product — <Wordmark>,
-// <Monogram>, the favicon and app icons (src/app/icon.tsx, apple-icon.tsx) — reads these paths, so none can drift.
+// <Monogram>, the platform icon (src/components/brand/app-icon.tsx, served at /frrata-icon) — reads these paths.
 // The hex values exist for the generated icons only (an image cannot read CSS); a test holds them equal to
-// globals.css (--brand, --primary, --primary-foreground).
+// globals.css (--brand, --brand-on-ink, --primary, --primary-foreground).
 // =============================================================================
 
 export const WORDMARK_VIEWBOX = '-6 12 302 92'
@@ -22,11 +22,14 @@ export const WORD = [
   'M287 73 A20 20 0 1 1 247 73 A20 20 0 1 1 287 73', 'M287 46 V100',
 ] as const
 
-/** The thread: the first r's arm, stopping a stitch short of the second r. The one part that may be rani. */
-export const THREAD = 'M51 77 A24 24 0 0 1 75 53 H86'
+/** The stitch: 3 units between the thread's end and the second r's stem edge, at any stroke (a heavier stroke ends the thread earlier). */
+export const STITCH = 3
+/** The thread at a stroke width: the first r's arm, stopping a stitch short of the second r. The one part that may be rani. */
+export const threadPath = (sw: number = STROKE) => `M51 77 A24 24 0 0 1 75 53 H${96 - sw / 2 - STITCH}`
+export const THREAD = threadPath(STROKE)
 
 /** The monogram: the rr alone (r1 stem, r2 stem and arm, the thread) on a 120 square, radius 23%. */
 export const MONOGRAM = { viewBox: '0 0 120 120', radius: 27.6, translate: 'translate(-26 -16)', parts: ['M51 100 V46', 'M96 100 V46', 'M96 77 A24 24 0 0 1 120 53 H128'] as const }
 
 /** For generated images only (favicon, app icons). Equal to globals.css's --brand, --primary and --primary-foreground (test). */
-export const HEX = { rani: '#D61F69', ink: '#1C1917', paper: '#FFFFFF' } as const
+export const HEX = { rani: '#D61F69', raniOnInk: '#FF4F93', ink: '#1C1917', paper: '#FFFFFF' } as const

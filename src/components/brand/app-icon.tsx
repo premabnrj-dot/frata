@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og'
-import { HEX, MONOGRAM, THREAD } from './mark-paths'
+import { HEX, MONOGRAM, threadPath } from './mark-paths'
 
 /**
  * The platform's tab and home-screen icon, drawn from the mark's own paths (no committed image to drift): an ink
@@ -15,7 +15,7 @@ export function appIcon(px: number) {
           <rect width="120" height="120" rx={px >= 128 ? 0 : MONOGRAM.radius} fill={HEX.ink} />
           <g transform={MONOGRAM.translate} fill="none" stroke={HEX.paper} strokeWidth={sw} strokeLinejoin="round">
             {MONOGRAM.parts.map((d) => <path key={d} d={d} />)}
-            <path d={THREAD} stroke={HEX.rani} />
+            <path d={threadPath(sw)} stroke={HEX.raniOnInk} />
           </g>
         </svg>
       </div>

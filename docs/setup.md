@@ -78,6 +78,15 @@ create your tenant and owner membership (it is a plain insert; no secret).
    on. Invites are claimed only by confirmed emails.
 4. Redeploy. You are already in `platform_staff` as Admin.
 
+### Rename day: Frrata (brand spec 2026-11-07)
+
+1. Supabase → Authentication → Emails: set the **sender name** to "Frrata" and the sign-in email's **subject** to
+   say "Frrata" (the sign-in page tells people to look for "Frrata" in their inbox).
+2. Vercel → frata → Domains: add **frrata.com** once bought. The app keeps working on its current hosts; moving shop
+   addresses is brand plan B·4, its own decision, with redirects.
+3. Before the name is public: the IP India trademark search (classes 35 and 42), frrata.in at an Indian registrar,
+   and the Instagram and WhatsApp handles (owner, 2026-11-07: checking these himself).
+
 ## Later
 
 - `CRON_SECRET` (Sensitive): the daily cron in `vercel.json` (03:17 UTC) is refused

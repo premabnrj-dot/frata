@@ -59,7 +59,7 @@
   /* The support-mode banner (ADR-0007) and nothing else. */
   --support: #8A5000; --support-foreground: #FFFFFF;
   /* ILLUSTRATION — pictograms and spot illustrations only (frata-design-language § Graphic language).
-     Ink line on paper, one warm fill, two accents. Never on a control, never oxblood, never the only sign of anything. */
+     Ink line on paper, one warm fill, two accents. Never on a control, never rani, never the only sign of anything. */
   --illo-line: #1C1917; --illo-paper: #FFFFFF; --illo-fill: #EFEBE5;
   --illo-haldi: var(--haldi); --illo-haldi-soft: #FBEFD2; --illo-indigo-soft: #DCE3F5;
 
@@ -239,8 +239,8 @@
      and of the phone's fixed bottom bar. */
   html:has([data-support-banner]) { scroll-padding-top: 3.5rem; }
   @media (max-width: 767px) { html:has([data-shell] main#content) { scroll-padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px)); } }
-  /* THE TINGE (brand spec, chapter 4): one detail per icon in rani, only inside a frame that asks for it (navs,
-     buttons, brand empty states). Outside one, icons are one colour: in a table, colour means status. */
+  /* THE TINGE (brand spec, chapter 4): one detail per icon in rani, only inside a frame that asks for it
+     (data-tinge: the navs and the More sheet). Outside one, icons are one colour: in a table, colour means status. */
   [data-tinge] { --icon-accent: var(--brand); }
   [data-surface="ink"] [data-tinge], [data-surface="ink"][data-tinge] { --icon-accent: var(--brand-on-ink); }
   /* A link in a working page: ink words, a thread-coloured underline (brand spec, chapter 5). */

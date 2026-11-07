@@ -3,8 +3,8 @@
 //
 // One set, drawn for a merchant's day: a 24 grid with a 2 margin, stroke 1.75 (2.25 for the current page), round
 // ends and joins. Each icon is TWO strokes: its body, in the colour of its text, and ONE detail — the tinge — in
-// var(--icon-accent, currentColor). --icon-accent is set only inside a [data-tinge] frame (the navs, buttons,
-// brand empty states; globals.css), so in a table or beside a status badge the icon is one colour: there,
+// var(--icon-accent, currentColor). --icon-accent is set only inside a [data-tinge] frame (the navs and the More
+// sheet today; globals.css), so in a table or beside a status badge the icon is one colour: there,
 // colour means status. Server-safe (no hooks); always aria-hidden — the label beside it carries the meaning.
 // =============================================================================
 
@@ -41,7 +41,6 @@ const ICONS = {
 } as const satisfies Record<string, readonly [string, string]>
 
 export type IconName = keyof typeof ICONS
-export const ICON_NAMES = Object.keys(ICONS) as IconName[]
 
 /** One frrata icon. `current` draws it at the current page's weight (2.25). */
 export function Icon({ name, className, current = false }: { name: IconName; className?: string; current?: boolean }) {

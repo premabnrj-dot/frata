@@ -1,7 +1,7 @@
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
-const THREAD = 'relative overflow-hidden after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:origin-left after:bg-thread after:transition-[scale] after:duration-fast after:ease-standard hover:after:scale-x-100 focus-visible:after:scale-x-100 disabled:after:scale-x-0'
+const THREAD = 'relative after:absolute after:inset-x-1.5 after:bottom-0 after:h-0.5 after:origin-left after:bg-thread after:transition-[scale] after:duration-fast after:ease-standard hover:after:scale-x-100 focus-visible:after:scale-x-100 disabled:after:scale-x-0'
 
 export const button = cva(
   'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors duration-fast ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50',

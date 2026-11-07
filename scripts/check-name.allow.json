@@ -12,7 +12,7 @@
   { "file": "src/domains/catalogue/taxonomy.ts", "text": "frata-fit", "why": "an attribute handle stored in product rows" },
   { "file": "src/domains/catalogue/taxonomy.ts", "text": "frata-set-includes", "why": "an attribute handle stored in product rows" },
   { "file": "src/domains/signup/slug.ts", "text": "frata", "why": "a reserved shop address (the old name stays reserved beside frrata)" },
-  { "file": "src/lib/crypto/secret-box.ts", "text": "frata", "why": "the key-derivation salt: renaming it makes every stored Razorpay key unreadable (known-ciphertext test)" },
+  { "file": "src/lib/crypto/secret-box.ts", "text": "frata", "why": "the key-derivation salt: renaming it makes every stored Razorpay key unreadable (known-token test)" },
   { "file": "src/lib/public-env.ts", "text": "app.frata.in", "why": "the platform host until the domain move (brand plan B·4)" },
   { "file": "src/lib/public-env.ts", "text": "frata.store", "why": "the shops' domain until the domain move (brand plan B·4); merchants have shared these links" }
 ]
