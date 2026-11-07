@@ -8,6 +8,8 @@
 // nowhere (frata-design-language: no "coming soon" navigation).
 // =============================================================================
 
+import { grievanceComplete } from '../settings/sections'
+
 export type SetupFacts = {
   shopName: string
   address: string
@@ -15,6 +17,8 @@ export type SetupFacts = {
   productCount: number
   legalName: string
   grievanceName: string
+  grievanceEmail: string
+  grievancePhone: string
   codOn: boolean
   codMaxPaise: number
   /** Razorpay with LIVE keys and a webhook that has worked (test keys do not count). */
@@ -49,9 +53,9 @@ export function setupSteps(f: SetupFacts, built: BuiltPages, formatInr: (paise: 
         : 'Products open in the next release: photos, sizes and colours and size charts.',
     },
     {
-      key: 'details', title: 'Business details and grievance officer', done: !!f.legalName.trim() && !!f.grievanceName.trim(),
+      key: 'details', title: 'Business details and grievance officer', done: !!f.legalName.trim() && grievanceComplete(f),
       href: built.settings ? (f.legalName.trim() ? '/console/settings/contact' : '/console/settings/store') : null,
-      detail: 'Your legal name, address and a grievance officer are shown on your shop, as the law asks. Razorpay checks them too.',
+      detail: 'Your legal name, address and a grievance officer (name, email and phone) are shown on your shop, as the law asks. Razorpay checks them too.',
     },
     {
       key: 'payments', title: 'How shoppers pay', done: canPay, href: built.settings ? '/console/settings/payments' : null,

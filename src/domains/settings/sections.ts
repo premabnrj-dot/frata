@@ -277,11 +277,19 @@ export function formValues(section: Section, stored: Record<string, unknown>): V
 }
 
 /** What a merchant still has to fill before live payments — derived, never stored. Each item names its section. */
+/**
+ * THE ONE ANSWER to "does this shop have its grievance officer": a name, an email and a phone (Consumer
+ * Protection (E-Commerce) Rules; owner 2026-11-07). Read by the setup checklist and opening the shop, by live
+ * payments, and by the settings page's summary, so the three can never disagree again.
+ */
+export const grievanceComplete = (s: { grievanceName: string; grievanceEmail: string; grievancePhone: string }) =>
+  !!s.grievanceName.trim() && !!s.grievanceEmail.trim() && !!s.grievancePhone.trim()
+
 export function missingForLivePayments(s: { legalName: string; address: string; supportEmail: string; supportPhone: string; grievanceName: string; grievanceEmail: string; grievancePhone: string }): { label: string; section: SectionKey }[] {
   const out: { label: string; section: SectionKey }[] = []
   if (!s.legalName.trim()) out.push({ label: 'Legal business name', section: 'store' })
   if (!s.address.trim()) out.push({ label: 'Registered address', section: 'store' })
   if (!s.supportEmail.trim() || !s.supportPhone.trim()) out.push({ label: 'Customer care email and phone', section: 'contact' })
-  if (!s.grievanceName.trim() || !s.grievanceEmail.trim() || !s.grievancePhone.trim()) out.push({ label: 'Grievance officer', section: 'contact' })
+  if (!grievanceComplete(s)) out.push({ label: 'Grievance officer', section: 'contact' })
   return out
 }

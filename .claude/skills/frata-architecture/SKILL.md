@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.3.0
+  version: 2.4.0
   verified: 2026-11-07
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -147,12 +147,25 @@ export async function confirmOrder(input: unknown): Promise<{ ok: boolean; error
 - **Audit rows carry no shopper data.** A support-mode `audit_events` row has
   the record id as `target` and only the NAMES of changed fields in `detail`:
   `frata_admin` reads that table across every shop.
-- **Undo is a compare-and-set** on the value the action wrote
-  (`where confirmed_at = $written and packed_at is null`), refused in words
-  when something moved since.
+- **Undo reverses an EVENT, not a timestamp.** It names the `order_events`
+  row it undoes, checks that row is still the order's latest and that nothing
+  later moved (packed, cancelled), and restores what the event changed
+  (`held_at` too). Comparing timestamps fails: SQL `now()` keeps microseconds
+  a JS `Date` drops. Refused in words when something moved since.
+- **History without shopper data.** `order_events` holds field NAMES (never an
+  address, phone or note text) and the actor's email as it was at sign-in, so
+  erasure never meets a copy and no name lookup is needed later.
 - **One home for SQL predicates.** A state test written in SQL (tabs, counts,
   holds) lives in `src/lib/db/order-predicates.ts` with a parity test
   against `orderState()` on fixtures — never restated in a query.
+- **Stock is per line.** `order_lines.stock_taken_at` says which lines took
+  stock; a writer stamps only the lines it took (`where stock_taken_at is
+  null`), so a retry, a late capture or a cancel never takes or returns twice.
+- **Additive migrations deploy in this order:** every new column nullable or
+  defaulted (the old code keeps writing between apply and push) → apply →
+  push → re-run the idempotent backfill (`where … is null`) for rows placed in
+  between → drop the backfill function in a later migration. A backfill has
+  its own test from the migration before it (`scripts/verify/backfill-0019.sh`).
 - **Operational state is a column, not jsonb.** `checkout` jsonb holds
   hypotheses for analysis; anything code branches on (stock taken, per line)
   is a typed column.

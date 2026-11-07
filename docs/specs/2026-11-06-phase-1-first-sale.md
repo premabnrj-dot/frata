@@ -46,7 +46,7 @@ phones, in an afternoon.
 
 ### 1D Orders
 - Research: COD confirmation within minutes cuts returns (vendor claims 15–45%, unverified); the queue is the manual version until WhatsApp (Phase 2). Optimistic updates (React 19 `useOptimistic`).
-- Build: state from timestamps, no status column. Confirm is conditional (`where confirmed_at is null`); the loser sees "Already confirmed by …". Undo (5 s) is a real reversal through the same action, audited. Cancel takes a reason and returns stock in the same transaction. Bulk confirm skips flagged orders and says how many.
+- Build: state from timestamps, no status column. Confirm is conditional (`where confirmed_at is null`); the loser sees "Already confirmed by …". Undo (8 s, built 1D) is a real reversal through the same action, audited. Cancel takes a reason and returns stock in the same transaction. Bulk confirm skips flagged orders and says how many.
 - Stress: 300 to confirm → j/k/c keys, 50 a page, bulk for unflagged · confirmed by mistake → Undo, then Cancel · support visit → audit row with both names (`asMember`) · cancelled stock → back on sale, cache tag refreshed.
 
 ### 1C·N Telling people
@@ -69,7 +69,7 @@ phones, in an afternoon.
 
 ### 1D·2 Order detail
 - Research: Shopify order page (items as ordered, timeline with notes, contact card, risk as level + next step + indicators). Dukaan: orders wait in Pending. GoKwik/Shopflo RTO scores (vendor, unverified). CGST Rule 46 (gstzen.in copy; confirm with CBIC): series per financial year ≤ 16 chars; no GSTIN → bill of supply, never "tax invoice".
-- Build: one primary action per state (Confirm · Print packing slip · none); the rest under More. Risk from rules with plain reasons and a next step, no score. Items read the order's price snapshot. Activity derived from timestamps, notes and audit rows. Address/phone editable until shipped, logged old → new, risk recomputed. Invoice numbers from a per-shop, per-year counter in the invoice's transaction.
+- Build: one primary action per state (Confirm · Print packing slip · none); the rest under More. Risk from rules with plain reasons and a next step, no score. Items read the order's price snapshot. Activity derived from timestamps, notes and audit rows. Address/phone editable until packed (the slip carries it), logged by field name only, never old or new values (built 1D), risk recomputed. Invoice numbers from a per-shop, per-year counter in the invoice's transaction.
 - Stress: two confirms at once → one wins · address edit after confirm → logged · price changed after order → order keeps it · 9-digit phone → call/WhatsApp off, high risk · prepaid cancel → stock back, refund in Razorpay until Phase 2 · 31 Mar 23:59 vs 1 Apr 00:01 → two series · long Hindi address at 360 px · support edit → badge in Activity.
 
 ### Demo catalogue

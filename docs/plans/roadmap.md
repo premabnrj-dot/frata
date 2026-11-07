@@ -14,7 +14,7 @@ gets its own research, spec and mockup before it is built.
 | 0 | Foundation | — | — (built 2026-11-06: tenancy, auth, console shell, gates) | Isolation proof green |
 | A1 | Frata admin: staff access and merchants | — (enables onboarding) | (Frata) add merchants, see setup and usage, open a merchant's console in audited support mode, staff with 2FA, activity log | First merchant onboarded by hand |
 | A2 | Plans and packages | — (the business) | (Frata) Launch/Growth/Scale with price, included orders, per-delivered-order fee, features; versions; assign/change | Every merchant on a plan version |
-| 1 | First sale (spec active 2026-11-06) | 3, 4, 5 | set up a store, add products with size × colour and size charts, publish a shop, take COD and prepaid orders, confirm them | First product live < 15 min; first real order |
+| 1 | First sale (spec active 2026-11-06; 1D Orders built 2026-11-07) | 3, 4, 5 | set up a store, add products with size × colour and size charts, publish a shop, take COD and prepaid orders, confirm them, pack with a slip and an invoice | First product live < 15 min; first real order |
 | 2 | Ship and confirm | 1 | confirm COD on WhatsApp within 5 min, ship with Shiprocket, track, work failed deliveries | RTO on confirmed vs unconfirmed COD |
 | 3 | True profit | 6, 1 | see profit per order and per delivered order; RTO by pincode; send delivered orders to Meta | Merchant can name profit per delivered order |
 | 4 | Fit and returns | 2 | run exchanges and returns with reasons; show fit feedback; size finder | Share of returns that are "size" |

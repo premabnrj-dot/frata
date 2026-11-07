@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { currentMethod, enteredAt, isHolding, isPlaced, isStanding, needsAction, ORDER_STATES, orderState, paidAfterSwitch, queueTab, shopperState, type OrderMoments } from '../order-state'
+import { currentMethod, enteredAt, isHolding, isPlaced, isStanding, needsAction, ORDER_STATES, orderState, paidAfterPacking, paidAfterSwitch, queueTab, shopperState, type OrderMoments } from '../order-state'
 
 const t = (n: number) => new Date(2026, 10, n)
 /** A COD order placed on day 1, nothing else happened yet; override what did. */
@@ -97,5 +97,15 @@ describe('enteredAt: when an order entered the tab it waits in', () => {
     expect(enteredAt(moments({ confirmedAt: t(4), packedAt: t(7) }), now)).toBeNull()
     expect(enteredAt(moments({ cancelledAt: t(7) }), now)).toBeNull()
     expect(enteredAt(moments({ paymentMethod: 'prepaid', payBy: t(30) }), now)).toBeNull()
+  })
+})
+
+describe('paidAfterPacking', () => {
+  const t = (m: number) => new Date(Date.UTC(2026, 10, 7, 10, m))
+  it('only a switched order paid online after it was packed', () => {
+    expect(paidAfterPacking({ switchedToCodAt: t(0), packedAt: t(10), paidAt: t(20) })).toBe(true)
+    expect(paidAfterPacking({ switchedToCodAt: t(0), packedAt: t(20), paidAt: t(10) })).toBe(false) // paid first: re-priced, nothing owed twice
+    expect(paidAfterPacking({ switchedToCodAt: null, packedAt: t(10), paidAt: t(20) })).toBe(false)
+    expect(paidAfterPacking({ switchedToCodAt: t(0), packedAt: null, paidAt: t(20) })).toBe(false)
   })
 })
