@@ -20,6 +20,9 @@ const ICONS = {
   staff: ['M5 20c1-4 3.8-6 7-6s6 2 7 6', 'M12 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z'],
   admin: ['M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z', 'M9 12l2.2 2.2L15.5 10'],
   external: ['M13 5h6v6 M19 5l-8 8', 'M17 14v5H5V7h5'],
+  // Apps (modules foundation, 2026-11-07): three tiles and the one being added.
+  apps: ['M4 4h7v7H4zM4 13h7v7H4zM13 13h7v7h-7z', 'M16.5 4v7 M13 7.5h7'],
+  reviews: ['M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z', 'M10 12.2l1.5 1.5 2.7-2.7'],
   menu: ['M4 7h16 M4 17h16', 'M4 12h16'],
   close: ['M6 6l12 12', 'M18 6 6 18'],
   // The merchant's day (brand book chapter 4): ready for pages and empty states.

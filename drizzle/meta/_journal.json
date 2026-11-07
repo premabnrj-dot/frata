@@ -190,6 +190,20 @@
       "when": 1794078352681,
       "tag": "0026_orders_seller_snapshot",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1794080674923,
+      "tag": "0027_modules",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1794080692035,
+      "tag": "0028_modules_access",
+      "breakpoints": true
     }
   ]
 }

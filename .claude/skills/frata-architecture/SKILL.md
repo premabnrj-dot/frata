@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.5.0
+  version: 2.6.0
   verified: 2026-11-07
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -179,6 +179,37 @@ export async function confirmOrder(input: unknown): Promise<{ ok: boolean; error
   seller GSTIN and each line's share of charges, at packing the seller's legal name
   and address (`orders.seller_name`, `seller_address`). A document reads the order,
   never today's settings.
+
+## Modules (M2 foundation, 2026-11-07, `check:modules`)
+
+Spec: `docs/specs/2026-11-07-modules-foundation.md`. A module is a feature a
+shop can have or not (Messages, RTO Shield, Reviews…).
+
+- **One registry**: `src/domains/modules/registry.ts` (`MODULE_KEYS`, `MODULES`).
+  Billing `core | plan | add_on`; `status: 'next'` until it is built. Plan
+  features are `PLAN_GRANTABLE` (the plan_versions CHECK is generated from it).
+- **"Usable" is decided once**: `moduleAccess(facts, now)` in
+  `src/domains/modules/access.ts` (granted by core, plan, add-on or trial;
+  switched on; not paused; dependencies usable). Badges and buttons come from
+  `offerFor()`. Never test a plan feature or an add-on row anywhere else.
+- **Facts**: `shopModules(tenantId, atIso)` (`src/lib/queries/modules.ts`),
+  cached per request. Admin reads the same facts through `merchantModules()`
+  (`src/lib/admin/modules.ts`) and still derives through `moduleAccess()`.
+- **Tables**: `tenant_modules` (the merchant's switch; app inserts and closes),
+  `tenant_addons` (granted by Frata only; app reads; admin inserts and may only
+  set `ends_at`), `addon_prices` (versions), `module_pauses` (platform-wide; one
+  open per module). Proof: tenancy check 29.
+- **A module's server action** goes through `asModule(module, roles, what, work)`
+  (a chokepoint in `check:actions`): it refuses in words, then runs as `asMember`.
+- **A module's outbox kinds** are listed in its `outboxKinds`. The cron asks
+  `outboxDecision()`: paused → the row waits (`deferRow`); off or not granted →
+  `markDead`. Switching a module off cancels its queued rows (`cancelQueued`).
+- **Core never imports a module.** A module's code lives in
+  `src/domains/<key>/`, `src/lib/modules/<key>/`, `src/components/modules/<key>/`,
+  `src/app/(console)/console/apps/<key>/`; core reaches it only through the hooks
+  `check:modules` lists: `<ModuleSlot name="order.side" | "home.tile">`
+  (`src/components/modules/slots.tsx`), the outbox cron, the console layout, the
+  webhooks. Add a filler to `FILLERS`, not an import to a core page.
 
 ## Outside world (ADR-0006)
 

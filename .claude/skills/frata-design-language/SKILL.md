@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 4.0.1
+  version: 4.1.0
   verified: 2026-11-07
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -61,6 +61,26 @@ from it).
 - A page that sells (the website, /partners) leads with the illustration and a
   numbers strip; steps are pictogram + 1–3 words + one short line; rules and
   details are pictogram + a title + an (i) tip.
+
+## Apps and modules (approved mockup v2, 2026-11-07)
+
+- **Console › Apps** (`/console/apps`, Store group; in More on a phone): modules
+  in three groups (Talk, Deliver, Grow), one `Section flush` list
+  each. A row: tile (`<Icon>` at 28 on a muted tile, `data-tinge` on the list; no haldi fill), name (a button that opens the details), the job in one
+  line, one badge from `offerFor()`, the action.
+- Badges: "Next", "In your plan", "Add-on · ₹499/mo", "In Growth and up",
+  "Trial · N days left", "Paused by Frrata". The action is a `role="switch"`
+  only when the module is usable to switch; otherwise "See details".
+- **Details dialog before getting an app**: title and job; "What you get" ✓
+  list; "Works with" with On/Off badges; a muted price panel (badge, price in
+  mono, "On your monthly Frrata bill · stop any time" for add-ons, the usage
+  line). Footer: "Not now" (focused) and the one action — the switch, "Add X ·
+  ₹499/mo" (a WhatsApp ask to Frrata, until billing), "See plans", or "Coming next".
+- Turning a module off asks once: "Turn off X?" · "Keep X" / "Turn off X".
+- **Admin**: merchant tabs Overview · Modules · Plan. The Modules tab is a table
+  (Module, Granted by, Merchant, Usable, action: "Give a 30-day trial of X",
+  "End trial"). Admin › Modules pauses a module "for everyone" with a reason;
+  the shop sees "Paused by Frrata". Admin writes are admin-role only.
 
 ## Partner workspace (approved mockup 2026-11-07)
 
