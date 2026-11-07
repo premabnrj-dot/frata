@@ -22,9 +22,8 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
       ...momentColumns, id: orders.id, number: orders.number,
       subtotal: orders.subtotal, shipping: orders.shipping, codCharge: orders.codCharge, gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst,
       customerName: orders.customerName, phone: orders.phone, addressLine: orders.addressLine, area: orders.area, landmark: orders.landmark,
-      pincode: orders.pincode, city: orders.city, state: orders.state, supplyState: orders.supplyState,
-      arrivesFrom: orders.arrivesFrom, arrivesTo: orders.arrivesTo, invoiceNumber: orders.invoiceNumber, cancelReason: orders.cancelReason, cancelNote: orders.cancelNote,
-      sellerGstin: orders.sellerGstin, erasedAt: orders.erasedAt,
+      pincode: orders.pincode, city: orders.city, state: orders.state,
+      invoiceNumber: orders.invoiceNumber, cancelReason: orders.cancelReason, cancelNote: orders.cancelNote, erasedAt: orders.erasedAt,
     }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.number, number))).limit(1)
     if (!o) return null
     const lines = await tx.select({
@@ -45,4 +44,3 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
   return { ...data, facts }
 }
 
-export type OrderDetail = NonNullable<Awaited<ReturnType<typeof orderDetail>>>

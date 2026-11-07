@@ -27,6 +27,8 @@ export type OrderActionsProps = {
   may: { hold: boolean; unhold: boolean; cancel: boolean; pack: boolean; confirm: boolean }
   /** High or unreadable risk: confirming is still allowed here (a person is looking), but it asks first. */
   riskWarning: string | null
+  /** A held order already paid online: Confirm releases it (it needs no confirming). */
+  heldPaid: boolean
   /** Paise to refund in Razorpay if cancelled (paid online), else 0. */
   refund: number
   refundLabel: string
@@ -60,9 +62,10 @@ function Actions(p: OrderActionsProps) {
     return r
   }
 
-  const confirm = () => run('confirmed', () => confirmOrder(p.orderId), true)
-  const primary = p.primary === 'confirm' ? { label: 'Confirm', go: () => (p.riskWarning ? setRiskOpen(true) : void confirm()) }
-    : p.primary === 'pack' ? { label: 'Mark packed', go: () => void run('packed', async () => { const r = await packOrder(p.orderId); return r.ok ? { ...r, ok: true } : r }) }
+  const confirm = () => run(p.heldPaid ? 'released from hold' : 'confirmed', () => confirmOrder(p.orderId), true)
+  // The primary button only when this person may do it (the action checks again): the role table can change.
+  const primary = p.primary === 'confirm' && p.may.confirm ? { label: p.heldPaid ? 'Release from hold' : 'Confirm', go: () => (p.riskWarning ? setRiskOpen(true) : void confirm()) }
+    : p.primary === 'pack' && p.may.pack ? { label: 'Mark packed', go: () => void run('packed', async () => { const r = await packOrder(p.orderId); return r.ok ? { ...r, ok: true } : r }) }
     : p.primary === 'cancel' && p.may.cancel ? { label: 'Cancel and refund…', go: () => setCancelOpen(true) } : null
 
   const items: MenuItem[] = [
@@ -98,7 +101,7 @@ function Actions(p: OrderActionsProps) {
         actions={<><Button variant="secondary" data-autofocus onClick={() => setRiskOpen(false)}>Not yet</Button><Button onClick={() => { setRiskOpen(false); void confirm() }}>Confirm anyway</Button></>} />
 
       <Dialog open={cancelOpen} onClose={() => { setCancelOpen(false); setError(null) }} title={`Cancel ${p.number}?`}
-        description={p.refund ? <>It was paid online: refund <strong>{p.refundLabel}</strong> in your Razorpay dashboard after cancelling. Frata does not move the money.</> : 'The customer is not told by Frata yet: tell them on WhatsApp or by phone.'}
+        description={p.refund ? <>It was paid online: refund <strong>{p.refundLabel}</strong> in your Razorpay dashboard after cancelling (Frata does not move the money). Frata does not tell the customer: tell them on WhatsApp or by phone.</> : 'Frata does not tell the customer: tell them on WhatsApp or by phone.'}
         actions={<><Button variant="secondary" data-autofocus onClick={() => { setCancelOpen(false); setError(null) }}>Keep the order</Button><Button variant="destructive" onClick={doCancel} aria-disabled={busy}>Cancel order</Button></>}>
         <fieldset className="grid gap-2">
           <legend className="mb-1 text-sm font-medium">Why?</legend>

@@ -4,7 +4,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
-import { collect, refundDue } from '@/domains/orders/amounts'
+import { collect, paidOnline } from '@/domains/orders/amounts'
 import { currentMethod, orderState, paidAfterSwitch } from '@/domains/orders/order-state'
 import { risk } from '@/domains/orders/risk'
 import { CANCEL_LABEL, may, primaryAction, type CancelReason } from '@/domains/orders/work'
@@ -57,10 +57,12 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   const s = STATE[state]
   const pay = method === 'cod' ? PAYMENT.cod : o.paidAt ? PAYMENT.paid : PAYMENT.unpaid
   const owed = collect(o)
-  const refund = refundDue({ ...o, cancelledAt: o.cancelledAt ?? now }) // what a cancel now would mean
+  // What a cancel would send back: what reached Razorpay (amounts.ts — after a switch the COD fee is already off).
+  const refund = paidOnline(o)
   const primary = primaryAction(state)
   const can = { confirm: may('confirm', state, role), hold: may('hold', state, role), unhold: may('unhold', state, role), cancel: may('cancel', state, role), pack: may('pack', state, role), edit: may('edit', state, role), note: may('note', state, role) }
-  const riskWarning = r && (r.level === 'high' || r.level === 'unknown') ? `${r.level === 'high' ? 'High risk' : 'Risk unavailable'}: ${r.reasons.join('; ') || r.next}. Confirm only once you have spoken to the customer.` : null
+  const why = (r?.reasons.join('; ') || r?.next || '').replace(/\.$/, '')
+  const riskWarning = r && (r.level === 'high' || r.level === 'unknown') ? `${r.level === 'high' ? 'High risk' : 'Risk unavailable'}: ${why}. Confirm only once you have spoken to the customer.` : null
   const history = [
     ...events.map((e) => ({ at: e.at, text: eventLabel(e, (x) => CANCEL_LABEL[x as CancelReason] ?? x), who: e.actorKind === 'support' ? `${e.actorEmail ?? ''} · Frata support` : e.actorEmail ?? 'Frata' })),
     { at: o.placedAt, text: method === 'cod' && !o.switchedToCodAt ? 'Placed · pay on delivery' : 'Placed · online', who: 'Customer' },
@@ -73,7 +75,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
       <PageHeader title={label} back={{ href: '/console/orders', label: 'Orders' }}
         badges={<><Badge tone={pay.tone}>{pay.label}</Badge><Badge tone={s.tone}>{s.label}</Badge></>}
         meta={<>Placed {dateTimeIN(o.placedAt)}{o.invoiceNumber ? <> · Invoice <span className="font-mono">{o.invoiceNumber}</span></> : null}</>}
-        actions={<OrderActions orderId={o.id} number={label} primary={primary === 'print_slip' ? null : primary} riskWarning={riskWarning}
+        actions={<OrderActions orderId={o.id} number={label} primary={primary === 'print_slip' ? null : primary} riskWarning={riskWarning} heldPaid={state === 'held' && !!o.paidAt}
           may={{ hold: can.hold, unhold: can.unhold, cancel: can.cancel, pack: can.pack, confirm: can.confirm }}
           refund={refund} refundLabel={formatInr(paise(refund))} stockTaken={lines.some((l) => l.stockTakenAt)} />} />
 
@@ -114,8 +116,10 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
             </dl>
             {/* The line the courier and the packer need, in words: never only a colour. */}
             <p className="border-t border-border pt-3 text-sm font-medium">
-              {state === 'cancelled' ? (o.paidAt ? <>Paid online, then cancelled: refund <Money paise={paise(Number(o.total))} /> in Razorpay.</> : 'Cancelled: nothing to collect.')
-                : state === 'refund_due' ? <>Paid after it sold out: cancel it, then refund <Money paise={paise(Number(o.total))} /> in Razorpay.</>
+              {state === 'cancelled' ? (refund ? <>Paid online, then cancelled: refund <Money paise={paise(refund)} /> in Razorpay.</> : 'Cancelled: nothing to collect.')
+                : state === 'refund_due' ? <>Paid after it sold out: cancel it, then refund <Money paise={paise(refund)} /> in Razorpay.{can.cancel ? null : ' Ask an owner or admin to cancel it.'}</>
+                : state === 'delivered' ? (method === 'cod' && !o.paidAt ? <>Delivered: <Money paise={paise(Number(o.total))} /> collected by the courier.</> : 'Delivered.')
+                : state === 'rto' || state === 'rto_received' ? 'Returned to you: nothing was collected.'
                 : paidAfterSwitch(o) ? 'Paid online — do not collect cash.'
                 : owed ? <>Collect <Money paise={paise(owed)} /> on delivery.</> : o.paidAt ? 'Paid online — collect nothing.' : 'Not paid yet.'}
             </p>

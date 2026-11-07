@@ -104,14 +104,17 @@ export async function unhold(tx: Tx, tenantId: string, actor: Actor, orderId: st
 export async function undo(tx: Tx, tenantId: string, actor: Actor, eventId: string, now = new Date()): Promise<Done> {
   const [e] = await tx.select({ id: orderEvents.id, orderId: orderEvents.orderId, kind: orderEvents.kind, at: orderEvents.at, reason: orderEvents.reason }).from(orderEvents)
     .where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.id, eventId)))
-  if (!e || (e.kind !== 'confirmed' && e.kind !== 'held')) return { ok: false, error: 'There is nothing to undo.' }
+  // confirmed, held, and unheld (Confirm on a held PAID order releases it: its undo puts the hold back; review 2026-11-07).
+  if (!e || (e.kind !== 'confirmed' && e.kind !== 'held' && e.kind !== 'unheld')) return { ok: false, error: 'There is nothing to undo.' }
   const [already] = await tx.select({ id: orderEvents.id }).from(orderEvents).where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.undoes, e.id)))
   if (already) return { ok: false, error: 'Already undone.' }
   const at = moment(now)
   const base = and(eq(orders.tenantId, tenantId), eq(orders.id, e.orderId), isNull(orders.packedAt), isNull(orders.cancelledAt))
   const r = e.kind === 'confirmed'
     ? await tx.update(orders).set({ confirmedAt: null, ...(e.reason === 'from_hold' ? { heldAt: at } : {}) }).where(and(base, eq(orders.confirmedAt, e.at))).returning({ id: orders.id })
-    : await tx.update(orders).set({ heldAt: null, ...(e.reason === 'from_confirmed' ? { confirmedAt: at } : {}) }).where(and(base, eq(orders.heldAt, e.at))).returning({ id: orders.id })
+    : e.kind === 'unheld'
+      ? await tx.update(orders).set({ heldAt: at }).where(and(base, isNull(orders.heldAt))).returning({ id: orders.id })
+      : await tx.update(orders).set({ heldAt: null, ...(e.reason === 'from_confirmed' ? { confirmedAt: at } : {}) }).where(and(base, eq(orders.heldAt, e.at))).returning({ id: orders.id })
   if (!r.length) {
     const c = await current(tx, tenantId, e.orderId, now)
     return { ok: false, error: c?.state === 'packed' ? 'Already packed — cancel it instead.' : 'This order changed since: open it to see what happened.' }
