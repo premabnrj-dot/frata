@@ -8,13 +8,15 @@
 
 import { type Paise, paise } from '@/domains/money/paise'
 import { deliveredFee } from '@/domains/plans/entitlements'
+import { LOW_BPS, split } from '@/domains/tax/gst'
 import { orderProfit, type OrderCosts } from './profit'
 
 /** What the shopper pays at the door, GST included. */
 export const EXAMPLE_COLLECT = paise(249_000)
 /** The example's assumptions, said on the page in a tip. */
 export const EXAMPLE_COSTS = { cogs: paise(99_000), forwardShipping: paise(7_000), rtoShipping: paise(7_000), codFee: paise(4_000), packaging: paise(2_500), adCost: paise(18_000) } as const
-const NET = paise(Math.round(EXAMPLE_COLLECT / 1.05))
+/** The order without its GST (clothing under the slab: the low rate), through the tax engine. */
+const NET = paise(split(EXAMPLE_COLLECT, LOW_BPS, true).taxable)
 
 export type ExampleOrder = { collect: Paise; fee: Paise; ifDelivered: Paise; ifReturned: Paise }
 

@@ -25,7 +25,7 @@ export const metadata = { title: { absolute: 'Frrata · Keep more of every order
 const CARDS: [IconName, string, string][] = [
   ['size', 'Sizes that fit', 'A chart per product type. Sold-out sizes shown.'],
   ['cod', 'COD on your terms', 'Limits, pincodes, a fee, and repeat-number flags.'],
-  ['shipped', 'Fast on any phone', 'Under two seconds on 4G. Pincode checked first.'],
+  ['shipped', 'Light on any phone', 'Made for 4G. Pincode checked before paying.'],
 ]
 const FAQ = [
   ['Do I need a developer?', 'No. Everything is set in the console.'],
@@ -42,8 +42,9 @@ export default async function Home() {
   const start = <Link href="/start" className={button({ variant: 'inverse', size: 'lg' })}>Start your shop free</Link>
   return (
     <div data-shell className={`min-h-dvh bg-background ${SHELL_FONT_VARS}`}>
+      <SiteStage><SiteHeader links={[{ href: '#how', label: 'How it works' }, { href: '#pricing', label: 'Pricing' }, { href: '/partners', label: 'Partners' }, { href: '/login', label: 'Sign in' }]} action={{ href: '/start', label: 'Start free' }} /></SiteStage>
+      <main id="content" tabIndex={-1} className="outline-none">
       <SiteStage>
-        <SiteHeader links={[{ href: '#how', label: 'How it works' }, { href: '#pricing', label: 'Pricing' }, { href: '/partners', label: 'Partners' }, { href: '/login', label: 'Sign in' }]} action={{ href: '/start', label: 'Start free' }} />
         <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 pt-8 pb-14 sm:px-8 md:grid-cols-[1.05fr_0.95fr]">
           <div className="grid gap-6">
             <p className="text-xs font-semibold tracking-widest text-primary-foreground/70 uppercase">For fashion brands on Instagram</p>
@@ -55,8 +56,6 @@ export default async function Home() {
         </section>
       </SiteStage>
       <Selvedge />
-
-      <main id="content" tabIndex={-1} className="outline-none">
         <NumberBand label="The terms" items={[['₹0', 'fee on a parcel that comes back'], ...(maxFee !== null ? [[`${maxFee.toLocaleString('en-IN')}%`, 'at most, on delivered orders'] as [string, string]] : []), ['1', 'afternoon to open'], ['0', 'apps to install']]} />
 
         <section id="how" className="mx-auto max-w-6xl px-4 py-16 sm:px-8">

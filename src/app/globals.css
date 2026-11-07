@@ -243,6 +243,9 @@
      (data-tinge: the navs and the More sheet). Outside one, icons are one colour: in a table, colour means status. */
   [data-tinge] { --icon-accent: var(--brand); }
   [data-surface="ink"] [data-tinge], [data-surface="ink"][data-tinge] { --icon-accent: var(--brand-on-ink); }
+  /* The /partners calculator (website spec W·1): no script — the checked radio's panel shows. Values: SHARE_CHOICES. */
+  [data-calc]:has(input[value="1"]:checked) [data-panel="1"], [data-calc]:has(input[value="3"]:checked) [data-panel="3"],
+  [data-calc]:has(input[value="5"]:checked) [data-panel="5"], [data-calc]:has(input[value="10"]:checked) [data-panel="10"] { display: grid; }
   /* A link in a working page: ink words, a thread-coloured underline (brand spec, chapter 5). */
   [data-shell] main#content a.underline { text-decoration-color: var(--thread); text-decoration-thickness: 1.5px; }
   [data-shell] :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }

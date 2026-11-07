@@ -32,7 +32,7 @@ const STEPS: [PictogramName, string, string][] = [
 const RULES: [PictogramName, string, string][] = [
   ['shield', 'The brand owns the store', 'Its customers and data too.'],
   ['owner', 'The brand can remove you', `Your share then runs ${T.noticeDays} more days.`],
-  ['clients', 'One partner per store', 'A shop the brand made itself stays theirs.'],
+  ['clients', 'One partner per store', 'A shop the brand made itself can’t be claimed.'],
   ['delivered', 'Fees only on delivered orders', 'A refused parcel earns nobody anything.'],
 ]
 const FAQ: [string, string][] = [
@@ -54,8 +54,9 @@ export default async function PartnersPage() {
   const wa = 'Hi Frrata, I build shops for brands. About the partner program.'
   return (
     <div data-shell className={`min-h-dvh bg-background ${SHELL_FONT_VARS}`}>
+      <SiteStage><SiteHeader section="Partners" links={[{ href: '/', label: 'For brands' }, { href: '/login', label: 'Sign in' }]} action={{ href: '/partners/apply', label: 'Apply' }} /></SiteStage>
+      <main id="content" tabIndex={-1} className="outline-none">
       <SiteStage>
-        <SiteHeader section="Partners" links={[{ href: '/', label: 'For brands' }, { href: '/login', label: 'Sign in' }]} action={{ href: '/partners/apply', label: 'Apply' }} />
         <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 pt-8 pb-14 sm:px-8 md:grid-cols-[1fr_1fr]">
           <div className="grid gap-6">
             <p className="text-xs font-semibold tracking-widest text-primary-foreground/70 uppercase">For developers, designers and agencies</p>
@@ -67,8 +68,6 @@ export default async function PartnersPage() {
         </section>
       </SiteStage>
       <Selvedge />
-
-      <main id="content" tabIndex={-1} className="outline-none">
         <NumberBand label="The terms" items={[[`${T.shareBps / 100}%`, 'of what Frrata collects'], [`${T.shareMonths}`, 'months, from opening'], ['₹0', 'added to the brand’s price'], [`${T.maxUnopened}`, 'shops in progress, free']]} />
 
         {ex && (
@@ -76,17 +75,22 @@ export default async function PartnersPage() {
             <h2 id="earn" className="mb-6 flex items-center font-display text-3xl font-semibold tracking-tight">What you’d earn
               <InfoTip about="this example">Example, not a promise: each brand on {ex.plan} with {EXAMPLE_BRAND.deliveredOrders} delivered orders of {formatInr(EXAMPLE_BRAND.orderValue)} a month. Frrata collects <Money paise={ex.frataCollects} /> from it; you get {T.shareBps / 100}%.</InfoTip>
             </h2>
-            <fieldset className="relative grid gap-4 pb-40 md:pb-32">
+            <fieldset data-calc className="grid gap-4">
               <legend className="mb-3 text-sm text-muted-foreground">Brands you build for</legend>
               <div className="flex flex-wrap gap-2">
                 {shareTable(ex).map((r) => (
-                  <label key={r.brands} className="cursor-pointer rounded-full border border-input bg-card px-4 py-2 font-mono text-sm font-semibold has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring [&:has(:checked)_[data-out]]:grid">
-                    <input type="radio" name="brands" value={r.brands} defaultChecked={r.brands === 5} className="sr-only" />{r.brands}
-                    <span data-out className="absolute inset-x-0 bottom-0 hidden gap-2 rounded-xl bg-primary p-5 font-sans text-primary-foreground sm:grid-cols-2">
-                      <span className="grid"><span className="text-sm font-normal text-primary-foreground/70">Each month</span><span className="font-mono text-3xl"><Money paise={r.perMonth} /></span></span>
-                      <span className="grid"><span className="text-sm font-normal text-primary-foreground/70">Over {T.shareMonths} months</span><span className="font-mono text-3xl"><Money paise={r.overTerm} /></span></span>
-                    </span>
+                  <label key={r.brands} className="cursor-pointer rounded-full border border-input bg-card px-4 py-2 font-mono text-sm font-semibold has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring">
+                    <input type="radio" name="brands" value={r.brands} defaultChecked={r.brands === 5} aria-describedby={`share-${r.brands}`} className="sr-only" />{r.brands}
                   </label>
+                ))}
+              </div>
+              {/* One cell; the checked radio's panel shows (globals.css [data-calc]). Each radio is described by its panel. */}
+              <div className="grid">
+                {shareTable(ex).map((r) => (
+                  <div key={r.brands} id={`share-${r.brands}`} data-panel={r.brands} className="col-start-1 row-start-1 hidden gap-2 rounded-xl bg-primary p-5 text-primary-foreground sm:grid-cols-2">
+                    <span className="grid"><span className="text-sm text-primary-foreground/70">Each month</span><span className="font-mono text-3xl"><Money paise={r.perMonth} /></span></span>
+                    <span className="grid"><span className="text-sm text-primary-foreground/70">Over {T.shareMonths} months</span><span className="font-mono text-3xl"><Money paise={r.overTerm} /></span></span>
+                  </div>
                 ))}
               </div>
             </fieldset>

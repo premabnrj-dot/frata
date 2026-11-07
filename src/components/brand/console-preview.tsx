@@ -1,19 +1,20 @@
 import { Money } from '@/components/data/numeric'
 import { type Paise, paise } from '@/domains/money/paise'
-import type { ExampleOrder } from '@/domains/orders/example'
+import { EXAMPLE_COSTS, type ExampleOrder } from '@/domains/orders/example'
+import { formatInr } from '@/lib/format'
 import { Monogram } from './monogram'
 
 // =============================================================================
 // FILE: src/components/brand/console-preview.tsx — the console, drawn for the website's hero (website spec W·1).
 //
 // A picture of the real Today screen and one order, filled with the example shop's data and marked "Example
-// shop". It is `inert`: nothing in it is a Tab stop or a link. Every money figure is handed in from
+// shop", with a caption. Nothing in it is a link or a Tab stop. Every money figure is handed in from
 // exampleOrder() (the profit engine), never typed here.
 // =============================================================================
 
 export function ConsolePreview({ order }: { order: ExampleOrder | null }) {
   return (
-    <figure inert aria-label="Example: the Frrata console" className="m-0 min-w-0 overflow-hidden rounded-xl bg-background text-foreground ring-1 ring-primary-foreground/15">
+    <figure className="m-0 min-w-0 overflow-hidden rounded-xl bg-background text-foreground ring-1 ring-primary-foreground/15">
       <div className="flex items-center gap-2.5 border-b border-border bg-card px-3.5 py-2.5 text-sm">
         <Monogram size={24} /><b>Kesar Studio</b>
         <span className="ml-auto rounded-sm bg-muted px-1.5 py-0.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Example shop</span>
@@ -34,12 +35,13 @@ export function ConsolePreview({ order }: { order: ExampleOrder | null }) {
             <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1">
               <dt>To collect</dt><dd className="text-right"><Money paise={order.collect} /></dd>
               <dt>Frrata fee, if delivered</dt><dd className="text-right"><Money paise={order.fee} /></dd>
-              <dt className="border-t border-border pt-1.5 font-semibold">You keep, if delivered</dt><dd className="border-t border-border pt-1.5 text-right font-semibold text-ok-text"><Money paise={order.ifDelivered} /></dd>
-              <dt className="text-muted-foreground">If it comes back</dt><dd className="text-right"><Money paise={order.ifReturned} /></dd>
+              <dt className="border-t border-border pt-1.5 font-semibold">You keep, if delivered <span className="ml-1 rounded-sm bg-info px-1 text-xs font-semibold text-info-text">Next</span></dt><dd className="border-t border-border pt-1.5 text-right font-semibold text-ok-text"><Money paise={order.ifDelivered} /></dd>
+              <dt className="text-muted-foreground">If it comes back <span className="ml-1 rounded-sm bg-info px-1 text-xs font-semibold text-info-text">Next</span></dt><dd className="text-right"><Money paise={order.ifReturned} /></dd>
             </dl>
           )}
         </div>
       </div>
+      <figcaption className="border-t border-border bg-card px-3.5 py-2 text-xs text-muted-foreground">Example shop. Kurta cost {formatInr(EXAMPLE_COSTS.cogs)}, shipping {formatInr(EXAMPLE_COSTS.forwardShipping)} each way, ads {formatInr(EXAMPLE_COSTS.adCost)}.</figcaption>
     </figure>
   )
 }
@@ -47,17 +49,18 @@ export function ConsolePreview({ order }: { order: ExampleOrder | null }) {
 /** A partner's workspace, drawn for /partners: example clients and the share each earns (from shareExample()). */
 export function EarningsPreview({ share, brands }: { share: Paise; brands: string[] }) {
   return (
-    <figure inert aria-label="Example: a partner's clients" className="m-0 min-w-0 overflow-hidden rounded-xl bg-background text-foreground ring-1 ring-primary-foreground/15">
+    <figure className="m-0 min-w-0 overflow-hidden rounded-xl bg-background text-foreground ring-1 ring-primary-foreground/15">
       <div className="flex items-center gap-2.5 border-b border-border bg-card px-3.5 py-2.5 text-sm">
         <Monogram size={24} /><b>Your clients</b>
         <span className="ml-auto rounded-sm bg-muted px-1.5 py-0.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Example</span>
       </div>
       <div className="grid gap-3 p-4">
-        <div><span className="text-xs text-muted-foreground">Your share this month</span><p className="font-mono text-3xl font-semibold"><Money paise={paise(share * brands.length)} /></p></div>
+        <div><span className="text-xs text-muted-foreground">Your share this month <span className="ml-1 rounded-sm bg-info px-1 font-semibold text-info-text">Next</span></span><p className="font-mono text-3xl font-semibold"><Money paise={paise(share * brands.length)} /></p></div>
         <table className="w-full text-sm"><tbody>
           {brands.map((b) => <tr key={b} className="border-t border-border"><td className="py-1.5">{b}</td><td className="py-1.5 text-right"><Money paise={share} decimals /></td></tr>)}
         </tbody></table>
       </div>
+      <figcaption className="border-t border-border bg-card px-3.5 py-2 text-xs text-muted-foreground">Example · ex GST · paid monthly once Frrata billing starts.</figcaption>
     </figure>
   )
 }
