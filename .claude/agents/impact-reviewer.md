@@ -31,7 +31,7 @@ Then, for the scope given (`git diff --stat <range>`, then the full diff):
 3. **Duplicates.** A fact the diff computes that already has a home (state in
    `src/domains/orders/order-state.ts`, money in `src/domains/money/`, profit
    in `src/domains/orders/profit.ts`, SQL predicates in
-   `src/lib/queries/order-predicates.ts` once it exists, GST in
+   `src/lib/db/order-predicates.ts` once it exists, GST in
    `src/domains/tax/`): finding, with the home to use.
 4. **Debt.** Files over their `check-size` budget or within 10% of it; new
    `TODO`/`FIXME` without an owner and date; dead exports (no caller); jsonb

@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { currentMethod, orderState, paidAfterSwitch } from '@/domains/orders/order-state'
+import { collect } from '@/domains/orders/amounts'
+import { currentMethod, orderState, paidAfterSwitch, shopperState } from '@/domains/orders/order-state'
 import { maskPhone } from '@/domains/checkout/address'
 import { LIMITS } from '@/lib/db/rate-limit'
 import { withTenant } from '@/lib/db/tenant'
@@ -20,7 +21,8 @@ export async function POST(request: Request) {
   if (!data.o || !data.shop) return reply({ error: 'Not found' }, 404)
   const o = data.o
   return reply({
-    number: o.number, state: orderState(o), method: currentMethod(o), paidAfterSwitch: paidAfterSwitch(o), canSwitchToCod: o.paymentMethod === 'prepaid' && !o.paidAt && !o.switchedToCodAt && !o.cancelledAt,
+    // Never the internal state (held, refund due) or why an order was cancelled: shopperState() only.
+    number: o.number, state: shopperState(orderState(o)), collect: collect(o), method: currentMethod(o), paidAfterSwitch: paidAfterSwitch(o), canSwitchToCod: o.paymentMethod === 'prepaid' && !o.paidAt && !o.switchedToCodAt && !o.cancelledAt,
     subtotal: o.subtotal, shipping: o.shipping, codCharge: o.codCharge, gstTotal: o.gstTotal, total: o.total, pricesIncludeGst: o.pricesIncludeGst,
     firstName: o.customerName.split(' ')[0] ?? '', to: `${o.city} ${o.pincode}`.trim(), phone: maskPhone(o.phone),
     arrives: o.arrivesFrom && o.arrivesTo ? { from: o.arrivesFrom, to: o.arrivesTo } : null, returnDays: o.returnDays, returnKind: o.returnKind,

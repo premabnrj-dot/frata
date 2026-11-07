@@ -5,13 +5,15 @@ const now = new Date('2026-11-07T10:00:00+05:30')
 const rules: ShopRules = { shippingFlat: 7900, freeShippingAbove: 199900, codOn: true, codMin: 0, codMax: 300000, codCharge: 4900, codBlockedPincodes: ['110001'], pricesIncludeGst: true, registered: true, dispatchDays: 2, metroDays: 4, restDays: 7 }
 const v = (id: string, over: Partial<VariantRow> = {}): VariantRow => ({
   variantId: id, productId: 'p', handle: 'kurta', title: 'Linen kurta set', status: 'active', publishAt: null, options: ['Size'], values: ['M'], sku: 'KS-1', price: 249000, compareAt: null,
-  stock: 5, whenOut: 'stop', shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderCap: null, held: 0, preordered: 0, hsn: '6211', image: null, ...over,
+  stock: 5, whenOut: 'stop', shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderCap: null, held: 0, preordered: 0, owed: 0, hsn: '6211', image: null, ...over,
 })
 
 describe('what can be sold', () => {
   it('takes held units off stock (holds are derived)', () => {
     expect(sellable(v('a', { stock: 3, held: 2 }), 2, now)).toEqual({ qty: 1, kind: 'in_stock', problem: 'reduced' })
     expect(sellable(v('a', { stock: 2, held: 2 }), 1, now)).toEqual({ qty: 0, kind: 'in_stock', problem: 'sold_out' })
+    // Stock that arrived for unpacked pre-orders is theirs first.
+    expect(sellable(v('a', { stock: 3, owed: 2 }), 2, now)).toEqual({ qty: 1, kind: 'in_stock', problem: 'reduced' })
   })
   it('pre-orders up to the cap once stock is gone; never mixes kinds', () => {
     const p = { stock: 0, whenOut: 'preorder' as const, shipsBy: '2026-12-15', preorderCap: 3 }

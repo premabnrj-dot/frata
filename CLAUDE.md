@@ -115,7 +115,9 @@ policies. Environment variables live in Vercel; `.env.example` lists names only.
 
 - **A Supabase service-role key.** Nothing needs one; its absence is the point.
 - **Data access through PostgREST / supabase-js from the browser.** Supabase is
-  auth only; `anon` and `authenticated` hold no grant on any table.
+  auth only; `anon` and `authenticated` hold no grant on any table, and the
+  Data API is switched off (owner, 2026-11-07: `service_role` keeps Supabase's
+  default grants, so the REST endpoint must stay off). Never turn it back on.
 - **A cross-brand shopper data network.** Not before DPDP consent design
   (obligations from 13 May 2027) and a decision superseding ADR-0002.
 - **Instagram in-app checkout.** Not available in India; DMs create assisted orders.

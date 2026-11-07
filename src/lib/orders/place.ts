@@ -59,7 +59,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     const shop = await checkoutShop(tx, tenantId)
     if (!shop || !shop.open) return { kind: 'refused', status: 404, error: 'This shop is not taking orders right now.' }
     // Abandoned online orders keep their row and lines for counts, but not the shopper's details past 90 days (spec, retention).
-    await tx.update(orders).set({ customerName: '', phone: '', addressLine: '', landmark: '', erasedAt: now })
+    await tx.update(orders).set({ customerName: '', phone: '', addressLine: '', area: '', landmark: '', erasedAt: now })
       .where(and(eq(orders.tenantId, tenantId), isNull(orders.erasedAt), isNull(orders.paidAt), isNull(orders.switchedToCodAt), eq(orders.paymentMethod, 'prepaid'),
         sql`${orders.placedAt} < ${new Date(now.getTime() - 90 * 86_400_000).toISOString()}::timestamptz`))
     if (input.method === 'prepaid' && !shop.online) return { kind: 'refused', status: 422, error: 'Online payment is not available at this shop right now. Pay on delivery instead.' }
@@ -88,16 +88,17 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
       id, tenantId, number, paymentMethod: input.method,
       subtotal: q.subtotal, shipping: q.shipping, codCharge: m.codCharge, gstTotal: m.gst, total: m.total, pricesIncludeGst: shop.pricesIncludeGst,
       merchandiseNet: q.merchandiseNet, cogs,
-      customerName: input.address.name, phone: input.address.phone, addressLine: `${input.address.addressLine}, ${input.address.area}`, landmark: input.address.landmark,
-      pincode: input.address.pincode, city: input.address.city, state: input.address.state, supplyState: input.address.state, shopState: gstinState(shop.gstin),
+      customerName: input.address.name, phone: input.address.phone, addressLine: input.address.addressLine, area: input.address.area, landmark: input.address.landmark,
+      pincode: input.address.pincode, city: input.address.city, state: input.address.state, supplyState: input.address.state, shopState: gstinState(shop.gstin), sellerGstin: shop.gstin,
       arrivesFrom: q.arrives?.from ?? null, arrivesTo: q.arrives?.to ?? null, returnDays: shop.returnDays, returnKind: shop.returnKind,
       tokenHash: tokenHash(orderToken(id)), idempotencyKey: input.idempotencyKey, requestHash: reqHash,
       payBy: cod ? null : new Date(now.getTime() + HOLD_MINUTES * 60_000),
       checkout: { shown: { prepaid: q.prepaid.total, cod: q.cod.offer.offered ? q.cod.total : null, codCharge: shop.codCharge }, firstMethod: input.facts.firstMethod ?? null,
-        attribution: input.facts.attribution ?? {}, onlineTotal: q.prepaid.total, stockTaken: cod },
+        attribution: input.facts.attribution ?? {}, onlineTotal: q.prepaid.total },
       placedAt: now,
     })
     await tx.insert(orderLines).values(live.map((l, position) => ({
+      ...m.shares[position]!,
       tenantId, orderId: id, variantId: l.variantId, productId: l.productId, title: l.title, optionValues: l.values, sku: l.sku,
       imageBase: l.image?.base ?? null, imageWidths: l.image?.widths ?? null, qty: l.qty, unitPrice: l.unitPrice, compareAt: l.compareAt,
       taxableValue: l.taxable, gstBps: l.gstBps, gst: l.gst, hsn: l.hsn, unitCost: costs.get(l.variantId) ?? null,
@@ -114,22 +115,25 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
 }
 
 /**
- * Take the stock of an order's in-stock lines (COD at placement or switch, online at capture), once.
- * False when a line can no longer be covered (a capture that landed after its hold expired and the piece sold).
+ * Take the stock of an order's lines of `kind` whose stock is not taken yet (in_stock: COD at placement or
+ * switch, online at capture; preorder: at packing). Each line is stamped when its stock leaves the shelf —
+ * only the lines actually taken — so a second call takes nothing and a cancel puts back exactly what was taken.
+ * Returns the lines that could not be covered (a capture after its hold expired and the piece sold: refund due).
  */
-export async function takeStock(tx: Tx, tenantId: string, orderId: string): Promise<boolean> {
-  const lines = await tx.select({ variantId: orderLines.variantId, qty: orderLines.qty }).from(orderLines)
-    .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId), eq(orderLines.kind, 'in_stock')))
-  let ok = true
+export async function takeStock(tx: Tx, tenantId: string, orderId: string, kind: 'in_stock' | 'preorder' = 'in_stock'): Promise<{ short: number }> {
+  const lines = await tx.select({ id: orderLines.id, variantId: orderLines.variantId, qty: orderLines.qty }).from(orderLines)
+    .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId), eq(orderLines.kind, kind), isNull(orderLines.stockTakenAt)))
+  let short = 0
+  // Variants in id order, as variantRows locks them: no deadlock between two orders sharing pieces.
   for (const l of [...lines].sort((a, b) => String(a.variantId).localeCompare(String(b.variantId)))) {
-    if (!l.variantId) continue
+    if (!l.variantId) { short++; continue }
     const r = await tx.update(variants).set({ stock: sql`${variants.stock} - ${l.qty}` })
       .where(and(eq(variants.tenantId, tenantId), eq(variants.id, l.variantId), sql`${variants.stock} >= ${l.qty}`)).returning({ id: variants.id })
-    if (!r.length) ok = false
+    if (!r.length) { short++; continue }
+    await tx.update(orderLines).set({ stockTakenAt: sql`now()` })
+      .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.id, l.id), isNull(orderLines.stockTakenAt)))
   }
-  await tx.update(orders).set({ checkout: sql`coalesce(${orders.checkout}, '{}'::jsonb) || ${JSON.stringify({ stockTaken: true, ...(ok ? {} : { outOfStockOnPayment: true }) })}::jsonb` })
-    .where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId)))
-  return ok
+  return { short }
 }
 
 /**
