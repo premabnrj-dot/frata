@@ -11,6 +11,9 @@ export const USERS = {
   staff: { id: 'cccccccc-0000-0000-0000-000000000002', email: 'arjun@kesarstudio.in' },
   // Frata staff (platform_staff), for Admin and support visits. Added by the flows that need it (90-ux), not the seed.
   frata: { id: 'cccccccc-0000-0000-0000-000000000009', email: 'meera@frata.test' },
+  // A partner who builds stores, and the brand owner a store is handed to (40-partners adds both).
+  partner: { id: 'cccccccc-0000-0000-0000-000000000010', email: 'pia@studio.test' },
+  brand: { id: 'cccccccc-0000-0000-0000-000000000011', email: 'neha@brandco.test' },
 }
 export const RZP_KEYS = { id: 'rzp_live_FrataTest01', secret: 'testsecret12345678abcd' }
 

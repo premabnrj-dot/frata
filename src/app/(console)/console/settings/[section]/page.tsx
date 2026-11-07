@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { Panel } from '@/components/ui/panel'
 import { fiscalYear } from '@/domains/counters/fiscal-year'
 import { formValues, sectionFor } from '@/domains/settings/sections'
-import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
+import { CAN_BUILD, requireMember } from '@/lib/auth/require-member'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 import { policyOverrides, shopWithSettings } from '@/lib/queries/settings'
 import { shopFacts, storedValues } from '../_components/facts'
@@ -13,11 +13,12 @@ export async function generateMetadata({ params }: { params: Promise<{ section: 
 }
 
 export default async function SettingsSectionPage({ params }: { params: Promise<{ section: string }> }) {
-  const auth = await requireMember(CAN_MANAGE)
-  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or an admin can change settings' : auth.message} />
+  const auth = await requireMember(CAN_BUILD)
+  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'You can’t change this shop’s settings' : auth.message} />
   const { section: key } = await params
   const section = sectionFor(key)
   if (!section) notFound()
+  if (!section.editors.includes(auth.membership.role)) return <Panel title="Only the owner or an admin can change this" />
   const tenantId = auth.membership.tenantId
   const [shop, overrides] = await Promise.all([
     shopWithSettings(tenantId),

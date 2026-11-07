@@ -10,6 +10,11 @@ import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { toConfirmCount } from '@/lib/queries/orders'
 import { supportVisit } from '@/lib/queries/support'
 import { TenantCheck } from '@/components/shell/tenant-check'
+import type { Place } from '@/components/shell/app-shell'
+import { BuildingBanner } from '@/components/nav/building-banner'
+import { myPartner, partnerClients } from '@/lib/db/partners'
+import { clientStage } from '@/domains/partners/stage'
+import { ROLE_LABEL } from '@/domains/tenancy/roles'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,8 +61,19 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     )
   }
   const now = new Date()
-  const { tenantId, tenantName, supportSessionId } = auth.membership
+  const { tenantId, tenantName, supportSessionId, role } = auth.membership
   const visit = supportSessionId ? await supportVisit(tenantId, supportSessionId) : null
+  // A partner in a store with no owner yet: the building banner and Hand over (approved mockup screen 7).
+  const logged = <T,>(fallback: T) => (err: unknown) => { console.error('[console layout] partner', err instanceof Error ? err.name : err); return fallback }
+  const partner = role === 'partner' ? await myPartner(auth.userId).catch(logged(null)) : null
+  const client = partner ? (await partnerClients(auth.userId).catch(logged([]))).find((c) => c.tenantId === tenantId) : undefined
+  // The stage is clientStage's, the one home (src/domains/partners/stage.ts): the banner shows while there is no owner.
+  const stage = client ? clientStage({ removedAt: client.removedAt, openInviteExpiresAt: client.inviteExpiresAt, hasOwner: !!client.ownerEmail, firstOpenedAt: client.firstOpenedAt }, now) : null
+  const building = client && (stage === 'building' || stage === 'invited') ? client : null
+  const places: Place[] = [
+    ...(partner?.approvedAt ? [{ href: '/partner', name: 'Partner workspace', role: '', current: false }] : []),
+    ...auth.all.filter((m) => !m.supportSessionId).map((m) => ({ href: '/console', name: m.tenantName, role: ROLE_LABEL[m.role], current: m.tenantId === tenantId, tenantId: m.tenantId })),
+  ]
   const pill = <Suspense fallback={null}><ToConfirmPill tenantId={tenantId} /></Suspense>
   const home: NavItem = { href: '/console', label: 'Home', icon: 'home', exact: true }
   const orders: NavItem = { href: '/console/orders', label: 'Orders', icon: 'orders', badge: pill }
@@ -70,8 +86,11 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   if (auth.staffRole !== null && !supportSessionId) foot.push({ href: '/admin', label: 'Frata Admin', icon: 'admin' })
   return (
     <AppShell title={tenantName} navLabel="Console" groups={groups} tabs={[home, orders, products]} more={[collections, settings, activity]} foot={foot}
-      email={auth.email} tenantId={tenantId} banner={visit ? <SupportBanner storeName={tenantName} visit={visit} now={now} /> : undefined}>
-      <TenantCheck tenantId={tenantId} staff={auth.staffRole !== null} />
+      email={auth.email} tenantId={tenantId} places={places}
+      banner={visit ? <SupportBanner storeName={tenantName} visit={visit} now={now} />
+        : building ? <BuildingBanner shop={tenantName} inviteEmail={building.inviteEmail} /> : undefined}>
+      {/* Anyone who can be in two places checks which shop each page is for (tenancy audit 2026-11-07). */}
+      <TenantCheck tenantId={tenantId} staff={auth.staffRole !== null || places.length > 1} />
       {children}
     </AppShell>
   )

@@ -6,13 +6,14 @@ import { parseSection, sectionFor, type Values } from '@/domains/settings/sectio
 import { POLICY_PAGES } from '@/domains/policies/render'
 import { hostFor, refreshHosts, refreshShop } from '@/lib/queries/storefront'
 import { asMember } from '@/lib/auth/as-member'
-import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
+import { CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { changeShopAddress } from '@/lib/db/platform'
 import { auditEvents, shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { slugProblem } from '@/domains/signup/slug'
 import { shopWithSettings } from '@/lib/queries/settings'
 
-// Settings are changed by an owner or admin (CAN_MANAGE). Each save checks the
+// Each section says who may save it (`editors`: owners, admins and the store's partner for the shop's own
+// settings); the shop's address stays CAN_MANAGE. Each save checks the
 // section's values with the same definition the form drew (src/domains/settings/
 // sections.ts), carries the version the page loaded (two tabs never overwrite
 // each other silently), and leaves an Activity row with who changed what.
@@ -42,7 +43,7 @@ export async function saveSection(sectionKey: string, values: Values, version: n
   if (!parsed.ok) return { ok: false, error: 'Some fields need a look before saving.', errors: parsed.errors }
   const { name, ...columns } = parsed.patch
   try {
-    const r = await asMember(CAN_MANAGE, { action: `settings.${section.key}`, detail: { fields: Object.keys(parsed.patch) } }, async (tx, auth) => {
+    const r = await asMember(section.editors, { action: `settings.${section.key}`, detail: { fields: Object.keys(parsed.patch) } }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
       const [row] = await tx.update(shopSettings)
         .set({ ...(columns as Partial<typeof shopSettings.$inferInsert>), version: sql`${shopSettings.version} + 1`, updatedAt: new Date() })
@@ -72,7 +73,7 @@ export async function savePolicyText(kind: string, body: string | null): Promise
   const text = body?.trim() ?? null
   if (text !== null && (text.length < 1 || text.length > 20000)) return { ok: false, error: 'Between 1 and 20,000 characters.' }
   try {
-    const r = await asMember(CAN_MANAGE, { action: `policy.${text === null ? 'reset' : 'edit'}`, target: kind }, async (tx, auth) => {
+    const r = await asMember(CAN_BUILD, { action: `policy.${text === null ? 'reset' : 'edit'}`, target: kind }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
       if (text === null) await tx.delete(shopPolicies).where(and(eq(shopPolicies.tenantId, tenantId), eq(shopPolicies.kind, kind)))
       else await tx.insert(shopPolicies).values({ tenantId, kind, body: text, updatedBy: auth.userId })

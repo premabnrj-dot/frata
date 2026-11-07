@@ -543,4 +543,101 @@ do $$ begin
   if (select pg_get_function_result('app_shops_to_erase(timestamptz)'::regprocedure)) <> 'SETOF uuid' then raise exception 'FAIL: the erasure list returns more than ids'; end if;
 end $$;
 
-\echo 'tenancy proof — all 27 checks passed'
+-- 28. Partners (docs/specs/2026-11-07-partner-foundations.md, review findings in the plan).
+-- P approved partner, Q applicant, O the brand's owner, X anyone else.
+insert into auth.users (id, email, email_confirmed_at) values
+  ('aaaaaaaa-0000-0000-0000-000000000010', 'p@studio.test', now()),
+  ('aaaaaaaa-0000-0000-0000-000000000011', 'q@studio.test', now()),
+  ('aaaaaaaa-0000-0000-0000-000000000012', 'owner@brand.test', now()),
+  ('aaaaaaaa-0000-0000-0000-000000000013', 'x@else.test', now());
+begin; set local role frata_app;
+do $$ declare t uuid; t2 uuid; n int; inv uuid; m jsonb; begin
+  -- the app cannot read or write partners, nor write a link
+  begin perform 1 from partners; raise exception 'FAIL: app reads partners'; exception when insufficient_privilege then null; end;
+  begin insert into partner_links (tenant_id, partner_id, share_bps, share_months, notice_days) values ('11111111-1111-1111-1111-111111111111', gen_random_uuid(), 1, 1, 1); raise exception 'FAIL: app wrote a link'; exception when insufficient_privilege then null; end;
+  -- apply: both apply; nobody is approved yet, so nobody can make a store
+  perform app_partner_apply('aaaaaaaa-0000-0000-0000-000000000010', 'Pia', 'Pia Studio', '919845012345', 'Jaipur', '{setup,design}', '', '1-4', 1);
+  perform app_partner_apply('aaaaaaaa-0000-0000-0000-000000000011', 'Quinn', '', '919845012346', 'Surat', '{}', '', '0', 1);
+  begin perform app_partner_create_shop('aaaaaaaa-0000-0000-0000-000000000011', 'Q shop', 'proof-q', '302001', 2000, 24, 90, 10); raise exception 'FAIL: an applicant made a store';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
+end $$;
+commit;
+update partners set approved_at = now() where user_id = 'aaaaaaaa-0000-0000-0000-000000000010';
+update partners set declined_at = now() where user_id = 'aaaaaaaa-0000-0000-0000-000000000011';
+begin; set local role frata_app;
+do $$ declare t uuid; n int; inv uuid; m jsonb; begin
+  begin perform app_partner_apply('aaaaaaaa-0000-0000-0000-000000000011', 'Quinn again', '', '919845012346', 'Surat', '{}', '', '0', 1); raise exception 'FAIL: a declined application was changed';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'decided' then raise; end if; end;
+  begin perform app_partner_create_shop('aaaaaaaa-0000-0000-0000-000000000011', 'Q shop', 'proof-q', '302001', 2000, 24, 90, 10); raise exception 'FAIL: a declined partner made a store';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
+  t := app_partner_create_shop('aaaaaaaa-0000-0000-0000-000000000010', 'Proof P', 'proof-p', '302001', 2000, 24, 90, 1);
+  -- the cap counts stores that have not opened
+  begin perform app_partner_create_shop('aaaaaaaa-0000-0000-0000-000000000010', 'Proof P2', 'proof-p2', '302001', 2000, 24, 90, 1); raise exception 'FAIL: past the cap of unopened stores';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'too_many' then raise; end if; end;
+  m := app_access_for('aaaaaaaa-0000-0000-0000-000000000010');
+  if jsonb_array_length(m->'memberships') <> 1 or m->'memberships'->0->>'role' <> 'partner' then raise exception 'FAIL: partner membership (%)', m; end if;
+  if (select count(*) from app_partner_clients('aaaaaaaa-0000-0000-0000-000000000010')) <> 1 then raise exception 'FAIL: partner clients'; end if;
+  if exists (select 1 from app_partner_clients('aaaaaaaa-0000-0000-0000-000000000011')) or exists (select 1 from app_partner_clients('aaaaaaaa-0000-0000-0000-000000000013')) then raise exception 'FAIL: another person sees P clients'; end if;
+  -- links: own shop only
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  if exists (select 1 from partner_links) then raise exception 'FAIL: A sees P shop link'; end if;
+  if exists (select 1 from app_shop_people() where role = 'partner') then raise exception 'FAIL: A lists P shop people'; end if;
+  perform set_config('app.tenant_id', t::text, true);
+  if (select count(*) from partner_links) <> 1 or (select share_bps from partner_links) <> 2000 then raise exception 'FAIL: P shop link'; end if;
+  perform set_config('app.tenant_id', '', true);
+  -- handover: only the linked partner; never to a member's own email; one open owner invite
+  begin perform app_handover_invite(t, 'aaaaaaaa-0000-0000-0000-000000000013', 'x@else.test'); raise exception 'FAIL: a stranger handed over P shop';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
+  begin perform app_handover_invite(t, 'aaaaaaaa-0000-0000-0000-000000000010', 'P@Studio.test'); raise exception 'FAIL: partner handed the store to themself';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'member_email' then raise; end if; end;
+  perform app_handover_invite(t, 'aaaaaaaa-0000-0000-0000-000000000010', 'first@brand.test');
+  inv := app_handover_invite(t, 'aaaaaaaa-0000-0000-0000-000000000010', 'Owner@Brand.test');
+  -- sign-in does not claim a handover; it waits for Accept
+  if app_claim_invites('aaaaaaaa-0000-0000-0000-000000000012') <> 0 then raise exception 'FAIL: sign-in claimed a handover'; end if;
+  if (select count(*) from app_my_handovers('aaaaaaaa-0000-0000-0000-000000000012')) <> 1 then raise exception 'FAIL: owner does not see the handover'; end if;
+  if exists (select 1 from app_my_handovers('aaaaaaaa-0000-0000-0000-000000000013')) then raise exception 'FAIL: a stranger sees the handover'; end if;
+  begin perform app_accept_handover('aaaaaaaa-0000-0000-0000-000000000013', inv); raise exception 'FAIL: a stranger accepted the handover';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'no_invite' then raise; end if; end;
+  if app_accept_handover('aaaaaaaa-0000-0000-0000-000000000012', inv) <> t then raise exception 'FAIL: accept'; end if;
+  begin perform app_handover_invite(t, 'aaaaaaaa-0000-0000-0000-000000000010', 'later@brand.test'); raise exception 'FAIL: handover after an owner exists';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'has_owner' then raise; end if; end;
+  -- People: the shop's own, the partner named
+  perform set_config('app.tenant_id', t::text, true);
+  if (select count(*) from app_shop_people()) <> 2 or (select partner_name from app_shop_people() where role = 'partner') <> 'Pia Studio' then raise exception 'FAIL: P shop people'; end if;
+  perform set_config('app.tenant_id', '', true);
+  -- removal: never by the partner; by the owner it ends the link, the membership and the partner's invites
+  begin perform app_remove_partner(t, 'aaaaaaaa-0000-0000-0000-000000000010'); raise exception 'FAIL: the partner removed themself as owner';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  begin perform app_remove_partner('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000012'); raise exception 'FAIL: an owner removed a partner from another shop';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  perform app_remove_partner(t, 'aaaaaaaa-0000-0000-0000-000000000012');
+  if exists (select 1 from jsonb_array_elements(app_access_for('aaaaaaaa-0000-0000-0000-000000000010')->'memberships') e where e->>'tenantId' = t::text) then raise exception 'FAIL: removed partner keeps access'; end if;
+  if exists (select 1 from app_partner_clients('aaaaaaaa-0000-0000-0000-000000000010') where slug is not null or owner_email is not null or plan_name is not null) then raise exception 'FAIL: removed partner still sees the shop details'; end if;
+end $$;
+commit;
+-- the window starts at the FIRST opening and never restarts
+do $$ declare t uuid := (select id from tenants where slug = 'proof-p'); s timestamptz; begin
+  insert into partner_links (tenant_id, partner_id, share_bps, share_months, notice_days)
+    select t, id, 2000, 24, 90 from partners where user_id = 'aaaaaaaa-0000-0000-0000-000000000010';
+  update shop_settings set published_at = now() - interval '1 day' where tenant_id = t;
+  select share_starts_at into s from partner_links where tenant_id = t and removed_at is null;
+  if s is null then raise exception 'FAIL: opening did not start the share'; end if;
+  update shop_settings set published_at = null where tenant_id = t;
+  update shop_settings set published_at = now() where tenant_id = t;
+  if (select share_starts_at from partner_links where tenant_id = t and removed_at is null) <> s then raise exception 'FAIL: reopening restarted the share'; end if;
+  begin insert into members (tenant_id, user_id, role) values (t, 'aaaaaaaa-0000-0000-0000-000000000013', 'boss'); raise exception 'FAIL: an unknown role';
+  exception when check_violation then null; end;
+  begin insert into invites (tenant_id, email, role, created_by) values (t, 'y@else.test', 'partner', 'aaaaaaaa-0000-0000-0000-000000000012'); raise exception 'FAIL: a partner was invited';
+  exception when check_violation then null; end;
+  if has_function_privilege('anon', 'app_partner_create_shop(uuid, text, text, text, integer, integer, integer, integer)', 'execute')
+     or has_function_privilege('authenticated', 'app_accept_handover(uuid, uuid)', 'execute')
+     or has_function_privilege('service_role', 'app_remove_partner(uuid, uuid)', 'execute')
+     or has_function_privilege('anon', 'app_shop_people()', 'execute')
+     or has_function_privilege('authenticated', 'app_my_partner(uuid)', 'execute')
+     or has_function_privilege('frata_admin', 'app_partner_create_shop(uuid, text, text, text, integer, integer, integer, integer)', 'execute') then
+    raise exception 'FAIL: a partner function is callable by the wrong role'; end if;
+  if has_table_privilege('authenticated', 'partners', 'select') or has_table_privilege('anon', 'partner_links', 'select') or has_table_privilege('service_role', 'partners', 'select')
+     or has_table_privilege('frata_app', 'partners', 'select') then raise exception 'FAIL: partners readable by the wrong role'; end if;
+end $$;
+
+\echo 'tenancy proof — all 28 checks passed'

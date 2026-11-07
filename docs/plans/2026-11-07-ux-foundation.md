@@ -147,7 +147,7 @@ direction holds. Every finding is taken:
   - The Admin "needs attention" pill (T3/A9) is dropped: computing it on every Admin page means reading every merchant's plan, owner and orders, and the merchants list already shows those facts. Signal to bring it back: more than about 50 merchants.
 
 **U·2a as built (2026-11-07), after tenancy-auditor (SAFE) and impact-reviewer:**
-- `AppShell({ ink, title, staffTag, groups, tabs, more, foot, email, tenantId, banner })` in `src/components/shell/`.
+- `AppShell({ ink, title, tag, places, groups, tabs, more, foot, email, tenantId, banner })` (`tag`: STAFF or PARTNER, replaced `staffTag` 2026-11-07) in `src/components/shell/`.
 - The client islands are `nav.tsx` (SidebarNav, and BottomBar with a native modal `<dialog>` More sheet), `nav-progress.tsx`, `tenant-check.tsx` and `announce.ts`.
 - The pill is `toConfirmCount` (cached per tenant, streamed in Suspense). The Admin pill is dropped.
 - Sign out lives in `src/app/(admin)/admin/sign-out/actions.ts`. It ends a visit with audit detail `{ by: 'sign-out' }`, signs out this device only (`scope: 'local'`), and nothing in it can stop the sign-out.

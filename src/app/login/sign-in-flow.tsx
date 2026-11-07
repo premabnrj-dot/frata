@@ -14,7 +14,7 @@ const RESEND_SECONDS = 60 // Supabase refuses a second email to one address with
  * too; the code is for a merchant who reads mail on another device. One flow
  * for signing in and signing up: an unknown email becomes a new account.
  */
-export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start'; linkFailed?: boolean }) {
+export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start' | 'partner'; linkFailed?: boolean }) {
   const router = useRouter()
   const [step, setStep] = useState<'email' | 'code'>(linkFailed ? 'code' : 'email')
   const [back, setBack] = useState(false)
@@ -53,6 +53,8 @@ export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start';
     start(async () => {
       const r = await verifyCode({ email, code: c })
       if (!r.ok) { setError(r.error); setCode(''); return }
+      // Applying as a partner: stay on the application unless a workspace or a waiting store comes first.
+      if (intent === 'partner' && r.to !== '/partner' && r.to !== '/handover' && r.to !== '/admin' && r.to !== '/choose') { router.refresh(); return }
       router.replace(r.to)
       router.refresh()
     })
@@ -76,7 +78,7 @@ export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start';
           </p>
         </div>
         <Button type="submit" disabled={pending} size="lg" className="w-full">
-          {pending ? 'Sending…' : intent === 'start' ? 'Email me a code' : 'Email me a sign-in code'}
+          {pending ? 'Sending…' : intent === 'signin' ? 'Email me a sign-in code' : 'Email me a code'}
         </Button>
         {intent === 'start' && <p className="text-xs text-muted-foreground">Free to build and preview. No card.</p>}
       </form>

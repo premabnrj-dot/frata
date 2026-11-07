@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { SHELL_FONT_VARS } from '@/components/shell/fonts'
+import { ROLE_LABEL } from '@/domains/tenancy/roles'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,7 +28,7 @@ export default async function ChoosePage() {
         {own.map((m) => (
           <Link key={m.tenantId} href="/console" className="flex items-center gap-3 rounded-md border border-input p-4">
             <span aria-hidden="true" className="flex size-10 items-center justify-center rounded-md bg-muted text-xs font-bold text-brand">{m.tenantName.slice(0, 2).toUpperCase()}</span>
-            <span className="flex-1"><span className="block font-semibold">{m.tenantName}</span><span className="text-sm text-muted-foreground">Your store&apos;s console · {m.role[0]!.toUpperCase() + m.role.slice(1)}</span></span>
+            <span className="flex-1"><span className="block font-semibold">{m.tenantName}</span><span className="text-sm text-muted-foreground">Your store&apos;s console · {ROLE_LABEL[m.role]}</span></span>
           </Link>
         ))}
         <p className="text-sm text-muted-foreground">You can switch at any time: Admin links to your store, and your store&apos;s menu links back to Admin.</p>

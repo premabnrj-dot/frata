@@ -49,6 +49,10 @@
   --ok-mark: #1E7B52; --warn-mark: #A86400; --danger-mark: #C02A2F; --info-mark: #3451B2;
   /* The support-mode banner (ADR-0007) and nothing else. */
   --support: #8A5000; --support-foreground: #FFFFFF;
+  /* ILLUSTRATION — pictograms and spot illustrations only (frata-design-language § Graphic language).
+     Ink line on paper, one warm fill, two accents. Never on a control, never oxblood, never the only sign of anything. */
+  --illo-line: #1C1917; --illo-paper: #FFFFFF; --illo-fill: #EFEBE5;
+  --illo-haldi: #E8B04B; --illo-haldi-soft: #FBEFD2; --illo-indigo-soft: #DCE3F5;
 
   --radius: 0.375rem;
 }
@@ -84,6 +88,8 @@
   --neutral: #262320; --neutral-text: #A9A29B;
   --ok-mark: #7FD3A6; --warn-mark: #F2C14E; --danger-mark: #F59A9C; --info-mark: #A3B6F5;
   --support: #8A5000; --support-foreground: #FFFFFF;
+  --illo-line: #EDEAE6; --illo-paper: #1C1A18; --illo-fill: #2A2623;
+  --illo-haldi: #D9A440; --illo-haldi-soft: #3A3018; --illo-indigo-soft: #222B44;
 }
 
 @theme inline {
@@ -124,6 +130,12 @@
   --color-info-mark: var(--info-mark);
   --color-support: var(--support);
   --color-support-foreground: var(--support-foreground);
+  --color-illo-line: var(--illo-line);
+  --color-illo-paper: var(--illo-paper);
+  --color-illo-fill: var(--illo-fill);
+  --color-illo-haldi: var(--illo-haldi);
+  --color-illo-haldi-soft: var(--illo-haldi-soft);
+  --color-illo-indigo-soft: var(--illo-indigo-soft);
 
   /* The Section title (every card, Console and Admin): text-section font-semibold. Never --text-card (collides with --color-card). */
   --text-section: 15px;

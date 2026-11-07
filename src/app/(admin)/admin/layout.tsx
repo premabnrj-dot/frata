@@ -43,12 +43,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // The same shell as the console; Admin differs only in chrome (ink, reversed mark, STAFF). No count pill (plan U · A9).
   const merchants: NavItem = { href: '/admin/merchants', label: 'Merchants', icon: 'merchants' }
   const plans: NavItem = { href: '/admin/plans', label: 'Plans', icon: 'plans' }
+  const partnersItem: NavItem = { href: '/admin/partners', label: 'Partners', icon: 'staff' }
   const staffItem: NavItem = { href: '/admin/staff', label: 'Staff', icon: 'staff' }
   const activity: NavItem = { href: '/admin/activity', label: 'Activity', icon: 'activity' }
   const foot: NavItem[] = ownStore ? [{ href: '/console', label: `${ownStore} console`, icon: 'external' }] : []
   return (
-    <AppShell ink title="Frata Admin" staffTag navLabel="Admin" groups={[{ label: 'Merchants', items: [merchants, plans] }, { label: 'Frata', items: [staffItem, activity] }]}
-      tabs={[merchants, plans, staffItem]} more={[activity]} foot={foot} email={staff.email}>
+    <AppShell ink title="Frata Admin" tag="STAFF" navLabel="Admin" groups={[{ label: 'Merchants', items: [merchants, partnersItem, plans] }, { label: 'Frata', items: [staffItem, activity] }]}
+      tabs={[merchants, plans, staffItem]} more={[partnersItem, activity]} foot={foot} email={staff.email}>
       {children}
     </AppShell>
   )

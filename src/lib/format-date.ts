@@ -18,6 +18,10 @@ export const dayIN = (d: Date) =>
 export const dayMonthIN = (d: Date) =>
   d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: IST })
 
+/** "Aug 2028" — a month a window ends in. */
+export const monthYearIN = (d: Date) =>
+  d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric', timeZone: IST })
+
 /** "12 October" — said in a sentence to a customer. */
 export const dayMonthLongIN = (d: Date) =>
   d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', timeZone: IST })

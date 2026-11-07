@@ -2,12 +2,75 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 3.3.0
+  version: 3.4.0
   verified: 2026-11-07
   covers: ["src/app/globals.css", "src/components/**"]
 ---
 
 # Frata design language
+
+## Voice (owner, 2026-11-07) — every word on every surface
+
+Clear, effective, short. Frata talks like a good tool: it says what is true and
+what to do, then stops. Our readers know their work; partners know how a store
+is built. We never explain the obvious.
+
+1. **Fewest words that are still true.** A headline is up to 8 words, a line up
+   to 15, a button 1–4 words naming the outcome ("Send invite", "Accept Kesar
+   Studio"). Sentence case. No exclamation marks, no emoji.
+2. **Lead with the verb or the number.** "Earn 20% for 24 months", not "You
+   can earn…". Numbers beat adjectives: ₹, %, days.
+3. **One idea per line.** Two ideas are two lines or a list.
+4. **Explanation goes in an (i) tip or a dialog, never a passage on the page**
+   (§ Labels, info tips). What stays visible: errors, a limit someone must meet,
+   money, legal wording, a risk reason.
+5. **Filler is banned** (`check:voice` holds the list: simply, easily,
+   seamless, powerful, unlock, leverage, robust, hassle-free, kindly…). Say
+   what the thing does instead.
+6. **The reader's words.** Merchant: order, delivery, payout, profit. Partner:
+   store, client, owner, share. Never ours: tenant, link, member row.
+7. **Second person, present tense, active.** "You", "we" for Frata. On a
+   partner's screens the merchant is "the brand"; on the merchant's, "you".
+
+## Graphic language (owner, 2026-11-07)
+
+Pictures carry the model; words label it. One drawing rule, used everywhere a
+graphic appears: the website, the partner workspace, empty states there.
+
+- **Pictograms** (`src/components/brand/pictogram.tsx`): a 48 grid, 4 px margin,
+  a **2 px ink line**, round caps and joins, paper inside, **one haldi accent
+  shape**, at most one warm fill. 32, 48 or 64 px. Names: store, build,
+  handover, earn, delivered, clients, owner, calendar, shield, apply. A new one
+  follows the same rule and joins `PICTOGRAMS`.
+- **A pictogram always sits on its tile** (`PictoTile`: 64 px, radius 12,
+  fill / haldi-soft / indigo-soft). Never loose, never coloured another way.
+- **Spot illustrations** (`src/components/brand/illustrations.tsx`) are built
+  from pictograms on a haldi-soft field, flat, no perspective, no faces, no
+  stock art. One per page at most (the hero).
+- **Tokens**: `--illo-line`, `--illo-paper`, `--illo-fill`, `--illo-haldi`,
+  `--illo-haldi-soft`, `--illo-indigo-soft` (globals.css, both themes). Never
+  oxblood (rule 6), never on a control, never the only sign of anything:
+  every graphic is `aria-hidden` beside words that say the same.
+- **UI icons stay lucide** (§ UX foundation rule 20). Pictograms are not icons.
+- **Rule 20's "no illustrations in empty states" is superseded for the website
+  and the partner workspace only** (owner, 2026-11-07): an empty state there may
+  lead with one `PictoTile`. The console and Admin keep rule 20.
+- A page that sells (the website, /partners) leads with the illustration and a
+  numbers strip; steps are pictogram + 1–3 words + one short line; rules and
+  details are pictogram + a title + an (i) tip.
+
+## Partner workspace (approved mockup 2026-11-07)
+
+- `/partner` uses the console's `AppShell` with `tag="PARTNER"` (info pair).
+  Admin keeps ink + STAFF. Nav: Clients, Your details.
+- A store with no owner shows the **building banner** (info pair, sticky, one
+  line: "Building for <shop> · No owner yet · Hand over") on every console page.
+- Client stages are derived (`src/domains/partners/stage.ts`) and shown as
+  badges with words: Building, Invite sent, With the owner, Open, Removed. A
+  removed store is dimmed with colour and has no actions.
+- **F3 store switcher**: in the account block at every width and in More on
+  phones, only with two or more places to go; it lists what app_access_for
+  returned, current one marked.
 
 Two surfaces, two looks. **The console is neutral, dense and numeric. The
 fashion lives in the storefront.** Patterns below are taken from Ekatan's admin

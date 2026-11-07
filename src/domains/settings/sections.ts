@@ -9,6 +9,7 @@
 // =============================================================================
 
 import { EMAIL_SHAPE, PINCODE_SHAPE } from '../signup/slug'
+import { CAN_BUILD, type MemberRole } from '../tenancy/roles'
 
 export type FieldKind = 'text' | 'textarea' | 'email' | 'phone' | 'rupees' | 'days' | 'select' | 'switch' | 'gstin' | 'hsn' | 'pincodes'
 
@@ -27,7 +28,11 @@ export type Block = { title: string; hint?: string; fields: Field[] }
 
 export type SectionKey = 'store' | 'contact' | 'brand' | 'policies' | 'payments' | 'shipping' | 'taxes'
 
-export type Section = { key: SectionKey; title: string; intro: string; blocks: Block[]; preview: 'footer' | 'contact' | 'brand' | 'policy' | 'checkout' | 'invoice' }
+/**
+ * `editors`: who may open and save this section (tenancy audit 2026-11-07). Required, so a new section decides
+ * it on purpose: a section that holds keys, people or money a partner must not touch says CAN_MANAGE or ['owner'].
+ */
+export type Section = { key: SectionKey; title: string; intro: string; blocks: Block[]; preview: 'footer' | 'contact' | 'brand' | 'policy' | 'checkout' | 'invoice'; editors: readonly MemberRole[] }
 
 export const ACCENT_OPTIONS = [['oxide', 'Oxide'], ['indigo', 'Indigo'], ['moss', 'Moss'], ['wine', 'Wine'], ['ink', 'Ink']] as const
 export const FONT_OPTIONS = [['fraunces', 'Fraunces (serif)'], ['cormorant', 'Cormorant (light serif)'], ['inter', 'Inter (plain)']] as const
@@ -38,6 +43,7 @@ const LAW = 'Shown on your shop’s Contact page and footer, as the Consumer Pro
 
 export const SECTIONS: readonly Section[] = [
   {
+    editors: CAN_BUILD,
     key: 'store', title: 'Store details', intro: 'Your shop’s name and the business behind it.', preview: 'footer',
     blocks: [
       { title: 'Your shop', fields: [
@@ -52,6 +58,7 @@ export const SECTIONS: readonly Section[] = [
     ],
   },
   {
+    editors: CAN_BUILD,
     key: 'contact', title: 'Contact and grievance officer', intro: 'How shoppers reach you, and who answers a complaint.', preview: 'contact',
     blocks: [
       { title: 'How shoppers reach you', fields: [
@@ -69,6 +76,7 @@ export const SECTIONS: readonly Section[] = [
     ],
   },
   {
+    editors: CAN_BUILD,
     key: 'brand', title: 'Brand', intro: 'How your shop looks. Buttons stay ink so they always read; your colour marks the details.', preview: 'brand',
     blocks: [
       { title: 'Look', fields: [
@@ -79,6 +87,7 @@ export const SECTIONS: readonly Section[] = [
     ],
   },
   {
+    editors: CAN_BUILD,
     key: 'policies', title: 'Policies', intro: 'Five pages written from your settings. Change a setting and the pages follow.', preview: 'policy',
     blocks: [
       { title: 'Returns', fields: [
@@ -88,6 +97,7 @@ export const SECTIONS: readonly Section[] = [
     ],
   },
   {
+    editors: CAN_BUILD,
     key: 'payments', title: 'Pay on delivery', intro: 'Your rules for cash and UPI on delivery. UPI and cards online come with Razorpay.', preview: 'checkout',
     blocks: [
       { title: 'Pay on delivery', fields: [
@@ -100,6 +110,7 @@ export const SECTIONS: readonly Section[] = [
     ],
   },
   {
+    editors: CAN_BUILD,
     key: 'shipping', title: 'Shipping and delivery', intro: 'What shoppers pay for delivery and how long it takes.', preview: 'checkout',
     blocks: [
       { title: 'What shoppers pay', fields: [
@@ -114,6 +125,7 @@ export const SECTIONS: readonly Section[] = [
     ],
   },
   {
+    editors: CAN_BUILD,
     key: 'taxes', title: 'Taxes and invoices', intro: 'GST on your prices and invoices.', preview: 'invoice',
     blocks: [
       { title: 'GST', fields: [

@@ -1,5 +1,6 @@
 import { Suspense, type CSSProperties, type ReactNode } from 'react'
 import { signOutAction } from '@/app/(admin)/admin/sign-out/actions'
+import { switchStoreAction } from '@/app/choose/actions'
 import { ANNOUNCER_ID } from './announce'
 import { SHELL_FONT_VARS } from './fonts'
 import { BottomBar, SidebarNav, type NavGroup, type NavItem } from './nav'
@@ -24,8 +25,10 @@ export type ShellProps = {
   ink?: boolean
   /** Name in the sidebar and phone top bar (the shop, or "Frata Admin"). */
   title: string
-  /** STAFF tag, Admin only. */
-  staffTag?: boolean
+  /** STAFF on Admin, PARTNER on the partner workspace (frata-design-language § Partner workspace). */
+  tag?: 'STAFF' | 'PARTNER'
+  /** Every place this person can be (F3 store switcher): shown only when there are two or more. */
+  places?: Place[]
   navLabel: string
   groups: NavGroup[]
   tabs: NavItem[]
@@ -37,6 +40,49 @@ export type ShellProps = {
   tenantId?: string
   banner?: ReactNode
   children: ReactNode
+}
+
+export type Place = { href: string; name: string; role: string; current: boolean; tenantId?: string }
+
+function Tag({ tag }: { tag?: 'STAFF' | 'PARTNER' }) {
+  if (!tag) return null
+  return <span className={`ml-1.5 rounded-sm px-1.5 align-middle text-xs font-semibold ${tag === 'STAFF' ? 'bg-warn text-warn-text' : 'bg-info text-info-text'}`}>{tag}</span>
+}
+
+/**
+ * F3 · one switcher for everyone with two or more places (a partner, an owner with two brands). It lists only what
+ * app_access_for returned; choosing a store posts its id to switchStoreAction, which sets frata_tenant only to one
+ * of those. A <details>, so it works before any script loads.
+ */
+function Switcher({ places, ink }: { places: Place[]; ink: boolean }) {
+  if (places.length < 2) return null
+  const here = places.find((p) => p.current)
+  return (
+    <details className="group relative px-2 py-1">
+      <summary className={`flex min-h-9 cursor-pointer list-none items-center justify-between gap-2 rounded-md border px-2 text-sm font-medium ${ink ? 'border-primary-foreground/30' : 'border-input'}`}>
+        <span className="truncate">{here ? here.name : 'Switch'}</span><span aria-hidden="true" className="text-xs">▾</span>
+        <span className="sr-only">: switch store</span>
+      </summary>
+      <ul className="absolute bottom-full left-2 right-2 z-40 mb-1 max-h-80 overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground">
+        {places.map((p) => (
+          <li key={p.href + (p.tenantId ?? '')}>
+            {p.tenantId ? (
+              <form action={switchStoreAction}>
+                <input type="hidden" name="tenantId" value={p.tenantId} />
+                <button type="submit" aria-current={p.current || undefined} className={`flex min-h-9 w-full items-center justify-between gap-2 rounded-md px-2 text-left text-sm hover:bg-accent ${p.current ? 'bg-accent font-semibold' : ''}`}>
+                  <span className="truncate">{p.name}</span><span className="shrink-0 text-xs text-muted-foreground">{p.role}</span>
+                </button>
+              </form>
+            ) : (
+              <a href={p.href} aria-current={p.current || undefined} className={`flex min-h-9 items-center justify-between gap-2 rounded-md px-2 text-sm hover:bg-accent ${p.current ? 'bg-accent font-semibold' : ''}`}>
+                <span className="truncate">{p.name}</span><span className="shrink-0 text-xs text-muted-foreground">{p.role}</span>
+              </a>
+            )}
+          </li>
+        ))}
+      </ul>
+    </details>
+  )
 }
 
 function Mark({ ink }: { ink: boolean }) {
@@ -55,7 +101,7 @@ function Account({ email, ink }: { email: string | null; ink: boolean }) {
   )
 }
 
-export function AppShell({ ink = false, title, staffTag = false, navLabel, groups, tabs, more, foot, email, tenantId, banner, children }: ShellProps) {
+export function AppShell({ ink = false, title, tag, places = [], navLabel, groups, tabs, more, foot, email, tenantId, banner, children }: ShellProps) {
   const surface = ink ? 'ink' : undefined
   return (
     <div data-shell data-tenant={tenantId} style={{ '--shell-top': banner ? '2.75rem' : '0px' } as CSSProperties /* the banner's own height reads this too */} className={`min-h-dvh bg-background ${SHELL_FONT_VARS}`}>
@@ -67,23 +113,24 @@ export function AppShell({ ink = false, title, staffTag = false, navLabel, group
           <div className="flex items-center gap-2.5 px-1.5 pb-2">
             <Mark ink={ink} />
             <div className="min-w-0">
-              <p className="line-clamp-2 text-sm font-semibold leading-tight" title={title}>{title}{staffTag && <span className="ml-1.5 rounded-sm bg-warn px-1.5 align-middle text-xs font-semibold text-warn-text">STAFF</span>}</p>
+              <p className="line-clamp-2 text-sm font-semibold leading-tight" title={title}>{title}<Tag tag={tag} /></p>
             </div>
           </div>
           <SidebarNav label={navLabel} groups={groups} ink={ink} />
           <div className={`mt-auto flex flex-col gap-0.5 border-t pt-2 ${ink ? 'border-primary-foreground/15' : 'border-border'}`}>
             {foot.length > 0 && <SidebarNav label={`${navLabel}: more`} groups={[{ label: '', items: foot }]} ink={ink} />}
+            <Switcher places={places} ink={ink} />
             <Account email={email} ink={ink} />
           </div>
         </aside>
         <header data-surface={surface} className={`flex h-12 items-center gap-2.5 border-b px-4 md:hidden print:hidden ${ink ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card'}`}>
           <Mark ink={ink} />
           <span className="min-w-0 truncate text-sm font-semibold">{title}</span>
-          {staffTag && <span className="rounded-sm bg-warn px-1.5 text-xs font-semibold text-warn-text">STAFF</span>}
+          <Tag tag={tag} />
         </header>
         <main id="content" tabIndex={-1} className="min-w-0 flex-1 space-y-6 p-4 pb-24 outline-none md:p-6">{children}</main>
       </div>
-      <BottomBar label={navLabel} tabs={tabs} more={[...more, ...foot]} ink={ink} moreFoot={<Account email={email} ink={false} />} />
+      <BottomBar label={navLabel} tabs={tabs} more={[...more, ...foot]} ink={ink} moreFoot={<><Switcher places={places} ink={false} /><Account email={email} ink={false} /></>} />
       <div id={ANNOUNCER_ID} aria-live="polite" aria-atomic="true" className="sr-only" />
     </div>
   )

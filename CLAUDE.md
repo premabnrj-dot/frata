@@ -86,7 +86,7 @@ run a new gate against the file that describes it.
 ## Before you commit
 
 ```bash
-npm test          # check:hex layers dates fetch config size tenant actions states contrast scale, then vitest
+npm test          # check:hex layers dates fetch config size tenant actions states contrast scale voice, then vitest
 npm run typecheck
 ```
 

@@ -4,7 +4,7 @@ import { supabaseFetch } from '@/lib/http/timeout'
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isAuthConfigured } from '@/lib/public-env'
 
 /**
- * Refreshes the auth cookie and bounces a signed-out visit to /console, /admin or /choose.
+ * Refreshes the auth cookie and bounces a signed-out visit to /console, /admin, /choose, /partner or /handover.
  *
  * ⚠️ getUser(), never getSession(): getSession() trusts the cookie without
  * asking the auth server, so a forged cookie passes.
@@ -29,7 +29,7 @@ export async function updateSession(request: NextRequest, response: NextResponse
 
   const { data: { user } } = await supabase.auth.getUser()
   const path = request.nextUrl.pathname
-  const guarded = ['/console', '/admin', '/choose'].some((r) => path === r || path.startsWith(`${r}/`))
+  const guarded = ['/console', '/admin', '/choose', '/partner', '/handover'].some((r) => path === r || path.startsWith(`${r}/`))
   if (!user && guarded) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'

@@ -6,7 +6,7 @@ const notFound = vi.fn(() => { throw new Error('NEXT_NOT_FOUND') })
 const requireMember = vi.fn(async () => ({ ok: true }))
 const env = { E2E_FIXTURES: false }
 vi.mock('next/navigation', () => ({ notFound }))
-vi.mock('@/lib/auth/require-member', () => ({ ANY_MEMBER: ['owner', 'admin', 'staff'], requireMember }))
+vi.mock('@/lib/auth/require-member', () => ({ ANY_MEMBER: ['owner', 'admin', 'staff', 'partner'], requireMember }))
 vi.mock('@/lib/env', () => env)
 vi.mock('../primitives', () => ({ Primitives: () => null }))
 

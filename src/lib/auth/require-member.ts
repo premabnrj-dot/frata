@@ -51,4 +51,4 @@ export const requireMember = cache(async (allowed: readonly MemberRole[]): Promi
   return { ok: true, userId: user.id, email: user.email ?? null, membership, all: access.memberships, staffRole: access.staffRole }
 })
 
-export { ANY_MEMBER, CAN_MANAGE } from '@/domains/tenancy/roles'
+export { ANY_MEMBER, CAN_BUILD, CAN_MANAGE } from '@/domains/tenancy/roles'

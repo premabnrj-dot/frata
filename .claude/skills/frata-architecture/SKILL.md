@@ -2,8 +2,8 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.1.1
-  verified: 2026-11-06
+  version: 2.2.0
+  verified: 2026-11-07
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
 ---
@@ -69,8 +69,24 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - Supabase auth only (magic link, `src/app/login/`). Data never goes through
   supabase-js or PostgREST; `anon`/`authenticated` hold no table grants.
 - Always `getUser()`, never `getSession()` (`check:layers`).
-- Signing in grants nothing; a `members` row does. Roles: owner, admin, staff
-  (`MEMBER_ROLES`); tuples `ANY_MEMBER`, `CAN_MANAGE`.
+- Signing in grants nothing; a `members` row does. Roles: owner, admin, staff,
+  partner (`MEMBER_ROLES`); tuples `ANY_MEMBER` (everyone, partner included),
+  `CAN_BUILD` (owner, admin, partner: catalogue, the look, the shop's own
+  settings), `CAN_MANAGE` (owner, admin: people, the address, opening the shop).
+  Payment keys are `['owner']`.
+- **Adding a role: read every caller of the tuple it joins** before it joins
+  (2026-11-07). A settings section declares its own `editors`
+  (`src/domains/settings/sections.ts`), read by its page, its save and the brand
+  upload, so a new section decides who edits it on purpose.
+- **Partners** (`docs/specs/2026-11-07-partner-foundations.md`): a partner is a
+  member with role `partner`, never a cross-tenant role. Their workspace reads
+  only Frata's own facts about their stores, through uid-keyed definer
+  functions in `src/lib/db/partners.ts` (drizzle/0023). `requirePartner()` is the
+  workspace's first line (`check:actions`). `partners` has no frata_app grant.
+  The attribution is `partner_links.created_at`, written once; the share's
+  window starts at `share_starts_at` (first opening, a trigger) and terms are
+  snapshotted from `PARTNER_TERMS`. A handover invite is never claimed at
+  sign-in: it waits for Accept (`app_accept_handover`).
 - A layout refuses with a panel, never a redirect (frata-gotchas) — and its
   check guards nothing below it: **every page and action calls
   `requireMember` itself.** It returns `not_configured` rather than throwing

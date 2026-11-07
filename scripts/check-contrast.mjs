@@ -25,6 +25,13 @@ const STATUS = ['ok', 'warn', 'danger', 'info', 'neutral']
 const DECORATIVE = {
   border: 'separates content (cards, table rules); never the only sign of a control (rule 2)',
   scrim: 'the veil behind an open dialog (the ink at 45%); nothing is read on it',
+  // Illustration (frata-design-language § Graphic language): aria-hidden, the same words always beside them.
+  'illo-line': 'pictogram and illustration strokes; decorative, the meaning is in the text beside',
+  'illo-paper': 'illustration paper',
+  'illo-fill': 'illustration warm fill',
+  'illo-haldi': 'illustration accent',
+  'illo-haldi-soft': 'illustration accent, pale',
+  'illo-indigo-soft': 'illustration second accent, pale',
 }
 
 export function pairs() {

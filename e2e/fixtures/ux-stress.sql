@@ -60,8 +60,9 @@ from products p cross join unnest(array['S','M','L']) with ordinality as u(sz, o
 where p.handle like 'stress-product-%';
 
 -- Meera: Frata staff (admin) and a member of Kesar.
-insert into auth.users (id, email, email_confirmed_at, last_sign_in_at) values ('cccccccc-0000-0000-0000-000000000009', 'meera@frata.test', now(), now());
-insert into platform_staff (user_id, email, role) values ('cccccccc-0000-0000-0000-000000000009', 'meera@frata.test', 'admin');
+insert into auth.users (id, email, email_confirmed_at, last_sign_in_at) values ('cccccccc-0000-0000-0000-000000000009', 'meera@frata.test', now(), now()) on conflict (id) do nothing;
+-- 40-partners adds her too (she approves a partner), so both tolerate the other.
+insert into platform_staff (user_id, email, role) values ('cccccccc-0000-0000-0000-000000000009', 'meera@frata.test', 'admin') on conflict (user_id) do nothing;
 insert into members (tenant_id, user_id, role) values ('d7342b03-4f9e-45db-b5e0-3760967cb3c7', 'cccccccc-0000-0000-0000-000000000009', 'admin');
 
 -- 60 more merchants (ids eeeeeeee-0000-4000-8000-0000000000NN, owners dddddddd-…-0000000000NN).

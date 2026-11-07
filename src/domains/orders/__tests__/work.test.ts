@@ -43,3 +43,12 @@ describe('invoice numbers', () => {
     expect(() => invoiceNumber({ series: 'KESR/', orderPrefix: 'KS', fiscalYear: '26-27', n: 100_000, kind: 'invoice' })).toThrow(/16/)
   })
 })
+
+describe('a partner (approved scope: products, orders, settings, the look)', () => {
+  it('works orders like staff, never cancels or edits one', () => {
+    expect(may('confirm', 'unconfirmed', 'partner')).toBe(true)
+    expect(may('pack', 'confirmed', 'partner')).toBe(true)
+    expect(may('cancel', 'unconfirmed', 'partner')).toBe(false)
+    expect(may('edit', 'unconfirmed', 'partner')).toBe(false)
+  })
+})

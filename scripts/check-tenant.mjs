@@ -51,7 +51,10 @@ const TENANT_IN_APP = {
 }
 const DATA_MODULE = /(?:from\s+|import\(\s*)['"]@\/lib\/(?:queries|db|admin|auth)(?:\/[^'"]*)?['"]/
 /** Actions the shell may import from src/app (they are endpoints, not reads), with why. */
-const SHELL_ACTIONS = { '@/app/(admin)/admin/sign-out/actions': 'Sign out: ends a live support visit (needs src/lib/admin, so it lives under Admin)' }
+const SHELL_ACTIONS = {
+  '@/app/(admin)/admin/sign-out/actions': 'Sign out: ends a live support visit (needs src/lib/admin, so it lives under Admin)',
+  '@/app/choose/actions': 'Switch store (F3): sets frata_tenant only to a store app_access_for returned',
+}
 /**
  * The file's code (comment lines skipped, as code() does) with every relative import written as its @/ path, so
  * '../../lib/db/tenant' cannot slip past a rule written for '@/lib/db/tenant' (tenancy audit of U·2a).

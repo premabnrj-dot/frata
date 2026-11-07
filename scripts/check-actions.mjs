@@ -17,7 +17,7 @@ import { join } from 'node:path'
 
 /** Functions that establish who is calling, and refuse who may not. */
 // shopRequest (src/lib/http/shop-api.ts) is requireShop plus a Zod body and a per-shop limit, for /api/shop/*.
-const CHOKEPOINTS = ['requireMember', 'requireStaff', 'asMember', 'requireUser', 'requireShop', 'shopRequest']
+const CHOKEPOINTS = ['requireMember', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'requireShop', 'shopRequest']
 
 /** Entry points that check their own credential: file → [what it is, a token that must appear in it]. */
 const ENTRY_POINTS = {
@@ -57,6 +57,13 @@ for (const file of existsSync('src/app/(admin)') ? walk('src/app/(admin)') : [])
   if (!file.endsWith('/page.tsx')) continue
   if (!/\brequireStaff\(/.test(readFileSync(file, 'utf8'))) {
     failures.push(`${file}  Admin page that does not call requireStaff( itself`)
+  }
+}
+// A partner workspace page is guarded by its own requirePartner (the layout guards nothing below).
+for (const file of existsSync('src/app/(partner)') ? walk('src/app/(partner)') : []) {
+  if (!file.endsWith('/page.tsx')) continue
+  if (!/\brequirePartner\(/.test(readFileSync(file, 'utf8'))) {
+    failures.push(`${file}  partner page that does not call requirePartner( itself`)
   }
 }
 // Every console write goes through asMember, which audits support visits in the same transaction.

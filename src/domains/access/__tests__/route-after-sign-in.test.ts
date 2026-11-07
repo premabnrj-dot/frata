@@ -15,3 +15,29 @@ describe('routeAfterSignIn', () => {
     expect(routeAfterSignIn({ isStaff: false, storeCount: 0 })).toBe('/start')
   })
 })
+
+describe('routeAfterSignIn — partners and handovers', () => {
+  it('shows a waiting handover before anything else', () => {
+    expect(routeAfterSignIn({ isStaff: true, storeCount: 3, handovers: 1, partner: 'approved' })).toBe('/handover')
+  })
+  it('sends an approved partner to the workspace, even with stores', () => {
+    expect(routeAfterSignIn({ isStaff: false, storeCount: 4, partner: 'approved' })).toBe('/partner')
+  })
+  it('shows an applicant with no store their application', () => {
+    expect(routeAfterSignIn({ isStaff: false, storeCount: 0, partner: 'applied' })).toBe('/partners/apply')
+    expect(routeAfterSignIn({ isStaff: false, storeCount: 0, partner: 'declined' })).toBe('/partners/apply')
+  })
+  it('keeps an applicant who owns a shop on their console', () => {
+    expect(routeAfterSignIn({ isStaff: false, storeCount: 1, partner: 'applied' })).toBe('/console')
+  })
+})
+
+describe('partnerStatus', async () => {
+  const { partnerStatus } = await import('../route-after-sign-in')
+  it('derives from timestamps', () => {
+    expect(partnerStatus(null)).toBe('none')
+    expect(partnerStatus({ approvedAt: null, declinedAt: null })).toBe('applied')
+    expect(partnerStatus({ approvedAt: new Date(), declinedAt: null })).toBe('approved')
+    expect(partnerStatus({ approvedAt: null, declinedAt: new Date() })).toBe('declined')
+  })
+})

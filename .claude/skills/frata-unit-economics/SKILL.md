@@ -2,7 +2,7 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.2.0
+  version: 2.3.0
   verified: 2026-11-07
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
@@ -68,6 +68,22 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
 | Fixed costs | ₹17 L/month placeholder | Itemise: people, infra, support, compliance |
 | Break-even | ~471 tenants | Recompute from tier mix and delivered-order fee |
 | Funding need | ~₹3.15 cr | Recompute after the above |
+
+Partner share (owner, 2026-11-07; unit-economics review 2026-11-07) — a cut of Frata's
+COLLECTED revenue (plan fee + delivered-order fee, ex GST, net of refunds), not of
+order profit; zero in a month Frata collects nothing:
+
+| Figure | Value | Source · date | Test |
+|---|---|---|---|
+| Partner share | 20% for 24 months from first opening; 90 days after removal | owner · 2026-11-07 | 5 design partners: do they sign at 20%? |
+| Share per Launch / Growth / Scale store | ₹704.80 / ₹3,879.80 / ₹9,299.80 a month | review, illustrative shapes · 2026-11-07 | Phase 6 invoices of partner-built stores |
+| Partner-sourced share of new stores | 30% | assumption · 2026-11-07 | partner_links count over 6 months |
+| Break-even at 30% partner-sourced, 60/30/10 mix | ~596 tenants (from ~471) | review · 2026-11-07 | recompute when the 471 is rebuilt |
+| A Launch store's full 24-month share as acquisition cost | ₹16,915.20 | review · 2026-11-07 | onboarding hours, partner vs direct |
+| Partner stores are new, not re-attributed | assumption · 2026-11-07 | opened-to-first-order time vs direct |
+
+Snapshotting 2000 bps per link locks every store opened before contribution is
+measured; changing PARTNER_TERMS changes only later stores.
 
 Tiers (decided): Launch ₹1,499/mo (~150 orders) + 2% of delivered order value,
 Growth ₹4,999/mo (~1,500) + 1%, Scale ₹14,999/mo (~5,000) + 0.5%; all channels

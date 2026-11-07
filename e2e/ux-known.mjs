@@ -14,7 +14,7 @@ export const KNOWN = [
   'target · console-product · 320 ≤ 23',
   'target · console-product-long · 320 ≤ 11',
   'target · console-settings-store · 320',
-  'target · admin-merchants · 320 ≤ 34',
+  'target · admin-merchants · 320 ≤ 35', // +1: 40-partners adds Mitti Handloom, one more row of the same debt
   'target · admin-merchant · 320',
   'target · admin-plans · 320 ≤ 3',
   'target · console-home · 390',
@@ -22,7 +22,7 @@ export const KNOWN = [
   'target · console-product · 390 ≤ 25',
   'target · console-product-long · 390 ≤ 12',
   'target · console-settings-store · 390',
-  'target · admin-merchants · 390 ≤ 34',
+  'target · admin-merchants · 390 ≤ 35', // +1: 40-partners' store
   'target · admin-merchant · 390',
   'target · admin-plans · 390 ≤ 3',
   'target · console-home · 1280',
@@ -30,7 +30,7 @@ export const KNOWN = [
   'target · console-product · 1280 ≤ 25',
   'target · console-product-long · 1280 ≤ 12',
   'target · console-settings-store · 1280',
-  'target · admin-merchants · 1280 ≤ 38',
+  'target · admin-merchants · 1280 ≤ 39', // +1: 40-partners' store
   'target · admin-merchant · 1280',
   'target · admin-plans · 1280 ≤ 3',
   'target · console-home · zoom200',
@@ -38,7 +38,7 @@ export const KNOWN = [
   'target · console-product · zoom200 ≤ 25',
   'target · console-product-long · zoom200 ≤ 12',
   'target · console-settings-store · zoom200',
-  'target · admin-merchants · zoom200 ≤ 37',
+  'target · admin-merchants · zoom200 ≤ 38', // +1: 40-partners' store
   'target · admin-merchant · zoom200',
   'target · admin-plans · zoom200 ≤ 3',
   'target · support-admin-merchant · 390',

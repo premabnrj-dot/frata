@@ -155,6 +155,20 @@
       "when": 1794047325221,
       "tag": "0021_erase_abandoned",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1794062790937,
+      "tag": "0022_partners",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794062817015,
+      "tag": "0023_partners_access",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
 # Partner foundations: signup, workspace, handover (F1–F3)
-Status: draft · Date: 2026-11-07 · Mockup: https://claude.ai/artifact/TPuqJEDpbNnor97gpjJnAj · Approved: pending
+Status: built · Date: 2026-11-07 · Mockup: https://claude.ai/artifact/TPuqJEDpbNnor97gpjJnAj · Approved: owner, 2026-11-07 ("Mockup approved, please execute"; plain voice, explanation in tips, graphic-led /partners)
 Research: `docs/research/2026-11-07-partner-program.md`
 
 ## Owner decisions (2026-11-07)
@@ -7,7 +7,7 @@ Research: `docs/research/2026-11-07-partner-program.md`
 2. **20% of what Frata collects from the merchant, for 24 months.**
 3. **F1–F3 are built now**, before billing (Phase 6). Statements and payouts wait for Phase 6.
 
-## Owner calls still open (recommendation first)
+## Owner calls (O1–O3 taken as recommended when the owner said execute, 2026-11-07; each is a constant in PARTNER_TERMS)
 - **O1 When the 24 months start:** at the shop's first payment to Frata (recommended:
   building time doesn't burn the partner's window), or at handover. Until Phase 6 bills,
   "first payment" is read as the moment the shop opens (`shop_settings.published_at`),
@@ -176,9 +176,9 @@ been read (blast radius).
   partners × 20 stores it's 10k rows.
 - **Performance:** Clients is one round trip (the definer). The switcher adds none (already
   in `app_access_for`). `/partners` is static.
-- **Reliability:** approval and handover emails go through the outbox (`email.partner_approved`,
-  `email.handover_invite`, dedupe key = partner id / invite id). If they fail, the invite still
-  exists and "Send again" works.
+- **Reliability:** approval and handover send the usual Supabase sign-in email (`sendSignInLink`, as Admin
+  does for owners). If it fails, the approval or invite still stands, the screen says the email did not
+  send, and signing in at /login shows the workspace or the store. "Send again" re-invites.
 - **Security:** each action uses `requireUser`/`requirePartner`/`asMember(roles)`/`requireStaff`
   and is listed for `check:actions`. Zod on every input. `app_remove_partner` takes no ids.
   A partner can't invite members, change the owner or reach payment keys (the roles table
@@ -192,6 +192,11 @@ been read (blast radius).
   switcher. `app_access_for` output gains nothing, but its consumers must render a `partner`
   role label. `/choose`. `app_claim_invites` gets a new refusal case (owner exists).
   Footgun: adding `partner` to `ANY_MEMBER` silently widens every staff-level action. Read each first.
+
+## As built (2026-11-07)
+Migrations 0022 (tables) and 0023 (grants, RLS, functions, trigger). Review findings and their fixes are in
+the plan. Handover acceptance is explicit (`/handover`), never claimed at sign-in. The 24 months start at the
+shop's FIRST opening (`partner_links.share_starts_at`, set once by a trigger).
 
 ## Phases (each usable on its own)
 - **P1 Stores and people:** the `partner` role (F2) with no partner yet, Settings › People,

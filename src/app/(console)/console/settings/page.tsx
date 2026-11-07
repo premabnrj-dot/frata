@@ -5,7 +5,7 @@ import { Panel } from '@/components/ui/panel'
 import { missingFacts, POLICY_PAGES, renderPolicy } from '@/domains/policies/render'
 import { missingForLivePayments, SECTIONS, type SectionKey } from '@/domains/settings/sections'
 import { paise } from '@/domains/money/paise'
-import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
+import { CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { formatInr } from '@/lib/format'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 import { shopWithSettings } from '@/lib/queries/settings'
@@ -17,8 +17,8 @@ export const metadata = { title: 'Settings' }
 const inr = (p: number) => formatInr(paise(p))
 
 export default async function SettingsPage() {
-  const auth = await requireMember(CAN_MANAGE)
-  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or an admin can change settings' : auth.message} />
+  const auth = await requireMember(CAN_BUILD)
+  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'You can’t change this shop’s settings' : auth.message} />
   const shop = await shopWithSettings(auth.membership.tenantId).catch((err) => { console.error('[settings]', err); return null })
   if (!shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const f = shopFacts(shop, SHOP_DOMAIN)
@@ -37,6 +37,8 @@ export default async function SettingsPage() {
     shipping: `${f.shippingFlat ? inr(f.shippingFlat) : 'Free'}${f.shippingFlat && f.freeShippingAbove ? `, free above ${inr(f.freeShippingAbove)}` : ''} · dispatched within ${f.dispatchDays} days`,
     taxes: f.gstin ? `GSTIN ${f.gstin} · tax invoices` : 'No GSTIN · bills of supply',
   }
+  const manages = (CAN_MANAGE as readonly string[]).includes(auth.membership.role)
+  const owner = auth.membership.role === 'owner'
   const needs = (k: SectionKey) => missing.some((m) => m.section === k) || (k === 'policies' && policyGaps > 0)
 
   return (
@@ -45,23 +47,28 @@ export default async function SettingsPage() {
       <p className="-mt-2 text-sm text-muted-foreground">What you save here shows on your shop straight away.</p>
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <nav aria-label="Settings" className="overflow-hidden rounded-md border border-border bg-card">
-          {SECTIONS.map((s) => (
+          {SECTIONS.filter((s) => s.editors.includes(auth.membership.role)).map((s) => (
             <Link key={s.key} href={`/console/settings/${s.key}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-4 py-3 first:border-t-0 transition-colors duration-fast hover:bg-accent">
               <span className="font-medium">{s.title}</span>
               <Badge tone={needs(s.key) ? 'warn' : 'neutral'} className="row-span-2">{needs(s.key) ? 'Needs you' : 'Edit'}</Badge>
               <span className="truncate text-sm text-muted-foreground">{summary[s.key]}</span>
             </Link>
           ))}
-          <Link href="/console/settings/online-payments" className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-4 py-3 transition-colors duration-fast hover:bg-accent">
+          {owner && <Link href="/console/settings/online-payments" className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-4 py-3 transition-colors duration-fast hover:bg-accent">
             <span className="font-medium">Online payments</span>
             <Badge tone={onlineNeeds ? 'warn' : 'neutral'} className="row-span-2">{onlineNeeds ? 'Needs you' : 'Edit'}</Badge>
             <span className="truncate text-sm text-muted-foreground">{online}</span>
-          </Link>
-          <Link href="/console/settings/address" className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-4 py-3 transition-colors duration-fast hover:bg-accent">
+          </Link>}
+          {manages && <Link href="/console/settings/people" className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-4 py-3 transition-colors duration-fast hover:bg-accent">
+            <span className="font-medium">People</span>
+            <Badge className="row-span-2">View</Badge>
+            <span className="truncate text-sm text-muted-foreground">Who works on this shop</span>
+          </Link>}
+          {manages && <Link href="/console/settings/address" className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-4 py-3 transition-colors duration-fast hover:bg-accent">
             <span className="font-medium">Shop address</span>
             <Badge className="row-span-2">Edit</Badge>
             <span className="truncate font-mono text-sm text-muted-foreground">{f.slug}.{SHOP_DOMAIN}</span>
-          </Link>
+          </Link>}
         </nav>
         <aside className="space-y-3">
           <section className="space-y-2 rounded-md border border-border bg-card p-4">

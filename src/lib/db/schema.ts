@@ -16,7 +16,7 @@ export const id = () => uuid('id').primaryKey().defaultRandom()
 export const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 export const money = (name: string) => bigint(name, { mode: 'number' })
 
-import { MEMBER_ROLES, type MemberRole } from '@/domains/tenancy/roles'
+import { MEMBER_ROLES, sqlList, type MemberRole } from '@/domains/tenancy/roles'
 export { MEMBER_ROLES, type MemberRole }
 
 export const tenants = pgTable('tenants', {
@@ -44,7 +44,7 @@ export const members = pgTable('members', {
 }, (t) => [
   primaryKey({ columns: [t.tenantId, t.userId] }),
   index('members_user').on(t.userId),
-  check('members_role', sql`${t.role} in ('owner','admin','staff')`),
+  check('members_role', sql`${t.role} in (${sql.raw(sqlList(MEMBER_ROLES))})`),
 ])
 
 // Orders, their lines and a shop's payment keys: src/lib/db/schema-orders.ts.
@@ -309,3 +309,5 @@ export const shopPolicies = pgTable('shop_policies', {
 ])
 
 // The catalogue (1A) lives in ./schema-catalogue.ts; import its tables from there.
+
+// Partners and their stores: src/lib/db/schema-partners.ts.
