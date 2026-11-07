@@ -71,7 +71,7 @@ export function Photos({ productId, tenantId, photos, colours, enabled }: { prod
         ))}
         {busy.map((b) => (
           <div key={b.name} className="grid h-40 w-32 place-items-center rounded-sm border border-dashed border-input p-2 text-center text-xs text-muted-foreground">
-            <span>{b.name.slice(0, 24)}<span className="mt-2 block h-1 w-24 overflow-hidden rounded-full bg-muted"><span className="block h-full bg-ok-text transition-[width] duration-base" style={{ width: `${b.p * 100}%` }} /></span></span>
+            <span>{b.name.slice(0, 24)}<span className="mt-2 block h-1 w-24 overflow-hidden rounded-full bg-muted"><span className="block h-full w-full origin-left bg-ok-text transition-transform duration-base" style={{ transform: `scaleX(${b.p})` }} /></span></span>
           </div>
         ))}
         {enabled ? (

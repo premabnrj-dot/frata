@@ -12,11 +12,17 @@ import { cn } from '@/lib/utils'
 // Native <dialog> with showModal(): the page behind is inert, focus is held
 // inside and returns to the button that opened it, Esc and a click on the
 // backdrop close it (as "keep"). Motion: dialog[data-dialog] in globals.css.
+// On a phone it is a sheet from the bottom, and the phone's Back closes it (as
+// "keep", spec U · U3) natively: Android's Back is a close request, the same
+// `cancel` as Esc. No history entry of our own: Next replaces the entry on a
+// server action or refresh, and a back() racing a router.push undoes the push.
+// A close request the browser lets through without `cancel` (no user
+// activation since the last one) still reaches onClose through `close`.
 // =============================================================================
 
 export function Dialog({ open, onClose, title, description, children, actions, className }: {
   open: boolean
-  /** Esc, the backdrop and the safe button all call this. */
+  /** Esc, Android's Back, the backdrop and the safe button all call this. It must set `open` to false: the browser may already have closed the dialog. */
   onClose: () => void
   title: string
   description?: React.ReactNode
@@ -30,6 +36,7 @@ export function Dialog({ open, onClose, title, description, children, actions, c
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId(), descId = useId()
+  const wanted = useRef(open); wanted.current = open
   useEffect(() => {
     const d = ref.current
     if (!d) return
@@ -39,6 +46,7 @@ export function Dialog({ open, onClose, title, description, children, actions, c
   return (
     <dialog ref={ref} data-dialog aria-labelledby={titleId} aria-describedby={description ? descId : undefined}
       onCancel={(e) => { e.preventDefault(); onClose() }}
+      onClose={() => { if (wanted.current) onClose() }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
       className={cn('m-auto w-[min(32rem,calc(100vw-2rem))] rounded-lg border border-border bg-popover p-0 text-popover-foreground', className)}>
       <div className="grid gap-4 p-5">

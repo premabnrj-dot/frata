@@ -92,3 +92,59 @@ describe('check:hex', () => {
     expect(execFileSync('node', ['scripts/check-hex.mjs', quiet], { stdio: 'pipe' }).toString()).toMatch(/clean/)
   })
 })
+
+describe('check:motion', async () => {
+  const { check } = await import('../check-motion.mjs')
+  it('fails layout transitions, transition-all and arbitrary timings; skips comments', () => {
+    const tsx = [
+      '<div className="h-full transition-[width] duration-slow" />',
+      '<div className="transition-[max-height,opacity]" />',
+      '<div className="transition-all" />',
+      '<div className="duration-[1400ms] ease-[cubic-bezier(0,0,0,1)] animate-[spin_1s]" />',
+      '// transition-[width] in a comment is fine',
+      '<div className="origin-left transition-transform duration-slow" style={{ transform: `scaleX(0.5)` }} />',
+    ].join('\n')
+    const p: string[] = check(tsx, false)
+    expect(p.filter((x) => x.startsWith('layout:')).length).toBe(3)
+    expect(p.filter((x) => x.startsWith('arbitrary:')).length).toBe(3)
+  })
+  it('in CSS: keyframes that move layout, animations over 400 ms, layout transitions; named exceptions pass', () => {
+    const css = [
+      '@keyframes grow { from { height: 0; } to { height: 100px; } }',
+      '@keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }',
+      '@keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }',
+      '@utility animate-slow { animation: fade 600ms ease; }',
+      '@utility animate-ok { animation: fade 320ms ease; }',
+      '@utility animate-undo { animation: undo-window 8s linear forwards; }',
+      '.panel { transition: height 200ms ease; }',
+      '.ok { transition: opacity var(--transition-duration-base) var(--ease-exit), display 200ms allow-discrete; }',
+    ].join('\n')
+    expect(check(css, true).sort()).toEqual(['keyframes: grow animates height', 'layout: transition: height 200ms ease', 'too-long: fade 600ms (nothing over 400 ms)'].sort())
+  })
+  it('catches what a line-by-line read missed: inline styles, delay-[…], long durations, all, multi-line and longhand CSS, exceptions past their own limits', () => {
+    const tsx = [
+      "<div style={{ transition: 'width 200ms ease' }} />",
+      '<div className="delay-[50ms] duration-1000 transition-[grid-template-rows]" />',
+      '<div className="duration-300 transition-opacity" />',
+    ].join('\n')
+    expect(check(tsx, false).sort()).toEqual(["layout: style transition 'width 200ms ease'", 'arbitrary: delay-[50ms]', 'arbitrary: duration-1000 (use duration-fast|base|slow)', 'layout: transition-[grid-template-rows]'].sort())
+    const css = [
+      '.a { transition: all 200ms; }',
+      '.b { transition: opacity 200ms,',
+      '  margin-top 200ms }',
+      '.c { transition-duration: 600ms; animation-duration: 0.01ms !important; }',
+      '.d { animation: 600ms ease fade; }',
+      '@keyframes draw { from { width: 0; stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }',
+      '.e { animation: draw 5s both; }',
+      '.f { animation: nav-run 1400ms linear; }',
+    ].join('\n')
+    expect(check(css, true).sort()).toEqual([
+      'layout: transition: all 200ms',
+      'layout: transition: opacity 200ms, margin-top 200ms',
+      'too-long: transition-duration: 600ms (nothing over 400 ms)',
+      'too-long: fade 600ms (nothing over 400 ms)',
+      'keyframes: draw animates width',
+      'too-long: draw 5000ms (its limit is 400 ms)',
+    ].sort())
+  })
+})

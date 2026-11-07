@@ -111,7 +111,8 @@ export default {
       await p.getByRole('button', { name: 'Cancel order…' }).click(); const dialog = p.getByRole('dialog', { name: 'Cancel KS-1001?' }); await dialog.waitFor()
       // Its entrance has finished (no running transition), so the box is its real size.
       await p.waitForFunction(() => document.querySelector('dialog[open]')?.getAnimations().length === 0, null, { timeout: 2000 })
-      const box = await dialog.boundingBox(); assert.ok(box && box.width <= 390 - 16, `dialog fits a phone (${box?.width})`)
+      // A phone dialog is a sheet along the bottom (rule 22, U·3): the full width, its bottom the viewport's.
+      const box = await dialog.boundingBox(); assert.ok(box && Math.abs(box.width - 390) <= 1 && Math.abs(box.y + box.height - 800) <= 1, `dialog is a sheet on a phone (${JSON.stringify(box)})`)
       await p.screenshot({ path: t.out('phone-dialog') }); await p.keyboard.press('Escape')
     })
 

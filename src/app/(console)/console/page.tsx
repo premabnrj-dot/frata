@@ -47,7 +47,7 @@ export default async function ConsoleHome() {
             <span className="text-sm text-muted-foreground"><span className="font-mono">{done} of {steps.length}</span> done</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="img" aria-label={`${done} of ${steps.length} steps done`}>
-            <div className="h-full bg-ok-text transition-[width] duration-slow ease-standard" style={{ width: `${(done / steps.length) * 100}%` }} />
+            <div className="h-full w-full origin-left bg-ok-text transition-transform duration-slow ease-standard" style={{ transform: `scaleX(${done / steps.length})` }} />
           </div>
         </div>
         <ol>

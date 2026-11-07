@@ -33,7 +33,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
       <ViewTabs label="Partner views" tabs={VIEWS.map(([k, label]) => ({ href: k === 'review' ? '/admin/partners' : `/admin/partners?view=${k}`, label, count: counts[k], current: k === view }))} />
       {rows.length === 0 ? <Panel title={view === 'review' ? 'Nothing to review' : `No ${view} partners`} /> : (
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <Section flush ariaLabel="Applications"><ul className="divide-y divide-border">
+          <Section flush ariaLabel="Applications"><ul data-list className="divide-y divide-border">
             {rows.map((r) => (
               <li key={r.id}>
                 <Link href={href(r.id)} aria-current={open?.id === r.id || undefined} className={`grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 px-4 py-3 text-sm hover:bg-accent ${open?.id === r.id ? 'bg-accent' : ''}`}>

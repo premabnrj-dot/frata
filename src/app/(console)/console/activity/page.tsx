@@ -18,7 +18,7 @@ export default async function ActivityPage() {
       <PageHeader title="Activity" />
       <Section title="Visits from Frata support">
         {visits.length === 0 ? <p className="text-sm text-muted-foreground">Frata support has not been in your console.</p> : (
-          <ul className="divide-y divide-border text-sm">
+          <ul data-list className="divide-y divide-border text-sm">
             {visits.map((v) => {
               const changes = events.filter((e) => e.supportSessionId === v.id && e.actorKind === 'support').length
               return (

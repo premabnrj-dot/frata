@@ -96,7 +96,7 @@ export function check(css) {
   return problems
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const file = process.argv[2] ?? 'src/app/globals.css'
   if (!existsSync(file)) { console.error(`check:contrast — no such file: ${file}`); process.exit(2) }
   const problems = check(readFileSync(file, 'utf8'))

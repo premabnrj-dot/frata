@@ -199,6 +199,9 @@
     table[data-rows="form"] td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 0.125rem; font-size: 0.75rem; color: var(--muted-foreground); }
     table[data-rows="form"] td :is(input, select) { width: 100% !important; } /* over the desktop w-16, w-40 … utilities */
   }
+  /* A list while the next view loads (src/components/shell/nav-progress.tsx sets aria-busy after 150 ms). */
+  main#content :is(table, [data-list]) { transition: opacity var(--transition-duration-fast) var(--ease-standard); }
+  main#content[aria-busy="true"] :is(table, [data-list]) { opacity: 0.55; }
   /* The phone's More sheet is open: the page behind does not scroll (src/components/shell/nav.tsx). */
   html:has(dialog[data-more][open]) { overflow: hidden; }
   /* The document keeps the scroll (A7): keep a focused or scrolled-to element clear of the sticky support banner
@@ -213,6 +216,7 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important; /* a delayed second part (the brand moment's tick) appears at once too */
     transition-duration: 0.01ms !important;
   }
 }
@@ -231,6 +235,11 @@
 @keyframes sheet-in { from { transform: translateY(100%); } to { transform: none; } }
 @utility animate-nav-run { animation: nav-run 1400ms cubic-bezier(0.3, 0, 1, 1); }
 @utility animate-sheet { animation: sheet-in 320ms cubic-bezier(0, 0, 0, 1); }
+/* THE ONE BRAND MOMENT (rule 26): "Your shop is open", a check drawn once — the circle in 320 ms, then the tick in
+   200 ms. stroke-dashoffset is paint only (no layout), the one named exception to rule 22 (check:motion). */
+@keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@utility animate-draw-circle { stroke-dasharray: 1; animation: draw 320ms cubic-bezier(0, 0, 0, 1) both; }
+@utility animate-draw-tick { stroke-dasharray: 1; animation: draw 200ms cubic-bezier(0, 0, 0, 1) 320ms both; }
 
 /* ── 1D·3 primitives: enter and exit as a pair, opacity and transform only, CSS only (§ UX foundation rules 22–23).
    Tips 120 ms; dialogs, menus and toasts 200 ms. Native <dialog> and [popover] give focus, Esc and the top layer;
@@ -251,12 +260,25 @@ dialog[data-dialog] {
 }
 dialog[data-dialog][open] { opacity: 1; transform: none; transition-timing-function: var(--ease-entrance); }
 @starting-style { dialog[data-dialog][open] { opacity: 0; transform: scale(0.97); } }
+/* On a phone the dialog is a sheet from the bottom, 320 ms in and out (spec U · U3; Android's Back closes it, a close
+   request: src/components/ui/dialog.tsx). Unlayered, so it wins over the dialog's own m-auto/width/rounded utilities. */
+@media (max-width: 767px) {
+  dialog[data-dialog] {
+    margin: auto 0 0; width: 100%; max-width: none; max-height: 85dvh; border-radius: 1rem 1rem 0 0; border-bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px); opacity: 1; transform: translateY(100%);
+    transition-duration: var(--transition-duration-slow);
+  }
+  dialog[data-dialog][open] { transform: none; }
+  @starting-style { dialog[data-dialog][open] { opacity: 1; transform: translateY(100%); } }
+}
 dialog[data-dialog]::backdrop {
   background: var(--scrim); opacity: 0;
   transition: opacity var(--transition-duration-base) var(--ease-standard), overlay var(--transition-duration-base) allow-discrete, display var(--transition-duration-base) allow-discrete;
 }
 dialog[data-dialog][open]::backdrop { opacity: 1; }
 @starting-style { dialog[data-dialog][open]::backdrop { opacity: 0; } }
+/* On a phone the scrim keeps pace with the 320 ms sheet. */
+@media (max-width: 767px) { dialog[data-dialog]::backdrop { transition-duration: var(--transition-duration-slow); } }
 
 [data-toast] { transition: opacity var(--transition-duration-base) var(--ease-entrance), transform var(--transition-duration-base) var(--ease-entrance); }
 @starting-style { [data-toast] { opacity: 0; transform: translateY(12px); } }
