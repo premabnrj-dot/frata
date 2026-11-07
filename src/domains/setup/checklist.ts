@@ -11,11 +11,13 @@
 export type SetupFacts = {
   shopName: string
   address: string
+  /** Active products (a draft cannot be bought). */
   productCount: number
   legalName: string
   grievanceName: string
   codOn: boolean
   codMaxPaise: number
+  /** Razorpay with LIVE keys and a webhook that has worked (test keys do not count). */
   paymentsConnected: boolean
   publishedAt: Date | null
 }
@@ -55,9 +57,12 @@ export function setupSteps(f: SetupFacts, built: BuiltPages, formatInr: (paise: 
         : 'Turn on Pay on delivery, or connect Razorpay.',
     },
     {
-      key: 'publish', title: 'Open your shop', done: f.publishedAt !== null, href: built.publish && hasProduct && canPay ? '/console' : null,
-      detail: f.publishedAt ? `Open at ${f.address}.` : !hasProduct ? 'Needs one product first. Until then your shop shows "Opening soon".'
+      key: 'publish', title: 'Open your shop', done: f.publishedAt !== null, href: null,
+      detail: f.publishedAt ? `Open at ${f.address}.` : !hasProduct ? 'Needs one Active product first. Until then your shop shows "Opening soon".'
         : !canPay ? 'Needs a way to pay first.' : `Ready. Your shop opens at ${f.address}.`,
     },
   ]
 }
+
+/** Every step before "Open your shop" is done: the button may be pressed (the action checks again on the server). */
+export const readyToOpen = (steps: SetupStep[]) => steps.filter((s) => s.key !== 'publish').every((s) => s.done)

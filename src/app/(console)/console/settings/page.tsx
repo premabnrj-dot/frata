@@ -9,6 +9,7 @@ import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { formatInr } from '@/lib/format'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 import { shopWithSettings } from '@/lib/queries/settings'
+import { paymentStatusFor } from '@/lib/queries/payments'
 import { shopFacts } from './_components/facts'
 
 export const metadata = { title: 'Settings · Frata' }
@@ -21,6 +22,9 @@ export default async function SettingsPage() {
   const shop = await shopWithSettings(auth.membership.tenantId).catch((err) => { console.error('[settings]', err); return null })
   if (!shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const f = shopFacts(shop, SHOP_DOMAIN)
+  const pay = await paymentStatusFor(auth.membership.tenantId).catch(() => null)
+  const online = !pay ? 'Could not load' : !pay.connected ? 'Not connected: shoppers can pay on delivery only' : pay.problem ? 'Needs attention' : !pay.webhookSeenAt ? 'Connected · one step left in Razorpay' : pay.mode === 'test' ? 'Test mode' : 'Live · UPI, cards, netbanking'
+  const onlineNeeds = !!pay && pay.connected && (!!pay.problem || !pay.webhookSeenAt)
   const missing = missingForLivePayments(f)
   const policyGaps = POLICY_PAGES.filter(([k]) => missingFacts(renderPolicy(k, f, inr)).length).length
 
@@ -48,6 +52,11 @@ export default async function SettingsPage() {
               <span className="truncate text-sm text-muted-foreground">{summary[s.key]}</span>
             </Link>
           ))}
+          <Link href="/console/settings/online-payments" className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-4 py-3 transition-colors duration-fast hover:bg-accent">
+            <span className="font-medium">Online payments</span>
+            <Badge tone={onlineNeeds ? 'warn' : 'neutral'} className="row-span-2">{onlineNeeds ? 'Needs you' : 'Edit'}</Badge>
+            <span className="truncate text-sm text-muted-foreground">{online}</span>
+          </Link>
           <Link href="/console/settings/address" className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-4 py-3 transition-colors duration-fast hover:bg-accent">
             <span className="font-medium">Shop address</span>
             <Badge className="row-span-2">Edit</Badge>

@@ -3,28 +3,29 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { paise } from '@/domains/money/paise'
-import { setupSteps } from '@/domains/setup/checklist'
+import { readyToOpen, setupSteps } from '@/domains/setup/checklist'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { formatInr } from '@/lib/format'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 import { shopWithSettings } from '@/lib/queries/settings'
-import { productCount } from '@/lib/queries/catalogue'
+import { activeProductCount, paymentStatusFor } from '@/lib/queries/payments'
+import { OpenShop } from './_components/open-shop'
 
 /** Pages the checklist may link to. Each flips to true when its sub-phase ships (docs/plans/2026-11-06-phase-1-first-sale.md). */
-const BUILT = { products: true, settings: true, publish: false }
+const BUILT = { products: true, settings: true, publish: true }
 
 export default async function ConsoleHome() {
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
-  const [shop, products] = await Promise.all([shopWithSettings(auth.membership.tenantId), productCount(auth.membership.tenantId)])
-    .catch((err) => { console.error('[console home]', err instanceof Error ? err.name : err); return [null, 0] as const })
+  const [shop, products, pay] = await Promise.all([shopWithSettings(auth.membership.tenantId), activeProductCount(auth.membership.tenantId), paymentStatusFor(auth.membership.tenantId)])
+    .catch((err) => { console.error('[console home]', err instanceof Error ? err.name : err); return [null, 0, null] as const })
   if (!shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
 
   const address = `${shop.slug}.${SHOP_DOMAIN}`
   const steps = setupSteps({
     shopName: shop.name, address, productCount: products,
     legalName: shop.settings.legalName, grievanceName: shop.settings.grievanceName,
-    codOn: shop.settings.codOn, codMaxPaise: shop.settings.codMax, paymentsConnected: false, publishedAt: shop.settings.publishedAt,
+    codOn: shop.settings.codOn, codMaxPaise: shop.settings.codMax, paymentsConnected: !!pay?.connected && pay.mode === 'live' && !!pay.webhookSeenAt, publishedAt: shop.settings.publishedAt,
   }, BUILT, (p) => formatInr(paise(p)))
   const done = steps.filter((s) => s.done).length
 
@@ -49,6 +50,7 @@ export default async function ConsoleHome() {
               <div className="min-w-0 flex-1">
                 <p className="font-medium">{s.href && !s.done ? <Link href={s.href} className="underline-offset-2 hover:underline">{s.title}</Link> : s.title}</p>
                 <p className="text-sm text-muted-foreground">{s.detail}</p>
+                {s.key === 'publish' && <div className="mt-2"><OpenShop address={address} open={s.done} ready={readyToOpen(steps)} canManage={auth.membership.role !== 'staff'} /></div>}
               </div>
             </li>
           ))}
