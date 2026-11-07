@@ -4,9 +4,10 @@
 // THE LOCAL STACK for end-to-end flows: a throwaway Postgres (fresh database
 // every run, every migration, e2e/seed.sql), the fake Supabase auth and fake
 // Razorpay, and a production build started on PORTS.app. Never touches
-// Supabase or any non-local database. With E2E_ADMIN_URL (CI's service
-// Postgres) it uses that database instead of starting its own.
-// The app's password is made up per run and never printed.
+// Supabase or any non-local database: E2E_ADMIN_URL (CI's service Postgres)
+// must point at localhost, or the run refuses (it sets role passwords, which
+// are server-wide). The app's and Admin's passwords are made up per run and
+// never printed.
 // =============================================================================
 import { execSync, spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
@@ -46,6 +47,9 @@ export async function up({ build = true } = {}) {
   // A stack left by an earlier run (killed, or still shutting down) holds the ports: clear it first.
   try { sh(`pkill -f "next start -p ${PORTS.app}|e2e/fakes/" || true`) } catch {}
   await until(async () => { try { await fetch(CONSOLE); return false } catch { return true } }, 10_000)
+  if (process.env.E2E_ADMIN_URL && !['localhost', '127.0.0.1'].includes(new URL(process.env.E2E_ADMIN_URL).hostname)) {
+    throw new Error('E2E_ADMIN_URL must be a local Postgres (localhost or 127.0.0.1): the stack sets role passwords server-wide')
+  }
   const server = process.env.E2E_ADMIN_URL ? (({ protocol, username, password, host }) => `${protocol}//${username}${password ? ':' + password : ''}@${host}`)(new URL(process.env.E2E_ADMIN_URL)) : startPostgres()
   const boot = adminSql(`${server}/postgres`)
   await boot.unsafe(`drop database if exists ${DB} with (force)`); await boot.unsafe(`create database ${DB}`); await boot.end()
@@ -55,6 +59,8 @@ export async function up({ build = true } = {}) {
   const pw = randomBytes(18).toString('hex')
   const db = adminSql(adminUrl)
   await db.unsafe(`alter role frata_app password '${pw}'`)
+  const adminPw = randomBytes(18).toString('hex')
+  await db.unsafe(`alter role frata_admin password '${adminPw}'`)
 
   run('fake-auth', 'node', ['e2e/fakes/auth.mjs'], { PORT: String(PORTS.auth) })
   run('fake-razorpay', 'node', ['e2e/fakes/razorpay.mjs'], { PORT: String(PORTS.razorpay) })
@@ -64,11 +70,11 @@ export async function up({ build = true } = {}) {
   sh('rm -rf .next/cache')
   const host = new URL(server).host
   run('next', 'npx', ['next', 'start', '-p', String(PORTS.app)], {
-    ...PUBLIC_ENV, DATABASE_URL: `postgres://frata_app:${pw}@${host}/${DB}`, PAYMENT_KEYS_SECRET: 'e2e-only-secret',
+    ...PUBLIC_ENV, DATABASE_URL: `postgres://frata_app:${pw}@${host}/${DB}`, ADMIN_DATABASE_URL: `postgres://frata_admin:${adminPw}@${host}/${DB}`, PAYMENT_KEYS_SECRET: 'e2e-only-secret',
     RAZORPAY_API_BASE: `http://localhost:${PORTS.razorpay}`, BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_x_y', BLOB_STORE_ID: 'store_e2e', CRON_SECRET: 'e2e-cron',
   })
   await until(async () => { try { return (await fetch(CONSOLE)).status > 0 } catch { return false } }, 60_000)
-  return { db, adminUrl }
+  return { db, adminUrl, dbName: DB }
 }
 
 export async function down(db) {

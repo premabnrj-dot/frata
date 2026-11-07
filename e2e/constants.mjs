@@ -9,6 +9,8 @@ export const OUT = new URL('./.out/', import.meta.url).pathname
 export const USERS = {
   owner: { id: 'cccccccc-0000-0000-0000-000000000001', email: 'riya@kesarstudio.in' },
   staff: { id: 'cccccccc-0000-0000-0000-000000000002', email: 'arjun@kesarstudio.in' },
+  // Frata staff (platform_staff), for Admin and support visits. Added by the flows that need it (90-ux), not the seed.
+  frata: { id: 'cccccccc-0000-0000-0000-000000000009', email: 'meera@frata.test' },
 }
 export const RZP_KEYS = { id: 'rzp_live_FrataTest01', secret: 'testsecret12345678abcd' }
 
