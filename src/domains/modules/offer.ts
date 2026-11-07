@@ -28,7 +28,7 @@ export function offerFor(key: ModuleKey, a: ModuleAccess, addonPrice: number | n
     return { badge: 'Next', tone: 'info', price: def.billing === 'add_on' && monthly ? `Add-on · ${monthly}` : def.billing === 'core' ? 'In every plan' : 'In Growth and up', action: { kind: 'none' } }
   }
   if (a.paused) return { badge: 'Paused by Frrata', tone: 'warn', price: priceLine(a, monthly, now), action: { kind: 'switch', on: a.on } }
-  if (a.granted) return { badge: a.how === 'trial' ? trialBadge(a, now) : 'In your plan', tone: a.how === 'trial' ? 'warn' : 'ok', price: priceLine(a, monthly, now), action: { kind: 'switch', on: a.on } }
+  if (a.granted) return { badge: a.how === 'trial' ? trialBadge(a, now) : a.how === 'add_on' ? 'Add-on' : 'In your plan', tone: a.how === 'trial' ? 'warn' : 'ok', price: priceLine(a, monthly, now), action: { kind: 'switch', on: a.on } }
   if (def.billing === 'add_on' && monthly) return { badge: `Add-on · ${monthly}`, tone: 'neutral', price: `${monthly} + 18% GST`, action: { kind: 'ask', label: `Add ${def.name} · ${monthly}` } }
   return { badge: 'In Growth and up', tone: 'neutral', price: 'In Growth and up', action: { kind: 'plans', label: 'See plans' } }
 }

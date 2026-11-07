@@ -15,7 +15,7 @@ export async function giveTrialAction(form: FormData) {
   const r = await giveTrial(staff, p.data.tenantId, p.data.module, new Date())
   const name = moduleName(p.data.module)
   redirect(r === 'given' ? back(p.data.tenantId, 'ok', `${name}: ${TRIAL_DAYS}-day trial started.`)
-    : back(p.data.tenantId, 'error', r === 'core' ? `${name} is in every plan.` : `They already have ${name}.`))
+    : back(p.data.tenantId, 'error', r === 'core' ? `${name} is in every plan.` : r === 'next' ? `${name} isn't built yet.` : `They already have ${name}.`))
 }
 
 export async function endAddonAction(form: FormData) {

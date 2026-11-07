@@ -1,10 +1,10 @@
 import 'server-only'
-import { and, desc, eq, isNull } from 'drizzle-orm'
+import { and, desc, eq, isNull, sql } from 'drizzle-orm'
 import { adminDb } from '@/lib/db/admin'
 import { modulePauses, tenantAddons, tenantModules } from '@/lib/db/schema-modules'
 import type { StaffOk } from '@/lib/auth/require-staff'
 import { currentPlan } from '@/domains/plans/entitlements'
-import { moduleAccess, type ModuleAccess, type ModuleFacts } from '@/domains/modules/access'
+import { liveAddon, moduleAccess, type ModuleAccess, type ModuleFacts } from '@/domains/modules/access'
 import { isModuleKey, MODULES, PLAN_GRANTABLE, type ModuleKey } from '@/domains/modules/registry'
 import { auditStaff } from './audit'
 import { tenantPlanHistory } from './plans'
@@ -38,7 +38,7 @@ export async function merchantModules(staff: StaffOk, tenantId: string, now: Dat
   const plan = currentPlan(history.map((h) => ({ ...h, startsAt: h.tp.startsAt })), now)
   const facts: ModuleFacts = {
     planFeatures: plan?.v.features ?? [],
-    addons: addons.filter((a) => isModuleKey(a.module)).map((a) => ({ module: a.module as ModuleKey, startsAt: a.startsAt, endsAt: a.endsAt, trialEndsAt: a.trialEndsAt })),
+    addons: addons.filter((a) => isModuleKey(a.module)).map((a) => ({ id: a.id, module: a.module as ModuleKey, startsAt: a.startsAt, endsAt: a.endsAt, trialEndsAt: a.trialEndsAt })),
     switchedOn: switches.map((s) => s.module).filter(isModuleKey),
     paused: pauses.map((p) => p.module),
   }
@@ -46,25 +46,24 @@ export async function merchantModules(staff: StaffOk, tenantId: string, now: Dat
   const switchedOnAt: MerchantModules['switchedOnAt'] = {}
   for (const s of switches) if (isModuleKey(s.module)) switchedOnAt[s.module] = s.enabledAt
   const addonId: MerchantModules['addonId'] = {}
-  for (const a of addons) {
-    if (!isModuleKey(a.module) || addonId[a.module]) continue
-    const live = a.startsAt <= now && (!a.endsAt || a.endsAt > now) && (!a.trialEndsAt || a.trialEndsAt > now)
-    if (live) addonId[a.module] = a.id
-  }
+  for (const k of PLAN_GRANTABLE) { const a = liveAddon(facts.addons, k, now); if (a?.id) addonId[k] = a.id }
   return { access, planName: plan?.name ?? null, switchedOnAt, addonId }
 }
 
-/** A free trial of a module the shop's plan does not grant. Refuses one it already has. */
-export async function giveTrial(staff: StaffOk, tenantId: string, module: ModuleKey, now: Date): Promise<'given' | 'has_it' | 'core'> {
+/** A free trial of a module the shop's plan does not grant. Refuses a module not built yet (its days would
+ *  run out unused) and one the shop already has; two clicks give one trial (a lock per shop and module). */
+export async function giveTrial(staff: StaffOk, tenantId: string, module: ModuleKey, now: Date): Promise<'given' | 'has_it' | 'core' | 'next'> {
   if (!PLAN_GRANTABLE.includes(module)) return 'core'
-  const m = await merchantModules(staff, tenantId, now)
-  if (m.access[module].granted) return 'has_it'
+  if (MODULES[module].status === 'next') return 'next'
   const ends = new Date(now.getTime() + TRIAL_DAYS * 86_400_000)
-  await adminDb().transaction(async (tx) => {
+  return adminDb().transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`trial:${tenantId}:${module}`}))`)
+    const m = await merchantModules(staff, tenantId, now)
+    if (m.access[module].granted) return 'has_it' as const
     await tx.insert(tenantAddons).values({ tenantId, module, startsAt: now, trialEndsAt: ends, reason: `${TRIAL_DAYS}-day trial`, createdBy: staff.userId })
     await auditStaff(tx, staff, { tenantId, action: 'module.trial', target: module, detail: { trialEndsAt: ends.toISOString() } })
+    return 'given' as const
   })
-  return 'given'
 }
 
 /** Ends a trial or add-on now. Only ends_at changes; the row stays as history. */

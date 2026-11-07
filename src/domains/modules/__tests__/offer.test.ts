@@ -1,11 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { moduleAccess, type ModuleFacts } from '../access'
 import { offerFor } from '../offer'
-import { MODULES } from '../registry'
+import { MODULE_KEYS, MODULES } from '../registry'
 
 const now = new Date('2026-11-07T10:00:00Z')
 const day = (n: number) => new Date(now.getTime() + n * 86_400_000)
 const none: ModuleFacts = { planFeatures: [], addons: [], switchedOn: [], paused: [] }
+const shipped = Object.fromEntries(MODULE_KEYS.map((k) => [k, MODULES[k].status]))
+afterEach(() => { for (const k of MODULE_KEYS) (MODULES[k] as { status: string }).status = shipped[k]! })
 const built = (k: keyof typeof MODULES, s: 'now' | 'next') => { (MODULES[k] as { status: string }).status = s }
 
 describe('offerFor', () => {

@@ -23,5 +23,5 @@ export async function resumeModuleAction(form: FormData) {
   const p = z.object({ module: z.enum(MODULE_KEYS) }).safeParse(Object.fromEntries(form))
   if (!p.success) redirect('/admin/modules')
   const ok = await resumeModule(staff, p.data.module, new Date())
-  redirect(ok ? back('ok', `${moduleName(p.data.module)} running again. Held messages go out now.`) : back('error', 'It was not paused.'))
+  redirect(ok ? back('ok', `${moduleName(p.data.module)} running again. Held messages go out with the next send.`) : back('error', 'It was not paused.'))
 }

@@ -17,12 +17,12 @@ import { endAddonAction, giveTrialAction } from './actions'
 export const metadata = { title: 'Modules' }
 
 function grantedBy(a: ModuleAccess, planName: string | null) {
+  if (a.how === 'trial') return `Trial until ${dayIN(a.trialEndsAt!)}`
   if (MODULES[a.key].status === 'next') return 'Next'
   switch (a.how) {
     case 'core': return 'Every plan'
     case 'plan': return `${planName ?? 'Their'} plan`
     case 'add_on': return 'Add-on'
-    case 'trial': return `Trial until ${dayIN(a.trialEndsAt!)}`
     default: return 'Not granted'
   }
 }
@@ -58,7 +58,7 @@ export default async function MerchantModulesPage({ params, searchParams }: { pa
             const a = m.access[k]
             const on = m.switchedOnAt[k]
             const addon = m.addonId[k]
-            const trialable = canChange && PLAN_GRANTABLE.includes(k) && !a.granted
+            const trialable = canChange && PLAN_GRANTABLE.includes(k) && !a.granted && MODULES[k].status === 'now'
             return (
               <DataTableRow key={k} dimmed={MODULES[k].status === 'next'}>
                 <Td cell="a" className="font-medium">{MODULES[k].name}</Td>

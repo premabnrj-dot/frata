@@ -1,6 +1,8 @@
 import 'server-only'
 import { cache } from 'react'
-import { and, desc, eq, isNull, lte, sql } from 'drizzle-orm'
+import { and, eq, isNull, sql } from 'drizzle-orm'
+import type { Tx } from '@/lib/db'
+import { currentPlan } from '@/domains/plans/entitlements'
 import { addonPrices, modulePauses, tenantAddons, tenantModules } from '@/lib/db/schema-modules'
 import { planVersions, tenantPlans } from '@/lib/db/schema'
 import { withTenant } from '@/lib/db/tenant'
@@ -16,12 +18,13 @@ import { ADD_ONS, isModuleKey, type ModuleKey } from '@/domains/modules/registry
 
 export type ShopModules = { facts: ModuleFacts; access: Record<ModuleKey, ModuleAccess> }
 
-async function readFacts(tenantId: string, now: Date): Promise<ModuleFacts> {
-  return withTenant(tenantId, async (tx) => {
-    const [plan] = await tx.select({ features: planVersions.features }).from(tenantPlans)
+/** The facts, read in a transaction already set to this shop (an action's own, or withTenant's). */
+export async function readFactsIn(tx: Tx, tenantId: string, now: Date): Promise<ModuleFacts> {
+  {
+    const plans = await tx.select({ features: planVersions.features, startsAt: tenantPlans.startsAt }).from(tenantPlans)
       .innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId))
-      .where(and(eq(tenantPlans.tenantId, tenantId), lte(tenantPlans.startsAt, now)))
-      .orderBy(desc(tenantPlans.startsAt)).limit(1)
+      .where(eq(tenantPlans.tenantId, tenantId))
+    const plan = currentPlan(plans, now)
     const addons = await tx.select({ module: tenantAddons.module, startsAt: tenantAddons.startsAt, endsAt: tenantAddons.endsAt, trialEndsAt: tenantAddons.trialEndsAt })
       .from(tenantAddons).where(eq(tenantAddons.tenantId, tenantId))
     const switches = await tx.select({ module: tenantModules.module }).from(tenantModules)
@@ -33,7 +36,14 @@ async function readFacts(tenantId: string, now: Date): Promise<ModuleFacts> {
       switchedOn: switches.map((s) => s.module).filter(isModuleKey),
       paused: pauses.map((p) => p.module).filter(isModuleKey),
     }
-  })
+  }
+}
+
+const readFacts = (tenantId: string, now: Date) => withTenant(tenantId, (tx) => readFactsIn(tx, tenantId, now))
+
+/** Access inside an action's transaction: the check and the write see one snapshot, on one connection. */
+export async function moduleAccessIn(tx: Tx, tenantId: string, now: Date) {
+  return moduleAccess(await readFactsIn(tx, tenantId, now), now)
 }
 
 /** Facts and access for one shop. Cached per request for the same (tenant, at): pass one `at` down a render to share the read. */

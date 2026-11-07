@@ -29,6 +29,10 @@ export async function GET(request: Request) {
   } catch (e) { console.error('[cron] erase list', e instanceof Error ? e.name : 'error') }
   const rows = await claimDue()
   let sent = 0
+  // One read of each shop's modules per sweep, not one per row.
+  const at = new Date().toISOString()
+  const accessOf = new Map<string, Promise<Awaited<ReturnType<typeof shopModules>>['access']>>()
+  const shopAccess = (tenantId: string) => { if (!accessOf.has(tenantId)) accessOf.set(tenantId, shopModules(tenantId, at).then((m) => m.access)); return accessOf.get(tenantId)! }
   for (const row of rows) {
     const send = SENDERS[row.kind]
     try {
@@ -36,7 +40,7 @@ export async function GET(request: Request) {
       // own transaction): Frrata's pause defers it, an off switch cancels it (architecture review 2026-11-07).
       const module = moduleForKind(row.kind)
       if (module) {
-        const decision = outboxDecision((await shopModules(row.tenantId, new Date().toISOString())).access[module])
+        const decision = outboxDecision((await shopAccess(row.tenantId))[module])
         if (decision === 'defer') { await deferRow(row.id); continue }
         if (decision === 'drop') { await markDead(row.id, `${module} is off for this shop`); continue }
       }

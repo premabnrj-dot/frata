@@ -9,7 +9,7 @@ import { CAN_MANAGE } from '@/lib/auth/require-member'
 import { auditEvents } from '@/lib/db/schema'
 import { tenantModules } from '@/lib/db/schema-modules'
 import { cancelQueued } from '@/lib/outbox'
-import { shopModules } from '@/lib/queries/modules'
+import { moduleAccessIn } from '@/lib/queries/modules'
 import { refreshShop } from '@/lib/queries/storefront'
 
 // Console › Apps (docs/specs/2026-11-07-modules-foundation.md § 5). Owners and admins switch a module on or off.
@@ -27,10 +27,10 @@ export async function setModuleAction(input: unknown): Promise<{ ok: true } | { 
     const r = await asMember(CAN_MANAGE, { action: on ? 'module.on' : 'module.off', target: module }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
       if (on) {
-        const { access } = await shopModules(tenantId, new Date().toISOString())
+        const access = await moduleAccessIn(tx, tenantId, new Date())
         const a = access[module]
-        if (def.status !== 'now') return 'next'
-        if (!a.granted) return 'not_granted'
+        if (a.why === 'next') return 'next'
+        if (a.why === 'not_granted') return 'not_granted'
         const missing = def.dependsOn.find((d) => !access[d].usable)
         if (missing) return `needs:${missing}`
         if (a.on) return 'done'

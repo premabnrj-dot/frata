@@ -1,7 +1,7 @@
 // =============================================================================
 // FLOW: modules — the foundation (docs/specs/2026-11-07-modules-foundation.md): the shop's
-// Apps page lists every module with its badge and opens the details dialog; Frata gives a
-// 30-day trial in Admin and ends it; Frata pauses a module for everyone and resumes it.
+// Apps page lists every module with its badge and opens the details dialog; Admin offers no
+// trial of a module not built yet and ends a trial; Admin pauses a module for everyone, then resumes it.
 // Guards: an Apps page that drops a module, a details dialog with no price or no way out,
 // a trial or pause that leaves no row or no audit, a phone that scrolls sideways.
 // =============================================================================
@@ -32,6 +32,7 @@ export default {
       await riya.getByRole('button', { name: 'Reviews', exact: true }).click()
       const d = riya.getByRole('dialog', { name: 'Reviews' })
       await d.getByRole('heading', { name: 'What you get' }).waitFor()
+      await riya.waitForTimeout(400) // let the dialog finish opening before the screenshot
       await d.getByText('₹499').first().waitFor()
       await riya.screenshot({ path: t.out('details') })
       await d.getByRole('button', { name: 'Not now' }).click()
@@ -47,13 +48,14 @@ export default {
     })
 
     const meera = await open('frata')
-    await t.step('Admin gives a 30-day trial, then ends it', async () => {
+    await t.step('Admin: no trial of a module not built yet; a trial shows and can be ended', async () => {
       await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/modules`)
       await meera.getByRole('link', { name: 'Modules', exact: true }).first().waitFor()
-      await meera.getByRole('button', { name: 'Give a 30-day trial of Reviews' }).click()
-      await meera.getByText('Reviews: 30-day trial started.').waitFor()
-      const [a] = await db`select trial_ends_at, ends_at from tenant_addons where tenant_id = ${KESAR} and module = 'reviews'`
-      assert.ok(a.trial_ends_at > new Date(Date.now() + 29 * 86_400_000)); assert.equal(a.ends_at, null)
+      // Every module is still Next: a trial would run out unused, so there is no trial button yet.
+      assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial/ }).count(), 0)
+      // A trial granted before (the row Admin writes when a module ships) shows its end and can be ended.
+      await db`insert into tenant_addons (tenant_id, module, trial_ends_at, reason, created_by) values (${KESAR}, 'reviews', now() + interval '30 days', '30-day trial', ${F.id})`
+      await meera.reload()
       await meera.getByText(/Trial until/).waitFor()
       await meera.screenshot({ path: t.out('admin-trial') })
       await meera.getByRole('button', { name: 'End trial' }).click()
@@ -61,7 +63,7 @@ export default {
       const [b] = await db`select ends_at from tenant_addons where tenant_id = ${KESAR} and module = 'reviews'`
       assert.ok(b.ends_at)
       const audit = await db`select action from audit_events where tenant_id = ${KESAR} and action like 'module.%' order by at`
-      assert.deepEqual(audit.map((r) => r.action), ['module.trial', 'module.end'])
+      assert.deepEqual(audit.map((r) => r.action), ['module.end'])
     })
 
     await t.step('Admin pauses a module for everyone, then resumes it', async () => {

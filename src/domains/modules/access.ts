@@ -9,7 +9,7 @@
 
 import { MODULE_KEYS, MODULES, type ModuleKey } from './registry'
 
-export type AddonFact = { module: ModuleKey; startsAt: Date; endsAt: Date | null; trialEndsAt: Date | null }
+export type AddonFact = { id?: string; module: ModuleKey; startsAt: Date; endsAt: Date | null; trialEndsAt: Date | null }
 export type ModuleFacts = {
   planFeatures: readonly string[]
   addons: readonly AddonFact[]
@@ -33,19 +33,24 @@ export type ModuleAccess = {
   why: Why
   /** The dependency that is not usable, when why = 'needs'. */
   needs: ModuleKey | null
+  /** Held back by a Frrata pause, its own or a dependency's: its messages wait, nothing is dropped. */
+  held: boolean
+}
+
+/** The add-on row in force for a module: a paid one before a trial. The one rule, read by access and by Admin. */
+export function liveAddon<A extends AddonFact>(addons: readonly A[], key: ModuleKey, now: Date): A | null {
+  const t = now.getTime()
+  const live = addons.filter((a) => a.module === key && a.startsAt.getTime() <= t && (!a.endsAt || a.endsAt.getTime() > t))
+  return live.find((a) => !a.trialEndsAt) ?? live.find((a) => a.trialEndsAt && a.trialEndsAt.getTime() > t) ?? null
 }
 
 function grant(key: ModuleKey, f: ModuleFacts, now: Date): { how: How; trialEndsAt: Date | null } | null {
   const def = MODULES[key]
   if (def.billing === 'core') return { how: 'core', trialEndsAt: null }
   if (f.planFeatures.includes(key)) return { how: 'plan', trialEndsAt: null }
-  const t = now.getTime()
-  const live = f.addons.filter((a) => a.module === key && a.startsAt.getTime() <= t && (!a.endsAt || a.endsAt.getTime() > t))
-  const paid = live.find((a) => !a.trialEndsAt)
-  if (paid) return { how: 'add_on', trialEndsAt: null }
-  const trial = live.find((a) => a.trialEndsAt && a.trialEndsAt.getTime() > t)
-  if (trial) return { how: 'trial', trialEndsAt: trial.trialEndsAt }
-  return null
+  const a = liveAddon(f.addons, key, now)
+  if (!a) return null
+  return a.trialEndsAt ? { how: 'trial', trialEndsAt: a.trialEndsAt } : { how: 'add_on', trialEndsAt: null }
 }
 
 export function moduleAccess(f: ModuleFacts, now: Date): Record<ModuleKey, ModuleAccess> {
@@ -60,7 +65,7 @@ export function moduleAccess(f: ModuleFacts, now: Date): Record<ModuleKey, Modul
     else if (!g) why = 'not_granted'
     else if (!on) why = 'off'
     else if (paused) why = 'paused'
-    return { key, granted: !!g, how: g?.how ?? null, trialEndsAt: g?.trialEndsAt ?? null, on, paused, usable: why === 'usable', why, needs: null }
+    return { key, granted: !!g, how: g?.how ?? null, trialEndsAt: g?.trialEndsAt ?? null, on, paused, usable: why === 'usable', why, needs: null, held: why === 'paused' }
   }
   for (const k of MODULE_KEYS) out[k] = base(k)
   // A dependency that is not usable makes the module not usable (one level is all the registry has; loop for safety).
@@ -69,7 +74,7 @@ export function moduleAccess(f: ModuleFacts, now: Date): Record<ModuleKey, Modul
       const a = out[k]
       if (!a.usable) continue
       const missing = MODULES[k].dependsOn.find((d) => !out[d].usable)
-      if (missing) out[k] = { ...a, usable: false, why: 'needs', needs: missing }
+      if (missing) out[k] = { ...a, usable: false, why: 'needs', needs: missing, held: out[missing].held }
     }
   }
   return out
@@ -78,6 +83,6 @@ export function moduleAccess(f: ModuleFacts, now: Date): Record<ModuleKey, Modul
 /** What the outbox does with a module's queued message (architecture review 2026-11-07). */
 export function outboxDecision(a: ModuleAccess): 'send' | 'defer' | 'drop' {
   if (a.usable) return 'send'
-  if (a.why === 'paused') return 'defer' // Frata's pause holds messages back; nothing is lost
+  if (a.held) return 'defer' // Frrata's pause (of it or what it needs) holds messages back; nothing is lost
   return 'drop' // the merchant turned it off, or it is no longer granted: cancelled, with the reason
 }

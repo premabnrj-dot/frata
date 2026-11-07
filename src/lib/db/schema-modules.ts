@@ -1,6 +1,6 @@
 // =============================================================================
 // FILE: src/lib/db/schema-modules.ts — modules: switches, add-ons, prices, pauses
-// (docs/specs/2026-11-07-modules-foundation.md § 2; access: drizzle/0025_modules_access.sql).
+// (docs/specs/2026-11-07-modules-foundation.md § 2; access: drizzle/0028_modules_access.sql).
 // Facts only: whether a module is usable is derived by moduleAccess(), never stored.
 // CHECK lists are built from the registry (MODULE_KEYS, PLAN_GRANTABLE, ADD_ONS), so the two cannot drift.
 // =============================================================================
