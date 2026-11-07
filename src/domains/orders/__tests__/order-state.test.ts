@@ -10,21 +10,21 @@ export const moments = (o: Partial<OrderMoments> = {}): OrderMoments => ({
 
 describe('orderState', () => {
   it('starts unconfirmed', () => {
-    expect(orderState(moments())).toBe('unconfirmed')
+    expect(orderState(moments(), new Date())).toBe('unconfirmed')
   })
   it('reads the furthest moment reached, whatever order the webhooks came in', () => {
-    expect(orderState(moments({ deliveredAt: t(5), shippedAt: t(2) }))).toBe('delivered')
+    expect(orderState(moments({ deliveredAt: t(5), shippedAt: t(2) }), new Date())).toBe('delivered')
   })
   it('an RTO outranks a delivery attempt', () => {
-    expect(orderState(moments({ shippedAt: t(2), ndrAt: t(4), rtoInitiatedAt: t(6) }))).toBe('rto')
+    expect(orderState(moments({ shippedAt: t(2), ndrAt: t(4), rtoInitiatedAt: t(6) }), new Date())).toBe('rto')
   })
   it('held, then confirmed (confirm clears held_at), then packed; cancel outranks all of them', () => {
-    expect(orderState(moments({ heldAt: t(2) }))).toBe('held')
-    expect(orderState(moments({ confirmedAt: t(2) }))).toBe('confirmed')
-    expect(orderState(moments({ confirmedAt: t(2), heldAt: t(3) }))).toBe('held') // undo of a confirm-from-hold restores held_at
-    expect(orderState(moments({ confirmedAt: t(2), packedAt: t(3) }))).toBe('packed')
-    expect(orderState(moments({ confirmedAt: t(2), packedAt: t(3), cancelledAt: t(4) }))).toBe('cancelled')
-    expect(orderState(moments({ packedAt: t(3), shippedAt: t(4) }))).toBe('shipped')
+    expect(orderState(moments({ heldAt: t(2) }), new Date())).toBe('held')
+    expect(orderState(moments({ confirmedAt: t(2) }), new Date())).toBe('confirmed')
+    expect(orderState(moments({ confirmedAt: t(2), heldAt: t(3) }), new Date())).toBe('held') // undo of a confirm-from-hold restores held_at
+    expect(orderState(moments({ confirmedAt: t(2), packedAt: t(3) }), new Date())).toBe('packed')
+    expect(orderState(moments({ confirmedAt: t(2), packedAt: t(3), cancelledAt: t(4) }), new Date())).toBe('cancelled')
+    expect(orderState(moments({ packedAt: t(3), shippedAt: t(4) }), new Date())).toBe('shipped')
   })
   it('queues only what a merchant must act on', () => {
     expect(needsAction('unconfirmed')).toBe(true)

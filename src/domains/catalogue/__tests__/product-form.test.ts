@@ -16,7 +16,7 @@ describe('rupees', () => {
 
 describe('cleanProduct', () => {
   it('turns the grid into paise, unknown cost stays null (not 0)', () => {
-    const r = cleanProduct(base)
+    const r = cleanProduct(base, new Date())
     const rest = { whenOut: 'stop', shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderCap: null }
     expect(r.ok && r.product.variants).toEqual([
       { values: ['S'], price: 249000, compareAt: 299000, unitCost: 98000, stock: 6, sku: 'KS-LK-S', ...rest },
@@ -24,12 +24,12 @@ describe('cleanProduct', () => {
     expect(r.ok && r.product.handle).toBe('linen-kurta-set')
   })
   it('names the cell that is wrong', () => {
-    const r = cleanProduct({ ...base, variants: [{ ...base.variants[0]!, compareAt: '2000' }, { ...base.variants[1]!, price: 'free', sku: 'ks-lk-s' }] })
+    const r = cleanProduct({ ...base, variants: [{ ...base.variants[0]!, compareAt: '2000' }, { ...base.variants[1]!, price: 'free', sku: 'ks-lk-s' }] }, new Date())
     expect(r.ok).toBe(false)
     if (!r.ok) expect(Object.keys(r.errors).sort()).toEqual(['v:M:price', 'v:M:sku', 'v:S:compareAt'])
   })
   it('a combination the grid never sent still needs a price', () => {
-    const r = cleanProduct({ ...base, options: [{ name: 'Size', values: ['S', 'M', 'L'] }] })
+    const r = cleanProduct({ ...base, options: [{ name: 'Size', values: ['S', 'M', 'L'] }] }, new Date())
     expect(!r.ok && r.errors['v:L:price']).toBe('A price in rupees.')
   })
 })
@@ -53,9 +53,9 @@ describe('when it runs out', () => {
     expect(cleanProduct({ ...base, variants: [{ ...base.variants[0]!, whenOut: 'made_to_order', leadMin: '14', leadMax: '10' }, base.variants[1]!] }, now).ok).toBe(false)
   })
   it('handle shape and colours only for real colour values', () => {
-    expect(cleanProduct({ ...base, handle: 'Bad Handle' }).ok).toBe(false)
+    expect(cleanProduct({ ...base, handle: 'Bad Handle' }, new Date()).ok).toBe(false)
     const c = cleanProduct({ ...base, options: [{ name: 'Colour', values: ['Indigo'] }], variants: [{ ...base.variants[0]!, values: ['Indigo'] }],
-      colours: [{ value: 'Indigo', family: '2', hex: '#2E3A63', crop: null }, { value: 'Ghost', family: null, hex: null, crop: null }] })
+      colours: [{ value: 'Indigo', family: '2', hex: '#2E3A63', crop: null }, { value: 'Ghost', family: null, hex: null, crop: null }] }, new Date())
     expect(c.ok && c.product.colours).toEqual([{ value: 'Indigo', family: '2', hex: '#2e3a63', crop: null }])
   })
 })

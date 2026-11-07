@@ -95,7 +95,7 @@ async function handleFree(tx: Tx, tenantId: string, handle: string, productId: s
 }
 
 export async function saveProduct(productId: string, version: number, input: ProductInput, manualCollections: string[] = []): Promise<Result<{ version: number; handle: string }>> {
-  const parsed = cleanProduct(input)
+  const parsed = cleanProduct(input, new Date())
   if (!parsed.ok) return { ok: false, error: 'Some fields need a look before saving.', errors: parsed.errors }
   const p = parsed.product
   // Category, details and colour families are checked against the standard lists here, on the server.

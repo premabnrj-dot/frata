@@ -57,7 +57,7 @@ export default async function MerchantPage({ params, searchParams }: { params: P
             {m.members.length === 0 && <p className="text-sm text-muted-foreground">No one has signed in yet.</p>}
             {m.members.map((x) => (
               <div key={x.userId} className="flex items-center justify-between text-sm">
-                <span className="min-w-0 [overflow-wrap:anywhere]">{x.email ?? 'Unknown'} {x.lastSignInAt && <span className="text-muted-foreground">· signed in {sinceIN(x.lastSignInAt)}</span>}</span>
+                <span className="min-w-0 [overflow-wrap:anywhere]">{x.email ?? 'Unknown'} {x.lastSignInAt && <span className="text-muted-foreground">· signed in {sinceIN(x.lastSignInAt, new Date())}</span>}</span>
                 <Badge>{x.role[0]!.toUpperCase() + x.role.slice(1)}</Badge>
               </div>
             ))}

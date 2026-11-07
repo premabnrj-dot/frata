@@ -54,14 +54,14 @@ export function Toaster({ children }: { children: React.ReactNode }) {
   }, [])
   const run = useCallback((ms: number) => {
     clearAll()
-    started.current = Date.now(); left.current = ms
+    started.current = Date.now(); left.current = ms // clock-ok: in an effect, after mount
     life.current = setTimeout(dismiss, ms)
   }, [dismiss])
 
   // Hover and focus each hold the window open; it runs again only when neither does.
   useEffect(() => {
     if (!toast || leaving) return
-    if (paused) { if (life.current) { clearTimeout(life.current); life.current = null; left.current -= Date.now() - started.current } }
+    if (paused) { if (life.current) { clearTimeout(life.current); life.current = null; left.current -= Date.now() - started.current } } // clock-ok: in an effect, after mount
     else if (!life.current) run(Math.max(1500, left.current))
   }, [paused, toast, leaving, run])
   useEffect(() => clearAll, [])

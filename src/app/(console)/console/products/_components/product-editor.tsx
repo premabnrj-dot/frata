@@ -22,6 +22,7 @@ import { SeoPanel } from './seo-panel'
 import { SizeChartPanel, type TypeRow } from './size-chart'
 import { StatusBadge } from './status-badge'
 import { StatusCard } from './status-card'
+import { useNow } from '@/components/time/now'
 import { EMPTY_CELL, shopperSees, VariantGrid, type Cell } from './variant-grid'
 import { Section } from '@/components/layout/section'
 import { PageHeader } from '@/components/layout/page-header'
@@ -48,6 +49,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
   initial: EditorProduct; shop: EditorShop; photos: Photo[]; types: TypeRow[]; tenantId: string; blobReady: boolean; allCollections: CollectionChip[]; families: Family[]
 }) {
   const router = useRouter()
+  const now = useNow()
   const { id, version: v0, status, publishAt, everLive, ...start0 } = initial
   const [saved, setSaved] = useState<Draft>(start0)
   const [d, setD] = useState<Draft>(start0)
@@ -69,7 +71,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
   const ready = readiness({
     title: d.title, photos: photos.length, prices: cells.map((c) => parseRupees(c.price) ?? 0),
     hasSizes: d.options.some((o) => /^sizes?$/i.test(o.name)), chartRows: type?.sizeChart.rows.length ?? 0,
-    anyBuyable: cells.some((c) => shopperSees(c).canBuy),
+    anyBuyable: cells.some((c) => shopperSees(c, now).canBuy),
   })
 
   // Defaults for search and sharing, from the product's own facts (seo.ts).
@@ -120,7 +122,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
           shows and edits it. A textarea, so a long title wraps to the next line instead of being cut mid-word
           (stress test S7). One line of text: Enter does nothing, unless an input method is still composing a word. */}
       <PageHeader title={d.title || 'New product'} back={{ href: '/console/products', label: 'Products' }}
-        badges={<StatusBadge status={status} publishAt={publishAt} />}
+        badges={<StatusBadge status={status} publishAt={publishAt} now={now} />}
         titleSlot={<div className="min-w-0 flex-1">
           <label htmlFor="title" className="sr-only">Product title</label>
           <textarea id="title" rows={1} value={d.title} maxLength={140} aria-invalid={!!errors.title || undefined} placeholder="Product title"
@@ -176,7 +178,8 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
 function Summary({ d, cells, photos, typeName, status, publishAt, address }: { d: Draft; cells: Cell[]; photos: Photo[]; typeName: string | null; status: Status; publishAt: string | null; address: string }) {
   const prices = cells.map((c) => parseRupees(c.price)).filter((x): x is number => x !== null && x > 0)
   const total = cells.reduce((a, c) => a + (Number(c.stock) || 0), 0)
-  const sees = cells.map((c) => shopperSees(c))
+  const now = useNow()
+  const sees = cells.map((c) => shopperSees(c, now))
   const soldOut = sees.filter((s) => !s.canBuy).length
   const later = sees.filter((s) => s.kind === 'preorder' || s.kind === 'made_to_order').length
   const cover = photos[0]
@@ -188,7 +191,7 @@ function Summary({ d, cells, photos, typeName, status, publishAt, address }: { d
           : <div className="grid h-20 w-16 shrink-0 place-items-center rounded-sm bg-muted text-xs text-muted-foreground">No photo</div>}
         <div className="min-w-0 space-y-1">
           <p className="truncate font-semibold">{d.title || 'Untitled product'}</p>
-          <StatusBadge status={status} publishAt={publishAt} />
+          <StatusBadge status={status} publishAt={publishAt} now={now} />
           <p className="truncate text-xs text-muted-foreground">{[d.category?.name, typeName].filter(Boolean).join(' · ')}</p>
           {colourOpt && colourOpt.values.length > 0 && (
             <ul className="flex flex-wrap gap-1" aria-label="Colours">{colourOpt.values.map((v) => <li key={v} title={v}><Swatch c={d.colours.find((c) => c.value === v) ?? { value: v, family: null, hex: null, crop: null }} photos={photos} d={18} /><span className="sr-only">{v}</span></li>)}</ul>
