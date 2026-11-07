@@ -20,7 +20,9 @@ export default async function OnlinePaymentsPage() {
       <Link href="/console/settings" className="text-sm text-muted-foreground hover:text-foreground">← Settings</Link>
       <h1 className="text-2xl font-bold tracking-tight">Online payments</h1>
       <OnlinePayments
-        status={status.connected ? { keyId: status.keyId, mode: status.mode, webhookSeenAt: status.webhookSeenAt?.toISOString() ?? null, lastEventAt: status.lastEventAt?.toISOString() ?? null, problem: status.problem, webhookUrl: webhookUrl!, webhookSecret: status.webhookSecret } : null}
+        status={status.connected ? { keyId: status.keyId, mode: status.mode, webhookSeenAt: status.webhookSeenAt?.toISOString() ?? null, lastEventAt: status.lastEventAt?.toISOString() ?? null, problem: status.problem, webhookUrl: webhookUrl!,
+          // Never to a Frata support visit (support acts as owner; with the secret it could sign a fake payment: audit 2026-11-07).
+          webhookSecret: auth.membership.supportSessionId ? null : status.webhookSecret } : null}
         support={!!auth.membership.supportSessionId} available={isPaymentsConfigured()} />
     </div>
   )

@@ -438,4 +438,19 @@ do $$ begin
 end $$;
 rollback;
 
-\echo 'tenancy proof — all 23 checks passed'
+-- 24. Inside a shop's transaction, webhook events and outbox rows stay in that shop (no insert for B, no move to B).
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  begin insert into webhook_events (provider, event_key, tenant_id, payload) values ('razorpay', 'razorpay:fake-for-b', '22222222-2222-2222-2222-222222222222', '{}'); raise exception 'FAIL: A wrote a webhook event for B';
+  exception when insufficient_privilege then null; end;
+  insert into webhook_events (provider, event_key, tenant_id, payload) values ('razorpay', 'razorpay:a-own', '11111111-1111-1111-1111-111111111111', '{}');
+  begin update webhook_events set tenant_id = '22222222-2222-2222-2222-222222222222' where event_key = 'razorpay:a-own'; raise exception 'FAIL: A moved a webhook event to B';
+  exception when insufficient_privilege then null; end;
+  insert into outbox (tenant_id, kind, dedupe_key, payload) values ('11111111-1111-1111-1111-111111111111', 'test.kind', 'a-own', '{}');
+  begin update outbox set tenant_id = '22222222-2222-2222-2222-222222222222' where dedupe_key = 'a-own'; raise exception 'FAIL: A moved an outbox row to B';
+  exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+
+\echo 'tenancy proof — all 24 checks passed'

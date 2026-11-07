@@ -63,7 +63,7 @@ for (const file of walk('src')) {
   // Shopper-facing code: pages, views, shop API routes and their reads (checkout review 2026-11-07 adds the API and checkout reads).
   const shopperRead = /^src\/lib\/queries\/(storefront|checkout)/.test(file)
   const shopper = file.startsWith('src/app/s/') || shopperRead || file.startsWith('src/components/shop-preview/')
-    || file.startsWith('src/components/storefront/') || file.startsWith('src/app/(console)/console/preview/') || file.startsWith('src/app/api/shop/')
+    || file.startsWith('src/components/storefront/') || file.startsWith('src/app/(console)/console/preview/') || file.startsWith('src/app/api/shop/') || file === 'src/lib/http/shop-api.ts'
   if (shopper) {
     const named = [...SENTINELS, 'keySecret', 'webhookSecret', 'key_secret', 'webhook_secret'].filter((x) => text.includes(x))
     if (named.length) failures.push(`${file}  shopper code names a merchant cost or secret (${named.join(', ')}) — select only what a shopper sees`)

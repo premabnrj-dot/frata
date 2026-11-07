@@ -139,8 +139,9 @@ export async function processEvents(tenantId: string, limit = 20): Promise<numbe
       .for('update', { skipLocked: true })
     for (const row of rows) {
       let error: string | null = null
-      try { error = await applyEvent(tx, tenantId, row.payload as Record<string, unknown>) } catch (e) { error = e instanceof Error ? e.name : 'error' }
-      await tx.update(webhookEvents).set({ processedAt: sql`now()`, lastError: error }).where(eq(webhookEvents.id, row.id))
+      // A savepoint per event: one bad event must not abort the batch and block every later payment (audit 2026-11-07).
+      try { error = await tx.transaction((sp) => applyEvent(sp, tenantId, row.payload as Record<string, unknown>)) } catch (e) { error = e instanceof Error ? e.name : 'error' }
+      await tx.update(webhookEvents).set({ processedAt: sql`now()`, lastError: error }).where(and(eq(webhookEvents.tenantId, tenantId), eq(webhookEvents.id, row.id)))
     }
     if (rows.length) await markEvent(tx, tenantId)
     return rows.length
@@ -158,7 +159,7 @@ async function applyEvent(tx: Tx, tenantId: string, ev: Record<string, unknown>)
   if (kind === 'payment.failed') { await tx.update(orders).set({ paymentFailedAt: sql`now()` }).where(and(eq(orders.tenantId, tenantId), eq(orders.id, o.id), isNull(orders.paidAt))); return null }
   if (kind !== 'payment.captured' && kind !== 'order.paid') return null
   const asked = Number((o.checkout as { onlineTotal?: number } | null)?.onlineTotal ?? -1)
-  if (p.status !== 'captured' || p.amount !== asked || String(entity.currency ?? 'INR') !== 'INR') return `amount or state does not match (${p.status})`
+  if (p.status !== 'captured' || p.amount !== asked || entity.currency !== 'INR') return `amount or state does not match (${p.status})`
   await markPaid(tx, { id: o.id, tenantId }, { paymentId: p.id, fee: p.fee, tax: p.tax })
   return null
 }
