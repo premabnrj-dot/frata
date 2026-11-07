@@ -26,14 +26,14 @@ export const ADMIN_ONLY = ['admin'] as const satisfies readonly StaffRole[]
 
 export const requireStaff = cache(async (allowed: readonly StaffRole[]): Promise<StaffResult> => {
   if (!isAuthConfigured() || !isDatabaseConfigured() || !isAdminDatabaseConfigured()) {
-    return { ok: false, reason: 'not_configured', message: 'Frata Admin is not connected yet' }
+    return { ok: false, reason: 'not_configured', message: 'Frrata Admin is not connected yet' }
   }
   const supabase = await createServerSupabase()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, reason: 'signed_out', message: 'Not signed in' }
   const { staffRole } = await accessFor(user.id)
   if (!staffRole || !allowed.includes(staffRole)) {
-    return { ok: false, reason: 'not_staff', message: 'This needs Frata staff access' }
+    return { ok: false, reason: 'not_staff', message: 'This needs Frrata staff access' }
   }
   return { ok: true, userId: user.id, email: user.email ?? '', role: staffRole }
 })

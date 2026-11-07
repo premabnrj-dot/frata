@@ -9,7 +9,7 @@ import { isPaymentsConfigured } from '@/lib/env'
 import { refreshShop } from '@/lib/queries/storefront'
 
 // Connecting Razorpay moves a merchant's money: owner only, and never during a
-// Frata support visit (support acts as owner; tenancy review 2026-11-07). The
+// Frrata support visit (support acts as owner; tenancy review 2026-11-07). The
 // keys are checked with Razorpay before anything is saved.
 
 type Result = { ok: true } | { ok: false; error: string; field?: 'keyId' | 'keySecret' }
@@ -19,7 +19,7 @@ export async function connectRazorpay(input: { keyId: string; keySecret: string 
   const keyId = String(input?.keyId ?? '').trim(), keySecret = String(input?.keySecret ?? '').trim()
   if (!modeOf(keyId)) return { ok: false, field: 'keyId', error: 'A Key ID starts rzp_live_ or rzp_test_. Copy it from Razorpay → Account & Settings → API keys.' }
   if (!/^[A-Za-z0-9]{12,64}$/.test(keySecret)) return { ok: false, field: 'keySecret', error: 'Paste the Key secret exactly as Razorpay showed it.' }
-  if (!isPaymentsConfigured()) return { ok: false, error: 'Online payments are not switched on for Frata yet. Nothing was saved.' }
+  if (!isPaymentsConfigured()) return { ok: false, error: 'Online payments are not switched on for Frrata yet. Nothing was saved.' }
   const check = await checkKeys({ keyId, keySecret })
   if (check === 'wrong') return { ok: false, field: 'keySecret', error: 'Razorpay did not accept these keys. Check both, or generate a new pair. Nothing was saved.' }
   if (check === 'unreachable') return { ok: false, error: 'Razorpay did not answer. Nothing was saved. Try again in a minute.' }
@@ -31,7 +31,7 @@ export async function connectRazorpay(input: { keyId: string; keySecret: string 
       return 'ok' as const
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (r.value === 'support') return { ok: false, error: 'Only the shop’s owner can connect Razorpay, not Frata support.' }
+    if (r.value === 'support') return { ok: false, error: 'Only the shop’s owner can connect Razorpay, not Frrata support.' }
     refreshShop(r.tenantId, 'shop')
     revalidatePath('/console', 'layout')
     return { ok: true }

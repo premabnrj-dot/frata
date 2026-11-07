@@ -94,7 +94,7 @@ export async function savePolicyText(kind: string, body: string | null): Promise
 
 const ADDRESS_ERRORS: Record<string, string> = {
   not_owner: 'Only the owner or an admin of this shop can change its address.',
-  published: 'Your shop is open, so its address is fixed. Ask Frata support on WhatsApp to move it.',
+  published: 'Your shop is open, so its address is fixed. Ask Frrata support on WhatsApp to move it.',
   bad_slug: 'Letters, digits and hyphens, at least 3.',
   slug_taken: 'That address is taken. Try another.',
 }

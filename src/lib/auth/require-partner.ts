@@ -19,7 +19,7 @@ export const requirePartner = cache(async (): Promise<PartnerResult> => {
   const user = await requireUser()
   if (!user.ok) return { ok: false, reason: user.reason, message: user.message }
   const partner = await myPartner(user.userId).catch((err) => { console.error('[requirePartner]', err instanceof Error ? err.name : err); return null })
-  if (!partner || partner.declinedAt) return { ok: false, reason: 'not_partner', message: 'This email is not a Frata partner' }
+  if (!partner || partner.declinedAt) return { ok: false, reason: 'not_partner', message: 'This email is not a Frrata partner' }
   if (!partner.approvedAt) return { ok: false, reason: 'in_review', message: 'Your application is in review' }
   return { ok: true, userId: user.userId, email: user.email, partner }
 })

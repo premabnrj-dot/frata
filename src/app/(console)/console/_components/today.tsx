@@ -14,6 +14,7 @@ import type { TodaySummary } from '@/lib/queries/today'
 import { cn } from '@/lib/utils'
 import { PAYMENT, RISK_LABEL, STATE, TABS } from '../orders/_components/labels'
 import { CopyLink } from './copy-link'
+import { Pictogram } from '@/components/brand/pictogram'
 
 // =============================================================================
 // FILE: src/app/(console)/console/_components/today.tsx
@@ -85,9 +86,14 @@ export function Today({ s, setup, now }: { s: TodaySummary | null; setup: Setup;
       })} />
 
       {s && weekOrders === 0 && s.counts.all === 0 ? (
-        <Section title="No orders yet">
-          <p className="text-sm text-muted-foreground">Share your shop on Instagram or WhatsApp. Orders land here.</p>
-          <CopyLink address={setup.address} />
+        // A brand empty state (brand spec, chapter 5): the shop pictogram on the block print; the words carry the meaning.
+        <Section className="block-print overflow-hidden" ariaLabel="No orders yet">
+          <div className="grid justify-items-start gap-3">
+            <Pictogram name="store" size={48} />
+            <h2 className="font-display text-xl font-semibold tracking-tight">No orders yet</h2>
+            <p className="text-sm text-muted-foreground">Share your shop on Instagram or WhatsApp. Orders land here.</p>
+            <CopyLink address={setup.address} />
+          </div>
         </Section>
       ) : bars ? (
         <Section title="Last 7 days" action={<Link href="/console/orders?tab=all" className="inline-flex min-h-6 items-center text-sm underline">All orders</Link>}>

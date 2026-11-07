@@ -10,6 +10,7 @@ import { PARTNER_TERMS } from '@/domains/partners/terms'
 import { publicPlans, type PublicPlan } from '@/lib/db/platform'
 import { formatInr } from '@/lib/format'
 import { frataWhatsappLink } from '@/lib/site'
+import { Wordmark } from '@/components/brand/wordmark'
 
 // =============================================================================
 // FRATA PARTNERS — the public page for developers, designers and agencies
@@ -20,7 +21,7 @@ import { frataWhatsappLink } from '@/lib/site'
 // =============================================================================
 
 export const revalidate = 3600
-export const metadata = { title: 'Frata Partners', description: 'Build fashion brands’ shops on Frata. Earn 20% of what we earn from them, for 24 months.' }
+export const metadata = { title: 'Frrata Partners', description: 'Build fashion brands’ shops on Frrata. Earn 20% of what we earn from them, for 24 months.' }
 
 const T = PARTNER_TERMS
 const STEPS: [PictogramName, string, string][] = [
@@ -38,11 +39,11 @@ const NOW = ['All your client stores, one sign-in', `Up to ${T.maxUnopened} stor
 const NEXT = ['Monthly statements and bank payouts', 'A monthly report for each client']
 const FAQ: [string, string][] = [
   ['Do I need to code?', 'No. Everything is set up in the console.'],
-  ['Does the brand pay more?', 'No. Your share comes out of Frata’s fee.'],
+  ['Does the brand pay more?', 'No. Your share comes out of Frrata’s fee.'],
   ['When does the 24 months start?', 'When the shop opens. Building time doesn’t count.'],
-  ['My client already has a Frata shop.', 'They can add you as staff. A store you didn’t build earns no share.'],
+  ['My client already has a Frrata shop.', 'They can add you as staff. A store you didn’t build earns no share.'],
   ['What do you need to pay me?', 'PAN and a bank account, when your first share is due. GSTIN if you have one.'],
-  ['When are payouts?', 'Monthly, once Frata billing starts. Your share is recorded from day one.'],
+  ['When are payouts?', 'Monthly, once Frrata billing starts. Your share is recorded from day one.'],
 ]
 
 async function launchPlan(): Promise<PublicPlan | null> {
@@ -56,7 +57,7 @@ export default async function PartnersPage() {
   return (
     <div data-shell className={`min-h-dvh bg-card ${SHELL_FONT_VARS}`}>
       <header className="mx-auto flex max-w-6xl items-center gap-5 px-4 py-4 sm:px-8">
-        <Link href="/" className="text-lg font-semibold text-brand">Frata</Link>
+        <Link href="/" aria-label="Frrata home" className="inline-flex min-h-6 items-center"><Wordmark thread label={null} className="h-6" /></Link>
         <span className="text-sm font-medium">Partners</span>
         <span className="flex-1" />
         <Link href="/" className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline">For brands</Link>
@@ -72,7 +73,7 @@ export default async function PartnersPage() {
               Build brands’ shops.<br />Earn <span className="font-mono">{T.shareBps / 100}%</span> for 2 years.
             </h1>
             <p className="text-lg text-muted-foreground">You build. The brand owns it. We pay you from our fee.</p>
-            <div className="flex flex-wrap items-center gap-4">{apply}<a href={frataWhatsappLink('Hi Frata, I build shops for brands. About the partner program.')} target="_blank" rel="noopener" className="text-sm underline">Ask on WhatsApp</a></div>
+            <div className="flex flex-wrap items-center gap-4">{apply}<a href={frataWhatsappLink('Hi Frrata, I build shops for brands. About the partner program.')} target="_blank" rel="noopener" className="text-sm underline">Ask on WhatsApp</a></div>
           </div>
           <PartnerLoop className="w-full max-w-lg justify-self-center" />
         </section>
@@ -90,7 +91,7 @@ export default async function PartnersPage() {
 
         <section aria-label="The numbers" className="bg-illo-haldi-soft">
           <dl className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-4 py-12 sm:px-8 md:grid-cols-4">
-            {[[`${T.shareBps / 100}%`, 'of what Frata collects'], [`${T.shareMonths}`, 'months per store'], ['₹0', 'added to the brand’s price'], [`${T.maxUnopened}`, 'stores in progress, free']].map(([n, l]) => (
+            {[[`${T.shareBps / 100}%`, 'of what Frrata collects'], [`${T.shareMonths}`, 'months per store'], ['₹0', 'added to the brand’s price'], [`${T.maxUnopened}`, 'stores in progress, free']].map(([n, l]) => (
               <div key={l} className="flex flex-col-reverse gap-1"><dt className="text-sm">{l}</dt><dd className="font-mono text-4xl font-semibold tracking-tight">{n}</dd></div>
             ))}
           </dl>
@@ -100,14 +101,14 @@ export default async function PartnersPage() {
           <section aria-labelledby="example" className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-12 sm:px-8 md:grid-cols-[1fr_1.1fr]">
             <div className="space-y-2">
               <h2 id="example" className="flex items-center text-2xl font-semibold tracking-tight">One brand, one month
-                <InfoTip about="this example">Example, not a promise. A brand on {ex.plan} with {EXAMPLE_BRAND.deliveredOrders} delivered orders of {formatInr(EXAMPLE_BRAND.orderValue)} (ex GST). Frata charges {ex.feeBps / 100}% only on delivered orders. Paid when Frata billing starts.</InfoTip>
+                <InfoTip about="this example">Example, not a promise. A brand on {ex.plan} with {EXAMPLE_BRAND.deliveredOrders} delivered orders of {formatInr(EXAMPLE_BRAND.orderValue)} (ex GST). Frrata charges {ex.feeBps / 100}% only on delivered orders. Paid when Frrata billing starts.</InfoTip>
               </h2>
               <p className="text-muted-foreground">The share grows when the brand delivers more.</p>
             </div>
             <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-2 rounded-lg border border-border bg-background p-5 text-sm">
               <dt className="text-muted-foreground">{ex.plan} plan</dt><dd className="text-right"><Money paise={ex.planFee} /></dd>
               <dt className="text-muted-foreground">{ex.feeBps / 100}% of {EXAMPLE_BRAND.deliveredOrders} delivered orders</dt><dd className="text-right"><Money paise={ex.orderFee} /></dd>
-              <dt className="border-t border-border pt-2">Frata collects</dt><dd className="border-t border-border pt-2 text-right"><Money paise={ex.frataCollects} /></dd>
+              <dt className="border-t border-border pt-2">Frrata collects</dt><dd className="border-t border-border pt-2 text-right"><Money paise={ex.frataCollects} /></dd>
               <dt className="text-base font-semibold">Your {T.shareBps / 100}%</dt><dd className="text-right text-base font-semibold"><Money paise={ex.share} decimals /> <span className="font-sans text-xs font-normal text-muted-foreground">/ month</span></dd>
             </dl>
           </section>
@@ -149,7 +150,7 @@ export default async function PartnersPage() {
       </main>
 
       <footer className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 border-t border-border px-4 py-6 text-sm text-muted-foreground sm:px-8">
-        <span className="font-semibold text-brand">Frata</span>
+        <Wordmark className="h-4" />
         <Link href="/" className="hover:text-foreground">For brands</Link>
         <Link href="/login" className="hover:text-foreground">Sign in</Link>
         <span>Made in India</span>

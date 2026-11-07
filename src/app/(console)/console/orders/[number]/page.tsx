@@ -64,7 +64,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   const why = (r?.reasons.join('; ') || r?.next || '').replace(/\.$/, '')
   const riskWarning = r && (r.level === 'high' || r.level === 'unknown') ? `${r.level === 'high' ? 'High risk' : 'Risk unavailable'}: ${why}. Confirm only once you have spoken to the customer.` : null
   const history = [
-    ...events.map((e) => ({ at: e.at, text: eventLabel(e, (x) => CANCEL_LABEL[x as CancelReason] ?? x), who: e.actorKind === 'support' ? `${e.actorEmail ?? ''} · Frata support` : e.actorEmail ?? 'Frata' })),
+    ...events.map((e) => ({ at: e.at, text: eventLabel(e, (x) => CANCEL_LABEL[x as CancelReason] ?? x), who: e.actorKind === 'support' ? `${e.actorEmail ?? ''} · Frrata support` : e.actorEmail ?? 'Frrata' })),
     { at: o.placedAt, text: method === 'cod' && !o.switchedToCodAt ? 'Placed · pay on delivery' : 'Placed · online', who: 'Customer' },
     ...(o.paidAt ? [{ at: o.paidAt, text: 'Paid online', who: 'Razorpay' }] : []),
     ...(o.switchedToCodAt ? [{ at: o.switchedToCodAt, text: 'Switched to pay on delivery', who: 'Customer' }] : []),

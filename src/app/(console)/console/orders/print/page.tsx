@@ -20,7 +20,7 @@ import { formatInr } from '@/lib/format'
 // pages (A4, the browser's print; not PDFs). ?kind=slip|invoice&n=1001,1002 —
 // one order or a selection (at most 50), numbers resolved inside the member's
 // own shop (another shop's number is silently not printed). Read through
-// asMember, so a Frata support visit that opens one is audited: these carry
+// asMember, so a Frrata support visit that opens one is audited: these carry
 // the shopper's full address. Never cached, no referrer sent onward.
 // The invoice's particulars follow GST Rules 46/49; the owner's CA confirms the
 // template before the first real invoice (spec § 1D·4).

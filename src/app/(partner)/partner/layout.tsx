@@ -9,7 +9,7 @@ import { accessFor } from '@/lib/db/platform'
 import { ROLE_LABEL, type MemberRole } from '@/domains/tenancy/roles'
 
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = { title: { template: '%s · Frata Partners', default: 'Frata Partners' } }
+export const metadata: Metadata = { title: { template: '%s · Frrata Partners', default: 'Frrata Partners' } }
 
 /**
  * The partner workspace: the console's shell with a PARTNER tag (frata-design-language § Partner workspace).
@@ -20,7 +20,7 @@ export default async function PartnerLayout({ children }: { children: React.Reac
   if (!auth.ok) {
     return (
       <main data-shell className="p-6">
-        <Panel title={auth.reason === 'in_review' ? 'Your application is in review' : auth.reason === 'signed_out' ? 'Sign in to continue' : 'This email is not a Frata partner'}
+        <Panel title={auth.reason === 'in_review' ? 'Your application is in review' : auth.reason === 'signed_out' ? 'Sign in to continue' : 'This email is not a Frrata partner'}
           action={<Link href={auth.reason === 'signed_out' ? '/login' : '/partners/apply'} className={button({ variant: 'secondary' })}>{auth.reason === 'signed_out' ? 'Sign in' : 'See your application'}</Link>} />
       </main>
     )

@@ -110,7 +110,7 @@ export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start' 
         <p role="alert" className="min-h-5 text-sm text-danger-text">{error}</p>
       </div>
       <p className="text-sm text-muted-foreground">
-        {pending ? 'Checking…' : <>Nothing yet? Look in Promotions or Spam for &ldquo;Frata&rdquo;.{' '}
+        {pending ? 'Checking…' : <>Nothing yet? Look in Promotions or Spam for &ldquo;Frrata&rdquo;.{' '}
           {sentAt
             ? <button type="button" className="underline disabled:no-underline disabled:opacity-60" disabled={wait > 0} onClick={() => send()}>
                 {wait > 0 ? `Send again in ${wait} s` : 'Send again'}

@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic'
 /** Tab titles "Orders · Kesar Studio" (rule 11): each page sets a plain title. */
 export async function generateMetadata(): Promise<Metadata> {
   const auth = await requireMember(ANY_MEMBER)
-  const shop = auth.ok ? auth.membership.tenantName : 'Frata'
+  const shop = auth.ok ? auth.membership.tenantName : 'Frrata'
   return { title: { template: `%s · ${shop}`, default: shop } }
 }
 
@@ -83,7 +83,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const activity: NavItem = { href: '/console/activity', label: 'Activity', icon: 'activity' }
   const groups: NavGroup[] = [{ label: 'Today', items: [home, orders] }, { label: 'Catalogue', items: [products, collections] }, { label: 'Store', items: [settings, activity] }]
   const foot: NavItem[] = [{ href: '/console/preview', label: 'Preview shop', icon: 'external' }]
-  if (auth.staffRole !== null && !supportSessionId) foot.push({ href: '/admin', label: 'Frata Admin', icon: 'admin' })
+  if (auth.staffRole !== null && !supportSessionId) foot.push({ href: '/admin', label: 'Frrata Admin', icon: 'admin' })
   return (
     <AppShell title={tenantName} navLabel="Console" groups={groups} tabs={[home, orders, products]} more={[collections, settings, activity]} foot={foot}
       email={auth.email} tenantId={tenantId} places={places}

@@ -21,7 +21,7 @@ export function ViewTabs({ label, tabs }: { label: string; tabs: ViewTab[] }) {
           <li key={t.href} className={cn(t.apart && 'ml-auto pl-4')}>
             <Link href={t.href} aria-current={t.current ? 'page' : undefined}
               className={cn('inline-flex min-h-10 items-center gap-2 rounded-md px-3 text-sm md:min-h-9',
-                t.current ? 'bg-accent font-semibold text-foreground' : 'text-muted-foreground hover:text-foreground')}>
+                t.current ? 'bg-accent font-semibold text-foreground shadow-[inset_0_-2px_0_var(--thread)]' : 'text-muted-foreground hover:text-foreground')}>
               {t.label}
               {t.count !== undefined ? <span className={cn('rounded-sm px-1.5 font-mono text-xs text-neutral-text tabular-nums', t.current ? 'bg-background' : 'bg-neutral')}>{t.count.toLocaleString('en-IN')}</span> : null}
             </Link>

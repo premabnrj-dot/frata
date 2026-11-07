@@ -57,7 +57,7 @@ export type Quote = {
   lines: QuoteLine[]
   /** Sum of the sellable lines, as shown (GST inside when prices include it). */
   subtotal: number; shipping: number
-  /** The lines' taxable value: Frata's fee base and the merchandise net. */
+  /** The lines' taxable value: Frrata's fee base and the merchandise net. */
   merchandiseNet: number
   prepaid: MethodTotal
   cod: MethodTotal & { offer: Cod }

@@ -32,7 +32,7 @@ describe('taxonomy', () => {
 })
 
 describe('describeAttribute', () => {
-  it('names standard, Frata-added and Frata-own values', async () => {
+  it('names standard, Frrata-added and Frrata-own values', async () => {
     const { describeAttribute } = await import('../taxonomy')
     expect(describeAttribute('fabric')?.values.some((v) => v.id === 'frata:chanderi')).toBe(true)
     expect(describeAttribute('frata-occasion')?.name).toBe('Occasion')

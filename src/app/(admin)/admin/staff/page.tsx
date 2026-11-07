@@ -50,7 +50,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
             <select id="role" name="role" className="h-10 md:h-9 rounded-md border border-input bg-card px-2 text-sm"><option value="support">Support</option><option value="admin">Admin</option></select>
           </div>
           <Button type="submit">Add staff</Button>
-          <p className="w-full text-xs text-muted-foreground">They must have signed in to Frata once with that email. Support can open merchants&apos; consoles; Admin can also edit plans and staff.</p>
+          <p className="w-full text-xs text-muted-foreground">They must have signed in to Frrata once with that email. Support can open merchants&apos; consoles; Admin can also edit plans and staff.</p>
         </form></Section>
       )}
     </>

@@ -6,7 +6,7 @@
 // src/lib/admin, which only Admin code may import (check:tenant, ADR-0007); the
 // Console's banner imports Admin's end-visit action the same way.
 //
-// Who may call it: anyone signed in (requireUser). It ends a live Frata support
+// Who may call it: anyone signed in (requireUser). It ends a live Frrata support
 // visit first, so a staffer who signs out never leaves one open (ADR-0007; the
 // visit's audit row records the end), then clears the shop choice cookie and
 // the Supabase session. A sign-out that cannot reach Supabase still clears the

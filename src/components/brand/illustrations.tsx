@@ -1,7 +1,7 @@
 import { Pictogram, type PictogramName } from './pictogram'
 
 // =============================================================================
-// FILE: src/components/brand/illustrations.tsx — Frata's spot illustrations.
+// FILE: src/components/brand/illustrations.tsx — Frrata's spot illustrations.
 //
 // frata-design-language § Graphic language: built from the pictograms' own
 // drawing rule (2 px ink line, paper, one warm fill, haldi as the one accent),

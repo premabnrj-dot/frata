@@ -32,6 +32,9 @@ const DECORATIVE = {
   'illo-haldi': 'illustration accent',
   'illo-haldi-soft': 'illustration accent, pale',
   'illo-indigo-soft': 'illustration second accent, pale',
+  // Brand-surface companions (brand spec 2026-11-07): sign-in, the website, drawings. Never text, never a control.
+  haldi: 'brand-surface highlight (and the illustration accent); never text or a control',
+  neel: 'brand-surface depth (block-print pattern); never text or a control',
 }
 
 export function pairs() {
@@ -40,9 +43,13 @@ export function pairs() {
   for (const s of STATUS) p.push([`${s}-text`, s, TEXT])
   p.push(['foreground', 'background', TEXT], ['muted-foreground', 'background', TEXT], ['muted-foreground', 'card', TEXT],
     ['danger-text', 'card', TEXT], ['brand', 'card', TEXT] /* the reversed mark: oxblood letter on a paper tile */,
-    ['destructive', 'popover', TEXT], ['destructive', 'accent', TEXT] /* a danger item in a menu, and hovered */)
+    ['destructive', 'popover', TEXT], ['destructive', 'accent', TEXT] /* a danger item in a menu, and hovered */,
+    // Rani as words (brand spec): only --brand-text, on every surface words sit on.
+    ['brand-text', 'background', TEXT], ['brand-text', 'card', TEXT], ['brand-text', 'muted', TEXT], ['brand-text', 'accent', TEXT])
   p.push(['input', 'card', NONTEXT], ['input', 'background', NONTEXT], ['ring', 'background', NONTEXT], ['ring', 'card', NONTEXT],
-    ['primary-foreground', 'primary', NONTEXT] /* the focus ring on ink */)
+    ['primary-foreground', 'primary', NONTEXT] /* the focus ring on ink */,
+    // The thread under a primary (ink) or secondary (card) button, the current tab, the loading bar; the tinge on ink.
+    ['thread', 'primary', NONTEXT], ['thread', 'card', NONTEXT], ['thread', 'background', NONTEXT], ['brand-on-ink', 'primary', NONTEXT])
   // The support banner's ring and its End now button (white on amber) are support-foreground/support, a text pair above.
   for (const s of ['ok', 'warn', 'danger', 'info']) p.push([`${s}-mark`, 'card', NONTEXT], [`${s}-mark`, 'background', NONTEXT])
   return p

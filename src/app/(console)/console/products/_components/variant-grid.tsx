@@ -132,7 +132,7 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku }: {
         </table>
       </div>
       <p className="text-xs text-muted-foreground">When it runs out applies once stock reaches 0: stop selling (sold out, still shown), take pre-orders with a ship-by date, or make to order with the days it takes. Shoppers see the result; you never type it.</p>
-      <p className="text-xs text-muted-foreground">An empty SKU is made for you when you save (shown in grey); type your own to replace it. Your cost is never shown to shoppers. It is how Frata will work out profit on each order. Leave it empty if you do not know it yet.</p>
+      <p className="text-xs text-muted-foreground">An empty SKU is made for you when you save (shown in grey); type your own to replace it. Your cost is never shown to shoppers. It is how Frrata will work out profit on each order. Leave it empty if you do not know it yet.</p>
     </div>
   )
 }

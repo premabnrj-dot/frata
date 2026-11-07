@@ -174,7 +174,7 @@ export const productColours = pgTable('product_colours', {
   check('product_colours_hex', sql`${t.hex} is null or ${t.hex} ~ '^#[0-9a-f]{6}$'`),
 ])
 
-/** A product's details for one attribute (fabric, occasion…): standard value ids, or Frata additions prefixed "frata:". */
+/** A product's details for one attribute (fabric, occasion…): standard value ids, or Frrata additions prefixed "frata:". */
 export const productAttributes = pgTable('product_attributes', {
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   productId: uuid('product_id').notNull(),

@@ -68,7 +68,7 @@ export function ApplyForm({ initial }: { initial?: Partial<Values> }) {
       <div className="space-y-1.5">
         <div className="flex items-start gap-2.5 text-sm">
           <input id="agree" type="checkbox" checked={v.agree} onChange={(e) => set('agree', e.target.checked)} aria-invalid={!!errors.agree || undefined} className="mt-0.5 size-4" />
-          <span><label htmlFor="agree">I agree to the partner terms</label><InfoTip about="the partner terms">{PARTNER_TERMS.shareBps / 100}% of what Frata collects from each store you build, for {PARTNER_TERMS.shareMonths} months from its opening. The brand owns its store and can remove you. You never copy shoppers’ details for your own use.</InfoTip></span>
+          <span><label htmlFor="agree">I agree to the partner terms</label><InfoTip about="the partner terms">{PARTNER_TERMS.shareBps / 100}% of what Frrata collects from each store you build, for {PARTNER_TERMS.shareMonths} months from its opening. The brand owns its store and can remove you. You never copy shoppers’ details for your own use.</InfoTip></span>
         </div>
         {err('agree')}
       </div>

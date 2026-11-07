@@ -10,9 +10,9 @@ import { sendSignInLink } from '@/lib/auth/send-link'
 const Decide = z.object({ id: z.uuid(), decision: z.enum(['approve', 'decline']), reason: z.string().trim().max(300).optional() })
 
 export async function decidePartnerAction(form: FormData) {
-  // Approving lets someone make stores: Frata admins only, as plans are (impact review 2026-11-07).
+  // Approving lets someone make stores: Frrata admins only, as plans are (impact review 2026-11-07).
   const staff = await requireStaff(ADMIN_ONLY)
-  if (!staff.ok) redirect('/admin/partners?error=' + encodeURIComponent('Only a Frata admin can decide an application.'))
+  if (!staff.ok) redirect('/admin/partners?error=' + encodeURIComponent('Only a Frrata admin can decide an application.'))
   const p = Decide.safeParse(Object.fromEntries(form))
   if (!p.success) redirect('/admin/partners?error=' + encodeURIComponent('Choose approve or decline.'))
   if (p.data.decision === 'decline' && !p.data.reason) redirect(`/admin/partners?id=${p.data.id}&error=${encodeURIComponent('Give a reason to decline.')}`)

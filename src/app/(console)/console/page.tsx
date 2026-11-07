@@ -19,7 +19,7 @@ import { Today } from './_components/today'
 /** Home shares the layout's segment, where Next does not apply the layout's title template: the full title here. */
 export async function generateMetadata() {
   const auth = await requireMember(ANY_MEMBER)
-  return { title: { absolute: auth.ok ? `Home · ${auth.membership.tenantName}` : 'Home · Frata' } }
+  return { title: { absolute: auth.ok ? `Home · ${auth.membership.tenantName}` : 'Home · Frrata' } }
 }
 
 export default async function ConsoleHome() {

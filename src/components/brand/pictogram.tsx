@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 // =============================================================================
-// FILE: src/components/brand/pictogram.tsx — Frata's pictograms.
+// FILE: src/components/brand/pictogram.tsx — Frrata's pictograms.
 //
 // frata-design-language § Graphic language. One drawing rule for all of them:
 // a 48 grid with a 4 px margin, a 2 px ink line with round caps and joins, paper
@@ -88,7 +88,7 @@ const DRAW: Record<PictogramName, ReactNode> = {
   </>),
 }
 
-/** A Frata pictogram. `size` in px (48 is its drawn size; 32 and 64 also hold the 2 px line well). */
+/** A Frrata pictogram. `size` in px (48 is its drawn size; 32 and 64 also hold the 2 px line well). */
 export function Pictogram({ name, size = 48, className }: { name: PictogramName; size?: number; className?: string }) {
   return (
     <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 48 48" className={className}>

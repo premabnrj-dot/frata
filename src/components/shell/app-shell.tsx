@@ -5,6 +5,7 @@ import { ANNOUNCER_ID } from './announce'
 import { SHELL_FONT_VARS } from './fonts'
 import { BottomBar, SidebarNav, type NavGroup, type NavItem } from './nav'
 import { NavProgress } from './nav-progress'
+import { Monogram } from '@/components/brand/monogram'
 
 // =============================================================================
 // FILE: src/components/shell/app-shell.tsx — ONE shell for Console and Admin.
@@ -23,7 +24,7 @@ import { NavProgress } from './nav-progress'
 
 export type ShellProps = {
   ink?: boolean
-  /** Name in the sidebar and phone top bar (the shop, or "Frata Admin"). */
+  /** Name in the sidebar and phone top bar (the shop, or "Frrata Admin"). */
   title: string
   /** STAFF on Admin, PARTNER on the partner workspace (frata-design-language § Partner workspace). */
   tag?: 'STAFF' | 'PARTNER'
@@ -33,7 +34,7 @@ export type ShellProps = {
   groups: NavGroup[]
   tabs: NavItem[]
   more: NavItem[]
-  /** Links under the nav: Preview shop, Frata Admin, the staffer's own store. */
+  /** Links under the nav: Preview shop, Frrata Admin, the staffer's own store. */
   foot: NavItem[]
   email: string | null
   /** The shop the shell was drawn for (Console): TenantCheck compares each page's against it. */
@@ -87,7 +88,7 @@ function Switcher({ places, ink }: { places: Place[]; ink: boolean }) {
 
 function Mark({ ink }: { ink: boolean }) {
   return (
-    <span aria-hidden="true" className={`inline-grid size-7 shrink-0 place-items-center rounded-[7px] text-base font-bold tracking-tighter ${ink ? 'bg-card text-brand' : 'bg-brand text-brand-foreground'}`}>F</span>
+    <Monogram size={28} tone={ink ? 'brand' : 'ink'} />
   )
 }
 

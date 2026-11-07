@@ -1,13 +1,18 @@
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
+const THREAD = 'relative overflow-hidden after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:origin-left after:bg-thread after:transition-[scale] after:duration-fast after:ease-standard hover:after:scale-x-100 focus-visible:after:scale-x-100 disabled:after:scale-x-0'
+
 export const button = cva(
   'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors duration-fast ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
-        secondary: 'border border-input bg-card hover:bg-accent',
+        // THE THREAD (brand spec, chapter 5): a 2 px rani line at the foot, a third wide; the full width on hover or
+        // keyboard focus (a transform, check:motion). Secondary: on hover and focus only. Destructive and ghost: never,
+        // so cancelling never looks like the brand's way forward. Disabled: none.
+        primary: `bg-primary text-primary-foreground hover:bg-primary/90 ${THREAD} after:scale-x-[0.34]`,
+        secondary: `border border-input bg-card hover:bg-accent ${THREAD} after:scale-x-0`,
         ghost: 'hover:bg-accent',
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
       },
@@ -15,7 +20,7 @@ export const button = cva(
       size: {
         default: 'h-10 px-3 text-sm md:h-9', // 40 px on phones, 36 px from 768 px (rule 19)
         lg: 'h-11 px-5 text-base', // sign-in, sign-up and the website's one call to action
-        // A label that can be long (it names a merchant, § Frata Admin): grows to two lines instead of overflowing.
+        // A label that can be long (it names a merchant, § Frrata Admin): grows to two lines instead of overflowing.
         wrap: 'min-h-10 px-3 py-2 text-left text-sm whitespace-normal [overflow-wrap:anywhere] md:min-h-9',
       },
     },

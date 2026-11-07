@@ -2,7 +2,7 @@
 // FILE: src/domains/partners/example.ts — the worked example on /partners.
 //
 // Computed from a plan row and PARTNER_TERMS, never typed (unit-economics review
-// 2026-11-07): what Frata collects from one brand in a month, ex GST, and the
+// 2026-11-07): what Frrata collects from one brand in a month, ex GST, and the
 // partner's share of it. The order count and value are named, and the page shows them.
 // =============================================================================
 

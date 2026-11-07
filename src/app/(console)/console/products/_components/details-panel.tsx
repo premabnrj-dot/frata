@@ -29,7 +29,7 @@ export function DetailsPanel({ attributes, values, onChange }: { attributes: Att
           </div>
         )
       })}
-      <p className="text-xs text-muted-foreground sm:col-span-2">Shoppers filter by these on your shop, and Google and Meta read them. Values marked · are Frata’s, for Indian crafts and fabrics; each is sent to Google as its nearest standard value.</p>
+      <p className="text-xs text-muted-foreground sm:col-span-2">Shoppers filter by these on your shop, and Google and Meta read them. Values marked · are Frrata’s, for Indian crafts and fabrics; each is sent to Google as its nearest standard value.</p>
     </div>
   )
 }

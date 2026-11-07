@@ -36,7 +36,7 @@ export default async function HandoverPage({ searchParams }: { searchParams: Pro
             <dt className="text-muted-foreground">You</dt><dd>Owner. The store and its data are yours.</dd>
             <dt className="text-muted-foreground">{h.partnerName}</dt>
             <dd>Partner: products, orders, settings, the look.<InfoTip about="what a partner can do">They can’t change billing, payment keys or people, or delete the store. Remove them any time in Settings › People.</InfoTip></dd>
-            <dt className="text-muted-foreground">Your price</dt><dd>Same as any Frata store.<InfoTip about="your price">Frata pays the partner from its own fee. Nothing is added to yours.</InfoTip></dd>
+            <dt className="text-muted-foreground">Your price</dt><dd>Same as any Frrata store.<InfoTip about="your price">Frrata pays the partner from its own fee. Nothing is added to yours.</InfoTip></dd>
           </dl>
           <form action={acceptHandoverAction} className="flex flex-wrap items-center gap-3">
             <input type="hidden" name="inviteId" value={h.inviteId} />

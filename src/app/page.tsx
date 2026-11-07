@@ -7,9 +7,10 @@ import { publicPlans, type PublicPlan } from '@/lib/db/platform'
 import { formatInr } from '@/lib/format'
 import { FRATA_WHATSAPP_DISPLAY, frataWhatsappLink } from '@/lib/site'
 import { SHELL_FONT_VARS } from '@/components/shell/fonts'
+import { Wordmark } from '@/components/brand/wordmark'
 
 // =============================================================================
-// The Frata website's homepage, on the console host (frata-design-language §
+// The Frrata website's homepage, on the console host (frata-design-language §
 // Phase 1): one promise, one primary action, every feature marked Now or Next,
 // prices read from the plans themselves (never a copy), GST stated, the fee
 // "only on delivered orders". Static, refreshed hourly; no client script.
@@ -31,9 +32,9 @@ const FAQ = [
   ['Do I need a developer?', 'No. Products, sizes, Pay on delivery rules, your logo and colours are all set in the console.'],
   ['I sell on Shopify now. Can I move?', 'Yes. Export your products from Shopify and import the file here as it is. Your old shop keeps running until you switch.'],
   ['Do I need Razorpay or KYC to start?', 'No. Your shop can take Pay on delivery orders without it. Connect Razorpay, with its KYC, when you want UPI and card payments.'],
-  ['What happens when a COD parcel is refused?', 'You pay no Frata fee on it. The fee is only on orders that are delivered.'],
+  ['What happens when a COD parcel is refused?', 'You pay no Frrata fee on it. The fee is only on orders that are delivered.'],
   ['Is there a free trial? Do I need a card?', 'You build and preview your whole shop free, with no card. You choose a plan when you open your shop to shoppers.'],
-  ['Can I use my own domain?', 'Your shop starts at a free address on Frata. Your own domain comes in a later release.'],
+  ['Can I use my own domain?', 'Your shop starts at a free address on Frrata. Your own domain comes in a later release.'],
 ] as const
 
 async function plansOrNone(): Promise<PublicPlan[]> {
@@ -46,7 +47,7 @@ export default async function Home() {
   return (
     <div data-shell className={`min-h-dvh bg-card ${SHELL_FONT_VARS}`}>
       <header className="mx-auto flex max-w-6xl items-center gap-5 px-4 py-4 sm:px-8">
-        <span className="text-lg font-semibold text-brand">Frata</span>
+        <Wordmark thread className="h-6" />
         <span className="flex-1" />
         <a href="#how" className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline">How it works</a>
         <a href="#pricing" className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline">Pricing</a>
@@ -59,7 +60,7 @@ export default async function Home() {
         <section className="mx-auto grid max-w-6xl items-center gap-10 border-t border-border px-4 py-14 sm:px-8 md:grid-cols-[1.1fr_0.9fr]">
           <div>
             <h1 className="text-[clamp(2rem,4.6vw,3rem)] font-bold leading-[1.08] tracking-tight">
-              A shop for your fashion label that <span className="text-brand">keeps more of every order</span> you deliver.
+              A shop for your fashion label that <span className="text-brand-text">keeps more of every order</span> you deliver.
             </h1>
             <p className="mt-4 max-w-xl text-lg text-muted-foreground">
               Sizes and colours done properly, Pay on delivery with your rules, UPI and cards. Built for Indian brands that sell on Instagram and have no developer.
@@ -67,7 +68,7 @@ export default async function Home() {
             <div className="mt-6 flex flex-wrap items-center gap-4">{start}<a href="#how" className="text-sm underline">See how it works</a></div>
             <p className="mt-3 text-sm text-muted-foreground">No card needed. Take Pay on delivery orders on day one; connect Razorpay when you are ready.</p>
           </div>
-          <div aria-label="Example: one order in the Frata console" className="space-y-2.5 rounded-lg border border-border bg-background p-4 text-sm">
+          <div aria-label="Example: one order in the Frrata console" className="space-y-2.5 rounded-lg border border-border bg-background p-4 text-sm">
             <div className="flex items-center justify-between"><b className="font-mono">KS-1043</b><span className="rounded bg-warn px-2 py-0.5 text-xs font-medium text-warn-text">COD · ₹2,490 to collect</span></div>
             <p className="text-muted-foreground">Ananya R. · Indore 452018 · Linen kurta set, Indigo, M</p>
             <div className="rounded-md border-l-[3px] border-ok-text bg-card px-3 py-2">
@@ -75,7 +76,7 @@ export default async function Home() {
               <p className="text-muted-foreground">Full address with a house number · first order from this phone</p>
             </div>
             <div className="flex justify-between"><span>You sell at</span><span className="font-mono">₹2,490</span></div>
-            <div className="flex justify-between"><span>Frata fee on Launch, only if delivered</span><span className="font-mono">2%</span></div>
+            <div className="flex justify-between"><span>Frrata fee on Launch, only if delivered</span><span className="font-mono">2%</span></div>
             <div className="flex justify-between border-t border-border pt-2 font-semibold"><span>If the parcel comes back</span><span className="font-mono">₹0 fee</span></div>
           </div>
         </section>
@@ -89,7 +90,7 @@ export default async function Home() {
               ['Share and confirm', 'Put the link in your Instagram bio. Orders land in one queue; confirm Pay on delivery orders before you pack them.']]
               .map(([t, d], i) => (
                 <li key={t} className="rounded-md border border-border p-4">
-                  <span className="font-mono text-xs text-brand">{i + 1}</span>
+                  <span className="font-mono text-xs text-muted-foreground">{i + 1}</span>
                   <b className="mt-1 block">{t}</b>
                   <p className="mt-1 text-sm text-muted-foreground">{d}</p>
                 </li>
@@ -149,7 +150,7 @@ export default async function Home() {
       </main>
 
       <footer className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 border-t border-border px-4 py-6 text-sm text-muted-foreground sm:px-8">
-        <span className="font-semibold text-brand">Frata</span>
+        <Wordmark className="h-4" />
         <a href={frataWhatsappLink()} target="_blank" rel="noopener" className="hover:text-foreground">WhatsApp us · <span className="font-mono">{FRATA_WHATSAPP_DISPLAY}</span></a>
         <span>Made in India</span>
         <Link href="/login" className="hover:text-foreground">Sign in</Link>

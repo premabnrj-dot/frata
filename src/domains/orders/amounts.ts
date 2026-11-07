@@ -45,5 +45,5 @@ export const collect = (o: StoredOrder) => (o.cancelledAt || currentMethod(o) !=
  */
 export const paidOnline = (o: StoredOrder) => (o.paidAt ? o.total : 0)
 
-/** What the merchant must send back in Razorpay when a paid order is cancelled (Frata refunds nothing itself). */
+/** What the merchant must send back in Razorpay when a paid order is cancelled (Frrata refunds nothing itself). */
 export const refundDue = (o: StoredOrder) => (o.cancelledAt ? paidOnline(o) : 0)

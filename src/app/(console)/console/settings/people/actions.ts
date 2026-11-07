@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { asMember } from '@/lib/auth/as-member'
 import { removePartner } from '@/lib/db/partners'
 
-// Settings › People. Only the shop's OWNER removes its partner (a members row with role owner: a Frata support
+// Settings › People. Only the shop's OWNER removes its partner (a members row with role owner: a Frrata support
 // visit has none, and the definer function refuses it too). The tenant is requireMember's, the uid getUser()'s.
 
 const SENTENCES: Record<string, string> = {

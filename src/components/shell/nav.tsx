@@ -1,9 +1,9 @@
 'use client'
 
-import { Activity, ExternalLink, House, LayoutGrid, Menu, ReceiptText, ShieldCheck, Shirt, SlidersHorizontal, Store, Users, CreditCard, X } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Icon, type IconName } from '@/components/icons/icon'
 
 // =============================================================================
 // FILE: src/components/shell/nav.tsx — the shell's two navs (client islands).
@@ -14,9 +14,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 // the server/client line). The count pill is a server-rendered slot.
 // =============================================================================
 
-const ICONS = { home: House, orders: ReceiptText, products: Shirt, collections: LayoutGrid, settings: SlidersHorizontal, activity: Activity,
-  merchants: Store, plans: CreditCard, staff: Users, admin: ShieldCheck, external: ExternalLink } as const
-export type IconName = keyof typeof ICONS
+export type { IconName }
 export type NavItem = { href: string; label: string; icon: IconName; badge?: ReactNode; exact?: boolean }
 export type NavGroup = { label: string; items: NavItem[] }
 
@@ -30,14 +28,13 @@ function currentHref(path: string, items: NavItem[]): string | null {
   return best?.href ?? null
 }
 
-const Icon = ({ name, className }: { name: IconName; className?: string }) => { const C = ICONS[name]; return <C aria-hidden="true" className={className} strokeWidth={1.8} /> }
 
 /** ≥ 768 px: the sidebar's groups. The current item: a 3 px bar, semibold, aria-current (never colour alone). */
 export function SidebarNav({ label, groups, ink = false }: { label: string; groups: NavGroup[]; ink?: boolean }) {
   const path = usePathname()
   const on = currentHref(path, groups.flatMap((g) => g.items))
   return (
-    <nav aria-label={label} className="flex flex-col gap-0.5">
+    <nav aria-label={label} data-tinge className="flex flex-col gap-0.5">
       {groups.map((g) => (
         <div key={g.label} className="flex flex-col gap-0.5">
           {g.label && <p className={`px-2 pb-1 pt-3 text-xs font-medium ${ink ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>{g.label}</p>}
@@ -48,8 +45,8 @@ export function SidebarNav({ label, groups, ink = false }: { label: string; grou
                 className={`relative flex h-9 items-center gap-2.5 rounded-md px-2 text-sm transition-colors duration-fast ease-standard ${cur ? 'font-semibold' : ''} ${ink
                   ? (cur ? 'bg-primary-foreground/15' : 'hover:bg-primary-foreground/10')
                   : (cur ? 'bg-accent' : 'hover:bg-accent')}`}>
-                {cur && <span aria-hidden="true" className={`absolute -left-2.5 top-2 bottom-2 w-[3px] rounded-r ${ink ? 'bg-warn' : 'bg-primary'}`} />}
-                <Icon name={i.icon} className={`size-4 shrink-0 ${cur ? '' : ink ? 'opacity-70' : 'text-muted-foreground'}`} />
+                {cur && <span aria-hidden="true" className={`absolute -left-2.5 top-2 bottom-2 w-[3px] rounded-r ${ink ? 'bg-warn' : 'bg-thread'}`} />}
+                <Icon name={i.icon} current={cur} className={`size-4 shrink-0 ${cur ? '' : ink ? 'opacity-70' : 'text-muted-foreground'}`} />
                 <span className="truncate">{i.label}</span>
                 {i.badge}
               </Link>
@@ -91,29 +88,29 @@ export function BottomBar({ label, tabs, more, moreFoot, ink = false }: { label:
   }, [])
   const tab = (cur: boolean) => `relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs ${cur ? 'font-semibold' : ''} ${ink
     ? (cur ? 'text-primary-foreground' : 'text-primary-foreground/70') : (cur ? 'text-foreground' : 'text-muted-foreground')}`
-  const bar = (cur: boolean) => cur && <span aria-hidden="true" className={`absolute inset-x-[30%] top-0 h-0.5 rounded-b ${ink ? 'bg-warn' : 'bg-primary'}`} />
+  const bar = (cur: boolean) => cur && <span aria-hidden="true" className={`absolute inset-x-[30%] top-0 h-0.5 rounded-b ${ink ? 'bg-warn' : 'bg-thread'}`} />
   return (
     <>
-      <nav aria-label={label} data-surface={ink ? 'ink' : undefined} className={`fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t pb-[env(safe-area-inset-bottom,0px)] md:hidden print:hidden ${ink ? 'border-primary bg-primary' : 'border-border bg-card'}`}>
+      <nav aria-label={label} data-tinge data-surface={ink ? 'ink' : undefined} className={`fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t pb-[env(safe-area-inset-bottom,0px)] md:hidden print:hidden ${ink ? 'border-primary bg-primary' : 'border-border bg-card'}`}>
         {tabs.map((i) => {
           const cur = i.href === on
           return (
             <Link key={i.href} href={i.href} aria-current={cur ? 'page' : undefined} className={tab(cur)}>
-              {bar(cur)}<span className="relative"><Icon name={i.icon} className="size-[22px]" />{i.badge && <span className="absolute -right-3.5 -top-1.5">{i.badge}</span>}</span>{i.label}
+              {bar(cur)}<span className="relative"><Icon name={i.icon} current={cur} className="size-[22px]" />{i.badge && <span className="absolute -right-3.5 -top-1.5">{i.badge}</span>}</span>{i.label}
             </Link>
           )
         })}
         <button ref={opener} type="button" aria-haspopup="dialog" aria-expanded={open} aria-current={inMore ? 'page' : undefined} onClick={() => setOpen(true)} className={tab(inMore)}>
-          {bar(inMore)}<Menu aria-hidden="true" className="size-[22px]" strokeWidth={1.8} />More
+          {bar(inMore)}<Icon name="menu" current={inMore} className="size-[22px]" />More
         </button>
       </nav>
-      <dialog ref={sheet} data-more aria-label="More" onClose={() => { setOpen(false); opener.current?.focus() }}
+      <dialog ref={sheet} data-more data-tinge aria-label="More" onClose={() => { setOpen(false); opener.current?.focus() }}
         onClick={(e) => { if (e.target === e.currentTarget) setOpen(false) }}
         className="m-0 mt-auto w-full max-w-none animate-sheet rounded-t-xl border-t border-border bg-card p-0 text-foreground backdrop:bg-foreground/40">
         <div className="p-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)]">
         <div className="flex items-center justify-between px-3 py-1">
           <span aria-hidden="true" className="mx-auto h-1 w-9 rounded-full bg-border" />
-          <button type="button" autoFocus onClick={() => setOpen(false)} aria-label="Close" className="inline-grid size-10 place-items-center rounded-md hover:bg-accent"><X aria-hidden="true" className="size-5" /></button>
+          <button type="button" autoFocus onClick={() => setOpen(false)} aria-label="Close" className="inline-grid size-10 place-items-center rounded-md hover:bg-accent"><Icon name="close" className="size-5" /></button>
         </div>
         {more.map((i) => (
           <Link key={i.href} href={i.href} aria-current={i.href === on ? 'page' : undefined} onClick={() => setOpen(false)}

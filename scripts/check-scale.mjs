@@ -19,7 +19,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-const DIRS = ['src/app/(console)', 'src/app/(admin)', 'src/components/shell', 'src/components/data', 'src/components/layout', 'src/components/nav', 'src/components/ui']
+const DIRS = ['src/app/(console)', 'src/app/(admin)', 'src/components/shell', 'src/components/brand', 'src/components/icons', 'src/components/data', 'src/components/layout', 'src/components/nav', 'src/components/ui']
 export { DIRS }
 export const RULES = {
   'text-px': /\btext-\[\d+(?:\.\d+)?px\]/g,

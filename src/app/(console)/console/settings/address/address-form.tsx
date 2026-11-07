@@ -12,7 +12,7 @@ import { PageHeader } from '@/components/layout/page-header'
 
 const WORDS: Record<AddressCheck['state'], string> = { ok: 'Available', taken: 'Taken. Try another.', too_short: 'At least 3 letters', shape: 'Letters, digits and hyphens only', reserved: 'Reserved. Try another.' }
 
-/** The shop's address: free to change until the shop opens; after that Frata support moves it. */
+/** The shop's address: free to change until the shop opens; after that Frrata support moves it. */
 export function AddressForm({ current, shopDomain, published, support }: { current: string; shopDomain: string; published: boolean; support: boolean }) {
   const router = useRouter()
   const [slug, setSlug] = useState(current)
@@ -43,7 +43,7 @@ export function AddressForm({ current, shopDomain, published, support }: { curre
           <span className="text-muted-foreground">.{shopDomain}</span>
         </div>
         <p id="slug-h" aria-live="polite" className={`text-sm ${state?.state === 'ok' ? 'text-ok-text' : state ? 'text-warn-text' : 'text-muted-foreground'}`}>
-          {locked ? (support ? 'Only the shop’s owner can change its address.' : <>Your shop is open, so its address is fixed: links you shared keep working. <a href={frataWhatsappLink('Hi Frata, I would like to change my shop’s address.')} target="_blank" rel="noopener" className="underline">Ask us on WhatsApp</a> to move it.</>)
+          {locked ? (support ? 'Only the shop’s owner can change its address.' : <>Your shop is open, so its address is fixed: links you shared keep working. <a href={frataWhatsappLink('Hi Frrata, I would like to change my shop’s address.')} target="_blank" rel="noopener" className="underline">Ask us on WhatsApp</a> to move it.</>)
             : state ? WORDS[state.state] : 'Free to change until your shop opens.'}
         </p>
         {msg && <p role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-ok-text' : 'text-danger-text'}`}>{msg.text}</p>}
