@@ -63,13 +63,19 @@ export function Today({ s, setup, now }: { s: TodaySummary | null; setup: Setup;
         // On a phone the next order comes first: it is the one tap the page exists for.
         <CardLink href={`/console/orders/${next.number}`} data-next-order className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5">
           <span className="col-span-2 text-xs text-muted-foreground">Next to confirm, oldest first</span>
-          <span className="min-w-0 truncate text-sm">
-            <b className="font-mono">{next.label}</b> · <Name>{next.customerName}</Name> · <Money paise={paise(next.total)} /> · {next.cod ? PAYMENT.cod.label : PAYMENT.paid.label} · waiting {waitedIN(next.since, now)}
-            {next.state === 'refund_due' ? <> · <Badge tone={STATE.refund_due.tone}>{STATE.refund_due.label}</Badge></>
-              : nextRisk === 'high' || nextRisk === 'medium' ? <> · <Badge tone={nextRisk === 'high' ? 'danger' : 'warn'}>{RISK_LABEL[nextRisk]} risk</Badge></>
-              : nextRisk === null ? <> · <span className="text-xs text-muted-foreground">Risk unavailable</span></> : null}
+          {/* Line 1: the number and what to know first (risk, or a refund due); line 2: who, how much, how long. On a
+              phone the name truncates, never the badge or the amount's line. */}
+          <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <b className="font-mono text-sm">{next.label}</b>
+            {next.state === 'refund_due' ? <Badge tone={STATE.refund_due.tone}>{STATE.refund_due.label}</Badge>
+              : nextRisk === 'high' || nextRisk === 'medium' ? <Badge tone={nextRisk === 'high' ? 'danger' : 'warn'}>{RISK_LABEL[nextRisk]} risk</Badge>
+              : nextRisk === null ? <span className="text-xs text-muted-foreground">Risk unavailable</span> : null}
           </span>
-          <span className="text-sm font-semibold whitespace-nowrap">Open →</span>
+          <span className="row-span-2 self-center text-sm font-semibold whitespace-nowrap">Open →</span>
+          <span className="flex min-w-0 gap-1 text-sm text-muted-foreground">
+            <span className="min-w-0 truncate"><Name>{next.customerName}</Name></span>
+            <span className="shrink-0">· <Money paise={paise(next.total)} /> · {next.cod ? PAYMENT.cod.label : PAYMENT.paid.label} · {waitedIN(next.since, now)}</span>
+          </span>
         </CardLink>
       )}
 
