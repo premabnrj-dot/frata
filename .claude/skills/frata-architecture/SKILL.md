@@ -47,6 +47,13 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - Every merchant read or write: `withTenant(tenantId, tx => …)` plus an explicit
   `where tenant_id = …`. The policy is the lock; the where is the intent and
   the index.
+- A page whose numbers must agree reads them in ONE `withTenant(…, { snapshot: true })`
+  (read-only, repeatable read: one snapshot for every statement), composing
+  `xWith(tx, tenantId, …)` readers (`queueCountsWith`, `riskFactsWith`); the
+  plain `x(tenantId, …)` wraps its `xWith` in its own `withTenant` (Home's
+  `todaySummary`, U·4). A slow optional part goes last, in a savepoint with
+  `set local statement_timeout`, put back to `default` before the savepoint
+  ends (SET LOCAL outlives RELEASE); a timeout is caught as "unavailable".
 - Raw `db()` only in `src/lib/db/`, `src/lib/outbox/`, `src/app/api/webhooks/`
   (`check:tenant` PLATFORM_SCOPE). Adding to that list needs a reason in the gate.
 

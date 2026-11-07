@@ -18,9 +18,10 @@ import { db, type Tx } from './index'
 // never from a URL, a form field or a request body.
 // =============================================================================
 
-export async function withTenant<T>(tenantId: string, work: (tx: Tx) => Promise<T>): Promise<T> {
+export async function withTenant<T>(tenantId: string, work: (tx: Tx) => Promise<T>, opts?: { snapshot?: boolean }): Promise<T> {
   return db().transaction(async (tx) => {
     await tx.execute(sql`select set_config('app.tenant_id', ${tenantId}, true)`)
     return work(tx)
-  })
+    // snapshot: one read-only view for every statement (repeatable read), for a page whose numbers must agree (Home, U·4).
+  }, opts?.snapshot ? { isolationLevel: 'repeatable read', accessMode: 'read only' } : undefined)
 }

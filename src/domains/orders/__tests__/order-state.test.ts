@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { currentMethod, isHolding, isPlaced, isStanding, needsAction, ORDER_STATES, orderState, paidAfterSwitch, queueTab, shopperState, type OrderMoments } from '../order-state'
+import { currentMethod, enteredAt, isHolding, isPlaced, isStanding, needsAction, ORDER_STATES, orderState, paidAfterSwitch, queueTab, shopperState, type OrderMoments } from '../order-state'
 
 const t = (n: number) => new Date(2026, 10, n)
 /** A COD order placed on day 1, nothing else happened yet; override what did. */
@@ -80,5 +80,22 @@ describe('the queue and the shopper', () => {
     for (const s of ORDER_STATES) expect(['held', 'refund_due', 'unconfirmed', 'rto', 'rto_received', 'payment_abandoned']).not.toContain(shopperState(s))
     expect(shopperState('held')).toBe('confirming')
     expect(shopperState('refund_due')).toBe('confirming')
+  })
+})
+
+describe('enteredAt: when an order entered the tab it waits in', () => {
+  const now = t(20)
+  it('placed, or switched to COD, for To confirm; paid when a refund is due', () => {
+    expect(enteredAt(moments(), now)).toEqual(t(1))
+    expect(enteredAt(moments({ paymentMethod: 'prepaid', switchedToCodAt: t(2) }), now)).toEqual(t(2))
+    expect(enteredAt(moments({ paymentMethod: 'prepaid', paidAt: t(3), stockShort: true }), now)).toEqual(t(3))
+  })
+  it('confirmed or paid for To pack; held for On hold; null elsewhere', () => {
+    expect(enteredAt(moments({ confirmedAt: t(4) }), now)).toEqual(t(4))
+    expect(enteredAt(moments({ paymentMethod: 'prepaid', paidAt: t(5) }), now)).toEqual(t(5))
+    expect(enteredAt(moments({ heldAt: t(6) }), now)).toEqual(t(6))
+    expect(enteredAt(moments({ confirmedAt: t(4), packedAt: t(7) }), now)).toBeNull()
+    expect(enteredAt(moments({ cancelledAt: t(7) }), now)).toBeNull()
+    expect(enteredAt(moments({ paymentMethod: 'prepaid', payBy: t(30) }), now)).toBeNull()
   })
 })

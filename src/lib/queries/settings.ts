@@ -2,6 +2,11 @@ import 'server-only'
 import { eq } from 'drizzle-orm'
 import { shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { withTenant } from '@/lib/db/tenant'
+import { paise } from '@/domains/money/paise'
+import { BUILT_PAGES, readyToOpen, setupSteps, type SetupStep } from '@/domains/setup/checklist'
+import { formatInr } from '@/lib/format'
+import { SHOP_DOMAIN } from '@/lib/public-env'
+import { activeProductCount, paymentStatusFor } from './payments'
 
 /** A shop's name, address slug and settings row, in one round trip. Null only if the row is missing. */
 export async function shopWithSettings(tenantId: string) {
@@ -19,4 +24,26 @@ export async function policyOverrides(tenantId: string): Promise<Record<string, 
     tx.select({ kind: shopPolicies.kind, body: shopPolicies.body }).from(shopPolicies).where(eq(shopPolicies.tenantId, tenantId)),
   )
   return Object.fromEntries(rows.map((r) => [r.kind, r.body]))
+}
+
+
+export type Setup = { name: string; address: string; open: boolean; steps: SetupStep[]; done: number; ready: boolean; left: SetupStep[] }
+
+/**
+ * The setup checklist as Home (before the shop opens) and /console/setup read it, once (U·4 review: one read, not
+ * two copies of its inputs). Null when the shop's row is missing; throws when the read fails.
+ */
+export async function setupFor(tenantId: string): Promise<Setup | null> {
+  const [shop, products, pay] = await Promise.all([shopWithSettings(tenantId), activeProductCount(tenantId), paymentStatusFor(tenantId)])
+  if (!shop) return null
+  const address = `${shop.slug}.${SHOP_DOMAIN}`
+  const steps = setupSteps({
+    shopName: shop.name, address, productCount: products,
+    legalName: shop.settings.legalName, grievanceName: shop.settings.grievanceName,
+    codOn: shop.settings.codOn, codMaxPaise: shop.settings.codMax, paymentsConnected: !!pay?.connected && pay.mode === 'live' && !!pay.webhookSeenAt, publishedAt: shop.settings.publishedAt,
+  }, BUILT_PAGES, (p) => formatInr(paise(p)))
+  return {
+    name: shop.name, address, open: !!shop.settings.publishedAt, steps, done: steps.filter((s) => s.done).length, ready: readyToOpen(steps),
+    left: steps.filter((s) => !s.done && s.key !== 'publish'),
+  }
 }

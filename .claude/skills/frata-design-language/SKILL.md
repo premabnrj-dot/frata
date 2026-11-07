@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 3.5.0
+  version: 3.6.0
   verified: 2026-11-07
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -422,6 +422,26 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     arbitrary `duration-`/`ease-`/`animate-`, keyframes animating anything but
     opacity and transform, or an animation over 400 ms fails, apart from the
     exceptions named in the script, each with its reason.
+
+**Home "Today" (owner-approved mockup 2026-11-07, U·4; spec `docs/specs/2026-11-07-ux-today.md`)**
+30. Before the shop opens, Home is the setup checklist. Once it is open, Home is
+    the day's work, in this order: the next order to confirm (oldest first,
+    one tap to its page), three counts (To confirm, To pack, On hold; each a
+    link to its tab; `CountTiles`), the last 7 days (orders placed and their
+    value, cancelled left out, one `scaleY` bar per IST day), and one line for
+    setup steps still open, or, when none are, "Setup, or close the shop for
+    now" (the checklist lives at `/console/setup`; always one tap away). No
+    suggestions or feature cards, no change-on-last-week figure, no chart
+    library.
+31. A Home count is `queueCounts`' and the nav pill's `toConfirmCount` reads the
+    same predicate (the pill, the tabs and the tile agree); "N
+    high risk" is `risk()` over the whole tab, never a page of it. A count that
+    could not be read says "Couldn't count", a risk "Risk unavailable"; never
+    0. A tile that is 0 stays in place and says so ("Nothing to confirm").
+32. A card that is one link is `CardLink` (`src/components/layout/`); waiting
+    counts are `CountTiles` (`src/components/data/`). The brand moment lives
+    in `OpenMoment`, which wraps a page whose content changes when the shop
+    opens; never in the component that opened it.
 
 
 Their words, not ours: order, delivery, return (not RTO in headings — "Returned

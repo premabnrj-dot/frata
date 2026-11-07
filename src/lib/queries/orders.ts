@@ -2,6 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { and, desc, eq, ilike, like as like_, or, sql } from 'drizzle-orm'
 import { orderLines, orders } from '@/lib/db/schema-orders'
+import type { Tx } from '@/lib/db'
 import { withTenant } from '@/lib/db/tenant'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { orderPrefix } from '@/domains/signup/slug'
@@ -51,11 +52,14 @@ function searchSql(raw: string) {
  * in a subquery and group by it.
  */
 export async function queueCounts(tenantId: string, now: Date): Promise<Record<QueueTab, number>> {
+  return withTenant(tenantId, (tx) => queueCountsWith(tx, tenantId, now))
+}
+
+/** queueCounts inside a caller's transaction (Home reads its counts, oldest waits and risk in one, U·4). */
+export async function queueCountsWith(tx: Tx, tenantId: string, now: Date): Promise<Record<QueueTab, number>> {
   const n = (tab: QueueTab) => sql<number>`(count(*) filter (where ${inTabSql(tab, now)}))::int`
-  const [r] = await withTenant(tenantId, (tx) =>
-    tx.select(Object.fromEntries(QUEUE_TABS.map((t) => [t, n(t)])) as Record<QueueTab, ReturnType<typeof n>>)
-      .from(orders).where(eq(orders.tenantId, tenantId)),
-  )
+  const [r] = await tx.select(Object.fromEntries(QUEUE_TABS.map((t) => [t, n(t)])) as Record<QueueTab, ReturnType<typeof n>>)
+    .from(orders).where(eq(orders.tenantId, tenantId))
   return Object.fromEntries(QUEUE_TABS.map((t) => [t, Number(r?.[t] ?? 0)])) as Record<QueueTab, number>
 }
 
