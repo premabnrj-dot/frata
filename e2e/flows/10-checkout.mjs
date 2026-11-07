@@ -100,6 +100,8 @@ export default {
       const before = await stock('{S,Rust}')
       await toCheckout('Rust', 'S'); await p.getByText('Pay online', { exact: true }).click()
       await p.getByRole('button', { name: /^Pay · ₹2,490/ }).click(); await p.waitForURL(/\/orders#t=/); await p.getByText(/Paid · being packed/).waitFor()
+      // The page can say Paid a moment before the capture's transaction is visible here: wait for it, never re-read once (UX session, 2026-11-07).
+      await until(async () => (await stock('{S,Rust}')) === before - 1).catch(() => {})
       assert.equal(await stock('{S,Rust}'), before - 1)
       const rzpOrder = (await (await fetch(RZP + '/_test/orders')).json()).at(-1)
       const auth = 'Basic ' + Buffer.from(`${RZP_KEYS.id}:${RZP_KEYS.secret}`).toString('base64')
