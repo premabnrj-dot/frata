@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 2.2.0
+  version: 3.0.0
   verified: 2026-11-06
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -164,7 +164,31 @@ micro `text-xs text-muted-foreground`.
   ₹" when prices differ, every colour as a small swatch, one tag at most.
 - Before a shop opens every page but the policies is "Opening soon".
 
-## Words a merchant reads
+## Labels, info tips and help text (owner, 2026-11-07 — overrides any earlier "say it under the field")
+
+The owner's rule: **explanation and detail go in an (i) info tip, never as text
+under every field. Cleaner screens.** Research (dated): NN/g "Why So Many Info
+Tips Are Bad" 2026-01-23; Polaris and Atlassian tooltip guidance (undated, live);
+Carbon toggletip 2026-09-30; WCAG 2.2 SC 1.4.13 (updated 2026-07-12); DWP hint
+text 2026-07-15.
+
+1. **Labels first.** Fix the label or the layout before adding anything. A screen
+   needing more than 2–3 tips has unclear labels.
+2. **(i) for optional detail only:** a definition, why we ask, what happens
+   later, an example. One or two sentences, ≤ 288 px wide, at most one link.
+3. **Never in a tip:** errors and validation, a required format or limit the
+   person must meet, money or anything that cannot be undone, legal or GST
+   wording, a risk reason. These stay visible — as the error, or one short line
+   only where the action needs it (the button's own confirm, a dialog).
+4. **Click or tap to open, not hover** (phones have no hover): `InfoTip`
+   (`src/components/ui/info-tip.tsx`) — a button named "About <field>",
+   `aria-expanded`, the popover right after it, Esc / outside click / second tap
+   closes, focus stays on the button; 44 px tap target.
+5. Hover/focus tooltips (`role="tooltip"`) only name icon-only buttons and show
+   truncated text in full — never on a field, never with links.
+6. Never the `title` attribute for anything a person needs.
+
+
 
 Their words, not ours: order, delivery, return (not RTO in headings — "Returned
 to you" with RTO in the detail), payout, customer, product, size. "Delivery
