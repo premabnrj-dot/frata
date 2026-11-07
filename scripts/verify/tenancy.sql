@@ -682,6 +682,11 @@ do $$ begin
   insert into module_pauses (module, paused_by, reason) values ('reviews', 'aaaaaaaa-0000-0000-0000-000000000001', 'proof');
   begin insert into module_pauses (module, paused_by, reason) values ('reviews', 'aaaaaaaa-0000-0000-0000-000000000001', 'twice'); raise exception 'FAIL: two open pauses';
   exception when unique_violation then null; end;
+  update module_pauses set resumed_at = now(), resumed_by = 'aaaaaaaa-0000-0000-0000-000000000001' where reason = 'proof';
+  if not found then raise exception 'FAIL: admin cannot resume a pause'; end if;
+  insert into module_pauses (module, paused_by, reason) values ('reviews', 'aaaaaaaa-0000-0000-0000-000000000001', 'proof again');
+  begin delete from module_pauses; raise exception 'FAIL: admin deleted pause history';
+  exception when insufficient_privilege then null; end;
 end $$;
 commit;
 begin; set local role frata_app;

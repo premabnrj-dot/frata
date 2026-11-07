@@ -46,11 +46,11 @@ grant update (ends_at) on tenant_addons to frata_admin;
 --> statement-breakpoint
 create policy admin_all on tenant_addons for all to frata_admin using (true) with check (true);
 --> statement-breakpoint
-grant insert on addon_prices to frata_admin;
+grant select, insert on addon_prices to frata_admin;
 --> statement-breakpoint
 create policy admin_insert on addon_prices for insert to frata_admin with check (true);
 --> statement-breakpoint
-grant insert on module_pauses to frata_admin;
+grant select, insert on module_pauses to frata_admin;
 --> statement-breakpoint
 grant update (resumed_at, resumed_by) on module_pauses to frata_admin;
 --> statement-breakpoint
