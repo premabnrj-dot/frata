@@ -1,14 +1,14 @@
 import Link from 'next/link'
 import { DataTable, DataTableHead, DataTableRow } from '@/components/data/data-table'
-import { Money } from '@/components/data/numeric'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { paise } from '@/domains/money/paise'
-import { currentMethod, isPlaced, orderState, queueTab, paidAfterSwitch, type OrderState } from '@/domains/orders/order-state'
+import { currentMethod, orderState, paidAfterSwitch, type OrderState } from '@/domains/orders/order-state'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { dateTimeIN } from '@/lib/format-date'
-import { listOrders, orderPrefixFor } from '@/lib/queries/orders'
+import { Money, Numeric } from '@/components/data/numeric'
+import { listOrders, ORDERS_PAGE, orderPrefixFor, queueCounts } from '@/lib/queries/orders'
 
 const STATE: Record<OrderState, { label: string; tone: 'ok' | 'warn' | 'danger' | 'info' | 'neutral' }> = {
   awaiting_payment: { label: 'Paying now', tone: 'neutral' },
@@ -27,26 +27,41 @@ const STATE: Record<OrderState, { label: string; tone: 'ok' | 'warn' | 'danger' 
   rto_received: { label: 'Returned', tone: 'neutral' },
 }
 
-export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ show?: string }> }) {
+export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ show?: string; page?: string }> }) {
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
-  const all = await listOrders(auth.membership.tenantId).catch((err) => { console.error('[orders]', err instanceof Error ? err.name : err); return null })
-  if (!all) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
-  const now = new Date()
-  const withState = all.map((o) => ({ o, state: orderState(o, now) }))
-  const unpaid = withState.filter((x) => !isPlaced(x.o))
+  const sp = await searchParams
   // Unpaid online orders are not orders yet: listed only when asked for (they never count as "To confirm").
-  const showUnpaid = (await searchParams).show === 'unpaid'
-  const rows = showUnpaid ? unpaid : withState.filter((x) => isPlaced(x.o))
-  const toConfirm = withState.filter((x) => queueTab(x.state) === 'to_confirm').length
-  const prefix = await orderPrefixFor(auth.membership.tenantId)
+  const showUnpaid = sp.show === 'unpaid'
+  const tab = showUnpaid ? 'not_paid' : 'all'
+  const now = new Date()
+  const tenantId = auth.membership.tenantId
+  const counts = await queueCounts(tenantId, now).catch((err) => { console.error('[orders]', err instanceof Error ? err.name : err); return null })
+  if (!counts) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  const total = counts[tab]
+  const pages = Math.max(1, Math.ceil(total / ORDERS_PAGE))
+  const asked = Number(sp.page)
+  const page = Number.isSafeInteger(asked) ? Math.min(Math.max(1, asked), pages) : 1
+  const list = await listOrders(tenantId, { tab, page, now }).catch((err) => { console.error('[orders]', err instanceof Error ? err.name : err); return null })
+  if (!list) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  const rows = list.map((o) => ({ o, state: orderState(o, now) }))
+  const first = (page - 1) * ORDERS_PAGE + 1
+  const at = (p: number) => `/console/orders${showUnpaid || p > 1 ? `?${new URLSearchParams({ ...(showUnpaid ? { show: 'unpaid' } : {}), ...(p > 1 ? { page: String(p) } : {}) })}` : ''}`
+  const prefix = await orderPrefixFor(tenantId)
+  const pager = pages > 1 && rows.length > 0 && (
+    <nav aria-label="Pages" className="mt-3 flex items-center gap-3 text-sm">
+      <span className="text-muted-foreground">Showing <Numeric>{first.toLocaleString('en-IN')}–{(first + rows.length - 1).toLocaleString('en-IN')}</Numeric> of <Numeric>{total.toLocaleString('en-IN')}</Numeric>, newest first</span>
+      {page > 1 && <Link href={at(page - 1)} className="underline">Newer</Link>}
+      {page < pages && <Link href={at(page + 1)} className="underline">Older</Link>}
+    </nav>
+  )
   return (
     <>
       <PageHeader title="Orders" />
       <p className="-mt-2 mb-3 text-sm text-muted-foreground">
-        {toConfirm ? <><span className="font-mono">{toConfirm}</span> to confirm. </> : null}
+        {counts.to_confirm ? <><Numeric>{counts.to_confirm.toLocaleString('en-IN')}</Numeric> to confirm. </> : null}
         {showUnpaid ? <Link href="/console/orders" className="underline">Back to orders</Link>
-          : unpaid.length ? <Link href="/console/orders?show=unpaid" className="underline">{unpaid.length} online order{unpaid.length === 1 ? '' : 's'} not paid</Link> : null}
+          : counts.not_paid ? <Link href="/console/orders?show=unpaid" className="underline"><Numeric>{counts.not_paid.toLocaleString('en-IN')}</Numeric> online order{counts.not_paid === 1 ? '' : 's'} not paid</Link> : null}
       </p>
       {rows.length === 0 ? (
         <Panel title={showUnpaid ? 'No unpaid online orders' : 'No orders yet'}>{showUnpaid ? 'Online orders that were never paid show here; they hold stock for 20 minutes, then let it go.' : 'Orders from your shop appear here as they are placed. Pay on delivery orders wait for you to confirm them.'}</Panel>
@@ -74,6 +89,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           </tbody>
         </DataTable>
       )}
+      {pager}
     </>
   )
 }
