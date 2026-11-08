@@ -159,6 +159,55 @@ protected, blocked; add, remove, release a held name. **Admin › Domain health*
 | A partner after handover | No longer sees the shop; the owner controls addresses | — |
 | Razorpay and a new domain | Payments run in-page with no callback URL; whether Razorpay checks the merchant's registered website is checked before D·2 ships | Plan |
 
+## Trust and safety (owner, 2026-11-08: "how to avoid safety, responsibility issues, spam prevention, abuse prevention")
+Research: `docs/research/2026-11-08-shop-addresses.md` § 4 (dated; the gazette pages refused us, so the 2026 rule
+numbers rest on law firms' notes — a lawyer confirms before launch).
+
+**Who is responsible for what.**
+
+| | The merchant (the seller) | Frrata (the platform) | Automatic |
+|---|---|---|---|
+| What is sold | Genuine, legal goods; true prices, offers, photos they have the right to use | Bans what may not be sold (Terms + Acceptable Use Policy: counterfeits and "first copy / 7A / master copy", weapons, drugs, adult content…) | Flags product text with those words or protected brands |
+| Shoppers' complaints about an order | The shop's grievance officer (already on every shop): 48 h to acknowledge, one month to resolve (E-Commerce Rules) | — | — |
+| Complaints about the shop itself (fake, phishing, unlawful) | Answers Frrata's notice in the console | **Frrata's grievance officer** (named on frrata.com): acknowledge 24 h, resolve 7 days, unlawful content 36 h, intimate images 2 h, **court or government order 3 h** (IT Rules amendment in force 20 Feb 2026) | A reference number the moment a report is filed |
+| Dark patterns | Doesn't add any (from 1 Jan 2027: a yearly self-audit) | Themes free of dark patterns by design (no fake timers, no pre-ticked boxes: offers rule 48) | — |
+| Records | — | Keeps a removed product's or frozen shop's content and records ≥ 180 days; logs ≥ 1 year (DPDP r.8(3)) | Never hard-deletes on takedown |
+| Reminding merchants of the rules | — | A notice at least every 3 months (IT Rules 2026) | Sent and logged (notices E·1) |
+
+**How abuse is stopped before it starts.**
+- **Sign-up:** Cloudflare Turnstile (free, no challenge cap; Siteverify on the server within 300 s) on sign-up, partner
+  application, contact and report forms; existing rate limits; disposable email domains are a soft signal, not a block.
+- **Names:** reserved, protected-brand and offensive lists; ASCII only (no lookalikes); retired names never reused.
+- **No code from merchants:** themes only, links only to the shop's own paths, fixed checkout fields — a shop can't host
+  a password form or a script. This is the biggest single protection against phishing.
+- **Money:** online payments need the merchant's own Razorpay account (Razorpay's KYC); COD protects shoppers from
+  paying a scam shop in advance.
+- **New-shop watch:** the first 30 days of every open shop appear in Admin with signals in words: a name near a protected
+  brand, product words like "first copy / replica / 7A", prices far below the brand's, many shops from one person,
+  disposable email, no Razorpay and no GSTIN.
+- **Watching our own hosts:** Google **Web Risk** (the Safe Browsing API is non-commercial only) checks every shop host
+  daily; a Search Console Domain property on frrata.shop gives security alerts; frrata.shop on the PSL keeps one shop's
+  flag on that shop (Safe Browsing v5 builds host checks from the PSL's eTLD+1).
+
+**How abuse is handled when it happens** (Shopify's ladder: the product first, the account last).
+1. **Report:** "Report this shop" in the footer of every frrata.shop address (on an own domain, the report page is
+   reachable from frrata.com/report, keeping the merchant's brand clean — owner call 8) → frrata.com/report: reason
+   (fake or counterfeit, scam, phishing, unlawful, trademark), the page, details; a rights-holder form for trademarks
+   (registration number, a sworn statement). Turnstile, rate limits per IP; **no email is ever sent to an address a
+   reporter typed** until they confirm it (no "subscription bombing" through our forms); the on-page reference number
+   is the acknowledgement.
+2. **Admin › Trust and safety:** one queue with the legal clock on each item (3 h order · 2 h · 36 h · 7 days), the
+   shop's signals, and actions with a reason the shop sees: **Hide a product** → **Freeze the shop** (the storefront
+   says "This shop is unavailable"; the console works read-only; orders already placed are kept and can still be
+   fulfilled and refunded) → **Close the shop**; plus Rename, Disconnect a domain, Block a name. A legal order uses
+   **Take down now** (one product or the shop, minutes, on-call).
+3. **The merchant is told in the console** what was reported and why (never who reported it), and **replies there**;
+   a reply reopens the case for a person to decide. Repeat or egregious cases go straight to Freeze.
+
+**What we will not do:** suggest brand names or "trending brands" to merchants (Hindware v Google, Delhi HC 22 May 2026:
+a tool that aids infringement loses safe harbour); verify every merchant by hand before opening (slow, and the signals
+above find the few); show the reporter's identity to the merchant.
+
 ## Design review (frata-planning § 3)
 - **UI/UX:** one primary action per step (Check records; Make it main; Change); the state of each record in words
   and colour; defaults that work (a frrata.shop address the moment the shop opens, www as main); constraints over
@@ -196,6 +245,7 @@ protected, blocked; add, remove, release a held name. **Admin › Domain health*
 | **D·0 Connect frrata.shop** | Nameservers at Hostinger → Vercel; `frrata.shop`, `*.frrata.shop`, `www.frrata.shop` on project `frata`; `NEXT_PUBLIC_SHOP_DOMAIN=frrata.shop`; apex and www to frrata.com; `_psl` TXT + the PSL request; Admin's name rule = sign-up's | the purchase; no migration |
 | **D·1 Names** | `shop_names`, `blocked_names`; renames after opening with redirects; Admin rename/freeze/release; the names list | D·0 |
 | **D·2 Own domains** | `shop_domains`, the connect flow, checks, main address, fallback, detach; canonical/sitemap on the main host; HSTS split; Admin detach/health | D·1; Razorpay website check |
+| **T·1 Trust and safety** | Terms and AUP, Frrata's grievance officer page, report forms, Turnstile, Admin queue with clocks, hide/freeze/close, new-shop watch, Web Risk, Search Console | D·0; a lawyer's review |
 | **D·3 One-click connect** | Domain Connect for GoDaddy and Cloudflare | templates accepted |
 | Later | Buying a domain through Frrata; console to app.frrata.com (its own small spec: Supabase redirect URLs, cookies) | signals |
 
@@ -210,6 +260,12 @@ protected, blocked; add, remove, release a held name. **Admin › Domain health*
 4. **Own domains on every plan**, no extra fee (Vercel charges none; Shopify includes it).
 5. **frrata.shop on the Public Suffix List** (Vercel's advice; what Shopify, Vercel and GitHub do).
 6. **Fallback after 24 hours, detach after 15 days** without proof.
+7. **Frrata's grievance officer** (a named person resident in India) and an on-call path for 3-hour orders; a lawyer
+   confirms Frrata's intermediary position and the Terms and Acceptable Use Policy before the first public shop.
+8. **"Report this shop" link:** in the footer of frrata.shop addresses; not on a merchant's own domain (brand) — the
+   report page stays reachable from frrata.com. Recommended.
+9. **Turnstile** on sign-up and Frrata's public forms (free); **Web Risk** for our hosts (price to confirm; a snippet
+   says 100,000 lookups a month free).
 
 ## Out of scope (and what brings each back)
 Selling domains (merchants ask "can I buy one here") · Domain Connect (D·3) · non-Latin domains (a merchant asks,

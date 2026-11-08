@@ -84,7 +84,7 @@ ol.own{padding-left:18px;margin:0}ol.own li{margin:6px 0}
   <nav class="toc" aria-label="Screens">
     <a href="#map">1 Three domains</a><a href="#name">2 Picking a name</a><a href="#settings">3 Shop address</a><a href="#rename">4 Change the name</a>
     <a href="#connect">5 Connect a domain</a><a href="#main">6 Main address</a><a href="#problems">7 Problems</a><a href="#admin">8 Admin</a>
-    <a href="#who">9 Who controls what</a><a href="#stress">10 Stress test</a><a href="#now">11 Connect frrata.shop now</a>
+    <a href="#safety">9 Trust and safety</a><a href="#who">10 Who controls what</a><a href="#stress">11 Stress test</a><a href="#now">12 Connect frrata.shop now</a>
   </nav>
 
   <h2 id="map">1 · Three domains, three jobs</h2>
@@ -280,7 +280,52 @@ ol.own{padding-left:18px;margin:0}ol.own li{margin:6px 0}
     </div>
   </div>
 
-  <h2 id="who">9 · Who controls what</h2>
+  <h2 id="safety">9 · Trust and safety</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th></th><th>The merchant (the seller)</th><th>Frrata (the platform)</th><th>Automatic</th></tr></thead>
+    <tbody>
+      <tr><td>What is sold</td><td>Genuine, legal goods; true prices and photos</td><td>Terms and Acceptable Use Policy ban counterfeits ("first copy", "7A", "master copy"), weapons, drugs, adult content</td><td>Flags product words and protected brands</td></tr>
+      <tr><td>A shopper's order complaint</td><td>The shop's grievance officer: 48 h to acknowledge, a month to resolve</td><td>—</td><td>—</td></tr>
+      <tr><td>A complaint about the shop</td><td>Answers Frrata's notice in the console</td><td>Frrata's grievance officer: 24 h acknowledge · 7 days resolve · unlawful 36 h · intimate images 2 h · <b>court or government order 3 h</b></td><td>Reference number on filing</td></tr>
+      <tr><td>Records</td><td>—</td><td>Removed content kept 180 days; logs 1 year</td><td>Never hard-deleted on takedown</td></tr>
+      <tr><td>Reminders of the rules</td><td>—</td><td>At least every 3 months</td><td>Sent and logged</td></tr>
+    </tbody>
+  </table></div>
+  <div class="grid3" style="margin-top:12px">
+    <div class="card"><h3>Before it starts</h3><ul class="sub" style="padding-left:18px;margin:0"><li>Turnstile on sign-up and our forms</li><li>Name lists; ASCII only</li><li>No code from merchants: no password forms, no scripts</li><li>Online payments need Razorpay's KYC; COD protects shoppers</li></ul></div>
+    <div class="card"><h3>Watching</h3><ul class="sub" style="padding-left:18px;margin:0"><li>New-shop watch for 30 days, signals in words</li><li>Google Web Risk checks every shop host daily</li><li>Search Console alerts on frrata.shop</li><li>Public Suffix List keeps one shop's flag on that shop</li></ul></div>
+    <div class="card"><h3>When it happens</h3><ul class="sub" style="padding-left:18px;margin:0"><li>Hide a product first</li><li>Then freeze the shop; close it last</li><li>The merchant sees why and replies in the console</li><li>Never shown who reported</li></ul></div>
+  </div>
+  <div class="grid2" style="margin-top:12px">
+    <div class="card">
+      <h3>frrata.com/report</h3>
+      <p class="k">Linked from "Report this shop" in every frrata.shop footer.</p>
+      <div class="field"><label for="rp1">Shop</label><input class="input mono" id="rp1" value="kesar-studio.frrata.shop"></div>
+      <div class="field"><label for="rp2">What's wrong</label><input class="input" id="rp2" value="Fake or counterfeit goods"></div>
+      <div class="field"><label for="rp3">The page</label><input class="input mono" id="rp3" value="/products/designer-bag-first-copy"></div>
+      <div class="row"><a class="btn primary">Send report</a><span class="k">Protected by Turnstile</span></div>
+      <p class="say ok" style="margin-top:10px">Received. Reference TS-20451. We act within 7 days, sooner for unlawful content.</p>
+      <p class="k">We email you only after you confirm your address. Trademark owners: <u>use the rights-holder form</u>.</p>
+    </div>
+    <div>
+      <div class="admin-bar"><span class="chip">STAFF</span>Admin › Trust and safety</div>
+      <div class="admin">
+        <ul class="list">
+          <li><span><b>Court order · Noor Label</b><br><span class="k">Remove /products/x · received 10:05</span></span><span class="row"><span class="chip c-danger">2 h 41 min left</span><a class="btn danger">Take down now</a></span></li>
+          <li><span><b>Counterfeit · Rang Threads</b><br><span class="k">"first copy" in 6 products · 3 reports</span></span><span class="row"><span class="chip c-warn">36 h · 20 h left</span><a class="btn">Hide products</a></span></li>
+          <li><span><b>New shop · luxe-brand-outlet</b><br><span class="k">Name near a protected brand · prices 80% below · no Razorpay · disposable email</span></span><span class="row"><span class="chip c-n">Watch</span><a class="btn">Freeze shop</a></span></li>
+          <li><span><b>Web Risk · glowskin.frrata.shop</b><br><span class="k">Flagged as social engineering today</span></span><span class="row"><span class="chip c-danger">Flagged</span><a class="btn">Open case</a></span></li>
+        </ul>
+        <p class="k" style="margin-top:8px">Every action asks for a reason; the shop sees it in its console and can reply.</p>
+      </div>
+    </div>
+  </div>
+  <div class="grid2" style="margin-top:12px">
+    <div class="card"><span class="chip c-danger">Shopper sees</span><p style="margin:8px 0 0"><b>This shop is unavailable.</b></p><p class="k">Orders already placed are still delivered and refunded by the shop.</p></div>
+    <div class="banner"><span><b>Frrata froze your shop on 12 Nov.</b> Reason: products described as "first copy" (case TS-20451). Your orders still work.</span><a class="btn">Reply to Frrata</a></div>
+  </div>
+
+  <h2 id="who">10 · Who controls what</h2>
   <div class="tablewrap"><table>
     <thead><tr><th>Action</th><th>Owner · Admin</th><th>Partner (before handover)</th><th>Staff</th><th>Support visit</th><th>Frrata Admin</th><th>Automatic</th></tr></thead>
     <tbody>
@@ -293,7 +338,7 @@ ol.own{padding-left:18px;margin:0}ol.own li{margin:6px 0}
     </tbody>
   </table></div>
 
-  <h2 id="stress">10 · Stress test</h2>
+  <h2 id="stress">11 · Stress test</h2>
   <div class="tablewrap"><table>
     <thead><tr><th>When…</th><th>What happens</th></tr></thead>
     <tbody>
@@ -312,7 +357,7 @@ ol.own{padding-left:18px;margin:0}ol.own li{margin:6px 0}
     </tbody>
   </table></div>
 
-  <h2 id="now">11 · Connect frrata.shop now (D·0)</h2>
+  <h2 id="now">12 · Connect frrata.shop now (D·0)</h2>
   <div class="note-box card" style="margin-bottom:12px"><b>Bought at Hostinger, 1 year, under review.</b> <span class="sub">That's fine. The registrar doesn't matter; the nameservers do. Once the review clears, point the nameservers at Vercel and everything below works the same as buying at Vercel.</span></div>
   <div class="grid2">
     <div class="card">
@@ -341,10 +386,13 @@ ol.own{padding-left:18px;margin:0}ol.own li{margin:6px 0}
     <ol class="sub" style="padding-left:18px;margin:0">
       <li>Keep frrata.shop at Hostinger with Vercel's nameservers; extend it to 3 years before the Public Suffix List request. Buy frrata.com at Vercel now.</li>
       <li>Two name changes after a shop opens; old names redirect forever and are never reused.</li>
-      <li>www as the main address when a merchant connects an apex domain.</li>
+      <li>Naked domains as the main address (decided).</li>
       <li>Own domains on every plan, no extra fee.</li>
       <li>frrata.shop on the Public Suffix List.</li>
       <li>Fall back after 24 hours of failing; disconnect after 15 days without proof.</li>
+      <li>Frrata's grievance officer named on frrata.com, an on-call path for 3-hour orders, and a lawyer's review of the Terms before the first public shop.</li>
+      <li>"Report this shop" in frrata.shop footers only; not on a merchant's own domain.</li>
+      <li>Turnstile on sign-up and our forms; Web Risk watching every shop host.</li>
     </ol>
   </div>
 </div>

@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.9.0
+  version: 1.10.0
   verified: 2026-11-08
   decisions: [ADR-0006]
 ---
@@ -369,6 +369,22 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
 - Domain Connect live at GoDaddy, Cloudflare, IONOS; not Hostinger, BigRock, Namecheap [V-undated].
 - Shopify: A 23.227.38.65 + www CNAME shops.myshopify.com; two myshopify names in all, the old one redirects
   [V-undated]. Squarespace unlinks after 15 days without its verify record [V 2026-10-28].
+
+## Trust and safety — checked 2026-11-08 (integration-researcher; gazette pages 403, so [S])
+
+- IT (Intermediary) Amendment Rules 2026, G.S.R. 120(E), in force 20 Feb 2026: court/government takedown **3 h** (was
+  36); grievances resolved in 7 days (was 15); unlawful content 36 h (was 72); intimate imagery 2 h (was 24); a user
+  advisory every 3 months; all intermediaries. 24 h acknowledgement unchanged [S, Khaitan 2026-02-16, Cyril Shroff
+  2026-02-11]. Draft Second Amendment (30 Mar 2026): 180-day retention a minimum; not notified as of 24 Aug 2026 [S].
+- E-Commerce (Amendment) Rules 2026 (G.S.R. 789(E), from 1 Jan 2027): yearly dark-pattern self-audit with a
+  certificate; a copy of the complaint to the complainant; grievance 48 h / one month unchanged [S, 2026-09-11].
+- Hindware v Google (Delhi HC, 22 May 2026): safe harbour lost by a tool that aids infringement [S, Medianama].
+- Shopify: product-level enforcement first, account last; trademark notices shown to the merchant in admin [V-undated].
+- Turnstile Free: 20 widgets, 10 hostnames each, no challenge cap; Siteverify mandatory, token 300 s, single use
+  [V 2026-08-14, 2026-10-22]. hCaptcha Pro $139/month [V-undated].
+- Safe Browsing API non-commercial only (v4 deprecated) → **Web Risk** for our hosts (price [U]); v5 host checks from the
+  PSL eTLD+1 [V-undated]. Search Console Domain property covers all subdomains [V-undated].
+- Whether a SaaS store builder is an "intermediary" (s.2(1)(w)) [U]: a lawyer confirms before the first public shop.
 
 ## Merchant billing (Frrata bills merchants) — checked 2026-11-08
 

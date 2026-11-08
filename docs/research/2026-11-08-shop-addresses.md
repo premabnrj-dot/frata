@@ -61,7 +61,26 @@ Squarespace, Domain Connect) and a codebase map. [V] primary, [V-undated] vendor
   step guides for the rest.
 - **Chrome IDN display** [V-undated]: mixed scripts and lookalikes show as punycode. *Taken:* ASCII only, no `xn--`.
 
-## 4. Could not verify
+## 4. Trust and safety (integration-researcher, checked 2026-11-08; MeitY/PIB/gazette pages returned 403)
+| Fact | Status | Source (date) |
+|---|---|---|
+| IT (Intermediary) Amendment Rules 2026, G.S.R. 120(E), in force 20 Feb 2026: court/government takedown **3 h** (was 36); grievances resolved **7 days** (was 15); unlawful content 36 h (was 72); intimate imagery 2 h (was 24); user advisory every 3 months; all intermediaries | S | Khaitan ERGO 2026-02-16; Cyril Shroff 2026-02-11 |
+| 24 h acknowledgement unchanged | S | Khaitan 2026-02-16 |
+| Draft Second Amendment (30 Mar 2026): advisories a condition of safe harbour; 180-day retention a minimum; not notified as of 24 Aug 2026 | S | LKS 2026-06-10; Medianama 2026-08-24 |
+| E-Commerce (Amendment) Rules 2026 (G.S.R. 789(E), in force 1 Jan 2027): a yearly dark-pattern self-audit with a certificate; a copy of the complaint to the complainant; grievance 48 h / one month unchanged | S | ABS News 2026-09-11; lexcomply (undated) |
+| Hindware v Google (Delhi HC, 22 May 2026): safe harbour lost by a tool that aids infringement | S | Medianama 2026-05-29 |
+| Shopify: enforcement at the product level first, the account last; trademark notices shown to the merchant, who responds in admin | V-undated | shopify.com/legal/aup; help.shopify.com |
+| Cloudflare Turnstile Free: 20 widgets, 10 hostnames each, no challenge cap; Siteverify mandatory; token 300 s, single use; reads no form inputs | V | developers.cloudflare.com 2026-08-14, 2026-10-22 |
+| Safe Browsing API is non-commercial only (v4 deprecated) → Web Risk for commercial monitoring; v5 builds host checks from the PSL eTLD+1 | V-undated | developers.google.com/safe-browsing |
+| Search Console Domain property covers all subdomains, DNS-verified | V-undated | support.google.com/webmasters/answer/34592 |
+| Disposable-email list (CC0) carries no accuracy guarantee: a signal, not a block | V-undated | github disposable-email-domains |
+| GSTIN/PAN lookup APIs (Cashfree Secure ID): no public rate card | V-undated | cashfree.com docs |
+
+Not verified: the gazette texts; whether a SaaS store builder is an "intermediary" under s.2(1)(w) (a lawyer to
+confirm); Web Risk pricing (snippet: 100,000 a month free, then $0.50/1,000); PUMA v IndiaMART; Razorpay's prohibited
+list for counterfeits.
+
+## 5. Could not verify
 Shopify's reserved store-name words; whether GoDaddy accepts any third-party Domain Connect template; Hostinger
 Domain Connect; Vercel's protection against re-adding a removed domain; real certificate issuance times; PSL review
 time; whether Razorpay checks the website domain a merchant registered (to check before own domains go live).
