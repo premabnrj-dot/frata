@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.19.0
+  version: 2.20.0
   verified: 2026-11-08
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -345,6 +345,7 @@ Budgets. Each says whether a gate holds it yet:
 | A cold shop page ≤ 12 statements, none repeated | review (loaders are `cache()`d since P3) |
 | No preloaded font and `priority` only on the first section's photos | review (P6, P15 fixed) |
 | Console page < 1 s p95; a query < 100 ms at the 10× seed, no seq scan on `orders` | review + EXPLAIN |
+| **Named exception:** Analytics' window aggregate (one grouped read of a period and the one before) is held to the page's 1 s, not 100 ms: 230 / 430 / 635 ms for 7 / 30 / 90 days, 713 ms for a source page at 10× | `analytics-speed.int.test.ts` (`SPEED=1`) |
 
 Rules:
 - Every exported storefront loader is `cache(shopCached(...))`. `unstable_cache`
@@ -369,6 +370,20 @@ Rules:
   no query `frata_app` runs (P10, measured; drizzle/0044). Search a tenant's history with ILIKE only
   where the plan can walk an ordered index and stop at the page (orders search: 100 ms at 150k), or
   through a tenant-bound definer — measured both ways first.
+
+## Attribution (Analytics A·1, 2026-11-08)
+
+- **Raw in, classified on read.** The shop shell's capture island (`CaptureAttribution`, never in a console preview or
+  the Look preview) keeps the landing's tags and the referrer's hostname; `/api/shop/orders` cleans them
+  (`cleanAttribution`) into `orders.checkout.attribution`. Nothing stores a classifier output: every reader calls the
+  one `classifySource` (`src/domains/analytics/source.ts`) on `attributionOf(checkout)`, so a better classifier
+  re-reads history. A creator's code the order uses (`useOfRowSql`, a labelled `discount_codes` row) wins over tags.
+- **Read grouped, never per order:** Analytics groups orders by their raw inputs in SQL (`src/lib/queries/analytics.ts`)
+  inside one transaction with `jit off`, `statement_timeout 3s`, `work_mem 64MB`; ₹ kept after returns is
+  `keptOf` over the groups (`src/domains/orders/kept.ts`, the one ₹-kept helper for Offers and Analytics).
+- **Links with tags** come from `shopLink` (`src/domains/analytics/link.ts`) only: URL + URLSearchParams, the shop's
+  own origin.
+- Erasing an abandoned order strips the click ids (`ERASED_KEYS`); the utm tags stay (owner: keep everything else).
 
 ## Money (ADR-0004)
 
