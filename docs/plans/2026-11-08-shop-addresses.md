@@ -1,73 +1,108 @@
 # Plan — Shop addresses: names, own domains, trust and safety
-Status: draft (plan review pending) · Date: 2026-11-08 · Spec: `docs/specs/2026-11-08-shop-addresses.md` (approved by the
-owner 2026-11-08, with the note "no descriptions or clarifications": spec § Words on screen) · Research:
-`docs/research/2026-11-08-shop-addresses.md`. D·0 is live (frrata.shop, main bce936b).
+Status: reviewed (2026-11-08: architecture, tenancy, security; every finding folded in below; owner calls at the end) ·
+Date: 2026-11-08 · Spec: `docs/specs/2026-11-08-shop-addresses.md` (approved by the owner 2026-11-08 with the note "no
+descriptions or clarifications": spec § Words on screen) · Research: `docs/research/2026-11-08-shop-addresses.md`.
+D·0 is live (frrata.shop, main bce936b).
 
 Gates on every task: `npm test`, `npm run typecheck`, int tests with `INT_DB_HOST`, `verify:tenancy` for every
 migration, `impact-reviewer` on the task's diff, e2e for the flows it touches. A `claude/**` push never deploys; main
-deploys production. Migrations start at **0064** (main holds 0063).
+deploys production. Migrations start at **0064**. **Deploy rule (review B3):** a migration never changes what a live
+definer returns; a new definer goes in beside the old one, the code switches, the old one goes in a later migration —
+so production never runs code against a database it doesn't match. Every new or recreated definer re-revokes from
+`public, anon, authenticated, service_role` (S12).
 
-## The regression net, first (before any change)
-| Changes | Net |
+## The regression net, first
+| Changes | Net (written before the change) |
 |---|---|
-| Host → shop lookup, redirects | `host.test.ts` (routeFor, shopSlugFromHost, platformHost); e2e `12-security` (bare domain 307, a shop opens); new e2e `52-addresses` written first with the D·1/D·2 steps marked pending |
-| The rename path | e2e `40-partners` and `01`/sign-up flows that pick an address; `slug.test.ts` |
-| Canonical, sitemap, robots | e2e `05-shop-look` (HTML) gains: canonical and sitemap use the main address |
-| Admin merchant pages | `admin.int.test.ts`; e2e `90-ux` (Admin pages measured) |
-| Every shop request | e2e `10-checkout`, `13-paging`, `51-analytics` (storefront through the host) |
+| Host → shop, redirects | `host.test.ts`; e2e `12-security` (bare domain 307; a shop opens; **no Set-Cookie on any shop host**); new e2e `52-addresses` with every D·1/D·2 step, pending until built |
+| Who can take a name | **New e2e `03-signup`** (sign-up picks a name; a taken one says "Taken"); `40-partners` (partner creates a store); Admin's form refusing a retired name (`admin.int.test.ts`) |
+| Canonical, sitemap, robots | e2e `05-shop-look` asserts canonical and sitemap use the main address |
+| Checkout through a host | `10-checkout`, `13-paging`, `51-analytics`; e2e 52 adds checkout through an old name and through a non-main domain |
 
-## D·1 — Names (renames after opening, redirects, the names list)
+## D1·0 — First, because it takes longest (owner + me)
+- **Extend frrata.shop to ≥ 3 years at Hostinger** (owner); then the `_psl` TXT record and the Public Suffix List pull
+  request (me, filed by the owner). No review time is promised; cookie and Safe Browsing isolation depend on it.
+- Until it is listed: **no cookies on shop hosts** (gate widened from `cookies(` under `src/app/s` to an e2e assertion
+  on every shop response) and **no pixels or third-party scripts on shops**.
+
+## D·1 — Names
 | Task | What | Verify |
 |---|---|---|
-| D1·1 | Migration 0064 `shop_names` (name PK, tenant_id, created_at, retired_at; one current per shop: partial unique `(tenant_id) where retired_at is null`), backfilled from `tenants.slug`; `blocked_names` (name PK, kind reserved/protected/offensive/held, reason, by, at) seeded from `RESERVED`; grants, RLS (frata_app reads its own `shop_names`; `blocked_names` readable by definers only), policies; frata_admin select/insert/update with reasons | `verify:tenancy` + new proofs: A can't read B's names; the app can't insert a name; a retired name can't be taken by another shop |
-| D1·2 | Pure `src/domains/addresses/names.ts`: `nameProblem(name, {blocked})` (shape via `slugProblem` + blocked + `xn--`), `renamesLeft(history, openedAt)` (free before opening, 2 after), `redirectFor(host, names)`. Tests: table of names, the two-change limit, retired names | vitest |
-| D1·3 | `app_change_shop_address` replaced (0064): before opening as today; after opening only if `renamesLeft > 0`; retires the old name (`retired_at`), inserts the new, mirrors `tenants.slug`, audit row; refuses blocked or ever-used names; `app_tenant_for_slug` returns the shop **and whether the name is current** | int test: rename after opening, third rename refused, old name still resolves with `current = false`, another shop can't take it |
-| D1·4 | Redirects: the shop lookup (`tenantForHost`, cached 60 s, tag `host:<h>`) returns `{ id, current }`; an old name 308s to the current address with the same path (in the shop layout from the cached lookup, never a DB call per request); `refreshHosts` on rename invalidates both | e2e 52: rename after opening → old address 308s to the new, path kept |
-| D1·5 | Settings › Shop address after opening: Change with "N changes left" (spec § Words); staff read-only; support visit disabled | e2e 52 + 90-ux at 390 px |
-| D1·6 | Admin › Merchant › Addresses: names (current + old), **Rename Kesar Studio's address** (reason, ignores the limit), **Freeze address changes**; Admin › Names: add/remove blocked, release a held name (reason) | `admin.int.test.ts`; e2e 90 Admin pages |
+| D1·1 | Migration 0064: `shop_names` (name PK, tenant_id, created_at, retired_at, retired_by_frrata bool, **no reuse ever** by the PK); one current per shop (partial unique `(tenant_id) where retired_at is null`); backfill from `tenants.slug`. **One trigger on `tenants` slug insert/update writes `shop_names`** (review B1) — so sign-up (`app_create_shop`), partners (`app_partner_create_shop`) and Admin (`createMerchant`) all hit the name PK; `revoke update (slug) on tenants from frata_admin`; a constraint trigger keeps `tenants.slug` = the current `shop_names` row. `blocked_names` holds only protected brands, offensive words and blocked domains (kind, reason, by); `RESERVED` stays in code (routing words Admin must not delete). `tenants.address_frozen_at`, `tenants.first_opened_at` (set once by the publish writer, never cleared by a close). | `verify:tenancy` new proofs: A can't read B's names; a retired name is refused by all three creators; Admin can't update a slug directly |
+| D1·2 | `app_name_check(name)` definer replaces `app_slug_available`: returns ok / taken (taken, retired, blocked and reserved all say **Taken**, so the check can't list protected brands); rate-limited per IP; granted to frata_app and frata_admin. Pure `src/domains/addresses/names.ts`: shape (`slugProblem`) + `xn--` refused | vitest; int |
+| D1·3 | `app_rename_shop(tenant, uid, name, by_frrata, reason)` — the one rename (merchant and Admin): owner/admin re-checked from `members` (merchant path); refuses a support visit; refuses when `address_frozen_at`; **before the first opening** a rename deletes the unshared old row; **after it**, at most two (SQL enforces; a parity int test with the TS display); the old row retired (redirecting) — or, when `by_frrata`, retired **without redirect**; audit row | int: rename after opening; third refused; close-reopen doesn't reset; Frrata rename stops redirecting |
+| D1·4 | `app_shop_for_host(host)` (new, beside `app_tenant_for_slug/_for_host`): returns **facts only** — tenant id, current name, whether the asked name is current or retired-redirecting, the shop's live domains (≤ 4 rows), frozen/closed. Pure `addressFor(host, facts, now)` → serve · redirect(to) · unavailable. `coreShop.host` and every `shopHost(slug)` caller (Make a link, settings, products, partner, Admin) read the one main address. Cache key `['sf-host-v2', host]`, tags `host:<every name and domain of the shop>`; **every change refreshes all hosts of both shops** (tenancy H5). | int: tags after rename; e2e 52 old name → current |
+| D1·5 | Redirect: in the shop layout from the cached facts, **307** (owner call 2) to `https://${main}` + the encoded path — never `new URL(path, base)` (`//evil.com`, `/\evil.com` tested); `/orders` never redirects across hosts (order tokens stay on the host that issued them); `/api/shop/*` accepts any live host of the shop so a checkout in flight finishes; sitemap/robots on a non-main host point at the main one. Measured on `next start` and Vercel: status, Location, second hit cached (`speed-reviewer`) | e2e 52; host tests for the path cases |
+| D1·6 | Settings › Shop address (spec § Words): Change with "N changes left"; staff read-only; support visits refused server-side (banner already says why — no per-button reasons) | e2e 52 + 90 at 390 px |
+| D1·7 | Admin (needs **aal2** in `requireStaff` first — S5): Addresses tab (names), **Rename <shop>'s address** (reason ≤ 500, no redirect), **Freeze address changes**; Admin › Names (protected, offensive, blocked domains; release = delete a retired `shop_names` row with a reason, refreshing its host). Close and takedown for the `admin` staff role only | admin int; e2e 90 |
 
-## D·2 — Own domains (connect, check, main, fallback, detach)
+## D·2 — Own domains (needs Vercel Pro: owner call 1)
 | Task | What | Verify |
 |---|---|---|
-| D2·0 | **Fix first:** HSTS split — `max-age` with `includeSubDomains` only on the console host and `*.SHOP_DOMAIN`; own domains get `max-age=31536000` without it (headers chosen per host in the middleware for shop hosts) | e2e 12: a shop on frrata.shop keeps includeSubDomains; an own-domain host (fake) doesn't |
-| D2·1 | Migration 0065 `shop_domains` (host PK, tenant_id, apex, token, claimed_at, proved_at, added_at, dns_ok_at, cert_ok_at, failing_since, main_at, removed_at, removed_reason, removed_by); one main per shop (partial unique); `tenant_domains` rows moved in, then dropped; `app_tenant_for_host` reads `shop_domains` (proved, added, not removed) and returns `{ id, main_host }` | `verify:tenancy`: A can't read or claim B's domain; a claimed-but-unproved host resolves to nothing |
-| D2·2 | Pure `src/domains/addresses/domains.ts`: `normaliseDomain` (lowercase, no scheme/path/port, ASCII only, no `xn--`, not an IP, not frrata.*, PSL-aware: refuse a bare suffix like `co.in`), `stateOf(row, now)` from timestamps, `mainHostFor(shop, domains)`, `shouldFallBack(now)` (24 h), `shouldDetach(now)` (15 days without proof), the 4-host cap | vitest table |
-| D2·3 | `src/lib/domains/vercel.ts` (the one owner of `VERCEL_DOMAINS_TOKEN`, team-scoped): add, verify, config, remove through `fetchWithTimeout`; outbox kinds `domain.add`, `domain.remove`, `domain.check` (ADR-0006); 409 "already on this project" = success | unit with a fake; int: an outbox row per call |
-| D2·4 | `src/lib/domains/dns.ts`: TXT lookup of `_frrata.<apex>` over DNS-over-HTTPS (Cloudflare and Google; both must agree), `fetchWithTimeout`, no caching across shops | unit with a fake resolver |
-| D2·5 | Actions: `connectDomain` (owner/admin/partner-before-handover; Zod; 10 a day a shop), `checkDomain` (one per 30 s), `makeMain`, `removeDomain`; the proof wins rule (a fresh proof from another shop moves the domain; the previous shop's row gets `removed_reason = 'proved elsewhere'`) | int tests per rule; `security-reviewer` |
-| D2·6 | The daily check (cron after the outbox drain): config + TXT for every connected domain at ≤ 500 config reads a minute; fallback after 24 h failing; detach after 15 days without proof; each change refreshes `host:` tags | int test with a fixed clock |
-| D2·7 | The main address everywhere: canonical, Open Graph, structured data, sitemap.xml, robots.txt, Make a link, Copy link read `mainHostFor`; non-main hosts 308 to the main one (same path); analytics `ownHosts` = all the shop's hosts | e2e 05 (canonical), 51 (attribution ignores own hosts), 52 |
-| D2·8 | Settings screens (spec § Words): Your domains, Connect 1–3, Make main dialog, the Not working banner on every console page for owners/admins | e2e 52 with a fake Vercel and a fake DNS (`e2e/fakes/vercel.mjs`, `dns.mjs`); 90-ux |
-| D2·9 | Admin: Addresses tab domains (Disconnect with reason, Retry), Admin › Domain health | e2e 90; admin int |
-| D2·10 | Razorpay check: confirm whether a merchant's registered website domain matters for Standard Checkout on an own domain (integration-researcher) | recorded in `frata-integrations` |
+| D2·0 | **Razorpay check first** (integration-researcher): does Standard Checkout care about the merchant's registered website domain | `frata-integrations` |
+| D2·1 | **HSTS split** in next.config with `has: host` rules: `includeSubDomains` only for the console host and `*.SHOP_DOMAIN`; the default (own domains) `max-age=31536000` without it. Check Vercel's own default HSTS. Ships before any own domain is attached | e2e 12 per host |
+| D2·2 | Migration 0065 `shop_domains`: **id PK**; unique `(tenant_id, host) where removed_at is null`; unique `(host) where proved_at is not null and removed_at is null`; **token = 128 random bits per row**, never derived from the host and never changed by another shop's action; timestamps claimed/proved/added/dns_ok/cert_ok/failing_since/parked/main/removed + removed_reason/by; CHECK host lowercase, no trailing dot, not under `frrata.*`, `frata.*`, `vercel.app`, the console host. frata_app: select own rows only; **every write through definers**; frata_admin: select + `update(removed_*)`. `tenant_domains` rows moved in as **removed** (never as proved); `app_tenant_for_host` dropped one migration later | `verify:tenancy`: A can't read or prove B's row; B's claim on A's live host leaves A resolving and A's token unchanged; checking with A's token value doesn't prove B |
+| D2·3 | Pure `src/domains/addresses/domains.ts`: `normaliseDomain` (Zod `.max(253)` first; lowercase; no scheme/path/port/`@ / : \ * _`/space; labels ≤ 63; no all-digit TLD; ASCII only, no `xn--`; not an IP; refuse `*.vercel.app`, console, `frrata.*`, `frata.*`, `.local`, `.internal`, `.test`, `.onion`, blocked domains; PSL-aware: refuse a bare suffix — `tldts`, server-only, one line in the plan on why); `stateOf(row, now)` → one tuple of badges (Main · Connected · Waiting for records · Securing · Not working · Disconnected) used by Words, rule 68 and the stress table alike; the 4-host cap | vitest table |
+| D2·4 | `src/lib/connectors/vercel/` (the one owner of the token: Production only, Sensitive, read in `env.ts`; refuse any base URL but `api.vercel.com`; never log a response body): add (with Vercel's own `www` → apex redirect at add time), verify, config, remove, through `fetchWithTimeout`. **Only add and remove are outbox kinds**; `drainSoon()` called after enqueue; config is a direct read. 409 counts as success only for "already on this project"; "in use by another account" shows the `_vercel` TXT and never sets `added_at` | unit with a fake; int: outbox row per add/remove |
+| D2·5 | `src/lib/connectors/dns/`: TXT of `_frrata.<apex>` over DoH (Cloudflare and Google must agree); `redirect: 'error'`; 64 kB cap; answer name must equal the query; store yes/no, never the strings; an error or 429 is "unknown" and never starts the 24 h or 15-day clocks | unit with a fake resolver |
+| D2·6 | Definers: `app_claim_domain` (owner/admin or partner-before-handover as a named tuple `CAN_MANAGE_ADDRESS`, re-checked in SQL; support visits refused; 10 a day a shop); `app_prove_domain` — a proof matches **only its own row's token**; if another shop holds the host live: moves only when **both resolvers see the new token and neither sees the old one**, and a **main** domain waits **72 h** with its owner told (owner call 3) — then, in one locked statement, the old row gets removed_* and its `main_at` cleared, and the old shop's notice and cache refresh are written as outbox rows under that shop; both tokens visible → a dispute in Admin, no flip-flop; one live owner per apex (`www.` moves with it). `app_make_main` requires `cert_ok_at` | int per rule (squat, real owner, both visible, 72 h hold) |
+| D2·7 | **Removal parks first** (security H1): a removed or moved host stays on our project serving nothing (the lookup never serves an unproven/removed row) until the check sees A and CNAME pointing away from Vercel for 3 days in a row; only then `domain.remove` — and the sender re-checks in the database that **no other shop holds that host live** (tenancy C2) | int: B drops its claim on A's live host → Vercel never called |
+| D2·8 | The check (Vercel Pro cron, every 10 min the first day after a claim, hourly after; batch × runs written down against ≤ 500 config reads a minute): a definer returns only `(tenant_id, host)`, writes per shop inside `withTenant`; **redirect only while the last check shows the domain on our project** — A, CNAME or TXT gone → fall back at once; the 24 h grace is for resolver or certificate errors only; detach after 15 days without proof | int with a fixed clock |
+| D2·9 | The main address everywhere (via D1·4's one reader): canonical, Open Graph, structured data, sitemap, robots, Make a link, Copy link; analytics `ownHosts` = every host of the shop | e2e 05, 51, 52 |
+| D2·10 | Screens (spec § Words, one badge tuple): Your domains, Connect 1–3, Make main, the Not working banner (read in the layout's existing transaction), "Keep these records" (a limit: the 15-day detach), states for 4 of 4 hosts, Vercel down, phone | e2e 52 with `e2e/fakes/vercel.mjs` + `dns.mjs`; 90-ux |
+| D2·11 | Admin: domains on the Addresses tab (Disconnect with reason, Retry), Domain health, disputes | admin int; e2e 90 |
 
-## T·1 — Trust and safety (needs a lawyer's review of the Terms and AUP before the first public shop)
+## T·1 — Trust and safety (beside D·2, before the first real shop; a lawyer reviews Terms and AUP)
 | Task | What | Verify |
 |---|---|---|
-| T1·1 | Pages on the console host: Terms, Acceptable Use Policy, Frrata's grievance officer (from Settings of Frrata itself, not hard-coded), `/report` (Turnstile, Siteverify on the server, rate-limited by IP; no email to a typed address until confirmed), the rights-holder form | e2e: report filed → reference shown; Turnstile fake |
-| T1·2 | Migration `ts_cases` (platform table, `frata_admin` only; tenant_id nullable for unknown hosts; kind, clock_due_at by kind: order 3 h, intimate 2 h, unlawful 36 h, other 7 days; events), `shop_restrictions` (tenant_id, product_id null, kind hide/freeze/close, reason, by, at, lifted_at) readable by the shop | `verify:tenancy`: a shop reads its own restrictions only, never cases or reporters |
-| T1·3 | Enforcement: a hidden product 404s on the shop and shows "Hidden by Frrata: <reason>" in the console; a frozen shop renders "This shop is unavailable." (orders already placed still work; console read-only with Reply); closed = frozen + domains removed | e2e: freeze → shop page; console banner; an order page still works |
-| T1·4 | Admin › Trust and safety: the queue with clocks, actions (Hide · Freeze · Close · Take down now) each with a reason; the merchant's Reply reopens the case | admin int; e2e 90 |
-| T1·5 | Signals: new-shop watch (30 days) with words (protected-name distance, product words "first copy / replica / 7A / master copy", price far below, many shops from one email domain/IP, disposable email, no Razorpay, no GSTIN); Web Risk daily per shop host (outbox kind `webrisk.check`); Search Console Domain property on frrata.shop (owner step) | unit (signals); int (watch list) |
-| T1·6 | The quarterly advisory to merchants (a notice; until messaging E·1, a console banner logged as sent) | int |
+| T1·1 | Terms, Acceptable Use Policy, Frrata's grievance officer page (from Frrata's own settings), on the console host | e2e |
+| T1·2 | `/report` and the rights-holder form: Turnstile (owner call 4: a Cloudflare script on the console origin; `/start` nonce) with Siteverify checking success, hostname and action, failing closed; `ipBucket` rate limit, fail closed; page ≤ 2,048 chars (shown as text, never fetched), details ≤ 5,000; the shop inserted through a definer; **no email to a typed address** (at most one confirmation per address hash a day, if ever); reporter data kept 180 days | e2e with a Turnstile fake |
+| T1·3 | `ts_cases` (frata_admin only; `frata_app` reading it fails), `shop_restrictions` (frata_app **select only**; composite FK `(tenant_id, product_id)`); the merchant reads and replies through `app_my_cases()` (reference, kind, Admin's reason, page — never the reporter's text) and `app_case_reply(...)` | `verify:tenancy` proofs |
+| T1·4 | Enforcement: hide a product, freeze, close — in the same action invalidate `shop:`, catalogue and `host:` tags; place-order and Razorpay order creation check `shop_restrictions` **uncached** in their transaction; a hidden product's photos and OG image deleted from Blob (a private copy kept 180 days); frozen/closed answers "This shop is unavailable." on **every** name and domain; orders already placed stay fulfillable and refundable (a defined set of console actions, not "read-only") | e2e: freeze → shop page, photo URL 404, an order still ships |
+| T1·5 | Admin › Trust and safety queue with clocks (order 3 h, intimate 2 h, unlawful 36 h, other 7 days), Hide · Freeze · Close · Take down now (admin role, aal2, reason ≤ 500) | admin int; e2e 90 |
+| T1·6 | Signals: new-shop watch (30 days), Web Risk daily per host (price rechecked first), Search Console Domain property (owner); the quarterly advisory (a console notice until messaging E·1) | unit + int |
 
-## Practices recorded in skills (in the same commits)
-- `frata-architecture`: a shop's address is built by `platformHost`/`shopHost` only; a host becomes a shop's only
-  after its TXT proof; the main address comes from `mainHostFor`; HSTS includeSubDomains never on an own domain.
-- `frata-design-language`: rules 67–71 (landed with the approval).
-- `frata-verify`: e2e fakes for Vercel and DNS; how to test a host on the local stack.
-- `frata-integrations`: Vercel domains (done), Razorpay website check (D2·10), Web Risk price.
+## Practices recorded in skills (same commits)
+- `frata-architecture`: a shop's address comes from one reader (`addressFor` over `app_shop_for_host`); a host is a
+  shop's only after its own row's TXT proof; definers change beside, never in place; HSTS includeSubDomains only for
+  hosts named by us; removal parks before it removes.
+- `frata-design-language`: rules 67–71 (landed), and the one badge tuple from `stateOf`.
+- `frata-verify`: e2e fakes for Vercel, DoH and Turnstile; testing hosts on the local stack.
+- `frata-integrations`: Vercel token scope, Razorpay website check, Web Risk price.
 
 ## Repetitive work → agents and scripts
 | Repeated by hand | Becomes |
 |---|---|
-| Checking a domain's DNS and certificate from a session behind the proxy | `scripts/check-domain.mjs <host>` (DoH for NS/A/TXT, Vercel config through the API) |
-| Production migrations through the Supabase tool | `scripts/prod-migrate.mjs` (listed since Analytics; built with 0064) |
+| Checking a domain from behind the proxy | `scripts/check-domain.mjs <host>` (DoH NS/A/TXT + Vercel config) |
+| Production migrations through the Supabase tool | `scripts/prod-migrate.mjs` (built with 0064) |
 
-## Questions for the plan review
-1. Redirect for an old name or a non-main domain: in the shop layout from the cached lookup (a cached 308 page per
-   path) or in the middleware (needs a host → main map without a DB call). Proposal: layout, measured by
-   `speed-reviewer`.
-2. `blocked_names` readable by the app only through a definer (`app_name_problem(name)`), so the list never ships to
-   a browser.
-3. The Vercel token's scope: team token restricted to project `frata` if Vercel allows; else a separate team member.
+## Reviews (2026-11-08) — folded in above
+- **Tenancy (FIX BEFORE MERGE):** row per claim with its own token (C1); remove re-checks other shops (C2); the move
+  as one definer with the old shop's notice and refresh (H3); retired names refused by every creator (H4); refresh
+  all hosts of both shops (H5); merchants' case read and reply through definers (H6); grants, check per shop, moved
+  rows as removed, Admin release as a definer, short cache on own-domain redirects, `/orders` never cross-host,
+  re-revokes, restrictions select-only (M7–M13).
+- **Architecture (CHANGES NEEDED):** one trigger for names (B1); id PK (B2); new definers beside old (B3); facts-only
+  definer + pure `addressFor` (B4); Vercel Pro and a real schedule (M5); 307 to own domains (M6); park before remove
+  (M7); renames counted from the first opening (M8); SQL enforces the limit (M9); Frrata renames don't redirect and a
+  freeze column (M10); `RESERVED` stays in code (M11); D1·0, T·1 beside D·2, Razorpay first (M12); defined actions
+  for a frozen shop (M13); `/api` on any live host, new cache key (M14); HSTS in next.config, `tldts` justified,
+  `connectors/`, the sign-up flow first, one badge tuple, "Keep these records" visible.
+- **Security (FIX BEFORE MERGE):** park before remove (H1); id PK and per-row token (H2); Vercel token scope,
+  Production-only and Sensitive, S1 first (H3); a 72 h hold and both-resolvers rule for moving a main domain (M1);
+  redirect only while on our project, encoded targets, `makeMain` needs the certificate (M2); Frrata renames don't
+  redirect, frozen answers unavailable everywhere (M3); takedown reaches caches and photos (M4); aal2 before Admin's
+  new powers (M5); PSL before D·2 and no shop cookies or pixels until then (M6); tuples, caps, DoH hygiene, HSTS
+  default, Vercel 409, report form limits (L1–L6).
+
+## Owner calls (recommendations first)
+1. **Vercel Pro before D·2** (≈ $20 a month per member): own domains need checks every 10 minutes at first and hourly
+   after; Hobby runs a cron once a day, which turns "24 h fallback" into 48 h and a connect into a day's wait.
+2. **307 (temporary) redirects to an own domain**: browsers keep a 308 forever, so after a main-address change,
+   fallback or detach, returning shoppers would land on a dead domain; canonical and sitemap carry the SEO.
+3. **A 72-hour hold before a main domain moves to another shop** that proves it, with the current owner told.
+4. **Turnstile on the console origin** (sign-up and /report): one Cloudflare script on public pages (rule 44
+   exception).
+5. **Admin two-step sign-in (aal2) before Admin's new powers** (rename, freeze, disconnect, takedown).
+6. **Vercel token for domains**: a dedicated team member (or integration) limited to project `frata`, Production
+   only, Sensitive, with an expiry.
