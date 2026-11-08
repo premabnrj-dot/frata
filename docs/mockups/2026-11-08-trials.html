@@ -1,0 +1,293 @@
+<title>Frrata Plan Trials</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Bricolage+Grotesque:opsz,wght@12..96,700&display=swap">
+<style>
+/* Layout: a proposal column — the trial's life on one timeline, then each screen a brand or Frrata sees, in Frrata's console tokens (same as the billing mockup). */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--brand:#D61F69;--brand-text:#A8124F;--thread:#D61F69;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;
+  --store-bg:#F6F1EA;--store-ink:#2A211B;--store-sub:#6E625A;
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--display:"Bricolage Grotesque","Inter",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--store-bg:#211C18;--store-ink:#F1E9E1;--store-sub:#B5A99F;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--store-bg:#211C18;--store-ink:#F1E9E1;--store-sub:#B5A99F;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.55 var(--sans);margin:0}
+.wrap{max-width:1000px;margin:0 auto;padding-block:32px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font:700 30px/1.15 var(--display);margin:0 0 6px;text-wrap:balance;letter-spacing:-.01em}
+h2{font-size:19px;margin:44px 0 8px;display:flex;gap:10px;align-items:center;text-wrap:balance}
+h2::before{content:"";width:18px;height:2px;background:var(--thread);flex:none}
+h3{font-size:15px;margin:0 0 6px}
+p{margin:0 0 10px;max-width:72ch}
+.sub{color:var(--sub)}.mono{font-family:var(--mono)}.num{font-variant-numeric:tabular-nums}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:16px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.between{justify-content:space-between}
+.stack{display:grid;gap:12px}
+.grid2{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}.grid2>*{min-width:0}
+.grid3{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}.grid3>*{min-width:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--fg);padding:6px 12px;font:500 13px var(--sans);min-height:34px;white-space:nowrap;cursor:pointer}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:500;white-space:nowrap}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-warn{background:var(--warn);color:var(--warn-text)}.c-n{background:var(--muted);color:var(--sub)}.c-danger{background:var(--danger);color:var(--danger-text)}.c-info{background:var(--info);color:var(--info-text)}
+.k{font-size:12px;color:var(--sub)}
+.big{font:600 24px var(--mono);font-variant-numeric:tabular-nums}
+.label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);font-weight:600}
+/* the owner's open calls */
+.calls{border:1px solid var(--border);border-left:3px solid var(--brand);background:var(--card);border-radius:6px;padding:14px 16px}
+.calls ol{margin:6px 0 0;padding-left:20px;display:grid;gap:6px}
+.calls b{color:var(--brand-text)}
+/* the trial's life, to scale: 8 Nov → 23 Dec (45 days) */
+.life{overflow-x:auto;border:1px solid var(--border);border-radius:6px;background:var(--card);padding:16px}
+.life svg{display:block;min-width:720px;width:100%;height:auto}
+/* the console frame */
+.frame{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--card);font-size:13px}
+.bar .shop{font-weight:600}
+.trialtag{font-size:12px;color:var(--sub);display:inline-flex;gap:6px;align-items:center}
+.trialtag a{color:var(--fg);text-decoration:underline;text-underline-offset:2px}
+.inner{padding:14px;display:grid;gap:12px}
+.banner{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:6px;padding:10px 14px}
+.banner.warn{background:var(--warn);color:var(--warn-text)}
+.banner.danger{background:var(--danger);color:var(--danger-text)}
+.banner .btns{display:flex;gap:8px;flex-wrap:wrap}
+.check{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}
+.check li{display:flex;gap:8px;align-items:center}
+.dot{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--input);flex:none;display:grid;place-items:center;font-size:10px}
+.dot.done{background:var(--ok-text);border-color:var(--ok-text);color:var(--card)}
+.plans{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.plan{border:1px solid var(--border);border-radius:6px;padding:12px;background:var(--card);display:grid;gap:4px;align-content:start}
+.plan.on{border:2px solid var(--fg)}
+.plan .p{font:600 18px var(--mono);font-variant-numeric:tabular-nums}
+.tl{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:0}
+.tl li{display:grid;grid-template-columns:96px 1fr;gap:10px;padding:6px 0;border-bottom:1px dashed var(--border);font-size:13px}
+.tl li:last-child{border-bottom:0}
+.tl .d{font-family:var(--mono);font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}
+.tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+th{font-size:12px;color:var(--sub);font-weight:500}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.store{background:var(--store-bg);color:var(--store-ink);border-radius:8px;padding:28px 18px;text-align:center;display:grid;gap:8px;justify-items:center}
+.store .name{font:700 20px var(--display);letter-spacing:.08em;text-transform:uppercase}
+.store p{color:var(--store-sub);margin:0}
+.msg{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:12px 14px;font-size:13px;max-width:420px}
+.msg .from{font-size:12px;color:var(--sub);margin-bottom:6px}
+.note{font-size:12.5px;color:var(--sub);border-left:2px solid var(--border);padding-left:10px;margin-top:8px}
+.funnel{display:grid;gap:8px}
+.fr{display:grid;grid-template-columns:minmax(120px,190px) 1fr 70px;gap:10px;align-items:center;font-size:13px}
+.fr .b{height:14px;border-radius:3px;background:var(--muted);overflow:hidden}
+.fr .b i{display:block;height:100%;background:var(--fg)}
+@media (max-width:520px){.tl li{grid-template-columns:80px 1fr}.fr{grid-template-columns:110px 1fr 54px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="label">Proposal · phase TR1 · for the owner's approval</div>
+  <h1>Free trials on plans</h1>
+  <p class="sub">Onboarding by trial: a brand signs up, picks a plan, opens its shop, and has 30 days of selling to see its first delivered order and what it kept, before it pays anything. Nothing on this page is built yet. Prices below are the current plan prices; dates are an example shop that signs up on 8 November.</p>
+
+  <div class="calls" role="note" aria-label="Decisions needed">
+    <strong>Your calls before this is built</strong> (spec: <span class="mono">docs/specs/2026-11-08-trials.md</span>). The screens show the recommended answer.
+    <ol>
+      <li><b>Q1 Fee during the trial.</b> Recommended: the per-order fee is waived on orders shipped during the trial, up to the plan's included orders. Or: charged as usual.</li>
+      <li><b>Q2 The end without autopay.</b> Recommended: 7 days of grace, then the shop pauses (no new orders; orders on their way finish normally; data kept 180 days). Or: pause at once.</li>
+      <li><b>Q3 Length.</b> Recommended: 30 days from the day the shop opens, never past 45 days from sign-up. Or: a flat 14 days from sign-up.</li>
+      <li><b>Q4 Phone check at sign-up</b> (a one-time code), so one business gets one trial.</li>
+      <li><b>Q5 The email provider</b> for the reminders (open since billing B3).</li>
+    </ol>
+  </div>
+
+  <h2>The trial's life</h2>
+  <p>One example shop, drawn to scale. Building the catalogue does not use up the trial: the 30 days start when the shop opens.</p>
+  <div class="life" role="img" aria-label="Timeline: signs up 8 Nov, opens 12 Nov, first delivered order 19 Nov, reminders 5, 9 and 11 Dec, trial ends 12 Dec, grace to 19 Dec, then paused unless autopay is set up. The 45-day cap is 23 Dec.">
+    <svg viewBox="0 0 760 150" xmlns="http://www.w3.org/2000/svg" font-family="Inter, system-ui, sans-serif" font-size="11">
+      <!-- scale: x = 30 + day * 15.5, day 0 = 8 Nov, day 45 = 23 Dec -->
+      <rect x="30" y="58" width="62" height="14" rx="3" fill="var(--muted)"/>
+      <rect x="92" y="58" width="465" height="14" rx="3" fill="var(--ok)"/>
+      <rect x="402" y="58" width="155" height="14" rx="0" fill="var(--warn)"/>
+      <rect x="557" y="58" width="108.5" height="14" rx="3" fill="var(--danger)"/>
+      <line x1="30" y1="65" x2="728" y2="65" stroke="var(--border)" stroke-width="1"/>
+      <g fill="var(--fg)">
+        <text x="30" y="48">Signs up</text><text x="30" y="96" fill="var(--sub)">8 Nov</text>
+        <text x="92" y="36">Opens shop · 30 days start</text><text x="92" y="96" fill="var(--sub)">12 Nov</text>
+        <text x="200" y="120">First delivered order (first proof)</text><text x="200" y="134" fill="var(--sub)">19 Nov</text>
+        <text x="402" y="36">Banner from 2 Dec</text>
+        <text x="557" y="48" font-weight="600">Trial ends</text><text x="557" y="96" fill="var(--sub)">12 Dec</text>
+        <text x="600" y="120">Grace: everything works</text><text x="600" y="134" fill="var(--sub)">to 19 Dec, then paused</text>
+        <text x="728" y="96" text-anchor="end" fill="var(--sub)">23 Dec cap</text>
+      </g>
+      <g fill="var(--fg)">
+        <circle cx="92" cy="65" r="5"/><circle cx="200.5" cy="65" r="5" fill="var(--ok-text)"/>
+        <circle cx="557" cy="65" r="5"/><circle cx="665.5" cy="65" r="5" fill="var(--danger-text)"/>
+      </g>
+      <g fill="var(--brand)">
+        <rect x="448.5" y="76" width="2" height="8"/><rect x="510.5" y="76" width="2" height="8"/><rect x="541.5" y="76" width="2" height="8"/>
+      </g>
+      <text x="448" y="110" fill="var(--sub)">reminders −7, −3, −1 days</text>
+      <line x1="728" y1="52" x2="728" y2="78" stroke="var(--sub)" stroke-dasharray="3 3"/>
+    </svg>
+  </div>
+  <p class="note">If autopay is set up at any point, the trial simply ends into the paid plan on 12 December; the first bill charges the plan by days from then. An upgrade during the trial starts when the trial ends (decided 8 Nov).</p>
+
+  <h2>1 · Sign-up: choose a plan</h2>
+  <p>The new step in <span class="mono">/start</span>, after the shop's name and pickup pincode. Growth is preselected because it shows the most of what the trial is for.</p>
+  <div class="frame">
+    <div class="inner">
+      <h3>Choose your plan</h3>
+      <p class="sub">30 days free from the day your shop opens. No payment needed to start.</p>
+      <div class="plans" role="radiogroup" aria-label="Plan">
+        <label class="plan"><span class="row between"><strong>Launch</strong><input type="radio" name="plan" id="p-launch"></span><span class="p">₹1,499<span class="k">/month + GST</span></span><span class="k">150 orders included · 2% per delivered order</span></label>
+        <label class="plan on"><span class="row between"><strong>Growth</strong><input type="radio" name="plan" id="p-growth" checked></span><span class="p">₹4,999<span class="k">/month + GST</span></span><span class="k">1,500 orders included · 1% per delivered order</span><span class="chip c-info">Most brands pick this</span></label>
+        <label class="plan"><span class="row between"><strong>Scale</strong><input type="radio" name="plan" id="p-scale"></span><span class="p">₹14,999<span class="k">/month + GST</span></span><span class="k">5,000 orders included · 0.5% per delivered order</span></label>
+      </div>
+      <div class="grid2">
+        <div><label class="k" for="phone">Your mobile number (we send a code once)</label><div class="row"><span class="btn" aria-hidden="true">+91</span><input id="phone" class="btn" style="flex:1;min-width:0;justify-content:flex-start" value="98290 43211"></div></div>
+        <div class="k" style="align-self:end">During the trial: no fee on orders shipped, up to your plan's included orders (Q1). You can change plan at any time.</div>
+      </div>
+      <div class="row"><button class="btn primary" type="button">Start my 30 days</button><span class="k">Nothing is charged until your trial ends, and only if you set up autopay.</span></div>
+    </div>
+  </div>
+  <p class="note">A business that has had a trial before (same email, phone, GSTIN or payout bank account) sees instead: "This business has had a free trial before, so your shop starts on the plan straight away. You pay from your first bill." Never a refusal to sign up.</p>
+
+  <h2>2 · Console while building</h2>
+  <div class="frame">
+    <div class="bar"><span class="shop">Kesar Studio</span><span class="trialtag">Growth trial · starts when you open · <a href="#">Plan and billing</a></span></div>
+    <div class="inner">
+      <div class="card">
+        <h3>Your 30 days start when you open your shop</h3>
+        <p class="sub">Take the time you need to add products. The trial clock waits, up to 23 December.</p>
+        <ul class="check">
+          <li><span class="dot done">✓</span>Add your first products <span class="k">· 14 added</span></li>
+          <li><span class="dot done">✓</span>Connect payments <span class="k">· Razorpay</span></li>
+          <li><span class="dot"></span>Open your shop</li>
+        </ul>
+        <div class="row" style="margin-top:10px"><button class="btn primary" type="button">Open my shop</button></div>
+      </div>
+    </div>
+  </div>
+
+  <h2>3 · Console during the trial</h2>
+  <p>A quiet line in the header, and one card on Home that is the reason for the trial: the first delivered order and what it kept.</p>
+  <div class="frame">
+    <div class="bar"><span class="shop">Kesar Studio</span><span class="trialtag"><span class="chip c-ok">Growth trial</span> 23 days left · <a href="#">Plan and billing</a></span></div>
+    <div class="inner grid2">
+      <div class="card">
+        <div class="label">First proof</div>
+        <h3 style="margin-top:4px">#1004 was delivered and kept you ₹612</h3>
+        <p class="sub">Chanderi kurta set, ₹2,490, COD to Jaipur. After product cost, shipping, the COD fee and payment fees. Frrata's fee: ₹0 during your trial.</p>
+        <a class="btn" href="#">See the order</a>
+      </div>
+      <div class="card">
+        <div class="label">Your trial so far</div>
+        <div class="grid3" style="margin-top:6px">
+          <div><div class="big">11</div><div class="k">orders</div></div>
+          <div><div class="big">4</div><div class="k">delivered</div></div>
+          <div><div class="big">₹2,140</div><div class="k">kept, delivered orders</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>4 · The last 10 days</h2>
+  <p>The billing banner (B3) in its trial form. The two choices carry equal weight, so declining is as easy to find as accepting.</p>
+  <div class="frame">
+    <div class="bar"><span class="shop">Kesar Studio</span><span class="trialtag"><span class="chip c-warn">Growth trial</span> 3 days left</span></div>
+    <div class="inner">
+      <div class="banner warn" role="status">
+        <span>Your Growth trial ends on <strong>12 December</strong>. Then ₹5,898.82 a month including GST, taken by autopay after a notice.</span>
+        <span class="btns"><button class="btn" type="button">Set up autopay</button><button class="btn" type="button">Not now</button></span>
+      </div>
+    </div>
+  </div>
+  <div class="grid2" style="margin-top:12px">
+    <div class="msg"><div class="from">Email · 3 days before (TR2)</div><strong>Your Frrata trial ends on 12 December</strong><p style="margin:6px 0 0">Kesar Studio has had 4 delivered orders that kept you ₹2,140. To keep selling after 12 December, set up autopay for Growth at ₹5,898.82 a month including GST. If you do nothing, your shop keeps working for 7 more days, then pauses. Nothing is deleted.</p></div>
+    <div class="msg"><div class="from">WhatsApp utility template · 1 day before (TR2)</div>Kesar Studio's Frrata trial ends tomorrow, 12 Dec. Set up autopay to keep selling: frrata.shop/billing · Reply STOP to stop these.</div>
+  </div>
+
+  <h2>5 · Plan and billing during the trial</h2>
+  <div class="frame">
+    <div class="inner grid2">
+      <div class="card">
+        <h3>Your trial</h3>
+        <ul class="tl">
+          <li><span class="d">8 Nov</span><span>Signed up on Growth</span></li>
+          <li><span class="d">12 Nov</span><span>Opened your shop · trial started</span></li>
+          <li><span class="d">12 Dec</span><span><strong>Trial ends</strong> · Growth starts at ₹4,999 a month + GST</span></li>
+          <li><span class="d">1 Jan</span><span>First bill: Growth for 12–31 Dec by days, ₹3,225 + GST, and December's fees</span></li>
+        </ul>
+        <div class="row" style="margin-top:10px"><button class="btn primary" type="button">Set up autopay</button><button class="btn" type="button">Pay now instead</button></div>
+      </div>
+      <div class="card">
+        <h3>Change plan</h3>
+        <p class="sub">Switching down keeps your trial. Switching up starts when your trial ends.</p>
+        <div class="stack">
+          <div class="row between"><span><strong>Launch</strong> <span class="k">₹1,499 · 150 orders · 2%</span></span><button class="btn" type="button">Switch to Launch</button></div>
+          <div class="row between"><span><strong>Scale</strong> <span class="k">₹14,999 · 5,000 orders · 0.5%</span></span><button class="btn" type="button">Upgrade after the trial</button></div>
+        </div>
+        <p class="note">Shown only when the shop has had fewer than 3 delivered orders and has not been extended: "You have not seen many delivered orders yet. <a href="#">Take 7 more days</a>" (once, never again).</p>
+      </div>
+    </div>
+  </div>
+
+  <h2>6 · Grace, then paused</h2>
+  <div class="grid2">
+    <div class="frame">
+      <div class="bar"><span class="shop">Kesar Studio</span><span class="trialtag"><span class="chip c-danger">Trial ended</span> pauses in 2 days</span></div>
+      <div class="inner">
+        <div class="banner danger" role="alert">
+          <span>Your trial ended on 12 December. Your shop pauses on <strong>19 December</strong>: no new orders after that. Orders already placed still ship and pay out.</span>
+          <span class="btns"><button class="btn" type="button">Set up autopay</button><button class="btn" type="button">Pay now</button></span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="store" aria-label="The paused shop, as a shopper sees it">
+        <span class="name">Kesar Studio</span>
+        <p>We are taking a short break and will be back soon.</p>
+        <p>Questions about an order? WhatsApp us on +91 98290 43211.</p>
+      </div>
+      <p class="note">What a shopper sees while paused. Orders already placed are shipped, delivered, returned and paid out as normal. The console stays open for them; products are read-only; Plan and billing reopens the shop at once.</p>
+    </div>
+  </div>
+
+  <h2>7 · Admin › Trials</h2>
+  <p>Frrata's list, ending soonest first. Extend once (7 days, a reason required) or end now; both are audited and Admin-only.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Shop</th><th>Plan</th><th>Opened</th><th class="n">Days left</th><th class="n">Delivered</th><th>Autopay</th><th>State</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>Kesar Studio</td><td>Growth</td><td class="num">12 Nov</td><td class="n">3</td><td class="n">4</td><td><span class="chip c-n">Not yet</span></td><td><span class="chip c-warn">Ending</span></td><td><button class="btn" type="button">Extend 7 days</button></td></tr>
+        <tr><td>Noor Threads</td><td>Launch</td><td class="num">20 Nov</td><td class="n">11</td><td class="n">9</td><td><span class="chip c-ok">UPI Autopay</span></td><td><span class="chip c-ok">Converts</span></td><td></td></tr>
+        <tr><td>Bandhej House</td><td>Growth</td><td class="k">not open</td><td class="n">—</td><td class="n">0</td><td><span class="chip c-n">Not yet</span></td><td><span class="chip c-info">Building</span></td><td></td></tr>
+        <tr><td>Ivory Loom</td><td>Scale</td><td class="num">2 Nov</td><td class="n">grace 4</td><td class="n">1</td><td><span class="chip c-n">Not yet</span></td><td><span class="chip c-danger">Grace</span></td><td><button class="btn" type="button">Extend 7 days</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <div class="row between"><h3>November cohort (TR3)</h3><span class="k">Example figures, to show the shape</span></div>
+    <div class="funnel" role="img" aria-label="Funnel: 40 signed up, 27 opened, 15 first proof, 11 paid.">
+      <div class="fr"><span>Signed up</span><span class="b"><i style="width:100%"></i></span><span class="num">40</span></div>
+      <div class="fr"><span>Opened their shop</span><span class="b"><i style="width:67.5%"></i></span><span class="num">27</span></div>
+      <div class="fr"><span>First delivered order</span><span class="b"><i style="width:37.5%"></i></span><span class="num">15</span></div>
+      <div class="fr"><span>Paid</span><span class="b"><i style="width:27.5%"></i></span><span class="num">11</span></div>
+    </div>
+  </div>
+
+  <h2>The phases</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Phase</th><th>A brand can</th><th>Frrata can</th></tr></thead>
+      <tbody>
+        <tr><td><strong>TR0</strong> Engine</td><td>nothing new</td><td>see each shop's trial state in Admin (shadow)</td></tr>
+        <tr><td><strong>TR1</strong> Self-serve trial</td><td>start a trial on a plan at sign-up; see days left and first proof; set up autopay; grace; pause and resume</td><td>extend once; end now</td></tr>
+        <tr><td><strong>TR2</strong> Reminders</td><td>get email and WhatsApp reminders; take 7 more days from the expiry note</td><td>—</td></tr>
+        <tr><td><strong>TR3</strong> Measure</td><td>—</td><td>the cohort funnel above</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
