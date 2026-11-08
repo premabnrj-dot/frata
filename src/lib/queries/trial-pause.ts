@@ -41,4 +41,3 @@ export const pausedAt = (p: { from: Date | string; to: Date | string | null } | 
 
 
 /** The pause window of one shop, in its own transaction (the console and tests). */
-export const shopPause = (tenantId: string) => withTenant(tenantId, (tx) => shopPauseIn(tx, tenantId))

@@ -75,6 +75,8 @@ describe('extensions', () => {
     expect(mayExtend(ist('2026-11-20T10:00:00'), live, 0, none)).toBe(false)
     expect(mayExtend(ist('2026-12-05T10:00:00'), live, 2, none)).toBe(true)
     expect(mayExtend(ist('2026-12-05T10:00:00'), live, 3, none)).toBe(false)
+    // Fees past ₹2,000 on 20 Nov bring the grace forward, but the extension still opens only 10 days before the end.
+    expect(mayExtend(ist('2026-11-25T10:00:00'), live, 0, { mandateActive: false, exposedAt: ist('2026-11-20T10:00:00') })).toBe(false)
     expect(mayExtend(ist('2026-12-15T10:00:00'), { ...live, extendedAt: ist('2026-12-05T10:00:00') }, 0, none)).toBe(false)
   })
   it('handover with under 7 days left extends automatically', () => {
@@ -93,6 +95,6 @@ describe('pauseWindow (no plan charge while paused)', () => {
     expect(pauseWindow(live, ist('2026-12-01T10:00:00'), null)).toBeNull()
     expect(pauseWindow(live, ist('2026-12-22T10:00:00'), null)).toEqual({ from: ist('2026-12-20T00:00:00'), to: ist('2026-12-22T10:00:00') })
     expect(pauseWindow(live, null, null)).toEqual({ from: ist('2026-12-20T00:00:00'), to: null })
-    expect(pauseWindow(live, ist('2026-12-01T10:00:00'), ist('2027-01-10T10:00:00'))).toEqual({ from: ist('2027-01-10T10:00:00'), to: null })
+    expect(pauseWindow(live, ist('2026-12-01T10:00:00'), ist('2027-01-10T10:00:00'))).toEqual({ from: ist('2027-01-17T10:00:00'), to: null })
   })
 })

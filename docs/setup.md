@@ -118,6 +118,11 @@ Until these are set, Console › Apps › Messages says "WhatsApp isn't switched
   later makes saved keys unreadable and those shops must reconnect. Each shop's
   Razorpay webhook secret is made by Frata per shop (Settings → Online payments);
   there is no platform-wide Razorpay secret.
+- `TRIAL_CLAIM_SECRET` (Sensitive, **Production only**): `openssl rand -base64 32`. Without it no shop gets a trial
+  (one trial per business is keyed by it); never change it once set.
+- `FRRATA_WA_PHONE_NUMBER_ID`, `FRRATA_WA_TOKEN` (Sensitive), `FRRATA_WA_SIGNUP_TEMPLATE`, `FRRATA_WA_TEMPLATE_LANG`
+  (**Production only**: a preview would send from Frrata's number): Frrata's own WhatsApp number and its approved
+  copy-code authentication template. All set, with `TRIAL_CLAIM_SECRET`, turns on the WhatsApp code at sign-up.
 - Supabase Pro before real merchants: free projects pause after a week idle and
   have no backups. Vercel Pro too: Hobby is non-commercial, and allows 100 deployments a day, 100 builds an hour and one
   at a time (the limit hit on 8 Nov), one WAF rate-limit rule per project, and cron once a day (±59 min; Vercel calls

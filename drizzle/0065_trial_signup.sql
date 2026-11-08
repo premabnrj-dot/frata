@@ -76,6 +76,9 @@ begin
     update public.signup_codes set consumed_at = now() where id = c.id;
     v_phone := c.phone_hmac; v_phone_ver := c.key_version;
   end if;
+  -- Two sign-ups with one key wait for each other here, so the check below sees the other's claim (security review TR1).
+  if coalesce(p_email_hmac, '') <> '' then perform pg_advisory_xact_lock(hashtext('trial_claim:email:' || p_email_hmac)); end if;
+  if v_phone is not null then perform pg_advisory_xact_lock(hashtext('trial_claim:phone:' || v_phone)); end if;
   -- No claimable key (the app has no claim secret): no trial, fail closed.
   if coalesce(p_email_hmac, '') = '' then v_trial := false; end if;
   if v_trial and exists (select 1 from public.trial_claims tc where tc.kind = 'email' and tc.key_version = p_key_version and tc.key_hmac = p_email_hmac) then v_trial := false; end if;
@@ -97,7 +100,6 @@ begin
   return query select v_tenant, v_trial;
 end $$;
 --> statement-breakpoint
--- The trial terms a sign-up page shows (the same row the definer freezes into the shop).
 revoke all on function app_signup_code_issue(uuid, text, text, smallint), app_signup_code_verify(uuid, uuid, text),
   app_create_shop_v2(uuid, text, text, text, text[], text, text, smallint, uuid) from public, anon, authenticated, service_role, frata_admin;
 --> statement-breakpoint

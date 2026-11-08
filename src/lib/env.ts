@@ -31,7 +31,7 @@ export const WA_VERIFY_TOKEN = process.env.WA_VERIFY_TOKEN ?? ''
 /** Graph API base. Unset in Vercel (the real one); set only by the local end-to-end test to its stand-in. */
 export const META_GRAPH_BASE = process.env.META_GRAPH_BASE || 'https://graph.facebook.com'
 /** Frrata's OWN WhatsApp number (not a merchant's) for sign-up codes (trials TR1; frata-integrations § Sign-up code).
- *  All three set = the WhatsApp code step is on at /start; any unset = off (sign-up uses the verified email only). */
+ *  These three and TRIAL_CLAIM_SECRET set = the WhatsApp code step is on at /start; any unset = off (sign-up uses the verified email only). */
 export const FRRATA_WA_PHONE_NUMBER_ID = process.env.FRRATA_WA_PHONE_NUMBER_ID ?? ''
 export const FRRATA_WA_TOKEN = process.env.FRRATA_WA_TOKEN ?? ''
 /** The approved copy-code authentication template's name and language. */

@@ -53,7 +53,7 @@ const SENTENCES: Record<string, string> = {
   slug_taken: 'Someone just took that address. Try another.',
 }
 
-export async function createMyShop(input: unknown): Promise<{ ok: true; trial: boolean } | { ok: false; error: string; field?: 'name' | 'slug' | 'pickup'; hasShop?: boolean }> {
+export async function createMyShop(input: unknown): Promise<{ ok: true; trial: boolean } | { ok: false; error: string; field?: 'name' | 'slug' | 'pickup' | 'phone'; hasShop?: boolean }> {
   const auth = await requireUser()
   if (!auth.ok) return { ok: false, error: auth.message }
   const parsed = Shop.safeParse(input)
@@ -67,21 +67,25 @@ export async function createMyShop(input: unknown): Promise<{ ok: true; trial: b
   const r = await createShop({ uid: auth.userId, name, slug, pickup, sells, plan, email: claimKey('email', auth.email), codeId: signupCodeOn() ? codeId : null })
   // Misses are not cached, but a lookup made in the same minute is: clear it for the new address.
   if (r.ok) { refreshHosts(hostFor(slug)); return { ok: true, trial: r.trial } }
-  const field = r.error === 'slug_taken' || r.error === 'bad_slug' ? 'slug' : r.error === 'bad_name' ? 'name' : r.error === 'bad_pincode' ? 'pickup' : undefined
+  const field = r.error === 'slug_taken' || r.error === 'bad_slug' ? 'slug' : r.error === 'bad_name' ? 'name' : r.error === 'bad_pincode' ? 'pickup' : r.error === 'bad_code' ? 'phone' : undefined
   return { ok: false, field, hasShop: r.error === 'has_shop', error: SENTENCES[r.error] ?? 'We could not create your shop. Nothing was saved. Try again in a minute.' }
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 // ── Trials TR1: the WhatsApp code (on only when Frrata's own number is set up; R2: rate-limited, fail closed). ──
 export async function sendSignupCode(phone: string): Promise<{ ok: true; codeId: string } | { ok: false; error: string }> {
   const auth = await requireUser()
   if (!auth.ok) return { ok: false, error: auth.message }
   if (!signupCodeOn()) return { ok: false, error: 'Not available yet.' }
-  const mobile = indianMobile(phone)
+  const mobile = typeof phone === 'string' && phone.length <= 20 ? indianMobile(phone) : null
   if (!mobile) return { ok: false, error: 'A 10-digit Indian mobile number.' }
   const phoneKey = claimKey('phone', mobile)!.hmac
   const ip = await clientIp()
-  const allowed = await withinLimit(LIMITS.signupCodeUser, auth.userId, new Date(), true) && await withinLimit(LIMITS.signupCodePhone, phoneKey, new Date(), true)
-    && await withinLimit(LIMITS.signupCodeIp, ip, new Date(), true)
+  const now = new Date()
+  const allowed = await withinLimit(LIMITS.signupCodeUser, auth.userId, now, true) && await withinLimit(LIMITS.signupCodePhone, phoneKey, now, true)
+    && await withinLimit(LIMITS.signupCodePhoneDay, phoneKey, now, true) && await withinLimit(LIMITS.signupCodeUserDay, auth.userId, now, true)
+    && await withinLimit(LIMITS.signupCodeIp, ip, now, true) && await withinLimit(LIMITS.signupCodeAll, 'all', now, true)
   if (!allowed) return { ok: false, error: 'Too many codes. Try again in an hour.' }
   const codeId = await sendCode(auth.userId, mobile)
   return codeId ? { ok: true, codeId } : { ok: false, error: 'We could not send the code. Check the number is on WhatsApp.' }
@@ -90,6 +94,6 @@ export async function sendSignupCode(phone: string): Promise<{ ok: true; codeId:
 export async function verifySignupCode(codeId: string, code: string): Promise<{ ok: boolean; error?: string }> {
   const auth = await requireUser()
   if (!auth.ok) return { ok: false, error: auth.message }
-  if (!/^[0-9a-f-]{36}$/.test(String(codeId ?? ''))) return { ok: false, error: 'Ask for a new code.' }
-  return (await checkCode(auth.userId, codeId, String(code ?? '').trim())) ? { ok: true } : { ok: false, error: 'That code is not right, or has expired.' }
+  if (!UUID.test(String(codeId ?? ''))) return { ok: false, error: 'Ask for a new code.' }
+  return (await checkCode(auth.userId, codeId, String(code ?? '').slice(0, 8).trim())) ? { ok: true } : { ok: false, error: 'That code is not right, or has expired.' }
 }

@@ -107,11 +107,14 @@ export function lastDay(endsAt: Date): Date {
   return new Date(endsAt.getTime() - 1)
 }
 
-/** The owner's one extension: not taken before, fewer than 3 delivered orders, offered from "ending" on. */
+/** The owner's one extension: not taken before, fewer than 3 delivered orders, in the last 10 days or the grace after. */
 export function mayExtend(now: Date, f: TrialFacts, delivered: number, m: TrialMoney): boolean {
   if (f.extendedAt || f.endedAt) return false
   const s = trialState(now, f, m)
-  return (s === 'ending' || s === 'grace') && delivered < EXTEND_BELOW_DELIVERED
+  // As app_trial_extend (0063): only from 10 days before the end to the end of the 7-day grace after it — an early
+  // grace (fees past ₹2,000) does not open it sooner.
+  const e = trialEndsAt(f).getTime(), t = now.getTime()
+  return (s === 'ending' || s === 'grace') && delivered < EXTEND_BELOW_DELIVERED && t >= e - ENDING_DAYS * DAY && t < e + GRACE_DAYS * DAY
 }
 
 /** A partner's shop handed over with under 7 trial days left gets the one extension automatically (owner, 2026-11-08). */
@@ -121,13 +124,15 @@ export function extendsAtHandover(now: Date, f: TrialFacts): boolean {
 
 /**
  * The days a shop is paused for billing (no plan charge accrues; owner 2026-11-08): from its pause until autopay
- * reopened it, or still running. Null when autopay was set up before the pause. A mandate revoked later pauses the shop
- * again from the later of the two. `exposedAt`: as TrialMoney.
+ * reopened it, or still running. Null when autopay was set up before the pause. A mandate revoked after the pause date
+ * pauses the shop 7 days (GRACE_DAYS) after the revocation. `exposedAt`: as TrialMoney.
  */
 export function pauseWindow(f: TrialFacts, mandateAt: Date | null, revokedAt: Date | null, exposedAt: Date | null = null): { from: Date; to: Date | null } | null {
   const at = pausesAt(trialEndsAt(f), { mandateActive: false, exposedAt })
   const active = !!mandateAt && !revokedAt
   if (active && mandateAt! <= at) return null
   if (active) return { from: at, to: mandateAt }
-  return { from: revokedAt && revokedAt > at ? revokedAt : at, to: null }
+  // A mandate revoked after the pause date: the same 7-day grace from the revocation, then the pause (impact review TR1).
+  const late = revokedAt && revokedAt > at ? new Date(revokedAt.getTime() + GRACE_DAYS * DAY) : null
+  return { from: late ?? at, to: null }
 }

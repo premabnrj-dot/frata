@@ -62,6 +62,8 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
       setError({ field: r.field, text: r.error })
       if (r.field === 'slug' || r.field === 'name') go('name', 'back')
       if (r.field === 'pickup') go('pickup', 'back')
+      // A code verified too long ago: ask for a new one.
+      if (r.field === 'phone') { setCodeId(null); setVerified(false); go('phone', 'back') }
     })
   }
 

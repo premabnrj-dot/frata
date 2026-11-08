@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.0.0
+  version: 5.0.1
   verified: 2026-11-08
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -680,9 +680,7 @@ saving we cannot show from their own orders.
     visible whatever the word count: "+ 18% GST" and "of each delivered order"
     on every plan, "up to N orders a month", the partner's 90-day tail and "24
     months, from opening", "₹0 added to the brand's price", and "Example · ex
-    GST · paid monthly once billing starts" beside partner numbers, and the
-    sign-up page's "Not asked now" panel (§ Phase 1; it answers the question
-    that stops a sign-up). Anything not built carries a Next tag, in the
+    GST · paid monthly once billing starts" beside partner numbers. Anything not built carries a Next tag, in the
     product picture too.
 42. **The frame** is `src/components/brand/site.tsx`: an ink `SiteStage` with
     `SiteHeader` (skip link, the mark with its thread on ink, the `inverse`

@@ -9,7 +9,7 @@ import { claimKey } from './claims'
 // FILE: src/lib/trials/signup-code.ts — THE WHATSAPP CODE AT SIGN-UP (trials TR1; tenancy finding R2). A 6-digit code
 // to an Indian WhatsApp number, from Frrata's own number. Only keyed HMACs are stored (signup_codes, definers only);
 // the code lives in memory until sent. Sent at once from the request (the row is the ADR-0006 record; a sign-up has
-// no tenant for the outbox). Off until Frrata's number and template exist (all three FRRATA_WA_* set).
+// no tenant for the outbox). Off until Frrata's number and template exist (the three FRRATA_WA_* and TRIAL_CLAIM_SECRET set).
 // =============================================================================
 
 export const signupCodeOn = () => !!(FRRATA_WA_PHONE_NUMBER_ID && FRRATA_WA_TOKEN && FRRATA_WA_SIGNUP_TEMPLATE && TRIAL_CLAIM_SECRET)

@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.21.0
+  version: 2.22.0
   verified: 2026-11-08
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -109,7 +109,9 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   The attribution is `partner_links.created_at`, written once; the share's
   window starts at `share_starts_at` (first opening, a trigger) and terms are
   snapshotted from `PARTNER_TERMS`. A handover invite is never claimed at
-  sign-in: it waits for Accept (`app_accept_handover`).
+  sign-in: it waits for Accept (`app_accept_handover_v2`, 0066), which claims the
+  new owner's verified email for the shop's trial or ends it (one trial per business). A partner's cap counts its
+  shops not yet handed over, and a shop with no owner is never billed (`app_shops_to_bill`).
 - A layout refuses with a panel, never a redirect (frata-gotchas) — and its
   check guards nothing below it: **every page and action calls
   `requireMember` itself.** It returns `not_configured` rather than throwing

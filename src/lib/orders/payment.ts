@@ -122,7 +122,7 @@ export async function switchToCod(tenantId: string, token: string, expectedTotal
     const o = await byToken(tx, tenantId, token)
     if (!o || o.paidAt || o.switchedAt || o.cancelledAt) return { kind: 'refused', status: 409, error: 'This order changed. Reload the page.' }
     const shop = await checkoutShop(tx, tenantId)
-    if (!shop?.open) return { kind: 'refused', status: 404, error: 'This shop is not taking orders right now.' }
+    if (!shop?.published) return { kind: 'refused', status: 404, error: 'This shop is not taking orders right now.' }
     // In position order, and kept with their ids: the quote's shares come back in bag order and are written by id.
     const lines = (await tx.select({ id: orderLines.id, variantId: orderLines.variantId, qty: orderLines.qty }).from(orderLines)
       .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id))).orderBy(orderLines.position)).filter((l) => l.variantId)
@@ -162,7 +162,7 @@ export async function retryPayment(tenantId: string, token: string, now = new Da
       const lines = await tx.select({ variantId: orderLines.variantId, qty: orderLines.qty, kind: orderLines.kind }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id)))
       const rows = await variantRows(tx, tenantId, lines.map((l) => l.variantId!).filter(Boolean), now, { lock: true })
       const shop = await checkoutShop(tx, tenantId)
-      if (!shop?.open) return 'closed' as const
+      if (!shop?.published) return 'closed' as const
       const q = quote(lines.filter((l) => l.variantId).map((l) => ({ variantId: l.variantId!, qty: l.qty })), rows, shop, now)
       if (q.lines.some((l) => l.problem) || q.subtotal !== Number(o.subtotal)) return 'gone' as const
       if (!(await offersStillFit(tx, tenantId, o.id, o.phone, now))) return 'offer' as const

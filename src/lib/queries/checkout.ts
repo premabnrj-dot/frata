@@ -50,9 +50,10 @@ export async function variantRows(tx: Tx, tenantId: string, ids: string[], now: 
   }))
 }
 
-export type CheckoutShop = ShopRules & { open: boolean; name: string; slug: string; gstin: string | null; returnDays: number; returnKind: string; whatsapp: string; online: boolean }
+export type CheckoutShop = ShopRules & { open: boolean; published: boolean; name: string; slug: string; gstin: string | null; returnDays: number; returnKind: string; whatsapp: string; online: boolean }
 
-/** The shop's checkout rules; `open` read here, inside the transaction (not the 60 s cached lookup). */
+/** The shop's checkout rules; `open` (taking NEW orders) read here, inside the transaction (not the 60 s cached lookup).
+ *  `published`: live at all — an order already placed in a paused shop still finishes (switch to COD, retry payment). */
 export async function checkoutShop(tx: Tx, tenantId: string): Promise<CheckoutShop | null> {
   const [s] = await tx.select({
     name: tenants.name, slug: tenants.slug, publishedAt: shopSettings.publishedAt, gstin: shopSettings.gstin, pricesIncludeGst: shopSettings.pricesIncludeGst,
@@ -62,7 +63,7 @@ export async function checkoutShop(tx: Tx, tenantId: string): Promise<CheckoutSh
   }).from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
   if (!s) return null
   return {
-    ...s, open: s.publishedAt !== null && !pausedAt(await shopPauseIn(tx, tenantId), new Date()), registered: !!s.gstin,
+    ...s, published: s.publishedAt !== null, open: s.publishedAt !== null && !pausedAt(await shopPauseIn(tx, tenantId), new Date()), registered: !!s.gstin,
     shippingFlat: Number(s.shippingFlat), freeShippingAbove: Number(s.freeShippingAbove), codMin: Number(s.codMin), codMax: Number(s.codMax), codCharge: Number(s.codCharge),
     online: canTakeOnline(await keysFor(tx, tenantId)),
   }

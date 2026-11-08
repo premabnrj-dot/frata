@@ -64,6 +64,8 @@ begin
   -- extension at once. No claim key (no secret configured): the trial ends — fail closed.
   select * from public.shop_trials where tenant_id = v_tenant into s;
   if s.tenant_id is not null and s.ended_at is null then
+    -- As app_create_shop_v2: one claim at a time per key.
+    if coalesce(p_email_hmac, '') <> '' then perform pg_advisory_xact_lock(hashtext('trial_claim:email:' || p_email_hmac)); end if;
     if coalesce(p_email_hmac, '') = '' or exists (select 1 from public.trial_claims tc where tc.kind = 'email' and tc.key_version = p_key_version and tc.key_hmac = p_email_hmac) then
       update public.shop_trials set ended_at = now() where tenant_id = v_tenant;
     else
@@ -91,3 +93,18 @@ grant execute on function app_accept_handover_v2(uuid, uuid, text, smallint) to 
 --> statement-breakpoint
 -- The 0023 handover neither claims nor ends a trial: nothing calls it now, so no role may (security review, TR1).
 revoke all on function app_accept_handover(uuid, uuid) from public, anon, authenticated, service_role, frata_app, frata_admin;
+--> statement-breakpoint
+-- Partner-built shops made before this migration, not yet handed over, get their trial now (security review TR1, M2):
+-- without one they would never pause and, unowned, never be billed. Terms from trial_settings; the clock from when the
+-- website went live, if it has.
+insert into shop_trials (tenant_id, days, open_window_days, signed_up_at, started_at)
+  select l.tenant_id, ts.days, ts.open_window_days, t.created_at, ss.published_at
+    from partner_links l join tenants t on t.id = l.tenant_id join shop_settings ss on ss.tenant_id = l.tenant_id
+    cross join (select days, open_window_days from trial_settings where id = 1) ts
+   where l.removed_at is null
+     and not exists (select 1 from members m where m.tenant_id = l.tenant_id and m.role = 'owner')
+     and not exists (select 1 from shop_trials st where st.tenant_id = l.tenant_id)
+  on conflict do nothing;
+--> statement-breakpoint
+select app_trial_recompute(st.tenant_id) from shop_trials st
+ where st.signed_up_at < now() and not exists (select 1 from tenant_plans tp where tp.tenant_id = st.tenant_id and tp.trial_ends_at is not null);

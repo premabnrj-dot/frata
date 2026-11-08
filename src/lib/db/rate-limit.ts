@@ -45,6 +45,10 @@ export const LIMITS = {
   signupCodeUser: { action: 'signup_code:user', max: 5, windowSeconds: 3600 },
   signupCodePhone: { action: 'signup_code:phone', max: 3, windowSeconds: 3600 },
   signupCodeIp: { action: 'signup_code:ip', max: 20, windowSeconds: 3600 },
+  // A day's cap too (security review TR1): no one's WhatsApp is flooded with codes, and Frrata's sender rating holds.
+  signupCodePhoneDay: { action: 'signup_code:phone_day', max: 5, windowSeconds: 86400 },
+  signupCodeUserDay: { action: 'signup_code:user_day', max: 8, windowSeconds: 86400 },
+  signupCodeAll: { action: 'signup_code:all', max: 300, windowSeconds: 3600 },
 } as const satisfies Record<string, Limit>
 
 /** Whether `subject` is already past the limit, WITHOUT counting an attempt. `failClosed`: true when the counter cannot be read. */

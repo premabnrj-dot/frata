@@ -30,6 +30,7 @@ export async function sendAuthCode(token: string, phoneNumberId: string, to: str
         ] },
       }),
     }, 8_000)
+    if (!r.ok) console.error('[sendAuthCode] status', r.status)
     return r.ok
-  } catch { return false }
+  } catch (err) { console.error('[sendAuthCode]', err instanceof Error ? err.name : 'error'); return false }
 }
