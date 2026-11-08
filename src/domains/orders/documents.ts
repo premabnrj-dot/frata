@@ -57,7 +57,9 @@ export function packingSlip(o: DocOrder, lines: DocLine[], shop: DocShop): Packi
  */
 export type InvoiceLine = { title: string; hsn: string | null; qty: number; gross: number; discount: number; taxable: number; rateBps: number; cgst: number; sgst: number; igst: number; total: number }
 export type Invoice = {
-  kind: 'tax_invoice' | 'bill_of_supply'; number: string; date: Date; cancelled: boolean
+  kind: 'tax_invoice' | 'bill_of_supply' | 'credit_note'; number: string; date: Date; cancelled: boolean
+  /** A credit note's original invoice (CGST Rule 53: its number and date), and why the sale was undone. */
+  against?: { number: string; date: Date; reason: CreditReason }
   seller: { name: string; address: string; gstin: string | null }
   buyer: { name: string; lines: string[] }
   placeOfSupply: { state: string; code: string | null }
@@ -94,4 +96,20 @@ export function invoice(o: DocOrder, lines: DocLine[], shop: DocShop): Invoice |
     lines: out, totals: { gross: sum('gross'), discount: sum('discount'), taxable: sum('taxable'), cgst: sum('cgst'), sgst: sum('sgst'), igst: sum('igst'), total: sum('total') },
     pricesIncludeGst: o.pricesIncludeGst, charges: { delivery: o.shipping, cod: o.codCharge },
   }
+}
+
+/** Why a packed sale was undone (Documents D3): cancelled after packing, or the parcel came back. */
+export const CREDIT_REASONS = ['cancelled', 'came_back'] as const
+export type CreditReason = (typeof CREDIT_REASONS)[number]
+export type IssuedCredit = { number: string; issuedAt: Date; reason: CreditReason }
+
+/**
+ * A credit note (Documents D3): the issued invoice reversed in full — the same lines, taxable values and tax heads,
+ * from the same frozen rows, under the credit note's own number and date, citing the invoice it reverses (CGST Rule
+ * 53). Null without an issued invoice. Never recomputed from today's prices: `invoice()` reads the order as packed.
+ */
+export function creditNote(o: DocOrder, lines: DocLine[], shop: DocShop, cn: IssuedCredit): Invoice | null {
+  const inv = invoice(o, lines, shop)
+  if (!inv) return null
+  return { ...inv, kind: 'credit_note', number: cn.number, date: cn.issuedAt, cancelled: false, against: { number: inv.number, date: inv.date, reason: cn.reason } }
 }

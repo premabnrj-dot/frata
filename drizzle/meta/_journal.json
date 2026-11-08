@@ -365,6 +365,20 @@
       "when": 1794141032103,
       "tag": "0051_analytics_pincode",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1794141556723,
+      "tag": "0052_credit_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1794141557813,
+      "tag": "0053_credit_notes_access",
+      "breakpoints": true
     }
   ]
 }

@@ -15,7 +15,9 @@ const rs = (p: number) => formatInr(paise(p), { decimals: true })
 const rate = (bps: number) => `${bps / 100}%`
 
 export function InvoicePage({ inv, order, brand, contact }: { inv: Invoice; order: string; brand: Brand; contact: string }) {
-  const tax = inv.kind === 'tax_invoice'
+  // A credit note keeps its invoice's tax treatment: GST heads when the seller was registered (CGST Rule 53).
+  const credit = inv.kind === 'credit_note'
+  const tax = inv.kind === 'tax_invoice' || (credit && !!inv.seller.gstin)
   const intra = inv.supply === 'intra'
   const offs = inv.totals.discount > 0
   const head = ['Item', 'HSN', 'Qty', ...(offs ? ['Value', 'Discount'] : []), 'Taxable value', ...(tax ? ['Rate', ...(intra ? ['CGST', 'SGST'] : ['IGST'])] : []), 'Total']
@@ -32,7 +34,8 @@ export function InvoicePage({ inv, order, brand, contact }: { inv: Invoice; orde
   return (
     <Page size="A4" style={s.page}>
       {inv.cancelled ? <Text style={{ position: 'absolute', top: 120, right: 50, transform: 'rotate(-8deg)', borderWidth: 3, borderColor: PAPER.stamp, color: PAPER.stamp, fontSize: 22, fontWeight: 600, paddingHorizontal: 10, paddingVertical: 2 }}>CANCELLED</Text> : null}
-      <Masthead brand={brand} title={tax ? 'Tax invoice' : 'Bill of supply'} reference={inv.number} meta={`${dayIN(inv.date)} · order ${order}`} />
+      <Masthead brand={brand} title={credit ? 'Credit note' : tax ? 'Tax invoice' : 'Bill of supply'} reference={inv.number} meta={`${dayIN(inv.date)} · order ${order}`} />
+      {inv.against ? <Text style={{ ...s.sub, marginTop: -6, marginBottom: 8 }}>Against {tax ? 'tax invoice' : 'bill of supply'} {inv.against.number} of {dayIN(inv.against.date)} · {inv.against.reason === 'cancelled' ? 'order cancelled after the invoice was issued' : 'the parcel came back'} · the amounts below are credited in full.</Text> : null}
       <View style={s.two}>
         <View style={s.col}><Text style={s.label}>SELLER</Text><Text style={{ fontWeight: 600 }}>{inv.seller.name}</Text><Text>{inv.seller.address}</Text>
           <Text>{inv.seller.gstin ? `GSTIN ${inv.seller.gstin}` : 'Not registered for GST'}</Text></View>

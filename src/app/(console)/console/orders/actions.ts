@@ -1,5 +1,7 @@
 'use server'
 
+import { issueCredit } from '@/lib/orders/credit'
+
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { CANCEL_REASONS, ROLES, type OrderAction } from '@/domains/orders/work'
@@ -88,6 +90,11 @@ export async function addOrderNote(orderId: string, body: string) {
 export async function packOrder(orderId: string) {
   // Packing takes pre-orders' stock and changes what they are owed: the product pages refresh when it moved.
   return Id.safeParse(orderId).success ? run('pack', orderId, {}, (tx, t, a) => work.pack(tx, t, a, orderId), (tenantId, v) => { if (v.preordersTaken) refreshShop(tenantId, 'catalogue') }) : notFound
+}
+
+/** A credit note for an order cancelled after packing or back at the shop (Documents D3): owners and admins, once. */
+export async function issueCreditNote(orderId: string) {
+  return Id.safeParse(orderId).success ? run('credit', orderId, {}, (tx, t, a) => issueCredit(tx, t, a, orderId)) : notFound
 }
 
 // Who it goes to: checkout's own rules (src/domains/checkout/address.ts), so an edited address is held to what a

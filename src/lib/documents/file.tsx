@@ -1,6 +1,6 @@
 import 'server-only'
 import { Document, renderToBuffer } from '@react-pdf/renderer'
-import { invoice, packingSlip, type DocLine, type DocOrder, type DocShop, type Invoice, type PackingSlip } from '@/domains/orders/documents'
+import { creditNote, invoice, packingSlip, type DocLine, type DocOrder, type DocShop, type Invoice, type IssuedCredit, type PackingSlip } from '@/domains/orders/documents'
 import { contentDisposition, documentFileName, PAPER } from '@/domains/documents/paper'
 import { registerFonts } from './fonts'
 import { InvoicePage } from './pdf/invoice'
@@ -20,7 +20,7 @@ import type { Brand } from './pdf/blocks'
 /** What to make: the document DATA (packingSlip() / invoice() output), never orders (architecture review 2026-11-08). */
 export type DocumentRequest =
   | { kind: 'slip'; size: SlipSize; slips: PackingSlip[] }
-  | { kind: 'invoice'; invoices: { inv: Invoice; order: string; paper?: Pick<Brand, 'logo' | 'signatory' | 'note'> }[] }
+  | { kind: 'invoice' | 'credit'; invoices: { inv: Invoice; order: string; paper?: Pick<Brand, 'logo' | 'signatory' | 'note'> }[] }
 export type DocumentFile = { bytes: Buffer; fileName: string; pages: number }
 
 /** Today in India, for a bulk file's name. */
@@ -37,16 +37,17 @@ export async function documentFile(req: DocumentRequest, brand: Brand, contact: 
     return { bytes, fileName: documentFileName('slip', brand.name, req.slips.map((x) => x.number), istDay(now)), pages: req.slips.length }
   }
   if (!req.invoices.length) return null
-  const bytes = await renderToBuffer(<Document title={`${brand.name} invoices`} {...meta}>
+  const bytes = await renderToBuffer(<Document title={`${brand.name} ${req.kind === 'credit' ? 'credit notes' : 'invoices'}`} {...meta}>
     {req.invoices.map(({ inv, order, paper }) => <InvoicePage key={inv.number} inv={inv} order={order} brand={paper ? { ...brand, ...paper } : brand} contact={contact} />)}
   </Document>)
   const one = req.invoices.length === 1 ? req.invoices[0]!.inv : null
-  return { bytes, fileName: documentFileName('invoice', brand.name, req.invoices.map((x) => x.inv.number), istDay(now), one?.kind === 'bill_of_supply' ? 'Bill of supply' : undefined), pages: req.invoices.length }
+  return { bytes, fileName: documentFileName(req.kind === 'credit' ? 'credit_note' : 'invoice', brand.name, req.invoices.map((x) => x.inv.number), istDay(now), one?.kind === 'bill_of_supply' ? 'Bill of supply' : undefined), pages: req.invoices.length }
 }
 
 /** The documents for orders already read for ONE shop (documentsFor), as a request: invoices only once packed. */
-export function requestFor(kind: 'slip' | 'invoice', size: SlipSize, docs: { o: DocOrder; lines: DocLine[]; paper?: Pick<Brand, 'logo' | 'signatory' | 'note'> }[], shop: DocShop): DocumentRequest {
+export function requestFor(kind: 'slip' | 'invoice' | 'credit', size: SlipSize, docs: { o: DocOrder; lines: DocLine[]; paper?: Pick<Brand, 'logo' | 'signatory' | 'note'>; credit?: IssuedCredit | null }[], shop: DocShop): DocumentRequest {
   if (kind === 'slip') return { kind, size, slips: docs.map(({ o, lines }) => packingSlip(o, lines, shop)) }
+  if (kind === 'credit') return { kind, invoices: docs.flatMap(({ o, lines, paper, credit }) => { const cn = credit ? creditNote(o, lines, shop, credit) : null; return cn ? [{ inv: cn, order: o.number, paper }] : [] }) }
   return { kind, invoices: docs.flatMap(({ o, lines, paper }) => { const inv = invoice(o, lines, shop); return inv ? [{ inv, order: o.number, paper }] : [] }) }
 }
 

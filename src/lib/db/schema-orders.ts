@@ -8,7 +8,7 @@
 
 import { sql } from 'drizzle-orm'
 import { boolean, check, date, foreignKey, index, integer, jsonb, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
-import { createdAt, id, money, tenants } from './schema'
+import { at, createdAt, id, money, tenants } from './schema'
 
 
 
@@ -232,7 +232,7 @@ export const orderEvents = pgTable('order_events', {
   // An undo points at an event on the same order (FK in drizzle/0020).
   unique('order_events_order_id_key').on(t.tenantId, t.orderId, t.id),
   index('order_events_order').on(t.tenantId, t.orderId, t.at),
-  check('order_events_kind', sql`${t.kind} in ('confirmed','held','unheld','undone','edited','packed','cancelled','note_added','printed_slip','printed_invoice','shipped','delivered','rto','lost','ndr','shipment_cancelled')`),
+  check('order_events_kind', sql`${t.kind} in ('confirmed','held','unheld','undone','edited','packed','cancelled','note_added','printed_slip','printed_invoice','shipped','delivered','rto','lost','ndr','shipment_cancelled','credit_noted')`),
   check('order_events_actor', sql`${t.actorKind} in ('member','support','system')`),
   // A person is named exactly when one acted.
   check('order_events_who', sql`(${t.actorKind} = 'system') = (${t.actorUserId} is null) and (${t.actorUserId} is null) = (${t.actorEmail} is null)`),
@@ -278,4 +278,34 @@ export const shipments = pgTable('shipments', {
   check('shipments_provider', sql`${t.provider} in ('self','shiprocket')`),
   check('shipments_text', sql`(${t.courierName} is null or length(${t.courierName}) between 1 and 60) and (${t.trackingNumber} is null or length(${t.trackingNumber}) between 1 and 40)`),
   check('shipments_ended', sql`(${t.endedAt} is null) = (${t.endedReason} is null) and (${t.endedReason} is null or ${t.endedReason} in ('cancelled','undone'))`),
+])
+
+/**
+ * A credit note (Documents D3): an issued invoice reversed in full when the sale was undone after packing (cancelled,
+ * or the parcel came back). One per order; its own series per financial year (tenant_counters kind 'credit'). Final
+ * once written: frata_app may only insert (and a trigger refuses any change, drizzle/0053). Its document is rendered
+ * from the order's frozen rows (creditNote(), src/domains/orders/documents.ts); the totals here are the figures it was
+ * issued with, so a later reader never recomputes them.
+ */
+export const creditNotes = pgTable('credit_notes', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'restrict' }),
+  orderId: uuid('order_id').notNull(),
+  number: text('number').notNull(),
+  againstInvoice: text('against_invoice').notNull(),
+  reason: text('reason').notNull(),
+  taxable: money('taxable').notNull(),
+  cgst: money('cgst').notNull(),
+  sgst: money('sgst').notNull(),
+  igst: money('igst').notNull(),
+  total: money('total').notNull(),
+  issuedAt: at('issued_at').notNull().defaultNow(),
+  issuedBy: uuid('issued_by').notNull(),
+}, (t) => [
+  foreignKey({ name: 'credit_notes_order_fk', columns: [t.tenantId, t.orderId], foreignColumns: [orders.tenantId, orders.id] }).onDelete('restrict'),
+  uniqueIndex('credit_notes_order').on(t.tenantId, t.orderId),
+  uniqueIndex('credit_notes_number').on(t.tenantId, t.number),
+  check('credit_notes_reason', sql`${t.reason} in ('cancelled','came_back')`),
+  check('credit_notes_number_len', sql`length(${t.number}) <= 16`),
+  check('credit_notes_money', sql`${t.taxable} >= 0 and ${t.cgst} >= 0 and ${t.sgst} >= 0 and ${t.igst} >= 0 and ${t.total} = ${t.taxable} + ${t.cgst} + ${t.sgst} + ${t.igst}`),
 ])

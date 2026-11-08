@@ -11,7 +11,7 @@
 import { ANY_MEMBER, CAN_MANAGE, SHIPPERS, type MemberRole } from '@/domains/tenancy/roles'
 import type { OrderState } from './order-state'
 
-export const ACTIONS = ['confirm', 'hold', 'unhold', 'undo', 'note', 'pack', 'print', 'edit', 'cancel', 'ship_self', 'deliver', 'came_back', 'lost'] as const
+export const ACTIONS = ['confirm', 'hold', 'unhold', 'undo', 'note', 'pack', 'print', 'edit', 'cancel', 'ship_self', 'deliver', 'came_back', 'lost', 'credit'] as const
 export type OrderAction = (typeof ACTIONS)[number]
 
 const STAFF: readonly MemberRole[] = ANY_MEMBER
@@ -26,6 +26,8 @@ export const ROLES: Record<OrderAction, readonly MemberRole[]> = {
   edit: MANAGERS, cancel: MANAGERS,
   // Ship S·0: shipping it yourself is the shop's own people; what happened to it (an outcome Frrata bills on) is the owner's or an admin's.
   ship_self: SHIPPERS, deliver: MANAGERS, came_back: MANAGERS, lost: MANAGERS,
+  // Documents D3: a credit note reverses an issued invoice — the owner's or an admin's.
+  credit: MANAGERS,
 }
 
 /** The states each action applies to. */
@@ -45,6 +47,9 @@ const WHEN: Record<Exclude<OrderAction, 'undo'>, readonly OrderState[]> = {
   deliver: ['shipped', 'ndr'],
   came_back: ['shipped', 'ndr'],
   lost: ['shipped', 'ndr'],
+  // An invoice issued (packed) and then the sale undone: cancelled after packing, or back at the shop. The work
+  // function also requires the invoice number (a cancel before packing issued none) and refuses a second note.
+  credit: ['cancelled', 'rto_received'],
 }
 
 /** Whether `action` applies to an order in `state` (roles aside). Undo is checked against its event. */
@@ -82,24 +87,27 @@ export const CANCEL_LABEL: Record<CancelReason, string> = {
 
 export const MAX_INVOICE = 16
 
+/** The three document series a shop numbers each financial year, each with its own counter (tenant_counters.kind). */
+export type DocSeries = 'invoice' | 'bill' | 'credit'
+
 /**
- * "KS/26-27/00001" for a tax invoice, "KS/26-27/B0001" for a bill of supply (its own series and counter).
- * `series` is the shop's prefix as set (≤ 5 characters, e.g. "KS/"); empty → the order prefix and a slash.
- * Throws past 16 characters rather than issue a number GST would refuse (the CHECK on orders refuses it too).
+ * "KS/26-27/00001" for a tax invoice, "KS/26-27/B0001" for a bill of supply, "KS/26-27/C0001" for a credit note
+ * (Documents D3), each its own series and counter. `series` is the shop's prefix as set (≤ 5 characters, e.g. "KS/");
+ * empty → the order prefix and a slash. Throws past 16 characters rather than issue a number GST would refuse.
  */
-function compose(o: { series: string; orderPrefix: string; fiscalYear: string; n: number; kind: 'invoice' | 'bill' }): string {
+function compose(o: { series: string; orderPrefix: string; fiscalYear: string; n: number; kind: DocSeries }): string {
   const series = o.series || `${o.orderPrefix}/`
   const sep = /[/-]$/.test(series) ? '' : '/'
-  const tail = o.kind === 'bill' ? `B${String(o.n).padStart(4, '0')}` : String(o.n).padStart(5, '0')
+  const tail = o.kind === 'bill' ? `B${String(o.n).padStart(4, '0')}` : o.kind === 'credit' ? `C${String(o.n).padStart(4, '0')}` : String(o.n).padStart(5, '0')
   return `${series}${sep}${o.fiscalYear}/${tail}`
 }
 
-/** The most a year can number, per kind, inside 16 characters: 99,999 tax invoices, 9,999 bills of supply. */
-export const MAX_IN_YEAR = { invoice: 99_999, bill: 9_999 } as const
+/** The most a year can number, per series, inside 16 characters. */
+export const MAX_IN_YEAR = { invoice: 99_999, bill: 9_999, credit: 9_999 } as const
 
 export class InvoiceNumberTooLong extends Error {}
 
-export function invoiceNumber(o: { series: string; orderPrefix: string; fiscalYear: string; n: number; kind: 'invoice' | 'bill' }): string {
+export function invoiceNumber(o: { series: string; orderPrefix: string; fiscalYear: string; n: number; kind: DocSeries }): string {
   const out = compose(o)
   if (out.length > MAX_INVOICE) throw new InvoiceNumberTooLong(`invoice number ${out} is longer than ${MAX_INVOICE} characters`)
   return out
@@ -110,4 +118,4 @@ export function invoiceNumber(o: { series: string; orderPrefix: string; fiscalYe
  * "KESRI/26-27/00001", 17 characters, and every Mark packed failed). Settings refuses a series that does not fit.
  */
 export const seriesFits = (series: string) =>
-  (['invoice', 'bill'] as const).every((kind) => compose({ series, orderPrefix: 'XXXX', fiscalYear: '26-27', n: MAX_IN_YEAR[kind], kind }).length <= MAX_INVOICE)
+  (['invoice', 'bill', 'credit'] as const).every((kind) => compose({ series, orderPrefix: 'XXXX', fiscalYear: '26-27', n: MAX_IN_YEAR[kind], kind }).length <= MAX_INVOICE)

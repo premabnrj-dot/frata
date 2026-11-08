@@ -2,7 +2,7 @@ import 'server-only'
 import { orderDiscounts } from '@/lib/db/schema-discounts'
 import { and, asc, desc, eq, isNull } from 'drizzle-orm'
 import { momentColumns, onlineTotalCol } from '@/lib/db/order-predicates'
-import { orderEvents, orderLines, orderNotes, orders, shipments } from '@/lib/db/schema-orders'
+import { creditNotes, orderEvents, orderLines, orderNotes, orders, shipments } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { riskFactsFor } from './order-risk'
 
@@ -28,7 +28,7 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
     }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.number, number))).limit(1)
     if (!o) return null
     // Five reads at once in the one transaction (speed review P8: postgres-js pipelines them; they ran in turn).
-    const [lines, events, notes, offerRows, [shipment]] = await Promise.all([tx.select({
+    const [lines, events, notes, offerRows, [shipment], [credit]] = await Promise.all([tx.select({
       id: orderLines.id, title: orderLines.title, optionValues: orderLines.optionValues, sku: orderLines.sku, qty: orderLines.qty, unitPrice: orderLines.unitPrice,
       imageBase: orderLines.imageBase, imageWidths: orderLines.imageWidths, kind: orderLines.kind, shipsBy: orderLines.shipsBy,
       leadMinDays: orderLines.leadMinDays, leadMaxDays: orderLines.leadMaxDays, stockTakenAt: orderLines.stockTakenAt,
@@ -44,9 +44,12 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
     // The parcel on its way (Ship): who carries it and how to follow it; none before it shipped.
     tx.select({ provider: shipments.provider, courierName: shipments.courierName, trackingNumber: shipments.trackingNumber })
       .from(shipments).where(and(eq(shipments.tenantId, tenantId), eq(shipments.orderId, o.id), isNull(shipments.endedAt))).limit(1),
+    // Its credit note, once issued (Documents D3).
+    tx.select({ number: creditNotes.number, issuedAt: creditNotes.issuedAt }).from(creditNotes)
+      .where(and(eq(creditNotes.tenantId, tenantId), eq(creditNotes.orderId, o.id))).limit(1),
     ])
     const offers = offerRows.map((d) => ({ ...d, amount: Number(d.amount) }))
-    return { o, lines, events, notes, offers, shipment: shipment ?? null }
+    return { o, lines, events, notes, offers, shipment: shipment ?? null, credit: credit ?? null }
   })
   if (!data) return null
   // Risk: null when its facts cannot be read (the page then says "Risk unavailable" and fails closed).

@@ -80,3 +80,16 @@ describe('shipping roles (Ship S·0)', () => {
     expect(primaryAction('shipped')).toBe(null) // Delivered lives in the Ship panel
   })
 })
+
+describe('credit notes (Documents D3)', () => {
+  it('number in their own C series within 16 characters; owners and admins only, after a cancel or a return', async () => {
+    const { invoiceNumber, seriesFits, may, applies } = await import('../work')
+    expect(invoiceNumber({ series: 'KS/', orderPrefix: 'KS', fiscalYear: '26-27', n: 1, kind: 'credit' })).toBe('KS/26-27/C0001')
+    expect(invoiceNumber({ series: 'KESR/', orderPrefix: 'KS', fiscalYear: '26-27', n: 9_999, kind: 'credit' })).toHaveLength(16)
+    expect(seriesFits('KESR/')).toBe(true)
+    expect(applies('credit', 'cancelled') && applies('credit', 'rto_received')).toBe(true)
+    expect(applies('credit', 'delivered') || applies('credit', 'packed')).toBe(false)
+    expect(may('credit', 'cancelled', 'owner')).toBe(true)
+    expect(may('credit', 'cancelled', 'staff')).toBe(false)
+  })
+})
