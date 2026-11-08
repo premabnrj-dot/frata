@@ -5,7 +5,7 @@ import { STATES } from '@/domains/checkout/states'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { OfferProgress, OfferRows, useQuote } from './bag'
 import { ATTR_KEY, bag, offerCode, useOfferCode } from './bag-store'
-import { api, codWhyNotText, dayRange, inr, type Pay, type PublicQuote } from './shop-client'
+import { api, codWhyNotText, dayRange, inr, type Pay, type PublicListed, type PublicQuote } from './shop-client'
 
 // =============================================================================
 // ONE-PAGE CHECKOUT (checkout spec § Design, mockup approved 2026-11-07).
@@ -30,6 +30,16 @@ function loadRazorpay(): Promise<boolean> {
     s.onload = () => res(true); s.onerror = () => res(false)
     document.head.appendChild(s)
   })
+}
+
+/** What a listed offer says it needs, in the shopper's words (the server decides; this only phrases it). */
+function needText(n: PublicListed['need']): string {
+  if (!n) return 'Applied'
+  if (n.kind === 'add') return `Add ${inr(n.amount)} more`
+  if (n.kind === 'add_items') return `Add ${n.n} more ${n.n === 1 ? 'piece' : 'pieces'}`
+  if (n.kind === 'gift') return 'Your free gift: add it to the bag'
+  if (n.kind === 'first_order') return 'For your first order'
+  return 'When you pay online'
 }
 
 export function Checkout({ shopName, legalName, privacyHref, returnLine }: { shopName: string; legalName: string; privacyHref: string; returnLine: string | null }) {
@@ -113,7 +123,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
     let attribution: Record<string, string> = {}
     try { attribution = JSON.parse(ss.get(ATTR_KEY) ?? '{}') } catch { /* */ }
     const r = await api<{ token: string; method: 'cod' | 'prepaid'; total: number; pay: Pay | null; payError: string | null }>('/api/shop/orders', {
-      idempotencyKey: attempt.current.key, bag: items, method, expectedTotal: total, ...(code ? { code } : {}),
+      idempotencyKey: attempt.current.key, bag: items, method, expectedTotal: total, ...(code ? { code, via: offerCode.via() } : {}),
       address: { phone: f.phone, name: f.name, pincode: f.pincode, addressLine: f.addressLine, area: f.area, landmark: f.landmark, city: f.city, state: f.state },
       facts: { firstMethod: firstMethod.current, attribution },
     })
@@ -227,7 +237,8 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
             <li key={`${l.title}-${l.code ?? ''}`} className={`flex items-center gap-2 rounded-sm border p-2.5 ${l.applied ? 'border-store-good' : 'border-dashed border-store-line'}`}>
               <span aria-hidden className={l.applied ? 'text-store-good' : 'text-store-sub'}>{l.applied ? '✓' : '○'}</span>
               <span className="min-w-0 flex-1"><b className="font-medium">{l.title}</b>{l.code ? <span className="ml-1.5 rounded-sm border border-store-line px-1 font-mono text-xs">{l.code}</span> : null}
-                <span className="block text-store-sub">{l.need?.kind === 'add' ? `Add ${inr(l.need.amount)} more` : l.need?.kind === 'pay_online' ? 'When you pay online' : 'Applied'}</span></span>
+                <span className="block text-store-sub">{needText(l.need)}</span></span>
+              {l.need?.kind === 'gift' ? <button type="button" className="min-h-11 shrink-0 rounded-sm border border-store-ink px-3 text-sm font-medium" onClick={() => bag.add((l.need as { variantId: string }).variantId, 1)}>Add it</button> : null}
             </li>
           ))}
         </ul>

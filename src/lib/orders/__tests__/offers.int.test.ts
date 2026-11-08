@@ -217,4 +217,86 @@ describe.skipIf(!host)('offers at placement and after', () => {
       })
     }
   })
+  it('O·2: first order once per phone (even two at once); a creator code reaches an unlisted offer; a product discount survives a switch', async () => {
+    process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
+    process.env.PAYMENT_KEYS_SECRET ??= 'int-test-only'
+    const { withTenant } = await import('@/lib/db/tenant')
+    const { shopSettings } = await import('@/lib/db/schema')
+    const { products, variants } = await import('@/lib/db/schema-catalogue')
+    const { orders, orderLines } = await import('@/lib/db/schema-orders')
+    const { discounts, discountCodes, discountTargets, orderDiscounts } = await import('@/lib/db/schema-discounts')
+    const { placeOrder } = await import('@/lib/orders/place')
+    const { quoteData, liveOffers } = await import('@/lib/queries/checkout')
+    const { storedPricing, writeReprice } = await import('@/lib/orders/reprice')
+    const { reprice } = await import('@/domains/orders/amounts')
+    const { quote } = await import('@/domains/checkout/quote')
+    const { and, eq, inArray, sql } = await import('drizzle-orm')
+    const stamp = Date.now()
+    const before = await withTenant(A, async (tx) => (await tx.select().from(shopSettings).where(eq(shopSettings.tenantId, A)))[0]!)
+    const made = await withTenant(A, async (tx) => {
+      await tx.update(shopSettings).set({ publishedAt: new Date(), codOn: true, codMin: 0, codMax: 0, codCharge: 0, shippingFlat: 0, freeShippingAbove: 0, pricesIncludeGst: true, codBlockedPincodes: [], gstin: '08ABCDE1234F1Z5' })
+        .where(eq(shopSettings.tenantId, A))
+      const [p] = await tx.insert(products).values({ tenantId: A, handle: `int-o2-${stamp}`, title: 'Int kurta', options: ['Size'], status: 'active', hsn: '6211' }).returning({ id: products.id })
+      const [v] = await tx.insert(variants).values({ tenantId: A, productId: p!.id, optionValues: ['M'], price: 280000, stock: 50 }).returning({ id: variants.id })
+      const at = new Date(Date.now() - 60_000)
+      const [first] = await tx.insert(discounts).values({ tenantId: A, title: 'Welcome', style: 'order_off', amountOff: 10000, firstOrder: true, startsAt: at, startedAt: at, startedBy: ME, createdBy: ME }).returning({ id: discounts.id })
+      const [sale] = await tx.insert(discounts).values({ tenantId: A, title: 'Kurta sale', style: 'product_off', percentBps: 2000, targets: 'products', startsAt: at, startedAt: at, startedBy: ME, createdBy: ME }).returning({ id: discounts.id })
+      await tx.insert(discountTargets).values({ tenantId: A, discountId: sale!.id, productId: p!.id })
+      const [vip] = await tx.insert(discounts).values({ tenantId: A, title: 'VIP', style: 'order_off', amountOff: 20000, listed: false, startsAt: at, startedAt: at, startedBy: ME, createdBy: ME }).returning({ id: discounts.id })
+      await tx.insert(discountCodes).values([{ tenantId: A, discountId: vip!.id, code: `VIP${String(stamp).slice(-6)}` }, { tenantId: A, discountId: vip!.id, code: `RIYA${String(stamp).slice(-6)}`, label: 'Riya' }])
+      return { product: p!.id, variant: v!.id, ids: [first!.id, sale!.id, vip!.id] }
+    })
+    const placed: string[] = []
+    try {
+      const bag = [{ variantId: made.variant, qty: 1 }]
+      const key = (n: number) => `o2${stamp}${n}`.padEnd(22, 'z').slice(0, 22)
+      const place = async (n: number, phone: string, code?: string) => {
+        const now = new Date(), data = await quoteData(A, [made.variant], now, code)
+        const q = quote(bag, data.rows, data.shop!, now, '302021', { offers: data.offers, code: data.typed })
+        const r = await placeOrder(A, { idempotencyKey: key(n), bag, address: address(phone), method: 'cod', expectedTotal: q.cod.total, code, facts: {} })
+        if (r.kind === 'placed') placed.push((await withTenant(A, (tx) => tx.select({ id: orders.id }).from(orders).where(and(eq(orders.tenantId, A), eq(orders.idempotencyKey, key(n))))))[0]!.id)
+        return { q, r }
+      }
+      // The sale (₹560 off the kurta) and the first-order ₹100: both, for a new phone.
+      const phone = `95000${String(stamp).slice(-5)}`
+      const a = await place(1, phone)
+      expect(a.r.kind).toBe('placed'); expect(a.q.cod.discount).toBe(56000 + 10000)
+      // Two at once for one new phone: only one can be first.
+      const twin = `94000${String(stamp).slice(-5)}`
+      const [t1, t2] = await Promise.all([place(2, twin), place(3, twin)])
+      expect([t1.r.kind, t2.r.kind].sort()).toEqual(['changed', 'placed'])
+      // The same phone again: no first-order offer (changed), the sale stays.
+      const again = await place(4, phone)
+      expect(again.r.kind).toBe('changed')
+      expect(again.r.kind === 'changed' && again.r.quote.cod.discount).toBe(56000)
+      // A creator code reaches the unlisted VIP offer, recorded as typed with the creator's code; no listing shows it.
+      const offers = await withTenant(A, (tx) => liveOffers(tx, A, new Date()))
+      expect(offers.find((o) => o.id === made.ids[2])?.code).toBe(`VIP${String(stamp).slice(-6)}`) // the public code, never the creator's
+      const c = await place(5, `93000${String(stamp).slice(-5)}`, `riya${String(stamp).slice(-6)}`)
+      expect(c.r.kind).toBe('placed'); expect(c.q.offers.code).toBe('applied')
+      await withTenant(A, async (tx) => {
+        const [row] = await tx.select({ via: orderDiscounts.via, codeId: orderDiscounts.codeId }).from(orderDiscounts).where(and(eq(orderDiscounts.tenantId, A), eq(orderDiscounts.orderId, placed.at(-1)!), eq(orderDiscounts.discountId, made.ids[2]!)))
+        expect(row?.via).toBe('typed')
+        const [creator] = await tx.select({ id: discountCodes.id }).from(discountCodes).where(and(eq(discountCodes.tenantId, A), sql`${discountCodes.label} = 'Riya'`, eq(discountCodes.discountId, made.ids[2]!)))
+        expect(row?.codeId).toBe(creator!.id)
+        // The product discount stays on its line through a reprice (as a switch or a capture would do it).
+        const o = placed[0]!
+        const sp = await storedPricing(tx, A, o, { shipping: 0, sellerGstin: '08ABCDE1234F1Z5', pricesIncludeGst: true })
+        expect(sp.lines[0]!.productDiscount).toBe(56000)
+        const r = reprice(sp, 'prepaid')
+        expect(r.discount).toBe(66000) // ₹560 product + ₹100 order, as placed
+        await writeReprice(tx, A, o, sp.lineIds, { ...r, codCharge: 0 })
+        const [l] = await tx.select({ d: orderLines.lineDiscount, pd: orderLines.productDiscount }).from(orderLines).where(eq(orderLines.orderId, o))
+        expect([Number(l!.d), Number(l!.pd)]).toEqual([66000, 56000])
+      })
+    } finally {
+      await withTenant(A, async (tx) => {
+        if (placed.length) await tx.update(orders).set({ cancelledAt: sql`now()` }).where(and(eq(orders.tenantId, A), inArray(orders.id, placed)))
+        await tx.update(discounts).set({ endedAt: new Date() }).where(and(eq(discounts.tenantId, A), inArray(discounts.id, made.ids)))
+        await tx.update(products).set({ status: 'archived' }).where(and(eq(products.tenantId, A), eq(products.id, made.product)))
+        await tx.update(shopSettings).set({ publishedAt: before.publishedAt, codOn: before.codOn, codMin: before.codMin, codMax: before.codMax, codCharge: before.codCharge,
+          shippingFlat: before.shippingFlat, freeShippingAbove: before.freeShippingAbove, pricesIncludeGst: before.pricesIncludeGst, codBlockedPincodes: before.codBlockedPincodes, gstin: before.gstin }).where(eq(shopSettings.tenantId, A))
+      })
+    }
+  })
 })

@@ -1,7 +1,7 @@
 import 'server-only'
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import type { ShopRules, VariantRow } from '@/domains/checkout/quote'
-import { DISCOUNT_STYLES, normalCode, type DiscountStyle, type DiscountTerms } from '@/domains/checkout/discounts'
+import { DISCOUNT_STYLES, normalCode, type DiscountStyle, type DiscountTerms, type TypedCode } from '@/domains/checkout/discounts'
 import type { Tx } from '@/lib/db'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { productImages, products, variants } from '@/lib/db/schema-catalogue'
@@ -9,7 +9,8 @@ import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { holdingSql, momentColumns, owedSql, standingSql } from '@/lib/db/order-predicates'
 import { discountUses, liveDiscountSql } from '@/lib/db/discount-predicates'
-import { discountCodes, discounts, orderDiscounts } from '@/lib/db/schema-discounts'
+import { discountCodes, discountTargets, discountTiers, discounts, orderDiscounts } from '@/lib/db/schema-discounts'
+import { collectionMembers } from './storefront'
 import { canTakeOnline, keysFor } from '@/lib/payments/keys'
 
 // =============================================================================
@@ -71,26 +72,53 @@ export async function checkoutShop(tx: Tx, tenantId: string): Promise<CheckoutSh
  * placement would refuse; placement re-counts under a lock and stays the authority (plan review 12).
  */
 export async function liveOffers(tx: Tx, tenantId: string, now: Date): Promise<DiscountTerms[]> {
+  // The offer's ONE public code (label null) only: a creator code is never listed (O·2 plan review 2).
   const rows = await tx.select({
     id: discounts.id, title: discounts.title, style: discounts.style, percentBps: discounts.percentBps, amountOff: discounts.amountOff, cap: discounts.cap,
     minSubtotal: discounts.minSubtotal, combinesWithPayment: discounts.combinesWithPayment, listed: discounts.listed, code: discountCodes.code, codeId: discountCodes.id,
+    targets: discounts.targets, buyQty: discounts.buyQty, getQty: discounts.getQty, getBps: discounts.getBps, giftVariantId: discounts.giftVariantId, firstOrder: discounts.firstOrder,
     limitTotal: discounts.limitTotal, budget: discounts.budget,
   }).from(discounts)
-    .leftJoin(discountCodes, and(eq(discountCodes.tenantId, discounts.tenantId), eq(discountCodes.discountId, discounts.id)))
+    .leftJoin(discountCodes, and(eq(discountCodes.tenantId, discounts.tenantId), eq(discountCodes.discountId, discounts.id), isNull(discountCodes.label)))
     .where(and(eq(discounts.tenantId, tenantId), liveDiscountSql(now)))
   const limited = rows.filter((r) => r.limitTotal !== null || r.budget !== null)
   const uses = await discountUses(tx, tenantId, limited.map((r) => r.id), now)
   const full = new Set(limited.filter((r) => { const u = uses.get(r.id); return (r.limitTotal !== null && (u?.n ?? 0) >= r.limitTotal) || (r.budget !== null && (u?.given ?? 0) >= Number(r.budget)) }).map((r) => r.id))
-  const seen = new Set<string>()
-  // One row per offer (O·1 offers carry at most one code; unique codes come in O·2 with their own lookup).
-  return rows.filter((r) => !full.has(r.id) && (DISCOUNT_STYLES as readonly string[]).includes(r.style) && !seen.has(r.id) && seen.add(r.id)).map((r) => ({
+  const live = rows.filter((r) => !full.has(r.id) && (DISCOUNT_STYLES as readonly string[]).includes(r.style))
+  if (!live.length) return []
+  const ids = live.map((r) => r.id)
+  // Targets (products, or collections resolved to their products now) and tiers, for the offers that have them.
+  const [targets, tiers] = await Promise.all([
+    live.some((r) => r.targets !== 'all') ? tx.select({ discountId: discountTargets.discountId, productId: discountTargets.productId, collectionId: discountTargets.collectionId }).from(discountTargets)
+      .where(and(eq(discountTargets.tenantId, tenantId), inArray(discountTargets.discountId, ids))) : Promise.resolve([]),
+    tx.select({ discountId: discountTiers.discountId, min: discountTiers.minSubtotal, percentBps: discountTiers.percentBps, amountOff: discountTiers.amountOff }).from(discountTiers)
+      .where(and(eq(discountTiers.tenantId, tenantId), inArray(discountTiers.discountId, ids))),
+  ])
+  const members = targets.some((t) => t.collectionId) ? await collectionMembers(tenantId) : {}
+  const productsOf = (id: string) => [...new Set(targets.filter((t) => t.discountId === id).flatMap((t) => (t.productId ? [t.productId] : members[t.collectionId!] ?? [])))]
+  return live.map((r) => ({
     id: r.id, title: r.title, style: r.style as DiscountStyle, percentBps: r.percentBps, amountOff: r.amountOff === null ? null : Number(r.amountOff), cap: r.cap === null ? null : Number(r.cap),
     minSubtotal: Number(r.minSubtotal), combinesWithPayment: r.combinesWithPayment, listed: r.listed, code: normalCode(r.code), codeId: r.codeId,
+    targets: r.targets === 'all' ? 'all' : productsOf(r.id), buyQty: r.buyQty, getQty: r.getQty, getBps: r.getBps, giftVariantId: r.giftVariantId, firstOrder: r.firstOrder,
+    tiers: tiers.filter((x) => x.discountId === r.id).map((x) => ({ min: Number(x.min), percentBps: x.percentBps, amountOff: x.amountOff === null ? null : Number(x.amountOff) })),
   }))
 }
 
-export const quoteData = (tenantId: string, ids: string[], now: Date) =>
-  withTenant(tenantId, async (tx) => ({ shop: await checkoutShop(tx, tenantId), rows: await variantRows(tx, tenantId, ids, now), offers: await liveOffers(tx, tenantId, now) }))
+/**
+ * A typed code: the live offer it belongs to (its public code or a creator code), looked up on (tenant, upper(code))
+ * inside the host's shop only — never across shops, never listed. Null when it is not a live offer's code.
+ */
+export async function codeFor(tx: Tx, tenantId: string, text: string | null | undefined, now: Date): Promise<TypedCode | null> {
+  const t = normalCode(text)
+  if (!t) return null
+  const [r] = await tx.select({ discountId: discountCodes.discountId, codeId: discountCodes.id }).from(discountCodes)
+    .innerJoin(discounts, and(eq(discounts.tenantId, discountCodes.tenantId), eq(discounts.id, discountCodes.discountId)))
+    .where(and(eq(discountCodes.tenantId, tenantId), sql`upper(${discountCodes.code}) = ${t}`, liveDiscountSql(now))).limit(1)
+  return { text: t, discountId: r?.discountId ?? null, codeId: r?.codeId ?? null }
+}
+
+export const quoteData = (tenantId: string, ids: string[], now: Date, code?: string | null) =>
+  withTenant(tenantId, async (tx) => ({ shop: await checkoutShop(tx, tenantId), rows: await variantRows(tx, tenantId, ids, now), offers: await liveOffers(tx, tenantId, now), typed: await codeFor(tx, tenantId, code, now) }))
 
 /** What the shopper's order page shows — masked address and phone (owner call 4). Found by the link token's hash only. */
 export async function orderPage(tx: Tx, tenantId: string, tokenHash: string) {

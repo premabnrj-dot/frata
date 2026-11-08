@@ -62,15 +62,18 @@ export const openBag = () => window.dispatchEvent(new Event('frata:open-bag'))
 // The offer code the shopper typed (one per order), for this tab: every quote and the order carry it. A shop link
 // with ?code=… fills it (a creator's or a WhatsApp broadcast's link). Never a price: the server decides what it does.
 const CODE_KEY = 'frrata.code.v1'
+// Whether the code came from a shop link (?code=): recorded on the order for the leak alert (O·3), never trusted for price.
+const VIA_KEY = 'frrata.code-via.v1'
 let codeNow: string | null = null
 const codeListeners = new Set<() => void>()
 const readCode = () => { try { return sessionStorage.getItem(CODE_KEY) } catch { return null } }
 export const offerCode = {
   get: () => (codeNow ??= readCode() ?? ''),
-  set: (c: string) => {
+  via: (): 'typed' | 'link' => { try { return sessionStorage.getItem(VIA_KEY) === 'link' ? 'link' : 'typed' } catch { return 'typed' } },
+  set: (c: string, via: 'typed' | 'link' = 'typed') => {
     const v = c.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 20)
     codeNow = v
-    try { if (v) sessionStorage.setItem(CODE_KEY, v); else sessionStorage.removeItem(CODE_KEY) } catch { /* the page keeps it */ }
+    try { if (v) { sessionStorage.setItem(CODE_KEY, v); sessionStorage.setItem(VIA_KEY, via) } else { sessionStorage.removeItem(CODE_KEY); sessionStorage.removeItem(VIA_KEY) } } catch { /* the page keeps it */ }
     codeListeners.forEach((l) => l())
   },
 }
@@ -84,6 +87,6 @@ export function captureAttribution() {
     const keep = Object.fromEntries([...p].filter(([k]) => /^(utm_(source|medium|campaign|content|term)|fbclid|gclid)$/.test(k)).map(([k, v]) => [k, v.slice(0, 200)]))
     if (Object.keys(keep).length) sessionStorage.setItem(ATTR_KEY, JSON.stringify(keep))
     const code = p.get('code')
-    if (code && /^[A-Za-z0-9]{1,20}$/.test(code)) offerCode.set(code)
+    if (code && /^[A-Za-z0-9]{1,20}$/.test(code)) offerCode.set(code, 'link')
   } catch { /* storage unavailable */ }
 }

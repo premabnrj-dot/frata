@@ -226,7 +226,8 @@ export function planOffers(linesIn: PlanLine[] | number, offers: DiscountTerms[]
 }
 
 export type PriceLine = { gross: number; qty: number; hsn: string | null; productDiscount?: number }
-export type MethodLine = { discount: number; taxable: number; gstBps: number; gst: number } & ChargeShare
+/** `discount` is the line's whole discount; `productDiscount` the product offers' part of it (stored, never re-spread). */
+export type MethodLine = { discount: number; productDiscount: number; taxable: number; gstBps: number; gst: number } & ChargeShare
 export type MethodPrice = {
   /** Merchandise discount (product + order + payment), summed over the lines. Shipping waived by an offer is not in it. */
   discount: number
@@ -250,7 +251,7 @@ export function priceMethod(lines: PriceLine[], orderAmount: number, paymentAmou
   const disc = lines.map((_, i) => prod[i]! + orderShare[i]! + payShare[i]!)
   const net = lines.map((l, i) => l.gross - disc[i]!)
   const t = taxOrder(lines.map((l, i) => ({ gross: net[i]!, unitPrice: net[i]! / l.qty, hsn: l.hsn })), charges, o)
-  const out = t.lines.map((l, i) => ({ discount: disc[i]!, taxable: l.taxable, gstBps: l.bps, gst: l.gst, chargeTaxable: l.chargeTaxable, chargeGst: l.chargeGst }))
+  const out = t.lines.map((l, i) => ({ discount: disc[i]!, productDiscount: prod[i]!, taxable: l.taxable, gstBps: l.bps, gst: l.gst, chargeTaxable: l.chargeTaxable, chargeGst: l.chargeGst }))
   const discount = disc.reduce((a, b) => a + b, 0)
   const gst = out.reduce((a, l) => a + l.gst + l.chargeGst, 0)
   return { discount, lines: out, merchandiseNet: out.reduce((a, l) => a + l.taxable, 0), gst, total: subtotal - discount + charges + (o.pricesIncludeGst ? 0 : gst) }

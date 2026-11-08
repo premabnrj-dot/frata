@@ -6,7 +6,7 @@ import { placeOrder } from '@/lib/orders/place'
 
 // Place an order. Limits fail closed here (a fake-COD script must not slip through a database hiccup).
 const Body = z.object({
-  idempotencyKey: z.string().regex(/^[A-Za-z0-9_-]{22,43}$/), bag: Bag, address: z.unknown(), method: z.enum(['cod', 'prepaid']), expectedTotal: z.number().int().min(0), code: Code.optional(),
+  idempotencyKey: z.string().regex(/^[A-Za-z0-9_-]{22,43}$/), bag: Bag, address: z.unknown(), method: z.enum(['cod', 'prepaid']), expectedTotal: z.number().int().min(0), code: Code.optional(), via: z.enum(['typed', 'link']).optional(),
   facts: z.object({ firstMethod: z.enum(['cod', 'prepaid']).nullable().optional(), attribution: z.record(z.string().max(40), z.string().max(200)).optional() }).optional(),
 })
 
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const attribution = Object.fromEntries(Object.entries(r.body.facts?.attribution ?? {}).filter(([k]) => /^(utm_(source|medium|campaign|content|term)|fbclid|fbc|fbp|gclid)$/.test(k)))
   try {
     const code = await codeToTry(r.tenantId, r.ip, r.body.code)
-    const out = await placeOrder(r.tenantId, { idempotencyKey: r.body.idempotencyKey, bag: r.body.bag, address: address.data, method: r.body.method, expectedTotal: r.body.expectedTotal, code, facts: { firstMethod: r.body.facts?.firstMethod ?? null, attribution } })
+    const out = await placeOrder(r.tenantId, { idempotencyKey: r.body.idempotencyKey, bag: r.body.bag, address: address.data, method: r.body.method, expectedTotal: r.body.expectedTotal, code, via: r.body.via, facts: { firstMethod: r.body.facts?.firstMethod ?? null, attribution } })
     // A code that did not apply counts against the guess limit here as on /quote (one rule: codeTried).
     await codeTried(r.tenantId, r.ip, r.body.code, !code ? 'not_applied' : out.kind === 'changed' ? out.quote.offers.code : out.kind === 'placed' ? out.code ?? 'applied' : 'applied')
     if (out.kind === 'changed') return reply({ changed: true, quote: publicQuote(out.quote) }, 409)

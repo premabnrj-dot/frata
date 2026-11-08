@@ -7,8 +7,9 @@ export type PublicQuoteLine = {
   shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; problem: 'gone' | 'sold_out' | 'reduced' | null
 }
 export type CodWhyNot = { reason: 'off' } | { reason: 'below_min'; min: number } | { reason: 'above_max'; max: number } | { reason: 'blocked_pincode'; pincode: string }
-export type PublicApplied = { title: string; amount: number; class: 'order' | 'shipping' | 'payment' }
-export type PublicListed = { title: string; code: string | null; style: 'order_off' | 'free_shipping' | 'pay_online'; applied: boolean; need: { kind: 'add'; amount: number } | { kind: 'pay_online' } | null }
+export type PublicApplied = { title: string; amount: number; class: 'product' | 'order' | 'shipping' | 'payment' }
+export type PublicListed = { title: string; code: string | null; style: 'order_off' | 'free_shipping' | 'pay_online' | 'product_off' | 'bxgy' | 'free_gift'; applied: boolean
+  need: { kind: 'add'; amount: number } | { kind: 'add_items'; n: number } | { kind: 'gift'; variantId: string } | { kind: 'pay_online' } | { kind: 'first_order' } | null }
 export type PublicQuote = {
   lines: PublicQuoteLine[]; subtotal: number; shipping: number; prepaid: number; gstPrepaid: number
   /** Offers (server-named fields only: shop-api publicQuote). */

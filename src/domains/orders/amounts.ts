@@ -36,8 +36,9 @@ export function charged(lines: Pick<StoredLine, 'taxableValue' | 'gst' | 'gstBps
 
 /** What reprice() needs: the lines as sold, the offers the order got (order_discounts), and the stored charges. */
 export type StoredPricing = {
-  lines: { unitPrice: number; qty: number; hsn: string | null }[]
-  applied: { class: 'order' | 'shipping' | 'payment'; amount: number }[]
+  /** `productDiscount`: the product offers' part of each line, as stored at placement (never re-spread). */
+  lines: { unitPrice: number; qty: number; hsn: string | null; productDiscount?: number }[]
+  applied: { class: 'product' | 'order' | 'shipping' | 'payment'; amount: number }[]
   shipping: number; registered: boolean; pricesIncludeGst: boolean
 }
 
@@ -53,10 +54,10 @@ export function reprice(s: StoredPricing, method: 'prepaid'): Repriced
 export function reprice(s: StoredPricing, method: 'cod', rules: DeliveryRules, pincode: string | null): { cod: Cod; price: Repriced | null }
 export function reprice(s: StoredPricing, method: 'cod' | 'prepaid', rules?: DeliveryRules, pincode?: string | null): Repriced | { cod: Cod; price: Repriced | null } {
   const order = s.applied.find((a) => a.class === 'order')?.amount ?? 0
-  const lines = s.lines.map((l) => ({ gross: l.unitPrice * l.qty, qty: l.qty, hsn: l.hsn }))
+  const lines = s.lines.map((l) => ({ gross: l.unitPrice * l.qty, qty: l.qty, hsn: l.hsn, productDiscount: l.productDiscount ?? 0 }))
   const tax = { registered: s.registered, pricesIncludeGst: s.pricesIncludeGst }
   if (method === 'prepaid') return { ...priceMethod(lines, order, s.applied.find((a) => a.class === 'payment')?.amount ?? 0, s.shipping, tax), codCharge: 0 }
-  const cod = codFor(lines.reduce((a, l) => a + l.gross, 0) - order, rules!, pincode)
+  const cod = codFor(lines.reduce((a, l) => a + l.gross - l.productDiscount, 0) - order, rules!, pincode)
   return { cod, price: cod.offered ? { ...priceMethod(lines, order, 0, s.shipping + cod.charge, tax), codCharge: cod.charge } : null }
 }
 

@@ -2,7 +2,8 @@ import 'server-only'
 import { randomUUID } from 'node:crypto'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import type { CleanAddress } from '@/domains/checkout/address'
-import { amountFor, candidates, normalCode, type DiscountTerms } from '@/domains/checkout/discounts'
+import { amountFor, candidates, classOf, normalCode, type DiscountTerms, type TypedCode } from '@/domains/checkout/discounts'
+import { holdingSql, standingSql } from '@/lib/db/order-predicates'
 import { quote, totalFor, type BagLine, type Quote } from '@/domains/checkout/quote'
 import { gstinState } from '@/domains/tax/gst'
 import type { Tx } from '@/lib/db'
@@ -11,7 +12,7 @@ import { variants } from '@/lib/db/schema-catalogue'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { orderToken, sha256, tokenHash } from '@/lib/crypto/secret-box'
-import { checkoutShop, liveOffers, variantRows } from '@/lib/queries/checkout'
+import { checkoutShop, codeFor, liveOffers, variantRows } from '@/lib/queries/checkout'
 import { discountUses, fits } from '@/lib/db/discount-predicates'
 import { discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import { keysFor } from '@/lib/payments/keys'
@@ -42,8 +43,8 @@ export const HOLD_MINUTES = 20 // owner call 3
 
 export type PlaceInput = {
   idempotencyKey: string; bag: BagLine[]; address: CleanAddress; method: 'cod' | 'prepaid'; expectedTotal: number
-  /** The code the shopper typed, if any (one per order). */
-  code?: string | null
+  /** The code the shopper typed, if any (one per order), and whether it came from a shop link (?code=). */
+  code?: string | null; via?: 'typed' | 'link'
   /** What the shopper was shown and did, for the hypotheses (frata-unit-economics): first card tapped, attribution. */
   facts: { firstMethod?: 'cod' | 'prepaid' | null; attribution?: Record<string, string> }
 }
@@ -76,8 +77,9 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     if (input.method === 'prepaid' && !shop.online) return { kind: 'refused', status: 422, error: 'Online payment is not available at this shop right now. Pay on delivery instead.' }
 
     const rows = await variantRows(tx, tenantId, input.bag.map((b) => b.variantId), now, { lock: true })
-    const offers = await fitOffers(tx, tenantId, await liveOffers(tx, tenantId, now), (o) => quote(input.bag, rows, shop, now, input.address.pincode, { offers: o, code: input.code }), input, now)
-    const q = quote(input.bag, rows, shop, now, input.address.pincode, { offers, code: input.code })
+    const typed = await codeFor(tx, tenantId, input.code, now)
+    const offers = await fitOffers(tx, tenantId, await liveOffers(tx, tenantId, now), (o) => quote(input.bag, rows, shop, now, input.address.pincode, { offers: o, code: typed }), input, typed, now)
+    const q = quote(input.bag, rows, shop, now, input.address.pincode, { offers, code: typed })
     if (q.empty) return { kind: 'refused', status: 422, error: 'Nothing in your bag can be bought right now.', quote: q }
     if (q.missing.length || q.lines.some((l) => l.problem) || totalFor(q, input.method) !== input.expectedTotal) return { kind: 'changed', quote: q }
     if (input.method === 'cod' && !q.cod.offer.offered) return { kind: 'refused', status: 422, error: 'Pay on delivery is not offered for this order. Pay online instead.', quote: q }
@@ -111,7 +113,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     })
     await tx.insert(orderLines).values(live.map((l, position) => ({
       ...m.shares[position]!,
-      lineDiscount: m.lines[position]!.discount, taxableValue: m.lines[position]!.taxable, gstBps: m.lines[position]!.gstBps, gst: m.lines[position]!.gst,
+      lineDiscount: m.lines[position]!.discount, productDiscount: m.lines[position]!.productDiscount, taxableValue: m.lines[position]!.taxable, gstBps: m.lines[position]!.gstBps, gst: m.lines[position]!.gst,
       tenantId, orderId: id, variantId: l.variantId, productId: l.productId, title: l.title, optionValues: l.values, sku: l.sku,
       imageBase: l.image?.base ?? null, imageWidths: l.image?.widths ?? null, qty: l.qty, unitPrice: l.unitPrice, compareAt: l.compareAt,
       hsn: l.hsn, unitCost: costs.get(l.variantId) ?? null,
@@ -119,8 +121,9 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     })))
     // What the order got, with the terms copied (the order keeps them whatever the offer becomes).
     if (m.applied.length) await tx.insert(orderDiscounts).values(m.applied.map((a) => ({
-      tenantId, orderId: id, discountId: a.discountId, codeId: a.codeId, class: a.class, amount: a.amount, title: a.title, style: a.terms.style,
-      percentBps: a.terms.percentBps, amountOff: a.terms.amountOff, cap: a.terms.cap, minSubtotal: a.terms.minSubtotal,
+      tenantId, orderId: id, discountId: a.discountId, class: a.class, amount: a.amount, title: a.title, style: a.terms.style,
+      ...termsCopy(a.terms, q.subtotal - m.lines.reduce((s, l) => s + l.productDiscount, 0)), via: typed?.discountId === a.discountId ? (input.via ?? 'typed') : 'auto',
+      codeId: typed?.discountId === a.discountId ? typed.codeId : a.codeId,
     })))
     if (cod) await takeStock(tx, tenantId, id, 'in_stock', soldOut)
     return { kind: 'new', id, number, method: input.method, total: m.total, code: q.offers.code }
@@ -134,15 +137,30 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
   return pay.ok ? { ...out, pay: pay.pay } : { ...out, payError: pay.error }
 }
 
+/** The terms an order keeps (copied, typed columns): a tier copies the step it reached. */
+function termsCopy(t: DiscountTerms, subtotal: number) {
+  const step = t.tiers?.length ? [...t.tiers].filter((x) => subtotal >= x.min).sort((a, b) => b.min - a.min)[0] : undefined
+  return step ? { percentBps: step.percentBps, amountOff: step.amountOff, cap: t.cap, minSubtotal: step.min } : { percentBps: t.percentBps, amountOff: t.amountOff, cap: t.cap, minSubtotal: t.minSubtotal }
+}
+
 /**
  * The live offers this placement may use. Every offer the bag could get that has a limit or a budget is locked, in
  * id order, BEFORE anything is counted (no deadlock between two checkouts; plan review 8); an offer with no limit locks
  * nothing, so a sitewide offer never queues a festive checkout. Then: an offer at its total or per-phone limit drops
  * out; the bag is priced; an applied offer whose amount would cross its budget drops out and the bag is priced again.
  */
-async function fitOffers(tx: Tx, tenantId: string, offers: DiscountTerms[], price: (o: DiscountTerms[]) => Quote, input: PlaceInput, now: Date): Promise<DiscountTerms[]> {
+async function fitOffers(tx: Tx, tenantId: string, offers: DiscountTerms[], price: (o: DiscountTerms[]) => Quote, input: PlaceInput, typed: TypedCode | null, now: Date): Promise<DiscountTerms[]> {
   const subtotal = price([]).subtotal
-  const could = candidates(offers, normalCode(input.code)).filter((t) => t.style === 'free_shipping' || amountFor(t, subtotal) > 0).map((t) => t.id)
+  // First order: one phone at a time in this shop (two at once cannot both be first); a phone with a standing or
+  // holding order here does not get it. The shopper reads the usual "changed" (it does reveal, slowly, that the
+  // phone has ordered here: accepted, O·2 plan review 6).
+  if (offers.some((t) => t.firstOrder)) {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${tenantId + ':phone:' + input.address.phone}, 0))`)
+    const [had] = await tx.execute<{ n: number }>(sql`select count(*)::int n from ${orders} o where o.tenant_id = ${tenantId} and o.phone = ${input.address.phone}
+      and (${standingSql('o')} or ${holdingSql(now, 'o')})`)
+    if ((had?.n ?? 0) > 0) offers = offers.filter((t) => !t.firstOrder)
+  }
+  const could = candidates(offers, typed).filter((t) => t.style === 'free_shipping' || classOf(t.style) === 'product' || amountFor(t, subtotal) > 0).map((t) => t.id)
   if (!could.length) return offers
   const limited = (await tx.execute<{ id: string; limit_total: number | null; limit_per_phone: number | null; budget: string | null }>(sql`
     select id, limit_total, limit_per_phone, budget from ${discounts} where tenant_id = ${tenantId} and id in ${could}
