@@ -87,8 +87,9 @@ export const paidAfterPacking = (o: Pick<OrderMoments, 'paidAt' | 'switchedToCod
 
 /**
  * A placed order: anything but an online order never paid and never switched to COD — even once cancelled
- * (the state alone cannot tell: found by the parity test, 2026-11-07). What a merchant counts and what plan
- * usage bills (`app_admin_order_counts`, drizzle/0017 — a cancelled order counts).
+ * (the state alone cannot tell: found by the parity test, 2026-11-07). What a merchant counts as placed
+ * (`app_admin_order_counts`, drizzle/0017 — a cancelled order counts). Billing counts billable orders instead
+ * (billableAt, billing B0); Admin › Merchants moves onto that in B1.
  */
 export const isPlaced = (o: Pick<OrderMoments, 'paymentMethod' | 'paidAt' | 'switchedToCodAt'>) => !(o.paymentMethod === 'prepaid' && !o.paidAt && !o.switchedToCodAt)
 

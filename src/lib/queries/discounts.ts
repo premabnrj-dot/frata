@@ -5,7 +5,7 @@ import type { DiscountStyle } from '@/domains/checkout/discounts'
 import { paise } from '@/domains/money/paise'
 import { freightOf, type FreightSource } from '@/domains/orders/freight'
 import { orderProfit } from '@/domains/orders/profit'
-import { deliveredFee } from '@/domains/plans/entitlements'
+import { feeForOrder } from '@/domains/plans/entitlements'
 import { planVersions, tenantPlans } from '@/lib/db/schema'
 import { estimateOf } from '@/domains/settings/ship-costs'
 import { shipCostsIn } from '@/lib/queries/settings'
@@ -13,7 +13,7 @@ import { discountCodes, discountTargets, discountTiers, discounts, orderDiscount
 import { collections, products, variants } from '@/lib/db/schema-catalogue'
 import { orders } from '@/lib/db/schema-orders'
 import { discountUses, useOfRowSql } from '@/lib/db/discount-predicates'
-import { currentMethodSql, holdingSql, openShipmentProviderSql, priorOrderSql, standingSql, stateSql } from '@/lib/db/order-predicates'
+import { billableAtSql, currentMethodSql, holdingSql, openShipmentProviderSql, priorOrderSql, standingSql, stateSql } from '@/lib/db/order-predicates'
 import { leakOf, type Leak } from '@/domains/checkout/leak'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
@@ -131,7 +131,7 @@ export type OfferStats = {
 export const JUDGE_MIN_ORDERS = 30
 
 const DAY = 86_400_000
-type Delivered = { net: string; cogs: string | null; fwd: string | null; rto: string | null; codfee: string | null; gw: string | null; base: string; cod: boolean; provider: 'self' | 'shiprocket' | null }
+type Delivered = { at: Date | string | null; net: string; cogs: string | null; fwd: string | null; rto: string | null; codfee: string | null; gw: string | null; base: string; cod: boolean; provider: 'self' | 'shiprocket' | null }
 const num = (v: string | null) => (v === null ? null : Number(v))
 const keptOf = (k: { kept: number | null; basis: KeptBasis }) => ({ keptPerDelivered: k.kept, keptBasis: k.basis })
 
@@ -147,7 +147,9 @@ export async function offerStats(tenantId: string, now = new Date(), opts: { day
 
 /** offerStats inside the caller's tenant transaction (the int test reads rows it will roll back). */
 export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, days = 30, costs = true): Promise<OfferStats> {
-  const fee = await feeBpsIn(tx, tenantId, now)
+  const plans = await planHistoryIn(tx, tenantId)
+  // Frrata's fee through the one rule (feeForOrder): the plan in force at the order's billableAt, on its merchandise net.
+  const feeOf = (d: Delivered) => paise(feeForOrder(plans, { merchandiseNet: Number(d.base), billableAt: d.at ? new Date(d.at) : now })?.fee ?? 0)
   // The shop's confirmed shipping-cost estimates (Settings › Shipping costs), for orders shipped another way.
   const est = estimateOf(await shipCostsIn(tx, tenantId))
   const since = sql`${new Date(now.getTime() - days * DAY).toISOString()}::timestamptz`
@@ -172,7 +174,7 @@ export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, days = 3
         from ${orders} o where o.tenant_id = ${tenantId} and o.placed_at >= ${since} and (${standingSql('o')} or ${holdingSql(now, 'o')}) and not ${used}`),
     // Delivered orders with an offer, with what profit.ts needs.
     tx.execute<Delivered & { id: string }>(sql`
-      select od.discount_id id, o.net_revenue net, o.cogs, o.forward_shipping fwd, o.rto_shipping rto, o.courier_cod_fee codfee, o.gateway_fee gw, o.merchandise_net base,
+      select od.discount_id id, ${billableAtSql('o')} at, o.net_revenue net, o.cogs, o.forward_shipping fwd, o.rto_shipping rto, o.courier_cod_fee codfee, o.gateway_fee gw, o.merchandise_net base,
              ${currentMethodSql('o')} = 'cod' cod,
              ${openShipmentProviderSql('o')} provider
         from ${orderDiscounts} od join ${orders} o on o.tenant_id = od.tenant_id and o.id = od.order_id
@@ -197,7 +199,7 @@ export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, days = 3
   // left out like one with unknown cost; the basis says whether any figure in the average was estimated or left out.
   // `costs` false (staff, partners): ₹ kept is a profit, so it is not even computed for them (tenancy audit 2026-11-08).
   const kept = (rows: Delivered[]): { kept: number | null; basis: KeptBasis } => {
-    if (fee === null || !costs) return { kept: null, basis: null }
+    if (!plans.length || !costs) return { kept: null, basis: null }
     const known = rows.filter((d) => d.cogs !== null)
       .map((d) => ({ d, f: freightOf(d.provider, { forwardShipping: num(d.fwd), rtoShipping: num(d.rto), courierCodFee: num(d.codfee) }, est, { cod: !!d.cod, outcome: 'delivered' }) }))
       .filter((x) => x.f.source !== 'pending')
@@ -206,7 +208,7 @@ export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, days = 3
     return {
       kept: Math.round(known.reduce((a, { d, f }) => a + orderProfit({
         netRevenue: paise(Number(d.net)), cogs: paise(Number(d.cogs)), forwardShipping: f.forwardShipping, rtoShipping: f.rtoShipping, codFee: f.codFee,
-        gatewayFee: paise(Number(d.gw ?? 0)), packaging: paise(0), adCost: paise(0), platformFee: deliveredFee(paise(Number(d.base)), fee),
+        gatewayFee: paise(Number(d.gw ?? 0)), packaging: paise(0), adCost: paise(0), platformFee: feeOf(d),
       }, 1).ifDelivered, 0) / known.length),
       basis: sources.has('none') ? 'none' : sources.has('estimate') ? 'estimate' : 'actual',
     }
@@ -244,11 +246,10 @@ export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, days = 3
 
 const ago = (now: Date, d: number) => sql`${new Date(now.getTime() - d * DAY).toISOString()}::timestamptz`
 
-/** The fee on a delivered order under the shop's current plan, in bps (null without a plan). */
-async function feeBpsIn(tx: Tx, tenantId: string, now: Date): Promise<number | null> {
-  const [p] = await tx.select({ fee: planVersions.feeBps }).from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId))
-    .where(and(eq(tenantPlans.tenantId, tenantId), sql`${tenantPlans.startsAt} <= ${now.toISOString()}::timestamptz`)).orderBy(desc(tenantPlans.startsAt)).limit(1)
-  return p ? p.fee : null
+/** The shop's plan history, for feeForOrder (the fee is the plan in force when each order became billable). */
+async function planHistoryIn(tx: Tx, tenantId: string) {
+  return tx.select({ startsAt: tenantPlans.startsAt, planVersion: { feeBps: planVersions.feeBps } }).from(tenantPlans)
+    .innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).where(eq(tenantPlans.tenantId, tenantId)).orderBy(asc(tenantPlans.startsAt))
 }
 
 /**

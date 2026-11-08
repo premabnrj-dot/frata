@@ -164,3 +164,10 @@ export async function publicPlansForPage(page: string): Promise<PublicPlan[]> {
     console.error(`[${page}] plans`, err instanceof Error ? err.name : 'error'); throw err
   }
 }
+
+// ── Billing (drizzle/0048) ─────────────────────────────────────────────────────
+/** Shops whose plan began before `before` (the end of the month being drafted): ids only. */
+export async function shopsToBill(before: Date): Promise<string[]> {
+  const rows = await db().execute<{ id: string }>(sql`select app_shops_to_bill(${before.toISOString()}::timestamptz) as id`)
+  return rows.map((r) => r.id)
+}

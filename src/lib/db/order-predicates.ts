@@ -1,6 +1,7 @@
 import 'server-only'
 import { sql, type SQL } from 'drizzle-orm'
 import { SHIP_TABS, type OrderState, type QueueTab } from '@/domains/orders/order-state'
+import { ASSUME_DELIVERED_DAYS } from '@/domains/orders/outcomes'
 import { orderLines, orders, shipments } from '@/lib/db/schema-orders'
 
 // =============================================================================
@@ -138,3 +139,14 @@ export const discountUseSql = (now: Date, cls: 'product' | 'order' | 'shipping' 
 export const owedSql = (tenantId: string, now: Date, variantCol = '"variants"."id"'): SQL<number> => sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id
   where l.tenant_id = ${tenantId} and l.variant_id = ${sql.raw(variantCol)} and l.kind = 'preorder' and l.stock_taken_at is null and o.packed_at is null and o.shipped_at is null
     and (${standingSql('o')} or ${holdingSql(now, 'o')}))`
+
+/**
+ * billableAt() in SQL (src/domains/orders/outcomes.ts): when an order became a delivered order for Frrata's fee —
+ * delivered, or shipped + 30 days, whichever came first; null after a return started, when lost without delivery,
+ * or when never shipped. The parity test holds the two equal.
+ */
+export const billableAtSql = (a = '"orders"'): SQL<Date | null> => sql<Date | null>`(case
+  when ${c(a, 'rto_initiated_at')} is not null then null
+  when ${c(a, 'delivered_at')} is not null then least(${c(a, 'delivered_at')}, ${c(a, 'shipped_at')} + interval '${sql.raw(String(ASSUME_DELIVERED_DAYS))} days')
+  when ${c(a, 'shipped_at')} is null or ${c(a, 'lost_at')} is not null then null
+  else ${c(a, 'shipped_at')} + interval '${sql.raw(String(ASSUME_DELIVERED_DAYS))} days' end)`

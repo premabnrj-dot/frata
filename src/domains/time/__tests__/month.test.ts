@@ -12,3 +12,12 @@ describe('monthStartIST', () => {
     expect(nextMonthStartIST(new Date('2026-12-15T00:00:00Z')).toISOString()).toBe('2026-12-31T18:30:00.000Z')
   })
 })
+
+describe('monthOfYM / ymOf', () => {
+  it('round-trips an IST month', async () => {
+    const { monthOfYM, ymOf } = await import('../month')
+    expect(monthOfYM('2026-12')!.toISOString()).toBe('2026-11-30T18:30:00.000Z')
+    expect(ymOf(monthOfYM('2026-12')!)).toBe('2026-12')
+    expect(monthOfYM('2026-13')).toBeNull()
+  })
+})
