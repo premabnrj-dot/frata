@@ -25,9 +25,9 @@ describe.skipIf(!host)('Admin library on a real database', () => {
     platform = await import('@/lib/db/platform')
   })
 
-  it('creates a merchant with a domain, an owner invite and a plan, and lists it', async () => {
+  it('creates a merchant with an owner invite and a plan, and lists it', async () => {
     const { id } = await admin.createMerchant(staff, {
-      name: 'Int Store', slug: `int-${Date.now()}`, host: `int-${Date.now()}.frata.test`,
+      name: 'Int Store', slug: `int-${Date.now()}`,
       ownerEmail: 'Owner@Int.Test', planCode: 'growth', trialEndsAt: null, now: new Date(),
     })
     const m = await admin.getMerchant(staff, id, new Date())

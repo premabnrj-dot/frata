@@ -37,6 +37,10 @@ describe('routeFor and shopRewrites: /s/ is reachable only through the rewrite',
   it('passes a shop host to the rewrite, refuses a malformed one', async () => {
     const { routeFor } = await import('../host')
     expect(routeFor('kesar.frata.store', '/products/kurta', C, false)).toEqual({ kind: 'shop' })
+    // The bare shop domain holds no shop: it is sent to Frrata's site; its subdomains stay shops.
+    expect(routeFor('frata.store', '/', C, false, 'frata.store')).toEqual({ kind: 'platform_apex' })
+    expect(routeFor('FRATA.STORE:443', '/x', C, false, 'frata.store')).toEqual({ kind: 'platform_apex' })
+    expect(routeFor('kesar.frata.store', '/', C, false, 'frata.store')).toEqual({ kind: 'shop' })
     expect(routeFor('kesar.frata.store', '/s/b.frata.store/products/x.png', C, false)).toEqual({ kind: 'shop' })
     expect(routeFor('x/../kesar.frata.store', '/', C, false)).toEqual({ kind: 'not_found' })
   })

@@ -42,6 +42,8 @@ export type Route =
   | { kind: 'not_found' }
   | { kind: 'shop' }
   | { kind: 'console' }
+  /** The shop domain itself (`frrata.shop`): no shop lives there; it sends people to Frrata's own site. */
+  | { kind: 'platform_apex' }
 
 /**
  * What the middleware does with one request (storefront spec § Review findings).
@@ -50,8 +52,9 @@ export type Route =
  * `/s/this/s/other/…`, which matches no page. `/s/…` is internal: on every host
  * that is not a shop it is a 404, `localhost` included, except under `next dev`.
  */
-export function routeFor(rawHost: string | null, pathname: string, consoleHost: string, dev: boolean): Route {
+export function routeFor(rawHost: string | null, pathname: string, consoleHost: string, dev: boolean, shopDomain?: string): Route {
   const surface = surfaceFor(rawHost, consoleHost)
+  if (surface.kind === 'storefront' && shopDomain && surface.host === shopDomain.toLowerCase()) return { kind: 'platform_apex' }
   if (surface.kind === 'storefront') return HOST_CHARS.test(surface.host) ? { kind: 'shop' } : { kind: 'not_found' }
   if (pathname === '/s' || pathname.startsWith('/s/')) return surface.kind === 'local' && dev ? { kind: 'console' } : { kind: 'not_found' }
   return { kind: 'console' }

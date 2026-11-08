@@ -4,9 +4,12 @@
 //       scripts run under it (the page hydrates, no CSP violation), and the
 //       nonce differs per request; the public pages and shops keep no nonce.
 //   S13 a Razorpay webhook body over the cap is refused before anything is read.
+//   D·0 the bare shop domain (frrata.shop in production, frata.test here) holds no shop: 308 to Frrata's site.
 // =============================================================================
 import assert from 'node:assert/strict'
+import { request } from 'node:http'
 import { CONSOLE, SHOP, signedIn } from '../lib.mjs'
+import { PORTS, SHOP_DOMAIN } from '../constants.mjs'
 
 export default {
   name: 'security',
@@ -41,6 +44,16 @@ export default {
       const big = await pg.evaluate(async () => (await fetch('/api/shop/orders', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pad: 'x'.repeat(40 * 1024) }) })).status)
       assert.equal(big, 413)
       await anon.close()
+    })
+    await t.step('the bare shop domain sends people to Frrata\'s site (308); a shop on it still opens', async () => {
+      const head = (host) => new Promise((resolve, reject) => {
+        const r = request({ host: '127.0.0.1', port: PORTS.app, path: '/products?x=1', method: 'GET', headers: { host } }, (res) => { res.resume(); resolve({ status: res.statusCode, location: res.headers.location }) })
+        r.on('error', reject); r.end()
+      })
+      const apex = await head(SHOP_DOMAIN)
+      assert.equal(apex.status, 308)
+      assert.match(apex.location ?? '', /^https:\/\/localhost\/$/)
+      assert.notEqual((await head(`kesar-studio.${SHOP_DOMAIN}`)).status, 308, 'a shop on the shop domain must not redirect')
     })
     await t.step('an oversized Razorpay webhook is refused with 413', async () => {
       const ctx = await t.browser.newContext()

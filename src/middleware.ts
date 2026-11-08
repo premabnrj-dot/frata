@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { routeFor } from '@/domains/tenancy/host'
-import { CONSOLE_HOST } from '@/lib/public-env'
+import { CONSOLE_HOST, SHOP_DOMAIN } from '@/lib/public-env'
 import { updateSession } from '@/lib/supabase/middleware'
 import { isSignedInPath, signedInCsp } from '@/lib/security-headers'
 
@@ -12,8 +12,10 @@ import { isSignedInPath, signedInCsp } from '@/lib/security-headers'
  * shop host is refused (routeFor decides).
  */
 export async function middleware(request: NextRequest) {
-  const route = routeFor(request.headers.get('host'), request.nextUrl.pathname, CONSOLE_HOST, process.env.NODE_ENV === 'development')
+  const route = routeFor(request.headers.get('host'), request.nextUrl.pathname, CONSOLE_HOST, process.env.NODE_ENV === 'development', SHOP_DOMAIN)
   if (route.kind === 'not_found') return new NextResponse(null, { status: 404 })
+  // The bare shop domain (frrata.shop) holds no shop: it goes to Frrata's own site (shop addresses spec, D·0).
+  if (route.kind === 'platform_apex') return NextResponse.redirect(`https://${CONSOLE_HOST}/`, 308)
   // A shop: the host rewrite in next.config (shopRewrites) serves it from /s/<host>/…; no session work here.
   if (route.kind === 'shop') return NextResponse.next()
   if (!isSignedInPath(request.nextUrl.pathname)) return updateSession(request, NextResponse.next({ request }))
