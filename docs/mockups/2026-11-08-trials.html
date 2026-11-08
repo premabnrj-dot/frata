@@ -87,7 +87,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 </style>
 
 <div class="wrap">
-  <div class="label">Proposal · phase TR1 · for the owner's approval</div>
+  <div class="label">Approved by the owner, 8 Nov 2026 · recommendations taken; trial length set in Admin, up to 90 days</div>
   <h1>Free trials on plans</h1>
   <p class="sub">Onboarding by trial: a brand signs up, picks a plan, opens its shop, and has 30 days of selling to see its first delivered order and what it kept, before it pays anything. Nothing on this page is built yet. Prices below are the current plan prices; dates are an example shop that signs up on 8 November.</p>
 
@@ -139,7 +139,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   <div class="frame">
     <div class="inner">
       <h3>Choose your plan</h3>
-      <p class="sub">30 days free from the day your shop opens. No payment needed to start.</p>
+      <p class="sub">30 days free from the day your shop opens. No payment needed to start. <span class="k">(The number is Admin's setting: up to 90.)</span></p>
       <div class="plans" role="radiogroup" aria-label="Plan">
         <label class="plan"><span class="row between"><strong>Launch</strong><input type="radio" name="plan" id="p-launch"></span><span class="p">₹1,499<span class="k">/month + GST</span></span><span class="k">150 orders included · 2% per delivered order</span></label>
         <label class="plan on"><span class="row between"><strong>Growth</strong><input type="radio" name="plan" id="p-growth" checked></span><span class="p">₹4,999<span class="k">/month + GST</span></span><span class="k">1,500 orders included · 1% per delivered order</span><span class="chip c-info">Most brands pick this</span></label>
@@ -255,7 +255,28 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     </div>
   </div>
 
-  <h2>7 · Admin › Trials</h2>
+  <h2>7 · Admin › Settings › Trials</h2>
+  <p>The trial length is a setting, not a constant (owner, 8 Nov). It applies to new sign-ups from the moment it is saved; a trial already running keeps the length it started with. For one shop (a partner deal, a festive campaign), Admin can give a different length before the shop opens.</p>
+  <div class="frame">
+    <div class="inner grid2">
+      <div class="card stack">
+        <h3>Trial for new sign-ups</h3>
+        <div><label class="k" for="t-days">Length, from the day the shop opens (7 to 90 days)</label><div class="row"><input id="t-days" class="btn" style="width:90px;justify-content:flex-start" value="30"><span class="k">days</span></div></div>
+        <div><label class="k" for="t-window">Days to open the shop before the clock starts anyway (0 to 30)</label><div class="row"><input id="t-window" class="btn" style="width:90px;justify-content:flex-start" value="15"><span class="k">days · so a trial never runs past 45 days from sign-up</span></div></div>
+        <div><label class="k" for="t-why">Why (kept in the activity log)</label><input id="t-why" class="btn" style="width:100%;justify-content:flex-start" value="Festive campaign: 90 days for sign-ups until 31 Jan"></div>
+        <div class="row"><button class="btn primary" type="button">Save trial length</button><span class="k">Sign-up page and plan cards update at once.</span></div>
+      </div>
+      <div class="card stack">
+        <h3>One shop's trial</h3>
+        <p class="sub">Bandhej House · Growth · not opened yet</p>
+        <div><label class="k" for="t-shop">Length for this shop (7 to 90 days)</label><div class="row"><input id="t-shop" class="btn" style="width:90px;justify-content:flex-start" value="90"><span class="k">days from opening</span></div></div>
+        <div class="row"><button class="btn" type="button">Set for this shop</button></div>
+        <p class="note">Once a shop has opened, its length is fixed; only the one 7-day extension remains.</p>
+      </div>
+    </div>
+  </div>
+
+  <h2>8 · Admin › Trials</h2>
   <p>Frrata's list, ending soonest first. Extend once (7 days, a reason required) or end now; both are audited and Admin-only.</p>
   <div class="tablewrap">
     <table>
