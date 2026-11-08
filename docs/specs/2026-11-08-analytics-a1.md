@@ -1,5 +1,5 @@
 # A·0 + A·1 · Where orders come from, judged on deliveries
-Status: draft · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/5PRMG996toWDUsnAuMTSJt · Approved: —
+Status: active (approved; waits for M2·2 Ship) · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/5PRMG996toWDUsnAuMTSJt · Approved: owner, 2026-11-08: mockup as drawn, orders first (C); outcomes by hand and billable with the guards (A, E); ₹ kept by source in every plan (B); call D answered "Can we work on shipping module first?": **M2·2 Ship is planned and built before A·0/A·1**, so freight and outcomes come from Ship, with the shop's own estimate only for orders it ships itself
 Parent spec: `docs/specs/2026-11-07-analytics.md` (the module, its phases and owner calls 1–6). This spec re-checks
 that one against what changed on 8 Nov and draws the first phase to build.
 
