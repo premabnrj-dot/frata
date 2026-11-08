@@ -13,6 +13,7 @@ import { acceptedBase, storeHost, WIDTHS, urlFor } from '@/domains/media/sizes'
 import { photosAreWebp } from '@/lib/media/uploaded'
 import { refreshShop } from '@/lib/queries/storefront'
 import { asMember } from '@/lib/auth/as-member'
+import { costsVisibleIn } from '@/lib/queries/settings'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { BLOB_READ_WRITE_TOKEN, BLOB_STORE_ID } from '@/lib/env'
 import type { Tx } from '@/lib/db'
@@ -145,12 +146,14 @@ export async function saveProduct(productId: string, version: number, input: Pro
         taken.add(v.sku.toUpperCase())
       }
       const byKey = new Map(p.variants.map((v) => [keyOf(v.values), v]))
+      // The cost of goods only from whoever sees it (seesCosts); otherwise the stored cost stays as it was.
+      const costs = await costsVisibleIn(tx, tenantId, auth.membership.role)
       // SKUs cleared first so two variants can swap SKUs in one save.
       await tx.update(variants).set({ sku: null }).where(and(eq(variants.tenantId, tenantId), eq(variants.productId, productId)))
       for (const [i, values] of plan.wanted.entries()) {
         const v = byKey.get(keyOf(values))!
         const data = {
-          price: v.price, compareAt: v.compareAt, unitCost: v.unitCost, stock: v.stock, sku: v.sku, position: i,
+          price: v.price, compareAt: v.compareAt, ...(costs ? { unitCost: v.unitCost } : {}), stock: v.stock, sku: v.sku, position: i,
           whenOut: v.whenOut, shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays, preorderCap: v.preorderCap,
         }
         const kept = plan.keep.find((k) => keyOf(k.optionValues) === keyOf(values))

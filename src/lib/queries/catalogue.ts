@@ -1,4 +1,6 @@
 import 'server-only'
+import { costsVisibleIn } from './settings'
+import type { MemberRole } from '@/domains/tenancy/roles'
 import { cache } from 'react'
 import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { availability, type WhenOut } from '@/domains/catalogue/availability'
@@ -65,12 +67,14 @@ export async function productHandleById(tenantId: string, id: string): Promise<s
 }
 
 /** Everything the editor needs for one product, in one transaction; null if it is not this shop's. */
-export async function productForEdit(tenantId: string, productId: string) {
+/** The product editor's reads. `role`: the viewer's, for its cost of goods (`seesCosts`: owner 2026-11-08, hidden from
+ * staff and from a partner after handover; not sent at all then). */
+export async function productForEdit(tenantId: string, productId: string, role: MemberRole) {
   return withTenant(tenantId, async (tx) => {
     const [product] = await tx.select().from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId))).limit(1)
     if (!product) return null
     const mine = <T extends { tenantId: unknown; productId: unknown }>(t: T) => and(eq(t.tenantId as never, tenantId), eq(t.productId as never, productId))
-    const [vs, imgs, types, colours, attrs, cols, member] = await Promise.all([
+    const [vs0, imgs, types, colours, attrs, cols, member, costs] = await Promise.all([
       tx.select().from(variants).where(and(mine(variants), isNull(variants.archivedAt))).orderBy(asc(variants.position)),
       tx.select().from(productImages).where(mine(productImages)).orderBy(asc(productImages.position)),
       tx.select({
@@ -82,10 +86,12 @@ export async function productForEdit(tenantId: string, productId: string) {
       tx.select().from(productAttributes).where(mine(productAttributes)),
       tx.select({ id: collections.id, title: collections.title, kind: collections.kind, matchAll: collections.matchAll, rules: collections.rules }).from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)),
       tx.select({ collectionId: collectionProducts.collectionId }).from(collectionProducts).where(mine(collectionProducts)),
+      costsVisibleIn(tx, tenantId, role),
     ])
+    const vs = costs ? vs0 : vs0.map((v) => ({ ...v, unitCost: null }))
     const [shop] = await tx.select({ name: tenants.name, slug: tenants.slug, orderPrefix: shopSettings.orderPrefix, codOn: shopSettings.codOn, returnDays: shopSettings.returnDays, returnKind: shopSettings.returnKind, pickup: shopSettings.pickupPincode })
       .from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
-    return { product, variants: vs, images: imgs, types, colours, attributes: attrs, collections: cols, memberOf: member.map((m) => m.collectionId), shop: shop ?? null }
+    return { product, variants: vs, images: imgs, types, colours, attributes: attrs, collections: cols, memberOf: member.map((m) => m.collectionId), shop: shop ?? null, costs }
   })
 }
 

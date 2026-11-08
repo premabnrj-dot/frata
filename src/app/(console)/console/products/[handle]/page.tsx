@@ -42,12 +42,12 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
   if (!found) notFound()
   if (found.handle !== handle) redirect(`/console/products/${found.handle}`)
 
-  const data = await productForEdit(tenantId, found.id).catch((err) => { console.error('[product]', err instanceof Error ? err.name : err); return undefined })
+  const data = await productForEdit(tenantId, found.id, auth.membership.role).catch((err) => { console.error('[product]', err instanceof Error ? err.name : err); return undefined })
   if (data === undefined) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   if (!data || !data.shop) notFound()
   const { product: p, shop } = data
   const place = shop.pickup ? await placeForPincode(shop.pickup).catch(() => null) : null
-  // The editor gets rupees as text; the cost travels as `cost` (the merchant's own, in their console).
+  // The editor gets rupees as text; the cost travels as `cost` (the merchant's own), and only to whoever seesCosts.
   const cells = Object.fromEntries(data.variants.map((v) => [keyOf(v.optionValues), {
     price: v.price ? rupeesText(v.price) : '', compareAt: rupeesText(v.compareAt), cost: rupeesText(v.unitCost), stock: String(v.stock), sku: v.sku ?? '',
     whenOut: v.whenOut as WhenOut, shipsBy: v.shipsBy ?? '', leadMin: v.leadMinDays ? String(v.leadMinDays) : '', leadMax: v.leadMaxDays ? String(v.leadMaxDays) : '', cap: v.preorderCap === null ? '' : String(v.preorderCap),
@@ -83,7 +83,7 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
       }}
       shop={{
         name: shop.name, address: `${shop.slug}.${SHOP_DOMAIN}`, skuPrefix: orderPrefix(shop.orderPrefix, shop.name),
-        codOn: shop.codOn, returnDays: shop.returnDays, returnKind: shop.returnKind, city: place?.city ?? null,
+        codOn: shop.codOn, returnDays: shop.returnDays, returnKind: shop.returnKind, city: place?.city ?? null, costs: data.costs,
       }}
       allCollections={collections}
       families={COLOUR_FAMILIES}

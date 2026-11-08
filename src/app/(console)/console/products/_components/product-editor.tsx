@@ -35,7 +35,9 @@ export type EditorProduct = {
   handle: string; seoTitle: string; seoDescription: string; tags: string[]
   category: PickedCategory | null; attributes: Record<string, string[]>; collections: string[]; colours: ColourInput[]
 }
-export type EditorShop = { name: string; address: string; skuPrefix: string; codOn: boolean; returnDays: number; returnKind: string; city: string | null }
+export type EditorShop = { name: string; address: string; skuPrefix: string; codOn: boolean; returnDays: number; returnKind: string; city: string | null
+  /** Whether this viewer sees and sets the cost of goods (`seesCosts`): when false, the column is not there and a save keeps the stored cost. */
+  costs: boolean }
 
 type Draft = Omit<EditorProduct, 'id' | 'version' | 'status' | 'publishAt' | 'everLive'>
 const isColour = (name: string) => /^colou?rs?$/i.test(name)
@@ -141,10 +143,10 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
           </Section>
           <Section><h2 className="flex items-center text-section font-semibold">Photos<InfoTip about="photos">The first is the cover: show the piece on a person. A large photo is fine; it is resized before it uploads.</InfoTip></h2><Photos productId={id} tenantId={tenantId} photos={photos} colours={colourOpt?.values ?? []} enabled={blobReady} /></Section>
           <Section>
-            <h2 className="flex items-center text-section font-semibold">Sizes, colours and stock<InfoTip about="sizes, colours and stock">Your cost is never shown to shoppers: it is how Frrata works out profit on each order. When it runs out applies at 0 stock: stop selling, take pre-orders, or make to order. An empty SKU is made for you when you save.</InfoTip></h2>
+            <h2 className="flex items-center text-section font-semibold">Sizes, colours and stock<InfoTip about="sizes, colours and stock">{shop.costs ? 'Your cost is never shown to shoppers: it is how Frrata works out profit on each order. ' : ''}When it runs out applies at 0 stock: stop selling, take pre-orders, or make to order. An empty SKU is made for you when you save.</InfoTip></h2>
             <OptionsEditor options={d.options} onChange={(options) => set({ options })} error={errors.options} />
             {colourOpt && colourOpt.values.length > 0 && <ColoursPanel values={colourOpt.values} colours={d.colours} onChange={(colours) => set({ colours })} photos={photos} families={families} />}
-            {combos.length > 0 && <VariantGrid options={opts} cells={d.cells} errors={errors} autoSku={(values) => skuFor(shop.skuPrefix, d.handle || defaults.handle, values)}
+            {combos.length > 0 && <VariantGrid options={opts} cells={d.cells} errors={errors} costs={shop.costs} autoSku={(values) => skuFor(shop.skuPrefix, d.handle || defaults.handle, values)}
               onChange={(k, patch) => { setD((x) => ({ ...x, cells: { ...x.cells, [k]: { ...(x.cells[k] ?? EMPTY_CELL), ...patch } } })); setMsg(null) }} />}
           </Section>
           <Section>
