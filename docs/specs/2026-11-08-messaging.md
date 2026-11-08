@@ -1,5 +1,5 @@
 # Email and notifications: Frrata → merchants and partners; merchant → shoppers
-Status: draft (mockup for the owner) · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/TwHtjtuFPzRDv4uLqLB9xQ (`docs/mockups/2026-11-08-messaging.html`) · Approved: —
+Status: parked (owner, 2026-11-08: "keep it parked" until shop addresses are planned; frrata.shop bought for shop subdomains — see `docs/specs/2026-11-08-shop-addresses.md`) · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/TwHtjtuFPzRDv4uLqLB9xQ (`docs/mockups/2026-11-08-messaging.html`) · Approved: —
 Research: `docs/research/2026-11-08-email-and-notifications.md` (four agents, facts checked 2026-11-08).
 Owner, 2026-11-08: **emails are branded — merchant to customer in the merchant's brand; Frrata to merchants and
 partners in Frrata's brand.** Checkout may ask for an email; **no consent checkbox.** **Amazon SES from the start**
