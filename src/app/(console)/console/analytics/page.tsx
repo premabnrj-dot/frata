@@ -4,8 +4,10 @@ import { ViewTabs } from '@/components/ui/view-tabs'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { dayMonthIN } from '@/lib/format-date'
 import { SHOP_DOMAIN } from '@/lib/public-env'
-import { PERIODS, analyticsFor, isPeriod, linkTargets, type Period } from '@/lib/queries/analytics'
-import { shopWithSettings } from '@/lib/queries/settings'
+import { PRESETS, type Preset } from '@/domains/analytics/link'
+import { classifySource } from '@/domains/analytics/source'
+import { PERIODS, analyticsPage, isPeriod, type Period } from '@/lib/queries/analytics'
+import { readFailed } from './_components/read-failed'
 import { MakeLink } from './_components/make-link'
 import { Pincodes, Sources, Strip, Summary } from './_components/parts'
 
@@ -27,13 +29,14 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const period: Period = isPeriod(asked) ? asked : 30
   const now = new Date()
   const { tenantId, role } = auth.membership
-  const [a, targets, shop] = await Promise.all([
-    analyticsFor(tenantId, role, period, now), linkTargets(tenantId), shopWithSettings(tenantId),
-  ]).catch((err) => { console.error('[analytics]', err instanceof Error ? err.name : 'error'); return [null, null, null] as const })
-  if (!a || !targets || !shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  // One snapshot transaction: the numbers, Make a link's targets and the shop's address (speed review A1·7).
+  const page = await analyticsPage(tenantId, role, period, now).catch((err: unknown) => readFailed('[analytics]', err))
+  if ('failed' in page) return page.failed
+  const { a, targets, shop } = page
 
-  const open = shop.settings.publishedAt !== null
-  const make = <MakeLink origin={`https://${shop.slug}.${SHOP_DOMAIN}`} open={open} products={targets.products} collections={targets.collections} />
+  // What each preset's orders show as, said by the server (the classifier stays out of the browser bundle).
+  const showsAs = Object.fromEntries((Object.keys(PRESETS) as Preset[]).map((k) => [k, classifySource({ utm_source: PRESETS[k].source, utm_medium: PRESETS[k].medium }, null).label])) as Record<Preset, string>
+  const make = <MakeLink origin={`https://${shop.slug}.${SHOP_DOMAIN}`} open={shop.open && !!shop.slug} products={targets.products} collections={targets.collections} showsAs={showsAs} />
   const dayBefore = new Date(a.start.getTime() - 86_400_000)
   const tabs = <ViewTabs label="Period" tabs={PERIODS.map((p) => ({ href: `/console/analytics?period=${p}`, label: `${p} days`, current: p === period }))} />
   const meta = `${dayMonthIN(a.start)} – today (so far), against ${dayMonthIN(a.prevStart)} – ${dayMonthIN(dayBefore)}. Orders by the day they were placed (IST); today's numbers still change.`

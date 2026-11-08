@@ -13,6 +13,8 @@ import { attributionInputsSql } from '@/lib/db/attribution-sql'
 import { creatorCodeJoinSql } from '@/lib/db/discount-predicates'
 import { currentMethodSql, feeBucketSql, holdingSql, stageSql, standingSql } from '@/lib/db/order-predicates'
 import { withTenant } from '@/lib/db/tenant'
+import { shopSettings, tenants } from '@/lib/db/schema'
+import { orderPrefix } from '@/domains/signup/slug'
 import { costsVisibleIn, planHistoryIn, shipCostsIn } from './settings'
 
 // =============================================================================
@@ -94,24 +96,21 @@ async function setUp(tx: Tx, tenantId: string, role: MemberRole) {
   return { costs, history, est: estimateOf(shipCosts) }
 }
 
-/** The page's numbers for `period` IST days (today included) against the period before. */
-export async function analyticsFor(tenantId: string, role: MemberRole, period: Period, now = new Date()): Promise<Analytics> {
-  return withTenant(tenantId, (tx) => analyticsIn(tx, tenantId, role, period, now), { snapshot: true })
-}
-
-/** analyticsFor inside the caller's tenant transaction (the int test reads rows it will roll back). */
+/** The page's numbers for `period` IST days (today included) against the period before, inside the caller's tenant
+ * transaction (analyticsPage; the int test reads rows it will roll back). */
 export async function analyticsIn(tx: Tx, tenantId: string, role: MemberRole, period: Period, now: Date): Promise<Analytics> {
   return (await windowIn(tx, tenantId, role, period, now)).analytics
 }
 
 /** The page's numbers and the grouped rows they came from (a source's page matches its orders on those rows' inputs). */
-async function windowIn(tx: Tx, tenantId: string, role: MemberRole, period: Period, now: Date): Promise<{ analytics: Analytics; rows: Row[] }> {
+async function windowIn(tx: Tx, tenantId: string, role: MemberRole, period: Period, now: Date, opts: { pincodes: boolean } = { pincodes: true }): Promise<{ analytics: Analytics; rows: Row[] }> {
   {
     const { costs, history, est } = await setUp(tx, tenantId, role)
     const start = istDayStart(now, -(period - 1)), prevStart = istDayStart(now, -(2 * period - 1))
     const rows = await tx.execute<Row>(windowSql(tenantId, now, start, prevStart, history.map((h) => h.startsAt)))
     // Returns by pincode, counts only (₹ by pincode is True Profit's): the covering partial index makes it index-only.
-    const pins = await tx.execute<{ pincode: string; rto: number; outcomes: number }>(sql`
+    // (Not on a source's page, which never shows them: speed review A1·7.)
+    const pins = !opts.pincodes ? [] : await tx.execute<{ pincode: string; rto: number; outcomes: number }>(sql`
       select o.pincode, (count(*) filter (where o.rto_initiated_at is not null))::int rto, count(*)::int outcomes
         from ${orders} o
        where o.tenant_id = ${tenantId} and o.placed_at >= ${start.toISOString()}::timestamptz and o.cancelled_at is null
@@ -168,13 +167,34 @@ async function windowIn(tx: Tx, tenantId: string, role: MemberRole, period: Peri
  */
 export async function sourcePage(tenantId: string, role: MemberRole, period: Period, slug: string, now = new Date()) {
   if (!/^[a-z0-9-]{1,64}$/.test(slug)) return null
-  return withTenant(tenantId, (tx) => sourcePageIn(tx, tenantId, role, period, slug, now), { snapshot: true })
+  // One transaction for the page (P8): its numbers, its orders and the shop's order prefix.
+  return withTenant(tenantId, async (tx) => {
+    const page = await sourcePageIn(tx, tenantId, role, period, slug, now)
+    return page ? { ...page, prefix: (await shopFactsIn(tx, tenantId)).prefix } : null
+  }, { snapshot: true })
+}
+
+/** The shop facts Analytics' pages use: its address segment, whether it is open, its order prefix (three columns). */
+async function shopFactsIn(tx: Tx, tenantId: string) {
+  const [r] = await tx.select({ slug: tenants.slug, name: tenants.name, prefix: shopSettings.orderPrefix, publishedAt: shopSettings.publishedAt })
+    .from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId)).limit(1)
+  return { slug: r?.slug ?? null, open: !!r?.publishedAt, prefix: orderPrefix(r?.prefix ?? '', r?.name ?? '') }
+}
+
+/** The Analytics page in ONE snapshot transaction (speed review A1·7, P8): the numbers, Make a link's targets and the
+ * shop's address, instead of three transactions on three connections. */
+export async function analyticsPage(tenantId: string, role: MemberRole, period: Period, now = new Date()) {
+  return withTenant(tenantId, async (tx) => {
+    const a = await analyticsIn(tx, tenantId, role, period, now)
+    const [targets, shop] = await Promise.all([linkTargetsIn(tx, tenantId), shopFactsIn(tx, tenantId)])
+    return { a, targets, shop }
+  }, { snapshot: true })
 }
 
 /** sourcePage inside the caller's tenant transaction: the list's numbers and the source's orders in one snapshot. */
 export async function sourcePageIn(tx: Tx, tenantId: string, role: MemberRole, period: Period, slug: string, now: Date) {
   if (!/^[a-z0-9-]{1,64}$/.test(slug)) return null
-  const { analytics: all, rows } = await windowIn(tx, tenantId, role, period, now)
+  const { analytics: all, rows } = await windowIn(tx, tenantId, role, period, now, { pincodes: false })
   const stat = all.sources.find((s) => s.slug === slug)
   if (!stat) return null
   {
@@ -192,28 +212,30 @@ export async function sourcePageIn(tx: Tx, tenantId: string, role: MemberRole, p
     // chr(1), which no stored value holds (cleanValue strips control characters), so the join stays an equality.
     const keys = JSON.stringify(mine.map((t) => ({ us: t.us, um: t.um, rh: t.rh, gads: t.gads, srs: t.srs, fb: t.fb, cc: t.cc })))
     const k = (col: SQL) => sql`coalesce(${col}, chr(1))`
+    // The window's orders with their creator first, fenced (offset 0), then matched: unfenced, the planner expected one
+    // tuple and probed order_discounts once per order (speed review A1·7: 415 -> 161 ms at 10x).
     const list = await tx.execute<{ number: number; placed_at: Date | string; total: string; stage: Stage; campaign: string | null }>(sql`
-      select o.number, o.placed_at, o.total, ${stageSql('o')} stage, ${i.uc} campaign
-        from ${orders} o
-        ${creatorCodeJoinSql(now)}
-        join jsonb_to_recordset(${keys}::jsonb) m(us text, um text, rh text, gads boolean, srs boolean, fb boolean, cc text)
-          on ${k(i.us)} = ${k(sql`m.us`)} and ${k(i.um)} = ${k(sql`m.um`)} and ${k(i.rh)} = ${k(sql`m.rh`)} and ${k(sql`dc.code`)} = ${k(sql`m.cc`)}
-         and ${i.gads} = m.gads and ${i.srs} = m.srs and ${i.fb} = m.fb
-       where o.tenant_id = ${tenantId} and o.placed_at >= ${start.toISOString()}::timestamptz and (${standingSql('o')} or ${holdingSql(now, 'o')})
-       order by o.placed_at desc limit 50`)
+      select x.number, x.placed_at, x.total, x.stage, x.campaign from (
+        select o.number, o.placed_at, o.total, ${stageSql('o')} stage, ${i.uc} campaign,
+               ${i.us} us, ${i.um} um, ${i.rh} rh, ${i.gads} gads, ${i.srs} srs, ${i.fb} fb, dc.code cc
+          from ${orders} o ${creatorCodeJoinSql(now)}
+         where o.tenant_id = ${tenantId} and o.placed_at >= ${start.toISOString()}::timestamptz and (${standingSql('o')} or ${holdingSql(now, 'o')})
+        offset 0) x
+      join jsonb_to_recordset(${keys}::jsonb) m(us text, um text, rh text, gads boolean, srs boolean, fb boolean, cc text)
+        on ${k(sql`x.us`)} = ${k(sql`m.us`)} and ${k(sql`x.um`)} = ${k(sql`m.um`)} and ${k(sql`x.rh`)} = ${k(sql`m.rh`)} and ${k(sql`x.cc`)} = ${k(sql`m.cc`)}
+       and x.gads = m.gads and x.srs = m.srs and x.fb = m.fb
+      order by x.placed_at desc limit 50`)
     return { stat, orders: list.map((o) => ({ number: o.number, placedAt: new Date(o.placed_at), total: Number(o.total), stage: o.stage, campaign: o.campaign })) }
   }
 }
 
 /** What Make a link can open: the shop's live products and its collections, by address (plan review 13: the dialog
  * offers only these, from the same shop; it never takes a typed host or path). */
-export async function linkTargets(tenantId: string) {
-  return withTenant(tenantId, async (tx) => {
-    const [ps, cs] = await Promise.all([
-      tx.select({ handle: products.handle, title: products.title }).from(products)
-        .where(and(eq(products.tenantId, tenantId), eq(products.status, 'active'), isNull(products.archivedAt))).orderBy(asc(products.title)).limit(200),
-      tx.select({ handle: collections.handle, title: collections.title }).from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)).limit(100),
-    ])
-    return { products: ps, collections: cs }
-  })
+export async function linkTargetsIn(tx: Tx, tenantId: string) {
+  const [ps, cs] = await Promise.all([
+    tx.select({ handle: products.handle, title: products.title }).from(products)
+      .where(and(eq(products.tenantId, tenantId), eq(products.status, 'active'), isNull(products.archivedAt))).orderBy(asc(products.title)).limit(200),
+    tx.select({ handle: collections.handle, title: collections.title }).from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)).limit(100),
+  ])
+  return { products: ps, collections: cs }
 }

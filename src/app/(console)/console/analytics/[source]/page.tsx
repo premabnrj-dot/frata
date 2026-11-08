@@ -9,9 +9,9 @@ import { Panel } from '@/components/ui/panel'
 import { paise } from '@/domains/money/paise'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { dayMonthIN } from '@/lib/format-date'
-import { orderPrefixFor } from '@/lib/queries/orders'
 import { isPeriod, sourcePage, type Period, type Stage } from '@/lib/queries/analytics'
 import { shareOf } from '../_components/parts'
+import { readFailed } from '../_components/read-failed'
 
 export const metadata = { title: 'A source · Analytics' }
 export const dynamic = 'force-dynamic'
@@ -33,11 +33,11 @@ export default async function SourcePage({ params, searchParams }: { params: Pro
   const asked = Number((await searchParams).period ?? 30)
   const period: Period = isPeriod(asked) ? asked : 30
   const { tenantId, role } = auth.membership
-  const [page, prefix] = await Promise.all([sourcePage(tenantId, role, period, slug), orderPrefixFor(tenantId)])
-    .catch((err) => { console.error('[analytics source]', err instanceof Error ? err.name : 'error'); return [undefined, undefined] as const })
-  if (page === undefined) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  // One snapshot transaction: the source's numbers, its orders and the order prefix (speed review A1·7).
+  const page = await sourcePage(tenantId, role, period, slug).catch((err: unknown) => readFailed('[analytics source]', err))
+  if (page && 'failed' in page) return page.failed
   if (!page) notFound()
-  const { stat, orders } = page
+  const { stat, orders, prefix } = page
   const t = stat.cur, out = t.delivered + t.rto + t.lost
   const back = { href: `/console/analytics?period=${period}`, label: 'Analytics' }
   return (

@@ -4,8 +4,7 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
-import { PRESETS, shopLink, type Preset } from '@/domains/analytics/link'
-import { classifySource } from '@/domains/analytics/source'
+import { shopLink, type Preset } from '@/domains/analytics/link'
 
 // =============================================================================
 // MAKE A LINK (A·1, the page's one primary action; mockup § Make a link): where it will be shared, which page opens,
@@ -21,7 +20,7 @@ const CHOICE_LABEL: Record<Preset | 'creator', string> = {
   meta_ad: 'Instagram or Facebook ad', google_ad: 'Google ad', creator: 'A creator',
 }
 
-export function MakeLink({ origin, open, products, collections }: { origin: string; open: boolean; products: Target[]; collections: Target[] }) {
+export function MakeLink({ origin, open, products, collections, showsAs: shows }: { origin: string; open: boolean; products: Target[]; collections: Target[]; showsAs: Record<Preset, string> }) {
   const [shown, setShown] = useState(false)
   const [choice, setChoice] = useState<Preset | 'creator'>('instagram_bio')
   const [page, setPage] = useState('/')
@@ -31,7 +30,7 @@ export function MakeLink({ origin, open, products, collections }: { origin: stri
     if (choice === 'creator') return null
     try { return shopLink(origin, page, { preset: choice, campaign: name }) } catch { return null }
   }, [origin, page, choice, name])
-  const showsAs = choice === 'creator' ? null : classifySource({ utm_source: PRESETS[choice].source, utm_medium: PRESETS[choice].medium }, null).label
+  const showsAs = choice === 'creator' ? null : shows[choice]
 
   async function copy() {
     if (!link) return
@@ -43,7 +42,8 @@ export function MakeLink({ origin, open, products, collections }: { origin: stri
       <Button onClick={() => { setShown(true); setCopied(null) }}>Make a link</Button>
       <Dialog open={shown} onClose={() => setShown(false)} title="Make a link"
         actions={<Button variant="secondary" data-autofocus onClick={() => setShown(false)}>Done</Button>}>
-        {!open ? (
+        {/* The body only while open: its page list is a third of the page's HTML otherwise (speed review A1·7). */}
+        {!shown ? null : !open ? (
           <p className="text-sm">Your shop opens to shoppers first; then a link brings them to it.</p>
         ) : (
           <div className="grid gap-4">
