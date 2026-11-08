@@ -26,3 +26,10 @@ export function billableDelivered(o: { shippedAt: Date | null; deliveredAt: Date
 
 /** An outcome (Delivered, Came back, Lost) can be undone until the IST month it was marked in is over (it is billed then). */
 export const outcomeUndoOpen = (markedAt: Date, now: Date) => monthStartIST(markedAt).getTime() === monthStartIST(now).getTime()
+
+/**
+ * Whether Shipped can be undone: within its IST month, and never once the order counts as delivered for the fee
+ * (30 days shipped): un-shipping and shipping again would restart that clock (unit-economics review 2026-11-08).
+ */
+export const shippedUndoOpen = (shippedAt: Date, now: Date) =>
+  outcomeUndoOpen(shippedAt, now) && now.getTime() - shippedAt.getTime() < ASSUME_DELIVERED_DAYS * DAY

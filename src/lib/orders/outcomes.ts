@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, desc, eq, gt, isNotNull, isNull, notInArray } from 'drizzle-orm'
-import { outcomeUndoOpen } from '@/domains/orders/outcomes'
+import { outcomeUndoOpen, shippedUndoOpen } from '@/domains/orders/outcomes'
 import { applies, ROLES, type OrderAction } from '@/domains/orders/work'
 import type { MemberRole } from '@/domains/tenancy/roles'
 import type { Tx } from '@/lib/db'
@@ -76,8 +76,8 @@ export const isOutcomeEvent = (kind: string) => kind in UNDOES
 
 /**
  * Undo Shipped, Delivered, Came back or Lost: only by a role that may do the action undone, only while nothing
- * happened since (notes, edits and prints aside), an outcome only within the IST month it was marked in (it is
- * billed then), and never a return whose stock was put back (the stock is the merchant's to adjust on Products).
+ * happened since (notes, edits and prints aside), each only within the IST month it was marked in (it is billed
+ * then; Shipped also never after 30 days, shippedUndoOpen), and never a return whose stock was put back (the stock is the merchant's to adjust on Products).
  * A compare-and-set on the moment the event wrote. Undoing Shipped ends its `self` shipment, so it can ship again.
  */
 export async function undoOutcome(tx: Tx, tenantId: string, actor: Actor & { role: MemberRole }, eventId: string, now = new Date()): Promise<Done> {
@@ -87,7 +87,7 @@ export async function undoOutcome(tx: Tx, tenantId: string, actor: Actor & { rol
   if (!ROLES[UNDOES[e.kind]!].includes(actor.role)) return { ok: false, error: 'Only an owner or admin can undo that.' }
   const [already] = await tx.select({ id: orderEvents.id }).from(orderEvents).where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.undoes, e.id)))
   if (already) return { ok: false, error: 'Already undone.' }
-  if (e.kind !== 'shipped' && !outcomeUndoOpen(e.at, now)) return { ok: false, error: 'That month is closed: it cannot be undone now.' }
+  if (!(e.kind === 'shipped' ? shippedUndoOpen(e.at, now) : outcomeUndoOpen(e.at, now))) return { ok: false, error: 'That month is closed: it cannot be undone now.' }
   if (e.kind === 'rto' && e.reason === 'restocked') return { ok: false, error: 'Its stock was put back: undo is not possible. Adjust the stock on Products if you need to.' }
   await current(tx, tenantId, e.orderId, now) // lock first, so an action committing meanwhile is seen
   const [later] = await tx.select({ id: orderEvents.id }).from(orderEvents)

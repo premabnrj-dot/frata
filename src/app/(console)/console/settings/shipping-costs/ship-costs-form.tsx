@@ -14,7 +14,7 @@ type Key = 'delivery' | 'ret' | 'cod'
 const FIELDS: { key: Key; label: string; hint: string; suggested: string }[] = [
   { key: 'delivery', label: 'A delivery', hint: 'Courier charge to deliver one parcel', suggested: '70' },
   { key: 'ret', label: 'A return', hint: 'Charged when a parcel comes back undelivered', suggested: '70' },
-  { key: 'cod', label: 'A COD fee', hint: 'The courier’s fee for collecting cash on a delivered COD order', suggested: '36' },
+  { key: 'cod', label: 'A COD fee', hint: 'The courier’s fee for collecting cash on a delivered COD order: about ₹50, or 2.5% of the order if higher', suggested: '50' },
 ]
 
 export function ShipCostsForm({ current, confirmedOn }: { current: Record<Key, string | null>; confirmedOn: string | null }) {

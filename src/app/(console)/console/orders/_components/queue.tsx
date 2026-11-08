@@ -223,6 +223,7 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
   )
 }
 
-export function Queue({ rows, label }: { rows: QueueRow[]; label: string }) {
-  return <Toaster><Rows rows={rows} label={label} /></Toaster>
+/** The queue, or `empty` when the tab has no rows: either way inside one Toaster, so a toast's Undo survives the last row leaving. */
+export function Queue({ rows, label, empty }: { rows: QueueRow[]; label: string; empty?: React.ReactNode }) {
+  return <Toaster>{rows.length ? <Rows rows={rows} label={label} /> : empty}</Toaster>
 }

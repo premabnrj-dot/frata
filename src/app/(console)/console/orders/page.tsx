@@ -87,13 +87,11 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
       <PageHeader title="Orders" />
       <ViewTabs label="Order views" tabs={ordered.map((t) => ({ href: href({ tab: t.tab, q: '' }), label: t.label, count: counts[t.tab], current: t.tab === tab, apart: t.tab === 'not_paid' }))} />
       <SearchField label="Search orders" placeholder="Search number, name or phone" value={q} clearHref={href({ q: '' })} hidden={tab !== 'to_confirm' ? { tab } : undefined} />
-      {rows.length === 0 ? (
+      {/* Always the Queue, even empty: its toast (and Undo) must outlive the last row leaving the tab (e2e 49). */}
+      <Queue rows={rows} label={`Orders · ${info.label}`} empty={
         <Panel title={q ? 'No order matches that search' : info.empty.title}>
           {q ? <>Try the order number, the customer&apos;s name or the last digits of their phone.</> : info.empty.body ?? null}
-        </Panel>
-      ) : (
-        <Queue rows={rows} label={`Orders · ${info.label}`} />
-      )}
+        </Panel>} />
       {rows.length > 0 ? (
         <Pager first={(shownPage - 1) * ORDERS_PAGE + 1} shown={rows.length} total={total} suffix="newest first" prevLabel="Newer" nextLabel="Older"
           prevHref={shownPage > 1 ? href({ page: shownPage - 1 }) : undefined} nextHref={shownPage < pages ? href({ page: shownPage + 1 }) : undefined} />

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { freightOf } from '../freight'
-import { billableDelivered, outcomeUndoOpen } from '../outcomes'
+import { billableDelivered, outcomeUndoOpen, shippedUndoOpen } from '../outcomes'
 
 const none = { forwardShipping: null, rtoShipping: null, courierCodFee: null }
 const est = { delivery: 7000, ret: 7000, codFee: 3600 }
@@ -47,5 +47,11 @@ describe('outcomeUndoOpen', () => {
   it('until the IST month it was marked in ends', () => {
     expect(outcomeUndoOpen(new Date('2026-11-30T18:00:00Z'), new Date('2026-11-30T18:20:00Z'))).toBe(true) // 23:30 → 23:50 IST, 30 Nov
     expect(outcomeUndoOpen(new Date('2026-11-30T18:00:00Z'), new Date('2026-11-30T18:31:00Z'))).toBe(false) // 00:01 IST, 1 Dec
+  })
+  it('Shipped: within its month, and never once it counts as delivered (30 days), so the billing clock never restarts', () => {
+    const shipped = new Date('2026-12-01T00:00:00+05:30')
+    expect(shippedUndoOpen(shipped, new Date('2026-12-20T10:00:00+05:30'))).toBe(true)
+    expect(shippedUndoOpen(shipped, new Date('2026-12-31T00:00:00+05:30'))).toBe(false) // 30 days, still December
+    expect(shippedUndoOpen(new Date('2026-11-30T23:00:00+05:30'), new Date('2026-12-01T09:00:00+05:30'))).toBe(false) // next month
   })
 })
