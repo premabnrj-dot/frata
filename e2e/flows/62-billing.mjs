@@ -160,6 +160,21 @@ export default {
         await riya.goto(CONSOLE + '/console/settings/billing'); await riya.getByRole('button', { name: 'UPI Autopay' }).waitFor()
         await riya.screenshot({ path: t.out('autopay-off'), fullPage: true })
       })
+      await t.step('B4: the owner upgrades to Growth now (the difference by days, in words); a switch back waits for the 1st, and Keep my plan cancels it', async () => {
+        await riya.goto(CONSOLE + '/console/settings/billing')
+        await riya.getByRole('button', { name: 'Upgrade to Growth' }).click()
+        await riya.getByRole('dialog').getByText(/is added to your next bill/).waitFor()
+        await riya.getByRole('button', { name: 'Upgrade now' }).click()
+        await riya.getByText('You are on Growth now.').waitFor()
+        await riya.locator('strong', { hasText: 'Growth' }).first().waitFor()
+        await riya.getByRole('button', { name: /^Switch to Launch on / }).click()
+        await riya.getByRole('button', { name: 'Switch on the 1st' }).click()
+        await riya.getByText(/^Moving to/).waitFor()
+        await riya.screenshot({ path: t.out('plan-change'), fullPage: true })
+        await riya.getByRole('button', { name: 'Keep my plan' }).click()
+        await riya.getByText('The change is cancelled.').waitFor()
+        await until(async () => (await db`select count(*)::int n from tenant_plans where tenant_id = ${KESAR} and starts_at > now()`)[0].n === 0)
+      })
     } finally {
       // Issued invoices, payments and credit notes are final (triggers): the test's own are removed with triggers off.
       await db.begin(async (x) => {
@@ -173,6 +188,7 @@ export default {
         await x`delete from frrata_invoice_lines where tenant_id = ${KESAR}`
         await x`delete from frrata_invoice_fees where tenant_id = ${KESAR}`
       })
+      await db`delete from tenant_plans where tenant_id = ${KESAR} and reason = 'Changed by the shop'`
       await db`delete from billing_accounts where tenant_id = ${KESAR}`
       await db`delete from audit_events where tenant_id = ${KESAR} and action = 'billing.details'`
       await db`delete from orders where tenant_id = ${KESAR} and number = ${N}`

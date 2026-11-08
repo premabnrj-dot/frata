@@ -6,9 +6,13 @@ import { STATE_OPTIONS } from '@/domains/billing/details'
 import { STATE_LABEL } from '@/domains/billing/status'
 import { paise } from '@/domains/money/paise'
 import { usage } from '@/domains/plans/entitlements'
+import { upgradeDifference } from '@/domains/billing/bill'
+import { monthStartIST, nextMonthStartIST } from '@/domains/time/month'
+import { formatInr, formatPercent } from '@/lib/format'
+import { publicPlans } from '@/lib/db/platform'
+import { PlanChoice } from './plan-choice'
 import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { dayIN, dayMonthLongIN, monthYearIN } from '@/lib/format-date'
-import { formatPercent } from '@/lib/format'
 import { errName } from '@/lib/log'
 import { billingOverview, payingFor } from '@/lib/queries/billing'
 import { billingGatewayIsTest, isBillingGatewayConfigured } from '@/lib/billing/gateway'
@@ -33,6 +37,7 @@ export default async function PlanAndBillingPage() {
     orderPrefixFor(auth.membership.tenantId),
     payingFor(auth.membership, now).catch(() => null),
   ])
+  const plans = await publicPlans().catch(() => [] as Awaited<ReturnType<typeof publicPlans>>)
   // Autopay and Pay now: only with Frrata's gateway connected, never on a Frrata support visit (finding 10).
   const canPay = isBillingGatewayConfigured() && !auth.membership.supportSessionId
   const METHOD: Record<string, string> = { upi: 'UPI Autopay', card: 'Card', emandate: 'Bank mandate (eNACH)' }
@@ -100,7 +105,15 @@ export default async function PlanAndBillingPage() {
           <>
             <p className="text-sm"><strong>{o.plan.name}</strong> · <Money paise={paise(o.plan.monthlyPrice)} /> a month · {o.plan.includedOrders.toLocaleString('en-IN')} orders included · {formatPercent(o.plan.feeBps / 10_000, o.plan.feeBps % 100 === 0 ? 0 : 1)} of each delivered order&apos;s value (before GST and delivery)</p>
             {o.plan.trialEndsAt && o.plan.trialEndsAt > now && <p className="text-sm text-ok-text">Free trial until {dayIN(o.plan.trialEndsAt)}: the plan costs nothing until then.</p>}
-            <p className="text-xs text-muted-foreground">To change your plan, message Frrata. Changing it yourself comes later.</p>
+            {o.plan.custom || auth.membership.supportSessionId || plans.length === 0
+              ? <p className="text-xs text-muted-foreground">{o.plan.custom ? 'Your price was agreed with Frrata. To change your plan, message Frrata.' : auth.membership.supportSessionId ? 'A Frrata support visit cannot change the shop’s plan.' : 'Plans could not be loaded. Try again in a minute.'}</p>
+              : <PlanChoice firstOfNext={dayMonthLongIN(nextMonthStartIST(now))}
+                  scheduled={o.scheduled ? { name: o.scheduled.name, on: dayMonthLongIN(o.scheduled.startsAt), byShop: o.scheduled.byShop } : null}
+                  options={plans.filter((p) => p.code !== o.plan!.code).map((p) => ({
+                    code: p.code, name: p.name, price: formatInr(paise(p.monthlyPrice)), included: p.includedOrders.toLocaleString('en-IN'),
+                    fee: formatPercent(p.feeBps / 10_000, p.feeBps % 100 === 0 ? 0 : 1), upgrade: p.monthlyPrice > o.plan!.monthlyPrice,
+                    difference: formatInr(upgradeDifference(o.plan!.monthlyPrice, p.monthlyPrice, now, monthStartIST(now), nextMonthStartIST(now), o.plan!.trialEndsAt)),
+                  }))} />}
           </>
         ) : <p className="text-sm text-muted-foreground">No plan yet.</p>}
       </Section>

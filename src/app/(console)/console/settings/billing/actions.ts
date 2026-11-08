@@ -148,3 +148,39 @@ export async function completePayNow(input: Checkout): Promise<{ ok: true } | { 
     return { ok: false, error: 'We could not confirm the payment yet. If money left your account, it will show here soon.' }
   }
 }
+
+// ── Billing B4: the shop changes its own plan (owners and admins; never a support visit). Upgrade now, the difference
+// charged by days on the next invoice; downgrade on the 1st. The definer is bound to this shop and refuses a price agreed
+// with Frrata or a change Frrata scheduled. ──
+const PlanCode = z.enum(['launch', 'growth', 'scale'])
+export async function changePlan(code: string): Promise<{ ok: true; startsAt: string; upgrade: boolean } | { ok: false; error: string }> {
+  const me = await requireMember(CAN_MANAGE)
+  if (!me.ok) return { ok: false, error: me.message }
+  if (me.membership.supportSessionId) return { ok: false, error: 'A Frrata support visit cannot change the shop’s plan.' }
+  const p = PlanCode.safeParse(code)
+  if (!p.success) return { ok: false, error: 'Choose a plan.' }
+  try {
+    const r = await asMember(CAN_MANAGE, { action: 'billing.plan.change', target: p.data }, async (tx, auth) => {
+      const [x] = await tx.execute<{ starts_at: string; upgrade: boolean }>(sql`select * from app_change_plan(${p.data}, ${auth.userId}::uuid)`)
+      return x!
+    })
+    if (!r.ok) return { ok: false, error: r.error }
+    revalidatePath('/console', 'layout')
+    return { ok: true, startsAt: new Date(r.value.starts_at).toISOString(), upgrade: r.value.upgrade }
+  } catch (e) {
+    const m = /plan: (.{1,120})/.exec(e instanceof Error ? (e.cause instanceof Error ? e.cause.message : e.message) : '')
+    console.error('[billing.plan.change]', errName(e))
+    const t = m?.[1]
+    return { ok: false, error: t ? `${t.charAt(0).toUpperCase()}${t.slice(1)}.` : 'We could not change the plan. Nothing was changed.' }
+  }
+}
+
+export async function cancelPlanChange(): Promise<{ ok: true } | { ok: false; error: string }> {
+  const me = await requireMember(CAN_MANAGE)
+  if (!me.ok) return { ok: false, error: me.message }
+  if (me.membership.supportSessionId) return { ok: false, error: 'A Frrata support visit cannot change the shop’s plan.' }
+  const r = await asMember(CAN_MANAGE, { action: 'billing.plan.cancel' }, async (tx) => { await tx.execute(sql`select app_cancel_plan_change()`) })
+  if (!r.ok) return { ok: false, error: r.error }
+  revalidatePath('/console', 'layout')
+  return { ok: true }
+}

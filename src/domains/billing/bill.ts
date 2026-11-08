@@ -47,6 +47,11 @@ export type BillInput = {
   carry: number
   /** Whether last month's bill was itself rolled (a bill rolls at most once in a row). */
   rolledLastMonth: boolean
+  /**
+   * What last month's invoice charged in advance for its plan (its plan lines for that month), or null when there was
+   * no invoice for it. With it, an upgrade during last month is charged by its days here (billing B4).
+   */
+  prevPlanBilled?: number | null
   /** Frrata's GSTIN and the shop's state code decide the heads (supplyKind); no GSTIN yet means IGST (test mode). */
   frrataGstin: string | null
   shopState: string | null
@@ -75,6 +80,16 @@ function byDays(price: number, from: Date, to: Date, monthStart: Date, nextMonth
   return Math.round((price * n) / total) as Paise
 }
 
+/**
+ * What an upgrade made now adds to the next bill, before GST (billing B4): the new price less the old, for the days
+ * left this month — the same by-days rule computeBill uses. Free while a trial still covers those days.
+ */
+export function upgradeDifference(oldPrice: number, newPrice: number, now: Date, monthStart: Date, nextMonthStart: Date, trialEndsAt: Date | null = null): Paise {
+  const from = trialEndsAt && trialEndsAt > now ? trialEndsAt : now
+  if (from >= nextMonthStart || newPrice <= oldPrice) return 0 as Paise
+  return byDays(newPrice - oldPrice, from, nextMonthStart, monthStart, nextMonthStart)
+}
+
 export function computeBill(i: BillInput): Bill {
   const lines: BillLine[] = []
   // The plan for M, in advance: each plan row in force during M, by its days; a trial is free for its days.
@@ -88,6 +103,22 @@ export function computeBill(i: BillInput): Bill {
     const full = monthlyPrice({ ...p, trialEndsAt: null }, from)
     const price = byDays(full, paidFrom, to, i.monthStart, i.nextMonthStart)
     if (price > 0) lines.push({ kind: 'plan', description: `${p.planVersion.name ?? p.planVersion.planCode} plan`, periodStart: paidFrom, periodEnd: to, quantity: 1, rateBps: null, taxable: price })
+  }
+  // B4: a plan changed during M−1 (an upgrade starts at once): what M−1's plan cost by its days, less what M−1's invoice
+  // already charged in advance — charged here when more. Never a refund (a downgrade starts on the 1st).
+  if (i.prevPlanBilled != null) {
+    const prevStarts = starts.filter((p, k) => p.startsAt < i.monthStart && (starts[k + 1]?.startsAt ?? i.monthStart) > i.prevMonthStart)
+    let owed = 0
+    for (const p of prevStarts) {
+      const k = starts.indexOf(p)
+      const from = new Date(Math.max(p.startsAt.getTime(), i.prevMonthStart.getTime()))
+      const to = new Date(Math.min((starts[k + 1]?.startsAt ?? i.monthStart).getTime(), i.monthStart.getTime()))
+      const paidFrom = p.trialEndsAt && p.trialEndsAt > from ? new Date(Math.min(p.trialEndsAt.getTime(), to.getTime())) : from
+      owed += byDays(monthlyPrice({ ...p, trialEndsAt: null }, from), paidFrom, to, i.prevMonthStart, i.monthStart)
+    }
+    const diff = owed - i.prevPlanBilled
+    const changed = prevStarts.length > 1 || (prevStarts[0] && prevStarts[0].startsAt > i.prevMonthStart)
+    if (diff > 0 && changed) lines.push({ kind: 'plan', description: 'Plan change last month: the difference, by days', periodStart: i.prevMonthStart, periodEnd: i.monthStart, quantity: 1, rateBps: null, taxable: diff as Paise })
   }
   // Add-on modules for M, in advance, by their days.
   for (const a of i.addons) {

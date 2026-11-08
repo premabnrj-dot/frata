@@ -34,7 +34,9 @@ function mayReadMoney(m: Pick<Membership, 'role'>) {
 export type Estimate = { invoiceOn: Date; bill: Bill; orders: { number: number; base: number; fee: number; feeBps: number; billableAt: Date }[] } | null | 'busy'
 
 export type BillingOverview = {
-  plan: { name: string; monthlyPrice: number; includedOrders: number; feeBps: number; trialEndsAt: Date | null } | null
+  plan: { code: string; name: string; monthlyPrice: number; includedOrders: number; feeBps: number; trialEndsAt: Date | null; custom: boolean } | null
+  /** A change waiting to start (a downgrade on the 1st): which plan, when, and whether the shop made it. */
+  scheduled: { name: string; startsAt: Date; byShop: boolean } | null
   estimate: Estimate
   invoices: { id: string; number: string; periodStart: Date; total: number; issuedAt: Date; testMode: boolean; state: InvoiceState; due: number; credits: { number: string; total: number }[] }[]
   details: { legalName: string; gstin: string; address: string; stateCode: string; email: string; saved: boolean }
@@ -47,7 +49,7 @@ export async function billingOverview(m: Pick<Membership, 'tenantId' | 'role'>, 
   const [base, estimate] = await Promise.all([
     withTenant(tenantId, async (tx) => {
       const [history, invoices, [account], [shop], paidRows, creditRows] = await Promise.all([
-        tx.select({ startsAt: tenantPlans.startsAt, trialEndsAt: tenantPlans.trialEndsAt, customMonthlyPrice: tenantPlans.customMonthlyPrice, name: plans.name,
+        tx.select({ startsAt: tenantPlans.startsAt, trialEndsAt: tenantPlans.trialEndsAt, customMonthlyPrice: tenantPlans.customMonthlyPrice, name: plans.name, code: plans.code, reason: tenantPlans.reason,
           monthlyPrice: planVersions.monthlyPrice, includedOrders: planVersions.includedOrders, feeBps: planVersions.feeBps })
           .from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(plans, eq(plans.id, planVersions.planId))
           .where(eq(tenantPlans.tenantId, tenantId)).orderBy(asc(tenantPlans.startsAt)),
@@ -82,7 +84,8 @@ export async function billingOverview(m: Pick<Membership, 'tenantId' | 'role'>, 
   const cur = currentPlan(base.history, now)
   const a = base.account, s = base.shop
   return {
-    plan: cur ? { name: cur.name, monthlyPrice: monthlyPrice({ planVersion: { monthlyPrice: paise(cur.monthlyPrice) }, customMonthlyPrice: cur.customMonthlyPrice === null ? null : paise(cur.customMonthlyPrice), trialEndsAt: null }, now), includedOrders: cur.includedOrders, feeBps: cur.feeBps, trialEndsAt: cur.trialEndsAt } : null,
+    plan: cur ? { code: cur.code, custom: cur.customMonthlyPrice !== null, name: cur.name, monthlyPrice: monthlyPrice({ planVersion: { monthlyPrice: paise(cur.monthlyPrice) }, customMonthlyPrice: cur.customMonthlyPrice === null ? null : paise(cur.customMonthlyPrice), trialEndsAt: null }, now), includedOrders: cur.includedOrders, feeBps: cur.feeBps, trialEndsAt: cur.trialEndsAt } : null,
+    scheduled: (() => { const f = base.history.find((h) => h.startsAt > now); return f ? { name: f.name, startsAt: f.startsAt, byShop: f.reason === 'Changed by the shop' } : null })(),
     estimate,
     invoices: base.invoices.flatMap((i) => {
       if (!i.issuedAt || !i.number) return []

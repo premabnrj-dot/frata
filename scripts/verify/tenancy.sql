@@ -1386,4 +1386,18 @@ do $$ begin
   then raise exception 'FAIL: a role reaches billing_events directly'; end if;
 end $$;
 
-\echo 'tenancy proof — all 43 checks passed'
+-- 44. Billing B4: a shop changes only its own plan, never a price agreed with Frrata, never a change Frrata scheduled.
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  begin perform app_change_plan('growth', '99999999-9999-9999-9999-999999999999'); exception when check_violation then null; end;
+  if exists (select 1 from tenant_plans where tenant_id = '22222222-2222-2222-2222-222222222222' and reason = 'Changed by the shop') then raise exception 'FAIL: A changed B''s plan'; end if;
+  begin insert into tenant_plans (tenant_id, plan_version_id, starts_at) select '11111111-1111-1111-1111-111111111111', id, now() from plan_versions limit 1; raise exception 'FAIL: the app writes tenant_plans'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['app_change_plan(text,uuid)', 'app_cancel_plan_change()']) f
+             where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: another role may change a shop''s plan'; end if;
+end $$;
+
+\echo 'tenancy proof — all 44 checks passed'
