@@ -11,6 +11,7 @@ import type { DiscountStyle } from '@/domains/checkout/discounts'
 import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
 import { checkQualify, saveOffer } from '../actions'
+import { OfferMore, type Pickers } from './offer-more'
 
 // =============================================================================
 // THE OFFER FORM (spec § Console; mockup "The founder's side"): one short form for the chosen style, a live preview
@@ -31,7 +32,7 @@ function preview(v: OfferValues): { bar: string; bag: string } | null {
   return { bar, bag }
 }
 
-export function OfferEditor({ id, initial, locked }: { id: string | null; initial: OfferValues; locked: { style: boolean; code: boolean } }) {
+export function OfferEditor({ id, initial, locked, pickers }: { id: string | null; initial: OfferValues; locked: { style: boolean; code: boolean }; pickers: Pickers }) {
   const router = useRouter()
   const [saved, setSaved] = useState(initial)
   const [v, setV] = useState(initial)
@@ -88,7 +89,7 @@ export function OfferEditor({ id, initial, locked }: { id: string | null; initia
       <Section title={STYLE_LABEL[style]?.name ?? 'Offer'}>
         <div className="space-y-1"><label htmlFor="o-title" className={lab}>Name <span className="font-normal text-muted-foreground">(shown to shoppers)</span></label>
           <input id="o-title" value={v.title} maxLength={60} placeholder="Diwali sale" aria-invalid={!!errors.title || undefined} aria-describedby={errors.title ? 'o-title-err' : undefined} onChange={(e) => set({ title: e.target.value })} className={field} />{err('title')}</div>
-        {style !== 'free_shipping' && (
+        {(style === 'order_off' || style === 'product_off' || style === 'pay_online') && (
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1"><label htmlFor="o-kind" className={lab}>Off</label>
               <select id="o-kind" value={v.kind} onChange={(e) => set({ kind: e.target.value })} className={field}><option value="percent">a percentage</option><option value="amount">an amount (₹)</option></select></div>
@@ -98,7 +99,8 @@ export function OfferEditor({ id, initial, locked }: { id: string | null; initia
               <input id="o-cap" inputMode="decimal" value={v.cap} aria-invalid={!!errors.cap || undefined} aria-describedby={errors.cap ? 'o-cap-err' : undefined} onChange={(e) => set({ cap: e.target.value })} className={field} />{err('cap')}</div>}
           </div>
         )}
-        <div className="space-y-1"><label htmlFor="o-min" className={lab}>Bag at least ₹ <span className="font-normal text-muted-foreground">(optional)</span></label>
+        <OfferMore v={v} set={set} errors={errors} pickers={pickers} />
+        <div className="space-y-1"><label htmlFor="o-min" className={lab}>{style === 'free_gift' ? 'Free when the rest of the bag reaches ₹' : 'Bag at least ₹'} <span className="font-normal text-muted-foreground">(optional)</span></label>
           <input id="o-min" inputMode="decimal" value={v.min} placeholder="1999" aria-invalid={!!errors.min || undefined} aria-describedby={errors.min ? 'o-min-err' : undefined} onChange={(e) => set({ min: e.target.value })} className={`${field} sm:max-w-48`} />{err('min')}</div>
         {share !== null && share >= 40 && qualify && (
           <p role="status" className="rounded-md bg-warn px-3 py-2 text-sm text-warn-text">

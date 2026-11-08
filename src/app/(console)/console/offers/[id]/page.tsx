@@ -6,10 +6,13 @@ import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { paise } from '@/domains/money/paise'
 import { ANY_MEMBER, CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
-import { listOffers } from '@/lib/queries/discounts'
+import { listOffers, offerPickers } from '@/lib/queries/discounts'
 import { dayMonthIN } from '@/lib/format-date'
 import { OfferEditor } from '../_components/offer-editor'
 import { OfferSteps } from '../_components/offer-steps'
+import { OfferCodes } from '../_components/offer-codes'
+import { setupFor } from '@/lib/queries/settings'
+import { formatInr } from '@/lib/format'
 import { STATUS, terms, valuesOf } from '../_components/data'
 
 export const metadata = { title: 'Offer' }
@@ -41,7 +44,9 @@ export default async function OfferPage({ params }: { params: Promise<{ id: stri
             {o.keptPerDelivered === null ? <dd className="text-xs text-muted-foreground">Once orders are delivered and their costs are known.</dd> : null}</div>
         </dl>
       </Section>
-      {canEdit ? <OfferEditor id={o.id} initial={valuesOf(o)} locked={{ style: true, code: true }} />
+      {o.style !== 'pay_online' && o.status !== 'ended' ? <OfferCodes id={o.id} address={(await setupFor(auth.membership.tenantId))?.address ?? ''} canAdd={manager} publicCode={o.code}
+        creators={o.creators.map((c) => ({ id: c.id, label: c.label, code: c.code, uses: String(c.useCount), given: formatInr(paise(c.given)) }))} /> : null}
+      {canEdit ? <OfferEditor id={o.id} initial={valuesOf(o)} locked={{ style: true, code: true }} pickers={await offerPickers(auth.membership.tenantId)} />
         : <Panel title={o.status === 'ended' ? 'This offer has ended' : 'Only an owner or admin can change a started offer'}>{o.status === 'ended' ? 'It no longer changes. Make a new offer to run it again.' : 'You can see its numbers here.'}</Panel>}
     </div>
   )

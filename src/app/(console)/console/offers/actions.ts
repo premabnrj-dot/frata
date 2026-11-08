@@ -2,10 +2,10 @@
 
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { parseOffer, type OfferValues } from '@/domains/checkout/offer-form'
+import { CODE_RE, parseOffer, type OfferPatch, type OfferValues } from '@/domains/checkout/offer-form'
 import { asMember } from '@/lib/auth/as-member'
 import { CAN_BUILD, CAN_MANAGE } from '@/lib/auth/require-member'
-import { discountCodes, discounts } from '@/lib/db/schema-discounts'
+import { discountCodes, discountTargets, discountTiers, discounts } from '@/lib/db/schema-discounts'
 import { refreshShop } from '@/lib/queries/storefront'
 import { alreadyQualify } from '@/lib/queries/discounts'
 import type { Tx } from '@/lib/db'
@@ -33,6 +33,14 @@ async function claimBar(tx: Tx, tenantId: string, id: string | null) {
   await tx.update(discounts).set({ announce: false }).where(and(eq(discounts.tenantId, tenantId), eq(discounts.announce, true), ...(id ? [sql`${discounts.id} <> ${id}`] : [])))
 }
 
+/** An offer's targets and tiers, replaced whole with each save (rows are never updated in place: 0040). */
+async function replaceParts(tx: Tx, tenantId: string, id: string, p: OfferPatch) {
+  await tx.delete(discountTargets).where(and(eq(discountTargets.tenantId, tenantId), eq(discountTargets.discountId, id)))
+  await tx.delete(discountTiers).where(and(eq(discountTiers.tenantId, tenantId), eq(discountTiers.discountId, id)))
+  if (p.targets !== 'all' && p.targetIds.length) await tx.insert(discountTargets).values(p.targetIds.map((t) => ({ tenantId, discountId: id, ...(p.targets === 'products' ? { productId: t } : { collectionId: t }) })))
+  if (p.tiers.length) await tx.insert(discountTiers).values(p.tiers.map((t) => ({ tenantId, discountId: id, minSubtotal: t.min, percentBps: t.percentBps, amountOff: t.amountOff })))
+}
+
 export async function saveOffer(id: string | null, values: OfferValues): Promise<OfferResult> {
   const parsed = parseOffer(values)
   if (!parsed.ok) return { ok: false, error: 'Some fields need a look before saving.', errors: parsed.errors }
@@ -41,10 +49,12 @@ export async function saveOffer(id: string | null, values: OfferValues): Promise
     const r = await asMember(CAN_BUILD, { action: id ? 'offer.edit' : 'offer.create', target: id ?? undefined, detail: { style: p.style } }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
       const cols = { title: p.title, percentBps: p.percentBps, amountOff: p.amountOff, cap: p.cap, minSubtotal: p.minSubtotal, startsAt: p.startsAt, endsAt: p.endsAt,
-        limitTotal: p.limitTotal, limitPerPhone: p.limitPerPhone, budget: p.budget, listed: p.listed, combinesWithPayment: p.combinesWithPayment, announce: p.announce }
+        limitTotal: p.limitTotal, limitPerPhone: p.limitPerPhone, budget: p.budget, listed: p.listed, combinesWithPayment: p.combinesWithPayment, announce: p.announce,
+        targets: p.targets, buyQty: p.buyQty, getQty: p.getQty, getBps: p.getBps, giftVariantId: p.giftVariantId, firstOrder: p.firstOrder }
       if (!id) {
         const [d] = await tx.insert(discounts).values({ tenantId, style: p.style, createdBy: auth.userId, ...cols }).returning({ id: discounts.id })
         if (p.code) await tx.insert(discountCodes).values({ tenantId, discountId: d!.id, code: p.code })
+        await replaceParts(tx, tenantId, d!.id, p)
         return { ok: true as const, id: d!.id, tenantId }
       }
       if (!/^[0-9a-f-]{36}$/.test(id)) return { ok: false as const, error: 'This offer was not found.' }
@@ -59,6 +69,7 @@ export async function saveOffer(id: string | null, values: OfferValues): Promise
         .where(and(eq(discounts.tenantId, tenantId), eq(discounts.id, id), isNull(discounts.endedAt), ...(isManager(auth.membership.role) ? [] : [isNull(discounts.startedAt)])))
         .returning({ id: discounts.id })
       if (!upd.length) return { ok: false as const, error: 'This offer changed meanwhile. Reload the page.' }
+      await replaceParts(tx, tenantId, id, p)
       return { ok: true as const, id, tenantId }
     })
     if (!r.ok) return { ok: false, error: r.error }
@@ -103,4 +114,33 @@ export async function checkQualify(v: { minSubtotal: number; percentBps: number 
   if (!ok) return null
   const r = await asMember(CAN_BUILD, { action: 'offer.qualify' }, async (_tx, auth) => alreadyQualify(auth.membership.tenantId, v))
   return r.ok ? r.value : null
+}
+
+/**
+ * A creator's code on an offer (owners and admins: it changes who gets a started offer). Its link is the shop's own
+ * address with ?code=. Never listed; unique per shop forever, like every code.
+ */
+export async function addCreatorCode(id: string, label: string, code: string): Promise<OfferResult> {
+  const c = code.trim().toUpperCase(), l = label.trim()
+  if (!/^[0-9a-f-]{36}$/.test(id)) return { ok: false, error: 'This offer was not found.' }
+  if (!l || l.length > 40) return { ok: false, error: 'Name the creator, up to 40 characters.', errors: { label: 'Who is it for?' } }
+  if (!CODE_RE.test(c)) return { ok: false, error: 'Check the code.', errors: { code: '4 to 20 letters or digits, no spaces.' } }
+  try {
+    const r = await asMember(CAN_MANAGE, { action: 'offer.creator_code', target: id, detail: { label: l } }, async (tx, auth) => {
+      const tenantId = auth.membership.tenantId
+      const [cur] = await tx.select({ endedAt: discounts.endedAt }).from(discounts).where(and(eq(discounts.tenantId, tenantId), eq(discounts.id, id)))
+      if (!cur || cur.endedAt) return { done: false, tenantId }
+      await tx.insert(discountCodes).values({ tenantId, discountId: id, code: c, label: l })
+      return { done: true, tenantId }
+    })
+    if (!r.ok) return { ok: false, error: r.error }
+    if (!r.value.done) return { ok: false, error: 'This offer has ended or was not found.' }
+    done(r.value.tenantId)
+    return { ok: true, id }
+  } catch (err) {
+    const k = codeOf(err)
+    if (k?.code === UNIQUE) return { ok: false, error: 'That code was used before in your shop. Codes are never reused.', errors: { code: 'Used before. Choose another.' } }
+    console.error('[offers] creator code', k?.code ?? (err instanceof Error ? err.name : 'error'))
+    return { ok: false, error: 'We could not add the code. Try again.' }
+  }
 }
