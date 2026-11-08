@@ -1,12 +1,13 @@
 import 'server-only'
-import { discountCodes, orderDiscounts } from '@/lib/db/schema-discounts'
+import { orderDiscounts } from '@/lib/db/schema-discounts'
 import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm'
-import { classifySource, type Source } from '@/domains/analytics/source'
-import { attributionOf } from '@/domains/analytics/attribution'
-import { useOfRowSql } from '@/lib/db/discount-predicates'
+import { sourceOfInputs, type Source, type SourceInputs } from '@/domains/analytics/source'
+import { attributionInputsSql } from '@/lib/db/attribution-sql'
+import { creatorCodeJoinSql } from '@/lib/db/discount-predicates'
 import { momentColumns, onlineTotalCol } from '@/lib/db/order-predicates'
 import { orderEvents, orderLines, orderNotes, orders, shipments } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
+import type { Tx } from '@/lib/db'
 import { riskFactsFor } from './order-risk'
 
 // =============================================================================
@@ -19,6 +20,20 @@ import { riskFactsFor } from './order-risk'
 // same "not found" as a number that does not exist (tenancy audit 2026-11-07).
 // =============================================================================
 
+/**
+ * Where one order came from: the inputs and the creator join Analytics groups by (attribution-sql.ts,
+ * creatorCodeJoinSql), classified by sourceOfInputs, so the order page and Analytics always name the same source. Inside
+ * the caller's tenant transaction. Its label is text a page renders, never a link.
+ */
+export async function orderSourceIn(tx: Tx, tenantId: string, orderId: string, now: Date): Promise<Source | null> {
+  const i = attributionInputsSql('o')
+  const [r] = await tx.execute<SourceInputs>(sql`
+    select ${i.us} us, ${i.um} um, ${i.uc} uc, ${i.rh} rh, ${i.gads} gads, ${i.srs} srs, ${i.fb} fb, dc.label cl, dc.code cc
+      from ${orders} o ${creatorCodeJoinSql(now)}
+     where o.tenant_id = ${tenantId} and o.id = ${orderId} order by od.created_at, dc.code limit 1`)
+  return r ? sourceOfInputs(r) : null
+}
+
 export async function orderDetail(tenantId: string, number: number, now = new Date()) {
   if (!Number.isSafeInteger(number) || number < 1) return null
   const data = await withTenant(tenantId, async (tx) => {
@@ -27,11 +42,11 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
       onlineTotal: onlineTotalCol, subtotal: orders.subtotal, discount: orders.discount, shipping: orders.shipping, codCharge: orders.codCharge, gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst,
       customerName: orders.customerName, phone: orders.phone, addressLine: orders.addressLine, area: orders.area, landmark: orders.landmark,
       pincode: orders.pincode, city: orders.city, state: orders.state,
-      checkout: orders.checkout, invoiceNumber: orders.invoiceNumber, cancelReason: orders.cancelReason, cancelNote: orders.cancelNote, erasedAt: orders.erasedAt,
+      invoiceNumber: orders.invoiceNumber, cancelReason: orders.cancelReason, cancelNote: orders.cancelNote, erasedAt: orders.erasedAt,
     }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.number, number))).limit(1)
     if (!o) return null
-    // Five reads at once in the one transaction (speed review P8: postgres-js pipelines them; they ran in turn).
-    const [lines, events, notes, offerRows, [shipment], [creator]] = await Promise.all([tx.select({
+    // Six reads at once in the one transaction (speed review P8: postgres-js pipelines them; they ran in turn).
+    const [lines, events, notes, offerRows, [shipment], source] = await Promise.all([tx.select({
       id: orderLines.id, title: orderLines.title, optionValues: orderLines.optionValues, sku: orderLines.sku, qty: orderLines.qty, unitPrice: orderLines.unitPrice,
       imageBase: orderLines.imageBase, imageWidths: orderLines.imageWidths, kind: orderLines.kind, shipsBy: orderLines.shipsBy,
       leadMinDays: orderLines.leadMinDays, leadMaxDays: orderLines.leadMaxDays, stockTakenAt: orderLines.stockTakenAt,
@@ -47,18 +62,11 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
     // The parcel on its way (Ship): who carries it and how to follow it; none before it shipped.
     tx.select({ provider: shipments.provider, courierName: shipments.courierName, trackingNumber: shipments.trackingNumber })
       .from(shipments).where(and(eq(shipments.tenantId, tenantId), eq(shipments.orderId, o.id), isNull(shipments.endedAt))).limit(1),
-    // A creator's code it is using (Analytics credits the order to the creator, whatever its tags say): the same join.
-    tx.execute<{ label: string; code: string }>(sql`
-      select dc.label, dc.code from ${orderDiscounts} od
-        join ${discountCodes} dc on dc.tenant_id = od.tenant_id and dc.id = od.code_id and dc.label is not null
-        join ${orders} o on o.tenant_id = od.tenant_id and o.id = od.order_id
-       where od.tenant_id = ${tenantId} and od.order_id = ${o.id} and ${useOfRowSql(now)} order by od.created_at, dc.code limit 1`),
+    // Where it came from (the same route Analytics classifies by).
+    orderSourceIn(tx, tenantId, o.id, now),
     ])
     const offers = offerRows.map((d) => ({ ...d, amount: Number(d.amount) }))
-    // Where it came from, by Analytics' one classifier (its label is text the page renders, never a link).
-    const source: Source = classifySource(attributionOf(o.checkout), creator ?? null)
-    const { checkout: _checkout, ...order } = o
-    return { o: order, lines, events, notes, offers, shipment: shipment ?? null, source }
+    return { o, lines, events, notes, offers, shipment: shipment ?? null, source }
   })
   if (!data) return null
   // Risk: null when its facts cannot be read (the page then says "Risk unavailable" and fails closed).

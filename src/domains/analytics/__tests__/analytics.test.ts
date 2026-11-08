@@ -1,3 +1,5 @@
+import { foldSources, type Totals } from '../totals'
+import { sourceOfInputs, type Channel } from '../source'
 import { describe, expect, it } from 'vitest'
 import { attributionOf, cleanAttribution, isTagged, landingParams, reduceHost } from '../attribution'
 import { judgeable } from '../judge'
@@ -105,4 +107,41 @@ describe('shopLink: one builder, never another site', () => {
 
 describe('judgeable', () => {
   it('a rate from 30', () => { expect(judgeable(29)).toBe(false); expect(judgeable(30)).toBe(true) })
+})
+
+describe('sourceOfInputs (the SQL readers\' one route to classifySource)', () => {
+  const none = { us: null, um: null, uc: null, rh: null, gads: false, srs: false, fb: false, cl: null, cc: null }
+  it.each([
+    [{ ...none, us: 'instagram', um: 'bio', uc: 'diwali-drop' }, 'instagram-bio', 'diwali-drop'],
+    [{ ...none, gads: true }, 'google-ads', null],
+    [{ ...none, srs: true }, 'google', null],
+    [{ ...none, fb: true }, 'instagram-or-facebook', null],
+    [{ ...none, rh: 'l.instagram.com' }, 'instagram', null],
+    [{ ...none, us: '‮ ', rh: 'news.example.com' }, 'news-example-com', null],
+    [{ ...none, us: 'instagram', cl: 'Riya', cc: 'RIYA10' }, 'creator-riya10', null],
+    [{ ...none, cl: 'Riya', cc: null }, 'direct-or-unknown', null],
+    [none, 'direct-or-unknown', null],
+  ])('%j → %s', (inputs, slug, campaign) => {
+    const s = sourceOfInputs(inputs)
+    expect({ slug: s.slug, campaign: s.campaign }).toEqual({ slug, campaign })
+  })
+})
+
+describe('foldSources', () => {
+  const t = (orders: number): Totals => ({ orders, sales: orders * 100, cod: orders, delivered: orders, rto: 0, lost: 0, onTheWay: 0, notSent: 0, kept: null })
+  const s = (slug: string, channel: Channel, orders: number) => ({ slug, channel, cur: t(orders) })
+  it('keeps the first 12 named sources and folds the rest and every Other into one row', () => {
+    const list = [...Array.from({ length: 14 }, (_, i) => s(`s${i}`, 'website', 20 - i)), s('typed', 'other', 5)]
+    const { rows, other } = foldSources(list)
+    expect(rows.map((r) => r.slug)).toEqual(Array.from({ length: 12 }, (_, i) => `s${i}`))
+    expect(other).toMatchObject({ orders: 8 + 7 + 5, sales: 2000, kept: null })
+  })
+  it('has no Other row when nothing folds', () => {
+    expect(foldSources([s('a', 'instagram', 3)]).other).toBeNull()
+  })
+  it('sums ₹ kept only where it is known', () => {
+    const kept = { kept: 500, counted: 2, leftOut: 1, delivered: { n: 2, kept: 500 }, rto: { n: 0, kept: 0 }, lost: { n: 0, kept: 0 }, basis: null }
+    const { other } = foldSources([s('x', 'other', 2), { slug: 'y', channel: 'other' as Channel, cur: { ...t(1), kept } }], 12)
+    expect(other!.kept).toMatchObject({ kept: 500, counted: 2, leftOut: 1 })
+  })
 })

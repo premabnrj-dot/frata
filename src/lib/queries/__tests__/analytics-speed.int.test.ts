@@ -1,6 +1,7 @@
 // Analytics at 10× (plan A1·5, frata-architecture § Speed): the page's read for 7, 30 and 90 days and a source page,
 // against scripts/verify/seed-10x.sql in a throwaway frata_speed database. Skipped unless SPEED is set. Budget: the
-// page under 1 s; measured 2026-11-08 at 270 / 389 / 574 ms and 681 ms for a source page.
+// page under 1 s; measured 2026-11-08 (A1·7: tags trimmed and lowercased in SQL, a source page reusing the grouped rows)
+// at 280–300 / 490 / 690–790 ms and 767 ms for a source page.
 import { expect, it } from 'vitest'
 it.skipIf(!process.env.SPEED)('analytics at 10×', { timeout: 60_000 }, async () => {
   process.env.DATABASE_URL = `postgresql://frata_app:x@${process.env.INT_DB_HOST}/frata_speed`

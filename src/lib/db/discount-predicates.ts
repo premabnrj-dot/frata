@@ -2,7 +2,7 @@ import 'server-only'
 import { sql, type SQL } from 'drizzle-orm'
 import type { Tx } from './index'
 import { discountUseSql } from './order-predicates'
-import { orderDiscounts } from './schema-discounts'
+import { discountCodes, orderDiscounts } from './schema-discounts'
 import { orders } from './schema-orders'
 
 // =============================================================================
@@ -38,6 +38,16 @@ export async function runningOffers(tx: { execute: Tx['execute'] }, tenantId: st
 /** Whether the order at `o` is using the order_discounts row at `od` (its class decides the rule). */
 export const useOfRowSql = (now: Date, od = 'od', o = 'o'): SQL =>
   sql`(case when ${c(od, 'class')} = 'payment' then ${discountUseSql(now, 'payment', o)} else ${discountUseSql(now, 'order', o)} end)`
+
+/**
+ * The creator code an order (alias `o`) uses now, as `dc.label` and `dc.code` (null when none): a labelled code joined
+ * through the order's own discount row while the order uses it (useOfRowSql). The one join Analytics, a source's page and
+ * the order page read a creator by. An order carries at most one typed or linked code (checkout's one TypedCode), so
+ * the join never repeats an order; readers that pick one row still order it (od.created_at, dc.code).
+ */
+export const creatorCodeJoinSql = (now: Date, o = 'o'): SQL => sql`left join (${orderDiscounts} od join ${discountCodes} dc
+    on dc.tenant_id = od.tenant_id and dc.id = od.code_id and dc.label is not null)
+  on od.tenant_id = ${c(o, 'tenant_id')} and od.order_id = ${c(o, 'id')} and ${useOfRowSql(now, 'od', o)}`
 
 export type DiscountUses = { n: number; given: number; phone: number }
 

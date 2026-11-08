@@ -9,7 +9,8 @@ import { JUDGE_MIN, judgeable } from '@/domains/analytics/judge'
 import { paise } from '@/domains/money/paise'
 import { keptPerOrder, type Kept } from '@/domains/orders/kept'
 import { formatPercent } from '@/lib/format'
-import type { Analytics, SourceStat, Totals } from '@/lib/queries/analytics'
+import { foldSources } from '@/domains/analytics/totals'
+import type { Analytics, Totals } from '@/lib/queries/analytics'
 
 // =============================================================================
 // ANALYTICS · THE PAGE'S PARTS (A·1; mockup https://claude.ai/artifact/5PRMG996toWDUsnAuMTSJt, as drawn, with Ship
@@ -116,23 +117,6 @@ export function Strip({ a }: { a: Analytics }) {
   )
 }
 
-/** Sources beyond the first 12, and values a shopper typed, fold into one "Other" row (spec § Design 3). */
-export function foldSources(sources: SourceStat[], keep = 12): { rows: SourceStat[]; other: Totals | null } {
-  const shown = sources.filter((s) => s.channel !== 'other').slice(0, keep)
-  const rest = sources.filter((s) => !shown.includes(s))
-  if (!rest.length) return { rows: shown, other: null }
-  const sum = (xs: Totals[]): Totals => {
-    const kepts = xs.map((x) => x.kept).filter((k): k is Kept => !!k)
-    const add = (f: (k: Kept) => number) => kepts.reduce((n, k) => n + f(k), 0)
-    return {
-      orders: xs.reduce((n, x) => n + x.orders, 0), sales: xs.reduce((n, x) => n + x.sales, 0), cod: xs.reduce((n, x) => n + x.cod, 0),
-      delivered: xs.reduce((n, x) => n + x.delivered, 0), rto: xs.reduce((n, x) => n + x.rto, 0), lost: xs.reduce((n, x) => n + x.lost, 0),
-      onTheWay: xs.reduce((n, x) => n + x.onTheWay, 0), notSent: xs.reduce((n, x) => n + x.notSent, 0),
-      kept: kepts.length ? { kept: add((k) => k.kept), counted: add((k) => k.counted), leftOut: add((k) => k.leftOut), delivered: { n: add((k) => k.delivered.n), kept: add((k) => k.delivered.kept) }, rto: { n: add((k) => k.rto.n), kept: add((k) => k.rto.kept) }, lost: { n: add((k) => k.lost.n), kept: add((k) => k.lost.kept) }, basis: null } : null,
-    }
-  }
-  return { rows: shown, other: sum(rest.map((s) => s.cur)) }
-}
 
 const HOW = 'A source is the tagged link the shopper arrived on, else the site they came from, else "Direct or unknown" (WhatsApp chats and many apps hide where a tap came from: a link from Make a link fixes that). The last one before the order, in that browser tab. Anyone can type tags into an address, so a source is what the link said.'
 
@@ -149,7 +133,7 @@ export function Sources({ a, period }: { a: Analytics; period: number }) {
         <Td cell="b" className="text-right">{a.costs && k && k.counted ? <Money paise={paise(k.kept)} /> : <><span className="text-xs text-muted-foreground md:hidden">Orders </span><Numeric>{t.orders}</Numeric></>}</Td>
         <Td cell="hide" className="text-right"><Numeric>{t.orders}</Numeric></Td>
         <Td cell="hide" className="text-right"><Money paise={paise(t.sales)} /></Td>
-        <Td cell="hide" className="text-right">{t.orders ? formatPercent(t.cod / t.orders, 0) : '—'}</Td>
+        <Td cell="hide" className="text-right">{t.orders ? shareOf(t.cod, t.orders) : '—'}</Td>
         <Td cell="c" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Delivered </span><Numeric>{t.delivered}</Numeric></Td>
         <Td cell="e" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Came back </span>{out ? shareOf(t.rto, out) : '—'}</Td>
         {a.costs ? <Td cell="f" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Per order with an outcome </span>{k && keptPerOrder(k) !== null ? (judgeable(k.counted) ? <Money paise={paise(keptPerOrder(k)!)} /> : <span className="text-xs text-muted-foreground">too few to judge</span>) : '—'}</Td> : null}

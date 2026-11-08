@@ -165,7 +165,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
                 {o.cancelReason ? <p className="pt-2 text-muted-foreground">Cancelled: {CANCEL_LABEL[o.cancelReason as CancelReason] ?? o.cancelReason}{o.cancelNote ? ` — ${o.cancelNote}` : ''}</p> : null}
               </div>
             )}
-            <p className="text-sm text-muted-foreground">Came from: <span className="text-foreground">{source.label}{source.campaign ? ` · ${source.campaign}` : ''}</span></p>
+            {source ? <p className="text-sm text-muted-foreground">Came from: <span className="text-foreground">{source.label}{source.campaign ? ` · ${source.campaign}` : ''}</span></p> : null}
           </Section>
 
           <Section id="notes" title="Notes">

@@ -51,9 +51,9 @@ export default {
         ['console-settings-address', 'owner', '/console/settings/address'],
         ['console-settings-payments', 'owner', '/console/settings/online-payments'],
         ['console-product-new', 'owner', '/console/products/new'],
-        // Analytics (A1·6): the page and a source's page, at 390 px with no sideways scroll.
+        // Analytics (A1·6): the page and a source's page (ux-stress.sql tags its own orders, so it exists), every width.
         ['console-analytics', 'owner', '/console/analytics'],
-        ['console-analytics-source', 'owner', '/console/analytics/direct-or-unknown'],
+        ['console-analytics-source', 'owner', '/console/analytics/instagram-bio'],
         ['admin-activity', 'frata', '/admin/activity'],
         ['admin-staff', 'frata', '/admin/staff'],
         ['admin-merchant-new', 'frata', '/admin/merchants/new'],
@@ -71,7 +71,9 @@ export default {
       const measure = async (ctx, page, path, w, label, h = 800) => {
         const p = await ctx.newPage(); p.on('pageerror', (e) => t.errors.push(`${page} ${label}: ${e.message}`))
         await p.setViewportSize({ width: w, height: h })
-        await p.goto(CONSOLE + path, { waitUntil: 'load' }); await p.evaluate(() => document.fonts.ready)
+        const res = await p.goto(CONSOLE + path, { waitUntil: 'load' }); await p.evaluate(() => document.fonts.ready)
+        // A page that answers "not found" would be measured as a 404 and pass (impact review A1·7).
+        if (!res || res.status() >= 400) fail('status', page, label, `HTTP ${res?.status()}`)
         const m = await p.evaluate(MEASURE, { phone: w < 768 })
         if (m.overflow.length) fail('overflow', page, label, m.overflow.join('; '))
         if (m.tableScroll.length) fail('table-scroll', page, label, m.tableScroll.join('; '))

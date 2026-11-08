@@ -333,8 +333,8 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
     orders on the whole page, the tally pictogram and a count to go replace the four numbers.
 64. **"Source known %"** sits in the strip; under half, one info line points to Make a link. A source is what the link
     said: the (i) on "Where orders came from" says how it is decided, once.
-65. **₹ only where `seesCosts`:** staff (and a partner after handover) see the same page with orders leading and no ₹
-    column, headline or caption.
+65. **₹ kept only where `seesCosts`:** staff (and a partner after handover) see the same page with orders leading and
+    no ₹ kept anywhere (column, headline, caption); sales and order totals stay, as on Orders.
 66. **Make a link** is the page's one primary action: where it will be shared (lowercase presets; "A creator" goes to
     Offers), which page opens, an optional name; out comes the link, Copy, and "Orders from it show as …". A shop not
     open yet says so instead. A source's own page lists its campaigns and its latest 50 orders, each opening the order;

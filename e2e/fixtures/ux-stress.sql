@@ -39,6 +39,14 @@ cross join lateral (select
   case when i in (1, 2, 3) then 0 else 8500 end as ship,
   case when i in (1, 2, 3) then 0 when i % 6 in (0, 3, 4, 5) then 4900 else 0 end as codc) s;
 
+-- Attributed orders for Analytics (A1·7, impact review): a long campaign, a long referring site and a tag typed by hand,
+-- so its rows and a source's page are measured at 320 px with labels as long as they get.
+update orders set checkout = coalesce(checkout, '{}'::jsonb) || jsonb_build_object('attribution', case number % 3
+    when 0 then jsonb_build_object('utm_source', 'instagram', 'utm_medium', 'bio', 'utm_campaign', 'diwali-festive-drop-handwoven-chanderi-collection-launch')
+    when 1 then jsonb_build_object('ref_host', 'shop-the-look.handwoven-heritage-couture-journal.example.com')
+    else jsonb_build_object('utm_source', 'a-very-long-newsletter-name-typed-by-hand', 'utm_medium', 'email') end)
+ where tenant_id = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7' and number between 5004 and 5060;
+
 insert into order_lines (tenant_id, order_id, variant_id, product_id, title, option_values, sku, qty, unit_price, taxable_value, gst_bps, gst, unit_cost, position, stock_taken_at)
 select o.tenant_id, o.id, 'd1c24d3d-d66f-48f2-acae-40c8220ddd43', '5ef1e555-0ebc-4eda-bfe8-9f22ce6e6738', 'Chanderi kurta set', '{S,Indigo}', 'KS-LINKUR-S-IND',
   1 + (o.number % 3), o.subtotal / (1 + (o.number % 3)), o.subtotal, 500, 0, 4242421, 0, o.placed_at

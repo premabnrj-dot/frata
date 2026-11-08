@@ -72,7 +72,7 @@ delivered or came back, and what each left in rupees, and makes a tagged link fo
    orders, sales, came back (RTO) and "source known" (how many orders carry a source). Each with the change from the
    period before. A period that includes today says "so far" and that today's numbers still change.
 3. **Where orders came from:** one row per source, most ₹ kept after returns first (by orders until any outcome is
-   known): orders, sales, COD share, delivered, came back, ₹ kept after returns, and ₹ kept per delivered order. A rate
+   known): orders, sales, COD share, delivered, came back, ₹ kept after returns, and ₹ kept per order with an outcome (delivered, came back or lost: `kept.ts`; built so, A1·6). A rate
    is shown only when its own denominator is 30 or more (`judgeable(n)`, one rule in the domain); below that, counts
    ("3 of 24 came back"). On a phone, one card per source. Top sources plus "Other" (values a shopper can type).
 4. **A source opens its page:** its campaigns (from the link's name) and its last 50 orders, each opening the order.

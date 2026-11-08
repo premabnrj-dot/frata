@@ -345,7 +345,7 @@ Budgets. Each says whether a gate holds it yet:
 | A cold shop page ≤ 12 statements, none repeated | review (loaders are `cache()`d since P3) |
 | No preloaded font and `priority` only on the first section's photos | review (P6, P15 fixed) |
 | Console page < 1 s p95; a query < 100 ms at the 10× seed, no seq scan on `orders` | review + EXPLAIN |
-| **Named exception:** Analytics' window aggregate (one grouped read of a period and the one before) is held to the page's 1 s, not 100 ms: 230 / 430 / 635 ms for 7 / 30 / 90 days, 713 ms for a source page at 10× | `analytics-speed.int.test.ts` (`SPEED=1`) |
+| **Named exception:** Analytics' window aggregate (one grouped read of a period and the one before) is held to the page's 1 s, not 100 ms (the timings at 10× live in the test's header) | `analytics-speed.int.test.ts` (`SPEED=1`) |
 
 Rules:
 - Every exported storefront loader is `cache(shopCached(...))`. `unstable_cache`
@@ -375,9 +375,12 @@ Rules:
 
 - **Raw in, classified on read.** The shop shell's capture island (`CaptureAttribution`, never in a console preview or
   the Look preview) keeps the landing's tags and the referrer's hostname; `/api/shop/orders` cleans them
-  (`cleanAttribution`) into `orders.checkout.attribution`. Nothing stores a classifier output: every reader calls the
-  one `classifySource` (`src/domains/analytics/source.ts`) on `attributionOf(checkout)`, so a better classifier
-  re-reads history. A creator's code the order uses (`useOfRowSql`, a labelled `discount_codes` row) wins over tags.
+  (`cleanAttribution`) into `orders.checkout.attribution`. Nothing stores a classifier output; the one rule is
+  `classifySource` (`src/domains/analytics/source.ts`), so a better classifier re-reads history. A reader of stored
+  orders (Analytics, a source's page, the order's "Came from") takes the inputs with `attributionInputsSql`
+  (`src/lib/db/attribution-sql.ts`) and the creator with `creatorCodeJoinSql`, and classifies with `sourceOfInputs`:
+  one route, so they never disagree (an int test checks the order page against Analytics). A creator's code the order
+  uses (a labelled `discount_codes` row) wins over tags.
 - **Read grouped, never per order:** Analytics groups orders by their raw inputs in SQL (`src/lib/queries/analytics.ts`)
   inside one transaction with `jit off`, `statement_timeout 3s`, `work_mem 64MB`; ₹ kept after returns is
   `keptOf` over the groups (`src/domains/orders/kept.ts`, the one ₹-kept helper for Offers and Analytics).
