@@ -36,7 +36,8 @@ export function OpenShop({ address, open, ready, canManage }: { address: string;
       ) : ask ? (
         <div className="flex flex-wrap items-center gap-3 text-sm"><span>Shoppers can order from <span className="font-mono">{address}</span> now.</span><Button disabled={pending} onClick={() => run(openShop, `Your shop is open at ${address}.`)}>Open it</Button><button type="button" className="inline-flex min-h-6 items-center underline" onClick={() => setAsk(false)}>Not yet</button></div>
       ) : (
-        <Button disabled={!ready || pending} onClick={() => setAsk(true)}>Open my shop</Button>
+        // Just closed here: it was open a moment ago, so it is ready, whatever a late render still says (e2e 90-ux).
+        <Button disabled={!(ready || known === false) || pending} onClick={() => setAsk(true)}>Open my shop</Button>
       )}
       {msg && !msg.ok && <p role="alert" className="text-sm text-danger-text">{msg.text}</p>}
       {/* One status region that is always there, so a screen reader hears what lands in it. */}
