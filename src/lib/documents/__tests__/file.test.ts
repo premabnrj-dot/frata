@@ -44,3 +44,19 @@ describe('documentFile (Documents D0)', () => {
     expect(await documentFile({ kind: 'invoice', invoices: [] }, brand, 'x')).toBeNull()
   })
 })
+
+describe("Frrata's own invoice and credit note (billing B2)", () => {
+  it('renders from frozen rows, test mode stamped, named by number', async () => {
+    const { frrataFile } = await import('../frrata')
+    const { frrataInvoiceDoc, frrataCreditNoteDoc } = await import('@/domains/billing/document')
+    const doc = frrataInvoiceDoc({ number: 'FRR/T26-27/000001', issuedAt: new Date('2026-12-01T03:00:00Z'), testMode: true, sellerName: 'Frrata (test mode)', sellerGstin: null, sellerAddress: 'Not set yet', sac: '998314',
+      buyerName: 'Kesar Studio LLP', buyerGstin: '08AAAAA0000A1Z5', buyerAddress: 'Jaipur', placeOfSupply: '08', periodStart: new Date('2026-11-30T18:30:00Z'), periodEnd: new Date('2026-12-31T18:30:00Z'),
+      taxable: 153328, cgst: 0, sgst: 0, igst: 27599, total: 180927 }, [{ description: 'Launch plan', quantity: 1, taxable: 149900 }, { description: 'Fee on delivered orders · 2 orders', quantity: 2, taxable: 3428 }])!
+    const f = await frrataFile(doc)
+    expect(f.bytes.subarray(0, 5).toString()).toBe('%PDF-')
+    expect(f.fileName).toBe('Frrata TEST Tax invoice FRR-T26-27-000001.pdf')
+    const cn = await frrataFile(frrataCreditNoteDoc(doc, { number: 'FRR/T26-27/C00001', issuedAt: new Date(), taxable: 10000, cgst: 0, sgst: 0, igst: 1800, total: 11800, reason: 'Goodwill', testMode: true }))
+    expect(cn.fileName).toBe('Frrata TEST Credit note FRR-T26-27-C00001.pdf')
+    expect(frrataInvoiceDoc({ number: null, issuedAt: null } as never, [])).toBeNull()
+  }, 30_000)
+})

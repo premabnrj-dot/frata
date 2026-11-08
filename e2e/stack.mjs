@@ -12,7 +12,7 @@
 import { execSync, spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, openSync } from 'node:fs'
-import { CONSOLE, META, OUT, PORTS, SHOP_DOMAIN, adminSql, until } from './lib.mjs'
+import { BILLING_KEYS, CONSOLE, META, OUT, PORTS, SHOP_DOMAIN, adminSql, until } from './lib.mjs'
 
 const ROOT = new URL('..', import.meta.url).pathname
 const PG_DIR = '/var/tmp/frata-e2e', PG_BIN = '/usr/lib/postgresql/16/bin', DB = 'frata_e2e'
@@ -81,7 +81,7 @@ export async function up({ build = true } = {}) {
   const host = new URL(server).host
   run('next', 'npx', ['next', 'start', '-p', String(PORTS.app)], {
     ...PUBLIC_ENV, DATABASE_URL: `postgres://frata_app:${pw}@${host}/${DB}`, ADMIN_DATABASE_URL: `postgres://frata_admin:${adminPw}@${host}/${DB}`, PAYMENT_KEYS_SECRET: 'e2e-only-secret',
-    RAZORPAY_API_BASE: `http://localhost:${PORTS.razorpay}`, BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_x_y', BLOB_STORE_ID: 'store_e2e', CRON_SECRET: 'e2e-cron', E2E_FIXTURES: '1',
+    RAZORPAY_API_BASE: `http://localhost:${PORTS.razorpay}`, BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_x_y', BLOB_STORE_ID: 'store_e2e', CRON_SECRET: 'e2e-cron', E2E_FIXTURES: '1', BILLING_TEST_ISSUE: '1', RAZORPAY_BILLING_KEY_ID: BILLING_KEYS.id, RAZORPAY_BILLING_KEY_SECRET: BILLING_KEYS.secret, RAZORPAY_BILLING_WEBHOOK_SECRET: BILLING_KEYS.webhook,
     META_APP_SECRET: META.appSecret, WA_VERIFY_TOKEN: META.verifyToken, META_GRAPH_BASE: `http://localhost:${PORTS.meta}`,
   })
   await until(async () => { try { return (await fetch(CONSOLE)).status > 0 } catch { return false } }, 60_000)

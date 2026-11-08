@@ -2,7 +2,7 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.6.0
+  version: 2.7.0
   verified: 2026-11-08
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
@@ -83,6 +83,23 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
   Test: a 4-week 50/50 split in 2–3 design-partner shops, judged at the shop's own COD RTO.
 - **A blanket % off** above a minimum most orders already meet is a giveaway (a ₹2,490 order at 10%
   off keeps ₹235 less and needs 1.3× the delivered orders): the console warns ("62% already qualify").
+
+## Trials (unit-economics-reviewer, 2026-11-08; owner calls the same day; hypotheses)
+
+- **Only the plan's monthly price is free in a trial**; fees and add-ons are charged as usual (owner). Nothing is
+  debited during a trial; fee invoices can be paid with Pay now; autopay is asked for once trial fees pass ₹2,000 before
+  GST (the grace then starts early). Length: 7–45 days for sign-ups (default 30), up to 90 per shop by staff.
+- **Hypotheses, each with its test:**
+  - Trial → paid 25% (10–15% fallback) — TR3 weekly cohorts, three of them.
+  - Non-payers ≈ 35% − conversion, at ~40 delivered orders a month — delivered orders per paused shop, first 3 cohorts.
+  - Paused shops pay ~0% of what they were invoiced — paused shops' invoices paid within 90 days.
+  - Cash cost ₹1,050–1,633 per trial (₹1,000 of it an onboarding placeholder) — onboarding minutes, first 20 trials.
+  - Forgone revenue per converted shop at 25%: Launch 30 d ₹6,172 (1.8 months), Growth 30 d ₹10,076 (0.5 months).
+  - 90 days converts no better than 30 — alternate the setting by weekly cohort; judge on contribution per sign-up.
+  - GST on an invoice never paid cannot be recovered — a CA's written opinion.
+  - The first debit after a trial fails more above ₹15,000 — debit success by amount band.
+- **No credit for plan days already billed in advance** when Admin gives a live, paid shop a trial mid-month or extends
+  after a 1st was invoiced: the trial's effect starts with the next invoice (impact review TR0; revisit if a shop asks).
 
 ## Current model (founder's, unvalidated, 2026-11)
 

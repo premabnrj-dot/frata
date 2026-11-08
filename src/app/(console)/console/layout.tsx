@@ -7,6 +7,7 @@ import { NavPill, type NavGroup, type NavItem } from '@/components/shell/nav'
 import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
+import { BillingBanner } from './_components/billing-banner'
 import { toConfirmCount } from '@/lib/queries/orders'
 import { supportVisit } from '@/lib/queries/support'
 import { TenantCheck } from '@/components/shell/tenant-check'
@@ -95,6 +96,8 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         : building ? <BuildingBanner shop={tenantName} inviteEmail={building.inviteEmail} /> : undefined}>
       {/* Anyone who can be in two places checks which shop each page is for (tenancy audit 2026-11-07). */}
       <TenantCheck tenantId={tenantId} staff={auth.staffRole !== null || places.length > 1} />
+      {/* Billing B3: a failed payment to Frrata, for owners and admins (never on a support visit, never a block). */}
+      {!supportSessionId && (role === 'owner' || role === 'admin') && <Suspense fallback={null}><BillingBanner membership={auth.membership} /></Suspense>}
       {children}
     </AppShell>
   )

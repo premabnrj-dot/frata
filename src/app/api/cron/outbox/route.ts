@@ -7,6 +7,7 @@ import { processEvents } from '@/lib/orders/payment'
 import { ERASE_AFTER_DAYS, eraseAbandoned } from '@/lib/orders/erase'
 import { errName } from '@/lib/log'
 import { runDrafts } from '@/lib/billing/run'
+import { collectDue } from '@/lib/billing/collect'
 
 // ENTRY POINT credential: CRON_SECRET via isCronRequest (scripts/check-actions.mjs).
 // The safety-net sweep; the outbox itself drains right after each enqueue (src/lib/outbox/drain.ts).
@@ -33,6 +34,9 @@ export async function GET(request: Request) {
   let billing = null
   // At most 15 s, so the outbox keeps its time; shops not reached are drafted on the next run.
   try { billing = await runDrafts(new Date(), undefined, started + 15_000) } catch (e) { console.error('[cron] billing', errName(e)) }
+  // Billing B3: notices, debit attempts (queued in the outbox below), the day-14 note; settles a lost webhook's attempts.
+  let collection = null
+  try { collection = await collectDue(new Date(), started + 25_000) } catch (e) { console.error('[cron] collection', errName(e)) }
   const { claimed, sent } = await drainOutbox(started + 45_000)
   // Razorpay and WhatsApp events not yet processed (each is processed at once on arrival; this is only the safety net).
   let events = 0
@@ -44,5 +48,5 @@ export async function GET(request: Request) {
     const n = await processWhatsApp(tenantId, new Date()).catch((e) => { console.error('[cron] whatsapp', tenantId, errName(e)); return 0 })
     events += n
   })
-  return NextResponse.json({ claimed, sent, events, erased, billing })
+  return NextResponse.json({ claimed, sent, events, erased, billing, collection })
 }

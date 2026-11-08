@@ -59,5 +59,7 @@ export function emailTypo(email: string): string | null {
   return fix ? `${email.slice(0, at)}@${fix}` : null
 }
 
-export const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+// Linear: every part between dots excludes the dot, so a long hostile string cannot make it backtrack (security
+// review 2026-11-08 measured 7.7 s at 80k characters on the old /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/).
+export const EMAIL_SHAPE = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)*\.[^\s@.]{2,}$/
 export const PINCODE_SHAPE = /^[1-9][0-9]{5}$/

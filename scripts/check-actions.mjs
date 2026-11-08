@@ -27,6 +27,7 @@ const ENTRY_POINTS = {
   'src/app/api/cron/outbox/route.ts': ['Vercel Cron', 'isCronRequest('],
   'src/app/api/webhooks/whatsapp/route.ts': ['Meta webhook: HMAC of the raw body with Frrata\'s app secret; each item routed by its own id through a definer', 'verifyMetaSignature('],
   'src/app/api/webhooks/razorpay/[key]/route.ts': ['Razorpay webhook: HMAC of the raw body with the shop\'s own secret, found by our key', 'verifyRazorpaySignature('],
+  'src/app/api/webhooks/billing/route.ts': ['Frrata\'s own billing webhook: HMAC of the raw body with Frrata\'s billing secret (current or previous)', 'webhookSigned('],
   // Public, read-only, cached per shop: the shop comes from the host the middleware wrote (shopFor checks its shape).
   'src/app/s/[host]/sitemap.xml/route.ts': ['a shop\'s sitemap: public, read-only', 'shopForRoute('],
   'src/app/s/[host]/robots.txt/route.ts': ['a shop\'s robots.txt: public, read-only', 'shopForRoute('],

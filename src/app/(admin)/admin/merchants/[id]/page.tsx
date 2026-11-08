@@ -1,3 +1,4 @@
+import { lastDay } from '@/domains/plans/trial'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Money, Numeric } from '@/components/data/numeric'
@@ -36,7 +37,7 @@ export default async function MerchantPage({ params, searchParams }: { params: P
   const m = await getMerchant(staff, id, now)
   if (!m) notFound()
   const cur = m.current
-  const use = cur ? usage(m.ordersThisMonth, cur.v.includedOrders) : null
+  const use = cur ? usage(m.ordersThisMonth ?? 0, cur.v.includedOrders) : null
   const owner = m.members.find((x) => x.role === 'owner')
   const openInvite = m.invites.find((i) => i.role === 'owner' && !i.acceptedAt && !i.revokedAt)
 
@@ -44,7 +45,7 @@ export default async function MerchantPage({ params, searchParams }: { params: P
     <>
       <PageHeader title={m.tenant.name} back={{ href: '/admin/merchants', label: 'Merchants' }}
         badges={<>{cur ? <Badge tone="info">{cur.name}</Badge> : <Badge tone="danger">No plan</Badge>}{m.tenant.isInternal && <Badge>Internal</Badge>}{!owner && <Badge tone="warn">Owner not signed in yet</Badge>}</>}
-        meta={<>{m.host && <span className="font-mono">{m.host}</span>}{m.host && ' · '}added {dayIN(m.tenant.createdAt)} · <Numeric>{m.ordersThisMonth.toLocaleString('en-IN')}</Numeric> orders this month</>}
+        meta={<>{m.host && <span className="font-mono">{m.host}</span>}{m.host && ' · '}added {dayIN(m.tenant.createdAt)} · {m.ordersThisMonth === null ? 'not drafted yet this month' : <><Numeric>{m.ordersThisMonth.toLocaleString('en-IN')}</Numeric> delivered orders this month{m.countedAt ? ` (counted ${dateTimeIN(m.countedAt)})` : ''}</>}</>}
         actions={<>
           <Link href={`/admin/merchants/${id}/plan`} className={button({ variant: 'secondary' })}>Change plan</Link>
           {/* Names the merchant (§ Frrata Admin); a long name wraps inside the button instead of overflowing it. */}
@@ -97,15 +98,16 @@ export default async function MerchantPage({ params, searchParams }: { params: P
                 <div className="flex justify-between"><span>Fee per delivered order</span><Numeric>{formatPercent(cur.v.feeBps / 10_000, cur.v.feeBps % 100 === 0 ? 0 : 1)}</Numeric></div>
                 {/* Usage as a meter, the words beside it (visual changes, owner-approved 2026-11-08). */}
                 <div>
-                  <div className="flex justify-between"><span>Orders this month</span><Numeric>{use!.used} / {use!.included.toLocaleString('en-IN')}</Numeric></div>
+                  <div className="flex justify-between"><span>Delivered orders this month</span><Numeric>{use!.used} / {use!.included.toLocaleString('en-IN')}</Numeric></div>
                   <div aria-hidden="true" className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
                     <span className={`block h-full origin-left rounded-full ${use!.over ? 'bg-warn-mark' : 'bg-foreground'}`} style={{ transform: `scaleX(${use!.included ? Math.min(1, use!.used / use!.included) : 1})` }} />
                   </div>
                   {use!.over && <p className="mt-1 text-warn-text">{(use!.used - use!.included).toLocaleString('en-IN')} over the plan. It keeps selling.</p>}
                 </div>
                 <p className="text-muted-foreground">{cur.v.features.length ? `Includes ${cur.v.features.map((f) => FEATURE_NAMES[f as Feature] ?? f).join(', ')}, all channels.` : 'All channels.'}</p>
-                {cur.tp.trialEndsAt && cur.tp.trialEndsAt > now && <p className="text-warn-text">Trial until {dayIN(cur.tp.trialEndsAt)}.</p>}
-                <p className="text-muted-foreground">On this plan since {dayIN(cur.tp.startsAt)}. Not charged yet: billing comes later.</p>
+                {cur.tp.trialEndsAt && cur.tp.trialEndsAt > now && <p className="text-warn-text">Trial until {dayIN(lastDay(cur.tp.trialEndsAt))}.</p>}
+                <p className="text-muted-foreground">On this plan since {dayIN(cur.tp.startsAt)}. Billed monthly (Admin › Billing).</p>
+                {(() => { const next = m.history.filter((h) => h.tp.startsAt > now).at(-1); return next ? <p className="text-warn-text">Moves to {next.name} on {dayIN(next.tp.startsAt)}{next.tp.byShop ? ', the shop’s own change' : ''}. A change here replaces it.</p> : null })()}
               </>
             ) : <p className="text-danger-text">No plan. Choose one with Change plan.</p>}
           </Section>

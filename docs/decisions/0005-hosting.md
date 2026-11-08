@@ -1,6 +1,6 @@
 # ADR-0005: Vercel (bom1) for the app, Supabase (ap-south-1) for data, auth and jobs
 
-Status: accepted · 2026-11-06 · amended 2026-11-06 (files: Vercel Blob)
+Status: accepted · 2026-11-06 · amended 2026-11-06 (files: Vercel Blob) · amended 2026-11-08 (AWS, owner)
 
 ## Decision
 - One Next.js app on Vercel serves the console and every storefront, routed by
@@ -22,7 +22,13 @@ Status: accepted · 2026-11-06 · amended 2026-11-06 (files: Vercel Blob)
   with no per-view image transforms. `BLOB_READ_WRITE_TOKEN` is read only in
   `src/lib/env.ts`.
 - Deploy by pushing to `main`; never `vercel deploy` (no commit behind it).
-- No AWS.
+- **AWS: allowed service by service, not as a second host** (owner, 2026-11-08; replaces "No AWS"). The app,
+  data, auth and jobs stay on Vercel and Supabase. An AWS service may be used when it does one job better or cheaper
+  (e.g. Amazon SES for email), on these terms: its own short decision record naming the service and why; region
+  `ap-south-1` (Mumbai), beside bom1 and Supabase; one IAM user per service with a least-privilege policy (that
+  service's actions only), its key in Vercel only, read by one owner module through `src/lib/env.ts`; no customer
+  or shopper data stored in AWS beyond what the service needs to do its job; calls through the outbox (ADR-0006).
+  None is in use as of 2026-11-08 (trials send by WhatsApp only).
 
 ## Why
 The stack the founder already runs well (Ekatan). Storefronts are cached so a

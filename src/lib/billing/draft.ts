@@ -5,14 +5,20 @@ import { MODULES, type ModuleKey } from '@/domains/modules/registry'
 import { paise } from '@/domains/money/paise'
 import type { PlanCode } from '@/domains/plans/entitlements'
 import { gstinState } from '@/domains/tax/gst'
+import { pauseWindow } from '@/domains/plans/trial'
+
+/** Off until TR1 task 9 ships the paused storefront: billing and selling pause together. */
+const TRIAL_PAUSE_LIVE = false
 import { monthStartIST, nextMonthStartIST } from '@/domains/time/month'
 import type { Tx } from '@/lib/db'
-import { billableAtSql } from '@/lib/db/order-predicates'
+import { billableAtSql, feeRateAtSql } from '@/lib/db/order-predicates'
 import { planVersions, plans, tenantPlans } from '@/lib/db/schema'
 import { billingAccounts, frrataFeeCredits, frrataInvoiceFees, frrataInvoiceLines, frrataInvoices } from '@/lib/db/schema-billing'
 import { addonPrices, tenantAddons } from '@/lib/db/schema-modules'
+import { shopTrials } from '@/lib/db/schema-trials'
 import { orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
+import { frrataGstin } from './seller'
 
 // =============================================================================
 // FILE: src/lib/billing/draft.ts — THE BILLING RUN'S DRAFT, one shop at a time (billing B0; plan
@@ -25,15 +31,26 @@ import { withTenant } from '@/lib/db/tenant'
 // fee row whose order is no longer billable and has no credit row. Running it twice writes the same draft.
 // =============================================================================
 
-/** Frrata's own GSTIN once it has one (test mode: none, so every bill is IGST). */
-const frrataGstin = () => process.env.FRRATA_GSTIN || null
 
-export type Drafted = { invoiceId: string; bill: Bill } | { invoiceId: null; issued: true }
+/** `numbers`: each billed or credited order's number, by order id (the page's "which orders"). */
+export type Drafted = { invoiceId: string; bill: Bill; numbers: Map<string, number> } | { invoiceId: null; issued: true }
 
 /** Drafts (or redrafts) the invoice for the IST month that `monthStart` begins. */
 export async function draftInvoice(tenantId: string, monthStart: Date, now = new Date()): Promise<Drafted> {
   if (monthStartIST(monthStart).getTime() !== monthStart.getTime()) throw new Error('draftInvoice: not the 1st of a month, IST')
   return withTenant(tenantId, (tx) => draftInvoiceIn(tx, tenantId, monthStart, now))
+}
+
+/**
+ * B4: what the invoice for `monthStart` charged in advance for its plan (its 'plan' lines; the 'change' line is the
+ * month before's). Null: that month has no invoice, so a change during it is not made up. One reader for the draft and
+ * the page's dialog (planChangeAdds), so the two never differ.
+ */
+// The outer columns are written out in full: in a one-table select drizzle prints them bare (frata-gotchas).
+export async function planBilledIn(tx: Tx, tenantId: string, monthStart: Date): Promise<number | null> {
+  const [r] = await tx.select({ n: sql<string>`coalesce((select sum(l.taxable) from ${frrataInvoiceLines} l where l.tenant_id = "frrata_invoices"."tenant_id" and l.invoice_id = "frrata_invoices"."id" and l.kind = 'plan'), 0)` })
+    .from(frrataInvoices).where(and(eq(frrataInvoices.tenantId, tenantId), eq(frrataInvoices.periodStart, monthStart)))
+  return r ? Number(r.n) : null
 }
 
 /** draftInvoice inside the caller's tenant transaction (the int test rolls it back). */
@@ -56,7 +73,7 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
   }
 
   const at = billableAtSql('o')
-  const [planRows, addonRows, feeRows, creditRows, prev, account] = await Promise.all([
+  const [planRows, addonRows, feeRows, creditRows, prev, planBilled, account, trial] = await Promise.all([
     tx.select({ startsAt: tenantPlans.startsAt, trialEndsAt: tenantPlans.trialEndsAt, customMonthlyPrice: tenantPlans.customMonthlyPrice,
       planCode: plans.code, name: plans.name, version: planVersions.version, monthlyPrice: planVersions.monthlyPrice, includedOrders: planVersions.includedOrders, feeBps: planVersions.feeBps })
       .from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(plans, eq(plans.id, planVersions.planId))
@@ -65,8 +82,8 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
       .from(tenantAddons).innerJoin(addonPrices, eq(addonPrices.id, tenantAddons.addonPriceId))
       .where(and(eq(tenantAddons.tenantId, tenantId), lt(tenantAddons.startsAt, nextMonthStart))),
     // Billable before the 1st (and by now), at most one month late, never billed (no fee row on any invoice).
-    tx.execute<{ id: string; number: number; at: string | Date; net: string }>(sql`
-      select o.id, o.number, ${at} at, o.merchandise_net net from ${orders} o
+    tx.execute<{ id: string; number: number; at: string | Date; rate_at: string | Date; net: string }>(sql`
+      select o.id, o.number, ${at} at, ${feeRateAtSql('o')} rate_at, o.merchandise_net net from ${orders} o
        where o.tenant_id = ${tenantId} and o.shipped_at is not null and ${at} >= ${oldest.toISOString()}::timestamptz and ${at} < ${upTo.toISOString()}::timestamptz
          and not exists (select 1 from ${frrataInvoiceFees} f where f.order_id = o.id)`),
     // Billed on an ISSUED invoice, no longer billable (came back or lost since), never credited. An unissued draft
@@ -77,20 +94,26 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
         join ${frrataInvoices} i on i.tenant_id = f.tenant_id and i.id = f.invoice_id
        where f.tenant_id = ${tenantId} and i.issued_at is not null and i.period_start < ${monthStart.toISOString()}::timestamptz and ${at} is null
          and not exists (select 1 from ${frrataFeeCredits} c where c.order_id = f.order_id)`),
-    tx.select({ carryOut: frrataInvoices.carryOut, rolled: frrataInvoices.rolled }).from(frrataInvoices)
+    tx.select({ id: frrataInvoices.id, carryOut: frrataInvoices.carryOut, rolled: frrataInvoices.rolled }).from(frrataInvoices)
       .where(and(eq(frrataInvoices.tenantId, tenantId), eq(frrataInvoices.periodStart, prevMonthStart))),
-    tx.select({ gstin: billingAccounts.gstin, stateCode: billingAccounts.stateCode }).from(billingAccounts).where(eq(billingAccounts.tenantId, tenantId)),
+    planBilledIn(tx, tenantId, prevMonthStart),
+    tx.select({ gstin: billingAccounts.gstin, stateCode: billingAccounts.stateCode, mandateAt: billingAccounts.mandateAt, mandateRevokedAt: billingAccounts.mandateRevokedAt }).from(billingAccounts).where(eq(billingAccounts.tenantId, tenantId)),
+    // Trials (TR0·3): a shop paused after its trial pays no plan for those days.
+    tx.select({ days: shopTrials.days, openWindowDays: shopTrials.openWindowDays, signedUpAt: shopTrials.signedUpAt, startedAt: shopTrials.startedAt, extendedAt: shopTrials.extendedAt, endedAt: shopTrials.endedAt }).from(shopTrials).where(eq(shopTrials.tenantId, tenantId)),
   ])
 
   const planHistory: PlanRow[] = planRows.map((p) => ({ startsAt: p.startsAt, trialEndsAt: p.trialEndsAt, customMonthlyPrice: p.customMonthlyPrice === null ? null : paise(p.customMonthlyPrice),
     planVersion: { planCode: p.planCode as PlanCode, name: p.name, monthlyPrice: paise(p.monthlyPrice), includedOrders: p.includedOrders, feeBps: p.feeBps } }))
   const addons: AddonRow[] = addonRows.map((a) => ({ module: a.module, name: MODULES[a.module as ModuleKey]?.name ?? a.module, monthlyPrice: paise(a.monthlyPrice), startsAt: a.startsAt, endsAt: a.endsAt, trialEndsAt: a.trialEndsAt }))
-  const feeOrders: FeeOrder[] = feeRows.map((o) => ({ orderId: o.id, number: `#${o.number}`, billableAt: new Date(o.at), merchandiseNet: Number(o.net) }))
+  const feeOrders: FeeOrder[] = feeRows.map((o) => ({ orderId: o.id, number: `#${o.number}`, billableAt: new Date(o.at), rateAt: new Date(o.rate_at), merchandiseNet: Number(o.net) }))
   const credits: FeeCredit[] = creditRows.map((c) => ({ orderId: c.id, number: `#${c.number}`, fee: paise(Number(c.fee)), invoiceNumber: c.invoice }))
   const acc = account[0]
   const bill = computeBill({
     monthStart, nextMonthStart, prevMonthStart, plans: planHistory, addons, feeOrders, credits,
-    carry: prev[0]?.carryOut ?? 0, rolledLastMonth: prev[0]?.rolled ?? false,
+    carry: prev[0]?.carryOut ?? 0, rolledLastMonth: prev[0]?.rolled ?? false, prevPlanBilled: planBilled,
+    // The billing pause turns on WITH the storefront pause (TR1 task 9; impact review TR0): a shop that still sells
+    // pays its plan. pauseWindow (src/domains/plans/trial.ts) is ready for it.
+    pause: TRIAL_PAUSE_LIVE && trial[0] ? pauseWindow(trial[0], account[0]?.mandateAt ?? null, account[0]?.mandateRevokedAt ?? null) : null,
     // The place of supply: the GSTIN's state when there is one (finding 7), else the state typed.
     frrataGstin: frrataGstin(), shopState: gstinState(acc?.gstin ?? null) ?? acc?.stateCode ?? null,
   })
@@ -106,6 +129,7 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
   if (bill.lines.length) await tx.insert(frrataInvoiceLines).values(bill.lines.map((l, k) => ({ tenantId, invoiceId, position: k + 1, ...l })))
   if (bill.fees.length) await tx.insert(frrataInvoiceFees).values(bill.fees.map((f) => ({ tenantId, invoiceId, ...f })))
   if (bill.credited.length) await tx.insert(frrataFeeCredits).values(bill.credited.map((c) => ({ tenantId, invoiceId, ...c })))
-  return { invoiceId, bill }
+  const numbers = new Map<string, number>([...feeRows.map((o) => [o.id, Number(o.number)] as const), ...creditRows.map((c) => [c.id, Number(c.number)] as const)])
+  return { invoiceId, bill, numbers }
 }
 

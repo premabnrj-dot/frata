@@ -1,10 +1,11 @@
 import 'server-only'
-import { asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { adminDb } from '@/lib/db/admin'
 import { invites, members, shopSettings, supportSessions, tenantDomains, tenantPlans, tenants } from '@/lib/db/schema'
 import type { StaffOk } from '@/lib/auth/require-staff'
 import { currentPlan, usage, type PlanCode } from '@/domains/plans/entitlements'
-import { monthStartIST } from '@/domains/time/month'
+import { nextMonthStartIST } from '@/domains/time/month'
+import { frrataInvoices } from '@/lib/db/schema-billing'
 import { auditStaff } from './audit'
 import { latestVersion, tenantPlanHistory } from './plans'
 
@@ -20,17 +21,24 @@ async function directory(ids: string[]): Promise<Directory> {
   return new Map(rows.map((r) => [r.id, { email: r.email, lastSignInAt: r.last_sign_in_at ? new Date(r.last_sign_in_at) : null }]))
 }
 
-async function orderCounts(since: Date): Promise<Map<string, number>> {
-  const rows = await adminDb().execute<{ tenant_id: string; n: string }>(
-    sql`select tenant_id, n from app_admin_order_counts(${since.toISOString()}::timestamptz)`,
-  )
-  return new Map(rows.map((r) => [r.tenant_id, Number(r.n)]))
+/**
+ * Delivered orders this month, per shop: the ONE "orders this month" (billing plan finding 4) — billable orders, as the
+ * daily billing run counted them on the draft of next month's invoice (frrata_invoices.orders_billed), the same figure
+ * the shop sees on Plan and billing. Not placed orders: a cancelled or returned order is not one. As fresh as the last
+ * draft (the daily run, or Admin › Billing › Run drafts): `at` says when; no draft row → null, never a false 0.
+ */
+async function orderCounts(now: Date, only?: string): Promise<Map<string, { n: number; at: Date }>> {
+  const next = eq(frrataInvoices.periodStart, nextMonthStartIST(now))
+  const rows = await adminDb().select({ tenantId: frrataInvoices.tenantId, n: frrataInvoices.ordersBilled, at: frrataInvoices.draftedAt }).from(frrataInvoices)
+    .where(only ? and(next, eq(frrataInvoices.tenantId, only)) : next)
+  return new Map(rows.map((r) => [r.tenantId, { n: r.n, at: r.at }]))
 }
 
 export type MerchantRow = {
   id: string; name: string; slug: string; host: string | null; isInternal: boolean
   plan: { code: PlanCode; name: string; version: number; includedOrders: number; trialEndsAt: Date | null } | null
-  ordersThisMonth: number; over: boolean
+  /** Delivered orders this month as last drafted; null before the first draft. */
+  ordersThisMonth: number | null; countedAt: Date | null; over: boolean
   owner: { email: string; lastSignInAt: Date | null } | null
   pendingInvite: string | null
 }
@@ -57,19 +65,20 @@ export async function listMerchants(staff: StaffOk, opts: { page: number; q?: st
     db.select().from(members).where(inArray(members.tenantId, ids)),
     db.select().from(invites).where(inArray(invites.tenantId, ids)),
     tenantPlanHistory(db, ids),
-  ]).then(async (r) => [...r, await orderCounts(monthStartIST(opts.now))] as const)
+  ]).then(async (r) => [...r, await orderCounts(opts.now)] as const)
   const dir = await directory(ms.filter((m) => m.role === 'owner').map((m) => m.userId))
 
   const rows = ts.map((t): MerchantRow => {
     const cur = currentPlan(history.filter((h) => h.tp.tenantId === t.id).map((h) => ({ ...h, startsAt: h.tp.startsAt })), opts.now)
     const owner = ms.find((m) => m.tenantId === t.id && m.role === 'owner')
     const open = inv.find((i) => i.tenantId === t.id && i.role === 'owner' && !i.acceptedAt && !i.revokedAt)
-    const n = counts.get(t.id) ?? 0
+    const c = counts.get(t.id) ?? null
+    const n = c?.n ?? 0
     return {
       id: t.id, name: t.name, slug: t.slug, isInternal: t.isInternal,
       host: domains.find((d) => d.tenantId === t.id)?.host ?? null,
       plan: cur ? { code: cur.code as PlanCode, name: cur.name, version: cur.v.version, includedOrders: cur.v.includedOrders, trialEndsAt: cur.tp.trialEndsAt } : null,
-      ordersThisMonth: n, over: cur ? usage(n, cur.v.includedOrders).over : false,
+      ordersThisMonth: c ? c.n : null, countedAt: c?.at ?? null, over: c && cur ? usage(n, cur.v.includedOrders).over : false,
       owner: owner ? dir.get(owner.userId) ?? null : null,
       pendingInvite: owner ? null : open?.email ?? null,
     }
@@ -89,7 +98,7 @@ export async function getMerchant(staff: StaffOk, id: string, now: Date) {
     tenantPlanHistory(db, [id]),
   ]).then(async (r) => [...r,
     await db.select().from(supportSessions).where(eq(supportSessions.tenantId, id)).orderBy(desc(supportSessions.startedAt)).limit(20),
-    await orderCounts(monthStartIST(now)),
+    await orderCounts(now, id),
   ] as const)
   const dir = await directory(ms.map((m) => m.userId))
   const cur = currentPlan(history.map((h) => ({ ...h, startsAt: h.tp.startsAt })), now)
@@ -97,7 +106,7 @@ export async function getMerchant(staff: StaffOk, id: string, now: Date) {
     tenant: t, host: domains[0]?.host ?? null,
     members: ms.map((m) => ({ ...m, email: dir.get(m.userId)?.email ?? null, lastSignInAt: dir.get(m.userId)?.lastSignInAt ?? null })),
     invites: inv, history, current: cur, sessions,
-    ordersThisMonth: counts.get(id) ?? 0,
+    ordersThisMonth: counts.get(id)?.n ?? null, countedAt: counts.get(id)?.at ?? null,
   }
 }
 

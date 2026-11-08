@@ -22,10 +22,11 @@ export const ROLL_BELOW = 10_000
 
 export type PlanRow = { startsAt: Date; planVersion: Pick<PlanVersion, 'planCode' | 'monthlyPrice' | 'includedOrders' | 'feeBps'> & { name?: string }; trialEndsAt: Date | null; customMonthlyPrice: Paise | null }
 export type AddonRow = { module: string; name: string; monthlyPrice: Paise; startsAt: Date; endsAt: Date | null; trialEndsAt: Date | null }
-export type FeeOrder = { orderId: string; number: string; billableAt: Date; merchandiseNet: number }
+/** `rateAt`: when the order shipped (its rate's moment); `billableAt`: when it is billed. */
+export type FeeOrder = { orderId: string; number: string; billableAt: Date; rateAt: Date; merchandiseNet: number }
 export type FeeCredit = { orderId: string; number: string; fee: Paise; invoiceNumber: string | null }
 
-export const LINE_KINDS = ['plan', 'addon', 'fee', 'over', 'credit', 'carry'] as const
+export const LINE_KINDS = ['plan', 'addon', 'fee', 'over', 'credit', 'carry', 'change'] as const
 export type LineKind = (typeof LINE_KINDS)[number]
 export type BillLine = { kind: LineKind; description: string; periodStart: Date; periodEnd: Date; quantity: number; rateBps: number | null; taxable: Paise }
 export type BilledFee = { orderId: string; billableAt: Date; base: Paise; feeBps: number; fee: Paise }
@@ -47,6 +48,13 @@ export type BillInput = {
   carry: number
   /** Whether last month's bill was itself rolled (a bill rolls at most once in a row). */
   rolledLastMonth: boolean
+  /**
+   * What last month's invoice charged in advance for its plan (its plan lines for that month), or null when there was
+   * no invoice for it. With it, an upgrade during last month is charged by its days here (billing B4).
+   */
+  prevPlanBilled?: number | null
+  /** A paused shop pays no plan for these days (trials; from the pause until autopay reopens it). */
+  pause?: Pause | null
   /** Frrata's GSTIN and the shop's state code decide the heads (supplyKind); no GSTIN yet means IGST (test mode). */
   frrataGstin: string | null
   shopState: string | null
@@ -75,20 +83,84 @@ function byDays(price: number, from: Date, to: Date, monthStart: Date, nextMonth
   return Math.round((price * n) / total) as Paise
 }
 
-export function computeBill(i: BillInput): Bill {
-  const lines: BillLine[] = []
-  // The plan for M, in advance: each plan row in force during M, by its days; a trial is free for its days.
-  const starts = [...i.plans].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
-  const inMonth = starts.filter((p, k) => p.startsAt < i.nextMonthStart && (starts[k + 1]?.startsAt ?? i.nextMonthStart) > i.monthStart)
-  for (const p of inMonth) {
+/** Days a paused shop pays no plan for (trials, owner 2026-11-08): from the pause until autopay reopens it. */
+export type Pause = { from: Date; to: Date | null }
+
+/** The plan rows in force during a month, each priced by its PAID days: a trial and a pause are free. */
+export function planDays(plans: PlanRow[], monthStart: Date, nextMonthStart: Date, pause: Pause | null = null): { row: PlanRow; paidFrom: Date; to: Date; price: Paise }[] {
+  const starts = [...plans].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+  const inMonth = starts.filter((p, k) => p.startsAt < nextMonthStart && (starts[k + 1]?.startsAt ?? nextMonthStart) > monthStart)
+  return inMonth.map((p) => {
     const k = starts.indexOf(p)
-    const from = new Date(Math.max(p.startsAt.getTime(), i.monthStart.getTime()))
-    const to = new Date(Math.min((starts[k + 1]?.startsAt ?? i.nextMonthStart).getTime(), i.nextMonthStart.getTime()))
+    const from = new Date(Math.max(p.startsAt.getTime(), monthStart.getTime()))
+    const to = new Date(Math.min((starts[k + 1]?.startsAt ?? nextMonthStart).getTime(), nextMonthStart.getTime()))
     const paidFrom = p.trialEndsAt && p.trialEndsAt > from ? new Date(Math.min(p.trialEndsAt.getTime(), to.getTime())) : from
     const full = monthlyPrice({ ...p, trialEndsAt: null }, from)
-    const price = byDays(full, paidFrom, to, i.monthStart, i.nextMonthStart)
-    if (price > 0) lines.push({ kind: 'plan', description: `${p.planVersion.name ?? p.planVersion.planCode} plan`, periodStart: paidFrom, periodEnd: to, quantity: 1, rateBps: null, taxable: price })
+    let price = byDays(full, paidFrom, to, monthStart, nextMonthStart)
+    if (pause) {
+      const pf = Math.max(pause.from.getTime(), paidFrom.getTime()), pt = Math.min(pause.to?.getTime() ?? Infinity, to.getTime())
+      if (pt > pf) price = Math.max(0, price - byDays(full, new Date(pf), new Date(pt), monthStart, nextMonthStart)) as Paise
+    }
+    return { row: p, paidFrom, to, price }
+  })
+}
+
+/** A trial still running at `at` (the 1st of a month): that month's plan days are billed after it, in arrears (A2). */
+export function trialRunsAt(plans: PlanRow[], at: Date): boolean {
+  const p = currentPlan(plans, at)
+  return !!p?.trialEndsAt && p.trialEndsAt > at
+}
+
+/**
+ * THE ONE "MADE UP BY DAYS" RULE (B4 plan changes; trials A2): what a month's plans cost by their paid days, less what
+ * its invoice already charged in advance for its plan; charged on the next invoice when more, never refunded. It
+ * covers an upgrade during the month, and the plan days after a trial that ended in it (billed nothing in advance, as
+ * nothing is billed while a trial runs on the 1st). Null `billed`: the month had no invoice, so nothing is made up.
+ */
+export function planChangeOwed(plans: PlanRow[], monthStart: Date, nextMonthStart: Date, billed: number | null, pause: Pause | null = null): Paise {
+  if (billed == null) return 0 as Paise
+  const owed = planDays(plans, monthStart, nextMonthStart, pause).reduce((t, d) => t + d.price, 0)
+  return Math.max(0, owed - billed) as Paise
+}
+
+/**
+ * What switching to `target` at `now` adds to the next bill, before GST: planChangeOwed with the change, less without
+ * it — the figure the invoice will carry (the page's dialog reads this; never its own arithmetic).
+ */
+/** When a change the shop makes starts (app_change_plan's rule): an upgrade now, or when a running trial ends; a
+ * downgrade on the next 1st. */
+export function planChangeStarts(cur: PlanRow | undefined, target: PlanRow['planVersion'], now: Date, nextMonthStart: Date): Date {
+  const up = cur ? target.monthlyPrice > cur.planVersion.monthlyPrice : true
+  if (!up) return nextMonthStart
+  return cur?.trialEndsAt && cur.trialEndsAt > now ? cur.trialEndsAt : now
+}
+
+export function planChangeAdds(plans: PlanRow[], target: PlanRow['planVersion'], now: Date, monthStart: Date, nextMonthStart: Date, billed: number | null): Paise {
+  const cur = [...plans].filter((p) => p.startsAt <= now).sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())[0]
+  const kept = plans.filter((p) => p.startsAt <= now)
+  // As computeBill: a month a trial ran in counts as billed 0, even with no invoice yet (impact review TR0).
+  if (billed == null && (trialRunsAt(kept, monthStart) || kept.some((p) => !!p.trialEndsAt && p.trialEndsAt > monthStart && p.trialEndsAt < nextMonthStart))) billed = 0
+  // As app_change_plan (owner, 2026-11-08): an upgrade during a trial starts when the trial is over, with no trial.
+  const startsAt = planChangeStarts(cur, target, now, nextMonthStart)
+  const up = cur ? target.monthlyPrice > cur.planVersion.monthlyPrice : true
+  const next: PlanRow = { startsAt, planVersion: target, trialEndsAt: !up && cur?.trialEndsAt && cur.trialEndsAt > startsAt ? cur.trialEndsAt : null, customMonthlyPrice: null }
+  return Math.max(0, planChangeOwed([...kept, next], monthStart, nextMonthStart, billed) - planChangeOwed(kept, monthStart, nextMonthStart, billed)) as Paise
+}
+
+export function computeBill(i: BillInput): Bill {
+  const lines: BillLine[] = []
+  // The plan for M, in advance: each plan row in force during M, by its paid days (a trial and a pause are free) —
+  // unless a trial still runs on the 1st: then M's plan days are billed next month, in arrears (trials A2), so nothing
+  // is invoiced, and so nothing debited, for a month a trial is running in.
+  const starts = [...i.plans].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+  if (!trialRunsAt(starts, i.monthStart)) for (const d of planDays(starts, i.monthStart, i.nextMonthStart, i.pause ?? null)) {
+    if (d.price > 0) lines.push({ kind: 'plan', description: `${d.row.planVersion.name ?? d.row.planVersion.planCode} plan`, periodStart: d.paidFrom, periodEnd: d.to, quantity: 1, rateBps: null, taxable: d.price })
   }
+  // M−1 made up by days (planChangeOwed, the one rule): an upgrade during it, or the plan after a trial that ended in
+  // it. A trial that ran on M−1's 1st means its invoice billed no plan: 0, even if that month had no invoice at all.
+  const prevTrial = trialRunsAt(starts, i.prevMonthStart) || starts.some((p) => !!p.trialEndsAt && p.trialEndsAt > i.prevMonthStart && p.trialEndsAt < i.monthStart)
+  const owed = planChangeOwed(starts, i.prevMonthStart, i.monthStart, i.prevPlanBilled ?? (prevTrial ? 0 : null), i.pause ?? null)
+  if (owed > 0) lines.push({ kind: 'change', description: prevTrial ? 'Your plan after the trial last month, by days' : 'Plan change last month: the difference, by days', periodStart: i.prevMonthStart, periodEnd: i.monthStart, quantity: 1, rateBps: null, taxable: owed })
   // Add-on modules for M, in advance, by their days.
   for (const a of i.addons) {
     const from = new Date(Math.max(a.startsAt.getTime(), i.monthStart.getTime(), a.trialEndsAt?.getTime() ?? 0))
@@ -99,14 +171,14 @@ export function computeBill(i: BillInput): Bill {
   }
   // The fee on each newly billable order, rounded per order, grouped into one line per rate.
   const fees: BilledFee[] = i.feeOrders.flatMap((o) => {
-    const f = feeForOrder(i.plans, { merchandiseNet: o.merchandiseNet, billableAt: o.billableAt })
+    const f = feeForOrder(i.plans, { merchandiseNet: o.merchandiseNet, rateAt: o.rateAt, billableAt: o.billableAt })
     return f ? [{ orderId: o.orderId, billableAt: o.billableAt, base: o.merchandiseNet as Paise, feeBps: f.feeBps, fee: f.fee }] : []
   })
   const byRate = new Map<number, BilledFee[]>()
   for (const f of fees) byRate.set(f.feeBps, [...(byRate.get(f.feeBps) ?? []), f])
   for (const [bps, fs] of [...byRate].sort((a, b) => b[0] - a[0])) {
     const base = fs.reduce((t, f) => t + f.base, 0)
-    lines.push({ kind: 'fee', description: `Fee on delivered orders · ${fs.length} orders · ₹${(base / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, periodStart: i.prevMonthStart, periodEnd: i.monthStart, quantity: fs.length, rateBps: bps, taxable: fs.reduce((t, f) => t + f.fee, 0) as Paise })
+    lines.push({ kind: 'fee', description: `Fee on delivered orders · ${fs.length} order${fs.length === 1 ? "" : "s"} · ₹${(base / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, periodStart: i.prevMonthStart, periodEnd: i.monthStart, quantity: fs.length, rateBps: bps, taxable: fs.reduce((t, f) => t + f.fee, 0) as Paise })
   }
   // Orders over the plan in M−1: the count only.
   const endPlan = currentPlan(i.plans, new Date(i.monthStart.getTime() - 1))

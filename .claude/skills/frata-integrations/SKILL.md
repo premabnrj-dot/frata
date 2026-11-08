@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.10.0
+  version: 1.11.0
   verified: 2026-11-08
   decisions: [ADR-0006]
 ---
@@ -209,7 +209,10 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
 - **Pricing**: per message since 1 Jul 2025. **From 1 Oct 2026 in-window utility and service messages are
   charged**; 1,000 free service messages per number per month [V]. Free entry point: Click-to-WhatsApp ads
   only, window up to 7 days [V]. India before GST: marketing ₹0.8631; utility, authentication, service
-  ₹0.1150 [S, watsberry 2026-10-01]. Utility/auth volume tiers per portfolio, monthly [V].
+  ₹0.1150 [S, watsberry 2026-10-01; whautomate "October 1, 2026"; Gallabox lists 0.1323 = +15%, inferred markup].
+  Authentication-international (₹2.4971 [S]) applies only when the WABA's Primary Business Location differs from the
+  user's country; India's rose 1 Apr 2026; 30-day notice [V, pricing + authentication-international-rates, undated,
+  read 2026-11-08]. Utility/auth volume tiers per market, monthly [V].
 - **Limits**: per business portfolio, shared by its numbers: 250 → 2,000 → 10,000 → 100,000 → unlimited [V].
 - **Templates**: marketing / utility / authentication; mixed content (an order update with a promo) is
   marketing; WhatsApp may re-categorise; review up to 24 h; body ≤1024; ≤10 buttons [V].
@@ -385,6 +388,29 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
 - Safe Browsing API non-commercial only (v4 deprecated) → **Web Risk** for our hosts (price [U]); v5 host checks from the
   PSL eTLD+1 [V-undated]. Search Console Domain property covers all subdomains [V-undated].
 - Whether a SaaS store builder is an "intermediary" (s.2(1)(w)) [U]: a lawyer confirms before the first public shop.
+
+## Sign-up code (OTP) and transactional email — checked 2026-11-08 (integration-researcher, for trials TR1/TR2)
+- **WhatsApp authentication template**: fixed text, optional security line, expiry footer 1–90 min; code ≤ 15 chars;
+  copy-code button text ≤ 25; no URLs, media or emojis; one-tap Android, zero-tap Android only, iOS < 26 no autofill
+  [V, authentication templates + copy-code pages, undated]. Frrata's own WABA: Primary Business Location India, INR.
+  Whether a Tech Provider's app may also send from the provider's own WABA: [U] — use a separate app/system user.
+- **SMS (India)**: TRAI Direction 18 Nov 2025 — every template variable pre-tagged (e.g. `#url#`), non-compliant templates
+  rejected; values checked against whitelisted domains, numbers, links [V, TRAI PR 133/2025]. TCCCPR Third Amendment
+  18 Sep 2026: a misused header or template suspended within 6 h [V, TRAI PR 119/2026]. DLT entity ~₹5,900, 2–7 business
+  days; header and template 1–3 days each [S]. Delivery time: [U]. MSG91 ₹0.25→₹0.16 per SMS by volume + 18% GST [V,
+  undated]; Twilio India $0.0083/segment, Verify $0.05 per success + channel [V, Oct 2026].
+- **Supabase phone OTP**: MessageBird, Twilio, Vonage, TextLocal (community); WhatsApp via Twilio only; Send SMS hook
+  (Standard Webhooks, HTTP 5 s) [V, undated]. **Not used**: the sign-up code is a Frrata row sent through the outbox
+  (ADR-0006), a business check, not a login.
+- **Amazon SES**: $0.10 per 1,000, $0.12/GB attachments [V, undated]; ap-south-1 API and SMTP endpoints [V]; sandbox per
+  region (verified recipients, 200/24 h, 1/s), production access first reply within 96 h [V]; Easy DKIM 2048-bit; SPF
+  alignment needs a custom MAIL FROM; strict DKIM alignment by default [V].
+- **Resend**: Free 3,000/mo (100/day), Pro $20/50k, $0.90 per 1,000 over; regions us-east-1, eu-west-1, sa-east-1,
+  ap-northeast-1 — no India; account data stored in the US [V, undated]. **Postmark**: Basic $15/10k … Platform $18 [V].
+  Netcore: no public pricing [U].
+- **Gmail**: one-click unsubscribe only for marketing/promotional — "Transactional messages are excluded"; 5,000/day per
+  primary domain once makes a bulk sender for good; bulk needs SPF + DKIM + DMARC (p=none ok), From aligned, spam < 0.3%
+  [V, support.google.com/a 14229414 + 81126, undated]. **Yahoo**: the same, unsubscribes honoured within 2 days [V].
 
 ## Merchant billing (Frrata bills merchants) — checked 2026-11-08
 

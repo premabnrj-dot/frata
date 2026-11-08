@@ -1328,4 +1328,212 @@ do $$ begin
   then raise exception 'FAIL: staff or API roles reach credit notes'; end if;
 end $$;
 
-\echo 'tenancy proof — all 41 checks passed'
+-- 42. Billing B2 (docs/plans/2026-11-08-billing.md § Review findings 6, 11, 17): payments and Frrata's credit notes are
+-- the shop's own to read; nobody writes them directly (only the three Admin definers, which frata_admin alone may run);
+-- a credit note is final for every role.
+insert into frrata_payments (tenant_id, invoice_id, method, amount, utr, captured_at) values ('22222222-2222-2222-2222-222222222222', 'b1110000-0000-0000-0000-00000000000b', 'bank_transfer', 100, 'PROOFUTRB1', now());
+insert into frrata_credit_notes (tenant_id, invoice_id, number, taxable, cgst, sgst, igst, total, reason, issued_by) values ('22222222-2222-2222-2222-222222222222', 'b1110000-0000-0000-0000-00000000000b', 'PROOF/C00001', 100, 9, 9, 0, 118, 'proof', '99999999-9999-9999-9999-999999999999');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  if exists (select 1 from frrata_payments) or exists (select 1 from frrata_credit_notes) then raise exception 'FAIL: A sees B payments or credit notes'; end if;
+  begin insert into frrata_payments (tenant_id, invoice_id, method, amount, utr, captured_at) values ('11111111-1111-1111-1111-111111111111', 'b1110000-0000-0000-0000-0000000000a1', 'upi', 1, 'PROOFUTRA1', now()); raise exception 'FAIL: the app recorded a payment';
+  exception when insufficient_privilege then null; end;
+  begin insert into frrata_credit_notes (tenant_id, invoice_id, number, taxable, cgst, sgst, igst, total, reason, issued_by) values ('11111111-1111-1111-1111-111111111111', 'b1110000-0000-0000-0000-0000000000a1', 'X/C1', 1, 0, 0, 0, 1, 'xyz', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: the app issued a credit note';
+  exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+do $$ begin
+  begin update frrata_credit_notes set reason = 'changed' where number = 'PROOF/C00001'; raise exception 'FAIL: a Frrata credit note changed';
+  exception when check_violation then null; end;
+  if exists (select 1 from unnest(array['frata_app', 'anon', 'authenticated', 'service_role']) r,
+               unnest(array['app_issue_frrata_invoices(timestamptz,int,bigint,uuid,text,text,text,text,boolean,text,text)', 'app_record_frrata_payment(uuid,bigint,text,text,uuid)', 'app_issue_frrata_credit_note(uuid,bigint,text,uuid,text,text)']) f
+             where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: a non-Admin role may issue, record or credit'; end if;
+  if not has_function_privilege('frata_admin', 'app_issue_frrata_invoices(timestamptz,int,bigint,uuid,text,text,text,text,boolean,text,text)', 'execute') then raise exception 'FAIL: Admin cannot issue'; end if;
+  if has_table_privilege('frata_admin', 'frrata_payments', 'insert, update, delete') or has_table_privilege('frata_admin', 'frrata_credit_notes', 'insert, update, delete')
+     or has_table_privilege('frata_app', 'frrata_payments', 'insert, update, delete')
+  then raise exception 'FAIL: a role writes payments or credit notes directly'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r, unnest(array['frrata_payments', 'frrata_credit_notes']) t
+             where has_any_column_privilege(r, t, 'select, insert, update, references') or has_table_privilege(r, t, 'select, insert, update, delete')) then raise exception 'FAIL: API roles reach B2 tables'; end if;
+end $$;
+
+-- 43. Billing B3 (plan findings 10, 12, 14): an autopay set-up completes only against THIS shop's pending row; the
+-- gateway's ids never reach frata_app; billing_events has no app grant; notices and set-ups are the shop's own.
+insert into billing_mandate_setups (tenant_id, gateway_order_id, gateway_customer_id, method, max_amount, created_by) values ('22222222-2222-2222-2222-222222222222', 'order_proofB1', 'cust_proofB', 'upi', 1500000, '99999999-9999-9999-9999-999999999999');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare ok boolean; begin
+  if exists (select 1 from billing_mandate_setups) then raise exception 'FAIL: A sees B autopay set-ups'; end if;
+  -- B's pending order, completed from A: refused, and B's mandate untouched.
+  select app_complete_mandate('order_proofB1', 'token_stolen') into ok;
+  if ok then raise exception 'FAIL: A completed B''s autopay'; end if;
+  begin perform 1 from billing_events; raise exception 'FAIL: the app reads billing_events'; exception when insufficient_privilege then null; end;
+  begin insert into billing_events (event_id, type, payload) values ('x', 'y', '{}'); raise exception 'FAIL: the app writes billing_events'; exception when insufficient_privilege then null; end;
+  begin perform gateway_order_id from billing_mandate_setups; raise exception 'FAIL: the app reads a gateway order id'; exception when insufficient_privilege then null; end;
+  -- A's own set-up starts and completes.
+  perform app_begin_mandate('cust_proofA', 'order_proofA1', 'upi', 1500000, '99999999-9999-9999-9999-999999999999');
+  select app_complete_mandate('order_proofA1', 'token_A') into ok;
+  if not ok then raise exception 'FAIL: A could not complete its own autopay'; end if;
+  if (select mandate_method from billing_accounts) is distinct from 'upi' then raise exception 'FAIL: A cannot see its own autopay status'; end if;
+end $$;
+rollback;
+do $$ begin
+  if (select mandate_token_id from billing_accounts where tenant_id = '22222222-2222-2222-2222-222222222222') is not null then raise exception 'FAIL: B''s mandate was touched'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r,
+               unnest(array['app_begin_mandate(text,text,text,bigint,uuid)', 'app_complete_mandate(text,text)', 'app_billing_due()', 'app_billing_begin_attempt(uuid,int)', 'app_billing_attempt_context(uuid)', 'app_billing_attempt_result(text,text,boolean,text)', 'app_store_billing_event(text,text,jsonb)', 'app_apply_billing_event(uuid)']) f
+             where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: an API role may run a billing B3 function'; end if;
+  if exists (select 1 from unnest(array['frata_app', 'frata_admin', 'anon', 'authenticated', 'service_role']) r where has_table_privilege(r, 'billing_events', 'select, insert, update, delete'))
+  then raise exception 'FAIL: a role reaches billing_events directly'; end if;
+end $$;
+
+-- 44. Billing B4: a shop changes only its own plan, as its owner or an admin; never a price agreed with Frrata, never a
+-- change Frrata scheduled; cancelling touches only its own; Admin never writes a row as the shop.
+insert into tenant_plans (tenant_id, plan_version_id, starts_at, created_by, reason, by_shop)
+  select '22222222-2222-2222-2222-222222222222', v.id, now() + interval '40 days', 'aaaaaaaa-0000-0000-0000-000000000001', 'Changed by the shop', true
+  from plan_versions v join plans p on p.id = v.plan_id where p.code = 'scale' order by v.version desc limit 1;
+begin; set local role frata_app;
+do $$ begin
+  perform set_config('app.tenant_id', '', true);
+  begin perform app_change_plan('growth', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: a plan changed with no shop set'; exception when insufficient_privilege then null; end;
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  -- B's staff member, acting in A: refused.
+  begin perform app_change_plan('growth', 'aaaaaaaa-0000-0000-0000-000000000005'); raise exception 'FAIL: a non-member changed A''s plan'; exception when insufficient_privilege then null; end;
+  -- A's owner upgrades (now), then schedules a downgrade, then cancels it.
+  perform app_change_plan('growth', '99999999-9999-9999-9999-999999999999');
+  if not exists (select 1 from tenant_plans where tenant_id = '11111111-1111-1111-1111-111111111111' and by_shop and starts_at <= now()) then raise exception 'FAIL: A''s upgrade was not written'; end if;
+  perform app_change_plan('launch', '99999999-9999-9999-9999-999999999999');
+  if not exists (select 1 from tenant_plans where tenant_id = '11111111-1111-1111-1111-111111111111' and by_shop and starts_at > now()) then raise exception 'FAIL: A''s downgrade was not scheduled'; end if;
+  if not app_cancel_plan_change('99999999-9999-9999-9999-999999999999') then raise exception 'FAIL: A could not cancel its change'; end if;
+  if exists (select 1 from tenant_plans where tenant_id = '11111111-1111-1111-1111-111111111111' and starts_at > now()) then raise exception 'FAIL: A''s change was not cancelled'; end if;
+  if (select count(*) from audit_events where tenant_id = '11111111-1111-1111-1111-111111111111' and action in ('billing.plan.change', 'billing.plan.cancel')) <> 3 then raise exception 'FAIL: a plan change was not audited'; end if;
+  begin insert into tenant_plans (tenant_id, plan_version_id, starts_at, created_by) select '11111111-1111-1111-1111-111111111111', id, now(), '99999999-9999-9999-9999-999999999999' from plan_versions limit 1; raise exception 'FAIL: the app writes tenant_plans'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+do $$ begin
+  if (select count(*) from tenant_plans where tenant_id = '22222222-2222-2222-2222-222222222222' and by_shop and starts_at > now()) <> 1 then raise exception 'FAIL: A touched B''s scheduled change'; end if;
+end $$;
+-- Admin never writes a row as the shop.
+begin; set local role frata_admin;
+do $$ begin
+  begin insert into tenant_plans (tenant_id, plan_version_id, starts_at, created_by, by_shop) select '11111111-1111-1111-1111-111111111111', id, now() + interval '50 days', 'aaaaaaaa-0000-0000-0000-000000000001', true from plan_versions limit 1;
+    raise exception 'FAIL: Admin wrote a row as the shop'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+-- A change Frrata scheduled, and a price agreed with Frrata: both refused.
+begin;
+insert into tenant_plans (tenant_id, plan_version_id, starts_at, created_by, reason)
+  select '11111111-1111-1111-1111-111111111111', v.id, now() + interval '20 days', 'aaaaaaaa-0000-0000-0000-000000000001', 'Agreed on a call'
+  from plan_versions v join plans p on p.id = v.plan_id where p.code = 'growth' order by v.version desc limit 1;
+set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  begin perform app_change_plan('scale', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: the shop replaced Frrata''s scheduled change'; exception when check_violation then null; end;
+  if app_cancel_plan_change('99999999-9999-9999-9999-999999999999') then raise exception 'FAIL: the shop cancelled Frrata''s scheduled change'; end if;
+end $$;
+rollback;
+begin;
+update tenant_plans set custom_monthly_price = 100000, reason = 'Agreed' where tenant_id = '11111111-1111-1111-1111-111111111111';
+set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  begin perform app_change_plan('scale', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: the shop changed a price agreed with Frrata'; exception when check_violation then null; end;
+end $$;
+rollback;
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['app_change_plan(text,uuid)', 'app_cancel_plan_change(uuid)']) f
+             where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: another role may change a shop''s plan'; end if;
+  if has_function_privilege('frata_app', 'app_admin_clear_shop_plan_change(uuid)', 'execute') then raise exception 'FAIL: the app clears plan changes'; end if;
+end $$;
+
+-- 45. Trials TR0: the trial's terms and claims. A shop reads only its own trial; the platform terms carry no who or why;
+-- no app role reads a claim, writes a trial, or runs the one writer of the trial end (T2, T8, R4).
+insert into shop_trials (tenant_id, days, open_window_days, signed_up_at) values
+  ('11111111-1111-1111-1111-111111111111', 30, 15, now() - interval '1 day'), ('22222222-2222-2222-2222-222222222222', 30, 15, now() - interval '1 day');
+select app_trial_recompute('11111111-1111-1111-1111-111111111111'), app_trial_recompute('22222222-2222-2222-2222-222222222222');
+insert into trial_claims (kind, key_hmac, key_version, tenant_id) values ('email', 'proof-hmac', 1, '22222222-2222-2222-2222-222222222222');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  if (select count(*) from shop_trials) <> 1 or exists (select 1 from shop_trials where tenant_id <> '11111111-1111-1111-1111-111111111111') then raise exception 'FAIL: A sees another shop''s trial'; end if;
+  if (select days from trial_settings) is null then raise exception 'FAIL: the app cannot read the trial terms'; end if;
+  begin perform reason from trial_settings; raise exception 'FAIL: the app reads why the terms changed'; exception when insufficient_privilege then null; end;
+  begin perform 1 from trial_claims; raise exception 'FAIL: the app reads trial claims'; exception when insufficient_privilege then null; end;
+  begin update shop_trials set extended_at = now(); raise exception 'FAIL: the app writes a trial'; exception when insufficient_privilege then null; end;
+  begin update trial_settings set days = 45; raise exception 'FAIL: the app writes the trial terms'; exception when insufficient_privilege then null; end;
+  begin perform app_trial_recompute('22222222-2222-2222-2222-222222222222'); raise exception 'FAIL: the app runs the trial-end writer'; exception when insufficient_privilege then null; end;
+  begin perform app_admin_extend_trial('99999999-9999-9999-9999-999999999999', '11111111-1111-1111-1111-111111111111', 'proof'); raise exception 'FAIL: the app runs an Admin trial definer'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+do $$ begin
+  if exists (select 1 from unnest(array['frata_app', 'frata_admin', 'anon', 'authenticated', 'service_role']) r, unnest(array['app_trial_recompute(uuid)', 'app_trial_ends_at(uuid)', 'app_trial_clock_starts()', 'app_tenant_plans_trial_sync()']) f
+             where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: a role may run the trial-end writer directly'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_app']) r where has_function_privilege(r, 'app_admin_set_trial_settings(uuid,int,int,text)', 'execute'))
+  then raise exception 'FAIL: a non-Admin role may set the trial terms'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r, unnest(array['trial_settings', 'shop_trials', 'trial_claims']) t
+             where has_table_privilege(r, t, 'select, insert, update, delete')) then raise exception 'FAIL: API roles reach the trial tables'; end if;
+end $$;
+
+-- 46. The clock starts once, at the FIRST time the website goes live; closing and reopening never restarts it (T4).
+update shop_settings set published_at = null where tenant_id = '11111111-1111-1111-1111-111111111111';
+update shop_settings set published_at = now() where tenant_id = '11111111-1111-1111-1111-111111111111';
+do $$ declare first timestamptz; e timestamptz; begin
+  select started_at into first from shop_trials where tenant_id = '11111111-1111-1111-1111-111111111111';
+  if first is null then raise exception 'FAIL: going live did not start the trial'; end if;
+  e := app_trial_ends_at('11111111-1111-1111-1111-111111111111');
+  if exists (select 1 from tenant_plans where tenant_id = '11111111-1111-1111-1111-111111111111' and starts_at < e and trial_ends_at is distinct from e) then raise exception 'FAIL: a plan row missed the trial end'; end if;
+  update shop_settings set published_at = null where tenant_id = '11111111-1111-1111-1111-111111111111';
+  perform pg_sleep(0.01);
+  update shop_settings set published_at = now() where tenant_id = '11111111-1111-1111-1111-111111111111';
+  if (select started_at from shop_trials where tenant_id = '11111111-1111-1111-1111-111111111111') <> first then raise exception 'FAIL: reopening restarted the trial'; end if;
+end $$;
+
+-- 47. The extension is the shop's owner or admin MEMBER only, once, in the last 10 days (T3); an upgrade during a
+-- trial waits for its end and moves with it (A1, R4).
+update shop_trials set signed_up_at = now() - interval '40 days', started_at = now() - interval '25 days' where tenant_id = '11111111-1111-1111-1111-111111111111';
+select app_trial_recompute('11111111-1111-1111-1111-111111111111');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare e1 timestamptz; e2 timestamptz; w timestamptz; begin
+  -- B's staff member (a support visit reports as owner; the members table does not) is refused.
+  begin perform app_trial_extend('aaaaaaaa-0000-0000-0000-000000000005'); raise exception 'FAIL: a non-member extended A''s trial'; exception when insufficient_privilege then null; end;
+  select trial_ends_at into e1 from tenant_plans where tenant_id = '11111111-1111-1111-1111-111111111111' and starts_at <= now() order by starts_at desc limit 1;
+  perform app_change_plan('growth', '99999999-9999-9999-9999-999999999999');
+  select starts_at into w from tenant_plans where tenant_id = '11111111-1111-1111-1111-111111111111' and waits_for_trial;
+  if w is distinct from e1 then raise exception 'FAIL: the upgrade does not wait for the trial end'; end if;
+  e2 := app_trial_extend('99999999-9999-9999-9999-999999999999');
+  if e2 <> e1 + interval '7 days' then raise exception 'FAIL: the extension is not 7 days'; end if;
+  if (select starts_at from tenant_plans where tenant_id = '11111111-1111-1111-1111-111111111111' and waits_for_trial) <> e2 then raise exception 'FAIL: the waiting upgrade did not move with the extension'; end if;
+  if exists (select 1 from tenant_plans where tenant_id = '11111111-1111-1111-1111-111111111111' and waits_for_trial and trial_ends_at is not null) then raise exception 'FAIL: the waiting upgrade carries a trial'; end if;
+  begin perform app_trial_extend('99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: a second extension'; exception when check_violation then null; end;
+end $$;
+rollback;
+-- 47b. Security review TR0: Admin never writes a waiting upgrade; a scheduled downgrade carries the trial end (T5);
+-- no extension once a waiting upgrade has started; frata_admin cannot run the shop's extension or the writer.
+begin; set local role frata_admin;
+do $$ begin
+  begin insert into tenant_plans (tenant_id, plan_version_id, starts_at, created_by, waits_for_trial) select '11111111-1111-1111-1111-111111111111', id, now(), 'aaaaaaaa-0000-0000-0000-000000000001', true from plan_versions limit 1;
+    raise exception 'FAIL: Admin wrote a waiting upgrade'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+do $$ begin
+  if has_function_privilege('frata_admin', 'app_trial_extend(uuid)', 'execute') then raise exception 'FAIL: Admin runs the shop''s extension'; end if;
+end $$;
+begin;
+-- A downgrade scheduled inside the trial carries the trial's end; a downgrade after it carries none.
+insert into tenant_plans (tenant_id, plan_version_id, starts_at, created_by, reason, by_shop)
+  select '11111111-1111-1111-1111-111111111111', v.id, now() + interval '2 days', '99999999-9999-9999-9999-999999999999', 'Changed by the shop', true from plan_versions v join plans p on p.id = v.plan_id where p.code = 'scale' order by v.version desc limit 1;
+do $$ declare e timestamptz := app_trial_ends_at('11111111-1111-1111-1111-111111111111'); begin
+  if (select trial_ends_at from tenant_plans where tenant_id = '11111111-1111-1111-1111-111111111111' and starts_at > now()) is distinct from e then raise exception 'FAIL: a scheduled row missed the trial end'; end if;
+end $$;
+rollback;
+begin;
+insert into tenant_plans (tenant_id, plan_version_id, starts_at, created_by, reason, by_shop, waits_for_trial)
+  select '11111111-1111-1111-1111-111111111111', v.id, now() - interval '1 minute', '99999999-9999-9999-9999-999999999999', 'Changed by the shop', true, true from plan_versions v join plans p on p.id = v.plan_id where p.code = 'growth' order by v.version desc limit 1;
+set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  begin perform app_trial_extend('99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: extended after the new plan started'; exception when check_violation then null; end;
+end $$;
+rollback;
+
+\echo 'tenancy proof — all 48 checks passed'

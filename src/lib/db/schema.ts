@@ -189,6 +189,10 @@ export const tenantPlans = pgTable('tenant_plans', {
   trialEndsAt: at('trial_ends_at'),
   customMonthlyPrice: money('custom_monthly_price'),
   reason: text('reason'),
+  /** Billing B4: the shop changed its own plan (app_change_plan); never written by Admin (column grant). */
+  byShop: boolean('by_shop').notNull().default(false),
+  /** Trials TR0: an upgrade waiting for the trial to end (it carries no trial; app_trial_recompute moves its start). */
+  waitsForTrial: boolean('waits_for_trial').notNull().default(false),
   createdBy: uuid('created_by').notNull(),
   createdAt: createdAt(),
 }, (t) => [

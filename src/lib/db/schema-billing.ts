@@ -11,7 +11,7 @@
 // =============================================================================
 
 import { sql } from 'drizzle-orm'
-import { boolean, check, foreignKey, index, integer, pgTable, primaryKey, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { boolean, check, foreignKey, index, integer, jsonb, pgTable, primaryKey, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { LINE_KINDS } from '@/domains/billing/bill'
 import { sqlList } from '@/domains/tenancy/roles'
 import { at, createdAt, id, money, tenants } from './schema'
@@ -69,6 +69,13 @@ export const frrataInvoices = pgTable('frrata_invoices', {
   buyerGstin: text('buyer_gstin'),
   buyerAddress: text('buyer_address'),
   placeOfSupply: text('place_of_supply'),
+  /** Frrata as the supplier, frozen at issue (B2): its legal name, GSTIN, address and the SAC of the service. */
+  sellerName: text('seller_name'),
+  sellerGstin: text('seller_gstin'),
+  sellerAddress: text('seller_address'),
+  sac: text('sac'),
+  /** Issued in test mode (no GSTIN yet): its own TEST series, printed "not a tax invoice", never collected for real. */
+  testMode: boolean('test_mode').notNull().default(false),
   createdAt: createdAt(),
 }, (t) => [
   uniqueIndex('frrata_invoices_tenant_period').on(t.tenantId, t.periodStart),
@@ -143,4 +150,115 @@ export const platformCounters = pgTable('platform_counters', {
   primaryKey({ columns: [t.kind, t.fy] }),
   check('platform_counters_kind', sql`${t.kind} in ('invoice', 'credit')`),
   check('platform_counters_next', sql`${t.next} >= 1`),
+])
+
+/**
+ * Money received against an issued Frrata invoice (billing B2 by hand, B3 by the gateway): one row per attempt or
+ * transfer. Captured or failed is derived from timestamps; "paid" is derived (captured + credited ≥ total). Written only
+ * by definers: Admin recording a bank transfer (unique UTR), the gateway's events (unique ids).
+ */
+export const frrataPayments = pgTable('frrata_payments', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull(),
+  invoiceId: uuid('invoice_id').notNull(),
+  attempt: integer('attempt').notNull().default(0),
+  method: text('method').notNull(),
+  amount: money('amount').notNull(),
+  utr: text('utr'),
+  gatewayOrderId: text('gateway_order_id'),
+  gatewayPaymentId: text('gateway_payment_id'),
+  capturedAt: at('captured_at'),
+  failedAt: at('failed_at'),
+  failureReason: text('failure_reason'),
+  /** Billing B3 (security review): the one sender that may charge this attempt took it at this moment; never twice. */
+  sendingAt: at('sending_at'),
+  /** Captured beyond what was due (a Pay now and a debit both landed): Frrata refunds this much. */
+  overPaid: money('over_paid').notNull().default(0),
+  recordedBy: uuid('recorded_by'),
+  createdAt: createdAt(),
+}, (t) => [
+  foreignKey({ name: 'frrata_payments_invoice_fk', columns: [t.tenantId, t.invoiceId], foreignColumns: [frrataInvoices.tenantId, frrataInvoices.id] }).onDelete('restrict'),
+  index('frrata_payments_invoice').on(t.tenantId, t.invoiceId),
+  uniqueIndex('frrata_payments_utr').on(t.utr),
+  uniqueIndex('frrata_payments_gateway_order').on(t.gatewayOrderId),
+  uniqueIndex('frrata_payments_gateway_payment').on(t.gatewayPaymentId),
+  check('frrata_payments_method', sql`${t.method} in ('bank_transfer','upi','card','emandate','paylink')`),
+  check('frrata_payments_amount', sql`${t.amount} > 0`),
+  check('frrata_payments_outcome', sql`not (${t.capturedAt} is not null and ${t.failedAt} is not null)`),
+])
+
+/** Frrata's credit note to a shop (B2): a waiver or correction against an issued invoice, its own series; final. */
+export const frrataCreditNotes = pgTable('frrata_credit_notes', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull(),
+  invoiceId: uuid('invoice_id').notNull(),
+  number: text('number').notNull(),
+  taxable: money('taxable').notNull(),
+  cgst: money('cgst').notNull(),
+  sgst: money('sgst').notNull(),
+  igst: money('igst').notNull(),
+  total: money('total').notNull(),
+  reason: text('reason').notNull(),
+  testMode: boolean('test_mode').notNull().default(false),
+  issuedAt: at('issued_at').notNull().defaultNow(),
+  issuedBy: uuid('issued_by').notNull(),
+}, (t) => [
+  foreignKey({ name: 'frrata_credit_notes_invoice_fk', columns: [t.tenantId, t.invoiceId], foreignColumns: [frrataInvoices.tenantId, frrataInvoices.id] }).onDelete('restrict'),
+  uniqueIndex('frrata_credit_notes_number').on(t.number),
+  index('frrata_credit_notes_invoice').on(t.tenantId, t.invoiceId),
+  check('frrata_credit_notes_money', sql`${t.taxable} > 0 and ${t.total} = ${t.taxable} + ${t.cgst} + ${t.sgst} + ${t.igst}`),
+  check('frrata_credit_notes_reason', sql`length(${t.reason}) between 3 and 240`),
+])
+
+/**
+ * An autopay set-up in progress (billing B3; plan finding 14): the gateway order the shop's checkout authorises. The
+ * mandate is saved only when the server has verified Checkout's signature, matched THIS shop's pending row, and fetched
+ * the token from the gateway itself. Written only by definers bound to the current shop.
+ */
+export const billingMandateSetups = pgTable('billing_mandate_setups', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'restrict' }),
+  gatewayOrderId: text('gateway_order_id').notNull().unique(),
+  gatewayCustomerId: text('gateway_customer_id').notNull(),
+  method: text('method').notNull(),
+  maxAmount: money('max_amount').notNull(),
+  createdBy: uuid('created_by').notNull(),
+  createdAt: createdAt(),
+  completedAt: at('completed_at'),
+}, (t) => [
+  index('billing_mandate_setups_tenant').on(t.tenantId),
+  check('billing_mandate_setups_method', sql`${t.method} in ('upi','card','emandate')`),
+  check('billing_mandate_setups_max', sql`${t.maxAmount} > 0`),
+])
+
+/**
+ * Frrata's own billing webhook (plan finding 12): each verified event stored once under the gateway's event id, then
+ * applied from the stored row. No frata_app grant: an insert-only definer stores, another applies.
+ */
+export const billingEvents = pgTable('billing_events', {
+  id: id(),
+  eventId: text('event_id').notNull().unique(),
+  type: text('type').notNull(),
+  payload: jsonb('payload').notNull(),
+  receivedAt: at('received_at').notNull().defaultNow(),
+  appliedAt: at('applied_at'),
+  error: text('error'),
+})
+
+/**
+ * What Frrata tells a shop about a debit (billing B3): the notice before each debit (≥ 24 h, RBI e-mandate framework),
+ * a failed payment, and the day-14 acknowledgement. The console shows them to owners and admins; email comes later.
+ */
+export const billingNotices = pgTable('billing_notices', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull(),
+  invoiceId: uuid('invoice_id').notNull(),
+  kind: text('kind').notNull(),
+  amount: money('amount').notNull(),
+  debitAt: at('debit_at'),
+  createdAt: createdAt(),
+}, (t) => [
+  foreignKey({ name: 'billing_notices_invoice_fk', columns: [t.tenantId, t.invoiceId], foreignColumns: [frrataInvoices.tenantId, frrataInvoices.id] }).onDelete('restrict'),
+  index('billing_notices_tenant').on(t.tenantId, t.createdAt),
+  check('billing_notices_kind', sql`${t.kind} in ('debit_notice','failed','acknowledge')`),
 ])
