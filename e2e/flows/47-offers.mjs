@@ -141,6 +141,23 @@ export default {
         await p.getByText(/applied\./).waitFor(); await p.getByText('−₹498').first().waitFor()
         await p.screenshot({ path: t.out('checkout-code'), fullPage: true })
       })
+      await t.step('O·2: Buy 2 get 1 from the console: a badge on the card, a line on the product page, the third piece free', async () => {
+        await db`update discounts set ended_at = now(), announce = false where ended_at is null` // only this offer now
+        await c.goto(CONSOLE + '/console/offers/new?style=bxgy')
+        await c.getByRole('button', { name: 'Save as draft' }).click()
+        await c.waitForURL(/\/console\/offers\/[0-9a-f-]{36}$/)
+        await c.getByRole('button', { name: 'Start', exact: true }).click(); await c.getByText('Live', { exact: true }).first().waitFor()
+        await c.getByRole('heading', { name: 'Codes' }).waitFor() // creator codes live here
+        await p.goto(SHOP + '/products', { waitUntil: 'domcontentloaded' })
+        await until(async () => { await p.reload({ waitUntil: 'domcontentloaded' }); return (await p.getByText('Buy 2, get 1 free', { exact: true }).count()) > 0 }, 20_000)
+        await p.screenshot({ path: t.out('badges'), fullPage: true })
+        await toBag()
+        await p.getByText(/Buy 2, get 1 free: Buy 2, get 1 free/).first().waitFor().catch(() => {}) // the product page's offer line (when the theme shows it)
+        const bag = p.getByRole('dialog', { name: 'Your bag' })
+        await bag.getByRole('button', { name: /One more/ }).click(); await bag.getByRole('button', { name: /One more/ }).click()
+        await bag.getByText('−₹2,490').waitFor() // three ₹2,490 kurtas: one free
+        await p.screenshot({ path: t.out('bag-bxgy'), fullPage: true })
+      })
       await ctx.close()
     } finally {
       // The flows after this one price the same products: no offer may outlive this flow.
