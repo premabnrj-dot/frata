@@ -2,7 +2,7 @@ import 'server-only'
 import { randomUUID } from 'node:crypto'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import type { CleanAddress } from '@/domains/checkout/address'
-import { amountFor, type DiscountTerms } from '@/domains/checkout/discounts'
+import { amountFor, candidates, normalCode, type DiscountTerms } from '@/domains/checkout/discounts'
 import { quote, totalFor, type BagLine, type Quote } from '@/domains/checkout/quote'
 import { gstinState } from '@/domains/tax/gst'
 import type { Tx } from '@/lib/db'
@@ -12,7 +12,7 @@ import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { orderToken, sha256, tokenHash } from '@/lib/crypto/secret-box'
 import { checkoutShop, liveOffers, variantRows } from '@/lib/queries/checkout'
-import { useOfRowSql } from '@/lib/db/discount-predicates'
+import { discountUses, fits } from '@/lib/db/discount-predicates'
 import { discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import { keysFor } from '@/lib/payments/keys'
 import { createOrder } from '@/lib/payments/razorpay'
@@ -48,17 +48,19 @@ export type PlaceInput = {
   facts: { firstMethod?: 'cod' | 'prepaid' | null; attribution?: Record<string, string> }
 }
 export type Pay = { keyId: string; razorpayOrderId: string; amount: number; name: string; phone: string; shop: string }
-export type Placed = { kind: 'placed'; token: string; number: number; method: 'cod' | 'prepaid'; total: number; pay: Pay | null; payError?: string }
+export type Placed = { kind: 'placed'; token: string; number: number; method: 'cod' | 'prepaid'; total: number; pay: Pay | null; payError?: string
+  /** What the typed code did (for the guess limit); null on a retry of a placed order or with no code. */
+  code?: 'applied' | 'not_applied' | null }
 export type PlaceResult =
   | Placed
   | { kind: 'changed'; quote: Quote }
   | { kind: 'refused'; status: 404 | 409 | 422; error: string; quote?: Quote }
 
-const requestHashOf = (i: PlaceInput) => sha256(JSON.stringify([i.address.phone, i.method, [...i.bag].map((b) => [b.variantId, b.qty]).sort(), ...(i.code ? [i.code.trim().toUpperCase()] : [])]))
+const requestHashOf = (i: PlaceInput) => sha256(JSON.stringify([i.address.phone, i.method, [...i.bag].map((b) => [b.variantId, b.qty]).sort(), ...(i.code ? [normalCode(i.code)] : [])]))
 
 export async function placeOrder(tenantId: string, input: PlaceInput, now = new Date()): Promise<PlaceResult> {
   const soldOut: string[] = []
-  const placed = await withTenant(tenantId, async (tx): Promise<PlaceResult | { kind: 'new'; id: string; number: number; method: 'cod' | 'prepaid'; total: number }> => {
+  const placed = await withTenant(tenantId, async (tx): Promise<PlaceResult | { kind: 'new'; id: string; number: number; method: 'cod' | 'prepaid'; total: number; code?: 'applied' | 'not_applied' | null }> => {
     // A retry of the same attempt finds its order; the same key with a different bag is not the same attempt.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${tenantId + ':' + input.idempotencyKey}, 0))`)
     const reqHash = requestHashOf(input)
@@ -121,12 +123,12 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
       percentBps: a.terms.percentBps, amountOff: a.terms.amountOff, cap: a.terms.cap, minSubtotal: a.terms.minSubtotal,
     })))
     if (cod) await takeStock(tx, tenantId, id, 'in_stock', soldOut)
-    return { kind: 'new', id, number, method: input.method, total: m.total }
+    return { kind: 'new', id, number, method: input.method, total: m.total, code: q.offers.code }
   })
   if (placed.kind !== 'new') return placed
   // The last piece went: the cached product pages say sold out at once (1D gap fix).
   if (soldOut.length) refreshShop(tenantId, 'catalogue')
-  const out: Placed = { kind: 'placed', token: orderToken(placed.id), number: placed.number, method: placed.method, total: placed.total, pay: null }
+  const out: Placed = { kind: 'placed', token: orderToken(placed.id), number: placed.number, method: placed.method, total: placed.total, pay: null, code: placed.code ?? null }
   if (placed.method === 'cod') return out
   const pay = await startPayment(tenantId, placed.id)
   return pay.ok ? { ...out, pay: pay.pay } : { ...out, payError: pay.error }
@@ -139,30 +141,20 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
  * out; the bag is priced; an applied offer whose amount would cross its budget drops out and the bag is priced again.
  */
 async function fitOffers(tx: Tx, tenantId: string, offers: DiscountTerms[], price: (o: DiscountTerms[]) => Quote, input: PlaceInput, now: Date): Promise<DiscountTerms[]> {
-  const typed = input.code ? input.code.trim().toUpperCase() : null
   const subtotal = price([]).subtotal
-  const could = offers.filter((t) => (t.code === null || t.listed || t.code === typed) && (t.style === 'free_shipping' || amountFor(t, subtotal) > 0)).map((t) => t.id)
+  const could = candidates(offers, normalCode(input.code)).filter((t) => t.style === 'free_shipping' || amountFor(t, subtotal) > 0).map((t) => t.id)
   if (!could.length) return offers
-  const limited = await tx.execute<{ id: string; limit_total: number | null; limit_per_phone: number | null; budget: string | null }>(sql`
+  const limited = (await tx.execute<{ id: string; limit_total: number | null; limit_per_phone: number | null; budget: string | null }>(sql`
     select id, limit_total, limit_per_phone, budget from ${discounts} where tenant_id = ${tenantId} and id in ${could}
-      and (limit_total is not null or limit_per_phone is not null or budget is not null) order by id for update`)
+      and (limit_total is not null or limit_per_phone is not null or budget is not null) order by id for update`))
+    .map((l) => ({ id: l.id, limitTotal: l.limit_total, limitPerPhone: l.limit_per_phone, budget: l.budget === null ? null : Number(l.budget) }))
   if (!limited.length) return offers
-  const used = new Map((await tx.execute<{ id: string; n: number; given: string; phone: number }>(sql`
-    select od.discount_id id, count(*)::int n, coalesce(sum(od.amount), 0)::bigint given, (count(*) filter (where o.phone = ${input.address.phone}))::int phone
-      from ${orderDiscounts} od join ${orders} o on o.tenant_id = od.tenant_id and o.id = od.order_id
-     where od.tenant_id = ${tenantId} and od.discount_id in ${limited.map((l) => l.id)} and ${useOfRowSql(now)} group by od.discount_id`)).map((u) => [u.id, u]))
-  const out = new Set(limited.filter((l) => {
-    const u = used.get(l.id)
-    return (l.limit_total !== null && (u?.n ?? 0) + 1 > l.limit_total) || (l.limit_per_phone !== null && (u?.phone ?? 0) + 1 > l.limit_per_phone)
-  }).map((l) => l.id))
-  // Budgets: as many passes as there are limited offers (each pass drops at least one, or stops).
+  const used = await discountUses(tx, tenantId, limited.map((l) => l.id), now, { phone: input.address.phone })
+  // Uses and per-phone first (budget 0 here: the amount is not known until priced); then budgets on the priced bag.
+  const out = new Set(limited.filter((l) => !fits({ ...l, budget: null }, used.get(l.id), 0)).map((l) => l.id))
   for (let pass = 0; pass <= limited.length; pass++) {
     const q = price(offers.filter((t) => !out.has(t.id)))
-    const m = input.method === 'cod' ? q.cod : q.prepaid
-    const over = m.applied.filter((a) => {
-      const l = limited.find((x) => x.id === a.discountId)
-      return l?.budget != null && Number(used.get(l.id)?.given ?? 0) + a.amount > Number(l.budget)
-    })
+    const over = (input.method === 'cod' ? q.cod : q.prepaid).applied.filter((a) => { const l = limited.find((x) => x.id === a.discountId); return l && !fits(l, used.get(l.id), a.amount) })
     if (!over.length) break
     for (const a of over) out.add(a.discountId)
   }

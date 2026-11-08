@@ -119,7 +119,7 @@ describe.skipIf(!host)('offers at placement and after', () => {
 
       // The switch, as switchToCod does it: priced again from the stored order, then written whole.
       const sp = await storedPricing(tx, A, o!.id, { shipping: 0, sellerGstin: '08ABCDE1234F1Z5', pricesIncludeGst: true })
-      const cod = reprice(sp, 'cod', 4900)
+      const cod = reprice(sp, 'cod', rules, null).price!
       expect(cod.total).toBe(q.cod.total) // exactly what the checkout showed for COD
       await tx.update(orders).set({ switchedToCodAt: now, payBy: null }).where(eq(orders.id, o!.id))
       await writeReprice(tx, A, o!.id, sp.lineIds, cod)
@@ -134,5 +134,87 @@ describe.skipIf(!host)('offers at placement and after', () => {
       expect(await inUse()).toBe(1)
       throw ROLLBACK
     }).catch((e) => { if (e !== ROLLBACK) throw e })
+  })
+  it('a per-phone limit and a budget each drop the offer for the order that would cross them; liveDiscountSql = offerStatus', async () => {
+    process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
+    process.env.PAYMENT_KEYS_SECRET ??= 'int-test-only'
+    const { withTenant } = await import('@/lib/db/tenant')
+    const { shopSettings } = await import('@/lib/db/schema')
+    const { products, variants } = await import('@/lib/db/schema-catalogue')
+    const { orders } = await import('@/lib/db/schema-orders')
+    const { discounts } = await import('@/lib/db/schema-discounts')
+    const { placeOrder } = await import('@/lib/orders/place')
+    const { quoteData } = await import('@/lib/queries/checkout')
+    const { quote } = await import('@/domains/checkout/quote')
+    const { offerStatus } = await import('@/domains/checkout/offer-status')
+    const { liveDiscountSql } = await import('@/lib/db/discount-predicates')
+    const { and, eq, inArray, sql } = await import('drizzle-orm')
+    const stamp = Date.now()
+    const before = await withTenant(A, async (tx) => (await tx.select().from(shopSettings).where(eq(shopSettings.tenantId, A)))[0]!)
+    const made = await withTenant(A, async (tx) => {
+      await tx.update(shopSettings).set({ publishedAt: new Date(), codOn: true, codMin: 0, codMax: 0, codCharge: 0, shippingFlat: 0, freeShippingAbove: 0, pricesIncludeGst: true, codBlockedPincodes: [], gstin: null })
+        .where(eq(shopSettings.tenantId, A))
+      const [p] = await tx.insert(products).values({ tenantId: A, handle: `int-limits-${stamp}`, title: 'Int tee', options: ['Size'], status: 'active' }).returning({ id: products.id })
+      const [v] = await tx.insert(variants).values({ tenantId: A, productId: p!.id, optionValues: ['M'], price: 100000, stock: 50 }).returning({ id: variants.id })
+      const at = new Date(Date.now() - 60_000)
+      // ₹100 off, once per phone; and ₹50 off within a ₹75 budget (one use fits, the second would cross it).
+      const [perPhone] = await tx.insert(discounts).values({ tenantId: A, title: 'Once each', style: 'order_off', amountOff: 10000, limitPerPhone: 1, startsAt: at, startedAt: at, startedBy: ME, createdBy: ME }).returning({ id: discounts.id })
+      const [budget] = await tx.insert(discounts).values({ tenantId: A, title: 'Small budget', style: 'pay_online', amountOff: 5000, budget: 7500, startsAt: at, startedAt: at, startedBy: ME, createdBy: ME, endsAt: null }).returning({ id: discounts.id })
+      return { product: p!.id, variant: v!.id, ids: [perPhone!.id, budget!.id] }
+    })
+    const placed: string[] = []
+    try {
+      const bag = [{ variantId: made.variant, qty: 1 }]
+      const key = (n: number) => `lim${stamp}${n}`.padEnd(22, 'y').slice(0, 22)
+      const place = async (n: number, phone: string) => {
+        const now = new Date(), data = await quoteData(A, [made.variant], now)
+        const q = quote(bag, data.rows, data.shop!, now, '302021', { offers: data.offers })
+        const r = await placeOrder(A, { idempotencyKey: key(n), bag, address: address(phone), method: 'cod', expectedTotal: q.cod.total, facts: {} })
+        if (r.kind === 'placed') placed.push((await withTenant(A, (tx) => tx.select({ id: orders.id }).from(orders).where(and(eq(orders.tenantId, A), eq(orders.idempotencyKey, key(n))))))[0]!.id)
+        return { q, r }
+      }
+      const phone = `97000${String(stamp).slice(-5)}`
+      const first = await place(1, phone)
+      expect(first.r.kind).toBe('placed')
+      expect(first.q.cod.discount).toBe(10000)
+      // The same phone again: the quote cannot know the phone, so it still offers ₹100 — placement drops it ("changed").
+      const second = await place(2, phone)
+      expect(second.r.kind).toBe('changed')
+      expect(second.r.kind === 'changed' && second.r.quote.cod.discount).toBe(0)
+      // Another phone: it applies again.
+      expect((await place(3, `96000${String(stamp).slice(-5)}`)).q.cod.discount).toBe(10000)
+
+      // The budget, priced exactly as placement does it: one ₹50 use fits ₹75, a second does not.
+      await withTenant(A, async (tx) => {
+        const { discountUses, fits } = await import('@/lib/db/discount-predicates')
+        const u = await discountUses(tx, A, [made.ids[1]!], new Date())
+        expect(fits({ limitTotal: null, limitPerPhone: null, budget: 7500 }, u.get(made.ids[1]!), 5000)).toBe(true)
+        expect(fits({ limitTotal: null, limitPerPhone: null, budget: 7500 }, { n: 1, given: 5000, phone: 0 }, 5000)).toBe(false)
+        // liveDiscountSql agrees with offerStatus() on every shape.
+        const now = new Date(), past = new Date(now.getTime() - 3_600_000), future = new Date(now.getTime() + 3_600_000)
+        const shapes = [
+          { startedAt: null, pausedAt: null, endedAt: null, startsAt: past, endsAt: null },
+          { startedAt: past, pausedAt: null, endedAt: null, startsAt: past, endsAt: null },
+          { startedAt: past, pausedAt: null, endedAt: null, startsAt: future, endsAt: null },
+          { startedAt: past, pausedAt: past, endedAt: null, startsAt: past, endsAt: null },
+          { startedAt: past, pausedAt: null, endedAt: past, startsAt: past, endsAt: null },
+          { startedAt: past, pausedAt: null, endedAt: null, startsAt: new Date(past.getTime() - 1000), endsAt: past },
+        ]
+        for (const sh of shapes) {
+          const [d] = await tx.insert(discounts).values({ tenantId: A, title: 'Shape', style: 'free_shipping', createdBy: ME, startedBy: sh.startedAt ? ME : null, ...sh }).returning({ id: discounts.id })
+          const [r] = await tx.select({ live: sql<boolean>`${liveDiscountSql(now)}` }).from(discounts).where(eq(discounts.id, d!.id))
+          expect({ sh, live: r!.live }).toEqual({ sh, live: offerStatus(sh, now) === 'live' })
+          await tx.update(discounts).set({ endedAt: now }).where(eq(discounts.id, d!.id))
+        }
+      })
+    } finally {
+      await withTenant(A, async (tx) => {
+        if (placed.length) await tx.update(orders).set({ cancelledAt: sql`now()` }).where(and(eq(orders.tenantId, A), inArray(orders.id, placed)))
+        await tx.update(discounts).set({ endedAt: new Date() }).where(and(eq(discounts.tenantId, A), inArray(discounts.id, made.ids)))
+        await tx.update(products).set({ status: 'archived' }).where(and(eq(products.tenantId, A), eq(products.id, made.product)))
+        await tx.update(shopSettings).set({ publishedAt: before.publishedAt, codOn: before.codOn, codMin: before.codMin, codMax: before.codMax, codCharge: before.codCharge,
+          shippingFlat: before.shippingFlat, freeShippingAbove: before.freeShippingAbove, pricesIncludeGst: before.pricesIncludeGst, codBlockedPincodes: before.codBlockedPincodes, gstin: before.gstin }).where(eq(shopSettings.tenantId, A))
+      })
+    }
   })
 })

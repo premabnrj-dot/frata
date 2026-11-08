@@ -6,7 +6,7 @@ import { orderState, type OrderState } from '@/domains/orders/order-state'
 import { applies, invoiceNumber, seriesFits, type CancelReason, type OrderAction } from '@/domains/orders/work'
 import { orderPrefix } from '@/domains/signup/slug'
 import type { Tx } from '@/lib/db'
-import { momentColumns } from '@/lib/db/order-predicates'
+import { momentColumns, onlineTotalCol } from '@/lib/db/order-predicates'
 import { shopSettings, tenantCounters, tenants } from '@/lib/db/schema'
 import { variants } from '@/lib/db/schema-catalogue'
 import { orderEvents, orderLines, orderNotes, orders } from '@/lib/db/schema-orders'
@@ -32,7 +32,7 @@ const moment = (now: Date) => new Date(Math.floor(now.getTime()))
 
 async function current(tx: Tx, tenantId: string, orderId: string, now: Date) {
   const [o] = await tx.select({ ...momentColumns, id: orders.id, number: orders.number, subtotal: orders.subtotal, shipping: orders.shipping, codCharge: orders.codCharge,
-    gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst, sellerGstin: orders.sellerGstin })
+    gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst, sellerGstin: orders.sellerGstin, onlineTotal: onlineTotalCol })
     .from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId))).for('update')
   return o ? { o, state: orderState(o, now) } : null
 }

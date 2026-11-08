@@ -88,6 +88,9 @@ export const holdingSql = (now: Date, a = '"orders"'): SQL =>
 /** isStanding(): placed and not cancelled — its lines still count against stock and pre-order caps. */
 export const standingSql = (a = '"orders"'): SQL => sql`(${c(a, 'cancelled_at')} is null and ${placedSql(a)})`
 
+/** What Razorpay was asked for (checkout.onlineTotal), as a number column for StoredOrder.onlineTotal. */
+export const onlineTotalCol = sql<number | null>`(${orders.checkout}->>'onlineTotal')::bigint`.mapWith((v) => (v == null ? null : Number(v)))
+
 /** usesDiscount() in SQL: whether the order at `a` is using an offer of `cls` (limits, budgets, ₹ given). */
 export const discountUseSql = (now: Date, cls: 'order' | 'shipping' | 'payment', a = '"orders"'): SQL =>
   cls === 'payment'

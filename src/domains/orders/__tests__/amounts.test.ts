@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { taxOrder } from '@/domains/tax/gst'
-import { charged, collect, paidOnline, refundDue, sharesOf, type StoredLine, type StoredOrder } from '../amounts'
+import { charged, collect, paidOnline, refundDue, reprice, sharesOf, type StoredLine, type StoredOrder } from '../amounts'
 
 // Two kurtas (₹2,490 at 5%, ₹3,200 at 18%), ₹79 delivery, ₹49 COD fee, prices include GST — as checkout stores them.
 const gross = [{ gross: 249000, unitPrice: 249000, hsn: '6211' }, { gross: 320000, unitPrice: 320000, hsn: '6211' }]
@@ -38,5 +38,30 @@ describe('amounts', () => {
     expect(refundDue(paidAfterSwitch)).toBe(0)
     expect(refundDue({ ...paidAfterSwitch, cancelledAt: new Date() })).toBe(576900)
     expect(refundDue(order({ cancelledAt: new Date() }))).toBe(0)
+  })
+})
+
+describe('reprice (offers)', () => {
+  // A ₹2,650 kurta with ₹100 off paying online: 5% online, 18% on delivery (the slab after the discount).
+  const s = { lines: [{ unitPrice: 265000, qty: 1, hsn: '6211' }], applied: [{ class: 'payment' as const, amount: 10000 }], shipping: 0, registered: true, pricesIncludeGst: true }
+  const rules = { shippingFlat: 0, freeShippingAbove: 0, codOn: true, codMin: 0, codMax: 0, codCharge: 4900 }
+  it('prepaid keeps the saving; on delivery drops it and adds the fee, each at its own rate', () => {
+    const pre = reprice(s, 'prepaid')
+    expect(pre).toMatchObject({ discount: 10000, total: 255000, codCharge: 0 })
+    expect(pre.lines[0]!.gstBps).toBe(500)
+    const { cod, price } = reprice(s, 'cod', rules, null)
+    expect(cod.offered).toBe(true)
+    expect(price).toMatchObject({ discount: 0, total: 269900, codCharge: 4900 })
+    expect(price!.lines[0]!.gstBps).toBe(1800)
+  })
+  it('an order offer stays on both; COD limits are tested on the bag after it', () => {
+    const o = { ...s, applied: [{ class: 'order' as const, amount: 30000 }, { class: 'payment' as const, amount: 10000 }] }
+    expect(reprice(o, 'cod', { ...rules, codMin: 240000 }, null).cod.offered).toBe(false) // 2,650 − 300 = 2,350 < 2,400
+    expect(reprice(o, 'cod', { ...rules, codMin: 230000 }, null).price!.discount).toBe(30000)
+  })
+  it('paidOnline is what Razorpay was asked for', () => {
+    const base = { paymentMethod: 'prepaid' as const, paidAt: new Date(), switchedToCodAt: new Date(), cancelledAt: null, subtotal: 265000, shipping: 0, codCharge: 4900, gstTotal: 0, total: 269900, pricesIncludeGst: true }
+    expect(paidOnline({ ...base, onlineTotal: 255000 })).toBe(255000)
+    expect(paidOnline(base)).toBe(269900)
   })
 })

@@ -1,7 +1,6 @@
 import 'server-only'
 import { and, eq } from 'drizzle-orm'
-import type { MethodPrice } from '@/domains/checkout/discounts'
-import type { StoredPricing } from '@/domains/orders/amounts'
+import type { Repriced, StoredPricing } from '@/domains/orders/amounts'
 import type { Tx } from '@/lib/db'
 import { orderDiscounts } from '@/lib/db/schema-discounts'
 import { orderLines, orders } from '@/lib/db/schema-orders'
@@ -31,7 +30,7 @@ export async function storedPricing(tx: Tx, tenantId: string, orderId: string, o
 }
 
 /** Write a reprice: the order's money and every line's discount, tax and charge share. */
-export async function writeReprice(tx: Tx, tenantId: string, orderId: string, lineIds: string[], r: MethodPrice & { codCharge: number }) {
+export async function writeReprice(tx: Tx, tenantId: string, orderId: string, lineIds: string[], r: Repriced) {
   await tx.update(orders).set({ codCharge: r.codCharge, gstTotal: r.gst, total: r.total, discount: r.discount, merchandiseNet: r.merchandiseNet })
     .where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId)))
   for (const [i, id] of lineIds.entries()) {

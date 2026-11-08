@@ -37,6 +37,12 @@ export type DiscountTerms = {
   code: string | null; codeId: string | null
 }
 
+/** A typed code as stored and compared: trimmed and upper-cased (codes are case-insensitive). */
+export const normalCode = (s: string | null | undefined) => (s ? s.trim().toUpperCase() : null)
+
+/** The offers a bag may get: automatic and listed ones, and the offer of the code the shopper typed. */
+export const candidates = (offers: DiscountTerms[], code: string | null) => offers.filter((t) => t.code === null || t.listed || (code !== null && t.code === code))
+
 export type Applied = { discountId: string; codeId: string | null; class: DiscountClass; title: string; amount: number; terms: DiscountTerms }
 /** What a listed offer the bag misses needs. */
 export type Need = { kind: 'add'; amount: number } | { kind: 'pay_online' } | null
@@ -72,8 +78,8 @@ export type OfferPlan = {
  * code the shopper typed. One code per order; a code applies only when it is the best of its class.
  */
 export function planOffers(subtotal: number, offers: DiscountTerms[], typed: string | null): OfferPlan {
-  const code = typed ? typed.trim().toUpperCase() : null
-  const cands = offers.filter((t) => t.code === null || t.listed || (code !== null && t.code === code))
+  const code = normalCode(typed)
+  const cands = candidates(offers, code)
   const of = (c: DiscountClass) => cands.filter((t) => classOf(t.style) === c)
 
   const o = best(of('order'), subtotal)

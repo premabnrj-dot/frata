@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { Address, addressErrors } from '@/domains/checkout/address'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
-import { Bag, Code, codeToTry, publicQuote, reply, shopRequest } from '@/lib/http/shop-api'
+import { Bag, Code, codeToTry, codeTried, publicQuote, reply, shopRequest } from '@/lib/http/shop-api'
 import { placeOrder } from '@/lib/orders/place'
 
 // Place an order. Limits fail closed here (a fake-COD script must not slip through a database hiccup).
@@ -20,6 +20,8 @@ export async function POST(request: Request) {
   try {
     const code = await codeToTry(r.tenantId, r.ip, r.body.code)
     const out = await placeOrder(r.tenantId, { idempotencyKey: r.body.idempotencyKey, bag: r.body.bag, address: address.data, method: r.body.method, expectedTotal: r.body.expectedTotal, code, facts: { firstMethod: r.body.facts?.firstMethod ?? null, attribution } })
+    // A code that did not apply counts against the guess limit here as on /quote (one rule: codeTried).
+    await codeTried(r.tenantId, r.ip, r.body.code, !code ? 'not_applied' : out.kind === 'changed' ? out.quote.offers.code : out.kind === 'placed' ? out.code ?? 'applied' : 'applied')
     if (out.kind === 'changed') return reply({ changed: true, quote: publicQuote(out.quote) }, 409)
     if (out.kind === 'refused') return reply({ error: out.error, ...(out.quote ? { quote: publicQuote(out.quote) } : {}) }, out.status)
     return reply({ token: out.token, number: out.number, method: out.method, total: out.total, pay: out.pay, payError: out.payError ?? null })

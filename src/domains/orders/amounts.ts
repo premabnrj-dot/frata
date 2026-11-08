@@ -12,12 +12,15 @@
 // =============================================================================
 
 import { priceMethod, type MethodPrice } from '@/domains/checkout/discounts'
+import { codFor, type Cod, type DeliveryRules } from '@/domains/checkout/delivery'
 import { shareCharges, type ChargeShare } from '@/domains/tax/gst'
 import { currentMethod, type OrderMoments } from './order-state'
 
 export type StoredLine = { taxableValue: number; gst: number; gstBps: number; chargeTaxable: number | null; chargeGst: number | null }
 export type StoredOrder = Pick<OrderMoments, 'paymentMethod' | 'paidAt' | 'switchedToCodAt' | 'cancelledAt'> & {
   subtotal: number; shipping: number; codCharge: number; gstTotal: number; total: number; pricesIncludeGst: boolean
+  /** What Razorpay was asked for (checkout.onlineTotal, set once at placement); null on a COD order. */
+  onlineTotal?: number | null
 }
 
 /**
@@ -38,17 +41,23 @@ export type StoredPricing = {
   shipping: number; registered: boolean; pricesIncludeGst: boolean
 }
 
+export type Repriced = MethodPrice & { codCharge: number }
+
 /**
  * An order priced again for a way of paying: the order offer's stored amount, and (prepaid only) the pay-online
- * saving's stored amount, spread exactly as at placement; the stored delivery plus `codCharge`. Never today's
- * offers: the order keeps the terms it was sold on.
+ * saving's stored amount, spread exactly as at placement, on the stored delivery. Never today's offers: the order
+ * keeps the terms it was sold on. Paying on delivery: offered (and its fee) by today's rules on the bag after the
+ * order offer — the same test as checkout's (quote.ts) — or `cod.offered` false and no price.
  */
-export function reprice(s: StoredPricing, method: 'cod' | 'prepaid', codCharge: number): MethodPrice & { codCharge: number } {
+export function reprice(s: StoredPricing, method: 'prepaid'): Repriced
+export function reprice(s: StoredPricing, method: 'cod', rules: DeliveryRules, pincode: string | null): { cod: Cod; price: Repriced | null }
+export function reprice(s: StoredPricing, method: 'cod' | 'prepaid', rules?: DeliveryRules, pincode?: string | null): Repriced | { cod: Cod; price: Repriced | null } {
   const order = s.applied.find((a) => a.class === 'order')?.amount ?? 0
-  const pay = method === 'prepaid' ? s.applied.find((a) => a.class === 'payment')?.amount ?? 0 : 0
-  const charge = method === 'cod' ? codCharge : 0
   const lines = s.lines.map((l) => ({ gross: l.unitPrice * l.qty, qty: l.qty, hsn: l.hsn }))
-  return { ...priceMethod(lines, order, pay, s.shipping + charge, { registered: s.registered, pricesIncludeGst: s.pricesIncludeGst }), codCharge: charge }
+  const tax = { registered: s.registered, pricesIncludeGst: s.pricesIncludeGst }
+  if (method === 'prepaid') return { ...priceMethod(lines, order, s.applied.find((a) => a.class === 'payment')?.amount ?? 0, s.shipping, tax), codCharge: 0 }
+  const cod = codFor(lines.reduce((a, l) => a + l.gross, 0) - order, rules!, pincode)
+  return { cod, price: cod.offered ? { ...priceMethod(lines, order, 0, s.shipping + cod.charge, tax), codCharge: cod.charge } : null }
 }
 
 /** Each line's share as stored, or (an order placed before 1D) worked out from the stored rates. */
@@ -61,11 +70,11 @@ export function sharesOf(lines: StoredLine[], o: StoredOrder): ChargeShare[] {
 export const collect = (o: StoredOrder) => (o.cancelledAt || currentMethod(o) !== 'cod' ? 0 : o.total)
 
 /**
- * What reached the shop's Razorpay account. A capture after a switch has had its COD fee taken off by markPaid
- * (src/lib/orders/payment.ts, from 1D), so it is the total. An order paid after a switch BEFORE 1D still carries
- * the COD fee in its total; none existed in production (0 orders, 2026-11-07).
+ * What reached the shop's Razorpay account: the online total Razorpay was asked for (and checks the capture against).
+ * The order's own total can differ — a capture after a switch and after packing keeps the issued COD figures (COD fee
+ * in, pay-online saving out). Orders without a stored online total fall back to their total.
  */
-export const paidOnline = (o: StoredOrder) => (o.paidAt ? o.total : 0)
+export const paidOnline = (o: StoredOrder) => (o.paidAt ? o.onlineTotal ?? o.total : 0)
 
 /** What the merchant must send back in Razorpay when a paid order is cancelled (Frrata refunds nothing itself). */
 export const refundDue = (o: StoredOrder) => (o.cancelledAt ? paidOnline(o) : 0)

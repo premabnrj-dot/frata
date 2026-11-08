@@ -1,9 +1,8 @@
 import 'server-only'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { quote, type Quote } from '@/domains/checkout/quote'
-import { codFor } from '@/domains/checkout/delivery'
 import { reprice } from '@/domains/orders/amounts'
-import { discountUseSql } from '@/lib/db/order-predicates'
+import { discountUses, fits } from '@/lib/db/discount-predicates'
 import { discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import type { Tx } from '@/lib/db'
 import { webhookEvents } from '@/lib/db/schema'
@@ -49,7 +48,7 @@ export async function markPaid(tx: Tx, o: OrderKey, p: { paymentId: string; fee?
   const paid = r[0]!
   if (paid.switchedAt && !paid.packedAt) {
     const sp = await storedPricing(tx, o.tenantId, o.id, { shipping: Number(paid.shipping), sellerGstin: paid.sellerGstin, pricesIncludeGst: paid.pricesIncludeGst })
-    const r = reprice(sp, 'prepaid', 0)
+    const r = reprice(sp, 'prepaid')
     // What the shopper paid is the online total they were shown; a difference is a bug to see, not to hide.
     const shown = Number((paid.checkout as { onlineTotal?: number } | null)?.onlineTotal ?? r.total)
     if (shown !== r.total) console.error('[markPaid] recomputed online total differs from the one shown', { order: o.id, shown, now: r.total })
@@ -133,9 +132,8 @@ export async function switchToCod(tenantId: string, token: string, expectedTotal
     const q = quote(bag, rows, shop, now, o.pincode)
     if (q.lines.some((l) => l.problem) || q.subtotal !== Number(o.subtotal)) return { kind: 'changed', quote: q }
     const sp = await storedPricing(tx, tenantId, o.id, { shipping: Number(o.shipping), sellerGstin: o.sellerGstin, pricesIncludeGst: o.pricesIncludeGst })
-    const offer = codFor(Number(o.subtotal) - (sp.applied.find((a) => a.class === 'order')?.amount ?? 0), shop, o.pincode)
-    if (!offer.offered) return { kind: 'refused', status: 422, error: 'Pay on delivery is not offered for this order.' }
-    const r = reprice(sp, 'cod', offer.charge)
+    const { price: r } = reprice(sp, 'cod', shop, o.pincode)
+    if (!r) return { kind: 'refused', status: 422, error: 'Pay on delivery is not offered for this order.' }
     if (r.total !== expectedTotal) return { kind: 'refused', status: 409, error: 'The Pay on delivery total is different. Check it and try again.', codTotal: r.total }
     const switched = await tx.update(orders).set({ switchedToCodAt: sql`now()`, payBy: null })
       .where(and(eq(orders.tenantId, tenantId), eq(orders.id, o.id), isNull(orders.paidAt), isNull(orders.switchedToCodAt))).returning({ id: orders.id })
@@ -180,22 +178,15 @@ export async function retryPayment(tenantId: string, token: string, now = new Da
 
 /** Whether each limited offer the order got still has room for it (the order's own use excluded), under a lock. */
 async function offersStillFit(tx: Tx, tenantId: string, orderId: string, phone: string, now: Date): Promise<boolean> {
-  const mine = await tx.select({ discountId: orderDiscounts.discountId, class: orderDiscounts.class, amount: orderDiscounts.amount }).from(orderDiscounts)
+  const mine = await tx.select({ discountId: orderDiscounts.discountId, amount: orderDiscounts.amount }).from(orderDiscounts)
     .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, orderId)))
   if (!mine.length) return true
-  const limited = await tx.execute<{ id: string; limit_total: number | null; limit_per_phone: number | null; budget: string | null }>(sql`
+  const limited = (await tx.execute<{ id: string; limit_total: number | null; limit_per_phone: number | null; budget: string | null }>(sql`
     select id, limit_total, limit_per_phone, budget from ${discounts} where tenant_id = ${tenantId} and id in ${mine.map((m) => m.discountId)}
-      and (limit_total is not null or limit_per_phone is not null or budget is not null) order by id for update`)
-  for (const l of limited) {
-    const own = mine.find((m) => m.discountId === l.id)!
-    const [u] = await tx.execute<{ n: number; given: string; phone: number }>(sql`
-      select count(*)::int n, coalesce(sum(od.amount), 0)::bigint given, (count(*) filter (where o.phone = ${phone}))::int phone
-        from ${orderDiscounts} od join ${orders} o on o.tenant_id = od.tenant_id and o.id = od.order_id
-       where od.tenant_id = ${tenantId} and od.discount_id = ${l.id} and od.order_id <> ${orderId} and ${discountUseSql(now, own.class === 'payment' ? 'payment' : 'order', 'o')}`)
-    if ((l.limit_total !== null && (u?.n ?? 0) + 1 > l.limit_total) || (l.limit_per_phone !== null && (u?.phone ?? 0) + 1 > l.limit_per_phone)
-      || (l.budget !== null && Number(u?.given ?? 0) + Number(own.amount) > Number(l.budget))) return false
-  }
-  return true
+      and (limit_total is not null or limit_per_phone is not null or budget is not null) order by id for update`))
+  const used = await discountUses(tx, tenantId, limited.map((l) => l.id), now, { phone, excludeOrder: orderId })
+  return limited.every((l) => fits({ limitTotal: l.limit_total, limitPerPhone: l.limit_per_phone, budget: l.budget === null ? null : Number(l.budget) }, used.get(l.id),
+    Number(mine.find((m) => m.discountId === l.id)!.amount)))
 }
 
 /**

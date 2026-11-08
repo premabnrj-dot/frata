@@ -41,6 +41,9 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ tone: 'error' | 'changed'; text: string } | null>(null)
   const [failed, setFailed] = useState<{ token: string; total: number } | null>(null)
+  // The Pay on delivery total of the order already placed, when the server says it differs from the bag's (an offer ran
+  // out or ended during the hold): shown first, then sent as the total the shopper agreed to.
+  const [codTotal, setCodTotal] = useState<number | null>(null)
   const { q, error: quoteError, refresh } = useQuote(f.pincode)
   const seen = useRef<PublicQuote | null>(null)
   const attempt = useRef<{ sig: string; key: string } | null>(null)
@@ -154,9 +157,10 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
   async function switchToCod() {
     if (!failed || !q?.cod) return
     setBusy(true); setMsg(null)
-    const r = await api<{ kind: 'switched' | 'paid' }>('/api/shop/orders/cod', { token: failed.token, expectedTotal: q.cod.total })
+    const r = await api<{ kind: 'switched' | 'paid' }>('/api/shop/orders/cod', { token: failed.token, expectedTotal: codTotal ?? q.cod.total })
     setBusy(false)
     if (r.ok) return done(failed.token)
+    if (typeof r.data.codTotal === 'number') { setCodTotal(r.data.codTotal); setMsg({ tone: 'changed', text: `Pay on delivery for this order is ${inr(r.data.codTotal)}. Tap again to confirm.` }); return }
     if (r.data.quote) { setMsg({ tone: 'changed', text: changedText(seen.current, r.data.quote) }); await refresh(); return }
     setMsg({ tone: 'error', text: r.data.error ?? 'We could not switch to Pay on delivery. Try again.' })
   }
@@ -172,7 +176,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
   const sect = 'mb-2 mt-6 text-xs font-semibold uppercase tracking-[0.1em] text-store-sub'
   const button = useMemo(() => {
     if (!q || q.empty) return 'Nothing to pay for'
-    if (failed) return method === 'cod' ? `Pay on delivery · ${inr(q.cod?.total ?? 0)}` : `Try paying again · ${inr(failed.total)}`
+    if (failed) return method === 'cod' ? `Pay on delivery · ${inr(codTotal ?? q.cod?.total ?? 0)}` : `Try paying again · ${inr(failed.total)}`
     if (!method) return 'Choose how to pay'
     return method === 'cod' ? `Place order · ${inr(total)}` : `Pay · ${inr(total)}`
   }, [q, method, total, failed])

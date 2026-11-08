@@ -1,7 +1,7 @@
 import { orderDiscounts } from '@/lib/db/schema-discounts'
 import 'server-only'
 import { and, asc, desc, eq } from 'drizzle-orm'
-import { momentColumns } from '@/lib/db/order-predicates'
+import { momentColumns, onlineTotalCol } from '@/lib/db/order-predicates'
 import { orderEvents, orderLines, orderNotes, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { riskFactsFor } from './order-risk'
@@ -21,7 +21,7 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
   const data = await withTenant(tenantId, async (tx) => {
     const [o] = await tx.select({
       ...momentColumns, id: orders.id, number: orders.number,
-      subtotal: orders.subtotal, discount: orders.discount, shipping: orders.shipping, codCharge: orders.codCharge, gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst,
+      onlineTotal: onlineTotalCol, subtotal: orders.subtotal, discount: orders.discount, shipping: orders.shipping, codCharge: orders.codCharge, gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst,
       customerName: orders.customerName, phone: orders.phone, addressLine: orders.addressLine, area: orders.area, landmark: orders.landmark,
       pincode: orders.pincode, city: orders.city, state: orders.state,
       invoiceNumber: orders.invoiceNumber, cancelReason: orders.cancelReason, cancelNote: orders.cancelNote, erasedAt: orders.erasedAt,

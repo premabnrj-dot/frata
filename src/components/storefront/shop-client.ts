@@ -14,7 +14,7 @@ export type PublicQuote = {
 }
 export type Pay = { keyId: string; razorpayOrderId: string; amount: number; name: string; phone: string; shop: string }
 
-export async function api<T>(path: string, body: unknown): Promise<{ ok: true; status: number; data: T } | { ok: false; status: number; data: { error?: string; fields?: Record<string, string>; changed?: boolean; quote?: PublicQuote } }> {
+export async function api<T>(path: string, body: unknown): Promise<{ ok: true; status: number; data: T } | { ok: false; status: number; data: { error?: string; fields?: Record<string, string>; changed?: boolean; quote?: PublicQuote; codTotal?: number } }> {
   try {
     const r = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), cache: 'no-store' })
     const data = await r.json().catch(() => ({}))

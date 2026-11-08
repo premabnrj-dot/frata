@@ -8,7 +8,7 @@ import { deliveredFee } from '@/domains/plans/entitlements'
 import { planVersions, tenantPlans } from '@/lib/db/schema'
 import { discountCodes, discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import { orders } from '@/lib/db/schema-orders'
-import { useOfRowSql } from '@/lib/db/discount-predicates'
+import { discountUses } from '@/lib/db/discount-predicates'
 import { standingSql } from '@/lib/db/order-predicates'
 import { withTenant } from '@/lib/db/tenant'
 
@@ -17,7 +17,7 @@ import { withTenant } from '@/lib/db/tenant'
 //
 // THE CONSOLE'S OFFERS (docs/specs/2026-11-08-coupons.md § Console). Merchant data: never imported by a
 // shopper's route (the shopper's read is liveOffers in checkout.ts). Status is derived (offer-status.ts);
-// uses, ₹ given and ₹ kept are derived from order_discounts and order state (useOfRowSql), never stored.
+// uses, ₹ given and ₹ kept are derived from order_discounts and order state (discountUses), never stored.
 // `useCount` and `budgetLeft` are server-only names (check-client-bundle sentinels): pages render them.
 // =============================================================================
 
@@ -50,16 +50,12 @@ export async function listOffers(tenantId: string, now = new Date()): Promise<Of
       .where(eq(discounts.tenantId, tenantId)).orderBy(desc(discounts.createdAt)).limit(200)
     if (!rows.length) return []
     // Uses and ₹ given, as the orders stand now; delivered orders with what profit.ts needs.
-    const uses = await tx.execute<{ id: string; n: number; given: string }>(sql`
-      select od.discount_id id, count(*)::int n, coalesce(sum(od.amount), 0)::bigint given from ${orderDiscounts} od
-        join ${orders} o on o.tenant_id = od.tenant_id and o.id = od.order_id
-       where od.tenant_id = ${tenantId} and ${useOfRowSql(now)} group by od.discount_id`)
+    const byId = await discountUses(tx, tenantId, rows.map((r) => r.id), now)
     const fee = await feeBpsNow(tenantId, now)
     const delivered = await tx.execute<{ id: string; net: string; cogs: string | null; fwd: string; gw: string | null; base: string }>(sql`
       select distinct od.discount_id id, o.id oid, o.net_revenue net, o.cogs, o.forward_shipping fwd, o.gateway_fee gw, o.merchandise_net base from ${orderDiscounts} od
         join ${orders} o on o.tenant_id = od.tenant_id and o.id = od.order_id
        where od.tenant_id = ${tenantId} and o.delivered_at is not null and o.rto_initiated_at is null and od.class <> 'shipping'`)
-    const byId = new Map(uses.map((u) => [u.id, u]))
     return rows.map((r) => {
       const u = byId.get(r.id)
       const given = Number(u?.given ?? 0)
