@@ -1,5 +1,5 @@
 # Documents as PDFs: a shop's packing slips, invoices, credit notes and labels, in the shop's own brand
-Status: draft (mockup awaiting owner) · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/132Kvnvy18BS9cLGQRxbpo (`docs/mockups/2026-11-08-documents-pdf.html`) · Approved: —
+Status: active · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/132Kvnvy18BS9cLGQRxbpo (`docs/mockups/2026-11-08-documents-pdf.html`) · Approved: owner, 2026-11-08 ("take up both plans and execute"; calls: PDF is the paper layout (print page = preview), credit notes in Frrata, no "Made with Frrata")
 Research: `docs/research/2026-11-08-documents-and-billing.md` § Documents (library tests rendered in this session).
 
 ## Goal
