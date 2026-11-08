@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 4.6.0
+  version: 4.7.0
   verified: 2026-11-08
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -110,6 +110,10 @@ from it).
   card: availability first, an offer's badge only where none shows.
 - A Hindi shop: `lang="hi"` on the shop, Noto Sans Devanagari after Inter; the shop's own words change, what the
   merchant typed never does. Hindi words get a fluent reader's review before a Hindi shop goes live.
+- Theme versions (T3): Look tells the merchant in words, never a status code — an update is ready (and that nothing
+  changes until they publish), Frrata recalled the version they're on (with one tap to restore the previous look),
+  or withdrew it (their previous look is live, nothing lost). Admin › Themes says every decision is final and names
+  the shops it touches; a destructive decision is a red-labelled form with a required reason, not a typed phrase.
 - Colours and type live in Look only; Settings › Brand keeps the logo and tagline and previews them in the published look.
 
 ## Partner workspace (approved mockup 2026-11-07)

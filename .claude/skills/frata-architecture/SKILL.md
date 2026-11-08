@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.11.0
+  version: 2.12.0
   verified: 2026-11-08
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -217,7 +217,7 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   (`src/components/modules/slots.tsx`), the outbox cron, the console layout, the
   webhooks. Add a filler to `FILLERS`, not an import to a core page.
 
-## Themes (T0, T1, T2 built 2026-11-08; spec docs/specs/2026-11-08-themes.md, plan docs/plans/2026-11-08-themes.md)
+## Themes (T0–T3 built 2026-11-08; spec docs/specs/2026-11-08-themes.md, plan docs/plans/2026-11-08-themes.md)
 
 - A shop's look is **data over one section library**: `src/domains/themes/` (types, `resolveTheme` — the ONE merge
   of manifest → style → the merchant's layer — `contrast`, section SAVE schemas, `readinessOf`, `carryOver`,
@@ -251,6 +251,13 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   of the same theme (`manifestNear`), never another theme.
 - **Back in stock** is the database's fact: one trigger (`app_variant_stock_times`) keeps `variants.sold_out_at` /
   `restocked_at` (sold out ≥ 24 h, stop-when-out only) and replaces whatever the app sends. Never set them in code.
+- **Theme versions** (T3): code ships a version; Admin decides who may use it (`theme_versions`, platform;
+  `theme_version_stages`, per shop). State is derived from dates; recall and withdraw are final (a trigger) and
+  Classic 1.0.0 can never be pulled. THE answers live in `src/domains/themes/release.ts`: `availableTo` /
+  `latestAvailable` (may a shop start on it) and `liveOf` (the newest publish not on a withdrawn version). Every
+  caller asks them through `themeAccess(tx, tenant)` in look.ts: Try, the gallery, Customize, Restore, Publish,
+  Undo; Admin's counts use `liveOf` too. The shop's look is `liveOf(cached publishes, versionStates)`: the
+  version rows are one global cache (tag `themes`), so a withdraw is one `refreshThemeVersions()`, not a bust per shop.
 - **Shop words** (T2): `shop_settings.shop_language` (en/hi); the words Frrata writes on a shop live in
   `src/components/storefront/words.ts`, **server-only**. An island takes the strings it shows as a prop (`buyWords`),
   never the module (`check-client-bundle` fails a chunk holding its Hindi). Domain functions return kinds and data;
