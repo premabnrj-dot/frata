@@ -435,6 +435,20 @@
       "when": 1794160402976,
       "tag": "0061_plan_change_by_shop",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1794164513442,
+      "tag": "0062_trials",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1794164533557,
+      "tag": "0063_trials_access",
+      "breakpoints": true
     }
   ]
 }

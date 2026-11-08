@@ -1445,4 +1445,67 @@ do $$ begin
   if has_function_privilege('frata_app', 'app_admin_clear_shop_plan_change(uuid)', 'execute') then raise exception 'FAIL: the app clears plan changes'; end if;
 end $$;
 
-\echo 'tenancy proof — all 44 checks passed'
+-- 45. Trials TR0: the trial's terms and claims. A shop reads only its own trial; the platform terms carry no who or why;
+-- no app role reads a claim, writes a trial, or runs the one writer of the trial end (T2, T8, R4).
+insert into shop_trials (tenant_id, days, open_window_days, signed_up_at) values
+  ('11111111-1111-1111-1111-111111111111', 30, 15, now() - interval '1 day'), ('22222222-2222-2222-2222-222222222222', 30, 15, now() - interval '1 day');
+select app_trial_recompute('11111111-1111-1111-1111-111111111111'), app_trial_recompute('22222222-2222-2222-2222-222222222222');
+insert into trial_claims (kind, key_hmac, key_version, tenant_id) values ('email', 'proof-hmac', 1, '22222222-2222-2222-2222-222222222222');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  if (select count(*) from shop_trials) <> 1 or exists (select 1 from shop_trials where tenant_id <> '11111111-1111-1111-1111-111111111111') then raise exception 'FAIL: A sees another shop''s trial'; end if;
+  if (select days from trial_settings) is null then raise exception 'FAIL: the app cannot read the trial terms'; end if;
+  begin perform reason from trial_settings; raise exception 'FAIL: the app reads why the terms changed'; exception when insufficient_privilege then null; end;
+  begin perform 1 from trial_claims; raise exception 'FAIL: the app reads trial claims'; exception when insufficient_privilege then null; end;
+  begin update shop_trials set extended_at = now(); raise exception 'FAIL: the app writes a trial'; exception when insufficient_privilege then null; end;
+  begin update trial_settings set days = 45; raise exception 'FAIL: the app writes the trial terms'; exception when insufficient_privilege then null; end;
+  begin perform app_trial_recompute('22222222-2222-2222-2222-222222222222'); raise exception 'FAIL: the app runs the trial-end writer'; exception when insufficient_privilege then null; end;
+  begin perform app_admin_extend_trial('99999999-9999-9999-9999-999999999999', '11111111-1111-1111-1111-111111111111', 'proof'); raise exception 'FAIL: the app runs an Admin trial definer'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+do $$ begin
+  if exists (select 1 from unnest(array['frata_app', 'frata_admin', 'anon', 'authenticated', 'service_role']) r, unnest(array['app_trial_recompute(uuid)', 'app_trial_ends_at(uuid)', 'app_trial_clock_starts()', 'app_tenant_plans_trial_sync()']) f
+             where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: a role may run the trial-end writer directly'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_app']) r where has_function_privilege(r, 'app_admin_set_trial_settings(uuid,int,int,text)', 'execute'))
+  then raise exception 'FAIL: a non-Admin role may set the trial terms'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r, unnest(array['trial_settings', 'shop_trials', 'trial_claims']) t
+             where has_table_privilege(r, t, 'select, insert, update, delete')) then raise exception 'FAIL: API roles reach the trial tables'; end if;
+end $$;
+
+-- 46. The clock starts once, at the FIRST time the website goes live; closing and reopening never restarts it (T4).
+update shop_settings set published_at = null where tenant_id = '11111111-1111-1111-1111-111111111111';
+update shop_settings set published_at = now() where tenant_id = '11111111-1111-1111-1111-111111111111';
+do $$ declare first timestamptz; e timestamptz; begin
+  select started_at into first from shop_trials where tenant_id = '11111111-1111-1111-1111-111111111111';
+  if first is null then raise exception 'FAIL: going live did not start the trial'; end if;
+  e := app_trial_ends_at('11111111-1111-1111-1111-111111111111');
+  if exists (select 1 from tenant_plans where tenant_id = '11111111-1111-1111-1111-111111111111' and starts_at < e and trial_ends_at is distinct from e) then raise exception 'FAIL: a plan row missed the trial end'; end if;
+  update shop_settings set published_at = null where tenant_id = '11111111-1111-1111-1111-111111111111';
+  perform pg_sleep(0.01);
+  update shop_settings set published_at = now() where tenant_id = '11111111-1111-1111-1111-111111111111';
+  if (select started_at from shop_trials where tenant_id = '11111111-1111-1111-1111-111111111111') <> first then raise exception 'FAIL: reopening restarted the trial'; end if;
+end $$;
+
+-- 47. The extension is the shop's owner or admin MEMBER only, once, in the last 10 days (T3); an upgrade during a
+-- trial waits for its end and moves with it (A1, R4).
+update shop_trials set signed_up_at = now() - interval '40 days', started_at = now() - interval '25 days' where tenant_id = '11111111-1111-1111-1111-111111111111';
+select app_trial_recompute('11111111-1111-1111-1111-111111111111');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare e1 timestamptz; e2 timestamptz; w timestamptz; begin
+  -- B's staff member (a support visit reports as owner; the members table does not) is refused.
+  begin perform app_trial_extend('aaaaaaaa-0000-0000-0000-000000000005'); raise exception 'FAIL: a non-member extended A''s trial'; exception when insufficient_privilege then null; end;
+  select trial_ends_at into e1 from tenant_plans where tenant_id = '11111111-1111-1111-1111-111111111111' and starts_at <= now() order by starts_at desc limit 1;
+  perform app_change_plan('growth', '99999999-9999-9999-9999-999999999999');
+  select starts_at into w from tenant_plans where tenant_id = '11111111-1111-1111-1111-111111111111' and waits_for_trial;
+  if w is distinct from e1 then raise exception 'FAIL: the upgrade does not wait for the trial end'; end if;
+  e2 := app_trial_extend('99999999-9999-9999-9999-999999999999');
+  if e2 <> e1 + interval '7 days' then raise exception 'FAIL: the extension is not 7 days'; end if;
+  if (select starts_at from tenant_plans where tenant_id = '11111111-1111-1111-1111-111111111111' and waits_for_trial) <> e2 then raise exception 'FAIL: the waiting upgrade did not move with the extension'; end if;
+  if exists (select 1 from tenant_plans where tenant_id = '11111111-1111-1111-1111-111111111111' and waits_for_trial and trial_ends_at is not null) then raise exception 'FAIL: the waiting upgrade carries a trial'; end if;
+  begin perform app_trial_extend('99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: a second extension'; exception when check_violation then null; end;
+end $$;
+rollback;
+
+\echo 'tenancy proof — all 47 checks passed'
