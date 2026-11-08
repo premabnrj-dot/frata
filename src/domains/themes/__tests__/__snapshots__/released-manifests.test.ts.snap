@@ -51,6 +51,13 @@ exports[`released theme manifests > atelier@1.0.0 is as released 1`] = `
     "spacing": "airy",
     "sticky": false,
   },
+  "features": [
+    "An arched photo beside your words",
+    "The maker’s story",
+    "How made to order works, in your words",
+    "One collection in focus",
+    "Round corners, airy spacing",
+  ],
   "home": [
     {
       "heading": {
@@ -97,6 +104,8 @@ exports[`released theme manifests > atelier@1.0.0 is as released 1`] = `
       "scheme": "tint",
     },
   ],
+  "job": "The craft and the maker first. For made-to-order and bridal.",
+  "name": "Atelier",
   "styles": [
     {
       "key": "moss",
@@ -255,6 +264,14 @@ exports[`released theme manifests > bazaar@1.0.0 is as released 1`] = `
     "spacing": "compact",
     "sticky": true,
   },
+  "features": [
+    "Category circles under the header",
+    "A sale banner with a real end date",
+    "Price tiles: Under ₹999, Under ₹1,999",
+    "Best sellers, by delivered orders",
+    "3 columns of products on a phone",
+    "Bottom tab bar: Home, Shop, Search, Bag",
+  ],
   "home": [
     {
       "heading": {
@@ -316,6 +333,8 @@ exports[`released theme manifests > bazaar@1.0.0 is as released 1`] = `
       ],
     },
   ],
+  "job": "Category circles, price tiles, festive banners. For big catalogues.",
+  "name": "Bazaar",
   "styles": [
     {
       "key": "sindoor",
@@ -527,6 +546,12 @@ exports[`released theme manifests > classic@1.0.0 is as released 1`] = `
     "spacing": "regular",
     "sticky": false,
   },
+  "features": [
+    "Your name and tagline up top",
+    "Collection tiles",
+    "Newest pieces first",
+    "Rounded cards, two columns on a phone",
+  ],
   "home": [
     {
       "heading": {
@@ -564,6 +589,8 @@ exports[`released theme manifests > classic@1.0.0 is as released 1`] = `
       "viewAll": true,
     },
   ],
+  "job": "Your shop as it is today. Simple and quick.",
+  "name": "Classic",
   "styles": [
     {
       "key": "oxide",
@@ -718,6 +745,14 @@ exports[`released theme manifests > editorial@1.0.0 is as released 1`] = `
     "spacing": "airy",
     "sticky": true,
   },
+  "features": [
+    "A full-bleed hero photo",
+    "Centred logo with a menu",
+    "Best sellers by delivered orders",
+    "Shop by promise from your settings",
+    "Your brand story beside a photo",
+    "Square corners, airy spacing",
+  ],
   "home": [
     {
       "heading": {
@@ -770,6 +805,8 @@ exports[`released theme manifests > editorial@1.0.0 is as released 1`] = `
       "text": "",
     },
   ],
+  "job": "Big photos, serif type. For designer ethnic wear.",
+  "name": "Editorial",
   "styles": [
     {
       "key": "haldi",
@@ -984,6 +1021,15 @@ exports[`released theme manifests > editorial@1.1.0 is as released 1`] = `
     "spacing": "airy",
     "sticky": true,
   },
+  "features": [
+    "A full-bleed hero photo",
+    "Centred logo with a menu",
+    "Best sellers by delivered orders",
+    "Shop by promise from your settings",
+    "Your brand story beside a photo",
+    "Square corners, airy spacing",
+    "Shop the look: pieces pinned on a photo",
+  ],
   "home": [
     {
       "heading": {
@@ -1036,6 +1082,8 @@ exports[`released theme manifests > editorial@1.1.0 is as released 1`] = `
       "text": "",
     },
   ],
+  "job": "Big photos, serif type. For designer ethnic wear.",
+  "name": "Editorial",
   "styles": [
     {
       "key": "haldi",
@@ -1246,6 +1294,13 @@ exports[`released theme manifests > minimal@1.0.0 is as released 1`] = `
     "spacing": "regular",
     "sticky": true,
   },
+  "features": [
+    "A tall photo, nothing else",
+    "Uppercase, tracked type",
+    "Edge-to-edge product grid",
+    "Outline buttons",
+    "Square corners",
+  ],
   "home": [
     {
       "heading": {
@@ -1275,6 +1330,8 @@ exports[`released theme manifests > minimal@1.0.0 is as released 1`] = `
       "shape": "square",
     },
   ],
+  "job": "Clean grid, square corners. For basics and streetwear.",
+  "name": "Minimal",
   "styles": [
     {
       "key": "ink",
@@ -1384,4 +1441,15 @@ exports[`released theme manifests > minimal@1.0.0 is as released 1`] = `
     },
   ],
 }
+`;
+
+exports[`released theme manifests > the versions in this build 1`] = `
+[
+  "atelier@1.0.0",
+  "bazaar@1.0.0",
+  "classic@1.0.0",
+  "editorial@1.0.0",
+  "editorial@1.1.0",
+  "minimal@1.0.0",
+]
 `;

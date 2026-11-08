@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { availableTo, latestAvailable, migrate, releaseProblems, versionState, withdrawnKeys, type VersionRow } from '../release'
+import { availableTo, isBaseline, latestAvailable, liveOf, releaseProblems, versionState, withdrawnKeys, type VersionRow } from '../release'
 import { CATALOGUE } from '../catalogue'
 
 const row = (version: string, over: Partial<VersionRow> = {}): VersionRow => ({ id: `id-${version}`, themeKey: 'editorial', version, releasedAt: null, recalledAt: null, withdrawnAt: null, ...over })
@@ -31,12 +31,13 @@ describe('theme versions (T3)', () => {
     expect(latestAvailable('editorial', code, [], new Set())).toBeNull()
     expect([...withdrawnKeys([row('1.1.0', { withdrawnAt: t }), row('1.0.0')])]).toEqual(['editorial@1.1.0'])
   })
-  it('migrate runs only the steps after the version it comes from, in order', () => {
-    const add = (k: string) => (l: { style: string; settings?: object }) => ({ ...l, style: l.style + k })
-    const path = [{ version: '1.2.0', migrations: [add('c')] }, { version: '1.1.0', migrations: [add('b')] }, { version: '1.0.0', migrations: [add('a')] }]
-    expect(migrate({ style: 'x' }, '1.0.0', path).style).toBe('xbc')
-    expect(migrate({ style: 'x' }, '1.1.0', path).style).toBe('xc')
-    expect(migrate({ style: 'x' }, '1.0.0', [{ version: '1.1.0' }])).toEqual({ style: 'x' })
+  it('live: the newest publish whose version is not withdrawn; the baseline can never be pulled', () => {
+    const pubs = [{ id: 3, themeKey: 'editorial', themeVersion: '1.1.0' }, { id: 2, themeKey: 'bazaar', themeVersion: '1.0.0' }, { id: 1, themeKey: 'classic', themeVersion: '1.0.0' }]
+    expect(liveOf(pubs, new Set())?.id).toBe(3)
+    expect(liveOf(pubs, new Set(['editorial@1.1.0']))?.id).toBe(2)
+    expect(liveOf(pubs, new Set(['editorial@1.1.0', 'bazaar@1.0.0']))?.id).toBe(1)
+    expect(liveOf([], new Set())).toBeNull()
+    expect([isBaseline('classic', '1.0.0'), isBaseline('editorial', '1.0.0')]).toEqual([true, false])
   })
   it('a version earlier than a released one, or one not in the build, cannot be released', () => {
     expect(releaseProblems(CATALOGUE.editorial!['1.1.0']!, ['1.0.0'])).toEqual([])

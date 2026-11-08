@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 4.5.0
+  version: 4.6.0
   verified: 2026-11-08
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -87,7 +87,7 @@ from it).
   "End trial"). Admin › Modules pauses a module "for everyone" with a reason;
   the shop sees "Paused by Frrata". Admin writes are admin-role only.
 
-## Shop themes (approved mockup 2026-11-08, T0 and T1 built)
+## Shop themes (approved mockups 2026-11-08, T0–T2 built)
 
 - The storefront's `--store-*` tokens now come from the shop's theme (`schemeVars(theme, scheme)` on the shell and
   on any section painted in another scheme). Never hard-code a store colour in a component.
@@ -104,6 +104,12 @@ from it).
   section is picture cards by kind, a full kind says its limit ("At most 2 on a page"); a section that blocks Publish
   says "needs you" in the list; Publish lists what shoppers will see change, then the person who published sees
   "Published" with Undo; a partner or staff sees "Ask the owner to publish"; support sees but can't change.
+- Pages beyond Home (T2 mockup https://claude.ai/artifact/H9wfYHs6Uq3Vod7rbRvHsM): the customizer's page picker
+  opens that page's panel (Product page: photos swipe/with thumbnails, About and details open/folded; Collection
+  page: title/banner); cards (standard/centred/framed) and computer columns (4/3) apply to every grid. One tag per
+  card: availability first, an offer's badge only where none shows.
+- A Hindi shop: `lang="hi"` on the shop, Noto Sans Devanagari after Inter; the shop's own words change, what the
+  merchant typed never does. Hindi words get a fluent reader's review before a Hindi shop goes live.
 - Colours and type live in Look only; Settings › Brand keeps the logo and tagline and previews them in the published look.
 
 ## Partner workspace (approved mockup 2026-11-07)

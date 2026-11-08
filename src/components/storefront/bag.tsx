@@ -116,7 +116,9 @@ export function OfferProgress({ q }: { q: PublicQuote }) {
 }
 
 /** The header's bag button and the drawer it opens (also opened by Add to bag). */
-export function BagButton({ checkoutHref, shopHref, label = 'Bag' }: { checkoutHref: string; shopHref: string; label?: string }) {
+export function BagButton({ checkoutHref, shopHref, label = 'Bag', count = ['Bag, 1 item', 'Bag, {n} items'] }: { checkoutHref: string; shopHref: string; label?: string
+  /** The button's name with a count, one and many (the shop's words; the name starts with the visible label). */
+  count?: [string, string] }) {
   const items = useBag()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDialogElement>(null)
@@ -130,7 +132,7 @@ export function BagButton({ checkoutHref, shopHref, label = 'Bag' }: { checkoutH
   const n = items.reduce((a, i) => a + i.qty, 0)
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="whitespace-nowrap px-2 py-2 text-sm" aria-label={`Bag, ${n} item${n === 1 ? '' : 's'}`}>{label}{n ? ` · ${n}` : ''}</button>
+      <button type="button" onClick={() => setOpen(true)} className="whitespace-nowrap px-2 py-2 text-sm" aria-label={(n === 1 ? count[0] : count[1]).replace('{n}', String(n))}>{label}{n ? ` · ${n}` : ''}</button>
       <dialog ref={ref} onClose={() => setOpen(false)} aria-label="Your bag"
         className="m-0 ml-auto h-dvh max-h-none w-full max-w-md overflow-y-auto bg-store-paper p-0 text-store-ink backdrop:bg-black/40">
         {open && (

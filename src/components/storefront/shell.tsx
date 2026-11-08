@@ -53,7 +53,7 @@ function ClassicHeader({ shop, href, gated, live, w }: { shop: ShellShop; href: 
         {!gated && <nav aria-label={w.shopNav} className="-mr-2 flex gap-1 overflow-x-auto text-sm">
           <Link href={href('/products')} className="whitespace-nowrap px-2 py-2">{w.shopAll}</Link>
           {shop.nav.map((c) => <Link key={c.handle} href={href(`/collections/${c.handle}`)} className="hidden whitespace-nowrap px-2 py-2 sm:inline">{c.title}</Link>)}
-          {live && <BagButton checkoutHref={href('/checkout')} shopHref={href('/products')} label={w.bag} />}
+          {live && <BagButton checkoutHref={href('/checkout')} shopHref={href('/products')} label={w.bag} count={[w.bagOne, w.bagMany]} />}
         </nav>}
       </div>
       {!gated && shop.nav.length > 0 && (
@@ -83,7 +83,7 @@ function MenuHeader({ shop, href, gated, live, minimal, w }: { shop: ShellShop; 
           )}
         </div>
         <Logo shop={shop} href={href} upper={minimal} className={minimal ? 'text-sm font-bold tracking-[0.24em]' : 'text-2xl font-semibold tracking-[0.12em] sm:text-3xl'} />
-        <div className="flex justify-end">{!gated && live && <BagButton checkoutHref={href('/checkout')} shopHref={href('/products')} label={w.bag} />}</div>
+        <div className="flex justify-end">{!gated && live && <BagButton checkoutHref={href('/checkout')} shopHref={href('/products')} label={w.bag} count={[w.bagOne, w.bagMany]} />}</div>
       </div>
       {!gated && !minimal && shop.nav.length > 0 && (
         <nav aria-label={w.collectionsNav} className="hidden justify-center gap-2 border-t border-store-line text-sm sm:flex">
@@ -152,7 +152,7 @@ export function ShopFooter({ f, href, variant = 'three', social = true, w = word
         <div className="space-y-1 text-store-sub">
           {f.legalName && <p>{f.legalName}</p>}
           {f.address && <p className="whitespace-pre-line">{f.address}</p>}
-          {f.grievanceName && <p>{w.grievance}: {f.grievanceName}{f.grievanceEmail ? `, ${f.grievanceEmail}` : ''}</p>}
+          {f.grievanceName && <p>{`${w.grievance}: `}{f.grievanceName}{f.grievanceEmail ? `, ${f.grievanceEmail}` : ''}</p>}
         </div>
       </div>
     </footer>

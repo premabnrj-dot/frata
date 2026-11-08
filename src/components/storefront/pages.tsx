@@ -78,14 +78,15 @@ export function PolicyView({ shop, page }: { shop: StoreShop; page: PolicyPage }
 
 /** Every page but the policies, until the shop publishes. */
 export function OpeningSoon({ shop, href }: { shop: StoreShop; href: Href }) {
+  const w = wordsFor(shop.shopLanguage)
   return (
     <section className={`${wrap} grid min-h-[50vh] place-items-center py-16 text-center`}>
       <div className="space-y-3">
-        <p className="text-sm uppercase tracking-[0.2em] text-store-sub">Opening soon</p>
+        <p className="text-sm uppercase tracking-[0.2em] text-store-sub">{w.opening.soon}</p>
         <h1 className="text-4xl sm:text-5xl" style={{ fontFamily: 'var(--store-display)' }}>{shop.shopName}</h1>
         {shop.tagline && <p className="text-lg text-store-sub">{shop.tagline}</p>}
-        {shop.instagram && <p><a className="underline underline-offset-4" href={`https://instagram.com/${shop.instagram.replace(/^@/, '')}`} rel="noopener">Follow on Instagram for the launch</a></p>}
-        <p className="pt-4 text-sm"><Link href={href('/policies/contact')} className="underline underline-offset-4">Contact</Link></p>
+        {shop.instagram && <p><a className="underline underline-offset-4" href={`https://instagram.com/${shop.instagram.replace(/^@/, '')}`} rel="noopener">{w.opening.follow}</a></p>}
+        <p className="pt-4 text-sm"><Link href={href('/policies/contact')} className="underline underline-offset-4">{w.contact}</Link></p>
       </div>
     </section>
   )

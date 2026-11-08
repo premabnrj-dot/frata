@@ -46,3 +46,9 @@ export function sourceProducts<P extends ListProduct>(src: Source, cat: Cat<P>, 
     }
   }
 }
+
+/** Shop the look's pieces as a shopper sees them: in the order pinned, only products listed now (a hidden or unlisted
+ *  piece drops out; with none left the section shows nothing). Handles name the shop's own catalogue only. */
+export function lookPieces<P extends ListProduct & { handle: string }, X extends { handle: string }>(pins: X[], products: P[], now: Date): (X & { p: P })[] {
+  return pins.flatMap((x) => { const p = products.find((q) => q.handle === x.handle && isListed(q, now)); return p ? [{ ...x, p }] : [] })
+}

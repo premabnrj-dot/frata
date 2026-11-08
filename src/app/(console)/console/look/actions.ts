@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { acceptedBase, storeHost } from '@/domains/media/sizes'
-import { manifestOf, latestOf } from '@/domains/themes/catalogue'
+import { manifestNear, manifestOf, latestOf } from '@/domains/themes/catalogue'
 import { brandColourProblem, carryOver, LayerSchema, layerProblems } from '@/domains/themes/layer'
 import { readinessOf } from '@/domains/themes/readiness'
 import { baselineRevision, resolveTheme } from '@/domains/themes/resolve'
@@ -65,7 +65,7 @@ export async function tryThemeAction(input: unknown): Promise<R<{ revisionId: st
     const t = auth.membership.tenantId
     const l = await lookFor(tx, t)
     const from = l.draft ?? l.live?.revision ?? null
-    const fromM = from ? manifestOf(from.themeKey, from.themeVersion) : null
+    const fromM = from ? manifestNear(from.themeKey, from.themeVersion) : null
     const fromLayer = from ? (from.settings as { settings?: object; home?: unknown[] }) : {}
     const c = fromM && from ? carryOver({ manifest: fromM, layer: { style: from.styleKey, ...fromLayer } }, to) : { layer: { style: to.styles[0]!.key }, lost: [] }
     const { style, ...rest } = c.layer

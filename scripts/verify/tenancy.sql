@@ -976,6 +976,9 @@ do $$ begin
   perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
   update variants set stock = 4 where id in ('cdcdcdcd-0000-0000-0000-00000000003a', 'cdcdcdcd-0000-0000-0000-00000000003c');
   if (select restocked_at from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003a') is null then raise exception 'FAIL: back after a day not recorded'; end if;
+  -- A product save that leaves stock alone keeps the time it came back.
+  update variants set price = price + 100 where id = 'cdcdcdcd-0000-0000-0000-00000000003a';
+  if (select restocked_at from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003a') is null then raise exception 'FAIL: a save without a stock change lost back-in-stock'; end if;
   if (select restocked_at from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003c') is not null then raise exception 'FAIL: a pre-order variant came "back"'; end if;
 end $$;
 commit;

@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.10.0
+  version: 2.11.0
   verified: 2026-11-08
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -217,7 +217,7 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   (`src/components/modules/slots.tsx`), the outbox cron, the console layout, the
   webhooks. Add a filler to `FILLERS`, not an import to a core page.
 
-## Themes (T0, T1 built 2026-11-08; spec docs/specs/2026-11-08-themes.md, plan docs/plans/2026-11-08-themes.md)
+## Themes (T0, T1, T2 built 2026-11-08; spec docs/specs/2026-11-08-themes.md, plan docs/plans/2026-11-08-themes.md)
 
 - A shop's look is **data over one section library**: `src/domains/themes/` (types, `resolveTheme` — the ONE merge
   of manifest → style → the merchant's layer — `contrast`, section SAVE schemas, `readinessOf`, `carryOver`,
@@ -243,6 +243,18 @@ shop can have or not (Messages, RTO Shield, Reviews…).
 - **Preview** `/console/theme-preview/<revision>/…` (route group `(lookpreview)`, no-store, noindex) is the ONLY
   framed route: SAMEORIGIN + `frame-ancestors 'self'`, only on the console host (`next.config.ts`,
   `framing.test.ts`). The customizer talks to it by `postMessage`, same origin and `e.source` checked.
+- **Page settings** (T2: gallery, details, card, desktop columns, collection top) are additive with today's values
+  as `PAGE_DEFAULTS`; a manifest may leave them out. A new setting never edits a released manifest.
+- **Released manifests never change**: `check:themes` (sha of each `<theme>/<semver>.ts` in `released.json`;
+  `npm run themes:lock` adds a new version) and `released-manifests.test.ts` (each manifest's evaluated content, so
+  a change in `kit.ts` or a version it builds on fails too). A missing version renders the nearest earlier version
+  of the same theme (`manifestNear`), never another theme.
+- **Back in stock** is the database's fact: one trigger (`app_variant_stock_times`) keeps `variants.sold_out_at` /
+  `restocked_at` (sold out ≥ 24 h, stop-when-out only) and replaces whatever the app sends. Never set them in code.
+- **Shop words** (T2): `shop_settings.shop_language` (en/hi); the words Frrata writes on a shop live in
+  `src/components/storefront/words.ts`, **server-only**. An island takes the strings it shows as a prop (`buyWords`),
+  never the module (`check-client-bundle` fails a chunk holding its Hindi). Domain functions return kinds and data;
+  the view words them. Checkout, bag drawer, emails, invoices and policy pages stay English for now.
 - **check:theme** is a vitest (`src/domains/themes/__tests__/check-theme.test.ts`): manifests are TS. It holds
   styles 1–5, allowed sections, sources, ≤ 20 sections and contrast for every scheme.
 - **Any storefront change** runs e2e `05-shop-look` (pixel diff against `e2e/baselines/`); an intended change

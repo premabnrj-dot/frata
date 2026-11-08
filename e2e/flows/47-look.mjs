@@ -143,8 +143,21 @@ export default {
       await riya.getByRole('button', { name: 'With thumbnails' }).click()
       await riya.getByRole('button', { name: 'Framed' }).click()
       const [{ id: draft }] = await db`select r.id from shop_theme_revisions r where r.tenant_id = ${KESAR} and not exists (select 1 from shop_theme_publishes p where p.revision_id = r.id) order by r.created_at desc limit 1`
-      await until(async () => { const [r] = await db`select settings from shop_theme_revisions where id = ${draft}`; return r.settings.settings?.gallery === 'thumbs' && r.settings.settings?.card === 'framed' }, 10_000)
-      // The preview frame wears it: framed cards on Shop all.
+      await riya.getByRole('button', { name: 'Folded' }).click()
+      await until(async () => { const [r] = await db`select settings from shop_theme_revisions where id = ${draft}`; return r.settings.settings?.gallery === 'thumbs' && r.settings.settings?.card === 'framed' && r.settings.settings?.details === 'folded' }, 10_000)
+      // The draft's product page wears it: a thumbnail strip (a second photo for the check), folded About, framed cards.
+      const [pr] = await db`select id, description from products where tenant_id = ${KESAR} and handle = 'chanderi-kurta-set'`
+      const [ph] = await db`select base from product_images where product_id = ${pr.id} order by position limit 1`
+      await db`insert into product_images (tenant_id, product_id, base, widths, width, height, alt, position) values (${KESAR}, ${pr.id}, ${ph.base + '-2'}, '{400,800}', 1200, 1500, '', 9)`
+      await db`update products set description = 'Hand-finished in Jaipur.' where id = ${pr.id}`
+      const look = await riya.context().newPage()
+      await look.goto(CONSOLE + `/console/theme-preview/${draft}/products/chanderi-kurta-set`)
+      await look.getByRole('list', { name: 'Choose a photo' }).waitFor()
+      await look.locator('details summary', { hasText: 'About this piece' }).waitFor()
+      assert.equal(await look.locator('[data-store-theme][data-card="framed"]').count(), 1)
+      await look.close()
+      await db`delete from product_images where product_id = ${pr.id} and position = 9`
+      await db`update products set description = ${pr.description} where id = ${pr.id}`
       await riya.getByLabel('Page').selectOption('home')
       await riya.getByRole('tab', { name: 'Sections' }).click()
       await riya.getByRole('button', { name: '+ Add a section' }).click()

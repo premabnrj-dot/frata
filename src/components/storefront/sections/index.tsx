@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { inCollection, isListed, priceOf } from '@/domains/storefront/listing'
-import { sourceProducts } from '@/domains/storefront/sources'
+import { lookPieces, sourceProducts } from '@/domains/storefront/sources'
 import { truePromises } from '@/domains/themes/readiness'
 import { schemeVars } from '@/domains/themes/resolve'
 import type { SectionInstance, SectionOf } from '@/domains/themes/sections'
@@ -126,7 +126,7 @@ function Products({ s, ctx }: { s: SectionOf<'products'>; ctx: SectionCtx }) {
       <div className="mb-4 flex items-baseline justify-between"><h2 id={h} className="text-xl"><Sized>{s.heading}</Sized></h2>{all && <Link href={ctx.href(all)} className="text-sm underline underline-offset-4">{wordsFor(ctx.shop.shopLanguage).seeAll}</Link>}</div>
       {s.layout === 'rail'
         ? <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">{list.slice(0, s.count).map((p, i) => <div key={p.id} className="w-[44%] shrink-0 snap-start sm:w-[23%]"><ProductCard p={p} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} priority={i < 2} /></div>)}</ul>
-        : <ProductGrid products={list.slice(0, s.count)} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} empty="New pieces are on their way." />}
+        : <ProductGrid products={list.slice(0, s.count)} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} empty={wordsFor(ctx.shop.shopLanguage).emptyShop} />}
     </section>
   )
 }
@@ -245,7 +245,7 @@ function Logos({ s }: { s: SectionOf<'logos'> }) {
  *  on the shop today drops out; with none left, the section shows nothing. Each piece links to its page. */
 function ShopTheLook({ s, ctx }: { s: SectionOf<'shop_the_look'>; ctx: SectionCtx }) {
   if (!s.image) return null
-  const pieces = s.pieces.flatMap((x) => { const p = ctx.cat.products.find((q) => q.handle === x.handle && isListed(q, ctx.now)); return p ? [{ ...x, p }] : [] })
+  const pieces = lookPieces(s.pieces, ctx.cat.products, ctx.now)
   if (!pieces.length) return null
   const h = `${s.id}-h`
   return (
@@ -263,7 +263,7 @@ function ShopTheLook({ s, ctx }: { s: SectionOf<'shop_the_look'>; ctx: SectionCt
           {pieces.map((x, i) => { const pr = priceOf(x.p); return (
             <li key={x.handle}><Link href={ctx.href(`/products/${x.handle}`)} className="flex items-center gap-3">
               <span className="relative block h-20 w-16 shrink-0 overflow-hidden rounded-[var(--store-radius)] bg-store-chip">{x.p.images[0] && <Photo p={x.p.images[0]} alt="" sizes="64px" className="absolute inset-0 h-full w-full object-cover" />}</span>
-              <span className="text-sm"><span className="block">{i + 1} · {x.p.title}</span>{pr && <span className="block font-medium">{pr.min !== pr.max ? 'From ' : ''}{rupees(pr.min)}</span>}</span>
+              <span className="text-sm"><span className="block">{i + 1} · {x.p.title}</span>{pr && <span className="block font-medium">{pr.min !== pr.max ? fill(wordsFor(ctx.shop.shopLanguage).from, { price: rupees(pr.min) }) : rupees(pr.min)}</span>}</span>
             </Link></li>
           ) })}
         </ol>

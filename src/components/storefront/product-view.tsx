@@ -7,7 +7,7 @@ import { isColourOption } from '@/domains/storefront/picker'
 import type { StoreProduct, StoreShop } from '@/lib/queries/storefront'
 import type { ThemeSettings } from '@/domains/themes/types'
 import { BuyBox, type OfferLine } from './buy-box'
-import { buyWords, fill, wordsFor, type Words } from './words'
+import { buyWords, fill, wordsFor } from './words'
 import { JsonLd } from './json-ld'
 
 
@@ -44,9 +44,9 @@ export function ProductView({ shop, p, now, live = false, layout, offers, below 
   const details = detailsOf(p)
   const gender = p.attributes['target-gender']?.[0] ? describeAttribute('target-gender')?.values.find((v) => v.id === p.attributes['target-gender']![0])?.name ?? null : null
   const ci = p.options.findIndex(isColourOption)
-  const model = p.modelHeight || p.modelSize ? `Model${p.modelHeight ? ` is ${p.modelHeight}` : ''}${p.modelHeight && p.modelSize ? ' and' : ''}${p.modelSize ? ` wears ${p.modelSize}` : ''}.` : null
   const w = wordsFor(shop.shopLanguage)
-  const rt = w.returns[shop.returnKind as keyof Words['returns']]
+  const model = p.modelHeight && p.modelSize ? fill(w.model.both, { h: p.modelHeight, s: p.modelSize }) : p.modelHeight ? fill(w.model.height, { h: p.modelHeight }) : p.modelSize ? fill(w.model.size, { s: p.modelSize }) : null
+  const rt = (w.returns as Record<string, string>)[shop.returnKind]
   const ret = rt ? fill(rt, { d: shop.returnDays }) : null
   const notes = [
     fill(w.ships, { d: shop.dispatchDays, days: shop.dispatchDays === 1 ? w.day : w.days, m: shop.metroDays, r: shop.restDays }),
@@ -62,7 +62,7 @@ export function ProductView({ shop, p, now, live = false, layout, offers, below 
   })
   return (
     <article className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
-      <BuyBox title={p.title} options={p.options} values={p.optionValues} variants={p.variants} colours={p.colours} images={p.images}
+      <BuyBox title={p.title} options={p.options} values={p.optionValues} variants={p.variants.map(({ restockedAt: _, ...v }) => v)} colours={p.colours} images={p.images}
         chart={p.sizeChart && p.sizeChart.rows.length ? p.sizeChart : null} model={model} now={now.toISOString()}
         delivery={{ shippingFlat: shop.shippingFlat, freeShippingAbove: shop.freeShippingAbove, codOn: shop.codOn, codMin: shop.codMin, codMax: shop.codMax, codCharge: shop.codCharge }}
         live={live} notes={notes} taxNote={shop.pricesIncludeGst ? w.taxIncluded : w.taxAdded} w={buyWords(shop.shopLanguage)} gallery={layout?.gallery} offers={offers} />

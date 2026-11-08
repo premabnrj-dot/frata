@@ -28,9 +28,10 @@ function* files(dir) {
 const TAXONOMY = 'Traditional & Ceremonial Clothing > Kurtas'
 
 // The shop's words (src/components/storefront/words.ts, themes T2) are server-only: an island gets the strings it
-// shows as a prop, so a shop never downloads both languages. A phrase only that module holds marks a chunk that
-// bundled it (written as escapes so this file stays ASCII).
-const WORDS = '\u0907\u0938 \u0936\u0949\u092a \u092a\u0930 \u0935\u093e\u092a\u0938\u0940 \u0928\u0939\u0940\u0902 \u0939\u094b\u0924\u0940'
+// shows as a prop, so a shop never downloads both languages. Every Devanagari phrase of 12+ characters that module
+// holds, read from the file now (so rewording the Hindi can't defeat the check), marks a chunk that bundled it.
+const WORDS = [...readFileSync('src/components/storefront/words.ts', 'utf8').matchAll(/'([^']*[\u0900-\u097F][^']*)'/g)].map((m) => m[1]).filter((t) => t.length >= 12)
+if (WORDS.length < 10) { console.error('check:client-bundle — found too few Hindi words in storefront/words.ts; has it moved?'); process.exit(1) }
 
 let found = [], taxonomy = [], words = []
 try {
@@ -39,7 +40,7 @@ try {
     const hits = SENTINELS.filter(s => text.includes(s))
     if (hits.length) found.push(`${f}  (${hits.join(', ')})`)
     if (text.includes(TAXONOMY)) taxonomy.push(f)
-    if (text.includes(WORDS)) words.push(f)
+    if (WORDS.some((w) => text.includes(w))) words.push(f)
   }
 } catch (e) {
   console.error(`check:client-bundle — no ${ROOT} to read; run it after next build.`)

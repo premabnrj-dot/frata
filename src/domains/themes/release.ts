@@ -1,5 +1,5 @@
 import { cmpSemver } from './catalogue'
-import type { ThemeLayer, ThemeManifest } from './types'
+import type { ThemeManifest } from './types'
 
 // =============================================================================
 // FILE: src/domains/themes/release.ts — which theme versions a shop may use (themes T3). Pure.
@@ -37,18 +37,15 @@ export function latestAvailable<M extends Pick<ThemeManifest, 'key' | 'version'>
 export const withdrawnKeys = (rows: VersionRow[]): Set<string> => new Set(rows.filter((r) => r.withdrawnAt).map((r) => `${r.themeKey}@${r.version}`))
 
 /**
- * A layer moved from one version of a theme to a later one: each manifest's `migrations` step in order. Sections
- * only grow (additive schemas), so a version without steps keeps the layer as it is. A step names the version it
- * leads to and is pure (a vitest per step).
+ * THE live rule (themes T3): a shop's live look is its newest publish whose version isn't withdrawn. `publishes`
+ * newest first. Read by the shop, Look, Undo and Admin's counts, so none can disagree.
  */
-export function migrate(layer: ThemeLayer, from: string, path: Pick<ThemeManifest, 'version' | 'migrations'>[]): ThemeLayer {
-  let out = layer
-  for (const m of [...path].sort((a, b) => cmpSemver(a.version, b.version))) {
-    if (cmpSemver(m.version, from) <= 0) continue
-    for (const step of m.migrations ?? []) out = step(out)
-  }
-  return out
+export function liveOf<P extends { themeKey: string; themeVersion: string }>(publishes: P[], bad: Set<string>): P | null {
+  return publishes.find((p) => !bad.has(`${p.themeKey}@${p.themeVersion}`)) ?? null
 }
+
+/** The look every shop can fall back to (baselineRevision): it can never be recalled or withdrawn. */
+export const isBaseline = (key: string, version: string) => key === 'classic' && version === '1.0.0'
 
 /**
  * Why a version can't be released (empty: it can). A version earlier than one already released can't be (shops

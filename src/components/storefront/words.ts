@@ -1,5 +1,6 @@
 import 'server-only'
 import type { Lang } from '@/lib/queries/storefront'
+import { POLICY_TITLE } from './policy'
 
 // =============================================================================
 // FILE: src/components/storefront/words.ts — the words Frrata writes on a shop, in English and Hindi (themes T2).
@@ -13,9 +14,10 @@ import type { Lang } from '@/lib/queries/storefront'
 export type { Lang }
 
 const EN = {
-  shopAll: 'Shop all', menu: 'Menu', contact: 'Contact', home: 'Home', shop: 'Shop', search: 'Search', bag: 'Bag',
+  shopAll: 'Shop all', menu: 'Menu', contact: 'Contact', home: 'Home', shop: 'Shop', search: 'Search', bag: 'Bag', bagOne: 'Bag, 1 item', bagMany: 'Bag, {n} items',
   shopNav: 'Shop', collectionsNav: 'Collections', categoriesNav: 'Categories', tabsNav: 'Shop tabs', policiesNav: 'Policies',
-  policy: { shipping: 'Shipping', returns: 'Returns and exchanges', privacy: 'Privacy', terms: 'Terms of sale', contact: 'Contact us' },
+  // The page titles' one home (the policy pages themselves stay English: their text is legal wording, checked in English).
+  policy: { ...POLICY_TITLE },
   grievance: 'Grievance officer',
   from: 'From {price}', colours: '{n} colours',
   tag: { 'Sold out': 'Sold out', 'Pre-order': 'Pre-order', 'Made to order': 'Made to order' },
@@ -24,6 +26,8 @@ const EN = {
   returns: { exchange_or_refund: '{d}-day returns and exchanges', exchange_only: '{d}-day exchanges', refund_only: '{d}-day returns', none: 'No returns on this shop' },
   taxIncluded: 'Price includes GST.', taxAdded: 'GST is added at checkout.',
   seeAll: 'See all',
+  model: { both: 'Model is {h} and wears {s}.', height: 'Model is {h}.', size: 'Model wears {s}.' },
+  opening: { soon: 'Opening soon', follow: 'Follow on Instagram for the launch' },
   emptyShop: 'New pieces are on their way.', emptyCollection: 'Nothing here right now. New pieces are on their way.',
   gone: '{title} is no longer available', goneSub: 'Here is what is new instead.', notHere: 'This page is not here', seeEverything: 'See everything in the shop',
   promise: { label: 'Our promises', cod: 'Pay on delivery', freeShipping: 'Free shipping above {above}', exchange: '{d}-day exchange', returns: '{d}-day returns', exchangeOrReturns: '{d}-day exchange or returns', shipsDay: 'Ships in {d} day', shipsDays: 'Ships in {d} days' },
@@ -31,7 +35,7 @@ const EN = {
 export type Words = typeof EN
 
 const HI: Words = {
-  shopAll: 'सब देखें', menu: 'मेन्यू', contact: 'संपर्क', home: 'होम', shop: 'शॉप', search: 'खोजें', bag: 'बैग',
+  shopAll: 'सब देखें', menu: 'मेन्यू', contact: 'संपर्क', home: 'होम', shop: 'शॉप', search: 'खोजें', bag: 'बैग', bagOne: 'बैग, 1 आइटम', bagMany: 'बैग, {n} आइटम',
   shopNav: 'शॉप', collectionsNav: 'कलेक्शन', categoriesNav: 'श्रेणियाँ', tabsNav: 'शॉप टैब', policiesNav: 'नीतियाँ',
   policy: { shipping: 'शिपिंग', returns: 'वापसी और एक्सचेंज', privacy: 'प्राइवेसी', terms: 'बिक्री की शर्तें', contact: 'संपर्क करें' },
   grievance: 'शिकायत अधिकारी',
@@ -42,6 +46,8 @@ const HI: Words = {
   returns: { exchange_or_refund: '{d} दिन में वापसी और एक्सचेंज', exchange_only: '{d} दिन में एक्सचेंज', refund_only: '{d} दिन में वापसी', none: 'इस शॉप पर वापसी नहीं होती' },
   taxIncluded: 'कीमत में GST शामिल है।', taxAdded: 'GST चेकआउट पर जुड़ेगा।',
   seeAll: 'सब देखें',
+  model: { both: 'मॉडल की लंबाई {h} है और उन्होंने {s} साइज़ पहना है।', height: 'मॉडल की लंबाई {h} है।', size: 'मॉडल ने {s} साइज़ पहना है।' },
+  opening: { soon: 'जल्द खुल रहा है', follow: 'लॉन्च के लिए Instagram पर फ़ॉलो करें' },
   emptyShop: 'नए पीस जल्द आ रहे हैं।', emptyCollection: 'अभी यहाँ कुछ नहीं है। नए पीस जल्द आ रहे हैं।',
   gone: '{title} अब उपलब्ध नहीं है', goneSub: 'इसकी जगह ये नए पीस देखें।', notHere: 'यह पेज यहाँ नहीं है', seeEverything: 'शॉप में सब देखें',
   promise: { label: 'हमारे वादे', cod: 'कैश ऑन डिलीवरी', freeShipping: '{above} से ऊपर फ्री शिपिंग', exchange: '{d} दिन में एक्सचेंज', returns: '{d} दिन में वापसी', exchangeOrReturns: '{d} दिन में एक्सचेंज या वापसी', shipsDay: '{d} दिन में भेजा जाएगा', shipsDays: '{d} दिन में भेजा जाएगा' },
