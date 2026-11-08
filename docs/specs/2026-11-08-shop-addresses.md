@@ -1,5 +1,5 @@
 # Shop addresses: a frrata.shop address for every shop, and the merchant's own domain
-Status: draft (mockup for the owner) · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/BStSSZeC35kgWfxQQ6VWNz (`docs/mockups/2026-11-08-shop-addresses.html`) · Approved: —
+Status: active · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/BStSSZeC35kgWfxQQ6VWNz (`docs/mockups/2026-11-08-shop-addresses.html`) · Approved: owner, 2026-11-08 ("shop addresses mockup approved", with one note: no descriptions or clarifications on screen — follow `frata-design-language` § Voice and § Labels; the words below are the build's)
 Research: `docs/research/2026-11-08-shop-addresses.md` (integration-researcher and a codebase map, 2026-11-08).
 Owner, 2026-11-08: buys **frrata.shop**; "help me connect with the system"; plan how merchants get a subdomain and
 attach their own domain themselves; review every scenario, stress test, security, UX, the boundaries — what Admin
@@ -110,6 +110,25 @@ Google moves your pages over a few weeks. Buttons: **Make it main** · **Not now
 **Admin › Merchant › Addresses** (tab): current name, old names (redirecting), domains with state and last check;
 actions with a reason: **Rename**, **Freeze changes**, **Detach domain**, **Retry sync**. **Admin › Names**: reserved,
 protected, blocked; add, remove, release a held name. **Admin › Domain health**: failing domains and sync errors.
+
+## Words on screen (owner's note at approval, 2026-11-08)
+The mockup's explanatory lines are not built. On screen stay only: the address, each state as a badge, errors, a
+limit someone must meet, and one risk line where an action can't be undone. Everything else is an (i) tip or gone.
+
+| Screen | Built as |
+|---|---|
+| Settings › Shop address | Card **Frrata address**: `kesar-studio.frrata.shop` · Copy · Open · **Change**; "2 changes left" (a limit); (i) "Old addresses keep working." Card **Your domains**: one row per host with its badge (Main · Connected · Waiting for records · Not working · Disconnected); **Connect a domain** |
+| Change name (dialog) | Field + "Available" / "Taken"; "1 of 2 changes"; **Change to kesar-jaipur** · **Keep kesar-studio** |
+| Connect · 1 | Field **Domain**; chips **Bought at** GoDaddy · Hostinger · BigRock · Namecheap · Cloudflare · Other; **Continue**. (i) on Domain: "www.kesarstudio.in will go to kesarstudio.in." |
+| Connect · 2 | Table Type · Name · Value · State, Copy per row; **Check records**; "Checked 1 min ago". A failing row says only what to change: "Points to 3.110.44.9 · use 216.198.79.1". Cloudflare chosen → "Set to DNS only" (a requirement). Link "GoDaddy steps". (i) "Your email records stay as they are." |
+| Connect · 3 | Badge **Securing** → **Connected**; **Make main** · **Not now** |
+| Make main (dialog) | "Make kesarstudio.in your main address?" · one risk line "Bags in progress start empty." · **Make main** · **Keep frrata.shop** |
+| Not working (banner) | "kesarstudio.in isn't working. Shoppers go to kesar-studio.frrata.shop." · **Fix** |
+| Problems | One line each, the fix only: "Turn off Cloudflare's proxy", "Allow letsencrypt.org in CAA", "Add the _frrata record", "Connected to another shop · add the TXT record to move it" |
+| Report page | Shop · What's wrong · Page · **Send report**; then "Received · TS-20451" |
+| Frozen shop (shopper) | "This shop is unavailable." |
+| Frozen shop (merchant banner) | "Frrata froze your shop: <reason>." · **Reply** |
+| Admin | Action buttons name the shop; every action has a required Reason field (shown to the shop); no prose |
 
 ## Data and rules (for the plan; every table with tenant_id, grant, RLS, policy in one migration)
 - **`shop_names`** (name PK, tenant_id, became_main_at, retired_at): every name a shop has had. The current one is

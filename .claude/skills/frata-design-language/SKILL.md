@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 4.15.0
+  version: 4.16.0
   verified: 2026-11-08
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -339,6 +339,20 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
     Offers), which page opens, an optional name; out comes the link, Copy, and "Orders from it show as …". A shop not
     open yet says so instead. A source's own page lists its campaigns and its latest 50 orders, each opening the order;
     the order page says "Came from: <source> · <campaign>" as text, never a link.
+
+## Shop addresses (owner-approved 2026-11-08; spec `docs/specs/2026-11-08-shop-addresses.md`, mockup https://claude.ai/artifact/BStSSZeC35kgWfxQQ6VWNz)
+
+67. **An address is mono, whole and copyable** (`kesar-studio.frrata.shop`), with Copy and Open beside it; a merchant
+    types only the name part, the domain shown as a fixed suffix.
+68. **A domain's state is a badge in words** (Main · Connected · Waiting for records · Securing · Not working ·
+    Disconnected), never a colour or icon alone; a failing record says only the fix ("Points to … · use …").
+69. **DNS records are a table to copy** (Type · Name · Value · State, Copy per row), values read from the provider at
+    the time, never hard-coded; one **Check records** button with "Checked N min ago".
+70. **No explanations on these screens** (owner's note at approval): what stays visible is the address, the state, an
+    error, a limit ("2 changes left"), and one risk line where an action can't be undone ("Bags in progress start
+    empty."). Anything else is an (i) tip or not said.
+71. **Trust and safety actions** (Admin) name the shop on the button and require a reason the shop will read; the shop
+    sees the reason and a **Reply**, never who reported it.
 
 ## Storefront as built (1B, 2026-11-07)
 
