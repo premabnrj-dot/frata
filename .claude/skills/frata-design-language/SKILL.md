@@ -2,8 +2,8 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.1.0
-  verified: 2026-11-08
+  version: 5.2.0
+  verified: 2026-11-09
   covers: ["src/app/globals.css", "src/components/**"]
 ---
 
@@ -133,6 +133,27 @@ from it).
   or withdrew it (their previous look is live, nothing lost). Admin › Themes says every decision is final and names
   the shops it touches; a destructive decision is a red-labelled form with a required reason, not a typed phrase.
 - Colours and type live in Look only; Settings › Brand keeps the logo and tagline and previews them in the published look.
+- **Three themes, each a job** (owner, 2026-11-08 night; plan `docs/plans/2026-11-09-themes-three.md`):
+  **Editorial** — occasion and designer wear: photos stacked large beside a buy box that stays, Cormorant, square,
+  a sheen on buttons, photos that grow, pages that fade in, sections that rise, statement footer in ink, focused
+  checkout. **Bazaar** — big catalogues and sales: circles, bottom tabs, three across, framed cards that lift,
+  thumbnails under the photo, pill buttons that press, a phone Add to bag bar, tinted footer. **Studio** —
+  contemporary and basics: split header, uppercase Inter, underlined buttons, two photos across beside a buy box
+  that stays, pages that rise, statement footer in black, focused checkout. A new look is a new value a theme
+  offers, never a fourth theme without a new job.
+- **A theme offers its own choices**; the customizer shows a choice only when the theme offers two or more values
+  (one value is no choice). Names merchants read: Photos (Two across, Stacked, Thumbnails under, Thumbnails beside);
+  Buttons Style (Solid, Outline, Underlined), Shape (Follows corners, Pill), On hover (Press, Lift, Sheen); Cards on
+  hover (Still, Lift, Zoom photo); Pages arrive (At once, Fade, Rise); Checkout (With your menu, Focused).
+- **2.0 motion**: transform and opacity only; hover motion inside `(hover: hover)`; a page arrives from opacity 0.6
+  (never 0, so the largest paint isn't held), ending on no transform; sections rise with a scroll timeline, never
+  the first; `Motion: None` and reduced motion stop all of it. Add to bag stays a filled button in every style.
+- **Legal lines never leave**: Statement and the focused checkout keep the policies, legal name, address and
+  grievance officer.
+- **Sample pieces** fill the customizer's preview of an empty shop, tagged "Sample", drawn (never photographed), and
+  never reach a shop; a photo section still needs the merchant's own photo to publish.
+- **Even rhythm** (2.0 themes): the same space above and below every section but a full-bleed one. Horizontal rails
+  snap to their padding (`scroll-px-4`), never past it.
 
 ## Partner workspace (approved mockup 2026-11-07)
 

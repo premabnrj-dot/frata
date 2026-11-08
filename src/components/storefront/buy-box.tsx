@@ -185,7 +185,7 @@ function Gallery({ photos, title, kind, w }: { photos: Img[]; title: string; kin
     : '-mx-4 flex snap-x snap-mandatory overflow-x-auto md:mx-0 md:grid md:grid-cols-2 md:gap-2 md:overflow-visible [&::-webkit-scrollbar]:hidden'
   const sizes = (i: number) => kind === 'rail' ? '(min-width: 768px) calc(55vw - 72px), 100vw' : kind === 'swipe' && i > 0 ? '(min-width: 768px) 27vw, 100vw' : '(min-width: 768px) 55vw, 100vw'
   const strip = single && photos.length > 1 && (
-    <ul className={kind === 'rail' ? 'mt-2 flex gap-2 overflow-x-auto pb-1 md:order-first md:mt-0 md:max-h-[44rem] md:flex-col md:overflow-y-auto md:pb-0' : 'mt-2 flex gap-2 overflow-x-auto pb-1'} aria-label={w.choosePhoto}>
+    <ul className={kind === 'rail' ? 'mt-2 flex gap-2 overflow-x-auto p-0.5 md:order-first md:mt-0 md:max-h-[44rem] md:flex-col md:overflow-y-auto' : 'mt-2 flex gap-2 overflow-x-auto p-0.5'} aria-label={w.choosePhoto}>
       {photos.map((ph, i) => (
         <li key={ph.base} className="shrink-0">
           <button type="button" onClick={() => show(i)} aria-label={fill(w.photoOf, { i: i + 1, n: photos.length })} aria-current={at === i ? 'true' : undefined}

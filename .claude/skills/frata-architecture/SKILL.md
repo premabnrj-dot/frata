@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.23.0
+  version: 2.24.0
   verified: 2026-11-08
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -302,6 +302,25 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   the view words them. Checkout, bag drawer, emails, invoices and policy pages stay English for now.
 - **check:theme** is a vitest (`src/domains/themes/__tests__/check-theme.test.ts`): manifests are TS. It holds
   styles 1–5, allowed sections, sources, ≤ 20 sections and contrast for every scheme.
+- **2.0 choices** (plan `docs/plans/2026-11-09-themes-three.md`): `FeelSettings` (button shape/motion, card hover,
+  entrance, reveal, buy box, phone bar, footer colours, checkout) are additive with today's look as `FEEL_DEFAULTS`.
+  **Which values a theme may use is `choicesFor(m, key)`** (`src/domains/themes/choices.ts`), read by `resolveTheme`
+  AND the forms: a manifest lists its values in `allowed.choices`; a key it leaves out gets `BASE_CHOICES` (only what
+  every 1.x theme had), so a 1.x theme can never render a 2.0 value. A stored layer is read **key by key**
+  (`readSettings`): a value this build can't read drops only itself. `carryOver` brings across only what the
+  merchant chose (never the old theme's defaults, never Classic's recorded font).
+- **Gallery** = `OFFERED` (Editorial, Bazaar, Studio); `THEME_ORDER` is every theme in the build. Classic stays the
+  baseline; Atelier lives on inside Editorial 2.
+- **Sample pieces** (`src/lib/themes/sample.ts`, data in `catalogue/samples.ts`, photos in `public/themes/samples/`
+  from `scripts/themes/make-samples.mjs`) are merged **only** by the theme-preview route, after the preview read,
+  when the shop lists fewer than 4 pieces and the manifest has `samples`. Never in a cached read, never on a shop
+  (shop hosts are rewritten, so the files can't be served there; `check-storefront-build` fails a shop chunk naming
+  them; `sample.test.ts` pins who imports the module). A real product at a `sample-` handle wins.
+- **Checkout** has its own route group `(checkout)` with `ShopFrame` (`src/app/s/[host]/_frame.tsx`, shared with
+  `(shop)`): Focused = the shell's `focused` (logo + compact legal footer). `(shop)/template.tsx` is the page
+  entrance wrapper (server, reads nothing, `display: contents` when off).
+- **A section is guarded**: `Sections` calls each one as a function in try/catch (`unstable_rethrow` first); a throw
+  leaves it out of the shop and names it in the preview.
 - **Any storefront change** runs e2e `05-shop-look` (pixel diff against `e2e/baselines/`); an intended change
   regenerates them in the same commit: `UPDATE_BASELINES=1 npm run e2e -- --only shop-look`. Look's state changes:
   `look.int.test.ts` (real Postgres) and e2e `47-look`.
