@@ -14,17 +14,19 @@ type Key = 'delivery' | 'ret' | 'cod'
 const FIELDS: { key: Key; label: string; hint: string; suggested: string }[] = [
   { key: 'delivery', label: 'A delivery', hint: 'Courier charge to deliver one parcel', suggested: '70' },
   { key: 'ret', label: 'A return', hint: 'Charged when a parcel comes back undelivered', suggested: '70' },
-  { key: 'cod', label: 'A COD fee', hint: 'The courier’s fee for collecting cash on a delivered COD order: about ₹50, or 2.5% of the order if higher', suggested: '50' },
+  { key: 'cod', label: 'A COD fee', hint: 'The courier’s fee for collecting cash on a delivered COD order: about ₹50 (one flat figure)', suggested: '50' },
 ]
 
-export function ShipCostsForm({ current, confirmedOn }: { current: Record<Key, string | null>; confirmedOn: string | null }) {
+export function ShipCostsForm({ current, confirmedOn: confirmed0 }: { current: Record<Key, string | null>; confirmedOn: string | null }) {
   const router = useRouter()
   const start0 = (k: Key, s: string) => current[k] ?? s
   const [v, setV] = useState<Record<Key, string>>(() => Object.fromEntries(FIELDS.map((f) => [f.key, start0(f.key, f.suggested)])) as Record<Key, string>)
   const [errors, setErrors] = useState<Partial<Record<Key, string>>>({})
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [pending, start] = useTransition()
-  const changed = !confirmedOn || FIELDS.some((f) => v[f.key] !== current[f.key])
+  const [confirmedOn, setConfirmedOn] = useState(confirmed0)
+  const [saved, setSaved] = useState<Record<Key, string | null>>(current)
+  const changed = !confirmedOn || FIELDS.some((f) => v[f.key] !== saved[f.key])
   const field = 'h-10 w-full min-w-0 bg-transparent text-sm tabular-nums outline-none md:h-9'
 
   return (
@@ -55,7 +57,7 @@ export function ShipCostsForm({ current, confirmedOn }: { current: Record<Key, s
           <Button type="button" disabled={!changed || pending} onClick={() => start(async () => {
             let r: Awaited<ReturnType<typeof saveShipCosts>>
             try { r = await saveShipCosts(v) } catch { r = { ok: false, error: 'We could not save. Check your connection; nothing was changed.' } }
-            if (r.ok) { setMsg({ ok: true, text: 'Shipping costs confirmed.' }); router.refresh() }
+            if (r.ok) { setMsg({ ok: true, text: 'Shipping costs confirmed.' }); setConfirmedOn(r.confirmedOn); setSaved(v); router.refresh() }
             else { setErrors((r.errors ?? {}) as Partial<Record<Key, string>>); setMsg({ ok: false, text: r.error }) }
           })}>{pending ? 'Saving…' : confirmedOn ? 'Save these costs' : 'Confirm these costs'}</Button>
         </div>

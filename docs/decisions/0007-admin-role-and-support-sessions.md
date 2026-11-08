@@ -25,6 +25,10 @@ Status: accepted · 2026-11-06 · amends ADR-0002
   `app_user_directory`, `app_find_confirmed_user`, `app_admin_order_counts`
   (frata_admin). Each revokes EXECUTE from public, anon and authenticated —
   Postgres grants PUBLIC EXECUTE by default and Supabase exposes functions over RPC.
+- **A new column on a table `frata_admin` reads table-wide reaches Admin too.** `shop_settings` is one (0008): its
+  shipping-cost estimates (Ship 0044, 2026-11-08) are readable by `frata_admin`, accepted because Admin reads no
+  cost column and support needs the shop's settings. Each later column on such a table makes this choice in its
+  migration's header, on purpose (tenancy audit 2026-11-08).
 
 ## Why
 Admin's job is to see across merchants, which the tenant policies forbid by

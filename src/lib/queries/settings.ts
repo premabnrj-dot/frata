@@ -1,5 +1,5 @@
 import 'server-only'
-import { eq } from 'drizzle-orm'
+import { eq, getTableColumns } from 'drizzle-orm'
 import { shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
@@ -10,10 +10,14 @@ import { formatInr } from '@/lib/format'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 import { activeProductCount, paymentStatusFor } from './payments'
 
-/** A shop's name, address slug and settings row, in one round trip. Null only if the row is missing. */
+// The settings row WITHOUT the shop's shipping-cost estimates: a merchant's cost, read only through shipCostsIn by
+// owners and admins (ADR-0003; tenancy audit 2026-11-08: partners reach pages that read this row).
+const { shipCostDelivery: _d, shipCostReturn: _r, shipCostCod: _c, shipCostsConfirmedAt: _a, ...settingsColumns } = getTableColumns(shopSettings)
+
+/** A shop's name, address slug and settings row (costs left out), in one round trip. Null only if the row is missing. */
 export async function shopWithSettings(tenantId: string) {
   return withTenant(tenantId, async (tx) => {
-    const [row] = await tx.select({ name: tenants.name, slug: tenants.slug, settings: shopSettings })
+    const [row] = await tx.select({ name: tenants.name, slug: tenants.slug, settings: settingsColumns })
       .from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id))
       .where(eq(tenants.id, tenantId)).limit(1)
     return row ?? null

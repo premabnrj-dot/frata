@@ -82,6 +82,20 @@ export default {
         await until(async () => (await moments(Q)).rto_delivered_at !== null)
       })
 
+      await t.step('Lost by the courier on an order paid online: asks first, then says to refund', async () => {
+        const L = top + 6
+        const [{ id }] = await db`insert into orders (tenant_id, number, payment_method, placed_at, paid_at, confirmed_at, packed_at, shipped_at, invoice_number, customer_name, phone, address_line, area, city, pincode, state, subtotal, total)
+          values (${T}, ${L}, 'prepaid', ${todayAgo(60)}, ${todayAgo(59)}, ${todayAgo(50)}, ${todayAgo(40)}, ${todayAgo(30)}, ${'SH/26-27/' + L}, 'Ship Lata', '9822300006', '5, MI Road', 'C Scheme', 'Jaipur', '302001', 'Rajasthan', 99000, 99000) returning id`
+        await db`insert into shipments (tenant_id, order_id, provider) values (${T}, ${id}, 'self')`
+        await p.goto(CONSOLE + `/console/orders/${L}`)
+        await p.getByRole('button', { name: 'Lost by the courier' }).click()
+        const d = p.getByRole('dialog', { name: 'Lost by the courier?' })
+        await d.getByRole('button', { name: 'Mark lost' }).click()
+        await p.locator('[data-toast]', { hasText: `${label(L)} marked lost.` }).waitFor()
+        await p.getByText(/Lost by the courier after it was paid online: refund the shopper in Razorpay/).waitFor()
+        assert.ok((await db`select lost_at from orders where id = ${id}`)[0].lost_at)
+      })
+
       await t.step('Bulk Delivered from On the way, and one Undo for both', async () => {
         const U = [top + 4, top + 5]
         for (const n of U) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { currentMethod, enteredAt, isHolding, isPlaced, isStanding, needsAction, ORDER_STATES, orderState, paidAfterPacking, paidAfterSwitch, queueTab, shopperState, type OrderMoments } from '../order-state'
+import { cashAtDoor, currentMethod, enteredAt, isHolding, isPlaced, isStanding, needsAction, ORDER_STATES, orderState, paidAfterPacking, paidAfterSwitch, queueTab, shopperState, SHOPPER_STATES, type OrderMoments } from '../order-state'
 
 const t = (n: number) => new Date(2026, 10, n)
 /** A COD order placed on day 1, nothing else happened yet; override what did. */
@@ -85,6 +85,10 @@ describe('the queue and the shopper', () => {
     expect(orderState(moments({ packedAt: t(3), shippedAt: t(4), lostAt: t(6), deliveredAt: t(7) }), new Date(2026, 10, 9))).toBe('delivered')
     expect(orderState(moments({ packedAt: t(3), shippedAt: t(4), lostAt: t(6), rtoInitiatedAt: t(7) }), new Date(2026, 10, 9))).toBe('rto')
     expect(shopperState('lost')).toBe('delivery_problem')
+  })
+  it('cash is kept ready only while the parcel can still reach the door', () => {
+    const ready = SHOPPER_STATES.filter(cashAtDoor)
+    expect(ready).toEqual(['confirming', 'confirmed', 'packed', 'shipped', 'ndr'])
   })
   it('never tells a shopper an internal word', () => {
     for (const s of ORDER_STATES) expect(['held', 'refund_due', 'unconfirmed', 'rto', 'rto_received', 'payment_abandoned']).not.toContain(shopperState(s))

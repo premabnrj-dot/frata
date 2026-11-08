@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.14.0
+  version: 2.15.0
   verified: 2026-11-08
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -314,7 +314,9 @@ Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
 - **First order** is decided at placement under a per-phone advisory lock (standing or holding
   order from that phone), and again on a payment retry.
 - **Did it make money?** `offerStats` (queries/discounts.ts) is the ONE computation of an offer's results:
-  window orders that use it now (`useOfRowSql`), state through `stateSql`, ₹ kept through profit.ts, new vs repeat
+  window orders that use it now (`useOfRowSql`), state through `stateSql`, ₹ kept through profit.ts with freight from
+  `freightOf` (domains/orders/freight.ts: Shiprocket actual or pending — pending left out — else the shop's confirmed
+  estimate, `estimateOf(shipCostsIn)`, else none; `keptBasis` says which; computed only for owners and admins), new vs repeat
   through `priorOrderSql` (also the first-order rule), each creator code's week through `leakOf` (domains/checkout/
   leak.ts). Nothing stored. Uses for limits and budgets stay `discountUses` (all time).
 - **Stopped by Frrata** (O·4): `stopped_*` makes an offer `stopped` in `offerStatus` and not live in

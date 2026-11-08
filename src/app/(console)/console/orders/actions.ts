@@ -70,10 +70,15 @@ export async function undoOrderAction(eventId: string) {
  * compare-and-set, history and audit row. The first refusal is returned, in its own words.
  */
 export async function undoMany(eventIds: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+  return undoEach(eventIds, undoOrderAction)
+}
+
+/** Each event through its own guarded undo, in one request; the first refusal in its own words. */
+async function undoEach(eventIds: unknown, undo: (id: string) => Promise<{ ok: true } | { ok: false; error: string }>): Promise<{ ok: true } | { ok: false; error: string }> {
   const ids = pickIds(eventIds)
   if (!ids.length) return { ok: false, error: 'There is nothing to undo.' }
   let bad: string | null = null
-  for (const id of ids) { const r = await undoOrderAction(id); if (!r.ok && !bad) bad = r.error }
+  for (const id of ids) { const r = await undo(id); if (!r.ok && !bad) bad = r.error }
   return bad ? { ok: false, error: bad } : { ok: true }
 }
 
@@ -203,15 +208,11 @@ export async function undoOutcomeAction(eventId: string): Promise<ActionResult> 
   }
 }
 
-/** Mark a selection delivered (the queue's bulk action, at most 50), each through deliverOrder. */
 /** A bulk outcome's Undo in ONE request, as undoMany (architecture review 2026-11-07); each through undoOutcomeAction. */
 export async function undoOutcomeMany(eventIds: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
-  const ids = pickIds(eventIds)
-  if (!ids.length) return { ok: false, error: 'There is nothing to undo.' }
-  let bad: string | null = null
-  for (const id of ids) { const r = await undoOutcomeAction(id); if (!r.ok && !bad) bad = r.error }
-  return bad ? { ok: false, error: bad } : { ok: true }
+  return undoEach(eventIds, undoOutcomeAction)
 }
+/** Mark a selection delivered (the queue's bulk action, at most 50), each through deliverOrder. */
 export async function deliverMany(orderIds: string[]): Promise<BulkResult> {
   try {
     const ids = pickIds(orderIds)

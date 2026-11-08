@@ -11,9 +11,9 @@ import { estimateOf } from '@/domains/settings/ship-costs'
 import { shipCostsIn } from '@/lib/queries/settings'
 import { discountCodes, discountTargets, discountTiers, discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import { collections, products, variants } from '@/lib/db/schema-catalogue'
-import { orders, shipments } from '@/lib/db/schema-orders'
+import { orders } from '@/lib/db/schema-orders'
 import { discountUses, useOfRowSql } from '@/lib/db/discount-predicates'
-import { currentMethodSql, holdingSql, priorOrderSql, standingSql, stateSql } from '@/lib/db/order-predicates'
+import { currentMethodSql, holdingSql, openShipmentProviderSql, priorOrderSql, standingSql, stateSql } from '@/lib/db/order-predicates'
 import { leakOf, type Leak } from '@/domains/checkout/leak'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
@@ -141,12 +141,12 @@ const keptOf = (k: { kept: number | null; basis: KeptBasis }) => ({ keptPerDeliv
  * through profit.ts, new vs repeat through priorOrderSql, and each creator code's week for its leak alert. Derived on
  * read; nothing stored. Driven by orders_tenant_placed and order_discounts_order_offer.
  */
-export async function offerStats(tenantId: string, now = new Date(), days = 30): Promise<OfferStats> {
-  return withTenant(tenantId, (tx) => offerStatsIn(tx, tenantId, now, days))
+export async function offerStats(tenantId: string, now = new Date(), opts: { days?: number; costs: boolean }): Promise<OfferStats> {
+  return withTenant(tenantId, (tx) => offerStatsIn(tx, tenantId, now, opts.days ?? 30, opts.costs))
 }
 
 /** offerStats inside the caller's tenant transaction (the int test reads rows it will roll back). */
-export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, days = 30): Promise<OfferStats> {
+export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, days = 30, costs = true): Promise<OfferStats> {
   const fee = await feeBpsIn(tx, tenantId, now)
   // The shop's confirmed shipping-cost estimates (Settings › Shipping costs), for orders shipped another way.
   const est = estimateOf(await shipCostsIn(tx, tenantId))
@@ -174,7 +174,7 @@ export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, days = 3
     tx.execute<Delivered & { id: string }>(sql`
       select od.discount_id id, o.net_revenue net, o.cogs, o.forward_shipping fwd, o.rto_shipping rto, o.courier_cod_fee codfee, o.gateway_fee gw, o.merchandise_net base,
              ${currentMethodSql('o')} = 'cod' cod,
-             (select s.provider from ${shipments} s where s.tenant_id = o.tenant_id and s.order_id = o.id and s.ended_at is null limit 1) provider
+             ${openShipmentProviderSql('o')} provider
         from ${orderDiscounts} od join ${orders} o on o.tenant_id = od.tenant_id and o.id = od.order_id
        where od.tenant_id = ${tenantId} and o.tenant_id = ${tenantId} and o.placed_at >= ${since} and ${useOfRowSql(now)} and ${st} = 'delivered'`),
     // Creator codes: the window's numbers, and the 35 days the leak alert reads (7 + the 28 before).
@@ -195,8 +195,9 @@ export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, days = 3
   ])
   // Freight through the one rule (freight.ts, Ship S0·6): a delivered order whose courier lines are still pending is
   // left out like one with unknown cost; the basis says whether any figure in the average was estimated or left out.
+  // `costs` false (staff, partners): ₹ kept is a profit, so it is not even computed for them (tenancy audit 2026-11-08).
   const kept = (rows: Delivered[]): { kept: number | null; basis: KeptBasis } => {
-    if (fee === null) return { kept: null, basis: null }
+    if (fee === null || !costs) return { kept: null, basis: null }
     const known = rows.filter((d) => d.cogs !== null)
       .map((d) => ({ d, f: freightOf(d.provider, { forwardShipping: num(d.fwd), rtoShipping: num(d.rto), courierCodFee: num(d.codfee) }, est, { cod: !!d.cod, outcome: 'delivered' }) }))
       .filter((x) => x.f.source !== 'pending')

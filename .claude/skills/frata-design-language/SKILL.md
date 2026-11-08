@@ -291,7 +291,9 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
     shows value and discount before GST at the line's rate.
 50. **The console judges offers on delivered orders:** uses, ₹ given, delivered, ₹ kept per
     delivered order; a form warns when an offer would mostly reward orders that already qualify.
-    Partners draft; owners and admins start, pause and end (ending confirms; it is final).
+    Partners draft; owners and admins start, pause and end (ending confirms; it is final). ₹ kept is a profit, so a
+    cost: owners and admins only (staff and partners see uses, ₹ given and delivered); beside it, "Shipping
+    estimated" or "Before shipping costs" (with a link to set them) whenever freight is not the courier's actual charge.
 51. **"Did it make money?" reads a window and says when it is too few** (O·3): the Offers list's strip and an offer's
     page show the last 30 days against the shop's orders without an offer; under 30 orders they say "too few to
     judge" before any number. A creator code flagged "Leak?" says which rule and names the remedy (end the offer);
@@ -312,6 +314,12 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 58. **The shopper's tracking** is on the shop's own order page: the expected date first, then a four-step progress
     (Packed · Shipped · Out for delivery · Delivered), the courier and tracking number, the latest scans, the pieces,
     the way back to the shop. Never a cost.
+59. **Settings › Shipping costs** (owners and admins only): a delivery, a return, a COD fee, in whole rupees, with
+    what a 0.5 kg parcel usually costs offered until confirmed; saving IS confirming ("Confirmed on 8 Nov 2026").
+    Until then Settings says "Needs you" and profit on orders shipped another way says "Before shipping costs".
+60. **An outcome's Undo outlives the row it was on:** the toast stays when the order leaves its tab or panel. Undo
+    closes at the end of the IST month the outcome was marked in; Shipped also once it has been 30 days on its way
+    (it counts as delivered then).
 
 ## Storefront as built (1B, 2026-11-07)
 

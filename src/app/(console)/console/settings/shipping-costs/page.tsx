@@ -17,7 +17,8 @@ export const metadata = { title: 'Shipping costs' }
 export default async function ShippingCostsPage() {
   const auth = await requireMember(CAN_MANAGE)
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or an admin can see shipping costs' : auth.message} />
-  const c = await shipCostsFor(auth.membership.tenantId).catch((err) => { console.error('[shipping-costs]', err); return undefined })
+  // The error's name only: a failed query's message carries its parameters (tenancy audit 2026-11-08).
+  const c = await shipCostsFor(auth.membership.tenantId).catch((err) => { console.error('[shipping-costs]', err instanceof Error ? err.name : 'error'); return undefined })
   if (c === undefined) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const rupees = (p: number | null | undefined) => (p == null ? null : String(Math.round(p / 100)))
   return <ShipCostsForm current={{ delivery: rupees(c?.delivery), ret: rupees(c?.ret), cod: rupees(c?.cod) }} confirmedOn={c?.confirmedAt ? dayIN(c.confirmedAt) : null} />

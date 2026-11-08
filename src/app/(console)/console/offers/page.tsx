@@ -21,7 +21,7 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
   const now = new Date()
-  const [rows, stats] = await Promise.all([listOffers(auth.membership.tenantId, now), offerStats(auth.membership.tenantId, now)])
+  const [rows, stats] = await Promise.all([listOffers(auth.membership.tenantId, now), offerStats(auth.membership.tenantId, now, { costs: (CAN_MANAGE as readonly string[]).includes(auth.membership.role) })])
     .catch((err) => { console.error('[offers]', err instanceof Error ? err.name : err); return [null, null] as const })
   if (!rows || !stats) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const tab = ((await searchParams).tab ?? 'live') as OfferStatus

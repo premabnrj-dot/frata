@@ -1,7 +1,7 @@
 import 'server-only'
 import { sql, type SQL } from 'drizzle-orm'
 import { SHIP_TABS, type OrderState, type QueueTab } from '@/domains/orders/order-state'
-import { orderLines, orders } from '@/lib/db/schema-orders'
+import { orderLines, orders, shipments } from '@/lib/db/schema-orders'
 
 // =============================================================================
 // FILE: src/lib/db/order-predicates.ts
@@ -93,6 +93,10 @@ export const inTabSql = (tab: QueueTab, now: Date, a = '"orders"'): SQL =>
  */
 export const placedSql = (a = '"orders"'): SQL =>
   sql`not (${c(a, 'payment_method')} = 'prepaid' and ${c(a, 'paid_at')} is null and ${c(a, 'switched_to_cod_at')} is null)`
+
+/** The order's open shipment's provider ('self', 'shiprocket'), or null before it shipped: the one SQL for it (Ship S·0). */
+export const openShipmentProviderSql = (a = '"orders"'): SQL<'self' | 'shiprocket' | null> =>
+  sql<'self' | 'shiprocket' | null>`(select s.provider from ${shipments} s where s.tenant_id = ${c(a, 'tenant_id')} and s.order_id = ${c(a, 'id')} and s.ended_at is null limit 1)`
 
 /** currentMethod() in SQL: online once paid, COD once switched (unless paid after all), else as chosen. */
 export const currentMethodSql = (a = '"orders"'): SQL<'cod' | 'prepaid'> => sql<'cod' | 'prepaid'>`(case

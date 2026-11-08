@@ -11,7 +11,7 @@ export type ShipCostsInput = { delivery: string; ret: string; cod: string }
 export type ShipCosts = { delivery: number | null; ret: number | null; cod: number | null; confirmedAt: Date | null }
 
 /** At most ₹10,000 each: a typo guard, far above any parcel's freight. */
-export const SHIP_COST_MAX_RUPEES = 10_000
+const SHIP_COST_MAX_RUPEES = 10_000
 
 /** Whole rupees as typed ("₹1,200", " 70 ") → paise, or a reason per field. */
 export function parseShipCosts(input: unknown): { ok: true; paise: { delivery: number; ret: number; cod: number } } | { ok: false; errors: Partial<Record<keyof ShipCostsInput, string>> } {

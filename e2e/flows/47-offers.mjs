@@ -162,7 +162,7 @@ export default {
         await c.goto(CONSOLE + `/console/offers/${f.id}`)
         await c.getByRole('region', { name: 'Last 30 days' }).getByText(/Too few to judge/).waitFor()
         await c.getByText('₹ kept per delivered order').waitFor()
-        // ₹ kept is a profit: staff see the offers and their uses, never it (Ship S0·6).
+        // ₹ kept is a profit: staff and partners see the offers and their uses, never it (Ship S0·6).
         const S = USERS.staff
         await db`insert into auth.users (id, email, email_confirmed_at) values (${S.id}, ${S.email}, now()) on conflict (id) do nothing`
         await db`insert into members (tenant_id, user_id, role) values (${KESAR}, ${S.id}, 'staff') on conflict do nothing`
@@ -175,9 +175,20 @@ export default {
           await sp.goto(CONSOLE + `/console/offers/${f.id}`)
           await sp.getByRole('region', { name: 'Last 30 days' }).waitFor()
           assert.equal(await sp.getByText(/₹ kept/).count(), 0)
+          // Partners build offers but never see a cost either.
+          const Pa = USERS.partner
+          await db`insert into auth.users (id, email, email_confirmed_at) values (${Pa.id}, ${Pa.email}, now()) on conflict (id) do nothing`
+          await db`insert into members (tenant_id, user_id, role) values (${KESAR}, ${Pa.id}, 'partner') on conflict do nothing`
+          const pc = await signedIn(t.browser, 'partner', { viewport: { width: 1280, height: 900 } })
+          try {
+            const pp = await pc.newPage(); pp.setDefaultTimeout(10_000); pp.on('pageerror', (e) => t.errors.push(e.message))
+            await pp.goto(CONSOLE + `/console/offers/${f.id}`)
+            await pp.getByRole('region', { name: 'Last 30 days' }).waitFor()
+            assert.equal(await pp.getByText(/₹ kept/).count(), 0)
+          } finally { await pc.close() }
         } finally {
           await sc.close()
-          await db`delete from members where tenant_id = ${KESAR} and user_id = ${S.id}`
+          await db`delete from members where tenant_id = ${KESAR} and user_id in (${S.id}, ${USERS.partner.id})`
         }
       })
       await t.step('O·2: Buy 2 get 1 from the console: a badge on the card, a line on the product page, the third piece free', async () => {

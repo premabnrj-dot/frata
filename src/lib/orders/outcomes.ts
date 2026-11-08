@@ -87,7 +87,8 @@ export async function undoOutcome(tx: Tx, tenantId: string, actor: Actor & { rol
   if (!ROLES[UNDOES[e.kind]!].includes(actor.role)) return { ok: false, error: 'Only an owner or admin can undo that.' }
   const [already] = await tx.select({ id: orderEvents.id }).from(orderEvents).where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.undoes, e.id)))
   if (already) return { ok: false, error: 'Already undone.' }
-  if (!(e.kind === 'shipped' ? shippedUndoOpen(e.at, now) : outcomeUndoOpen(e.at, now))) return { ok: false, error: 'That month is closed: it cannot be undone now.' }
+  if (!outcomeUndoOpen(e.at, now)) return { ok: false, error: 'That month is closed: it cannot be undone now.' }
+  if (e.kind === 'shipped' && !shippedUndoOpen(e.at, now)) return { ok: false, error: 'It has been on its way 30 days, so it counts as delivered: it cannot be undone now.' }
   if (e.kind === 'rto' && e.reason === 'restocked') return { ok: false, error: 'Its stock was put back: undo is not possible. Adjust the stock on Products if you need to.' }
   await current(tx, tenantId, e.orderId, now) // lock first, so an action committing meanwhile is seen
   const [later] = await tx.select({ id: orderEvents.id }).from(orderEvents)

@@ -166,7 +166,7 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
   })
 
   const count = picked.size
-  const onWay = rows.some((r) => picked.has(r.id) && r.shipStep === 'deliver'), others = rows.some((r) => picked.has(r.id) && r.shipStep !== 'deliver')
+  const onWay = rows.some((r) => picked.has(r.id) && r.shipStep === 'deliver'), others = rows.some((r) => picked.has(r.id) && (r.canConfirm || r.canHold))
   // At most a print page's worth (a queue page is 50 rows today; the cap says so if that changes).
   const printable = rows.filter((r) => picked.has(r.id) && r.canPrint).map((r) => r.n).slice(0, MAX_DOCUMENTS)
   return (
@@ -224,6 +224,6 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
 }
 
 /** The queue, or `empty` when the tab has no rows: either way inside one Toaster, so a toast's Undo survives the last row leaving. */
-export function Queue({ rows, label, empty }: { rows: QueueRow[]; label: string; empty?: React.ReactNode }) {
+export function Queue({ rows, label, empty }: { rows: QueueRow[]; label: string; empty: React.ReactNode }) {
   return <Toaster>{rows.length ? <Rows rows={rows} label={label} /> : empty}</Toaster>
 }

@@ -24,7 +24,7 @@ export default async function OfferPage({ params }: { params: Promise<{ id: stri
   const { id } = await params
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound()
   const now = new Date()
-  const [rows, stats] = await Promise.all([listOffers(auth.membership.tenantId, now, id), offerStats(auth.membership.tenantId, now)])
+  const [rows, stats] = await Promise.all([listOffers(auth.membership.tenantId, now, id), offerStats(auth.membership.tenantId, now, { costs: (CAN_MANAGE as readonly string[]).includes(auth.membership.role) })])
     .catch((err) => { console.error('[offer]', err instanceof Error ? err.name : err); return [null, null] as const })
   if (!rows || !stats) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const o = rows.find((r) => r.id === id)

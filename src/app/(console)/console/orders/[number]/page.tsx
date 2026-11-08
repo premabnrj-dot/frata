@@ -134,9 +134,9 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
                 : state === 'cancelled' ? (refund ? <>Paid online, then cancelled: refund <Money paise={paise(refund)} /> in Razorpay.</> : 'Cancelled: nothing to collect.')
                 : state === 'refund_due' ? <>Paid after it sold out: cancel it, then refund <Money paise={paise(refund)} /> in Razorpay.{can.cancel ? null : ' Ask an owner or admin to cancel it.'}</>
                 : state === 'delivered' ? (method === 'cod' && !o.paidAt ? <>Delivered: <Money paise={paise(Number(o.total))} /> collected by the courier.</> : 'Delivered.')
-                : (state === 'rto' || state === 'rto_received') && o.paidAt ? 'Came back to you after it was paid online: refund the shopper in Razorpay, or send it again.'
+                : (state === 'rto' || state === 'rto_received') && o.paidAt ? 'Came back to you after it was paid online: refund the shopper in Razorpay.'
                 : state === 'rto' || state === 'rto_received' ? 'Came back to you: nothing was collected.'
-                : state === 'lost' && o.paidAt ? 'Lost by the courier after it was paid online: refund the shopper in Razorpay, or send it again. Claim it with the courier.'
+                : state === 'lost' && o.paidAt ? 'Lost by the courier after it was paid online: refund the shopper in Razorpay, and claim it with the courier.'
                 : state === 'lost' ? 'Lost by the courier: nothing was collected. Claim it with the courier.'
                 : paidAfterSwitch(o) ? 'Paid online — do not collect cash.'
                 : owed ? <>Collect <Money paise={paise(owed)} /> on delivery.</> : o.paidAt ? 'Paid online — collect nothing.' : 'Not paid yet.'}

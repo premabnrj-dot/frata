@@ -11,6 +11,7 @@ import { changeShopAddress } from '@/lib/db/platform'
 import { auditEvents, shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { slugProblem } from '@/domains/signup/slug'
 import { parseShipCosts, type ShipCostsInput } from '@/domains/settings/ship-costs'
+import { dayIN } from '@/lib/format-date'
 import { shopWithSettings } from '@/lib/queries/settings'
 
 // Each section says who may save it (`editors`: owners, admins and the store's partner for the shop's own
@@ -135,20 +136,22 @@ export async function changeAddress(slug: string): Promise<{ ok: true } | { ok: 
  * Confirm the three shipping costs: saving them IS confirming them (profit then reads "estimated", not "before
  * shipping costs"). Owners and admins only: a merchant's cost (partners build settings but never see costs).
  */
-export async function saveShipCosts(input: ShipCostsInput): Promise<{ ok: true } | { ok: false; error: string; errors?: Record<string, string> }> {
+export async function saveShipCosts(input: ShipCostsInput): Promise<{ ok: true; confirmedOn: string } | { ok: false; error: string; errors?: Record<string, string> }> {
   const p = parseShipCosts(input)
   if (!p.ok) return { ok: false, error: 'Some fields need a look before saving.', errors: p.errors as Record<string, string> }
   const v = p.paise
   try {
     const r = await asMember(CAN_MANAGE, { action: 'settings.ship_costs', detail: { fields: ['shipCostDelivery', 'shipCostReturn', 'shipCostCod'] } }, async (tx, auth) => {
-      const saved = await tx.update(shopSettings).set({ shipCostDelivery: v.delivery, shipCostReturn: v.ret, shipCostCod: v.cod, shipCostsConfirmedAt: new Date(), updatedAt: new Date() })
+      const now = new Date()
+      const saved = await tx.update(shopSettings).set({ shipCostDelivery: v.delivery, shipCostReturn: v.ret, shipCostCod: v.cod, shipCostsConfirmedAt: now, updatedAt: now })
         .where(eq(shopSettings.tenantId, auth.membership.tenantId)).returning({ id: shopSettings.tenantId })
       return saved.length > 0
     })
     if (!r.ok) return { ok: false, error: r.error }
     if (!r.value) return { ok: false, error: 'We could not save. Nothing was changed. Try again in a minute.' }
     revalidatePath('/console', 'layout')
-    return { ok: true }
+    // The date as the page says it, so the form shows it at once (not only after the refresh).
+    return { ok: true, confirmedOn: dayIN(new Date()) }
   } catch (err) {
     console.error('[saveShipCosts]', dbReason(err))
     return { ok: false, error: 'We could not save. Nothing was changed. Try again in a minute.' }

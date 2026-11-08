@@ -67,8 +67,15 @@ describe.skipIf(!host)('outcomes by hand', () => {
       expect(await state(b)).toBe('packed')
       const sh2 = await out.markShipped(tx, { tenantId: A, actor: riya, orderId: b, now: later(12) })
       expect(sh2.ok).toBe(true)
-      // 30 days on it counts as delivered: un-shipping it would restart the billing clock, so Undo is refused.
+      // Next month: closed.
       expect(await out.undoOutcome(tx, A, owner, ev(sh2), later(12 + 30 * 86_400))).toMatchObject({ ok: false, error: 'That month is closed: it cannot be undone now.' })
+      // Shipped on 1 Dec (IST) and undone on 31 Dec: the month is open, but 30 days on it counts as delivered, and
+      // un-shipping it would restart the billing clock.
+      const b2 = await packed()
+      const dec1 = new Date('2026-11-30T18:40:00Z') // 00:10 IST, 1 Dec
+      const sh3 = await out.markShipped(tx, { tenantId: A, actor: riya, orderId: b2, now: dec1 })
+      expect(await out.undoOutcome(tx, A, owner, ev(sh3), new Date(dec1.getTime() + 30 * 86_400_000 + 60_000)))
+        .toMatchObject({ ok: false, error: 'It has been on its way 30 days, so it counts as delivered: it cannot be undone now.' })
 
       // Came back with the stock put back: once; undo refused. Without it: undo puts it back on the way.
       const c = await packed()

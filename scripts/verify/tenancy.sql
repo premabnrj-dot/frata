@@ -1152,8 +1152,11 @@ do $$ declare n int; begin
 end $$;
 rollback;
 do $$ begin
-  if has_table_privilege('frata_admin', 'shipments', 'select') or has_table_privilege('anon', 'shipments', 'select') or has_table_privilege('service_role', 'shipments', 'select')
-     or has_table_privilege('authenticated', 'shipments', 'select') then raise exception 'FAIL: staff or API roles reach shipments'; end if;
+  -- Any privilege at all, table or column level (tenancy audit 2026-11-08: select alone missed a column grant).
+  if exists (select 1 from unnest(array['frata_admin', 'anon', 'authenticated', 'service_role']) r
+             where has_any_column_privilege(r, 'shipments', 'select, insert, update, references')
+                or has_table_privilege(r, 'shipments', 'select, insert, update, delete, truncate, references, trigger'))
+  then raise exception 'FAIL: staff or API roles reach shipments'; end if;
 end $$;
 
 \echo 'tenancy proof — all 37 checks passed'

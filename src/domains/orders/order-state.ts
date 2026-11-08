@@ -171,3 +171,6 @@ export function shopperState(s: OrderState): ShopperState {
     default: return s
   }
 }
+
+/** Whether a COD shopper keeps cash ready: only while the parcel can still reach the door (never once delivered, coming back or lost). */
+export const cashAtDoor = (s: ShopperState) => s === 'confirming' || s === 'confirmed' || s === 'packed' || s === 'shipped' || s === 'ndr'

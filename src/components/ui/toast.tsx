@@ -17,7 +17,8 @@ import { announce } from '@/components/shell/announce'
 // how to undo, since a screen reader user cannot see the bar.
 // Every timer is held in a ref and cleared when a newer toast arrives, so a
 // leaving or an earlier undo's result never overwrites the toast on screen
-// (impact review 2026-11-07).
+// (impact review 2026-11-07). Mount the Toaster ABOVE anything a refresh can remove (a row list that empties, a
+// panel that leaves): a toast dies with its Toaster, Undo and all (Queue's `empty`, ShipPanel's `done`; Ship S0·5).
 // =============================================================================
 
 export const UNDO_MS = 8000
