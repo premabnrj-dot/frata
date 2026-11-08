@@ -107,7 +107,8 @@ export const orderDiscounts = pgTable('order_discounts', {
 ])
 
 /**
- * Every price a variant had, from when (written by a trigger on variants: drizzle/0032_offers_access.sql). The
+ * Every price a variant had, from when (written by a trigger on variants: drizzle/0032_offers_access.sql). The trigger
+ * runs as the caller: any role that changes a price (today only frata_app) needs insert on price_history too. The
  * 30-day prior price a struck price must show from 1 Jan 2027 is derived from it (E-Commerce Amendment Rules 2026).
  */
 export const priceHistory = pgTable('price_history', {

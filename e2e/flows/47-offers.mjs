@@ -40,14 +40,17 @@ export default {
         await c.getByText('Live', { exact: true }).first().waitFor()
         await c.screenshot({ path: t.out('offer-page'), fullPage: true })
       })
-      await t.step('and a "pay online, save ₹50"', async () => {
+      await t.step('and a "pay online, save ₹50", which takes over the bar', async () => {
         await c.goto(CONSOLE + '/console/offers/new?style=pay_online')
+        await c.getByLabel(/Show it in the bar/).check() // moves the bar from Festive: one offer in it at a time
         await c.getByRole('button', { name: 'Save as draft' }).click()
         await c.waitForURL(/\/console\/offers\/[0-9a-f-]{36}$/)
         await c.getByRole('button', { name: 'Start', exact: true }).click()
         await c.getByText('Live', { exact: true }).first().waitFor()
         await c.goto(CONSOLE + '/console/offers')
         await c.getByRole('link', { name: 'Festive' }).waitFor(); await c.getByRole('link', { name: 'Pay online, save' }).waitFor()
+        assert.equal((await db`select count(*)::int n from discounts where announce`)[0].n, 1, 'one offer in the bar')
+        await c.getByText('₹50 off paying online · in the bar').waitFor()
         await c.screenshot({ path: t.out('offers-list'), fullPage: true })
       })
       await t.step('the list on a phone: no sideways scroll', async () => {
@@ -77,7 +80,7 @@ export default {
 
       await t.step('the bar, and the bag: each saving named, the pay-online total', async () => {
         await toBag()
-        await p.getByText(/Festive · 10% off above ₹2,000/).first().waitFor()
+        await p.getByText('Pay online, save ₹50', { exact: true }).first().waitFor() // the bar
         const bag = p.getByRole('dialog', { name: 'Your bag' })
         await bag.getByText('Festive', { exact: true }).waitFor(); await bag.getByText('−₹249').waitFor()
         await bag.getByText('Pay online, save (paying online)').waitFor(); await bag.getByText('−₹50').waitFor()

@@ -25,8 +25,9 @@ const UNIQUE = '23505'
 const codeOf = (err: unknown) => (err as { cause?: { code?: string; constraint_name?: string } })?.cause
 
 /** Only one offer in the bar: turning it on for this one turns it off for the rest (in the same transaction). */
-async function claimBar(tx: Tx, tenantId: string, id: string) {
-  await tx.update(discounts).set({ announce: false }).where(and(eq(discounts.tenantId, tenantId), eq(discounts.announce, true), sql`${discounts.id} <> ${id}`))
+async function claimBar(tx: Tx, tenantId: string, id: string | null) {
+  // BEFORE this offer is written with announce = true: the one-bar index is not deferrable (tenancy audit).
+  await tx.update(discounts).set({ announce: false }).where(and(eq(discounts.tenantId, tenantId), eq(discounts.announce, true), ...(id ? [sql`${discounts.id} <> ${id}`] : [])))
 }
 
 export async function saveOffer(id: string | null, values: OfferValues): Promise<OfferResult> {
@@ -39,8 +40,8 @@ export async function saveOffer(id: string | null, values: OfferValues): Promise
       const cols = { title: p.title, percentBps: p.percentBps, amountOff: p.amountOff, cap: p.cap, minSubtotal: p.minSubtotal, startsAt: p.startsAt, endsAt: p.endsAt,
         limitTotal: p.limitTotal, limitPerPhone: p.limitPerPhone, budget: p.budget, listed: p.listed, combinesWithPayment: p.combinesWithPayment, announce: p.announce }
       if (!id) {
+        if (p.announce) await claimBar(tx, tenantId, null)
         const [d] = await tx.insert(discounts).values({ tenantId, style: p.style, createdBy: auth.userId, ...cols }).returning({ id: discounts.id })
-        if (p.announce) await claimBar(tx, tenantId, d!.id)
         if (p.code) await tx.insert(discountCodes).values({ tenantId, discountId: d!.id, code: p.code })
         return { ok: true as const, id: d!.id, tenantId }
       }
@@ -51,11 +52,11 @@ export async function saveOffer(id: string | null, values: OfferValues): Promise
       if (cur.endedAt) return { ok: false as const, error: 'An ended offer does not change. Duplicate it to run it again.' }
       if (cur.startedAt && !isManager(auth.membership.role)) return { ok: false as const, error: 'Only an owner or admin can change an offer that has started.' }
       if (cur.style !== p.style) return { ok: false as const, error: 'The style of an offer does not change. Make a new one.' }
+      if (p.announce) await claimBar(tx, tenantId, id)
       const upd = await tx.update(discounts).set(cols)
         .where(and(eq(discounts.tenantId, tenantId), eq(discounts.id, id), isNull(discounts.endedAt), ...(isManager(auth.membership.role) ? [] : [isNull(discounts.startedAt)])))
         .returning({ id: discounts.id })
       if (!upd.length) return { ok: false as const, error: 'This offer changed meanwhile. Reload the page.' }
-      if (p.announce) await claimBar(tx, tenantId, id)
       return { ok: true as const, id, tenantId }
     })
     if (!r.ok) return { ok: false, error: r.error }
