@@ -134,6 +134,9 @@ either side of a publish (both already in the themes spec).
 - **Known gaps:** the checkout has no preview page, so "Checkout: Focused" is seen after Publish; no automated test
   of the phone bar's timing or the CSS motion (screenshots only); `src/lib/queries/storefront.ts` is at 395 of 400
   lines (split before its next change).
+- **Full e2e:** 159 of 160 steps green on this branch. The one red, `90-ux › motion (U·3)` ("Open my shop" stays
+  disabled), fails the same way on `origin/main` (98de1bb, 153 of 154) and passes when run alone: state left by a
+  flow between 49 and 70, not this work.
 - **For the owner:** Admin › Themes shows Editorial 2.0.0, Bazaar 2.0.0 and Studio 2.0.0 as "New in this deploy".
   Until they are released, shops see the 1.x versions of the same three themes. Release (or stage to a pilot shop
   first) once the branch is merged.
