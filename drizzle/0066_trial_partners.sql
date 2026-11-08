@@ -3,7 +3,8 @@
 -- for every shop; a brand accepting a handover with under 7 trial days left gets the extension automatically).
 -- Hand-written. Replaces app_partner_create_shop and app_accept_handover (0023) and app_shops_to_bill (0048).
 -- - A partner's cap counts its shops not yet handed over, live or not (R1: publishing no longer frees a slot).
--- - A partner-built shop gets its trial terms at creation (frozen); the publish trigger starts the clock.
+-- - A partner-built shop's trial starts when the partner starts building it, at creation (owner, 2026-11-08), and the
+--   shop cannot go live until a brand owns it: a partner builds, the owner opens (the guard below).
 -- - Handover claims the new owner's VERIFIED email (the HMAC the app computes from getUser(); R7). A business that
 --   has had a trial ends this one now; otherwise, under 7 days left, the one extension is given at once.
 -- - A shop with no owner is never billed (R1): app_shops_to_bill lists owned shops only.
@@ -34,9 +35,9 @@ begin
   insert into public.tenants (slug, name) values (p_slug, v_name) returning id into v_tenant;
   insert into public.members (tenant_id, user_id, role) values (v_tenant, p_uid, 'partner');
   insert into public.shop_settings (tenant_id, pickup_pincode, support_email) values (v_tenant, p_pickup, v_email);
-  -- The trial's terms, frozen now; it begins when the website goes live (the publish trigger).
+  -- The trial's terms, frozen now; it begins now, as the partner starts work (owner, 2026-11-08).
   select * from public.trial_settings where id = 1 into ts;
-  insert into public.shop_trials (tenant_id, days, open_window_days, signed_up_at) values (v_tenant, ts.days, ts.open_window_days, now());
+  insert into public.shop_trials (tenant_id, days, open_window_days, signed_up_at, started_at) values (v_tenant, ts.days, ts.open_window_days, now(), now());
   insert into public.tenant_plans (tenant_id, plan_version_id, starts_at, created_by) values (v_tenant, v_version, now(), p_uid);
   insert into public.partner_links (tenant_id, partner_id, share_bps, share_months, notice_days)
     values (v_tenant, v_partner, p_share_bps, p_share_months, p_notice_days);
@@ -96,9 +97,9 @@ revoke all on function app_accept_handover(uuid, uuid) from public, anon, authen
 --> statement-breakpoint
 -- Partner-built shops made before this migration, not yet handed over, get their trial now (security review TR1, M2):
 -- without one they would never pause and, unowned, never be billed. Terms from trial_settings; the clock from when the
--- website went live, if it has.
+-- partner started work (the shop's creation).
 insert into shop_trials (tenant_id, days, open_window_days, signed_up_at, started_at)
-  select l.tenant_id, ts.days, ts.open_window_days, t.created_at, ss.published_at
+  select l.tenant_id, ts.days, ts.open_window_days, t.created_at, t.created_at
     from partner_links l join tenants t on t.id = l.tenant_id join shop_settings ss on ss.tenant_id = l.tenant_id
     cross join (select days, open_window_days from trial_settings where id = 1) ts
    where l.removed_at is null
@@ -108,3 +109,20 @@ insert into shop_trials (tenant_id, days, open_window_days, signed_up_at, starte
 --> statement-breakpoint
 select app_trial_recompute(st.tenant_id) from shop_trials st
  where st.signed_up_at < now() and not exists (select 1 from tenant_plans tp where tp.tenant_id = st.tenant_id and tp.trial_ends_at is not null);
+--> statement-breakpoint
+-- ── A partner-built shop goes live only once a brand owns it (owner, 2026-11-08): it opens after its handover. Every
+-- path that sets published_at meets this, the app's Open action included. ──
+create or replace function app_shop_publish_needs_owner() returns trigger
+  language plpgsql security definer set search_path = '' as $$
+begin
+  if exists (select 1 from public.partner_links l where l.tenant_id = new.tenant_id and l.removed_at is null)
+     and not exists (select 1 from public.members m where m.tenant_id = new.tenant_id and m.role = 'owner') then
+    raise exception 'shop: it opens once its owner accepts the handover' using errcode = 'check_violation';
+  end if;
+  return new;
+end $$;
+--> statement-breakpoint
+revoke all on function app_shop_publish_needs_owner() from public, anon, authenticated, service_role, frata_app, frata_admin;
+--> statement-breakpoint
+create trigger shop_settings_publish_needs_owner before update of published_at on shop_settings
+  for each row when (new.published_at is not null and old.published_at is null) execute function app_shop_publish_needs_owner();

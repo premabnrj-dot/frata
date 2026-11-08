@@ -24,6 +24,11 @@ async function trialBlocksSupport(tx: Parameters<Parameters<typeof asMember>[2]>
   return !!t && !t.endedAt
 }
 
+const pgCode = (err: unknown): string | undefined => {
+  const e = err as { code?: string; cause?: { code?: string } } | null
+  return e?.code ?? e?.cause?.code
+}
+
 export async function openShop(): Promise<Result> {
   try {
     const r = await asMember(CAN_MANAGE, { action: 'shop.open' }, async (tx, auth) => {
@@ -47,6 +52,8 @@ export async function openShop(): Promise<Result> {
     revalidatePath('/console', 'layout')
     return { ok: true }
   } catch (err) {
+    // A partner-built shop opens once its owner accepts the handover (owner, 2026-11-08; the database refuses).
+    if (pgCode(err) === '23514') return { ok: false, error: 'The shop opens once its owner accepts the handover.' }
     console.error('[openShop]', err instanceof Error ? err.name : 'error')
     return { ok: false, error: 'We could not open the shop. Nothing was changed.' }
   }

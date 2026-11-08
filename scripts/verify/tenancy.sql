@@ -1579,6 +1579,15 @@ do $$ begin
   if not exists (select 1 from app_shops_to_bill(now()) t where t = '11111111-1111-1111-1111-111111111111') then raise exception 'FAIL: an owned shop is not billed'; end if;
   if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_accept_handover_v2(uuid,uuid,text,smallint)', 'execute'))
   then raise exception 'FAIL: another role may accept a handover'; end if;
+  -- A partner-built shop goes live only once a brand owns it (owner, 2026-11-08).
+  insert into partner_links (tenant_id, partner_id, share_bps, share_months, notice_days)
+    select '33333333-3333-3333-3333-333333333333', id, 2000, 24, 90 from partners where user_id = 'aaaaaaaa-0000-0000-0000-000000000010';
+  insert into shop_settings (tenant_id, pickup_pincode) values ('33333333-3333-3333-3333-333333333333', '302001') on conflict do nothing;
+  begin update shop_settings set published_at = now() where tenant_id = '33333333-3333-3333-3333-333333333333';
+    raise exception 'FAIL: a partner shop went live with no owner'; exception when check_violation then null; end;
+  -- Its trial ran from creation: a partner shop made by app_partner_create_shop has started_at set.
+  if exists (select 1 from shop_trials st join partner_links l on l.tenant_id = st.tenant_id where st.started_at is null) then
+    raise exception 'FAIL: a partner shop''s trial waits for going live'; end if;
   -- The 0023 handover skips the trial claim: no role may run it any more.
   if has_function_privilege('frata_app', 'app_accept_handover(uuid,uuid)', 'execute') then raise exception 'FAIL: the app may still accept a handover without its claim'; end if;
 end $$;
