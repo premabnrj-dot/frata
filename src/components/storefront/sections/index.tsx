@@ -278,18 +278,20 @@ function ShopTheLook({ s, ctx }: { s: SectionOf<'shop_the_look'>; ctx: SectionCt
   )
 }
 
-function One({ s, ctx }: { s: SectionInstance; ctx: SectionCtx }) {
+/** One section's markup, computed now (each section is a plain function of its settings and data, called directly,
+ *  so the guard below sees anything it throws while it reads its data). */
+function One({ s, ctx }: { s: SectionInstance; ctx: SectionCtx }): React.ReactNode {
   switch (s.key) {
-    case 'hero': return <Hero s={s} ctx={ctx} />
-    case 'collection_tiles': return <CollectionTiles s={s} ctx={ctx} />
-    case 'products': return <Products s={s} ctx={ctx} />
-    case 'price_tiles': return <PriceTiles s={s} ctx={ctx} />
-    case 'promises': return <Promises s={s} ctx={ctx} />
-    case 'image_text': return <ImageText s={s} ctx={ctx} />
-    case 'drop_teaser': return <DropTeaser s={s} ctx={ctx} />
-    case 'rich_text': return <RichText s={s} ctx={ctx} />
-    case 'logos': return <Logos s={s} />
-    case 'shop_the_look': return <ShopTheLook s={s} ctx={ctx} />
+    case 'hero': return Hero({ s, ctx })
+    case 'collection_tiles': return CollectionTiles({ s, ctx })
+    case 'products': return Products({ s, ctx })
+    case 'price_tiles': return PriceTiles({ s, ctx })
+    case 'promises': return Promises({ s, ctx })
+    case 'image_text': return ImageText({ s, ctx })
+    case 'drop_teaser': return DropTeaser({ s, ctx })
+    case 'rich_text': return RichText({ s, ctx })
+    case 'logos': return Logos({ s })
+    case 'shop_the_look': return ShopTheLook({ s, ctx })
   }
 }
 
@@ -298,7 +300,7 @@ function One({ s, ctx }: { s: SectionInstance; ctx: SectionCtx }) {
  * renders) and named in the customizer's preview. Called as a function so the guard sees its errors; Next's own
  * control-flow errors pass through (architecture review 2026-11-09, finding 5). Logs the error's name only.
  */
-function Guarded({ s, ctx }: { s: SectionInstance; ctx: SectionCtx }) {
+export function Guarded({ s, ctx }: { s: SectionInstance; ctx: SectionCtx }) {
   try {
     return One({ s, ctx })
   } catch (e) {

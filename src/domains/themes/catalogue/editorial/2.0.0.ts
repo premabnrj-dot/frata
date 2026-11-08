@@ -37,7 +37,7 @@ export const editorial_2_0_0: ThemeManifest = {
       footerScheme: ['ink', 'paper', 'tint'], checkout: ['focused', 'standard'],
     },
   },
-  samples: true, rhythm: 'even',
+  samples: 'festive', rhythm: 'even',
   home: [
     { id: 'hero', key: 'hero', layout: 'image_text', heading: { from: 'shopName' }, text: { from: 'tagline' }, height: 'tall' },
     { id: 'new-in', key: 'products', heading: 'New in', source: { kind: 'newest' }, count: 12, layout: 'grid' },

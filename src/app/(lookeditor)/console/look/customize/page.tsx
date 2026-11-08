@@ -4,6 +4,7 @@ import { displayFamily, STORE_FONT_VARS } from '@/components/shop-preview/fonts'
 import { POLICY_TITLE } from '@/components/storefront/policy'
 import { manifestOf } from '@/domains/themes/catalogue'
 import { choicesOf } from '@/domains/themes/choices'
+import { needsSamples, SAMPLE_FIRST } from '@/lib/themes/sample'
 import { truePromises } from '@/domains/themes/readiness'
 import { resolveTheme } from '@/domains/themes/resolve'
 import { PROMISES } from '@/domains/themes/sections'
@@ -54,6 +55,8 @@ export default async function Customize() {
     ...data.products.map((p) => ({ path: `/products/${p.handle}`, label: `Product: ${p.title}` })),
     ...(['shipping', 'returns', 'privacy', 'terms', 'contact'] as const).map((k) => ({ path: `/policies/${k}`, label: POLICY_TITLE[k] })),
   ]
+  // The preview shows sample pieces (and so a sample page) only when the theme has them and the shop lists few of its own.
+  const sampled = !!m.samples && needsSamples(data.products.length)
   const schemeNames = m.styles.find((s) => s.key === draft.style)?.schemeNames ?? {}
   return (
     <div className={STORE_FONT_VARS}>
@@ -68,7 +71,7 @@ export default async function Customize() {
         targets={targets} fonts={Object.fromEntries(PAIRINGS.map((p) => [p, displayFamily(p)])) as Record<Pairing, string>}
         canPublish={(CAN_MANAGE as readonly string[]).includes(role)} shopOpen={!!shop.publishedAt} nowIso={new Date().toISOString()}
         // A theme with samples (2.0): with no piece or collection of its own yet, the page picker opens a sample one.
-        firstProduct={data.products[0]?.handle ?? (m.samples ? 'sample-haldi-kurta' : null)} firstCollection={data.collections[0]?.handle ?? (m.samples ? 'sample-kurtas' : null)}
+        firstProduct={data.products[0]?.handle ?? (sampled ? SAMPLE_FIRST.product : null)} firstCollection={data.collections[0]?.handle ?? (sampled ? SAMPLE_FIRST.collection : null)}
         choices={choicesOf(m)}
       />
     </div>

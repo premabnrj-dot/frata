@@ -44,7 +44,7 @@ export const minimal_2_0_0: ThemeManifest = {
       footerScheme: ['ink', 'paper'], checkout: ['focused', 'standard'],
     },
   },
-  samples: true, rhythm: 'even',
+  samples: 'studio', rhythm: 'even',
   home: [
     { id: 'hero', key: 'hero', layout: 'image', heading: { from: 'shopName' }, height: 'tall' },
     { id: 'new-in', key: 'products', heading: 'New in', source: { kind: 'newest' }, count: 8, layout: 'grid' },

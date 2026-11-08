@@ -4,7 +4,6 @@ import type { ResolvedTheme } from '@/domains/themes/types'
 import { previewBestSellers, previewCatalogue as readCatalogue, previewProduct, type StoreShop } from '@/lib/queries/storefront'
 import { bestSellersFor } from '@/lib/themes/page-look'
 import { isSampleHandle, sampleProduct, withSamples } from '@/lib/themes/sample'
-import { isListed } from '@/domains/storefront/listing'
 import { AllView, CollectionView, GoneView, HomeView, PolicyView, ShopNotFound } from './pages'
 import { POLICY_TITLE } from './policy'
 import { ProductView } from './product-view'
@@ -17,7 +16,7 @@ export async function previewPage(o: { tenantId: string; shop: StoreShop; path: 
   samples?: boolean }): Promise<{ body: React.ReactNode; note: string | null }> {
   const { tenantId, shop, path, href, now, theme, samples = false } = o
   const [a, b, ...rest] = path
-  const previewCatalogue = async (t: string) => { const c = await readCatalogue(t); return samples ? withSamples(c, c.products.filter((p) => isListed(p, now)).length, now) : c }
+  const previewCatalogue = async (t: string) => { const c = await readCatalogue(t); return samples ? withSamples(c, now) : c }
   if (rest.length) return { body: <ShopNotFound href={href} lang={shop.shopLanguage} />, note: null }
   if (!a) {
     const best = await bestSellersFor(theme, (d) => previewBestSellers(tenantId, d))
@@ -28,7 +27,7 @@ export async function previewPage(o: { tenantId: string; shop: StoreShop; path: 
     const r = await previewProduct(tenantId, b)
     if (r.kind === 'moved') redirect(href(`/products/${r.to}`))
     // A sample piece's page: only when the shop has no product of its own at this address. Not live: the bag is off.
-    const sample = r.kind === 'none' && samples && isSampleHandle(b) ? sampleProduct(b, now) : null
+    const sample = r.kind === 'none' && samples && isSampleHandle(b) ? sampleProduct(b) : null
     if (sample) return { body: <ProductView shop={shop} p={sample} now={now} layout={theme.settings} />, note: null }
     if (r.kind === 'none') return { body: <ShopNotFound href={href} lang={shop.shopLanguage} />, note: null }
     const p = r.product

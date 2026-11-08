@@ -35,7 +35,7 @@ export const bazaar_2_0_0: ThemeManifest = {
       footerScheme: ['tint', 'paper', 'ink'], checkout: ['standard', 'focused'],
     },
   },
-  samples: true, rhythm: 'even',
+  samples: 'festive', rhythm: 'even',
   home: [
     { id: 'sale', key: 'hero', layout: 'text', heading: { from: 'shopName' }, text: { from: 'tagline' }, height: 'short', scheme: 'ink' },
     { id: 'tiles', key: 'collection_tiles', heading: 'Shop by category', mode: 'auto', count: 6, shape: 'portrait' },

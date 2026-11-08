@@ -117,8 +117,8 @@ export type ThemeManifest = {
   allowed: { pairings: Pairing[]; headers: HeaderVariant[]; footers: FooterVariant[]; sections: SectionKey[]; heroMasks?: ('none' | 'arch')[]
     /** 2.0: the values this theme offers for a setting (choicesFor). A key left out keeps the values every 1.x theme had. */
     choices?: Choices }
-  /** 2.0: the customizer's preview fills an empty shop with sample pieces and draws the theme's placeholder where a photo is missing. */
-  samples?: boolean
+  /** 2.0: the customizer's preview fills an empty shop with sample pieces, and a missing hero photo with this sample scene. */
+  samples?: 'festive' | 'studio'
   /** 2.0: every section below the hero gets the same space above and below it (the 1.x themes keep their spacing). */
   rhythm?: 'even'
   home: SectionInput[]

@@ -85,7 +85,10 @@ export const onColour = (c: string): Hex => (contrast(c, ON_COLOUR.light) >= 4.5
  */
 export function carryOver(from: { manifest: ThemeManifest; layer: ThemeLayer }, to: ThemeManifest): { layer: ThemeLayer; lost: string[] } {
   // Another version of the same theme (Editorial 1.0 → 1.1): everything the merchant made comes across (T2 review).
-  if (from.manifest.key === to.key) {
+  // A new major version (Minimal 1 → Studio 2, Editorial 1 → 2) is a new character: it is tried like another theme,
+  // so only what the merchant chose comes across (impact review 2026-11-09).
+  const major = (v: string) => v.split('.')[0]
+  if (from.manifest.key === to.key && major(from.manifest.version) === major(to.version)) {
     const style = to.styles.some((s) => s.key === from.layer.style) ? from.layer.style : to.styles[0]!.key
     const parsed = (from.layer.home ?? []).map((s) => SectionSchema.safeParse(s)).flatMap((r) => (r.success ? [r.data] : []))
     const home = from.layer.home?.filter((s) => { const r = SectionSchema.safeParse(s); return r.success && to.allowed.sections.includes(r.data.key) })

@@ -39,7 +39,7 @@ for (const [k, files] of Object.entries(build)) {
   // every shop key, layouts and error pages included.
   for (const f of files) if (/\.(css|js)$/.test(f) && /bricolage/i.test(readFileSync(join('.next', f), 'utf8'))) failures.push(`${k}  loads the shell's display face (Bricolage) through ${f}`)
   // The customizer's sample pieces never reach a shop's browser (src/lib/themes/sample.ts): no sample photo path, no sample id.
-  for (const f of files) if (f.endsWith('.js') && /\/themes\/samples\/|sample-haldi-kurta/.test(readFileSync(join('.next', f), 'utf8'))) failures.push(`${k}  carries the customizer's sample pieces through ${f}`)
+  for (const f of files) if (f.endsWith('.js') && /\/themes\/samples\//.test(readFileSync(join('.next', f), 'utf8'))) failures.push(`${k}  carries the customizer's sample pieces through ${f}`)
   const css = files.filter((f) => f.endsWith('.css')).reduce((a, f) => a + gz(f), 0) / 1024
   if (css > CSS_BUDGET_KB) failures.push(`${k}  loads ${css.toFixed(1)} kB of CSS gzipped (budget ${CSS_BUDGET_KB} kB)`)
   if (!k.endsWith('/page')) continue

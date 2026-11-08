@@ -51,6 +51,15 @@ describe('carryOver (Try another theme)', () => {
     const mine = carryOver({ manifest: ed2, layer: { style: 'haldi', settings: { brandColour: '#7A1F2B', gallery: 'stack', corners: 'round' } } }, CATALOGUE.bazaar!['2.0.0']!)
     expect(mine.layer.settings).toEqual({ brandColour: '#7A1F2B', corners: 'round' })
   })
+  it('a new major version of the same theme is tried like another theme (Minimal 1 → Studio 2); a minor one keeps everything', () => {
+    const m2 = CATALOGUE.minimal!['2.0.0']!
+    const r = carryOver({ manifest: mi, layer: { style: 'ink', settings: { header: 'minimal', footer: 'compact', buttons: 'outline' } } }, m2)
+    expect(r.layer.settings).toEqual({})
+    const t = resolveTheme(m2, r.layer)
+    expect([t.settings.header, t.settings.footer, t.settings.buttons, t.settings.entrance]).toEqual(['split', 'statement', 'underline', 'rise'])
+    const minor = carryOver({ manifest: ed, layer: { style: 'rose', settings: { corners: 'round' } } }, CATALOGUE.editorial!['1.1.0']!)
+    expect(minor.layer.settings).toEqual({ corners: 'round' })
+  })
 })
 
 describe('diffLayers (the publish list)', () => {

@@ -46,5 +46,6 @@ describe('readSettings: a value this build can’t read drops only itself', () =
     expect(readSettings({ brandColour: '#7a1f2b', corners: 'round', header: 'hologram', gallery: 'carousel' })).toEqual({ brandColour: '#7A1F2B', corners: 'round' })
     expect(readSettings(null)).toEqual({})
     expect(readSettings({ nope: 1 })).toEqual({})
+    expect(readSettings(JSON.parse('{"constructor":1,"toString":2,"__proto__":{"corners":"round"},"corners":"soft"}'))).toEqual({ corners: 'soft' })
   })
 })

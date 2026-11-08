@@ -1,4 +1,5 @@
 import 'server-only'
+import { isListed } from '@/domains/storefront/listing'
 import type { StoreCard, StoreCatalogue, StoreCollection, StoreProduct } from '@/lib/queries/storefront'
 
 // =============================================================================
@@ -34,7 +35,11 @@ const card = (p: Piece, i: number): StoreProduct => {
 }
 
 /** The sample pieces, newest first. */
-export const samplePieces = (_now?: Date): StoreProduct[] => PIECES.map((p, i) => card(p, i))
+export const samplePieces = (): StoreProduct[] => PIECES.map((p, i) => card(p, i))
+/** What the customizer's page picker opens when the shop has none of its own (and samples apply). */
+export const SAMPLE_FIRST = { product: `${SAMPLE_PREFIX}${PIECES[0]!.name}`, collection: `${SAMPLE_PREFIX}kurtas` }
+/** Do samples apply: a shop listing fewer than SAMPLES_BELOW pieces. */
+export const needsSamples = (listed: number) => listed < SAMPLES_BELOW
 const COLLECTIONS: [string, string, string[]][] = [
   ['kurtas', 'Kurtas', ['haldi-kurta', 'indigo-dabu', 'ivory-chikan']],
   ['occasion', 'Occasion', ['rani-anarkali', 'mehndi-saree']],
@@ -43,14 +48,14 @@ const COLLECTIONS: [string, string, string[]][] = [
 const sampleCollections = (): StoreCollection[] => COLLECTIONS.map(([h, title, names]) => ({ id: `${SAMPLE_PREFIX}c-${h}`, handle: `${SAMPLE_PREFIX}${h}`, title, description: '', kind: 'manual', matchAll: true, rules: [], sort: 'manual', productIds: names.map((n) => `${SAMPLE_PREFIX}${n}`) }))
 
 /** The preview's catalogue: the shop's own, then the samples when it lists fewer than SAMPLES_BELOW pieces. */
-export function withSamples(cat: StoreCatalogue, listed: number, now: Date): StoreCatalogue {
-  if (listed >= SAMPLES_BELOW) return cat
-  const cards: StoreCard[] = samplePieces(now)
+export function withSamples(cat: StoreCatalogue, now: Date): StoreCatalogue {
+  if (!needsSamples(cat.products.filter((p) => isListed(p, now)).length)) return cat
+  const cards: StoreCard[] = samplePieces()
   return { products: [...cat.products, ...cards], collections: cat.collections.length >= 2 ? cat.collections : [...cat.collections, ...sampleCollections()] }
 }
 
 /** A sample piece's page in the preview: only when the shop has no real product at this handle. */
-export const sampleProduct = (handle: string, now: Date): StoreProduct | null => samplePieces(now).find((p) => p.handle === handle) ?? null
+export const sampleProduct = (handle: string): StoreProduct | null => samplePieces().find((p) => p.handle === handle) ?? null
 
 /** Photos for a Hero or Image with text that has none yet, in the preview of a theme with samples. */
 export const SAMPLE_SCENES = {
@@ -61,8 +66,8 @@ export const SAMPLE_SCENES = {
 
 /** The preview's theme: a photo Hero or an Image with text that has no photo yet shows a sample scene (the shop
  *  itself still needs the merchant's photo before Publish: readiness is unchanged). */
-export function withSampleImages<T extends { key: string; home: import('@/domains/themes/sections').SectionInstance[] }>(t: T): T {
-  const scene = t.key === 'minimal' ? SAMPLE_SCENES.studio : SAMPLE_SCENES.festive
+export function withSampleImages<T extends { home: import('@/domains/themes/sections').SectionInstance[] }>(t: T, look: 'festive' | 'studio' = 'festive'): T {
+  const scene = SAMPLE_SCENES[look]
   return { ...t, home: t.home.map((s) => s.key === 'hero' && s.layout !== 'text' && !s.image ? { ...s, image: scene }
     : (s.key === 'image_text' || s.key === 'shop_the_look') && !s.image ? { ...s, image: SAMPLE_SCENES.piece } : s) }
 }

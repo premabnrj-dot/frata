@@ -309,7 +309,7 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   every 1.x theme had), so a 1.x theme can never render a 2.0 value. A stored layer is read **key by key**
   (`readSettings`): a value this build can't read drops only itself. `carryOver` brings across only what the
   merchant chose (never the old theme's defaults, never Classic's recorded font).
-- **Gallery** = `OFFERED` (Editorial, Bazaar, Studio); `THEME_ORDER` is every theme in the build. Classic stays the
+- **Gallery** = `OFFERED` (Editorial, Bazaar, Studio); `CATALOGUE` holds every theme in the build. Classic stays the
   baseline; Atelier lives on inside Editorial 2.
 - **Sample pieces** (`src/lib/themes/sample.ts`, data in `catalogue/samples.ts`, photos in `public/themes/samples/`
   from `scripts/themes/make-samples.mjs`) are merged **only** by the theme-preview route, after the preview read,
@@ -319,7 +319,7 @@ shop can have or not (Messages, RTO Shield, Reviews…).
 - **Checkout** has its own route group `(checkout)` with `ShopFrame` (`src/app/s/[host]/_frame.tsx`, shared with
   `(shop)`): Focused = the shell's `focused` (logo + compact legal footer). `(shop)/template.tsx` is the page
   entrance wrapper (server, reads nothing, `display: contents` when off).
-- **A section is guarded**: `Sections` calls each one as a function in try/catch (`unstable_rethrow` first); a throw
+- **A section is guarded**: `Guarded` calls the section's own function (Hero({ s, ctx }) …, never <Hero/>) in try/catch (`unstable_rethrow` first); a throw
   leaves it out of the shop and names it in the preview.
 - **Any storefront change** runs e2e `05-shop-look` (pixel diff against `e2e/baselines/`); an intended change
   regenerates them in the same commit: `UPDATE_BASELINES=1 npm run e2e -- --only shop-look`. Look's state changes:

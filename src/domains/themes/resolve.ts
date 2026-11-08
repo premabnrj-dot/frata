@@ -22,7 +22,8 @@ export function readSettings(raw: unknown): Partial<ThemeSettings> {
   const shape = SettingsSchema.shape as Record<string, { safeParse: (v: unknown) => { success: boolean; data?: unknown } }>
   const out: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
-    const f = shape[k]; if (!f || v === undefined) continue
+    // Own fields only: a stored key such as `constructor` must not reach a built-in (security review 2026-11-09).
+    const f = Object.hasOwn(shape, k) ? shape[k] : undefined; if (!f || v === undefined) continue
     const r = f.safeParse(v); if (r.success && r.data !== undefined) out[k] = r.data
   }
   return out as Partial<ThemeSettings>

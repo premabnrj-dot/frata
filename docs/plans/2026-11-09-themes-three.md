@@ -1,5 +1,5 @@
 # Plan: three purposeful themes (Editorial 2, Bazaar 2, Studio) with deeper options and sample content
-Status: active (reviews folded in below) · Date: 2026-11-09 · Research: `docs/research/2026-11-08-themes-pro-grade.md` · Mockup: https://claude.ai/artifact/S2bPoCzyBPKA1NW4BesKfz
+Status: built (2.0.0 versions await release in Admin) · Date: 2026-11-09 · Research: `docs/research/2026-11-08-themes-pro-grade.md` · Mockup: https://claude.ai/artifact/S2bPoCzyBPKA1NW4BesKfz
 Owner, 2026-11-08 (night, then away until morning): "let's execute this plan and make existing themes distinctive,
 purposeful, better, use dummy data/demo data … options: product page styling, image gallery styling, button motions,
 transitions, checkout page styles, nav bar styles, footer options … just have 3 with each having its own purpose,
@@ -117,3 +117,23 @@ either side of a publish (both already in the themes spec).
 8. Card hover inside `@media (hover: hover)`, transform only; lift's shadow is a pseudo-element's opacity.
 9. Phone bar state lives in its own child; hidden with transform + `inert`; the page pads for it.
 10. Focused checkout is a route group (no `:has()`), so n/a.
+
+## As built (2026-11-09)
+- Tasks 0–7 done. `npm test` 588 passed; typecheck clean; `npm run build` with every postbuild gate (product page
+  114.1 kB of 115, checkout 113.8, shop CSS under 20 kB); e2e 05-shop-look, 10-checkout, 12-security, 47-look,
+  48-themes-admin, 48-themes-three green.
+- **Changed from the plan:** placeholder art is the sample scenes (drawn WebP, preview only), not inline SVG; the
+  focused checkout is a `(checkout)` route group; `rhythm: 'even'` (2.0 manifests) evens section spacing; carryOver
+  also treats a new major version of the same theme as a switch (impact review).
+- **Classic's one visual change:** horizontal rails no longer snap 16 px past their padding (a bug every theme had);
+  `e2e/baselines/shop-home-phone.png` regenerated for it, nothing else moved.
+- **Reviews on the diff:** impact-reviewer (FIX BEFORE COMMIT: the section guard returned elements, so it caught
+  nothing — now it calls each section's function, with a test; major-version carryOver; sample count in one place;
+  the preview wraps pages for the entrance; THEME_ORDER removed; spec amended; Look thumbnails draw Split and
+  Statement); security-reviewer (SAFE; `readSettings` reads own fields only, tested).
+- **Known gaps:** the checkout has no preview page, so "Checkout: Focused" is seen after Publish; no automated test
+  of the phone bar's timing or the CSS motion (screenshots only); `src/lib/queries/storefront.ts` is at 395 of 400
+  lines (split before its next change).
+- **For the owner:** Admin › Themes shows Editorial 2.0.0, Bazaar 2.0.0 and Studio 2.0.0 as "New in this deploy".
+  Until they are released, shops see the 1.x versions of the same three themes. Release (or stage to a pilot shop
+  first) once the branch is merged.
