@@ -133,6 +133,14 @@ export function pauseWindow(f: TrialFacts, mandateAt: Date | null, revokedAt: Da
   if (active && mandateAt! <= at) return null
   if (active) return { from: at, to: mandateAt }
   // A mandate revoked after the pause date: the same 7-day grace from the revocation, then the pause (impact review TR1).
-  const late = revokedAt && revokedAt > at ? new Date(revokedAt.getTime() + GRACE_DAYS * DAY) : null
-  return { from: late ?? at, to: null }
+  const late = revokedAt && revokedAt > at ? autopayStoppedPause(revokedAt) : null
+  return late ?? { from: at, to: null }
+}
+
+/**
+ * Any shop, trial or not (owner, 2026-11-08: both are treated the same): autopay stopped pauses the shop 7 days
+ * (GRACE_DAYS) after it stopped, until autopay is set up again. Null while autopay runs or was never set up.
+ */
+export function autopayStoppedPause(revokedAt: Date | null): { from: Date; to: null } | null {
+  return revokedAt ? { from: new Date(revokedAt.getTime() + GRACE_DAYS * DAY), to: null } : null
 }

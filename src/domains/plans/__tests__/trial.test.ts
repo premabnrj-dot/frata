@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { pauseWindow, checkTerms, daysUntil, endOfIstDayAfter, extendsAtHandover, lastDay, mayExtend, pausesAt, trialEndsAt, trialState, type TrialFacts, type TrialMoney } from '../trial'
+import { autopayStoppedPause, pauseWindow, checkTerms, daysUntil, endOfIstDayAfter, extendsAtHandover, lastDay, mayExtend, pausesAt, trialEndsAt, trialState, type TrialFacts, type TrialMoney } from '../trial'
 
 // IST wall-clock moments (UTC+5:30).
 const ist = (s: string) => new Date(`${s}+05:30`)
@@ -96,5 +96,12 @@ describe('pauseWindow (no plan charge while paused)', () => {
     expect(pauseWindow(live, ist('2026-12-22T10:00:00'), null)).toEqual({ from: ist('2026-12-20T00:00:00'), to: ist('2026-12-22T10:00:00') })
     expect(pauseWindow(live, null, null)).toEqual({ from: ist('2026-12-20T00:00:00'), to: null })
     expect(pauseWindow(live, ist('2026-12-01T10:00:00'), ist('2027-01-10T10:00:00'))).toEqual({ from: ist('2027-01-17T10:00:00'), to: null })
+  })
+})
+
+describe('autopayStoppedPause (any shop; owner 2026-11-08)', () => {
+  it('7 days after autopay stopped; never while it runs', () => {
+    expect(autopayStoppedPause(null)).toBeNull()
+    expect(autopayStoppedPause(ist('2027-02-01T10:00:00'))).toEqual({ from: ist('2027-02-08T10:00:00'), to: null })
   })
 })

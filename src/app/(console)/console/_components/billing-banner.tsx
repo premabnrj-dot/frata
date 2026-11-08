@@ -3,18 +3,23 @@ import { Money } from '@/components/data/numeric'
 import { paise } from '@/domains/money/paise'
 import type { Membership } from '@/lib/db/platform'
 import { billingBanner, shopTrial } from '@/lib/queries/billing'
+import { pausedAt, shopPauseFor } from '@/lib/queries/trial-pause'
 import { dayMonthIN } from '@/lib/format-date'
 import { formatInr } from '@/lib/format'
 import { TrialEnding } from './trial-ending'
 
 /** Frrata's billing and trial notes on every console page — owners and admins only (billing B3; trials TR1·7). */
 export async function BillingBanner({ membership }: { membership: Pick<Membership, 'tenantId' | 'role'> }) {
-  const [b, t] = await Promise.all([billingBanner(membership).catch(() => null), shopTrial(membership).catch(() => null)])
-  // One banner, in order: a failed payment, a paused or grace trial, a trial ending, the day-14 note, the trial line.
+  const [b, t, w] = await Promise.all([billingBanner(membership).catch(() => null), shopTrial(membership).catch(() => null), shopPauseFor(membership).catch(() => null)])
+  const now = new Date() // clock-ok: a server component, rendered per request
+  // The pause, as shoppers meet it (one window for the shop, checkout and billing): paused, or within its 7 days.
+  const paused = pausedAt(w, now)
+  const soon = !paused && !!w && !w.to && w.from.getTime() - now.getTime() <= 7 * 86_400_000
+  // One banner, in order: a failed payment, paused or about to pause, a trial ending, the day-14 note, the trial line.
   if (b?.kind === 'failed') return <Due kind="failed" amount={b.amount} number={b.number} />
-  if (t?.state === 'paused' || t?.state === 'grace') return (
+  if (w && (paused || soon)) return (
     <div role="alert" className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-danger-text/30 bg-danger px-3 py-2 text-sm text-danger-text">
-      <span>{t.state === 'paused' ? 'Shop paused · no new orders' : `Trial ended · shop pauses ${dayMonthIN(t.pausesAt)}`}</span>
+      <span>{paused ? 'Shop paused · no new orders' : `${t?.state === 'grace' ? 'Trial ended' : 'Autopay stopped'} · shop pauses ${dayMonthIN(w.from)}`}</span>
       <Link href="/console/settings/billing#paying" className="font-medium underline">Set up autopay</Link>
     </div>
   )
