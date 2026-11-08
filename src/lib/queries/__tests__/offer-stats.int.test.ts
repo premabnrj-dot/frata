@@ -59,7 +59,13 @@ describe.skipIf(!host)('offerStats', () => {
       for (let i = 0; i < 12; i++) await order({ at: ago(1 + (i % 6)), phone: `98291000${String(i).padStart(2, '0')}` }, { d: L, amount: 1000, code: LEAK, via: i < 10 ? 'typed' : 'link' })
       for (let i = 0; i < 12; i++) await order({ at: ago(8 + i * 2), phone: `98292000${String(i).padStart(2, '0')}` }, { d: L, amount: 1000, code: LEAK, via: 'link' })
 
+      // The window's edge (Analytics A1·0 baseline): 30 rolling days start at 10:00 UTC on 30 Jan; 30 IST days (A1·3)
+      // start at 18:30 UTC that day. An order at 12:00 UTC on 30 Jan is inside the first and outside the second: when
+      // Offers moves to IST days this count goes from 1 to 0, on purpose.
+      const E = await offer('Edge')
+      await order({ at: new Date('2031-01-30T12:00:00Z'), phone: '9829000099' }, { d: E, amount: 1000 })
       const s = await offerStatsIn(tx, A, now)
+      expect(s.offers.get(E)?.orders).toBe(1) // rolling 30 × 24 h today
       const d = s.offers.get(D)!
       expect({ orders: d.orders, given: d.given, aov: d.aov, prepaid: d.prepaid, repeat: d.repeat, fresh: d.fresh, delivered: d.delivered, rto: d.rto, givenPerDelivered: d.givenPerDelivered })
         .toEqual({ orders: 3, given: 60000, aov: Math.round((180000 + 270000 + 190000) / 3), prepaid: 1, repeat: 1, fresh: 2, delivered: 2, rto: 1, givenPerDelivered: 30000 })
@@ -86,7 +92,7 @@ describe.skipIf(!host)('offerStats', () => {
       expect(leak.id).toBe(LEAK)
       expect(leak.leak?.reasons).toEqual(['typed', 'spike']) // 10 of 12 typed; 12 this week against ~3 a week
       // The window's orders: every order using an offer now (an order counts once), and the rest.
-      expect({ orders: s.all.orders, delivered: s.all.delivered, given: s.all.given }).toEqual({ orders: 3 + 24, delivered: 2, given: 60000 + 24 * 1000 })
+      expect({ orders: s.all.orders, delivered: s.all.delivered, given: s.all.given }).toEqual({ orders: 3 + 24 + 1, delivered: 2, given: 60000 + 24 * 1000 + 1000 })
       expect(s.without).toEqual({ orders: 2, aov: 120000, delivered: 1, rto: 1 })
       // New vs repeat reads the first-order rule: the repeat buyer's phone has ordered here; the new one's had not, before.
       const [had] = await tx.execute<{ before: boolean; ever: boolean }>(sql`select ${priorOrderSql(now, A, '9829000001', { except: first, before: sql`${ago(3).toISOString()}::timestamptz` })} before,
