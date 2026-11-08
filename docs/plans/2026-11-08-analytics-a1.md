@@ -72,10 +72,14 @@ plan (call B).
 
 **Attribution (security MED/LOW, tenancy MED, architecture 3–4)**
 7. One `ATTRIBUTION_KEYS` and one `cleanAttribution(raw, shopHosts)` in `src/domains/analytics/`, used by the island,
-   the route and `erase.ts` (fixes today's drift: the bag store lacks `fbc`/`fbp`). Keys: utm_source, utm_medium,
-   utm_campaign, utm_content, utm_term, fbclid, fbc, fbp, gclid, gbraid, wbraid, ref_host (the researcher confirms
-   `gbraid`, `wbraid`, `igsh`). A named `z.object`, each ≤ 200, NFKC, control and bidi characters stripped; a 32 kB
-   body cap in `shopRequest` (413).
+   the route and `erase.ts` (fixes today's drift between them). Keys (integration-researcher, 2026-11-08,
+   `frata-integrations` § Attribution signals): utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid,
+   gclid, gbraid, wbraid, gad_source (Google ads without gclid), srsltid (Google free listings: organic), ref_host.
+   Dropped: `fbc`/`fbp` as URL keys (cookie values Meta never puts in a URL; A·3 derives `fbc` from `fbclid` on the
+   server), `igsh` (only on instagram.com links). The order of evidence: creator code > utm > gclid/gbraid/wbraid/
+   gad_source (Google ads) > srsltid (Google, free) > fbclid ("Instagram or Facebook", never ads) > referrer host (a hint:
+   in-app browsers often send none) > "Direct or unknown". A named `z.object`, each ≤ 200, NFKC, control and bidi
+   characters stripped; a 32 kB body cap in `shopRequest` (413).
 8. **The referrer:** the island stores only the referring site's hostname (`new URL(document.referrer).hostname`), on
    the tab's first landing; the server re-reduces: `http`, `https`, `android-app` only; no IP literals, `localhost`, the
    console host or any `*.SHOP_DOMAIN`; the shop's own hosts from the request's tenant (`requireShop`: its domains and
@@ -83,7 +87,7 @@ plan (call B).
 9. **Previews:** the `capture` prop is off in `/console/preview` and the Look preview, and the island also refuses to
    run on the console host; a test checks neither attribution nor `frrata.code.v1` is stored there. Capture keeps
    filling a creator code from `?code=` with `via='link'` (the leak alert reads it).
-10. **Erase:** clears fbclid, fbc, fbp, gclid, gbraid, wbraid and ref_host on abandoned orders, plus a one-off migration
+10. **Erase:** clears every click id (fbclid, gclid, gbraid, wbraid, gad_source, srsltid, and legacy fbc/fbp) and ref_host on abandoned orders, plus a one-off migration
    for abandoned orders erased before this (`erased_at is not null`). Real orders keep attribution (owner).
 11. **Display:** shopper-typed values render as text only, never as an `href`; the source slug is classifier output
    `[a-z0-9-]{1,64}`, compared in TypeScript, unknown → `notFound()` (never echoed); the period accepts 7, 30, 90 only;

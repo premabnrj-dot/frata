@@ -142,7 +142,7 @@ delivered or came back, and what each left in rupees, and makes a tagged link fo
   off in both the console preview and the Look preview (today the Look preview passes `live`, so capture runs there).
 - **Modularity:** `src/domains/analytics/` (pure): `attributionOf(unknown)` (parses `checkout` null or `{}`),
   `classifySource()` (creator link > UTM > gclid as Google ads > fbclid as "Instagram or Facebook", never ads by
-  itself, since Meta adds it to ordinary link taps too [U: confirm with a dated source before building] > referrer >
+  itself, since Meta adds it to ordinary link taps too [S, 2026-09-29; Meta documents it for ads only, undated] > referrer >
   direct), with a `CLASSIFIER_VERSION` and a dated line on the page when the rule changes; channel names; the link
   builder's URL; `judgeable(n)`. `src/domains/orders/kept.ts` (pure, out of `offerStats`): sum, count, per order and
   how many had costs, for delivered (`ifDelivered`) and returned (`ifRto`) orders, over an IST-day window. Reads in

@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.6.0
+  version: 1.7.0
   verified: 2026-11-08
   decisions: [ADR-0006]
 ---
@@ -251,6 +251,43 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
 - Sensitive OAuth scopes need brand verification; Google Ads needs a developer
   token with brand verification [U, founder].
 - Never send Google user data to ad platforms (Google API policy) [U, founder].
+
+## Attribution signals (landing URL + referrer) — checked 2026-11-08 (integration-researcher, for analytics A1·2)
+
+Meta, Instagram and WhatsApp publish nothing on what referrer a shop page receives, and most Meta/Google help pages carry
+no date. URL parameters are the signal; the referrer is a hint. [V] read on the provider's or a standards body's own
+page · [S] secondary only · [U] no current source.
+- `fbclid`: Meta documents it only on ad clicks ("when a user clicks an ad on Facebook and/or Instagram") and never says
+  ads-only [V content, undated]; organic and shared links carry it too, so it never means "ad" by itself [S, elasticfunnels
+  2026-09-29]. Safari strips gclid/fbclid/msclkid in Private Browsing, Mail and Messages; normal browsing passes them [S,
+  taggrs 2026-07-30].
+- `fbc`/`fbp` are cookie values, never URL parameters Meta adds. `fbc` = `fb.<subdomainIndex>.<creationTime ms>.<fbclid>`;
+  built on the server without an `_fbc` cookie, subdomainIndex = 1 [V content, Meta fbp-and-fbc, undated].
+- Meta auto-adding `utm_*` to ads: [U] (headline only; Meta help pages unreadable).
+- `igsh` (older `igshid`) is added when an Instagram post/reel/video link is copied or shared, i.e. on instagram.com URLs;
+  not on outbound bio/story/DM links [S, aurumspire 2026-07-28; igshare 2026-01-17]. Not an attribution key.
+- Referrer from Instagram/Facebook in-app browsers: often empty; when present the shim host `l.instagram.com`
+  (`l.facebook.com`, `lm.facebook.com`) [S, sendurl 2026-11-02]. Per placement and per OS: [U]. GA4 lists l.instagram.com,
+  instagram.com, ig, l.facebook.com, lm.facebook.com, m.facebook.com, l.messenger.com, whatsapp(.com), youtube.com,
+  m.youtube.com as sources [V, GA4 source-category list, undated]. iOS 27 WKWebView apps can override the referrer on every
+  request (`overrideReferrerForAllRequests`) [V, WebKit 2026-09-17].
+- WhatsApp: no referrer, so it looks direct [S, cutt.ly 2026-05-02]. `android-app://com.whatsapp`: [U]. CTA URL buttons open
+  the default browser [V Meta, undated]; template CTA links open an in-app browser for ≥1,000/day numbers [S, Wati
+  2025-11-18]; an iPhone in-app browser for all chat links is in development [S, MacRumors 2026-10-20].
+- Google Ads: auto-tagging adds `gclid`, "on by default for new accounts" [V content, undated]; also `gad_*` (`gad_source`)
+  [V content, undated]. `wbraid` = ad in an iOS app → web page; `gbraid` = web ad → iOS app [V Ads API docs, undated]
+  (Ads Help, 2023, no current source, says gbraid is on landing pages for all iOS 14.5+ clicks). Several can co-exist
+  (Google ranks gclid > wbraid > gbraid). Any of gclid/gbraid/wbraid/gad_source = Google Ads.
+- Google free listings: Merchant Center auto-tagging adds `srsltid` (on by default for new accounts), reported as organic
+  [V content, undated]; also seen on plain organic Search URLs [S]. `srsltid` = Google organic, not paid.
+- Google organic referrer `www.google.com` (origin): [U]; a `google.com/goto` redirect test was reported, unconfirmed by
+  Google [S, 2026-07-10]. YouTube app referrer and `android-app://` from Android apps: [U] (Custom Tabs lets an app set
+  `android-app://<package>` [V Chrome docs, undated]).
+- Referrer-Policy default `strict-origin-when-cross-origin` [V, W3C ED 2026-03-20; MDN 2026-09-04]; Safari cuts every
+  third-party referrer to its origin [V content, undated]. The REFERRING page's policy decides what we receive (W3C §3.9);
+  our own header only governs what we send onward. In-app browsers' policy: [U].
+- Open: a dated test on real Android and iOS devices (bio, story sticker, DM, WhatsApp, YouTube) recording `ref_host`
+  would turn the [U] referrer rows into [V].
 
 ## Privacy — checked 2026-11-06 (rechecked 2026-11-08)
 
