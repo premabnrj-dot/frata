@@ -62,13 +62,18 @@ export async function saveOffer(id: string | null, values: OfferValues): Promise
         return { ok: true as const, id: d!.id, tenantId }
       }
       if (!/^[0-9a-f-]{36}$/.test(id)) return { ok: false as const, error: 'This offer was not found.' }
-      const [cur] = await tx.select({ startedAt: discounts.startedAt, endedAt: discounts.endedAt, stoppedAt: discounts.stoppedAt, style: discounts.style }).from(discounts)
+      const [cur] = await tx.select({ startedAt: discounts.startedAt, endedAt: discounts.endedAt, stoppedAt: discounts.stoppedAt, endsAt: discounts.endsAt, style: discounts.style }).from(discounts)
         .where(and(eq(discounts.tenantId, tenantId), eq(discounts.id, id))).for('update')
       if (!cur) return { ok: false as const, error: 'This offer was not found.' }
       if (cur.endedAt) return { ok: false as const, error: 'An ended offer does not change. Duplicate it to run it again.' }
       if (cur.stoppedAt) return { ok: false as const, error: STOPPED }
       if (cur.startedAt && !isManager(auth.membership.role)) return { ok: false as const, error: 'Only an owner or admin can change an offer that has started.' }
       if (cur.style !== p.style) return { ok: false as const, error: 'The style of an offer does not change. Make a new one.' }
+      // A started offer past its end that gets a later end runs again: it counts toward the limit like a start (audit).
+      const now = new Date()
+      if (cur.startedAt && cur.endsAt && cur.endsAt <= now && (!p.endsAt || p.endsAt > now) && await runningOffers(tx, tenantId, now) >= MAX_RUNNING_OFFERS) {
+        return { ok: false as const, error: RUNNING_FULL }
+      }
       if (p.announce && cur.startedAt) await claimBar(tx, tenantId, id)
       const upd = await tx.update(discounts).set(cols)
         .where(and(eq(discounts.tenantId, tenantId), eq(discounts.id, id), isNull(discounts.endedAt), isNull(discounts.stoppedAt), ...(isManager(auth.membership.role) ? [] : [isNull(discounts.startedAt)])))

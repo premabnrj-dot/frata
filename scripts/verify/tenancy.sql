@@ -1107,8 +1107,20 @@ end $$;
 commit;
 do $$ begin
   if (select stopped_at from discounts where id = 'd15c0000-0000-0000-0000-00000000000a') is not null then raise exception 'FAIL: a stop reached another offer'; end if;
+  -- frata_admin's reach on discounts, pinned column by column (a later grant of a term, limit or budget fails here).
+  if (select string_agg(column_name, ',' order by column_name) from information_schema.column_privileges where grantee = 'frata_admin' and table_name = 'discounts' and privilege_type = 'SELECT')
+     <> 'ended_at,ends_at,id,paused_at,started_at,starts_at,stop_reason,stopped_at,style,tenant_id,title' then raise exception 'FAIL: admin reads more of an offer than planned'; end if;
+  if (select string_agg(column_name, ',' order by column_name) from information_schema.column_privileges where grantee = 'frata_admin' and table_name = 'discounts' and privilege_type = 'UPDATE')
+     <> 'stop_reason,stopped_at,stopped_by' then raise exception 'FAIL: admin may change more of an offer than its stop'; end if;
+  if has_table_privilege('frata_admin', 'discounts', 'insert') or has_table_privilege('frata_admin', 'discounts', 'delete') or has_table_privilege('frata_admin', 'discounts', 'truncate')
+     or has_any_column_privilege('frata_admin', 'discount_targets', 'select') or has_any_column_privilege('frata_admin', 'discount_tiers', 'select')
+     or has_any_column_privilege('frata_admin', 'price_history', 'select') or has_any_column_privilege('frata_admin', 'order_discounts', 'select')
+     or has_any_column_privilege('frata_admin', 'discount_codes', 'select') then raise exception 'FAIL: admin reaches offer rows beyond its grant'; end if;
+  -- The totals' numbers, not only their shape: B's one order using an offer (check 31), ₹100 given; nothing for A.
+  if (select (orders, given)::text from app_admin_offer_totals(now() - interval '100 years') where tenant_id = '22222222-2222-2222-2222-222222222222') is distinct from '(1,10000)'
+     or exists (select 1 from app_admin_offer_totals(now() - interval '100 years') where tenant_id = '11111111-1111-1111-1111-111111111111') then raise exception 'FAIL: offer totals count the wrong orders'; end if;
   if pg_get_function_result('app_admin_offer_totals(timestamptz)'::regprocedure) <> 'TABLE(tenant_id uuid, orders bigint, given bigint)' then raise exception 'FAIL: offer totals return more than aggregates'; end if;
-  if has_function_privilege('frata_app', 'app_admin_offer_totals(timestamptz)', 'execute') or has_function_privilege('anon', 'app_admin_offer_totals(timestamptz)', 'execute')
+  if has_function_privilege('frata_app', 'app_admin_offer_totals(timestamptz)', 'execute') or has_function_privilege('anon', 'app_admin_offer_totals(timestamptz)', 'execute') or has_function_privilege('authenticated', 'app_admin_offer_totals(timestamptz)', 'execute')
      or has_function_privilege('service_role', 'app_admin_offer_totals(timestamptz)', 'execute') then raise exception 'FAIL: a non-admin role reads offer totals'; end if;
   if (select count(*) from app_admin_offer_totals(now() - interval '100 years')) <> (select count(distinct tenant_id) from app_admin_offer_totals(now() - interval '100 years')) then raise exception 'FAIL: offer totals not one row per shop'; end if;
   if has_column_privilege('frata_app', 'discounts', 'stopped_at', 'update') or has_column_privilege('frata_app', 'discounts', 'stop_reason', 'update') then raise exception 'FAIL: the shop may set a stop'; end if;

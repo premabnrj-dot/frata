@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { z } from 'zod'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
@@ -26,7 +27,7 @@ export default async function ShopOffersPage({ params, searchParams }: { params:
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
   const [{ tenantId }, sp, adminRole] = await Promise.all([params, searchParams, requireStaff(ADMIN_ONLY)])
-  if (!/^[0-9a-f-]{36}$/.test(tenantId)) notFound()
+  if (!z.uuid().safeParse(tenantId).success) notFound()
   const shop = await shopOffersForAdmin(staff, tenantId, new Date())
   if (!shop) notFound()
   const admin = adminRole.ok

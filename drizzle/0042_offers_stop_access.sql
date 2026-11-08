@@ -4,6 +4,9 @@
 -- Admin's kill switch: frata_admin (NOBYPASSRLS) reads a shop's offers by the columns that say what an offer is and
 -- where it stands, and sets only stopped_*. It reads no terms, limits, budget or codes, and nothing on order_discounts,
 -- codes, targets or tiers. The shop cannot clear a stop: stopped_* is outside frata_app's column update grant.
+-- frata_app keeps its table-level insert (0032): drizzle names every column in an INSERT (DEFAULT for the unset ones)
+-- and Postgres checks the privilege on each, so a column-level insert grant without stopped_* breaks saveOffer. A
+-- shop could only insert its OWN offer already stopped, and no action passes stopped_* (accepted, tenancy audit).
 -- Platform totals: app_admin_offer_totals returns, per shop, orders using an offer and the ₹ given since p_since —
 -- aggregates only, never an order or a shopper. KNOWN COPY: its use rule restates discountUseSql/useOfRowSql
 -- (src/lib/db/order-predicates.ts, discount-predicates.ts) where that module cannot reach; change both together
