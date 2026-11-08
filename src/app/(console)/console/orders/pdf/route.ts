@@ -15,7 +15,12 @@ import { errName } from '@/lib/log'
 
 export const dynamic = 'force-dynamic'
 
-const text = (status: number, body: string) => new Response(body, { status, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'private, no-store' } })
+// A refusal is a small page with the reason and a way back (the links are not `download` links, so a refusal is read,
+// never saved as "pdf.txt"; a PDF still downloads by its Content-Disposition: attachment).
+const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
+const text = (status: number, body: string) => new Response(
+  `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="referrer" content="no-referrer"><title>PDF</title><body style="font:16px system-ui;max-width:32rem;margin:4rem auto;padding:0 1rem"><p>${esc(body)}</p><p><a href="/console/orders">Back to orders</a></p>`,
+  { status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'" } })
 
 export async function GET(request: Request) {
   const sp = new URL(request.url).searchParams

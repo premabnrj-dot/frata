@@ -103,7 +103,7 @@ export default {
         await p.goto(CONSOLE + `/console/orders/${A}`)
         await p.getByRole('button', { name: 'More' }).click()
         const link = p.getByRole('menuitem', { name: 'Download invoice (PDF)' })
-        assert.equal(await link.getAttribute('download'), '', 'the menu item downloads')
+        assert.equal(await link.getAttribute('download'), null, 'not a download link: a refusal is read, never saved as pdf.txt')
         const get = (q) => p.context().request.get(CONSOLE + `/console/orders/pdf?${q}`)
         const inv1 = await get(`kind=invoice&n=${A}`)
         assert.equal(inv1.status(), 200)
@@ -119,7 +119,9 @@ export default {
         assert.equal(slips.status(), 200)
         assert.match((await slips.body()).toString('latin1'), /MediaBox \[0 0 288 432\]/, 'a 4×6 label')
         assert.match(slips.headers()['content-disposition'], /Packing slips \d{4}-\d{2}-\d{2} \(2\)\.pdf/)
-        assert.equal((await get(`kind=slip&n=${top + 900}`)).status(), 404, "another shop's number makes nothing")
+        const none = await get(`kind=slip&n=${top + 900}`)
+        assert.equal(none.status(), 404, "another shop's number makes nothing")
+        assert.match(none.headers()['content-type'], /text\/html/, 'a refusal is a page with a way back')
       })
 
       await t.step('Settings › Documents (D2): the signatory, note and slip size save; the queue starts at that size', async () => {

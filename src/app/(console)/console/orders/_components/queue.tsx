@@ -188,7 +188,7 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
           {printable.length ? <Link prefetch={false} href={printHref('slip', printable)} className={button({ variant: 'secondary' })}>Print {printable.length === 1 ? 'slip' : `${printable.length} slips`}</Link> : null}
           {/* The same slips as one PDF, on A4 or a 4×6 thermal label (Documents D1); the size is remembered on this device. */}
           {printable.length ? <>
-            <a href={pdfHref('slip', printable, slipSize)} download className={button({ variant: 'secondary' })}>Download {printable.length === 1 ? 'slip' : `${printable.length} slips`} (PDF)</a>
+            <a href={pdfHref('slip', printable, slipSize)} className={button({ variant: 'secondary' })}>Download {printable.length === 1 ? 'slip' : `${printable.length} slips`} (PDF)</a>
             <label className="sr-only" htmlFor="slip-size">Slip size</label>
             <select id="slip-size" value={slipSize} onChange={(e) => pickSize(e.target.value === 'label' ? 'label' : 'a4')} className="h-10 rounded-md border border-input bg-card px-2 text-sm md:h-9">
               <option value="a4">A4</option><option value="label">4×6 label</option>

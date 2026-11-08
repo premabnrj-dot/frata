@@ -80,8 +80,8 @@ function Actions(p: OrderActionsProps) {
     ...(p.may.unhold ? [{ label: 'Take off hold', onSelect: () => void run('taken off hold', () => unholdOrder(p.orderId)) }] : []),
     ...(p.print.slip && !printPrimary ? [{ label: 'Print packing slip', href: p.print.slip }] : []),
     ...(p.print.invoice ? [{ label: 'Print invoice', href: p.print.invoice }] : []),
-    ...(p.pdf?.slip ? [{ label: 'Download packing slip (PDF)', href: p.pdf.slip, download: true }] : []),
-    ...(p.pdf?.invoice ? [{ label: 'Download invoice (PDF)', href: p.pdf.invoice, download: true }] : []),
+    ...(p.pdf?.slip ? [{ label: 'Download packing slip (PDF)', href: p.pdf.slip }] : []),
+    ...(p.pdf?.invoice ? [{ label: 'Download invoice (PDF)', href: p.pdf.invoice }] : []),
     { label: 'Copy link', onSelect: () => { void navigator.clipboard?.writeText(window.location.href).then(() => toast({ text: 'Link copied.' }), () => toast({ text: 'Copy the address from the address bar.' })) } },
     ...(p.may.cancel && p.primary !== 'cancel' ? [{ label: 'Cancel order…', onSelect: () => setCancelOpen(true), danger: true }] : []),
   ]

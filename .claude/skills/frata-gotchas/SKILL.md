@@ -1,15 +1,16 @@
 ---
 name: frata-gotchas
-description: Use when something in Frata fails in a way that makes no sense - a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
+description: Use when something in Frata fails in a way that makes no sense - a PDF download that saves as pdf.txt, MODULE_NOT_FOUND in production only, a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.12.0
-  verified: 2026-11-07
+  version: 1.13.0
+  verified: 2026-11-08
 ---
 
 # Frata gotchas
 
 | Symptom | Cause | Fix |
 |---|---|---|
+| A PDF download saves as `pdf.txt` (the route's text error), and the log says `Cannot find module …/pdfkit/js/standard-fonts/Helvetica.cjs`, in production only | pdfkit loads its standard fonts (and their chunks) through its package `imports` map (`#standard-fonts/…`); Next's file tracer does not follow it, so the files are on disk locally and absent from the function | List them in `next.config.ts` `outputFileTracingIncludes`; `scripts/check-pdf-trace.mjs` (postbuild) renders a PDF from the traced files alone. A new PDF route goes in its ROUTES. Never trust a local render for a dependency that loads files at run time |
 | `npm install` → `Cannot read properties of null (reading 'edgesOut')` | npm 10's arborist crashes on vitest 4's optional peers | `.npmrc` has `legacy-peer-deps=true`; keep it (Vercel reads it too) |
 | "invariant expected layout router to be mounted" | `redirect()` from a layout during render | Redirect in `src/middleware.ts`; a layout renders a `Panel` |
 | A page runs (and errors, or reads data) although its layout refused | Next renders layout and page in parallel; a layout's check guards nothing below it | Every page and action calls `requireMember` itself; it never throws |
