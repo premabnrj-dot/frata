@@ -1,0 +1,93 @@
+import Link from 'next/link'
+import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
+import { PageHeader } from '@/components/layout/page-header'
+import { Section } from '@/components/layout/section'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Notice } from '@/components/ui/notice'
+import { Panel } from '@/components/ui/panel'
+import { heldNames, listBlocked, type BlockedKind } from '@/lib/admin/addresses'
+import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
+import { dayIN } from '@/lib/format-date'
+import { blockNameAction, releaseNameAction, unblockNameAction } from './actions'
+
+export const metadata = { title: 'Names' }
+
+const field = 'h-10 rounded-md border border-input bg-card px-3 text-sm'
+const KIND: Record<BlockedKind, string> = { protected: 'Protected brand', offensive: 'Offensive', domain: 'Domain' }
+
+/** Shop addresses D1·7 (mockup § 8, Admin › Names): blocked names and domains, and names held by a shop's past. */
+export default async function NamesPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
+  const staff = await requireStaff(ANY_STAFF)
+  if (!staff.ok) return <Panel title={staff.message} />
+  const [blocked, held, sp, admin] = await Promise.all([listBlocked(staff), heldNames(staff), searchParams, requireStaff(ADMIN_ONLY)])
+  const can = admin.ok
+
+  return (
+    <>
+      <PageHeader title="Names" />
+      <Notice ok={sp.ok} error={sp.error} />
+      {can && (
+        <Section title="Block a name" className="text-sm">
+          <form action={blockNameAction} className="grid gap-3 md:grid-cols-[1fr_10rem_1fr_auto] md:items-end">
+            <label className="flex flex-col gap-1"><span className="font-medium">Name or domain</span>
+              <input name="name" required minLength={3} maxLength={253} autoComplete="off" className={`${field} font-mono`} /></label>
+            <label className="flex flex-col gap-1"><span className="font-medium">Kind</span>
+              <select name="kind" required className={field}>{(Object.keys(KIND) as BlockedKind[]).map((k) => <option key={k} value={k}>{KIND[k]}</option>)}</select></label>
+            <label className="flex flex-col gap-1"><span className="font-medium">Reason</span>
+              <input name="reason" required minLength={3} maxLength={500} className={field} /></label>
+            <Button type="submit" variant="secondary">Block name</Button>
+          </form>
+        </Section>
+      )}
+      <Section title="Blocked" flush>
+        {blocked.length ? (
+          <DataTable label="Blocked names">
+            <DataTableHead><th>Name or domain</th><th>Kind</th><th>Reason</th><th>Added</th>{can && <th><span className="sr-only">Action</span></th>}</DataTableHead>
+            <DataTableBody>
+              {blocked.map((b) => (
+                <DataTableRow key={b.name}>
+                  <Td cell="a" className="font-mono">{b.name}</Td>
+                  <Td cell="c">{KIND[b.kind]}</Td>
+                  <Td cell="e">{b.reason}</Td>
+                  <Td cell="d">{dayIN(b.createdAt)}</Td>
+                  {can && (
+                    <Td cell="f" className="text-right">
+                      <form action={unblockNameAction}><input type="hidden" name="name" value={b.name} />
+                        <Button type="submit" variant="secondary">Unblock {b.name}</Button></form>
+                    </Td>
+                  )}
+                </DataTableRow>
+              ))}
+            </DataTableBody>
+          </DataTable>
+        ) : <p className="p-4 text-sm text-muted-foreground">None.</p>}
+      </Section>
+      <Section title="Held" flush>
+        {held.length ? (
+          <DataTable label="Held names" rows={can ? 'form' : 'list'}>
+            <DataTableHead><th>Name</th><th>Shop</th><th>Since</th>{can && <th>Release</th>}</DataTableHead>
+            <DataTableBody>
+              {held.map((h) => (
+                <DataTableRow key={h.name}>
+                  <Td cell="a" className="font-mono">{h.name}{h.retiredByFrrata && <> <Badge tone="warn">No redirect</Badge></>}</Td>
+                  <Td cell="c"><Link href={`/admin/merchants/${h.tenantId}/addresses`} className="underline-offset-2 hover:underline">{h.shop}</Link></Td>
+                  <Td cell="d">{dayIN(h.retiredAt)}</Td>
+                  {can && (
+                    <Td cell="f">
+                      <form action={releaseNameAction} className="flex flex-wrap items-center gap-2">
+                        <input type="hidden" name="name" value={h.name} />
+                        <input name="reason" required minLength={3} maxLength={500} aria-label={`Why release ${h.name}`} placeholder="Reason" className={`${field} min-w-0 flex-1`} />
+                        <Button type="submit" variant="secondary">Release {h.name}</Button>
+                      </form>
+                    </Td>
+                  )}
+                </DataTableRow>
+              ))}
+            </DataTableBody>
+          </DataTable>
+        ) : <p className="p-4 text-sm text-muted-foreground">None.</p>}
+      </Section>
+    </>
+  )
+}

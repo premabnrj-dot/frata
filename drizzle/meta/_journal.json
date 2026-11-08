@@ -484,6 +484,13 @@
       "when": 1794172920119,
       "tag": "0068_addresses_access",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1794173611761,
+      "tag": "0069_addresses_admin",
+      "breakpoints": true
     }
   ]
 }

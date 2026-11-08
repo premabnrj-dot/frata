@@ -38,7 +38,7 @@ export const tenants = pgTable('tenants', {
 /**
  * Every name a shop has had (shop addresses D·1). The primary key means a name is never given to a second shop; the
  * current one has no `retired_at`. A retired name redirects to the current one unless Frrata retired it. Written only by
- * the trigger on `tenants` and the rename definer (drizzle/0065); `tenants.slug` mirrors the current row.
+ * the trigger on `tenants` and the rename and release definers (drizzle/0068, 0069); `tenants.slug` mirrors the current row.
  */
 export const shopNames = pgTable('shop_names', {
   name: text('name').primaryKey(),

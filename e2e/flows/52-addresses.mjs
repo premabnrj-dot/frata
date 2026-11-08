@@ -6,7 +6,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import { CONSOLE, signedIn } from '../lib.mjs'
-import { SHOP_DOMAIN } from '../constants.mjs'
+import { SHOP_DOMAIN, USERS } from '../constants.mjs'
 
 const at = (name) => `http://${name}.${SHOP_DOMAIN}`
 
@@ -59,6 +59,32 @@ export default {
         await p.fill('#slug', 'kesar-studio'); await p.getByText('Available', { exact: true }).waitFor()
         await p.getByRole('button', { name: 'Change to kesar-studio' }).click()
         await p.getByRole('status').filter({ hasText: `Moved to kesar-studio.${SHOP_DOMAIN}` }).waitFor()
+      })
+      await t.step('Frrata renames the shop: the old address serves nothing; Admin › Names releases it; the shop takes it back', async () => {
+        const F = USERS.frata
+        await db`insert into platform_staff (user_id, email, role) values (${F.id}, ${F.email}, 'admin') on conflict (user_id) do nothing`
+        const [{ name }] = await db`select name from tenants where id = ${T}`
+        const staff = await signedIn(t.browser, 'frata', { viewport: { width: 1280, height: 900 } })
+        try {
+          const a = await staff.newPage(); a.setDefaultTimeout(10_000); a.on('pageerror', (e) => t.errors.push(e.message))
+          await a.goto(CONSOLE + `/admin/merchants/${T}/addresses`)
+          await a.locator('input[name="slug"]').fill('kesar-frrata')
+          await a.locator('form').filter({ has: a.locator('input[name="slug"]') }).locator('input[name="reason"]').fill('Copies another brand')
+          await a.getByRole('button', { name: `Rename ${name}'s address` }).click()
+          await a.getByRole('status').filter({ hasText: `Renamed to kesar-frrata.${SHOP_DOMAIN}` }).waitFor()
+          await a.getByText('Old · no redirect').waitFor()
+          const s = await t.browser.newContext(); const q = await s.newPage()
+          const res = await q.goto(at('kesar-studio') + '/?utm_source=instagram')
+          await q.waitForTimeout(800)
+          assert.equal(res?.status(), 404, 'a name Frrata retired must serve nothing')
+          assert.equal(new URL(q.url()).hostname, `kesar-studio.${SHOP_DOMAIN}`, 'a name Frrata retired must not redirect')
+          await s.close()
+          await a.goto(CONSOLE + '/admin/names')
+          await a.getByLabel('Why release kesar-studio').fill('Trademark cleared')
+          await a.getByRole('button', { name: 'Release kesar-studio' }).click()
+          await a.getByRole('status').filter({ hasText: 'kesar-studio released.' }).waitFor()
+        } finally { await staff.close() }
+        await rename(p, 'kesar-studio')
       })
     } finally {
       await owner.close()
