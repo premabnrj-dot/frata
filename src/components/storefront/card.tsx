@@ -21,11 +21,11 @@ export function ProductCard({ p, href, now, priority = false }: { p: CardProduct
   return (
     <li className="group min-w-0">
       <Link href={href(`/products/${p.handle}`)} className="block space-y-2">
-        <div className="relative aspect-[4/5] overflow-hidden rounded-sm bg-store-chip">
+        <div className="relative aspect-[var(--store-ratio)] overflow-hidden rounded-[var(--store-radius)] bg-store-chip">
           {cover ? <Photo p={cover} alt={p.title} sizes="(min-width: 1024px) 25vw, 50vw" priority={priority} className="absolute inset-0 h-full w-full object-cover" />
             : <span className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-store-sub">{p.title}</span>}
-          {second && <Photo p={second} alt="" sizes="(min-width: 1024px) 25vw, 50vw" className="absolute inset-0 hidden h-full w-full object-cover opacity-0 transition-opacity duration-base [@media(hover:hover)]:block [@media(hover:hover)]:group-hover:opacity-100" />}
-          {tag && <span className="absolute left-2 top-2 rounded-sm bg-store-paper/90 px-1.5 py-0.5 text-xs">{tag}</span>}
+          {second && <Photo p={second} alt="" sizes="(min-width: 1024px) 25vw, 50vw" className="store-hover absolute inset-0 hidden h-full w-full object-cover opacity-0 transition-opacity duration-base [@media(hover:hover)]:block [@media(hover:hover)]:group-hover:opacity-100" />}
+          {tag && <span className="absolute left-2 top-2 rounded-[var(--store-radius)] bg-store-paper/90 px-1.5 py-0.5 text-xs">{tag}</span>}
         </div>
         <p className="line-clamp-2 text-sm leading-snug">{p.title}</p>
         {price && <p className="text-sm"><span className="font-medium">{price.min !== price.max ? 'From ' : ''}{money(price.min)}</span>{price.compareAt && <s className="ml-1.5 text-store-sub">{money(price.compareAt)}</s>}</p>}
@@ -41,5 +41,5 @@ export function ProductCard({ p, href, now, priority = false }: { p: CardProduct
 
 export function ProductGrid({ products, href, now, empty }: { products: CardProduct[]; href: Href; now: Date; empty: React.ReactNode }) {
   if (!products.length) return <div className="py-16 text-center text-store-sub">{empty}</div>
-  return <ul className="grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 lg:grid-cols-4">{products.map((p, i) => <ProductCard key={p.id} p={p} href={href} now={now} priority={i < 2} />)}</ul>
+  return <ul className="grid grid-cols-[repeat(var(--store-cols),minmax(0,1fr))] gap-x-3 gap-y-8 sm:grid-cols-2 sm:gap-x-5 lg:grid-cols-4">{products.map((p, i) => <ProductCard key={p.id} p={p} href={href} now={now} priority={i < 2} />)}</ul>
 }

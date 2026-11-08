@@ -332,8 +332,15 @@ dialog[data-dialog][open]::backdrop { opacity: 1; }
 [data-store-theme] {
   --store-paper: #F6F1EA; --store-ink: #1F1A17; --store-sub: #5A4A3C; --store-line: #E2D9CC; --store-chip: #EFE8DE;
   --store-good: #1E6B47; --store-bad: #A8321F; --store-accent: #8A3B1F;
+  --store-on-accent: #F6F1EA; --store-button: #1F1A17; --store-on-button: #F6F1EA; --store-sale: #A8321F;
+  /* Theme settings (themes spec § Theme settings); the shell sets each from the shop's theme. */
+  --store-radius: var(--radius-sm); --store-ratio: 4 / 5; --store-cols: 2; --store-h-scale: 1; --store-space: 1;
   background: var(--store-paper); color: var(--store-ink);
 }
+[data-store-theme][data-headings="upper"] :is(h1, h2, h3) { text-transform: uppercase; letter-spacing: 0.12em; }
+[data-store-theme][data-hover="off"] .store-hover { display: none !important; }
+[data-store-theme][data-buttons="outline"] .store-btn { background: transparent; color: var(--store-ink); box-shadow: inset 0 0 0 1px var(--store-ink); }
+[data-store-theme][data-motion="none"] * { transition: none !important; animation: none !important; }
 [data-store-theme][data-accent="indigo"] { --store-accent: #2E3A63; }
 [data-store-theme][data-accent="moss"] { --store-accent: #3F5B3A; }
 [data-store-theme][data-accent="wine"] { --store-accent: #7A1F2B; }
@@ -342,4 +349,6 @@ dialog[data-dialog][open]::backdrop { opacity: 1; }
   --color-store-paper: var(--store-paper); --color-store-ink: var(--store-ink); --color-store-sub: var(--store-sub);
   --color-store-line: var(--store-line); --color-store-chip: var(--store-chip); --color-store-good: var(--store-good);
   --color-store-bad: var(--store-bad); --color-store-accent: var(--store-accent);
+  --color-store-on-accent: var(--store-on-accent); --color-store-button: var(--store-button); --color-store-on-button: var(--store-on-button);
+  --color-store-sale: var(--store-sale);
 }

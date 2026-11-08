@@ -81,7 +81,7 @@ export function schemeVars(t: ResolvedTheme, scheme: SchemeKey = 'paper'): Recor
   }
 }
 
-const RADIUS = { square: '0px', soft: '0.125rem', round: '0.75rem' } as const
+const RADIUS = { square: '0px', soft: 'var(--radius-sm)', round: '0.75rem' } as const // soft = rounded-sm, today's corners
 const RATIO = { '4:5': '4 / 5', '3:4': '3 / 4', '1:1': '1 / 1' } as const
 const HSCALE = { compact: '0.9', regular: '1', large: '1.12' } as const
 const GAP = { airy: '1.4', regular: '1', compact: '0.7' } as const

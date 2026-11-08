@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { ON_COLOUR } from './catalogue/kit'
 import { contrast } from './contrast'
 import { SECTION_NAMES, SectionSchema, MAX_PER_PAGE, MAX_SECTIONS, shopPath, type SectionInstance } from './sections'
 import { FOOTERS, HEADERS, PAIRINGS, type Hex, type Scheme, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
@@ -55,11 +56,11 @@ export function layerProblems(layer: unknown): string[] {
 export function brandColourProblem(colour: string, schemes: Scheme[]): string | null {
   if (!/^#[0-9A-Fa-f]{6}$/.test(colour)) return 'Pick a colour.'
   for (const s of schemes) if (contrast(colour, s.bg) < 3) return 'Too light on this background. Pick a deeper shade.'
-  if (contrast(colour, '#FFFFFF') < 4.5 && contrast(colour, '#1F1A17') < 4.5) return 'Text on it would be hard to read. Pick a deeper or lighter shade.'
+  if (contrast(colour, ON_COLOUR.light) < 4.5 && contrast(colour, ON_COLOUR.dark) < 4.5) return 'Text on it would be hard to read. Pick a deeper or lighter shade.'
   return null
 }
 /** Text on a brand-colour fill: white when readable, else ink. */
-export const onColour = (c: string): Hex => (contrast(c, '#FFFFFF') >= 4.5 ? '#FFFFFF' : '#1F1A17')
+export const onColour = (c: string): Hex => (contrast(c, ON_COLOUR.light) >= 4.5 ? ON_COLOUR.light : ON_COLOUR.dark)
 
 /**
  * Trying another theme: what the merchant set that the new theme allows comes across, the rest takes its defaults

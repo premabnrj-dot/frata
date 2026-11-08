@@ -13,3 +13,6 @@ export const band = (bg: Hex, text: Hex, sub: Hex, line: Hex, chip: Hex, accent:
   bg, text, sub, line, chip, accent, onAccent, button: text, onButton: bg, good: text, bad: text, sale: text,
 })
 export const style = (key: string, name: string, schemes: Style['schemes'], schemeNames?: Style['schemeNames']): Style => ({ key, name, schemes, ...(schemeNames ? { schemeNames } : {}) })
+
+/** The two text colours that can sit on a merchant's brand colour (the brand colour rule, layer.ts). */
+export const ON_COLOUR = { light: '#FFFFFF', dark: '#1F1A17' } as const satisfies Record<string, Hex>

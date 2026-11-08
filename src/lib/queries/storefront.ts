@@ -8,7 +8,9 @@ import type { DeliveryRules } from '@/domains/checkout/delivery'
 import { tenantForHost } from '@/lib/db/platform'
 import { shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
-import { owedSql } from '@/lib/db/order-predicates'
+import { owedSql, stateSql } from '@/lib/db/order-predicates'
+import { orderLines, orders } from '@/lib/db/schema-orders'
+import { shopThemePublishes, shopThemeRevisions } from '@/lib/db/schema-themes'
 import { withTenant } from '@/lib/db/tenant'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 
@@ -28,9 +30,10 @@ import { SHOP_DOMAIN } from '@/lib/public-env'
 type Loader<A extends unknown[], R> = (tenantId: string, ...a: A) => Promise<R>
 
 /** The one cache wrapper (check:tenant 6d). Built per call so the tags carry this tenant. */
-function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop' | 'catalogue', fn: Loader<A, R>): Loader<A, R> {
+/** `revalidate`: the backstop in seconds (default 60; Best sellers 3600: unit-economics review 2026-11-08). */
+function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop' | 'catalogue', fn: Loader<A, R>, revalidate = 60): Loader<A, R> {
   return (tenantId, ...a) => unstable_cache(() => fn(tenantId, ...a), ['sf', name, tenantId, ...a.map(String)], {
-    tags: [`shop:${tenantId}`, ...(scope === 'catalogue' ? [`shop:${tenantId}:catalogue`] : [])], revalidate: 60,
+    tags: [`shop:${tenantId}`, ...(scope === 'catalogue' ? [`shop:${tenantId}:catalogue`] : [])], revalidate,
   })()
 }
 
@@ -213,7 +216,48 @@ async function lookup(handles: { current: string[]; old: Record<string, string> 
   return to ? { kind: 'moved', to } : { kind: 'none' }
 }
 
+// ── The shop's look (themes T1): the latest publish row, never a draft ──────────
+
+export type StoredLook = { revisionId: string; themeKey: string; themeVersion: string; styleKey: string; settings: unknown }
+const lookCols = { revisionId: shopThemeRevisions.id, themeKey: shopThemeRevisions.themeKey, themeVersion: shopThemeRevisions.themeVersion, styleKey: shopThemeRevisions.styleKey, settings: shopThemeRevisions.settings }
+
+async function coreLook(tenantId: string): Promise<StoredLook | null> {
+  return withTenant(tenantId, async (tx) => {
+    const [r] = await tx.select(lookCols).from(shopThemePublishes)
+      .innerJoin(shopThemeRevisions, and(eq(shopThemeRevisions.tenantId, shopThemePublishes.tenantId), eq(shopThemeRevisions.id, shopThemePublishes.revisionId)))
+      .where(eq(shopThemePublishes.tenantId, tenantId)).orderBy(desc(shopThemePublishes.publishedAt), desc(shopThemePublishes.id)).limit(1)
+    return r ?? null
+  })
+}
+
+/** A revision of THIS shop for its own preview (a draft or an old look). Another shop's id and a missing id read the same: null. */
+export async function previewRevision(tenantId: string, revisionId: string): Promise<StoredLook | null> {
+  if (!/^[0-9a-f-]{36}$/.test(revisionId)) return null
+  return withTenant(tenantId, async (tx) => {
+    const [r] = await tx.select(lookCols).from(shopThemeRevisions).where(and(eq(shopThemeRevisions.tenantId, tenantId), eq(shopThemeRevisions.id, revisionId))).limit(1)
+    return r ?? null
+  })
+}
+
+/** Best sellers: product ids by delivered units in the window, most first. Ids only: a count never leaves the server (ADR-0003). */
+async function coreBestSellers(tenantId: string, days: number): Promise<string[]> {
+  const now = new Date()
+  const since = new Date(now.getTime() - days * 86_400_000)
+  return withTenant(tenantId, async (tx) => {
+    const rows = await tx.select({ productId: orderLines.productId }).from(orderLines)
+      .innerJoin(orders, and(eq(orders.tenantId, orderLines.tenantId), eq(orders.id, orderLines.orderId)))
+      .where(and(eq(orders.tenantId, tenantId), sql`${orders.deliveredAt} >= ${since.toISOString()}`, sql`${stateSql(now)} = 'delivered'`, sql`${orderLines.productId} is not null`))
+      .groupBy(orderLines.productId).orderBy(sql`sum(${orderLines.qty}) desc`, orderLines.productId).limit(60)
+    return rows.map((r) => r.productId!).filter(Boolean)
+  })
+}
+
 // ── Exports: cached for shoppers, uncached for the merchant's preview ──────────
+
+export const shopLook = shopCached('look', 'shop', (t) => coreLook(t))
+export const shopBestSellers = shopCached('best', 'catalogue', (t, days: number) => coreBestSellers(t, days), 3600)
+export const previewLook = (tenantId: string) => coreLook(tenantId)
+export const previewBestSellers = (tenantId: string, days: number) => coreBestSellers(tenantId, days)
 
 export const shopSettingsFor = shopCached('shop', 'shop', (t) => coreShop(t))
 export const shopCatalogue = shopCached('catalogue', 'catalogue', (t) => coreCatalogue(t, false))

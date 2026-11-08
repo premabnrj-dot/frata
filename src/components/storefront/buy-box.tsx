@@ -105,7 +105,7 @@ export function BuyBox(p: BuyBoxProps) {
                 }
                 return (
                   <button key={val} type="button" aria-pressed={on} onClick={() => choose(i, val)}
-                    className={`relative min-h-11 min-w-12 rounded-sm border px-3 text-sm ${on ? 'border-store-ink bg-store-ink text-store-paper' : 'border-store-line'} ${st.canBuy ? '' : 'text-store-sub line-through decoration-1'}`}>
+                    className={`relative min-h-11 min-w-12 rounded-[var(--store-radius)] border px-3 text-sm ${on ? 'border-store-ink bg-store-ink text-store-paper' : 'border-store-line'} ${st.canBuy ? '' : 'text-store-sub line-through decoration-1'}`}>
                     {val}<span className="sr-only">{st.canBuy ? '' : ', sold out'}</span>
                   </button>
                 )
@@ -115,7 +115,7 @@ export function BuyBox(p: BuyBoxProps) {
         ))}
 
         <p role="status" className={`min-h-5 text-sm ${a ? TONE[a.kind] : 'text-store-sub'}`}>{a ? a.label : p.options.length ? `Pick a ${p.options.find((_, i) => picked[i] === null)?.toLowerCase() ?? 'size'} to see when it ships.` : ''}</p>
-        <button type="button" onClick={add} className="h-12 w-full rounded-sm bg-store-ink text-base font-medium text-store-paper">{a?.kind === 'preorder' ? 'Pre-order' : 'Add to bag'}</button>
+        <button type="button" onClick={add} className="store-btn h-12 w-full rounded-[var(--store-radius)] bg-store-button text-base font-medium text-store-on-button">{a?.kind === 'preorder' ? 'Pre-order' : 'Add to bag'}</button>
         {note && <p role="alert" className="text-sm">{note}</p>}
 
         <ul className="space-y-1.5 border-t border-store-line pt-4 text-sm">
