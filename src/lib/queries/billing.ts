@@ -4,7 +4,7 @@ import { GST_BPS, type Bill, type PlanRow } from '@/domains/billing/bill'
 import { daysUntil, lastDay, mayExtend, pausesAt, trialEndsAt, trialState, type TrialState } from '@/domains/plans/trial'
 import { cache } from 'react'
 import { orders } from '@/lib/db/schema-orders'
-import { shopTrials } from '@/lib/db/schema-trials'
+import { trialFactsIn } from './trial-pause'
 import { applyBps, paise } from '@/domains/money/paise'
 import { currentPlan, monthlyPrice } from '@/domains/plans/entitlements'
 import { gstinState } from '@/domains/tax/gst'
@@ -177,17 +177,16 @@ export type ShopTrial = { state: TrialState; lastDay: Date; pausesAt: Date; days
 export const shopTrial = cache(async (m: Pick<Membership, 'tenantId' | 'role'>, now: Date = new Date()): Promise<ShopTrial | null> => {
   if (!(CAN_MANAGE as readonly string[]).includes(m.role)) return null
   return withTenant(m.tenantId, async (tx) => {
-    const [t] = await tx.select({ days: shopTrials.days, openWindowDays: shopTrials.openWindowDays, signedUpAt: shopTrials.signedUpAt, startedAt: shopTrials.startedAt, extendedAt: shopTrials.extendedAt, endedAt: shopTrials.endedAt })
-      .from(shopTrials).where(eq(shopTrials.tenantId, m.tenantId))
-    if (!t) return null
-    const [[acc], [plan], [delivered]] = await Promise.all([
-      tx.select({ mandateAt: billingAccounts.mandateAt, revokedAt: billingAccounts.mandateRevokedAt }).from(billingAccounts).where(eq(billingAccounts.tenantId, m.tenantId)),
+    const f = await trialFactsIn(tx, m.tenantId)
+    if (!f) return null
+    const t = f.facts
+    const [[plan], [delivered]] = await Promise.all([
       tx.select({ name: plans.name, price: planVersions.monthlyPrice, custom: tenantPlans.customMonthlyPrice }).from(tenantPlans)
         .innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(plans, eq(plans.id, planVersions.planId))
         .where(and(eq(tenantPlans.tenantId, m.tenantId), sql`${tenantPlans.startsAt} <= now()`)).orderBy(desc(tenantPlans.startsAt)).limit(1),
       tx.select({ n: sql<number>`count(*)::int` }).from(orders).where(and(eq(orders.tenantId, m.tenantId), isNotNull(orders.deliveredAt), sql`${orders.rtoInitiatedAt} is null and ${orders.rtoDeliveredAt} is null`)),
     ])
-    const money = { mandateActive: !!acc?.mandateAt && !acc.revokedAt, exposedAt: null }
+    const money = { mandateActive: !!f.mandateAt && !f.revokedAt, exposedAt: f.exposedAt }
     const endsAt = trialEndsAt(t)
     const price = Number(plan?.custom ?? plan?.price ?? 0)
     return {

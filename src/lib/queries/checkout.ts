@@ -7,6 +7,7 @@ import { shopSettings, tenants } from '@/lib/db/schema'
 import { productImages, products, variants } from '@/lib/db/schema-catalogue'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
+import { pausedAt, shopPauseIn } from './trial-pause'
 import { documentsFor } from '@/lib/orders/documents'
 import { holdingSql, momentColumns, owedSql, standingSql } from '@/lib/db/order-predicates'
 import { discountUses, liveDiscountSql } from '@/lib/db/discount-predicates'
@@ -61,7 +62,7 @@ export async function checkoutShop(tx: Tx, tenantId: string): Promise<CheckoutSh
   }).from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
   if (!s) return null
   return {
-    ...s, open: s.publishedAt !== null, registered: !!s.gstin,
+    ...s, open: s.publishedAt !== null && !pausedAt(await shopPauseIn(tx, tenantId), new Date()), registered: !!s.gstin,
     shippingFlat: Number(s.shippingFlat), freeShippingAbove: Number(s.freeShippingAbove), codMin: Number(s.codMin), codMax: Number(s.codMax), codCharge: Number(s.codCharge),
     online: canTakeOnline(await keysFor(tx, tenantId)),
   }

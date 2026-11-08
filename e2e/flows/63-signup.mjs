@@ -4,6 +4,7 @@
 // a shop on the plan chosen (trials TR1: Growth preselected, a trial with frozen terms, the email claimed). Cleans up.
 // =============================================================================
 import assert from 'node:assert/strict'
+import http from 'node:http'
 import { CONSOLE, PORTS, USERS, signedIn } from '../lib.mjs'
 
 const SLUG = 'noor-threads-e2e'
@@ -89,6 +90,30 @@ export default {
         await p.goto(CONSOLE + '/console')
         await p.getByText(/^Trial ended · shop pauses /).waitFor()
         await p.screenshot({ path: t.out('trial-grace'), fullPage: false })
+      })
+
+      await t.step('TR1·9: past the grace without autopay the shop pauses — "Back soon", no new orders; the console says so', async () => {
+        const [{ id }] = await db`select id from tenants where slug = ${SLUG}`
+        // Live (the clock already started above), and 50 days on: trial + extension + grace all over.
+        await db`update shop_settings set published_at = now() - interval '50 days' where tenant_id = ${id}`
+        await db`update shop_trials set started_at = now() - interval '50 days', signed_up_at = now() - interval '51 days' where tenant_id = ${id}`
+        await db`select app_trial_recompute(${id})`
+        const shop = await t.browser.newContext({ viewport: { width: 390, height: 844 } })
+        const s = await shop.newPage()
+        await s.goto(`http://${SLUG}.frata.test/`)
+        await s.getByText('Back soon').waitFor()
+        await s.screenshot({ path: t.out('paused-shop'), fullPage: false })
+        // node:http, not fetch: undici drops a Host header (frata-gotchas).
+        const quote = await new Promise((done) => {
+          const r = http.request({ host: '127.0.0.1', port: 3077, path: '/api/shop/quote', method: 'POST', headers: { host: `${SLUG}.frata.test`, origin: `http://${SLUG}.frata.test`, 'content-type': 'application/json' } },
+            (res) => { let b = ''; res.on('data', (c) => (b += c)); res.on('end', () => done({ status: res.statusCode, body: b })) })
+          r.end(JSON.stringify({ bag: [{ variantId: '00000000-0000-4000-8000-000000000001', qty: 1 }] }))
+        })
+        assert.equal(quote.status, 404)
+        assert.match(quote.body, /not taking orders right now/)
+        await shop.close()
+        await p.goto(CONSOLE + '/console')
+        await p.getByText('Shop paused · no new orders').waitFor()
       })
     } finally {
       await cleanup()

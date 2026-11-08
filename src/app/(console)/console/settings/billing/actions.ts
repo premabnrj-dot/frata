@@ -11,6 +11,7 @@ import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { auditEvents } from '@/lib/db/schema'
 import { billingAccounts } from '@/lib/db/schema-billing'
 import { errName } from '@/lib/log'
+import { refreshShop } from '@/lib/queries/storefront'
 import { PLAN_CODES } from '@/domains/plans/entitlements'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 
@@ -106,6 +107,7 @@ export async function completeAutopay(input: Checkout): Promise<{ ok: true } | {
     if (!r.ok) return { ok: false, error: r.error }
     if (!r.value) return { ok: false, error: 'That set-up is not this shop’s, or it is already done.' }
     revalidatePath('/console/settings/billing')
+    refreshShop(o.me.membership.tenantId, 'shop') // trials TR1·9: autopay reopens a paused shop at once
     return { ok: true }
   } catch (e) {
     console.error('[billing.autopay.done]', errName(e))
@@ -221,6 +223,7 @@ export async function takeMoreDays(): Promise<{ ok: true } | { ok: false; error:
   try {
     const r = await asMember(CAN_MANAGE, { action: 'trial.extend' }, async (tx, auth) => { await tx.execute(sql`select app_trial_extend(${auth.userId}::uuid)`) })
     if (!r.ok) return { ok: false, error: r.error }
+    refreshShop(me.membership.tenantId, 'shop')
     revalidatePath('/console', 'layout')
     return { ok: true }
   } catch (e) {

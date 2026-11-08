@@ -2,6 +2,7 @@ import { OpeningSoon } from '@/components/storefront/pages'
 import { ShopShell } from '@/components/storefront/shell'
 import { AnnounceBar } from '@/components/storefront/announce-bar'
 import { shopAnnouncement, shopCatalogue, shopLook } from '@/lib/queries/storefront'
+import { pausedAt } from '@/lib/queries/trial-pause'
 import { circlesOf, themeOf } from '@/lib/themes/page-look'
 import { shopFor, shopHref } from '../_shop'
 
@@ -10,6 +11,8 @@ export default async function ShopLayout({ children, params }: { children: React
   const shop = await shopFor(params)
   const theme = themeOf(shop, await shopLook(shop.id))
   if (!shop.publishedAt) return <ShopShell shop={shop} href={shopHref} theme={theme} gated><OpeningSoon shop={shop} href={shopHref} /></ShopShell>
+  // Trials TR1·9: paused for no autopay after the trial — no new orders (orders already placed carry on).
+  if (pausedAt(shop.pause, new Date())) return <ShopShell shop={shop} href={shopHref} theme={theme} gated><OpeningSoon shop={shop} href={shopHref} paused /></ShopShell>
   const circles = theme.settings.header === 'circles' ? circlesOf(await shopCatalogue(shop.id), new Date()) : []
   // The offer the merchant put in the bar (offers O·1); a read that fails shows no bar, never an error page. A live
   // offer takes the bar's place; without one, the theme's own announcement (Look › Header) shows. One bar, never two.
