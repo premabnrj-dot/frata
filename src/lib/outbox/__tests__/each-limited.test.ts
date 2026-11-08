@@ -1,0 +1,30 @@
+import { describe, expect, it, vi } from 'vitest'
+vi.mock('server-only', () => ({}))
+vi.mock('next/server', () => ({ after: () => {} }))
+vi.mock('@/lib/queries/modules', () => ({ shopModules: async () => ({ access: {} }) }))
+vi.mock('../index', () => ({ claimDue: vi.fn(), deferRow: vi.fn(), markDead: vi.fn(), markFailed: vi.fn(), markSent: vi.fn() }))
+const { eachLimited, drainOutbox } = await import('../drain')
+const idx = await import('../index')
+
+describe('eachLimited', () => {
+  it('runs every item, never more than the limit at once', async () => {
+    let live = 0, most = 0; const done: number[] = []
+    await eachLimited([1, 2, 3, 4, 5, 6, 7], 3, async (n) => { live++; most = Math.max(most, live); await new Promise((r) => setTimeout(r, 2)); done.push(n); live-- })
+    expect(done.sort()).toEqual([1, 2, 3, 4, 5, 6, 7]); expect(most).toBe(3)
+  })
+})
+
+describe('drainOutbox (speed review P5)', () => {
+  it('claims batch after batch until the queue is short of a batch', async () => {
+    const row = (i: number) => ({ id: `r${i}`, kind: 'nothing.registered', tenantId: 't', attempts: 1 })
+    vi.mocked(idx.claimDue).mockReset().mockResolvedValueOnce(Array.from({ length: 25 }, (_, i) => row(i)) as never).mockResolvedValueOnce(Array.from({ length: 25 }, (_, i) => row(25 + i)) as never).mockResolvedValueOnce([row(50)] as never)
+    const r = await drainOutbox(Date.now() + 10_000)
+    expect(r.claimed).toBe(51)
+    expect(idx.claimDue).toHaveBeenCalledTimes(3)
+  })
+  it('stops at the deadline', async () => {
+    vi.mocked(idx.claimDue).mockReset().mockResolvedValue([] as never)
+    expect((await drainOutbox(Date.now() - 1)).claimed).toBe(0)
+    expect(idx.claimDue).not.toHaveBeenCalled()
+  })
+})

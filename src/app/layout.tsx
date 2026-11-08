@@ -3,7 +3,9 @@ import { Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
-const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains', display: 'swap' })
+// Not preloaded (speed review P6): the console's figures face; on a shop's page it was a 40 kB download ahead of
+// the product photo. It still loads wherever a page uses it.
+const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains', display: 'swap', preload: false })
 
 export const metadata: Metadata = {
   title: { default: 'Frrata', template: '%s · Frrata' },

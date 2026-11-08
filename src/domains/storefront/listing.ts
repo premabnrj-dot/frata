@@ -73,3 +73,14 @@ export function inCollection<T extends ListProduct>(c: ListCollection, all: T[],
   const members = c.kind === 'manual' ? live.filter((p) => c.productIds.includes(p.id)) : live.filter((p) => matches(cleanRules(c.rules), c.matchAll, ruleFacts(p, now)))
   return sortProducts(members, c.sort, c.productIds)
 }
+
+/** How many cards one list page shows (speed review P2: a 600-piece shop rendered 3.9 MB of HTML on one page). */
+export const PAGE_SIZE = 48
+/** The page asked for, from a path segment: a whole number from 2 up (page 1 is the list's own address); else null. */
+export function pageParam(raw: string | undefined): number | null {
+  return raw && /^[1-9]\d{0,3}$/.test(raw) && Number(raw) >= 2 ? Number(raw) : null
+}
+/** One page of a list; `pages` is at least 1, and a page past the end has no items (the route answers 404). */
+export function pageOf<T>(items: readonly T[], page: number, size = PAGE_SIZE): { items: T[]; page: number; pages: number } {
+  return { items: items.slice((page - 1) * size, page * size), page, pages: Math.max(1, Math.ceil(items.length / size)) }
+}

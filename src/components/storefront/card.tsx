@@ -45,7 +45,7 @@ export function ProductCard({ p, href, now, priority = false, badge = null, lang
   )
 }
 
-export function ProductGrid({ products, href, now, empty, lang }: { products: CardProduct[]; href: Href; now: Date; empty: React.ReactNode; lang?: Lang }) {
+export function ProductGrid({ products, href, now, empty, lang, lead = true }: { products: CardProduct[]; href: Href; now: Date; empty: React.ReactNode; lang?: Lang; lead?: boolean }) {
   if (!products.length) return <div className="py-16 text-center text-store-sub">{empty}</div>
-  return <ul className="grid grid-cols-[repeat(var(--store-cols),minmax(0,1fr))] gap-x-3 gap-y-8 sm:grid-cols-2 sm:gap-x-5 lg:grid-cols-[repeat(var(--store-dcols,4),minmax(0,1fr))]">{products.map((p, i) => <ProductCard key={p.id} p={p} href={href} now={now} priority={i < 2} lang={lang} />)}</ul>
+  return <ul className="grid grid-cols-[repeat(var(--store-cols),minmax(0,1fr))] gap-x-3 gap-y-8 sm:grid-cols-2 sm:gap-x-5 lg:grid-cols-[repeat(var(--store-dcols,4),minmax(0,1fr))]">{products.map((p, i) => <ProductCard key={p.id} p={p} href={href} now={now} priority={lead && i < 2} lang={lang} />)}</ul>
 }

@@ -22,7 +22,9 @@ import type { Href } from '../shell'
 // (settingVars), so Classic renders exactly what the shop rendered before themes (e2e 05-shop-look).
 // =============================================================================
 
-export type SectionCtx = { shop: StoreShop; cat: StoreCatalogue; theme: ResolvedTheme; href: Href; now: Date; bestSellers?: Partial<Record<30 | 90, string[]>> }
+export type SectionCtx = { shop: StoreShop; cat: StoreCatalogue; theme: ResolvedTheme; href: Href; now: Date; bestSellers?: Partial<Record<30 | 90, string[]>>
+  /** The page's first section: only its photos load ahead of the rest (speed review P15: four `priority` images competed). */
+  lead?: boolean }
 const wrap = 'mx-auto max-w-6xl px-4 sm:px-6'
 const pad = 'py-[calc(var(--store-space)*2.5rem)] sm:py-[calc(var(--store-space)*3.5rem)]'
 const rupees = (p: number) => formatInr(paise(p))
@@ -64,7 +66,7 @@ function Hero({ s, ctx }: { s: SectionOf<'hero'>; ctx: SectionCtx }) {
     return (
       <section className={`${wrap} ${pad} grid items-center gap-8 sm:grid-cols-2`}>
         <div className={`relative overflow-hidden bg-store-chip ${s.mask === 'arch' ? 'rounded-t-full' : 'rounded-[var(--store-radius)]'} aspect-[4/5]`}>
-          <Photo p={img} alt={img.alt} sizes="(min-width: 640px) 50vw, 100vw" priority className="absolute inset-0 h-full w-full object-cover" />
+          <Photo p={img} alt={img.alt} sizes="(min-width: 640px) 50vw, 100vw" priority={!!ctx.lead} className="absolute inset-0 h-full w-full object-cover" />
         </div>
         <div className="space-y-4">{title}{text && <p className="max-w-xl text-lg text-store-sub">{text}</p>}<Button b={s.button} href={ctx.href} /></div>
       </section>
@@ -73,7 +75,7 @@ function Hero({ s, ctx }: { s: SectionOf<'hero'>; ctx: SectionCtx }) {
   const centred = s.position === 'centre'
   return (
     <section className={`relative ${tall} overflow-hidden bg-store-chip`}>
-      <Photo p={img} alt={s.layout === 'image' ? heading : img.alt} sizes="100vw" priority className="absolute inset-0 h-full w-full object-cover" />
+      <Photo p={img} alt={s.layout === 'image' ? heading : img.alt} sizes="100vw" priority={!!ctx.lead} className="absolute inset-0 h-full w-full object-cover" />
       {s.layout === 'image_text' && (
         <div className={`relative z-10 flex ${tall} ${centred ? 'items-center justify-center text-center' : 'items-end'} bg-linear-to-t from-black/45 via-black/10 to-transparent`}>
           <div className={`${wrap} w-full space-y-3 py-10 text-white`}>{title}{text && <p className={`max-w-xl text-lg ${centred ? 'mx-auto' : ''}`}>{text}</p>}<Button b={s.button} href={ctx.href} /></div>
@@ -125,8 +127,8 @@ function Products({ s, ctx }: { s: SectionOf<'products'>; ctx: SectionCtx }) {
     <section aria-labelledby={h} className={wrap}>
       <div className="mb-4 flex items-baseline justify-between"><h2 id={h} className="text-xl"><Sized>{s.heading}</Sized></h2>{all && <Link href={ctx.href(all)} className="text-sm underline underline-offset-4">{wordsFor(ctx.shop.shopLanguage).seeAll}</Link>}</div>
       {s.layout === 'rail'
-        ? <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">{list.slice(0, s.count).map((p, i) => <div key={p.id} className="w-[44%] shrink-0 snap-start sm:w-[23%]"><ProductCard p={p} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} priority={i < 2} /></div>)}</ul>
-        : <ProductGrid products={list.slice(0, s.count)} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} empty={wordsFor(ctx.shop.shopLanguage).emptyShop} />}
+        ? <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">{list.slice(0, s.count).map((p, i) => <div key={p.id} className="w-[44%] shrink-0 snap-start sm:w-[23%]"><ProductCard p={p} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} priority={!!ctx.lead && i < 2} /></div>)}</ul>
+        : <ProductGrid products={list.slice(0, s.count)} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} empty={wordsFor(ctx.shop.shopLanguage).emptyShop} lead={!!ctx.lead} />}
     </section>
   )
 }
@@ -290,9 +292,9 @@ function One({ s, ctx }: { s: SectionInstance; ctx: SectionCtx }) {
 export function Sections({ list, ctx }: { list: SectionInstance[]; ctx: SectionCtx }) {
   return (
     <>
-      {list.filter((s) => !s.hidden).map((s) => (
+      {list.filter((s) => !s.hidden).map((s, i) => (
         <Paint key={s.id} s={s} theme={ctx.theme}>
-          <div data-section={s.id} className="contents"><One s={s} ctx={ctx} /></div>
+          <div data-section={s.id} className="contents"><One s={s} ctx={{ ...ctx, lead: i === 0 }} /></div>
         </Paint>
       ))}
     </>

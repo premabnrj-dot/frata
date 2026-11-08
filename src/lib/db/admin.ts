@@ -1,6 +1,7 @@
 import 'server-only'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
+import { POOL } from './index'
 import { ADMIN_DATABASE_URL } from '@/lib/env'
 import * as schema from './schema'
 import { parseDatabaseUrl } from './url'
@@ -20,7 +21,7 @@ let client: ReturnType<typeof drizzle<typeof schema>> | null = null
 export function adminDb() {
   if (!client) {
     client = drizzle(
-      postgres(parseDatabaseUrl(ADMIN_DATABASE_URL, 'frata_admin', 'ADMIN_DATABASE_URL'), { prepare: false, max: 2 }),
+      postgres(parseDatabaseUrl(ADMIN_DATABASE_URL, 'frata_admin', 'ADMIN_DATABASE_URL'), { ...POOL, max: 2 }),
       { schema },
     )
   }

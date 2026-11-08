@@ -21,11 +21,18 @@ import { parseDatabaseUrl } from './url'
 // this way). parseDatabaseUrl (./url.ts) fails with a message, never the value.
 // =============================================================================
 
+/**
+ * The pool (speed review P12): an idle connection is let go after 20 s, so warm-but-idle functions stop holding
+ * Supavisor's client slots (about 200 on small tiers: 20 instances × 10 used them all); a connect that hangs
+ * fails in 5 s; a connection is renewed every 10 minutes. `prepare: false` for Supavisor's transaction mode.
+ */
+export const POOL = { prepare: false, max: 10, idle_timeout: 20, connect_timeout: 5, max_lifetime: 600 } as const
+
 let client: ReturnType<typeof drizzle<typeof schema>> | null = null
 
 export function db() {
   if (!client) {
-    client = drizzle(postgres(parseDatabaseUrl(DATABASE_URL, 'frata_app'), { prepare: false, max: 10 }), { schema })
+    client = drizzle(postgres(parseDatabaseUrl(DATABASE_URL, 'frata_app'), POOL), { schema })
   }
   return client
 }

@@ -1,5 +1,5 @@
 # Whole-codebase review: performance, security, motion and visuals
-Date: 2026-11-08 · Status: findings open, fixes need the owner's call · Proposal mockup: https://claude.ai/artifact/R5rhr3Q1UY27QpnkmEamNS (`docs/mockups/2026-11-08-motion-and-visuals.html`)
+Date: 2026-11-08 · Status: fixes built 2026-11-08 (see § Outcome); S1, S5, S6 wait for the owner · Proposal mockup: https://claude.ai/artifact/R5rhr3Q1UY27QpnkmEamNS (`docs/mockups/2026-11-08-motion-and-visuals.html`)
 
 Three reviews ran against `main` at 51366ad.
 
@@ -88,3 +88,37 @@ The proposed motion system, the illustration and icon opportunities, and the rul
 - `frata-architecture` 2.15.0: a new § Speed (budgets, loader rules, pool, fonts); § Auth, § Tenancy and § Outside world gain the security rules above, each marked where the code does not hold it yet.
 - `frata-verify` 1.6.0: a speed proof and a header and cookie proof.
 - New agents `speed-reviewer` and `security-reviewer`, so these reviews run the same way every time.
+
+## Outcome (built 2026-11-08, owner: "fix the speed and security issues first")
+
+| # | Outcome |
+|---|---|
+| S1 | **Owner, in Vercel**: Preview still has the production `DATABASE_URL` |
+| S2 | Fixed: `sessionCookieOptions` (httpOnly, Secure, lax, 30 days) |
+| S3 | Fixed: per-request nonce + `strict-dynamic` + `form-action 'self'` on signed-in pages (middleware); e2e 12-security |
+| S4 | Fixed: drizzle/0043 (no no-shop webhook rows; stored payloads trimmed); `trimRazorpayEvent` after processing; proof 37 |
+| S5 | Accepted (ADR-0007): aal2 before outside merchants |
+| S6 | **Owner**: may staff edit the catalogue? (code says yes, the role notes say no) |
+| S7 | Fixed: check:actions per export, comments ignored, look editor and preview pages covered |
+| S8 | Fixed: `ipBucket` (IPv6 per /64) |
+| S9 | Fixed: the sign-in code limit fails closed |
+| S10 | Fixed: `errName`, new gate check:logs |
+| S11 | Fixed: WebP bytes checked before attaching; 800 upload tokens per shop an hour |
+| S12 | Fixed: drizzle/0043 revokes service_role from every public function; proof 37 |
+| S13 | Fixed: 256 kB cap, 413 before any lookup; e2e 12-security |
+| S14 | Left for routine upgrades (build-time only) |
+| P1 | Fixed: offers by index, list photos only, blanks dropped: 880 kB at 600 products with an offer (`catalogue-size.int.test.ts`) |
+| P2 | Fixed: 48 a page, `/products/page/N`, `/collections/<h>/page/N`; e2e 13-paging |
+| P3 | Fixed: every shop loader `cache()`d |
+| P4 | Fixed: `collectionMembersIn(tx, …)` |
+| P5 | Fixed in code (`drainOutbox` loops, `drainSoon`, `eachLimited`); the cron stays daily until a sender needs Pro |
+| P6 | Fixed: no font preloaded on a shop |
+| P7 | Fixed: middleware `getClaims`; `currentAccess`/`currentStaff` once per request |
+| P8 | Fixed: Orders, the order page and Home read in parallel |
+| P9 | Index `orders_tenant_placed_only`: index-only count, 58 → 39 ms at 150k |
+| P10 | Measured, kept: row security keeps Postgres off any index for ILIKE; 100 ms at 150k |
+| P11 | Fixed: `refreshSoldOut`, at most once per 30 s per shop and instance |
+| P12 | Timeouts added; `attachDatabasePool` waits (a new dependency) |
+| P13 | Index `order_lines_preorder_owed` |
+| P14 | Fixed for the order page (147.5 → 125 kB); the look editor keeps zod (it validates there) |
+| P15 | Fixed: `priority` only in the first section; the logo is sized |

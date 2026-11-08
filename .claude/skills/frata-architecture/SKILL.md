@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.15.0
+  version: 2.16.0
   verified: 2026-11-08
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -111,7 +111,9 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   { httpOnly: true, secure: true, sameSite: 'lax' }` with a bounded `maxAge`;
   nothing reads the Supabase session in the browser. A readable cookie turns any
   script on the console origin (the Meta SDK, the look preview) into a stolen
-  staff session. *Not yet held: S2 in `docs/research/2026-11-08-performance-security-motion-review.md`.*
+  staff session (`sessionCookieOptions`, src/lib/security-headers.ts). Signed-in console pages
+  carry a per-request script nonce (`signedInCsp`, set by the middleware, which REPLACES next.config's
+  header of the same name, so it carries the whole policy and X-Frame-Options; e2e 12-security).
 - **Route handlers are not server actions:** Next checks Origin for actions
   only. A cookie-authenticated POST route checks `Origin` itself, as
   `requireShop` does. Console and shops stay on different registrable domains.
@@ -317,8 +319,9 @@ shop can have or not (Messages, RTO Shield, Reviews…).
 - **Background work is sized, not hoped.** Batch × runs per day covers 10× peak
   with the number written in the spec. A daily cron is the safety net: a
   sender drains right after `enqueue` (`after()`), loops `claimDue` until empty
-  or out of time, and shops run with bounded concurrency. *Not yet held:
-  `claimDue(25)` on a daily cron is 25 sends a day (P5); fix before the first sender.*
+  or out of time, and shops run with bounded concurrency (`src/lib/outbox/drain.ts`:
+  `drainSoon()` after the commit, `drainOutbox(deadline)`, `eachLimited`). The cron is still daily (Hobby);
+  a sender with a deadline (COD confirmation) needs a frequent schedule (Pro) before it ships.
 
 ## Speed (review 2026-11-08; findings P1–P15 in `docs/research/2026-11-08-performance-security-motion-review.md`)
 
@@ -329,10 +332,10 @@ Budgets. Each says whether a gate holds it yet:
 | Shop first-load JS ≤ 120 kB gz | `check:storefront-build` |
 | Every shop route ISR; second visit HIT | build + `check:payload` |
 | Console/Admin first-load JS ≤ 150 kB gz (customize ≤ 190) | review (a gate to add) |
-| Largest shop page HTML ≤ 300 kB raw, RSC ≤ 150 kB; lists paged | review (a gate to add; `/products` is 3.9 MB today, P2) |
-| A cached loader entry ≤ 1 MB (Next refuses > 2 MB, silently) | review (the catalogue is 1.95 MB today, P1) |
-| A cold shop page ≤ 12 statements, none repeated | review (61 today, P3) |
-| One preloaded font and one `priority` image per shop page | review (4 fonts and 4 images today, P6, P15) |
+| Largest shop page HTML ≤ 300 kB raw, RSC ≤ 150 kB; lists paged | lists page at 48 (`PAGE_SIZE`, `/products/page/N`, e2e 13-paging); HTML bytes a review |
+| A cached loader entry ≤ 1 MB (Next refuses > 2 MB, silently) | `catalogue-size.int.test.ts` (880 kB at 600 products with an offer; `src/lib/storefront/catalogue-entry.ts`) |
+| A cold shop page ≤ 12 statements, none repeated | review (loaders are `cache()`d since P3) |
+| No preloaded font and `priority` only on the first section's photos | review (P6, P15 fixed) |
 | Console page < 1 s p95; a query < 100 ms at the 10× seed, no seq scan on `orders` | review + EXPLAIN |
 
 Rules:
@@ -351,10 +354,12 @@ Rules:
 - A shopper's write invalidates the narrowest tag it can: the product, not
   the shop. Catalogue refreshes are debounced (P11).
 - Fonts: a shop preloads only its own face; console faces never reach `/s/` (P6).
-- Pool: `prepare: false, max: 10`, plus `idle_timeout`, `connect_timeout` and
-  `attachDatabasePool` on Fluid (P12, not yet held).
-- A new search over free text is a `pg_trgm` GIN index, not `ilike '%…%'`
-  over a tenant's history (P10).
+- Pool: `POOL` in src/lib/db/index.ts (`idle_timeout: 20, connect_timeout: 5, max_lifetime: 600`).
+  `attachDatabasePool` (@vercel/functions) is not added: a new dependency, the owner's call.
+- **Row security keeps Postgres off an index for ILIKE / LIKE** (not leakproof): a trigram index helps
+  no query `frata_app` runs (P10, measured; drizzle/0044). Search a tenant's history with ILIKE only
+  where the plan can walk an ordered index and stop at the page (orders search: 100 ms at 150k), or
+  through a tenant-bound definer — measured both ways first.
 
 ## Money (ADR-0004)
 

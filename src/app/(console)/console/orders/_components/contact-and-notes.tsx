@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
-import { cleanMobile } from '@/domains/checkout/address'
+import { cleanMobile } from '@/domains/checkout/mobile'
 import { STATES } from '@/domains/checkout/states'
 import { addOrderNote, editOrderContact } from '../actions'
 

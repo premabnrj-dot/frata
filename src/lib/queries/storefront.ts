@@ -50,14 +50,7 @@ function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop
   })())
 }
 
-/** After a console write commits: the shop's pages read fresh rows. */
-export function refreshShop(tenantId: string, scope: 'shop' | 'catalogue') {
-  revalidateTag(scope === 'shop' ? `shop:${tenantId}` : `shop:${tenantId}:catalogue`)
-}
-/** After an address change or a new shop: the host lookups for both addresses. */
-export function refreshHosts(...hosts: string[]) {
-  for (const h of hosts) revalidateTag(`host:${h}`)
-}
+export { refreshHosts, refreshShop, refreshSoldOut } from '@/lib/storefront/refresh'
 export const hostFor = (slug: string) => `${slug}.${SHOP_DOMAIN}`
 
 class Miss extends Error {}

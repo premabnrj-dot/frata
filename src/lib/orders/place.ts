@@ -17,7 +17,7 @@ import { discountUses, fits } from '@/lib/db/discount-predicates'
 import { discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import { keysFor } from '@/lib/payments/keys'
 import { createOrder } from '@/lib/payments/razorpay'
-import { refreshShop } from '@/lib/queries/storefront'
+import { refreshSoldOut } from '@/lib/queries/storefront'
 
 // =============================================================================
 // FILE: src/lib/orders/place.ts
@@ -131,7 +131,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
   })
   if (placed.kind !== 'new') return placed
   // The last piece went: the cached product pages say sold out at once (1D gap fix).
-  if (soldOut.length) refreshShop(tenantId, 'catalogue')
+  if (soldOut.length) refreshSoldOut(tenantId)
   const out: Placed = { kind: 'placed', token: orderToken(placed.id), number: placed.number, method: placed.method, total: placed.total, pay: null, code: placed.code ?? null }
   if (placed.method === 'cod') return out
   const pay = await startPayment(tenantId, placed.id)

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { PolicyPage } from '@/domains/policies/render'
 import { shopJsonLd } from '@/domains/catalogue/seo'
-import { inCollection, isListed } from '@/domains/storefront/listing'
+import { inCollection, isListed, pageOf } from '@/domains/storefront/listing'
 import { classicFromSettings } from '@/domains/themes/resolve'
 import type { ResolvedTheme, ThemeSettings } from '@/domains/themes/types'
 import type { StoreCatalogue, StoreCollection, StoreShop } from '@/lib/queries/storefront'
@@ -27,22 +27,43 @@ export function HomeView({ shop, cat, href, now, theme, bestSellers }: { shop: S
   )
 }
 
-export function AllView({ cat, href, now, lang }: { cat: StoreCatalogue; href: Href; now: Date; lang?: Lang }) {
-  const listed = cat.products.filter((p) => isListed(p, now))
+/** Page n of a list, at its own address (page 1 is the list itself), so every page is cached on its own. */
+export const pagePath = (base: string, n: number) => (n <= 1 ? base : `${base}/page/${n}`)
+
+/** Previous · Page n of m · Next, under a list longer than one page. */
+function Pager({ page, pages, base, href, lang }: { page: number; pages: number; base: string; href: Href; lang?: Lang }) {
+  if (pages <= 1) return null
+  const w = wordsFor(lang)
+  const link = 'inline-flex min-h-11 items-center rounded-[var(--store-radius)] border border-store-line px-4 hover:bg-store-chip'
+  return (
+    <nav aria-label={w.pages} className="mt-10 flex items-center justify-center gap-3 text-sm">
+      {page > 1 ? <Link className={link} href={href(pagePath(base, page - 1))} rel="prev">{w.prevPage}</Link> : null}
+      <span aria-current="page" className="text-store-sub">{fill(w.pageOf, { n: page, m: pages })}</span>
+      {page < pages ? <Link className={link} href={href(pagePath(base, page + 1))} rel="next">{w.nextPage}</Link> : null}
+    </nav>
+  )
+}
+
+export function AllView({ cat, href, now, lang, page = 1 }: { cat: StoreCatalogue; href: Href; now: Date; lang?: Lang; page?: number }) {
+  const one = pageOf(cat.products.filter((p) => isListed(p, now)), page)
   const w = wordsFor(lang)
   return (
     <section className={`${wrap} py-8`}>
       <h1 className="mb-6 text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{w.shopAll}</h1>
-      <ProductGrid products={listed} href={href} now={now} empty={w.emptyShop} lang={lang} />
+      <ProductGrid products={one.items} href={href} now={now} empty={w.emptyShop} lang={lang} />
+      <Pager page={one.page} pages={one.pages} base="/products" href={href} lang={lang} />
     </section>
   )
 }
 
-export function CollectionView({ c, cat, href, now, top = 'title', lang }: { c: StoreCollection; cat: StoreCatalogue; href: Href; now: Date; top?: ThemeSettings['collectionTop']; lang?: Lang }) {
-  const items = inCollection(c, cat.products, now)
+export function CollectionView({ c, cat, href, now, top = 'title', lang, page = 1 }: { c: StoreCollection; cat: StoreCatalogue; href: Href; now: Date; top?: ThemeSettings['collectionTop']; lang?: Lang; page?: number }) {
+  const all = inCollection(c, cat.products, now)
+  const one = pageOf(all, page)
+  const items = one.items
+  const pager = <Pager page={one.page} pages={one.pages} base={`/collections/${c.handle}`} href={href} lang={lang} />
   const w = wordsFor(lang)
   // Banner (themes T2): the first listed piece's first photo, as the category circles use; none, the title as today.
-  const cover = top === 'banner' ? items.find((p) => p.images[0])?.images[0] ?? null : null
+  const cover = top === 'banner' && page === 1 ? all.find((p) => p.images[0])?.images[0] ?? null : null
   if (cover) return (
     <>
       <div className="relative flex min-h-56 items-end overflow-hidden bg-store-chip sm:min-h-72">
@@ -54,14 +75,14 @@ export function CollectionView({ c, cat, href, now, top = 'title', lang }: { c: 
           </div>
         </div>
       </div>
-      <section className={`${wrap} py-8`}><ProductGrid products={items} href={href} now={now} empty={w.emptyCollection} lang={lang} /></section>
+      <section className={`${wrap} py-8`}><ProductGrid products={items} href={href} now={now} empty={w.emptyCollection} lang={lang} />{pager}</section>
     </>
   )
   return (
     <section className={`${wrap} py-8`}>
       <h1 className="text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{c.title}</h1>
       {c.description && <p className="mt-2 max-w-prose text-store-sub">{c.description}</p>}
-      <div className="mt-6"><ProductGrid products={items} href={href} now={now} empty={w.emptyCollection} lang={lang} /></div>
+      <div className="mt-6"><ProductGrid products={items} href={href} now={now} empty={w.emptyCollection} lang={lang} />{pager}</div>
     </section>
   )
 }
