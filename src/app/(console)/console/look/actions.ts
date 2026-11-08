@@ -4,9 +4,9 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { acceptedBase, storeHost } from '@/domains/media/sizes'
 import { manifestOf, latestOf } from '@/domains/themes/catalogue'
-import { brandColourProblem, carryOver, layerProblems } from '@/domains/themes/layer'
+import { brandColourProblem, carryOver, LayerSchema, layerProblems } from '@/domains/themes/layer'
 import { readinessOf } from '@/domains/themes/readiness'
-import { resolveTheme } from '@/domains/themes/resolve'
+import { baselineRevision, resolveTheme } from '@/domains/themes/resolve'
 import { SectionSchema } from '@/domains/themes/sections'
 import { THEME_KEYS } from '@/lib/db/schema-themes'
 import { asMember } from '@/lib/auth/as-member'
@@ -31,7 +31,7 @@ const audit = (tx: Parameters<Parameters<typeof asMember>[2]>[0], a: { membershi
   tx.insert(auditEvents).values({ tenantId: a.membership.tenantId, actorUserId: a.userId, actorEmail: a.email, actorKind: 'member', action, target: target ?? null })
 
 /** Every photo a layer names, rebuilt by acceptedBase for THIS shop's theme folder; one that isn't refuses the save. */
-function cleanImages(layer: { home?: unknown[] }, tenantId: string): { home?: unknown[] } | null {
+function cleanImages<L extends { home?: unknown[] }>(layer: L, tenantId: string): L | null {
   const host = storeHost(BLOB_STORE_ID)
   const fix = (img: { base: string } | null | undefined) => {
     if (!img) return img
@@ -42,7 +42,7 @@ function cleanImages(layer: { home?: unknown[] }, tenantId: string): { home?: un
   try {
     const home = layer.home?.map((raw) => {
       const p = SectionSchema.safeParse(raw)
-      if (!p.success) return raw
+      if (!p.success) throw new Error('section')
       const s = p.data
       if (s.key === 'hero' || s.key === 'image_text' || s.key === 'drop_teaser') return { ...s, image: fix(s.image) }
       if (s.key === 'logos') return { ...s, images: s.images.map((i) => fix(i)!) }
@@ -91,7 +91,8 @@ export async function saveLookAction(input: unknown): Promise<R<{ version: numbe
     const layer = p.data.layer as { settings?: { brandColour?: string | null }; home?: unknown[] }
     const colour = layer.settings?.brandColour
     if (colour) { const sch = resolveTheme(m, { style: p.data.style }).schemes; const why = brandColourProblem(colour, [sch.paper, sch.tint]); if (why) return { error: why } }
-    const clean = cleanImages(layer, t)
+    // Stored as parsed: unknown settings keys are dropped (tenancy audit 2026-11-08).
+    const clean = cleanImages({ ...layer, settings: LayerSchema.parse(layer).settings }, t)
     if (!clean) return { error: 'A photo didn’t come from this shop. Upload it again.' }
     const s = await saveDraft(tx, t, { userId: auth.userId, email: auth.email }, { revisionId: rev.id, version: p.data.version, styleKey: p.data.style, settings: clean })
     if (!s.ok) return { error: s.why === 'stale' ? `${rev.updatedByEmail ?? 'Someone'} changed this draft a moment ago. Reload to see their changes.` : s.why === 'published' ? 'This look was published. Reload to keep editing.' : 'This draft is gone. Reload.' }
@@ -119,7 +120,7 @@ export async function publishLookAction(input: unknown): Promise<R> {
     if (blocking.length) return { error: `Before publishing: ${blocking[0]!.text}.` }
     const out = await publishRevision(tx, t, { userId: auth.userId, email: auth.email }, {
       revisionId: rev.id, version: p.data.version,
-      baseline: () => ({ themeKey: 'classic', themeVersion: '1.0.0', styleKey: facts.accent, settings: { settings: { pairing: facts.displayFont } } }),
+      baseline: () => baselineRevision(facts.accent, facts.displayFont),
     })
     if (out !== 'ok') return { error: out === 'stale' ? 'The draft changed after you opened Publish. Look again, then publish.' : 'This draft is gone. Reload.' }
     await audit(tx, auth, 'look.publish', `${m.name} · ${rev.styleKey}`)
@@ -132,11 +133,15 @@ export async function publishLookAction(input: unknown): Promise<R> {
   return { ok: true }
 }
 
-export async function undoPublishAction(): Promise<R> {
+/** Undo last publish, from the live look the person saw (`live`): another publish since refuses. */
+export async function undoPublishAction(input: unknown): Promise<R> {
+  const p = z.object({ live: z.uuid() }).safeParse(input)
+  if (!p.success) return { ok: false, error: 'Reload, then undo.' }
   const r = await asMember(CAN_MANAGE, { action: 'look.undo' }, async (tx, auth) => {
     if (auth.membership.supportSessionId) return { error: SUPPORT }
-    const back = await undoPublish(tx, auth.membership.tenantId, { userId: auth.userId, email: auth.email })
-    if (!back) return { error: 'There is no earlier look.' }
+    const back = await undoPublish(tx, auth.membership.tenantId, { userId: auth.userId, email: auth.email }, p.data.live)
+    if (back === 'moved') return { error: 'Someone published since. Reload to see the look shoppers have now.' }
+    if (back === 'none') return { error: 'There is no earlier look.' }
     await audit(tx, auth, 'look.undo')
     return {}
   })
@@ -174,9 +179,10 @@ export async function editLookAction(): Promise<R<{ revisionId: string }>> {
     if (l.draft) return { revisionId: l.draft.id }
     const facts = await lookFacts(tx, t)
     const base = l.live?.revision ?? null
+    // reuse: a draft another tab opened since the read above is kept, not replaced (impact review 2026-11-08).
     const d = await newDraft(tx, t, { userId: auth.userId, email: auth.email }, base
       ? { themeKey: base.themeKey, themeVersion: base.themeVersion, styleKey: base.styleKey, settings: base.settings as object }
-      : { themeKey: 'classic', themeVersion: '1.0.0', styleKey: facts.accent, settings: { settings: { pairing: facts.displayFont } } })
+      : baselineRevision(facts.accent, facts.displayFont), { reuse: true })
     return { revisionId: d.id }
   })
   if (!r.ok) return r

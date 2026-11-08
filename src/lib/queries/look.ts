@@ -32,3 +32,15 @@ export async function editorData(tenantId: string): Promise<EditorData | null> {
 }
 
 export const revisionFor = (tenantId: string, id: string) => withTenant(tenantId, (tx) => revisionOf(tx, tenantId, id))
+
+/**
+ * The live look, when THIS person published it in the last 10 minutes (and so the Published page after Publish
+ * applies), else null: after Discard, a bookmark or someone else's publish, the customizer sends them to Look.
+ */
+export async function justPublished(tenantId: string, userId: string, now: Date): Promise<{ liveId: string; canUndo: boolean } | null> {
+  return withTenant(tenantId, async (tx) => {
+    const l = await lookFor(tx, tenantId)
+    if (!l.live || l.live.publishedBy !== userId || now.getTime() - l.live.publishedAt.getTime() > 10 * 60_000) return null
+    return { liveId: l.live.revision.id, canUndo: !!l.previous }
+  })
+}

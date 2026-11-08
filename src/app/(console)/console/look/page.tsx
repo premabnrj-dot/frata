@@ -51,7 +51,7 @@ export default async function LookPage() {
               {' · '}<Link href="/console/look/history" className="underline underline-offset-4">History</Link>
             </p>
             {l.draft && <p className="flex flex-wrap items-center gap-2 text-sm"><Badge tone="warn">Draft</Badge>{draftName !== liveM.name ? `${draftName}: ` : ''}You have unpublished changes · saved {dateTimeIN(l.draft.updatedAt)}</p>}
-            <LookActions canEdit={canEdit} canPublish={canPublish} hasDraft={!!l.draft} canUndo={!!l.previous && canPublish} support={support} />
+            <LookActions canEdit={canEdit} canPublish={canPublish} hasDraft={!!l.draft} undoFrom={l.previous && canPublish ? l.live!.revision.id : null} support={support} />
           </div>
         </div>
       </Section>

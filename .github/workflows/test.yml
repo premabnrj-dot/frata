@@ -38,7 +38,7 @@ jobs:
       - name: Admin library and order predicates on the migrated database
         run: |
           psql "$ADMIN_URL" -q -c "alter role frata_app password 'ci'; alter role frata_admin password 'ci';"
-          npx vitest run src/lib/admin src/lib/db src/lib/orders src/lib/catalogue src/lib/queries
+          npx vitest run src/lib/admin src/lib/db src/lib/orders src/lib/catalogue src/lib/queries src/lib/themes
         env:
           ADMIN_URL: postgres://postgres:postgres@localhost:5432/frata_proof
           INT_DB_HOST: localhost:5432

@@ -10,7 +10,7 @@ import { diffLayers } from '@/domains/themes/layer'
 import { readinessOf, type ShopFacts } from '@/domains/themes/readiness'
 import type { SectionInstance, SectionKey } from '@/domains/themes/sections'
 import type { FooterVariant, HeaderVariant, Pairing, ThemeSettings } from '@/domains/themes/types'
-import { publishLookAction, saveLookAction, undoPublishAction } from '@/app/(console)/console/look/actions'
+import { publishLookAction, saveLookAction } from '@/app/(console)/console/look/actions'
 import type { LinkTarget } from './controls'
 import { SectionForm, type FormCtx } from './section-form'
 import { SectionsPanel } from './sections-panel'
@@ -51,7 +51,6 @@ export function Editor(p: EditorProps) {
   const [page, setPage] = useState<'home' | 'product' | 'collection'>('home')
   const [status, setStatus] = useState<Status>('saved')
   const [publishing, setPublishing] = useState(false)
-  const [published, setPublished] = useState(false)
   const [pubError, setPubError] = useState<string | null>(null)
   const [pending, start] = useTransition()
   const version = useRef(p.version)
@@ -104,10 +103,9 @@ export function Editor(p: EditorProps) {
     setPubError(null)
     if (timer.current) { clearTimeout(timer.current); timer.current = null; await save() }
     const r = await publishLookAction({ revisionId: p.revisionId, version: version.current })
-    if (!r.ok) { setPubError(r.error); return }
-    setPublished(true)
+    // Success re-renders this page with no draft: it shows Published (with Undo) to the person who just published.
+    if (!r.ok) setPubError(r.error)
   })
-  const undoPublish = () => start(async () => { const r = await undoPublishAction(); if (!r.ok) setPubError(r.error); else router.push('/console/look') })
 
   const panel = (
     <div className="space-y-4">
@@ -160,19 +158,14 @@ export function Editor(p: EditorProps) {
         </section>
       </div>
 
-      <Dialog open={publishing} onClose={() => (published ? router.push('/console/look') : setPublishing(false))} title={published ? 'Published' : `Publish ${p.themeName} · ${styleName}?`}
-        description={published ? 'Shoppers see it on their next visit.' : p.shopOpen ? 'Shoppers see this now. Your current look is kept in History.' : 'Your shop is closed: this is the look shoppers see when it opens.'}
-        actions={published
-          ? <><Button variant="secondary" className="after:hidden" disabled={pending} onClick={undoPublish}>Undo</Button><Button data-autofocus onClick={() => router.push('/console/look')}>Back to Look</Button></>
-          : <><Button variant="secondary" className="after:hidden" data-autofocus onClick={() => setPublishing(false)}>Not yet</Button><Button disabled={pending || blocking.length > 0} onClick={publish}>Publish</Button></>}>
-        {!published && (
+      <Dialog open={publishing} onClose={() => setPublishing(false)} title={`Publish ${p.themeName} · ${styleName}?`}
+        description={p.shopOpen ? 'Shoppers see this now. Your current look is kept in History.' : 'Your shop is closed: this is the look shoppers see when it opens.'}
+        actions={<><Button variant="secondary" className="after:hidden" data-autofocus onClick={() => setPublishing(false)}>Not yet</Button><Button disabled={pending || blocking.length > 0} onClick={publish}>Publish</Button></>}>
           <div className="space-y-3 text-sm">
             {changes.length > 0 && <ul className="list-disc space-y-1 pl-5 text-muted-foreground">{changes.map((c) => <li key={c}>{c}</li>)}</ul>}
             {blocking.length > 0 && <div role="alert" className="rounded-md bg-danger px-3 py-2 text-danger-text"><p className="font-medium">Before publishing:</p><ul className="list-disc pl-5">{blocking.map((b) => <li key={b.sectionId + b.text}>{b.text}</li>)}</ul></div>}
             {pubError && <p role="alert" className="text-danger-text">{pubError}</p>}
           </div>
-        )}
-        {published && <p className="text-sm"><a href="/console/preview" className="underline underline-offset-4">View your shop</a></p>}
       </Dialog>
     </div>
   )

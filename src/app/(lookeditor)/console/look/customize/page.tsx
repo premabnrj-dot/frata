@@ -10,7 +10,7 @@ import { PAIRINGS, type Pairing } from '@/domains/themes/types'
 import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
 import { ANY_MEMBER, CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
-import { editorData } from '@/lib/queries/look'
+import { editorData, justPublished } from '@/lib/queries/look'
 import { previewShop } from '@/lib/queries/storefront'
 import { Editor } from './editor'
 import { Published } from './published'
@@ -28,8 +28,13 @@ export default async function Customize() {
   const t = auth.membership.tenantId
   const [data, shop] = await Promise.all([editorData(t), previewShop(t)])
   if (!shop) redirect('/console/look')
-  // No open draft: it was just published (this page re-renders after Publish), or there was none. Say so, offer Undo.
-  if (!data) return <Published canUndo={(CAN_MANAGE as readonly string[]).includes(role)} />
+  // No open draft: if this person just published it (this page re-renders after Publish), say so and offer Undo;
+  // otherwise (Discard, a bookmark, someone else published) back to Look.
+  if (!data) {
+    const j = await justPublished(t, auth.userId, new Date())
+    if (!j) redirect('/console/look')
+    return <Published undoFrom={j.canUndo && (CAN_MANAGE as readonly string[]).includes(role) ? j.liveId : null} />
+  }
   const m = manifestOf(data.draft.themeKey, data.draft.themeVersion)
   if (!m) redirect('/console/look')
   const stored = data.draft.settings as { settings?: object; home?: unknown[] }

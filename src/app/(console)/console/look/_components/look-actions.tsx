@@ -7,7 +7,7 @@ import { Menu } from '@/components/ui/menu'
 import { discardDraftAction, editLookAction, undoPublishAction } from '../actions'
 
 /** Customize (primary), Preview, More: what a merchant does with the published look and the draft. */
-export function LookActions({ canEdit, canPublish, hasDraft, canUndo, support }: { canEdit: boolean; canPublish: boolean; hasDraft: boolean; canUndo: boolean; support: boolean }) {
+export function LookActions({ canEdit, canPublish, hasDraft, undoFrom, support }: { canEdit: boolean; canPublish: boolean; hasDraft: boolean; undoFrom: string | null; support: boolean }) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -24,13 +24,13 @@ export function LookActions({ canEdit, canPublish, hasDraft, canUndo, support }:
   if (!canEdit) return <p className="text-sm text-muted-foreground">{support ? 'Frrata support can look, not change the shop’s look.' : 'Ask the owner to change the shop’s look.'}</p>
   const items = [
     ...(hasDraft ? [{ label: 'Discard draft', onSelect: () => run(discardDraftAction), danger: true }] : []),
-    ...(canUndo ? [{ label: 'Undo last publish', onSelect: () => run(undoPublishAction) }] : []),
+    ...(undoFrom ? [{ label: 'Undo last publish', onSelect: () => run(() => undoPublishAction({ live: undoFrom })) }] : []),
     { label: 'History', href: '/console/look/history' },
   ]
   return (
     <div className="space-y-2 pt-1">
       <div className="flex flex-wrap gap-2">
-        <Button disabled={pending} onClick={customize}>{hasDraft ? 'Customize' : 'Customize'}</Button>
+        <Button disabled={pending} onClick={customize}>Customize</Button>
         <a href="/console/preview" className={button({ variant: 'secondary' })}>Preview shop</a>
         <Menu items={items} />
       </div>

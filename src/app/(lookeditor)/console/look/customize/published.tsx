@@ -7,7 +7,7 @@ import { Button, button } from '@/components/ui/button'
 import { undoPublishAction } from '@/app/(console)/console/look/actions'
 
 /** After Publish (mockup "Publish": "Published. Shoppers see it on their next visit. View your shop. Undo"). */
-export function Published({ canUndo }: { canUndo: boolean }) {
+export function Published({ undoFrom }: { undoFrom: string | null }) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -19,7 +19,7 @@ export function Published({ canUndo }: { canUndo: boolean }) {
         <div className="flex flex-wrap gap-2">
           <Link href="/console/look" className={button()}>Back to Look</Link>
           <a href="/console/preview" className={button({ variant: 'secondary' })}>View your shop</a>
-          {canUndo && <Button variant="secondary" className="after:hidden" disabled={pending} onClick={() => start(async () => { const r = await undoPublishAction(); if (!r.ok) setError(r.error); else router.push('/console/look') })}>Undo</Button>}
+          {undoFrom && <Button variant="secondary" className="after:hidden" disabled={pending} onClick={() => start(async () => { const r = await undoPublishAction({ live: undoFrom }); if (!r.ok) setError(r.error); else router.push('/console/look') })}>Undo</Button>}
         </div>
         {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
       </section>

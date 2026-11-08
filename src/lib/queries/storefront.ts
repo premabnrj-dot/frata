@@ -10,7 +10,7 @@ import { shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { owedSql, stateSql } from '@/lib/db/order-predicates'
 import { orderLines, orders } from '@/lib/db/schema-orders'
-import { shopThemePublishes, shopThemeRevisions } from '@/lib/db/schema-themes'
+import { liveRevision, revisionOf, type Revision } from '@/lib/themes/look'
 import { withTenant } from '@/lib/db/tenant'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 
@@ -219,25 +219,13 @@ async function lookup(handles: { current: string[]; old: Record<string, string> 
 // ── The shop's look (themes T1): the latest publish row, never a draft ──────────
 
 export type StoredLook = { revisionId: string; themeKey: string; themeVersion: string; styleKey: string; settings: unknown }
-const lookCols = { revisionId: shopThemeRevisions.id, themeKey: shopThemeRevisions.themeKey, themeVersion: shopThemeRevisions.themeVersion, styleKey: shopThemeRevisions.styleKey, settings: shopThemeRevisions.settings }
+const stored = (r: Revision | null): StoredLook | null => (r ? { revisionId: r.id, themeKey: r.themeKey, themeVersion: r.themeVersion, styleKey: r.styleKey, settings: r.settings } : null)
 
-async function coreLook(tenantId: string): Promise<StoredLook | null> {
-  return withTenant(tenantId, async (tx) => {
-    const [r] = await tx.select(lookCols).from(shopThemePublishes)
-      .innerJoin(shopThemeRevisions, and(eq(shopThemeRevisions.tenantId, shopThemePublishes.tenantId), eq(shopThemeRevisions.id, shopThemePublishes.revisionId)))
-      .where(eq(shopThemePublishes.tenantId, tenantId)).orderBy(desc(shopThemePublishes.publishedAt), desc(shopThemePublishes.id)).limit(1)
-    return r ?? null
-  })
-}
+// Which revision is live, and which revision an id names, are src/lib/themes/look.ts's rules; read through it.
+const coreLook = (tenantId: string) => withTenant(tenantId, async (tx) => stored(await liveRevision(tx, tenantId)))
 
 /** A revision of THIS shop for its own preview (a draft or an old look). Another shop's id and a missing id read the same: null. */
-export async function previewRevision(tenantId: string, revisionId: string): Promise<StoredLook | null> {
-  if (!/^[0-9a-f-]{36}$/.test(revisionId)) return null
-  return withTenant(tenantId, async (tx) => {
-    const [r] = await tx.select(lookCols).from(shopThemeRevisions).where(and(eq(shopThemeRevisions.tenantId, tenantId), eq(shopThemeRevisions.id, revisionId))).limit(1)
-    return r ?? null
-  })
-}
+export const previewRevision = (tenantId: string, revisionId: string) => withTenant(tenantId, async (tx) => stored(await revisionOf(tx, tenantId, revisionId)))
 
 /** Best sellers: product ids by delivered units in the window, most first. Ids only: a count never leaves the server (ADR-0003). */
 async function coreBestSellers(tenantId: string, days: number): Promise<string[]> {

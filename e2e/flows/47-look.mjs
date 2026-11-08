@@ -25,7 +25,7 @@ export default {
       // Production shops got their look recorded by the migration; this seed shop is made after the migrations, so it
       // has none yet and renders Classic from its settings (its first publish records it: checked under History).
       const [{ n }] = await db`select count(*)::int n from shop_theme_publishes where tenant_id = ${KESAR}`
-      assert.ok(n <= 1)
+      assert.equal(n, 0, 'the seed shop has no publish row before its first publish')
       await riya.goto(CONSOLE + '/console/look')
       await riya.getByRole('heading', { level: 1, name: 'Look' }).waitFor()
       await riya.getByRole('heading', { name: 'Classic · Oxide' }).waitFor()
@@ -66,6 +66,13 @@ export default {
       await riya.getByRole('button', { name: '+ Add a section' }).click()
       await riya.getByRole('dialog', { name: 'Add a section' }).getByRole('button', { name: /^Rich text/ }).click()
       await riya.getByLabel('Text (a blank line starts a new paragraph)').fill('Every piece is hand-finished in Jaipur.')
+      // T1·0: from the autosave landing to the preview showing it (budget 1 s p75 on a laptop; 2 s here, a busy CI box).
+      await until(async () => { const [r] = await db`select settings from shop_theme_revisions where id = ${rev}`; return JSON.stringify(r.settings).includes('hand-finished in Jaipur') }, 10_000)
+      const t0 = Date.now()
+      await riya.frameLocator('iframe[title="Your shop with this look"]').getByText('Every piece is hand-finished in Jaipur.').waitFor()
+      const ms = Date.now() - t0
+      console.log(`     look › preview refreshed ${ms} ms after the save`)
+      assert.ok(ms < 2000, `preview refresh took ${ms} ms`)
       await riya.getByRole('button', { name: '‹ Sections' }).click()
       await riya.getByRole('button', { name: 'Move Rich text up' }).click()
       await riya.getByRole('button', { name: 'Hide Products' }).last().click()
@@ -83,12 +90,15 @@ export default {
       await d.getByText('Theme: Bazaar · Genda').waitFor()
       await riya.screenshot({ path: t.out('publish') })
       await d.getByRole('button', { name: 'Publish', exact: true }).click()
-      await riya.getByRole('heading', { name: 'Published' }).first().waitFor()
+      await riya.getByRole('heading', { level: 1, name: 'Published' }).waitFor()
+      // The first publish recorded the look before it (lazy baseline): two rows, the older one Classic.
+      const pubs = await db`select r.theme_key from shop_theme_publishes p join shop_theme_revisions r on r.id = p.revision_id where p.tenant_id = ${KESAR} order by p.published_at, p.id`
+      assert.deepEqual(pubs.map((x) => x.theme_key), ['classic', 'bazaar'])
       await shopSays(/Shop tabs/)
       assert.ok(/hand-finished in Jaipur/.test(await shopHtml()), 'the published sections are on the shop')
       const audit = await db`select action from audit_events where tenant_id = ${KESAR} and action = 'look.publish'`
       assert.equal(audit.length, 1)
-      await riya.getByText('Back to Look').first().click()
+      await riya.getByRole('link', { name: 'Back to Look' }).click()
       await riya.getByRole('heading', { name: 'Bazaar · Genda' }).waitFor()
     })
 

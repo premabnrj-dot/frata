@@ -1,8 +1,8 @@
 // =============================================================================
 // FILE: src/lib/db/schema-themes.ts — a shop's looks (docs/specs/2026-11-08-themes.md § Data, plan § Review findings).
 // Access: drizzle/0032_themes_access.sql. Revisions are content (the merchant's layer, re-parsed at every read);
-// which look is LIVE is derived: the latest publish row. The open draft is the newest revision with no publish row,
-// created after the latest publish. Nothing here stores a status.
+// which look is LIVE is derived: the latest publish row. The open draft is the newest revision with no publish row
+// (at most one: src/lib/themes/look.ts replaces it under a per-shop lock). Nothing here stores a status.
 // =============================================================================
 
 import { sql } from 'drizzle-orm'

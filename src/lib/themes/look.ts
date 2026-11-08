@@ -20,10 +20,17 @@ type Who = { userId: string; email: string | null }
 
 const lockShop = (tx: Tx, tenantId: string) => tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`look:${tenantId}`}))`)
 
-async function latestPublish(tx: Tx, tenantId: string) {
-  const [p] = await tx.select().from(shopThemePublishes).where(eq(shopThemePublishes.tenantId, tenantId))
-    .orderBy(desc(shopThemePublishes.publishedAt), desc(shopThemePublishes.id)).limit(1)
-  return p ?? null
+/** Published looks, newest first: THE order that makes one live (by published_at, then id). The shop reads it too. */
+async function published(tx: Tx, tenantId: string, limit: number) {
+  const rows = await tx.select({ p: shopThemePublishes, r: shopThemeRevisions }).from(shopThemePublishes)
+    .innerJoin(shopThemeRevisions, and(eq(shopThemeRevisions.tenantId, shopThemePublishes.tenantId), eq(shopThemeRevisions.id, shopThemePublishes.revisionId)))
+    .where(eq(shopThemePublishes.tenantId, tenantId)).orderBy(desc(shopThemePublishes.publishedAt), desc(shopThemePublishes.id)).limit(limit)
+  return rows.map((x) => ({ revision: x.r, publishedAt: x.p.publishedAt, publishedBy: x.p.publishedBy, publishedByEmail: x.p.publishedByEmail }))
+}
+
+/** The live look's revision (the storefront's read), or null: the shop has never published. */
+export async function liveRevision(tx: Tx, tenantId: string): Promise<Revision | null> {
+  return (await published(tx, tenantId, 1))[0]?.revision ?? null
 }
 
 async function openDraft(tx: Tx, tenantId: string): Promise<Revision | null> {
@@ -34,34 +41,33 @@ async function openDraft(tx: Tx, tenantId: string): Promise<Revision | null> {
   return r ?? null
 }
 
-export type Look = {
-  live: { revision: Revision; publishedAt: Date; publishedByEmail: string | null } | null
-  draft: Revision | null
-  history: { revision: Revision; publishedAt: Date; publishedByEmail: string | null }[]
-  previous: Revision | null
-}
+type Published = { revision: Revision; publishedAt: Date; publishedBy: string; publishedByEmail: string | null }
+export type Look = { live: Published | null; draft: Revision | null; history: Published[]; previous: Revision | null }
 
 /** Live, draft and history for the console (no other shop's rows can appear: the tenant is in every query). */
 export async function lookFor(tx: Tx, tenantId: string): Promise<Look> {
-  const rows = await tx.select({ p: shopThemePublishes, r: shopThemeRevisions }).from(shopThemePublishes)
-    .innerJoin(shopThemeRevisions, and(eq(shopThemeRevisions.tenantId, shopThemePublishes.tenantId), eq(shopThemeRevisions.id, shopThemePublishes.revisionId)))
-    .where(eq(shopThemePublishes.tenantId, tenantId)).orderBy(desc(shopThemePublishes.publishedAt), desc(shopThemePublishes.id)).limit(50)
-  const history = rows.map((x) => ({ revision: x.r, publishedAt: x.p.publishedAt, publishedByEmail: x.p.publishedByEmail }))
+  const history = await published(tx, tenantId, 50)
   const live = history[0] ?? null
   return { live, draft: await openDraft(tx, tenantId), history, previous: history.find((h) => h.revision.id !== live?.revision.id)?.revision ?? null }
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+
 /** A revision of this shop, or null (another shop's id reads the same as a missing one). */
 export async function revisionOf(tx: Tx, tenantId: string, id: string): Promise<Revision | null> {
-  if (!/^[0-9a-f-]{36}$/.test(id)) return null
+  if (!UUID.test(id)) return null
   const [r] = await tx.select().from(shopThemeRevisions).where(and(eq(shopThemeRevisions.tenantId, tenantId), eq(shopThemeRevisions.id, id))).limit(1)
   return r ?? null
 }
 
-/** A new draft (Try a theme, Restore, the first edit after a publish): replaces the open draft, if any. */
-export async function newDraft(tx: Tx, tenantId: string, who: Who, d: { themeKey: string; themeVersion: string; styleKey: string; settings: object }): Promise<Revision> {
+/**
+ * A new draft (Try a theme, Restore): replaces the open draft, if any. With `reuse` (Customize), an open draft is kept
+ * and returned instead: read under the lock, so two tabs opening Customize at once share one draft.
+ */
+export async function newDraft(tx: Tx, tenantId: string, who: Who, d: { themeKey: string; themeVersion: string; styleKey: string; settings: object }, opts: { reuse?: boolean } = {}): Promise<Revision> {
   await lockShop(tx, tenantId)
   const old = await openDraft(tx, tenantId)
+  if (old && opts.reuse) return old
   if (old) await tx.delete(shopThemeRevisions).where(and(eq(shopThemeRevisions.tenantId, tenantId), eq(shopThemeRevisions.id, old.id)))
   const [r] = await tx.insert(shopThemeRevisions).values({
     tenantId, ...d, createdBy: who.userId, createdByEmail: who.email, updatedBy: who.userId, updatedByEmail: who.email,
@@ -89,8 +95,7 @@ export async function publishRevision(tx: Tx, tenantId: string, who: Who, d: { r
   const [r] = await tx.select().from(shopThemeRevisions).where(and(eq(shopThemeRevisions.tenantId, tenantId), eq(shopThemeRevisions.id, d.revisionId))).for('update')
   if (!r) return 'gone'
   if (r.version !== d.version) return 'stale'
-  const live = await latestPublish(tx, tenantId)
-  if (!live) {
+  if (!(await liveRevision(tx, tenantId))) {
     // Lazy baseline (plan § T1·1): the shop's look before its first publish, so History and Undo have it.
     const b = d.baseline()
     const [base] = await tx.insert(shopThemeRevisions).values({ tenantId, ...b, createdAt: new Date(Date.now() - 1000), createdBy: SYSTEM, updatedBy: SYSTEM }).returning()
@@ -100,11 +105,16 @@ export async function publishRevision(tx: Tx, tenantId: string, who: Who, d: { r
   return 'ok'
 }
 
-/** Undo after publish: the look before the live one goes live again (a new publish row; history keeps both). */
-export async function undoPublish(tx: Tx, tenantId: string, who: Who): Promise<Revision | null> {
+/**
+ * Undo after publish: the look before the live one goes live again (a new publish row; history keeps both). Only
+ * from the live look the person saw (`expectLive`): another publish since then refuses ('moved'). A second Undo
+ * brings the undone look back (the previous look is the newest one that isn't live): that is intended.
+ */
+export async function undoPublish(tx: Tx, tenantId: string, who: Who, expectLive: string): Promise<Revision | 'none' | 'moved'> {
   await lockShop(tx, tenantId)
   const l = await lookFor(tx, tenantId)
-  if (!l.previous) return null
+  if (l.live?.revision.id !== expectLive) return 'moved'
+  if (!l.previous) return 'none'
   await tx.insert(shopThemePublishes).values({ tenantId, revisionId: l.previous.id, publishedBy: who.userId, publishedByEmail: who.email })
   return l.previous
 }

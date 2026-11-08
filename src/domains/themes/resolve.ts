@@ -56,10 +56,20 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
   return { key: m.key, version: m.version, style: style.key, schemes, settings, home }
 }
 
-/** A shop that has never published a theme: Classic, from the two settings it has always had (themes plan T0). */
-export function classicFromSettings(accent: string, displayFont: string): ResolvedTheme {
+/**
+ * A shop's look before it ever published: Classic, from the two settings it has always had (themes plan T0). The one
+ * definition: the lazy baseline row on first publish and the first draft read it; migration 0032's backfill is its
+ * SQL twin (SQL can't import this; keep the two equal).
+ */
+export function baselineRevision(accent: string, displayFont: string) {
   const pairing: Pairing = (PAIRINGS as readonly string[]).includes(displayFont) ? (displayFont as Pairing) : 'fraunces'
-  return resolveTheme(manifestOf('classic', '1.0.0')!, { style: accent, settings: { pairing } })
+  return { themeKey: 'classic', themeVersion: '1.0.0', styleKey: accent, settings: { settings: { pairing } } }
+}
+
+/** A shop that has never published a theme: its baseline, resolved. */
+export function classicFromSettings(accent: string, displayFont: string): ResolvedTheme {
+  const b = baselineRevision(accent, displayFont)
+  return resolveTheme(manifestOf(b.themeKey, b.themeVersion)!, { style: b.styleKey, ...b.settings })
 }
 
 /** A published (or previewed) revision as stored, resolved; an unknown theme or version falls back to Classic. */

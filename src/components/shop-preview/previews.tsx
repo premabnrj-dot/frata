@@ -31,6 +31,8 @@ export type ShopFacts = PolicyFacts & {
   gstin: string | null
   defaultHsn: string
   invoiceSeries: string
+  /** The published look's paper tokens and display face, for the brand and footer previews (Settings › Brand). */
+  look?: { vars: Record<string, string>; display: string }
 }
 
 const inr = (p: number) => formatInr(paise(p))
@@ -55,8 +57,8 @@ export { Pieces } from '@/components/storefront/policy'
 export function FooterPreview({ f }: { f: ShopFacts }) {
   return (
     <Frame label="Footer on every page">
-      <div data-store-theme="" data-accent={f.accent} className="space-y-1.5 p-4 text-[13px] leading-relaxed">
-        <b className="block text-base" style={{ fontFamily: displayFamily(f.displayFont) }}>{f.shopName}</b>
+      <div data-store-theme="" data-accent={f.accent} style={f.look?.vars} className="space-y-1.5 p-4 text-[13px] leading-relaxed">
+        <b className="block text-base" style={{ fontFamily: f.look?.display ?? displayFamily(f.displayFont) }}>{f.shopName}</b>
         {f.tagline && <p className="text-store-sub">{f.tagline}</p>}
         <p>Contact · Shipping · Returns · Privacy · Terms</p>
         <p className="text-store-sub">{f.legalName || <Missing>legal business name</Missing>} · {f.address || <Missing>registered address</Missing>}</p>
@@ -70,14 +72,14 @@ export function FooterPreview({ f }: { f: ShopFacts }) {
 export function BrandPreview({ f }: { f: ShopFacts }) {
   return (
     <Frame label={`${f.slug}.${f.shopDomain}`}>
-      <div data-store-theme="" data-accent={f.accent}>
+      <div data-store-theme="" data-accent={f.accent} style={f.look?.vars}>
         <div className="flex items-center justify-between border-b border-store-line px-4 py-2.5">
-          <span className="text-[15px] font-semibold tracking-[0.14em]" style={{ fontFamily: displayFamily(f.displayFont) }}>{f.shopName.toUpperCase()}</span>
+          <span className="text-[15px] font-semibold tracking-[0.14em]" style={{ fontFamily: f.look?.display ?? displayFamily(f.displayFont) }}>{f.shopName.toUpperCase()}</span>
           <span className="size-2 rounded-full bg-store-accent" aria-label="Your accent colour" />
         </div>
         <div className="space-y-2 p-4">
           <div className="aspect-[4/5] w-full rounded-sm bg-store-chip" aria-hidden="true" />
-          <p className="text-lg" style={{ fontFamily: displayFamily(f.displayFont) }}>Linen kurta set</p>
+          <p className="text-lg" style={{ fontFamily: f.look?.display ?? displayFamily(f.displayFont) }}>Linen kurta set</p>
           <p className="font-mono text-sm">₹2,490</p>
           <div className="flex gap-1.5">{['S', 'M', 'L'].map((s, i) => <span key={s} className={`grid h-9 w-11 place-items-center rounded-sm border text-sm ${i === 1 ? 'border-store-ink' : 'border-store-line'}`}>{s}</span>)}</div>
           <span className="grid h-10 place-items-center rounded-sm bg-store-ink text-sm text-white">Add to bag</span>
@@ -98,7 +100,7 @@ export function PolicyPreview({ f, page, override }: { f: ShopFacts; page: Polic
   return (
     <Frame label={`${f.slug}.${f.shopDomain}/${page === 'contact' ? 'contact' : `policies/${page}`}`}>
       <div data-store-theme="" data-accent={f.accent} className="space-y-2.5 p-4 text-[13px] leading-relaxed">
-        <b className="block text-lg font-medium" style={{ fontFamily: displayFamily(f.displayFont) }}>{title}</b>
+        <b className="block text-lg font-medium" style={{ fontFamily: f.look?.display ?? displayFamily(f.displayFont) }}>{title}</b>
         <PolicyBody page={page} facts={f} override={override} />
         {page === 'contact' && f.whatsapp && <p className="underline">Message {f.shopName} on WhatsApp</p>}
       </div>

@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.8.0
+  version: 2.9.0
   verified: 2026-11-07
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -217,24 +217,37 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   (`src/components/modules/slots.tsx`), the outbox cron, the console layout, the
   webhooks. Add a filler to `FILLERS`, not an import to a core page.
 
-## Themes (T0 built 2026-11-08; spec docs/specs/2026-11-08-themes.md)
+## Themes (T0, T1 built 2026-11-08; spec docs/specs/2026-11-08-themes.md, plan docs/plans/2026-11-08-themes.md)
 
 - A shop's look is **data over one section library**: `src/domains/themes/` (types, `resolveTheme` — the ONE merge
-  of manifest → style → the merchant's layer — `contrast`, section SAVE schemas) and
-  `src/components/storefront/sections/` (server components). Rendering reads only `ResolvedTheme`.
+  of manifest → style → the merchant's layer — `contrast`, section SAVE schemas, `readinessOf`, `carryOver`,
+  `diffLayers`, `baselineRevision`) and `src/components/storefront/sections/` (server components). Rendering reads
+  only `ResolvedTheme`; settings reach CSS as `--store-*` custom properties and `data-*` attributes on the shell.
 - **Manifests** are typed files `src/domains/themes/catalogue/<theme>/<semver>.ts`, listed in `catalogue/index.ts`.
   A released file never changes; a new version is a new file. Theme colours live there and nowhere else
   (`check:hex` QUOTED rule).
-- **Section schemas change additively only** (a new optional field with a default); a breaking change is a new
-  section key. `sections-snapshot.test.ts` fails anything else. Shape lives in the save schema; publish/render
-  readiness is a separate pure check (T1).
-- **Sources** (`src/domains/storefront/sources.ts`) pick a section's products: pure, listed only, newest by `since`.
-  Never by cost or margin (the order reaches the shopper; ADR-0003).
+- **Section schemas change additively only** (a new optional field with a default; never a narrower bound); a
+  breaking change is a new section key. `sections-snapshot.test.ts` + `fixtures/stored-sections-v1.json` fail
+  anything else. Shape is the save schema; what blocks a publish is `readinessOf` (a separate pure check).
+- **Sources** (`src/domains/storefront/sources.ts`) pick a section's products: pure, listed only, newest by `since`,
+  Best sellers by **delivered units** (`shopBestSellers`: ids only, cached an hour). Never by cost or margin
+  (ADR-0003).
+- **Looks: `src/lib/themes/look.ts` is the one module that reads or writes them.** Live = the latest
+  `shop_theme_publishes` row (published_at, then id): derived, never stored; the storefront reads it through
+  `liveRevision`. Draft = the newest revision with no publish row, at most one (replaced under the per-shop advisory
+  lock `look:<tenant>`). Publishes are append-only; a published revision is frozen by `app_theme_revision_frozen`.
+  Saves and publishes lock the row and check its `version`; Undo names the live revision it saw. The first publish
+  of a shop with no publish row records its baseline (`baselineRevision`; migration 0032 is its SQL twin).
+- **Writes** are `src/app/(console)/console/look/actions.ts` (all `asMember`, a support visit refused). Every image
+  in a layer is rebuilt by `acceptedBase(…, 'theme')` for this shop; uploads go to `tenants/<id>/theme/`.
+- **Preview** `/console/theme-preview/<revision>/…` (route group `(lookpreview)`, no-store, noindex) is the ONLY
+  framed route: SAMEORIGIN + `frame-ancestors 'self'`, only on the console host (`next.config.ts`,
+  `framing.test.ts`). The customizer talks to it by `postMessage`, same origin and `e.source` checked.
 - **check:theme** is a vitest (`src/domains/themes/__tests__/check-theme.test.ts`): manifests are TS. It holds
   styles 1–5, allowed sections, sources, ≤ 20 sections and contrast for every scheme.
-- A shop with no published theme renders **Classic from `accent` and `display_font`** (`classicFromSettings`).
 - **Any storefront change** runs e2e `05-shop-look` (pixel diff against `e2e/baselines/`); an intended change
-  regenerates them in the same commit: `UPDATE_BASELINES=1 npm run e2e -- --only shop-look`.
+  regenerates them in the same commit: `UPDATE_BASELINES=1 npm run e2e -- --only shop-look`. Look's state changes:
+  `look.int.test.ts` (real Postgres) and e2e `47-look`.
 
 ## Outside world (ADR-0006)
 
