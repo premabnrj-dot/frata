@@ -109,7 +109,11 @@ async function coreShop(tenantId: string): Promise<StoreShop | null> {
 // ── The catalogue: every product a list can show, and the collections ───────────
 
 export type StoreImage = { id: string; base: string; widths: number[]; width: number; height: number; optionValue: string | null; alt: string }
-export type StoreVariant = { id: string; values: string[]; sku: string | null; price: number; compareAt: number | null; stock: number; whenOut: 'stop' | 'preorder' | 'made_to_order'; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; preorderFull: boolean; restockedAt: string | null }
+export type StoreVariant = { id: string; values: string[]; sku: string | null; price: number
+  /** The 30-day prior price when the price was cut within 30 days (derived); null otherwise. */
+  compareAt: number | null
+  /** The tag's M.R.P. as the merchant typed it (never struck through). */
+  mrp: number | null; stock: number; whenOut: 'stop' | 'preorder' | 'made_to_order'; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; preorderFull: boolean; restockedAt: string | null }
 export type StoreColour = { value: string; family: string | null; hex: string | null; cropImageId: string | null; crop: { x: number; y: number; r: number } | null }
 export type StoreCard = {
   id: string; handle: string; title: string; status: string; publishAt: string | null; since: string
@@ -131,15 +135,25 @@ const MAX_LISTED = 600
  */
 const variantCols = (tenantId: string) => ({
   owed: owedSql(tenantId, new Date()),
-  id: variants.id, productId: variants.productId, values: variants.optionValues, sku: variants.sku, price: variants.price, compareAt: variants.compareAt,
+  id: variants.id, productId: variants.productId, values: variants.optionValues, sku: variants.sku, price: variants.price,
+  // The struck "was" price is DERIVED, never typed (E-Commerce Amendment Rules 2026, from 1 Jan 2027; offers O·2 plan
+  // review 10): the lowest price in the 30 days before today's price took effect (the price carried into that window
+  // included), shown only within 30 days of that change. A raise-then-cut never shows a saving. The merchant's typed
+  // compare-at is the tag's M.R.P. (`mrp`), never struck through.
+  compareAt: sql<string | null>`(select case when c.f > now() - interval '30 days' then (
+      select min(h.price) from price_history h where h.tenant_id = ${tenantId} and h.variant_id = "variants"."id" and h.from_at < c.f
+        and h.from_at >= coalesce((select max(h2.from_at) from price_history h2 where h2.tenant_id = ${tenantId} and h2.variant_id = "variants"."id" and h2.from_at <= c.f - interval '30 days'), '-infinity'::timestamptz))
+    end from (select max(h0.from_at) f from price_history h0 where h0.tenant_id = ${tenantId} and h0.variant_id = "variants"."id") c)`,
+  mrp: variants.compareAt,
   stock: variants.stock, whenOut: variants.whenOut, shipsBy: variants.shipsBy, leadMinDays: variants.leadMinDays, leadMaxDays: variants.leadMaxDays, cap: variants.preorderCap,
   restockedAt: variants.restockedAt,
 })
 const imageCols = { id: productImages.id, productId: productImages.productId, base: productImages.base, widths: productImages.widths, width: productImages.width, height: productImages.height, optionValue: productImages.optionValue, alt: productImages.alt }
 const colourCols = { productId: productColours.productId, value: productColours.value, family: productColours.family, hex: productColours.hex, cropImageId: productColours.cropImageId, crop: productColours.crop }
 
-const toVariant = (v: { id: string; values: string[]; sku: string | null; price: number; compareAt: number | null; stock: number; owed: number; whenOut: string; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; cap: number | null; restockedAt: Date | null }): StoreVariant => ({
-  id: v.id, values: v.values, sku: v.sku, price: Number(v.price), compareAt: v.compareAt === null ? null : Number(v.compareAt),
+const toVariant = (v: { id: string; values: string[]; sku: string | null; price: number; compareAt: string | number | null; mrp: number | null; stock: number; owed: number; whenOut: string; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; cap: number | null; restockedAt: Date | null }): StoreVariant => ({
+  id: v.id, values: v.values, sku: v.sku, price: Number(v.price), compareAt: v.compareAt !== null && Number(v.compareAt) > Number(v.price) ? Number(v.compareAt) : null,
+  mrp: v.mrp === null ? null : Number(v.mrp),
   // Shoppers learn "only N left" at LOW_STOCK_AT or below; above it, the count is not theirs to see.
   stock: Math.min(Math.max(0, v.stock - v.owed), LOW_STOCK_AT + 1), whenOut: v.whenOut as StoreVariant['whenOut'], shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays,
   // No orders before 1C, so pre-orders are full only at a cap of 0; 1C counts them.
