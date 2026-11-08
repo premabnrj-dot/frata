@@ -107,7 +107,7 @@ async function setUp(tx: Tx, tenantId: string, role: MemberRole) {
 
 /** The page's numbers for `period` IST days (today included) against the period before. */
 export async function analyticsFor(tenantId: string, role: MemberRole, period: Period, now = new Date()): Promise<Analytics> {
-  return withTenant(tenantId, (tx) => analyticsIn(tx, tenantId, role, period, now))
+  return withTenant(tenantId, (tx) => analyticsIn(tx, tenantId, role, period, now), { snapshot: true })
 }
 
 /** analyticsFor inside the caller's tenant transaction (the int test reads rows it will roll back). */
@@ -173,7 +173,7 @@ export async function analyticsIn(tx: Tx, tenantId: string, role: MemberRole, pe
  */
 export async function sourcePage(tenantId: string, role: MemberRole, period: Period, slug: string, now = new Date()) {
   if (!/^[a-z0-9-]{1,64}$/.test(slug)) return null
-  return withTenant(tenantId, (tx) => sourcePageIn(tx, tenantId, role, period, slug, now))
+  return withTenant(tenantId, (tx) => sourcePageIn(tx, tenantId, role, period, slug, now), { snapshot: true })
 }
 
 /** sourcePage inside the caller's tenant transaction: the list's numbers and the source's orders in one snapshot. */
@@ -196,18 +196,22 @@ export async function sourcePageIn(tx: Tx, tenantId: string, role: MemberRole, p
        where o.tenant_id = ${tenantId} and o.placed_at >= ${start.toISOString()}::timestamptz and (${standingSql('o')} or ${holdingSql(now, 'o')})`)
     const mine = tuples.filter((t) => sourceOf(t).slug === slug)
     if (!mine.length) return { stat, orders: [] }
-    const eq = (col: SQL, v: string | null) => sql`${col} is not distinct from ${v}`
-    const match = sql.join(mine.map((t) => sql`(${eq(sql`o.checkout -> 'attribution' ->> 'utm_source'`, t.us)} and ${eq(sql`o.checkout -> 'attribution' ->> 'utm_medium'`, t.um)}
-      and ${eq(sql`o.checkout -> 'attribution' ->> 'ref_host'`, t.rh)}
-      and coalesce(jsonb_exists_any(o.checkout -> 'attribution', array['gclid', 'gbraid', 'wbraid', 'gad_source']), false) = ${t.gads}
-      and coalesce(jsonb_exists(o.checkout -> 'attribution', 'srsltid'), false) = ${t.srs} and coalesce(jsonb_exists(o.checkout -> 'attribution', 'fbclid'), false) = ${t.fb}
-      and ${eq(sql`dc.code`, t.cc)})`), sql` or `)
+    // The source's raw tuples as ONE parameter, hash-joined (security review A1·7: an OR per tuple let a shopper typing
+    // many tag variants push a real source's page past the timeout or Postgres's parameter limit). A null compares as
+    // chr(1), which no stored value holds (cleanValue strips control characters), so the join stays an equality.
+    const keys = JSON.stringify(mine.map((t) => ({ us: t.us, um: t.um, rh: t.rh, gads: t.gads, srs: t.srs, fb: t.fb, cc: t.cc })))
+    const k = (col: SQL) => sql`coalesce(${col}, chr(1))`
     const list = await tx.execute<{ number: number; placed_at: Date | string; total: string; stage: Stage; campaign: string | null }>(sql`
       select o.number, o.placed_at, o.total, ${stageSql('o')} stage, o.checkout -> 'attribution' ->> 'utm_campaign' campaign
         from ${orders} o
         left join (${orderDiscounts} od join ${discountCodes} dc on dc.tenant_id = od.tenant_id and dc.id = od.code_id and dc.label is not null)
           on od.tenant_id = o.tenant_id and od.order_id = o.id and ${useOfRowSql(now)}
-       where o.tenant_id = ${tenantId} and o.placed_at >= ${start.toISOString()}::timestamptz and (${standingSql('o')} or ${holdingSql(now, 'o')}) and (${match})
+        join jsonb_to_recordset(${keys}::jsonb) m(us text, um text, rh text, gads boolean, srs boolean, fb boolean, cc text)
+          on ${k(sql`o.checkout -> 'attribution' ->> 'utm_source'`)} = ${k(sql`m.us`)} and ${k(sql`o.checkout -> 'attribution' ->> 'utm_medium'`)} = ${k(sql`m.um`)}
+         and ${k(sql`o.checkout -> 'attribution' ->> 'ref_host'`)} = ${k(sql`m.rh`)} and ${k(sql`dc.code`)} = ${k(sql`m.cc`)}
+         and coalesce(jsonb_exists_any(o.checkout -> 'attribution', array['gclid', 'gbraid', 'wbraid', 'gad_source']), false) = m.gads
+         and coalesce(jsonb_exists(o.checkout -> 'attribution', 'srsltid'), false) = m.srs and coalesce(jsonb_exists(o.checkout -> 'attribution', 'fbclid'), false) = m.fb
+       where o.tenant_id = ${tenantId} and o.placed_at >= ${start.toISOString()}::timestamptz and (${standingSql('o')} or ${holdingSql(now, 'o')})
        order by o.placed_at desc limit 50`)
     return { stat, orders: list.map((o) => ({ number: o.number, placedAt: new Date(o.placed_at), total: Number(o.total), stage: o.stage, campaign: o.campaign })) }
   }

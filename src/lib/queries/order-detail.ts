@@ -52,7 +52,7 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
       select dc.label, dc.code from ${orderDiscounts} od
         join ${discountCodes} dc on dc.tenant_id = od.tenant_id and dc.id = od.code_id and dc.label is not null
         join ${orders} o on o.tenant_id = od.tenant_id and o.id = od.order_id
-       where od.tenant_id = ${tenantId} and od.order_id = ${o.id} and ${useOfRowSql(now)} limit 1`),
+       where od.tenant_id = ${tenantId} and od.order_id = ${o.id} and ${useOfRowSql(now)} order by od.created_at, dc.code limit 1`),
     ])
     const offers = offerRows.map((d) => ({ ...d, amount: Number(d.amount) }))
     // Where it came from, by Analytics' one classifier (its label is text the page renders, never a link).
