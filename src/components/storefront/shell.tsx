@@ -20,7 +20,7 @@ export function ShopShell({ shop, href, banner, children, gated = false, live = 
       {banner}
       <header className="border-b border-store-line">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
-          <Link href={href('/')} className="mr-auto text-lg font-semibold tracking-[0.12em] sm:text-xl" style={{ fontFamily: displayFamily(t.settings.pairing) }}>
+          <Link href={href('/')} className="mr-auto text-lg font-semibold tracking-[0.12em] sm:text-xl" style={{ fontFamily: 'var(--store-display)' }}>
             {shop.logoUrl ? <img src={shop.logoUrl} alt={shop.shopName} className="h-8 w-auto" /> : shop.shopName.toUpperCase()}
           </Link>
           {!gated && <nav aria-label="Shop" className="-mr-2 flex gap-1 overflow-x-auto text-sm">
@@ -41,13 +41,13 @@ export function ShopShell({ shop, href, banner, children, gated = false, live = 
   )
 }
 
-/** The footer on every page, and in Settings' footer preview. */
+/** The footer on every page (inside the shell, which sets --store-display). */
 export function ShopFooter({ f, href }: { f: ShellShop; href: Href }) {
   return (
     <footer className="mt-16 border-t border-store-line bg-store-chip/50">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-sm sm:grid-cols-3 sm:px-6">
         <div className="space-y-2">
-          <p className="text-lg" style={{ fontFamily: displayFamily(f.displayFont) }}>{f.shopName}</p>
+          <p className="text-lg" style={{ fontFamily: 'var(--store-display)' }}>{f.shopName}</p>
           {f.tagline && <p className="text-store-sub">{f.tagline}</p>}
           <p className="flex gap-4">
             {f.instagram && <a href={igLink(f.instagram)} rel="noopener" className="underline underline-offset-4">Instagram</a>}

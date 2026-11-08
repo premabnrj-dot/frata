@@ -34,7 +34,7 @@ const QUOTED_OK = [
   [/^src\/domains\/themes\/catalogue\//, 'theme manifests: a shop theme\'s colours are its data (check:theme holds their contrast)'],
   [/\/__tests__\//, 'tests state colours they assert'],
   [/^src\/components\/brand\/mark-paths\.ts$/, 'the frrata mark rasterised for icons and OG images, where CSS tokens cannot reach'],
-  [/^src\/app\/\(console\)\/console\/products\/_components\/colours-panel\.tsx$/, 'a product colour swatch: the merchant\'s own colour value, not a UI colour'],
+  [/^src\/app\/\(console\)\/console\/products\/_components\/colours-panel\.tsx$/, 'the native colour input needs a starting value before the merchant picks a product colour'],
 ]
 
 /** Comment-only lines, in both TS and CSS. */
@@ -63,10 +63,8 @@ for (const file of walk(ROOT)) {
     const quoted = QUOTED_OK.some(([r]) => r.test(rel)) ? [] : (line.match(QUOTED) ?? [])
     const hits = [...(line.match(BAD) ?? []), ...quoted]
     if (!hits.length) continue
-    {
-      console.error(`${rel}:${i + 1}  ${hits.join(', ')}`)
-      failures += hits.length
-    }
+    console.error(`${rel}:${i + 1}  ${hits.join(', ')}`)
+    failures += hits.length
   }
 }
 

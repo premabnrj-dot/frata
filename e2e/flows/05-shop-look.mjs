@@ -39,12 +39,16 @@ async function warm(url) {
     if (html === last) return
     last = html; await new Promise((r) => setTimeout(r, 600))
   }
+  throw new Error(`${url} never settled: its HTML kept changing for 12 s`)
 }
 
 async function shoot(page, url) {
   if (url.startsWith(SHOP)) await warm(url)
   await page.goto(url, { waitUntil: 'networkidle' })
   await page.evaluate(() => document.fonts.ready)
+  // Lazy images below the fold: scroll through once so every image has loaded (or failed) before the capture.
+  await page.evaluate(async () => { for (let y = 0; y < document.body.scrollHeight; y += 600) { window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 50)) } window.scrollTo(0, 0) })
+  await page.waitForLoadState('networkidle')
   return page.screenshot({ fullPage: true, animations: 'disabled', caret: 'hide', mask: [page.getByText(DATES)], maskColor: '#FF00FF' })
 }
 
@@ -79,7 +83,7 @@ export default {
     }
     await t.step('the console preview of the shop matches its baseline', async () => {
       const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 })
-      const p = await ctx.newPage()
+      const p = await ctx.newPage(); p.on('pageerror', (e) => t.errors.push(e.message))
       written += compare('console-preview-desktop', await shoot(p, CONSOLE + '/console/preview'), t).written ? 1 : 0
       await ctx.close()
     })

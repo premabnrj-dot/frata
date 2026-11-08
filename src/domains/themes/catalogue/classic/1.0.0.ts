@@ -1,7 +1,7 @@
 import type { Scheme, Style, ThemeManifest } from '../../types'
 
 // Classic 1.0.0 — today's shop, exactly (themes plan T0·4). Its colours are the --store-* values the shop has
-// always used (globals.css [data-store-theme]); __tests__/classic.test.ts holds them equal until T1 removes the CSS copy.
+// always used (globals.css [data-store-theme]); __tests__/check-theme.test.ts holds them equal until T1 removes the CSS copy.
 // Released files never change (a new version is a new file).
 
 const base: Omit<Scheme, 'accent'> = {

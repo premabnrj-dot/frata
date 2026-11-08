@@ -1,4 +1,5 @@
 import { manifestOf } from './catalogue'
+import { SectionSchema } from './sections'
 import { PAIRINGS, type Pairing, type ResolvedTheme, type SchemeKey, type ThemeLayer, type ThemeManifest } from './types'
 
 // =============================================================================
@@ -17,7 +18,9 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
     header: m.allowed.headers.includes(want.header) ? want.header : m.defaults.header,
     footer: m.allowed.footers.includes(want.footer) ? want.footer : m.defaults.footer,
   }
-  const home = (layer.home ?? m.home).filter((s) => m.allowed.sections.includes(s.key))
+  // A stored layer is parsed again here: a section that no longer parses (or that this theme does not allow) is
+  // dropped, never rendered half-valid.
+  const home = (layer.home ?? m.home).flatMap((s) => { const p = SectionSchema.safeParse(s); return p.success && m.allowed.sections.includes(p.data.key) ? [p.data] : [] })
   return { key: m.key, version: m.version, style: style.key, schemes, settings, home }
 }
 

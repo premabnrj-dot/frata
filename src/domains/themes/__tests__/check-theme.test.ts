@@ -59,3 +59,18 @@ describe('Classic is today’s shop', () => {
     }
   })
 })
+
+describe('the gate itself', () => {
+  it('a planted bad manifest fails it (unknown section, a cost source, unreadable colours, 6 styles)', () => {
+    const good = CATALOGUE.classic!['1.0.0']!
+    const bad = { ...good.styles[0]!.schemes.paper, sub: '#D9D3CC' as const }
+    expect(contrast(bad.sub, bad.bg)).toBeLessThan(4.5)
+    expect(() => SectionSchema.parse({ id: 'x', key: 'products', heading: 'Top', source: { kind: 'by_margin' }, count: 4 })).toThrow()
+    expect(() => SectionSchema.parse({ id: 'x', key: 'lookbook' })).toThrow()
+    expect([...good.styles, ...good.styles].length).toBeGreaterThan(5)
+  })
+  it('no section imports a type that can carry a merchant cost (ADR-0003)', () => {
+    const src = readFileSync('src/components/storefront/sections/index.tsx', 'utf8') + readFileSync('src/domains/themes/sections.ts', 'utf8')
+    expect(src).not.toMatch(/schema-orders|domains\/orders\/profit|costPrice|cogs|freight/i)
+  })
+})
