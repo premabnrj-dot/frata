@@ -19,7 +19,7 @@ import type { ShowOffer } from '@/domains/checkout/offer-showcase'
 import type { Tx } from '@/lib/db'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 import { cleanRules, matches } from '@/domains/catalogue/collection-rules'
-import { productFacts } from './catalogue'
+import { productFactsIn } from './catalogue'
 
 // =============================================================================
 // WHAT A SHOPPER'S PAGE READS (storefront spec 2026-11-07, § Review findings).
@@ -337,7 +337,7 @@ export const shopAnnouncement = shopCached('announce', 'shop', (tenantId) => wit
   const [r] = await tx.select({
     title: discounts.title, style: discounts.style, percentBps: discounts.percentBps, amountOff: discounts.amountOff, minSubtotal: discounts.minSubtotal, listed: discounts.listed,
     startsAt: discounts.startsAt, endsAt: discounts.endsAt, startedAt: discounts.startedAt, pausedAt: discounts.pausedAt, endedAt: discounts.endedAt, code: discountCodes.code,
-  }).from(discounts).leftJoin(discountCodes, and(eq(discountCodes.tenantId, discounts.tenantId), eq(discountCodes.discountId, discounts.id)))
+  }).from(discounts).leftJoin(discountCodes, and(eq(discountCodes.tenantId, discounts.tenantId), eq(discountCodes.discountId, discounts.id), isNull(discountCodes.label)))
     .where(and(eq(discounts.tenantId, tenantId), eq(discounts.announce, true))).limit(1)
   if (!r) return null
   const iso = (d: Date | null) => (d ? d.toISOString() : null)
@@ -351,17 +351,18 @@ export const shopCatalogue = shopCached('catalogue', 'catalogue', (t) => coreCat
  * the collections list uses) — for product offers' targets (offers O·2 plan review 9). Product ids only; cached with the
  * catalogue (60 s), so a product joining a rule collection reaches its offer within a minute.
  */
-export const collectionMembers = shopCached('collection-members', 'catalogue', async (tenantId): Promise<Record<string, string[]>> => {
-  const [cols, picked] = await withTenant(tenantId, async (tx) => [
-    await tx.select({ id: collections.id, kind: collections.kind, matchAll: collections.matchAll, rules: collections.rules }).from(collections).where(eq(collections.tenantId, tenantId)),
-    await tx.select({ collectionId: collectionProducts.collectionId, productId: collectionProducts.productId }).from(collectionProducts).where(eq(collectionProducts.tenantId, tenantId)),
-  ] as const)
+/** collectionMembers, in the caller's tenant transaction: placement prices with members read now, under its locks. */
+export async function collectionMembersIn(tx: Tx, tenantId: string): Promise<Record<string, string[]>> {
+  const cols = await tx.select({ id: collections.id, kind: collections.kind, matchAll: collections.matchAll, rules: collections.rules }).from(collections).where(eq(collections.tenantId, tenantId))
+  const picked = await tx.select({ collectionId: collectionProducts.collectionId, productId: collectionProducts.productId }).from(collectionProducts).where(eq(collectionProducts.tenantId, tenantId))
   const auto = cols.filter((c) => c.kind === 'auto')
-  const facts = auto.length ? await productFacts(tenantId) : []
+  const facts = auto.length ? await productFactsIn(tx, tenantId) : []
   return Object.fromEntries(cols.map((c) => [c.id, c.kind === 'auto'
     ? facts.filter((f) => matches(cleanRules(c.rules), c.matchAll === 1, f)).map((f) => f.id)
     : picked.filter((p) => p.collectionId === c.id).map((p) => p.productId)]))
-})
+}
+
+export const collectionMembers = shopCached('collection-members', 'catalogue', (tenantId): Promise<Record<string, string[]>> => withTenant(tenantId, (tx) => collectionMembersIn(tx, tenantId)))
 const shopHandles = shopCached('handles', 'catalogue', (t) => coreHandles(t, false))
 const shopProductRow = shopCached('product', 'catalogue', (t, handle: string) => coreProduct(t, handle, false))
 export async function shopProduct(tenantId: string, handle: string): Promise<Lookup> {

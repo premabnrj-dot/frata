@@ -10,7 +10,7 @@ import { withTenant } from '@/lib/db/tenant'
 import { holdingSql, momentColumns, owedSql, standingSql } from '@/lib/db/order-predicates'
 import { discountUses, liveDiscountSql } from '@/lib/db/discount-predicates'
 import { discountCodes, discountTargets, discountTiers, discounts, orderDiscounts } from '@/lib/db/schema-discounts'
-import { collectionMembers } from './storefront'
+import { collectionMembers, collectionMembersIn } from './storefront'
 import { canTakeOnline, keysFor } from '@/lib/payments/keys'
 
 // =============================================================================
@@ -71,7 +71,8 @@ export async function checkoutShop(tx: Tx, tenantId: string): Promise<CheckoutSh
  * function (ADR-0003). An offer whose limit or budget is already reached is left out, so the bag never shows what
  * placement would refuse; placement re-counts under a lock and stays the authority (plan review 12).
  */
-export async function liveOffers(tx: Tx, tenantId: string, now: Date): Promise<DiscountTerms[]> {
+/** `fresh`: placement — collection members read now in `tx` (under its locks), never the 60 s cache. */
+export async function liveOffers(tx: Tx, tenantId: string, now: Date, o: { fresh?: boolean } = {}): Promise<DiscountTerms[]> {
   // The offer's ONE public code (label null) only: a creator code is never listed (O·2 plan review 2).
   const rows = await tx.select({
     id: discounts.id, title: discounts.title, style: discounts.style, percentBps: discounts.percentBps, amountOff: discounts.amountOff, cap: discounts.cap,
@@ -94,7 +95,7 @@ export async function liveOffers(tx: Tx, tenantId: string, now: Date): Promise<D
     tx.select({ discountId: discountTiers.discountId, min: discountTiers.minSubtotal, percentBps: discountTiers.percentBps, amountOff: discountTiers.amountOff }).from(discountTiers)
       .where(and(eq(discountTiers.tenantId, tenantId), inArray(discountTiers.discountId, ids))),
   ])
-  const members = targets.some((t) => t.collectionId) ? await collectionMembers(tenantId) : {}
+  const members = targets.some((t) => t.collectionId) ? (o.fresh ? await collectionMembersIn(tx, tenantId) : await collectionMembers(tenantId)) : {}
   const productsOf = (id: string) => [...new Set(targets.filter((t) => t.discountId === id).flatMap((t) => (t.productId ? [t.productId] : members[t.collectionId!] ?? [])))]
   return live.map((r) => ({
     id: r.id, title: r.title, style: r.style as DiscountStyle, percentBps: r.percentBps, amountOff: r.amountOff === null ? null : Number(r.amountOff), cap: r.cap === null ? null : Number(r.cap),

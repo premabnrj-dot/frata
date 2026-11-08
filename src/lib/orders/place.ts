@@ -78,7 +78,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
 
     const rows = await variantRows(tx, tenantId, input.bag.map((b) => b.variantId), now, { lock: true })
     const typed = await codeFor(tx, tenantId, input.code, now)
-    const offers = await fitOffers(tx, tenantId, await liveOffers(tx, tenantId, now), (o) => quote(input.bag, rows, shop, now, input.address.pincode, { offers: o, code: typed }), input, typed, now)
+    const offers = await fitOffers(tx, tenantId, await liveOffers(tx, tenantId, now, { fresh: true }), (o) => quote(input.bag, rows, shop, now, input.address.pincode, { offers: o, code: typed }), input, typed, now)
     const q = quote(input.bag, rows, shop, now, input.address.pincode, { offers, code: typed })
     if (q.empty) return { kind: 'refused', status: 422, error: 'Nothing in your bag can be bought right now.', quote: q }
     if (q.missing.length || q.lines.some((l) => l.problem) || totalFor(q, input.method) !== input.expectedTotal) return { kind: 'changed', quote: q }

@@ -5,6 +5,7 @@ import { availability, type WhenOut } from '@/domains/catalogue/availability'
 import { matches, type ProductFacts, type Rule } from '@/domains/catalogue/collection-rules'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { withTenant } from '@/lib/db/tenant'
+import type { Tx } from '@/lib/db'
 import { shopSettings, tenants } from '@/lib/db/schema'
 
 // The console's catalogue reads (1A). Every one inside withTenant with an
@@ -96,8 +97,8 @@ export async function typesFor(tenantId: string) {
 export type FactsRow = ProductFacts & { id: string; title: string; handle: string; status: string; cover: { base: string; widths: number[] } | null }
 
 /** Every product's facts for collection rules (collection-rules.ts), in one transaction. */
-export async function productFacts(tenantId: string, now = new Date()): Promise<FactsRow[]> {
-  return withTenant(tenantId, async (tx) => {
+/** Every product's facts for collection rules, in the caller's tenant transaction (placement reads them fresh). */
+export async function productFactsIn(tx: Tx, tenantId: string, now = new Date()): Promise<FactsRow[]> {
     const ps = await tx.select({ id: products.id, title: products.title, handle: products.handle, status: products.status, categoryId: products.taxonomyCategory, tags: products.tags,
       cover: sql<{ base: string; widths: number[] } | null>`(select json_build_object('base', i.base, 'widths', i.widths) from ${productImages} i where i.product_id = "products"."id" and i.tenant_id = ${tenantId} order by i.position limit 1)` })
       .from(products).where(and(eq(products.tenantId, tenantId), sql`${products.status} <> 'archived'`)).orderBy(desc(products.updatedAt)).limit(2000)
@@ -118,7 +119,10 @@ export async function productFacts(tenantId: string, now = new Date()): Promise<
         inStock: mine.some((v) => availability({ ...v, whenOut: v.whenOut as WhenOut }, now).canBuy),
       }
     })
-  })
+}
+
+export async function productFacts(tenantId: string, now = new Date()): Promise<FactsRow[]> {
+  return withTenant(tenantId, (tx) => productFactsIn(tx, tenantId, now))
 }
 
 /** The collections list, each with how many products are in it now. */
