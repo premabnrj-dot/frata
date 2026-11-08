@@ -19,7 +19,7 @@ export function announceText(a: Announced): string {
   return `${what}${a.code ? ` · code ${a.code}` : ''}${till}`
 }
 
-export function AnnounceBar({ a, now = new Date() }: { a: Announced | null; now?: Date }) {
+export function AnnounceBar({ a, now }: { a: Announced | null; now: Date }) {
   if (!a) return null
   const d = (s: string | null) => (s ? new Date(s) : null)
   if (offerStatus({ startedAt: d(a.startedAt), pausedAt: d(a.pausedAt), endedAt: d(a.endedAt), startsAt: new Date(a.startsAt), endsAt: d(a.endsAt) }, now) !== 'live') return null

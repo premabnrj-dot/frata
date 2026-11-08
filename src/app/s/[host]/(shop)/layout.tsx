@@ -10,5 +10,5 @@ export default async function ShopLayout({ children, params }: { children: React
   if (!shop.publishedAt) return <ShopShell shop={shop} href={shopHref} gated><OpeningSoon shop={shop} href={shopHref} /></ShopShell>
   // The offer the merchant put in the bar (offers O·1); a read that fails shows no bar, never an error page.
   const announce = await shopAnnouncement(shop.id).catch(() => null)
-  return <ShopShell shop={shop} href={shopHref} live banner={<AnnounceBar a={announce} />}>{children}</ShopShell>
+  return <ShopShell shop={shop} href={shopHref} live banner={<AnnounceBar a={announce} now={new Date()} />}>{children}</ShopShell>
 }
