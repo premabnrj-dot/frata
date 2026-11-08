@@ -118,3 +118,16 @@ export function mayExtend(now: Date, f: TrialFacts, delivered: number, m: TrialM
 export function extendsAtHandover(now: Date, f: TrialFacts): boolean {
   return !f.extendedAt && !f.endedAt && trialEndsAt(f).getTime() - now.getTime() < EXTENSION_DAYS * DAY
 }
+
+/**
+ * The days a shop is paused for billing (no plan charge accrues; owner 2026-11-08): from its pause until autopay
+ * reopened it, or still running. Null when autopay was set up before the pause. A mandate revoked later pauses the shop
+ * again from the later of the two. `exposedAt`: as TrialMoney.
+ */
+export function pauseWindow(f: TrialFacts, mandateAt: Date | null, revokedAt: Date | null, exposedAt: Date | null = null): { from: Date; to: Date | null } | null {
+  const at = pausesAt(trialEndsAt(f), { mandateActive: false, exposedAt })
+  const active = !!mandateAt && !revokedAt
+  if (active && mandateAt! <= at) return null
+  if (active) return { from: at, to: mandateAt }
+  return { from: revokedAt && revokedAt > at ? revokedAt : at, to: null }
+}

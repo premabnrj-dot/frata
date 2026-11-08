@@ -236,6 +236,33 @@ begin
   return query select at, up;
 end $$;
 --> statement-breakpoint
+-- ── Collection never debits during a trial (A2, E2): the due list carries each shop's trial end (null without one). ──
+drop function if exists app_billing_due();
+--> statement-breakpoint
+create function app_billing_due() returns table (tenant_id uuid, invoice_id uuid, number text, due bigint, test_mode boolean, issued_at timestamptz,
+  mandate boolean, mandate_max bigint, mandate_method text, notice_at timestamptz, attempts int, pending int, last_failed_at timestamptz, acknowledged boolean, trial_ends_at timestamptz)
+  language sql stable security definer set search_path = '' as $$
+  select i.tenant_id, i.id, i.number,
+         i.total - coalesce((select sum(p.amount) from public.frrata_payments p where p.invoice_id = i.id and p.captured_at is not null), 0)
+                 - coalesce((select sum(c.total) from public.frrata_credit_notes c where c.invoice_id = i.id), 0),
+         i.test_mode, i.issued_at,
+         (b.mandate_token_id is not null and b.mandate_revoked_at is null), b.mandate_max, b.mandate_method,
+         (select max(n.created_at) from public.billing_notices n where n.invoice_id = i.id and n.kind = 'debit_notice'),
+         (select count(*)::int from public.frrata_payments p where p.invoice_id = i.id and p.attempt > 0),
+         (select count(*)::int from public.frrata_payments p where p.invoice_id = i.id and p.attempt > 0 and p.captured_at is null and p.failed_at is null),
+         (select max(p.failed_at) from public.frrata_payments p where p.invoice_id = i.id and p.attempt > 0),
+         exists (select 1 from public.billing_notices n where n.invoice_id = i.id and n.kind = 'acknowledge'),
+         public.app_trial_ends_at(i.tenant_id)
+    from public.frrata_invoices i left join public.billing_accounts b on b.tenant_id = i.tenant_id
+   where i.number is not null and i.issued_at > now() - interval '60 days'
+     and i.total > coalesce((select sum(p.amount) from public.frrata_payments p where p.invoice_id = i.id and p.captured_at is not null), 0)
+                 + coalesce((select sum(c.total) from public.frrata_credit_notes c where c.invoice_id = i.id), 0)
+$$;
+--> statement-breakpoint
+revoke all on function app_billing_due() from public, anon, authenticated, service_role;
+--> statement-breakpoint
+grant execute on function app_billing_due() to frata_app;
+--> statement-breakpoint
 revoke all on function app_ist_day_end_after(timestamptz, int), app_trial_ends_at(uuid), app_trial_recompute(uuid), app_tenant_plans_trial_sync(),
   app_trial_clock_starts(), app_trial_extend(uuid), app_trial_staff_check(uuid, text), app_admin_set_trial_settings(uuid, int, int, text),
   app_admin_set_shop_trial(uuid, uuid, int, text), app_admin_extend_trial(uuid, uuid, text), app_admin_end_trial(uuid, uuid, text)

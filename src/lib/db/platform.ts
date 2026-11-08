@@ -174,13 +174,13 @@ export async function shopsToBill(before: Date): Promise<string[]> {
 
 // ── Billing B3: autopay, the system's side (drizzle/0057). Definers; no shop set. ───────────────────────────────
 export type BillingDue = { tenantId: string; invoiceId: string; number: string; due: number; testMode: boolean; issuedAt: Date; mandate: boolean; mandateMax: number | null
-  mandateMethod: string | null; noticeAt: Date | null; attempts: number; pending: number; lastFailedAt: Date | null; acknowledged: boolean }
+  mandateMethod: string | null; noticeAt: Date | null; attempts: number; pending: number; lastFailedAt: Date | null; acknowledged: boolean; trialEndsAt: Date | null }
 export async function billingDue(): Promise<BillingDue[]> {
   const rows = await db().execute<Record<string, unknown>>(sql`select * from app_billing_due()`)
   const d = (v: unknown) => (v ? new Date(v as string) : null)
   return rows.map((r) => ({ tenantId: r.tenant_id as string, invoiceId: r.invoice_id as string, number: r.number as string, due: Number(r.due), testMode: !!r.test_mode, issuedAt: new Date(r.issued_at as string),
     mandate: !!r.mandate, mandateMax: r.mandate_max == null ? null : Number(r.mandate_max), mandateMethod: (r.mandate_method as string) ?? null, noticeAt: d(r.notice_at),
-    attempts: Number(r.attempts), pending: Number(r.pending), lastFailedAt: d(r.last_failed_at), acknowledged: !!r.acknowledged }))
+    attempts: Number(r.attempts), pending: Number(r.pending), lastFailedAt: d(r.last_failed_at), acknowledged: !!r.acknowledged, trialEndsAt: d(r.trial_ends_at) }))
 }
 export async function billingNotice(invoiceId: string, kind: 'debit_notice' | 'failed' | 'acknowledge', amount: number, debitAt: Date | null) {
   await db().execute(sql`select app_billing_notice(${invoiceId}::uuid, ${kind}, ${amount}, ${debitAt ? debitAt.toISOString() : null}::timestamptz)`)

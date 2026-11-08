@@ -36,9 +36,14 @@ describe('computeBill (billing B0, golden months)', () => {
     expect(b.lines.find((l) => l.kind === 'over')).toMatchObject({ quantity: 100, taxable: 0 })
   })
   it('a trial month: free for its days; a small bill rolls once, then invoices', () => {
+    // Trials A2: a trial running on 1 Nov bills no plan on November's invoice; December's makes up 16–30 Nov by days.
     const trial = { ...launch, trialEndsAt: ist(2026, 11, 16) }
-    const b = computeBill(base(11, { plans: [trial] }))
-    expect(b.lines[0]!.taxable).toBe(Math.round(149900 * 15 / 30))
+    expect(computeBill(base(11, { plans: [trial] })).lines.some((l) => l.kind === 'plan' || l.kind === 'change')).toBe(false)
+    const dec = computeBill(base(12, { plans: [trial], prevPlanBilled: 0 }))
+    expect(dec.lines.find((l) => l.kind === 'change')).toMatchObject({ taxable: Math.round(149900 * 15 / 30), description: 'Your plan after the trial last month, by days' })
+    expect(dec.lines.find((l) => l.kind === 'plan')!.taxable).toBe(149900) // December in advance, the trial over
+    // No November invoice at all (a shop that signed up in November): still made up.
+    expect(computeBill(base(12, { plans: [trial], prevPlanBilled: null })).lines.find((l) => l.kind === 'change')!.taxable).toBe(Math.round(149900 * 15 / 30))
     const tiny = computeBill(base(12, { plans: [{ ...launch, trialEndsAt: ist(2027, 1) }], feeOrders: orders(5, 85714, ist(2026, 11, 20)) }))
     expect([tiny.rolled, tiny.taxable, tiny.total]).toEqual([true, 8570, 0])
     const again = computeBill(base(12, { plans: [{ ...launch, trialEndsAt: ist(2027, 1) }], feeOrders: orders(5, 85714, ist(2026, 11, 20)), rolledLastMonth: true }))
@@ -106,6 +111,22 @@ describe('plan changes (billing B4)', () => {
     const b = computeBill(base(12, { plans: down, prevPlanBilled: 499900 }))
     expect(b.lines.some((l) => l.kind === 'change')).toBe(false)
     expect(b.lines[0]).toMatchObject({ taxable: 149900 })
+  })
+})
+
+describe('trials (TR0·3): nothing billed while a trial runs on the 1st; a waiting upgrade; a pause is free', () => {
+  it('an upgrade that waited for the trial end: billed by its days next month, never in advance during the trial', () => {
+    const plans = [{ ...launch, trialEndsAt: ist(2026, 12, 13) }, { ...growth, startsAt: ist(2026, 12, 13), trialEndsAt: null }]
+    expect(computeBill(base(12, { plans })).lines.some((l) => l.kind === 'plan')).toBe(false)
+    const jan = computeBill(base(1 + 12, { plans, prevPlanBilled: 0, monthStart: ist(2027, 1), nextMonthStart: ist(2027, 2), prevMonthStart: ist(2026, 12) }))
+    expect(jan.lines.find((l) => l.kind === 'change')!.taxable).toBe(Math.round(499900 * 19 / 31)) // Growth 13–31 Dec
+    expect(jan.lines.find((l) => l.kind === 'plan')).toMatchObject({ taxable: 499900 })
+  })
+  it('the days a shop is paused cost no plan', () => {
+    const plans = [{ ...launch, trialEndsAt: ist(2026, 12, 13) }]
+    const jan = computeBill(base(13, { plans, prevPlanBilled: 0, monthStart: ist(2027, 1), nextMonthStart: ist(2027, 2), prevMonthStart: ist(2026, 12), pause: { from: ist(2026, 12, 20), to: null } }))
+    expect(jan.lines.find((l) => l.kind === 'change')!.taxable).toBe(Math.round(149900 * 19 / 31) - Math.round(149900 * 12 / 31)) // 13–19 Dec only
+    expect(jan.lines.some((l) => l.kind === 'plan')).toBe(false) // all of January paused
   })
 })
 

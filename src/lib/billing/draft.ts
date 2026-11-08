@@ -5,12 +5,14 @@ import { MODULES, type ModuleKey } from '@/domains/modules/registry'
 import { paise } from '@/domains/money/paise'
 import type { PlanCode } from '@/domains/plans/entitlements'
 import { gstinState } from '@/domains/tax/gst'
+import { pauseWindow } from '@/domains/plans/trial'
 import { monthStartIST, nextMonthStartIST } from '@/domains/time/month'
 import type { Tx } from '@/lib/db'
 import { billableAtSql, feeRateAtSql } from '@/lib/db/order-predicates'
 import { planVersions, plans, tenantPlans } from '@/lib/db/schema'
 import { billingAccounts, frrataFeeCredits, frrataInvoiceFees, frrataInvoiceLines, frrataInvoices } from '@/lib/db/schema-billing'
 import { addonPrices, tenantAddons } from '@/lib/db/schema-modules'
+import { shopTrials } from '@/lib/db/schema-trials'
 import { orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { frrataGstin } from './seller'
@@ -68,7 +70,7 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
   }
 
   const at = billableAtSql('o')
-  const [planRows, addonRows, feeRows, creditRows, prev, planBilled, account] = await Promise.all([
+  const [planRows, addonRows, feeRows, creditRows, prev, planBilled, account, trial] = await Promise.all([
     tx.select({ startsAt: tenantPlans.startsAt, trialEndsAt: tenantPlans.trialEndsAt, customMonthlyPrice: tenantPlans.customMonthlyPrice,
       planCode: plans.code, name: plans.name, version: planVersions.version, monthlyPrice: planVersions.monthlyPrice, includedOrders: planVersions.includedOrders, feeBps: planVersions.feeBps })
       .from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(plans, eq(plans.id, planVersions.planId))
@@ -92,7 +94,9 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
     tx.select({ id: frrataInvoices.id, carryOut: frrataInvoices.carryOut, rolled: frrataInvoices.rolled }).from(frrataInvoices)
       .where(and(eq(frrataInvoices.tenantId, tenantId), eq(frrataInvoices.periodStart, prevMonthStart))),
     planBilledIn(tx, tenantId, prevMonthStart),
-    tx.select({ gstin: billingAccounts.gstin, stateCode: billingAccounts.stateCode }).from(billingAccounts).where(eq(billingAccounts.tenantId, tenantId)),
+    tx.select({ gstin: billingAccounts.gstin, stateCode: billingAccounts.stateCode, mandateAt: billingAccounts.mandateAt, mandateRevokedAt: billingAccounts.mandateRevokedAt }).from(billingAccounts).where(eq(billingAccounts.tenantId, tenantId)),
+    // Trials (TR0·3): a shop paused after its trial pays no plan for those days.
+    tx.select().from(shopTrials).where(eq(shopTrials.tenantId, tenantId)),
   ])
 
   const planHistory: PlanRow[] = planRows.map((p) => ({ startsAt: p.startsAt, trialEndsAt: p.trialEndsAt, customMonthlyPrice: p.customMonthlyPrice === null ? null : paise(p.customMonthlyPrice),
@@ -104,6 +108,7 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
   const bill = computeBill({
     monthStart, nextMonthStart, prevMonthStart, plans: planHistory, addons, feeOrders, credits,
     carry: prev[0]?.carryOut ?? 0, rolledLastMonth: prev[0]?.rolled ?? false, prevPlanBilled: planBilled,
+    pause: trial[0] ? pauseWindow(trial[0], account[0]?.mandateAt ?? null, account[0]?.mandateRevokedAt ?? null) : null,
     // The place of supply: the GSTIN's state when there is one (finding 7), else the state typed.
     frrataGstin: frrataGstin(), shopState: gstinState(acc?.gstin ?? null) ?? acc?.stateCode ?? null,
   })

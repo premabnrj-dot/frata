@@ -33,3 +33,17 @@ describe('collecting a due invoice (billing B3)', () => {
     expect(nextStep({ ...base, attempts: 4, lastFailedAt: at(100) }, at(15 * 24), false)).toEqual({ kind: 'acknowledge' })
   })
 })
+
+describe('nextStep during a trial (trials A2)', () => {
+  const now = new Date('2026-12-05T10:00:00+05:30')
+  const d = { due: 100000, testMode: true, issuedAt: new Date('2026-12-01T00:00:00+05:30'), mandate: true, mandateMax: 1_500_000, noticeAt: null, attempts: 0, pending: 0, lastFailedAt: null, acknowledged: false }
+  it('waits while the trial runs; the notice goes 25 h before its end, so the debit lands after it', () => {
+    expect(nextStep({ ...d, trialEndsAt: new Date('2026-12-13T00:00:00+05:30') }, now, true)).toEqual({ kind: 'wait', why: 'in a trial: collected after it ends' })
+    expect(nextStep({ ...d, trialEndsAt: new Date('2026-12-06T00:00:00+05:30') }, now, true).kind).toBe('notice')
+  })
+  it('the day-14 note counts from the trial end when later than the invoice', () => {
+    const late = { ...d, mandate: false, trialEndsAt: new Date('2026-12-13T00:00:00+05:30') }
+    expect(nextStep(late, new Date('2026-12-20T00:00:00+05:30'), true).kind).toBe('wait')
+    expect(nextStep(late, new Date('2026-12-27T00:00:00+05:30'), true).kind).toBe('acknowledge')
+  })
+})

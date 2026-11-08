@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkTerms, daysUntil, endOfIstDayAfter, extendsAtHandover, lastDay, mayExtend, pausesAt, trialEndsAt, trialState, type TrialFacts, type TrialMoney } from '../trial'
+import { pauseWindow, checkTerms, daysUntil, endOfIstDayAfter, extendsAtHandover, lastDay, mayExtend, pausesAt, trialEndsAt, trialState, type TrialFacts, type TrialMoney } from '../trial'
 
 // IST wall-clock moments (UTC+5:30).
 const ist = (s: string) => new Date(`${s}+05:30`)
@@ -84,5 +84,15 @@ describe('extensions', () => {
   it('days left counts a part day as a day', () => {
     expect(daysUntil(ist('2026-12-12T18:00:00'), trialEndsAt(live))).toBe(1)
     expect(daysUntil(ist('2026-12-14T18:00:00'), trialEndsAt(live))).toBe(0)
+  })
+})
+
+describe('pauseWindow (no plan charge while paused)', () => {
+  const live = { ...base, startedAt: ist('2026-11-12T16:00:00') } // pauses 20 Dec 00:00 without autopay
+  it('autopay before the pause: never paused; after it: paused until autopay; none: still paused', () => {
+    expect(pauseWindow(live, ist('2026-12-01T10:00:00'), null)).toBeNull()
+    expect(pauseWindow(live, ist('2026-12-22T10:00:00'), null)).toEqual({ from: ist('2026-12-20T00:00:00'), to: ist('2026-12-22T10:00:00') })
+    expect(pauseWindow(live, null, null)).toEqual({ from: ist('2026-12-20T00:00:00'), to: null })
+    expect(pauseWindow(live, ist('2026-12-01T10:00:00'), ist('2027-01-10T10:00:00'))).toEqual({ from: ist('2027-01-10T10:00:00'), to: null })
   })
 })
