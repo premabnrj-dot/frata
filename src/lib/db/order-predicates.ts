@@ -88,6 +88,15 @@ export const holdingSql = (now: Date, a = '"orders"'): SQL =>
 /** isStanding(): placed and not cancelled — its lines still count against stock and pre-order caps. */
 export const standingSql = (a = '"orders"'): SQL => sql`(${c(a, 'cancelled_at')} is null and ${placedSql(a)})`
 
+/**
+ * Another order from this phone in this shop that is standing or holding: "has ordered here before". The ONE rule
+ * behind a first-order offer (placement, and again on a payment retry) and O·3's new-vs-repeat buyer. `except`
+ * leaves an order out (the one being judged); `before` counts only orders placed before that moment.
+ */
+export const priorOrderSql = (now: Date, tenantId: string, phone: SQL | string, o: { except?: SQL | string; before?: SQL } = {}): SQL =>
+  sql`exists (select 1 from ${orders} po where po.tenant_id = ${tenantId} and po.phone = ${phone}
+    and (${standingSql('po')} or ${holdingSql(now, 'po')})${o.except ? sql` and po.id <> ${o.except}` : sql``}${o.before ? sql` and po.placed_at < ${o.before}` : sql``})`
+
 /** What Razorpay was asked for (checkout.onlineTotal), as a number column for StoredOrder.onlineTotal. */
 export const onlineTotalCol = sql<number | null>`(${orders.checkout}->>'onlineTotal')::bigint`.mapWith((v) => (v == null ? null : Number(v)))
 

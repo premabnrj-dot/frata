@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import type { CleanAddress } from '@/domains/checkout/address'
 import { amountFor, candidates, classOf, normalCode, stepReached, type DiscountTerms, type TypedCode } from '@/domains/checkout/discounts'
-import { holdingSql, standingSql } from '@/lib/db/order-predicates'
+import { priorOrderSql } from '@/lib/db/order-predicates'
 import { quote, totalFor, type BagLine, type Quote } from '@/domains/checkout/quote'
 import { gstinState } from '@/domains/tax/gst'
 import type { Tx } from '@/lib/db'
@@ -157,9 +157,8 @@ async function fitOffers(tx: Tx, tenantId: string, offers: DiscountTerms[], pric
   // phone has ordered here: accepted, O·2 plan review 6).
   if (offers.some((t) => t.firstOrder)) {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${tenantId + ':phone:' + input.address.phone}, 0))`)
-    const [had] = await tx.execute<{ n: number }>(sql`select count(*)::int n from ${orders} o where o.tenant_id = ${tenantId} and o.phone = ${input.address.phone}
-      and (${standingSql('o')} or ${holdingSql(now, 'o')})`)
-    if ((had?.n ?? 0) > 0) offers = offers.filter((t) => !t.firstOrder)
+    const [had] = await tx.execute<{ yes: boolean }>(sql`select ${priorOrderSql(now, tenantId, input.address.phone)} yes`)
+    if (had?.yes) offers = offers.filter((t) => !t.firstOrder)
   }
   const could = candidates(offers, typed).filter((t) => t.style === 'free_shipping' || classOf(t.style) === 'product' || amountFor(t, subtotal) > 0).map((t) => t.id)
   if (!could.length) return offers

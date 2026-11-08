@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.12.1
+  version: 2.13.0
   verified: 2026-11-08
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -288,8 +288,10 @@ Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
 
 **Offers (O·1, docs/plans/2026-11-08-offers.md).** Core checkout pricing, not a module
 (`check:modules` forbids core importing module code).
-- **One engine:** `src/domains/checkout/discounts.ts` — `planOffers` (best per class: order →
-  thresholds on the bag after it → payment, prepaid only), `priceMethod` (spread by value to the
+- **One engine:** `src/domains/checkout/discounts.ts` — `planOffers` (best per class: product
+  (greedy, one per line; Buy X get Y spread over the group by value; a gift line made free, never
+  added by the server) → order (highest tier step reached) → thresholds on the bag after it →
+  payment, prepaid only), `priceMethod` (the stored `productDiscount` first, then the rest) (spread by value to the
   paise; each line's GST rate on its own discounted piece, **per way of paying**: line tax lives in
   `MethodTotal`, never on `QuoteLine`).
 - **One repricer and one writer:** a placed order is priced again only by `amounts.reprice()` from
@@ -303,7 +305,13 @@ Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
 - **The shopper's read** of offers is `liveOffers()` in `queries/checkout.ts` (terms only);
   `publicQuote` maps offers to named fields (a test proves no id, term, limit or budget leaks).
   Codes: one per order, unique per shop forever, fail-closed per-IP guess limit, one answer for
-  every failure.
+  every failure. A creator code is a labelled code: matched only when typed (`codeFor`), never
+  in the bar (`isNull(label)`), recorded with `via` (link or typed).
+- **First order** is decided at placement under a per-phone advisory lock (standing or holding
+  order from that phone), and again on a payment retry.
+- **Prior price** is derived from `price_history` (`priorPriceSql`, `lib/db/price-predicates.ts`):
+  the lowest price in the 30 days before the current one took effect, shown only within 30 days
+  of the change. `variants.compare_at` is the M.R.P. (`mrp`), never a struck price.
 
 ## Config
 

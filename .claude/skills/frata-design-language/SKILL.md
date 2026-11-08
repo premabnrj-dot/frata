@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 4.7.0
+  version: 4.8.0
   verified: 2026-11-08
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -298,7 +298,8 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 - Views in `src/components/storefront/` are the ONE rendering of a shop: the
   shop pages, `/console/preview` and Settings' previews all use them.
 - Product page order: gallery (chosen colour's photos first) → title → price
-  (compare-at struck, "Save ₹N", never a percentage) → colour, then size →
+  (the prior price struck only after a real cut in the last 30 days, "Save ₹N", never a
+  percentage; M.R.P. on its own line, never struck) → colour, then size →
   "Shoppers see" line for the choice → Add to bag (never greyed out; "Pick a
   size.") → Pay on delivery, delivery charge, dispatch and arrival days, the
   return window → description → details → the model.
