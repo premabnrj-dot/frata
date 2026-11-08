@@ -95,6 +95,8 @@ export const orders = pgTable('orders', {
   unique('orders_tenant_id_key').on(t.tenantId, t.id),
   uniqueIndex('orders_tenant_number').on(t.tenantId, t.number),
   index('orders_tenant_placed').on(t.tenantId, t.placedAt),
+  // Best sellers by delivered units (themes T1·3): the shop's delivered orders in a window.
+  index('orders_tenant_delivered').on(t.tenantId, t.deliveredAt).where(sql`${t.deliveredAt} is not null`),
   // Every lookup leads with the tenant: a unique on the value alone would tell another shop that a value exists.
   uniqueIndex('orders_tenant_token').on(t.tenantId, t.tokenHash),
   uniqueIndex('orders_tenant_idempotency').on(t.tenantId, t.idempotencyKey),

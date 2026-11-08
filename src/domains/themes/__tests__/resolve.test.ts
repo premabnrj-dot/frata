@@ -5,7 +5,7 @@ import { classicFromSettings, resolveTheme, schemeVars } from '../resolve'
 describe('resolveTheme', () => {
   it('a layer picks the style and settings; anything the theme does not allow falls back', () => {
     const t = resolveTheme(classic_1_0_0, { style: 'moss', settings: { pairing: 'cormorant' } })
-    expect(t.style).toBe('moss'); expect(t.settings.pairing).toBe('cormorant'); expect(t.home).toEqual(classic_1_0_0.home)
+    expect(t.style).toBe('moss'); expect(t.settings.pairing).toBe('cormorant'); expect(t.home.map((s) => s.id)).toEqual(classic_1_0_0.home.map((s) => s.id))
     const odd = resolveTheme(classic_1_0_0, { style: 'nope', settings: { pairing: 'comic-sans' as never, header: 'mega' as never } })
     expect(odd.style).toBe('oxide'); expect(odd.settings).toEqual(classic_1_0_0.defaults)
   })

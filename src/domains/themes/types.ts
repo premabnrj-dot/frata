@@ -5,7 +5,7 @@
 // only ResolvedTheme. No CSS, no HTML, no script ever comes from a layer.
 // =============================================================================
 
-import type { SectionInstance, SectionKey } from './sections'
+import type { SectionInput, SectionInstance, SectionKey } from './sections'
 
 export type Hex = `#${string}`
 /** The colour roles a section can be painted in. Shown to merchants by the style's own names. */
@@ -17,18 +17,43 @@ export type Scheme = {
   button: Hex; onButton: Hex
   good: Hex; bad: Hex; sale: Hex
 }
-export type Style = { key: string; name: string; schemes: Partial<Record<SchemeKey, Scheme>> & { paper: Scheme } }
+export type Style = { key: string; name: string; schemes: Partial<Record<SchemeKey, Scheme>> & { paper: Scheme }; schemeNames?: Partial<Record<SchemeKey, string>> }
 
 /** Curated display faces; body is always Inter. Bricolage is Frrata's own face and never ships to a shop (brand rule 35). */
-export const PAIRINGS = ['fraunces', 'cormorant', 'inter'] as const
+export const PAIRINGS = ['fraunces', 'cormorant', 'inter', 'playfair', 'dmserif'] as const
 export type Pairing = (typeof PAIRINGS)[number]
+export const PAIRING_NAMES: Record<Pairing, string> = { fraunces: 'Fraunces', cormorant: 'Cormorant', inter: 'Inter', playfair: 'Playfair Display', dmserif: 'DM Serif Display' }
 
-export const HEADERS = ['classic'] as const
+export const HEADERS = ['classic', 'centred', 'minimal', 'circles'] as const
 export type HeaderVariant = (typeof HEADERS)[number]
-export const FOOTERS = ['three'] as const
+export const HEADER_NAMES: Record<HeaderVariant, string> = { classic: 'Classic', centred: 'Centred logo', minimal: 'Minimal', circles: 'Category circles' }
+export const FOOTERS = ['three', 'compact'] as const
 export type FooterVariant = (typeof FOOTERS)[number]
+export const FOOTER_NAMES: Record<FooterVariant, string> = { three: 'Three columns', compact: 'Compact' }
 
-export type ThemeSettings = { pairing: Pairing; header: HeaderVariant; footer: FooterVariant }
+export type Announcement = { text: string; link: string | null; scheme: SchemeKey }
+
+/** Every Theme settings control (spec § Theme settings). Each a typed choice; the only free value is the brand colour. */
+export type ThemeSettings = {
+  pairing: Pairing
+  headings: 'as_typed' | 'upper'
+  size: 'compact' | 'regular' | 'large'
+  corners: 'square' | 'soft' | 'round'
+  buttons: 'solid' | 'outline'
+  spacing: 'airy' | 'regular' | 'compact'
+  photo: '4:5' | '3:4' | '1:1'
+  hoverPhoto: boolean
+  phoneColumns: 2 | 3
+  header: HeaderVariant
+  sticky: boolean
+  bottomTabs: boolean
+  announcement: Announcement | null
+  footer: FooterVariant
+  social: boolean
+  motion: 'subtle' | 'none'
+  /** Replaces the accent in every scheme; accepted only when readable (brandColourProblem). */
+  brandColour: Hex | null
+}
 
 export type ThemeManifest = {
   key: string
@@ -36,15 +61,17 @@ export type ThemeManifest = {
   version: string
   name: string
   job: string
+  /** What the shop sells, from shop_settings.sells: the gallery lists these themes first. */
+  goodFor: string[]
   features: string[]
   styles: Style[]
   defaults: ThemeSettings
-  allowed: { pairings: Pairing[]; headers: HeaderVariant[]; footers: FooterVariant[]; sections: SectionKey[] }
-  home: SectionInstance[]
+  allowed: { pairings: Pairing[]; headers: HeaderVariant[]; footers: FooterVariant[]; sections: SectionKey[]; heroMasks?: ('none' | 'arch')[] }
+  home: SectionInput[]
 }
 
 /** The merchant's layer. Content, never state (which revision is live is a publish row). */
-export type ThemeLayer = { style: string; settings?: Partial<ThemeSettings>; home?: SectionInstance[] }
+export type ThemeLayer = { style: string; settings?: Partial<ThemeSettings>; home?: unknown[] }
 
 export type ResolvedTheme = {
   key: string; version: string; style: string

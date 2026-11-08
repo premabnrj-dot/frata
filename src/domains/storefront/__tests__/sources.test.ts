@@ -26,5 +26,9 @@ describe('sources', () => {
     expect(sourceProducts({ kind: 'under_price', maxPaise: 100000 }, cat, now).map((x) => x.id)).toEqual(['new'])
     expect(sourceProducts({ kind: 'on_sale' }, cat, now).map((x) => x.id)).toEqual(['new'])
   })
+  it('best sellers: in the ranked order, listed only, unranked left out', () => {
+    expect(sourceProducts({ kind: 'best_sellers', days: 90 }, cat, now, ['draft', 'old', 'new']).map((x) => x.id)).toEqual(['old', 'new'])
+    expect(sourceProducts({ kind: 'best_sellers', days: 90 }, cat, now)).toEqual([])
+  })
   it('a scheduled product appears at its moment', () => expect(sourceProducts({ kind: 'newest' }, cat, new Date('2026-11-10T00:00:00Z')).map((x) => x.id)[0]).toBe('later'))
 })

@@ -17,8 +17,17 @@ export const classic_1_0_0: ThemeManifest = {
   job: 'Your shop as it is today. Simple and quick.',
   features: ['Your name and tagline up top', 'Collection tiles', 'Newest pieces first', 'Rounded cards, two columns on a phone'],
   styles: [style('oxide', 'Oxide', '#8A3B1F'), style('indigo', 'Indigo', '#2E3A63'), style('moss', 'Moss', '#3F5B3A'), style('wine', 'Wine', '#7A1F2B'), style('ink', 'Ink', '#1F1A17')],
-  defaults: { pairing: 'fraunces', header: 'classic', footer: 'three' },
-  allowed: { pairings: ['fraunces', 'cormorant', 'inter'], headers: ['classic'], footers: ['three'], sections: ['hero', 'collection_tiles', 'products'] },
+  goodFor: [],
+  // Today's look, setting by setting (e2e 05-shop-look holds it to the pixel).
+  defaults: {
+    pairing: 'fraunces', headings: 'as_typed', size: 'regular', corners: 'soft', buttons: 'solid', spacing: 'regular', photo: '4:5',
+    hoverPhoto: true, phoneColumns: 2, header: 'classic', sticky: false, bottomTabs: false, announcement: null, footer: 'three',
+    social: true, motion: 'subtle', brandColour: null,
+  },
+  allowed: {
+    pairings: ['fraunces', 'cormorant', 'inter'], headers: ['classic', 'circles'], footers: ['three', 'compact'],
+    sections: ['hero', 'collection_tiles', 'products', 'price_tiles', 'promises', 'image_text', 'drop_teaser', 'rich_text', 'logos'],
+  },
   home: [
     { id: 'hero', key: 'hero', hidden: false, scheme: 'paper', layout: 'text', heading: { from: 'shopName' }, text: { from: 'tagline' } },
     { id: 'tiles', key: 'collection_tiles', hidden: false, scheme: 'paper', heading: '', mode: 'auto', count: 6, shape: 'portrait' },

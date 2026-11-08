@@ -9,6 +9,7 @@ import { inCollection, isListed, priceOf, type ListCollection, type ListProduct 
 
 export type Source =
   | { kind: 'newest' }
+  | { kind: 'best_sellers'; days: 30 | 90 }
   | { kind: 'collection'; handle: string }
   | { kind: 'under_price'; maxPaise: number }
   | { kind: 'on_sale' }
@@ -16,11 +17,16 @@ export type Source =
 type Cat<P extends ListProduct> = { products: P[]; collections: (ListCollection & { handle: string })[] }
 
 /** Every product the source matches, in its order. The section takes the first `count`. */
-export function sourceProducts<P extends ListProduct>(src: Source, cat: Cat<P>, now: Date): P[] {
+/** `ranked`: for Best sellers, product ids by delivered units in the window (bestSellerOrder; ids only, never counts). */
+export function sourceProducts<P extends ListProduct>(src: Source, cat: Cat<P>, now: Date, ranked: string[] = []): P[] {
   const listed = () => cat.products.filter((p) => isListed(p, now))
   switch (src.kind) {
     // Newest first by `since` (publish_at, else published_at, else created_at): the catalogue read's own order.
     case 'newest': return listed().sort((a, b) => b.since.localeCompare(a.since))
+    case 'best_sellers': {
+      const at = new Map(ranked.map((id, i) => [id, i]))
+      return listed().filter((p) => at.has(p.id)).sort((a, b) => at.get(a.id)! - at.get(b.id)!)
+    }
     case 'collection': {
       const c = cat.collections.find((x) => x.handle === src.handle)
       return c ? inCollection(c, cat.products, now) : []
