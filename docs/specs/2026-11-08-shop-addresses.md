@@ -28,7 +28,7 @@ the new one. Frrata's team only steps in for disputes, abuse and names that copy
 |---|---|---|
 | **frrata.com** | Frrata's website, people's mail, later `app.frrata.com` (console) and `notify.frrata.com` (notices) | Frrata |
 | **frrata.shop** | `<name>.frrata.shop`: one per shop; the apex and `www` go to frrata.com | Frrata (wildcard, certificates, the Public Suffix List entry) |
-| **The merchant's domain** | `www.kesarstudio.in` (and the apex, which redirects) | The merchant (their registrar, their DNS); Frrata serves it once proven |
+| **The merchant's domain** | `kesarstudio.in` (naked; `www` redirects to it — owner, 2026-11-08) | The merchant (their registrar, their DNS); Frrata serves it once proven |
 
 **2. What the merchant controls** (owner and admin; a partner before handover; never staff; support visits read only):
 - the frrata.shop name: free changes until the shop opens; after that **two changes**, each old name redirecting for
@@ -67,8 +67,8 @@ form uses the same rule (today it does not).
 - Staff see the page read-only; a support visit sees it with buttons disabled and why.
 
 **Connect a domain** (a page, three steps, resumable):
-1. **Your domain**: type `kesarstudio.in` (we suggest `www.kesarstudio.in` as the main address and the apex
-   redirecting to it, as Vercel recommends; a subdomain like `shop.kesarstudio.in` works too). **Where did you buy
+1. **Your domain**: type `kesarstudio.in`. The naked domain is the main address and `www.kesarstudio.in` redirects to
+   it (owner, 2026-11-08); a subdomain like `shop.kesarstudio.in` works too. **Where did you buy
    it?** GoDaddy · Hostinger · BigRock · Namecheap · Cloudflare · Other → the matching step-by-step guide.
 2. **Add these records** (each with Copy; values read from Vercel for this project, never hard-coded):
    - `TXT  _frrata  frrata-verify=7c1e…` — proves the domain is yours;
@@ -79,8 +79,19 @@ form uses the same rule (today it does not).
 3. **Securing**: "Getting a secure certificate (usually 5–10 minutes)" → **Connected** → the choice:
    **Make it your main address** (a dialog listing what happens) or **Keep it as a second address**.
 
-**Make it your main address** (dialog): shoppers who open kesar-studio.frrata.shop or kesarstudio.in arrive at
-www.kesarstudio.in (same page); links you shared keep working; bags in progress start afresh (do it in a quiet hour);
+**Naked domains (owner, 2026-11-08: "I would prefer naked domains").** Possible without a real issue:
+- The apex takes an **A record** (DNS allows no CNAME at the apex); the www host takes a CNAME and redirects (308) to
+  the apex. Vercel recommends www only because a CNAME lets it re-route without the merchant changing anything.
+- The one cost: if Vercel ever changes the IP it recommends for our project, the merchant must edit one A record. Our
+  daily check sees it ("Points to an old Vercel address · change it to …") and says so; Vercel keeps answering on its
+  published anycast IPs. Cloudflare users can use CNAME flattening and never hit this.
+- Nothing else differs: shops set no cookies (so apex cookies can't leak to the merchant's other subdomains), HSTS on
+  own domains is sent without includeSubDomains, and an A record at the apex never conflicts with MX (email).
+- **frrata.com and frrata.shop are naked too**: their nameservers are Vercel's, which answers the apex itself (no IP
+  for anyone to update); `www.frrata.com` redirects to `frrata.com`.
+
+**Make it your main address** (dialog): shoppers who open kesar-studio.frrata.shop or www.kesarstudio.in arrive at
+kesarstudio.in (same page); links you shared keep working; bags in progress start afresh (do it in a quiet hour);
 Google moves your pages over a few weeks. Buttons: **Make it main** · **Not now**.
 
 **Problems, in words** (each with one way on):
@@ -90,7 +101,7 @@ Google moves your pages over a few weeks. Buttons: **Make it main** · **Not now
 - Certificate blocked by CAA · "Your domain allows only DigiCert to issue certificates. Add letsencrypt.org."
 - Connected to another shop · "This domain is connected to another Frrata shop. If it's yours, add the TXT record
   above: whoever proves it gets it, and the other shop is told."
-- Main domain stopped working · banner on every console page for owners and admins: "www.kesarstudio.in stopped
+- Main domain stopped working · banner on every console page for owners and admins: "kesarstudio.in stopped
   working on 12 Nov. Shoppers are being sent to kesar-studio.frrata.shop until it's fixed. **See what's wrong**."
 
 **Admin › Merchant › Addresses** (tab): current name, old names (redirecting), domains with state and last check;
@@ -194,7 +205,8 @@ protected, blocked; add, remove, release a held name. **Admin › Domain health*
    not Vercel as registrar. Extend to 3 years before the PSL request (> 2 years left). If the review refuses it, buy it
    at Vercel ($2.99, renews $38.39). **Buy frrata.com at Vercel now** ($12.03/yr, available 2026-11-08).
 2. **Renames after opening: two**, old names redirect forever and are never reused (Shopify allows two names in all).
-3. **www as the main address** when a merchant connects an apex domain (Vercel's advice; the apex redirects).
+3. **Naked domains as the main address — decided (owner, 2026-11-08)**: `kesarstudio.in` main, `www` redirects;
+   frrata.com and frrata.shop naked too.
 4. **Own domains on every plan**, no extra fee (Vercel charges none; Shopify includes it).
 5. **frrata.shop on the Public Suffix List** (Vercel's advice; what Shopify, Vercel and GitHub do).
 6. **Fallback after 24 hours, detach after 15 days** without proof.

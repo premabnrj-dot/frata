@@ -91,15 +91,28 @@ ol.own{padding-left:18px;margin:0}ol.own li{margin:6px 0}
   <div class="map">
     <div class="dom"><span class="tag">Frrata</span><span class="addr">frrata.com</span><p class="sub">Frrata's website and people's mail. Later the console (app.frrata.com) and notices.</p></div>
     <div class="dom"><span class="tag">Every shop</span><span class="addr"><b>kesar-studio</b>.frrata.shop</span><p class="sub">One name per shop. Frrata runs the certificates. On the Public Suffix List, so shops stay apart in browsers.</p></div>
-    <div class="dom"><span class="tag">The brand's own</span><span class="addr">www.kesarstudio.in</span><p class="sub">The merchant's domain and DNS. Frrata serves it once the merchant proves it's theirs.</p></div>
+    <div class="dom"><span class="tag">The brand's own</span><span class="addr">kesarstudio.in</span><p class="sub">The merchant's domain and DNS. Frrata serves it once the merchant proves it's theirs.</p></div>
   </div>
   <div class="card" style="margin-top:12px">
-    <h3>Once www.kesarstudio.in is the main address</h3>
-    <div class="flow"><span>kesar-studio.frrata.shop/products/rust-kurta</span><i>→ 308 →</i><span>www.kesarstudio.in/products/rust-kurta</span></div>
-    <div class="flow"><span>kesarstudio.in/collections/festive</span><i>→ 308 →</i><span>www.kesarstudio.in/collections/festive</span></div>
-    <div class="flow"><span>kesar.frrata.shop (an old name)</span><i>→ 308 →</i><span>www.kesarstudio.in</span></div>
+    <h3>Once kesarstudio.in is the main address</h3>
+    <div class="flow"><span>kesar-studio.frrata.shop/products/rust-kurta</span><i>→ 308 →</i><span>kesarstudio.in/products/rust-kurta</span></div>
+    <div class="flow"><span>www.kesarstudio.in/collections/festive</span><i>→ 308 →</i><span>kesarstudio.in/collections/festive</span></div>
+    <div class="flow"><span>kesar.frrata.shop (an old name)</span><i>→ 308 →</i><span>kesarstudio.in</span></div>
     <p class="k" style="margin-top:8px">Same page, every time. Search engines, sitemaps and shared links all point at the main address.</p>
   </div>
+
+  <div class="tablewrap" style="margin-top:12px"><table>
+    <thead><tr><th></th><th>frrata.com</th><th>frrata.shop</th></tr></thead>
+    <tbody>
+      <tr><td>Who it's for</td><td>Frrata: the company, merchants signing in, partners</td><td>Shoppers visiting a shop</td></tr>
+      <tr><td>What it serves</td><td>The website (frrata.com), later the console (app.frrata.com), Admin, sign-in, Frrata's notices and people's mail</td><td>Only storefronts: <span class="mono">name.frrata.shop</span>; frrata.shop itself sends you to frrata.com</td></tr>
+      <tr><td>Whose content</td><td>Frrata's alone</td><td>Each merchant's (products, words, photos)</td></tr>
+      <tr><td>Cookies and sign-in</td><td>Yes: sessions live here only</td><td>Never. No log-in ever happens on a shop</td></tr>
+      <tr><td>If one shop misbehaves</td><td>Untouched: a flag on a shop can't reach Frrata's own site or sign-in</td><td>Public Suffix List: browsers and Safe Browsing treat each shop on its own</td></tr>
+      <tr><td>Email reputation</td><td>Frrata's notices (notify.frrata.com)</td><td>Shops' order emails (later), kept apart from Frrata's</td></tr>
+      <tr><td>Naked or www</td><td>frrata.com; www redirects</td><td>name.frrata.shop; the naked frrata.shop redirects to frrata.com</td></tr>
+    </tbody>
+  </table></div>
 
   <h2 id="name">2 · Picking a name (sign-up, and Admin's new-merchant form)</h2>
   <div class="grid3">
@@ -121,8 +134,8 @@ ol.own{padding-left:18px;margin:0}ol.own li{margin:6px 0}
     <div class="card">
       <div class="row between"><h3 style="margin:0">Your own domain</h3><a class="btn primary">Connect a domain</a></div>
       <ul class="list" style="margin-top:8px">
-        <li><span><span class="mono">www.kesarstudio.in</span><br><span class="k">Checked 2 hours ago</span></span><span class="row"><span class="chip c-ok">Main address</span><a class="btn ghost">Manage</a></span></li>
-        <li><span><span class="mono">kesarstudio.in</span><br><span class="k">Sends shoppers to www.kesarstudio.in</span></span><span class="chip c-ok">Connected</span></li>
+        <li><span><span class="mono">kesarstudio.in</span><br><span class="k">Checked 2 hours ago</span></span><span class="row"><span class="chip c-ok">Main address</span><a class="btn ghost">Manage</a></span></li>
+        <li><span><span class="mono">www.kesarstudio.in</span><br><span class="k">Sends shoppers to kesarstudio.in</span></span><span class="chip c-ok">Connected</span></li>
         <li><span><span class="mono">shop.rangthreads.in</span><br><span class="k">Add the records, then check</span></span><span class="chip c-warn">Waiting for records</span></li>
       </ul>
     </div>
@@ -150,7 +163,7 @@ ol.own{padding-left:18px;margin:0}ol.own li{margin:6px 0}
   <div class="grid2">
     <div class="card">
       <div class="steps"><span class="on">1 Your domain</span><span>2 Records</span><span>3 Securing</span></div>
-      <div class="field"><label for="d1">Your domain</label><input class="input mono" id="d1" value="kesarstudio.in"><span class="k">We'll use <b class="mono">www.kesarstudio.in</b> as the main address and send kesarstudio.in there. A subdomain like shop.kesarstudio.in works too.</span></div>
+      <div class="field"><label for="d1">Your domain</label><input class="input mono" id="d1" value="kesarstudio.in"><span class="k">We'll use <b class="mono">kesarstudio.in</b> as the main address and send www.kesarstudio.in there. A subdomain like shop.kesarstudio.in works too.</span></div>
       <p style="font-size:13px;font-weight:500;margin:0 0 6px">Where did you buy it?</p>
       <div class="reg"><span class="on">GoDaddy</span><span>Hostinger</span><span>BigRock</span><span>Namecheap</span><span>Cloudflare</span><span>Other</span></div>
       <div class="row" style="margin-top:14px"><a class="btn primary">Continue</a></div>
@@ -173,7 +186,7 @@ ol.own{padding-left:18px;margin:0}ol.own li{margin:6px 0}
     <div class="rec"><span class="mono">A</span><code>@</code><code class="v">76.76.21.21</code><span class="st chip c-danger">Points to 3.110.44.9</span><a class="btn cp">Copy</a></div>
     <div class="rec"><span class="mono">CNAME</span><code>www</code><code class="v">d41f8c2a.vercel-dns-017.com</code><span class="st chip c-warn">Not found yet</span><a class="btn cp">Copy</a></div>
     <p class="why">The A record still points to your old website (3.110.44.9). Edit it to 76.76.21.21. DNS can take up to 48 hours; we check every 10 minutes for the first day.</p>
-    <p class="k">Using Cloudflare? Set these records to DNS only (grey cloud).</p>
+    <p class="k">Using Cloudflare? Set these records to DNS only (grey cloud). The A record makes kesarstudio.in (naked) your shop; www gets a CNAME and is sent to it.</p>
     <div class="row" style="margin-top:10px"><a class="btn primary">Check records</a><span class="k">Checked 1 minute ago</span></div>
   </div>
   <div class="grid2" style="margin-top:12px">
@@ -183,7 +196,7 @@ ol.own{padding-left:18px;margin:0}ol.own li{margin:6px 0}
       <p class="sub">Usually 5 to 10 minutes. You can leave this page; we'll show it here when it's done.</p>
     </div>
     <div class="card">
-      <div class="row between"><b>www.kesarstudio.in is connected</b><span class="chip c-ok">Connected</span></div>
+      <div class="row between"><b>kesarstudio.in is connected</b><span class="chip c-ok">Connected</span></div>
       <p class="sub" style="margin-top:6px">It opens your shop now. Shoppers still use kesar-studio.frrata.shop until you choose.</p>
       <div class="row"><a class="btn primary">Make it your main address</a><a class="btn">Keep it as a second address</a></div>
     </div>
@@ -191,9 +204,9 @@ ol.own{padding-left:18px;margin:0}ol.own li{margin:6px 0}
 
   <h2 id="main">6 · Make it your main address</h2>
   <div class="dialog">
-    <h3>Make www.kesarstudio.in your main address?</h3>
+    <h3>Make kesarstudio.in your main address?</h3>
     <ul class="sub">
-      <li>Shoppers who open kesar-studio.frrata.shop or kesarstudio.in arrive at the same page on www.kesarstudio.in.</li>
+      <li>Shoppers who open kesar-studio.frrata.shop or www.kesarstudio.in arrive at the same page on kesarstudio.in.</li>
       <li>Links you've shared keep working.</li>
       <li>Bags in progress start afresh. Do it in a quiet hour.</li>
       <li>Google moves your pages over a few weeks.</li>
@@ -203,7 +216,7 @@ ol.own{padding-left:18px;margin:0}ol.own li{margin:6px 0}
   </div>
 
   <h2 id="problems">7 · Problems, in words, each with one way on</h2>
-  <div class="banner"><span><b>www.kesarstudio.in stopped working on 12 Nov.</b> Shoppers are being sent to kesar-studio.frrata.shop until it's fixed.</span><a class="btn">See what's wrong</a></div>
+  <div class="banner"><span><b>kesarstudio.in stopped working on 12 Nov.</b> Shoppers are being sent to kesar-studio.frrata.shop until it's fixed.</span><a class="btn">See what's wrong</a></div>
   <p class="k" style="margin-top:6px">On every console page for owners and admins, after 24 hours of failed checks.</p>
   <div class="grid2" style="margin-top:12px">
     <div class="problem"><b>Cloudflare's proxy is on</b><p>The certificate can't be issued through the orange cloud.</p><span class="k">Set the two records to DNS only, then Check records.</span></div>
@@ -230,16 +243,16 @@ ol.own{padding-left:18px;margin:0}ol.own li{margin:6px 0}
       <div>
         <h3>Domains</h3>
         <ul class="list">
-          <li><span class="mono">www.kesarstudio.in</span><span class="chip c-ok">Main · checked 2 h ago</span></li>
-          <li><span class="mono">kesarstudio.in</span><span class="chip c-ok">Redirects</span></li>
+          <li><span class="mono">kesarstudio.in</span><span class="chip c-ok">Main · checked 2 h ago</span></li>
+          <li><span class="mono">www.kesarstudio.in</span><span class="chip c-ok">Redirects</span></li>
         </ul>
         <div class="row" style="margin-top:8px"><a class="btn danger">Disconnect a domain</a><a class="btn">Retry sync</a></div>
       </div>
     </div>
     <div class="card" style="margin-top:12px;border-color:var(--danger-text)">
-      <h3 style="color:var(--danger-text)">Disconnect www.kesarstudio.in from Kesar Studio</h3>
+      <h3 style="color:var(--danger-text)">Disconnect kesarstudio.in from Kesar Studio</h3>
       <div class="field"><label for="ad1">Reason (shown to the shop)</label><input class="input" id="ad1" value="Reported as copying another brand (case 2211)"></div>
-      <div class="row"><a class="btn danger">Disconnect www.kesarstudio.in</a><a class="btn">Keep it connected</a></div>
+      <div class="row"><a class="btn danger">Disconnect kesarstudio.in</a><a class="btn">Keep it connected</a></div>
     </div>
   </div>
   <div class="grid2" style="margin-top:12px">
@@ -261,7 +274,7 @@ ol.own{padding-left:18px;margin:0}ol.own li{margin:6px 0}
         <tbody>
           <tr><td class="mono">www.noorlabel.com</td><td>Noor Label</td><td><span class="chip c-danger">Failing 2 days · on fallback</span></td></tr>
           <tr><td class="mono">shop.rangthreads.in</td><td>Rang Threads</td><td><span class="chip c-warn">Waiting 3 days</span></td></tr>
-          <tr><td class="mono">www.kesarstudio.in</td><td>Kesar Studio</td><td><span class="chip c-ok">Healthy</span></td></tr>
+          <tr><td class="mono">kesarstudio.in</td><td>Kesar Studio</td><td><span class="chip c-ok">Healthy</span></td></tr>
         </tbody>
       </table></div>
     </div>
