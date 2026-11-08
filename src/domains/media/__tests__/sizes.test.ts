@@ -31,6 +31,12 @@ describe('acceptedBase', () => {
     expect(acceptedBase(ok, host, A, 'brand')).toBeNull()
     expect(acceptedBase(ok.replace(host, 'evil.public.blob.vercel-storage.com'), host, A, 'products')).toBeNull()
   })
+  it('a look\'s photo: this shop\'s theme folder only; another shop\'s theme photo is refused', () => {
+    const t = ok.replace('/products/', '/theme/')
+    expect(acceptedBase(t, host, A, 'theme')).toBe(t)
+    expect(acceptedBase(t.replace(A, B), host, A, 'theme')).toBeNull()
+    expect(acceptedBase(ok, host, A, 'theme')).toBeNull()
+  })
   it('refuses strings a URL parser would clean up into a passing path', () => {
     for (const bad of [
       `https://${host}/tenants/${B}/products/x\\..\\..\\..\\${A}/products/${id}`,

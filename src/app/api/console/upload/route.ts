@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client'
 import { MAX_UPLOAD_BYTES, PATH_SHAPE } from '@/domains/media/sizes'
-import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
+import { ANY_MEMBER, CAN_BUILD, requireMember } from '@/lib/auth/require-member'
 import { sectionFor } from '@/domains/settings/sections'
 import { BLOB_READ_WRITE_TOKEN, isBlobConfigured } from '@/lib/env'
 
@@ -24,6 +24,8 @@ export async function POST(request: Request) {
         if (!m || m[1] !== auth.membership.tenantId) throw new Error('path outside this shop')
         // The shop's logo (brand/) is a setting: whoever may edit the Brand section (sections.ts `editors`).
         if (m[2] === 'brand' && !(sectionFor('brand')?.editors ?? []).includes(auth.membership.role)) throw new Error('brand needs a brand editor')
+        // A look's photos: whoever may edit the look, never a Frrata support visit (themes plan, tenancy review).
+        if (m[2] === 'theme' && (!(CAN_BUILD as readonly string[]).includes(auth.membership.role) || auth.membership.supportSessionId)) throw new Error('theme needs a look editor')
         return { allowedContentTypes: ['image/webp'], maximumSizeInBytes: MAX_UPLOAD_BYTES, addRandomSuffix: false, allowOverwrite: false, cacheControlMaxAge: 31536000 }
       },
     })

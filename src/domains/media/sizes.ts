@@ -29,8 +29,8 @@ export function pick(widths: readonly number[], target: number): number {
   return [...widths].sort((a, b) => a - b).find((w) => w >= target) ?? Math.max(...widths)
 }
 
-/** A blob path inside the shop's own folder: tenants/<tenant>/products/<id>-<width>.webp. */
-export const PATH_SHAPE = /^tenants\/([0-9a-f-]{36})\/(products|brand)\/([0-9a-f-]{36})-(400|800|1200|1600)\.webp$/
+/** A blob path inside the shop's own folder: tenants/<tenant>/<products|brand|theme>/<id>-<width>.webp (theme: a look's photos, T1). */
+export const PATH_SHAPE = /^tenants\/([0-9a-f-]{36})\/(products|brand|theme)\/([0-9a-f-]{36})-(400|800|1200|1600)\.webp$/
 
 /** The public host of a Vercel Blob store: store_ROPY6… → ropy6….public.blob.vercel-storage.com. */
 export function storeHost(storeId: string): string | null {
@@ -45,7 +45,7 @@ export function storeHost(storeId: string): string | null {
  * the raw string is what gets stored and later deleted; tenancy audit 2026-11-06).
  * Returns the rebuilt URL to store, never the input.
  */
-export function acceptedBase(raw: string, host: string, tenantId: string, folder: 'products' | 'brand'): string | null {
+export function acceptedBase(raw: string, host: string, tenantId: string, folder: 'products' | 'brand' | 'theme'): string | null {
   if (typeof raw !== 'string' || raw.length > 300 || /[?#%\\\s]/.test(raw)) return null
   let u: URL
   try { u = new URL(raw) } catch { return null }
