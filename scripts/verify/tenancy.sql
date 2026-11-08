@@ -1010,6 +1010,10 @@ do $$ begin
   exception when insufficient_privilege then null; end;
   perform set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
   if not exists (select 1 from theme_version_stages) then raise exception 'FAIL: B can''t see its own stage'; end if;
+  begin perform staged_by from theme_version_stages; raise exception 'FAIL: a shop reads which staff member staged it';
+  exception when insufficient_privilege then null; end;
+  begin delete from theme_version_stages; raise exception 'FAIL: a shop unstaged itself';
+  exception when insufficient_privilege then null; end;
 end $$;
 commit;
 begin; set local role frata_admin;
@@ -1026,6 +1030,10 @@ do $$ begin
   perform id, tenant_id, revision_id, published_at from shop_theme_publishes;
   perform id, tenant_id, theme_key, theme_version from shop_theme_revisions;
   begin perform settings from shop_theme_revisions; raise exception 'FAIL: staff read a shop''s look content';
+  exception when insufficient_privilege then null; end;
+  begin perform published_by_email from shop_theme_publishes; raise exception 'FAIL: staff read who published a shop''s look';
+  exception when insufficient_privilege then null; end;
+  begin perform created_by_email from shop_theme_revisions; raise exception 'FAIL: staff read who made a shop''s look';
   exception when insufficient_privilege then null; end;
 end $$;
 commit;

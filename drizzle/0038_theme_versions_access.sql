@@ -42,6 +42,7 @@ create trigger theme_versions_final before update on theme_versions for each row
 --> statement-breakpoint
 grant select (version_id, tenant_id, staged_at) on theme_version_stages to frata_app;
 --> statement-breakpoint
+-- Select only, on purpose: a shop never writes a stage (Admin stages and unstages). Don't add a write grant here.
 create policy tenant_rows on theme_version_stages for select to frata_app using (tenant_id = app_current_tenant());
 --> statement-breakpoint
 grant select, insert, delete on theme_version_stages to frata_admin;
