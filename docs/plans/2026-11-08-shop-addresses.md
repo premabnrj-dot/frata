@@ -1,5 +1,5 @@
 # Plan — Shop addresses: names, own domains, trust and safety
-Status: reviewed (2026-11-08: architecture, tenancy, security; every finding folded in below; owner calls at the end) ·
+Status: active (reviewed 2026-11-08: architecture, tenancy, security; owner calls decided) ·
 Date: 2026-11-08 · Spec: `docs/specs/2026-11-08-shop-addresses.md` (approved by the owner 2026-11-08 with the note "no
 descriptions or clarifications": spec § Words on screen) · Research: `docs/research/2026-11-08-shop-addresses.md`.
 D·0 is live (frrata.shop, main bce936b).
@@ -34,7 +34,7 @@ so production never runs code against a database it doesn't match. Every new or 
 | D1·4 | `app_shop_for_host(host)` (new, beside `app_tenant_for_slug/_for_host`): returns **facts only** — tenant id, current name, whether the asked name is current or retired-redirecting, the shop's live domains (≤ 4 rows), frozen/closed. Pure `addressFor(host, facts, now)` → serve · redirect(to) · unavailable. `coreShop.host` and every `shopHost(slug)` caller (Make a link, settings, products, partner, Admin) read the one main address. Cache key `['sf-host-v2', host]`, tags `host:<every name and domain of the shop>`; **every change refreshes all hosts of both shops** (tenancy H5). | int: tags after rename; e2e 52 old name → current |
 | D1·5 | Redirect: in the shop layout from the cached facts, **307** (owner call 2) to `https://${main}` + the encoded path — never `new URL(path, base)` (`//evil.com`, `/\evil.com` tested); `/orders` never redirects across hosts (order tokens stay on the host that issued them); `/api/shop/*` accepts any live host of the shop so a checkout in flight finishes; sitemap/robots on a non-main host point at the main one. Measured on `next start` and Vercel: status, Location, second hit cached (`speed-reviewer`) | e2e 52; host tests for the path cases |
 | D1·6 | Settings › Shop address (spec § Words): Change with "N changes left"; staff read-only; support visits refused server-side (banner already says why — no per-button reasons) | e2e 52 + 90 at 390 px |
-| D1·7 | Admin (needs **aal2** in `requireStaff` first — S5): Addresses tab (names), **Rename <shop>'s address** (reason ≤ 500, no redirect), **Freeze address changes**; Admin › Names (protected, offensive, blocked domains; release = delete a retired `shop_names` row with a reason, refreshing its host). Close and takedown for the `admin` staff role only | admin int; e2e 90 |
+| D1·7 | Admin (aal2 not chosen: owner call 5, accepted risk): Addresses tab (names), **Rename <shop>'s address** (reason ≤ 500, no redirect), **Freeze address changes**; Admin › Names (protected, offensive, blocked domains; release = delete a retired `shop_names` row with a reason, refreshing its host). Close and takedown for the `admin` staff role only | admin int; e2e 90 |
 
 ## D·2 — Own domains (needs Vercel Pro: owner call 1)
 | Task | What | Verify |
@@ -59,7 +59,7 @@ so production never runs code against a database it doesn't match. Every new or 
 | T1·2 | `/report` and the rights-holder form: Turnstile (owner call 4: a Cloudflare script on the console origin; `/start` nonce) with Siteverify checking success, hostname and action, failing closed; `ipBucket` rate limit, fail closed; page ≤ 2,048 chars (shown as text, never fetched), details ≤ 5,000; the shop inserted through a definer; **no email to a typed address** (at most one confirmation per address hash a day, if ever); reporter data kept 180 days | e2e with a Turnstile fake |
 | T1·3 | `ts_cases` (frata_admin only; `frata_app` reading it fails), `shop_restrictions` (frata_app **select only**; composite FK `(tenant_id, product_id)`); the merchant reads and replies through `app_my_cases()` (reference, kind, Admin's reason, page — never the reporter's text) and `app_case_reply(...)` | `verify:tenancy` proofs |
 | T1·4 | Enforcement: hide a product, freeze, close — in the same action invalidate `shop:`, catalogue and `host:` tags; place-order and Razorpay order creation check `shop_restrictions` **uncached** in their transaction; a hidden product's photos and OG image deleted from Blob (a private copy kept 180 days); frozen/closed answers "This shop is unavailable." on **every** name and domain; orders already placed stay fulfillable and refundable (a defined set of console actions, not "read-only") | e2e: freeze → shop page, photo URL 404, an order still ships |
-| T1·5 | Admin › Trust and safety queue with clocks (order 3 h, intimate 2 h, unlawful 36 h, other 7 days), Hide · Freeze · Close · Take down now (admin role, aal2, reason ≤ 500) | admin int; e2e 90 |
+| T1·5 | Admin › Trust and safety queue with clocks (order 3 h, intimate 2 h, unlawful 36 h, other 7 days), Hide · Freeze · Close · Take down now (admin role, reason ≤ 500; aal2 not chosen, owner call 5) | admin int; e2e 90 |
 | T1·6 | Signals: new-shop watch (30 days), Web Risk daily per host (price rechecked first), Search Console Domain property (owner); the quarterly advisory (a console notice until messaging E·1) | unit + int |
 
 ## Practices recorded in skills (same commits)
@@ -95,14 +95,14 @@ so production never runs code against a database it doesn't match. Every new or 
   new powers (M5); PSL before D·2 and no shop cookies or pixels until then (M6); tuples, caps, DoH hygiene, HSTS
   default, Vercel 409, report form limits (L1–L6).
 
-## Owner calls (recommendations first)
-1. **Vercel Pro before D·2** (≈ $20 a month per member): own domains need checks every 10 minutes at first and hourly
-   after; Hobby runs a cron once a day, which turns "24 h fallback" into 48 h and a connect into a day's wait.
-2. **307 (temporary) redirects to an own domain**: browsers keep a 308 forever, so after a main-address change,
-   fallback or detach, returning shoppers would land on a dead domain; canonical and sitemap carry the SEO.
-3. **A 72-hour hold before a main domain moves to another shop** that proves it, with the current owner told.
-4. **Turnstile on the console origin** (sign-up and /report): one Cloudflare script on public pages (rule 44
-   exception).
-5. **Admin two-step sign-in (aal2) before Admin's new powers** (rename, freeze, disconnect, takedown).
-6. **Vercel token for domains**: a dedicated team member (or integration) limited to project `frata`, Production
-   only, Sensitive, with an expiry.
+## Owner calls — decided 2026-11-08
+1. **Vercel Pro before D·2: yes.** D·1 builds now on Hobby; D·2 waits for Pro and a frequent schedule (`vercel.json`).
+2. **307 redirects to an own domain: yes.** Canonical and sitemap carry the SEO.
+3. **A 72-hour hold before a main domain moves** to a shop that proves it, the current owner told: yes. A non-main
+   domain moves at once (both resolvers, old token gone).
+4. **Turnstile on sign-up and /report: yes** (rule 44 exception: one Cloudflare script on those pages).
+5. **Admin two-step sign-in (aal2): not chosen.** Accepted risk (owner, 2026-11-08): Admin's rename, freeze,
+   disconnect and takedown sit behind the emailed sign-in code (S5 stays open). Mitigations kept: admin staff role only
+   for close and takedown, a required reason, Admin › Activity for every action.
+6. **Dedicated Vercel token: not chosen.** Accepted risk: the domains token is a team token. Mitigations kept:
+   Production only, Sensitive, read in `env.ts`, base URL fixed to `api.vercel.com`, never logged.
