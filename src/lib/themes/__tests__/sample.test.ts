@@ -1,0 +1,57 @@
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { describe, expect, it } from 'vitest'
+import { SAMPLE_PIECES } from '@/domains/themes/catalogue/samples'
+import { isListed } from '@/domains/storefront/listing'
+import { SAMPLE_SCENES, SAMPLES_BELOW, isSampleHandle, samplePieces, sampleProduct, withSampleImages, withSamples } from '../sample'
+
+// The customizer's sample pieces (plan 2026-11-09-themes-three, task 5; architecture review finding 4).
+const now = new Date('2026-11-09T06:00:00Z')
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+describe('sample pieces', () => {
+  it('every photo they name was drawn (scripts/themes/make-samples.mjs)', () => {
+    for (const p of samplePieces(now)) for (const i of p.images) for (const w of i.widths) expect(existsSync(`public${i.base}-${w}.webp`), `${i.base}-${w}`).toBe(true)
+    for (const s of Object.values(SAMPLE_SCENES)) for (const w of s.widths) expect(existsSync(`public${s.base}-${w}.webp`), s.base).toBe(true)
+    expect(SAMPLE_PIECES.length).toBe(8)
+  })
+  it('are listed, marked, and carry nothing the quote or the bag would accept (no uuid ids)', () => {
+    for (const p of samplePieces(now)) {
+      expect(p.sample).toBe(true); expect(isListed(p, now)).toBe(true); expect(isSampleHandle(p.handle)).toBe(true)
+      for (const v of p.variants) expect(v.id).not.toMatch(UUID)
+    }
+  })
+  it('include one on sale and one sold out, as a real shop would', () => {
+    const ps = samplePieces(now)
+    expect(ps.some((p) => p.variants.some((v) => v.compareAt))).toBe(true)
+    expect(ps.some((p) => p.variants.every((v) => v.stock === 0))).toBe(true)
+  })
+})
+
+describe('withSamples', () => {
+  const empty = { products: [], collections: [] }
+  it('fills a shop listing fewer than SAMPLES_BELOW pieces, after its own; leaves a fuller shop alone', () => {
+    expect(withSamples(empty, 0, now).products).toHaveLength(8)
+    expect(withSamples(empty, 0, now).collections).toHaveLength(3)
+    const full = { products: [], collections: [] }
+    expect(withSamples(full, SAMPLES_BELOW, now)).toBe(full)
+  })
+  it('a sample page only for a sample handle', () => {
+    expect(sampleProduct('sample-haldi-kurta', now)?.title).toBe('Haldi block-print kurta')
+    expect(sampleProduct('haldi-kurta', now)).toBeNull()
+  })
+  it('a missing photo in the preview gets a scene; one the merchant added stays', () => {
+    const t = withSampleImages({ key: 'editorial', home: [{ id: 'h', key: 'hero', hidden: false, scheme: 'paper', layout: 'image_text', heading: { text: 'A' }, image: null, button: null, position: 'bottom_left', height: 'tall', mask: 'none' }] } as never) as { home: { image: { base: string } | null }[] }
+    expect(t.home[0]!.image?.base).toBe('/themes/samples/scene-festive')
+  })
+})
+
+describe('samples never reach a shop', () => {
+  it('only the customizer’s look preview asks for them', () => {
+    const users: string[] = []
+    const walk = (d: string) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = join(d, e.name); if (e.isDirectory()) walk(p); else if (/\.tsx?$/.test(e.name) && !p.includes('__tests__') && /lib\/themes\/sample'/.test(readFileSync(p, 'utf8'))) users.push(p) } }
+    walk('src')
+    expect(users.sort()).toEqual(['src/app/(lookpreview)/console/theme-preview/[revision]/[[...path]]/page.tsx', 'src/components/storefront/preview-body.tsx'])
+    expect(readFileSync('src/lib/queries/storefront.ts', 'utf8')).not.toMatch(/from '@\/lib\/themes\/sample'|withSamples\(/)
+  })
+})

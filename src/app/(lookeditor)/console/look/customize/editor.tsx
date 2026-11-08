@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import type { Choices } from '@/domains/themes/choices'
 import { diffLayers } from '@/domains/themes/layer'
 import { readinessOf, type ShopFacts } from '@/domains/themes/readiness'
 import type { SectionInstance, SectionKey } from '@/domains/themes/sections'
@@ -34,7 +35,10 @@ export type EditorProps = {
   live: { theme: string; style: string; settings: Partial<ThemeSettings>; home: SectionInstance[] } | null
   facts: ShopFacts; formCtx: FormCtx; targets: LinkTarget[]; fonts: Record<Pairing, string>
   canPublish: boolean; shopOpen: boolean; nowIso: string; firstProduct: string | null; firstCollection: string | null
+  /** What this theme offers for each choice (choicesFor; null = any value). */
+  choices: Choices
 }
+
 
 const DEVICES = { phone: { w: 390, h: 780 }, tablet: { w: 768, h: 1024 }, desktop: { w: 1280, h: 800 } } as const
 type Device = keyof typeof DEVICES
@@ -60,6 +64,8 @@ export function Editor(p: EditorProps) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latest = useRef({ layer, style })
   latest.current = { layer, style }
+  const latestSel = useRef<string | null>(null)
+  latestSel.current = selected
   const stuck = typeof status === 'object' && /changed this draft|published|gone/.test(status.error)
 
   // While a change saves, the preview dims; it comes back as the shop redraws with it (motion system: a theme or
@@ -92,6 +98,17 @@ export function Editor(p: EditorProps) {
     return () => window.removeEventListener('keydown', key)
   })
   useEffect(() => { post({ type: 'select', sectionId: selected }) }, [selected])
+  // A section clicked in the preview (the bridge, same origin and our own frame only) opens its settings here.
+  useEffect(() => {
+    const on = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin || e.source !== frame.current?.contentWindow) return
+      const m = e.data as { type?: string; sectionId?: unknown }
+      if (m.type === 'picked' && typeof m.sectionId === 'string' && /^[a-z0-9-]{1,40}$/.test(m.sectionId)) { setTab('sections'); setPage('home'); setSelected(m.sectionId) }
+      if (m.type === 'ready') post({ type: 'select', sectionId: latestSel.current })
+    }
+    window.addEventListener('message', on)
+    return () => window.removeEventListener('message', on)
+  }, [])
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
 
   const issues = useMemo(() => readinessOf(layer.home, p.facts, now), [layer.home, p.facts, now])
@@ -116,7 +133,7 @@ export function Editor(p: EditorProps) {
       <div role="tablist" aria-label="Edit" className="flex gap-5 border-b border-border text-sm">
         {(['sections', 'theme'] as const).map((t) => <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`py-3 ${tab === t ? 'border-b-2 border-foreground font-semibold' : 'text-muted-foreground'}`}>{t === 'theme' ? 'Theme settings' : page === 'product' ? 'Product page' : page === 'collection' ? 'Collection page' : 'Sections'}</button>)}
       </div>
-      {tab === 'sections' && page !== 'home' && <PageForm page={page} settings={layer.settings} set={(s) => change({ ...layer, settings: { ...layer.settings, ...s } })} />}
+      {tab === 'sections' && page !== 'home' && <PageForm page={page} settings={layer.settings} choices={p.choices} set={(s) => change({ ...layer, settings: { ...layer.settings, ...s } })} />}
       {tab === 'sections' && page === 'home' && (sel ? (
         <div className="space-y-4">
           <button type="button" onClick={() => setSelected(null)} className="text-sm text-muted-foreground">‹ Sections</button>
@@ -128,7 +145,7 @@ export function Editor(p: EditorProps) {
         <SectionsPanel home={layer.home} selected={selected} allowed={p.allowed.sections} issues={issueMap} now={now}
           onSelect={setSelected} onChange={(home, id) => { change({ ...layer, home }); if (id) setSelected(id) }} />
       ))}
-      {tab === 'theme' && <ThemeForm settings={layer.settings} style={style} styles={p.styles} allowed={p.allowed} targets={p.targets} fonts={p.fonts}
+      {tab === 'theme' && <ThemeForm settings={layer.settings} style={style} styles={p.styles} allowed={p.allowed} choices={p.choices} schemes={p.formCtx.schemes} targets={p.targets} fonts={p.fonts}
         set={(s) => change({ ...layer, settings: { ...layer.settings, ...s } })} setStyle={(k) => change(layer, k)} />}
     </div>
   )

@@ -1,8 +1,10 @@
 import { redirect } from 'next/navigation'
 import { statusLabel, visibility, type Status } from '@/domains/catalogue/availability'
 import type { ResolvedTheme } from '@/domains/themes/types'
-import { previewBestSellers, previewCatalogue, previewProduct, type StoreShop } from '@/lib/queries/storefront'
+import { previewBestSellers, previewCatalogue as readCatalogue, previewProduct, type StoreShop } from '@/lib/queries/storefront'
 import { bestSellersFor } from '@/lib/themes/page-look'
+import { isSampleHandle, sampleProduct, withSamples } from '@/lib/themes/sample'
+import { isListed } from '@/domains/storefront/listing'
 import { AllView, CollectionView, GoneView, HomeView, PolicyView, ShopNotFound } from './pages'
 import { POLICY_TITLE } from './policy'
 import { ProductView } from './product-view'
@@ -10,18 +12,24 @@ import type { Href } from './shell'
 
 /** One shop page for the merchant's previews (drafts and unlisted pieces included, never cached), and a note on what
  *  shoppers see instead. Shared by /console/preview and the customizer's look preview. */
-export async function previewPage(o: { tenantId: string; shop: StoreShop; path: string[]; href: Href; now: Date; theme: ResolvedTheme }): Promise<{ body: React.ReactNode; note: string | null }> {
-  const { tenantId, shop, path, href, now, theme } = o
+export async function previewPage(o: { tenantId: string; shop: StoreShop; path: string[]; href: Href; now: Date; theme: ResolvedTheme
+  /** The customizer's look preview of a theme with samples (never /console/preview, which shows the shop as shoppers see it). */
+  samples?: boolean }): Promise<{ body: React.ReactNode; note: string | null }> {
+  const { tenantId, shop, path, href, now, theme, samples = false } = o
   const [a, b, ...rest] = path
+  const previewCatalogue = async (t: string) => { const c = await readCatalogue(t); return samples ? withSamples(c, c.products.filter((p) => isListed(p, now)).length, now) : c }
   if (rest.length) return { body: <ShopNotFound href={href} lang={shop.shopLanguage} />, note: null }
   if (!a) {
     const best = await bestSellersFor(theme, (d) => previewBestSellers(tenantId, d))
-    return { body: <HomeView shop={shop} cat={await previewCatalogue(tenantId)} href={href} now={now} theme={theme} bestSellers={best} />, note: null }
+    return { body: <HomeView shop={shop} cat={await previewCatalogue(tenantId)} href={href} now={now} theme={theme} bestSellers={best} preview />, note: null }
   }
   if (a === 'products' && !b) return { body: <AllView cat={await previewCatalogue(tenantId)} href={href} now={now} lang={shop.shopLanguage} />, note: null }
   if (a === 'products' && b && /^[a-z0-9-]{1,100}$/.test(b)) {
     const r = await previewProduct(tenantId, b)
     if (r.kind === 'moved') redirect(href(`/products/${r.to}`))
+    // A sample piece's page: only when the shop has no product of its own at this address. Not live: the bag is off.
+    const sample = r.kind === 'none' && samples && isSampleHandle(b) ? sampleProduct(b, now) : null
+    if (sample) return { body: <ProductView shop={shop} p={sample} now={now} layout={theme.settings} />, note: null }
     if (r.kind === 'none') return { body: <ShopNotFound href={href} lang={shop.shopLanguage} />, note: null }
     const p = r.product
     const v = visibility(p.status as Status, p.publishAt ? new Date(p.publishAt) : null, now)

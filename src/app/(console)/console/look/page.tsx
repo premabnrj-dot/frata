@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
-import { cmpSemver, CATALOGUE, manifestOf, THEME_ORDER } from '@/domains/themes/catalogue'
+import { cmpSemver, CATALOGUE, manifestOf, OFFERED } from '@/domains/themes/catalogue'
 import { latestAvailable } from '@/domains/themes/release'
 import { resolveStored, resolveTheme } from '@/domains/themes/resolve'
 import { ANY_MEMBER, CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
@@ -33,7 +33,7 @@ export default async function LookPage() {
   const styleName = liveM.styles.find((s) => s.key === liveTheme.style)?.name ?? liveTheme.style
   const sells = new Set(l.facts.sells)
   // Only versions this shop may use (released, or staged to it; never recalled or withdrawn: themes T3).
-  const offered = THEME_ORDER.flatMap((k) => { const m = latestAvailable(k, Object.values(CATALOGUE[k] ?? {}), l.access.rows, l.access.staged); return m ? [m] : [] })
+  const offered = OFFERED.flatMap((k) => { const m = latestAvailable(k, Object.values(CATALOGUE[k] ?? {}), l.access.rows, l.access.staged); return m ? [m] : [] })
   const liveOk = !l.live || l.may(l.live.revision.themeKey, l.live.revision.themeVersion)
   const newest = offered.find((m) => m.key === liveTheme.key && cmpSemver(m.version, liveTheme.version) > 0) ?? null
   const withdrawn = l.history[0] && l.live && l.history[0].revision.id !== l.live.revision.id ? CATALOGUE[l.history[0].revision.themeKey]?.[l.history[0].revision.themeVersion] ?? null : null

@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { ON_COLOUR } from './catalogue/kit'
+import { choicesFor } from './choices'
 import { contrast } from './contrast'
 import { SECTION_NAMES, SectionSchema, MAX_PER_PAGE, MAX_SECTIONS, shopPath, type SectionInstance } from './sections'
 import { FOOTERS, HEADERS, PAGE_DEFAULTS, PAIRINGS, type Hex, type Scheme, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
@@ -15,7 +16,7 @@ export const SettingsSchema = z.object({
   headings: z.enum(['as_typed', 'upper']),
   size: z.enum(['compact', 'regular', 'large']),
   corners: z.enum(['square', 'soft', 'round']),
-  buttons: z.enum(['solid', 'outline']),
+  buttons: z.enum(['solid', 'outline', 'underline']),
   spacing: z.enum(['airy', 'regular', 'compact']),
   photo: z.enum(['4:5', '3:4', '1:1']),
   hoverPhoto: z.boolean(),
@@ -29,11 +30,21 @@ export const SettingsSchema = z.object({
   motion: z.enum(['subtle', 'none']),
   brandColour: hex.nullable(),
   // T2, additive (each optional; absent = PAGE_DEFAULTS).
-  gallery: z.enum(['swipe', 'thumbs']),
+  gallery: z.enum(['swipe', 'thumbs', 'rail', 'stack']),
   details: z.enum(['open', 'folded']),
   card: z.enum(['standard', 'centred', 'framed']),
   desktopColumns: z.union([z.literal(3), z.literal(4)]),
   collectionTop: z.enum(['title', 'banner']),
+  // 2.0, additive (absent = FEEL_DEFAULTS; which values a theme may use: choicesFor).
+  buttonShape: z.enum(['theme', 'pill']),
+  buttonMotion: z.enum(['press', 'lift', 'fill']),
+  cardHover: z.enum(['none', 'lift', 'zoom']),
+  entrance: z.enum(['none', 'fade', 'rise']),
+  reveal: z.boolean(),
+  buyBoxSticky: z.boolean(),
+  buyBar: z.boolean(),
+  footerScheme: z.enum(['paper', 'tint', 'ink']),
+  checkout: z.enum(['standard', 'focused']),
 }).partial()
 
 /** A stored or submitted layer, checked for shape. Sections are checked one by one (and again at every read). */
@@ -84,13 +95,23 @@ export function carryOver(from: { manifest: ThemeManifest; layer: ThemeLayer }, 
   }
   const was = { ...PAGE_DEFAULTS, ...from.manifest.defaults, ...(from.layer.settings ?? {}) } as ThemeSettings
   const lost: string[] = []
-  const settings: Partial<ThemeSettings> = {
-    brandColour: was.brandColour, corners: was.corners, photo: was.photo, announcement: was.announcement,
-    // Page layouts are the merchant's, whatever the theme (T2).
-    gallery: was.gallery, details: was.details, card: was.card, desktopColumns: was.desktopColumns, collectionTop: was.collectionTop,
+  // Only what the merchant chose comes across, never the old theme's defaults: a new theme opens with its own
+  // character (plan 2026-11-09-themes-three). Content (brand colour, announcement) always; a layout choice only if
+  // the new theme offers that value.
+  const mine = from.layer.settings ?? {}
+  const settings: Partial<ThemeSettings> = {}
+  if (mine.brandColour !== undefined) settings.brandColour = mine.brandColour
+  if (mine.announcement !== undefined) settings.announcement = mine.announcement
+  for (const k of ['corners', 'photo', 'gallery', 'details', 'card', 'desktopColumns', 'collectionTop'] as const) {
+    const v = mine[k]; const list = choicesFor(to, k)
+    if (v !== undefined && (!list || (list as readonly unknown[]).includes(v))) (settings as Record<string, unknown>)[k] = v
   }
-  if (to.allowed.pairings.includes(was.pairing)) settings.pairing = was.pairing
-  else if (was.pairing !== from.manifest.defaults.pairing) lost.push(`The ${was.pairing} type isn't in ${to.name}`)
+  // Type the merchant picked in the customizer; Classic's is the font recorded from Settings before themes, so the new
+  // theme's own type wins over it.
+  if (mine.pairing !== undefined && from.manifest.key !== 'classic') {
+    if (to.allowed.pairings.includes(mine.pairing)) settings.pairing = mine.pairing
+    else lost.push(`The ${mine.pairing} type isn't in ${to.name}`)
+  }
   if (was.header !== from.manifest.defaults.header) {
     if (to.allowed.headers.includes(was.header)) settings.header = was.header
     else lost.push(`The ${was.header === 'circles' ? 'category circles' : was.header} header isn't in ${to.name}`)
@@ -131,5 +152,7 @@ export const SETTING_NAMES: Record<keyof ThemeSettings, string> = {
   hoverPhoto: 'Second photo on hover', phoneColumns: 'Columns on a phone', header: 'Header', sticky: 'Sticky header', bottomTabs: 'Bottom tabs',
   announcement: 'Announcement bar', footer: 'Footer', social: 'Social links', motion: 'Motion', brandColour: 'Brand colour',
   gallery: 'Product photos', details: 'About and details', card: 'Product cards', desktopColumns: 'Columns on a computer',
-  collectionTop: 'Top of a collection',
+  collectionTop: 'Top of a collection', buttonShape: 'Button shape', buttonMotion: 'Button motion', cardHover: 'Card hover',
+  entrance: 'Page entrance', reveal: 'Sections rise in', buyBoxSticky: 'Buy box beside photos', buyBar: 'Add to bag bar on phones',
+  footerScheme: 'Footer colours', checkout: 'Checkout',
 }

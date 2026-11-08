@@ -3,14 +3,14 @@ import { classic_1_0_0 } from '../catalogue/classic/1.0.0'
 import { classicFromSettings, resolveStored, resolveTheme, schemeVars, settingAttrs, settingVars } from '../resolve'
 import { CATALOGUE, manifestNear } from '../catalogue'
 import { carryOver } from '../layer'
-import { PAGE_DEFAULTS } from '../types'
+import { FEEL_DEFAULTS, PAGE_DEFAULTS } from '../types'
 
 describe('resolveTheme', () => {
   it('a layer picks the style and settings; anything the theme does not allow falls back', () => {
     const t = resolveTheme(classic_1_0_0, { style: 'moss', settings: { pairing: 'cormorant' } })
     expect(t.style).toBe('moss'); expect(t.settings.pairing).toBe('cormorant'); expect(t.home.map((s) => s.id)).toEqual(classic_1_0_0.home.map((s) => s.id))
     const odd = resolveTheme(classic_1_0_0, { style: 'nope', settings: { pairing: 'comic-sans' as never, header: 'mega' as never } })
-    expect(odd.style).toBe('oxide'); expect(odd.settings).toEqual({ ...PAGE_DEFAULTS, ...classic_1_0_0.defaults })
+    expect(odd.style).toBe('oxide'); expect(odd.settings).toEqual({ ...PAGE_DEFAULTS, ...FEEL_DEFAULTS, ...classic_1_0_0.defaults })
   })
   it('a section key the theme does not allow is dropped from Home', () => {
     const t = resolveTheme({ ...classic_1_0_0, allowed: { ...classic_1_0_0.allowed, sections: ['hero'] } }, { style: 'oxide' })

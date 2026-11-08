@@ -4,16 +4,19 @@ import Link from 'next/link'
 import { BRAND_COLOUR_START } from '@/domains/themes/catalogue/kit'
 import { brandColourProblem } from '@/domains/themes/layer'
 import { FOOTER_NAMES, HEADER_NAMES, PAIRING_NAMES, type Announcement, type FooterVariant, type HeaderVariant, type Pairing, type Scheme, type ThemeSettings } from '@/domains/themes/types'
-import { Choice, Field, LinkPicker, Switch, Text, type LinkTarget } from './controls'
+import { Choice, Field, LinkPicker, Offered, OfferedSwitch, Switch, Text, type LinkTarget } from './controls'
+import type { Choices } from '@/domains/themes/choices'
 
 // "Theme settings" (themes spec § Theme settings, every control). Typed choices only; the brand colour is the one
 // free value, checked as it is picked against the style's light schemes.
 
 export type StyleOption = { key: string; name: string; swatches: string[]; light: Scheme[] }
 
-export function ThemeForm({ settings, style, styles, allowed, targets, fonts, set, setStyle }: {
+export function ThemeForm({ settings, style, styles, allowed, choices, schemes, targets, fonts, set, setStyle }: {
   settings: ThemeSettings; style: string; styles: StyleOption[]
   allowed: { pairings: Pairing[]; headers: HeaderVariant[]; footers: FooterVariant[] }
+  /** What this theme offers for each choice (2.0); a choice it doesn't offer isn't shown. */
+  choices: Choices; schemes: { key: 'paper' | 'tint' | 'ink'; name: string }[]
   targets: LinkTarget[]; fonts: Record<Pairing, string>
   set: (s: Partial<ThemeSettings>) => void; setStyle: (k: string) => void
 }) {
@@ -53,14 +56,19 @@ export function ThemeForm({ settings, style, styles, allowed, targets, fonts, se
       </fieldset>
       <Choice label="Type size" value={settings.size} onChange={(size) => set({ size })} options={[{ value: 'compact', label: 'Compact' }, { value: 'regular', label: 'Regular' }, { value: 'large', label: 'Large' }]} />
       <Choice label="Headings" value={settings.headings} onChange={(headings) => set({ headings })} options={[{ value: 'as_typed', label: 'As typed' }, { value: 'upper', label: 'UPPERCASE' }]} />
-      <Choice label="Corners" value={settings.corners} onChange={(corners) => set({ corners })} options={[{ value: 'square', label: 'Square' }, { value: 'soft', label: 'Soft' }, { value: 'round', label: 'Round' }]} />
-      <Choice label="Buttons" value={settings.buttons} onChange={(buttons) => set({ buttons })} options={[{ value: 'solid', label: 'Solid' }, { value: 'outline', label: 'Outline' }]} />
+      <Offered label="Corners" value={settings.corners} list={choices.corners} onChange={(corners) => set({ corners })} all={[{ value: 'square', label: 'Square' }, { value: 'soft', label: 'Soft' }, { value: 'round', label: 'Round' }]} />
       <Choice label="Spacing" value={settings.spacing} onChange={(spacing) => set({ spacing })} options={[{ value: 'airy', label: 'Airy' }, { value: 'regular', label: 'Regular' }, { value: 'compact', label: 'Compact' }]} />
 
       <h3 className="pt-2 text-sm font-semibold">Products</h3>
       <Choice label="Photo shape" value={settings.photo} onChange={(photo) => set({ photo, ...(photo === '4:5' ? { phoneColumns: 2 as const } : {}) })} options={[{ value: '4:5', label: '4:5' }, { value: '3:4', label: '3:4' }, { value: '1:1', label: '1:1' }]} />
-      <Choice label="Columns on a phone" value={settings.phoneColumns} onChange={(phoneColumns) => set({ phoneColumns })} options={[{ value: 2, label: '2' }, ...(settings.photo === '4:5' ? [] : [{ value: 3 as const, label: '3' }])]} />
+      <Offered label="Columns on a phone" value={settings.phoneColumns} list={choices.phoneColumns} onChange={(phoneColumns) => set({ phoneColumns })} all={[{ value: 2, label: '2' }, ...(settings.photo === '4:5' ? [] : [{ value: 3 as const, label: '3' }])]} />
       <Switch label="Second photo on hover (computers)" on={settings.hoverPhoto} onChange={(hoverPhoto) => set({ hoverPhoto })} />
+      <Offered label="Cards on hover" value={settings.cardHover} list={choices.cardHover} onChange={(cardHover) => set({ cardHover })} all={[{ value: 'none', label: 'Still' }, { value: 'lift', label: 'Lift' }, { value: 'zoom', label: 'Zoom photo' }]} />
+
+      <h3 className="pt-2 text-sm font-semibold">Buttons</h3>
+      <Offered label="Style" value={settings.buttons} list={choices.buttons} onChange={(buttons) => set({ buttons })} all={[{ value: 'solid', label: 'Solid' }, { value: 'outline', label: 'Outline' }, { value: 'underline', label: 'Underlined' }]} />
+      <Offered label="Shape" value={settings.buttonShape} list={choices.buttonShape} onChange={(buttonShape) => set({ buttonShape })} all={[{ value: 'theme', label: 'Follows corners' }, { value: 'pill', label: 'Pill' }]} />
+      <Offered label="On hover" value={settings.buttonMotion} list={choices.buttonMotion} onChange={(buttonMotion) => set({ buttonMotion })} all={[{ value: 'press', label: 'Press' }, { value: 'lift', label: 'Lift' }, { value: 'fill', label: 'Sheen' }]} />
 
       <h3 className="pt-2 text-sm font-semibold">Header</h3>
       <Choice label="Layout" value={settings.header} onChange={(header) => set({ header })} options={allowed.headers.map((h) => ({ value: h, label: HEADER_NAMES[h] }))} />
@@ -77,10 +85,19 @@ export function ThemeForm({ settings, style, styles, allowed, targets, fonts, se
 
       <h3 className="pt-2 text-sm font-semibold">Footer</h3>
       <Choice label="Layout" value={settings.footer} onChange={(footer) => set({ footer })} options={allowed.footers.map((f) => ({ value: f, label: FOOTER_NAMES[f] }))} />
+      <Offered label="Colours" value={settings.footerScheme} list={choices.footerScheme} onChange={(footerScheme) => set({ footerScheme })} all={schemes.map((x) => ({ value: x.key, label: x.name }))} />
       <Switch label="Instagram and WhatsApp links" on={settings.social} onChange={(social) => set({ social })} />
       <p className="text-xs text-muted-foreground">Policies, your legal name and the grievance officer always show: the law asks for them.</p>
 
+      <h3 className="pt-2 text-sm font-semibold">Motion</h3>
       <Choice label="Motion" value={settings.motion} onChange={(motion) => set({ motion })} options={[{ value: 'subtle', label: 'Subtle' }, { value: 'none', label: 'None' }]} />
+      {settings.motion !== 'none' && <>
+        <Offered label="Pages arrive" value={settings.entrance} list={choices.entrance} onChange={(entrance) => set({ entrance })} all={[{ value: 'none', label: 'At once' }, { value: 'fade', label: 'Fade' }, { value: 'rise', label: 'Rise' }]} />
+        <OfferedSwitch label="Sections rise in as you scroll" on={settings.reveal} list={choices.reveal} onChange={(reveal) => set({ reveal })} />
+      </>}
+
+      <h3 className="pt-2 text-sm font-semibold">Checkout</h3>
+      <Offered label="Checkout" value={settings.checkout} list={choices.checkout} onChange={(checkout) => set({ checkout })} all={[{ value: 'standard', label: 'With your menu' }, { value: 'focused', label: 'Focused' }]} />
     </div>
   )
 }

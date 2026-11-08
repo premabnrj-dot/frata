@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { displayFamily, STORE_FONT_VARS } from '@/components/shop-preview/fonts'
 import { POLICY_TITLE } from '@/components/storefront/policy'
 import { manifestOf } from '@/domains/themes/catalogue'
+import { choicesOf } from '@/domains/themes/choices'
 import { truePromises } from '@/domains/themes/readiness'
 import { resolveTheme } from '@/domains/themes/resolve'
 import { PROMISES } from '@/domains/themes/sections'
@@ -66,7 +67,9 @@ export default async function Customize() {
           schemes: [{ key: 'paper', name: schemeNames.paper ?? 'Paper' }, { key: 'tint', name: schemeNames.tint ?? 'Tint' }, { key: 'ink', name: schemeNames.ink ?? 'Ink' }] }}
         targets={targets} fonts={Object.fromEntries(PAIRINGS.map((p) => [p, displayFamily(p)])) as Record<Pairing, string>}
         canPublish={(CAN_MANAGE as readonly string[]).includes(role)} shopOpen={!!shop.publishedAt} nowIso={new Date().toISOString()}
-        firstProduct={data.products[0]?.handle ?? null} firstCollection={data.collections[0]?.handle ?? null}
+        // A theme with samples (2.0): with no piece or collection of its own yet, the page picker opens a sample one.
+        firstProduct={data.products[0]?.handle ?? (m.samples ? 'sample-haldi-kurta' : null)} firstCollection={data.collections[0]?.handle ?? (m.samples ? 'sample-kurtas' : null)}
+        choices={choicesOf(m)}
       />
     </div>
   )

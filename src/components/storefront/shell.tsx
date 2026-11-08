@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { displayFamily, STORE_FONT_VARS } from '@/components/shop-preview/fonts'
 import type { PolicyFacts } from '@/domains/policies/render'
 import { classicFromSettings, schemeVars, settingAttrs, settingVars } from '@/domains/themes/resolve'
-import type { ResolvedTheme } from '@/domains/themes/types'
+import type { FooterVariant, ResolvedTheme } from '@/domains/themes/types'
 import { BagButton } from './bag'
 import { CaptureAttribution } from './capture'
 import { wordsFor, type Lang, type Words } from './words'
@@ -18,24 +18,31 @@ export type Circle = { handle: string; title: string; image: PhotoData | null }
 
 /** Every shop page: the theme's tokens, settings and display face, its header and footer. Props only.
  *  No theme passed: Classic from the shop's settings (the look every shop had before themes). */
-export function ShopShell({ shop, href, banner, children, gated = false, live = false, capture = false, theme, circles = [] }: { shop: ShellShop; href: Href; banner?: React.ReactNode; children: React.ReactNode; gated?: boolean; live?: boolean
+export function ShopShell({ shop, href, banner, children, gated = false, live = false, capture = false, theme, circles = [], focused = false }: { shop: ShellShop; href: Href; banner?: React.ReactNode; children: React.ReactNode; gated?: boolean; live?: boolean
   /** Record how the shopper arrived (Analytics A·1): the real shop only, never a console preview (which may be `live`). */
-  capture?: boolean; theme?: ResolvedTheme; circles?: Circle[] }) {
+  capture?: boolean; theme?: ResolvedTheme; circles?: Circle[]
+  /** The focused checkout (2.0 choice): the logo and the legal footer only; no menu, announcement, tabs or social links. */
+  focused?: boolean }) {
   const t = theme ?? classicFromSettings(shop.accent, shop.displayFont)
   const s = t.settings
-  const tabs = s.bottomTabs && !gated
+  const bare = gated || focused
+  const tabs = s.bottomTabs && !bare
   const w = wordsFor(shop.shopLanguage)
   return (
     <div data-store-theme="" lang={shop.shopLanguage === 'hi' ? 'hi' : undefined} {...settingAttrs(t)} className={`${STORE_FONT_VARS} flex min-h-dvh flex-col`} style={{ ...settingVars(t), '--store-display': displayFamily(s.pairing) } as React.CSSProperties}>
-      {banner ?? (s.announcement && !gated && <Announcement a={s.announcement} t={t} href={href} />)}
-      <header className={`border-b border-store-line ${s.sticky ? 'sticky top-0 z-30 bg-store-paper' : ''}`}>
-        {s.header === 'centred' || s.header === 'minimal'
+      {!focused && (banner ?? (s.announcement && !gated && <Announcement a={s.announcement} t={t} href={href} />))}
+      <header className={`border-b border-store-line ${s.sticky && !focused ? 'sticky top-0 z-30 bg-store-paper' : ''}`}>
+        {focused ? <div className="mx-auto flex max-w-6xl justify-center px-4 py-4 sm:px-6"><Logo shop={shop} href={href} upper={s.header === 'minimal' || s.headings === 'upper'} className="text-lg font-semibold tracking-[0.12em]" /></div>
+          : s.header === 'centred' || s.header === 'minimal'
           ? <MenuHeader shop={shop} href={href} gated={gated} live={live} minimal={s.header === 'minimal'} w={w} />
+          : s.header === 'split' ? <SplitHeader shop={shop} href={href} gated={gated} live={live} w={w} />
           : <ClassicHeader shop={shop} href={href} gated={gated} live={live} w={w} />}
-        {s.header === 'circles' && !gated && circles.length > 0 && <CircleRow circles={circles} href={href} w={w} />}
+        {s.header === 'circles' && !bare && circles.length > 0 && <CircleRow circles={circles} href={href} w={w} />}
       </header>
       <main id="main" className={`flex-1 ${tabs ? 'pb-16 sm:pb-0' : ''}`}>{children}</main>
-      <ShopFooter f={shop} href={href} variant={s.footer} social={s.social} w={w} />
+      <div style={s.footerScheme !== 'paper' ? schemeVars(t, s.footerScheme) as React.CSSProperties : undefined} className={s.footerScheme !== 'paper' ? 'contents' : undefined}>
+        <ShopFooter f={shop} href={href} variant={focused ? 'compact' : s.footer} social={s.social && !focused} w={w} painted={s.footerScheme !== 'paper'} />
+      </div>
       {tabs && <BottomTabs href={href} live={live} w={w} />}
       {/* How the shopper arrived: on every page of the real shop, never in a console preview (Analytics A·1). */}
       <CaptureAttribution capture={capture} />
@@ -99,6 +106,32 @@ function MenuHeader({ shop, href, gated, live, minimal, w }: { shop: ShellShop; 
   )
 }
 
+/** Split (2.0): the collections on the left, the logo centred, the bag on the right; a phone gets the menu sheet. */
+function SplitHeader({ shop, href, gated, live, w }: { shop: ShellShop; href: Href; gated: boolean; live: boolean; w: Words }) {
+  return (
+    <div className="mx-auto grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-3 sm:px-6">
+      <div className="min-w-0">
+        {!gated && <>
+          <nav aria-label={w.shopNav} className="hidden gap-1 overflow-x-auto text-sm sm:flex">
+            <Link href={href('/products')} className="store-nav whitespace-nowrap px-2 py-2">{w.shopAll}</Link>
+            {shop.nav.slice(0, 4).map((c) => <Link key={c.handle} href={href(`/collections/${c.handle}`)} className="store-nav whitespace-nowrap px-2 py-2">{c.title}</Link>)}
+          </nav>
+          <details className="relative sm:hidden">
+            <summary aria-label={w.menu} className="grid size-11 cursor-pointer list-none place-items-center text-xl [&::-webkit-details-marker]:hidden">≡</summary>
+            <nav aria-label={w.menu} className="absolute left-0 top-12 z-40 w-64 space-y-1 rounded-[var(--store-radius)] border border-store-line bg-store-paper p-3 text-base shadow-sm">
+              <Link href={href('/products')} className="block py-2">{w.shopAll}</Link>
+              {shop.nav.map((c) => <Link key={c.handle} href={href(`/collections/${c.handle}`)} className="block py-2">{c.title}</Link>)}
+              <Link href={href('/policies/contact')} className="block py-2 text-store-sub">{w.contact}</Link>
+            </nav>
+          </details>
+        </>}
+      </div>
+      <Logo shop={shop} href={href} upper className="text-base font-bold tracking-[0.2em] sm:text-lg" />
+      <div className="flex justify-end">{!gated && live && <BagButton checkoutHref={href('/checkout')} shopHref={href('/products')} label={w.bag} count={[w.bagOne, w.bagMany]} />}</div>
+    </div>
+  )
+}
+
 /** Category circles under the header: each collection's first photo, the Instagram-story idiom. */
 function CircleRow({ circles, href, w }: { circles: Circle[]; href: Href; w: Words }) {
   return (
@@ -138,10 +171,13 @@ function BottomTabs({ href, live, w }: { href: Href; live: boolean; w: Words }) 
 }
 
 /** The footer on every page (inside the shell, which sets --store-display). */
-export function ShopFooter({ f, href, variant = 'three', social = true, w = wordsFor(f.shopLanguage) }: { f: ShellShop; href: Href; variant?: 'three' | 'compact'; social?: boolean; w?: Words }) {
-  if (variant === 'compact') return <CompactFooter f={f} href={href} social={social} w={w} />
+export function ShopFooter({ f, href, variant = 'three', social = true, w = wordsFor(f.shopLanguage), painted = false }: { f: ShellShop; href: Href; variant?: FooterVariant; social?: boolean; w?: Words
+  /** Painted in another scheme (footer colours, 2.0): its own background, edge to edge. */
+  painted?: boolean }) {
+  if (variant === 'compact') return <CompactFooter f={f} href={href} social={social} w={w} painted={painted} />
+  if (variant === 'statement') return <StatementFooter f={f} href={href} social={social} w={w} painted={painted} />
   return (
-    <footer className="mt-16 border-t border-store-line bg-store-chip/50">
+    <footer className={`mt-16 border-t border-store-line ${painted ? 'bg-store-paper text-store-ink' : 'bg-store-chip/50'}`}>
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-sm sm:grid-cols-3 sm:px-6">
         <div className="space-y-2">
           <p className="text-lg" style={{ fontFamily: 'var(--store-display)' }}>{f.shopName}</p>
@@ -165,9 +201,9 @@ export function ShopFooter({ f, href, variant = 'three', social = true, w = word
 }
 
 /** One column on every width. The policies, legal name, address and grievance officer stay: the law, not a setting. */
-function CompactFooter({ f, href, social, w }: { f: ShellShop; href: Href; social: boolean; w: Words }) {
+function CompactFooter({ f, href, social, w, painted }: { f: ShellShop; href: Href; social: boolean; w: Words; painted: boolean }) {
   return (
-    <footer className="mt-16 border-t border-store-line">
+    <footer className={`mt-16 border-t border-store-line ${painted ? 'bg-store-paper text-store-ink' : ''}`}>
       <div className="mx-auto max-w-6xl space-y-3 px-4 py-8 text-center text-sm sm:px-6">
         <p className="text-base" style={{ fontFamily: 'var(--store-display)' }}>{f.shopName}</p>
         <nav aria-label={w.policiesNav}><ul className="flex flex-wrap justify-center gap-x-4 gap-y-1">
@@ -178,6 +214,34 @@ function CompactFooter({ f, href, social, w }: { f: ShellShop; href: Href; socia
           {f.whatsapp && <a href={waLink(f.whatsapp)} rel="noopener" className="underline underline-offset-4">WhatsApp</a>}
         </p>}
         <p className="text-store-sub">{[f.legalName, f.address?.replace(/\n/g, ', '), f.grievanceName ? `${w.grievance}: ${f.grievanceName}${f.grievanceEmail ? `, ${f.grievanceEmail}` : ''}` : ''].filter(Boolean).join(' · ')}</p>
+      </div>
+    </footer>
+  )
+}
+
+/** Statement (2.0): the shop's name set large, then every legal fact the other footers carry (none is removed). */
+function StatementFooter({ f, href, social, w, painted }: { f: ShellShop; href: Href; social: boolean; w: Words; painted: boolean }) {
+  return (
+    <footer className={`mt-16 overflow-hidden border-t border-store-line ${painted ? 'bg-store-paper text-store-ink' : ''}`}>
+      <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 text-sm sm:px-6 sm:py-14">
+        <div className="grid gap-8 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="space-y-2">
+            {f.tagline && <p className="max-w-sm text-base text-store-sub">{f.tagline}</p>}
+            {social && <p className="flex gap-4">
+              {f.instagram && <a href={igLink(f.instagram)} rel="noopener" className="underline underline-offset-4">Instagram</a>}
+              {f.whatsapp && <a href={waLink(f.whatsapp)} rel="noopener" className="underline underline-offset-4">WhatsApp</a>}
+            </p>}
+          </div>
+          <nav aria-label={w.policiesNav}><ul className="space-y-1.5">
+            {(['shipping', 'returns', 'privacy', 'terms', 'contact'] as const).map((k) => <li key={k}><Link href={href(`/policies/${k}`)} className="hover:underline">{w.policy[k]}</Link></li>)}
+          </ul></nav>
+          <div className="space-y-1 text-store-sub">
+            {f.legalName && <p>{f.legalName}</p>}
+            {f.address && <p className="whitespace-pre-line">{f.address}</p>}
+            {f.grievanceName && <p>{`${w.grievance}: `}{f.grievanceName}{f.grievanceEmail ? `, ${f.grievanceEmail}` : ''}</p>}
+          </div>
+        </div>
+        <p aria-hidden="true" className="truncate border-t border-store-line pt-6 text-[clamp(2.5rem,11vw,8rem)] leading-none tracking-tight" style={{ fontFamily: 'var(--store-display)' }}>{f.shopName}</p>
       </div>
     </footer>
   )

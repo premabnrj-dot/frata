@@ -21,7 +21,7 @@ export default {
     const open = async (who, opts) => { const ctx = await signedIn(t.browser, who, opts); const p = await ctx.newPage(); p.setDefaultTimeout(15_000); p.on('pageerror', (e) => t.errors.push(e.message)); return p }
     const riya = await open('owner', { viewport: { width: 1280, height: 900 } })
 
-    await t.step('Look: today’s look is Classic, recorded; five themes, free', async () => {
+    await t.step('Look: today’s look is Classic, recorded; three themes to try, free', async () => {
       // Production shops got their look recorded by the migration; this seed shop is made after the migrations, so it
       // has none yet and renders Classic from its settings (its first publish records it: checked under History).
       const [{ n }] = await db`select count(*)::int n from shop_theme_publishes where tenant_id = ${KESAR}`
@@ -29,7 +29,10 @@ export default {
       await riya.goto(CONSOLE + '/console/look')
       await riya.getByRole('heading', { level: 1, name: 'Look' }).waitFor()
       await riya.getByRole('heading', { name: 'Classic · Oxide' }).waitFor()
-      for (const name of ['Classic', 'Editorial', 'Bazaar', 'Minimal', 'Atelier']) await riya.getByRole('button', { name, exact: true }).waitFor()
+      // Three themes are offered (plan 2026-11-09-themes-three); Classic and Atelier still render, but aren't offered.
+      // The 2.0 versions aren't released in this seed, so the gallery shows each theme's released 1.x (Minimal, not Studio).
+      for (const name of ['Editorial', 'Bazaar', 'Minimal']) await riya.getByRole('button', { name, exact: true }).waitFor()
+      for (const name of ['Classic', 'Atelier']) assert.equal(await riya.getByRole('button', { name, exact: true }).count(), 0, `${name} is not offered`)
       await riya.screenshot({ path: t.out('look'), fullPage: true })
       const phone = await open('owner', { viewport: { width: 390, height: 844 } })
       await phone.goto(CONSOLE + '/console/look')
@@ -143,7 +146,7 @@ export default {
       await riya.goto(CONSOLE + '/console/look/customize')
       await riya.getByLabel('Page').selectOption('product')
       await riya.getByRole('tab', { name: 'Product page' }).click()
-      await riya.getByRole('button', { name: 'With thumbnails' }).click()
+      await riya.getByRole('button', { name: 'Thumbnails under' }).click()
       await riya.getByRole('button', { name: 'Framed' }).click()
       const [{ id: draft }] = await db`select r.id from shop_theme_revisions r where r.tenant_id = ${KESAR} and not exists (select 1 from shop_theme_publishes p where p.revision_id = r.id) order by r.created_at desc limit 1`
       await riya.getByRole('button', { name: 'Folded' }).click()

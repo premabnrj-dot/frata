@@ -41,6 +41,16 @@ describe('carryOver (Try another theme)', () => {
     expect(r.layer.home?.length).toBe(2)
     expect(carryOver({ manifest: cl, layer: { style: 'oxide' } }, ed).layer.home).toBeUndefined()
   })
+  it('a new theme opens with its own character: the old theme’s defaults and Classic’s recorded type stay behind', () => {
+    const ed2 = CATALOGUE.editorial!['2.0.0']!
+    const r = carryOver({ manifest: cl, layer: { style: 'oxide', settings: { pairing: 'fraunces' } } }, ed2)
+    expect(r.layer.settings).toEqual({})
+    const t = resolveTheme(ed2, r.layer)
+    expect([t.settings.pairing, t.settings.gallery, t.settings.details, t.settings.corners]).toEqual(['cormorant', 'stack', 'folded', 'square'])
+    // What the merchant chose comes across when the new theme offers it; a value it doesn't offer stays behind.
+    const mine = carryOver({ manifest: ed2, layer: { style: 'haldi', settings: { brandColour: '#7A1F2B', gallery: 'stack', corners: 'round' } } }, CATALOGUE.bazaar!['2.0.0']!)
+    expect(mine.layer.settings).toEqual({ brandColour: '#7A1F2B', corners: 'round' })
+  })
 })
 
 describe('diffLayers (the publish list)', () => {

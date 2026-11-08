@@ -1,7 +1,8 @@
 import { manifestNear, manifestOf } from './catalogue'
-import { LayerSchema, onColour, brandColourProblem } from './layer'
+import { choicesFor } from './choices'
+import { LayerSchema, SettingsSchema, onColour, brandColourProblem } from './layer'
 import { SectionSchema, type SectionInstance } from './sections'
-import { PAGE_DEFAULTS, PAIRINGS, type Pairing, type ResolvedTheme, type Scheme, type SchemeKey, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
+import { FEEL_DEFAULTS, PAGE_DEFAULTS, PAIRINGS, type ChoiceKey, type Pairing, type ResolvedTheme, type Scheme, type SchemeKey, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
 
 // =============================================================================
 // FILE: src/domains/themes/resolve.ts — the ONE merge: manifest defaults → style → the merchant's layer.
@@ -12,34 +13,59 @@ import { PAGE_DEFAULTS, PAIRINGS, type Pairing, type ResolvedTheme, type Scheme,
 
 const pick = <T,>(want: T | undefined, allowed: readonly T[] | null, fallback: T): T => (want !== undefined && (!allowed || allowed.includes(want)) ? want : fallback)
 
+/**
+ * A stored layer's settings, key by key: a value this build can't read (an enum value from a newer build, after a
+ * revert) drops only itself, never the rest of the merchant's look (architecture review 2026-11-09, finding 7).
+ */
+export function readSettings(raw: unknown): Partial<ThemeSettings> {
+  if (!raw || typeof raw !== 'object') return {}
+  const shape = SettingsSchema.shape as Record<string, { safeParse: (v: unknown) => { success: boolean; data?: unknown } }>
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    const f = shape[k]; if (!f || v === undefined) continue
+    const r = f.safeParse(v); if (r.success && r.data !== undefined) out[k] = r.data
+  }
+  return out as Partial<ThemeSettings>
+}
+
 export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme {
   const style = m.styles.find((s) => s.key === layer.style) ?? m.styles[0]!
-  const parsed = LayerSchema.safeParse({ settings: layer.settings ?? {}, home: layer.home })
-  const want: Partial<ThemeSettings> = parsed.success ? (parsed.data.settings as Partial<ThemeSettings>) : {}
-  const d = m.defaults
+  const parsed = LayerSchema.safeParse({ settings: {}, home: layer.home })
+  const want: Partial<ThemeSettings> = readSettings(layer.settings)
+  const d = { ...PAGE_DEFAULTS, ...FEEL_DEFAULTS, ...m.defaults } as ThemeSettings
+  const c = <K extends ChoiceKey>(k: K): ThemeSettings[K] => pick(want[k] as ThemeSettings[K] | undefined, choicesFor(m, k), d[k])
   const settings: ThemeSettings = {
     pairing: pick(want.pairing, m.allowed.pairings, d.pairing),
-    headings: pick(want.headings, null, d.headings),
-    size: pick(want.size, null, d.size),
-    corners: pick(want.corners, null, d.corners),
-    buttons: pick(want.buttons, null, d.buttons),
-    spacing: pick(want.spacing, null, d.spacing),
-    photo: pick(want.photo, null, d.photo),
-    hoverPhoto: pick(want.hoverPhoto, null, d.hoverPhoto),
-    phoneColumns: pick(want.phoneColumns, null, d.phoneColumns),
+    headings: c('headings'),
+    size: c('size'),
+    corners: c('corners'),
+    buttons: c('buttons'),
+    spacing: c('spacing'),
+    photo: c('photo'),
+    hoverPhoto: c('hoverPhoto'),
+    phoneColumns: c('phoneColumns'),
     header: pick(want.header, m.allowed.headers, d.header),
-    sticky: pick(want.sticky, null, d.sticky),
-    bottomTabs: pick(want.bottomTabs, null, d.bottomTabs),
+    sticky: c('sticky'),
+    bottomTabs: c('bottomTabs'),
     announcement: want.announcement === undefined ? d.announcement : want.announcement,
     footer: pick(want.footer, m.allowed.footers, d.footer),
-    social: pick(want.social, null, d.social),
-    motion: pick(want.motion, null, d.motion),
+    social: c('social'),
+    motion: c('motion'),
     brandColour: want.brandColour === undefined ? d.brandColour : want.brandColour,
-    gallery: pick(want.gallery, null, d.gallery ?? PAGE_DEFAULTS.gallery),
-    details: pick(want.details, null, d.details ?? PAGE_DEFAULTS.details),
-    card: pick(want.card, null, d.card ?? PAGE_DEFAULTS.card),
-    desktopColumns: pick(want.desktopColumns, null, d.desktopColumns ?? PAGE_DEFAULTS.desktopColumns),
-    collectionTop: pick(want.collectionTop, null, d.collectionTop ?? PAGE_DEFAULTS.collectionTop),
+    gallery: c('gallery'),
+    details: c('details'),
+    card: c('card'),
+    desktopColumns: c('desktopColumns'),
+    collectionTop: c('collectionTop'),
+    buttonShape: c('buttonShape'),
+    buttonMotion: c('buttonMotion'),
+    cardHover: c('cardHover'),
+    entrance: c('entrance'),
+    reveal: c('reveal'),
+    buyBoxSticky: c('buyBoxSticky'),
+    buyBar: c('buyBar'),
+    footerScheme: c('footerScheme'),
+    checkout: c('checkout'),
   }
   // 3 photo columns on a phone only with a squarer photo (spec § Theme settings).
   if (settings.phoneColumns === 3 && settings.photo === '4:5') settings.phoneColumns = 2
@@ -58,7 +84,7 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
     if (!p.success || !m.allowed.sections.includes(p.data.key)) return []
     return [p.data.key === 'hero' && !masks.includes(p.data.mask) ? { ...p.data, mask: 'none' } : p.data]
   })
-  return { key: m.key, version: m.version, style: style.key, schemes, settings, home }
+  return { key: m.key, version: m.version, style: style.key, schemes, settings, home, ...(m.rhythm ? { rhythm: m.rhythm } : {}) }
 }
 
 /**
@@ -112,5 +138,12 @@ export function settingAttrs(t: ResolvedTheme): Record<string, string> {
   return {
     'data-headings': t.settings.headings, 'data-buttons': t.settings.buttons, 'data-motion': t.settings.motion, 'data-hover': t.settings.hoverPhoto ? 'on' : 'off',
     'data-card': t.settings.card,
+    // The 2.0 choices: an attribute only for a value that isn't today's, so a 1.x look's markup is unchanged.
+    ...(t.settings.buttonShape !== 'theme' ? { 'data-button-shape': t.settings.buttonShape } : {}),
+    ...(t.settings.buttonMotion !== 'press' ? { 'data-button-motion': t.settings.buttonMotion } : {}),
+    ...(t.settings.cardHover !== 'none' ? { 'data-card-hover': t.settings.cardHover } : {}),
+    ...(t.settings.entrance !== 'none' ? { 'data-entrance': t.settings.entrance } : {}),
+    ...(t.settings.reveal ? { 'data-reveal': 'on' } : {}),
+    ...(t.rhythm ? { 'data-rhythm': t.rhythm } : {}),
   }
 }

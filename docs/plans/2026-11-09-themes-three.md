@@ -1,5 +1,5 @@
 # Plan: three purposeful themes (Editorial 2, Bazaar 2, Studio) with deeper options and sample content
-Status: executing · Date: 2026-11-09 · Research: `docs/research/2026-11-08-themes-pro-grade.md` · Mockup: https://claude.ai/artifact/S2bPoCzyBPKA1NW4BesKfz
+Status: active (reviews folded in below) · Date: 2026-11-09 · Research: `docs/research/2026-11-08-themes-pro-grade.md` · Mockup: https://claude.ai/artifact/S2bPoCzyBPKA1NW4BesKfz
 Owner, 2026-11-08 (night, then away until morning): "let's execute this plan and make existing themes distinctive,
 purposeful, better, use dummy data/demo data … options: product page styling, image gallery styling, button motions,
 transitions, checkout page styles, nav bar styles, footer options … just have 3 with each having its own purpose,
@@ -75,3 +75,45 @@ either side of a publish (both already in the themes spec).
 - **Unit economics:** none (themes stay free; no new cost).
 - **Blast radius:** shell (every shop page), buy box (every product page), checkout (a CSS rule only), the customizer.
   Classic's look must not move a pixel (05-shop-look).
+
+## Review findings (2026-11-09) — every finding taken; these override the sections above where they differ
+### architecture-reviewer: CHANGES NEEDED
+1. **Legal text stays.** The focused checkout uses the compact footer (every legal fact, no social links); the
+   Statement footer adds the shop's name large above all the legal facts and removes none. e2e checks both.
+2. **New choices are pinned per manifest.** One helper `choicesFor(m, key)`, used by `resolveTheme` and the forms: a new
+   key a manifest doesn't list allows only `CHOICE_DEFAULTS[key]` (so a 1.x manifest can never render a 2.0 value
+   after a recall, a revert or carryOver); an existing key keeps today's rule. Vitest: every new value in a layer on
+   every 1.x manifest resolves exactly like `{}`.
+3. **Placeholder art in the preview only.** Readiness is unchanged: a photo Hero or Image with text still needs a
+   photo before Publish (decision 3 above is narrowed: nothing drawn reaches a shop).
+4. **Samples:** only from the customizer's preview (`samples: true` from theme-preview, never `/console/preview`);
+   a real product is looked up first and a `sample-` page shows only when that is `none`; merged after
+   `previewCatalogue`, never in the cached reads; variant ids not uuid-shaped (the quote refuses them); the sample
+   product renders `live={false}`; `sample.ts` lives in `src/lib/themes/` (it builds query-layer types); `Photo` gets
+   no change: a sample card carries `art` and the card draws it. Vitest: the cached reads never return a sample.
+5. **Section guard calls `One()` as a function** inside try/catch, rethrows Next's own errors (`unstable_rethrow`),
+   logs the error's name only.
+6. **Names:** `buttonMotion`, `entrance`, `reveal`; `motion: none` and reduced motion turn all of them off. Studio's
+   underline buttons are a new value of `buttons`.
+7. **A reverted deploy keeps the rest of a layer:** settings are parsed key by key; an unknown value drops only itself.
+8. `split` / `statement` go in `allowed.headers` / `allowed.footers`; `allowed.choices` is typed per key; check:theme
+   asserts each default is in its own list.
+9. Entrance: CSS keyed on a shell attribute; the template adds no box (`display: contents` when off); `(order)` gets
+   none.
+10. Focused checkout: a `(checkout)` route group with its own layout (same shop checks) passing `focused` to the shell;
+    no `:has()`. The preview has no checkout page: the setting is described in the form by its two names only.
+11. Gallery shows three; a shop on Atelier or Classic keeps its look and its card at the top of Look (not in the list).
+12. CSS for new choices targets non-default values only; no unconditional transition on `.store-btn`.
+### speed-reviewer: WITHIN BUDGET with these (all taken)
+1. Entrance keyframes end on `transform: none`, fill `backwards`, no `will-change` (a leftover transform would pin
+   the phone buy bar to the page); the bar is portalled to `body`.
+2. `check:storefront-build`: product page and checkout ≤ 115 kB; no sample or placeholder marker in any `/s/` chunk.
+3. Every new rule scoped `[data-store-theme][data-…]`; shop CSS ≤ 20 kB gz in the same gate.
+4. Gallery `sizes` per layout (stack 55vw; grid photos after the first 27vw; rail `calc(55vw - 72px)`); thumbnails
+   `fetchPriority="low"`; photo 0 the only priority; e2e asserts one `fetchpriority=high` on a product page.
+5. Reveal: `animation-range: entry 0% entry 60%`, `animation-timeline` after the shorthand, never on the lead section.
+6. template.tsx stays a server component reading nothing; checkout and order pages get no entrance.
+7. Placeholder art (preview only now) is drawn once per page as a `<symbol>` and `<use>`d.
+8. Card hover inside `@media (hover: hover)`, transform only; lift's shadow is a pseudo-element's opacity.
+9. Phone bar state lives in its own child; hidden with transform + `inert`; the page pads for it.
+10. Focused checkout is a route group (no `:has()`), so n/a.

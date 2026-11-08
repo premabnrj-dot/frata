@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { unstable_rethrow } from 'next/navigation'
+import { errName } from '@/lib/log'
 import { inCollection, isListed, priceOf } from '@/domains/storefront/listing'
 import { lookPieces, sourceProducts } from '@/domains/storefront/sources'
 import { truePromises } from '@/domains/themes/readiness'
@@ -24,7 +26,9 @@ import type { Href } from '../shell'
 
 export type SectionCtx = { shop: StoreShop; cat: StoreCatalogue; theme: ResolvedTheme; href: Href; now: Date; bestSellers?: Partial<Record<30 | 90, string[]>>
   /** The page's first section: only its photos load ahead of the rest (speed review P15: four `priority` images competed). */
-  lead?: boolean }
+  lead?: boolean
+  /** The customizer's preview: a section that fails says so there (on the shop it is left out). */
+  preview?: boolean }
 const wrap = 'mx-auto max-w-6xl px-4 sm:px-6'
 const pad = 'py-[calc(var(--store-space)*2.5rem)] sm:py-[calc(var(--store-space)*3.5rem)]'
 const rupees = (p: number) => formatInr(paise(p))
@@ -97,7 +101,7 @@ function CollectionTiles({ s, ctx }: { s: SectionOf<'collection_tiles'>; ctx: Se
   return (
     <section aria-labelledby={h} className={`${wrap} pb-[calc(var(--store-space)*3rem)]`}>
       {s.heading ? <div className="mb-4"><H2 id={h}>{s.heading}</H2></div> : <h2 id={h} className="sr-only">{wordsFor(ctx.shop.shopLanguage).collectionsNav}</h2>}
-      <ul className={circle ? '-mx-4 flex snap-x gap-4 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0' : '-mx-4 flex snap-x gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0'}>
+      <ul className={circle ? '-mx-4 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 sm:mx-0 sm:scroll-px-0 sm:flex-wrap sm:px-0' : '-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 sm:mx-0 sm:scroll-px-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0'}>
         {tiles.map(({ c, first }) => (
           <li key={c.id} className={circle ? 'w-24 shrink-0 snap-start text-center sm:w-28' : 'w-[70%] shrink-0 snap-start sm:w-auto'}>
             <Link href={href(`/collections/${c.handle}`)} className="group block">
@@ -127,7 +131,7 @@ function Products({ s, ctx }: { s: SectionOf<'products'>; ctx: SectionCtx }) {
     <section aria-labelledby={h} className={wrap}>
       <div className="mb-4 flex items-baseline justify-between"><h2 id={h} className="text-xl"><Sized>{s.heading}</Sized></h2>{all && <Link href={ctx.href(all)} className="text-sm underline underline-offset-4">{wordsFor(ctx.shop.shopLanguage).seeAll}</Link>}</div>
       {s.layout === 'rail'
-        ? <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">{list.slice(0, s.count).map((p, i) => <div key={p.id} className="w-[44%] shrink-0 snap-start sm:w-[23%]"><ProductCard p={p} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} priority={!!ctx.lead && i < 2} /></div>)}</ul>
+        ? <ul className="-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:scroll-px-0 sm:px-0">{list.slice(0, s.count).map((p, i) => <div key={p.id} className="w-[44%] shrink-0 snap-start sm:w-[23%]"><ProductCard p={p} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} priority={!!ctx.lead && i < 2} /></div>)}</ul>
         : <ProductGrid products={list.slice(0, s.count)} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} empty={wordsFor(ctx.shop.shopLanguage).emptyShop} lead={!!ctx.lead} />}
     </section>
   )
@@ -289,12 +293,27 @@ function One({ s, ctx }: { s: SectionInstance; ctx: SectionCtx }) {
   }
 }
 
+/**
+ * One section, guarded: a section that throws while it renders is left out of the page (the rest of the shop still
+ * renders) and named in the customizer's preview. Called as a function so the guard sees its errors; Next's own
+ * control-flow errors pass through (architecture review 2026-11-09, finding 5). Logs the error's name only.
+ */
+function Guarded({ s, ctx }: { s: SectionInstance; ctx: SectionCtx }) {
+  try {
+    return One({ s, ctx })
+  } catch (e) {
+    unstable_rethrow(e)
+    console.error('section failed', s.key, errName(e))
+    return ctx.preview ? <div role="status" className="mx-4 my-6 grid min-h-28 place-items-center rounded-[var(--store-radius)] border border-dashed border-store-sub p-4 text-center text-sm text-store-sub sm:mx-6">This section couldn’t be shown. Hide it or undo the last change.</div> : null
+  }
+}
+
 export function Sections({ list, ctx }: { list: SectionInstance[]; ctx: SectionCtx }) {
   return (
     <>
       {list.filter((s) => !s.hidden).map((s, i) => (
         <Paint key={s.id} s={s} theme={ctx.theme}>
-          <div data-section={s.id} className="contents"><One s={s} ctx={{ ...ctx, lead: i === 0 }} /></div>
+          <div data-section={s.id} data-key={s.key} data-lead={i === 0 ? '' : undefined} className="contents"><Guarded s={s} ctx={{ ...ctx, lead: i === 0 }} /></div>
         </Paint>
       ))}
     </>

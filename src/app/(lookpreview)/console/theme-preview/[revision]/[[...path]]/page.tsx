@@ -5,6 +5,9 @@ import { ShopShell } from '@/components/storefront/shell'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { previewCatalogue, previewRevision, previewShop } from '@/lib/queries/storefront'
 import { circlesOf, themeOf } from '@/lib/themes/page-look'
+import { manifestOf } from '@/domains/themes/catalogue'
+import { isListed } from '@/domains/storefront/listing'
+import { withSampleImages, withSamples } from '@/lib/themes/sample'
 import { PreviewBridge } from './bridge'
 
 // =============================================================================
@@ -27,9 +30,13 @@ export default async function LookPreview({ params }: { params: Promise<{ revisi
   const base = `/console/theme-preview/${revision}`
   const href = (p: string) => (p === '/' ? base : `${base}${p}`)
   const now = new Date()
-  const theme = themeOf(shop, rev)
-  const circles = theme.settings.header === 'circles' ? circlesOf(await previewCatalogue(tenantId), now) : []
-  const { body } = await previewPage({ tenantId, shop, path, href, now, theme })
+  // A theme with samples (2.0) fills an empty shop with sample pieces and missing photos with sample scenes, here only.
+  const resolved = themeOf(shop, rev)
+  const samples = !!manifestOf(resolved.key, resolved.version)?.samples
+  const theme = samples ? withSampleImages(resolved) : resolved
+  const cat = theme.settings.header === 'circles' ? await previewCatalogue(tenantId) : null
+  const circles = cat ? circlesOf(samples ? withSamples(cat, cat.products.filter((p) => isListed(p, now)).length, now) : cat, now) : []
+  const { body } = await previewPage({ tenantId, shop, path, href, now, theme, samples })
   return (
     <>
       <ShopShell shop={shop} href={href} theme={theme} circles={circles} live>{body}</ShopShell>

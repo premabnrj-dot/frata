@@ -9,7 +9,7 @@ import type { Href } from './shell'
 import { fill, wordsFor, type Lang } from './words'
 import { Swatch, type SwatchColour, type SwatchImage } from './swatch'
 
-export type CardProduct = Omit<ListProduct, 'colours'> & { handle: string; options: string[]; images: (PhotoData & SwatchImage & { optionValue: string | null })[]; colours: (SwatchColour & { family: string | null })[] }
+export type CardProduct = Omit<ListProduct, 'colours'> & { sample?: true; handle: string; options: string[]; images: (PhotoData & SwatchImage & { optionValue: string | null })[]; colours: (SwatchColour & { family: string | null })[] }
 
 export const money = (p: number) => formatInr(paise(p))
 
@@ -20,7 +20,8 @@ export function ProductCard({ p, href, now, priority = false, badge = null, lang
   const price = priceOf(p)
   const w = wordsFor(lang)
   const t = cardTag(p, now)
-  const tag = (t ? w.tag[t] : null) ?? (badge ?? cardBadge(p.offers, now))?.label ?? null
+  // A sample piece (the customizer's preview only) says so before anything else.
+  const tag = p.sample ? 'Sample' : (t ? w.tag[t] : null) ?? (badge ?? cardBadge(p.offers, now))?.label ?? null
   const [cover, second] = p.images
   const ci = p.options.findIndex(isColourOption)
   const colours = ci >= 0 ? [...new Set(p.variants.map((v) => v.values[ci]!))] : []

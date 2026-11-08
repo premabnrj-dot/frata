@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { availability, type Availability } from '@/domains/catalogue/availability'
 import { inches, type Chart } from '@/domains/catalogue/size-charts'
 import { codFor, type DeliveryRules } from '@/domains/checkout/delivery'
@@ -15,6 +16,7 @@ import { fill } from './fill'
 import type { BuyWords } from './words'
 import { Icon } from '@/components/icons/icon'
 
+type Gallery = 'swipe' | 'thumbs' | 'rail' | 'stack'
 type Img = PhotoData & SwatchImage & { optionValue: string | null; alt: string }
 export type BuyBoxProps = {
   title: string; options: string[]; values: string[][]; variants: (ListVariant & { id: string })[]; colours: SwatchColour[]; images: Img[]
@@ -23,8 +25,12 @@ export type BuyBoxProps = {
   notes: string[]; taxNote: string
   /** On the shop itself (the bag works); false in the console's preview. */
   live?: boolean
-  /** The theme's product photos (themes T2): swipe (today) or with a thumbnail strip. */
-  gallery?: 'swipe' | 'thumbs'
+  /** The theme's product photos (themes T2; rail and stack 2.0): swipe (today), a thumbnail strip, a thumbnail column beside, every photo stacked. */
+  gallery?: Gallery
+  /** 2.0: on a computer the buy box stays beside the photos as they scroll. */
+  stickyBox?: boolean
+  /** 2.0: on a phone, an Add to bag bar at the bottom once the page's own button has scrolled away; `aboveTabs` lifts it over the bottom tabs. */
+  buyBar?: boolean; aboveTabs?: boolean
   /** The shop's words for this island (words.ts BUY, in the shop's language): plain strings, so nothing else ships. */
   w: BuyWords
   /** Offers that apply to this product (Offers O·2 fills it from liveOffers), after the price; display only, the quote prices. */
@@ -50,6 +56,7 @@ export function BuyBox(p: BuyBoxProps) {
   const [note, setNote] = useState<string | null>(null)
   const [guide, setGuide] = useState(false)
   const sizesRef = useRef<HTMLFieldSetElement>(null)
+  const buyRef = useRef<HTMLButtonElement>(null)
   const ci = p.options.findIndex(isColourOption), si = p.options.findIndex(isSizeOption)
   const order = p.options.map((_, i) => i).sort((a, b) => Number(b === ci) - Number(a === ci))
 
@@ -83,8 +90,8 @@ export function BuyBox(p: BuyBoxProps) {
 
   return (
     <div className="grid gap-6 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] md:gap-10">
-      <Gallery photos={photos} title={p.title} thumbs={p.gallery === 'thumbs'} w={p.w} />
-      <div className="min-w-0 space-y-5">
+      <Gallery photos={photos} title={p.title} kind={p.gallery ?? 'swipe'} w={p.w} />
+      <div className={`min-w-0 space-y-5 ${p.stickyBox ? 'md:sticky md:top-24 md:self-start' : ''}`}>
         <div className="space-y-2">
           <h1 className="text-2xl leading-tight sm:text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{p.title}</h1>
           {shown && <p className="text-lg"><span className="font-medium">{money(shown.price)}</span>
@@ -127,7 +134,7 @@ export function BuyBox(p: BuyBoxProps) {
         ))}
 
         <p role="status" className={`min-h-5 text-sm ${a ? TONE[a.kind] : 'text-store-sub'}`}>{a ? labelOf(a, p.w) : p.options.length ? fill(p.w.pickToSee, { option: p.options.find((_, i) => picked[i] === null)?.toLowerCase() ?? p.w.size.toLowerCase() }) : ''}</p>
-        <button type="button" onClick={add} className="store-btn h-12 w-full rounded-[var(--store-radius)] transition-transform duration-fast ease-standard active:scale-97 bg-store-button text-base font-medium text-store-on-button">{a?.kind === 'preorder' ? p.w.preorder : p.w.addToBag}</button>
+        <button ref={buyRef} type="button" onClick={add} className="store-btn store-buy h-12 w-full rounded-[var(--store-radius)] transition-transform duration-fast ease-standard active:scale-97 bg-store-button text-base font-medium text-store-on-button">{a?.kind === 'preorder' ? p.w.preorder : p.w.addToBag}</button>
         {note && <p role="alert" className="text-sm">{note}</p>}
 
         <ul className="space-y-1.5 border-t border-store-line pt-4 text-sm">
@@ -137,6 +144,7 @@ export function BuyBox(p: BuyBoxProps) {
         </ul>
         {p.model && <p className="text-sm text-store-sub">{p.model}</p>}
       </div>
+      {p.buyBar && <PhoneBar target={buyRef} title={p.title} price={shown ? money(shown.price) : null} label={a?.kind === 'preorder' ? p.w.preorder : p.w.addToBag} onAdd={() => { buyRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }); add() }} aboveTabs={!!p.aboveTabs} />}
       {guide && p.chart && <SizeGuide chart={p.chart} model={p.model} w={p.w} onClose={() => setGuide(false)} />}
     </div>
   )
@@ -160,38 +168,72 @@ function labelOf(a: Availability, w: BuyWords): string {
 }
 
 /**
- * Photos side by side, swiped on a phone (scroll-snap), stacked on a desktop. The first is the page's largest paint.
- * With thumbnails (themes T2): one photo at a time at every width, a strip of buttons under it.
+ * Photos, swiped on a phone (scroll-snap) in every layout. On a computer: swipe = the first large, the rest two-up
+ * (today); thumbs = one at a time with a strip of buttons under it; rail (2.0) = one at a time with a column of
+ * thumbnails beside it; stack (2.0) = every photo, one under the other. The first photo is the page's largest paint
+ * and the only priority one; `sizes` says how wide each really is, so no photo downloads larger than it shows
+ * (speed review 2026-11-09).
  */
-function Gallery({ photos, title, thumbs = false, w }: { photos: Img[]; title: string; thumbs?: boolean; w: BuyWords }) {
+function Gallery({ photos, title, kind, w }: { photos: Img[]; title: string; kind: Gallery; w: BuyWords }) {
   const [at, setAt] = useState(0)
   const list = useRef<HTMLUListElement>(null)
   if (!photos.length) return <div className="grid aspect-[4/5] place-items-center rounded-sm bg-store-chip text-store-sub">{title}</div>
   const show = (i: number) => { const el = list.current; if (el) el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' }); setAt(i) }
+  const single = kind === 'thumbs' || kind === 'rail'
+  const ul = single ? '-mx-4 flex snap-x snap-mandatory overflow-x-auto md:mx-0 [&::-webkit-scrollbar]:hidden'
+    : kind === 'stack' ? '-mx-4 flex snap-x snap-mandatory overflow-x-auto md:mx-0 md:flex-col md:gap-3 md:overflow-visible [&::-webkit-scrollbar]:hidden'
+    : '-mx-4 flex snap-x snap-mandatory overflow-x-auto md:mx-0 md:grid md:grid-cols-2 md:gap-2 md:overflow-visible [&::-webkit-scrollbar]:hidden'
+  const sizes = (i: number) => kind === 'rail' ? '(min-width: 768px) calc(55vw - 72px), 100vw' : kind === 'swipe' && i > 0 ? '(min-width: 768px) 27vw, 100vw' : '(min-width: 768px) 55vw, 100vw'
+  const strip = single && photos.length > 1 && (
+    <ul className={kind === 'rail' ? 'mt-2 flex gap-2 overflow-x-auto pb-1 md:order-first md:mt-0 md:max-h-[44rem] md:flex-col md:overflow-y-auto md:pb-0' : 'mt-2 flex gap-2 overflow-x-auto pb-1'} aria-label={w.choosePhoto}>
+      {photos.map((ph, i) => (
+        <li key={ph.base} className="shrink-0">
+          <button type="button" onClick={() => show(i)} aria-label={fill(w.photoOf, { i: i + 1, n: photos.length })} aria-current={at === i ? 'true' : undefined}
+            className={`block w-14 overflow-hidden rounded-[var(--store-radius)] ${at === i ? 'ring-2 ring-store-ink' : ''}`}>
+            <Photo p={ph} alt="" sizes="56px" low className="aspect-[4/5] w-full bg-store-chip object-cover" />
+          </button>
+        </li>
+      ))}
+    </ul>
+  )
   return (
-    <div className="min-w-0">
-      <ul ref={list} className={thumbs ? '-mx-4 flex snap-x snap-mandatory overflow-x-auto md:mx-0 [&::-webkit-scrollbar]:hidden' : '-mx-4 flex snap-x snap-mandatory overflow-x-auto md:mx-0 md:grid md:grid-cols-2 md:gap-2 md:overflow-visible [&::-webkit-scrollbar]:hidden'}
+    <div className={`min-w-0 ${kind === 'rail' ? 'md:flex md:gap-3' : ''}`}>
+      <ul ref={list} className={`${ul} ${kind === 'rail' ? 'md:min-w-0 md:flex-1' : ''}`}
         onScroll={(e) => setAt(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))} aria-label={w.photos}>
         {photos.map((ph, i) => (
-          <li key={ph.base} className={thumbs ? 'w-full shrink-0 snap-center' : `w-full shrink-0 snap-center md:w-auto ${i === 0 ? 'md:col-span-2' : ''}`}>
-            <Photo p={ph} alt={ph.alt || (i === 0 ? title : fill(w.photoAlt, { title, i: i + 1 }))} sizes="(min-width: 768px) 55vw, 100vw" priority={i === 0} className="aspect-[4/5] w-full bg-store-chip object-cover" />
+          <li key={ph.base} className={single ? 'w-full shrink-0 snap-center' : `w-full shrink-0 snap-center md:w-auto ${kind === 'swipe' && i === 0 ? 'md:col-span-2' : ''}`}>
+            <Photo p={ph} alt={ph.alt || (i === 0 ? title : fill(w.photoAlt, { title, i: i + 1 }))} sizes={sizes(i)} priority={i === 0} className="aspect-[4/5] w-full bg-store-chip object-cover" />
           </li>
         ))}
       </ul>
-      {thumbs && photos.length > 1
-        ? <ul className="mt-2 flex gap-2 overflow-x-auto pb-1" aria-label={w.choosePhoto}>
-            {photos.map((ph, i) => (
-              <li key={ph.base} className="shrink-0">
-                <button type="button" onClick={() => show(i)} aria-label={fill(w.photoOf, { i: i + 1, n: photos.length })} aria-current={at === i ? 'true' : undefined}
-                  className={`block w-14 overflow-hidden rounded-[var(--store-radius)] ${at === i ? 'ring-2 ring-store-ink' : ''}`}>
-                  <Photo p={ph} alt="" sizes="56px" className="aspect-[4/5] w-full bg-store-chip object-cover" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        : photos.length > 1 && <p className="mt-2 text-center text-xs text-store-sub md:hidden" aria-hidden="true">{at + 1} / {photos.length}</p>}
+      {strip}
+      {!single && photos.length > 1 && <p className="mt-2 text-center text-xs text-store-sub md:hidden" aria-hidden="true">{at + 1} / {photos.length}</p>}
     </div>
   )
+}
+
+/**
+ * Phones only (2.0 choice): the Add to bag bar slides up once the page's own button is out of view, and away when it
+ * is back. Its own component, so showing it re-renders nothing else; portalled to the shop's root, so no transformed
+ * ancestor (the page entrance) can pin it to the page (speed review 2026-11-09).
+ */
+function PhoneBar({ target, title, price, label, onAdd, aboveTabs }: { target: React.RefObject<HTMLButtonElement | null>; title: string; price: string | null; label: string; onAdd: () => void; aboveTabs: boolean }) {
+  const [on, setOn] = useState(false)
+  const [root, setRoot] = useState<Element | null>(null)
+  useEffect(() => {
+    setRoot(target.current?.closest('[data-store-theme]') ?? null)
+    const el = target.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver(([e]) => setOn(!!e && !e.isIntersecting && e.boundingClientRect.top < 0))
+    io.observe(el)
+    return () => io.disconnect()
+  }, [target])
+  if (!root) return null
+  return createPortal(
+    <div inert={!on} aria-hidden={!on} className={`store-buybar fixed inset-x-0 z-40 flex items-center gap-3 border-t border-store-line bg-store-paper px-4 py-2 text-store-ink transition-transform duration-base ease-standard sm:hidden ${aboveTabs ? 'bottom-14' : 'bottom-0'} ${on ? 'translate-y-0' : 'translate-y-[calc(100%+3.5rem)]'}`}>
+      <div className="min-w-0 flex-1"><p className="truncate text-sm">{title}</p>{price && <p className="text-sm font-medium">{price}</p>}</div>
+      <button type="button" onClick={onAdd} className="store-btn store-buy h-11 shrink-0 rounded-[var(--store-radius)] bg-store-button px-5 text-sm font-medium text-store-on-button">{label}</button>
+    </div>, root)
 }
 
 /** A sheet over the page; it is a history entry, so the phone's Back closes it. */

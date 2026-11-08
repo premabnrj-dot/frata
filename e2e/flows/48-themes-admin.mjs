@@ -37,7 +37,7 @@ export default {
       await db`delete from theme_versions where theme_key = 'editorial' and version = '1.1.0'`
       await meera.goto(CONSOLE + '/admin/themes')
       await meera.getByRole('heading', { level: 1, name: 'Themes' }).waitFor()
-      await meera.getByText('New in this deploy: Editorial 1.1.0').waitFor()
+      await meera.getByText(/^New in this deploy: .*Editorial 1\.1\.0/).waitFor()
       await meera.screenshot({ path: t.out('admin-themes'), fullPage: true })
       assert.equal(await editorialVersion(), '1.0.0')
     })

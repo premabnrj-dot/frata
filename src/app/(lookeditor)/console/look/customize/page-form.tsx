@@ -1,20 +1,21 @@
 'use client'
 
 import type { ThemeSettings } from '@/domains/themes/types'
-import { Choice } from './controls'
+import { Choice, Offered, OfferedSwitch } from './controls'
+import type { Choices } from '@/domains/themes/choices'
 
 // The product page and collection page panels (themes T2, mockup board "Customizer · Product page"): what every page
 // of that kind wears. Every default is what shops had before T2. Cards and columns show on every grid.
 
-export function PageForm({ page, settings, set }: { page: 'product' | 'collection'; settings: ThemeSettings; set: (s: Partial<ThemeSettings>) => void }) {
+export function PageForm({ page, settings, choices, set }: { page: 'product' | 'collection'; settings: ThemeSettings; choices: Choices; set: (s: Partial<ThemeSettings>) => void }) {
   return (
     <div className="space-y-6">
       {page === 'product' ? <>
-        <p className="text-sm text-muted-foreground">Every product page wears this layout.</p>
-        <Choice label="Photos" value={settings.gallery} onChange={(gallery) => set({ gallery })} options={[{ value: 'swipe', label: 'Swipe' }, { value: 'thumbs', label: 'With thumbnails' }]} />
+        <Offered label="Photos" value={settings.gallery} list={choices.gallery} onChange={(gallery) => set({ gallery })} all={[{ value: 'swipe', label: 'Two across' }, { value: 'stack', label: 'Stacked' }, { value: 'thumbs', label: 'Thumbnails under' }, { value: 'rail', label: 'Thumbnails beside' }]} />
+        <OfferedSwitch label="Buy box stays beside the photos (computers)" on={settings.buyBoxSticky} list={choices.buyBoxSticky} onChange={(buyBoxSticky) => set({ buyBoxSticky })} />
+        <OfferedSwitch label="Add to bag bar on phones" on={settings.buyBar} list={choices.buyBar} onChange={(buyBar) => set({ buyBar })} />
         <Choice label="About and details" value={settings.details} onChange={(details) => set({ details })} options={[{ value: 'open', label: 'Open' }, { value: 'folded', label: 'Folded' }]} />
       </> : <>
-        <p className="text-sm text-muted-foreground">Every collection page wears this layout.</p>
         <Choice label="Top of the page" value={settings.collectionTop} onChange={(collectionTop) => set({ collectionTop })} options={[{ value: 'title', label: 'Title' }, { value: 'banner', label: 'Banner' }]} />
         <p className="text-xs text-muted-foreground">Banner uses the collection’s first piece’s photo. With no photo, the title shows.</p>
       </>}

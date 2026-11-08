@@ -398,8 +398,50 @@ img[data-photo]::before { content: ""; position: absolute; inset: 0; background:
 [data-store-theme][data-card="framed"] .store-card { box-shadow: inset 0 0 0 1px var(--store-line); border-radius: var(--store-radius); padding: 0.5rem 0.5rem 0.75rem; }
 [data-store-theme][data-buttons="outline"] .store-btn { background: transparent; color: var(--store-ink); box-shadow: inset 0 0 0 1px var(--store-ink); }
 [data-store-theme][data-motion="none"] * { transition: none !important; animation: none !important; }
+/* ── The 2.0 theme choices (plan 2026-11-09-themes-three). Each rule targets a value that isn't today's, so a 1.x
+   look's CSS is unchanged; data-motion="none" (above) and reduced motion stop every movement here. ── */
+[data-store-theme][data-button-shape="pill"] .store-btn { border-radius: 9999px; }
+/* Underline buttons (Studio): a section's button reads as underlined words; Add to bag stays a filled button. */
+[data-store-theme][data-buttons="underline"] .store-btn:not(.store-buy) { background: transparent; color: inherit; border-radius: 0; padding-inline: 0; min-height: 2.25rem; text-decoration: underline; text-underline-offset: 0.4em; text-decoration-thickness: 1px; letter-spacing: 0.08em; text-transform: uppercase; }
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  [data-store-theme][data-button-motion="lift"] .store-btn { transition: translate var(--transition-duration-base) var(--ease-standard); }
+  [data-store-theme][data-button-motion="lift"] .store-btn:hover { translate: 0 -2px; }
+  /* Fill: a sheen sweeps across from the left (a transform on a layer under the words). */
+  [data-store-theme][data-button-motion="fill"] .store-btn { position: relative; isolation: isolate; overflow: hidden; }
+  [data-store-theme][data-button-motion="fill"] .store-btn::before { content: ""; position: absolute; inset: 0; z-index: -1; background: color-mix(in srgb, currentColor 16%, transparent); transform: scaleX(0); transform-origin: left; transition: transform var(--transition-duration-slow) var(--ease-standard); }
+  [data-store-theme][data-button-motion="fill"] .store-btn:hover::before { transform: scaleX(1); }
+  /* Cards: lift (the card rises; its shadow is a layer that fades in) or zoom (the photo grows inside its frame). */
+  [data-store-theme][data-card-hover="lift"] .store-card { position: relative; transition: translate var(--transition-duration-base) var(--ease-standard); }
+  [data-store-theme][data-card-hover="lift"] .store-card::after { content: ""; position: absolute; inset: -0.5rem; z-index: -1; border-radius: var(--store-radius); box-shadow: 0 10px 24px -12px color-mix(in srgb, var(--store-ink) 35%, transparent); opacity: 0; transition: opacity var(--transition-duration-base) var(--ease-standard); pointer-events: none; }
+  [data-store-theme][data-card-hover="lift"] .store-card:hover { translate: 0 -4px; }
+  [data-store-theme][data-card-hover="lift"] .store-card:hover::after { opacity: 1; }
+  [data-store-theme][data-card-hover="zoom"] .store-card img { transition: scale var(--transition-duration-slow) var(--ease-standard); }
+  [data-store-theme][data-card-hover="zoom"] .store-card:hover img { scale: 1.05; }
+}
+/* Even rhythm (the 2.0 themes): the same space above and below every section but a full-bleed one. */
+[data-store-theme][data-rhythm="even"] [data-section]:not([data-key="hero"], [data-key="drop_teaser"]) > section { padding-block: calc(var(--store-space) * 1.75rem); }
+@media (min-width: 640px) { [data-store-theme][data-rhythm="even"] [data-section]:not([data-key="hero"], [data-key="drop_teaser"]) > section { padding-block: calc(var(--store-space) * 2.75rem); } }
+/* The page entrance (a template around each shop page): fade or rise, from 0.6 so the largest paint is never held
+   back, ending on no transform (fill backwards only: a leftover transform would pin fixed bars to the page). */
+.store-enter { display: contents; }
+[data-store-theme]:is([data-entrance="fade"], [data-entrance="rise"]) .store-enter { display: block; }
+@keyframes store-enter-fade { from { opacity: 0.6; } to { opacity: 1; } }
+@keyframes store-enter-rise { from { opacity: 0.6; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  [data-store-theme][data-entrance="fade"] .store-enter { animation: store-enter-fade var(--transition-duration-base) var(--ease-entrance) backwards; }
+  [data-store-theme][data-entrance="rise"] .store-enter { animation: store-enter-rise var(--transition-duration-slow) var(--ease-entrance) backwards; }
+}
+/* Sections rise in as they scroll into view: never the first (the largest paint); no script. */
+@keyframes store-reveal { from { opacity: 0.2; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-store-theme][data-reveal="on"] [data-section]:not([data-lead]) > * { animation: store-reveal linear backwards; animation-timeline: view(); animation-range: entry 0% entry 60%; }
+  }
+}
 /* The customizer's selected section, in its preview only (theme-preview bridge). */
 [data-store-theme] [data-picked] { outline: 2px solid var(--color-info-text); outline-offset: 4px; }
+/* In the customizer's frame (the bridge sets data-inspect): a section under the pointer is outlined and clickable. */
+[data-inspect] [data-store-theme] [data-section] > :not([data-picked]):hover { outline: 1px dashed var(--color-info-text); outline-offset: 4px; cursor: pointer; }
 [data-store-theme][data-accent="indigo"] { --store-accent: #2E3A63; }
 [data-store-theme][data-accent="moss"] { --store-accent: #3F5B3A; }
 [data-store-theme][data-accent="wine"] { --store-accent: #7A1F2B; }

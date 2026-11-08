@@ -45,6 +45,19 @@ export function Choice<T extends string | number>({ label, value, options, onCha
   )
 }
 
+/** The options a theme offers (choicesFor's list; null = all), in the order written here. */
+export const offered = <T extends string | number | boolean,>(list: readonly T[] | null, all: { value: T; label: string }[]) => (list ? all.filter((o) => list.includes(o.value)) : all)
+
+/** A choice the theme offers: nothing when it offers one value or none (a single value is not a choice). */
+export function Offered<T extends string | number>({ label, value, list, all, onChange }: { label: string; value: T; list: readonly T[] | null; all: { value: T; label: string }[]; onChange: (v: T) => void }) {
+  const options = offered(list, all)
+  return options.length > 1 ? <Choice label={label} value={value} options={options} onChange={onChange} /> : null
+}
+/** An on/off the theme offers: nothing unless it allows both. */
+export function OfferedSwitch({ label, on, list, onChange }: { label: string; on: boolean; list: readonly boolean[] | null; onChange: (v: boolean) => void }) {
+  return !list || (list.includes(true) && list.includes(false)) ? <Switch label={label} on={on} onChange={onChange} /> : null
+}
+
 export function Switch({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
