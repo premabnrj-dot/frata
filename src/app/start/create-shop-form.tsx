@@ -4,10 +4,10 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { PINCODE_SHAPE, slugFor, slugProblem } from '@/domains/signup/slug'
-import { checkAddress, createMyShop, lookupPincode, type AddressCheck } from './actions'
+import { checkAddress, createMyShop, lookupPincode, sendSignupCode, verifySignupCode, type AddressCheck } from './actions'
 
 const SELL_LABELS = [['women', 'Women'], ['men', 'Men'], ['kids', 'Kids'], ['ethnic', 'Ethnic wear'], ['accessories', 'Accessories'], ['footwear', 'Footwear']] as const
-type Step = 'name' | 'pickup' | 'plan' | 'sells'
+type Step = 'name' | 'pickup' | 'plan' | 'phone' | 'sells'
 /** A plan card as the sign-up shows it (prices with GST from the server; never a cost). */
 export type SignupPlan = { code: string; name: string; price: string; included: string; fee: string }
 
@@ -16,7 +16,7 @@ const ADDRESS_WORDS: Record<AddressCheck['state'], string> = {
 }
 
 /** Shop name (address derived live) → pickup pincode → plan (trials TR1) → optional "what do you sell" → the console. */
-export function CreateShopForm({ shopDomain, plans, trialDays }: { shopDomain: string; plans: SignupPlan[]; trialDays: number }) {
+export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopDomain: string; plans: SignupPlan[]; trialDays: number; codeOn: boolean }) {
   const router = useRouter()
   const [step, setStep] = useState<Step>('name')
   const [dir, setDir] = useState<'forward' | 'back'>('forward')
@@ -27,6 +27,10 @@ export function CreateShopForm({ shopDomain, plans, trialDays }: { shopDomain: s
   const [pickup, setPickup] = useState('')
   const [place, setPlace] = useState<{ city: string; state: string } | null | 'unknown'>(null)
   const [sells, setSells] = useState<string[]>([])
+  const [phone, setPhone] = useState('')
+  const [code, setCode] = useState('')
+  const [codeId, setCodeId] = useState<string | null>(null)
+  const [verified, setVerified] = useState(false)
   const [plan, setPlan] = useState(plans.some((p) => p.code === 'growth') ? 'growth' : plans[0]?.code ?? 'launch')
   const [error, setError] = useState<{ field?: string; text: string } | null>(null)
   const [pending, start] = useTransition()
@@ -53,7 +57,7 @@ export function CreateShopForm({ shopDomain, plans, trialDays }: { shopDomain: s
   function submit() {
     setError(null)
     start(async () => {
-      const r = await createMyShop({ name, slug, pickup, sells, plan })
+      const r = await createMyShop({ name, slug, pickup, sells, plan, codeId: verified ? codeId : null })
       if (r.ok || r.hasShop) { router.replace('/console'); router.refresh(); return }
       setError({ field: r.field, text: r.error })
       if (r.field === 'slug' || r.field === 'name') go('name', 'back')
@@ -62,14 +66,15 @@ export function CreateShopForm({ shopDomain, plans, trialDays }: { shopDomain: s
   }
 
   const anim = dir === 'forward' ? 'animate-step-forward' : 'animate-step-back'
-  const stepNo = { name: 1, pickup: 2, plan: 3, sells: 4 }[step]
+  const steps = codeOn ? 5 : 4
+  const stepNo = { name: 1, pickup: 2, plan: 3, phone: 4, sells: steps }[step]
 
   return (
     <div className="space-y-5">
       <div className="h-1 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-        <div className="h-full w-full origin-left bg-thread transition-transform duration-slow ease-standard" style={{ transform: `scaleX(${stepNo / 4})` }} />
+        <div className="h-full w-full origin-left bg-thread transition-transform duration-slow ease-standard" style={{ transform: `scaleX(${stepNo / steps})` }} />
       </div>
-      <p className="text-xs text-muted-foreground">Step <span className="font-mono">{stepNo}</span> of <span className="font-mono">4</span></p>
+      <p className="text-xs text-muted-foreground">Step <span className="font-mono">{stepNo}</span> of <span className="font-mono">{steps}</span></p>
 
       {step === 'name' && (
         <form key="name" className={`space-y-4 ${anim}`} noValidate onSubmit={(e) => {
@@ -130,7 +135,7 @@ export function CreateShopForm({ shopDomain, plans, trialDays }: { shopDomain: s
       )}
 
       {step === 'plan' && (
-        <form key="plan" className={`space-y-4 ${anim}`} noValidate onSubmit={(e) => { e.preventDefault(); go('sells') }}>
+        <form key="plan" className={`space-y-4 ${anim}`} noValidate onSubmit={(e) => { e.preventDefault(); go(codeOn ? 'phone' : 'sells') }}>
           <h1 className="text-2xl font-semibold tracking-tight">Choose your plan</h1>
           <p className="text-sm text-muted-foreground">{trialDays} days free from going live</p>
           <fieldset className="space-y-2">
@@ -148,6 +153,50 @@ export function CreateShopForm({ shopDomain, plans, trialDays }: { shopDomain: s
           <div className="flex gap-2">
             <Button type="button" variant="secondary" size="lg" onClick={() => go('pickup', 'back')}>Back</Button>
             <Button type="submit" size="lg" className="flex-1">Continue</Button>
+          </div>
+        </form>
+      )}
+
+      {step === 'phone' && (
+        <form key="phone" className={`space-y-4 ${anim}`} noValidate onSubmit={(e) => {
+          e.preventDefault()
+          if (verified) return go('sells')
+          start(async () => {
+            if (!codeId) {
+              const r = await sendSignupCode(phone)
+              if (!r.ok) return setError({ field: 'phone', text: r.error })
+              setCodeId(r.codeId)
+            } else {
+              const r = await verifySignupCode(codeId, code)
+              if (!r.ok) return setError({ field: 'code', text: r.error ?? 'Try again.' })
+              setVerified(true); go('sells')
+            }
+          })
+        }}>
+          <h1 className="text-2xl font-semibold tracking-tight">Your WhatsApp number</h1>
+          <div className="space-y-1.5">
+            <label htmlFor="phone" className="block text-sm font-medium">Mobile number</label>
+            <div className="flex gap-2">
+              <span className="flex h-11 items-center rounded-md border border-input bg-muted px-3 font-mono text-sm">+91</span>
+              <input id="phone" autoFocus inputMode="tel" autoComplete="tel-national" maxLength={10} value={phone} disabled={!!codeId}
+                aria-invalid={error?.field === 'phone' || undefined}
+                onChange={(e) => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); setError(null) }}
+                className="h-11 w-44 rounded-md border border-input bg-card px-3 font-mono text-base aria-invalid:border-danger-text" />
+            </div>
+          </div>
+          {codeId && !verified && (
+            <div className="space-y-1.5">
+              <label htmlFor="code" className="block text-sm font-medium">Code from WhatsApp</label>
+              <input id="code" autoFocus inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code}
+                aria-invalid={error?.field === 'code' || undefined}
+                onChange={(e) => { setCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(null) }}
+                className="h-11 w-32 rounded-md border border-input bg-card px-3 font-mono text-base tracking-widest aria-invalid:border-danger-text" />
+            </div>
+          )}
+          {error && <p role="alert" className="text-sm text-danger-text">{error.text}</p>}
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" size="lg" onClick={() => go('plan', 'back')} disabled={pending}>Back</Button>
+            <Button type="submit" size="lg" className="flex-1" disabled={pending}>{!codeId ? 'Send code' : verified ? 'Continue' : 'Verify'}</Button>
           </div>
         </form>
       )}
@@ -170,7 +219,7 @@ export function CreateShopForm({ shopDomain, plans, trialDays }: { shopDomain: s
           </div>
           {error && <p role="alert" className="text-sm text-danger-text">{error.text}</p>}
           <div className="flex gap-2">
-            <Button type="button" variant="secondary" size="lg" onClick={() => go('plan', 'back')} disabled={pending}>Back</Button>
+            <Button type="button" variant="secondary" size="lg" onClick={() => go(codeOn ? 'phone' : 'plan', 'back')} disabled={pending}>Back</Button>
             <Button type="button" size="lg" className="flex-1" onClick={submit} disabled={pending}>
               {pending ? 'Creating your shop…' : sells.length ? 'Create my shop' : 'Skip and create my shop'}
             </Button>

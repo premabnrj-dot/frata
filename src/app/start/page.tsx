@@ -7,6 +7,7 @@ import { SHOP_DOMAIN } from '@/lib/public-env'
 import { frataWhatsappLink } from '@/lib/site'
 import { SignInFlow } from '../login/sign-in-flow'
 import { CreateShopForm } from './create-shop-form'
+import { signupCodeOn } from '@/lib/trials/signup-code'
 import { SHELL_FONT_VARS } from '@/components/shell/fonts'
 import { Selvedge, SiteHeader, SiteStage } from '@/components/brand/site'
 
@@ -32,7 +33,7 @@ export default async function StartPage() {
       <Selvedge />
       <main id="content" tabIndex={-1} className="mx-auto grid max-w-4xl gap-10 px-4 py-10 outline-none sm:px-8 md:grid-cols-[minmax(0,1fr)_auto]">
         <div className="max-w-md">
-          {auth.ok ? <CreateShopForm shopDomain={SHOP_DOMAIN} plans={plans} trialDays={trialDays} /> : (
+          {auth.ok ? <CreateShopForm shopDomain={SHOP_DOMAIN} plans={plans} trialDays={trialDays} codeOn={signupCodeOn()} /> : (
             <div className="space-y-4">
               <h1 className="font-display text-2xl font-semibold tracking-tight">Start your shop</h1>
               <SignInFlow intent="start" />

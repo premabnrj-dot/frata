@@ -10,6 +10,7 @@ import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { clientIp } from '@/lib/http/client-ip'
 import { PLAN_CODES } from '@/domains/plans/entitlements'
 import { claimKey } from '@/lib/trials/claims'
+import { checkCode, indianMobile, sendCode, signupCodeOn } from '@/lib/trials/signup-code'
 
 // Creating a shop: the signed-in person (requireUser → getUser) becomes its
 // owner through app_create_shop, which re-checks everything in one transaction.
@@ -38,6 +39,7 @@ const Shop = z.object({
   pickup: z.string().regex(PINCODE_SHAPE),
   sells: z.array(z.enum(SELLS)).max(SELLS.length),
   plan: z.enum(PLAN_CODES).default('growth'),
+  codeId: z.uuid().nullable().default(null),
 })
 
 const SENTENCES: Record<string, string> = {
@@ -56,13 +58,38 @@ export async function createMyShop(input: unknown): Promise<{ ok: true; trial: b
   if (!auth.ok) return { ok: false, error: auth.message }
   const parsed = Shop.safeParse(input)
   if (!parsed.success) return { ok: false, error: 'Check the highlighted fields.' }
-  const { name, slug, pickup, sells, plan } = parsed.data
+  const { name, slug, pickup, sells, plan, codeId } = parsed.data
+  // Q4: with the WhatsApp code on, a verified code is required (its phone is claimed inside the definer, R3).
+  if (signupCodeOn() && !codeId) return { ok: false, error: 'Verify your WhatsApp number first.' }
   if (slugProblem(slug)) return { ok: false, field: 'slug', error: SENTENCES.bad_slug! }
   if (!(await withinLimit(LIMITS.createShopIp, await clientIp()))) return { ok: false, error: 'Too many shops made from here in the last hour. Try again later.' }
   // The email key is the VERIFIED email from getUser() (requireUser), never a form value (trials T1).
-  const r = await createShop({ uid: auth.userId, name, slug, pickup, sells, plan, email: claimKey('email', auth.email), codeId: null })
+  const r = await createShop({ uid: auth.userId, name, slug, pickup, sells, plan, email: claimKey('email', auth.email), codeId: signupCodeOn() ? codeId : null })
   // Misses are not cached, but a lookup made in the same minute is: clear it for the new address.
   if (r.ok) { refreshHosts(hostFor(slug)); return { ok: true, trial: r.trial } }
   const field = r.error === 'slug_taken' || r.error === 'bad_slug' ? 'slug' : r.error === 'bad_name' ? 'name' : r.error === 'bad_pincode' ? 'pickup' : undefined
   return { ok: false, field, hasShop: r.error === 'has_shop', error: SENTENCES[r.error] ?? 'We could not create your shop. Nothing was saved. Try again in a minute.' }
+}
+
+// ── Trials TR1: the WhatsApp code (on only when Frrata's own number is set up; R2: rate-limited, fail closed). ──
+export async function sendSignupCode(phone: string): Promise<{ ok: true; codeId: string } | { ok: false; error: string }> {
+  const auth = await requireUser()
+  if (!auth.ok) return { ok: false, error: auth.message }
+  if (!signupCodeOn()) return { ok: false, error: 'Not available yet.' }
+  const mobile = indianMobile(phone)
+  if (!mobile) return { ok: false, error: 'A 10-digit Indian mobile number.' }
+  const phoneKey = claimKey('phone', mobile)!.hmac
+  const ip = await clientIp()
+  const allowed = await withinLimit(LIMITS.signupCodeUser, auth.userId, new Date(), true) && await withinLimit(LIMITS.signupCodePhone, phoneKey, new Date(), true)
+    && await withinLimit(LIMITS.signupCodeIp, ip, new Date(), true)
+  if (!allowed) return { ok: false, error: 'Too many codes. Try again in an hour.' }
+  const codeId = await sendCode(auth.userId, mobile)
+  return codeId ? { ok: true, codeId } : { ok: false, error: 'We could not send the code. Check the number is on WhatsApp.' }
+}
+
+export async function verifySignupCode(codeId: string, code: string): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireUser()
+  if (!auth.ok) return { ok: false, error: auth.message }
+  if (!/^[0-9a-f-]{36}$/.test(String(codeId ?? ''))) return { ok: false, error: 'Ask for a new code.' }
+  return (await checkCode(auth.userId, codeId, String(code ?? '').trim())) ? { ok: true } : { ok: false, error: 'That code is not right, or has expired.' }
 }

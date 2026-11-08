@@ -4,7 +4,7 @@
 // a shop on the plan chosen (trials TR1: Growth preselected, a trial with frozen terms, the email claimed). Cleans up.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, USERS, signedIn } from '../lib.mjs'
+import { CONSOLE, PORTS, USERS, signedIn } from '../lib.mjs'
 
 const SLUG = 'noor-threads-e2e'
 
@@ -18,6 +18,7 @@ export default {
       const ts = await db`select id from tenants where slug = ${SLUG}`
       for (const { id } of ts) await db.begin(async (x) => {
         await x`set local session_replication_role = replica`
+        await x`delete from signup_codes where user_id = ${F.id}`
         for (const tbl of ['audit_events', 'tenant_plans', 'shop_trials', 'trial_claims', 'members', 'shop_settings', 'tenant_domains', 'tenant_counters', 'tenant_modules']) await x.unsafe(`delete from ${tbl} where tenant_id = $1`, [id]).catch(() => undefined)
         await x`delete from tenants where id = ${id}`
       })
@@ -40,6 +41,17 @@ export default {
         assert.equal(await p.getByRole('radio', { name: /Growth/ }).isChecked(), true)
         await p.screenshot({ path: t.out('plan-step'), fullPage: true })
         await p.getByRole('button', { name: 'Continue' }).click()
+        // The WhatsApp code (on: Frrata's own number is configured in the stack). A wrong code is refused first.
+        await p.getByLabel('Mobile number').fill('9829043211')
+        await p.getByRole('button', { name: 'Send code' }).click()
+        await p.getByLabel('Code from WhatsApp').waitFor()
+        const sent = await (await fetch(`http://localhost:${PORTS.meta}/_test/code?to=919829043211`)).json()
+        assert.match(sent.code ?? '', /^\d{6}$/)
+        await p.getByLabel('Code from WhatsApp').fill(sent.code === '000000' ? '111111' : '000000')
+        await p.getByRole('button', { name: 'Verify' }).click()
+        await p.getByText('That code is not right, or has expired.').waitFor()
+        await p.getByLabel('Code from WhatsApp').fill(sent.code)
+        await p.getByRole('button', { name: 'Verify' }).click()
         await p.getByRole('button', { name: /create my shop/i }).click()
         await p.waitForURL(/\/console$/)
         const [s] = await db`select t.id, m.role from tenants t join members m on m.tenant_id = t.id where t.slug = ${SLUG} and m.user_id = ${F.id}`
@@ -49,7 +61,8 @@ export default {
         // A first sign-up gets a trial with the terms frozen, and its verified email is claimed (keyed, never stored).
         const [trial] = await db`select days, started_at from shop_trials where tenant_id = ${s.id}`
         assert.ok(trial && trial.started_at === null, 'a trial, not started until the website goes live')
-        assert.equal((await db`select count(*)::int n from trial_claims where tenant_id = ${s.id} and kind = 'email'`)[0].n, 1)
+        assert.equal((await db`select count(*)::int n from trial_claims where tenant_id = ${s.id} and kind in ('email', 'phone')`)[0].n, 2)
+        assert.equal((await db`select count(*)::int n from signup_codes where user_id = ${F.id} and consumed_at is not null`)[0].n, 1)
         assert.equal((await db`select count(*)::int n from trial_claims where key_hmac = ${F.email}`)[0].n, 0)
         await p.screenshot({ path: t.out('new-shop'), fullPage: true })
       })

@@ -41,6 +41,10 @@ export const LIMITS = {
   pdfShop: { action: 'pdf:shop', max: 120, windowSeconds: 600 },
   // Frrata's billing gateway (B3 security review): each start makes a gateway customer or order; per member, fail closed.
   billingMember: { action: 'billing:member', max: 10, windowSeconds: 600 },
+  // Sign-up WhatsApp codes (trials TR1, R2): per person, per phone and per IP; fail closed (a code costs Frrata a message).
+  signupCodeUser: { action: 'signup_code:user', max: 5, windowSeconds: 3600 },
+  signupCodePhone: { action: 'signup_code:phone', max: 3, windowSeconds: 3600 },
+  signupCodeIp: { action: 'signup_code:ip', max: 20, windowSeconds: 3600 },
 } as const satisfies Record<string, Limit>
 
 /** Whether `subject` is already past the limit, WITHOUT counting an attempt. `failClosed`: true when the counter cannot be read. */

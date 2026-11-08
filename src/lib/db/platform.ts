@@ -241,3 +241,15 @@ export async function signupTrialDays(): Promise<number> {
   const [r] = await db().execute<{ days: number }>(sql`select days from trial_settings where id = 1`)
   return r?.days ?? 30
 }
+
+// ── Trials TR1: sign-up codes (drizzle/0065; definers only, keyed HMACs only) ─────────────────────────────────────
+export async function signupCodeIssue(uid: string, phoneHmac: string, codeHmac: string, version: number): Promise<string | null> {
+  try {
+    const [r] = await db().execute<{ id: string }>(sql`select app_signup_code_issue(${uid}::uuid, ${phoneHmac}, ${codeHmac}, ${version}::smallint) as id`)
+    return r?.id ?? null
+  } catch (err) { console.error('[signupCodeIssue]', errName(err)); return null }
+}
+export async function signupCodeVerify(uid: string, id: string, codeHmac: string): Promise<boolean> {
+  const [r] = await db().execute<{ ok: boolean }>(sql`select app_signup_code_verify(${uid}::uuid, ${id}::uuid, ${codeHmac}) as ok`)
+  return !!r?.ok
+}
