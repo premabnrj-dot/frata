@@ -4,6 +4,7 @@ import { offerStatus, type OfferStatus } from '@/domains/checkout/offer-status'
 import type { DiscountStyle } from '@/domains/checkout/discounts'
 import { paise } from '@/domains/money/paise'
 import { freightOf, type FreightSource } from '@/domains/orders/freight'
+import { JUDGE_MIN } from '@/domains/analytics/judge'
 import { orderProfit } from '@/domains/orders/profit'
 import { deliveredFee } from '@/domains/plans/entitlements'
 import { planVersions, tenantPlans } from '@/lib/db/schema'
@@ -131,8 +132,8 @@ export type OfferStats = {
   offers: Map<string, OfferStat>
 }
 
-/** Under this many orders an offer's numbers are "too few to judge" (the console says so). */
-export const JUDGE_MIN_ORDERS = 30
+/** Under this many orders an offer's numbers are "too few to judge": the one threshold (domains/analytics/judge.ts). */
+export const JUDGE_MIN_ORDERS = JUDGE_MIN
 
 const DAY = 86_400_000
 type Delivered = { net: string; cogs: string | null; fwd: string | null; rto: string | null; codfee: string | null; gw: string | null; base: string; cod: boolean; provider: 'self' | 'shiprocket' | null }
