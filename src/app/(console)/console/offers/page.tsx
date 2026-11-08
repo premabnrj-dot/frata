@@ -48,10 +48,10 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
                 <Td cell="a"><Link href={`/console/offers/${r.id}`} data-row-link prefetch={false} className="font-medium hover:underline">{r.title}</Link>
                   <span className="block text-xs text-muted-foreground">{terms(r)}{r.announce ? ' · in the bar' : ''}</span></Td>
                 <Td cell="d">{r.code ? <span className="rounded-sm bg-muted px-1.5 py-0.5 font-mono text-xs">{r.code}</span> : <Badge tone="neutral">Automatic</Badge>}</Td>
-                <Td cell="b" className="text-right"><Numeric>{r.useCount}</Numeric>{r.limitTotal ? <span className="text-muted-foreground"> / {r.limitTotal}</span> : null}</Td>
-                <Td cell="c" className="text-right"><Money paise={paise(r.given)} /></Td>
-                <Td className="text-right"><Numeric>{r.delivered}</Numeric></Td>
-                <Td className="text-right">{r.keptPerDelivered === null ? <span className="text-muted-foreground" title="Shows once orders with this offer are delivered and their costs are known">—</span> : <Money paise={paise(r.keptPerDelivered)} />}</Td>
+                <Td cell="b" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Uses </span><Numeric>{r.useCount}</Numeric>{r.limitTotal ? <span className="text-muted-foreground"> / {r.limitTotal}</span> : null}</Td>
+                <Td cell="c" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Given </span><Money paise={paise(r.given)} /></Td>
+                <Td cell="e" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Delivered </span><Numeric>{r.delivered}</Numeric></Td>
+                <Td cell="f" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Kept each </span>{r.keptPerDelivered === null ? <span className="text-muted-foreground" title="Shows once orders with this offer are delivered and their costs are known">—</span> : <Money paise={paise(r.keptPerDelivered)} />}</Td>
               </DataTableRow>
             ))}
           </DataTableBody>

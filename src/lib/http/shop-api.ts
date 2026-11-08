@@ -39,7 +39,9 @@ export async function codeToTry(tenantId: string, ip: string, code: string | nul
   return (await overLimit(LIMITS.codeIp, `${tenantId}:${ip}`, new Date(), true)) ? null : code
 }
 export async function codeTried(tenantId: string, ip: string, typed: string | null | undefined, result: 'applied' | 'not_applied' | null) {
-  if (typed && result !== 'applied') await withinLimit(LIMITS.codeIp, `${tenantId}:${ip}`, new Date(), true)
+  if (!typed || result === 'applied') return
+  // Distinct codes, not calls: a code already counted in this window (the bag re-pricing) is not counted again.
+  if (await withinLimit(LIMITS.codeSeen, `${tenantId}:${ip}:${typed.trim().toUpperCase()}`, new Date(), true)) await withinLimit(LIMITS.codeIp, `${tenantId}:${ip}`, new Date(), true)
 }
 
 /** An offer as the shopper sees it: its title, what it saved, and its class — never an id, a limit, a budget or a count. */

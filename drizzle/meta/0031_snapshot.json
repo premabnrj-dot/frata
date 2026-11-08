@@ -5736,7 +5736,7 @@
             }
           ],
           "isUnique": true,
-          "where": "\"discounts\".\"announce\"",
+          "where": "\"discounts\".\"announce\" and \"discounts\".\"started_at\" is not null and \"discounts\".\"ended_at\" is null",
           "concurrently": false,
           "method": "btree",
           "with": {}

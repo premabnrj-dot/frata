@@ -42,6 +42,8 @@ export default {
         ['admin-plans', 'frata', '/admin/plans'],
         // The rest of what U·2b converted (impact review U·2b): every page measured, none only by hand.
         ['console-collections', 'owner', '/console/collections'],
+        ['console-offers', 'owner', '/console/offers'],
+        ['console-offer-new', 'owner', '/console/offers/new'],
         ['console-collection', 'owner', '/console/collections/kurtas'],
         ['console-activity', 'owner', '/console/activity'],
         ['console-settings-address', 'owner', '/console/settings/address'],

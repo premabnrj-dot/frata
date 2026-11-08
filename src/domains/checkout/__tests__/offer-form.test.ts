@@ -34,3 +34,20 @@ describe('offerStatus', () => {
     expect(offerStatus({ ...d, startedAt: null, endedAt: now }, now)).toBe('ended')
   })
 })
+
+describe('offer text: one wording everywhere', () => {
+  it('terms, and the bar with a listed code and a real end', async () => {
+    const { offerTerms, barText } = await import('../offer-text')
+    const o = { title: 'Diwali', style: 'order_off', percentBps: 1500, amountOff: null, cap: 50000, minSubtotal: 299900 }
+    expect(offerTerms(o)).toBe('15% off (up to ₹500) above ₹2,999')
+    expect(barText(o, { code: 'DIWALI15', endsAt: new Date('2026-11-30T18:00:00Z') })).toBe('Diwali · 15% off above ₹2,999 · code DIWALI15 · till 30 Nov')
+    expect(barText({ ...o, style: 'pay_online', percentBps: null, amountOff: 5000, minSubtotal: 0 }, { code: null, endsAt: null })).toBe('Pay online, save ₹50')
+    expect(offerTerms({ ...o, style: 'free_shipping', percentBps: null, minSubtotal: 99900 })).toBe('Free shipping above ₹999')
+  })
+  it('an unlisted code offer cannot go in the bar (shoppers would read an offer they cannot get)', async () => {
+    const { parseOffer } = await import('../offer-form')
+    const r = parseOffer({ title: 'Friends', style: 'order_off', kind: 'percent', value: '20', cap: '', min: '', code: 'FRIENDS20', startsAt: '2026-11-15T00:00', endsAt: '',
+      limitTotal: '', limitPerPhone: '', budget: '', listed: false, combinesWithPayment: true, announce: true })
+    expect(r.ok ? null : r.errors.announce).toMatch(/bar/)
+  })
+})

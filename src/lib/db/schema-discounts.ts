@@ -41,14 +41,15 @@ export const discounts = pgTable('discounts', {
   endedAt: at('ended_at'),
   listed: boolean('listed').notNull().default(true),
   combinesWithPayment: boolean('combines_with_payment').notNull().default(true),
-  /** The one offer in the shop's announcement bar. */
+  /** In the shop's announcement bar (one started offer at a time; a draft takes it when it starts). */
   announce: boolean('announce').notNull().default(false),
   createdBy: uuid('created_by').notNull(),
   createdAt: createdAt(),
 }, (t) => [
   unique('discounts_tenant_id_key').on(t.tenantId, t.id),
   index('discounts_tenant_live').on(t.tenantId).where(sql`${t.startedAt} is not null and ${t.endedAt} is null`),
-  uniqueIndex('discounts_one_announce').on(t.tenantId).where(sql`${t.announce}`),
+  // One offer in the bar among started ones: a draft may ask for the bar and takes it when it starts.
+  uniqueIndex('discounts_one_announce').on(t.tenantId).where(sql`${t.announce} and ${t.startedAt} is not null and ${t.endedAt} is null`),
   check('discounts_style', sql`${t.style} in (${sql.raw(sqlList(DISCOUNT_STYLES))})`),
   check('discounts_value', sql`case when ${t.style} = 'free_shipping' then ${t.percentBps} is null and ${t.amountOff} is null and ${t.cap} is null
     else (${t.percentBps} is null) <> (${t.amountOff} is null) end`),

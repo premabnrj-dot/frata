@@ -84,7 +84,7 @@ ALTER TABLE "price_history" ADD CONSTRAINT "price_history_variant_fk" FOREIGN KE
 CREATE UNIQUE INDEX "discount_codes_tenant_code" ON "discount_codes" USING btree ("tenant_id",upper("code"));--> statement-breakpoint
 CREATE INDEX "discount_codes_discount" ON "discount_codes" USING btree ("tenant_id","discount_id");--> statement-breakpoint
 CREATE INDEX "discounts_tenant_live" ON "discounts" USING btree ("tenant_id") WHERE "discounts"."started_at" is not null and "discounts"."ended_at" is null;--> statement-breakpoint
-CREATE UNIQUE INDEX "discounts_one_announce" ON "discounts" USING btree ("tenant_id") WHERE "discounts"."announce";--> statement-breakpoint
+CREATE UNIQUE INDEX "discounts_one_announce" ON "discounts" USING btree ("tenant_id") WHERE "discounts"."announce" and "discounts"."started_at" is not null and "discounts"."ended_at" is null;--> statement-breakpoint
 CREATE UNIQUE INDEX "order_discounts_order_class" ON "order_discounts" USING btree ("tenant_id","order_id","class");--> statement-breakpoint
 CREATE INDEX "order_discounts_discount" ON "order_discounts" USING btree ("tenant_id","discount_id");--> statement-breakpoint
 CREATE INDEX "price_history_variant" ON "price_history" USING btree ("tenant_id","variant_id","from_at");--> statement-breakpoint

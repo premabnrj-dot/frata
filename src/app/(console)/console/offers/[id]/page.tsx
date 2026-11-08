@@ -19,7 +19,7 @@ export default async function OfferPage({ params }: { params: Promise<{ id: stri
   if (!auth.ok) return <Panel title={auth.message} />
   const { id } = await params
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound()
-  const rows = await listOffers(auth.membership.tenantId).catch(() => null)
+  const rows = await listOffers(auth.membership.tenantId, new Date(), id).catch(() => null)
   if (!rows) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const o = rows.find((r) => r.id === id)
   if (!o) notFound()

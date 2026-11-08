@@ -2,7 +2,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Panel } from '@/components/ui/panel'
 import { toIst, type OfferValues } from '@/domains/checkout/offer-form'
 import { DISCOUNT_STYLES } from '@/domains/checkout/discounts'
-import { CAN_BUILD, requireMember } from '@/lib/auth/require-member'
+import { CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { OfferEditor } from '../_components/offer-editor'
 
 export const metadata = { title: 'New offer' }
@@ -20,7 +20,7 @@ export default async function NewOfferPage({ searchParams }: { searchParams: Pro
   return (
     <div className="max-w-3xl">
       <PageHeader title="New offer" back={{ href: '/console/offers', label: 'Offers' }} />
-      <p className="mb-4 text-sm text-muted-foreground">Saved as a draft. {(['owner', 'admin'] as string[]).includes(auth.membership.role) ? 'Start it when you are ready.' : 'The shop’s owner starts it.'}</p>
+      <p className="mb-4 text-sm text-muted-foreground">Saved as a draft. {(CAN_MANAGE as readonly string[]).includes(auth.membership.role) ? 'Start it when you are ready.' : 'The shop’s owner starts it.'}</p>
       <OfferEditor id={null} initial={initial} locked={{ style: false, code: false }} />
     </div>
   )

@@ -12,7 +12,9 @@ export function useQuote(pincode?: string) {
   const [q, setQ] = useState<PublicQuote | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const key = JSON.stringify([items, pincode ?? null, code])
+  // A half-typed pincode is not a new price: only a whole one re-prices the bag (and re-sends the code).
+  const pin = pincode && /^[1-9][0-9]{5}$/.test(pincode) ? pincode : null
+  const key = JSON.stringify([items, pin, code])
   const seq = useRef(0)
   const refresh = useCallback(async () => {
     if (!items.length) { setQ(null); return null }

@@ -59,6 +59,7 @@ export function parseOffer(v: OfferValues): { ok: true; patch: OfferPatch } | { 
   else if (endsAt && startsAt && endsAt <= startsAt) e.endsAt = 'It has to end after it starts.'
   const opt = (s: string, k: string, f: (s: string) => number | null) => { if (!s.trim()) return null; const x = f(s); if (!x) e[k] = k === 'budget' ? 'An amount in rupees, or leave it empty.' : 'A whole number, or leave it empty.'; return x }
   const limitTotal = opt(v.limitTotal, 'limitTotal', whole), limitPerPhone = opt(v.limitPerPhone, 'limitPerPhone', whole), budget = opt(v.budget, 'budget', rupees)
+  if (v.announce && code && !v.listed) e.announce = 'An offer only for people with the code cannot go in the bar: everyone would read it.'
   if (Object.keys(e).length) return { ok: false, errors: e }
   return { ok: true, patch: { title, style: style!, percentBps, amountOff, cap, minSubtotal: minSubtotal!, code, startsAt: startsAt!, endsAt, limitTotal, limitPerPhone, budget,
     // An unlisted offer is reached only by its code: one without a code is always listed.

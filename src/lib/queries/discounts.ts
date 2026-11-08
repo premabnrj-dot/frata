@@ -39,7 +39,8 @@ export type OfferRow = {
 
 const n = (v: unknown) => (v == null ? null : Number(v))
 
-export async function listOffers(tenantId: string, now = new Date()): Promise<OfferRow[]> {
+/** Every offer (newest 200), or just `onlyId` (an offer page: never missed because it is older than the newest 200). */
+export async function listOffers(tenantId: string, now = new Date(), onlyId?: string): Promise<OfferRow[]> {
   return withTenant(tenantId, async (tx) => {
     const rows = await tx.select({
       id: discounts.id, title: discounts.title, style: discounts.style, percentBps: discounts.percentBps, amountOff: discounts.amountOff, cap: discounts.cap, minSubtotal: discounts.minSubtotal,
@@ -47,7 +48,7 @@ export async function listOffers(tenantId: string, now = new Date()): Promise<Of
       startedAt: discounts.startedAt, pausedAt: discounts.pausedAt, endedAt: discounts.endedAt, listed: discounts.listed, combinesWithPayment: discounts.combinesWithPayment,
       announce: discounts.announce, createdAt: discounts.createdAt, code: discountCodes.code,
     }).from(discounts).leftJoin(discountCodes, and(eq(discountCodes.tenantId, discounts.tenantId), eq(discountCodes.discountId, discounts.id)))
-      .where(eq(discounts.tenantId, tenantId)).orderBy(desc(discounts.createdAt)).limit(200)
+      .where(onlyId ? and(eq(discounts.tenantId, tenantId), eq(discounts.id, onlyId)) : eq(discounts.tenantId, tenantId)).orderBy(desc(discounts.createdAt)).limit(200)
     if (!rows.length) return []
     // Uses and ₹ given, as the orders stand now; delivered orders with what profit.ts needs.
     const byId = await discountUses(tx, tenantId, rows.map((r) => r.id), now)

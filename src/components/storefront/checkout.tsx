@@ -224,7 +224,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
         <h2 className={sect}>Offers</h2>
         <ul className="space-y-2 text-sm" aria-label="Offers for this bag">
           {q.offers.listed.map((l) => (
-            <li key={l.title} className={`flex items-center gap-2 rounded-sm border p-2.5 ${l.applied ? 'border-store-good' : 'border-store-line opacity-75'}`}>
+            <li key={`${l.title}-${l.code ?? ''}`} className={`flex items-center gap-2 rounded-sm border p-2.5 ${l.applied ? 'border-store-good' : 'border-dashed border-store-line'}`}>
               <span aria-hidden className={l.applied ? 'text-store-good' : 'text-store-sub'}>{l.applied ? '✓' : '○'}</span>
               <span className="min-w-0 flex-1"><b className="font-medium">{l.title}</b>{l.code ? <span className="ml-1.5 rounded-sm border border-store-line px-1 font-mono text-xs">{l.code}</span> : null}
                 <span className="block text-store-sub">{l.need?.kind === 'add' ? `Add ${inr(l.need.amount)} more` : l.need?.kind === 'pay_online' ? 'When you pay online' : 'Applied'}</span></span>
@@ -234,8 +234,8 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
       </> : null}
       {q && <OfferProgress q={q} />}
       {q && (code ? (
-        <p className="mt-2 text-sm">Code <b className="font-mono">{code}</b>{q.offers.code === 'applied' ? ' applied.' : <span className="text-store-bad"> — this code doesn’t work here.</span>}
-          {' '}<button type="button" className="underline" onClick={() => { offerCode.set(''); setDraftCode('') }}>Remove</button></p>
+        <p className="mt-2 text-sm" aria-live="polite">Code <b className="font-mono">{code}</b>{q.offers.code === 'applied' ? ' applied.' : <span className="text-store-bad"> — this code doesn’t work here.</span>}
+          {' '}<button type="button" className="min-h-11 underline" onClick={() => { offerCode.set(''); setDraftCode('') }}>Remove</button></p>
       ) : typing ? (
         <div className="mt-2 flex gap-2">
           <label htmlFor="offer-code" className="sr-only">Offer code</label>
@@ -243,7 +243,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (draftCode) offerCode.set(draftCode) } }} className={`${field} font-mono`} />
           <button type="button" disabled={!draftCode} onClick={() => offerCode.set(draftCode)} className="h-11 shrink-0 rounded-sm border border-store-ink px-4 text-sm font-medium disabled:opacity-50">Apply</button>
         </div>
-      ) : <button type="button" className="mt-2 text-sm underline" onClick={() => setTyping(true)}>Have a code?</button>)}
+      ) : <button type="button" className="mt-1 min-h-11 text-sm underline" onClick={() => setTyping(true)}>Have a code?</button>)}
 
       <h2 className={sect}>Payment</h2>
       <div role="radiogroup" aria-label="How to pay" className="space-y-2">

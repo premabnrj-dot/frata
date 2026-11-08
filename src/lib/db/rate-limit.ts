@@ -29,6 +29,8 @@ export const LIMITS = {
   // Offer codes that did not apply, per shop and IP ("<tenant>:<ip>"): guessing stops; fail closed. No per-shop block,
   // so one guesser cannot switch off a shop's real codes (offers plan review 11).
   codeIp: { action: 'shop_code:ip', max: 20, windowSeconds: 600 },
+  // Once per code per IP per window: the same code re-sent with every re-price counts once (impact review).
+  codeSeen: { action: 'shop_code:seen', max: 1, windowSeconds: 600 },
 } as const satisfies Record<string, Limit>
 
 /** Whether `subject` is already past the limit, WITHOUT counting an attempt. `failClosed`: true when the counter cannot be read. */

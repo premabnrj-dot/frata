@@ -103,6 +103,15 @@ export default {
         assert.deepEqual((await db`select class, amount from order_discounts where order_id = ${o.id}`).map((r) => [r.class, Number(r.amount)]), [['order', order]])
         await c.goto(CONSOLE + `/console/orders/${o.number}`); await c.getByText('Offer · Festive').waitFor()
       })
+      await t.step('paid online: both offers recorded, the total Razorpay was asked for', async () => {
+        await toBag(); await p.getByRole('button', { name: 'Checkout' }).click(); await p.waitForURL(/\/checkout$/); await fill()
+        await p.getByText('Pay online', { exact: true }).click()
+        await p.getByRole('button', { name: /^Pay · / }).click(); await p.waitForURL(/\/orders#t=/); await p.getByText(/Paid · being packed/).waitFor()
+        const o = await until(async () => { const x = await lastOrder(); return x.paid_at && x })
+        assert.equal(Number(o.total), online); assert.equal(Number(o.discount), order + saving)
+        assert.equal(Number(o.checkout.onlineTotal), online, 'Razorpay was asked for the discounted total')
+        assert.deepEqual((await db`select class from order_discounts where order_id = ${o.id} order by class`).map((r) => r.class), ['order', 'payment'])
+      })
       await t.step('online dismissed → switch to COD: told the saving goes, then it is gone from the order', async () => {
         await toBag(); await p.getByRole('button', { name: 'Checkout' }).click(); await p.waitForURL(/\/checkout$/); await fill()
         await p.evaluate(() => { window.__rzpMode = 'dismiss' })

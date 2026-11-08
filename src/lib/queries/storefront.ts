@@ -220,7 +220,7 @@ export const shopSettingsFor = shopCached('shop', 'shop', (t) => coreShop(t))
 
 /**
  * The offer in the shop's announcement bar (one at most), as RAW terms and timestamps: whether it is live is decided
- * at render (offerStatus), never cached. Shopper-safe fields only — never a limit, budget or count (ADR-0003).
+ * when the page renders (offerStatus) — pages regenerate every 60 s, so up to a minute late. Shopper-safe fields only — never a limit, budget or count (ADR-0003).
  */
 export const shopAnnouncement = shopCached('announce', 'shop', (tenantId) => withTenant(tenantId, async (tx) => {
   const [r] = await tx.select({

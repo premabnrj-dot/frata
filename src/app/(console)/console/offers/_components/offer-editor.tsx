@@ -6,6 +6,7 @@ import { Section } from '@/components/layout/section'
 import { Button } from '@/components/ui/button'
 import { LeaveDialog, Message, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
 import { STYLE_LABEL, parseOffer, type OfferValues } from '@/domains/checkout/offer-form'
+import { barText } from '@/domains/checkout/offer-text'
 import type { DiscountStyle } from '@/domains/checkout/discounts'
 import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
@@ -20,16 +21,14 @@ import { checkQualify, saveOffer } from '../actions'
 const inr = (p: number) => formatInr(paise(p))
 const field = 'h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text disabled:opacity-60'
 
-/** What a shopper reads for these values (the bar and the bag line), from the same parse the action uses. */
+/** What a shopper reads for these values: the bar's own words (offer-text.ts), from the same parse the action uses. */
 function preview(v: OfferValues): { bar: string; bag: string } | null {
   const p = parseOffer(v)
   if (!p.ok) return null
   const o = p.patch
-  const off = o.percentBps ? `${o.percentBps / 100}% off` : o.amountOff ? `${inr(o.amountOff)} off` : 'Free shipping'
-  const above = o.minSubtotal ? ` above ${inr(o.minSubtotal)}` : ''
-  const code = o.code ? ` · code ${o.code}` : ''
-  if (o.style === 'pay_online') return { bar: `Pay online, save ${o.amountOff ? inr(o.amountOff) : `${(o.percentBps ?? 0) / 100}%`}`, bag: `On the pay-online card at checkout${above ? ` (bags${above})` : ''}` }
-  return { bar: `${o.title}: ${off}${above}${code}`, bag: o.minSubtotal ? `Bag: "${inr(Math.max(0, o.minSubtotal - 1))} … ${inr(o.minSubtotal)}: ${off}" as it fills` : `Bag: "${off}" applied` }
+  const bar = barText(o, { code: o.listed ? o.code : null, endsAt: o.endsAt })
+  const bag = o.style === 'pay_online' ? 'On the pay-online card at checkout' : o.minSubtotal ? `Bag: "₹… more for ${o.title}" until it reaches ${inr(o.minSubtotal)}` : `Bag: "${o.title}" applied`
+  return { bar, bag }
 }
 
 export function OfferEditor({ id, initial, locked }: { id: string | null; initial: OfferValues; locked: { style: boolean; code: boolean } }) {
@@ -96,11 +95,11 @@ export function OfferEditor({ id, initial, locked }: { id: string | null; initia
             <div className="space-y-1"><label htmlFor="o-value" className={lab}>{v.kind === 'percent' ? 'Percent' : 'Rupees'}</label>
               <input id="o-value" inputMode="decimal" value={v.value} placeholder={v.kind === 'percent' ? '10' : '50'} aria-invalid={!!errors.value || undefined} aria-describedby={errors.value ? 'o-value-err' : undefined} onChange={(e) => set({ value: e.target.value })} className={field} />{err('value')}</div>
             {v.kind === 'percent' && <div className="space-y-1"><label htmlFor="o-cap" className={lab}>At most ₹ <span className="font-normal text-muted-foreground">(optional)</span></label>
-              <input id="o-cap" inputMode="decimal" value={v.cap} aria-invalid={!!errors.cap || undefined} onChange={(e) => set({ cap: e.target.value })} className={field} />{err('cap')}</div>}
+              <input id="o-cap" inputMode="decimal" value={v.cap} aria-invalid={!!errors.cap || undefined} aria-describedby={errors.cap ? 'o-cap-err' : undefined} onChange={(e) => set({ cap: e.target.value })} className={field} />{err('cap')}</div>}
           </div>
         )}
         <div className="space-y-1"><label htmlFor="o-min" className={lab}>Bag at least ₹ <span className="font-normal text-muted-foreground">(optional)</span></label>
-          <input id="o-min" inputMode="decimal" value={v.min} placeholder="1999" aria-invalid={!!errors.min || undefined} onChange={(e) => set({ min: e.target.value })} className={`${field} sm:max-w-48`} />{err('min')}</div>
+          <input id="o-min" inputMode="decimal" value={v.min} placeholder="1999" aria-invalid={!!errors.min || undefined} aria-describedby={errors.min ? 'o-min-err' : undefined} onChange={(e) => set({ min: e.target.value })} className={`${field} sm:max-w-48`} />{err('min')}</div>
         {share !== null && share >= 40 && qualify && (
           <p role="status" className="rounded-md bg-warn px-3 py-2 text-sm text-warn-text">
             <b>{share}% of last month’s orders were already at this amount.</b> About {inr(qualify.would)} would go to them. A higher minimum rewards bigger bags instead.
@@ -117,17 +116,17 @@ export function OfferEditor({ id, initial, locked }: { id: string | null; initia
       <Section title="When and how much">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1"><label htmlFor="o-starts" className={lab}>Starts</label>
-            <input id="o-starts" type="datetime-local" value={v.startsAt} aria-invalid={!!errors.startsAt || undefined} onChange={(e) => set({ startsAt: e.target.value })} className={field} />{err('startsAt')}</div>
+            <input id="o-starts" type="datetime-local" value={v.startsAt} aria-invalid={!!errors.startsAt || undefined} aria-describedby={errors.startsAt ? 'o-startsAt-err' : undefined} onChange={(e) => set({ startsAt: e.target.value })} className={field} />{err('startsAt')}</div>
           <div className="space-y-1"><label htmlFor="o-ends" className={lab}>Ends <span className="font-normal text-muted-foreground">(optional)</span></label>
-            <input id="o-ends" type="datetime-local" value={v.endsAt} aria-invalid={!!errors.endsAt || undefined} onChange={(e) => set({ endsAt: e.target.value })} className={field} />{err('endsAt')}</div>
+            <input id="o-ends" type="datetime-local" value={v.endsAt} aria-invalid={!!errors.endsAt || undefined} aria-describedby={errors.endsAt ? 'o-endsAt-err' : undefined} onChange={(e) => set({ endsAt: e.target.value })} className={field} />{err('endsAt')}</div>
           <div className="space-y-1"><label htmlFor="o-total" className={lab}>Total uses <span className="font-normal text-muted-foreground">(optional)</span></label>
-            <input id="o-total" inputMode="numeric" value={v.limitTotal} aria-invalid={!!errors.limitTotal || undefined} onChange={(e) => set({ limitTotal: e.target.value })} className={field} />{err('limitTotal')}</div>
+            <input id="o-total" inputMode="numeric" value={v.limitTotal} aria-invalid={!!errors.limitTotal || undefined} aria-describedby={errors.limitTotal ? 'o-limitTotal-err' : undefined} onChange={(e) => set({ limitTotal: e.target.value })} className={field} />{err('limitTotal')}</div>
           <div className="space-y-1"><label htmlFor="o-phone" className={lab}>Uses per phone <span className="font-normal text-muted-foreground">(optional)</span></label>
-            <input id="o-phone" inputMode="numeric" value={v.limitPerPhone} aria-invalid={!!errors.limitPerPhone || undefined} onChange={(e) => set({ limitPerPhone: e.target.value })} className={field} />{err('limitPerPhone')}</div>
+            <input id="o-phone" inputMode="numeric" value={v.limitPerPhone} aria-invalid={!!errors.limitPerPhone || undefined} aria-describedby={errors.limitPerPhone ? 'o-limitPerPhone-err' : undefined} onChange={(e) => set({ limitPerPhone: e.target.value })} className={field} />{err('limitPerPhone')}</div>
           <div className="space-y-1 sm:col-span-2"><label htmlFor="o-budget" className={lab}>Budget ₹ <span className="font-normal text-muted-foreground">(optional; it stops giving when this much is given)</span></label>
-            <input id="o-budget" inputMode="decimal" value={v.budget} aria-invalid={!!errors.budget || undefined} onChange={(e) => set({ budget: e.target.value })} className={`${field} sm:max-w-48`} />{err('budget')}</div>
+            <input id="o-budget" inputMode="decimal" value={v.budget} aria-invalid={!!errors.budget || undefined} aria-describedby={errors.budget ? 'o-budget-err' : undefined} onChange={(e) => set({ budget: e.target.value })} className={`${field} sm:max-w-48`} />{err('budget')}</div>
         </div>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.announce} onChange={(e) => set({ announce: e.target.checked })} />Show it in the bar at the top of your shop (one offer at a time)</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.announce} aria-describedby={errors.announce ? 'o-announce-err' : undefined} onChange={(e) => set({ announce: e.target.checked })} />Show it in the bar at the top of your shop (one offer at a time; a draft takes the bar when it starts)</label>{err('announce')}
         <p className="text-xs text-muted-foreground">Times are India time. Shoppers see an end date only if you set one.</p>
       </Section>
 
