@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
-import { CATALOGUE, latestOf, manifestOf, THEME_ORDER } from '@/domains/themes/catalogue'
+import { cmpSemver, CATALOGUE, latestOf, manifestOf, THEME_ORDER } from '@/domains/themes/catalogue'
 import { resolveStored, resolveTheme } from '@/domains/themes/resolve'
 import { ANY_MEMBER, CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { dateTimeIN, dayIN } from '@/lib/format-date'
@@ -32,7 +32,7 @@ export default async function LookPage() {
   const styleName = liveM.styles.find((s) => s.key === liveTheme.style)?.name ?? liveTheme.style
   const sells = new Set(l.facts.sells)
   const themes: GalleryTheme[] = THEME_ORDER.map((k) => latestOf(k)!).map((m) => ({
-    key: m.key, name: m.name, job: m.job, version: m.version, features: m.features, inUse: m.key === liveTheme.key,
+    key: m.key, name: m.name, job: m.job, version: m.version, features: m.features, inUse: m.key === liveTheme.key, newer: m.key === liveTheme.key && cmpSemver(m.version, liveTheme.version) > 0,
     styles: m.styles.map((s) => ({ key: s.key, name: s.name, colour: s.schemes.paper.accent })),
     thumb: <ThemeThumb t={resolveTheme(m, { style: m.styles[0]!.key })} name={shop.shopName} size="sm" />,
     fits: m.goodFor.filter((g) => sells.has(g)).length,

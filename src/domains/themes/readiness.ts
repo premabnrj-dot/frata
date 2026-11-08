@@ -34,6 +34,11 @@ export function readinessOf(home: SectionInstance[], f: ShopFacts, now: Date): I
         if (!s.image) add(true, 'add a photo')
         if (altMissing(s.image)) add(true, 'describe the photo for people who can’t see it')
         break
+      case 'shop_the_look':
+        if (!s.image) add(true, 'add a photo')
+        if (altMissing(s.image)) add(true, 'describe the photo for people who can’t see it')
+        if (!s.pieces.length) add(true, 'pin at least one piece on the photo')
+        break
       case 'logos':
         if (!s.images.length) add(false, 'add a logo, or it shows nothing')
         if (s.images.some((i) => altMissing(i))) add(true, 'name each logo')

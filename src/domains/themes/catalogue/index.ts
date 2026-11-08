@@ -3,13 +3,14 @@ import { atelier_1_0_0 } from './atelier/1.0.0'
 import { bazaar_1_0_0 } from './bazaar/1.0.0'
 import { classic_1_0_0 } from './classic/1.0.0'
 import { editorial_1_0_0 } from './editorial/1.0.0'
+import { editorial_1_1_0 } from './editorial/1.1.0'
 import { minimal_1_0_0 } from './minimal/1.0.0'
 
 // The themes in this build. A version is added as a new file and listed here; a listed file never changes (T3's
 // git gate enforces it).
 export const CATALOGUE: Record<string, Record<string, ThemeManifest>> = {
   classic: { '1.0.0': classic_1_0_0 },
-  editorial: { '1.0.0': editorial_1_0_0 },
+  editorial: { '1.0.0': editorial_1_0_0, '1.1.0': editorial_1_1_0 },
   bazaar: { '1.0.0': bazaar_1_0_0 },
   minimal: { '1.0.0': minimal_1_0_0 },
   atelier: { '1.0.0': atelier_1_0_0 },

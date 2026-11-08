@@ -19,6 +19,7 @@ const summary = (s: SectionInstance): string => {
     case 'drop_teaser': return s.heading
     case 'rich_text': return s.heading || 'Text'
     case 'logos': return `${s.images.length} logos`
+    case 'shop_the_look': return `${s.pieces.length} of 4 pieces`
   }
 }
 
@@ -34,6 +35,7 @@ export function blank(key: SectionKey, id: string, now: Date): SectionInstance {
     case 'drop_teaser': return { id, key, hidden: false, scheme: 'ink', heading: 'New collection', at: new Date(now.getTime() + 7 * 86_400_000 + 5.5 * 3_600_000).toISOString().slice(0, 16) + ':00+05:30', image: null }
     case 'rich_text': return { id, key, hidden: false, scheme: 'paper', heading: '', body: [], align: 'left' }
     case 'logos': return { id, key, hidden: false, scheme: 'paper', heading: 'As seen in', images: [] }
+    case 'shop_the_look': return { id, key, hidden: false, scheme: 'paper', image: null, heading: 'Shop the look', pieces: [] }
   }
 }
 
@@ -41,6 +43,7 @@ const ADD_TEXT: Record<SectionKey, string> = {
   hero: 'A big photo or your name, with one button.', products: 'New in, best sellers, a collection, a price, on sale.', collection_tiles: 'Your collections as tiles or circles.',
   price_tiles: 'Shop by budget. Made from your prices.', promises: 'Pay on delivery, exchanges: words from your settings, so they stay true.',
   image_text: 'Your story beside a photo.', drop_teaser: 'A date for your next drop. Hides itself after.', rich_text: 'A few paragraphs: how made to order works, a size promise.', logos: 'Press or partner logos.',
+  shop_the_look: 'One photo, up to four pieces pinned on it.',
 }
 
 export function SectionsPanel({ home, selected, allowed, onSelect, onChange, issues, now }: {

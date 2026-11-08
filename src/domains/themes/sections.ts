@@ -127,28 +127,38 @@ export const LogosSchema = z.object({
   images: z.array(ImageSchema).max(8).default([]),
 })
 
+/** One photo, up to four pieces pinned on it (themes T2; Editorial 1.1). x and y are percentages of the photo. */
+const pin = z.number().min(0).max(100)
+export const ShopTheLookSchema = z.object({
+  id, key: z.literal('shop_the_look'), hidden, scheme,
+  image: ImageSchema.nullable().default(null),
+  heading: text(60).default('Shop the look'),
+  pieces: z.array(z.object({ handle: z.string().regex(/^[a-z0-9-]{1,100}$/), x: pin, y: pin })).max(4).default([]),
+})
+
 export const SectionSchema = z.discriminatedUnion('key', [
   HeroSchema, CollectionTilesSchema, ProductsSchema, PriceTilesSchema, PromisesSchema, ImageTextSchema, DropTeaserSchema, RichTextSchema, LogosSchema,
+  ShopTheLookSchema,
 ])
 export type SectionInstance = z.infer<typeof SectionSchema>
 /** A section as written in a manifest or a stored layer: defaults may be left out. */
 export type SectionInput = z.input<typeof SectionSchema>
 export type SectionKey = SectionInstance['key']
 export type SectionOf<K extends SectionKey> = Extract<SectionInstance, { key: K }>
-export const SECTION_KEYS: SectionKey[] = ['hero', 'collection_tiles', 'products', 'price_tiles', 'promises', 'image_text', 'drop_teaser', 'rich_text', 'logos']
+export const SECTION_KEYS: SectionKey[] = ['hero', 'collection_tiles', 'products', 'price_tiles', 'promises', 'image_text', 'drop_teaser', 'rich_text', 'logos', 'shop_the_look']
 
 /** How many of each a page may hold (spec § Sections). */
-export const MAX_PER_PAGE: Record<SectionKey, number> = { hero: 3, collection_tiles: 3, products: 8, price_tiles: 1, promises: 1, image_text: 4, drop_teaser: 1, rich_text: 4, logos: 1 }
+export const MAX_PER_PAGE: Record<SectionKey, number> = { hero: 3, collection_tiles: 3, products: 8, price_tiles: 1, promises: 1, image_text: 4, drop_teaser: 1, rich_text: 4, logos: 1, shop_the_look: 2 }
 export const MAX_SECTIONS = 20
 
 export const SECTION_NAMES: Record<SectionKey, string> = {
   hero: 'Hero', collection_tiles: 'Collection tiles', products: 'Products', price_tiles: 'Price tiles', promises: 'Shop by promise',
-  image_text: 'Image with text', drop_teaser: 'Drop teaser', rich_text: 'Rich text', logos: 'Logos',
+  image_text: 'Image with text', drop_teaser: 'Drop teaser', rich_text: 'Rich text', logos: 'Logos', shop_the_look: 'Shop the look',
 }
 /** The Add sheet's kinds (mockup "Add a section"); empty kinds are not shown. */
 export const SECTION_KINDS: { name: string; keys: SectionKey[] }[] = [
   { name: 'Products', keys: ['products', 'price_tiles'] },
   { name: 'Collections', keys: ['collection_tiles'] },
-  { name: 'Images and story', keys: ['hero', 'image_text', 'drop_teaser', 'rich_text', 'logos'] },
+  { name: 'Images and story', keys: ['hero', 'image_text', 'shop_the_look', 'drop_teaser', 'rich_text', 'logos'] },
   { name: 'Trust', keys: ['promises'] },
 ]

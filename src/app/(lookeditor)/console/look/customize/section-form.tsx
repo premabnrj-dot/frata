@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { PROMISES, SECTION_NAMES, type SectionInstance, type SectionOf } from '@/domains/themes/sections'
 import { Choice, Field, ImageField, LinkPicker, Switch, Text, paiseToRupees, rupeesToPaise, type LinkTarget } from './controls'
 
@@ -13,6 +14,8 @@ export type FormCtx = {
   schemes: { key: 'paper' | 'tint' | 'ink'; name: string }[]
   masks: ('none' | 'arch')[]
   promiseWords: Record<(typeof PROMISES)[number], { text: string; true: boolean }>
+  /** The shop's products, newest first (Shop the look picks from them). */
+  products: { handle: string; title: string }[]
 }
 
 type Set<S> = (s: S) => void
@@ -148,6 +151,51 @@ function Logos({ s, set, c }: { s: SectionOf<'logos'>; set: Set<SectionOf<'logos
   </>)
 }
 
+/** Shop the look: a photo, then up to four pieces; tap the photo to put the chosen piece's dot there (sliders too). */
+function Look({ s, set, c }: { s: SectionOf<'shop_the_look'>; set: Set<SectionOf<'shop_the_look'>>; c: FormCtx }) {
+  const [at, setAt] = useState(0)
+  const piece = s.pieces[at]
+  const place = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (!piece) return
+    const r = e.currentTarget.getBoundingClientRect()
+    const x = Math.round(((e.clientX - r.left) / r.width) * 100), y = Math.round(((e.clientY - r.top) / r.height) * 100)
+    set({ ...s, pieces: s.pieces.map((p, i) => (i === at ? { ...p, x: Math.min(100, Math.max(0, x)), y: Math.min(100, Math.max(0, y)) } : p)) })
+  }
+  const move = (k: 'x' | 'y', v: number) => set({ ...s, pieces: s.pieces.map((p, i) => (i === at ? { ...p, [k]: v } : p)) })
+  const unused = c.products.filter((p) => !s.pieces.some((x) => x.handle === p.handle))
+  return (<>
+    <Text label="Heading" value={s.heading} max={60} onChange={(heading) => set({ ...s, heading })} />
+    <ImageField label="Photo" value={s.image} tenantId={c.tenantId} onChange={(image) => set({ ...s, image })} />
+    {s.image && (
+      <div className="space-y-1">
+        <button type="button" onClick={place} disabled={!piece} aria-label={piece ? `Put piece ${at + 1}’s dot where you tap` : 'Add a piece first'} className="relative block w-full overflow-hidden rounded-md">
+          <img src={`${s.image.base}-${s.image.widths[0]}.webp`} alt="" className="aspect-[4/5] w-full object-cover" />
+          {s.pieces.map((p, i) => <span key={p.handle} aria-hidden="true" style={{ left: `${p.x}%`, top: `${p.y}%` }} className={`absolute grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-card text-xs font-semibold text-foreground ${i === at ? 'ring-2 ring-foreground' : ''}`}>{i + 1}</span>)}
+        </button>
+        <p className="text-xs text-muted-foreground">Tap the photo to place the selected piece’s dot.</p>
+      </div>
+    )}
+    <ol className="space-y-2">
+      {s.pieces.map((p, i) => (
+        <li key={p.handle} className={`flex items-center gap-2 rounded-md px-2 ${i === at ? 'border-2 border-foreground' : 'border border-input'}`}>
+          <button type="button" onClick={() => setAt(i)} aria-pressed={i === at} className="min-h-11 flex-1 text-left text-sm">{i + 1} · {c.products.find((x) => x.handle === p.handle)?.title ?? p.handle}</button>
+          <button type="button" aria-label={`Remove piece ${i + 1}`} onClick={() => { set({ ...s, pieces: s.pieces.filter((_, j) => j !== i) }); setAt(0) }} className="grid size-9 place-items-center rounded-md">×</button>
+        </li>
+      ))}
+    </ol>
+    {piece && <>
+      <Field label={`Piece ${at + 1}: across`}>{(id) => <input id={id} type="range" min={0} max={100} value={piece.x} onChange={(e) => move('x', Number(e.target.value))} className="w-full" />}</Field>
+      <Field label={`Piece ${at + 1}: down`}>{(id) => <input id={id} type="range" min={0} max={100} value={piece.y} onChange={(e) => move('y', Number(e.target.value))} className="w-full" />}</Field>
+    </>}
+    {s.pieces.length < 4 && unused.length > 0 && <Field label={`Add a piece (${s.pieces.length} of 4)`}>{(id) => (
+      <select id={id} value="" onChange={(e) => { if (!e.target.value) return; set({ ...s, pieces: [...s.pieces, { handle: e.target.value, x: 50, y: 50 }] }); setAt(s.pieces.length) }} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm">
+        <option value="">Pick a product…</option>
+        {unused.map((p) => <option key={p.handle} value={p.handle}>{p.title}</option>)}
+      </select>)}</Field>}
+    <p className="text-xs text-muted-foreground">A piece that’s hidden or not listed drops out of the look on the shop.</p>
+  </>)
+}
+
 export function SectionForm({ s, set, c }: { s: SectionInstance; set: (s: SectionInstance) => void; c: FormCtx }) {
   const body = (() => {
     switch (s.key) {
@@ -160,6 +208,7 @@ export function SectionForm({ s, set, c }: { s: SectionInstance; set: (s: Sectio
       case 'drop_teaser': return <Drop s={s} set={set} c={c} />
       case 'rich_text': return <Rich s={s} set={set} />
       case 'logos': return <Logos s={s} set={set} c={c} />
+      case 'shop_the_look': return <Look s={s} set={set} c={c} />
     }
   })()
   return (

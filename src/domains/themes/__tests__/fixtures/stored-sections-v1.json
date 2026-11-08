@@ -5,5 +5,8 @@
   { "id": "new-in", "key": "products", "heading": "New in", "source": { "kind": "newest" }, "count": 24, "viewAll": true },
   { "id": "festive", "key": "products", "heading": "Festive", "source": { "kind": "collection", "handle": "festive-edit" }, "count": 8 },
   { "id": "budget", "key": "products", "heading": "Under ₹999", "source": { "kind": "under_price", "maxPaise": 99900 }, "count": 4 },
-  { "id": "sale", "key": "products", "heading": "On sale", "source": { "kind": "on_sale" }, "count": 12, "viewAll": false }
+  { "id": "sale", "key": "products", "heading": "On sale", "source": { "kind": "on_sale" }, "count": 12, "viewAll": false },
+  { "id": "t2-back", "key": "products", "heading": "Back in stock", "source": { "kind": "back_in_stock" }, "count": 8, "viewAll": false, "layout": "rail" },
+  { "id": "t2-look", "key": "shop_the_look", "scheme": "tint", "heading": "Wear it to the sangeet", "pieces": [{ "handle": "chanderi-kurta-set", "x": 30, "y": 40 }],
+    "image": { "base": "https://abc.public.blob.vercel-storage.com/tenants/11111111-1111-1111-1111-111111111111/theme/22222222-2222-2222-2222-222222222222", "widths": [400, 800], "width": 1200, "height": 1500, "alt": "A kurta set at a sangeet" } }
 ]

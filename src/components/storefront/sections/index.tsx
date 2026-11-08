@@ -239,6 +239,37 @@ function Logos({ s }: { s: SectionOf<'logos'> }) {
   )
 }
 
+/** Shop the look (Editorial 1.1): numbered dots on the photo, the same pieces listed beside it. A piece not listed
+ *  on the shop today drops out; with none left, the section shows nothing. Each piece links to its page. */
+function ShopTheLook({ s, ctx }: { s: SectionOf<'shop_the_look'>; ctx: SectionCtx }) {
+  if (!s.image) return null
+  const pieces = s.pieces.flatMap((x) => { const p = ctx.cat.products.find((q) => q.handle === x.handle && isListed(q, ctx.now)); return p ? [{ ...x, p }] : [] })
+  if (!pieces.length) return null
+  const h = `${s.id}-h`
+  return (
+    <section aria-labelledby={h} className={`${wrap} ${pad} grid items-start gap-8 sm:grid-cols-2`}>
+      <div className="relative aspect-[4/5] overflow-hidden rounded-[var(--store-radius)] bg-store-chip">
+        <Photo p={s.image} alt={s.image.decorative ? '' : s.image.alt} sizes="(min-width: 640px) 50vw, 100vw" className="absolute inset-0 h-full w-full object-cover" />
+        {pieces.map((x, i) => (
+          <Link key={x.handle} href={ctx.href(`/products/${x.handle}`)} style={{ left: `${x.x}%`, top: `${x.y}%` }} aria-label={`${i + 1}: ${x.p.title}`}
+            className="absolute grid size-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-store-paper text-sm font-semibold text-store-ink shadow">{i + 1}</Link>
+        ))}
+      </div>
+      <div className="space-y-4">
+        <H2 id={h}>{s.heading}</H2>
+        <ol className="space-y-3">
+          {pieces.map((x, i) => { const pr = priceOf(x.p); return (
+            <li key={x.handle}><Link href={ctx.href(`/products/${x.handle}`)} className="flex items-center gap-3">
+              <span className="relative block h-20 w-16 shrink-0 overflow-hidden rounded-[var(--store-radius)] bg-store-chip">{x.p.images[0] && <Photo p={x.p.images[0]} alt="" sizes="64px" className="absolute inset-0 h-full w-full object-cover" />}</span>
+              <span className="text-sm"><span className="block">{i + 1} · {x.p.title}</span>{pr && <span className="block font-medium">{pr.min !== pr.max ? 'From ' : ''}{rupees(pr.min)}</span>}</span>
+            </Link></li>
+          ) })}
+        </ol>
+      </div>
+    </section>
+  )
+}
+
 function One({ s, ctx }: { s: SectionInstance; ctx: SectionCtx }) {
   switch (s.key) {
     case 'hero': return <Hero s={s} ctx={ctx} />
@@ -250,6 +281,7 @@ function One({ s, ctx }: { s: SectionInstance; ctx: SectionCtx }) {
     case 'drop_teaser': return <DropTeaser s={s} ctx={ctx} />
     case 'rich_text': return <RichText s={s} ctx={ctx} />
     case 'logos': return <Logos s={s} />
+    case 'shop_the_look': return <ShopTheLook s={s} ctx={ctx} />
   }
 }
 
