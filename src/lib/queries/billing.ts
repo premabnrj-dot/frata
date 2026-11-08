@@ -9,7 +9,9 @@ import { nextMonthStartIST } from '@/domains/time/month'
 import { draftInvoiceIn } from '@/lib/billing/draft'
 import type { Membership } from '@/lib/db/platform'
 import { planVersions, plans, shopSettings, tenantPlans } from '@/lib/db/schema'
-import { billingAccounts, frrataInvoices } from '@/lib/db/schema-billing'
+import { billingAccounts, frrataCreditNotes, frrataInvoiceLines, frrataInvoices, frrataPayments } from '@/lib/db/schema-billing'
+import { invoiceState, type InvoiceState } from '@/domains/billing/status'
+import { frrataCreditNoteDoc, frrataInvoiceDoc, type FrrataDoc } from '@/domains/billing/document'
 import { withTenant } from '@/lib/db/tenant'
 
 // =============================================================================
@@ -34,7 +36,7 @@ export type Estimate = { invoiceOn: Date; bill: Bill; orders: { number: number; 
 export type BillingOverview = {
   plan: { name: string; monthlyPrice: number; includedOrders: number; feeBps: number; trialEndsAt: Date | null } | null
   estimate: Estimate
-  invoices: { id: string; number: string; periodStart: Date; total: number; issuedAt: Date }[]
+  invoices: { id: string; number: string; periodStart: Date; total: number; issuedAt: Date; state: InvoiceState; due: number; credits: { number: string; total: number }[] }[]
   details: { legalName: string; gstin: string; address: string; stateCode: string; email: string; saved: boolean }
 }
 
@@ -44,7 +46,7 @@ export async function billingOverview(m: Pick<Membership, 'tenantId' | 'role'>, 
   const invoiceOn = nextMonthStartIST(now)
   const [base, estimate] = await Promise.all([
     withTenant(tenantId, async (tx) => {
-      const [history, invoices, [account], [shop]] = await Promise.all([
+      const [history, invoices, [account], [shop], paidRows, creditRows] = await Promise.all([
         tx.select({ startsAt: tenantPlans.startsAt, trialEndsAt: tenantPlans.trialEndsAt, customMonthlyPrice: tenantPlans.customMonthlyPrice, name: plans.name,
           monthlyPrice: planVersions.monthlyPrice, includedOrders: planVersions.includedOrders, feeBps: planVersions.feeBps })
           .from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(plans, eq(plans.id, planVersions.planId))
@@ -54,8 +56,10 @@ export async function billingOverview(m: Pick<Membership, 'tenantId' | 'role'>, 
         tx.select({ legalName: billingAccounts.legalName, gstin: billingAccounts.gstin, address: billingAccounts.address, stateCode: billingAccounts.stateCode, email: billingAccounts.email })
           .from(billingAccounts).where(eq(billingAccounts.tenantId, tenantId)),
         tx.select({ legalName: shopSettings.legalName, gstin: shopSettings.gstin, address: shopSettings.address, email: shopSettings.supportEmail }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)),
+        tx.select({ id: frrataPayments.invoiceId, n: sql<string>`sum(${frrataPayments.amount})` }).from(frrataPayments).where(and(eq(frrataPayments.tenantId, tenantId), isNotNull(frrataPayments.capturedAt))).groupBy(frrataPayments.invoiceId),
+        tx.select({ id: frrataCreditNotes.invoiceId, number: frrataCreditNotes.number, total: frrataCreditNotes.total }).from(frrataCreditNotes).where(eq(frrataCreditNotes.tenantId, tenantId)).orderBy(asc(frrataCreditNotes.issuedAt)),
       ])
-      return { history, invoices, account, shop }
+      return { history, invoices, account, shop, paidRows, creditRows }
     }),
     // The run, rolled back: nothing is written, whatever the page shows.
     (async (): Promise<Estimate> => {
@@ -80,10 +84,30 @@ export async function billingOverview(m: Pick<Membership, 'tenantId' | 'role'>, 
   return {
     plan: cur ? { name: cur.name, monthlyPrice: monthlyPrice({ planVersion: { monthlyPrice: paise(cur.monthlyPrice) }, customMonthlyPrice: cur.customMonthlyPrice === null ? null : paise(cur.customMonthlyPrice), trialEndsAt: null }, now), includedOrders: cur.includedOrders, feeBps: cur.feeBps, trialEndsAt: cur.trialEndsAt } : null,
     estimate,
-    invoices: base.invoices.flatMap((i) => (i.issuedAt ? [{ id: i.id, number: i.number ?? '', periodStart: i.periodStart, total: i.total, issuedAt: i.issuedAt }] : [])),
+    invoices: base.invoices.flatMap((i) => {
+      if (!i.issuedAt || !i.number) return []
+      const paid = Number(base.paidRows.find((p) => p.id === i.id)?.n ?? 0)
+      const credits = base.creditRows.filter((c) => c.id === i.id).map((c) => ({ number: c.number, total: c.total }))
+      return [{ id: i.id, number: i.number, periodStart: i.periodStart, total: i.total, issuedAt: i.issuedAt, credits, ...invoiceState(i, paid, credits.reduce((t, c) => t + c.total, 0)) }]
+    }),
     // Prefilled from Store details until the shop saves its own billing details (spec § Design).
     details: a
       ? { legalName: a.legalName, gstin: a.gstin ?? '', address: a.address, stateCode: a.stateCode ?? '', email: a.email, saved: true }
       : { legalName: s?.legalName ?? '', gstin: s?.gstin ?? '', address: s?.address ?? '', stateCode: gstinState(s?.gstin ?? null) ?? '', email: s?.email ?? '', saved: false },
   }
+}
+
+/** One of the shop's own issued invoices (or a credit note against it) as document data, for its PDF. Owners and admins. */
+export async function shopFrrataDocument(m: Pick<Membership, 'tenantId' | 'role'>, invoiceId: string, creditNumber?: string): Promise<FrrataDoc | null> {
+  mayReadMoney(m)
+  return withTenant(m.tenantId, async (tx) => {
+    const [i] = await tx.select().from(frrataInvoices).where(and(eq(frrataInvoices.tenantId, m.tenantId), eq(frrataInvoices.id, invoiceId)))
+    if (!i) return null
+    const lines = await tx.select({ description: frrataInvoiceLines.description, quantity: frrataInvoiceLines.quantity, taxable: frrataInvoiceLines.taxable }).from(frrataInvoiceLines)
+      .where(and(eq(frrataInvoiceLines.tenantId, m.tenantId), eq(frrataInvoiceLines.invoiceId, invoiceId))).orderBy(asc(frrataInvoiceLines.position))
+    const doc = frrataInvoiceDoc(i, lines)
+    if (!doc || !creditNumber) return doc
+    const [cn] = await tx.select().from(frrataCreditNotes).where(and(eq(frrataCreditNotes.tenantId, m.tenantId), eq(frrataCreditNotes.invoiceId, invoiceId), eq(frrataCreditNotes.number, creditNumber)))
+    return cn ? frrataCreditNoteDoc(doc, cn) : null
+  })
 }

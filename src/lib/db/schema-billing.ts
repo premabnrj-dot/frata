@@ -69,6 +69,13 @@ export const frrataInvoices = pgTable('frrata_invoices', {
   buyerGstin: text('buyer_gstin'),
   buyerAddress: text('buyer_address'),
   placeOfSupply: text('place_of_supply'),
+  /** Frrata as the supplier, frozen at issue (B2): its legal name, GSTIN, address and the SAC of the service. */
+  sellerName: text('seller_name'),
+  sellerGstin: text('seller_gstin'),
+  sellerAddress: text('seller_address'),
+  sac: text('sac'),
+  /** Issued in test mode (no GSTIN yet): its own TEST series, printed "not a tax invoice", never collected for real. */
+  testMode: boolean('test_mode').notNull().default(false),
   createdAt: createdAt(),
 }, (t) => [
   uniqueIndex('frrata_invoices_tenant_period').on(t.tenantId, t.periodStart),
@@ -143,4 +150,58 @@ export const platformCounters = pgTable('platform_counters', {
   primaryKey({ columns: [t.kind, t.fy] }),
   check('platform_counters_kind', sql`${t.kind} in ('invoice', 'credit')`),
   check('platform_counters_next', sql`${t.next} >= 1`),
+])
+
+/**
+ * Money received against an issued Frrata invoice (billing B2 by hand, B3 by the gateway): one row per attempt or
+ * transfer. Captured or failed is derived from timestamps; "paid" is derived (captured + credited ≥ total). Written only
+ * by definers: Admin recording a bank transfer (unique UTR), the gateway's events (unique ids).
+ */
+export const frrataPayments = pgTable('frrata_payments', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull(),
+  invoiceId: uuid('invoice_id').notNull(),
+  attempt: integer('attempt').notNull().default(0),
+  method: text('method').notNull(),
+  amount: money('amount').notNull(),
+  utr: text('utr'),
+  gatewayOrderId: text('gateway_order_id'),
+  gatewayPaymentId: text('gateway_payment_id'),
+  capturedAt: at('captured_at'),
+  failedAt: at('failed_at'),
+  failureReason: text('failure_reason'),
+  recordedBy: uuid('recorded_by'),
+  createdAt: createdAt(),
+}, (t) => [
+  foreignKey({ name: 'frrata_payments_invoice_fk', columns: [t.tenantId, t.invoiceId], foreignColumns: [frrataInvoices.tenantId, frrataInvoices.id] }).onDelete('restrict'),
+  index('frrata_payments_invoice').on(t.tenantId, t.invoiceId),
+  uniqueIndex('frrata_payments_utr').on(t.utr),
+  uniqueIndex('frrata_payments_gateway_order').on(t.gatewayOrderId),
+  uniqueIndex('frrata_payments_gateway_payment').on(t.gatewayPaymentId),
+  check('frrata_payments_method', sql`${t.method} in ('bank_transfer','upi','card','emandate','paylink')`),
+  check('frrata_payments_amount', sql`${t.amount} > 0`),
+  check('frrata_payments_outcome', sql`not (${t.capturedAt} is not null and ${t.failedAt} is not null)`),
+])
+
+/** Frrata's credit note to a shop (B2): a waiver or correction against an issued invoice, its own series; final. */
+export const frrataCreditNotes = pgTable('frrata_credit_notes', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull(),
+  invoiceId: uuid('invoice_id').notNull(),
+  number: text('number').notNull(),
+  taxable: money('taxable').notNull(),
+  cgst: money('cgst').notNull(),
+  sgst: money('sgst').notNull(),
+  igst: money('igst').notNull(),
+  total: money('total').notNull(),
+  reason: text('reason').notNull(),
+  testMode: boolean('test_mode').notNull().default(false),
+  issuedAt: at('issued_at').notNull().defaultNow(),
+  issuedBy: uuid('issued_by').notNull(),
+}, (t) => [
+  foreignKey({ name: 'frrata_credit_notes_invoice_fk', columns: [t.tenantId, t.invoiceId], foreignColumns: [frrataInvoices.tenantId, frrataInvoices.id] }).onDelete('restrict'),
+  uniqueIndex('frrata_credit_notes_number').on(t.number),
+  index('frrata_credit_notes_invoice').on(t.tenantId, t.invoiceId),
+  check('frrata_credit_notes_money', sql`${t.taxable} > 0 and ${t.total} = ${t.taxable} + ${t.cgst} + ${t.sgst} + ${t.igst}`),
+  check('frrata_credit_notes_reason', sql`length(${t.reason}) between 3 and 240`),
 ])

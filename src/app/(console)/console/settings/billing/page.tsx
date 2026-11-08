@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Panel } from '@/components/ui/panel'
 import { STATE_OPTIONS } from '@/domains/billing/details'
+import { STATE_LABEL } from '@/domains/billing/status'
 import { paise } from '@/domains/money/paise'
 import { usage } from '@/domains/plans/entitlements'
 import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
@@ -105,10 +106,18 @@ export default async function PlanAndBillingPage() {
 
       <Section>
         <h2 className="text-section font-semibold">Invoices</h2>
-        {o.invoices.length === 0 ? <p className="text-sm text-muted-foreground">No invoices yet. Frrata&apos;s invoices to you appear here, one each month, with a PDF.</p> : (
+        {o.invoices.length === 0 ? <p className="text-sm text-muted-foreground">No invoices yet. Frrata&apos;s invoices to you appear here, one each month, with a PDF. Until billing starts, any invoice here is a test and is never collected.</p> : (
           <table className="w-full text-sm">
-            <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-1 font-medium">Month</th><th className="py-1 font-medium">Invoice</th><th className="py-1 text-right font-medium">Amount</th></tr></thead>
-            <tbody>{o.invoices.map((i) => <tr key={i.id} className="border-t border-border"><td className="py-1.5">{monthYearIN(i.periodStart)}</td><td className="py-1.5 font-mono">{i.number}</td><td className="py-1.5 text-right"><Money paise={paise(i.total)} decimals /></td></tr>)}</tbody>
+            <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-1 font-medium">Month</th><th className="py-1 font-medium">Invoice</th><th className="py-1 text-right font-medium">Amount</th><th className="py-1 font-medium">Status</th><th className="py-1"><span className="sr-only">PDF</span></th></tr></thead>
+            <tbody>{o.invoices.map((i) => (
+              <tr key={i.id} className="border-t border-border align-top">
+                <td className="py-1.5">{monthYearIN(i.periodStart)}</td>
+                <td className="py-1.5 font-mono">{i.number}{i.credits.map((c) => <a key={c.number} href={`/console/settings/billing/invoice/${i.id}?credit=${encodeURIComponent(c.number)}`} className="block text-xs text-muted-foreground underline">Credit note {c.number}</a>)}</td>
+                <td className="py-1.5 text-right"><Money paise={paise(i.total)} decimals /></td>
+                <td className="py-1.5">{i.state === 'due' ? <span className="text-warn-text">Due <Money paise={paise(i.due)} decimals /></span> : STATE_LABEL[i.state]}</td>
+                <td className="py-1.5 text-right"><a href={`/console/settings/billing/invoice/${i.id}`} className="underline">PDF</a></td>
+              </tr>
+            ))}</tbody>
           </table>
         )}
       </Section>

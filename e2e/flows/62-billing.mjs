@@ -80,8 +80,54 @@ export default {
         await row.getByText(String(d.orders_billed), { exact: true }).first().waitFor()
         assert.equal(await row.getByText('—', { exact: true }).count(), 0, 'a drafted shop shows its count, not a dash')
       })
+
+      await t.step('B2: Admin issues this month (typed confirmation), in the TEST series; the shop sees it due and downloads it; a payment by UTR settles it; the GST export lists it', async () => {
+        const meera = await open('frata', { viewport: { width: 1280, height: 900 } })
+        const now = new Date(); const i = new Date(now.getTime() + 330 * 60_000)
+        const thisYm = `${i.getUTCFullYear()}-${String(i.getUTCMonth() + 1).padStart(2, '0')}`
+        await meera.goto(CONSOLE + `/admin/billing?month=${thisYm}`)
+        await meera.getByRole('button', { name: /^Run drafts for/ }).click()
+        await meera.getByText(/drafted/).first().waitFor()
+        const issue = meera.getByRole('button', { name: /^Issue \d+ invoices?$/ })
+        await issue.waitFor()
+        const n = Number((await issue.textContent()).match(/\d+/)[0])
+        await meera.getByLabel(/Type ISSUE/).fill('ISSUE 999')
+        await issue.click()
+        await meera.getByText(`Type ISSUE ${n} to issue.`).waitFor()
+        await meera.getByLabel(/Type ISSUE/).fill(`ISSUE ${n}`)
+        await meera.getByRole('button', { name: /^Issue \d+ invoices?$/ }).click()
+        await meera.getByText(/issued.*test mode/).waitFor()
+        const [inv] = await db`select id, number, total from frrata_invoices where tenant_id = ${KESAR} and number is not null order by issued_at desc limit 1`
+        assert.match(inv.number, /^FRR\/T\d\d-\d\d\/\d{6}$/)
+        // The shop: due, with its PDF.
+        await riya.goto(CONSOLE + '/console/settings/billing')
+        await riya.getByText(inv.number).waitFor()
+        await riya.getByText(/^Due/).first().waitFor()
+        const pdf = await riya.context().request.get(CONSOLE + `/console/settings/billing/invoice/${inv.id}`)
+        assert.equal(pdf.status(), 200); assert.equal(pdf.headers()['content-type'], 'application/pdf')
+        assert.match(pdf.headers()['content-disposition'], /Frrata Tax invoice FRR-T/)
+        // Admin records the bank transfer; the shop sees it paid.
+        await meera.goto(CONSOLE + `/admin/billing/invoice/${inv.id}`)
+        await meera.getByLabel('Reference (UTR)').fill('E2EUTR123456')
+        await meera.getByRole('button', { name: 'Record payment' }).click()
+        await meera.getByText('Payment recorded.').waitFor()
+        await riya.reload(); await riya.getByRole('cell', { name: 'Paid', exact: true }).waitFor()
+        assert.equal(await riya.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'the invoices table fits a 390 px phone')
+        await riya.screenshot({ path: t.out('invoices-paid'), fullPage: true })
+        const csv = await meera.context().request.get(CONSOLE + `/admin/billing/export?month=${thisYm}`)
+        assert.equal(csv.status(), 200)
+        assert.ok((await csv.text()).includes(inv.number), 'the export lists the invoice')
+      })
     } finally {
-      await db`delete from frrata_invoices where tenant_id = ${KESAR} and issued_at is null` // cascades lines, fees, credits
+      // Issued invoices, payments and credit notes are final (triggers): the test's own are removed with triggers off.
+      await db.begin(async (x) => {
+        await x`set local session_replication_role = replica`
+        await x`delete from frrata_payments where tenant_id = ${KESAR}`
+        await x`delete from frrata_credit_notes where tenant_id = ${KESAR}`
+        await x`delete from frrata_invoices where tenant_id = ${KESAR}`
+        await x`delete from frrata_invoice_lines where tenant_id = ${KESAR}`
+        await x`delete from frrata_invoice_fees where tenant_id = ${KESAR}`
+      })
       await db`delete from billing_accounts where tenant_id = ${KESAR}`
       await db`delete from audit_events where tenant_id = ${KESAR} and action = 'billing.details'`
       await db`delete from orders where tenant_id = ${KESAR} and number = ${N}`

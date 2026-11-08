@@ -13,6 +13,7 @@ import { billingAccounts, frrataFeeCredits, frrataInvoiceFees, frrataInvoiceLine
 import { addonPrices, tenantAddons } from '@/lib/db/schema-modules'
 import { orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
+import { frrataGstin } from './seller'
 
 // =============================================================================
 // FILE: src/lib/billing/draft.ts — THE BILLING RUN'S DRAFT, one shop at a time (billing B0; plan
@@ -25,8 +26,6 @@ import { withTenant } from '@/lib/db/tenant'
 // fee row whose order is no longer billable and has no credit row. Running it twice writes the same draft.
 // =============================================================================
 
-/** Frrata's own GSTIN once it has one (test mode: none, so every bill is IGST). */
-const frrataGstin = () => process.env.FRRATA_GSTIN || null
 
 /** `numbers`: each billed or credited order's number, by order id (the page's "which orders"). */
 export type Drafted = { invoiceId: string; bill: Bill; numbers: Map<string, number> } | { invoiceId: null; issued: true }

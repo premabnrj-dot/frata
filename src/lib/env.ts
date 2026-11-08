@@ -27,6 +27,13 @@ export const WA_VERIFY_TOKEN = process.env.WA_VERIFY_TOKEN ?? ''
 /** Graph API base. Unset in Vercel (the real one); set only by the local end-to-end test to its stand-in. */
 export const META_GRAPH_BASE = process.env.META_GRAPH_BASE || 'https://graph.facebook.com'
 
+/** Frrata as the supplier on its own invoices (billing B2). FRRATA_GSTIN unset = test mode: invoices go out in a TEST
+ *  series, printed "not a tax invoice". All four are set together, with the CA, before real billing. */
+export const FRRATA_GSTIN = process.env.FRRATA_GSTIN ?? ''
+export const FRRATA_LEGAL_NAME = process.env.FRRATA_LEGAL_NAME ?? ''
+export const FRRATA_ADDRESS = process.env.FRRATA_ADDRESS ?? ''
+export const FRRATA_SAC = process.env.FRRATA_SAC ?? ''
+
 /** False on a fresh Vercel project with no variables yet: pages say so instead of crashing. */
 export const isDatabaseConfigured = () => DATABASE_URL !== ''
 export const isAdminDatabaseConfigured = () => ADMIN_DATABASE_URL !== ''

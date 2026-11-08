@@ -1328,4 +1328,33 @@ do $$ begin
   then raise exception 'FAIL: staff or API roles reach credit notes'; end if;
 end $$;
 
-\echo 'tenancy proof — all 41 checks passed'
+-- 42. Billing B2 (docs/plans/2026-11-08-billing.md § Review findings 6, 11, 17): payments and Frrata's credit notes are
+-- the shop's own to read; nobody writes them directly (only the three Admin definers, which frata_admin alone may run);
+-- a credit note is final for every role.
+insert into frrata_payments (tenant_id, invoice_id, method, amount, utr, captured_at) values ('22222222-2222-2222-2222-222222222222', 'b1110000-0000-0000-0000-00000000000b', 'bank_transfer', 100, 'PROOFUTRB1', now());
+insert into frrata_credit_notes (tenant_id, invoice_id, number, taxable, cgst, sgst, igst, total, reason, issued_by) values ('22222222-2222-2222-2222-222222222222', 'b1110000-0000-0000-0000-00000000000b', 'PROOF/C00001', 100, 9, 9, 0, 118, 'proof', '99999999-9999-9999-9999-999999999999');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  if exists (select 1 from frrata_payments) or exists (select 1 from frrata_credit_notes) then raise exception 'FAIL: A sees B payments or credit notes'; end if;
+  begin insert into frrata_payments (tenant_id, invoice_id, method, amount, utr, captured_at) values ('11111111-1111-1111-1111-111111111111', 'b1110000-0000-0000-0000-0000000000a1', 'upi', 1, 'PROOFUTRA1', now()); raise exception 'FAIL: the app recorded a payment';
+  exception when insufficient_privilege then null; end;
+  begin insert into frrata_credit_notes (tenant_id, invoice_id, number, taxable, cgst, sgst, igst, total, reason, issued_by) values ('11111111-1111-1111-1111-111111111111', 'b1110000-0000-0000-0000-0000000000a1', 'X/C1', 1, 0, 0, 0, 1, 'xyz', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: the app issued a credit note';
+  exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+do $$ begin
+  begin update frrata_credit_notes set reason = 'changed' where number = 'PROOF/C00001'; raise exception 'FAIL: a Frrata credit note changed';
+  exception when check_violation then null; end;
+  if exists (select 1 from unnest(array['frata_app', 'anon', 'authenticated', 'service_role']) r,
+               unnest(array['app_issue_frrata_invoices(timestamptz,int,bigint,uuid,text,text,text,text,boolean,text,text)', 'app_record_frrata_payment(uuid,bigint,text,text,uuid)', 'app_issue_frrata_credit_note(uuid,bigint,text,uuid,text,text)']) f
+             where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: a non-Admin role may issue, record or credit'; end if;
+  if not has_function_privilege('frata_admin', 'app_issue_frrata_invoices(timestamptz,int,bigint,uuid,text,text,text,text,boolean,text,text)', 'execute') then raise exception 'FAIL: Admin cannot issue'; end if;
+  if has_table_privilege('frata_admin', 'frrata_payments', 'insert, update, delete') or has_table_privilege('frata_admin', 'frrata_credit_notes', 'insert, update, delete')
+     or has_table_privilege('frata_app', 'frrata_payments', 'insert, update, delete')
+  then raise exception 'FAIL: a role writes payments or credit notes directly'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r, unnest(array['frrata_payments', 'frrata_credit_notes']) t
+             where has_any_column_privilege(r, t, 'select, insert, update, references') or has_table_privilege(r, t, 'select, insert, update, delete')) then raise exception 'FAIL: API roles reach B2 tables'; end if;
+end $$;
+
+\echo 'tenancy proof — all 42 checks passed'
