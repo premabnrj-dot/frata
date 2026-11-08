@@ -1,4 +1,5 @@
 import 'server-only'
+import type { ClaimKey } from '@/lib/trials/claims'
 import { sql } from 'drizzle-orm'
 import { db, type Tx } from './index'
 import { withTenant } from './tenant'
@@ -99,9 +100,10 @@ export async function myHandovers(uid: string): Promise<Handover[]> {
 }
 
 /** The invite id comes from the form, but the function accepts only an invite to THIS user's confirmed email. */
-export async function acceptHandover(uid: string, inviteId: string): Promise<{ ok: true; tenantId: string } | { ok: false; error: string }> {
+export async function acceptHandover(uid: string, inviteId: string, email: ClaimKey | null): Promise<{ ok: true; tenantId: string } | { ok: false; error: string }> {
   try {
-    const rows = await db().execute<{ t: string }>(sql`select app_accept_handover(${uid}::uuid, ${inviteId}::uuid) as t`)
+    // Trials TR1·10 (drizzle/0066): the owner's verified email is claimed for the shop's trial at handover.
+    const rows = await db().execute<{ t: string }>(sql`select app_accept_handover_v2(${uid}::uuid, ${inviteId}::uuid, ${email?.hmac ?? null}, ${email?.version ?? 1}::smallint) as t`)
     return { ok: true, tenantId: rows[0]!.t }
   } catch (err) {
     return { ok: false, error: dbCode(err, ['email_unconfirmed', 'no_invite', 'has_owner', 'already_member'], 'acceptHandover') }

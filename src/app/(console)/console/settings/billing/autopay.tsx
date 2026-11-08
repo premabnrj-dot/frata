@@ -57,7 +57,7 @@ export function SetUpAutopay() {
         <Button variant="secondary" onClick={() => go('card')} aria-disabled={busy}>Card</Button>
         <Button variant="secondary" onClick={() => go('emandate')} aria-disabled={busy}>Bank mandate (eNACH)</Button>
       </div>
-      <p className="text-xs text-muted-foreground">UPI and cards: up to ₹15,000 a month without approving each debit. Bills above that: a bank mandate (eNACH), approved once. Cards cost Frrata 2% + GST, so UPI or eNACH is better.</p>
+      <p className="text-xs text-muted-foreground">UPI, card: up to ₹15,000 · eNACH: above</p>
       {msg && <p role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-ok-text' : 'text-danger-text'}`}>{msg.text}</p>}
     </div>
   )

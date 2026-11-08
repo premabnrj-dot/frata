@@ -118,6 +118,37 @@ Until these are set, Console › Apps › Messages says "WhatsApp isn't switched
   later makes saved keys unreadable and those shops must reconnect. Each shop's
   Razorpay webhook secret is made by Frata per shop (Settings → Online payments);
   there is no platform-wide Razorpay secret.
+- `TRIAL_CLAIM_SECRET` (Sensitive, **Production only**): `openssl rand -base64 32`. Without it no shop gets a trial
+  (one trial per business is keyed by it); never change it once set.
+- `FRRATA_WA_PHONE_NUMBER_ID`, `FRRATA_WA_TOKEN` (Sensitive), `FRRATA_WA_SIGNUP_TEMPLATE`, `FRRATA_WA_TEMPLATE_LANG`
+  (**Production only**: a preview would send from Frrata's number): Frrata's own WhatsApp number and its approved
+  copy-code authentication template. All set, with `TRIAL_CLAIM_SECRET`, turns on the WhatsApp code at sign-up.
+
+### Frrata's own WhatsApp number (the sign-up code)
+
+Owner steps, about an hour plus Meta's template review. Facts: frata-integrations § Sign-up code (checked 2026-11-08).
+This is Frrata's number, separate from the Tech Provider app that connects merchants' numbers. No GST or business
+verification is needed to start; unverified, it reaches 250 different people a day (plenty for sign-ups). Verify the
+business once the company exists to lift that.
+
+1. **A number** that can take an SMS or a call and is **not on WhatsApp** (a new SIM is simplest; a number on the
+   WhatsApp app must delete that account first).
+2. **business.facebook.com** → create a business portfolio "Frrata" (India, INR — the currency cannot change later).
+3. **developers.facebook.com** → My Apps → Create app → Business → link it to that portfolio → add **WhatsApp**.
+   Use a new app, not the Tech Provider one.
+4. App → WhatsApp → **API Setup** → Add phone number → display name "Frrata" → verify with the code Meta sends.
+   Copy the **Phone number ID** shown there.
+5. **WhatsApp Manager → Payment settings** → add a card (templates do not send without one; Meta charges in INR + GST).
+6. **WhatsApp Manager → Message templates → Create**: category **Authentication**, name `frrata_signup_code`,
+   language English, delivery **Copy code**, add the security line, code expires in **10 minutes**. Submit; approval
+   is usually minutes to hours. Note the language code it shows (`en` or `en_US`).
+7. **Business settings → Users → System users** → Add (Admin) → Assign assets: the app and the WhatsApp account, full
+   control → **Generate token**, expiry *Never*, permissions `whatsapp_business_messaging` and
+   `whatsapp_business_management`. Copy it once; it is not shown again.
+8. **Vercel → frata → Settings → Environment Variables**, Production only:
+   `FRRATA_WA_PHONE_NUMBER_ID` (step 4), `FRRATA_WA_TOKEN` (step 7, Sensitive), `FRRATA_WA_SIGNUP_TEMPLATE` =
+   `frrata_signup_code`, `FRRATA_WA_TEMPLATE_LANG` = the code from step 6. Redeploy (or push to `main`).
+9. Test: sign up at /start with your own mobile — the "WhatsApp number" step appears and the code arrives.
 - Supabase Pro before real merchants: free projects pause after a week idle and
   have no backups. Vercel Pro too: Hobby is non-commercial, and allows 100 deployments a day, 100 builds an hour and one
   at a time (the limit hit on 8 Nov), one WAF rate-limit rule per project, and cron once a day (±59 min; Vercel calls

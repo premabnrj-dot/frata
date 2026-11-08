@@ -54,3 +54,23 @@ export const trialClaims = pgTable('trial_claims', {
   check('trial_claims_kind', sql`${t.kind} in ('email','phone','gstin','payout')`),
   uniqueIndex('trial_claims_key').on(t.kind, t.keyVersion, t.keyHmac),
 ])
+
+/**
+ * A sign-up code sent by WhatsApp (trials TR1; tenancy finding R2): platform data with NO tenant and no grant to any
+ * app role — definers only. Keyed HMACs of the phone and the code (never the values); 10 minutes; at most 5 tries;
+ * consumed once by app_create_shop_v2, which claims the phone for one trial per business.
+ */
+export const signupCodes = pgTable('signup_codes', {
+  id: id(),
+  userId: uuid('user_id').notNull(),
+  phoneHmac: text('phone_hmac').notNull(),
+  codeHmac: text('code_hmac').notNull(),
+  keyVersion: smallint('key_version').notNull(),
+  expiresAt: at('expires_at').notNull(),
+  attempts: integer('attempts').notNull().default(0),
+  verifiedAt: at('verified_at'),
+  consumedAt: at('consumed_at'),
+  createdAt: createdAt(),
+}, (t) => [
+  check('signup_codes_attempts', sql`${t.attempts} between 0 and 5`),
+])

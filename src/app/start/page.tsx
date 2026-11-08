@@ -1,10 +1,13 @@
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
-import { accessFor } from '@/lib/db/platform'
+import { accessFor, publicPlans, signupTrialDays } from '@/lib/db/platform'
+import { formatInr, formatPercent } from '@/lib/format'
+import { paise } from '@/domains/money/paise'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 import { frataWhatsappLink } from '@/lib/site'
 import { SignInFlow } from '../login/sign-in-flow'
 import { CreateShopForm } from './create-shop-form'
+import { signupCodeOn } from '@/lib/trials/signup-code'
 import { SHELL_FONT_VARS } from '@/components/shell/fonts'
 import { Selvedge, SiteHeader, SiteStage } from '@/components/brand/site'
 
@@ -20,27 +23,24 @@ export default async function StartPage() {
     const access = await accessFor(auth.userId).catch(() => null)
     if (access?.memberships.some((m) => m.role === 'owner' && !m.supportSessionId)) redirect('/console')
   }
+  // Trials TR1: the plans and the trial length, read from the price list and Admin's setting (never a copy).
+  const [planRows, trialDays] = auth.ok ? await Promise.all([publicPlans(), signupTrialDays()]) : [[], 30]
+  const plans = planRows.map((p) => ({ code: p.code, name: p.name, price: formatInr(paise(p.monthlyPrice)),
+    included: p.includedOrders.toLocaleString('en-IN'), fee: formatPercent(p.feeBps / 10_000, p.feeBps % 100 === 0 ? 0 : 1) }))
   return (
     <div data-shell className={`min-h-dvh bg-background ${SHELL_FONT_VARS}`}>
       <SiteStage><SiteHeader links={[]} action={auth.ok ? undefined : { href: '/login', label: 'Sign in' }} /></SiteStage>
       <Selvedge />
-      <main id="content" tabIndex={-1} className="mx-auto grid max-w-4xl gap-10 px-4 py-10 outline-none sm:px-8 md:grid-cols-[minmax(0,1fr)_260px]">
+      <main id="content" tabIndex={-1} className="mx-auto grid max-w-4xl gap-10 px-4 py-10 outline-none sm:px-8 md:grid-cols-[minmax(0,1fr)_auto]">
         <div className="max-w-md">
-          {auth.ok ? <CreateShopForm shopDomain={SHOP_DOMAIN} /> : (
+          {auth.ok ? <CreateShopForm shopDomain={SHOP_DOMAIN} plans={plans} trialDays={trialDays} codeOn={signupCodeOn()} /> : (
             <div className="space-y-4">
               <h1 className="font-display text-2xl font-semibold tracking-tight">Start your shop</h1>
               <SignInFlow intent="start" />
             </div>
           )}
         </div>
-        <aside aria-label="Asked later" className="space-y-2 border-l-2 border-border pl-4 text-sm text-muted-foreground">
-          <p className="font-medium text-foreground">Not asked now</p>
-          <p>No password: you sign in with a link or a code we email.</p>
-          <p>Your logo, GSTIN and full address: in Settings, before your first invoice.</p>
-          <p>Razorpay and its KYC: only when you want UPI and card payments. Pay on delivery works without it.</p>
-          <p>A plan: when you open your shop to shoppers.</p>
-          <p className="pt-2">Stuck? <a href={frataWhatsappLink()} target="_blank" rel="noopener" className="underline">Ask us on WhatsApp</a></p>
-        </aside>
+        <p className="text-sm text-muted-foreground md:pt-1">Stuck? <a href={frataWhatsappLink()} target="_blank" rel="noopener" className="underline">WhatsApp us</a></p>
       </main>
     </div>
   )

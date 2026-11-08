@@ -34,10 +34,10 @@ describe.skipIf(!host)('a trial shop\'s invoices', () => {
     if (!nov.invoiceId || !dec.invoiceId || !jan.invoiceId) throw new Error('not drafted')
     expect(nov.bill.lines.some((l) => l.kind === 'plan' || l.kind === 'change')).toBe(false)
     expect(dec.bill.lines.some((l) => l.kind === 'plan')).toBe(false)
-    // 4–31 December at Growth by days. (The billing pause is off until the storefront pause ships, TR1 task 9: a shop
-    // that still sells pays its plan.)
-    expect(jan.bill.lines.find((l) => l.kind === 'change')!.taxable).toBe(Math.round(499900 * 28 / 31))
-    expect(jan.bill.lines.find((l) => l.kind === 'plan')!.taxable).toBe(499900)
+    // No autopay: the shop pauses after the 7-day grace (from 11 December), and paused days are free (TR1·9). So
+    // 4–10 December at Growth by days, and no plan for January while it stays paused.
+    expect(jan.bill.lines.find((l) => l.kind === 'change')!.taxable).toBe(Math.round(499900 * 7 / 31))
+    expect(jan.bill.lines.some((l) => l.kind === 'plan')).toBe(false)
   })
 
   it('with autopay set up before the pause: 4–31 December by days, and January in advance', async () => {

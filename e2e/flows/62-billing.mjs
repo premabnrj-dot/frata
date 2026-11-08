@@ -52,7 +52,7 @@ export default {
         await riya.getByText(/registered in state 27/).waitFor()
         await riya.getByLabel('State').selectOption('27')
         await riya.getByRole('button', { name: 'Save billing details' }).click()
-        await riya.getByText('Saved. Your next invoice is made out to these details.').waitFor()
+        await riya.getByText('Saved.', { exact: true }).waitFor()
         const [a] = await db`select legal_name, gstin, state_code, email from billing_accounts where tenant_id = ${KESAR}`
         assert.deepEqual([a.legal_name, a.gstin, a.state_code, a.email], ['Kesar Studio LLP', '27AAPFU0939F1ZV', '27', 'accounts@kesarstudio.in'])
         const audit = await db`select detail from audit_events where tenant_id = ${KESAR} and action = 'billing.details' order by at desc limit 1`
@@ -145,11 +145,11 @@ export default {
         await age(); await fetch(`${RZP}/_test/fail-next`, { method: 'POST' })
         await run()
         await until(async () => (await db`select failed_at from frrata_payments where invoice_id = ${inv.id} and attempt = 1`)[0]?.failed_at, 15_000)
-        await riya.goto(CONSOLE + '/console'); await riya.getByText(/didn.t go through/).waitFor()
+        await riya.goto(CONSOLE + '/console'); await riya.getByText(/^Payment of .* failed\./).waitFor()
         // 3. A fresh notice, then the retry: captured; the banner goes.
         await run(); await age(); await run()
         await until(async () => (await db`select captured_at from frrata_payments where invoice_id = ${inv.id} and attempt = 2`)[0]?.captured_at, 15_000)
-        await riya.reload(); assert.equal(await riya.getByText(/didn.t go through/).count(), 0)
+        await riya.reload(); assert.equal(await riya.getByText(/^Payment of .* failed\./).count(), 0)
         // 4. The billing webhook: a bad signature is refused; a signed token.cancelled turns autopay off.
         const [{ tok }] = await db`select mandate_token_id tok from billing_accounts where tenant_id = ${KESAR}`
         const body = JSON.stringify({ event: 'token.cancelled', created_at: 1, payload: { token: { entity: { id: tok, status: 'cancelled' } } } })
@@ -163,7 +163,7 @@ export default {
       await t.step('B4: the owner upgrades to Growth now (the difference by days, in words); a switch back waits for the 1st, and Keep my plan cancels it', async () => {
         await riya.goto(CONSOLE + '/console/settings/billing')
         await riya.getByRole('button', { name: 'Upgrade to Growth' }).click()
-        await riya.getByRole('dialog').getByText(/is added to your next bill/).waitFor()
+        await riya.getByRole('dialog').getByText(/\+ GST on your next bill/).waitFor()
         await riya.getByRole('button', { name: 'Upgrade now' }).click()
         await riya.getByText('You are on Growth now.').waitFor()
         await riya.locator('strong', { hasText: 'Growth' }).first().waitFor()
@@ -179,7 +179,7 @@ export default {
         const meera = await open('frata', { viewport: { width: 1280, height: 900 } })
         await meera.goto(CONSOLE + '/admin/plans#trials')
         await meera.getByLabel(/^Length for new sign-ups/).fill('45')
-        await meera.getByLabel(/^Why \(kept/).fill('Festive campaign')
+        await meera.locator('#trials').getByLabel(/^Why$/).fill('Festive campaign')
         await meera.getByRole('button', { name: 'Save trial terms' }).click()
         await meera.getByText('New sign-ups get 45 days from going live.').waitFor()
         await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/plan`)
@@ -189,10 +189,12 @@ export default {
         await meera.getByRole('button', { name: 'Give a trial' }).click()
         await meera.getByText(/^\d+ days left · 14 days/).waitFor() // Kesar is live: the clock starts now
         await meera.screenshot({ path: t.out('admin-trial'), fullPage: true })
+        await meera.goto(CONSOLE + '/admin/trials')
+        await meera.getByRole('link', { name: 'Kesar Studio' }).waitFor()
         await meera.goto(CONSOLE + '/admin/merchants?q=Kesar')
         await meera.getByText(/Trial(?: ending)? · \d+ days left/).first().waitFor()
         await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/plan`)
-        await meera.getByLabel(/^Why end it now/).fill('Test over')
+        await meera.getByLabel('Why end the trial').fill('Test over')
         await meera.getByRole('button', { name: 'End the trial now' }).click()
         await meera.getByText('Trial ended.').waitFor()
         assert.equal((await db`select count(*)::int n from audit_events where tenant_id = ${KESAR} and action in ('trial.set', 'trial.end')`)[0].n, 2)

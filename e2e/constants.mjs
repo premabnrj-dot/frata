@@ -16,6 +16,8 @@ export const USERS = {
   // A partner who builds stores, and the brand owner a store is handed to (40-partners adds both).
   partner: { id: 'cccccccc-0000-0000-0000-000000000010', email: 'pia@studio.test' },
   brand: { id: 'cccccccc-0000-0000-0000-000000000011', email: 'neha@brandco.test' },
+  // A brand owner signing up on their own (63-signup, trials TR1): no shop until the flow makes one.
+  founder: { id: 'cccccccc-0000-0000-0000-000000000012', email: 'aanya@noorthreads.test' },
 }
 export const RZP_KEYS = { id: 'rzp_live_FrataTest01', secret: 'testsecret12345678abcd' }
 /** Frrata's own billing account (billing B3), test keys: they may collect only test-mode invoices. */

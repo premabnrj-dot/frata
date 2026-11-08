@@ -12,13 +12,13 @@ import { clientIp } from '@/lib/http/client-ip'
 import { hostFor, refreshHosts } from '@/lib/queries/storefront'
 
 // A partner makes a client store (approved mockup screen 6). The uid is getUser()'s; app_partner_create_shop
-// re-checks the approval, the cap of unopened stores and the address, and records the link with PARTNER_TERMS.
+// re-checks the approval, the cap of stores not handed over and the address, and records the link with PARTNER_TERMS.
 
 const Store = z.object({ name: z.string().trim().min(1).max(60), slug: z.string(), pickup: z.string().regex(PINCODE_SHAPE) })
 
 const SENTENCES: Record<string, string> = {
   not_partner: 'Your partner account is not approved yet.',
-  too_many: `You have ${PARTNER_TERMS.maxUnopened} stores that have not opened yet. Hand one over first.`,
+  too_many: `You have ${PARTNER_TERMS.maxUnopened} stores not handed over yet. Hand one over first.`,
   bad_name: 'The shop needs a name of up to 60 letters.',
   bad_slug: 'Letters, digits and hyphens, at least 3.',
   bad_pincode: 'A pincode is 6 digits and starts with 1 to 9.',

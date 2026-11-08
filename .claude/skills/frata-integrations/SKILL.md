@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.11.0
+  version: 1.12.0
   verified: 2026-11-08
   decisions: [ADR-0006]
 ---
@@ -402,6 +402,23 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
 - **Supabase phone OTP**: MessageBird, Twilio, Vonage, TextLocal (community); WhatsApp via Twilio only; Send SMS hook
   (Standard Webhooks, HTTP 5 s) [V, undated]. **Not used**: the sign-up code is a Frrata row sent through the outbox
   (ADR-0006), a business check, not a login.
+- **Frrata's own sign-up WABA without GST** (checked 2026-11-08, integration-researcher): no Meta page requires GST or
+  business verification to use the Cloud API or send authentication templates [V, about-the-platform + authentication
+  templates, undated]. A new, unverified portfolio: **250 unique users per rolling 24 h** outside a service window (shared
+  by its numbers; per portfolio since 2025-10-08) → 2,000 by verifying, by a partner verifying, OR by 2,000 delivered
+  high-quality templates to unique users in 30 days; then 10K → 100K → unlimited by automatic scaling [V,
+  messaging-limits, undated]. Authentication messages count toward it: [U, inference]. Unverified: 2 numbers (20 once
+  verified or at 2,000), 250 templates (6,000 verified + approved name), no Official Business Account; the display name
+  shows in chats only once approved, its review starts at a higher limit [V]. A payment method is required for
+  production template sends (test numbers exempt; error 131042) [V]. India Sold-To: INR only, invoiced by Facebook India,
+  currency fixed once chosen [V, pricing, 2026-10-01]. UPI/RuPay to pay Meta: [U]. GST 18% on Meta's charges [S,
+  montymobile 2026-09-28]; GSTIN on billing and input credit: [U]. Verification documents in India: GST, Udyam/MSME,
+  Shop & Establishment, Certificate of Incorporation, business PAN [S, Wati 2026-06-16; Exotel]; a sole proprietor often
+  with PAN or Udyam [S, Zoko 2026-08-20]. Rule 5 here: verify once, in the legal entity's name — run the sign-up WABA
+  unverified (250/day) until the Pvt Ltd exists. Authentication-international applies only to a business based outside
+  the user's country sending > 750K messages outside windows in 30 days [V] — not Frrata (India → India).
+- **Tech Provider "access verification"**: "no longer required" (changelog 2025-10-03) but embedded-signup/overview still
+  names it for the 200-a-week onboarding limit [U conflict, 2026-11-08].
 - **Amazon SES**: $0.10 per 1,000, $0.12/GB attachments [V, undated]; ap-south-1 API and SMTP endpoints [V]; sandbox per
   region (verified recipients, 200/24 h, 1/s), production access first reply within 96 h [V]; Easy DKIM 2048-bit; SPF
   alignment needs a custom MAIL FROM; strict DKIM alignment by default [V].

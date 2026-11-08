@@ -12,8 +12,9 @@ import { META_ID_RE } from '@/domains/communication/webhook'
 // calls with the merchant's token, never from the browser (tenancy review: a forged id cannot claim a number).
 // =============================================================================
 
-/** v26.0 (introduced 29 Jul 2026; v27.0 is newer but undated) — frata-integrations § Meta, checked 2026-11-07. The page's SDK init uses the same. */
-export const GRAPH_VERSION = 'v26.0'
+/** The one Graph version (src/lib/meta/graph.ts); the page's SDK init uses the same. */
+export { GRAPH_VERSION } from '@/lib/meta/graph'
+import { GRAPH_VERSION } from '@/lib/meta/graph'
 const TIMEOUT_MS = 8_000
 const META_ID = META_ID_RE
 
@@ -127,3 +128,4 @@ export async function startHistorySync(token: string, phoneNumberId: string): Pr
   const b = await graph('POST', `/${phoneNumberId}/smb_app_data`, token, { messaging_product: 'whatsapp', sync_type: 'history' })
   return a.ok && b.ok
 }
+

@@ -29,14 +29,14 @@ export function PlanChoice({ options, downgradeOn, scheduled }: { options: Optio
         {options.map((o) => (
           <li key={o.code} className="flex flex-col gap-1 rounded-md border border-border p-3 text-sm">
             <strong>{o.name}</strong>
-            <span className="text-muted-foreground">{o.price} a month · {o.included} orders · {o.fee} of delivered value</span>
+            <span className="text-muted-foreground">{o.price}/mo · {o.included} orders · {o.fee}</span>
             <Button variant="secondary" className="mt-1 self-start" onClick={() => { setMsg(null); setPick(o) }}>{o.upgrade ? (o.afterTrial ? `Upgrade to ${o.name} after the trial` : `Upgrade to ${o.name}`) : `Switch to ${o.name} on ${downgradeOn}`}</Button>
           </li>
         ))}
       </ul>
       {msg && <p role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-ok-text' : 'text-danger-text'}`}>{msg.text}</p>}
       <Dialog open={!!pick} onClose={() => setPick(null)} title={pick ? (pick.upgrade ? (pick.afterTrial ? `Upgrade to ${pick.name} on ${pick.afterTrial}?` : `Upgrade to ${pick.name} now?`) : `Switch to ${pick.name} on ${downgradeOn}?`) : ''}
-        description={pick ? (pick.upgrade ? (pick.afterTrial ? `Your trial runs to its end on ${pick.afterTrial}; then ${pick.name} starts, at ${pick.price} a month. You can change your mind until then.` : `It starts now${pick.difference ? `. This month's difference, ${pick.difference} before GST, is added to your next bill` : ', with nothing extra for this month'}; from next month you pay ${pick.price} a month. Orders already shipped keep the rate they shipped under.`) : `You stay on your plan until ${downgradeOn}, then pay ${pick.price} a month. Nothing is refunded.`) : ''}
+        description={pick ? (pick.upgrade ? (pick.afterTrial ? `From ${pick.afterTrial}: ${pick.price}/mo + GST.` : `${pick.difference ? `${pick.difference} + GST on your next bill, then ` : ''}${pick.price}/mo + GST.`) : `From ${downgradeOn}: ${pick.price}/mo + GST. No refund.`) : ''}
         actions={<><Button variant="secondary" data-autofocus onClick={() => setPick(null)}>Not now</Button><Button onClick={go} disabled={busy}>{pick?.upgrade ? (pick.afterTrial ? 'Upgrade after the trial' : 'Upgrade now') : 'Switch on the 1st'}</Button></>} />
     </div>
   )

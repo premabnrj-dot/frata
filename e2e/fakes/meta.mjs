@@ -14,6 +14,9 @@ const NUMBERS = {
     whatsapp_business_manager_messaging_limit: 'TIER_250', is_on_biz_app: false, platform_type: 'CLOUD_API', health_status: { can_send_message: 'AVAILABLE' } },
 }
 let quality = 'GREEN', currency = 'USD', rejectAll = false
+// Frrata's own number (trials TR1 sign-up codes): the token, and the last code sent to each number.
+const FRRATA_TOKEN = 'EAAe2efrratasignup', FRRATA_NUMBER = '200000000099'
+const sentCodes = new Map()
 const send = (res, code, body) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)) }
 const bearer = (req) => (req.headers.authorization ?? '').replace(/^Bearer /, '')
 
@@ -22,6 +25,7 @@ http.createServer((req, res) => {
     const u = new URL(req.url, 'http://x'); const body = raw ? JSON.parse(raw) : {}
     if (u.pathname.startsWith('/_test/')) {
       if (u.pathname === '/_test/calls') return send(res, 200, calls)
+      if (u.pathname === '/_test/code') return send(res, 200, { code: sentCodes.get(u.searchParams.get('to') ?? '') ?? null })
       if (u.pathname === '/_test/set') { quality = body.quality ?? quality; currency = body.currency ?? currency; rejectAll = body.rejectAll ?? rejectAll; return send(res, 200, { ok: true }) }
       return send(res, 404, {})
     }
@@ -42,6 +46,14 @@ http.createServer((req, res) => {
       const t = tokens.get(u.searchParams.get('input_token') ?? '')
       if (!t) return send(res, 200, { data: { is_valid: false } })
       return send(res, 200, { data: { app_id: META.appId, is_valid: true, granular_scopes: [{ scope: 'whatsapp_business_management', target_ids: [t.waba] }, { scope: 'whatsapp_business_messaging', target_ids: [t.waba] }] } })
+    }
+    if (bearer(req) === FRRATA_TOKEN) {
+      let n
+      if (req.method === 'POST' && (n = p.match(/^\/(\d+)\/messages$/)) && n[1] === FRRATA_NUMBER && body.type === 'template' && body.template?.name === 'frrata_signup_code') {
+        sentCodes.set(body.to, body.template.components?.[0]?.parameters?.[0]?.text ?? null)
+        return send(res, 200, { messaging_product: 'whatsapp', contacts: [{ input: body.to, wa_id: body.to }], messages: [{ id: `wamid.${Date.now()}` }] })
+      }
+      return send(res, 400, { error: { code: 100 } })
     }
     const t = tokens.get(bearer(req))
     if (!t || rejectAll) return send(res, 401, { error: { code: 190, message: 'Error validating access token' } })

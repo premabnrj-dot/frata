@@ -40,6 +40,7 @@ export default {
         ['admin-merchants-nomatch', 'frata', '/admin/merchants?q=nomatchzz'],
         ['admin-merchant', 'frata', `/admin/merchants/${KESAR}`],
         ['admin-plans', 'frata', '/admin/plans'],
+        ['admin-trials', 'frata', '/admin/trials'],
         ['admin-themes', 'frata', '/admin/themes'],
         ['admin-theme-version', 'frata', '/admin/themes/editorial/1.0.0'],
         // The rest of what U·2b converted (impact review U·2b): every page measured, none only by hand.

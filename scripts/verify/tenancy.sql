@@ -647,9 +647,9 @@ do $$ declare t uuid; n int; inv uuid; m jsonb; begin
   if app_claim_invites('aaaaaaaa-0000-0000-0000-000000000012') <> 0 then raise exception 'FAIL: sign-in claimed a handover'; end if;
   if (select count(*) from app_my_handovers('aaaaaaaa-0000-0000-0000-000000000012')) <> 1 then raise exception 'FAIL: owner does not see the handover'; end if;
   if exists (select 1 from app_my_handovers('aaaaaaaa-0000-0000-0000-000000000013')) then raise exception 'FAIL: a stranger sees the handover'; end if;
-  begin perform app_accept_handover('aaaaaaaa-0000-0000-0000-000000000013', inv); raise exception 'FAIL: a stranger accepted the handover';
+  begin perform app_accept_handover_v2('aaaaaaaa-0000-0000-0000-000000000013', inv, null, 1::smallint); raise exception 'FAIL: a stranger accepted the handover';
   exception when sqlstate 'P0001' then if sqlerrm <> 'no_invite' then raise; end if; end;
-  if app_accept_handover('aaaaaaaa-0000-0000-0000-000000000012', inv) <> t then raise exception 'FAIL: accept'; end if;
+  if app_accept_handover_v2('aaaaaaaa-0000-0000-0000-000000000012', inv, null, 1::smallint) <> t then raise exception 'FAIL: accept'; end if;
   begin perform app_handover_invite(t, 'aaaaaaaa-0000-0000-0000-000000000010', 'later@brand.test'); raise exception 'FAIL: handover after an owner exists';
   exception when sqlstate 'P0001' then if sqlerrm <> 'has_owner' then raise; end if; end;
   -- People: the shop's own, the partner named
@@ -1585,4 +1585,60 @@ do $$ begin
 end $$;
 rollback;
 
-\echo 'tenancy proof — all 48 checks passed'
+-- 49. Trials TR1·5: a trial at sign-up. No app role reads a sign-up code; the shop is made on the chosen plan with a
+-- trial (terms frozen) and an email claim; a second sign-up with a claimed email gets no trial; a code that is not this
+-- person's, or not verified, is refused (R3); a code verifies once and at most 5 tries count.
+insert into auth.users (id, email, email_confirmed_at) values
+  ('aaaaaaaa-0000-0000-0000-000000000040', 'first@trial-proof.test', now()), ('aaaaaaaa-0000-0000-0000-000000000041', 'again@trial-proof.test', now());
+begin; set local role frata_app;
+do $$ declare r record; c uuid; begin
+  begin perform 1 from signup_codes; raise exception 'FAIL: the app reads sign-up codes'; exception when insufficient_privilege then null; end;
+  c := app_signup_code_issue('aaaaaaaa-0000-0000-0000-000000000040', 'phone-hmac-1', 'code-hmac-1', 1::smallint);
+  if app_signup_code_verify('aaaaaaaa-0000-0000-0000-000000000041', c, 'code-hmac-1') then raise exception 'FAIL: another person verified a code'; end if;
+  if app_signup_code_verify('aaaaaaaa-0000-0000-0000-000000000040', c, 'wrong') then raise exception 'FAIL: a wrong code verified'; end if;
+  if not app_signup_code_verify('aaaaaaaa-0000-0000-0000-000000000040', c, 'code-hmac-1') then raise exception 'FAIL: the right code did not verify'; end if;
+  -- Another person cannot spend this code.
+  begin perform app_create_shop_v2('aaaaaaaa-0000-0000-0000-000000000041', 'Proof Two', 'proof-two', '452009', '{}', 'growth', 'email-hmac-2', 1::smallint, c);
+    raise exception 'FAIL: a code spent by another person'; exception when others then if sqlerrm <> 'bad_code' then raise; end if; end;
+  select * into r from app_create_shop_v2('aaaaaaaa-0000-0000-0000-000000000040', 'Proof One', 'proof-one', '452009', '{}', 'growth', 'email-hmac-1', 1::smallint, c);
+  if not r.trial then raise exception 'FAIL: a first sign-up got no trial'; end if;
+  begin perform app_create_shop_v2('aaaaaaaa-0000-0000-0000-000000000041', 'Proof Two', 'proof-two', '452009', '{}', 'growth', 'email-hmac-2', 1::smallint, c);
+    raise exception 'FAIL: a code used twice'; exception when others then if sqlerrm <> 'bad_code' then raise; end if; end;
+end $$;
+rollback;
+begin;
+do $$ declare r record; begin
+  -- As the definer runs it (superuser here, to check the rows): the claimed email gets the plan without a trial.
+  insert into trial_claims (kind, key_hmac, key_version, tenant_id) values ('email', 'email-hmac-taken', 1, '11111111-1111-1111-1111-111111111111');
+  select * into r from app_create_shop_v2('aaaaaaaa-0000-0000-0000-000000000041', 'Proof Two', 'proof-two', '452009', '{}', 'launch', 'email-hmac-taken', 1::smallint, null);
+  if r.trial or exists (select 1 from shop_trials where tenant_id = r.tenant_id) then raise exception 'FAIL: a claimed email got a trial'; end if;
+  select * into r from app_create_shop_v2('aaaaaaaa-0000-0000-0000-000000000040', 'Proof One', 'proof-one', '452009', '{}', 'growth', 'email-hmac-new', 1::smallint, null);
+  if not r.trial or (select days from shop_trials where tenant_id = r.tenant_id) <> (select days from trial_settings) then raise exception 'FAIL: the trial terms were not frozen'; end if;
+  if (select trial_ends_at from tenant_plans where tenant_id = r.tenant_id) is null then raise exception 'FAIL: the new shop''s plan row has no trial end'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) ro, unnest(array['app_create_shop_v2(uuid,text,text,text,text[],text,text,smallint,uuid)', 'app_signup_code_issue(uuid,text,text,smallint)', 'app_signup_code_verify(uuid,uuid,text)']) f
+             where has_function_privilege(ro, f, 'execute')) then raise exception 'FAIL: another role may sign up or issue codes'; end if;
+end $$;
+rollback;
+
+-- 50. Trials TR1·10: a shop with no owner is never billed (R1); only the app runs the handover with its claim.
+insert into tenants (id, slug, name) values ('33333333-3333-3333-3333-333333333333', 'proof-ownerless', 'Proof Ownerless');
+insert into tenant_plans (tenant_id, plan_version_id, starts_at, created_by) select '33333333-3333-3333-3333-333333333333', pv.id, now() - interval '40 days', 'aaaaaaaa-0000-0000-0000-000000000001' from plan_versions pv join plans p on p.id = pv.plan_id where p.code = 'launch' and pv.version = 1;
+do $$ begin
+  if exists (select 1 from app_shops_to_bill(now()) t where t = '33333333-3333-3333-3333-333333333333') then raise exception 'FAIL: a shop with no owner is billed'; end if;
+  if not exists (select 1 from app_shops_to_bill(now()) t where t = '11111111-1111-1111-1111-111111111111') then raise exception 'FAIL: an owned shop is not billed'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_accept_handover_v2(uuid,uuid,text,smallint)', 'execute'))
+  then raise exception 'FAIL: another role may accept a handover'; end if;
+  -- A partner-built shop goes live only once a brand owns it (owner, 2026-11-08).
+  insert into partner_links (tenant_id, partner_id, share_bps, share_months, notice_days)
+    select '33333333-3333-3333-3333-333333333333', id, 2000, 24, 90 from partners where user_id = 'aaaaaaaa-0000-0000-0000-000000000010';
+  insert into shop_settings (tenant_id, pickup_pincode) values ('33333333-3333-3333-3333-333333333333', '302001') on conflict do nothing;
+  begin update shop_settings set published_at = now() where tenant_id = '33333333-3333-3333-3333-333333333333';
+    raise exception 'FAIL: a partner shop went live with no owner'; exception when check_violation then null; end;
+  -- Its trial ran from creation: a partner shop made by app_partner_create_shop has started_at set.
+  if exists (select 1 from shop_trials st join partner_links l on l.tenant_id = st.tenant_id where st.started_at is null) then
+    raise exception 'FAIL: a partner shop''s trial waits for going live'; end if;
+  -- The 0023 handover skips the trial claim: no role may run it any more.
+  if has_function_privilege('frata_app', 'app_accept_handover(uuid,uuid)', 'execute') then raise exception 'FAIL: the app may still accept a handover without its claim'; end if;
+end $$;
+
+\echo 'tenancy proof — all 50 checks passed'

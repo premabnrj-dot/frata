@@ -2,12 +2,30 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 4.16.0
+  version: 5.1.0
   verified: 2026-11-08
   covers: ["src/app/globals.css", "src/components/**"]
 ---
 
 # Frata design language
+
+## Rule 0 — no explanations (owner, 2026-11-08; binding on every screen AND every mockup)
+
+**Clients and partners already understand their work. A screen never explains anything unless it is required.**
+Pages are clean, the layout tight, space used for the work, not for words.
+
+- **Default: no helper text at all.** A screen is labels, values, controls and actions. No intro paragraphs under a
+  heading, no "what happens next", no "Not asked now" asides, no "you can change this later", no reassurance ("nothing
+  is charged…"), no notes repeating what a label or the layout already shows, no notes for staff on how a feature works.
+- **Required, so it stays — and only as short as it can be:** an error and how to fix it; a limit a person must meet
+  (a format, a range); money that will be taken, with its date (one line, at the action); legal or GST wording the law
+  asks for; a consequence that cannot be undone, in the confirm dialog of that action; a risk reason.
+- **Anything else optional goes in an (i) tip** (§ Labels, info tips) — and only if a real person would ask.
+- **The cut before shipping** (and before publishing a mockup): read every sentence on the screen and delete it;
+  restore it only if the screen is wrong or unsafe without it. A status is a chip or a value ("Trial · 12 days left"),
+  never a sentence.
+- **Space:** one card per job, no cards that only hold text, dense rows over stacked paragraphs, actions beside what
+  they act on.
 
 ## Voice (owner, 2026-11-07) — every word on every surface
 
@@ -348,7 +366,7 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
     Disconnected), never a colour or icon alone; a failing record says only the fix ("Points to … · use …").
 69. **DNS records are a table to copy** (Type · Name · Value · State, Copy per row), values read from the provider at
     the time, never hard-coded; one **Check records** button with "Checked N min ago".
-70. **No explanations on these screens** (owner's note at approval): what stays visible is the address, the state, an
+70. **No explanations on these screens** (Rule 0; the owner's note at approval): what stays visible is the address, the state, an
     error, a limit ("2 changes left"), and one risk line where an action can't be undone ("Bags in progress start
     empty."). Anything else is an (i) tip or not said.
 71. **Trust and safety actions** (Admin) name the shop on the button and require a reason the shop will read; the shop
@@ -676,9 +694,7 @@ saving we cannot show from their own orders.
     visible whatever the word count: "+ 18% GST" and "of each delivered order"
     on every plan, "up to N orders a month", the partner's 90-day tail and "24
     months, from opening", "₹0 added to the brand's price", and "Example · ex
-    GST · paid monthly once billing starts" beside partner numbers, and the
-    sign-up page's "Not asked now" panel (§ Phase 1; it answers the question
-    that stops a sign-up). Anything not built carries a Next tag, in the
+    GST · paid monthly once billing starts" beside partner numbers. Anything not built carries a Next tag, in the
     product picture too.
 42. **The frame** is `src/components/brand/site.tsx`: an ink `SiteStage` with
     `SiteHeader` (skip link, the mark with its thread on ink, the `inverse`

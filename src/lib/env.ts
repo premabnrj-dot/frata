@@ -9,6 +9,10 @@ import 'server-only'
 // =============================================================================
 
 export const DATABASE_URL = process.env.DATABASE_URL ?? ''
+/** Trials (TR1): the key of the one-trial-per-business HMACs (src/lib/trials/claims.ts). Production only. Without it a
+ *  sign-up gets no trial (fail closed). Never change it once set: earlier claims would no longer match (bump
+ *  TRIAL_CLAIM_KEY_VERSION with a new key instead). */
+export const TRIAL_CLAIM_SECRET = process.env.TRIAL_CLAIM_SECRET ?? ''
 /** frata_admin — cross-tenant (ADR-0007). Set for Production only; previews say "not connected". */
 export const ADMIN_DATABASE_URL = process.env.ADMIN_DATABASE_URL ?? ''
 /** Encrypts each shop's Razorpay secrets and signs order links (src/lib/crypto/secret-box.ts). Production only.
@@ -26,6 +30,13 @@ export const META_APP_SECRET = process.env.META_APP_SECRET ?? ''
 export const WA_VERIFY_TOKEN = process.env.WA_VERIFY_TOKEN ?? ''
 /** Graph API base. Unset in Vercel (the real one); set only by the local end-to-end test to its stand-in. */
 export const META_GRAPH_BASE = process.env.META_GRAPH_BASE || 'https://graph.facebook.com'
+/** Frrata's OWN WhatsApp number (not a merchant's) for sign-up codes (trials TR1; frata-integrations § Sign-up code).
+ *  These three and TRIAL_CLAIM_SECRET set = the WhatsApp code step is on at /start; any unset = off (sign-up uses the verified email only). */
+export const FRRATA_WA_PHONE_NUMBER_ID = process.env.FRRATA_WA_PHONE_NUMBER_ID ?? ''
+export const FRRATA_WA_TOKEN = process.env.FRRATA_WA_TOKEN ?? ''
+/** The approved copy-code authentication template's name and language. */
+export const FRRATA_WA_SIGNUP_TEMPLATE = process.env.FRRATA_WA_SIGNUP_TEMPLATE ?? ''
+export const FRRATA_WA_TEMPLATE_LANG = process.env.FRRATA_WA_TEMPLATE_LANG || 'en'
 
 /** Frrata as the supplier on its own invoices (billing B2). FRRATA_GSTIN unset = test mode: invoices go out in a TEST
  *  series, printed "not a tax invoice". All four are set together, with the CA, before real billing. */

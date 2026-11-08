@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { TENANT_COOKIE } from '@/lib/auth/require-member'
 import { requireUser } from '@/lib/auth/require-user'
 import { acceptHandover } from '@/lib/db/partners'
+import { claimKey } from '@/lib/trials/claims'
 
 // Accept a store a partner built. The invite id comes from the form, but app_accept_handover accepts only an
 // invite to THIS person's confirmed email, on a store with no owner, and never by its own partner.
@@ -22,7 +23,7 @@ export async function acceptHandoverAction(form: FormData) {
   if (!auth.ok) redirect('/login')
   const id = z.uuid().safeParse(form.get('inviteId'))
   if (!id.success) redirect('/handover')
-  const r = await acceptHandover(auth.userId, id.data)
+  const r = await acceptHandover(auth.userId, id.data, claimKey('email', auth.email))
   if (!r.ok) redirect(`/handover?error=${encodeURIComponent(SENTENCES[r.error] ?? 'We could not accept the store. Nothing was changed.')}`)
   ;(await cookies()).set(TENANT_COOKIE, r.tenantId, { httpOnly: true, sameSite: 'lax', path: '/', secure: process.env.NODE_ENV === 'production' })
   redirect('/console')
