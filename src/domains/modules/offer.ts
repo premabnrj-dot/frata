@@ -15,7 +15,7 @@ export type Offer = {
   /** The price as a merchant reads it ("In your plan", "₹499/mo + 18% GST"). */
   price: string
   /**
-   * The one action: switch it (on/off), ask Frrata for an add-on (billing comes later), see the plans, or none (coming next).
+   * The one action: switch it (on/off), ask Frrata for an add-on, see the plans (Plan and billing), or none (coming next).
    * `switch` carries whether it is on.
    */
   action: { kind: 'switch'; on: boolean } | { kind: 'ask'; label: string } | { kind: 'plans'; label: string } | { kind: 'none' }

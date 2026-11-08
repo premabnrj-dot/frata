@@ -1386,18 +1386,63 @@ do $$ begin
   then raise exception 'FAIL: a role reaches billing_events directly'; end if;
 end $$;
 
--- 44. Billing B4: a shop changes only its own plan, never a price agreed with Frrata, never a change Frrata scheduled.
+-- 44. Billing B4: a shop changes only its own plan, as its owner or an admin; never a price agreed with Frrata, never a
+-- change Frrata scheduled; cancelling touches only its own; Admin never writes a row as the shop.
+insert into tenant_plans (tenant_id, plan_version_id, starts_at, created_by, reason, by_shop)
+  select '22222222-2222-2222-2222-222222222222', v.id, now() + interval '40 days', 'aaaaaaaa-0000-0000-0000-000000000001', 'Changed by the shop', true
+  from plan_versions v join plans p on p.id = v.plan_id where p.code = 'scale' order by v.version desc limit 1;
 begin; set local role frata_app;
-select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
-do $$ declare n int; begin
-  begin perform app_change_plan('growth', '99999999-9999-9999-9999-999999999999'); exception when check_violation then null; end;
-  if exists (select 1 from tenant_plans where tenant_id = '22222222-2222-2222-2222-222222222222' and reason = 'Changed by the shop') then raise exception 'FAIL: A changed B''s plan'; end if;
-  begin insert into tenant_plans (tenant_id, plan_version_id, starts_at) select '11111111-1111-1111-1111-111111111111', id, now() from plan_versions limit 1; raise exception 'FAIL: the app writes tenant_plans'; exception when insufficient_privilege then null; end;
+do $$ begin
+  perform set_config('app.tenant_id', '', true);
+  begin perform app_change_plan('growth', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: a plan changed with no shop set'; exception when insufficient_privilege then null; end;
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  -- B's staff member, acting in A: refused.
+  begin perform app_change_plan('growth', 'aaaaaaaa-0000-0000-0000-000000000005'); raise exception 'FAIL: a non-member changed A''s plan'; exception when insufficient_privilege then null; end;
+  -- A's owner upgrades (now), then schedules a downgrade, then cancels it.
+  perform app_change_plan('growth', '99999999-9999-9999-9999-999999999999');
+  if not exists (select 1 from tenant_plans where tenant_id = '11111111-1111-1111-1111-111111111111' and by_shop and starts_at <= now()) then raise exception 'FAIL: A''s upgrade was not written'; end if;
+  perform app_change_plan('launch', '99999999-9999-9999-9999-999999999999');
+  if not exists (select 1 from tenant_plans where tenant_id = '11111111-1111-1111-1111-111111111111' and by_shop and starts_at > now()) then raise exception 'FAIL: A''s downgrade was not scheduled'; end if;
+  if not app_cancel_plan_change('99999999-9999-9999-9999-999999999999') then raise exception 'FAIL: A could not cancel its change'; end if;
+  if exists (select 1 from tenant_plans where tenant_id = '11111111-1111-1111-1111-111111111111' and starts_at > now()) then raise exception 'FAIL: A''s change was not cancelled'; end if;
+  if (select count(*) from audit_events where tenant_id = '11111111-1111-1111-1111-111111111111' and action in ('billing.plan.change', 'billing.plan.cancel')) <> 3 then raise exception 'FAIL: a plan change was not audited'; end if;
+  begin insert into tenant_plans (tenant_id, plan_version_id, starts_at, created_by) select '11111111-1111-1111-1111-111111111111', id, now(), '99999999-9999-9999-9999-999999999999' from plan_versions limit 1; raise exception 'FAIL: the app writes tenant_plans'; exception when insufficient_privilege then null; end;
 end $$;
 rollback;
 do $$ begin
-  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['app_change_plan(text,uuid)', 'app_cancel_plan_change()']) f
+  if (select count(*) from tenant_plans where tenant_id = '22222222-2222-2222-2222-222222222222' and by_shop and starts_at > now()) <> 1 then raise exception 'FAIL: A touched B''s scheduled change'; end if;
+end $$;
+-- Admin never writes a row as the shop.
+begin; set local role frata_admin;
+do $$ begin
+  begin insert into tenant_plans (tenant_id, plan_version_id, starts_at, created_by, by_shop) select '11111111-1111-1111-1111-111111111111', id, now() + interval '50 days', 'aaaaaaaa-0000-0000-0000-000000000001', true from plan_versions limit 1;
+    raise exception 'FAIL: Admin wrote a row as the shop'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+-- A change Frrata scheduled, and a price agreed with Frrata: both refused.
+begin;
+insert into tenant_plans (tenant_id, plan_version_id, starts_at, created_by, reason)
+  select '11111111-1111-1111-1111-111111111111', v.id, now() + interval '20 days', 'aaaaaaaa-0000-0000-0000-000000000001', 'Agreed on a call'
+  from plan_versions v join plans p on p.id = v.plan_id where p.code = 'growth' order by v.version desc limit 1;
+set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  begin perform app_change_plan('scale', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: the shop replaced Frrata''s scheduled change'; exception when check_violation then null; end;
+  if app_cancel_plan_change('99999999-9999-9999-9999-999999999999') then raise exception 'FAIL: the shop cancelled Frrata''s scheduled change'; end if;
+end $$;
+rollback;
+begin;
+update tenant_plans set custom_monthly_price = 100000, reason = 'Agreed' where tenant_id = '11111111-1111-1111-1111-111111111111';
+set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  begin perform app_change_plan('scale', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: the shop changed a price agreed with Frrata'; exception when check_violation then null; end;
+end $$;
+rollback;
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['app_change_plan(text,uuid)', 'app_cancel_plan_change(uuid)']) f
              where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: another role may change a shop''s plan'; end if;
+  if has_function_privilege('frata_app', 'app_admin_clear_shop_plan_change(uuid)', 'execute') then raise exception 'FAIL: the app clears plan changes'; end if;
 end $$;
 
 \echo 'tenancy proof — all 44 checks passed'

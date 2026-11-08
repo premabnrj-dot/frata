@@ -6,7 +6,7 @@ import { STATE_OPTIONS } from '@/domains/billing/details'
 import { STATE_LABEL } from '@/domains/billing/status'
 import { paise } from '@/domains/money/paise'
 import { usage } from '@/domains/plans/entitlements'
-import { upgradeDifference } from '@/domains/billing/bill'
+import { planChangeAdds } from '@/domains/billing/bill'
 import { monthStartIST, nextMonthStartIST } from '@/domains/time/month'
 import { formatInr, formatPercent } from '@/lib/format'
 import { publicPlans } from '@/lib/db/platform'
@@ -37,7 +37,7 @@ export default async function PlanAndBillingPage() {
     orderPrefixFor(auth.membership.tenantId),
     payingFor(auth.membership, now).catch(() => null),
   ])
-  const plans = await publicPlans().catch(() => [] as Awaited<ReturnType<typeof publicPlans>>)
+  const plans = await publicPlans().catch((e) => { console.error('[billing page] plans', errName(e)); return [] as Awaited<ReturnType<typeof publicPlans>> })
   // Autopay and Pay now: only with Frrata's gateway connected, never on a Frrata support visit (finding 10).
   const canPay = isBillingGatewayConfigured() && !auth.membership.supportSessionId
   const METHOD: Record<string, string> = { upi: 'UPI Autopay', card: 'Card', emandate: 'Bank mandate (eNACH)' }
@@ -107,12 +107,13 @@ export default async function PlanAndBillingPage() {
             {o.plan.trialEndsAt && o.plan.trialEndsAt > now && <p className="text-sm text-ok-text">Free trial until {dayIN(o.plan.trialEndsAt)}: the plan costs nothing until then.</p>}
             {o.plan.custom || auth.membership.supportSessionId || plans.length === 0
               ? <p className="text-xs text-muted-foreground">{o.plan.custom ? 'Your price was agreed with Frrata. To change your plan, message Frrata.' : auth.membership.supportSessionId ? 'A Frrata support visit cannot change the shop’s plan.' : 'Plans could not be loaded. Try again in a minute.'}</p>
-              : <PlanChoice firstOfNext={dayMonthLongIN(nextMonthStartIST(now))}
+              : <PlanChoice downgradeOn={dayMonthLongIN(o.forChange.downgradeOn)}
                   scheduled={o.scheduled ? { name: o.scheduled.name, on: dayMonthLongIN(o.scheduled.startsAt), byShop: o.scheduled.byShop } : null}
                   options={plans.filter((p) => p.code !== o.plan!.code).map((p) => ({
                     code: p.code, name: p.name, price: formatInr(paise(p.monthlyPrice)), included: p.includedOrders.toLocaleString('en-IN'),
                     fee: formatPercent(p.feeBps / 10_000, p.feeBps % 100 === 0 ? 0 : 1), upgrade: p.monthlyPrice > o.plan!.monthlyPrice,
-                    difference: formatInr(upgradeDifference(o.plan!.monthlyPrice, p.monthlyPrice, now, monthStartIST(now), nextMonthStartIST(now), o.plan!.trialEndsAt)),
+                    // The figure the next invoice carries: the same rule (planChangeAdds), never the page's own arithmetic.
+                    difference: (() => { const d = planChangeAdds(o.forChange.plans, { planCode: p.code as never, name: p.name, monthlyPrice: paise(p.monthlyPrice), includedOrders: p.includedOrders, feeBps: p.feeBps }, now, monthStartIST(now), nextMonthStartIST(now), o.forChange.billed); return d > 0 ? formatInr(d) : null })(),
                   }))} />}
           </>
         ) : <p className="text-sm text-muted-foreground">No plan yet.</p>}

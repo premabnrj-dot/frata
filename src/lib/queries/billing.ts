@@ -1,12 +1,12 @@
 import 'server-only'
 import { and, asc, desc, eq, gt, inArray, isNotNull, sql } from 'drizzle-orm'
-import type { Bill } from '@/domains/billing/bill'
+import type { Bill, PlanRow } from '@/domains/billing/bill'
 import { paise } from '@/domains/money/paise'
 import { currentPlan, monthlyPrice } from '@/domains/plans/entitlements'
 import { gstinState } from '@/domains/tax/gst'
 import { CAN_MANAGE } from '@/domains/tenancy/roles'
-import { nextMonthStartIST } from '@/domains/time/month'
-import { draftInvoiceIn } from '@/lib/billing/draft'
+import { monthStartIST, nextMonthStartIST } from '@/domains/time/month'
+import { draftInvoiceIn, planBilledIn } from '@/lib/billing/draft'
 import type { Membership } from '@/lib/db/platform'
 import { planVersions, plans, shopSettings, tenantPlans } from '@/lib/db/schema'
 import { billingAccounts, billingNotices, frrataCreditNotes, frrataInvoiceLines, frrataInvoices, frrataPayments } from '@/lib/db/schema-billing'
@@ -37,6 +37,8 @@ export type BillingOverview = {
   plan: { code: string; name: string; monthlyPrice: number; includedOrders: number; feeBps: number; trialEndsAt: Date | null; custom: boolean } | null
   /** A change waiting to start (a downgrade on the 1st): which plan, when, and whether the shop made it. */
   scheduled: { name: string; startsAt: Date; byShop: boolean } | null
+  /** For the Change plan dialog (planChangeAdds): the plan rows in force, and what this month's invoice billed for its plan. */
+  forChange: { plans: PlanRow[]; billed: number | null; downgradeOn: Date }
   estimate: Estimate
   invoices: { id: string; number: string; periodStart: Date; total: number; issuedAt: Date; testMode: boolean; state: InvoiceState; due: number; credits: { number: string; total: number }[] }[]
   details: { legalName: string; gstin: string; address: string; stateCode: string; email: string; saved: boolean }
@@ -48,8 +50,8 @@ export async function billingOverview(m: Pick<Membership, 'tenantId' | 'role'>, 
   const invoiceOn = nextMonthStartIST(now)
   const [base, estimate] = await Promise.all([
     withTenant(tenantId, async (tx) => {
-      const [history, invoices, [account], [shop], paidRows, creditRows] = await Promise.all([
-        tx.select({ startsAt: tenantPlans.startsAt, trialEndsAt: tenantPlans.trialEndsAt, customMonthlyPrice: tenantPlans.customMonthlyPrice, name: plans.name, code: plans.code, reason: tenantPlans.reason,
+      const [history, invoices, [account], [shop], paidRows, creditRows, planBilled] = await Promise.all([
+        tx.select({ startsAt: tenantPlans.startsAt, trialEndsAt: tenantPlans.trialEndsAt, customMonthlyPrice: tenantPlans.customMonthlyPrice, name: plans.name, code: plans.code, byShop: tenantPlans.byShop,
           monthlyPrice: planVersions.monthlyPrice, includedOrders: planVersions.includedOrders, feeBps: planVersions.feeBps })
           .from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(plans, eq(plans.id, planVersions.planId))
           .where(eq(tenantPlans.tenantId, tenantId)).orderBy(asc(tenantPlans.startsAt)),
@@ -60,8 +62,9 @@ export async function billingOverview(m: Pick<Membership, 'tenantId' | 'role'>, 
         tx.select({ legalName: shopSettings.legalName, gstin: shopSettings.gstin, address: shopSettings.address, email: shopSettings.supportEmail }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)),
         tx.select({ id: frrataPayments.invoiceId, n: sql<string>`sum(${frrataPayments.amount})` }).from(frrataPayments).where(and(eq(frrataPayments.tenantId, tenantId), isNotNull(frrataPayments.capturedAt))).groupBy(frrataPayments.invoiceId),
         tx.select({ id: frrataCreditNotes.invoiceId, number: frrataCreditNotes.number, total: frrataCreditNotes.total }).from(frrataCreditNotes).where(eq(frrataCreditNotes.tenantId, tenantId)).orderBy(asc(frrataCreditNotes.issuedAt)),
+        planBilledIn(tx, tenantId, monthStartIST(now)),
       ])
-      return { history, invoices, account, shop, paidRows, creditRows }
+      return { history, invoices, account, shop, paidRows, creditRows, planBilled }
     }),
     // The run, rolled back: nothing is written, whatever the page shows.
     (async (): Promise<Estimate> => {
@@ -85,7 +88,14 @@ export async function billingOverview(m: Pick<Membership, 'tenantId' | 'role'>, 
   const a = base.account, s = base.shop
   return {
     plan: cur ? { code: cur.code, custom: cur.customMonthlyPrice !== null, name: cur.name, monthlyPrice: monthlyPrice({ planVersion: { monthlyPrice: paise(cur.monthlyPrice) }, customMonthlyPrice: cur.customMonthlyPrice === null ? null : paise(cur.customMonthlyPrice), trialEndsAt: null }, now), includedOrders: cur.includedOrders, feeBps: cur.feeBps, trialEndsAt: cur.trialEndsAt } : null,
-    scheduled: (() => { const f = base.history.find((h) => h.startsAt > now); return f ? { name: f.name, startsAt: f.startsAt, byShop: f.reason === 'Changed by the shop' } : null })(),
+    scheduled: (() => { const f = base.history.find((h) => h.startsAt > now); return f ? { name: f.name, startsAt: f.startsAt, byShop: f.byShop } : null })(),
+    forChange: {
+      plans: base.history.filter((h) => h.startsAt <= now).map((h) => ({ startsAt: h.startsAt, trialEndsAt: h.trialEndsAt, customMonthlyPrice: h.customMonthlyPrice === null ? null : paise(h.customMonthlyPrice),
+        planVersion: { planCode: h.code as PlanRow['planVersion']['planCode'], name: h.name, monthlyPrice: paise(h.monthlyPrice), includedOrders: h.includedOrders, feeBps: h.feeBps } })),
+      billed: base.planBilled,
+      // As app_change_plan: after this month's upgrade by the shop, a downgrade starts the 1st of the month after next.
+      downgradeOn: cur && cur.byShop && cur.startsAt >= monthStartIST(now) ? nextMonthStartIST(nextMonthStartIST(now)) : nextMonthStartIST(now),
+    },
     estimate,
     invoices: base.invoices.flatMap((i) => {
       if (!i.issuedAt || !i.number) return []

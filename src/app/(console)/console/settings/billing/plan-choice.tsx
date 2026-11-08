@@ -7,9 +7,9 @@ import { cancelPlanChange, changePlan } from './actions'
 
 // Change plan (billing B4): an upgrade starts now and this month's difference is charged by the day on the next bill;
 // a downgrade starts on the 1st. Each asks first, with the figure in words. The actions revalidate; no router.refresh() (frata-gotchas).
-type Option = { code: string; name: string; price: string; included: string; fee: string; upgrade: boolean; difference: string }
+type Option = { code: string; name: string; price: string; included: string; fee: string; upgrade: boolean; difference: string | null }
 
-export function PlanChoice({ options, firstOfNext, scheduled }: { options: Option[]; firstOfNext: string; scheduled: { name: string; on: string; byShop: boolean } | null }) {
+export function PlanChoice({ options, downgradeOn, scheduled }: { options: Option[]; downgradeOn: string; scheduled: { name: string; on: string; byShop: boolean } | null }) {
   const [pick, setPick] = useState<Option | null>(null)
   const [busy, start] = useTransition()
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -17,7 +17,7 @@ export function PlanChoice({ options, firstOfNext, scheduled }: { options: Optio
     if (!pick) return
     const r = await changePlan(pick.code)
     setPick(null)
-    setMsg(r.ok ? { ok: true, text: r.upgrade ? `You are on ${pick.name} now.` : `You move to ${pick.name} on ${firstOfNext}.` } : { ok: false, text: r.error })
+    setMsg(r.ok ? { ok: true, text: r.upgrade ? `You are on ${pick.name} now.` : `You move to ${pick.name} on ${downgradeOn}.` } : { ok: false, text: r.error })
   })
   return (
     <div className="space-y-2">
@@ -30,14 +30,14 @@ export function PlanChoice({ options, firstOfNext, scheduled }: { options: Optio
           <li key={o.code} className="flex flex-col gap-1 rounded-md border border-border p-3 text-sm">
             <strong>{o.name}</strong>
             <span className="text-muted-foreground">{o.price} a month · {o.included} orders · {o.fee} of delivered value</span>
-            <Button variant="secondary" className="mt-1 self-start" onClick={() => { setMsg(null); setPick(o) }}>{o.upgrade ? `Upgrade to ${o.name}` : `Switch to ${o.name} on ${firstOfNext}`}</Button>
+            <Button variant="secondary" className="mt-1 self-start" onClick={() => { setMsg(null); setPick(o) }}>{o.upgrade ? `Upgrade to ${o.name}` : `Switch to ${o.name} on ${downgradeOn}`}</Button>
           </li>
         ))}
       </ul>
       {msg && <p role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-ok-text' : 'text-danger-text'}`}>{msg.text}</p>}
-      <Dialog open={!!pick} onClose={() => setPick(null)} title={pick ? (pick.upgrade ? `Upgrade to ${pick.name} now?` : `Switch to ${pick.name} on ${firstOfNext}?`) : ''}
-        description={pick ? (pick.upgrade ? `It starts now. This month's difference, about ${pick.difference} before GST, is added to your next bill; from next month you pay ${pick.price} a month.` : `You stay on your plan until ${firstOfNext}, then pay ${pick.price} a month. Nothing is refunded for this month.`) : ''}
-        actions={<><Button variant="secondary" data-autofocus onClick={() => setPick(null)}>Not now</Button><Button onClick={go} aria-disabled={busy}>{pick?.upgrade ? 'Upgrade now' : 'Switch on the 1st'}</Button></>} />
+      <Dialog open={!!pick} onClose={() => setPick(null)} title={pick ? (pick.upgrade ? `Upgrade to ${pick.name} now?` : `Switch to ${pick.name} on ${downgradeOn}?`) : ''}
+        description={pick ? (pick.upgrade ? `It starts now${pick.difference ? `. This month's difference, ${pick.difference} before GST, is added to your next bill` : ', with nothing extra for this month'}; from next month you pay ${pick.price} a month. A trial does not carry over, and you can move back down from the 1st of the month after next.` : `You stay on your plan until ${downgradeOn}, then pay ${pick.price} a month. Nothing is refunded.`) : ''}
+        actions={<><Button variant="secondary" data-autofocus onClick={() => setPick(null)}>Not now</Button><Button onClick={go} disabled={busy}>{pick?.upgrade ? 'Upgrade now' : 'Switch on the 1st'}</Button></>} />
     </div>
   )
 }

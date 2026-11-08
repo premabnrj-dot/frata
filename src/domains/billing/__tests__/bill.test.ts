@@ -1,6 +1,6 @@
 // Billing B0: computeBill reproduces the unit-economics review's worked months to the paisa (2026-11-08).
 import { describe, expect, it } from 'vitest'
-import { computeBill, upgradeDifference, type BillInput, type PlanRow } from '../bill'
+import { computeBill, planChangeAdds, planChangeOwed, type BillInput, type PlanRow } from '../bill'
 import { billableAt, billableDelivered } from '@/domains/orders/outcomes'
 import { feeForOrder } from '@/domains/plans/entitlements'
 import { paise } from '@/domains/money/paise'
@@ -82,27 +82,36 @@ describe('plan changes (billing B4)', () => {
   it('an upgrade on 16 November: the December invoice adds November’s difference by its days; no change, no line', () => {
     const upgraded = [launch, { ...growth, startsAt: ist(2026, 11, 16) }]
     const b = computeBill(base(12, { plans: upgraded, prevPlanBilled: 149900 }))
-    const diff = b.lines.find((l) => l.description.startsWith('Plan change'))!
+    const diff = b.lines.find((l) => l.kind === 'change')!
     // November by days: Launch for 15 of 30, Growth for 15 of 30, less the Launch month already charged.
     expect(diff.taxable).toBe(Math.round(149900 * 15 / 30) + Math.round(499900 * 15 / 30) - 149900)
     expect(b.lines[0]).toMatchObject({ kind: 'plan', taxable: 499900 }) // December in advance, at Growth
-    expect(computeBill(base(12, { plans: [launch], prevPlanBilled: 149900 })).lines.some((l) => l.description.startsWith('Plan change'))).toBe(false)
+    expect(computeBill(base(12, { plans: [launch], prevPlanBilled: 149900 })).lines.some((l) => l.kind === 'change')).toBe(false)
   })
   it('a downgrade starts on the 1st: nothing to make up, never a refund', () => {
     const down = [{ ...growth, startsAt: ist(2026, 10) }, { ...launch, startsAt: ist(2026, 12) }]
     const b = computeBill(base(12, { plans: down, prevPlanBilled: 499900 }))
-    expect(b.lines.some((l) => l.description.startsWith('Plan change'))).toBe(false)
+    expect(b.lines.some((l) => l.kind === 'change')).toBe(false)
     expect(b.lines[0]).toMatchObject({ taxable: 149900 })
   })
 })
 
-describe('upgradeDifference (billing B4)', () => {
-  const ms = new Date('2026-10-31T18:30:00Z'), next = new Date('2026-11-30T18:30:00Z')
-  it('charges the difference for the days left', () => {
-    expect(upgradeDifference(99_900, 249_900, new Date('2026-11-15T18:30:00Z'), ms, next)).toBe(75_000)
+describe('planChangeAdds (billing B4): the dialog shows what the invoice will bill', () => {
+  const nov = ist(2026, 11), dec = ist(2026, 12)
+  it('equals the next invoice’s change line, to the paisa', () => {
+    const now = ist(2026, 11, 16)
+    const shown = planChangeAdds([launch], growth.planVersion, now, nov, dec, 149900)
+    const billed = computeBill(base(12, { plans: [launch, { ...growth, startsAt: now }], prevPlanBilled: 149900 })).lines.find((l) => l.kind === 'change')!.taxable
+    expect(shown).toBe(billed)
+    expect(shown).toBeGreaterThan(0)
   })
-  it('is nothing for a downgrade or inside a trial covering the month', () => {
-    expect(upgradeDifference(249_900, 99_900, new Date('2026-11-15T18:30:00Z'), ms, next)).toBe(0)
-    expect(upgradeDifference(99_900, 249_900, new Date('2026-11-15T18:30:00Z'), ms, next, new Date('2026-12-10T00:00:00Z'))).toBe(0)
+  it('a second upgrade adds only its own difference; no invoice this month or a downgrade adds nothing', () => {
+    const first = [launch, { ...growth, startsAt: ist(2026, 11, 10) }]
+    const now = ist(2026, 11, 20)
+    const scale = { ...growth.planVersion, planCode: 'scale' as const, monthlyPrice: 1499900 as never }
+    const total = planChangeOwed([...first, { ...growth, planVersion: scale, startsAt: now }], nov, dec, 149900)
+    expect(planChangeAdds(first, scale, now, nov, dec, 149900)).toBe(total - planChangeOwed(first, nov, dec, 149900))
+    expect(planChangeAdds([launch], growth.planVersion, now, nov, dec, null)).toBe(0)
+    expect(planChangeAdds([{ ...growth, startsAt: ist(2026, 10) }], launch.planVersion, now, nov, dec, 499900)).toBe(0)
   })
 })

@@ -1,5 +1,5 @@
 import 'server-only'
-import { asc, desc, eq, inArray, lte, max } from 'drizzle-orm'
+import { asc, desc, eq, inArray, lte, max, sql } from 'drizzle-orm'
 import { adminDb, type AdminTx } from '@/lib/db/admin'
 import { plans, planVersions, tenantPlans } from '@/lib/db/schema'
 import type { StaffOk } from '@/lib/auth/require-staff'
@@ -69,13 +69,15 @@ export async function changeTenantPlan(
 ) {
   return adminDb().transaction(async (tx) => {
     const version = await latestVersion(tx, c.code)
+    // Frrata's change replaces one the shop scheduled itself (billing B4): never two, never the shop's undoing Frrata's.
+    const [cleared] = await tx.execute<{ n: number }>(sql`select app_admin_clear_shop_plan_change(${tenantId}::uuid) as n`)
     await tx.insert(tenantPlans).values({
       tenantId, planVersionId: version.id, startsAt: c.startsAt, trialEndsAt: c.trialEndsAt,
       customMonthlyPrice: c.customMonthlyPrice, reason: c.reason, createdBy: staff.userId,
     })
     await auditStaff(tx, staff, {
       tenantId, action: 'plan.change', target: `${c.code} v${version.version}`,
-      detail: { startsAt: c.startsAt.toISOString(), trialEndsAt: c.trialEndsAt?.toISOString() ?? null, customMonthlyPrice: c.customMonthlyPrice, reason: c.reason },
+      detail: { startsAt: c.startsAt.toISOString(), trialEndsAt: c.trialEndsAt?.toISOString() ?? null, customMonthlyPrice: c.customMonthlyPrice, reason: c.reason, replacedShopChange: Number(cleared?.n ?? 0) > 0 },
     })
   })
 }

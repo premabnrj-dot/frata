@@ -428,6 +428,13 @@
       "when": 1794159928977,
       "tag": "0060_billing_double_charge",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1794160402976,
+      "tag": "0061_plan_change_by_shop",
+      "breakpoints": true
     }
   ]
 }

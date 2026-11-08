@@ -11,6 +11,7 @@ import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { auditEvents } from '@/lib/db/schema'
 import { billingAccounts } from '@/lib/db/schema-billing'
 import { errName } from '@/lib/log'
+import { PLAN_CODES } from '@/domains/plans/entitlements'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 
 // Billing details (billing B1; plan finding 10): owners and admins (a Frrata support visit may correct them, audited),
@@ -178,7 +179,7 @@ export async function completePayNow(input: Checkout): Promise<{ ok: true } | { 
 // ── Billing B4: the shop changes its own plan (owners and admins; never a support visit). Upgrade now, the difference
 // charged by days on the next invoice; downgrade on the 1st. The definer is bound to this shop and refuses a price agreed
 // with Frrata or a change Frrata scheduled. ──
-const PlanCode = z.enum(['launch', 'growth', 'scale'])
+const PlanCode = z.enum(PLAN_CODES)
 export async function changePlan(code: string): Promise<{ ok: true; startsAt: string; upgrade: boolean } | { ok: false; error: string }> {
   const me = await requireMember(CAN_MANAGE)
   if (!me.ok) return { ok: false, error: me.message }
@@ -205,7 +206,7 @@ export async function cancelPlanChange(): Promise<{ ok: true } | { ok: false; er
   const me = await requireMember(CAN_MANAGE)
   if (!me.ok) return { ok: false, error: me.message }
   if (me.membership.supportSessionId) return { ok: false, error: 'A Frrata support visit cannot change the shop’s plan.' }
-  const r = await asMember(CAN_MANAGE, { action: 'billing.plan.cancel' }, async (tx) => { await tx.execute(sql`select app_cancel_plan_change()`) })
+  const r = await asMember(CAN_MANAGE, { action: 'billing.plan.cancel' }, async (tx, auth) => { await tx.execute(sql`select app_cancel_plan_change(${auth.userId}::uuid)`) })
   if (!r.ok) return { ok: false, error: r.error }
   revalidatePath('/console', 'layout')
   return { ok: true }

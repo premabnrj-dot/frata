@@ -189,6 +189,8 @@ export const tenantPlans = pgTable('tenant_plans', {
   trialEndsAt: at('trial_ends_at'),
   customMonthlyPrice: money('custom_monthly_price'),
   reason: text('reason'),
+  /** Billing B4: the shop changed its own plan (app_change_plan); never written by Admin (column grant). */
+  byShop: boolean('by_shop').notNull().default(false),
   createdBy: uuid('created_by').notNull(),
   createdAt: createdAt(),
 }, (t) => [

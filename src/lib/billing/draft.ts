@@ -36,6 +36,18 @@ export async function draftInvoice(tenantId: string, monthStart: Date, now = new
   return withTenant(tenantId, (tx) => draftInvoiceIn(tx, tenantId, monthStart, now))
 }
 
+/**
+ * B4: what the invoice for `monthStart` charged in advance for its plan (its 'plan' lines; the 'change' line is the
+ * month before's). Null: that month has no invoice, so a change during it is not made up. One reader for the draft and
+ * the page's dialog (planChangeAdds), so the two never differ.
+ */
+// The outer columns are written out in full: in a one-table select drizzle prints them bare (frata-gotchas).
+export async function planBilledIn(tx: Tx, tenantId: string, monthStart: Date): Promise<number | null> {
+  const [r] = await tx.select({ n: sql<string>`coalesce((select sum(l.taxable) from ${frrataInvoiceLines} l where l.tenant_id = "frrata_invoices"."tenant_id" and l.invoice_id = "frrata_invoices"."id" and l.kind = 'plan'), 0)` })
+    .from(frrataInvoices).where(and(eq(frrataInvoices.tenantId, tenantId), eq(frrataInvoices.periodStart, monthStart)))
+  return r ? Number(r.n) : null
+}
+
 /** draftInvoice inside the caller's tenant transaction (the int test rolls it back). */
 export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date, now = new Date()): Promise<Drafted> {
   const nextMonthStart = nextMonthStartIST(monthStart)
@@ -56,7 +68,7 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
   }
 
   const at = billableAtSql('o')
-  const [planRows, addonRows, feeRows, creditRows, prev, account] = await Promise.all([
+  const [planRows, addonRows, feeRows, creditRows, prev, planBilled, account] = await Promise.all([
     tx.select({ startsAt: tenantPlans.startsAt, trialEndsAt: tenantPlans.trialEndsAt, customMonthlyPrice: tenantPlans.customMonthlyPrice,
       planCode: plans.code, name: plans.name, version: planVersions.version, monthlyPrice: planVersions.monthlyPrice, includedOrders: planVersions.includedOrders, feeBps: planVersions.feeBps })
       .from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(plans, eq(plans.id, planVersions.planId))
@@ -77,11 +89,9 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
         join ${frrataInvoices} i on i.tenant_id = f.tenant_id and i.id = f.invoice_id
        where f.tenant_id = ${tenantId} and i.issued_at is not null and i.period_start < ${monthStart.toISOString()}::timestamptz and ${at} is null
          and not exists (select 1 from ${frrataFeeCredits} c where c.order_id = f.order_id)`),
-    tx.select({ id: frrataInvoices.id, carryOut: frrataInvoices.carryOut, rolled: frrataInvoices.rolled,
-      // B4: what last month's invoice charged in advance for its plan (lines for that month; not its own plan-change line).
-      planBilled: sql<string>`coalesce((select sum(l.taxable) from ${frrataInvoiceLines} l where l.tenant_id = ${frrataInvoices.tenantId} and l.invoice_id = ${frrataInvoices.id}
-        and l.kind = 'plan' and l.period_start >= ${prevMonthStart.toISOString()}::timestamptz), 0)` }).from(frrataInvoices)
+    tx.select({ id: frrataInvoices.id, carryOut: frrataInvoices.carryOut, rolled: frrataInvoices.rolled }).from(frrataInvoices)
       .where(and(eq(frrataInvoices.tenantId, tenantId), eq(frrataInvoices.periodStart, prevMonthStart))),
+    planBilledIn(tx, tenantId, prevMonthStart),
     tx.select({ gstin: billingAccounts.gstin, stateCode: billingAccounts.stateCode }).from(billingAccounts).where(eq(billingAccounts.tenantId, tenantId)),
   ])
 
@@ -93,7 +103,7 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
   const acc = account[0]
   const bill = computeBill({
     monthStart, nextMonthStart, prevMonthStart, plans: planHistory, addons, feeOrders, credits,
-    carry: prev[0]?.carryOut ?? 0, rolledLastMonth: prev[0]?.rolled ?? false, prevPlanBilled: prev[0] ? Number(prev[0].planBilled) : null,
+    carry: prev[0]?.carryOut ?? 0, rolledLastMonth: prev[0]?.rolled ?? false, prevPlanBilled: planBilled,
     // The place of supply: the GSTIN's state when there is one (finding 7), else the state typed.
     frrataGstin: frrataGstin(), shopState: gstinState(acc?.gstin ?? null) ?? acc?.stateCode ?? null,
   })

@@ -105,7 +105,8 @@ export default async function MerchantPage({ params, searchParams }: { params: P
                 </div>
                 <p className="text-muted-foreground">{cur.v.features.length ? `Includes ${cur.v.features.map((f) => FEATURE_NAMES[f as Feature] ?? f).join(', ')}, all channels.` : 'All channels.'}</p>
                 {cur.tp.trialEndsAt && cur.tp.trialEndsAt > now && <p className="text-warn-text">Trial until {dayIN(cur.tp.trialEndsAt)}.</p>}
-                <p className="text-muted-foreground">On this plan since {dayIN(cur.tp.startsAt)}. Not charged yet: billing comes later.</p>
+                <p className="text-muted-foreground">On this plan since {dayIN(cur.tp.startsAt)}. Billed monthly (Admin › Billing).</p>
+                {(() => { const next = m.history.filter((h) => h.tp.startsAt > now).at(-1); return next ? <p className="text-warn-text">Moves to {next.name} on {dayIN(next.tp.startsAt)}{next.tp.byShop ? ', the shop’s own change' : ''}. A change here replaces it.</p> : null })()}
               </>
             ) : <p className="text-danger-text">No plan. Choose one with Change plan.</p>}
           </Section>

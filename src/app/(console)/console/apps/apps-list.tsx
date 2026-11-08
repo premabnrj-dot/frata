@@ -53,7 +53,7 @@ export function AppsList({ groups, rows, canManage }: { groups: { key: Group; la
     // On a phone the whole row opens the details (a chevron says so); the button is for a computer only.
     if (where === 'row') return <Button variant="secondary" className="hidden md:inline-flex" onClick={() => { setError(null); setOpen(r) }}>See details</Button>
     if (a.kind === 'ask') return <a href={r.ask} target="_blank" rel="noopener" className={button()}>{a.label}</a>
-    if (a.kind === 'plans') return <a href="/#pricing" className={button()}>{a.label}</a>
+    if (a.kind === 'plans') return <Link href="/console/settings/billing" className={button()}>{a.label}</Link>
     return <Badge tone="neutral">Coming next</Badge>
   }
   return (
