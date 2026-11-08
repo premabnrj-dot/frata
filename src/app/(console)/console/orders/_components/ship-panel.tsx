@@ -18,7 +18,7 @@ import { cameBackOrder, deliverOrder, lostOrder, shipOrder, undoOutcomeAction } 
 // page still renders the panel (stage `done`, nothing shown) so the toast and its Undo survive the refresh (e2e 49).
 // =============================================================================
 
-export type ShipPanelProps = {
+type ShipPanelProps = {
   orderId: string; number: string
   stage: 'to_ship' | 'on_the_way' | 'done'
   may: { ship: boolean; outcome: boolean }

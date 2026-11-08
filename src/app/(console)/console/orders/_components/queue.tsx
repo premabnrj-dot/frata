@@ -15,7 +15,7 @@ import type { Paise } from '@/domains/money/paise'
 import { MAX_DOCUMENTS } from '@/domains/orders/documents'
 import { confirmKey } from '@/domains/ui/shortcuts'
 import { cn } from '@/lib/utils'
-import { confirmMany, confirmOrder, deliverMany, deliverOrder, holdMany, holdOrder, shipOrder, undoMany, undoOrderAction, undoOutcomeAction, type BulkResult } from '../actions'
+import { confirmMany, confirmOrder, deliverMany, deliverOrder, holdMany, holdOrder, shipOrder, undoMany, undoOrderAction, undoOutcomeAction, undoOutcomeMany, type BulkResult } from '../actions'
 import { printHref, RISK_LABEL, type Tone } from './labels'
 
 // =============================================================================
@@ -67,9 +67,9 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
     const undo = async () => {
       if (lastUndo.current === undo) lastUndo.current = null
       // One request for a bulk undo, never one per order (they would queue behind each other). An outcome (Shipped,
-      // Delivered) is undone through its own guarded action, one by one (at most 50).
+      // Delivered) is undone through its own guarded action.
       const r = await (outcome
-        ? (async () => { let first: { ok: true } | { ok: false; error: string } = { ok: true }; for (const e of eventIds) { const x = await undoOutcomeAction(e); if (!x.ok && first.ok) first = x } return first })()
+        ? (eventIds.length === 1 ? undoOutcomeAction(eventIds[0]!) : undoOutcomeMany(eventIds))
         : eventIds.length === 1 ? undoOrderAction(eventIds[0]!) : undoMany(eventIds))
         .catch(() => ({ ok: false as const, error: 'We could not undo that. Open the order to see where it is.' }))
       unmark(ids); router.refresh()
@@ -166,6 +166,7 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
   })
 
   const count = picked.size
+  const onWay = rows.some((r) => picked.has(r.id) && r.shipStep === 'deliver'), others = rows.some((r) => picked.has(r.id) && r.shipStep !== 'deliver')
   // At most a print page's worth (a queue page is 50 rows today; the cap says so if that changes).
   const printable = rows.filter((r) => picked.has(r.id) && r.canPrint).map((r) => r.n).slice(0, MAX_DOCUMENTS)
   return (
@@ -173,10 +174,10 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
       {count > 0 ? (
         <div role="region" aria-label="Selected orders" className="sticky top-[var(--shell-top,0px)] z-10 flex flex-wrap items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm">
           <span className="font-medium">{count} selected</span>
-          {rows.some((r) => picked.has(r.id) && r.shipStep === 'deliver')
-            ? <Button onClick={() => bulkDelivered()} aria-disabled={busy}>Delivered</Button>
-            : <><Button onClick={() => bulk('confirm')} aria-disabled={busy}>Confirm</Button>
-              <Button variant="secondary" onClick={() => bulk('hold')} aria-disabled={busy}>Hold</Button></>}
+          {/* What the picked rows can take: Delivered for those on their way; Confirm and Hold for the rest (a mixed pick on All). */}
+          {onWay ? <Button onClick={() => bulkDelivered()} aria-disabled={busy}>Delivered</Button> : null}
+          {others ? <><Button variant={onWay ? 'secondary' : 'primary'} onClick={() => bulk('confirm')} aria-disabled={busy}>Confirm</Button>
+            <Button variant="secondary" onClick={() => bulk('hold')} aria-disabled={busy}>Hold</Button></> : null}
           {/* Slips for the selected orders that have one, in the queue's order (the print page takes at most 50). */}
           {printable.length ? <Link prefetch={false} href={printHref('slip', printable)} className={button({ variant: 'secondary' })}>Print {printable.length === 1 ? 'slip' : `${printable.length} slips`}</Link> : null}
           <Button variant="ghost" onClick={() => setPicked(new Set())}>Clear</Button>

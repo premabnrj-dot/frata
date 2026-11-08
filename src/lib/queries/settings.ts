@@ -2,6 +2,8 @@ import 'server-only'
 import { eq } from 'drizzle-orm'
 import { shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { withTenant } from '@/lib/db/tenant'
+import type { Tx } from '@/lib/db'
+import type { ShipCosts } from '@/domains/settings/ship-costs'
 import { paise } from '@/domains/money/paise'
 import { BUILT_PAGES, readyToOpen, setupSteps, type SetupStep } from '@/domains/setup/checklist'
 import { formatInr } from '@/lib/format'
@@ -52,10 +54,14 @@ export async function setupFor(tenantId: string): Promise<Setup | null> {
  * The shop's three shipping-cost estimates (Ship S·0, owner call S3), in paise, and when they were confirmed. A
  * merchant's cost: read on the server only (ADR-0003), never put into ShopFacts (the storefront reads those).
  */
-export async function shipCostsFor(tenantId: string) {
-  return withTenant(tenantId, async (tx) => {
-    const [r] = await tx.select({ delivery: shopSettings.shipCostDelivery, ret: shopSettings.shipCostReturn, cod: shopSettings.shipCostCod, confirmedAt: shopSettings.shipCostsConfirmedAt })
-      .from(shopSettings).where(eq(shopSettings.tenantId, tenantId)).limit(1)
-    return r ? { delivery: r.delivery === null ? null : Number(r.delivery), ret: r.ret === null ? null : Number(r.ret), cod: r.cod === null ? null : Number(r.cod), confirmedAt: r.confirmedAt } : null
-  })
+export async function shipCostsFor(tenantId: string): Promise<ShipCosts | null> {
+  return withTenant(tenantId, (tx) => shipCostsIn(tx, tenantId))
+}
+
+/** The one read of the three costs, inside the caller's tenant transaction (offerStats reads it too). */
+export async function shipCostsIn(tx: Tx, tenantId: string): Promise<ShipCosts | null> {
+  const [r] = await tx.select({ delivery: shopSettings.shipCostDelivery, ret: shopSettings.shipCostReturn, cod: shopSettings.shipCostCod, confirmedAt: shopSettings.shipCostsConfirmedAt })
+    .from(shopSettings).where(eq(shopSettings.tenantId, tenantId)).limit(1)
+  const n = (v: number | bigint | string | null) => (v === null ? null : Number(v))
+  return r ? { delivery: n(r.delivery), ret: n(r.ret), cod: n(r.cod), confirmedAt: r.confirmedAt } : null
 }

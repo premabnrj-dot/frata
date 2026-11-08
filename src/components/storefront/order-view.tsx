@@ -40,6 +40,8 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
   const num = `${prefix}-${v.number}`
   const wa = v.shop.whatsapp ? `https://wa.me/${v.shop.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Order ${num}`)}` : null
   const placed = v.state !== 'not_paid' && v.state !== 'awaiting_payment'
+  // Cash is kept ready only while the parcel can still reach the door (never after it was delivered, came back or hit a problem).
+  const atDoor = v.state === 'confirming' || v.state === 'confirmed' || v.state === 'packed' || v.state === 'shipped' || v.state === 'ndr'
   const copy = () => navigator.clipboard?.writeText(window.location.href).then(() => setCopied(true), () => setCopied(false))
   return (
     <article className="mx-auto max-w-lg space-y-4 px-4 py-8">
@@ -63,7 +65,7 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
         {(v.savings ?? []).map((s, i) => <div key={`${s.title}-${i}`} className="flex justify-between text-store-good"><dt>{s.title}</dt><dd className="tabular-nums">−{inr(s.amount)}</dd></div>)}
         <div className="flex justify-between"><dt>Delivery</dt><dd>{v.shipping ? inr(v.shipping) : 'Free'}</dd></div>
         {v.method === 'cod' && v.codCharge > 0 && <div className="flex justify-between"><dt>Pay on delivery fee</dt><dd>{inr(v.codCharge)}</dd></div>}
-        <div className="flex justify-between pt-1 text-base"><dt className="font-medium">{v.collect > 0 && placed ? `Keep ${inr(v.collect)} ready` : v.method === 'prepaid' && v.state !== 'not_paid' && v.state !== 'awaiting_payment' ? 'Paid online' : 'Total'}</dt>
+        <div className="flex justify-between pt-1 text-base"><dt className="font-medium">{v.collect > 0 && placed && atDoor ? `Keep ${inr(v.collect)} ready` : v.collect > 0 && v.state === 'delivered' ? 'Paid on delivery' : v.method === 'prepaid' && v.state !== 'not_paid' && v.state !== 'awaiting_payment' ? 'Paid online' : 'Total'}</dt>
           <dd className="tabular-nums">{v.method === 'cod' ? 'cash or UPI' : inr(v.total)}</dd></div>
         {v.paidAfterSwitch && <p className="text-store-good">Your online payment went through: nothing to pay on delivery.</p>}
         <div className="flex justify-between text-store-sub"><dt>To</dt><dd>{v.to}{v.phone ? ` · phone ${v.phone}` : ''}</dd></div>

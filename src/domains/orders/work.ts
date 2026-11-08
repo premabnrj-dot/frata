@@ -58,14 +58,14 @@ export const may = (action: OrderAction, state: OrderState, role: MemberRole) =>
 
 /**
  * The ONE primary action in the order page's header (design-language § Work queues 3). A held order whose
- * payment was online is confirmed (released) the same way. Refund due: the only way forward is to cancel.
+ * payment was online is confirmed (released) the same way. Refund due: the only way forward is to cancel. A shipped
+ * order has none here: Delivered sits in its Ship panel beside Came back and Lost (Ship S0·5).
  */
-export function primaryAction(state: OrderState): 'confirm' | 'pack' | 'print_slip' | 'cancel' | 'deliver' | null {
+export function primaryAction(state: OrderState): 'confirm' | 'pack' | 'print_slip' | 'cancel' | null {
   if (state === 'unconfirmed' || state === 'held') return 'confirm'
   if (state === 'confirmed' || state === 'paid') return 'pack'
   if (state === 'packed') return 'print_slip'
   if (state === 'refund_due') return 'cancel'
-  if (state === 'shipped' || state === 'ndr') return 'deliver'
   return null
 }
 

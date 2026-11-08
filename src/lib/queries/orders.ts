@@ -1,7 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { and, desc, eq, ilike, like as like_, or, sql } from 'drizzle-orm'
-import { orderLines, orders } from '@/lib/db/schema-orders'
+import { orderLines, orders, shipments } from '@/lib/db/schema-orders'
 import type { Tx } from '@/lib/db'
 import { withTenant } from '@/lib/db/tenant'
 import { shopSettings, tenants } from '@/lib/db/schema'
@@ -26,6 +26,8 @@ export async function listOrders(tenantId: string, { tab = 'all', page = 1, q = 
       id: orders.id, number: orders.number, total: orders.total, customerName: orders.customerName, city: orders.city,
       ...momentColumns,
       items: sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l where l.order_id = "orders"."id" and l.tenant_id = ${tenantId})`,
+      // Shipped with a courier through Frrata: its tracking sets the outcome, so the row offers no Delivered (Ship S·0).
+      byCourier: sql<boolean>`exists (select 1 from ${shipments} s where s.tenant_id = ${tenantId} and s.order_id = "orders"."id" and s.provider = 'shiprocket' and s.ended_at is null)`,
       // How many match (this tab and search), in the same query: the pager's "of N" — only when a search is on.
       // Without one the page reads queueCounts, and a window count would stop LIMIT from cutting the scan short.
       matching: search ? sql<number>`(count(*) over ())::int` : sql<number>`0`,

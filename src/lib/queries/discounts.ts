@@ -6,7 +6,9 @@ import { paise } from '@/domains/money/paise'
 import { freightOf, type FreightSource } from '@/domains/orders/freight'
 import { orderProfit } from '@/domains/orders/profit'
 import { deliveredFee } from '@/domains/plans/entitlements'
-import { planVersions, shopSettings, tenantPlans } from '@/lib/db/schema'
+import { planVersions, tenantPlans } from '@/lib/db/schema'
+import { estimateOf } from '@/domains/settings/ship-costs'
+import { shipCostsIn } from '@/lib/queries/settings'
 import { discountCodes, discountTargets, discountTiers, discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import { collections, products, variants } from '@/lib/db/schema-catalogue'
 import { orders, shipments } from '@/lib/db/schema-orders'
@@ -147,9 +149,7 @@ export async function offerStats(tenantId: string, now = new Date(), days = 30):
 export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, days = 30): Promise<OfferStats> {
   const fee = await feeBpsIn(tx, tenantId, now)
   // The shop's confirmed shipping-cost estimates (Settings › Shipping costs), for orders shipped another way.
-  const [c] = await tx.select({ d: shopSettings.shipCostDelivery, r: shopSettings.shipCostReturn, cod: shopSettings.shipCostCod, at: shopSettings.shipCostsConfirmedAt })
-    .from(shopSettings).where(eq(shopSettings.tenantId, tenantId)).limit(1)
-  const est = c?.at && c.d !== null && c.r !== null && c.cod !== null ? { delivery: Number(c.d), ret: Number(c.r), codFee: Number(c.cod) } : null
+  const est = estimateOf(await shipCostsIn(tx, tenantId))
   const since = sql`${new Date(now.getTime() - days * DAY).toISOString()}::timestamptz`
   const st = stateSql(now, 'o')
   const prepaid = sql`${currentMethodSql('o')} = 'prepaid'`

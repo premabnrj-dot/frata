@@ -41,7 +41,7 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
     const offers = (await tx.select({ title: orderDiscounts.title, class: orderDiscounts.class, amount: orderDiscounts.amount }).from(orderDiscounts)
       .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, o.id)))).map((d) => ({ ...d, amount: Number(d.amount) }))
     // The parcel on its way (Ship): who carries it and how to follow it; null before it shipped.
-    const [shipment] = await tx.select({ provider: shipments.provider, courierName: shipments.courierName, trackingNumber: shipments.trackingNumber, openedAt: shipments.openedAt })
+    const [shipment] = await tx.select({ provider: shipments.provider, courierName: shipments.courierName, trackingNumber: shipments.trackingNumber })
       .from(shipments).where(and(eq(shipments.tenantId, tenantId), eq(shipments.orderId, o.id), isNull(shipments.endedAt))).limit(1)
     return { o, lines, events, notes, offers, shipment: shipment ?? null }
   })

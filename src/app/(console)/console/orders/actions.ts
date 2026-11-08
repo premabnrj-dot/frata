@@ -204,6 +204,14 @@ export async function undoOutcomeAction(eventId: string): Promise<ActionResult> 
 }
 
 /** Mark a selection delivered (the queue's bulk action, at most 50), each through deliverOrder. */
+/** A bulk outcome's Undo in ONE request, as undoMany (architecture review 2026-11-07); each through undoOutcomeAction. */
+export async function undoOutcomeMany(eventIds: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ids = pickIds(eventIds)
+  if (!ids.length) return { ok: false, error: 'There is nothing to undo.' }
+  let bad: string | null = null
+  for (const id of ids) { const r = await undoOutcomeAction(id); if (!r.ok && !bad) bad = r.error }
+  return bad ? { ok: false, error: bad } : { ok: true }
+}
 export async function deliverMany(orderIds: string[]): Promise<BulkResult> {
   try {
     const ids = pickIds(orderIds)

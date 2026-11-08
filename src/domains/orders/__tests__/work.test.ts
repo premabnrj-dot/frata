@@ -77,6 +77,6 @@ describe('shipping roles (Ship S·0)', () => {
     expect(may('deliver', 'shipped', 'staff')).toBe(false)
     expect(may('deliver', 'ndr', 'owner')).toBe(true)
     expect(applies('ship_self', 'confirmed')).toBe(false)
-    expect(primaryAction('shipped')).toBe('deliver')
+    expect(primaryAction('shipped')).toBe(null) // Delivered lives in the Ship panel
   })
 })

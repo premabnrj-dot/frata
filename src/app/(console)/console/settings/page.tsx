@@ -5,6 +5,7 @@ import { Panel } from '@/components/ui/panel'
 import { missingFacts, POLICY_PAGES, renderPolicy } from '@/domains/policies/render'
 import { grievanceComplete, missingForLivePayments, SECTIONS, type SectionKey } from '@/domains/settings/sections'
 import { paise } from '@/domains/money/paise'
+import { estimateOf } from '@/domains/settings/ship-costs'
 import { CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { formatInr } from '@/lib/format'
 import { SHOP_DOMAIN } from '@/lib/public-env'
@@ -42,9 +43,9 @@ export default async function SettingsPage() {
   const owner = auth.membership.role === 'owner'
   // A merchant's cost: read only for owners and admins (ADR-0003).
   const ship = manages ? await shipCostsFor(auth.membership.tenantId).catch(() => undefined) : undefined
-  const shipSummary = ship === undefined ? 'Could not load' : ship?.confirmedAt && ship.delivery !== null && ship.ret !== null && ship.cod !== null
-    ? `Delivery ${inr(ship.delivery)} · return ${inr(ship.ret)} · COD fee ${inr(ship.cod)}` : 'Not confirmed: profit says “before shipping costs”'
-  const shipNeeds = ship !== undefined && !ship?.confirmedAt
+  const est = ship === undefined ? null : estimateOf(ship)
+  const shipSummary = ship === undefined ? 'Could not load' : est ? `Delivery ${inr(est.delivery)} · return ${inr(est.ret)} · COD fee ${inr(est.codFee)}` : 'Not confirmed: profit says “before shipping costs”'
+  const shipNeeds = ship !== undefined && !est
   const needs = (k: SectionKey) => missing.some((m) => m.section === k) || (k === 'policies' && policyGaps > 0)
 
   return (

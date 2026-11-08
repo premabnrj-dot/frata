@@ -1,8 +1,8 @@
 // =============================================================================
 // FLOW: ship (M2·2 S·0, docs/specs/2026-11-08-ship.md) — orders that have left the work tabs: To ship, On the way,
 // Coming back; Mark shipped another way, then Delivered or Came back, each with Undo; staff ship but never mark an
-// outcome or see a cost; partners never ship. Written first (plan S0·0): today a packed order is in no work tab, so
-// the first step failed until S0·5 landed. Seeds its own orders and members, and removes the members after.
+// outcome or see a cost; partners never ship; bulk Delivered and its one Undo. Written first (plan S0·0);
+// its first step failed until S0·5 landed. Seeds its own orders and members, and removes the members after.
 // Guards: an outcome a partner or staff member can set, a packed order lost from every tab, an Undo that leaves the
 // order unable to ship again.
 // =============================================================================
@@ -82,6 +82,23 @@ export default {
         await until(async () => (await moments(Q)).rto_delivered_at !== null)
       })
 
+      await t.step('Bulk Delivered from On the way, and one Undo for both', async () => {
+        const U = [top + 4, top + 5]
+        for (const n of U) {
+          const [{ id }] = await db`insert into orders (tenant_id, number, payment_method, placed_at, confirmed_at, packed_at, shipped_at, invoice_number, customer_name, phone, address_line, area, city, pincode, state, subtotal, total)
+            values (${T}, ${n}, 'cod', ${todayAgo(60)}, ${todayAgo(50)}, ${todayAgo(40)}, ${todayAgo(30)}, ${'SH/26-27/' + n}, 'Ship Bulk', '9822300009', '1, MI Road', 'C Scheme', 'Jaipur', '302001', 'Rajasthan', 99000, 99000) returning id`
+          await db`insert into shipments (tenant_id, order_id, provider) values (${T}, ${id}, 'self')`
+        }
+        await p.goto(CONSOLE + '/console/orders?tab=on_the_way')
+        for (const n of U) await p.getByRole('checkbox', { name: `Select ${label(n)}` }).check()
+        await p.getByRole('region', { name: 'Selected orders' }).getByRole('button', { name: 'Delivered' }).click()
+        await p.locator('[data-toast]', { hasText: 'Marked 2 delivered.' }).waitFor()
+        await until(async () => (await Promise.all(U.map(moments))).every((m) => m.delivered_at !== null))
+        await p.locator('[data-toast]').getByRole('button', { name: 'Undo' }).click()
+        await p.locator('[data-toast]', { hasText: 'Undone.' }).waitFor()
+        await until(async () => (await Promise.all(U.map(moments))).every((m) => m.delivered_at === null))
+      })
+
       await t.step('Shipping costs: confirmed once, shown on Settings', async () => {
         await p.goto(CONSOLE + '/console/settings')
         await p.getByRole('link', { name: /Shipping costs/ }).filter({ hasText: 'Not confirmed' }).click()
@@ -105,6 +122,14 @@ export default {
     try {
       await t.step('Staff ship but never mark an outcome or open shipping costs', async () => {
         const s = await staff.newPage(); s.setDefaultTimeout(10_000); s.on('pageerror', (e) => t.errors.push(e.message))
+        // From the queue row, with Undo (the outcome Undo checks the staff member's own role on the server).
+        await s.goto(CONSOLE + '/console/orders?tab=to_ship')
+        await s.getByRole('button', { name: `Mark shipped ${label(R)}` }).click()
+        await s.locator('[data-toast]', { hasText: `${label(R)} marked shipped.` }).waitFor()
+        await until(async () => (await moments(R)).shipped_at !== null)
+        await s.locator('[data-toast]').getByRole('button', { name: 'Undo' }).click()
+        await s.locator('[data-toast]', { hasText: 'Undone.' }).waitFor()
+        await until(async () => (await moments(R)).shipped_at === null)
         await s.goto(CONSOLE + `/console/orders/${R}`)
         await s.getByRole('button', { name: 'Mark shipped' }).click()
         await s.getByText('An owner or admin marks it delivered or came back.').waitFor()

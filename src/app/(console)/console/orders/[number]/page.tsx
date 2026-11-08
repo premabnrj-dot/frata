@@ -5,7 +5,7 @@ import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { collect, paidOnline, savingsAsPaid } from '@/domains/orders/amounts'
-import { currentMethod, orderState, paidAfterPacking, paidAfterSwitch } from '@/domains/orders/order-state'
+import { currentMethod, orderState, paidAfterPacking, paidAfterSwitch, queueTab } from '@/domains/orders/order-state'
 import { risk } from '@/domains/orders/risk'
 import { CANCEL_LABEL, may, primaryAction, type CancelReason } from '@/domains/orders/work'
 import { pick, urlFor } from '@/domains/media/sizes'
@@ -61,10 +61,10 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   const owed = collect(o)
   // What a cancel would send back: what reached Razorpay (amounts.ts — after a switch the COD fee is already off).
   const refund = paidOnline(o)
-  const primary0 = primaryAction(state)
-  // A shipped order's step (Delivered) lives in its shipping panel, below (Ship S0·5), not in the header.
-  const primary = primary0 === 'deliver' ? null : primary0
-  const shipStage = state === 'packed' ? 'to_ship' as const : state === 'shipped' || state === 'ndr' ? 'on_the_way' as const
+  const primary = primaryAction(state)
+  // The Ship panel by queue tab; after an outcome it stays (nothing shown) so its toast's Undo survives the refresh.
+  const tab = queueTab(state)
+  const shipStage = tab === 'to_ship' ? 'to_ship' as const : tab === 'on_the_way' || tab === 'couldnt_deliver' ? 'on_the_way' as const
     : state === 'delivered' || state === 'rto' || state === 'rto_received' || state === 'lost' ? 'done' as const : null
   const can = { confirm: may('confirm', state, role), hold: may('hold', state, role), unhold: may('unhold', state, role), cancel: may('cancel', state, role), pack: may('pack', state, role), edit: may('edit', state, role), note: may('note', state, role) }
   const why = (r?.reasons.join('; ') || r?.next || '').replace(/\.$/, '')
@@ -134,7 +134,9 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
                 : state === 'cancelled' ? (refund ? <>Paid online, then cancelled: refund <Money paise={paise(refund)} /> in Razorpay.</> : 'Cancelled: nothing to collect.')
                 : state === 'refund_due' ? <>Paid after it sold out: cancel it, then refund <Money paise={paise(refund)} /> in Razorpay.{can.cancel ? null : ' Ask an owner or admin to cancel it.'}</>
                 : state === 'delivered' ? (method === 'cod' && !o.paidAt ? <>Delivered: <Money paise={paise(Number(o.total))} /> collected by the courier.</> : 'Delivered.')
+                : (state === 'rto' || state === 'rto_received') && o.paidAt ? 'Came back to you after it was paid online: refund the shopper in Razorpay, or send it again.'
                 : state === 'rto' || state === 'rto_received' ? 'Came back to you: nothing was collected.'
+                : state === 'lost' && o.paidAt ? 'Lost by the courier after it was paid online: refund the shopper in Razorpay, or send it again. Claim it with the courier.'
                 : state === 'lost' ? 'Lost by the courier: nothing was collected. Claim it with the courier.'
                 : paidAfterSwitch(o) ? 'Paid online — do not collect cash.'
                 : owed ? <>Collect <Money paise={paise(owed)} /> on delivery.</> : o.paidAt ? 'Paid online — collect nothing.' : 'Not paid yet.'}

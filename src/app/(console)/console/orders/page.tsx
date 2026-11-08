@@ -66,7 +66,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
       risk: state === 'unconfirmed' || state === 'held' ? (facts === null ? 'unknown' : f ? risk(f).level : 'low') : 'low',
       canConfirm: applies('confirm', state), canHold: applies('hold', state), canPrint: applies('print', state),
       total: Number(o.total), placed: dateTimeIN(o.placedAt), dimmed: STATE[state].tone === 'neutral',
-      shipStep: may('ship_self', state, role) ? 'ship' : may('deliver', state, role) ? 'deliver' : null,
+      shipStep: o.byCourier ? null : may('ship_self', state, role) ? 'ship' : may('deliver', state, role) ? 'deliver' : null,
     }
   })
 
