@@ -1,0 +1,9 @@
+[
+  { "id": "hero", "key": "hero", "hidden": false, "scheme": "paper", "layout": "text", "heading": { "from": "shopName" }, "text": { "from": "tagline" } },
+  { "id": "hero-2", "key": "hero", "heading": { "text": "The Chanderi edit" } },
+  { "id": "tiles", "key": "collection_tiles", "mode": "auto", "count": 6, "shape": "portrait" },
+  { "id": "new-in", "key": "products", "heading": "New in", "source": { "kind": "newest" }, "count": 24, "viewAll": true },
+  { "id": "festive", "key": "products", "heading": "Festive", "source": { "kind": "collection", "handle": "festive-edit" }, "count": 8 },
+  { "id": "budget", "key": "products", "heading": "Under ₹999", "source": { "kind": "under_price", "maxPaise": 99900 }, "count": 4 },
+  { "id": "sale", "key": "products", "heading": "On sale", "source": { "kind": "on_sale" }, "count": 12, "viewAll": false }
+]

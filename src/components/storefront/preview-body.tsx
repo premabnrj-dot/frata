@@ -1,0 +1,40 @@
+import { redirect } from 'next/navigation'
+import { statusLabel, visibility, type Status } from '@/domains/catalogue/availability'
+import type { ResolvedTheme } from '@/domains/themes/types'
+import { previewBestSellers, previewCatalogue, previewProduct, type StoreShop } from '@/lib/queries/storefront'
+import { bestSellersFor } from '@/lib/themes/page-look'
+import { AllView, CollectionView, GoneView, HomeView, PolicyView, ShopNotFound } from './pages'
+import { POLICY_TITLE } from './policy'
+import { ProductView } from './product-view'
+import type { Href } from './shell'
+
+/** One shop page for the merchant's previews (drafts and unlisted pieces included, never cached), and a note on what
+ *  shoppers see instead. Shared by /console/preview and the customizer's look preview. */
+export async function previewPage(o: { tenantId: string; shop: StoreShop; path: string[]; href: Href; now: Date; theme: ResolvedTheme }): Promise<{ body: React.ReactNode; note: string | null }> {
+  const { tenantId, shop, path, href, now, theme } = o
+  const [a, b, ...rest] = path
+  if (rest.length) return { body: <ShopNotFound href={href} />, note: null }
+  if (!a) {
+    const best = await bestSellersFor(theme, (d) => previewBestSellers(tenantId, d))
+    return { body: <HomeView shop={shop} cat={await previewCatalogue(tenantId)} href={href} now={now} theme={theme} bestSellers={best} />, note: null }
+  }
+  if (a === 'products' && !b) return { body: <AllView cat={await previewCatalogue(tenantId)} href={href} now={now} />, note: null }
+  if (a === 'products' && b && /^[a-z0-9-]{1,100}$/.test(b)) {
+    const r = await previewProduct(tenantId, b)
+    if (r.kind === 'moved') redirect(href(`/products/${r.to}`))
+    if (r.kind === 'none') return { body: <ShopNotFound href={href} />, note: null }
+    const p = r.product
+    const v = visibility(p.status as Status, p.publishAt ? new Date(p.publishAt) : null, now)
+    const label = statusLabel(p.status as Status, p.publishAt ? new Date(p.publishAt) : null, now)
+    const note = !v.reachable ? `${label}: shoppers ${v.gone ? 'read that it is no longer available' : 'get "page not found"'} here.`
+      : !v.listed ? 'Unlisted: shoppers with the link see this page; it is not in lists or search.' : null
+    return { body: v.gone ? <GoneView title={p.title} cat={await previewCatalogue(tenantId)} href={href} now={now} /> : <ProductView shop={shop} p={p} now={now} />, note }
+  }
+  if (a === 'collections' && b) {
+    const cat = await previewCatalogue(tenantId)
+    const c = cat.collections.find((x) => x.handle === b)
+    return { body: c ? <CollectionView c={c} cat={cat} href={href} now={now} /> : <ShopNotFound href={href} />, note: null }
+  }
+  if (a === 'policies' && b && b in POLICY_TITLE) return { body: <PolicyView shop={shop} page={b as keyof typeof POLICY_TITLE} />, note: null }
+  return { body: <ShopNotFound href={href} />, note: null }
+}

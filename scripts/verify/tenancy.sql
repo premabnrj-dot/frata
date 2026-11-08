@@ -886,4 +886,59 @@ do $$ begin
     raise exception 'FAIL: an order''s discount is not the sum of its lines'''; end if;
 end $$;
 
-\echo 'tenancy proof — all 31 checks passed'
+-- 32. Shop looks (themes T1; docs/specs/2026-11-08-themes.md, plan § Review findings).
+begin; set local role frata_app;
+do $$ declare n int; ra uuid; rb uuid; begin
+  perform set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+  insert into shop_theme_revisions (tenant_id, theme_key, theme_version, style_key, settings, created_by, updated_by)
+    values ('22222222-2222-2222-2222-222222222222', 'bazaar', '1.0.0', 'sindoor', '{}', '99999999-9999-9999-9999-999999999999', '99999999-9999-9999-9999-999999999999') returning id into rb;
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  if exists (select 1 from shop_theme_revisions where tenant_id = '22222222-2222-2222-2222-222222222222') then raise exception 'FAIL: A sees B''s looks'; end if;
+  insert into shop_theme_revisions (tenant_id, theme_key, theme_version, style_key, settings, created_by, updated_by)
+    values ('11111111-1111-1111-1111-111111111111', 'editorial', '1.0.0', 'haldi', '{}', '99999999-9999-9999-9999-999999999999', '99999999-9999-9999-9999-999999999999') returning id into ra;
+  begin insert into shop_theme_revisions (tenant_id, theme_key, theme_version, style_key, settings, created_by, updated_by)
+    values ('22222222-2222-2222-2222-222222222222', 'editorial', '1.0.0', 'haldi', '{}', '99999999-9999-9999-9999-999999999999', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: A wrote a look for B';
+  exception when insufficient_privilege then null; end;
+  begin insert into shop_theme_revisions (tenant_id, theme_key, theme_version, style_key, settings, created_by, updated_by)
+    values ('11111111-1111-1111-1111-111111111111', 'liquid', '1.0.0', 'x', '{}', '99999999-9999-9999-9999-999999999999', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: an unknown theme';
+  exception when check_violation then null; end;
+  update shop_theme_revisions set settings = '{"x":1}' where id = rb; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A edited B''s look'; end if;
+  delete from shop_theme_revisions where id = rb; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A deleted B''s look'; end if;
+  begin update shop_theme_revisions set tenant_id = '22222222-2222-2222-2222-222222222222' where id = ra; raise exception 'FAIL: A moved a look to B';
+  exception when insufficient_privilege then null; end;
+  begin update shop_theme_revisions set theme_key = 'bazaar' where id = ra; raise exception 'FAIL: app changed a revision''s theme';
+  exception when insufficient_privilege then null; end;
+  -- a publish of B's revision fails, whichever tenant it names
+  begin insert into shop_theme_publishes (tenant_id, revision_id, published_by) values ('11111111-1111-1111-1111-111111111111', rb, '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: A published B''s look';
+  exception when foreign_key_violation then null; end;
+  begin insert into shop_theme_publishes (tenant_id, revision_id, published_by) values ('22222222-2222-2222-2222-222222222222', rb, '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: A published for B';
+  exception when insufficient_privilege then null; end;
+  -- a draft saves; once published it is frozen and can't be deleted; publishes are append-only
+  update shop_theme_revisions set settings = '{"home":[]}', version = version + 1 where id = ra; get diagnostics n = row_count;
+  if n <> 1 then raise exception 'FAIL: a draft could not be saved'; end if;
+  insert into shop_theme_publishes (tenant_id, revision_id, published_by) values ('11111111-1111-1111-1111-111111111111', ra, '99999999-9999-9999-9999-999999999999');
+  begin update shop_theme_revisions set settings = '{}' where id = ra; raise exception 'FAIL: a published look changed';
+  exception when check_violation then null; end;
+  begin delete from shop_theme_revisions where id = ra; raise exception 'FAIL: a published look was deleted';
+  exception when check_violation then null; end;
+  begin update shop_theme_publishes set published_at = now(); raise exception 'FAIL: a publish was rewritten';
+  exception when insufficient_privilege then null; end;
+  begin delete from shop_theme_publishes; raise exception 'FAIL: a publish was deleted';
+  exception when insufficient_privilege then null; end;
+end $$;
+commit;
+begin; set local role frata_app;
+do $$ begin
+  if exists (select 1 from shop_theme_revisions) or exists (select 1 from shop_theme_publishes) then raise exception 'FAIL: looks readable with no shop set'; end if;
+end $$;
+commit;
+do $$ begin
+  if has_table_privilege('frata_admin', 'shop_theme_revisions', 'select') or has_table_privilege('frata_admin', 'shop_theme_publishes', 'select') then
+    raise exception 'FAIL: staff read a shop''s looks in T1'; end if;
+  if has_table_privilege('anon', 'shop_theme_revisions', 'select') or has_table_privilege('authenticated', 'shop_theme_publishes', 'select')
+     or has_table_privilege('service_role', 'shop_theme_revisions', 'select') then raise exception 'FAIL: API roles reach shop looks'; end if;
+end $$;
+
+\echo 'tenancy proof — all 32 checks passed'

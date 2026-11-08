@@ -1,0 +1,441 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`section schemas > collection_tiles keeps its shape 1`] = `
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "count": {
+      "default": 6,
+      "maximum": 8,
+      "minimum": 2,
+      "type": "integer",
+    },
+    "handles": {
+      "default": [],
+      "items": {
+        "pattern": "^[a-z0-9-]{1,80}$",
+        "type": "string",
+      },
+      "maxItems": 8,
+      "type": "array",
+    },
+    "heading": {
+      "default": "",
+      "maxLength": 40,
+      "type": "string",
+    },
+    "hidden": {
+      "default": false,
+      "type": "boolean",
+    },
+    "id": {
+      "pattern": "^[a-z0-9-]{1,40}$",
+      "type": "string",
+    },
+    "key": {
+      "const": "collection_tiles",
+      "type": "string",
+    },
+    "mode": {
+      "default": "auto",
+      "enum": [
+        "auto",
+        "picked",
+      ],
+      "type": "string",
+    },
+    "scheme": {
+      "default": "paper",
+      "enum": [
+        "paper",
+        "tint",
+        "ink",
+      ],
+      "type": "string",
+    },
+    "shape": {
+      "default": "portrait",
+      "enum": [
+        "portrait",
+        "square",
+        "circle",
+      ],
+      "type": "string",
+    },
+  },
+  "required": [
+    "id",
+    "key",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`section schemas > hero keeps its shape 1`] = `
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "button": {
+      "anyOf": [
+        {
+          "properties": {
+            "label": {
+              "maxLength": 24,
+              "type": "string",
+            },
+            "link": {
+              "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+              "type": "string",
+            },
+          },
+          "required": [
+            "label",
+            "link",
+          ],
+          "type": "object",
+        },
+        {
+          "type": "null",
+        },
+      ],
+      "default": null,
+    },
+    "heading": {
+      "anyOf": [
+        {
+          "properties": {
+            "from": {
+              "enum": [
+                "shopName",
+                "tagline",
+              ],
+              "type": "string",
+            },
+          },
+          "required": [
+            "from",
+          ],
+          "type": "object",
+        },
+        {
+          "properties": {
+            "text": {
+              "maxLength": 60,
+              "type": "string",
+            },
+          },
+          "required": [
+            "text",
+          ],
+          "type": "object",
+        },
+      ],
+    },
+    "height": {
+      "default": "tall",
+      "enum": [
+        "short",
+        "tall",
+      ],
+      "type": "string",
+    },
+    "hidden": {
+      "default": false,
+      "type": "boolean",
+    },
+    "id": {
+      "pattern": "^[a-z0-9-]{1,40}$",
+      "type": "string",
+    },
+    "image": {
+      "anyOf": [
+        {
+          "properties": {
+            "alt": {
+              "default": "",
+              "maxLength": 160,
+              "type": "string",
+            },
+            "base": {
+              "maxLength": 300,
+              "type": "string",
+            },
+            "decorative": {
+              "default": false,
+              "type": "boolean",
+            },
+            "height": {
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "type": "integer",
+            },
+            "width": {
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "type": "integer",
+            },
+            "widths": {
+              "items": {
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991,
+                "type": "integer",
+              },
+              "maxItems": 4,
+              "minItems": 1,
+              "type": "array",
+            },
+          },
+          "required": [
+            "base",
+            "widths",
+            "width",
+            "height",
+          ],
+          "type": "object",
+        },
+        {
+          "type": "null",
+        },
+      ],
+      "default": null,
+    },
+    "key": {
+      "const": "hero",
+      "type": "string",
+    },
+    "layout": {
+      "default": "text",
+      "enum": [
+        "text",
+        "image_text",
+        "split",
+        "image",
+      ],
+      "type": "string",
+    },
+    "mask": {
+      "default": "none",
+      "enum": [
+        "none",
+        "arch",
+      ],
+      "type": "string",
+    },
+    "position": {
+      "default": "bottom_left",
+      "enum": [
+        "bottom_left",
+        "centre",
+      ],
+      "type": "string",
+    },
+    "scheme": {
+      "default": "paper",
+      "enum": [
+        "paper",
+        "tint",
+        "ink",
+      ],
+      "type": "string",
+    },
+    "text": {
+      "anyOf": [
+        {
+          "properties": {
+            "from": {
+              "enum": [
+                "shopName",
+                "tagline",
+              ],
+              "type": "string",
+            },
+          },
+          "required": [
+            "from",
+          ],
+          "type": "object",
+        },
+        {
+          "properties": {
+            "text": {
+              "maxLength": 160,
+              "type": "string",
+            },
+          },
+          "required": [
+            "text",
+          ],
+          "type": "object",
+        },
+      ],
+    },
+  },
+  "required": [
+    "id",
+    "key",
+    "heading",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`section schemas > products keeps its shape 1`] = `
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "count": {
+      "anyOf": [
+        {
+          "const": 4,
+          "type": "number",
+        },
+        {
+          "const": 8,
+          "type": "number",
+        },
+        {
+          "const": 12,
+          "type": "number",
+        },
+        {
+          "const": 24,
+          "type": "number",
+        },
+      ],
+    },
+    "heading": {
+      "maxLength": 40,
+      "type": "string",
+    },
+    "hidden": {
+      "default": false,
+      "type": "boolean",
+    },
+    "id": {
+      "pattern": "^[a-z0-9-]{1,40}$",
+      "type": "string",
+    },
+    "key": {
+      "const": "products",
+      "type": "string",
+    },
+    "layout": {
+      "default": "grid",
+      "enum": [
+        "grid",
+        "rail",
+      ],
+      "type": "string",
+    },
+    "scheme": {
+      "default": "paper",
+      "enum": [
+        "paper",
+        "tint",
+        "ink",
+      ],
+      "type": "string",
+    },
+    "source": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "const": "newest",
+              "type": "string",
+            },
+          },
+          "required": [
+            "kind",
+          ],
+          "type": "object",
+        },
+        {
+          "properties": {
+            "days": {
+              "anyOf": [
+                {
+                  "const": 30,
+                  "type": "number",
+                },
+                {
+                  "const": 90,
+                  "type": "number",
+                },
+              ],
+              "default": 90,
+            },
+            "kind": {
+              "const": "best_sellers",
+              "type": "string",
+            },
+          },
+          "required": [
+            "kind",
+          ],
+          "type": "object",
+        },
+        {
+          "properties": {
+            "handle": {
+              "pattern": "^[a-z0-9-]{1,80}$",
+              "type": "string",
+            },
+            "kind": {
+              "const": "collection",
+              "type": "string",
+            },
+          },
+          "required": [
+            "kind",
+            "handle",
+          ],
+          "type": "object",
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "under_price",
+              "type": "string",
+            },
+            "maxPaise": {
+              "exclusiveMinimum": 0,
+              "maximum": 100000000,
+              "type": "integer",
+            },
+          },
+          "required": [
+            "kind",
+            "maxPaise",
+          ],
+          "type": "object",
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "on_sale",
+              "type": "string",
+            },
+          },
+          "required": [
+            "kind",
+          ],
+          "type": "object",
+        },
+      ],
+    },
+    "viewAll": {
+      "default": true,
+      "type": "boolean",
+    },
+  },
+  "required": [
+    "id",
+    "key",
+    "heading",
+    "source",
+    "count",
+  ],
+  "type": "object",
+}
+`;

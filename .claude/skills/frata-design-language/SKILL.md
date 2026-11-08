@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 4.3.0
+  version: 4.5.0
   verified: 2026-11-08
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -86,6 +86,25 @@ from it).
   (Module, Granted by, Merchant, Usable, action: "Give a 30-day trial of X",
   "End trial"). Admin › Modules pauses a module "for everyone" with a reason;
   the shop sees "Paused by Frrata". Admin writes are admin-role only.
+
+## Shop themes (approved mockup 2026-11-08, T0 and T1 built)
+
+- The storefront's `--store-*` tokens now come from the shop's theme (`schemeVars(theme, scheme)` on the shell and
+  on any section painted in another scheme). Never hard-code a store colour in a component.
+- Themes are presets over one section library; a new look is a manifest, a new capability is a section.
+- Promise and trust words come from shop facts, never typed claims; a section with nothing to show renders nothing.
+- The customizer and Look follow the T1 mockup (https://claude.ai/artifact/9QRkdHHKLAwpj5LmcxYYSU): phone preview
+  first, one primary action (Customize / Publish), autosave states, Undo/Redo, counters for limits.
+- Storefront tokens a component may read: `--store-bg/text/sub/line/chip/accent/button/on-button/sale/good/bad`,
+  `--store-display`, `--store-radius`, `--store-ratio` (photo shape), `--store-cols` (phone columns),
+  `--store-h-scale`, `--store-space`. Buttons carry `store-btn` (Outline buttons follow `data-buttons`), a second
+  photo on hover `store-hover` (off with `data-hover="off"`); motion obeys `data-motion`.
+- Customizer patterns: every change is one Undo step and an autosave 800 ms later ("Saving…" / "Saved" / "Not saved"
+  in a `role=status`); a stale draft says who changed it and offers Reload; move up/down buttons beside drag; Add a
+  section is picture cards by kind, a full kind says its limit ("At most 2 on a page"); a section that blocks Publish
+  says "needs you" in the list; Publish lists what shoppers will see change, then the person who published sees
+  "Published" with Undo; a partner or staff sees "Ask the owner to publish"; support sees but can't change.
+- Colours and type live in Look only; Settings › Brand keeps the logo and tagline and previews them in the published look.
 
 ## Partner workspace (approved mockup 2026-11-07)
 
@@ -576,8 +595,8 @@ saving we cannot show from their own orders.
 
 ## Storefront
 
-- Each merchant gets theme tokens (a small set: ink, paper, accent, display
-  font, radius) applied under `data-store-theme`; never hard-coded per page.
+- Each merchant's shop wears its published theme (§ Shop themes: the `--store-*` tokens) under
+  `data-store-theme`; never hard-coded per page.
 - Editorial, type-led, large imagery, few colours. Indian shopper conventions
   built in: pincode delivery check, "Pay on delivery" badge, size chart and
   "find my size", the return window in words, WhatsApp order updates.

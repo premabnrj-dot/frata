@@ -232,6 +232,20 @@
       "when": 1794099017311,
       "tag": "0032_offers_access",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794102681220,
+      "tag": "0033_themes",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794102686940,
+      "tag": "0034_themes_access",
+      "breakpoints": true
     }
   ]
 }

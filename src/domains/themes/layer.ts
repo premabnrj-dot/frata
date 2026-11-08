@@ -1,0 +1,116 @@
+import { z } from 'zod'
+import { ON_COLOUR } from './catalogue/kit'
+import { contrast } from './contrast'
+import { SECTION_NAMES, SectionSchema, MAX_PER_PAGE, MAX_SECTIONS, shopPath, type SectionInstance } from './sections'
+import { FOOTERS, HEADERS, PAIRINGS, type Hex, type Scheme, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
+
+// =============================================================================
+// FILE: src/domains/themes/layer.ts — the merchant's layer: its save schema, the brand colour rule, switching
+// themes (carryOver) and the publish dialog's change list (diffLayers). Pure.
+// =============================================================================
+
+const hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/).transform((h) => h.toUpperCase() as Hex)
+export const SettingsSchema = z.object({
+  pairing: z.enum(PAIRINGS),
+  headings: z.enum(['as_typed', 'upper']),
+  size: z.enum(['compact', 'regular', 'large']),
+  corners: z.enum(['square', 'soft', 'round']),
+  buttons: z.enum(['solid', 'outline']),
+  spacing: z.enum(['airy', 'regular', 'compact']),
+  photo: z.enum(['4:5', '3:4', '1:1']),
+  hoverPhoto: z.boolean(),
+  phoneColumns: z.union([z.literal(2), z.literal(3)]),
+  header: z.enum(HEADERS),
+  sticky: z.boolean(),
+  bottomTabs: z.boolean(),
+  announcement: z.object({ text: z.string().trim().min(1).max(80), link: shopPath.nullable(), scheme: z.enum(['paper', 'tint', 'ink']) }).nullable(),
+  footer: z.enum(FOOTERS),
+  social: z.boolean(),
+  motion: z.enum(['subtle', 'none']),
+  brandColour: hex.nullable(),
+}).partial()
+
+/** A stored or submitted layer, checked for shape. Sections are checked one by one (and again at every read). */
+export const LayerSchema = z.object({
+  settings: SettingsSchema.default({}),
+  home: z.array(z.unknown()).max(MAX_SECTIONS).optional(),
+})
+export type StoredLayer = z.infer<typeof LayerSchema>
+
+/** Why a layer can't be saved as it is (shape and limits only). Empty: it can be saved. */
+export function layerProblems(layer: unknown): string[] {
+  const p = LayerSchema.safeParse(layer)
+  if (!p.success) return p.error.issues.map((i) => `${i.path.join('.') || 'look'}: ${i.message}`)
+  const out: string[] = []
+  const home = (p.data.home ?? []).map((s, i) => ({ i, r: SectionSchema.safeParse(s) }))
+  for (const { i, r } of home) if (!r.success) out.push(`Section ${i + 1}: ${r.error.issues[0]?.message ?? 'not valid'}`)
+  const counts = new Map<string, number>()
+  for (const { r } of home) if (r.success) counts.set(r.data.key, (counts.get(r.data.key) ?? 0) + 1)
+  for (const [k, n] of counts) if (n > MAX_PER_PAGE[k as SectionInstance['key']]) out.push(`${SECTION_NAMES[k as SectionInstance['key']]}: at most ${MAX_PER_PAGE[k as SectionInstance['key']]} on a page`)
+  const ids = home.filter((h) => h.r.success).map((h) => (h.r.data as SectionInstance).id)
+  if (new Set(ids).size !== ids.length) out.push('Two sections share an id')
+  return out
+}
+
+/** The brand colour replaces the accent on the light schemes (paper, tint); it must read on each of them (spec § Theme settings). */
+export function brandColourProblem(colour: string, schemes: Scheme[]): string | null {
+  if (!/^#[0-9A-Fa-f]{6}$/.test(colour)) return 'Pick a colour.'
+  for (const s of schemes) if (contrast(colour, s.bg) < 3) return 'Too light on this background. Pick a deeper shade.'
+  if (contrast(colour, ON_COLOUR.light) < 4.5 && contrast(colour, ON_COLOUR.dark) < 4.5) return 'Text on it would be hard to read. Pick a deeper or lighter shade.'
+  return null
+}
+/** Text on a brand-colour fill: white when readable, else ink. */
+export const onColour = (c: string): Hex => (contrast(c, ON_COLOUR.light) >= 4.5 ? ON_COLOUR.light : ON_COLOUR.dark)
+
+/**
+ * Trying another theme: what the merchant set that the new theme allows comes across, the rest takes its defaults
+ * (spec § Switching themes). Returns the new layer and, in words, what did not come across.
+ */
+export function carryOver(from: { manifest: ThemeManifest; layer: ThemeLayer }, to: ThemeManifest): { layer: ThemeLayer; lost: string[] } {
+  const was = { ...from.manifest.defaults, ...(from.layer.settings ?? {}) } as ThemeSettings
+  const lost: string[] = []
+  const settings: Partial<ThemeSettings> = {
+    brandColour: was.brandColour, corners: was.corners, photo: was.photo, announcement: was.announcement,
+  }
+  if (to.allowed.pairings.includes(was.pairing)) settings.pairing = was.pairing
+  else if (was.pairing !== from.manifest.defaults.pairing) lost.push(`The ${was.pairing} type isn't in ${to.name}`)
+  if (was.header !== from.manifest.defaults.header) {
+    if (to.allowed.headers.includes(was.header)) settings.header = was.header
+    else lost.push(`The ${was.header === 'circles' ? 'category circles' : was.header} header isn't in ${to.name}`)
+  }
+  const sections = (from.layer.home ?? from.manifest.home).flatMap((s) => { const r = SectionSchema.safeParse(s); return r.success ? [r.data] : [] })
+  const kept = sections.filter((s) => to.allowed.sections.includes(s.key))
+  for (const s of sections) if (!to.allowed.sections.includes(s.key)) lost.push(`${SECTION_NAMES[s.key]} isn't in ${to.name}`)
+  // Keep the merchant's own Home only if they changed it; an untouched Home takes the new theme's.
+  const changed = JSON.stringify(from.layer.home ?? null) !== 'null'
+  return { layer: { style: to.styles[0]!.key, settings, ...(changed ? { home: kept } : {}) }, lost }
+}
+
+/** The publish dialog's list: what a shopper will see change, in words (mockup "Publish"). */
+export function diffLayers(a: { theme: string; style: string; settings: Partial<ThemeSettings>; home: SectionInstance[] } | null, b: { theme: string; themeName: string; style: string; styleName: string; settings: Partial<ThemeSettings>; home: SectionInstance[] }): string[] {
+  if (!a || a.theme !== b.theme) return [`Theme: ${b.themeName} · ${b.styleName}`]
+  const out: string[] = []
+  if (a.style !== b.style) out.push(`Colours: ${b.styleName}`)
+  for (const k of Object.keys({ ...a.settings, ...b.settings }) as (keyof ThemeSettings)[]) {
+    if (JSON.stringify(a.settings[k] ?? null) !== JSON.stringify(b.settings[k] ?? null)) out.push(SETTING_NAMES[k])
+  }
+  const before = new Map(a.home.map((s) => [s.id, s]))
+  const after = new Map(b.home.map((s) => [s.id, s]))
+  for (const s of b.home) {
+    const was = before.get(s.id)
+    if (!was) out.push(`${SECTION_NAMES[s.key]} added`)
+    else if (!was.hidden && s.hidden) out.push(`${SECTION_NAMES[s.key]} hidden`)
+    else if (was.hidden && !s.hidden) out.push(`${SECTION_NAMES[s.key]} shown`)
+    else if (JSON.stringify(was) !== JSON.stringify(s)) out.push(`${SECTION_NAMES[s.key]} changed`)
+  }
+  for (const s of a.home) if (!after.has(s.id)) out.push(`${SECTION_NAMES[s.key]} removed`)
+  const order = (h: SectionInstance[]) => h.filter((s) => before.has(s.id) && after.has(s.id)).map((s) => s.id).join()
+  if (order(a.home) !== order(b.home)) out.push('Sections moved')
+  return [...new Set(out)]
+}
+
+export const SETTING_NAMES: Record<keyof ThemeSettings, string> = {
+  pairing: 'Type', headings: 'Headings', size: 'Type size', corners: 'Corners', buttons: 'Buttons', spacing: 'Spacing', photo: 'Photo shape',
+  hoverPhoto: 'Second photo on hover', phoneColumns: 'Columns on a phone', header: 'Header', sticky: 'Sticky header', bottomTabs: 'Bottom tabs',
+  announcement: 'Announcement bar', footer: 'Footer', social: 'Social links', motion: 'Motion', brandColour: 'Brand colour',
+}

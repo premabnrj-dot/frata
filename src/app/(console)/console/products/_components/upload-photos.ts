@@ -25,7 +25,7 @@ async function toWebp(bitmap: ImageBitmap, width: number): Promise<Blob> {
 }
 
 /** Resizes and uploads one photo; calls onProgress with 0–1. */
-export async function uploadPhoto(file: File, tenantId: string, onProgress: (p: number) => void): Promise<Uploaded> {
+export async function uploadPhoto(file: File, tenantId: string, onProgress: (p: number) => void, folder: 'products' | 'theme' = 'products'): Promise<Uploaded> {
   if (!/^image\/(jpeg|png|webp|heic|heif)$/.test(file.type) && !/\.(jpe?g|png|webp|heic)$/i.test(file.name)) throw new Error(`${file.name} is not a photo.`)
   if (file.size > MAX_SOURCE_BYTES) throw new Error(`${file.name} is over 25 MB.`)
   const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => { throw new Error(`${file.name} could not be read. Save it as JPEG and try again.`) })
@@ -35,7 +35,7 @@ export async function uploadPhoto(file: File, tenantId: string, onProgress: (p: 
   let base = ''
   for (const [i, w] of widths.entries()) {
     const blob = await toWebp(bitmap, w)
-    const res = await upload(`tenants/${tenantId}/products/${id}-${w}.webp`, blob, { access: 'public', handleUploadUrl: '/api/console/upload', contentType: 'image/webp' })
+    const res = await upload(`tenants/${tenantId}/${folder}/${id}-${w}.webp`, blob, { access: 'public', handleUploadUrl: '/api/console/upload', contentType: 'image/webp' })
     base = res.url.replace(/-\d+\.webp$/, '')
     onProgress((i + 1) / widths.length)
   }

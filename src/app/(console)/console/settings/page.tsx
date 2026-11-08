@@ -32,7 +32,7 @@ export default async function SettingsPage() {
   const summary: Record<SectionKey, string> = {
     store: `${f.shopName} · ${f.legalName || 'legal name missing'}`,
     contact: grievanceComplete(f) ? `${f.supportEmail} · grievance officer ${f.grievanceName}` : f.grievanceName ? 'Grievance officer’s email or phone missing' : 'Grievance officer missing',
-    brand: `${f.displayFont[0]!.toUpperCase()}${f.displayFont.slice(1)} · ${f.accent}${f.tagline ? ` · “${f.tagline.slice(0, 40)}”` : ''}`,
+    brand: f.tagline ? `“${f.tagline.slice(0, 40)}”` : 'Your logo and one line',
     policies: policyGaps ? `${policyGaps} of 5 pages are missing details` : `${f.returnKind === 'none' ? 'No returns' : `${f.returnDays}-day returns`} · 5 pages from your details`,
     payments: f.codOn ? `On, up to ${f.codMax ? inr(f.codMax) : 'any value'}${f.codCharge ? `, fee ${inr(f.codCharge)}` : ', no fee'}` : 'Off: shoppers pay online only',
     shipping: `${f.shippingFlat ? inr(f.shippingFlat) : 'Free'}${f.shippingFlat && f.freeShippingAbove ? `, free above ${inr(f.freeShippingAbove)}` : ''} · dispatched within ${f.dispatchDays} days`,

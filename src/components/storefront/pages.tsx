@@ -1,48 +1,24 @@
 import Link from 'next/link'
-import { displayFamily } from '@/components/shop-preview/fonts'
 import type { PolicyPage } from '@/domains/policies/render'
 import { shopJsonLd } from '@/domains/catalogue/seo'
 import { inCollection, isListed } from '@/domains/storefront/listing'
+import { classicFromSettings } from '@/domains/themes/resolve'
+import type { ResolvedTheme } from '@/domains/themes/types'
 import type { StoreCatalogue, StoreCollection, StoreShop } from '@/lib/queries/storefront'
 import { ProductGrid } from './card'
 import { JsonLd } from './json-ld'
-import { Photo } from './photo'
+import { Sections } from './sections'
 import { PolicyBody, POLICY_TITLE } from './policy'
 import type { Href } from './shell'
 
-const NEW_IN = 24
 const wrap = 'mx-auto max-w-6xl px-4 sm:px-6'
 
-export function HomeView({ shop, cat, href, now }: { shop: StoreShop; cat: StoreCatalogue; href: Href; now: Date }) {
-  const listed = cat.products.filter((p) => isListed(p, now))
-  const tiles = cat.collections.map((c) => ({ c, first: inCollection(c, cat.products, now)[0] })).filter((t) => t.first).slice(0, 6)
+/** Home: the shop's theme's sections, then the shop's structured data. T0: Classic from the shop's settings. */
+export function HomeView({ shop, cat, href, now, theme, bestSellers }: { shop: StoreShop; cat: StoreCatalogue; href: Href; now: Date; theme?: ResolvedTheme; bestSellers?: Partial<Record<30 | 90, string[]>> }) {
+  const t = theme ?? classicFromSettings(shop.accent, shop.displayFont)
   return (
     <>
-      <section className={`${wrap} py-10 sm:py-16`}>
-        <h1 className="max-w-3xl text-4xl leading-[1.05] sm:text-6xl" style={{ fontFamily: displayFamily(shop.displayFont) }}>{shop.shopName}</h1>
-        {shop.tagline && <p className="mt-3 max-w-xl text-lg text-store-sub">{shop.tagline}</p>}
-      </section>
-      {tiles.length > 0 && (
-        <section aria-labelledby="col-h" className={`${wrap} pb-12`}>
-          <h2 id="col-h" className="sr-only">Collections</h2>
-          <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
-            {tiles.map(({ c, first }) => (
-              <li key={c.id} className="w-[70%] shrink-0 snap-start sm:w-auto">
-                <Link href={href(`/collections/${c.handle}`)} className="group block">
-                  <div className="relative aspect-[4/5] overflow-hidden rounded-sm bg-store-chip">
-                    {first!.images[0] && <Photo p={first!.images[0]} alt="" sizes="(min-width: 640px) 33vw, 70vw" className="absolute inset-0 h-full w-full object-cover transition-transform duration-slow group-hover:scale-[1.02]" />}
-                  </div>
-                  <p className="mt-2 text-base">{c.title}</p>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      <section aria-labelledby="new-h" className={wrap}>
-        <div className="mb-4 flex items-baseline justify-between"><h2 id="new-h" className="text-xl">New in</h2>{listed.length > NEW_IN && <Link href={href('/products')} className="text-sm underline underline-offset-4">See all</Link>}</div>
-        <ProductGrid products={listed.slice(0, NEW_IN)} href={href} now={now} empty="New pieces are on their way." />
-      </section>
+      <Sections list={t.home} ctx={{ shop, cat, theme: t, href, now, bestSellers }} />
       <JsonLd data={shopJsonLd({ name: shop.shopName, url: `https://${shop.host}`, logo: shop.logoUrl, sameAs: shop.instagram ? [`https://instagram.com/${shop.instagram.replace(/^@/, '')}`] : [],
         returnDays: shop.returnDays, returnKind: shop.returnKind, shippingFlat: shop.shippingFlat, freeShippingAbove: shop.freeShippingAbove, metroDays: shop.metroDays, restDays: shop.restDays, dispatchDays: shop.dispatchDays })} />
     </>
