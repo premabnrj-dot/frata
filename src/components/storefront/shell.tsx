@@ -4,6 +4,7 @@ import type { PolicyFacts } from '@/domains/policies/render'
 import { classicFromSettings, schemeVars, settingAttrs, settingVars } from '@/domains/themes/resolve'
 import type { ResolvedTheme } from '@/domains/themes/types'
 import { BagButton } from './bag'
+import { CaptureAttribution } from './capture'
 import { wordsFor, type Lang, type Words } from './words'
 import { Photo, type PhotoData } from './photo'
 
@@ -34,6 +35,8 @@ export function ShopShell({ shop, href, banner, children, gated = false, live = 
       <main id="main" className={`flex-1 ${tabs ? 'pb-16 sm:pb-0' : ''}`}>{children}</main>
       <ShopFooter f={shop} href={href} variant={s.footer} social={s.social} w={w} />
       {tabs && <BottomTabs href={href} live={live} w={w} />}
+      {/* How the shopper arrived: on every page of the live shop, never in a console preview (Analytics A·1). */}
+      <CaptureAttribution capture={live} />
     </div>
   )
 }

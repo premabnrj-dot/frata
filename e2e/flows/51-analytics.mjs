@@ -6,7 +6,7 @@
 // Guards: a source lost when capture moves, a creator link that stops crediting its creator.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { SHOP, USERS, playwright } from '../lib.mjs'
+import { CONSOLE, SHOP, USERS, playwright, signedIn } from '../lib.mjs'
 
 const { devices } = playwright
 
@@ -31,7 +31,8 @@ export default {
       await t.step('a tagged creator link: the order keeps its tags, and the code is credited as a link', async () => {
         await p.goto(SHOP + '/products/chanderi-kurta-set', { waitUntil: 'domcontentloaded' })
         await p.evaluate(() => { localStorage.clear(); sessionStorage.clear() })
-        await p.goto(SHOP + '/products/chanderi-kurta-set?utm_source=instagram&utm_medium=bio&utm_campaign=diwali-drop&code=RIYA51', { waitUntil: 'domcontentloaded' })
+        // Arriving from Instagram's link shim (its referrer, reduced to a hostname, is kept beside the tags).
+        await p.goto(SHOP + '/products/chanderi-kurta-set?utm_source=instagram&utm_medium=bio&utm_campaign=diwali-drop&code=RIYA51', { waitUntil: 'domcontentloaded', referer: 'https://l.instagram.com/?u=https%3A%2F%2Fkesar&e=AT1' })
         await p.getByRole('button', { name: /^Rust/ }).click(); await p.getByRole('button', { name: 'M', exact: true }).click()
         await p.getByRole('button', { name: /Add to bag/ }).click(); await p.getByRole('dialog', { name: 'Your bag' }).waitFor()
         await p.getByRole('button', { name: 'Checkout' }).click(); await p.waitForURL(/\/checkout$/)
@@ -44,6 +45,7 @@ export default {
         assert.ok(o, 'the order was placed')
         const attr = o.checkout?.attribution ?? {}
         assert.equal(attr.utm_source, 'instagram'); assert.equal(attr.utm_medium, 'bio'); assert.equal(attr.utm_campaign, 'diwali-drop')
+        assert.equal(attr.ref_host, 'l.instagram.com', 'the referring site, as a hostname only')
         const used = await db`select od.via, dc.code from order_discounts od join discount_codes dc on dc.tenant_id = od.tenant_id and dc.id = od.code_id where od.order_id = ${o.id}`
         assert.deepEqual(used.map((r) => [r.code, r.via]), [['RIYA51', 'link']], 'the creator code, credited as a link')
       })
@@ -57,6 +59,20 @@ export default {
       })
     } finally {
       await ctx.close()
+    }
+
+    // A console preview never captures: tags and a creator code in its address are not stored (plan review 9).
+    const owner = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 900 } })
+    try {
+      await t.step('a console preview stores no attribution and no creator code', async () => {
+        const c = await owner.newPage(); c.setDefaultTimeout(10_000); c.on('pageerror', (e) => t.errors.push(e.message))
+        await c.goto(CONSOLE + '/console/preview/products/chanderi-kurta-set?utm_source=preview-test&code=RIYA51')
+        await c.waitForLoadState('networkidle')
+        const stored = await c.evaluate(() => [sessionStorage.getItem('frata.attr.v1'), sessionStorage.getItem('frrata.code.v1')])
+        assert.deepEqual(stored, [null, null])
+      })
+    } finally {
+      await owner.close()
       await db`update discounts set ended_at = now() where id = ${d.id}`
     }
   },

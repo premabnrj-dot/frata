@@ -3,11 +3,14 @@ import { Address, addressErrors } from '@/domains/checkout/address'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { Bag, Code, codeToTry, codeTried, publicQuote, reply, shopRequest } from '@/lib/http/shop-api'
 import { placeOrder } from '@/lib/orders/place'
+import { cleanAttribution } from '@/domains/analytics/attribution'
+import { CONSOLE_HOST, SHOP_DOMAIN } from '@/lib/public-env'
 
 // Place an order. Limits fail closed here (a fake-COD script must not slip through a database hiccup).
 const Body = z.object({
   idempotencyKey: z.string().regex(/^[A-Za-z0-9_-]{22,43}$/), bag: Bag, address: z.unknown(), method: z.enum(['cod', 'prepaid']), expectedTotal: z.number().int().min(0), code: Code.optional(), via: z.enum(['typed', 'link']).optional(),
-  facts: z.object({ firstMethod: z.enum(['cod', 'prepaid']).nullable().optional(), attribution: z.record(z.string().max(40), z.string().max(200)).optional() }).optional(),
+  // Attribution as the shop's capture kept it: at most 20 keys of ≤ 300 characters; cleaned to ATTRIBUTION_KEYS below.
+  facts: z.object({ firstMethod: z.enum(['cod', 'prepaid']).nullable().optional(), attribution: z.record(z.string().max(40), z.string().max(300)).refine((o) => Object.keys(o).length <= 20).optional() }).optional(),
 })
 
 export async function POST(request: Request) {
@@ -16,7 +19,10 @@ export async function POST(request: Request) {
   const address = Address.safeParse(r.body.address)
   if (!address.success) return reply({ error: 'Some details need a look.', fields: addressErrors(address.error) }, 400)
   if (!(await withinLimit(LIMITS.placeOrderPhone, `${r.tenantId}:${address.data.phone}`, new Date(), true))) return reply({ error: 'Too many orders from this phone in the last hour. Message the shop on WhatsApp if you need help.' }, 429)
-  const attribution = Object.fromEntries(Object.entries(r.body.facts?.attribution ?? {}).filter(([k]) => /^(utm_(source|medium|campaign|content|term)|fbclid|fbc|fbp|gclid)$/.test(k)))
+  // The one cleaner (domains/analytics): listed keys only, each cleaned; the referring site reduced to a hostname that is
+  // not this shop (the request's own host), any shop on the shop domain, the console, a payment page or an IP.
+  const host = (request.headers.get('host') ?? '').toLowerCase().replace(/:\d+$/, '')
+  const attribution = cleanAttribution(r.body.facts?.attribution, { ownHosts: [host, host.replace(/^www\./, ''), `www.${host.replace(/^www\./, '')}`], shopDomain: SHOP_DOMAIN, consoleHost: CONSOLE_HOST })
   try {
     const code = await codeToTry(r.tenantId, r.ip, r.body.code)
     const out = await placeOrder(r.tenantId, { idempotencyKey: r.body.idempotencyKey, bag: r.body.bag, address: address.data, method: r.body.method, expectedTotal: r.body.expectedTotal, code, via: r.body.via, facts: { firstMethod: r.body.facts?.firstMethod ?? null, attribution } })

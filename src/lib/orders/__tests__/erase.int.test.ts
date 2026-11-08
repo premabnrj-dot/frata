@@ -19,8 +19,8 @@ describe.skipIf(!host)('erasing abandoned online orders', () => {
     const base = 930_000 + Math.floor(Math.random() * 60_000)
     const who = { customerName: 'Ananya Sharma', phone: '9829043210', addressLine: 'B-14, Tilak Marg', area: 'C-Scheme' }
     await withTenant(A, (tx) => tx.insert(orders).values([
-      { tenantId: A, number: base, paymentMethod: 'prepaid', placedAt: old, ...who },                       // abandoned, old: erased
-      { tenantId: A, number: base + 1, paymentMethod: 'prepaid', placedAt: old, paidAt: old, ...who },      // paid: kept
+      { tenantId: A, number: base, paymentMethod: 'prepaid', placedAt: old, ...who, checkout: { attribution: { utm_source: 'instagram', fbclid: 'IwAR1', gclid: 'Cj0', ref_host: 'l.instagram.com', fbc: 'fb.1.2.3' } } }, // abandoned, old: erased
+      { tenantId: A, number: base + 1, paymentMethod: 'prepaid', placedAt: old, paidAt: old, ...who, checkout: { attribution: { fbclid: 'IwAR2' } } }, // paid: kept
       { tenantId: A, number: base + 2, paymentMethod: 'cod', placedAt: old, ...who },                       // COD: kept
       { tenantId: A, number: base + 3, paymentMethod: 'prepaid', placedAt: now, ...who },                   // abandoned, recent: kept
     ]))
@@ -31,5 +31,9 @@ describe.skipIf(!host)('erasing abandoned online orders', () => {
     expect(rows.slice(0, 4).map((r) => [r.n - base, r.name, r.area, !!r.erased])).toEqual([
       [0, '', '', true], [1, 'Ananya Sharma', 'C-Scheme', false], [2, 'Ananya Sharma', 'C-Scheme', false], [3, 'Ananya Sharma', 'C-Scheme', false],
     ])
+    // The click ids and the referring site go with the details; the merchant's own utm tags stay. A paid order keeps all.
+    const att = await withTenant(A, (tx) => tx.select({ n: orders.number, c: orders.checkout }).from(orders).where(and(eq(orders.tenantId, A), gte(orders.number, base))).orderBy(orders.number))
+    expect((att[0]!.c as { attribution: unknown }).attribution).toEqual({ utm_source: 'instagram' })
+    expect((att[1]!.c as { attribution: unknown }).attribution).toEqual({ fbclid: 'IwAR2' })
   })
 })

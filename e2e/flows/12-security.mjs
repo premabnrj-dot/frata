@@ -35,6 +35,11 @@ export default {
         assert.match(h, /frame-ancestors 'none'/, `${url} lost the global policy`)
         assert.doesNotMatch(h, /nonce-/, `${url} got a nonce`)
       }
+      // A shop sends only its origin onward (Analytics A·1, security review: asserted, not set again).
+      assert.equal((await pg.goto(SHOP + '/')).headers()['referrer-policy'], 'strict-origin-when-cross-origin')
+      // A shop request over 32 kB is refused before it is parsed.
+      const big = await pg.evaluate(async () => (await fetch('/api/shop/orders', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pad: 'x'.repeat(40 * 1024) }) })).status)
+      assert.equal(big, 413)
       await anon.close()
     })
     await t.step('an oversized Razorpay webhook is refused with 413', async () => {

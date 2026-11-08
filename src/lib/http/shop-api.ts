@@ -10,6 +10,7 @@ import { LIMITS, overLimit, withinLimit, type Limit } from '@/lib/db/rate-limit'
 // per-shop limits, no caching, and replies that never carry more than the shopper's own.
 
 export const noStore = { 'cache-control': 'private, no-store' }
+const MAX_BODY = 32 * 1024
 export const reply = (data: unknown, status = 200) => NextResponse.json(data, { status, headers: noStore })
 
 export async function shopRequest<T extends z.ZodTypeAny>(request: Request, schema: T, limit: Limit, failClosed = false):
@@ -18,8 +19,13 @@ export async function shopRequest<T extends z.ZodTypeAny>(request: Request, sche
   if (!shop.ok) return { ok: false, response: reply({ error: shop.error }, shop.status) }
   const ip = await clientIp()
   if (!(await withinLimit(limit, `${shop.tenantId}:${ip}`, new Date(), failClosed))) return { ok: false, response: reply({ error: 'Too many tries from here. Wait a few minutes and try again.' }, 429) }
+  // A shop request is small (a bag, an address, a few tags): over 32 kB is refused before it is parsed (security review).
   let json: unknown
-  try { json = await request.json() } catch { return { ok: false, response: reply({ error: 'Bad request' }, 400) } }
+  try {
+    const text = await request.text()
+    if (text.length > MAX_BODY) return { ok: false, response: reply({ error: 'Too large' }, 413) }
+    json = JSON.parse(text)
+  } catch { return { ok: false, response: reply({ error: 'Bad request' }, 400) } }
   const parsed = schema.safeParse(json)
   if (!parsed.success) return { ok: false, response: reply({ error: 'Bad request', fields: Object.fromEntries(parsed.error.issues.map((i) => [String(i.path.join('.')), i.message])) }, 400) }
   return { ok: true, tenantId: shop.tenantId, body: parsed.data, ip }

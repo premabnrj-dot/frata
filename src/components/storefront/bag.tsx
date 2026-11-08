@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { api, codWhyNotText, inr, type PublicQuote } from './shop-client'
-import { bag, captureAttribution, useBag, useOfferCode } from './bag-store'
+import { bag, useBag, useOfferCode } from './bag-store'
 import { Icon } from '@/components/icons/icon'
 
 /** Re-price the bag on the server whenever it changes; the bag follows what can be bought. */
@@ -123,7 +123,6 @@ export function BagButton({ checkoutHref, shopHref, label = 'Bag', count = ['Bag
   const items = useBag()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDialogElement>(null)
-  useEffect(() => { captureAttribution() }, [])
   useEffect(() => {
     const o = () => setOpen(true)
     window.addEventListener('frata:open-bag', o)
