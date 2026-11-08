@@ -1,5 +1,5 @@
 # Email and notifications: Frrata → merchants and partners; merchant → shoppers
-Status: parked (owner, 2026-11-08: "keep it parked" until shop addresses are planned; frrata.shop bought for shop subdomains — see `docs/specs/2026-11-08-shop-addresses.md`) · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/TwHtjtuFPzRDv4uLqLB9xQ (`docs/mockups/2026-11-08-messaging.html`) · Approved: —
+Status: draft, resumed 2026-11-08 (owner: "while we're waiting for DNS, can we pick Email Plan"; shop addresses in `docs/specs/2026-11-08-shop-addresses.md`) · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/TwHtjtuFPzRDv4uLqLB9xQ (`docs/mockups/2026-11-08-messaging.html`) · Approved: —
 Research: `docs/research/2026-11-08-email-and-notifications.md` (four agents, facts checked 2026-11-08).
 Owner, 2026-11-08: **emails are branded — merchant to customer in the merchant's brand; Frrata to merchants and
 partners in Frrata's brand.** Checkout may ask for an email; **no consent checkbox.** **Amazon SES from the start**
@@ -29,7 +29,7 @@ partners what they must know, and the things they cannot miss always arrive.
 | | Frrata → merchants, staff, partners | A merchant → its shoppers |
 |---|---|---|
 | Brand | Frrata: wordmark, rani thread, Inter | The shop: its logo, accent, name. **No Frrata mark anywhere**, not in the footer |
-| From | `Frrata <notices@notify.frrata.com>` | `Kesar Studio <kesar-studio@frrata.shop>` until the shop verifies its domain, then `Kesar Studio <orders@kesarstudio.in>` |
+| From | `Frrata <notices@notify.frrata.com>` | `Kesar Studio <kesar-studio@frratamail.com>` until the shop verifies its domain, then `Kesar Studio <orders@kesarstudio.in>` |
 | Reply-To | Frrata support | The shop's support email (Settings › Store). A Gmail address is Reply-To only, never From (DMARC) |
 | Where it also shows | The console's Notices (bell): every notice lands there first | The order page (shopper's and the console's) shows each email's state |
 | Who decides | Frrata; required types can't be switched off | The merchant: on/off per email, wording, sender |
@@ -50,7 +50,11 @@ and events to Klaviyo, not SMTP.
   every subdomain of one primary domain together, so shops' mail must not live under frrata.com.
 
 **4. Domains** (owner call 2): frrata.com (bought) keeps people's mail and `notify.frrata.com` for notices;
-**frrata.shop** (to buy) carries shops' order emails; a third domain for shared marketing is chosen at E·4. Each:
+**frratamail.com** (to buy; $12.03/yr at Vercel, available 2026-11-08) carries shops' order emails; a third domain for
+shared marketing is chosen at E·4. **Not frrata.shop:** it holds the storefronts and goes on the Public Suffix List, and
+DMARC works out a sender's organisational domain from that list, so each `name.frrata.shop` would count as its own
+organisation for mail and frrata.shop itself as a public suffix [U: the DMARC revision in progress changes the
+method; a separate domain avoids the question either way]. Each:
 SPF, DKIM, DMARC (`p=none` first, then quarantine), a custom return path.
 
 **5. Consent without a checkbox** (owner: no consent check; owner call 3). Order emails go to every email given at
@@ -128,7 +132,7 @@ payout statement (when partner payouts exist).
 **E·3 Send from your own domain** (screen 7).
 - Settings › Emails › Your domain: type `kesarstudio.in` → the records (3 CNAME for DKIM, MX + TXT for the return
   path, one DMARC TXT) with Copy, "Check records", the state in words (Waiting for records · Checking · Sending from
-  orders@kesarstudio.in · Records missing — sending from kesar-studio@frrata.shop until fixed). Typical wait "up to
+  orders@kesarstudio.in · Records missing — sending from kesar-studio@frratamail.com until fixed). Typical wait "up to
   48 hours". The fallback is automatic; nothing is lost while records are wrong.
 
 **E·4 Campaigns** (module "Email campaigns", Grow group; screen 8).
@@ -162,7 +166,7 @@ and review ask (Reviews), Win-back at 90 days; each stops when the shopper order
 | A typo (`gmial.com`) | Checkout suggests the fix; if it still bounces, the address is suppressed for this shop | Emails card: Bounced · Fix the address · Send again |
 | The shopper marks an email as spam | Suppressed for this shop only; their other shops' mail is untouched | Emails card: Marked spam; the shop's complaint rate |
 | One shop's campaign draws complaints | That shop's marketing pauses alone (tenant), order emails go on; Frrata Admin sees it | Banner: "Campaigns paused: 0.4% marked as spam" |
-| A shop's domain records break after verifying | Sending falls back to `kesar-studio@frrata.shop` at once | Settings: "Records missing — sending from …"; a notice to the owner |
+| A shop's domain records break after verifying | Sending falls back to `kesar-studio@frratamail.com` at once | Settings: "Records missing — sending from …"; a notice to the owner |
 | Support email is a Gmail address | Used as Reply-To only | Sender card says so |
 | No support email set | Order emails can't be switched on; the list links to Settings › Store | Emails to shoppers: "Add a support email first" |
 | Marked shipped, then Undo within 5 minutes | Shipping emails wait 5 minutes and re-check the order; an undone step sends nothing | Undo toast: "The shopper has not been emailed" |
@@ -227,6 +231,26 @@ and review ask (Reviews), Win-back at 90 days; each stops when the shopper order
   Edit contact (email), the settings list, the console shell (bell), sign-in (SMTP move — the most shared path:
   e2e every flow signs in).
 
+## Tooling: Wraps (owner asked 2026-11-08: "see if this is helpful and can make the process easier")
+Wraps (wraps.dev) deploys email infrastructure into **our own AWS account** with one command and offers a TypeScript SDK.
+Checked 2026-11-08: the CLI `@wraps.dev/cli` 3.20.1 (AGPL-3.0, Pulumi underneath, updated 2026-11-04) "deploys SES,
+DynamoDB, Lambda, EventBridge, and IAM roles", with "least-privilege roles with OIDC support (Vercel, AWS native)" and
+domain verification with DKIM/SPF/DMARC; the SDK `@wraps.dev/email` 0.15.1 (MIT, first published 2025-11-12) sends with
+`new WrapsEmail().send({ from, to, subject, html })`; templates are React Email; a local dashboard reads the history.
+Not stated anywhere we could read: Mumbai (ap-south-1) support, SES tenants, a per-shop domain API [U].
+- **Take: the CLI, once, for E·0** (a tool we run, so AGPL does not reach our code): the SES account set-up, the
+  configuration set, the event pipeline and above all **Vercel OIDC → an AWS role**, so no long-lived AWS keys sit in
+  Vercel's environment. A day of console work becomes one reviewed command; check the region and what it created
+  before E·0 closes.
+- **Take: React Email** for our two layouts (the shop's and Frrata's).
+- **Not the SDK at runtime:** pre-1.0, it pulls DynamoDB, S3 and SSM clients, has no SES tenants (one shop's trouble
+  pausing only that shop is the reason we chose SES), and keeps the email history in **DynamoDB, outside Postgres and
+  its row security** — a second copy of every message's state, and shopper addresses where our isolation proof
+  (`verify:tenancy`) can't reach. Our sender stays ~100 lines on `@aws-sdk/client-sesv2` (`SendEmail` with
+  `TenantName`, the configuration set and List-Unsubscribe headers); events land in our `webhook_events` (ADR-0006).
+- **Not for merchants' domains (E·3):** those are created by our code per shop (`CreateEmailIdentity` + tenant), never
+  by a CLI.
+
 ## Pricing: the Messages wallet (owner: higher than cost, a model Indian merchants know)
 Indian merchants already buy messaging as **prepaid packs**: WhatsApp tools (Interakt, WATI) and SMS gateways (MSG91)
 sell a wallet you recharge, with a rate in paise per message and GST shown. Frrata does the same:
@@ -259,7 +283,7 @@ sell a wallet you recharge, with a rate in paise per message and GST shown. Frra
 ## Phases (each usable on its own)
 | Phase | A merchant can… | Depends on |
 |---|---|---|
-| **E·0 Foundation** | sign in without the hourly cap; nothing else visible | provider account, frrata.com DNS, frrata.shop bought |
+| **E·0 Foundation** | sign in without the hourly cap; nothing else visible | AWS account (SES Mumbai), frrata.com and frratamail.com bought |
 | **E·1 Notices** | see every Frrata notice in the console; get billing, security and Frrata-action emails | E·0; billing B3 uses it |
 | **E·2 Order emails** | have shoppers emailed at each step in the shop's brand; change the words; see bounces | E·0 |
 | **E·3 Own domain** | send from orders@theirbrand.in | E·2 |
@@ -271,7 +295,7 @@ sell a wallet you recharge, with a rate in paise per message and GST shown. Frra
 ## Owner calls (recommendations first)
 1. **Provider — decided (owner, 2026-11-08): Amazon SES from the start**, Mumbai, a tenant per shop; production
    access and a quota for festive volume requested in E·0.
-2. **Domains:** buy **frrata.shop** now for shops' order emails (≈ $12/yr class; check the price); `notify.frrata.com`
+2. **Domains:** buy **frratamail.com** for shops' order emails ($12.03/yr; frrata.shop stays storefronts only); `notify.frrata.com`
    for Frrata. The shared marketing domain waits for E·4.
 3. **Marketing consent without a checkbox:** (A, recommended) marketing only to shoppers who tap "Email me new drops"
    (no box in checkout; DPDP-ready); (B) email every checkout address until 12 May 2027, then only tappers — two
@@ -286,7 +310,7 @@ sell a wallet you recharge, with a rate in paise per message and GST shown. Frra
 ## Out of scope (and what brings each back)
 Merchant SMTP/own ESP (Scale merchants asking for Klaviyo → an export) · HTML/code templates (a partner building
 themes asks) · open tracking (never: Apple hides opens) · A/B tests (campaigns with > 10k subscribers) · BIMI (DMARC
-at reject on frrata.shop, then a CMC) · SMS (DLT registration done for Frrata as telemarketer) · email attachments
+at reject on frratamail.com, then a CMC) · SMS (DLT registration done for Frrata as telemarketer) · email attachments
 (a CA asks for the PDF by email) · Hindi email words (a fluent review) · inbound email into the Inbox (C3 live).
 
 ## Facts used

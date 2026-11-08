@@ -144,7 +144,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       <div class="who"><span class="pill">Kesar Studio</span><span class="arrow">→</span><span class="pill">Shoppers who gave an email</span></div>
       <dl class="kv">
         <dt>Brand</dt><dd>The shop's logo, colour and name. No Frrata mark anywhere</dd>
-        <dt>From</dt><dd class="mono">Kesar Studio &lt;kesar-studio@frrata.shop&gt; → orders@kesarstudio.in once verified</dd>
+        <dt>From</dt><dd class="mono">Kesar Studio &lt;kesar-studio@frratamail.com&gt; → orders@kesarstudio.in once verified</dd>
         <dt>Reply-To</dt><dd>The shop's support email</dd>
         <dt>Order emails</dt><dd>Included on every plan; no consent needed; never capped</dd>
         <dt>Marketing</dt><dd>Only to shoppers who tapped "Email me new drops"; from the Messages wallet</dd>
@@ -184,7 +184,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     <div class="card">
       <div class="row between"><h3 style="margin:0">Sender</h3><span class="chip c-n">Frrata's address</span></div>
       <dl class="kv" style="margin:10px 0">
-        <dt>From</dt><dd><b>Kesar Studio</b> <span class="mono sub">kesar-studio@frrata.shop</span></dd>
+        <dt>From</dt><dd><b>Kesar Studio</b> <span class="mono sub">kesar-studio@frratamail.com</span></dd>
         <dt>Replies go to</dt><dd class="mono">care@kesarstudio.in</dd>
       </dl>
       <div class="row"><a class="btn">Send from your own domain</a><a class="btn ghost">Change sender name</a></div>
@@ -300,19 +300,19 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   <h2 id="domain">7 · Send from your own domain</h2>
   <div class="card">
     <div class="row between"><h3 style="margin:0">kesarstudio.in</h3><span class="chip c-warn">Waiting for records</span></div>
-    <p class="sub" style="margin-top:6px">Add these at your domain provider (GoDaddy, Hostinger, BigRock…), then check. It can take up to 48 hours. Until then, emails go from kesar-studio@frrata.shop: nothing is lost.</p>
+    <p class="sub" style="margin-top:6px">Add these at your domain provider (GoDaddy, Hostinger, BigRock…), then check. It can take up to 48 hours. Until then, emails go from kesar-studio@frratamail.com: nothing is lost.</p>
     <div class="rec" style="font-weight:500;color:var(--sub)"><span>Type</span><span>Name</span><span class="v">Value</span><span class="cp"></span></div>
     <div class="rec"><span class="mono">CNAME</span><code>a1b2…._domainkey</code><code class="v">a1b2….dkim.amazonses.com</code><a class="btn cp">Copy</a></div>
     <div class="rec"><span class="mono">CNAME</span><code>c3d4…._domainkey</code><code class="v">c3d4….dkim.amazonses.com</code><a class="btn cp">Copy</a></div>
     <div class="rec"><span class="mono">CNAME</span><code>e5f6…._domainkey</code><code class="v">e5f6….dkim.amazonses.com</code><a class="btn cp">Copy</a></div>
     <div class="rec"><span class="mono">MX</span><code>bounce</code><code class="v">10 feedback-smtp.ap-south-1.amazonses.com</code><a class="btn cp">Copy</a></div>
     <div class="rec"><span class="mono">TXT</span><code>bounce</code><code class="v">v=spf1 include:amazonses.com ~all</code><a class="btn cp">Copy</a></div>
-    <div class="rec"><span class="mono">TXT</span><code>_dmarc</code><code class="v">v=DMARC1; p=none; rua=mailto:dmarc@frrata.shop</code><a class="btn cp">Copy</a></div>
+    <div class="rec"><span class="mono">TXT</span><code>_dmarc</code><code class="v">v=DMARC1; p=none; rua=mailto:dmarc@frratamail.com</code><a class="btn cp">Copy</a></div>
     <div class="row" style="margin-top:12px"><a class="btn primary">Check records</a><span class="k">Checked 2 min ago · 3 of 6 found</span></div>
   </div>
   <div class="grid3" style="margin-top:12px">
     <div class="card"><span class="chip c-ok">Sending from orders@kesarstudio.in</span><p class="k" style="margin-top:6px">All records found. Checked every day.</p></div>
-    <div class="card"><span class="chip c-danger">Records missing</span><p class="k" style="margin-top:6px">Sending from kesar-studio@frrata.shop until fixed. The owner gets a notice.</p></div>
+    <div class="card"><span class="chip c-danger">Records missing</span><p class="k" style="margin-top:6px">Sending from kesar-studio@frratamail.com until fixed. The owner gets a notice.</p></div>
     <div class="card"><span class="chip c-n">Address</span><p class="k" style="margin-top:6px">orders@ by default; any name before @kesarstudio.in.</p></div>
   </div>
 
@@ -429,7 +429,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       <tr><td>A typo that bounces</td><td>Suppressed for this shop; later emails held</td><td>Order: Fix the address · Send again</td></tr>
       <tr><td>Marked as spam</td><td>Stopped for this shop only, not the shopper's other Frrata shops</td><td>Order; the shop's rate</td></tr>
       <tr><td>One shop's campaign draws complaints</td><td>That shop's marketing pauses alone; order emails go on</td><td>Shop banner; Admin</td></tr>
-      <tr><td>Domain records break after verifying</td><td>Falls back to kesar-studio@frrata.shop at once</td><td>Settings; owner notice</td></tr>
+      <tr><td>Domain records break after verifying</td><td>Falls back to kesar-studio@frratamail.com at once</td><td>Settings; owner notice</td></tr>
       <tr><td>Shipped, then Undo in 5 minutes</td><td>The email waits 5 minutes and re-reads the order; nothing sent</td><td>Undo toast</td></tr>
       <tr><td>Confirmed, then cancelled a minute later</td><td>Only "Cancelled" goes</td><td>Order</td></tr>
       <tr><td>Festive peak, 10× orders</td><td>Order emails jump the queue; campaigns slow; SES quota raised before the season</td><td>Admin › Email health</td></tr>
@@ -447,7 +447,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   <div class="tablewrap"><table>
     <thead><tr><th>Phase</th><th>A merchant can…</th></tr></thead>
     <tbody>
-      <tr><td><b>E·0 Foundation</b></td><td>Sign in without the hourly limit (SES, Mumbai; frrata.com and frrata.shop records; events; suppression)</td></tr>
+      <tr><td><b>E·0 Foundation</b></td><td>Sign in without the hourly limit (SES, Mumbai; frrata.com and frratamail.com records; events; suppression)</td></tr>
       <tr><td><b>E·1 Notices</b></td><td>See every Frrata notice in the console; get billing, security and Frrata-action emails</td></tr>
       <tr><td><b>E·2 Order emails</b></td><td>Have shoppers emailed at each step in the shop's brand; change the words; see bounces</td></tr>
       <tr><td><b>E·3 Own domain</b></td><td>Send from orders@theirbrand.in</td></tr>
@@ -462,7 +462,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     <p class="sub">Merchant's brand to shoppers, Frrata's to merchants and partners · email at checkout, no consent box · Amazon SES from the start · charge above cost in a prepaid wallet.</p>
     <h3 style="margin-top:12px">For you to approve</h3>
     <ol class="sub" style="padding-left:18px;margin:0">
-      <li>Buy <b>frrata.shop</b> for shops' order emails; Frrata's notices from notify.frrata.com.</li>
+      <li>Buy <b>frratamail.com</b> for shops' order emails (frrata.shop stays storefronts only); Frrata's notices from notify.frrata.com.</li>
       <li>Marketing only to shoppers who tap "Email me new drops" (no box; ready for DPDP from 12 May 2027).</li>
       <li>No Frrata mark in shoppers' emails on any plan.</li>
       <li>The invoice as a link, not an attachment.</li>

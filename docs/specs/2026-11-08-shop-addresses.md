@@ -50,6 +50,9 @@ domains on Vercel (outbox rows, ADR-0006); re-checking every connected domain da
 frrata.shop address when the main domain fails for 24 hours; **detaching** a domain whose proof has been gone for 15
 days (Squarespace's rule); redirects from old names and other domains to the main address.
 
+**Email never goes from frrata.shop** (it is on the Public Suffix List; shops' order email uses frratamail.com —
+messaging spec § boundaries 4).
+
 **5. What we deliberately do not do (now):** sell domains (later: Vercel's registrar API, if merchants ask); edit a
 merchant's DNS for them (later: Domain Connect for GoDaddy and Cloudflare); touch email records (MX stays theirs; our
 records never conflict with mail); non-Latin domain names (`xn--`, homoglyphs).
