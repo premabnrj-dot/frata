@@ -1044,4 +1044,37 @@ end $$;
 delete from theme_version_stages where version_id = '7e7e7e7e-0000-0000-0000-00000000000a';
 delete from theme_versions where id = '7e7e7e7e-0000-0000-0000-00000000000a';
 
-\echo 'tenancy proof — all 34 checks passed'
+
+-- 35. Offers O·2 (docs/plans/2026-11-08-offers-o2.md): targets and tiers are the shop's own; a gift link clears only itself.
+insert into discount_targets (tenant_id, discount_id, product_id) values ('22222222-2222-2222-2222-222222222222', 'd15c0000-0000-0000-0000-00000000000b', 'eeeeeeee-0000-0000-0000-00000000000b');
+insert into discount_tiers (tenant_id, discount_id, min_subtotal, percent_bps) values ('22222222-2222-2222-2222-222222222222', 'd15c0000-0000-0000-0000-00000000000b', 100000, 500);
+insert into variants (id, tenant_id, product_id, option_values, price) values ('cdcdcdcd-0000-0000-0000-0000000000a9', '11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', '{GIFT}', 49900);
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if exists (select 1 from discount_targets) or exists (select 1 from discount_tiers) then raise exception 'FAIL: A sees B targets or tiers'; end if;
+  delete from discount_targets; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A removed B targets'; end if;
+  delete from discount_tiers; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A removed B tiers'; end if;
+  begin insert into discount_targets (tenant_id, discount_id, product_id) values ('11111111-1111-1111-1111-111111111111', 'd15c0000-0000-0000-0000-00000000000a', 'eeeeeeee-0000-0000-0000-00000000000b'); raise exception 'FAIL: A targeted B product';
+  exception when foreign_key_violation then null; end;
+  begin insert into discount_tiers (tenant_id, discount_id, min_subtotal, percent_bps) values ('11111111-1111-1111-1111-111111111111', 'd15c0000-0000-0000-0000-00000000000b', 1, 1); raise exception 'FAIL: A added a tier to B offer';
+  exception when foreign_key_violation then null; end;
+  begin update discount_targets set product_id = null; raise exception 'FAIL: app updated a target'; exception when insufficient_privilege then null; end;
+  -- A's own gift offer: a gift from B's variants is refused; its own variant is fine.
+  begin insert into discounts (tenant_id, title, style, gift_variant_id, min_subtotal, starts_at, created_by) values ('11111111-1111-1111-1111-111111111111', 'Gift', 'free_gift', 'cdcdcdcd-0000-0000-0000-00000000000b', 0, now(), '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: A gift from B variant';
+  exception when foreign_key_violation then null; end;
+  insert into discounts (id, tenant_id, title, style, gift_variant_id, min_subtotal, starts_at, created_by) values ('d15c0000-0000-0000-0000-0000000000a2', '11111111-1111-1111-1111-111111111111', 'Gift', 'free_gift', 'cdcdcdcd-0000-0000-0000-0000000000a9', 0, now(), '99999999-9999-9999-9999-999999999999');
+end $$;
+commit;
+do $$ begin
+  if has_table_privilege('frata_admin', 'discount_targets', 'select') or has_table_privilege('frata_admin', 'discount_tiers', 'select') or has_table_privilege('service_role', 'discount_targets', 'select') or has_table_privilege('anon', 'discount_tiers', 'select') then
+    raise exception 'FAIL: staff or API roles reach targets or tiers'; end if;
+end $$;
+-- Deleting the gift variant clears the gift only (tenant_id stays), as the owner would see it.
+delete from variants where id = 'cdcdcdcd-0000-0000-0000-0000000000a9';
+do $$ begin
+  if (select gift_variant_id from discounts where id = 'd15c0000-0000-0000-0000-0000000000a2') is not null then raise exception 'FAIL: gift link kept a deleted variant'; end if;
+  if (select tenant_id from discounts where id = 'd15c0000-0000-0000-0000-0000000000a2') is distinct from '11111111-1111-1111-1111-111111111111' then raise exception 'FAIL: the gift link moved the offer'; end if;
+end $$;
+
+\echo 'tenancy proof — all 35 checks passed'

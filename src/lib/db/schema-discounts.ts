@@ -11,7 +11,7 @@ import { boolean, check, foreignKey, index, integer, pgTable, text, unique, uniq
 import { DISCOUNT_STYLES } from '@/domains/checkout/discounts'
 import { sqlList } from '@/domains/tenancy/roles'
 import { at, createdAt, id, money, tenants } from './schema'
-import { variants } from './schema-catalogue'
+import { collections, products, variants } from './schema-catalogue'
 import { orders } from './schema-orders'
 
 /** An offer's terms. A draft until started (a partner drafts; an owner or admin starts it: owner call 6). */
@@ -41,6 +41,14 @@ export const discounts = pgTable('discounts', {
   endedAt: at('ended_at'),
   listed: boolean('listed').notNull().default(true),
   combinesWithPayment: boolean('combines_with_payment').notNull().default(true),
+  /** Product offers: every product, or the products / collections in discount_targets (O·2). */
+  targets: text('targets').notNull().default('all'),
+  /** Buy X get Y: X, Y, and the % off the Y pieces in bps (10000 = free). */
+  buyQty: integer('buy_qty'), getQty: integer('get_qty'), getBps: integer('get_bps'),
+  /** Free gift: the piece that is free above min_subtotal. Set null if the variant goes (the offer then gives nothing). */
+  giftVariantId: uuid('gift_variant_id'),
+  /** Only for a phone with no order at this shop (decided at placement). */
+  firstOrder: boolean('first_order').notNull().default(false),
   /** In the shop's announcement bar (one started offer at a time; a draft takes it when it starts). */
   announce: boolean('announce').notNull().default(false),
   createdBy: uuid('created_by').notNull(),
@@ -51,8 +59,14 @@ export const discounts = pgTable('discounts', {
   // One offer in the bar among started ones: a draft may ask for the bar and takes it when it starts.
   uniqueIndex('discounts_one_announce').on(t.tenantId).where(sql`${t.announce} and ${t.startedAt} is not null and ${t.endedAt} is null`),
   check('discounts_style', sql`${t.style} in (${sql.raw(sqlList(DISCOUNT_STYLES))})`),
-  check('discounts_value', sql`case when ${t.style} = 'free_shipping' then ${t.percentBps} is null and ${t.amountOff} is null and ${t.cap} is null
+  // free_shipping, bxgy, free_gift: no % or ₹; order_off: one of them, or neither when it has tiers; the rest: exactly one.
+  check('discounts_value', sql`case ${t.style}
+    when 'free_shipping' then ${t.percentBps} is null and ${t.amountOff} is null and ${t.cap} is null
+    when 'bxgy' then ${t.percentBps} is null and ${t.amountOff} is null and ${t.buyQty} between 1 and 10 and ${t.getQty} between 1 and 10 and ${t.getBps} between 1 and 10000
+    when 'free_gift' then ${t.percentBps} is null and ${t.amountOff} is null
+    when 'order_off' then not (${t.percentBps} is not null and ${t.amountOff} is not null)
     else (${t.percentBps} is null) <> (${t.amountOff} is null) end`),
+  check('discounts_targets', sql`${t.targets} in ('all','products','collections')`),
   check('discounts_money', sql`(${t.percentBps} is null or ${t.percentBps} between 1 and 10000) and (${t.amountOff} is null or ${t.amountOff} > 0)
     and (${t.cap} is null or ${t.cap} > 0) and ${t.minSubtotal} >= 0 and (${t.budget} is null or ${t.budget} > 0)
     and (${t.limitTotal} is null or ${t.limitTotal} > 0) and (${t.limitPerPhone} is null or ${t.limitPerPhone} > 0)`),
@@ -61,14 +75,48 @@ export const discounts = pgTable('discounts', {
   check('discounts_started_by', sql`(${t.startedAt} is null) = (${t.startedBy} is null)`),
 ])
 
+/** What a product offer covers when its targets are products or collections (exactly one per row). */
+export const discountTargets = pgTable('discount_targets', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'restrict' }),
+  discountId: uuid('discount_id').notNull(),
+  productId: uuid('product_id'),
+  collectionId: uuid('collection_id'),
+}, (t) => [
+  foreignKey({ name: 'discount_targets_discount_fk', columns: [t.tenantId, t.discountId], foreignColumns: [discounts.tenantId, discounts.id] }).onDelete('cascade'),
+  foreignKey({ name: 'discount_targets_product_fk', columns: [t.tenantId, t.productId], foreignColumns: [products.tenantId, products.id] }).onDelete('cascade'),
+  foreignKey({ name: 'discount_targets_collection_fk', columns: [t.tenantId, t.collectionId], foreignColumns: [collections.tenantId, collections.id] }).onDelete('cascade'),
+  index('discount_targets_discount').on(t.tenantId, t.discountId),
+  check('discount_targets_one', sql`(${t.productId} is null) <> (${t.collectionId} is null)`),
+])
+
+/** An order offer's steps: from `min_subtotal`, this % or ₹ off (the highest step reached applies). */
+export const discountTiers = pgTable('discount_tiers', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'restrict' }),
+  discountId: uuid('discount_id').notNull(),
+  minSubtotal: money('min_subtotal').notNull(),
+  percentBps: integer('percent_bps'),
+  amountOff: money('amount_off'),
+}, (t) => [
+  foreignKey({ name: 'discount_tiers_discount_fk', columns: [t.tenantId, t.discountId], foreignColumns: [discounts.tenantId, discounts.id] }).onDelete('cascade'),
+  uniqueIndex('discount_tiers_step').on(t.tenantId, t.discountId, t.minSubtotal),
+  check('discount_tiers_value', sql`(${t.percentBps} is null) <> (${t.amountOff} is null) and (${t.percentBps} is null or ${t.percentBps} between 1 and 10000)
+    and (${t.amountOff} is null or ${t.amountOff} > 0) and ${t.minSubtotal} > 0`),
+])
+
 /** A shared code. Unique per shop FOREVER (case-insensitive): a used code is never handed to another offer. */
 export const discountCodes = pgTable('discount_codes', {
   id: id(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'restrict' }),
   discountId: uuid('discount_id').notNull(),
   code: text('code').notNull(),
+  /** A creator's name for a creator code; null for the offer's one public code. */
+  label: text('label'),
   createdAt: createdAt(),
 }, (t) => [
+  uniqueIndex('discount_codes_one_public').on(t.tenantId, t.discountId).where(sql`${t.label} is null`),
+  check('discount_codes_label', sql`${t.label} is null or length(${t.label}) between 1 and 40`),
   foreignKey({ name: 'discount_codes_discount_fk', columns: [t.tenantId, t.discountId], foreignColumns: [discounts.tenantId, discounts.id] }).onDelete('restrict'),
   unique('discount_codes_tenant_discount_id_key').on(t.tenantId, t.discountId, t.id),
   uniqueIndex('discount_codes_tenant_code').on(t.tenantId, sql`upper(${t.code})`),
@@ -96,14 +144,17 @@ export const orderDiscounts = pgTable('order_discounts', {
   amountOff: money('amount_off'),
   cap: money('cap'),
   minSubtotal: money('min_subtotal').notNull(),
+  /** How it reached the order: by itself, a typed code, or a code from a link (?code=). For O·3's leak alert. */
+  via: text('via').notNull().default('auto'),
   createdAt: createdAt(),
 }, (t) => [
   foreignKey({ name: 'order_discounts_order_fk', columns: [t.tenantId, t.orderId], foreignColumns: [orders.tenantId, orders.id] }).onDelete('cascade'),
   foreignKey({ name: 'order_discounts_discount_fk', columns: [t.tenantId, t.discountId], foreignColumns: [discounts.tenantId, discounts.id] }).onDelete('restrict'),
   foreignKey({ name: 'order_discounts_code_fk', columns: [t.tenantId, t.discountId, t.codeId], foreignColumns: [discountCodes.tenantId, discountCodes.discountId, discountCodes.id] }).onDelete('restrict'),
-  uniqueIndex('order_discounts_order_class').on(t.tenantId, t.orderId, t.class),
+  uniqueIndex('order_discounts_order_offer').on(t.tenantId, t.orderId, t.discountId),
   index('order_discounts_discount').on(t.tenantId, t.discountId),
-  check('order_discounts_class', sql`${t.class} in ('order','shipping','payment')`),
+  check('order_discounts_class', sql`${t.class} in ('product','order','shipping','payment')`),
+  check('order_discounts_via', sql`${t.via} in ('auto','typed','link')`),
   check('order_discounts_amount', sql`${t.amount} > 0`),
 ])
 

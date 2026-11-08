@@ -136,6 +136,8 @@ export const orderLines = pgTable('order_lines', {
   unitPrice: money('unit_price').notNull(),
   compareAt: money('compare_at'),
   lineDiscount: money('line_discount').notNull().default(0),
+  /** The product offers' part of line_discount, fixed at placement and never re-spread by a reprice (offers O·2). */
+  productDiscount: money('product_discount').notNull().default(0),
   /** Value before GST, after any discount; GST per line, rounded per line (the invoice matches). */
   taxableValue: money('taxable_value').notNull(),
   gstBps: integer('gst_bps').notNull().default(0),
@@ -159,7 +161,7 @@ export const orderLines = pgTable('order_lines', {
   index('order_lines_order').on(t.tenantId, t.orderId),
   index('order_lines_variant').on(t.tenantId, t.variantId),
   check('order_lines_qty', sql`${t.qty} between 1 and 10`),
-  check('order_lines_money', sql`${t.unitPrice} >= 0 and ${t.taxableValue} >= 0 and ${t.gst} >= 0 and ${t.lineDiscount} >= 0 and (${t.unitCost} is null or ${t.unitCost} >= 0)`),
+  check('order_lines_money', sql`${t.unitPrice} >= 0 and ${t.taxableValue} >= 0 and ${t.gst} >= 0 and ${t.lineDiscount} >= 0 and ${t.productDiscount} >= 0 and ${t.productDiscount} <= ${t.lineDiscount} and (${t.unitCost} is null or ${t.unitCost} >= 0)`),
   check('order_lines_kind', sql`${t.kind} in ('in_stock','preorder','made_to_order')`),
 ])
 
