@@ -7,9 +7,14 @@ export type PublicQuoteLine = {
   shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; problem: 'gone' | 'sold_out' | 'reduced' | null
 }
 export type CodWhyNot = { reason: 'off' } | { reason: 'below_min'; min: number } | { reason: 'above_max'; max: number } | { reason: 'blocked_pincode'; pincode: string }
+export type PublicApplied = { title: string; amount: number; class: 'order' | 'shipping' | 'payment' }
+export type PublicListed = { title: string; code: string | null; style: 'order_off' | 'free_shipping' | 'pay_online'; applied: boolean; need: { kind: 'add'; amount: number } | { kind: 'pay_online' } | null }
 export type PublicQuote = {
   lines: PublicQuoteLine[]; subtotal: number; shipping: number; prepaid: number; gstPrepaid: number
-  cod: { total: number; charge: number; gst: number } | null; codWhyNot: CodWhyNot | null
+  /** Offers (server-named fields only: shop-api publicQuote). */
+  discountPrepaid: number; appliedPrepaid: PublicApplied[]
+  cod: { total: number; charge: number; gst: number; discount: number; applied: PublicApplied[] } | null; codWhyNot: CodWhyNot | null
+  offers: { listed: PublicListed[]; code: 'applied' | 'not_applied' | null }
   arrives: { from: string; to: string } | null; empty: boolean; missing: string[]
 }
 export type Pay = { keyId: string; razorpayOrderId: string; amount: number; name: string; phone: string; shop: string }

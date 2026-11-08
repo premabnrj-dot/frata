@@ -59,6 +59,23 @@ export const useBag = () => useSyncExternalStore(subscribe, bag.get, () => EMPTY
 /** Open the bag drawer from anywhere (Add to bag, the header). */
 export const openBag = () => window.dispatchEvent(new Event('frata:open-bag'))
 
+// The offer code the shopper typed (one per order), for this tab: every quote and the order carry it. A shop link
+// with ?code=… fills it (a creator's or a WhatsApp broadcast's link). Never a price: the server decides what it does.
+const CODE_KEY = 'frrata.code.v1'
+let codeNow: string | null = null
+const codeListeners = new Set<() => void>()
+const readCode = () => { try { return sessionStorage.getItem(CODE_KEY) } catch { return null } }
+export const offerCode = {
+  get: () => (codeNow ??= readCode() ?? ''),
+  set: (c: string) => {
+    const v = c.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 20)
+    codeNow = v
+    try { if (v) sessionStorage.setItem(CODE_KEY, v); else sessionStorage.removeItem(CODE_KEY) } catch { /* the page keeps it */ }
+    codeListeners.forEach((l) => l())
+  },
+}
+export const useOfferCode = () => useSyncExternalStore((l) => { codeListeners.add(l); return () => codeListeners.delete(l) }, offerCode.get, () => '')
+
 export const ATTR_KEY = 'frata.attr.v1'
 /** Remember how the shopper arrived (utm_*, fbclid…), for this tab, so the order can say which ad brought it. */
 export function captureAttribution() {
@@ -66,5 +83,7 @@ export function captureAttribution() {
     const p = new URLSearchParams(window.location.search)
     const keep = Object.fromEntries([...p].filter(([k]) => /^(utm_(source|medium|campaign|content|term)|fbclid|gclid)$/.test(k)).map(([k, v]) => [k, v.slice(0, 200)]))
     if (Object.keys(keep).length) sessionStorage.setItem(ATTR_KEY, JSON.stringify(keep))
+    const code = p.get('code')
+    if (code && /^[A-Za-z0-9]{1,20}$/.test(code)) offerCode.set(code)
   } catch { /* storage unavailable */ }
 }
