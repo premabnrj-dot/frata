@@ -92,13 +92,13 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   <p class="sub">Onboarding by trial: a brand signs up, picks a plan, opens its shop, and has 30 days of selling to see its first delivered order and what it kept, before it pays anything. Nothing on this page is built yet. Prices below are the current plan prices; dates are an example shop that signs up on 8 November.</p>
 
   <div class="calls" role="note" aria-label="Decisions needed">
-    <strong>Your calls before this is built</strong> (spec: <span class="mono">docs/specs/2026-11-08-trials.md</span>). The screens show the recommended answer.
+    <strong>Decided by the owner, 8 Nov 2026</strong> (spec: <span class="mono">docs/specs/2026-11-08-trials.md</span>). The screens show the decisions.
     <ol>
-      <li><b>Q1 Fee during the trial.</b> Recommended: the per-order fee is waived on orders shipped during the trial, up to the plan's included orders. Or: charged as usual.</li>
+      <li><b>Q1 Fee during the trial.</b> Decided: only the monthly plan price is free. The per-order fee and add-ons are charged as usual.</li>
       <li><b>Q2 The end without autopay.</b> Recommended: 7 days of grace, then the shop pauses (no new orders; orders on their way finish normally; data kept 180 days). Or: pause at once.</li>
       <li><b>Q3 Length.</b> Recommended: 30 days from the day the shop opens, never past 45 days from sign-up. Or: a flat 14 days from sign-up.</li>
-      <li><b>Q4 Phone check at sign-up</b> (a one-time code), so one business gets one trial.</li>
-      <li><b>Q5 The email provider</b> for the reminders (open since billing B3).</li>
+      <li><b>Q4 Phone check at sign-up</b> by a WhatsApp code, so one business gets one trial.</li>
+      <li><b>Q5 Messages.</b> Decided: WhatsApp only, for the code and every reminder. No email, no SMS.</li>
     </ol>
   </div>
 
@@ -146,10 +146,10 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
         <label class="plan"><span class="row between"><strong>Scale</strong><input type="radio" name="plan" id="p-scale"></span><span class="p">₹14,999<span class="k">/month + GST</span></span><span class="k">5,000 orders included · 0.5% per delivered order</span></label>
       </div>
       <div class="grid2">
-        <div><label class="k" for="phone">Your mobile number (we send a code once)</label><div class="row"><span class="btn" aria-hidden="true">+91</span><input id="phone" class="btn" style="flex:1;min-width:0;justify-content:flex-start" value="98290 43211"></div></div>
-        <div class="k" style="align-self:end">During the trial: no fee on orders shipped, up to your plan's included orders (Q1). You can change plan at any time.</div>
+        <div><label class="k" for="phone">Your WhatsApp number (we send a code once)</label><div class="row"><span class="btn" aria-hidden="true">+91</span><input id="phone" class="btn" style="flex:1;min-width:0;justify-content:flex-start" value="98290 43211"></div></div>
+        <div class="k" style="align-self:end">During the trial the monthly plan price is free. The fee on each delivered order applies as usual. You can change plan at any time.</div>
       </div>
-      <div class="row"><button class="btn primary" type="button">Start my 30 days</button><span class="k">Nothing is charged until your trial ends, and only if you set up autopay.</span></div>
+      <div class="row"><button class="btn primary" type="button">Start my 30 days</button><span class="k">No plan price until your trial ends. Each delivered order's fee is billed monthly, as on any plan.</span></div>
     </div>
   </div>
   <p class="note">A business that has had a trial before (same email, phone, GSTIN or payout bank account) sees instead: "This business has had a free trial before, so your shop starts on the plan straight away. You pay from your first bill." Never a refusal to sign up.</p>
@@ -179,7 +179,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       <div class="card">
         <div class="label">First proof</div>
         <h3 style="margin-top:4px">#1004 was delivered and kept you ₹612</h3>
-        <p class="sub">Chanderi kurta set, ₹2,490, COD to Jaipur. After product cost, shipping, the COD fee and payment fees. Frrata's fee: ₹0 during your trial.</p>
+        <p class="sub">Chanderi kurta set, ₹2,490, COD to Jaipur. After product cost, shipping, the COD fee, payment fees and Frrata's 1% fee. Your plan price: ₹0 during your trial.</p>
         <a class="btn" href="#">See the order</a>
       </div>
       <div class="card">
@@ -205,7 +205,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     </div>
   </div>
   <div class="grid2" style="margin-top:12px">
-    <div class="msg"><div class="from">Email · 3 days before (TR2)</div><strong>Your Frrata trial ends on 12 December</strong><p style="margin:6px 0 0">Kesar Studio has had 4 delivered orders that kept you ₹2,140. To keep selling after 12 December, set up autopay for Growth at ₹5,898.82 a month including GST. If you do nothing, your shop keeps working for 7 more days, then pauses. Nothing is deleted.</p></div>
+    <div class="msg"><div class="from">WhatsApp utility template · 3 days before (TR2)</div>Your Frrata trial for Kesar Studio ends on 12 Dec. 4 delivered orders so far, ₹2,140 kept. To keep selling, set up autopay for Growth (₹5,898.82 a month incl. GST): frrata.shop/billing. If you do nothing, your shop works 7 more days, then pauses. Nothing is deleted.</div>
     <div class="msg"><div class="from">WhatsApp utility template · 1 day before (TR2)</div>Kesar Studio's Frrata trial ends tomorrow, 12 Dec. Set up autopay to keep selling: frrata.shop/billing · Reply STOP to stop these.</div>
   </div>
 
@@ -218,7 +218,8 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
           <li><span class="d">8 Nov</span><span>Signed up on Growth</span></li>
           <li><span class="d">12 Nov</span><span>Opened your shop · trial started</span></li>
           <li><span class="d">12 Dec</span><span><strong>Trial ends</strong> · Growth starts at ₹4,999 a month + GST</span></li>
-          <li><span class="d">1 Jan</span><span>First bill: Growth for 12–31 Dec by days, ₹3,225 + GST, and December's fees</span></li>
+          <li><span class="d">1 Dec</span><span>Bill for November's delivered-order fees (the plan is free)</span></li>
+          <li><span class="d">1 Jan</span><span>Growth for 12–31 Dec by days, ₹3,225 + GST, and December's fees</span></li>
         </ul>
         <div class="row" style="margin-top:10px"><button class="btn primary" type="button">Set up autopay</button><button class="btn" type="button">Pay now instead</button></div>
       </div>
