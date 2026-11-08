@@ -9,7 +9,7 @@ import type { Tx } from '@/lib/db'
 import { momentColumns, onlineTotalCol } from '@/lib/db/order-predicates'
 import { shopSettings, tenantCounters, tenants } from '@/lib/db/schema'
 import { variants } from '@/lib/db/schema-catalogue'
-import { orderEvents, orderLines, orderNotes, orders } from '@/lib/db/schema-orders'
+import { orderEvents, orderLines, orderNotes, orders, shipments } from '@/lib/db/schema-orders'
 import { takeStock } from './place'
 
 // =============================================================================
@@ -28,16 +28,16 @@ export type Actor = { kind: 'member' | 'support'; userId: string; email: string 
 export type Done<T = object> = ({ ok: true; eventId: string } & T) | { ok: false; error: string; by?: { email: string | null; at: Date } }
 
 /** Moments are written from one JS Date truncated to the millisecond, so an undo can match them exactly. */
-const moment = (now: Date) => new Date(Math.floor(now.getTime()))
+export const moment = (now: Date) => new Date(Math.floor(now.getTime()))
 
-async function current(tx: Tx, tenantId: string, orderId: string, now: Date) {
+export async function current(tx: Tx, tenantId: string, orderId: string, now: Date) {
   const [o] = await tx.select({ ...momentColumns, id: orders.id, number: orders.number, subtotal: orders.subtotal, shipping: orders.shipping, codCharge: orders.codCharge,
     gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst, sellerGstin: orders.sellerGstin, onlineTotal: onlineTotalCol })
     .from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId))).for('update')
   return o ? { o, state: orderState(o, now) } : null
 }
 
-async function record(tx: Tx, tenantId: string, orderId: string, actor: Actor, kind: typeof orderEvents.$inferInsert.kind, at: Date, extra: Partial<typeof orderEvents.$inferInsert> = {}) {
+export async function record(tx: Tx, tenantId: string, orderId: string, actor: Actor, kind: typeof orderEvents.$inferInsert.kind, at: Date, extra: Partial<typeof orderEvents.$inferInsert> = {}) {
   const [e] = await tx.insert(orderEvents).values({ tenantId, orderId, kind, actorKind: actor.kind, actorUserId: actor.userId, actorEmail: actor.email, at, ...extra }).returning({ id: orderEvents.id })
   return e!.id
 }
@@ -199,22 +199,32 @@ export async function cancel(tx: Tx, tenantId: string, actor: Actor, orderId: st
   if (!applies('cancel', c.state)) return c.state === 'cancelled' ? refuse(tx, tenantId, orderId, 'cancel', c.state) : { ok: false, error: 'It has left the shop: that is a return (Phase 2).' }
   const note = c0.note?.trim().slice(0, 500) || null
   if (c0.reason === 'other' && !note) return { ok: false, error: 'Say why in a few words.' }
+  // A shipment booked with the courier but not yet picked up (Ship S·1) is cancelled with the courier first.
+  const [open] = await tx.select({ id: shipments.id }).from(shipments).where(and(eq(shipments.tenantId, tenantId), eq(shipments.orderId, orderId), isNull(shipments.endedAt))).limit(1)
+  if (open) return { ok: false, error: 'A shipment is booked for it: cancel the shipment first.' }
   const at = moment(now)
   const r = await tx.update(orders).set({ cancelledAt: at, cancelReason: c0.reason, cancelNote: note })
     .where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId), isNull(orders.cancelledAt), isNull(orders.shippedAt))).returning({ id: orders.id })
   if (!r.length) return refuse(tx, tenantId, orderId, 'cancel', (await current(tx, tenantId, orderId, now))!.state)
-  const backInStock: string[] = []
-  if (c0.restock) {
-    const taken = await tx.select({ id: orderLines.id, variantId: orderLines.variantId, qty: orderLines.qty }).from(orderLines)
-      .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId), isNotNull(orderLines.stockTakenAt)))
-    for (const l of [...taken].sort((a, b) => String(a.variantId).localeCompare(String(b.variantId)))) {
-      await tx.update(orderLines).set({ stockTakenAt: null }).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.id, l.id)))
-      if (!l.variantId) continue
-      const [v] = await tx.update(variants).set({ stock: sql`${variants.stock} + ${l.qty}` })
-        .where(and(eq(variants.tenantId, tenantId), eq(variants.id, l.variantId))).returning({ stock: variants.stock })
-      if (v && v.stock - l.qty <= 0) backInStock.push(l.variantId)
-    }
-  }
+  const backInStock = c0.restock ? await putStockBack(tx, tenantId, orderId) : []
   const after: StoredOrder = { ...c.o, cancelledAt: at }
   return { ok: true, eventId: await record(tx, tenantId, orderId, actor, 'cancelled', at, { reason: c0.reason }), refund: refundDue(after), backInStock }
+}
+
+/**
+ * Put back exactly the lines whose stock was taken (per line, once), in variant order; says which variants came back
+ * from 0 so the caller refreshes the shop. Cancel and a return that came back (outcomes.ts) both use it.
+ */
+export async function putStockBack(tx: Tx, tenantId: string, orderId: string): Promise<string[]> {
+  const backInStock: string[] = []
+  const taken = await tx.select({ id: orderLines.id, variantId: orderLines.variantId, qty: orderLines.qty }).from(orderLines)
+    .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId), isNotNull(orderLines.stockTakenAt)))
+  for (const l of [...taken].sort((a, b) => String(a.variantId).localeCompare(String(b.variantId)))) {
+    await tx.update(orderLines).set({ stockTakenAt: null }).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.id, l.id)))
+    if (!l.variantId) continue
+    const [v] = await tx.update(variants).set({ stock: sql`${variants.stock} + ${l.qty}` })
+      .where(and(eq(variants.tenantId, tenantId), eq(variants.id, l.variantId))).returning({ stock: variants.stock })
+    if (v && v.stock - l.qty <= 0) backInStock.push(l.variantId)
+  }
+  return backInStock
 }

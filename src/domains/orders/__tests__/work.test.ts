@@ -67,3 +67,16 @@ describe('a series that fits the year', () => {
     expect(() => invoiceNumber({ series: 'KESR/', orderPrefix: 'KS', fiscalYear: '26-27', n: MAX_IN_YEAR.bill + 1, kind: 'bill' })).toThrow(InvoiceNumberTooLong)
   })
 })
+
+describe('shipping roles (Ship S·0)', () => {
+  it('the shop\'s own people ship; only owners and admins mark an outcome; partners do neither', () => {
+    expect([...ROLES.ship_self].sort()).toEqual(['admin', 'owner', 'staff'])
+    for (const a of ['deliver', 'came_back', 'lost'] as const) expect([...ROLES[a]].sort()).toEqual(['admin', 'owner'])
+    expect(may('ship_self', 'packed', 'partner')).toBe(false)
+    expect(may('ship_self', 'packed', 'staff')).toBe(true)
+    expect(may('deliver', 'shipped', 'staff')).toBe(false)
+    expect(may('deliver', 'ndr', 'owner')).toBe(true)
+    expect(applies('ship_self', 'confirmed')).toBe(false)
+    expect(primaryAction('shipped')).toBe('deliver')
+  })
+})
