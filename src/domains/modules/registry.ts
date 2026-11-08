@@ -42,8 +42,8 @@ export type ModuleDef = {
 
 export const MODULES: Record<ModuleKey, ModuleDef> = {
   communication: {
-    key: 'communication', name: 'Messages', job: 'WhatsApp with customers. One inbox for your team.', group: 'talk', billing: 'core', status: 'next',
-    usage: 'Meta bills messages', dependsOn: [], outboxKinds: [],
+    key: 'communication', name: 'Messages', job: 'WhatsApp with customers. One inbox for your team.', group: 'talk', billing: 'core', status: 'now',
+    usage: 'Meta bills messages', dependsOn: [], outboxKinds: [], setup: '/console/apps/communication',
     features: ['Your own WhatsApp Business number', 'COD confirmation by reply', 'Shipped and delivered updates', 'One inbox for your team', 'Notes, assignment, quick replies'],
   },
   rto_shield: {

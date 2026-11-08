@@ -25,6 +25,7 @@ export default async function AppsPage() {
       key, name: def.name, job: def.job, group: def.group, features: [...def.features], usage: def.usage ?? null,
       worksWith: def.dependsOn.map((d) => ({ name: MODULES[d].name, on: access[d].usable })),
       offer: offerFor(key, a, prices[key]?.monthlyPrice ?? null, now),
+      setup: a.on && a.usable && def.setup ? def.setup : null,
       ask: frataWhatsappLink(`Hi Frrata, please add ${def.name} to ${auth.membership.tenantName}.`),
     }
   })

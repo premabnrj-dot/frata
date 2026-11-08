@@ -87,10 +87,29 @@ create your tenant and owner membership (it is a plain insert; no secret).
 3. Before the name is public: the IP India trademark search (classes 35 and 42), frrata.in at an Indian registrar,
    and the Instagram and WhatsApp handles (owner, 2026-11-07: checking these himself).
 
+### 7. Messages: Frrata's Meta app (C1, 2026-11-07)
+
+Until these are set, Console › Apps › Messages says "WhatsApp isn't switched on for Frrata yet" and nothing is called.
+
+1. **Meta Business verification** of Frrata's portfolio, then a Meta app of type Business set up as a **Tech
+   Provider** (developers.facebook.com → My Apps). Add the WhatsApp product.
+2. **Embedded Signup**: WhatsApp → Embedded Signup → create a configuration (v4) with WhatsApp Business app onboarding
+   allowed. Copy its **configuration id**. Add `frata.vercel.app` (and the console host) to the app's allowed domains.
+3. **Webhook**: WhatsApp → Configuration → callback URL `https://<console host>/api/webhooks/whatsapp`, verify token = the
+   value you set as `WA_VERIFY_TOKEN`. Subscribe the fields `messages`, `smb_message_echoes`, `history`,
+   `smb_app_state_sync`, `account_update`, `phone_number_quality_update`, `phone_number_name_update`.
+4. Vercel → frata → Environment Variables (Production):
+   - `NEXT_PUBLIC_META_APP_ID` (the app id) and `NEXT_PUBLIC_WA_CONFIG_ID` (step 2): public, shown to Meta's popup.
+   - `META_APP_SECRET` (Sensitive): App settings → Basic → App secret.
+   - `WA_VERIFY_TOKEN` (Sensitive): any random string, e.g. `openssl rand -hex 16`, the same as in step 3.
+   - `PAYMENT_KEYS_SECRET` must already be set (it seals each shop's WhatsApp token too).
+5. Redeploy, then connect Frrata's own test number first (dev mode). Other brands' numbers need **App Review**
+   (two screencasts, recorded after C2·1) and access verification; until then Meta allows 10 new brands per 7 days.
+
 ## Later
 
 - `CRON_SECRET` (Sensitive): the daily cron in `vercel.json` (03:17 UTC) is refused
-  without it. It is the safety net for Razorpay events; each event is also
+  without it. It is the safety net for Razorpay and WhatsApp events; each event is also
   processed the moment it arrives.
 - `PAYMENT_KEYS_SECRET` (Sensitive, Production): replace the placeholder with
   `openssl rand -base64 32` **before any merchant connects Razorpay** — changing it

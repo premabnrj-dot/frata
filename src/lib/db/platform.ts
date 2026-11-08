@@ -120,16 +120,24 @@ export async function paymentWebhookFor(key: string): Promise<{ tenantId: string
   return rows[0] ? { tenantId: rows[0].tenant_id, secretEnc: rows[0].webhook_secret_enc } : null
 }
 
-/** Shops with Razorpay events still to process (the daily safety net; read with no tenant set, which the policy allows). */
-export async function shopsWithPendingEvents(): Promise<string[]> {
-  const rows = await db().execute<{ tenant_id: string }>(sql`select distinct tenant_id from webhook_events where processed_at is null and tenant_id is not null limit 500`)
-  return rows.map((r) => r.tenant_id)
+/** Shops with a provider's events still to process (the daily safety net; read with no tenant set, which the policy allows). */
+export async function shopsWithPendingEvents(provider: 'razorpay' | 'whatsapp' = 'razorpay'): Promise<string[]> {
+  const rows = await db().execute<{ t: string }>(sql`select t from app_pending_event_shops(${provider}) as t`)
+  return rows.map((r) => r.t)
 }
 
 /** Shops with abandoned online orders past the cutoff whose shopper details are still there: ids only (drizzle/0021). */
 export async function shopsToErase(before: Date): Promise<string[]> {
   const rows = await db().execute<{ id: string }>(sql`select app_shops_to_erase(${before.toISOString()}::timestamptz) as id`)
   return rows.map((r) => r.id)
+}
+
+// ── Messages (WhatsApp, drizzle/0030) ──────────────────────────────────────────
+/** Stores one verified WhatsApp item for the shop whose open connection has this id, under OUR key
+ *  "whatsapp:<shop>:<tail>". The definer finds the shop; returns it when a new row landed (null: no shop, or a retry). */
+export async function storeWhatsAppEvent(by: 'number' | 'account', metaId: string, tail: string, payload: object): Promise<string | null> {
+  const rows = await db().execute<{ t: string | null }>(sql`select app_store_wa_event(${by}, ${metaId}, ${tail}, ${JSON.stringify(payload)}::jsonb) as t`)
+  return rows[0]?.t ?? null
 }
 
 /**

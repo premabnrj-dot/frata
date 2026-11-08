@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 4.1.0
+  version: 4.2.0
   verified: 2026-11-07
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -77,6 +77,11 @@ from it).
   line). Footer: "Not now" (focused) and the one action — the switch, "Add X ·
   ₹499/mo" (a WhatsApp ask to Frrata, until billing), "See plans", or "Coming next".
 - Turning a module off asks once: "Turn off X?" · "Keep X" / "Turn off X".
+- **Messages setup** (`/console/apps/communication`, from the Apps row's "Set up"): not connected → two path cards
+  (Business app, bordered 2 px, "Most brands"; a new number) with an icon tile, the app-changes and other-tool
+  notes as (i) tips, and a muted "Next" band. Connected → the number card (mono phone, name · which apps, Quality,
+  Limit, Chats from the app; More: Check again, Disconnect) and "Needs you" rows: a badge (Blocks messages / By 31
+  Dec / Quality low / In review), the need in words, one action. Meta's raw values never show.
 - **Admin**: merchant tabs Overview · Modules · Plan. The Modules tab is a table
   (Module, Granted by, Merchant, Usable, action: "Give a 30-day trial of X",
   "End trial"). Admin › Modules pauses a module "for everyone" with a reason;

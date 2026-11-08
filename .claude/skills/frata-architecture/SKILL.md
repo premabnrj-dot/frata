@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.6.0
+  version: 2.7.0
   verified: 2026-11-07
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -204,6 +204,12 @@ shop can have or not (Messages, RTO Shield, Reviews…).
 - **A module's outbox kinds** are listed in its `outboxKinds`. The cron asks
   `outboxDecision()`: paused → the row waits (`deferRow`); off or not granted →
   `markDead`. Switching a module off cancels its queued rows (`cancelQueued`).
+- **A module that calls the outside world** (Meta, Shiprocket) asks `moduleGate(module, roles)` first, calls out
+  with no transaction open, then writes through `asModule` (which asks again). Example: `connectWhatsAppAction`.
+- **One webhook URL per provider for every shop** (`/api/webhooks/whatsapp`): each item is routed by its own
+  account id through a definer (`app_tenant_for_wa`, open rows only, digits only), stored one row per item under
+  `whatsapp:<tenant>:<id>:<field>:<item>[:<status>]` (`src/domains/communication/webhook.ts`). An item for no
+  open connection is not stored.
 - **Core never imports a module.** A module's code lives in
   `src/domains/<key>/`, `src/lib/modules/<key>/`, `src/components/modules/<key>/`,
   `src/app/(console)/console/apps/<key>/`; core reaches it only through the hooks
