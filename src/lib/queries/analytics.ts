@@ -1,5 +1,5 @@
 import 'server-only'
-import { sql, type SQL } from 'drizzle-orm'
+import { and, asc, eq, isNull, sql, type SQL } from 'drizzle-orm'
 import { classifySource, type Channel } from '@/domains/analytics/source'
 import { keptOf, type Kept, type KeptGroup } from '@/domains/orders/kept'
 import { estimateOf } from '@/domains/settings/ship-costs'
@@ -8,6 +8,7 @@ import { istDayStart } from '@/domains/time/day'
 import type { Tx } from '@/lib/db'
 import { discountCodes, orderDiscounts } from '@/lib/db/schema-discounts'
 import { orders, shipments } from '@/lib/db/schema-orders'
+import { collections, products } from '@/lib/db/schema-catalogue'
 import { useOfRowSql } from '@/lib/db/discount-predicates'
 import { currentMethodSql, feeBucketSql, holdingSql, stageSql, standingSql } from '@/lib/db/order-predicates'
 import { withTenant } from '@/lib/db/tenant'
@@ -210,4 +211,17 @@ export async function sourcePageIn(tx: Tx, tenantId: string, role: MemberRole, p
        order by o.placed_at desc limit 50`)
     return { stat, orders: list.map((o) => ({ number: o.number, placedAt: new Date(o.placed_at), total: Number(o.total), stage: o.stage, campaign: o.campaign })) }
   }
+}
+
+/** What Make a link can open: the shop's live products and its collections, by address (plan review 13: the dialog
+ * offers only these, from the same shop; it never takes a typed host or path). */
+export async function linkTargets(tenantId: string) {
+  return withTenant(tenantId, async (tx) => {
+    const [ps, cs] = await Promise.all([
+      tx.select({ handle: products.handle, title: products.title }).from(products)
+        .where(and(eq(products.tenantId, tenantId), eq(products.status, 'active'), isNull(products.archivedAt))).orderBy(asc(products.title)).limit(200),
+      tx.select({ handle: collections.handle, title: collections.title }).from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)).limit(100),
+    ])
+    return { products: ps, collections: cs }
+  })
 }
