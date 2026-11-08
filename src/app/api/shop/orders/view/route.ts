@@ -27,5 +27,7 @@ export async function POST(request: Request) {
     firstName: o.customerName.split(' ')[0] ?? '', to: `${o.city} ${o.pincode}`.trim(), phone: maskPhone(o.phone),
     arrives: o.arrivesFrom && o.arrivesTo ? { from: o.arrivesFrom, to: o.arrivesTo } : null, returnDays: o.returnDays, returnKind: o.returnKind,
     lines: o.lines, shop: { name: data.shop.name, whatsapp: data.shop.whatsapp },
+    // What the offers saved on the items, as the order is paid now (the pay-online saving only while paid online).
+    savings: o.offers.filter((d) => d.class === 'order' || (d.class === 'payment' && currentMethod(o) === 'prepaid')).map((d) => ({ title: d.title, amount: d.amount })),
   })
 }

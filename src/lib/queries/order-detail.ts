@@ -1,3 +1,4 @@
+import { orderDiscounts } from '@/lib/db/schema-discounts'
 import 'server-only'
 import { and, asc, desc, eq } from 'drizzle-orm'
 import { momentColumns } from '@/lib/db/order-predicates'
@@ -20,7 +21,7 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
   const data = await withTenant(tenantId, async (tx) => {
     const [o] = await tx.select({
       ...momentColumns, id: orders.id, number: orders.number,
-      subtotal: orders.subtotal, shipping: orders.shipping, codCharge: orders.codCharge, gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst,
+      subtotal: orders.subtotal, discount: orders.discount, shipping: orders.shipping, codCharge: orders.codCharge, gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst,
       customerName: orders.customerName, phone: orders.phone, addressLine: orders.addressLine, area: orders.area, landmark: orders.landmark,
       pincode: orders.pincode, city: orders.city, state: orders.state,
       invoiceNumber: orders.invoiceNumber, cancelReason: orders.cancelReason, cancelNote: orders.cancelNote, erasedAt: orders.erasedAt,
@@ -36,7 +37,10 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
       .from(orderEvents).where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.orderId, o.id))).orderBy(desc(orderEvents.at)).limit(100)
     const notes = await tx.select({ id: orderNotes.id, body: orderNotes.body, authorEmail: orderNotes.authorEmail, at: orderNotes.at })
       .from(orderNotes).where(and(eq(orderNotes.tenantId, tenantId), eq(orderNotes.orderId, o.id))).orderBy(desc(orderNotes.at)).limit(100)
-    return { o, lines, events, notes }
+    // The offers it got, as recorded at placement (the pay-online saving is shown only while it is paid online).
+    const offers = (await tx.select({ title: orderDiscounts.title, class: orderDiscounts.class, amount: orderDiscounts.amount }).from(orderDiscounts)
+      .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, o.id)))).map((d) => ({ ...d, amount: Number(d.amount) }))
+    return { o, lines, events, notes, offers }
   })
   if (!data) return null
   // Risk: null when its facts cannot be read (the page then says "Risk unavailable" and fails closed).

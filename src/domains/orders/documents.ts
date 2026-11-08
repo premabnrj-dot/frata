@@ -16,10 +16,10 @@
 // =============================================================================
 
 import { stateCode } from '@/domains/checkout/states'
-import { gstHeads, supplyKind } from '@/domains/tax/gst'
+import { gstHeads, split, supplyKind } from '@/domains/tax/gst'
 import { collect, sharesOf, type StoredLine, type StoredOrder } from './amounts'
 
-export type DocLine = StoredLine & { title: string; optionValues: string[]; qty: number; sku: string | null; hsn: string | null; imageBase: string | null; imageWidths: number[] | null }
+export type DocLine = StoredLine & { unitPrice: number; lineDiscount: number; title: string; optionValues: string[]; qty: number; sku: string | null; hsn: string | null; imageBase: string | null; imageWidths: number[] | null }
 export type DocOrder = StoredOrder & {
   number: string; placedAt: Date; packedAt: Date | null; invoiceNumber: string | null; sellerGstin: string | null
   /** The seller as it was at packing; null before packing (the invoice then is not issued). */
@@ -51,7 +51,11 @@ export function packingSlip(o: DocOrder, lines: DocLine[], shop: DocShop): Packi
   }
 }
 
-export type InvoiceLine = { title: string; hsn: string | null; qty: number; taxable: number; rateBps: number; cgst: number; sgst: number; igst: number; total: number }
+/**
+ * `gross` and `discount` are before GST at the line's rate (an offer's discount, recorded on the invoice: CGST s.15(3)(a)),
+ * so gross − discount = taxable (Rule 46); the charges' share sits in gross and taxable alike.
+ */
+export type InvoiceLine = { title: string; hsn: string | null; qty: number; gross: number; discount: number; taxable: number; rateBps: number; cgst: number; sgst: number; igst: number; total: number }
 export type Invoice = {
   kind: 'tax_invoice' | 'bill_of_supply'; number: string; date: Date; cancelled: boolean
   seller: { name: string; address: string; gstin: string | null }
@@ -59,7 +63,7 @@ export type Invoice = {
   placeOfSupply: { state: string; code: string | null }
   supply: 'intra' | 'inter'
   lines: InvoiceLine[]
-  totals: { taxable: number; cgst: number; sgst: number; igst: number; total: number }
+  totals: { gross: number; discount: number; taxable: number; cgst: number; sgst: number; igst: number; total: number }
   /** True when the prices the shopper saw included GST (the line says so). */
   pricesIncludeGst: boolean
   /** What the charges were, for the line under the table (they are inside each line's value). */
@@ -77,15 +81,17 @@ export function invoice(o: DocOrder, lines: DocLine[], shop: DocShop): Invoice |
     const taxable = l.taxableValue + shares[i]!.chargeTaxable
     const gst = l.gst + shares[i]!.chargeGst
     const heads = kind === 'tax_invoice' ? gstHeads(gst, supply) : { cgst: 0, sgst: 0, igst: 0 }
-    return { title: [l.title, ...l.optionValues].join(' · '), hsn: l.hsn, qty: l.qty, taxable, rateBps: kind === 'tax_invoice' ? l.gstBps : 0, ...heads, total: taxable + heads.cgst + heads.sgst + heads.igst }
+    // The discount before GST: the line's gross value before GST at its rate, less its stored taxable value.
+    const discount = l.lineDiscount ? split(l.unitPrice * l.qty, l.gstBps, o.pricesIncludeGst).taxable - l.taxableValue : 0
+    return { title: [l.title, ...l.optionValues].join(' · '), hsn: l.hsn, qty: l.qty, gross: taxable + discount, discount, taxable, rateBps: kind === 'tax_invoice' ? l.gstBps : 0, ...heads, total: taxable + heads.cgst + heads.sgst + heads.igst }
   })
-  const sum = (k: keyof Pick<InvoiceLine, 'taxable' | 'cgst' | 'sgst' | 'igst' | 'total'>) => out.reduce((a, l) => a + l[k], 0)
+  const sum = (k: keyof Pick<InvoiceLine, 'gross' | 'discount' | 'taxable' | 'cgst' | 'sgst' | 'igst' | 'total'>) => out.reduce((a, l) => a + l[k], 0)
   return {
     kind, number: o.invoiceNumber, date: o.packedAt, cancelled: !!o.cancelledAt,
     seller: { name: o.sellerName ?? (shop.legalName || shop.name), address: o.sellerAddress ?? shop.address, gstin: o.sellerGstin },
     buyer: { name: o.customerName, lines: addressLines(o) },
     placeOfSupply: { state: o.supplyState ?? o.state, code }, supply,
-    lines: out, totals: { taxable: sum('taxable'), cgst: sum('cgst'), sgst: sum('sgst'), igst: sum('igst'), total: sum('total') },
+    lines: out, totals: { gross: sum('gross'), discount: sum('discount'), taxable: sum('taxable'), cgst: sum('cgst'), sgst: sum('sgst'), igst: sum('igst'), total: sum('total') },
     pricesIncludeGst: o.pricesIncludeGst, charges: { delivery: o.shipping, cod: o.codCharge },
   }
 }
