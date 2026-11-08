@@ -81,11 +81,9 @@ export const SECTIONS: readonly Section[] = [
   },
   {
     editors: CAN_BUILD,
-    key: 'brand', title: 'Brand', intro: 'How your shop looks. Buttons stay ink so they always read; your colour marks the details.', preview: 'brand',
+    key: 'brand', title: 'Brand', intro: 'Your logo and one line about your brand. Colours, type and layout live in Look.', preview: 'brand',
     blocks: [
       { title: 'Look', fields: [
-        { key: 'accent', label: 'Accent colour', kind: 'select', options: ACCENT_OPTIONS },
-        { key: 'displayFont', label: 'Display font', kind: 'select', options: FONT_OPTIONS },
         { key: 'tagline', label: 'One line about your brand', kind: 'text', max: 150, wide: true, tip: 'Under your logo, and when your link is shared.' },
       ] },
     ],

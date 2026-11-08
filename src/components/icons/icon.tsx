@@ -22,6 +22,8 @@ const ICONS = {
   external: ['M13 5h6v6 M19 5l-8 8', 'M17 14v5H5V7h5'],
   // Apps (modules foundation, 2026-11-07): three tiles and the one being added.
   apps: ['M4 4h7v7H4zM4 13h7v7H4zM13 13h7v7h-7z', 'M16.5 4v7 M13 7.5h7'],
+  // Look (themes, 2026-11-08): a shop front, its awning the tinge.
+  look: ['M5 10v10h14V10 M10 20v-5h4v5', 'M4 10l1.5-5h13L20 10c0 1.4-1.1 2.5-2.5 2.5S15 11.4 15 10c0 1.4-1.1 2.5-2.5 2.5S10 11.4 10 10c0 1.4-1.1 2.5-2.5 2.5S5 11.4 5 10'],
   reviews: ['M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z', 'M10 12.2l1.5 1.5 2.7-2.7'],
   menu: ['M4 7h16 M4 17h16', 'M4 12h16'],
   close: ['M6 6l12 12', 'M18 6 6 18'],

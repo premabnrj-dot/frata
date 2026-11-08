@@ -16,3 +16,5 @@ export const style = (key: string, name: string, schemes: Style['schemes'], sche
 
 /** The two text colours that can sit on a merchant's brand colour (the brand colour rule, layer.ts). */
 export const ON_COLOUR = { light: '#FFFFFF', dark: '#1F1A17' } as const satisfies Record<string, Hex>
+/** Where the brand-colour picker starts (a deep wine that reads on every light scheme). */
+export const BRAND_COLOUR_START: Hex = '#7A1F2B'
