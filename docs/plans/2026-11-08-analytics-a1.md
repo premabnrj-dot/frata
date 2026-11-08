@@ -1,5 +1,5 @@
 # Plan — Analytics A·0 + A·1 (where orders come from, judged on deliveries)
-Status: draft (reviewed 2026-11-08: architecture, tenancy, security, unit economics; speed re-running) · Date: 2026-11-08 · Spec: `docs/specs/2026-11-08-analytics-a1.md` (approved by the
+Status: active (reviewed 2026-11-08: architecture, tenancy, security, unit economics, speed; owner answers in) · Date: 2026-11-08 · Spec: `docs/specs/2026-11-08-analytics-a1.md` (approved by the
 owner 2026-11-08; mockup https://claude.ai/artifact/5PRMG996toWDUsnAuMTSJt as drawn) · Parent: `docs/specs/2026-11-07-analytics.md`
 
 Gates on every task: `npm test`, `npm run typecheck`, int tests with `INT_DB_HOST`, `verify:tenancy` if `drizzle/` or a
@@ -35,7 +35,7 @@ and On the way (not a new tab), and the shipping-costs line links to Settings �
 ## Plan review (2026-11-08): these override everything below
 Reviewers: `architecture-reviewer` (changes needed), `tenancy-auditor` (fix before merge; no cross-tenant path),
 `security-reviewer` (fix before merge; no critical or high), `unit-economics-reviewer` (helps the merchant, neutral for
-Frrata, once 1–4 are fixed), `speed-reviewer` (re-running after a container restart cut it off).
+Frrata, once 1–4 are fixed), `speed-reviewer` (over budget as drafted, measured at 10×; fits with 16).
 Owner answers (8 Nov): partners see ₹ only before handover ("Once handed over, no"); **partners may also set and confirm
 shipping costs before handover**; attribution (utm tags, click ids, referring site) is **kept with the order for good**
 (the abandoned-checkout erase stays as the existing DPDP rule). Billing session (8 Nov, proposed in
@@ -100,10 +100,30 @@ plan (call B).
 15. Regression net before A1·4: an order from `?utm_…&code=X` (attribution saved, `via='link'`); a Look preview that
    stores nothing; flows `05-shop-look` (not 20), `40-partners`, `47-look`, `12-security` join the net. A test holds
    one offer's ₹ kept and creator counts equal on Offers and Analytics.
-16. Speed (pending the re-run): § Speed budgets (each query < 100 ms, the page < 1 s p95); every statement listed in the
-   one `withTenant` (fee, costs, `costsVisibleIn`, the window, pincode last in a savepoint with a timeout, the Make a link
-   pickers by slug); the seed holds a festive worst case; bytes to Node measured; first-load JS against 150 kB. If the
-   window read is over budget: typed raw attribution keys or SQL grouping by raw inputs, never a stored classifier output.
+16. **Speed (measured at 10×: 146k orders in the 180-day read, peak day 7.5k).** As drafted the window read took 1,785 ms
+   (2,305 with JIT) and shipped 52.6 MB to Node (1.6 s just to parse): over budget. Built instead:
+   - **Group in SQL by the raw inputs**, never per order: period (this / before), utm_source, utm_medium,
+     utm_campaign, ref_host, gclid/gbraid/wbraid present, fbclid present, the creator label in use, `stateSql`,
+     `currentMethodSql`, the open shipment's provider, which of COGS and each freight figure are null, and the fee
+     bucket (plan versions' change times passed in, never a per-row lateral). Money inputs summed per group;
+     `kept.ts` takes groups (`orderProfit` is linear; per-order rounding of the fee is the one difference, tested).
+     `classifySource` runs over the groups in TypeScript (10 ms). Offers reads the same grouped path. Measured 670 /
+     484 / 232 ms at 146k / 85k / 40k rows, 1.4 MB.
+   - **Joins, not per-row subqueries:** the open shipment (`shipments_one_open` allows one) and the creator code by
+     LEFT JOIN; a join form beside `openShipmentProviderSql`, with a parity test.
+   - **In the analytics transaction:** `set local jit = off` (JIT added 535–590 ms; check Supabase's setting) and
+     `set local statement_timeout = '3s'` (pool max 10). Default period 30 days.
+   - **Pincode:** a partial covering index (one migration, the next free number): `orders (tenant_id, placed_at)
+     include (pincode, rto_initiated_at) where cancelled_at is null and (rto_initiated_at is not null or delivered_at is
+     not null or lost_at is not null)`: 193 → 40 ms, index-only; placing an order never writes it.
+   - **Source page:** the slug's raw tuples come from the grouped read, then one parameterised `LIMIT 50` query.
+   - **Offers:** `offerStatsIn(tx, …, role)` reads `costsVisibleIn`, the fee and the costs in its one `Promise.all` (the
+     fee and costs are awaited in turn today, P8); its page uses one `withTenant`; nothing calls `withTenant` inside it.
+   - **Budgets:** the page under 1 s p95 is the stop rule; the window aggregate is a named exception to 100 ms per
+     query (the orders scan alone is 150–220 ms at 10×), recorded in `frata-architecture` § Speed. Never a stored
+     classifier output.
+   - **The island:** its own `'use client'` file importing only `bag-store` (0.5 kB gz; through `bag.tsx` it would add
+     5.8 kB); never `headers()` in a shop page. The page itself is dynamic, no data cache.
 17. UI: under 30 orders on the whole page, the tally pictogram (rule 20a); per row, counts; staff see the page without ₹
    (orders and sources lead); "lost" joins the strip (a listed change from the mockup, with the two word changes);
    orders → delivered drawn with `Journey`; Make a link states: shop not open, no products, Copy refused; an unknown
