@@ -13,6 +13,7 @@ import { tokenHash } from '@/lib/crypto/secret-box'
 import { checkoutShop, variantRows } from '@/lib/queries/checkout'
 import { keysFor, markEvent } from '@/lib/payments/keys'
 import { checkoutSignatureOk, orderPayments, toPayment } from '@/lib/payments/razorpay'
+import { trimRazorpayEvent } from '@/lib/webhooks/razorpay'
 import { refreshShop } from '@/lib/queries/storefront'
 import { HOLD_MINUTES, startPayment, takeStock, type Pay } from './place'
 import { storedPricing, writeReprice } from './reprice'
@@ -202,6 +203,12 @@ export async function offersStillFit(tx: Tx, tenantId: string, orderId: string, 
     Number(mine.find((m) => m.discountId === l.id)!.amount)))
 }
 
+/** Store a verified Razorpay event inside the shop OUR key named (drizzle/0043: no webhook row exists outside a shop). */
+export async function storeRazorpayEvent(tenantId: string, key: string, payload: object): Promise<void> {
+  await withTenant(tenantId, (tx) => tx.insert(webhookEvents).values({ provider: 'razorpay', eventKey: `razorpay:${tenantId}:${key.replace(/^razorpay:/, '')}`, tenantId, payload })
+    .onConflictDoNothing({ target: webhookEvents.eventKey }))
+}
+
 /**
  * Process stored Razorpay events for one shop (right after storing, from /pay and the order page, and from the
  * daily cron). The tenant is the event row's own (set from our key, never the payload); the order is matched by
@@ -217,7 +224,7 @@ export async function processEvents(tenantId: string, limit = 20): Promise<numbe
       let error: string | null = null
       // A savepoint per event: one bad event must not abort the batch and block every later payment (audit 2026-11-07).
       try { error = await tx.transaction((sp) => applyEvent(sp, tenantId, row.payload as Record<string, unknown>, soldOut)) } catch (e) { error = e instanceof Error ? e.name : 'error' }
-      await tx.update(webhookEvents).set({ processedAt: sql`now()`, lastError: error }).where(and(eq(webhookEvents.tenantId, tenantId), eq(webhookEvents.id, row.id)))
+      await tx.update(webhookEvents).set({ processedAt: sql`now()`, lastError: error, payload: trimRazorpayEvent(row.payload as Record<string, unknown>) }).where(and(eq(webhookEvents.tenantId, tenantId), eq(webhookEvents.id, row.id)))
     }
     if (rows.length) await markEvent(tx, tenantId)
     return rows.length

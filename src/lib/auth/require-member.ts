@@ -34,7 +34,12 @@ export type MemberResult =
     }
   | { ok: false; reason: 'not_configured' | 'signed_out' | 'no_access'; message: string }
 
-export const requireMember = cache(async (allowed: readonly MemberRole[]): Promise<MemberResult> => {
+/**
+ * Who is signed in and which store they act in: once per request. Takes no argument, because `cache` keys on the
+ * argument's identity and every role tuple is a different array (speed review P7: each tuple used to ask the auth
+ * server and the database again).
+ */
+const currentAccess = cache(async (): Promise<MemberResult> => {
   if (!isAuthConfigured() || !isDatabaseConfigured()) {
     return { ok: false, reason: 'not_configured', message: 'Frrata is not connected yet' }
   }
@@ -45,10 +50,16 @@ export const requireMember = cache(async (allowed: readonly MemberRole[]): Promi
   const access = await accessFor(user.id)
   const wanted = (await cookies()).get(TENANT_COOKIE)?.value
   const membership = access.memberships.find((m) => m.tenantId === wanted) ?? access.memberships[0]
-  if (!membership || !allowed.includes(membership.role)) {
-    return { ok: false, reason: 'no_access', message: 'You do not have access to this store' }
-  }
+  if (!membership) return { ok: false, reason: 'no_access', message: 'You do not have access to this store' }
   return { ok: true, userId: user.id, email: user.email ?? null, membership, all: access.memberships, staffRole: access.staffRole }
 })
+
+export async function requireMember(allowed: readonly MemberRole[]): Promise<MemberResult> {
+  const a = await currentAccess()
+  if (a.ok && !allowed.includes(a.membership.role)) {
+    return { ok: false, reason: 'no_access', message: 'You do not have access to this store' }
+  }
+  return a
+}
 
 export { ANY_MEMBER, CAN_BUILD, CAN_MANAGE } from '@/domains/tenancy/roles'

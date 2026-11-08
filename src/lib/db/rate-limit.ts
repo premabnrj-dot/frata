@@ -2,6 +2,7 @@ import 'server-only'
 import { createHash } from 'node:crypto'
 import { sql } from 'drizzle-orm'
 import { db } from './index'
+import { errName } from '@/lib/log'
 
 // =============================================================================
 // FILE: src/lib/db/rate-limit.ts
@@ -31,6 +32,8 @@ export const LIMITS = {
   codeIp: { action: 'shop_code:ip', max: 20, windowSeconds: 600 },
   // Once per code per IP per window: the same code re-sent with every re-price counts once (impact review).
   codeSeen: { action: 'shop_code:seen', max: 1, windowSeconds: 600 },
+  // Upload tokens per shop (security review S11): four widths per photo, so 200 photos an hour; Frrata pays for storage.
+  uploadShop: { action: 'upload:shop', max: 800, windowSeconds: 3600 },
 } as const satisfies Record<string, Limit>
 
 /** Whether `subject` is already past the limit, WITHOUT counting an attempt. `failClosed`: true when the counter cannot be read. */
@@ -42,7 +45,7 @@ export async function overLimit(limit: Limit, subject: string, now = new Date(),
     const rows = await db().execute<{ n: number }>(sql`select n from rate_limits where key = ${key} and window_start = ${windowStart.toISOString()}::timestamptz`)
     return (rows[0]?.n ?? 0) >= limit.max
   } catch (err) {
-    console.error('[overLimit]', limit.action, err instanceof Error ? err.message : err)
+    console.error('[overLimit]', limit.action, errName(err))
     return failClosed
   }
 }
@@ -61,7 +64,7 @@ export async function withinLimit(limit: Limit, subject: string, now = new Date(
     if (Math.random() < 0.01) await db().execute(sql`delete from rate_limits where window_start < now() - interval '1 day'`)
     return (rows[0]?.n ?? 0) <= limit.max
   } catch (err) {
-    console.error('[withinLimit]', limit.action, err instanceof Error ? err.message : err)
+    console.error('[withinLimit]', limit.action, errName(err))
     return !failClosed
   }
 }

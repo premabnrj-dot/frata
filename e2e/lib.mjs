@@ -21,7 +21,11 @@ export const adminSql = (url) => postgres(url, { max: 2, onnotice: () => {} })
 export async function signedIn(browser, who = 'owner', opts = {}) {
   const ctx = await browser.newContext(opts)
   const u = USERS[who]
-  const session = { access_token: who, refresh_token: 'r', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: u.id, email: u.email, aud: 'authenticated' } }
+  // JWT-shaped (HS256, so getClaims asks the fake's /user, as it would for a symmetric key); `who` names the person.
+  const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url')
+  const exp = Math.floor(Date.now() / 1000) + 3600
+  const token = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: u.id, who, role: 'authenticated', aud: 'authenticated', exp })}.sig`
+  const session = { access_token: token, refresh_token: 'r', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: u.id, email: u.email, aud: 'authenticated' } }
   await ctx.addCookies([{ name: 'sb-localhost-auth-token', value: 'base64-' + Buffer.from(JSON.stringify(session)).toString('base64url'), domain: 'localhost', path: '/' }])
   return ctx
 }

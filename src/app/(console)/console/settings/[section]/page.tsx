@@ -10,6 +10,7 @@ import { resolveStored, schemeVars } from '@/domains/themes/resolve'
 import { displayFamily } from '@/components/shop-preview/fonts'
 import { shopFacts, storedValues } from '../_components/facts'
 import { SettingsForm } from '../_components/settings-form'
+import { errName } from '@/lib/log'
 
 export async function generateMetadata({ params }: { params: Promise<{ section: string }> }) {
   return { title: sectionFor((await params).section)?.title ?? 'Settings' }
@@ -27,7 +28,7 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
     shopWithSettings(tenantId),
     section.key === 'policies' ? policyOverrides(tenantId) : Promise.resolve({}),
     section.preview === 'brand' || section.preview === 'footer' ? previewLook(tenantId) : Promise.resolve(null),
-  ]).catch((err) => { console.error('[settings section]', key, err); return [null, {}, null] as const })
+  ]).catch((err) => { console.error('[settings section]', key, errName(err)); return [null, {}, null] as const })
   if (!shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   // The brand and footer previews wear the shop's published look (Look owns colours and type now).
   const theme = resolveStored(live, shop.settings)

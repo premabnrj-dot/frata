@@ -806,9 +806,12 @@ do $$ declare t uuid; n int; begin
   begin insert into webhook_events (provider, event_key, tenant_id, payload) values ('whatsapp', 'whatsapp:forged', '11111111-1111-1111-1111-111111111111', '{}'); raise exception 'FAIL: a WhatsApp item stored around the definer';
   exception when insufficient_privilege then null; end;
   if not exists (select 1 from app_pending_event_shops('whatsapp') x where x = '22222222-2222-2222-2222-222222222222') then raise exception 'FAIL: the sweep cannot find pending shops'; end if;
-  -- Razorpay's receiver still stores its signed events with no shop set (INSERT … ON CONFLICT DO NOTHING)
+  -- Razorpay's receiver stores inside the shop its key names (drizzle/0043), a retry collapsing to one row.
+  perform set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
   insert into webhook_events (provider, event_key, tenant_id, payload) values ('razorpay', 'razorpay:proof30:payment.captured:pay_9', '22222222-2222-2222-2222-222222222222', '{}') on conflict (event_key) do nothing;
   insert into webhook_events (provider, event_key, tenant_id, payload) values ('razorpay', 'razorpay:proof30:payment.captured:pay_9', '22222222-2222-2222-2222-222222222222', '{}') on conflict (event_key) do nothing;
+  if (select count(*) from webhook_events where event_key = 'razorpay:proof30:payment.captured:pay_9') <> 1 then raise exception 'FAIL: a Razorpay retry stored twice'; end if;
+  perform set_config('app.tenant_id', '', true);
 end $$;
 commit;
 begin; set local role frata_app;
@@ -1128,4 +1131,25 @@ do $$ begin
 end $$;
 update discounts set stopped_at = null, stopped_by = null, stop_reason = null where id = 'd15c0000-0000-0000-0000-00000000000b';
 
-\echo 'tenancy proof — all 36 checks passed'
+-- 37. Security review 2026-11-08 (drizzle/0043): with no shop set, frata_app reads and writes NO webhook row (any
+--     provider); a processed Razorpay event keeps no shopper field; no public function is executable by service_role.
+insert into webhook_events (provider, event_key, tenant_id, payload, processed_at) values ('razorpay', 'razorpay:b:payment.captured:pay_37', '22222222-2222-2222-2222-222222222222',
+  '{"event":"payment.captured","payload":{"payment":{"entity":{"id":"pay_37","order_id":"order_37","amount":100,"email":"s@x.in","contact":"9829043210","vpa":"s@upi"}}}}', null);
+begin; set local role frata_app;
+do $$ begin
+  if exists (select 1 from webhook_events) then raise exception 'FAIL: a webhook row is readable with no shop set'; end if;
+  begin insert into webhook_events (provider, event_key, tenant_id, payload) values ('razorpay', 'razorpay:noshop', '22222222-2222-2222-2222-222222222222', '{}'); raise exception 'FAIL: a webhook row stored with no shop set';
+  exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+do $$
+declare f text;
+begin
+  if exists (select 1 from pg_roles where rolname = 'service_role') then
+    select string_agg(p.oid::regprocedure::text, ', ') into f from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.prokind = 'f' and has_function_privilege('service_role', p.oid, 'execute');
+    if f is not null then raise exception 'FAIL: service_role may execute %', f; end if;
+  end if;
+end $$;
+
+\echo 'tenancy proof — all 37 checks passed'

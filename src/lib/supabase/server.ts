@@ -2,6 +2,7 @@ import 'server-only'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { supabaseFetch } from '@/lib/http/timeout'
+import { sessionCookieOptions } from '@/lib/security-headers'
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '@/lib/public-env'
 
 /** Supabase is used for AUTH ONLY. Data goes through src/lib/db with the tenant policy. */
@@ -9,6 +10,7 @@ export async function createServerSupabase() {
   const store = await cookies()
   return createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { fetch: supabaseFetch() },
+    cookieOptions: sessionCookieOptions(),
     cookies: {
       getAll: () => store.getAll(),
       setAll: (toSet: { name: string; value: string; options: CookieOptions }[]) => {

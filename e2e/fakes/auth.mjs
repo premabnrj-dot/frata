@@ -4,7 +4,10 @@
 import http from 'node:http'
 import { USERS } from '../constants.mjs'
 http.createServer((req, res) => {
-  const who = USERS[(req.headers.authorization ?? '').replace(/^Bearer /, '')]
+  const token = (req.headers.authorization ?? '').replace(/^Bearer /, '')
+  let name = token
+  try { name = JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString()).who ?? token } catch { /* a bare name */ }
+  const who = USERS[name]
   if (req.url.startsWith('/auth/v1/user') && who) {
     const now = new Date().toISOString()
     res.writeHead(200, { 'content-type': 'application/json' })

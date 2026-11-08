@@ -2,6 +2,7 @@ import 'server-only'
 import { partnerStatus, routeAfterSignIn, type SignInDestination } from '@/domains/access/route-after-sign-in'
 import { accessFor, claimInvites } from '@/lib/db/platform'
 import { myHandovers, myPartner } from '@/lib/db/partners'
+import { errName } from '@/lib/log'
 
 /**
  * After a person signs in — by the email link or by its 6-digit code: claim
@@ -15,7 +16,7 @@ export async function destinationAfterSignIn(userId: string): Promise<SignInDest
     const [access, partner, handovers] = await Promise.all([accessFor(userId), myPartner(userId), myHandovers(userId)])
     return routeAfterSignIn({ isStaff: access.staffRole !== null, storeCount: access.memberships.length, handovers: handovers.length, partner: partnerStatus(partner) })
   } catch (err) {
-    console.error('[destinationAfterSignIn]', err)
+    console.error('[destinationAfterSignIn]', errName(err))
     return '/console'
   }
 }

@@ -1,7 +1,9 @@
 import 'server-only'
 import { and, asc, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
 import { revalidateTag, unstable_cache } from 'next/cache'
+import { cache } from 'react'
 import { LOW_STOCK_AT } from '@/domains/catalogue/availability'
+import { WIDTHS } from '@/domains/media/sizes'
 import type { Chart } from '@/domains/catalogue/size-charts'
 import type { PolicyFacts } from '@/domains/policies/render'
 import type { DeliveryRules } from '@/domains/checkout/delivery'
@@ -39,10 +41,12 @@ type Loader<A extends unknown[], R> = (tenantId: string, ...a: A) => Promise<R>
 
 /** The one cache wrapper (check:tenant 6d). Built per call so the tags carry this tenant. */
 /** `revalidate`: the backstop in seconds (default 60; Best sellers 3600: unit-economics review 2026-11-08). */
+// React cache() on top (speed review P3): unstable_cache does not merge misses already in flight, and layout,
+// generateMetadata and page render in parallel — each ran the same queries on its own connection.
 function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop' | 'catalogue', fn: Loader<A, R>, revalidate = 60): Loader<A, R> {
-  return (tenantId, ...a) => unstable_cache(() => fn(tenantId, ...a), ['sf', name, tenantId, ...a.map(String)], {
+  return cache((tenantId: string, ...a: A) => unstable_cache(() => fn(tenantId, ...a), ['sf', name, tenantId, ...a.map(String)], {
     tags: [`shop:${tenantId}`, ...(scope === 'catalogue' ? [`shop:${tenantId}:catalogue`] : [])], revalidate,
-  })()
+  })())
 }
 
 /** After a console write commits: the shop's pages read fresh rows. */
@@ -57,14 +61,14 @@ export const hostFor = (slug: string) => `${slug}.${SHOP_DOMAIN}`
 
 class Miss extends Error {}
 /** Which shop a host is. A miss is never cached (anyone can mint subdomains); a hit lives 60 s or until its tag. */
-export async function shopIdForHost(host: string): Promise<string | null> {
+export const shopIdForHost = cache(async (host: string): Promise<string | null> => {
   try {
     return await unstable_cache(async () => { const t = await tenantForHost(host); if (!t) throw new Miss(); return t.id }, ['sf-host', host], { tags: [`host:${host}`], revalidate: 60 })()
   } catch (e) {
     if (e instanceof Miss) return null
     throw e
   }
-}
+})
 
 // ── The shop ───────────────────────────────────────────────────────────────────
 
@@ -163,20 +167,22 @@ const toVariant = (v: { id: string; values: string[]; sku: string | null; price:
  * The shop's started, unended, listed offers as the showcase reads them (offers O·2): words and timestamps only, never
  * a limit, budget or count (ADR-0003). Product offers carry the products they cover (collections resolved now).
  */
-async function showcase(tx: Tx, tenantId: string): Promise<{ shop: ShowOffer[]; byProduct: (id: string) => ShowOffer[] }> {
+type Showcase = { shop: ShowOffer[]; byProduct: (id: string) => ShowOffer[]; product: ShowOffer[]; indexFor: (id: string) => number[] }
+async function showcase(tx: Tx, tenantId: string): Promise<Showcase> {
   const rows = await tx.select({
     id: discounts.id, title: discounts.title, style: discounts.style, percentBps: discounts.percentBps, amountOff: discounts.amountOff, minSubtotal: discounts.minSubtotal,
     targets: discounts.targets, buyQty: discounts.buyQty, getQty: discounts.getQty, getBps: discounts.getBps, firstOrder: discounts.firstOrder, code: discountCodes.code,
     startsAt: discounts.startsAt, endsAt: discounts.endsAt, startedAt: discounts.startedAt, pausedAt: discounts.pausedAt, endedAt: discounts.endedAt, stoppedAt: discounts.stoppedAt,
   }).from(discounts).leftJoin(discountCodes, and(eq(discountCodes.tenantId, discounts.tenantId), eq(discountCodes.discountId, discounts.id), isNull(discountCodes.label)))
     .where(and(eq(discounts.tenantId, tenantId), sql`${discounts.startedAt} is not null and ${discounts.endedAt} is null and ${discounts.listed}`))
-  if (!rows.length) return { shop: [], byProduct: () => [] }
+  if (!rows.length) return { shop: [], byProduct: () => [], product: [], indexFor: () => [] }
   const tiers = await tx.select({ discountId: discountTiers.discountId, min: discountTiers.minSubtotal, percentBps: discountTiers.percentBps, amountOff: discountTiers.amountOff }).from(discountTiers)
     .where(and(eq(discountTiers.tenantId, tenantId), inArray(discountTiers.discountId, rows.map((r) => r.id)))).orderBy(asc(discountTiers.minSubtotal))
   const narrowed = rows.filter((r) => r.targets !== 'all').map((r) => r.id)
   const targets = narrowed.length ? await tx.select({ discountId: discountTargets.discountId, productId: discountTargets.productId, collectionId: discountTargets.collectionId }).from(discountTargets)
     .where(and(eq(discountTargets.tenantId, tenantId), inArray(discountTargets.discountId, narrowed))) : []
-  const members = targets.some((t) => t.collectionId) ? await collectionMembers(tenantId) : {}
+  // In THIS transaction (speed review P4): a cached loader here opened a second connection mid-transaction.
+  const members = targets.some((t) => t.collectionId) ? await collectionMembersIn(tx, tenantId) : {}
   const iso = (x: Date | null) => (x ? x.toISOString() : null)
   const all = rows.map((r) => {
     const words = { title: r.title, style: r.style, percentBps: r.percentBps, amountOff: r.amountOff === null ? null : Number(r.amountOff), minSubtotal: Number(r.minSubtotal),
@@ -190,13 +196,43 @@ async function showcase(tx: Tx, tenantId: string): Promise<{ shop: ShowOffer[]; 
       covers: !product ? null : r.targets === 'all' ? 'all' as const : new Set(targets.filter((t) => t.discountId === r.id).flatMap((t) => (t.productId ? [t.productId] : members[t.collectionId!] ?? []))),
     }
   })
+  const productOffers = all.filter((a) => a.covers !== null)
+  const indexFor = (id: string) => productOffers.flatMap((a, i) => (a.covers === 'all' || (a.covers instanceof Set && a.covers.has(id)) ? [i] : []))
   return {
     shop: all.filter((a) => a.covers === null).map((a) => a.offer),
-    byProduct: (id) => all.filter((a) => a.covers === 'all' || (a.covers instanceof Set && a.covers.has(id))).map((a) => a.offer),
+    byProduct: (id) => indexFor(id).map((i) => productOffers[i]!.offer),
+    product: productOffers.map((a) => a.offer),
+    indexFor,
   }
 }
 
-async function coreCatalogue(tenantId: string, drafts: boolean): Promise<StoreCatalogue> {
+/**
+ * The catalogue as it is CACHED (speed review P1): a list card keeps the photos a list shows (the cover, the second
+ * for hover, and each colour's first), and offers are held once with each card naming them by index. A shop-wide
+ * offer copied onto 600 cards took the entry past Next's 2 MB limit, past which nothing is cached and every shop page
+ * reads Postgres. `catalogue-size.int.test.ts` holds it under 1 MB at 600 products.
+ */
+type CachedCard = Omit<StoreCard, 'offers'> & { offerIdx: number[] }
+export type CatalogueEntry = { products: CachedCard[]; collections: StoreCollection[]; offers: ShowOffer[]; photoPrefix: string }
+const listPhotos = (imgs: StoreImage[]): StoreImage[] => imgs.filter((im, i) => i < 2 || (im.optionValue !== null && imgs.findIndex((x) => x.optionValue === im.optionValue) === i))
+// Empty fields are left out of the cached copy and put back on the way out: most of a variant, photo or colour is
+// null or false, and 600 cards × 5 sizes repeat each key name thousands of times.
+// A list never shows a SKU (the product page reads its own row), every photo shares its folder's address, and
+// most photos have every width we make.
+const VARIANT_BLANK = { sku: null, compareAt: null, mrp: null, shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderFull: false, restockedAt: null } satisfies Partial<StoreVariant>
+const IMAGE_BLANK = { optionValue: null, widths: [...WIDTHS] } satisfies Partial<StoreImage>
+const COLOUR_BLANK = { family: null, hex: null, cropImageId: null, crop: null } satisfies Partial<StoreColour>
+const dropBlank = <T extends object>(o: T): T => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && v !== false)) as T
+const expand = (e: CatalogueEntry): StoreCatalogue => ({
+  collections: e.collections,
+  products: e.products.map(({ offerIdx, ...c }) => ({
+    ...c, offers: offerIdx.map((i) => e.offers[i]!),
+    variants: c.variants.map((v) => ({ ...VARIANT_BLANK, ...v })),
+    images: c.images.map((im) => ({ ...IMAGE_BLANK, ...im, base: im.base.startsWith('https://') ? im.base : e.photoPrefix + im.base })), colours: c.colours.map((x) => ({ ...COLOUR_BLANK, ...x })),
+  })),
+})
+
+async function coreCatalogue(tenantId: string, drafts: boolean): Promise<CatalogueEntry> {
   return withTenant(tenantId, async (tx) => {
     const ps = await tx.select({
       id: products.id, handle: products.handle, title: products.title, status: products.status, publishAt: products.publishAt,
@@ -215,17 +251,24 @@ async function coreCatalogue(tenantId: string, drafts: boolean): Promise<StoreCa
       tx.select({ collectionId: collectionProducts.collectionId, productId: collectionProducts.productId }).from(collectionProducts).where(eq(collectionProducts.tenantId, tenantId)).orderBy(asc(collectionProducts.position)),
     ]) : [[], [], [], [], [], []] as const
     const show = await showcase(tx, tenantId)
+    const first = imgs[0]?.base ?? ''
+    const photoPrefix = first.startsWith('https://') ? first.slice(0, first.lastIndexOf('/') + 1) : ''
     return {
+      photoPrefix,
       products: ps.map((p) => ({
         id: p.id, handle: p.handle, title: p.title, status: p.status, publishAt: p.publishAt ? p.publishAt.toISOString() : null, since: new Date(p.since).toISOString(), options: p.options,
         categoryId: p.categoryId, tags: p.tags,
         // Lists show two photos at most (cover, and the second on hover) plus each colour's own first photo.
-        images: imgs.filter((i) => i.productId === p.id).map(({ productId: _, ...i }) => i),
-        variants: vs.filter((v) => v.productId === p.id).map(toVariant),
-        colours: cols.filter((c) => c.productId === p.id).map(({ productId: _, ...c }) => c),
+        images: listPhotos(imgs.filter((i) => i.productId === p.id).map(({ productId: _, ...i }) => i)).map((im) => dropBlank({
+          ...im, base: photoPrefix && im.base.startsWith(photoPrefix) ? im.base.slice(photoPrefix.length) : im.base,
+          widths: im.widths.length === WIDTHS.length && im.widths.every((w, k) => w === WIDTHS[k]) ? null : im.widths,
+        }) as StoreImage),
+        variants: vs.filter((v) => v.productId === p.id).map(toVariant).map((v) => dropBlank({ ...v, sku: null })),
+        colours: cols.filter((c) => c.productId === p.id).map(({ productId: _, ...c }) => c).map(dropBlank),
         attributes: Object.fromEntries(attrs.filter((a) => a.productId === p.id).map((a) => [a.attribute, a.values])),
-        offers: show.byProduct(p.id),
+        offerIdx: show.indexFor(p.id),
       })),
+      offers: show.product,
       collections: colls.map((c) => ({ ...c, kind: c.kind as 'manual' | 'auto', matchAll: c.matchAll === 1, rules: c.rules, productIds: members.filter((m) => m.collectionId === c.id).map((m) => m.productId) })),
     }
   })
@@ -342,7 +385,11 @@ export const shopAnnouncement = shopCached('announce', 'shop', (tenantId) => wit
   return { title: r.title, style: r.style, percentBps: r.percentBps, amountOff: r.amountOff === null ? null : Number(r.amountOff), minSubtotal: Number(r.minSubtotal),
     code: r.listed && r.code ? r.code.toUpperCase() : null, startsAt: r.startsAt.toISOString(), endsAt: iso(r.endsAt), startedAt: iso(r.startedAt), pausedAt: iso(r.pausedAt), endedAt: iso(r.endedAt), stoppedAt: iso(r.stoppedAt) }
 }))
-export const shopCatalogue = shopCached('catalogue', 'catalogue', (t) => coreCatalogue(t, false))
+// A new key: the entry's shape changed (offers by index), and a cache that survives a deploy must not meet the old one.
+const shopCatalogueEntry = shopCached('catalogue-v2', 'catalogue', (t) => coreCatalogue(t, false))
+export const shopCatalogue = async (tenantId: string): Promise<StoreCatalogue> => expand(await shopCatalogueEntry(tenantId))
+/** The entry exactly as the cache stores it (its size is what Next's 2 MB limit reads; catalogue-size.int.test.ts). */
+export const catalogueEntry = (tenantId: string) => coreCatalogue(tenantId, false)
 
 /**
  * Which products each collection holds now — hand-picked rows, or rule matches (collection-rules.ts, the same matching
@@ -368,7 +415,7 @@ export async function shopProduct(tenantId: string, handle: string): Promise<Loo
 }
 
 export const previewShop = (tenantId: string) => coreShop(tenantId)
-export const previewCatalogue = (tenantId: string) => coreCatalogue(tenantId, true)
+export const previewCatalogue = async (tenantId: string) => expand(await coreCatalogue(tenantId, true))
 export async function previewProduct(tenantId: string, handle: string): Promise<Lookup> {
   return lookup(await coreHandles(tenantId, true), () => coreProduct(tenantId, handle, true), handle)
 }

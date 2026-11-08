@@ -12,6 +12,7 @@ import { shopWithSettings } from '@/lib/queries/settings'
 import { paymentStatusFor } from '@/lib/queries/payments'
 import { shopFacts } from './_components/facts'
 import { Section } from '@/components/layout/section'
+import { errName } from '@/lib/log'
 
 export const metadata = { title: 'Settings' }
 
@@ -20,7 +21,7 @@ const inr = (p: number) => formatInr(paise(p))
 export default async function SettingsPage() {
   const auth = await requireMember(CAN_BUILD)
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'You can’t change this shop’s settings' : auth.message} />
-  const shop = await shopWithSettings(auth.membership.tenantId).catch((err) => { console.error('[settings]', err); return null })
+  const shop = await shopWithSettings(auth.membership.tenantId).catch((err) => { console.error('[settings]', errName(err)); return null })
   if (!shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const f = shopFacts(shop, SHOP_DOMAIN)
   const pay = await paymentStatusFor(auth.membership.tenantId).catch(() => null)

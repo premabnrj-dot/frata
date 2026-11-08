@@ -54,3 +54,9 @@ export function acceptedBase(raw: string, host: string, tenantId: string, folder
   const m = PATH_SHAPE.exec(`${u.pathname.slice(1)}-400.webp`)
   return m && m[1] === tenantId && m[2] === folder ? rebuilt : null
 }
+
+/** A WebP file starts "RIFF" <size> "WEBP" (security review S11: the upload token trusts the declared type). */
+export function isWebp(head: Uint8Array): boolean {
+  const s = (a: number, b: number) => String.fromCharCode(...head.slice(a, b))
+  return head.length >= 12 && s(0, 4) === 'RIFF' && s(8, 12) === 'WEBP'
+}

@@ -2,6 +2,7 @@ import 'server-only'
 import { headers } from 'next/headers'
 import { CONSOLE_HOST } from '@/lib/public-env'
 import { createServerSupabase } from '@/lib/supabase/server'
+import { errName } from '@/lib/log'
 
 /**
  * Emails a sign-in link AND a 6-digit code (Supabase's Magic Link template
@@ -23,7 +24,7 @@ export async function sendSignInLink(email: string): Promise<{ sent: true } | { 
     if (error) throw error
     return { sent: true }
   } catch (err) {
-    console.error('[sendSignInLink]', err)
+    console.error('[sendSignInLink]', errName(err))
     const msg = err instanceof Error ? err.message : ''
     if (/only request this after|security purposes/i.test(msg)) return { sent: false, error: 'An email was sent less than a minute ago. Wait a moment, then ask again.' }
     if (/rate limit/i.test(msg)) return { sent: false, error: 'Too many sign-in emails in the last hour. Try again later.' }

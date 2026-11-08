@@ -302,6 +302,13 @@
       "when": 1794116352117,
       "tag": "0042_offers_stop_access",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1794119981646,
+      "tag": "0043_security_review",
+      "breakpoints": true
     }
   ]
 }

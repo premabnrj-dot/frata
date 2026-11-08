@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm'
 import { db, type Tx } from './index'
 import { withTenant } from './tenant'
 import { PARTNER_TERMS } from '@/domains/partners/terms'
+import { errName } from '@/lib/log'
 
 // =============================================================================
 // FILE: src/lib/db/partners.ts — the partner questions, each a SECURITY DEFINER
@@ -15,7 +16,7 @@ import { PARTNER_TERMS } from '@/domains/partners/terms'
 function dbCode(err: unknown, codes: readonly string[], tag: string): string {
   const msg = (err as { cause?: { message?: string } })?.cause?.message ?? (err instanceof Error ? err.message : '')
   const code = codes.find((c) => msg === c || msg.includes(c))
-  if (!code) console.error(`[${tag}]`, msg)
+  if (!code) console.error(`[${tag}]`, errName(err))
   return code ?? 'unknown'
 }
 

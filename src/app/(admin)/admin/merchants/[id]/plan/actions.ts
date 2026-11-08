@@ -7,6 +7,7 @@ import { PLAN_CODES } from '@/domains/plans/entitlements'
 import { nextMonthStartIST } from '@/domains/time/month'
 import { changeTenantPlan } from '@/lib/admin/plans'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
+import { errName } from '@/lib/log'
 
 const Change = z.object({
   tenantId: z.uuid(),
@@ -34,7 +35,7 @@ export async function changePlanAction(form: FormData) {
       reason: p.data.reason,
     })
   } catch (err) {
-    console.error('[changePlanAction]', err)
+    console.error('[changePlanAction]', errName(err))
     redirect(`/admin/merchants/${id}/plan?error=${encodeURIComponent('We could not change the plan. Nothing was saved.')}`)
   }
   redirect(`/admin/merchants/${id}?ok=${encodeURIComponent('Plan changed.')}`)

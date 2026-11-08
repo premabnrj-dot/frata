@@ -6,6 +6,7 @@ import { sendSignInLink } from '@/lib/auth/send-link'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { clientIp } from '@/lib/http/client-ip'
 import { createServerSupabase } from '@/lib/supabase/server'
+import { errName } from '@/lib/log'
 
 // ENTRY POINT credential: none needed — sendCode only asks Supabase to email a
 // link and a code to the address given; verifyCode proves the person holds that
@@ -33,7 +34,8 @@ export type VerifyResult = { ok: true; to: string } | { ok: false; error: string
 export async function verifyCode(input: { email: string; code: string }): Promise<VerifyResult> {
   const parsed = Code.safeParse({ email: String(input.email ?? '').trim().toLowerCase(), code: String(input.code ?? '').trim() })
   if (!parsed.success) return { ok: false, error: 'The code is the 6 digits in the email.' }
-  if (!(await withinLimit(LIMITS.verifyCodeEmail, parsed.data.email))) {
+  // Fails closed (security review S9): a guessed code must not get unlimited tries while the counter is down.
+  if (!(await withinLimit(LIMITS.verifyCodeEmail, parsed.data.email, new Date(), true))) {
     return { ok: false, error: 'Too many tries. Ask for a new email in a few minutes.' }
   }
   try {
@@ -42,7 +44,7 @@ export async function verifyCode(input: { email: string; code: string }): Promis
     if (error || !data.user) return { ok: false, error: 'That code is wrong or has expired. Check the newest email, or ask for another.' }
     return { ok: true, to: await destinationAfterSignIn(data.user.id) }
   } catch (err) {
-    console.error('[verifyCode]', err instanceof Error ? err.message : err)
+    console.error('[verifyCode]', errName(err))
     return { ok: false, error: 'We could not check the code. Try again in a minute.' }
   }
 }

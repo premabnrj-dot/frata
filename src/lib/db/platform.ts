@@ -4,6 +4,7 @@ import { db } from './index'
 import { shopSlugFromHost } from '@/domains/tenancy/host'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 import type { MemberRole, StaffRole } from './schema'
+import { errName } from '@/lib/log'
 
 // =============================================================================
 // FILE: src/lib/db/platform.ts
@@ -82,7 +83,7 @@ export async function createShop(p: { uid: string; name: string; slug: string; p
   } catch (err) {
     const msg = (err as { cause?: { message?: string } })?.cause?.message ?? (err instanceof Error ? err.message : '')
     const code = CREATE_SHOP_ERRORS.find((c) => msg.includes(c))
-    if (!code) console.error('[createShop]', msg)
+    if (!code) console.error('[createShop]', errName(err))
     return { ok: false, error: (code as CreateShopError | undefined) ?? 'unknown' }
   }
 }
@@ -119,7 +120,7 @@ export async function changeShopAddress(tenantId: string, uid: string, slug: str
   } catch (err) {
     const msg = (err as { cause?: { message?: string } })?.cause?.message ?? (err instanceof Error ? err.message : '')
     const code = ['not_owner', 'published', 'bad_slug', 'slug_taken'].find((c) => msg.includes(c))
-    if (!code) console.error('[changeShopAddress]', msg)
+    if (!code) console.error('[changeShopAddress]', errName(err))
     return { ok: false, error: code ?? 'unknown' }
   }
 }

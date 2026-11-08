@@ -31,3 +31,34 @@ export const SECURITY_HEADERS: { key: string; value: string }[] = [
 export const FRAMEABLE_HEADERS: { key: string; value: string }[] = SECURITY_HEADERS.map((h) =>
   h.key === 'X-Frame-Options' ? { key: h.key, value: 'SAMEORIGIN' }
     : h.key === 'Content-Security-Policy' ? { key: h.key, value: CONTENT_SECURITY_POLICY.replace("frame-ancestors 'none'", "frame-ancestors 'self'") } : h)
+
+/**
+ * THE SCRIPT POLICY for the signed-in pages on the console host (security review S3, 2026-11-08), sent by the
+ * middleware beside the global policy above (it carries the global policy too: a middleware header replaces next.config's). Those pages render per
+ * request already, so a per-request nonce costs no cache; Next reads it from the request's CSP header and puts it on
+ * its own scripts. 'strict-dynamic' lets a nonced script load the next one (the Meta SDK in Connect). Shops and the
+ * static public pages keep the global policy only: a nonce would make them per-request.
+ */
+export function signedInCsp(nonce: string, dev: boolean, framed = false): string {
+  // The whole policy: a middleware header REPLACES next.config's header of the same name, it does not add a second.
+  return [
+    (framed ? CONTENT_SECURITY_POLICY.replace("frame-ancestors 'none'", "frame-ancestors 'self'") : CONTENT_SECURITY_POLICY),
+    `script-src 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ''}`,
+    "form-action 'self'",
+  ].join('; ')
+}
+
+/** The console-host paths that render per request behind a sign-in (or lead to one). `/partners` is the public page, not `/partner`. */
+const SIGNED_IN = ['/console', '/admin', '/partner', '/choose', '/handover', '/login', '/start', '/auth']
+export function isSignedInPath(path: string): boolean {
+  return SIGNED_IN.some((p) => path === p || path.startsWith(`${p}/`))
+}
+
+/**
+ * The Supabase session cookies (security review S2): never readable by a page script (nothing reads the session in
+ * the browser), only over HTTPS outside development, and kept 30 days, not @supabase/ssr's 400.
+ */
+export const SESSION_COOKIE = { httpOnly: true, sameSite: 'lax' as const, maxAge: 60 * 60 * 24 * 30, path: '/' }
+export function sessionCookieOptions(dev = process.env.NODE_ENV === 'development') {
+  return { ...SESSION_COOKIE, secure: !dev }
+}

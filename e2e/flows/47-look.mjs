@@ -195,10 +195,14 @@ export default {
       const res = await riya.goto(CONSOLE + `/console/theme-preview/${theirs}`)
       assert.equal(res.status(), 404)
       const [{ id: mine }] = await db`select id from shop_theme_revisions where tenant_id = ${KESAR} order by created_at desc limit 1`
-      const own = await fetch(CONSOLE + `/console/theme-preview/${mine}`, { redirect: 'manual' })
-      assert.equal(own.headers.get('x-frame-options'), 'SAMEORIGIN')
-      assert.match(own.headers.get('content-security-policy') ?? '', /frame-ancestors 'self'/)
-      assert.equal((await fetch(CONSOLE + '/console/look', { redirect: 'manual' })).headers.get('x-frame-options'), 'DENY')
+      // Signed in, as the customizer loads it (a signed-out fetch only meets the redirect to sign in).
+      const own = await riya.context().request.get(CONSOLE + `/console/theme-preview/${mine}`, { maxRedirects: 0 })
+      assert.equal(own.status(), 200)
+      assert.equal(own.headers()['x-frame-options'], 'SAMEORIGIN')
+      assert.match(own.headers()['content-security-policy'] ?? '', /frame-ancestors 'self'/)
+      const look = await riya.context().request.get(CONSOLE + '/console/look', { maxRedirects: 0 })
+      assert.equal(look.headers()['x-frame-options'], 'DENY')
+      assert.match(look.headers()['content-security-policy'] ?? '', /frame-ancestors 'none'/)
       await db`delete from shop_theme_revisions where tenant_id = ${OTHER}`
       await db`delete from tenants where id = ${OTHER}`
     })
