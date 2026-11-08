@@ -19,3 +19,25 @@ describe('billing details (billing B1)', () => {
     expect(STATE_OPTIONS.find(([c]) => c === '08')?.[1]).toBe('Rajasthan (08)')
   })
 })
+
+describe('billing details refuse what should never print (security review 2026-11-08)', () => {
+  it('a hostile megabyte is refused by length before any pattern, in milliseconds', () => {
+    const t0 = Date.now()
+    const r = parseBillingDetails({ ...good, email: 'a@' + '.'.repeat(1_000_000) + '@' })
+    expect(r.ok).toBe(false)
+    expect(Date.now() - t0).toBeLessThan(200)
+  })
+  it('the email pattern is linear even within the cap', async () => {
+    const { EMAIL_SHAPE } = await import('@/domains/signup/slug')
+    const t0 = Date.now()
+    expect(EMAIL_SHAPE.test('a@' + '.'.repeat(100_000) + '@')).toBe(false)
+    expect(Date.now() - t0).toBeLessThan(200)
+    expect(['riya@kesar.in', 'a.b@c.co.in'].every((e) => EMAIL_SHAPE.test(e))).toBe(true)
+    expect(['a@b', 'a@b.c', 'a@@b.in', 'a b@c.in'].some((e) => EMAIL_SHAPE.test(e))).toBe(false)
+  })
+  it('no web addresses in words printed on the invoice; control and bidi characters removed', () => {
+    expect(parseBillingDetails({ ...good, address: 'Pay at https://x.test' }).ok).toBe(false)
+    expect(parseBillingDetails({ ...good, legalName: 'www.kesar.in' }).ok).toBe(false)
+    expect(parseBillingDetails({ ...good, legalName: 'Kesar\u202e Studio' })).toMatchObject({ ok: true, value: { legalName: 'Kesar Studio' } })
+  })
+})

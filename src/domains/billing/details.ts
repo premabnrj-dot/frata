@@ -15,16 +15,24 @@ export const STATE_OPTIONS: readonly (readonly [string, string])[] = STATES.map(
 const CODES = new Set(STATES.map((s) => STATE_CODE[s]))
 
 export function parseBillingDetails(raw: Record<string, unknown>): { ok: true; value: BillingDetails } | { ok: false; errors: Record<string, string> } {
-  const text = (k: string) => (typeof raw[k] === 'string' ? (raw[k] as string).trim() : '')
+  // Every field is capped BEFORE any pattern runs (a hostile megabyte never reaches a regex), and control and
+  // bidirectional characters are removed: these words print on Frrata's invoice.
+  const CAP: Record<string, number> = { legalName: 200, address: 400, email: 254, gstin: 15, stateCode: 2 }
   const errors: Record<string, string> = {}
+  for (const [k, max] of Object.entries(CAP)) if (typeof raw[k] === 'string' && (raw[k] as string).length > max + 50) errors[k] = `Up to ${max} characters.`
+  if (Object.keys(errors).length) return { ok: false, errors }
+  const text = (k: string) => (typeof raw[k] === 'string' ? (raw[k] as string).replace(/[\u0000-\u0008\u000b-\u001f\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, '').trim() : '')
+  const LINK = /https?:\/\/|www\./i
   const legalName = text('legalName'), address = text('address'), email = text('email').toLowerCase()
   const gstin = text('gstin').toUpperCase() || null
   let stateCode = text('stateCode')
   if (!legalName) errors.legalName = 'Needed: the name invoices are made out to.'
   else if (legalName.length > 200) errors.legalName = 'Up to 200 characters.'
+  else if (LINK.test(legalName)) errors.legalName = 'No web addresses here: plain words only.'
   if (!address) errors.address = 'Needed: the address on your GST registration, or your business address.'
   else if (address.length > 400) errors.address = 'Up to 400 characters.'
-  if (!email || !EMAIL_SHAPE.test(email) || email.length > 254) errors.email = 'An email address for invoices.'
+  else if (LINK.test(address)) errors.address = 'No web addresses here: plain words only.'
+  if (!email || email.length > 254 || !EMAIL_SHAPE.test(email)) errors.email = 'An email address for invoices.'
   if (gstin && !gstinValid(gstin)) errors.gstin = 'Check the GSTIN: 15 characters, and the last one is a check digit.'
   if (gstin && gstinValid(gstin)) {
     const fromGstin = gstinState(gstin)!

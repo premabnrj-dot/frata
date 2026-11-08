@@ -10,7 +10,7 @@ import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { listMerchants, PAGE_SIZE } from '@/lib/admin/merchants'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
-import { dayMonthIN, sinceIN } from '@/lib/format-date'
+import { dateTimeIN, dayMonthIN, sinceIN } from '@/lib/format-date'
 
 export const metadata = { title: 'Merchants' }
 
@@ -58,7 +58,7 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
                     : m.pendingInvite ? <span className="text-warn-text">Owner not signed in yet</span> : <span className="text-muted-foreground">No owner</span>}
                 </Td>
                 <Td cell="b" className="text-right">
-                  <Numeric>{m.ordersThisMonth.toLocaleString('en-IN')}</Numeric><span className="text-xs text-muted-foreground md:hidden"> delivered</span>
+                  {m.ordersThisMonth === null ? <span className="text-muted-foreground" title="Not drafted yet">—</span> : <span title={m.countedAt ? `Counted ${dateTimeIN(m.countedAt)}` : undefined}><Numeric>{m.ordersThisMonth.toLocaleString('en-IN')}</Numeric></span>}<span className="text-xs text-muted-foreground md:hidden"> delivered</span>
                   {m.over && <div className="text-xs text-warn-text">Over the plan&apos;s {m.plan?.includedOrders.toLocaleString('en-IN')}</div>}
                 </Td>
                 <Td cell="e" className="md:text-right"><Link href={`/admin/merchants/${m.id}/support`} className="inline-flex min-h-6 items-center whitespace-nowrap text-sm underline-offset-2 hover:underline">Open console</Link></Td>

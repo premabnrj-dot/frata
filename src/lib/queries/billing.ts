@@ -1,8 +1,9 @@
 import 'server-only'
-import { and, asc, desc, eq, isNotNull } from 'drizzle-orm'
+import { and, asc, desc, eq, isNotNull, sql } from 'drizzle-orm'
 import type { Bill } from '@/domains/billing/bill'
 import { paise } from '@/domains/money/paise'
 import { currentPlan, monthlyPrice } from '@/domains/plans/entitlements'
+import { gstinState } from '@/domains/tax/gst'
 import { CAN_MANAGE } from '@/domains/tenancy/roles'
 import { nextMonthStartIST } from '@/domains/time/month'
 import { draftInvoiceIn } from '@/lib/billing/draft'
@@ -27,7 +28,8 @@ function mayReadMoney(m: Pick<Membership, 'role'>) {
   if (!(CAN_MANAGE as readonly string[]).includes(m.role)) throw new NotForThisRole()
 }
 
-export type Estimate = { invoiceOn: Date; bill: Bill; orders: { number: number; base: number; fee: number; feeBps: number }[] } | null
+/** Null: no plan (nothing to bill). 'busy': the billing run is redrafting it this moment. */
+export type Estimate = { invoiceOn: Date; bill: Bill; orders: { number: number; base: number; fee: number; feeBps: number; billableAt: Date }[] } | null | 'busy'
 
 export type BillingOverview = {
   plan: { name: string; monthlyPrice: number; includedOrders: number; feeBps: number; trialEndsAt: Date | null } | null
@@ -59,10 +61,17 @@ export async function billingOverview(m: Pick<Membership, 'tenantId' | 'role'>, 
     (async (): Promise<Estimate> => {
       let out: Estimate = null
       await withTenant(tenantId, async (tx) => {
+        // The run takes the draft's row lock; a page view waits for it at most 1 s and never holds the run up for long
+        // (impact review 2026-11-08): on a timeout the page says the estimate is being updated.
+        await tx.execute(sql`set local lock_timeout = '1s'`)
         const r = await draftInvoiceIn(tx, tenantId, invoiceOn, now)
-        if (r.invoiceId) out = { invoiceOn, bill: r.bill, orders: r.bill.fees.map((f) => ({ number: r.numbers.get(f.orderId) ?? 0, base: f.base, fee: f.fee, feeBps: f.feeBps })).sort((a, b) => b.number - a.number) }
+        if (r.invoiceId) out = { invoiceOn, bill: r.bill, orders: r.bill.fees.map((f) => ({ number: r.numbers.get(f.orderId) ?? 0, base: f.base, fee: f.fee, feeBps: f.feeBps, billableAt: f.billableAt })).sort((a, b) => b.number - a.number) }
         throw ROLLBACK
-      }).catch((e) => { if (e !== ROLLBACK) throw e })
+      }).catch((e) => {
+        if (e === ROLLBACK) return
+        if ((e as { code?: string; cause?: { code?: string } })?.code === '55P03' || (e as { cause?: { code?: string } })?.cause?.code === '55P03') { out = 'busy'; return }
+        throw e
+      })
       return out
     })(),
   ])
@@ -71,10 +80,10 @@ export async function billingOverview(m: Pick<Membership, 'tenantId' | 'role'>, 
   return {
     plan: cur ? { name: cur.name, monthlyPrice: monthlyPrice({ planVersion: { monthlyPrice: paise(cur.monthlyPrice) }, customMonthlyPrice: cur.customMonthlyPrice === null ? null : paise(cur.customMonthlyPrice), trialEndsAt: null }, now), includedOrders: cur.includedOrders, feeBps: cur.feeBps, trialEndsAt: cur.trialEndsAt } : null,
     estimate,
-    invoices: base.invoices.map((i) => ({ id: i.id, number: i.number ?? '', periodStart: i.periodStart, total: i.total, issuedAt: i.issuedAt! })),
+    invoices: base.invoices.flatMap((i) => (i.issuedAt ? [{ id: i.id, number: i.number ?? '', periodStart: i.periodStart, total: i.total, issuedAt: i.issuedAt }] : [])),
     // Prefilled from Store details until the shop saves its own billing details (spec § Design).
     details: a
       ? { legalName: a.legalName, gstin: a.gstin ?? '', address: a.address, stateCode: a.stateCode ?? '', email: a.email, saved: true }
-      : { legalName: s?.legalName ?? '', gstin: s?.gstin ?? '', address: s?.address ?? '', stateCode: s?.gstin ? s.gstin.slice(0, 2) : '', email: s?.email ?? '', saved: false },
+      : { legalName: s?.legalName ?? '', gstin: s?.gstin ?? '', address: s?.address ?? '', stateCode: gstinState(s?.gstin ?? null) ?? '', email: s?.email ?? '', saved: false },
   }
 }

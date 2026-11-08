@@ -30,19 +30,31 @@ describe.skipIf(!host)('billing reads on a real database', () => {
     await expect(q.billingOverview({ tenantId, role: 'partner' as never })).rejects.toBeInstanceOf(q.NotForThisRole)
     const o = await q.billingOverview({ tenantId, role: 'owner' }, ist('2026-11-20T12:00:00'))
     expect(o.plan).toMatchObject({ name: 'Launch', monthlyPrice: 149900, includedOrders: 150, feeBps: 200 })
-    expect(o.estimate?.bill.usage).toEqual({ orders: 3, included: 150, over: false })
-    expect(o.estimate?.orders.map((x) => [x.number, x.fee])).toEqual([[3, 1714], [2, 1714], [1, 1714]])
+    const e = o.estimate as Exclude<typeof o.estimate, 'busy' | null>
+    expect(e.bill.usage).toEqual({ orders: 3, included: 150, over: false })
+    expect(e.orders.map((x) => [x.number, x.fee])).toEqual([[3, 1714], [2, 1714], [1, 1714]])
     expect(o.details.saved).toBe(false)
   })
 
-  it('reading the estimate writes nothing', async () => {
+  it('reading the estimate writes nothing — with no draft yet, and with a draft the run already wrote', async () => {
     const { withTenant } = await import('@/lib/db/tenant')
-    const { frrataInvoices, frrataInvoiceFees } = await import('@/lib/db/schema-billing')
+    const { frrataInvoices, frrataInvoiceFees, frrataInvoiceLines } = await import('@/lib/db/schema-billing')
     const { eq } = await import('drizzle-orm')
     const q = await import('../billing')
+    const snap = () => withTenant(tenantId, async (tx) => ({
+      inv: await tx.select({ id: frrataInvoices.id, draftedAt: frrataInvoices.draftedAt, total: frrataInvoices.total }).from(frrataInvoices).where(eq(frrataInvoices.tenantId, tenantId)),
+      fees: (await tx.select({ orderId: frrataInvoiceFees.orderId }).from(frrataInvoiceFees).where(eq(frrataInvoiceFees.tenantId, tenantId))).map((f) => f.orderId).sort(),
+      lines: (await tx.select({ id: frrataInvoiceLines.id }).from(frrataInvoiceLines).where(eq(frrataInvoiceLines.tenantId, tenantId))).length,
+    }))
     await q.billingOverview({ tenantId, role: 'admin' }, ist('2026-11-20T12:00:00'))
-    const [inv, fees] = await withTenant(tenantId, async (tx) => [await tx.select().from(frrataInvoices).where(eq(frrataInvoices.tenantId, tenantId)), await tx.select().from(frrataInvoiceFees).where(eq(frrataInvoiceFees.tenantId, tenantId))])
-    expect([inv.length, fees.length]).toEqual([0, 0])
+    expect(await snap()).toEqual({ inv: [], fees: [], lines: 0 })
+    // The run drafts December; a page view then redrafts it inside its rolled-back transaction: the rows come back.
+    const { draftInvoice } = await import('@/lib/billing/draft')
+    await draftInvoice(tenantId, ist('2026-12-01T00:00:00'), ist('2026-11-20T12:00:00'))
+    const before = await snap()
+    expect(before.fees).toHaveLength(3)
+    await q.billingOverview({ tenantId, role: 'owner' }, ist('2026-11-21T12:00:00'))
+    expect(await snap()).toEqual(before)
   })
 
   it('billing details save as frata_app (detail columns only) and read back; Admin counts what the draft counted', async () => {
@@ -59,7 +71,7 @@ describe.skipIf(!host)('billing reads on a real database', () => {
     const o = await q.billingOverview({ tenantId, role: 'owner' }, ist('2026-11-20T12:00:00'))
     expect(o.details).toEqual({ ...v, legalName: 'B1 Store Pvt Ltd', saved: true })
     // Inter-state now (Maharashtra shop, Frrata unregistered in test mode): IGST either way, and the run uses the GSTIN's state.
-    expect(o.estimate?.bill.igst).toBeGreaterThan(0)
+    expect((o.estimate as Exclude<typeof o.estimate, 'busy' | null>).bill.igst).toBeGreaterThan(0)
     const { draftInvoice } = await import('@/lib/billing/draft')
     const { nextMonthStartIST } = await import('@/domains/time/month')
     const now = ist('2026-11-20T12:00:00')

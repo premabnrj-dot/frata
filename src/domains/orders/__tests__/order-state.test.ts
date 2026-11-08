@@ -45,7 +45,7 @@ describe('paying online', () => {
     expect(orderState(online({ paidAt: t(9) }), now)).toBe('paid')
     expect(orderState(online({ switchedToCodAt: t(9) }), now)).toBe('unconfirmed')
     expect(isPlaced(online({}))).toBe(false)
-    expect(isPlaced(moments({ cancelledAt: t(2) }))).toBe(true) // plan usage counts a cancelled order (app_admin_order_counts)
+    expect(isPlaced(moments({ cancelledAt: t(2) }))).toBe(true) // a cancelled order was placed
     expect(isPlaced(online({ cancelledAt: t(9) }))).toBe(false) // …but an online order never paid was never placed
     expect(isHolding(online({ placedAt: t(10), payBy: t(11) }), now)).toBe(true)
     expect(isHolding(online({ placedAt: t(10), payBy: t(11), cancelledAt: t(10) }), now)).toBe(false)

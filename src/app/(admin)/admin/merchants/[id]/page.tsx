@@ -36,7 +36,7 @@ export default async function MerchantPage({ params, searchParams }: { params: P
   const m = await getMerchant(staff, id, now)
   if (!m) notFound()
   const cur = m.current
-  const use = cur ? usage(m.ordersThisMonth, cur.v.includedOrders) : null
+  const use = cur ? usage(m.ordersThisMonth ?? 0, cur.v.includedOrders) : null
   const owner = m.members.find((x) => x.role === 'owner')
   const openInvite = m.invites.find((i) => i.role === 'owner' && !i.acceptedAt && !i.revokedAt)
 
@@ -44,7 +44,7 @@ export default async function MerchantPage({ params, searchParams }: { params: P
     <>
       <PageHeader title={m.tenant.name} back={{ href: '/admin/merchants', label: 'Merchants' }}
         badges={<>{cur ? <Badge tone="info">{cur.name}</Badge> : <Badge tone="danger">No plan</Badge>}{m.tenant.isInternal && <Badge>Internal</Badge>}{!owner && <Badge tone="warn">Owner not signed in yet</Badge>}</>}
-        meta={<>{m.host && <span className="font-mono">{m.host}</span>}{m.host && ' · '}added {dayIN(m.tenant.createdAt)} · <Numeric>{m.ordersThisMonth.toLocaleString('en-IN')}</Numeric> delivered orders this month</>}
+        meta={<>{m.host && <span className="font-mono">{m.host}</span>}{m.host && ' · '}added {dayIN(m.tenant.createdAt)} · {m.ordersThisMonth === null ? 'not drafted yet this month' : <><Numeric>{m.ordersThisMonth.toLocaleString('en-IN')}</Numeric> delivered orders this month{m.countedAt ? ` (counted ${dateTimeIN(m.countedAt)})` : ''}</>}</>}
         actions={<>
           <Link href={`/admin/merchants/${id}/plan`} className={button({ variant: 'secondary' })}>Change plan</Link>
           {/* Names the merchant (§ Frrata Admin); a long name wraps inside the button instead of overflowing it. */}

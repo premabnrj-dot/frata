@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { parseBillingDetails } from '@/domains/billing/details'
 import { asMember } from '@/lib/auth/as-member'
-import { CAN_MANAGE } from '@/lib/auth/require-member'
+import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { auditEvents } from '@/lib/db/schema'
 import { billingAccounts } from '@/lib/db/schema-billing'
 import { errName } from '@/lib/log'
@@ -13,6 +13,9 @@ import { errName } from '@/lib/log'
 // through asMember. Only the detail columns: frata_app holds no grant on the gateway or mandate columns (0048), so the
 // upsert names its columns rather than letting drizzle write DEFAULT into every one.
 export async function saveBillingDetails(input: Record<string, unknown>): Promise<{ ok: true } | { ok: false; error: string; errors?: Record<string, string> }> {
+  // Who first, then the input (security review 2026-11-08): nobody outside owner and admin gets the parser's time.
+  const me = await requireMember(CAN_MANAGE)
+  if (!me.ok) return { ok: false, error: me.message }
   const p = parseBillingDetails(input && typeof input === 'object' ? input : {})
   if (!p.ok) return { ok: false, error: 'Some fields need a look before saving.', errors: p.errors }
   const v = p.value

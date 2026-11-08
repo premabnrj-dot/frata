@@ -30,10 +30,13 @@ export default async function PlanAndBillingPage() {
     orderPrefixFor(auth.membership.tenantId),
   ])
   if (!o) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
-  const e = o.estimate
-  const fees = e?.bill.lines.filter((l) => l.kind === 'fee') ?? []
-  const feeSoFar = fees.reduce((t, l) => t + l.taxable, 0)
-  const delivered = e?.orders.reduce((t, x) => t + x.base, 0) ?? 0
+  const e = o.estimate === 'busy' ? null : o.estimate
+  // This month's delivered orders only (a late order from last month is billed too, and listed, but not counted here),
+  // so the value matches the count beside it.
+  const monthStart = e ? new Date(e.bill.lines.find((l) => l.kind === 'fee')?.periodStart ?? e.invoiceOn) : now
+  const thisMonthOrders = e?.orders.filter((x) => x.billableAt >= monthStart) ?? []
+  const feeSoFar = thisMonthOrders.reduce((t, x) => t + x.fee, 0)
+  const delivered = thisMonthOrders.reduce((t, x) => t + x.base, 0)
   const thisMonth = monthYearIN(now)
   const gst = e ? e.bill.cgst + e.bill.sgst + e.bill.igst : 0
   return (
@@ -43,7 +46,8 @@ export default async function PlanAndBillingPage() {
 
       <Section>
         <h2 className="text-section font-semibold">{thisMonth} so far</h2>
-        {!o.plan || !e ? <p className="text-sm text-muted-foreground">No plan yet, so nothing to bill. Frrata sets your plan when your shop opens.</p> : (
+        {o.estimate === 'busy' ? <p className="text-sm text-muted-foreground">Frrata is updating this estimate right now. Reload in a moment.</p>
+          : !o.plan || !e ? <p className="text-sm text-muted-foreground">No plan yet, so nothing to bill. Frrata sets your plan when your shop opens.</p> : (
           <>
             <dl className="grid gap-3 text-sm sm:grid-cols-3">
               <div><dt className="text-muted-foreground">Delivered orders</dt><dd className="text-lg font-semibold"><Numeric>{e.bill.usage.orders.toLocaleString('en-IN')}</Numeric> <span className="text-sm font-normal text-muted-foreground">of {e.bill.usage.included.toLocaleString('en-IN')} included</span></dd></div>

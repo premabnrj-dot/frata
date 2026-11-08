@@ -8,7 +8,8 @@ import assert from 'node:assert/strict'
 import { CONSOLE, USERS, signedIn, until } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
-const ym = (d) => { const i = new Date(d.getTime() + 330 * 60_000); return `${i.getUTCFullYear()}-${String(i.getUTCMonth() + 1).padStart(2, '0')}` }
+// The IST month after the one `d` falls in, as "YYYY-MM" (month ends are IST, not UTC).
+const nextYm = (d) => { const i = new Date(d.getTime() + 330 * 60_000); const n = new Date(Date.UTC(i.getUTCFullYear(), i.getUTCMonth() + 1, 1)); return `${n.getUTCFullYear()}-${String(n.getUTCMonth() + 1).padStart(2, '0')}` }
 
 export default {
   name: 'billing',
@@ -53,6 +54,8 @@ export default {
         await riya.getByText('Saved. Your next invoice is made out to these details.').waitFor()
         const [a] = await db`select legal_name, gstin, state_code, email from billing_accounts where tenant_id = ${KESAR}`
         assert.deepEqual([a.legal_name, a.gstin, a.state_code, a.email], ['Kesar Studio LLP', '27AAPFU0939F1ZV', '27', 'accounts@kesarstudio.in'])
+        const audit = await db`select detail from audit_events where tenant_id = ${KESAR} and action = 'billing.details' order by at desc limit 1`
+        assert.deepEqual(audit[0]?.detail, { gstin: true, state: '27' }, 'audited, without the GSTIN itself')
       })
 
       await t.step('staff never see money: Settings is closed to them, and the billing page refuses a typed link', async () => {
@@ -67,19 +70,20 @@ export default {
 
       await t.step("Admin: Run drafts for next month, then Merchants shows the drafted count as Delivered this month", async () => {
         const meera = await open('frata', { viewport: { width: 1280, height: 900 } })
-        const next = new Date(); next.setUTCDate(28); next.setUTCDate(next.getUTCDate() + 7)
-        await meera.goto(CONSOLE + `/admin/billing?month=${ym(next)}`)
+        await meera.goto(CONSOLE + `/admin/billing?month=${nextYm(new Date())}`)
         await meera.getByRole('button', { name: /^Run drafts for/ }).click()
         await meera.getByText(/drafted/).first().waitFor()
         const [d] = await until(async () => { const r = await db`select orders_billed from frrata_invoices where tenant_id = ${KESAR} order by period_start desc limit 1`; return r.length && r })
         assert.ok(d.orders_billed >= 1, 'the delivered order is counted')
         await meera.goto(CONSOLE + '/admin/merchants')
         const row = meera.getByRole('row').filter({ hasText: 'Kesar' })
-        await row.getByText(String(d.orders_billed)).first().waitFor()
+        await row.getByText(String(d.orders_billed), { exact: true }).first().waitFor()
+        assert.equal(await row.getByText('—', { exact: true }).count(), 0, 'a drafted shop shows its count, not a dash')
       })
     } finally {
       await db`delete from frrata_invoices where tenant_id = ${KESAR} and issued_at is null` // cascades lines, fees, credits
       await db`delete from billing_accounts where tenant_id = ${KESAR}`
+      await db`delete from audit_events where tenant_id = ${KESAR} and action = 'billing.details'`
       await db`delete from orders where tenant_id = ${KESAR} and number = ${N}`
       await db`delete from members where tenant_id = ${KESAR} and user_id = ${USERS.staff.id}`
     }

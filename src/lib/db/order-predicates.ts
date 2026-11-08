@@ -88,8 +88,8 @@ export const inTabSql = (tab: QueueTab, now: Date, a = '"orders"'): SQL =>
   tab === 'all' ? placedSql(a) : sql`(${SHIP.has(tab) ? inFlightSql(a) : openSql(a)} and ${stateSql(now, a)} in (${list(IN[tab])}))`
 
 /**
- * isPlaced(): not an online order still waiting for, or never given, its payment. Cancelled orders count (plan usage).
- * KNOWN COPY: app_admin_order_counts (drizzle/0017) and app_admin_offer_totals (drizzle/0042) state the same rule in
+ * isPlaced(): not an online order still waiting for, or never given, its payment. Cancelled orders count as placed.
+ * KNOWN COPY: app_admin_offer_totals (drizzle/0042), and the unread app_admin_order_counts (drizzle/0006), state it in
  * their SQL bodies, where this module cannot reach; change all together (impact review 2026-11-07).
  */
 export const placedSql = (a = '"orders"'): SQL =>

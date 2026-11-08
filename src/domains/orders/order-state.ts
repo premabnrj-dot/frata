@@ -88,8 +88,8 @@ export const paidAfterPacking = (o: Pick<OrderMoments, 'paidAt' | 'switchedToCod
 /**
  * A placed order: anything but an online order never paid and never switched to COD — even once cancelled
  * (the state alone cannot tell: found by the parity test, 2026-11-07). What a merchant counts as placed
- * (`app_admin_order_counts`, drizzle/0017 — a cancelled order counts). Billing counts billable orders instead
- * (billableAt, billing B0); Admin › Merchants moves onto that in B1.
+ * (a cancelled order counts). Plan usage and Admin › Merchants count billable orders instead (billableAt, billing
+ * B0–B1); `app_admin_order_counts` (drizzle/0006) has no reader since B1 and goes with the next Admin migration.
  */
 export const isPlaced = (o: Pick<OrderMoments, 'paymentMethod' | 'paidAt' | 'switchedToCodAt'>) => !(o.paymentMethod === 'prepaid' && !o.paidAt && !o.switchedToCodAt)
 
