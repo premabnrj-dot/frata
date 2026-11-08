@@ -7,6 +7,7 @@ import { STATE_LABEL } from '@/domains/billing/status'
 import { paise } from '@/domains/money/paise'
 import { usage } from '@/domains/plans/entitlements'
 import { planChangeAdds, planChangeStarts } from '@/domains/billing/bill'
+import { lastDay } from '@/domains/plans/trial'
 import { monthStartIST, nextMonthStartIST } from '@/domains/time/month'
 import { formatInr, formatPercent } from '@/lib/format'
 import { publicPlans } from '@/lib/db/platform'
@@ -104,7 +105,7 @@ export default async function PlanAndBillingPage() {
         {o.plan ? (
           <>
             <p className="text-sm"><strong>{o.plan.name}</strong> · <Money paise={paise(o.plan.monthlyPrice)} /> a month · {o.plan.includedOrders.toLocaleString('en-IN')} orders included · {formatPercent(o.plan.feeBps / 10_000, o.plan.feeBps % 100 === 0 ? 0 : 1)} of each delivered order&apos;s value (before GST and delivery)</p>
-            {o.plan.trialEndsAt && o.plan.trialEndsAt > now && <p className="text-sm text-ok-text">Free trial until {dayIN(o.plan.trialEndsAt)}: the plan costs nothing until then.</p>}
+            {o.plan.trialEndsAt && o.plan.trialEndsAt > now && <p className="text-sm text-ok-text">Free trial until {dayIN(lastDay(o.plan.trialEndsAt))}: the plan costs nothing until then.</p>}
             {o.plan.custom || auth.membership.supportSessionId || plans.length === 0
               ? <p className="text-xs text-muted-foreground">{o.plan.custom ? 'Your price was agreed with Frrata. To change your plan, message Frrata.' : auth.membership.supportSessionId ? 'A Frrata support visit cannot change the shop’s plan.' : 'Plans could not be loaded. Try again in a minute.'}</p>
               : <PlanChoice downgradeOn={dayMonthLongIN(o.forChange.downgradeOn)}

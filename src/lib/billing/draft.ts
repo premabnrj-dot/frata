@@ -6,6 +6,9 @@ import { paise } from '@/domains/money/paise'
 import type { PlanCode } from '@/domains/plans/entitlements'
 import { gstinState } from '@/domains/tax/gst'
 import { pauseWindow } from '@/domains/plans/trial'
+
+/** Off until TR1 task 9 ships the paused storefront: billing and selling pause together. */
+const TRIAL_PAUSE_LIVE = false
 import { monthStartIST, nextMonthStartIST } from '@/domains/time/month'
 import type { Tx } from '@/lib/db'
 import { billableAtSql, feeRateAtSql } from '@/lib/db/order-predicates'
@@ -96,7 +99,7 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
     planBilledIn(tx, tenantId, prevMonthStart),
     tx.select({ gstin: billingAccounts.gstin, stateCode: billingAccounts.stateCode, mandateAt: billingAccounts.mandateAt, mandateRevokedAt: billingAccounts.mandateRevokedAt }).from(billingAccounts).where(eq(billingAccounts.tenantId, tenantId)),
     // Trials (TR0·3): a shop paused after its trial pays no plan for those days.
-    tx.select().from(shopTrials).where(eq(shopTrials.tenantId, tenantId)),
+    tx.select({ days: shopTrials.days, openWindowDays: shopTrials.openWindowDays, signedUpAt: shopTrials.signedUpAt, startedAt: shopTrials.startedAt, extendedAt: shopTrials.extendedAt, endedAt: shopTrials.endedAt }).from(shopTrials).where(eq(shopTrials.tenantId, tenantId)),
   ])
 
   const planHistory: PlanRow[] = planRows.map((p) => ({ startsAt: p.startsAt, trialEndsAt: p.trialEndsAt, customMonthlyPrice: p.customMonthlyPrice === null ? null : paise(p.customMonthlyPrice),
@@ -108,7 +111,9 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
   const bill = computeBill({
     monthStart, nextMonthStart, prevMonthStart, plans: planHistory, addons, feeOrders, credits,
     carry: prev[0]?.carryOut ?? 0, rolledLastMonth: prev[0]?.rolled ?? false, prevPlanBilled: planBilled,
-    pause: trial[0] ? pauseWindow(trial[0], account[0]?.mandateAt ?? null, account[0]?.mandateRevokedAt ?? null) : null,
+    // The billing pause turns on WITH the storefront pause (TR1 task 9; impact review TR0): a shop that still sells
+    // pays its plan. pauseWindow (src/domains/plans/trial.ts) is ready for it.
+    pause: TRIAL_PAUSE_LIVE && trial[0] ? pauseWindow(trial[0], account[0]?.mandateAt ?? null, account[0]?.mandateRevokedAt ?? null) : null,
     // The place of supply: the GSTIN's state when there is one (finding 7), else the state typed.
     frrataGstin: frrataGstin(), shopState: gstinState(acc?.gstin ?? null) ?? acc?.stateCode ?? null,
   })

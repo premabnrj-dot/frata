@@ -7,6 +7,7 @@ import { asMember } from '@/lib/auth/as-member'
 import { CAN_MANAGE } from '@/lib/auth/require-member'
 import { auditEvents, shopSettings, tenants } from '@/lib/db/schema'
 import { products } from '@/lib/db/schema-catalogue'
+import { shopTrials } from '@/lib/db/schema-trials'
 import { canTakeOnline, keysFor } from '@/lib/payments/keys'
 import { hostFor, refreshShop } from '@/lib/queries/storefront'
 
@@ -15,10 +16,19 @@ import { hostFor, refreshShop } from '@/lib/queries/storefront'
 
 type Result = { ok: true } | { ok: false; error: string }
 
+/** Trials T11: going live starts a shop's trial for good, so a Frrata support visit never opens or closes a shop with a
+ * trial that has not ended — the owner does. */
+const SUPPORT_TRIAL = 'This shop is on a free trial: its owner opens or closes it (going live starts the trial).'
+async function trialBlocksSupport(tx: Parameters<Parameters<typeof asMember>[2]>[0], tenantId: string): Promise<boolean> {
+  const [t] = await tx.select({ endedAt: shopTrials.endedAt }).from(shopTrials).where(eq(shopTrials.tenantId, tenantId))
+  return !!t && !t.endedAt
+}
+
 export async function openShop(): Promise<Result> {
   try {
     const r = await asMember(CAN_MANAGE, { action: 'shop.open' }, async (tx, auth) => {
       const t = auth.membership.tenantId
+      if (auth.membership.supportSessionId && await trialBlocksSupport(tx, t)) return SUPPORT_TRIAL
       const [s] = await tx.select({ name: tenants.name, slug: tenants.slug, legalName: shopSettings.legalName, grievanceName: shopSettings.grievanceName, grievanceEmail: shopSettings.grievanceEmail, grievancePhone: shopSettings.grievancePhone, codOn: shopSettings.codOn, codMax: shopSettings.codMax, publishedAt: shopSettings.publishedAt })
         .from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, t))
       if (!s) return 'Your shop’s settings are missing.'
@@ -45,10 +55,13 @@ export async function openShop(): Promise<Result> {
 export async function closeShop(): Promise<Result> {
   try {
     const r = await asMember(CAN_MANAGE, { action: 'shop.close' }, async (tx, auth) => {
+      if (auth.membership.supportSessionId && await trialBlocksSupport(tx, auth.membership.tenantId)) return SUPPORT_TRIAL
       await tx.update(shopSettings).set({ publishedAt: null }).where(eq(shopSettings.tenantId, auth.membership.tenantId))
       if (!auth.membership.supportSessionId) await tx.insert(auditEvents).values({ tenantId: auth.membership.tenantId, actorUserId: auth.userId, actorEmail: auth.email, actorKind: 'member', action: 'shop.close' })
+      return null
     })
     if (!r.ok) return { ok: false, error: r.error }
+    if (r.value) return { ok: false, error: r.value }
     refreshShop(r.tenantId, 'shop')
     revalidatePath('/console', 'layout')
     return { ok: true }

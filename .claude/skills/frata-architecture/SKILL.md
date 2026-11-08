@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.20.0
+  version: 2.21.0
   verified: 2026-11-08
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -437,6 +437,21 @@ Server secrets in `src/lib/env.ts`, public values in `src/lib/public-env.ts`,
 `CRON_SECRET` in `src/lib/auth/cron.ts` — one reader each, every name in
 `.env.example` (`check:config`). The db connection is lazy: a build with no
 `DATABASE_URL` still compiles.
+
+## Trials (TR0 built 2026-11-08; spec docs/specs/2026-11-08-trials.md, plan docs/plans/2026-11-08-trials.md)
+
+- **Terms are frozen into the shop's row when they apply.** Admin's `trial_settings` are for NEW sign-ups; a shop's
+  `shop_trials` row keeps the length and window it started with, so a later change never moves a running trial.
+  Do the same for any setting that changes terms (a price, a length, a limit).
+- **One writer of a derived-but-stored fact.** `tenant_plans.trial_ends_at` (what billing reads) is written only by
+  `app_trial_recompute` (drizzle/0063: security invoker, revoked from every role, locks the tenant, touches the row in
+  force and later rows only). Every change calls it — the first-publish trigger, every insert into `tenant_plans`, the
+  extension, Admin's set / extend / end. Its SQL day rule (`app_ist_day_end_after`) is held to
+  `src/domains/plans/trial.ts` by a parity int test.
+- **The trial begins once the website is live** — the first `published_at` only; closing and reopening never restarts
+  it. A support visit never opens or closes a shop with a running trial (it would start the clock for good).
+- **The state is derived, never stored** (`trialState`); every trial end is the end of an IST day, stored as the first
+  moment of the next (exclusive) — show it with `lastDay()`, never `dayIN(trialEndsAt)`.
 
 ## Hosting (ADR-0005)
 

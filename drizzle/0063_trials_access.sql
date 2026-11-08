@@ -30,7 +30,8 @@ grant select on trial_settings, shop_trials, trial_claims to frata_admin;
 --> statement-breakpoint
 create policy admin_read on trial_settings for select to frata_admin using (true);
 --> statement-breakpoint
-grant select on shop_trials to frata_app;
+-- Never who extended or ended it (staff ids): the shop reads the facts only (security review TR0).
+grant select (tenant_id, days, open_window_days, signed_up_at, started_at, extended_at, ended_at, created_at) on shop_trials to frata_app;
 --> statement-breakpoint
 create policy tenant_read on shop_trials for select to frata_app using (tenant_id = app_current_tenant());
 --> statement-breakpoint
@@ -69,8 +70,10 @@ begin
   perform 1 from public.tenants where id = p_tenant for update;
   e := public.app_trial_ends_at(p_tenant);
   if e is null then return null; end if;
+  -- Only the row in force now and later rows: a past row is history, never re-priced (security review TR0).
   update public.tenant_plans tp set trial_ends_at = case when tp.starts_at < e then e else null end
-   where tp.tenant_id = p_tenant and not tp.waits_for_trial and tp.trial_ends_at is distinct from (case when tp.starts_at < e then e else null end);
+   where tp.tenant_id = p_tenant and not tp.waits_for_trial and tp.trial_ends_at is distinct from (case when tp.starts_at < e then e else null end)
+     and not exists (select 1 from public.tenant_plans n where n.tenant_id = tp.tenant_id and n.starts_at > tp.starts_at and n.starts_at <= now());
   update public.tenant_plans tp set starts_at = greatest(now(), e), trial_ends_at = null
    where tp.tenant_id = p_tenant and tp.waits_for_trial and tp.starts_at > now() and tp.starts_at <> greatest(now(), e);
   return e;
@@ -80,6 +83,8 @@ end $$;
 create or replace function app_tenant_plans_trial_sync() returns trigger
   language plpgsql security definer set search_path = '' as $$
 begin
+  -- R4: a plan row inserted by another trigger never recurses into the recompute.
+  if pg_trigger_depth() > 1 then return null; end if;
   if exists (select 1 from public.shop_trials where tenant_id = new.tenant_id) then perform public.app_trial_recompute(new.tenant_id); end if;
   return null;
 end $$;
@@ -110,9 +115,17 @@ begin
   select * from public.shop_trials where tenant_id = t into s;
   if s.tenant_id is null then raise exception 'trial: this shop has no trial' using errcode = 'check_violation'; end if;
   if s.extended_at is not null or s.ended_at is not null then raise exception 'trial: the extra days were already taken' using errcode = 'check_violation'; end if;
+  if exists (select 1 from public.tenant_plans w where w.tenant_id = t and w.waits_for_trial and w.starts_at <= now()) then
+    raise exception 'trial: the new plan has started; the trial cannot be extended' using errcode = 'check_violation'; end if;
   e := public.app_trial_ends_at(t);
+  -- As mayExtend (src/domains/plans/trial.ts): ending or grace only — never while building, never once autopay
+  -- has ended the trial into the paid plan.
+  if s.started_at is null and now() < public.app_ist_day_end_after(s.signed_up_at, s.open_window_days) then
+    raise exception 'trial: more days can be taken once the website is live' using errcode = 'check_violation'; end if;
   if now() < e - interval '10 days' or now() >= e + interval '7 days' then
     raise exception 'trial: more days can be taken in the last 10 days of the trial' using errcode = 'check_violation'; end if;
+  if now() >= e and exists (select 1 from public.billing_accounts b where b.tenant_id = t and b.mandate_at is not null and b.mandate_revoked_at is null) then
+    raise exception 'trial: the trial has ended into your plan' using errcode = 'check_violation'; end if;
   select count(*) into delivered from public.orders o
    where o.tenant_id = t and o.delivered_at is not null and o.rto_initiated_at is null and o.rto_delivered_at is null;
   if delivered >= 3 then raise exception 'trial: more days are for shops that have not yet had 3 delivered orders' using errcode = 'check_violation'; end if;
@@ -179,6 +192,8 @@ begin
   select * from public.shop_trials where tenant_id = p_tenant into s;
   if s.tenant_id is null then raise exception 'trial: this shop has no trial' using errcode = 'check_violation'; end if;
   if s.extended_at is not null or s.ended_at is not null then raise exception 'trial: the extra days were already taken' using errcode = 'check_violation'; end if;
+  if exists (select 1 from public.tenant_plans w where w.tenant_id = p_tenant and w.waits_for_trial and w.starts_at <= now()) then
+    raise exception 'trial: the new plan has started; the trial cannot be extended' using errcode = 'check_violation'; end if;
   update public.shop_trials set extended_at = now(), extended_by = p_staff where tenant_id = p_tenant;
   e := public.app_trial_recompute(p_tenant);
   insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
@@ -240,6 +255,13 @@ begin
   return query select at, up;
 end $$;
 --> statement-breakpoint
+-- ── Admin never writes a row as the shop NOR a waiting upgrade (a row recompute skips: security review TR0). ──
+create or replace function app_tenant_plans_by_shop_guard() returns trigger language plpgsql set search_path = '' as $$
+begin
+  if (new.by_shop or new.waits_for_trial) and current_user = 'frata_admin' then raise exception 'plan: Admin never writes a change as the shop' using errcode = 'insufficient_privilege'; end if;
+  return new;
+end $$;
+--> statement-breakpoint
 -- ── Collection never debits during a trial (A2, E2): the due list carries each shop's trial end (null without one). ──
 drop function if exists app_billing_due();
 --> statement-breakpoint
@@ -256,7 +278,8 @@ create function app_billing_due() returns table (tenant_id uuid, invoice_id uuid
          (select count(*)::int from public.frrata_payments p where p.invoice_id = i.id and p.attempt > 0 and p.captured_at is null and p.failed_at is null),
          (select max(p.failed_at) from public.frrata_payments p where p.invoice_id = i.id and p.attempt > 0),
          exists (select 1 from public.billing_notices n where n.invoice_id = i.id and n.kind = 'acknowledge'),
-         public.app_trial_ends_at(i.tenant_id)
+         coalesce(public.app_trial_ends_at(i.tenant_id),
+                  (select tp.trial_ends_at from public.tenant_plans tp where tp.tenant_id = i.tenant_id and tp.starts_at <= now() order by tp.starts_at desc limit 1))
     from public.frrata_invoices i left join public.billing_accounts b on b.tenant_id = i.tenant_id
    where i.number is not null and i.issued_at > now() - interval '60 days'
      and i.total > coalesce((select sum(p.amount) from public.frrata_payments p where p.invoice_id = i.id and p.captured_at is not null), 0)

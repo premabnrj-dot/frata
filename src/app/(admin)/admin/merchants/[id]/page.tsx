@@ -1,3 +1,4 @@
+import { lastDay } from '@/domains/plans/trial'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Money, Numeric } from '@/components/data/numeric'
@@ -104,7 +105,7 @@ export default async function MerchantPage({ params, searchParams }: { params: P
                   {use!.over && <p className="mt-1 text-warn-text">{(use!.used - use!.included).toLocaleString('en-IN')} over the plan. It keeps selling.</p>}
                 </div>
                 <p className="text-muted-foreground">{cur.v.features.length ? `Includes ${cur.v.features.map((f) => FEATURE_NAMES[f as Feature] ?? f).join(', ')}, all channels.` : 'All channels.'}</p>
-                {cur.tp.trialEndsAt && cur.tp.trialEndsAt > now && <p className="text-warn-text">Trial until {dayIN(cur.tp.trialEndsAt)}.</p>}
+                {cur.tp.trialEndsAt && cur.tp.trialEndsAt > now && <p className="text-warn-text">Trial until {dayIN(lastDay(cur.tp.trialEndsAt))}.</p>}
                 <p className="text-muted-foreground">On this plan since {dayIN(cur.tp.startsAt)}. Billed monthly (Admin › Billing).</p>
                 {(() => { const next = m.history.filter((h) => h.tp.startsAt > now).at(-1); return next ? <p className="text-warn-text">Moves to {next.name} on {dayIN(next.tp.startsAt)}{next.tp.byShop ? ', the shop’s own change' : ''}. A change here replaces it.</p> : null })()}
               </>

@@ -1507,5 +1507,33 @@ do $$ declare e1 timestamptz; e2 timestamptz; w timestamptz; begin
   begin perform app_trial_extend('99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: a second extension'; exception when check_violation then null; end;
 end $$;
 rollback;
+-- 47b. Security review TR0: Admin never writes a waiting upgrade; a scheduled downgrade carries the trial end (T5);
+-- no extension once a waiting upgrade has started; frata_admin cannot run the shop's extension or the writer.
+begin; set local role frata_admin;
+do $$ begin
+  begin insert into tenant_plans (tenant_id, plan_version_id, starts_at, created_by, waits_for_trial) select '11111111-1111-1111-1111-111111111111', id, now(), 'aaaaaaaa-0000-0000-0000-000000000001', true from plan_versions limit 1;
+    raise exception 'FAIL: Admin wrote a waiting upgrade'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+do $$ begin
+  if has_function_privilege('frata_admin', 'app_trial_extend(uuid)', 'execute') then raise exception 'FAIL: Admin runs the shop''s extension'; end if;
+end $$;
+begin;
+-- A downgrade scheduled inside the trial carries the trial's end; a downgrade after it carries none.
+insert into tenant_plans (tenant_id, plan_version_id, starts_at, created_by, reason, by_shop)
+  select '11111111-1111-1111-1111-111111111111', v.id, now() + interval '2 days', '99999999-9999-9999-9999-999999999999', 'Changed by the shop', true from plan_versions v join plans p on p.id = v.plan_id where p.code = 'scale' order by v.version desc limit 1;
+do $$ declare e timestamptz := app_trial_ends_at('11111111-1111-1111-1111-111111111111'); begin
+  if (select trial_ends_at from tenant_plans where tenant_id = '11111111-1111-1111-1111-111111111111' and starts_at > now()) is distinct from e then raise exception 'FAIL: a scheduled row missed the trial end'; end if;
+end $$;
+rollback;
+begin;
+insert into tenant_plans (tenant_id, plan_version_id, starts_at, created_by, reason, by_shop, waits_for_trial)
+  select '11111111-1111-1111-1111-111111111111', v.id, now() - interval '1 minute', '99999999-9999-9999-9999-999999999999', 'Changed by the shop', true, true from plan_versions v join plans p on p.id = v.plan_id where p.code = 'growth' order by v.version desc limit 1;
+set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  begin perform app_trial_extend('99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: extended after the new plan started'; exception when check_violation then null; end;
+end $$;
+rollback;
 
-\echo 'tenancy proof — all 47 checks passed'
+\echo 'tenancy proof — all 48 checks passed'

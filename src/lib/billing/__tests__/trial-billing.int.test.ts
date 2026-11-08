@@ -34,9 +34,10 @@ describe.skipIf(!host)('a trial shop\'s invoices', () => {
     if (!nov.invoiceId || !dec.invoiceId || !jan.invoiceId) throw new Error('not drafted')
     expect(nov.bill.lines.some((l) => l.kind === 'plan' || l.kind === 'change')).toBe(false)
     expect(dec.bill.lines.some((l) => l.kind === 'plan')).toBe(false)
-    // No autopay: grace 4–10 December, paused from 11 December — the grace week only, and no January plan.
-    expect(jan.bill.lines.find((l) => l.kind === 'change')!.taxable).toBe(Math.round(499900 * 7 / 31))
-    expect(jan.bill.lines.some((l) => l.kind === 'plan')).toBe(false)
+    // 4–31 December at Growth by days. (The billing pause is off until the storefront pause ships, TR1 task 9: a shop
+    // that still sells pays its plan.)
+    expect(jan.bill.lines.find((l) => l.kind === 'change')!.taxable).toBe(Math.round(499900 * 28 / 31))
+    expect(jan.bill.lines.find((l) => l.kind === 'plan')!.taxable).toBe(499900)
   })
 
   it('with autopay set up before the pause: 4–31 December by days, and January in advance', async () => {
@@ -53,7 +54,7 @@ describe.skipIf(!host)('a trial shop\'s invoices', () => {
     expect(jan.bill.lines.find((l) => l.kind === 'plan')!.taxable).toBe(499900)
   })
 
-  it('the due list carries the trial end', async () => {
+  it('the SQL day rule ends the trial after its last IST day', async () => {
     const { db } = await import('@/lib/db')
     const { sql } = await import('drizzle-orm')
     const [r] = await db().execute<{ e: string }>(sql`select app_ist_day_end_after('2026-11-03T12:00:00+05:30'::timestamptz, 30) as e`)

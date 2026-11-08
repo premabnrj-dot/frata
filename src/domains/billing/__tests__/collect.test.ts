@@ -3,7 +3,7 @@ import { nextStep, type DueInvoice } from '../collect'
 
 const H = 3_600_000
 const issued = new Date('2026-12-01T00:00:00Z')
-const base: DueInvoice = { due: 180927, testMode: true, issuedAt: issued, mandate: true, mandateMax: 1_500_000, noticeAt: null, attempts: 0, pending: 0, lastFailedAt: null, acknowledged: false }
+const base: DueInvoice = { due: 180927, testMode: true, issuedAt: issued, mandate: true, mandateMax: 1_500_000, noticeAt: null, attempts: 0, pending: 0, lastFailedAt: null, acknowledged: false, trialEndsAt: null }
 const at = (h: number) => new Date(issued.getTime() + h * H)
 
 describe('collecting a due invoice (billing B3)', () => {

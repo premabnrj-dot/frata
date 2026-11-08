@@ -138,6 +138,8 @@ export function planChangeStarts(cur: PlanRow | undefined, target: PlanRow['plan
 export function planChangeAdds(plans: PlanRow[], target: PlanRow['planVersion'], now: Date, monthStart: Date, nextMonthStart: Date, billed: number | null): Paise {
   const cur = [...plans].filter((p) => p.startsAt <= now).sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())[0]
   const kept = plans.filter((p) => p.startsAt <= now)
+  // As computeBill: a month a trial ran in counts as billed 0, even with no invoice yet (impact review TR0).
+  if (billed == null && (trialRunsAt(kept, monthStart) || kept.some((p) => !!p.trialEndsAt && p.trialEndsAt > monthStart && p.trialEndsAt < nextMonthStart))) billed = 0
   // As app_change_plan (owner, 2026-11-08): an upgrade during a trial starts when the trial is over, with no trial.
   const startsAt = planChangeStarts(cur, target, now, nextMonthStart)
   const up = cur ? target.monthlyPrice > cur.planVersion.monthlyPrice : true

@@ -16,7 +16,7 @@ export const NOTICE_LEAD_MS = 25 * HOUR
 export const MAX_ATTEMPTS = 4
 export const ACKNOWLEDGE_AFTER_DAYS = 14
 
-export type DueInvoice = { due: number; testMode: boolean; issuedAt: Date; mandate: boolean; mandateMax: number | null; noticeAt: Date | null; attempts: number; pending: number; lastFailedAt: Date | null; acknowledged: boolean; trialEndsAt?: Date | null }
+export type DueInvoice = { due: number; testMode: boolean; issuedAt: Date; mandate: boolean; mandateMax: number | null; noticeAt: Date | null; attempts: number; pending: number; lastFailedAt: Date | null; acknowledged: boolean; trialEndsAt: Date | null }
 export type Step = { kind: 'notice'; debitAt: Date } | { kind: 'attempt'; attempt: number } | { kind: 'acknowledge' } | { kind: 'wait'; why: string }
 
 export function nextStep(d: DueInvoice, now: Date, gatewayIsTest: boolean): Step {

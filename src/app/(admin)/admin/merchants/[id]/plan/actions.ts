@@ -15,7 +15,6 @@ const Change = z.object({
   tenantId: z.uuid(),
   code: z.enum(PLAN_CODES),
   when: z.enum(['now', 'next_month']),
-  trialEndsAt: z.string().optional().transform((v) => (v ? new Date(`${v}T23:59:59+05:30`) : null)),
   customPrice: z.string().optional().transform((v) => (v && v.trim() ? Number(v.replace(/[₹,\s]/g, '')) : null)).refine((v) => v === null || (Number.isFinite(v) && v >= 0), 'price'),
   reason: z.string().trim().max(200).optional().transform((v) => v || null),
 })
@@ -32,7 +31,9 @@ export async function changePlanAction(form: FormData) {
     await changeTenantPlan(staff, p.data.tenantId, {
       code: p.data.code,
       startsAt: p.data.when === 'now' ? now : nextMonthStartIST(now),
-      trialEndsAt: p.data.trialEndsAt,
+      // Trials (security review TR0): a trial is never typed here — only the audited, ADMIN_ONLY trial definers set one
+      // (Free trial card); a shop with a trial keeps it across the change (app_trial_recompute).
+      trialEndsAt: null,
       customMonthlyPrice: p.data.customPrice === null ? null : fromRupees(p.data.customPrice),
       reason: p.data.reason,
     })
