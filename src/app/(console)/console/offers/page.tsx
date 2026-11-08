@@ -8,7 +8,7 @@ import { Panel } from '@/components/ui/panel'
 import { ViewTabs } from '@/components/ui/view-tabs'
 import { OFFER_STATUSES, type OfferStatus } from '@/domains/checkout/offer-status'
 import { paise } from '@/domains/money/paise'
-import { ANY_MEMBER, CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
+import { ANY_MEMBER, CAN_BUILD, requireMember } from '@/lib/auth/require-member'
 import { listOffers, offerStats } from '@/lib/queries/discounts'
 import { STATUS, terms } from './_components/data'
 import { keptNote, OfferStrip } from './_components/offer-results'
@@ -21,7 +21,7 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
   const now = new Date()
-  const [rows, stats] = await Promise.all([listOffers(auth.membership.tenantId, now), offerStats(auth.membership.tenantId, now, { costs: (CAN_MANAGE as readonly string[]).includes(auth.membership.role) })])
+  const [rows, stats] = await Promise.all([listOffers(auth.membership.tenantId, now), offerStats(auth.membership.tenantId, now, { role: auth.membership.role })])
     .catch((err) => { console.error('[offers]', err instanceof Error ? err.name : err); return [null, null] as const })
   if (!rows || !stats) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const tab = ((await searchParams).tab ?? 'live') as OfferStatus
@@ -29,8 +29,8 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
   const count = (s: OfferStatus) => rows.filter((r) => r.status === s).length
   const shown = rows.filter((r) => r.status === current)
   const canBuild = (CAN_BUILD as readonly string[]).includes(auth.membership.role)
-  // ₹ kept is a profit: owners and admins only (staff and partners never see a cost; Ship S0·6).
-  const costs = (CAN_MANAGE as readonly string[]).includes(auth.membership.role)
+  // ₹ kept is a profit: who sees it is seesCosts, read with the stats (owners and admins; a partner before handover).
+  const costs = stats.costs
   const add = canBuild ? <Link href="/console/offers/new" className={button()}>New offer</Link> : undefined
   if (!rows.length) return (
     <>

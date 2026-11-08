@@ -1,9 +1,10 @@
 import 'server-only'
-import { eq, getTableColumns } from 'drizzle-orm'
-import { shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
+import { eq, getTableColumns, sql } from 'drizzle-orm'
+import { members, shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
 import type { ShipCosts } from '@/domains/settings/ship-costs'
+import { seesCosts, type MemberRole } from '@/domains/tenancy/roles'
 import { paise } from '@/domains/money/paise'
 import { BUILT_PAGES, readyToOpen, setupSteps, type SetupStep } from '@/domains/setup/checklist'
 import { formatInr } from '@/lib/format'
@@ -62,10 +63,32 @@ export async function shipCostsFor(tenantId: string): Promise<ShipCosts | null> 
   return withTenant(tenantId, (tx) => shipCostsIn(tx, tenantId))
 }
 
+/** The costs and whether this member may see them (`seesCosts`, failing closed), in one transaction. */
+export async function shipCostsSeenBy(tenantId: string, role: MemberRole): Promise<{ visible: boolean; costs: ShipCosts | null }> {
+  return withTenant(tenantId, async (tx) => {
+    const [visible, costs] = await Promise.all([costsVisibleIn(tx, tenantId, role), shipCostsIn(tx, tenantId)])
+    return { visible, costs: visible ? costs : null }
+  })
+}
+
 /** The one read of the three costs, inside the caller's tenant transaction (offerStats reads it too). */
 export async function shipCostsIn(tx: Tx, tenantId: string): Promise<ShipCosts | null> {
   const [r] = await tx.select({ delivery: shopSettings.shipCostDelivery, ret: shopSettings.shipCostReturn, cod: shopSettings.shipCostCod, confirmedAt: shopSettings.shipCostsConfirmedAt })
     .from(shopSettings).where(eq(shopSettings.tenantId, tenantId)).limit(1)
   const n = (v: number | bigint | string | null) => (v === null ? null : Number(v))
   return r ? { delivery: n(r.delivery), ret: n(r.ret), cod: n(r.cod), confirmedAt: r.confirmedAt } : null
+}
+
+/**
+ * Whether this member sees the shop's costs and profit (`seesCosts`), inside the caller's tenant transaction. Owners,
+ * admins and staff need no read. A partner's answer depends on whether the shop has an owner yet, and it FAILS CLOSED
+ * (tenancy review 2026-11-08): with no tenant context the policy hides every member row, so a count of zero (a partner
+ * is always a member) means "no context", read as "has an owner": no ₹. An error propagates; the page then fails.
+ */
+export async function costsVisibleIn(tx: Tx, tenantId: string, role: MemberRole): Promise<boolean> {
+  if (role !== 'partner') return seesCosts(role, true)
+  const [r] = await tx.select({ all: sql<number>`count(*)::int`, owners: sql<number>`(count(*) filter (where ${members.role} = 'owner'))::int` })
+    .from(members).where(eq(members.tenantId, tenantId))
+  if (!r || r.all === 0) return false
+  return seesCosts(role, r.owners > 0)
 }

@@ -10,7 +10,8 @@ import { estimateOf } from '@/domains/settings/ship-costs'
 import { CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { formatInr } from '@/lib/format'
 import { SHOP_DOMAIN } from '@/lib/public-env'
-import { shipCostsFor, shopWithSettings } from '@/lib/queries/settings'
+import { shipCostsSeenBy, shopWithSettings } from '@/lib/queries/settings'
+import { CAN_SET_COSTS } from '@/domains/tenancy/roles'
 import { paymentStatusFor } from '@/lib/queries/payments'
 import { shopFacts } from './_components/facts'
 import { Section } from '@/components/layout/section'
@@ -58,8 +59,9 @@ export default async function SettingsPage() {
   }
   const manages = (CAN_MANAGE as readonly string[]).includes(auth.membership.role)
   const owner = auth.membership.role === 'owner'
-  // A merchant's cost: read only for owners and admins (ADR-0003).
-  const ship = manages ? await shipCostsFor(auth.membership.tenantId).catch(() => undefined) : undefined
+  // Shipping costs: whoever seesCosts (owners and admins; a partner before handover). Staff never read them.
+  const seen = (CAN_SET_COSTS as readonly string[]).includes(auth.membership.role) ? await shipCostsSeenBy(auth.membership.tenantId, auth.membership.role).catch(() => undefined) : null
+  const ship = seen?.visible ? seen.costs : seen === undefined ? undefined : null
   const est = ship === undefined ? null : estimateOf(ship)
   const shipSummary = ship === undefined ? 'Could not load' : est ? `Delivery ${inr(est.delivery)} · return ${inr(est.ret)} · COD fee ${inr(est.codFee)}` : 'Not confirmed: profit says “before shipping costs”'
   const shipNeeds = ship !== undefined && !est
@@ -77,7 +79,7 @@ export default async function SettingsPage() {
           {owner && <Row href="/console/settings/online-payments" icon="payments" title="Online payments" summary={online} needs={onlineNeeds} />}
           {manages && <Row href="/console/settings/people" icon="people" title="People" summary="Who works on this shop" />}
           {manages && <Row href="/console/settings/address" icon="address" title="Shop address" summary={`${f.slug}.${SHOP_DOMAIN}`} mono />}
-          {manages && <Row href="/console/settings/shipping-costs" icon="shipped" title="Shipping costs" summary={shipSummary} needs={shipNeeds} />}
+          {seen !== null && (seen === undefined || seen.visible) && <Row href="/console/settings/shipping-costs" icon="shipped" title="Shipping costs" summary={shipSummary} needs={shipNeeds} />}
         </Section>
         <aside className="space-y-3">
           <Section>

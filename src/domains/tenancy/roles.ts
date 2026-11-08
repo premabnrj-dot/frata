@@ -15,6 +15,21 @@ export const SHIPPERS = ['owner', 'admin', 'staff'] as const satisfies readonly 
 /** Owners and admins: payments, people, the shop's address, opening and closing it. Never a partner. */
 export const CAN_MANAGE = ['owner', 'admin'] as const satisfies readonly MemberRole[]
 
+/** Who may set the shop's shipping costs: owners and admins, and a partner while the shop has no owner (owner,
+ * 2026-11-08: "Partners can set them" before handover); `seesCosts` decides the partner case inside the transaction. */
+export const CAN_SET_COSTS = ['owner', 'admin', 'partner'] as const satisfies readonly MemberRole[]
+
+/**
+ * Who sees a merchant's costs and profit (₹ kept, shipping costs): owners and admins always (a support visit acts as
+ * the owner, audited); a partner only while the shop has no owner (owner, 2026-11-08: "Once handed over, no"); staff
+ * never. The one rule for Offers, Settings › Shipping costs and Analytics; `costsVisibleIn` feeds it, failing closed.
+ */
+export function seesCosts(role: MemberRole, hasOwner: boolean): boolean {
+  if (role === 'owner' || role === 'admin') return true
+  if (role === 'partner') return !hasOwner
+  return false
+}
+
 /** How a role is said, everywhere (People, the switcher, /choose). */
 export const ROLE_LABEL: Record<MemberRole, string> = { owner: 'Owner', admin: 'Admin', staff: 'Staff', partner: 'Partner' }
 /** The members_role CHECK's list, built from MEMBER_ROLES (schema.ts), so the two cannot drift. */

@@ -11,6 +11,8 @@ import { changeShopAddress } from '@/lib/db/platform'
 import { auditEvents, shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { slugProblem } from '@/domains/signup/slug'
 import { parseShipCosts, type ShipCostsInput } from '@/domains/settings/ship-costs'
+import { CAN_SET_COSTS } from '@/domains/tenancy/roles'
+import { costsVisibleIn } from '@/lib/queries/settings'
 import { dayIN } from '@/lib/format-date'
 import { shopWithSettings } from '@/lib/queries/settings'
 import { errName } from '@/lib/log'
@@ -138,13 +140,16 @@ export async function saveShipCosts(input: ShipCostsInput): Promise<{ ok: true; 
   if (!p.ok) return { ok: false, error: 'Some fields need a look before saving.', errors: p.errors as Record<string, string> }
   const v = p.paise
   try {
-    const r = await asMember(CAN_MANAGE, { action: 'settings.ship_costs', detail: { fields: ['shipCostDelivery', 'shipCostReturn', 'shipCostCod'] } }, async (tx, auth) => {
+    // Owners, admins, and a partner before handover (CAN_SET_COSTS, then seesCosts in the same transaction).
+    const r = await asMember(CAN_SET_COSTS, { action: 'settings.ship_costs', detail: { fields: ['shipCostDelivery', 'shipCostReturn', 'shipCostCod'] } }, async (tx, auth) => {
+      if (!(await costsVisibleIn(tx, auth.membership.tenantId, auth.membership.role))) return 'handed_over' as const
       const now = new Date()
       const saved = await tx.update(shopSettings).set({ shipCostDelivery: v.delivery, shipCostReturn: v.ret, shipCostCod: v.cod, shipCostsConfirmedAt: now, updatedAt: now })
         .where(eq(shopSettings.tenantId, auth.membership.tenantId)).returning({ id: shopSettings.tenantId })
       return saved.length > 0
     })
     if (!r.ok) return { ok: false, error: r.error }
+    if (r.value === 'handed_over') return { ok: false, error: 'The shop’s owner sets its shipping costs now.' }
     if (!r.value) return { ok: false, error: 'We could not save. Nothing was changed. Try again in a minute.' }
     revalidatePath('/console', 'layout')
     // The date as the page says it, so the form shows it at once (not only after the refresh).

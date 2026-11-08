@@ -9,6 +9,8 @@ import { deliveredFee } from '@/domains/plans/entitlements'
 import { planVersions, tenantPlans } from '@/lib/db/schema'
 import { estimateOf } from '@/domains/settings/ship-costs'
 import { shipCostsIn } from '@/lib/queries/settings'
+import { costsVisibleIn } from '@/lib/queries/settings'
+import type { MemberRole } from '@/domains/tenancy/roles'
 import { discountCodes, discountTargets, discountTiers, discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import { collections, products, variants } from '@/lib/db/schema-catalogue'
 import { orders } from '@/lib/db/schema-orders'
@@ -120,6 +122,8 @@ export type KeptBasis = 'actual' | 'estimate' | 'none' | null
 
 export type OfferStats = {
   days: number
+  /** Whether this viewer sees ₹ kept (`seesCosts`); when false, every ₹ kept is null and never computed. */
+  costs: boolean
   /** Every order with an offer in the window (an order with two offers counts once). */
   all: { orders: number; given: number; aov: number | null; prepaid: number; delivered: number; rto: number; givenPerDelivered: number | null }
   /** The shop's orders without one, in the same window: what the offers are judged against. */
@@ -141,15 +145,17 @@ const keptOf = (k: { kept: number | null; basis: KeptBasis }) => ({ keptPerDeliv
  * through profit.ts, new vs repeat through priorOrderSql, and each creator code's week for its leak alert. Derived on
  * read; nothing stored. Driven by orders_tenant_placed and order_discounts_order_offer.
  */
-export async function offerStats(tenantId: string, now = new Date(), opts: { days?: number; costs: boolean }): Promise<OfferStats> {
-  return withTenant(tenantId, (tx) => offerStatsIn(tx, tenantId, now, opts.days ?? 30, opts.costs))
+export async function offerStats(tenantId: string, now = new Date(), opts: { days?: number; role: MemberRole }): Promise<OfferStats> {
+  return withTenant(tenantId, (tx) => offerStatsIn(tx, tenantId, now, { days: opts.days, role: opts.role }))
 }
 
 /** offerStats inside the caller's tenant transaction (the int test reads rows it will roll back). */
-export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, days = 30, costs = true): Promise<OfferStats> {
-  const fee = await feeBpsIn(tx, tenantId, now)
-  // The shop's confirmed shipping-cost estimates (Settings › Shipping costs), for orders shipped another way.
-  const est = estimateOf(await shipCostsIn(tx, tenantId))
+export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, opts: { days?: number; role?: MemberRole } = {}): Promise<OfferStats> {
+  const days = opts.days ?? 30
+  // Who may see ₹ kept (seesCosts, failing closed), the fee and the shop's confirmed shipping-cost estimates: read
+  // together, in this transaction (speed review: they ran one after another).
+  const [costs, fee, shipCosts] = await Promise.all([costsVisibleIn(tx, tenantId, opts.role ?? 'owner'), feeBpsIn(tx, tenantId, now), shipCostsIn(tx, tenantId)])
+  const est = estimateOf(shipCosts)
   const since = sql`${new Date(now.getTime() - days * DAY).toISOString()}::timestamptz`
   const st = stateSql(now, 'o')
   const prepaid = sql`${currentMethodSql('o')} = 'prepaid'`
@@ -235,7 +241,7 @@ export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, days = 3
   const a = all[0]!, w = without[0]!
   const givenAll = [...offers.values()].reduce((x, o) => x + o.given, 0)
   return {
-    days,
+    days, costs,
     all: { orders: a.n, given: givenAll, aov: per1(Number(a.total), a.n), prepaid: a.prepaid, delivered: a.delivered, rto: a.rto, givenPerDelivered: per1(givenAll, a.delivered) },
     without: { orders: w.n, aov: per1(Number(w.total), w.n), delivered: w.delivered, rto: w.rto },
     offers,

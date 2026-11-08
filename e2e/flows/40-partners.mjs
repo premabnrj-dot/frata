@@ -92,6 +92,14 @@ export default {
       await pia.getByRole('heading', { name: 'Brand', level: 1 }).waitFor() // the look is the partner's to build
     })
 
+    await t.step('while building, the partner sets the shop\'s shipping costs (seesCosts, owner 2026-11-08)', async () => {
+      await pia.goto(CONSOLE + '/console/settings/shipping-costs')
+      await pia.getByRole('button', { name: 'Confirm these costs' }).click()
+      await pia.getByText('Shipping costs confirmed.').waitFor()
+      const [c] = await db`select ship_costs_confirmed_at from shop_settings where tenant_id = ${T}`
+      assert.ok(c.ship_costs_confirmed_at, 'confirmed by the partner')
+    })
+
     await t.step('hand over: an invite, not claimed at sign-in', async () => {
       await pia.goto(CONSOLE + '/console')
       await pia.getByRole('button', { name: 'Hand over' }).click()
@@ -117,6 +125,10 @@ export default {
       await pia.goto(CONSOLE + '/partner')
       await pia.getByText('With the owner').first().waitFor()
       await pia.screenshot({ path: t.out('clients') })
+      // Handed over: the shop's costs are its owner's now ("Once handed over, no").
+      await pia.goto(CONSOLE + '/console/settings/shipping-costs')
+      await pia.getByText('Only the owner or an admin can see shipping costs').waitFor()
+      assert.equal(await pia.getByLabel('A delivery').count(), 0)
     })
 
     await t.step('the owner removes the partner; access ends', async () => {
