@@ -8,7 +8,8 @@
 // Two figures, because a COD order is a bet until it is delivered:
 //   - `ifDelivered`: what the order earns when the customer accepts it
 //   - `ifRto`: what it costs when it comes back (forward + return freight, the
-//     COD fee where the courier charges it anyway, the ad spend already gone)
+//     COD fee where the courier charges it anyway, the ad spend already gone, and
+//     on a prepaid order the gateway's fee, which a refund does not return)
 //   - `ifLost`: what it costs when the courier loses it (Ship S·0's "Lost by the courier"; unit-economics review
 //     2026-11-08): the forward freight and the goods are gone, the gateway kept its fee; no return leg, no COD fee,
 //     no platform fee. A courier's claim is not counted until something records it.

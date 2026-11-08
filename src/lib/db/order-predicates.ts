@@ -1,6 +1,7 @@
 import 'server-only'
 import { sql, type SQL } from 'drizzle-orm'
 import { SHIP_TABS, type OrderState, type QueueTab } from '@/domains/orders/order-state'
+import { ASSUME_DELIVERED_DAYS } from '@/domains/orders/outcomes'
 import { orderLines, orders, shipments } from '@/lib/db/schema-orders'
 
 // =============================================================================
@@ -157,7 +158,7 @@ export const stageSql = (a = '"orders"'): SQL<'delivered' | 'rto' | 'lost' | 'on
  * k = the k-th of `feeChanges` (the plan versions' start times, oldest first), 0 none; only delivered orders pay a fee.
  */
 export function feeBucketSql(a: string, feeChanges: readonly Date[]): SQL<number> {
-  const billableAt = sql`least(${c(a, 'delivered_at')}, ${c(a, 'shipped_at')} + interval '30 days')`
+  const billableAt = sql`least(${c(a, 'delivered_at')}, ${c(a, 'shipped_at')} + ${sql.raw(`interval '${ASSUME_DELIVERED_DAYS} days'`)})`
   if (!feeChanges.length) return sql<number>`0`
   // Only a delivered order pays a fee: delivered and no return (stateSql's ranking), straight from its columns.
   const delivered = sql`(${c(a, 'delivered_at')} is not null and ${c(a, 'rto_initiated_at')} is null and ${c(a, 'rto_delivered_at')} is null)`

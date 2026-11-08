@@ -9,8 +9,9 @@ import { CONSOLE_HOST, SHOP_DOMAIN } from '@/lib/public-env'
 // Place an order. Limits fail closed here (a fake-COD script must not slip through a database hiccup).
 const Body = z.object({
   idempotencyKey: z.string().regex(/^[A-Za-z0-9_-]{22,43}$/), bag: Bag, address: z.unknown(), method: z.enum(['cod', 'prepaid']), expectedTotal: z.number().int().min(0), code: Code.optional(), via: z.enum(['typed', 'link']).optional(),
-  // Attribution as the shop's capture kept it: at most 20 keys of ≤ 300 characters; cleaned to ATTRIBUTION_KEYS below.
-  facts: z.object({ firstMethod: z.enum(['cod', 'prepaid']).nullable().optional(), attribution: z.record(z.string().max(40), z.string().max(300)).refine((o) => Object.keys(o).length <= 20).optional() }).optional(),
+  // Attribution as the shop's capture kept it: anything (junk in sessionStorage never stops an order); cleanAttribution
+  // keeps the listed keys only, and the 32 kB body cap bounds the size.
+  facts: z.object({ firstMethod: z.enum(['cod', 'prepaid']).nullable().optional(), attribution: z.unknown().optional() }).optional(),
 })
 
 export async function POST(request: Request) {

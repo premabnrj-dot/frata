@@ -153,11 +153,20 @@ export default {
         await s.getByText('An owner or admin marks it delivered or came back.').waitFor()
         assert.equal(await s.getByRole('button', { name: 'Delivered', exact: true }).count(), 0)
         // The cost of goods follows the same rule (owner 2026-11-08): staff edit products without it, and it never reaches their page.
-        const [v] = await db`select v.unit_cost from variants v join products p on p.id = v.product_id where p.tenant_id = ${T} and p.handle = 'chanderi-kurta-set' and v.unit_cost is not null limit 1`
+        const costs = async () => (await db`select v.option_values, v.unit_cost, v.stock from variants v join products p on p.id = v.product_id
+          where p.tenant_id = ${T} and p.handle = 'chanderi-kurta-set' and v.archived_at is null order by v.option_values`).map((r) => ({ values: r.option_values.join(' '), cost: r.unit_cost, stock: r.stock }))
+        const before = await costs()
+        const known = before.find((r) => r.cost !== null)
+        assert.ok(known, 'the seed has a cost to hide')
         await s.goto(CONSOLE + '/console/products/chanderi-kurta-set')
         await s.getByText('Sizes, colours and stock').waitFor()
         assert.equal(await s.getByRole('columnheader', { name: 'Your cost, ₹' }).count(), 0)
-        if (v) assert.ok(!(await s.content()).includes(`"cost":"${Number(v.unit_cost) / 100}"`), 'the cost is not in the page')
+        assert.ok(!(await s.content()).includes(String(Number(known.cost) / 100)), 'the cost is not anywhere in the page')
+        // A staff save changes the stock and keeps every stored cost as it was.
+        await s.getByLabel('Stock for M Rust').fill('7')
+        await s.getByRole('button', { name: 'Save', exact: true }).click()
+        await until(async () => (await costs()).find((r) => r.values === 'M Rust')?.stock === 7)
+        assert.deepEqual((await costs()).map((r) => [r.values, r.cost]), before.map((r) => [r.values, r.cost]))
         await s.goto(CONSOLE + '/console/settings/shipping-costs')
         await s.getByText(/Only the owner or an admin|can’t change this shop’s settings/).first().waitFor()
         assert.equal(await s.getByLabel('A delivery').count(), 0)

@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 4.13.0
+  version: 4.14.0
   verified: 2026-11-08
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -295,7 +295,7 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
     Partners draft; owners and admins start, pause and end (ending confirms; it is final). ₹ kept is a profit, so a
     cost: whoever `seesCosts` (owners and admins; a partner only before handover, owner 2026-11-08; never staff);
     beside it, "Shipping
-    estimated" or "Before shipping costs" (with a link to set them) whenever freight is not the courier's actual charge.
+    estimated" or "Before shipping costs (returns count once they are set)" (with a link to set them) whenever freight is not the courier's actual charge.
 51. **"Did it make money?" reads a window and says when it is too few** (O·3): the Offers list's strip and an offer's
     page show the last 30 days against the shop's orders without an offer; under 30 orders they say "too few to
     judge" before any number. A creator code flagged "Leak?" says which rule and names the remedy (end the offer);

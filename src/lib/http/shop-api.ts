@@ -22,8 +22,10 @@ export async function shopRequest<T extends z.ZodTypeAny>(request: Request, sche
   // A shop request is small (a bag, an address, a few tags): over 32 kB is refused before it is parsed (security review).
   let json: unknown
   try {
+    // The declared length first (refused before reading), then the bytes actually read.
+    if (Number(request.headers.get('content-length') ?? 0) > MAX_BODY) return { ok: false, response: reply({ error: 'Too large' }, 413) }
     const text = await request.text()
-    if (text.length > MAX_BODY) return { ok: false, response: reply({ error: 'Too large' }, 413) }
+    if (new TextEncoder().encode(text).length > MAX_BODY) return { ok: false, response: reply({ error: 'Too large' }, 413) }
     json = JSON.parse(text)
   } catch { return { ok: false, response: reply({ error: 'Bad request' }, 400) } }
   const parsed = schema.safeParse(json)

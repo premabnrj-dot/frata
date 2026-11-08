@@ -5,7 +5,7 @@ import { withTenant } from '@/lib/db/tenant'
 import { ERASED_KEYS } from '@/domains/analytics/attribution'
 
 /** `checkout` with its attribution's click ids and referring site removed (null and {} stay as they are). */
-export const stripTracking = (col: typeof orders.checkout) =>
+const stripTracking = (col: typeof orders.checkout) =>
   sql`case when jsonb_typeof(${col}->'attribution') = 'object' then jsonb_set(${col}, '{attribution}', (${col}->'attribution') - ${sql.raw(`array[${ERASED_KEYS.map((k) => `'${k}'`).join(',')}]`)}::text[]) else ${col} end`
 
 // =============================================================================

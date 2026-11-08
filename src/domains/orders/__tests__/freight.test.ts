@@ -50,7 +50,8 @@ describe('freightOf: lost by the courier', () => {
   it('only the forward leg: actual from Shiprocket (pending until it arrives), else the estimate, else none', () => {
     expect(freightOf('shiprocket', { forwardShipping: 6200, rtoShipping: 6200, courierCodFee: 3600 }, est, { cod: true, outcome: 'lost' }))
       .toEqual({ forwardShipping: 6200, rtoShipping: 0, codFee: 0, source: 'actual' })
-    expect(freightOf('shiprocket', none, est, { cod: true, outcome: 'lost' }).source).toBe('pending')
+    expect(freightOf('shiprocket', none, est, { cod: true, outcome: 'lost' })).toEqual({ forwardShipping: 7000, rtoShipping: 0, codFee: 0, source: 'estimate' })
+    expect(freightOf('shiprocket', none, null, { cod: true, outcome: 'lost' }).source).toBe('pending')
     expect(freightOf('self', none, est, { cod: true, outcome: 'lost' })).toEqual({ forwardShipping: 7000, rtoShipping: 0, codFee: 0, source: 'estimate' })
     expect(freightOf(null, none, null, { cod: false, outcome: 'lost' }).source).toBe('none')
   })

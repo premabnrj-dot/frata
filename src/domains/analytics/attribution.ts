@@ -17,9 +17,9 @@ export const ATTRIBUTION_KEYS = [
 export type AttributionKey = (typeof ATTRIBUTION_KEYS)[number]
 export type Attribution = Partial<Record<AttributionKey, string>>
 
-/** The click ids: erased with an abandoned order's other details (DPDP, `erase.ts`), with the referring site. Includes
- * keys stored before this list existed (`fbc`, `fbp`). */
-export const ERASED_KEYS = ['fbclid', 'gclid', 'gbraid', 'wbraid', 'gad_source', 'srsltid', 'ref_host', 'fbc', 'fbp'] as const
+/** Erased with an abandoned order's other details (DPDP, `erase.ts`): every key but the merchant's own utm tags (so a
+ * click id added to the list later is erased too), and `fbc`/`fbp`, stored before this list existed. */
+export const ERASED_KEYS: readonly string[] = [...ATTRIBUTION_KEYS.filter((k) => !k.startsWith('utm_')), 'fbc', 'fbp']
 
 const MAX = 200
 const isKey = (k: string): k is AttributionKey => (ATTRIBUTION_KEYS as readonly string[]).includes(k)

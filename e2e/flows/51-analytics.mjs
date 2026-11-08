@@ -29,8 +29,7 @@ export default {
     const p = await ctx.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message))
     try {
       await t.step('a tagged creator link: the order keeps its tags, and the code is credited as a link', async () => {
-        await p.goto(SHOP + '/products/chanderi-kurta-set', { waitUntil: 'domcontentloaded' })
-        await p.evaluate(() => { localStorage.clear(); sessionStorage.clear() })
+        // A fresh context: the tab's first page is this tagged landing (no earlier visit to settle first).
         // Arriving from Instagram's link shim (its referrer, reduced to a hostname, is kept beside the tags).
         await p.goto(SHOP + '/products/chanderi-kurta-set?utm_source=instagram&utm_medium=bio&utm_campaign=diwali-drop&code=RIYA51', { waitUntil: 'domcontentloaded', referer: 'https://l.instagram.com/?u=https%3A%2F%2Fkesar&e=AT1' })
         await p.getByRole('button', { name: /^Rust/ }).click(); await p.getByRole('button', { name: 'M', exact: true }).click()

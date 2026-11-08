@@ -18,7 +18,9 @@ export type Circle = { handle: string; title: string; image: PhotoData | null }
 
 /** Every shop page: the theme's tokens, settings and display face, its header and footer. Props only.
  *  No theme passed: Classic from the shop's settings (the look every shop had before themes). */
-export function ShopShell({ shop, href, banner, children, gated = false, live = false, theme, circles = [] }: { shop: ShellShop; href: Href; banner?: React.ReactNode; children: React.ReactNode; gated?: boolean; live?: boolean; theme?: ResolvedTheme; circles?: Circle[] }) {
+export function ShopShell({ shop, href, banner, children, gated = false, live = false, capture = false, theme, circles = [] }: { shop: ShellShop; href: Href; banner?: React.ReactNode; children: React.ReactNode; gated?: boolean; live?: boolean
+  /** Record how the shopper arrived (Analytics A·1): the real shop only, never a console preview (which may be `live`). */
+  capture?: boolean; theme?: ResolvedTheme; circles?: Circle[] }) {
   const t = theme ?? classicFromSettings(shop.accent, shop.displayFont)
   const s = t.settings
   const tabs = s.bottomTabs && !gated
@@ -35,8 +37,8 @@ export function ShopShell({ shop, href, banner, children, gated = false, live = 
       <main id="main" className={`flex-1 ${tabs ? 'pb-16 sm:pb-0' : ''}`}>{children}</main>
       <ShopFooter f={shop} href={href} variant={s.footer} social={s.social} w={w} />
       {tabs && <BottomTabs href={href} live={live} w={w} />}
-      {/* How the shopper arrived: on every page of the live shop, never in a console preview (Analytics A·1). */}
-      <CaptureAttribution capture={live} />
+      {/* How the shopper arrived: on every page of the real shop, never in a console preview (Analytics A·1). */}
+      <CaptureAttribution capture={capture} />
     </div>
   )
 }

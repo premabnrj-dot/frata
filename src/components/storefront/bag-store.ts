@@ -88,9 +88,13 @@ const SEEN_KEY = 'frrata.attr.seen'
  * read once, on the tab's first page, and kept as its hostname only (never a path or query). Never on the console's
  * own address (a preview), and a creator's `?code=` still fills the code, credited as a link.
  */
+let capturedAt: string | null = null
 export function captureAttribution() {
   try {
     if (window.location.pathname.startsWith('/console')) return
+    // Once per page: a second run (React's dev double effect, the shell mounting again) must not rewrite the touch.
+    if (capturedAt === window.location.href) return
+    capturedAt = window.location.href
     const landing = landingParams(window.location.search)
     const first = !sessionStorage.getItem(SEEN_KEY)
     let ref: string | null = null

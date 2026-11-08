@@ -14,5 +14,5 @@ export default async function ShopLayout({ children, params }: { children: React
   // The offer the merchant put in the bar (offers O·1); a read that fails shows no bar, never an error page. A live
   // offer takes the bar's place; without one, the theme's own announcement (Look › Header) shows. One bar, never two.
   const announce = await shopAnnouncement(shop.id).catch(() => null)
-  return <ShopShell shop={shop} href={shopHref} theme={theme} circles={circles} live banner={announce ? <AnnounceBar a={announce} now={new Date()} /> : undefined}>{children}</ShopShell>
+  return <ShopShell shop={shop} href={shopHref} theme={theme} circles={circles} live capture banner={announce ? <AnnounceBar a={announce} now={new Date()} /> : undefined}>{children}</ShopShell>
 }
