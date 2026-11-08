@@ -1,5 +1,5 @@
 # A·0 + A·1 · Where orders come from, judged on deliveries
-Status: draft · Date: 2026-11-08 · Mockup: (below, once published) · Approved: —
+Status: draft · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/5PRMG996toWDUsnAuMTSJt · Approved: —
 Parent spec: `docs/specs/2026-11-07-analytics.md` (the module, its phases and owner calls 1–6). This spec re-checks
 that one against what changed on 8 Nov and draws the first phase to build.
 
