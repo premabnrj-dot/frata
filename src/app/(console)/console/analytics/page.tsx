@@ -3,7 +3,7 @@ import { Panel } from '@/components/ui/panel'
 import { ViewTabs } from '@/components/ui/view-tabs'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { dayMonthIN } from '@/lib/format-date'
-import { SHOP_DOMAIN } from '@/lib/public-env'
+import { shopHost } from '@/lib/public-env'
 import { PRESETS, type Preset } from '@/domains/analytics/link'
 import { classifySource } from '@/domains/analytics/source'
 import { PERIODS, analyticsPage, isPeriod, type Period } from '@/lib/queries/analytics'
@@ -36,7 +36,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
 
   // What each preset's orders show as, said by the server (the classifier stays out of the browser bundle).
   const showsAs = Object.fromEntries((Object.keys(PRESETS) as Preset[]).map((k) => [k, classifySource({ utm_source: PRESETS[k].source, utm_medium: PRESETS[k].medium }, null).label])) as Record<Preset, string>
-  const make = <MakeLink origin={`https://${shop.slug}.${SHOP_DOMAIN}`} open={shop.open && !!shop.slug} products={targets.products} collections={targets.collections} showsAs={showsAs} />
+  const make = <MakeLink origin={`https://${shopHost(shop.slug ?? '')}`} open={shop.open && !!shop.slug} products={targets.products} collections={targets.collections} showsAs={showsAs} />
   const dayBefore = new Date(a.start.getTime() - 86_400_000)
   const tabs = <ViewTabs label="Period" tabs={PERIODS.map((p) => ({ href: `/console/analytics?period=${p}`, label: `${p} days`, current: p === period }))} />
   const meta = `${dayMonthIN(a.start)} – today (so far), against ${dayMonthIN(a.prevStart)} – ${dayMonthIN(dayBefore)}. Orders by the day they were placed (IST); today's numbers still change.`

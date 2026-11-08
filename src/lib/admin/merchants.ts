@@ -2,7 +2,7 @@ import 'server-only'
 import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { adminDb } from '@/lib/db/admin'
 import { invites, members, shopSettings, supportSessions, tenantPlans, tenants } from '@/lib/db/schema'
-import { SHOP_DOMAIN } from '@/lib/public-env'
+import { shopHost } from '@/lib/public-env'
 import type { StaffOk } from '@/lib/auth/require-staff'
 import { currentPlan, usage, type PlanCode } from '@/domains/plans/entitlements'
 import { nextMonthStartIST } from '@/domains/time/month'
@@ -35,11 +35,9 @@ async function orderCounts(now: Date, only?: string): Promise<Map<string, { n: n
   return new Map(rows.map((r) => [r.tenantId, { n: r.n, at: r.at }]))
 }
 
-/** A shop's frrata.shop address, from its name (the platform address is never a stored row: shop addresses D·0). */
-const platformHost = (slug: string) => `${slug}.${SHOP_DOMAIN}`
-
 export type MerchantRow = {
-  id: string; name: string; slug: string; host: string | null; isInternal: boolean
+  /** The shop's frrata.shop address, from its name (never a stored row: shop addresses D·0). */
+  id: string; name: string; slug: string; host: string; isInternal: boolean
   plan: { code: PlanCode; name: string; version: number; includedOrders: number; trialEndsAt: Date | null } | null
   /** Delivered orders this month as last drafted; null before the first draft. */
   ordersThisMonth: number | null; countedAt: Date | null; over: boolean
@@ -79,7 +77,7 @@ export async function listMerchants(staff: StaffOk, opts: { page: number; q?: st
     const n = c?.n ?? 0
     return {
       id: t.id, name: t.name, slug: t.slug, isInternal: t.isInternal,
-      host: platformHost(t.slug),
+      host: shopHost(t.slug),
       plan: cur ? { code: cur.code as PlanCode, name: cur.name, version: cur.v.version, includedOrders: cur.v.includedOrders, trialEndsAt: cur.tp.trialEndsAt } : null,
       ordersThisMonth: c ? c.n : null, countedAt: c?.at ?? null, over: c && cur ? usage(n, cur.v.includedOrders).over : false,
       owner: owner ? dir.get(owner.userId) ?? null : null,
@@ -105,7 +103,7 @@ export async function getMerchant(staff: StaffOk, id: string, now: Date) {
   const dir = await directory(ms.map((m) => m.userId))
   const cur = currentPlan(history.map((h) => ({ ...h, startsAt: h.tp.startsAt })), now)
   return {
-    tenant: t, host: platformHost(t.slug),
+    tenant: t, host: shopHost(t.slug),
     members: ms.map((m) => ({ ...m, email: dir.get(m.userId)?.email ?? null, lastSignInAt: dir.get(m.userId)?.lastSignInAt ?? null })),
     invites: inv, history, current: cur, sessions,
     ordersThisMonth: counts.get(id)?.n ?? null, countedAt: counts.get(id)?.at ?? null,

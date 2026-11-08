@@ -52,7 +52,7 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
                     <Link href={`/admin/merchants/${m.id}`} data-row-link className="inline-flex min-h-6 min-w-6 items-center font-medium [overflow-wrap:anywhere] hover:underline"><Name>{m.name}</Name></Link>
                     {m.isInternal && <Badge>Internal</Badge>}
                   </div>
-                  {m.host && <div className="truncate font-mono text-xs text-muted-foreground">{m.host}</div>}
+                  <div className="truncate font-mono text-xs text-muted-foreground">{m.host}</div>
                 </Td>
                 <Td cell="d">
                   {m.plan ? <Badge tone="info">{m.plan.name}</Badge> : <Badge tone="danger">No plan</Badge>}

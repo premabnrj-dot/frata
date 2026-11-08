@@ -8,7 +8,7 @@ import { seesCosts, type MemberRole } from '@/domains/tenancy/roles'
 import { paise } from '@/domains/money/paise'
 import { BUILT_PAGES, readyToOpen, setupSteps, type SetupStep } from '@/domains/setup/checklist'
 import { formatInr } from '@/lib/format'
-import { SHOP_DOMAIN } from '@/lib/public-env'
+import { shopHost } from '@/lib/public-env'
 import { activeProductCount, paymentStatusFor } from './payments'
 
 // The settings row WITHOUT the shop's shipping-cost estimates: a merchant's cost, read only through shipCostsIn by
@@ -43,7 +43,7 @@ export type Setup = { name: string; address: string; open: boolean; steps: Setup
 export async function setupFor(tenantId: string): Promise<Setup | null> {
   const [shop, products, pay] = await Promise.all([shopWithSettings(tenantId), activeProductCount(tenantId), paymentStatusFor(tenantId)])
   if (!shop) return null
-  const address = `${shop.slug}.${SHOP_DOMAIN}`
+  const address = shopHost(shop.slug)
   const steps = setupSteps({
     shopName: shop.name, address, productCount: products,
     legalName: shop.settings.legalName, grievanceName: shop.settings.grievanceName, grievanceEmail: shop.settings.grievanceEmail, grievancePhone: shop.settings.grievancePhone,

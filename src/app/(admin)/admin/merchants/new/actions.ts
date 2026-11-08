@@ -7,12 +7,12 @@ import { slugProblem } from '@/domains/signup/slug'
 import { createMerchant, slugTaken } from '@/lib/admin/merchants'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { sendSignInLink } from '@/lib/auth/send-link'
-import { SHOP_DOMAIN } from '@/lib/public-env'
+import { shopHost } from '@/lib/public-env'
 import { errName } from '@/lib/log'
 
 const NewMerchant = z.object({
   name: z.string().trim().min(2).max(80),
-  slug: z.string().trim().toLowerCase().max(30),
+  slug: z.string().trim().toLowerCase().max(64),
   ownerEmail: z.email(),
   planCode: z.enum(PLAN_CODES),
   trialEndsAt: z.string().optional().transform((v) => (v ? new Date(`${v}T23:59:59+05:30`) : null)),
@@ -29,7 +29,7 @@ export async function createMerchantAction(form: FormData) {
   // The same rule as sign-up and partners (shop addresses spec, D·0): shape, length, reserved words.
   const problem = slugProblem(m.slug)
   if (problem) return back(problem === 'reserved' ? `${m.slug} is kept for Frrata. Choose another shop address.` : 'Shop address: 3–30 letters, digits and single hyphens, not starting or ending with one.')
-  if (await slugTaken(staff, m.slug)) return back(`${m.slug}.${SHOP_DOMAIN} is taken. Choose another shop address.`)
+  if (await slugTaken(staff, m.slug)) return back(`${shopHost(m.slug)} is taken. Choose another shop address.`)
   let id: string
   try {
     ;({ id } = await createMerchant(staff, { ...m, now: new Date() }))

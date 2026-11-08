@@ -4,7 +4,7 @@
 //       scripts run under it (the page hydrates, no CSP violation), and the
 //       nonce differs per request; the public pages and shops keep no nonce.
 //   S13 a Razorpay webhook body over the cap is refused before anything is read.
-//   D·0 the bare shop domain (frrata.shop in production, frata.test here) holds no shop: 308 to Frrata's site.
+//   D·0 the bare shop domain (frrata.shop in production, frata.test here) holds no shop: 307 to Frrata's site.
 // =============================================================================
 import assert from 'node:assert/strict'
 import { request } from 'node:http'
@@ -45,13 +45,13 @@ export default {
       assert.equal(big, 413)
       await anon.close()
     })
-    await t.step('the bare shop domain sends people to Frrata\'s site (308); a shop on it still opens', async () => {
+    await t.step('the bare shop domain sends people to Frrata\'s site (307 until frrata.com); a shop on it still opens', async () => {
       const head = (host) => new Promise((resolve, reject) => {
         const r = request({ host: '127.0.0.1', port: PORTS.app, path: '/products?x=1', method: 'GET', headers: { host } }, (res) => { res.resume(); resolve({ status: res.statusCode, location: res.headers.location }) })
         r.on('error', reject); r.end()
       })
       const apex = await head(SHOP_DOMAIN)
-      assert.equal(apex.status, 308)
+      assert.equal(apex.status, 307)
       assert.match(apex.location ?? '', /^https:\/\/localhost\/$/)
       assert.notEqual((await head(`kesar-studio.${SHOP_DOMAIN}`)).status, 308, 'a shop on the shop domain must not redirect')
     })

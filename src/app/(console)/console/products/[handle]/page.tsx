@@ -9,7 +9,7 @@ import { orderPrefix } from '@/domains/signup/slug'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { isBlobConfigured } from '@/lib/env'
 import { placeForPincode } from '@/lib/db/platform'
-import { SHOP_DOMAIN } from '@/lib/public-env'
+import { shopHost } from '@/lib/public-env'
 import { productForEdit, productHandleById, productIdByHandle } from '@/lib/queries/catalogue'
 import { ProductEditor } from '../_components/product-editor'
 import { NowProvider } from '@/components/time/now'
@@ -82,7 +82,7 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
         colours: data.colours.map((c) => ({ value: c.value, family: c.family, hex: c.hex, crop: c.cropImageId && c.crop ? { imageId: c.cropImageId, ...c.crop } : null })),
       }}
       shop={{
-        name: shop.name, address: `${shop.slug}.${SHOP_DOMAIN}`, skuPrefix: orderPrefix(shop.orderPrefix, shop.name),
+        name: shop.name, address: shopHost(shop.slug), skuPrefix: orderPrefix(shop.orderPrefix, shop.name),
         codOn: shop.codOn, returnDays: shop.returnDays, returnKind: shop.returnKind, city: place?.city ?? null, costs: data.costs,
       }}
       allCollections={collections}

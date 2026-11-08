@@ -14,7 +14,7 @@ Squarespace, Domain Connect) and a codebase map. [V] primary, [V-undated] vendor
   freed at once with no redirect; only an audit row remembers it. **Admin's new-merchant form uses a looser rule**
   (1–40 chars, `--`, reserved words allowed): a real inconsistency.
 - **`tenant_domains`:** `host, tenant_id, created_at`; frata_app may only read; frata_admin select + insert; no one can
-  update or delete. Only Admin's createMerchant writes a row (the platform host, display only, stale after a rename).
+  update or delete. Only Admin's createMerchant wrote a row (the platform host, display only); D·0 stopped that — the platform address is computed (`shopHost`).
 - **URLs built from the platform host even on an own domain:** canonical, Open Graph, structured data, sitemap.xml,
   robots.txt. Relative and host-proof: old product handles (308), `/orders#t=`, Razorpay (in-page handler, no
   callback URL). Console-bound: Razorpay webhooks, sign-in links, previews.

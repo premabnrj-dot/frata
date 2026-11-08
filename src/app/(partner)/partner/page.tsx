@@ -13,7 +13,7 @@ import { switchStoreAction } from '@/app/choose/actions'
 import { requirePartner } from '@/lib/auth/require-partner'
 import { partnerClients, type ClientRow } from '@/lib/db/partners'
 import { dayIN, monthYearIN } from '@/lib/format-date'
-import { SHOP_DOMAIN } from '@/lib/public-env'
+import { shopHost } from '@/lib/public-env'
 
 export const metadata = { title: 'Clients' }
 
@@ -68,7 +68,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
             <li key={c.tenantId} className={`grid gap-x-3 gap-y-1 px-4 py-3 text-sm lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.2fr)_6rem_minmax(0,1fr)_7rem] lg:items-center ${stage === 'ended' ? 'text-muted-foreground' : ''}`}>
               <div className="min-w-0">
                 <p className="truncate font-medium">{c.name}</p>
-                {c.slug && <p className="truncate font-mono text-xs text-muted-foreground">{c.slug}.{SHOP_DOMAIN}</p>}
+                {c.slug && <p className="truncate font-mono text-xs text-muted-foreground">{shopHost(c.slug)}</p>}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone={TONE[stage]}>{STAGE_LABEL[stage]}</Badge>

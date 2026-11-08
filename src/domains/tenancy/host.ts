@@ -35,6 +35,9 @@ export function shopSlugFromHost(host: string, shopDomain: string): string | nul
   return slug && !slug.includes('.') ? slug : null
 }
 
+/** A shop's platform address from its name: the ONE way it is built (`shopSlugFromHost` reads it back). */
+export const platformHost = (slug: string, shopDomain: string) => `${slug}.${shopDomain.toLowerCase()}`
+
 /** What a host may be made of; anything else (a slash, `..`) is refused before it can shape a path. */
 const HOST_CHARS = /^[a-z0-9.-]+$/
 
@@ -52,9 +55,9 @@ export type Route =
  * `/s/this/s/other/…`, which matches no page. `/s/…` is internal: on every host
  * that is not a shop it is a 404, `localhost` included, except under `next dev`.
  */
-export function routeFor(rawHost: string | null, pathname: string, consoleHost: string, dev: boolean, shopDomain?: string): Route {
+export function routeFor(rawHost: string | null, pathname: string, consoleHost: string, dev: boolean, shopDomain: string): Route {
   const surface = surfaceFor(rawHost, consoleHost)
-  if (surface.kind === 'storefront' && shopDomain && surface.host === shopDomain.toLowerCase()) return { kind: 'platform_apex' }
+  if (surface.kind === 'storefront' && surface.host === shopDomain.toLowerCase()) return { kind: 'platform_apex' }
   if (surface.kind === 'storefront') return HOST_CHARS.test(surface.host) ? { kind: 'shop' } : { kind: 'not_found' }
   if (pathname === '/s' || pathname.startsWith('/s/')) return surface.kind === 'local' && dev ? { kind: 'console' } : { kind: 'not_found' }
   return { kind: 'console' }

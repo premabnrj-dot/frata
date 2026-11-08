@@ -26,12 +26,16 @@ describe.skipIf(!host)('Admin library on a real database', () => {
   })
 
   it('creates a merchant with an owner invite and a plan, and lists it', async () => {
+    const slug = `int-${Date.now()}`
     const { id } = await admin.createMerchant(staff, {
-      name: 'Int Store', slug: `int-${Date.now()}`,
+      name: 'Int Store', slug,
       ownerEmail: 'Owner@Int.Test', planCode: 'growth', trialEndsAt: null, now: new Date(),
     })
     const m = await admin.getMerchant(staff, id, new Date())
     expect(m?.tenant.name).toBe('Int Store')
+    // The platform address is computed from the name, never a stored row (shop addresses D·0).
+    const { shopHost } = await import('@/lib/public-env')
+    expect(m?.host).toBe(shopHost(slug))
     expect(m?.current?.code).toBe('growth')
     expect(m?.current?.v.feeBps).toBe(100)
     expect(m?.invites[0]?.email).toBe('owner@int.test')
