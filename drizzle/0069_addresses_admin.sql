@@ -56,7 +56,7 @@ end;
 $$;
 
 --> statement-breakpoint
--- Returns the shop that held the name, so the caller refreshes that shop's host lookups.
+-- Returns the shop that held the name. The caller refreshes the released name's host lookup.
 create or replace function app_admin_release_name(p_staff uuid, p_name text, p_reason text)
   returns uuid
   language plpgsql volatile security definer set search_path = '' as $$

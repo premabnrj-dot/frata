@@ -37,6 +37,12 @@ so production never runs code against a database it doesn't match. Every new or 
 | D1·6 | Settings › Shop address (spec § Words): Change with "N changes left"; staff read-only; support visits refused server-side (banner already says why — no per-button reasons) | e2e 52 + 90 at 390 px |
 | D1·7 | Admin (aal2 not chosen: owner call 5, accepted risk): Addresses tab (names), **Rename <shop>'s address** (reason ≤ 500, no redirect), **Freeze address changes**; Admin › Names (protected, offensive, blocked domains; release = delete a retired `shop_names` row with a reason, refreshing its host). Close and takedown for the `admin` staff role only | admin int; e2e 90 |
 
+**D1·7 as built (tenancy audit 2026-11-08, safe):** rename, freeze and release are admin-role definers (0069) that
+audit themselves; blocked names are Admin rows with an audit row. Accepted, as in 0063: a definer trusts the
+`p_staff` uuid the Admin code passes (any frata_admin code could pass an admin's id); a stronger lock would read a
+transaction-local `app.staff_id` set by `adminDb`. A release's reason is written to the former holder's audit rows:
+staff never name another merchant in it.
+
 ## D·2 — Own domains (needs Vercel Pro: owner call 1)
 | Task | What | Verify |
 |---|---|---|

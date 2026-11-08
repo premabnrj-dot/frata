@@ -168,12 +168,12 @@ do $$ begin
 end $$;
 commit;
 
--- 13. No app_* function is callable by public, anon or authenticated; neither app role bypasses RLS.
+-- 13. No app_* function is callable by public, anon, authenticated or service_role; neither app role bypasses RLS.
 do $$ declare f record; begin
   for f in select p.oid::regprocedure as sig from pg_proc p join pg_namespace n on n.oid = p.pronamespace
            where n.nspname = 'public' and p.proname like 'app\_%' loop
     if has_function_privilege('anon', f.sig, 'execute') or has_function_privilege('authenticated', f.sig, 'execute')
-       or has_function_privilege('public', f.sig, 'execute') then
+       or has_function_privilege('public', f.sig, 'execute') or has_function_privilege('service_role', f.sig, 'execute') then
       raise exception 'FAIL: % is callable by an API role', f.sig;
     end if;
   end loop;
@@ -346,6 +346,12 @@ begin;
 -- Shop addresses D1·7 (0069): Admin's address writes are for the admin role only (support is refused in SQL); a freeze
 -- goes through its definer (no direct write); a release frees only a retired name, never a shop's current one.
 insert into platform_staff (user_id, email, role) values ('aaaaaaaa-0000-0000-0000-0000000000ff', 'staff@proof.test', 'admin'), ('aaaaaaaa-0000-0000-0000-0000000000fe', 'support@proof.test', 'support') on conflict do nothing;
+do $$ declare f text; begin
+  foreach f in array array['app_admin_rename_shop(uuid,uuid,text,text)', 'app_admin_freeze_address(uuid,uuid,boolean,text)', 'app_admin_release_name(uuid,text,text)'] loop
+    if has_function_privilege('frata_app', f, 'execute') or has_function_privilege('service_role', f, 'execute') then raise exception 'FAIL: % is callable outside Admin', f; end if;
+    if not has_function_privilege('frata_admin', f, 'execute') then raise exception 'FAIL: Admin cannot call %', f; end if;
+  end loop;
+end $$;
 insert into shop_names (name, tenant_id, retired_at) values ('proof-b-old', '22222222-2222-2222-2222-222222222222', now());
 set local role frata_admin;
 do $$ begin

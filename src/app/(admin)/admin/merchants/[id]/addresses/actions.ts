@@ -30,8 +30,11 @@ export async function adminRenameAction(form: FormData) {
   const before = await merchantAddresses(staff, d.tenantId)
   const r = await adminRenameShop(staff, d.tenantId, d.slug, d.reason)
   if (!r.ok) fail(id, addressAdminError(r.error))
-  // Every name the shop has had stops pointing at the old one: the old name now serves nothing.
-  refreshHosts(...[...new Set([d.slug, ...(before?.names.map((n) => n.name) ?? [])])].map((n) => hostFor(n)))
+  // Every name the shop has had stops pointing at the old one: the old name now serves nothing. Read again after the
+  // rename too, so a merchant rename landing in between is refreshed as well (tenancy audit D1·7).
+  const after = await merchantAddresses(staff, d.tenantId).catch(() => null)
+  const names = [d.slug, ...(before?.names ?? []), ...(after?.names ?? [])].map((n) => (typeof n === 'string' ? n : n.name))
+  refreshHosts(...[...new Set(names)].map((n) => hostFor(n)))
   refreshShop(d.tenantId, 'shop')
   if (before) revalidatePath(`/s/${hostFor(before.slug)}`, 'layout')
   revalidatePath(back(id))
