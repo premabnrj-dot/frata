@@ -35,11 +35,11 @@ export function Gallery({ themes, canEdit, sorted }: { themes: GalleryTheme[]; c
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {themes.map((t) => (
           <li key={t.key}>
-            <Section flush ariaLabel={t.name} className={t.inUse ? 'ring-2 ring-foreground' : ''}>
+            <Section flush ariaLabel={t.name} className={`relative transition-shadow duration-fast hover:shadow-md ${t.inUse ? 'ring-2 ring-foreground' : ''}`}>
               <div className="grid place-items-center bg-muted py-4">{t.thumb}</div>
               <div className="space-y-1.5 p-4">
                 <div className="flex items-center gap-2">
-                  <button type="button" onClick={() => { setError(null); setLost([]); setOpen(t) }} className="text-left font-semibold underline-offset-4 hover:underline">{t.name}</button>
+                  <button type="button" onClick={() => { setError(null); setLost([]); setOpen(t) }} className="text-left font-semibold underline-offset-4 after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring">{t.name}</button>
                   {t.inUse ? <Badge tone="ok">In use</Badge> : <Badge>Free</Badge>}{t.newer && <Badge tone="info">{t.version} is here</Badge>}
                 </div>
                 <p className="text-sm text-muted-foreground">{t.job}</p>
@@ -54,13 +54,14 @@ export function Gallery({ themes, canEdit, sorted }: { themes: GalleryTheme[]; c
           <span className="text-muted-foreground">All themes are free in every plan.</span>
         </li>
       </ul>
-      <Dialog open={!!open} onClose={() => setOpen(null)} title={open?.name ?? ''} description={open?.job}
+      <Dialog open={!!open} onClose={() => setOpen(null)} title={open?.name ?? ''} description={open?.job} className="md:w-[min(56rem,calc(100vw-2rem))]"
         actions={open ? <>
           <Button variant="secondary" className="after:hidden" data-autofocus onClick={() => setOpen(null)}>Not now</Button>
           {canEdit && (!open.inUse || open.newer) && (lost.length ? <Button onClick={() => router.push('/console/look/customize')}>Open the draft</Button> : <Button disabled={pending} onClick={() => tryIt(open)}>{open.newer ? `Try ${open.name} ${open.version} in a draft` : `Try ${open.name} in a draft`}</Button>)}
         </> : null}>
         {open ? (
-          <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_14rem]">
+          <div className="grid gap-5 md:grid-cols-[auto_minmax(0,1fr)_14rem]">
+            <div className="hidden place-items-center self-start rounded-lg bg-muted p-3 md:grid">{open.thumb}</div>
             <div className="space-y-3">
               <h3 className="text-sm font-semibold">What it has</h3>
               <ul className="grid gap-2 text-sm sm:grid-cols-2">{open.features.map((f) => <li key={f} className="flex gap-2"><span aria-hidden="true" className="text-ok-text">✓</span>{f}</li>)}</ul>

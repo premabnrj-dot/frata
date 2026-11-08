@@ -39,9 +39,12 @@ export default {
 
     let rev
     await t.step('Details, then Try Bazaar: a draft opens; shoppers still see Classic', async () => {
-      await riya.getByRole('button', { name: 'Bazaar', exact: true }).click()
+      // The whole card opens a theme, not only its name (owner, 2026-11-08): click its picture.
+      await riya.getByRole('region', { name: 'Bazaar', exact: true }).click({ position: { x: 40, y: 40 } })
       const d = riya.getByRole('dialog', { name: 'Bazaar' })
       await d.getByText('Category circles under the header').waitFor()
+      assert.ok((await d.boundingBox()).width > 700, 'the details dialog is wide on a computer')
+      await riya.screenshot({ path: t.out('details') })
       await d.getByRole('button', { name: 'Try Bazaar in a draft' }).click()
       await riya.waitForURL(/\/console\/look\/customize$/)
       ;[{ id: rev }] = await db`select id from shop_theme_revisions where tenant_id = ${KESAR} and theme_key = 'bazaar'`

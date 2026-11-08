@@ -6,7 +6,7 @@
 // e2e/.out/, and exits non-zero if any step failed. A failed step ends its
 // flow (later steps depend on it); the other flows still run.
 // =============================================================================
-import { readdirSync } from 'node:fs'
+import { readdirSync, writeFileSync } from 'node:fs'
 import { OUT, SHOP_DOMAIN, PORTS, playwright } from './lib.mjs'
 const { chromium } = playwright
 import { down, up } from './stack.mjs'
@@ -37,6 +37,9 @@ try {
       failed++; console.log(`FAIL ${flow.name} › ${e.step ?? ''} ${String(e.message).split('\n')[0]}`)
       // An assertion's values (actual vs expected) say what happened; a bare first line does not.
       if (e.actual !== undefined || e.expected !== undefined) console.log(`     got ${JSON.stringify(e.actual)} · wanted ${JSON.stringify(e.expected)}`)
+      // The whole message (Playwright's call log says why a click waited: disabled, covered, moving), beside the shots.
+      writeFileSync(`${OUT}${f.replace('.mjs', '')}-FAILED.txt`, `${e.step ?? ''}\n${e.stack ?? e.message}\n`)
+      console.log(`     full error: e2e/.out/${f.replace('.mjs', '')}-FAILED.txt`)
       // What every open page showed at the failure, so the report says what happened, not only that it timed out.
       let n = 0
       for (const ctx of browser.contexts()) for (const page of ctx.pages()) {

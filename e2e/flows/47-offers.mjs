@@ -19,7 +19,7 @@ export default {
     const lastOrder = async () => (await db`select * from orders order by placed_at desc limit 1`)[0]
     const cc = await signedIn(t.browser, 'owner')
     const c = await cc.newPage(); c.setDefaultTimeout(10_000); c.on('pageerror', (e) => t.errors.push(e.message))
-    const [s] = await db`select shipping_flat, free_shipping_above, cod_charge from shop_settings limit 1`
+    const [s] = await db`select s.shipping_flat, s.free_shipping_above, s.cod_charge from shop_settings s join tenants t on t.id = s.tenant_id where t.slug = 'kesar-studio'`
     const ship = (amount) => (Number(s.shipping_flat) && !(Number(s.free_shipping_above) && amount >= Number(s.free_shipping_above)) ? Number(s.shipping_flat) : 0)
     const inr = (p) => '₹' + (p / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })
     // This flow sells Rust M a few times; the flows after it expect the stock they had, so it is put back in `finally`.

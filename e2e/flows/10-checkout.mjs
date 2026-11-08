@@ -123,7 +123,11 @@ export default {
       await p.getByText(/Payment did not go through/).waitFor()
       await p.getByText('Pay on delivery', { exact: true }).click(); await p.getByRole('button', { name: /Pay on delivery · ₹2,539/ }).click()
       await p.waitForURL(/\/orders#t=/); await p.getByText('Keep ₹2,539 ready').waitFor()
-      let o = await lastOrder(); assert.ok(o.switched_to_cod_at); assert.equal(await stock('{M,Rust}'), before - 1)
+      // The page can show the order a moment before the switch's transaction is visible to this connection (seen
+      // under the full suite's load): wait for both, then assert.
+      let o = await until(async () => { const x = await lastOrder(); return x.switched_to_cod_at && x }, 10_000)
+      await until(async () => (await stock('{M,Rust}')) === before - 1, 10_000).catch(() => {})
+      assert.equal(await stock('{M,Rust}'), before - 1)
       const pay = await (await fetch(RZP + '/_test/pay', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ order_id: o.razorpay_order_id }) })).json()
       assert.equal(await webhook({ event: 'payment.captured', payload: { payment: { entity: pay.payment } } }), 200)
       o = await until(async () => { const x = await lastOrder(); return x.paid_at && x })
