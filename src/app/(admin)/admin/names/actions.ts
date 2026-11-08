@@ -3,21 +3,25 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
+import { SLUG_SHAPE } from '@/domains/signup/slug'
 import { addressAdminError, BLOCKED_KINDS, blockName, releaseName, unblockName } from '@/lib/admin/addresses'
 import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import { hostFor } from '@/lib/queries/storefront'
 import { refreshHosts } from '@/lib/storefront/refresh'
 
-// Shop addresses D1·7: Admin › Names. Admin role only; each write is audited.
+// Shop addresses D1·7: Admin › Names. Admin role only (the definers in 0069 check again, need a reason and audit).
 
-const NAME = /^[a-z0-9]([a-z0-9-]{1,28}[a-z0-9])$/
+const shopName = (n: string) => SLUG_SHAPE.test(n) && !n.includes('--')
 const DOMAIN = /^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/
 const Name = z.string().trim().toLowerCase().max(253)
-const Block = z.object({ name: Name, kind: z.enum(BLOCKED_KINDS), reason: z.string().trim().min(3).max(500) })
-  .refine((b) => (b.kind === 'domain' ? DOMAIN : NAME).test(b.name), { path: ['name'] })
-const Release = z.object({ name: Name.refine((n) => NAME.test(n)), reason: z.string().trim().min(3).max(500) })
+const Reason = z.string().trim().min(3).max(500)
+const Block = z.object({ name: Name, kind: z.enum(BLOCKED_KINDS), reason: Reason })
+  .refine((b) => (b.kind === 'domain' ? DOMAIN.test(b.name) : shopName(b.name)), { path: ['name'] })
+const Unblock = z.object({ name: Name, reason: Reason })
+const Release = z.object({ name: Name.refine(shopName), reason: Reason })
 
 const go = (q: 'ok' | 'error', msg: string): never => redirect(`/admin/names?${q}=${encodeURIComponent(msg)}`)
+const reasonOr = (e: z.ZodError, other: string) => (e.issues.some((i) => i.path[0] === 'reason') ? addressAdminError('reason') : other)
 
 async function admin() {
   const staff = await requireStaff(ADMIN_ONLY)
@@ -28,29 +32,31 @@ async function admin() {
 export async function blockNameAction(form: FormData) {
   const staff = await admin()
   const p = Block.safeParse(Object.fromEntries(form))
-  if (!p.success) go('error', p.error.issues.some((i) => i.path[0] === 'reason') ? addressAdminError('reason') : 'Check the name: letters, digits and hyphens, or a domain.')
+  if (!p.success) go('error', reasonOr(p.error, 'Use letters, digits and single hyphens, or a domain.'))
   const d = p.data!
-  const added = await blockName(staff, d).catch(() => null)
-  if (added === null) go('error', addressAdminError('unknown'))
-  if (!added) go('error', 'Already blocked.')
+  const r = await blockName(staff, d)
+  if (!r.ok) go('error', addressAdminError(r.error))
+  if (r.ok && !r.value) go('error', 'Already blocked.')
   revalidatePath('/admin/names')
   go('ok', `${d.name} blocked.`)
 }
 
 export async function unblockNameAction(form: FormData) {
   const staff = await admin()
-  const name = Name.safeParse(form.get('name'))
-  if (!name.success) go('error', addressAdminError('unknown'))
-  const removed = await unblockName(staff, name.data!).catch(() => null)
-  if (!removed) go('error', addressAdminError('unknown'))
+  const p = Unblock.safeParse(Object.fromEntries(form))
+  if (!p.success) go('error', reasonOr(p.error, addressAdminError('unknown')))
+  const d = p.data!
+  const r = await unblockName(staff, d.name, d.reason)
+  if (!r.ok) go('error', addressAdminError(r.error))
+  if (r.ok && !r.value) go('error', 'Not on the list.')
   revalidatePath('/admin/names')
-  go('ok', `${name.data} unblocked.`)
+  go('ok', `${d.name} unblocked.`)
 }
 
 export async function releaseNameAction(form: FormData) {
   const staff = await admin()
   const p = Release.safeParse(Object.fromEntries(form))
-  if (!p.success) go('error', addressAdminError('reason'))
+  if (!p.success) go('error', reasonOr(p.error, addressAdminError('bad_slug')))
   const d = p.data!
   const r = await releaseName(staff, d.name, d.reason)
   if (!r.ok) go('error', addressAdminError(r.error))

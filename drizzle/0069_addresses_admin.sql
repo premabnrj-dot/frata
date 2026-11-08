@@ -6,7 +6,8 @@
 --   · freezing a shop's address changes goes through a definer that writes its own audit row (the column grant from
 --     0068 is withdrawn: one way in);
 --   · releasing a name deletes a RETIRED shop_names row (never a shop's current name), with a reason, audited.
--- Blocked names stay plain Admin rows (0068's grant), written beside an audit row in one transaction.
+--   · blocking and unblocking a name go through definers too, each with a reason (0068's insert/delete grant on
+--     blocked_names is withdrawn; Admin keeps select).
 -- =============================================================================
 create or replace function app_admin_rename_shop(p_tenant uuid, p_staff uuid, p_slug text, p_reason text)
   returns void
@@ -76,7 +77,64 @@ end;
 $$;
 
 --> statement-breakpoint
-revoke all on function app_admin_freeze_address(uuid, uuid, boolean, text), app_admin_release_name(uuid, text, text) from public, anon, authenticated, service_role;
+-- True when added; false when it was already on the list. A protected or offensive name is a shop name's shape; a domain is a host.
+create or replace function app_admin_block_name(p_staff uuid, p_name text, p_kind text, p_reason text)
+  returns boolean
+  language plpgsql volatile security definer set search_path = '' as $$
+declare
+  v_email text;
+  v_n int;
+begin
+  if length(btrim(coalesce(p_reason, ''))) not between 3 and 500 then raise exception 'reason' using errcode = 'P0001'; end if;
+  select s.email into v_email from public.platform_staff s where s.user_id = p_staff and s.role = 'admin';
+  if v_email is null then raise exception 'not_staff' using errcode = 'P0001'; end if;
+  if p_kind not in ('protected', 'offensive', 'domain')
+     or (p_kind = 'domain' and p_name !~ '^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$')
+     or (p_kind <> 'domain' and (p_name !~ '^[a-z0-9]([a-z0-9-]{1,28}[a-z0-9])$' or p_name ~ '--')) then
+    raise exception 'bad_slug' using errcode = 'P0001';
+  end if;
+  insert into public.blocked_names (name, kind, reason, created_by) values (p_name, p_kind, btrim(p_reason), p_staff) on conflict (name) do nothing;
+  get diagnostics v_n = row_count;
+  if v_n = 0 then return false; end if;
+  insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
+    values (null, p_staff, v_email, 'staff', 'name.blocked', p_name, jsonb_build_object('kind', p_kind, 'reason', btrim(p_reason)));
+  return true;
+end;
+$$;
 
 --> statement-breakpoint
-grant execute on function app_admin_freeze_address(uuid, uuid, boolean, text), app_admin_release_name(uuid, text, text) to frata_admin;
+-- True when removed; false when it was not on the list.
+create or replace function app_admin_unblock_name(p_staff uuid, p_name text, p_reason text)
+  returns boolean
+  language plpgsql volatile security definer set search_path = '' as $$
+declare
+  v_email text;
+  v_kind text;
+begin
+  if length(btrim(coalesce(p_reason, ''))) not between 3 and 500 then raise exception 'reason' using errcode = 'P0001'; end if;
+  select s.email into v_email from public.platform_staff s where s.user_id = p_staff and s.role = 'admin';
+  if v_email is null then raise exception 'not_staff' using errcode = 'P0001'; end if;
+  delete from public.blocked_names where name = p_name returning kind into v_kind;
+  if v_kind is null then return false; end if;
+  insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
+    values (null, p_staff, v_email, 'staff', 'name.unblocked', p_name, jsonb_build_object('kind', v_kind, 'reason', btrim(p_reason)));
+  return true;
+end;
+$$;
+
+--> statement-breakpoint
+revoke insert, delete on blocked_names from frata_admin;
+
+--> statement-breakpoint
+drop policy admin_all on blocked_names;
+
+--> statement-breakpoint
+create policy admin_read on blocked_names for select to frata_admin using (true);
+
+--> statement-breakpoint
+revoke all on function app_admin_rename_shop(uuid, uuid, text, text), app_admin_freeze_address(uuid, uuid, boolean, text), app_admin_release_name(uuid, text, text),
+  app_admin_block_name(uuid, text, text, text), app_admin_unblock_name(uuid, text, text) from public, anon, authenticated, service_role;
+
+--> statement-breakpoint
+grant execute on function app_admin_rename_shop(uuid, uuid, text, text), app_admin_freeze_address(uuid, uuid, boolean, text), app_admin_release_name(uuid, text, text),
+  app_admin_block_name(uuid, text, text, text), app_admin_unblock_name(uuid, text, text) to frata_admin;

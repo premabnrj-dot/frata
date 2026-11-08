@@ -42,6 +42,10 @@ audit themselves; blocked names are Admin rows with an audit row. Accepted, as i
 `p_staff` uuid the Admin code passes (any frata_admin code could pass an admin's id); a stronger lock would read a
 transaction-local `app.staff_id` set by `adminDb`. A release's reason is written to the former holder's audit rows:
 staff never name another merchant in it.
+Built differently from mockup § 8 (impact review): Admin › Names is three parts (Blocked, Frrata's words read-only,
+Held with Release in the row) rather than one table. Telling the shop about Frrata's rename, freeze or release (spec
+§ 3, design rule 71: the reason and a Reply) comes with T·1's notices; until then the shop's address page shows
+"frozen" and the audit log keeps the reason.
 
 ## D·2 — Own domains (needs Vercel Pro: owner call 1)
 | Task | What | Verify |

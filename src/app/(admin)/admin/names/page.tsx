@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
-import { heldNames, listBlocked, type BlockedKind } from '@/lib/admin/addresses'
+import { RESERVED } from '@/domains/signup/slug'
+import { HELD_LIMIT, heldNames, listBlocked, type BlockedKind } from '@/lib/admin/addresses'
 import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dayIN } from '@/lib/format-date'
 import { blockNameAction, releaseNameAction, unblockNameAction } from './actions'
@@ -42,7 +43,7 @@ export default async function NamesPage({ searchParams }: { searchParams: Promis
       )}
       <Section title="Blocked" flush>
         {blocked.length ? (
-          <DataTable label="Blocked names">
+          <DataTable label="Blocked names" rows={can ? 'form' : 'list'}>
             <DataTableHead><th>Name or domain</th><th>Kind</th><th>Reason</th><th>Added</th>{can && <th><span className="sr-only">Action</span></th>}</DataTableHead>
             <DataTableBody>
               {blocked.map((b) => (
@@ -53,8 +54,11 @@ export default async function NamesPage({ searchParams }: { searchParams: Promis
                   <Td cell="d">{dayIN(b.createdAt)}</Td>
                   {can && (
                     <Td cell="f" className="text-right">
-                      <form action={unblockNameAction}><input type="hidden" name="name" value={b.name} />
-                        <Button type="submit" variant="secondary">Unblock {b.name}</Button></form>
+                      <form action={unblockNameAction} className="flex flex-wrap items-center justify-end gap-2">
+                        <input type="hidden" name="name" value={b.name} />
+                        <input name="reason" required minLength={3} maxLength={500} aria-label={`Why unblock ${b.name}`} placeholder="Reason" className={`${field} min-w-0 flex-1`} />
+                        <Button type="submit" variant="secondary" size="wrap">Unblock {b.name}</Button>
+                      </form>
                     </Td>
                   )}
                 </DataTableRow>
@@ -63,7 +67,10 @@ export default async function NamesPage({ searchParams }: { searchParams: Promis
           </DataTable>
         ) : <p className="p-4 text-sm text-muted-foreground">None.</p>}
       </Section>
-      <Section title="Held" flush>
+      <Section title={`Frrata's words · ${RESERVED.size}`}>
+        <p className="font-mono text-sm leading-relaxed">{[...RESERVED].sort().join(' · ')}</p>
+      </Section>
+      <Section title={held.length >= HELD_LIMIT ? `Held · first ${HELD_LIMIT}` : 'Held'} flush>
         {held.length ? (
           <DataTable label="Held names" rows={can ? 'form' : 'list'}>
             <DataTableHead><th>Name</th><th>Shop</th><th>Since</th>{can && <th>Release</th>}</DataTableHead>

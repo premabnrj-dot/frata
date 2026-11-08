@@ -54,7 +54,6 @@ export default async function MerchantAddressesPage({ params, searchParams }: { 
       </DataTable>
       <p className="text-sm text-muted-foreground">
         {a.firstOpenedAt ? `Merchant changes: ${Math.min(a.renamesUsed, RENAMES_AFTER_OPENING)} of ${RENAMES_AFTER_OPENING} used` : 'Not opened yet'}
-        {frozen && ` · frozen ${dayIN(a.frozenAt!)}`}
       </p>
       {admin.ok && (
         <div className="grid gap-4 md:grid-cols-2 [&>*]:min-w-0">
@@ -72,10 +71,10 @@ export default async function MerchantAddressesPage({ params, searchParams }: { 
                 <span className="font-medium">Reason</span>
                 <input name="reason" required minLength={3} maxLength={500} className={field} />
               </label>
-              <Button type="submit" variant="secondary" className="h-auto min-h-10 whitespace-normal py-2 text-left">Rename {name}&apos;s address</Button>
+              <Button type="submit" variant="secondary" size="wrap">Rename {name}&apos;s address</Button>
             </form>
           </Section>
-          <Section title={frozen ? 'Address changes frozen' : 'Freeze address changes'} className="text-sm">
+          <Section title={frozen ? `Frozen since ${dayIN(a.frozenAt!)}` : 'Freeze address changes'} className="text-sm">
             <form action={freezeAddressAction} className="space-y-3">
               <input type="hidden" name="tenantId" value={id} />
               <input type="hidden" name="frozen" value={frozen ? 'no' : 'yes'} />
@@ -83,7 +82,7 @@ export default async function MerchantAddressesPage({ params, searchParams }: { 
                 <span className="font-medium">Reason</span>
                 <input name="reason" required minLength={3} maxLength={500} className={field} />
               </label>
-              <Button type="submit" variant="secondary" className="h-auto min-h-10 whitespace-normal py-2 text-left">{frozen ? `Allow ${name}'s address changes` : `Freeze ${name}'s address`}</Button>
+              <Button type="submit" variant="secondary" size="wrap">{frozen ? `Allow ${name}'s address changes` : `Freeze ${name}'s address`}</Button>
             </form>
           </Section>
         </div>

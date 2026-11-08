@@ -15,7 +15,7 @@ const Reason = z.string().trim().min(3).max(500)
 const Rename = z.object({ tenantId: z.uuid(), slug: z.string().trim().toLowerCase().max(64), reason: Reason })
 const Freeze = z.object({ tenantId: z.uuid(), frozen: z.enum(['yes', 'no']), reason: Reason })
 
-const back = (id: unknown) => `/admin/merchants/${typeof id === 'string' && /^[0-9a-f-]{36}$/.test(id) ? id : ''}/addresses`
+const back = (id: unknown) => (typeof id === 'string' && /^[0-9a-f-]{36}$/.test(id) ? `/admin/merchants/${id}/addresses` : '/admin/merchants')
 const fail = (id: unknown, msg: string): never => redirect(`${back(id)}?error=${encodeURIComponent(msg)}`)
 
 export async function adminRenameAction(form: FormData) {

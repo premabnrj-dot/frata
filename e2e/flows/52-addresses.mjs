@@ -78,6 +78,11 @@ export default {
           await q.waitForTimeout(800)
           assert.equal(res?.status(), 404, 'a name Frrata retired must serve nothing')
           assert.equal(new URL(q.url()).hostname, `kesar-studio.${SHOP_DOMAIN}`, 'a name Frrata retired must not redirect')
+          const now = await q.goto(at('kesar-frrata') + '/')
+          assert.equal(now?.status(), 200, 'the new name serves the shop')
+          // An older name of the shop's own (from its renames above) now leads to the new one (refreshHosts over all names).
+          await q.goto(at('kesar-two') + '/?utm_source=instagram')
+          await q.waitForURL(at('kesar-frrata') + '/?utm_source=instagram')
           await s.close()
           await a.goto(CONSOLE + '/admin/names')
           await a.getByLabel('Why release kesar-studio').fill('Trademark cleared')

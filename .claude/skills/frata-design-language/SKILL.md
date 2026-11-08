@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.1.0
+  version: 5.2.0
   verified: 2026-11-08
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -100,10 +100,13 @@ from it).
   notes as (i) tips, and a muted "Next" band. Connected → the number card (mono phone, name · which apps, Quality,
   Limit, Chats from the app; More: Check again, Disconnect) and "Needs you" rows: a badge (Blocks messages / By 31
   Dec / Quality low / In review), the need in words, one action. Meta's raw values never show.
-- **Admin**: merchant tabs Overview · Modules · Plan. The Modules tab is a table
+- **Admin**: merchant tabs Overview · Modules · Plan · Addresses. The Modules tab is a table
   (Module, Granted by, Merchant, Usable, action: "Give a 30-day trial of X",
   "End trial"). Admin › Modules pauses a module "for everyone" with a reason;
   the shop sees "Paused by Frrata". Admin writes are admin-role only.
+  The Addresses tab lists the shop's names (Current · Old · redirects · Old · no redirect), then "Rename <shop>'s
+  address" and "Freeze <shop>'s address", each with a reason. Admin › Names: block a name or domain, unblock or
+  release with a reason in the row; Frrata's own words listed, read-only.
 
 ## Shop themes (approved mockups 2026-11-08, T0–T2 built)
 
@@ -543,7 +546,7 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     plain words.
 20a. **No Unicode glyph stands in for a control** (owner-approved 2026-11-08): ↑ ↓ ◉ ↶ ↷ × › are drawn
     in `icon.tsx` (`up`, `down`, `eye`/`eyeOff`, `undo`, `redo`, `close`, `chevron`, `drag`). Two nav items
-    never share a glyph (Admin: Merchants `merchants`, Themes `themes`, Partners `partners`, Staff `staff`;
+    never share a glyph (Admin: Merchants `merchants`, Themes `themes`, Partners `partners`, Staff `staff`, Names `address`;
     the partner workspace: Your details `details`). A row that opens something ends in a `chevron`; a status
     pill says "Needs you" only when it does. How an order is paid is a neutral badge with its icon (`cod`,
     `prepaid`): only the order's state is coloured. A count that is still going says so ("Today · so far").
