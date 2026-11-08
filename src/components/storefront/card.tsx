@@ -1,3 +1,4 @@
+import { cardBadge } from '@/domains/checkout/offer-showcase'
 import Link from 'next/link'
 import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
@@ -19,7 +20,7 @@ export function ProductCard({ p, href, now, priority = false, badge = null, lang
   const price = priceOf(p)
   const w = wordsFor(lang)
   const t = cardTag(p, now)
-  const tag = (t ? w.tag[t] : null) ?? badge?.label ?? null
+  const tag = (t ? w.tag[t] : null) ?? (badge ?? cardBadge(p.offers, now))?.label ?? null
   const [cover, second] = p.images
   const ci = p.options.findIndex(isColourOption)
   const colours = ci >= 0 ? [...new Set(p.variants.map((v) => v.values[ci]!))] : []

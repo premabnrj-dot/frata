@@ -17,6 +17,8 @@ export type ListProduct = {
   id: string; title: string; status: string; publishAt: string | null; since: string
   categoryId: string | null; attributes: Record<string, string[]>; tags: string[]
   colours: { value: string; family: string | null }[]; variants: ListVariant[]
+  /** Offers the shop shows on this product (raw: live is decided at render; offer-showcase.ts). */
+  offers?: import('@/domains/checkout/offer-showcase').ShowOffer[]
 }
 export type ListCollection = { kind: 'manual' | 'auto'; matchAll: boolean; rules: unknown[]; sort: string; productIds: string[] }
 

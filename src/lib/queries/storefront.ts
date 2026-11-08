@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
 import { revalidateTag, unstable_cache } from 'next/cache'
 import { LOW_STOCK_AT } from '@/domains/catalogue/availability'
 import type { Chart } from '@/domains/catalogue/size-charts'
@@ -13,7 +13,10 @@ import { orderLines, orders } from '@/lib/db/schema-orders'
 import { liveCandidates, revisionOf, type Revision } from '@/lib/themes/look'
 import { liveOf, withdrawnKeys } from '@/domains/themes/release'
 import { withTenant } from '@/lib/db/tenant'
-import { discountCodes, discounts } from '@/lib/db/schema-discounts'
+import { discountCodes, discountTargets, discountTiers, discounts } from '@/lib/db/schema-discounts'
+import { barText, bxgyText, offOf, offerTerms } from '@/domains/checkout/offer-text'
+import type { ShowOffer } from '@/domains/checkout/offer-showcase'
+import type { Tx } from '@/lib/db'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 import { cleanRules, matches } from '@/domains/catalogue/collection-rules'
 import { productFacts } from './catalogue'
@@ -112,6 +115,8 @@ export type StoreCard = {
   id: string; handle: string; title: string; status: string; publishAt: string | null; since: string
   options: string[]; images: StoreImage[]; variants: StoreVariant[]; colours: StoreColour[]
   categoryId: string | null; attributes: Record<string, string[]>; tags: string[]
+  /** Offers the shop shows on this product, raw (live decided at render: offer-showcase.ts). */
+  offers?: ShowOffer[]
 }
 export type StoreCollection = { id: string; handle: string; title: string; description: string; kind: 'manual' | 'auto'; matchAll: boolean; rules: unknown[]; sort: string; productIds: string[] }
 export type StoreCatalogue = { products: StoreCard[]; collections: StoreCollection[] }
@@ -142,6 +147,43 @@ const toVariant = (v: { id: string; values: string[]; sku: string | null; price:
   restockedAt: v.restockedAt ? v.restockedAt.toISOString() : null,
 })
 
+/**
+ * The shop's started, unended, listed offers as the showcase reads them (offers O·2): words and timestamps only, never
+ * a limit, budget or count (ADR-0003). Product offers carry the products they cover (collections resolved now).
+ */
+async function showcase(tx: Tx, tenantId: string): Promise<{ shop: ShowOffer[]; byProduct: (id: string) => ShowOffer[] }> {
+  const rows = await tx.select({
+    id: discounts.id, title: discounts.title, style: discounts.style, percentBps: discounts.percentBps, amountOff: discounts.amountOff, minSubtotal: discounts.minSubtotal,
+    targets: discounts.targets, buyQty: discounts.buyQty, getQty: discounts.getQty, getBps: discounts.getBps, firstOrder: discounts.firstOrder, code: discountCodes.code,
+    startsAt: discounts.startsAt, endsAt: discounts.endsAt, startedAt: discounts.startedAt, pausedAt: discounts.pausedAt, endedAt: discounts.endedAt,
+  }).from(discounts).leftJoin(discountCodes, and(eq(discountCodes.tenantId, discounts.tenantId), eq(discountCodes.discountId, discounts.id), isNull(discountCodes.label)))
+    .where(and(eq(discounts.tenantId, tenantId), sql`${discounts.startedAt} is not null and ${discounts.endedAt} is null and ${discounts.listed}`))
+  if (!rows.length) return { shop: [], byProduct: () => [] }
+  const tiers = await tx.select({ discountId: discountTiers.discountId, min: discountTiers.minSubtotal, percentBps: discountTiers.percentBps, amountOff: discountTiers.amountOff }).from(discountTiers)
+    .where(and(eq(discountTiers.tenantId, tenantId), inArray(discountTiers.discountId, rows.map((r) => r.id)))).orderBy(asc(discountTiers.minSubtotal))
+  const narrowed = rows.filter((r) => r.targets !== 'all').map((r) => r.id)
+  const targets = narrowed.length ? await tx.select({ discountId: discountTargets.discountId, productId: discountTargets.productId, collectionId: discountTargets.collectionId }).from(discountTargets)
+    .where(and(eq(discountTargets.tenantId, tenantId), inArray(discountTargets.discountId, narrowed))) : []
+  const members = targets.some((t) => t.collectionId) ? await collectionMembers(tenantId) : {}
+  const iso = (x: Date | null) => (x ? x.toISOString() : null)
+  const all = rows.map((r) => {
+    const words = { title: r.title, style: r.style, percentBps: r.percentBps, amountOff: r.amountOff === null ? null : Number(r.amountOff), minSubtotal: Number(r.minSubtotal),
+      targets: r.targets, buyQty: r.buyQty, getQty: r.getQty, getBps: r.getBps, firstOrder: r.firstOrder,
+      tiers: tiers.filter((x) => x.discountId === r.id).map((x) => ({ min: Number(x.min), percentBps: x.percentBps, amountOff: x.amountOff === null ? null : Number(x.amountOff) })) }
+    const product = r.style === 'product_off' || r.style === 'bxgy'
+    const label = (r.style === 'pay_online' ? barText(words, { code: null, endsAt: null }) : offerTerms(words)) + (r.code && !product ? ` · code ${r.code.toUpperCase()}` : '')
+    return {
+      offer: { label: product ? `${r.title}: ${offerTerms({ ...words, targets: 'all' })}` : label, badge: r.style === 'bxgy' ? bxgyText(words) : r.style === 'product_off' ? offOf(words, false) : null, product,
+        startsAt: r.startsAt.toISOString(), endsAt: iso(r.endsAt), startedAt: iso(r.startedAt), pausedAt: iso(r.pausedAt), endedAt: iso(r.endedAt) } satisfies ShowOffer,
+      covers: !product ? null : r.targets === 'all' ? 'all' as const : new Set(targets.filter((t) => t.discountId === r.id).flatMap((t) => (t.productId ? [t.productId] : members[t.collectionId!] ?? []))),
+    }
+  })
+  return {
+    shop: all.filter((a) => a.covers === null).map((a) => a.offer),
+    byProduct: (id) => all.filter((a) => a.covers === 'all' || (a.covers instanceof Set && a.covers.has(id))).map((a) => a.offer),
+  }
+}
+
 async function coreCatalogue(tenantId: string, drafts: boolean): Promise<StoreCatalogue> {
   return withTenant(tenantId, async (tx) => {
     const ps = await tx.select({
@@ -160,6 +202,7 @@ async function coreCatalogue(tenantId: string, drafts: boolean): Promise<StoreCa
       tx.select({ id: collections.id, handle: collections.handle, title: collections.title, description: collections.description, kind: collections.kind, matchAll: collections.matchAll, rules: collections.rules, sort: collections.sort }).from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)),
       tx.select({ collectionId: collectionProducts.collectionId, productId: collectionProducts.productId }).from(collectionProducts).where(eq(collectionProducts.tenantId, tenantId)).orderBy(asc(collectionProducts.position)),
     ]) : [[], [], [], [], [], []] as const
+    const show = await showcase(tx, tenantId)
     return {
       products: ps.map((p) => ({
         id: p.id, handle: p.handle, title: p.title, status: p.status, publishAt: p.publishAt ? p.publishAt.toISOString() : null, since: new Date(p.since).toISOString(), options: p.options,
@@ -169,6 +212,7 @@ async function coreCatalogue(tenantId: string, drafts: boolean): Promise<StoreCa
         variants: vs.filter((v) => v.productId === p.id).map(toVariant),
         colours: cols.filter((c) => c.productId === p.id).map(({ productId: _, ...c }) => c),
         attributes: Object.fromEntries(attrs.filter((a) => a.productId === p.id).map((a) => [a.attribute, a.values])),
+        offers: show.byProduct(p.id),
       })),
       collections: colls.map((c) => ({ ...c, kind: c.kind as 'manual' | 'auto', matchAll: c.matchAll === 1, rules: c.rules, productIds: members.filter((m) => m.collectionId === c.id).map((m) => m.productId) })),
     }
@@ -216,6 +260,8 @@ async function coreProduct(tenantId: string, handle: string, drafts: boolean): P
       ...p, publishAt: p.publishAt ? p.publishAt.toISOString() : null, since: new Date(p.since).toISOString(),
       images: imgs.map(({ productId: _, ...i }) => i), variants: vs.map(toVariant), colours: cols.map(({ productId: _, ...c }) => c),
       attributes: Object.fromEntries(attrs.map((a) => [a.attribute, a.values])), sizeChart: p.sizeChart ?? null, typeName: p.typeName ?? null,
+      // Its own product offers, then the shop's (raw; live decided at render).
+      offers: await showcase(tx, tenantId).then((sh) => [...sh.byProduct(p.id), ...sh.shop]),
     }
   })
 }
