@@ -88,3 +88,6 @@ $$;
 revoke all on function app_accept_handover_v2(uuid, uuid, text, smallint) from public, anon, authenticated, service_role, frata_admin;
 --> statement-breakpoint
 grant execute on function app_accept_handover_v2(uuid, uuid, text, smallint) to frata_app;
+--> statement-breakpoint
+-- The 0023 handover neither claims nor ends a trial: nothing calls it now, so no role may (security review, TR1).
+revoke all on function app_accept_handover(uuid, uuid) from public, anon, authenticated, service_role, frata_app, frata_admin;

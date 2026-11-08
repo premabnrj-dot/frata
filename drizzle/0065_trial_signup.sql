@@ -64,6 +64,7 @@ begin
   if p_slug !~ '^[a-z0-9]([a-z0-9-]{1,28}[a-z0-9])$' or p_slug ~ '--' then raise exception 'bad_slug' using errcode = 'P0001'; end if;
   if p_pickup !~ '^[1-9][0-9]{5}$' then raise exception 'bad_pincode' using errcode = 'P0001'; end if;
   if exists (select 1 from public.tenants t where t.slug = p_slug) then raise exception 'slug_taken' using errcode = 'P0001'; end if;
+  if p_plan is null or p_plan not in ('launch', 'growth', 'scale') then raise exception 'bad_plan' using errcode = 'P0001'; end if;
   select pv.id into v_version from public.plan_versions pv join public.plans p on p.id = pv.plan_id
     where p.code = p_plan order by pv.version desc limit 1;
   if v_version is null then raise exception 'bad_plan' using errcode = 'P0001'; end if;

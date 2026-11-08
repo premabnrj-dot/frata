@@ -598,9 +598,9 @@ do $$ declare t uuid; n int; inv uuid; m jsonb; begin
   if app_claim_invites('aaaaaaaa-0000-0000-0000-000000000012') <> 0 then raise exception 'FAIL: sign-in claimed a handover'; end if;
   if (select count(*) from app_my_handovers('aaaaaaaa-0000-0000-0000-000000000012')) <> 1 then raise exception 'FAIL: owner does not see the handover'; end if;
   if exists (select 1 from app_my_handovers('aaaaaaaa-0000-0000-0000-000000000013')) then raise exception 'FAIL: a stranger sees the handover'; end if;
-  begin perform app_accept_handover('aaaaaaaa-0000-0000-0000-000000000013', inv); raise exception 'FAIL: a stranger accepted the handover';
+  begin perform app_accept_handover_v2('aaaaaaaa-0000-0000-0000-000000000013', inv, null, 1::smallint); raise exception 'FAIL: a stranger accepted the handover';
   exception when sqlstate 'P0001' then if sqlerrm <> 'no_invite' then raise; end if; end;
-  if app_accept_handover('aaaaaaaa-0000-0000-0000-000000000012', inv) <> t then raise exception 'FAIL: accept'; end if;
+  if app_accept_handover_v2('aaaaaaaa-0000-0000-0000-000000000012', inv, null, 1::smallint) <> t then raise exception 'FAIL: accept'; end if;
   begin perform app_handover_invite(t, 'aaaaaaaa-0000-0000-0000-000000000010', 'later@brand.test'); raise exception 'FAIL: handover after an owner exists';
   exception when sqlstate 'P0001' then if sqlerrm <> 'has_owner' then raise; end if; end;
   -- People: the shop's own, the partner named
@@ -1557,6 +1557,7 @@ do $$ declare r record; c uuid; begin
     raise exception 'FAIL: a code used twice'; exception when others then if sqlerrm <> 'bad_code' then raise; end if; end;
 end $$;
 rollback;
+begin;
 do $$ declare r record; begin
   -- As the definer runs it (superuser here, to check the rows): the claimed email gets the plan without a trial.
   insert into trial_claims (kind, key_hmac, key_version, tenant_id) values ('email', 'email-hmac-taken', 1, '11111111-1111-1111-1111-111111111111');
@@ -1567,8 +1568,8 @@ do $$ declare r record; begin
   if (select trial_ends_at from tenant_plans where tenant_id = r.tenant_id) is null then raise exception 'FAIL: the new shop''s plan row has no trial end'; end if;
   if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) ro, unnest(array['app_create_shop_v2(uuid,text,text,text,text[],text,text,smallint,uuid)', 'app_signup_code_issue(uuid,text,text,smallint)', 'app_signup_code_verify(uuid,uuid,text)']) f
              where has_function_privilege(ro, f, 'execute')) then raise exception 'FAIL: another role may sign up or issue codes'; end if;
-  delete from trial_claims where key_hmac in ('email-hmac-taken', 'email-hmac-new');
 end $$;
+rollback;
 
 -- 50. Trials TR1·10: a shop with no owner is never billed (R1); only the app runs the handover with its claim.
 insert into tenants (id, slug, name) values ('33333333-3333-3333-3333-333333333333', 'proof-ownerless', 'Proof Ownerless');
@@ -1578,6 +1579,8 @@ do $$ begin
   if not exists (select 1 from app_shops_to_bill(now()) t where t = '11111111-1111-1111-1111-111111111111') then raise exception 'FAIL: an owned shop is not billed'; end if;
   if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_accept_handover_v2(uuid,uuid,text,smallint)', 'execute'))
   then raise exception 'FAIL: another role may accept a handover'; end if;
+  -- The 0023 handover skips the trial claim: no role may run it any more.
+  if has_function_privilege('frata_app', 'app_accept_handover(uuid,uuid)', 'execute') then raise exception 'FAIL: the app may still accept a handover without its claim'; end if;
 end $$;
 
 \echo 'tenancy proof — all 50 checks passed'
