@@ -1,0 +1,360 @@
+<title>Frrata Motion and Visuals</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column of proposals; each proposal = a short claim, a live demo you can press, and a decision chip. Frrata console tokens. */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;
+  --brand:#D61F69;--brand-text:#A8124F;--thread:#D61F69;--haldi:#F2B233;--illo-fill:#EFEBE5;--illo-haldi-soft:#FBEFD2;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;
+  --scrim:color-mix(in srgb,#1C1917 45%,transparent);
+  --store-paper:#F7F2EA;--store-ink:#2A211B;--store-chip:#EDE4D6;--store-sub:#7A6A5C;
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;
+  --fast:120ms;--base:200ms;--slow:320ms;
+  --ease-standard:cubic-bezier(.2,0,0,1);--ease-entrance:cubic-bezier(0,0,0,1);--ease-exit:cubic-bezier(.3,0,1,1);
+  --ease-spring:linear(0,.13 6%,.5 16%,.86 28%,1.02 40%,1.04 50%,1.01 66%,1);
+  --ease-snap:linear(0,.16 6%,.55 16%,.88 30%,.98 46%,1);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;
+  --brand-text:#FF7AAE;--illo-fill:#2A2622;--illo-haldi-soft:#3A2F17;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;
+  --scrim:color-mix(in srgb,#000 60%,transparent);
+  --store-paper:#1F1A16;--store-ink:#F1E8DC;--store-chip:#2E2721;--store-sub:#B8A796;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;
+  --brand-text:#FF7AAE;--illo-fill:#2A2622;--illo-haldi-soft:#3A2F17;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;
+  --scrim:color-mix(in srgb,#000 60%,transparent);
+  --store-paper:#1F1A16;--store-ink:#F1E8DC;--store-chip:#2E2721;--store-sub:#B8A796;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.55 var(--sans);margin:0}
+.wrap{max-width:880px;margin:0 auto;padding-block:32px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:28px;line-height:1.2;margin:0 0 6px;text-wrap:balance;letter-spacing:-.01em}
+h2{font-size:19px;margin:44px 0 4px;text-wrap:balance;display:flex;gap:10px;align-items:center}
+h2::before{content:"";width:18px;height:2px;background:var(--thread);flex:none}
+h3{font-size:15px;margin:0 0 4px}
+p{margin:0 0 10px;max-width:68ch}
+.sub{color:var(--sub)}
+.lede{color:var(--sub);font-size:15px;max-width:68ch}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:16px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.grid>*{min-width:0}
+.mono{font-family:var(--mono);font-size:12px}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:500;white-space:nowrap}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-warn{background:var(--warn);color:var(--warn-text)}.c-danger{background:var(--danger);color:var(--danger-text)}.c-info{background:var(--info);color:var(--info-text)}.c-n{background:var(--muted);color:var(--sub)}
+.ask{display:flex;gap:8px;align-items:flex-start;background:var(--illo-haldi-soft);border-radius:6px;padding:10px 12px;margin-top:12px;font-size:13px}
+.ask b{white-space:nowrap}
+button{font:inherit;cursor:pointer}
+.btn{border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--fg);padding:7px 14px;font-weight:500;min-height:36px}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn:focus-visible,.row:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.btn:active{scale:.97}
+.btn{transition:scale var(--fast) var(--ease-standard),background-color var(--fast) var(--ease-standard)}
+.tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:12px;color:var(--sub);font-weight:500}
+tr:last-child td{border-bottom:0}
+td.n{font-family:var(--mono);font-size:12px;white-space:nowrap}
+.stage{position:relative;height:250px;overflow:hidden;border-radius:6px;background:var(--muted);border:1px solid var(--border)}
+.stage .ctl{position:absolute;left:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap;z-index:1}
+/* demo: sheet */
+.scrim{position:absolute;inset:0;background:var(--scrim);opacity:0;pointer-events:none;transition:opacity var(--base) var(--ease-exit)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:12px 12px 0 0;padding:16px;transform:translateY(105%);transition:transform var(--base) var(--ease-exit);z-index:2}
+.on .scrim{opacity:1;transition:opacity var(--slow) var(--ease-entrance)}
+.on .sheet{transform:none;transition:transform var(--slow) var(--ease-spring)}
+.old .sheet{transition-timing-function:var(--ease-entrance)}
+/* dialog */
+.dlg{position:absolute;left:50%;top:50%;width:min(300px,80%);translate:-50% -50%;background:var(--card);border-radius:6px;padding:16px;border:1px solid var(--border);opacity:0;scale:.97;transition:opacity var(--base) var(--ease-exit),scale var(--base) var(--ease-exit);z-index:2;pointer-events:none}
+.on .dlg{opacity:1;scale:1;transition-timing-function:var(--ease-entrance);pointer-events:auto}
+/* toast */
+.toast{position:absolute;left:50%;bottom:14px;translate:-50% 12px;opacity:0;background:var(--fg);color:var(--bg);border-radius:6px;padding:8px 12px;font-size:13px;display:flex;gap:12px;align-items:center;transition:opacity var(--base) var(--ease-exit),translate var(--base) var(--ease-exit);white-space:nowrap}
+.toast.show{opacity:1;translate:-50% 0;transition-timing-function:var(--ease-entrance)}
+.toast .bar{position:absolute;left:0;bottom:0;height:2px;width:100%;background:var(--thread);transform-origin:left}
+/* bag */
+.bagbtn{position:absolute;right:12px;top:12px;display:flex;align-items:center;gap:6px;background:var(--store-paper);color:var(--store-ink);border:1px solid var(--store-chip);border-radius:999px;padding:5px 12px;z-index:1}
+.count{display:inline-block;min-width:18px;text-align:center;background:var(--store-ink);color:var(--store-paper);border-radius:999px;font-size:11px;font-weight:600;padding:0 5px}
+.count.pop{animation:pop var(--base) var(--ease-snap)}
+@keyframes pop{0%{transform:translateY(-4px)}100%{transform:none}}
+.drawer{position:absolute;top:0;right:0;bottom:0;width:min(260px,75%);background:var(--store-paper);color:var(--store-ink);padding:16px;transform:translateX(105%);transition:transform var(--base) var(--ease-exit);z-index:2}
+.on .drawer{transform:none;transition:transform var(--slow) var(--ease-spring)}
+.shopstage{background:var(--store-paper);color:var(--store-ink)}
+/* photo */
+.photos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:56px 12px 12px}
+.ph{aspect-ratio:3/4;border-radius:4px;background:var(--store-chip);position:relative;overflow:hidden;display:grid;place-items:center}
+.ph svg{width:24px;height:24px;color:var(--store-sub)}
+.ph .img{position:absolute;inset:0;opacity:0;transition:opacity var(--base) var(--ease-entrance)}
+.ph.loaded .img{opacity:1}
+.broken{border:1px dashed var(--store-sub);background:transparent;place-items:start;padding:6px;font-size:11px;color:var(--store-sub)}
+/* reduced */
+.rm *{transition-duration:var(--fast)!important;animation:none!important}
+.rm .sheet,.rm .drawer{transform:none!important;opacity:0;transition-property:opacity!important}
+.rm.on .sheet,.rm.on .drawer{opacity:1}
+.rm .dlg{scale:1!important}
+@media (prefers-reduced-motion:reduce){*{transition-duration:var(--fast)!important;animation:none!important}}
+/* before/after */
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ba>div{min-width:0}
+@media (max-width:620px){.ba{grid-template-columns:1fr}}
+.lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);margin-bottom:6px;font-weight:600}
+.mini{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:12.5px}
+.row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.row:last-child{border-bottom:0}
+.tile{width:28px;height:28px;border-radius:6px;background:var(--muted);display:grid;place-items:center;flex:none}
+.tile svg{width:16px;height:16px}
+.grow{flex:1;min-width:0}
+.ic{stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.ic .t{stroke:var(--brand)}
+.flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:6px 0}
+.node{border:1px solid var(--border);border-radius:6px;padding:6px 10px;background:var(--muted);font-weight:500}
+.arrow{color:var(--sub)}
+.meter{height:6px;border-radius:3px;background:var(--muted);overflow:hidden;margin:6px 0}
+.meter i{display:block;height:100%;background:var(--warn-text);transform-origin:left}
+.tight li{margin-bottom:4px}
+.fd{display:grid;grid-template-columns:auto 1fr auto;gap:8px 12px;align-items:baseline;font-size:13px}
+.fd .sev{font-family:var(--mono);font-size:11px}
+footer{margin-top:48px;color:var(--sub);font-size:12px}
+</style>
+
+<div class="wrap">
+  <p class="mono sub" style="margin:0 0 8px">Proposal · 8 Nov 2026 · needs your approval before any of it is built</p>
+  <h1>Motion and visuals across Frrata</h1>
+  <p class="lede">I reviewed every transition in the product and every screen in the test screenshots. The proposal has three parts: one motion system for the Console, Admin and the shops, five sketches of cleaner screens, and six rule changes. The demos below run on the proposed values, so press them. The performance and security findings from the same review are at the end. Those need your call too, not a mockup.</p>
+
+  <h2>What is wrong today</h2>
+  <div class="card">
+    <div class="fd">
+      <span class="chip c-danger">Fix</span><span>The phone <b>More</b> sheet slides in but vanishes on close, and its dimmed backdrop is darker than every other dialog's.</span><span class="sev sub">rule 23</span>
+      <span class="chip c-danger">Fix</span><span>The shop's <b>bag</b> and <b>size guide</b> appear with no motion at all, on a raw black backdrop.</span><span class="sev sub">shop</span>
+      <span class="chip c-danger">Fix</span><span>A product photo that hasn't loaded, or failed, shows the browser's broken-image icon and its alt text.</span><span class="sev sub">shop</span>
+      <span class="chip c-warn">Change</span><span>The <b>Unsaved changes</b> bar and the leave dialog slide in sideways, as if they were the next step of a form.</span><span class="sev sub">misuse</span>
+      <span class="chip c-warn">Change</span><span>There are three different toggle switches, each with its own speed and on colour.</span><span class="sev sub">consistency</span>
+      <span class="chip c-warn">Change</span><span>The theme gallery's hover animates a shadow, which is banned and draws nothing anyway.</span><span class="sev sub">rule 22</span>
+      <span class="chip c-n">Note</span><span>Page transitions (rule 24) still wait for an upgrade. React 19.3 is out, but we're on Next 15.5 and React 19.2, so we need Next 16.4+ first.</span><span class="sev sub">planned apart</span>
+    </div>
+  </div>
+
+  <h2>Proposed motion system</h2>
+  <p>Keep the three durations and three easings we have. Add two curves: a <b>spring</b> with a 4% overshoot, only for things that travel across the screen (sheets, the bag), and a <b>snap</b> with no overshoot, for toggles and the bag count. Opacity and colour keep the plain easings. Nothing bounces on a desktop dialog, a number or in Admin.</p>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Token</th><th>Value</th><th>Used for</th></tr></thead>
+    <tbody>
+      <tr><td class="n">fast · base · slow</td><td class="n">120 · 200 · 320 ms</td><td>unchanged</td></tr>
+      <tr><td class="n">standard · entrance · exit</td><td class="n">unchanged</td><td>opacity, colour, small moves</td></tr>
+      <tr><td class="n">--ease-spring <span class="chip c-info">new</span></td><td class="n">linear(), ~4% over</td><td>phone sheets, the bag drawer (320 ms in)</td></tr>
+      <tr><td class="n">--ease-snap <span class="chip c-info">new</span></td><td class="n">linear(), no overshoot</td><td>switches, bag count, popovers on a phone</td></tr>
+      <tr><td class="n">--duration-flash <span class="chip c-info">new name</span></td><td class="n">800 ms</td><td>a value that changed flashes once (exists, now named)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin-top:20px">Try it</h3>
+  <p class="sub">Turn on "Reduced motion" to see the proposed rule: things stop moving, but they fade in and out over 120 ms so you can still tell what happened, instead of cutting.</p>
+  <label style="display:inline-flex;gap:8px;align-items:center;margin-bottom:10px"><input type="checkbox" id="rm"> Reduced motion</label>
+  <div class="grid">
+    <div>
+      <div class="stage" id="s-sheet">
+        <div class="ctl"><button class="btn primary" data-open="s-sheet">Phone sheet</button><label class="sub" style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="old"> today's curve</label></div>
+        <div class="scrim" data-close="s-sheet"></div>
+        <div class="sheet"><h3>More</h3><p class="sub" style="font-size:13px">Customers · Campaigns · Apps · Settings</p><button class="btn" data-close="s-sheet">Close</button></div>
+      </div>
+      <p class="sub" style="font-size:12px;margin-top:6px">320 ms in on the spring, 200 ms out on exit. It leaves the same way it came in (today it only enters).</p>
+    </div>
+    <div>
+      <div class="stage" id="s-dlg">
+        <div class="ctl"><button class="btn primary" data-open="s-dlg">Dialog</button></div>
+        <div class="scrim" data-close="s-dlg"></div>
+        <div class="dlg"><h3>Cancel order FR-1042?</h3><p class="sub" style="font-size:13px">The shopper gets a message.</p><button class="btn" data-close="s-dlg">Keep it</button></div>
+      </div>
+      <p class="sub" style="font-size:12px;margin-top:6px">Desktop dialog: fade and scale from .97 over 200 ms. No spring, so it feels calm. Unchanged.</p>
+    </div>
+    <div>
+      <div class="stage" id="s-toast">
+        <div class="ctl"><button class="btn primary" id="toastgo">Archive 3 orders</button></div>
+        <div class="toast" id="toast">3 orders archived <u style="cursor:pointer">Undo</u><span class="bar" id="tbar"></span></div>
+      </div>
+      <p class="sub" style="font-size:12px;margin-top:6px">Toast rises 12 px over 200 ms. The thread empties over the 8 s Undo window. Unchanged.</p>
+    </div>
+    <div>
+      <div class="stage shopstage" id="s-bag">
+        <div class="ctl"><button class="btn primary" id="addbag" style="background:var(--store-ink);color:var(--store-paper);border-color:var(--store-ink)">Add to bag</button></div>
+        <button class="bagbtn" data-open="s-bag">Bag <span class="count" id="cnt" role="status">0</span></button>
+        <div class="scrim" data-close="s-bag"></div>
+        <div class="drawer"><h3>Your bag</h3><p style="font-size:13px;opacity:.8">Rani silk sari · ₹4,890</p><button class="btn" data-close="s-bag">Close</button></div>
+      </div>
+      <p class="sub" style="font-size:12px;margin-top:6px">Shop: the button gives a 120 ms press and the bag count hops 4 px on the snap curve. The drawer comes in on the spring. Today the bag just appears.</p>
+    </div>
+    <div style="grid-column:1/-1">
+      <div class="stage shopstage" id="s-ph" style="height:auto">
+        <div class="ctl"><button class="btn primary" id="phgo" style="background:var(--store-ink);color:var(--store-paper);border-color:var(--store-ink)">Load photos</button></div>
+        <div class="photos" id="photos"></div>
+      </div>
+      <p class="sub" style="font-size:12px;margin-top:6px">Shop photos: a tile in the shop's colour with a small product icon, then the photo fades in over 200 ms. If a photo fails, the tile stays, never the broken-image icon. The last tile is what shoppers see today.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:24px">Each pattern, once</h3>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Pattern</th><th>In / out</th><th>Moves</th><th>Reduced motion</th></tr></thead>
+    <tbody>
+      <tr><td>Page change (Console, Admin)</td><td class="n">—</td><td>The progress bar only, until the upgrade. Then the content fades (120 out, 200 in), the header and nav stay still, nothing slides.</td><td>instant</td></tr>
+      <tr><td>Page change (website, shop)</td><td class="n">120 / 200</td><td>The same fade, through the browser's built-in page transition (Chrome 126+, Safari 18.2+). Older browsers just cut.</td><td>none</td></tr>
+      <tr><td>Filter, sort, page</td><td class="n">120</td><td>The list dims to 55% while it loads. Rows never fly in.</td><td>instant</td></tr>
+      <tr><td>Row expand</td><td class="n">200</td><td>The chevron turns and the content fades in. The height doesn't animate.</td><td>instant</td></tr>
+      <tr><td>Dialog (desktop)</td><td class="n">200 / 200</td><td>Fade, scale .97 → 1</td><td>120 ms fade</td></tr>
+      <tr><td>Sheet, drawer, bag</td><td class="n">320 / 200</td><td>Slides on the spring; the backdrop fades</td><td>120 ms fade</td></tr>
+      <tr><td>Popover, menu, tip</td><td class="n">200 (tip 120)</td><td>Fade, 4 px drop from its trigger</td><td>fade only</td></tr>
+      <tr><td>Toast</td><td class="n">200</td><td>Rises 12 px; the Undo bar empties</td><td>fade; Undo said in words</td></tr>
+      <tr><td>Tab switch</td><td class="n">120</td><td>The thread slides under the tab; the content fades</td><td>instant</td></tr>
+      <tr><td>Step forward / back</td><td class="n">320 / 120</td><td>16 px slide plus fade, from the side it came from. Only for steps of a form or flow.</td><td>120 ms fade</td></tr>
+      <tr><td>Save</td><td class="n">120</td><td>"Saving…" → "Saved", and a tick draws once</td><td>words only</td></tr>
+      <tr><td>Changed value</td><td class="n">800</td><td>The background flashes once</td><td>an outline, no motion</td></tr>
+      <tr><td>Loading to content</td><td class="n">200</td><td>The placeholder fades out and the content fades in. No shimmer.</td><td>instant</td></tr>
+      <tr><td>Switch</td><td class="n">120</td><td>The knob moves on the snap curve; one switch everywhere</td><td>instant</td></tr>
+      <tr><td>Theme switch (customizer)</td><td class="n">200</td><td>The preview fades from the old look to the new</td><td>instant</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="ask"><b>Your call:</b><span>Approve the two new curves and this table as the system? If yes, it becomes the rule in the design skill, and the motion check expands to cover the shops.</span></div>
+
+  <h2>Pictures where words are doing too much</h2>
+  <p>Your rules stay as they are: working lists (Orders, Activity) stay words only, and pictures go where they explain something. These are the five strongest of sixteen places I found.</p>
+
+  <div class="card" style="margin-bottom:12px">
+    <h3>1 · Online payments: how the money moves</h3>
+    <p class="sub">Settings › Online payments. Today it's two numbered paragraphs about keys and webhooks.</p>
+    <div class="ba">
+      <div><div class="lbl">Today</div><div class="mini"><p><b>1.</b> Shoppers pay through your Razorpay account. Money settles to your bank account on Razorpay's schedule…</p><p><b>2.</b> Done once in your dashboard: add a webhook with the URL below and select the events payment.captured, payment.failed, order.paid…</p></div></div>
+      <div><div class="lbl">Proposed</div><div class="mini">
+        <div class="flow"><span class="node">Shopper pays</span><span class="arrow">→</span><span class="node">Razorpay</span><span class="arrow">→</span><span class="node">Your bank</span></div>
+        <div class="flow sub" style="font-size:12px"><span style="border-top:1.5px dashed var(--brand);width:40px;display:inline-block"></span> Razorpay tells Frrata, so the order is marked paid</div>
+        <p style="margin-top:8px">Events to choose: <span class="chip c-n mono">payment.captured</span> <span class="chip c-n mono">order.paid</span> <span class="chip c-n mono">+2</span> <span class="sub">(i)</span></p>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:12px">
+    <h3>2 · Settings: an icon on every row</h3>
+    <p class="sub">Settings. Today it's ten rows of text with an "Edit" pill each, then a "Coming later" card of prose.</p>
+    <div class="ba">
+      <div><div class="lbl">Today</div><div class="mini"><div class="row"><span class="grow"><b>Cash on delivery</b><br><span class="sub">Who may pay on delivery, and the fee</span></span><span class="chip c-n">Edit</span></div><div class="row"><span class="grow"><b>Shipping</b><br><span class="sub">Rates and free-shipping threshold</span></span><span class="chip c-n">Edit</span></div><div class="row"><span class="grow"><b>Packing slips</b><br><span class="sub">What prints on a slip</span></span><span class="chip c-n">Edit</span></div></div></div>
+      <div><div class="lbl">Proposed</div><div class="mini">
+        <div class="row" tabindex="0"><span class="tile"><svg class="ic" viewBox="0 0 16 16"><rect x="2" y="4" width="12" height="8" rx="1.5"/><circle class="t" cx="8" cy="8" r="1.8"/></svg></span><span class="grow"><b>Cash on delivery</b><br><span class="sub">Who may pay on delivery, and the fee</span></span><span class="sub">›</span></div>
+        <div class="row" tabindex="0"><span class="tile"><svg class="ic" viewBox="0 0 16 16"><path d="M1.5 4.5h8v6h-8zM9.5 7h3l2 2v1.5h-5"/><circle class="t" cx="4.5" cy="11.5" r="1.2"/><circle class="t" cx="11.5" cy="11.5" r="1.2"/></svg></span><span class="grow"><b>Shipping</b><br><span class="sub">Rates and free-shipping threshold</span></span><span class="sub">›</span></div>
+        <div class="row" tabindex="0"><span class="tile"><svg class="ic" viewBox="0 0 16 16"><path d="M4 2h6l2 2v10H4z"/><path class="t" d="M6 7h4M6 9.5h3"/></svg></span><span class="grow"><b>Packing slips</b><br><span class="sub">What prints on a slip</span></span><span class="sub">›</span></div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:12px">
+    <h3>3 · Product status: say less, show the count</h3>
+    <p class="sub">Product editor. Today each of the four statuses has a two-line explanation, plus a five-line checklist.</p>
+    <div class="ba">
+      <div><div class="lbl">Today</div><div class="mini"><p>◉ <b>On sale</b> — shoppers can see and buy it in your shop and in links you share…</p><p>○ <b>Scheduled</b> — goes on sale at the time you choose; until then…</p><p class="sub">✓ Has a photo ✓ Has a price ✓ Has a size ✓ Has stock ✓ Has a category</p></div></div>
+      <div><div class="lbl">Proposed</div><div class="mini"><p>◉ On sale <span class="sub">(i)</span> &nbsp; ○ Scheduled <span class="sub">(i)</span> &nbsp; ○ Draft <span class="sub">(i)</span></p><p><span class="chip c-ok">Ready · 5 of 5</span> <span class="sub">▸ what's checked</span></p><p class="sub" style="font-size:12px">If something is missing, the list opens by itself and says what.</p></div></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:12px">
+    <h3>4 · Connecting WhatsApp: three steps, not a sentence</h3>
+    <p class="sub">Messages › Connect. Uses the three-step drawing we already have, from the website.</p>
+    <div class="flow"><span class="node">1 · Meta opens a window</span><span class="arrow">→</span><span class="node">2 · Pick your business</span><span class="arrow">→</span><span class="node">3 · Pick the number</span><span class="sub" style="font-size:12px">· about 3 minutes</span></div>
+  </div>
+
+  <div class="card">
+    <h3>5 · Admin plan usage: a meter, not a sentence</h3>
+    <p class="sub">Admin › a merchant. Today it says "269 of 150" plus two sentences, including our internal "Phase 6".</p>
+    <div class="mini" style="max-width:360px"><div style="display:flex;justify-content:space-between"><b>Orders this month</b><span class="mono">269 / 150</span></div><div class="meter"><i style="transform:scaleX(1)"></i></div><span class="sub" style="font-size:12px">119 over the plan. Billed with the next invoice.</span></div>
+  </div>
+
+  <h3 style="margin-top:20px">The other eleven, smaller</h3>
+  <ul class="tight">
+    <li><b>Apps on a phone:</b> the whole row opens the app's details, instead of seven identical "See details" buttons. The details dialog leads with the app's icon.</li>
+    <li><b>Look customizer:</b> real icons for up, down, show, undo, redo and drag. Today they are ↑ ↓ ◉ ↶ ↷.</li>
+    <li><b>Admin and partner menus:</b> Merchants, Themes and Look share one shopfront icon, and three items share one person icon. Each gets its own icon.</li>
+    <li><b>Order risk card:</b> the risk icon with "High" in words, and the reasons as rows. On a phone it comes first.</li>
+    <li><b>Orders list:</b> COD and "To confirm" are both yellow. Payment becomes a neutral badge with a COD or prepaid icon, so only the status is coloured.</li>
+    <li><b>Home, last 7 days:</b> the count on each bar (on hover or keyboard focus), and "Today · so far" on today's bar.</li>
+    <li><b>Offer results:</b> four zeros become one line, "Too few orders to judge yet", until there are 30 orders. The form's long hints in brackets move into (i) tips.</li>
+    <li><b>New pictograms:</b> payments, risk and returned, for the brand moments only (shop not open yet, no products yet).</li>
+    <li><b>Partners page:</b> with 5 brands chosen, no earnings panel shows. Could be a bug; I'll check it on its own.</li>
+  </ul>
+  <div class="ask"><b>Your call:</b><span>Build all sixteen, or start with the five above? Each one is small, apart from the payments diagram and the customizer icons.</span></div>
+
+  <h2>Rule changes</h2>
+  <ul class="tight">
+    <li><b>Rule 22, what moves:</b> add the spring and snap curves. A shadow, filter or layout property never animates.</li>
+    <li><b>Rule 24, page transitions:</b> when we're on Next 16.4+ and React 19.3, pages fade (120 ms out, 200 ms in) while the shell stays still. The website and shops can fade now, through the browser's own page transition. Nothing ever slides.</li>
+    <li><b>Rule 25, reduced motion:</b> it removes movement, not meaning. A slide or scale becomes a 120 ms fade, and a countdown becomes words.</li>
+    <li><b>New: one Switch, one Sheet.</b> One toggle everywhere. Every sheet or drawer, including More and the bag, uses the dialog's motion, with an exit and the standard backdrop.</li>
+    <li><b>New: shop motion uses the same tokens</b> under the theme's motion setting. Photos fade in over a tile, and the motion check covers the shops.</li>
+    <li><b>New: no Unicode glyph as an icon,</b> and two menu items never share an icon.</li>
+  </ul>
+  <p class="sub">The e2e screenshots will also be taken with reduced motion on. One today caught the publish dialog half faded.</p>
+
+  <h2>From the same review: speed and security</h2>
+  <p>These need decisions, not a mockup. The full list, with file and line for each, is in <span class="mono">docs/research/2026-11-08-performance-security-motion-review.md</span>.</p>
+  <div class="card">
+    <div class="fd">
+      <span class="chip c-danger">High</span><span><b>Preview builds use the production database.</b> Any branch you push other than mine is built with the live <span class="mono">DATABASE_URL</span>. Only you can change this in Vercel: remove the Preview scope or point it at a Supabase branch, and turn on Deployment Protection.</span><span class="sev sub">S1 · you</span>
+      <span class="chip c-danger">High</span><span><b>A big shop stops caching.</b> A 600-product catalogue caches at 1.95 MB, and Next refuses anything over 2 MB. One shop-wide offer pushes it over, and every shop page then hits the database. All-products and collections render every product (3.9 MB of HTML).</span><span class="sev sub">P1 P2</span>
+      <span class="chip c-danger">High</span><span><b>Repeated and deadlock-prone queries.</b> A cold product page runs 61 statements because its parallel parts each fetch the same data. One offer path opens a second connection inside a transaction, which can lock up a busy pool for up to 30 s.</span><span class="sev sub">P3 P4</span>
+      <span class="chip c-warn">Latent</span><span><b>The message queue sends 25 a day.</b> Fine today, with no sender, but it must change before WhatsApp COD confirmations ship.</span><span class="sev sub">P5</span>
+      <span class="chip c-warn">Med</span><span><b>Sign-in cookies</b> can be read by page scripts, aren't marked Secure, and last 400 days. There is no script allow-list (CSP <span class="mono">script-src</span>) on the Console and Admin.</span><span class="sev sub">S2 S3</span>
+      <span class="chip c-warn">Med</span><span><b>Razorpay webhook rows keep shopper email and phone forever.</b> Trim them after processing, as WhatsApp already does.</span><span class="sev sub">S4</span>
+      <span class="chip c-warn">Ask</span><span><b>Staff members can edit products and collections</b>, but the role notes say only owners, admins and partners build the catalogue. Which is right?</span><span class="sev sub">S6 · you</span>
+      <span class="chip c-n">Med</span><span>Each shop page preloads 4 fonts ahead of its main photo. Console pages run their queries one after another. Order search and the "All" count scan every order.</span><span class="sev sub">P6–P10</span>
+    </div>
+  </div>
+  <div class="ask"><b>Your call:</b><span>The highs and the cookie, CSP and webhook fixes are bug fixes, so they don't need a mockup. Shall I fix them now, in that order, before the motion work?</span></div>
+
+  <footer>Sources checked 8 Nov 2026:
+    <ul class="tight">
+      <li>React 19.3 release (9 Sep 2026): view transitions stable.</li>
+      <li>Next.js view transitions guide (updated 15 Oct 2026).</li>
+      <li>caniuse: page transitions, October 2026 data.</li>
+      <li>web-features: CSS <span class="mono">linear()</span> easing, widely supported since 11 Jun 2026.</li>
+      <li>Apple's reduced-motion criteria: replace motion with a fade.</li>
+    </ul>
+    Material 3 Expressive springs: I found no official page from the last 12 months, so that point is unverified.
+  </footer>
+</div>
+
+<script>
+(function(){
+  const $=(s)=>document.querySelector(s);
+  const rm=$('#rm'),old=$('#old');
+  const stages=['s-sheet','s-dlg','s-bag','s-toast','s-ph'].map(id=>document.getElementById(id));
+  function applyRm(){stages.forEach(s=>s.classList.toggle('rm',rm.checked))}
+  rm.addEventListener('change',applyRm);
+  old.addEventListener('change',()=>document.getElementById('s-sheet').classList.toggle('old',old.checked));
+  document.addEventListener('click',(e)=>{
+    const o=e.target.closest('[data-open]');if(o){document.getElementById(o.dataset.open).classList.add('on');return}
+    const c=e.target.closest('[data-close]');if(c){document.getElementById(c.dataset.close).classList.remove('on')}
+  });
+  document.addEventListener('keydown',(e)=>{if(e.key==='Escape')document.querySelectorAll('.stage.on').forEach(s=>s.classList.remove('on'))});
+  // toast
+  let tt;const toast=$('#toast'),bar=$('#tbar');
+  $('#toastgo').addEventListener('click',()=>{
+    clearTimeout(tt);toast.classList.add('show');
+    if(bar.animate&&!rm.checked&&!matchMedia('(prefers-reduced-motion: reduce)').matches){bar.animate([{transform:'scaleX(1)'},{transform:'scaleX(0)'}],{duration:8000,easing:'linear',fill:'forwards'})}
+    tt=setTimeout(()=>toast.classList.remove('show'),8000);
+  });
+  toast.addEventListener('click',()=>{clearTimeout(tt);toast.classList.remove('show')});
+  // bag
+  let n=0;const cnt=$('#cnt');
+  $('#addbag').addEventListener('click',()=>{n++;cnt.textContent=n;cnt.classList.remove('pop');void cnt.offsetWidth;cnt.classList.add('pop')});
+  // photos
+  const icon='<svg class="ic" viewBox="0 0 16 16"><path d="M5 2.5 3 4 1.5 7l2 1V14h9V8l2-1L13 4l-2-1.5c-.5 1-1.6 1.6-3 1.6S5.5 3.5 5 2.5z"/></svg>';
+  const shades=[['#B5294E','#E9B7A1'],['#3E5A47','#C9D6BF'],['#C98A2B','#F2DDB0'],['#5B3A6B','#D8C3E0'],['#1F4E79','#BBD0E6']];
+  const box=$('#photos');
+  function reset(){box.innerHTML='';shades.forEach((s,i)=>{const d=document.createElement('div');d.className='ph';d.innerHTML=icon+'<div class="img" style="background:linear-gradient(160deg,'+s[1]+','+s[0]+')"></div>';box.appendChild(d)});
+    const b=document.createElement('div');b.className='ph broken';b.innerHTML='<span>▢ Rani silk sari, front</span>';box.appendChild(b)}
+  reset();
+  $('#phgo').addEventListener('click',()=>{reset();[...box.querySelectorAll('.ph:not(.broken)')].forEach((d,i)=>setTimeout(()=>d.classList.add('loaded'),250+i*260))});
+  setTimeout(()=>[...box.querySelectorAll('.ph:not(.broken)')].forEach(d=>d.classList.add('loaded')),600);
+})();
+</script>

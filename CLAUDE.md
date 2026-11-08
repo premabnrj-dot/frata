@@ -34,7 +34,9 @@ Google → `frata-integrations`. Prices, fees, margins, the business model →
 Something failing that makes no sense → `frata-gotchas`.
 Agents: `tenancy-auditor`, `architecture-reviewer`, `integration-researcher`,
 `unit-economics-reviewer`, `impact-reviewer` (every task's diff: callers, test
-gaps, debt), `e2e-runner` (the browser flows in `e2e/`).
+gaps, debt), `speed-reviewer` (a plan or diff that touches a page, a query,
+a cache or background work), `security-reviewer` (an action, route, webhook,
+header, cookie or merchant content), `e2e-runner` (the browser flows in `e2e/`).
 
 ## Rules that apply to everything
 

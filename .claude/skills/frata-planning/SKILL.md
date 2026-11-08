@@ -1,9 +1,9 @@
 ---
 name: frata-planning
-description: Use when planning any Frata feature, enhancement, redesign or connector - before writing a spec or plan, before executing one, and when closing one - to run the spec, research, design review, mockup, sign-off, plan, execute and document loop, with the review headings (UI/UX, tenancy, modularity, SSOT/DRY, YAGNI, KISS, performance, reliability, security, unit economics, blast radius).
+description: Use when planning any Frata feature, enhancement, redesign or connector - before writing a spec or plan, before executing one, and when closing one - to run the spec, research, design review, mockup, sign-off, plan, execute and document loop, with the review headings (UI/UX, tenancy, modularity, SSOT/DRY, YAGNI, KISS, performance, reliability, security, motion and visuals, unit economics, blast radius).
 metadata:
-  version: 2.2.0
-  verified: 2026-11-06
+  version: 2.3.0
+  verified: 2026-11-08
   decisions: [ADR-0001]
 ---
 
@@ -24,7 +24,9 @@ No feature is executed before its review and mockup are signed off (ADR-0001).
    spec, with a version bump.
 3. **Review before executing.** After sign-off and before the first line of code,
    run the review (§ 3) and the agents: `architecture-reviewer`, `tenancy-auditor`
-   when data is touched, `unit-economics-reviewer` when money moves. Every
+   when data is touched, `speed-reviewer` when a page, query, cache or
+   background job changes, `security-reviewer` when an action, route, webhook
+   or merchant content changes, `unit-economics-reviewer` when money moves. Every
    finding is fixed in the plan or accepted by the owner in writing.
 4. **Stay on the product goal.** Every spec opens with which ranked problem it
    moves (§ North star) and how we will know. Work that moves none waits.
@@ -121,14 +123,42 @@ Answer every heading. "n/a" says why. A review that says "yes" to each is not do
 - **KISS** — the simplest version in one paragraph; each new dependency, table
   or abstraction has a line on why existing ones do not do.
 - **Scalability** — what breaks at 500 tenants and 10× festive traffic: table
-  growth, indexes, pool size, per-tenant hot spots, background-job backlog.
-- **Performance and speed** — at festive volume (seed 10× a normal week): round trips per
-  request, indexes on what is filtered, storefront cached, console under 1 s.
+  growth, indexes, per-tenant hot spots. Background work: write down batch size
+  × runs per day against 10× peak (a daily cron is a safety net, never the main
+  path: drain after `enqueue`). Pool: instances × `max` against Supavisor's
+  client limit.
+- **Performance and speed** — at a 10× seed (600 products, 150k orders in one
+  shop), write each of these into the spec (budgets: `frata-architecture` § Speed):
+  (a) the statements each page runs, in order; independent ones share ONE
+  `withTenant` with `Promise.all`; no cached loader or second `withTenant`
+  inside a transaction; (b) EXPLAIN of every new query: no seq scan on
+  `orders`/`order_lines`/`variants`, under 100 ms; (c) the bytes of each cached
+  entry (under 1 MB; Next refuses over 2 MB and silently stops caching);
+  (d) the HTML + RSC bytes of the largest shop page it changes (under 300 kB
+  raw; lists are paged, never "the whole catalogue"); (e) what each write
+  invalidates, by tag; a shopper's action purging a whole shop is a finding;
+  (f) first-load JS against the surface's budget; (g) what is preloaded or
+  `priority` (one font, one image per shop page).
 - **Reliability** — every outbound call through `fetchWithTimeout` and the
   outbox; what a merchant reads when it fails; whether a retry is safe.
-- **Security** — each action/route: who may call it (`check:actions`), whether
-  they may touch THIS row, what it accepts (Zod), what it returns. Webhooks:
-  signature on the raw body. Secrets: server only, one owner module.
+- **Security** — for each action or route: who may call it (the tuple, and
+  whether the tuple's documented meaning covers this action); whether they may
+  touch THIS row; Zod input with length caps; the reply, named fields only; its
+  rate limit, the subject it counts (IPv6 per /64) and whether it fails closed
+  (fail closed where someone could be guessing). Webhooks: raw-body HMAC, a
+  size cap before parsing, our idempotency key, the payload trimmed to what
+  reconciliation needs once processed. Merchant content: where it renders
+  (shop, Console, Admin, the preview frame on the console origin) — never as
+  HTML, links as shop paths. Secrets: server only, one owner module, sealed per
+  shop and field. PII: where it is stored, how long, who reads it (support
+  visits included), what the logs carry (an error's name or code, never the
+  raw error). Environments: a preview never holds production credentials.
+- **Motion and visuals** — which pattern in `frata-design-language` § Motion
+  each change uses (no new duration or easing); what a phone shows on enter and
+  exit; reduced motion. For each new screen: what a picture would say better
+  than the words (a pictogram, a three-step journey, a small diagram, an icon
+  per row), and what can leave the screen (help into an (i) tip, a checklist
+  collapsed to its count). No Unicode glyph stands in for an icon.
 - **Unit economics** — does it change what a merchant pays, what Frata pays
   (WhatsApp, Vercel, Supabase), or the profit formula? Run `unit-economics-reviewer`.
 - **Blast radius** — every caller of what changes; shared resources (middleware,

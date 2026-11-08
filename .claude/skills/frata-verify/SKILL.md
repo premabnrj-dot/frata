@@ -2,8 +2,8 @@
 name: frata-verify
 description: Use before saying a Frata change works - to run the gates, typecheck, tests and production build, run the end-to-end browser flows (npm run e2e), check a mockup, prove tenant isolation on a real Postgres, run the built app locally against that database with storefront and console Host headers, and exercise webhooks and cron with curl.
 metadata:
-  version: 1.5.0
-  verified: 2026-11-06
+  version: 1.6.0
+  verified: 2026-11-08
   covers: ["scripts/verify/**", "e2e/**", "scripts/check-mockup.mjs"]
 ---
 
@@ -112,6 +112,31 @@ shop host with Chromium's `--host-resolver-rules`. Cover: COD, paid online, a
 dismissed payment switched to COD, a late capture after the switch (paid wins,
 stock taken once), a price change mid-checkout, a double submit. Then
 `SHOP_HOST=… PATHS="/ /checkout /bag /orders" npm run check:payload`.
+
+## Speed proof — before saying a change is fast enough (2026-11-08)
+
+1. Seed one shop at 10× (600 products × 5 variants × 5 images, 150k orders and
+   lines) in the throwaway Postgres.
+2. `ALTER SYSTEM SET log_statement='all'; select pg_reload_conf();`
+3. Kill the server (`pkill -f next-server`; a pkill on "next start" misses it),
+   then clear `.next/cache/fetch-cache` and `.next/server/route-cache`.
+4. Curl each changed shop page twice with its Host header, and record:
+   - the statements on the cold visit, and any that repeat;
+   - TTFB, cold and warm;
+   - the HTML and `.rsc` bytes;
+   - the largest file in `fetch-cache`.
+5. Compare every number with `frata-architecture` § Speed. EXPLAIN ANALYZE each
+   query the change adds.
+6. Write the numbers in the commit or the spec.
+
+## Header and cookie proof — before claiming a security fix
+
+- `curl -sI` a console page, a shop page and `/console/theme-preview/*`. Read the
+  CSP, X-Frame-Options and the `Set-Cookie` flags (HttpOnly, Secure, SameSite,
+  Max-Age).
+- Send a POST from another Origin to each changed route: expect 403.
+- Send an oversized webhook body: expect 413.
+- Run the action as each role the tuple excludes: expect a refusal.
 
 ## In a browser
 
