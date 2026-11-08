@@ -21,6 +21,10 @@ export default {
     await db`insert into orders (tenant_id, number, payment_method, placed_at, confirmed_at, packed_at, invoice_number, customer_name, phone, address_line, area, city, pincode, state, subtotal, total)
       values (${T}, ${P}, 'cod', ${todayAgo(60)}, ${todayAgo(50)}, ${todayAgo(40)}, ${'SH/26-27/' + P}, 'Ship Meera', '9822300001', '7, Civil Lines', 'Bani Park', 'Jaipur', '302016', 'Rajasthan', 249000, 249000),
         (${T}, ${Q}, 'cod', ${todayAgo(60)}, ${todayAgo(50)}, ${todayAgo(40)}, ${'SH/26-27/' + Q}, 'Ship Kabir', '9822300002', '9, MI Road', 'C Scheme', 'Jaipur', '302001', 'Rajasthan', 149000, 149000)`
+    // Its orders take numbers top+1..top+6: move the shop's own order counter past them, so a shopper's next order
+    // (placed by a later flow) never collides with one seeded here (orders_tenant_number).
+    await db`insert into tenant_counters (tenant_id, kind, period, next) values (${T}, 'order', '', ${top + 7})
+      on conflict (tenant_id, kind, period) do update set next = greatest(tenant_counters.next, excluded.next)`
     const moments = async (n) => (await db`select shipped_at, delivered_at, rto_delivered_at from orders where tenant_id = ${T} and number = ${n}`)[0]
     const S = USERS.staff, Pa = USERS.partner
     await db`insert into auth.users (id, email, email_confirmed_at) values (${Pa.id}, ${Pa.email}, now()), (${S.id}, ${S.email}, now()) on conflict (id) do nothing`
