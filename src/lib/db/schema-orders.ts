@@ -247,8 +247,6 @@ export const orderNotes = pgTable('order_notes', {
   check('order_notes_body', sql`length(${t.body}) between 1 and 2000`),
 ])
 
-export const SHIP_PROVIDERS = ['self', 'shiprocket'] as const
-
 /**
  * A parcel on its way (Ship, docs/specs/2026-11-08-ship.md): who carries it and how to follow it. At most one OPEN
  * shipment per order. The ORDER's state stays derived from its own timestamps (order-state.ts); this holds only what

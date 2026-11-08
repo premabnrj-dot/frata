@@ -2,12 +2,12 @@
 // FLOW: ship (M2·2 S·0, docs/specs/2026-11-08-ship.md) — orders that have left the work tabs: To ship, On the way,
 // Coming back; Mark shipped another way, then Delivered or Came back, each with Undo; staff ship but never mark an
 // outcome or see a cost; partners never ship. Written first (plan S0·0): today a packed order is in no work tab, so
-// the first step fails until S0·5 lands; later steps are added with the tasks that build them. Seeds its own orders.
+// the first step failed until S0·5 landed. Seeds its own orders and members, and removes the members after.
 // Guards: an outcome a partner or staff member can set, a packed order lost from every tab, an Undo that leaves the
 // order unable to ship again.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { todayAgo, CONSOLE, signedIn } from '../lib.mjs'
+import { todayAgo, until, CONSOLE, USERS, signedIn } from '../lib.mjs'
 
 export default {
   name: 'ship',
@@ -17,9 +17,14 @@ export default {
     const [{ top }] = await db`select coalesce(max(number), 1000)::int top from orders where tenant_id = ${T}`
     const [{ prefix }] = await db`select order_prefix as prefix from shop_settings where tenant_id = ${T}`
     const label = (n) => `${prefix || 'KS'}-${n}`
-    const P = top + 1
+    const P = top + 1, Q = top + 2
     await db`insert into orders (tenant_id, number, payment_method, placed_at, confirmed_at, packed_at, invoice_number, customer_name, phone, address_line, area, city, pincode, state, subtotal, total)
-      values (${T}, ${P}, 'cod', ${todayAgo(60)}, ${todayAgo(50)}, ${todayAgo(40)}, ${'SH/26-27/' + P}, 'Ship Meera', '9822300001', '7, Civil Lines', 'Bani Park', 'Jaipur', '302016', 'Rajasthan', 249000, 249000)`
+      values (${T}, ${P}, 'cod', ${todayAgo(60)}, ${todayAgo(50)}, ${todayAgo(40)}, ${'SH/26-27/' + P}, 'Ship Meera', '9822300001', '7, Civil Lines', 'Bani Park', 'Jaipur', '302016', 'Rajasthan', 249000, 249000),
+        (${T}, ${Q}, 'cod', ${todayAgo(60)}, ${todayAgo(50)}, ${todayAgo(40)}, ${'SH/26-27/' + Q}, 'Ship Kabir', '9822300002', '9, MI Road', 'C Scheme', 'Jaipur', '302001', 'Rajasthan', 149000, 149000)`
+    const moments = async (n) => (await db`select shipped_at, delivered_at, rto_delivered_at from orders where tenant_id = ${T} and number = ${n}`)[0]
+    const S = USERS.staff, Pa = USERS.partner
+    await db`insert into auth.users (id, email, email_confirmed_at) values (${Pa.id}, ${Pa.email}, now()), (${S.id}, ${S.email}, now()) on conflict (id) do nothing`
+    await db`insert into members (tenant_id, user_id, role) values (${T}, ${Pa.id}, 'partner'), (${T}, ${S.id}, 'staff') on conflict do nothing`
 
     const owner = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 900 } })
     const p = await owner.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message))
@@ -29,10 +34,97 @@ export default {
         await p.getByRole('row').filter({ hasText: label(P) }).waitFor()
         await p.goto(CONSOLE + `/console/orders/${P}`)
         await p.getByRole('button', { name: 'Mark shipped' }).waitFor()
-        assert.ok(await p.getByRole('link', { name: /Print slip/ }).count() + await p.getByRole('button', { name: /Print slip/ }).count() > 0)
+        assert.ok(await p.getByRole('link', { name: /Print packing slip/ }).count() + await p.getByRole('button', { name: /Print packing slip/ }).count() > 0)
+      })
+
+      await t.step('Mark shipped another way: in On the way; Undo puts it back in To ship', async () => {
+        await p.getByLabel('Courier').fill('Professional Couriers')
+        await p.getByLabel('Tracking number').fill('PC123456')
+        await p.getByRole('button', { name: 'Mark shipped' }).click()
+        await p.locator('[data-toast]', { hasText: `${label(P)} marked shipped.` }).waitFor()
+        await p.getByRole('heading', { name: 'On the way' }).waitFor()
+        await p.getByText('PC123456').waitFor()
+        await p.getByRole('button', { name: 'Undo' }).click()
+        await p.locator('[data-toast]', { hasText: 'Undone.' }).waitFor()
+        await until(async () => (await moments(P)).shipped_at === null)
+        await p.reload()
+        await p.getByRole('button', { name: 'Mark shipped' }).click()
+        await p.getByRole('heading', { name: 'On the way' }).waitFor()
+        await p.goto(CONSOLE + '/console/orders?tab=on_the_way')
+        await p.getByRole('row').filter({ hasText: label(P) }).waitFor()
+      })
+
+      await t.step('Delivered, with Undo; then delivered for good and in no shipping tab', async () => {
+        await p.goto(CONSOLE + `/console/orders/${P}`)
+        await p.getByRole('button', { name: 'Delivered', exact: true }).click()
+        await p.locator('[data-toast]', { hasText: `${label(P)} marked delivered.` }).waitFor()
+        await p.getByRole('button', { name: 'Undo' }).click()
+        await p.locator('[data-toast]', { hasText: 'Undone.' }).waitFor()
+        await until(async () => (await moments(P)).delivered_at === null)
+        await p.reload()
+        await p.getByRole('button', { name: 'Delivered', exact: true }).click()
+        await p.locator('[data-toast]', { hasText: `${label(P)} marked delivered.` }).waitFor()
+        await until(async () => (await moments(P)).delivered_at !== null)
+        await p.goto(CONSOLE + '/console/orders?tab=on_the_way')
+        await p.getByRole('tab', { name: /On the way/ }).waitFor()
+        assert.equal(await p.getByRole('row').filter({ hasText: label(P) }).count(), 0)
+      })
+
+      await t.step('Came back asks first, then it is out of On the way', async () => {
+        await p.goto(CONSOLE + `/console/orders/${Q}`)
+        await p.getByRole('button', { name: 'Mark shipped' }).click()
+        await p.getByRole('heading', { name: 'On the way' }).waitFor()
+        await p.getByRole('button', { name: 'Came back', exact: true }).click()
+        const d = p.getByRole('dialog', { name: `${label(Q)} came back?` })
+        await d.waitFor()
+        await d.getByRole('button', { name: 'Came back' }).click()
+        await p.locator('[data-toast]', { hasText: `${label(Q)} marked came back.` }).waitFor()
+        await until(async () => (await moments(Q)).rto_delivered_at !== null)
+      })
+
+      await t.step('Shipping costs: confirmed once, shown on Settings', async () => {
+        await p.goto(CONSOLE + '/console/settings')
+        await p.getByRole('link', { name: /Shipping costs/ }).filter({ hasText: 'Not confirmed' }).click()
+        await p.waitForURL(/\/console\/settings\/shipping-costs$/)
+        await p.getByLabel('A delivery').fill('65')
+        await p.getByRole('button', { name: 'Confirm these costs' }).click()
+        await p.getByText('Shipping costs confirmed.').waitFor()
+        await p.getByText(/^Confirmed on /).waitFor()
+        await p.goto(CONSOLE + '/console/settings')
+        await p.getByRole('link', { name: /Shipping costs/ }).filter({ hasText: 'Delivery ₹65' }).waitFor()
       })
     } finally {
       await owner.close()
+    }
+
+    const R = top + 3
+    await db`insert into orders (tenant_id, number, payment_method, placed_at, confirmed_at, packed_at, shipped_at, invoice_number, customer_name, phone, address_line, area, city, pincode, state, subtotal, total)
+      values (${T}, ${R}, 'cod', ${todayAgo(60)}, ${todayAgo(50)}, ${todayAgo(40)}, null, ${'SH/26-27/' + R}, 'Ship Asha', '9822300003', '3, Tonk Road', 'Durgapura', 'Jaipur', '302018', 'Rajasthan', 99000, 99000)`
+    const staff = await signedIn(t.browser, 'staff', { viewport: { width: 390, height: 844 } })
+    const partner = await signedIn(t.browser, 'partner', { viewport: { width: 1280, height: 900 } })
+    try {
+      await t.step('Staff ship but never mark an outcome or open shipping costs', async () => {
+        const s = await staff.newPage(); s.setDefaultTimeout(10_000); s.on('pageerror', (e) => t.errors.push(e.message))
+        await s.goto(CONSOLE + `/console/orders/${R}`)
+        await s.getByRole('button', { name: 'Mark shipped' }).click()
+        await s.getByText('An owner or admin marks it delivered or came back.').waitFor()
+        assert.equal(await s.getByRole('button', { name: 'Delivered', exact: true }).count(), 0)
+        await s.goto(CONSOLE + '/console/settings/shipping-costs')
+        await s.getByText(/Only the owner or an admin|can’t change this shop’s settings/).first().waitFor()
+        assert.equal(await s.getByLabel('A delivery').count(), 0)
+      })
+
+      await t.step('Partners never ship', async () => {
+        await db`update orders set shipped_at = null where tenant_id = ${T} and number = ${R}`
+        await db`update shipments set ended_at = now(), ended_reason = 'undone' where tenant_id = ${T} and ended_at is null and order_id = (select id from orders where tenant_id = ${T} and number = ${R})`
+        const q = await partner.newPage(); q.setDefaultTimeout(10_000); q.on('pageerror', (e) => t.errors.push(e.message))
+        await q.goto(CONSOLE + `/console/orders/${R}`)
+        await q.waitForLoadState('networkidle')
+        assert.equal(await q.getByRole('button', { name: 'Mark shipped' }).count(), 0)
+      })
+    } finally {
+      await staff.close(); await partner.close()
+      await db`delete from members where tenant_id = ${T} and user_id in (${Pa.id}, ${S.id})`
     }
   },
 }

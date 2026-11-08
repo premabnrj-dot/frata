@@ -1,8 +1,8 @@
 import 'server-only'
 import { orderDiscounts } from '@/lib/db/schema-discounts'
-import { and, asc, desc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq, isNull } from 'drizzle-orm'
 import { momentColumns, onlineTotalCol } from '@/lib/db/order-predicates'
-import { orderEvents, orderLines, orderNotes, orders } from '@/lib/db/schema-orders'
+import { orderEvents, orderLines, orderNotes, orders, shipments } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { riskFactsFor } from './order-risk'
 
@@ -40,7 +40,10 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
     // The offers it got, as recorded at placement (the pay-online saving is shown only while it is paid online).
     const offers = (await tx.select({ title: orderDiscounts.title, class: orderDiscounts.class, amount: orderDiscounts.amount }).from(orderDiscounts)
       .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, o.id)))).map((d) => ({ ...d, amount: Number(d.amount) }))
-    return { o, lines, events, notes, offers }
+    // The parcel on its way (Ship): who carries it and how to follow it; null before it shipped.
+    const [shipment] = await tx.select({ provider: shipments.provider, courierName: shipments.courierName, trackingNumber: shipments.trackingNumber, openedAt: shipments.openedAt })
+      .from(shipments).where(and(eq(shipments.tenantId, tenantId), eq(shipments.orderId, o.id), isNull(shipments.endedAt))).limit(1)
+    return { o, lines, events, notes, offers, shipment: shipment ?? null }
   })
   if (!data) return null
   // Risk: null when its facts cannot be read (the page then says "Risk unavailable" and fails closed).

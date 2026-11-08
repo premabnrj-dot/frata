@@ -30,7 +30,9 @@ const zero = (source: FreightSource): Freight => ({ forwardShipping: paise(0), r
  */
 export function freightOf(provider: 'self' | 'shiprocket' | null, facts: FreightFacts, est: ShipCostEstimate, o: { cod: boolean; outcome: 'delivered' | 'rto' }): Freight {
   if (provider === 'shiprocket') {
-    if (facts.forwardShipping === null || (o.outcome === 'rto' && facts.rtoShipping === null)) return zero('pending')
+    // A line the outcome needs and the statement has not brought yet: the forward freight; the return on a return; the
+    // COD fee on a delivered COD order (unknown is never ₹0).
+    if (facts.forwardShipping === null || (o.outcome === 'rto' && facts.rtoShipping === null) || (o.cod && o.outcome === 'delivered' && facts.courierCodFee === null)) return zero('pending')
     return { forwardShipping: paise(facts.forwardShipping), rtoShipping: paise(facts.rtoShipping ?? 0), codFee: paise(facts.courierCodFee ?? 0), source: 'actual' }
   }
   if (!est) return zero('none')

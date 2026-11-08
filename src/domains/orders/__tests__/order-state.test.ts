@@ -79,7 +79,12 @@ describe('the queue and the shopper', () => {
     expect(queueTab('shipped')).toBe('on_the_way')
     expect(queueTab('ndr')).toBe('couldnt_deliver')
     expect(queueTab('rto')).toBe('coming_back')
-    for (const s of ['delivered', 'rto_received', 'cancelled', 'payment_abandoned'] as const) expect(queueTab(s)).toBe(s === 'payment_abandoned' ? 'not_paid' : null)
+    for (const s of ['delivered', 'rto_received', 'cancelled', 'lost', 'payment_abandoned'] as const) expect(queueTab(s)).toBe(s === 'payment_abandoned' ? 'not_paid' : null)
+    // Lost by the courier: after delivered and returns, before cancelled; the shopper hears of a delivery problem.
+    expect(orderState(moments({ packedAt: t(3), shippedAt: t(4), lostAt: t(6) }), new Date(2026, 10, 9))).toBe('lost')
+    expect(orderState(moments({ packedAt: t(3), shippedAt: t(4), lostAt: t(6), deliveredAt: t(7) }), new Date(2026, 10, 9))).toBe('delivered')
+    expect(orderState(moments({ packedAt: t(3), shippedAt: t(4), lostAt: t(6), rtoInitiatedAt: t(7) }), new Date(2026, 10, 9))).toBe('rto')
+    expect(shopperState('lost')).toBe('delivery_problem')
   })
   it('never tells a shopper an internal word', () => {
     for (const s of ORDER_STATES) expect(['held', 'refund_due', 'unconfirmed', 'rto', 'rto_received', 'payment_abandoned']).not.toContain(shopperState(s))

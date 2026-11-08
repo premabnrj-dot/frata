@@ -11,4 +11,5 @@
 // =============================================================================
 
 // Offers (offers plan review 17): only names the server derives — an offer's remaining budget and its use count.
-export const SENTINELS = ['cogs', 'forwardShipping', 'rtoShipping', 'gatewayBps', 'platformFee', 'adCost', 'codFee', 'unitCost', 'unit_cost', 'budgetLeft', 'useCount']
+// Ship S·0: the courier's COD fee and the shop's shipping-cost estimates.
+export const SENTINELS = ['cogs', 'forwardShipping', 'rtoShipping', 'courierCodFee', 'shipCostDelivery', 'shipCostReturn', 'shipCostCod', 'gatewayBps', 'platformFee', 'adCost', 'codFee', 'unitCost', 'unit_cost', 'budgetLeft', 'useCount']

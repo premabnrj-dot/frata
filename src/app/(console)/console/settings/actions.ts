@@ -127,3 +127,35 @@ export async function changeAddress(slug: string): Promise<{ ok: true } | { ok: 
   revalidatePath('/console', 'layout')
   return { ok: true }
 }
+
+// ── Ship S·0: what shipping costs when the shop sends orders another way (owner call S3) ──
+
+const RUPEES = /^\d{1,5}$/
+
+/**
+ * Confirm the three shipping costs: saving them IS confirming them (profit then reads "estimated", not "before
+ * shipping costs"). Owners and admins only: a merchant's cost (partners build settings but never see costs).
+ */
+export async function saveShipCosts(input: { delivery: string; ret: string; cod: string }): Promise<{ ok: true } | { ok: false; error: string; errors?: Record<string, string> }> {
+  const errors: Record<string, string> = {}
+  const v: Record<string, number> = {}
+  for (const k of ['delivery', 'ret', 'cod'] as const) {
+    const clean = String(input?.[k] ?? '').replace(/[,₹\s]/g, '')
+    if (!RUPEES.test(clean) || Number(clean) > 10000) errors[k] = 'Whole rupees, up to ₹10,000.'
+    else v[k] = Number(clean) * 100
+  }
+  if (Object.keys(errors).length) return { ok: false, error: 'Some fields need a look before saving.', errors }
+  try {
+    const r = await asMember(CAN_MANAGE, { action: 'settings.ship_costs', detail: { fields: ['shipCostDelivery', 'shipCostReturn', 'shipCostCod'] } }, async (tx, auth) => {
+      await tx.update(shopSettings).set({ shipCostDelivery: v.delivery!, shipCostReturn: v.ret!, shipCostCod: v.cod!, shipCostsConfirmedAt: new Date(), updatedAt: new Date() })
+        .where(eq(shopSettings.tenantId, auth.membership.tenantId))
+      return true
+    })
+    if (!r.ok) return { ok: false, error: r.error }
+    revalidatePath('/console', 'layout')
+    return { ok: true }
+  } catch (err) {
+    console.error('[saveShipCosts]', dbReason(err))
+    return { ok: false, error: 'We could not save. Nothing was changed. Try again in a minute.' }
+  }
+}

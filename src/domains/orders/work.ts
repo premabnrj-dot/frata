@@ -8,7 +8,7 @@
 // Pure.
 // =============================================================================
 
-import { ANY_MEMBER, CAN_MANAGE, type MemberRole } from '@/domains/tenancy/roles'
+import { ANY_MEMBER, CAN_MANAGE, SHIPPERS, type MemberRole } from '@/domains/tenancy/roles'
 import type { OrderState } from './order-state'
 
 export const ACTIONS = ['confirm', 'hold', 'unhold', 'undo', 'note', 'pack', 'print', 'edit', 'cancel', 'ship_self', 'deliver', 'came_back', 'lost'] as const
@@ -16,8 +16,6 @@ export type OrderAction = (typeof ACTIONS)[number]
 
 const STAFF: readonly MemberRole[] = ANY_MEMBER
 const MANAGERS: readonly MemberRole[] = CAN_MANAGE
-/** Who sends parcels out (Ship § Reviews 8): the shop's own people, never a partner. */
-export const SHIPPERS: readonly MemberRole[] = ['owner', 'admin', 'staff']
 
 /**
  * Roles per action. Support sessions act as the owner (ADR-0007) and are audited. Undoing an outcome (Shipped,
@@ -35,7 +33,7 @@ const WHEN: Record<Exclude<OrderAction, 'undo'>, readonly OrderState[]> = {
   confirm: ['unconfirmed', 'held'],
   hold: ['unconfirmed', 'confirmed', 'paid'],
   unhold: ['held'],
-  note: ['unconfirmed', 'held', 'confirmed', 'paid', 'refund_due', 'packed', 'cancelled', 'shipped', 'ndr', 'delivered', 'rto', 'rto_received'],
+  note: ['unconfirmed', 'held', 'confirmed', 'paid', 'refund_due', 'packed', 'cancelled', 'shipped', 'ndr', 'delivered', 'rto', 'rto_received', 'lost'],
   pack: ['confirmed', 'paid'],
   edit: ['unconfirmed', 'held', 'confirmed', 'paid'],
   cancel: ['unconfirmed', 'held', 'confirmed', 'paid', 'refund_due', 'packed'],

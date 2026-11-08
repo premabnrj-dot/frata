@@ -19,6 +19,7 @@ import { orderPrefixFor } from '@/lib/queries/orders'
 import { AddNote, EditContact } from '../_components/contact-and-notes'
 import { eventLabel, PAYMENT, printHref, STATE } from '../_components/labels'
 import { OrderActions } from '../_components/order-actions'
+import { ShipPanel } from '../_components/ship-panel'
 
 // =============================================================================
 // FILE: src/app/(console)/console/orders/[number]/page.tsx
@@ -50,7 +51,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   // Another shop's order is the same "not found" as one that does not exist.
   if (d === null) return <Panel title="No such order in your shop">Check the number, or find it from <a href="/console/orders?tab=all" className="underline">all orders</a>.</Panel>
 
-  const { o, lines, events, notes, facts, offers } = d
+  const { o, lines, events, notes, facts, offers, shipment } = d
   const label = `${prefix}-${o.number}`
   const state = orderState(o, now)
   const method = currentMethod(o)
@@ -61,8 +62,10 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   // What a cancel would send back: what reached Razorpay (amounts.ts — after a switch the COD fee is already off).
   const refund = paidOnline(o)
   const primary0 = primaryAction(state)
-  // Delivered as the primary action arrives with its button (Ship S0·5).
+  // A shipped order's step (Delivered) lives in its shipping panel, below (Ship S0·5), not in the header.
   const primary = primary0 === 'deliver' ? null : primary0
+  const shipStage = state === 'packed' ? 'to_ship' as const : state === 'shipped' || state === 'ndr' ? 'on_the_way' as const
+    : state === 'delivered' || state === 'rto' || state === 'rto_received' || state === 'lost' ? 'done' as const : null
   const can = { confirm: may('confirm', state, role), hold: may('hold', state, role), unhold: may('unhold', state, role), cancel: may('cancel', state, role), pack: may('pack', state, role), edit: may('edit', state, role), note: may('note', state, role) }
   const why = (r?.reasons.join('; ') || r?.next || '').replace(/\.$/, '')
   const riskWarning = r && (r.level === 'high' || r.level === 'unknown') ? `${r.level === 'high' ? 'High risk' : 'Risk unavailable'}: ${why}. Confirm only once you have spoken to the customer.` : null
@@ -98,6 +101,10 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
             </Section>
           ) : null}
 
+          {shipStage ? <ShipPanel orderId={o.id} number={label} stage={shipStage} stockTaken={lines.some((l) => l.stockTakenAt)}
+            may={{ ship: may('ship_self', state, role), outcome: may('deliver', state, role) }}
+            shipment={shipment ? { courierName: shipment.courierName, trackingNumber: shipment.trackingNumber, byCourier: shipment.provider === 'shiprocket' } : null} /> : null}
+
           <Section id="items" title="Items">
             <ul className="divide-y divide-border">
               {lines.map((l) => (
@@ -127,7 +134,8 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
                 : state === 'cancelled' ? (refund ? <>Paid online, then cancelled: refund <Money paise={paise(refund)} /> in Razorpay.</> : 'Cancelled: nothing to collect.')
                 : state === 'refund_due' ? <>Paid after it sold out: cancel it, then refund <Money paise={paise(refund)} /> in Razorpay.{can.cancel ? null : ' Ask an owner or admin to cancel it.'}</>
                 : state === 'delivered' ? (method === 'cod' && !o.paidAt ? <>Delivered: <Money paise={paise(Number(o.total))} /> collected by the courier.</> : 'Delivered.')
-                : state === 'rto' || state === 'rto_received' ? 'Returned to you: nothing was collected.'
+                : state === 'rto' || state === 'rto_received' ? 'Came back to you: nothing was collected.'
+                : state === 'lost' ? 'Lost by the courier: nothing was collected. Claim it with the courier.'
                 : paidAfterSwitch(o) ? 'Paid online — do not collect cash.'
                 : owed ? <>Collect <Money paise={paise(owed)} /> on delivery.</> : o.paidAt ? 'Paid online — collect nothing.' : 'Not paid yet.'}
             </p>

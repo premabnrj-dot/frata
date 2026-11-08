@@ -5,7 +5,7 @@ import { Panel } from '@/components/ui/panel'
 import { ViewTabs } from '@/components/ui/view-tabs'
 import { currentMethod, orderState, paidAfterSwitch, QUEUE_TABS, type QueueTab } from '@/domains/orders/order-state'
 import { risk } from '@/domains/orders/risk'
-import { applies } from '@/domains/orders/work'
+import { applies, may } from '@/domains/orders/work'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { dateTimeIN } from '@/lib/format-date'
 import { riskFactsFor } from '@/lib/queries/order-risk'
@@ -35,6 +35,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const q = (sp.q ?? '').trim().slice(0, 60)
   const now = new Date()
   const tenantId = auth.membership.tenantId
+  const role = auth.membership.role
   const counts = await queueCounts(tenantId, now).catch((err) => { console.error('[orders]', err instanceof Error ? err.name : err); return null })
   if (!counts) return fail
   // The pager's total: the tab's own count, or (searching) how many match, from the list query itself.
@@ -65,6 +66,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
       risk: state === 'unconfirmed' || state === 'held' ? (facts === null ? 'unknown' : f ? risk(f).level : 'low') : 'low',
       canConfirm: applies('confirm', state), canHold: applies('hold', state), canPrint: applies('print', state),
       total: Number(o.total), placed: dateTimeIN(o.placedAt), dimmed: STATE[state].tone === 'neutral',
+      shipStep: may('ship_self', state, role) ? 'ship' : may('deliver', state, role) ? 'deliver' : null,
     }
   })
 
@@ -78,10 +80,12 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
     return `/console/orders${s ? `?${s}` : ''}`
   }
   const info = TABS.find((t) => t.tab === tab)!
+  // Couldn't deliver jumps to the front when it holds anything (design language 53): a failed delivery is today's work.
+  const ordered = counts.couldnt_deliver > 0 ? [...TABS].sort((a, b) => Number(b.tab === 'couldnt_deliver') - Number(a.tab === 'couldnt_deliver')) : TABS
   return (
     <>
       <PageHeader title="Orders" />
-      <ViewTabs label="Order views" tabs={TABS.map((t) => ({ href: href({ tab: t.tab, q: '' }), label: t.label, count: counts[t.tab], current: t.tab === tab, apart: t.tab === 'not_paid' }))} />
+      <ViewTabs label="Order views" tabs={ordered.map((t) => ({ href: href({ tab: t.tab, q: '' }), label: t.label, count: counts[t.tab], current: t.tab === tab, apart: t.tab === 'not_paid' }))} />
       <SearchField label="Search orders" placeholder="Search number, name or phone" value={q} clearHref={href({ q: '' })} hidden={tab !== 'to_confirm' ? { tab } : undefined} />
       {rows.length === 0 ? (
         <Panel title={q ? 'No order matches that search' : info.empty.title}>

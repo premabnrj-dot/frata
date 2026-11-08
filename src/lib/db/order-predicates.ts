@@ -49,7 +49,7 @@ export const stateSql = (now: Date, a = '"orders"'): SQL<OrderState> => sql<Orde
   when ${c(a, 'confirmed_at')} is not null then 'confirmed'
   else 'unconfirmed' end)`
 
-/** enteredAt() in SQL: when an order entered its work tab; null outside To confirm, To pack and On hold. */
+/** enteredAt() in SQL: when an order entered its tab; null outside the work tabs and the four shipping tabs. */
 export const enteredAtSql = (now: Date, a = '"orders"'): SQL<Date | null> => sql<Date | null>`(case ${stateSql(now, a)}
   when 'unconfirmed' then coalesce(${c(a, 'switched_to_cod_at')}, ${c(a, 'placed_at')})
   when 'refund_due' then ${c(a, 'paid_at')} when 'paid' then ${c(a, 'paid_at')}

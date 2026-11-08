@@ -8,7 +8,7 @@ import { paise } from '@/domains/money/paise'
 import { CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { formatInr } from '@/lib/format'
 import { SHOP_DOMAIN } from '@/lib/public-env'
-import { shopWithSettings } from '@/lib/queries/settings'
+import { shipCostsFor, shopWithSettings } from '@/lib/queries/settings'
 import { paymentStatusFor } from '@/lib/queries/payments'
 import { shopFacts } from './_components/facts'
 import { Section } from '@/components/layout/section'
@@ -40,6 +40,11 @@ export default async function SettingsPage() {
   }
   const manages = (CAN_MANAGE as readonly string[]).includes(auth.membership.role)
   const owner = auth.membership.role === 'owner'
+  // A merchant's cost: read only for owners and admins (ADR-0003).
+  const ship = manages ? await shipCostsFor(auth.membership.tenantId).catch(() => undefined) : undefined
+  const shipSummary = ship === undefined ? 'Could not load' : ship?.confirmedAt && ship.delivery !== null && ship.ret !== null && ship.cod !== null
+    ? `Delivery ${inr(ship.delivery)} · return ${inr(ship.ret)} · COD fee ${inr(ship.cod)}` : 'Not confirmed: profit says “before shipping costs”'
+  const shipNeeds = ship !== undefined && !ship?.confirmedAt
   const needs = (k: SectionKey) => missing.some((m) => m.section === k) || (k === 'policies' && policyGaps > 0)
 
   return (
@@ -69,6 +74,11 @@ export default async function SettingsPage() {
             <span className="font-medium">Shop address</span>
             <Badge className="row-span-2">Edit</Badge>
             <span className="truncate font-mono text-sm text-muted-foreground">{f.slug}.{SHOP_DOMAIN}</span>
+          </Link>}
+          {manages && <Link href="/console/settings/shipping-costs" className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-4 py-3 transition-colors duration-fast hover:bg-accent">
+            <span className="font-medium">Shipping costs</span>
+            <Badge tone={shipNeeds ? 'warn' : 'neutral'} className="row-span-2">{shipNeeds ? 'Needs you' : 'Edit'}</Badge>
+            <span className="truncate text-sm text-muted-foreground">{shipSummary}</span>
           </Link>}
         </Section>
         <aside className="space-y-3">

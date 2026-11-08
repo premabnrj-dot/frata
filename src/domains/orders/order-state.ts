@@ -155,7 +155,7 @@ export function enteredAt(o: OrderMoments, now: Date): Date | null {
 // ── What a shopper is told (never the internal word: held, refund_due, a cancel reason) ──
 
 export const SHOPPER_STATES = [
-  'confirming', 'confirmed', 'paid', 'packed', 'awaiting_payment', 'not_paid', 'cancelled', 'shipped', 'ndr', 'delivered', 'returning', 'returned',
+  'confirming', 'confirmed', 'paid', 'packed', 'awaiting_payment', 'not_paid', 'cancelled', 'shipped', 'ndr', 'delivered', 'returning', 'returned', 'delivery_problem',
 ] as const
 export type ShopperState = (typeof SHOPPER_STATES)[number]
 
@@ -165,8 +165,9 @@ export function shopperState(s: OrderState): ShopperState {
     case 'payment_abandoned': return 'not_paid'
     case 'rto': return 'returning'
     case 'rto_received': return 'returned'
-    // Lost by the courier: the shopper is told delivery hit a problem and the shop will be in touch (never "lost").
-    case 'lost': return 'ndr'
+    // Lost by the courier: the shopper is told delivery hit a problem and the shop will be in touch (never "lost",
+    // never "the courier will try again").
+    case 'lost': return 'delivery_problem'
     default: return s
   }
 }

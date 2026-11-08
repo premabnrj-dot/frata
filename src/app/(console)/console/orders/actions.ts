@@ -10,6 +10,7 @@ import { requireMember } from '@/lib/auth/require-member'
 import { riskFactsFor } from '@/lib/queries/order-risk'
 import type { Tx } from '@/lib/db'
 import * as work from '@/lib/orders/work'
+import * as out from '@/lib/orders/outcomes'
 import { refreshShop } from '@/lib/queries/storefront'
 
 // =============================================================================
@@ -22,6 +23,8 @@ import { refreshShop } from '@/lib/queries/storefront'
 // from the membership — never from the caller. Who may do what:
 //   confirm, hold, unhold, undo, note, pack, print — owner, admin, staff
 //   edit address or phone, cancel                 — owner, admin
+//   mark shipped another way                      — owner, admin, staff (never a partner)
+//   delivered, came back, lost; undo those        — owner, admin (Ship S·0; undo by the undone action's roles)
 // A support visit acts as the owner and is audited: the audit row carries the
 // order id and the NAMES of fields changed, never shopper data.
 // =============================================================================
@@ -157,5 +160,59 @@ export async function holdMany(orderIds: string[]): Promise<BulkResult> {
   } catch (err) {
     console.error('[order.holdMany]', err instanceof Error ? err.name : 'error')
     return { ok: false, error: 'We could not hold those. Nothing more was changed.' }
+  }
+}
+
+// ── Ship S·0: a parcel's dates by hand (src/lib/orders/outcomes.ts) ──
+
+const Shipped = z.object({ courierName: z.string().trim().max(60).optional(), trackingNumber: z.string().trim().max(40).optional() })
+
+/** Shipped another way: courier name and tracking number as typed, both optional. */
+export async function shipOrder(orderId: string, input: unknown = {}) {
+  const p = Shipped.safeParse(input)
+  if (!Id.safeParse(orderId).success || !p.success) return notFound
+  return run('ship_self', orderId, {}, (tx, t, a) => out.markShipped(tx, { tenantId: t, actor: a, orderId, ...p.data }))
+}
+export async function deliverOrder(orderId: string) {
+  return Id.safeParse(orderId).success ? run('deliver', orderId, {}, (tx, t, a) => out.markDelivered(tx, { tenantId: t, actor: a, orderId })) : notFound
+}
+/** It came back to the shop; its stock goes back only when asked (then the shop's pages read fresh stock). */
+export async function cameBackOrder(orderId: string, restock: boolean) {
+  return Id.safeParse(orderId).success
+    ? run('came_back', orderId, { restock: !!restock }, (tx, t, a) => out.markCameBack(tx, { tenantId: t, actor: a, orderId, restock: !!restock }),
+      (t, v) => { if (v.backInStock.length) refreshShop(t, 'catalogue') })
+    : notFound
+}
+export async function lostOrder(orderId: string) {
+  return Id.safeParse(orderId).success ? run('lost', orderId, {}, (tx, t, a) => out.markLost(tx, { tenantId: t, actor: a, orderId })) : notFound
+}
+
+/** Undo Shipped, Delivered, Came back or Lost: shippers reach it; undoOutcome checks the role of the action undone. */
+export async function undoOutcomeAction(eventId: string): Promise<ActionResult> {
+  if (!Id.safeParse(eventId).success) return { ok: false, error: 'There is nothing to undo.' }
+  try {
+    const r = await asMember(ROLES.ship_self, { action: 'order.undo_outcome', target: eventId, detail: {} }, (tx, auth) =>
+      out.undoOutcome(tx, auth.membership.tenantId, { kind: auth.membership.supportSessionId ? 'support' : 'member', userId: auth.userId, email: auth.email ?? '', role: auth.membership.role }, eventId))
+    if (!r.ok) return { ok: false, error: r.error }
+    if (!r.value.ok) return { ok: false, error: r.value.error }
+    revalidatePath('/console', 'layout')
+    return r.value
+  } catch (err) {
+    console.error('[order.undo_outcome]', err instanceof Error ? err.name : 'error')
+    return { ok: false, error: 'We could not undo that. Nothing was changed.' }
+  }
+}
+
+/** Mark a selection delivered (the queue's bulk action, at most 50), each through deliverOrder. */
+export async function deliverMany(orderIds: string[]): Promise<BulkResult> {
+  try {
+    const ids = pickIds(orderIds)
+    if (!ids.length) return { ok: false, error: 'Select the orders that were delivered.' }
+    const done: { id: string; eventId: string }[] = [], failed: { id: string; error: string }[] = []
+    for (const id of ids) { const r = await deliverOrder(id); if (r.ok) done.push({ id, eventId: r.eventId }); else failed.push({ id, error: r.error }) }
+    return { ok: true, done, skippedHigh: 0, failed }
+  } catch (err) {
+    console.error('[order.deliverMany]', err instanceof Error ? err.name : 'error')
+    return { ok: false, error: 'We could not mark those. Nothing more was changed.' }
   }
 }

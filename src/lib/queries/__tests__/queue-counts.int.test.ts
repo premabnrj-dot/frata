@@ -34,6 +34,8 @@ describe.skipIf(!host)('queue counts', () => {
       await add({ confirmedAt: ago(40), packedAt: ago(30), invoiceNumber: `QC/${n}`, shippedAt: ago(20), rtoInitiatedAt: ago(5) }) // rto
       await add({ confirmedAt: ago(40), packedAt: ago(30), invoiceNumber: `QC/${n}`, shippedAt: ago(20), deliveredAt: ago(5) }) // delivered
       await add({ confirmedAt: ago(40), packedAt: ago(30), invoiceNumber: `QC/${n}`, cancelledAt: ago(25) }) // cancelled after packing
+      await add({ confirmedAt: ago(40), packedAt: ago(30), invoiceNumber: `QC/${n}`, shippedAt: ago(20), lostAt: ago(5) }) // lost by the courier
+      await add({ confirmedAt: ago(40), packedAt: ago(30), invoiceNumber: `QC/${n}`, shippedAt: ago(20), rtoInitiatedAt: ago(5), rtoDeliveredAt: ago(2) }) // came back
       const rows = await tx.select({ ...momentColumns, placed: sql<boolean>`${placedSql()}` }).from(orders).where(eq(orders.tenantId, A))
       const want = Object.fromEntries(QUEUE_TABS.map((t) => [t, 0])) as Record<string, number>
       for (const r of rows) {

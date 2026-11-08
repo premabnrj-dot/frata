@@ -10,6 +10,7 @@ describe('freightOf', () => {
     expect(freightOf('shiprocket', { forwardShipping: 6200, rtoShipping: null, courierCodFee: 3600 }, est, { cod: true, outcome: 'delivered' }))
       .toEqual({ forwardShipping: 6200, rtoShipping: 0, codFee: 3600, source: 'actual' })
     expect(freightOf('shiprocket', none, est, { cod: true, outcome: 'delivered' }).source).toBe('pending')
+    expect(freightOf('shiprocket', { forwardShipping: 6200, rtoShipping: null, courierCodFee: null }, est, { cod: true, outcome: 'delivered' }).source).toBe('pending')
     expect(freightOf('shiprocket', { forwardShipping: 6200, rtoShipping: null, courierCodFee: 0 }, est, { cod: true, outcome: 'rto' }).source).toBe('pending')
     // A COD fee reversed on a return nets to 0 in the actual lines.
     expect(freightOf('shiprocket', { forwardShipping: 6200, rtoShipping: 6200, courierCodFee: 0 }, est, { cod: true, outcome: 'rto' }))
@@ -36,6 +37,7 @@ describe('billableDelivered (call E)', () => {
   })
   it('never when it came back, was lost by the courier, or never shipped', () => {
     expect(billableDelivered({ ...o, rtoInitiatedAt: daysAgo(2) }, now)).toBe(false)
+    expect(billableDelivered({ ...o, deliveredAt: daysAgo(3), rtoInitiatedAt: daysAgo(2) }, now)).toBe(false) // a return outranks delivered
     expect(billableDelivered({ ...o, lostAt: daysAgo(3) }, now)).toBe(false)
     expect(billableDelivered({ ...o, shippedAt: null }, now)).toBe(false)
   })

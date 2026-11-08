@@ -19,6 +19,7 @@ const STATE: Record<ShopperState, string> = {
   confirming: 'Placed · the shop confirms it soon', confirmed: 'Confirmed · being packed', paid: 'Paid · being packed', packed: 'Packed · ready to ship',
   awaiting_payment: 'Waiting for your payment', not_paid: 'Not paid · the order was not placed', cancelled: 'Cancelled', shipped: 'On its way',
   ndr: 'Delivery attempt failed · the courier will try again', delivered: 'Delivered', returning: 'Returning to the shop', returned: 'Returned to the shop',
+  delivery_problem: 'There was a problem with the delivery · the shop will contact you',
 }
 
 /**

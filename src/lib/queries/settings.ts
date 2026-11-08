@@ -47,3 +47,15 @@ export async function setupFor(tenantId: string): Promise<Setup | null> {
     left: steps.filter((s) => !s.done && s.key !== 'publish'),
   }
 }
+
+/**
+ * The shop's three shipping-cost estimates (Ship S·0, owner call S3), in paise, and when they were confirmed. A
+ * merchant's cost: read on the server only (ADR-0003), never put into ShopFacts (the storefront reads those).
+ */
+export async function shipCostsFor(tenantId: string) {
+  return withTenant(tenantId, async (tx) => {
+    const [r] = await tx.select({ delivery: shopSettings.shipCostDelivery, ret: shopSettings.shipCostReturn, cod: shopSettings.shipCostCod, confirmedAt: shopSettings.shipCostsConfirmedAt })
+      .from(shopSettings).where(eq(shopSettings.tenantId, tenantId)).limit(1)
+    return r ? { delivery: r.delivery === null ? null : Number(r.delivery), ret: r.ret === null ? null : Number(r.ret), cod: r.cod === null ? null : Number(r.cod), confirmedAt: r.confirmedAt } : null
+  })
+}

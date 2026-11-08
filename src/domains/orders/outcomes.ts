@@ -17,8 +17,10 @@ export const ASSUME_DELIVERED_DAYS = 30
  * (billing, roadmap phase 6), with a parity test.
  */
 export function billableDelivered(o: { shippedAt: Date | null; deliveredAt: Date | null; rtoInitiatedAt: Date | null; lostAt: Date | null }, now: Date): boolean {
+  // The same ranking as orderState: a return outranks delivered; delivered outranks lost.
+  if (o.rtoInitiatedAt) return false
   if (o.deliveredAt) return true
-  if (!o.shippedAt || o.rtoInitiatedAt || o.lostAt) return false
+  if (!o.shippedAt || o.lostAt) return false
   return now.getTime() - o.shippedAt.getTime() >= ASSUME_DELIVERED_DAYS * DAY
 }
 

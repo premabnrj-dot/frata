@@ -4,6 +4,8 @@
 -- shipments: the shop's own rows only (frata_app under RLS); never deleted by the app (an order's cascade removes
 -- them); updated only to end one or correct the courier name and tracking number, never moved to another order.
 -- frata_admin and the API roles: nothing.
+-- shop_settings' three shipping-cost estimates fall under frata_admin's existing table-level read (0008): Frrata staff
+-- may see a shop's own estimate of its freight, as they see its other settings (accepted, Ship S·0 impact review).
 -- orders.forward_shipping: nothing ever wrote it, so every 0 meant "not known": it becomes null (0043 dropped the
 -- default), so freight.ts uses the shop's estimate rather than treating unknown freight as free.
 -- =============================================================================

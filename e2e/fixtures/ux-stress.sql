@@ -28,7 +28,7 @@ select 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'::uuid, 5000 + i,
   case when i % 17 = 0 and i % 6 = 3 then now() end,
   case when i % 6 = 1 or i % 11 = 0 then now() - (i * interval '41 minutes') + interval '1 minute' end,
   s.sub, s.ship, s.codc, 0, s.sub + s.ship + s.codc,
-  (s.sub * 0.42)::bigint, case when i % 6 in (3,4) then 7900 else 0 end,
+  (s.sub * 0.42)::bigint, case when i % 6 in (3,4) then 7900 end, -- freight: known on shipped ones, else not known (null; Ship 0044)
   (array['Venkatanarasimharajuvaripeta Subrahmanyam Lakshminarayana', 'प्रियंका शर्मा', 'முத்துலட்சுமி', 'Ananya Sharma', 'Mohammed Irfan Qureshi', 'ਹਰਪ੍ਰੀਤ ਕੌਰ', 'Sneha', 'Rajalakshmi Venkataraman Iyer', 'অনন্যা বন্দ্যোপাধ্যায়', 'Kavya R'])[1 + (i % 10)],
   '98290' || lpad((43210 + i)::text, 5, '0'),
   (array['Thiruvananthapuram', 'Jaipur', 'Chennai', 'Visakhapatnam', 'Mumbai', 'Bhubaneswar'])[1 + (i % 6)],

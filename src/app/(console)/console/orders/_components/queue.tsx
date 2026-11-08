@@ -15,7 +15,7 @@ import type { Paise } from '@/domains/money/paise'
 import { MAX_DOCUMENTS } from '@/domains/orders/documents'
 import { confirmKey } from '@/domains/ui/shortcuts'
 import { cn } from '@/lib/utils'
-import { confirmMany, confirmOrder, holdMany, holdOrder, undoMany, undoOrderAction, type BulkResult } from '../actions'
+import { confirmMany, confirmOrder, deliverMany, deliverOrder, holdMany, holdOrder, shipOrder, undoMany, undoOrderAction, undoOutcomeAction, type BulkResult } from '../actions'
 import { printHref, RISK_LABEL, type Tone } from './labels'
 
 // =============================================================================
@@ -33,6 +33,8 @@ export type QueueRow = {
   id: string; n: number; number: string; href: string; customer: string; place: string
   payment: { label: string; tone: Tone }; state: { label: string; tone: Tone }; doNotCollect: boolean
   risk: 'low' | 'medium' | 'high' | 'unknown'; canConfirm: boolean; canHold: boolean; canPrint: boolean; total: number; placed: string; dimmed: boolean
+  /** Ship S·0: the row's one shipping step for THIS member (packed → Mark shipped; on its way → Delivered), or none. */
+  shipStep: 'ship' | 'deliver' | null
 }
 
 function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
@@ -61,11 +63,14 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
   const toggle = (id: string) => setPicked((p) => { const s = new Set(p); if (s.has(id)) s.delete(id); else s.add(id); return s })
   const unmark = (ids: string[]) => setDone((d) => Object.fromEntries(Object.entries(d).filter(([k]) => !ids.includes(k))))
   // An undo runs once: from the toast or from z, whichever comes first.
-  const undoable = (eventIds: string[], ids: string[]) => {
+  const undoable = (eventIds: string[], ids: string[], outcome = false) => {
     const undo = async () => {
       if (lastUndo.current === undo) lastUndo.current = null
-      // One request for a bulk undo, never one per order (they would queue behind each other).
-      const r = await (eventIds.length === 1 ? undoOrderAction(eventIds[0]!) : undoMany(eventIds))
+      // One request for a bulk undo, never one per order (they would queue behind each other). An outcome (Shipped,
+      // Delivered) is undone through its own guarded action, one by one (at most 50).
+      const r = await (outcome
+        ? (async () => { let first: { ok: true } | { ok: false; error: string } = { ok: true }; for (const e of eventIds) { const x = await undoOutcomeAction(e); if (!x.ok && first.ok) first = x } return first })()
+        : eventIds.length === 1 ? undoOrderAction(eventIds[0]!) : undoMany(eventIds))
         .catch(() => ({ ok: false as const, error: 'We could not undo that. Open the order to see where it is.' }))
       unmark(ids); router.refresh()
       return r.ok ? { ok: true } : { ok: false, error: r.error }
@@ -91,6 +96,38 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
     }
     const undo = undoable([r.eventId], [row.id]); lastUndo.current = undo
     toast({ text: `${row.number} ${what === 'confirm' ? 'confirmed' : 'put on hold'}.`, undo })
+  }
+
+  async function step(row: QueueRow) {
+    if (busy && saving()) return
+    if (done[row.id] || !row.shipStep) return
+    const word = row.shipStep === 'ship' ? 'Shipped' : 'Delivered'
+    setBusy(true); setDone((d) => ({ ...d, [row.id]: word }))
+    let r: { ok: true; eventId: string } | { ok: false; error: string }
+    try { r = row.shipStep === 'ship' ? await shipOrder(row.id) : await deliverOrder(row.id) }
+    catch { r = { ok: false, error: 'We could not save that. Check your connection; nothing was changed.' } }
+    finally { setBusy(false) }
+    if (!r.ok) { unmark([row.id]); toast({ text: `${row.number}: ${r.error}` }); return }
+    const undo = undoable([r.eventId], [row.id], true); lastUndo.current = undo
+    toast({ text: `${row.number} marked ${word.toLowerCase()}.`, undo })
+  }
+
+  async function bulkDelivered() {
+    if (busy && saving()) return
+    const ids = rows.filter((r) => picked.has(r.id) && r.shipStep === 'deliver').map((r) => r.id)
+    if (!ids.length) { toast({ text: 'None of the selected orders is on its way.' }); return }
+    setBusy(true)
+    let r: BulkResult
+    try { r = await deliverMany(ids) } catch { r = { ok: false, error: 'We could not save that. Check your connection; nothing more was changed.' } } finally { setBusy(false) }
+    if (!r.ok) { toast({ text: r.error }); return }
+    setDone((d) => ({ ...d, ...Object.fromEntries(r.done.map((c) => [c.id, 'Delivered'])) }))
+    setPicked(new Set())
+    const label = (id: string) => rows.find((x) => x.id === id)?.number ?? 'One order'
+    const parts = [`Marked ${r.done.length} delivered.`]
+    if (r.failed.length) parts.push(`${label(r.failed[0]!.id)}: ${r.failed[0]!.error}${r.failed.length > 1 ? ` (and ${r.failed.length - 1} more)` : ''}`)
+    const undo = r.done.length ? undoable(r.done.map((c) => c.eventId), r.done.map((c) => c.id), true) : undefined
+    lastUndo.current = undo ?? null
+    toast({ text: parts.join(' '), undo })
   }
 
   async function bulk(what: 'confirm' | 'hold') {
@@ -136,8 +173,10 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
       {count > 0 ? (
         <div role="region" aria-label="Selected orders" className="sticky top-[var(--shell-top,0px)] z-10 flex flex-wrap items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm">
           <span className="font-medium">{count} selected</span>
-          <Button onClick={() => bulk('confirm')} aria-disabled={busy}>Confirm</Button>
-          <Button variant="secondary" onClick={() => bulk('hold')} aria-disabled={busy}>Hold</Button>
+          {rows.some((r) => picked.has(r.id) && r.shipStep === 'deliver')
+            ? <Button onClick={() => bulkDelivered()} aria-disabled={busy}>Delivered</Button>
+            : <><Button onClick={() => bulk('confirm')} aria-disabled={busy}>Confirm</Button>
+              <Button variant="secondary" onClick={() => bulk('hold')} aria-disabled={busy}>Hold</Button></>}
           {/* Slips for the selected orders that have one, in the queue's order (the print page takes at most 50). */}
           {printable.length ? <Link prefetch={false} href={printHref('slip', printable)} className={button({ variant: 'secondary' })}>Print {printable.length === 1 ? 'slip' : `${printable.length} slips`}</Link> : null}
           <Button variant="ghost" onClick={() => setPicked(new Set())}>Clear</Button>
@@ -167,6 +206,7 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
                   {r.risk === 'low' ? null : r.risk === 'unknown' ? <span className="text-xs text-muted-foreground">Risk unavailable</span> : (
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium"><span aria-hidden className={cn('size-2 rounded-full', r.risk === 'high' ? 'bg-danger-mark' : 'bg-warn-mark')} />{RISK_LABEL[r.risk]} risk</span>
                   )}
+                  {r.shipStep && !now ? <Button variant="secondary" onClick={() => void step(r)} aria-disabled={busy}>{r.shipStep === 'ship' ? 'Mark shipped' : 'Delivered'}<span className="sr-only"> {r.number}</span></Button> : null}
                 </span></Td>
                 <Td cell="b" className="text-right"><Money paise={r.total as Paise} /></Td>
                 <Td cell="f" className="whitespace-nowrap text-xs text-muted-foreground md:text-sm">{r.placed}</Td>
