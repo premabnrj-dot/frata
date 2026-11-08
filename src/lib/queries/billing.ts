@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, desc, eq, isNotNull, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, inArray, isNotNull, sql } from 'drizzle-orm'
 import type { Bill } from '@/domains/billing/bill'
 import { paise } from '@/domains/money/paise'
 import { currentPlan, monthlyPrice } from '@/domains/plans/entitlements'
@@ -9,7 +9,7 @@ import { nextMonthStartIST } from '@/domains/time/month'
 import { draftInvoiceIn } from '@/lib/billing/draft'
 import type { Membership } from '@/lib/db/platform'
 import { planVersions, plans, shopSettings, tenantPlans } from '@/lib/db/schema'
-import { billingAccounts, frrataCreditNotes, frrataInvoiceLines, frrataInvoices, frrataPayments } from '@/lib/db/schema-billing'
+import { billingAccounts, billingNotices, frrataCreditNotes, frrataInvoiceLines, frrataInvoices, frrataPayments } from '@/lib/db/schema-billing'
 import { invoiceState, type InvoiceState } from '@/domains/billing/status'
 import { frrataCreditNoteDoc, frrataInvoiceDoc, type FrrataDoc } from '@/domains/billing/document'
 import { withTenant } from '@/lib/db/tenant'
@@ -109,5 +109,47 @@ export async function shopFrrataDocument(m: Pick<Membership, 'tenantId' | 'role'
     if (!doc || !creditNumber) return doc
     const [cn] = await tx.select().from(frrataCreditNotes).where(and(eq(frrataCreditNotes.tenantId, m.tenantId), eq(frrataCreditNotes.invoiceId, invoiceId), eq(frrataCreditNotes.number, creditNumber)))
     return cn ? frrataCreditNoteDoc(doc, cn) : null
+  })
+}
+
+export type Paying = {
+  mandate: { method: string; max: number; since: Date } | null
+  /** The latest notice of a debit not yet taken (amount, when). */
+  nextDebit: { amount: number; at: Date } | null
+}
+
+/** Autopay as the shop sees it (billing B3): on or off, how and up to what; the next debit announced. Owners and admins. */
+export async function payingFor(m: Pick<Membership, 'tenantId' | 'role'>, now = new Date()): Promise<Paying> {
+  mayReadMoney(m)
+  return withTenant(m.tenantId, async (tx) => {
+    const [[a], [n]] = await Promise.all([
+      tx.select({ method: billingAccounts.mandateMethod, max: billingAccounts.mandateMax, at: billingAccounts.mandateAt, revoked: billingAccounts.mandateRevokedAt }).from(billingAccounts).where(eq(billingAccounts.tenantId, m.tenantId)),
+      tx.select({ amount: billingNotices.amount, at: billingNotices.debitAt }).from(billingNotices)
+        .where(and(eq(billingNotices.tenantId, m.tenantId), eq(billingNotices.kind, 'debit_notice'), gt(billingNotices.debitAt, new Date(now.getTime() - 86_400_000)))).orderBy(desc(billingNotices.createdAt)).limit(1),
+    ])
+    return {
+      mandate: a?.method && a.at && !a.revoked ? { method: a.method, max: a.max ?? 0, since: a.at } : null,
+      nextDebit: n?.at ? { amount: n.amount, at: n.at } : null,
+    }
+  })
+}
+
+/**
+ * The console banner for owners and admins (billing B3; plan finding 9 lets the layout read this): a debit that failed
+ * on an invoice still due, or the day-14 acknowledgement. Null otherwise — and always null for anyone else. Never a block.
+ */
+export async function billingBanner(m: Pick<Membership, 'tenantId' | 'role'>): Promise<{ kind: 'failed' | 'acknowledge'; amount: number; number: string } | null> {
+  if (!(CAN_MANAGE as readonly string[]).includes(m.role)) return null
+  return withTenant(m.tenantId, async (tx) => {
+    const rows = await tx.select({ kind: billingNotices.kind, amount: billingNotices.amount, invoiceId: billingNotices.invoiceId, number: frrataInvoices.number, total: frrataInvoices.total, testMode: frrataInvoices.testMode })
+      .from(billingNotices).innerJoin(frrataInvoices, and(eq(frrataInvoices.tenantId, billingNotices.tenantId), eq(frrataInvoices.id, billingNotices.invoiceId)))
+      .where(and(eq(billingNotices.tenantId, m.tenantId), inArray(billingNotices.kind, ['failed', 'acknowledge']))).orderBy(desc(billingNotices.createdAt)).limit(1)
+    const r = rows[0]
+    if (!r || !r.number) return null
+    // Shown only while the invoice is still due.
+    const [paid] = await tx.select({ n: sql<string>`coalesce(sum(${frrataPayments.amount}), 0)` }).from(frrataPayments).where(and(eq(frrataPayments.tenantId, m.tenantId), eq(frrataPayments.invoiceId, r.invoiceId), isNotNull(frrataPayments.capturedAt)))
+    const [cred] = await tx.select({ n: sql<string>`coalesce(sum(${frrataCreditNotes.total}), 0)` }).from(frrataCreditNotes).where(and(eq(frrataCreditNotes.tenantId, m.tenantId), eq(frrataCreditNotes.invoiceId, r.invoiceId)))
+    const due = r.total - Number(paid?.n ?? 0) - Number(cred?.n ?? 0)
+    return due > 0 ? { kind: r.kind as 'failed' | 'acknowledge', amount: due, number: r.number } : null
   })
 }

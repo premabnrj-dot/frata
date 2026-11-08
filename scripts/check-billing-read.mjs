@@ -6,7 +6,8 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
-const ALLOWED = [/^src\/app\/\(console\)\/console\/settings\/billing\//, /^src\/lib\/queries\/billing\.ts$/, /\/__tests__\//]
+// The console's billing banner (owners and admins only, plan finding 9) is the one reader outside the billing pages.
+const ALLOWED = [/^src\/app\/\(console\)\/console\/settings\/billing\//, /^src\/app\/\(console\)\/console\/_components\/billing-banner\.tsx$/, /^src\/lib\/queries\/billing\.ts$/, /\/__tests__\//]
 const IMPORT = /(?:from\s+|import\(\s*)['"]@\/lib\/queries\/billing['"]/
 const walk = (d) => readdirSync(d).flatMap((n) => { const p = join(d, n).replaceAll('\\', '/'); return statSync(p).isDirectory() ? walk(p) : /\.(ts|tsx)$/.test(n) ? [p] : [] })
 const bad = walk('src').filter((f) => !ALLOWED.some((re) => re.test(f)))

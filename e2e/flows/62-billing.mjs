@@ -5,7 +5,8 @@
 // Admin's "Delivered this month" is the count the billing run drafted. Nothing is charged. Cleans up after itself.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, USERS, signedIn, until } from '../lib.mjs'
+import { createHmac } from 'node:crypto'
+import { BILLING_KEYS, CONSOLE, FAKE_CHECKOUT, RZP, USERS, signedIn, until } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 // The IST month after the one `d` falls in, as "YYYY-MM" (month ends are IST, not UTC).
@@ -102,7 +103,7 @@ export default {
         // The shop: the test invoice says so, with its PDF (named TEST).
         await riya.goto(CONSOLE + '/console/settings/billing')
         await riya.getByText(inv.number).waitFor()
-        await riya.getByText('Test — never collected').first().waitFor()
+        await riya.getByText(/^Test · due/).first().waitFor()
         const pdf = await riya.context().request.get(CONSOLE + `/console/settings/billing/invoice/${inv.id}`)
         assert.equal(pdf.status(), 200); assert.equal(pdf.headers()['content-type'], 'application/pdf')
         assert.match(pdf.headers()['content-disposition'], /Frrata TEST Tax invoice FRR-T/)
@@ -122,10 +123,50 @@ export default {
         assert.equal(csv.status(), 200)
         assert.ok(!(await csv.text()).includes(inv.number), 'test documents stay out of the GST export')
       })
+
+      await t.step('B3: UPI Autopay set up through Checkout (verified on the server); a notice, then a debit 25 h later; a failure shows the banner, the retry after a fresh notice settles it; a signed webhook turns autopay off', async () => {
+        await riya.context().route('https://checkout.razorpay.com/v1/checkout.js', (r) => r.fulfill({ contentType: 'application/javascript', body: FAKE_CHECKOUT }))
+        await riya.goto(CONSOLE + '/console/settings/billing')
+        await riya.getByRole('button', { name: 'UPI Autopay' }).click()
+        await riya.getByText('Active', { exact: true }).waitFor()
+        const meera = await open('frata', { viewport: { width: 1280, height: 900 } })
+        const run = async () => { await meera.goto(CONSOLE + '/admin/billing'); await meera.getByRole('button', { name: 'Run collection now' }).click(); await meera.getByText(/notices?, \d+ debits? started/).waitFor() }
+        const [inv] = await db`select id from frrata_invoices where tenant_id = ${KESAR} and number is not null order by issued_at desc limit 1`
+        // 26 hours pass: notices and failures move back together, so their order (a fresh notice after a failure) holds.
+        const age = async () => {
+          await db`update billing_notices set created_at = created_at - interval '26 hours', debit_at = debit_at - interval '26 hours' where invoice_id = ${inv.id}`
+          await db`update frrata_payments set failed_at = failed_at - interval '26 hours' where invoice_id = ${inv.id} and failed_at is not null`
+        }
+        // 1. A notice first; no debit yet.
+        await run()
+        assert.equal((await db`select count(*)::int n from billing_notices where invoice_id = ${inv.id} and kind = 'debit_notice'`)[0].n, 1)
+        assert.equal((await db`select count(*)::int n from frrata_payments where invoice_id = ${inv.id} and attempt > 0`)[0].n, 0, 'no debit before the notice has stood 25 h')
+        // 2. The notice has stood; the bank declines the debit: the banner, on every page, for the owner.
+        await age(); await fetch(`${RZP}/_test/fail-next`, { method: 'POST' })
+        await run()
+        await until(async () => (await db`select failed_at from frrata_payments where invoice_id = ${inv.id} and attempt = 1`)[0]?.failed_at, 15_000)
+        await riya.goto(CONSOLE + '/console'); await riya.getByText(/didn.t go through/).waitFor()
+        // 3. A fresh notice, then the retry: captured; the banner goes.
+        await run(); await age(); await run()
+        await until(async () => (await db`select captured_at from frrata_payments where invoice_id = ${inv.id} and attempt = 2`)[0]?.captured_at, 15_000)
+        await riya.reload(); assert.equal(await riya.getByText(/didn.t go through/).count(), 0)
+        // 4. The billing webhook: a bad signature is refused; a signed token.cancelled turns autopay off.
+        const [{ tok }] = await db`select mandate_token_id tok from billing_accounts where tenant_id = ${KESAR}`
+        const body = JSON.stringify({ event: 'token.cancelled', created_at: 1, payload: { token: { entity: { id: tok, status: 'cancelled' } } } })
+        const sig = createHmac('sha256', BILLING_KEYS.webhook).update(body).digest('hex')
+        assert.equal((await fetch(CONSOLE + '/api/webhooks/billing', { method: 'POST', headers: { 'content-type': 'application/json', 'x-razorpay-signature': '0'.repeat(64) }, body })).status, 401)
+        assert.equal((await fetch(CONSOLE + '/api/webhooks/billing', { method: 'POST', headers: { 'content-type': 'application/json', 'x-razorpay-signature': sig }, body })).status, 200)
+        await until(async () => (await db`select mandate_revoked_at from billing_accounts where tenant_id = ${KESAR}`)[0].mandate_revoked_at)
+        await riya.goto(CONSOLE + '/console/settings/billing'); await riya.getByRole('button', { name: 'UPI Autopay' }).waitFor()
+        await riya.screenshot({ path: t.out('autopay-off'), fullPage: true })
+      })
     } finally {
       // Issued invoices, payments and credit notes are final (triggers): the test's own are removed with triggers off.
       await db.begin(async (x) => {
         await x`set local session_replication_role = replica`
+        await x`delete from billing_notices where tenant_id = ${KESAR}`
+        await x`delete from billing_mandate_setups where tenant_id = ${KESAR}`
+        await x`delete from billing_events`
         await x`delete from frrata_payments where tenant_id = ${KESAR}`
         await x`delete from frrata_credit_notes where tenant_id = ${KESAR}`
         await x`delete from frrata_invoices where tenant_id = ${KESAR}`

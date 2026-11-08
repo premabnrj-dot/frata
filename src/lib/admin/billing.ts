@@ -164,3 +164,14 @@ export async function runDraftsNow(staff: StaffOk, monthStart: Date): Promise<Ru
   await adminDb().transaction((tx) => auditStaff(tx, staff, { action: 'billing.drafts.run', target: monthStart.toISOString(), detail: r }))
   return r
 }
+
+/** "Run collection now" (ADMIN_ONLY): the daily collection, then the queued debits sent; audited. */
+export async function runCollectionNow(staff: StaffOk) {
+  adminOnly(staff)
+  const { collectDue } = await import('@/lib/billing/collect')
+  const { drainOutbox } = await import('@/lib/outbox/drain')
+  const r = await collectDue(new Date(), Date.now() + 20_000)
+  const sent = await drainOutbox(Date.now() + 20_000)
+  await adminDb().transaction((tx) => auditStaff(tx, staff, { action: 'billing.collect.run', detail: { ...r, sent: sent.sent } }))
+  return { ...r, sent: sent.sent }
+}

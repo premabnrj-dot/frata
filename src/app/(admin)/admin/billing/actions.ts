@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { monthOfYM } from '@/domains/time/month'
-import { issueCreditNote, issueMonth, recordPayment, runDraftsNow } from '@/lib/admin/billing'
+import { issueCreditNote, issueMonth, recordPayment, runCollectionNow, runDraftsNow } from '@/lib/admin/billing'
 import { fromRupees } from '@/domains/money/paise'
 import { errName } from '@/lib/log'
 import { draftableMonths } from '@/lib/billing/run'
@@ -86,4 +86,21 @@ export async function creditAction(form: FormData) {
   }
   revalidatePath(back)
   redirect(`${back}?ok=${encodeURIComponent(`Credit note ${n} issued.`)}`)
+}
+
+export async function collectAction(form: FormData) {
+  const staff = await requireStaff(ADMIN_ONLY)
+  if (!staff.ok) redirect('/admin/billing')
+  const ym = String(form.get('month') ?? '')
+  const back = `/admin/billing${/^\d{4}-\d{2}$/.test(ym) ? `?month=${ym}&` : '?'}`
+  let msg: string
+  try {
+    const r = await runCollectionNow(staff)
+    msg = `${r.notices} notice${r.notices === 1 ? '' : 's'}, ${r.attempts} debit${r.attempts === 1 ? '' : 's'} started, ${r.sent} sent, ${r.settled} settled, ${r.acknowledged} day-14 note${r.acknowledged === 1 ? '' : 's'}.`
+  } catch (e) {
+    console.error('[billing.collect]', errName(e))
+    redirect(`${back}error=${encodeURIComponent('The collection run failed. Nothing was charged twice; check the logs.')}`)
+  }
+  revalidatePath('/admin/billing')
+  redirect(`${back}ok=${encodeURIComponent(msg)}`)
 }

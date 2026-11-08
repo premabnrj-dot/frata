@@ -12,7 +12,7 @@ import { draftableMonths } from '@/lib/billing/run'
 import { usage } from '@/domains/plans/entitlements'
 import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import { dayIN } from '@/lib/format-date'
-import { issueAction, runDraftsAction } from './actions'
+import { collectAction, issueAction, runDraftsAction } from './actions'
 
 export const metadata = { title: 'Billing' }
 
@@ -58,6 +58,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           )}
         </Panel>
       )}
+      <form action={collectAction}><input type="hidden" name="month" value={ym} /><button className={button({ variant: 'secondary' })}>Run collection now</button></form>
       {rows.some((r) => r.number) && <p className="text-sm"><a href={`/admin/billing/export?month=${ym}`} className="underline">Download the GST export for {label} (CSV)</a></p>}
       {rows.length === 0 ? (
         <Panel title={`No invoices for ${label} yet`}>The daily run drafts this month and next for every shop on a plan. Run drafts to make them now.</Panel>

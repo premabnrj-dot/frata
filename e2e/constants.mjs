@@ -18,4 +18,6 @@ export const USERS = {
   brand: { id: 'cccccccc-0000-0000-0000-000000000011', email: 'neha@brandco.test' },
 }
 export const RZP_KEYS = { id: 'rzp_live_FrataTest01', secret: 'testsecret12345678abcd' }
+/** Frrata's own billing account (billing B3), test keys: they may collect only test-mode invoices. */
+export const BILLING_KEYS = { id: 'rzp_test_FrrataBill1', secret: 'billsecret12345678abcd', webhook: 'billwebhooksecret123' }
 

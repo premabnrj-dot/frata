@@ -171,3 +171,47 @@ export async function shopsToBill(before: Date): Promise<string[]> {
   const rows = await db().execute<{ id: string }>(sql`select app_shops_to_bill(${before.toISOString()}::timestamptz) as id`)
   return rows.map((r) => r.id)
 }
+
+// ── Billing B3: autopay, the system's side (drizzle/0057). Definers; no shop set. ───────────────────────────────
+export type BillingDue = { tenantId: string; invoiceId: string; number: string; due: number; testMode: boolean; issuedAt: Date; mandate: boolean; mandateMax: number | null
+  mandateMethod: string | null; noticeAt: Date | null; attempts: number; pending: number; lastFailedAt: Date | null; acknowledged: boolean }
+export async function billingDue(): Promise<BillingDue[]> {
+  const rows = await db().execute<Record<string, unknown>>(sql`select * from app_billing_due()`)
+  const d = (v: unknown) => (v ? new Date(v as string) : null)
+  return rows.map((r) => ({ tenantId: r.tenant_id as string, invoiceId: r.invoice_id as string, number: r.number as string, due: Number(r.due), testMode: !!r.test_mode, issuedAt: new Date(r.issued_at as string),
+    mandate: !!r.mandate, mandateMax: r.mandate_max == null ? null : Number(r.mandate_max), mandateMethod: (r.mandate_method as string) ?? null, noticeAt: d(r.notice_at),
+    attempts: Number(r.attempts), pending: Number(r.pending), lastFailedAt: d(r.last_failed_at), acknowledged: !!r.acknowledged }))
+}
+export async function billingNotice(invoiceId: string, kind: 'debit_notice' | 'failed' | 'acknowledge', amount: number, debitAt: Date | null) {
+  await db().execute(sql`select app_billing_notice(${invoiceId}::uuid, ${kind}, ${amount}, ${debitAt ? debitAt.toISOString() : null}::timestamptz)`)
+}
+/** One attempt's payment row and outbox row, together; null when another attempt is unsettled or nothing can be taken. */
+export async function beginBillingAttempt(invoiceId: string, attempt: number): Promise<string | null> {
+  const [r] = await db().execute<{ id: string | null }>(sql`select app_billing_begin_attempt(${invoiceId}::uuid, ${attempt}) as id`)
+  return r?.id ?? null
+}
+export type AttemptContext = { tenantId: string; amount: number; receipt: string; gatewayOrderId: string | null; customer: string | null; token: string | null; testMode: boolean }
+export async function billingAttemptContext(paymentId: string): Promise<AttemptContext | null> {
+  const [r] = await db().execute<Record<string, unknown>>(sql`select * from app_billing_attempt_context(${paymentId}::uuid)`)
+  return r ? { tenantId: r.tenant_id as string, amount: Number(r.amount), receipt: r.receipt as string, gatewayOrderId: (r.gateway_order_id as string) ?? null, customer: (r.customer as string) ?? null, token: (r.token as string) ?? null, testMode: !!r.test_mode } : null
+}
+export async function billingAttemptOrder(paymentId: string, order: string) {
+  await db().execute(sql`select app_billing_attempt_order(${paymentId}::uuid, ${order})`)
+}
+export async function billingAttemptResult(order: string, paymentId: string | null, captured: boolean, reason: string | null): Promise<boolean> {
+  const [r] = await db().execute<{ ok: boolean }>(sql`select app_billing_attempt_result(${order}, ${paymentId}, ${captured}, ${reason}) as ok`)
+  return !!r?.ok
+}
+/** Frrata's billing webhook: stored once under the gateway's event id (null: already stored), then applied from the row. */
+export async function storeBillingEvent(eventId: string, type: string, payload: object): Promise<string | null> {
+  const [r] = await db().execute<{ id: string | null }>(sql`select app_store_billing_event(${eventId}, ${type}, ${JSON.stringify(payload)}::jsonb) as id`)
+  return r?.id ?? null
+}
+export async function applyBillingEvent(id: string) {
+  await db().execute(sql`select app_apply_billing_event(${id}::uuid)`)
+}
+/** Attempts still unsettled after `olderMinutes` (a lost webhook): ids and their gateway orders. */
+export async function billingUnsettled(olderMinutes: number): Promise<{ paymentId: string; order: string }[]> {
+  const rows = await db().execute<{ payment_id: string; gateway_order_id: string }>(sql`select * from app_billing_unsettled(make_interval(mins => ${olderMinutes}))`)
+  return rows.map((r) => ({ paymentId: r.payment_id, order: r.gateway_order_id }))
+}

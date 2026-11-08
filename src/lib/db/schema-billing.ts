@@ -11,7 +11,7 @@
 // =============================================================================
 
 import { sql } from 'drizzle-orm'
-import { boolean, check, foreignKey, index, integer, pgTable, primaryKey, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { boolean, check, foreignKey, index, integer, jsonb, pgTable, primaryKey, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { LINE_KINDS } from '@/domains/billing/bill'
 import { sqlList } from '@/domains/tenancy/roles'
 import { at, createdAt, id, money, tenants } from './schema'
@@ -204,4 +204,57 @@ export const frrataCreditNotes = pgTable('frrata_credit_notes', {
   index('frrata_credit_notes_invoice').on(t.tenantId, t.invoiceId),
   check('frrata_credit_notes_money', sql`${t.taxable} > 0 and ${t.total} = ${t.taxable} + ${t.cgst} + ${t.sgst} + ${t.igst}`),
   check('frrata_credit_notes_reason', sql`length(${t.reason}) between 3 and 240`),
+])
+
+/**
+ * An autopay set-up in progress (billing B3; plan finding 14): the gateway order the shop's checkout authorises. The
+ * mandate is saved only when the server has verified Checkout's signature, matched THIS shop's pending row, and fetched
+ * the token from the gateway itself. Written only by definers bound to the current shop.
+ */
+export const billingMandateSetups = pgTable('billing_mandate_setups', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'restrict' }),
+  gatewayOrderId: text('gateway_order_id').notNull().unique(),
+  gatewayCustomerId: text('gateway_customer_id').notNull(),
+  method: text('method').notNull(),
+  maxAmount: money('max_amount').notNull(),
+  createdBy: uuid('created_by').notNull(),
+  createdAt: createdAt(),
+  completedAt: at('completed_at'),
+}, (t) => [
+  index('billing_mandate_setups_tenant').on(t.tenantId),
+  check('billing_mandate_setups_method', sql`${t.method} in ('upi','card','emandate')`),
+  check('billing_mandate_setups_max', sql`${t.maxAmount} > 0`),
+])
+
+/**
+ * Frrata's own billing webhook (plan finding 12): each verified event stored once under the gateway's event id, then
+ * applied from the stored row. No frata_app grant: an insert-only definer stores, another applies.
+ */
+export const billingEvents = pgTable('billing_events', {
+  id: id(),
+  eventId: text('event_id').notNull().unique(),
+  type: text('type').notNull(),
+  payload: jsonb('payload').notNull(),
+  receivedAt: at('received_at').notNull().defaultNow(),
+  appliedAt: at('applied_at'),
+  error: text('error'),
+})
+
+/**
+ * What Frrata tells a shop about a debit (billing B3): the notice before each debit (≥ 24 h, RBI e-mandate framework),
+ * a failed payment, and the day-14 acknowledgement. The console shows them to owners and admins; email comes later.
+ */
+export const billingNotices = pgTable('billing_notices', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull(),
+  invoiceId: uuid('invoice_id').notNull(),
+  kind: text('kind').notNull(),
+  amount: money('amount').notNull(),
+  debitAt: at('debit_at'),
+  createdAt: createdAt(),
+}, (t) => [
+  foreignKey({ name: 'billing_notices_invoice_fk', columns: [t.tenantId, t.invoiceId], foreignColumns: [frrataInvoices.tenantId, frrataInvoices.id] }).onDelete('restrict'),
+  index('billing_notices_tenant').on(t.tenantId, t.createdAt),
+  check('billing_notices_kind', sql`${t.kind} in ('debit_notice','failed','acknowledge')`),
 ])

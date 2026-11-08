@@ -10,7 +10,9 @@ import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { dayIN, dayMonthLongIN, monthYearIN } from '@/lib/format-date'
 import { formatPercent } from '@/lib/format'
 import { errName } from '@/lib/log'
-import { billingOverview } from '@/lib/queries/billing'
+import { billingOverview, payingFor } from '@/lib/queries/billing'
+import { billingGatewayIsTest, isBillingGatewayConfigured } from '@/lib/billing/gateway'
+import { PayNow, SetUpAutopay, StopAutopay } from './autopay'
 import { orderPrefixFor } from '@/lib/queries/orders'
 import { BillingDetailsForm } from './details-form'
 
@@ -26,10 +28,14 @@ export default async function PlanAndBillingPage() {
   const auth = await requireMember(CAN_MANAGE)
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the shop’s owner or an admin can see its plan and bills' : auth.message} />
   const now = new Date()
-  const [o, prefix] = await Promise.all([
+  const [o, prefix, paying] = await Promise.all([
     billingOverview(auth.membership, now).catch((e) => { console.error('[billing page]', errName(e)); return null }),
     orderPrefixFor(auth.membership.tenantId),
+    payingFor(auth.membership, now).catch(() => null),
   ])
+  // Autopay and Pay now: only with Frrata's gateway connected, never on a Frrata support visit (finding 10).
+  const canPay = isBillingGatewayConfigured() && !auth.membership.supportSessionId
+  const METHOD: Record<string, string> = { upi: 'UPI Autopay', card: 'Card', emandate: 'Bank mandate (eNACH)' }
   if (!o) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const e = o.estimate === 'busy' ? null : o.estimate
   // This month's delivered orders only (a late order from last month is billed too, and listed, but not counted here),
@@ -101,7 +107,15 @@ export default async function PlanAndBillingPage() {
 
       <Section>
         <h2 className="text-section font-semibold">Paying</h2>
-        <p className="text-sm text-muted-foreground">Nothing to set up yet. When billing starts, you choose UPI Autopay, a card or a bank mandate (eNACH) here, and Frrata tells you each amount before it is taken.</p>
+        {!isBillingGatewayConfigured() ? <p className="text-sm text-muted-foreground">Nothing to set up yet. When billing starts, you choose UPI Autopay, a card or a bank mandate (eNACH) here, and Frrata tells you each amount before it is taken.</p>
+          : paying?.mandate ? (
+            <div className="space-y-1 text-sm">
+              <p><strong>{METHOD[paying.mandate.method] ?? paying.mandate.method}</strong> · <span className="text-ok-text">Active</span> · up to <Money paise={paise(paying.mandate.max)} /> a debit · since {dayIN(paying.mandate.since)}</p>
+              {paying.nextDebit && <p>Next debit <Money paise={paise(paying.nextDebit.amount)} decimals /> on {dayIN(paying.nextDebit.at)}. You were told a day ahead, as the RBI rules ask.</p>}
+              {canPay && <StopAutopay />}
+            </div>
+          ) : canPay ? <SetUpAutopay /> : <p className="text-sm text-muted-foreground">No autopay. {auth.membership.supportSessionId ? 'Only the shop’s owner or an admin can set it up.' : ''}</p>}
+        {billingGatewayIsTest() && <p className="mt-1 text-xs text-muted-foreground">Test gateway: no real money moves.</p>}
       </Section>
 
       <Section>
@@ -114,8 +128,8 @@ export default async function PlanAndBillingPage() {
                 <td className="py-1.5">{monthYearIN(i.periodStart)}</td>
                 <td className="py-1.5 font-mono">{i.number}{i.credits.map((c) => <a key={c.number} href={`/console/settings/billing/invoice/${i.id}?credit=${encodeURIComponent(c.number)}`} className="block text-xs text-muted-foreground underline">Credit note {c.number}</a>)}</td>
                 <td className="py-1.5 text-right"><Money paise={paise(i.total)} decimals /></td>
-                <td className="py-1.5">{i.testMode ? <span className="text-muted-foreground">Test — never collected</span> : i.state === 'due' ? <span className="text-warn-text">Due <Money paise={paise(i.due)} decimals /></span> : STATE_LABEL[i.state]}</td>
-                <td className="py-1.5 text-right"><a href={`/console/settings/billing/invoice/${i.id}`} className="underline">PDF</a></td>
+                <td className="py-1.5">{i.testMode ? <span className="text-muted-foreground">{i.state === 'due' && billingGatewayIsTest() ? <>Test · due <Money paise={paise(i.due)} decimals /> (test money)</> : i.state === 'due' ? 'Test — never collected' : `Test · ${STATE_LABEL[i.state].toLowerCase()}`}</span> : i.state === 'due' ? <span className="text-warn-text">Due <Money paise={paise(i.due)} decimals /></span> : STATE_LABEL[i.state]}</td>
+                <td className="py-1.5 text-right"><a href={`/console/settings/billing/invoice/${i.id}`} className="underline">PDF</a>{canPay && i.state === 'due' && i.testMode === billingGatewayIsTest() ? <div className="mt-1"><PayNow invoiceId={i.id} /></div> : null}</td>
               </tr>
             ))}</tbody>
           </table>

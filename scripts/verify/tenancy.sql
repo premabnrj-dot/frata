@@ -1357,4 +1357,33 @@ do $$ begin
              where has_any_column_privilege(r, t, 'select, insert, update, references') or has_table_privilege(r, t, 'select, insert, update, delete')) then raise exception 'FAIL: API roles reach B2 tables'; end if;
 end $$;
 
-\echo 'tenancy proof — all 42 checks passed'
+-- 43. Billing B3 (plan findings 10, 12, 14): an autopay set-up completes only against THIS shop's pending row; the
+-- gateway's ids never reach frata_app; billing_events has no app grant; notices and set-ups are the shop's own.
+insert into billing_mandate_setups (tenant_id, gateway_order_id, gateway_customer_id, method, max_amount, created_by) values ('22222222-2222-2222-2222-222222222222', 'order_proofB1', 'cust_proofB', 'upi', 1500000, '99999999-9999-9999-9999-999999999999');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare ok boolean; begin
+  if exists (select 1 from billing_mandate_setups) then raise exception 'FAIL: A sees B autopay set-ups'; end if;
+  -- B's pending order, completed from A: refused, and B's mandate untouched.
+  select app_complete_mandate('order_proofB1', 'token_stolen') into ok;
+  if ok then raise exception 'FAIL: A completed B''s autopay'; end if;
+  begin perform 1 from billing_events; raise exception 'FAIL: the app reads billing_events'; exception when insufficient_privilege then null; end;
+  begin insert into billing_events (event_id, type, payload) values ('x', 'y', '{}'); raise exception 'FAIL: the app writes billing_events'; exception when insufficient_privilege then null; end;
+  begin perform gateway_order_id from billing_mandate_setups; raise exception 'FAIL: the app reads a gateway order id'; exception when insufficient_privilege then null; end;
+  -- A's own set-up starts and completes.
+  perform app_begin_mandate('cust_proofA', 'order_proofA1', 'upi', 1500000, '99999999-9999-9999-9999-999999999999');
+  select app_complete_mandate('order_proofA1', 'token_A') into ok;
+  if not ok then raise exception 'FAIL: A could not complete its own autopay'; end if;
+  if (select mandate_method from billing_accounts) is distinct from 'upi' then raise exception 'FAIL: A cannot see its own autopay status'; end if;
+end $$;
+rollback;
+do $$ begin
+  if (select mandate_token_id from billing_accounts where tenant_id = '22222222-2222-2222-2222-222222222222') is not null then raise exception 'FAIL: B''s mandate was touched'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r,
+               unnest(array['app_begin_mandate(text,text,text,bigint,uuid)', 'app_complete_mandate(text,text)', 'app_billing_due()', 'app_billing_begin_attempt(uuid,int)', 'app_billing_attempt_context(uuid)', 'app_billing_attempt_result(text,text,boolean,text)', 'app_store_billing_event(text,text,jsonb)', 'app_apply_billing_event(uuid)']) f
+             where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: an API role may run a billing B3 function'; end if;
+  if exists (select 1 from unnest(array['frata_app', 'frata_admin', 'anon', 'authenticated', 'service_role']) r where has_table_privilege(r, 'billing_events', 'select, insert, update, delete'))
+  then raise exception 'FAIL: a role reaches billing_events directly'; end if;
+end $$;
+
+\echo 'tenancy proof — all 43 checks passed'

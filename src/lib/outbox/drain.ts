@@ -5,6 +5,7 @@ import { moduleForKind } from '@/domains/modules/registry'
 import { shopModules } from '@/lib/queries/modules'
 import { errName } from '@/lib/log'
 import { claimDue, deferRow, markDead, markFailed, markSent, type OutboxRow } from './index'
+import { sendBillAttempt } from '@/lib/billing/debit'
 
 // =============================================================================
 // FILE: src/lib/outbox/drain.ts — sending what the outbox holds (speed review P5, 2026-11-08)
@@ -15,7 +16,10 @@ import { claimDue, deferRow, markDead, markFailed, markSent, type OutboxRow } fr
 // `kind` here as they are built; until one exists, its rows wait with a clear error.
 // =============================================================================
 
-export const SENDERS: Record<string, (row: OutboxRow) => Promise<void>> = {}
+export const SENDERS: Record<string, (row: OutboxRow) => Promise<void>> = {
+  // Billing B3: a debit attempt on Frrata's own gateway. Never paused by a module switch (finding 13: no module owns it).
+  'bill:attempt': sendBillAttempt,
+}
 const BATCH = 25
 
 /** Sends due rows until none are left or `deadline` passes. Two drains at once never send a row twice (SKIP LOCKED). */
