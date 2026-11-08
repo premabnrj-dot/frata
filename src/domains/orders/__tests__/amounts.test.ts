@@ -43,7 +43,7 @@ describe('amounts', () => {
 
 describe('reprice (offers)', () => {
   // A ₹2,650 kurta with ₹100 off paying online: 5% online, 18% on delivery (the slab after the discount).
-  const s = { lines: [{ unitPrice: 265000, qty: 1, hsn: '6211' }], applied: [{ class: 'payment' as const, amount: 10000 }], shipping: 0, registered: true, pricesIncludeGst: true }
+  const s = { lines: [{ unitPrice: 265000, qty: 1, hsn: '6211', productDiscount: 0 }], applied: [{ class: 'payment' as const, amount: 10000 }], shipping: 0, registered: true, pricesIncludeGst: true }
   const rules = { shippingFlat: 0, freeShippingAbove: 0, codOn: true, codMin: 0, codMax: 0, codCharge: 4900 }
   it('prepaid keeps the saving; on delivery drops it and adds the fee, each at its own rate', () => {
     const pre = reprice(s, 'prepaid')

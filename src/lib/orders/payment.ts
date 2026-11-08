@@ -3,6 +3,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm'
 import { quote, type Quote } from '@/domains/checkout/quote'
 import { reprice } from '@/domains/orders/amounts'
 import { discountUses, fits } from '@/lib/db/discount-predicates'
+import { holdingSql, standingSql } from '@/lib/db/order-predicates'
 import { discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import type { Tx } from '@/lib/db'
 import { webhookEvents } from '@/lib/db/schema'
@@ -178,9 +179,17 @@ export async function retryPayment(tenantId: string, token: string, now = new Da
 
 /** Whether each limited offer the order got still has room for it (the order's own use excluded), under a lock. */
 async function offersStillFit(tx: Tx, tenantId: string, orderId: string, phone: string, now: Date): Promise<boolean> {
-  const mine = await tx.select({ discountId: orderDiscounts.discountId, amount: orderDiscounts.amount }).from(orderDiscounts)
+  const mine = await tx.select({ discountId: orderDiscounts.discountId, amount: orderDiscounts.amount, firstOrder: discounts.firstOrder }).from(orderDiscounts)
+    .innerJoin(discounts, and(eq(discounts.tenantId, orderDiscounts.tenantId), eq(discounts.id, orderDiscounts.discountId)))
     .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, orderId)))
   if (!mine.length) return true
+  // A first-order offer: the phone may have ordered since this hold ran out (impact review) — same lock, same rule.
+  if (mine.some((m) => m.firstOrder)) {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${tenantId + ':phone:' + phone}, 0))`)
+    const [had] = await tx.execute<{ n: number }>(sql`select count(*)::int n from ${orders} o where o.tenant_id = ${tenantId} and o.phone = ${phone} and o.id <> ${orderId}
+      and (${standingSql('o')} or ${holdingSql(now, 'o')})`)
+    if ((had?.n ?? 0) > 0) return false
+  }
   const limited = (await tx.execute<{ id: string; limit_total: number | null; limit_per_phone: number | null; budget: string | null }>(sql`
     select id, limit_total, limit_per_phone, budget from ${discounts} where tenant_id = ${tenantId} and id in ${mine.map((m) => m.discountId)}
       and (limit_total is not null or limit_per_phone is not null or budget is not null) order by id for update`))

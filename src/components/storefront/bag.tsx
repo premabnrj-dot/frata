@@ -103,8 +103,8 @@ export function BagContents({ onCheckout, onKeepShopping }: { onCheckout: () => 
  * such. Titles and amounts come from the server; nothing is worked out here.
  */
 export function OfferRows({ applied }: { applied: PublicQuote['appliedPrepaid'] }) {
-  return <>{applied.map((a) => (
-    <p key={a.class} className="flex justify-between text-store-good"><span>{a.class === 'payment' ? `${a.title} (paying online)` : a.class === 'shipping' ? `${a.title}: free delivery` : a.title}</span><span className="tabular-nums">−{inr(a.amount)}</span></p>
+  return <>{applied.map((a, i) => (
+    <p key={`${a.class}-${i}`} className="flex justify-between text-store-good"><span>{a.class === 'payment' ? `${a.title} (paying online)` : a.class === 'shipping' ? `${a.title}: free delivery` : a.title}</span><span className="tabular-nums">−{inr(a.amount)}</span></p>
   ))}</>
 }
 

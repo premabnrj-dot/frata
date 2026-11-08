@@ -92,7 +92,7 @@ export const standingSql = (a = '"orders"'): SQL => sql`(${c(a, 'cancelled_at')}
 export const onlineTotalCol = sql<number | null>`(${orders.checkout}->>'onlineTotal')::bigint`.mapWith((v) => (v == null ? null : Number(v)))
 
 /** usesDiscount() in SQL: whether the order at `a` is using an offer of `cls` (limits, budgets, ₹ given). */
-export const discountUseSql = (now: Date, cls: 'order' | 'shipping' | 'payment', a = '"orders"'): SQL =>
+export const discountUseSql = (now: Date, cls: 'product' | 'order' | 'shipping' | 'payment', a = '"orders"'): SQL =>
   cls === 'payment'
     ? sql`((${c(a, 'paid_at')} is not null and ${c(a, 'cancelled_at')} is null) or ${holdingSql(now, a)})`
     : sql`(${standingSql(a)} or ${holdingSql(now, a)})`

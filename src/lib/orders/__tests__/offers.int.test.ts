@@ -299,4 +299,67 @@ describe.skipIf(!host)('offers at placement and after', () => {
       })
     }
   })
+  it('O·2 money: a product discount stays on its line through a switch to COD and a capture; the prior price is derived', async () => {
+    process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
+    process.env.PAYMENT_KEYS_SECRET ??= 'int-test-only'
+    const { withTenant } = await import('@/lib/db/tenant')
+    const { orders, orderLines } = await import('@/lib/db/schema-orders')
+    const { products, variants } = await import('@/lib/db/schema-catalogue')
+    const { discounts, orderDiscounts, priceHistory } = await import('@/lib/db/schema-discounts')
+    const { markPaid } = await import('@/lib/orders/payment')
+    const { storedPricing, writeReprice } = await import('@/lib/orders/reprice')
+    const { reprice } = await import('@/domains/orders/amounts')
+    const { quote } = await import('@/domains/checkout/quote')
+    const { priorPriceSql } = await import('@/lib/db/price-predicates')
+    const { eq, sql } = await import('drizzle-orm')
+    const ROLLBACK = new Error('rollback')
+    await withTenant(A, async (tx) => {
+      const now = new Date()
+      const [sale] = await tx.insert(discounts).values({ tenantId: A, title: 'Sale', style: 'product_off', percentBps: 2000, startsAt: now, startedAt: now, startedBy: ME, createdBy: ME }).returning({ id: discounts.id })
+      const [save] = await tx.insert(discounts).values({ tenantId: A, title: 'Pay online', style: 'pay_online', amountOff: 5000, startsAt: now, startedAt: now, startedBy: ME, createdBy: ME }).returning({ id: discounts.id })
+      const terms = (id: string, style: 'product_off' | 'pay_online', p: number | null, a: number | null) => ({ id, title: style, style, percentBps: p, amountOff: a, cap: null, minSubtotal: 0, combinesWithPayment: true, listed: true, code: null, codeId: null, targets: 'all' as const })
+      const rules = { shippingFlat: 0, freeShippingAbove: 0, codOn: true, codMin: 0, codMax: 0, codCharge: 4900, pricesIncludeGst: true, registered: true, dispatchDays: 2, metroDays: 2, restDays: 5 }
+      const row = { variantId: 'v', productId: 'p', handle: 'h', title: 'Kurta', status: 'active', publishAt: null, options: [], values: [], sku: null, price: 300000, compareAt: null,
+        stock: 5, whenOut: 'stop' as const, shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderCap: null, held: 0, preordered: 0, owed: 0, hsn: '6211', image: null }
+      const q = quote([{ variantId: 'v', qty: 1 }], [row], rules, now, null, { offers: [terms(sale!.id, 'product_off', 2000, null), terms(save!.id, 'pay_online', null, 5000)] })
+      const m = q.prepaid
+      expect(m.lines[0]!.productDiscount).toBe(60000)
+      const [o] = await tx.insert(orders).values({ tenantId: A, number: 930_101, paymentMethod: 'prepaid', placedAt: now, payBy: new Date(now.getTime() + 600_000),
+        subtotal: q.subtotal, discount: m.discount, shipping: 0, codCharge: 0, gstTotal: m.gst, total: m.total, merchandiseNet: m.merchandiseNet, sellerGstin: '08ABCDE1234F1Z5', pricesIncludeGst: true,
+        checkout: { onlineTotal: m.total } }).returning({ id: orders.id })
+      await tx.insert(orderLines).values({ tenantId: A, orderId: o!.id, title: 'Kurta', qty: 1, unitPrice: 300000, hsn: '6211', position: 0, kind: 'in_stock', stockTakenAt: now,
+        lineDiscount: m.lines[0]!.discount, productDiscount: m.lines[0]!.productDiscount, taxableValue: m.lines[0]!.taxable, gstBps: m.lines[0]!.gstBps, gst: m.lines[0]!.gst, chargeTaxable: 0, chargeGst: 0 })
+      await tx.insert(orderDiscounts).values(m.applied.map((a) => ({ tenantId: A, orderId: o!.id, discountId: a.discountId, class: a.class, amount: a.amount, title: a.title, style: a.terms.style, percentBps: a.terms.percentBps, amountOff: a.terms.amountOff, minSubtotal: 0 })))
+      const read = async () => {
+        const [x] = await tx.select({ total: orders.total, discount: orders.discount, cod: orders.codCharge }).from(orders).where(eq(orders.id, o!.id))
+        const [l] = await tx.select({ d: orderLines.lineDiscount, pd: orderLines.productDiscount }).from(orderLines).where(eq(orderLines.orderId, o!.id))
+        return { total: Number(x!.total), discount: Number(x!.discount), cod: Number(x!.cod), d: Number(l!.d), pd: Number(l!.pd) }
+      }
+      const placedAs = await read()
+      // Switch to COD: the saving goes, the product discount stays on its line.
+      const sp = await storedPricing(tx, A, o!.id, { shipping: 0, sellerGstin: '08ABCDE1234F1Z5', pricesIncludeGst: true })
+      const { price: cod } = reprice(sp, 'cod', rules, null)
+      expect(cod!.total).toBe(q.cod.total)
+      await tx.update(orders).set({ switchedToCodAt: now, payBy: null }).where(eq(orders.id, o!.id))
+      await writeReprice(tx, A, o!.id, sp.lineIds, cod!)
+      expect(await read()).toEqual({ total: 300000 - 60000 + 4900, discount: 60000, cod: 4900, d: 60000, pd: 60000 })
+      // A capture after the switch: everything as placed.
+      expect(await markPaid(tx, { id: o!.id, tenantId: A }, { paymentId: 'pay_int_o2' })).toBe('paid')
+      expect(await read()).toEqual(placedAs)
+
+      // The prior price (price history is append-only; a new variant's trigger row is "today's price"):
+      // 3,000 for two months, cut to 2,500 today → struck 3,000; 2,500 then raised to 3,000 for 5 days, cut back today → no saving.
+      const [pr] = await tx.insert(products).values({ tenantId: A, handle: `int-prior-${Date.now()}`, title: 'Prior', status: 'active' }).returning({ id: products.id })
+      const prior = async (opt: string, before: [number, number][]) => {
+        const [v] = await tx.insert(variants).values({ tenantId: A, productId: pr!.id, optionValues: [opt], price: 250000 }).returning({ id: variants.id })
+        for (const [price, daysAgo] of before) await tx.insert(priceHistory).values({ tenantId: A, variantId: v!.id, price, fromAt: new Date(Date.now() - daysAgo * 86_400_000) })
+        const [r] = await tx.select({ p: priorPriceSql(A) }).from(variants).where(eq(variants.id, v!.id))
+        return r!.p === null ? null : Number(r!.p)
+      }
+      void sql
+      expect(await prior('M', [[300000, 60]])).toBe(300000)
+      expect(await prior('L', [[250000, 60], [300000, 5]])).toBe(250000) // = today's price: nothing struck
+      throw ROLLBACK
+    }).catch((e) => { if (e !== ROLLBACK) throw e })
+  })
 })

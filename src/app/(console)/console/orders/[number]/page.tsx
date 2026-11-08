@@ -4,7 +4,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
-import { collect, paidOnline } from '@/domains/orders/amounts'
+import { collect, paidOnline, savingsAsPaid } from '@/domains/orders/amounts'
 import { currentMethod, orderState, paidAfterPacking, paidAfterSwitch } from '@/domains/orders/order-state'
 import { risk } from '@/domains/orders/risk'
 import { CANCEL_LABEL, may, primaryAction, type CancelReason } from '@/domains/orders/work'
@@ -111,8 +111,8 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
               ))}
             </ul>
             <dl className="space-y-1 border-t border-border pt-3 text-sm">
-              {offers.filter((x) => x.class === 'order' || (x.class === 'payment' && currentMethod(o) === 'prepaid')).map((x) => (
-                <div key={x.class} className="flex justify-between text-ok-text"><dt>{x.class === 'payment' ? `${x.title} (paid online)` : `Offer · ${x.title}`}</dt><dd>−<Money paise={paise(x.amount)} /></dd></div>
+              {savingsAsPaid(offers, currentMethod(o)).map((x, i) => (
+                <div key={`${x.class}-${i}`} className="flex justify-between text-ok-text"><dt>{x.class === 'payment' ? `${x.title} (paid online)` : `Offer · ${x.title}`}</dt><dd>−<Money paise={paise(x.amount)} /></dd></div>
               ))}
               <div className="flex justify-between"><dt>Delivery{offers.some((x) => x.class === 'shipping') ? ' (offer)' : ''}</dt><dd>{o.shipping ? <Money paise={paise(o.shipping)} /> : 'Free'}</dd></div>
               {o.codCharge ? <div className="flex justify-between"><dt>Pay on delivery fee</dt><dd><Money paise={paise(o.codCharge)} /></dd></div> : null}

@@ -152,7 +152,7 @@ export default {
         await until(async () => { await p.reload({ waitUntil: 'domcontentloaded' }); return (await p.getByText('Buy 2, get 1 free', { exact: true }).count()) > 0 }, 20_000)
         await p.screenshot({ path: t.out('badges'), fullPage: true })
         await toBag()
-        await p.getByText(/Buy 2, get 1 free: Buy 2, get 1 free/).first().waitFor().catch(() => {}) // the product page's offer line (when the theme shows it)
+        await p.getByText(/Buy 2, get 1 free: Buy 2, get 1 free/).first().waitFor() // the product page's offer line
         const bag = p.getByRole('dialog', { name: 'Your bag' })
         await bag.getByRole('button', { name: /One more/ }).click(); await bag.getByRole('button', { name: /One more/ }).click()
         await bag.getByText('−₹2,490').waitFor() // three ₹2,490 kurtas: one free

@@ -26,7 +26,7 @@ export function OfferCodes({ id, address, creators, canAdd, publicCode }: {
   })
   return (
     <Section title="Codes">
-      <p className="text-sm text-muted-foreground">{publicCode ? <>Everyone&apos;s code: <b className="font-mono">{publicCode}</b>. </> : null}Creator codes are your creators&apos; own; each link fills the code for their followers.</p>
+      <p className="text-sm text-muted-foreground">{publicCode ? <>Everyone&apos;s code: <b className="font-mono">{publicCode}</b>. </> : <>This offer applies by itself: a creator code here changes no price, it only records who sent the shopper. </>}Creator codes are your creators&apos; own; each link fills the code for their followers.</p>
       {creators.length > 0 && (
         <ul className="divide-y divide-border text-sm">
           {creators.map((c) => (

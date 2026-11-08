@@ -20,7 +20,7 @@ const shop = { name: 'Kesar Studio', legalName: 'Kesar Studio LLP', address: 'Ja
 describe('the invoice', () => {
   it('an offer: value and discount before GST at each line rate, value − discount = taxable, totals = the order', () => {
     // ₹555 off a ₹2,800 kurta and a ₹900 dupatta; free delivery; paid online.
-    const items = [{ gross: 280000, qty: 1, hsn: '6211' }, { gross: 90000, qty: 1, hsn: '6211' }]
+    const items = [{ gross: 280000, qty: 1, hsn: '6211', productDiscount: 0 }, { gross: 90000, qty: 1, hsn: '6211', productDiscount: 0 }]
     const m = priceMethod(items, 55500, 0, 0, { registered: true, pricesIncludeGst: true })
     const ls: DocLine[] = m.lines.map((l, i) => ({ taxableValue: l.taxable, gst: l.gst, gstBps: l.gstBps, chargeTaxable: 0, chargeGst: 0, unitPrice: items[i]!.gross, lineDiscount: l.discount,
       title: ['Linen kurta', 'Mul dupatta'][i]!, optionValues: [], qty: 1, sku: null, hsn: '6211', imageBase: null, imageWidths: null }))

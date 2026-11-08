@@ -69,7 +69,7 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku }: {
         {/* On a phone each size and colour becomes a card of labelled fields (data-rows="form", rule 15). */}
         <table data-rows="form" role="table" aria-label="Sizes, colours and stock" className="w-full text-sm">
           <thead role="rowgroup" className="bg-muted/50 text-left text-xs text-muted-foreground"><tr role="row" className="[&>th]:px-2 [&>th]:py-2">
-            <th role="columnheader">{options.map((o) => o.name).join(' / ') || 'Product'}</th><th role="columnheader">Price, ₹</th><th role="columnheader" title="The maximum retail price printed on the tag. Shoppers see it as M.R.P.; a struck “was” price comes only from a real price cut in the last 30 days.">M.R.P., ₹</th><th role="columnheader">Your cost, ₹</th><th role="columnheader">Stock</th><th role="columnheader">When it runs out</th><th role="columnheader">Shoppers see</th><th role="columnheader">SKU</th></tr></thead>
+            <th role="columnheader">{options.map((o) => o.name).join(' / ') || 'Product'}</th><th role="columnheader">Price, ₹</th><th role="columnheader" title="The maximum retail price printed on the tag. Shown on the product page as M.R.P. incl. taxes; never sell above it. A struck “was” price comes only from a real price cut in the last 30 days.">M.R.P., ₹</th><th role="columnheader">Your cost, ₹</th><th role="columnheader">Stock</th><th role="columnheader">When it runs out</th><th role="columnheader">Shoppers see</th><th role="columnheader">SKU</th></tr></thead>
           {groups.map((grp) => {
             const shut = collapse && grp.label && !open[grp.label]
             const sold = grp.rows.filter((c) => !shopperSees(cells[keyOf(c)] ?? EMPTY_CELL, now).canBuy).length

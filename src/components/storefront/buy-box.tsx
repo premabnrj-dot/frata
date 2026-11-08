@@ -87,7 +87,7 @@ export function BuyBox(p: BuyBoxProps) {
         <div className="space-y-2">
           <h1 className="text-2xl leading-tight sm:text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{p.title}</h1>
           {shown && <p className="text-lg"><span className="font-medium">{money(shown.price)}</span>
-            {shown.compareAt && shown.compareAt > shown.price && <><s className="ml-2 text-store-sub">{money(shown.compareAt)}</s><span className="ml-2 text-sm text-store-good">{fill(p.w.save, { amount: money(shown.compareAt - shown.price) })}</span></>}</p>}
+            {shown.compareAt && shown.compareAt > shown.price && <><s className="ml-2 text-store-sub">{money(shown.compareAt)}</s><span className="ml-2 text-sm text-store-good">{fill(p.w.save, { amount: money(shown.compareAt - shown.price) })}</span></>}{shown.mrp && shown.mrp >= shown.price ? <span className="ml-2 text-xs text-store-sub">M.R.P. {money(shown.mrp)} incl. taxes</span> : null}</p>}
           {p.offers && p.offers.length > 0 && <ul className="space-y-1 text-sm text-store-sale" aria-label={p.w.offers}>{p.offers.map((o) => <li key={o.label}>{o.label}{o.ends ? ` · ${o.ends}` : ''}</li>)}</ul>}
           <p className="text-xs text-store-sub">{p.taxNote}</p>
         </div>

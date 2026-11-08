@@ -101,7 +101,7 @@ export const isHolding = (o: Pick<OrderMoments, 'paymentMethod' | 'paidAt' | 'sw
  * offers: standing or holding (an abandoned online order gives its use back). The pay-online saving: paid online,
  * or still holding — a switch to COD gives it back (docs/plans/2026-11-08-offers.md, plan review 7).
  */
-export const usesDiscount = (o: Pick<OrderMoments, 'paymentMethod' | 'paidAt' | 'switchedToCodAt' | 'cancelledAt' | 'payBy'>, cls: 'order' | 'shipping' | 'payment', now: Date) =>
+export const usesDiscount = (o: Pick<OrderMoments, 'paymentMethod' | 'paidAt' | 'switchedToCodAt' | 'cancelledAt' | 'payBy'>, cls: 'product' | 'order' | 'shipping' | 'payment', now: Date) =>
   cls === 'payment' ? (!!o.paidAt && !o.cancelledAt) || isHolding(o, now) : isStanding(o) || isHolding(o, now)
 
 /** States a merchant must act on today. */

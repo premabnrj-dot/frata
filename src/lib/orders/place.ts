@@ -2,7 +2,7 @@ import 'server-only'
 import { randomUUID } from 'node:crypto'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import type { CleanAddress } from '@/domains/checkout/address'
-import { amountFor, candidates, classOf, normalCode, type DiscountTerms, type TypedCode } from '@/domains/checkout/discounts'
+import { amountFor, candidates, classOf, normalCode, stepReached, type DiscountTerms, type TypedCode } from '@/domains/checkout/discounts'
 import { holdingSql, standingSql } from '@/lib/db/order-predicates'
 import { quote, totalFor, type BagLine, type Quote } from '@/domains/checkout/quote'
 import { gstinState } from '@/domains/tax/gst'
@@ -119,7 +119,8 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
       hsn: l.hsn, unitCost: costs.get(l.variantId) ?? null,
       kind: l.kind, shipsBy: l.shipsBy, leadMinDays: l.leadMinDays, leadMaxDays: l.leadMaxDays, position,
     })))
-    // What the order got, with the terms copied (the order keeps them whatever the offer becomes).
+    // What the order got, with its value terms copied (a tier: the step reached). Buy X get Y, gift and target terms are
+    // not copied: what they gave is fixed on each line (order_lines.product_discount), which is what a reprice keeps.
     if (m.applied.length) await tx.insert(orderDiscounts).values(m.applied.map((a) => ({
       tenantId, orderId: id, discountId: a.discountId, class: a.class, amount: a.amount, title: a.title, style: a.terms.style,
       ...termsCopy(a.terms, q.subtotal - m.lines.reduce((s, l) => s + l.productDiscount, 0)), via: typed?.discountId === a.discountId ? (input.via ?? 'typed') : 'auto',
@@ -139,7 +140,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
 
 /** The terms an order keeps (copied, typed columns): a tier copies the step it reached. */
 function termsCopy(t: DiscountTerms, subtotal: number) {
-  const step = t.tiers?.length ? [...t.tiers].filter((x) => subtotal >= x.min).sort((a, b) => b.min - a.min)[0] : undefined
+  const step = stepReached(t.tiers, subtotal)
   return step ? { percentBps: step.percentBps, amountOff: step.amountOff, cap: t.cap, minSubtotal: step.min } : { percentBps: t.percentBps, amountOff: t.amountOff, cap: t.cap, minSubtotal: t.minSubtotal }
 }
 

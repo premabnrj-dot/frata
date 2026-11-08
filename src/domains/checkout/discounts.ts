@@ -82,11 +82,14 @@ export type Need =
   | { kind: 'pay_online' } | { kind: 'first_order' } | null
 export type Listed = { title: string; code: string | null; style: DiscountStyle; applied: boolean; need: Need }
 
+/** The highest step of a tiered offer that `base` reaches (null below the first, or with no steps). */
+export const stepReached = (tiers: readonly Tier[] | undefined, base: number): Tier | null =>
+  [...(tiers ?? [])].filter((x) => base >= x.min).sort((a, b) => b.min - a.min)[0] ?? null
+
 /** The value an order offer gives at `base`: its own, or the highest tier reached. */
 const orderValue = (t: Pick<DiscountTerms, 'percentBps' | 'amountOff' | 'minSubtotal' | 'tiers'>, base: number) => {
-  const tiers = t.tiers ?? []
-  if (!tiers.length) return base >= t.minSubtotal ? { percentBps: t.percentBps, amountOff: t.amountOff } : null
-  const reached = [...tiers].filter((x) => base >= x.min).sort((a, b) => b.min - a.min)[0]
+  if (!t.tiers?.length) return base >= t.minSubtotal ? { percentBps: t.percentBps, amountOff: t.amountOff } : null
+  const reached = stepReached(t.tiers, base)
   return reached ? { percentBps: reached.percentBps, amountOff: reached.amountOff } : null
 }
 
@@ -225,7 +228,7 @@ export function planOffers(linesIn: PlanLine[] | number, offers: DiscountTerms[]
   return { productDisc, products, order, freeShipping: ship, payment, code: typed === null ? null : usedCode ? 'applied' : 'not_applied', listed }
 }
 
-export type PriceLine = { gross: number; qty: number; hsn: string | null; productDiscount?: number }
+export type PriceLine = { gross: number; qty: number; hsn: string | null; productDiscount: number }
 /** `discount` is the line's whole discount; `productDiscount` the product offers' part of it (stored, never re-spread). */
 export type MethodLine = { discount: number; productDiscount: number; taxable: number; gstBps: number; gst: number } & ChargeShare
 export type MethodPrice = {
@@ -245,7 +248,7 @@ export type MethodPrice = {
 export function priceMethod(lines: PriceLine[], orderAmount: number, paymentAmount: number, charges: number, o: { registered: boolean; pricesIncludeGst: boolean }): MethodPrice {
   const gross = lines.map((l) => l.gross)
   const subtotal = gross.reduce((a, b) => a + b, 0)
-  const prod = lines.map((l) => l.productDiscount ?? 0)
+  const prod = lines.map((l) => l.productDiscount)
   const orderShare = apportion(orderAmount, gross.map((g, i) => g - prod[i]!))
   const payShare = apportion(paymentAmount, gross.map((g, i) => g - prod[i]! - orderShare[i]!))
   const disc = lines.map((_, i) => prod[i]! + orderShare[i]! + payShare[i]!)

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { collect } from '@/domains/orders/amounts'
+import { collect, savingsAsPaid } from '@/domains/orders/amounts'
 import { currentMethod, orderState, paidAfterSwitch, shopperState } from '@/domains/orders/order-state'
 import { maskPhone } from '@/domains/checkout/address'
 import { LIMITS } from '@/lib/db/rate-limit'
@@ -28,6 +28,6 @@ export async function POST(request: Request) {
     arrives: o.arrivesFrom && o.arrivesTo ? { from: o.arrivesFrom, to: o.arrivesTo } : null, returnDays: o.returnDays, returnKind: o.returnKind,
     lines: o.lines, shop: { name: data.shop.name, whatsapp: data.shop.whatsapp },
     // What the offers saved on the items, as the order is paid now (the pay-online saving only while paid online).
-    savings: o.offers.filter((d) => d.class === 'order' || (d.class === 'payment' && currentMethod(o) === 'prepaid')).map((d) => ({ title: d.title, amount: d.amount })),
+    savings: savingsAsPaid(o.offers, currentMethod(o)).map((d) => ({ title: d.title, amount: d.amount })),
   })
 }

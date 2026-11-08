@@ -9,6 +9,7 @@ import { tenantForHost, themeVersionRows } from '@/lib/db/platform'
 import { shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { owedSql, stateSql } from '@/lib/db/order-predicates'
+import { priorPriceSql } from '@/lib/db/price-predicates'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { liveCandidates, revisionOf, type Revision } from '@/lib/themes/look'
 import { liveOf, withdrawnKeys } from '@/domains/themes/release'
@@ -140,10 +141,7 @@ const variantCols = (tenantId: string) => ({
   // review 10): the lowest price in the 30 days before today's price took effect (the price carried into that window
   // included), shown only within 30 days of that change. A raise-then-cut never shows a saving. The merchant's typed
   // compare-at is the tag's M.R.P. (`mrp`), never struck through.
-  compareAt: sql<string | null>`(select case when c.f > now() - interval '30 days' then (
-      select min(h.price) from price_history h where h.tenant_id = ${tenantId} and h.variant_id = "variants"."id" and h.from_at < c.f
-        and h.from_at >= coalesce((select max(h2.from_at) from price_history h2 where h2.tenant_id = ${tenantId} and h2.variant_id = "variants"."id" and h2.from_at <= c.f - interval '30 days'), '-infinity'::timestamptz))
-    end from (select max(h0.from_at) f from price_history h0 where h0.tenant_id = ${tenantId} and h0.variant_id = "variants"."id") c)`,
+  compareAt: priorPriceSql(tenantId),
   mrp: variants.compareAt,
   stock: variants.stock, whenOut: variants.whenOut, shipsBy: variants.shipsBy, leadMinDays: variants.leadMinDays, leadMaxDays: variants.leadMaxDays, cap: variants.preorderCap,
   restockedAt: variants.restockedAt,

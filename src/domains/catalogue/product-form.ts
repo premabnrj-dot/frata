@@ -68,7 +68,7 @@ export function cleanProduct(p: ProductInput, now: Date): { ok: true; product: C
       if (price === null) errors[cell('price')] = 'A price in rupees.'
       const compareAt = v?.compareAt.trim() ? parseRupees(v.compareAt) : null
       if (v?.compareAt.trim() && compareAt === null) errors[cell('compareAt')] = 'A price in rupees.'
-      else if (compareAt !== null && price !== null && compareAt <= price) errors[cell('compareAt')] = 'Higher than the price, or empty.'
+      else if (compareAt !== null && price !== null && compareAt < price) errors[cell('compareAt')] = 'The M.R.P. can’t be below the price: never sell above M.R.P.'
       const unitCost = v?.cost.trim() ? parseRupees(v.cost) : null
       if (v?.cost.trim() && unitCost === null) errors[cell('cost')] = 'A cost in rupees, or empty.'
       const stockText = (v?.stock ?? '0').trim() || '0'

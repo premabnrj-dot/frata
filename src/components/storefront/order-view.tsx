@@ -59,7 +59,7 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
         ))}
       </ul>
       <dl className="space-y-1 text-sm">
-        {(v.savings ?? []).map((s) => <div key={s.title} className="flex justify-between text-store-good"><dt>{s.title}</dt><dd className="tabular-nums">−{inr(s.amount)}</dd></div>)}
+        {(v.savings ?? []).map((s, i) => <div key={`${s.title}-${i}`} className="flex justify-between text-store-good"><dt>{s.title}</dt><dd className="tabular-nums">−{inr(s.amount)}</dd></div>)}
         <div className="flex justify-between"><dt>Delivery</dt><dd>{v.shipping ? inr(v.shipping) : 'Free'}</dd></div>
         {v.method === 'cod' && v.codCharge > 0 && <div className="flex justify-between"><dt>Pay on delivery fee</dt><dd>{inr(v.codCharge)}</dd></div>}
         <div className="flex justify-between pt-1 text-base"><dt className="font-medium">{v.collect > 0 && placed ? `Keep ${inr(v.collect)} ready` : v.method === 'prepaid' && v.state !== 'not_paid' && v.state !== 'awaiting_payment' ? 'Paid online' : 'Total'}</dt>
