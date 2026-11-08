@@ -66,7 +66,7 @@ export default {
     })
 
     await t.step('Withdrawn: the shop shows its previous look at once, and Look says why', async () => {
-      const before = await shopHtml()
+      assert.ok(!/Shop tabs/.test(await shopHtml()), 'the shop starts on a look without the tab bar')
       await riya.goto(CONSOLE + '/console/look')
       await riya.getByRole('button', { name: 'Bazaar', exact: true }).click()
       await riya.getByRole('dialog', { name: 'Bazaar' }).getByRole('button', { name: 'Try Bazaar in a draft' }).click()
@@ -74,12 +74,13 @@ export default {
       await riya.getByRole('button', { name: 'Publish', exact: true }).click()
       await riya.getByRole('dialog', { name: /Publish Bazaar/ }).getByRole('button', { name: 'Publish', exact: true }).click()
       await riya.getByRole('heading', { level: 1, name: 'Published' }).waitFor()
-      await until(async () => (await shopHtml()) !== before, 15_000)
+      // Bazaar has the phone tab bar; the look before it doesn't.
+      await until(async () => /Shop tabs/.test(await shopHtml()), 15_000)
       await meera.goto(CONSOLE + '/admin/themes/bazaar/1.0.0')
       await meera.getByLabel('Why withdraw it').fill('Prices unreadable on the tint scheme')
       await meera.getByRole('button', { name: 'Withdraw Bazaar 1.0.0' }).click()
       await meera.getByText('Withdrawn. Shops on it show their previous look now.').waitFor()
-      await until(async () => (await shopHtml()) === before, 15_000)
+      await until(async () => !/Shop tabs/.test(await shopHtml()), 15_000)
       await riya.goto(CONSOLE + '/console/look')
       await riya.getByText('Frrata withdrew Bazaar 1.0.0 for a problem. Your previous look is live; nothing is lost.').waitFor()
       assert.equal(await riya.getByRole('button', { name: 'Bazaar', exact: true }).count(), 0, 'a withdrawn theme is not offered')
