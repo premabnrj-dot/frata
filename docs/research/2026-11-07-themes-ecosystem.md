@@ -1,6 +1,6 @@
 # Themes and a customizer for Frrata shops
 
-Status: research + proposal · Date: 2026-11-07 · Approved: owner took every recommendation (2026-11-08, "go with your recommendations on themes, make the mockups"); T1 mockup https://claude.ai/artifact/9QRkdHHKLAwpj5LmcxYYSU awaiting sign-off
+Status: research + proposal · Date: 2026-11-07 · Approved: owner took every recommendation (2026-11-08, "go with your recommendations on themes, make the mockups"); T1 mockup https://claude.ai/artifact/9QRkdHHKLAwpj5LmcxYYSU approved 2026-11-08; spec docs/specs/2026-11-08-themes.md
 North star: problem (5) a premium-looking storefront, with (4) mobile checkout conversion. A faster, better-looking
 shop turns more Instagram visits into delivered orders, and the delivered-order fee is how Frrata earns.
 Sources: every external fact carries the date it was checked (2026-11-07) and the page's own date where it has one.
