@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.13.0
+  version: 2.14.0
   verified: 2026-11-08
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -171,6 +171,10 @@ export async function confirmOrder(input: unknown): Promise<{ ok: boolean; error
   is a typed column.
 - **A definer function that names people takes no ids:** it reads
   `app_current_tenant()` and returns only that shop's members.
+- **Admin reads tenant data only two ways** (offers O·4): `admin_*` policies plus column grants naming exactly the
+  columns Admin needs (it sets only the columns it owns, e.g. `discounts.stopped_*`), or a definer that returns
+  aggregates per shop (`app_admin_offer_totals`), never a row a shopper is in. A status Admin shows is derived by the
+  same pure function the shop uses (`offerStatus`), never restated.
 - **A read inside a caller's transaction lives beside the writers** (`src/lib/orders/`), the one exception to
   "reads go through `src/lib/queries/`": `documentsFor` takes the `asMember` transaction so a support visit
   that opens a document carrying the shopper's address is audited, and `check:tenant` requires a queries file
@@ -309,6 +313,14 @@ Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
   in the bar (`isNull(label)`), recorded with `via` (link or typed).
 - **First order** is decided at placement under a per-phone advisory lock (standing or holding
   order from that phone), and again on a payment retry.
+- **Did it make money?** `offerStats` (queries/discounts.ts) is the ONE computation of an offer's results:
+  window orders that use it now (`useOfRowSql`), state through `stateSql`, ₹ kept through profit.ts, new vs repeat
+  through `priorOrderSql` (also the first-order rule), each creator code's week through `leakOf` (domains/checkout/
+  leak.ts). Nothing stored. Uses for limits and budgets stay `discountUses` (all time).
+- **Stopped by Frrata** (O·4): `stopped_*` makes an offer `stopped` in `offerStatus` and not live in
+  `liveDiscountSql`; the shop can only end it (every console WHERE has `stopped_at is null`, except End). At most
+  `MAX_RUNNING_OFFERS` (20) run per shop: `runningOffers` counts under the shop's offers advisory lock, read by a
+  start and by Admin's resume.
 - **Prior price** is derived from `price_history` (`priorPriceSql`, `lib/db/price-predicates.ts`):
   the lowest price in the 30 days before the current one took effect, shown only within 30 days
   of the change. `variants.compare_at` is the M.R.P. (`mrp`), never a struck price.

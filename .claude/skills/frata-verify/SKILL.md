@@ -2,7 +2,7 @@
 name: frata-verify
 description: Use before saying a Frata change works - to run the gates, typecheck, tests and production build, run the end-to-end browser flows (npm run e2e), check a mockup, prove tenant isolation on a real Postgres, run the built app locally against that database with storefront and console Host headers, and exercise webhooks and cron with curl.
 metadata:
-  version: 1.4.0
+  version: 1.5.0
   verified: 2026-11-06
   covers: ["scripts/verify/**", "e2e/**", "scripts/check-mockup.mjs"]
 ---
@@ -20,6 +20,11 @@ npm run build       # postbuild: check:client-bundle
 ```
 
 A gate you added: plant a violation and watch it fail before trusting it.
+
+- **A definer gets a parity test against the app-side count** (offers O·4): whatever a SECURITY DEFINER function
+  restates (`app_admin_offer_totals` restates the offer-use rule), an int test runs it and the app's own function
+  (`discountUses`) on the same rows and asserts they agree. `verify:tenancy` asserts a write changed exactly the rows
+  it should (check 36: a stop changes one row).
 
 ## A throwaway Postgres (this container has PostgreSQL 16)
 
