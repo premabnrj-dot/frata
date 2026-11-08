@@ -9,11 +9,16 @@
 // Facts: frata-integrations § Attribution signals (checked 2026-11-08). Pure.
 // =============================================================================
 
-import type { Attribution } from './attribution'
+import { cleanValue, type Attribution } from './attribution'
 
 /** Bumped whenever the rule changes; the page says so with the date (spec: numbers never jump without a word). */
 export const CLASSIFIER_VERSION = 1
 export const CLASSIFIER_SINCE = '2026-11-08'
+
+/** The click ids that decide a source, by what they mean: SQL readers test these same lists (attribution-sql.ts). */
+export const GOOGLE_ADS_KEYS = ['gclid', 'gbraid', 'wbraid', 'gad_source'] as const
+export const GOOGLE_FREE_KEYS = ['srsltid'] as const
+export const META_CLICK_KEYS = ['fbclid'] as const
 
 export const CHANNELS = ['creator', 'instagram', 'facebook', 'meta', 'whatsapp', 'google_ads', 'google', 'youtube', 'email', 'website', 'other', 'direct'] as const
 export type Channel = (typeof CHANNELS)[number]
@@ -101,9 +106,9 @@ export function classifySource(a: Attribution, creator: { label: string; code: s
     // A value the merchant (or someone) typed: kept as its own row under Other.
     return make('other', `Other · ${src.slice(0, 40)}`, campaign)
   }
-  if (a.gclid || a.gbraid || a.wbraid || a.gad_source) return make('google_ads', 'Google ads', campaign)
-  if (a.srsltid) return make('google', 'Google', campaign)
-  if (a.fbclid) return make('meta', 'Instagram or Facebook', campaign)
+  if (GOOGLE_ADS_KEYS.some((k) => a[k])) return make('google_ads', 'Google ads', campaign)
+  if (GOOGLE_FREE_KEYS.some((k) => a[k])) return make('google', 'Google', campaign)
+  if (META_CLICK_KEYS.some((k) => a[k])) return make('meta', 'Instagram or Facebook', campaign)
   if (a.ref_host) {
     const host = a.ref_host.replace(/^www\./, '')
     const hit = HOST_CHANNEL.find(([re]) => re.test(host))
@@ -111,4 +116,22 @@ export function classifySource(a: Attribution, creator: { label: string; code: s
     return make('website', host.slice(0, 60), campaign)
   }
   return make('direct', CHANNEL_LABEL.direct, campaign)
+}
+
+/** What a SQL reader groups an order by (attribution-sql.ts): the tags, the referrer, which click ids it has, and the
+ * creator code it uses. Every reader of stored orders (Analytics, a source's page, the order page) classifies these
+ * through sourceOfInputs, so they always agree; each string is cleaned again here (rows from before the cleaner). */
+export type SourceInputs = {
+  us: string | null; um: string | null; uc: string | null; rh: string | null
+  gads: boolean; srs: boolean; fb: boolean
+  cl: string | null; cc: string | null
+}
+
+export function sourceOfInputs(r: SourceInputs): Source {
+  const v = (x: string | null) => cleanValue(x) ?? undefined
+  const label = cleanValue(r.cl), code = cleanValue(r.cc)
+  return classifySource({
+    utm_source: v(r.us), utm_medium: v(r.um), utm_campaign: v(r.uc), ref_host: v(r.rh),
+    gclid: r.gads ? '1' : undefined, srsltid: r.srs ? '1' : undefined, fbclid: r.fb ? '1' : undefined,
+  }, label && code ? { label, code } : null)
 }

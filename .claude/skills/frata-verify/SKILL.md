@@ -2,7 +2,7 @@
 name: frata-verify
 description: Use before saying a Frata change works - to run the gates, typecheck, tests and production build, run the end-to-end browser flows (npm run e2e), check a mockup, prove tenant isolation on a real Postgres, run the built app locally against that database with storefront and console Host headers, and exercise webhooks and cron with curl.
 metadata:
-  version: 1.6.0
+  version: 1.7.0
   verified: 2026-11-08
   covers: ["scripts/verify/**", "e2e/**", "scripts/check-mockup.mjs"]
 ---
@@ -116,7 +116,9 @@ stock taken once), a price change mid-checkout, a double submit. Then
 ## Speed proof — before saying a change is fast enough (2026-11-08)
 
 1. Seed one shop at 10× (600 products × 5 variants × 5 images, 150k orders and
-   lines) in the throwaway Postgres.
+   lines) in the throwaway Postgres: `scripts/verify/seed-10x.sql` into a fresh `frata_speed` database (apply the
+   migrations, `alter role frata_app password 'x'`). A page that reads a window of orders also runs its timing test
+   there (`SPEED=1 INT_DB_HOST=localhost:54330 npx vitest run analytics-speed --silent=false`) and EXPLAINs its reads.
 2. `ALTER SYSTEM SET log_statement='all'; select pg_reload_conf();`
 3. Kill the server (`pkill -f next-server`; a pkill on "next start" misses it),
    then clear `.next/cache/fetch-cache` and `.next/server/route-cache`.

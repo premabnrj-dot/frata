@@ -1,5 +1,5 @@
 # A·0 + A·1 · Where orders come from, judged on deliveries
-Status: active (approved; waits for M2·2 Ship) · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/5PRMG996toWDUsnAuMTSJt · Approved: owner, 2026-11-08: mockup as drawn, orders first (C); outcomes by hand and billable with the guards (A, E); ₹ kept by source in every plan (B); call D answered "Can we work on shipping module first?": **M2·2 Ship is planned and built before A·0/A·1**, so freight and outcomes come from Ship, with the shop's own estimate only for orders it ships itself
+Status: built 2026-11-08 (plan `docs/plans/2026-11-08-analytics-a1.md`, A1·0–A1·7) · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/5PRMG996toWDUsnAuMTSJt · Approved: owner, 2026-11-08: mockup as drawn, orders first (C); outcomes by hand and billable with the guards (A, E); ₹ kept by source in every plan (B); call D answered "Can we work on shipping module first?": **M2·2 Ship is planned and built before A·0/A·1**, so freight and outcomes come from Ship, with the shop's own estimate only for orders it ships itself
 Parent spec: `docs/specs/2026-11-07-analytics.md` (the module, its phases and owner calls 1–6). This spec re-checks
 that one against what changed on 8 Nov and draws the first phase to build.
 
@@ -72,7 +72,7 @@ delivered or came back, and what each left in rupees, and makes a tagged link fo
    orders, sales, came back (RTO) and "source known" (how many orders carry a source). Each with the change from the
    period before. A period that includes today says "so far" and that today's numbers still change.
 3. **Where orders came from:** one row per source, most ₹ kept after returns first (by orders until any outcome is
-   known): orders, sales, COD share, delivered, came back, ₹ kept after returns, and ₹ kept per delivered order. A rate
+   known): orders, sales, COD share, delivered, came back, ₹ kept after returns, and ₹ kept per order with an outcome (delivered, came back or lost: `kept.ts`; built so, A1·6). A rate
    is shown only when its own denominator is 30 or more (`judgeable(n)`, one rule in the domain); below that, counts
    ("3 of 24 came back"). On a phone, one card per source. Top sources plus "Other" (values a shopper can type).
 4. **A source opens its page:** its campaigns (from the link's name) and its last 50 orders, each opening the order.

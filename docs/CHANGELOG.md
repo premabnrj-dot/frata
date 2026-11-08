@@ -3,6 +3,20 @@
 What a merchant (or Frata staff) can do now that they could not before, newest first. One entry per closed
 phase; the detail is in its plan.
 
+## 2026-11-08 — Analytics A·1 ([plan](plans/2026-11-08-analytics-a1.md), [spec](specs/2026-11-08-analytics-a1.md))
+
+- **Console › Analytics** (`/console/analytics`): where this period's orders came from (7, 30 or 90 days against the
+  period before), judged on ₹ kept after returns: delivered, came back or lost, before ads and packaging. Orders,
+  sales, COD, delivered and came back per source; counts, not shares, under 30; returns by pincode.
+- **A source's page:** its campaigns and its latest 50 orders, each opening the order.
+- **Make a link:** a link for an Instagram bio, a story, a WhatsApp broadcast or an ad, to any page, with a name;
+  copied in one tap, and it says what its orders will show as. "A creator" goes to Offers.
+- **The order page says where the order came from** ("Came from: Creator · Riya · diwali-drop").
+- **The shop remembers where a shopper came from** (the link's tags and the referring site) until the order; a console
+  preview never does. An abandoned order's click ids are erased with its other details.
+- **₹ kept is a cost:** owners and admins see it; a partner only before handover; staff never. Product cost of goods
+  follows the same rule.
+
 ## 2026-11-07 — 1D Orders ([plan](plans/2026-11-07-orders.md), [spec](specs/2026-11-07-orders.md))
 
 - **The orders queue** (`/console/orders`): To confirm · To pack · On hold · All, with counts; 50 a page;

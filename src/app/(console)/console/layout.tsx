@@ -83,12 +83,13 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const offers: NavItem = { href: '/console/offers', label: 'Offers', icon: 'offers' }
   const look: NavItem = { href: '/console/look', label: 'Look', icon: 'look' }
   const apps: NavItem = { href: '/console/apps', label: 'Apps', icon: 'apps' }
+  const analytics: NavItem = { href: '/console/analytics', label: 'Analytics', icon: 'profit' }
   const activity: NavItem = { href: '/console/activity', label: 'Activity', icon: 'activity' }
-  const groups: NavGroup[] = [{ label: 'Today', items: [home, orders] }, { label: 'Catalogue', items: [products, collections] }, { label: 'Store', items: [offers, look, apps, settings, activity] }]
+  const groups: NavGroup[] = [{ label: 'Today', items: [home, orders, analytics] }, { label: 'Catalogue', items: [products, collections] }, { label: 'Store', items: [offers, look, apps, settings, activity] }]
   const foot: NavItem[] = [{ href: '/console/preview', label: 'Preview shop', icon: 'external' }]
   if (auth.staffRole !== null && !supportSessionId) foot.push({ href: '/admin', label: 'Frrata Admin', icon: 'admin' })
   return (
-    <AppShell title={tenantName} navLabel="Console" groups={groups} tabs={[home, orders, products]} more={[collections, offers, look, apps, settings, activity]} foot={foot}
+    <AppShell title={tenantName} navLabel="Console" groups={groups} tabs={[home, orders, products]} more={[analytics, collections, offers, look, apps, settings, activity]} foot={foot}
       email={auth.email} tenantId={tenantId} places={places}
       banner={visit ? <SupportBanner storeName={tenantName} visit={visit} now={now} />
         : building ? <BuildingBanner shop={tenantName} inviteEmail={building.inviteEmail} /> : undefined}>

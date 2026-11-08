@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 4.14.0
+  version: 4.15.0
   verified: 2026-11-08
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -322,6 +322,23 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 60. **An outcome's Undo outlives the row it was on:** the toast stays when the order leaves its tab or panel. Undo
     closes at the end of the IST month the outcome was marked in; Shipped also once it has been 30 days on its way
     (it counts as delivered then).
+
+## Analytics (owner-approved 2026-11-08; spec `docs/specs/2026-11-08-analytics-a1.md`, mockup https://claude.ai/artifact/5PRMG996toWDUsnAuMTSJt; A·1 built)
+
+61. **One question first:** "Where did this period's orders come from, and what did each keep after returns?" The
+    period (7 · 30 · 90 IST days, today "so far") is always read against the one before, and the meta line names both.
+62. **Pending is never zero and never a return.** Orders not sent yet or on the way are counted as such; a share of
+    returns names its denominator ("6% of 54 with an outcome"), and an order joins it only once it has an outcome.
+63. **Under 30, counts:** below `JUDGE_MIN` a share is "3 of 12" and a per-order ₹ says "too few to judge"; under 30
+    orders on the whole page, the tally pictogram and a count to go replace the four numbers.
+64. **"Source known %"** sits in the strip; under half, one info line points to Make a link. A source is what the link
+    said: the (i) on "Where orders came from" says how it is decided, once.
+65. **₹ kept only where `seesCosts`:** staff (and a partner after handover) see the same page with orders leading and
+    no ₹ kept anywhere (column, headline, caption); sales and order totals stay, as on Orders.
+66. **Make a link** is the page's one primary action: where it will be shared (lowercase presets; "A creator" goes to
+    Offers), which page opens, an optional name; out comes the link, Copy, and "Orders from it show as …". A shop not
+    open yet says so instead. A source's own page lists its campaigns and its latest 50 orders, each opening the order;
+    the order page says "Came from: <source> · <campaign>" as text, never a link.
 
 ## Storefront as built (1B, 2026-11-07)
 

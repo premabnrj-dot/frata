@@ -18,7 +18,7 @@ describe.skipIf(!host)('analytics', () => {
     const { orders } = await import('@/lib/db/schema-orders')
     const { shopSettings } = await import('@/lib/db/schema')
     const { discounts, discountCodes, orderDiscounts } = await import('@/lib/db/schema-discounts')
-    const { eq } = await import('drizzle-orm')
+    const { eq, sql } = await import('drizzle-orm')
     const q = await import('@/lib/queries/analytics')
     const now = new Date('2031-03-01T10:00:00Z')
     const ago = (d: number) => new Date(now.getTime() - d * 86_400_000)
@@ -82,6 +82,25 @@ describe.skipIf(!host)('analytics', () => {
       expect(page?.orders.length).toBe(1)
       expect(await q.sourcePageIn(tx, A, 'owner', 30, 'no-such-source', now)).toBeNull()
       expect(await q.sourcePageIn(tx, A, 'owner', 30, "x' or 1=1 --", now)).toBeNull()
+      // The order page and Analytics classify by one route (impact review A1·7): each order's own source (orderSourceIn)
+      // is a source whose page lists it — tags with spaces and capitals, a click id alone, an empty click id, a
+      // referrer only, an empty tag beside a referrer, and a creator's code.
+      const { orderSourceIn } = await import('@/lib/queries/order-detail')
+      const cases = [
+        { attribution: { utm_source: ' Instagram ', utm_medium: 'BIO', utm_campaign: 'parity' } },
+        { attribution: { gclid: 'abc' } }, { attribution: { gclid: '' } }, { attribution: { ref_host: 'l.instagram.com' } },
+        { attribution: { utm_source: '  ', ref_host: 'news.example.com' } },
+      ]
+      const ids = [viaRiya]
+      for (const checkout of cases) ids.push(await order({ at: ago(1), checkout }))
+      for (const id of ids) {
+        const src = await orderSourceIn(tx, A, id, now)
+        const [row] = await tx.execute<{ number: number }>(sql`select number from orders where id = ${id}`)
+        const number = row!.number
+        const pageOf = await q.sourcePageIn(tx, A, 'owner', 30, src!.slug, now)
+        expect({ slug: src!.slug, listed: pageOf?.orders.some((x) => x.number === number) }).toEqual({ slug: src!.slug, listed: true })
+      }
+      expect((await orderSourceIn(tx, A, ids[1]!, now))!.label).toBe('Instagram bio')
       throw ROLLBACK
     }).catch((err) => { if (err !== ROLLBACK) throw err })
   })

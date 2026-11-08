@@ -1,9 +1,13 @@
 import 'server-only'
 import { orderDiscounts } from '@/lib/db/schema-discounts'
-import { and, asc, desc, eq, isNull } from 'drizzle-orm'
+import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm'
+import { sourceOfInputs, type Source, type SourceInputs } from '@/domains/analytics/source'
+import { attributionInputsSql } from '@/lib/db/attribution-sql'
+import { creatorCodeJoinSql } from '@/lib/db/discount-predicates'
 import { momentColumns, onlineTotalCol } from '@/lib/db/order-predicates'
 import { creditNotes, orderEvents, orderLines, orderNotes, orders, shipments } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
+import type { Tx } from '@/lib/db'
 import { riskFactsFor } from './order-risk'
 
 // =============================================================================
@@ -16,6 +20,20 @@ import { riskFactsFor } from './order-risk'
 // same "not found" as a number that does not exist (tenancy audit 2026-11-07).
 // =============================================================================
 
+/**
+ * Where one order came from: the inputs and the creator join Analytics groups by (attribution-sql.ts,
+ * creatorCodeJoinSql), classified by sourceOfInputs, so the order page and Analytics always name the same source. Inside
+ * the caller's tenant transaction. Its label is text a page renders, never a link.
+ */
+export async function orderSourceIn(tx: Tx, tenantId: string, orderId: string, now: Date): Promise<Source | null> {
+  const i = attributionInputsSql('o')
+  const [r] = await tx.execute<SourceInputs>(sql`
+    select ${i.us} us, ${i.um} um, ${i.uc} uc, ${i.rh} rh, ${i.gads} gads, ${i.srs} srs, ${i.fb} fb, dc.label cl, dc.code cc
+      from ${orders} o ${creatorCodeJoinSql(now)}
+     where o.tenant_id = ${tenantId} and o.id = ${orderId} order by od.created_at, dc.code limit 1`)
+  return r ? sourceOfInputs(r) : null
+}
+
 export async function orderDetail(tenantId: string, number: number, now = new Date()) {
   if (!Number.isSafeInteger(number) || number < 1) return null
   const data = await withTenant(tenantId, async (tx) => {
@@ -27,8 +45,8 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
       invoiceNumber: orders.invoiceNumber, cancelReason: orders.cancelReason, cancelNote: orders.cancelNote, erasedAt: orders.erasedAt,
     }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.number, number))).limit(1)
     if (!o) return null
-    // Five reads at once in the one transaction (speed review P8: postgres-js pipelines them; they ran in turn).
-    const [lines, events, notes, offerRows, [shipment], [credit]] = await Promise.all([tx.select({
+    // Seven reads at once in the one transaction (speed review P8: postgres-js pipelines them; they ran in turn).
+    const [lines, events, notes, offerRows, [shipment], [credit], source] = await Promise.all([tx.select({
       id: orderLines.id, title: orderLines.title, optionValues: orderLines.optionValues, sku: orderLines.sku, qty: orderLines.qty, unitPrice: orderLines.unitPrice,
       imageBase: orderLines.imageBase, imageWidths: orderLines.imageWidths, kind: orderLines.kind, shipsBy: orderLines.shipsBy,
       leadMinDays: orderLines.leadMinDays, leadMaxDays: orderLines.leadMaxDays, stockTakenAt: orderLines.stockTakenAt,
@@ -47,9 +65,11 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
     // Its credit note, once issued (Documents D3).
     tx.select({ number: creditNotes.number, issuedAt: creditNotes.issuedAt }).from(creditNotes)
       .where(and(eq(creditNotes.tenantId, tenantId), eq(creditNotes.orderId, o.id))).limit(1),
+    // Where it came from (the same route Analytics classifies by).
+    orderSourceIn(tx, tenantId, o.id, now),
     ])
     const offers = offerRows.map((d) => ({ ...d, amount: Number(d.amount) }))
-    return { o, lines, events, notes, offers, shipment: shipment ?? null, credit: credit ?? null }
+    return { o, lines, events, notes, offers, shipment: shipment ?? null, credit: credit ?? null, source }
   })
   if (!data) return null
   // Risk: null when its facts cannot be read (the page then says "Risk unavailable" and fails closed).
