@@ -1,0 +1,337 @@
+<title>Frrata Shop Addresses</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Bricolage+Grotesque:opsz,wght@12..96,700&display=swap">
+<style>
+/* Layout: a proposal column; console and Admin screens in Frrata tokens. Addresses in mono, states as words + colour. */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--brand:#D61F69;--brand-text:#A8124F;--thread:#D61F69;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;--ink:#1C1917;--on-ink:#FAFAF9;
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--display:"Bricolage Grotesque","Inter",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--ink:#0B0A09;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--ink:#0B0A09;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.55 var(--sans);margin:0}
+.wrap{max-width:1040px;margin:0 auto;padding-block:28px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:28px;line-height:1.2;margin:0 0 6px;text-wrap:balance}
+h2{font-size:19px;margin:48px 0 8px;display:flex;gap:10px;align-items:center;text-wrap:balance;scroll-margin-top:16px}
+h2::before{content:"";width:18px;height:2px;background:var(--thread);flex:none}
+h3{font-size:15px;margin:0 0 6px}
+p{margin:0 0 10px;max-width:72ch}
+.sub{color:var(--sub)}.mono{font-family:var(--mono)}.k{font-size:12px;color:var(--sub)}
+nav.toc{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 4px}
+nav.toc a{font-size:12.5px;color:var(--fg);text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:3px 10px;background:var(--card)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:16px;min-width:0}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}
+.grid2{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}.grid2>*{min-width:0}
+.grid3{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}.grid3>*{min-width:0}
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--fg);padding:6px 12px;font:500 13px var(--sans);min-height:34px;white-space:nowrap}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.danger{border-color:var(--danger-text);color:var(--danger-text)}
+.btn.ghost{border-color:transparent;background:transparent;text-decoration:underline;text-underline-offset:3px}
+.btn[aria-disabled="true"]{opacity:.5}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:500;white-space:nowrap}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-warn{background:var(--warn);color:var(--warn-text)}.c-n{background:var(--muted);color:var(--sub)}.c-danger{background:var(--danger);color:var(--danger-text)}.c-info{background:var(--info);color:var(--info-text)}
+.addr{font:500 15px var(--mono);overflow-wrap:anywhere}.addr b{color:var(--brand-text);font-weight:600}
+.field{display:grid;gap:4px;margin-bottom:12px}.field label{font-size:13px;font-weight:500}
+.input{border:1px solid var(--input);border-radius:6px;padding:8px 10px;background:var(--card);color:var(--fg);font:14px var(--sans);min-height:38px;width:100%}
+.affix{display:flex;align-items:stretch;border:1px solid var(--input);border-radius:6px;overflow:hidden;background:var(--card)}
+.affix input{border:0;padding:8px 10px;font:14px var(--mono);min-width:0;flex:1;background:transparent;color:var(--fg)}
+.affix span{padding:8px 10px;background:var(--muted);color:var(--sub);font:14px var(--mono);white-space:nowrap}
+.say{font-size:12.5px}.say.ok{color:var(--ok-text)}.say.bad{color:var(--danger-text)}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.list li:last-child{border-bottom:0}
+.steps{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 14px}
+.steps span{font-size:12.5px;padding:3px 10px;border-radius:999px;border:1px solid var(--border);color:var(--sub)}
+.steps span.on{border-color:var(--fg);color:var(--fg);font-weight:600}.steps span.done{background:var(--ok);color:var(--ok-text);border-color:transparent}
+.rec{display:grid;grid-template-columns:60px minmax(0,.8fr) minmax(0,1.6fr) auto auto;gap:8px;align-items:center;font-size:12.5px;padding:8px 0;border-bottom:1px solid var(--border)}
+.rec code{font:12px var(--mono);overflow-wrap:anywhere;background:var(--muted);padding:2px 5px;border-radius:4px}
+.rec.head{font-weight:500;color:var(--sub)}
+@media (max-width:620px){.rec{grid-template-columns:60px minmax(0,1fr) auto}.rec .v{grid-column:1/-1}.rec .st{grid-column:1/-1}.rec .cp{grid-row:1;grid-column:3}}
+.why{font-size:12.5px;color:var(--sub);margin-top:2px}
+.reg{display:flex;flex-wrap:wrap;gap:6px}.reg span{border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:13px;background:var(--card)}.reg span.on{border:2px solid var(--fg);font-weight:600}
+.dialog{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:18px;max-width:460px;box-shadow:0 8px 24px rgb(0 0 0 / .12)}
+.dialog ul{padding-left:18px;margin:6px 0 14px}.dialog li{margin:4px 0}
+.banner{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--danger);color:var(--danger-text);border-radius:6px;padding:10px 14px}
+.problem{border-left:3px solid var(--warn-text);padding:8px 12px;background:var(--card);border-radius:0 6px 6px 0}
+.problem.bad{border-color:var(--danger-text)}
+.problem b{display:block;font-size:13.5px}.problem p{font-size:13px;margin:2px 0 6px}
+.map{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.dom{border:1px solid var(--border);border-radius:8px;padding:14px;background:var(--card)}
+.dom .addr{display:block;margin:4px 0 8px}
+.tag{font:600 10.5px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--sub)}
+.flow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font:13px var(--mono);margin-top:12px}
+.flow i{font-style:normal;color:var(--sub)}
+.tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:12px;color:var(--sub);font-weight:500}tr:last-child td{border-bottom:0}
+.admin-bar{display:flex;gap:10px;align-items:center;background:var(--ink);color:var(--on-ink);border-radius:6px 6px 0 0;padding:8px 12px;font-size:13px}
+.admin-bar .chip{background:var(--warn);color:var(--warn-text)}
+.admin{border:1px solid var(--border);border-top:0;border-radius:0 0 6px 6px;padding:14px;background:var(--card)}
+.tabs{display:flex;gap:16px;border-bottom:1px solid var(--border);margin-bottom:12px;font-size:13px;flex-wrap:wrap}
+.tabs span{padding:6px 0;color:var(--sub)}.tabs span.on{color:var(--fg);font-weight:600;border-bottom:2px solid var(--thread)}
+ol.own{padding-left:18px;margin:0}ol.own li{margin:6px 0}
+</style>
+
+<div class="wrap">
+  <p class="k mono">Mockup · 8 Nov 2026 · spec docs/specs/2026-11-08-shop-addresses.md · for the owner's approval</p>
+  <h1>Shop addresses: a frrata.shop name, then your own domain</h1>
+  <p class="sub">Every shop gets <span class="mono">name.frrata.shop</span> the day it opens. A brand connects its own domain by copying three records, then makes it the main address. Frrata's team steps in only for disputes, abuse and copied brands.</p>
+  <nav class="toc" aria-label="Screens">
+    <a href="#map">1 Three domains</a><a href="#name">2 Picking a name</a><a href="#settings">3 Shop address</a><a href="#rename">4 Change the name</a>
+    <a href="#connect">5 Connect a domain</a><a href="#main">6 Main address</a><a href="#problems">7 Problems</a><a href="#admin">8 Admin</a>
+    <a href="#who">9 Who controls what</a><a href="#stress">10 Stress test</a><a href="#now">11 Connect frrata.shop now</a>
+  </nav>
+
+  <h2 id="map">1 · Three domains, three jobs</h2>
+  <div class="map">
+    <div class="dom"><span class="tag">Frrata</span><span class="addr">frrata.com</span><p class="sub">Frrata's website and people's mail. Later the console (app.frrata.com) and notices.</p></div>
+    <div class="dom"><span class="tag">Every shop</span><span class="addr"><b>kesar-studio</b>.frrata.shop</span><p class="sub">One name per shop. Frrata runs the certificates. On the Public Suffix List, so shops stay apart in browsers.</p></div>
+    <div class="dom"><span class="tag">The brand's own</span><span class="addr">www.kesarstudio.in</span><p class="sub">The merchant's domain and DNS. Frrata serves it once the merchant proves it's theirs.</p></div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h3>Once www.kesarstudio.in is the main address</h3>
+    <div class="flow"><span>kesar-studio.frrata.shop/products/rust-kurta</span><i>→ 308 →</i><span>www.kesarstudio.in/products/rust-kurta</span></div>
+    <div class="flow"><span>kesarstudio.in/collections/festive</span><i>→ 308 →</i><span>www.kesarstudio.in/collections/festive</span></div>
+    <div class="flow"><span>kesar.frrata.shop (an old name)</span><i>→ 308 →</i><span>www.kesarstudio.in</span></div>
+    <p class="k" style="margin-top:8px">Same page, every time. Search engines, sitemaps and shared links all point at the main address.</p>
+  </div>
+
+  <h2 id="name">2 · Picking a name (sign-up, and Admin's new-merchant form)</h2>
+  <div class="grid3">
+    <div class="card"><label class="k" for="n1">Your shop's address</label><div class="affix"><input id="n1" value="kesar-studio"><span>.frrata.shop</span></div><p class="say ok" style="margin-top:6px">Available</p></div>
+    <div class="card"><label class="k" for="n2">Your shop's address</label><div class="affix"><input id="n2" value="kesar"><span>.frrata.shop</span></div><p class="say bad" style="margin-top:6px">Taken. Try kesar-studio or kesar-jaipur</p></div>
+    <div class="card"><label class="k" for="n3">Your shop's address</label><div class="affix"><input id="n3" value="fabindia-sale"><span>.frrata.shop</span></div><p class="say bad" style="margin-top:6px">This name belongs to another brand. Pick your own</p></div>
+  </div>
+  <p class="k" style="margin-top:8px">3–30 letters, digits and single hyphens. Never: our words (admin, www, checkout…), protected brands, offensive words, a name another shop used before, non-Latin lookalikes. One rule for sign-up, partners and Admin (Admin's form is looser today).</p>
+
+  <h2 id="settings">3 · Console › Settings › Shop address</h2>
+  <div class="grid2">
+    <div class="card">
+      <div class="row between"><h3 style="margin:0">Your frrata.shop address</h3><span class="chip c-n">Second address</span></div>
+      <p class="addr" style="margin:10px 0"><b>kesar-studio</b>.frrata.shop</p>
+      <div class="row"><a class="btn">Copy</a><a class="btn">Open</a><a class="btn">Change</a></div>
+      <p class="k" style="margin-top:10px">2 changes left. The old address keeps working and is never given to another shop.</p>
+      <p class="k">Old name: <span class="mono">kesar.frrata.shop</span> · sends shoppers here</p>
+    </div>
+    <div class="card">
+      <div class="row between"><h3 style="margin:0">Your own domain</h3><a class="btn primary">Connect a domain</a></div>
+      <ul class="list" style="margin-top:8px">
+        <li><span><span class="mono">www.kesarstudio.in</span><br><span class="k">Checked 2 hours ago</span></span><span class="row"><span class="chip c-ok">Main address</span><a class="btn ghost">Manage</a></span></li>
+        <li><span><span class="mono">kesarstudio.in</span><br><span class="k">Sends shoppers to www.kesarstudio.in</span></span><span class="chip c-ok">Connected</span></li>
+        <li><span><span class="mono">shop.rangthreads.in</span><br><span class="k">Add the records, then check</span></span><span class="chip c-warn">Waiting for records</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="grid2" style="margin-top:12px">
+    <div class="card"><span class="chip c-n">Staff</span><p class="k" style="margin-top:6px">See this page. Only owners and admins change the address or connect a domain.</p></div>
+    <div class="card"><span class="chip c-warn">Frrata support visit</span><p class="k" style="margin-top:6px">Can read the records to help you. Can't connect, change or remove anything.</p></div>
+  </div>
+
+  <h2 id="rename">4 · Change the name (after the shop opens)</h2>
+  <div class="dialog">
+    <h3>Change your frrata.shop address</h3>
+    <label class="k" for="r1">New address</label>
+    <div class="affix" style="margin:4px 0 6px"><input id="r1" value="kesar-jaipur"><span>.frrata.shop</span></div>
+    <p class="say ok">Available</p>
+    <ul class="sub">
+      <li><span class="mono">kesar-studio.frrata.shop</span> keeps working and sends shoppers to the new name.</li>
+      <li>No other shop can ever take the old name.</li>
+      <li>This uses 1 of your 2 changes.</li>
+    </ul>
+    <div class="row"><a class="btn primary">Change to kesar-jaipur</a><a class="btn">Keep kesar-studio</a></div>
+  </div>
+
+  <h2 id="connect">5 · Connect a domain (three steps, resumable)</h2>
+  <div class="grid2">
+    <div class="card">
+      <div class="steps"><span class="on">1 Your domain</span><span>2 Records</span><span>3 Securing</span></div>
+      <div class="field"><label for="d1">Your domain</label><input class="input mono" id="d1" value="kesarstudio.in"><span class="k">We'll use <b class="mono">www.kesarstudio.in</b> as the main address and send kesarstudio.in there. A subdomain like shop.kesarstudio.in works too.</span></div>
+      <p style="font-size:13px;font-weight:500;margin:0 0 6px">Where did you buy it?</p>
+      <div class="reg"><span class="on">GoDaddy</span><span>Hostinger</span><span>BigRock</span><span>Namecheap</span><span>Cloudflare</span><span>Other</span></div>
+      <div class="row" style="margin-top:14px"><a class="btn primary">Continue</a></div>
+      <p class="k" style="margin-top:8px">Refused: frrata domains, IP addresses, non-Latin names, a bare suffix like co.in.</p>
+    </div>
+    <div class="card">
+      <h3>Before you start</h3>
+      <ul class="sub" style="padding-left:18px;margin:0">
+        <li>Nothing shoppers see changes until you make the domain your main address.</li>
+        <li>Your email stays where it is: we never ask you to change MX records.</li>
+        <li>No developer needed: three records to copy.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <div class="steps"><span class="done">1 Your domain</span><span class="on">2 Records</span><span>3 Securing</span></div>
+    <p class="sub">In GoDaddy: <b>My Products › kesarstudio.in › DNS › Add New Record</b>. Add these three, then check. <a class="btn ghost">See the GoDaddy steps with pictures</a></p>
+    <div class="rec head"><span>Type</span><span>Name</span><span class="v">Value</span><span class="st">State</span><span class="cp"></span></div>
+    <div class="rec"><span class="mono">TXT</span><code>_frrata</code><code class="v">frrata-verify=7c1e9a42b8f0d6</code><span class="st chip c-ok">Found: proves it's yours</span><a class="btn cp">Copy</a></div>
+    <div class="rec"><span class="mono">A</span><code>@</code><code class="v">76.76.21.21</code><span class="st chip c-danger">Points to 3.110.44.9</span><a class="btn cp">Copy</a></div>
+    <div class="rec"><span class="mono">CNAME</span><code>www</code><code class="v">d41f8c2a.vercel-dns-017.com</code><span class="st chip c-warn">Not found yet</span><a class="btn cp">Copy</a></div>
+    <p class="why">The A record still points to your old website (3.110.44.9). Edit it to 76.76.21.21. DNS can take up to 48 hours; we check every 10 minutes for the first day.</p>
+    <p class="k">Using Cloudflare? Set these records to DNS only (grey cloud).</p>
+    <div class="row" style="margin-top:10px"><a class="btn primary">Check records</a><span class="k">Checked 1 minute ago</span></div>
+  </div>
+  <div class="grid2" style="margin-top:12px">
+    <div class="card">
+      <div class="steps"><span class="done">1 Your domain</span><span class="done">2 Records</span><span class="on">3 Securing</span></div>
+      <p><b>Getting a secure certificate</b></p>
+      <p class="sub">Usually 5 to 10 minutes. You can leave this page; we'll show it here when it's done.</p>
+    </div>
+    <div class="card">
+      <div class="row between"><b>www.kesarstudio.in is connected</b><span class="chip c-ok">Connected</span></div>
+      <p class="sub" style="margin-top:6px">It opens your shop now. Shoppers still use kesar-studio.frrata.shop until you choose.</p>
+      <div class="row"><a class="btn primary">Make it your main address</a><a class="btn">Keep it as a second address</a></div>
+    </div>
+  </div>
+
+  <h2 id="main">6 · Make it your main address</h2>
+  <div class="dialog">
+    <h3>Make www.kesarstudio.in your main address?</h3>
+    <ul class="sub">
+      <li>Shoppers who open kesar-studio.frrata.shop or kesarstudio.in arrive at the same page on www.kesarstudio.in.</li>
+      <li>Links you've shared keep working.</li>
+      <li>Bags in progress start afresh. Do it in a quiet hour.</li>
+      <li>Google moves your pages over a few weeks.</li>
+    </ul>
+    <div class="row"><a class="btn primary">Make it main</a><a class="btn">Not now</a></div>
+    <p class="k" style="margin-top:10px">You can make kesar-studio.frrata.shop main again at any time.</p>
+  </div>
+
+  <h2 id="problems">7 · Problems, in words, each with one way on</h2>
+  <div class="banner"><span><b>www.kesarstudio.in stopped working on 12 Nov.</b> Shoppers are being sent to kesar-studio.frrata.shop until it's fixed.</span><a class="btn">See what's wrong</a></div>
+  <p class="k" style="margin-top:6px">On every console page for owners and admins, after 24 hours of failed checks.</p>
+  <div class="grid2" style="margin-top:12px">
+    <div class="problem"><b>Cloudflare's proxy is on</b><p>The certificate can't be issued through the orange cloud.</p><span class="k">Set the two records to DNS only, then Check records.</span></div>
+    <div class="problem"><b>Your domain only allows DigiCert certificates</b><p>A CAA record blocks the certificate we use.</p><span class="k">Add: CAA 0 issue "letsencrypt.org".</span></div>
+    <div class="problem bad"><b>Connected to another Frrata shop</b><p>If it's yours, add the TXT record above. Whoever proves it gets it; the other shop is told.</p><span class="k">Or write to Frrata support.</span></div>
+    <div class="problem"><b>Proof record removed</b><p>The _frrata TXT record is gone. We'll disconnect the domain on 27 Nov unless it's back.</p><span class="k">Add it again, then Check records.</span></div>
+    <div class="problem"><b>Waiting on our side</b><p>We couldn't reach our hosting provider. We'll keep trying.</p><span class="k">Nothing for you to do.</span></div>
+    <div class="problem bad"><b>Disconnected by Frrata</b><p>Reason: reported as copying another brand (case 2211).</p><span class="k">Reply to support to appeal.</span></div>
+  </div>
+
+  <h2 id="admin">8 · Frrata Admin</h2>
+  <div class="admin-bar"><span class="chip">STAFF</span>Admin › Merchants › Kesar Studio</div>
+  <div class="admin">
+    <div class="tabs"><span>Overview</span><span>Modules</span><span>Plan</span><span class="on">Addresses</span></div>
+    <div class="grid2">
+      <div>
+        <h3>Names</h3>
+        <ul class="list">
+          <li><span class="mono">kesar-studio.frrata.shop</span><span class="chip c-ok">Current</span></li>
+          <li><span class="mono">kesar.frrata.shop</span><span class="k">Old · redirects · since 2 Nov</span></li>
+        </ul>
+        <div class="row" style="margin-top:8px"><a class="btn">Rename Kesar Studio's address</a><a class="btn">Freeze address changes</a></div>
+      </div>
+      <div>
+        <h3>Domains</h3>
+        <ul class="list">
+          <li><span class="mono">www.kesarstudio.in</span><span class="chip c-ok">Main · checked 2 h ago</span></li>
+          <li><span class="mono">kesarstudio.in</span><span class="chip c-ok">Redirects</span></li>
+        </ul>
+        <div class="row" style="margin-top:8px"><a class="btn danger">Disconnect a domain</a><a class="btn">Retry sync</a></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px;border-color:var(--danger-text)">
+      <h3 style="color:var(--danger-text)">Disconnect www.kesarstudio.in from Kesar Studio</h3>
+      <div class="field"><label for="ad1">Reason (shown to the shop)</label><input class="input" id="ad1" value="Reported as copying another brand (case 2211)"></div>
+      <div class="row"><a class="btn danger">Disconnect www.kesarstudio.in</a><a class="btn">Keep it connected</a></div>
+    </div>
+  </div>
+  <div class="grid2" style="margin-top:12px">
+    <div class="card">
+      <h3>Admin › Names</h3>
+      <div class="tablewrap"><table style="min-width:380px">
+        <thead><tr><th>Name or domain</th><th>Kind</th><th>Reason</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">checkout</td><td>Ours</td><td>A Frrata path</td></tr>
+          <tr><td class="mono">fabindia</td><td>Protected brand</td><td>Trademark</td></tr>
+          <tr><td class="mono">kesar</td><td>Held</td><td>Kesar Studio's old name · <u>Release</u></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <h3>Admin › Domain health</h3>
+      <div class="tablewrap"><table style="min-width:380px">
+        <thead><tr><th>Domain</th><th>Shop</th><th>State</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">www.noorlabel.com</td><td>Noor Label</td><td><span class="chip c-danger">Failing 2 days · on fallback</span></td></tr>
+          <tr><td class="mono">shop.rangthreads.in</td><td>Rang Threads</td><td><span class="chip c-warn">Waiting 3 days</span></td></tr>
+          <tr><td class="mono">www.kesarstudio.in</td><td>Kesar Studio</td><td><span class="chip c-ok">Healthy</span></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <h2 id="who">9 · Who controls what</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Action</th><th>Owner · Admin</th><th>Partner (before handover)</th><th>Staff</th><th>Support visit</th><th>Frrata Admin</th><th>Automatic</th></tr></thead>
+    <tbody>
+      <tr><td>Pick the name</td><td>At sign-up</td><td>At creation</td><td>—</td><td>—</td><td>New merchant</td><td>—</td></tr>
+      <tr><td>Change the name</td><td>Free before opening; 2 after</td><td>Before handover</td><td>—</td><td>Read</td><td>Rename with a reason; freeze</td><td>Old names redirect</td></tr>
+      <tr><td>Connect a domain</td><td>Yes (4 at most)</td><td>Yes</td><td>—</td><td>Read</td><td>—</td><td>Proof, Vercel, certificate</td></tr>
+      <tr><td>Make main</td><td>Yes</td><td>Yes</td><td>—</td><td>—</td><td>—</td><td>Fallback after 24 h failing</td></tr>
+      <tr><td>Remove a domain</td><td>Yes</td><td>Yes</td><td>—</td><td>—</td><td>Disconnect with a reason</td><td>After 15 days without proof</td></tr>
+      <tr><td>Names list</td><td>—</td><td>—</td><td>—</td><td>—</td><td>Reserve, protect, block, release</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2 id="stress">10 · Stress test</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>When…</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td>Two people want "kesar" at once</td><td>One wins; the other sees "Just taken" with suggestions</td></tr>
+      <tr><td>A merchant types a domain they don't own</td><td>Stays "claimed", never served, lapses in 7 days, blocks nobody</td></tr>
+      <tr><td>The real owner arrives after a squatter</td><td>Their TXT proof wins at once; the squatter's claim lapses</td></tr>
+      <tr><td>A domain is sold to someone else</td><td>Checks fail → fallback after 24 h → disconnected after 15 days → the new owner can prove it</td></tr>
+      <tr><td>Main domain expires at the registrar</td><td>Shoppers go to the frrata.shop address after 24 h; owner banner</td></tr>
+      <tr><td>Merchant changes the main address</td><td>Bags in progress start afresh; placed orders untouched; shared links redirect</td></tr>
+      <tr><td>A shop closes</td><td>Domains removed from Vercel at once; names held; owner told to delete their records</td></tr>
+      <tr><td>A phishing store on frrata.shop</td><td>Admin freezes it and disconnects its domains; the Public Suffix List keeps one shop's flag off the others</td></tr>
+      <tr><td>A merchant's domain gets HSTS</td><td>Without includeSubDomains, so their webmail or old site is never forced to HTTPS (today every host gets includeSubDomains: fixed in D·2)</td></tr>
+      <tr><td>Vercel down or rate-limited (100 writes a minute)</td><td>Outbox retries; "Waiting on our side"; never shown connected before it is</td></tr>
+      <tr><td>Registrar won't allow a CNAME on the apex</td><td>A record for the apex, CNAME for www</td></tr>
+      <tr><td>Merchant touches MX by mistake</td><td>Our guide warns first; we never ask for MX</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2 id="now">11 · Connect frrata.shop now (D·0)</h2>
+  <div class="note-box card" style="margin-bottom:12px"><b>Bought at Hostinger, 1 year, under review.</b> <span class="sub">That's fine. The registrar doesn't matter; the nameservers do. Once the review clears, point the nameservers at Vercel and everything below works the same as buying at Vercel.</span></div>
+  <div class="grid2">
+    <div class="card">
+      <h3>Your steps</h3>
+      <ol class="own">
+        <li><b>Wait for Hostinger's review</b> (up to 24 hours). Don't buy it twice. If it's refused, buy frrata.shop at Vercel instead ($2.99, then $38.39 a year).</li>
+        <li>Hostinger › Domains › frrata.shop › <b>DNS / Nameservers › Change nameservers</b> › custom: <span class="mono">ns1.vercel-dns.com</span> and <span class="mono">ns2.vercel-dns.com</span>.</li>
+        <li>Before we ask for the Public Suffix List: <b>extend frrata.shop by 2 more years</b> at Hostinger (it needs more than 2 years left). Not urgent for launch.</li>
+        <li><b>Buy frrata.com now at Vercel</b> ($12.03 a year): Frrata's own domain for the website, the console and notices. Buying at Vercel keeps both domains' DNS in one place.</li>
+        <li>Tell me when the review clears.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>Then I do</h3>
+      <ol class="own">
+        <li>Add <span class="mono">frrata.shop</span>, <span class="mono">*.frrata.shop</span> and <span class="mono">www.frrata.shop</span> to project frata.</li>
+        <li>Set <span class="mono">NEXT_PUBLIC_SHOP_DOMAIN=frrata.shop</span> for production and redeploy from main.</li>
+        <li>Check a shop opens at <span class="mono">kesar-studio.frrata.shop</span> with a certificate.</li>
+        <li>Add the <span class="mono">_psl</span> TXT record and prepare the Public Suffix List request for you to file.</li>
+        <li>Align Admin's name rule with sign-up's.</li>
+      </ol>
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h3>For you to approve</h3>
+    <ol class="sub" style="padding-left:18px;margin:0">
+      <li>Keep frrata.shop at Hostinger with Vercel's nameservers; extend it to 3 years before the Public Suffix List request. Buy frrata.com at Vercel now.</li>
+      <li>Two name changes after a shop opens; old names redirect forever and are never reused.</li>
+      <li>www as the main address when a merchant connects an apex domain.</li>
+      <li>Own domains on every plan, no extra fee.</li>
+      <li>frrata.shop on the Public Suffix List.</li>
+      <li>Fall back after 24 hours of failing; disconnect after 15 days without proof.</li>
+    </ol>
+  </div>
+</div>

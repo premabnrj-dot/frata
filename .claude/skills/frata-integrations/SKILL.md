@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.8.0
+  version: 1.9.0
   verified: 2026-11-08
   decisions: [ADR-0006]
 ---
@@ -347,6 +347,28 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
 - **Web push:** iOS 16.4+ only as a Home Screen web app; ask from a tap; a push not shown makes Safari revoke the
   permission [V-undated, developer.apple.com]. Chrome rate-limits disruptive senders (≥ 1,000/min) [V 2026-01-06]. A
   subscription belongs to one origin's service worker: a shop that changes domain loses its subscribers [V spec / U].
+
+## Domains (Vercel for Platforms) — checked 2026-11-08 (research `docs/research/2026-11-08-shop-addresses.md`)
+
+- Wildcard `*.frrata.shop` needs Vercel nameservers or `_acme-challenge` NS delegation (DNS-01); the apex and www are
+  added separately; one level per certificate [V, Vercel docs 2026-09-16/18]. The registrar does not matter, the
+  nameservers do (frrata.shop bought at Hostinger 2026-11-08 → NS `ns1/ns2.vercel-dns.com`).
+- Vercel prices (2026-11-08): frrata.shop $2.99 then $38.39/yr; frrata.com $12.03/yr; .shop is not free-with-Pro [V].
+- API: `POST /v10/projects/{id}/domains` (redirect, 301/302/307/308), `POST /v9/…/{d}/verify`, `DELETE /v9/…/{d}`,
+  `GET /v6/domains/{d}/config` → misconfigured, recommendedIPv4/CNAME by rank [V, REST reference read 2026-11-08].
+  409 = on another Vercel project / not allowed.
+- `_vercel` TXT only when another Vercel account uses the domain; a new value on re-add. Frrata adds its own TXT proof.
+- A record and www CNAME values are per project (76.76.21.21 or 216.198.79.1; `*.vercel-dns-017.com`); no IPv6;
+  www recommended as primary [V 2026-09-18].
+- Pro: soft limit 100,000 domains a project; domain writes 100/60 s, verify 100/60 s, config reads 500/60 s [V].
+- Let's Encrypt, HTTP-01, "wait 5 to 10 minutes"; CAA must allow letsencrypt.org; proxies break issuance [V].
+- The middleware sees the custom host unchanged [V 2025-12-13].
+- Public Suffix List: Vercel advises it for tenant domains (myshopify.com, vercel.app, github.io are on it); a `_psl`
+  TXT, > 2 years left on the registration, no review-time guarantee; Let's Encrypt limits 50 certs per registered
+  domain per 7 days by the PSL [V Vercel 2026-09-16, LE 2026-08-05; U PSL wiki 2025-05-23].
+- Domain Connect live at GoDaddy, Cloudflare, IONOS; not Hostinger, BigRock, Namecheap [V-undated].
+- Shopify: A 23.227.38.65 + www CNAME shops.myshopify.com; two myshopify names in all, the old one redirects
+  [V-undated]. Squarespace unlinks after 15 days without its verify record [V 2026-10-28].
 
 ## Merchant billing (Frrata bills merchants) — checked 2026-11-08
 
