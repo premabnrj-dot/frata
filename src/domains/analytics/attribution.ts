@@ -89,7 +89,8 @@ export function attributionOf(checkout: unknown): Attribution {
   const a = checkout && typeof checkout === 'object' ? (checkout as { attribution?: unknown }).attribution : null
   const out: Attribution = {}
   if (!a || typeof a !== 'object' || Array.isArray(a)) return out
-  for (const [k, v] of Object.entries(a as Record<string, unknown>)) if (isKey(k) && typeof v === 'string' && v) out[k] = v.slice(0, MAX)
+  // Cleaned on read too: rows stored before the cleaner existed may carry control or bidi characters.
+  for (const [k, v] of Object.entries(a as Record<string, unknown>)) { if (!isKey(k)) continue; const c = cleanValue(v); if (c) out[k] = c }
   return out
 }
 

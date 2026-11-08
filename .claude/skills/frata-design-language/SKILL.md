@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 4.12.0
+  version: 4.13.0
   verified: 2026-11-08
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -289,10 +289,12 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
     countdown, never one that restarts per visit (CCPA dark-pattern rules).
 49. **Each saving is named** in the bag, checkout, the order page and the invoice; the invoice
     shows value and discount before GST at the line's rate.
-50. **The console judges offers on delivered orders:** uses, ₹ given, delivered, ₹ kept per
-    delivered order; a form warns when an offer would mostly reward orders that already qualify.
+50. **The console judges offers on delivered orders:** uses, ₹ given, delivered, ₹ kept per order
+    after returns (Analytics' figure: "Delivered, came back or lost · before ads and packaging", with how many were
+    left out); a form warns when an offer would mostly reward orders that already qualify.
     Partners draft; owners and admins start, pause and end (ending confirms; it is final). ₹ kept is a profit, so a
-    cost: owners and admins only (staff and partners see uses, ₹ given and delivered); beside it, "Shipping
+    cost: whoever `seesCosts` (owners and admins; a partner only before handover, owner 2026-11-08; never staff);
+    beside it, "Shipping
     estimated" or "Before shipping costs" (with a link to set them) whenever freight is not the courier's actual charge.
 51. **"Did it make money?" reads a window and says when it is too few** (O·3): the Offers list's strip and an offer's
     page show the last 30 days against the shop's orders without an offer; under 30 orders they say "too few to
@@ -314,7 +316,7 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 58. **The shopper's tracking** is on the shop's own order page: the expected date first, then a four-step progress
     (Packed · Shipped · Out for delivery · Delivered), the courier and tracking number, the latest scans, the pieces,
     the way back to the shop. Never a cost.
-59. **Settings › Shipping costs** (owners and admins only): a delivery, a return, a COD fee, in whole rupees, with
+59. **Settings › Shipping costs** (`seesCosts`: owners and admins; a partner before handover, who may set them too): a delivery, a return, a COD fee, in whole rupees, with
     what a 0.5 kg parcel usually costs offered until confirmed; saving IS confirming ("Confirmed on 8 Nov 2026").
     Until then Settings says "Needs you" and profit on orders shipped another way says "Before shipping costs".
 60. **An outcome's Undo outlives the row it was on:** the toast stays when the order leaves its tab or panel. Undo

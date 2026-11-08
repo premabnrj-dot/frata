@@ -61,18 +61,27 @@ const HOST_CHANNEL: [RegExp, Channel][] = [
 ]
 
 const tidy = (s: string) => s.toLowerCase().trim()
-export const slugOf = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64) || 'unknown'
+/** A short, stable hash, so two labels that lose their letters to the ASCII slug (Devanagari, say) stay apart. */
+const hash = (s: string) => { let h = 2166136261; for (const ch of s) { h ^= ch.codePointAt(0)!; h = Math.imul(h, 16777619) } return (h >>> 0).toString(36).slice(0, 6) }
+/** A label as a URL segment, `[a-z0-9-]{1,64}`; a hash is added whenever letters were dropped. */
+export function slugOf(s: string): string {
+  const ascii = s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+  // Letters or digits outside ASCII (once accents are dropped) would vanish from the slug; punctuation does not count.
+  const lossy = /[^\x00-\x7f]/.test(s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^\p{L}\p{N}]/gu, ''))
+  return (lossy ? `${ascii.slice(0, 56) || 'x'}-${hash(s)}` : ascii.slice(0, 64)) || 'unknown'
+}
 
-function make(channel: Channel, label: string, campaign: string | null): Source {
-  return { channel, label, slug: slugOf(label), campaign: campaign ? campaign.slice(0, 200) : null }
+function make(channel: Channel, label: string, campaign: string | null, slug = slugOf(label)): Source {
+  return { channel, label, slug, campaign: campaign ? campaign.slice(0, 200) : null }
 }
 
 /**
- * The order's source. `creator`: the label of the creator code the order uses now (useOfRowSql), or null.
+ * The order's source. `creator`: the creator code the order uses now (useOfRowSql), its label and code, or null. A
+ * creator's slug is built from the code (ASCII, one per shop), so creators with names in any script stay apart.
  */
-export function classifySource(a: Attribution, creator: string | null): Source {
+export function classifySource(a: Attribution, creator: { label: string; code: string } | null): Source {
   const campaign = a.utm_campaign ?? null
-  if (creator) return make('creator', `Creator · ${creator}`, campaign)
+  if (creator) return make('creator', `Creator · ${creator.label}`, campaign, `creator-${creator.code.toLowerCase().replace(/[^a-z0-9]/g, '')}`)
 
   const src = a.utm_source ? tidy(a.utm_source) : ''
   const med = a.utm_medium ? tidy(a.utm_medium) : ''

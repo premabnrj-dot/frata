@@ -55,13 +55,6 @@ export async function setupFor(tenantId: string): Promise<Setup | null> {
   }
 }
 
-/**
- * The shop's three shipping-cost estimates (Ship S·0, owner call S3), in paise, and when they were confirmed. A
- * merchant's cost: read on the server only (ADR-0003), never put into ShopFacts (the storefront reads those).
- */
-export async function shipCostsFor(tenantId: string): Promise<ShipCosts | null> {
-  return withTenant(tenantId, (tx) => shipCostsIn(tx, tenantId))
-}
 
 /** The costs and whether this member may see them (`seesCosts`, failing closed), in one transaction. */
 export async function shipCostsSeenBy(tenantId: string, role: MemberRole): Promise<{ visible: boolean; costs: ShipCosts | null }> {

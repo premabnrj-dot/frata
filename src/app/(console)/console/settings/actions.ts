@@ -6,15 +6,13 @@ import { openShopErrors, parseSection, sectionFor, type Values } from '@/domains
 import { POLICY_PAGES } from '@/domains/policies/render'
 import { hostFor, refreshHosts, refreshShop } from '@/lib/queries/storefront'
 import { asMember } from '@/lib/auth/as-member'
-import { CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
+import { CAN_BUILD, CAN_MANAGE, CAN_SET_COSTS, requireMember } from '@/lib/auth/require-member'
 import { changeShopAddress } from '@/lib/db/platform'
 import { auditEvents, shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { slugProblem } from '@/domains/signup/slug'
 import { parseShipCosts, type ShipCostsInput } from '@/domains/settings/ship-costs'
-import { CAN_SET_COSTS } from '@/domains/tenancy/roles'
-import { costsVisibleIn } from '@/lib/queries/settings'
 import { dayIN } from '@/lib/format-date'
-import { shopWithSettings } from '@/lib/queries/settings'
+import { costsVisibleIn, shopWithSettings } from '@/lib/queries/settings'
 import { errName } from '@/lib/log'
 
 // Each section says who may save it (`editors`: owners, admins and the store's partner for the shop's own
@@ -133,7 +131,7 @@ export async function changeAddress(slug: string): Promise<{ ok: true } | { ok: 
 
 /**
  * Confirm the three shipping costs: saving them IS confirming them (profit then reads "estimated", not "before
- * shipping costs"). Owners and admins only: a merchant's cost (partners build settings but never see costs).
+ * shipping costs"). A merchant's cost: owners and admins, and a partner before handover (seesCosts; owner 2026-11-08).
  */
 export async function saveShipCosts(input: ShipCostsInput): Promise<{ ok: true; confirmedOn: string } | { ok: false; error: string; errors?: Record<string, string> }> {
   const p = parseShipCosts(input)

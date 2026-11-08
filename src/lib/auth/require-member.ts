@@ -62,4 +62,4 @@ export async function requireMember(allowed: readonly MemberRole[]): Promise<Mem
   return a
 }
 
-export { ANY_MEMBER, CAN_BUILD, CAN_MANAGE } from '@/domains/tenancy/roles'
+export { ANY_MEMBER, CAN_BUILD, CAN_MANAGE, CAN_SET_COSTS } from '@/domains/tenancy/roles'

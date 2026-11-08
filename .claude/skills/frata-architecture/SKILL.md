@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.18.0
+  version: 2.19.0
   verified: 2026-11-08
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -90,8 +90,13 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   partner (`MEMBER_ROLES`); tuples `ANY_MEMBER` (everyone, partner included:
   orders, and products and collections — staff edit the catalogue, owner
   2026-11-08), `CAN_BUILD` (owner, admin, partner: the look and the shop's own
-  settings), `CAN_MANAGE` (owner, admin: people, the address, opening the shop).
-  Payment keys are `['owner']`.
+  settings), `CAN_MANAGE` (owner, admin: people, the address, opening the shop),
+  `SHIPPERS` (owner, admin, staff: sending parcels), `CAN_SET_COSTS` (owner, admin, partner: shipping costs, then
+  `seesCosts`). Payment keys are `['owner']`.
+- **Who sees a cost or a profit is `seesCosts(role, hasOwner)`** (owners and admins; a partner only while the shop has
+  no owner; staff never; owner 2026-11-08), read through `costsVisibleIn(tx, …)` inside the page's transaction, which
+  fails closed (no tenant context reads as "has an owner"). When it says no, the figure is not computed or sent, not
+  hidden.
 - **Adding a role: read every caller of the tuple it joins** before it joins
   (2026-11-07). A settings section declares its own `editors`
   (`src/domains/settings/sections.ts`), read by its page, its save and the brand

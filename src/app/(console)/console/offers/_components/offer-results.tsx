@@ -3,13 +3,14 @@ import { Section } from '@/components/layout/section'
 import { Money, Numeric } from '@/components/data/numeric'
 import { paise } from '@/domains/money/paise'
 import { formatPercent } from '@/lib/format'
-import { JUDGE_MIN_ORDERS, type KeptBasis, type OfferStat, type OfferStats } from '@/lib/queries/discounts'
+import { JUDGE_MIN as JUDGE_MIN_ORDERS } from '@/domains/analytics/judge'
+import type { KeptBasis, OfferStat, OfferStats } from '@/lib/queries/discounts'
 import { Pictogram } from '@/components/brand/pictogram'
 
 // =============================================================================
 // DID IT MAKE MONEY? (offers O·3; mockup "Did it make money?"). The 30-day strip on the Offers list and an offer's own
 // numbers, both read from offerStats() (the one computation). Server components: a merchant's cost stays here, and
-// ₹ kept (a profit, so a cost) shows only to owners and admins (`costs`; staff and partners never see a cost).
+// ₹ kept (a profit, so a cost) shows only to whoever `seesCosts` (owners and admins; a partner before handover).
 // =============================================================================
 
 const share = (a: number, b: number) => (b > 0 ? formatPercent(a / b, 0) : '—')

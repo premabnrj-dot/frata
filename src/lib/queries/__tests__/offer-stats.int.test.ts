@@ -64,7 +64,7 @@ describe.skipIf(!host)('offerStats', () => {
       // on purpose when Offers moved to IST days.
       const E = await offer('Edge')
       await order({ at: new Date('2031-01-30T12:00:00Z'), phone: '9829000099' }, { d: E, amount: 1000 })
-      const s = await offerStatsIn(tx, A, now)
+      const s = await offerStatsIn(tx, A, now, { role: 'owner' })
       expect(s.offers.get(E)?.orders ?? 0).toBe(0) // IST days
       const d = s.offers.get(D)!
       expect({ orders: d.orders, given: d.given, aov: d.aov, prepaid: d.prepaid, repeat: d.repeat, fresh: d.fresh, delivered: d.delivered, rto: d.rto, givenPerDelivered: d.givenPerDelivered })
@@ -76,17 +76,17 @@ describe.skipIf(!host)('offerStats', () => {
       expect({ kept: d.keptPerOrder, basis: d.keptBasis, leftOut: d.keptLeftOut }).toEqual({ kept: (180000 - 80000 - 3600 + 0) / 2, basis: 'none', leftOut: 1 })
       // The shop confirms ₹70 a delivery, ₹70 a return, ₹36 COD fee: estimated (a COD delivery pays the fee).
       await tx.update(shopSettings).set({ shipCostDelivery: 7000, shipCostReturn: 7000, shipCostCod: 3600, shipCostsConfirmedAt: now }).where(eq(shopSettings.tenantId, A))
-      const est = (await offerStatsIn(tx, A, now)).offers.get(D)!
+      const est = (await offerStatsIn(tx, A, now, { role: 'owner' })).offers.get(D)!
       // Delivered: 1,800 − 800 − 70 − 36 COD fee − 36 fee = 858; the return: −(70 + 70) = −140 (no COD fee on a return).
       expect({ kept: est.keptPerOrder, basis: est.keptBasis }).toEqual({ kept: (180000 - 80000 - 7000 - 3600 - 3600 - 14000) / 2, basis: 'estimate' })
       // Shipped with Shiprocket: its ₹60 forward line is recorded but the COD fee line is not: pending, left out (never ₹0);
       // the return still counts.
       await tx.insert(shipments).values({ tenantId: A, orderId: first, provider: 'shiprocket' })
-      const pend = (await offerStatsIn(tx, A, now)).offers.get(D)!
+      const pend = (await offerStatsIn(tx, A, now, { role: 'owner' })).offers.get(D)!
       expect({ kept: pend.keptPerOrder, basis: pend.keptBasis, leftOut: pend.keptLeftOut }).toEqual({ kept: -14000, basis: 'estimate', leftOut: 2 })
       // The ₹30 COD fee line arrives: actual.
       await tx.update(orders).set({ courierCodFee: 3000 }).where(eq(orders.id, first))
-      const act = (await offerStatsIn(tx, A, now)).offers.get(D)!
+      const act = (await offerStatsIn(tx, A, now, { role: 'owner' })).offers.get(D)!
       expect({ kept: act.keptPerOrder, basis: act.keptBasis }).toEqual({ kept: (180000 - 80000 - 6000 - 3000 - 3600 - 14000) / 2, basis: 'estimate' })
       // Staff (and a partner after handover) get no ₹ kept at all: not computed.
       expect((await offerStatsIn(tx, A, now, { role: 'staff' })).offers.get(D)!.keptPerOrder).toBeNull()

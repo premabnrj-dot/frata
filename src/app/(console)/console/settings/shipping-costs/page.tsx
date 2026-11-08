@@ -1,6 +1,5 @@
 import { Panel } from '@/components/ui/panel'
-import { requireMember } from '@/lib/auth/require-member'
-import { CAN_SET_COSTS } from '@/domains/tenancy/roles'
+import { CAN_SET_COSTS, requireMember } from '@/lib/auth/require-member'
 import { dayIN } from '@/lib/format-date'
 import { shipCostsSeenBy } from '@/lib/queries/settings'
 import { ShipCostsForm } from './ship-costs-form'

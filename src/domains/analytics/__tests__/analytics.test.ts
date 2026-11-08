@@ -41,9 +41,16 @@ describe('cleanAttribution and attributionOf', () => {
 })
 
 describe('classifySource: one rule, strongest evidence first', () => {
-  const s = (a: Parameters<typeof classifySource>[0], creator: string | null = null) => { const r = classifySource(a, creator); return [r.channel, r.label, r.slug, r.campaign] }
+  const s = (a: Parameters<typeof classifySource>[0], creator: { label: string; code: string } | null = null) => { const r = classifySource(a, creator); return [r.channel, r.label, r.slug, r.campaign] }
   it('a creator code beats every tag', () => {
-    expect(s({ utm_source: 'instagram', utm_medium: 'bio', utm_campaign: 'diwali-drop' }, 'Riya')).toEqual(['creator', 'Creator · Riya', 'creator-riya', 'diwali-drop'])
+    expect(s({ utm_source: 'instagram', utm_medium: 'bio', utm_campaign: 'diwali-drop' }, { label: 'Riya', code: 'RIYA10' })).toEqual(['creator', 'Creator · Riya', 'creator-riya10', 'diwali-drop'])
+  })
+  it('creators named in any script stay apart (the slug is the code); other non-Latin labels get a hash', () => {
+    expect(s({}, { label: 'रिया', code: 'RIYA10' })[2]).toBe('creator-riya10')
+    expect(s({}, { label: 'सीमा', code: 'SEEMA5' })[2]).toBe('creator-seema5')
+    const a = classifySource({ utm_source: 'अखबार' }, null).slug, b = classifySource({ utm_source: 'पत्रिका' }, null).slug
+    expect(a).not.toBe(b)
+    expect(a).toMatch(/^[a-z0-9-]{1,64}$/)
   })
   it('the link\'s own tags, in the merchant\'s words', () => {
     expect(s({ utm_source: 'instagram', utm_medium: 'bio', utm_campaign: 'diwali-drop' })).toEqual(['instagram', 'Instagram bio', 'instagram-bio', 'diwali-drop'])

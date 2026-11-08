@@ -2,7 +2,6 @@ import 'server-only'
 import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 import { offerStatus, type OfferStatus } from '@/domains/checkout/offer-status'
 import type { DiscountStyle } from '@/domains/checkout/discounts'
-import { JUDGE_MIN } from '@/domains/analytics/judge'
 import { keptOf, keptPerOrder, type KeptBasis, type KeptGroup } from '@/domains/orders/kept'
 import { planVersions, tenantPlans } from '@/lib/db/schema'
 import { estimateOf } from '@/domains/settings/ship-costs'
@@ -132,8 +131,6 @@ export type OfferStats = {
   offers: Map<string, OfferStat>
 }
 
-/** Under this many orders an offer's numbers are "too few to judge": the one threshold (domains/analytics/judge.ts). */
-export const JUDGE_MIN_ORDERS = JUDGE_MIN
 
 const DAY = 86_400_000
 const num = (v: string | null) => (v === null ? null : Number(v))
@@ -154,11 +151,11 @@ export async function offerStats(tenantId: string, now = new Date(), opts: { day
 }
 
 /** offerStats inside the caller's tenant transaction (the int test reads rows it will roll back). */
-export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, opts: { days?: number; role?: MemberRole } = {}): Promise<OfferStats> {
+export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, opts: { days?: number; role: MemberRole }): Promise<OfferStats> {
   const days = opts.days ?? 30
   // Who may see ₹ kept (seesCosts, failing closed), the fee and the shop's confirmed shipping-cost estimates: read
   // together, in this transaction (speed review: they ran one after another).
-  const [costs, history, shipCosts] = await Promise.all([costsVisibleIn(tx, tenantId, opts.role ?? 'owner'), planHistoryIn(tx, tenantId), shipCostsIn(tx, tenantId)])
+  const [costs, history, shipCosts] = await Promise.all([costsVisibleIn(tx, tenantId, opts.role), planHistoryIn(tx, tenantId), shipCostsIn(tx, tenantId)])
   const est = estimateOf(shipCosts)
   // IST days (Analytics A·1, plan review 4): "the last 30 days" is today and the 29 IST days before, as Analytics counts.
   const since = sql`${istDayStart(now, -(days - 1)).toISOString()}::timestamptz`
