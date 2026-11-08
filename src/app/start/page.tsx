@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { accessFor } from '@/lib/db/platform'
@@ -7,7 +6,7 @@ import { frataWhatsappLink } from '@/lib/site'
 import { SignInFlow } from '../login/sign-in-flow'
 import { CreateShopForm } from './create-shop-form'
 import { SHELL_FONT_VARS } from '@/components/shell/fonts'
-import { Wordmark } from '@/components/brand/wordmark'
+import { Selvedge, SiteHeader, SiteStage } from '@/components/brand/site'
 
 export const metadata = { title: 'Start your shop' }
 export const dynamic = 'force-dynamic'
@@ -22,12 +21,10 @@ export default async function StartPage() {
     if (access?.memberships.some((m) => m.role === 'owner' && !m.supportSessionId)) redirect('/console')
   }
   return (
-    <main data-shell className={`min-h-dvh bg-background ${SHELL_FONT_VARS}`}>
-      <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-8">
-        <Link href="/" aria-label="Frrata home" className="inline-flex min-h-6 items-center"><Wordmark thread label={null} className="h-5" /></Link>
-        {!auth.ok && <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">Sign in</Link>}
-      </header>
-      <div className="mx-auto grid max-w-4xl gap-10 px-4 py-10 sm:px-8 md:grid-cols-[minmax(0,1fr)_260px]">
+    <div data-shell className={`min-h-dvh bg-background ${SHELL_FONT_VARS}`}>
+      <SiteStage><SiteHeader links={[]} action={auth.ok ? undefined : { href: '/login', label: 'Sign in' }} /></SiteStage>
+      <Selvedge />
+      <main id="content" tabIndex={-1} className="mx-auto grid max-w-4xl gap-10 px-4 py-10 outline-none sm:px-8 md:grid-cols-[minmax(0,1fr)_260px]">
         <div className="max-w-md">
           {auth.ok ? <CreateShopForm shopDomain={SHOP_DOMAIN} /> : (
             <div className="space-y-4">
@@ -44,7 +41,7 @@ export default async function StartPage() {
           <p>A plan: when you open your shop to shoppers.</p>
           <p className="pt-2">Stuck? <a href={frataWhatsappLink()} target="_blank" rel="noopener" className="underline">Ask us on WhatsApp</a></p>
         </aside>
-      </div>
-    </main>
+      </main>
+    </div>
   )
 }

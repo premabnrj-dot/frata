@@ -21,11 +21,11 @@ export default {
       const ctx = await t.browser.newContext(); const p = await ctx.newPage(); p.on('pageerror', (e) => t.errors.push(e.message))
       await p.goto(CONSOLE + '/partners')
       await p.getByRole('heading', { level: 1 }).getByText('Build brands’ shops.').waitFor()
-      assert.ok(await p.locator('main svg[aria-hidden="true"]').count() >= 8, 'the illustration and pictograms')
+      assert.ok(await p.locator('body svg[aria-hidden="true"]').count() >= 8, 'the drawings: the hero, the pictograms')
       // The page is static and the e2e build has no database, so the example is hidden here (the designed fallback:
       // no plans, no example, never ₹0). Its sum is unit-tested (src/domains/partners/__tests__); when shown it reads ₹875.80.
-      const ex = p.getByRole('heading', { name: 'One brand, one month' })
-      if (await ex.count()) await p.getByText('₹875.80').waitFor()
+      const ex = p.getByRole('heading', { name: 'What you’d earn' })
+      if (await ex.count()) await p.getByText('₹875.80').first().waitFor()
       assert.equal(await p.getByText(/₹0\.00|NaN/).count(), 0)
       await p.getByText('added to the brand’s price').waitFor()
       await p.screenshot({ path: t.out('public'), fullPage: true })

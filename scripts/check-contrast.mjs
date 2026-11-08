@@ -34,7 +34,6 @@ const DECORATIVE = {
   'illo-indigo-soft': 'illustration second accent, pale',
   // Brand-surface companions (brand spec 2026-11-07): sign-in, the website, drawings. Never text, never a control.
   haldi: 'brand-surface highlight (and the illustration accent); never text or a control',
-  neel: 'brand-surface depth (block-print pattern); never text or a control',
 }
 
 export function pairs() {
@@ -45,7 +44,9 @@ export function pairs() {
     ['danger-text', 'card', TEXT], ['brand', 'card', TEXT] /* the mark (rani) on a card, held to text contrast though it is a logo */,
     ['destructive', 'popover', TEXT], ['destructive', 'accent', TEXT] /* a danger item in a menu, and hovered */,
     // Rani as words (brand spec): only --brand-text, on every surface words sit on.
-    ['brand-text', 'background', TEXT], ['brand-text', 'card', TEXT], ['brand-text', 'muted', TEXT], ['brand-text', 'accent', TEXT])
+    ['brand-text', 'background', TEXT], ['brand-text', 'card', TEXT], ['brand-text', 'muted', TEXT], ['brand-text', 'accent', TEXT],
+    // The website's Neel band: paper numbers and words on it (website spec W·1); rani on the ink stage.
+    ['primary-foreground', 'neel', TEXT], ['brand-on-ink', 'primary', TEXT])
   p.push(['input', 'card', NONTEXT], ['input', 'background', NONTEXT], ['ring', 'background', NONTEXT], ['ring', 'card', NONTEXT],
     ['primary-foreground', 'primary', NONTEXT] /* the focus ring on ink */,
     // The thread under a primary (ink) or secondary (card) button, the current tab, the loading bar; the tinge on ink.

@@ -21,3 +21,11 @@ export function shareExample(plan: { name: string; monthlyPrice: number; feeBps:
   const frataCollects = sum([planFee, orderFee])
   return { plan: plan.name, planFee, orderFee, frataCollects, share: applyBps(frataCollects, shareBps), feeBps: plan.feeBps }
 }
+
+/** The calculator's choices on /partners (zero-JS radio chips): how many brands a partner builds for. */
+export const SHARE_CHOICES = [1, 3, 5, 10] as const
+
+/** For each choice: the partner's share a month and over the whole term, from shareExample() (never typed). */
+export function shareTable(ex: ShareExample, months: number = PARTNER_TERMS.shareMonths) {
+  return SHARE_CHOICES.map((n) => ({ brands: n, perMonth: paise(ex.share * n), overTerm: paise(ex.share * n * months) }))
+}

@@ -522,11 +522,41 @@ saving we cannot show from their own orders.
 38. **The running stitch**: a dashed edge (`border-dashed`) for a place to drop
     something and for "setup steps left"; never around a card that is content.
 39. **The block print** (`block-print` utility): the mark's quarter circle and
-    circle as a repeat, a mask over `--neel` at 6%; the sign-in page (and the
-    website's brand bands), never behind a number, a table, a form or a
-    control. Brand empty states use a `PictoTile` instead.
+    circle as a repeat, a mask over a token at 6%. On the public pages it is the
+    `Selvedge` only (paper on ink, under the stage; rule 42), never behind a
+    number, a table, a form or a control. Brand empty states use a `PictoTile`.
 40. **Haldi and Neel** live on brand surfaces only and are never text or a
     control. Rani as text is `--brand-text`.
+
+## The public pages (owner-approved W·1, 2026-11-07; spec `docs/specs/2026-11-07-website-rework.md`)
+
+41. **Fewer words, more pictures** (owner): each section makes one point, in a
+    heading of at most 6 words, a line of at most 12, a card of at most 2 short
+    lines (a page's h1, the one promise, may run to 8 words), and shows it in a
+    drawing, the product picture or a number. No
+    reassurance paragraphs, no notes about how the page is made. These stay
+    visible whatever the word count: "+ 18% GST" and "of each delivered order"
+    on every plan, "up to N orders a month", the partner's 90-day tail and "24
+    months, from opening", "₹0 added to the brand's price", and "Example · ex
+    GST · paid monthly once billing starts" beside partner numbers, and the
+    sign-up page's "Not asked now" panel (§ Phase 1; it answers the question
+    that stops a sign-up). Anything not built carries a Next tag, in the
+    product picture too.
+42. **The frame** is `src/components/brand/site.tsx`: an ink `SiteStage` with
+    `SiteHeader` (skip link, the mark with its thread on ink, the `inverse`
+    button), the `Selvedge` (the block print as a woven edge under the stage, the
+    only place it appears), a Neel `NumberBand` of terms (paper on Neel, gated),
+    and `SiteFooter` with WhatsApp written out. /, /partners, /login and /start.
+43. **The product is shown as it is**, drawn (`ConsolePreview`,
+    `EarningsPreview`): `inert`, marked "Example", every figure from the engines
+    (`exampleOrder()` through `orderProfit()`, `shareExample()`), never typed.
+    No invented testimonials or logos.
+44. **No new client script on a public page**: a choice is radio chips, with
+    one panel per choice in a shared cell, shown by `[data-calc]:has(:checked)`
+    and named by `aria-describedby` (the partner calculator over
+    `shareTable()`). The shared `InfoTip` and the sign-in form are the only
+    islands.
+    Large ₹ figures are mono (a ₹ in the display face pulls the Devanagari file).
 
 ## Storefront
 

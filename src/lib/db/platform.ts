@@ -139,3 +139,16 @@ export async function storeWhatsAppEvent(by: 'number' | 'account', metaId: strin
   const rows = await db().execute<{ t: string | null }>(sql`select app_store_wa_event(${by}, ${metaId}, ${tail}, ${JSON.stringify(payload)}::jsonb) as t`)
   return rows[0]?.t ?? null
 }
+
+/**
+ * The plans for a public page (website spec W·1): none while the site is being built without a database, so the
+ * page shows its fallback; at runtime a failure THROWS, so the last good cached page stays instead of an hour of
+ * "no prices".
+ */
+export async function publicPlansForPage(page: string): Promise<PublicPlan[]> {
+  try { return await publicPlans() } catch (err) {
+    // NEXT_PHASE is set by Next itself while it builds (next/constants PHASE_PRODUCTION_BUILD).
+    if (process.env.NEXT_PHASE === 'phase-production-build') return []
+    console.error(`[${page}] plans`, err instanceof Error ? err.name : 'error'); throw err
+  }
+}

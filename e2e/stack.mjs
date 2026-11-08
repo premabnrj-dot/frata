@@ -68,7 +68,9 @@ export async function up({ build = true } = {}) {
   run('fake-razorpay', 'node', ['e2e/fakes/razorpay.mjs'], { PORT: String(PORTS.razorpay) })
   run('fake-meta', 'node', ['e2e/fakes/meta.mjs'], { PORT: String(PORTS.meta) })
   if (build) {
-    try { sh('npm run build', PUBLIC_ENV) } catch (e) {
+    // The database is migrated and seeded already: the build reads the plans, so the public pages' prices, the hero's
+    // example order and the partner calculator render in e2e (impact review W·1).
+    try { sh('npm run build', { ...PUBLIC_ENV, DATABASE_URL: `postgres://frata_app:${pw}@${new URL(server).host}/${DB}` }) } catch (e) {
       // The lines that say why; if none match (a killed build), the log's last lines, so a failure always says something.
       const lines = String(e.stdout ?? '') .split('\n').concat(String(e.stderr ?? '').split('\n'))
       const why = lines.filter((l) => /rror|check:|Killed|ENOSPC|EADDRINUSE/.test(l)).slice(0, 15)
