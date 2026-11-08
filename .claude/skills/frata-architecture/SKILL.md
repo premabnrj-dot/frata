@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.16.0
+  version: 2.17.0
   verified: 2026-11-08
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -87,8 +87,9 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - `getUser()` (or, in the middleware's redirect only, `getClaims()`, which verifies the JWT), never
   `getSession()` (`check:layers`). The member and staff checks always ask `getUser()`.
 - Signing in grants nothing; a `members` row does. Roles: owner, admin, staff,
-  partner (`MEMBER_ROLES`); tuples `ANY_MEMBER` (everyone, partner included),
-  `CAN_BUILD` (owner, admin, partner: catalogue, the look, the shop's own
+  partner (`MEMBER_ROLES`); tuples `ANY_MEMBER` (everyone, partner included:
+  orders, and products and collections — staff edit the catalogue, owner
+  2026-11-08), `CAN_BUILD` (owner, admin, partner: the look and the shop's own
   settings), `CAN_MANAGE` (owner, admin: people, the address, opening the shop).
   Payment keys are `['owner']`.
 - **Adding a role: read every caller of the tuple it joins** before it joins
@@ -118,9 +119,9 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - **Route handlers are not server actions:** Next checks Origin for actions
   only. A cookie-authenticated POST route checks `Origin` itself, as
   `requireShop` does. Console and shops stay on different registrable domains.
-- **A tuple means what its comment says.** An action guarded with
-  `ANY_MEMBER` that the tuple comments exclude (staff and the catalogue) is a
-  finding, not a judgement call (S6).
+- **A tuple means what its comment says.** An action whose tuple's comment
+  excludes the role it lets through is a finding, not a judgement call (S6,
+  settled by the owner 2026-11-08: staff edit products and collections).
 - Staff sign-in needs a second factor (aal2 in `requireStaff`) before outside
   merchants go live; a support visit acts as owner (S5, ADR-0007).
 
@@ -356,8 +357,9 @@ Rules:
 - A shopper's write invalidates the narrowest tag it can: the product, not
   the shop. Catalogue refreshes are debounced (P11).
 - Fonts: a shop preloads only its own face; console faces never reach `/s/` (P6).
-- Pool: `POOL` in src/lib/db/index.ts (`idle_timeout: 20, connect_timeout: 5, max_lifetime: 600`).
-  `attachDatabasePool` (@vercel/functions) is not added: a new dependency, the owner's call.
+- Pool: `POOL` in src/lib/db/index.ts (`idle_timeout: 20, connect_timeout: 5, max_lifetime: 600`), and
+  `attachDatabasePool` on Vercel through a pg-shaped adapter: `withTenant` reports each release
+  (`poolReleased`). It does not know postgres-js and throws on it unadapted.
 - **Row security keeps Postgres off an index for ILIKE / LIKE** (not leakproof): a trigram index helps
   no query `frata_app` runs (P10, measured; drizzle/0044). Search a tenant's history with ILIKE only
   where the plan can walk an ordered index and stop at the page (orders search: 100 ms at 150k), or

@@ -1,6 +1,7 @@
 import 'server-only'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
+import { attachDatabasePool } from '@vercel/functions'
 import { DATABASE_URL } from '@/lib/env'
 import * as schema from './schema'
 import { parseDatabaseUrl } from './url'
@@ -30,9 +31,19 @@ export const POOL = { prepare: false, max: 10, idle_timeout: 20, connect_timeout
 
 let client: ReturnType<typeof drizzle<typeof schema>> | null = null
 
+/**
+ * Vercel Fluid keeps an instance alive between requests; attachDatabasePool (owner, 2026-11-08) holds the function
+ * open (waitUntil) until the pool's idle timeout after its last use, so idle connections close cleanly instead of
+ * being frozen with the instance. It knows pg, not postgres-js, so it is handed a pg-shaped adapter whose `release`
+ * fires after each tenant transaction (withTenant). Only on Vercel: elsewhere there is no request context to extend.
+ */
+const released: (() => void)[] = []
+export const poolReleased = () => { for (const f of released) f() }
+
 export function db() {
   if (!client) {
     client = drizzle(postgres(parseDatabaseUrl(DATABASE_URL, 'frata_app'), POOL), { schema })
+    if (process.env.VERCEL) attachDatabasePool({ options: { idleTimeoutMillis: POOL.idle_timeout * 1000 }, on: (_event: 'release', listener: () => void) => { released.push(listener) } })
   }
   return client
 }

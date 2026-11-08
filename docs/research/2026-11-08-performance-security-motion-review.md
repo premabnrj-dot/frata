@@ -98,7 +98,7 @@ The proposed motion system, the illustration and icon opportunities, and the rul
 | S3 | Fixed: per-request nonce + `strict-dynamic` + `form-action 'self'` on signed-in pages (middleware); e2e 12-security |
 | S4 | Fixed: drizzle/0043 (no no-shop webhook rows; stored payloads trimmed); `trimRazorpayEvent` after processing; proof 37 |
 | S5 | Accepted (ADR-0007): aal2 before outside merchants |
-| S6 | **Owner**: may staff edit the catalogue? (code says yes, the role notes say no) |
+| S6 | Settled by the owner 2026-11-08: staff edit products and collections (as the code did); the role notes now say so |
 | S7 | Fixed: check:actions per export, comments ignored, look editor and preview pages covered |
 | S8 | Fixed: `ipBucket` (IPv6 per /64) |
 | S9 | Fixed: the sign-in code limit fails closed |
@@ -111,14 +111,14 @@ The proposed motion system, the illustration and icon opportunities, and the rul
 | P2 | Fixed: 48 a page, `/products/page/N`, `/collections/<h>/page/N`; e2e 13-paging |
 | P3 | Fixed: every shop loader `cache()`d |
 | P4 | Fixed: `collectionMembersIn(tx, …)` |
-| P5 | Fixed in code (`drainOutbox` loops, `eachLimited`); `drainSoon` is ready for the first sender, which calls it; the cron stays daily until a sender needs Pro |
+| P5 | Fixed in code (`drainOutbox` loops, `eachLimited`); `drainSoon` is ready for the first sender, which calls it. **Open (owner, 2026-11-08: Pro later):** Vercel Pro and a 5-minute cron, and the outbox claim through a definer, before the first sender ships — docs/setup.md § Later |
 | P6 | Fixed: no font preloaded on a shop |
 | P7 | Fixed: middleware `getClaims`; `currentAccess`/`currentStaff` once per request |
 | P8 | Fixed: Orders, the order page and Home read in parallel |
 | P9 | Index `orders_tenant_placed_only`: index-only count, 58 → 39 ms at 150k |
 | P10 | Measured, kept: row security keeps Postgres off any index for ILIKE; 100 ms at 150k |
 | P11 | Fixed: `refreshSoldOut`, at most once per 30 s per shop and instance |
-| P12 | Timeouts added; `attachDatabasePool` waits (a new dependency) |
+| P12 | Timeouts added; `attachDatabasePool` (@vercel/functions 3.10.2, owner 2026-11-08) through a pg-shaped adapter released after each tenant transaction, on Vercel only |
 | P13 | Index `order_lines_preorder_owed` |
 | P14 | Fixed for the order page (147.5 → 125 kB); the look editor keeps zod (it validates there) |
 | P15 | Fixed: `priority` only in the first section; the logo is sized |
