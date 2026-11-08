@@ -11,6 +11,18 @@ Status: accepted · 2026-11-06 · adopted from Ekatan's WhatsApp outbox
   RAW body, insert into `webhook_events` under OUR key (provider:event:object)
   with `on conflict do nothing`, answer 200 at once, process later.
 
+## Amendment (owner, 2026-11-08): an inbound webhook with no signature
+Shiprocket's tracking webhook carries no signature, only an optional static token (`frata-integrations`
+§ Shiprocket). Such a webhook is accepted only as a **trigger**, never as a fact:
+- the URL's key only routes to a shop; the secret is the provider's token header, required, sealed, compared in
+  constant time;
+- the event is stored through a definer under OUR key, with the tenant in it (`provider:<tenant>:object:state:time`),
+  only when the object is that tenant's; answered 200 at once;
+- the processor **reads the state back from the provider's API with the shop's own credentials** before writing any
+  state change, and clamps the provider's time to now plus a small skew;
+- a sweep catches what the webhook missed.
+A signed webhook (Razorpay, Meta) keeps the rule above. Spec: `docs/specs/2026-11-08-ship.md` § Reviews 2.
+
 ## Why
 Providers deliver at least once and retry (Razorpay: 24 h, ~5 s timeout). An
 order and its WhatsApp confirmation must commit together or not at all; a

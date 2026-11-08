@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 4.9.0
+  version: 4.10.0
   verified: 2026-11-08
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -298,6 +298,21 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
     it never acts by itself.
 52. **Stopped by Frrata** is a danger badge and a line with Frrata's own reason; the shop's only action is End.
 
+## Shipping (owner-approved 2026-11-08; spec `docs/specs/2026-11-08-ship.md`, mockup https://claude.ai/artifact/VfTnw5iJAT3JY7AAjteNC5)
+
+53. **The queue by next step:** Couldn't deliver (first, in danger, when it has any) · To confirm · To pack · To ship ·
+    On the way · Coming back. Each tab is a state the order already has; never a stored status.
+54. **One button that changes with the step** on a packed order: "Ship ₹62 via Delhivery Surface" → "Print label";
+    the courier is pre-chosen, cheapest and fastest one tap away. Staff see the courier and days, never a rupee.
+55. **Lists never call the courier:** prices appear when Ship opens on one order.
+56. **Shipping it yourself is a peer path,** not a fallback: Mark shipped (courier and tracking number optional), then
+    Delivered or Came back, one tap each, with Undo until anything later happens.
+57. **A failed delivery is today's work:** the courier's reason, the attempt, the shopper's phone (Call), and one
+    action; a re-attempt needs one fix (a date, a phone, or the address with a warning when it lacks a house number).
+58. **The shopper's tracking** is on the shop's own order page: the expected date first, then a four-step progress
+    (Packed · Shipped · Out for delivery · Delivered), the courier and tracking number, the latest scans, the pieces,
+    the way back to the shop. Never a cost.
+
 ## Storefront as built (1B, 2026-11-07)
 
 - Views in `src/components/storefront/` are the ONE rendering of a shop: the
@@ -532,9 +547,9 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     opens; never in the component that opened it.
 
 
-Their words, not ours: order, delivery, return (not RTO in headings — "Returned
-to you" with RTO in the detail), payout, customer, product, size. "Delivery
-failed" for NDR in lists. Money is "profit", not "contribution". Never claim a
+Their words, not ours: order, delivery, return (not RTO in headings — "Came back"
+or "Coming back" with RTO in the detail; owner, 2026-11-08, Ship mockup), payout, customer, product, size.
+"Couldn't deliver" for NDR in lists and tabs. Money is "profit", not "contribution". Never claim a
 saving we cannot show from their own orders.
 
 ## Brand: frrata (owner-approved 2026-11-07; spec `docs/specs/2026-11-07-brand-frrata.md`, book https://claude.ai/artifact/S55h8hC9dYNJC2fQghjFvi)
