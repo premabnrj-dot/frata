@@ -95,11 +95,17 @@ export default async function MerchantPage({ params, searchParams }: { params: P
                 <div className="flex justify-between"><span>{cur.name} <span className="text-xs text-muted-foreground">· version {cur.v.version}</span></span><Money paise={paise(cur.tp.customMonthlyPrice ?? cur.v.monthlyPrice)} />/mo</div>
                 {cur.tp.customMonthlyPrice !== null && <p className="text-xs text-muted-foreground">Custom price: {cur.tp.reason}</p>}
                 <div className="flex justify-between"><span>Fee per delivered order</span><Numeric>{formatPercent(cur.v.feeBps / 10_000, cur.v.feeBps % 100 === 0 ? 0 : 1)}</Numeric></div>
-                <div className="flex justify-between"><span>Orders this month</span><Numeric>{use!.used} of {use!.included.toLocaleString('en-IN')}</Numeric></div>
-                {use!.over && <p className="text-warn-text">Over the included orders. It keeps selling; the next plan adds room and features.</p>}
+                {/* Usage as a meter, the words beside it (visual changes, owner-approved 2026-11-08). */}
+                <div>
+                  <div className="flex justify-between"><span>Orders this month</span><Numeric>{use!.used} / {use!.included.toLocaleString('en-IN')}</Numeric></div>
+                  <div aria-hidden="true" className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+                    <span className={`block h-full origin-left rounded-full ${use!.over ? 'bg-warn-mark' : 'bg-foreground'}`} style={{ transform: `scaleX(${use!.included ? Math.min(1, use!.used / use!.included) : 1})` }} />
+                  </div>
+                  {use!.over && <p className="mt-1 text-warn-text">{(use!.used - use!.included).toLocaleString('en-IN')} over the plan. It keeps selling.</p>}
+                </div>
                 <p className="text-muted-foreground">{cur.v.features.length ? `Includes ${cur.v.features.map((f) => FEATURE_NAMES[f as Feature] ?? f).join(', ')}, all channels.` : 'All channels.'}</p>
                 {cur.tp.trialEndsAt && cur.tp.trialEndsAt > now && <p className="text-warn-text">Trial until {dayIN(cur.tp.trialEndsAt)}.</p>}
-                <p className="text-muted-foreground">On this plan since {dayIN(cur.tp.startsAt)}. Not charged yet: billing comes in Phase 6.</p>
+                <p className="text-muted-foreground">On this plan since {dayIN(cur.tp.startsAt)}. Not charged yet: billing comes later.</p>
               </>
             ) : <p className="text-danger-text">No plan. Choose one with Change plan.</p>}
           </Section>

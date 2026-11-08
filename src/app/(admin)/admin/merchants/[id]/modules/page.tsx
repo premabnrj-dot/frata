@@ -84,7 +84,7 @@ export default async function MerchantModulesPage({ params, searchParams }: { pa
           })}
         </DataTableBody>
       </DataTable>
-      <p className="text-sm text-muted-foreground">A trial ends by itself after {TRIAL_DAYS} days. Paid add-ons come with billing in Phase 6.</p>
+      <p className="text-sm text-muted-foreground">A trial ends by itself after {TRIAL_DAYS} days. Paid add-ons come with billing.</p>
     </>
   )
 }

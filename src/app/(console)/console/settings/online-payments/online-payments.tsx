@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { connectRazorpay, disconnectRazorpay } from './actions'
 import { Section } from '@/components/layout/section'
 import { sinceIN } from '@/lib/format-date'
+import { Icon } from '@/components/icons/icon'
 
 type Status = { keyId: string; mode: 'test' | 'live'; webhookSeenAt: string | null; lastEventAt: string | null; problem: string | null; webhookUrl: string; webhookSecret: string | null } | null
 
@@ -44,7 +45,7 @@ export function OnlinePayments({ status, support, available, now }: { status: St
     <>
       <Section>
         <div className="flex items-center justify-between gap-3"><h2 className="text-section font-semibold">Razorpay</h2>{badge}</div>
-        <p className="text-sm text-muted-foreground">Shoppers pay by UPI, card or netbanking into your own Razorpay account. Razorpay settles to your bank; Frrata never holds your money.</p>
+        <MoneyFlow />
         {status?.problem && <p role="alert" className="rounded-md bg-danger p-3 text-sm text-danger-text">{status.problem}</p>}
       </Section>
 
@@ -71,8 +72,8 @@ export function OnlinePayments({ status, support, available, now }: { status: St
 
       {status && (
         <Section>
-          <h2 className="text-section font-semibold">2 · Tell Razorpay where to send payments</h2>
-          <p className="text-sm text-muted-foreground">Done once, in your Razorpay dashboard: Account &amp; Settings → Webhooks → Add new webhook. If a shopper pays and closes the page, this is how your shop learns the order is paid.</p>
+          <div className="flex items-center"><h2 className="text-section font-semibold">2 · Tell Razorpay where to send payments</h2><InfoTip about="the webhook">Done once, in your Razorpay dashboard: Account &amp; Settings → Webhooks → Add new webhook. If a shopper pays and closes the page, this is how your shop learns the order is paid.</InfoTip></div>
+          <p className="text-sm text-muted-foreground">Razorpay → Account &amp; Settings → Webhooks → Add new webhook.</p>
           <ol className="space-y-3 text-sm">
             <li><span className="font-medium">Webhook URL</span>
               <div className="mt-1 flex gap-2"><code className="min-w-0 flex-1 truncate rounded-md border border-input bg-muted px-2 py-2 text-xs">{status.webhookUrl}</code><Button variant="secondary" onClick={() => copy(status.webhookUrl)}>Copy</Button></div></li>
@@ -80,7 +81,8 @@ export function OnlinePayments({ status, support, available, now }: { status: St
               {status.webhookSecret
                 ? <div className="mt-1 flex gap-2"><code className="min-w-0 flex-1 truncate rounded-md border border-input bg-muted px-2 py-2 text-xs">{status.webhookSecret}</code><Button variant="secondary" onClick={() => copy(status.webhookSecret!)}>Copy</Button></div>
                 : <p className="mt-1 text-muted-foreground">Already in Razorpay (hidden since the first event arrived).</p>}</li>
-            <li><span className="font-medium">Events</span>: tick <code>payment.captured</code>, <code>payment.failed</code> and <code>order.paid</code>. Save.</li>
+            <li><span className="font-medium">Events to tick</span>, then Save
+              <ul className="mt-1 flex flex-wrap gap-1.5" aria-label="Events">{RZP_EVENTS.map((e) => <li key={e}><button type="button" onClick={() => copy(e)} className="inline-flex min-h-6 items-center rounded-sm bg-muted px-2 font-mono text-xs hover:bg-accent" aria-label={`Copy ${e}`}>{e}</button></li>)}</ul></li>
           </ol>
           <p className="text-sm">{status.webhookSeenAt ? <Badge tone="ok">Working · last event {sinceIN(status.lastEventAt ?? status.webhookSeenAt, new Date(now))}</Badge> : <Badge>Waiting for Razorpay’s first event…</Badge>}</p>
           {status.mode === 'test' && <p className="text-xs text-muted-foreground">Test keys (rzp_test_) let you try Razorpay, but an open shop offers online payment only with live keys and a webhook that has worked.</p>}
@@ -95,5 +97,30 @@ export function OnlinePayments({ status, support, available, now }: { status: St
         </Section>
       )}
     </>
+  )
+}
+
+const RZP_EVENTS = ['payment.captured', 'payment.failed', 'order.paid'] as const
+
+/**
+ * How the money moves, drawn (visual changes, owner-approved 2026-11-08): shopper → Razorpay → your bank, and a dashed
+ * line back to the shop — the webhook. Its words are the alt: the list reads in order to a screen reader.
+ */
+function MoneyFlow() {
+  const node = 'rounded-md border border-border bg-muted px-3 py-1.5 text-sm font-medium'
+  return (
+    <figure className="space-y-2">
+      <ol className="flex flex-wrap items-center gap-2" aria-label="How a payment reaches you">
+        <li className={node}>Shopper pays</li>
+        <li aria-hidden="true"><Icon name="chevron" className="size-4 text-muted-foreground" /></li>
+        <li className={node}>Your Razorpay</li>
+        <li aria-hidden="true"><Icon name="chevron" className="size-4 text-muted-foreground" /></li>
+        <li className={node}>Your bank</li>
+      </ol>
+      <figcaption className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span aria-hidden="true" className="inline-block w-10 border-t-2 border-dashed border-thread" />
+        Razorpay tells Frrata, so the order is marked paid. Frrata never holds your money.
+      </figcaption>
+    </figure>
   )
 }

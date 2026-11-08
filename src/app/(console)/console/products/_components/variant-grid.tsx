@@ -6,6 +6,7 @@ import { availability, type WhenOut } from '@/domains/catalogue/availability'
 import { combinations, groupOption, keyOf, type Option } from '@/domains/catalogue/variants'
 import { button } from '@/components/ui/button'
 import { useNow } from '@/components/time/now'
+import { Icon } from '@/components/icons/icon'
 
 export type Cell = Omit<VariantInput, 'values'>
 export const EMPTY_CELL: Cell = { price: '', compareAt: '', cost: '', stock: '0', sku: '', whenOut: 'stop', shipsBy: '', leadMin: '', leadMax: '', cap: '' }
@@ -78,7 +79,7 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku }: {
                 {grp.label && (
                   <tr role="row" className="bg-card"><td role="cell" colSpan={8} data-cell="full" className="px-2 py-1.5">
                     <button type="button" aria-expanded={!shut} className="flex min-h-6 w-full items-center gap-2 text-left font-medium" onClick={() => setOpen({ ...open, [grp.label]: shut ? true : false })}>
-                      <span aria-hidden="true" className={`inline-block transition-transform duration-fast ${shut ? '' : 'rotate-90'}`}>›</span>{grp.label}
+                      <span aria-hidden="true" className={`inline-block transition-transform duration-fast ${shut ? '' : 'rotate-90'}`}><Icon name="chevron" className="size-3.5" /></span>{grp.label}
                       <span className="text-xs font-normal text-muted-foreground">{grp.rows.length} · {sold ? `${sold} sold out` : 'all in stock'}</span>
                     </button>
                   </td></tr>

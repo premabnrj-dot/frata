@@ -87,7 +87,7 @@ export default async function PartnersPage() {
               {/* One cell; the checked radio's panel shows (globals.css [data-calc]). Each radio is described by its panel. */}
               <div className="grid">
                 {shareTable(ex).map((r) => (
-                  <div key={r.brands} id={`share-${r.brands}`} data-panel={r.brands} className="col-start-1 row-start-1 hidden gap-2 rounded-xl bg-primary p-5 text-primary-foreground sm:grid-cols-2">
+                  <div key={r.brands} id={`share-${r.brands}`} data-panel={r.brands} className="col-start-1 row-start-1 gap-2 rounded-xl bg-primary p-5 text-primary-foreground sm:grid-cols-2">
                     <span className="grid"><span className="text-sm text-primary-foreground/70">Each month</span><span className="font-mono text-3xl"><Money paise={r.perMonth} /></span></span>
                     <span className="grid"><span className="text-sm text-primary-foreground/70">Over {T.shareMonths} months</span><span className="font-mono text-3xl"><Money paise={r.overTerm} /></span></span>
                   </div>

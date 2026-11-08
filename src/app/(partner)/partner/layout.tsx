@@ -31,7 +31,7 @@ export default async function PartnerLayout({ children }: { children: React.Reac
     ...access.memberships.filter((m) => !m.supportSessionId).map((m) => ({ href: '/console', name: m.tenantName, role: ROLE_LABEL[m.role as MemberRole] ?? m.role, current: false, tenantId: m.tenantId })),
   ]
   const clients: NavItem = { href: '/partner', label: 'Clients', icon: 'merchants', exact: true }
-  const details: NavItem = { href: '/partner/details', label: 'Your details', icon: 'staff' }
+  const details: NavItem = { href: '/partner/details', label: 'Your details', icon: 'details' }
   const name = auth.partner.businessName || auth.partner.name
   return (
     <AppShell title={name} tag="PARTNER" navLabel="Partner" groups={[{ label: '', items: [clients, details] }]} tabs={[clients, details]} more={[]} foot={[]}

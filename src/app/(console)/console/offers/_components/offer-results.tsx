@@ -3,6 +3,7 @@ import { Money, Numeric } from '@/components/data/numeric'
 import { paise } from '@/domains/money/paise'
 import { formatPercent } from '@/lib/format'
 import { JUDGE_MIN_ORDERS, type OfferStat, type OfferStats } from '@/lib/queries/discounts'
+import { Pictogram } from '@/components/brand/pictogram'
 
 // =============================================================================
 // DID IT MAKE MONEY? (offers O·3; mockup "Did it make money?"). The 30-day strip on the Offers list and an offer's own
@@ -45,7 +46,17 @@ export function OfferNumbers({ o, s }: { o: OfferStat | undefined; s: OfferStats
   const w = s.without
   return (
     <Section title={`Last ${s.days} days`} id="numbers">
-      {x.orders < JUDGE_MIN_ORDERS ? <p className="rounded-md bg-info px-3 py-2 text-sm text-info-text">Too few to judge: <Numeric>{x.orders}</Numeric> {x.orders === 1 ? 'order' : 'orders'} so far. The numbers mean something from {JUDGE_MIN_ORDERS}.</p> : null}
+      {/* Under the threshold the eight numbers would be noise (mostly zeros): one line, a picture and a count to go
+          (visual changes, owner-approved 2026-11-08). */}
+      {x.orders < JUDGE_MIN_ORDERS ? (
+        <div className="flex items-center gap-4">
+          <Pictogram name="tally" size={48} className="shrink-0" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <p className="text-sm">Too few to judge: <Numeric>{x.orders}</Numeric> {x.orders === 1 ? 'order' : 'orders'} so far. The numbers mean something from {JUDGE_MIN_ORDERS}.</p>
+            <div aria-hidden="true" className="h-1.5 overflow-hidden rounded-full bg-muted"><span className="block h-full origin-left rounded-full bg-foreground" style={{ transform: `scaleX(${x.orders / JUDGE_MIN_ORDERS})` }} /></div>
+          </div>
+        </div>
+      ) : (
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div><dt className="text-xs text-muted-foreground">Orders</dt><dd className="font-mono text-lg"><Numeric>{x.orders}</Numeric></dd>
           <dd className="text-xs text-muted-foreground"><Numeric>{x.fresh}</Numeric> new · <Numeric>{x.repeat}</Numeric> repeat buyers</dd></div>
@@ -60,6 +71,7 @@ export function OfferNumbers({ o, s }: { o: OfferStat | undefined; s: OfferStats
         <div className="col-span-2"><dt className="text-xs text-muted-foreground">₹ kept per delivered order</dt><dd className="font-mono text-lg">{rs(x.keptPerDelivered)}</dd>
           {x.keptPerDelivered === null ? <dd className="text-xs text-muted-foreground">Once orders are delivered and their costs are known.</dd> : null}</div>
       </dl>
+      )}
     </Section>
   )
 }

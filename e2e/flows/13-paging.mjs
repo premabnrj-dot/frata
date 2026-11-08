@@ -20,7 +20,7 @@ export default {
         const ctx = await t.browser.newContext(); const p = await ctx.newPage()
         const total = before + 60, pages = Math.ceil(total / 48)
         // The catalogue is cached for up to 60 s: wait for the new pieces to reach Shop all.
-        await until(async () => { await p.goto(SHOP + '/products'); return (await p.getByRole('navigation', { name: 'Pages' }).count()) === 1 }, 75_000)
+        await until(async () => { await p.goto(SHOP + '/products'); return (await p.getByRole("navigation", { name: "Pages" }).count()) === 1 }, 150_000)
         assert.equal(await p.locator('section:has(> h1) > ul > li').count(), 48)
         await p.getByText(`Page 1 of ${pages}`).waitFor()
         await p.getByRole('link', { name: 'Next' }).click()

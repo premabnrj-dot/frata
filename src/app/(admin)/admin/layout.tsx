@@ -44,9 +44,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const merchants: NavItem = { href: '/admin/merchants', label: 'Merchants', icon: 'merchants' }
   const plans: NavItem = { href: '/admin/plans', label: 'Plans', icon: 'plans' }
   const modulesItem: NavItem = { href: '/admin/modules', label: 'Modules', icon: 'apps' }
-  const themesItem: NavItem = { href: '/admin/themes', label: 'Themes', icon: 'look' }
+  const themesItem: NavItem = { href: '/admin/themes', label: 'Themes', icon: 'themes' }
   const offersItem: NavItem = { href: '/admin/offers', label: 'Offers', icon: 'offers' }
-  const partnersItem: NavItem = { href: '/admin/partners', label: 'Partners', icon: 'staff' }
+  const partnersItem: NavItem = { href: '/admin/partners', label: 'Partners', icon: 'partners' }
   const staffItem: NavItem = { href: '/admin/staff', label: 'Staff', icon: 'staff' }
   const activity: NavItem = { href: '/admin/activity', label: 'Activity', icon: 'activity' }
   const foot: NavItem[] = ownStore ? [{ href: '/console', label: `${ownStore} console`, icon: 'external' }] : []

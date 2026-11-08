@@ -42,10 +42,11 @@ export default async function OfferPage({ params }: { params: Promise<{ id: stri
       {o.status === 'stopped' ? <p role="status" className="rounded-md bg-danger px-3 py-2 text-sm text-danger-text">Frrata stopped this offer{o.stoppedAt ? ` on ${dayMonthIN(o.stoppedAt)}` : ''}: {o.stopReason}. Shoppers don’t get it. You can end it; to run it again, ask Frrata support.</p> : null}
       {o.status === 'draft' && !manager ? <p className="rounded-md bg-info px-3 py-2 text-sm text-info-text">A draft. The shop’s owner or an admin starts it.</p> : null}
       <Section title="So far">
+        {o.useCount === 0 ? <p className="text-sm text-muted-foreground">Not used yet{o.budgetLeft !== null ? <> · <Money paise={paise(o.budgetLeft)} /> of the budget to give</> : null}.</p> : (
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div><dt className="text-xs text-muted-foreground">Uses</dt><dd className="font-mono text-lg"><Numeric>{o.useCount}</Numeric>{o.limitTotal ? <span className="text-sm text-muted-foreground"> / {o.limitTotal}</span> : null}</dd></div>
           <div><dt className="text-xs text-muted-foreground">₹ given</dt><dd className="font-mono text-lg"><Money paise={paise(o.given)} /></dd>{o.budgetLeft !== null ? <dd className="text-xs text-muted-foreground"><Money paise={paise(o.budgetLeft)} /> of the budget left</dd> : null}</div>
-        </dl>
+        </dl>)}
       </Section>
       {o.status !== 'draft' ? <OfferNumbers o={mine} s={stats} /> : null}
       {o.style !== 'pay_online' && o.status !== 'ended' && o.status !== 'stopped' ? <OfferCodes id={o.id} address={(await setupFor(auth.membership.tenantId))?.address ?? ''} canAdd={manager} publicCode={o.code}

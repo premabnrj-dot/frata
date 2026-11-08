@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { inches, type Chart } from '@/domains/catalogue/size-charts'
 import { createType, saveSizeChart } from '../actions'
+import { Icon } from '@/components/icons/icon'
 
 export type TypeRow = { id: string; name: string; sizeChart: Chart; uses: number }
 
@@ -70,7 +71,7 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
                   const v = e.target.value.trim() === '' ? null : Number(e.target.value)
                   setEdit({ ...edit, rows: edit.rows.map((x, j) => (j === ri ? { ...x, values: x.values.map((y, k) => (k === ci ? (Number.isNaN(v as number) ? y : v) : y)) } : x)) })
                 }} className="h-7 w-20 rounded border border-input px-1 font-mono text-xs" /></td>)}
-                <td><button type="button" aria-label={`Remove ${r.size}`} className="inline-grid min-h-6 min-w-6 place-items-center text-xs text-muted-foreground" onClick={() => setEdit({ ...edit, rows: edit.rows.filter((_, j) => j !== ri) })}>×</button></td>
+                <td><button type="button" aria-label={`Remove ${r.size}`} className="inline-grid min-h-6 min-w-6 place-items-center text-xs text-muted-foreground" onClick={() => setEdit({ ...edit, rows: edit.rows.filter((_, j) => j !== ri) })}><Icon name="close" className="size-3.5" /></button></td>
               </tr>
             ))}</tbody></table></div>
           <button type="button" className="inline-flex min-h-6 items-center text-xs underline" onClick={() => setEdit({ ...edit, rows: [...edit.rows, { size: '', values: edit.columns.map(() => null) }] })}>+ size</button>

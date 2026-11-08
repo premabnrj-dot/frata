@@ -16,6 +16,7 @@ import { SectionForm, type FormCtx } from './section-form'
 import { SectionsPanel } from './sections-panel'
 import { PageForm } from './page-form'
 import { ThemeForm, type StyleOption } from './theme-form'
+import { Icon } from '@/components/icons/icon'
 
 // =============================================================================
 // The customizer (approved mockup "Customizer", "Customizer on a phone", "Publish"). One draft revision:
@@ -145,8 +146,8 @@ export function Editor(p: EditorProps) {
           {(Object.keys(DEVICES) as Device[]).map((k) => <button key={k} type="button" aria-pressed={device === k} onClick={() => setDevice(k)} className={`h-9 px-3 capitalize ${device === k ? 'bg-primary text-primary-foreground' : ''}`}>{k}</button>)}
         </div>
         <span className="flex-1" />
-        <button type="button" aria-label="Undo" disabled={!past.length || stuck} onClick={undo} className="hidden size-9 rounded-md border border-input disabled:opacity-40 sm:block">↶</button>
-        <button type="button" aria-label="Redo" disabled={!future.length || stuck} onClick={redo} className="hidden size-9 rounded-md border border-input disabled:opacity-40 sm:block">↷</button>
+        <button type="button" aria-label="Undo" disabled={!past.length || stuck} onClick={undo} className="hidden size-9 place-items-center rounded-md border border-input disabled:opacity-40 sm:grid"><Icon name="undo" className="size-4" /></button>
+        <button type="button" aria-label="Redo" disabled={!future.length || stuck} onClick={redo} className="hidden size-9 place-items-center rounded-md border border-input disabled:opacity-40 sm:grid"><Icon name="redo" className="size-4" /></button>
         <span role="status" className="text-sm text-muted-foreground">{status === 'saved' ? 'Saved' : status === 'saving' ? 'Saving…' : 'Not saved'}</span>
         <a href={`/console/theme-preview/${p.revisionId}${path}`} target="_blank" rel="noopener" className="hidden min-h-9 content-center rounded-md border border-input px-3 text-sm sm:block">Preview</a>
         {p.canPublish ? <Button onClick={() => { setPubError(null); setPublishing(true) }} disabled={stuck}>Publish</Button> : <span className="text-sm text-muted-foreground">Ask the owner to publish</span>}

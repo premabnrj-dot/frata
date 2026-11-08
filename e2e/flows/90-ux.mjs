@@ -295,7 +295,8 @@ export default {
         assert.equal(p.url(), url)
         await pc.close()
         // A list while the next view loads: dimmed and busy (a slow network makes the wait visible).
-        const dc = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 800 } })
+        // A motion test: these two contexts see motion as a shopper with no preference does (run.mjs defaults to reduce).
+        const dc = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 800 }, reducedMotion: 'no-preference' })
         const q = await dc.newPage(); await q.goto(CONSOLE + '/console/orders?tab=all')
         const cdp = await dc.newCDPSession(q)
         await cdp.send('Network.enable'); await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 900, downloadThroughput: 1e6, uploadThroughput: 1e6 })
@@ -307,7 +308,7 @@ export default {
         await dc.close()
         // The one brand moment, from the setup page (where the shop is closed again), then from Home, whose checklist
         // gives way to Today as the shop opens: the check is drawn once with the words, and survives that switch.
-        const hc = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 800 } })
+        const hc = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 800 }, reducedMotion: 'no-preference' })
         // Setup (and closing the shop) is reached from Home, by a tap, not by typing its address (impact review U·4).
         const h = await hc.newPage(); await h.goto(CONSOLE + '/console')
         await h.getByRole('link', { name: 'Setup, or close the shop for now' }).click(); await h.waitForURL(/\/console\/setup$/)

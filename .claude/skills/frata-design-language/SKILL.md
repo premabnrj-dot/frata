@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 4.10.0
+  version: 4.11.0
   verified: 2026-11-08
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -467,6 +467,15 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     info, menu dots) stay lucide until redrawn in the set. A brand empty state
     may lead with one `PictoTile` (§ Graphic language); working lists keep
     plain words.
+20a. **No Unicode glyph stands in for a control** (owner-approved 2026-11-08): ↑ ↓ ◉ ↶ ↷ × › are drawn
+    in `icon.tsx` (`up`, `down`, `eye`/`eyeOff`, `undo`, `redo`, `close`, `chevron`, `drag`). Two nav items
+    never share a glyph (Admin: Merchants `merchants`, Themes `themes`, Partners `partners`, Staff `staff`;
+    the partner workspace: Your details `details`). A row that opens something ends in a `chevron`; a status
+    pill says "Needs you" only when it does. How an order is paid is a neutral badge with its icon (`cod`,
+    `prepaid`): only the order's state is coloured. A count that is still going says so ("Today · so far").
+    Before a number means anything (an offer under 30 orders) show the one line, the `tally` pictogram and
+    a meter, never a grid of zeros. A flow of money or steps is drawn (the payments flow, `Journey`), its
+    words still in the page.
 21. Indian names: Noto Sans (Devanagari, Tamil, …) is a fallback face behind
     Inter in the shell's own stack (`--font-shell` on `[data-shell]`, never on
     `html`), committed files (`next/font/local`, OFL) with `preload: false` and

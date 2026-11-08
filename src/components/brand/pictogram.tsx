@@ -11,7 +11,7 @@ import type { ReactNode } from 'react'
 // website, brand empty states and the illustrations built from them.
 // =============================================================================
 
-export const PICTOGRAMS = ['store', 'build', 'handover', 'earn', 'delivered', 'clients', 'owner', 'calendar', 'shield', 'apply'] as const
+export const PICTOGRAMS = ['store', 'build', 'handover', 'earn', 'delivered', 'clients', 'owner', 'calendar', 'shield', 'apply', 'payments', 'risk', 'returned', 'tally'] as const
 export type PictogramName = (typeof PICTOGRAMS)[number]
 
 const line = 'stroke-illo-line'
@@ -85,6 +85,34 @@ const DRAW: Record<PictogramName, ReactNode> = {
     <path d="M14 15h14M14 21h14M14 27h8" {...L} />
     <circle cx="35" cy="34" r="7" className="fill-illo-haldi stroke-illo-line" strokeWidth={2} />
     <path d="M32 34h6M36 31l3 3-3 3" {...L} />
+  </>),
+  // Visual changes (owner-approved 2026-11-08), for brand moments only.
+  // A card paying into a bank: online payments.
+  payments: (<>
+    <rect x="6" y="12" width="28" height="18" rx="3" className="fill-illo-paper stroke-illo-line" strokeWidth={2} />
+    <path d="M6 18h28M11 25h7" {...L} />
+    <path d="M28 40V30h14v10z" className="fill-illo-haldi stroke-illo-line" strokeWidth={2} strokeLinejoin="round" />
+    <path d="M26 30l9-5 9 5" {...L} />
+  </>),
+  // A parcel with a question mark: an order to check before confirming.
+  risk: (<>
+    <path d="M8 16l16-8 16 8v18l-16 8-16-8z" className="fill-illo-fill stroke-illo-line" strokeWidth={2} strokeLinejoin="round" />
+    <circle cx="35" cy="33" r="7" className="fill-illo-haldi stroke-illo-line" strokeWidth={2} />
+    <path d="M33 31a2 2 0 1 1 3 1.7c-.7.4-1 .8-1 1.6M35 37v.1" {...L} />
+  </>),
+  // A parcel coming back: returned to origin.
+  returned: (<>
+    <path d="M14 20l12-6 12 6v14l-12 6-12-6z" className="fill-illo-fill stroke-illo-line" strokeWidth={2} strokeLinejoin="round" />
+    <path d="M14 20l12 6 12-6M26 26v14" {...L} />
+    <path d="M6 14h10" {...L} />
+    <circle cx="10" cy="34" r="5" className="fill-illo-haldi stroke-illo-line" strokeWidth={2} />
+    <path d="M8 34h4M10 32l-2 2 2 2" {...L} />
+  </>),
+  // Tally marks with the last still to come: too few to judge yet.
+  tally: (<>
+    <rect x="7" y="9" width="34" height="30" rx="3" className="fill-illo-paper stroke-illo-line" strokeWidth={2} />
+    <path d="M15 17v14M20 17v14M25 17v14" {...L} />
+    <rect x="29" y="17" width="5" height="14" rx="1.5" className="fill-illo-haldi stroke-illo-line" strokeWidth={2} />
   </>),
 }
 

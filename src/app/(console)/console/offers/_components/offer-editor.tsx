@@ -12,6 +12,7 @@ import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
 import { checkQualify, saveOffer } from '../actions'
 import { OfferMore, type Pickers } from './offer-more'
+import { InfoTip } from '@/components/ui/info-tip'
 
 // =============================================================================
 // THE OFFER FORM (spec § Console; mockup "The founder's side"): one short form for the chosen style, a live preview
@@ -107,7 +108,7 @@ export function OfferEditor({ id, initial, locked, pickers }: { id: string | nul
             <b>{share}% of last month’s orders were already at this amount.</b> About {inr(qualify.would)} would go to them. A higher minimum rewards bigger bags instead.
           </p>
         )}
-        <div className="space-y-1"><label htmlFor="o-code" className={lab}>Code <span className="font-normal text-muted-foreground">(optional; without one it applies by itself)</span></label>
+        <div className="space-y-1"><div className="flex items-center"><label htmlFor="o-code" className={lab}>Code <span className="font-normal text-muted-foreground">(optional)</span></label><InfoTip about="the code">Without a code the offer applies by itself.</InfoTip></div>
           <input id="o-code" value={v.code} maxLength={20} disabled={locked.code} placeholder="DIWALI15" autoCapitalize="characters" aria-invalid={!!errors.code || undefined} aria-describedby={errors.code ? 'o-code-err' : 'o-code-hint'}
             onChange={(e) => set({ code: e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase() })} className={`${field} font-mono sm:max-w-60`} />
           {errors.code ? err('code') : <p id="o-code-hint" className="text-xs text-muted-foreground">{locked.code ? 'A code never changes. End this offer and make a new one to use another.' : 'Codes are never reused in your shop.'}</p>}</div>
@@ -125,7 +126,7 @@ export function OfferEditor({ id, initial, locked, pickers }: { id: string | nul
             <input id="o-total" inputMode="numeric" value={v.limitTotal} aria-invalid={!!errors.limitTotal || undefined} aria-describedby={errors.limitTotal ? 'o-limitTotal-err' : undefined} onChange={(e) => set({ limitTotal: e.target.value })} className={field} />{err('limitTotal')}</div>
           <div className="space-y-1"><label htmlFor="o-phone" className={lab}>Uses per phone <span className="font-normal text-muted-foreground">(optional)</span></label>
             <input id="o-phone" inputMode="numeric" value={v.limitPerPhone} aria-invalid={!!errors.limitPerPhone || undefined} aria-describedby={errors.limitPerPhone ? 'o-limitPerPhone-err' : undefined} onChange={(e) => set({ limitPerPhone: e.target.value })} className={field} />{err('limitPerPhone')}</div>
-          <div className="space-y-1 sm:col-span-2"><label htmlFor="o-budget" className={lab}>Budget ₹ <span className="font-normal text-muted-foreground">(optional; it stops giving when this much is given)</span></label>
+          <div className="space-y-1 sm:col-span-2"><div className="flex items-center"><label htmlFor="o-budget" className={lab}>Budget ₹ <span className="font-normal text-muted-foreground">(optional)</span></label><InfoTip about="the budget">The offer stops giving once this much has been given.</InfoTip></div>
             <input id="o-budget" inputMode="decimal" value={v.budget} aria-invalid={!!errors.budget || undefined} aria-describedby={errors.budget ? 'o-budget-err' : undefined} onChange={(e) => set({ budget: e.target.value })} className={`${field} sm:max-w-48`} />{err('budget')}</div>
         </div>
         <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" className="size-5 shrink-0 accent-primary" checked={v.announce} aria-describedby={errors.announce ? 'o-announce-err' : undefined} onChange={(e) => set({ announce: e.target.checked })} />Show it in the bar at the top of your shop (one offer at a time; a draft takes the bar when it starts)</label>{err('announce')}

@@ -249,6 +249,7 @@
   [data-tinge] { --icon-accent: var(--brand); }
   [data-surface="ink"] [data-tinge], [data-surface="ink"][data-tinge] { --icon-accent: var(--brand-on-ink); }
   /* The /partners calculator (website spec W·1): no script — the checked radio's panel shows. Values: SHARE_CHOICES. */
+  [data-calc] [data-panel] { display: none; } /* hidden here, not with a `hidden` utility: utilities outrank this layer, so the checked panel never showed (visual changes, 2026-11-08) */
   [data-calc]:has(input[value="1"]:checked) [data-panel="1"], [data-calc]:has(input[value="3"]:checked) [data-panel="3"],
   [data-calc]:has(input[value="5"]:checked) [data-panel="5"], [data-calc]:has(input[value="10"]:checked) [data-panel="10"] { display: grid; }
   /* A link in a working page: ink words, a thread-coloured underline (brand spec, chapter 5). */

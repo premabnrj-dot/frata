@@ -12,6 +12,7 @@ import { CategoryPicker } from '../../products/_components/organise-card'
 import { deleteCollection, previewRules, saveCollection } from '../actions'
 import { Section } from '@/components/layout/section'
 import { PageHeader } from '@/components/layout/page-header'
+import { Icon } from '@/components/icons/icon'
 
 export type EditorCollection = { id: string | null; title: string; handle: string; description: string; kind: 'manual' | 'auto'; matchAll: boolean; rules: Row[]; sort: string; productIds: string[] }
 export type ProductPick = { id: string; title: string; status: string }
@@ -134,7 +135,7 @@ export function CollectionEditor({ initial, products, families, attrOptions }: {
                       {r.field === 'tag' && <input aria-label={`Tag for rule ${i + 1}`} value={r.value} maxLength={40} placeholder="Diwali 2026" onChange={(e) => setRow(i, { value: e.target.value })} className={field} />}
                       {r.field === 'in_stock' && <p className="py-2 text-xs text-muted-foreground">In stock, or taking pre-orders or made to order.</p>}
                     </div>
-                    <button type="button" aria-label={`Remove rule ${i + 1}`} className="h-9 px-2 text-muted-foreground hover:text-foreground" onClick={() => set({ rules: d.rules.filter((_, j) => j !== i) })}>×</button>
+                    <button type="button" aria-label={`Remove rule ${i + 1}`} className="h-9 px-2 text-muted-foreground hover:text-foreground" onClick={() => set({ rules: d.rules.filter((_, j) => j !== i) })}><Icon name="close" className="size-3.5" /></button>
                   </li>
                 ))}
               </ul>

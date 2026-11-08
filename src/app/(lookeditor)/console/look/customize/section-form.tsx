@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { PROMISES, SECTION_NAMES, type SectionInstance, type SectionOf } from '@/domains/themes/sections'
 import { Choice, Field, ImageField, LinkPicker, Switch, Text, paiseToRupees, rupeesToPaise, type LinkTarget } from './controls'
+import { Icon } from '@/components/icons/icon'
 
 // One section's settings (themes spec § Sections: every field, type and limit). The form edits a copy; every
 // change goes through `set`, which the editor turns into an undo step and an autosave.
@@ -179,7 +180,7 @@ function Look({ s, set, c }: { s: SectionOf<'shop_the_look'>; set: Set<SectionOf
       {s.pieces.map((p, i) => (
         <li key={p.handle} className={`flex items-center gap-2 rounded-md px-2 ${i === at ? 'border-2 border-foreground' : 'border border-input'}`}>
           <button type="button" onClick={() => setAt(i)} aria-pressed={i === at} className="min-h-11 flex-1 text-left text-sm">{i + 1} · {c.products.find((x) => x.handle === p.handle)?.title ?? p.handle}</button>
-          <button type="button" aria-label={`Remove piece ${i + 1}`} onClick={() => { set({ ...s, pieces: s.pieces.filter((_, j) => j !== i) }); setAt(0) }} className="grid size-9 place-items-center rounded-md">×</button>
+          <button type="button" aria-label={`Remove piece ${i + 1}`} onClick={() => { set({ ...s, pieces: s.pieces.filter((_, j) => j !== i) }); setAt(0) }} className="grid size-9 place-items-center rounded-md"><Icon name="close" className="size-4" /></button>
         </li>
       ))}
     </ol>

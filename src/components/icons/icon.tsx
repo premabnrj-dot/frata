@@ -45,6 +45,28 @@ const ICONS = {
   profit: ['M4 17l5-5 4 3 7-8', 'M15 7h5v5'],
   // A price tag (Offers): the tag, then its hole and a cut.
   offers: ['M4 4h7l9 9-7 7-9-9z', 'M8 8h.01 M10.5 14.5l4-4'],
+  // Visual changes (owner-approved 2026-11-08): no Unicode glyph stands in for a control, and no two nav items share one.
+  // Themes (Admin): a swatch card, three colours, the top one the tinge.
+  themes: ['M5 3h7v18H5z M12 8l6.5-2.5 2.5 6.5L12 15.5', 'M5 8h7 M5 13h7'],
+  // Partners: two people, the one behind the tinge.
+  partners: ['M3 20c.8-3.3 3-5 5.5-5s4.7 1.7 5.5 5 M8.5 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M15 12.5a2.7 2.7 0 1 0 0-5.4 M16.5 15c2 .4 3.6 2 4.5 5'],
+  // Your details: a card with a person on it.
+  details: ['M3 5h18v14H3z M13.5 10h4.5 M13.5 13.5h3', 'M8 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M5 16.5c.6-1.6 1.7-2.5 3-2.5s2.4.9 3 2.5'],
+  up: ['M12 19V5', 'M6 11l6-6 6 6'],
+  down: ['M12 5v14', 'M6 13l6 6 6-6'],
+  eye: ['M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z', 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'],
+  eyeOff: ['M4.5 8.5C3.2 10.1 2.5 12 2.5 12S6 18.5 12 18.5c1.6 0 3-.4 4.2-1.1 M9 5.9c.9-.3 1.9-.4 3-.4 6 0 9.5 6.5 9.5 6.5s-.8 1.5-2.2 3', 'M3 3l18 18'],
+  undo: ['M9 14 4 9l5-5', 'M4 9h10.5a5.5 5.5 0 0 1 0 11H11'],
+  redo: ['M15 14l5-5-5-5', 'M20 9H9.5a5.5 5.5 0 0 0 0 11H13'],
+  drag: ['M9 6h.01 M9 12h.01 M9 18h.01', 'M15 6h.01 M15 12h.01 M15 18h.01'],
+  chevron: ['M9 6l6 6-6 6', 'M9 6l6 6-6 6'],
+  payments: ['M3 6h18v12H3z M7 15h3', 'M3 10h18'],
+  ship: ['M3 7h11v9H3z M14 10h3.5l3.5 3.5V16h-7z', 'M7 18.5a1.5 1.5 0 1 0 0-.01 M17 18.5a1.5 1.5 0 1 0 0-.01'],
+  tax: ['M6 3h12v18l-3-2-3 2-3-2-3 2z', 'M9 14l6-6 M9.5 8.5h.01 M14.5 13.5h.01'],
+  policy: ['M6 3h9l3 3v15H6z', 'M9 10h6 M9 13.5h6 M9 17h4'],
+  brand: ['M12 21a9 9 0 1 1 9-9c0 2.5-2 3.5-3.5 3.5H15a2 2 0 0 0-1.5 3.3c.4.5.2 2.2-1.5 2.2z', 'M7.5 11h.01 M10 7.5h.01 M14.5 7.5h.01'],
+  address: ['M12 21s7-5.6 7-11.5a7 7 0 1 0-14 0C5 15.4 12 21 12 21z', 'M12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+  people: ['M3 20c.8-3.3 3-5 5.5-5s4.7 1.7 5.5 5 M8.5 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M15 12.5a2.7 2.7 0 1 0 0-5.4 M16.5 15c2 .4 3.6 2 4.5 5'],
 } as const satisfies Record<string, readonly [string, string]>
 
 export type IconName = keyof typeof ICONS

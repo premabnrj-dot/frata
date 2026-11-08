@@ -50,10 +50,11 @@ export function AppsList({ groups, rows, canManage }: { groups: { key: Group; la
       return <span className="flex items-center gap-3"><Link href={r.setup} className={button({ variant: 'secondary' })}>Set up</Link>{canManage ? <Switch on={a.on} label={r.name} disabled={pending} onChange={() => ask(r)(!a.on)} /> : null}</span>
     }
     if (a.kind === 'switch') return canManage ? <Switch on={a.on} label={r.name} disabled={pending} onChange={() => ask(r)(!a.on)} /> : <span className="text-sm text-muted-foreground">{a.on ? 'On' : 'Off'}</span>
-    if (where === 'row') return <Button variant="secondary" onClick={() => { setError(null); setOpen(r) }}>See details</Button>
+    // On a phone the whole row opens the details (a chevron says so); the button is for a computer only.
+    if (where === 'row') return <Button variant="secondary" className="hidden md:inline-flex" onClick={() => { setError(null); setOpen(r) }}>See details</Button>
     if (a.kind === 'ask') return <a href={r.ask} target="_blank" rel="noopener" className={button()}>{a.label}</a>
     if (a.kind === 'plans') return <a href="/#pricing" className={button()}>{a.label}</a>
-    return <span className="text-sm text-muted-foreground">Coming next</span>
+    return <Badge tone="neutral">Coming next</Badge>
   }
   return (
     <>
@@ -67,15 +68,16 @@ export function AppsList({ groups, rows, canManage }: { groups: { key: Group; la
             <Section flush ariaLabel={g.label}>
               <ul className="divide-y divide-border">
                 {list.map((r) => (
-                  <li key={r.key} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+                  <li key={r.key} className="relative flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
                     <Tile k={r.key} />
                     <div className="min-w-[11rem] flex-1">
-                      <button type="button" onClick={() => { setError(null); setOpen(r) }} className="text-left font-semibold underline-offset-2 hover:underline">{r.name}</button>
+                      {/* The name opens the details; on a phone its hit area is the whole row (switches and links sit above it). */}
+                      <button type="button" onClick={() => { setError(null); setOpen(r) }} className="text-left font-semibold underline-offset-2 hover:underline max-md:after:absolute max-md:after:inset-0 max-md:after:content-['']">{r.name}</button>
                       <p className="text-sm text-muted-foreground">{r.job}</p>
                     </div>
-                    <Badge tone={TONE[r.offer.tone]}>{r.offer.badge}</Badge>
+                    <span className="flex items-center gap-2"><Badge tone={TONE[r.offer.tone]}>{r.offer.badge}</Badge>{r.offer.action.kind !== 'switch' ? <Icon name="chevron" className="size-4 text-muted-foreground md:hidden" /> : null}</span>
                     {r.usage ? <span className="hidden text-xs text-muted-foreground md:inline">{r.usage}</span> : null}
-                    {action(r, 'row')}
+                    {r.offer.action.kind === 'switch' || r.setup ? <span className="relative z-10 flex items-center">{action(r, 'row')}</span> : <span className="relative z-10 hidden md:flex">{action(r, 'row')}</span>}
                   </li>
                 ))}
               </ul>
@@ -90,6 +92,7 @@ export function AppsList({ groups, rows, canManage }: { groups: { key: Group; la
         {open ? (
           <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_15rem]">
             <div className="space-y-3">
+              <Tile k={open.key} size="lg" />
               <h3 className="text-sm font-semibold">What you get</h3>
               <ul className="space-y-2 text-sm">{open.features.map((f) => <li key={f} className="flex gap-2"><span aria-hidden="true" className="text-ok-text">✓</span>{f}</li>)}</ul>
               {open.worksWith.length ? (
