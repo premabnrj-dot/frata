@@ -34,6 +34,9 @@ export const LIMITS = {
   codeSeen: { action: 'shop_code:seen', max: 1, windowSeconds: 600 },
   // Upload tokens per shop (security review S11): four widths per photo, so 200 photos an hour; Frrata pays for storage.
   uploadShop: { action: 'upload:shop', max: 800, windowSeconds: 3600 },
+  // PDF documents (Documents D1, security review 2026-11-08): a render is CPU; per member and per shop, fail closed.
+  pdfMember: { action: 'pdf:member', max: 30, windowSeconds: 600 },
+  pdfShop: { action: 'pdf:shop', max: 120, windowSeconds: 600 },
 } as const satisfies Record<string, Limit>
 
 /** Whether `subject` is already past the limit, WITHOUT counting an attempt. `failClosed`: true when the counter cannot be read. */

@@ -17,7 +17,7 @@ import { dateTimeIN, dayMonthIN } from '@/lib/format-date'
 import { orderDetail } from '@/lib/queries/order-detail'
 import { orderPrefixFor } from '@/lib/queries/orders'
 import { AddNote, EditContact } from '../_components/contact-and-notes'
-import { eventLabel, PAYMENT, printHref, STATE } from '../_components/labels'
+import { eventLabel, PAYMENT, pdfHref, printHref, STATE } from '../_components/labels'
 import { OrderActions } from '../_components/order-actions'
 import { ShipPanel } from '../_components/ship-panel'
 import { Icon } from '@/components/icons/icon'
@@ -83,7 +83,8 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
         badges={<><Badge tone={pay.tone}><Icon name={pay.icon} className="mr-1 inline size-3.5 align-[-2px]" />{pay.label}</Badge><Badge tone={s.tone}>{s.label}</Badge></>}
         meta={<>Placed {dateTimeIN(o.placedAt)}{o.invoiceNumber ? <> · Invoice <span className="font-mono">{o.invoiceNumber}</span></> : null}</>}
         actions={<OrderActions orderId={o.id} number={label} primary={primary}
-          print={{ slip: may('print', state, role) ? printHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? printHref('invoice', [o.number]) : null }} riskWarning={riskWarning} heldPaid={state === 'held' && !!o.paidAt}
+          print={{ slip: may('print', state, role) ? printHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? printHref('invoice', [o.number]) : null }}
+          pdf={{ slip: may('print', state, role) ? pdfHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? pdfHref('invoice', [o.number]) : null }} riskWarning={riskWarning} heldPaid={state === 'held' && !!o.paidAt}
           may={{ hold: can.hold, unhold: can.unhold, cancel: can.cancel, pack: can.pack, confirm: can.confirm }}
           refund={refund} refundLabel={formatInr(paise(refund))} stockTaken={lines.some((l) => l.stockTakenAt)} />} />
 

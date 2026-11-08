@@ -26,6 +26,8 @@ export type OrderActionsProps = {
   primary: 'confirm' | 'pack' | 'print_slip' | 'cancel' | null
   /** The print pages this order has now: a slip once it is placed, an invoice once packed. */
   print: { slip: string | null; invoice: string | null }
+  /** The same documents as PDF downloads (Documents D1). */
+  pdf?: { slip: string | null; invoice: string | null }
   /** Which More items this person may use on this order now. */
   may: { hold: boolean; unhold: boolean; cancel: boolean; pack: boolean; confirm: boolean }
   /** High or unreadable risk: confirming is still allowed here (a person is looking), but it asks first. */
@@ -78,6 +80,8 @@ function Actions(p: OrderActionsProps) {
     ...(p.may.unhold ? [{ label: 'Take off hold', onSelect: () => void run('taken off hold', () => unholdOrder(p.orderId)) }] : []),
     ...(p.print.slip && !printPrimary ? [{ label: 'Print packing slip', href: p.print.slip }] : []),
     ...(p.print.invoice ? [{ label: 'Print invoice', href: p.print.invoice }] : []),
+    ...(p.pdf?.slip ? [{ label: 'Download packing slip (PDF)', href: p.pdf.slip, download: true }] : []),
+    ...(p.pdf?.invoice ? [{ label: 'Download invoice (PDF)', href: p.pdf.invoice, download: true }] : []),
     { label: 'Copy link', onSelect: () => { void navigator.clipboard?.writeText(window.location.href).then(() => toast({ text: 'Link copied.' }), () => toast({ text: 'Copy the address from the address bar.' })) } },
     ...(p.may.cancel && p.primary !== 'cancel' ? [{ label: 'Cancel order…', onSelect: () => setCancelOpen(true), danger: true }] : []),
   ]

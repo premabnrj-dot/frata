@@ -16,7 +16,7 @@ import { MAX_DOCUMENTS } from '@/domains/orders/documents'
 import { confirmKey } from '@/domains/ui/shortcuts'
 import { cn } from '@/lib/utils'
 import { confirmMany, confirmOrder, deliverMany, deliverOrder, holdMany, holdOrder, shipOrder, undoMany, undoOrderAction, undoOutcomeAction, undoOutcomeMany, type BulkResult } from '../actions'
-import { printHref, RISK_LABEL, type Tone } from './labels'
+import { pdfHref, printHref, RISK_LABEL, type Tone } from './labels'
 import { Icon } from '@/components/icons/icon'
 
 // =============================================================================
@@ -170,6 +170,10 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
   const onWay = rows.some((r) => picked.has(r.id) && r.shipStep === 'deliver'), others = rows.some((r) => picked.has(r.id) && (r.canConfirm || r.canHold))
   // At most a print page's worth (a queue page is 50 rows today; the cap says so if that changes).
   const printable = rows.filter((r) => picked.has(r.id) && r.canPrint).map((r) => r.n).slice(0, MAX_DOCUMENTS)
+  // A4 or the 4×6 label, remembered on this device (a printer belongs to a desk, not to an account).
+  const [slipSize, setSlipSize] = useState<'a4' | 'label'>('a4')
+  useEffect(() => { try { if (localStorage.getItem('frrata:slip-size') === 'label') setSlipSize('label') } catch { /* private mode */ } }, [])
+  const pickSize = (v: 'a4' | 'label') => { setSlipSize(v); try { localStorage.setItem('frrata:slip-size', v) } catch { /* private mode */ } }
   return (
     <>
       {count > 0 ? (
@@ -181,6 +185,14 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
             <Button variant="secondary" onClick={() => bulk('hold')} aria-disabled={busy}>Hold</Button></> : null}
           {/* Slips for the selected orders that have one, in the queue's order (the print page takes at most 50). */}
           {printable.length ? <Link prefetch={false} href={printHref('slip', printable)} className={button({ variant: 'secondary' })}>Print {printable.length === 1 ? 'slip' : `${printable.length} slips`}</Link> : null}
+          {/* The same slips as one PDF, on A4 or a 4×6 thermal label (Documents D1); the size is remembered on this device. */}
+          {printable.length ? <>
+            <a href={pdfHref('slip', printable, slipSize)} download className={button({ variant: 'secondary' })}>Download {printable.length === 1 ? 'slip' : `${printable.length} slips`} (PDF)</a>
+            <label className="sr-only" htmlFor="slip-size">Slip size</label>
+            <select id="slip-size" value={slipSize} onChange={(e) => pickSize(e.target.value === 'label' ? 'label' : 'a4')} className="h-10 rounded-md border border-input bg-card px-2 text-sm md:h-9">
+              <option value="a4">A4</option><option value="label">4×6 label</option>
+            </select>
+          </> : null}
           <Button variant="ghost" onClick={() => setPicked(new Set())}>Clear</Button>
         </div>
       ) : null}
