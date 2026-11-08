@@ -66,6 +66,8 @@ export const DOC_LOGO_SHAPE = /^tenants\/([0-9a-f-]{36})\/documents\/([0-9a-f-]{
 export const MAX_DOC_IMAGE_BYTES = 1024 * 1024
 /** Longest side of a logo for paper, in pixels (enough for 300 dpi at the masthead's size). */
 export const DOC_LOGO_PX = 600
+/** The largest image a document will decode, a side, whatever made it (the loader's cap). */
+export const MAX_DOC_IMAGE_PX = 2000
 
 /** A PNG starts \x89PNG\r\n\x1a\n; a JPEG starts FF D8 FF (React-PDF reads only these two). */
 export function imageKind(head: Uint8Array): 'png' | 'jpeg' | null {
@@ -76,7 +78,7 @@ export function imageKind(head: Uint8Array): 'png' | 'jpeg' | null {
 
 /** PNG pixel size from its IHDR (bytes 16–23); null when it is not a PNG. */
 export function pngSize(b: Uint8Array): { width: number; height: number } | null {
-  if (imageKind(b) !== 'png' || b.length < 24) return null
+  if (imageKind(b) !== 'png' || b.length < 24 || String.fromCharCode(b[12]!, b[13]!, b[14]!, b[15]!) !== 'IHDR') return null
   const u32 = (o: number) => ((b[o]! << 24) | (b[o + 1]! << 16) | (b[o + 2]! << 8) | b[o + 3]!) >>> 0
   return { width: u32(16), height: u32(20) }
 }

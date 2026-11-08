@@ -28,7 +28,7 @@ export async function POST(request: Request) {
         if (d) {
           if (d[1] !== auth.membership.tenantId) throw new Error('path outside this shop')
           if (!(sectionFor('documents')?.editors ?? []).includes(auth.membership.role) || auth.membership.supportSessionId) throw new Error('documents needs a documents editor')
-          if (!(await withinLimit(LIMITS.uploadShop, auth.membership.tenantId))) throw new Error('upload limit')
+          if (!(await withinLimit(LIMITS.uploadShop, auth.membership.tenantId, new Date(), true))) throw new Error('upload limit') // fails closed (security review 2026-11-08)
           return { allowedContentTypes: ['image/png'], maximumSizeInBytes: MAX_DOC_IMAGE_BYTES, addRandomSuffix: false, allowOverwrite: false, cacheControlMaxAge: 31536000 }
         }
         const m = PATH_SHAPE.exec(pathname)
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
         if (m[2] === 'brand' && !(sectionFor('brand')?.editors ?? []).includes(auth.membership.role)) throw new Error('brand needs a brand editor')
         // A look's photos: whoever may edit the look, never a Frrata support visit (themes plan, tenancy review).
         if (m[2] === 'theme' && (!(CAN_BUILD as readonly string[]).includes(auth.membership.role) || auth.membership.supportSessionId)) throw new Error('theme needs a look editor')
-        if (!(await withinLimit(LIMITS.uploadShop, auth.membership.tenantId))) throw new Error('upload limit')
+        if (!(await withinLimit(LIMITS.uploadShop, auth.membership.tenantId, new Date(), true))) throw new Error('upload limit') // fails closed (security review 2026-11-08)
         return { allowedContentTypes: ['image/webp'], maximumSizeInBytes: MAX_UPLOAD_BYTES, addRandomSuffix: false, allowOverwrite: false, cacheControlMaxAge: 31536000 }
       },
     })

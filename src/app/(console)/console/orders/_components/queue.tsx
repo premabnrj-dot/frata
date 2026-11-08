@@ -238,6 +238,6 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
 }
 
 /** The queue, or `empty` when the tab has no rows: either way inside one Toaster, so a toast's Undo survives the last row leaving. */
-export function Queue({ rows, label, empty, slipSize = 'a4' }: { rows: QueueRow[]; label: string; empty: React.ReactNode; slipSize?: 'a4' | 'label' }) {
+export function Queue({ rows, label, empty, slipSize }: { rows: QueueRow[]; label: string; empty: React.ReactNode; slipSize: 'a4' | 'label' }) {
   return <Toaster>{rows.length ? <Rows rows={rows} label={label} slipSize={slipSize} /> : empty}</Toaster>
 }

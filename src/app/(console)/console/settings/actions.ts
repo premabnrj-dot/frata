@@ -15,6 +15,7 @@ import { dayIN } from '@/lib/format-date'
 import { shopWithSettings } from '@/lib/queries/settings'
 import { errName } from '@/lib/log'
 import { docImage } from '@/lib/documents/images'
+import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 
 // Each section says who may save it (`editors`: owners, admins and the store's partner for the shop's own
 // settings); the shop's address stays CAN_MANAGE. Each save checks the
@@ -166,8 +167,9 @@ export async function setDocLogo(url: string | null): Promise<{ ok: true } | { o
   const me = await requireMember(editors)
   if (!me.ok) return { ok: false, error: me.message }
   if (me.membership.supportSessionId) return { ok: false, error: 'A support visit cannot change the shop’s logo.' }
+  if (!(await withinLimit(LIMITS.uploadShop, me.membership.tenantId, new Date(), true))) return { ok: false, error: 'Too many changes in the last few minutes. Try again shortly.' }
   if (url !== null && (typeof url !== 'string' || !(await docImage(url, me.membership.tenantId)))) {
-    return { ok: false, error: 'That logo could not be used. Upload a PNG or JPEG up to 1 MB.' }
+    return { ok: false, error: 'That logo could not be used. Choose a PNG, JPEG or WebP image; it is saved as a PNG up to 1 MB.' }
   }
   try {
     const r = await asMember(editors, { action: 'settings.documents.logo', detail: { set: url !== null } }, async (tx, auth) => {

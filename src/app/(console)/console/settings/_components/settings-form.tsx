@@ -56,7 +56,7 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
   function save() {
     start(async () => {
       const r = await saveSection(section.key, values, version)
-      if (r.ok) { setSaved(values); setVersion(r.version); setErrors({}); setMessage({ tone: 'ok', text: 'Saved. Your shop shows it now.' }); router.refresh(); return }
+      if (r.ok) { setSaved(values); setVersion(r.version); setErrors({}); setMessage({ tone: 'ok', text: section.key === 'documents' ? 'Saved. New slips and invoices use it; issued invoices keep theirs.' : 'Saved. Your shop shows it now.' }); router.refresh(); return }
       setErrors(r.errors ?? {}); setConflict(!!r.conflict); setMessage({ tone: 'error', text: r.error })
       const first = r.errors && Object.keys(r.errors)[0]
       if (first) document.getElementById(`f-${first}`)?.focus()

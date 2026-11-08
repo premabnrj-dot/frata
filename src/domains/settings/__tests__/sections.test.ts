@@ -98,3 +98,12 @@ describe('an open shop keeps its grievance officer', () => {
     expect(openShopErrors(s('store'), { name: '' }, { name: 'Kesar' })).toEqual({})
   })
 })
+
+describe('documents (D2)', () => {
+  it('refuses a web address in the words printed on documents', () => {
+    const sec = SECTIONS.find((x) => x.key === 'documents')!
+    expect(parseSection(sec, { docSignatory: 'Riya', docNote: 'Pay at https://x.test', slipSize: 'a4' }).ok).toBe(false)
+    expect(parseSection(sec, { docSignatory: 'www.riya.in', docNote: '', slipSize: 'a4' }).ok).toBe(false)
+    expect(parseSection(sec, { docSignatory: 'Riya Mehta', docNote: 'Exchanges within 7 days.', slipSize: 'label' }).ok).toBe(true)
+  })
+})

@@ -94,6 +94,9 @@ export const orders = pgTable('orders', {
   invoiceNumber: text('invoice_number'),
   /** The shop's logo as it was at packing (its Blob path, never overwritten): every copy of the invoice shows it (Documents D2). */
   invoiceLogo: text('invoice_logo'),
+  /** The signatory and invoice note as they were at packing (Settings › Documents): an issued invoice never changes. */
+  invoiceSignatory: text('invoice_signatory'),
+  invoiceNote: text('invoice_note'),
   cancelReason: text('cancel_reason'),
   cancelNote: text('cancel_note'),
   /** The shop's GSTIN when the order was placed (null: not registered then): the invoice reads this, never today's settings. */

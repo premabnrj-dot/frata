@@ -3,7 +3,7 @@ import { LIMITS } from '@/lib/db/rate-limit'
 import { tokenHash } from '@/lib/crypto/secret-box'
 import { reply, shopRequest, Token } from '@/lib/http/shop-api'
 import { shopperInvoice } from '@/lib/queries/checkout'
-import { brandFor, invoiceLogos } from '@/lib/documents/brand'
+import { brandFor, frozenPaper } from '@/lib/documents/brand'
 import { documentFile, pdfResponse, requestFor } from '@/lib/documents/file'
 import { errName } from '@/lib/log'
 
@@ -23,9 +23,9 @@ export async function POST(request: Request) {
   try {
     const found = await shopperInvoice(r.tenantId, tokenHash(r.body.token))
     if (!found?.orders.length) return reply({ error: 'Not found' }, 404)
-    const [brand, logos] = await Promise.all([brandFor(r.tenantId, found.paper), invoiceLogos(r.tenantId, found.orders.map((o) => o.logo))])
+    const [brand, frozen] = await Promise.all([brandFor(r.tenantId, null), frozenPaper(r.tenantId, found.orders.map((o) => o.frozen))])
     if (!brand) return reply({ error: 'Not found' }, 404)
-    const docs = found.orders.map((o) => ({ ...o, logo: o.logo ? logos.get(o.logo) ?? null : null }))
+    const docs = found.orders.map(({ frozen: _f, ...o }, i) => ({ ...o, paper: frozen[i] }))
     const file = await documentFile(requestFor('invoice', 'A4', docs, found.shop), brand.brand, brand.contact)
     if (!file) return reply({ error: 'Not found' }, 404)
     return pdfResponse(file)

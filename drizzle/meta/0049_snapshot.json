@@ -1,5 +1,5 @@
 {
-  "id": "6ac4ff92-682d-44f8-b4ce-840ec84784fa",
+  "id": "4e6e71e0-2d41-4291-986d-ed5b99e0b9eb",
   "prevId": "e54d38bc-2bef-4889-b02e-72c98a29d3c3",
   "version": "7",
   "dialect": "postgresql",
@@ -4190,6 +4190,18 @@
         },
         "invoice_logo": {
           "name": "invoice_logo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "invoice_signatory": {
+          "name": "invoice_signatory",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "invoice_note": {
+          "name": "invoice_note",
           "type": "text",
           "primaryKey": false,
           "notNull": false

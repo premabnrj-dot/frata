@@ -129,7 +129,7 @@ export default {
         await p.getByRole('textbox', { name: /^Note at the foot/ }).fill('Exchanges within 7 days.')
         await p.getByRole('combobox', { name: /^Slip size/ }).selectOption('label')
         await p.getByRole('button', { name: 'Save' }).first().click()
-        await p.getByText('Saved. Your shop shows it now.').waitFor()
+        await p.getByText('Saved. New slips and invoices use it').waitFor()
         const [s] = await db`select doc_signatory, doc_note, slip_size from shop_settings where tenant_id = ${T}`
         assert.deepEqual([s.doc_signatory, s.doc_note, s.slip_size], ['Riya Mehta', 'Exchanges within 7 days.', 'label'])
         await p.evaluate(() => localStorage.removeItem('frrata:slip-size'))
@@ -150,6 +150,15 @@ export default {
           assert.equal(dl.suggestedFilename(), `Kesar Studio Tax invoice ${invA.replaceAll('/', '-')}.pdf`)
           const wrong = await s.evaluate(async () => (await fetch('/api/shop/orders/invoice', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: 'nottherightone0000000A' }) })).status)
           assert.equal(wrong, 404)
+          // Not packed yet: no button, and its own right token still makes nothing.
+          const tokenC = 'docflowtoken000000000C', C = top + 3
+          await db`insert into orders (tenant_id, number, payment_method, placed_at, confirmed_at, customer_name, phone, city, pincode, state, subtotal, total, token_hash)
+            values (${T}, ${C}, 'cod', now(), now(), 'Doc Unpacked', '9833300003', 'Jaipur', '302001', 'Rajasthan', 249000, 249000, ${createHash('sha256').update(tokenC).digest('hex')})`
+          await s.goto(SHOP + `/orders#t=${tokenC}`, { waitUntil: 'domcontentloaded' }); await s.reload({ waitUntil: 'domcontentloaded' })
+          await s.getByText(label(C)).waitFor()
+          assert.equal(await s.getByRole('button', { name: 'Download invoice (PDF)' }).count(), 0, 'no invoice before packing')
+          const early = await s.evaluate(async (tk) => (await fetch('/api/shop/orders/invoice', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: tk }) })).status, tokenC)
+          assert.equal(early, 404)
         } finally { await sc.close() }
       })
 
@@ -204,7 +213,7 @@ export default {
       })
     } finally {
       await owner.close()
-      await db`delete from orders where tenant_id = ${T} and number between ${A} and ${B}`
+      await db`delete from orders where tenant_id = ${T} and number between ${A} and ${top + 3}`
       await db`delete from orders where tenant_id = ${OTHER}`
       await db`delete from tenants where id = ${OTHER}`
     }

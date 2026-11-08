@@ -23,10 +23,10 @@ import { orderLines, orders } from '@/lib/db/schema-orders'
 
 export { MAX_DOCUMENTS }
 
-/** Settings › Documents (D2): today's logo for paper (slips), the signatory and the invoice note. */
+/** Settings › Documents (D2): the logo for paper, the signatory and the invoice note — today's (slips), or as an invoice froze them. */
 export type Paper = { logo: string | null; signatory: string; note: string }
 
-export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], kind: 'slip' | 'invoice', now = new Date()): Promise<{ shop: DocShop; paper: Paper; orders: { n: number; o: DocOrder; lines: DocLine[]; logo: string | null }[]; skipped: { number: string; state: OrderState }[] }> {
+export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], kind: 'slip' | 'invoice', now = new Date()): Promise<{ shop: DocShop; paper: Paper; orders: { n: number; o: DocOrder; lines: DocLine[]; frozen: Paper }[]; skipped: { number: string; state: OrderState }[] }> {
   const wanted = [...new Set(numbers.filter((n) => Number.isSafeInteger(n) && n > 0))].slice(0, MAX_DOCUMENTS)
   const [s] = await tx.select({ name: tenants.name, legalName: shopSettings.legalName, address: shopSettings.address, prefix: shopSettings.orderPrefix,
     logo: shopSettings.docLogo, signatory: shopSettings.docSignatory, note: shopSettings.docNote })
@@ -38,7 +38,7 @@ export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], 
   const os = await tx.select({
     ...momentColumns, id: orders.id, number: orders.number, paymentMethod: orders.paymentMethod, paidAt: orders.paidAt, switchedToCodAt: orders.switchedToCodAt, cancelledAt: orders.cancelledAt,
     subtotal: orders.subtotal, shipping: orders.shipping, codCharge: orders.codCharge, gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst,
-    placedAt: orders.placedAt, packedAt: orders.packedAt, invoiceNumber: orders.invoiceNumber, sellerGstin: orders.sellerGstin, sellerName: orders.sellerName, sellerAddress: orders.sellerAddress, invoiceLogo: orders.invoiceLogo,
+    placedAt: orders.placedAt, packedAt: orders.packedAt, invoiceNumber: orders.invoiceNumber, sellerGstin: orders.sellerGstin, sellerName: orders.sellerName, sellerAddress: orders.sellerAddress, invoiceLogo: orders.invoiceLogo, invoiceSignatory: orders.invoiceSignatory, invoiceNote: orders.invoiceNote,
     customerName: orders.customerName, phone: orders.phone, addressLine: orders.addressLine, area: orders.area, landmark: orders.landmark,
     city: orders.city, pincode: orders.pincode, state: orders.state, supplyState: orders.supplyState,
   }).from(orders).where(and(eq(orders.tenantId, tenantId), inArray(orders.number, wanted)))
@@ -61,11 +61,12 @@ export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], 
       if (!o) return [] // unknown or another shop's number: silently not printed
       if (kind === 'slip') { const st = orderState(o, now); if (!applies('print', st)) { skipped.push({ number: `${prefix}-${n}`, state: st }); return [] } }
       const lines = ls.filter((l) => l.orderId === o.id).map(({ orderId: _o, ...l }) => ({ ...l, taxableValue: Number(l.taxableValue), gst: Number(l.gst), unitPrice: Number(l.unitPrice), lineDiscount: Number(l.lineDiscount), chargeTaxable: l.chargeTaxable === null ? null : Number(l.chargeTaxable), chargeGst: l.chargeGst === null ? null : Number(l.chargeGst) }))
-      const { invoiceLogo, ...stored } = o
+      const { invoiceLogo, invoiceSignatory, invoiceNote, ...stored } = o
       const doc: DocOrder = {
         ...stored, number: `${prefix}-${o.number}`, subtotal: Number(o.subtotal), shipping: Number(o.shipping), codCharge: Number(o.codCharge), gstTotal: Number(o.gstTotal), total: Number(o.total),
       }
-      return [{ n, o: doc, lines, logo: invoiceLogo }]
+      // What the invoice froze at packing (an order packed before D2 froze nothing: no logo, no signatory or note).
+      return [{ n, o: doc, lines, frozen: { logo: invoiceLogo, signatory: invoiceSignatory ?? '', note: invoiceNote ?? '' } }]
     }),
   }
 }

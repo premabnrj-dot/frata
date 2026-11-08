@@ -26,6 +26,8 @@ export type Field = {
   max?: number
   options?: readonly (readonly [string, string])[]
   wide?: boolean
+  /** Printed on documents: refuse web addresses (a PDF viewer would make them links). */
+  noLinks?: boolean
 }
 
 export type Block = { title: string; hint?: string; tip?: string; fields: Field[] }
@@ -148,8 +150,8 @@ export const SECTIONS: readonly Section[] = [
     key: 'documents', title: 'Documents', intro: 'Your packing slips and invoices as PDFs: in your logo and colour, with your words.', preview: 'invoice',
     blocks: [
       { title: 'Invoices', fields: [
-        { key: 'docSignatory', label: 'Authorised signatory', kind: 'text', max: 80, tip: 'The name printed under “For <your business>” on each invoice, as GST asks.' },
-        { key: 'docNote', label: 'Note at the foot of each invoice', kind: 'textarea', max: 240, wide: true, tip: 'A return-policy line or a thank-you. Plain text: no links.' },
+        { key: 'docSignatory', label: 'Authorised signatory', kind: 'text', max: 80, noLinks: true, tip: 'The name printed under “For <your business>” on each invoice, as GST asks.' },
+        { key: 'docNote', label: 'Note at the foot of each invoice', kind: 'textarea', max: 240, wide: true, noLinks: true, tip: 'A return-policy line or a thank-you. Plain text: no links.' },
       ] },
       { title: 'Packing slips', tip: 'Each person’s last choice in the order queue wins; this is where a new teammate starts.', fields: [
         { key: 'slipSize', label: 'Slip size', kind: 'select', options: SLIP_SIZE_OPTIONS },
@@ -231,6 +233,8 @@ function check(section: Section, values: Values): { patch: Patch; errors: Record
     // The invoice series must leave room for a whole year of numbers inside GST's 16 characters (work.ts).
     if (f.key === 'invoiceSeries' && s && !seriesFits(s)) { errors[f.key] = 'Too long: up to 4 characters, or 5 ending in / or -.'; continue }
     if (f.max && s.length > f.max) { errors[f.key] = `Up to ${f.max} characters.`; continue }
+    // Words printed on a document stay words: a PDF viewer turns a typed address into a live link (plan finding 5).
+    if (f.noLinks && /https?:\/\/|www\./i.test(s)) { errors[f.key] = 'No web addresses here: plain words only.'; continue }
     switch (f.kind) {
       case 'email':
         if (s && !EMAIL_SHAPE.test(s)) errors[f.key] = 'Check this email address.'

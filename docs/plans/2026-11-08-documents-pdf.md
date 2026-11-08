@@ -33,6 +33,19 @@ Reviews: architecture-reviewer and security-reviewer, both on the plan before an
 9. **Owner calls applied:** the PDF is the paper layout (the print page stays as the preview), no "Made with
    Frrata", and credit notes are issued in Frrata.
 
+**D2 as built (2026-11-08; security-reviewer and impact-reviewer findings applied)**
+- The logo for paper is a PNG only: the browser redraws any PNG, JPEG or WebP as a PNG (≤ 600 px) and uploads it
+  through `DOC_LOGO_SHAPE` (1 MB, documents editors, never a support visit, limit failing closed). `setDocLogo` and the
+  loader check the magic bytes, IHDR, ≤ 2000 px and that the image data inflates within that size (no
+  decompression bomb). Only successes and definite refusals are cached.
+- An invoice freezes its logo, signatory and note at packing (`orders.invoice_logo`, `invoice_signatory`,
+  `invoice_note`); slips use today's. CHECKs pin both logo columns to the shop's own folder (proof check 40).
+- The signatory and note refuse web addresses (a PDF viewer would make them links).
+- **Dropped:** product photos on slips (photos are WebP; React-PDF reads PNG/JPEG; converting needs a native
+  dependency). Brought back by a merchant asking, with server-side conversion. **Not built:** a document colour
+  (the look's accent through `paperAccent` is used) and a logo "made from the shop logo" (no shop logo is set yet).
+- **Carried:** the HTML print page does not yet show the signatory, note or logo (it stays a preview; D3 aligns it).
+
 ## Tasks (each: verify, impact-reviewer on its diff, commit)
 - **D0**
   - Paper rules (`src/domains/documents/paper.ts`): accent at 4.5:1, file names, Content-Disposition.
