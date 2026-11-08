@@ -29,6 +29,8 @@ export type OrderMoments = {
   /** Latest failed delivery attempt not yet resolved. */
   ndrAt: Date | null
   deliveredAt: Date | null
+  /** The courier lost the parcel (Ship): an outcome, never billed. */
+  lostAt: Date | null
   rtoInitiatedAt: Date | null
   rtoDeliveredAt: Date | null
   /** Paid, and an in-stock line's stock was never taken (it sold out before the capture): the money goes back. */
@@ -37,13 +39,13 @@ export type OrderMoments = {
 
 export const ORDER_STATES = [
   'awaiting_payment', 'payment_abandoned', 'unconfirmed', 'held', 'confirmed', 'paid', 'refund_due', 'packed',
-  'cancelled', 'shipped', 'ndr', 'delivered', 'rto', 'rto_received',
+  'cancelled', 'shipped', 'ndr', 'delivered', 'rto', 'rto_received', 'lost',
 ] as const
 export type OrderState = (typeof ORDER_STATES)[number]
 
 /**
  * The furthest moment reached, in this order (each line outranks the ones below):
- *   returned (rto_received > rto) > delivered > cancelled > delivery failed (ndr) > shipped > packed
+ *   returned (rto_received > rto) > delivered > lost by the courier > cancelled > delivery failed (ndr) > shipped > packed
  *   paid online → refund_due (sold out before capture) > held > paid ("To pack": confirming is for COD)
  *   online, unpaid, not switched → awaiting_payment inside pay_by, payment_abandoned after
  *   COD (chosen, or switched to) → held > confirmed > unconfirmed
@@ -53,6 +55,7 @@ export function orderState(o: OrderMoments, now: Date): OrderState {
   if (o.rtoDeliveredAt) return 'rto_received'
   if (o.rtoInitiatedAt) return 'rto'
   if (o.deliveredAt) return 'delivered'
+  if (o.lostAt) return 'lost'
   if (o.cancelledAt) return 'cancelled'
   if (o.ndrAt) return 'ndr'
   if (o.shippedAt) return 'shipped'
@@ -162,6 +165,8 @@ export function shopperState(s: OrderState): ShopperState {
     case 'payment_abandoned': return 'not_paid'
     case 'rto': return 'returning'
     case 'rto_received': return 'returned'
+    // Lost by the courier: the shopper is told delivery hit a problem and the shop will be in touch (never "lost").
+    case 'lost': return 'ndr'
     default: return s
   }
 }

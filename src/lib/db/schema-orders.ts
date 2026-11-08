@@ -85,6 +85,8 @@ export const orders = pgTable('orders', {
   deliveredAt: timestamp('delivered_at', { withTimezone: true }),
   rtoInitiatedAt: timestamp('rto_initiated_at', { withTimezone: true }),
   rtoDeliveredAt: timestamp('rto_delivered_at', { withTimezone: true }),
+  /** The courier lost, destroyed or damaged the parcel (Ship S·0 by hand; S·1 from the courier): never billed as delivered. */
+  lostAt: timestamp('lost_at', { withTimezone: true }),
   // ── The merchant's work (1D). Who did each, and when, is in order_events.
   heldAt: timestamp('held_at', { withTimezone: true }),
   /** Packing issues the invoice number (GST: at removal of goods), so the two are set together. */
@@ -114,7 +116,7 @@ export const orders = pgTable('orders', {
   // The holds that count against stock: online, unpaid, not cancelled.
   index('orders_tenant_holds').on(t.tenantId, t.payBy).where(sql`${t.paidAt} is null and ${t.cancelledAt} is null and ${t.payBy} is not null`),
   // The shipping tabs (Ship S·0): packed, no outcome yet. inFlightSql (order-predicates.ts) says this first.
-  index('orders_inflight_idx').on(t.tenantId, t.placedAt.desc()).where(sql`${t.rtoDeliveredAt} is null and (${t.rtoInitiatedAt} is not null or (${t.deliveredAt} is null and ${t.cancelledAt} is null and (${t.packedAt} is not null or ${t.shippedAt} is not null or ${t.ndrAt} is not null)))`),
+  index('orders_inflight_idx').on(t.tenantId, t.placedAt.desc()).where(sql`${t.rtoDeliveredAt} is null and (${t.rtoInitiatedAt} is not null or (${t.deliveredAt} is null and ${t.lostAt} is null and ${t.cancelledAt} is null and (${t.packedAt} is not null or ${t.shippedAt} is not null or ${t.ndrAt} is not null)))`),
   check('orders_freight', sql`(${t.forwardShipping} is null or ${t.forwardShipping} >= 0) and (${t.rtoShipping} is null or ${t.rtoShipping} >= 0) and (${t.courierCodFee} is null or ${t.courierCodFee} >= 0)`),
   check('orders_payment_method', sql`${t.paymentMethod} in ('cod','prepaid')`),
   check('orders_money', sql`${t.subtotal} >= 0 and ${t.shipping} >= 0 and ${t.codCharge} >= 0 and ${t.gstTotal} >= 0 and ${t.total} >= 0`),
@@ -250,8 +252,8 @@ export const SHIP_PROVIDERS = ['self', 'shiprocket'] as const
 /**
  * A parcel on its way (Ship, docs/specs/2026-11-08-ship.md): who carries it and how to follow it. At most one OPEN
  * shipment per order. The ORDER's state stays derived from its own timestamps (order-state.ts); this holds only what
- * the courier knows, and the shipment's OWN ending (never a copy of delivered or returned): cancelled before pickup,
- * lost by the courier, or undone (Shipped was undone, so the order can ship again). `self`: shipped another way
+ * the courier knows, and the shipment's OWN ending (never a copy of delivered, returned or lost): cancelled before
+ * pickup, or undone (Shipped was undone, so the order can ship again). `self`: shipped another way
  * (courier name and tracking number as typed; never unique). Access: drizzle/0044_ship_access.sql.
  */
 export const shipments = pgTable('shipments', {
@@ -271,5 +273,5 @@ export const shipments = pgTable('shipments', {
   index('shipments_order').on(t.tenantId, t.orderId),
   check('shipments_provider', sql`${t.provider} in ('self','shiprocket')`),
   check('shipments_text', sql`(${t.courierName} is null or length(${t.courierName}) between 1 and 60) and (${t.trackingNumber} is null or length(${t.trackingNumber}) between 1 and 40)`),
-  check('shipments_ended', sql`(${t.endedAt} is null) = (${t.endedReason} is null) and (${t.endedReason} is null or ${t.endedReason} in ('cancelled','lost','undone'))`),
+  check('shipments_ended', sql`(${t.endedAt} is null) = (${t.endedReason} is null) and (${t.endedReason} is null or ${t.endedReason} in ('cancelled','undone'))`),
 ])

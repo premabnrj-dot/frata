@@ -1,5 +1,5 @@
 {
-  "id": "deeba15f-3f0e-42ed-925f-bbf0fc454766",
+  "id": "5e36c66c-138d-41ea-bb94-9b2e7266ee3a",
   "prevId": "87ba268a-b296-436a-b9a2-d668c875ea69",
   "version": "7",
   "dialect": "postgresql",
@@ -4129,6 +4129,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "lost_at": {
+          "name": "lost_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "held_at": {
           "name": "held_at",
           "type": "timestamp with time zone",
@@ -4380,7 +4386,7 @@
             }
           ],
           "isUnique": false,
-          "where": "\"orders\".\"rto_delivered_at\" is null and (\"orders\".\"rto_initiated_at\" is not null or (\"orders\".\"delivered_at\" is null and \"orders\".\"cancelled_at\" is null and (\"orders\".\"packed_at\" is not null or \"orders\".\"shipped_at\" is not null or \"orders\".\"ndr_at\" is not null)))",
+          "where": "\"orders\".\"rto_delivered_at\" is null and (\"orders\".\"rto_initiated_at\" is not null or (\"orders\".\"delivered_at\" is null and \"orders\".\"lost_at\" is null and \"orders\".\"cancelled_at\" is null and (\"orders\".\"packed_at\" is not null or \"orders\".\"shipped_at\" is not null or \"orders\".\"ndr_at\" is not null)))",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -4750,7 +4756,7 @@
         },
         "shipments_ended": {
           "name": "shipments_ended",
-          "value": "(\"shipments\".\"ended_at\" is null) = (\"shipments\".\"ended_reason\" is null) and (\"shipments\".\"ended_reason\" is null or \"shipments\".\"ended_reason\" in ('cancelled','lost','undone'))"
+          "value": "(\"shipments\".\"ended_at\" is null) = (\"shipments\".\"ended_reason\" is null) and (\"shipments\".\"ended_reason\" is null or \"shipments\".\"ended_reason\" in ('cancelled','undone'))"
         }
       },
       "isRLSEnabled": false

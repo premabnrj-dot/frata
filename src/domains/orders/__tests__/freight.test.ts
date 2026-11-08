@@ -28,7 +28,7 @@ describe('freightOf', () => {
 describe('billableDelivered (call E)', () => {
   const now = new Date('2026-12-15T10:00:00Z')
   const daysAgo = (d: number) => new Date(now.getTime() - d * 86_400_000)
-  const o = { shippedAt: daysAgo(31), deliveredAt: null, rtoInitiatedAt: null, lost: false }
+  const o = { shippedAt: daysAgo(31), deliveredAt: null, rtoInitiatedAt: null, lostAt: null }
   it('delivered is billable; shipped 30+ days with no outcome counts as delivered', () => {
     expect(billableDelivered({ ...o, deliveredAt: daysAgo(1) }, now)).toBe(true)
     expect(billableDelivered(o, now)).toBe(true)
@@ -36,7 +36,7 @@ describe('billableDelivered (call E)', () => {
   })
   it('never when it came back, was lost by the courier, or never shipped', () => {
     expect(billableDelivered({ ...o, rtoInitiatedAt: daysAgo(2) }, now)).toBe(false)
-    expect(billableDelivered({ ...o, lost: true }, now)).toBe(false)
+    expect(billableDelivered({ ...o, lostAt: daysAgo(3) }, now)).toBe(false)
     expect(billableDelivered({ ...o, shippedAt: null }, now)).toBe(false)
   })
 })

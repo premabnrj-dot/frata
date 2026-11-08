@@ -32,7 +32,7 @@ describe.skipIf(!host)('order predicates match orderState()', () => {
           tenantId: A, number: 900_000 + i, paymentMethod: prepaid ? 'prepaid' : 'cod', placedAt: at(-48),
           payBy: prepaid ? (r() < 0.5 ? at(1) : at(-1)) : null, paidAt: prepaid ? maybe(-2) : maybe(-2, 0.05), switchedToCodAt: prepaid ? maybe(-3, 0.3) : null,
           confirmedAt: maybe(-4, 0.4), heldAt: maybe(-4, 0.3), packedAt: packed, invoiceNumber: packed ? `PT/26-27/${i}` : null,
-          cancelledAt: maybe(-1, 0.15), shippedAt: maybe(0, 0.1), ndrAt: maybe(0, 0.05), deliveredAt: maybe(0, 0.05), rtoInitiatedAt: maybe(0, 0.04), rtoDeliveredAt: maybe(0, 0.03),
+          cancelledAt: maybe(-1, 0.15), shippedAt: maybe(0, 0.1), ndrAt: maybe(0, 0.05), deliveredAt: maybe(0, 0.05), lostAt: maybe(0, 0.03), rtoInitiatedAt: maybe(0, 0.04), rtoDeliveredAt: maybe(0, 0.03),
         }).returning({ id: orders.id })
         const isTaken = r() < 0.7; taken.set(900_000 + i, isTaken)
         await tx.insert(orderLines).values({ tenantId: A, orderId: o!.id, title: 'Kurta', qty: 1, unitPrice: 100000, taxableValue: 95238, kind: 'in_stock', stockTakenAt: isTaken ? at(-3) : null })

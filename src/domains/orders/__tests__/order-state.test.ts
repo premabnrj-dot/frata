@@ -5,7 +5,7 @@ const t = (n: number) => new Date(2026, 10, n)
 /** A COD order placed on day 1, nothing else happened yet; override what did. */
 export const moments = (o: Partial<OrderMoments> = {}): OrderMoments => ({
   placedAt: t(1), paymentMethod: 'cod', payBy: null, paidAt: null, switchedToCodAt: null, confirmedAt: null, heldAt: null, packedAt: null,
-  cancelledAt: null, shippedAt: null, ndrAt: null, deliveredAt: null, rtoInitiatedAt: null, rtoDeliveredAt: null, stockShort: false, ...o,
+  cancelledAt: null, shippedAt: null, ndrAt: null, deliveredAt: null, lostAt: null, rtoInitiatedAt: null, rtoDeliveredAt: null, stockShort: false, ...o,
 })
 
 describe('orderState', () => {

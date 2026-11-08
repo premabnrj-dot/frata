@@ -22,7 +22,7 @@ const c = (a: string, col: string) => sql.raw(`${a}.${col}`)
 export const momentColumns = {
   placedAt: orders.placedAt, paymentMethod: orders.paymentMethod, payBy: orders.payBy, paidAt: orders.paidAt, switchedToCodAt: orders.switchedToCodAt,
   confirmedAt: orders.confirmedAt, heldAt: orders.heldAt, packedAt: orders.packedAt, cancelledAt: orders.cancelledAt, shippedAt: orders.shippedAt,
-  ndrAt: orders.ndrAt, deliveredAt: orders.deliveredAt, rtoInitiatedAt: orders.rtoInitiatedAt, rtoDeliveredAt: orders.rtoDeliveredAt,
+  ndrAt: orders.ndrAt, deliveredAt: orders.deliveredAt, lostAt: orders.lostAt, rtoInitiatedAt: orders.rtoInitiatedAt, rtoDeliveredAt: orders.rtoDeliveredAt,
   stockShort: sql<boolean>`${stockShortSql()}`.mapWith(Boolean),
 }
 const ts = (d: Date) => sql`${d.toISOString()}::timestamptz`
@@ -38,6 +38,7 @@ export const stateSql = (now: Date, a = '"orders"'): SQL<OrderState> => sql<Orde
   when ${c(a, 'rto_delivered_at')} is not null then 'rto_received'
   when ${c(a, 'rto_initiated_at')} is not null then 'rto'
   when ${c(a, 'delivered_at')} is not null then 'delivered'
+  when ${c(a, 'lost_at')} is not null then 'lost'
   when ${c(a, 'cancelled_at')} is not null then 'cancelled'
   when ${c(a, 'ndr_at')} is not null then 'ndr'
   when ${c(a, 'shipped_at')} is not null then 'shipped'
@@ -78,7 +79,7 @@ export const openSql = (a = '"orders"'): SQL => sql.raw(['packed_at', 'shipped_a
  * least packed. Said first for the partial index orders_inflight_idx (Ship S·0), as openSql is for the work tabs; the
  * text matches the index's predicate exactly. It changes no result: the parity test holds it.
  */
-export const inFlightSql = (a = '"orders"'): SQL => sql.raw(`${a}."rto_delivered_at" is null and (${a}."rto_initiated_at" is not null or (${a}."delivered_at" is null and ${a}."cancelled_at" is null and (${a}."packed_at" is not null or ${a}."shipped_at" is not null or ${a}."ndr_at" is not null)))`)
+export const inFlightSql = (a = '"orders"'): SQL => sql.raw(`${a}."rto_delivered_at" is null and (${a}."rto_initiated_at" is not null or (${a}."delivered_at" is null and ${a}."lost_at" is null and ${a}."cancelled_at" is null and (${a}."packed_at" is not null or ${a}."shipped_at" is not null or ${a}."ndr_at" is not null)))`)
 
 const SHIP = new Set<string>(SHIP_TABS)
 /** queueTab() in SQL; 'all' is every placed order. */

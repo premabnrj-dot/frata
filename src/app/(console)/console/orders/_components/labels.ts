@@ -26,6 +26,7 @@ export const STATE: Record<OrderState, { label: string; tone: Tone }> = {
   delivered: { label: 'Delivered', tone: 'ok' },
   rto: { label: 'Returning', tone: 'danger' },
   rto_received: { label: 'Returned', tone: 'neutral' },
+  lost: { label: 'Lost by the courier', tone: 'danger' },
 }
 
 /** How it is paid now (currentMethod), and whether the online payment came in. */

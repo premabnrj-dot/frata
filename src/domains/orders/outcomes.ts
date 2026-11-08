@@ -16,9 +16,9 @@ export const ASSUME_DELIVERED_DAYS = 30
  * outcome since, unless it came back or the courier lost it. KNOWN COPY: its SQL twin lands with its first reader
  * (billing, roadmap phase 6), with a parity test.
  */
-export function billableDelivered(o: { shippedAt: Date | null; deliveredAt: Date | null; rtoInitiatedAt: Date | null; lost: boolean }, now: Date): boolean {
+export function billableDelivered(o: { shippedAt: Date | null; deliveredAt: Date | null; rtoInitiatedAt: Date | null; lostAt: Date | null }, now: Date): boolean {
   if (o.deliveredAt) return true
-  if (!o.shippedAt || o.rtoInitiatedAt || o.lost) return false
+  if (!o.shippedAt || o.rtoInitiatedAt || o.lostAt) return false
   return now.getTime() - o.shippedAt.getTime() >= ASSUME_DELIVERED_DAYS * DAY
 }
 
