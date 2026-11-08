@@ -22,7 +22,8 @@ describe.skipIf(!host)('Admin › Offers: the kill switch and the totals', () =>
 
   it('a stop drops the offer from the quote, the code and the bar; resume brings it back within the limit', async () => {
     const { withTenant } = await import('@/lib/db/tenant')
-    const { discounts, discountCodes } = await import('@/lib/db/schema-discounts')
+    const { discounts, discountCodes, orderDiscounts } = await import('@/lib/db/schema-discounts')
+    const { orders } = await import('@/lib/db/schema-orders')
     const { quoteData, codeFor } = await import('@/lib/queries/checkout')
     const { listOffers } = await import('@/lib/queries/discounts')
     const { discountUses, runningOffers } = await import('@/lib/db/discount-predicates')
@@ -64,7 +65,22 @@ describe.skipIf(!host)('Admin › Offers: the kill switch and the totals', () =>
       expect(await seen()).toEqual({ quoted: true, code: true, bar: true, status: 'live', why: null })
       expect(await admin.resumeOffer(staff, B, D)).toBe('none')
 
-      // The totals agree with the app's own count of uses.
+      // The totals agree with the app's own count of uses, on one order per branch of the use rule: a payment saving
+      // on a paid order (counts), on one switched to COD (not), an order saving on a cancelled order (not), both on an
+      // order still holding its stock (count), and one whose payment window ran out (not).
+      const P = await start('Pay online', { style: 'pay_online', percentBps: null, amountOff: 5000 })
+      await withTenant(B, async (tx) => {
+        const at = (m: number) => new Date(Date.now() + m * 60_000)
+        const order = async (o: Partial<typeof orders.$inferInsert>) => (await tx.insert(orders).values({ tenantId: B, number: 990_000 + Math.floor(Math.random() * 9_000), paymentMethod: 'prepaid',
+          placedAt: at(-30), phone: '9829444000', subtotal: 100000, discount: 0, total: 100000, pricesIncludeGst: true, ...o }).returning({ id: orders.id }))[0]!.id
+        const use = (orderId: string, discountId: string, cls: 'order' | 'payment', amount: number) =>
+          tx.insert(orderDiscounts).values({ tenantId: B, orderId, discountId, class: cls, amount, title: 'x', style: 'order_off', minSubtotal: 0 })
+        await use(await order({ paidAt: at(-20) }), P, 'payment', 5000)
+        await use(await order({ switchedToCodAt: at(-20) }), P, 'payment', 5000)
+        await use(await order({ paymentMethod: 'cod', cancelledAt: at(-10) }), D, 'order', 7000)
+        const holding = await order({ payBy: at(20) }); await use(holding, D, 'order', 7000); await use(holding, P, 'payment', 5000)
+        await use(await order({ payBy: at(-5) }), D, 'order', 7000)
+      })
       const ids = await withTenant(B, async (tx) => (await tx.select({ id: discounts.id }).from(discounts).where(eq(discounts.tenantId, B))).map((r) => r.id))
       const uses = await withTenant(B, (tx) => discountUses(tx, B, ids, new Date()))
       const given = [...uses.values()].reduce((a, u) => a + u.given, 0)

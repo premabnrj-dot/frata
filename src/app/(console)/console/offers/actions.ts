@@ -1,15 +1,15 @@
 'use server'
 
-import { and, eq, isNull, sql } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { CODE_RE, MAX_RUNNING_OFFERS, parseOffer, RUNNING_FULL, type OfferPatch, type OfferValues } from '@/domains/checkout/offer-form'
+import { CODE_RE, parseOffer, RUNNING_FULL, type OfferPatch, type OfferValues } from '@/domains/checkout/offer-form'
 import { asMember } from '@/lib/auth/as-member'
 import { CAN_BUILD, CAN_MANAGE } from '@/lib/auth/require-member'
 import { discountCodes, discountTargets, discountTiers, discounts } from '@/lib/db/schema-discounts'
 import { refreshShop } from '@/lib/queries/storefront'
 import { alreadyQualify } from '@/lib/queries/discounts'
 import type { Tx } from '@/lib/db'
-import { runningOffers } from '@/lib/db/discount-predicates'
+import { claimBar, codeRefusal, editRefusal, stepOfferIn, STEPS, type Step } from '@/lib/offers/steps'
 
 // =============================================================================
 // OFFERS: who may do what (spec § Who controls what; owner call 6). Owners, admins and the store's partner draft
@@ -25,17 +25,7 @@ export type OfferResult = { ok: true; id: string } | { ok: false; error: string;
 const isManager = (role: string) => (CAN_MANAGE as readonly string[]).includes(role)
 const done = (tenantId: string) => { refreshShop(tenantId, 'shop'); revalidatePath('/console/offers') }
 const UNIQUE = '23505'
-const STOPPED = 'Frrata stopped this offer, so it does not change. You can end it; to run it again, ask Frrata support.'
 const codeOf = (err: unknown) => (err as { cause?: { code?: string; constraint_name?: string } })?.cause
-
-/**
- * Only one STARTED offer in the bar: when this one takes it (saving a started offer, or starting a draft that asked
- * for it), the others let go first — a draft's wish never empties the bar of a live offer (impact review).
- */
-async function claimBar(tx: Tx, tenantId: string, id: string | null) {
-  // BEFORE this offer is written with announce = true: the one-bar index is not deferrable (tenancy audit).
-  await tx.update(discounts).set({ announce: false }).where(and(eq(discounts.tenantId, tenantId), eq(discounts.announce, true), ...(id ? [sql`${discounts.id} <> ${id}`] : [])))
-}
 
 /** An offer's targets and tiers, replaced whole with each save (rows are never updated in place: 0040). */
 async function replaceParts(tx: Tx, tenantId: string, id: string, p: OfferPatch) {
@@ -62,19 +52,10 @@ export async function saveOffer(id: string | null, values: OfferValues): Promise
         return { ok: true as const, id: d!.id, tenantId }
       }
       if (!/^[0-9a-f-]{36}$/.test(id)) return { ok: false as const, error: 'This offer was not found.' }
-      const [cur] = await tx.select({ startedAt: discounts.startedAt, endedAt: discounts.endedAt, stoppedAt: discounts.stoppedAt, endsAt: discounts.endsAt, style: discounts.style }).from(discounts)
-        .where(and(eq(discounts.tenantId, tenantId), eq(discounts.id, id))).for('update')
-      if (!cur) return { ok: false as const, error: 'This offer was not found.' }
-      if (cur.endedAt) return { ok: false as const, error: 'An ended offer does not change. Duplicate it to run it again.' }
-      if (cur.stoppedAt) return { ok: false as const, error: STOPPED }
-      if (cur.startedAt && !isManager(auth.membership.role)) return { ok: false as const, error: 'Only an owner or admin can change an offer that has started.' }
-      if (cur.style !== p.style) return { ok: false as const, error: 'The style of an offer does not change. Make a new one.' }
-      // A started offer past its end that gets a later end runs again: it counts toward the limit like a start (audit).
-      const now = new Date()
-      if (cur.startedAt && cur.endsAt && cur.endsAt <= now && (!p.endsAt || p.endsAt > now) && await runningOffers(tx, tenantId, now) >= MAX_RUNNING_OFFERS) {
-        return { ok: false as const, error: RUNNING_FULL }
-      }
-      if (p.announce && cur.startedAt) await claimBar(tx, tenantId, id)
+      const refused = await editRefusal(tx, tenantId, id, { manager: isManager(auth.membership.role), style: p.style, endsAt: p.endsAt }, new Date())
+      if (refused) return { ok: false as const, error: refused }
+      const [cur] = await tx.select({ startedAt: discounts.startedAt }).from(discounts).where(and(eq(discounts.tenantId, tenantId), eq(discounts.id, id)))
+      if (p.announce && cur!.startedAt) await claimBar(tx, tenantId, id)
       const upd = await tx.update(discounts).set(cols)
         .where(and(eq(discounts.tenantId, tenantId), eq(discounts.id, id), isNull(discounts.endedAt), isNull(discounts.stoppedAt), ...(isManager(auth.membership.role) ? [] : [isNull(discounts.startedAt)])))
         .returning({ id: discounts.id })
@@ -94,30 +75,14 @@ export async function saveOffer(id: string | null, values: OfferValues): Promise
   }
 }
 
-type Step = 'start' | 'pause' | 'resume' | 'end'
-
-/** Start (a draft), pause, resume, or end for good — owners and admins only, each guarded in its own WHERE. */
+/** Start (a draft), pause, resume, or end for good — owners and admins only (lib/offers/steps.ts holds the rules). */
 export async function stepOffer(id: string, step: Step): Promise<OfferResult> {
-  if (!/^[0-9a-f-]{36}$/.test(id) || !['start', 'pause', 'resume', 'end'].includes(step)) return { ok: false, error: 'This offer was not found.' }
-  const r = await asMember(CAN_MANAGE, { action: `offer.${step}`, target: id }, async (tx, auth) => {
-    const tenantId = auth.membership.tenantId
-    // Ending still works on an offer Frrata stopped; nothing else does.
-    const mine = and(eq(discounts.tenantId, tenantId), eq(discounts.id, id), isNull(discounts.endedAt), ...(step === 'end' ? [] : [isNull(discounts.stoppedAt)]))
-    const now = new Date()
-    const set = step === 'start' ? { startedAt: now, startedBy: auth.userId } : step === 'pause' ? { pausedAt: now } : step === 'resume' ? { pausedAt: null } : { endedAt: now, announce: false }
-    const guard = step === 'start' ? isNull(discounts.startedAt) : step === 'pause' ? and(sql`${discounts.startedAt} is not null`, isNull(discounts.pausedAt)) : step === 'resume' ? sql`${discounts.pausedAt} is not null` : undefined
-    if (step === 'start') {
-      // Paused and scheduled offers already count as running, so only a start can cross the limit.
-      if (await runningOffers(tx, tenantId, now) >= MAX_RUNNING_OFFERS) return { done: false, full: true, tenantId }
-      const [cur] = await tx.select({ announce: discounts.announce }).from(discounts).where(mine)
-      if (cur?.announce) await claimBar(tx, tenantId, id)
-    }
-    const upd = await tx.update(discounts).set(set).where(guard ? and(mine, guard) : mine).returning({ id: discounts.id })
-    return { done: upd.length > 0, full: false, tenantId }
-  })
+  if (!/^[0-9a-f-]{36}$/.test(id) || !STEPS.includes(step)) return { ok: false, error: 'This offer was not found.' }
+  const r = await asMember(CAN_MANAGE, { action: `offer.${step}`, target: id }, async (tx, auth) =>
+    ({ result: await stepOfferIn(tx, auth.membership.tenantId, auth.userId, id, step, new Date()), tenantId: auth.membership.tenantId }))
   if (!r.ok) return { ok: false, error: r.error }
-  if (r.value.full) return { ok: false, error: RUNNING_FULL }
-  if (!r.value.done) return { ok: false, error: 'This offer changed meanwhile, or Frrata stopped it. Reload the page.' }
+  if (r.value.result === 'full') return { ok: false, error: RUNNING_FULL }
+  if (r.value.result === 'none') return { ok: false, error: 'This offer changed meanwhile, or Frrata stopped it. Reload the page.' }
   done(r.value.tenantId)
   return { ok: true, id }
 }
@@ -142,8 +107,7 @@ export async function addCreatorCode(id: string, label: string, code: string): P
   try {
     const r = await asMember(CAN_MANAGE, { action: 'offer.creator_code', target: id, detail: { label: l } }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
-      const [cur] = await tx.select({ endedAt: discounts.endedAt, stoppedAt: discounts.stoppedAt }).from(discounts).where(and(eq(discounts.tenantId, tenantId), eq(discounts.id, id)))
-      if (!cur || cur.endedAt || cur.stoppedAt) return { done: false, tenantId }
+      if (await codeRefusal(tx, tenantId, id)) return { done: false, tenantId }
       await tx.insert(discountCodes).values({ tenantId, discountId: id, code: c, label: l })
       return { done: true, tenantId }
     })

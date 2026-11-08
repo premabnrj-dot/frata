@@ -2,7 +2,7 @@ import 'server-only'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { quote, type Quote } from '@/domains/checkout/quote'
 import { reprice } from '@/domains/orders/amounts'
-import { discountUses, fits } from '@/lib/db/discount-predicates'
+import { discountUses, fits, liveDiscountSql } from '@/lib/db/discount-predicates'
 import { priorOrderSql } from '@/lib/db/order-predicates'
 import { discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import type { Tx } from '@/lib/db'
@@ -172,17 +172,22 @@ export async function retryPayment(tenantId: string, token: string, now = new Da
   if (id === null) return { ok: false, status: 404, error: 'This order is not waiting for an online payment.' }
   if (id === 'closed') return { ok: false, status: 404, error: 'This shop is not taking orders right now.' }
   if (id === 'gone') return { ok: false, status: 409, error: 'Something in this order sold out or changed price while you were away. Go back to your bag.' }
-  if (id === 'offer') return { ok: false, status: 409, error: 'This offer ran out while you were away. Go back to your bag.' }
+  if (id === 'offer') return { ok: false, status: 409, error: 'An offer on this order changed or ran out while you were away. Go back to your bag.' }
   const pay = await startPayment(tenantId, id)
   return pay.ok ? pay : { ok: false, status: 422, error: pay.error }
 }
 
-/** Whether each limited offer the order got still has room for it (the order's own use excluded), under a lock. */
-async function offersStillFit(tx: Tx, tenantId: string, orderId: string, phone: string, now: Date): Promise<boolean> {
-  const mine = await tx.select({ discountId: orderDiscounts.discountId, amount: orderDiscounts.amount, firstOrder: discounts.firstOrder }).from(orderDiscounts)
+/**
+ * After a hold ran out, whether the order may still be paid at its offers: each is still live (not paused, ended or
+ * stopped by Frrata: "before paying, never after"), a first-order one is still the phone's first, and each limited
+ * one still has room for it (the order's own use excluded), under a lock. Exported for its int test.
+ */
+export async function offersStillFit(tx: Tx, tenantId: string, orderId: string, phone: string, now: Date): Promise<boolean> {
+  const mine = await tx.select({ discountId: orderDiscounts.discountId, amount: orderDiscounts.amount, firstOrder: discounts.firstOrder, live: sql<boolean>`${liveDiscountSql(now)}` }).from(orderDiscounts)
     .innerJoin(discounts, and(eq(discounts.tenantId, orderDiscounts.tenantId), eq(discounts.id, orderDiscounts.discountId)))
     .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, orderId)))
   if (!mine.length) return true
+  if (mine.some((m) => !m.live)) return false
   // A first-order offer: the phone may have ordered since this hold ran out (impact review) — same lock, same rule.
   if (mine.some((m) => m.firstOrder)) {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${tenantId + ':phone:' + phone}, 0))`)

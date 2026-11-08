@@ -11,13 +11,12 @@ import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dayMonthIN } from '@/lib/format-date'
 import { STYLE_LABEL } from '@/domains/checkout/offer-form'
 import type { DiscountStyle } from '@/domains/checkout/discounts'
+import { STATUS_WORDS } from '@/domains/checkout/offer-status'
 import { resumeAction, stopAction } from '../actions'
 
 export const metadata = { title: 'Shop offers' }
 
 const input = 'h-10 rounded-md border border-input bg-card px-3 text-sm'
-const TONE = { live: 'ok', scheduled: 'info', draft: 'neutral', paused: 'warn', stopped: 'danger', ended: 'neutral' } as const
-const LABEL = { live: 'Live', scheduled: 'Scheduled', draft: 'Draft', paused: 'Paused', stopped: 'Stopped by Frrata', ended: 'Ended' } as const
 
 /**
  * One shop's offers for Frrata staff (offers O·4): what each is and where it stands, never its terms or uses. Admin
@@ -42,7 +41,7 @@ export default async function ShopOffersPage({ params, searchParams }: { params:
           {open.map((o) => {
             const hidden = <><input type="hidden" name="tenantId" value={tenantId} /><input type="hidden" name="id" value={o.id} /></>
             return (
-              <Section key={o.id} title={o.title} id={`o-${o.id}`} action={<Badge tone={TONE[o.status]}>{LABEL[o.status]}</Badge>}>
+              <Section key={o.id} title={o.title} id={`o-${o.id}`} action={<Badge tone={STATUS_WORDS[o.status].tone}>{STATUS_WORDS[o.status].label}</Badge>}>
                 <p className="text-sm text-muted-foreground">{STYLE_LABEL[o.style as DiscountStyle]?.name ?? o.style} · from {dayMonthIN(o.startsAt)}{o.endsAt ? ` till ${dayMonthIN(o.endsAt)}` : ''}</p>
                 {o.status === 'stopped' ? <p className="text-sm">Stopped{o.stoppedAt ? ` ${dayMonthIN(o.stoppedAt)}` : ''}: {o.stopReason}</p> : null}
                 {admin && o.status === 'stopped' ? <form action={resumeAction}>{hidden}<Button type="submit" variant="secondary">Resume {o.title}</Button></form> : null}

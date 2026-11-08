@@ -7,7 +7,7 @@
 // which, and never acts by itself: codes cannot be removed, so the remedy it names is ending the offer. Pure.
 // =============================================================================
 
-export const LEAK_MIN_USES = 10
+const LEAK_MIN_USES = 10
 
 export type CodeWeek = {
   /** Uses in the last 7 days, and how many of them came through the creator's link. */
@@ -27,12 +27,13 @@ const SAY: Record<LeakReason, (w: CodeWeek) => string> = {
   spike: () => 'this week ran at more than 3 times its usual week',
 }
 
-/** The leak alert for one creator code, or null. A code younger than a week before this one has no usual week. */
+/** The leak alert for one creator code, or null. */
 export function leakOf(w: CodeWeek): Leak {
   if (w.last7 < LEAK_MIN_USES) return null
   const reasons: LeakReason[] = []
   if (w.viaLink7 * 2 < w.last7) reasons.push('typed')
-  if (w.prevDays >= 7 && w.last7 * w.prevDays > 3 * 7 * w.prev28) reasons.push('spike')
+  // No usual week (under 7 days before this one, or no use at all): a creator's first busy week is not a spike.
+  if (w.prevDays >= 7 && w.prev28 > 0 && w.last7 * w.prevDays > 3 * 7 * w.prev28) reasons.push('spike')
   if (!reasons.length) return null
   const why = reasons.map((r) => SAY[r](w)).join('; and ')
   return { reasons, text: `Leak? ${why[0]!.toUpperCase()}${why.slice(1)}. If it has spread, end the offer: codes cannot be removed, and ending it ends it for every creator.` }

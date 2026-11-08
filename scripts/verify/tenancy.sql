@@ -874,8 +874,9 @@ commit;
 do $$ begin
   if (select count(*) from price_history where variant_id = 'cdcdcdcd-0000-0000-0000-00000000000b' and price = 1) <> 0 then raise exception 'FAIL: B price history moved under A'; end if;
   if exists (select 1 from variants v where not exists (select 1 from price_history h where h.tenant_id = v.tenant_id and h.variant_id = v.id)) then raise exception 'FAIL: a variant has no price history'; end if;
+  -- Table-level only: from O·4 Admin reads named columns of discounts (pinned in check 36).
   if has_table_privilege('frata_admin', 'discounts', 'select') or has_table_privilege('frata_admin', 'discount_codes', 'select') or has_table_privilege('frata_admin', 'order_discounts', 'select') or has_table_privilege('frata_admin', 'price_history', 'select') then
-    raise exception 'FAIL: staff read offers directly'; end if;
+    raise exception 'FAIL: staff read whole offer tables'; end if;
   if has_table_privilege('anon', 'discounts', 'select') or has_table_privilege('authenticated', 'discount_codes', 'select') or has_table_privilege('service_role', 'order_discounts', 'select') or has_table_privilege('service_role', 'price_history', 'select') or has_table_privilege('service_role', 'discounts', 'select') then
     raise exception 'FAIL: API roles reach offers'; end if;
   if has_function_privilege('anon', 'app_record_price()', 'execute') or has_function_privilege('authenticated', 'app_record_price()', 'execute') then raise exception 'FAIL: API roles run the price trigger'; end if;

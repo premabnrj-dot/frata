@@ -10,7 +10,7 @@ import { discountCodes, discountTargets, discountTiers, discounts, orderDiscount
 import { collections, products, variants } from '@/lib/db/schema-catalogue'
 import { orders } from '@/lib/db/schema-orders'
 import { discountUses, useOfRowSql } from '@/lib/db/discount-predicates'
-import { holdingSql, priorOrderSql, standingSql, stateSql } from '@/lib/db/order-predicates'
+import { currentMethodSql, holdingSql, priorOrderSql, standingSql, stateSql } from '@/lib/db/order-predicates'
 import { leakOf, type Leak } from '@/domains/checkout/leak'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
@@ -59,7 +59,7 @@ export async function listOffers(tenantId: string, now = new Date(), onlyId?: st
     }).from(discounts).leftJoin(discountCodes, and(eq(discountCodes.tenantId, discounts.tenantId), eq(discountCodes.discountId, discounts.id), isNull(discountCodes.label)))
       .where(onlyId ? and(eq(discounts.tenantId, tenantId), eq(discounts.id, onlyId)) : eq(discounts.tenantId, tenantId)).orderBy(desc(discounts.createdAt)).limit(200)
     if (!rows.length) return []
-    // Uses and ₹ given, as the orders stand now; delivered orders with what profit.ts needs.
+    // Uses and ₹ given, all time, as the orders stand now (limits and budgets read the same count).
     const byId = await discountUses(tx, tenantId, rows.map((r) => r.id), now)
     const ids = rows.map((r) => r.id)
     const [targets, tiers, creators] = await Promise.all([
@@ -140,7 +140,7 @@ export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, days = 3
   const fee = await feeBpsIn(tx, tenantId, now)
   const since = sql`${new Date(now.getTime() - days * DAY).toISOString()}::timestamptz`
   const st = stateSql(now, 'o')
-  const prepaid = sql`(o.paid_at is not null or (o.payment_method = 'prepaid' and o.switched_to_cod_at is null))`
+  const prepaid = sql`${currentMethodSql('o')} = 'prepaid'`
   const used = sql`exists (select 1 from ${orderDiscounts} od where od.tenant_id = o.tenant_id and od.order_id = o.id and ${useOfRowSql(now)})`
   const [per, all, without, delivered, codes] = await Promise.all([
     tx.execute<{ id: string; n: number; given: string; total: string; prepaid: number; repeat: number; delivered: number; rto: number }>(sql`

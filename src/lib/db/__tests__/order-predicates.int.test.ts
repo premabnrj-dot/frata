@@ -42,7 +42,7 @@ describe.skipIf(!host)('order predicates match orderState()', () => {
         toConfirm: sql<boolean>`${p.inTabSql('to_confirm', now)}`, toPack: sql<boolean>`${p.inTabSql('to_pack', now)}`, onHold: sql<boolean>`${p.inTabSql('on_hold', now)}`,
         notPaid: sql<boolean>`${p.inTabSql('not_paid', now)}`, all: sql<boolean>`${p.inTabSql('all', now)}`,
         entered: sql<string | null>`${p.enteredAtSql(now)}`, placed: sql<boolean>`${p.placedSql()}`, holding: sql<boolean>`${p.holdingSql(now)}`, standing: sql<boolean>`${p.standingSql()}`,
-        useOrder: sql<boolean>`${p.discountUseSql(now, 'order')}`, usePayment: sql<boolean>`${p.discountUseSql(now, 'payment')}`,
+        useOrder: sql<boolean>`${p.discountUseSql(now, 'order')}`, usePayment: sql<boolean>`${p.discountUseSql(now, 'payment')}`, method: p.currentMethodSql(),
       }).from(orders).where(and(eq(orders.tenantId, A), gte(orders.number, 900_000), lt(orders.number, 900_400)))
       expect(rows.length).toBe(400)
       const seen = new Set<string>()
@@ -52,9 +52,9 @@ describe.skipIf(!host)('order predicates match orderState()', () => {
         const state = s.orderState(row, now)
         seen.add(state)
         const tab = s.queueTab(state)
-        const got = { state: row.sqlState, to_confirm: row.toConfirm, to_pack: row.toPack, on_hold: row.onHold, not_paid: row.notPaid, all: row.all, placed: row.placed, holding: row.holding, standing: row.standing, useOrder: row.useOrder, usePayment: row.usePayment }
+        const got = { state: row.sqlState, to_confirm: row.toConfirm, to_pack: row.toPack, on_hold: row.onHold, not_paid: row.notPaid, all: row.all, placed: row.placed, holding: row.holding, standing: row.standing, useOrder: row.useOrder, usePayment: row.usePayment, method: row.method }
         const want = { state, to_confirm: tab === 'to_confirm', to_pack: tab === 'to_pack', on_hold: tab === 'on_hold', not_paid: tab === 'not_paid', all: s.isPlaced(row), placed: s.isPlaced(row),
-          holding: s.isHolding(row, now), standing: s.isStanding(row), useOrder: s.usesDiscount(row, 'order', now), usePayment: s.usesDiscount(row, 'payment', now) }
+          holding: s.isHolding(row, now), standing: s.isStanding(row), useOrder: s.usesDiscount(row, 'order', now), usePayment: s.usesDiscount(row, 'payment', now), method: s.currentMethod(row) }
         expect({ number: row.number, ...got }).toEqual({ number: row.number, ...want })
         // enteredAt (U·4): the same moment, to the millisecond.
         expect({ number: row.number, entered: row.entered ? new Date(row.entered).getTime() : null }).toEqual({ number: row.number, entered: s.enteredAt(row, now)?.getTime() ?? null })

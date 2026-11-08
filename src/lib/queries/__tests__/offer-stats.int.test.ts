@@ -29,13 +29,13 @@ describe.skipIf(!host)('offerStats', () => {
       const D = await offer('Stats'), L = await offer('Leaky')
       const code = async (d: string, c: string, made: Date) => (await tx.insert(discountCodes).values({ tenantId: A, discountId: d, code: c, label: c, createdAt: made }).returning({ id: discountCodes.id }))[0]!.id
       const RIYA = await code(D, `RIYA${n}`, ago(60)), LEAK = await code(L, `LEAK${n}`, ago(60))
-      type O = { at: Date; phone: string; method?: 'cod' | 'prepaid'; subtotal?: number; paid?: boolean; payBy?: Date; delivered?: boolean; rto?: boolean; cancelled?: boolean }
+      type O = { at: Date; phone: string; method?: 'cod' | 'prepaid'; subtotal?: number; paid?: boolean; payBy?: Date; delivered?: boolean; rto?: boolean; cancelled?: boolean; costs?: { cogs: number; forwardShipping: number } }
       const order = async (o: O, use?: { d: string; amount: number; code?: string; via?: 'auto' | 'typed' | 'link' }) => {
         const subtotal = o.subtotal ?? 200000, discount = use?.amount ?? 0
         const [r] = await tx.insert(orders).values({
           tenantId: A, number: n++, paymentMethod: o.method ?? 'cod', placedAt: o.at, phone: o.phone, subtotal, discount, total: subtotal - discount, pricesIncludeGst: true,
           payBy: o.payBy ?? null, paidAt: o.paid ? o.at : null, shippedAt: o.delivered || o.rto ? o.at : null, deliveredAt: o.delivered ? o.at : null,
-          rtoInitiatedAt: o.rto ? o.at : null, cancelledAt: o.cancelled ? o.at : null,
+          rtoInitiatedAt: o.rto ? o.at : null, cancelledAt: o.cancelled ? o.at : null, merchandiseNet: subtotal - discount, ...o.costs,
         }).returning({ id: orders.id })
         if (use) await tx.insert(orderDiscounts).values({ tenantId: A, orderId: r!.id, discountId: use.d, codeId: use.code ?? null, class: 'order', amount: use.amount,
           title: 'x', style: 'order_off', percentBps: 1000, minSubtotal: 0, via: use.via ?? 'auto' })
@@ -44,7 +44,7 @@ describe.skipIf(!host)('offerStats', () => {
       // Offer D in the window: delivered by link (new buyer), paid online and delivered by a typed code (a repeat buyer:
       // the same phone ordered 60 days ago), returned (RTO), and two that use nothing now (cancelled; online, abandoned).
       await order({ at: ago(60), phone: '9829000002' })
-      const first = await order({ at: ago(3), phone: '9829000001', delivered: true }, { d: D, amount: 20000, code: RIYA, via: 'link' })
+      const first = await order({ at: ago(3), phone: '9829000001', delivered: true, costs: { cogs: 80000, forwardShipping: 6000 } }, { d: D, amount: 20000, code: RIYA, via: 'link' })
       await order({ at: ago(4), phone: '9829000002', method: 'prepaid', paid: true, delivered: true, subtotal: 300000 }, { d: D, amount: 30000, code: RIYA, via: 'typed' })
       await order({ at: ago(5), phone: '9829000003', rto: true }, { d: D, amount: 10000 })
       await order({ at: ago(6), phone: '9829000004', cancelled: true }, { d: D, amount: 10000 })
@@ -62,6 +62,9 @@ describe.skipIf(!host)('offerStats', () => {
       const d = s.offers.get(D)!
       expect({ orders: d.orders, given: d.given, aov: d.aov, prepaid: d.prepaid, repeat: d.repeat, fresh: d.fresh, delivered: d.delivered, rto: d.rto, givenPerDelivered: d.givenPerDelivered })
         .toEqual({ orders: 3, given: 60000, aov: Math.round((180000 + 270000 + 190000) / 3), prepaid: 1, repeat: 1, fresh: 2, delivered: 2, rto: 1, givenPerDelivered: 30000 })
+      // ₹ kept per delivered order (profit.ts): the delivered order with known costs only (the other's cogs is unknown):
+      // ₹1,800 net − ₹800 cogs − ₹60 shipping − the plan's 2% on ₹1,800 merchandise (₹36) = ₹904.
+      expect(d.keptPerDelivered).toBe(180000 - 80000 - 6000 - 3600)
       const riya = d.creators.find((c) => c.id === RIYA)!
       expect({ orders: riya.orders, delivered: riya.delivered, rto: riya.rto, given: riya.given, viaLink: riya.viaLink, leak: riya.leak })
         .toEqual({ orders: 2, delivered: 2, rto: 0, given: 50000, viaLink: 1, leak: null })

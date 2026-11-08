@@ -6,6 +6,12 @@
 export const OFFER_STATUSES = ['draft', 'scheduled', 'live', 'paused', 'stopped', 'ended'] as const
 export type OfferStatus = (typeof OFFER_STATUSES)[number]
 
+/** How a status reads and its badge tone, everywhere (the console's list and offer page, Admin › Offers). */
+export const STATUS_WORDS: Record<OfferStatus, { label: string; tone: 'ok' | 'warn' | 'info' | 'neutral' | 'danger' }> = {
+  live: { label: 'Live', tone: 'ok' }, scheduled: { label: 'Scheduled', tone: 'info' }, draft: { label: 'Draft', tone: 'neutral' }, paused: { label: 'Paused', tone: 'warn' },
+  stopped: { label: 'Stopped by Frrata', tone: 'danger' }, ended: { label: 'Ended', tone: 'neutral' },
+}
+
 /** stoppedAt is required (O·4 review 3): every reader of an offer's status must say whether Frrata stopped it. */
 export type OfferMoments = { startedAt: Date | null; pausedAt: Date | null; endedAt: Date | null; stoppedAt: Date | null; startsAt: Date; endsAt: Date | null }
 

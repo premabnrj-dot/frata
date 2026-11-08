@@ -29,5 +29,6 @@ describe('leakOf', () => {
     expect(leakOf(w(12, 12, 2, 14))?.reasons).toEqual(['spike']) // usual 1 a week
     expect(leakOf(w(12, 12, 0, 6))).toBeNull()
     expect(leakOf(w(12, 12, 0, 0))).toBeNull()
+    expect(leakOf(w(12, 12, 0, 28))).toBeNull() // a month unused, then a launch week: no usual week to compare
   })
 })

@@ -21,6 +21,7 @@ export default {
     const c = await cc.newPage(); c.setDefaultTimeout(10_000); c.on('pageerror', (e) => t.errors.push(e.message))
     const [s] = await db`select s.shipping_flat, s.free_shipping_above, s.cod_charge from shop_settings s join tenants t on t.id = s.tenant_id where t.slug = 'kesar-studio'`
     const ship = (amount) => (Number(s.shipping_flat) && !(Number(s.free_shipping_above) && amount >= Number(s.free_shipping_above)) ? Number(s.shipping_flat) : 0)
+    const [{ id: KESAR }] = await db`select id from tenants where slug = 'kesar-studio'`
     const inr = (p) => '₹' + (p / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })
     // This flow sells Rust M a few times; the flows after it expect the stock they had, so it is put back in `finally`.
     const [{ stock: rustM }] = await db`select stock from variants where option_values = '{M,Rust}'`
@@ -143,8 +144,14 @@ export default {
         await p.screenshot({ path: t.out('checkout-code'), fullPage: true })
       })
       await t.step('O·3: the list shows the last 30 days; an offer page its own numbers, "too few to judge"', async () => {
-        const [{ n, given }] = await db`select count(distinct od.order_id)::int n, sum(od.amount)::bigint given from order_discounts od join orders o on o.id = od.order_id
-          where o.cancelled_at is null and (od.class <> 'payment' or o.paid_at is not null)`
+        // What offerStats counts: Kesar's orders of the last 30 days using an offer now (discountUseSql's rule: a payment
+        // saving on a paid, uncancelled order; any other on a standing order; either on one still holding its stock).
+        const holding = `(o.payment_method = 'prepaid' and o.paid_at is null and o.switched_to_cod_at is null and o.cancelled_at is null and o.pay_by > now())`
+        const [{ n, given }] = await db.unsafe(`select count(distinct od.order_id)::int n, coalesce(sum(od.amount), 0)::bigint given
+          from order_discounts od join orders o on o.tenant_id = od.tenant_id and o.id = od.order_id
+          where o.tenant_id = '${KESAR}' and o.placed_at >= now() - interval '30 days'
+            and case when od.class = 'payment' then (o.paid_at is not null and o.cancelled_at is null) or ${holding}
+                     else (o.cancelled_at is null and not (o.payment_method = 'prepaid' and o.paid_at is null and o.switched_to_cod_at is null)) or ${holding} end`)
         await c.goto(CONSOLE + '/console/offers')
         const strip = c.getByRole('region', { name: 'Last 30 days' })
         await strip.getByText(`${n} orders with an offer`).waitFor()

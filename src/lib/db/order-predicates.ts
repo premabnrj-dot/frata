@@ -75,11 +75,16 @@ export const inTabSql = (tab: QueueTab, now: Date, a = '"orders"'): SQL =>
 
 /**
  * isPlaced(): not an online order still waiting for, or never given, its payment. Cancelled orders count (plan usage).
- * KNOWN COPY: app_admin_order_counts (drizzle/0017) states the same rule in its SQL body, where this module cannot
- * reach; change both together (impact review 2026-11-07).
+ * KNOWN COPY: app_admin_order_counts (drizzle/0017) and app_admin_offer_totals (drizzle/0042) state the same rule in
+ * their SQL bodies, where this module cannot reach; change all together (impact review 2026-11-07).
  */
 export const placedSql = (a = '"orders"'): SQL =>
   sql`not (${c(a, 'payment_method')} = 'prepaid' and ${c(a, 'paid_at')} is null and ${c(a, 'switched_to_cod_at')} is null)`
+
+/** currentMethod() in SQL: online once paid, COD once switched (unless paid after all), else as chosen. */
+export const currentMethodSql = (a = '"orders"'): SQL<'cod' | 'prepaid'> => sql<'cod' | 'prepaid'>`(case
+  when ${c(a, 'paid_at')} is not null then 'prepaid' when ${c(a, 'switched_to_cod_at')} is not null then 'cod'
+  when ${c(a, 'payment_method')} = 'prepaid' then 'prepaid' else 'cod' end)`
 
 /** isHolding(): an unpaid online order inside pay_by, not cancelled, holds its stock. */
 export const holdingSql = (now: Date, a = '"orders"'): SQL =>
@@ -94,13 +99,16 @@ export const standingSql = (a = '"orders"'): SQL => sql`(${c(a, 'cancelled_at')}
  * leaves an order out (the one being judged); `before` counts only orders placed before that moment.
  */
 export const priorOrderSql = (now: Date, tenantId: string, phone: SQL | string, o: { except?: SQL | string; before?: SQL } = {}): SQL =>
-  sql`exists (select 1 from ${orders} po where po.tenant_id = ${tenantId} and po.phone = ${phone}
+  sql`exists (select 1 from ${orders} po where po.tenant_id = ${tenantId} and po.phone = ${phone} and po.phone <> ''
     and (${standingSql('po')} or ${holdingSql(now, 'po')})${o.except ? sql` and po.id <> ${o.except}` : sql``}${o.before ? sql` and po.placed_at < ${o.before}` : sql``})`
 
 /** What Razorpay was asked for (checkout.onlineTotal), as a number column for StoredOrder.onlineTotal. */
 export const onlineTotalCol = sql<number | null>`(${orders.checkout}->>'onlineTotal')::bigint`.mapWith((v) => (v == null ? null : Number(v)))
 
-/** usesDiscount() in SQL: whether the order at `a` is using an offer of `cls` (limits, budgets, ₹ given). */
+/**
+ * usesDiscount() in SQL: whether the order at `a` is using an offer of `cls` (limits, budgets, ₹ given).
+ * KNOWN COPY: app_admin_offer_totals (drizzle/0042) restates it; its int test holds it to discountUses.
+ */
 export const discountUseSql = (now: Date, cls: 'product' | 'order' | 'shipping' | 'payment', a = '"orders"'): SQL =>
   cls === 'payment'
     ? sql`((${c(a, 'paid_at')} is not null and ${c(a, 'cancelled_at')} is null) or ${holdingSql(now, a)})`
