@@ -453,15 +453,22 @@
     {
       "idx": 64,
       "version": "7",
-      "when": 1794172233203,
-      "tag": "0064_addresses",
+      "when": 1794166886238,
+      "tag": "0064_signup_codes",
       "breakpoints": true
     },
     {
       "idx": 65,
       "version": "7",
-      "when": 1794172234472,
-      "tag": "0065_addresses_access",
+      "when": 1794166887574,
+      "tag": "0065_trial_signup",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1794168903996,
+      "tag": "0066_trial_partners",
       "breakpoints": true
     }
   ]
