@@ -88,6 +88,15 @@ export const holdingSql = (now: Date, a = '"orders"'): SQL =>
 /** isStanding(): placed and not cancelled — its lines still count against stock and pre-order caps. */
 export const standingSql = (a = '"orders"'): SQL => sql`(${c(a, 'cancelled_at')} is null and ${placedSql(a)})`
 
+/** What Razorpay was asked for (checkout.onlineTotal), as a number column for StoredOrder.onlineTotal. */
+export const onlineTotalCol = sql<number | null>`(${orders.checkout}->>'onlineTotal')::bigint`.mapWith((v) => (v == null ? null : Number(v)))
+
+/** usesDiscount() in SQL: whether the order at `a` is using an offer of `cls` (limits, budgets, ₹ given). */
+export const discountUseSql = (now: Date, cls: 'order' | 'shipping' | 'payment', a = '"orders"'): SQL =>
+  cls === 'payment'
+    ? sql`((${c(a, 'paid_at')} is not null and ${c(a, 'cancelled_at')} is null) or ${holdingSql(now, a)})`
+    : sql`(${standingSql(a)} or ${holdingSql(now, a)})`
+
 /**
  * Units of the variant at `variantCol` owed to pre-orders not yet packed: stock that arrives for them is not for
  * sale. Read by checkout (variantRows) and the product page (storefront), so the two agree (impact review 2026-11-07).

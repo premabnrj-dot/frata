@@ -48,7 +48,7 @@ export const MODULES: Record<ModuleKey, ModuleDef> = {
   },
   rto_shield: {
     key: 'rto_shield', name: 'RTO Shield', job: 'Confirm COD before you pack. Fewer refused parcels.', group: 'deliver', billing: 'plan', status: 'next', dependsOn: ['communication'], outboxKinds: [],
-    features: ['COD waits for a WhatsApp confirm', 'A COD commitment fee, your rule', 'Pincode and phone history', 'Prepaid nudge at checkout'],
+    features: ['COD waits for a WhatsApp confirm', 'A COD commitment fee, your rule', 'Pincode and phone history', 'Uses your pay-online offer to nudge COD buyers'],
   },
   ship: {
     key: 'ship', name: 'Ship', job: 'Shiprocket labels, tracking, failed deliveries.', group: 'deliver', billing: 'core', status: 'next', usage: 'Shiprocket bills freight', dependsOn: [], outboxKinds: [],

@@ -43,6 +43,8 @@ const ICONS = {
   stock: ['M4 12l8 4 8-4 M4 16l8 4 8-4', 'M12 4l8 4-8 4-8-4z'],
   campaigns: ['M4 10v4h3l8 4V6L7 10z', 'M18.5 9a4 4 0 0 1 0 6'],
   profit: ['M4 17l5-5 4 3 7-8', 'M15 7h5v5'],
+  // A price tag (Offers): the tag, then its hole and a cut.
+  offers: ['M4 4h7l9 9-7 7-9-9z', 'M8 8h.01 M10.5 14.5l4-4'],
 } as const satisfies Record<string, readonly [string, string]>
 
 export type IconName = keyof typeof ICONS

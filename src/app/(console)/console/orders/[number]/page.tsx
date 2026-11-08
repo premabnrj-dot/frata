@@ -50,7 +50,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   // Another shop's order is the same "not found" as one that does not exist.
   if (d === null) return <Panel title="No such order in your shop">Check the number, or find it from <a href="/console/orders?tab=all" className="underline">all orders</a>.</Panel>
 
-  const { o, lines, events, notes, facts } = d
+  const { o, lines, events, notes, facts, offers } = d
   const label = `${prefix}-${o.number}`
   const state = orderState(o, now)
   const method = currentMethod(o)
@@ -111,7 +111,10 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
               ))}
             </ul>
             <dl className="space-y-1 border-t border-border pt-3 text-sm">
-              <div className="flex justify-between"><dt>Delivery</dt><dd>{o.shipping ? <Money paise={paise(o.shipping)} /> : 'Free'}</dd></div>
+              {offers.filter((x) => x.class === 'order' || (x.class === 'payment' && currentMethod(o) === 'prepaid')).map((x) => (
+                <div key={x.class} className="flex justify-between text-ok-text"><dt>{x.class === 'payment' ? `${x.title} (paid online)` : `Offer · ${x.title}`}</dt><dd>−<Money paise={paise(x.amount)} /></dd></div>
+              ))}
+              <div className="flex justify-between"><dt>Delivery{offers.some((x) => x.class === 'shipping') ? ' (offer)' : ''}</dt><dd>{o.shipping ? <Money paise={paise(o.shipping)} /> : 'Free'}</dd></div>
               {o.codCharge ? <div className="flex justify-between"><dt>Pay on delivery fee</dt><dd><Money paise={paise(o.codCharge)} /></dd></div> : null}
               <div className="flex justify-between text-muted-foreground"><dt>GST {o.pricesIncludeGst ? '(included)' : ''}</dt><dd><Money paise={paise(o.gstTotal)} /></dd></div>
               <div className="flex justify-between pt-1 font-medium"><dt>Total</dt><dd><Money paise={paise(o.total)} /></dd></div>

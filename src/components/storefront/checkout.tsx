@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { STATES } from '@/domains/checkout/states'
 import { pick, urlFor } from '@/domains/media/sizes'
-import { useQuote } from './bag'
-import { ATTR_KEY, bag } from './bag-store'
+import { OfferProgress, OfferRows, useQuote } from './bag'
+import { ATTR_KEY, bag, offerCode, useOfferCode } from './bag-store'
 import { api, codWhyNotText, dayRange, inr, type Pay, type PublicQuote } from './shop-client'
 
 // =============================================================================
@@ -41,6 +41,9 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ tone: 'error' | 'changed'; text: string } | null>(null)
   const [failed, setFailed] = useState<{ token: string; total: number } | null>(null)
+  // The Pay on delivery total of the order already placed, when the server says it differs from the bag's (an offer ran
+  // out or ended during the hold): shown first, then sent as the total the shopper agreed to.
+  const [codTotal, setCodTotal] = useState<number | null>(null)
   const { q, error: quoteError, refresh } = useQuote(f.pincode)
   const seen = useRef<PublicQuote | null>(null)
   const attempt = useRef<{ sig: string; key: string } | null>(null)
@@ -66,6 +69,11 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
 
   const total = q ? (method === 'cod' ? q.cod?.total ?? 0 : method === 'prepaid' ? q.prepaid : q.prepaid) : 0
   const codOk = !!q?.cod
+  // The pay-online saving, said on both cards (never a COD surcharge: drip-pricing rule, spec § Rules).
+  const saving = q?.appliedPrepaid.find((a) => a.class === 'payment') ?? null
+  const code = useOfferCode()
+  const [typing, setTyping] = useState(false)
+  const [draftCode, setDraftCode] = useState('')
   const lines = q?.lines.filter((l) => l.qty > 0) ?? []
 
   const choose = (m: 'cod' | 'prepaid') => { if (!firstMethod.current) firstMethod.current = m; setMethod(m); setMsg(null) }
@@ -100,12 +108,12 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
     if (!check()) return
     setBusy(true); setMsg(null)
     const items = bag.get()
-    const sig = JSON.stringify([items, method, f.phone])
+    const sig = JSON.stringify([items, method, f.phone, code])
     if (!attempt.current || attempt.current.sig !== sig) attempt.current = { sig, key: randomKey() }
     let attribution: Record<string, string> = {}
     try { attribution = JSON.parse(ss.get(ATTR_KEY) ?? '{}') } catch { /* */ }
     const r = await api<{ token: string; method: 'cod' | 'prepaid'; total: number; pay: Pay | null; payError: string | null }>('/api/shop/orders', {
-      idempotencyKey: attempt.current.key, bag: items, method, expectedTotal: total,
+      idempotencyKey: attempt.current.key, bag: items, method, expectedTotal: total, ...(code ? { code } : {}),
       address: { phone: f.phone, name: f.name, pincode: f.pincode, addressLine: f.addressLine, area: f.area, landmark: f.landmark, city: f.city, state: f.state },
       facts: { firstMethod: firstMethod.current, attribution },
     })
@@ -154,9 +162,10 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
   async function switchToCod() {
     if (!failed || !q?.cod) return
     setBusy(true); setMsg(null)
-    const r = await api<{ kind: 'switched' | 'paid' }>('/api/shop/orders/cod', { token: failed.token, expectedTotal: q.cod.total })
+    const r = await api<{ kind: 'switched' | 'paid' }>('/api/shop/orders/cod', { token: failed.token, expectedTotal: codTotal ?? q.cod.total })
     setBusy(false)
     if (r.ok) return done(failed.token)
+    if (typeof r.data.codTotal === 'number') { setCodTotal(r.data.codTotal); setMsg({ tone: 'changed', text: `Pay on delivery for this order is ${inr(r.data.codTotal)}. Tap again to confirm.` }); return }
     if (r.data.quote) { setMsg({ tone: 'changed', text: changedText(seen.current, r.data.quote) }); await refresh(); return }
     setMsg({ tone: 'error', text: r.data.error ?? 'We could not switch to Pay on delivery. Try again.' })
   }
@@ -172,7 +181,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
   const sect = 'mb-2 mt-6 text-xs font-semibold uppercase tracking-[0.1em] text-store-sub'
   const button = useMemo(() => {
     if (!q || q.empty) return 'Nothing to pay for'
-    if (failed) return method === 'cod' ? `Pay on delivery · ${inr(q.cod?.total ?? 0)}` : `Try paying again · ${inr(failed.total)}`
+    if (failed) return method === 'cod' ? `Pay on delivery · ${inr(codTotal ?? q.cod?.total ?? 0)}` : `Try paying again · ${inr(failed.total)}`
     if (!method) return 'Choose how to pay'
     return method === 'cod' ? `Place order · ${inr(total)}` : `Pay · ${inr(total)}`
   }, [q, method, total, failed])
@@ -211,18 +220,43 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
         </div>
       </fieldset>
 
+      {q && (q.offers.listed.length > 0 || code || typing) ? <>
+        <h2 className={sect}>Offers</h2>
+        <ul className="space-y-2 text-sm" aria-label="Offers for this bag">
+          {q.offers.listed.map((l) => (
+            <li key={`${l.title}-${l.code ?? ''}`} className={`flex items-center gap-2 rounded-sm border p-2.5 ${l.applied ? 'border-store-good' : 'border-dashed border-store-line'}`}>
+              <span aria-hidden className={l.applied ? 'text-store-good' : 'text-store-sub'}>{l.applied ? '✓' : '○'}</span>
+              <span className="min-w-0 flex-1"><b className="font-medium">{l.title}</b>{l.code ? <span className="ml-1.5 rounded-sm border border-store-line px-1 font-mono text-xs">{l.code}</span> : null}
+                <span className="block text-store-sub">{l.need?.kind === 'add' ? `Add ${inr(l.need.amount)} more` : l.need?.kind === 'pay_online' ? 'When you pay online' : 'Applied'}</span></span>
+            </li>
+          ))}
+        </ul>
+      </> : null}
+      {q && <OfferProgress q={q} />}
+      {q && (code ? (
+        <p className="mt-2 text-sm" aria-live="polite">Code <b className="font-mono">{code}</b>{q.offers.code === 'applied' ? ' applied.' : <span className="text-store-bad"> — this code doesn’t work here.</span>}
+          {' '}<button type="button" className="min-h-11 underline" onClick={() => { offerCode.set(''); setDraftCode('') }}>Remove</button></p>
+      ) : typing ? (
+        <div className="mt-2 flex gap-2">
+          <label htmlFor="offer-code" className="sr-only">Offer code</label>
+          <input id="offer-code" value={draftCode} maxLength={20} autoCapitalize="characters" placeholder="Code" onChange={(e) => setDraftCode(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase())}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (draftCode) offerCode.set(draftCode) } }} className={`${field} font-mono`} />
+          <button type="button" disabled={!draftCode} onClick={() => offerCode.set(draftCode)} className="h-11 shrink-0 rounded-sm border border-store-ink px-4 text-sm font-medium disabled:opacity-50">Apply</button>
+        </div>
+      ) : <button type="button" className="mt-1 min-h-11 text-sm underline" onClick={() => setTyping(true)}>Have a code?</button>)}
+
       <h2 className={sect}>Payment</h2>
       <div role="radiogroup" aria-label="How to pay" className="space-y-2">
         {q && (
           <label className={`block cursor-pointer rounded-sm border bg-store-paper p-3 ${method === 'prepaid' ? 'border-store-ink shadow-[0_0_0_1px_var(--store-ink)]' : 'border-store-line'}`}>
             <span className="flex items-center gap-2"><input type="radio" name="pay" checked={method === 'prepaid'} onChange={() => choose('prepaid')} className="accent-store-ink" /><b className="font-medium">Pay online</b><span className="ml-auto tabular-nums">{inr(q.prepaid)}</span></span>
-            <span className="ml-6 block text-sm text-store-sub">UPI, cards, netbanking. Opens Razorpay.</span>
+            <span className="ml-6 block text-sm text-store-sub">UPI, cards, netbanking. Opens Razorpay.{saving ? <b className="ml-1 font-medium text-store-good">Saves {inr(saving.amount)}</b> : null}</span>
           </label>
         )}
         {q && (codOk ? (
           <label className={`block cursor-pointer rounded-sm border bg-store-paper p-3 ${method === 'cod' ? 'border-store-ink shadow-[0_0_0_1px_var(--store-ink)]' : 'border-store-line'}`}>
             <span className="flex items-center gap-2"><input type="radio" name="pay" checked={method === 'cod'} onChange={() => choose('cod')} className="accent-store-ink" /><b className="font-medium">Pay on delivery</b><span className="ml-auto tabular-nums">{inr(q.cod!.total)}</span></span>
-            <span className="ml-6 block text-sm text-store-sub">{q.cod!.charge ? `Includes a ${inr(q.cod!.charge)} Pay on delivery fee. ` : ''}Cash or UPI to the courier.</span>
+            <span className="ml-6 block text-sm text-store-sub">{q.cod!.charge ? `Includes a ${inr(q.cod!.charge)} Pay on delivery fee. ` : ''}Cash or UPI to the courier.{saving ? ` No ${inr(saving.amount)} online saving.` : ''}</span>
           </label>
         ) : (
           <div className="rounded-sm border border-store-line p-3 opacity-70"><b className="font-medium">Pay on delivery</b><p className="text-sm text-store-bad">{codWhyNotText(q.codWhyNot)}</p></div>
@@ -241,6 +275,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
       </ul>
       {q && (
         <div className="mt-2 space-y-1 text-sm">
+          <OfferRows applied={method === 'cod' ? q.cod?.applied ?? [] : q.appliedPrepaid.filter((a) => a.class !== 'payment' || method === 'prepaid')} />
           <p className="flex justify-between"><span>Delivery</span><span>{q.shipping ? inr(q.shipping) : 'Free'}</span></p>
           {method === 'cod' && q.cod?.charge ? <p className="flex justify-between"><span>Pay on delivery fee</span><span>{inr(q.cod.charge)}</span></p> : null}
           {q.arrives && <p className="flex justify-between text-store-sub"><span>Arrives</span><span>{dayRange(q.arrives)}</span></p>}

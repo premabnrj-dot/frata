@@ -58,7 +58,7 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
 
 /**
  * A shop's look before it ever published: Classic, from the two settings it has always had (themes plan T0). The one
- * definition: the lazy baseline row on first publish and the first draft read it; migration 0032's backfill is its
+ * definition: the lazy baseline row on first publish and the first draft read it; migration 0034's backfill is its
  * SQL twin (SQL can't import this; keep the two equal).
  */
 export function baselineRevision(accent: string, displayFont: string) {

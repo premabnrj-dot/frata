@@ -96,6 +96,8 @@ export default {
       await p.locator('body').click({ position: { x: 5, y: 700 } })
       await p.keyboard.press('?'); await p.getByRole('dialog', { name: 'Keyboard shortcuts' }).waitFor()
       await p.getByLabel('Use single-key shortcuts on this device').uncheck(); await p.keyboard.press('Escape')
+      // Its 200 ms exit must finish first: a ? pressed while it fades out finds the closing sheet, which then goes (race under load).
+      await p.getByRole('dialog', { name: 'Keyboard shortcuts' }).waitFor({ state: 'hidden' })
       await p.keyboard.press('j'); assert.equal(await p.getByTestId('row').textContent(), 'row 2')
       await p.keyboard.press('?'); await p.getByRole('dialog', { name: 'Keyboard shortcuts' }).waitFor()
       await p.getByLabel('Use single-key shortcuts on this device').check(); await p.keyboard.press('Escape')

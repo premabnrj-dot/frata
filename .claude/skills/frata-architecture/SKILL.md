@@ -2,8 +2,8 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.9.0
-  verified: 2026-11-07
+  version: 2.10.0
+  verified: 2026-11-08
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
 ---
@@ -237,7 +237,7 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   `liveRevision`. Draft = the newest revision with no publish row, at most one (replaced under the per-shop advisory
   lock `look:<tenant>`). Publishes are append-only; a published revision is frozen by `app_theme_revision_frozen`.
   Saves and publishes lock the row and check its `version`; Undo names the live revision it saw. The first publish
-  of a shop with no publish row records its baseline (`baselineRevision`; migration 0032 is its SQL twin).
+  of a shop with no publish row records its baseline (`baselineRevision`; migration 0034 is its SQL twin).
 - **Writes** are `src/app/(console)/console/look/actions.ts` (all `asMember`, a support visit refused). Every image
   in a layer is rebuilt by `acceptedBase(…, 'theme')` for this shop; uploads go to `tenants/<id>/theme/`.
 - **Preview** `/console/theme-preview/<revision>/…` (route group `(lookpreview)`, no-store, noindex) is the ONLY
@@ -266,6 +266,25 @@ shop can have or not (Messages, RTO Shield, Reviews…).
 Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
 `<Money paise>` to render; `formatInr` groups in lakh/crore. Profit is
 `orderProfit()` — never a margin computed inline.
+
+**Offers (O·1, docs/plans/2026-11-08-offers.md).** Core checkout pricing, not a module
+(`check:modules` forbids core importing module code).
+- **One engine:** `src/domains/checkout/discounts.ts` — `planOffers` (best per class: order →
+  thresholds on the bag after it → payment, prepaid only), `priceMethod` (spread by value to the
+  paise; each line's GST rate on its own discounted piece, **per way of paying**: line tax lives in
+  `MethodTotal`, never on `QuoteLine`).
+- **One repricer and one writer:** a placed order is priced again only by `amounts.reprice()` from
+  its stored lines and `order_discounts` (never today's offers), and written only by
+  `lib/orders/reprice.ts writeReprice()` — every money column of the order and its lines together.
+  Switch to COD, a capture after a switch and a retry go through them; a retry never reprices.
+- **Uses are derived:** `discountUses()`/`fits()` in `src/lib/db/discount-predicates.ts` (with
+  `liveDiscountSql`, twin of `offerStatus()`), counted through `discountUseSql`/`usesDiscount`
+  (parity-tested). Placement locks every offer the bag could get that has a limit, in id order,
+  before counting; an offer over a limit drops out and the shopper gets `changed`.
+- **The shopper's read** of offers is `liveOffers()` in `queries/checkout.ts` (terms only);
+  `publicQuote` maps offers to named fields (a test proves no id, term, limit or budget leaks).
+  Codes: one per order, unique per shop forever, fail-closed per-IP guess limit, one answer for
+  every failure.
 
 ## Config
 

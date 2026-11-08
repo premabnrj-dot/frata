@@ -83,6 +83,8 @@ function Invoice({ o, lines, shop }: { o: DocOrder; lines: DocLine[]; shop: DocS
   const inv = invoice(o, lines, shop)
   if (!inv) return <article className="break-after-page p-6"><p className="font-mono">{o.number}</p><p>Not packed yet: its invoice is issued when it is marked packed.</p></article>
   const intra = inv.supply === 'intra'
+  // Value and Discount columns only when an offer touched the order: an order without one prints as before.
+  const offs = inv.totals.discount > 0
   return (
     <article className="relative space-y-5 break-after-page bg-background p-6 text-sm text-foreground print:p-0">
       {inv.cancelled ? <p className="absolute right-6 top-6 rotate-[-8deg] border-4 border-danger-text px-3 py-1 text-2xl font-bold text-danger-text print:right-0 print:top-0">CANCELLED</p> : null}
@@ -100,7 +102,8 @@ function Invoice({ o, lines, shop }: { o: DocOrder; lines: DocLine[]; shop: DocS
       </div>
       <table className="w-full">
         <thead><tr className="border-b border-foreground text-left">
-          <th className="py-1">Item</th><th className="py-1">HSN</th><th className="py-1 text-right">Qty</th><th className="py-1 text-right">Taxable value</th>
+          <th className="py-1">Item</th><th className="py-1">HSN</th><th className="py-1 text-right">Qty</th>
+          {offs ? <><th className="py-1 text-right">Value</th><th className="py-1 text-right">Discount</th></> : null}<th className="py-1 text-right">Taxable value</th>
           {inv.kind === 'tax_invoice' ? <><th className="py-1 text-right">Rate</th>{intra ? <><th className="py-1 text-right">CGST</th><th className="py-1 text-right">SGST</th></> : <th className="py-1 text-right">IGST</th>}</> : null}
           <th className="py-1 text-right">Total</th>
         </tr></thead>
@@ -108,6 +111,7 @@ function Invoice({ o, lines, shop }: { o: DocOrder; lines: DocLine[]; shop: DocS
           {inv.lines.map((l, i) => (
             <tr key={i} className="border-b border-border">
               <td className="py-1.5">{l.title}</td><td className="py-1.5 font-mono">{l.hsn ?? '—'}</td><td className="py-1.5 text-right font-mono">{l.qty}</td>
+              {offs ? <><td className="py-1.5 text-right"><Money paise={paise(l.gross)} decimals /></td><td className="py-1.5 text-right">{l.discount ? <>−<Money paise={paise(l.discount)} decimals /></> : '—'}</td></> : null}
               <td className="py-1.5 text-right"><Money paise={paise(l.taxable)} decimals /></td>
               {inv.kind === 'tax_invoice' ? <><td className="py-1.5 text-right font-mono">{rate(l.rateBps)}</td>{intra ? <><td className="py-1.5 text-right"><Money paise={paise(l.cgst)} decimals /></td><td className="py-1.5 text-right"><Money paise={paise(l.sgst)} decimals /></td></> : <td className="py-1.5 text-right"><Money paise={paise(l.igst)} decimals /></td>}</> : null}
               <td className="py-1.5 text-right"><Money paise={paise(l.total)} decimals /></td>
@@ -115,7 +119,9 @@ function Invoice({ o, lines, shop }: { o: DocOrder; lines: DocLine[]; shop: DocS
           ))}
         </tbody>
         <tfoot><tr className="font-semibold">
-          <td className="py-2" colSpan={3}>Total</td><td className="py-2 text-right"><Money paise={paise(inv.totals.taxable)} decimals /></td>
+          <td className="py-2" colSpan={3}>Total</td>
+          {offs ? <><td className="py-2 text-right"><Money paise={paise(inv.totals.gross)} decimals /></td><td className="py-2 text-right">−<Money paise={paise(inv.totals.discount)} decimals /></td></> : null}
+          <td className="py-2 text-right"><Money paise={paise(inv.totals.taxable)} decimals /></td>
           {inv.kind === 'tax_invoice' ? <><td />{intra ? <><td className="py-2 text-right"><Money paise={paise(inv.totals.cgst)} decimals /></td><td className="py-2 text-right"><Money paise={paise(inv.totals.sgst)} decimals /></td></> : <td className="py-2 text-right"><Money paise={paise(inv.totals.igst)} decimals /></td>}</> : null}
           <td className="py-2 text-right"><Money paise={paise(inv.totals.total)} decimals /></td>
         </tr></tfoot>

@@ -1,12 +1,15 @@
 import 'server-only'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import type { ShopRules, VariantRow } from '@/domains/checkout/quote'
+import { DISCOUNT_STYLES, normalCode, type DiscountStyle, type DiscountTerms } from '@/domains/checkout/discounts'
 import type { Tx } from '@/lib/db'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { productImages, products, variants } from '@/lib/db/schema-catalogue'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { holdingSql, momentColumns, owedSql, standingSql } from '@/lib/db/order-predicates'
+import { discountUses, liveDiscountSql } from '@/lib/db/discount-predicates'
+import { discountCodes, discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import { canTakeOnline, keysFor } from '@/lib/payments/keys'
 
 // =============================================================================
@@ -62,8 +65,32 @@ export async function checkoutShop(tx: Tx, tenantId: string): Promise<CheckoutSh
   }
 }
 
+/**
+ * The shop's live offers as the engine reads them: terms only — never a limit, a budget or a count leaves this
+ * function (ADR-0003). An offer whose limit or budget is already reached is left out, so the bag never shows what
+ * placement would refuse; placement re-counts under a lock and stays the authority (plan review 12).
+ */
+export async function liveOffers(tx: Tx, tenantId: string, now: Date): Promise<DiscountTerms[]> {
+  const rows = await tx.select({
+    id: discounts.id, title: discounts.title, style: discounts.style, percentBps: discounts.percentBps, amountOff: discounts.amountOff, cap: discounts.cap,
+    minSubtotal: discounts.minSubtotal, combinesWithPayment: discounts.combinesWithPayment, listed: discounts.listed, code: discountCodes.code, codeId: discountCodes.id,
+    limitTotal: discounts.limitTotal, budget: discounts.budget,
+  }).from(discounts)
+    .leftJoin(discountCodes, and(eq(discountCodes.tenantId, discounts.tenantId), eq(discountCodes.discountId, discounts.id)))
+    .where(and(eq(discounts.tenantId, tenantId), liveDiscountSql(now)))
+  const limited = rows.filter((r) => r.limitTotal !== null || r.budget !== null)
+  const uses = await discountUses(tx, tenantId, limited.map((r) => r.id), now)
+  const full = new Set(limited.filter((r) => { const u = uses.get(r.id); return (r.limitTotal !== null && (u?.n ?? 0) >= r.limitTotal) || (r.budget !== null && (u?.given ?? 0) >= Number(r.budget)) }).map((r) => r.id))
+  const seen = new Set<string>()
+  // One row per offer (O·1 offers carry at most one code; unique codes come in O·2 with their own lookup).
+  return rows.filter((r) => !full.has(r.id) && (DISCOUNT_STYLES as readonly string[]).includes(r.style) && !seen.has(r.id) && seen.add(r.id)).map((r) => ({
+    id: r.id, title: r.title, style: r.style as DiscountStyle, percentBps: r.percentBps, amountOff: r.amountOff === null ? null : Number(r.amountOff), cap: r.cap === null ? null : Number(r.cap),
+    minSubtotal: Number(r.minSubtotal), combinesWithPayment: r.combinesWithPayment, listed: r.listed, code: normalCode(r.code), codeId: r.codeId,
+  }))
+}
+
 export const quoteData = (tenantId: string, ids: string[], now: Date) =>
-  withTenant(tenantId, async (tx) => ({ shop: await checkoutShop(tx, tenantId), rows: await variantRows(tx, tenantId, ids, now) }))
+  withTenant(tenantId, async (tx) => ({ shop: await checkoutShop(tx, tenantId), rows: await variantRows(tx, tenantId, ids, now), offers: await liveOffers(tx, tenantId, now) }))
 
 /** What the shopper's order page shows — masked address and phone (owner call 4). Found by the link token's hash only. */
 export async function orderPage(tx: Tx, tenantId: string, tokenHash: string) {
@@ -76,5 +103,8 @@ export async function orderPage(tx: Tx, tenantId: string, tokenHash: string) {
   const lines = await tx.select({ title: orderLines.title, optionValues: orderLines.optionValues, qty: orderLines.qty, unitPrice: orderLines.unitPrice, imageBase: orderLines.imageBase,
     imageWidths: orderLines.imageWidths, kind: orderLines.kind, shipsBy: orderLines.shipsBy })
     .from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id))).orderBy(orderLines.position)
-  return { ...o, lines }
+  // The offers it got: title, class and amount only (never an offer's id, limits or budget).
+  const offers = (await tx.select({ title: orderDiscounts.title, class: orderDiscounts.class, amount: orderDiscounts.amount }).from(orderDiscounts)
+    .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, o.id)))).map((d) => ({ ...d, amount: Number(d.amount) }))
+  return { ...o, lines, offers }
 }

@@ -12,6 +12,7 @@ import { owedSql, stateSql } from '@/lib/db/order-predicates'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { liveRevision, revisionOf, type Revision } from '@/lib/themes/look'
 import { withTenant } from '@/lib/db/tenant'
+import { discountCodes, discounts } from '@/lib/db/schema-discounts'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 
 // =============================================================================
@@ -248,6 +249,22 @@ export const previewLook = (tenantId: string) => coreLook(tenantId)
 export const previewBestSellers = (tenantId: string, days: number) => coreBestSellers(tenantId, days)
 
 export const shopSettingsFor = shopCached('shop', 'shop', (t) => coreShop(t))
+
+/**
+ * The offer in the shop's announcement bar (one at most), as RAW terms and timestamps: whether it is live is decided
+ * when the page renders (offerStatus) — pages regenerate every 60 s, so up to a minute late. Shopper-safe fields only — never a limit, budget or count (ADR-0003).
+ */
+export const shopAnnouncement = shopCached('announce', 'shop', (tenantId) => withTenant(tenantId, async (tx) => {
+  const [r] = await tx.select({
+    title: discounts.title, style: discounts.style, percentBps: discounts.percentBps, amountOff: discounts.amountOff, minSubtotal: discounts.minSubtotal, listed: discounts.listed,
+    startsAt: discounts.startsAt, endsAt: discounts.endsAt, startedAt: discounts.startedAt, pausedAt: discounts.pausedAt, endedAt: discounts.endedAt, code: discountCodes.code,
+  }).from(discounts).leftJoin(discountCodes, and(eq(discountCodes.tenantId, discounts.tenantId), eq(discountCodes.discountId, discounts.id)))
+    .where(and(eq(discounts.tenantId, tenantId), eq(discounts.announce, true))).limit(1)
+  if (!r) return null
+  const iso = (d: Date | null) => (d ? d.toISOString() : null)
+  return { title: r.title, style: r.style, percentBps: r.percentBps, amountOff: r.amountOff === null ? null : Number(r.amountOff), minSubtotal: Number(r.minSubtotal),
+    code: r.listed && r.code ? r.code.toUpperCase() : null, startsAt: r.startsAt.toISOString(), endsAt: iso(r.endsAt), startedAt: iso(r.startedAt), pausedAt: iso(r.pausedAt), endedAt: iso(r.endedAt) }
+}))
 export const shopCatalogue = shopCached('catalogue', 'catalogue', (t) => coreCatalogue(t, false))
 const shopHandles = shopCached('handles', 'catalogue', (t) => coreHandles(t, false))
 const shopProductRow = shopCached('product', 'catalogue', (t, handle: string) => coreProduct(t, handle, false))

@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { taxOrder } from '@/domains/tax/gst'
+import { priceMethod } from '@/domains/checkout/discounts'
 import { addressLines, invoice, packingSlip, type DocLine, type DocOrder } from '../documents'
 
 const gross = [{ gross: 249000, unitPrice: 249000, hsn: '6211' }, { gross: 320000, unitPrice: 320000, hsn: '6211' }]
 const t = taxOrder(gross, 7900 + 4900, { registered: true, pricesIncludeGst: true })
 const lines: DocLine[] = t.lines.map((l, i) => ({
-  taxableValue: l.taxable, gst: l.gst, gstBps: l.bps, chargeTaxable: l.chargeTaxable, chargeGst: l.chargeGst,
+  taxableValue: l.taxable, gst: l.gst, gstBps: l.bps, chargeTaxable: l.chargeTaxable, chargeGst: l.chargeGst, unitPrice: gross[i]!.unitPrice, lineDiscount: 0,
   title: ['Chanderi kurta set', 'Silk kurta'][i]!, optionValues: ['M', 'Rust'], qty: 1, sku: `KS-${i}`, hsn: '6211', imageBase: null, imageWidths: null,
 }))
 const gstTotal = t.lines.reduce((a, l) => a + l.gst, 0) + t.chargesGst
@@ -17,6 +18,18 @@ const order = (o: Partial<DocOrder> = {}): DocOrder => ({
 const shop = { name: 'Kesar Studio', legalName: 'Kesar Studio LLP', address: 'Jaipur', returnAddress: '' }
 
 describe('the invoice', () => {
+  it('an offer: value and discount before GST at each line rate, value − discount = taxable, totals = the order', () => {
+    // ₹555 off a ₹2,800 kurta and a ₹900 dupatta; free delivery; paid online.
+    const items = [{ gross: 280000, qty: 1, hsn: '6211' }, { gross: 90000, qty: 1, hsn: '6211' }]
+    const m = priceMethod(items, 55500, 0, 0, { registered: true, pricesIncludeGst: true })
+    const ls: DocLine[] = m.lines.map((l, i) => ({ taxableValue: l.taxable, gst: l.gst, gstBps: l.gstBps, chargeTaxable: 0, chargeGst: 0, unitPrice: items[i]!.gross, lineDiscount: l.discount,
+      title: ['Linen kurta', 'Mul dupatta'][i]!, optionValues: [], qty: 1, sku: null, hsn: '6211', imageBase: null, imageWidths: null }))
+    const inv = invoice(order({ paymentMethod: 'prepaid', paidAt: new Date(), subtotal: 370000, shipping: 0, codCharge: 0, gstTotal: m.gst, total: m.total }), ls, shop)!
+    expect(inv.totals.total).toBe(314500)
+    for (const l of inv.lines) expect(l.gross - l.discount).toBe(l.taxable)
+    expect(inv.lines.map((l) => l.rateBps)).toEqual([500, 500]) // ₹2,380 after the offer: 5%, not 18%
+    expect(inv.lines[0]!.gross).toBe(266667) // ₹2,800 at the line's 5%, before GST
+  })
   it('adds up to the order: taxable + GST = total, GST = what checkout charged', () => {
     const inv = invoice(order(), lines, shop)!
     expect(inv.kind).toBe('tax_invoice')

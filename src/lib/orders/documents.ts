@@ -41,6 +41,7 @@ export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], 
   const ls = await tx.select({
     orderId: orderLines.orderId, title: orderLines.title, optionValues: orderLines.optionValues, qty: orderLines.qty, sku: orderLines.sku, hsn: orderLines.hsn,
     imageBase: orderLines.imageBase, imageWidths: orderLines.imageWidths, taxableValue: orderLines.taxableValue, gst: orderLines.gst, gstBps: orderLines.gstBps,
+    unitPrice: orderLines.unitPrice, lineDiscount: orderLines.lineDiscount,
     chargeTaxable: orderLines.chargeTaxable, chargeGst: orderLines.chargeGst,
   }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), inArray(orderLines.orderId, os.map((o) => o.id)))).orderBy(asc(orderLines.position))
   // In the order asked for (a bulk print keeps the queue's order).
@@ -54,7 +55,7 @@ export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], 
       const o = byNumber.get(n)
       if (!o) return [] // unknown or another shop's number: silently not printed
       if (kind === 'slip') { const st = orderState(o, now); if (!applies('print', st)) { skipped.push({ number: `${prefix}-${n}`, state: st }); return [] } }
-      const lines = ls.filter((l) => l.orderId === o.id).map(({ orderId: _o, ...l }) => ({ ...l, taxableValue: Number(l.taxableValue), gst: Number(l.gst), chargeTaxable: l.chargeTaxable === null ? null : Number(l.chargeTaxable), chargeGst: l.chargeGst === null ? null : Number(l.chargeGst) }))
+      const lines = ls.filter((l) => l.orderId === o.id).map(({ orderId: _o, ...l }) => ({ ...l, taxableValue: Number(l.taxableValue), gst: Number(l.gst), unitPrice: Number(l.unitPrice), lineDiscount: Number(l.lineDiscount), chargeTaxable: l.chargeTaxable === null ? null : Number(l.chargeTaxable), chargeGst: l.chargeGst === null ? null : Number(l.chargeGst) }))
       const doc: DocOrder = {
         ...o, number: `${prefix}-${o.number}`, subtotal: Number(o.subtotal), shipping: Number(o.shipping), codCharge: Number(o.codCharge), gstTotal: Number(o.gstTotal), total: Number(o.total),
       }

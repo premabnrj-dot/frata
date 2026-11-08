@@ -1,6 +1,6 @@
 {
-  "id": "d3dc2ee7-9f2d-4fce-a70a-38abe72456fa",
-  "prevId": "cc1499b2-6e16-44d5-a7f1-0217fd1175d7",
+  "id": "ac735e4d-13ea-4283-b8dd-156ddc1bc5ee",
+  "prevId": "8bbb62b2-1c0c-4f2e-aff9-f140b6a6a24d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3822,6 +3822,13 @@
             "as": "total - gst_total"
           }
         },
+        "discount": {
+          "name": "discount",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "merchandise_net": {
           "name": "merchandise_net",
           "type": "bigint",
@@ -4159,28 +4166,6 @@
           "method": "btree",
           "concurrently": false
         },
-        "orders_tenant_delivered": {
-          "name": "orders_tenant_delivered",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "delivered_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "where": "\"orders\".\"delivered_at\" is not null",
-          "concurrently": false
-        },
         "orders_tenant_token": {
           "name": "orders_tenant_token",
           "columns": [
@@ -4347,7 +4332,11 @@
         },
         "orders_total": {
           "name": "orders_total",
-          "value": "\"orders\".\"total\" = \"orders\".\"subtotal\" + \"orders\".\"shipping\" + \"orders\".\"cod_charge\" + case when \"orders\".\"prices_include_gst\" then 0 else \"orders\".\"gst_total\" end"
+          "value": "\"orders\".\"total\" = \"orders\".\"subtotal\" - \"orders\".\"discount\" + \"orders\".\"shipping\" + \"orders\".\"cod_charge\" + case when \"orders\".\"prices_include_gst\" then 0 else \"orders\".\"gst_total\" end"
+        },
+        "orders_discount": {
+          "name": "orders_discount",
+          "value": "\"orders\".\"discount\" >= 0 and \"orders\".\"discount\" <= \"orders\".\"subtotal\""
         },
         "orders_phone": {
           "name": "orders_phone",
@@ -5444,8 +5433,8 @@
       },
       "isRLSEnabled": false
     },
-    "public.shop_theme_publishes": {
-      "name": "shop_theme_publishes",
+    "public.discount_codes": {
+      "name": "discount_codes",
       "schema": "",
       "columns": {
         "id": {
@@ -5461,165 +5450,17 @@
           "primaryKey": false,
           "notNull": true
         },
-        "revision_id": {
-          "name": "revision_id",
+        "discount_id": {
+          "name": "discount_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "published_at": {
-          "name": "published_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "published_by": {
-          "name": "published_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "published_by_email": {
-          "name": "published_by_email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "shop_theme_publishes_latest": {
-          "name": "shop_theme_publishes_latest",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "published_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        },
-        "shop_theme_publishes_revision_idx": {
-          "name": "shop_theme_publishes_revision_idx",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "revision_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        }
-      },
-      "foreignKeys": {
-        "shop_theme_publishes_tenant_id_tenants_id_fk": {
-          "name": "shop_theme_publishes_tenant_id_tenants_id_fk",
-          "tableFrom": "shop_theme_publishes",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "tableTo": "tenants",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
-        },
-        "shop_theme_publishes_revision": {
-          "name": "shop_theme_publishes_revision",
-          "tableFrom": "shop_theme_publishes",
-          "columnsFrom": [
-            "tenant_id",
-            "revision_id"
-          ],
-          "tableTo": "shop_theme_revisions",
-          "columnsTo": [
-            "tenant_id",
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.shop_theme_revisions": {
-      "name": "shop_theme_revisions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "theme_key": {
-          "name": "theme_key",
+        "code": {
+          "name": "code",
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "theme_version": {
-          "name": "theme_version",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "style_key": {
-          "name": "style_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "settings": {
-          "name": "settings",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
         },
         "created_at": {
           "name": "created_at",
@@ -5627,42 +5468,11 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_by_email": {
-          "name": "created_by_email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_by": {
-          "name": "updated_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_by_email": {
-          "name": "updated_by_email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
-        "shop_theme_revisions_recent": {
-          "name": "shop_theme_revisions_recent",
+        "discount_codes_tenant_code": {
+          "name": "discount_codes_tenant_code",
           "columns": [
             {
               "expression": "tenant_id",
@@ -5671,7 +5481,28 @@
               "nulls": "last"
             },
             {
-              "expression": "created_at",
+              "expression": "upper(\"code\")",
+              "isExpression": true,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "discount_codes_discount": {
+          "name": "discount_codes_discount",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "discount_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5684,9 +5515,9 @@
         }
       },
       "foreignKeys": {
-        "shop_theme_revisions_tenant_id_tenants_id_fk": {
-          "name": "shop_theme_revisions_tenant_id_tenants_id_fk",
-          "tableFrom": "shop_theme_revisions",
+        "discount_codes_tenant_id_tenants_id_fk": {
+          "name": "discount_codes_tenant_id_tenants_id_fk",
+          "tableFrom": "discount_codes",
           "columnsFrom": [
             "tenant_id"
           ],
@@ -5695,13 +5526,241 @@
             "id"
           ],
           "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "restrict"
+        },
+        "discount_codes_discount_fk": {
+          "name": "discount_codes_discount_fk",
+          "tableFrom": "discount_codes",
+          "columnsFrom": [
+            "tenant_id",
+            "discount_id"
+          ],
+          "tableTo": "discounts",
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "shop_theme_revisions_tenant_id": {
-          "name": "shop_theme_revisions_tenant_id",
+        "discount_codes_tenant_discount_id_key": {
+          "name": "discount_codes_tenant_discount_id_key",
+          "columns": [
+            "tenant_id",
+            "discount_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "discount_codes_code": {
+          "name": "discount_codes_code",
+          "value": "\"discount_codes\".\"code\" ~ '^[A-Za-z0-9]{4,20}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.discounts": {
+      "name": "discounts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "style": {
+          "name": "style",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "percent_bps": {
+          "name": "percent_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amount_off": {
+          "name": "amount_off",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cap": {
+          "name": "cap",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "min_subtotal": {
+          "name": "min_subtotal",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "limit_total": {
+          "name": "limit_total",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "limit_per_phone": {
+          "name": "limit_per_phone",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "budget": {
+          "name": "budget",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "starts_at": {
+          "name": "starts_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ends_at": {
+          "name": "ends_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_by": {
+          "name": "started_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "paused_at": {
+          "name": "paused_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ended_at": {
+          "name": "ended_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "listed": {
+          "name": "listed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "combines_with_payment": {
+          "name": "combines_with_payment",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "announce": {
+          "name": "announce",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "discounts_tenant_live": {
+          "name": "discounts_tenant_live",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"discounts\".\"started_at\" is not null and \"discounts\".\"ended_at\" is null",
+          "concurrently": false
+        },
+        "discounts_one_announce": {
+          "name": "discounts_one_announce",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"discounts\".\"announce\" and \"discounts\".\"started_at\" is not null and \"discounts\".\"ended_at\" is null",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "discounts_tenant_id_tenants_id_fk": {
+          "name": "discounts_tenant_id_tenants_id_fk",
+          "tableFrom": "discounts",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenants",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "discounts_tenant_id_key": {
+          "name": "discounts_tenant_id_key",
           "columns": [
             "tenant_id",
             "id"
@@ -5711,23 +5770,351 @@
       },
       "policies": {},
       "checkConstraints": {
-        "shop_theme_revisions_key": {
-          "name": "shop_theme_revisions_key",
-          "value": "\"shop_theme_revisions\".\"theme_key\" in ('classic','editorial','bazaar','minimal','atelier')"
+        "discounts_style": {
+          "name": "discounts_style",
+          "value": "\"discounts\".\"style\" in ('order_off','free_shipping','pay_online')"
         },
-        "shop_theme_revisions_version_shape": {
-          "name": "shop_theme_revisions_version_shape",
-          "value": "\"shop_theme_revisions\".\"theme_version\" ~ '^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}$'"
+        "discounts_value": {
+          "name": "discounts_value",
+          "value": "case when \"discounts\".\"style\" = 'free_shipping' then \"discounts\".\"percent_bps\" is null and \"discounts\".\"amount_off\" is null and \"discounts\".\"cap\" is null\n    else (\"discounts\".\"percent_bps\" is null) <> (\"discounts\".\"amount_off\" is null) end"
         },
-        "shop_theme_revisions_style_shape": {
-          "name": "shop_theme_revisions_style_shape",
-          "value": "\"shop_theme_revisions\".\"style_key\" ~ '^[a-z0-9-]{1,40}$'"
+        "discounts_money": {
+          "name": "discounts_money",
+          "value": "(\"discounts\".\"percent_bps\" is null or \"discounts\".\"percent_bps\" between 1 and 10000) and (\"discounts\".\"amount_off\" is null or \"discounts\".\"amount_off\" > 0)\n    and (\"discounts\".\"cap\" is null or \"discounts\".\"cap\" > 0) and \"discounts\".\"min_subtotal\" >= 0 and (\"discounts\".\"budget\" is null or \"discounts\".\"budget\" > 0)\n    and (\"discounts\".\"limit_total\" is null or \"discounts\".\"limit_total\" > 0) and (\"discounts\".\"limit_per_phone\" is null or \"discounts\".\"limit_per_phone\" > 0)"
         },
-        "shop_theme_revisions_size": {
-          "name": "shop_theme_revisions_size",
-          "value": "octet_length(\"shop_theme_revisions\".\"settings\"::text) <= 65536"
+        "discounts_window": {
+          "name": "discounts_window",
+          "value": "\"discounts\".\"ends_at\" is null or \"discounts\".\"ends_at\" > \"discounts\".\"starts_at\""
+        },
+        "discounts_title": {
+          "name": "discounts_title",
+          "value": "length(\"discounts\".\"title\") between 1 and 60"
+        },
+        "discounts_started_by": {
+          "name": "discounts_started_by",
+          "value": "(\"discounts\".\"started_at\" is null) = (\"discounts\".\"started_by\" is null)"
         }
       },
+      "isRLSEnabled": false
+    },
+    "public.order_discounts": {
+      "name": "order_discounts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "discount_id": {
+          "name": "discount_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code_id": {
+          "name": "code_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "class": {
+          "name": "class",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount": {
+          "name": "amount",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "style": {
+          "name": "style",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "percent_bps": {
+          "name": "percent_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amount_off": {
+          "name": "amount_off",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cap": {
+          "name": "cap",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "min_subtotal": {
+          "name": "min_subtotal",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "order_discounts_order_class": {
+          "name": "order_discounts_order_class",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "order_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "class",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "order_discounts_discount": {
+          "name": "order_discounts_discount",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "discount_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "order_discounts_tenant_id_tenants_id_fk": {
+          "name": "order_discounts_tenant_id_tenants_id_fk",
+          "tableFrom": "order_discounts",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenants",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "order_discounts_order_fk": {
+          "name": "order_discounts_order_fk",
+          "tableFrom": "order_discounts",
+          "columnsFrom": [
+            "tenant_id",
+            "order_id"
+          ],
+          "tableTo": "orders",
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "order_discounts_discount_fk": {
+          "name": "order_discounts_discount_fk",
+          "tableFrom": "order_discounts",
+          "columnsFrom": [
+            "tenant_id",
+            "discount_id"
+          ],
+          "tableTo": "discounts",
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "order_discounts_code_fk": {
+          "name": "order_discounts_code_fk",
+          "tableFrom": "order_discounts",
+          "columnsFrom": [
+            "tenant_id",
+            "discount_id",
+            "code_id"
+          ],
+          "tableTo": "discount_codes",
+          "columnsTo": [
+            "tenant_id",
+            "discount_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "order_discounts_class": {
+          "name": "order_discounts_class",
+          "value": "\"order_discounts\".\"class\" in ('order','shipping','payment')"
+        },
+        "order_discounts_amount": {
+          "name": "order_discounts_amount",
+          "value": "\"order_discounts\".\"amount\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.price_history": {
+      "name": "price_history",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "variant_id": {
+          "name": "variant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "price": {
+          "name": "price",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "from_at": {
+          "name": "from_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "price_history_variant": {
+          "name": "price_history_variant",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "variant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "from_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "price_history_tenant_id_tenants_id_fk": {
+          "name": "price_history_tenant_id_tenants_id_fk",
+          "tableFrom": "price_history",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenants",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "price_history_variant_fk": {
+          "name": "price_history_variant_fk",
+          "tableFrom": "price_history",
+          "columnsFrom": [
+            "tenant_id",
+            "variant_id"
+          ],
+          "tableTo": "variants",
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     }
   },

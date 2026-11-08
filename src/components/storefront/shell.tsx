@@ -23,8 +23,7 @@ export function ShopShell({ shop, href, banner, children, gated = false, live = 
   const tabs = s.bottomTabs && !gated
   return (
     <div data-store-theme="" {...settingAttrs(t)} className={`${STORE_FONT_VARS} flex min-h-dvh flex-col`} style={{ ...settingVars(t), '--store-display': displayFamily(s.pairing) } as React.CSSProperties}>
-      {banner}
-      {s.announcement && !gated && <Announcement a={s.announcement} t={t} href={href} />}
+      {banner ?? (s.announcement && !gated && <Announcement a={s.announcement} t={t} href={href} />)}
       <header className={`border-b border-store-line ${s.sticky ? 'sticky top-0 z-30 bg-store-paper' : ''}`}>
         {s.header === 'centred' || s.header === 'minimal'
           ? <MenuHeader shop={shop} href={href} gated={gated} live={live} minimal={s.header === 'minimal'} />

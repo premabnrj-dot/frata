@@ -10,4 +10,5 @@
 // Bare `cost` and `margin` are NOT here: `margin` is a CSS key.
 // =============================================================================
 
-export const SENTINELS = ['cogs', 'forwardShipping', 'rtoShipping', 'gatewayBps', 'platformFee', 'adCost', 'codFee', 'unitCost', 'unit_cost']
+// Offers (offers plan review 17): only names the server derives — an offer's remaining budget and its use count.
+export const SENTINELS = ['cogs', 'forwardShipping', 'rtoShipping', 'gatewayBps', 'platformFee', 'adCost', 'codFee', 'unitCost', 'unit_cost', 'budgetLeft', 'useCount']

@@ -3,21 +3,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { api, codWhyNotText, inr, type PublicQuote } from './shop-client'
-import { bag, captureAttribution, useBag } from './bag-store'
+import { bag, captureAttribution, useBag, useOfferCode } from './bag-store'
 
 /** Re-price the bag on the server whenever it changes; the bag follows what can be bought. */
 export function useQuote(pincode?: string) {
   const items = useBag()
+  const code = useOfferCode()
   const [q, setQ] = useState<PublicQuote | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const key = JSON.stringify([items, pincode ?? null])
+  // A half-typed pincode is not a new price: only a whole one re-prices the bag (and re-sends the code).
+  const pin = pincode && /^[1-9][0-9]{5}$/.test(pincode) ? pincode : null
+  const key = JSON.stringify([items, pin, code])
   const seq = useRef(0)
   const refresh = useCallback(async () => {
     if (!items.length) { setQ(null); return null }
     const n = ++seq.current
     setLoading(true)
-    const r = await api<{ quote: PublicQuote }>('/api/shop/quote', { bag: items, ...(pincode && /^[1-9][0-9]{5}$/.test(pincode) ? { pincode } : {}) })
+    const r = await api<{ quote: PublicQuote }>('/api/shop/quote', { bag: items, ...(pincode && /^[1-9][0-9]{5}$/.test(pincode) ? { pincode } : {}), ...(code ? { code } : {}) })
     if (n !== seq.current) return null
     setLoading(false)
     if (!r.ok) { setError(r.data.error ?? 'Could not load your bag.'); return null }
@@ -80,6 +83,8 @@ export function BagContents({ onCheckout, onKeepShopping }: { onCheckout: () => 
       </ul>
       {q && buyable.length > 0 && (
         <div className="space-y-1 border-t border-store-line pt-3 text-sm">
+          <OfferProgress q={q} />
+          <OfferRows applied={q.appliedPrepaid} />
           <p className="flex justify-between"><span>Delivery</span><span>{q.shipping ? inr(q.shipping) : 'Free'}</span></p>
           {q.cod ? q.cod.charge > 0 && <p className="flex justify-between text-store-sub"><span>Pay on delivery adds {inr(q.cod.charge)}</span><span>if you choose it</span></p>
             : <p className="text-store-sub">{codWhyNotText(q.codWhyNot)}</p>}
@@ -91,6 +96,23 @@ export function BagContents({ onCheckout, onKeepShopping }: { onCheckout: () => 
       {!q && !error && <p className="text-sm text-store-sub">Pricing your bag…</p>}
     </div>
   )
+}
+
+/**
+ * What each offer saved (offers spec § Showcase): the order offer, free delivery, and the pay-online saving marked as
+ * such. Titles and amounts come from the server; nothing is worked out here.
+ */
+export function OfferRows({ applied }: { applied: PublicQuote['appliedPrepaid'] }) {
+  return <>{applied.map((a) => (
+    <p key={a.class} className="flex justify-between text-store-good"><span>{a.class === 'payment' ? `${a.title} (paying online)` : a.class === 'shipping' ? `${a.title}: free delivery` : a.title}</span><span className="tabular-nums">−{inr(a.amount)}</span></p>
+  ))}</>
+}
+
+/** The nearest listed offer the bag misses by an amount: "₹420 more for Diwali". One line, never a timer. */
+export function OfferProgress({ q }: { q: PublicQuote }) {
+  const near = q.offers.listed.filter((l) => l.need?.kind === 'add').sort((a, b) => (a.need as { amount: number }).amount - (b.need as { amount: number }).amount)[0]
+  if (!near || near.need?.kind !== 'add') return null
+  return <p className="rounded-sm bg-store-chip px-3 py-2 text-sm"><b className="tabular-nums">{inr(near.need.amount)} more</b> for {near.title}</p>
 }
 
 /** The header's bag button and the drawer it opens (also opened by Add to bag). */
