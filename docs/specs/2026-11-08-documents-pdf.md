@@ -1,5 +1,5 @@
 # Documents as PDFs: a shop's packing slips, invoices, credit notes and labels, in the shop's own brand
-Status: draft (mockup awaiting owner) · Date: 2026-11-08 · Mockup: see the session's documents artifact · Approved: —
+Status: draft (mockup awaiting owner) · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/132Kvnvy18BS9cLGQRxbpo (`docs/mockups/2026-11-08-documents-pdf.html`) · Approved: —
 Research: `docs/research/2026-11-08-documents-and-billing.md` § Documents (library tests rendered in this session).
 
 ## Goal

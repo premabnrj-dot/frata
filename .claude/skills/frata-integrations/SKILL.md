@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.6.0
+  version: 1.7.0
   verified: 2026-11-08
   decisions: [ADR-0006]
 ---
@@ -263,3 +263,27 @@ Earlier: consent managers from 13 Nov 2026; notice,
 consent, processor contracts and 72 h breach reporting from 13 May 2027 [V].
 Frata is a processor for each merchant's shoppers; using one merchant's shopper
 data for another needs a separate decision (CLAUDE.md § deliberately absent).
+
+## Merchant billing (Frrata bills merchants) — checked 2026-11-08
+
+- RBI Digital Payments – E-mandate Framework, 2026 (21 Apr 2026, RBI/DPSS/2026-27/396) covers cards, PPI, UPI;
+  NACH not in scope. Without extra authentication up to ₹15,000 a debit (₹1,00,000 only for insurance, mutual funds,
+  credit card bills); first debit always authenticated; fixed or variable amount, the customer may set a maximum;
+  notice ≥ 24 h before EVERY debit (merchant, amount, date/time, mandate ref, reason) [V, rbi.org.in MD id=13374].
+- So a merchant whose monthly bill exceeds ₹15,000 approves each debit on a card or UPI mandate (Shopify India does
+  this) [V, help.shopify.com india-pay-bills, undated, cites 13 Jul 2026]; eNACH avoids it.
+- Razorpay Subscriptions: fixed plan amount per cycle; Add-ons DEPRECATED (FAQ) though the overview still lists them;
+  a live amount change only for card-authorised subscriptions; retries T+1..T+3, then `halted` [V, lastmod 2026-10-08].
+- Variable monthly amounts → Razorpay Recurring Payments (token; we start each charge; cards, UPI Autopay, eMandate,
+  paper NACH) [V, llm-docs, undated]. Who sends the pre-debit notice is not documented [U]: Frrata sends its own.
+- Razorpay Invoices API cannot make GST-compliant invoices → Frrata issues its own tax invoice [V, lastmod 2026-10-14].
+- Cashfree On-Demand: charge any amount up to the authorised maximum; no auto-retry on eNACH or card, 3 on UPI; ≥ 25 h
+  between notice and UPI debit; eNACH approval 24–48 h [V, Cashfree FAQ, undated].
+- Frrata stores only the gateway's customer / token / mandate id and status, never card or bank details [U for the
+  current RBI text].
+- GST (CBIC unreachable 2026-11-08): place of supply s.12(2) IGST and Circular 242/36/2024 [U, 2024-12-31]; Rule 46
+  incl. 16-character serial [U]; e-invoicing above ₹5 cr [S, 2026-03-13]; SAC for SaaS unresolved (998315 most cited)
+  [U]; TDS moved to Income-tax Act 2025 s.393 from 1 Apr 2026 [S]. **A CA confirms before the first invoice.**
+- Shopify reference: 30-day cycles, apps on a separate cycle; app plans priced in USD; India pays in INR (UPI; cards via
+  Razorpay); unpaid → store frozen, no grace [V, help.shopify.com, undated]. Frrata never blocks a shop.
+- Details and the research table: `docs/research/2026-11-08-documents-and-billing.md` § Billing.

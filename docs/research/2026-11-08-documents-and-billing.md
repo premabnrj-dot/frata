@@ -35,5 +35,27 @@ Vercel functions (docs updated 2026-08-24): 250 MB uncompressed; 2 GB / 1 vCPU; 
 - 4×6 in (100 × 150 mm) thermal labels: Shiprocket sells 100 × 150 mm rolls (page undated); "no current source found"
   for a dated Shiprocket statement; verify against the Shiprocket API's own label at S·1.
 
-## Billing
-See § Billing below (integration-researcher, 2026-11-08).
+## Billing (integration-researcher, checked 2026-11-08)
+
+| Fact | Status | Source · date |
+|---|---|---|
+| RBI Digital Payments – E-mandate Framework, 2026 (RBI/DPSS/2026-27/396) consolidates cards, PPI, UPI e-mandates; NACH/eNACH not in scope | V | rbi.org.in MD id=13374 · 2026-04-21 |
+| No extra authentication up to ₹15,000 a debit; ₹1,00,000 only for insurance, mutual funds, credit card bills (not SaaS) | V | same |
+| Variable-amount mandates allowed, customer may set a maximum; first debit always authenticated | V | same |
+| Notice ≥ 24 h before EVERY debit (merchant, amount, date/time, mandate ref, reason) | V | same |
+| Razorpay Subscriptions add-ons deprecated (FAQ); a live UPI/eMandate subscription cannot change amount; retries T+1..T+3 then halted | V | razorpay.com/docs subscriptions FAQ, payment-retries · lastmod 2026-10-08 |
+| Variable monthly amounts → Razorpay Recurring Payments (token; merchant-initiated charges; card, UPI Autopay, eMandate, NACH) | V | razorpay llm-docs recurring-payments (undated) |
+| Razorpay Invoices API cannot produce GST-compliant invoices | V | razorpay api invoices · lastmod 2026-10-14 |
+| Smart Collect: virtual accounts (NEFT/RTGS/IMPS; 2.0 adds UPI) | V | razorpay llm-docs smart-collect (undated) |
+| Cashfree On-Demand: charge up to an authorised maximum; no auto-retry on eNACH/card, 3 on UPI; ≥ 25 h notice for UPI | V (undated) | cashfree.com/docs subscription FAQ (cites API 2026-01-01) |
+| Shopify India: INR, UPI; cards via Razorpay; above ₹15,000 extra approval; unpaid → frozen, no grace | V (undated) | help.shopify.com india-pay-bills (cites 2026-07-13), billing-extensions |
+| Shopify app plans priced in USD only | V | shopify.dev subscription-billing (cites April 2026) |
+| Stripe: prorations by default; negative not refunded; usage not prorated; portal: payment method, invoices, download | V (undated) | docs.stripe.com prorations, customer-management |
+| Linear: credits applied to future invoices, not refunded | V | linear.app/docs/billing-and-plans (Jan 2026) |
+| E-invoicing above ₹5 cr AATO (Notification 10/2023) | S | gimbooks.com · 2026-03-13 |
+| TDS moved to Income-tax Act 2025 s.393 from 1 Apr 2026 (technical 2%, professional 10%, ₹50,000) — SaaS classification disputed | S | tdsman.com · 2026-07-08 |
+| Place of supply for services (s.12(2) IGST; Circular 242/36/2024), Rule 46 particulars, SAC for SaaS (998315 most cited) | U — CBIC unreachable 2026-11-08 | gstcouncil.gov.in · 2024-12-31 |
+| Card-on-file: tokens by network/issuer; merchants store no card data | U | rbi.org.in MD 12573 · 2023-12-20 |
+
+**Could not verify:** CBIC (503), e-invoice portals (503), income tax (403), NPCI (no content), Razorpay India API pages
+for `max_amount` and who sends the pre-debit notice. **A CA confirms GST and TDS before the first Frrata invoice.**
