@@ -64,9 +64,10 @@ revoke all on function app_store_wa_event(text, text, text, jsonb), app_pending_
 --> statement-breakpoint
 grant execute on function app_store_wa_event(text, text, text, jsonb), app_pending_event_shops(text) to frata_app;
 --> statement-breakpoint
--- With no shop set, frata_app may no longer read or change any event; it may still insert a signed Razorpay one
--- (the receiver knows its shop from our key) but never a WhatsApp one (only the definer stores those).
-alter policy webhook_read on webhook_events using (tenant_id = app_current_tenant());
+-- With no shop set, frata_app may no longer read or change a WhatsApp event, nor insert one (only the definer
+-- stores those). Razorpay's receiver keeps its no-shop insert, and Postgres checks the read policy on
+-- INSERT … ON CONFLICT, so a Razorpay row stays readable there (found by e2e 10-checkout, 2026-11-07).
+alter policy webhook_read on webhook_events using (tenant_id = app_current_tenant() or (app_current_tenant() is null and provider <> 'whatsapp'));
 --> statement-breakpoint
 alter policy webhook_update on webhook_events using (tenant_id = app_current_tenant()) with check (tenant_id = app_current_tenant());
 --> statement-breakpoint
