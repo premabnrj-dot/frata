@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.12.0
+  version: 2.12.1
   verified: 2026-11-08
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -232,9 +232,9 @@ shop can have or not (Messages, RTO Shield, Reviews…).
 - **Sources** (`src/domains/storefront/sources.ts`) pick a section's products: pure, listed only, newest by `since`,
   Best sellers by **delivered units** (`shopBestSellers`: ids only, cached an hour). Never by cost or margin
   (ADR-0003).
-- **Looks: `src/lib/themes/look.ts` is the one module that reads or writes them.** Live = the latest
-  `shop_theme_publishes` row (published_at, then id): derived, never stored; the storefront reads it through
-  `liveRevision`. Draft = the newest revision with no publish row, at most one (replaced under the per-shop advisory
+- **Looks: `src/lib/themes/look.ts` is the one module that reads or writes them.** Live = `liveOf` over
+  `liveCandidates` (the newest publish of each version, newest first) minus withdrawn versions: derived, never
+  stored; the shop, Look, Undo and Admin all use it. Draft = the newest revision with no publish row, at most one (replaced under the per-shop advisory
   lock `look:<tenant>`). Publishes are append-only; a published revision is frozen by `app_theme_revision_frozen`.
   Saves and publishes lock the row and check its `version`; Undo names the live revision it saw. The first publish
   of a shop with no publish row records its baseline (`baselineRevision`; migration 0034 is its SQL twin).
@@ -245,9 +245,9 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   `framing.test.ts`). The customizer talks to it by `postMessage`, same origin and `e.source` checked.
 - **Page settings** (T2: gallery, details, card, desktop columns, collection top) are additive with today's values
   as `PAGE_DEFAULTS`; a manifest may leave them out. A new setting never edits a released manifest.
-- **Released manifests never change**: `check:themes` (sha of each `<theme>/<semver>.ts` in `released.json`;
-  `npm run themes:lock` adds a new version) and `released-manifests.test.ts` (each manifest's evaluated content, so
-  a change in `kit.ts` or a version it builds on fails too). A missing version renders the nearest earlier version
+- **Released manifests never change**: `released-manifests.test.ts` snapshots each manifest's evaluated content (so a
+  change in `kit.ts` or a version it builds on fails too) and the list of versions (so a removal fails); a new
+  version adds its snapshot on purpose. A missing version renders the nearest earlier version
   of the same theme (`manifestNear`), never another theme.
 - **Back in stock** is the database's fact: one trigger (`app_variant_stock_times`) keeps `variants.sold_out_at` /
   `restocked_at` (sold out ≥ 24 h, stop-when-out only) and replaces whatever the app sends. Never set them in code.

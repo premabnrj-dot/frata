@@ -87,6 +87,7 @@ export default async function ThemeVersionPage({ params, searchParams }: { param
           {v.state !== 'withdrawn' && !isBaseline(key, version) && (
             <form action={pullAction} className="space-y-2">{hidden}<input type="hidden" name="how" value="withdraw" />
               <p className="text-sm text-danger-text">Withdraw, for a problem shoppers must not see: {v.live} shop{v.live === 1 ? '' : 's'} show their previous look at once. Final.</p>
+              {v.liveShops.length > 0 && <p className="text-sm">Moves back: {v.liveShops.slice(0, 20).map((s) => s.name).join(', ')}{v.liveShops.length > 20 ? `, and ${v.liveShops.length - 20} more` : ''}.</p>}
               <label className="sr-only" htmlFor="withdraw-why">Why withdraw it</label>
               <input id="withdraw-why" name="reason" required minLength={3} maxLength={300} placeholder="The problem, in a few words" className={`${input} w-full max-w-md`} />
               <Button type="submit" variant="destructive">Withdraw {v.name} {v.version}</Button>

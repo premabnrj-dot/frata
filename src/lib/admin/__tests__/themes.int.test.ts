@@ -41,11 +41,17 @@ describe.skipIf(!host)('Admin › Themes and what shops see', () => {
     expect((await run((tx) => L.liveRevision(tx, A)))?.id).toBe(d1.id)
     expect((await run((tx) => L.lookFor(tx, A))).may('minimal', '1.0.0')).toBe(false)
 
+    // Many publishes of the same version (more than any page of history): the fallback still finds the one before.
+    const { shopThemePublishes } = await import('@/lib/db/schema-themes')
+    await run(async (tx) => { for (let i = 0; i < 12; i++) await tx.insert(shopThemePublishes).values({ tenantId: A, revisionId: d1.id, publishedBy: who.userId, publishedAt: new Date(Date.now() + i) }) })
     // Withdraw: the shop's live look is its previous one at once (liveOf skips the withdrawn version).
     expect(await themes.pullVersion(staff, 'minimal', '1.0.0', 'withdraw', 'A broken layout on phones')).toEqual({ ok: true })
     const now = (await run((tx) => L.liveRevision(tx, A)))?.id ?? null
     expect(now).not.toBe(d1.id)
     if (before) expect(now).toBe(before)
+    // Publishing again doesn't add a second baseline (rows exist even when every version is withdrawn).
+    const bases = await run(async (tx) => (await L.lookFor(tx, A)).history.filter((h) => h.revision.createdBy === L.SYSTEM).length)
+    expect(bases).toBeLessThanOrEqual(1)
 
     // Final, and the baseline can't be pulled.
     expect((await themes.pullVersion(staff, 'minimal', '1.0.0', 'withdraw', 'again')).ok).toBe(false)

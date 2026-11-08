@@ -10,7 +10,7 @@ import { shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { owedSql, stateSql } from '@/lib/db/order-predicates'
 import { orderLines, orders } from '@/lib/db/schema-orders'
-import { LIVE_DEPTH, recentPublishes, revisionOf, type Revision } from '@/lib/themes/look'
+import { liveCandidates, revisionOf, type Revision } from '@/lib/themes/look'
 import { liveOf, withdrawnKeys } from '@/domains/themes/release'
 import { withTenant } from '@/lib/db/tenant'
 import { discountCodes, discounts } from '@/lib/db/schema-discounts'
@@ -232,7 +232,9 @@ const stored = (r: Revision | null): StoredLook | null => (r ? { revisionId: r.i
 // Which revision is live (liveOf), and which revision an id names, are src/lib/themes/look.ts's and release.ts's rules.
 // The shop caches its recent publishes; which versions are withdrawn is one platform read for every shop (tag
 // `themes`), so a withdraw is one revalidation, whatever the number of shops (T3 review).
-const corePublishes = (tenantId: string) => withTenant(tenantId, async (tx) => (await recentPublishes(tx, tenantId, LIVE_DEPTH)).map((p) => stored(p.revision)!))
+const corePublishes = (tenantId: string) => withTenant(tenantId, async (tx) => (await liveCandidates(tx, tenantId)).map((p) => stored(p.revision)!))
+// The cache hands back JSON (dates as strings): only whether a date is set matters to withdrawnKeys, so the rows are
+// read as they come.
 const versionStates = unstable_cache(() => themeVersionRows(), ['sf-theme-versions'], { tags: ['themes'], revalidate: 300 })
 /** After Admin withdraws or recalls a version: every shop re-reads which versions it may render. */
 export const refreshThemeVersions = () => revalidateTag('themes')
@@ -255,7 +257,8 @@ async function coreBestSellers(tenantId: string, days: number): Promise<string[]
 
 // ── Exports: cached for shoppers, uncached for the merchant's preview ──────────
 
-const shopPublishes = shopCached('look', 'shop', (t) => corePublishes(t))
+// A new key: the T1 entry 'look' held one look, this holds a list (a cache that survives a deploy must not meet the old shape).
+const shopPublishes = shopCached('publishes', 'shop', (t) => corePublishes(t))
 /** The shop's live look: its newest publish whose version isn't withdrawn (liveOf). */
 export const shopLook = async (tenantId: string): Promise<StoredLook | null> => liveOf(await shopPublishes(tenantId), withdrawnKeys(await versionStates()))
 export const shopBestSellers = shopCached('best', 'catalogue', (t, days: number) => coreBestSellers(t, days), 3600)

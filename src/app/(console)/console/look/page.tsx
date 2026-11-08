@@ -49,7 +49,7 @@ export default async function LookPage() {
     <>
       <PageHeader title="Look" meta="How your shop looks. Shoppers see the published theme." />
       {withdrawn && <p role="status" className="mb-3 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">Frrata withdrew {withdrawn.name} {withdrawn.version} for a problem. Your previous look is live; nothing is lost.</p>}
-      {!liveOk && <p role="status" className="mb-3 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">Frrata recalled {liveM.name} {liveM.version}. Your shop still shows it, but it gets no fixes.{l.previous && canPublish ? ' Restore your previous look below, or try the theme again for its current version.' : ' Ask the owner to restore the previous look.'}</p>}
+      {!liveOk && <p role="status" className="mb-3 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">Frrata recalled {liveM.name} {liveM.version}. Your shop still shows it, but it gets no fixes.{!canPublish ? ' Ask the owner to restore the previous look.' : l.previous ? ' Restore your previous look below, or try the theme again for its current version.' : ' Try the theme again for its current version: Customize opens a draft on it.'}</p>}
       {!draftOk && l.draft && <p role="status" className="mb-3 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">Your draft is on a recalled version of {draftName}, so it can’t be published. Try the theme again: your changes come across.</p>}
       {newest && liveOk && <p role="status" className="mb-3 rounded-md bg-info px-3 py-2 text-sm text-info-text">{newest.name} {newest.version} is ready: {newest.features.at(-1)}. Try it from the gallery below; your look comes across in a draft, and nothing changes until you publish.</p>}
       <Section ariaLabel="Your theme">

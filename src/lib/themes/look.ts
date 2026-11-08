@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, desc, eq, notExists, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, notExists, sql } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
 import { shopThemePublishes, shopThemeRevisions, themeVersionStages, themeVersions } from '@/lib/db/schema-themes'
 import { availableTo, liveOf, withdrawnKeys, type VersionRow } from '@/domains/themes/release'
@@ -26,12 +26,27 @@ async function published(tx: Tx, tenantId: string, limit: number) {
   const rows = await tx.select({ p: shopThemePublishes, r: shopThemeRevisions }).from(shopThemePublishes)
     .innerJoin(shopThemeRevisions, and(eq(shopThemeRevisions.tenantId, shopThemePublishes.tenantId), eq(shopThemeRevisions.id, shopThemePublishes.revisionId)))
     .where(eq(shopThemePublishes.tenantId, tenantId)).orderBy(desc(shopThemePublishes.publishedAt), desc(shopThemePublishes.id)).limit(limit)
-  return rows.map((x) => ({ revision: x.r, publishedAt: x.p.publishedAt, publishedBy: x.p.publishedBy, publishedByEmail: x.p.publishedByEmail }))
+  return rows.map((x) => ({ publishId: x.p.id, revision: x.r, publishedAt: x.p.publishedAt, publishedBy: x.p.publishedBy, publishedByEmail: x.p.publishedByEmail }))
 }
 
-/** How far back the shop looks for a publish it may still render (a withdrawn version is skipped, T3). */
-export const LIVE_DEPTH = 10
-export const recentPublishes = published
+/**
+ * What liveOf chooses from (themes T3): the newest publish of each version this shop ever published, newest first.
+ * Bounded by the number of versions, not by publishes, so a shop that published one version many times still falls
+ * back to the version before when it's withdrawn (T3 impact review). The shop, Look and Undo all read this.
+ */
+export async function liveCandidates(tx: Tx, tenantId: string) {
+  const all = await tx.select({ id: shopThemePublishes.id, revisionId: shopThemePublishes.revisionId, key: shopThemeRevisions.themeKey, version: shopThemeRevisions.themeVersion }).from(shopThemePublishes)
+    .innerJoin(shopThemeRevisions, and(eq(shopThemeRevisions.tenantId, shopThemePublishes.tenantId), eq(shopThemeRevisions.id, shopThemePublishes.revisionId)))
+    .where(eq(shopThemePublishes.tenantId, tenantId)).orderBy(desc(shopThemePublishes.publishedAt), desc(shopThemePublishes.id))
+  const seen = new Set<string>()
+  const pick = all.filter((p) => { const k = `${p.key}@${p.version}`; if (seen.has(k)) return false; seen.add(k); return true })
+  if (!pick.length) return []
+  const rows = await tx.select({ p: shopThemePublishes, r: shopThemeRevisions }).from(shopThemePublishes)
+    .innerJoin(shopThemeRevisions, and(eq(shopThemeRevisions.tenantId, shopThemePublishes.tenantId), eq(shopThemeRevisions.id, shopThemePublishes.revisionId)))
+    .where(and(eq(shopThemePublishes.tenantId, tenantId), inArray(shopThemePublishes.id, pick.map((p) => p.id))))
+  const by = new Map(rows.map((x) => [x.p.id, x]))
+  return pick.flatMap((p) => { const x = by.get(p.id); return x ? [{ publishId: x.p.id, revision: x.r, publishedAt: x.p.publishedAt, publishedBy: x.p.publishedBy, publishedByEmail: x.p.publishedByEmail, themeKey: x.r.themeKey, themeVersion: x.r.themeVersion }] : [] })
+}
 
 /**
  * Which theme versions this shop may use (themes T3): the platform's decisions and this shop's stages. THE loader
@@ -50,7 +65,7 @@ export async function themeAccess(tx: Tx, tenantId: string): Promise<{ rows: Ver
 /** The live look's revision (liveOf: the newest publish not on a withdrawn version), or null: never published. */
 export async function liveRevision(tx: Tx, tenantId: string): Promise<Revision | null> {
   const { bad } = await themeAccess(tx, tenantId)
-  return liveOf((await published(tx, tenantId, LIVE_DEPTH)).map((p) => ({ ...p, themeKey: p.revision.themeKey, themeVersion: p.revision.themeVersion })), bad)?.revision ?? null
+  return liveOf(await liveCandidates(tx, tenantId), bad)?.revision ?? null
 }
 
 async function openDraft(tx: Tx, tenantId: string): Promise<Revision | null> {
@@ -61,7 +76,7 @@ async function openDraft(tx: Tx, tenantId: string): Promise<Revision | null> {
   return r ?? null
 }
 
-type Published = { revision: Revision; publishedAt: Date; publishedBy: string; publishedByEmail: string | null }
+type Published = { publishId: string; revision: Revision; publishedAt: Date; publishedBy: string; publishedByEmail: string | null }
 export type Look = {
   live: Published | null; draft: Revision | null; history: Published[]
   /** Undo's target: the newest earlier look the shop may still use (not the live one, not recalled or withdrawn). */
@@ -73,10 +88,10 @@ export type Look = {
 
 /** Live, draft and history for the console (no other shop's rows can appear: the tenant is in every query). */
 export async function lookFor(tx: Tx, tenantId: string): Promise<Look> {
-  const [history, access] = await Promise.all([published(tx, tenantId, 50), themeAccess(tx, tenantId)])
-  const live = liveOf(history.map((h) => ({ ...h, themeKey: h.revision.themeKey, themeVersion: h.revision.themeVersion })), access.bad)
+  const [history, access, candidates] = await Promise.all([published(tx, tenantId, 50), themeAccess(tx, tenantId), liveCandidates(tx, tenantId)])
+  const live = liveOf(candidates, access.bad)
   const previous = history.find((h) => h.revision.id !== live?.revision.id && access.may(h.revision.themeKey, h.revision.themeVersion))?.revision ?? null
-  return { live: live ? { revision: live.revision, publishedAt: live.publishedAt, publishedBy: live.publishedBy, publishedByEmail: live.publishedByEmail } : null, draft: await openDraft(tx, tenantId), history, previous, may: access.may, access }
+  return { live: live ? { publishId: live.publishId, revision: live.revision, publishedAt: live.publishedAt, publishedBy: live.publishedBy, publishedByEmail: live.publishedByEmail } : null, draft: await openDraft(tx, tenantId), history, previous, may: access.may, access }
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
@@ -126,7 +141,8 @@ export async function publishRevision(tx: Tx, tenantId: string, who: Who, d: { r
   // A version recalled or withdrawn (or never offered to this shop) can't go live (T3). A withdraw racing this needs
   // no lock: render skips a withdrawn version anyway (liveOf).
   if (!(await themeAccess(tx, tenantId)).may(r.themeKey, r.themeVersion)) return 'unavailable'
-  if (!(await liveRevision(tx, tenantId))) {
+  // No publish row at all (not "nothing live": every version withdrawn still has rows, and History has the baseline).
+  if (!(await published(tx, tenantId, 1)).length) {
     // Lazy baseline (plan § T1·1): the shop's look before its first publish, so History and Undo have it.
     const b = d.baseline()
     const [base] = await tx.insert(shopThemeRevisions).values({ tenantId, ...b, createdAt: new Date(Date.now() - 1000), createdBy: SYSTEM, updatedBy: SYSTEM }).returning()

@@ -32,11 +32,5 @@ export function manifestNear(key: string, version: string): ThemeManifest | null
   return v ? vs[v]! : null
 }
 
-/** The newest version of each theme (T3 adds release state from Admin; until then every version here is available). */
-export function latestOf(key: string): ThemeManifest | null {
-  const vs = CATALOGUE[key]; if (!vs) return null
-  const v = Object.keys(vs).sort((a, b) => cmpSemver(b, a))[0]
-  return v ? vs[v]! : null
-}
 export const cmpSemver = (a: string, b: string) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 3; i++) if (x[i]! !== y[i]!) return x[i]! - y[i]!; return 0 }
 export const THEME_ORDER = ['classic', 'editorial', 'bazaar', 'minimal', 'atelier'] as const

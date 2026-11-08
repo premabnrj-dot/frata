@@ -129,7 +129,7 @@ export async function publishLookAction(input: unknown): Promise<R> {
       revisionId: rev.id, version: p.data.version,
       baseline: () => baselineRevision(facts.accent, facts.displayFont),
     })
-    if (out !== 'ok') return { error: out === 'stale' ? 'The draft changed after you opened Publish. Look again, then publish.' : out === 'unavailable' ? `${m.name} ${rev.themeVersion} was recalled, so it can’t be published. Try the theme again for its current version, or restore an earlier look.` : 'This draft is gone. Reload.' }
+    if (out !== 'ok') return { error: out === 'stale' ? 'The draft changed after you opened Publish. Look again, then publish.' : out === 'unavailable' ? `${m.name} ${rev.themeVersion} isn’t offered by Frrata any more, so it can’t be published. Try the theme again for its current version, or restore an earlier look.` : 'This draft is gone. Reload.' }
     await audit(tx, auth, 'look.publish', `${m.name} · ${rev.styleKey}`)
     return {}
   })
@@ -168,7 +168,7 @@ export async function restoreLookAction(input: unknown): Promise<R<{ revisionId:
     const t = auth.membership.tenantId
     const from = await revisionOf(tx, t, p.data.revisionId)
     if (!from || !manifestOf(from.themeKey, from.themeVersion)) return { error: 'That look can’t be restored.' }
-    if (!(await themeAccess(tx, t)).may(from.themeKey, from.themeVersion)) return { error: 'That look’s theme version was recalled, so it can’t be restored. Try the theme for its current version.' }
+    if (!(await themeAccess(tx, t)).may(from.themeKey, from.themeVersion)) return { error: 'That look’s theme version isn’t offered by Frrata any more, so it can’t be restored. Try the theme for its current version.' }
     const d = await newDraft(tx, t, { userId: auth.userId, email: auth.email }, { themeKey: from.themeKey, themeVersion: from.themeVersion, styleKey: from.styleKey, settings: from.settings as object })
     return { revisionId: d.id }
   })
@@ -179,12 +179,13 @@ export async function restoreLookAction(input: unknown): Promise<R<{ revisionId:
 }
 
 /** The draft to edit: the open one, else a new one copied from the live look. */
-export async function editLookAction(): Promise<R<{ revisionId: string }>> {
+export async function editLookAction(): Promise<R<{ revisionId: string; lost: string[] }>> {
   const r = await asMember(CAN_BUILD, { action: 'look.edit' }, async (tx, auth) => {
     if (auth.membership.supportSessionId) return { error: SUPPORT }
     const t = auth.membership.tenantId
     const l = await lookFor(tx, t)
-    if (l.draft) return { revisionId: l.draft.id }
+    if (l.draft) return { revisionId: l.draft.id, lost: [] as string[] }
+    let lost: string[] = []
     const facts = await lookFacts(tx, t)
     const base = l.live?.revision ?? null
     // A live look on a recalled version starts its draft on the newest version of that theme the shop may use (the
@@ -196,16 +197,17 @@ export async function editLookAction(): Promise<R<{ revisionId: string }>> {
           const fromM = manifestNear(base.themeKey, base.themeVersion)
           if (!to || !fromM) return baselineRevision(facts.accent, facts.displayFont)
           const c = carryOver({ manifest: fromM, layer: { style: base.styleKey, ...(base.settings as object) } }, to)
+          lost = c.lost
           const { style, ...rest } = c.layer
           return { themeKey: to.key, themeVersion: to.version, styleKey: style, settings: rest }
         })()
     // reuse: a draft another tab opened since the read above is kept, not replaced (impact review 2026-11-08).
     const d = await newDraft(tx, t, { userId: auth.userId, email: auth.email }, start, { reuse: true })
-    return { revisionId: d.id }
+    return { revisionId: d.id, lost }
   })
   if (!r.ok) return r
   if ('error' in r.value) return { ok: false, error: r.value.error as string }
-  return { ok: true, revisionId: r.value.revisionId as string }
+  return { ok: true, revisionId: r.value.revisionId as string, lost: (r.value.lost as string[]) ?? [] }
 }
 
 export async function discardDraftAction(): Promise<R> {

@@ -19,8 +19,9 @@ export type AdminVersion = {
   key: string; version: string; name: string; features: string[]; inCode: boolean
   id: string | null; state: VersionState
   releasedAt: Date | null; recalledAt: Date | null; recalledReason: string | null; withdrawnAt: Date | null; withdrawnReason: string | null
-  /** Shops whose live look (liveOf) is on this version. */
+  /** Shops whose live look (liveOf) is on this version: how many, and who (a withdraw names them). */
   live: number
+  liveShops: { tenantId: string; name: string }[]
   staged: { tenantId: string; name: string }[]
 }
 
@@ -28,21 +29,23 @@ export type AdminVersion = {
 export async function themeVersionsForAdmin(staff: StaffOk): Promise<AdminVersion[]> {
   void staff
   const db = adminDb()
-  const [rows, stages, pubs, revs] = await Promise.all([
+  const [rows, stages, pubs, revs, names] = await Promise.all([
     db.select().from(themeVersions),
     db.select({ versionId: themeVersionStages.versionId, tenantId: themeVersionStages.tenantId, name: tenants.name }).from(themeVersionStages).innerJoin(tenants, eq(tenants.id, themeVersionStages.tenantId)).orderBy(asc(tenants.name)),
     db.select({ tenantId: shopThemePublishes.tenantId, revisionId: shopThemePublishes.revisionId, publishedAt: shopThemePublishes.publishedAt, id: shopThemePublishes.id }).from(shopThemePublishes),
     db.select({ id: shopThemeRevisions.id, tenantId: shopThemeRevisions.tenantId, themeKey: shopThemeRevisions.themeKey, themeVersion: shopThemeRevisions.themeVersion }).from(shopThemeRevisions),
+    db.select({ id: tenants.id, name: tenants.name }).from(tenants),
   ])
+  const nameOf = new Map(names.map((n) => [n.id, n.name]))
   // Each shop's live look by the shop's own rule (liveOf), so Admin's counts never disagree with what shoppers see.
   const bad = withdrawnKeys(rows)
   const rev = new Map(revs.map((r) => [r.id, r]))
   const byShop = new Map<string, { themeKey: string; themeVersion: string; at: number; id: string }[]>()
   for (const p of pubs) { const r = rev.get(p.revisionId); if (!r) continue; const list = byShop.get(p.tenantId) ?? []; list.push({ themeKey: r.themeKey, themeVersion: r.themeVersion, at: p.publishedAt.getTime(), id: p.id }); byShop.set(p.tenantId, list) }
-  const live = new Map<string, number>()
-  for (const list of byShop.values()) {
+  const live = new Map<string, { tenantId: string; name: string }[]>()
+  for (const [tenantId, list] of byShop) {
     const l = liveOf(list.sort((a, b) => b.at - a.at || b.id.localeCompare(a.id)), bad)
-    if (l) live.set(`${l.themeKey}@${l.themeVersion}`, (live.get(`${l.themeKey}@${l.themeVersion}`) ?? 0) + 1)
+    if (l) { const k = `${l.themeKey}@${l.themeVersion}`; live.set(k, [...(live.get(k) ?? []), { tenantId, name: nameOf.get(tenantId) ?? tenantId }]) }
   }
   const keys = new Set([...Object.values(CATALOGUE).flatMap((vs) => Object.values(vs).map((m) => `${m.key}@${m.version}`)), ...rows.map((r) => `${r.themeKey}@${r.version}`)])
   return [...keys].map((kv) => {
@@ -53,7 +56,7 @@ export async function themeVersionsForAdmin(staff: StaffOk): Promise<AdminVersio
     return {
       key, version, name: m?.name ?? key, features: m?.features ?? [], inCode: !!m, id: r?.id ?? null, state: versionState(r, staged.length),
       releasedAt: r?.releasedAt ?? null, recalledAt: r?.recalledAt ?? null, recalledReason: r?.recalledReason ?? null, withdrawnAt: r?.withdrawnAt ?? null, withdrawnReason: r?.withdrawnReason ?? null,
-      live: live.get(kv) ?? 0, staged,
+      live: live.get(kv)?.length ?? 0, liveShops: (live.get(kv) ?? []).sort((a, b) => a.name.localeCompare(b.name)), staged,
     }
   }).sort((a, b) => a.key.localeCompare(b.key) || cmpSemver(b.version, a.version))
 }
@@ -74,8 +77,8 @@ export async function stageVersion(staff: StaffOk, key: string, version: string,
     if (!r) return 'not_in_code' as const
     const [row] = await tx.select().from(themeVersions).where(eq(themeVersions.id, r.id))
     if (row?.recalledAt || row?.withdrawnAt) return 'pulled' as const
-    await tx.insert(themeVersionStages).values({ tenantId, versionId: r.id, stagedBy: staff.userId }).onConflictDoNothing()
-    await auditStaff(tx, staff, { tenantId, action: 'theme.stage', target: `${key}@${version}` })
+    const added = await tx.insert(themeVersionStages).values({ tenantId, versionId: r.id, stagedBy: staff.userId }).onConflictDoNothing().returning({ v: themeVersionStages.versionId })
+    if (added.length) await auditStaff(tx, staff, { tenantId, action: 'theme.stage', target: `${key}@${version}` })
     return 'staged' as const
   })
 }
