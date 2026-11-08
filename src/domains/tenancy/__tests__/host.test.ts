@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { shopSlugFromHost, surfaceFor } from '../host'
+import { shopSlugFromHost, platformHost, surfaceFor } from '../host'
 
 describe('surfaceFor', () => {
   it('knows the console', () => {
@@ -29,6 +29,8 @@ describe('shopSlugFromHost', () => {
     expect(shopSlugFromHost('frata.store', 'frata.store')).toBeNull()
     expect(shopSlugFromHost('a.b.frata.store', 'frata.store')).toBeNull()
     expect(shopSlugFromHost('evilfrata.store', 'frata.store')).toBeNull()
+    // The one builder and the one reader agree (shop addresses D·0).
+    expect(shopSlugFromHost(platformHost('kesar-studio', 'FRRATA.shop'), 'frrata.shop')).toBe('kesar-studio')
   })
 })
 
@@ -36,18 +38,22 @@ describe('routeFor and shopRewrites: /s/ is reachable only through the rewrite',
   const C = 'app.frata.in'
   it('passes a shop host to the rewrite, refuses a malformed one', async () => {
     const { routeFor } = await import('../host')
-    expect(routeFor('kesar.frata.store', '/products/kurta', C, false)).toEqual({ kind: 'shop' })
-    expect(routeFor('kesar.frata.store', '/s/b.frata.store/products/x.png', C, false)).toEqual({ kind: 'shop' })
-    expect(routeFor('x/../kesar.frata.store', '/', C, false)).toEqual({ kind: 'not_found' })
+    expect(routeFor('kesar.frata.store', '/products/kurta', C, false, 'frata.store')).toEqual({ kind: 'shop' })
+    // The bare shop domain holds no shop: it is sent to Frrata's site; its subdomains stay shops.
+    expect(routeFor('frata.store', '/', C, false, 'frata.store')).toEqual({ kind: 'platform_apex' })
+    expect(routeFor('FRATA.STORE:443', '/x', C, false, 'frata.store')).toEqual({ kind: 'platform_apex' })
+    expect(routeFor('kesar.frata.store', '/', C, false, 'frata.store')).toEqual({ kind: 'shop' })
+    expect(routeFor('kesar.frata.store', '/s/b.frata.store/products/x.png', C, false, 'frata.store')).toEqual({ kind: 'shop' })
+    expect(routeFor('x/../kesar.frata.store', '/', C, false, 'frata.store')).toEqual({ kind: 'not_found' })
   })
   it('404s /s/ on the console, vercel.app and localhost in production', async () => {
     const { routeFor } = await import('../host')
     for (const h of [C, 'frata.vercel.app', 'localhost:3000', '127.0.0.1', null]) {
-      expect(routeFor(h, '/s/b.frata.store/products/x.png', C, false)).toEqual({ kind: 'not_found' })
-      expect(routeFor(h, '/s/b.frata.store', C, false)).toEqual({ kind: 'not_found' })
+      expect(routeFor(h, '/s/b.frata.store/products/x.png', C, false, 'frata.store')).toEqual({ kind: 'not_found' })
+      expect(routeFor(h, '/s/b.frata.store', C, false, 'frata.store')).toEqual({ kind: 'not_found' })
     }
-    expect(routeFor('localhost:3000', '/s/b.frata.store', C, true)).toEqual({ kind: 'console' })
-    expect(routeFor(C, '/style.png', C, false)).toEqual({ kind: 'console' })
+    expect(routeFor('localhost:3000', '/s/b.frata.store', C, true, 'frata.store')).toEqual({ kind: 'console' })
+    expect(routeFor(C, '/style.png', C, false, 'frata.store')).toEqual({ kind: 'console' })
   })
   it('rewrites every shop path under /s/<host>, root files and /api aside', async () => {
     const { shopRewrites } = await import('../host')

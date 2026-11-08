@@ -16,7 +16,7 @@ describe.skipIf(!host)('issueCredit on a real database', () => {
     const admin = await import('@/lib/admin/merchants')
     const staff = { ok: true as const, userId: 'aaaaaaaa-0000-0000-0000-0000000000ff', email: 'int@frata.test', role: 'admin' as const }
     const slug = `credit-${Date.now()}`
-    tenantId = (await admin.createMerchant(staff, { name: 'Credit Store', slug, host: `${slug}.frata.test`, ownerEmail: 'o@credit.test', planCode: 'launch', trialEndsAt: null, now: new Date() })).id
+    tenantId = (await admin.createMerchant(staff, { name: 'Credit Store', slug, ownerEmail: 'o@credit.test', planCode: 'launch', trialEndsAt: null, now: new Date() })).id
   })
 
   it('one credit note per undone sale, in its own series, with the invoice figures; final; none without an invoice', async () => {

@@ -21,7 +21,7 @@ describe.skipIf(!host)('collection on a real database', () => {
     vi.resetModules()
     const admin = await import('@/lib/admin/merchants')
     const slug = `b3-${Date.now()}`
-    tenantId = (await admin.createMerchant(staff, { name: 'B3 Store', slug, host: `${slug}.frata.test`, ownerEmail: 'o@b3.test', planCode: 'launch', trialEndsAt: null, now: ist('2026-10-01T00:00:00') })).id
+    tenantId = (await admin.createMerchant(staff, { name: 'B3 Store', slug, ownerEmail: 'o@b3.test', planCode: 'launch', trialEndsAt: null, now: ist('2026-10-01T00:00:00') })).id
     const { draftInvoice } = await import('@/lib/billing/draft')
     await draftInvoice(tenantId, NOV)
     const b = await import('@/lib/admin/billing')
@@ -83,7 +83,7 @@ describe.skipIf(!host)('collection on a real database', () => {
     const { sql } = await import('drizzle-orm')
     const admin = await import('@/lib/admin/merchants')
     const slug = `b3x-${Date.now()}`
-    const t2 = (await admin.createMerchant(staff, { name: 'B3 Twice', slug, host: `${slug}.frata.test`, ownerEmail: 'o@b3x.test', planCode: 'launch', trialEndsAt: null, now: ist('2026-10-01T00:00:00') })).id
+    const t2 = (await admin.createMerchant(staff, { name: 'B3 Twice', slug, ownerEmail: 'o@b3x.test', planCode: 'launch', trialEndsAt: null, now: ist('2026-10-01T00:00:00') })).id
     const { draftInvoice } = await import('@/lib/billing/draft')
     await draftInvoice(t2, NOV)
     const b = await import('@/lib/admin/billing')

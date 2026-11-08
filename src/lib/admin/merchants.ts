@@ -1,7 +1,8 @@
 import 'server-only'
 import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { adminDb } from '@/lib/db/admin'
-import { invites, members, shopSettings, supportSessions, tenantDomains, tenantPlans, tenants } from '@/lib/db/schema'
+import { invites, members, shopSettings, supportSessions, tenantPlans, tenants } from '@/lib/db/schema'
+import { shopHost } from '@/lib/public-env'
 import type { StaffOk } from '@/lib/auth/require-staff'
 import { currentPlan, usage, type PlanCode } from '@/domains/plans/entitlements'
 import { nextMonthStartIST } from '@/domains/time/month'
@@ -35,7 +36,8 @@ async function orderCounts(now: Date, only?: string): Promise<Map<string, { n: n
 }
 
 export type MerchantRow = {
-  id: string; name: string; slug: string; host: string | null; isInternal: boolean
+  /** The shop's frrata.shop address, from its name (never a stored row: shop addresses D·0). */
+  id: string; name: string; slug: string; host: string; isInternal: boolean
   plan: { code: PlanCode; name: string; version: number; includedOrders: number; trialEndsAt: Date | null } | null
   /** Delivered orders this month as last drafted; null before the first draft. */
   ordersThisMonth: number | null; countedAt: Date | null; over: boolean
@@ -60,8 +62,7 @@ export async function listMerchants(staff: StaffOk, opts: { page: number; q?: st
   const ids = ts.map((t) => t.id)
   if (ids.length === 0) return { rows: [], total }
 
-  const [domains, ms, inv, history, counts] = await Promise.all([
-    db.select().from(tenantDomains).where(inArray(tenantDomains.tenantId, ids)),
+  const [ms, inv, history, counts] = await Promise.all([
     db.select().from(members).where(inArray(members.tenantId, ids)),
     db.select().from(invites).where(inArray(invites.tenantId, ids)),
     tenantPlanHistory(db, ids),
@@ -76,7 +77,7 @@ export async function listMerchants(staff: StaffOk, opts: { page: number; q?: st
     const n = c?.n ?? 0
     return {
       id: t.id, name: t.name, slug: t.slug, isInternal: t.isInternal,
-      host: domains.find((d) => d.tenantId === t.id)?.host ?? null,
+      host: shopHost(t.slug),
       plan: cur ? { code: cur.code as PlanCode, name: cur.name, version: cur.v.version, includedOrders: cur.v.includedOrders, trialEndsAt: cur.tp.trialEndsAt } : null,
       ordersThisMonth: c ? c.n : null, countedAt: c?.at ?? null, over: c && cur ? usage(n, cur.v.includedOrders).over : false,
       owner: owner ? dir.get(owner.userId) ?? null : null,
@@ -91,8 +92,7 @@ export async function getMerchant(staff: StaffOk, id: string, now: Date) {
   const db = adminDb()
   const [t] = await db.select().from(tenants).where(eq(tenants.id, id)).limit(1)
   if (!t) return null
-  const [domains, ms, inv, history, sessions, counts] = await Promise.all([
-    db.select().from(tenantDomains).where(eq(tenantDomains.tenantId, id)),
+  const [ms, inv, history, sessions, counts] = await Promise.all([
     db.select().from(members).where(eq(members.tenantId, id)),
     db.select().from(invites).where(eq(invites.tenantId, id)).orderBy(desc(invites.createdAt)),
     tenantPlanHistory(db, [id]),
@@ -103,7 +103,7 @@ export async function getMerchant(staff: StaffOk, id: string, now: Date) {
   const dir = await directory(ms.map((m) => m.userId))
   const cur = currentPlan(history.map((h) => ({ ...h, startsAt: h.tp.startsAt })), now)
   return {
-    tenant: t, host: domains[0]?.host ?? null,
+    tenant: t, host: shopHost(t.slug),
     members: ms.map((m) => ({ ...m, email: dir.get(m.userId)?.email ?? null, lastSignInAt: dir.get(m.userId)?.lastSignInAt ?? null })),
     invites: inv, history, current: cur, sessions,
     ordersThisMonth: counts.get(id)?.n ?? null, countedAt: counts.get(id)?.at ?? null,
@@ -118,12 +118,11 @@ export async function slugTaken(staff: StaffOk, slug: string): Promise<boolean> 
 
 export async function createMerchant(
   staff: StaffOk,
-  m: { name: string; slug: string; host: string; ownerEmail: string; planCode: PlanCode; trialEndsAt: Date | null; now: Date },
+  m: { name: string; slug: string; ownerEmail: string; planCode: PlanCode; trialEndsAt: Date | null; now: Date },
 ): Promise<{ id: string }> {
   return adminDb().transaction(async (tx) => {
     const [t] = await tx.insert(tenants).values({ name: m.name, slug: m.slug }).returning({ id: tenants.id })
     const id = t!.id
-    await tx.insert(tenantDomains).values({ host: m.host, tenantId: id })
     await tx.insert(shopSettings).values({ tenantId: id, supportEmail: m.ownerEmail.toLowerCase() })
     await tx.insert(invites).values({ tenantId: id, email: m.ownerEmail.toLowerCase(), role: 'owner', createdBy: staff.userId })
     const version = await latestVersion(tx, m.planCode)

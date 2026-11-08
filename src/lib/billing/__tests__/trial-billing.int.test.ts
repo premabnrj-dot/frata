@@ -16,7 +16,7 @@ describe.skipIf(!host)('a trial shop\'s invoices', () => {
     vi.resetModules()
     const admin = await import('@/lib/admin/merchants')
     const slug = `tr-${Date.now()}`
-    tenantId = (await admin.createMerchant(staff, { name: 'Trial Store', slug, host: `${slug}.frata.test`, ownerEmail: 'o@tr.test', planCode: 'growth', trialEndsAt: null, now: new Date('2026-10-01T00:00:00Z') })).id
+    tenantId = (await admin.createMerchant(staff, { name: 'Trial Store', slug, ownerEmail: 'o@tr.test', planCode: 'growth', trialEndsAt: null, now: new Date('2026-10-01T00:00:00Z') })).id
     // A 30-day trial that went live on 3 November (IST): it ends at the end of 3 December.
     const postgres = (await import('postgres')).default
     const su = postgres(process.env.INT_DB_SUPER_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1 })

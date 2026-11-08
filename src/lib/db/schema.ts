@@ -29,7 +29,7 @@ export const tenants = pgTable('tenants', {
   createdAt: createdAt(),
 })
 
-/** A storefront host — a platform subdomain or the merchant's own domain. */
+/** A merchant's own storefront domain. A platform subdomain (`<slug>.SHOP_DOMAIN`) is never stored: it is found by slug. */
 export const tenantDomains = pgTable('tenant_domains', {
   host: text('host').primaryKey(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),

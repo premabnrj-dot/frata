@@ -18,7 +18,7 @@ describe.skipIf(!host)('issuing Frrata invoices on a real database', () => {
     process.env.ADMIN_DATABASE_URL = `postgresql://frata_admin:${pass}@${host}/${dbName}`
     const admin = await import('@/lib/admin/merchants')
     const slug = `b2-${Date.now()}`
-    tenantId = (await admin.createMerchant(staff, { name: 'B2 Store', slug, host: `${slug}.frata.test`, ownerEmail: 'o@b2.test', planCode: 'launch', trialEndsAt: null, now: ist('2026-10-01T00:00:00') })).id
+    tenantId = (await admin.createMerchant(staff, { name: 'B2 Store', slug, ownerEmail: 'o@b2.test', planCode: 'launch', trialEndsAt: null, now: ist('2026-10-01T00:00:00') })).id
     const { withTenant } = await import('@/lib/db/tenant')
     const { orders } = await import('@/lib/db/schema-orders')
     await withTenant(tenantId, (tx) => tx.insert(orders).values([1, 2].map((n) => ({ tenantId, number: n, paymentMethod: 'cod' as const, placedAt: ist('2026-10-01T10:00:00'),

@@ -1,3 +1,5 @@
+// Relative, not '@/': next.config loads this file, and its loader does not resolve the alias.
+import { platformHost } from '../domains/tenancy/host'
 // =============================================================================
 // FILE: src/lib/public-env.ts
 //
@@ -9,8 +11,11 @@ export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
 export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
 export const CONSOLE_HOST = process.env.NEXT_PUBLIC_CONSOLE_HOST ?? 'app.frata.in'
 
-/** The domain a shop's subdomain sits under: <slug>.<SHOP_DOMAIN>. Not yet bought (owner call). */
+/** The domain a shop's subdomain sits under: <slug>.<SHOP_DOMAIN>. Production: frrata.shop (live 2026-11-08; its bare domain redirects). */
 export const SHOP_DOMAIN = process.env.NEXT_PUBLIC_SHOP_DOMAIN || 'frata.store'
+
+/** A shop's platform address, `kesar-studio.frrata.shop` (built by the one pure rule in tenancy/host.ts). */
+export const shopHost = (slug: string) => platformHost(slug, SHOP_DOMAIN)
 
 /** Frrata's Meta app id and its Embedded Signup configuration: both are shown to Meta's popup in the browser (not secret). */
 export const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID ?? ''

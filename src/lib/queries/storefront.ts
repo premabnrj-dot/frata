@@ -20,7 +20,7 @@ import { discountCodes, discountTargets, discountTiers, discounts } from '@/lib/
 import { barText, bxgyText, offOf, offerTerms } from '@/domains/checkout/offer-text'
 import type { ShowOffer } from '@/domains/checkout/offer-showcase'
 import type { Tx } from '@/lib/db'
-import { SHOP_DOMAIN } from '@/lib/public-env'
+import { shopHost } from '@/lib/public-env'
 import { cleanRules, matches } from '@/domains/catalogue/collection-rules'
 import { productFactsIn } from './catalogue'
 import { compactCard, expand, photoPrefixOf, type CatalogueEntry } from '@/lib/storefront/catalogue-entry'
@@ -51,7 +51,7 @@ function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop
 }
 
 export { refreshHosts, refreshShop, refreshSoldOut } from '@/lib/storefront/refresh'
-export const hostFor = (slug: string) => `${slug}.${SHOP_DOMAIN}`
+export const hostFor = shopHost
 
 class Miss extends Error {}
 /** Which shop a host is. A miss is never cached (anyone can mint subdomains); a hit lives 60 s or until its tag. */

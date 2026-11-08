@@ -9,7 +9,7 @@ import { paise } from '@/domains/money/paise'
 import { estimateOf } from '@/domains/settings/ship-costs'
 import { CAN_BUILD, CAN_MANAGE, CAN_SET_COSTS, requireMember } from '@/lib/auth/require-member'
 import { formatInr } from '@/lib/format'
-import { SHOP_DOMAIN } from '@/lib/public-env'
+import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
 import { shipCostsSeenBy, shopWithSettings } from '@/lib/queries/settings'
 import { paymentStatusFor } from '@/lib/queries/payments'
 import { shopFacts } from './_components/facts'
@@ -79,7 +79,7 @@ export default async function SettingsPage() {
           {owner && <Row href="/console/settings/online-payments" icon="payments" title="Online payments" summary={online} needs={onlineNeeds} />}
           {manages && <Row href="/console/settings/billing" icon="plans" title="Plan and billing" summary="Your plan, this month so far, invoices and billing details" />}
           {manages && <Row href="/console/settings/people" icon="people" title="People" summary="Who works on this shop" />}
-          {manages && <Row href="/console/settings/address" icon="address" title="Shop address" summary={`${f.slug}.${SHOP_DOMAIN}`} mono />}
+          {manages && <Row href="/console/settings/address" icon="address" title="Shop address" summary={shopHost(f.slug)} mono />}
           {seen !== null && (seen === undefined || seen.visible) && <Row href="/console/settings/shipping-costs" icon="shipped" title="Shipping costs" summary={shipSummary} needs={shipNeeds} />}
         </Section>
         <aside className="space-y-3">

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { routeFor } from '@/domains/tenancy/host'
-import { CONSOLE_HOST } from '@/lib/public-env'
+import { CONSOLE_HOST, SHOP_DOMAIN } from '@/lib/public-env'
 import { updateSession } from '@/lib/supabase/middleware'
 import { isSignedInPath, signedInCsp } from '@/lib/security-headers'
 
@@ -8,12 +8,16 @@ import { isSignedInPath, signedInCsp } from '@/lib/security-headers'
  * One deployment, two surfaces. The console host serves /console, /login and
  * the API; every other host is a merchant's storefront and is rewritten to
  * /s/<host>/… by next.config (shopRewrites), where the tenant is looked up by
- * host on the server. Here: /s/ is refused on every other host, and a malformed
- * shop host is refused (routeFor decides).
+ * host on the server. Here: /s/ is refused on every other host, a malformed
+ * shop host is refused, and the bare shop domain is sent to Frrata's site
+ * (routeFor decides).
  */
 export async function middleware(request: NextRequest) {
-  const route = routeFor(request.headers.get('host'), request.nextUrl.pathname, CONSOLE_HOST, process.env.NODE_ENV === 'development')
+  const route = routeFor(request.headers.get('host'), request.nextUrl.pathname, CONSOLE_HOST, process.env.NODE_ENV === 'development', SHOP_DOMAIN)
   if (route.kind === 'not_found') return new NextResponse(null, { status: 404 })
+  // The bare shop domain (frrata.shop) holds no shop: it goes to Frrata's own site (shop addresses spec, D·0). A 307
+  // while that site is the stopgap console host: browsers cache a 308 for good. 308 to frrata.com once it is attached.
+  if (route.kind === 'platform_apex') return NextResponse.redirect(`https://${CONSOLE_HOST}/`, 307)
   // A shop: the host rewrite in next.config (shopRewrites) serves it from /s/<host>/…; no session work here.
   if (route.kind === 'shop') return NextResponse.next()
   if (!isSignedInPath(request.nextUrl.pathname)) return updateSession(request, NextResponse.next({ request }))
