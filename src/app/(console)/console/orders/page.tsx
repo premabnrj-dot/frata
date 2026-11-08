@@ -12,6 +12,7 @@ import { riskFactsFor } from '@/lib/queries/order-risk'
 import { listOrders, ORDERS_PAGE, orderPrefixFor, queueCounts } from '@/lib/queries/orders'
 import { PAYMENT, STATE, TABS } from './_components/labels'
 import { Queue, type QueueRow } from './_components/queue'
+import { errName } from '@/lib/log'
 
 // =============================================================================
 // FILE: src/app/(console)/console/orders/page.tsx
@@ -36,14 +37,20 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const now = new Date()
   const tenantId = auth.membership.tenantId
   const role = auth.membership.role
-  const counts = await queueCounts(tenantId, now).catch((err) => { console.error('[orders]', err instanceof Error ? err.name : err); return null })
-  if (!counts) return fail
-  // The pager's total: the tab's own count, or (searching) how many match, from the list query itself.
+  // Counts, the page asked for and the order prefix in parallel (speed review P8: they ran one after another); the
+  // rare page past the end is fetched again once the count says where the end is.
   const asked = Number(sp.page)
   const pagesFor = (n: number) => Math.max(1, Math.ceil(n / ORDERS_PAGE))
-  const page = Number.isSafeInteger(asked) ? Math.min(Math.max(1, asked), q ? 1_000 : pagesFor(counts[tab])) : 1
-  let list = await listOrders(tenantId, { tab, page, q, now }).catch((err) => { console.error('[orders]', err instanceof Error ? err.name : err); return null })
-  if (!list) return fail
+  const wanted = Number.isSafeInteger(asked) ? Math.min(Math.max(1, asked), 1_000) : 1
+  const [counts, first, prefix] = await Promise.all([
+    queueCounts(tenantId, now).catch((err) => { console.error('[orders]', errName(err)); return null }),
+    listOrders(tenantId, { tab, page: wanted, q, now }).catch((err) => { console.error('[orders]', errName(err)); return null }),
+    orderPrefixFor(tenantId),
+  ])
+  if (!counts || !first) return fail
+  // The pager's total: the tab's own count, or (searching) how many match, from the list query itself.
+  const page = q ? wanted : Math.min(wanted, pagesFor(counts[tab]))
+  let list = page === wanted ? first : ((await listOrders(tenantId, { tab, page, q, now }).catch(() => null)) ?? [])
   // A search link past its last page (results shrank since): show its first page, and say so in the pager.
   const refetched = q !== '' && !list.length && page > 1
   if (refetched) list = (await listOrders(tenantId, { tab, page: 1, q, now }).catch(() => [])) ?? []
@@ -51,9 +58,8 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const pages = pagesFor(total)
   const shownPage = refetched ? 1 : page
 
-  const prefix = await orderPrefixFor(tenantId)
   // If the risk facts cannot be read, rows say "Risk unavailable" and c opens instead of confirming: never fail open.
-  const facts = await riskFactsFor(tenantId, list.map((o) => o.id), now).catch((err) => { console.error('[orders] risk', err instanceof Error ? err.name : err); return null })
+  const facts = await riskFactsFor(tenantId, list.map((o) => o.id), now).catch((err) => { console.error('[orders] risk', errName(err)); return null })
   const rows: QueueRow[] = list.map((o) => {
     const state = orderState(o, now)
     const method = currentMethod(o)

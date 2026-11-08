@@ -10,14 +10,9 @@ import { z } from 'zod'
 
 export { STATES } from './states'
 import { STATES } from './states'
+import { cleanMobile } from './mobile'
+export { cleanMobile, maskPhone } from './mobile'
 
-/** "+91 98290-43210", "098290 43210" → "9829043210"; null if it is not an Indian mobile number. */
-export function cleanMobile(raw: string): string | null {
-  let d = String(raw ?? '').replace(/\D/g, '')
-  if (d.length === 12 && d.startsWith('91')) d = d.slice(2)
-  else if (d.length === 11 && d.startsWith('0')) d = d.slice(1)
-  return /^[6-9][0-9]{9}$/.test(d) ? d : null
-}
 
 const text = (min: number, max: number, what: string) => z.string().transform((s) => s.trim().replace(/\s+/g, ' ')).pipe(z.string().min(min, what).max(max, `Up to ${max} characters.`))
 
@@ -40,4 +35,3 @@ export function addressErrors(e: z.ZodError): Record<string, string> {
 }
 
 /** "…3210" and "Jaipur 302001": what a forwarded order link may show (owner call 4). */
-export const maskPhone = (p: string) => (p.length >= 4 ? `…${p.slice(-4)}` : '')

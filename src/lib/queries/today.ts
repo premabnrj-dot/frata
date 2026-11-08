@@ -45,25 +45,22 @@ const asDate = (v: unknown) => (v == null ? null : v instanceof Date ? v : new D
 
 export async function todaySummary(tenantId: string, now: Date): Promise<TodaySummary> {
   return withTenant(tenantId, async (tx) => {
-    const counts = await queueCountsWith(tx, tenantId, now)
-
-    const [w] = await tx.select({
+    const day = sql<string>`((${orders.placedAt} at time zone 'Asia/Kolkata')::date)::text`
+    // Five reads at once in the one transaction (speed review P8: postgres-js pipelines them; they ran in turn).
+    const [counts, [w], [n], [p], week] = await Promise.all([queueCountsWith(tx, tenantId, now), tx.select({
       to_pack: sql<string | null>`min(${enteredAtSql(now)}) filter (where ${inTabSql('to_pack', now)})`,
       on_hold: sql<string | null>`min(${enteredAtSql(now)}) filter (where ${inTabSql('on_hold', now)})`,
-    }).from(orders).where(and(eq(orders.tenantId, tenantId), openSql())) // open orders only: the partial index (1D·7)
-
-    const [n] = await tx.select({ id: orders.id, number: orders.number, customerName: orders.customerName, total: orders.total, ...momentColumns, entered: sql<string | null>`${enteredAtSql(now)}` })
+    }).from(orders).where(and(eq(orders.tenantId, tenantId), openSql())), // open orders only: the partial index (1D·7)
+    tx.select({ id: orders.id, number: orders.number, customerName: orders.customerName, total: orders.total, ...momentColumns, entered: sql<string | null>`${enteredAtSql(now)}` })
       .from(orders).where(and(eq(orders.tenantId, tenantId), inTabSql('to_confirm', now)))
-      .orderBy(asc(enteredAtSql(now)), asc(orders.number)).limit(1)
-
-    const [p] = await tx.select({ prefix: shopSettings.orderPrefix, name: tenants.name }).from(tenants)
-      .leftJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
-    const prefix = orderPrefix(p?.prefix ?? '', p?.name ?? '')
-
-    const day = sql<string>`((${orders.placedAt} at time zone 'Asia/Kolkata')::date)::text`
-    const week = await tx.select({ day, orders: sql<number>`count(*)::int`, value: sql<string>`coalesce(sum(${orders.total}), 0)::bigint` })
+      .orderBy(asc(enteredAtSql(now)), asc(orders.number)).limit(1),
+    tx.select({ prefix: shopSettings.orderPrefix, name: tenants.name }).from(tenants)
+      .leftJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId)),
+    tx.select({ day, orders: sql<number>`count(*)::int`, value: sql<string>`coalesce(sum(${orders.total}), 0)::bigint` })
       .from(orders).where(and(eq(orders.tenantId, tenantId), standingSql(), gte(orders.placedAt, istDayStart(now, -6))))
-      .groupBy(day)
+      .groupBy(day),
+    ])
+    const prefix = orderPrefix(p?.prefix ?? '', p?.name ?? '')
 
     // Risk last, in a savepoint: a timeout rolls back only the savepoint (and its SET LOCAL), not the read; on success
     // the limit is put back by hand. Each of its two statements gets the 2 s, so the worst case is about 4 s.

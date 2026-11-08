@@ -35,7 +35,7 @@ export function Gallery({ themes, canEdit, sorted }: { themes: GalleryTheme[]; c
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {themes.map((t) => (
           <li key={t.key}>
-            <Section flush ariaLabel={t.name} className={`relative transition-shadow duration-fast hover:shadow-md ${t.inUse ? 'ring-2 ring-foreground' : ''}`}>
+            <Section flush ariaLabel={t.name} className={`relative transition-colors duration-fast hover:border-input ${t.inUse ? 'ring-2 ring-foreground' : ''}`}>
               <div className="grid place-items-center bg-muted py-4">{t.thumb}</div>
               <div className="space-y-1.5 p-4">
                 <div className="flex items-center gap-2">

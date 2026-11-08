@@ -134,10 +134,18 @@ export const OVERLAP = () => {
 
 /** Reduced motion: the longest transition or animation on the page, in ms (it must be ≤ 0.01). */
 export const LONGEST_MOTION = () => {
+  // Reduced motion removes movement, not meaning (motion system 2026-11-08, rule 25): a transition of opacity alone
+  // (with overlay/display, which keep a closing dialog painted) may run its 120 ms fade; anything that moves may not.
   let max = 0
-  for (const el of document.querySelectorAll('*')) {
+  for (const el of [...document.querySelectorAll('*')]) {
     const s = getComputedStyle(el)
-    for (const d of [...s.transitionDuration.split(','), ...s.animationDuration.split(',')]) max = Math.max(max, parseFloat(d) * (d.trim().endsWith('ms') ? 1 : 1000) || 0)
+    const props = s.transitionProperty.split(',').map((p) => p.trim())
+    const fadeOnly = props.every((p) => ['opacity', 'overlay', 'display'].includes(p))
+    for (const d of s.transitionDuration.split(',')) {
+      const ms = parseFloat(d) * (d.trim().endsWith('ms') ? 1 : 1000) || 0
+      max = Math.max(max, fadeOnly && ms <= 120 ? 0 : ms)
+    }
+    for (const d of s.animationDuration.split(',')) max = Math.max(max, parseFloat(d) * (d.trim().endsWith('ms') ? 1 : 1000) || 0)
   }
   return max
 }

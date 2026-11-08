@@ -3,6 +3,9 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { InfoTip } from '@/components/ui/info-tip'
+import { Icon } from '@/components/icons/icon'
 import { visibility, type Status } from '@/domains/catalogue/availability'
 import type { Readiness } from '@/domains/catalogue/product-form'
 import { setStatus } from '../actions'
@@ -47,11 +50,15 @@ export function StatusCard({ productId, status, publishAt, ready, dirty }: { pro
       <h2 id="status-h" className="text-section font-semibold">Status</h2>
       <fieldset className="space-y-1.5">
         <legend className="sr-only">Who can find this product</legend>
+        {/* One line each; what a status means is behind its (i) (visual changes, owner-approved 2026-11-08). */}
         {CHOICES.map((c) => (
-          <label key={c.v} className={`flex cursor-pointer gap-2 rounded-md border p-2 text-sm transition-colors duration-fast ${pick === c.v ? 'border-ring bg-accent' : 'border-border hover:bg-accent'}`}>
-            <input type="radio" name="status" value={c.v} checked={pick === c.v} onChange={() => { setPick(c.v); setMsg(null) }} className="mt-0.5" />
-            <span><span className="font-medium">{c.label}</span><span className="block text-xs text-muted-foreground">{c.says}</span></span>
-          </label>
+          <div key={c.v} className={`flex items-center rounded-md border pr-1 text-sm transition-colors duration-fast ${pick === c.v ? 'border-ring bg-accent' : 'border-border hover:bg-accent'}`}>
+            <label className="flex min-h-9 flex-1 cursor-pointer items-center gap-2 px-2">
+              <input type="radio" name="status" value={c.v} checked={pick === c.v} onChange={() => { setPick(c.v); setMsg(null) }} />
+              <span className="font-medium">{c.label}</span>
+            </label>
+            <InfoTip about={`${c.label.toLowerCase()} products`}>{c.says}</InfoTip>
+          </div>
         ))}
       </fieldset>
       {pick === 'active' && (
@@ -63,9 +70,16 @@ export function StatusCard({ productId, status, publishAt, ready, dirty }: { pro
         </div>
       )}
       {needsReady && (
-        <ul className="space-y-0.5 text-sm" aria-label="Needed before shoppers see it">
-          {ready.map((r) => <li key={r.label} className={r.ok ? 'text-ok-text' : 'text-warn-text'}><span aria-hidden="true">{r.ok ? '✓ ' : '• '}</span>{r.label}{r.ok ? '' : ' (missing)'}</li>)}
-        </ul>
+        // The checklist as its count; it opens by itself when something is missing.
+        <details open={!allReady} className="group text-sm">
+          <summary className="flex min-h-6 cursor-pointer list-none items-center gap-2">
+            <Badge tone={allReady ? 'ok' : 'warn'}>{allReady ? 'Ready' : 'Not ready'} · {ready.filter((r) => r.ok).length} of {ready.length}</Badge>
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Icon name="chevron" className="size-3.5 transition-transform duration-fast group-open:rotate-90" />What’s checked</span>
+          </summary>
+          <ul className="mt-1.5 space-y-0.5" aria-label="Needed before shoppers see it">
+            {ready.map((r) => <li key={r.label} className={r.ok ? 'text-ok-text' : 'text-warn-text'}><span aria-hidden="true">{r.ok ? '✓ ' : '• '}</span>{r.label}{r.ok ? '' : ' (missing)'}</li>)}
+          </ul>
+        </details>
       )}
       <p className="text-xs text-muted-foreground">{v.scheduled ? 'Shoppers get "page not found" until it goes live.' : v.listed ? 'Shoppers can find it and buy it.' : v.reachable ? 'Shoppers with the link can buy it.' : pick === 'archived' ? 'Shoppers read that it is no longer available.' : 'Shoppers get "page not found".'}</p>
       {changed && <Button className="w-full" disabled={pending || blocked || dirty} onClick={apply}>{pick === 'active' && !later ? 'Make it active' : pick === 'active' ? 'Schedule it' : `Set to ${CHOICES.find((c) => c.v === pick)!.label.toLowerCase()}`}</Button>}

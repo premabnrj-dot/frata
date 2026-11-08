@@ -16,6 +16,7 @@ import { SectionForm, type FormCtx } from './section-form'
 import { SectionsPanel } from './sections-panel'
 import { PageForm } from './page-form'
 import { ThemeForm, type StyleOption } from './theme-form'
+import { Icon } from '@/components/icons/icon'
 
 // =============================================================================
 // The customizer (approved mockup "Customizer", "Customizer on a phone", "Publish"). One draft revision:
@@ -61,6 +62,8 @@ export function Editor(p: EditorProps) {
   latest.current = { layer, style }
   const stuck = typeof status === 'object' && /changed this draft|published|gone/.test(status.error)
 
+  // While a change saves, the preview dims; it comes back as the shop redraws with it (motion system: a theme or
+  // setting change fades old into new in 200 ms, never a jump).
   const post = (m: object) => frame.current?.contentWindow?.postMessage(m, window.location.origin)
   const save = useCallback(async () => {
     setStatus('saving')
@@ -143,8 +146,8 @@ export function Editor(p: EditorProps) {
           {(Object.keys(DEVICES) as Device[]).map((k) => <button key={k} type="button" aria-pressed={device === k} onClick={() => setDevice(k)} className={`h-9 px-3 capitalize ${device === k ? 'bg-primary text-primary-foreground' : ''}`}>{k}</button>)}
         </div>
         <span className="flex-1" />
-        <button type="button" aria-label="Undo" disabled={!past.length || stuck} onClick={undo} className="hidden size-9 rounded-md border border-input disabled:opacity-40 sm:block">↶</button>
-        <button type="button" aria-label="Redo" disabled={!future.length || stuck} onClick={redo} className="hidden size-9 rounded-md border border-input disabled:opacity-40 sm:block">↷</button>
+        <button type="button" aria-label="Undo" disabled={!past.length || stuck} onClick={undo} className="hidden size-9 place-items-center rounded-md border border-input disabled:opacity-40 sm:grid"><Icon name="undo" className="size-4" /></button>
+        <button type="button" aria-label="Redo" disabled={!future.length || stuck} onClick={redo} className="hidden size-9 place-items-center rounded-md border border-input disabled:opacity-40 sm:grid"><Icon name="redo" className="size-4" /></button>
         <span role="status" className="text-sm text-muted-foreground">{status === 'saved' ? 'Saved' : status === 'saving' ? 'Saving…' : 'Not saved'}</span>
         <a href={`/console/theme-preview/${p.revisionId}${path}`} target="_blank" rel="noopener" className="hidden min-h-9 content-center rounded-md border border-input px-3 text-sm sm:block">Preview</a>
         {p.canPublish ? <Button onClick={() => { setPubError(null); setPublishing(true) }} disabled={stuck}>Publish</Button> : <span className="text-sm text-muted-foreground">Ask the owner to publish</span>}
@@ -155,7 +158,8 @@ export function Editor(p: EditorProps) {
         <aside aria-label="Edit" className="h-[46dvh] shrink-0 overflow-y-auto border-t border-border bg-card p-4 md:h-auto md:w-[360px] md:border-r md:border-t-0">{panel}</aside>
         <section aria-label="Preview" className="flex min-h-0 flex-1 items-start justify-center overflow-auto bg-muted p-0 md:p-6">
           <div className="origin-top md:rounded-[28px] md:border-[8px] md:border-foreground" style={{ width: device === 'phone' ? 'min(390px, 100%)' : d.w, height: d.h, transform: device === 'desktop' ? 'scale(0.62)' : device === 'tablet' ? 'scale(0.8)' : undefined }}>
-            <iframe ref={frame} title="Your shop with this look" src={`/console/theme-preview/${p.revisionId}${path}`} className="size-full bg-card" />
+            <iframe ref={frame} title="Your shop with this look" src={`/console/theme-preview/${p.revisionId}${path}`}
+              className={`size-full bg-card transition-opacity duration-base ease-standard ${status === 'saving' ? 'opacity-60' : ''}`} />
           </div>
         </section>
       </div>

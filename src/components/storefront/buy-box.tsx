@@ -13,6 +13,7 @@ import { Swatch, type SwatchColour, type SwatchImage } from './swatch'
 import { bag, openBag } from './bag-store'
 import { fill } from './fill'
 import type { BuyWords } from './words'
+import { Icon } from '@/components/icons/icon'
 
 type Img = PhotoData & SwatchImage & { optionValue: string | null; alt: string }
 export type BuyBoxProps = {
@@ -126,7 +127,7 @@ export function BuyBox(p: BuyBoxProps) {
         ))}
 
         <p role="status" className={`min-h-5 text-sm ${a ? TONE[a.kind] : 'text-store-sub'}`}>{a ? labelOf(a, p.w) : p.options.length ? fill(p.w.pickToSee, { option: p.options.find((_, i) => picked[i] === null)?.toLowerCase() ?? p.w.size.toLowerCase() }) : ''}</p>
-        <button type="button" onClick={add} className="store-btn h-12 w-full rounded-[var(--store-radius)] bg-store-button text-base font-medium text-store-on-button">{a?.kind === 'preorder' ? p.w.preorder : p.w.addToBag}</button>
+        <button type="button" onClick={add} className="store-btn h-12 w-full rounded-[var(--store-radius)] transition-transform duration-fast ease-standard active:scale-97 bg-store-button text-base font-medium text-store-on-button">{a?.kind === 'preorder' ? p.w.preorder : p.w.addToBag}</button>
         {note && <p role="alert" className="text-sm">{note}</p>}
 
         <ul className="space-y-1.5 border-t border-store-line pt-4 text-sm">
@@ -209,12 +210,12 @@ function SizeGuide({ chart, model, onClose, w }: { chart: Chart; model: string |
   }, [])
   const close = () => { if (window.history.state?.sizeGuide) window.history.back(); else onClose() }
   return (
-    <dialog ref={ref} onCancel={(e) => { e.preventDefault(); close() }} aria-labelledby="sg-h"
-      className="m-0 mt-auto w-full max-w-none rounded-t-md bg-store-paper p-0 text-store-ink backdrop:bg-black/40 sm:m-auto sm:max-w-lg sm:rounded-md">
+    <dialog ref={ref} data-store-drawer="sheet" onCancel={(e) => { e.preventDefault(); close() }} aria-labelledby="sg-h"
+      className="m-0 mt-auto w-full max-w-none rounded-t-md bg-store-paper p-0 text-store-ink sm:m-auto sm:max-w-lg sm:rounded-md">
       <div className="space-y-4 p-5">
         <div className="flex items-center justify-between">
           <h2 id="sg-h" className="text-lg font-medium">{w.sizeGuide}</h2>
-          <button type="button" onClick={close} className="grid size-11 place-items-center text-xl" aria-label={w.closeGuide}>×</button>
+          <button type="button" onClick={close} className="grid size-11 place-items-center text-xl" aria-label={w.closeGuide}><Icon name="close" className="size-3.5" /></button>
         </div>
         <div className="flex gap-1 text-sm" role="group" aria-label={w.units}>
           {(['cm', 'in'] as const).map((u) => <button key={u} type="button" aria-pressed={unit === u} onClick={() => setUnit(u)} className={`rounded-sm border px-3 py-1.5 ${unit === u ? 'border-store-ink bg-store-ink text-store-paper' : 'border-store-line'}`}>{u === 'cm' ? w.cm : w.inches}</button>)}

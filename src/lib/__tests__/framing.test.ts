@@ -21,3 +21,25 @@ describe('framing headers', () => {
     expect(preview.find((r) => frameOf(r) === 'DENY')!.missing?.[0]).toMatchObject({ type: 'host' })
   })
 })
+
+import { isSignedInPath, sessionCookieOptions, signedInCsp } from '../security-headers'
+
+// Security review S2/S3 (2026-11-08): the signed-in pages' policy carries the global one (a middleware header
+// replaces next.config's), the nonce, and form-action; the look preview alone may be framed by the console.
+describe('signed-in policy', () => {
+  it('keeps the global directives and adds the nonce and form-action', () => {
+    const p = signedInCsp('abc', false)
+    expect(p).toMatch(/frame-ancestors 'none'; object-src 'none'; base-uri 'self'/)
+    expect(p).toMatch(/script-src 'nonce-abc' 'strict-dynamic'; form-action 'self'$/)
+    expect(p).not.toMatch(/unsafe-eval/)
+    expect(signedInCsp('abc', false, true)).toMatch(/frame-ancestors 'self'/)
+  })
+  it('covers the signed-in paths and not the public ones', () => {
+    for (const p of ['/console', '/console/orders', '/admin/merchants', '/partner', '/login', '/start']) expect(isSignedInPath(p)).toBe(true)
+    for (const p of ['/', '/partners', '/partners/apply', '/frrata-icon']) expect(isSignedInPath(p)).toBe(false)
+  })
+  it('session cookies are httpOnly, lax, 30 days, Secure outside development', () => {
+    expect(sessionCookieOptions(false)).toEqual({ httpOnly: true, sameSite: 'lax', maxAge: 2592000, path: '/', secure: true })
+    expect(sessionCookieOptions(true).secure).toBe(false)
+  })
+})

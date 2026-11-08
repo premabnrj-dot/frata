@@ -70,7 +70,7 @@ export async function undoOrderAction(eventId: string) {
  * compare-and-set, history and audit row. The first refusal is returned, in its own words.
  */
 export async function undoMany(eventIds: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
-  return undoEach(eventIds, undoOrderAction)
+  return undoEach(eventIds, (id) => undoOrderAction(id))
 }
 
 /** Each event through its own guarded undo, in one request; the first refusal in its own words. */
@@ -210,7 +210,7 @@ export async function undoOutcomeAction(eventId: string): Promise<ActionResult> 
 
 /** A bulk outcome's Undo in ONE request, as undoMany (architecture review 2026-11-07); each through undoOutcomeAction. */
 export async function undoOutcomeMany(eventIds: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
-  return undoEach(eventIds, undoOutcomeAction)
+  return undoEach(eventIds, (id) => undoOutcomeAction(id))
 }
 /** Mark a selection delivered (the queue's bulk action, at most 50), each through deliverOrder. */
 export async function deliverMany(orderIds: string[]): Promise<BulkResult> {

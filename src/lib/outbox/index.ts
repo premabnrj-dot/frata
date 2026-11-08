@@ -9,7 +9,8 @@ import { outbox } from '@/lib/db/schema'
 // A CALL TO THE OUTSIDE WORLD IS A ROW BEFORE IT IS A REQUEST (from Ekatan).
 // `enqueue` runs inside the same withTenant transaction as the change that
 // caused it, so an order and its WhatsApp confirmation commit together or not
-// at all. The dedupe key makes a retried action a no-op.
+// at all. The dedupe key makes a retried action a no-op. After the transaction
+// commits, call drainSoon() (./drain.ts) so it is sent now, not at the next cron.
 // =============================================================================
 
 export async function enqueue(

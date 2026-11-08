@@ -4,6 +4,8 @@ import { MAX_UPLOAD_BYTES, PATH_SHAPE } from '@/domains/media/sizes'
 import { ANY_MEMBER, CAN_BUILD, requireMember } from '@/lib/auth/require-member'
 import { sectionFor } from '@/domains/settings/sections'
 import { BLOB_READ_WRITE_TOKEN, isBlobConfigured } from '@/lib/env'
+import { errName } from '@/lib/log'
+import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 
 // Photo uploads (ADR-0005). The browser asks for a one-time token for ONE
 // path; we give it only to a signed-in member, only for a path inside that
@@ -26,12 +28,13 @@ export async function POST(request: Request) {
         if (m[2] === 'brand' && !(sectionFor('brand')?.editors ?? []).includes(auth.membership.role)) throw new Error('brand needs a brand editor')
         // A look's photos: whoever may edit the look, never a Frrata support visit (themes plan, tenancy review).
         if (m[2] === 'theme' && (!(CAN_BUILD as readonly string[]).includes(auth.membership.role) || auth.membership.supportSessionId)) throw new Error('theme needs a look editor')
+        if (!(await withinLimit(LIMITS.uploadShop, auth.membership.tenantId))) throw new Error('upload limit')
         return { allowedContentTypes: ['image/webp'], maximumSizeInBytes: MAX_UPLOAD_BYTES, addRandomSuffix: false, allowOverwrite: false, cacheControlMaxAge: 31536000 }
       },
     })
     return NextResponse.json(result)
   } catch (err) {
-    console.error('[upload]', err instanceof Error ? err.message : 'unknown')
+    console.error('[upload]', errName(err))
     return NextResponse.json({ error: 'That upload was refused.' }, { status: 400 })
   }
 }

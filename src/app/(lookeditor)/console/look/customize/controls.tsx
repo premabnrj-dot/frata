@@ -3,6 +3,7 @@
 import { useId, useState } from 'react'
 import { uploadPhoto } from '@/app/(console)/console/products/_components/upload-photos'
 import type { ThemeImage } from '@/domains/themes/sections'
+import { Switch as Toggle } from '@/components/ui/switch'
 
 // The customizer's small controls: each a labelled native control or a group of real buttons (design-language
 // primitives; recognition over recall). Limits show as counters, never as a refusal after typing.
@@ -48,10 +49,7 @@ export function Switch({ label, on, onChange }: { label: string; on: boolean; on
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
       <span>{label}</span>
-      <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-fast ${on ? 'bg-primary' : 'bg-input'}`}>
-        <span className={`absolute top-0.5 size-5 rounded-full bg-card transition-transform duration-fast ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
-      </button>
+      <Toggle on={on} onChange={onChange} label={label} />
     </div>
   )
 }

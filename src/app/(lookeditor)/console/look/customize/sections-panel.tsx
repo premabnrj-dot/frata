@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Dialog } from '@/components/ui/dialog'
 import { MAX_PER_PAGE, SECTION_KINDS, SECTION_NAMES, type SectionInstance, type SectionKey } from '@/domains/themes/sections'
+import { Icon } from '@/components/icons/icon'
 
 // The Sections tab (mockup "Customizer"): the Home's sections in order. Each row moves up or down (buttons: drag is
 // not the only way), hides or shows, and opens its form; Header and Footer are always on. "Add a section" opens
@@ -70,9 +71,9 @@ export function SectionsPanel({ home, selected, allowed, onSelect, onChange, iss
               <span className="block font-medium">{SECTION_NAMES[s.key]}{issues.has(s.id) && <span className="ml-2 text-xs font-normal text-warn-text">needs you</span>}</span>
               <span className="block text-xs text-muted-foreground">{s.hidden ? 'Hidden' : summary(s)}</span>
             </button>
-            <button type="button" aria-label={`Move ${SECTION_NAMES[s.key]} up`} disabled={i === 0} onClick={() => move(i, -1)} className="grid size-9 place-items-center rounded-md disabled:opacity-30">↑</button>
-            <button type="button" aria-label={`Move ${SECTION_NAMES[s.key]} down`} disabled={i === home.length - 1} onClick={() => move(i, 1)} className="grid size-9 place-items-center rounded-md disabled:opacity-30">↓</button>
-            <button type="button" aria-label={`${s.hidden ? 'Show' : 'Hide'} ${SECTION_NAMES[s.key]}`} aria-pressed={!s.hidden} onClick={() => onChange(home.map((x) => (x.id === s.id ? { ...x, hidden: !x.hidden } : x)))} className="grid size-9 place-items-center rounded-md">{s.hidden ? '◌' : '◉'}</button>
+            <button type="button" aria-label={`Move ${SECTION_NAMES[s.key]} up`} disabled={i === 0} onClick={() => move(i, -1)} className="grid size-9 place-items-center rounded-md disabled:opacity-30"><Icon name="up" className="size-4" /></button>
+            <button type="button" aria-label={`Move ${SECTION_NAMES[s.key]} down`} disabled={i === home.length - 1} onClick={() => move(i, 1)} className="grid size-9 place-items-center rounded-md disabled:opacity-30"><Icon name="down" className="size-4" /></button>
+            <button type="button" aria-label={`${s.hidden ? 'Show' : 'Hide'} ${SECTION_NAMES[s.key]}`} aria-pressed={!s.hidden} onClick={() => onChange(home.map((x) => (x.id === s.id ? { ...x, hidden: !x.hidden } : x)))} className="grid size-9 place-items-center rounded-md"><Icon name={s.hidden ? 'eyeOff' : 'eye'} className="size-4" /></button>
           </li>
         ))}
         <li className="flex items-center gap-2 rounded-md px-2 py-2 text-muted-foreground"><span className="flex-1">Footer</span><span className="text-xs">Always on</span></li>

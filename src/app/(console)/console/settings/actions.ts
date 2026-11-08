@@ -13,6 +13,7 @@ import { slugProblem } from '@/domains/signup/slug'
 import { parseShipCosts, type ShipCostsInput } from '@/domains/settings/ship-costs'
 import { dayIN } from '@/lib/format-date'
 import { shopWithSettings } from '@/lib/queries/settings'
+import { errName } from '@/lib/log'
 
 // Each section says who may save it (`editors`: owners, admins and the store's partner for the shop's own
 // settings); the shop's address stays CAN_MANAGE. Each save checks the
@@ -29,11 +30,7 @@ class NeededWhenOpen extends Error { constructor(readonly errors: Record<string,
  * own message carries the query's parameters — a merchant's GSTIN, phones,
  * a whole policy page — and logs are not the place for them (tenancy audit).
  */
-function dbReason(err: unknown): string {
-  const cause = (err as { cause?: { code?: string; message?: string } })?.cause
-  if (cause) return `${cause.code ?? ''} ${cause.message ?? ''}`.trim()
-  return err instanceof Error ? err.name : 'unknown'
-}
+const dbReason = errName
 
 export type SaveResult =
   | { ok: true; version: number }

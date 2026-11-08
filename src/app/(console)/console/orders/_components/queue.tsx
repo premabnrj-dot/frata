@@ -17,6 +17,7 @@ import { confirmKey } from '@/domains/ui/shortcuts'
 import { cn } from '@/lib/utils'
 import { confirmMany, confirmOrder, deliverMany, deliverOrder, holdMany, holdOrder, shipOrder, undoMany, undoOrderAction, undoOutcomeAction, undoOutcomeMany, type BulkResult } from '../actions'
 import { printHref, RISK_LABEL, type Tone } from './labels'
+import { Icon } from '@/components/icons/icon'
 
 // =============================================================================
 // FILE: src/app/(console)/console/orders/_components/queue.tsx
@@ -31,7 +32,7 @@ import { printHref, RISK_LABEL, type Tone } from './labels'
 
 export type QueueRow = {
   id: string; n: number; number: string; href: string; customer: string; place: string
-  payment: { label: string; tone: Tone }; state: { label: string; tone: Tone }; doNotCollect: boolean
+  payment: { label: string; tone: Tone; icon: 'cod' | 'prepaid' }; state: { label: string; tone: Tone }; doNotCollect: boolean
   risk: 'low' | 'medium' | 'high' | 'unknown'; canConfirm: boolean; canHold: boolean; canPrint: boolean; total: number; placed: string; dimmed: boolean
   /** Ship S·0: the row's one shipping step for THIS member (packed → Mark shipped; on its way → Delivered), or none. */
   shipStep: 'ship' | 'deliver' | null
@@ -201,7 +202,7 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
                 {/* One cell for the badges (several would overlap on a phone), on a full line of its own there: payment,
                     status and risk do not fit beside the customer at 390 px (seen at phone width, 2026-11-07). */}
                 <Td cell="e"><span className="flex flex-wrap items-center gap-1.5">
-                  <Badge tone={r.payment.tone}>{r.payment.label}</Badge>
+                  <Badge tone={r.payment.tone}><Icon name={r.payment.icon} className="mr-1 inline size-3.5 align-[-2px]" />{r.payment.label}</Badge>
                   {r.doNotCollect ? <Badge tone="danger">Do not collect cash</Badge> : null}
                   {now ? <Badge tone="info">{now}</Badge> : <Badge tone={r.state.tone}>{r.state.label}</Badge>}
                   {r.risk === 'low' ? null : r.risk === 'unknown' ? <span className="text-xs text-muted-foreground">Risk unavailable</span> : (

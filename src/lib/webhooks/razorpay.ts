@@ -33,3 +33,18 @@ export function razorpayEventKey(event: RazorpayEvent): string | null {
   const objectId = event.payload?.[entityName]?.entity?.id
   return objectId ? `razorpay:${event.event}:${objectId}` : null
 }
+
+/** The most a Razorpay webhook body may be before it is read (security review S13); a real one is a few kB. */
+export const RAZORPAY_BODY_LIMIT = 256 * 1024
+
+/**
+ * What a processed Razorpay event keeps (security review S4): the event and the payment fields reconciliation
+ * reads (`toPayment`, the order match). The shopper's email, phone, VPA and card details are dropped once used.
+ * drizzle/0043 trims the rows stored before this with the same keys.
+ */
+export const KEPT_PAYMENT_FIELDS = ['id', 'order_id', 'amount', 'currency', 'status', 'method', 'fee', 'tax'] as const
+export function trimRazorpayEvent(ev: Record<string, unknown>): Record<string, unknown> {
+  const entity = (ev.payload as { payment?: { entity?: Record<string, unknown> } } | undefined)?.payment?.entity
+  const kept = entity ? Object.fromEntries(KEPT_PAYMENT_FIELDS.filter((k) => k in entity).map((k) => [k, entity[k]])) : null
+  return { event: ev.event ?? null, ...(kept ? { payload: { payment: { entity: kept } } } : {}) }
+}

@@ -20,6 +20,7 @@ import { AddNote, EditContact } from '../_components/contact-and-notes'
 import { eventLabel, PAYMENT, printHref, STATE } from '../_components/labels'
 import { OrderActions } from '../_components/order-actions'
 import { ShipPanel } from '../_components/ship-panel'
+import { Icon } from '@/components/icons/icon'
 
 // =============================================================================
 // FILE: src/app/(console)/console/orders/[number]/page.tsx
@@ -79,7 +80,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   return (
     <>
       <PageHeader title={label} back={{ href: '/console/orders', label: 'Orders' }}
-        badges={<><Badge tone={pay.tone}>{pay.label}</Badge><Badge tone={s.tone}>{s.label}</Badge></>}
+        badges={<><Badge tone={pay.tone}><Icon name={pay.icon} className="mr-1 inline size-3.5 align-[-2px]" />{pay.label}</Badge><Badge tone={s.tone}>{s.label}</Badge></>}
         meta={<>Placed {dateTimeIN(o.placedAt)}{o.invoiceNumber ? <> · Invoice <span className="font-mono">{o.invoiceNumber}</span></> : null}</>}
         actions={<OrderActions orderId={o.id} number={label} primary={primary}
           print={{ slip: may('print', state, role) ? printHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? printHref('invoice', [o.number]) : null }} riskWarning={riskWarning} heldPaid={state === 'held' && !!o.paidAt}
@@ -90,8 +91,14 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
         <div className="min-w-0 space-y-6">
           {r && r.level !== 'low' ? (
             <Section id="risk" title={r.level === 'high' ? 'High risk' : r.level === 'medium' ? 'Medium risk' : 'Risk unavailable'}>
-              {r.reasons.length ? <ul className="list-disc space-y-1 pl-5 text-sm">{r.reasons.map((x) => <li key={x}>{x}</li>)}</ul> : null}
-              {r.next ? <p className="text-sm font-medium">{r.next}</p> : null}
+              {/* The level as a mark and a word, the reasons as rows (visual changes, owner-approved 2026-11-08). */}
+              <div className="flex items-start gap-3">
+                <span aria-hidden="true" className={`grid size-10 shrink-0 place-items-center rounded-md ${r.level === 'high' ? 'bg-danger text-danger-text' : r.level === 'medium' ? 'bg-warn text-warn-text' : 'bg-muted text-muted-foreground'}`}><Icon name="risk" className="size-5" /></span>
+                <div className="min-w-0 flex-1">
+                  {r.reasons.length ? <ul className="divide-y divide-border text-sm">{r.reasons.map((x) => <li key={x} className="py-1.5 first:pt-0">{x}</li>)}</ul> : null}
+                  {r.next ? <p className="mt-2 text-sm font-medium">{r.next}</p> : null}
+                </div>
+              </div>
               {o.phone ? (
                 <div className="flex flex-wrap gap-2">
                   <a href={`tel:+91${o.phone}`} className="inline-flex min-h-10 items-center rounded-md border border-input px-3 text-sm md:min-h-9">Call {o.phone}</a>

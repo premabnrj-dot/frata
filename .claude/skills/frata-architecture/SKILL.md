@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.15.0
+  version: 2.18.0
   verified: 2026-11-08
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -71,14 +71,25 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
    cross-tenant read and write checks) and run `npm run verify:tenancy`.
 4. `npm test` — `check:tenant` fails a table without RLS or a policy.
 
+### Definers and platform reads (security review 2026-11-08)
+
+- A new definer is revoked from `public, anon, authenticated` **and
+  `service_role`** (Supabase grants it by default privileges; S12).
+- No `frata_app` policy has an `app_current_tenant() is null` branch on a table
+  that holds shopper data. A platform sweep uses a definer that returns ids only (S4).
+- Admin takes tenant ids from forms (it is cross-tenant by role); every Admin
+  write still matches `tenant_id` **and** the row id together.
+
 ## Auth
 
 - Supabase auth only (magic link, `src/app/login/`). Data never goes through
   supabase-js or PostgREST; `anon`/`authenticated` hold no table grants.
-- Always `getUser()`, never `getSession()` (`check:layers`).
+- `getUser()` (or, in the middleware's redirect only, `getClaims()`, which verifies the JWT), never
+  `getSession()` (`check:layers`). The member and staff checks always ask `getUser()`.
 - Signing in grants nothing; a `members` row does. Roles: owner, admin, staff,
-  partner (`MEMBER_ROLES`); tuples `ANY_MEMBER` (everyone, partner included),
-  `CAN_BUILD` (owner, admin, partner: catalogue, the look, the shop's own
+  partner (`MEMBER_ROLES`); tuples `ANY_MEMBER` (everyone, partner included:
+  orders, and products and collections — staff edit the catalogue, owner
+  2026-11-08), `CAN_BUILD` (owner, admin, partner: the look and the shop's own
   settings), `CAN_MANAGE` (owner, admin: people, the address, opening the shop).
   Payment keys are `['owner']`.
 - **Adding a role: read every caller of the tuple it joins** before it joins
@@ -98,6 +109,21 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   check guards nothing below it: **every page and action calls
   `requireMember` itself.** It returns `not_configured` rather than throwing
   when the environment is unset.
+- **Session cookies:** every `createServerClient` passes `cookieOptions:
+  { httpOnly: true, secure: true, sameSite: 'lax' }` with a bounded `maxAge`;
+  nothing reads the Supabase session in the browser. A readable cookie turns any
+  script on the console origin (the Meta SDK, the look preview) into a stolen
+  staff session (`sessionCookieOptions`, src/lib/security-headers.ts). Signed-in console pages
+  carry a per-request script nonce (`signedInCsp`, set by the middleware, which REPLACES next.config's
+  header of the same name, so it carries the whole policy and X-Frame-Options; e2e 12-security).
+- **Route handlers are not server actions:** Next checks Origin for actions
+  only. A cookie-authenticated POST route checks `Origin` itself, as
+  `requireShop` does. Console and shops stay on different registrable domains.
+- **A tuple means what its comment says.** An action whose tuple's comment
+  excludes the role it lets through is a finding, not a judgement call (S6,
+  settled by the owner 2026-11-08: staff edit products and collections).
+- Staff sign-in needs a second factor (aal2 in `requireStaff`) before outside
+  merchants go live; a support visit acts as owner (S5, ADR-0007).
 
 ## Time in client components (2026-11-07, `check:clock`)
 
@@ -283,6 +309,61 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   processed_at is null`. List the route in `scripts/check-actions.mjs` ENTRY_POINTS.
 - Per-merchant credentials (Shiprocket tokens, Meta system user tokens) are
   never in env; they go in a tenant table, encrypted — the design is a spec.
+- A webhook caps its body before parsing (`raw.length > N` → 413) and checks the
+  signature before any database read the secret allows (S13).
+- Once processed, a webhook row keeps only what reconciliation needs (event,
+  object id, amount, status). Shopper fields (email, contact, VPA) are dropped
+  then, never kept (S4; WhatsApp already does this in `webhook.ts`).
+- A provider base URL from env (`*_API_BASE`) is refused in production unless
+  it is the provider's own host.
+- Logs carry an error's `name` or code, never the raw error. A drizzle error
+  includes its parameters, so emails and phones end up in Vercel logs (S10).
+- **Background work is sized, not hoped.** Batch × runs per day covers 10× peak
+  with the number written in the spec. A daily cron is the safety net: a
+  sender drains right after `enqueue` (`after()`), loops `claimDue` until empty
+  or out of time, and shops run with bounded concurrency (`src/lib/outbox/drain.ts`:
+  `drainSoon()` after the commit — not called yet: the first sender's change calls it —
+  `drainOutbox(deadline)`, `eachLimited`). The cron is still daily (Hobby);
+  a sender with a deadline (COD confirmation) needs a frequent schedule (Pro) before it ships.
+
+## Speed (review 2026-11-08; findings P1–P15 in `docs/research/2026-11-08-performance-security-motion-review.md`)
+
+Budgets. Each says whether a gate holds it yet:
+
+| Budget | Held by |
+|---|---|
+| Shop first-load JS ≤ 120 kB gz | `check:storefront-build` |
+| Every shop route ISR; second visit HIT | build + `check:payload` |
+| Console/Admin first-load JS ≤ 150 kB gz (customize ≤ 190) | review (a gate to add) |
+| Largest shop page HTML ≤ 300 kB raw, RSC ≤ 150 kB; lists paged | lists page at 48 (`PAGE_SIZE`, `/products/page/N`, e2e 13-paging); HTML bytes a review |
+| A cached loader entry ≤ 1 MB (Next refuses > 2 MB, silently) | `catalogue-size.int.test.ts` (880 kB at 600 products with an offer; `src/lib/storefront/catalogue-entry.ts`) |
+| A cold shop page ≤ 12 statements, none repeated | review (loaders are `cache()`d since P3) |
+| No preloaded font and `priority` only on the first section's photos | review (P6, P15 fixed) |
+| Console page < 1 s p95; a query < 100 ms at the 10× seed, no seq scan on `orders` | review + EXPLAIN |
+
+Rules:
+- Every exported storefront loader is `cache(shopCached(...))`. `unstable_cache`
+  does not merge parallel misses, and layout, `generateMetadata` and page
+  render in parallel.
+- **Never** call a cached loader or `withTenant` inside a `withTenant`
+  callback; pass `tx` (`*In(tx, …)`). A second connection inside a
+  transaction deadlocks a full pool until the 30 s idle-in-transaction
+  timeout (P4).
+- A page opens one `withTenant` and runs independent reads with `Promise.all`
+  inside it (postgres-js pipelines them). One transaction per helper, one
+  after another, is the slow shape (P8).
+- `cache()`d functions take no array or object argument; `cache` keys on
+  identity, so `requireMember(CAN_BUILD)` misses the layout's entry (P7).
+- A shopper's write invalidates the narrowest tag it can: the product, not
+  the shop. Catalogue refreshes are debounced (P11).
+- Fonts: a shop preloads only its own face; console faces never reach `/s/` (P6).
+- Pool: `POOL` in src/lib/db/index.ts (`idle_timeout: 20, connect_timeout: 5, max_lifetime: 600`), and
+  `attachDatabasePool` on Vercel through a pg-shaped adapter: `withTenant` reports each release
+  (`poolReleased`). It does not know postgres-js and throws on it unadapted.
+- **Row security keeps Postgres off an index for ILIKE / LIKE** (not leakproof): a trigram index helps
+  no query `frata_app` runs (P10, measured; drizzle/0044). Search a tenant's history with ILIKE only
+  where the plan can walk an ordered index and stop at the page (orders search: 100 ms at 150k), or
+  through a tenant-bound definer — measured both ways first.
 
 ## Money (ADR-0004)
 

@@ -65,7 +65,7 @@ export default async function ChangePlanPage({ params, searchParams }: { params:
         </div>
       </div>
       <p className="rounded-md bg-muted px-3 py-2 text-sm">
-        The store moves to the current version of the plan you choose: its price, included orders, fee and features. {cur ? `Today: ${cur.name}, ${cur.v.includedOrders.toLocaleString('en-IN')} orders included.` : 'It has no plan today.'} Nothing is charged until billing arrives in Phase 6.
+        The store moves to the current version of the plan you choose: its price, included orders, fee and features. {cur ? `Today: ${cur.name}, ${cur.v.includedOrders.toLocaleString('en-IN')} orders included.` : 'It has no plan today.'} Nothing is charged until billing arrives.
       </p>
       <div className="flex justify-end gap-2 border-t border-border pt-4">
         <Link href={`/admin/merchants/${id}`} className={button({ variant: 'secondary' })}>Keep {cur?.name ?? 'as it is'}</Link>

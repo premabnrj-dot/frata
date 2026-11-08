@@ -24,7 +24,8 @@ export type StaffResult = StaffOk | { ok: false; reason: 'not_configured' | 'sig
 export const ANY_STAFF = ['admin', 'support'] as const satisfies readonly StaffRole[]
 export const ADMIN_ONLY = ['admin'] as const satisfies readonly StaffRole[]
 
-export const requireStaff = cache(async (allowed: readonly StaffRole[]): Promise<StaffResult> => {
+/** Once per request; no argument, because `cache` keys on identity and each tuple is its own array (speed review P7). */
+const currentStaff = cache(async (): Promise<StaffOk | Exclude<StaffResult, StaffOk> | { ok: 'none'; userId: string }> => {
   if (!isAuthConfigured() || !isDatabaseConfigured() || !isAdminDatabaseConfigured()) {
     return { ok: false, reason: 'not_configured', message: 'Frrata Admin is not connected yet' }
   }
@@ -32,8 +33,14 @@ export const requireStaff = cache(async (allowed: readonly StaffRole[]): Promise
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, reason: 'signed_out', message: 'Not signed in' }
   const { staffRole } = await accessFor(user.id)
-  if (!staffRole || !allowed.includes(staffRole)) {
-    return { ok: false, reason: 'not_staff', message: 'This needs Frrata staff access' }
-  }
+  if (!staffRole) return { ok: 'none', userId: user.id }
   return { ok: true, userId: user.id, email: user.email ?? '', role: staffRole }
 })
+
+export async function requireStaff(allowed: readonly StaffRole[]): Promise<StaffResult> {
+  const s = await currentStaff()
+  if (s.ok === 'none' || (s.ok === true && !allowed.includes(s.role))) {
+    return { ok: false, reason: 'not_staff', message: 'This needs Frrata staff access' }
+  }
+  return s
+}

@@ -40,7 +40,7 @@ export function ShopShell({ shop, href, banner, children, gated = false, live = 
 
 const Logo = ({ shop, href, className, upper = true }: { shop: ShellShop; href: Href; className: string; upper?: boolean }) => (
   <Link href={href('/')} className={className} style={{ fontFamily: 'var(--store-display)' }}>
-    {shop.logoUrl ? <img src={shop.logoUrl} alt={shop.shopName} className="h-8 w-auto" /> : upper ? shop.shopName.toUpperCase() : shop.shopName}
+    {shop.logoUrl ? <img src={shop.logoUrl} alt={shop.shopName} height={32} width={128} className="h-8 w-auto max-w-32 object-contain object-left" /> : upper ? shop.shopName.toUpperCase() : shop.shopName}
   </Link>
 )
 

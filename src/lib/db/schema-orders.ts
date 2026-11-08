@@ -252,7 +252,7 @@ export const orderNotes = pgTable('order_notes', {
  * shipment per order. The ORDER's state stays derived from its own timestamps (order-state.ts); this holds only what
  * the courier knows, and the shipment's OWN ending (never a copy of delivered, returned or lost): cancelled before
  * pickup, or undone (Shipped was undone, so the order can ship again). `self`: shipped another way
- * (courier name and tracking number as typed; never unique). Access: drizzle/0044_ship_access.sql.
+ * (courier name and tracking number as typed; never unique). Access: drizzle/0046_ship_access.sql.
  */
 export const shipments = pgTable('shipments', {
   id: id(),

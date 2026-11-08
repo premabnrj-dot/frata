@@ -103,11 +103,15 @@ export function Today({ s, setup, now }: { s: TodaySummary | null; setup: Setup;
               <p className="grid"><b className="font-mono text-xl font-semibold tabular-nums"><Money paise={paise(weekValue)} /></b><span className="text-xs text-muted-foreground">their value · cancelled left out</span></p>
             </div>
             <div>
-              <div role="img" aria-label={`Orders placed per day: ${bars.map((b) => `${b.today ? 'today' : weekdayShortIN(b.day)} ${b.orders}`).join(', ')}`} className="grid h-16 grid-cols-7 items-end gap-1.5">
+              {/* Each day's count over its bar, and today said to be still going (visual changes, owner-approved 2026-11-08). */}
+              <div className="mb-1 grid grid-cols-7 gap-1.5 text-center font-mono text-xs tabular-nums text-muted-foreground" aria-hidden>
+                {bars.map((b) => <span key={b.day}>{b.orders}</span>)}
+              </div>
+              <div role="img" aria-label={`Orders placed per day: ${bars.map((b) => `${b.today ? 'today so far' : weekdayShortIN(b.day)} ${b.orders}`).join(', ')}`} className="grid h-16 grid-cols-7 items-end gap-1.5">
                 {bars.map((b) => <span key={b.day} title={`${b.orders} · ${formatInr(paise(b.value))}`} className={cn('block h-full min-h-0.5 origin-bottom rounded-t-sm bg-foreground', b.today ? 'opacity-45' : 'opacity-80')} style={{ transform: `scaleY(${Math.max(b.share, 0.02)})` }} />)}
               </div>
               <div className="mt-1 grid grid-cols-7 gap-1.5 text-center text-xs text-muted-foreground" aria-hidden>
-                {bars.map((b) => <span key={b.day}>{b.today ? 'Today' : weekdayShortIN(b.day)}</span>)}
+                {bars.map((b) => <span key={b.day} className="leading-tight">{b.today ? <>Today<span className="block">so far</span></> : weekdayShortIN(b.day)}</span>)}
               </div>
             </div>
           </div>

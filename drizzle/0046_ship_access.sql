@@ -6,7 +6,7 @@
 -- frata_admin and the API roles: nothing.
 -- shop_settings' three shipping-cost estimates fall under frata_admin's existing table-level read (0008): Frrata staff
 -- may see a shop's own estimate of its freight, as they see its other settings (accepted, Ship S·0 impact review).
--- orders.forward_shipping: nothing ever wrote it, so every 0 meant "not known": it becomes null (0043 dropped the
+-- orders.forward_shipping: nothing ever wrote it, so every 0 meant "not known": it becomes null (0045 dropped the
 -- default), so freight.ts uses the shop's estimate rather than treating unknown freight as free.
 -- =============================================================================
 revoke all on shipments from anon, authenticated, service_role;

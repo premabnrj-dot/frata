@@ -30,7 +30,13 @@ export const STATE: Record<OrderState, { label: string; tone: Tone }> = {
 }
 
 /** How it is paid now (currentMethod), and whether the online payment came in. */
-export const PAYMENT = { cod: { label: 'COD', tone: 'warn' as Tone }, paid: { label: 'Paid online', tone: 'ok' as Tone }, unpaid: { label: 'Online, not paid', tone: 'neutral' as Tone } }
+// How it is paid is a neutral badge with its icon; only the order's STATE is coloured, so "COD" and "To confirm" no
+// longer read as one yellow axis (visual changes, owner-approved 2026-11-08).
+export const PAYMENT = {
+  cod: { label: 'COD', tone: 'neutral' as Tone, icon: 'cod' as const },
+  paid: { label: 'Paid online', tone: 'neutral' as Tone, icon: 'prepaid' as const },
+  unpaid: { label: 'Online, not paid', tone: 'neutral' as Tone, icon: 'prepaid' as const },
+}
 
 /** The queue's views, and what each says when nothing waits in it (an empty state per tab, design-language § Work queues 8). */
 export const TABS: { tab: QueueTab; label: string; empty: { title: string; body?: string } }[] = [

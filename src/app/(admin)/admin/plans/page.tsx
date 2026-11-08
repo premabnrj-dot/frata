@@ -23,7 +23,7 @@ export default async function PlansPage({ searchParams }: { searchParams: Promis
   const cell = 'border-l border-border px-4 py-3'
   return (
     <>
-      <PageHeader title="Plans" actions={<span className="text-sm text-muted-foreground">Prices exclude GST · not charged until billing arrives in Phase 6</span>} />
+      <PageHeader title="Plans" actions={<span className="text-sm text-muted-foreground">Prices exclude GST · not charged until billing arrives</span>} />
       <Notice ok={ok} />
       {/* A plan matrix does not reflow into rows: on a phone each plan is its own card (rule 15). */}
       <div className="space-y-3 md:hidden">

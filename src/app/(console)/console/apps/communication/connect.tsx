@@ -6,6 +6,7 @@ import { Icon } from '@/components/icons/icon'
 import { Badge } from '@/components/ui/badge'
 import { InfoTip } from '@/components/ui/info-tip'
 import { connectWhatsAppAction } from './actions'
+import { Journey } from '@/components/brand/journey'
 
 // =============================================================================
 // Connect WhatsApp (C1 · mockup Connect). Two paths, then Meta's popup (Embedded Signup v4; the Facebook SDK is
@@ -108,9 +109,14 @@ export function ConnectChoices({ ready, canManage, appId, configId, graphVersion
         <InfoTip about="moving from another tool">A number can’t move between tools any more. In your tool’s WhatsApp settings, share the account with Frrata as a partner, then pick it in Meta’s window here.</InfoTip>
       </p>
       {error ? <p role="alert" className="text-sm text-danger-text">{error}</p> : null}
-      <section aria-label="What happens next" className="flex flex-wrap items-center gap-3 rounded-md bg-muted px-4 py-3 text-sm">
-        <span className="font-semibold">Next</span>
-        <span className="text-muted-foreground">Meta’s window opens. Pick your business, then your number. Takes about 3 minutes.</span>
+      {/* What happens next, drawn as three steps (visual changes, owner-approved 2026-11-08). */}
+      <section aria-label="What happens next" className="space-y-3 rounded-md bg-muted px-4 py-4 text-sm">
+        <Journey label="Connecting WhatsApp, in three steps" steps={[
+          { icon: 'external', title: 'Meta’s window opens' },
+          { icon: 'merchants', title: 'Pick your business', next: true },
+          { icon: 'messages', title: 'Pick your number', next: true },
+        ]} />
+        <p className="text-muted-foreground">Takes about 3 minutes.</p>
       </section>
     </div>
   )

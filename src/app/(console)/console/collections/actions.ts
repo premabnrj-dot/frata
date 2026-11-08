@@ -10,6 +10,7 @@ import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { auditEvents } from '@/lib/db/schema'
 import { collectionProducts, collections, products } from '@/lib/db/schema-catalogue'
 import { productFacts } from '@/lib/queries/catalogue'
+import { errName } from '@/lib/log'
 
 // Collections (1A·7): the shop's own groups for menus and pages. Hand-picked
 // (manual) or filled by rules (auto). Any member may edit; every write through
@@ -75,8 +76,7 @@ export async function saveCollection(id: string | null, input: CollectionInput):
     return { ok: true, handle: r.value }
   } catch (err) {
     if (err instanceof Stop) return err.result
-    const cause = (err as { cause?: { code?: string; message?: string } })?.cause
-    console.error('[saveCollection]', cause ? `${cause.code ?? ''} ${cause.message ?? ''}` : err instanceof Error ? err.name : err)
+    console.error('[saveCollection]', errName(err))
     return { ok: false, error: 'We could not save the collection. Nothing was changed.' }
   }
 }

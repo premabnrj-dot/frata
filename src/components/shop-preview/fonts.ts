@@ -2,11 +2,11 @@ import { Cormorant_Garamond, DM_Serif_Display, Fraunces, Playfair_Display } from
 import localFont from 'next/font/local'
 
 // A shop's display faces (themes spec § Theme settings › Pairing; body is Inter). Loaded only by the pages that
-// show a shop — the storefront and its previews. Latin only. Fraunces and Cormorant keep today's preload (Classic's
-// look is held to the pixel); the faces themes added are not preloaded (architecture review: no extra LCP cost
-// for shops that don't use them).
-const fraunces = Fraunces({ subsets: ['latin'], weight: ['500', '600'], display: 'swap', variable: '--font-store-fraunces' })
-const cormorant = Cormorant_Garamond({ subsets: ['latin'], weight: ['500', '600'], display: 'swap', variable: '--font-store-cormorant' })
+// show a shop — the storefront and its previews. Latin only. None is preloaded (speed review P6): every shop page
+// preloaded Fraunces and Cormorant whichever face it used, ahead of its main photo; a face downloads when the page
+// uses it.
+const fraunces = Fraunces({ subsets: ['latin'], weight: ['500', '600'], display: 'swap', preload: false, variable: '--font-store-fraunces' })
+const cormorant = Cormorant_Garamond({ subsets: ['latin'], weight: ['500', '600'], display: 'swap', preload: false, variable: '--font-store-cormorant' })
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['500', '600'], display: 'swap', preload: false, variable: '--font-store-playfair' })
 const dmserif = DM_Serif_Display({ subsets: ['latin'], weight: ['400'], display: 'swap', preload: false, variable: '--font-store-dmserif' })
 

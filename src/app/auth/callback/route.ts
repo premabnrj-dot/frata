@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { destinationAfterSignIn } from '@/lib/auth/after-sign-in'
 import { createServerSupabase } from '@/lib/supabase/server'
+import { errName } from '@/lib/log'
 
 // ENTRY POINT credential: the one-time code Supabase issued in the email link.
 // A link opened in another browser or app cannot be exchanged here (the code
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
     const supabase = await createServerSupabase()
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error && data.user) return NextResponse.redirect(new URL(await destinationAfterSignIn(data.user.id), url.origin))
-    console.error('[auth/callback]', error?.message)
+    console.error('[auth/callback]', errName(error))
   }
   return NextResponse.redirect(new URL('/login?link=other-browser', url.origin))
 }

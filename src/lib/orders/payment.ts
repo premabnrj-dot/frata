@@ -13,7 +13,8 @@ import { tokenHash } from '@/lib/crypto/secret-box'
 import { checkoutShop, variantRows } from '@/lib/queries/checkout'
 import { keysFor, markEvent } from '@/lib/payments/keys'
 import { checkoutSignatureOk, orderPayments, toPayment } from '@/lib/payments/razorpay'
-import { refreshShop } from '@/lib/queries/storefront'
+import { trimRazorpayEvent } from '@/lib/webhooks/razorpay'
+import { refreshSoldOut } from '@/lib/queries/storefront'
 import { HOLD_MINUTES, startPayment, takeStock, type Pay } from './place'
 import { storedPricing, writeReprice } from './reprice'
 
@@ -78,7 +79,7 @@ export async function confirmPayment(tenantId: string, token: string, reply: { p
     await markPaid(tx, { id: o.id, tenantId }, { paymentId: reply.paymentId }, soldOut)
     return { ok: true }
   })
-  if (soldOut.length) refreshShop(tenantId, 'catalogue')
+  if (soldOut.length) refreshSoldOut(tenantId)
   return r
 }
 
@@ -111,7 +112,7 @@ export async function switchToCod(tenantId: string, token: string, expectedTotal
     if (captured) {
       const soldOut: string[] = []
       await withTenant(tenantId, (tx) => markPaid(tx, { id: pre.o!.id, tenantId }, { paymentId: captured.id, fee: captured.fee, tax: captured.tax }, soldOut))
-      if (soldOut.length) refreshShop(tenantId, 'catalogue')
+      if (soldOut.length) refreshSoldOut(tenantId)
       return { kind: 'paid' }
     }
     if (pays.some((p) => p.status === 'authorized')) return { kind: 'refused', status: 409, error: 'Your payment is still going through. Wait a moment, then check your order.' }
@@ -144,7 +145,7 @@ export async function switchToCod(tenantId: string, token: string, expectedTotal
     await takeStock(tx, tenantId, o.id, 'in_stock', soldOut)
     return { kind: 'switched', total: r.total }
   })
-  if (soldOut.length) refreshShop(tenantId, 'catalogue')
+  if (soldOut.length) refreshSoldOut(tenantId)
   return r
 }
 
@@ -202,6 +203,12 @@ export async function offersStillFit(tx: Tx, tenantId: string, orderId: string, 
     Number(mine.find((m) => m.discountId === l.id)!.amount)))
 }
 
+/** Store a verified Razorpay event inside the shop OUR key named (drizzle/0043: no webhook row exists outside a shop). */
+export async function storeRazorpayEvent(tenantId: string, key: string, payload: object): Promise<void> {
+  await withTenant(tenantId, (tx) => tx.insert(webhookEvents).values({ provider: 'razorpay', eventKey: `razorpay:${tenantId}:${key.replace(/^razorpay:/, '')}`, tenantId, payload })
+    .onConflictDoNothing({ target: webhookEvents.eventKey }))
+}
+
 /**
  * Process stored Razorpay events for one shop (right after storing, from /pay and the order page, and from the
  * daily cron). The tenant is the event row's own (set from our key, never the payload); the order is matched by
@@ -217,13 +224,13 @@ export async function processEvents(tenantId: string, limit = 20): Promise<numbe
       let error: string | null = null
       // A savepoint per event: one bad event must not abort the batch and block every later payment (audit 2026-11-07).
       try { error = await tx.transaction((sp) => applyEvent(sp, tenantId, row.payload as Record<string, unknown>, soldOut)) } catch (e) { error = e instanceof Error ? e.name : 'error' }
-      await tx.update(webhookEvents).set({ processedAt: sql`now()`, lastError: error }).where(and(eq(webhookEvents.tenantId, tenantId), eq(webhookEvents.id, row.id)))
+      await tx.update(webhookEvents).set({ processedAt: sql`now()`, lastError: error, payload: trimRazorpayEvent(row.payload as Record<string, unknown>) }).where(and(eq(webhookEvents.tenantId, tenantId), eq(webhookEvents.id, row.id)))
     }
     if (rows.length) await markEvent(tx, tenantId)
     return rows.length
   })
   // A rolled-back savepoint may have listed a variant: one refresh too many is harmless.
-  if (soldOut.length) refreshShop(tenantId, 'catalogue')
+  if (soldOut.length) refreshSoldOut(tenantId)
   return n
 }
 

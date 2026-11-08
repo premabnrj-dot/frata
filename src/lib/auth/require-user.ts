@@ -2,6 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { isAuthConfigured } from '@/lib/public-env'
 import { createServerSupabase } from '@/lib/supabase/server'
+import { errName } from '@/lib/log'
 
 // =============================================================================
 // FILE: src/lib/auth/require-user.ts
@@ -23,7 +24,7 @@ export const requireUser = cache(async (): Promise<UserOk | UserRefusal> => {
     if (!data.user?.email) return { ok: false, reason: 'signed_out', message: 'Sign in to continue.' }
     return { ok: true, userId: data.user.id, email: data.user.email }
   } catch (err) {
-    console.error('[requireUser]', err)
+    console.error('[requireUser]', errName(err))
     return { ok: false, reason: 'signed_out', message: 'Sign in to continue.' }
   }
 })

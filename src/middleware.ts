@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { routeFor } from '@/domains/tenancy/host'
 import { CONSOLE_HOST } from '@/lib/public-env'
 import { updateSession } from '@/lib/supabase/middleware'
+import { isSignedInPath, signedInCsp } from '@/lib/security-headers'
 
 /**
  * One deployment, two surfaces. The console host serves /console, /login and
@@ -15,7 +16,20 @@ export async function middleware(request: NextRequest) {
   if (route.kind === 'not_found') return new NextResponse(null, { status: 404 })
   // A shop: the host rewrite in next.config (shopRewrites) serves it from /s/<host>/…; no session work here.
   if (route.kind === 'shop') return NextResponse.next()
-  return updateSession(request, NextResponse.next({ request }))
+  if (!isSignedInPath(request.nextUrl.pathname)) return updateSession(request, NextResponse.next({ request }))
+  // Signed-in pages: a per-request script nonce (security review S3). Next reads it from the request's CSP header.
+  const nonce = btoa(crypto.randomUUID())
+  const framed = request.nextUrl.pathname.startsWith('/console/theme-preview/')
+  const csp = signedInCsp(nonce, process.env.NODE_ENV === 'development', framed)
+  const headers = new Headers(request.headers)
+  headers.set('x-nonce', nonce)
+  headers.set('content-security-policy', csp)
+  const response = await updateSession(request, NextResponse.next({ request: { headers } }))
+  response.headers.set('Content-Security-Policy', csp)
+  // Set here too: once the middleware overrides the request's headers, next.config's host-matched entry no longer
+  // matches, and the look preview fell to DENY (found by e2e 47-look).
+  response.headers.set('X-Frame-Options', framed ? 'SAMEORIGIN' : 'DENY')
+  return response
 }
 
 // Image-looking paths are NOT skipped (tenancy audit 2026-11-07): /s/<other>/x.png must meet routeFor too.

@@ -11,9 +11,10 @@
     "check:payload": "node scripts/check-payload.mjs",
     "postbuild": "node scripts/check-client-bundle.mjs && node scripts/check-storefront-build.mjs",
     "start": "next start",
-    "test": "node scripts/check-hex.mjs && node scripts/check-layers.mjs && node scripts/check-dates.mjs && node scripts/check-fetch.mjs && node scripts/check-config.mjs && node scripts/check-size.mjs && node scripts/check-tenant.mjs && node scripts/check-actions.mjs && node scripts/check-states.mjs && node scripts/check-contrast.mjs && node scripts/check-scale.mjs && node scripts/check-voice.mjs && node scripts/check-motion.mjs && node scripts/check-clock.mjs && node scripts/check-modules.mjs && node scripts/check-name.mjs && vitest run",
+    "test": "node scripts/check-hex.mjs && node scripts/check-layers.mjs && node scripts/check-dates.mjs && node scripts/check-fetch.mjs && node scripts/check-logs.mjs && node scripts/check-config.mjs && node scripts/check-size.mjs && node scripts/check-tenant.mjs && node scripts/check-actions.mjs && node scripts/check-states.mjs && node scripts/check-contrast.mjs && node scripts/check-scale.mjs && node scripts/check-voice.mjs && node scripts/check-motion.mjs && node scripts/check-clock.mjs && node scripts/check-modules.mjs && node scripts/check-name.mjs && vitest run",
     "test:watch": "vitest",
     "check:tenant": "node scripts/check-tenant.mjs",
+    "check:logs": "node scripts/check-logs.mjs",
     "check:actions": "node scripts/check-actions.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:scale": "node scripts/check-scale.mjs",
@@ -26,12 +27,13 @@
     "db:generate": "drizzle-kit generate",
     "verify:tenancy": "bash scripts/verify/tenancy.sh",
     "e2e": "node e2e/run.mjs",
-    "verify:backfill": "bash scripts/verify/backfill-0019.sh && bash scripts/verify/backfill-0044.sh"
+    "verify:backfill": "bash scripts/verify/backfill-0019.sh && bash scripts/verify/backfill-0046.sh"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "@vercel/blob": "^2.8.2",
+    "@vercel/functions": "3.10.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.3",

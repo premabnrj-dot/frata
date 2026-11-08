@@ -1,6 +1,6 @@
 import 'server-only'
 import { sql } from 'drizzle-orm'
-import { db, type Tx } from './index'
+import { db, poolReleased, type Tx } from './index'
 
 // =============================================================================
 // FILE: src/lib/db/tenant.ts
@@ -19,6 +19,14 @@ import { db, type Tx } from './index'
 // =============================================================================
 
 export async function withTenant<T>(tenantId: string, work: (tx: Tx) => Promise<T>, opts?: { snapshot?: boolean }): Promise<T> {
+  try {
+    return await withTenantTx(tenantId, work, opts)
+  } finally {
+    poolReleased() // the connection is back in the pool (attachDatabasePool, src/lib/db/index.ts)
+  }
+}
+
+function withTenantTx<T>(tenantId: string, work: (tx: Tx) => Promise<T>, opts?: { snapshot?: boolean }): Promise<T> {
   return db().transaction(async (tx) => {
     await tx.execute(sql`select set_config('app.tenant_id', ${tenantId}, true)`)
     return work(tx)

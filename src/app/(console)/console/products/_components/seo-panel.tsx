@@ -4,6 +4,7 @@ import { InfoTip } from '@/components/ui/info-tip'
 import { DESCRIPTION_WARN_AT, shareCard, TITLE_WARN_AT } from '@/domains/catalogue/seo'
 import { pick, urlFor } from '@/domains/media/sizes'
 import type { Photo } from './photos'
+import { Icon } from '@/components/icons/icon'
 
 /**
  * Search and sharing: closed by default (owner, 2026-11-06) — every product
@@ -22,7 +23,7 @@ export function SeoPanel({ handle, onHandle, seoTitle, onSeoTitle, seoDescriptio
   return (
     <details className="group rounded-md border border-border bg-card">
       <summary className="flex cursor-pointer list-none items-center gap-2 p-4 [&::-webkit-details-marker]:hidden">
-        <span aria-hidden="true" className="inline-block transition-transform duration-fast group-open:rotate-90">›</span>
+        <span aria-hidden="true" className="inline-block transition-transform duration-fast group-open:rotate-90"><Icon name="chevron" className="size-3.5" /></span>
         <span className="min-w-0 flex-1"><span className="block font-semibold">Search and sharing</span>
           <span className="block truncate text-xs text-muted-foreground">{url}</span></span>
         <span className="text-xs text-muted-foreground">{seoTitle || seoDescription ? 'Edited' : 'Made for you'}</span>

@@ -69,6 +69,8 @@ export function BottomBar({ label, tabs, more, moreFoot, ink = false }: { label:
   const sheet = useRef<HTMLDialogElement>(null)
   const opener = useRef<HTMLButtonElement>(null)
   useEffect(() => { setOpen(false) }, [path])
+  // The dialog primitive's sheet motion (data-dialog, globals.css): in on the spring, out in 200 ms, the standard
+  // scrim — it used to vanish on close (motion system 2026-11-08).
   // A native modal <dialog>: focus stays inside, the page behind is inert, Esc closes; focus returns to More. The
   // page behind does not scroll while it is open: a CSS rule on dialog[data-more][open] (globals.css), so no path
   // (a sign-out, a refresh to a refusal) can leave <html> locked. Turning the phone past 768 px closes it, since
@@ -103,9 +105,9 @@ export function BottomBar({ label, tabs, more, moreFoot, ink = false }: { label:
           {bar(inMore)}<Icon name="menu" current={inMore} className="size-[22px]" />More
         </button>
       </nav>
-      <dialog ref={sheet} data-more data-tinge aria-label="More" onClose={() => { setOpen(false); opener.current?.focus() }}
+      <dialog ref={sheet} data-more data-dialog data-tinge aria-label="More" onClose={() => { setOpen(false); opener.current?.focus() }}
         onClick={(e) => { if (e.target === e.currentTarget) setOpen(false) }}
-        className="m-0 mt-auto w-full max-w-none animate-sheet rounded-t-xl border-t border-border bg-card p-0 text-foreground backdrop:bg-foreground/40">
+        className="m-0 mt-auto w-full max-w-none rounded-t-xl border-t border-border bg-card p-0 text-foreground">
         <div className="p-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)]">
         <div className="flex items-center justify-between px-3 py-1">
           <span aria-hidden="true" className="mx-auto h-1 w-9 rounded-full bg-border" />

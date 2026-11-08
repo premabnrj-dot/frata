@@ -27,22 +27,25 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
       invoiceNumber: orders.invoiceNumber, cancelReason: orders.cancelReason, cancelNote: orders.cancelNote, erasedAt: orders.erasedAt,
     }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.number, number))).limit(1)
     if (!o) return null
-    const lines = await tx.select({
+    // Five reads at once in the one transaction (speed review P8: postgres-js pipelines them; they ran in turn).
+    const [lines, events, notes, offerRows, [shipment]] = await Promise.all([tx.select({
       id: orderLines.id, title: orderLines.title, optionValues: orderLines.optionValues, sku: orderLines.sku, qty: orderLines.qty, unitPrice: orderLines.unitPrice,
       imageBase: orderLines.imageBase, imageWidths: orderLines.imageWidths, kind: orderLines.kind, shipsBy: orderLines.shipsBy,
       leadMinDays: orderLines.leadMinDays, leadMaxDays: orderLines.leadMaxDays, stockTakenAt: orderLines.stockTakenAt,
-    }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id))).orderBy(asc(orderLines.position))
-    const events = await tx.select({ id: orderEvents.id, kind: orderEvents.kind, actorKind: orderEvents.actorKind, actorEmail: orderEvents.actorEmail, fields: orderEvents.fields,
+    }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id))).orderBy(asc(orderLines.position)),
+    tx.select({ id: orderEvents.id, kind: orderEvents.kind, actorKind: orderEvents.actorKind, actorEmail: orderEvents.actorEmail, fields: orderEvents.fields,
       reason: orderEvents.reason, undoes: orderEvents.undoes, at: orderEvents.at })
-      .from(orderEvents).where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.orderId, o.id))).orderBy(desc(orderEvents.at)).limit(100)
-    const notes = await tx.select({ id: orderNotes.id, body: orderNotes.body, authorEmail: orderNotes.authorEmail, at: orderNotes.at })
-      .from(orderNotes).where(and(eq(orderNotes.tenantId, tenantId), eq(orderNotes.orderId, o.id))).orderBy(desc(orderNotes.at)).limit(100)
+      .from(orderEvents).where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.orderId, o.id))).orderBy(desc(orderEvents.at)).limit(100),
+    tx.select({ id: orderNotes.id, body: orderNotes.body, authorEmail: orderNotes.authorEmail, at: orderNotes.at })
+      .from(orderNotes).where(and(eq(orderNotes.tenantId, tenantId), eq(orderNotes.orderId, o.id))).orderBy(desc(orderNotes.at)).limit(100),
     // The offers it got, as recorded at placement (the pay-online saving is shown only while it is paid online).
-    const offers = (await tx.select({ title: orderDiscounts.title, class: orderDiscounts.class, amount: orderDiscounts.amount }).from(orderDiscounts)
-      .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, o.id)))).map((d) => ({ ...d, amount: Number(d.amount) }))
-    // The parcel on its way (Ship): who carries it and how to follow it; null before it shipped.
-    const [shipment] = await tx.select({ provider: shipments.provider, courierName: shipments.courierName, trackingNumber: shipments.trackingNumber })
-      .from(shipments).where(and(eq(shipments.tenantId, tenantId), eq(shipments.orderId, o.id), isNull(shipments.endedAt))).limit(1)
+    tx.select({ title: orderDiscounts.title, class: orderDiscounts.class, amount: orderDiscounts.amount }).from(orderDiscounts)
+      .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, o.id))),
+    // The parcel on its way (Ship): who carries it and how to follow it; none before it shipped.
+    tx.select({ provider: shipments.provider, courierName: shipments.courierName, trackingNumber: shipments.trackingNumber })
+      .from(shipments).where(and(eq(shipments.tenantId, tenantId), eq(shipments.orderId, o.id), isNull(shipments.endedAt))).limit(1),
+    ])
+    const offers = offerRows.map((d) => ({ ...d, amount: Number(d.amount) }))
     return { o, lines, events, notes, offers, shipment: shipment ?? null }
   })
   if (!data) return null

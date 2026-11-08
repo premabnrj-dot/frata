@@ -806,9 +806,12 @@ do $$ declare t uuid; n int; begin
   begin insert into webhook_events (provider, event_key, tenant_id, payload) values ('whatsapp', 'whatsapp:forged', '11111111-1111-1111-1111-111111111111', '{}'); raise exception 'FAIL: a WhatsApp item stored around the definer';
   exception when insufficient_privilege then null; end;
   if not exists (select 1 from app_pending_event_shops('whatsapp') x where x = '22222222-2222-2222-2222-222222222222') then raise exception 'FAIL: the sweep cannot find pending shops'; end if;
-  -- Razorpay's receiver still stores its signed events with no shop set (INSERT … ON CONFLICT DO NOTHING)
+  -- Razorpay's receiver stores inside the shop its key names (drizzle/0043), a retry collapsing to one row.
+  perform set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
   insert into webhook_events (provider, event_key, tenant_id, payload) values ('razorpay', 'razorpay:proof30:payment.captured:pay_9', '22222222-2222-2222-2222-222222222222', '{}') on conflict (event_key) do nothing;
   insert into webhook_events (provider, event_key, tenant_id, payload) values ('razorpay', 'razorpay:proof30:payment.captured:pay_9', '22222222-2222-2222-2222-222222222222', '{}') on conflict (event_key) do nothing;
+  if (select count(*) from webhook_events where event_key = 'razorpay:proof30:payment.captured:pay_9') <> 1 then raise exception 'FAIL: a Razorpay retry stored twice'; end if;
+  perform set_config('app.tenant_id', '', true);
 end $$;
 commit;
 begin; set local role frata_app;
@@ -1128,7 +1131,50 @@ do $$ begin
 end $$;
 update discounts set stopped_at = null, stopped_by = null, stop_reason = null where id = 'd15c0000-0000-0000-0000-00000000000b';
 
--- 37. Ship S·0 (docs/specs/2026-11-08-ship.md): shipments are the shop's own; one open per order; the app never deletes
+-- 37. Security review 2026-11-08 (drizzle/0043): with no shop set, frata_app reads and writes NO webhook row (any
+--     provider); a processed Razorpay event keeps no shopper field; no public function is executable by service_role.
+insert into webhook_events (provider, event_key, tenant_id, payload, processed_at) values ('razorpay', 'razorpay:b:payment.captured:pay_37', '22222222-2222-2222-2222-222222222222',
+  '{"event":"payment.captured","payload":{"payment":{"entity":{"id":"pay_37","order_id":"order_37","amount":100,"email":"s@x.in","contact":"9829043210","vpa":"s@upi"}}}}', null);
+begin; set local role frata_app;
+do $$ begin
+  if exists (select 1 from webhook_events) then raise exception 'FAIL: a webhook row is readable with no shop set'; end if;
+  begin insert into webhook_events (provider, event_key, tenant_id, payload) values ('razorpay', 'razorpay:noshop', '22222222-2222-2222-2222-222222222222', '{}'); raise exception 'FAIL: a webhook row stored with no shop set';
+  exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+-- Inside shop A: B's events stay unreadable, and nothing is stored for B (the Razorpay receiver now relies on this).
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  if exists (select 1 from webhook_events where event_key = 'razorpay:b:payment.captured:pay_37') then raise exception 'FAIL: A reads B''s webhook row'; end if;
+  begin insert into webhook_events (provider, event_key, tenant_id, payload) values ('razorpay', 'razorpay:a-for-b-37', '22222222-2222-2222-2222-222222222222', '{}'); raise exception 'FAIL: A stored a webhook row for B';
+  exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+-- The trim of processed Razorpay payloads (the same statement drizzle/0043 ran over existing rows) keeps no shopper field.
+update webhook_events set processed_at = now() where event_key = 'razorpay:b:payment.captured:pay_37';
+update webhook_events e set payload = jsonb_strip_nulls(jsonb_build_object(
+    'event', e.payload -> 'event',
+    'payload', case when e.payload #> '{payload,payment,entity}' is null then null else jsonb_build_object('payment', jsonb_build_object('entity',
+      (select coalesce(jsonb_object_agg(k, v), '{}'::jsonb) from jsonb_each(e.payload #> '{payload,payment,entity}') as f(k, v)
+        where k in ('id', 'order_id', 'amount', 'currency', 'status', 'method', 'fee', 'tax')))) end))
+  where e.provider = 'razorpay' and e.processed_at is not null and e.event_key = 'razorpay:b:payment.captured:pay_37';
+do $$ declare p jsonb; begin
+  select payload into p from webhook_events where event_key = 'razorpay:b:payment.captured:pay_37';
+  if p::text ~ '(email|contact|vpa|9829043210)' then raise exception 'FAIL: a processed event keeps shopper fields: %', p; end if;
+  if p #>> '{payload,payment,entity,order_id}' is distinct from 'order_37' or (p #>> '{payload,payment,entity,amount}')::int <> 100 then raise exception 'FAIL: the trim lost what reconciliation reads: %', p; end if;
+end $$;
+do $$
+declare f text;
+begin
+  if exists (select 1 from pg_roles where rolname = 'service_role') then
+    select string_agg(p.oid::regprocedure::text, ', ') into f from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.prokind = 'f' and has_function_privilege('service_role', p.oid, 'execute');
+    if f is not null then raise exception 'FAIL: service_role may execute %', f; end if;
+  end if;
+end $$;
+
+-- 38. Ship S·0 (docs/specs/2026-11-08-ship.md): shipments are the shop's own; one open per order; the app never deletes
 -- one or moves it to another order; staff and the API roles see none.
 insert into shipments (id, tenant_id, order_id, provider, courier_name) values ('5a1b0000-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-00000000000b', 'self', 'B courier');
 begin; set local role frata_app;
@@ -1159,4 +1205,4 @@ do $$ begin
   then raise exception 'FAIL: staff or API roles reach shipments'; end if;
 end $$;
 
-\echo 'tenancy proof — all 37 checks passed'
+\echo 'tenancy proof — all 38 checks passed'

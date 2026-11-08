@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { OfferValues } from '@/domains/checkout/offer-form'
+import { InfoTip } from '@/components/ui/info-tip'
 
 // =============================================================================
 // THE O·2 PARTS OF THE OFFER FORM (docs/plans/2026-11-08-offers-o2.md): what a product offer covers, Buy X get Y, the
@@ -66,7 +67,7 @@ export function OfferMore({ v, set, errors, pickers }: { v: OfferValues; set: (p
         </fieldset>
       )}
       {style === 'order_off' && (
-        <fieldset className="space-y-2"><legend className={lab}>Steps <span className="font-normal text-muted-foreground">(optional: more off for bigger bags; the value above is then not used)</span></legend>
+        <fieldset className="space-y-2"><legend className={lab}>Steps <span className="font-normal text-muted-foreground">(optional)</span><InfoTip about="steps">More off for bigger bags. With steps, the value above is not used.</InfoTip></legend>
           {tiers.map((t, i) => (
             <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2">
               <div className="space-y-1"><label htmlFor={`o-tmin-${i}`} className="text-xs">From ₹</label>

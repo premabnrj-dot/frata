@@ -10,6 +10,7 @@ import { attributesFor, categoryById, cleanAttributes, COLOUR_FAMILIES, searchCa
 import { handleFor, keyOf, reconcile, skuFor, uniqueSku } from '@/domains/catalogue/variants'
 import { orderPrefix } from '@/domains/signup/slug'
 import { acceptedBase, storeHost, WIDTHS, urlFor } from '@/domains/media/sizes'
+import { photosAreWebp } from '@/lib/media/uploaded'
 import { refreshShop } from '@/lib/queries/storefront'
 import { asMember } from '@/lib/auth/as-member'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
@@ -18,6 +19,7 @@ import type { Tx } from '@/lib/db'
 import { auditEvents, shopSettings, tenants } from '@/lib/db/schema'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { archivedVariants, retireVariants } from '@/lib/catalogue/retire-variants'
+import { errName } from '@/lib/log'
 
 // Catalogue changes (1A). Any member may edit products (staff run catalogues);
 // every write goes through asMember, so a support visit is audited in the same
@@ -26,10 +28,7 @@ import { archivedVariants, retireVariants } from '@/lib/catalogue/retire-variant
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string; errors?: Record<string, string>; conflict?: boolean }
 class Stop extends Error { constructor(public result: { ok: false; error: string; errors?: Record<string, string>; conflict?: boolean }) { super('stop') } }
 
-const reason = (err: unknown) => {
-  const c = (err as { cause?: { code?: string; message?: string; constraint_name?: string } })?.cause
-  return c ? `${c.code ?? ''} ${c.constraint_name ?? ''} ${c.message ?? ''}`.trim() : err instanceof Error ? err.name : 'unknown'
-}
+const reason = errName
 
 async function memberAudit(tx: Tx, auth: { userId: string; email: string | null; membership: { tenantId: string; supportSessionId: string | null } }, action: string, target?: string) {
   if (!auth.membership.supportSessionId) {
@@ -265,6 +264,7 @@ export async function categoryDetails(id: string) {
 /** Photos the browser has uploaded (every width) — attached only if they are inside THIS shop's folder. */
 export async function attachPhotos(productId: string, photos: { base: string; widths: number[]; width: number; height: number }[]): Promise<Result> {
   if (!Array.isArray(photos) || !photos.length || photos.length > 12) return { ok: false, error: 'Up to 12 photos at a time.' }
+  if (!(await photosAreWebp(photos))) return { ok: false, error: 'That file is not a photo we made. Upload it again.' }
   try {
     const r = await asMember(ANY_MEMBER, { action: 'product.photos', target: productId, detail: { added: photos.length } }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
@@ -328,7 +328,7 @@ export async function editPhoto(imageId: string, change: { move?: -1 | 1; option
     // Delete the files only if the stored base is still exactly inside this shop's folder.
     const host = storeHost(BLOB_STORE_ID)
     if (r.value && BLOB_READ_WRITE_TOKEN && host && acceptedBase(r.value.base, host, r.value.tenantId, 'products') === r.value.base) {
-      await del(r.value.widths.map((w) => urlFor(r.value!.base, w)), { token: BLOB_READ_WRITE_TOKEN }).catch((e) => console.error('[editPhoto] blob delete', e instanceof Error ? e.message : e))
+      await del(r.value.widths.map((w) => urlFor(r.value!.base, w)), { token: BLOB_READ_WRITE_TOKEN }).catch((e) => console.error('[editPhoto] blob delete', errName(e)))
     }
     revalidatePath('/console/products', 'layout')
     return { ok: true }

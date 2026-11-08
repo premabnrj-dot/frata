@@ -4,10 +4,11 @@ export const MEMBER_ROLES = ['owner', 'admin', 'staff', 'partner'] as const
 export type MemberRole = (typeof MEMBER_ROLES)[number]
 /**
  * Everyone in the shop. A partner works the shop like staff, orders included (approved mockup, owner 2026-11-07:
- * "products, orders, settings and the look"). The console's guards and the order rules (orders/work.ts) read these.
+ * "products, orders, settings and the look"). Staff edit products and collections too (owner, 2026-11-08: the
+ * catalogue is ANY_MEMBER). The console's guards and the order rules (orders/work.ts) read these.
  */
 export const ANY_MEMBER = ['owner', 'admin', 'staff', 'partner'] as const satisfies readonly MemberRole[]
-/** Who builds the shop: catalogue, the look, policies, delivery and tax settings. Not payments, people, the address, the plan or opening it. */
+/** Who builds the shop beyond the catalogue: the look, policies, delivery and tax settings, the logo. Not payments, people, the address, the plan or opening it. (Products and collections are ANY_MEMBER: staff edit them, owner 2026-11-08.) */
 export const CAN_BUILD = ['owner', 'admin', 'partner'] as const satisfies readonly MemberRole[]
 /** Who sends parcels out (Ship § Reviews 8): the shop's own people. Never a partner. */
 export const SHIPPERS = ['owner', 'admin', 'staff'] as const satisfies readonly MemberRole[]

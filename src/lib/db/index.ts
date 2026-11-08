@@ -1,6 +1,7 @@
 import 'server-only'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
+import { attachDatabasePool } from '@vercel/functions'
 import { DATABASE_URL } from '@/lib/env'
 import * as schema from './schema'
 import { parseDatabaseUrl } from './url'
@@ -21,11 +22,28 @@ import { parseDatabaseUrl } from './url'
 // this way). parseDatabaseUrl (./url.ts) fails with a message, never the value.
 // =============================================================================
 
+/**
+ * The pool (speed review P12): an idle connection is let go after 20 s, so warm-but-idle functions stop holding
+ * Supavisor's client slots (about 200 on small tiers: 20 instances × 10 used them all); a connect that hangs
+ * fails in 5 s; a connection is renewed every 10 minutes. `prepare: false` for Supavisor's transaction mode.
+ */
+export const POOL = { prepare: false, max: 10, idle_timeout: 20, connect_timeout: 5, max_lifetime: 600 } as const
+
 let client: ReturnType<typeof drizzle<typeof schema>> | null = null
+
+/**
+ * Vercel Fluid keeps an instance alive between requests; attachDatabasePool (owner, 2026-11-08) holds the function
+ * open (waitUntil) until the pool's idle timeout after its last use, so idle connections close cleanly instead of
+ * being frozen with the instance. It knows pg, not postgres-js, so it is handed a pg-shaped adapter whose `release`
+ * fires after each tenant transaction (withTenant). Only on Vercel: elsewhere there is no request context to extend.
+ */
+const released: (() => void)[] = []
+export const poolReleased = () => { for (const f of released) f() }
 
 export function db() {
   if (!client) {
-    client = drizzle(postgres(parseDatabaseUrl(DATABASE_URL, 'frata_app'), { prepare: false, max: 10 }), { schema })
+    client = drizzle(postgres(parseDatabaseUrl(DATABASE_URL, 'frata_app'), POOL), { schema })
+    if (process.env.VERCEL) attachDatabasePool({ options: { idleTimeoutMillis: POOL.idle_timeout * 1000 }, on: (_event: 'release', listener: () => void) => { released.push(listener) } })
   }
   return client
 }

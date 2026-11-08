@@ -7,6 +7,7 @@ import { createMerchant, slugTaken } from '@/lib/admin/merchants'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { sendSignInLink } from '@/lib/auth/send-link'
 import { SHOP_DOMAIN } from '@/lib/public-env'
+import { errName } from '@/lib/log'
 
 const NewMerchant = z.object({
   name: z.string().trim().min(2).max(80),
@@ -29,7 +30,7 @@ export async function createMerchantAction(form: FormData) {
   try {
     ;({ id } = await createMerchant(staff, { ...m, host: `${m.slug}.${SHOP_DOMAIN}`, now: new Date() }))
   } catch (err) {
-    console.error('[createMerchantAction]', err)
+    console.error('[createMerchantAction]', errName(err))
     return back('We could not add the merchant. Nothing was saved.')
   }
   const link = await sendSignInLink(m.ownerEmail)

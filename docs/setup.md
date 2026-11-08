@@ -123,3 +123,12 @@ Until these are set, Console › Apps › Messages says "WhatsApp isn't switched
   at a time (the limit hit on 8 Nov), one WAF rate-limit rule per project, and cron once a day (±59 min; Vercel calls
   Cron Jobs "legacy", moving to Schedules). Pro is $20 a month with one deploying seat and $20 of usage
   (vercel.com/docs, 2026-07-15 to 09-16).
+- **Before WhatsApp COD confirmations (or any outbox sender) ship** (owner, 2026-11-08: "will upgrade to Pro
+  later"; review P5):
+  1. **Vercel Pro**, then a frequent outbox schedule in `vercel.json` (every 5 minutes, not the daily `17 3 * * *`).
+     A sender also drains straight after its commit (`drainSoon`, `src/lib/outbox/drain.ts`); the cron is the net.
+  2. **The outbox claim moves to a definer** that returns the due rows for the sweep, and the `outbox` policies lose
+     their no-shop branch (drizzle/0017, 0018), so a table that will hold shoppers' phones has none
+     (tenancy audit 2026-11-08; `check:tenant` lists `outbox` in OPEN_FOR_APP until then).
+- **Preview deployments must not hold the production database** (review S1): in Vercel, take `DATABASE_URL` off
+  Preview (or point Preview at a Supabase branch) and turn on Deployment Protection for previews.

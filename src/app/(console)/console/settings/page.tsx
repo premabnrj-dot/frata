@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
+import { Icon, type IconName } from '@/components/icons/icon'
 import { Panel } from '@/components/ui/panel'
 import { missingFacts, POLICY_PAGES, renderPolicy } from '@/domains/policies/render'
 import { grievanceComplete, missingForLivePayments, SECTIONS, type SectionKey } from '@/domains/settings/sections'
@@ -13,15 +14,31 @@ import { shipCostsFor, shopWithSettings } from '@/lib/queries/settings'
 import { paymentStatusFor } from '@/lib/queries/payments'
 import { shopFacts } from './_components/facts'
 import { Section } from '@/components/layout/section'
+import { errName } from '@/lib/log'
 
 export const metadata = { title: 'Settings' }
+
+// One icon a row (visual changes, owner-approved 2026-11-08): the section is found by its picture as well as its name.
+const SECTION_ICON: Record<SectionKey, IconName> = { store: 'merchants', contact: 'messages', brand: 'brand', policies: 'policy', payments: 'cod', shipping: 'ship', taxes: 'tax' }
+
+/** A settings row: its icon, its name, what it holds now, and "Needs you" only when it does — else a chevron. */
+function Row({ href, icon, title, summary, needs = false, mono = false }: { href: string; icon: IconName; title: string; summary: string; needs?: boolean; mono?: boolean }) {
+  return (
+    <Link href={href} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-4 py-3 first:border-t-0 transition-colors duration-fast hover:bg-accent">
+      <span aria-hidden="true" className="row-span-2 grid size-9 place-items-center rounded-md bg-muted"><Icon name={icon} className="size-5" /></span>
+      <span className="font-medium">{title}</span>
+      <span className="row-span-2 flex items-center">{needs ? <Badge tone="warn">Needs you</Badge> : <Icon name="chevron" className="size-4 text-muted-foreground" />}</span>
+      <span className={`truncate text-sm text-muted-foreground ${mono ? 'font-mono' : ''}`}>{summary}</span>
+    </Link>
+  )
+}
 
 const inr = (p: number) => formatInr(paise(p))
 
 export default async function SettingsPage() {
   const auth = await requireMember(CAN_BUILD)
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'You can’t change this shop’s settings' : auth.message} />
-  const shop = await shopWithSettings(auth.membership.tenantId).catch((err) => { console.error('[settings]', err); return null })
+  const shop = await shopWithSettings(auth.membership.tenantId).catch((err) => { console.error('[settings]', errName(err)); return null })
   if (!shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const f = shopFacts(shop, SHOP_DOMAIN)
   const pay = await paymentStatusFor(auth.membership.tenantId).catch(() => null)
@@ -55,32 +72,12 @@ export default async function SettingsPage() {
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Section as="nav" flush ariaLabel="Settings">
           {SECTIONS.filter((s) => s.editors.includes(auth.membership.role)).map((s) => (
-            <Link key={s.key} href={`/console/settings/${s.key}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-4 py-3 first:border-t-0 transition-colors duration-fast hover:bg-accent">
-              <span className="font-medium">{s.title}</span>
-              <Badge tone={needs(s.key) ? 'warn' : 'neutral'} className="row-span-2">{needs(s.key) ? 'Needs you' : 'Edit'}</Badge>
-              <span className="truncate text-sm text-muted-foreground">{summary[s.key]}</span>
-            </Link>
+            <Row key={s.key} href={`/console/settings/${s.key}`} icon={SECTION_ICON[s.key]} title={s.title} summary={summary[s.key]} needs={needs(s.key)} />
           ))}
-          {owner && <Link href="/console/settings/online-payments" className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-4 py-3 transition-colors duration-fast hover:bg-accent">
-            <span className="font-medium">Online payments</span>
-            <Badge tone={onlineNeeds ? 'warn' : 'neutral'} className="row-span-2">{onlineNeeds ? 'Needs you' : 'Edit'}</Badge>
-            <span className="truncate text-sm text-muted-foreground">{online}</span>
-          </Link>}
-          {manages && <Link href="/console/settings/people" className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-4 py-3 transition-colors duration-fast hover:bg-accent">
-            <span className="font-medium">People</span>
-            <Badge className="row-span-2">View</Badge>
-            <span className="truncate text-sm text-muted-foreground">Who works on this shop</span>
-          </Link>}
-          {manages && <Link href="/console/settings/address" className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-4 py-3 transition-colors duration-fast hover:bg-accent">
-            <span className="font-medium">Shop address</span>
-            <Badge className="row-span-2">Edit</Badge>
-            <span className="truncate font-mono text-sm text-muted-foreground">{f.slug}.{SHOP_DOMAIN}</span>
-          </Link>}
-          {manages && <Link href="/console/settings/shipping-costs" className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-4 py-3 transition-colors duration-fast hover:bg-accent">
-            <span className="font-medium">Shipping costs</span>
-            <Badge tone={shipNeeds ? 'warn' : 'neutral'} className="row-span-2">{shipNeeds ? 'Needs you' : 'Edit'}</Badge>
-            <span className="truncate text-sm text-muted-foreground">{shipSummary}</span>
-          </Link>}
+          {owner && <Row href="/console/settings/online-payments" icon="payments" title="Online payments" summary={online} needs={onlineNeeds} />}
+          {manages && <Row href="/console/settings/people" icon="people" title="People" summary="Who works on this shop" />}
+          {manages && <Row href="/console/settings/address" icon="address" title="Shop address" summary={`${f.slug}.${SHOP_DOMAIN}`} mono />}
+          {manages && <Row href="/console/settings/shipping-costs" icon="shipped" title="Shipping costs" summary={shipSummary} needs={shipNeeds} />}
         </Section>
         <aside className="space-y-3">
           <Section>
@@ -92,10 +89,7 @@ export default async function SettingsPage() {
               </>
             ) : <p className="text-sm text-ok-text">Your business details, contacts and grievance officer are all set.</p>}
           </Section>
-          <Section>
-            <h2 className="text-section font-semibold">Coming later</h2>
-            <p className="text-sm text-muted-foreground">Your own domain, team invitations, email templates and your Frrata plan and bills come in later releases.</p>
-          </Section>
+          <p className="px-1 text-xs text-muted-foreground">Coming later: your own domain, email templates, your plan and bills.</p>
         </aside>
       </div>
     </>

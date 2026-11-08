@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Fails: a server action file or route handler that reaches no auth check, and is not an entry point named below with the credential it checks; a console page that does not call requireMember itself.
+// Fails: a server action file or route handler that reaches no auth check (per exported action, comments ignored), and is not an entry point named below with the credential it checks; a console, look-editor or look-preview page that does not call requireMember itself.
 //
 // ⚠️ WHY. A server action is a public POST endpoint whether or not any page
 // imports it, and a page's sign-in check does not cover the actions on it
@@ -17,7 +17,8 @@ import { join } from 'node:path'
 
 /** Functions that establish who is calling, and refuse who may not. */
 // shopRequest (src/lib/http/shop-api.ts) is requireShop plus a Zod body and a per-shop limit, for /api/shop/*.
-const CHOKEPOINTS = ['requireMember', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'requireShop', 'shopRequest']
+// moduleGate (src/lib/auth/as-module.ts) is requireMember plus the module's on/off check, for reads and non-writing actions.
+const CHOKEPOINTS = ['requireMember', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest']
 
 /** Entry points that check their own credential: file → [what it is, a token that must appear in it]. */
 const ENTRY_POINTS = {
@@ -36,11 +37,37 @@ const walk = dir => readdirSync(dir).flatMap(n => {
   return statSync(p).isDirectory() ? walk(p) : /\.(ts|tsx)$/.test(p) && !p.includes('/__tests__/') ? [p] : []
 })
 
+/** The file without its comments, so a chokepoint named only in a comment guards nothing (security review S7). */
+const code = (text) => text.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map((l) => (/^\s*\/\//.test(l) ? '' : l.replace(/\s\/\/.*$/, ''))).join('\n')
+const guards = (body) => CHOKEPOINTS.some(c => new RegExp(`\\b${c}\\(`).test(body))
+/** Each top-level function in a file: name → body (to the next top-level declaration). */
+function functionsOf(src) {
+  const out = new Map()
+  const re = /^(export\s+)?(?:async\s+)?function\s+(\w+)|^(export\s+)?const\s+(\w+)\s*=\s*(?:cache\()?async/gm
+  const hits = [...src.matchAll(re)]
+  hits.forEach((m, i) => out.set(m[2] ?? m[4], { exported: !!(m[1] ?? m[3]), body: src.slice(m.index, hits[i + 1]?.index ?? src.length) }))
+  return out
+}
+/**
+ * An exported action is guarded when its body calls a chokepoint, or calls a function in the same file that is
+ * guarded (followed through the file: a bulk action calls the single one, which calls the shared runner).
+ */
+function unguardedExports(src) {
+  const fns = functionsOf(src)
+  const ok = new Set([...fns].filter(([, f]) => guards(f.body)).map(([n]) => n))
+  for (let grew = true; grew;) {
+    grew = false
+    for (const [n, f] of fns) if (!ok.has(n) && [...ok].some((h) => new RegExp(`\\b${h}\\(`).test(f.body))) { ok.add(n); grew = true }
+  }
+  return [...fns].filter(([n, f]) => f.exported && !ok.has(n)).map(([n]) => n)
+}
+
 const failures = []
 const seen = new Set()
 for (const file of walk('src')) {
-  const text = readFileSync(file, 'utf8')
-  const isAction = /^\s*['"]use server['"]/.test(text)
+  const raw = readFileSync(file, 'utf8')
+  const isAction = /^\s*['"]use server['"]/.test(raw)
+  const text = code(raw)
   const isRoute = /\/route\.ts$/.test(file) && file.startsWith('src/app/')
   if (!isAction && !isRoute) continue
   const entry = ENTRY_POINTS[file]
@@ -49,8 +76,11 @@ for (const file of walk('src')) {
     if (!text.includes(entry[1])) failures.push(`${file}  listed as "${entry[0]}" but no longer contains \`${entry[1]}\` — re-check how it is protected`)
     continue
   }
-  if (!CHOKEPOINTS.some(c => new RegExp(`\\b${c}\\(`).test(text))) {
+  if (!guards(text)) {
     failures.push(`${file}  ${isAction ? 'server actions' : 'route handler'} with no auth check — call ${CHOKEPOINTS.join(' / ')}, or list it in scripts/check-actions.mjs with the credential it checks`)
+  } else if (isAction) {
+    // Per export: one guarded action does not cover its unguarded siblings (security review S7).
+    for (const name of unguardedExports(text)) failures.push(`${file}  exported action ${name}() reaches no auth check of its own`)
   }
 }
 // An Admin page is guarded by its own requireStaff (layouts guard nothing below).
@@ -77,9 +107,9 @@ for (const file of walk('src/app/(console)')) {
 
 // A console page is guarded by its OWN check: Next renders the layout and the
 // page in parallel, so the layout's requireMember protects nothing below it.
-for (const file of walk('src/app/(console)')) {
+for (const file of ['src/app/(console)', 'src/app/(lookeditor)', 'src/app/(lookpreview)'].flatMap((d) => (existsSync(d) ? walk(d) : []))) {
   if (!file.endsWith('/page.tsx')) continue
-  if (!/\brequireMember\(/.test(readFileSync(file, 'utf8'))) {
+  if (!/\brequireMember\(/.test(code(readFileSync(file, 'utf8')))) {
     failures.push(`${file}  console page that does not call requireMember( itself — the layout's check does not cover it`)
   }
 }
