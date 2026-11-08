@@ -1,0 +1,292 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`section schemas > collection_tiles keeps its shape 1`] = `
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "count": {
+      "default": 6,
+      "maximum": 8,
+      "minimum": 2,
+      "type": "integer",
+    },
+    "heading": {
+      "default": "",
+      "maxLength": 40,
+      "type": "string",
+    },
+    "hidden": {
+      "default": false,
+      "type": "boolean",
+    },
+    "id": {
+      "pattern": "^[a-z0-9-]{1,40}$",
+      "type": "string",
+    },
+    "key": {
+      "const": "collection_tiles",
+      "type": "string",
+    },
+    "mode": {
+      "default": "auto",
+      "enum": [
+        "auto",
+      ],
+      "type": "string",
+    },
+    "scheme": {
+      "default": "paper",
+      "enum": [
+        "paper",
+        "tint",
+        "ink",
+      ],
+      "type": "string",
+    },
+    "shape": {
+      "default": "portrait",
+      "enum": [
+        "portrait",
+      ],
+      "type": "string",
+    },
+  },
+  "required": [
+    "id",
+    "key",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`section schemas > hero keeps its shape 1`] = `
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "heading": {
+      "anyOf": [
+        {
+          "properties": {
+            "from": {
+              "enum": [
+                "shopName",
+                "tagline",
+              ],
+              "type": "string",
+            },
+          },
+          "required": [
+            "from",
+          ],
+          "type": "object",
+        },
+        {
+          "properties": {
+            "text": {
+              "maxLength": 60,
+              "type": "string",
+            },
+          },
+          "required": [
+            "text",
+          ],
+          "type": "object",
+        },
+      ],
+    },
+    "hidden": {
+      "default": false,
+      "type": "boolean",
+    },
+    "id": {
+      "pattern": "^[a-z0-9-]{1,40}$",
+      "type": "string",
+    },
+    "key": {
+      "const": "hero",
+      "type": "string",
+    },
+    "layout": {
+      "default": "text",
+      "enum": [
+        "text",
+      ],
+      "type": "string",
+    },
+    "scheme": {
+      "default": "paper",
+      "enum": [
+        "paper",
+        "tint",
+        "ink",
+      ],
+      "type": "string",
+    },
+    "text": {
+      "anyOf": [
+        {
+          "properties": {
+            "from": {
+              "enum": [
+                "shopName",
+                "tagline",
+              ],
+              "type": "string",
+            },
+          },
+          "required": [
+            "from",
+          ],
+          "type": "object",
+        },
+        {
+          "properties": {
+            "text": {
+              "maxLength": 160,
+              "type": "string",
+            },
+          },
+          "required": [
+            "text",
+          ],
+          "type": "object",
+        },
+      ],
+    },
+  },
+  "required": [
+    "id",
+    "key",
+    "heading",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`section schemas > products keeps its shape 1`] = `
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "count": {
+      "anyOf": [
+        {
+          "const": 4,
+          "type": "number",
+        },
+        {
+          "const": 8,
+          "type": "number",
+        },
+        {
+          "const": 12,
+          "type": "number",
+        },
+        {
+          "const": 24,
+          "type": "number",
+        },
+      ],
+    },
+    "heading": {
+      "maxLength": 40,
+      "type": "string",
+    },
+    "hidden": {
+      "default": false,
+      "type": "boolean",
+    },
+    "id": {
+      "pattern": "^[a-z0-9-]{1,40}$",
+      "type": "string",
+    },
+    "key": {
+      "const": "products",
+      "type": "string",
+    },
+    "scheme": {
+      "default": "paper",
+      "enum": [
+        "paper",
+        "tint",
+        "ink",
+      ],
+      "type": "string",
+    },
+    "source": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "const": "newest",
+              "type": "string",
+            },
+          },
+          "required": [
+            "kind",
+          ],
+          "type": "object",
+        },
+        {
+          "properties": {
+            "handle": {
+              "pattern": "^[a-z0-9-]{1,80}$",
+              "type": "string",
+            },
+            "kind": {
+              "const": "collection",
+              "type": "string",
+            },
+          },
+          "required": [
+            "kind",
+            "handle",
+          ],
+          "type": "object",
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "under_price",
+              "type": "string",
+            },
+            "maxPaise": {
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "type": "integer",
+            },
+          },
+          "required": [
+            "kind",
+            "maxPaise",
+          ],
+          "type": "object",
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "on_sale",
+              "type": "string",
+            },
+          },
+          "required": [
+            "kind",
+          ],
+          "type": "object",
+        },
+      ],
+    },
+    "viewAll": {
+      "default": true,
+      "type": "boolean",
+    },
+  },
+  "required": [
+    "id",
+    "key",
+    "heading",
+    "source",
+    "count",
+  ],
+  "type": "object",
+}
+`;

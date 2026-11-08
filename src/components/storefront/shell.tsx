@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { displayFamily, STORE_FONT_VARS } from '@/components/shop-preview/fonts'
 import type { PolicyFacts } from '@/domains/policies/render'
+import { classicFromSettings, schemeVars } from '@/domains/themes/resolve'
+import type { ResolvedTheme } from '@/domains/themes/types'
 import { POLICY_TITLE } from './policy'
 import { BagButton } from './bag'
 
@@ -10,14 +12,15 @@ export type ShellShop = PolicyFacts & { slug: string; accent: string; displayFon
 const waLink = (n: string) => `https://wa.me/${n.replace(/\D/g, '')}`
 const igLink = (h: string) => `https://instagram.com/${h.replace(/^@/, '')}`
 
-/** Every shop page: the theme (accent, display font), header, footer. Props only. */
-export function ShopShell({ shop, href, banner, children, gated = false, live = false }: { shop: ShellShop; href: Href; banner?: React.ReactNode; children: React.ReactNode; gated?: boolean; live?: boolean }) {
+/** Every shop page: the theme's tokens and display face, header, footer. Props only. T0: Classic from the shop's settings. */
+export function ShopShell({ shop, href, banner, children, gated = false, live = false, theme }: { shop: ShellShop; href: Href; banner?: React.ReactNode; children: React.ReactNode; gated?: boolean; live?: boolean; theme?: ResolvedTheme }) {
+  const t = theme ?? classicFromSettings(shop.accent, shop.displayFont)
   return (
-    <div data-store-theme="" data-accent={shop.accent} className={`${STORE_FONT_VARS} flex min-h-dvh flex-col`} style={{ '--store-display': displayFamily(shop.displayFont) } as React.CSSProperties}>
+    <div data-store-theme="" className={`${STORE_FONT_VARS} flex min-h-dvh flex-col`} style={{ ...schemeVars(t), '--store-display': displayFamily(t.settings.pairing) } as React.CSSProperties}>
       {banner}
       <header className="border-b border-store-line">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
-          <Link href={href('/')} className="mr-auto text-lg font-semibold tracking-[0.12em] sm:text-xl" style={{ fontFamily: displayFamily(shop.displayFont) }}>
+          <Link href={href('/')} className="mr-auto text-lg font-semibold tracking-[0.12em] sm:text-xl" style={{ fontFamily: displayFamily(t.settings.pairing) }}>
             {shop.logoUrl ? <img src={shop.logoUrl} alt={shop.shopName} className="h-8 w-auto" /> : shop.shopName.toUpperCase()}
           </Link>
           {!gated && <nav aria-label="Shop" className="-mr-2 flex gap-1 overflow-x-auto text-sm">

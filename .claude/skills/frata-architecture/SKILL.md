@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.7.0
+  version: 2.8.0
   verified: 2026-11-07
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -216,6 +216,25 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   `check:modules` lists: `<ModuleSlot name="order.side" | "home.tile">`
   (`src/components/modules/slots.tsx`), the outbox cron, the console layout, the
   webhooks. Add a filler to `FILLERS`, not an import to a core page.
+
+## Themes (T0 built 2026-11-08; spec docs/specs/2026-11-08-themes.md)
+
+- A shop's look is **data over one section library**: `src/domains/themes/` (types, `resolveTheme` — the ONE merge
+  of manifest → style → the merchant's layer — `contrast`, section SAVE schemas) and
+  `src/components/storefront/sections/` (server components). Rendering reads only `ResolvedTheme`.
+- **Manifests** are typed files `src/domains/themes/catalogue/<theme>/<semver>.ts`, listed in `catalogue/index.ts`.
+  A released file never changes; a new version is a new file. Theme colours live there and nowhere else
+  (`check:hex` QUOTED rule).
+- **Section schemas change additively only** (a new optional field with a default); a breaking change is a new
+  section key. `sections-snapshot.test.ts` fails anything else. Shape lives in the save schema; publish/render
+  readiness is a separate pure check (T1).
+- **Sources** (`src/domains/storefront/sources.ts`) pick a section's products: pure, listed only, newest by `since`.
+  Never by cost or margin (the order reaches the shopper; ADR-0003).
+- **check:theme** is a vitest (`src/domains/themes/__tests__/check-theme.test.ts`): manifests are TS. It holds
+  styles 1–5, allowed sections, sources, ≤ 20 sections and contrast for every scheme.
+- A shop with no published theme renders **Classic from `accent` and `display_font`** (`classicFromSettings`).
+- **Any storefront change** runs e2e `05-shop-look` (pixel diff against `e2e/baselines/`); an intended change
+  regenerates them in the same commit: `UPDATE_BASELINES=1 npm run e2e -- --only shop-look`.
 
 ## Outside world (ADR-0006)
 

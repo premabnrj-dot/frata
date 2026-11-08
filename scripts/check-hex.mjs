@@ -27,6 +27,16 @@ const BAD =
   /(?:text|bg|border|fill|stroke|ring|from|via|to)-(?:\[#[0-9a-fA-F]{3,8}\]|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3})|(?<![a-zA-Z-])(?:rgba?|hsla?|hwb|oklch|oklab|lch|lab|color-mix)\(|-\[[^\]\s]*#[0-9a-fA-F]{3,8}\b[^\]\s]*\]/g
 // The second half (2026-11-07, plan U·1b): a colour function outside globals.css is a colour the tokens never see.
 
+// A QUOTED hex in code (themes plan, architecture review 2026-11-08): '#8A3B1F' slipped past BAD, so "colours live
+// in globals.css and theme manifests only" was not enforced. Allowed only where a colour is data, each with why.
+const QUOTED = /['"`]#[0-9a-fA-F]{3,8}['"`]/g
+const QUOTED_OK = [
+  [/^src\/domains\/themes\/catalogue\//, 'theme manifests: a shop theme\'s colours are its data (check:theme holds their contrast)'],
+  [/\/__tests__\//, 'tests state colours they assert'],
+  [/^src\/components\/brand\/mark-paths\.ts$/, 'the frrata mark rasterised for icons and OG images, where CSS tokens cannot reach'],
+  [/^src\/app\/\(console\)\/console\/products\/_components\/colours-panel\.tsx$/, 'a product colour swatch: the merchant\'s own colour value, not a UI colour'],
+]
+
 /** Comment-only lines, in both TS and CSS. */
 function isComment(line) {
   const t = line.trim()
@@ -50,8 +60,10 @@ for (const file of walk(ROOT)) {
 
   for (const [i, line] of readFileSync(file, 'utf8').split(/\r?\n/).entries()) {
     if (isComment(line)) continue
-    const hits = line.match(BAD)
-    if (hits) {
+    const quoted = QUOTED_OK.some(([r]) => r.test(rel)) ? [] : (line.match(QUOTED) ?? [])
+    const hits = [...(line.match(BAD) ?? []), ...quoted]
+    if (!hits.length) continue
+    {
       console.error(`${rel}:${i + 1}  ${hits.join(', ')}`)
       failures += hits.length
     }

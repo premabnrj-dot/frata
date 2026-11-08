@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 4.2.0
+  version: 4.3.0
   verified: 2026-11-07
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -86,6 +86,15 @@ from it).
   (Module, Granted by, Merchant, Usable, action: "Give a 30-day trial of X",
   "End trial"). Admin › Modules pauses a module "for everyone" with a reason;
   the shop sees "Paused by Frrata". Admin writes are admin-role only.
+
+## Shop themes (approved mockup 2026-11-08, T0 built)
+
+- The storefront's `--store-*` tokens now come from the shop's theme (`schemeVars(theme, scheme)` on the shell and
+  on any section painted in another scheme). Never hard-code a store colour in a component.
+- Themes are presets over one section library; a new look is a manifest, a new capability is a section.
+- Promise and trust words come from shop facts, never typed claims; a section with nothing to show renders nothing.
+- The customizer and Look follow the T1 mockup (https://claude.ai/artifact/9QRkdHHKLAwpj5LmcxYYSU): phone preview
+  first, one primary action (Customize / Publish), autosave states, Undo/Redo, counters for limits.
 
 ## Partner workspace (approved mockup 2026-11-07)
 
