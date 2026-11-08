@@ -1,0 +1,49 @@
+import { describe, expect, it } from 'vitest'
+import { freightOf } from '../freight'
+import { billableDelivered, outcomeUndoOpen } from '../outcomes'
+
+const none = { forwardShipping: null, rtoShipping: null, courierCodFee: null }
+const est = { delivery: 7000, ret: 7000, codFee: 3600 }
+
+describe('freightOf', () => {
+  it('Shiprocket: the statement lines; pending (never ₹0) until the line an outcome needs arrives', () => {
+    expect(freightOf('shiprocket', { forwardShipping: 6200, rtoShipping: null, courierCodFee: 3600 }, est, { cod: true, outcome: 'delivered' }))
+      .toEqual({ forwardShipping: 6200, rtoShipping: 0, codFee: 3600, source: 'actual' })
+    expect(freightOf('shiprocket', none, est, { cod: true, outcome: 'delivered' }).source).toBe('pending')
+    expect(freightOf('shiprocket', { forwardShipping: 6200, rtoShipping: null, courierCodFee: 0 }, est, { cod: true, outcome: 'rto' }).source).toBe('pending')
+    // A COD fee reversed on a return nets to 0 in the actual lines.
+    expect(freightOf('shiprocket', { forwardShipping: 6200, rtoShipping: 6200, courierCodFee: 0 }, est, { cod: true, outcome: 'rto' }))
+      .toEqual({ forwardShipping: 6200, rtoShipping: 6200, codFee: 0, source: 'actual' })
+  })
+  it('shipped another way (or not yet shipped): the confirmed estimate; its COD fee only when a COD order is delivered', () => {
+    expect(freightOf('self', none, est, { cod: true, outcome: 'delivered' })).toEqual({ forwardShipping: 7000, rtoShipping: 7000, codFee: 3600, source: 'estimate' })
+    expect(freightOf(null, none, est, { cod: true, outcome: 'rto' }).codFee).toBe(0)
+    expect(freightOf('self', none, est, { cod: false, outcome: 'delivered' }).codFee).toBe(0)
+  })
+  it('with no confirmed estimate, freight is left out and says so', () => {
+    expect(freightOf('self', none, null, { cod: true, outcome: 'delivered' })).toEqual({ forwardShipping: 0, rtoShipping: 0, codFee: 0, source: 'none' })
+  })
+})
+
+describe('billableDelivered (call E)', () => {
+  const now = new Date('2026-12-15T10:00:00Z')
+  const daysAgo = (d: number) => new Date(now.getTime() - d * 86_400_000)
+  const o = { shippedAt: daysAgo(31), deliveredAt: null, rtoInitiatedAt: null, lost: false }
+  it('delivered is billable; shipped 30+ days with no outcome counts as delivered', () => {
+    expect(billableDelivered({ ...o, deliveredAt: daysAgo(1) }, now)).toBe(true)
+    expect(billableDelivered(o, now)).toBe(true)
+    expect(billableDelivered({ ...o, shippedAt: daysAgo(29) }, now)).toBe(false)
+  })
+  it('never when it came back, was lost by the courier, or never shipped', () => {
+    expect(billableDelivered({ ...o, rtoInitiatedAt: daysAgo(2) }, now)).toBe(false)
+    expect(billableDelivered({ ...o, lost: true }, now)).toBe(false)
+    expect(billableDelivered({ ...o, shippedAt: null }, now)).toBe(false)
+  })
+})
+
+describe('outcomeUndoOpen', () => {
+  it('until the IST month it was marked in ends', () => {
+    expect(outcomeUndoOpen(new Date('2026-11-30T18:00:00Z'), new Date('2026-11-30T18:20:00Z'))).toBe(true) // 23:30 → 23:50 IST, 30 Nov
+    expect(outcomeUndoOpen(new Date('2026-11-30T18:00:00Z'), new Date('2026-11-30T18:31:00Z'))).toBe(false) // 00:01 IST, 1 Dec
+  })
+})

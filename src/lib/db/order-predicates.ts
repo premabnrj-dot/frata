@@ -1,6 +1,6 @@
 import 'server-only'
 import { sql, type SQL } from 'drizzle-orm'
-import type { OrderState, QueueTab } from '@/domains/orders/order-state'
+import { SHIP_TABS, type OrderState, type QueueTab } from '@/domains/orders/order-state'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 
 // =============================================================================
@@ -53,10 +53,13 @@ export const enteredAtSql = (now: Date, a = '"orders"'): SQL<Date | null> => sql
   when 'unconfirmed' then coalesce(${c(a, 'switched_to_cod_at')}, ${c(a, 'placed_at')})
   when 'refund_due' then ${c(a, 'paid_at')} when 'paid' then ${c(a, 'paid_at')}
   when 'confirmed' then ${c(a, 'confirmed_at')}
-  when 'held' then ${c(a, 'held_at')} end)`
+  when 'held' then ${c(a, 'held_at')}
+  when 'packed' then ${c(a, 'packed_at')} when 'shipped' then ${c(a, 'shipped_at')}
+  when 'ndr' then ${c(a, 'ndr_at')} when 'rto' then ${c(a, 'rto_initiated_at')} end)`
 
 const IN: Record<Exclude<QueueTab, 'all'>, OrderState[]> = {
   to_confirm: ['unconfirmed', 'refund_due'], to_pack: ['confirmed', 'paid'], on_hold: ['held'], not_paid: ['awaiting_payment', 'payment_abandoned'],
+  to_ship: ['packed'], on_the_way: ['shipped'], couldnt_deliver: ['ndr'], coming_back: ['rto'],
 }
 const list = (states: OrderState[]) => sql.raw(states.map((s) => `'${s}'`).join(','))
 
@@ -69,9 +72,18 @@ const list = (states: OrderState[]) => sql.raw(states.map((s) => `'${s}'`).join(
 export const openSql = (a = '"orders"'): SQL => sql.raw(['packed_at', 'shipped_at', 'ndr_at', 'delivered_at', 'cancelled_at', 'rto_initiated_at', 'rto_delivered_at']
   .map((k) => `${a}."${k}" is null`).join(' and '))
 
+/**
+ * Every order a shipping tab can hold (packed, shipped, couldn't deliver, coming back): not back at the shop, and
+ * either a return started (it outranks delivered and cancelled in stateSql) or not delivered, not cancelled and at
+ * least packed. Said first for the partial index orders_inflight_idx (Ship S·0), as openSql is for the work tabs; the
+ * text matches the index's predicate exactly. It changes no result: the parity test holds it.
+ */
+export const inFlightSql = (a = '"orders"'): SQL => sql.raw(`${a}."rto_delivered_at" is null and (${a}."rto_initiated_at" is not null or (${a}."delivered_at" is null and ${a}."cancelled_at" is null and (${a}."packed_at" is not null or ${a}."shipped_at" is not null or ${a}."ndr_at" is not null)))`)
+
+const SHIP = new Set<string>(SHIP_TABS)
 /** queueTab() in SQL; 'all' is every placed order. */
 export const inTabSql = (tab: QueueTab, now: Date, a = '"orders"'): SQL =>
-  tab === 'all' ? placedSql(a) : sql`(${openSql(a)} and ${stateSql(now, a)} in (${list(IN[tab])}))`
+  tab === 'all' ? placedSql(a) : sql`(${SHIP.has(tab) ? inFlightSql(a) : openSql(a)} and ${stateSql(now, a)} in (${list(IN[tab])}))`
 
 /**
  * isPlaced(): not an online order still waiting for, or never given, its payment. Cancelled orders count (plan usage).

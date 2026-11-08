@@ -60,7 +60,9 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   const owed = collect(o)
   // What a cancel would send back: what reached Razorpay (amounts.ts — after a switch the COD fee is already off).
   const refund = paidOnline(o)
-  const primary = primaryAction(state)
+  const primary0 = primaryAction(state)
+  // Delivered as the primary action arrives with its button (Ship S0·5).
+  const primary = primary0 === 'deliver' ? null : primary0
   const can = { confirm: may('confirm', state, role), hold: may('hold', state, role), unhold: may('unhold', state, role), cancel: may('cancel', state, role), pack: may('pack', state, role), edit: may('edit', state, role), note: may('note', state, role) }
   const why = (r?.reasons.join('; ') || r?.next || '').replace(/\.$/, '')
   const riskWarning = r && (r.level === 'high' || r.level === 'unknown') ? `${r.level === 'high' ? 'High risk' : 'Risk unavailable'}: ${why}. Confirm only once you have spoken to the customer.` : null

@@ -302,6 +302,20 @@
       "when": 1794116352117,
       "tag": "0042_offers_stop_access",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1794132323169,
+      "tag": "0043_ship",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1794132324057,
+      "tag": "0044_ship_access",
+      "breakpoints": true
     }
   ]
 }

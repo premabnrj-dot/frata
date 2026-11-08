@@ -74,7 +74,12 @@ describe('the queue and the shopper', () => {
     expect(queueTab('paid')).toBe('to_pack')
     expect(queueTab('held')).toBe('on_hold')
     expect(queueTab('awaiting_payment')).toBe('not_paid')
-    expect(queueTab('packed')).toBe(null)
+    // Ship S·0: the shipping tabs; an order with an outcome waits nowhere.
+    expect(queueTab('packed')).toBe('to_ship')
+    expect(queueTab('shipped')).toBe('on_the_way')
+    expect(queueTab('ndr')).toBe('couldnt_deliver')
+    expect(queueTab('rto')).toBe('coming_back')
+    for (const s of ['delivered', 'rto_received', 'cancelled', 'payment_abandoned'] as const) expect(queueTab(s)).toBe(s === 'payment_abandoned' ? 'not_paid' : null)
   })
   it('never tells a shopper an internal word', () => {
     for (const s of ORDER_STATES) expect(['held', 'refund_due', 'unconfirmed', 'rto', 'rto_received', 'payment_abandoned']).not.toContain(shopperState(s))
@@ -90,11 +95,15 @@ describe('enteredAt: when an order entered the tab it waits in', () => {
     expect(enteredAt(moments({ paymentMethod: 'prepaid', switchedToCodAt: t(2) }), now)).toEqual(t(2))
     expect(enteredAt(moments({ paymentMethod: 'prepaid', paidAt: t(3), stockShort: true }), now)).toEqual(t(3))
   })
-  it('confirmed or paid for To pack; held for On hold; null elsewhere', () => {
+  it('confirmed or paid for To pack; held for On hold; the shipping moment for the shipping tabs; null elsewhere', () => {
     expect(enteredAt(moments({ confirmedAt: t(4) }), now)).toEqual(t(4))
     expect(enteredAt(moments({ paymentMethod: 'prepaid', paidAt: t(5) }), now)).toEqual(t(5))
     expect(enteredAt(moments({ heldAt: t(6) }), now)).toEqual(t(6))
-    expect(enteredAt(moments({ confirmedAt: t(4), packedAt: t(7) }), now)).toBeNull()
+    expect(enteredAt(moments({ confirmedAt: t(4), packedAt: t(7) }), now)).toEqual(t(7))
+    expect(enteredAt(moments({ confirmedAt: t(4), packedAt: t(7), shippedAt: t(8) }), now)).toEqual(t(8))
+    expect(enteredAt(moments({ confirmedAt: t(4), packedAt: t(7), shippedAt: t(8), ndrAt: t(9) }), now)).toEqual(t(9))
+    expect(enteredAt(moments({ confirmedAt: t(4), packedAt: t(7), shippedAt: t(8), rtoInitiatedAt: t(10) }), now)).toEqual(t(10))
+    expect(enteredAt(moments({ confirmedAt: t(4), packedAt: t(7), shippedAt: t(8), deliveredAt: t(10) }), now)).toBeNull()
     expect(enteredAt(moments({ cancelledAt: t(7) }), now)).toBeNull()
     expect(enteredAt(moments({ paymentMethod: 'prepaid', payBy: t(30) }), now)).toBeNull()
   })

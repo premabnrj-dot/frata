@@ -1128,4 +1128,32 @@ do $$ begin
 end $$;
 update discounts set stopped_at = null, stopped_by = null, stop_reason = null where id = 'd15c0000-0000-0000-0000-00000000000b';
 
-\echo 'tenancy proof — all 36 checks passed'
+-- 37. Ship S·0 (docs/specs/2026-11-08-ship.md): shipments are the shop's own; one open per order; the app never deletes
+-- one or moves it to another order; staff and the API roles see none.
+insert into shipments (id, tenant_id, order_id, provider, courier_name) values ('5a1b0000-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-00000000000b', 'self', 'B courier');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if exists (select 1 from shipments) then raise exception 'FAIL: A sees B shipments'; end if;
+  update shipments set courier_name = 'x'; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A changed a B shipment'; end if;
+  begin insert into shipments (tenant_id, order_id, provider) values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-00000000000b', 'self'); raise exception 'FAIL: A shipped a B order';
+  exception when foreign_key_violation then null; end;
+  begin insert into shipments (tenant_id, order_id, provider) values ('22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-00000000000b', 'self'); raise exception 'FAIL: A made a shipment in B';
+  exception when insufficient_privilege then null; end;
+  -- A's own: one open shipment per order; never deleted; never moved to another order.
+  insert into orders (id, tenant_id, number, payment_method, placed_at) values ('acacacac-0000-0000-0000-0000000005a1', '11111111-1111-1111-1111-111111111111', 9101, 'cod', now());
+  insert into shipments (id, tenant_id, order_id, provider) values ('5a1b0000-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-0000000005a1', 'self');
+  begin insert into shipments (tenant_id, order_id, provider) values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-0000000005a1', 'self'); raise exception 'FAIL: two open shipments for one order';
+  exception when unique_violation then null; end;
+  begin delete from shipments; raise exception 'FAIL: the app deleted a shipment'; exception when insufficient_privilege then null; end;
+  begin update shipments set order_id = order_id; raise exception 'FAIL: the app moved a shipment'; exception when insufficient_privilege then null; end;
+  update shipments set ended_at = now(), ended_reason = 'undone' where id = '5a1b0000-0000-0000-0000-00000000000a';
+  insert into shipments (tenant_id, order_id, provider) values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-0000000005a1', 'self'); -- an ended one leaves room
+end $$;
+rollback;
+do $$ begin
+  if has_table_privilege('frata_admin', 'shipments', 'select') or has_table_privilege('anon', 'shipments', 'select') or has_table_privilege('service_role', 'shipments', 'select')
+     or has_table_privilege('authenticated', 'shipments', 'select') then raise exception 'FAIL: staff or API roles reach shipments'; end if;
+end $$;
+
+\echo 'tenancy proof — all 37 checks passed'

@@ -34,7 +34,14 @@ export const orders = pgTable('orders', {
   merchandiseNet: money('merchandise_net').notNull().default(0),
   /** From the lines' cost snapshot; null when any line's cost is unknown (unknown is not ₹0). */
   cogs: money('cogs'),
-  forwardShipping: money('forward_shipping').notNull().default(0),
+  /**
+   * What shipping actually cost (Ship S·3, from the courier's statement): null until known, then `freight.ts` uses the
+   * shop's confirmed estimate instead. Never the quote. `courierCodFee` is the courier's fee, net of a reversal on a
+   * return; not `codCharge` (what the SHOPPER paid for Pay on delivery).
+   */
+  forwardShipping: money('forward_shipping'),
+  rtoShipping: money('rto_shipping'),
+  courierCodFee: money('courier_cod_fee'),
   /** Razorpay's own fee and its GST on the captured payment (from the payment entity). */
   gatewayFee: money('gateway_fee'),
   gatewayTax: money('gateway_tax'),
@@ -106,6 +113,9 @@ export const orders = pgTable('orders', {
   index('orders_tenant_phone').on(t.tenantId, t.phone),
   // The holds that count against stock: online, unpaid, not cancelled.
   index('orders_tenant_holds').on(t.tenantId, t.payBy).where(sql`${t.paidAt} is null and ${t.cancelledAt} is null and ${t.payBy} is not null`),
+  // The shipping tabs (Ship S·0): packed, no outcome yet. inFlightSql (order-predicates.ts) says this first.
+  index('orders_inflight_idx').on(t.tenantId, t.placedAt.desc()).where(sql`${t.rtoDeliveredAt} is null and (${t.rtoInitiatedAt} is not null or (${t.deliveredAt} is null and ${t.cancelledAt} is null and (${t.packedAt} is not null or ${t.shippedAt} is not null or ${t.ndrAt} is not null)))`),
+  check('orders_freight', sql`(${t.forwardShipping} is null or ${t.forwardShipping} >= 0) and (${t.rtoShipping} is null or ${t.rtoShipping} >= 0) and (${t.courierCodFee} is null or ${t.courierCodFee} >= 0)`),
   check('orders_payment_method', sql`${t.paymentMethod} in ('cod','prepaid')`),
   check('orders_money', sql`${t.subtotal} >= 0 and ${t.shipping} >= 0 and ${t.codCharge} >= 0 and ${t.gstTotal} >= 0 and ${t.total} >= 0`),
   // The total is its parts, less the offers' discount (GST inside the prices when they include it).
@@ -214,7 +224,7 @@ export const orderEvents = pgTable('order_events', {
   // An undo points at an event on the same order (FK in drizzle/0020).
   unique('order_events_order_id_key').on(t.tenantId, t.orderId, t.id),
   index('order_events_order').on(t.tenantId, t.orderId, t.at),
-  check('order_events_kind', sql`${t.kind} in ('confirmed','held','unheld','undone','edited','packed','cancelled','note_added','printed_slip','printed_invoice')`),
+  check('order_events_kind', sql`${t.kind} in ('confirmed','held','unheld','undone','edited','packed','cancelled','note_added','printed_slip','printed_invoice','shipped','delivered','rto','lost','ndr','shipment_cancelled')`),
   check('order_events_actor', sql`${t.actorKind} in ('member','support','system')`),
   // A person is named exactly when one acted.
   check('order_events_who', sql`(${t.actorKind} = 'system') = (${t.actorUserId} is null) and (${t.actorUserId} is null) = (${t.actorEmail} is null)`),
@@ -233,4 +243,33 @@ export const orderNotes = pgTable('order_notes', {
   foreignKey({ name: 'order_notes_order_fk', columns: [t.tenantId, t.orderId], foreignColumns: [orders.tenantId, orders.id] }).onDelete('cascade'),
   index('order_notes_order').on(t.tenantId, t.orderId, t.at),
   check('order_notes_body', sql`length(${t.body}) between 1 and 2000`),
+])
+
+export const SHIP_PROVIDERS = ['self', 'shiprocket'] as const
+
+/**
+ * A parcel on its way (Ship, docs/specs/2026-11-08-ship.md): who carries it and how to follow it. At most one OPEN
+ * shipment per order. The ORDER's state stays derived from its own timestamps (order-state.ts); this holds only what
+ * the courier knows, and the shipment's OWN ending (never a copy of delivered or returned): cancelled before pickup,
+ * lost by the courier, or undone (Shipped was undone, so the order can ship again). `self`: shipped another way
+ * (courier name and tracking number as typed; never unique). Access: drizzle/0044_ship_access.sql.
+ */
+export const shipments = pgTable('shipments', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'restrict' }),
+  orderId: uuid('order_id').notNull(),
+  provider: text('provider').notNull(),
+  courierName: text('courier_name'),
+  trackingNumber: text('tracking_number'),
+  openedAt: timestamp('opened_at', { withTimezone: true }).notNull().defaultNow(),
+  endedAt: timestamp('ended_at', { withTimezone: true }),
+  endedReason: text('ended_reason'),
+}, (t) => [
+  foreignKey({ name: 'shipments_order_fk', columns: [t.tenantId, t.orderId], foreignColumns: [orders.tenantId, orders.id] }).onDelete('cascade'),
+  unique('shipments_tenant_id_key').on(t.tenantId, t.id),
+  uniqueIndex('shipments_one_open').on(t.tenantId, t.orderId).where(sql`${t.endedAt} is null`),
+  index('shipments_order').on(t.tenantId, t.orderId),
+  check('shipments_provider', sql`${t.provider} in ('self','shiprocket')`),
+  check('shipments_text', sql`(${t.courierName} is null or length(${t.courierName}) between 1 and 60) and (${t.trackingNumber} is null or length(${t.trackingNumber}) between 1 and 40)`),
+  check('shipments_ended', sql`(${t.endedAt} is null) = (${t.endedReason} is null) and (${t.endedReason} is null or ${t.endedReason} in ('cancelled','lost','undone'))`),
 ])

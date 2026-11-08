@@ -6,8 +6,8 @@ import type { Tx } from '@/lib/db'
 import { withTenant } from '@/lib/db/tenant'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { orderPrefix } from '@/domains/signup/slug'
-import { inTabSql, momentColumns, openSql, placedSql } from '@/lib/db/order-predicates'
-import { QUEUE_TABS, type QueueTab } from '@/domains/orders/order-state'
+import { inFlightSql, inTabSql, momentColumns, openSql, placedSql } from '@/lib/db/order-predicates'
+import { QUEUE_TABS, SHIP_TABS, type QueueTab } from '@/domains/orders/order-state'
 import { parseOrderSearch } from '@/domains/orders/search'
 
 /** Rows a page (docs/specs/2026-11-07-orders.md § 1D·1). */
@@ -59,12 +59,16 @@ export async function queueCounts(tenantId: string, now: Date): Promise<Record<Q
 /** queueCounts inside a caller's transaction (Home reads its counts, oldest waits and risk in one, U·4). */
 export async function queueCountsWith(tx: Tx, tenantId: string, now: Date): Promise<Record<QueueTab, number>> {
   const n = (tab: QueueTab) => sql<number>`(count(*) filter (where ${inTabSql(tab, now)}))::int`
-  // The work tabs over OPEN orders only (the partial index); All is a plain count of placed orders.
-  const work = QUEUE_TABS.filter((t) => t !== 'all')
+  // The work tabs over OPEN orders only (orders_open_idx), the shipping tabs over orders IN FLIGHT only
+  // (orders_inflight_idx); All is a plain count of placed orders.
+  const ship = new Set<QueueTab>(SHIP_TABS)
+  const work = QUEUE_TABS.filter((t) => t !== 'all' && !ship.has(t))
   const [r] = await tx.select(Object.fromEntries(work.map((t) => [t, n(t)])) as Record<QueueTab, ReturnType<typeof n>>)
     .from(orders).where(and(eq(orders.tenantId, tenantId), openSql()))
+  const [f] = await tx.select(Object.fromEntries(SHIP_TABS.map((t) => [t, n(t)])) as Record<QueueTab, ReturnType<typeof n>>)
+    .from(orders).where(and(eq(orders.tenantId, tenantId), inFlightSql()))
   const [all] = await tx.select({ n: sql<number>`count(*)::int` }).from(orders).where(and(eq(orders.tenantId, tenantId), placedSql()))
-  return Object.fromEntries(QUEUE_TABS.map((t) => [t, Number(t === 'all' ? all?.n ?? 0 : r?.[t] ?? 0)])) as Record<QueueTab, number>
+  return Object.fromEntries(QUEUE_TABS.map((t) => [t, Number(t === 'all' ? all?.n ?? 0 : (ship.has(t) ? f?.[t] : r?.[t]) ?? 0)])) as Record<QueueTab, number>
 }
 
 export type OrderRow = Awaited<ReturnType<typeof listOrders>>[number]

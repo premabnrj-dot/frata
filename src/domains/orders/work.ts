@@ -11,16 +11,23 @@
 import { ANY_MEMBER, CAN_MANAGE, type MemberRole } from '@/domains/tenancy/roles'
 import type { OrderState } from './order-state'
 
-export const ACTIONS = ['confirm', 'hold', 'unhold', 'undo', 'note', 'pack', 'print', 'edit', 'cancel'] as const
+export const ACTIONS = ['confirm', 'hold', 'unhold', 'undo', 'note', 'pack', 'print', 'edit', 'cancel', 'ship_self', 'deliver', 'came_back', 'lost'] as const
 export type OrderAction = (typeof ACTIONS)[number]
 
 const STAFF: readonly MemberRole[] = ANY_MEMBER
 const MANAGERS: readonly MemberRole[] = CAN_MANAGE
+/** Who sends parcels out (Ship § Reviews 8): the shop's own people, never a partner. */
+export const SHIPPERS: readonly MemberRole[] = ['owner', 'admin', 'staff']
 
-/** Roles per action. Support sessions act as the owner (ADR-0007) and are audited. */
+/**
+ * Roles per action. Support sessions act as the owner (ADR-0007) and are audited. Undoing an outcome (Shipped,
+ * Delivered, Came back, Lost) needs the role of the action it undoes, not `undo`'s (Ship plan review 4).
+ */
 export const ROLES: Record<OrderAction, readonly MemberRole[]> = {
   confirm: STAFF, hold: STAFF, unhold: STAFF, undo: STAFF, note: STAFF, pack: STAFF, print: STAFF,
   edit: MANAGERS, cancel: MANAGERS,
+  // Ship S·0: shipping it yourself is the shop's own people; what happened to it (an outcome Frrata bills on) is the owner's or an admin's.
+  ship_self: SHIPPERS, deliver: MANAGERS, came_back: MANAGERS, lost: MANAGERS,
 }
 
 /** The states each action applies to. */
@@ -36,6 +43,10 @@ const WHEN: Record<Exclude<OrderAction, 'undo'>, readonly OrderState[]> = {
   // or delivered (a cancelled COD slip once read "collect nothing"). The invoice is not an action: it prints
   // whenever one was issued, a cancelled one stamped CANCELLED.
   print: ['confirmed', 'paid', 'packed', 'shipped', 'ndr'],
+  ship_self: ['packed'],
+  deliver: ['shipped', 'ndr'],
+  came_back: ['shipped', 'ndr'],
+  lost: ['shipped', 'ndr'],
 }
 
 /** Whether `action` applies to an order in `state` (roles aside). Undo is checked against its event. */
@@ -51,11 +62,12 @@ export const may = (action: OrderAction, state: OrderState, role: MemberRole) =>
  * The ONE primary action in the order page's header (design-language § Work queues 3). A held order whose
  * payment was online is confirmed (released) the same way. Refund due: the only way forward is to cancel.
  */
-export function primaryAction(state: OrderState): 'confirm' | 'pack' | 'print_slip' | 'cancel' | null {
+export function primaryAction(state: OrderState): 'confirm' | 'pack' | 'print_slip' | 'cancel' | 'deliver' | null {
   if (state === 'unconfirmed' || state === 'held') return 'confirm'
   if (state === 'confirmed' || state === 'paid') return 'pack'
   if (state === 'packed') return 'print_slip'
   if (state === 'refund_due') return 'cancel'
+  if (state === 'shipped' || state === 'ndr') return 'deliver'
   return null
 }
 

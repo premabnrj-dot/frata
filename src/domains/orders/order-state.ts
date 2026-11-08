@@ -109,8 +109,10 @@ export const needsAction = (s: OrderState) => s === 'unconfirmed' || s === 'held
 
 // ── The console's work queue (docs/specs/2026-11-07-orders.md § 1D·1) ──
 
-export const QUEUE_TABS = ['to_confirm', 'to_pack', 'on_hold', 'all', 'not_paid'] as const
+export const QUEUE_TABS = ['couldnt_deliver', 'to_confirm', 'to_pack', 'to_ship', 'on_the_way', 'coming_back', 'on_hold', 'all', 'not_paid'] as const
 export type QueueTab = (typeof QUEUE_TABS)[number]
+/** The shipping tabs (Ship S·0): orders that have left the work tabs but not yet reached an outcome. */
+export const SHIP_TABS = ['to_ship', 'on_the_way', 'couldnt_deliver', 'coming_back'] as const satisfies readonly QueueTab[]
 
 /** The tab an order waits in ('all' holds every placed order besides). Refund due waits with To confirm: a person decides. */
 export function queueTab(s: OrderState): Exclude<QueueTab, 'all'> | null {
@@ -118,13 +120,17 @@ export function queueTab(s: OrderState): Exclude<QueueTab, 'all'> | null {
   if (s === 'confirmed' || s === 'paid') return 'to_pack'
   if (s === 'held') return 'on_hold'
   if (s === 'awaiting_payment' || s === 'payment_abandoned') return 'not_paid'
+  if (s === 'packed') return 'to_ship'
+  if (s === 'shipped') return 'on_the_way'
+  if (s === 'ndr') return 'couldnt_deliver'
+  if (s === 'rto') return 'coming_back'
   return null
 }
 
 /**
  * When an order entered the tab it waits in, for "oldest waiting" (U·4 Home): placed (or switched to COD) for To
- * confirm, paid when a refund is due, confirmed or paid for To pack, held for On hold. Null outside the three
- * work tabs. A held order paid online is On hold, so held_at wins (the state decides). Taking an order off hold
+ * confirm, paid when a refund is due, confirmed or paid for To pack, held for On hold. Null outside the work tabs
+ * and the four shipping tabs (packed, shipped, the latest failed attempt, the return started). A held order paid online is On hold, so held_at wins (the state decides). Taking an order off hold
  * clears held_at, so it re-enters To confirm at its placement. enteredAtSql() in src/lib/db/order-predicates.ts is
  * its twin (parity int test).
  */
@@ -134,6 +140,11 @@ export function enteredAt(o: OrderMoments, now: Date): Date | null {
     case 'refund_due': case 'paid': return o.paidAt
     case 'confirmed': return o.confirmedAt
     case 'held': return o.heldAt
+    // The shipping tabs (Ship S·0): packed, shipped, the latest failed attempt, the return started.
+    case 'packed': return o.packedAt
+    case 'shipped': return o.shippedAt
+    case 'ndr': return o.ndrAt
+    case 'rto': return o.rtoInitiatedAt
     default: return null
   }
 }
