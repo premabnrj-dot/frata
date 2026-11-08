@@ -4,7 +4,8 @@ import { adminDb } from '@/lib/db/admin'
 import { invites, members, shopSettings, supportSessions, tenantDomains, tenantPlans, tenants } from '@/lib/db/schema'
 import type { StaffOk } from '@/lib/auth/require-staff'
 import { currentPlan, usage, type PlanCode } from '@/domains/plans/entitlements'
-import { monthStartIST } from '@/domains/time/month'
+import { nextMonthStartIST } from '@/domains/time/month'
+import { frrataInvoices } from '@/lib/db/schema-billing'
 import { auditStaff } from './audit'
 import { latestVersion, tenantPlanHistory } from './plans'
 
@@ -20,11 +21,15 @@ async function directory(ids: string[]): Promise<Directory> {
   return new Map(rows.map((r) => [r.id, { email: r.email, lastSignInAt: r.last_sign_in_at ? new Date(r.last_sign_in_at) : null }]))
 }
 
-async function orderCounts(since: Date): Promise<Map<string, number>> {
-  const rows = await adminDb().execute<{ tenant_id: string; n: string }>(
-    sql`select tenant_id, n from app_admin_order_counts(${since.toISOString()}::timestamptz)`,
-  )
-  return new Map(rows.map((r) => [r.tenant_id, Number(r.n)]))
+/**
+ * Delivered orders this month, per shop: the ONE "orders this month" (billing plan finding 4) — billable orders, as the
+ * daily billing run counted them on the draft of next month's invoice (frrata_invoices.orders_billed), the same figure
+ * the shop sees on Plan and billing. Not placed orders (app_admin_order_counts): a cancelled or returned order is not one.
+ */
+async function orderCounts(now: Date): Promise<Map<string, number>> {
+  const rows = await adminDb().select({ tenantId: frrataInvoices.tenantId, n: frrataInvoices.ordersBilled }).from(frrataInvoices)
+    .where(eq(frrataInvoices.periodStart, nextMonthStartIST(now)))
+  return new Map(rows.map((r) => [r.tenantId, r.n]))
 }
 
 export type MerchantRow = {
@@ -57,7 +62,7 @@ export async function listMerchants(staff: StaffOk, opts: { page: number; q?: st
     db.select().from(members).where(inArray(members.tenantId, ids)),
     db.select().from(invites).where(inArray(invites.tenantId, ids)),
     tenantPlanHistory(db, ids),
-  ]).then(async (r) => [...r, await orderCounts(monthStartIST(opts.now))] as const)
+  ]).then(async (r) => [...r, await orderCounts(opts.now)] as const)
   const dir = await directory(ms.filter((m) => m.role === 'owner').map((m) => m.userId))
 
   const rows = ts.map((t): MerchantRow => {
@@ -89,7 +94,7 @@ export async function getMerchant(staff: StaffOk, id: string, now: Date) {
     tenantPlanHistory(db, [id]),
   ]).then(async (r) => [...r,
     await db.select().from(supportSessions).where(eq(supportSessions.tenantId, id)).orderBy(desc(supportSessions.startedAt)).limit(20),
-    await orderCounts(monthStartIST(now)),
+    await orderCounts(now),
   ] as const)
   const dir = await directory(ms.map((m) => m.userId))
   const cur = currentPlan(history.map((h) => ({ ...h, startsAt: h.tp.startsAt })), now)

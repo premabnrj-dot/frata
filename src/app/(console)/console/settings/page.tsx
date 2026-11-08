@@ -77,6 +77,7 @@ export default async function SettingsPage() {
             <Row key={s.key} href={`/console/settings/${s.key}`} icon={SECTION_ICON[s.key]} title={s.title} summary={summary[s.key]} needs={needs(s.key)} />
           ))}
           {owner && <Row href="/console/settings/online-payments" icon="payments" title="Online payments" summary={online} needs={onlineNeeds} />}
+          {manages && <Row href="/console/settings/billing" icon="plans" title="Plan and billing" summary="Your plan, this month so far, invoices and billing details" />}
           {manages && <Row href="/console/settings/people" icon="people" title="People" summary="Who works on this shop" />}
           {manages && <Row href="/console/settings/address" icon="address" title="Shop address" summary={`${f.slug}.${SHOP_DOMAIN}`} mono />}
           {seen !== null && (seen === undefined || seen.visible) && <Row href="/console/settings/shipping-costs" icon="shipped" title="Shipping costs" summary={shipSummary} needs={shipNeeds} />}
@@ -91,7 +92,7 @@ export default async function SettingsPage() {
               </>
             ) : <p className="text-sm text-ok-text">Your business details, contacts and grievance officer are all set.</p>}
           </Section>
-          <p className="px-1 text-xs text-muted-foreground">Coming later: your own domain, email templates, your plan and bills.</p>
+          <p className="px-1 text-xs text-muted-foreground">Coming later: your own domain and email templates.</p>
         </aside>
       </div>
     </>

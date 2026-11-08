@@ -44,7 +44,7 @@ export default async function MerchantPage({ params, searchParams }: { params: P
     <>
       <PageHeader title={m.tenant.name} back={{ href: '/admin/merchants', label: 'Merchants' }}
         badges={<>{cur ? <Badge tone="info">{cur.name}</Badge> : <Badge tone="danger">No plan</Badge>}{m.tenant.isInternal && <Badge>Internal</Badge>}{!owner && <Badge tone="warn">Owner not signed in yet</Badge>}</>}
-        meta={<>{m.host && <span className="font-mono">{m.host}</span>}{m.host && ' · '}added {dayIN(m.tenant.createdAt)} · <Numeric>{m.ordersThisMonth.toLocaleString('en-IN')}</Numeric> orders this month</>}
+        meta={<>{m.host && <span className="font-mono">{m.host}</span>}{m.host && ' · '}added {dayIN(m.tenant.createdAt)} · <Numeric>{m.ordersThisMonth.toLocaleString('en-IN')}</Numeric> delivered orders this month</>}
         actions={<>
           <Link href={`/admin/merchants/${id}/plan`} className={button({ variant: 'secondary' })}>Change plan</Link>
           {/* Names the merchant (§ Frrata Admin); a long name wraps inside the button instead of overflowing it. */}
@@ -97,7 +97,7 @@ export default async function MerchantPage({ params, searchParams }: { params: P
                 <div className="flex justify-between"><span>Fee per delivered order</span><Numeric>{formatPercent(cur.v.feeBps / 10_000, cur.v.feeBps % 100 === 0 ? 0 : 1)}</Numeric></div>
                 {/* Usage as a meter, the words beside it (visual changes, owner-approved 2026-11-08). */}
                 <div>
-                  <div className="flex justify-between"><span>Orders this month</span><Numeric>{use!.used} / {use!.included.toLocaleString('en-IN')}</Numeric></div>
+                  <div className="flex justify-between"><span>Delivered orders this month</span><Numeric>{use!.used} / {use!.included.toLocaleString('en-IN')}</Numeric></div>
                   <div aria-hidden="true" className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
                     <span className={`block h-full origin-left rounded-full ${use!.over ? 'bg-warn-mark' : 'bg-foreground'}`} style={{ transform: `scaleX(${use!.included ? Math.min(1, use!.used / use!.included) : 1})` }} />
                   </div>

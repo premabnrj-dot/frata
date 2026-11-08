@@ -106,7 +106,7 @@ export function computeBill(i: BillInput): Bill {
   for (const f of fees) byRate.set(f.feeBps, [...(byRate.get(f.feeBps) ?? []), f])
   for (const [bps, fs] of [...byRate].sort((a, b) => b[0] - a[0])) {
     const base = fs.reduce((t, f) => t + f.base, 0)
-    lines.push({ kind: 'fee', description: `Fee on delivered orders · ${fs.length} orders · ₹${(base / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, periodStart: i.prevMonthStart, periodEnd: i.monthStart, quantity: fs.length, rateBps: bps, taxable: fs.reduce((t, f) => t + f.fee, 0) as Paise })
+    lines.push({ kind: 'fee', description: `Fee on delivered orders · ${fs.length} order${fs.length === 1 ? "" : "s"} · ₹${(base / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, periodStart: i.prevMonthStart, periodEnd: i.monthStart, quantity: fs.length, rateBps: bps, taxable: fs.reduce((t, f) => t + f.fee, 0) as Paise })
   }
   // Orders over the plan in M−1: the count only.
   const endPlan = currentPlan(i.plans, new Date(i.monthStart.getTime() - 1))

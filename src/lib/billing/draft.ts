@@ -28,7 +28,8 @@ import { withTenant } from '@/lib/db/tenant'
 /** Frrata's own GSTIN once it has one (test mode: none, so every bill is IGST). */
 const frrataGstin = () => process.env.FRRATA_GSTIN || null
 
-export type Drafted = { invoiceId: string; bill: Bill } | { invoiceId: null; issued: true }
+/** `numbers`: each billed or credited order's number, by order id (the page's "which orders"). */
+export type Drafted = { invoiceId: string; bill: Bill; numbers: Map<string, number> } | { invoiceId: null; issued: true }
 
 /** Drafts (or redrafts) the invoice for the IST month that `monthStart` begins. */
 export async function draftInvoice(tenantId: string, monthStart: Date, now = new Date()): Promise<Drafted> {
@@ -106,6 +107,7 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
   if (bill.lines.length) await tx.insert(frrataInvoiceLines).values(bill.lines.map((l, k) => ({ tenantId, invoiceId, position: k + 1, ...l })))
   if (bill.fees.length) await tx.insert(frrataInvoiceFees).values(bill.fees.map((f) => ({ tenantId, invoiceId, ...f })))
   if (bill.credited.length) await tx.insert(frrataFeeCredits).values(bill.credited.map((c) => ({ tenantId, invoiceId, ...c })))
-  return { invoiceId, bill }
+  const numbers = new Map<string, number>([...feeRows.map((o) => [o.id, Number(o.number)] as const), ...creditRows.map((c) => [c.id, Number(c.number)] as const)])
+  return { invoiceId, bill, numbers }
 }
 

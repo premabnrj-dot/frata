@@ -37,7 +37,7 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
       ) : (
         <DataTable label="Merchants">
           <DataTableHead>
-            <th>Merchant</th><th>Plan</th><th>Owner</th><th className="text-right">Orders this month</th><th></th>
+            <th>Merchant</th><th>Plan</th><th>Owner</th><th className="text-right">Delivered this month</th><th></th>
           </DataTableHead>
           <DataTableBody>
             {rows.map((m) => (
@@ -58,7 +58,7 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
                     : m.pendingInvite ? <span className="text-warn-text">Owner not signed in yet</span> : <span className="text-muted-foreground">No owner</span>}
                 </Td>
                 <Td cell="b" className="text-right">
-                  <Numeric>{m.ordersThisMonth.toLocaleString('en-IN')}</Numeric><span className="text-xs text-muted-foreground md:hidden"> orders</span>
+                  <Numeric>{m.ordersThisMonth.toLocaleString('en-IN')}</Numeric><span className="text-xs text-muted-foreground md:hidden"> delivered</span>
                   {m.over && <div className="text-xs text-warn-text">Over the plan&apos;s {m.plan?.includedOrders.toLocaleString('en-IN')}</div>}
                 </Td>
                 <Td cell="e" className="md:text-right"><Link href={`/admin/merchants/${m.id}/support`} className="inline-flex min-h-6 items-center whitespace-nowrap text-sm underline-offset-2 hover:underline">Open console</Link></Td>
