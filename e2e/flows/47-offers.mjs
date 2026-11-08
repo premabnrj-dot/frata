@@ -161,7 +161,9 @@ export default {
         const [f] = await db`select id from discounts where title = 'Festive'`
         await c.goto(CONSOLE + `/console/offers/${f.id}`)
         await c.getByRole('region', { name: 'Last 30 days' }).getByText(/Too few to judge/).waitFor()
-        await c.getByText('₹ kept per delivered order').waitFor()
+        // The list's ₹ kept column (the offer page shows no numbers under 30 orders: "too few to judge").
+        await c.goto(CONSOLE + '/console/offers')
+        await c.getByRole('columnheader', { name: /₹ kept per delivered/ }).waitFor()
         // ₹ kept is a profit: staff and partners see the offers and their uses, never it (Ship S0·6).
         const S = USERS.staff
         await db`insert into auth.users (id, email, email_confirmed_at) values (${S.id}, ${S.email}, now()) on conflict (id) do nothing`
@@ -170,10 +172,7 @@ export default {
         try {
           const sp = await sc.newPage(); sp.setDefaultTimeout(10_000); sp.on('pageerror', (e) => t.errors.push(e.message))
           await sp.goto(CONSOLE + '/console/offers')
-          await sp.getByRole('region', { name: 'Last 30 days' }).waitFor()
-          assert.equal(await sp.getByText(/₹ kept/).count(), 0)
-          await sp.goto(CONSOLE + `/console/offers/${f.id}`)
-          await sp.getByRole('region', { name: 'Last 30 days' }).waitFor()
+          await sp.getByRole('columnheader', { name: /Delivered/ }).waitFor()
           assert.equal(await sp.getByText(/₹ kept/).count(), 0)
           // Partners build offers but never see a cost either.
           const Pa = USERS.partner
@@ -182,8 +181,8 @@ export default {
           const pc = await signedIn(t.browser, 'partner', { viewport: { width: 1280, height: 900 } })
           try {
             const pp = await pc.newPage(); pp.setDefaultTimeout(10_000); pp.on('pageerror', (e) => t.errors.push(e.message))
-            await pp.goto(CONSOLE + `/console/offers/${f.id}`)
-            await pp.getByRole('region', { name: 'Last 30 days' }).waitFor()
+            await pp.goto(CONSOLE + '/console/offers')
+            await pp.getByRole('columnheader', { name: /Delivered/ }).waitFor()
             assert.equal(await pp.getByText(/₹ kept/).count(), 0)
           } finally { await pc.close() }
         } finally {
