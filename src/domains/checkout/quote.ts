@@ -15,8 +15,9 @@
 
 import { istDayKey } from '../time/day'
 import { availability, visibility, type Status, type WhenOut } from '@/domains/catalogue/availability'
-import { taxOrder, type ChargeShare } from '@/domains/tax/gst'
+import type { ChargeShare } from '@/domains/tax/gst'
 import { codFor, shippingFor, type Cod, type DeliveryRules } from './delivery'
+import { planOffers, priceMethod, type Applied, type DiscountTerms, type Listed, type MethodLine } from './discounts'
 
 export const MAX_QTY = 10
 export const MAX_LINES = 20
@@ -49,17 +50,28 @@ export type QuoteLine = {
   variantId: string; productId: string; handle: string; title: string; options: string[]; values: string[]; sku: string | null
   image: { base: string; widths: number[] } | null; unitPrice: number; compareAt: number | null
   requested: number; qty: number; kind: LineKind; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null
-  gross: number; gstBps: number; taxable: number; gst: number; hsn: string | null
+  gross: number; hsn: string | null
   problem: LineProblem | null
 }
-/** What one way of paying costs. `shares`: each sold line's share of the charges (delivery, and the COD fee when paying on delivery), in `lines` order, sold lines only. */
-export type MethodTotal = { codCharge: number; gst: number; total: number; shares: ChargeShare[] }
-export type Quote = {
-  lines: QuoteLine[]
-  /** Sum of the sellable lines, as shown (GST inside when prices include it). */
-  subtotal: number; shipping: number
+/**
+ * What one way of paying costs. `lines` (sold lines only, in `lines` order): each line's discount and its tax at the
+ * rate of its own discounted piece; `shares`: each sold line's share of the charges (delivery, and the COD fee when
+ * paying on delivery). Line tax lives here, not on QuoteLine: it can differ by way of paying (offers plan review).
+ */
+export type MethodTotal = {
+  codCharge: number; gst: number; total: number; shares: ChargeShare[]
+  discount: number; lines: MethodLine[]
   /** The lines' taxable value: Frrata's fee base and the merchandise net. */
   merchandiseNet: number
+  /** The offers this way of paying gets (order, shipping, payment), with their amounts. */
+  applied: Applied[]
+}
+export type Quote = {
+  lines: QuoteLine[]
+  /** Sum of the sellable lines, as shown (GST inside when prices include it), before any offer. */
+  subtotal: number
+  /** Delivery after offers (the same for both ways of paying). */
+  shipping: number
   prepaid: MethodTotal
   cod: MethodTotal & { offer: Cod }
   arrives: { from: string; to: string } | null
@@ -67,6 +79,8 @@ export type Quote = {
   empty: boolean
   /** Bag ids that are no longer this shop's variants (deleted, or never were): the bag drops them and says so. */
   missing: string[]
+  /** Listed offers (applied, or what they need) and what the typed code did. */
+  offers: { listed: Listed[]; code: 'applied' | 'not_applied' | null }
 }
 
 const DAY = 86_400_000
@@ -102,8 +116,10 @@ export function arrivalRange(lines: Pick<QuoteLine, 'kind' | 'shipsBy' | 'leadMi
   return { from, to }
 }
 
+export type QuoteOffers = { offers?: DiscountTerms[]; code?: string | null }
+
 /** Price a bag. Unknown variant ids come back as `gone` lines; quantities are clamped to 1…MAX_QTY. */
-export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Date, pincode?: string | null): Quote {
+export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Date, pincode?: string | null, o: QuoteOffers = {}): Quote {
   const byId = new Map(rows.map((v) => [v.variantId, v]))
   const seen = new Set<string>()
   const missing: string[] = []
@@ -118,31 +134,35 @@ export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Dat
   })
   const live = draft.filter((d) => d.qty > 0)
   const subtotal = live.reduce((a, d) => a + d.v.price * d.qty, 0)
-  const shipping = live.length ? shippingFor(subtotal, r) : 0
-  const offer = codFor(subtotal, r, pincode)
+  // Offers (discounts.ts): the order class first, then the thresholds on what is left, then the payment class.
+  const plan = live.length ? planOffers(subtotal, o.offers ?? [], o.code ?? null) : planOffers(0, [], o.code ?? null)
+  const afterOrder = subtotal - (plan.order?.amount ?? 0)
+  const charged = live.length ? shippingFor(afterOrder, r) : 0
+  const waived = plan.freeShipping && charged > 0 ? charged : 0
+  const shipping = charged - waived
+  const shipApplied: Applied | null = waived ? { discountId: plan.freeShipping!.id, codeId: plan.freeShipping!.codeId, class: 'shipping', title: plan.freeShipping!.title, amount: waived, terms: plan.freeShipping! } : null
+  const offer = codFor(afterOrder, r, pincode)
   const codCharge = offer.offered ? offer.charge : 0
-  const tax = (charges: number) => taxOrder(live.map((d) => ({ gross: d.v.price * d.qty, unitPrice: d.v.price, hsn: d.v.hsn })), charges, { registered: r.registered, pricesIncludeGst: r.pricesIncludeGst })
-  const tPre = tax(shipping), tCod = tax(shipping + codCharge)
-  const linesGst = tPre.lines.reduce((a, l) => a + l.gst, 0)
-  const total = (charges: number, gst: number) => subtotal + charges + (r.pricesIncludeGst ? 0 : gst)
-  const prepaidGst = linesGst + tPre.chargesGst, codGst = linesGst + tCod.chargesGst
-
-  let li = 0
-  const lines: QuoteLine[] = draft.map((d) => {
-    const t = d.qty > 0 ? tPre.lines[li++]! : { bps: 0, taxable: 0, gst: 0 }
-    return {
-      variantId: d.v.variantId, productId: d.v.productId, handle: d.v.handle, title: d.v.title, options: d.v.options, values: d.v.values, sku: d.v.sku,
-      image: d.v.image, unitPrice: d.v.price, compareAt: d.v.compareAt, requested: d.requested, qty: d.qty, kind: d.kind,
-      shipsBy: d.kind === 'preorder' ? d.v.shipsBy : null, leadMinDays: d.kind === 'made_to_order' ? d.v.leadMinDays : null, leadMaxDays: d.kind === 'made_to_order' ? d.v.leadMaxDays : null,
-      gross: d.v.price * d.qty, gstBps: t.bps, taxable: t.taxable, gst: t.gst, hsn: d.v.hsn, problem: d.problem,
-    }
-  })
+  const priced = live.map((d) => ({ gross: d.v.price * d.qty, qty: d.qty, hsn: d.v.hsn }))
+  const tax = { registered: r.registered, pricesIncludeGst: r.pricesIncludeGst }
+  const pre = priceMethod(priced, plan.order?.amount ?? 0, plan.payment?.amount ?? 0, shipping, tax)
+  const cod = priceMethod(priced, plan.order?.amount ?? 0, 0, shipping + codCharge, tax)
+  const appliedFor = (...a: (Applied | null)[]) => a.filter((x): x is Applied => x !== null)
+  // A typed code that applies only when paying online still counts as applied (the saving shows on that card).
+  const lines: QuoteLine[] = draft.map((d) => ({
+    variantId: d.v.variantId, productId: d.v.productId, handle: d.v.handle, title: d.v.title, options: d.v.options, values: d.v.values, sku: d.v.sku,
+    image: d.v.image, unitPrice: d.v.price, compareAt: d.v.compareAt, requested: d.requested, qty: d.qty, kind: d.kind,
+    shipsBy: d.kind === 'preorder' ? d.v.shipsBy : null, leadMinDays: d.kind === 'made_to_order' ? d.v.leadMinDays : null, leadMaxDays: d.kind === 'made_to_order' ? d.v.leadMaxDays : null,
+    gross: d.v.price * d.qty, hsn: d.v.hsn, problem: d.problem,
+  }))
+  const shares = (m: typeof pre) => m.lines.map(({ chargeTaxable, chargeGst }) => ({ chargeTaxable, chargeGst }))
   return {
-    lines, subtotal, shipping, merchandiseNet: tPre.lines.reduce((a, l) => a + l.taxable, 0),
-    prepaid: { codCharge: 0, gst: prepaidGst, total: total(shipping, prepaidGst), shares: tPre.lines.map(({ chargeTaxable, chargeGst }) => ({ chargeTaxable, chargeGst })) },
-    cod: { offer, codCharge, gst: codGst, total: offer.offered ? total(shipping + codCharge, codGst) : 0, shares: tCod.lines.map(({ chargeTaxable, chargeGst }) => ({ chargeTaxable, chargeGst })) },
+    lines, subtotal, shipping,
+    prepaid: { codCharge: 0, gst: pre.gst, total: pre.total, shares: shares(pre), discount: pre.discount, lines: pre.lines, merchandiseNet: pre.merchandiseNet, applied: appliedFor(plan.order, shipApplied, plan.payment) },
+    cod: { offer, codCharge, gst: cod.gst, total: offer.offered ? cod.total : 0, shares: shares(cod), discount: cod.discount, lines: cod.lines, merchandiseNet: cod.merchandiseNet, applied: appliedFor(plan.order, shipApplied) },
     arrives: arrivalRange(lines.filter((l) => l.qty > 0), r, now),
     empty: live.length === 0, missing,
+    offers: { listed: plan.listed, code: plan.code },
   }
 }
 

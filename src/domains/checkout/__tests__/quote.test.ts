@@ -38,8 +38,8 @@ describe('quote', () => {
     expect(q.prepaid.total).toBe(249000)
     expect(q.cod.total).toBe(253900)
     expect(q.cod.offer.offered).toBe(true)
-    expect(q.lines[0]).toMatchObject({ gstBps: 500, taxable: 237143, gst: 11857 })
-    expect(q.merchandiseNet).toBe(237143)
+    expect(q.prepaid.lines[0]).toMatchObject({ gstBps: 500, taxable: 237143, gst: 11857, discount: 0 })
+    expect(q.prepaid.merchandiseNet).toBe(237143)
     expect(q.cod.gst - q.prepaid.gst).toBe(233) // GST on the ₹49 fee at 5%
   })
   it('adds GST when prices exclude it; charges delivery below the threshold', () => {

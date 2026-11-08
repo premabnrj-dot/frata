@@ -86,7 +86,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     await tx.insert(orders).values({
       id, tenantId, number, paymentMethod: input.method,
       subtotal: q.subtotal, shipping: q.shipping, codCharge: m.codCharge, gstTotal: m.gst, total: m.total, pricesIncludeGst: shop.pricesIncludeGst,
-      merchandiseNet: q.merchandiseNet, cogs,
+      merchandiseNet: m.merchandiseNet, cogs,
       customerName: input.address.name, phone: input.address.phone, addressLine: input.address.addressLine, area: input.address.area, landmark: input.address.landmark,
       pincode: input.address.pincode, city: input.address.city, state: input.address.state, supplyState: input.address.state, shopState: gstinState(shop.gstin), sellerGstin: shop.gstin,
       arrivesFrom: q.arrives?.from ?? null, arrivesTo: q.arrives?.to ?? null, returnDays: shop.returnDays, returnKind: shop.returnKind,
@@ -98,9 +98,10 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     })
     await tx.insert(orderLines).values(live.map((l, position) => ({
       ...m.shares[position]!,
+      lineDiscount: m.lines[position]!.discount, taxableValue: m.lines[position]!.taxable, gstBps: m.lines[position]!.gstBps, gst: m.lines[position]!.gst,
       tenantId, orderId: id, variantId: l.variantId, productId: l.productId, title: l.title, optionValues: l.values, sku: l.sku,
       imageBase: l.image?.base ?? null, imageWidths: l.image?.widths ?? null, qty: l.qty, unitPrice: l.unitPrice, compareAt: l.compareAt,
-      taxableValue: l.taxable, gstBps: l.gstBps, gst: l.gst, hsn: l.hsn, unitCost: costs.get(l.variantId) ?? null,
+      hsn: l.hsn, unitCost: costs.get(l.variantId) ?? null,
       kind: l.kind, shipsBy: l.shipsBy, leadMinDays: l.leadMinDays, leadMaxDays: l.leadMaxDays, position,
     })))
     if (cod) await takeStock(tx, tenantId, id, 'in_stock', soldOut)
