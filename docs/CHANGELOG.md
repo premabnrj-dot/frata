@@ -3,6 +3,16 @@
 What a merchant (or Frata staff) can do now that they could not before, newest first. One entry per closed
 phase; the detail is in its plan.
 
+## 2026-11-08 — Shop addresses D·0–D·1 ([plan](plans/2026-11-08-shop-addresses.md), [spec](specs/2026-11-08-shop-addresses.md))
+
+- **Every shop is at `name.frrata.shop`**; frrata.shop itself goes to Frrata.
+- **Settings › Shop address:** change the name; free until the shop first opens, then two changes. An old address
+  keeps working: it leads to the new one on the same page with its link tags, so Instagram links keep counting.
+- **A name is never given to a second shop:** a shop's old names stay its own, for sign-up, partners and Admin alike.
+- **Admin › Merchant › Addresses:** the shop's names; Frrata's rename (with a reason; the old name serves nothing);
+  freeze address changes.
+- **Admin › Names:** block a protected brand, an offensive word or a domain; release a held name with a reason.
+
 ## 2026-11-08 — Analytics A·1 ([plan](plans/2026-11-08-analytics-a1.md), [spec](specs/2026-11-08-analytics-a1.md))
 
 - **Console › Analytics** (`/console/analytics`): where this period's orders came from (7, 30 or 90 days against the

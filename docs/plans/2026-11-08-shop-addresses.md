@@ -2,7 +2,8 @@
 Status: active (reviewed 2026-11-08: architecture, tenancy, security; owner calls decided) ·
 Date: 2026-11-08 · Spec: `docs/specs/2026-11-08-shop-addresses.md` (approved by the owner 2026-11-08 with the note "no
 descriptions or clarifications": spec § Words on screen) · Research: `docs/research/2026-11-08-shop-addresses.md`.
-D·0 is live (frrata.shop, main bce936b).
+D·0 is live (frrata.shop, main bce936b). D·1 is live: D1·1–D1·6 at main 98de1bb (migrations 0067, 0068), D1·7 Admin
+with migration 0069. Migrations were renumbered after the trials work took 0064–0066.
 
 Gates on every task: `npm test`, `npm run typecheck`, int tests with `INT_DB_HOST`, `verify:tenancy` for every
 migration, `impact-reviewer` on the task's diff, e2e for the flows it touches. A `claude/**` push never deploys; main
