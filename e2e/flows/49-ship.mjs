@@ -66,7 +66,7 @@ export default {
         await p.locator('[data-toast]', { hasText: `${label(P)} marked delivered.` }).waitFor()
         await until(async () => (await moments(P)).delivered_at !== null)
         await p.goto(CONSOLE + '/console/orders?tab=on_the_way')
-        await p.getByRole('tab', { name: /On the way/ }).waitFor()
+        await p.getByRole('navigation', { name: 'Order views' }).getByRole('link', { name: /^On the way/ }).waitFor()
         assert.equal(await p.getByRole('row').filter({ hasText: label(P) }).count(), 0)
       })
 
