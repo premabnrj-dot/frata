@@ -10,8 +10,10 @@ import { discountCodes, discountTargets, discountTiers, discounts, orderDiscount
 import { collections, products, variants } from '@/lib/db/schema-catalogue'
 import { orders } from '@/lib/db/schema-orders'
 import { discountUses, useOfRowSql } from '@/lib/db/discount-predicates'
-import { standingSql } from '@/lib/db/order-predicates'
+import { holdingSql, priorOrderSql, standingSql, stateSql } from '@/lib/db/order-predicates'
+import { leakOf, type Leak } from '@/domains/checkout/leak'
 import { withTenant } from '@/lib/db/tenant'
+import type { Tx } from '@/lib/db'
 
 // =============================================================================
 // FILE: src/lib/queries/discounts.ts
@@ -33,14 +35,11 @@ export type OfferRow = {
   /** ₹ it gave on those orders. */
   given: number
   budgetLeft: number | null
-  delivered: number
-  /** Profit kept per delivered order that used it (profit.ts), or null before any delivery. */
-  keptPerDelivered: number | null
   // O·2 terms
   targets: 'all' | 'products' | 'collections'; targetIds: string[]
   buyQty: number | null; getQty: number | null; getBps: number | null; giftVariantId: string | null; firstOrder: boolean
   tiers: { min: number; percentBps: number | null; amountOff: number | null }[]
-  /** Creator codes, each with its own uses and ₹ given (O·3 judges them on delivered orders). */
+  /** Creator codes, each with its own uses and ₹ given, all time (offerStats judges them on the window's delivered orders). */
   creators: { id: string; label: string; code: string; useCount: number; given: number }[]
 }
 
@@ -60,11 +59,6 @@ export async function listOffers(tenantId: string, now = new Date(), onlyId?: st
     if (!rows.length) return []
     // Uses and ₹ given, as the orders stand now; delivered orders with what profit.ts needs.
     const byId = await discountUses(tx, tenantId, rows.map((r) => r.id), now)
-    const fee = await feeBpsNow(tenantId, now)
-    const delivered = await tx.execute<{ id: string; net: string; cogs: string | null; fwd: string; gw: string | null; base: string }>(sql`
-      select distinct od.discount_id id, o.id oid, o.net_revenue net, o.cogs, o.forward_shipping fwd, o.gateway_fee gw, o.merchandise_net base from ${orderDiscounts} od
-        join ${orders} o on o.tenant_id = od.tenant_id and o.id = od.order_id
-       where od.tenant_id = ${tenantId} and o.delivered_at is not null and o.rto_initiated_at is null and od.class <> 'shipping'`)
     const ids = rows.map((r) => r.id)
     const [targets, tiers, creators] = await Promise.all([
       tx.select({ discountId: discountTargets.discountId, productId: discountTargets.productId, collectionId: discountTargets.collectionId }).from(discountTargets)
@@ -81,18 +75,11 @@ export async function listOffers(tenantId: string, now = new Date(), onlyId?: st
     return rows.map((r) => {
       const u = byId.get(r.id)
       const given = Number(u?.given ?? 0)
-      const mine = delivered.filter((d) => d.id === r.id)
-      // ₹ kept per delivered order: profit.ts on what was stored. Unknown costs (cogs not set) leave it unknown.
-      const known = mine.filter((d) => d.cogs !== null)
-      const kept = known.length && fee !== null ? Math.round(known.reduce((a, d) => a + orderProfit({
-        netRevenue: paise(Number(d.net)), cogs: paise(Number(d.cogs)), forwardShipping: paise(Number(d.fwd)), rtoShipping: paise(0), codFee: paise(0),
-        gatewayFee: paise(Number(d.gw ?? 0)), packaging: paise(0), adCost: paise(0), platformFee: deliveredFee(paise(Number(d.base)), fee),
-      }, 1).ifDelivered, 0) / known.length) : null
       const budget = n(r.budget)
       return {
         ...r, style: r.style as DiscountStyle, amountOff: n(r.amountOff), cap: n(r.cap), minSubtotal: Number(r.minSubtotal), budget,
         code: r.code ? r.code.toUpperCase() : null, status: offerStatus(r, now), useCount: u?.n ?? 0, given,
-        budgetLeft: budget === null ? null : Math.max(0, budget - given), delivered: mine.length, keptPerDelivered: kept,
+        budgetLeft: budget === null ? null : Math.max(0, budget - given),
         targets: r.targets as OfferRow['targets'], targetIds: targets.filter((t) => t.discountId === r.id).map((t) => (t.productId ?? t.collectionId)!),
         tiers: tiers.filter((t) => t.discountId === r.id).map((t) => ({ min: Number(t.min), percentBps: t.percentBps, amountOff: n(t.amountOff) })),
         creators: creators.filter((c) => c.discountId === r.id).map((c) => ({ id: c.id, label: c.label!, code: c.code.toUpperCase(), useCount: byCode.get(c.id)?.n ?? 0, given: Number(byCode.get(c.id)?.given ?? 0) })),
@@ -101,13 +88,141 @@ export async function listOffers(tenantId: string, now = new Date(), onlyId?: st
   })
 }
 
+export type CreatorStat = {
+  id: string
+  /** In the window: orders using the code now, delivered, returned (RTO), ₹ given, and how many came by the link. */
+  orders: number; delivered: number; rto: number; given: number; viaLink: number
+  leak: Leak
+}
+export type OfferStat = {
+  orders: number; given: number
+  /** Average order total (after offers) of these orders, in paise. */
+  aov: number | null
+  prepaid: number
+  /** Buyers who had ordered here before (priorOrderSql), and the rest. */
+  repeat: number; fresh: number
+  delivered: number; rto: number
+  /** ₹ kept per delivered order (profit.ts; orders with unknown costs left out), or null before one. */
+  keptPerDelivered: number | null
+  /** ₹ given ÷ delivered orders, or null before one. */
+  givenPerDelivered: number | null
+  /** Creator codes, ranked by delivered orders. */
+  creators: CreatorStat[]
+}
+export type OfferStats = {
+  days: number
+  /** Every order with an offer in the window (an order with two offers counts once). */
+  all: { orders: number; given: number; aov: number | null; prepaid: number; delivered: number; rto: number; givenPerDelivered: number | null }
+  /** The shop's orders without one, in the same window: what the offers are judged against. */
+  without: { orders: number; aov: number | null; delivered: number; rto: number }
+  offers: Map<string, OfferStat>
+}
+
+/** Under this many orders an offer's numbers are "too few to judge" (the console says so). */
+export const JUDGE_MIN_ORDERS = 30
+
+const DAY = 86_400_000
+
+/**
+ * DID IT MAKE MONEY? The ONE computation of an offer's results (plan O·3, review 4): the orders placed in the last
+ * `days` days that use an offer now (useOfRowSql, the same rule as limits), their state through stateSql, ₹ kept
+ * through profit.ts, new vs repeat through priorOrderSql, and each creator code's week for its leak alert. Derived on
+ * read; nothing stored. Driven by orders_tenant_placed and order_discounts_order_offer.
+ */
+export async function offerStats(tenantId: string, now = new Date(), days = 30): Promise<OfferStats> {
+  return withTenant(tenantId, (tx) => offerStatsIn(tx, tenantId, now, days))
+}
+
+/** offerStats inside the caller's tenant transaction (the int test reads rows it will roll back). */
+export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, days = 30): Promise<OfferStats> {
+  const fee = await feeBpsIn(tx, tenantId, now)
+  const since = sql`${new Date(now.getTime() - days * DAY).toISOString()}::timestamptz`
+  const st = stateSql(now, 'o')
+  const prepaid = sql`(o.paid_at is not null or (o.payment_method = 'prepaid' and o.switched_to_cod_at is null))`
+  const used = sql`exists (select 1 from ${orderDiscounts} od where od.tenant_id = o.tenant_id and od.order_id = o.id and ${useOfRowSql(now)})`
+  const [per, all, without, delivered, codes] = await Promise.all([
+    tx.execute<{ id: string; n: number; given: string; total: string; prepaid: number; repeat: number; delivered: number; rto: number }>(sql`
+      select od.discount_id id, count(*)::int n, sum(od.amount)::bigint given, sum(o.total)::bigint total, (count(*) filter (where ${prepaid}))::int prepaid,
+             (count(*) filter (where ${priorOrderSql(now, tenantId, sql`o.phone`, { except: sql`o.id`, before: sql`o.placed_at` })}))::int repeat,
+             (count(*) filter (where ${st} = 'delivered'))::int delivered, (count(*) filter (where ${st} in ('rto', 'rto_received')))::int rto
+        from ${orderDiscounts} od join ${orders} o on o.tenant_id = od.tenant_id and o.id = od.order_id
+       where od.tenant_id = ${tenantId} and o.tenant_id = ${tenantId} and o.placed_at >= ${since} and ${useOfRowSql(now)}
+       group by od.discount_id`),
+    tx.execute<{ n: number; total: string; prepaid: number; delivered: number; rto: number }>(sql`
+      select count(*)::int n, coalesce(sum(o.total), 0)::bigint total, (count(*) filter (where ${prepaid}))::int prepaid,
+             (count(*) filter (where ${st} = 'delivered'))::int delivered, (count(*) filter (where ${st} in ('rto', 'rto_received')))::int rto
+        from ${orders} o where o.tenant_id = ${tenantId} and o.placed_at >= ${since} and ${used}`),
+    tx.execute<{ n: number; total: string; delivered: number; rto: number }>(sql`
+      select count(*)::int n, coalesce(sum(o.total), 0)::bigint total,
+             (count(*) filter (where ${st} = 'delivered'))::int delivered, (count(*) filter (where ${st} in ('rto', 'rto_received')))::int rto
+        from ${orders} o where o.tenant_id = ${tenantId} and o.placed_at >= ${since} and (${standingSql('o')} or ${holdingSql(now, 'o')}) and not ${used}`),
+    // Delivered orders with an offer, with what profit.ts needs.
+    tx.execute<{ id: string; net: string; cogs: string | null; fwd: string; gw: string | null; base: string }>(sql`
+      select od.discount_id id, o.net_revenue net, o.cogs, o.forward_shipping fwd, o.gateway_fee gw, o.merchandise_net base
+        from ${orderDiscounts} od join ${orders} o on o.tenant_id = od.tenant_id and o.id = od.order_id
+       where od.tenant_id = ${tenantId} and o.tenant_id = ${tenantId} and o.placed_at >= ${since} and ${useOfRowSql(now)} and ${st} = 'delivered'`),
+    // Creator codes: the window's numbers, and the 35 days the leak alert reads (7 + the 28 before).
+    tx.execute<{ id: string; discount_id: string; created_at: Date | string; n: number; given: string; link: number; delivered: number; rto: number; n7: number; link7: number; prev28: number }>(sql`
+      select dc.id, dc.discount_id, dc.created_at,
+             (count(od.id) filter (where o.placed_at >= ${since}))::int n, coalesce(sum(od.amount) filter (where o.placed_at >= ${since}), 0)::bigint given,
+             (count(od.id) filter (where o.placed_at >= ${since} and od.via = 'link'))::int link,
+             (count(od.id) filter (where o.placed_at >= ${since} and ${st} = 'delivered'))::int delivered,
+             (count(od.id) filter (where o.placed_at >= ${since} and ${st} in ('rto', 'rto_received')))::int rto,
+             (count(od.id) filter (where o.placed_at >= ${ago(now, 7)}))::int n7, (count(od.id) filter (where o.placed_at >= ${ago(now, 7)} and od.via = 'link'))::int link7,
+             (count(od.id) filter (where o.placed_at < ${ago(now, 7)} and o.placed_at >= ${ago(now, 35)}))::int prev28
+        from ${discountCodes} dc
+        left join (${orderDiscounts} od join ${orders} o on o.tenant_id = od.tenant_id and o.id = od.order_id
+                   and o.placed_at >= least(${since}, ${ago(now, 35)}) and ${useOfRowSql(now)})
+          on od.tenant_id = dc.tenant_id and od.code_id = dc.id
+       where dc.tenant_id = ${tenantId} and dc.label is not null
+       group by dc.id`),
+  ])
+  type Delivered = { net: string; cogs: string | null; fwd: string; gw: string | null; base: string }
+  const kept = (rows: Delivered[]) => {
+    const known = rows.filter((d) => d.cogs !== null)
+    return known.length && fee !== null ? Math.round(known.reduce((a, d) => a + orderProfit({
+      netRevenue: paise(Number(d.net)), cogs: paise(Number(d.cogs)), forwardShipping: paise(Number(d.fwd)), rtoShipping: paise(0), codFee: paise(0),
+      gatewayFee: paise(Number(d.gw ?? 0)), packaging: paise(0), adCost: paise(0), platformFee: deliveredFee(paise(Number(d.base)), fee),
+    }, 1).ifDelivered, 0) / known.length) : null
+  }
+  const per1 = (a: number, b: number) => (b > 0 ? Math.round(a / b) : null)
+  const startOfPrev = now.getTime() - 35 * DAY, endOfPrev = now.getTime() - 7 * DAY
+  const offers = new Map<string, OfferStat>()
+  for (const r of per) {
+    const given = Number(r.given)
+    offers.set(r.id, {
+      orders: r.n, given, aov: per1(Number(r.total), r.n), prepaid: r.prepaid, repeat: r.repeat, fresh: r.n - r.repeat,
+      delivered: r.delivered, rto: r.rto, keptPerDelivered: kept(delivered.filter((d) => d.id === r.id)), givenPerDelivered: per1(given, r.delivered),
+      creators: [],
+    })
+  }
+  for (const c of codes) {
+    const made = new Date(c.created_at).getTime()
+    const prevDays = Math.max(0, Math.min(28, Math.floor((endOfPrev - Math.max(made, startOfPrev)) / DAY)))
+    const stat: CreatorStat = { id: c.id, orders: c.n, delivered: c.delivered, rto: c.rto, given: Number(c.given), viaLink: c.link,
+      leak: leakOf({ last7: c.n7, viaLink7: c.link7, prev28: c.prev28, prevDays }) }
+    const o = offers.get(c.discount_id)
+    if (o) o.creators.push(stat)
+    else if (c.n7 || stat.orders) offers.set(c.discount_id, { orders: 0, given: 0, aov: null, prepaid: 0, repeat: 0, fresh: 0, delivered: 0, rto: 0, keptPerDelivered: null, givenPerDelivered: null, creators: [stat] })
+  }
+  for (const o of offers.values()) o.creators.sort((a, b) => b.delivered - a.delivered || b.orders - a.orders)
+  const a = all[0]!, w = without[0]!
+  const givenAll = [...offers.values()].reduce((x, o) => x + o.given, 0)
+  return {
+    days,
+    all: { orders: a.n, given: givenAll, aov: per1(Number(a.total), a.n), prepaid: a.prepaid, delivered: a.delivered, rto: a.rto, givenPerDelivered: per1(givenAll, a.delivered) },
+    without: { orders: w.n, aov: per1(Number(w.total), w.n), delivered: w.delivered, rto: w.rto },
+    offers,
+  }
+}
+
+const ago = (now: Date, d: number) => sql`${new Date(now.getTime() - d * DAY).toISOString()}::timestamptz`
+
 /** The fee on a delivered order under the shop's current plan, in bps (null without a plan). */
-async function feeBpsNow(tenantId: string, now: Date): Promise<number | null> {
-  return withTenant(tenantId, async (tx) => {
-    const [p] = await tx.select({ fee: planVersions.feeBps }).from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId))
-      .where(and(eq(tenantPlans.tenantId, tenantId), sql`${tenantPlans.startsAt} <= ${now.toISOString()}::timestamptz`)).orderBy(desc(tenantPlans.startsAt)).limit(1)
-    return p ? p.fee : null
-  })
+async function feeBpsIn(tx: Tx, tenantId: string, now: Date): Promise<number | null> {
+  const [p] = await tx.select({ fee: planVersions.feeBps }).from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId))
+    .where(and(eq(tenantPlans.tenantId, tenantId), sql`${tenantPlans.startsAt} <= ${now.toISOString()}::timestamptz`)).orderBy(desc(tenantPlans.startsAt)).limit(1)
+  return p ? p.fee : null
 }
 
 /**

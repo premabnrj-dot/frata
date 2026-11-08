@@ -141,6 +141,19 @@ export default {
         await p.getByText(/applied\./).waitFor(); await p.getByText('−₹498').first().waitFor()
         await p.screenshot({ path: t.out('checkout-code'), fullPage: true })
       })
+      await t.step('O·3: the list shows the last 30 days; an offer page its own numbers, "too few to judge"', async () => {
+        const [{ n, given }] = await db`select count(distinct od.order_id)::int n, sum(od.amount)::bigint given from order_discounts od join orders o on o.id = od.order_id
+          where o.cancelled_at is null and (od.class <> 'payment' or o.paid_at is not null)`
+        await c.goto(CONSOLE + '/console/offers')
+        const strip = c.getByRole('region', { name: 'Last 30 days' })
+        await strip.getByText(`${n} orders with an offer`).waitFor()
+        await strip.getByText(inr(Number(given)), { exact: true }).waitFor()
+        await strip.getByText(/Too few orders with an offer to judge yet/).waitFor()
+        await c.screenshot({ path: t.out('strip'), fullPage: true })
+        const [f] = await db`select id from discounts where title = 'Festive'`
+        await c.goto(CONSOLE + `/console/offers/${f.id}`)
+        await c.getByRole('region', { name: 'Last 30 days' }).getByText(/Too few to judge/).waitFor()
+      })
       await t.step('O·2: Buy 2 get 1 from the console: a badge on the card, a line on the product page, the third piece free', async () => {
         await db`update discounts set ended_at = now(), announce = false where ended_at is null` // only this offer now
         await c.goto(CONSOLE + '/console/offers/new?style=bxgy')

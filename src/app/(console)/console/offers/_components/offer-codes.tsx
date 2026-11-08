@@ -3,15 +3,16 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Section } from '@/components/layout/section'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Message } from '@/components/ui/unsaved'
 import { addCreatorCode } from '../actions'
 
 // CREATOR CODES (offers O·2): a creator's own code for this offer, with a link to share (the shop's address with ?code=),
-// and what it brought. Never listed at checkout. Owners and admins add them (it changes who gets a started offer).
+// and what it brought (O·3: ranked by delivered orders, with its RTO and leak alert). Never listed at checkout. Owners and admins add them (it changes who gets a started offer).
 export function OfferCodes({ id, address, creators, canAdd, publicCode }: {
   id: string; address: string; canAdd: boolean; publicCode: string | null
-  creators: { id: string; label: string; code: string; uses: string; given: string }[]
+  creators: { id: string; label: string; code: string; uses: string; given: string; orders: string; delivered: string; rto: string; byLink: string; leak: string | null }[]
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
@@ -31,7 +32,9 @@ export function OfferCodes({ id, address, creators, canAdd, publicCode }: {
         <ul className="divide-y divide-border text-sm">
           {creators.map((c) => (
             <li key={c.id} className="grid gap-0.5 py-2">
-              <span className="flex flex-wrap items-center gap-2"><b>{c.label}</b><span className="rounded-sm bg-muted px-1.5 font-mono text-xs">{c.code}</span><span className="ml-auto text-muted-foreground">{c.uses} uses · {c.given} given</span></span>
+              <span className="flex flex-wrap items-center gap-2"><b>{c.label}</b><span className="rounded-sm bg-muted px-1.5 font-mono text-xs">{c.code}</span>{c.leak ? <Badge tone="warn">Leak?</Badge> : null}<span className="ml-auto text-muted-foreground">{c.uses} uses · {c.given} given</span></span>
+              <span className="text-xs text-muted-foreground">Last 30 days: {c.orders} orders · {c.delivered} delivered · RTO {c.rto} · {c.byLink} by link</span>
+              {c.leak ? <span className="rounded-md bg-warn px-2 py-1 text-xs text-warn-text">{c.leak}</span> : null}
               <span className="truncate font-mono text-xs text-muted-foreground">https://{address}/?code={c.code}</span>
             </li>
           ))}

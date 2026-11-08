@@ -1,0 +1,70 @@
+import { Section } from '@/components/layout/section'
+import { Money, Numeric } from '@/components/data/numeric'
+import { paise } from '@/domains/money/paise'
+import { formatPercent } from '@/lib/format'
+import { JUDGE_MIN_ORDERS, type OfferStat, type OfferStats } from '@/lib/queries/discounts'
+
+// =============================================================================
+// DID IT MAKE MONEY? (offers O·3; mockup "Did it make money?"). The 30-day strip on the Offers list and an offer's own
+// numbers, both read from offerStats() (the one computation). Server components: a merchant's cost stays here.
+// =============================================================================
+
+const share = (a: number, b: number) => (b > 0 ? formatPercent(a / b, 0) : '—')
+const rtoRate = (o: { delivered: number; rto: number }) => share(o.rto, o.delivered + o.rto)
+const rs = (p: number | null) => (p === null ? '—' : <Money paise={paise(p)} />)
+
+function Kpi({ k, v, f }: { k: string; v: React.ReactNode; f: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-muted-foreground">{k}</dt>
+      <dd className="font-mono text-lg font-semibold">{v}</dd>
+      <dd className="text-xs text-muted-foreground">{f}</dd>
+    </div>
+  )
+}
+
+/** The Offers list's strip: every order with an offer in the window, against the shop's orders without one. */
+export function OfferStrip({ s }: { s: OfferStats }) {
+  const a = s.all, w = s.without
+  return (
+    <Section title={`Last ${s.days} days`} id="strip">
+      {a.orders < JUDGE_MIN_ORDERS ? <p className="text-sm text-muted-foreground">Too few orders with an offer to judge yet: <Numeric>{a.orders}</Numeric> of {JUDGE_MIN_ORDERS}.</p> : null}
+      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Kpi k="₹ given" v={<Money paise={paise(a.given)} />} f={<><Numeric>{a.orders}</Numeric> orders with an offer</>} />
+        <Kpi k="Prepaid share" v={share(a.prepaid, a.orders)} f="of orders with an offer" />
+        <Kpi k="Average order with an offer" v={rs(a.aov)} f={<>{rs(w.aov)} without</>} />
+        <Kpi k="₹ given per delivered order" v={rs(a.givenPerDelivered)} f={<>₹ given ÷ <Numeric>{a.delivered}</Numeric> delivered</>} />
+      </dl>
+    </Section>
+  )
+}
+
+/** One offer's numbers over the window. Under 30 orders it says so before any number. */
+export function OfferNumbers({ o, s }: { o: OfferStat | undefined; s: OfferStats }) {
+  const x: OfferStat = o ?? { orders: 0, given: 0, aov: null, prepaid: 0, repeat: 0, fresh: 0, delivered: 0, rto: 0, keptPerDelivered: null, givenPerDelivered: null, creators: [] }
+  const w = s.without
+  return (
+    <Section title={`Last ${s.days} days`} id="numbers">
+      {x.orders < JUDGE_MIN_ORDERS ? <p className="rounded-md bg-info px-3 py-2 text-sm text-info-text">Too few to judge: <Numeric>{x.orders}</Numeric> {x.orders === 1 ? 'order' : 'orders'} so far. The numbers mean something from {JUDGE_MIN_ORDERS}.</p> : null}
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div><dt className="text-xs text-muted-foreground">Orders</dt><dd className="font-mono text-lg"><Numeric>{x.orders}</Numeric></dd>
+          <dd className="text-xs text-muted-foreground"><Numeric>{x.fresh}</Numeric> new · <Numeric>{x.repeat}</Numeric> repeat buyers</dd></div>
+        <div><dt className="text-xs text-muted-foreground">₹ given</dt><dd className="font-mono text-lg"><Money paise={paise(x.given)} /></dd>
+          <dd className="text-xs text-muted-foreground">{rs(x.givenPerDelivered)} per delivered order</dd></div>
+        <div><dt className="text-xs text-muted-foreground">Average order</dt><dd className="font-mono text-lg">{rs(x.aov)}</dd>
+          <dd className="text-xs text-muted-foreground">{rs(w.aov)} without an offer</dd></div>
+        <div><dt className="text-xs text-muted-foreground">Prepaid</dt><dd className="font-mono text-lg">{share(x.prepaid, x.orders)}</dd></div>
+        <div><dt className="text-xs text-muted-foreground">Delivered</dt><dd className="font-mono text-lg"><Numeric>{x.delivered}</Numeric></dd></div>
+        <div><dt className="text-xs text-muted-foreground">Returned (RTO)</dt><dd className="font-mono text-lg">{rtoRate(x)}</dd>
+          <dd className="text-xs text-muted-foreground">{rtoRate(w)} without an offer</dd></div>
+        <div className="col-span-2"><dt className="text-xs text-muted-foreground">₹ kept per delivered order</dt><dd className="font-mono text-lg">{rs(x.keptPerDelivered)}</dd>
+          {x.keptPerDelivered === null ? <dd className="text-xs text-muted-foreground">Once orders are delivered and their costs are known.</dd> : null}</div>
+      </dl>
+    </Section>
+  )
+}
+
+/** A creator code's line on the offer page: what it brought in the window, and its leak alert. */
+export const creatorLine = (c: OfferStat['creators'][number] | undefined) => c
+  ? { orders: String(c.orders), delivered: String(c.delivered), rto: rtoRate(c), byLink: share(c.viaLink, c.orders), leak: c.leak?.text ?? null }
+  : { orders: '0', delivered: '0', rto: '—', byLink: '—', leak: null }
