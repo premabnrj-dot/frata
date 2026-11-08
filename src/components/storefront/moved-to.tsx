@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { movedUrl } from '@/domains/addresses/names'
 
 /**
  * A shop's OLD name (shop addresses D·1): the page still renders (its canonical already names the current address), and
@@ -9,10 +10,8 @@ import { useEffect } from 'react'
  */
 export function MovedTo({ to, children }: { to: string; children: React.ReactNode }) {
   useEffect(() => {
-    const { protocol, pathname, search, hash } = window.location
-    if (pathname === '/orders' || pathname.startsWith('/orders/')) return
-    // The target is built from our own host and the current location's parts: never a URL a shopper typed.
-    window.location.replace(`${protocol}//${to}${pathname}${search}${hash}`)
+    const url = movedUrl(to, window.location)
+    if (url) window.location.replace(url)
   }, [to])
   return children
 }

@@ -19,6 +19,7 @@ CREATE TABLE "shop_names" (
 --> statement-breakpoint
 ALTER TABLE "tenants" ADD COLUMN "first_opened_at" timestamp with time zone;--> statement-breakpoint
 ALTER TABLE "tenants" ADD COLUMN "address_frozen_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "tenants" ADD COLUMN "renames_used" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE "shop_names" ADD CONSTRAINT "shop_names_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "shop_names_current" ON "shop_names" USING btree ("tenant_id") WHERE retired_at is null;--> statement-breakpoint
 CREATE INDEX "shop_names_tenant" ON "shop_names" USING btree ("tenant_id");

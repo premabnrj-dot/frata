@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { InfoTip } from '@/components/ui/info-tip'
 import { slugProblem } from '@/domains/signup/slug'
+import { RENAMES_AFTER_OPENING } from '@/domains/addresses/names'
 import type { AddressCheck } from '@/app/start/actions'
 import { changeAddress, checkShopAddress } from '../actions'
 import { Section } from '@/components/layout/section'
@@ -46,7 +47,7 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
     if (!r.ok) return
     setFacts((f) => ({
       current: slug,
-      left: f.left === null ? null : Math.max(0, f.left - (f.old.includes(slug) ? 0 : 1)),
+      left: f.left === null ? null : Math.max(0, f.left - 1),
       old: f.left === null ? f.old.filter((n) => n !== slug) : [f.current, ...f.old.filter((n) => n !== slug)],
     }))
     router.refresh()
@@ -60,7 +61,7 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
       <PageHeader title="Shop address" back={{ href: '/console/settings', label: 'Settings' }} />
       <Section>
         <label htmlFor="slug" className="flex items-center gap-1 text-sm font-medium">Frrata address
-          {left !== null && <InfoTip about="old addresses">Old addresses keep working and lead here. No other shop can take them.</InfoTip>}
+          {left !== null && <InfoTip about="old addresses">Old addresses keep working.</InfoTip>}
         </label>
         <div className="flex items-center gap-1 rounded-md border border-input bg-card px-3 font-mono text-sm focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
           <input id="slug" value={slug} disabled={locked || pending} aria-describedby="slug-h"
@@ -69,6 +70,12 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
           <span className="text-muted-foreground">.{shopDomain}</span>
         </div>
         {line && <p id="slug-h" aria-live="polite" className={`text-sm ${state?.state === 'ok' ? 'text-ok-text' : state || frozen || left === 0 ? 'text-warn-text' : 'text-muted-foreground'}`}>{line}</p>}
+        {!changed && (
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="secondary" onClick={() => { void navigator.clipboard?.writeText(`https://${current}.${shopDomain}`).then(() => setMsg({ ok: true, text: 'Copied' })).catch(() => {}) }}>Copy</Button>
+            <a href={`https://${current}.${shopDomain}`} target="_blank" rel="noopener" className="inline-flex min-h-10 items-center rounded-md border border-input px-3 text-sm md:min-h-9">Open</a>
+          </div>
+        )}
         {old.length > 0 && <p className="text-sm text-muted-foreground">Old: <span className="font-mono">{old.map((n) => `${n}.${shopDomain}`).join(', ')}</span></p>}
         {msg && <p role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-ok-text' : 'text-danger-text'}`}>{msg.text}</p>}
         {!locked && (
@@ -84,7 +91,7 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
           <Button type="button" variant="secondary" data-autofocus onClick={() => setConfirming(false)}>Keep {current}</Button>
           <Button type="button" disabled={pending} onClick={change}>{pending ? 'Changing…' : `Change to ${slug}`}</Button>
         </>}>
-        <p className="text-sm">{left !== null && `${(2 - left) + 1} of 2 changes`}</p>
+        <p className="text-sm">{left !== null && `${RENAMES_AFTER_OPENING - left + 1} of ${RENAMES_AFTER_OPENING} changes`}</p>
       </Dialog>
     </div>
   )

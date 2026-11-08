@@ -20,6 +20,6 @@ export const metadata = { title: { template: '%s', default: 'Shop' }, icons: { i
 /** A shop's old name leads to its current one (shop addresses D·1): see MovedTo. */
 export default async function ShopRoot({ children, params }: { children: React.ReactNode; params: Promise<{ host: string }> }) {
   const host = shopHostParam((await params).host)
-  const to = host && isDatabaseConfigured() ? await shopMovedTo(host) : null
+  const to = host && isDatabaseConfigured() ? await shopMovedTo(host).catch(() => null) : null
   return to ? <MovedTo to={to}>{children}</MovedTo> : children
 }

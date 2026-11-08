@@ -1,5 +1,5 @@
 {
-  "id": "c7e88eaf-aff9-41dd-886c-95660f1670fd",
+  "id": "a5e00462-d8eb-4e88-b9b2-4d1e9246e542",
   "prevId": "4ba220a9-8241-4411-8fd7-ce43589e6b6c",
   "version": "7",
   "dialect": "postgresql",
@@ -1903,6 +1903,13 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "renames_used": {
+          "name": "renames_used",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         }
       },
       "indexes": {},

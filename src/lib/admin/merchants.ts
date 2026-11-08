@@ -110,10 +110,11 @@ export async function getMerchant(staff: StaffOk, id: string, now: Date) {
   }
 }
 
+/** Taken, retired by any shop, or blocked: the same check sign-up uses (app_name_check), so Admin never reuses a name. */
 export async function slugTaken(staff: StaffOk, slug: string): Promise<boolean> {
   void staff
-  const [row] = await adminDb().select({ id: tenants.id }).from(tenants).where(eq(tenants.slug, slug)).limit(1)
-  return !!row
+  const rows = await adminDb().execute<{ r: string }>(sql`select app_name_check(${slug}) as r`)
+  return rows[0]?.r !== 'ok'
 }
 
 export async function createMerchant(

@@ -5,14 +5,20 @@
 -- ONE record of names: every name a shop has had is a shop_names row, and its primary key means a name is never given
 -- to a second shop. A trigger on tenants writes the row for every creator (sign-up, partners, Admin), so no path can
 -- take a retired name; tenants.slug mirrors the current row and may change only through the rename definers.
--- Renames: free before the shop's FIRST opening (the unshared row is deleted); two after it, counted in SQL; the old
--- name retires and redirects. Frrata's rename (impersonation) retires the old name WITHOUT a redirect.
+-- Renames: free before the shop's FIRST opening (the unshared row is deleted); two after it, counted by
+-- tenants.renames_used (taking back an old name counts too: no back-and-forth); the old name retires and redirects. Frrata's rename (impersonation) retires the old name WITHOUT a redirect.
 -- New definers sit beside the old ones (B3): app_slug_available and app_tenant_for_slug stay until the code has moved.
 -- =============================================================================
 insert into shop_names (name, tenant_id, created_at) select t.slug, t.id, t.created_at from tenants t on conflict (name) do nothing;
 --> statement-breakpoint
-update tenants t set first_opened_at = s.published_at from shop_settings s
-  where s.tenant_id = t.id and s.published_at is not null and t.first_opened_at is null;
+-- The first opening: the earliest of "opened" in the audit log and today's published_at, so a shop that opened and then
+-- closed still counts as opened (impact review D·1).
+update tenants t set first_opened_at = o.first from (
+  select x.tenant_id, min(x.at) as first from (
+    select a.tenant_id, a.at from audit_events a where a.action = 'shop.open'
+    union all select s.tenant_id, s.published_at from shop_settings s where s.published_at is not null
+  ) x group by x.tenant_id
+) o where o.tenant_id = t.id and t.first_opened_at is null;
 --> statement-breakpoint
 revoke all on shop_names, blocked_names from anon, authenticated, service_role;
 --> statement-breakpoint
@@ -101,13 +107,14 @@ declare
   v_opened timestamptz;
   v_frozen timestamptz;
   v_used int;
+  v_n int;
   v_email text;
 begin
   if not exists (select 1 from public.members m where m.tenant_id = p_tenant and m.user_id = p_uid and m.role in ('owner','admin')) then
     raise exception 'not_owner' using errcode = 'P0001';
   end if;
   if p_slug !~ '^[a-z0-9]([a-z0-9-]{1,28}[a-z0-9])$' or p_slug ~ '--' then raise exception 'bad_slug' using errcode = 'P0001'; end if;
-  select t.slug, t.first_opened_at, t.address_frozen_at into v_old, v_opened, v_frozen from public.tenants t where t.id = p_tenant for update;
+  select t.slug, t.first_opened_at, t.address_frozen_at, t.renames_used into v_old, v_opened, v_frozen, v_used from public.tenants t where t.id = p_tenant for update;
   if v_frozen is not null then raise exception 'frozen' using errcode = 'P0001'; end if;
   if v_old = p_slug then return; end if;
   if exists (select 1 from public.blocked_names b where b.name = p_slug)
@@ -118,15 +125,16 @@ begin
     -- Never shared: nothing to keep.
     delete from public.shop_names where tenant_id = p_tenant and name = v_old;
   else
-    select count(*) into v_used from public.shop_names n
-      where n.tenant_id = p_tenant and n.retired_at is not null and not n.retired_by_frrata and n.retired_at >= v_opened;
     if v_used >= 2 then raise exception 'no_renames_left' using errcode = 'P0001'; end if;
     update public.shop_names set retired_at = now() where tenant_id = p_tenant and name = v_old;
   end if;
-  -- One of this shop's own old names comes back to life; a new one is recorded.
+  -- One of this shop's own old names comes back to life; a new one is recorded. A shop that lost the race for the
+  -- same new name inserts nothing: "taken" (impact review D·1).
   insert into public.shop_names (name, tenant_id) values (p_slug, p_tenant)
-    on conflict (name) do update set retired_at = null, created_at = now() where public.shop_names.tenant_id = p_tenant;
-  update public.tenants set slug = p_slug where id = p_tenant;
+    on conflict (name) do update set retired_at = null, created_at = now() where public.shop_names.tenant_id = p_tenant and not public.shop_names.retired_by_frrata;
+  get diagnostics v_n = row_count;
+  if v_n = 0 then raise exception 'slug_taken' using errcode = 'P0001'; end if;
+  update public.tenants set slug = p_slug, renames_used = renames_used + (case when v_opened is null then 0 else 1 end) where id = p_tenant;
   select u.email into v_email from auth.users u where u.id = p_uid;
   insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
     values (p_tenant, p_uid, v_email, 'member', 'shop.address_changed', p_slug, jsonb_build_object('from', v_old));

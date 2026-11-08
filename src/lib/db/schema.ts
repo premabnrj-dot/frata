@@ -31,6 +31,8 @@ export const tenants = pgTable('tenants', {
   firstOpenedAt: timestamp('first_opened_at', { withTimezone: true }),
   /** Frrata froze address changes (a name or domain dispute); set by Admin. */
   addressFrozenAt: timestamp('address_frozen_at', { withTimezone: true }),
+  /** Renames since the first opening: the limit's one count, raised only by app_change_shop_address (taking back an old name counts too). */
+  renamesUsed: integer('renames_used').notNull().default(0),
 })
 
 /**

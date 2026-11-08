@@ -291,6 +291,8 @@ begin;
 -- retires without a redirect; the app reads only its own names.
 update shop_settings set published_at = now() where tenant_id = '22222222-2222-2222-2222-222222222222';
 update shop_settings set published_at = null where tenant_id = '22222222-2222-2222-2222-222222222222';
+-- A confirmed person with no shop yet, so the sign-up proof below reaches the name check (not "email_unconfirmed").
+insert into auth.users (id, email, email_confirmed_at) values ('aaaaaaaa-0000-0000-0000-000000000009', 'newcomer@proof.test', now());
 set local role frata_app;
 do $$ declare r record; begin
   perform app_change_shop_address('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-two');
@@ -303,7 +305,7 @@ do $$ declare r record; begin
   begin perform app_change_shop_address('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', 'proof-b-two'); raise exception 'FAIL: A took B''s retired name';
   exception when raise_exception then if sqlerrm <> 'slug_taken' then raise; end if; end;
   begin perform app_create_shop('aaaaaaaa-0000-0000-0000-000000000009', 'Squatter', 'proof-b-two', '110001', '{}'); raise exception 'FAIL: sign-up took a retired name';
-  exception when raise_exception then if sqlerrm not in ('slug_taken', 'email_unconfirmed') then raise; end if; end;
+  exception when raise_exception then if sqlerrm <> 'slug_taken' then raise; end if; end;
   begin insert into shop_names (name, tenant_id) values ('proof-a-steal', '11111111-1111-1111-1111-111111111111'); raise exception 'FAIL: app writes a name';
   exception when insufficient_privilege then null; end;
 end $$;
@@ -322,7 +324,11 @@ set local role frata_app;
 do $$ begin
   begin perform app_change_shop_address('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-frozen'); raise exception 'FAIL: a frozen shop renamed itself';
   exception when raise_exception then if sqlerrm <> 'frozen' then raise; end if; end;
+end $$;
+select set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+do $$ begin
   if exists (select 1 from shop_names where tenant_id = '11111111-1111-1111-1111-111111111111') then raise exception 'FAIL: B reads A''s names'; end if;
+  if not exists (select 1 from shop_names where tenant_id = '22222222-2222-2222-2222-222222222222') then raise exception 'FAIL: B can''t read its own names'; end if;
 end $$;
 rollback;
 begin;

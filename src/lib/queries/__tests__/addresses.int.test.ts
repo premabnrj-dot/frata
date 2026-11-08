@@ -25,22 +25,33 @@ describe.skipIf(!host)('shop names', () => {
     try {
       await su`insert into auth.users (id, email, email_confirmed_at) values (${uid}, 'o@names.test', now()) on conflict do nothing`
       await su`insert into members (tenant_id, user_id, role) values (${id}, ${uid}, 'owner')`
+      // Before the first opening: free, and the name it left is never kept (it was never shared).
+      const left = async () => { const f = (await addressFacts(id))!; return renamesLeft(f.firstOpenedAt, f.renamesUsed) }
+      expect(await left()).toBeNull()
+      expect(await platform.changeShopAddress(id, uid, `${base}-pre`)).toEqual({ ok: true })
+      expect(await platform.slugAvailable(base)).toBe(true)
+      expect(await platform.changeShopAddress(id, uid, base)).toEqual({ ok: true })
       await su`update shop_settings set published_at = now() - interval '1 minute' where tenant_id = ${id}`
-      const left = async () => { const f = (await addressFacts(id))!; return renamesLeft(f.firstOpenedAt, f.names) }
+      await su`update shop_settings set published_at = null where tenant_id = ${id}`
+      // Opened once (then closed): two changes, and taking back an old name counts too (no back-and-forth).
       expect(await left()).toBe(2)
       expect(await platform.changeShopAddress(id, uid, `${base}-b`)).toEqual({ ok: true })
       expect(await left()).toBe(1)
-      // Taking back an old name while a change is left costs nothing, in SQL and on screen alike.
       expect(await platform.changeShopAddress(id, uid, base)).toEqual({ ok: true })
-      expect(await left()).toBe(1)
-      expect(await platform.changeShopAddress(id, uid, `${base}-c`)).toEqual({ ok: true })
       expect(await left()).toBe(0)
-      expect(await platform.changeShopAddress(id, uid, `${base}-d`)).toEqual({ ok: false, error: 'no_renames_left' })
-      expect(await platform.changeShopAddress(id, uid, base)).toEqual({ ok: false, error: 'no_renames_left' })
+      expect(await platform.changeShopAddress(id, uid, `${base}-b`)).toEqual({ ok: false, error: 'no_renames_left' })
       const moved = await platform.tenantForHost(shopHost(`${base}-b`))
-      expect(moved).toMatchObject({ id, movedTo: shopHost(`${base}-c`) })
-      expect((await platform.tenantForHost(shopHost(`${base}-c`)))?.movedTo).toBeNull()
-      expect(await platform.slugAvailable(`${base}-c`)).toBe(false)
+      expect(moved).toMatchObject({ id, movedTo: shopHost(base) })
+      expect((await platform.tenantForHost(shopHost(base)))?.movedTo).toBeNull()
+      expect(await platform.slugAvailable(`${base}-b`)).toBe(false)
+      // Frrata's rename: the name it leaves leads nowhere.
+      const adminDb = postgres(`postgresql://frata_admin:${pass}@${host}/${dbName}`, { max: 1, onnotice: () => {} })
+      try {
+        await su`insert into platform_staff (user_id, email, role) values (${staff.userId}, 'int@frata.test', 'admin') on conflict do nothing`
+        await adminDb`select app_admin_rename_shop(${id}::uuid, ${staff.userId}::uuid, ${`${base}-fr`}, 'Copies another brand')`
+      } finally { await adminDb.end() }
+      expect(await platform.tenantForHost(shopHost(base))).toBeNull()
+      expect(await admin.slugTaken(staff, base)).toBe(true)
     } finally {
       await su.end()
     }
