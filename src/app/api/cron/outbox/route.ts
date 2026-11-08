@@ -1,3 +1,4 @@
+import { processWhatsApp } from '@/lib/modules/communication/webhook'
 import { NextResponse } from 'next/server'
 import { isCronRequest } from '@/lib/auth/cron'
 import { claimDue, deferRow, markDead, markFailed, markSent, type OutboxRow } from '@/lib/outbox'
@@ -52,10 +53,13 @@ export async function GET(request: Request) {
       await markFailed(row.id, row.attempts, err instanceof Error ? err.message : String(err))
     }
   }
-  // Razorpay events not yet processed (each is processed at once on arrival; this is only the safety net).
+  // Razorpay and WhatsApp events not yet processed (each is processed at once on arrival; this is only the safety net).
   let events = 0
   for (const tenantId of await shopsWithPendingEvents()) {
     events += await processEvents(tenantId, 200).catch((e) => { console.error('[cron] events', tenantId, e instanceof Error ? e.name : 'error'); return 0 })
+  }
+  for (const tenantId of await shopsWithPendingEvents('whatsapp')) {
+    events += await processWhatsApp(tenantId, new Date()).catch((e) => { console.error('[cron] whatsapp', tenantId, e instanceof Error ? e.name : 'error'); return 0 })
   }
   return NextResponse.json({ claimed: rows.length, sent, events, erased })
 }

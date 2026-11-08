@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { Section } from '@/components/layout/section'
@@ -13,7 +14,7 @@ import { setModuleAction } from './actions'
 
 export type AppRow = {
   key: ModuleKey; name: string; job: string; group: Group; features: string[]; usage: string | null
-  worksWith: { name: string; on: boolean }[]; offer: Offer; ask: string
+  worksWith: { name: string; on: boolean }[]; offer: Offer; ask: string; setup: string | null
 }
 
 const ICON: Record<ModuleKey, IconName> = {
@@ -52,6 +53,9 @@ export function AppsList({ groups, rows, canManage }: { groups: { key: Group; la
   const ask = (r: AppRow) => (on: boolean) => (on ? toggle(r, true) : setOff(r))
   const action = (r: AppRow, where: 'row' | 'dialog') => {
     const a = r.offer.action
+    if (a.kind === 'switch' && r.setup && where === 'row') {
+      return <span className="flex items-center gap-3"><Link href={r.setup} className={button({ variant: 'secondary' })}>Set up</Link>{canManage ? <Switch on={a.on} label={r.name} disabled={pending} onChange={() => ask(r)(!a.on)} /> : null}</span>
+    }
     if (a.kind === 'switch') return canManage ? <Switch on={a.on} label={r.name} disabled={pending} onChange={() => ask(r)(!a.on)} /> : <span className="text-sm text-muted-foreground">{a.on ? 'On' : 'Off'}</span>
     if (where === 'row') return <Button variant="secondary" onClick={() => { setError(null); setOpen(r) }}>See details</Button>
     if (a.kind === 'ask') return <a href={r.ask} target="_blank" rel="noopener" className={button()}>{a.label}</a>
