@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.7.0
+  version: 1.8.0
   verified: 2026-11-08
   decisions: [ADR-0006]
 ---
@@ -296,10 +296,57 @@ DPDP Rules: gazette G.S.R. 846(E) dated 13 Nov 2025 [S], "notified on 14 Novembe
 logs) or cookies, and no MeitY cookie FAQ, found [U, 2026-11-08]. The DPDP (Removal of Difficulties) Order 2026,
 S.O. 5458(E) of 5 Oct 2026, fixes wording in s.9(1) and s.10(2)(c)(ii) only [S, Legal500 2026-11-02]. The Board had no
 Chairperson or Members as of 10 Sep 2026 [S, LiveLaw].
-Earlier: consent managers from 13 Nov 2026; notice,
-consent, processor contracts and 72 h breach reporting from 13 May 2027 [V].
+Phases (rechecked 2026-11-08 from the gazette scan): r.4 consent managers "one year", r.3 and 5–16 "eighteen months"
+after the gazette of 13 Nov 2025 [V]; AZB counts 12 Nov 2026 / 12 May 2027 [S, 2025-11-14]; the exact day is [U] —
+**plan for 12 May 2027**. Notice (r.3): itemised data, purpose, withdrawal as easy as giving. Breach (r.7): each person
+without delay, the Board within 72 h. Logs ≥ 1 year (r.8(3)). Under-18: parental consent (r.10). **Order updates rest
+on s.7(a) (no consent); marketing needs "a clear affirmative action" (s.6(1)): a pre-ticked box fails** [V text /
+S reading, 2026-11-08].
 Frata is a processor for each merchant's shoppers; using one merchant's shopper
 data for another needs a separate decision (CLAUDE.md § deliberately absent).
+
+## Email — checked 2026-11-08 (research `docs/research/2026-11-08-email-and-notifications.md`)
+
+- **Amazon SES (owner: from the start).** ap-south-1 has API, SMTP `email-smtp.ap-south-1.amazonaws.com` and feedback
+  endpoints; sandbox 200 a day, 1 a second until production access [V-undated]. Price: à la carte $0.10/1,000; new
+  accounts start on Essentials $0.16/1,000 from 21 Jul 2026 (switchable) [V-undated, aws.amazon.com/ses/pricing].
+- **SES tenants:** $0.005/tenant/month + $0.005/1,000; per-tenant reputation and auto-pause (Standard/Strict/None), up
+  to 10,000; "combined sending activity still affects your overall account reputation" [V-undated, dg/tenants].
+  Suppression order "Configuration Set > Tenant > Account" [V, AWS blog 2026-07-07].
+- **SES domains:** `CreateEmailIdentity` → 3 DKIM CNAMEs; custom MAIL FROM = MX feedback-smtp.<region> + SPF TXT;
+  events (bounce, complaint, delay) via SNS/EventBridge [V-undated]. SNS signature verification [U] — read before
+  building the events route.
+- **Resend** (not chosen): no India region; single-account tenants share one reputation; complaint rate < 0.08% or
+  "may be shut down without warning" [V-undated; AUP V 2026-10-13]. Postmark: separate transactional/broadcast streams
+  [V 2026-10-26]. ZeptoMail: transactional only [V-undated].
+- **Gmail:** every sender SPF or DKIM, spam < 0.3%; bulk (~5,000 a day to personal accounts, **counted per primary
+  domain, subdomains together, permanent**) needs SPF + DKIM + DMARC aligned, one-click unsubscribe on marketing
+  ("Transactional messages are excluded"), spam < 0.10%; enforcement ramped from Nov 2025 [V-undated,
+  support.google.com/a/answer/81126, /14229414]. Yahoo: RFC 8058, unsubscribes honoured within 2 days. Microsoft: 5,000+
+  a day → SPF, DKIM, DMARC pass or 550 5.7.515 (from 5 May 2025) [V-undated / S]. BIMI: DMARC quarantine/reject at
+  100% + VMC/CMC [V 2026-10-26].
+- **Shopify:** an unauthenticated sender is rewritten to `store+123@shopifyemail.com`; CNAMEs, DMARC `p=none` minimum,
+  up to 48 h; Shopify Messaging 10,000 free a month then $1 / $0.65 / $0.55 per 1,000; abandoned checkout free; warm-up
+  20–30% a week, 5× a day's volume triggers throttling [V-undated, help.shopify.com].
+- **India:** no law or rule on commercial email found [U]; DPDP governs it (§ Privacy). No email data-residency or
+  GST-invoice-by-email rule found [U, a CA to confirm].
+- **A prepaid wallet** for Frrata's own services is a closed-system PPI, "not regulated or supervised by RBI", while it
+  permits no cash withdrawal [V, RBI Master Direction on PPIs as on 30 Sep 2026, para 2.1]. Paying Meta or an SMS
+  vendor on the merchant's behalf would make it semi-closed (RBI authorisation) [S reading].
+
+## Notifications (SMS, WhatsApp, push) — checked 2026-11-08
+
+- **SMS (TRAI):** each brand registers on DLT as a principal entity (header, templates); variables tagged, links and
+  numbers whitelisted, else rejected (PR 133/2025, 18 Nov 2025) [V]; misused headers suspended within 6 h; an inquiry
+  allows messages for 7 days if kept verifiable; old consents count only if registered with operators (Third
+  Amendment, PR 119/2026, 18 Sep 2026) [V]. ~₹0.16–0.25 a message + GST [S, MSG91].
+- **WhatsApp:** India marketing ₹0.8631, utility ₹0.115 (+GST) [S, 2026-09-30]. Per-user marketing limit adapts to
+  engagement; 131049 = wait 24 h; messages inside the window don't count. Cloud API stops marketing on 13 Oct 2027 (no
+  marketing for accounts created from 13 Apr 2027) → Marketing Messages API. Separate opt-in per category advised
+  [V-undated, developers.facebook.com].
+- **Web push:** iOS 16.4+ only as a Home Screen web app; ask from a tap; a push not shown makes Safari revoke the
+  permission [V-undated, developer.apple.com]. Chrome rate-limits disruptive senders (≥ 1,000/min) [V 2026-01-06]. A
+  subscription belongs to one origin's service worker: a shop that changes domain loses its subscribers [V spec / U].
 
 ## Merchant billing (Frrata bills merchants) — checked 2026-11-08
 
