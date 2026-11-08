@@ -7,14 +7,16 @@ import { PINCODE_SHAPE, slugFor, slugProblem } from '@/domains/signup/slug'
 import { checkAddress, createMyShop, lookupPincode, type AddressCheck } from './actions'
 
 const SELL_LABELS = [['women', 'Women'], ['men', 'Men'], ['kids', 'Kids'], ['ethnic', 'Ethnic wear'], ['accessories', 'Accessories'], ['footwear', 'Footwear']] as const
-type Step = 'name' | 'pickup' | 'sells'
+type Step = 'name' | 'pickup' | 'plan' | 'sells'
+/** A plan card as the sign-up shows it (prices with GST from the server; never a cost). */
+export type SignupPlan = { code: string; name: string; price: string; included: string; fee: string }
 
 const ADDRESS_WORDS: Record<AddressCheck['state'], string> = {
   ok: 'Available', taken: 'Taken. Try another.', too_short: 'At least 3 letters', shape: 'Letters, digits and hyphens only', reserved: 'Reserved. Try another.',
 }
 
-/** Shop name (address derived live) → pickup pincode → optional "what do you sell" → the console. */
-export function CreateShopForm({ shopDomain }: { shopDomain: string }) {
+/** Shop name (address derived live) → pickup pincode → plan (trials TR1) → optional "what do you sell" → the console. */
+export function CreateShopForm({ shopDomain, plans, trialDays }: { shopDomain: string; plans: SignupPlan[]; trialDays: number }) {
   const router = useRouter()
   const [step, setStep] = useState<Step>('name')
   const [dir, setDir] = useState<'forward' | 'back'>('forward')
@@ -25,6 +27,7 @@ export function CreateShopForm({ shopDomain }: { shopDomain: string }) {
   const [pickup, setPickup] = useState('')
   const [place, setPlace] = useState<{ city: string; state: string } | null | 'unknown'>(null)
   const [sells, setSells] = useState<string[]>([])
+  const [plan, setPlan] = useState(plans.some((p) => p.code === 'growth') ? 'growth' : plans[0]?.code ?? 'launch')
   const [error, setError] = useState<{ field?: string; text: string } | null>(null)
   const [pending, start] = useTransition()
   const flashKey = useRef(0)
@@ -50,7 +53,7 @@ export function CreateShopForm({ shopDomain }: { shopDomain: string }) {
   function submit() {
     setError(null)
     start(async () => {
-      const r = await createMyShop({ name, slug, pickup, sells })
+      const r = await createMyShop({ name, slug, pickup, sells, plan })
       if (r.ok || r.hasShop) { router.replace('/console'); router.refresh(); return }
       setError({ field: r.field, text: r.error })
       if (r.field === 'slug' || r.field === 'name') go('name', 'back')
@@ -59,14 +62,14 @@ export function CreateShopForm({ shopDomain }: { shopDomain: string }) {
   }
 
   const anim = dir === 'forward' ? 'animate-step-forward' : 'animate-step-back'
-  const stepNo = { name: 1, pickup: 2, sells: 3 }[step]
+  const stepNo = { name: 1, pickup: 2, plan: 3, sells: 4 }[step]
 
   return (
     <div className="space-y-5">
       <div className="h-1 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-        <div className="h-full w-full origin-left bg-thread transition-transform duration-slow ease-standard" style={{ transform: `scaleX(${stepNo / 3})` }} />
+        <div className="h-full w-full origin-left bg-thread transition-transform duration-slow ease-standard" style={{ transform: `scaleX(${stepNo / 4})` }} />
       </div>
-      <p className="text-xs text-muted-foreground">Step <span className="font-mono">{stepNo}</span> of <span className="font-mono">3</span></p>
+      <p className="text-xs text-muted-foreground">Step <span className="font-mono">{stepNo}</span> of <span className="font-mono">4</span></p>
 
       {step === 'name' && (
         <form key="name" className={`space-y-4 ${anim}`} noValidate onSubmit={(e) => {
@@ -104,7 +107,7 @@ export function CreateShopForm({ shopDomain }: { shopDomain: string }) {
         <form key="pickup" className={`space-y-4 ${anim}`} noValidate onSubmit={(e) => {
           e.preventDefault()
           if (!PINCODE_SHAPE.test(pickup)) return setError({ field: 'pickup', text: 'A pincode is 6 digits and starts with 1 to 9.' })
-          go('sells')
+          go('plan')
         }}>
           <h1 className="text-2xl font-semibold tracking-tight">Where do parcels leave from?</h1>
           <p className="text-sm text-muted-foreground">Your pickup pincode. It sets delivery times now and courier rates later.</p>
@@ -121,6 +124,29 @@ export function CreateShopForm({ shopDomain }: { shopDomain: string }) {
           {error && <p role="alert" className="text-sm text-danger-text">{error.text}</p>}
           <div className="flex gap-2">
             <Button type="button" variant="secondary" size="lg" onClick={() => go('name', 'back')}>Back</Button>
+            <Button type="submit" size="lg" className="flex-1">Continue</Button>
+          </div>
+        </form>
+      )}
+
+      {step === 'plan' && (
+        <form key="plan" className={`space-y-4 ${anim}`} noValidate onSubmit={(e) => { e.preventDefault(); go('sells') }}>
+          <h1 className="text-2xl font-semibold tracking-tight">Choose your plan</h1>
+          <p className="text-sm text-muted-foreground">{trialDays} days free from going live</p>
+          <fieldset className="space-y-2">
+            <legend className="sr-only">Plan</legend>
+            {plans.map((p) => (
+              <label key={p.code} className="flex cursor-pointer items-start gap-3 rounded-md border border-input bg-card p-3 text-sm has-[:checked]:border-2 has-[:checked]:border-primary">
+                <input type="radio" name="plan" value={p.code} checked={plan === p.code} onChange={() => setPlan(p.code)} className="mt-1" />
+                <span className="grid gap-0.5">
+                  <span className="font-medium">{p.name}</span>
+                  <span><span className="font-mono">{p.price}</span><span className="text-muted-foreground">/mo + GST · {p.included} orders · {p.fee} per delivered order</span></span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" size="lg" onClick={() => go('pickup', 'back')}>Back</Button>
             <Button type="submit" size="lg" className="flex-1">Continue</Button>
           </div>
         </form>
@@ -144,7 +170,7 @@ export function CreateShopForm({ shopDomain }: { shopDomain: string }) {
           </div>
           {error && <p role="alert" className="text-sm text-danger-text">{error.text}</p>}
           <div className="flex gap-2">
-            <Button type="button" variant="secondary" size="lg" onClick={() => go('pickup', 'back')} disabled={pending}>Back</Button>
+            <Button type="button" variant="secondary" size="lg" onClick={() => go('plan', 'back')} disabled={pending}>Back</Button>
             <Button type="button" size="lg" className="flex-1" onClick={submit} disabled={pending}>
               {pending ? 'Creating your shop…' : sells.length ? 'Create my shop' : 'Skip and create my shop'}
             </Button>

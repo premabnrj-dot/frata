@@ -2,7 +2,7 @@
 name: frata-planning
 description: Use when planning any Frata feature, enhancement, redesign or connector - before writing a spec or plan, before executing one, and when closing one - to run the spec, research, design review, mockup, sign-off, plan, execute and document loop, with the review headings (UI/UX, tenancy, modularity, SSOT/DRY, YAGNI, KISS, performance, reliability, security, motion and visuals, unit economics, blast radius).
 metadata:
-  version: 2.3.0
+  version: 2.4.0
   verified: 2026-11-08
   decisions: [ADR-0001]
 ---
@@ -69,7 +69,8 @@ Copy into the conversation and tick as you go:
 - [ ] 1 SPEC      docs/specs/YYYY-MM-DD-<topic>.md (template below), one per phase
 - [ ] 2 RESEARCH  how 2–3 strong products do this job; what the codebase already has
 - [ ] 3 REVIEW    every heading below, written into the spec
-- [ ] 4 MOCKUP    HTML mockup published as an artifact, link in the spec
+- [ ] 4 MOCKUP    HTML mockup published as an artifact, link in the spec — Rule 0 (frata-design-language):
+                  no explanatory text on any screen; cut every sentence not required
                   (node scripts/check-mockup.mjs <file> first: no overflow, no errors)
 - [ ] 5 SIGN-OFF  owner approves → spec status: active; approved rules → frata-design-language
 - [ ] 5b REVIEW   agents run on the plan (rule 3); findings fixed or accepted

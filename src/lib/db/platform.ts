@@ -1,6 +1,7 @@
 import 'server-only'
 import { sql } from 'drizzle-orm'
 import { db } from './index'
+import type { ClaimKey } from '@/lib/trials/claims'
 import { shopSlugFromHost } from '@/domains/tenancy/host'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 import type { MemberRole, StaffRole } from './schema'
@@ -65,21 +66,24 @@ export async function placeForPincode(pincode: string): Promise<{ city: string; 
   return rows[0] ?? null
 }
 
-export type CreateShopError = 'email_unconfirmed' | 'has_shop' | 'bad_name' | 'bad_slug' | 'bad_pincode' | 'slug_taken' | 'no_launch_plan'
-const CREATE_SHOP_ERRORS: readonly string[] = ['email_unconfirmed', 'has_shop', 'bad_name', 'bad_slug', 'bad_pincode', 'slug_taken', 'no_launch_plan']
+export type CreateShopError = 'email_unconfirmed' | 'has_shop' | 'bad_name' | 'bad_slug' | 'bad_pincode' | 'slug_taken' | 'no_launch_plan' | 'bad_plan' | 'bad_code'
+const CREATE_SHOP_ERRORS: readonly string[] = ['email_unconfirmed', 'has_shop', 'bad_name', 'bad_slug', 'bad_pincode', 'slug_taken', 'no_launch_plan', 'bad_plan', 'bad_code']
 
 /**
  * app_create_shop: `uid` must come from requireUser() (getUser), never from input.
  * `sells` must already be checked against SELLS: it is sent as one array literal
  * (drizzle would expand a JS array into a list of parameters).
  */
-export async function createShop(p: { uid: string; name: string; slug: string; pickup: string; sells: string[] }):
-  Promise<{ ok: true; tenantId: string } | { ok: false; error: CreateShopError | 'unknown' }> {
+export async function createShop(p: { uid: string; name: string; slug: string; pickup: string; sells: string[]; plan: string; email: ClaimKey | null; codeId: string | null }):
+  Promise<{ ok: true; tenantId: string; trial: boolean } | { ok: false; error: CreateShopError | 'unknown' }> {
   try {
-    const rows = await db().execute<{ id: string }>(
-      sql`select app_create_shop(${p.uid}::uuid, ${p.name}, ${p.slug}, ${p.pickup}, ${`{${p.sells.join(',')}}`}::text[]) as id`,
+    // Trials TR1 (drizzle/0065): the chosen plan, and a trial when no verified key has had one. The email key is the
+    // HMAC of getUser()'s email (src/lib/trials/claims.ts); the phone comes only from a code this person verified.
+    const rows = await db().execute<{ tenant_id: string; trial: boolean }>(
+      sql`select * from app_create_shop_v2(${p.uid}::uuid, ${p.name}, ${p.slug}, ${p.pickup}, ${`{${p.sells.join(',')}}`}::text[], ${p.plan},
+        ${p.email?.hmac ?? null}, ${p.email?.version ?? 1}::smallint, ${p.codeId}::uuid)`,
     )
-    return { ok: true, tenantId: rows[0]!.id }
+    return { ok: true, tenantId: rows[0]!.tenant_id, trial: !!rows[0]!.trial }
   } catch (err) {
     const msg = (err as { cause?: { message?: string } })?.cause?.message ?? (err instanceof Error ? err.message : '')
     const code = CREATE_SHOP_ERRORS.find((c) => msg.includes(c))
@@ -230,4 +234,10 @@ export async function applyBillingEvent(id: string) {
 export async function billingUnsettled(olderMinutes: number): Promise<{ paymentId: string; order: string | null }[]> {
   const rows = await db().execute<{ payment_id: string; gateway_order_id: string | null }>(sql`select * from app_billing_unsettled(make_interval(mins => ${olderMinutes}))`)
   return rows.map((r) => ({ paymentId: r.payment_id, order: r.gateway_order_id }))
+}
+
+/** The trial terms new sign-ups get (platform data, trials TR1): the sign-up page names the length from here, never a copy. */
+export async function signupTrialDays(): Promise<number> {
+  const [r] = await db().execute<{ days: number }>(sql`select days from trial_settings where id = 1`)
+  return r?.days ?? 30
 }

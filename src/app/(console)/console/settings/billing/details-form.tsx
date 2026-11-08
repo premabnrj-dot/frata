@@ -16,7 +16,7 @@ export function BillingDetailsForm({ initial, states }: { initial: Details; stat
   const set = (k: keyof Details, x: string) => { setV((d) => ({ ...d, [k]: x })); setErrors(({ [k]: _, ...rest }) => rest); setMessage(null) }
   const save = () => start(async () => {
     const r = await saveBillingDetails(v)
-    if (r.ok) { setErrors({}); setMessage({ ok: true, text: 'Saved. Your next invoice is made out to these details.' }); return }
+    if (r.ok) { setErrors({}); setMessage({ ok: true, text: 'Saved.' }); return }
     setErrors(r.errors ?? {}); setMessage({ ok: false, text: r.error })
   })
   const field = 'w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text'
@@ -25,7 +25,6 @@ export function BillingDetailsForm({ initial, states }: { initial: Details; stat
   return (
     <Section>
       <h2 className="text-section font-semibold">Billing details</h2>
-      <p className="-mt-1 text-sm text-muted-foreground">{initial.saved ? 'Frrata’s invoices to you are made out to these.' : 'Filled in from your Store details: check them and save.'}</p>
       <form className="grid gap-3 sm:grid-cols-2" noValidate onSubmit={(e) => { e.preventDefault(); save() }}>
         <div className="space-y-1 sm:col-span-2"><label htmlFor="b-legalName" className="text-sm font-medium">Legal name</label><input {...a('legalName')} value={v.legalName} maxLength={200} onChange={(e) => set('legalName', e.target.value)} className={`${field} h-10 md:h-9`} />{err('legalName')}</div>
         <div className="space-y-1"><label htmlFor="b-gstin" className="text-sm font-medium">GSTIN <span className="font-normal text-muted-foreground">(optional)</span></label><input {...a('gstin')} value={v.gstin} maxLength={15} autoCapitalize="characters" onChange={(e) => set('gstin', e.target.value)} className={`${field} h-10 font-mono md:h-9`} />{err('gstin') ?? <p className="text-xs text-muted-foreground">With it, you can claim the GST on Frrata&apos;s invoice.</p>}</div>

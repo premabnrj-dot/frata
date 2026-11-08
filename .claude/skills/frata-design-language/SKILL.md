@@ -2,12 +2,30 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 4.15.0
+  version: 5.0.0
   verified: 2026-11-08
   covers: ["src/app/globals.css", "src/components/**"]
 ---
 
 # Frata design language
+
+## Rule 0 — no explanations (owner, 2026-11-08; binding on every screen AND every mockup)
+
+**Clients and partners already understand their work. A screen never explains anything unless it is required.**
+Pages are clean, the layout tight, space used for the work, not for words.
+
+- **Default: no helper text at all.** A screen is labels, values, controls and actions. No intro paragraphs under a
+  heading, no "what happens next", no "Not asked now" asides, no "you can change this later", no reassurance ("nothing
+  is charged…"), no notes repeating what a label or the layout already shows, no notes for staff on how a feature works.
+- **Required, so it stays — and only as short as it can be:** an error and how to fix it; a limit a person must meet
+  (a format, a range); money that will be taken, with its date (one line, at the action); legal or GST wording the law
+  asks for; a consequence that cannot be undone, in the confirm dialog of that action; a risk reason.
+- **Anything else optional goes in an (i) tip** (§ Labels, info tips) — and only if a real person would ask.
+- **The cut before shipping** (and before publishing a mockup): read every sentence on the screen and delete it;
+  restore it only if the screen is wrong or unsafe without it. A status is a chip or a value ("Trial · 12 days left"),
+  never a sentence.
+- **Space:** one card per job, no cards that only hold text, dense rows over stacked paragraphs, actions beside what
+  they act on.
 
 ## Voice (owner, 2026-11-07) — every word on every surface
 

@@ -449,6 +449,20 @@
       "when": 1794164533557,
       "tag": "0063_trials_access",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1794166886238,
+      "tag": "0064_signup_codes",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1794166887574,
+      "tag": "0065_trial_signup",
+      "breakpoints": true
     }
   ]
 }

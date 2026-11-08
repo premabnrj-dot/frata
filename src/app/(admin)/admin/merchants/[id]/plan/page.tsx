@@ -39,7 +39,7 @@ export default async function ChangePlanPage({ params, searchParams }: { params:
     <Section title="Free trial" className="text-sm" id="trial">
       {trial ? (
         <p>{trial.state === 'building' ? `Not live yet: ${trial.facts.days} days start when the website goes live.` : `${trial.state === 'paid' ? 'Ended' : trial.state === 'grace' ? 'Ended, in grace' : trial.state === 'paused' ? 'Ended, paused' : `${trial.daysLeft} days left`} · ${trial.facts.days} days${trial.facts.extendedAt ? ' + 7 extended' : ''} · last day ${dayIN(trial.lastDay)}.`}</p>
-      ) : <p className="text-muted-foreground">No trial. {isAdmin && 'Give one below: it starts when the website goes live.'}</p>}
+      ) : <p className="text-muted-foreground">No trial.</p>}
       {isAdmin && (!trial || !trial.facts.startedAt) && (
         <form action={setShopTrialAction} className="grid gap-2 sm:grid-cols-[8rem_1fr_auto] sm:items-end">
           <input type="hidden" name="tenantId" value={id} />
@@ -50,8 +50,8 @@ export default async function ChangePlanPage({ params, searchParams }: { params:
       )}
       {isAdmin && trial && !trial.facts.endedAt && trial.state !== 'paid' && trial.state !== 'paused' && (
         <div className="grid gap-2 sm:grid-cols-2">
-          {!trial.facts.extendedAt && <form action={extendShopTrialAction} className="flex flex-col gap-1"><input type="hidden" name="tenantId" value={id} /><label className="flex flex-col gap-1"><span>Why 7 more days (once)</span><input name="reason" required minLength={3} maxLength={240} className={field} /></label><Button type="submit" variant="secondary">Extend 7 days</Button></form>}
-          <form action={endShopTrialAction} className="flex flex-col gap-1"><input type="hidden" name="tenantId" value={id} /><label className="flex flex-col gap-1"><span>Why end it now</span><input name="reason" required minLength={3} maxLength={240} className={field} /></label><Button type="submit" variant="secondary">End the trial now</Button></form>
+          {!trial.facts.extendedAt && <form action={extendShopTrialAction} className="flex flex-col gap-1"><input type="hidden" name="tenantId" value={id} /><label className="flex flex-col gap-1"><span>Why</span><input name="reason" aria-label="Why extend the trial" required minLength={3} maxLength={240} className={field} /></label><Button type="submit" variant="secondary">Extend 7 days</Button></form>}
+          <form action={endShopTrialAction} className="flex flex-col gap-1"><input type="hidden" name="tenantId" value={id} /><label className="flex flex-col gap-1"><span>Why</span><input name="reason" aria-label="Why end the trial" required minLength={3} maxLength={240} className={field} /></label><Button type="submit" variant="secondary">End the trial now</Button></form>
         </div>
       )}
     </Section>
@@ -79,7 +79,6 @@ export default async function ChangePlanPage({ params, searchParams }: { params:
           <label htmlFor="when" className="text-sm font-medium">Starts</label>
           <select id="when" name="when" className={field}><option value="now">Today</option><option value="next_month">The 1st of next month</option></select>
         </div>
-        <p className="self-end text-sm text-muted-foreground">{trial ? 'The free trial carries over to the new plan.' : 'A free trial is given above (admins).'}</p>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="customPrice" className="text-sm font-medium">Custom monthly price, ₹ <span className="font-normal text-muted-foreground">(optional)</span></label>
           <input id="customPrice" name="customPrice" inputMode="numeric" className={`${field} font-mono`} />

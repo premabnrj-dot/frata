@@ -81,16 +81,15 @@ export default async function PlansPage({ searchParams }: { searchParams: Promis
       </div>
       {/* Trials TR0·4 (owner, 2026-11-08): the terms for NEW sign-ups; a running trial keeps the terms it started with. */}
       <Section title="Free trials" className="max-w-2xl text-sm" id="trials">
-        <p className="text-muted-foreground">New sign-ups get <strong className="text-foreground">{terms.days} days</strong> free from the day their website goes live, and <strong className="text-foreground">{terms.openWindowDays} days</strong> to go live before the clock starts anyway. Only the plan&apos;s monthly price is free; fees and add-ons are charged as usual. A trial already running keeps its length. {terms.reason && <>Last change: {terms.reason} ({dayIN(terms.updatedAt)}).</>}</p>
+        <p><strong>{terms.days} days</strong> from going live · <strong>{terms.openWindowDays} days</strong> to go live{terms.reason && <span className="text-muted-foreground"> · {terms.reason}, {dayIN(terms.updatedAt)}</span>}</p>
         {staff.role === 'admin' && (
           <form action={setTrialTermsAction} className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5"><span className="font-medium">Length for new sign-ups, 7 to 45 days</span>
               <input name="days" type="number" min={7} max={45} required defaultValue={terms.days} className="h-10 rounded-md border border-input bg-card px-3 font-mono" /></label>
             <label className="flex flex-col gap-1.5"><span className="font-medium">Days to go live, 0 to 30</span>
               <input name="openWindowDays" type="number" min={0} max={30} required defaultValue={terms.openWindowDays} className="h-10 rounded-md border border-input bg-card px-3 font-mono" /></label>
-            <label className="flex flex-col gap-1.5 sm:col-span-2"><span className="font-medium">Why (kept in the activity log)</span>
+            <label className="flex flex-col gap-1.5 sm:col-span-2"><span className="font-medium">Why</span>
               <input name="reason" required minLength={3} maxLength={240} className="h-10 rounded-md border border-input bg-card px-3" /></label>
-            <p className="text-muted-foreground sm:col-span-2">Up to 90 days can be given to one shop, from its plan page. A longer trial pays back later: a small Launch shop on 90 days takes about 6.5 months.</p>
             <div className="sm:col-span-2"><Button type="submit">Save trial terms</Button></div>
           </form>
         )}

@@ -8,6 +8,8 @@ import { hostFor, refreshHosts } from '@/lib/queries/storefront'
 import { createShop, placeForPincode, slugAvailable } from '@/lib/db/platform'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { clientIp } from '@/lib/http/client-ip'
+import { PLAN_CODES } from '@/domains/plans/entitlements'
+import { claimKey } from '@/lib/trials/claims'
 
 // Creating a shop: the signed-in person (requireUser → getUser) becomes its
 // owner through app_create_shop, which re-checks everything in one transaction.
@@ -35,6 +37,7 @@ const Shop = z.object({
   slug: z.string(),
   pickup: z.string().regex(PINCODE_SHAPE),
   sells: z.array(z.enum(SELLS)).max(SELLS.length),
+  plan: z.enum(PLAN_CODES).default('growth'),
 })
 
 const SENTENCES: Record<string, string> = {
@@ -43,20 +46,23 @@ const SENTENCES: Record<string, string> = {
   bad_name: 'Your shop needs a name of up to 60 letters.',
   bad_slug: 'That address cannot be used. Letters, digits and hyphens, at least 3.',
   bad_pincode: 'A pincode is 6 digits and starts with 1 to 9.',
+  bad_plan: 'Choose a plan.',
+  bad_code: 'That WhatsApp code has expired. Ask for a new one.',
   slug_taken: 'Someone just took that address. Try another.',
 }
 
-export async function createMyShop(input: unknown): Promise<{ ok: true } | { ok: false; error: string; field?: 'name' | 'slug' | 'pickup'; hasShop?: boolean }> {
+export async function createMyShop(input: unknown): Promise<{ ok: true; trial: boolean } | { ok: false; error: string; field?: 'name' | 'slug' | 'pickup'; hasShop?: boolean }> {
   const auth = await requireUser()
   if (!auth.ok) return { ok: false, error: auth.message }
   const parsed = Shop.safeParse(input)
   if (!parsed.success) return { ok: false, error: 'Check the highlighted fields.' }
-  const { name, slug, pickup, sells } = parsed.data
+  const { name, slug, pickup, sells, plan } = parsed.data
   if (slugProblem(slug)) return { ok: false, field: 'slug', error: SENTENCES.bad_slug! }
   if (!(await withinLimit(LIMITS.createShopIp, await clientIp()))) return { ok: false, error: 'Too many shops made from here in the last hour. Try again later.' }
-  const r = await createShop({ uid: auth.userId, name, slug, pickup, sells })
+  // The email key is the VERIFIED email from getUser() (requireUser), never a form value (trials T1).
+  const r = await createShop({ uid: auth.userId, name, slug, pickup, sells, plan, email: claimKey('email', auth.email), codeId: null })
   // Misses are not cached, but a lookup made in the same minute is: clear it for the new address.
-  if (r.ok) { refreshHosts(hostFor(slug)); return { ok: true } }
+  if (r.ok) { refreshHosts(hostFor(slug)); return { ok: true, trial: r.trial } }
   const field = r.error === 'slug_taken' || r.error === 'bad_slug' ? 'slug' : r.error === 'bad_name' ? 'name' : r.error === 'bad_pincode' ? 'pickup' : undefined
   return { ok: false, field, hasShop: r.error === 'has_shop', error: SENTENCES[r.error] ?? 'We could not create your shop. Nothing was saved. Try again in a minute.' }
 }

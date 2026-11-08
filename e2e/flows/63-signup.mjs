@@ -1,7 +1,7 @@
 // =============================================================================
 // FLOW: sign-up (trials TR1's regression net, written before app_create_shop changes — plan rule 5). A person with no
 // shop signs in, makes one through /start (name, address, pincode, what they sell) and lands in the console, owner of
-// a shop on a plan. Cleans up after itself.
+// a shop on the plan chosen (trials TR1: Growth preselected, a trial with frozen terms, the email claimed). Cleans up.
 // =============================================================================
 import assert from 'node:assert/strict'
 import { CONSOLE, USERS, signedIn } from '../lib.mjs'
@@ -34,12 +34,23 @@ export default {
         await p.getByRole('button', { name: 'Continue' }).click()
         await p.getByLabel('Pincode').fill('452009')
         await p.getByRole('button', { name: 'Continue' }).click()
+        // Trials TR1: the plan step — Growth is chosen; the trial length is Admin's setting.
+        await p.getByRole('heading', { name: 'Choose your plan' }).waitFor()
+        await p.getByText(/^\d+ days free from going live$/).waitFor()
+        assert.equal(await p.getByRole('radio', { name: /Growth/ }).isChecked(), true)
+        await p.screenshot({ path: t.out('plan-step'), fullPage: true })
+        await p.getByRole('button', { name: 'Continue' }).click()
         await p.getByRole('button', { name: /create my shop/i }).click()
         await p.waitForURL(/\/console$/)
         const [s] = await db`select t.id, m.role from tenants t join members m on m.tenant_id = t.id where t.slug = ${SLUG} and m.user_id = ${F.id}`
         assert.equal(s?.role, 'owner')
         const [plan] = await db`select p.code from tenant_plans tp join plan_versions v on v.id = tp.plan_version_id join plans p on p.id = v.plan_id where tp.tenant_id = ${s.id}`
-        assert.ok(plan?.code, 'the new shop has a plan')
+        assert.equal(plan?.code, 'growth')
+        // A first sign-up gets a trial with the terms frozen, and its verified email is claimed (keyed, never stored).
+        const [trial] = await db`select days, started_at from shop_trials where tenant_id = ${s.id}`
+        assert.ok(trial && trial.started_at === null, 'a trial, not started until the website goes live')
+        assert.equal((await db`select count(*)::int n from trial_claims where tenant_id = ${s.id} and kind = 'email'`)[0].n, 1)
+        assert.equal((await db`select count(*)::int n from trial_claims where key_hmac = ${F.email}`)[0].n, 0)
         await p.screenshot({ path: t.out('new-shop'), fullPage: true })
       })
     } finally {

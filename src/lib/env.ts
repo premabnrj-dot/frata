@@ -9,6 +9,10 @@ import 'server-only'
 // =============================================================================
 
 export const DATABASE_URL = process.env.DATABASE_URL ?? ''
+/** Trials (TR1): the key of the one-trial-per-business HMACs (src/lib/trials/claims.ts). Production only. Without it a
+ *  sign-up gets no trial (fail closed). Never change it once set: earlier claims would no longer match (bump
+ *  TRIAL_CLAIM_KEY_VERSION with a new key instead). */
+export const TRIAL_CLAIM_SECRET = process.env.TRIAL_CLAIM_SECRET ?? ''
 /** frata_admin — cross-tenant (ADR-0007). Set for Production only; previews say "not connected". */
 export const ADMIN_DATABASE_URL = process.env.ADMIN_DATABASE_URL ?? ''
 /** Encrypts each shop's Razorpay secrets and signs order links (src/lib/crypto/secret-box.ts). Production only.
