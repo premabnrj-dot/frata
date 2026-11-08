@@ -42,7 +42,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
         {d.payments.length === 0 ? <p className="text-sm text-muted-foreground">None yet.</p> : (
           <ul className="space-y-1 text-sm">{d.payments.map((p, k) => <li key={k}><Money paise={paise(p.amount)} decimals /> · {METHOD[p.method] ?? p.method}{p.utr ? <> · <span className="font-mono">{p.utr}</span></> : null} · {p.capturedAt ? `received ${dateTimeIN(p.capturedAt)}` : p.failedAt ? `failed ${dateTimeIN(p.failedAt)}${p.failureReason ? `: ${p.failureReason}` : ''}` : 'waiting for the bank'}</li>)}</ul>
         )}
-        {i.state === 'due' && (
+        {i.testMode ? <p className="mt-2 text-sm text-muted-foreground">A test invoice is never collected by hand.</p> : i.state === 'due' && (
           <form action={paymentAction} className="mt-3 flex flex-wrap items-end gap-2">
             <input type="hidden" name="invoice" value={i.id} />
             <label className="flex flex-col gap-1.5 text-sm font-medium">Amount, ₹<input name="rupees" inputMode="decimal" defaultValue={(i.due / 100).toFixed(2)} className={`${field} w-32`} /></label>

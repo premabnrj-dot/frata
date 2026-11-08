@@ -54,9 +54,9 @@ describe("Frrata's own invoice and credit note (billing B2)", () => {
       taxable: 153328, cgst: 0, sgst: 0, igst: 27599, total: 180927 }, [{ description: 'Launch plan', quantity: 1, taxable: 149900 }, { description: 'Fee on delivered orders · 2 orders', quantity: 2, taxable: 3428 }])!
     const f = await frrataFile(doc)
     expect(f.bytes.subarray(0, 5).toString()).toBe('%PDF-')
-    expect(f.fileName).toBe('Frrata Tax invoice FRR-T26-27-000001.pdf')
+    expect(f.fileName).toBe('Frrata TEST Tax invoice FRR-T26-27-000001.pdf')
     const cn = await frrataFile(frrataCreditNoteDoc(doc, { number: 'FRR/T26-27/C00001', issuedAt: new Date(), taxable: 10000, cgst: 0, sgst: 0, igst: 1800, total: 11800, reason: 'Goodwill', testMode: true }))
-    expect(cn.fileName).toBe('Frrata Credit note FRR-T26-27-C00001.pdf')
+    expect(cn.fileName).toBe('Frrata TEST Credit note FRR-T26-27-C00001.pdf')
     expect(frrataInvoiceDoc({ number: null, issuedAt: null } as never, [])).toBeNull()
   }, 30_000)
 })

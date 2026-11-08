@@ -33,6 +33,16 @@ export const FRRATA_GSTIN = process.env.FRRATA_GSTIN ?? ''
 export const FRRATA_LEGAL_NAME = process.env.FRRATA_LEGAL_NAME ?? ''
 export const FRRATA_ADDRESS = process.env.FRRATA_ADDRESS ?? ''
 export const FRRATA_SAC = process.env.FRRATA_SAC ?? ''
+/** Test databases only (e2e, int tests): lets Admin issue a month in test mode. NEVER in Production or a preview on
+ *  the production database: a test-mode issue freezes the real drafts and their orders' fees for good. */
+export const BILLING_TEST_ISSUE = process.env.BILLING_TEST_ISSUE ?? ''
+
+/** Frrata's OWN Razorpay account, for billing merchants (billing B3; plan finding 15): Production only, Sensitive, read
+ *  only by src/lib/billing/gateway.ts. Never a shop's keys. The webhook secret has a previous value during a rotation. */
+export const RAZORPAY_BILLING_KEY_ID = process.env.RAZORPAY_BILLING_KEY_ID ?? ''
+export const RAZORPAY_BILLING_KEY_SECRET = process.env.RAZORPAY_BILLING_KEY_SECRET ?? ''
+export const RAZORPAY_BILLING_WEBHOOK_SECRET = process.env.RAZORPAY_BILLING_WEBHOOK_SECRET ?? ''
+export const RAZORPAY_BILLING_WEBHOOK_SECRET_PREVIOUS = process.env.RAZORPAY_BILLING_WEBHOOK_SECRET_PREVIOUS ?? ''
 
 /** False on a fresh Vercel project with no variables yet: pages say so instead of crashing. */
 export const isDatabaseConfigured = () => DATABASE_URL !== ''

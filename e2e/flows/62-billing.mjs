@@ -81,7 +81,7 @@ export default {
         assert.equal(await row.getByText('—', { exact: true }).count(), 0, 'a drafted shop shows its count, not a dash')
       })
 
-      await t.step('B2: Admin issues this month (typed confirmation), in the TEST series; the shop sees it due and downloads it; a payment by UTR settles it; the GST export lists it', async () => {
+      await t.step('B2: Admin issues this month (typed confirmation) in the TEST series; the shop sees it as a test and downloads it; never collected by hand; a credit note; never in the GST export', async () => {
         const meera = await open('frata', { viewport: { width: 1280, height: 900 } })
         const now = new Date(); const i = new Date(now.getTime() + 330 * 60_000)
         const thisYm = `${i.getUTCFullYear()}-${String(i.getUTCMonth() + 1).padStart(2, '0')}`
@@ -99,24 +99,28 @@ export default {
         await meera.getByText(/issued.*test mode/).waitFor()
         const [inv] = await db`select id, number, total from frrata_invoices where tenant_id = ${KESAR} and number is not null order by issued_at desc limit 1`
         assert.match(inv.number, /^FRR\/T\d\d-\d\d\/\d{6}$/)
-        // The shop: due, with its PDF.
+        // The shop: the test invoice says so, with its PDF (named TEST).
         await riya.goto(CONSOLE + '/console/settings/billing')
         await riya.getByText(inv.number).waitFor()
-        await riya.getByText(/^Due/).first().waitFor()
+        await riya.getByText('Test — never collected').first().waitFor()
         const pdf = await riya.context().request.get(CONSOLE + `/console/settings/billing/invoice/${inv.id}`)
         assert.equal(pdf.status(), 200); assert.equal(pdf.headers()['content-type'], 'application/pdf')
-        assert.match(pdf.headers()['content-disposition'], /Frrata Tax invoice FRR-T/)
-        // Admin records the bank transfer; the shop sees it paid.
+        assert.match(pdf.headers()['content-disposition'], /Frrata TEST Tax invoice FRR-T/)
+        // Admin: a test invoice is never collected by hand; a credit note is issued in the test series.
         await meera.goto(CONSOLE + `/admin/billing/invoice/${inv.id}`)
-        await meera.getByLabel('Reference (UTR)').fill('E2EUTR123456')
-        await meera.getByRole('button', { name: 'Record payment' }).click()
-        await meera.getByText('Payment recorded.').waitFor()
-        await riya.reload(); await riya.getByRole('cell', { name: 'Paid', exact: true }).waitFor()
+        await meera.getByText('A test invoice is never collected by hand.').waitFor()
+        assert.equal(await meera.getByRole('button', { name: 'Record payment' }).count(), 0)
+        await meera.getByLabel(/Taxable value to credit/).fill('10')
+        await meera.getByLabel(/Reason/).fill('Goodwill for a slow week')
+        await meera.getByRole('button', { name: 'Issue credit note' }).click()
+        await meera.getByText(/Credit note FRR\/T\d\d-\d\d\/C\d{5} issued/).waitFor()
+        await riya.reload(); await riya.getByText(/^Credit note FRR\/T/).first().waitFor()
         assert.equal(await riya.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'the invoices table fits a 390 px phone')
-        await riya.screenshot({ path: t.out('invoices-paid'), fullPage: true })
+        await riya.screenshot({ path: t.out('invoices-test'), fullPage: true })
+        // The CA's export never lists a test document.
         const csv = await meera.context().request.get(CONSOLE + `/admin/billing/export?month=${thisYm}`)
         assert.equal(csv.status(), 200)
-        assert.ok((await csv.text()).includes(inv.number), 'the export lists the invoice')
+        assert.ok(!(await csv.text()).includes(inv.number), 'test documents stay out of the GST export')
       })
     } finally {
       // Issued invoices, payments and credit notes are final (triggers): the test's own are removed with triggers off.

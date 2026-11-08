@@ -27,7 +27,7 @@ export async function runDraftsAction(form: FormData) {
 }
 
 // ── Billing B2: issue, record a payment, a credit note (ADMIN_ONLY; each audited in its own transaction) ──
-const Issue = z.object({ month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/), count: z.coerce.number().int().min(1).max(100_000), total: z.coerce.number().int().min(1), confirm: z.string() })
+const Issue = z.object({ month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/), count: z.coerce.number().int().min(1).max(100_000), total: z.coerce.number().int().min(1), confirm: z.string().max(32) })
 const reason = (e: unknown) => {
   const m = e instanceof Error ? (e.cause instanceof Error ? e.cause.message : e.message) : ''
   // The definer's own words (no data in them) are safe to show; anything else is generic.

@@ -2,7 +2,7 @@
 // set. Issue refuses figures Admin did not review, then numbers and freezes the month in the TEST series (no Frrata
 // GSTIN here); a payment and a credit note never exceed what is due; a UTR is used once; the GST export lists both; the
 // shop reads its own document; an issued invoice cannot change.
-import { beforeAll, describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 const host = process.env.INT_DB_HOST
 const dbName = process.env.INT_DB_NAME ?? 'frata_proof'
@@ -27,32 +27,34 @@ describe.skipIf(!host)('issuing Frrata invoices on a real database', () => {
     await draftInvoice(tenantId, NOV)
   })
 
-  it('issues only what was reviewed, in the TEST series; payments and credits never exceed what is due', async () => {
+  it('test mode: refused without the test-database switch; then issues only what was reviewed, in the TEST series; never collected by hand, never filed', async () => {
     const b = await import('../billing')
     const rows = await b.billingMonth(staff, NOV)
     const mine = rows.find((r) => r.tenantId === tenantId)!
     expect(mine.total).toBe(180927) // ₹1,499 + 2 × ₹17.14, IGST 18% (no Frrata GSTIN: test mode)
     const ready = b.toIssue(rows, NOV)
-    await expect(b.issueMonth(staff, NOV, { count: ready.count, total: ready.total + 1 })).rejects.toThrow()
-    const r = await b.issueMonth(staff, NOV, { count: ready.count, total: ready.total })
+    // Production has no GSTIN yet: issuing there would freeze real drafts as tests. Refused unless this is a test database.
+    await expect(b.issueMonth(staff, NOV, { count: ready.count, total: ready.total })).rejects.toThrow(/test-mode issuing is off/)
+    process.env.BILLING_TEST_ISSUE = '1'
+    vi.resetModules()
+    const b2 = await import('../billing')
+    await expect(b2.issueMonth(staff, NOV, { count: ready.count, total: ready.total + 1 })).rejects.toThrow()
+    const r = await b2.issueMonth(staff, NOV, { count: ready.count, total: ready.total })
     expect(r).toMatchObject({ issued: ready.count, test: true })
-    const d = (await b.invoiceDetail(staff, mine.id))!
+    const d = (await b2.invoiceDetail(staff, mine.id))!
     expect(d.invoice.number).toMatch(/^FRR\/T\d\d-\d\d\/\d{6}$/)
     expect([d.invoice.state, d.invoice.due, d.invoice.testMode]).toEqual(['due', 180927, true])
-    // Never more than is due; a reference once.
-    await expect(b.recordPayment(staff, mine.id, { amount: 180928, method: 'bank_transfer', utr: 'UTR000001' })).rejects.toThrow()
-    await b.recordPayment(staff, mine.id, { amount: 100000, method: 'bank_transfer', utr: 'UTR000001' })
-    await expect(b.recordPayment(staff, mine.id, { amount: 1000, method: 'upi', utr: 'utr000001' })).rejects.toThrow()
-    // A credit note: heads at the invoice's own (IGST here); capped at the invoice's taxable value.
-    await expect(b.issueCreditNote(staff, mine.id, { taxable: 153329, reason: 'Too much' })).rejects.toThrow()
-    const cn = await b.issueCreditNote(staff, mine.id, { taxable: 10000, reason: 'Goodwill for a slow week' })
-    expect(cn).toMatch(/\/C\d{5}$/)
-    const after = (await b.invoiceDetail(staff, mine.id))!
-    expect([after.invoice.paid, after.invoice.credited, after.invoice.due]).toEqual([100000, 11800, 69127])
-    await b.recordPayment(staff, mine.id, { amount: 69127, method: 'upi', utr: 'UPI0000002' })
-    expect((await b.invoiceDetail(staff, mine.id))!.invoice.state).toBe('paid')
-    const gst = await b.gstRows(staff, ist('2026-11-01T00:00:00'), ist('2027-12-01T00:00:00'))
-    expect(gst.filter((g) => g.number === d.invoice.number || g.number === cn).map((g) => g.type).sort()).toEqual(['Credit note', 'Invoice'])
+    // A test invoice is never collected by hand.
+    await expect(b2.recordPayment(staff, mine.id, { amount: 100000, method: 'bank_transfer', utr: 'UTR000001' })).rejects.toThrow()
+    // A credit note: in the TEST series (it follows the invoice), heads at the invoice's own, capped.
+    await expect(b2.issueCreditNote(staff, mine.id, { taxable: 153329, reason: 'Too much' })).rejects.toThrow()
+    const cn = await b2.issueCreditNote(staff, mine.id, { taxable: 10000, reason: 'Goodwill for a slow week' })
+    expect(cn).toMatch(/^FRR\/T\d\d-\d\d\/C\d{5}$/)
+    const after = (await b2.invoiceDetail(staff, mine.id))!
+    expect([after.invoice.credited, after.invoice.due]).toEqual([11800, 169127])
+    // Never in the CA's export.
+    const gst = await b2.gstRows(staff, ist('2026-11-01T00:00:00'), ist('2027-12-01T00:00:00'))
+    expect(gst.filter((g) => g.number === d.invoice.number || g.number === cn)).toEqual([])
   })
 
   it('the shop reads its own invoice; staff cannot; an issued invoice never changes', async () => {
@@ -63,7 +65,7 @@ describe.skipIf(!host)('issuing Frrata invoices on a real database', () => {
     expect(doc?.totals.total).toBe(180927)
     await expect(q.shopFrrataDocument({ tenantId, role: 'staff' }, mine.id)).rejects.toBeInstanceOf(q.NotForThisRole)
     const o = await q.billingOverview({ tenantId, role: 'owner' }, ist('2026-11-20T12:00:00'))
-    expect(o.invoices.find((i) => i.id === mine.id)).toMatchObject({ state: 'paid', credits: [{ total: 11800 }] })
+    expect(o.invoices.find((i) => i.id === mine.id)).toMatchObject({ testMode: true, state: 'due', credits: [{ total: 11800 }] })
     const { withTenant } = await import('@/lib/db/tenant')
     const { frrataInvoices } = await import('@/lib/db/schema-billing')
     const { eq } = await import('drizzle-orm')

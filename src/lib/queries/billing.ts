@@ -36,7 +36,7 @@ export type Estimate = { invoiceOn: Date; bill: Bill; orders: { number: number; 
 export type BillingOverview = {
   plan: { name: string; monthlyPrice: number; includedOrders: number; feeBps: number; trialEndsAt: Date | null } | null
   estimate: Estimate
-  invoices: { id: string; number: string; periodStart: Date; total: number; issuedAt: Date; state: InvoiceState; due: number; credits: { number: string; total: number }[] }[]
+  invoices: { id: string; number: string; periodStart: Date; total: number; issuedAt: Date; testMode: boolean; state: InvoiceState; due: number; credits: { number: string; total: number }[] }[]
   details: { legalName: string; gstin: string; address: string; stateCode: string; email: string; saved: boolean }
 }
 
@@ -51,7 +51,7 @@ export async function billingOverview(m: Pick<Membership, 'tenantId' | 'role'>, 
           monthlyPrice: planVersions.monthlyPrice, includedOrders: planVersions.includedOrders, feeBps: planVersions.feeBps })
           .from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(plans, eq(plans.id, planVersions.planId))
           .where(eq(tenantPlans.tenantId, tenantId)).orderBy(asc(tenantPlans.startsAt)),
-        tx.select({ id: frrataInvoices.id, number: frrataInvoices.number, periodStart: frrataInvoices.periodStart, total: frrataInvoices.total, issuedAt: frrataInvoices.issuedAt })
+        tx.select({ id: frrataInvoices.id, number: frrataInvoices.number, periodStart: frrataInvoices.periodStart, total: frrataInvoices.total, issuedAt: frrataInvoices.issuedAt, testMode: frrataInvoices.testMode })
           .from(frrataInvoices).where(and(eq(frrataInvoices.tenantId, tenantId), isNotNull(frrataInvoices.issuedAt))).orderBy(desc(frrataInvoices.periodStart)).limit(36),
         tx.select({ legalName: billingAccounts.legalName, gstin: billingAccounts.gstin, address: billingAccounts.address, stateCode: billingAccounts.stateCode, email: billingAccounts.email })
           .from(billingAccounts).where(eq(billingAccounts.tenantId, tenantId)),
@@ -88,7 +88,7 @@ export async function billingOverview(m: Pick<Membership, 'tenantId' | 'role'>, 
       if (!i.issuedAt || !i.number) return []
       const paid = Number(base.paidRows.find((p) => p.id === i.id)?.n ?? 0)
       const credits = base.creditRows.filter((c) => c.id === i.id).map((c) => ({ number: c.number, total: c.total }))
-      return [{ id: i.id, number: i.number, periodStart: i.periodStart, total: i.total, issuedAt: i.issuedAt, credits, ...invoiceState(i, paid, credits.reduce((t, c) => t + c.total, 0)) }]
+      return [{ id: i.id, number: i.number, periodStart: i.periodStart, total: i.total, issuedAt: i.issuedAt, testMode: i.testMode, credits, ...invoiceState(i, paid, credits.reduce((t, c) => t + c.total, 0)) }]
     }),
     // Prefilled from Store details until the shop saves its own billing details (spec § Design).
     details: a

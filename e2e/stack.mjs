@@ -81,7 +81,7 @@ export async function up({ build = true } = {}) {
   const host = new URL(server).host
   run('next', 'npx', ['next', 'start', '-p', String(PORTS.app)], {
     ...PUBLIC_ENV, DATABASE_URL: `postgres://frata_app:${pw}@${host}/${DB}`, ADMIN_DATABASE_URL: `postgres://frata_admin:${adminPw}@${host}/${DB}`, PAYMENT_KEYS_SECRET: 'e2e-only-secret',
-    RAZORPAY_API_BASE: `http://localhost:${PORTS.razorpay}`, BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_x_y', BLOB_STORE_ID: 'store_e2e', CRON_SECRET: 'e2e-cron', E2E_FIXTURES: '1',
+    RAZORPAY_API_BASE: `http://localhost:${PORTS.razorpay}`, BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_x_y', BLOB_STORE_ID: 'store_e2e', CRON_SECRET: 'e2e-cron', E2E_FIXTURES: '1', BILLING_TEST_ISSUE: '1',
     META_APP_SECRET: META.appSecret, WA_VERIFY_TOKEN: META.verifyToken, META_GRAPH_BASE: `http://localhost:${PORTS.meta}`,
   })
   await until(async () => { try { return (await fetch(CONSOLE)).status > 0 } catch { return false } }, 60_000)

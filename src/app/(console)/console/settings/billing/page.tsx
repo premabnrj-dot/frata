@@ -114,7 +114,7 @@ export default async function PlanAndBillingPage() {
                 <td className="py-1.5">{monthYearIN(i.periodStart)}</td>
                 <td className="py-1.5 font-mono">{i.number}{i.credits.map((c) => <a key={c.number} href={`/console/settings/billing/invoice/${i.id}?credit=${encodeURIComponent(c.number)}`} className="block text-xs text-muted-foreground underline">Credit note {c.number}</a>)}</td>
                 <td className="py-1.5 text-right"><Money paise={paise(i.total)} decimals /></td>
-                <td className="py-1.5">{i.state === 'due' ? <span className="text-warn-text">Due <Money paise={paise(i.due)} decimals /></span> : STATE_LABEL[i.state]}</td>
+                <td className="py-1.5">{i.testMode ? <span className="text-muted-foreground">Test — never collected</span> : i.state === 'due' ? <span className="text-warn-text">Due <Money paise={paise(i.due)} decimals /></span> : STATE_LABEL[i.state]}</td>
                 <td className="py-1.5 text-right"><a href={`/console/settings/billing/invoice/${i.id}`} className="underline">PDF</a></td>
               </tr>
             ))}</tbody>

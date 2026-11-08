@@ -2,7 +2,7 @@ import 'server-only'
 import { and, asc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
 import { invoiceState, type InvoiceState } from '@/domains/billing/status'
 import { frrataCreditNoteDoc, frrataInvoiceDoc, type FrrataDoc, type GstRow } from '@/domains/billing/document'
-import { frrataSeller } from '@/lib/billing/seller'
+import { frrataSeller, testIssueAllowed } from '@/lib/billing/seller'
 import { ADMIN_ONLY, type StaffOk } from '@/lib/auth/require-staff'
 import { adminDb } from '@/lib/db/admin'
 import { tenants } from '@/lib/db/schema'
@@ -65,6 +65,8 @@ export function toIssue(rows: DraftRow[], monthStart: Date) {
 export async function issueMonth(staff: StaffOk, monthStart: Date, expected: { count: number; total: number }) {
   adminOnly(staff)
   const s = frrataSeller()
+  // Without Frrata's GSTIN this would issue the REAL drafts as tests and freeze their fees for good (security review).
+  if (s.test && !testIssueAllowed()) throw new Error('issue: test-mode issuing is off here — set Frrata’s GSTIN, legal name, address and SAC first')
   return adminDb().transaction(async (tx) => {
     const [r] = await tx.execute<{ issued: number; closed: number }>(sql`select * from app_issue_frrata_invoices(${monthStart.toISOString()}::timestamptz, ${expected.count}, ${expected.total}, ${staff.userId}::uuid,
       ${s.name}, ${s.gstin ?? ''}, ${s.address}, ${s.sac}, ${s.test}, ${s.prefix}, ${s.fy})`)
@@ -142,9 +144,10 @@ export async function gstRows(staff: StaffOk, monthStart: Date, nextMonthStart: 
   const db = adminDb()
   const range = (col: typeof frrataInvoices.issuedAt | typeof frrataCreditNotes.issuedAt) => sql`${col} >= ${monthStart.toISOString()}::timestamptz and ${col} < ${nextMonthStart.toISOString()}::timestamptz`
   const [inv, cns] = await Promise.all([
-    db.select().from(frrataInvoices).where(and(isNotNull(frrataInvoices.number), range(frrataInvoices.issuedAt))).orderBy(asc(frrataInvoices.number)),
+    // Test-mode documents are never supplies: they stay out of the CA's export (security review 2026-11-08).
+    db.select().from(frrataInvoices).where(and(isNotNull(frrataInvoices.number), eq(frrataInvoices.testMode, false), range(frrataInvoices.issuedAt))).orderBy(asc(frrataInvoices.number)),
     db.select({ cn: frrataCreditNotes, inv: { number: frrataInvoices.number, buyerName: frrataInvoices.buyerName, buyerGstin: frrataInvoices.buyerGstin, placeOfSupply: frrataInvoices.placeOfSupply } })
-      .from(frrataCreditNotes).innerJoin(frrataInvoices, eq(frrataInvoices.id, frrataCreditNotes.invoiceId)).where(range(frrataCreditNotes.issuedAt)).orderBy(asc(frrataCreditNotes.number)),
+      .from(frrataCreditNotes).innerJoin(frrataInvoices, eq(frrataInvoices.id, frrataCreditNotes.invoiceId)).where(and(eq(frrataCreditNotes.testMode, false), range(frrataCreditNotes.issuedAt))).orderBy(asc(frrataCreditNotes.number)),
   ])
   return [
     ...inv.map((i): GstRow => ({ type: 'Invoice', number: i.number!, date: i.issuedAt!, against: '', buyer: i.buyerName ?? '', gstin: i.buyerGstin ?? '', placeOfSupply: i.placeOfSupply ?? '', taxable: i.taxable, cgst: i.cgst, sgst: i.sgst, igst: i.igst, total: i.total })),
