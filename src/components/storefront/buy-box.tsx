@@ -20,7 +20,13 @@ export type BuyBoxProps = {
   notes: string[]; taxNote: string
   /** On the shop itself (the bag works); false in the console's preview. */
   live?: boolean
+  /** The theme's product photos (themes T2): swipe (today) or with a thumbnail strip. */
+  gallery?: 'swipe' | 'thumbs'
+  /** Offers that apply to this product (Offers O·2 fills it from liveOffers), after the price; display only, the quote prices. */
+  offers?: OfferLine[]
 }
+/** One offer line as a shopper reads it: "10% off with UPI", and when it ends if it really does. */
+export type OfferLine = { label: string; ends: string | null }
 
 const money = (p: number) => formatInr(paise(p))
 const TONE = { in_stock: 'text-store-good', low_stock: 'text-store-bad', sold_out: 'text-store-bad', preorder: 'text-store-ink', made_to_order: 'text-store-ink' } as const
@@ -72,12 +78,13 @@ export function BuyBox(p: BuyBoxProps) {
 
   return (
     <div className="grid gap-6 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] md:gap-10">
-      <Gallery photos={photos} title={p.title} />
+      <Gallery photos={photos} title={p.title} thumbs={p.gallery === 'thumbs'} />
       <div className="min-w-0 space-y-5">
         <div className="space-y-2">
           <h1 className="text-2xl leading-tight sm:text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{p.title}</h1>
           {shown && <p className="text-lg"><span className="font-medium">{money(shown.price)}</span>
             {shown.compareAt && shown.compareAt > shown.price && <><s className="ml-2 text-store-sub">{money(shown.compareAt)}</s><span className="ml-2 text-sm text-store-good">Save {money(shown.compareAt - shown.price)}</span></>}</p>}
+          {p.offers && p.offers.length > 0 && <ul className="space-y-1 text-sm text-store-sale" aria-label="Offers">{p.offers.map((o) => <li key={o.label}>{o.label}{o.ends ? ` · ${o.ends}` : ''}</li>)}</ul>}
           <p className="text-xs text-store-sub">{p.taxNote}</p>
         </div>
 
@@ -136,21 +143,37 @@ function deliveryLine(price: number, d: DeliveryRules) {
   return `Delivery ${money(d.shippingFlat)}${d.freeShippingAbove ? `, free above ${money(d.freeShippingAbove)}` : ''}`
 }
 
-/** Photos side by side, swiped on a phone (scroll-snap), stacked on a desktop. The first is the page's largest paint. */
-function Gallery({ photos, title }: { photos: Img[]; title: string }) {
+/**
+ * Photos side by side, swiped on a phone (scroll-snap), stacked on a desktop. The first is the page's largest paint.
+ * With thumbnails (themes T2): one photo at a time at every width, a strip of buttons under it.
+ */
+function Gallery({ photos, title, thumbs = false }: { photos: Img[]; title: string; thumbs?: boolean }) {
   const [at, setAt] = useState(0)
+  const list = useRef<HTMLUListElement>(null)
   if (!photos.length) return <div className="grid aspect-[4/5] place-items-center rounded-sm bg-store-chip text-store-sub">{title}</div>
+  const show = (i: number) => { const el = list.current; if (el) el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' }); setAt(i) }
   return (
     <div className="min-w-0">
-      <ul className="-mx-4 flex snap-x snap-mandatory overflow-x-auto md:mx-0 md:grid md:grid-cols-2 md:gap-2 md:overflow-visible [&::-webkit-scrollbar]:hidden"
+      <ul ref={list} className={thumbs ? '-mx-4 flex snap-x snap-mandatory overflow-x-auto md:mx-0 [&::-webkit-scrollbar]:hidden' : '-mx-4 flex snap-x snap-mandatory overflow-x-auto md:mx-0 md:grid md:grid-cols-2 md:gap-2 md:overflow-visible [&::-webkit-scrollbar]:hidden'}
         onScroll={(e) => setAt(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))} aria-label="Photos">
         {photos.map((ph, i) => (
-          <li key={ph.base} className={`w-full shrink-0 snap-center md:w-auto ${i === 0 ? 'md:col-span-2' : ''}`}>
+          <li key={ph.base} className={thumbs ? 'w-full shrink-0 snap-center' : `w-full shrink-0 snap-center md:w-auto ${i === 0 ? 'md:col-span-2' : ''}`}>
             <Photo p={ph} alt={ph.alt || (i === 0 ? title : `${title}, photo ${i + 1}`)} sizes="(min-width: 768px) 55vw, 100vw" priority={i === 0} className="aspect-[4/5] w-full bg-store-chip object-cover" />
           </li>
         ))}
       </ul>
-      {photos.length > 1 && <p className="mt-2 text-center text-xs text-store-sub md:hidden" aria-hidden="true">{at + 1} / {photos.length}</p>}
+      {thumbs && photos.length > 1
+        ? <ul className="mt-2 flex gap-2 overflow-x-auto pb-1" aria-label="Choose a photo">
+            {photos.map((ph, i) => (
+              <li key={ph.base} className="shrink-0">
+                <button type="button" onClick={() => show(i)} aria-label={`Photo ${i + 1} of ${photos.length}`} aria-current={at === i ? 'true' : undefined}
+                  className={`block w-14 overflow-hidden rounded-[var(--store-radius)] ${at === i ? 'ring-2 ring-store-ink' : ''}`}>
+                  <Photo p={ph} alt="" sizes="56px" className="aspect-[4/5] w-full bg-store-chip object-cover" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        : photos.length > 1 && <p className="mt-2 text-center text-xs text-store-sub md:hidden" aria-hidden="true">{at + 1} / {photos.length}</p>}
     </div>
   )
 }

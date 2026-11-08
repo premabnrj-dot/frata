@@ -19,6 +19,18 @@ export function manifestOf(key: string, version: string): ThemeManifest | null {
   return CATALOGUE[key]?.[version] ?? null
 }
 
+/**
+ * The version a stored revision renders with: its own, else the newest of the same theme at or below it (a build
+ * without that version, e.g. after a revert), else the theme's oldest. Never another theme (T2 review).
+ */
+export function manifestNear(key: string, version: string): ThemeManifest | null {
+  const vs = CATALOGUE[key]; if (!vs) return null
+  if (vs[version]) return vs[version]!
+  const sorted = Object.keys(vs).sort((a, b) => cmpSemver(b, a))
+  const v = sorted.find((x) => cmpSemver(x, version) <= 0) ?? sorted.at(-1)
+  return v ? vs[v]! : null
+}
+
 /** The newest version of each theme (T3 adds release state from Admin; until then every version here is available). */
 export function latestOf(key: string): ThemeManifest | null {
   const vs = CATALOGUE[key]; if (!vs) return null

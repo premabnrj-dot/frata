@@ -12,14 +12,16 @@ export type CardProduct = Omit<ListProduct, 'colours'> & { handle: string; optio
 export const money = (p: number) => formatInr(paise(p))
 
 /** One product in a grid: cover (second photo on hover), name, price, every colour, one tag at most. */
-export function ProductCard({ p, href, now, priority = false }: { p: CardProduct; href: Href; now: Date; priority?: boolean }) {
+export function ProductCard({ p, href, now, priority = false, badge = null }: { p: CardProduct; href: Href; now: Date; priority?: boolean
+  /** An offer's badge (Offers O·2), shown only where no availability tag is: one tag per card. */
+  badge?: { label: string } | null }) {
   const price = priceOf(p)
-  const tag = cardTag(p, now)
+  const tag = cardTag(p, now) ?? badge?.label ?? null
   const [cover, second] = p.images
   const ci = p.options.findIndex(isColourOption)
   const colours = ci >= 0 ? [...new Set(p.variants.map((v) => v.values[ci]!))] : []
   return (
-    <li className="group min-w-0">
+    <li className="store-card group min-w-0">
       <Link href={href(`/products/${p.handle}`)} className="block space-y-2">
         <div className="relative aspect-[var(--store-ratio)] overflow-hidden rounded-[var(--store-radius)] bg-store-chip">
           {cover ? <Photo p={cover} alt={p.title} sizes="(min-width: 1024px) 25vw, 50vw" priority={priority} className="absolute inset-0 h-full w-full object-cover" />
@@ -31,7 +33,7 @@ export function ProductCard({ p, href, now, priority = false }: { p: CardProduct
         {price && <p className="text-sm"><span className="font-medium">{price.min !== price.max ? 'From ' : ''}{money(price.min)}</span>{price.compareAt && <s className="ml-1.5 text-store-sub">{money(price.compareAt)}</s>}</p>}
       </Link>
       {colours.length > 1 && (
-        <ul className="mt-1.5 flex gap-1.5 overflow-x-auto pb-1" aria-label={`${colours.length} colours`}>
+        <ul className="store-swatches mt-1.5 flex gap-1.5 overflow-x-auto pb-1" aria-label={`${colours.length} colours`}>
           {colours.map((c) => <li key={c} title={c}><Swatch c={p.colours.find((x) => x.value === c) ?? { value: c, hex: null, cropImageId: null, crop: null }} images={p.images} d={16} /><span className="sr-only">{c}</span></li>)}
         </ul>
       )}
@@ -41,5 +43,5 @@ export function ProductCard({ p, href, now, priority = false }: { p: CardProduct
 
 export function ProductGrid({ products, href, now, empty }: { products: CardProduct[]; href: Href; now: Date; empty: React.ReactNode }) {
   if (!products.length) return <div className="py-16 text-center text-store-sub">{empty}</div>
-  return <ul className="grid grid-cols-[repeat(var(--store-cols),minmax(0,1fr))] gap-x-3 gap-y-8 sm:grid-cols-2 sm:gap-x-5 lg:grid-cols-4">{products.map((p, i) => <ProductCard key={p.id} p={p} href={href} now={now} priority={i < 2} />)}</ul>
+  return <ul className="grid grid-cols-[repeat(var(--store-cols),minmax(0,1fr))] gap-x-3 gap-y-8 sm:grid-cols-2 sm:gap-x-5 lg:grid-cols-[repeat(var(--store-dcols,4),minmax(0,1fr))]">{products.map((p, i) => <ProductCard key={p.id} p={p} href={href} now={now} priority={i < 2} />)}</ul>
 }

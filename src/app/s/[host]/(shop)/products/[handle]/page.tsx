@@ -3,7 +3,8 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import { GoneView } from '@/components/storefront/pages'
 import { productSeo, ProductView } from '@/components/storefront/product-view'
 import { visibility, type Status } from '@/domains/catalogue/availability'
-import { shopCatalogue, shopProduct } from '@/lib/queries/storefront'
+import { shopCatalogue, shopLook, shopProduct } from '@/lib/queries/storefront'
+import { themeOf } from '@/lib/themes/page-look'
 import { robotsFor, shopFor, shopHref } from '../../../_shop'
 
 export const revalidate = 60
@@ -40,5 +41,6 @@ export default async function ProductPage({ params }: { params: Params }) {
   const now = new Date()
   // Archived: the shopper reads that it has gone, with new pieces below; noindex drops it from search (spec § Review findings).
   if (v.gone) return <GoneView title={p.title} cat={await shopCatalogue(shop.id)} href={shopHref} now={now} />
-  return <ProductView shop={shop} p={p} now={now} live />
+  const theme = themeOf(shop, await shopLook(shop.id))
+  return <ProductView shop={shop} p={p} now={now} live layout={theme.settings} />
 }

@@ -40,7 +40,7 @@ export default async function Customize() {
   const stored = data.draft.settings as { settings?: object; home?: unknown[] }
   const draft = resolveTheme(m, { style: data.draft.styleKey, ...stored })
   const liveM = data.live ? manifestOf(data.live.themeKey, data.live.themeVersion) : null
-  const live = data.live && liveM ? (() => { const l = resolveTheme(liveM, { style: data.live.styleKey, ...(data.live.settings as object) }); return { theme: l.key, style: l.style, settings: (data.live.settings as { settings?: object }).settings ?? {}, home: l.home } })() : null
+  const live = data.live && liveM ? (() => { const l = resolveTheme(liveM, { style: data.live.styleKey, ...(data.live.settings as object) }); return { theme: l.key, style: l.style, settings: l.settings, home: l.home } })() : null
   const f = data.facts
   const tp = truePromises(f)
   const promiseWords = Object.fromEntries(PROMISES.map((k) => [k, {

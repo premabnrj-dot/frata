@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { ON_COLOUR } from './catalogue/kit'
 import { contrast } from './contrast'
 import { SECTION_NAMES, SectionSchema, MAX_PER_PAGE, MAX_SECTIONS, shopPath, type SectionInstance } from './sections'
-import { FOOTERS, HEADERS, PAIRINGS, type Hex, type Scheme, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
+import { FOOTERS, HEADERS, PAGE_DEFAULTS, PAIRINGS, type Hex, type Scheme, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
 
 // =============================================================================
 // FILE: src/domains/themes/layer.ts — the merchant's layer: its save schema, the brand colour rule, switching
@@ -28,6 +28,12 @@ export const SettingsSchema = z.object({
   social: z.boolean(),
   motion: z.enum(['subtle', 'none']),
   brandColour: hex.nullable(),
+  // T2, additive (each optional; absent = PAGE_DEFAULTS).
+  gallery: z.enum(['swipe', 'thumbs']),
+  details: z.enum(['open', 'folded']),
+  card: z.enum(['standard', 'centred', 'framed']),
+  desktopColumns: z.union([z.literal(3), z.literal(4)]),
+  collectionTop: z.enum(['title', 'banner']),
 }).partial()
 
 /** A stored or submitted layer, checked for shape. Sections are checked one by one (and again at every read). */
@@ -67,10 +73,18 @@ export const onColour = (c: string): Hex => (contrast(c, ON_COLOUR.light) >= 4.5
  * (spec § Switching themes). Returns the new layer and, in words, what did not come across.
  */
 export function carryOver(from: { manifest: ThemeManifest; layer: ThemeLayer }, to: ThemeManifest): { layer: ThemeLayer; lost: string[] } {
-  const was = { ...from.manifest.defaults, ...(from.layer.settings ?? {}) } as ThemeSettings
+  // Another version of the same theme (Editorial 1.0 → 1.1): everything the merchant made comes across (T2 review).
+  if (from.manifest.key === to.key) {
+    const style = to.styles.some((s) => s.key === from.layer.style) ? from.layer.style : to.styles[0]!.key
+    const home = from.layer.home?.filter((s) => { const r = SectionSchema.safeParse(s); return r.success && to.allowed.sections.includes(r.data.key) })
+    return { layer: { style, ...(from.layer.settings ? { settings: from.layer.settings } : {}), ...(home ? { home } : {}) }, lost: [] }
+  }
+  const was = { ...PAGE_DEFAULTS, ...from.manifest.defaults, ...(from.layer.settings ?? {}) } as ThemeSettings
   const lost: string[] = []
   const settings: Partial<ThemeSettings> = {
     brandColour: was.brandColour, corners: was.corners, photo: was.photo, announcement: was.announcement,
+    // Page layouts are the merchant's, whatever the theme (T2).
+    gallery: was.gallery, details: was.details, card: was.card, desktopColumns: was.desktopColumns, collectionTop: was.collectionTop,
   }
   if (to.allowed.pairings.includes(was.pairing)) settings.pairing = was.pairing
   else if (was.pairing !== from.manifest.defaults.pairing) lost.push(`The ${was.pairing} type isn't in ${to.name}`)
@@ -113,4 +127,6 @@ export const SETTING_NAMES: Record<keyof ThemeSettings, string> = {
   pairing: 'Type', headings: 'Headings', size: 'Type size', corners: 'Corners', buttons: 'Buttons', spacing: 'Spacing', photo: 'Photo shape',
   hoverPhoto: 'Second photo on hover', phoneColumns: 'Columns on a phone', header: 'Header', sticky: 'Sticky header', bottomTabs: 'Bottom tabs',
   announcement: 'Announcement bar', footer: 'Footer', social: 'Social links', motion: 'Motion', brandColour: 'Brand colour',
+  gallery: 'Product photos', details: 'About and details', card: 'Product cards', desktopColumns: 'Columns on a computer',
+  collectionTop: 'Top of a collection',
 }

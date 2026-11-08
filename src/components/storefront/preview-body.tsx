@@ -28,12 +28,12 @@ export async function previewPage(o: { tenantId: string; shop: StoreShop; path: 
     const label = statusLabel(p.status as Status, p.publishAt ? new Date(p.publishAt) : null, now)
     const note = !v.reachable ? `${label}: shoppers ${v.gone ? 'read that it is no longer available' : 'get "page not found"'} here.`
       : !v.listed ? 'Unlisted: shoppers with the link see this page; it is not in lists or search.' : null
-    return { body: v.gone ? <GoneView title={p.title} cat={await previewCatalogue(tenantId)} href={href} now={now} /> : <ProductView shop={shop} p={p} now={now} />, note }
+    return { body: v.gone ? <GoneView title={p.title} cat={await previewCatalogue(tenantId)} href={href} now={now} /> : <ProductView shop={shop} p={p} now={now} layout={theme.settings} />, note }
   }
   if (a === 'collections' && b) {
     const cat = await previewCatalogue(tenantId)
     const c = cat.collections.find((x) => x.handle === b)
-    return { body: c ? <CollectionView c={c} cat={cat} href={href} now={now} /> : <ShopNotFound href={href} />, note: null }
+    return { body: c ? <CollectionView c={c} cat={cat} href={href} now={now} top={theme.settings.collectionTop} /> : <ShopNotFound href={href} />, note: null }
   }
   if (a === 'policies' && b && b in POLICY_TITLE) return { body: <PolicyView shop={shop} page={b as keyof typeof POLICY_TITLE} />, note: null }
   return { body: <ShopNotFound href={href} />, note: null }

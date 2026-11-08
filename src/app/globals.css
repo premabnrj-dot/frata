@@ -339,6 +339,10 @@ dialog[data-dialog][open]::backdrop { opacity: 1; }
 }
 [data-store-theme][data-headings="upper"] :is(h1, h2, h3) { text-transform: uppercase; letter-spacing: 0.12em; }
 [data-store-theme][data-hover="off"] .store-hover { display: none !important; }
+/* Product cards (themes T2): standard is today's; centred and framed restyle the same markup. */
+[data-store-theme][data-card="centred"] .store-card { text-align: center; }
+[data-store-theme][data-card="centred"] .store-swatches { justify-content: center; }
+[data-store-theme][data-card="framed"] .store-card { box-shadow: inset 0 0 0 1px var(--store-line); border-radius: var(--store-radius); padding: 0.5rem 0.5rem 0.75rem; }
 [data-store-theme][data-buttons="outline"] .store-btn { background: transparent; color: var(--store-ink); box-shadow: inset 0 0 0 1px var(--store-ink); }
 [data-store-theme][data-motion="none"] * { transition: none !important; animation: none !important; }
 /* The customizer's selected section, in its preview only (theme-preview bridge). */

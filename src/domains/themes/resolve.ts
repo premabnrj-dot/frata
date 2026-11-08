@@ -1,7 +1,7 @@
-import { manifestOf } from './catalogue'
+import { manifestNear, manifestOf } from './catalogue'
 import { LayerSchema, onColour, brandColourProblem } from './layer'
 import { SectionSchema, type SectionInstance } from './sections'
-import { PAIRINGS, type Pairing, type ResolvedTheme, type Scheme, type SchemeKey, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
+import { PAGE_DEFAULTS, PAIRINGS, type Pairing, type ResolvedTheme, type Scheme, type SchemeKey, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
 
 // =============================================================================
 // FILE: src/domains/themes/resolve.ts — the ONE merge: manifest defaults → style → the merchant's layer.
@@ -35,6 +35,11 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
     social: pick(want.social, null, d.social),
     motion: pick(want.motion, null, d.motion),
     brandColour: want.brandColour === undefined ? d.brandColour : want.brandColour,
+    gallery: pick(want.gallery, null, d.gallery ?? PAGE_DEFAULTS.gallery),
+    details: pick(want.details, null, d.details ?? PAGE_DEFAULTS.details),
+    card: pick(want.card, null, d.card ?? PAGE_DEFAULTS.card),
+    desktopColumns: pick(want.desktopColumns, null, d.desktopColumns ?? PAGE_DEFAULTS.desktopColumns),
+    collectionTop: pick(want.collectionTop, null, d.collectionTop ?? PAGE_DEFAULTS.collectionTop),
   }
   // 3 photo columns on a phone only with a squarer photo (spec § Theme settings).
   if (settings.phoneColumns === 3 && settings.photo === '4:5') settings.phoneColumns = 2
@@ -75,7 +80,7 @@ export function classicFromSettings(accent: string, displayFont: string): Resolv
 /** A published (or previewed) revision as stored, resolved; an unknown theme or version falls back to Classic. */
 export function resolveStored(row: { themeKey: string; themeVersion: string; styleKey: string; settings: unknown } | null, shop: { accent: string; displayFont: string }): ResolvedTheme {
   if (!row) return classicFromSettings(shop.accent, shop.displayFont)
-  const m = manifestOf(row.themeKey, row.themeVersion)
+  const m = manifestNear(row.themeKey, row.themeVersion)
   if (!m) return classicFromSettings(shop.accent, shop.displayFont)
   const s = (row.settings ?? {}) as { settings?: Partial<ThemeSettings>; home?: unknown[] }
   return resolveTheme(m, { style: row.styleKey, settings: s.settings, home: s.home })
@@ -100,11 +105,12 @@ export function settingVars(t: ResolvedTheme): Record<string, string> {
   return {
     ...schemeVars(t),
     '--store-radius': RADIUS[t.settings.corners], '--store-ratio': RATIO[t.settings.photo], '--store-cols': String(t.settings.phoneColumns),
-    '--store-h-scale': HSCALE[t.settings.size], '--store-space': GAP[t.settings.spacing],
+    '--store-h-scale': HSCALE[t.settings.size], '--store-space': GAP[t.settings.spacing], '--store-dcols': String(t.settings.desktopColumns),
   }
 }
 export function settingAttrs(t: ResolvedTheme): Record<string, string> {
   return {
     'data-headings': t.settings.headings, 'data-buttons': t.settings.buttons, 'data-motion': t.settings.motion, 'data-hover': t.settings.hoverPhoto ? 'on' : 'off',
+    'data-card': t.settings.card,
   }
 }

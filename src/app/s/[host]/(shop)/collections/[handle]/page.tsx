@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { CollectionView } from '@/components/storefront/pages'
-import { shopCatalogue } from '@/lib/queries/storefront'
+import { shopCatalogue, shopLook } from '@/lib/queries/storefront'
+import { themeOf } from '@/lib/themes/page-look'
 import { robotsFor, shopFor, shopHref } from '../../../_shop'
 
 export const revalidate = 60
@@ -26,6 +27,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 }
 
 export default async function Collection({ params }: { params: Params }) {
-  const { cat, c } = await load(params)
-  return <CollectionView c={c} cat={cat} href={shopHref} now={new Date()} />
+  const { shop, cat, c } = await load(params)
+  const theme = themeOf(shop, await shopLook(shop.id))
+  return <CollectionView c={c} cat={cat} href={shopHref} now={new Date()} top={theme.settings.collectionTop} />
 }

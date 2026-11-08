@@ -3,10 +3,11 @@ import type { PolicyPage } from '@/domains/policies/render'
 import { shopJsonLd } from '@/domains/catalogue/seo'
 import { inCollection, isListed } from '@/domains/storefront/listing'
 import { classicFromSettings } from '@/domains/themes/resolve'
-import type { ResolvedTheme } from '@/domains/themes/types'
+import type { ResolvedTheme, ThemeSettings } from '@/domains/themes/types'
 import type { StoreCatalogue, StoreCollection, StoreShop } from '@/lib/queries/storefront'
 import { ProductGrid } from './card'
 import { JsonLd } from './json-ld'
+import { Photo } from './photo'
 import { Sections } from './sections'
 import { PolicyBody, POLICY_TITLE } from './policy'
 import type { Href } from './shell'
@@ -35,12 +36,29 @@ export function AllView({ cat, href, now }: { cat: StoreCatalogue; href: Href; n
   )
 }
 
-export function CollectionView({ c, cat, href, now }: { c: StoreCollection; cat: StoreCatalogue; href: Href; now: Date }) {
+export function CollectionView({ c, cat, href, now, top = 'title' }: { c: StoreCollection; cat: StoreCatalogue; href: Href; now: Date; top?: ThemeSettings['collectionTop'] }) {
+  const items = inCollection(c, cat.products, now)
+  // Banner (themes T2): the first listed piece's first photo, as the category circles use; none, the title as today.
+  const cover = top === 'banner' ? items.find((p) => p.images[0])?.images[0] ?? null : null
+  if (cover) return (
+    <>
+      <div className="relative flex min-h-56 items-end overflow-hidden bg-store-chip sm:min-h-72">
+        <Photo p={cover} alt="" sizes="100vw" priority className="absolute inset-0 h-full w-full object-cover" />
+        <div className={`${wrap} relative w-full py-6`}>
+          <div className="inline-block max-w-prose rounded-[var(--store-radius)] bg-black/60 px-4 py-3 text-white">
+            <h1 className="text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{c.title}</h1>
+            {c.description && <p className="mt-1">{c.description}</p>}
+          </div>
+        </div>
+      </div>
+      <section className={`${wrap} py-8`}><ProductGrid products={items} href={href} now={now} empty="Nothing here right now. New pieces are on their way." /></section>
+    </>
+  )
   return (
     <section className={`${wrap} py-8`}>
       <h1 className="text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{c.title}</h1>
       {c.description && <p className="mt-2 max-w-prose text-store-sub">{c.description}</p>}
-      <div className="mt-6"><ProductGrid products={inCollection(c, cat.products, now)} href={href} now={now} empty="Nothing here right now. New pieces are on their way." /></div>
+      <div className="mt-6"><ProductGrid products={items} href={href} now={now} empty="Nothing here right now. New pieces are on their way." /></div>
     </section>
   )
 }
