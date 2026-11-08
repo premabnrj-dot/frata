@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm'
 import { db } from './index'
 import type { ClaimKey } from '@/lib/trials/claims'
 import { shopSlugFromHost } from '@/domains/tenancy/host'
-import { SHOP_DOMAIN } from '@/lib/public-env'
+import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
 import type { MemberRole, StaffRole } from './schema'
 import { errName } from '@/lib/log'
 
@@ -23,12 +23,18 @@ import { errName } from '@/lib/log'
  * domain>) is found by its slug, so changing the shop domain is an environment
  * change; any other host is a merchant's own domain (tenant_domains).
  */
-export async function tenantForHost(host: string): Promise<{ id: string; name: string } | null> {
+export async function tenantForHost(host: string): Promise<{ id: string; name: string; movedTo: string | null } | null> {
   const slug = shopSlugFromHost(host, SHOP_DOMAIN)
-  const rows = slug
-    ? await db().execute<{ id: string; name: string }>(sql`select id, name from app_tenant_for_slug(${slug})`)
-    : await db().execute<{ id: string; name: string }>(sql`select id, name from app_tenant_for_host(${host})`)
-  return rows[0] ?? null
+  if (!slug) {
+    const rows = await db().execute<{ id: string; name: string }>(sql`select id, name from app_tenant_for_host(${host})`)
+    return rows[0] ? { ...rows[0], movedTo: null } : null
+  }
+  // Any name the shop has had (shop addresses D·1): an old one leads to the current; one Frrata retired leads nowhere.
+  const rows = await db().execute<{ id: string; name: string; current_name: string; retired: boolean; retired_by_frrata: boolean }>(
+    sql`select id, name, current_name, retired, retired_by_frrata from app_shop_for_name(${slug})`)
+  const r = rows[0]
+  if (!r || r.retired_by_frrata) return null
+  return { id: r.id, name: r.name, movedTo: r.retired ? shopHost(r.current_name) : null }
 }
 
 export type Membership = {
@@ -55,9 +61,10 @@ export async function claimInvites(userId: string): Promise<number> {
 
 // ── Sign-up (Phase 1): before the shop exists ────────────────────────────────
 
+/** Free or not: a name ever used by any shop, or blocked by Frrata, is "taken" (the reason is never told). */
 export async function slugAvailable(slug: string): Promise<boolean> {
-  const rows = await db().execute<{ ok: boolean }>(sql`select app_slug_available(${slug}) as ok`)
-  return rows[0]?.ok === true
+  const rows = await db().execute<{ r: string }>(sql`select app_name_check(${slug}) as r`)
+  return rows[0]?.r === 'ok'
 }
 
 /** India Post reference data: the same for every shop. */
@@ -123,7 +130,7 @@ export async function changeShopAddress(tenantId: string, uid: string, slug: str
     return { ok: true }
   } catch (err) {
     const msg = (err as { cause?: { message?: string } })?.cause?.message ?? (err instanceof Error ? err.message : '')
-    const code = ['not_owner', 'published', 'bad_slug', 'slug_taken'].find((c) => msg.includes(c))
+    const code = ['not_owner', 'frozen', 'no_renames_left', 'bad_slug', 'slug_taken'].find((c) => msg.includes(c))
     if (!code) console.error('[changeShopAddress]', errName(err))
     return { ok: false, error: code ?? 'unknown' }
   }

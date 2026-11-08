@@ -159,10 +159,10 @@ runs after the console transaction commits.
 
 **Host lookup (both HIGH).** `host:<host>` is cached 60 s and a MISS is never
 cached (a wildcard domain lets anyone mint hosts). An address change
-revalidates `host:<old>`, `host:<new>` and `shop:<t>` (and the old paths'
-layout); a new shop revalidates `host:<slug>`. A freed address is not
-re-claimable for 30 days (later, with `tenant_domains`; until then the
-address change already needs an unpublished shop, so no shopper has it).
+revalidates `host:<every name the shop has had>` and `shop:<t>` (and the old
+paths' layout); a new shop revalidates `host:<slug>`. A name a shop has used is
+never given to another shop (`shop_names`, shop addresses D·1, 2026-11-08); a
+rename after opening keeps the old name leading to the new one.
 
 **Preview cannot leak (both HIGH).** `src/lib/queries/storefront.ts` exports
 cached `shop*` loaders and separate uncached `preview*` loaders over one

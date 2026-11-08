@@ -54,15 +54,21 @@ export { refreshHosts, refreshShop, refreshSoldOut } from '@/lib/storefront/refr
 export const hostFor = shopHost
 
 class Miss extends Error {}
-/** Which shop a host is. A miss is never cached (anyone can mint subdomains); a hit lives 60 s or until its tag. */
-export const shopIdForHost = cache(async (host: string): Promise<string | null> => {
+/**
+ * Which shop a host is, and where an old name moved to. A miss is never cached (anyone can mint subdomains); a hit lives
+ * 60 s or until its tag. The key is versioned: the data cache outlives a deploy (shop addresses D·1, review M14).
+ */
+const hostFacts = cache(async (host: string): Promise<{ id: string; movedTo: string | null } | null> => {
   try {
-    return await unstable_cache(async () => { const t = await tenantForHost(host); if (!t) throw new Miss(); return t.id }, ['sf-host', host], { tags: [`host:${host}`], revalidate: 60 })()
+    return await unstable_cache(async () => { const t = await tenantForHost(host); if (!t) throw new Miss(); return { id: t.id, movedTo: t.movedTo } }, ['sf-host-v2', host], { tags: [`host:${host}`], revalidate: 60 })()
   } catch (e) {
     if (e instanceof Miss) return null
     throw e
   }
 })
+export const shopIdForHost = async (host: string): Promise<string | null> => (await hostFacts(host))?.id ?? null
+/** The shop's current address when `host` is one of its old names; null for its current one. */
+export const shopMovedTo = async (host: string): Promise<string | null> => (await hostFacts(host))?.movedTo ?? null
 
 // ── The shop ───────────────────────────────────────────────────────────────────
 

@@ -470,6 +470,20 @@
       "when": 1794168903996,
       "tag": "0066_trial_partners",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1794172918873,
+      "tag": "0067_addresses",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1794172920119,
+      "tag": "0068_addresses_access",
+      "breakpoints": true
     }
   ]
 }

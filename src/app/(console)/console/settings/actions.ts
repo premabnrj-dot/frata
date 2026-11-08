@@ -8,11 +8,14 @@ import { hostFor, refreshHosts, refreshShop } from '@/lib/queries/storefront'
 import { asMember } from '@/lib/auth/as-member'
 import { CAN_BUILD, CAN_MANAGE, CAN_SET_COSTS, requireMember } from '@/lib/auth/require-member'
 import { changeShopAddress } from '@/lib/db/platform'
+import { addressFacts } from '@/lib/queries/addresses'
+import { oldNames } from '@/domains/addresses/names'
+import { checkAddress, type AddressCheck } from '@/app/start/actions'
 import { auditEvents, shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { slugProblem } from '@/domains/signup/slug'
 import { parseShipCosts, type ShipCostsInput } from '@/domains/settings/ship-costs'
 import { dayIN } from '@/lib/format-date'
-import { costsVisibleIn, shopWithSettings } from '@/lib/queries/settings'
+import { costsVisibleIn } from '@/lib/queries/settings'
 import { errName } from '@/lib/log'
 import { docImage } from '@/lib/documents/images'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
@@ -105,9 +108,20 @@ export async function savePolicyText(kind: string, body: string | null): Promise
 
 const ADDRESS_ERRORS: Record<string, string> = {
   not_owner: 'Only the owner or an admin of this shop can change its address.',
-  published: 'Your shop is open, so its address is fixed. Ask Frrata support on WhatsApp to move it.',
+  frozen: 'Frrata has paused address changes for this shop.',
+  no_renames_left: 'No changes left.',
   bad_slug: 'Letters, digits and hyphens, at least 3.',
   slug_taken: 'That address is taken. Try another.',
+}
+
+/** The address check on Settings: like sign-up's, but one of this shop's own old names is free to take back. */
+export async function checkShopAddress(slug: string): Promise<AddressCheck> {
+  const auth = await requireMember(CAN_MANAGE)
+  if (!auth.ok) return { state: 'shape' }
+  const s = String(slug ?? '').toLowerCase()
+  const f = await addressFacts(auth.membership.tenantId).catch(() => null)
+  if (f && oldNames(f.names).includes(s)) return { state: 'ok' }
+  return checkAddress(s)
 }
 
 export async function changeAddress(slug: string): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -117,12 +131,13 @@ export async function changeAddress(slug: string): Promise<{ ok: true } | { ok: 
   const s = String(slug ?? '').toLowerCase()
   const problem = slugProblem(s)
   if (problem) return { ok: false, error: problem === 'reserved' ? 'That address is reserved. Try another.' : ADDRESS_ERRORS.bad_slug! }
-  const before = await shopWithSettings(auth.membership.tenantId).catch(() => null)
+  const before = await addressFacts(auth.membership.tenantId).catch(() => null)
   const r = await changeShopAddress(auth.membership.tenantId, auth.userId, s)
   if (!r.ok) return { ok: false, error: ADDRESS_ERRORS[r.error] ?? 'We could not change the address. Nothing was changed.' }
-  // The old address must not keep showing this shop from the storefront cache.
-  // Both addresses' lookups and every page of the old one (storefront review 2026-11-07).
-  refreshHosts(hostFor(s), ...(before ? [hostFor(before.slug)] : []))
+  // Every name the shop has had now leads to the new one: each host's lookup, and every page of the one it left
+  // (storefront review 2026-11-07; shop addresses D·1, tenancy H5).
+  const all = [...new Set([s, ...(before ? [before.slug, ...before.names.map((n) => n.name)] : [])])]
+  refreshHosts(...all.map((n) => hostFor(n)))
   refreshShop(auth.membership.tenantId, 'shop')
   if (before) revalidatePath(`/s/${hostFor(before.slug)}`, 'layout')
   revalidatePath('/console', 'layout')
