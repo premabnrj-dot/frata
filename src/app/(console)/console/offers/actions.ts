@@ -7,6 +7,7 @@ import { asMember } from '@/lib/auth/as-member'
 import { CAN_BUILD, CAN_MANAGE } from '@/lib/auth/require-member'
 import { discountCodes, discounts } from '@/lib/db/schema-discounts'
 import { refreshShop } from '@/lib/queries/storefront'
+import { alreadyQualify } from '@/lib/queries/discounts'
 import type { Tx } from '@/lib/db'
 
 // =============================================================================
@@ -87,4 +88,12 @@ export async function stepOffer(id: string, step: Step): Promise<OfferResult> {
   if (!r.value.done) return { ok: false, error: 'This offer changed meanwhile. Reload the page.' }
   done(r.value.tenantId)
   return { ok: true, id }
+}
+
+/** How much of last month's orders an order offer would mostly reward (the form's warning). Read only. */
+export async function checkQualify(v: { minSubtotal: number; percentBps: number | null; amountOff: number | null; cap: number | null }) {
+  const ok = [v.minSubtotal, v.percentBps ?? 0, v.amountOff ?? 0, v.cap ?? 0].every((x) => Number.isSafeInteger(x) && x >= 0)
+  if (!ok) return null
+  const r = await asMember(CAN_BUILD, { action: 'offer.qualify' }, async (_tx, auth) => alreadyQualify(auth.membership.tenantId, v))
+  return r.ok ? r.value : null
 }
