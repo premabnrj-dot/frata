@@ -276,8 +276,11 @@ export default {
         const url = p.url()
         await p.getByRole('button', { name: 'Cancel order…' }).click()
         const d = p.getByRole('dialog', { name: 'Cancel KS-1001?' }); await d.waitFor()
-        const box = await d.boundingBox()
-        assert.ok(box && Math.abs(box.y + box.height - 844) <= 2 && box.width >= 389, `a sheet along the bottom: ${JSON.stringify(box)}`)
+        // Read once the sheet's first frame has run (its slide-in is 0.01 ms under reduced motion, but still a transition).
+        const atBottom = (b) => b && Math.abs(b.y + b.height - 844) <= 2 && b.width >= 389
+        let box = null
+        await until(async () => atBottom(box = await d.boundingBox()), 2_000).catch(() => {})
+        assert.ok(atBottom(box), `a sheet along the bottom: ${JSON.stringify(box)}`)
         // Android's Back is a close request: requestClose() is that same request, `cancel` first.
         const history = await p.evaluate(() => window.history.length)
         await d.evaluate((el) => el.requestClose()); await d.waitFor({ state: 'hidden' })
