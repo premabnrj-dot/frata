@@ -2,8 +2,8 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.3.0
-  verified: 2026-11-07
+  version: 2.4.0
+  verified: 2026-11-08
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
 
@@ -56,6 +56,19 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
    support costs per tenant per tier.
 9. **Revenue lines not yet modelled**: Razorpay Aggregator commission (rates
    unpublished — ask), shipping margin if Frata ever resells freight (decision needed).
+
+## Offers (unit-economics-reviewer, 2026-11-08; hypotheses)
+
+- **The fee base is after the discount** (owner call 5): `merchandise_net` is the lines' taxable
+  value after offers. Frrata gives up 2% of a discount on Launch (₹2.40 on a ₹1,200 order at 10% off).
+- **Offers are core** (every plan): Shopify includes discounts on every plan and GoKwik's fee
+  includes prepaid incentives, so an add-on would make Frrata dearer than the baseline.
+- **"Pay online, save ₹50"** costs ₹45 on every prepaid order (including those that would have paid
+  anyway) and gains ₹215–345 per order that switches from COD. Break-even: 4–8 more prepaid orders in
+  100 at 30–40% prepaid and 21–30% COD RTO; about 23 in 100 if switchers are low-risk (10% RTO).
+  Test: a 4-week 50/50 split in 2–3 design-partner shops, judged at the shop's own COD RTO.
+- **A blanket % off** above a minimum most orders already meet is a giveaway (a ₹2,490 order at 10%
+  off keeps ₹235 less and needs 1.3× the delivered orders): the console warns ("62% already qualify").
 
 ## Current model (founder's, unvalidated, 2026-11)
 

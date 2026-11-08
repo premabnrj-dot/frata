@@ -2,8 +2,8 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 4.2.0
-  verified: 2026-11-07
+  version: 4.3.0
+  verified: 2026-11-08
   covers: ["src/app/globals.css", "src/components/**"]
 ---
 
@@ -247,6 +247,22 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 - **Collections**: hand-picked (an order you set) or filled by rules (all or
   any) with a live "N products match now" count; a product shows the
   hand-picked ones as toggles and the rule-based ones it is in, in words.
+
+## Offers (owner-approved 2026-11-08; spec `docs/specs/2026-11-08-coupons.md`, mockup https://claude.ai/artifact/HVFMBJzJoH9tTUh9d1zxHT)
+
+45. **Save, never surcharge.** "Pay online, save ₹50" on the pay-online card and "No ₹50 online
+    saving" on the COD card; never "COD costs ₹50 more". Every fee shown before the shopper commits.
+46. **The best offer is applied for the shopper.** Checkout lists the shop's offers (applied, or
+    what each needs: "Add ₹300 more"); "Have a code?" stays behind a link (Baymard, Jun 2026).
+47. **One answer for a code that does not apply**, whether it exists or not: "this code doesn't
+    work here". Unlisted codes never appear in a list.
+48. **Real ends only.** The bar shows "till 30 Nov" only when the offer has an end; never a
+    countdown, never one that restarts per visit (CCPA dark-pattern rules).
+49. **Each saving is named** in the bag, checkout, the order page and the invoice; the invoice
+    shows value and discount before GST at the line's rate.
+50. **The console judges offers on delivered orders:** uses, ₹ given, delivered, ₹ kept per
+    delivered order; a form warns when an offer would mostly reward orders that already qualify.
+    Partners draft; owners and admins start, pause and end (ending confirms; it is final).
 
 ## Storefront as built (1B, 2026-11-07)
 

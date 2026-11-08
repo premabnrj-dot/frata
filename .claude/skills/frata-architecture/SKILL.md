@@ -2,8 +2,8 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.7.0
-  verified: 2026-11-07
+  version: 2.8.0
+  verified: 2026-11-08
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
 ---
@@ -234,6 +234,25 @@ shop can have or not (Messages, RTO Shield, Reviews…).
 Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
 `<Money paise>` to render; `formatInr` groups in lakh/crore. Profit is
 `orderProfit()` — never a margin computed inline.
+
+**Offers (O·1, docs/plans/2026-11-08-offers.md).** Core checkout pricing, not a module
+(`check:modules` forbids core importing module code).
+- **One engine:** `src/domains/checkout/discounts.ts` — `planOffers` (best per class: order →
+  thresholds on the bag after it → payment, prepaid only), `priceMethod` (spread by value to the
+  paise; each line's GST rate on its own discounted piece, **per way of paying**: line tax lives in
+  `MethodTotal`, never on `QuoteLine`).
+- **One repricer and one writer:** a placed order is priced again only by `amounts.reprice()` from
+  its stored lines and `order_discounts` (never today's offers), and written only by
+  `lib/orders/reprice.ts writeReprice()` — every money column of the order and its lines together.
+  Switch to COD, a capture after a switch and a retry go through them; a retry never reprices.
+- **Uses are derived:** `discountUses()`/`fits()` in `src/lib/db/discount-predicates.ts` (with
+  `liveDiscountSql`, twin of `offerStatus()`), counted through `discountUseSql`/`usesDiscount`
+  (parity-tested). Placement locks every offer the bag could get that has a limit, in id order,
+  before counting; an offer over a limit drops out and the shopper gets `changed`.
+- **The shopper's read** of offers is `liveOffers()` in `queries/checkout.ts` (terms only);
+  `publicQuote` maps offers to named fields (a test proves no id, term, limit or budget leaks).
+  Codes: one per order, unique per shop forever, fail-closed per-IP guess limit, one answer for
+  every failure.
 
 ## Config
 

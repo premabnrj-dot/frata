@@ -2,8 +2,8 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.3.0
-  verified: 2026-11-07
+  version: 1.4.0
+  verified: 2026-11-08
   decisions: [ADR-0006]
 ---
 
@@ -83,6 +83,24 @@ in razorpay.com/docs/sitemap.xml (most read 2026-10-08, a bulk rebuild).
   text not read]. (Corrects the 2026-11-06 note, which said "from 15 Oct 2026 [V]".)
 - Magic Checkout ~0.65–0.75% per order (competitor reference) [S, 2026-11-06].
 - No RBI/NPCI rule on cash on delivery found [U, 2026-11-07].
+
+## Commerce law and checkout references (offers) — checked 2026-11-08 (research `docs/research/2026-11-08-coupons.md`)
+
+- Apparel GST 5% ≤ ₹2,500 a piece, 18% above, from 22 Sep 2025 [V PIB 2025-09-17; S LS Q2509 2025-12-15]; the slab is on
+  the post-discount pre-GST value per piece [S] (decision 1, plan 2026-11-08-offers).
+- s.15(3)(b) substituted from 1 Nov 2026 (N 03/2026-CT): a post-supply discount needs a credit note and ITC reversal [V by
+  two sources, gazette unread]. BOGO = two supplies at one price, rate per s.8 (Circular 92/11/2019) [V].
+- E-Commerce (Amendment) Rules 2026, GSR 789(E), from 1 Jan 2027: a price cut shows the prior price = the lowest in 30
+  days; yearly dark-pattern self-audit and certificate [V TaxHeal 2026-09-16 / Bar & Bench 2026-09-28; gazette unread].
+- No sale above MRP including taxes (Legal Metrology r.18(2), r.2(m)) [V, consolidated to 2026-02-13].
+- A purchase-linked contest or game of chance is an unfair trade practice unless prescribed (CPA s.2(47)(iii)(b)) [S].
+- CCPA: recurring countdowns treated as false urgency; fees added at checkout as drip pricing; penalties ₹1–7 lakh so far
+  [S Bar & Bench 2026-09-01; LS Q5415 2026-03-25].
+- Razorpay Magic Checkout: auto-apply best coupon; "unavailable" coupons shown disabled until eligible; prepaid-only
+  coupons remove COD; budget, total and per-customer limits; prepaid discount on COD orders excludes shipping and COD fee
+  [V magic-checkout/shopify/features lastmod 2026-10-23; order-settings/prepay-cod lastmod 2026-10-08].
+- Baymard: collapse the promo field and auto-apply (83% of sites don't) [V 2026-06-01]; show free-shipping qualification
+  in the cart summary [V 2026-11-02].
 
 ## Shiprocket — checked 2026-11-06
 
