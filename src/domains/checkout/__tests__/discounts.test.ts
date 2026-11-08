@@ -117,3 +117,60 @@ describe('priceMethod', () => {
     expect(m.total).toBe(100001 + 33333 + 7 - 11000 + 7900)
   })
 })
+
+describe('O·2: product offers, Buy X get Y, gift, tiers, typed codes', () => {
+  const tee = (id: string, price: number) => v(id, price, { productId: 'tee-' + id })
+  const line = (id: string, price: number, qty = 1, productId = 'p' + id) => ({ productId, variantId: id, unitPrice: price, qty })
+  it('% off chosen products only, capped on the whole offer', () => {
+    const sale = t({ id: 'd-sale', title: 'Kurta sale', style: 'product_off', percentBps: 2000, targets: ['pa'] })
+    const p = planOffers([line('a', 280000), line('b', 90000)], [sale], null)
+    expect(p.productDisc).toEqual([56000, 0])
+    expect(p.products.map((x) => [x.discountId, x.amount])).toEqual([['d-sale', 56000]])
+    expect(planOffers([line('a', 280000, 2)], [{ ...sale, cap: 50000 }], null).productDisc).toEqual([50000])
+  })
+  it('Buy 2 get 1: the cheapest of each group free, the saving spread over the group by value; short bags are told', () => {
+    const b2g1 = t({ id: 'd-b2g1', title: 'Buy 2 get 1', style: 'bxgy', buyQty: 2, getQty: 1, getBps: 10000, targets: 'all' })
+    const p = planOffers([line('a', 79900, 2), line('b', 69900)], [b2g1], null)
+    expect(p.products[0]!.amount).toBe(69900) // the ₹699 tee free
+    expect(p.productDisc.reduce((a, b) => a + b, 0)).toBe(69900)
+    expect(p.productDisc[1]).toBeLessThan(69900) // spread, not all on the free piece
+    const short = planOffers([line('a', 79900)], [b2g1], null)
+    expect(short.listed).toEqual([{ title: 'Buy 2 get 1', code: null, style: 'bxgy', applied: false, need: { kind: 'add_items', n: 2 } }])
+  })
+  it('a free gift: free once the rest reaches the minimum; asks to add it, or how much more', () => {
+    const gift = t({ id: 'd-gift', title: 'Gift', style: 'free_gift', minSubtotal: 200000, giftVariantId: 'g' })
+    expect(planOffers([line('a', 249000), line('g', 49900)], [gift], null).productDisc).toEqual([0, 49900])
+    expect(planOffers([line('a', 249000)], [gift], null).listed[0]!.need).toEqual({ kind: 'gift', variantId: 'g' })
+    expect(planOffers([line('a', 150000), line('g', 49900)], [gift], null).listed[0]!.need).toEqual({ kind: 'add', amount: 50000 })
+  })
+  it('greedy and stable: the offer saving most takes its lines; a line takes one product offer', () => {
+    const small = t({ id: 'd-1', title: 'Small', style: 'product_off', percentBps: 1000, targets: 'all' })
+    const big = t({ id: 'd-2', title: 'Big', style: 'product_off', percentBps: 3000, targets: ['pa'] })
+    const p = planOffers([line('a', 100000), line('b', 100000)], [small, big], null)
+    expect(p.productDisc).toEqual([30000, 10000])
+    expect(planOffers([line('a', 100000), line('b', 100000)], [big, small], null).productDisc).toEqual([30000, 10000])
+  })
+  it('tiers: the highest step reached; the next step is what the bag needs', () => {
+    const tiers = t({ id: 'd-t', title: 'Spend more', percentBps: null, tiers: [{ min: 199900, percentBps: 1000, amountOff: null }, { min: 299900, percentBps: 1500, amountOff: null }] })
+    const p = planOffers(250000, [tiers], null)
+    expect(p.order?.amount).toBe(25000)
+    expect(p.listed[0]).toMatchObject({ applied: true, need: { kind: 'add', amount: 49900 } })
+    expect(planOffers(150000, [tiers], null).listed[0]!.need).toEqual({ kind: 'add', amount: 49900 })
+  })
+  it('order offers apply to the bag after product offers; a typed creator code reaches an unlisted offer', () => {
+    const sale = t({ id: 'd-sale', title: 'Sale', style: 'product_off', percentBps: 5000, targets: 'all' })
+    const vip = t({ id: 'd-vip', title: 'VIP', amountOff: 10000, listed: false, code: 'VIP100', codeId: 'c-pub' })
+    const p = planOffers([line('a', 300000)], [sale, vip], { text: 'RIYA100', discountId: 'd-vip', codeId: 'c-riya' })
+    expect([p.productDisc[0], p.order?.amount, p.code]).toEqual([150000, 10000, 'applied'])
+    expect(planOffers([line('a', 300000)], [sale, vip], { text: 'NOPE', discountId: null, codeId: null }).code).toBe('not_applied')
+  })
+  it('the quote: product discounts stay on their lines; the order offer and the saving spread on what is left; GST per piece', () => {
+    const sale = t({ id: 'd-sale', title: 'Kurta sale', style: 'product_off', percentBps: 2000, targets: ['pa'] })
+    const q = quote(bag, [kurta, dupatta], rules, now, null, { offers: [sale, online] })
+    expect(q.prepaid.lines.map((l) => l.discount)).toEqual([56000 + Math.round(5000 * 224000 / 314000), 5000 - Math.round(5000 * 224000 / 314000)])
+    expect(q.prepaid.lines[0]!.gstBps).toBe(500) // ₹2,800 − 20% = ₹2,240: 5%
+    expect(q.prepaid.total).toBe(370000 - 56000 - 5000)
+    expect(q.prepaid.applied.map((a) => a.class)).toEqual(['product', 'payment'])
+    void tee
+  })
+})

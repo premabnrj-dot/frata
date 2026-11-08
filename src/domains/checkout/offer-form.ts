@@ -21,6 +21,9 @@ export const STYLE_LABEL: Record<DiscountStyle, { name: string; line: string }> 
   order_off: { name: '% or ₹ off the order', line: 'With a minimum bag value. Festive sales, welcome offers.' },
   free_shipping: { name: 'Free shipping', line: 'Above a bag value, or with a code.' },
   pay_online: { name: 'Pay online, save', line: 'Fewer COD orders. Shown on the pay-online card.' },
+  product_off: { name: '% or ₹ off products', line: 'On chosen products or collections. A badge on each.' },
+  bxgy: { name: 'Buy X, get Y', line: 'Buy 2, get 1 free. Basics, kidswear, accessories.' },
+  free_gift: { name: 'Free gift', line: 'A chosen piece free above a bag value.' },
 }
 
 const rupees = (s: string) => (/^\d{1,7}(\.\d{1,2})?$/.test(s.trim()) ? Math.round(Number(s.trim()) * 100) : null)

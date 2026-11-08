@@ -17,7 +17,7 @@ import { istDayKey } from '../time/day'
 import { availability, visibility, type Status, type WhenOut } from '@/domains/catalogue/availability'
 import type { ChargeShare } from '@/domains/tax/gst'
 import { codFor, shippingFor, type Cod, type DeliveryRules } from './delivery'
-import { planOffers, priceMethod, type Applied, type DiscountTerms, type Listed, type MethodLine } from './discounts'
+import { planOffers, priceMethod, type Applied, type DiscountTerms, type Listed, type MethodLine, type TypedCode } from './discounts'
 
 export const MAX_QTY = 10
 export const MAX_LINES = 20
@@ -116,7 +116,7 @@ export function arrivalRange(lines: Pick<QuoteLine, 'kind' | 'shipsBy' | 'leadMi
   return { from, to }
 }
 
-export type QuoteOffers = { offers?: DiscountTerms[]; code?: string | null }
+export type QuoteOffers = { offers?: DiscountTerms[]; code?: TypedCode | string | null }
 
 /** Price a bag. Unknown variant ids come back as `gone` lines; quantities are clamped to 1…MAX_QTY. */
 export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Date, pincode?: string | null, o: QuoteOffers = {}): Quote {
@@ -135,15 +135,15 @@ export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Dat
   const live = draft.filter((d) => d.qty > 0)
   const subtotal = live.reduce((a, d) => a + d.v.price * d.qty, 0)
   // Offers (discounts.ts): the order class first, then the thresholds on what is left, then the payment class.
-  const plan = live.length ? planOffers(subtotal, o.offers ?? [], o.code ?? null) : planOffers(0, [], o.code ?? null)
-  const afterOrder = subtotal - (plan.order?.amount ?? 0)
+  const plan = planOffers(live.map((d) => ({ productId: d.v.productId, variantId: d.v.variantId, unitPrice: d.v.price, qty: d.qty })), live.length ? o.offers ?? [] : [], o.code ?? null)
+  const afterOrder = subtotal - plan.productDisc.reduce((a, b) => a + b, 0) - (plan.order?.amount ?? 0)
   const charged = live.length ? shippingFor(afterOrder, r) : 0
   const waived = plan.freeShipping && charged > 0 ? charged : 0
   const shipping = charged - waived
   const shipApplied: Applied | null = waived ? { discountId: plan.freeShipping!.id, codeId: plan.freeShipping!.codeId, class: 'shipping', title: plan.freeShipping!.title, amount: waived, terms: plan.freeShipping! } : null
   const offer = codFor(afterOrder, r, pincode)
   const codCharge = offer.offered ? offer.charge : 0
-  const priced = live.map((d) => ({ gross: d.v.price * d.qty, qty: d.qty, hsn: d.v.hsn }))
+  const priced = live.map((d, i) => ({ gross: d.v.price * d.qty, qty: d.qty, hsn: d.v.hsn, productDiscount: plan.productDisc[i]! }))
   const tax = { registered: r.registered, pricesIncludeGst: r.pricesIncludeGst }
   const pre = priceMethod(priced, plan.order?.amount ?? 0, plan.payment?.amount ?? 0, shipping, tax)
   const cod = priceMethod(priced, plan.order?.amount ?? 0, 0, shipping + codCharge, tax)
@@ -158,8 +158,8 @@ export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Dat
   const shares = (m: typeof pre) => m.lines.map(({ chargeTaxable, chargeGst }) => ({ chargeTaxable, chargeGst }))
   return {
     lines, subtotal, shipping,
-    prepaid: { codCharge: 0, gst: pre.gst, total: pre.total, shares: shares(pre), discount: pre.discount, lines: pre.lines, merchandiseNet: pre.merchandiseNet, applied: appliedFor(plan.order, shipApplied, plan.payment) },
-    cod: { offer, codCharge, gst: cod.gst, total: offer.offered ? cod.total : 0, shares: shares(cod), discount: cod.discount, lines: cod.lines, merchandiseNet: cod.merchandiseNet, applied: appliedFor(plan.order, shipApplied) },
+    prepaid: { codCharge: 0, gst: pre.gst, total: pre.total, shares: shares(pre), discount: pre.discount, lines: pre.lines, merchandiseNet: pre.merchandiseNet, applied: appliedFor(...plan.products, plan.order, shipApplied, plan.payment) },
+    cod: { offer, codCharge, gst: cod.gst, total: offer.offered ? cod.total : 0, shares: shares(cod), discount: cod.discount, lines: cod.lines, merchandiseNet: cod.merchandiseNet, applied: appliedFor(...plan.products, plan.order, shipApplied) },
     arrives: arrivalRange(lines.filter((l) => l.qty > 0), r, now),
     empty: live.length === 0, missing,
     offers: { listed: plan.listed, code: plan.code },
