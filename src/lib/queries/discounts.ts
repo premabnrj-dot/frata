@@ -3,9 +3,8 @@ import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm
 import { offerStatus, type OfferStatus } from '@/domains/checkout/offer-status'
 import type { DiscountStyle } from '@/domains/checkout/discounts'
 import { keptOf, keptPerOrder, type KeptBasis, type KeptGroup } from '@/domains/orders/kept'
-import { planVersions, tenantPlans } from '@/lib/db/schema'
 import { estimateOf } from '@/domains/settings/ship-costs'
-import { costsVisibleIn, shipCostsIn } from '@/lib/queries/settings'
+import { costsVisibleIn, planHistoryIn, shipCostsIn } from '@/lib/queries/settings'
 import type { MemberRole } from '@/domains/tenancy/roles'
 import { istDayStart } from '@/domains/time/day'
 import { discountCodes, discountTargets, discountTiers, discounts, orderDiscounts } from '@/lib/db/schema-discounts'
@@ -242,11 +241,6 @@ export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, opts: { 
 const ago = (now: Date, d: number) => sql`${istDayStart(now, -(d - 1)).toISOString()}::timestamptz`
 
 /** The fee on a delivered order under the shop's current plan, in bps (null without a plan). */
-/** The shop's plan versions with their fee, oldest first (feeForOrder's history; billing B0 replaces the pick). */
-async function planHistoryIn(tx: Tx, tenantId: string): Promise<{ startsAt: Date; feeBps: number }[]> {
-  return tx.select({ startsAt: tenantPlans.startsAt, feeBps: planVersions.feeBps }).from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId))
-    .where(eq(tenantPlans.tenantId, tenantId)).orderBy(tenantPlans.startsAt)
-}
 
 /**
  * Who would get an order offer anyway: of the last 30 days' standing orders, the share already at or above

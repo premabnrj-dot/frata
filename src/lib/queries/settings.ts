@@ -1,6 +1,6 @@
 import 'server-only'
 import { eq, getTableColumns, sql } from 'drizzle-orm'
-import { members, shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
+import { members, planVersions, shopPolicies, shopSettings, tenantPlans, tenants } from '@/lib/db/schema'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
 import type { ShipCosts } from '@/domains/settings/ship-costs'
@@ -84,4 +84,10 @@ export async function costsVisibleIn(tx: Tx, tenantId: string, role: MemberRole)
     .from(members).where(eq(members.tenantId, tenantId))
   if (!r || r.all === 0) return false
   return seesCosts(role, r.owners > 0)
+}
+
+/** The shop's plan versions with their fee, oldest first (feeForOrder's history; billing B0 replaces the pick). */
+export async function planHistoryIn(tx: Tx, tenantId: string): Promise<{ startsAt: Date; feeBps: number }[]> {
+  return tx.select({ startsAt: tenantPlans.startsAt, feeBps: planVersions.feeBps }).from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId))
+    .where(eq(tenantPlans.tenantId, tenantId)).orderBy(tenantPlans.startsAt)
 }

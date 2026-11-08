@@ -140,21 +140,46 @@ export const owedSql = (tenantId: string, now: Date, variantCol = '"variants"."i
     and (${standingSql('o')} or ${holdingSql(now, 'o')}))`
 
 /**
+ * Where a standing or holding order stands for Analytics (A·1): its outcome, on the way, or not sent yet. Straight
+ * from the outcome timestamps, in stateSql's ranking (a return outranks delivered, delivered outranks lost; shipped or a
+ * failed attempt is on the way): the full state expression, with its refund-due subquery, cost four evaluations per
+ * order at 10×. Only for orders that are not cancelled (the caller's filter); a parity int test holds it to stateSql.
+ */
+export const stageSql = (a = '"orders"'): SQL<'delivered' | 'rto' | 'lost' | 'on_the_way' | 'not_sent'> => sql`(case
+  when ${c(a, 'rto_delivered_at')} is not null or ${c(a, 'rto_initiated_at')} is not null then 'rto'
+  when ${c(a, 'delivered_at')} is not null then 'delivered'
+  when ${c(a, 'lost_at')} is not null then 'lost'
+  when ${c(a, 'ndr_at')} is not null or ${c(a, 'shipped_at')} is not null then 'on_the_way'
+  else 'not_sent' end)`
+
+/**
+ * The plan-fee bucket at an order's billable moment, the first of delivered and 30 days shipped (billing's rule):
+ * k = the k-th of `feeChanges` (the plan versions' start times, oldest first), 0 none; only delivered orders pay a fee.
+ */
+export function feeBucketSql(a: string, feeChanges: readonly Date[]): SQL<number> {
+  const billableAt = sql`least(${c(a, 'delivered_at')}, ${c(a, 'shipped_at')} + interval '30 days')`
+  if (!feeChanges.length) return sql<number>`0`
+  // Only a delivered order pays a fee: delivered and no return (stateSql's ranking), straight from its columns.
+  const delivered = sql`(${c(a, 'delivered_at')} is not null and ${c(a, 'rto_initiated_at')} is null and ${c(a, 'rto_delivered_at')} is null)`
+  // A plain CASE over the few plan changes, latest first (a per-row unnest cost ~40% of the read at 10×).
+  const arms = [...feeChanges.entries()].reverse().map(([i, d]) => sql`when ${billableAt} >= ${d.toISOString()}::timestamptz then ${sql.raw(String(i + 1))}`)
+  return sql<number>`(case when ${delivered} then (case ${sql.join(arms, sql` `)} else 0 end) else 0 end)`
+}
+
+/**
  * ₹ KEPT, GROUPED (Analytics A·1; speed review: never one row per order). The expressions `keptOf`
  * (src/domains/orders/kept.ts) groups by, and what it sums: an order with an outcome (delivered, came back, lost) by
  * its outcome, the open shipment's provider, COD or not, which costs it knows, and the plan-fee bucket at its billable
  * moment (`feeChanges`: the plan versions' start times, oldest first; bucket k means the k-th version, 0 none, as
  * `feeForOrder`). Offers and Analytics both read it, so their ₹ kept agree.
  */
-export function keptSql(now: Date, a: string, feeChanges: readonly Date[]) {
+export function keptSql(now: Date, a: string, feeChanges: readonly Date[], providerCol?: SQL) {
   const st = stateSql(now, a)
-  // Billable at whichever comes first: delivered, or 30 days shipped with no outcome (billableDelivered's moment).
-  const billableAt = sql`least(${c(a, 'delivered_at')}, ${c(a, 'shipped_at')} + interval '30 days')`
-  const changes = feeChanges.length ? sql`array[${sql.join(feeChanges.map((d) => sql`${d.toISOString()}::timestamptz`), sql`, `)}]` : sql`array[]::timestamptz[]`
   const outcome = sql<'delivered' | 'rto' | 'lost'>`(case when ${st} = 'delivered' then 'delivered' when ${st} in ('rto', 'rto_received') then 'rto' else 'lost' end)`
-  const provider = openShipmentProviderSql(a)
+  // The open shipment's provider: a joined column when the caller has one (speed review: never per row at scale).
+  const provider = providerCol ?? openShipmentProviderSql(a)
   const cod = sql<boolean>`(${currentMethodSql(a)} = 'cod')`
-  const bucket = sql<number>`(case when ${st} = 'delivered' then (select count(*)::int from unnest(${changes}) ch where ch <= ${billableAt}) else 0 end)`
+  const bucket = feeBucketSql(a, feeChanges)
   return {
     /** Only orders with an outcome. */
     where: sql`${st} in ('delivered', 'rto', 'rto_received', 'lost')`,
