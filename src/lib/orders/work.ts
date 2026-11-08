@@ -154,7 +154,7 @@ export async function pack(tx: Tx, tenantId: string, actor: Actor, orderId: stri
   if (pre.short) return { ok: false, error: 'The pre-ordered pieces are not in stock yet. Add the stock when they arrive, then pack.' }
   const kind = c.o.sellerGstin ? 'invoice' : 'bill'
   const fy = fiscalYear(now)
-  const [s] = await tx.select({ series: shopSettings.invoiceSeries, prefix: shopSettings.orderPrefix, name: tenants.name, legalName: shopSettings.legalName, address: shopSettings.address }).from(tenants)
+  const [s] = await tx.select({ series: shopSettings.invoiceSeries, prefix: shopSettings.orderPrefix, name: tenants.name, legalName: shopSettings.legalName, address: shopSettings.address, logo: shopSettings.docLogo }).from(tenants)
     .innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
   // Before the counter moves (a refusal after it would leave a gap in the numbers): a series saved before
   // settings checked it may not leave room for the year's numbers inside GST's 16 characters.
@@ -164,8 +164,9 @@ export async function pack(tx: Tx, tenantId: string, actor: Actor, orderId: stri
     .returning({ next: tenantCounters.next })
   const number = invoiceNumber({ series: s?.series ?? '', orderPrefix: orderPrefix(s?.prefix ?? '', s?.name ?? ''), fiscalYear: fy, n: n!.next - 1, kind })
   const at = moment(now)
-  // The seller as the invoice is issued: a later change to Settings never rewrites it (architecture review 2026-11-07).
-  const r = await tx.update(orders).set({ packedAt: at, invoiceNumber: number, sellerName: s?.legalName || s?.name || '', sellerAddress: s?.address ?? '' })
+  // The seller as the invoice is issued, and its logo for paper (Documents D2): a later change to Settings never
+  // rewrites either (architecture review 2026-11-07).
+  const r = await tx.update(orders).set({ packedAt: at, invoiceNumber: number, sellerName: s?.legalName || s?.name || '', sellerAddress: s?.address ?? '', invoiceLogo: s?.logo ?? null })
     .where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId), isNull(orders.packedAt), isNull(orders.cancelledAt), isNull(orders.heldAt))).returning({ id: orders.id })
   // The row is locked (current: for update), so this cannot miss; if it ever does, the counter rolls back with it.
   if (!r.length) throw new Error('pack: order changed under its lock')

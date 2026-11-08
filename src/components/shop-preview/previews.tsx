@@ -32,6 +32,10 @@ export type ShopFacts = PolicyFacts & {
   gstin: string | null
   defaultHsn: string
   invoiceSeries: string
+  docLogo: string | null
+  docSignatory: string
+  docNote: string
+  slipSize: string
   /** The published look's paper tokens and display face, for the brand and footer previews (Settings › Brand). */
   look?: { vars: Record<string, string>; display: string }
 }
@@ -145,6 +149,12 @@ export function InvoicePreview({ f, fiscalYear }: { f: ShopFacts; fiscalYear: st
         <p className="font-mono text-xs">{f.invoiceSeries}{fiscalYear}/0001</p>
         <p>{f.legalName || <Missing>legal business name</Missing>}<br /><span className="text-store-sub">{f.address || <Missing>registered address</Missing>}</span>{registered && <><br />GSTIN <span className="font-mono">{f.gstin}</span></>}</p>
         <p className="text-xs text-store-sub">{registered ? `HSN ${f.defaultHsn} · CGST and SGST inside your state, IGST outside` : 'Not registered for GST: no tax is charged or shown.'}</p>
+        {(f.docNote || f.docSignatory) && (
+          <div className="flex items-end justify-between gap-3 border-t border-store-line pt-2 text-xs">
+            <span className="text-store-sub">{f.docNote}</span>
+            <span className="shrink-0 text-right">For {f.legalName || f.shopName}<br />Authorised signatory{f.docSignatory ? ` · ${f.docSignatory}` : ''}</span>
+          </div>
+        )}
       </div>
     </Frame>
   )

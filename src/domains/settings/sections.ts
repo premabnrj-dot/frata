@@ -30,7 +30,7 @@ export type Field = {
 
 export type Block = { title: string; hint?: string; tip?: string; fields: Field[] }
 
-export type SectionKey = 'store' | 'contact' | 'brand' | 'policies' | 'payments' | 'shipping' | 'taxes'
+export type SectionKey = 'store' | 'contact' | 'brand' | 'policies' | 'payments' | 'shipping' | 'taxes' | 'documents'
 
 /**
  * `editors`: who may open and save this section (tenancy audit 2026-11-07). Required, so a new section decides
@@ -40,6 +40,7 @@ export type Section = { key: SectionKey; title: string; intro: string; blocks: B
 
 export const LANGUAGE_OPTIONS = [['en', 'English'], ['hi', 'हिन्दी (Hindi)']] as const
 export const RETURN_OPTIONS = [['exchange_or_refund', 'An exchange or a refund'], ['exchange_only', 'An exchange only'], ['refund_only', 'A refund only'], ['none', 'No returns']] as const
+export const SLIP_SIZE_OPTIONS = [['a4', 'A4 paper'], ['label', '4×6 label (thermal printer)']] as const
 export const RETURN_DAY_OPTIONS = [['3', '3 days'], ['7', '7 days'], ['10', '10 days'], ['15', '15 days'], ['30', '30 days']] as const
 
 const LAW = 'Shown on your shop’s Contact page and footer, as the Consumer Protection (E-Commerce) Rules ask.'
@@ -139,6 +140,19 @@ export const SECTIONS: readonly Section[] = [
       ] },
       { title: 'Invoice numbers', hint: 'One series a financial year, never reused. A new series starts on 1 April.', fields: [
         { key: 'invoiceSeries', label: 'Series prefix', kind: 'text', max: 5, hint: 'Up to 4 characters, or 5 ending in / or -.', tip: 'Like KS/. The year and the number follow it: KS/26-27/00001.' },
+      ] },
+    ],
+  },
+  {
+    editors: CAN_BUILD,
+    key: 'documents', title: 'Documents', intro: 'Your packing slips and invoices as PDFs: in your logo and colour, with your words.', preview: 'invoice',
+    blocks: [
+      { title: 'Invoices', fields: [
+        { key: 'docSignatory', label: 'Authorised signatory', kind: 'text', max: 80, tip: 'The name printed under “For <your business>” on each invoice, as GST asks.' },
+        { key: 'docNote', label: 'Note at the foot of each invoice', kind: 'textarea', max: 240, wide: true, tip: 'A return-policy line or a thank-you. Plain text: no links.' },
+      ] },
+      { title: 'Packing slips', tip: 'Each person’s last choice in the order queue wins; this is where a new teammate starts.', fields: [
+        { key: 'slipSize', label: 'Slip size', kind: 'select', options: SLIP_SIZE_OPTIONS },
       ] },
     ],
   },

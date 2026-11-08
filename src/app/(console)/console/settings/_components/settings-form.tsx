@@ -12,6 +12,7 @@ import { POLICY_PAGES, type PolicyPage } from '@/domains/policies/render'
 import { draftPatch, sectionFor, type Field, type Values } from '@/domains/settings/sections'
 import { saveSection } from '../actions'
 import { PolicyPages } from './policy-pages'
+import { DocLogo } from './doc-logo'
 import { Section } from '@/components/layout/section'
 import { PageHeader } from '@/components/layout/page-header'
 import { Switch } from '@/components/ui/switch'
@@ -21,13 +22,15 @@ import { Switch } from '@/components/ui/switch'
  * "Unsaved changes" bar on the first edit, a guard on leaving, and the shop
  * beside it as shoppers will see it (frata-design-language § Phase 1).
  */
-export function SettingsForm({ sectionKey, initial, version: startVersion, facts, fiscalYear, overrides }: {
+export function SettingsForm({ sectionKey, initial, version: startVersion, facts, fiscalYear, overrides, tenantId }: {
   sectionKey: string
   initial: Values
   version: number
   facts: ShopFacts
   fiscalYear: string
   overrides: Record<string, string>
+  /** For an upload's path (Settings › Documents' logo). */
+  tenantId: string
 }) {
   const section = sectionFor(sectionKey)!
   const router = useRouter()
@@ -75,6 +78,7 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
       <Message m={message} onReload={conflict ? () => window.location.reload() : undefined} />
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <form className="space-y-4" noValidate onSubmit={(e) => { e.preventDefault(); if (dirty) save() }}>
+          {section.key === 'documents' && <DocLogo tenantId={tenantId} current={facts.docLogo} />}
           {section.blocks.map((b) => (
             <Section key={b.title}>
               <h2 className="flex items-center text-section font-semibold">{b.title}{b.tip ? <InfoTip about={b.title.toLowerCase()}>{b.tip}</InfoTip> : null}</h2>

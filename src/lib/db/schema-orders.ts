@@ -92,6 +92,8 @@ export const orders = pgTable('orders', {
   /** Packing issues the invoice number (GST: at removal of goods), so the two are set together. */
   packedAt: timestamp('packed_at', { withTimezone: true }),
   invoiceNumber: text('invoice_number'),
+  /** The shop's logo as it was at packing (its Blob path, never overwritten): every copy of the invoice shows it (Documents D2). */
+  invoiceLogo: text('invoice_logo'),
   cancelReason: text('cancel_reason'),
   cancelNote: text('cancel_note'),
   /** The shop's GSTIN when the order was placed (null: not registered then): the invoice reads this, never today's settings. */
@@ -104,6 +106,7 @@ export const orders = pgTable('orders', {
   createdAt: createdAt(),
 }, (t) => [
   unique('orders_tenant_id_key').on(t.tenantId, t.id),
+  check('orders_invoice_logo', sql`${t.invoiceLogo} is null or ${t.invoiceLogo} ~ ('^https://[a-z0-9]+\\.public\\.blob\\.vercel-storage\\.com/tenants/' || ${t.tenantId}::text || '/documents/[0-9a-f-]{36}\\.png$')`),
   uniqueIndex('orders_tenant_number').on(t.tenantId, t.number),
   index('orders_tenant_placed').on(t.tenantId, t.placedAt),
   // Best sellers by delivered units (themes T1·3): the shop's delivered orders in a window.

@@ -27,6 +27,8 @@ export const LIMITS = {
   placeOrderIp: { action: 'shop_place:ip', max: 30, windowSeconds: 3600 },
   placeOrderPhone: { action: 'shop_place:phone', max: 5, windowSeconds: 3600 },
   payIp: { action: 'shop_pay:ip', max: 60, windowSeconds: 600 },
+  /** The shopper's invoice PDF (Documents D2): per shop and IP, failing closed. */
+  invoiceIp: { action: 'shop_invoice:ip', max: 20, windowSeconds: 600 },
   // Offer codes that did not apply, per shop and IP ("<tenant>:<ip>"): guessing stops; fail closed. No per-shop block,
   // so one guesser cannot switch off a shop's real codes (offers plan review 11).
   codeIp: { action: 'shop_code:ip', max: 20, windowSeconds: 600 },

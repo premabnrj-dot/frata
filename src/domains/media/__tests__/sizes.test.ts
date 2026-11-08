@@ -45,3 +45,24 @@ describe('acceptedBase', () => {
     ]) expect(acceptedBase(bad, host, A, 'products'), bad).toBeNull()
   })
 })
+
+describe('logo for paper (Documents D2)', () => {
+  const t = '11111111-1111-1111-1111-111111111111', id = '22222222-2222-2222-2222-222222222222', host = 'abc.public.blob.vercel-storage.com'
+  it('accepts only this shop’s documents folder, PNG, exact URL', async () => {
+    const { acceptedDocLogo, DOC_LOGO_SHAPE } = await import('../sizes')
+    expect(DOC_LOGO_SHAPE.exec(`tenants/${t}/documents/${id}.png`)?.[1]).toBe(t)
+    expect(DOC_LOGO_SHAPE.test(`tenants/${t}/documents/${id}.webp`)).toBe(false)
+    expect(acceptedDocLogo(`https://${host}/tenants/${t}/documents/${id}.png`, host, t)).toBeTruthy()
+    expect(acceptedDocLogo(`https://${host}/tenants/${id}/documents/${id}.png`, host, t)).toBeNull()
+    expect(acceptedDocLogo(`https://evil.test/tenants/${t}/documents/${id}.png`, host, t)).toBeNull()
+    expect(acceptedDocLogo(`https://${host}/tenants/${t}/documents/${id}.png?x=1`, host, t)).toBeNull()
+  })
+  it('knows PNG and JPEG by their bytes, and a PNG’s size', async () => {
+    const { imageKind, pngSize } = await import('../sizes')
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 2, 88, 0, 0, 0, 200])
+    expect(imageKind(png)).toBe('png')
+    expect(pngSize(png)).toEqual({ width: 600, height: 200 })
+    expect(imageKind(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))).toBe('jpeg')
+    expect(imageKind(new TextEncoder().encode('<svg'))).toBeNull()
+  })
+})

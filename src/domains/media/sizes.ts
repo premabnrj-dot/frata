@@ -60,3 +60,33 @@ export function isWebp(head: Uint8Array): boolean {
   const s = (a: number, b: number) => String.fromCharCode(...head.slice(a, b))
   return head.length >= 12 && s(0, 4) === 'RIFF' && s(8, 12) === 'WEBP'
 }
+
+/** The logo for paper (Documents D2): one PNG per upload in the shop's documents folder, at most 1 MB. */
+export const DOC_LOGO_SHAPE = /^tenants\/([0-9a-f-]{36})\/documents\/([0-9a-f-]{36})\.png$/
+export const MAX_DOC_IMAGE_BYTES = 1024 * 1024
+/** Longest side of a logo for paper, in pixels (enough for 300 dpi at the masthead's size). */
+export const DOC_LOGO_PX = 600
+
+/** A PNG starts \x89PNG\r\n\x1a\n; a JPEG starts FF D8 FF (React-PDF reads only these two). */
+export function imageKind(head: Uint8Array): 'png' | 'jpeg' | null {
+  if (head.length >= 8 && head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4e && head[3] === 0x47 && head[4] === 0x0d && head[5] === 0x0a && head[6] === 0x1a && head[7] === 0x0a) return 'png'
+  if (head.length >= 3 && head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff) return 'jpeg'
+  return null
+}
+
+/** PNG pixel size from its IHDR (bytes 16–23); null when it is not a PNG. */
+export function pngSize(b: Uint8Array): { width: number; height: number } | null {
+  if (imageKind(b) !== 'png' || b.length < 24) return null
+  const u32 = (o: number) => ((b[o]! << 24) | (b[o + 1]! << 16) | (b[o + 2]! << 8) | b[o + 3]!) >>> 0
+  return { width: u32(16), height: u32(20) }
+}
+
+/** A logo-for-paper URL, accepted only as EXACTLY https://<our store>/tenants/<this tenant>/documents/<uuid>.png. */
+export function acceptedDocLogo(raw: string, host: string, tenantId: string): string | null {
+  if (typeof raw !== 'string' || raw.length > 300 || /[?#%\\\s]/.test(raw)) return null
+  let u: URL
+  try { u = new URL(raw) } catch { return null }
+  if (u.protocol !== 'https:' || u.host !== host || `${u.origin}${u.pathname}` !== raw) return null
+  const m = DOC_LOGO_SHAPE.exec(u.pathname.slice(1))
+  return m && m[1] === tenantId ? raw : null
+}

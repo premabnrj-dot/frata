@@ -1284,4 +1284,20 @@ do $$ begin
   then raise exception 'FAIL: frata_admin writes invoices directly (only the issue definer may)'; end if;
 end $$;
 
-\echo 'tenancy proof — all 39 checks passed'
+-- 40. Documents D2 (docs/plans/2026-11-08-documents-pdf.md): a shop's logo for paper, and the logo an invoice froze
+-- at packing, can only be a file in that shop's own documents folder; never another shop's.
+insert into shop_settings (tenant_id) values ('11111111-1111-1111-1111-111111111111') on conflict do nothing;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  update shop_settings set doc_logo = 'https://abc.public.blob.vercel-storage.com/tenants/11111111-1111-1111-1111-111111111111/documents/aaaaaaaa-0000-0000-0000-000000000001.png';
+  begin update shop_settings set doc_logo = 'https://abc.public.blob.vercel-storage.com/tenants/22222222-2222-2222-2222-222222222222/documents/aaaaaaaa-0000-0000-0000-000000000001.png'; raise exception 'FAIL: A took B''s logo';
+  exception when check_violation then null; end;
+  begin update shop_settings set doc_logo = 'https://evil.test/tenants/11111111-1111-1111-1111-111111111111/documents/aaaaaaaa-0000-0000-0000-000000000001.png'; raise exception 'FAIL: a logo from another host';
+  exception when check_violation then null; end;
+  begin update orders set invoice_logo = 'https://abc.public.blob.vercel-storage.com/tenants/22222222-2222-2222-2222-222222222222/documents/aaaaaaaa-0000-0000-0000-000000000001.png'; raise exception 'FAIL: an invoice froze B''s logo';
+  exception when check_violation then null; end;
+end $$;
+rollback;
+
+\echo 'tenancy proof — all 40 checks passed'

@@ -19,7 +19,7 @@ import { errName } from '@/lib/log'
 export const metadata = { title: 'Settings' }
 
 // One icon a row (visual changes, owner-approved 2026-11-08): the section is found by its picture as well as its name.
-const SECTION_ICON: Record<SectionKey, IconName> = { store: 'merchants', contact: 'messages', brand: 'brand', policies: 'policy', payments: 'cod', shipping: 'ship', taxes: 'tax' }
+const SECTION_ICON: Record<SectionKey, IconName> = { store: 'merchants', contact: 'messages', brand: 'brand', policies: 'policy', payments: 'cod', shipping: 'ship', taxes: 'tax', documents: 'slip' }
 
 /** A settings row: its icon, its name, what it holds now, and "Needs you" only when it does — else a chevron. */
 function Row({ href, icon, title, summary, needs = false, mono = false }: { href: string; icon: IconName; title: string; summary: string; needs?: boolean; mono?: boolean }) {
@@ -55,6 +55,7 @@ export default async function SettingsPage() {
     payments: f.codOn ? `On, up to ${f.codMax ? inr(f.codMax) : 'any value'}${f.codCharge ? `, fee ${inr(f.codCharge)}` : ', no fee'}` : 'Off: shoppers pay online only',
     shipping: `${f.shippingFlat ? inr(f.shippingFlat) : 'Free'}${f.shippingFlat && f.freeShippingAbove ? `, free above ${inr(f.freeShippingAbove)}` : ''} · dispatched within ${f.dispatchDays} days`,
     taxes: f.gstin ? `GSTIN ${f.gstin} · tax invoices` : 'No GSTIN · bills of supply',
+    documents: `${f.slipSize === 'label' ? '4×6 slips' : 'A4 slips'}${f.docSignatory ? ` · signed ${f.docSignatory}` : ' · no signatory yet'}`,
   }
   const manages = (CAN_MANAGE as readonly string[]).includes(auth.membership.role)
   const owner = auth.membership.role === 'owner'

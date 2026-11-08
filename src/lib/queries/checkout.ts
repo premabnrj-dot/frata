@@ -7,6 +7,7 @@ import { shopSettings, tenants } from '@/lib/db/schema'
 import { productImages, products, variants } from '@/lib/db/schema-catalogue'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
+import { documentsFor } from '@/lib/orders/documents'
 import { holdingSql, momentColumns, owedSql, standingSql } from '@/lib/db/order-predicates'
 import { discountUses, liveDiscountSql } from '@/lib/db/discount-predicates'
 import { discountCodes, discountTargets, discountTiers, discounts, orderDiscounts } from '@/lib/db/schema-discounts'
@@ -136,4 +137,16 @@ export async function orderPage(tx: Tx, tenantId: string, tokenHash: string) {
   const offers = (await tx.select({ title: orderDiscounts.title, class: orderDiscounts.class, amount: orderDiscounts.amount }).from(orderDiscounts)
     .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, o.id)))).map((d) => ({ ...d, amount: Number(d.amount) }))
   return { ...o, lines, offers }
+}
+
+/**
+ * The shopper's own invoice (Documents D2): the order this token belongs to in THIS shop, its invoice documents only
+ * once packed; null otherwise (not packed, wrong shop and wrong token look the same to the caller).
+ */
+export async function shopperInvoice(tenantId: string, hash: string) {
+  return withTenant(tenantId, async (tx) => {
+    const [o] = await tx.select({ number: orders.number, packedAt: orders.packedAt }).from(orders)
+      .where(and(eq(orders.tenantId, tenantId), eq(orders.tokenHash, hash))).limit(1)
+    return o?.packedAt ? documentsFor(tx, tenantId, [o.number], 'invoice') : null
+  })
 }

@@ -38,7 +38,7 @@ export type QueueRow = {
   shipStep: 'ship' | 'deliver' | null
 }
 
-function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
+function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: string; slipSize: 'a4' | 'label' }) {
   const router = useRouter()
   const toast = useToast()
   const [enabled, setEnabled] = useShortcutsEnabled()
@@ -170,9 +170,10 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
   const onWay = rows.some((r) => picked.has(r.id) && r.shipStep === 'deliver'), others = rows.some((r) => picked.has(r.id) && (r.canConfirm || r.canHold))
   // At most a print page's worth (a queue page is 50 rows today; the cap says so if that changes).
   const printable = rows.filter((r) => picked.has(r.id) && r.canPrint).map((r) => r.n).slice(0, MAX_DOCUMENTS)
-  // A4 or the 4×6 label, remembered on this device (a printer belongs to a desk, not to an account).
-  const [slipSize, setSlipSize] = useState<'a4' | 'label'>('a4')
-  useEffect(() => { try { if (localStorage.getItem('frrata:slip-size') === 'label') setSlipSize('label') } catch { /* private mode */ } }, [])
+  // A4 or the 4×6 label: the shop's default (Settings › Documents), then this device's last choice (a printer belongs
+  // to a desk, not to an account).
+  const [slipSize, setSlipSize] = useState<'a4' | 'label'>(shopSize)
+  useEffect(() => { try { const v = localStorage.getItem('frrata:slip-size'); if (v === 'label' || v === 'a4') setSlipSize(v) } catch { /* private mode */ } }, [])
   const pickSize = (v: 'a4' | 'label') => { setSlipSize(v); try { localStorage.setItem('frrata:slip-size', v) } catch { /* private mode */ } }
   return (
     <>
@@ -237,6 +238,6 @@ function Rows({ rows, label }: { rows: QueueRow[]; label: string }) {
 }
 
 /** The queue, or `empty` when the tab has no rows: either way inside one Toaster, so a toast's Undo survives the last row leaving. */
-export function Queue({ rows, label, empty }: { rows: QueueRow[]; label: string; empty: React.ReactNode }) {
-  return <Toaster>{rows.length ? <Rows rows={rows} label={label} /> : empty}</Toaster>
+export function Queue({ rows, label, empty, slipSize = 'a4' }: { rows: QueueRow[]; label: string; empty: React.ReactNode; slipSize?: 'a4' | 'label' }) {
+  return <Toaster>{rows.length ? <Rows rows={rows} label={label} slipSize={slipSize} /> : empty}</Toaster>
 }

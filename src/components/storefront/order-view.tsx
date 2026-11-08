@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { cashAtDoor, type ShopperState } from '@/domains/orders/order-state'
-import { api, dayRange, inr } from './shop-client'
+import { api, dayRange, downloadInvoice, inr } from './shop-client'
 
 type View = {
   number: number; state: ShopperState; collect: number; method: 'cod' | 'prepaid'; paidAfterSwitch: boolean; canSwitchToCod: boolean
@@ -13,6 +13,8 @@ type View = {
   arrives: { from: string; to: string } | null; returnDays: number | null; returnKind: string | null
   lines: { title: string; optionValues: string[]; qty: number; unitPrice: number; imageBase: string | null; imageWidths: number[] | null; kind: string }[]
   shop: { name: string; whatsapp: string }
+  /** An invoice exists (the order was packed): the shopper may download it (Documents D2). */
+  invoice?: boolean
 }
 
 const STATE: Record<ShopperState, string> = {
@@ -30,9 +32,16 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
   const [v, setV] = useState<View | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const tokenRef = useRef('')
+  const [invoiceState, setInvoiceState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null })
+  const getInvoice = () => {
+    setInvoiceState({ busy: true, error: null })
+    void downloadInvoice(tokenRef.current).then((r) => setInvoiceState({ busy: false, error: r.ok ? null : r.error }))
+  }
   useEffect(() => {
     const token = new URLSearchParams(window.location.hash.slice(1)).get('t') ?? ''
     if (!/^[A-Za-z0-9_-]{22}$/.test(token)) { setError('This order link is not complete. Open the link you saved, or message the shop.'); return }
+    tokenRef.current = token
     void api<View>('/api/shop/orders/view', { token }).then((r) => (r.ok ? setV(r.data) : setError(r.status === 404 ? 'We could not find this order. Check the link, or message the shop.' : r.data.error ?? 'Could not load your order.')))
   }, [])
   if (error) return <p role="alert" className="mx-auto max-w-lg px-4 py-16 text-center">{error}</p>
@@ -69,6 +78,12 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
         <div className="flex justify-between text-store-sub"><dt>To</dt><dd>{v.to}{v.phone ? ` · phone ${v.phone}` : ''}</dd></div>
       </dl>
       {wa && <a href={wa} rel="noopener" className="grid h-12 place-items-center rounded-sm bg-store-ink text-store-paper">Message {v.shop.name} on WhatsApp</a>}
+      {v.invoice && (
+        <div>
+          <button type="button" onClick={getInvoice} disabled={invoiceState.busy} className="grid h-12 w-full place-items-center rounded-sm border border-store-ink">{invoiceState.busy ? 'Making your invoice…' : 'Download invoice (PDF)'}</button>
+          {invoiceState.error && <p role="alert" className="mt-1 text-sm text-store-bad">{invoiceState.error}</p>}
+        </div>
+      )}
       <p className="text-sm text-store-sub">Save this page: it is your receipt. <button type="button" onClick={copy} className="underline">{copied ? 'Link copied' : 'Copy link'}</button></p>
       {v.returnKind && v.returnKind !== 'none' && v.returnDays ? <p className="text-sm text-store-sub">{v.returnDays}-day {v.returnKind === 'exchange_only' ? 'exchanges' : v.returnKind === 'refund_only' ? 'returns' : 'returns and exchanges'}. <a href={returnsHref} className="underline">How returns work</a></p> : null}
     </article>

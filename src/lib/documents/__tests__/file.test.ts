@@ -32,6 +32,14 @@ describe('documentFile (Documents D0)', () => {
     expect(f!.fileName).toBe('Kesar Studio Tax invoice KS-26-27-00043.pdf')
     expect(f!.bytes.length).toBeGreaterThan(2000)
   }, 30_000)
+  it('an invoice embeds the logo it was packed with (D2), not the shop’s logo of today', async () => {
+    // A 2×2 PNG, the shape a logo for paper is stored in.
+    const png = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGOQkRQHIgYIBQAIcgEx1UJShAAAAABJRU5ErkJggg==', 'base64'))
+    const none = await documentFile({ kind: 'invoice', invoices: [{ inv, order: 'KS-1043', logo: null }] }, { ...brand, logo: png }, 'x')
+    const frozen = await documentFile({ kind: 'invoice', invoices: [{ inv, order: 'KS-1043', logo: png }] }, brand, 'x')
+    expect(text(none!.bytes)).not.toMatch(/\/Subtype \/Image/)
+    expect(text(frozen!.bytes)).toMatch(/\/Subtype \/Image/)
+  }, 30_000)
   it('makes nothing from nothing', async () => {
     expect(await documentFile({ kind: 'invoice', invoices: [] }, brand, 'x')).toBeNull()
   })

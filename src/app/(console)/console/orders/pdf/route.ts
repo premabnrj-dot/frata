@@ -2,7 +2,7 @@ import { asMember } from '@/lib/auth/as-member'
 import { ROLES } from '@/domains/orders/work'
 import { documentsFor, MAX_DOCUMENTS } from '@/lib/orders/documents'
 import { documentFile, pdfResponse, requestFor } from '@/lib/documents/file'
-import { brandFor } from '@/lib/documents/brand'
+import { brandFor, invoiceLogos } from '@/lib/documents/brand'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { errName } from '@/lib/log'
 
@@ -31,10 +31,12 @@ export async function GET(request: Request) {
     })
     if (!r.ok) return text(403, r.error)
     if (!r.value) return text(429, 'Too many PDFs in the last few minutes. Try again shortly.')
-    const shopBrand = await brandFor(r.value.tenantId)
+    const { shop, paper, orders } = r.value.docs
+    const [shopBrand, logos] = await Promise.all([brandFor(r.value.tenantId, paper), kind === 'invoice' ? invoiceLogos(r.value.tenantId, orders.map((o) => o.logo)) : null])
     if (!shopBrand) return text(404, 'This shop has no settings yet.')
-    const { shop, orders } = r.value.docs
-    const file = await documentFile(requestFor(kind, size, orders, shop), shopBrand.brand, shopBrand.contact)
+    // An invoice shows the logo frozen at packing (none if it had none); a slip shows today's.
+    const docs = logos ? orders.map((o) => ({ ...o, logo: o.logo ? logos.get(o.logo) ?? null : null })) : orders.map(({ logo: _l, ...o }) => o)
+    const file = await documentFile(requestFor(kind, size, docs, shop), shopBrand.brand, shopBrand.contact)
     if (!file) return text(404, kind === 'invoice' ? 'No invoice yet: an invoice is issued when the order is marked packed.' : 'None of these orders has a packing slip now.')
     return pdfResponse(file)
   } catch (err) {

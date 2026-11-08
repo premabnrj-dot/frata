@@ -40,3 +40,19 @@ export const codWhyNotText = (w: CodWhyNot | null) => !w ? null
   : w.reason === 'below_min' ? `Pay on delivery is for orders from ${inr(w.min)}.`
   : w.reason === 'above_max' ? `Pay on delivery is for orders up to ${inr(w.max)}. Pay online for this bag, or remove an item.`
   : `Pay on delivery is not offered to ${w.pincode}.`
+
+/** The shopper's invoice PDF (Documents D2): POSTed with the order token, saved under the file name the shop gave it. */
+export async function downloadInvoice(token: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const r = await fetch('/api/shop/orders/invoice', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token }), cache: 'no-store' })
+    if (!r.ok) return { ok: false, error: r.status === 429 ? 'Too many tries. Wait a few minutes.' : r.status === 404 ? 'Your invoice is not ready yet: it is made when your order is packed.' : 'We could not make your invoice. Try again in a minute.' }
+    const name = /filename="([^"]+)"/.exec(r.headers.get('content-disposition') ?? '')?.[1] ?? 'Invoice.pdf'
+    const url = URL.createObjectURL(await r.blob())
+    const a = Object.assign(document.createElement('a'), { href: url, download: name })
+    document.body.append(a); a.click(); a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+    return { ok: true }
+  } catch {
+    return { ok: false, error: 'No connection. Check your internet and try again.' }
+  }
+}
