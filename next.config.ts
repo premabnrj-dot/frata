@@ -8,7 +8,11 @@ const config: NextConfig = {
   // Documents (D0): React-PDF runs on the server only, as itself; its fonts are files read at render, so they are
   // traced into every function that may make a document (src/lib/documents/fonts.ts).
   serverExternalPackages: ['@react-pdf/renderer'],
-  outputFileTracingIncludes: { '/**': ['./src/lib/documents/fonts/**'] },
+  // Our vendored fonts, and pdfkit's standard fonts: pdfkit loads them through its package "imports" map
+  // ('#standard-fonts/…'), which the file tracer cannot follow — without them every PDF fails in production with
+  // MODULE_NOT_FOUND Helvetica.cjs (2026-11-08). scripts/check-pdf-trace.mjs (postbuild) renders a PDF from the traced
+  // files alone and fails the build if anything is missing.
+  outputFileTracingIncludes: { '/**': ['./src/lib/documents/fonts/**', './node_modules/pdfkit/js/standard-fonts/**/*.cjs', './node_modules/pdfkit/package.json'] },
   // Every other host is a shop, served from /s/<host>/… (src/domains/tenancy/host.ts).
   async rewrites() {
     return { beforeFiles: shopRewrites(CONSOLE_HOST), afterFiles: [], fallback: [] }
