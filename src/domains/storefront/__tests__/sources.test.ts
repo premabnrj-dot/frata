@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ListProduct, ListVariant } from '../listing'
-import { sourceProducts } from '../sources'
+import { lookPieces, sourceProducts } from '../sources'
 
 const now = new Date('2026-11-07T10:00:00+05:30')
 const v = (over: Partial<ListVariant> = {}): ListVariant => ({ values: ['S'], price: 249000, compareAt: null, stock: 5, whenOut: 'stop', shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderFull: false, ...over })
@@ -31,4 +31,23 @@ describe('sources', () => {
     expect(sourceProducts({ kind: 'best_sellers', days: 90 }, cat, now)).toEqual([])
   })
   it('a scheduled product appears at its moment', () => expect(sourceProducts({ kind: 'newest' }, cat, new Date('2026-11-10T00:00:00Z')).map((x) => x.id)[0]).toBe('later'))
+  it('back in stock: a size that came back in 30 days and can be bought now, latest first', () => {
+    const c = { collections: [], products: [
+      p('a', '2026-10-01T00:00:00Z', { variants: [v({ restockedAt: '2026-11-01T00:00:00Z' }), v({ values: ['M'] })] }),
+      p('b', '2026-10-01T00:00:00Z', { variants: [v({ restockedAt: '2026-11-06T00:00:00Z' })] }),
+      p('gone-again', '2026-10-01T00:00:00Z', { variants: [v({ restockedAt: '2026-11-06T00:00:00Z', stock: 0 })] }),
+      p('long-ago', '2026-10-01T00:00:00Z', { variants: [v({ restockedAt: '2026-09-01T00:00:00Z' })] }),
+      p('never', '2026-10-01T00:00:00Z'),
+      p('hidden', '2026-10-01T00:00:00Z', { status: 'unlisted', variants: [v({ restockedAt: '2026-11-06T00:00:00Z' })] }),
+    ] }
+    expect(sourceProducts({ kind: 'back_in_stock' }, c, now).map((x) => x.id)).toEqual(['b', 'a'])
+  })
+})
+
+describe('shop the look pieces', () => {
+  it('keeps the pinned order and drops a piece not listed now', () => {
+    const ps = [{ ...p('a', '2026-10-01T00:00:00Z'), handle: 'a' }, { ...p('b', '2026-10-01T00:00:00Z', { status: 'unlisted' }), handle: 'b' }, { ...p('c', '2026-10-01T00:00:00Z'), handle: 'c' }]
+    expect(lookPieces([{ handle: 'c', x: 1, y: 2 }, { handle: 'b', x: 0, y: 0 }, { handle: 'gone', x: 0, y: 0 }, { handle: 'a', x: 3, y: 4 }], ps, now).map((x) => [x.handle, x.x])).toEqual([['c', 1], ['a', 3]])
+    expect(lookPieces([{ handle: 'b', x: 0, y: 0 }], ps, now)).toEqual([])
+  })
 })

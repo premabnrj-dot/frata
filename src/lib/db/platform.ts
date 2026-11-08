@@ -100,6 +100,17 @@ export async function publicPlans(): Promise<PublicPlan[]> {
   return rows.map((r) => ({ code: r.code, name: r.name, monthlyPrice: Number(r.monthly_price), includedOrders: r.included_orders, feeBps: r.fee_bps, features: r.features }))
 }
 
+/**
+ * The theme versions Frrata has decided about (themes T3): platform data the shop reads to know which versions it
+ * may use and which are withdrawn. Only the columns shops may read (never who or why).
+ */
+export async function themeVersionRows(): Promise<{ id: string; themeKey: string; version: string; releasedAt: Date | null; recalledAt: Date | null; withdrawnAt: Date | null }[]> {
+  const rows = await db().execute<{ id: string; theme_key: string; version: string; released_at: string | null; recalled_at: string | null; withdrawn_at: string | null }>(sql`
+    select id, theme_key, version, released_at, recalled_at, withdrawn_at from theme_versions`)
+  const d = (x: string | null) => (x ? new Date(x) : null)
+  return rows.map((r) => ({ id: r.id, themeKey: r.theme_key, version: r.version, releasedAt: d(r.released_at), recalledAt: d(r.recalled_at), withdrawnAt: d(r.withdrawn_at) }))
+}
+
 /** app_change_shop_address: the tenant from requireMember, the uid from getUser(); the function re-checks both. */
 export async function changeShopAddress(tenantId: string, uid: string, slug: string): Promise<{ ok: true } | { ok: false; error: string }> {
   try {

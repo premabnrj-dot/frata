@@ -11,7 +11,7 @@ import { MAX_PER_PAGE, SECTION_KINDS, SECTION_NAMES, type SectionInstance, type 
 const summary = (s: SectionInstance): string => {
   switch (s.key) {
     case 'hero': return s.layout === 'text' ? 'Words only' : s.image ? 'With a photo' : 'Needs a photo'
-    case 'products': return s.source.kind === 'newest' ? `New in · ${s.count}` : s.source.kind === 'best_sellers' ? `By delivered orders · ${s.source.days} days` : s.source.kind === 'collection' ? `A collection · ${s.count}` : s.source.kind === 'under_price' ? `Under a price · ${s.count}` : `On sale · ${s.count}`
+    case 'products': return s.source.kind === 'newest' ? `New in · ${s.count}` : s.source.kind === 'best_sellers' ? `By delivered orders · ${s.source.days} days` : s.source.kind === 'collection' ? `A collection · ${s.count}` : s.source.kind === 'under_price' ? `Under a price · ${s.count}` : s.source.kind === 'back_in_stock' ? `Back in stock · ${s.count}` : `On sale · ${s.count}`
     case 'collection_tiles': return s.mode === 'auto' ? `Automatic · ${s.count}` : `${s.handles.length} picked`
     case 'price_tiles': return `${s.bands.length} tiles`
     case 'promises': return `${s.show.length} promises`
@@ -19,6 +19,7 @@ const summary = (s: SectionInstance): string => {
     case 'drop_teaser': return s.heading
     case 'rich_text': return s.heading || 'Text'
     case 'logos': return `${s.images.length} logos`
+    case 'shop_the_look': return `${s.pieces.length} of 4 pieces`
   }
 }
 
@@ -34,6 +35,7 @@ export function blank(key: SectionKey, id: string, now: Date): SectionInstance {
     case 'drop_teaser': return { id, key, hidden: false, scheme: 'ink', heading: 'New collection', at: new Date(now.getTime() + 7 * 86_400_000 + 5.5 * 3_600_000).toISOString().slice(0, 16) + ':00+05:30', image: null }
     case 'rich_text': return { id, key, hidden: false, scheme: 'paper', heading: '', body: [], align: 'left' }
     case 'logos': return { id, key, hidden: false, scheme: 'paper', heading: 'As seen in', images: [] }
+    case 'shop_the_look': return { id, key, hidden: false, scheme: 'paper', image: null, heading: 'Shop the look', pieces: [] }
   }
 }
 
@@ -41,6 +43,7 @@ const ADD_TEXT: Record<SectionKey, string> = {
   hero: 'A big photo or your name, with one button.', products: 'New in, best sellers, a collection, a price, on sale.', collection_tiles: 'Your collections as tiles or circles.',
   price_tiles: 'Shop by budget. Made from your prices.', promises: 'Pay on delivery, exchanges: words from your settings, so they stay true.',
   image_text: 'Your story beside a photo.', drop_teaser: 'A date for your next drop. Hides itself after.', rich_text: 'A few paragraphs: how made to order works, a size promise.', logos: 'Press or partner logos.',
+  shop_the_look: 'One photo, up to four pieces pinned on it.',
 }
 
 export function SectionsPanel({ home, selected, allowed, onSelect, onChange, issues, now }: {

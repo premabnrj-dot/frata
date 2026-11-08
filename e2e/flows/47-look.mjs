@@ -136,6 +136,55 @@ export default {
       await db`delete from members where tenant_id = ${KESAR} and user_id in (${P.id}, ${S.id})`
     })
 
+    await t.step('T2: the product page panel saves a layout; Back in stock is a source', async () => {
+      await riya.goto(CONSOLE + '/console/look/customize')
+      await riya.getByLabel('Page').selectOption('product')
+      await riya.getByRole('tab', { name: 'Product page' }).click()
+      await riya.getByRole('button', { name: 'With thumbnails' }).click()
+      await riya.getByRole('button', { name: 'Framed' }).click()
+      const [{ id: draft }] = await db`select r.id from shop_theme_revisions r where r.tenant_id = ${KESAR} and not exists (select 1 from shop_theme_publishes p where p.revision_id = r.id) order by r.created_at desc limit 1`
+      await riya.getByRole('button', { name: 'Folded' }).click()
+      await until(async () => { const [r] = await db`select settings from shop_theme_revisions where id = ${draft}`; return r.settings.settings?.gallery === 'thumbs' && r.settings.settings?.card === 'framed' && r.settings.settings?.details === 'folded' }, 10_000)
+      // The draft's product page wears it: a thumbnail strip (a second photo for the check), folded About, framed cards.
+      const [pr] = await db`select id, description from products where tenant_id = ${KESAR} and handle = 'chanderi-kurta-set'`
+      const [ph] = await db`select base from product_images where product_id = ${pr.id} order by position limit 1`
+      await db`insert into product_images (tenant_id, product_id, base, widths, width, height, alt, position) values (${KESAR}, ${pr.id}, ${ph.base + '-2'}, '{400,800}', 1200, 1500, '', 9)`
+      await db`update products set description = 'Hand-finished in Jaipur.' where id = ${pr.id}`
+      const look = await riya.context().newPage()
+      await look.goto(CONSOLE + `/console/theme-preview/${draft}/products/chanderi-kurta-set`)
+      await look.getByRole('list', { name: 'Choose a photo' }).waitFor()
+      await look.locator('details summary', { hasText: 'About this piece' }).waitFor()
+      assert.equal(await look.locator('[data-store-theme][data-card="framed"]').count(), 1)
+      await look.close()
+      await db`delete from product_images where product_id = ${pr.id} and position = 9`
+      await db`update products set description = ${pr.description} where id = ${pr.id}`
+      await riya.getByLabel('Page').selectOption('home')
+      await riya.getByRole('tab', { name: 'Sections' }).click()
+      await riya.getByRole('button', { name: '+ Add a section' }).click()
+      await riya.getByRole('dialog', { name: 'Add a section' }).getByRole('button', { name: /^Products/ }).click()
+      await riya.getByRole('button', { name: 'Back in stock' }).click()
+      await until(async () => { const [r] = await db`select settings from shop_theme_revisions where id = ${draft}`; return (r.settings.home ?? []).some((s) => s.source?.kind === 'back_in_stock') }, 10_000)
+    })
+
+    await t.step('T2: Shop words in Hindi (Settings › Brand): the shop’s own words change, what the merchant typed stays', async () => {
+      await riya.goto(CONSOLE + '/console/settings/brand')
+      await riya.getByLabel('Show them in').selectOption('hi')
+      await riya.getByRole('button', { name: 'Save', exact: true }).click()
+      await riya.getByText('Saved. Your shop shows it now.').waitFor()
+      const page = await riya.context().newPage()
+      await page.goto(CONSOLE + '/console/preview/products/chanderi-kurta-set')
+      await page.locator('[data-store-theme][lang="hi"]').first().waitFor()
+      await page.getByRole('button', { name: 'बैग में डालें' }).waitFor()
+      await page.getByText('Chanderi kurta set').first().waitFor()
+      await page.screenshot({ path: t.out('hindi-product'), fullPage: true })
+      await shopSays(/बैग/)
+      await riya.getByLabel('Show them in').selectOption('en')
+      await riya.getByRole('button', { name: 'Save', exact: true }).click()
+      await riya.getByText('Saved. Your shop shows it now.').waitFor()
+      await shopSays(/बैग/, false)
+      await page.close()
+    })
+
     await t.step('Another shop’s revision: not found; only the look preview can be framed, by the console', async () => {
       const OTHER = 'abababab-0000-4000-8000-0000000000b1'
       await db`insert into tenants (id, slug, name) values (${OTHER}, 'look-other-shop', 'Other') on conflict do nothing`

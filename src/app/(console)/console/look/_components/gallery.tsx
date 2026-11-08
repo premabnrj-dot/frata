@@ -10,6 +10,8 @@ import { tryThemeAction } from '../actions'
 
 export type GalleryTheme = {
   key: string; name: string; job: string; version: string; features: string[]; inUse: boolean; fits: number
+  /** In use, on an older version than this one: Try moves the shop's look across whole (same theme). */
+  newer?: boolean
   styles: { key: string; name: string; colour: string }[]; thumb: React.ReactNode
 }
 
@@ -38,7 +40,7 @@ export function Gallery({ themes, canEdit, sorted }: { themes: GalleryTheme[]; c
               <div className="space-y-1.5 p-4">
                 <div className="flex items-center gap-2">
                   <button type="button" onClick={() => { setError(null); setLost([]); setOpen(t) }} className="text-left font-semibold underline-offset-4 hover:underline">{t.name}</button>
-                  {t.inUse ? <Badge tone="ok">In use</Badge> : <Badge>Free</Badge>}
+                  {t.inUse ? <Badge tone="ok">In use</Badge> : <Badge>Free</Badge>}{t.newer && <Badge tone="info">{t.version} is here</Badge>}
                 </div>
                 <p className="text-sm text-muted-foreground">{t.job}</p>
                 <p className="flex items-center gap-1.5 text-xs text-muted-foreground">{t.styles.map((s) => <span key={s.key} title={s.name} className="size-3.5 rounded-full border border-border" style={{ background: s.colour }} />)}{t.styles.length} styles</p>
@@ -55,7 +57,7 @@ export function Gallery({ themes, canEdit, sorted }: { themes: GalleryTheme[]; c
       <Dialog open={!!open} onClose={() => setOpen(null)} title={open?.name ?? ''} description={open?.job}
         actions={open ? <>
           <Button variant="secondary" className="after:hidden" data-autofocus onClick={() => setOpen(null)}>Not now</Button>
-          {canEdit && !open.inUse && (lost.length ? <Button onClick={() => router.push('/console/look/customize')}>Open the draft</Button> : <Button disabled={pending} onClick={() => tryIt(open)}>Try {open.name} in a draft</Button>)}
+          {canEdit && (!open.inUse || open.newer) && (lost.length ? <Button onClick={() => router.push('/console/look/customize')}>Open the draft</Button> : <Button disabled={pending} onClick={() => tryIt(open)}>{open.newer ? `Try ${open.name} ${open.version} in a draft` : `Try ${open.name} in a draft`}</Button>)}
         </> : null}>
         {open ? (
           <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_14rem]">

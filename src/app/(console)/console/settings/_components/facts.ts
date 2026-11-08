@@ -11,7 +11,7 @@ export function shopFacts(shop: Row, shopDomain: string): ShopFacts {
     legalName: s.legalName, address: s.address, originCountry: s.originCountry, orderPrefix: s.orderPrefix,
     supportEmail: s.supportEmail, supportPhone: s.supportPhone, whatsapp: s.whatsapp, instagram: s.instagram,
     grievanceName: s.grievanceName, grievanceRole: s.grievanceRole, grievanceEmail: s.grievanceEmail, grievancePhone: s.grievancePhone,
-    accent: s.accent, displayFont: s.displayFont, tagline: s.tagline,
+    accent: s.accent, displayFont: s.displayFont, tagline: s.tagline, shopLanguage: s.shopLanguage,
     returnKind: s.returnKind as ShopFacts['returnKind'], returnDays: s.returnDays,
     codOn: s.codOn, codMin: s.codMin, codMax: s.codMax, codCharge: s.codCharge, codBlockedPincodes: s.codBlockedPincodes,
     shippingFlat: s.shippingFlat, freeShippingAbove: s.freeShippingAbove, dispatchDays: s.dispatchDays, metroDays: s.metroDays, restDays: s.restDays,

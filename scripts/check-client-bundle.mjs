@@ -27,13 +27,20 @@ function* files(dir) {
 // holds marks a chunk that bundled it.
 const TAXONOMY = 'Traditional & Ceremonial Clothing > Kurtas'
 
-let found = [], taxonomy = []
+// The shop's words (src/components/storefront/words.ts, themes T2) are server-only: an island gets the strings it
+// shows as a prop, so a shop never downloads both languages. Every Devanagari phrase of 12+ characters that module
+// holds, read from the file now (so rewording the Hindi can't defeat the check), marks a chunk that bundled it.
+const WORDS = [...readFileSync('src/components/storefront/words.ts', 'utf8').matchAll(/'([^']*[\u0900-\u097F][^']*)'/g)].map((m) => m[1]).filter((t) => t.length >= 12)
+if (WORDS.length < 10) { console.error('check:client-bundle — found too few Hindi words in storefront/words.ts; has it moved?'); process.exit(1) }
+
+let found = [], taxonomy = [], words = []
 try {
   for (const f of files(ROOT)) {
     const text = readFileSync(f, 'utf8')
     const hits = SENTINELS.filter(s => text.includes(s))
     if (hits.length) found.push(`${f}  (${hits.join(', ')})`)
     if (text.includes(TAXONOMY)) taxonomy.push(f)
+    if (WORDS.some((w) => text.includes(w))) words.push(f)
   }
 } catch (e) {
   console.error(`check:client-bundle — no ${ROOT} to read; run it after next build.`)
@@ -52,6 +59,12 @@ if (taxonomy.length) {
   for (const f of taxonomy) console.error('  ' + f)
   console.error('\n  A client file imports a value from catalogue/taxonomy.ts. Import only types there;')
   console.error('  ask the server (findCategories, categoryDetails) or use catalogue/category-id.ts.')
+  process.exit(1)
+}
+if (words.length) {
+  console.error('check:client-bundle — the shop words module is in the browser bundle:')
+  for (const f of words) console.error('  ' + f)
+  console.error('\n  A client file imports storefront/words.ts. Pass the island its strings as a prop (buyWords).')
   process.exit(1)
 }
 console.log('check:client-bundle — clean')

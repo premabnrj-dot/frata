@@ -5,12 +5,13 @@ import { LOW_STOCK_AT } from '@/domains/catalogue/availability'
 import type { Chart } from '@/domains/catalogue/size-charts'
 import type { PolicyFacts } from '@/domains/policies/render'
 import type { DeliveryRules } from '@/domains/checkout/delivery'
-import { tenantForHost } from '@/lib/db/platform'
+import { tenantForHost, themeVersionRows } from '@/lib/db/platform'
 import { shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { owedSql, stateSql } from '@/lib/db/order-predicates'
 import { orderLines, orders } from '@/lib/db/schema-orders'
-import { liveRevision, revisionOf, type Revision } from '@/lib/themes/look'
+import { liveCandidates, revisionOf, type Revision } from '@/lib/themes/look'
+import { liveOf, withdrawnKeys } from '@/domains/themes/release'
 import { withTenant } from '@/lib/db/tenant'
 import { discountCodes, discounts } from '@/lib/db/schema-discounts'
 import { SHOP_DOMAIN } from '@/lib/public-env'
@@ -61,9 +62,13 @@ export async function shopIdForHost(host: string): Promise<string | null> {
 
 // ── The shop ───────────────────────────────────────────────────────────────────
 
+/** The language of the words Frrata writes on a shop (shop_settings.shop_language). */
+export type Lang = 'en' | 'hi'
 export type StoreShop = PolicyFacts & DeliveryRules & {
   id: string; slug: string; host: string; publishedAt: string | null; orderPrefix: string
   accent: string; displayFont: string; tagline: string; logoUrl: string | null; whatsapp: string; instagram: string
+  /** The words Frrata writes on the shop (themes T2). */
+  shopLanguage: Lang
   overrides: Record<string, string>; nav: { handle: string; title: string }[]
 }
 
@@ -74,7 +79,7 @@ async function coreShop(tenantId: string): Promise<StoreShop | null> {
       legalName: shopSettings.legalName, address: shopSettings.address, supportEmail: shopSettings.supportEmail, supportPhone: shopSettings.supportPhone,
       whatsapp: shopSettings.whatsapp, instagram: shopSettings.instagram,
       grievanceName: shopSettings.grievanceName, grievanceRole: shopSettings.grievanceRole, grievanceEmail: shopSettings.grievanceEmail, grievancePhone: shopSettings.grievancePhone,
-      accent: shopSettings.accent, displayFont: shopSettings.displayFont, tagline: shopSettings.tagline, logoUrl: shopSettings.logoUrl,
+      accent: shopSettings.accent, displayFont: shopSettings.displayFont, tagline: shopSettings.tagline, logoUrl: shopSettings.logoUrl, shopLanguage: shopSettings.shopLanguage,
       returnKind: shopSettings.returnKind, returnDays: shopSettings.returnDays,
       // COD limits are public: the Shipping policy states them.
       codOn: shopSettings.codOn, codMin: shopSettings.codMin, codMax: shopSettings.codMax, codCharge: shopSettings.codCharge,
@@ -89,7 +94,7 @@ async function coreShop(tenantId: string): Promise<StoreShop | null> {
     ])
     return {
       ...r, shopName: r.name, id: tenantId, host: hostFor(r.slug), publishedAt: r.publishedAt ? r.publishedAt.toISOString() : null,
-      returnKind: r.returnKind as PolicyFacts['returnKind'],
+      returnKind: r.returnKind as PolicyFacts['returnKind'], shopLanguage: r.shopLanguage === 'hi' ? 'hi' : 'en',
       codMin: Number(r.codMin), codMax: Number(r.codMax), codCharge: Number(r.codCharge), shippingFlat: Number(r.shippingFlat), freeShippingAbove: Number(r.freeShippingAbove),
       overrides: Object.fromEntries(pol.map((p) => [p.kind, p.body])), nav,
     }
@@ -99,7 +104,7 @@ async function coreShop(tenantId: string): Promise<StoreShop | null> {
 // ── The catalogue: every product a list can show, and the collections ───────────
 
 export type StoreImage = { id: string; base: string; widths: number[]; width: number; height: number; optionValue: string | null; alt: string }
-export type StoreVariant = { id: string; values: string[]; sku: string | null; price: number; compareAt: number | null; stock: number; whenOut: 'stop' | 'preorder' | 'made_to_order'; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; preorderFull: boolean }
+export type StoreVariant = { id: string; values: string[]; sku: string | null; price: number; compareAt: number | null; stock: number; whenOut: 'stop' | 'preorder' | 'made_to_order'; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; preorderFull: boolean; restockedAt: string | null }
 export type StoreColour = { value: string; family: string | null; hex: string | null; cropImageId: string | null; crop: { x: number; y: number; r: number } | null }
 export type StoreCard = {
   id: string; handle: string; title: string; status: string; publishAt: string | null; since: string
@@ -121,16 +126,18 @@ const variantCols = (tenantId: string) => ({
   owed: owedSql(tenantId, new Date()),
   id: variants.id, productId: variants.productId, values: variants.optionValues, sku: variants.sku, price: variants.price, compareAt: variants.compareAt,
   stock: variants.stock, whenOut: variants.whenOut, shipsBy: variants.shipsBy, leadMinDays: variants.leadMinDays, leadMaxDays: variants.leadMaxDays, cap: variants.preorderCap,
+  restockedAt: variants.restockedAt,
 })
 const imageCols = { id: productImages.id, productId: productImages.productId, base: productImages.base, widths: productImages.widths, width: productImages.width, height: productImages.height, optionValue: productImages.optionValue, alt: productImages.alt }
 const colourCols = { productId: productColours.productId, value: productColours.value, family: productColours.family, hex: productColours.hex, cropImageId: productColours.cropImageId, crop: productColours.crop }
 
-const toVariant = (v: { id: string; values: string[]; sku: string | null; price: number; compareAt: number | null; stock: number; owed: number; whenOut: string; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; cap: number | null }): StoreVariant => ({
+const toVariant = (v: { id: string; values: string[]; sku: string | null; price: number; compareAt: number | null; stock: number; owed: number; whenOut: string; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; cap: number | null; restockedAt: Date | null }): StoreVariant => ({
   id: v.id, values: v.values, sku: v.sku, price: Number(v.price), compareAt: v.compareAt === null ? null : Number(v.compareAt),
   // Shoppers learn "only N left" at LOW_STOCK_AT or below; above it, the count is not theirs to see.
   stock: Math.min(Math.max(0, v.stock - v.owed), LOW_STOCK_AT + 1), whenOut: v.whenOut as StoreVariant['whenOut'], shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays,
   // No orders before 1C, so pre-orders are full only at a cap of 0; 1C counts them.
   preorderFull: v.cap !== null && v.cap <= 0,
+  restockedAt: v.restockedAt ? v.restockedAt.toISOString() : null,
 })
 
 async function coreCatalogue(tenantId: string, drafts: boolean): Promise<StoreCatalogue> {
@@ -222,8 +229,15 @@ async function lookup(handles: { current: string[]; old: Record<string, string> 
 export type StoredLook = { revisionId: string; themeKey: string; themeVersion: string; styleKey: string; settings: unknown }
 const stored = (r: Revision | null): StoredLook | null => (r ? { revisionId: r.id, themeKey: r.themeKey, themeVersion: r.themeVersion, styleKey: r.styleKey, settings: r.settings } : null)
 
-// Which revision is live, and which revision an id names, are src/lib/themes/look.ts's rules; read through it.
-const coreLook = (tenantId: string) => withTenant(tenantId, async (tx) => stored(await liveRevision(tx, tenantId)))
+// Which revision is live (liveOf), and which revision an id names, are src/lib/themes/look.ts's and release.ts's rules.
+// The shop caches its recent publishes; which versions are withdrawn is one platform read for every shop (tag
+// `themes`), so a withdraw is one revalidation, whatever the number of shops (T3 review).
+const corePublishes = (tenantId: string) => withTenant(tenantId, async (tx) => (await liveCandidates(tx, tenantId)).map((p) => stored(p.revision)!))
+// The cache hands back JSON (dates as strings): only whether a date is set matters to withdrawnKeys, so the rows are
+// read as they come.
+const versionStates = unstable_cache(() => themeVersionRows(), ['sf-theme-versions'], { tags: ['themes'], revalidate: 300 })
+/** After Admin withdraws or recalls a version: every shop re-reads which versions it may render. */
+export const refreshThemeVersions = () => revalidateTag('themes')
 
 /** A revision of THIS shop for its own preview (a draft or an old look). Another shop's id and a missing id read the same: null. */
 export const previewRevision = (tenantId: string, revisionId: string) => withTenant(tenantId, async (tx) => stored(await revisionOf(tx, tenantId, revisionId)))
@@ -243,9 +257,12 @@ async function coreBestSellers(tenantId: string, days: number): Promise<string[]
 
 // ── Exports: cached for shoppers, uncached for the merchant's preview ──────────
 
-export const shopLook = shopCached('look', 'shop', (t) => coreLook(t))
+// A new key: the T1 entry 'look' held one look, this holds a list (a cache that survives a deploy must not meet the old shape).
+const shopPublishes = shopCached('publishes', 'shop', (t) => corePublishes(t))
+/** The shop's live look: its newest publish whose version isn't withdrawn (liveOf). */
+export const shopLook = async (tenantId: string): Promise<StoredLook | null> => liveOf(await shopPublishes(tenantId), withdrawnKeys(await versionStates()))
 export const shopBestSellers = shopCached('best', 'catalogue', (t, days: number) => coreBestSellers(t, days), 3600)
-export const previewLook = (tenantId: string) => coreLook(tenantId)
+export const previewLook = async (tenantId: string): Promise<StoredLook | null> => liveOf(await corePublishes(tenantId), withdrawnKeys(await themeVersionRows()))
 export const previewBestSellers = (tenantId: string, days: number) => coreBestSellers(tenantId, days)
 
 export const shopSettingsFor = shopCached('shop', 'shop', (t) => coreShop(t))

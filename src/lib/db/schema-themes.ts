@@ -6,7 +6,7 @@
 // =============================================================================
 
 import { sql } from 'drizzle-orm'
-import { check, foreignKey, index, integer, jsonb, pgTable, text, unique, uuid } from 'drizzle-orm/pg-core'
+import { check, foreignKey, index, integer, jsonb, pgTable, primaryKey, text, unique, uuid } from 'drizzle-orm/pg-core'
 import { at, id, tenants } from './schema'
 
 export const THEME_KEYS = ['classic', 'editorial', 'bazaar', 'minimal', 'atelier'] as const
@@ -48,4 +48,36 @@ export const shopThemePublishes = pgTable('shop_theme_publishes', {
   foreignKey({ columns: [t.tenantId, t.revisionId], foreignColumns: [shopThemeRevisions.tenantId, shopThemeRevisions.id], name: 'shop_theme_publishes_revision' }).onDelete('no action'), // checked at statement end, so deleting a shop cascades; the trigger refuses deleting a published revision
   index('shop_theme_publishes_latest').on(t.tenantId, t.publishedAt, t.id),
   index('shop_theme_publishes_revision_idx').on(t.tenantId, t.revisionId),
+])
+
+/**
+ * A theme version Admin has decided about (themes T3). Platform data: no tenant. The code is the manifest; this row
+ * holds only when Admin released, recalled or withdrew it (state is derived from these, never stored). Shops read
+ * id, key, version and the three dates (column grants); never who or why. Recall and withdraw are final.
+ */
+export const themeVersions = pgTable('theme_versions', {
+  id: id(),
+  themeKey: text('theme_key').notNull(),
+  version: text('version').notNull(),
+  createdAt: at('created_at').notNull().defaultNow(),
+  releasedAt: at('released_at'), releasedBy: uuid('released_by'),
+  recalledAt: at('recalled_at'), recalledBy: uuid('recalled_by'), recalledReason: text('recalled_reason'),
+  withdrawnAt: at('withdrawn_at'), withdrawnBy: uuid('withdrawn_by'), withdrawnReason: text('withdrawn_reason'),
+}, (t) => [
+  unique('theme_versions_key_version').on(t.themeKey, t.version),
+  check('theme_versions_version_shape', sql`${t.version} ~ '^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}$'`),
+  // Classic 1.0.0 is every shop's fallback look (baselineRevision): it can never be pulled.
+  check('theme_versions_baseline_stays', sql`not (${t.themeKey} = 'classic' and ${t.version} = '1.0.0' and (${t.recalledAt} is not null or ${t.withdrawnAt} is not null))`),
+  check('theme_versions_reasons', sql`(${t.recalledAt} is null or length(${t.recalledReason}) between 3 and 300) and (${t.withdrawnAt} is null or length(${t.withdrawnReason}) between 3 and 300)`),
+])
+
+/** A version offered to one shop before everyone (a pilot). The shop reads its own rows; Admin stages and unstages. */
+export const themeVersionStages = pgTable('theme_version_stages', {
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  versionId: uuid('version_id').notNull().references(() => themeVersions.id, { onDelete: 'cascade' }),
+  stagedAt: at('staged_at').notNull().defaultNow(),
+  stagedBy: uuid('staged_by').notNull(),
+}, (t) => [
+  primaryKey({ columns: [t.tenantId, t.versionId], name: 'theme_version_stages_pk' }),
+  index('theme_version_stages_version').on(t.versionId),
 ])

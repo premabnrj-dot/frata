@@ -53,7 +53,23 @@ export type ThemeSettings = {
   motion: 'subtle' | 'none'
   /** Replaces the accent in every scheme; accepted only when readable (brandColourProblem). */
   brandColour: Hex | null
+} & PageSettings
+
+/**
+ * Pages beyond Home (themes T2). Additive: a manifest may leave them out, and every default is what shops had before
+ * T2, so no look changes until a merchant picks something (PAGE_DEFAULTS).
+ */
+export type PageSettings = {
+  /** Product photos: one at a time (today) or with a thumbnail strip. */
+  gallery: 'swipe' | 'thumbs'
+  /** "About this piece" and "Details": open (today) or folded into disclosures. */
+  details: 'open' | 'folded'
+  card: 'standard' | 'centred' | 'framed'
+  desktopColumns: 3 | 4
+  /** A collection page's top: its title (today) or a banner of its photo. */
+  collectionTop: 'title' | 'banner'
 }
+export const PAGE_DEFAULTS: PageSettings = { gallery: 'swipe', details: 'open', card: 'standard', desktopColumns: 4, collectionTop: 'title' }
 
 export type ThemeManifest = {
   key: string
@@ -65,7 +81,8 @@ export type ThemeManifest = {
   goodFor: string[]
   features: string[]
   styles: Style[]
-  defaults: ThemeSettings
+  /** Page settings (T2) may be left out: PAGE_DEFAULTS fills them. */
+  defaults: Omit<ThemeSettings, keyof PageSettings> & Partial<PageSettings>
   allowed: { pairings: Pairing[]; headers: HeaderVariant[]; footers: FooterVariant[]; sections: SectionKey[]; heroMasks?: ('none' | 'arch')[] }
   home: SectionInput[]
 }

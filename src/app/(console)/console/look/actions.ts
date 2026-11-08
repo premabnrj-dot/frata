@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { acceptedBase, storeHost } from '@/domains/media/sizes'
-import { manifestOf, latestOf } from '@/domains/themes/catalogue'
+import { CATALOGUE, manifestNear, manifestOf } from '@/domains/themes/catalogue'
+import { latestAvailable } from '@/domains/themes/release'
 import { brandColourProblem, carryOver, LayerSchema, layerProblems } from '@/domains/themes/layer'
 import { readinessOf } from '@/domains/themes/readiness'
 import { baselineRevision, resolveTheme } from '@/domains/themes/resolve'
@@ -15,7 +16,7 @@ import { auditEvents } from '@/lib/db/schema'
 import { BLOB_STORE_ID } from '@/lib/env'
 import { refreshShop } from '@/lib/queries/storefront'
 import { lookFacts } from '@/lib/themes/facts'
-import { discardDraft, lookFor, newDraft, publishRevision, revisionOf, saveDraft, undoPublish } from '@/lib/themes/look'
+import { discardDraft, lookFor, newDraft, publishRevision, revisionOf, saveDraft, themeAccess, undoPublish } from '@/lib/themes/look'
 
 // =============================================================================
 // Console › Look (themes spec § Revisions; plan § Review findings). Editing a draft: owner, admin or partner
@@ -44,9 +45,13 @@ function cleanImages<L extends { home?: unknown[] }>(layer: L, tenantId: string)
       const p = SectionSchema.safeParse(raw)
       if (!p.success) throw new Error('section')
       const s = p.data
-      if (s.key === 'hero' || s.key === 'image_text' || s.key === 'drop_teaser') return { ...s, image: fix(s.image) }
-      if (s.key === 'logos') return { ...s, images: s.images.map((i) => fix(i)!) }
-      return s
+      // Exhaustive: a new section with a photo can't be missed (tenancy audit 2026-11-08: Shop the look was).
+      switch (s.key) {
+        case 'hero': case 'image_text': case 'drop_teaser': case 'shop_the_look': return { ...s, image: fix(s.image) }
+        case 'logos': return { ...s, images: s.images.map((i) => fix(i)!) }
+        case 'collection_tiles': case 'products': case 'price_tiles': case 'promises': case 'rich_text': return s
+        default: return s satisfies never
+      }
     })
     return { ...layer, ...(home ? { home } : {}) }
   } catch { return null }
@@ -55,13 +60,15 @@ function cleanImages<L extends { home?: unknown[] }>(layer: L, tenantId: string)
 export async function tryThemeAction(input: unknown): Promise<R<{ revisionId: string; lost: string[] }>> {
   const p = z.object({ theme: z.enum(THEME_KEYS) }).safeParse(input)
   if (!p.success) return { ok: false, error: 'Unknown theme.' }
-  const to = latestOf(p.data.theme)!
-  const r = await asMember(CAN_BUILD, { action: 'look.try', target: to.key }, async (tx, auth) => {
+  const r = await asMember(CAN_BUILD, { action: 'look.try', target: p.data.theme }, async (tx, auth) => {
     if (auth.membership.supportSessionId) return { error: SUPPORT }
     const t = auth.membership.tenantId
     const l = await lookFor(tx, t)
+    // The newest version this shop may use (released, or staged to it; never recalled or withdrawn: T3).
+    const to = latestAvailable(p.data.theme, Object.values(CATALOGUE[p.data.theme] ?? {}), l.access.rows, l.access.staged)
+    if (!to) return { error: 'This theme isn’t available right now.' }
     const from = l.draft ?? l.live?.revision ?? null
-    const fromM = from ? manifestOf(from.themeKey, from.themeVersion) : null
+    const fromM = from ? manifestNear(from.themeKey, from.themeVersion) : null
     const fromLayer = from ? (from.settings as { settings?: object; home?: unknown[] }) : {}
     const c = fromM && from ? carryOver({ manifest: fromM, layer: { style: from.styleKey, ...fromLayer } }, to) : { layer: { style: to.styles[0]!.key }, lost: [] }
     const { style, ...rest } = c.layer
@@ -122,7 +129,7 @@ export async function publishLookAction(input: unknown): Promise<R> {
       revisionId: rev.id, version: p.data.version,
       baseline: () => baselineRevision(facts.accent, facts.displayFont),
     })
-    if (out !== 'ok') return { error: out === 'stale' ? 'The draft changed after you opened Publish. Look again, then publish.' : 'This draft is gone. Reload.' }
+    if (out !== 'ok') return { error: out === 'stale' ? 'The draft changed after you opened Publish. Look again, then publish.' : out === 'unavailable' ? `${m.name} ${rev.themeVersion} isn’t offered by Frrata any more, so it can’t be published. Try the theme again for its current version, or restore an earlier look.` : 'This draft is gone. Reload.' }
     await audit(tx, auth, 'look.publish', `${m.name} · ${rev.styleKey}`)
     return {}
   })
@@ -161,6 +168,7 @@ export async function restoreLookAction(input: unknown): Promise<R<{ revisionId:
     const t = auth.membership.tenantId
     const from = await revisionOf(tx, t, p.data.revisionId)
     if (!from || !manifestOf(from.themeKey, from.themeVersion)) return { error: 'That look can’t be restored.' }
+    if (!(await themeAccess(tx, t)).may(from.themeKey, from.themeVersion)) return { error: 'That look’s theme version isn’t offered by Frrata any more, so it can’t be restored. Try the theme for its current version.' }
     const d = await newDraft(tx, t, { userId: auth.userId, email: auth.email }, { themeKey: from.themeKey, themeVersion: from.themeVersion, styleKey: from.styleKey, settings: from.settings as object })
     return { revisionId: d.id }
   })
@@ -171,23 +179,35 @@ export async function restoreLookAction(input: unknown): Promise<R<{ revisionId:
 }
 
 /** The draft to edit: the open one, else a new one copied from the live look. */
-export async function editLookAction(): Promise<R<{ revisionId: string }>> {
+export async function editLookAction(): Promise<R<{ revisionId: string; lost: string[] }>> {
   const r = await asMember(CAN_BUILD, { action: 'look.edit' }, async (tx, auth) => {
     if (auth.membership.supportSessionId) return { error: SUPPORT }
     const t = auth.membership.tenantId
     const l = await lookFor(tx, t)
-    if (l.draft) return { revisionId: l.draft.id }
+    if (l.draft) return { revisionId: l.draft.id, lost: [] as string[] }
+    let lost: string[] = []
     const facts = await lookFacts(tx, t)
     const base = l.live?.revision ?? null
+    // A live look on a recalled version starts its draft on the newest version of that theme the shop may use (the
+    // same theme: everything comes across), else on the baseline (T3).
+    const start = !base ? baselineRevision(facts.accent, facts.displayFont)
+      : l.may(base.themeKey, base.themeVersion) ? { themeKey: base.themeKey, themeVersion: base.themeVersion, styleKey: base.styleKey, settings: base.settings as object }
+        : (() => {
+          const to = latestAvailable(base.themeKey, Object.values(CATALOGUE[base.themeKey] ?? {}), l.access.rows, l.access.staged)
+          const fromM = manifestNear(base.themeKey, base.themeVersion)
+          if (!to || !fromM) return baselineRevision(facts.accent, facts.displayFont)
+          const c = carryOver({ manifest: fromM, layer: { style: base.styleKey, ...(base.settings as object) } }, to)
+          lost = c.lost
+          const { style, ...rest } = c.layer
+          return { themeKey: to.key, themeVersion: to.version, styleKey: style, settings: rest }
+        })()
     // reuse: a draft another tab opened since the read above is kept, not replaced (impact review 2026-11-08).
-    const d = await newDraft(tx, t, { userId: auth.userId, email: auth.email }, base
-      ? { themeKey: base.themeKey, themeVersion: base.themeVersion, styleKey: base.styleKey, settings: base.settings as object }
-      : baselineRevision(facts.accent, facts.displayFont), { reuse: true })
-    return { revisionId: d.id }
+    const d = await newDraft(tx, t, { userId: auth.userId, email: auth.email }, start, { reuse: true })
+    return { revisionId: d.id, lost }
   })
   if (!r.ok) return r
   if ('error' in r.value) return { ok: false, error: r.value.error as string }
-  return { ok: true, revisionId: r.value.revisionId as string }
+  return { ok: true, revisionId: r.value.revisionId as string, lost: (r.value.lost as string[]) ?? [] }
 }
 
 export async function discardDraftAction(): Promise<R> {

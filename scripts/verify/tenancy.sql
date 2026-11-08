@@ -941,4 +941,107 @@ do $$ begin
      or has_table_privilege('service_role', 'shop_theme_revisions', 'select') then raise exception 'FAIL: API roles reach shop looks'; end if;
 end $$;
 
-\echo 'tenancy proof — all 32 checks passed'
+-- 33. Back in stock (themes T2): the database alone keeps sold_out_at / restocked_at; A can't move B's stock.
+insert into variants (id, tenant_id, product_id, option_values, price, stock, when_out, ships_by) values
+  ('cdcdcdcd-0000-0000-0000-00000000003a', '11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', '{XL}', 100000, 1, 'stop', null),
+  ('cdcdcdcd-0000-0000-0000-00000000003c', '11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', '{XXL}', 100000, 1, 'preorder', '2027-01-15'),
+  ('cdcdcdcd-0000-0000-0000-00000000003b', '22222222-2222-2222-2222-222222222222', 'eeeeeeee-0000-0000-0000-00000000000b', '{XL}', 100000, 0, 'stop', null);
+begin; set local role frata_app;
+do $$ declare n int; r record; begin
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  update variants set stock = 5 where id = 'cdcdcdcd-0000-0000-0000-00000000003b'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A moved B''s stock'; end if;
+  update variants set restocked_at = now(), sold_out_at = now() where id = 'cdcdcdcd-0000-0000-0000-00000000003a';
+  select * into r from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003a';
+  if r.restocked_at is not null or r.sold_out_at is not null then raise exception 'FAIL: the app wrote the stock times'; end if;
+  update variants set stock = 0 where id in ('cdcdcdcd-0000-0000-0000-00000000003a', 'cdcdcdcd-0000-0000-0000-00000000003c');
+  if (select sold_out_at from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003a') is null then raise exception 'FAIL: selling out was not recorded'; end if;
+  update variants set stock = 1 where id = 'cdcdcdcd-0000-0000-0000-00000000003a';
+  if (select restocked_at from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003a') is not null then raise exception 'FAIL: back within minutes counted as back in stock'; end if;
+  update variants set stock = 0 where id = 'cdcdcdcd-0000-0000-0000-00000000003a';
+  -- Forging on the other paths: an insert, and an update that also moves stock.
+  insert into variants (id, tenant_id, product_id, option_values, price, stock, sold_out_at, restocked_at) values
+    ('cdcdcdcd-0000-0000-0000-00000000003d', '11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', '{3XL}', 100000, 0, now() - interval '9 days', now());
+  if (select sold_out_at is not null or restocked_at is not null from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003d') then raise exception 'FAIL: an insert wrote the stock times'; end if;
+  update variants set stock = 2, restocked_at = now(), sold_out_at = now() - interval '9 days' where id = 'cdcdcdcd-0000-0000-0000-00000000003d';
+  if (select sold_out_at is not null or restocked_at is not null from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003d') then raise exception 'FAIL: an update with stock wrote the stock times'; end if;
+end $$;
+commit;
+-- A day passes (as the owner, past the trigger).
+alter table variants disable trigger variants_stock_times;
+update variants set sold_out_at = now() - interval '2 days' where id in ('cdcdcdcd-0000-0000-0000-00000000003a', 'cdcdcdcd-0000-0000-0000-00000000003c');
+alter table variants enable trigger variants_stock_times;
+begin; set local role frata_app;
+do $$ begin
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  update variants set stock = 4 where id in ('cdcdcdcd-0000-0000-0000-00000000003a', 'cdcdcdcd-0000-0000-0000-00000000003c');
+  if (select restocked_at from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003a') is null then raise exception 'FAIL: back after a day not recorded'; end if;
+  -- A product save that leaves stock alone keeps the time it came back.
+  update variants set price = price + 100 where id = 'cdcdcdcd-0000-0000-0000-00000000003a';
+  if (select restocked_at from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003a') is null then raise exception 'FAIL: a save without a stock change lost back-in-stock'; end if;
+  if (select restocked_at from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003c') is not null then raise exception 'FAIL: a pre-order variant came "back"'; end if;
+end $$;
+commit;
+do $$ begin
+  if (select prosecdef from pg_proc where proname = 'app_variant_stock_times') then raise exception 'FAIL: the stock-times trigger is a definer'; end if;
+  if (select tgenabled from pg_trigger where tgname = 'variants_stock_times') <> 'O' then raise exception 'FAIL: the stock-times trigger is off'; end if;
+  if has_function_privilege('anon', 'app_variant_stock_times()', 'execute') or has_function_privilege('authenticated', 'app_variant_stock_times()', 'execute') then raise exception 'FAIL: API roles run the stock-times trigger'; end if;
+  if (select restocked_at from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003b') is not null then raise exception 'FAIL: B''s variant changed'; end if;
+end $$;
+
+-- 34. Theme versions (themes T3): shops read when, never who or why; a stage is one shop's; decisions are final;
+--     the baseline can't be pulled; Admin counts looks by column, never reading a shop's settings.
+insert into theme_versions (id, theme_key, version) values ('7e7e7e7e-0000-0000-0000-00000000000a', 'editorial', '9.9.9');
+insert into theme_version_stages (tenant_id, version_id, staged_by) values ('22222222-2222-2222-2222-222222222222', '7e7e7e7e-0000-0000-0000-00000000000a', '99999999-9999-9999-9999-999999999999');
+begin; set local role frata_app;
+do $$ begin
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  perform id, theme_key, version, released_at, recalled_at, withdrawn_at from theme_versions;
+  begin perform released_by from theme_versions; raise exception 'FAIL: a shop reads who released a theme';
+  exception when insufficient_privilege then null; end;
+  begin perform recalled_reason from theme_versions; raise exception 'FAIL: a shop reads why a theme was recalled';
+  exception when insufficient_privilege then null; end;
+  begin insert into theme_versions (theme_key, version) values ('bazaar', '9.9.9'); raise exception 'FAIL: a shop added a theme version';
+  exception when insufficient_privilege then null; end;
+  begin update theme_versions set released_at = now(); raise exception 'FAIL: a shop released a theme';
+  exception when insufficient_privilege then null; end;
+  if exists (select 1 from theme_version_stages) then raise exception 'FAIL: A sees B''s staged versions'; end if;
+  begin insert into theme_version_stages (tenant_id, version_id, staged_by) values ('11111111-1111-1111-1111-111111111111', '7e7e7e7e-0000-0000-0000-00000000000a', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: a shop staged itself';
+  exception when insufficient_privilege then null; end;
+  perform set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+  if not exists (select 1 from theme_version_stages) then raise exception 'FAIL: B can''t see its own stage'; end if;
+  begin perform staged_by from theme_version_stages; raise exception 'FAIL: a shop reads which staff member staged it';
+  exception when insufficient_privilege then null; end;
+  begin delete from theme_version_stages; raise exception 'FAIL: a shop unstaged itself';
+  exception when insufficient_privilege then null; end;
+end $$;
+commit;
+begin; set local role frata_admin;
+do $$ begin
+  update theme_versions set released_at = now(), released_by = '99999999-9999-9999-9999-999999999999' where id = '7e7e7e7e-0000-0000-0000-00000000000a';
+  begin update theme_versions set released_at = null where id = '7e7e7e7e-0000-0000-0000-00000000000a'; raise exception 'FAIL: a release was undone';
+  exception when check_violation then null; end;
+  begin update theme_versions set recalled_at = now(), recalled_by = '99999999-9999-9999-9999-999999999999', recalled_reason = 'x' where id = '7e7e7e7e-0000-0000-0000-00000000000a'; raise exception 'FAIL: a recall without a reason';
+  exception when check_violation then null; end;
+  begin update theme_versions set withdrawn_at = now(), withdrawn_by = '99999999-9999-9999-9999-999999999999', withdrawn_reason = 'a problem' where theme_key = 'classic' and version = '1.0.0'; raise exception 'FAIL: the baseline look was withdrawn';
+  exception when check_violation then null; end;
+  begin update theme_versions set theme_key = 'bazaar' where id = '7e7e7e7e-0000-0000-0000-00000000000a'; raise exception 'FAIL: Admin renamed a version';
+  exception when insufficient_privilege then null; end;
+  perform id, tenant_id, revision_id, published_at from shop_theme_publishes;
+  perform id, tenant_id, theme_key, theme_version from shop_theme_revisions;
+  begin perform settings from shop_theme_revisions; raise exception 'FAIL: staff read a shop''s look content';
+  exception when insufficient_privilege then null; end;
+  begin perform published_by_email from shop_theme_publishes; raise exception 'FAIL: staff read who published a shop''s look';
+  exception when insufficient_privilege then null; end;
+  begin perform created_by_email from shop_theme_revisions; raise exception 'FAIL: staff read who made a shop''s look';
+  exception when insufficient_privilege then null; end;
+end $$;
+commit;
+do $$ begin
+  if has_table_privilege('anon', 'theme_versions', 'select') or has_table_privilege('authenticated', 'theme_version_stages', 'select') or has_table_privilege('service_role', 'theme_versions', 'select') then raise exception 'FAIL: API roles reach theme versions'; end if;
+  if (select count(*) from theme_versions where released_at is not null) < 6 then raise exception 'FAIL: the build''s versions were not recorded as released'; end if;
+end $$;
+delete from theme_version_stages where version_id = '7e7e7e7e-0000-0000-0000-00000000000a';
+delete from theme_versions where id = '7e7e7e7e-0000-0000-0000-00000000000a';
+
+\echo 'tenancy proof — all 34 checks passed'

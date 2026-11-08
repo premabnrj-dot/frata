@@ -148,6 +148,7 @@ const OPEN_FOR_APP = {
   plan_versions: 'the public price list',
   addon_prices: 'the public add-on price list (modules foundation)',
   module_pauses: 'Frrata pausing a module for every shop: platform-wide, no tenant data',
+  theme_versions: 'which theme versions Frrata released, recalled or withdrew: platform-wide, no tenant data (themes T3)',
 }
 // `alter policy` bodies count too (0018), and `app_current_tenant() is null or …` — the shape that lets a
 // query with no tenant set read every shop — is allowed only on OPEN_FOR_APP tables (tenancy audit 2026-11-07).

@@ -14,6 +14,7 @@ import { publishLookAction, saveLookAction } from '@/app/(console)/console/look/
 import type { LinkTarget } from './controls'
 import { SectionForm, type FormCtx } from './section-form'
 import { SectionsPanel } from './sections-panel'
+import { PageForm } from './page-form'
 import { ThemeForm, type StyleOption } from './theme-form'
 
 // =============================================================================
@@ -110,9 +111,10 @@ export function Editor(p: EditorProps) {
   const panel = (
     <div className="space-y-4">
       <div role="tablist" aria-label="Edit" className="flex gap-5 border-b border-border text-sm">
-        {(['sections', 'theme'] as const).map((t) => <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`py-3 ${tab === t ? 'border-b-2 border-foreground font-semibold' : 'text-muted-foreground'}`}>{t === 'sections' ? 'Sections' : 'Theme settings'}</button>)}
+        {(['sections', 'theme'] as const).map((t) => <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`py-3 ${tab === t ? 'border-b-2 border-foreground font-semibold' : 'text-muted-foreground'}`}>{t === 'theme' ? 'Theme settings' : page === 'product' ? 'Product page' : page === 'collection' ? 'Collection page' : 'Sections'}</button>)}
       </div>
-      {tab === 'sections' && (sel ? (
+      {tab === 'sections' && page !== 'home' && <PageForm page={page} settings={layer.settings} set={(s) => change({ ...layer, settings: { ...layer.settings, ...s } })} />}
+      {tab === 'sections' && page === 'home' && (sel ? (
         <div className="space-y-4">
           <button type="button" onClick={() => setSelected(null)} className="text-sm text-muted-foreground">‹ Sections</button>
           <SectionForm s={sel} c={p.formCtx} set={(s) => change({ ...layer, home: layer.home.map((x) => (x.id === s.id ? s : x)) })} />

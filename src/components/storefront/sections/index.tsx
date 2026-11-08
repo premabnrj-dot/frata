@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { inCollection, isListed, priceOf } from '@/domains/storefront/listing'
-import { sourceProducts } from '@/domains/storefront/sources'
+import { lookPieces, sourceProducts } from '@/domains/storefront/sources'
 import { truePromises } from '@/domains/themes/readiness'
 import { schemeVars } from '@/domains/themes/resolve'
 import type { SectionInstance, SectionOf } from '@/domains/themes/sections'
@@ -10,6 +10,7 @@ import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
 import type { StoreCatalogue, StoreShop } from '@/lib/queries/storefront'
 import { ProductCard, ProductGrid } from '../card'
+import { fill, wordsFor } from '../words'
 import { Photo } from '../photo'
 import type { Href } from '../shell'
 
@@ -93,7 +94,7 @@ function CollectionTiles({ s, ctx }: { s: SectionOf<'collection_tiles'>; ctx: Se
   const shape = circle ? 'aspect-square rounded-full' : s.shape === 'square' ? 'aspect-square rounded-[var(--store-radius)]' : 'aspect-[4/5] rounded-[var(--store-radius)]'
   return (
     <section aria-labelledby={h} className={`${wrap} pb-[calc(var(--store-space)*3rem)]`}>
-      {s.heading ? <div className="mb-4"><H2 id={h}>{s.heading}</H2></div> : <h2 id={h} className="sr-only">Collections</h2>}
+      {s.heading ? <div className="mb-4"><H2 id={h}>{s.heading}</H2></div> : <h2 id={h} className="sr-only">{wordsFor(ctx.shop.shopLanguage).collectionsNav}</h2>}
       <ul className={circle ? '-mx-4 flex snap-x gap-4 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0' : '-mx-4 flex snap-x gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0'}>
         {tiles.map(({ c, first }) => (
           <li key={c.id} className={circle ? 'w-24 shrink-0 snap-start text-center sm:w-28' : 'w-[70%] shrink-0 snap-start sm:w-auto'}>
@@ -122,10 +123,10 @@ function Products({ s, ctx }: { s: SectionOf<'products'>; ctx: SectionCtx }) {
   const h = `${s.id}-h`
   return (
     <section aria-labelledby={h} className={wrap}>
-      <div className="mb-4 flex items-baseline justify-between"><h2 id={h} className="text-xl"><Sized>{s.heading}</Sized></h2>{all && <Link href={ctx.href(all)} className="text-sm underline underline-offset-4">See all</Link>}</div>
+      <div className="mb-4 flex items-baseline justify-between"><h2 id={h} className="text-xl"><Sized>{s.heading}</Sized></h2>{all && <Link href={ctx.href(all)} className="text-sm underline underline-offset-4">{wordsFor(ctx.shop.shopLanguage).seeAll}</Link>}</div>
       {s.layout === 'rail'
-        ? <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">{list.slice(0, s.count).map((p, i) => <div key={p.id} className="w-[44%] shrink-0 snap-start sm:w-[23%]"><ProductCard p={p} href={ctx.href} now={ctx.now} priority={i < 2} /></div>)}</ul>
-        : <ProductGrid products={list.slice(0, s.count)} href={ctx.href} now={ctx.now} empty="New pieces are on their way." />}
+        ? <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">{list.slice(0, s.count).map((p, i) => <div key={p.id} className="w-[44%] shrink-0 snap-start sm:w-[23%]"><ProductCard p={p} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} priority={i < 2} /></div>)}</ul>
+        : <ProductGrid products={list.slice(0, s.count)} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} empty={wordsFor(ctx.shop.shopLanguage).emptyShop} />}
     </section>
   )
 }
@@ -149,7 +150,7 @@ function PriceTiles({ s, ctx }: { s: SectionOf<'price_tiles'>; ctx: SectionCtx }
       {bands.map((b) => (
         <div key={b.i} id={`${s.id}-${b.i}`} className="scroll-mt-24 space-y-3">
           <h3 className="text-base font-medium">{b.label}</h3>
-          <ProductGrid products={b.items.slice(0, 4)} href={ctx.href} now={ctx.now} empty="" />
+          <ProductGrid products={b.items.slice(0, 4)} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} empty="" />
         </div>
       ))}
     </section>
@@ -160,14 +161,15 @@ function PriceTiles({ s, ctx }: { s: SectionOf<'price_tiles'>; ctx: SectionCtx }
 function Promises({ s, ctx }: { s: SectionOf<'promises'>; ctx: SectionCtx }) {
   const f = ctx.shop
   const t = truePromises({ collections: [], codOn: f.codOn, freeShippingAbove: f.freeShippingAbove, returnDays: f.returnDays, dispatchDays: f.dispatchDays })
+  const w = wordsFor(f.shopLanguage).promise
   const words = s.show.filter((k) => t.includes(k)).map((k) =>
-    k === 'cod' ? 'Pay on delivery'
-      : k === 'free_shipping' ? `Free shipping above ${rupees(f.freeShippingAbove!)}`
-        : k === 'returns' ? `${f.returnDays}-day ${f.returnKind === 'exchange_only' ? 'exchange' : f.returnKind === 'refund_only' ? 'returns' : 'exchange or returns'}`
-          : `Ships in ${f.dispatchDays} ${f.dispatchDays === 1 ? 'day' : 'days'}`)
+    k === 'cod' ? w.cod
+      : k === 'free_shipping' ? fill(w.freeShipping, { above: rupees(f.freeShippingAbove!) })
+        : k === 'returns' ? fill(f.returnKind === 'exchange_only' ? w.exchange : f.returnKind === 'refund_only' ? w.returns : w.exchangeOrReturns, { d: f.returnDays })
+          : fill(f.dispatchDays === 1 ? w.shipsDay : w.shipsDays, { d: f.dispatchDays }))
   if (!words.length) return null
   return (
-    <section aria-label="Our promises" className={`${wrap} ${pad}`}>
+    <section aria-label={w.label} className={`${wrap} ${pad}`}>
       <ul className="grid grid-cols-2 gap-3 text-center text-sm sm:grid-cols-4">
         {words.map((w) => <li key={w} className="rounded-[var(--store-radius)] border border-store-line px-3 py-5">{w}</li>)}
       </ul>
@@ -239,6 +241,37 @@ function Logos({ s }: { s: SectionOf<'logos'> }) {
   )
 }
 
+/** Shop the look (Editorial 1.1): numbered dots on the photo, the same pieces listed beside it. A piece not listed
+ *  on the shop today drops out; with none left, the section shows nothing. Each piece links to its page. */
+function ShopTheLook({ s, ctx }: { s: SectionOf<'shop_the_look'>; ctx: SectionCtx }) {
+  if (!s.image) return null
+  const pieces = lookPieces(s.pieces, ctx.cat.products, ctx.now)
+  if (!pieces.length) return null
+  const h = `${s.id}-h`
+  return (
+    <section aria-labelledby={h} className={`${wrap} ${pad} grid items-start gap-8 sm:grid-cols-2`}>
+      <div className="relative aspect-[4/5] overflow-hidden rounded-[var(--store-radius)] bg-store-chip">
+        <Photo p={s.image} alt={s.image.decorative ? '' : s.image.alt} sizes="(min-width: 640px) 50vw, 100vw" className="absolute inset-0 h-full w-full object-cover" />
+        {pieces.map((x, i) => (
+          <Link key={x.handle} href={ctx.href(`/products/${x.handle}`)} style={{ left: `${x.x}%`, top: `${x.y}%` }} aria-label={`${i + 1}: ${x.p.title}`}
+            className="absolute grid size-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-store-paper text-sm font-semibold text-store-ink shadow">{i + 1}</Link>
+        ))}
+      </div>
+      <div className="space-y-4">
+        <H2 id={h}>{s.heading}</H2>
+        <ol className="space-y-3">
+          {pieces.map((x, i) => { const pr = priceOf(x.p); return (
+            <li key={x.handle}><Link href={ctx.href(`/products/${x.handle}`)} className="flex items-center gap-3">
+              <span className="relative block h-20 w-16 shrink-0 overflow-hidden rounded-[var(--store-radius)] bg-store-chip">{x.p.images[0] && <Photo p={x.p.images[0]} alt="" sizes="64px" className="absolute inset-0 h-full w-full object-cover" />}</span>
+              <span className="text-sm"><span className="block">{i + 1} · {x.p.title}</span>{pr && <span className="block font-medium">{pr.min !== pr.max ? fill(wordsFor(ctx.shop.shopLanguage).from, { price: rupees(pr.min) }) : rupees(pr.min)}</span>}</span>
+            </Link></li>
+          ) })}
+        </ol>
+      </div>
+    </section>
+  )
+}
+
 function One({ s, ctx }: { s: SectionInstance; ctx: SectionCtx }) {
   switch (s.key) {
     case 'hero': return <Hero s={s} ctx={ctx} />
@@ -250,6 +283,7 @@ function One({ s, ctx }: { s: SectionInstance; ctx: SectionCtx }) {
     case 'drop_teaser': return <DropTeaser s={s} ctx={ctx} />
     case 'rich_text': return <RichText s={s} ctx={ctx} />
     case 'logos': return <Logos s={s} />
+    case 'shop_the_look': return <ShopTheLook s={s} ctx={ctx} />
   }
 }
 

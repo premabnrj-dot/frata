@@ -99,6 +99,10 @@ export const variants = pgTable('variants', {
   position: integer('position').notNull().default(0),
   archivedAt: at('archived_at'),
   createdAt: createdAt(),
+  /** When stock last went from > 0 to 0. Kept by the database (trigger app_variant_stock_times), never by the app. */
+  soldOutAt: at('sold_out_at'),
+  /** When a variant sold out for ≥ 24 h came back (stop-when-out only): Back in stock. Kept by the same trigger. */
+  restockedAt: at('restocked_at'),
 }, (t) => [
   unique('variants_tenant_id_key').on(t.tenantId, t.id),
   foreignKey({ name: 'variants_product_fk', columns: [t.tenantId, t.productId], foreignColumns: [products.tenantId, products.id] }).onDelete('cascade'),

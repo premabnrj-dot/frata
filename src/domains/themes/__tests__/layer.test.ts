@@ -69,4 +69,11 @@ describe('readiness (publish tier)', () => {
     expect(r.filter((x) => !x.blocks).map((x) => x.sectionId)).toEqual(['t', 'd', 'p'])
     expect(truePromises(f)).toEqual(['cod', 'returns', 'dispatch'])
   })
+  it('Shop the look needs a photo, its words, and at least one piece', () => {
+    const img = { base: 'https://x/y', widths: [400], width: 800, height: 1000, alt: 'A look' }
+    const r = (o: object) => readinessOf([sec({ id: 'l', key: 'shop_the_look', ...o })], f, now).filter((x) => x.blocks).map((x) => x.text)
+    expect(r({})).toEqual(['Shop the look: add a photo', 'Shop the look: pin at least one piece on the photo'])
+    expect(r({ image: { ...img, alt: '' }, pieces: [{ handle: 'a', x: 1, y: 1 }] })).toEqual(['Shop the look: describe the photo for people who can’t see it'])
+    expect(r({ image: img, pieces: [{ handle: 'a', x: 1, y: 1 }] })).toEqual([])
+  })
 })
