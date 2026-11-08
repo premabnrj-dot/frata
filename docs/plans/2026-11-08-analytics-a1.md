@@ -1,5 +1,5 @@
 # Plan — Analytics A·0 + A·1 (where orders come from, judged on deliveries)
-Status: active (reviewed 2026-11-08: architecture, tenancy, security, unit economics, speed; owner answers in) · Date: 2026-11-08 · Spec: `docs/specs/2026-11-08-analytics-a1.md` (approved by the
+Status: done 2026-11-08 (A1·0–A1·7 built; closing reviews: tenancy and security safe, impact and speed findings fixed — see § Closing review) · Date: 2026-11-08 · Spec: `docs/specs/2026-11-08-analytics-a1.md` (approved by the
 owner 2026-11-08; mockup https://claude.ai/artifact/5PRMG996toWDUsnAuMTSJt as drawn) · Parent: `docs/specs/2026-11-07-analytics.md`
 
 Gates on every task: `npm test`, `npm run typecheck`, int tests with `INT_DB_HOST`, `verify:tenancy` if `drizzle/` or a
@@ -189,3 +189,17 @@ Billing's open calls (Ship plan § unit-economics) are the billing session's.
 |---|---|
 | Applying a migration to production through the Supabase tool (fourth time) | `scripts/prod-migrate.mjs`: prints one transaction with each file's sha256 and journal `when` (A1·7 if a migration lands; else the next plan that has one) |
 | Seeding 10× orders for EXPLAIN | `scripts/verify/seed-10x.sql` (A1·5), reused by `speed-reviewer` |
+
+## Closing review (A1·7, 2026-11-08)
+- **Tenancy:** safe (40/40 isolation checks, gates clean). Fixed: one snapshot per page; a stable creator pick.
+- **Security:** safe. Fixed: a source's page matches its tuples as one JSON parameter, hash-joined (an OR per tuple let
+  typed tag variants push a real source's page past its limits).
+- **Impact:** one route from an order to its source (`attributionInputsSql`, `creatorCodeJoinSql`, `sourceOfInputs`)
+  with an int test that the order page and Analytics agree; Totals and `foldSources` in the domain with a test; COD
+  share a count under 30; e2e 51 always ends its offer; 90-ux fails a 4xx page and measures a seeded source page.
+- **Speed:** one transaction per page; a source's page reuses the grouped rows, skips pincodes and fences its list
+  read; "Still counting" on a 3 s timeout; Make a link's body only while open, its labels from the server. At 10×:
+  267–320 / 453–490 / 708 ms, 606–729 ms for a source page.
+- **Left for later (not blocking):** a Suspense-streamed Analytics page for a cold cache; e2e for Make a link when the
+  shop is not open or Copy is refused, and for the 7- and 90-day periods; `linkTargets` caps (200 products, 100
+  collections) said in the dialog; shopper-typed tag values styled apart from Frrata's own words.
