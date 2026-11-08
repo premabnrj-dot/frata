@@ -14,11 +14,12 @@ describe.skipIf(!host)('offerStats', () => {
   it('counts what each offer and creator code brought, by state, method, buyer and route', async () => {
     process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
     const { withTenant } = await import('@/lib/db/tenant')
-    const { orders } = await import('@/lib/db/schema-orders')
+    const { orders, shipments } = await import('@/lib/db/schema-orders')
+    const { shopSettings } = await import('@/lib/db/schema')
     const { discounts, discountCodes, orderDiscounts } = await import('@/lib/db/schema-discounts')
     const { offerStatsIn } = await import('@/lib/queries/discounts')
     const { priorOrderSql } = await import('@/lib/db/order-predicates')
-    const { sql } = await import('drizzle-orm')
+    const { eq, sql } = await import('drizzle-orm')
     const now = new Date('2031-03-01T10:00:00Z')
     const ago = (d: number) => new Date(now.getTime() - d * 86_400_000)
     const ROLLBACK = new Error('rollback')
@@ -62,9 +63,22 @@ describe.skipIf(!host)('offerStats', () => {
       const d = s.offers.get(D)!
       expect({ orders: d.orders, given: d.given, aov: d.aov, prepaid: d.prepaid, repeat: d.repeat, fresh: d.fresh, delivered: d.delivered, rto: d.rto, givenPerDelivered: d.givenPerDelivered })
         .toEqual({ orders: 3, given: 60000, aov: Math.round((180000 + 270000 + 190000) / 3), prepaid: 1, repeat: 1, fresh: 2, delivered: 2, rto: 1, givenPerDelivered: 30000 })
-      // ₹ kept per delivered order (profit.ts): the delivered order with known costs only (the other's cogs is unknown):
-      // ₹1,800 net − ₹800 cogs − ₹60 shipping − the plan's 2% on ₹1,800 merchandise (₹36) = ₹904.
-      expect(d.keptPerDelivered).toBe(180000 - 80000 - 6000 - 3600)
+      // ₹ kept per delivered order (profit.ts): the delivered order with known costs only (the other's cogs is unknown).
+      // Its freight goes through freight.ts (Ship S0·6). Shipped another way and no confirmed estimate yet: freight left
+      // out and said so — ₹1,800 net − ₹800 cogs − the plan's 2% on ₹1,800 merchandise (₹36) = ₹964, before shipping costs.
+      expect({ kept: d.keptPerDelivered, basis: d.keptBasis }).toEqual({ kept: 180000 - 80000 - 3600, basis: 'none' })
+      // The shop confirms ₹70 a delivery, ₹70 a return, ₹36 COD fee: estimated (a COD delivery pays the fee).
+      await tx.update(shopSettings).set({ shipCostDelivery: 7000, shipCostReturn: 7000, shipCostCod: 3600, shipCostsConfirmedAt: now }).where(eq(shopSettings.tenantId, A))
+      const est = (await offerStatsIn(tx, A, now)).offers.get(D)!
+      expect({ kept: est.keptPerDelivered, basis: est.keptBasis }).toEqual({ kept: 180000 - 80000 - 7000 - 3600 - 3600, basis: 'estimate' })
+      // Shipped with Shiprocket: its ₹60 forward line is recorded but the COD fee line is not: pending, left out (never ₹0).
+      await tx.insert(shipments).values({ tenantId: A, orderId: first, provider: 'shiprocket' })
+      const pend = (await offerStatsIn(tx, A, now)).offers.get(D)!
+      expect({ kept: pend.keptPerDelivered, basis: pend.keptBasis }).toEqual({ kept: null, basis: null })
+      // The ₹30 COD fee line arrives: actual.
+      await tx.update(orders).set({ courierCodFee: 3000 }).where(eq(orders.id, first))
+      const act = (await offerStatsIn(tx, A, now)).offers.get(D)!
+      expect({ kept: act.keptPerDelivered, basis: act.keptBasis }).toEqual({ kept: 180000 - 80000 - 6000 - 3000 - 3600, basis: 'actual' })
       const riya = d.creators.find((c) => c.id === RIYA)!
       expect({ orders: riya.orders, delivered: riya.delivered, rto: riya.rto, given: riya.given, viaLink: riya.viaLink, leak: riya.leak })
         .toEqual({ orders: 2, delivered: 2, rto: 0, given: 50000, viaLink: 1, leak: null })

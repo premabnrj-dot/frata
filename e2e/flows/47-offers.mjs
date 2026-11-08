@@ -161,6 +161,24 @@ export default {
         const [f] = await db`select id from discounts where title = 'Festive'`
         await c.goto(CONSOLE + `/console/offers/${f.id}`)
         await c.getByRole('region', { name: 'Last 30 days' }).getByText(/Too few to judge/).waitFor()
+        await c.getByText('₹ kept per delivered order').waitFor()
+        // ₹ kept is a profit: staff see the offers and their uses, never it (Ship S0·6).
+        const S = USERS.staff
+        await db`insert into auth.users (id, email, email_confirmed_at) values (${S.id}, ${S.email}, now()) on conflict (id) do nothing`
+        await db`insert into members (tenant_id, user_id, role) values (${KESAR}, ${S.id}, 'staff') on conflict do nothing`
+        const sc = await signedIn(t.browser, 'staff', { viewport: { width: 1280, height: 900 } })
+        try {
+          const sp = await sc.newPage(); sp.setDefaultTimeout(10_000); sp.on('pageerror', (e) => t.errors.push(e.message))
+          await sp.goto(CONSOLE + '/console/offers')
+          await sp.getByRole('region', { name: 'Last 30 days' }).waitFor()
+          assert.equal(await sp.getByText(/₹ kept/).count(), 0)
+          await sp.goto(CONSOLE + `/console/offers/${f.id}`)
+          await sp.getByRole('region', { name: 'Last 30 days' }).waitFor()
+          assert.equal(await sp.getByText(/₹ kept/).count(), 0)
+        } finally {
+          await sc.close()
+          await db`delete from members where tenant_id = ${KESAR} and user_id = ${S.id}`
+        }
       })
       await t.step('O·2: Buy 2 get 1 from the console: a badge on the card, a line on the product page, the third piece free', async () => {
         await db`update discounts set ended_at = now(), announce = false where ended_at is null` // only this offer now

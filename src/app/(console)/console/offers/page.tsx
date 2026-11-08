@@ -8,10 +8,10 @@ import { Panel } from '@/components/ui/panel'
 import { ViewTabs } from '@/components/ui/view-tabs'
 import { OFFER_STATUSES, type OfferStatus } from '@/domains/checkout/offer-status'
 import { paise } from '@/domains/money/paise'
-import { ANY_MEMBER, CAN_BUILD, requireMember } from '@/lib/auth/require-member'
+import { ANY_MEMBER, CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { listOffers, offerStats } from '@/lib/queries/discounts'
 import { STATUS, terms } from './_components/data'
-import { OfferStrip } from './_components/offer-results'
+import { keptNote, OfferStrip } from './_components/offer-results'
 
 export const metadata = { title: 'Offers' }
 
@@ -29,6 +29,8 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
   const count = (s: OfferStatus) => rows.filter((r) => r.status === s).length
   const shown = rows.filter((r) => r.status === current)
   const canBuild = (CAN_BUILD as readonly string[]).includes(auth.membership.role)
+  // ₹ kept is a profit: owners and admins only (staff and partners never see a cost; Ship S0·6).
+  const costs = (CAN_MANAGE as readonly string[]).includes(auth.membership.role)
   const add = canBuild ? <Link href="/console/offers/new" className={button()}>New offer</Link> : undefined
   if (!rows.length) return (
     <>
@@ -46,7 +48,7 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
       <ViewTabs label="Offers by status" tabs={order.map((s) => ({ href: `/console/offers?tab=${s}`, label: STATUS[s].label, count: count(s), current: s === current }))} />
       {!shown.length ? <Panel title={`No ${STATUS[current].label.toLowerCase()} offers`}>{current === 'live' ? 'Start a draft, or make a new offer.' : 'Nothing here right now.'}</Panel> : (
         <DataTable>
-          <DataTableHead><th>Offer</th><th>How</th><th className="text-right">Uses</th><th className="text-right">₹ given</th><th className="text-right">Delivered · 30 days</th><th className="text-right">₹ kept per delivered · 30 days</th></DataTableHead>
+          <DataTableHead><th>Offer</th><th>How</th><th className="text-right">Uses</th><th className="text-right">₹ given</th><th className="text-right">Delivered · 30 days</th>{costs ? <th className="text-right">₹ kept per delivered · 30 days</th> : null}</DataTableHead>
           <DataTableBody>
             {shown.map((r) => { const x = stats.offers.get(r.id); return (
               <DataTableRow key={r.id}>
@@ -56,7 +58,7 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
                 <Td cell="b" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Uses </span><Numeric>{r.useCount}</Numeric>{r.limitTotal ? <span className="text-muted-foreground"> / {r.limitTotal}</span> : null}</Td>
                 <Td cell="c" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Given </span><Money paise={paise(r.given)} /></Td>
                 <Td cell="e" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Delivered </span><Numeric>{x?.delivered ?? 0}</Numeric></Td>
-                <Td cell="f" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Kept each </span>{x?.keptPerDelivered == null ? <span className="text-muted-foreground" title="Shows once orders with this offer are delivered and their costs are known">—</span> : <Money paise={paise(x.keptPerDelivered)} />}</Td>
+                {costs ? <Td cell="f" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Kept each </span>{x?.keptPerDelivered == null ? <span className="text-muted-foreground" title="Shows once orders with this offer are delivered and their costs are known">—</span> : <><Money paise={paise(x.keptPerDelivered)} />{keptNote(x.keptBasis) ? <span className="block text-xs text-muted-foreground">{keptNote(x.keptBasis)}</span> : null}</>}</Td> : null}
               </DataTableRow>
             ) })}
           </DataTableBody>

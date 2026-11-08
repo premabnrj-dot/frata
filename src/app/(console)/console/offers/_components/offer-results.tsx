@@ -1,17 +1,22 @@
+import Link from 'next/link'
 import { Section } from '@/components/layout/section'
 import { Money, Numeric } from '@/components/data/numeric'
 import { paise } from '@/domains/money/paise'
 import { formatPercent } from '@/lib/format'
-import { JUDGE_MIN_ORDERS, type OfferStat, type OfferStats } from '@/lib/queries/discounts'
+import { JUDGE_MIN_ORDERS, type KeptBasis, type OfferStat, type OfferStats } from '@/lib/queries/discounts'
 
 // =============================================================================
 // DID IT MAKE MONEY? (offers O·3; mockup "Did it make money?"). The 30-day strip on the Offers list and an offer's own
-// numbers, both read from offerStats() (the one computation). Server components: a merchant's cost stays here.
+// numbers, both read from offerStats() (the one computation). Server components: a merchant's cost stays here, and
+// ₹ kept (a profit, so a cost) shows only to owners and admins (`costs`; staff and partners never see a cost).
 // =============================================================================
 
 const share = (a: number, b: number) => (b > 0 ? formatPercent(a / b, 0) : '—')
 const rtoRate = (o: { delivered: number; rto: number }) => share(o.rto, o.delivered + o.rto)
 const rs = (p: number | null) => (p === null ? '—' : <Money paise={paise(p)} />)
+
+/** How ₹ kept counted shipping (freight.ts): said beside the figure whenever it is not the courier's actual charge. */
+export const keptNote = (b: KeptBasis) => (b === 'estimate' ? 'Shipping estimated' : b === 'none' ? 'Before shipping costs' : null)
 
 function Kpi({ k, v, f }: { k: string; v: React.ReactNode; f: React.ReactNode }) {
   return (
@@ -40,8 +45,8 @@ export function OfferStrip({ s }: { s: OfferStats }) {
 }
 
 /** One offer's numbers over the window. Under 30 orders it says so before any number. */
-export function OfferNumbers({ o, s }: { o: OfferStat | undefined; s: OfferStats }) {
-  const x: OfferStat = o ?? { orders: 0, given: 0, aov: null, prepaid: 0, repeat: 0, fresh: 0, delivered: 0, rto: 0, keptPerDelivered: null, givenPerDelivered: null, creators: [] }
+export function OfferNumbers({ o, s, costs }: { o: OfferStat | undefined; s: OfferStats; costs: boolean }) {
+  const x: OfferStat = o ?? { orders: 0, given: 0, aov: null, prepaid: 0, repeat: 0, fresh: 0, delivered: 0, rto: 0, keptPerDelivered: null, keptBasis: null, givenPerDelivered: null, creators: [] }
   const w = s.without
   return (
     <Section title={`Last ${s.days} days`} id="numbers">
@@ -57,8 +62,9 @@ export function OfferNumbers({ o, s }: { o: OfferStat | undefined; s: OfferStats
         <div><dt className="text-xs text-muted-foreground">Delivered</dt><dd className="font-mono text-lg"><Numeric>{x.delivered}</Numeric></dd></div>
         <div><dt className="text-xs text-muted-foreground">Returned (RTO)</dt><dd className="font-mono text-lg">{rtoRate(x)}</dd>
           <dd className="text-xs text-muted-foreground">{rtoRate(w)} without an offer</dd></div>
-        <div className="col-span-2"><dt className="text-xs text-muted-foreground">₹ kept per delivered order</dt><dd className="font-mono text-lg">{rs(x.keptPerDelivered)}</dd>
-          {x.keptPerDelivered === null ? <dd className="text-xs text-muted-foreground">Once orders are delivered and their costs are known.</dd> : null}</div>
+        {costs ? <div className="col-span-2"><dt className="text-xs text-muted-foreground">₹ kept per delivered order</dt><dd className="font-mono text-lg">{rs(x.keptPerDelivered)}</dd>
+          {x.keptPerDelivered === null ? <dd className="text-xs text-muted-foreground">Once orders are delivered and their costs are known.</dd>
+            : keptNote(x.keptBasis) ? <dd className="text-xs text-muted-foreground">{keptNote(x.keptBasis)}{x.keptBasis === 'none' ? <> · <Link href="/console/settings/shipping-costs" className="underline">set shipping costs</Link></> : null}</dd> : null}</div> : null}
       </dl>
     </Section>
   )

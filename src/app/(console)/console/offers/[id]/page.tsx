@@ -47,7 +47,7 @@ export default async function OfferPage({ params }: { params: Promise<{ id: stri
           <div><dt className="text-xs text-muted-foreground">₹ given</dt><dd className="font-mono text-lg"><Money paise={paise(o.given)} /></dd>{o.budgetLeft !== null ? <dd className="text-xs text-muted-foreground"><Money paise={paise(o.budgetLeft)} /> of the budget left</dd> : null}</div>
         </dl>
       </Section>
-      {o.status !== 'draft' ? <OfferNumbers o={mine} s={stats} /> : null}
+      {o.status !== 'draft' ? <OfferNumbers o={mine} s={stats} costs={manager} /> : null}
       {o.style !== 'pay_online' && o.status !== 'ended' && o.status !== 'stopped' ? <OfferCodes id={o.id} address={(await setupFor(auth.membership.tenantId))?.address ?? ''} canAdd={manager} publicCode={o.code}
         creators={[...o.creators].sort((a, b) => (rank.get(a.id) ?? 1e9) - (rank.get(b.id) ?? 1e9))
           .map((c) => ({ id: c.id, label: c.label, code: c.code, uses: String(c.useCount), given: formatInr(paise(c.given)), ...creatorLine(mine?.creators.find((x) => x.id === c.id)) }))} /> : null}
