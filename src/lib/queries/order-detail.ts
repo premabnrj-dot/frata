@@ -5,7 +5,7 @@ import { sourceOfInputs, type Source, type SourceInputs } from '@/domains/analyt
 import { attributionInputsSql } from '@/lib/db/attribution-sql'
 import { creatorCodeJoinSql } from '@/lib/db/discount-predicates'
 import { momentColumns, onlineTotalCol } from '@/lib/db/order-predicates'
-import { orderEvents, orderLines, orderNotes, orders, shipments } from '@/lib/db/schema-orders'
+import { creditNotes, orderEvents, orderLines, orderNotes, orders, shipments } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
 import { riskFactsFor } from './order-risk'
@@ -45,8 +45,8 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
       invoiceNumber: orders.invoiceNumber, cancelReason: orders.cancelReason, cancelNote: orders.cancelNote, erasedAt: orders.erasedAt,
     }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.number, number))).limit(1)
     if (!o) return null
-    // Six reads at once in the one transaction (speed review P8: postgres-js pipelines them; they ran in turn).
-    const [lines, events, notes, offerRows, [shipment], source] = await Promise.all([tx.select({
+    // Seven reads at once in the one transaction (speed review P8: postgres-js pipelines them; they ran in turn).
+    const [lines, events, notes, offerRows, [shipment], [credit], source] = await Promise.all([tx.select({
       id: orderLines.id, title: orderLines.title, optionValues: orderLines.optionValues, sku: orderLines.sku, qty: orderLines.qty, unitPrice: orderLines.unitPrice,
       imageBase: orderLines.imageBase, imageWidths: orderLines.imageWidths, kind: orderLines.kind, shipsBy: orderLines.shipsBy,
       leadMinDays: orderLines.leadMinDays, leadMaxDays: orderLines.leadMaxDays, stockTakenAt: orderLines.stockTakenAt,
@@ -62,11 +62,14 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
     // The parcel on its way (Ship): who carries it and how to follow it; none before it shipped.
     tx.select({ provider: shipments.provider, courierName: shipments.courierName, trackingNumber: shipments.trackingNumber })
       .from(shipments).where(and(eq(shipments.tenantId, tenantId), eq(shipments.orderId, o.id), isNull(shipments.endedAt))).limit(1),
+    // Its credit note, once issued (Documents D3).
+    tx.select({ number: creditNotes.number, issuedAt: creditNotes.issuedAt }).from(creditNotes)
+      .where(and(eq(creditNotes.tenantId, tenantId), eq(creditNotes.orderId, o.id))).limit(1),
     // Where it came from (the same route Analytics classifies by).
     orderSourceIn(tx, tenantId, o.id, now),
     ])
     const offers = offerRows.map((d) => ({ ...d, amount: Number(d.amount) }))
-    return { o, lines, events, notes, offers, shipment: shipment ?? null, source }
+    return { o, lines, events, notes, offers, shipment: shipment ?? null, credit: credit ?? null, source }
   })
   if (!data) return null
   // Risk: null when its facts cannot be read (the page then says "Risk unavailable" and fails closed).

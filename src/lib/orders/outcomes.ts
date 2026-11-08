@@ -92,6 +92,8 @@ export async function undoOutcome(tx: Tx, tenantId: string, actor: Actor & { rol
   if (e.kind === 'rto' && e.reason === 'restocked') return { ok: false, error: 'Its stock was put back: undo is not possible. Adjust the stock on Products if you need to.' }
   await current(tx, tenantId, e.orderId, now) // lock first, so an action committing meanwhile is seen
   const [later] = await tx.select({ id: orderEvents.id }).from(orderEvents)
+    // credit_noted is NOT passive: a credit note reverses the sale, so undoing Came back after one must be refused
+    // (credit.int.test.ts holds it). Never add it to this list.
     .where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.orderId, e.orderId), gt(orderEvents.at, e.at), notInArray(orderEvents.kind, ['note_added', 'edited', 'printed_slip', 'printed_invoice'])))
     .orderBy(desc(orderEvents.at)).limit(1)
   if (later) return { ok: false, error: 'This order changed since: open it to see what happened.' }

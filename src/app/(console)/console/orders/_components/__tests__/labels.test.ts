@@ -19,3 +19,10 @@ describe('order history in words', () => {
     for (const s of ORDER_STATES) expect(STATE[s].label.length).toBeGreaterThan(0)
   })
 })
+
+describe('credit notes in the timeline (Documents D3)', () => {
+  it('says why the credit note was issued', () => {
+    expect(say('credit_noted', 'cancelled')).toBe('Credit note issued · cancelled after packing')
+    expect(say('credit_noted', 'came_back')).toBe('Credit note issued · it came back')
+  })
+})

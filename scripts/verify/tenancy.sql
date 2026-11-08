@@ -1300,4 +1300,32 @@ do $$ begin
 end $$;
 rollback;
 
-\echo 'tenancy proof — all 40 checks passed'
+-- 41. Credit notes (Documents D3): the shop's own; issued (insert) only, never changed or deleted by anyone; another
+-- shop's order cannot be credited; staff and the API roles see none.
+insert into orders (id, tenant_id, number, payment_method, placed_at) values ('acacacac-0000-0000-0000-0000000c0e0a', '11111111-1111-1111-1111-111111111111', 9301, 'cod', now()), ('acacacac-0000-0000-0000-0000000c0e0b', '22222222-2222-2222-2222-222222222222', 9301, 'cod', now());
+insert into credit_notes (tenant_id, order_id, number, against_invoice, reason, taxable, cgst, sgst, igst, total, issued_by) values ('22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-0000000c0e0b', 'B/26-27/C0001', 'B/26-27/00001', 'cancelled', 100, 9, 9, 0, 118, '99999999-9999-9999-9999-999999999999');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if exists (select 1 from credit_notes) then raise exception 'FAIL: A sees B credit notes'; end if;
+  begin insert into credit_notes (tenant_id, order_id, number, against_invoice, reason, taxable, cgst, sgst, igst, total, issued_by) values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-0000000c0e0b', 'A/26-27/C0001', 'x', 'cancelled', 0, 0, 0, 0, 0, '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: A credited a B order';
+  exception when foreign_key_violation then null; end;
+  begin insert into credit_notes (tenant_id, order_id, number, against_invoice, reason, taxable, cgst, sgst, igst, total, issued_by) values ('22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-0000000c0e0b', 'B/26-27/C0002', 'x', 'cancelled', 0, 0, 0, 0, 0, '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: A wrote a credit note in B';
+  exception when insufficient_privilege then null; end;
+  insert into credit_notes (tenant_id, order_id, number, against_invoice, reason, taxable, cgst, sgst, igst, total, issued_by) values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-0000000c0e0a', 'A/26-27/C0001', 'A/26-27/00001', 'came_back', 100, 9, 9, 0, 118, '99999999-9999-9999-9999-999999999999');
+  begin insert into credit_notes (tenant_id, order_id, number, against_invoice, reason, taxable, cgst, sgst, igst, total, issued_by) values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-0000000c0e0a', 'A/26-27/C0002', 'A/26-27/00001', 'came_back', 100, 9, 9, 0, 118, '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: two credit notes for one order';
+  exception when unique_violation then null; end;
+  begin update credit_notes set total = total; raise exception 'FAIL: the app changed a credit note'; exception when insufficient_privilege then null; end;
+  begin delete from credit_notes; raise exception 'FAIL: the app deleted a credit note'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+do $$ begin
+  begin update credit_notes set number = number; raise exception 'FAIL: a credit note changed'; exception when check_violation then null; end;
+  begin delete from credit_notes; raise exception 'FAIL: a credit note deleted'; exception when check_violation then null; end;
+  begin truncate credit_notes; raise exception 'FAIL: credit notes truncated'; exception when check_violation then null; end;
+  if exists (select 1 from unnest(array['frata_admin', 'anon', 'authenticated', 'service_role']) r
+             where has_any_column_privilege(r, 'credit_notes', 'select, insert, update, references') or has_table_privilege(r, 'credit_notes', 'select, insert, update, delete, truncate, references, trigger'))
+  then raise exception 'FAIL: staff or API roles reach credit notes'; end if;
+end $$;
+
+\echo 'tenancy proof — all 41 checks passed'

@@ -8,7 +8,7 @@ import { Dialog } from '@/components/ui/dialog'
 import { Menu, type MenuItem } from '@/components/ui/menu'
 import { Toaster, useToast } from '@/components/ui/toast'
 import { CANCEL_LABEL, CANCEL_REASONS, type CancelReason } from '@/domains/orders/work'
-import { cancelOrder, confirmOrder, holdOrder, packOrder, undoOrderAction, unholdOrder } from '../actions'
+import { cancelOrder, confirmOrder, holdOrder, issueCreditNote, packOrder, undoOrderAction, unholdOrder } from '../actions'
 
 // =============================================================================
 // FILE: src/app/(console)/console/orders/_components/order-actions.tsx
@@ -27,7 +27,9 @@ export type OrderActionsProps = {
   /** The print pages this order has now: a slip once it is placed, an invoice once packed. */
   print: { slip: string | null; invoice: string | null }
   /** The same documents as PDF downloads (Documents D1). */
-  pdf?: { slip: string | null; invoice: string | null }
+  pdf?: { slip: string | null; invoice: string | null; credit?: string | null }
+  /** Documents D3: whether this person may issue a credit note now, and the one issued. */
+  credit?: { may: boolean; number: string | null }
   /** Which More items this person may use on this order now. */
   may: { hold: boolean; unhold: boolean; cancel: boolean; pack: boolean; confirm: boolean }
   /** High or unreadable risk: confirming is still allowed here (a person is looking), but it asks first. */
@@ -47,6 +49,7 @@ function Actions(p: OrderActionsProps) {
   const [busy, setBusy] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [riskOpen, setRiskOpen] = useState(false)
+  const [creditOpen, setCreditOpen] = useState(false)
   const [reason, setReason] = useState<CancelReason | ''>('')
   const [note, setNote] = useState('')
   const [restock, setRestock] = useState(true)
@@ -82,6 +85,8 @@ function Actions(p: OrderActionsProps) {
     ...(p.print.invoice ? [{ label: 'Print invoice', href: p.print.invoice }] : []),
     ...(p.pdf?.slip ? [{ label: 'Download packing slip (PDF)', href: p.pdf.slip }] : []),
     ...(p.pdf?.invoice ? [{ label: 'Download invoice (PDF)', href: p.pdf.invoice }] : []),
+    ...(p.pdf?.credit ? [{ label: 'Download credit note (PDF)', href: p.pdf.credit }] : []),
+    ...(p.credit?.may ? [{ label: 'Issue credit note…', onSelect: () => setCreditOpen(true) }] : []),
     { label: 'Copy link', onSelect: () => { void navigator.clipboard?.writeText(window.location.href).then(() => toast({ text: 'Link copied.' }), () => toast({ text: 'Copy the address from the address bar.' })) } },
     ...(p.may.cancel && p.primary !== 'cancel' ? [{ label: 'Cancel order…', onSelect: () => setCancelOpen(true), danger: true }] : []),
   ]
@@ -111,6 +116,10 @@ function Actions(p: OrderActionsProps) {
 
       <Dialog open={riskOpen} onClose={() => setRiskOpen(false)} title={`Confirm ${p.number}?`} description={p.riskWarning}
         actions={<><Button variant="secondary" data-autofocus onClick={() => setRiskOpen(false)}>Not yet</Button><Button onClick={() => { setRiskOpen(false); void confirm() }}>Confirm anyway</Button></>} />
+
+      <Dialog open={creditOpen} onClose={() => setCreditOpen(false)} title={`Issue a credit note for ${p.number}?`}
+        description="It reverses the whole invoice, with its own number from your credit-note series. A credit note is final: it cannot be changed or taken back."
+        actions={<><Button variant="secondary" data-autofocus onClick={() => setCreditOpen(false)}>Not now</Button><Button onClick={() => void run('credited', async () => { const r = await issueCreditNote(p.orderId); return r.ok ? { ...r, ok: true } : r }).then((r) => { if (r) setCreditOpen(false) })} aria-disabled={busy}>Issue credit note</Button></>} />
 
       <Dialog open={cancelOpen} onClose={() => { setCancelOpen(false); setError(null) }} title={`Cancel ${p.number}?`}
         description={p.refund ? <>It was paid online: refund <strong>{p.refundLabel}</strong> in your Razorpay dashboard after cancelling (Frrata does not move the money). Frrata does not tell the customer: tell them on WhatsApp or by phone.</> : 'Frrata does not tell the customer: tell them on WhatsApp or by phone.'}

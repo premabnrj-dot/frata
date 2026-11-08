@@ -10,7 +10,7 @@ import { ROLES } from '@/domains/orders/work'
 import { asMember } from '@/lib/auth/as-member'
 import { requireMember } from '@/lib/auth/require-member'
 import { dayMonthLongIN } from '@/lib/format-date'
-import { documentsFor, MAX_DOCUMENTS } from '@/lib/orders/documents'
+import { documentsFor, MAX_DOCUMENTS, type Paper } from '@/lib/orders/documents'
 import { formatInr } from '@/lib/format'
 import { STATE } from '../_components/labels'
 
@@ -79,7 +79,8 @@ function Slip({ o, lines, shop }: { o: DocOrder; lines: DocLine[]; shop: DocShop
 
 const rate = (bps: number) => `${bps / 100}%`
 
-function Invoice({ o, lines, shop }: { o: DocOrder; lines: DocLine[]; shop: DocShop }) {
+function Invoice({ o, lines, shop, frozen }: { o: DocOrder; lines: DocLine[]; shop: DocShop; frozen: Paper }) {
+  // An invoice or bill of supply only: credit notes are PDF-only (their kind never reaches these ternaries).
   const inv = invoice(o, lines, shop)
   if (!inv) return <article className="break-after-page p-6"><p className="font-mono">{o.number}</p><p>Not packed yet: its invoice is issued when it is marked packed.</p></article>
   const intra = inv.supply === 'intra'
@@ -131,6 +132,11 @@ function Invoice({ o, lines, shop }: { o: DocOrder; lines: DocLine[]; shop: DocS
         {inv.pricesIncludeGst && inv.kind === 'tax_invoice' ? <p>Prices include GST.</p> : null}
         {inv.kind === 'bill_of_supply' ? <p>The seller is not registered for GST; no GST is charged.</p> : null}
       </div>
+      {/* As the invoice froze them at packing (Documents D2), the same as its PDF. */}
+      <div className="flex items-end justify-between gap-6 pt-4 text-xs">
+        <p className="text-muted-foreground">{frozen.note}</p>
+        <p className="shrink-0 text-right"><span className="block border-t border-foreground pt-1">Authorised signatory{frozen.signatory ? ` · ${frozen.signatory}` : ''}</span><span className="text-muted-foreground">for {inv.seller.name}</span></p>
+      </div>
     </article>
   )
 }
@@ -159,7 +165,7 @@ export default async function PrintPage({ searchParams }: { searchParams: Promis
       {r.value.skipped.length ? <p role="status" className="text-sm print:hidden">Not printed: {r.value.skipped.map((x) => `${x.number} (${STATE[x.state].label.toLowerCase()})`).join(', ')}. A packing slip is for an order from confirmed until it is delivered.</p> : null}
       {asked.length > numbers.length ? <p role="status" className="text-sm print:hidden">The first {MAX_DOCUMENTS} of the {asked.length} orders asked for. Print these, then the rest.</p> : null}
       {docs.length === 0 ? <Panel title="Nothing to print">{r.value.skipped.length ? 'None of these orders has a packing slip now.' : 'None of these orders is in your shop.'}</Panel>
-        : docs.map(({ o, lines }) => kind === 'invoice' ? <Invoice key={o.number} o={o} lines={lines} shop={r.value.shop} /> : <Slip key={o.number} o={o} lines={lines} shop={r.value.shop} />)}
+        : docs.map(({ o, lines, frozen }) => kind === 'invoice' ? <Invoice key={o.number} o={o} lines={lines} shop={r.value.shop} frozen={frozen} /> : <Slip key={o.number} o={o} lines={lines} shop={r.value.shop} />)}
     </>
   )
 }

@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { CREDIT_SERIES_FULL, CreditSeriesFull, issueCredit } from '@/lib/orders/credit'
 import { z } from 'zod'
 import { CANCEL_REASONS, ROLES, type OrderAction } from '@/domains/orders/work'
 import { Address, addressErrors } from '@/domains/checkout/address'
@@ -25,6 +26,7 @@ import { refreshShop } from '@/lib/queries/storefront'
 //   edit address or phone, cancel                 — owner, admin
 //   mark shipped another way                      — owner, admin, staff (never a partner)
 //   delivered, came back, lost; undo those        — owner, admin (Ship S·0; undo by the undone action's roles)
+//   issue a credit note                           — owner, admin, never a support visit (Documents D3)
 // A support visit acts as the owner and is audited: the audit row carries the
 // order id and the NAMES of fields changed, never shopper data.
 // =============================================================================
@@ -46,6 +48,7 @@ async function run<T extends object>(action: OrderAction, target: string, detail
     revalidatePath('/console', 'layout')
     return v
   } catch (err) {
+    if (err instanceof CreditSeriesFull) return { ok: false, error: CREDIT_SERIES_FULL }
     console.error(`[order.${action}]`, err instanceof Error ? err.name : 'error')
     return { ok: false, error: 'We could not save that. Nothing was changed.' }
   }
@@ -88,6 +91,11 @@ export async function addOrderNote(orderId: string, body: string) {
 export async function packOrder(orderId: string) {
   // Packing takes pre-orders' stock and changes what they are owed: the product pages refresh when it moved.
   return Id.safeParse(orderId).success ? run('pack', orderId, {}, (tx, t, a) => work.pack(tx, t, a, orderId), (tenantId, v) => { if (v.preordersTaken) refreshShop(tenantId, 'catalogue') }) : notFound
+}
+
+/** A credit note for an order cancelled after packing or back at the shop (Documents D3): owners and admins, once. */
+export async function issueCreditNote(orderId: string) {
+  return Id.safeParse(orderId).success ? run('credit', orderId, {}, (tx, t, a) => issueCredit(tx, t, a, orderId)) : notFound
 }
 
 // Who it goes to: checkout's own rules (src/domains/checkout/address.ts), so an edited address is held to what a

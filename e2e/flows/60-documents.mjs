@@ -197,6 +197,26 @@ export default {
         await p.keyboard.press('p'); await p.locator('[data-toast]', { hasText: `${label(A)} has no packing slip` }).waitFor()
       })
 
+      await t.step('a credit note (D3): issued once for the cancelled invoice, in its own C series; its PDF downloads; not offered twice', async () => {
+        await p.goto(CONSOLE + `/console/orders/${A}`)
+        await p.getByRole('button', { name: 'More' }).click(); await p.getByRole('menuitem', { name: 'Issue credit note…' }).click()
+        const d = p.getByRole('dialog', { name: `Issue a credit note for ${label(A)}?` }); await d.waitFor()
+        await d.getByRole('button', { name: 'Issue credit note' }).click()
+        const cn = await until(async () => (await db`select number, against_invoice, total from credit_notes where tenant_id = ${T}`).find((r) => r.against_invoice === invA))
+        assert.match(cn.number, /\/\d\d-\d\d\/C\d{4}$/, 'its own C series')
+        assert.ok(cn.number.length <= 16)
+        await p.getByText(cn.number).first().waitFor()
+        const pdf = await p.context().request.get(CONSOLE + `/console/orders/pdf?kind=credit&n=${A}`)
+        assert.equal(pdf.status(), 200)
+        assert.equal(pdf.headers()['content-type'], 'application/pdf')
+        assert.match(pdf.headers()['content-disposition'], new RegExp(`Credit note ${cn.number.replaceAll('/', '-')}\\.pdf`))
+        await p.getByRole('button', { name: 'More' }).click()
+        assert.equal(await p.getByRole('menuitem', { name: 'Issue credit note…' }).count(), 0, 'one credit note per order')
+        await p.getByRole('menuitem', { name: 'Download credit note (PDF)' }).waitFor()
+        await p.keyboard.press('Escape')
+        assert.equal((await p.context().request.get(CONSOLE + `/console/orders/pdf?kind=credit&n=${B}`)).status(), 404, 'no credit note, nothing to download')
+      })
+
       await t.step("another shop's number prints nothing", async () => {
         await p.goto(CONSOLE + `/console/orders/print?kind=slip&n=${top + 900}`)
         await p.getByText('Nothing to print').waitFor()
@@ -215,6 +235,8 @@ export default {
       })
     } finally {
       await owner.close()
+      // A credit note is final (its trigger refuses a delete): the test's own is removed with triggers off.
+      await db.begin(async (x) => { await x`set local session_replication_role = replica`; await x`delete from credit_notes where tenant_id = ${T} and order_id in (select id from orders where tenant_id = ${T} and number between ${A} and ${top + 3})` })
       await db`delete from orders where tenant_id = ${T} and number between ${A} and ${top + 3}`
       await db`delete from orders where tenant_id = ${OTHER}`
       await db`delete from tenants where id = ${OTHER}`

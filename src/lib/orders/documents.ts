@@ -1,13 +1,13 @@
 import 'server-only'
 import { and, asc, eq, inArray } from 'drizzle-orm'
-import { MAX_DOCUMENTS, type DocLine, type DocOrder, type DocShop } from '@/domains/orders/documents'
+import { CREDIT_REASONS, MAX_DOCUMENTS, type CreditReason, type DocLine, type DocOrder, type DocShop, type IssuedCredit } from '@/domains/orders/documents'
 import { orderPrefix } from '@/domains/signup/slug'
 import { orderState, type OrderState } from '@/domains/orders/order-state'
 import { applies } from '@/domains/orders/work'
 import { momentColumns } from '@/lib/db/order-predicates'
 import type { Tx } from '@/lib/db'
 import { shopSettings, tenants } from '@/lib/db/schema'
-import { orderLines, orders } from '@/lib/db/schema-orders'
+import { creditNotes, orderLines, orders } from '@/lib/db/schema-orders'
 
 // =============================================================================
 // FILE: src/lib/orders/documents.ts
@@ -26,7 +26,7 @@ export { MAX_DOCUMENTS }
 /** Settings › Documents (D2): the logo for paper, the signatory and the invoice note — today's (slips), or as an invoice froze them. */
 export type Paper = { logo: string | null; signatory: string; note: string }
 
-export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], kind: 'slip' | 'invoice', now = new Date()): Promise<{ shop: DocShop; paper: Paper; orders: { n: number; o: DocOrder; lines: DocLine[]; frozen: Paper }[]; skipped: { number: string; state: OrderState }[] }> {
+export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], kind: 'slip' | 'invoice' | 'credit', now = new Date()): Promise<{ shop: DocShop; paper: Paper; orders: { n: number; o: DocOrder; lines: DocLine[]; frozen: Paper; credit: IssuedCredit | null }[]; skipped: { number: string; state: OrderState }[] }> {
   const wanted = [...new Set(numbers.filter((n) => Number.isSafeInteger(n) && n > 0))].slice(0, MAX_DOCUMENTS)
   const [s] = await tx.select({ name: tenants.name, legalName: shopSettings.legalName, address: shopSettings.address, prefix: shopSettings.orderPrefix,
     logo: shopSettings.docLogo, signatory: shopSettings.docSignatory, note: shopSettings.docNote })
@@ -49,6 +49,9 @@ export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], 
     unitPrice: orderLines.unitPrice, lineDiscount: orderLines.lineDiscount,
     chargeTaxable: orderLines.chargeTaxable, chargeGst: orderLines.chargeGst,
   }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), inArray(orderLines.orderId, os.map((o) => o.id)))).orderBy(asc(orderLines.position))
+  // Credit notes issued for these orders (Documents D3): only read when one is asked for.
+  const cns = kind === 'credit' ? await tx.select({ orderId: creditNotes.orderId, number: creditNotes.number, issuedAt: creditNotes.issuedAt, reason: creditNotes.reason, against: creditNotes.againstInvoice, total: creditNotes.total })
+    .from(creditNotes).where(and(eq(creditNotes.tenantId, tenantId), inArray(creditNotes.orderId, os.map((o) => o.id)))) : []
   // In the order asked for (a bulk print keeps the queue's order).
   const byNumber = new Map(os.map((o) => [o.number, o]))
   // A slip only for an order that may go out (applies('print'), the same rule as the buttons): a typed link to an
@@ -66,7 +69,8 @@ export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], 
         ...stored, number: `${prefix}-${o.number}`, subtotal: Number(o.subtotal), shipping: Number(o.shipping), codCharge: Number(o.codCharge), gstTotal: Number(o.gstTotal), total: Number(o.total),
       }
       // What the invoice froze at packing (an order packed before D2 froze nothing: no logo, no signatory or note).
-      return [{ n, o: doc, lines, frozen: { logo: invoiceLogo, signatory: invoiceSignatory ?? '', note: invoiceNote ?? '' } }]
+      const cn = cns.find((x) => x.orderId === o.id)
+      return [{ n, o: doc, lines, frozen: { logo: invoiceLogo, signatory: invoiceSignatory ?? '', note: invoiceNote ?? '' }, credit: cn ? { number: cn.number, issuedAt: cn.issuedAt, reason: (CREDIT_REASONS as readonly string[]).includes(cn.reason) ? cn.reason as CreditReason : 'cancelled', against: cn.against, total: Number(cn.total) } : null }]
     }),
   }
 }

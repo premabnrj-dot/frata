@@ -74,3 +74,20 @@ describe('the packing slip', () => {
     expect(addressLines(order({ addressLine: 'B-14, Tilak Marg, C-Scheme', area: '' }))[0]).toBe('B-14, Tilak Marg, C-Scheme')
   })
 })
+
+describe('the credit note (Documents D3)', () => {
+  it('reverses the issued invoice in full under its own number and date, citing the invoice (Rule 53)', async () => {
+    const { creditNote } = await import('../documents')
+    const o = order({ cancelledAt: new Date('2026-11-08T05:00:00Z') })
+    const inv = invoice(o, lines, shop)!
+    const issued = { number: 'KS/26-27/C0001', issuedAt: new Date('2026-11-08T06:00:00Z'), reason: 'cancelled' as const, against: inv.number, total: inv.totals.total }
+    const cn = creditNote(o, lines, shop, issued)!
+    expect(cn.kind).toBe('credit_note')
+    expect([cn.number, cn.cancelled]).toEqual(['KS/26-27/C0001', false])
+    expect(cn.against).toEqual({ number: 'KS/26-27/00001', date: inv.date, reason: 'cancelled' })
+    expect(cn.totals).toEqual(inv.totals)
+    expect(cn.lines).toEqual(inv.lines)
+    expect(creditNote(order({ invoiceNumber: null, packedAt: null }), lines, shop, issued)).toBeNull()
+    expect(() => creditNote(o, lines, shop, { ...issued, total: issued.total + 1 })).toThrow(/differs/)
+  })
+})
