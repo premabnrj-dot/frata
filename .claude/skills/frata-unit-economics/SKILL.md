@@ -2,7 +2,7 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.4.0
+  version: 2.5.0
   verified: 2026-11-08
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
@@ -12,9 +12,19 @@ metadata:
 ## The one formula
 
 Profit per order is `orderProfit()` in `src/domains/orders/profit.ts` — if
-delivered, if returned, and expected (weighted by delivery probability). The
+delivered, if returned, if lost by the courier, and expected (weighted by delivery probability). The
 console, analytics and any model use it; nobody computes a margin inline.
 Contribution per ₹100 is `contributionPer100()`. Money in paise.
+
+- **Lost by the courier** (`ifLost`, unit-economics review 2026-11-08): −(forward freight + packaging + ads + COGS +
+  the gateway's fee); no return leg, no COD fee, no Frrata fee (a lost parcel is never billed). A courier's claim is
+  not counted until a column records it. Freight for each outcome comes from `freightOf` (`src/domains/orders/freight.ts`).
+- **₹ kept after returns** (`src/domains/orders/kept.ts`, Offers and Analytics alike): what delivered orders earned
+  minus what returns and lost parcels cost, over orders with an outcome. Known costs only (orders carry no packaging or
+  ad spend: "before ads and packaging"); an order whose COGS or courier line is unknown is left out and counted as left
+  out, never ₹0. A source or an offer is judged on ₹ kept after returns, and per order with an outcome, never per
+  delivered order alone. The fee is the plan version in force when the order becomes billable (`feeForOrder`, billing's
+  rule).
 
 ## Rules
 

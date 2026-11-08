@@ -43,6 +43,16 @@ describe('billableDelivered (call E)', () => {
   })
 })
 
+describe('freightOf: lost by the courier', () => {
+  it('only the forward leg: actual from Shiprocket (pending until it arrives), else the estimate, else none', () => {
+    expect(freightOf('shiprocket', { forwardShipping: 6200, rtoShipping: 6200, courierCodFee: 3600 }, est, { cod: true, outcome: 'lost' }))
+      .toEqual({ forwardShipping: 6200, rtoShipping: 0, codFee: 0, source: 'actual' })
+    expect(freightOf('shiprocket', none, est, { cod: true, outcome: 'lost' }).source).toBe('pending')
+    expect(freightOf('self', none, est, { cod: true, outcome: 'lost' })).toEqual({ forwardShipping: 7000, rtoShipping: 0, codFee: 0, source: 'estimate' })
+    expect(freightOf(null, none, null, { cod: false, outcome: 'lost' }).source).toBe('none')
+  })
+})
+
 describe('outcomeUndoOpen', () => {
   it('until the IST month it was marked in ends', () => {
     expect(outcomeUndoOpen(new Date('2026-11-30T18:00:00Z'), new Date('2026-11-30T18:20:00Z'))).toBe(true) // 23:30 → 23:50 IST, 30 Nov

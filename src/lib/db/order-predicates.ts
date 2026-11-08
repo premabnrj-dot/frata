@@ -138,3 +138,34 @@ export const discountUseSql = (now: Date, cls: 'product' | 'order' | 'shipping' 
 export const owedSql = (tenantId: string, now: Date, variantCol = '"variants"."id"'): SQL<number> => sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id
   where l.tenant_id = ${tenantId} and l.variant_id = ${sql.raw(variantCol)} and l.kind = 'preorder' and l.stock_taken_at is null and o.packed_at is null and o.shipped_at is null
     and (${standingSql('o')} or ${holdingSql(now, 'o')}))`
+
+/**
+ * ₹ KEPT, GROUPED (Analytics A·1; speed review: never one row per order). The expressions `keptOf`
+ * (src/domains/orders/kept.ts) groups by, and what it sums: an order with an outcome (delivered, came back, lost) by
+ * its outcome, the open shipment's provider, COD or not, which costs it knows, and the plan-fee bucket at its billable
+ * moment (`feeChanges`: the plan versions' start times, oldest first; bucket k means the k-th version, 0 none, as
+ * `feeForOrder`). Offers and Analytics both read it, so their ₹ kept agree.
+ */
+export function keptSql(now: Date, a: string, feeChanges: readonly Date[]) {
+  const st = stateSql(now, a)
+  const billableAt = sql`coalesce(${c(a, 'delivered_at')}, ${c(a, 'shipped_at')} + interval '30 days')`
+  const changes = feeChanges.length ? sql`array[${sql.join(feeChanges.map((d) => sql`${d.toISOString()}::timestamptz`), sql`, `)}]` : sql`array[]::timestamptz[]`
+  const outcome = sql<'delivered' | 'rto' | 'lost'>`(case when ${st} = 'delivered' then 'delivered' when ${st} in ('rto', 'rto_received') then 'rto' else 'lost' end)`
+  const provider = openShipmentProviderSql(a)
+  const cod = sql<boolean>`(${currentMethodSql(a)} = 'cod')`
+  const bucket = sql<number>`(case when ${st} = 'delivered' then (select count(*)::int from unnest(${changes}) ch where ch <= ${billableAt}) else 0 end)`
+  return {
+    /** Only orders with an outcome. */
+    where: sql`${st} in ('delivered', 'rto', 'rto_received', 'lost')`,
+    /** The group's columns: outcome, provider, cod, bucket, then the sums. */
+    columns: sql`${outcome} outcome, ${provider} provider, ${cod} cod, ${bucket} bucket, count(*)::int n,
+      coalesce(sum(${c(a, 'net_revenue')}), 0)::bigint net, sum(${c(a, 'cogs')})::bigint cogs, sum(${c(a, 'forward_shipping')})::bigint fwd,
+      sum(${c(a, 'rto_shipping')})::bigint rto, sum(${c(a, 'courier_cod_fee')})::bigint codfee, coalesce(sum(${c(a, 'gateway_fee')}), 0)::bigint gw,
+      coalesce(sum(${c(a, 'merchandise_net')}), 0)::bigint base`,
+    /** Group by these, after `lead` key columns of the caller's own placed first: the four group columns by position,
+     * and known costs apart from unknown, so a sum is null only when all of its orders lack it. */
+    groupBy: (lead = 0) => sql.raw(`${[1, 2, 3, 4].map((i) => i + lead).join(', ')}, (${a}.cogs is null), (${a}.forward_shipping is null), (${a}.rto_shipping is null), (${a}.courier_cod_fee is null)`),
+  }
+}
+/** A row of keptSql, as postgres returns it. */
+export type KeptRow = { outcome: 'delivered' | 'rto' | 'lost'; provider: 'self' | 'shiprocket' | null; cod: boolean; bucket: number; n: number; net: string; cogs: string | null; fwd: string | null; rto: string | null; codfee: string | null; gw: string; base: string }

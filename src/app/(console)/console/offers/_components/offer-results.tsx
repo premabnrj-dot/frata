@@ -47,7 +47,7 @@ export function OfferStrip({ s }: { s: OfferStats }) {
 
 /** One offer's numbers over the window. Under 30 orders it says so before any number. */
 export function OfferNumbers({ o, s, costs }: { o: OfferStat | undefined; s: OfferStats; costs: boolean }) {
-  const x: OfferStat = o ?? { orders: 0, given: 0, aov: null, prepaid: 0, repeat: 0, fresh: 0, delivered: 0, rto: 0, keptPerDelivered: null, keptBasis: null, givenPerDelivered: null, creators: [] }
+  const x: OfferStat = o ?? { orders: 0, given: 0, aov: null, prepaid: 0, repeat: 0, fresh: 0, delivered: 0, rto: 0, keptPerOrder: null, keptBasis: null, keptLeftOut: 0, givenPerDelivered: null, creators: [] }
   const w = s.without
   return (
     <Section title={`Last ${s.days} days`} id="numbers">
@@ -73,8 +73,9 @@ export function OfferNumbers({ o, s, costs }: { o: OfferStat | undefined; s: Off
         <div><dt className="text-xs text-muted-foreground">Delivered</dt><dd className="font-mono text-lg"><Numeric>{x.delivered}</Numeric></dd></div>
         <div><dt className="text-xs text-muted-foreground">Returned (RTO)</dt><dd className="font-mono text-lg">{rtoRate(x)}</dd>
           <dd className="text-xs text-muted-foreground">{rtoRate(w)} without an offer</dd></div>
-        {costs ? <div className="col-span-2"><dt className="text-xs text-muted-foreground">₹ kept per delivered order</dt><dd className="font-mono text-lg">{rs(x.keptPerDelivered)}</dd>
-          {x.keptPerDelivered === null ? <dd className="text-xs text-muted-foreground">Once orders are delivered and their costs are known.</dd>
+        {costs ? <div className="col-span-2"><dt className="text-xs text-muted-foreground">₹ kept per order, after returns</dt><dd className="font-mono text-lg">{rs(x.keptPerOrder)}</dd>
+          <dd className="text-xs text-muted-foreground">Delivered, came back or lost · before ads and packaging{x.keptLeftOut ? ` · ${x.keptLeftOut} left out (costs not known yet)` : ''}</dd>
+          {x.keptPerOrder === null ? <dd className="text-xs text-muted-foreground">Once orders are delivered or come back, and their costs are known.</dd>
             : keptNote(x.keptBasis) ? <dd className="text-xs text-muted-foreground">{keptNote(x.keptBasis)}{x.keptBasis === 'none' ? <> · <Link href="/console/settings/shipping-costs" className="underline">set shipping costs</Link></> : null}</dd> : null}</div> : null}
       </dl>
       )}

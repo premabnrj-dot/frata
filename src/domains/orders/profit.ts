@@ -9,7 +9,10 @@
 //   - `ifDelivered`: what the order earns when the customer accepts it
 //   - `ifRto`: what it costs when it comes back (forward + return freight, the
 //     COD fee where the courier charges it anyway, the ad spend already gone)
-//   - `expected`: the two weighted by the chance it is delivered
+//   - `ifLost`: what it costs when the courier loses it (Ship S·0's "Lost by the courier"; unit-economics review
+//     2026-11-08): the forward freight and the goods are gone, the gateway kept its fee; no return leg, no COD fee,
+//     no platform fee. A courier's claim is not counted until something records it.
+//   - `expected`: delivered and RTO weighted by the chance it is delivered
 //
 // All inputs are paise. GST is outside: the merchant collects and remits it,
 // so it is never contribution. Pure: no I/O, no dates, no defaults hidden here.
@@ -38,7 +41,7 @@ export type OrderCosts = {
   platformFee: Paise
 }
 
-export type OrderProfit = { ifDelivered: Paise; ifRto: Paise; expected: Paise }
+export type OrderProfit = { ifDelivered: Paise; ifRto: Paise; ifLost: Paise; expected: Paise }
 
 export function orderProfit(c: OrderCosts, deliveryProbability: number): OrderProfit {
   if (deliveryProbability < 0 || deliveryProbability > 1) {
@@ -51,8 +54,9 @@ export function orderProfit(c: OrderCosts, deliveryProbability: number): OrderPr
   // The goods come back, so COGS is not lost; a fashion return is often not
   // resaleable at full value, which is the caller's to model in `cogs` later.
   const ifRto = paise(-(sunk + c.rtoShipping + c.codFee))
+  const ifLost = paise(-(sunk + c.cogs + c.gatewayFee))
   const expected = paise(Math.round(ifDelivered * deliveryProbability + ifRto * (1 - deliveryProbability)))
-  return { ifDelivered, ifRto, expected }
+  return { ifDelivered, ifRto, ifLost, expected }
 }
 
 /** Contribution per ₹100 of order value — the unit the business model speaks in. */

@@ -2,21 +2,18 @@ import 'server-only'
 import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 import { offerStatus, type OfferStatus } from '@/domains/checkout/offer-status'
 import type { DiscountStyle } from '@/domains/checkout/discounts'
-import { paise } from '@/domains/money/paise'
-import { freightOf, type FreightSource } from '@/domains/orders/freight'
 import { JUDGE_MIN } from '@/domains/analytics/judge'
-import { orderProfit } from '@/domains/orders/profit'
-import { deliveredFee } from '@/domains/plans/entitlements'
+import { keptOf, keptPerOrder, type KeptBasis, type KeptGroup } from '@/domains/orders/kept'
 import { planVersions, tenantPlans } from '@/lib/db/schema'
 import { estimateOf } from '@/domains/settings/ship-costs'
-import { shipCostsIn } from '@/lib/queries/settings'
-import { costsVisibleIn } from '@/lib/queries/settings'
+import { costsVisibleIn, shipCostsIn } from '@/lib/queries/settings'
 import type { MemberRole } from '@/domains/tenancy/roles'
+import { istDayStart } from '@/domains/time/day'
 import { discountCodes, discountTargets, discountTiers, discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import { collections, products, variants } from '@/lib/db/schema-catalogue'
 import { orders } from '@/lib/db/schema-orders'
 import { discountUses, useOfRowSql } from '@/lib/db/discount-predicates'
-import { currentMethodSql, holdingSql, openShipmentProviderSql, priorOrderSql, standingSql, stateSql } from '@/lib/db/order-predicates'
+import { currentMethodSql, holdingSql, keptSql, priorOrderSql, standingSql, stateSql, type KeptRow } from '@/lib/db/order-predicates'
 import { leakOf, type Leak } from '@/domains/checkout/leak'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
@@ -102,6 +99,7 @@ export type CreatorStat = {
   orders: number; delivered: number; rto: number; given: number; viaLink: number
   leak: Leak
 }
+export type { KeptBasis }
 export type OfferStat = {
   orders: number; given: number
   /** Average order total (after offers) of these orders, in paise. */
@@ -110,16 +108,18 @@ export type OfferStat = {
   /** Buyers who had ordered here before (priorOrderSql), and the rest. */
   repeat: number; fresh: number
   delivered: number; rto: number
-  /** ₹ kept per delivered order (profit.ts; orders with unknown costs or pending freight left out), or null before one. */
-  keptPerDelivered: number | null
+  /** ₹ kept per order with an outcome, after returns and lost parcels (kept.ts, the figure Analytics shows; known costs
+   * only), or null before one, or for a viewer who does not see costs. */
+  keptPerOrder: number | null
   /** How its freight was counted (freight.ts): all actual; some estimated; some before shipping costs (no estimate). */
   keptBasis: KeptBasis
+  /** Orders with an outcome left out of ₹ kept (unknown COGS, freight pending from the courier). */
+  keptLeftOut: number
   /** ₹ given ÷ delivered orders, or null before one. */
   givenPerDelivered: number | null
   /** Creator codes, ranked by delivered orders. */
   creators: CreatorStat[]
 }
-export type KeptBasis = 'actual' | 'estimate' | 'none' | null
 
 export type OfferStats = {
   days: number
@@ -136,9 +136,12 @@ export type OfferStats = {
 export const JUDGE_MIN_ORDERS = JUDGE_MIN
 
 const DAY = 86_400_000
-type Delivered = { net: string; cogs: string | null; fwd: string | null; rto: string | null; codfee: string | null; gw: string | null; base: string; cod: boolean; provider: 'self' | 'shiprocket' | null }
 const num = (v: string | null) => (v === null ? null : Number(v))
-const keptOf = (k: { kept: number | null; basis: KeptBasis }) => ({ keptPerDelivered: k.kept, keptBasis: k.basis })
+/** keptSql's rows as keptOf's groups (the fee bucket read against the shop's plan history, as feeForOrder). */
+const groupsOf = (rows: readonly KeptRow[], history: readonly { feeBps: number }[]): KeptGroup[] => rows.map((r) => ({
+  outcome: r.outcome, n: r.n, provider: r.provider, cod: !!r.cod, net: Number(r.net), cogs: num(r.cogs), forward: num(r.fwd), rto: num(r.rto),
+  courierCodFee: num(r.codfee), gateway: Number(r.gw), base: Number(r.base), feeBps: r.bucket > 0 ? history[r.bucket - 1]?.feeBps ?? null : null,
+}))
 
 /**
  * DID IT MAKE MONEY? The ONE computation of an offer's results (plan O·3, review 4): the orders placed in the last
@@ -155,9 +158,11 @@ export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, opts: { 
   const days = opts.days ?? 30
   // Who may see ₹ kept (seesCosts, failing closed), the fee and the shop's confirmed shipping-cost estimates: read
   // together, in this transaction (speed review: they ran one after another).
-  const [costs, fee, shipCosts] = await Promise.all([costsVisibleIn(tx, tenantId, opts.role ?? 'owner'), feeBpsIn(tx, tenantId, now), shipCostsIn(tx, tenantId)])
+  const [costs, history, shipCosts] = await Promise.all([costsVisibleIn(tx, tenantId, opts.role ?? 'owner'), planHistoryIn(tx, tenantId), shipCostsIn(tx, tenantId)])
   const est = estimateOf(shipCosts)
-  const since = sql`${new Date(now.getTime() - days * DAY).toISOString()}::timestamptz`
+  // IST days (Analytics A·1, plan review 4): "the last 30 days" is today and the 29 IST days before, as Analytics counts.
+  const since = sql`${istDayStart(now, -(days - 1)).toISOString()}::timestamptz`
+  const kept = keptSql(now, 'o', history.map((h) => h.startsAt))
   const st = stateSql(now, 'o')
   const prepaid = sql`${currentMethodSql('o')} = 'prepaid'`
   const used = sql`exists (select 1 from ${orderDiscounts} od where od.tenant_id = o.tenant_id and od.order_id = o.id and ${useOfRowSql(now)})`
@@ -177,13 +182,12 @@ export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, opts: { 
       select count(*)::int n, coalesce(sum(o.total), 0)::bigint total,
              (count(*) filter (where ${st} = 'delivered'))::int delivered, (count(*) filter (where ${st} in ('rto', 'rto_received')))::int rto
         from ${orders} o where o.tenant_id = ${tenantId} and o.placed_at >= ${since} and (${standingSql('o')} or ${holdingSql(now, 'o')}) and not ${used}`),
-    // Delivered orders with an offer, with what profit.ts needs.
-    tx.execute<Delivered & { id: string }>(sql`
-      select od.discount_id id, o.net_revenue net, o.cogs, o.forward_shipping fwd, o.rto_shipping rto, o.courier_cod_fee codfee, o.gateway_fee gw, o.merchandise_net base,
-             ${currentMethodSql('o')} = 'cod' cod,
-             ${openShipmentProviderSql('o')} provider
+    // Orders with an outcome and an offer, grouped for kept.ts (keptSql); read only for a viewer who sees costs.
+    costs ? tx.execute<KeptRow & { id: string }>(sql`
+      select od.discount_id id, ${kept.columns}
         from ${orderDiscounts} od join ${orders} o on o.tenant_id = od.tenant_id and o.id = od.order_id
-       where od.tenant_id = ${tenantId} and o.tenant_id = ${tenantId} and o.placed_at >= ${since} and ${useOfRowSql(now)} and ${st} = 'delivered'`),
+       where od.tenant_id = ${tenantId} and o.tenant_id = ${tenantId} and o.placed_at >= ${since} and ${useOfRowSql(now)} and ${kept.where}
+       group by od.discount_id, ${kept.groupBy(1)}`) : Promise.resolve([] as (KeptRow & { id: string })[]),
     // Creator codes: the window's numbers, and the 35 days the leak alert reads (7 + the 28 before).
     tx.execute<{ id: string; discount_id: string; created_at: Date | string; n: number; given: string; link: number; delivered: number; rto: number; n7: number; link7: number; prev28: number }>(sql`
       select dc.id, dc.discount_id, dc.created_at,
@@ -200,32 +204,20 @@ export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, opts: { 
        where dc.tenant_id = ${tenantId} and dc.label is not null
        group by dc.id`),
   ])
-  // Freight through the one rule (freight.ts, Ship S0·6): a delivered order whose courier lines are still pending is
-  // left out like one with unknown cost; the basis says whether any figure in the average was estimated or left out.
-  // `costs` false (staff, partners): ₹ kept is a profit, so it is not even computed for them (tenancy audit 2026-11-08).
-  const kept = (rows: Delivered[]): { kept: number | null; basis: KeptBasis } => {
-    if (fee === null || !costs) return { kept: null, basis: null }
-    const known = rows.filter((d) => d.cogs !== null)
-      .map((d) => ({ d, f: freightOf(d.provider, { forwardShipping: num(d.fwd), rtoShipping: num(d.rto), courierCodFee: num(d.codfee) }, est, { cod: !!d.cod, outcome: 'delivered' }) }))
-      .filter((x) => x.f.source !== 'pending')
-    if (!known.length) return { kept: null, basis: null }
-    const sources = new Set<FreightSource>(known.map((x) => x.f.source))
-    return {
-      kept: Math.round(known.reduce((a, { d, f }) => a + orderProfit({
-        netRevenue: paise(Number(d.net)), cogs: paise(Number(d.cogs)), forwardShipping: f.forwardShipping, rtoShipping: f.rtoShipping, codFee: f.codFee,
-        gatewayFee: paise(Number(d.gw ?? 0)), packaging: paise(0), adCost: paise(0), platformFee: deliveredFee(paise(Number(d.base)), fee),
-      }, 1).ifDelivered, 0) / known.length),
-      basis: sources.has('none') ? 'none' : sources.has('estimate') ? 'estimate' : 'actual',
-    }
+  // ₹ kept after returns and lost parcels, per order with an outcome (kept.ts, the figure Analytics shows).
+  const keptFor = (id: string) => {
+    if (!costs) return { keptPerOrder: null, keptBasis: null, keptLeftOut: 0 }
+    const k = keptOf(groupsOf(delivered.filter((d) => d.id === id), history), est)
+    return { keptPerOrder: keptPerOrder(k), keptBasis: k.basis, keptLeftOut: k.leftOut }
   }
   const per1 = (a: number, b: number) => (b > 0 ? Math.round(a / b) : null)
-  const startOfPrev = now.getTime() - 35 * DAY, endOfPrev = now.getTime() - 7 * DAY
+  const startOfPrev = istDayStart(now, -34).getTime(), endOfPrev = istDayStart(now, -6).getTime()
   const offers = new Map<string, OfferStat>()
   for (const r of per) {
     const given = Number(r.given)
     offers.set(r.id, {
       orders: r.n, given, aov: per1(Number(r.total), r.n), prepaid: r.prepaid, repeat: r.repeat, fresh: r.n - r.repeat,
-      delivered: r.delivered, rto: r.rto, ...keptOf(kept(delivered.filter((d) => d.id === r.id))), givenPerDelivered: per1(given, r.delivered),
+      delivered: r.delivered, rto: r.rto, ...keptFor(r.id), givenPerDelivered: per1(given, r.delivered),
       creators: [],
     })
   }
@@ -236,7 +228,7 @@ export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, opts: { 
       leak: leakOf({ last7: c.n7, viaLink7: c.link7, prev28: c.prev28, prevDays }) }
     const o = offers.get(c.discount_id)
     if (o) o.creators.push(stat)
-    else if (c.n7 || stat.orders) offers.set(c.discount_id, { orders: 0, given: 0, aov: null, prepaid: 0, repeat: 0, fresh: 0, delivered: 0, rto: 0, keptPerDelivered: null, keptBasis: null, givenPerDelivered: null, creators: [stat] })
+    else if (c.n7 || stat.orders) offers.set(c.discount_id, { orders: 0, given: 0, aov: null, prepaid: 0, repeat: 0, fresh: 0, delivered: 0, rto: 0, keptPerOrder: null, keptBasis: null, keptLeftOut: 0, givenPerDelivered: null, creators: [stat] })
   }
   for (const o of offers.values()) o.creators.sort((a, b) => b.delivered - a.delivered || b.orders - a.orders)
   const a = all[0]!, w = without[0]!
@@ -249,13 +241,14 @@ export async function offerStatsIn(tx: Tx, tenantId: string, now: Date, opts: { 
   }
 }
 
-const ago = (now: Date, d: number) => sql`${new Date(now.getTime() - d * DAY).toISOString()}::timestamptz`
+/** The start of the IST day `d - 1` days before today: "the last d days", as Analytics counts them. */
+const ago = (now: Date, d: number) => sql`${istDayStart(now, -(d - 1)).toISOString()}::timestamptz`
 
 /** The fee on a delivered order under the shop's current plan, in bps (null without a plan). */
-async function feeBpsIn(tx: Tx, tenantId: string, now: Date): Promise<number | null> {
-  const [p] = await tx.select({ fee: planVersions.feeBps }).from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId))
-    .where(and(eq(tenantPlans.tenantId, tenantId), sql`${tenantPlans.startsAt} <= ${now.toISOString()}::timestamptz`)).orderBy(desc(tenantPlans.startsAt)).limit(1)
-  return p ? p.fee : null
+/** The shop's plan versions with their fee, oldest first (feeForOrder's history; billing B0 replaces the pick). */
+async function planHistoryIn(tx: Tx, tenantId: string): Promise<{ startsAt: Date; feeBps: number }[]> {
+  return tx.select({ startsAt: tenantPlans.startsAt, feeBps: planVersions.feeBps }).from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId))
+    .where(eq(tenantPlans.tenantId, tenantId)).orderBy(tenantPlans.startsAt)
 }
 
 /**

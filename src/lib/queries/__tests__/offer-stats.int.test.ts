@@ -59,32 +59,37 @@ describe.skipIf(!host)('offerStats', () => {
       for (let i = 0; i < 12; i++) await order({ at: ago(1 + (i % 6)), phone: `98291000${String(i).padStart(2, '0')}` }, { d: L, amount: 1000, code: LEAK, via: i < 10 ? 'typed' : 'link' })
       for (let i = 0; i < 12; i++) await order({ at: ago(8 + i * 2), phone: `98292000${String(i).padStart(2, '0')}` }, { d: L, amount: 1000, code: LEAK, via: 'link' })
 
-      // The window's edge (Analytics A1·0 baseline): 30 rolling days start at 10:00 UTC on 30 Jan; 30 IST days (A1·3)
-      // start at 18:30 UTC that day. An order at 12:00 UTC on 30 Jan is inside the first and outside the second: when
-      // Offers moves to IST days this count goes from 1 to 0, on purpose.
+      // The window's edge: 30 rolling days would start at 10:00 UTC on 30 Jan; 30 IST days (Analytics A1·3, as Offers
+      // counts now) start at 18:30 UTC that day. An order at 12:00 UTC on 30 Jan is outside: the count went from 1 to 0
+      // on purpose when Offers moved to IST days.
       const E = await offer('Edge')
       await order({ at: new Date('2031-01-30T12:00:00Z'), phone: '9829000099' }, { d: E, amount: 1000 })
       const s = await offerStatsIn(tx, A, now)
-      expect(s.offers.get(E)?.orders).toBe(1) // rolling 30 × 24 h today
+      expect(s.offers.get(E)?.orders ?? 0).toBe(0) // IST days
       const d = s.offers.get(D)!
       expect({ orders: d.orders, given: d.given, aov: d.aov, prepaid: d.prepaid, repeat: d.repeat, fresh: d.fresh, delivered: d.delivered, rto: d.rto, givenPerDelivered: d.givenPerDelivered })
         .toEqual({ orders: 3, given: 60000, aov: Math.round((180000 + 270000 + 190000) / 3), prepaid: 1, repeat: 1, fresh: 2, delivered: 2, rto: 1, givenPerDelivered: 30000 })
-      // ₹ kept per delivered order (profit.ts): the delivered order with known costs only (the other's cogs is unknown).
-      // Its freight goes through freight.ts (Ship S0·6). Shipped another way and no confirmed estimate yet: freight left
-      // out and said so — ₹1,800 net − ₹800 cogs − the plan's 2% on ₹1,800 merchandise (₹36) = ₹964, before shipping costs.
-      expect({ kept: d.keptPerDelivered, basis: d.keptBasis }).toEqual({ kept: 180000 - 80000 - 3600, basis: 'none' })
+      // ₹ kept per order with an outcome, after returns (kept.ts, the figure Analytics shows): the delivered COD order with
+      // known costs, and the return (which needs no COGS); the delivered prepaid order without COGS is left out, counted.
+      // No confirmed estimate yet, so freight is left out and said so: (₹1,800 − ₹800 − the plan's 2% fee ₹36) + ₹0 for
+      // the return = ₹964 over 2 orders, before shipping costs.
+      expect({ kept: d.keptPerOrder, basis: d.keptBasis, leftOut: d.keptLeftOut }).toEqual({ kept: (180000 - 80000 - 3600 + 0) / 2, basis: 'none', leftOut: 1 })
       // The shop confirms ₹70 a delivery, ₹70 a return, ₹36 COD fee: estimated (a COD delivery pays the fee).
       await tx.update(shopSettings).set({ shipCostDelivery: 7000, shipCostReturn: 7000, shipCostCod: 3600, shipCostsConfirmedAt: now }).where(eq(shopSettings.tenantId, A))
       const est = (await offerStatsIn(tx, A, now)).offers.get(D)!
-      expect({ kept: est.keptPerDelivered, basis: est.keptBasis }).toEqual({ kept: 180000 - 80000 - 7000 - 3600 - 3600, basis: 'estimate' })
-      // Shipped with Shiprocket: its ₹60 forward line is recorded but the COD fee line is not: pending, left out (never ₹0).
+      // Delivered: 1,800 − 800 − 70 − 36 COD fee − 36 fee = 858; the return: −(70 + 70) = −140 (no COD fee on a return).
+      expect({ kept: est.keptPerOrder, basis: est.keptBasis }).toEqual({ kept: (180000 - 80000 - 7000 - 3600 - 3600 - 14000) / 2, basis: 'estimate' })
+      // Shipped with Shiprocket: its ₹60 forward line is recorded but the COD fee line is not: pending, left out (never ₹0);
+      // the return still counts.
       await tx.insert(shipments).values({ tenantId: A, orderId: first, provider: 'shiprocket' })
       const pend = (await offerStatsIn(tx, A, now)).offers.get(D)!
-      expect({ kept: pend.keptPerDelivered, basis: pend.keptBasis }).toEqual({ kept: null, basis: null })
+      expect({ kept: pend.keptPerOrder, basis: pend.keptBasis, leftOut: pend.keptLeftOut }).toEqual({ kept: -14000, basis: 'estimate', leftOut: 2 })
       // The ₹30 COD fee line arrives: actual.
       await tx.update(orders).set({ courierCodFee: 3000 }).where(eq(orders.id, first))
       const act = (await offerStatsIn(tx, A, now)).offers.get(D)!
-      expect({ kept: act.keptPerDelivered, basis: act.keptBasis }).toEqual({ kept: 180000 - 80000 - 6000 - 3000 - 3600, basis: 'actual' })
+      expect({ kept: act.keptPerOrder, basis: act.keptBasis }).toEqual({ kept: (180000 - 80000 - 6000 - 3000 - 3600 - 14000) / 2, basis: 'estimate' })
+      // Staff (and a partner after handover) get no ₹ kept at all: not computed.
+      expect((await offerStatsIn(tx, A, now, { role: 'staff' })).offers.get(D)!.keptPerOrder).toBeNull()
       const riya = d.creators.find((c) => c.id === RIYA)!
       expect({ orders: riya.orders, delivered: riya.delivered, rto: riya.rto, given: riya.given, viaLink: riya.viaLink, leak: riya.leak })
         .toEqual({ orders: 2, delivered: 2, rto: 0, given: 50000, viaLink: 1, leak: null })
@@ -92,7 +97,9 @@ describe.skipIf(!host)('offerStats', () => {
       expect(leak.id).toBe(LEAK)
       expect(leak.leak?.reasons).toEqual(['typed', 'spike']) // 10 of 12 typed; 12 this week against ~3 a week
       // The window's orders: every order using an offer now (an order counts once), and the rest.
-      expect({ orders: s.all.orders, delivered: s.all.delivered, given: s.all.given }).toEqual({ orders: 3 + 24 + 1, delivered: 2, given: 60000 + 24 * 1000 + 1000 })
+      // 23 of the leaky code's 24: the one placed 30 days ago is outside "the last 30 days" in IST days (today and the 29
+      // before); it still counts in the leak alert's 28 days before this week.
+      expect({ orders: s.all.orders, delivered: s.all.delivered, given: s.all.given }).toEqual({ orders: 3 + 23, delivered: 2, given: 60000 + 23 * 1000 })
       expect(s.without).toEqual({ orders: 2, aov: 120000, delivered: 1, rto: 1 })
       // New vs repeat reads the first-order rule: the repeat buyer's phone has ordered here; the new one's had not, before.
       const [had] = await tx.execute<{ before: boolean; ever: boolean }>(sql`select ${priorOrderSql(now, A, '9829000001', { except: first, before: sql`${ago(3).toISOString()}::timestamptz` })} before,

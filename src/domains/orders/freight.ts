@@ -19,6 +19,8 @@ export type FreightFacts = { forwardShipping: number | null; rtoShipping: number
 export type ShipCostEstimate = { delivery: number; ret: number; codFee: number } | null
 
 export type FreightSource = 'actual' | 'pending' | 'estimate' | 'none'
+/** How the parcel ended: delivered, came back (RTO) or lost by the courier. */
+export type Outcome = 'delivered' | 'rto' | 'lost'
 export type Freight = { forwardShipping: Paise; rtoShipping: Paise; codFee: Paise; source: FreightSource }
 
 const zero = (source: FreightSource): Freight => ({ forwardShipping: paise(0), rtoShipping: paise(0), codFee: paise(0), source })
@@ -28,7 +30,12 @@ const zero = (source: FreightSource): Freight => ({ forwardShipping: paise(0), r
  * shipped. `cod`: collected on delivery. An estimated COD fee is charged only when delivered (couriers reverse it on
  * a return; Shiprocket's actual lines already net the reversal).
  */
-export function freightOf(provider: 'self' | 'shiprocket' | null, facts: FreightFacts, est: ShipCostEstimate, o: { cod: boolean; outcome: 'delivered' | 'rto' }): Freight {
+export function freightOf(provider: 'self' | 'shiprocket' | null, facts: FreightFacts, est: ShipCostEstimate, o: { cod: boolean; outcome: Outcome }): Freight {
+  // Lost by the courier: only the forward leg was paid (no return, no COD fee collected).
+  if (o.outcome === 'lost') {
+    if (provider === 'shiprocket') return facts.forwardShipping === null ? zero('pending') : { forwardShipping: paise(facts.forwardShipping), rtoShipping: paise(0), codFee: paise(0), source: 'actual' }
+    return est ? { forwardShipping: paise(est.delivery), rtoShipping: paise(0), codFee: paise(0), source: 'estimate' } : zero('none')
+  }
   if (provider === 'shiprocket') {
     // A line the outcome needs and the statement has not brought yet: the forward freight; the return on a return; the
     // COD fee on a delivered COD order (unknown is never ₹0).
