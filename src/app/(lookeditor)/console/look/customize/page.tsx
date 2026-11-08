@@ -13,6 +13,7 @@ import { ANY_MEMBER, CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/req
 import { editorData } from '@/lib/queries/look'
 import { previewShop } from '@/lib/queries/storefront'
 import { Editor } from './editor'
+import { Published } from './published'
 
 // The customizer page: its own route group (no console chrome: the shop is the canvas). Only an editor of the look
 // (owner, admin, partner; not a support visit) gets here; the draft must exist (Look's Customize makes it).
@@ -26,7 +27,9 @@ export default async function Customize() {
   if (!(CAN_BUILD as readonly string[]).includes(role) || support) redirect('/console/look')
   const t = auth.membership.tenantId
   const [data, shop] = await Promise.all([editorData(t), previewShop(t)])
-  if (!data || !shop) redirect('/console/look')
+  if (!shop) redirect('/console/look')
+  // No open draft: it was just published (this page re-renders after Publish), or there was none. Say so, offer Undo.
+  if (!data) return <Published canUndo={(CAN_MANAGE as readonly string[]).includes(role)} />
   const m = manifestOf(data.draft.themeKey, data.draft.themeVersion)
   if (!m) redirect('/console/look')
   const stored = data.draft.settings as { settings?: object; home?: unknown[] }
