@@ -1,5 +1,5 @@
 # Plan — Analytics A·0 + A·1 (where orders come from, judged on deliveries)
-Status: draft (awaiting plan review) · Date: 2026-11-08 · Spec: `docs/specs/2026-11-08-analytics-a1.md` (approved by the
+Status: draft (reviewed 2026-11-08: architecture, tenancy, security, unit economics; speed re-running) · Date: 2026-11-08 · Spec: `docs/specs/2026-11-08-analytics-a1.md` (approved by the
 owner 2026-11-08; mockup https://claude.ai/artifact/5PRMG996toWDUsnAuMTSJt as drawn) · Parent: `docs/specs/2026-11-07-analytics.md`
 
 Gates on every task: `npm test`, `npm run typecheck`, int tests with `INT_DB_HOST`, `verify:tenancy` if `drizzle/` or a
@@ -31,6 +31,84 @@ asked for, in Ship's own design, which this plan reads instead of building again
 
 The mockup stays as approved; two strips change words only because of 1–2: "Before outcomes exist" links to To ship
 and On the way (not a new tab), and the shipping-costs line links to Settings › Shipping costs (three costs).
+
+## Plan review (2026-11-08): these override everything below
+Reviewers: `architecture-reviewer` (changes needed), `tenancy-auditor` (fix before merge; no cross-tenant path),
+`security-reviewer` (fix before merge; no critical or high), `unit-economics-reviewer` (helps the merchant, neutral for
+Frrata, once 1–4 are fixed), `speed-reviewer` (re-running after a container restart cut it off).
+Owner answers (8 Nov): partners see ₹ only before handover ("Once handed over, no"); **partners may also set and confirm
+shipping costs before handover**; attribution (utm tags, click ids, referring site) is **kept with the order for good**
+(the abandoned-checkout erase stays as the existing DPDP rule). Billing session (8 Nov, proposed in
+`docs/specs/2026-11-08-billing.md`, owner yet to approve): the fee for an order is the plan version in force when it
+becomes billable (`billableDelivered`'s moment), through `feeForOrder`; ₹ kept by source and campaign stays on every
+plan (call B).
+
+**Money (unit economics, architecture blocker 1–2)**
+1. **Lost is priced in the engine, not in `kept.ts`:** `orderProfit` gains `ifLost` = −(forward freight + COGS +
+   gateway fee if prepaid), no return leg, no COD fee, no Frrata fee; `freightOf` gains outcome `lost` (forward only).
+   A courier's claim is not counted until a column records it. `frata-unit-economics` updated in the same commit;
+   `unit-economics-reviewer` on that diff (the money rule).
+2. **The fee per order:** `kept.ts` takes a `feeFor(order)` function, never reads plans itself. Until billing B0 lands,
+   a local `feeForOrder(tenantId, order)` (named as billing's, same signature `(tenantId, order) => bps`, in the caller's
+   transaction) picks the plan version at the order's billable moment through entitlements' `startsAt <= at`; billing
+   replaces its body. Offers and Analytics both read it.
+3. **What Offers and Analytics show:** ₹ kept **after returns** (and lost), the same figure on both pages, with a count of
+   orders left out (pending freight, unknown COGS); returns do not need COGS (the `cogs !== null` filter applies to
+   delivered and lost only). The second figure per source is **₹ kept per order with an outcome**, never per delivered
+   order alone; `judgeable` counts outcomes, and "on the way" shows beside ₹ kept. The page says **"before ads and
+   packaging"** (rows from ad clicks: "before ad spend"). Offers' figures change on purpose (≈ ₹27–53 lower per delivered
+   order at the reviewer's shapes); its int baseline is updated deliberately.
+4. **Windows:** Offers' 30 days and the leak alert's 7/35 days move to IST days, one helper with Analytics'.
+
+**Who sees ₹ (tenancy HIGH, architecture 5, security LOW-9)**
+5. `seesCosts(role, hasOwner)` in `src/domains/tenancy/roles.ts`: owner and admin yes (with no read; a support visit has
+   role owner and sees them, audited as now); staff no; partner only while the shop has **no owner member** (the one
+   fact; `clientStage` and the banner keep their own wording). The read runs **only for a partner**, inside the page's
+   transaction (`costsVisibleIn(tx, tenantId, role)`), and **fails closed**: an error or no tenant context means "has an
+   owner", no ₹. Offers' two reads move into one `withTenant`. When ₹ is hidden, the ₹ fields are absent from props and
+   the RSC payload (an e2e reads a staff page's HTML). Int test: a partner with two client shops, one handed over.
+6. **Partners set shipping costs before handover** (owner): `saveShipCosts` runs as a named tuple `CAN_SET_COSTS`
+   (owner, admin, partner) whose comment says why, then checks `seesCosts` inside the same `asMember` transaction.
+
+**Attribution (security MED/LOW, tenancy MED, architecture 3–4)**
+7. One `ATTRIBUTION_KEYS` and one `cleanAttribution(raw, shopHosts)` in `src/domains/analytics/`, used by the island,
+   the route and `erase.ts` (fixes today's drift: the bag store lacks `fbc`/`fbp`). Keys: utm_source, utm_medium,
+   utm_campaign, utm_content, utm_term, fbclid, fbc, fbp, gclid, gbraid, wbraid, ref_host (the researcher confirms
+   `gbraid`, `wbraid`, `igsh`). A named `z.object`, each ≤ 200, NFKC, control and bidi characters stripped; a 32 kB
+   body cap in `shopRequest` (413).
+8. **The referrer:** the island stores only the referring site's hostname (`new URL(document.referrer).hostname`), on
+   the tab's first landing; the server re-reduces: `http`, `https`, `android-app` only; no IP literals, `localhost`, the
+   console host or any `*.SHOP_DOMAIN`; the shop's own hosts from the request's tenant (`requireShop`: its domains and
+   slug), never from the browser. No landing path is kept (nothing reads it).
+9. **Previews:** the `capture` prop is off in `/console/preview` and the Look preview, and the island also refuses to
+   run on the console host; a test checks neither attribution nor `frrata.code.v1` is stored there. Capture keeps
+   filling a creator code from `?code=` with `via='link'` (the leak alert reads it).
+10. **Erase:** clears fbclid, fbc, fbp, gclid, gbraid, wbraid and ref_host on abandoned orders, plus a one-off migration
+   for abandoned orders erased before this (`erased_at is not null`). Real orders keep attribution (owner).
+11. **Display:** shopper-typed values render as text only, never as an `href`; the source slug is classifier output
+   `[a-z0-9-]{1,64}`, compared in TypeScript, unknown → `notFound()` (never echoed); the period accepts 7, 30, 90 only;
+   no cache keyed by tenant alone (₹ depends on the viewer). e2e with `<img onerror>` and `javascript:` values.
+12. **Referrer-Policy is already sent** (`src/lib/security-headers.ts`): no header task; e2e 12-security asserts it on a
+   shop host. The page's one-line rule says a source can be forged within the order rate limits.
+13. **Make a link:** built with `URL` + `URLSearchParams` (a name like `x&code=RIYA10` cannot add a code), the name
+   normalised to `[a-z0-9-]{1,50}`, products, collections and creators from server lists of the same tenant, the
+   result's origin asserted to be the shop's own. One builder shared with Offers' creator link (`offer-codes.tsx`).
+
+**Reuse, regression net, speed, UI (architecture 3, 4, 7, 9; minor)**
+14. `judgeable` reuses `JUDGE_MIN_ORDERS`, moved to the domain. The creator-code subquery is a named helper matching
+   `od.tenant_id = o.tenant_id and dc.tenant_id = od.tenant_id`; the int test gives tenant B a code with A's text.
+15. Regression net before A1·4: an order from `?utm_…&code=X` (attribution saved, `via='link'`); a Look preview that
+   stores nothing; flows `05-shop-look` (not 20), `40-partners`, `47-look`, `12-security` join the net. A test holds
+   one offer's ₹ kept and creator counts equal on Offers and Analytics.
+16. Speed (pending the re-run): § Speed budgets (each query < 100 ms, the page < 1 s p95); every statement listed in the
+   one `withTenant` (fee, costs, `costsVisibleIn`, the window, pincode last in a savepoint with a timeout, the Make a link
+   pickers by slug); the seed holds a festive worst case; bytes to Node measured; first-load JS against 150 kB. If the
+   window read is over budget: typed raw attribution keys or SQL grouping by raw inputs, never a stored classifier output.
+17. UI: under 30 orders on the whole page, the tally pictogram (rule 20a); per row, counts; staff see the page without ₹
+   (orders and sources lead); "lost" joins the strip (a listed change from the mockup, with the two word changes);
+   orders → delivered drawn with `Journey`; Make a link states: shop not open, no products, Copy refused; an unknown
+   source's own state. `frata-verify`'s existing 10× seed step is extended, not duplicated.
+18. Reviewers run on the plan now (done) and again at A1·7 on the diff; `integration-researcher` runs before A1·2.
 
 ## Regression net first (rule 5)
 - e2e that covers what A·1 changes: `10-checkout` (placement; attribution rides on it), `47-offers` (₹ kept; moves to
