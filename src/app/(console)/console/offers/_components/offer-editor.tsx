@@ -109,8 +109,8 @@ export function OfferEditor({ id, initial, locked }: { id: string | null; initia
           <input id="o-code" value={v.code} maxLength={20} disabled={locked.code} placeholder="DIWALI15" autoCapitalize="characters" aria-invalid={!!errors.code || undefined} aria-describedby={errors.code ? 'o-code-err' : 'o-code-hint'}
             onChange={(e) => set({ code: e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase() })} className={`${field} font-mono sm:max-w-60`} />
           {errors.code ? err('code') : <p id="o-code-hint" className="text-xs text-muted-foreground">{locked.code ? 'A code never changes. End this offer and make a new one to use another.' : 'Codes are never reused in your shop.'}</p>}</div>
-        {v.code && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.listed} onChange={(e) => set({ listed: e.target.checked })} />Show it at checkout (unticked: only shoppers who type the code get it)</label>}
-        {style === 'order_off' && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.combinesWithPayment} onChange={(e) => set({ combinesWithPayment: e.target.checked })} />Shoppers who pay online also get your pay-online saving</label>}
+        {v.code && <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" className="size-5 shrink-0 accent-primary" checked={v.listed} onChange={(e) => set({ listed: e.target.checked })} />Show it at checkout (unticked: only shoppers who type the code get it)</label>}
+        {style === 'order_off' && <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" className="size-5 shrink-0 accent-primary" checked={v.combinesWithPayment} onChange={(e) => set({ combinesWithPayment: e.target.checked })} />Shoppers who pay online also get your pay-online saving</label>}
       </Section>
 
       <Section title="When and how much">
@@ -126,7 +126,7 @@ export function OfferEditor({ id, initial, locked }: { id: string | null; initia
           <div className="space-y-1 sm:col-span-2"><label htmlFor="o-budget" className={lab}>Budget ₹ <span className="font-normal text-muted-foreground">(optional; it stops giving when this much is given)</span></label>
             <input id="o-budget" inputMode="decimal" value={v.budget} aria-invalid={!!errors.budget || undefined} aria-describedby={errors.budget ? 'o-budget-err' : undefined} onChange={(e) => set({ budget: e.target.value })} className={`${field} sm:max-w-48`} />{err('budget')}</div>
         </div>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.announce} aria-describedby={errors.announce ? 'o-announce-err' : undefined} onChange={(e) => set({ announce: e.target.checked })} />Show it in the bar at the top of your shop (one offer at a time; a draft takes the bar when it starts)</label>{err('announce')}
+        <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" className="size-5 shrink-0 accent-primary" checked={v.announce} aria-describedby={errors.announce ? 'o-announce-err' : undefined} onChange={(e) => set({ announce: e.target.checked })} />Show it in the bar at the top of your shop (one offer at a time; a draft takes the bar when it starts)</label>{err('announce')}
         <p className="text-xs text-muted-foreground">Times are India time. Shoppers see an end date only if you set one.</p>
       </Section>
 
