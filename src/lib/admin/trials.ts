@@ -4,6 +4,7 @@ import { trialState, trialEndsAt, daysUntil, lastDay, type TrialFacts, type Tria
 import { adminDb } from '@/lib/db/admin'
 import { billingAccounts } from '@/lib/db/schema-billing'
 import { shopTrials, trialSettings } from '@/lib/db/schema-trials'
+import { tenants } from '@/lib/db/schema'
 import type { StaffOk } from '@/lib/auth/require-staff'
 
 // =============================================================================
@@ -58,4 +59,19 @@ export async function endShopTrial(staff: StaffOk, tenantId: string, reason: str
 export function trialError(e: unknown): string {
   const m = /trial: (.{1,160})/.exec(e instanceof Error ? (e.cause instanceof Error ? e.cause.message : e.message) : '')?.[1]
   return m ? `${m.charAt(0).toUpperCase()}${m.slice(1)}.` : 'Nothing was changed. Try again, or check the logs.'
+}
+
+export type TrialRow = ShopTrialView & { tenantId: string; name: string; autopay: boolean }
+
+/** Admin › Trials: every shop with a trial, ending soonest first (paused and paid last). */
+export async function trialList(staff: StaffOk, now: Date): Promise<TrialRow[]> {
+  void staff
+  const db = adminDb()
+  const rows = await db.select({ tenantId: shopTrials.tenantId, name: tenants.name }).from(shopTrials).innerJoin(tenants, eq(tenants.id, shopTrials.tenantId))
+  const views = await shopTrialsFor(staff, rows.map((r) => r.tenantId), now)
+  const accounts = rows.length ? await db.select({ tenantId: billingAccounts.tenantId, mandateAt: billingAccounts.mandateAt, revokedAt: billingAccounts.mandateRevokedAt }).from(billingAccounts).where(inArray(billingAccounts.tenantId, rows.map((r) => r.tenantId))) : []
+  const autopay = new Map(accounts.map((a) => [a.tenantId, !!a.mandateAt && !a.revokedAt]))
+  const ORDER: Record<string, number> = { grace: 0, ending: 1, trial: 2, building: 3, paused: 4, paid: 5 }
+  return rows.flatMap((r) => { const v = views.get(r.tenantId); return v ? [{ ...v, tenantId: r.tenantId, name: r.name, autopay: autopay.get(r.tenantId) ?? false }] : [] })
+    .sort((a, b) => (ORDER[a.state]! - ORDER[b.state]!) || a.endsAt.getTime() - b.endsAt.getTime())
 }

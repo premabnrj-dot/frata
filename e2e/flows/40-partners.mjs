@@ -122,6 +122,9 @@ export default {
       await neha.waitForURL(CONSOLE + '/console')
       const roles = await db`select role from members where tenant_id = ${T} order by role`
       assert.deepEqual(roles.map((r) => r.role), ['owner', 'partner'])
+      // Trials TR1·10: the partner-built shop has a trial (frozen terms); the handover claimed the owner's email.
+      assert.equal((await db`select count(*)::int n from shop_trials where tenant_id = ${T}`)[0].n, 1)
+      assert.equal((await db`select count(*)::int n from trial_claims where tenant_id = ${T} and kind = 'email'`)[0].n, 1)
       await pia.goto(CONSOLE + '/partner')
       await pia.getByText('With the owner').first().waitFor()
       await pia.screenshot({ path: t.out('clients') })

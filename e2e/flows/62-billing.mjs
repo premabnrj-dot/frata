@@ -189,6 +189,8 @@ export default {
         await meera.getByRole('button', { name: 'Give a trial' }).click()
         await meera.getByText(/^\d+ days left · 14 days/).waitFor() // Kesar is live: the clock starts now
         await meera.screenshot({ path: t.out('admin-trial'), fullPage: true })
+        await meera.goto(CONSOLE + '/admin/trials')
+        await meera.getByRole('link', { name: 'Kesar Studio' }).waitFor()
         await meera.goto(CONSOLE + '/admin/merchants?q=Kesar')
         await meera.getByText(/Trial(?: ending)? · \d+ days left/).first().waitFor()
         await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/plan`)

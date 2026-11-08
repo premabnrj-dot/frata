@@ -1570,4 +1570,14 @@ do $$ declare r record; begin
   delete from trial_claims where key_hmac in ('email-hmac-taken', 'email-hmac-new');
 end $$;
 
-\echo 'tenancy proof — all 49 checks passed'
+-- 50. Trials TR1·10: a shop with no owner is never billed (R1); only the app runs the handover with its claim.
+insert into tenants (id, slug, name) values ('33333333-3333-3333-3333-333333333333', 'proof-ownerless', 'Proof Ownerless');
+insert into tenant_plans (tenant_id, plan_version_id, starts_at, created_by) select '33333333-3333-3333-3333-333333333333', pv.id, now() - interval '40 days', 'aaaaaaaa-0000-0000-0000-000000000001' from plan_versions pv join plans p on p.id = pv.plan_id where p.code = 'launch' and pv.version = 1;
+do $$ begin
+  if exists (select 1 from app_shops_to_bill(now()) t where t = '33333333-3333-3333-3333-333333333333') then raise exception 'FAIL: a shop with no owner is billed'; end if;
+  if not exists (select 1 from app_shops_to_bill(now()) t where t = '11111111-1111-1111-1111-111111111111') then raise exception 'FAIL: an owned shop is not billed'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_accept_handover_v2(uuid,uuid,text,smallint)', 'execute'))
+  then raise exception 'FAIL: another role may accept a handover'; end if;
+end $$;
+
+\echo 'tenancy proof — all 50 checks passed'
