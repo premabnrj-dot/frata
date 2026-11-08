@@ -79,15 +79,20 @@ describe.skipIf(!host)('offerStats', () => {
       const est = (await offerStatsIn(tx, A, now, { role: 'owner' })).offers.get(D)!
       // Delivered: 1,800 − 800 − 70 − 36 COD fee − 36 fee = 858; the return: −(70 + 70) = −140 (no COD fee on a return).
       expect({ kept: est.keptPerOrder, basis: est.keptBasis }).toEqual({ kept: (180000 - 80000 - 7000 - 3600 - 3600 - 14000) / 2, basis: 'estimate' })
-      // Shipped with Shiprocket: its ₹60 forward line is recorded but the COD fee line is not: pending, left out (never ₹0);
-      // the return still counts.
+      // Shipped with Shiprocket: its ₹60 forward line is recorded but the COD fee line is not: the shop's ₹36 estimate
+      // stands in for it (never ₹0, never left out while an estimate exists): 1,800 − 800 − 60 − 36 − 36 = 868; −140.
       await tx.insert(shipments).values({ tenantId: A, orderId: first, provider: 'shiprocket' })
       const pend = (await offerStatsIn(tx, A, now, { role: 'owner' })).offers.get(D)!
-      expect({ kept: pend.keptPerOrder, basis: pend.keptBasis, leftOut: pend.keptLeftOut }).toEqual({ kept: -14000, basis: 'estimate', leftOut: 2 })
+      expect({ kept: pend.keptPerOrder, basis: pend.keptBasis, leftOut: pend.keptLeftOut }).toEqual({ kept: (180000 - 80000 - 6000 - 3600 - 3600 - 14000) / 2, basis: 'estimate', leftOut: 1 })
       // The ₹30 COD fee line arrives: actual.
       await tx.update(orders).set({ courierCodFee: 3000 }).where(eq(orders.id, first))
       const act = (await offerStatsIn(tx, A, now, { role: 'owner' })).offers.get(D)!
       expect({ kept: act.keptPerOrder, basis: act.keptBasis }).toEqual({ kept: (180000 - 80000 - 6000 - 3000 - 3600 - 14000) / 2, basis: 'estimate' })
+      // A parcel lost by the courier: the forward freight (estimated ₹70) and the goods (₹500) are gone: −570.
+      const lostId = await order({ at: ago(2), phone: '9829000077', costs: { cogs: 50000, forwardShipping: null as unknown as number } }, { d: D, amount: 10000 })
+      await tx.update(orders).set({ shippedAt: ago(2), lostAt: ago(1) }).where(eq(orders.id, lostId))
+      const withLost = (await offerStatsIn(tx, A, now, { role: 'owner' })).offers.get(D)!
+      expect(withLost.keptPerOrder).toBe(Math.round((180000 - 80000 - 6000 - 3000 - 3600 - 14000 - 7000 - 50000) / 3))
       // Staff (and a partner after handover) get no ₹ kept at all: not computed.
       expect((await offerStatsIn(tx, A, now, { role: 'staff' })).offers.get(D)!.keptPerOrder).toBeNull()
       const riya = d.creators.find((c) => c.id === RIYA)!

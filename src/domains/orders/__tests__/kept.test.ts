@@ -19,10 +19,13 @@ describe('keptOf: ₹ kept after returns and lost parcels', () => {
     const k = keptOf([g({ outcome: 'rto', cogs: null }), g({ cogs: null, n: 2 }), g({ outcome: 'lost', cogs: null })], est)
     expect(k).toMatchObject({ counted: 1, leftOut: 3, kept: -14000 })
   })
-  it('Shiprocket: actual lines as summed; pending freight is left out, never ₹0', () => {
+  it('Shiprocket: actual lines as summed; a missing line takes the estimate per parcel; with no estimate, left out', () => {
     const actual = keptOf([g({ provider: 'shiprocket', n: 2, net: 171428, cogs: 68572, base: 171428, forward: 12400, courierCodFee: 7200 })], est)
     expect(actual).toMatchObject({ counted: 2, basis: 'actual', kept: 171428 - 68572 - 12400 - 7200 - 3429 })
-    expect(keptOf([g({ provider: 'shiprocket' })], est)).toMatchObject({ counted: 0, leftOut: 1, basis: null })
+    // Two delivered COD parcels whose forward lines (₹124 together) arrived but not their COD fees: 2 × ₹50 estimated.
+    const mixed = keptOf([g({ provider: 'shiprocket', n: 2, net: 171428, cogs: 68572, base: 171428, forward: 12400 })], est)
+    expect(mixed).toMatchObject({ counted: 2, basis: 'estimate', kept: 171428 - 68572 - 12400 - 2 * 5000 - 3429 })
+    expect(keptOf([g({ provider: 'shiprocket' })], null)).toMatchObject({ counted: 0, leftOut: 1, basis: null })
   })
   it('a group equals the sum of its orders: estimates scale by the count', () => {
     const one = keptOf([g({})], est).kept

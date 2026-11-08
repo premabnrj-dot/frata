@@ -52,8 +52,9 @@ export function orderProfit(c: OrderCosts, deliveryProbability: number): OrderPr
     c.netRevenue - c.cogs - sunk - c.codFee - c.gatewayFee - c.platformFee,
   )
   // The goods come back, so COGS is not lost; a fashion return is often not
-  // resaleable at full value, which is the caller's to model in `cogs` later.
-  const ifRto = paise(-(sunk + c.rtoShipping + c.codFee))
+  // resaleable at full value, which is the caller's to model in `cogs` later. A prepaid return is refunded and the
+  // gateway keeps its fee (unit-economics review 2026-11-08, as `ifLost`).
+  const ifRto = paise(-(sunk + c.rtoShipping + c.codFee + c.gatewayFee))
   const ifLost = paise(-(sunk + c.cogs + c.gatewayFee))
   const expected = paise(Math.round(ifDelivered * deliveryProbability + ifRto * (1 - deliveryProbability)))
   return { ifDelivered, ifRto, ifLost, expected }

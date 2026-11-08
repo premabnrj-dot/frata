@@ -22,6 +22,9 @@ describe('orderProfit', () => {
   it('loses freight both ways, the COD fee and the sunk ad spend on an RTO', () => {
     expect(orderProfit(cod, 0).ifRto).toBe(fromRupees(-430))
   })
+  it('a prepaid return is refunded and the gateway keeps its fee', () => {
+    expect(orderProfit({ ...cod, codFee: paise(0), gatewayFee: fromRupees(20) }, 0).ifRto).toBe(fromRupees(-420)) // −(340 sunk + 60 return + 20 gateway)
+  })
   it('a parcel lost by the courier loses the forward freight, the goods and the sunk spend; no return leg, COD fee or platform fee', () => {
     // −(70 forward + 20 packaging + 250 ads + 350 goods + 0 gateway) = −690
     expect(orderProfit(cod, 0).ifLost).toBe(fromRupees(-690))

@@ -63,13 +63,14 @@ export function keptOf(groups: readonly KeptGroup[], est: ShipCostEstimate): Kep
   for (const g of groups) {
     if (g.n <= 0) continue
     if (g.outcome !== 'rto' && g.cogs === null) { out.leftOut += g.n; continue }
-    const f = freightOf(g.provider, { forwardShipping: g.forward, rtoShipping: g.rto, courierCodFee: g.courierCodFee }, est, { cod: g.cod, outcome: g.outcome })
+    // Actual lines are already the group's sums; an estimate is per parcel, so it is scaled to the group first (a
+    // Shiprocket group can mix both: its missing lines take the estimate).
+    const groupEst = est ? { delivery: est.delivery * g.n, ret: est.ret * g.n, codFee: est.codFee * g.n } : null
+    const f = freightOf(g.provider, { forwardShipping: g.forward, rtoShipping: g.rto, courierCodFee: g.courierCodFee }, groupEst, { cod: g.cod, outcome: g.outcome })
     if (f.source === 'pending') { out.leftOut += g.n; continue }
-    // An estimate is per parcel; actual lines are already the group's sums.
-    const k = f.source === 'estimate' ? g.n : 1
     const p = orderProfit({
       netRevenue: paise(g.net), cogs: paise(g.cogs ?? 0),
-      forwardShipping: paise(f.forwardShipping * k), rtoShipping: paise(f.rtoShipping * k), codFee: paise(f.codFee * k),
+      forwardShipping: f.forwardShipping, rtoShipping: f.rtoShipping, codFee: f.codFee,
       gatewayFee: paise(g.gateway), packaging: paise(0), adCost: paise(0),
       platformFee: g.outcome === 'delivered' && g.feeBps !== null ? deliveredFee(paise(g.base), g.feeBps) : paise(0),
     }, 1)
@@ -87,7 +88,7 @@ export const keptPerOrder = (k: Kept) => (k.counted > 0 ? Math.round(k.kept / k.
 
 /**
  * The plan fee for an order: the plan version in force at the moment it becomes billable (billing's proposed rule,
- * `docs/specs/2026-11-08-billing.md`: delivered_at, or shipped_at + 30 days with no outcome). A stand-in with billing's
+ * `docs/specs/2026-11-08-billing.md`: the first of delivered_at and shipped_at + 30 days). A stand-in with billing's
  * name until billing B0 lands its own; `history` is the shop's plan versions, oldest first.
  */
 export function feeForOrder(history: readonly { startsAt: Date; feeBps: number }[], billableAt: Date): number | null {

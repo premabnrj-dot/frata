@@ -38,9 +38,17 @@ export function freightOf(provider: 'self' | 'shiprocket' | null, facts: Freight
   }
   if (provider === 'shiprocket') {
     // A line the outcome needs and the statement has not brought yet: the forward freight; the return on a return; the
-    // COD fee on a delivered COD order (unknown is never ₹0).
-    if (facts.forwardShipping === null || (o.outcome === 'rto' && facts.rtoShipping === null) || (o.cod && o.outcome === 'delivered' && facts.courierCodFee === null)) return zero('pending')
-    return { forwardShipping: paise(facts.forwardShipping), rtoShipping: paise(facts.rtoShipping ?? 0), codFee: paise(facts.courierCodFee ?? 0), source: 'actual' }
+    // COD fee on a delivered COD order. Unknown is never ₹0: the shop's confirmed estimate stands in for the missing line
+    // (labelled estimated; unit-economics review 2026-11-08: leaving the order out pulled ₹ kept down while returns
+    // counted), and with no estimate the order is pending.
+    const fwdMissing = facts.forwardShipping === null, rtoMissing = o.outcome === 'rto' && facts.rtoShipping === null
+    const codMissing = o.cod && o.outcome === 'delivered' && facts.courierCodFee === null
+    if (!fwdMissing && !rtoMissing && !codMissing) return { forwardShipping: paise(facts.forwardShipping!), rtoShipping: paise(facts.rtoShipping ?? 0), codFee: paise(facts.courierCodFee ?? 0), source: 'actual' }
+    if (!est) return zero('pending')
+    return {
+      forwardShipping: paise(fwdMissing ? est.delivery : facts.forwardShipping!), rtoShipping: paise(rtoMissing ? est.ret : facts.rtoShipping ?? 0),
+      codFee: paise(codMissing ? est.codFee : facts.courierCodFee ?? 0), source: 'estimate',
+    }
   }
   if (!est) return zero('none')
   return { forwardShipping: paise(est.delivery), rtoShipping: paise(est.ret), codFee: paise(o.cod && o.outcome === 'delivered' ? est.codFee : 0), source: 'estimate' }

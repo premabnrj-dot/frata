@@ -18,7 +18,7 @@ const rtoRate = (o: { delivered: number; rto: number }) => share(o.rto, o.delive
 const rs = (p: number | null) => (p === null ? '—' : <Money paise={paise(p)} />)
 
 /** How ₹ kept counted shipping (freight.ts): said beside the figure whenever it is not the courier's actual charge. */
-export const keptNote = (b: KeptBasis) => (b === 'estimate' ? 'Shipping estimated' : b === 'none' ? 'Before shipping costs' : null)
+export const keptNote = (b: KeptBasis) => (b === 'estimate' ? 'Shipping estimated' : b === 'none' ? 'Before shipping costs (returns count once they are set)' : null)
 
 function Kpi({ k, v, f }: { k: string; v: React.ReactNode; f: React.ReactNode }) {
   return (
@@ -75,7 +75,7 @@ export function OfferNumbers({ o, s, costs }: { o: OfferStat | undefined; s: Off
         <div><dt className="text-xs text-muted-foreground">Returned (RTO)</dt><dd className="font-mono text-lg">{rtoRate(x)}</dd>
           <dd className="text-xs text-muted-foreground">{rtoRate(w)} without an offer</dd></div>
         {costs ? <div className="col-span-2"><dt className="text-xs text-muted-foreground">₹ kept per order, after returns</dt><dd className="font-mono text-lg">{rs(x.keptPerOrder)}</dd>
-          <dd className="text-xs text-muted-foreground">Delivered, came back or lost · before ads and packaging{x.keptLeftOut ? ` · ${x.keptLeftOut} left out (costs not known yet)` : ''}</dd>
+          <dd className="text-xs text-muted-foreground">Delivered, came back or lost · before ads and packaging{x.keptLeftOut ? ` · ${x.keptLeftOut} left out (cost of goods or courier charges not known yet)` : ''}</dd>
           {x.keptPerOrder === null ? <dd className="text-xs text-muted-foreground">Once orders are delivered or come back, and their costs are known.</dd>
             : keptNote(x.keptBasis) ? <dd className="text-xs text-muted-foreground">{keptNote(x.keptBasis)}{x.keptBasis === 'none' ? <> · <Link href="/console/settings/shipping-costs" className="underline">set shipping costs</Link></> : null}</dd> : null}</div> : null}
       </dl>

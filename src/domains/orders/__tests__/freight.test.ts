@@ -6,12 +6,15 @@ const none = { forwardShipping: null, rtoShipping: null, courierCodFee: null }
 const est = { delivery: 7000, ret: 7000, codFee: 3600 }
 
 describe('freightOf', () => {
-  it('Shiprocket: the statement lines; pending (never ₹0) until the line an outcome needs arrives', () => {
+  it('Shiprocket: the statement lines; a line not arrived yet takes the confirmed estimate; with none, pending (never ₹0)', () => {
     expect(freightOf('shiprocket', { forwardShipping: 6200, rtoShipping: null, courierCodFee: 3600 }, est, { cod: true, outcome: 'delivered' }))
       .toEqual({ forwardShipping: 6200, rtoShipping: 0, codFee: 3600, source: 'actual' })
-    expect(freightOf('shiprocket', none, est, { cod: true, outcome: 'delivered' }).source).toBe('pending')
-    expect(freightOf('shiprocket', { forwardShipping: 6200, rtoShipping: null, courierCodFee: null }, est, { cod: true, outcome: 'delivered' }).source).toBe('pending')
-    expect(freightOf('shiprocket', { forwardShipping: 6200, rtoShipping: null, courierCodFee: 0 }, est, { cod: true, outcome: 'rto' }).source).toBe('pending')
+    expect(freightOf('shiprocket', none, est, { cod: true, outcome: 'delivered' })).toEqual({ forwardShipping: 7000, rtoShipping: 0, codFee: 3600, source: 'estimate' })
+    expect(freightOf('shiprocket', { forwardShipping: 6200, rtoShipping: null, courierCodFee: null }, est, { cod: true, outcome: 'delivered' }))
+      .toEqual({ forwardShipping: 6200, rtoShipping: 0, codFee: 3600, source: 'estimate' })
+    expect(freightOf('shiprocket', { forwardShipping: 6200, rtoShipping: null, courierCodFee: 0 }, est, { cod: true, outcome: 'rto' }))
+      .toEqual({ forwardShipping: 6200, rtoShipping: 7000, codFee: 0, source: 'estimate' })
+    for (const o of ['delivered', 'rto'] as const) expect(freightOf('shiprocket', none, null, { cod: true, outcome: o }).source).toBe('pending')
     // A COD fee reversed on a return nets to 0 in the actual lines.
     expect(freightOf('shiprocket', { forwardShipping: 6200, rtoShipping: 6200, courierCodFee: 0 }, est, { cod: true, outcome: 'rto' }))
       .toEqual({ forwardShipping: 6200, rtoShipping: 6200, codFee: 0, source: 'actual' })

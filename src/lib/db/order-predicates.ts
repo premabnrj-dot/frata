@@ -148,7 +148,8 @@ export const owedSql = (tenantId: string, now: Date, variantCol = '"variants"."i
  */
 export function keptSql(now: Date, a: string, feeChanges: readonly Date[]) {
   const st = stateSql(now, a)
-  const billableAt = sql`coalesce(${c(a, 'delivered_at')}, ${c(a, 'shipped_at')} + interval '30 days')`
+  // Billable at whichever comes first: delivered, or 30 days shipped with no outcome (billableDelivered's moment).
+  const billableAt = sql`least(${c(a, 'delivered_at')}, ${c(a, 'shipped_at')} + interval '30 days')`
   const changes = feeChanges.length ? sql`array[${sql.join(feeChanges.map((d) => sql`${d.toISOString()}::timestamptz`), sql`, `)}]` : sql`array[]::timestamptz[]`
   const outcome = sql<'delivered' | 'rto' | 'lost'>`(case when ${st} = 'delivered' then 'delivered' when ${st} in ('rto', 'rto_received') then 'rto' else 'lost' end)`
   const provider = openShipmentProviderSql(a)

@@ -47,6 +47,8 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
       <OfferStrip s={stats} />
       <ViewTabs label="Offers by status" tabs={order.map((s) => ({ href: `/console/offers?tab=${s}`, label: STATUS[s].label, count: count(s), current: s === current }))} />
       {!shown.length ? <Panel title={`No ${STATUS[current].label.toLowerCase()} offers`}>{current === 'live' ? 'Start a draft, or make a new offer.' : 'Nothing here right now.'}</Panel> : (
+        <>
+        {costs ? <p className="text-xs text-muted-foreground">₹ kept per order: delivered, came back or lost, after returns · before ads and packaging.</p> : null}
         <DataTable>
           <DataTableHead><th>Offer</th><th>How</th><th className="text-right">Uses</th><th className="text-right">₹ given</th><th className="text-right">Delivered · 30 days</th>{costs ? <th className="text-right">₹ kept per order, after returns · 30 days</th> : null}</DataTableHead>
           <DataTableBody>
@@ -63,6 +65,7 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
             ) })}
           </DataTableBody>
         </DataTable>
+        </>
       )}
     </>
   )
