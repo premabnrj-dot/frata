@@ -1,6 +1,6 @@
 # Themes and a customizer for Frrata shops
 
-Status: research + proposal · Date: 2026-11-07 · Approved: pending (owner calls in § 12)
+Status: research + proposal · Date: 2026-11-07 · Approved: owner took every recommendation (2026-11-08, "go with your recommendations on themes, make the mockups"); T1 mockup https://claude.ai/artifact/9QRkdHHKLAwpj5LmcxYYSU awaiting sign-off
 North star: problem (5) a premium-looking storefront, with (4) mobile checkout conversion. A faster, better-looking
 shop turns more Instagram visits into delivered orders, and the delivered-order fee is how Frrata earns.
 Sources: every external fact carries the date it was checked (2026-11-07) and the page's own date where it has one.
@@ -461,7 +461,12 @@ Each phase opens with its mockup (ADR-0001) and a spec. The review agents (`arch
 | Puck does not fit our data model | Fallback: a sidebar form over the same Zod schemas (cheaper than it sounds) |
 | `jsonb` treated as state (rule 5) | The manifest and merchant layer are validated content. Publish, licence and review state are rows and timestamps |
 
-## 12. Owner calls
+## 12. Owner calls (decided 2026-11-08, as recommended)
+
+Decided: 1 data-only themes; 2 free in every plan until the premium smoke test; 3 owner and admin publish;
+4 launch themes Editorial, Bazaar, Minimal, Atelier, plus Classic (today's look, the default); 5 public preview links
+later (members-only preview first); 6 partner share stays a hypothesis until T4, unit-economics-reviewer first.
+
 
 1. **Data-only themes, no DSL, no third-party code** for T0–T3 (recommended).
 2. **Themes free in every plan** until the premium smoke test (recommended), or premium themes from T3 at ₹2,999–7,999.
