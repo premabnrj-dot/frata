@@ -22,7 +22,8 @@ export const ROLL_BELOW = 10_000
 
 export type PlanRow = { startsAt: Date; planVersion: Pick<PlanVersion, 'planCode' | 'monthlyPrice' | 'includedOrders' | 'feeBps'> & { name?: string }; trialEndsAt: Date | null; customMonthlyPrice: Paise | null }
 export type AddonRow = { module: string; name: string; monthlyPrice: Paise; startsAt: Date; endsAt: Date | null; trialEndsAt: Date | null }
-export type FeeOrder = { orderId: string; number: string; billableAt: Date; merchandiseNet: number }
+/** `rateAt`: when the order shipped (its rate's moment); `billableAt`: when it is billed. */
+export type FeeOrder = { orderId: string; number: string; billableAt: Date; rateAt: Date; merchandiseNet: number }
 export type FeeCredit = { orderId: string; number: string; fee: Paise; invoiceNumber: string | null }
 
 export const LINE_KINDS = ['plan', 'addon', 'fee', 'over', 'credit', 'carry', 'change'] as const
@@ -105,12 +106,21 @@ export function planChangeOwed(plans: PlanRow[], monthStart: Date, nextMonthStar
  * What switching to `target` at `now` adds to the next bill, before GST: planChangeOwed with the change, less without
  * it — the figure the invoice will carry (the page's dialog reads this; never its own arithmetic).
  */
+/** When a change the shop makes starts (app_change_plan's rule): an upgrade now, or when a running trial ends; a
+ * downgrade on the next 1st. */
+export function planChangeStarts(cur: PlanRow | undefined, target: PlanRow['planVersion'], now: Date, nextMonthStart: Date): Date {
+  const up = cur ? target.monthlyPrice > cur.planVersion.monthlyPrice : true
+  if (!up) return nextMonthStart
+  return cur?.trialEndsAt && cur.trialEndsAt > now ? cur.trialEndsAt : now
+}
+
 export function planChangeAdds(plans: PlanRow[], target: PlanRow['planVersion'], now: Date, monthStart: Date, nextMonthStart: Date, billed: number | null): Paise {
   const cur = [...plans].filter((p) => p.startsAt <= now).sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())[0]
   const kept = plans.filter((p) => p.startsAt <= now)
-  // As app_change_plan: a trial does not carry onto a higher plan (security review 2026-11-08).
+  // As app_change_plan (owner, 2026-11-08): an upgrade during a trial starts when the trial is over, with no trial.
+  const startsAt = planChangeStarts(cur, target, now, nextMonthStart)
   const up = cur ? target.monthlyPrice > cur.planVersion.monthlyPrice : true
-  const next: PlanRow = { startsAt: now, planVersion: target, trialEndsAt: !up && cur?.trialEndsAt && cur.trialEndsAt > now ? cur.trialEndsAt : null, customMonthlyPrice: null }
+  const next: PlanRow = { startsAt, planVersion: target, trialEndsAt: !up && cur?.trialEndsAt && cur.trialEndsAt > startsAt ? cur.trialEndsAt : null, customMonthlyPrice: null }
   return Math.max(0, planChangeOwed([...kept, next], monthStart, nextMonthStart, billed) - planChangeOwed(kept, monthStart, nextMonthStart, billed)) as Paise
 }
 
@@ -141,7 +151,7 @@ export function computeBill(i: BillInput): Bill {
   }
   // The fee on each newly billable order, rounded per order, grouped into one line per rate.
   const fees: BilledFee[] = i.feeOrders.flatMap((o) => {
-    const f = feeForOrder(i.plans, { merchandiseNet: o.merchandiseNet, billableAt: o.billableAt })
+    const f = feeForOrder(i.plans, { merchandiseNet: o.merchandiseNet, rateAt: o.rateAt, billableAt: o.billableAt })
     return f ? [{ orderId: o.orderId, billableAt: o.billableAt, base: o.merchandiseNet as Paise, feeBps: f.feeBps, fee: f.fee }] : []
   })
   const byRate = new Map<number, BilledFee[]>()

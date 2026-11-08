@@ -154,26 +154,34 @@ export const stageSql = (a = '"orders"'): SQL<'delivered' | 'rto' | 'lost' | 'on
   else 'not_sent' end)`
 
 /**
- * The plan-fee bucket at an order's billable moment (billing B0's `billableAtSql`, the one rule): k = the k-th of
+ * The moment an order's fee RATE is decided: when it shipped (owner, 2026-11-08), else its billable moment. Twin of
+ * feeForOrder's `rateAt` (src/domains/plans/entitlements.ts). Billing reads only shipped orders, so there it is shipped_at.
+ */
+export const feeRateAtSql = (a = '"orders"'): SQL<Date | null> => sql<Date | null>`coalesce(${c(a, 'shipped_at')}, ${billableAtSql(a)})`
+
+/**
+ * The plan-fee bucket at an order's rate moment (`feeRateAtSql`, the one rule): k = the k-th of
  * `feeChanges` (the plan versions' start times, oldest first), 0 none; the same pick as `feeForOrder`
  * (domains/plans/entitlements.ts), made per group in SQL so ₹ kept never reads one row per order. Only a delivered
  * order pays a fee here (an order assumed delivered after 30 days is billed but has no outcome to show yet).
  */
 export function feeBucketSql(a: string, feeChanges: readonly Date[]): SQL<number> {
-  const billableAt = billableAtSql(a)
   if (!feeChanges.length) return sql<number>`0`
+  // As feeForOrder: billable before any plan pays nothing; shipped before the first plan takes the first plan's rate.
+  const first = sql`${feeChanges[0]!.toISOString()}::timestamptz`
+  const rateAt = sql`greatest(${feeRateAtSql(a)}, ${first})`
   // Only a delivered order pays a fee: delivered and no return (stateSql's ranking), straight from its columns.
   const delivered = sql`(${c(a, 'delivered_at')} is not null and ${c(a, 'rto_initiated_at')} is null and ${c(a, 'rto_delivered_at')} is null)`
   // A plain CASE over the few plan changes, latest first (a per-row unnest cost ~40% of the read at 10×).
-  const arms = [...feeChanges.entries()].reverse().map(([i, d]) => sql`when ${billableAt} >= ${d.toISOString()}::timestamptz then ${sql.raw(String(i + 1))}`)
-  return sql<number>`(case when ${delivered} then (case ${sql.join(arms, sql` `)} else 0 end) else 0 end)`
+  const arms = [...feeChanges.entries()].reverse().map(([i, d]) => sql`when ${rateAt} >= ${d.toISOString()}::timestamptz then ${sql.raw(String(i + 1))}`)
+  return sql<number>`(case when ${delivered} and ${billableAtSql(a)} >= ${first} then (case ${sql.join(arms, sql` `)} else 0 end) else 0 end)`
 }
 
 /**
  * ₹ KEPT, GROUPED (Analytics A·1; speed review: never one row per order). The expressions `keptOf`
  * (src/domains/orders/kept.ts) groups by, and what it sums: an order with an outcome (delivered, came back, lost) by
- * its outcome, the open shipment's provider, COD or not, which costs it knows, and the plan-fee bucket at its billable
- * moment (`feeChanges`: the plan versions' start times, oldest first; bucket k means the k-th version, 0 none, as
+ * its outcome, the open shipment's provider, COD or not, which costs it knows, and the plan-fee bucket at its rate
+ * moment (when it shipped) (`feeChanges`: the plan versions' start times, oldest first; bucket k means the k-th version, 0 none, as
  * `feeForOrder`). Offers and Analytics both read it, so their ₹ kept agree.
  */
 export function keptSql(now: Date, a: string, feeChanges: readonly Date[], providerCol?: SQL) {

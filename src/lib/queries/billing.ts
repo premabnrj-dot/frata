@@ -93,8 +93,7 @@ export async function billingOverview(m: Pick<Membership, 'tenantId' | 'role'>, 
       plans: base.history.filter((h) => h.startsAt <= now).map((h) => ({ startsAt: h.startsAt, trialEndsAt: h.trialEndsAt, customMonthlyPrice: h.customMonthlyPrice === null ? null : paise(h.customMonthlyPrice),
         planVersion: { planCode: h.code as PlanRow['planVersion']['planCode'], name: h.name, monthlyPrice: paise(h.monthlyPrice), includedOrders: h.includedOrders, feeBps: h.feeBps } })),
       billed: base.planBilled,
-      // As app_change_plan: after this month's upgrade by the shop, a downgrade starts the 1st of the month after next.
-      downgradeOn: cur && cur.byShop && cur.startsAt >= monthStartIST(now) ? nextMonthStartIST(nextMonthStartIST(now)) : nextMonthStartIST(now),
+      downgradeOn: nextMonthStartIST(now),
     },
     estimate,
     invoices: base.invoices.flatMap((i) => {

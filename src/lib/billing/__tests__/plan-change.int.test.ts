@@ -15,10 +15,10 @@ describe.skipIf(!host)('plan changes on a real database', () => {
     vi.resetModules()
   })
   // Each test starts from its own shop on Growth (since 1 October), with its owner as a member.
-  const fresh = async () => {
+  const fresh = async (trialEndsAt: Date | null = null) => {
     const admin = await import('@/lib/admin/merchants')
     const slug = `b4-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
-    tenantId = (await admin.createMerchant(staff, { name: 'B4 Store', slug, host: `${slug}.frata.test`, ownerEmail: 'o@b4.test', planCode: 'growth', trialEndsAt: null, now: new Date('2026-10-01T00:00:00Z') })).id
+    tenantId = (await admin.createMerchant(staff, { name: 'B4 Store', slug, host: `${slug}.frata.test`, ownerEmail: 'o@b4.test', planCode: 'growth', trialEndsAt, now: new Date('2026-10-01T00:00:00Z') })).id
     // The owner as a member (an invite is not one): written as the database owner, as sign-up does.
     const postgres = (await import('postgres')).default
     const su = postgres(process.env.INT_DB_SUPER_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1 })
@@ -61,9 +61,9 @@ describe.skipIf(!host)('plan changes on a real database', () => {
     expect(Math.abs(line.taxable - shown)).toBeLessThanOrEqual(1)
     // This month's own plan lines are what was billed in advance; the change line is next month's.
     expect(await withTenant(tenantId, (tx) => planBilledIn(tx, tenantId, M))).toBe(billed)
-    // Back to Growth: after this month's upgrade, not before the 1st of the month after next.
+    // Back to Growth: on the next 1st (orders shipped under Scale keep Scale's rate).
     const down = await change('growth')
-    expect(new Date(down.starts_at).getTime()).toBe(nextMonthStartIST(N).getTime())
+    expect(new Date(down.starts_at).getTime()).toBe(N.getTime())
     const { sql } = await import('drizzle-orm')
     await withTenant(tenantId, (tx) => tx.execute(sql`select app_cancel_plan_change(${owner}::uuid)`))
   })
@@ -82,6 +82,18 @@ describe.skipIf(!host)('plan changes on a real database', () => {
     expect(up.upgrade).toBe(true)
     expect(Math.abs(new Date(up.starts_at).getTime() - Date.now())).toBeLessThan(60_000)
     await expect(change('scale')).rejects.toThrow()
+  })
+
+  it('an upgrade during a trial waits until the trial is over, and carries no trial', async () => {
+    const end = new Date(Date.now() + 10 * 86_400_000)
+    await fresh(end)
+    const up = await change('scale')
+    expect(up.upgrade).toBe(true)
+    expect(new Date(up.starts_at).getTime()).toBe(end.getTime())
+    const { withTenant } = await import('@/lib/db/tenant')
+    const { sql } = await import('drizzle-orm')
+    const [row] = await withTenant(tenantId, (tx) => tx.execute<{ trial_ends_at: string | null }>(sql`select trial_ends_at from tenant_plans where starts_at > now()`))
+    expect(row!.trial_ends_at).toBeNull()
   })
 
   it('only the owner or an admin may change it', async () => {

@@ -7,7 +7,7 @@ import type { PlanCode } from '@/domains/plans/entitlements'
 import { gstinState } from '@/domains/tax/gst'
 import { monthStartIST, nextMonthStartIST } from '@/domains/time/month'
 import type { Tx } from '@/lib/db'
-import { billableAtSql } from '@/lib/db/order-predicates'
+import { billableAtSql, feeRateAtSql } from '@/lib/db/order-predicates'
 import { planVersions, plans, tenantPlans } from '@/lib/db/schema'
 import { billingAccounts, frrataFeeCredits, frrataInvoiceFees, frrataInvoiceLines, frrataInvoices } from '@/lib/db/schema-billing'
 import { addonPrices, tenantAddons } from '@/lib/db/schema-modules'
@@ -77,8 +77,8 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
       .from(tenantAddons).innerJoin(addonPrices, eq(addonPrices.id, tenantAddons.addonPriceId))
       .where(and(eq(tenantAddons.tenantId, tenantId), lt(tenantAddons.startsAt, nextMonthStart))),
     // Billable before the 1st (and by now), at most one month late, never billed (no fee row on any invoice).
-    tx.execute<{ id: string; number: number; at: string | Date; net: string }>(sql`
-      select o.id, o.number, ${at} at, o.merchandise_net net from ${orders} o
+    tx.execute<{ id: string; number: number; at: string | Date; rate_at: string | Date; net: string }>(sql`
+      select o.id, o.number, ${at} at, ${feeRateAtSql('o')} rate_at, o.merchandise_net net from ${orders} o
        where o.tenant_id = ${tenantId} and o.shipped_at is not null and ${at} >= ${oldest.toISOString()}::timestamptz and ${at} < ${upTo.toISOString()}::timestamptz
          and not exists (select 1 from ${frrataInvoiceFees} f where f.order_id = o.id)`),
     // Billed on an ISSUED invoice, no longer billable (came back or lost since), never credited. An unissued draft
@@ -98,7 +98,7 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
   const planHistory: PlanRow[] = planRows.map((p) => ({ startsAt: p.startsAt, trialEndsAt: p.trialEndsAt, customMonthlyPrice: p.customMonthlyPrice === null ? null : paise(p.customMonthlyPrice),
     planVersion: { planCode: p.planCode as PlanCode, name: p.name, monthlyPrice: paise(p.monthlyPrice), includedOrders: p.includedOrders, feeBps: p.feeBps } }))
   const addons: AddonRow[] = addonRows.map((a) => ({ module: a.module, name: MODULES[a.module as ModuleKey]?.name ?? a.module, monthlyPrice: paise(a.monthlyPrice), startsAt: a.startsAt, endsAt: a.endsAt, trialEndsAt: a.trialEndsAt }))
-  const feeOrders: FeeOrder[] = feeRows.map((o) => ({ orderId: o.id, number: `#${o.number}`, billableAt: new Date(o.at), merchandiseNet: Number(o.net) }))
+  const feeOrders: FeeOrder[] = feeRows.map((o) => ({ orderId: o.id, number: `#${o.number}`, billableAt: new Date(o.at), rateAt: new Date(o.rate_at), merchandiseNet: Number(o.net) }))
   const credits: FeeCredit[] = creditRows.map((c) => ({ orderId: c.id, number: `#${c.number}`, fee: paise(Number(c.fee)), invoiceNumber: c.invoice }))
   const acc = account[0]
   const bill = computeBill({

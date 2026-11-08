@@ -5,10 +5,10 @@
 -- Bound to app_current_tenant(), and the actor must be an owner or admin of that shop (the precedent:
 -- app_change_shop_address). Each change and cancel is audited here. The shop is locked first, so two tabs act one
 -- after the other. A price agreed with Frrata (custom) or a change Frrata scheduled (by_shop false) is never changed
--- here. Security review 2026-11-08:
---  * an upgrade keeps the shop on the higher plan until the end of the NEXT month (a downgrade after it starts the 1st
---    of the month after next), so a short upgrade cannot buy a lower fee for a month's deliveries;
---  * a trial does not carry onto a higher plan: the higher plan is paid from the moment it starts.
+-- here. Owner calls (2026-11-08, after the security review):
+--  * each order's fee is charged at the rate of the plan it SHIPPED under (feeForOrder / feeRateAtSql), so a short
+--    upgrade cannot buy a lower rate for orders already on their way; a downgrade starts on the 1st as before;
+--  * an upgrade during a trial waits until the trial is over (it starts then, paid; the trial does not move to it).
 -- tenant_plans stays written only by definers and frata_admin; Admin cannot write by_shop (column grant).
 -- =============================================================================
 create or replace function app_change_plan(p_code text, p_by uuid) returns table (starts_at timestamptz, upgrade boolean)
@@ -32,14 +32,14 @@ begin
     raise exception 'plan: Frrata has a change scheduled for your plan; message Frrata' using errcode = 'check_violation'; end if;
   delete from public.tenant_plans tp where tp.tenant_id = t and tp.starts_at > now() and tp.by_shop;
   up := target.monthly_price > cur.vprice;
-  if up then
+  if up and cur.trial_ends_at > now() then
+    at := cur.trial_ends_at;          -- an upgrade waits until the trial is over
+  elsif up then
     at := now();
-  elsif cur.by_shop and cur.starts_at >= month1 - interval '1 month' then
-    -- The current plan is this month's upgrade: it runs to the end of next month.
-    at := (date_trunc('month', now() at time zone 'Asia/Kolkata') + interval '2 months') at time zone 'Asia/Kolkata';
   else
     at := month1;
   end if;
+  -- A downgrade keeps what is left of the trial; an upgrade never carries one.
   insert into public.tenant_plans (tenant_id, plan_version_id, starts_at, trial_ends_at, created_by, reason, by_shop)
     values (t, target.id, at, case when not up and cur.trial_ends_at > at then cur.trial_ends_at else null end, p_by, 'Changed by the shop', true);
   select u.email into v_email from auth.users u where u.id = p_by;

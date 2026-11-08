@@ -6,7 +6,7 @@ import { STATE_OPTIONS } from '@/domains/billing/details'
 import { STATE_LABEL } from '@/domains/billing/status'
 import { paise } from '@/domains/money/paise'
 import { usage } from '@/domains/plans/entitlements'
-import { planChangeAdds } from '@/domains/billing/bill'
+import { planChangeAdds, planChangeStarts } from '@/domains/billing/bill'
 import { monthStartIST, nextMonthStartIST } from '@/domains/time/month'
 import { formatInr, formatPercent } from '@/lib/format'
 import { publicPlans } from '@/lib/db/platform'
@@ -109,12 +109,19 @@ export default async function PlanAndBillingPage() {
               ? <p className="text-xs text-muted-foreground">{o.plan.custom ? 'Your price was agreed with Frrata. To change your plan, message Frrata.' : auth.membership.supportSessionId ? 'A Frrata support visit cannot change the shop’s plan.' : 'Plans could not be loaded. Try again in a minute.'}</p>
               : <PlanChoice downgradeOn={dayMonthLongIN(o.forChange.downgradeOn)}
                   scheduled={o.scheduled ? { name: o.scheduled.name, on: dayMonthLongIN(o.scheduled.startsAt), byShop: o.scheduled.byShop } : null}
-                  options={plans.filter((p) => p.code !== o.plan!.code).map((p) => ({
-                    code: p.code, name: p.name, price: formatInr(paise(p.monthlyPrice)), included: p.includedOrders.toLocaleString('en-IN'),
-                    fee: formatPercent(p.feeBps / 10_000, p.feeBps % 100 === 0 ? 0 : 1), upgrade: p.monthlyPrice > o.plan!.monthlyPrice,
+                  options={plans.filter((p) => p.code !== o.plan!.code).map((p) => {
+                    const target = { planCode: p.code as never, name: p.name, monthlyPrice: paise(p.monthlyPrice), includedOrders: p.includedOrders, feeBps: p.feeBps }
+                    const cur = [...o.forChange.plans].sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())[0]
+                    const starts = planChangeStarts(cur, target, now, nextMonthStartIST(now))
                     // The figure the next invoice carries: the same rule (planChangeAdds), never the page's own arithmetic.
-                    difference: (() => { const d = planChangeAdds(o.forChange.plans, { planCode: p.code as never, name: p.name, monthlyPrice: paise(p.monthlyPrice), includedOrders: p.includedOrders, feeBps: p.feeBps }, now, monthStartIST(now), nextMonthStartIST(now), o.forChange.billed); return d > 0 ? formatInr(d) : null })(),
-                  }))} />}
+                    const d = planChangeAdds(o.forChange.plans, target, now, monthStartIST(now), nextMonthStartIST(now), o.forChange.billed)
+                    return {
+                      code: p.code, name: p.name, price: formatInr(paise(p.monthlyPrice)), included: p.includedOrders.toLocaleString('en-IN'),
+                      fee: formatPercent(p.feeBps / 10_000, p.feeBps % 100 === 0 ? 0 : 1), upgrade: p.monthlyPrice > o.plan!.monthlyPrice,
+                      afterTrial: starts.getTime() > now.getTime() && p.monthlyPrice > o.plan!.monthlyPrice ? dayMonthLongIN(starts) : null,
+                      difference: d > 0 ? formatInr(d) : null,
+                    }
+                  })} />}
           </>
         ) : <p className="text-sm text-muted-foreground">No plan yet.</p>}
       </Section>

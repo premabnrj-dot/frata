@@ -56,12 +56,17 @@ export function deliveredFee(netRevenue: Paise, feeBps: number): Paise {
 }
 
 /**
- * THE fee for one order (billing B0, the one rule; Analytics reads it too): the plan version in force when the order
- * became billable (billableAt), on the order's merchandise net (taxable after offers; no GST, delivery or COD fee),
- * rounded per order, so a later credit reverses exactly what was billed. Null fee without a plan then.
+ * THE fee for one order (billing B0, the one rule; Analytics reads it too): the rate of the plan version in force when
+ * the order SHIPPED (`rateAt`; owner, 2026-11-08 — a plan changed after shipping never changes an order's rate, so a
+ * short upgrade cannot buy a lower rate for orders already on their way), on the order's merchandise net (taxable after
+ * offers; no GST, delivery or COD fee), rounded per order, so a later credit reverses exactly what was billed. WHEN it is
+ * billed is still its billable moment. Null fee without a plan then. SQL twin: feeRateAtSql (src/lib/db/order-predicates.ts).
  */
-export function feeForOrder<T extends { startsAt: Date; planVersion: Pick<PlanVersion, 'feeBps'> }>(history: readonly T[], order: { merchandiseNet: number; billableAt: Date }): { feeBps: number; fee: Paise } | null {
-  const plan = currentPlan(history, order.billableAt)
+export function feeForOrder<T extends { startsAt: Date; planVersion: Pick<PlanVersion, 'feeBps'> }>(history: readonly T[], order: { merchandiseNet: number; rateAt: Date; billableAt: Date }): { feeBps: number; fee: Paise } | null {
+  // Billable before any plan: no fee. Shipped before the first plan: the first plan's rate.
+  if (!currentPlan(history, order.billableAt)) return null
+  const first = [...history].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())[0]!
+  const plan = currentPlan(history, order.rateAt < first.startsAt ? first.startsAt : order.rateAt)
   return plan ? { feeBps: plan.planVersion.feeBps, fee: deliveredFee(order.merchandiseNet as Paise, plan.planVersion.feeBps) } : null
 }
 

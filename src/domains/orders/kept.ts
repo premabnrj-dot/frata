@@ -33,7 +33,7 @@ export type KeptGroup = {
   gateway: number
   /** Merchandise net: what Frrata's per-delivered fee is charged on. */
   base: number
-  /** The plan fee (bps) in force at the orders' billable moment (entitlements' `feeForOrder` pick, via
+  /** The plan fee (bps) in force when the orders shipped (entitlements' `feeForOrder` pick, via
    * `feeBucketSql`), or null with no plan. The fee is charged on the group's merchandise net (billing rounds per order). */
   feeBps: number | null
 }

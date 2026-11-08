@@ -8,7 +8,7 @@ import { paise } from '@/domains/money/paise'
 const ist = (y: number, m: number, d = 1) => new Date(Date.UTC(y, m - 1, d) - 330 * 60_000)
 const launch: PlanRow = { startsAt: ist(2026, 11), planVersion: { planCode: 'launch', name: 'Launch', monthlyPrice: paise(149900), includedOrders: 150, feeBps: 200 }, trialEndsAt: null, customMonthlyPrice: null }
 const growth: PlanRow = { ...launch, planVersion: { planCode: 'growth', name: 'Growth', monthlyPrice: paise(499900), includedOrders: 1500, feeBps: 100 } }
-const orders = (n: number, net: number, at: Date) => Array.from({ length: n }, (_, k) => ({ orderId: `o${k}`, number: `KS-${1000 + k}`, billableAt: at, merchandiseNet: net }))
+const orders = (n: number, net: number, at: Date) => Array.from({ length: n }, (_, k) => ({ orderId: `o${k}`, number: `KS-${1000 + k}`, billableAt: at, rateAt: at, merchandiseNet: net }))
 const base = (m: number, over: Partial<BillInput>): BillInput => ({ monthStart: ist(2026, m), nextMonthStart: ist(2026, m + 1), prevMonthStart: ist(2026, m - 1), plans: [launch], addons: [], feeOrders: [], credits: [], carry: 0, rolledLastMonth: false, frrataGstin: '08AAACF0000A1Z5', shopState: '08', ...over })
 
 describe('computeBill (billing B0, golden months)', () => {
@@ -60,8 +60,8 @@ describe('computeBill (billing B0, golden months)', () => {
   })
   it('the fee follows the plan in force when the order became billable', () => {
     const history = [launch, { ...growth, startsAt: ist(2026, 11, 20) }]
-    expect(feeForOrder(history, { merchandiseNet: 100000, billableAt: ist(2026, 11, 19) })!.feeBps).toBe(200)
-    expect(feeForOrder(history, { merchandiseNet: 100000, billableAt: ist(2026, 11, 21) })!.feeBps).toBe(100)
+    expect(feeForOrder(history, { merchandiseNet: 100000, rateAt: ist(2026, 11, 19), billableAt: ist(2026, 11, 19) })!.feeBps).toBe(200)
+    expect(feeForOrder(history, { merchandiseNet: 100000, rateAt: ist(2026, 11, 21), billableAt: ist(2026, 11, 21) })!.feeBps).toBe(100)
   })
 })
 
@@ -87,6 +87,19 @@ describe('plan changes (billing B4)', () => {
     expect(diff.taxable).toBe(Math.round(149900 * 15 / 30) + Math.round(499900 * 15 / 30) - 149900)
     expect(b.lines[0]).toMatchObject({ kind: 'plan', taxable: 499900 }) // December in advance, at Growth
     expect(computeBill(base(12, { plans: [launch], prevPlanBilled: 149900 })).lines.some((l) => l.kind === 'change')).toBe(false)
+  })
+  it('an order is charged at the rate of the plan it SHIPPED under, though it is delivered after an upgrade', () => {
+    const upgraded = [launch, { ...growth, startsAt: ist(2026, 11, 30) }]
+    const o = { orderId: 'o1', number: 'KS-1', billableAt: ist(2026, 11, 30), rateAt: ist(2026, 11, 20), merchandiseNet: 100000 }
+    const b = computeBill(base(12, { plans: upgraded, feeOrders: [o], prevPlanBilled: 149900 }))
+    expect(b.fees[0]).toMatchObject({ feeBps: 200, fee: 2000 }) // Launch's 2%, not Growth's 1%
+    const later = computeBill(base(12, { plans: upgraded, feeOrders: [{ ...o, rateAt: ist(2026, 11, 30) }], prevPlanBilled: 149900 }))
+    expect(later.fees[0]).toMatchObject({ feeBps: 100 })
+  })
+  it('shipped before the shop had a plan: the first plan’s rate; billable before any plan: no fee', () => {
+    const o = { orderId: 'o1', number: 'KS-1', billableAt: ist(2026, 11, 3), rateAt: ist(2026, 10, 30), merchandiseNet: 100000 }
+    expect(computeBill(base(12, { feeOrders: [o] })).fees[0]).toMatchObject({ feeBps: 200 })
+    expect(computeBill(base(12, { feeOrders: [{ ...o, billableAt: ist(2026, 10, 31) }] })).fees).toHaveLength(0)
   })
   it('a downgrade starts on the 1st: nothing to make up, never a refund', () => {
     const down = [{ ...growth, startsAt: ist(2026, 10) }, { ...launch, startsAt: ist(2026, 12) }]

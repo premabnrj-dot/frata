@@ -160,7 +160,7 @@ export default {
         await riya.goto(CONSOLE + '/console/settings/billing'); await riya.getByRole('button', { name: 'UPI Autopay' }).waitFor()
         await riya.screenshot({ path: t.out('autopay-off'), fullPage: true })
       })
-      await t.step('B4: the owner upgrades to Growth now (the difference by days, in words); a switch back waits until the month after next (an upgrade runs a full month), and Keep my plan cancels it', async () => {
+      await t.step('B4: the owner upgrades to Growth now (the difference by days, in words); a switch back waits for the 1st, and Keep my plan cancels it', async () => {
         await riya.goto(CONSOLE + '/console/settings/billing')
         await riya.getByRole('button', { name: 'Upgrade to Growth' }).click()
         await riya.getByRole('dialog').getByText(/is added to your next bill/).waitFor()
