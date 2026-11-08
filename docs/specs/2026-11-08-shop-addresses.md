@@ -242,7 +242,7 @@ above find the few); show the reporter's identity to the merchant.
 ## Phases
 | Phase | What | Needs |
 |---|---|---|
-| **D·0 Connect frrata.shop** | Nameservers at Hostinger → Vercel; `frrata.shop`, `*.frrata.shop`, `www.frrata.shop` on project `frata`; `NEXT_PUBLIC_SHOP_DOMAIN=frrata.shop`; apex and www to frrata.com; `_psl` TXT + the PSL request; Admin's name rule = sign-up's | the purchase; no migration |
+| **D·0 Connect frrata.shop** (in progress 2026-11-08: registered 17:04 UTC at Hostinger, expires 2027-11-08; registry NS = ns1/ns2.vercel-dns.com at 17:37; `frrata.shop`, `*.frrata.shop` and `www.frrata.shop` → 308 frrata.shop added to project `frata`; `NEXT_PUBLIC_SHOP_DOMAIN` added by the owner, value to confirm; resolvers cache the old NS ≤ 6 h) | Nameservers at Hostinger → Vercel; `frrata.shop`, `*.frrata.shop`, `www.frrata.shop` on project `frata`; `NEXT_PUBLIC_SHOP_DOMAIN=frrata.shop`; apex and www to frrata.com; `_psl` TXT + the PSL request; Admin's name rule = sign-up's | the purchase; no migration |
 | **D·1 Names** | `shop_names`, `blocked_names`; renames after opening with redirects; Admin rename/freeze/release; the names list | D·0 |
 | **D·2 Own domains** | `shop_domains`, the connect flow, checks, main address, fallback, detach; canonical/sitemap on the main host; HSTS split; Admin detach/health | D·1; Razorpay website check |
 | **T·1 Trust and safety** | Terms and AUP, Frrata's grievance officer page, report forms, Turnstile, Admin queue with clocks, hide/freeze/close, new-shop watch, Web Risk, Search Console | D·0; a lawyer's review |
