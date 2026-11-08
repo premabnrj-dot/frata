@@ -27,7 +27,40 @@ export const tenants = pgTable('tenants', {
   /** Frrata's own stores (the demo), shown as "Internal" in Admin. The plan is in tenant_plans. */
   isInternal: boolean('is_internal').notNull().default(false),
   createdAt: createdAt(),
+  /** The first time the shop opened to shoppers; set once by a trigger, never cleared by a close (renames count from it). */
+  firstOpenedAt: timestamp('first_opened_at', { withTimezone: true }),
+  /** Frrata froze address changes (a name or domain dispute); set by Admin. */
+  addressFrozenAt: timestamp('address_frozen_at', { withTimezone: true }),
 })
+
+/**
+ * Every name a shop has had (shop addresses D·1). The primary key means a name is never given to a second shop; the
+ * current one has no `retired_at`. A retired name redirects to the current one unless Frrata retired it. Written only by
+ * the trigger on `tenants` and the rename definer (drizzle/0065); `tenants.slug` mirrors the current row.
+ */
+export const shopNames = pgTable('shop_names', {
+  name: text('name').primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  createdAt: createdAt(),
+  retiredAt: timestamp('retired_at', { withTimezone: true }),
+  retiredByFrrata: boolean('retired_by_frrata').notNull().default(false),
+}, (t) => [
+  uniqueIndex('shop_names_current').on(t.tenantId).where(sql`retired_at is null`),
+  index('shop_names_tenant').on(t.tenantId),
+  check('shop_names_lower', sql`${t.name} = lower(${t.name})`),
+])
+
+/** Names and domains no shop may take: protected brands, offensive words, blocked domains (Admin, with a reason). Frrata's own routing words stay in code (RESERVED). */
+export const blockedNames = pgTable('blocked_names', {
+  name: text('name').primaryKey(),
+  kind: text('kind').notNull(),
+  reason: text('reason').notNull(),
+  createdBy: uuid('created_by'),
+  createdAt: createdAt(),
+}, (t) => [
+  check('blocked_names_kind', sql`${t.kind} in ('protected','offensive','domain')`),
+  check('blocked_names_lower', sql`${t.name} = lower(${t.name})`),
+])
 
 /** A merchant's own storefront domain. A platform subdomain (`<slug>.SHOP_DOMAIN`) is never stored: it is found by slug. */
 export const tenantDomains = pgTable('tenant_domains', {

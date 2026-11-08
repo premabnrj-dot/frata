@@ -286,11 +286,54 @@ do $$ declare n int; begin
 end $$;
 rollback;
 begin;
+-- Shop addresses D·1 (0065): after the first opening, two renames; the old names stay the shop's (retired, redirecting)
+-- and no other shop can take them, by any creator; a close doesn't reset the count; a freeze refuses; Frrata's rename
+-- retires without a redirect; the app reads only its own names.
 update shop_settings set published_at = now() where tenant_id = '22222222-2222-2222-2222-222222222222';
+update shop_settings set published_at = null where tenant_id = '22222222-2222-2222-2222-222222222222';
+set local role frata_app;
+do $$ declare r record; begin
+  perform app_change_shop_address('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-two');
+  perform app_change_shop_address('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-three');
+  begin perform app_change_shop_address('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-four'); raise exception 'FAIL: a third rename after opening';
+  exception when raise_exception then if sqlerrm <> 'no_renames_left' then raise; end if; end;
+  select * into r from app_shop_for_name('proof-b-two');
+  if r.id <> '22222222-2222-2222-2222-222222222222' or not r.retired or r.retired_by_frrata or r.current_name <> 'proof-b-three' then raise exception 'FAIL: an old name must stay the shop''s and redirect'; end if;
+  if app_name_check('proof-b-two') <> 'taken' then raise exception 'FAIL: a retired name looked free'; end if;
+  begin perform app_change_shop_address('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', 'proof-b-two'); raise exception 'FAIL: A took B''s retired name';
+  exception when raise_exception then if sqlerrm <> 'slug_taken' then raise; end if; end;
+  begin perform app_create_shop('aaaaaaaa-0000-0000-0000-000000000009', 'Squatter', 'proof-b-two', '110001', '{}'); raise exception 'FAIL: sign-up took a retired name';
+  exception when raise_exception then if sqlerrm not in ('slug_taken', 'email_unconfirmed') then raise; end if; end;
+  begin insert into shop_names (name, tenant_id) values ('proof-a-steal', '11111111-1111-1111-1111-111111111111'); raise exception 'FAIL: app writes a name';
+  exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+begin;
+-- Every creator goes through the trigger: a direct insert of a retired name fails as "slug_taken".
+insert into shop_names (name, tenant_id, retired_at) values ('proof-held', '22222222-2222-2222-2222-222222222222', now());
+do $$ begin
+  begin insert into tenants (slug, name) values ('proof-held', 'Taker'); raise exception 'FAIL: a new shop took a retired name';
+  exception when raise_exception then if sqlerrm <> 'slug_taken' then raise; end if; end;
+  begin update tenants set slug = 'proof-unrecorded' where id = '11111111-1111-1111-1111-111111111111'; raise exception 'FAIL: a slug moved outside the rename definers';
+  exception when raise_exception then if sqlerrm <> 'rename_through_definer' then raise; end if; end;
+end $$;
+update tenants set address_frozen_at = now() where id = '22222222-2222-2222-2222-222222222222';
 set local role frata_app;
 do $$ begin
-  begin perform app_change_shop_address('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-late'); raise exception 'FAIL: a published shop moved itself';
-  exception when raise_exception then if sqlerrm <> 'published' then raise; end if; end;
+  begin perform app_change_shop_address('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-frozen'); raise exception 'FAIL: a frozen shop renamed itself';
+  exception when raise_exception then if sqlerrm <> 'frozen' then raise; end if; end;
+  if exists (select 1 from shop_names where tenant_id = '11111111-1111-1111-1111-111111111111') then raise exception 'FAIL: B reads A''s names'; end if;
+end $$;
+rollback;
+begin;
+insert into platform_staff (user_id, email, role) values ('aaaaaaaa-0000-0000-0000-0000000000ff', 'staff@proof.test', 'admin') on conflict do nothing;
+set local role frata_admin;
+do $$ declare r record; begin
+  perform app_admin_rename_shop('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-0000000000ff', 'proof-b-renamed', 'Copies another brand');
+  select n.retired_by_frrata as by_frrata into r from shop_names n where n.name = 'proof-b';
+  if not r.by_frrata then raise exception 'FAIL: Frrata''s rename must not redirect'; end if;
+  begin update tenants set slug = 'admin-direct' where id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: Admin wrote a slug directly';
+  exception when insufficient_privilege then null; end;
 end $$;
 rollback;
 
