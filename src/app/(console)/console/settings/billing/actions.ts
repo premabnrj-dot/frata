@@ -211,3 +211,21 @@ export async function cancelPlanChange(): Promise<{ ok: true } | { ok: false; er
   revalidatePath('/console', 'layout')
   return { ok: true }
 }
+
+// ── Trials TR1·7: the owner's one extension (7 days). The definer checks the member, the window and the delivered
+// count itself (never a parameter) and audits it; a support visit is refused here and there. ──
+export async function takeMoreDays(): Promise<{ ok: true } | { ok: false; error: string }> {
+  const me = await requireMember(CAN_MANAGE)
+  if (!me.ok) return { ok: false, error: me.message }
+  if (me.membership.supportSessionId) return { ok: false, error: 'Not on a support visit.' }
+  try {
+    const r = await asMember(CAN_MANAGE, { action: 'trial.extend' }, async (tx, auth) => { await tx.execute(sql`select app_trial_extend(${auth.userId}::uuid)`) })
+    if (!r.ok) return { ok: false, error: r.error }
+    revalidatePath('/console', 'layout')
+    return { ok: true }
+  } catch (e) {
+    const m = /trial: (.{1,160})/.exec(e instanceof Error ? (e.cause instanceof Error ? e.cause.message : e.message) : '')?.[1]
+    console.error('[trial.extend]', errName(e))
+    return { ok: false, error: m ? `${m.charAt(0).toUpperCase()}${m.slice(1)}.` : 'Nothing was changed. Try again in a minute.' }
+  }
+}

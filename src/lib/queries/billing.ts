@@ -1,7 +1,11 @@
 import 'server-only'
 import { and, asc, desc, eq, gt, inArray, isNotNull, sql } from 'drizzle-orm'
-import type { Bill, PlanRow } from '@/domains/billing/bill'
-import { paise } from '@/domains/money/paise'
+import { GST_BPS, type Bill, type PlanRow } from '@/domains/billing/bill'
+import { daysUntil, lastDay, mayExtend, pausesAt, trialEndsAt, trialState, type TrialState } from '@/domains/plans/trial'
+import { cache } from 'react'
+import { orders } from '@/lib/db/schema-orders'
+import { shopTrials } from '@/lib/db/schema-trials'
+import { applyBps, paise } from '@/domains/money/paise'
 import { currentPlan, monthlyPrice } from '@/domains/plans/entitlements'
 import { gstinState } from '@/domains/tax/gst'
 import { CAN_MANAGE } from '@/domains/tenancy/roles'
@@ -165,3 +169,31 @@ export async function billingBanner(m: Pick<Membership, 'tenantId' | 'role'>): P
     return due > 0 ? { kind: r.kind as 'failed' | 'acknowledge', amount: due, number: r.number } : null
   })
 }
+
+// ── Trials TR1·6–7: the shop's trial, as the console shows it (one read per request, shared by the banner and Plan and
+// billing). Derived from the facts (src/domains/plans/trial.ts); nothing stored. Owners and admins only. ──
+export type ShopTrial = { state: TrialState; lastDay: Date; pausesAt: Date; daysLeft: number; plan: string; priceWithGst: number; mayExtend: boolean; extended: boolean }
+
+export const shopTrial = cache(async (m: Pick<Membership, 'tenantId' | 'role'>, now: Date = new Date()): Promise<ShopTrial | null> => {
+  if (!(CAN_MANAGE as readonly string[]).includes(m.role)) return null
+  return withTenant(m.tenantId, async (tx) => {
+    const [t] = await tx.select({ days: shopTrials.days, openWindowDays: shopTrials.openWindowDays, signedUpAt: shopTrials.signedUpAt, startedAt: shopTrials.startedAt, extendedAt: shopTrials.extendedAt, endedAt: shopTrials.endedAt })
+      .from(shopTrials).where(eq(shopTrials.tenantId, m.tenantId))
+    if (!t) return null
+    const [[acc], [plan], [delivered]] = await Promise.all([
+      tx.select({ mandateAt: billingAccounts.mandateAt, revokedAt: billingAccounts.mandateRevokedAt }).from(billingAccounts).where(eq(billingAccounts.tenantId, m.tenantId)),
+      tx.select({ name: plans.name, price: planVersions.monthlyPrice, custom: tenantPlans.customMonthlyPrice }).from(tenantPlans)
+        .innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(plans, eq(plans.id, planVersions.planId))
+        .where(and(eq(tenantPlans.tenantId, m.tenantId), sql`${tenantPlans.startsAt} <= now()`)).orderBy(desc(tenantPlans.startsAt)).limit(1),
+      tx.select({ n: sql<number>`count(*)::int` }).from(orders).where(and(eq(orders.tenantId, m.tenantId), isNotNull(orders.deliveredAt), sql`${orders.rtoInitiatedAt} is null and ${orders.rtoDeliveredAt} is null`)),
+    ])
+    const money = { mandateActive: !!acc?.mandateAt && !acc.revokedAt, exposedAt: null }
+    const endsAt = trialEndsAt(t)
+    const price = Number(plan?.custom ?? plan?.price ?? 0)
+    return {
+      state: trialState(now, t, money), lastDay: lastDay(endsAt), pausesAt: pausesAt(endsAt, money), daysLeft: daysUntil(now, endsAt),
+      plan: plan?.name ?? '', priceWithGst: price + applyBps(paise(price), GST_BPS),
+      mayExtend: mayExtend(now, t, delivered?.n ?? 0, money), extended: !!t.extendedAt,
+    }
+  })
+})

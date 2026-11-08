@@ -15,7 +15,8 @@ import { PlanChoice } from './plan-choice'
 import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { dayIN, dayMonthLongIN, monthYearIN } from '@/lib/format-date'
 import { errName } from '@/lib/log'
-import { billingOverview, payingFor } from '@/lib/queries/billing'
+import { billingOverview, payingFor, shopTrial } from '@/lib/queries/billing'
+import { TakeMoreDays } from './take-more-days'
 import { billingGatewayIsTest, isBillingGatewayConfigured } from '@/lib/billing/gateway'
 import { PayNow, SetUpAutopay, StopAutopay } from './autopay'
 import { orderPrefixFor } from '@/lib/queries/orders'
@@ -38,6 +39,7 @@ export default async function PlanAndBillingPage() {
     orderPrefixFor(auth.membership.tenantId),
     payingFor(auth.membership, now).catch(() => null),
   ])
+  const trial = await shopTrial(auth.membership, now).catch(() => null)
   const plans = await publicPlans().catch((e) => { console.error('[billing page] plans', errName(e)); return [] as Awaited<ReturnType<typeof publicPlans>> })
   // Autopay and Pay now: only with Frrata's gateway connected, never on a Frrata support visit (finding 10).
   const canPay = isBillingGatewayConfigured() && !auth.membership.supportSessionId
@@ -103,7 +105,12 @@ export default async function PlanAndBillingPage() {
         {o.plan ? (
           <>
             <p className="text-sm"><strong>{o.plan.name}</strong> · <Money paise={paise(o.plan.monthlyPrice)} />/mo · {o.plan.includedOrders.toLocaleString('en-IN')} orders · {formatPercent(o.plan.feeBps / 10_000, o.plan.feeBps % 100 === 0 ? 0 : 1)} per delivered order</p>
-            {o.plan.trialEndsAt && o.plan.trialEndsAt > now && <p className="text-sm text-ok-text">Trial until {dayIN(lastDay(o.plan.trialEndsAt))}</p>}
+            {trial && trial.state !== 'paid' ? (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className={trial.state === 'grace' || trial.state === 'paused' ? 'text-danger-text' : 'text-ok-text'}>{trial.state === 'building' ? 'Trial starts when your shop goes live' : trial.state === 'grace' || trial.state === 'paused' ? `Trial ended · ${trial.state === 'paused' ? 'paused' : `pauses ${dayIN(trial.pausesAt)}`}` : `Trial · ${trial.daysLeft} days left · last day ${dayIN(trial.lastDay)}`}</span>
+                {trial.mayExtend && !auth.membership.supportSessionId && <TakeMoreDays />}
+              </div>
+            ) : o.plan.trialEndsAt && o.plan.trialEndsAt > now && <p className="text-sm text-ok-text">Trial until {dayIN(lastDay(o.plan.trialEndsAt))}</p>}
             {o.plan.custom || auth.membership.supportSessionId || plans.length === 0
               ? <p className="text-xs text-muted-foreground">{o.plan.custom ? 'Price agreed with Frrata' : auth.membership.supportSessionId ? 'Read-only on a support visit' : 'Plans could not be loaded. Try again in a minute.'}</p>
               : <PlanChoice downgradeOn={dayMonthLongIN(o.forChange.downgradeOn)}
@@ -125,7 +132,7 @@ export default async function PlanAndBillingPage() {
         ) : <p className="text-sm text-muted-foreground">No plan yet.</p>}
       </Section>
 
-      <Section>
+      <Section id="paying">
         <h2 className="text-section font-semibold">Paying</h2>
         {!isBillingGatewayConfigured() ? <p className="text-sm text-muted-foreground">Not open yet</p>
           : paying?.mandate ? (

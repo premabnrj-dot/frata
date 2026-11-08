@@ -145,11 +145,11 @@ export default {
         await age(); await fetch(`${RZP}/_test/fail-next`, { method: 'POST' })
         await run()
         await until(async () => (await db`select failed_at from frrata_payments where invoice_id = ${inv.id} and attempt = 1`)[0]?.failed_at, 15_000)
-        await riya.goto(CONSOLE + '/console'); await riya.getByText(/didn.t go through/).waitFor()
+        await riya.goto(CONSOLE + '/console'); await riya.getByText(/^Payment of .* failed\./).waitFor()
         // 3. A fresh notice, then the retry: captured; the banner goes.
         await run(); await age(); await run()
         await until(async () => (await db`select captured_at from frrata_payments where invoice_id = ${inv.id} and attempt = 2`)[0]?.captured_at, 15_000)
-        await riya.reload(); assert.equal(await riya.getByText(/didn.t go through/).count(), 0)
+        await riya.reload(); assert.equal(await riya.getByText(/^Payment of .* failed\./).count(), 0)
         // 4. The billing webhook: a bad signature is refused; a signed token.cancelled turns autopay off.
         const [{ tok }] = await db`select mandate_token_id tok from billing_accounts where tenant_id = ${KESAR}`
         const body = JSON.stringify({ event: 'token.cancelled', created_at: 1, payload: { token: { entity: { id: tok, status: 'cancelled' } } } })

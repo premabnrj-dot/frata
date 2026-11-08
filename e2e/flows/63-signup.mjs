@@ -66,6 +66,30 @@ export default {
         assert.equal((await db`select count(*)::int n from trial_claims where key_hmac = ${F.email}`)[0].n, 0)
         await p.screenshot({ path: t.out('new-shop'), fullPage: true })
       })
+
+      await t.step('TR1·7: the trial in the console — building; ending (banner, two equal choices); 7 more days once; grace', async () => {
+        const [{ id }] = await db`select id from tenants where slug = ${SLUG}`
+        await p.goto(CONSOLE + '/console/settings/billing')
+        await p.getByText('Trial starts when your shop goes live').waitFor()
+        // Live 25 days ago: 5 days left, so the banner asks — and declining is as visible as accepting.
+        await db`update shop_trials set signed_up_at = now() - interval '26 days', started_at = now() - interval '25 days' where tenant_id = ${id}`
+        await db`select app_trial_recompute(${id})`
+        await p.goto(CONSOLE + '/console')
+        await p.getByText(/^Trial ends .* · then ₹5,899\/mo incl\. GST$/).waitFor()
+        await p.getByRole('link', { name: 'Set up autopay' }).waitFor()
+        await p.getByRole('button', { name: 'Not now' }).click()
+        await p.getByText(/^Trial ends/).waitFor({ state: 'detached' })
+        await p.goto(CONSOLE + '/console/settings/billing')
+        await p.getByRole('button', { name: 'Take 7 more days' }).click()
+        await p.getByText(/^Trial · \d+ days left/).waitFor()
+        await p.getByRole('button', { name: 'Take 7 more days' }).waitFor({ state: 'detached' }) // once only
+        // Past the end without autopay: grace, then the pause date.
+        await db`update shop_trials set started_at = now() - interval '40 days', signed_up_at = now() - interval '41 days' where tenant_id = ${id}`
+        await db`select app_trial_recompute(${id})`
+        await p.goto(CONSOLE + '/console')
+        await p.getByText(/^Trial ended · shop pauses /).waitFor()
+        await p.screenshot({ path: t.out('trial-grace'), fullPage: false })
+      })
     } finally {
       await cleanup()
     }

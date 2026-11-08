@@ -29,7 +29,7 @@ export function PlanChoice({ options, downgradeOn, scheduled }: { options: Optio
         {options.map((o) => (
           <li key={o.code} className="flex flex-col gap-1 rounded-md border border-border p-3 text-sm">
             <strong>{o.name}</strong>
-            <span className="text-muted-foreground">{o.price} a month · {o.included} orders · {o.fee} of delivered value</span>
+            <span className="text-muted-foreground">{o.price}/mo · {o.included} orders · {o.fee}</span>
             <Button variant="secondary" className="mt-1 self-start" onClick={() => { setMsg(null); setPick(o) }}>{o.upgrade ? (o.afterTrial ? `Upgrade to ${o.name} after the trial` : `Upgrade to ${o.name}`) : `Switch to ${o.name} on ${downgradeOn}`}</Button>
           </li>
         ))}
