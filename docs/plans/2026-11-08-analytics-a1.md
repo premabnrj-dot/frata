@@ -134,6 +134,11 @@ plan (call B).
    source's own state. `frata-verify`'s existing 10× seed step is extended, not duplicated.
 18. Reviewers run on the plan now (done) and again at A1·7 on the diff; `integration-researcher` runs before A1·2.
 
+**Merged with main (8 Nov, billing B0 and documents):** Analytics' migrations are 0050 (erase the click ids of
+abandoned orders erased before) and 0051 (the pincode index), after billing's 0047–0048 and documents' 0049. The fee
+per order is billing's one rule: `feeBucketSql` reads `billableAtSql`, the same pick as `feeForOrder`
+(domains/plans/entitlements.ts); the local stand-in is gone.
+
 ## Regression net first (rule 5)
 - e2e that covers what A·1 changes: `10-checkout` (placement; attribution rides on it), `47-offers` (₹ kept; moves to
   `kept.ts` and IST days), `49-ship` (outcomes the page reads), `50-order-page` (the "Came from" line), `90-ux`

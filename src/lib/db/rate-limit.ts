@@ -27,6 +27,8 @@ export const LIMITS = {
   placeOrderIp: { action: 'shop_place:ip', max: 30, windowSeconds: 3600 },
   placeOrderPhone: { action: 'shop_place:phone', max: 5, windowSeconds: 3600 },
   payIp: { action: 'shop_pay:ip', max: 60, windowSeconds: 600 },
+  /** The shopper's invoice PDF (Documents D2): per shop and IP, failing closed. */
+  invoiceIp: { action: 'shop_invoice:ip', max: 20, windowSeconds: 600 },
   // Offer codes that did not apply, per shop and IP ("<tenant>:<ip>"): guessing stops; fail closed. No per-shop block,
   // so one guesser cannot switch off a shop's real codes (offers plan review 11).
   codeIp: { action: 'shop_code:ip', max: 20, windowSeconds: 600 },
@@ -34,6 +36,9 @@ export const LIMITS = {
   codeSeen: { action: 'shop_code:seen', max: 1, windowSeconds: 600 },
   // Upload tokens per shop (security review S11): four widths per photo, so 200 photos an hour; Frrata pays for storage.
   uploadShop: { action: 'upload:shop', max: 800, windowSeconds: 3600 },
+  // PDF documents (Documents D1, security review 2026-11-08): a render is CPU; per member and per shop, fail closed.
+  pdfMember: { action: 'pdf:member', max: 30, windowSeconds: 600 },
+  pdfShop: { action: 'pdf:shop', max: 120, windowSeconds: 600 },
 } as const satisfies Record<string, Limit>
 
 /** Whether `subject` is already past the limit, WITHOUT counting an attempt. `failClosed`: true when the counter cannot be read. */

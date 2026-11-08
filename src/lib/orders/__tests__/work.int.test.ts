@@ -14,6 +14,7 @@ describe.skipIf(!host)('order work', () => {
     process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
     process.env.PAYMENT_KEYS_SECRET ??= 'int-test-only'
     const { withTenant } = await import('@/lib/db/tenant')
+    const { shopSettings } = await import('@/lib/db/schema')
     const { orders, orderLines, orderEvents } = await import('@/lib/db/schema-orders')
     const { products, variants } = await import('@/lib/db/schema-catalogue')
     const w = await import('@/lib/orders/work')
@@ -72,7 +73,13 @@ describe.skipIf(!host)('order work', () => {
       expect(await w.undo(tx, A, riya, (c2 as { eventId: string }).eventId, later(11))).toMatchObject({ ok: false, error: 'Already packed — cancel it instead.' })
       const b = await order(2, { sellerGstin: '08AAAAA0000A1Z5' })
       await w.confirm(tx, A, riya, b, later(12))
+      // Documents D2: the logo, signatory and note are frozen at packing; changing Settings later leaves the invoice alone.
+      const logo = (n: number) => `https://abc.public.blob.vercel-storage.com/tenants/${A}/documents/aaaaaaaa-0000-0000-0000-00000000000${n}.png`
+      await tx.update(shopSettings).set({ docLogo: logo(1), docSignatory: 'Riya Mehta', docNote: 'Exchanges in 7 days.' }).where(eq(shopSettings.tenantId, A))
       expect(await w.pack(tx, A, riya, b, later(13))).toMatchObject({ ok: true, invoiceNumber: expect.stringMatching(/\/26-27\/00001$/) })
+      await tx.update(shopSettings).set({ docLogo: logo(2), docSignatory: 'Someone Else', docNote: '' }).where(eq(shopSettings.tenantId, A))
+      const [frozen] = await tx.select({ logo: orders.invoiceLogo, signatory: orders.invoiceSignatory, note: orders.invoiceNote }).from(orders).where(eq(orders.id, b))
+      expect(frozen).toEqual({ logo: logo(1), signatory: 'Riya Mehta', note: 'Exchanges in 7 days.' })
       const c = await order(3, { sellerGstin: '08AAAAA0000A1Z5' })
       await w.confirm(tx, A, riya, c, later(14))
       expect(await w.pack(tx, A, riya, c, later(15))).toMatchObject({ invoiceNumber: expect.stringMatching(/\/26-27\/00002$/) })

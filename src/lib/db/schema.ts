@@ -247,6 +247,12 @@ export const shopSettings = pgTable('shop_settings', {
   gstin: text('gstin'),
   defaultHsn: text('default_hsn').notNull().default('6211'),
   invoiceSeries: text('invoice_series').notNull().default(''),
+  /** Documents D2 (Settings › Documents): the signatory named on invoices, a footer note, the slip's default size. */
+  /** The logo for paper: a PNG in the shop's Blob folder (tenants/<t>/documents/<uuid>.png), byte-checked when set. */
+  docLogo: text('doc_logo'),
+  docSignatory: text('doc_signatory').notNull().default(''),
+  docNote: text('doc_note').notNull().default(''),
+  slipSize: text('slip_size').notNull().default('a4'),
   /** Asked at sign-up; null for shops made before it (Admin-created). */
   pickupPincode: text('pickup_pincode'),
   /**
@@ -275,6 +281,9 @@ export const shopSettings = pgTable('shop_settings', {
     and (${t.shipCostsConfirmedAt} is null or (${t.shipCostDelivery} is not null and ${t.shipCostReturn} is not null and ${t.shipCostCod} is not null))`),
   // The series heads the invoice number: series + '26-27/' + 5 digits must stay within GST's 16 characters (1D).
   check('shop_settings_invoice_series', sql`length(${t.invoiceSeries}) <= 5`),
+  check('shop_settings_documents', sql`${t.slipSize} in ('a4','label') and length(${t.docSignatory}) <= 80 and length(${t.docNote}) <= 240`),
+  // A logo for paper only from this shop's own documents folder, so a document never loads another shop's file.
+  check('shop_settings_doc_logo', sql`${t.docLogo} is null or ${t.docLogo} ~ ('^https://[a-z0-9]+\\.public\\.blob\\.vercel-storage\\.com/tenants/' || ${t.tenantId}::text || '/documents/[0-9a-f-]{36}\\.png$')`),
 ])
 
 export const COUNTER_KINDS = ['order', 'invoice', 'bill'] as const

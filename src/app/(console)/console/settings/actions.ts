@@ -14,6 +14,8 @@ import { parseShipCosts, type ShipCostsInput } from '@/domains/settings/ship-cos
 import { dayIN } from '@/lib/format-date'
 import { costsVisibleIn, shopWithSettings } from '@/lib/queries/settings'
 import { errName } from '@/lib/log'
+import { docImage } from '@/lib/documents/images'
+import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 
 // Each section says who may save it (`editors`: owners, admins and the store's partner for the shop's own
 // settings); the shop's address stays CAN_MANAGE. Each save checks the
@@ -155,5 +157,33 @@ export async function saveShipCosts(input: ShipCostsInput): Promise<{ ok: true; 
   } catch (err) {
     console.error('[saveShipCosts]', dbReason(err))
     return { ok: false, error: 'We could not save. Nothing was changed. Try again in a minute.' }
+  }
+}
+
+/**
+ * The logo for paper (Settings › Documents, D2): a PNG the browser uploaded to this shop's documents folder, or null
+ * to go back to the shop's initial. Accepted only as this shop's exact path, and only once its bytes are a PNG within
+ * the size limits (docImage reads it the way a document will). Never by a Frrata support visit.
+ */
+export async function setDocLogo(url: string | null): Promise<{ ok: true } | { ok: false; error: string }> {
+  const editors = sectionFor('documents')!.editors
+  const me = await requireMember(editors)
+  if (!me.ok) return { ok: false, error: me.message }
+  if (me.membership.supportSessionId) return { ok: false, error: 'A support visit cannot change the shop’s logo.' }
+  if (!(await withinLimit(LIMITS.uploadShop, me.membership.tenantId, new Date(), true))) return { ok: false, error: 'Too many changes in the last few minutes. Try again shortly.' }
+  if (url !== null && (typeof url !== 'string' || !(await docImage(url, me.membership.tenantId)))) {
+    return { ok: false, error: 'That logo could not be used. Choose a PNG, JPEG or WebP image; it is saved as a PNG up to 1 MB.' }
+  }
+  try {
+    const r = await asMember(editors, { action: 'settings.documents.logo', detail: { set: url !== null } }, async (tx, auth) => {
+      await tx.update(shopSettings).set({ docLogo: url, updatedAt: new Date() }).where(eq(shopSettings.tenantId, auth.membership.tenantId))
+      await tx.insert(auditEvents).values({ tenantId: auth.membership.tenantId, actorUserId: auth.userId, actorEmail: auth.email, actorKind: 'member', action: 'settings.documents.logo', detail: { set: url !== null } })
+    })
+    if (!r.ok) return { ok: false, error: r.error }
+    revalidatePath('/console/settings', 'layout')
+    return { ok: true }
+  } catch (err) {
+    console.error('[setDocLogo]', dbReason(err))
+    return { ok: false, error: 'We could not save the logo. Nothing was changed. Try again in a minute.' }
   }
 }

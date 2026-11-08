@@ -1,0 +1,209 @@
+<title>Frrata Merchant Billing</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Bricolage+Grotesque:opsz,wght@12..96,700&display=swap">
+<style>
+/* Layout: a proposal column; console and Admin screens in Frrata tokens, then Frrata's own invoice on white paper. */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--brand:#D61F69;--brand-text:#A8124F;--thread:#D61F69;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;--support:#8A5000;
+  --paper:#FFFFFF;--paper-ink:#1C1917;--paper-sub:#5B5550;--paper-line:#E4E0DB;
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--display:"Bricolage Grotesque","Inter",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.55 var(--sans);margin:0}
+.wrap{max-width:1000px;margin:0 auto;padding-block:32px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:28px;line-height:1.2;margin:0 0 6px;text-wrap:balance}
+h2{font-size:19px;margin:44px 0 8px;display:flex;gap:10px;align-items:center;text-wrap:balance}
+h2::before{content:"";width:18px;height:2px;background:var(--thread);flex:none}
+h3{font-size:15px;margin:0 0 6px}
+p{margin:0 0 10px;max-width:72ch}
+.sub{color:var(--sub)}.mono{font-family:var(--mono)}.num{font-variant-numeric:tabular-nums}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:16px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.between{justify-content:space-between}
+.grid2{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}.grid2>*{min-width:0}
+.grid3{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}.grid3>*{min-width:0}
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--fg);padding:6px 12px;font:500 13px var(--sans);min-height:34px;white-space:nowrap}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:500;white-space:nowrap}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-warn{background:var(--warn);color:var(--warn-text)}.c-n{background:var(--muted);color:var(--sub)}.c-danger{background:var(--danger);color:var(--danger-text)}.c-info{background:var(--info);color:var(--info-text)}
+.meter{height:8px;border-radius:4px;background:var(--muted);overflow:hidden;margin:6px 0}.meter i{display:block;height:100%;background:var(--fg);border-radius:4px}
+.big{font:600 26px var(--mono);font-variant-numeric:tabular-nums}
+.k{font-size:12px;color:var(--sub)}
+.tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+th{font-size:12px;color:var(--sub);font-weight:500}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.banner{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--danger);color:var(--danger-text);border-radius:6px;padding:10px 14px}
+.ask{display:flex;gap:8px;background:var(--warn);color:var(--warn-text);border-radius:6px;padding:10px 12px;margin-top:10px;font-size:13px}
+.ask b{white-space:nowrap}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;counter-reset:s}
+.step{border:1px solid var(--border);border-radius:6px;background:var(--card);padding:10px;font-size:12.5px;position:relative}
+.step b{display:block;font-size:12px;color:var(--brand-text);font-family:var(--mono)}
+.opt{border:1px solid var(--border);border-radius:6px;padding:12px;background:var(--card)}
+.opt.on{border:2px solid var(--fg)}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.strip div{border:1px solid var(--border);border-radius:6px;padding:8px 10px;background:var(--card)}
+.strip b{display:block;font:600 20px var(--mono)}
+.paperwrap{overflow-x:auto;padding:12px;background:var(--muted);border-radius:8px}
+.paper{background:var(--paper);color:var(--paper-ink);width:600px;max-width:none;margin:0 auto;padding:30px 34px;box-shadow:0 1px 2px rgb(0 0 0 / .12);font-size:11px;line-height:1.5}
+.mast{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding-bottom:10px;border-bottom:2px solid #D61F69;margin-bottom:14px}
+.wm{font:700 22px var(--display);letter-spacing:-.01em}.wm i{font-style:normal;color:#D61F69}
+.doc{text-align:right}.doc b{display:block;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
+.pt{width:100%;border-collapse:collapse;font-size:10.5px;min-width:0}
+.pt th{color:var(--paper-sub);border-bottom:1px solid var(--paper-ink);padding:4px;font-size:10px}
+.pt td{border-bottom:1px solid var(--paper-line);padding:5px 4px}
+.lab{font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-sub);font-weight:600}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:8px}
+.tot{margin-left:auto;width:230px}.tot div{display:flex;justify-content:space-between;padding:2px 0}.tot .g{border-top:1px solid var(--paper-ink);font-weight:700;padding-top:4px}
+.paid{display:inline-block;border:2px solid #1E7B52;color:#1E7B52;font-weight:700;letter-spacing:.1em;padding:2px 8px;border-radius:4px;transform:rotate(-4deg)}
+footer{margin-top:48px;color:var(--sub);font-size:12px}
+@media (max-width:620px){.two{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+  <p class="mono sub" style="margin:0 0 8px">Proposal · 8 Nov 2026 · Billing B0–B4 · approve before anything is built</p>
+  <h1>How Frrata bills its merchants</h1>
+  <p class="sub" style="font-size:15px">One bill a month: the plan in advance, the fee on delivered orders in arrears. The merchant sees it growing every day, pays by UPI Autopay without lifting a finger, and gets a GST invoice their CA accepts. Frrata's team runs the month and handles only the few that fail. The shop never stops for an unpaid bill.</p>
+
+  <h2>How a month works</h2>
+  <div class="flow">
+    <div class="step"><b>All month</b>Orders become billable as they're delivered (or 30 days after shipping with no outcome). "This month so far" updates daily.</div>
+    <div class="step"><b>1st</b>Frrata issues the invoice: this month's plan + last month's fee + credits. GST invoice PDF.</div>
+    <div class="step"><b>1st</b>Notice to the merchant: amount, date, why. (RBI: ≥ 24 h before every debit.)</div>
+    <div class="step"><b>3rd</b>Autopay debit. Over ₹15,000, the merchant approves it, or eNACH collects.</div>
+    <div class="step"><b>4th–6th</b>Up to 3 retries. A banner and a pay link if they fail.</div>
+    <div class="step"><b>Day 14</b>Unpaid: your call (below). Never: the shop, checkout or orders stop.</div>
+  </div>
+  <p class="sub" style="margin-top:8px">Your decisions, built in: a packed order never shipped is never billed · Lost needs no proof and is not billed · a late Came back or Lost is credited on the next invoice.</p>
+
+  <h2>Console › Settings › Plan and billing</h2>
+  <p class="sub">Owners and admins only. Staff and partners never see money.</p>
+  <div class="banner" style="margin-bottom:12px"><span><b>Your 1 Nov payment of ₹4,294.02 didn't go through.</b> The bank declined the UPI Autopay debit.</span><span class="btn" style="background:var(--danger-text);color:#fff;border-color:var(--danger-text)">Pay now</span></div>
+  <p class="sub" style="font-size:12px;margin-top:-6px">The banner shows only after a failure, on every console page, for owners and admins.</p>
+  <div class="grid2">
+    <div class="card">
+      <div class="row between"><h3>November so far</h3><span class="chip c-n">Updates daily</span></div>
+      <div class="k">Delivered orders</div>
+      <div class="row between"><span class="big">118</span><span class="sub num">of 150 included</span></div>
+      <div class="meter" aria-hidden="true"><i style="width:78.7%"></i></div>
+      <div class="grid2" style="gap:8px;margin-top:8px">
+        <div><div class="k">Delivered value</div><b class="mono num">₹1,07,000</b></div>
+        <div><div class="k">Fee so far · 2%</div><b class="mono num">₹2,140.00</b></div>
+      </div>
+      <p style="margin-top:10px"><b>Estimated bill on 1 Dec: ₹4,294.02</b> <span class="sub">incl. GST</span></p>
+      <p class="sub" style="font-size:12px;margin:0">December plan ₹1,499 + November fee ₹2,140 + GST 18%. <u>See the orders</u></p>
+    </div>
+    <div class="card">
+      <div class="row between"><h3>Your plan</h3><span class="btn">Change plan</span></div>
+      <p style="margin:0"><b>Launch</b> · ₹1,499 a month</p>
+      <p class="sub" style="margin:0">150 orders included · 2% of delivered order value · all channels</p>
+      <p class="sub" style="margin:6px 0 0;font-size:12px">Upgrade: starts now; this month's difference is charged by the day on your next bill. Downgrade: starts on the 1st.</p>
+      <hr style="border:0;border-top:1px solid var(--border);margin:12px 0">
+      <div class="row between"><h3>Paying</h3><span class="btn">Change</span></div>
+      <div class="row"><span class="chip c-ok">UPI Autopay · Active</span><span class="sub">riya@okaxis · up to ₹15,000</span></div>
+      <p class="sub" style="font-size:12px;margin:6px 0 0">Next debit 3 Dec, ₹4,294.02. You'll get a notice on 1 Dec.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:16px">Invoices</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Month</th><th>Invoice</th><th class="n">Amount</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      <tr><td>Nov 2026</td><td class="mono">FRR/26-27/000412</td><td class="n">₹4,294.02</td><td><span class="chip c-danger">Payment failed</span></td><td><span class="btn">Pay now</span> <span class="btn">Download PDF</span></td></tr>
+      <tr><td>Oct 2026</td><td class="mono">FRR/26-27/000233</td><td class="n">₹3,866.86</td><td><span class="chip c-ok">Paid 3 Oct · UPI Autopay</span></td><td><span class="btn">Download PDF</span></td></tr>
+      <tr><td>Sep 2026</td><td class="mono">FRR/26-27/000091</td><td class="n">₹1,768.82</td><td><span class="chip c-ok">Paid 3 Sep</span></td><td><span class="btn">Download PDF</span></td></tr>
+    </tbody></table></div>
+  <p class="sub" style="font-size:12px">Credits show as a line on the next invoice ("KS-1031 came back after billing: −₹49.80").</p>
+
+  <h3 style="margin-top:16px">Billing details</h3>
+  <div class="card grid3">
+    <div><div class="k">Legal name</div>Kesar Studio LLP</div>
+    <div><div class="k">GSTIN</div><span class="mono">08AAAAA0000A1Z5</span> <span class="chip c-ok">valid</span></div>
+    <div><div class="k">State (decides CGST+SGST or IGST)</div>Rajasthan (08)</div>
+    <div><div class="k">Billing email</div>accounts@kesarstudio.in</div>
+  </div>
+
+  <h2>Setting up autopay</h2>
+  <div class="grid3">
+    <div class="opt on"><b>UPI Autopay</b> <span class="chip c-ok">Recommended</span><p class="sub" style="margin:6px 0 0;font-size:12.5px">Approve once in your UPI app. Debits up to ₹15,000 go through by themselves.</p></div>
+    <div class="opt"><b>Card</b><p class="sub" style="margin:6px 0 0;font-size:12.5px">Saved by the bank, never by Frrata. Over ₹15,000 you approve each month.</p></div>
+    <div class="opt"><b>Bank mandate (eNACH)</b><p class="sub" style="margin:6px 0 0;font-size:12.5px">For bills over ₹15,000: no approval each month. Takes 1–2 days to set up.</p></div>
+  </div>
+  <p class="sub" style="font-size:12px;margin-top:8px">No mandate yet? Each invoice carries a pay link (UPI, card, netbanking) and bank transfer details.</p>
+
+  <h2>Admin › Billing</h2>
+  <div class="card">
+    <div class="row between"><h3>December 2026 run</h3><span class="row"><span class="btn">Review drafts</span><span class="btn primary">Issue 398 ready</span></span></div>
+    <div class="strip" style="margin-top:8px">
+      <div><span class="k">Draft</span><b>412</b></div><div><span class="k">Ready</span><b>398</b></div><div><span class="k">Needs a look</span><b style="color:var(--warn-text)">14</b></div><div><span class="k">Issued</span><b>0</b></div><div><span class="k">Ex GST</span><b>₹23.4 L</b></div>
+    </div>
+    <h3 style="margin-top:14px">Needs a look first</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Shop</th><th>Why</th><th class="n">This bill</th><th class="n">Last</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>Mitti Collective</td><td><span class="chip c-warn">Up 140%</span> festive sale</td><td class="n">₹38,410</td><td class="n">₹16,002</td><td><span class="btn">Open</span></td></tr>
+        <tr><td>Saanjh Weaves</td><td><span class="chip c-warn">No billing details</span></td><td class="n">₹2,525.20</td><td class="n">—</td><td><span class="btn">Open</span></td></tr>
+        <tr><td>Rang Rasiya</td><td><span class="chip c-info">Custom price</span> ₹999 until Mar (reason: design partner)</td><td class="n">₹1,640</td><td class="n">₹1,610</td><td><span class="btn">Open</span></td></tr>
+        <tr><td>Kesar Studio</td><td><span class="chip c-info">Credit −₹49.80</span> KS-1031 came back</td><td class="n">₹4,235.26</td><td class="n">₹4,294.02</td><td><span class="btn">Open</span></td></tr>
+      </tbody></table></div>
+    <p class="sub" style="font-size:12px;margin-top:8px">Issuing is admin only and asks you to type the month. Drafts recompute until then; an issued invoice never changes.</p>
+  </div>
+
+  <h3 style="margin-top:16px">Collections</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Shop</th><th>Invoice</th><th class="n">Due</th><th>State</th><th>Actions</th></tr></thead>
+    <tbody>
+      <tr><td>Kesar Studio</td><td class="mono">000412</td><td class="n">₹4,294.02</td><td><span class="chip c-danger">Failed · 3 of 3 tries</span> insufficient funds</td><td class="row"><span class="btn">Retry</span><span class="btn">Send pay link</span><span class="btn">More</span></td></tr>
+      <tr><td>Mitti Collective</td><td class="mono">000398</td><td class="n">₹38,410.00</td><td><span class="chip c-warn">Waiting for approval</span> over ₹15,000</td><td class="row"><span class="btn">Remind</span><span class="btn">Suggest eNACH</span></td></tr>
+      <tr><td>Saanjh Weaves</td><td class="mono">000377</td><td class="n">₹2,525.20</td><td><span class="chip c-n">No mandate · link sent</span></td><td class="row"><span class="btn">Record bank transfer</span></td></tr>
+      <tr><td>Phool Pattiyan</td><td class="mono">000301</td><td class="n">₹1,768.82</td><td><span class="chip c-danger">Overdue 14 days</span></td><td class="row"><span class="btn">Extend</span><span class="btn">Waive…</span></td></tr>
+    </tbody></table></div>
+  <p class="sub" style="font-size:12px;margin-top:8px">Waive and extend need a reason and are recorded. Each merchant also gets a Billing tab: plan history, mandate, invoices, payments, credits, <b>Issue credit note</b>. Exports for your CA: a GSTR-1 ready CSV, the invoice register and the payments register.</p>
+
+  <h2>Frrata's tax invoice</h2>
+  <div class="paperwrap"><div class="paper">
+    <div class="mast"><div><div class="wm">frrata<i>.</i></div><div style="font-size:9px;color:var(--paper-sub)">Frrata Technologies Pvt Ltd · GSTIN 29XXXXX0000X1Z0 (yours, to come)</div></div><div class="doc"><b>Tax invoice</b><span class="mono">FRR/26-27/000412</span><br><span>1 Dec 2026 · due 3 Dec</span></div></div>
+    <div class="two"><div><div class="lab">Billed to</div><b>Kesar Studio LLP</b><br>GSTIN 08AAAAA0000A1Z5<br>12 MI Road, Jaipur 302001, Rajasthan (08)</div><div><div class="lab">Place of supply</div>Rajasthan (08)<div class="lab" style="margin-top:6px">SAC · Reverse charge</div>998315 (CA to confirm) · No</div></div>
+    <table class="pt"><thead><tr><th style="text-align:left">Description</th><th style="text-align:left">Period</th><th style="text-align:right">Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Taxable</th></tr></thead>
+      <tbody>
+        <tr><td>Launch plan</td><td>1–31 Dec (in advance)</td><td style="text-align:right">1</td><td style="text-align:right">₹1,499.00</td><td style="text-align:right">₹1,499.00</td></tr>
+        <tr><td>Fee on delivered orders · ₹1,07,000</td><td>1–30 Nov (in arrears)</td><td style="text-align:right">118</td><td style="text-align:right">2%</td><td style="text-align:right">₹2,140.00</td></tr>
+        <tr><td>Orders over the plan</td><td>1–30 Nov</td><td style="text-align:right">0</td><td style="text-align:right">—</td><td style="text-align:right">₹0.00</td></tr>
+      </tbody></table>
+    <div class="tot" style="margin-top:8px"><div><span>Taxable value</span><span>₹3,639.00</span></div><div><span>IGST 18%</span><span>₹655.02</span></div><div class="g"><span>Total</span><span>₹4,294.02</span></div></div>
+    <div class="two" style="margin-top:12px"><div style="color:var(--paper-sub)">Pay by UPI Autopay on 3 Dec. Questions: billing@frrata.in</div><div style="text-align:right"><span class="paid">PAID 3 DEC</span><div style="margin-top:8px;border-top:1px solid var(--paper-ink);display:inline-block;padding-top:2px">Authorised signatory</div></div></div>
+  </div></div>
+  <p class="sub" style="font-size:12px;margin-top:8px">IGST because Frrata and the shop are in different states; CGST + SGST when they are in the same state. The "PAID" stamp is added to the stored copy once paid. Rendered by the same PDF system as the shop's documents.</p>
+
+  <h2>What else billing needs</h2>
+  <div class="grid2">
+    <div class="card"><h3>Built with it</h3><ul style="margin:0;padding-left:18px">
+      <li>One fee rule for every order, shared with Analytics (the plan in force when the order became billable).</li>
+      <li>Credit notes with their own series; adjustments for late outcomes, waivers and upgrades.</li>
+      <li>Partner share statements from paid invoices (B5).</li>
+      <li>Every debit, notice and email is a queued row first (ADR-0006).</li>
+      <li>Shadow billing (B0): a full month of draft bills before any money moves.</li></ul></div>
+    <div class="card"><h3>Skills, agents and checks</h3><ul style="margin:0;padding-left:18px">
+      <li>New skill <b>frata-billing</b>: the month, snapshot and credit, dunning, GST rules, who sees money.</li>
+      <li>New agent <b>billing-reviewer</b>: any change to plans, fees, bills or GST.</li>
+      <li><b>ADR-0008</b>: how Frrata bills merchants.</li>
+      <li>Updated: frata-integrations (done today: the dated mandate and gateway facts), frata-unit-economics, frata-architecture.</li>
+      <li>Checks: issued invoices can't change; the billable rule in TypeScript and SQL agree; a golden month fixture.</li></ul></div>
+  </div>
+
+  <h2>Your calls</h2>
+  <div class="ask"><b>1.</b><span>Calendar month: plan in advance, fee in arrears, one invoice on the 1st. (Recommended)</span></div>
+  <div class="ask"><b>2.</b><span>Collect through Razorpay Recurring Payments: UPI Autopay first, card, eNACH above ₹15,000, a pay link as the fallback. Frrata works out the bill; Razorpay only collects. (Recommended; Cashfree is the alternative.)</span></div>
+  <div class="ask"><b>3.</b><span>Unpaid after 14 days: owners and admins see a notice they must acknowledge, and the console keeps working. The shop never stops. (Recommended; or also pause paid modules.)</span></div>
+  <div class="ask"><b>4.</b><span>Frrata's GSTIN, registered address and SAC code, from you and your CA, before the first real invoice (B2).</span></div>
+  <div class="ask"><b>5.</b><span>Partners are paid their share monthly, from paid invoices only. (Recommended)</span></div>
+
+  <footer>Facts checked 8 Nov 2026: RBI E-mandate Framework 2026 (21 Apr 2026); Razorpay Subscriptions and Recurring Payments docs (Oct 2026); Shopify India billing help (cites Jul 2026); Stripe and Linear billing docs. GST particulars and the SAC code wait for your CA (government sites were unreachable today). Example figures use the decided Launch tier. Spec: docs/specs/2026-11-08-billing.md.</footer>
+</div>

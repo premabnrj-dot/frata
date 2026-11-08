@@ -43,6 +43,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // The same shell as the console; Admin differs only in chrome (ink, reversed mark, STAFF). No count pill (plan U · A9).
   const merchants: NavItem = { href: '/admin/merchants', label: 'Merchants', icon: 'merchants' }
   const plans: NavItem = { href: '/admin/plans', label: 'Plans', icon: 'plans' }
+  const billingItem: NavItem = { href: '/admin/billing', label: 'Billing', icon: 'payments' }
   const modulesItem: NavItem = { href: '/admin/modules', label: 'Modules', icon: 'apps' }
   const themesItem: NavItem = { href: '/admin/themes', label: 'Themes', icon: 'themes' }
   const offersItem: NavItem = { href: '/admin/offers', label: 'Offers', icon: 'offers' }
@@ -51,8 +52,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const activity: NavItem = { href: '/admin/activity', label: 'Activity', icon: 'activity' }
   const foot: NavItem[] = ownStore ? [{ href: '/console', label: `${ownStore} console`, icon: 'external' }] : []
   return (
-    <AppShell ink title="Frrata Admin" tag="STAFF" navLabel="Admin" groups={[{ label: 'Merchants', items: [merchants, partnersItem, plans, modulesItem, themesItem, offersItem] }, { label: 'Frrata', items: [staffItem, activity] }]}
-      tabs={[merchants, plans, staffItem]} more={[partnersItem, modulesItem, themesItem, offersItem, activity]} foot={foot} email={staff.email}>
+    <AppShell ink title="Frrata Admin" tag="STAFF" navLabel="Admin" groups={[{ label: 'Merchants', items: [merchants, partnersItem, plans, billingItem, modulesItem, themesItem, offersItem] }, { label: 'Frrata', items: [staffItem, activity] }]}
+      tabs={[merchants, plans, staffItem]} more={[partnersItem, billingItem, modulesItem, themesItem, offersItem, activity]} foot={foot} email={staff.email}>
       {children}
     </AppShell>
   )

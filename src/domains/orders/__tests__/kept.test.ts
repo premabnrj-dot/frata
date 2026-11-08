@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { feeForOrder, keptOf, keptPerOrder, type KeptGroup } from '../kept'
+import { keptOf, keptPerOrder, type KeptGroup } from '../kept'
 
 const est = { delivery: 7000, ret: 7000, codFee: 5000 }
 // A ₹900 COD order (net of GST ₹857.14 → 85714), COGS 40% (34286), merchandise net 85714, fee 2%.
@@ -38,14 +38,5 @@ describe('keptOf: ₹ kept after returns and lost parcels', () => {
     const k = keptOf([g({}), g({ outcome: 'rto' })], est)
     expect(keptPerOrder(k)).toBe(Math.round((37714 - 14000) / 2))
     expect(keptPerOrder(keptOf([], est))).toBeNull()
-  })
-})
-
-describe('feeForOrder (stand-in for billing B0)', () => {
-  it('the plan version in force at the billable moment', () => {
-    const h = [{ startsAt: new Date('2026-01-01'), feeBps: 200 }, { startsAt: new Date('2026-06-01'), feeBps: 100 }]
-    expect(feeForOrder(h, new Date('2025-12-31'))).toBeNull()
-    expect(feeForOrder(h, new Date('2026-03-01'))).toBe(200)
-    expect(feeForOrder(h, new Date('2026-06-01'))).toBe(100)
   })
 })

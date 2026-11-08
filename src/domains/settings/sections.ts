@@ -26,11 +26,13 @@ export type Field = {
   max?: number
   options?: readonly (readonly [string, string])[]
   wide?: boolean
+  /** Printed on documents: refuse web addresses (a PDF viewer would make them links). */
+  noLinks?: boolean
 }
 
 export type Block = { title: string; hint?: string; tip?: string; fields: Field[] }
 
-export type SectionKey = 'store' | 'contact' | 'brand' | 'policies' | 'payments' | 'shipping' | 'taxes'
+export type SectionKey = 'store' | 'contact' | 'brand' | 'policies' | 'payments' | 'shipping' | 'taxes' | 'documents'
 
 /**
  * `editors`: who may open and save this section (tenancy audit 2026-11-07). Required, so a new section decides
@@ -40,6 +42,7 @@ export type Section = { key: SectionKey; title: string; intro: string; blocks: B
 
 export const LANGUAGE_OPTIONS = [['en', 'English'], ['hi', 'हिन्दी (Hindi)']] as const
 export const RETURN_OPTIONS = [['exchange_or_refund', 'An exchange or a refund'], ['exchange_only', 'An exchange only'], ['refund_only', 'A refund only'], ['none', 'No returns']] as const
+export const SLIP_SIZE_OPTIONS = [['a4', 'A4 paper'], ['label', '4×6 label (thermal printer)']] as const
 export const RETURN_DAY_OPTIONS = [['3', '3 days'], ['7', '7 days'], ['10', '10 days'], ['15', '15 days'], ['30', '30 days']] as const
 
 const LAW = 'Shown on your shop’s Contact page and footer, as the Consumer Protection (E-Commerce) Rules ask.'
@@ -142,6 +145,19 @@ export const SECTIONS: readonly Section[] = [
       ] },
     ],
   },
+  {
+    editors: CAN_BUILD,
+    key: 'documents', title: 'Documents', intro: 'Your packing slips and invoices as PDFs: in your logo and colour, with your words.', preview: 'invoice',
+    blocks: [
+      { title: 'Invoices', fields: [
+        { key: 'docSignatory', label: 'Authorised signatory', kind: 'text', max: 80, noLinks: true, tip: 'The name printed under “For <your business>” on each invoice, as GST asks.' },
+        { key: 'docNote', label: 'Note at the foot of each invoice', kind: 'textarea', max: 240, wide: true, noLinks: true, tip: 'A return-policy line or a thank-you. Plain text: no links.' },
+      ] },
+      { title: 'Packing slips', tip: 'Each person’s last choice in the order queue wins; this is where a new teammate starts.', fields: [
+        { key: 'slipSize', label: 'Slip size', kind: 'select', options: SLIP_SIZE_OPTIONS },
+      ] },
+    ],
+  },
 ]
 
 export const sectionFor = (key: string): Section | undefined => SECTIONS.find((s) => s.key === key)
@@ -217,6 +233,8 @@ function check(section: Section, values: Values): { patch: Patch; errors: Record
     // The invoice series must leave room for a whole year of numbers inside GST's 16 characters (work.ts).
     if (f.key === 'invoiceSeries' && s && !seriesFits(s)) { errors[f.key] = 'Too long: up to 4 characters, or 5 ending in / or -.'; continue }
     if (f.max && s.length > f.max) { errors[f.key] = `Up to ${f.max} characters.`; continue }
+    // Words printed on a document stay words: a PDF viewer turns a typed address into a live link (plan finding 5).
+    if (f.noLinks && /https?:\/\/|www\./i.test(s)) { errors[f.key] = 'No web addresses here: plain words only.'; continue }
     switch (f.kind) {
       case 'email':
         if (s && !EMAIL_SHAPE.test(s)) errors[f.key] = 'Check this email address.'

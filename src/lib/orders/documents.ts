@@ -23,21 +23,26 @@ import { orderLines, orders } from '@/lib/db/schema-orders'
 
 export { MAX_DOCUMENTS }
 
-export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], kind: 'slip' | 'invoice', now = new Date()): Promise<{ shop: DocShop; orders: { n: number; o: DocOrder; lines: DocLine[] }[]; skipped: { number: string; state: OrderState }[] }> {
+/** Settings › Documents (D2): the logo for paper, the signatory and the invoice note — today's (slips), or as an invoice froze them. */
+export type Paper = { logo: string | null; signatory: string; note: string }
+
+export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], kind: 'slip' | 'invoice', now = new Date()): Promise<{ shop: DocShop; paper: Paper; orders: { n: number; o: DocOrder; lines: DocLine[]; frozen: Paper }[]; skipped: { number: string; state: OrderState }[] }> {
   const wanted = [...new Set(numbers.filter((n) => Number.isSafeInteger(n) && n > 0))].slice(0, MAX_DOCUMENTS)
-  const [s] = await tx.select({ name: tenants.name, legalName: shopSettings.legalName, address: shopSettings.address, prefix: shopSettings.orderPrefix })
+  const [s] = await tx.select({ name: tenants.name, legalName: shopSettings.legalName, address: shopSettings.address, prefix: shopSettings.orderPrefix,
+    logo: shopSettings.docLogo, signatory: shopSettings.docSignatory, note: shopSettings.docNote })
     .from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
   const shop: DocShop = { name: s?.name ?? '', legalName: s?.legalName ?? '', address: s?.address ?? '', returnAddress: s?.address ?? '' }
+  const paper: Paper = { logo: s?.logo ?? null, signatory: s?.signatory ?? '', note: s?.note ?? '' }
   const prefix = orderPrefix(s?.prefix ?? '', s?.name ?? '')
-  if (!wanted.length) return { shop, orders: [], skipped: [] }
+  if (!wanted.length) return { shop, paper, orders: [], skipped: [] }
   const os = await tx.select({
     ...momentColumns, id: orders.id, number: orders.number, paymentMethod: orders.paymentMethod, paidAt: orders.paidAt, switchedToCodAt: orders.switchedToCodAt, cancelledAt: orders.cancelledAt,
     subtotal: orders.subtotal, shipping: orders.shipping, codCharge: orders.codCharge, gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst,
-    placedAt: orders.placedAt, packedAt: orders.packedAt, invoiceNumber: orders.invoiceNumber, sellerGstin: orders.sellerGstin, sellerName: orders.sellerName, sellerAddress: orders.sellerAddress,
+    placedAt: orders.placedAt, packedAt: orders.packedAt, invoiceNumber: orders.invoiceNumber, sellerGstin: orders.sellerGstin, sellerName: orders.sellerName, sellerAddress: orders.sellerAddress, invoiceLogo: orders.invoiceLogo, invoiceSignatory: orders.invoiceSignatory, invoiceNote: orders.invoiceNote,
     customerName: orders.customerName, phone: orders.phone, addressLine: orders.addressLine, area: orders.area, landmark: orders.landmark,
     city: orders.city, pincode: orders.pincode, state: orders.state, supplyState: orders.supplyState,
   }).from(orders).where(and(eq(orders.tenantId, tenantId), inArray(orders.number, wanted)))
-  if (!os.length) return { shop, orders: [], skipped: [] }
+  if (!os.length) return { shop, paper, orders: [], skipped: [] }
   const ls = await tx.select({
     orderId: orderLines.orderId, title: orderLines.title, optionValues: orderLines.optionValues, qty: orderLines.qty, sku: orderLines.sku, hsn: orderLines.hsn,
     imageBase: orderLines.imageBase, imageWidths: orderLines.imageWidths, taxableValue: orderLines.taxableValue, gst: orderLines.gst, gstBps: orderLines.gstBps,
@@ -50,16 +55,18 @@ export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], 
   // unconfirmed COD order must not print "Collect ₹…" (architecture review 2026-11-07). Said, not silent.
   const skipped: { number: string; state: OrderState }[] = []
   return {
-    shop, skipped,
+    shop, paper, skipped,
     orders: wanted.flatMap((n) => {
       const o = byNumber.get(n)
       if (!o) return [] // unknown or another shop's number: silently not printed
       if (kind === 'slip') { const st = orderState(o, now); if (!applies('print', st)) { skipped.push({ number: `${prefix}-${n}`, state: st }); return [] } }
       const lines = ls.filter((l) => l.orderId === o.id).map(({ orderId: _o, ...l }) => ({ ...l, taxableValue: Number(l.taxableValue), gst: Number(l.gst), unitPrice: Number(l.unitPrice), lineDiscount: Number(l.lineDiscount), chargeTaxable: l.chargeTaxable === null ? null : Number(l.chargeTaxable), chargeGst: l.chargeGst === null ? null : Number(l.chargeGst) }))
+      const { invoiceLogo, invoiceSignatory, invoiceNote, ...stored } = o
       const doc: DocOrder = {
-        ...o, number: `${prefix}-${o.number}`, subtotal: Number(o.subtotal), shipping: Number(o.shipping), codCharge: Number(o.codCharge), gstTotal: Number(o.gstTotal), total: Number(o.total),
+        ...stored, number: `${prefix}-${o.number}`, subtotal: Number(o.subtotal), shipping: Number(o.shipping), codCharge: Number(o.codCharge), gstTotal: Number(o.gstTotal), total: Number(o.total),
       }
-      return [{ n, o: doc, lines }]
+      // What the invoice froze at packing (an order packed before D2 froze nothing: no logo, no signatory or note).
+      return [{ n, o: doc, lines, frozen: { logo: invoiceLogo, signatory: invoiceSignatory ?? '', note: invoiceNote ?? '' } }]
     }),
   }
 }

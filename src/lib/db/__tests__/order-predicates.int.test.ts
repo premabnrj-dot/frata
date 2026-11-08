@@ -72,4 +72,39 @@ describe.skipIf(!host)('order predicates match orderState()', () => {
       throw ROLLBACK
     }).catch((e) => { if (e !== ROLLBACK) throw e })
   })
+  it('billableAtSql matches billableAt() on 300 generated outcomes', async () => {
+    process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
+    const { withTenant } = await import('@/lib/db/tenant')
+    const { orders } = await import('@/lib/db/schema-orders')
+    const p = await import('@/lib/db/order-predicates')
+    const { billableAt } = await import('@/domains/orders/outcomes')
+    const { eq, and, sql, gte, lt } = await import('drizzle-orm')
+    const now = new Date('2026-11-07T10:00:00Z')
+    const day = (d: number) => new Date(now.getTime() + d * 86_400_000)
+    const r = rng(11)
+    const maybe = (d: number, odds: number) => (r() < odds ? day(d) : null)
+    const ROLLBACK = new Error('rollback')
+    await withTenant(A, async (tx) => {
+      for (let i = 0; i < 300; i++) {
+        // Shipped 45 or 10 days ago (or never); delivered before or after the 30-day mark, so least() is exercised.
+        const shipped = r() < 0.85 ? day(r() < 0.5 ? -45 : -10) : null
+        await tx.insert(orders).values({
+          tenantId: A, number: 910_000 + i, paymentMethod: 'cod', placedAt: day(-50), confirmedAt: day(-49), packedAt: day(-48), invoiceNumber: `PB/26-27/${i}`,
+          shippedAt: shipped, deliveredAt: maybe(r() < 0.5 ? -20 : -2, 0.5), lostAt: maybe(-1, 0.15), rtoInitiatedAt: maybe(-1, 0.1),
+        })
+      }
+      const rows = await tx.select({ number: orders.number, shippedAt: orders.shippedAt, deliveredAt: orders.deliveredAt, lostAt: orders.lostAt, rtoInitiatedAt: orders.rtoInitiatedAt,
+        at: sql<string | null>`${p.billableAtSql()}` })
+        .from(orders).where(and(eq(orders.tenantId, A), gte(orders.number, 910_000), lt(orders.number, 910_300)))
+      expect(rows.length).toBe(300)
+      const kinds = new Set<string>()
+      for (const row of rows) {
+        const want = billableAt(row)
+        kinds.add(want === null ? 'null' : row.deliveredAt && want.getTime() === row.deliveredAt.getTime() ? 'delivered' : 'assumed')
+        expect({ number: row.number, at: row.at ? new Date(row.at).getTime() : null }).toEqual({ number: row.number, at: want?.getTime() ?? null })
+      }
+      expect([...kinds].sort()).toEqual(['assumed', 'delivered', 'null'])
+      throw ROLLBACK
+    }).catch((e) => { if (e !== ROLLBACK) throw e })
+  })
 })

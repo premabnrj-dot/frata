@@ -33,7 +33,8 @@ export type KeptGroup = {
   gateway: number
   /** Merchandise net: what Frrata's per-delivered fee is charged on. */
   base: number
-  /** The plan fee (bps) in force at the orders' billable moment (`feeForOrder`), or null with no plan. */
+  /** The plan fee (bps) in force at the orders' billable moment (entitlements' `feeForOrder` pick, via
+   * `feeBucketSql`), or null with no plan. The fee is charged on the group's merchandise net (billing rounds per order). */
   feeBps: number | null
 }
 
@@ -85,14 +86,3 @@ export function keptOf(groups: readonly KeptGroup[], est: ShipCostEstimate): Kep
 
 /** ₹ kept per order with an outcome (the second figure a source is judged on; never per delivered order alone). */
 export const keptPerOrder = (k: Kept) => (k.counted > 0 ? Math.round(k.kept / k.counted) : null)
-
-/**
- * The plan fee for an order: the plan version in force at the moment it becomes billable (billing's proposed rule,
- * `docs/specs/2026-11-08-billing.md`: the first of delivered_at and shipped_at + 30 days). A stand-in with billing's
- * name until billing B0 lands its own; `history` is the shop's plan versions, oldest first.
- */
-export function feeForOrder(history: readonly { startsAt: Date; feeBps: number }[], billableAt: Date): number | null {
-  let fee: number | null = null
-  for (const h of history) if (h.startsAt.getTime() <= billableAt.getTime()) fee = h.feeBps
-  return fee
-}

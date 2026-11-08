@@ -1,0 +1,169 @@
+<title>Frrata Shop Documents</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,600&family=Noto+Sans+Devanagari:wght@400;600&display=swap">
+<style>
+/* Layout: a proposal column of screens (console UI in Frrata tokens) and paper sheets (the PDFs, always white paper in the shop's brand). */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--brand:#D61F69;--thread:#D61F69;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;
+  --paper:#FFFFFF;--paper-ink:#1C1917;--paper-sub:#5B5550;--paper-line:#E4E0DB;--shop:#8A3B1F;
+  --sans:"Inter","Noto Sans Devanagari",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--display:"Fraunces",Georgia,serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.55 var(--sans);margin:0}
+.wrap{max-width:980px;margin:0 auto;padding-block:32px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:28px;line-height:1.2;margin:0 0 6px;text-wrap:balance}
+h2{font-size:19px;margin:44px 0 8px;display:flex;gap:10px;align-items:center;text-wrap:balance}
+h2::before{content:"";width:18px;height:2px;background:var(--thread);flex:none}
+h3{font-size:15px;margin:0 0 6px}
+p{margin:0 0 10px;max-width:70ch}
+.sub{color:var(--sub)}.mono{font-family:var(--mono)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:16px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.grid2{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}.grid2>*{min-width:0}
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--fg);padding:6px 12px;font:500 13px var(--sans);min-height:34px}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:500;white-space:nowrap}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-warn{background:var(--warn);color:var(--warn-text)}.c-n{background:var(--muted);color:var(--sub)}.c-danger{background:var(--danger);color:var(--danger-text)}.c-info{background:var(--info);color:var(--info-text)}
+.ask{display:flex;gap:8px;background:var(--warn);color:var(--warn-text);border-radius:6px;padding:10px 12px;margin-top:12px;font-size:13px}
+.ask b{white-space:nowrap}
+.ic{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.seg{display:inline-flex;border:1px solid var(--input);border-radius:6px;overflow:hidden}.seg span{padding:5px 10px;font-size:12px}.seg .on{background:var(--fg);color:var(--bg)}
+.list{border:1px solid var(--border);border-radius:6px;background:var(--card);overflow:hidden}
+.li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 12px;border-top:1px solid var(--border);font-size:13px}.li:first-child{border-top:0}
+.field{display:grid;gap:4px;margin-bottom:10px}.field label{font-size:13px;font-weight:500}
+.input{border:1px solid var(--input);border-radius:6px;padding:7px 10px;background:var(--card);color:var(--fg);font:13px var(--sans);width:100%}
+/* Paper: always white, the shop's own colour (Kesar Studio: oxide) */
+.paperwrap{overflow-x:auto;padding:12px;background:var(--muted);border-radius:8px}
+.paper{background:var(--paper);color:var(--paper-ink);width:560px;max-width:none;margin:0 auto;padding:30px 34px;box-shadow:0 1px 2px rgb(0 0 0 / .12);font-size:11px;line-height:1.5;font-family:var(--sans)}
+.paper.label{width:300px;padding:16px 18px}
+.mast{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding-bottom:10px;border-bottom:2px solid var(--shop);margin-bottom:14px}
+.logo{display:flex;align-items:center;gap:10px}.logo .m{width:34px;height:34px;border-radius:6px;background:var(--shop);color:#fff;display:grid;place-items:center;font:600 15px var(--display)}
+.logo b{font:600 17px var(--display);letter-spacing:.02em}
+.doc{text-align:right}.doc b{display:block;font-size:13px;letter-spacing:.08em;text-transform:uppercase}.doc span{color:var(--paper-sub)}
+.collect{border:2px solid var(--paper-ink);border-radius:4px;padding:8px 10px;font-size:16px;font-weight:700;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.bar{height:34px;display:flex;gap:1px;align-items:stretch}.bar i{background:var(--paper-ink);display:block}
+table.t{width:100%;border-collapse:collapse;font-size:10.5px;margin:8px 0}
+.t th{text-align:left;color:var(--paper-sub);font-weight:600;border-bottom:1px solid var(--paper-ink);padding:4px 4px}
+.t td{border-bottom:1px solid var(--paper-line);padding:5px 4px;vertical-align:top}
+.t .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:8px}
+.lab{font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-sub);font-weight:600}
+.tot{margin-left:auto;width:220px;font-size:11px}.tot div{display:flex;justify-content:space-between;padding:2px 0}.tot .g{border-top:1px solid var(--paper-ink);font-weight:700;padding-top:4px;margin-top:2px}
+.foot{display:flex;justify-content:space-between;color:var(--paper-sub);font-size:9px;border-top:1px solid var(--paper-line);margin-top:14px;padding-top:6px}
+.thumb{width:26px;height:32px;background:#EFE8DE;border-radius:2px;display:inline-block;vertical-align:middle}
+.new{outline:2px dashed var(--brand);outline-offset:2px;border-radius:4px}
+.note{font-size:12px;color:var(--sub);margin-top:6px}
+footer{margin-top:48px;color:var(--sub);font-size:12px}
+@media (max-width:620px){.two{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+  <p class="mono sub" style="margin:0 0 8px">Proposal · 8 Nov 2026 · Documents D1–D3 · approve before anything is built</p>
+  <h1>Your shop's paperwork, as branded PDFs</h1>
+  <p class="sub" style="font-size:15px">Packing slips, tax invoices and credit notes download as PDFs in the shop's own logo and colour, one order or fifty at once, on A4 or a 4×6 thermal label. The numbers stay the ones issued at packing. Dashed outlines mark what is new.</p>
+
+  <h2>Why not Ekatan's way</h2>
+  <div class="card">
+    <p>Ekatan drew its PDFs with jsPDF: pure document data, shared blocks, one builder per document, one file function for download and email. We keep that shape. We change the library, because jsPDF breaks Hindi. Tested today:</p>
+    <div class="grid2" style="margin-top:6px">
+      <div><div class="lab" style="color:var(--sub)">jsPDF (Ekatan)</div><p style="font-size:18px;margin:4px 0" aria-label="क्षत्रिय rendered broken: the conjunct split and the vowel sign on the wrong letter">क्&zwnj;षत्&zwnj;रि&zwnj;य <span class="chip c-danger">broken</span></p><p class="note">Conjuncts split, the ि lands on the wrong letter.</p></div>
+      <div><div class="lab" style="color:var(--sub)">React-PDF (proposed)</div><p style="font-size:18px;margin:4px 0">श्री प्रिया शर्मा, तिलक मार्ग <span class="chip c-ok">correct</span></p><p class="note">Hindi and English on one line. 50 slips in 0.5 s, 57 kB.</p></div>
+    </div>
+  </div>
+
+  <h2>The order page</h2>
+  <div class="card">
+    <div class="row" style="justify-content:space-between"><div class="row"><b style="font-size:18px">KS-1043</b><span class="chip c-n">COD</span><span class="chip c-info">Packed</span></div><div class="row"><span class="btn">Mark shipped</span><span class="btn">More</span></div></div>
+    <div class="list" style="margin-top:12px">
+      <div class="li"><svg class="ic" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 11.5h6"/></svg><span><b>Packing slip</b> <span class="sub">· Collect ₹2,489</span></span><span class="row"><span class="btn">Print</span><span class="btn new">Download PDF</span></span></div>
+      <div class="li"><svg class="ic" viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6z"/><path d="M9 10h6M9 13.5h6"/></svg><span><b>Tax invoice</b> <span class="sub mono">KS/26-27/00043</span> <span class="sub">· issued 7 Nov</span></span><span class="row"><span class="btn">Print</span><span class="btn new">Download PDF</span></span></div>
+      <div class="li"><svg class="ic" viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6z"/><path d="M9 13l6-6"/></svg><span class="sub">Cancelled after packing? The invoice downloads stamped CANCELLED, and <b style="color:var(--fg)">Issue credit note</b> appears here (D3, owner and admin).</span><span></span></div>
+    </div>
+  </div>
+
+  <h2>Fifty at once from the queue</h2>
+  <div class="card">
+    <div class="row" style="justify-content:space-between;background:var(--fg);color:var(--bg);border-radius:6px;padding:8px 12px">
+      <span><b>12 selected</b></span>
+      <span class="row"><span class="btn" style="background:transparent;color:var(--bg);border-color:var(--bg)">Print 12 slips</span><span class="btn new" style="background:var(--bg);color:var(--fg)">Download 12 slips (PDF)</span><span class="seg new"><span class="on">A4</span><span style="background:var(--card);color:var(--fg)">4×6 label</span></span></span>
+    </div>
+    <p class="note">One PDF, one order per page, in queue order. File: <span class="mono">Kesar Studio Packing slips 2026-11-08 (12).pdf</span>. Up to 50; beyond that the button says so. Your size choice is remembered.</p>
+  </div>
+
+  <h2>The PDFs</h2>
+  <p class="sub">On white paper always. The shop's logo, name and one colour (if it reads at 4.5:1 on paper, else ink). Money and numbers in ink. Hindi names print correctly.</p>
+  <h3 style="margin-top:14px">Packing slip · A4</h3>
+  <div class="paperwrap"><div class="paper">
+    <div class="mast"><div class="logo"><span class="m">K</span><b>KESAR STUDIO</b></div><div class="doc"><b>Packing slip</b><span class="mono">KS-1043 · 7 Nov 2026</span></div></div>
+    <div class="collect"><span>Collect ₹2,489 on delivery</span><span class="bar" aria-label="Barcode KS-1043"><i style="width:2px"></i><i style="width:1px"></i><i style="width:3px"></i><i style="width:1px"></i><i style="width:2px"></i><i style="width:1px"></i><i style="width:1px"></i><i style="width:3px"></i><i style="width:2px"></i><i style="width:1px"></i><i style="width:2px"></i><i style="width:3px"></i><i style="width:1px"></i><i style="width:2px"></i><i style="width:1px"></i><i style="width:3px"></i></span></div>
+    <div class="two"><div><div class="lab">Deliver to</div><b>श्री प्रिया शर्मा</b><br>B-14, तिलक मार्ग, C-Scheme<br>Jaipur 302001, Rajasthan<br><span class="mono">98290 43210</span></div><div><div class="lab">Return to</div>Kesar Studio LLP<br>12 MI Road, Jaipur 302001</div></div>
+    <table class="t"><thead><tr><th></th><th>Item</th><th>SKU</th><th class="n">Qty</th></tr></thead>
+      <tbody><tr><td><span class="thumb"></span></td><td><b>Chanderi kurta set</b><br>Indigo · M</td><td class="mono">KUR-CH-IN-M</td><td class="n">1</td></tr>
+      <tr><td><span class="thumb"></span></td><td><b>Block-print dupatta</b><br>Rani</td><td class="mono">DUP-BP-RN</td><td class="n">1</td></tr></tbody></table>
+    <div class="foot"><span>Questions? care@kesarstudio.in · +91 98290 00000</span><span>Page 1 of 1</span></div>
+  </div></div>
+
+  <h3 style="margin-top:20px">Tax invoice · A4</h3>
+  <div class="paperwrap"><div class="paper">
+    <div class="mast"><div class="logo"><span class="m">K</span><div><b>KESAR STUDIO</b><div style="font-size:9px;color:var(--paper-sub)">Kesar Studio LLP · GSTIN 08AAAAA0000A1Z5</div></div></div><div class="doc"><b>Tax invoice</b><span class="mono">KS/26-27/00043</span><br><span>7 Nov 2026 · order KS-1043</span></div></div>
+    <div class="two"><div><div class="lab">Billed to</div><b>श्री प्रिया शर्मा</b><br>B-14, तिलक मार्ग, Jaipur 302001<br>Rajasthan (08)</div><div><div class="lab">Place of supply</div>Rajasthan (08)<div class="lab" style="margin-top:6px">Reverse charge</div><span class="new">No</span></div></div>
+    <table class="t"><thead><tr><th>Item</th><th>HSN</th><th class="n">Qty</th><th class="n">Taxable</th><th class="n">CGST</th><th class="n">SGST</th><th class="n">Total</th></tr></thead>
+      <tbody><tr><td>Chanderi kurta set · Indigo M</td><td class="mono">6204</td><td class="n"><span class="new">1 pcs</span></td><td class="n">₹1,982.14</td><td class="n">6% ₹118.93</td><td class="n">6% ₹118.93</td><td class="n">₹2,220.00</td></tr>
+      <tr><td>Block-print dupatta · Rani</td><td class="mono">6214</td><td class="n">1 pcs</td><td class="n">₹196.43</td><td class="n">6% ₹11.79</td><td class="n">6% ₹11.78</td><td class="n">₹220.00</td></tr>
+      <tr><td>Pay on delivery fee</td><td class="mono">9968</td><td class="n">1</td><td class="n">₹41.53</td><td class="n">9% ₹3.73</td><td class="n">9% ₹3.74</td><td class="n">₹49.00</td></tr></tbody></table>
+    <div class="tot"><div><span>Taxable value</span><span>₹2,220.10</span></div><div><span>CGST</span><span>₹134.45</span></div><div><span>SGST</span><span>₹134.45</span></div><div class="g"><span>Total</span><span>₹2,489.00</span></div></div>
+    <div class="two" style="margin-top:10px"><div style="color:var(--paper-sub)">Returns within 7 days of delivery. Thank you for shopping handmade.</div><div style="text-align:right" class="new"><div style="height:22px"></div><div style="border-top:1px solid var(--paper-ink);display:inline-block;padding-top:2px">Authorised signatory · Riya Mehta</div></div></div>
+    <div class="foot"><span>Kesar Studio LLP · 12 MI Road, Jaipur 302001</span><span>Page 1 of 1</span></div>
+  </div></div>
+
+  <h3 style="margin-top:20px">Packing slip · 4×6 thermal label</h3>
+  <div class="paperwrap"><div class="paper label">
+    <div class="mast" style="margin-bottom:8px"><div class="logo"><span class="m" style="background:var(--paper-ink)">K</span><b style="font-size:13px">KESAR STUDIO</b></div><div class="doc"><b class="mono" style="letter-spacing:0">KS-1043</b></div></div>
+    <div class="collect" style="font-size:18px">COLLECT ₹2,489</div>
+    <div class="lab">Deliver to</div><b>श्री प्रिया शर्मा</b><br>B-14, तिलक मार्ग, Jaipur 302001<br><span class="mono">98290 43210</span>
+    <p style="margin:8px 0 0;font-size:10px">2 items · Chanderi kurta set (M), dupatta</p>
+  </div></div>
+  <p class="note">Black only on a label (thermal printers print one colour). The courier's own label comes with Ship S·1.</p>
+
+  <h2>Settings › Documents (D2)</h2>
+  <div class="grid2">
+    <div class="card">
+      <div class="field"><label for="lg">Logo on paper</label><div class="row"><span class="m" style="width:34px;height:34px;border-radius:6px;background:var(--shop);color:#fff;display:grid;place-items:center;font:600 15px var(--display)">K</span><span class="btn">Use my shop logo</span><span class="btn">Upload PNG</span></div></div>
+      <div class="field"><label>Document colour</label><div class="row"><span style="width:20px;height:20px;border-radius:4px;background:var(--shop)"></span><span>Your shop's accent (reads at 6.8:1 on paper)</span></div></div>
+      <div class="field"><label for="sig">Authorised signatory</label><input id="sig" class="input" value="Riya Mehta"></div>
+      <div class="field"><label for="ft">Line under the invoice</label><input id="ft" class="input" value="Returns within 7 days of delivery. Thank you for shopping handmade."></div>
+      <div class="field"><label>Packing slips</label><div class="row"><span class="seg"><span class="on">A4</span><span>4×6 label</span></span><label class="row" style="font-size:13px"><input type="checkbox" checked id="ph"> Show product photos</label></div></div>
+    </div>
+    <div class="card"><h3>Preview</h3><p class="sub">The first page of your invoice, as it will download. Changes show here before you save.</p><div style="transform:scale(.55);transform-origin:top left;height:240px;width:180%"><div class="paper" style="margin:0"><div class="mast"><div class="logo"><span class="m">K</span><b>KESAR STUDIO</b></div><div class="doc"><b>Tax invoice</b><span class="mono">KS/26-27/00043</span></div></div><table class="t"><tr><td>Chanderi kurta set</td><td class="n">₹2,220.00</td></tr></table></div></div></div>
+  </div>
+
+  <h2>The shopper's copy (D2)</h2>
+  <div class="card" style="max-width:420px">
+    <p class="sub" style="margin:0">Your order KS-1043 · Packed</p>
+    <p style="margin:4px 0 10px">Arrives Tue 11 Nov to Wed 12 Nov.</p>
+    <span class="btn new">Download invoice</span>
+    <p class="note">Shown once the order is packed. Fetched with the order's private link, never a guessable address.</p>
+  </div>
+
+  <h2>Under the hood</h2>
+  <div class="card">
+    <ul style="margin:0;padding-left:18px">
+      <li><b>One source of numbers.</b> The slip and invoice data you print today feed the PDF; nothing is recomputed.</li>
+      <li><b>An issued invoice is stored once.</b> Rendered at packing, kept privately, and every download serves the same file, even after you change your logo.</li>
+      <li><b>No costs, ever.</b> Document inputs carry no cost fields; a check fails the build if one appears.</li>
+      <li><b>Nothing fetched from outside.</b> Fonts ship with Frrata; images come from your shop's own storage.</li>
+    </ul>
+  </div>
+
+  <h2>Your calls</h2>
+  <div class="ask"><b>1.</b><span>The PDF becomes the one paper layout; today's print page stays as the on-screen preview with a Print button. (Recommended)</span></div>
+  <div class="ask"><b>2.</b><span>Credit notes inside Frrata (D3), with their own series, instead of "ask your CA". (Recommended)</span></div>
+  <div class="ask"><b>3.</b><span>"Made with Frrata" in 7 pt in the footer of a merchant's documents: yes or no?</span></div>
+
+  <footer>Library tests run 8 Nov 2026 in this session: jsPDF 4.2.1, @react-pdf/renderer 4.9.0, pdfmake 0.3.14. GST particulars from CGST Rule 46 (secondary source dated 8 Sep 2026); a CA confirms before D3. Spec: docs/specs/2026-11-08-documents-pdf.md.</footer>
+</div>

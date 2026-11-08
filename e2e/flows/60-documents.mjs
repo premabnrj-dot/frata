@@ -9,7 +9,8 @@
 // removes them at the end.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, signedIn, until } from '../lib.mjs'
+import { createHash } from 'node:crypto'
+import { CONSOLE, SHOP, signedIn, until } from '../lib.mjs'
 
 export default {
   name: 'documents',
@@ -98,6 +99,69 @@ export default {
         await p.getByText('Place of supply: Maharashtra (27)').waitFor()
       })
 
+      await t.step('PDFs (Documents D1): the slip and the invoice download branded, never cached; the same invoice number every time', async () => {
+        await p.goto(CONSOLE + `/console/orders/${A}`)
+        await p.getByRole('button', { name: 'More' }).click()
+        const link = p.getByRole('menuitem', { name: 'Download invoice (PDF)' })
+        assert.equal(await link.getAttribute('download'), '', 'the menu item downloads')
+        const get = (q) => p.context().request.get(CONSOLE + `/console/orders/pdf?${q}`)
+        const inv1 = await get(`kind=invoice&n=${A}`)
+        assert.equal(inv1.status(), 200)
+        assert.equal(inv1.headers()['content-type'], 'application/pdf')
+        assert.match(inv1.headers()['cache-control'], /no-store/)
+        assert.match(inv1.headers()['content-disposition'], new RegExp(`Tax invoice ${invA.replaceAll('/', '-')}\\.pdf`))
+        const body = await inv1.body()
+        assert.equal(body.subarray(0, 5).toString(), '%PDF-')
+        const inv2 = await get(`kind=invoice&n=${A}`)
+        assert.equal(inv2.headers()['content-disposition'], inv1.headers()['content-disposition'], 'a second download is the same invoice')
+        assert.equal(await invoiceOf(A), invA, 'a download never issues a number')
+        const slips = await get(`kind=slip&size=label&n=${A},${B}`)
+        assert.equal(slips.status(), 200)
+        assert.match((await slips.body()).toString('latin1'), /MediaBox \[0 0 288 432\]/, 'a 4×6 label')
+        assert.match(slips.headers()['content-disposition'], /Packing slips \d{4}-\d{2}-\d{2} \(2\)\.pdf/)
+        assert.equal((await get(`kind=slip&n=${top + 900}`)).status(), 404, "another shop's number makes nothing")
+      })
+
+      await t.step('Settings › Documents (D2): the signatory, note and slip size save; the queue starts at that size', async () => {
+        await p.goto(CONSOLE + '/console/settings/documents')
+        await p.getByRole('heading', { name: 'Logo for paper' }).waitFor()
+        await p.getByRole('textbox', { name: /^Authorised signatory/ }).fill('Riya Mehta')
+        await p.getByRole('textbox', { name: /^Note at the foot/ }).fill('Exchanges within 7 days.')
+        await p.getByRole('combobox', { name: /^Slip size/ }).selectOption('label')
+        await p.getByRole('button', { name: 'Save' }).first().click()
+        await p.getByText('Saved. New slips and invoices use it').waitFor()
+        const [s] = await db`select doc_signatory, doc_note, slip_size from shop_settings where tenant_id = ${T}`
+        assert.deepEqual([s.doc_signatory, s.doc_note, s.slip_size], ['Riya Mehta', 'Exchanges within 7 days.', 'label'])
+        await p.evaluate(() => localStorage.removeItem('frrata:slip-size'))
+        await p.goto(CONSOLE + '/console/orders?tab=all')
+        await p.getByRole('checkbox', { name: `Select ${label(A)}` }).check()
+        assert.equal(await p.getByRole('combobox', { name: 'Slip size' }).inputValue(), 'label', "a new desk starts at the shop's size")
+        await db`update shop_settings set doc_signatory = '', doc_note = '', slip_size = 'a4' where tenant_id = ${T}`
+      })
+
+      await t.step("the shopper's copy (D2): Download invoice on their order page gives the same invoice; a wrong token gives nothing", async () => {
+        const token = 'docflowtoken000000000A'
+        await db`update orders set token_hash = ${createHash('sha256').update(token).digest('hex')} where tenant_id = ${T} and number = ${A}`
+        const sc = await t.browser.newContext({ viewport: { width: 390, height: 844 } })
+        const s = await sc.newPage(); s.setDefaultTimeout(10_000); s.on('pageerror', (e) => t.errors.push(e.message))
+        try {
+          await s.goto(SHOP + `/orders#t=${token}`, { waitUntil: 'domcontentloaded' })
+          const [dl] = await Promise.all([s.waitForEvent('download'), s.getByRole('button', { name: 'Download invoice (PDF)' }).click()])
+          assert.equal(dl.suggestedFilename(), `Kesar Studio Tax invoice ${invA.replaceAll('/', '-')}.pdf`)
+          const wrong = await s.evaluate(async () => (await fetch('/api/shop/orders/invoice', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: 'nottherightone0000000A' }) })).status)
+          assert.equal(wrong, 404)
+          // Not packed yet: no button, and its own right token still makes nothing.
+          const tokenC = 'docflowtoken000000000C', C = top + 3
+          await db`insert into orders (tenant_id, number, payment_method, placed_at, confirmed_at, customer_name, phone, city, pincode, state, subtotal, total, token_hash)
+            values (${T}, ${C}, 'cod', now(), now(), 'Doc Unpacked', '9833300003', 'Jaipur', '302001', 'Rajasthan', 249000, 249000, ${createHash('sha256').update(tokenC).digest('hex')})`
+          await s.goto(SHOP + `/orders#t=${tokenC}`, { waitUntil: 'domcontentloaded' }); await s.reload({ waitUntil: 'domcontentloaded' })
+          await s.getByText(label(C)).waitFor()
+          assert.equal(await s.getByRole('button', { name: 'Download invoice (PDF)' }).count(), 0, 'no invoice before packing')
+          const early = await s.evaluate(async (tk) => (await fetch('/api/shop/orders/invoice', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: tk }) })).status, tokenC)
+          assert.equal(early, 404)
+        } finally { await sc.close() }
+      })
+
       await t.step('the queue: select two, Print 2 slips opens both in order; p on a row prints its slip', async () => {
         await p.goto(CONSOLE + '/console/orders?tab=all')
         await p.getByRole('checkbox', { name: `Select ${label(A)}` }).check()
@@ -149,7 +213,7 @@ export default {
       })
     } finally {
       await owner.close()
-      await db`delete from orders where tenant_id = ${T} and number between ${A} and ${B}`
+      await db`delete from orders where tenant_id = ${T} and number between ${A} and ${top + 3}`
       await db`delete from orders where tenant_id = ${OTHER}`
       await db`delete from tenants where id = ${OTHER}`
     }

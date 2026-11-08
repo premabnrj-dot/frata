@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     subtotal: o.subtotal, shipping: o.shipping, codCharge: o.codCharge, gstTotal: o.gstTotal, total: o.total, pricesIncludeGst: o.pricesIncludeGst,
     firstName: o.customerName.split(' ')[0] ?? '', to: `${o.city} ${o.pincode}`.trim(), phone: maskPhone(o.phone),
     arrives: o.arrivesFrom && o.arrivesTo ? { from: o.arrivesFrom, to: o.arrivesTo } : null, returnDays: o.returnDays, returnKind: o.returnKind,
-    lines: o.lines, shop: { name: data.shop.name, whatsapp: data.shop.whatsapp },
+    lines: o.lines, shop: { name: data.shop.name, whatsapp: data.shop.whatsapp }, invoice: !!o.packedAt,
     // What the offers saved on the items, as the order is paid now (the pay-online saving only while paid online).
     savings: savingsAsPaid(o.offers, currentMethod(o)).map((d) => ({ title: d.title, amount: d.amount })),
   })

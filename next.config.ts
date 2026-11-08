@@ -5,6 +5,10 @@ import { CONSOLE_HOST } from './src/lib/public-env'
 
 const config: NextConfig = {
   reactStrictMode: true,
+  // Documents (D0): React-PDF runs on the server only, as itself; its fonts are files read at render, so they are
+  // traced into every function that may make a document (src/lib/documents/fonts.ts).
+  serverExternalPackages: ['@react-pdf/renderer'],
+  outputFileTracingIncludes: { '/**': ['./src/lib/documents/fonts/**'] },
   // Every other host is a shop, served from /s/<host>/… (src/domains/tenancy/host.ts).
   async rewrites() {
     return { beforeFiles: shopRewrites(CONSOLE_HOST), afterFiles: [], fallback: [] }

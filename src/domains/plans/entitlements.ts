@@ -45,7 +45,7 @@ export function currentPlan<T extends { startsAt: Date }>(rows: readonly T[], no
 
 
 /** What the merchant pays a month for the plan itself. */
-export function monthlyPrice(row: Pick<TenantPlanRow, 'planVersion' | 'customMonthlyPrice' | 'trialEndsAt'>, now: Date): Paise {
+export function monthlyPrice(row: { planVersion: Pick<PlanVersion, 'monthlyPrice'> } & Pick<TenantPlanRow, 'customMonthlyPrice' | 'trialEndsAt'>, now: Date): Paise {
   if (row.trialEndsAt && now.getTime() < row.trialEndsAt.getTime()) return 0 as Paise
   return row.customMonthlyPrice ?? row.planVersion.monthlyPrice
 }
@@ -53,6 +53,16 @@ export function monthlyPrice(row: Pick<TenantPlanRow, 'planVersion' | 'customMon
 /** Frrata's fee on one delivered order. A returned order is never charged. */
 export function deliveredFee(netRevenue: Paise, feeBps: number): Paise {
   return applyBps(netRevenue, feeBps)
+}
+
+/**
+ * THE fee for one order (billing B0, the one rule; Analytics reads it too): the plan version in force when the order
+ * became billable (billableAt), on the order's merchandise net (taxable after offers; no GST, delivery or COD fee),
+ * rounded per order, so a later credit reverses exactly what was billed. Null fee without a plan then.
+ */
+export function feeForOrder<T extends { startsAt: Date; planVersion: Pick<PlanVersion, 'feeBps'> }>(history: readonly T[], order: { merchandiseNet: number; billableAt: Date }): { feeBps: number; fee: Paise } | null {
+  const plan = currentPlan(history, order.billableAt)
+  return plan ? { feeBps: plan.planVersion.feeBps, fee: deliveredFee(order.merchandiseNet as Paise, plan.planVersion.feeBps) } : null
 }
 
 /** Orders this month against what the plan includes. Past it the store keeps selling; `over` flags it. */

@@ -78,3 +78,5 @@ export function eventLabel(e: { kind: string; reason: string | null; fields: str
 
 /** The print page for one order or a selection (numbers without the shop's prefix; at most 50 are printed). */
 export const printHref = (kind: 'slip' | 'invoice', numbers: number[]) => `/console/orders/print?kind=${kind}&n=${numbers.join(',')}`
+/** The same documents as a PDF download (Documents D1): A4, or a 4×6 thermal label for slips. */
+export const pdfHref = (kind: 'slip' | 'invoice', numbers: number[], size: 'a4' | 'label' = 'a4') => `/console/orders/pdf?kind=${kind}&size=${size}&n=${numbers.join(',')}`

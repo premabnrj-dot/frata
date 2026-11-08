@@ -251,10 +251,10 @@ do $$ begin
   if exists (select 1 from members where user_id = 'aaaaaaaa-0000-0000-0000-000000000004') then raise exception 'FAIL: a refused or rolled-back creation left a member'; end if;
 end $$;
 
--- 18. Every app_* definer function pins an empty search_path.
+-- 18. Every definer function in public pins an empty search_path (any name: tenancy audit 2026-11-08).
 do $$ declare f record; begin
   for f in select p.oid::regprocedure as sig, p.proconfig from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-           where n.nspname = 'public' and p.proname like 'app\_%' and p.prosecdef loop
+           where n.nspname = 'public' and p.prosecdef loop
     if not coalesce('search_path=""' = any(f.proconfig) or 'search_path=' = any(f.proconfig), false) then
       raise exception 'FAIL: % has search_path %', f.sig, f.proconfig;
     end if;
@@ -1205,4 +1205,99 @@ do $$ begin
   then raise exception 'FAIL: staff or API roles reach shipments'; end if;
 end $$;
 
-\echo 'tenancy proof — all 38 checks passed'
+-- 39. Billing B0 (docs/plans/2026-11-08-billing.md § Review findings 6, 8–11): a shop sees only its own invoices and
+-- billing details; it drafts only while unissued and never numbers, issues or deletes an invoice; billing details are
+-- the detail columns only; an issued invoice, its lines, fees and credits are final for every role; composite keys
+-- keep a row in its own shop; platform_counters and the gateway columns reach no app role.
+insert into orders (id, tenant_id, number, payment_method, placed_at) values ('acacacac-0000-0000-0000-0000000b111a', '11111111-1111-1111-1111-111111111111', 9201, 'cod', now()), ('acacacac-0000-0000-0000-0000000b111b', '22222222-2222-2222-2222-222222222222', 9201, 'cod', now());
+insert into frrata_invoices (id, tenant_id, period_start, period_end, taxable, cgst, sgst, igst, total) values
+  ('b1110000-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', '2026-10-31T18:30:00Z', '2026-11-30T18:30:00Z', 100, 9, 9, 0, 118),
+  ('b1110000-0000-0000-0000-0000000000a1', '11111111-1111-1111-1111-111111111111', '2026-09-30T18:30:00Z', '2026-10-31T18:30:00Z', 100, 9, 9, 0, 118);
+insert into billing_accounts (tenant_id, legal_name, gateway_customer_id) values ('22222222-2222-2222-2222-222222222222', 'B Pvt Ltd', 'cust_b');
+insert into frrata_invoice_fees (tenant_id, invoice_id, order_id, billable_at, base, fee_bps, fee) values ('22222222-2222-2222-2222-222222222222', 'b1110000-0000-0000-0000-00000000000b', 'acacacac-0000-0000-0000-0000000b111b', now(), 85714, 200, 1714);
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if exists (select 1 from frrata_invoices where tenant_id <> '11111111-1111-1111-1111-111111111111') or exists (select 1 from billing_accounts) then raise exception 'FAIL: A sees B billing'; end if;
+  update frrata_invoices set total = 0 where tenant_id = '22222222-2222-2222-2222-222222222222'; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A changed a B invoice'; end if;
+  begin insert into frrata_invoices (tenant_id, period_start, period_end, taxable, cgst, sgst, igst, total) values ('22222222-2222-2222-2222-222222222222', now(), now() + interval '1 day', 0, 0, 0, 0, 0); raise exception 'FAIL: A drafted in B';
+  exception when insufficient_privilege then null; end;
+  -- A line on a B invoice from A: the composite key refuses it.
+  begin insert into frrata_invoice_lines (tenant_id, invoice_id, position, kind, description, period_start, period_end, quantity, taxable) values ('11111111-1111-1111-1111-111111111111', 'b1110000-0000-0000-0000-00000000000b', 1, 'plan', 'x', now(), now(), 1, 0); raise exception 'FAIL: A wrote a line on a B invoice';
+  exception when foreign_key_violation then null; end;
+  begin insert into frrata_invoice_fees (tenant_id, invoice_id, order_id, billable_at, base, fee_bps, fee) values ('11111111-1111-1111-1111-111111111111', 'b1110000-0000-0000-0000-0000000000a1', 'acacacac-0000-0000-0000-0000000b111b', now(), 1, 200, 0); raise exception 'FAIL: A billed a B order';
+  exception when foreign_key_violation or unique_violation then null; end;
+  -- A credit naming B's billed order, from A: the composite key refuses it (it would block B's own credit).
+  begin insert into frrata_fee_credits (tenant_id, invoice_id, order_id, fee) values ('11111111-1111-1111-1111-111111111111', 'b1110000-0000-0000-0000-0000000000a1', 'acacacac-0000-0000-0000-0000000b111b', 1714); raise exception 'FAIL: A credited a B order';
+  exception when foreign_key_violation then null; end;
+  -- A's own draft: lines and fees in, the totals redrafted; never numbered, issued or deleted by the app.
+  insert into frrata_invoice_lines (tenant_id, invoice_id, position, kind, description, period_start, period_end, quantity, taxable) values ('11111111-1111-1111-1111-111111111111', 'b1110000-0000-0000-0000-0000000000a1', 1, 'plan', 'Launch', now(), now(), 1, 100);
+  insert into frrata_invoice_fees (tenant_id, invoice_id, order_id, billable_at, base, fee_bps, fee) values ('11111111-1111-1111-1111-111111111111', 'b1110000-0000-0000-0000-0000000000a1', 'acacacac-0000-0000-0000-0000000b111a', now(), 85714, 200, 1714);
+  begin insert into frrata_invoice_fees (tenant_id, invoice_id, order_id, billable_at, base, fee_bps, fee) values ('11111111-1111-1111-1111-111111111111', 'b1110000-0000-0000-0000-0000000000a1', 'acacacac-0000-0000-0000-0000000b111a', now(), 85714, 200, 1714); raise exception 'FAIL: an order billed twice';
+  exception when unique_violation then null; end;
+  update frrata_invoices set total = 118, drafted_at = now() where id = 'b1110000-0000-0000-0000-0000000000a1';
+  begin update frrata_invoices set number = 'FRR/26-27/1' where id = 'b1110000-0000-0000-0000-0000000000a1'; raise exception 'FAIL: the app numbered an invoice';
+  exception when insufficient_privilege then null; end;
+  begin update frrata_invoices set issued_at = now() where id = 'b1110000-0000-0000-0000-0000000000a1'; raise exception 'FAIL: the app issued an invoice';
+  exception when insufficient_privilege then null; end;
+  begin delete from frrata_invoices; raise exception 'FAIL: the app deleted an invoice'; exception when insufficient_privilege then null; end;
+  -- Billing details: the detail columns only.
+  insert into billing_accounts (tenant_id, legal_name, gstin, state_code) values ('11111111-1111-1111-1111-111111111111', 'A Pvt Ltd', '08ABCDE1234F1Z5', '08');
+  update billing_accounts set email = 'a@x.test';
+  begin update billing_accounts set mandate_token_id = 'x'; raise exception 'FAIL: the app set a mandate'; exception when insufficient_privilege then null; end;
+  begin perform gateway_customer_id from billing_accounts; raise exception 'FAIL: the app read a gateway id'; exception when insufficient_privilege then null; end;
+end $$;
+commit;
+-- Issue A's invoice as the owner (the B2 definer's job), then: final for the app and for the owner alike.
+update frrata_invoices set number = 'FRR/26-27/000001', issued_at = now() where id = 'b1110000-0000-0000-0000-0000000000a1';
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  update frrata_invoices set drafted_at = now() where id = 'b1110000-0000-0000-0000-0000000000a1'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: the app changed an issued invoice'; end if;
+  begin delete from frrata_invoice_lines; raise exception 'FAIL: a line of an issued invoice deleted'; exception when check_violation then null; end;
+  begin delete from frrata_invoice_fees; raise exception 'FAIL: a fee of an issued invoice deleted'; exception when check_violation then null; end;
+  begin insert into frrata_invoice_lines (tenant_id, invoice_id, position, kind, description, period_start, period_end, quantity, taxable) values ('11111111-1111-1111-1111-111111111111', 'b1110000-0000-0000-0000-0000000000a1', 2, 'fee', 'x', now(), now(), 1, 1); raise exception 'FAIL: a line added to an issued invoice';
+  exception when check_violation then null; end;
+end $$;
+rollback;
+do $$ begin
+  begin update frrata_invoices set drafted_at = now(), buyer_name = 'x' where id = 'b1110000-0000-0000-0000-0000000000a1'; raise exception 'FAIL: an issued invoice changed';
+  exception when check_violation then null; end;
+  begin delete from frrata_invoices where id = 'b1110000-0000-0000-0000-0000000000a1'; raise exception 'FAIL: an issued invoice deleted';
+  exception when check_violation then null; end;
+  begin update frrata_invoice_fees set invoice_id = 'b1110000-0000-0000-0000-00000000000b', tenant_id = '22222222-2222-2222-2222-222222222222' where order_id = 'acacacac-0000-0000-0000-0000000b111a'; raise exception 'FAIL: a fee moved off an issued invoice';
+  exception when check_violation then null; end;
+  begin truncate frrata_invoices cascade; raise exception 'FAIL: invoices truncated'; exception when check_violation then null; end;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['app_shops_to_bill(timestamptz)', 'frrata_invoice_frozen()', 'frrata_invoice_child_frozen()']) f
+             where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: a role may execute a billing function'; end if;
+  if exists (select 1 from unnest(array['frata_app', 'frata_admin', 'anon', 'authenticated', 'service_role']) r
+             where has_any_column_privilege(r, 'platform_counters', 'select, insert, update, references') or has_table_privilege(r, 'platform_counters', 'select, insert, update, delete, truncate, references, trigger'))
+  then raise exception 'FAIL: a role reaches platform_counters'; end if;
+  if has_column_privilege('frata_app', 'billing_accounts', 'mandate_token_id', 'select') or has_column_privilege('frata_admin', 'billing_accounts', 'mandate_token_id', 'select')
+     or has_column_privilege('frata_app', 'billing_accounts', 'gateway_customer_id', 'select') or has_column_privilege('frata_app', 'billing_accounts', 'mandate_revoked_at', 'update')
+  then raise exception 'FAIL: the gateway columns reach an app role'; end if;
+  if exists (select 1 from unnest(array['billing_accounts', 'frrata_invoices', 'frrata_invoice_lines', 'frrata_invoice_fees', 'frrata_fee_credits']) t, unnest(array['anon', 'authenticated', 'service_role']) r
+             where has_any_column_privilege(r, t, 'select, insert, update, references') or has_table_privilege(r, t, 'select, insert, update, delete, truncate, references, trigger'))
+  then raise exception 'FAIL: API roles reach billing'; end if;
+  if has_table_privilege('frata_admin', 'frrata_invoices', 'insert, update, delete') or has_any_column_privilege('frata_admin', 'frrata_invoices', 'insert, update')
+  then raise exception 'FAIL: frata_admin writes invoices directly (only the issue definer may)'; end if;
+end $$;
+
+-- 40. Documents D2 (docs/plans/2026-11-08-documents-pdf.md): a shop's logo for paper, and the logo an invoice froze
+-- at packing, can only be a file in that shop's own documents folder; never another shop's.
+insert into shop_settings (tenant_id) values ('11111111-1111-1111-1111-111111111111') on conflict do nothing;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  update shop_settings set doc_logo = 'https://abc.public.blob.vercel-storage.com/tenants/11111111-1111-1111-1111-111111111111/documents/aaaaaaaa-0000-0000-0000-000000000001.png';
+  begin update shop_settings set doc_logo = 'https://abc.public.blob.vercel-storage.com/tenants/22222222-2222-2222-2222-222222222222/documents/aaaaaaaa-0000-0000-0000-000000000001.png'; raise exception 'FAIL: A took B''s logo';
+  exception when check_violation then null; end;
+  begin update shop_settings set doc_logo = 'https://evil.test/tenants/11111111-1111-1111-1111-111111111111/documents/aaaaaaaa-0000-0000-0000-000000000001.png'; raise exception 'FAIL: a logo from another host';
+  exception when check_violation then null; end;
+  begin update orders set invoice_logo = 'https://abc.public.blob.vercel-storage.com/tenants/22222222-2222-2222-2222-222222222222/documents/aaaaaaaa-0000-0000-0000-000000000001.png'; raise exception 'FAIL: an invoice froze B''s logo';
+  exception when check_violation then null; end;
+end $$;
+rollback;
+
+\echo 'tenancy proof — all 40 checks passed'

@@ -154,11 +154,13 @@ export const stageSql = (a = '"orders"'): SQL<'delivered' | 'rto' | 'lost' | 'on
   else 'not_sent' end)`
 
 /**
- * The plan-fee bucket at an order's billable moment, the first of delivered and 30 days shipped (billing's rule):
- * k = the k-th of `feeChanges` (the plan versions' start times, oldest first), 0 none; only delivered orders pay a fee.
+ * The plan-fee bucket at an order's billable moment (billing B0's `billableAtSql`, the one rule): k = the k-th of
+ * `feeChanges` (the plan versions' start times, oldest first), 0 none; the same pick as `feeForOrder`
+ * (domains/plans/entitlements.ts), made per group in SQL so ₹ kept never reads one row per order. Only a delivered
+ * order pays a fee here (an order assumed delivered after 30 days is billed but has no outcome to show yet).
  */
 export function feeBucketSql(a: string, feeChanges: readonly Date[]): SQL<number> {
-  const billableAt = sql`least(${c(a, 'delivered_at')}, ${c(a, 'shipped_at')} + ${sql.raw(`interval '${ASSUME_DELIVERED_DAYS} days'`)})`
+  const billableAt = billableAtSql(a)
   if (!feeChanges.length) return sql<number>`0`
   // Only a delivered order pays a fee: delivered and no return (stateSql's ranking), straight from its columns.
   const delivered = sql`(${c(a, 'delivered_at')} is not null and ${c(a, 'rto_initiated_at')} is null and ${c(a, 'rto_delivered_at')} is null)`
@@ -196,3 +198,13 @@ export function keptSql(now: Date, a: string, feeChanges: readonly Date[], provi
 }
 /** A row of keptSql, as postgres returns it. */
 export type KeptRow = { outcome: 'delivered' | 'rto' | 'lost'; provider: 'self' | 'shiprocket' | null; cod: boolean; bucket: number; n: number; net: string; cogs: string | null; fwd: string | null; rto: string | null; codfee: string | null; gw: string; base: string }
+/**
+ * billableAt() in SQL (src/domains/orders/outcomes.ts): when an order became a delivered order for Frrata's fee —
+ * delivered, or shipped + 30 days, whichever came first; null after a return started, when lost without delivery,
+ * or when never shipped. The parity test holds the two equal.
+ */
+export const billableAtSql = (a = '"orders"'): SQL<Date | null> => sql<Date | null>`(case
+  when ${c(a, 'rto_initiated_at')} is not null then null
+  when ${c(a, 'delivered_at')} is not null then least(${c(a, 'delivered_at')}, ${c(a, 'shipped_at')} + interval '${sql.raw(String(ASSUME_DELIVERED_DAYS))} days')
+  when ${c(a, 'shipped_at')} is null or ${c(a, 'lost_at')} is not null then null
+  else ${c(a, 'shipped_at')} + interval '${sql.raw(String(ASSUME_DELIVERED_DAYS))} days' end)`

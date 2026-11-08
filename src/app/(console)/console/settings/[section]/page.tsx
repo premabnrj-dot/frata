@@ -41,6 +41,7 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
       facts={facts}
       fiscalYear={fiscalYear(new Date())}
       overrides={overrides}
+      tenantId={tenantId}
     />
   )
 }

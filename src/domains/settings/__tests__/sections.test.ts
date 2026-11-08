@@ -58,7 +58,7 @@ describe('parseSection', () => {
 
 describe('formValues', () => {
   it('is the inverse of parseSection for every section', () => {
-    const stored = { name: 'Kesar', orderPrefix: 'KS', legalName: 'Kesar LLP', originCountry: 'India', address: 'Indore', supportEmail: 'a@b.in', supportPhone: '9827041000', whatsapp: '', instagram: 'k', grievanceName: 'R', grievanceRole: '', grievanceEmail: 'g@b.in', grievancePhone: '9827041001', accent: 'oxide', displayFont: 'fraunces', tagline: '', shopLanguage: 'hi', returnKind: 'exchange_or_refund', returnDays: 7, codOn: true, codMin: 0, codMax: 300000, codCharge: 4900, codBlockedPincodes: ['793001'], shippingFlat: 7900, freeShippingAbove: 199900, dispatchDays: 2, metroDays: 4, restDays: 7, pricesIncludeGst: true, gstin: null, defaultHsn: '6211', invoiceSeries: 'KS/' }
+    const stored = { name: 'Kesar', orderPrefix: 'KS', legalName: 'Kesar LLP', originCountry: 'India', address: 'Indore', supportEmail: 'a@b.in', supportPhone: '9827041000', whatsapp: '', instagram: 'k', grievanceName: 'R', grievanceRole: '', grievanceEmail: 'g@b.in', grievancePhone: '9827041001', accent: 'oxide', displayFont: 'fraunces', tagline: '', shopLanguage: 'hi', returnKind: 'exchange_or_refund', returnDays: 7, codOn: true, codMin: 0, codMax: 300000, codCharge: 4900, codBlockedPincodes: ['793001'], shippingFlat: 7900, freeShippingAbove: 199900, dispatchDays: 2, metroDays: 4, restDays: 7, pricesIncludeGst: true, gstin: null, defaultHsn: '6211', invoiceSeries: 'KS/', docSignatory: 'R. Sharma', docNote: 'Exchanges within 7 days.', slipSize: 'label' }
     for (const sec of SECTIONS) {
       const r = parseSection(sec, formValues(sec, stored))
       expect(r.ok, sec.key).toBe(true)
@@ -96,5 +96,14 @@ describe('an open shop keeps its grievance officer', () => {
       grievanceName: expect.stringMatching(/officer’s name/), grievanceEmail: expect.stringMatching(/officer’s email/) })
     expect(openShopErrors(contact, { grievanceName: 'Riya', grievanceEmail: 'care@x.in', grievancePhone: '', supportEmail: 'new@x.in' }, saved)).toEqual({})
     expect(openShopErrors(s('store'), { name: '' }, { name: 'Kesar' })).toEqual({})
+  })
+})
+
+describe('documents (D2)', () => {
+  it('refuses a web address in the words printed on documents', () => {
+    const sec = SECTIONS.find((x) => x.key === 'documents')!
+    expect(parseSection(sec, { docSignatory: 'Riya', docNote: 'Pay at https://x.test', slipSize: 'a4' }).ok).toBe(false)
+    expect(parseSection(sec, { docSignatory: 'www.riya.in', docNote: '', slipSize: 'a4' }).ok).toBe(false)
+    expect(parseSection(sec, { docSignatory: 'Riya Mehta', docNote: 'Exchanges within 7 days.', slipSize: 'label' }).ok).toBe(true)
   })
 })

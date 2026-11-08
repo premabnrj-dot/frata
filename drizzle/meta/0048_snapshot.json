@@ -1,6 +1,6 @@
 {
-  "id": "fd08c0e8-17d8-4a1d-9d3d-17f507802b1d",
-  "prevId": "6fafe151-5b62-4c28-893b-90adc5697505",
+  "id": "e54d38bc-2bef-4889-b02e-72c98a29d3c3",
+  "prevId": "77a4a92f-04e3-4466-b451-21d6129fc544",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -7233,6 +7233,778 @@
         "theme_versions_reasons": {
           "name": "theme_versions_reasons",
           "value": "(\"theme_versions\".\"recalled_at\" is null or length(\"theme_versions\".\"recalled_reason\") between 3 and 300) and (\"theme_versions\".\"withdrawn_at\" is null or length(\"theme_versions\".\"withdrawn_reason\") between 3 and 300)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.billing_accounts": {
+      "name": "billing_accounts",
+      "schema": "",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "legal_name": {
+          "name": "legal_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "gstin": {
+          "name": "gstin",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "state_code": {
+          "name": "state_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "gateway_customer_id": {
+          "name": "gateway_customer_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mandate_token_id": {
+          "name": "mandate_token_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mandate_method": {
+          "name": "mandate_method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mandate_max": {
+          "name": "mandate_max",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mandate_at": {
+          "name": "mandate_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mandate_revoked_at": {
+          "name": "mandate_revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "billing_accounts_tenant_id_tenants_id_fk": {
+          "name": "billing_accounts_tenant_id_tenants_id_fk",
+          "tableFrom": "billing_accounts",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenants",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "billing_accounts_gstin": {
+          "name": "billing_accounts_gstin",
+          "value": "\"billing_accounts\".\"gstin\" is null or \"billing_accounts\".\"gstin\" ~ '^[0-9]{2}[A-Z0-9]{13}$'"
+        },
+        "billing_accounts_state": {
+          "name": "billing_accounts_state",
+          "value": "\"billing_accounts\".\"state_code\" is null or \"billing_accounts\".\"state_code\" ~ '^[0-9]{2}$'"
+        },
+        "billing_accounts_sizes": {
+          "name": "billing_accounts_sizes",
+          "value": "length(\"billing_accounts\".\"legal_name\") <= 200 and length(\"billing_accounts\".\"address\") <= 400 and length(\"billing_accounts\".\"email\") <= 254"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.frrata_fee_credits": {
+      "name": "frrata_fee_credits",
+      "schema": "",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "invoice_id": {
+          "name": "invoice_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fee": {
+          "name": "fee",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "frrata_fee_credits_invoice": {
+          "name": "frrata_fee_credits_invoice",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "invoice_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "frrata_fee_credits_invoice_fk": {
+          "name": "frrata_fee_credits_invoice_fk",
+          "tableFrom": "frrata_fee_credits",
+          "columnsFrom": [
+            "tenant_id",
+            "invoice_id"
+          ],
+          "tableTo": "frrata_invoices",
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "frrata_fee_credits_fee_fk": {
+          "name": "frrata_fee_credits_fee_fk",
+          "tableFrom": "frrata_fee_credits",
+          "columnsFrom": [
+            "tenant_id",
+            "order_id"
+          ],
+          "tableTo": "frrata_invoice_fees",
+          "columnsTo": [
+            "tenant_id",
+            "order_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {
+        "frrata_fee_credits_order": {
+          "name": "frrata_fee_credits_order",
+          "columns": [
+            "order_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "frrata_fee_credits_money": {
+          "name": "frrata_fee_credits_money",
+          "value": "\"frrata_fee_credits\".\"fee\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.frrata_invoice_fees": {
+      "name": "frrata_invoice_fees",
+      "schema": "",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "invoice_id": {
+          "name": "invoice_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "billable_at": {
+          "name": "billable_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "base": {
+          "name": "base",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fee_bps": {
+          "name": "fee_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fee": {
+          "name": "fee",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "frrata_invoice_fees_invoice": {
+          "name": "frrata_invoice_fees_invoice",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "invoice_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "frrata_invoice_fees_invoice_fk": {
+          "name": "frrata_invoice_fees_invoice_fk",
+          "tableFrom": "frrata_invoice_fees",
+          "columnsFrom": [
+            "tenant_id",
+            "invoice_id"
+          ],
+          "tableTo": "frrata_invoices",
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "frrata_invoice_fees_order_fk": {
+          "name": "frrata_invoice_fees_order_fk",
+          "tableFrom": "frrata_invoice_fees",
+          "columnsFrom": [
+            "tenant_id",
+            "order_id"
+          ],
+          "tableTo": "orders",
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {
+        "frrata_invoice_fees_order": {
+          "name": "frrata_invoice_fees_order",
+          "columns": [
+            "order_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "frrata_invoice_fees_tenant_order_key": {
+          "name": "frrata_invoice_fees_tenant_order_key",
+          "columns": [
+            "tenant_id",
+            "order_id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "frrata_invoice_fees_money": {
+          "name": "frrata_invoice_fees_money",
+          "value": "\"frrata_invoice_fees\".\"base\" >= 0 and \"frrata_invoice_fees\".\"fee\" >= 0 and \"frrata_invoice_fees\".\"fee_bps\" between 0 and 10000"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.frrata_invoice_lines": {
+      "name": "frrata_invoice_lines",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "invoice_id": {
+          "name": "invoice_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "period_start": {
+          "name": "period_start",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "period_end": {
+          "name": "period_end",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rate_bps": {
+          "name": "rate_bps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "taxable": {
+          "name": "taxable",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "frrata_invoice_lines_position": {
+          "name": "frrata_invoice_lines_position",
+          "columns": [
+            {
+              "expression": "invoice_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "position",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "frrata_invoice_lines_invoice_fk": {
+          "name": "frrata_invoice_lines_invoice_fk",
+          "tableFrom": "frrata_invoice_lines",
+          "columnsFrom": [
+            "tenant_id",
+            "invoice_id"
+          ],
+          "tableTo": "frrata_invoices",
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "frrata_invoice_lines_kind": {
+          "name": "frrata_invoice_lines_kind",
+          "value": "\"frrata_invoice_lines\".\"kind\" in ('plan','addon','fee','over','credit','carry')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.frrata_invoices": {
+      "name": "frrata_invoices",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "period_start": {
+          "name": "period_start",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "period_end": {
+          "name": "period_end",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "drafted_at": {
+          "name": "drafted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "taxable": {
+          "name": "taxable",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cgst": {
+          "name": "cgst",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sgst": {
+          "name": "sgst",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "igst": {
+          "name": "igst",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total": {
+          "name": "total",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "carry_in": {
+          "name": "carry_in",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "carry_out": {
+          "name": "carry_out",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "rolled": {
+          "name": "rolled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "orders_billed": {
+          "name": "orders_billed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "included_orders": {
+          "name": "included_orders",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "number": {
+          "name": "number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "issued_at": {
+          "name": "issued_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "issued_by": {
+          "name": "issued_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "buyer_name": {
+          "name": "buyer_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "buyer_gstin": {
+          "name": "buyer_gstin",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "buyer_address": {
+          "name": "buyer_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "place_of_supply": {
+          "name": "place_of_supply",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "frrata_invoices_tenant_period": {
+          "name": "frrata_invoices_tenant_period",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "period_start",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "frrata_invoices_number": {
+          "name": "frrata_invoices_number",
+          "columns": [
+            {
+              "expression": "number",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "frrata_invoices_period": {
+          "name": "frrata_invoices_period",
+          "columns": [
+            {
+              "expression": "period_start",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "frrata_invoices_tenant_id_tenants_id_fk": {
+          "name": "frrata_invoices_tenant_id_tenants_id_fk",
+          "tableFrom": "frrata_invoices",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenants",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "frrata_invoices_tenant_id_key": {
+          "name": "frrata_invoices_tenant_id_key",
+          "columns": [
+            "tenant_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "frrata_invoices_issued": {
+          "name": "frrata_invoices_issued",
+          "value": "\"frrata_invoices\".\"number\" is null or \"frrata_invoices\".\"issued_at\" is not null"
+        },
+        "frrata_invoices_money": {
+          "name": "frrata_invoices_money",
+          "value": "\"frrata_invoices\".\"taxable\" >= 0 and \"frrata_invoices\".\"cgst\" >= 0 and \"frrata_invoices\".\"sgst\" >= 0 and \"frrata_invoices\".\"igst\" >= 0 and (\"frrata_invoices\".\"total\" = \"frrata_invoices\".\"taxable\" + \"frrata_invoices\".\"cgst\" + \"frrata_invoices\".\"sgst\" + \"frrata_invoices\".\"igst\" or \"frrata_invoices\".\"rolled\")"
+        },
+        "frrata_invoices_period_order": {
+          "name": "frrata_invoices_period_order",
+          "value": "\"frrata_invoices\".\"period_end\" > \"frrata_invoices\".\"period_start\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.platform_counters": {
+      "name": "platform_counters",
+      "schema": "",
+      "columns": {
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fy": {
+          "name": "fy",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "next": {
+          "name": "next",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "platform_counters_kind_fy_pk": {
+          "name": "platform_counters_kind_fy_pk",
+          "columns": [
+            "kind",
+            "fy"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "platform_counters_kind": {
+          "name": "platform_counters_kind",
+          "value": "\"platform_counters\".\"kind\" in ('invoice', 'credit')"
+        },
+        "platform_counters_next": {
+          "name": "platform_counters_next",
+          "value": "\"platform_counters\".\"next\" >= 1"
         }
       },
       "isRLSEnabled": false

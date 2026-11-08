@@ -11,17 +11,27 @@ const DAY = 86_400_000
 /** After this many days shipped with no outcome, an order counts as delivered for Frrata's fee (call E). */
 export const ASSUME_DELIVERED_DAYS = 30
 
+type Outcome = { shippedAt: Date | null; deliveredAt: Date | null; rtoInitiatedAt: Date | null; lostAt: Date | null }
+
 /**
- * Whether an order is a delivered order for Frrata's per-delivered-order fee: delivered; or shipped 30 days ago with no
- * outcome since, unless it came back or the courier lost it. KNOWN COPY: its SQL twin lands with its first reader
- * (billing, roadmap phase 6), with a parity test.
+ * When an order became a delivered order for Frrata's per-delivered-order fee (billing B0, the one rule): delivered;
+ * or shipped and 30 days passed with no outcome, whichever came first. Null when it came back or the courier lost it,
+ * and when it was never shipped (packed and never shipped is never billed: owner, 2026-11-08). Its SQL twin is
+ * `billableAtSql` (src/lib/db/order-predicates.ts), held equal by a parity test.
  */
-export function billableDelivered(o: { shippedAt: Date | null; deliveredAt: Date | null; rtoInitiatedAt: Date | null; lostAt: Date | null }, now: Date): boolean {
+export function billableAt(o: Outcome): Date | null {
   // The same ranking as orderState: a return outranks delivered; delivered outranks lost.
-  if (o.rtoInitiatedAt) return false
-  if (o.deliveredAt) return true
-  if (!o.shippedAt || o.lostAt) return false
-  return now.getTime() - o.shippedAt.getTime() >= ASSUME_DELIVERED_DAYS * DAY
+  if (o.rtoInitiatedAt) return null
+  const assumed = o.shippedAt ? new Date(o.shippedAt.getTime() + ASSUME_DELIVERED_DAYS * DAY) : null
+  if (o.deliveredAt) return assumed && assumed.getTime() < o.deliveredAt.getTime() ? assumed : o.deliveredAt
+  if (!o.shippedAt || o.lostAt) return null
+  return assumed
+}
+
+/** Whether an order counts as delivered for the fee at `now`: billableAt read at one moment (its tests hold the rule). */
+export function billableDelivered(o: Outcome, now: Date): boolean {
+  const at = billableAt(o)
+  return at !== null && at.getTime() <= now.getTime()
 }
 
 /** An outcome (Delivered, Came back, Lost) can be undone until the IST month it was marked in is over (it is billed then). */

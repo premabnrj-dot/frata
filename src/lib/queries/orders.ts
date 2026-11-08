@@ -81,6 +81,12 @@ export async function orderPrefixFor(tenantId: string): Promise<string> {
   return orderPrefix(r?.prefix ?? '', r?.name ?? '')
 }
 
+/** The queue's shop facts in one read: the order prefix and the default slip size (Settings › Documents, D2). */
+export async function queueShopFor(tenantId: string): Promise<{ prefix: string; slipSize: 'a4' | 'label' }> {
+  const [r] = await withTenant(tenantId, (tx) => tx.select({ prefix: shopSettings.orderPrefix, name: tenants.name, slipSize: shopSettings.slipSize }).from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId)))
+  return { prefix: orderPrefix(r?.prefix ?? '', r?.name ?? ''), slipSize: r?.slipSize === 'label' ? 'label' : 'a4' }
+}
+
 /**
  * The nav pill (spec U · U·2a): how many orders wait in To confirm, over all of them — the To confirm tab's own
  * predicate, so pill and tab agree. React cache() keys it on the tenant alone for one request (the layout and a

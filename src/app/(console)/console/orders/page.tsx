@@ -9,7 +9,7 @@ import { applies, may } from '@/domains/orders/work'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { dateTimeIN } from '@/lib/format-date'
 import { riskFactsFor } from '@/lib/queries/order-risk'
-import { listOrders, ORDERS_PAGE, orderPrefixFor, queueCounts } from '@/lib/queries/orders'
+import { listOrders, ORDERS_PAGE, queueShopFor, queueCounts } from '@/lib/queries/orders'
 import { PAYMENT, STATE, TABS } from './_components/labels'
 import { Queue, type QueueRow } from './_components/queue'
 import { errName } from '@/lib/log'
@@ -42,11 +42,12 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const asked = Number(sp.page)
   const pagesFor = (n: number) => Math.max(1, Math.ceil(n / ORDERS_PAGE))
   const wanted = Number.isSafeInteger(asked) ? Math.min(Math.max(1, asked), 1_000) : 1
-  const [counts, first, prefix] = await Promise.all([
+  const [counts, first, queueShop] = await Promise.all([
     queueCounts(tenantId, now).catch((err) => { console.error('[orders]', errName(err)); return null }),
     listOrders(tenantId, { tab, page: wanted, q, now }).catch((err) => { console.error('[orders]', errName(err)); return null }),
-    orderPrefixFor(tenantId),
+    queueShopFor(tenantId),
   ])
+  const prefix = queueShop.prefix
   if (!counts || !first) return fail
   // The pager's total: the tab's own count, or (searching) how many match, from the list query itself.
   const page = q ? wanted : Math.min(wanted, pagesFor(counts[tab]))
@@ -94,7 +95,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
       <ViewTabs label="Order views" tabs={ordered.map((t) => ({ href: href({ tab: t.tab, q: '' }), label: t.label, count: counts[t.tab], current: t.tab === tab, apart: t.tab === 'not_paid' }))} />
       <SearchField label="Search orders" placeholder="Search number, name or phone" value={q} clearHref={href({ q: '' })} hidden={tab !== 'to_confirm' ? { tab } : undefined} />
       {/* Always the Queue, even empty: its toast (and Undo) must outlive the last row leaving the tab (e2e 49). */}
-      <Queue rows={rows} label={`Orders · ${info.label}`} empty={
+      <Queue rows={rows} label={`Orders · ${info.label}`} slipSize={queueShop.slipSize} empty={
         <Panel title={q ? 'No order matches that search' : info.empty.title}>
           {q ? <>Try the order number, the customer&apos;s name or the last digits of their phone.</> : info.empty.body ?? null}
         </Panel>} />
