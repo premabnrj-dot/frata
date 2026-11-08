@@ -52,7 +52,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   // Another shop's order is the same "not found" as one that does not exist.
   if (d === null) return <Panel title="No such order in your shop">Check the number, or find it from <a href="/console/orders?tab=all" className="underline">all orders</a>.</Panel>
 
-  const { o, lines, events, notes, facts, offers, shipment } = d
+  const { o, lines, events, notes, facts, offers, shipment, source } = d
   const label = `${prefix}-${o.number}`
   const state = orderState(o, now)
   const method = currentMethod(o)
@@ -165,6 +165,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
                 {o.cancelReason ? <p className="pt-2 text-muted-foreground">Cancelled: {CANCEL_LABEL[o.cancelReason as CancelReason] ?? o.cancelReason}{o.cancelNote ? ` — ${o.cancelNote}` : ''}</p> : null}
               </div>
             )}
+            <p className="text-sm text-muted-foreground">Came from: <span className="text-foreground">{source.label}{source.campaign ? ` · ${source.campaign}` : ''}</span></p>
           </Section>
 
           <Section id="notes" title="Notes">

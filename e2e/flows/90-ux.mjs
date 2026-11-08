@@ -51,6 +51,9 @@ export default {
         ['console-settings-address', 'owner', '/console/settings/address'],
         ['console-settings-payments', 'owner', '/console/settings/online-payments'],
         ['console-product-new', 'owner', '/console/products/new'],
+        // Analytics (A1·6): the page and a source's page, at 390 px with no sideways scroll.
+        ['console-analytics', 'owner', '/console/analytics'],
+        ['console-analytics-source', 'owner', '/console/analytics/direct-or-unknown'],
         ['admin-activity', 'frata', '/admin/activity'],
         ['admin-staff', 'frata', '/admin/staff'],
         ['admin-merchant-new', 'frata', '/admin/merchants/new'],
