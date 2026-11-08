@@ -61,6 +61,8 @@ export function Editor(p: EditorProps) {
   latest.current = { layer, style }
   const stuck = typeof status === 'object' && /changed this draft|published|gone/.test(status.error)
 
+  // While a change saves, the preview dims; it comes back as the shop redraws with it (motion system: a theme or
+  // setting change fades old into new in 200 ms, never a jump).
   const post = (m: object) => frame.current?.contentWindow?.postMessage(m, window.location.origin)
   const save = useCallback(async () => {
     setStatus('saving')
@@ -155,7 +157,8 @@ export function Editor(p: EditorProps) {
         <aside aria-label="Edit" className="h-[46dvh] shrink-0 overflow-y-auto border-t border-border bg-card p-4 md:h-auto md:w-[360px] md:border-r md:border-t-0">{panel}</aside>
         <section aria-label="Preview" className="flex min-h-0 flex-1 items-start justify-center overflow-auto bg-muted p-0 md:p-6">
           <div className="origin-top md:rounded-[28px] md:border-[8px] md:border-foreground" style={{ width: device === 'phone' ? 'min(390px, 100%)' : d.w, height: d.h, transform: device === 'desktop' ? 'scale(0.62)' : device === 'tablet' ? 'scale(0.8)' : undefined }}>
-            <iframe ref={frame} title="Your shop with this look" src={`/console/theme-preview/${p.revisionId}${path}`} className="size-full bg-card" />
+            <iframe ref={frame} title="Your shop with this look" src={`/console/theme-preview/${p.revisionId}${path}`}
+              className={`size-full bg-card transition-opacity duration-base ease-standard ${status === 'saving' ? 'opacity-60' : ''}`} />
           </div>
         </section>
       </div>

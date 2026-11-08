@@ -84,7 +84,8 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 
 - Supabase auth only (magic link, `src/app/login/`). Data never goes through
   supabase-js or PostgREST; `anon`/`authenticated` hold no table grants.
-- Always `getUser()`, never `getSession()` (`check:layers`).
+- `getUser()` (or, in the middleware's redirect only, `getClaims()`, which verifies the JWT), never
+  `getSession()` (`check:layers`). The member and staff checks always ask `getUser()`.
 - Signing in grants nothing; a `members` row does. Roles: owner, admin, staff,
   partner (`MEMBER_ROLES`); tuples `ANY_MEMBER` (everyone, partner included),
   `CAN_BUILD` (owner, admin, partner: catalogue, the look, the shop's own
@@ -320,7 +321,8 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   with the number written in the spec. A daily cron is the safety net: a
   sender drains right after `enqueue` (`after()`), loops `claimDue` until empty
   or out of time, and shops run with bounded concurrency (`src/lib/outbox/drain.ts`:
-  `drainSoon()` after the commit, `drainOutbox(deadline)`, `eachLimited`). The cron is still daily (Hobby);
+  `drainSoon()` after the commit — not called yet: the first sender's change calls it —
+  `drainOutbox(deadline)`, `eachLimited`). The cron is still daily (Hobby);
   a sender with a deadline (COD confirmation) needs a frequent schedule (Pro) before it ships.
 
 ## Speed (review 2026-11-08; findings P1–P15 in `docs/research/2026-11-08-performance-security-motion-review.md`)

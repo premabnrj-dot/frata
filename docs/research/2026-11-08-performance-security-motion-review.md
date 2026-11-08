@@ -103,7 +103,7 @@ The proposed motion system, the illustration and icon opportunities, and the rul
 | S8 | Fixed: `ipBucket` (IPv6 per /64) |
 | S9 | Fixed: the sign-in code limit fails closed |
 | S10 | Fixed: `errName`, new gate check:logs |
-| S11 | Fixed: WebP bytes checked before attaching; 800 upload tokens per shop an hour |
+| S11 | Fixed for product photos (WebP bytes checked before attaching); 800 upload tokens per shop an hour. The look's and the logo's uploads are not byte-checked yet |
 | S12 | Fixed: drizzle/0043 revokes service_role from every public function; proof 37 |
 | S13 | Fixed: 256 kB cap, 413 before any lookup; e2e 12-security |
 | S14 | Left for routine upgrades (build-time only) |
@@ -111,7 +111,7 @@ The proposed motion system, the illustration and icon opportunities, and the rul
 | P2 | Fixed: 48 a page, `/products/page/N`, `/collections/<h>/page/N`; e2e 13-paging |
 | P3 | Fixed: every shop loader `cache()`d |
 | P4 | Fixed: `collectionMembersIn(tx, …)` |
-| P5 | Fixed in code (`drainOutbox` loops, `drainSoon`, `eachLimited`); the cron stays daily until a sender needs Pro |
+| P5 | Fixed in code (`drainOutbox` loops, `eachLimited`); `drainSoon` is ready for the first sender, which calls it; the cron stays daily until a sender needs Pro |
 | P6 | Fixed: no font preloaded on a shop |
 | P7 | Fixed: middleware `getClaims`; `currentAccess`/`currentStaff` once per request |
 | P8 | Fixed: Orders, the order page and Home read in parallel |
@@ -122,3 +122,9 @@ The proposed motion system, the illustration and icon opportunities, and the rul
 | P13 | Index `order_lines_preorder_owed` |
 | P14 | Fixed for the order page (147.5 → 125 kB); the look editor keeps zod (it validates there) |
 | P15 | Fixed: `priority` only in the first section; the logo is sized |
+
+**Tenancy audit of the fixes (2026-11-08): SAFE.** Its gaps were closed in the proof (a processed event keeps no
+shopper field; inside shop A, B's webhook rows are unreadable and unwritable) and in the outbox (`last_error` keeps
+an error's name, not its message). One stays open on purpose: the `outbox` policies keep their no-shop branch
+(drizzle/0017, 0018) because the cron claims across shops. **Before the first sender enqueues a shopper's phone**, the
+claim moves to a definer that returns rows for the sweep and the null branch goes (§ Definers and platform reads).

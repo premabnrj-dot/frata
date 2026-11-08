@@ -11,6 +11,7 @@ import { Icon, type IconName } from '@/components/icons/icon'
 import type { Offer } from '@/domains/modules/offer'
 import type { Group, ModuleKey } from '@/domains/modules/registry'
 import { setModuleAction } from './actions'
+import { Switch } from '@/components/ui/switch'
 
 export type AppRow = {
   key: ModuleKey; name: string; job: string; group: Group; features: string[]; usage: string | null
@@ -28,14 +29,6 @@ function Tile({ k, size = 'md' }: { k: ModuleKey; size?: 'md' | 'lg' }) {
   return <span aria-hidden="true" data-tinge className={`inline-grid shrink-0 place-items-center rounded-lg bg-muted ${size === 'lg' ? 'size-14' : 'size-12'}`}><Icon name={ICON[k] ?? 'apps'} className="size-7" /></span>
 }
 
-function Switch({ on, label, disabled, onChange }: { on: boolean; label: string; disabled?: boolean; onChange: () => void }) {
-  return (
-    <button type="button" role="switch" aria-checked={on} aria-label={label} disabled={disabled} onClick={onChange}
-      className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors duration-fast ease-standard disabled:opacity-50 ${on ? 'border-primary bg-primary' : 'border-input bg-card'}`}>
-      <span className={`absolute size-5 rounded-full transition-transform duration-fast ease-standard ${on ? 'translate-x-6 bg-primary-foreground' : 'translate-x-1 bg-input'}`} />
-    </button>
-  )
-}
 
 /** The rows, the details dialog (a sheet on phones) and the turn-off dialog. One action per app (offer.ts). */
 export function AppsList({ groups, rows, canManage }: { groups: { key: Group; label: string }[]; rows: AppRow[]; canManage: boolean }) {

@@ -1142,6 +1142,28 @@ do $$ begin
   exception when insufficient_privilege then null; end;
 end $$;
 rollback;
+-- Inside shop A: B's events stay unreadable, and nothing is stored for B (the Razorpay receiver now relies on this).
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  if exists (select 1 from webhook_events where event_key = 'razorpay:b:payment.captured:pay_37') then raise exception 'FAIL: A reads B''s webhook row'; end if;
+  begin insert into webhook_events (provider, event_key, tenant_id, payload) values ('razorpay', 'razorpay:a-for-b-37', '22222222-2222-2222-2222-222222222222', '{}'); raise exception 'FAIL: A stored a webhook row for B';
+  exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+-- The trim of processed Razorpay payloads (the same statement drizzle/0043 ran over existing rows) keeps no shopper field.
+update webhook_events set processed_at = now() where event_key = 'razorpay:b:payment.captured:pay_37';
+update webhook_events e set payload = jsonb_strip_nulls(jsonb_build_object(
+    'event', e.payload -> 'event',
+    'payload', case when e.payload #> '{payload,payment,entity}' is null then null else jsonb_build_object('payment', jsonb_build_object('entity',
+      (select coalesce(jsonb_object_agg(k, v), '{}'::jsonb) from jsonb_each(e.payload #> '{payload,payment,entity}') as f(k, v)
+        where k in ('id', 'order_id', 'amount', 'currency', 'status', 'method', 'fee', 'tax')))) end))
+  where e.provider = 'razorpay' and e.processed_at is not null and e.event_key = 'razorpay:b:payment.captured:pay_37';
+do $$ declare p jsonb; begin
+  select payload into p from webhook_events where event_key = 'razorpay:b:payment.captured:pay_37';
+  if p::text ~ '(email|contact|vpa|9829043210)' then raise exception 'FAIL: a processed event keeps shopper fields: %', p; end if;
+  if p #>> '{payload,payment,entity,order_id}' is distinct from 'order_37' or (p #>> '{payload,payment,entity,amount}')::int <> 100 then raise exception 'FAIL: the trim lost what reconciliation reads: %', p; end if;
+end $$;
 do $$
 declare f text;
 begin

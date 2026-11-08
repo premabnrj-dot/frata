@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 4.9.0
+  version: 4.10.0
   verified: 2026-11-08
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -238,10 +238,10 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
   with "+ 18% GST"; the order fee "only on delivered orders". One primary
   action ("Start free"), no video hero, no chat widget at first paint; a
   WhatsApp link instead.
-- **Motion**: 120 ms feedback, 200 ms small moves and exits, 320 ms screens
-  and sheets entering, nothing over 400 ms; a step moves in from the side it
-  came from; changed or autofilled values flash once; reduced motion makes
-  every change instant.
+- **Motion**: 120 ms feedback, 200 ms small moves and exits, 320 ms sheets
+  and drawers entering, nothing over 400 ms; a step moves in from the side it
+  came from; changed or autofilled values flash once (`--duration-flash`);
+  reduced motion fades instead (§ UX foundation rules 22–25a).
 
 ## Product page and catalogue (owner-approved, 2026-11-06)
 
@@ -477,15 +477,37 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
 **Motion (adds to § Phase 1 Motion)**
 22. CSS only: transitions with `@starting-style` and
     `transition-behavior: allow-discrete`. No animation library. Animate only
-    `opacity` and `transform`.
+    `opacity` and `transform` (or `scale`/`translate`) — never `box-shadow`,
+    `filter` or a layout property. Durations `fast|base|slow` (120/200/320);
+    easings `standard|entrance|exit`, and the two springs written with
+    `linear()` (owner-approved 2026-11-08): `ease-spring` (about 4%
+    overshoot) for what travels across the screen — a phone sheet, a drawer,
+    the bag — and `ease-snap` (no overshoot) for a switch's knob or a count
+    that hops. Never a spring on a desktop dialog, a number, or in Admin.
+    Mockup https://claude.ai/artifact/R5rhr3Q1UY27QpnkmEamNS has the table of
+    every pattern; build from it.
 23. Enter and exit are a pair. Nothing leaves slower than it came. Tips take
     120 ms; dialogs, menus and toasts 200 ms; phone sheets 320 ms.
-24. **No page transitions** until Next and React are upgraded to React 19.3's
-    `<ViewTransition>`. Then it is used only for a content-reveal crossfade,
-    with the header held still, `::view-transition { pointer-events: none }`,
-    0 s under reduced motion, and never a sliding list.
-25. Reduced motion: every change is instant, and a countdown (the 8 s Undo)
-    becomes words ("Undo for 8 seconds").
+24. **Route changes crossfade; nothing slides.** Once Next ≥ 16.4 and React
+    ≥ 19.3 are in `package.json` (not yet: Next 15.5, React 19.2 — the
+    upgrade is planned on its own), `<ViewTransition>` wraps each `page.tsx`
+    (never a layout) for a 120 ms out / 200 ms in opacity crossfade of
+    `main#content`, the shell a named group that does not animate,
+    `::view-transition { pointer-events: none }`, 0 s under reduced motion.
+    Until then the progress bar alone. The website and the shops may use
+    `@view-transition { navigation: auto }` with the same crossfade.
+25. **Reduced motion removes movement, not meaning** (owner 2026-11-08):
+    nothing travels or scales; what opens and closes (a dialog, sheet,
+    drawer, popover, toast) fades in 120 ms; decoration stops; a countdown
+    (the 8 s Undo) becomes words ("Undo for 8 seconds"). The e2e flows take
+    their screenshots under reduced motion.
+25a. **One Switch, one sheet.** A toggle is `ui/switch.tsx`, everywhere.
+    Every sheet or drawer — the phone's More, a phone `Dialog`, the shop's
+    bag and size guide — enters on the spring in 320 ms and leaves in 200 ms
+    over the standard scrim (`data-dialog`; the shop's `data-store-drawer`
+    over its ink at 45%). A bar that appears in place (Unsaved changes)
+    rises 8 px and fades (`animate-rise`); the step slide (`animate-step-*`)
+    is only for a step of a flow.
 26. The one brand moment: "Your shop is open", a check drawn once in rani (320
     ms circle, 200 ms tick), its words in the display face. No confetti, no
     sound.
@@ -506,7 +528,7 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     dim to .55. Mark a list of records that is not a `<table>` with
     `data-list` (activity, people, partner clients, Admin partners do).
 29. Progress bars move by `scaleX` on a full-width bar, never by `width`.
-    `npm test` runs `check:motion`: a layout transition, `transition-all`, an
+    `npm test` runs `check:motion` (over the shop too, since 2026-11-08): a layout transition, `transition-all`, an
     arbitrary `duration-`/`ease-`/`animate-`, keyframes animating anything but
     opacity and transform, or an animation over 400 ms fails, apart from the
     exceptions named in the script, each with its reason.
@@ -619,6 +641,15 @@ saving we cannot show from their own orders.
 - Phone first, touch targets ≥ 44px. Photos from the 1A ladder (400–1600 WebP)
   through `srcSet`/`sizes` (`src/components/storefront/photo.tsx`), the largest
   paint eager with `fetchpriority=high`, the rest lazy; no `next/image` optimiser.
+  Only the first section's photos are `priority` (speed review P15), and no shop
+  font is preloaded (P6). A photo that has not painted, or never will, shows the
+  shop's chip tile with a small garment drawn on it — never the browser's
+  broken-image glyph or its alt text (`img[data-photo]`).
+- **Shop motion** uses the console's tokens under the theme's `data-motion`
+  (`none` stops it): Add to bag answers in 120 ms (a 0.97 press) and the bag's
+  count hops on the snap curve; the bag and the size guide are
+  `data-store-drawer` (rule 25a). A list longer than 48 is paged at its own
+  addresses (`/products/page/N`), each cached on its own.
 - Checkout: one page, at most 7 fields, phone first, pincode fills city and
   state, labels above fields. No shopper OTP until DLT registration (Phase 2);
   COD rules and the To confirm queue carry the risk. No merchant cost ever

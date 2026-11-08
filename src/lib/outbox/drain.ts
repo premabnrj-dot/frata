@@ -44,7 +44,9 @@ export async function drainOutbox(deadline: number): Promise<{ claimed: number; 
         await markSent(row.id)
         sent++
       } catch (err) {
-        await markFailed(row.id, row.attempts, err instanceof Error ? err.message : String(err))
+        // Our own refusals keep their words; a database or sender error only its name and code (S10: a drizzle
+        // error carries its parameters).
+        await markFailed(row.id, row.attempts, err instanceof Error && !('cause' in err) && err.name === 'Error' ? err.message : errName(err))
       }
     }
     if (rows.length < BATCH) break
@@ -52,7 +54,10 @@ export async function drainOutbox(deadline: number): Promise<{ claimed: number; 
   return { claimed, sent }
 }
 
-/** After a change that enqueued commits: send now, after the response, within 20 s; the cron catches the rest. */
+/**
+ * After a change that enqueued commits: send now, after the response, within 20 s; the cron catches the rest.
+ * Not called yet: nothing enqueues before the first sender (WhatsApp COD confirmation). That change calls it.
+ */
 export function drainSoon() {
   after(() => drainOutbox(Date.now() + 20_000).then(() => undefined, (e) => console.error('[outbox] drain', errName(e))))
 }

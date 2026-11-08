@@ -176,6 +176,11 @@
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-entrance: cubic-bezier(0, 0, 0, 1);
   --ease-exit: cubic-bezier(0.3, 0, 1, 1);
+  /* Springs (owner-approved 2026-11-08, frata-design-language § Motion system): only for what travels across the
+     screen. --ease-spring overshoots about 4% (phone sheets, drawers, the bag); --ease-snap settles without one
+     (switches, a count that hops). Never on a desktop dialog, a number, or Admin. linear(): Baseline 2026-06. */
+  --ease-spring: linear(0, 0.13 6%, 0.5 16%, 0.86 28%, 1.02 40%, 1.04 50%, 1.01 66%, 1);
+  --ease-snap: linear(0, 0.16 6%, 0.55 16%, 0.88 30%, 0.98 46%, 1);
 
   /* Borders, not shadows. */
   --shadow-xs: 0 0 #0000;
@@ -259,22 +264,32 @@
     animation-delay: 0ms !important; /* a delayed second part (the brand moment's tick) appears at once too */
     transition-duration: 0.01ms !important;
   }
+  /* Reduced motion removes movement, not meaning (rule 25, owner 2026-11-08): what opens and closes still fades,
+     in 120 ms, without travelling or scaling. */
+  [data-pop], dialog[data-dialog], dialog[data-dialog]::backdrop, [data-toast], [data-store-drawer], [data-store-drawer]::backdrop {
+    transform: none !important; transition-property: opacity, overlay, display !important; transition-duration: var(--transition-duration-fast) !important;
+  }
 }
 
 /* A step of a flow enters from the side it came from (frata-design-language § Motion). */
 @keyframes step-in-forward { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
 @keyframes step-in-back { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
+:root { --duration-flash: 800ms; } /* a changed value flashes once (Phase 1 rule); named, not a Tailwind duration */
 @keyframes value-flash { from { background-color: var(--warn); } to { background-color: transparent; } }
 @utility animate-step-forward { animation: step-in-forward 320ms cubic-bezier(0, 0, 0, 1); }
 @utility animate-step-back { animation: step-in-back 320ms cubic-bezier(0, 0, 0, 1); }
-@utility animate-value-flash { animation: value-flash 800ms cubic-bezier(0.2, 0, 0, 1); }
-/* The shell (plan U · U·2a, motion rules 22–23): the progress bar creeps to 80 % while a move is on its way;
-   the phone's More sheet rises in 320 ms. Transform and scale only (rule 22). */
+/* A bar that appears in place (Unsaved changes): it rises 8 px and fades in, never slides in like a step. */
+@keyframes rise-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@utility animate-rise { animation: rise-in 200ms cubic-bezier(0, 0, 0, 1); }
+/* A dialog drawn by hand (the leave-without-saving alert): the dialog's own entrance, fade and scale from .97. */
+@keyframes pop-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: none; } }
+@utility animate-pop { animation: pop-in 200ms cubic-bezier(0, 0, 0, 1); }
+@utility animate-value-flash { animation: value-flash var(--duration-flash) cubic-bezier(0.2, 0, 0, 1); }
+/* The shell (plan U · U·2a, motion rules 22–23): the progress bar creeps to 80 % while a move is on its way. (The
+   phone's More sheet is a [data-dialog] sheet: in on the spring, out in 200 ms.) Transform and scale only (rule 22). */
 /* `scale`, the same property Tailwind's scale-x-* sets: animating transform as well would multiply the two. */
 @keyframes nav-run { from { scale: 0 1; } to { scale: 0.8 1; } }
-@keyframes sheet-in { from { transform: translateY(100%); } to { transform: none; } }
 @utility animate-nav-run { animation: nav-run 1400ms cubic-bezier(0.3, 0, 1, 1); }
-@utility animate-sheet { animation: sheet-in 320ms cubic-bezier(0, 0, 0, 1); }
 /* THE ONE BRAND MOMENT (rule 26): "Your shop is open", a check drawn once — the circle in 320 ms, then the tick in
    200 ms. stroke-dashoffset is paint only (no layout), the one named exception to rule 22 (check:motion). */
 @keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
@@ -308,7 +323,7 @@ dialog[data-dialog][open] { opacity: 1; transform: none; transition-timing-funct
     padding-bottom: env(safe-area-inset-bottom, 0px); opacity: 1; transform: translateY(100%);
     transition-duration: var(--transition-duration-slow);
   }
-  dialog[data-dialog][open] { transform: none; }
+  dialog[data-dialog][open] { transform: none; transition-timing-function: var(--ease-spring); }
   @starting-style { dialog[data-dialog][open] { opacity: 1; transform: translateY(100%); } }
 }
 dialog[data-dialog]::backdrop {
@@ -326,6 +341,41 @@ dialog[data-dialog][open]::backdrop { opacity: 1; }
 /* The Undo window as a bar that empties; under reduced motion the words say it instead (rule 25). */
 @keyframes undo-window { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 @utility animate-undo-window { animation: undo-window 8s linear forwards; transform-origin: left; }
+
+/* The shop's drawers (motion system 2026-11-08): the bag comes in from the side, the size guide up from the bottom
+   on a phone (a dialog on a computer), each on the spring in 320 ms and out in 200 ms, over the shop's own scrim.
+   They used to appear with no motion over raw black. Reduced motion: a 120 ms fade (above); data-motion="none": none. */
+dialog[data-store-drawer] {
+  transform: translateX(100%);
+  transition: transform var(--transition-duration-base) var(--ease-exit), overlay var(--transition-duration-base) allow-discrete, display var(--transition-duration-base) allow-discrete;
+}
+dialog[data-store-drawer="sheet"] { transform: translateY(100%); }
+dialog[data-store-drawer][open] { transform: none; transition-duration: var(--transition-duration-slow); transition-timing-function: var(--ease-spring); }
+@starting-style { dialog[data-store-drawer][open] { transform: translateX(100%); } dialog[data-store-drawer="sheet"][open] { transform: translateY(100%); } }
+@media (min-width: 640px) {
+  dialog[data-store-drawer="sheet"] { transform: scale(0.97); opacity: 0; transition-property: transform, opacity, overlay, display; }
+  dialog[data-store-drawer="sheet"][open] { transform: none; opacity: 1; transition-duration: var(--transition-duration-base); transition-timing-function: var(--ease-entrance); }
+  @starting-style { dialog[data-store-drawer="sheet"][open] { transform: scale(0.97); opacity: 0; } }
+}
+dialog[data-store-drawer]::backdrop {
+  background: color-mix(in srgb, var(--store-ink, #1F1A17) 45%, transparent); opacity: 0;
+  transition: opacity var(--transition-duration-base) var(--ease-standard), overlay var(--transition-duration-base) allow-discrete, display var(--transition-duration-base) allow-discrete;
+}
+dialog[data-store-drawer][open]::backdrop { opacity: 1; }
+@starting-style { dialog[data-store-drawer][open]::backdrop { opacity: 0; } }
+
+/* A shop photo before it paints, or if it never does (visual change 1, 2026-11-08): the shop's chip tile with a small
+   garment, under the photo; a broken one is covered by the same tile, so neither the browser's glyph nor the alt
+   text shows. (A broken <img> takes pseudo-elements; the alt stays for screen readers.) */
+img[data-photo] { background: var(--store-chip, #EFE8DE) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%235A4A3C' stroke-opacity='.55' stroke-width='1.2' stroke-linejoin='round'%3E%3Cpath d='M5 2.5 3 4 1.5 7l2 1V14h9V8l2-1L13 4l-2-1.5c-.5 1-1.6 1.6-3 1.6S5.5 3.5 5 2.5z'/%3E%3C/svg%3E") center / 24px no-repeat; color: transparent; }
+img[data-photo]::before { content: ""; position: absolute; inset: 0; background: inherit; }
+/* The cover needs its photo to be positioned: relative by default, in the base layer, so a photo's own `absolute`
+   utility still wins (an unlayered rule would beat it and lay the tile over the whole page). */
+@layer base { img[data-photo] { position: relative; } }
+
+/* Add to bag: the bag's count hops 4 px on the snap curve when it changes (a new key replays it). */
+@keyframes count-hop { from { transform: translateY(-4px); } to { transform: none; } }
+@utility animate-count { animation: count-hop 200ms var(--ease-snap); }
 
 /* ── A merchant's shop (storefront and its previews). Fixed light paper: it is
    their brand, not the viewer's OS theme. Accent = shop_settings.accent. ── */

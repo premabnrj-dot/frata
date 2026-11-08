@@ -130,7 +130,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     return { kind: 'new', id, number, method: input.method, total: m.total, code: q.offers.code }
   })
   if (placed.kind !== 'new') return placed
-  // The last piece went: the cached product pages say sold out at once (1D gap fix).
+  // The last piece went: the cached pages say sold out within the 60 s backstop at most (refreshSoldOut, once per 30 s; checkout reads live stock).
   if (soldOut.length) refreshSoldOut(tenantId)
   const out: Placed = { kind: 'placed', token: orderToken(placed.id), number: placed.number, method: placed.method, total: placed.total, pay: null, code: placed.code ?? null }
   if (placed.method === 'cod') return out

@@ -14,6 +14,7 @@ import { saveSection } from '../actions'
 import { PolicyPages } from './policy-pages'
 import { Section } from '@/components/layout/section'
 import { PageHeader } from '@/components/layout/page-header'
+import { Switch } from '@/components/ui/switch'
 
 /**
  * One settings page: the fields its section defines, ONE explicit save, an
@@ -119,10 +120,7 @@ function FieldInput({ f, value, error, onChange }: { f: Field; value: Values[str
     return (
       <div className="flex items-center justify-between gap-3 sm:col-span-2">
         <span className="flex items-center"><label htmlFor={id} className="text-sm font-medium">{f.label}</label>{tip}</span>
-        <button id={id} type="button" role="switch" aria-checked={value === true} onClick={() => onChange(value !== true)}
-          className="relative h-6 w-11 shrink-0 rounded-full bg-input transition-colors duration-base aria-checked:bg-ok-text">
-          <span className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-card transition-transform duration-base ease-standard ${value === true ? 'translate-x-5' : ''}`} />
-        </button>
+        <Switch id={id} on={value === true} onChange={(v) => onChange(v)} />
       </div>
     )
   }

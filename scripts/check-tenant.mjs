@@ -141,7 +141,6 @@ for (const t of tables) {
 // (to frata_admin) are fenced by ADR-0007 instead.
 const OPEN_FOR_APP = {
   outbox: 'the cross-tenant sweep reads and marks due rows; inserts are tenant-checked',
-  webhook_events: 'a signed webhook arrives before its tenant is known',
   pincodes: 'India Post reference data, the same for every shop, read-only',
   rate_limits: 'hashed abuse counters, no tenant data',
   plans: 'the public price list',
@@ -152,12 +151,21 @@ const OPEN_FOR_APP = {
 }
 // `alter policy` bodies count too (0018), and `app_current_tenant() is null or …` — the shape that lets a
 // query with no tenant set read every shop — is allowed only on OPEN_FOR_APP tables (tenancy audit 2026-11-07).
-for (const m of sql.matchAll(/(create|alter) policy\s+(\w+)\s+on\s+"?([a-z_]+)"?([\s\S]*?);/g)) {
+// Each policy as the migrations LEAVE it: a later alter replaces an earlier body, a drop removes it (so a branch a
+// later migration took away is not reported, and one it adds is).
+const finalPolicies = new Map()
+for (const m of sql.matchAll(/(create|alter|drop) policy\s+(?:if exists\s+)?(\w+)\s+on\s+"?([a-z_]+)"?([\s\S]*?);/g)) {
   const [, verb, name, table, body] = m
-  if (verb === 'create' && !/\bto\s+[^;]*\bfrata_app\b/.test(body)) continue
-  if (verb === 'alter' && !/\b(using|with check|to)\b/.test(body)) continue
-  if (OPEN_FOR_APP[table]) continue
-  if (verb === 'alter' && /\bto\s+[^;]*\bfrata_app\b/.test(body) && !/\busing\b/.test(body)) { failures.push(`policy ${name} on ${table}  is handed to frata_app by alter policy without its body — drop and create it, so this gate can read it`); continue }
+  const key = `${table}.${name}`
+  if (verb === 'drop') { finalPolicies.delete(key); continue }
+  const toApp = /\bto\s+[^;]*\bfrata_app\b/.test(body)
+  if (verb === 'alter' && toApp && !/\busing\b/.test(body) && !OPEN_FOR_APP[table]) failures.push(`policy ${name} on ${table}  is handed to frata_app by alter policy without its body — drop and create it, so this gate can read it`)
+  if (verb === 'alter' && !/\b(using|with check)\b/.test(body)) { if (toApp && finalPolicies.has(key)) finalPolicies.get(key).forApp = true; continue }
+  const forApp = verb === 'create' ? toApp : (finalPolicies.get(key)?.forApp ?? false) || toApp
+  finalPolicies.set(key, { name, table, body, forApp })
+}
+for (const { name, table, body, forApp } of finalPolicies.values()) {
+  if (!forApp || OPEN_FOR_APP[table]) continue
   if (!/app_current_tenant\(\)/.test(body)) failures.push(`policy ${name} on ${table}  lets frata_app past without app_current_tenant() — bind it to the tenant, or add the table to OPEN_FOR_APP with why`)
   else if (/app_current_tenant\(\)\s+is\s+null/.test(body)) failures.push(`policy ${name} on ${table}  opens every shop when no tenant is set (app_current_tenant() is null) — only OPEN_FOR_APP tables may`)
 }

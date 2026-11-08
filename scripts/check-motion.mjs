@@ -3,8 +3,8 @@
 // FILE: scripts/check-motion.mjs — `node scripts/check-motion.mjs [path]`
 //
 // Fails: motion that breaks frata-design-language § UX foundation rules 22–29
-// in Console, Admin, the partner workspace and the sign-in pages (the shop
-// has its own motion):
+// in Console, Admin, the partner workspace, the sign-in pages and (since the
+// motion system, 2026-11-08) the shop, whose motion uses the same tokens:
 //   layout      a transition of a property that reflows the page (width,
 //               height, top/left/right/bottom, inset, margin, padding, gap,
 //               flex-basis, grid-template-*, font-size), or of `all` (it would
@@ -25,7 +25,7 @@ import { join, relative } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const DIRS = ['src/app/(console)', 'src/app/(admin)', 'src/app/(partner)', 'src/app/login', 'src/app/start', 'src/app/choose', 'src/app/handover', 'src/app/partners',
-  'src/components/shell', 'src/components/brand', 'src/components/icons', 'src/components/data', 'src/components/layout', 'src/components/nav', 'src/components/ui', 'src/app/globals.css']
+  'src/components/shell', 'src/components/brand', 'src/components/storefront', 'src/app/s', 'src/components/icons', 'src/components/data', 'src/components/layout', 'src/components/nav', 'src/components/ui', 'src/app/globals.css']
 const MOVING = ['opacity', 'transform', 'scale', 'translate', 'rotate']
 const LIMIT_MS = 400
 /** Keyframes allowed to animate something else, or for longer than 400 ms: what each may animate, for how long, and why. */

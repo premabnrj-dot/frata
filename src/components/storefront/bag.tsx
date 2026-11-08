@@ -132,9 +132,9 @@ export function BagButton({ checkoutHref, shopHref, label = 'Bag', count = ['Bag
   const n = items.reduce((a, i) => a + i.qty, 0)
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="whitespace-nowrap px-2 py-2 text-sm" aria-label={(n === 1 ? count[0] : count[1]).replace('{n}', String(n))}>{label}{n ? ` · ${n}` : ''}</button>
-      <dialog ref={ref} onClose={() => setOpen(false)} aria-label="Your bag"
-        className="m-0 ml-auto h-dvh max-h-none w-full max-w-md overflow-y-auto bg-store-paper p-0 text-store-ink backdrop:bg-black/40">
+      <button type="button" onClick={() => setOpen(true)} className="whitespace-nowrap px-2 py-2 text-sm" aria-label={(n === 1 ? count[0] : count[1]).replace('{n}', String(n))}>{label}{n ? <> · <span key={n} className="inline-block animate-count">{n}</span></> : ''}</button>
+      <dialog ref={ref} data-store-drawer onClose={() => setOpen(false)} aria-label="Your bag"
+        className="m-0 ml-auto h-dvh max-h-none w-full max-w-md overflow-y-auto bg-store-paper p-0 text-store-ink">
         {open && (
           <div className="p-5">
             <div className="mb-2 flex items-center justify-between"><h2 className="text-lg font-medium">Your bag</h2><button type="button" onClick={() => setOpen(false)} className="grid size-11 place-items-center text-xl" aria-label="Close bag">×</button></div>

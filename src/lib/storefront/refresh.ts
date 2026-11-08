@@ -10,7 +10,7 @@ export function refreshShop(tenantId: string, scope: 'shop' | 'catalogue') {
 /**
  * A shopper's order sold something out (speed review P11). Each refresh rebuilds the whole catalogue and every product
  * page, so at a festive drop one per sell-out kept the shop uncached: at most one per shop every 30 s from this
- * instance. Checkout always reads live stock, so a card that still shows the last piece for 30 s sells nothing twice.
+ * instance. Checkout always reads live stock, so a card that still shows the last piece (up to the 60 s backstop) sells nothing twice.
  */
 const lastSoldOut = new Map<string, number>()
 export function refreshSoldOut(tenantId: string, now = Date.now()) {

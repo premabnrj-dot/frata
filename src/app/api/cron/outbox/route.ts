@@ -23,17 +23,20 @@ export async function GET(request: Request) {
   try {
     const now = new Date()
     await eachLimited(await shopsToErase(new Date(now.getTime() - ERASE_AFTER_DAYS * 86_400_000)), SHOPS_AT_ONCE, async (tenantId) => {
-      erased += await eraseAbandoned(tenantId, now).catch((e) => { console.error('[cron] erase', tenantId, errName(e)); return 0 })
+      const n = await eraseAbandoned(tenantId, now).catch((e) => { console.error('[cron] erase', tenantId, errName(e)); return 0 })
+      erased += n // read after the await: four shops run at once
     })
   } catch (e) { console.error('[cron] erase list', errName(e)) }
   const { claimed, sent } = await drainOutbox(started + 45_000)
   // Razorpay and WhatsApp events not yet processed (each is processed at once on arrival; this is only the safety net).
   let events = 0
   await eachLimited(await shopsWithPendingEvents(), SHOPS_AT_ONCE, async (tenantId) => {
-    events += await processEvents(tenantId, 200).catch((e) => { console.error('[cron] events', tenantId, errName(e)); return 0 })
+    const n = await processEvents(tenantId, 200).catch((e) => { console.error('[cron] events', tenantId, errName(e)); return 0 })
+    events += n
   })
   await eachLimited(await shopsWithPendingEvents('whatsapp'), SHOPS_AT_ONCE, async (tenantId) => {
-    events += await processWhatsApp(tenantId, new Date()).catch((e) => { console.error('[cron] whatsapp', tenantId, errName(e)); return 0 })
+    const n = await processWhatsApp(tenantId, new Date()).catch((e) => { console.error('[cron] whatsapp', tenantId, errName(e)); return 0 })
+    events += n
   })
   return NextResponse.json({ claimed, sent, events, erased })
 }

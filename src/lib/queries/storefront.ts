@@ -3,7 +3,6 @@ import { and, asc, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
 import { revalidateTag, unstable_cache } from 'next/cache'
 import { cache } from 'react'
 import { LOW_STOCK_AT } from '@/domains/catalogue/availability'
-import { WIDTHS } from '@/domains/media/sizes'
 import type { Chart } from '@/domains/catalogue/size-charts'
 import type { PolicyFacts } from '@/domains/policies/render'
 import type { DeliveryRules } from '@/domains/checkout/delivery'
@@ -23,7 +22,7 @@ import type { Tx } from '@/lib/db'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 import { cleanRules, matches } from '@/domains/catalogue/collection-rules'
 import { productFactsIn } from './catalogue'
-import { dropBlank, expand, listPhotos, type CatalogueEntry } from '@/lib/storefront/catalogue-entry'
+import { compactCard, expand, photoPrefixOf, type CatalogueEntry } from '@/lib/storefront/catalogue-entry'
 
 // =============================================================================
 // WHAT A SHOPPER'S PAGE READS (storefront spec 2026-11-07, § Review findings).
@@ -219,24 +218,18 @@ async function coreCatalogue(tenantId: string, drafts: boolean): Promise<Catalog
       tx.select({ collectionId: collectionProducts.collectionId, productId: collectionProducts.productId }).from(collectionProducts).where(eq(collectionProducts.tenantId, tenantId)).orderBy(asc(collectionProducts.position)),
     ]) : [[], [], [], [], [], []] as const
     const show = await showcase(tx, tenantId)
-    const first = imgs[0]?.base ?? ''
-    const photoPrefix = first.startsWith('https://') ? first.slice(0, first.lastIndexOf('/') + 1) : ''
+    const photoPrefix = photoPrefixOf(imgs.map((i) => i.base))
     return {
       photoPrefix,
-      products: ps.map((p) => ({
+      offers: show.product,
+      products: ps.map((p) => compactCard({
         id: p.id, handle: p.handle, title: p.title, status: p.status, publishAt: p.publishAt ? p.publishAt.toISOString() : null, since: new Date(p.since).toISOString(), options: p.options,
         categoryId: p.categoryId, tags: p.tags,
-        // Lists show two photos at most (cover, and the second on hover) plus each colour's own first photo.
-        images: listPhotos(imgs.filter((i) => i.productId === p.id).map(({ productId: _, ...i }) => i)).map((im) => dropBlank({
-          ...im, base: photoPrefix && im.base.startsWith(photoPrefix) ? im.base.slice(photoPrefix.length) : im.base,
-          widths: im.widths.length === WIDTHS.length && im.widths.every((w, k) => w === WIDTHS[k]) ? null : im.widths,
-        }) as StoreImage),
-        variants: vs.filter((v) => v.productId === p.id).map(toVariant).map((v) => dropBlank({ ...v, sku: null })),
-        colours: cols.filter((c) => c.productId === p.id).map(({ productId: _, ...c }) => c).map(dropBlank),
+        images: imgs.filter((i) => i.productId === p.id).map(({ productId: _, ...i }) => i),
+        variants: vs.filter((v) => v.productId === p.id).map(toVariant),
+        colours: cols.filter((c) => c.productId === p.id).map(({ productId: _, ...c }) => c),
         attributes: Object.fromEntries(attrs.filter((a) => a.productId === p.id).map((a) => [a.attribute, a.values])),
-        offerIdx: show.indexFor(p.id),
-      })),
-      offers: show.product,
+      }, show.indexFor(p.id), photoPrefix)),
       collections: colls.map((c) => ({ ...c, kind: c.kind as 'manual' | 'auto', matchAll: c.matchAll === 1, rules: c.rules, productIds: members.filter((m) => m.collectionId === c.id).map((m) => m.productId) })),
     }
   })
