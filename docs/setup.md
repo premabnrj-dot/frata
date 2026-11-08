@@ -14,7 +14,9 @@ Checked 2026-11-06.
 
 To make room on the free plan, the old ekatan3d project **fpis was paused**
 (2026-11-06). Restore it from the Supabase dashboard if anything still needs it;
-the free plan then needs another project paused or an upgrade.
+the free plan then needs another project paused or an upgrade. The free limit is 2 active projects **per user**, counted
+across every organisation where the owner is Owner or Admin (Supabase billing docs, 2026-09-17), so a second Frrata
+database (analytics A·2) needs Pro or another project paused.
 
 ## Owner steps (secrets never pass through an agent)
 
@@ -117,4 +119,7 @@ Until these are set, Console › Apps › Messages says "WhatsApp isn't switched
   Razorpay webhook secret is made by Frata per shop (Settings → Online payments);
   there is no platform-wide Razorpay secret.
 - Supabase Pro before real merchants: free projects pause after a week idle and
-  have no backups. Vercel Pro too: Hobby is non-commercial.
+  have no backups. Vercel Pro too: Hobby is non-commercial, and allows 100 deployments a day, 100 builds an hour and one
+  at a time (the limit hit on 8 Nov), one WAF rate-limit rule per project, and cron once a day (±59 min; Vercel calls
+  Cron Jobs "legacy", moving to Schedules). Pro is $20 a month with one deploying seat and $20 of usage
+  (vercel.com/docs, 2026-07-15 to 09-16).

@@ -1,5 +1,5 @@
 # A · Shop analytics, built in
-Status: draft · Date: 2026-11-07 · Mockup: https://claude.ai/artifact/L8qEogLftNmucUJewuYAaK · Approved: —
+Status: draft (rechecked 2026-11-08: see `docs/specs/2026-11-08-analytics-a1.md` § What changed) · Date: 2026-11-07 · Mockup: https://claude.ai/artifact/L8qEogLftNmucUJewuYAaK · Approved: —
 
 Research: `docs/research/2026-11-07-analytics.md` (Shopify, India's law, how others build it; every fact dated there).
 
@@ -255,6 +255,15 @@ orders ──outbox (drained in after())──▶ Meta CAPI · GA4 MP · Google 
 - GA4 client-side gtag on shops: a merchant needs a GA4 feature that MP can't feed.
 - A cross-brand shopper graph: never without a decision superseding ADR-0002.
 - ClickHouse: raw events pass about 1B rows, or a rollup takes over 60 s.
+
+## Rechecked 2026-11-08 (what changed for A·2–A·4)
+- A·2 needs Supabase Pro (Free is 2 projects per user and 500 MB) and Vercel Pro or pg_cron for 15-minute rollups
+  (Hobby cron is daily; Cron Jobs are "legacy"). Hobby's one WAF rate-limit rule is shared with anything else needing one.
+- The beacon never requires `Sec-Fetch-Site` (unverified in WebKit and in-app browsers); it falls back to Origin.
+- A·3: Google Ads offline uploads move to the Data Manager API, which cannot retract; RTO retraction needs the Google
+  Ads API and a developer token (a business-track item). Meta CAPI facts unchanged.
+- A·4 follows Admin's settled pattern (offers O·4): `admin_*` policies with column grants, or a definer of aggregates.
+- Delivered and RTO dates are written by nothing yet: A·1 proposes marking them by hand until M2·2 Ship.
 
 ## Facts used
 See `docs/research/2026-11-07-analytics.md`; each fact there carries its source and date. Before A·3 is planned:

@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.4.0
+  version: 1.5.0
   verified: 2026-11-08
   decisions: [ADR-0006]
 ---
@@ -171,16 +171,30 @@ in razorpay.com/docs/sitemap.xml (most read 2026-10-08, a bulk rebuild).
   smb_message_echoes [V]. Media URLs live **5 minutes** and need the token [V]. Usernames: a BSUID, phone may be absent [V].
 - No agent concept in the Cloud API; policy requires a human escalation path; opt-in must name the
   business; opt-outs honoured on or off WhatsApp [V, policy 23 Sep 2026].
-- **Conversions API**: a website event's `event_time` may be up to 7 days old;
-  ONE older event fails the WHOLE request [V, Meta docs]. Send "Delivered" as a
-  custom event at delivery time; drop anything over 7 days before batching.
-  Timestamps in seconds, not ms.
+- **Conversions API** (rechecked 2026-11-08; Meta's server-event page shows no date, so treat as unverified-current):
+  `event_time` ≤ 7 days before sending, and ONE older event fails the WHOLE request; `event_name` may be a custom
+  event; `action_source` ∈ email, website, app, phone_call, chat, physical_store, system_generated,
+  business_messaging, other; `event_source_url` required for website events. Send "Delivered" as a custom event at
+  delivery time; drop anything over 7 days before batching; seconds, not ms. Which `action_source` fits a delivery is
+  not documented [U]. Meta-hosted one-click CAPI (web events only) since 15 Apr 2026; no India-specific CAPI rule
+  found [S, 2026-11-08].
 - Instagram India: no in-app checkout; product tags click through to the site;
   shop eligibility uneven; commerce review up to 4 weeks [V/S]. DMs → assisted
   order creation, not automatic. Reels creator affiliate links launched in
   India in 2026 (3–15% commission) [S].
 
-## Google — checked 2026-11-06
+## Google — checked 2026-11-06 (Ads and GA4 rechecked 2026-11-08 for analytics A·3)
+
+- **Offline click conversions:** since 15 Jun 2026 the Google Ads API's `UploadClickConversions` fails
+  (`CUSTOMER_NOT_ALLOWLISTED_FOR_THIS_FEATURE`) for a project that did not upload between 17 Dec 2025 and 15 Jun 2026;
+  new integrations use the **Data Manager API** (no developer token) [V developer docs, undated; Ads developer blog
+  2026-05-15]. The Help Center says "January 2026 through June 2026"; the developer docs win.
+- **Retractions:** the Data Manager API "doesn't support conversion retractions" (a restatement keeps the count). RETRACTION
+  and RESTATEMENT stay on the Google Ads API (`ConversionAdjustmentUploadService`, a developer token; wait 4–6 h after
+  creating a conversion action) [V content, undated, read 2026-11-08]. Whether the Ads API can retract a conversion sent
+  through the Data Manager API: [U]. **So taking back an RTO order in Google Ads needs a developer token.**
+- **GA4 Measurement Protocol `refund`:** `transaction_id` required; `currency` required with `value`; items optional
+  (recommended for item-level refunds); partial-refund rules undocumented [V content, page date not visible, 2026-11-08].
 
 - Content API for Shopping sunset 18 Aug 2026, degradation from 1 Sep → build
   only on **Merchant API v1** [V, Google].
@@ -188,9 +202,14 @@ in razorpay.com/docs/sitemap.xml (most read 2026-10-08, a bulk rebuild).
   token with brand verification [U, founder].
 - Never send Google user data to ad platforms (Google API policy) [U, founder].
 
-## Privacy — checked 2026-11-06
+## Privacy — checked 2026-11-06 (rechecked 2026-11-08)
 
-DPDP Rules notified 13 Nov 2025; consent managers from 13 Nov 2026; notice,
+DPDP Rules: gazette G.S.R. 846(E) dated 13 Nov 2025 [S], "notified on 14 November 2025" per PIB's backgrounder
+(2025-11-17) [V]; 18-month phased compliance. No amendment touching Rule 8(3) (one-year retention of traffic data and
+logs) or cookies, and no MeitY cookie FAQ, found [U, 2026-11-08]. The DPDP (Removal of Difficulties) Order 2026,
+S.O. 5458(E) of 5 Oct 2026, fixes wording in s.9(1) and s.10(2)(c)(ii) only [S, Legal500 2026-11-02]. The Board had no
+Chairperson or Members as of 10 Sep 2026 [S, LiveLaw].
+Earlier: consent managers from 13 Nov 2026; notice,
 consent, processor contracts and 72 h breach reporting from 13 May 2027 [V].
 Frata is a processor for each merchant's shoppers; using one merchant's shopper
 data for another needs a separate decision (CLAUDE.md § deliberately absent).

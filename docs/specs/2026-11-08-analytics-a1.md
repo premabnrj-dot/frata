@@ -35,17 +35,44 @@ Measure: (a) merchants who open Analytics in a week; (b) the share of orders wit
 After an Instagram post or a WhatsApp broadcast, a founder on a phone sees which source brought orders, how many were
 delivered or came back, and what each left in rupees, and makes a tagged link for the next post.
 
-## Research (UX refresh, 8 Nov)
-See § Facts used for dates. Summary of what is taken:
-- (filled from the UX research pass)
+## Research (UX refresh, 8 Nov; each source dated on the page, "NCSF" = no current source found)
+- **Shopify Analytics:**
+  - Taken: plain definitions of Direct and Unknown and of the one attribution rule (help.shopify.com marketing reports,
+    content dated 2026-10-18); "reports that include today may change" (traffic reports, 2026-10-18); insights only for
+    shops averaging 10+ orders a week, a sample floor (changelog 2026-04-20); annotations for data delays and definition
+    changes (changelog 2026-05-05).
+  - Avoid: five attribution models in a menu, whose default its own docs disagree on (2026-10-18); numbers that jump
+    after a reclassification without saying so (channels 2026-10-18, sessions 2026-09-21).
+- **Shiprocket seller dashboard:** Taken: every view compared with the previous period and filterable by payment
+  mode; an RTO and NDR section with reasons (blog 2026-08-24); mobile NDR rows with one-tap actions (2026-05-01).
+  Avoid: a "recovery rate" with no definition (2026-08-24). Razorpay's RTO page shows how much delivery data it has
+  ("Delivery Data"): NCSF (undated), taken as an idea only.
+- **Plausible:** Taken: channels, sources and campaigns as one card where a channel opens its sources; "Direct / None"
+  explained as dark traffic from messengers and apps, where WhatsApp lands (docs updated 2026-11-05); a period still
+  running compared with the same hours before (2026-09-09). Avoid: the comparison only on hover, which a phone cannot do.
+- **Fathom:** Taken: the comparison value shown, not only its date (changelog 2026-03-04). Avoid: cross-tabs for power users.
+- **Research:** text-only uncertainty works as a disclaimer, intervals are misread; show frequencies and a summary with
+  drill-down (Frontiers in Digital Health, 2026-07-30). Build each screen around one question; every figure implies a
+  next step (Smashing Magazine, 2026-08-26). NN/g and Baymard: NCSF for owner dashboards.
+- **Link builders:** Shopify's shareable links: destination, then tags, Copy (blog 2026-10-17); lowercase values with
+  one separator, because a typo splits a row. Avoid free-text source and medium.
+- **Rules taken into the design:** one question first (₹ kept, then orders → delivered → came back → on the way); one
+  primary action (Make a link); one fixed attribution rule said in one sentence; pending never shown as zero or as
+  RTO; under 30 orders, counts ("1 of 13 came back") instead of rates; every rate names what it is a share of; how
+  much of the data is known ("source known 94%"); sources as cards on a phone with the change inline, never on hover;
+  presets write lowercase tags and the merchant names only the campaign.
+- **Not taken now:** a QR code and a short link in Make a link (a QR library; a redirect service): if merchants ask.
 
 ## Design (mockup)
 ### Console › Analytics (new nav item, under Orders)
 1. **Period:** 7, 30 or 90 days, against the period before it ("vs the 30 days before"). IST days.
-2. **The strip, four numbers:** orders, sales, delivered rate (with RTO rate beside it), ₹ kept per delivered order.
-   Each shows the change from the period before. Under 30 orders: "too few to judge" instead of a change.
-3. **Where orders came from:** one row per source, ranked by ₹ kept (by orders until any outcome is known): orders,
-   sales, COD share, delivered, RTO, ₹ kept per delivered order. On a phone, one card per source.
+2. **The one question first:** ₹ kept on delivered orders (with the change and ₹ per delivered order), then one line:
+   orders → delivered · came back (a share of the orders with an outcome) · still on the way. Then four numbers:
+   orders, sales, came back (RTO) and "source known" (how many orders carry a source). Each with the change from the
+   period before. A period that includes today says "so far" and that today's numbers still change.
+3. **Where orders came from:** one row per source, most ₹ kept first (by orders until any outcome is known): orders,
+   sales, COD share, delivered, came back (rate of those with an outcome), ₹ kept and ₹ kept each. Under 30 orders a
+   source shows counts ("1 of 13 came back · too few to judge"), never a rate. On a phone, one card per source.
 4. **A source opens its page:** its campaigns (from the link's name) and its last 50 orders, each opening the order.
 5. **Returns by pincode:** the pincodes with the most RTO among decided orders (at least 5 decided), with the rate.
 6. **Make a link** (the page's one primary action): where it will be shared (Instagram bio, a story, a WhatsApp
@@ -106,5 +133,16 @@ See § Facts used for dates. Summary of what is taken:
 - An orders-list filter by source: if merchants ask for it twice.
 - Editing a source by hand: if a merchant shows a source is wrong.
 
-## Facts used
-- (from the platform facts pass, each with its source and date)
+## Facts used (rechecked 2026-11-08; recorded in `frata-integrations` 1.5.0 and `docs/setup.md`)
+A·1 rests on none of them: it reads the main database and calls nothing outside. They bear on A·2 and A·3:
+- Supabase Free: 2 active projects per user across organisations, 500 MB, pauses after a week idle; Pro from $25 with
+  one Micro (Supabase docs, commits 2026-09-17 to 11-03). A·2's separate database needs Pro.
+- Vercel Hobby: non-commercial; 100 deployments a day; one WAF rate-limit rule per project with 1M allowed requests;
+  cron once a day and Cron Jobs now "legacy". Pro $20 a month; WAF rate limiting $0.55 per 1M in bom1 (vercel.com/docs,
+  2026-06-16 to 09-16). A·2's 15-minute rollups need Pro or Supabase's pg_cron (Free availability unconfirmed).
+- `Sec-Fetch-Site` on a beacon: specified, but unverified in WebKit and the Instagram in-app browser: A·2 never
+  requires it (falls back to Origin).
+- Google Ads: new offline conversion uploads go through the Data Manager API, which cannot retract; an RTO retraction
+  needs the Google Ads API and a developer token (developer docs, read 2026-11-08; blog 2026-05-15). This adds a
+  business-track item before A·3.
+- DPDP: no change to Rule 8(3) or cookies found (2026-11-08).
