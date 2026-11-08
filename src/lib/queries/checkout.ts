@@ -1,12 +1,15 @@
 import 'server-only'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import type { ShopRules, VariantRow } from '@/domains/checkout/quote'
+import { DISCOUNT_STYLES, type DiscountStyle, type DiscountTerms } from '@/domains/checkout/discounts'
 import type { Tx } from '@/lib/db'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { productImages, products, variants } from '@/lib/db/schema-catalogue'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { holdingSql, momentColumns, owedSql, standingSql } from '@/lib/db/order-predicates'
+import { liveDiscountSql, useOfRowSql } from '@/lib/db/discount-predicates'
+import { discountCodes, discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import { canTakeOnline, keysFor } from '@/lib/payments/keys'
 
 // =============================================================================
@@ -62,8 +65,30 @@ export async function checkoutShop(tx: Tx, tenantId: string): Promise<CheckoutSh
   }
 }
 
+/**
+ * The shop's live offers as the engine reads them: terms only — never a limit, a budget or a count leaves this
+ * function (ADR-0003). An offer whose limit or budget is already reached is left out, so the bag never shows what
+ * placement would refuse; placement re-counts under a lock and stays the authority (plan review 12).
+ */
+export async function liveOffers(tx: Tx, tenantId: string, now: Date): Promise<DiscountTerms[]> {
+  const rows = await tx.select({
+    id: discounts.id, title: discounts.title, style: discounts.style, percentBps: discounts.percentBps, amountOff: discounts.amountOff, cap: discounts.cap,
+    minSubtotal: discounts.minSubtotal, combinesWithPayment: discounts.combinesWithPayment, listed: discounts.listed, code: discountCodes.code, codeId: discountCodes.id,
+    full: sql<boolean>`(${discounts.limitTotal} is not null or ${discounts.budget} is not null) and exists (
+      select 1 from (select count(*) n, coalesce(sum(od.amount), 0) given from ${orderDiscounts} od join ${orders} o on o.tenant_id = od.tenant_id and o.id = od.order_id
+        where od.tenant_id = ${tenantId} and od.discount_id = "discounts"."id" and ${useOfRowSql(now)}) u
+      where u.n >= coalesce(${discounts.limitTotal}, 2147483647) or u.given >= coalesce(${discounts.budget}, 9223372036854775807))`,
+  }).from(discounts)
+    .leftJoin(discountCodes, and(eq(discountCodes.tenantId, discounts.tenantId), eq(discountCodes.discountId, discounts.id)))
+    .where(and(eq(discounts.tenantId, tenantId), liveDiscountSql(now)))
+  return rows.filter((r) => !r.full && (DISCOUNT_STYLES as readonly string[]).includes(r.style)).map((r) => ({
+    id: r.id, title: r.title, style: r.style as DiscountStyle, percentBps: r.percentBps, amountOff: r.amountOff === null ? null : Number(r.amountOff), cap: r.cap === null ? null : Number(r.cap),
+    minSubtotal: Number(r.minSubtotal), combinesWithPayment: r.combinesWithPayment, listed: r.listed, code: r.code ? r.code.toUpperCase() : null, codeId: r.codeId,
+  }))
+}
+
 export const quoteData = (tenantId: string, ids: string[], now: Date) =>
-  withTenant(tenantId, async (tx) => ({ shop: await checkoutShop(tx, tenantId), rows: await variantRows(tx, tenantId, ids, now) }))
+  withTenant(tenantId, async (tx) => ({ shop: await checkoutShop(tx, tenantId), rows: await variantRows(tx, tenantId, ids, now), offers: await liveOffers(tx, tenantId, now) }))
 
 /** What the shopper's order page shows — masked address and phone (owner call 4). Found by the link token's hash only. */
 export async function orderPage(tx: Tx, tenantId: string, tokenHash: string) {

@@ -1,7 +1,10 @@
 import 'server-only'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { quote, type Quote } from '@/domains/checkout/quote'
-import { charged } from '@/domains/orders/amounts'
+import { codFor } from '@/domains/checkout/delivery'
+import { reprice } from '@/domains/orders/amounts'
+import { discountUseSql } from '@/lib/db/order-predicates'
+import { discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import type { Tx } from '@/lib/db'
 import { webhookEvents } from '@/lib/db/schema'
 import { orderLines, orders } from '@/lib/db/schema-orders'
@@ -12,6 +15,7 @@ import { keysFor, markEvent } from '@/lib/payments/keys'
 import { checkoutSignatureOk, orderPayments, toPayment } from '@/lib/payments/razorpay'
 import { refreshShop } from '@/lib/queries/storefront'
 import { HOLD_MINUTES, startPayment, takeStock, type Pay } from './place'
+import { storedPricing, writeReprice } from './reprice'
 
 // =============================================================================
 // FILE: src/lib/orders/payment.ts
@@ -27,31 +31,29 @@ type OrderKey = { id: string; tenantId: string }
 
 /**
  * Record the payment once and take the stock of any line not taken yet (none, after a switch to COD: takeStock
- * stamps per line). A capture after a switch: the shopper paid the online total, so the COD fee and its GST come
- * off the stored order and its lines' shares (amounts.charged, from the stored rates) — but ONLY before packing.
+ * stamps per line). A capture after a switch: the shopper paid the online total, so the order is priced again as
+ * prepaid from its stored lines and offers (amounts.reprice: the COD fee off, the pay-online saving back) and every
+ * money column rewritten together (reprice.ts) — but ONLY before packing.
  * Once packed, its invoice is issued under its number and is never rewritten (GST Rule 46; unit-economics review
  * 2026-11-07): the order keeps its figures and says "paid after packing" (paidAfterPacking) for a person to settle.
  */
 export async function markPaid(tx: Tx, o: OrderKey, p: { paymentId: string; fee?: number | null; tax?: number | null }, soldOut: string[] = []): Promise<'paid' | 'already'> {
   const r = await tx.update(orders).set({ paidAt: sql`now()`, razorpayPaymentId: p.paymentId, ...(p.fee != null ? { gatewayFee: p.fee, gatewayTax: p.tax ?? null } : {}) })
     .where(and(eq(orders.tenantId, o.tenantId), eq(orders.id, o.id), isNull(orders.paidAt)))
-    .returning({ switchedAt: orders.switchedToCodAt, packedAt: orders.packedAt, codCharge: orders.codCharge, subtotal: orders.subtotal, shipping: orders.shipping, pricesIncludeGst: orders.pricesIncludeGst, checkout: orders.checkout })
+    .returning({ switchedAt: orders.switchedToCodAt, packedAt: orders.packedAt, shipping: orders.shipping, pricesIncludeGst: orders.pricesIncludeGst, sellerGstin: orders.sellerGstin, checkout: orders.checkout })
   if (!r.length) {
     // Already paid (the other path won): the fee may still be news.
     if (p.fee != null) await tx.update(orders).set({ gatewayFee: p.fee, gatewayTax: p.tax ?? null }).where(and(eq(orders.tenantId, o.tenantId), eq(orders.id, o.id), isNull(orders.gatewayFee)))
     return 'already'
   }
   const paid = r[0]!
-  if (paid.switchedAt && Number(paid.codCharge) > 0 && !paid.packedAt) {
-    const lines = await tx.select({ id: orderLines.id, taxableValue: orderLines.taxableValue, gst: orderLines.gst, gstBps: orderLines.gstBps }).from(orderLines)
-      .where(and(eq(orderLines.tenantId, o.tenantId), eq(orderLines.orderId, o.id))).orderBy(orderLines.position)
-    const ls = lines.map((l) => ({ ...l, taxableValue: Number(l.taxableValue), gst: Number(l.gst) }))
-    const now = charged(ls, { subtotal: Number(paid.subtotal), shipping: Number(paid.shipping), pricesIncludeGst: paid.pricesIncludeGst }, 0)
+  if (paid.switchedAt && !paid.packedAt) {
+    const sp = await storedPricing(tx, o.tenantId, o.id, { shipping: Number(paid.shipping), sellerGstin: paid.sellerGstin, pricesIncludeGst: paid.pricesIncludeGst })
+    const r = reprice(sp, 'prepaid', 0)
     // What the shopper paid is the online total they were shown; a difference is a bug to see, not to hide.
-    const shown = Number((paid.checkout as { onlineTotal?: number } | null)?.onlineTotal ?? now.total)
-    if (shown !== now.total) console.error('[markPaid] recomputed online total differs from the one shown', { order: o.id, shown, now: now.total })
-    await tx.update(orders).set({ codCharge: 0, gstTotal: now.gstTotal, total: now.total }).where(and(eq(orders.tenantId, o.tenantId), eq(orders.id, o.id)))
-    for (const [i, l] of lines.entries()) await tx.update(orderLines).set(now.shares[i]!).where(and(eq(orderLines.tenantId, o.tenantId), eq(orderLines.id, l.id)))
+    const shown = Number((paid.checkout as { onlineTotal?: number } | null)?.onlineTotal ?? r.total)
+    if (shown !== r.total) console.error('[markPaid] recomputed online total differs from the one shown', { order: o.id, shown, now: r.total })
+    await writeReprice(tx, o.tenantId, o.id, sp.lineIds, r)
   }
   await takeStock(tx, o.tenantId, o.id, 'in_stock', soldOut)
   return 'paid'
@@ -60,7 +62,7 @@ export async function markPaid(tx: Tx, o: OrderKey, p: { paymentId: string; fee?
 const byToken = async (tx: Tx, tenantId: string, token: string) => {
   if (!/^[A-Za-z0-9_-]{22}$/.test(token)) return null
   const [o] = await tx.select({ id: orders.id, method: orders.paymentMethod, rzp: orders.razorpayOrderId, paidAt: orders.paidAt, cancelledAt: orders.cancelledAt, switchedAt: orders.switchedToCodAt,
-    payBy: orders.payBy, subtotal: orders.subtotal, total: orders.total, pincode: orders.pincode })
+    payBy: orders.payBy, subtotal: orders.subtotal, total: orders.total, pincode: orders.pincode, phone: orders.phone, shipping: orders.shipping, sellerGstin: orders.sellerGstin, pricesIncludeGst: orders.pricesIncludeGst })
     .from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.tokenHash, tokenHash(token))))
   return o ?? null
 }
@@ -88,11 +90,14 @@ export async function paymentFailed(tenantId: string, token: string): Promise<vo
   })
 }
 
-export type SwitchResult = { kind: 'switched'; total: number } | { kind: 'paid' } | { kind: 'changed'; quote: Quote } | { kind: 'refused'; status: 404 | 409 | 422; error: string }
+export type SwitchResult = { kind: 'switched'; total: number } | { kind: 'paid' } | { kind: 'changed'; quote: Quote }
+  | { kind: 'refused'; status: 404 | 409 | 422; error: string; codTotal?: number }
 
 /**
  * Pay on delivery instead, for the SAME order. Asks Razorpay first: a payment authorized or captured means it is
- * paid (or about to be), and nothing is switched. The COD total must be the one the shopper saw.
+ * paid (or about to be), and nothing is switched. The COD total is the order priced again from its stored lines and
+ * offers (the pay-online saving comes off; the COD fee and its limits from today's settings, on the bag after the
+ * order offer) and must be the one the shopper saw; if not, the reply carries it so the shopper can see it first.
  */
 export async function switchToCod(tenantId: string, token: string, expectedTotal: number, now = new Date()): Promise<SwitchResult> {
   const pre = await withTenant(tenantId, async (tx) => ({ o: await byToken(tx, tenantId, token), keys: await keysFor(tx, tenantId) }))
@@ -124,24 +129,31 @@ export async function switchToCod(tenantId: string, token: string, expectedTotal
     // Re-priced against today's rows, this order's own hold excluded (it is the one switching).
     const rows = (await variantRows(tx, tenantId, bag.map((b) => b.variantId), now, { lock: true }))
       .map((r) => ({ ...r, held: o.payBy && o.payBy > now ? Math.max(0, r.held - (bag.find((b) => b.variantId === r.variantId)?.qty ?? 0)) : r.held }))
+    // Today's rows decide only whether every piece can still be sold at its price; the money is the stored order's.
     const q = quote(bag, rows, shop, now, o.pincode)
     if (q.lines.some((l) => l.problem) || q.subtotal !== Number(o.subtotal)) return { kind: 'changed', quote: q }
-    if (!q.cod.offer.offered) return { kind: 'refused', status: 422, error: 'Pay on delivery is not offered for this order.' }
-    if (q.cod.total !== expectedTotal) return { kind: 'changed', quote: q }
-    const switched = await tx.update(orders).set({ switchedToCodAt: sql`now()`, codCharge: q.cod.codCharge, gstTotal: q.cod.gst, total: q.cod.total, payBy: null })
+    const sp = await storedPricing(tx, tenantId, o.id, { shipping: Number(o.shipping), sellerGstin: o.sellerGstin, pricesIncludeGst: o.pricesIncludeGst })
+    const offer = codFor(Number(o.subtotal) - (sp.applied.find((a) => a.class === 'order')?.amount ?? 0), shop, o.pincode)
+    if (!offer.offered) return { kind: 'refused', status: 422, error: 'Pay on delivery is not offered for this order.' }
+    const r = reprice(sp, 'cod', offer.charge)
+    if (r.total !== expectedTotal) return { kind: 'refused', status: 409, error: 'The Pay on delivery total is different. Check it and try again.', codTotal: r.total }
+    const switched = await tx.update(orders).set({ switchedToCodAt: sql`now()`, payBy: null })
       .where(and(eq(orders.tenantId, tenantId), eq(orders.id, o.id), isNull(orders.paidAt), isNull(orders.switchedToCodAt))).returning({ id: orders.id })
     // Paid or switched in the meantime (another tab, a capture): nothing more to do here (plan review 2026-11-07).
     if (!switched.length) return { kind: 'refused', status: 409, error: 'This order was already paid or moved to Pay on delivery. Reload the page.' }
-    // Every line was re-priced unchanged (else 'changed' above), so shares[i] is lines[i]'s.
-    for (const [i, l] of lines.entries()) await tx.update(orderLines).set(q.cod.shares[i]!).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.id, l.id)))
+    await writeReprice(tx, tenantId, o.id, sp.lineIds, r)
     await takeStock(tx, tenantId, o.id, 'in_stock', soldOut)
-    return { kind: 'switched', total: q.cod.total }
+    return { kind: 'switched', total: r.total }
   })
   if (soldOut.length) refreshShop(tenantId, 'catalogue')
   return r
 }
 
-/** Try paying online again on the same order: the hold is renewed only if every line can still be sold. */
+/**
+ * Try paying online again on the same order: the hold is renewed only if every line can still be sold and every
+ * limited offer the order got still fits (its use was given back when the hold ran out). Never repriced: the amount
+ * Razorpay asks for stays the online total the shopper was shown (offers plan review 3).
+ */
 export async function retryPayment(tenantId: string, token: string, now = new Date()): Promise<{ ok: true; pay: Pay } | { ok: false; status: 404 | 409 | 422; error: string }> {
   const id = await withTenant(tenantId, async (tx) => {
     const o = await byToken(tx, tenantId, token)
@@ -152,7 +164,8 @@ export async function retryPayment(tenantId: string, token: string, now = new Da
       const shop = await checkoutShop(tx, tenantId)
       if (!shop?.open) return 'closed' as const
       const q = quote(lines.filter((l) => l.variantId).map((l) => ({ variantId: l.variantId!, qty: l.qty })), rows, shop, now)
-      if (q.lines.some((l) => l.problem) || q.prepaid.total !== Number((await tx.select({ t: orders.checkout }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.id, o.id))))[0]?.t?.onlineTotal ?? -1)) return 'gone' as const
+      if (q.lines.some((l) => l.problem) || q.subtotal !== Number(o.subtotal)) return 'gone' as const
+      if (!(await offersStillFit(tx, tenantId, o.id, o.phone, now))) return 'offer' as const
       await tx.update(orders).set({ payBy: new Date(now.getTime() + HOLD_MINUTES * 60_000) }).where(and(eq(orders.tenantId, tenantId), eq(orders.id, o.id)))
     }
     return o.id
@@ -160,8 +173,29 @@ export async function retryPayment(tenantId: string, token: string, now = new Da
   if (id === null) return { ok: false, status: 404, error: 'This order is not waiting for an online payment.' }
   if (id === 'closed') return { ok: false, status: 404, error: 'This shop is not taking orders right now.' }
   if (id === 'gone') return { ok: false, status: 409, error: 'Something in this order sold out or changed price while you were away. Go back to your bag.' }
+  if (id === 'offer') return { ok: false, status: 409, error: 'This offer ran out while you were away. Go back to your bag.' }
   const pay = await startPayment(tenantId, id)
   return pay.ok ? pay : { ok: false, status: 422, error: pay.error }
+}
+
+/** Whether each limited offer the order got still has room for it (the order's own use excluded), under a lock. */
+async function offersStillFit(tx: Tx, tenantId: string, orderId: string, phone: string, now: Date): Promise<boolean> {
+  const mine = await tx.select({ discountId: orderDiscounts.discountId, class: orderDiscounts.class, amount: orderDiscounts.amount }).from(orderDiscounts)
+    .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, orderId)))
+  if (!mine.length) return true
+  const limited = await tx.execute<{ id: string; limit_total: number | null; limit_per_phone: number | null; budget: string | null }>(sql`
+    select id, limit_total, limit_per_phone, budget from ${discounts} where tenant_id = ${tenantId} and id in ${mine.map((m) => m.discountId)}
+      and (limit_total is not null or limit_per_phone is not null or budget is not null) order by id for update`)
+  for (const l of limited) {
+    const own = mine.find((m) => m.discountId === l.id)!
+    const [u] = await tx.execute<{ n: number; given: string; phone: number }>(sql`
+      select count(*)::int n, coalesce(sum(od.amount), 0)::bigint given, (count(*) filter (where o.phone = ${phone}))::int phone
+        from ${orderDiscounts} od join ${orders} o on o.tenant_id = od.tenant_id and o.id = od.order_id
+       where od.tenant_id = ${tenantId} and od.discount_id = ${l.id} and od.order_id <> ${orderId} and ${discountUseSql(now, own.class === 'payment' ? 'payment' : 'order', 'o')}`)
+    if ((l.limit_total !== null && (u?.n ?? 0) + 1 > l.limit_total) || (l.limit_per_phone !== null && (u?.phone ?? 0) + 1 > l.limit_per_phone)
+      || (l.budget !== null && Number(u?.given ?? 0) + Number(own.amount) > Number(l.budget))) return false
+  }
+  return true
 }
 
 /**

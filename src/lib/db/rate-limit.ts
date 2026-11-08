@@ -26,7 +26,24 @@ export const LIMITS = {
   placeOrderIp: { action: 'shop_place:ip', max: 30, windowSeconds: 3600 },
   placeOrderPhone: { action: 'shop_place:phone', max: 5, windowSeconds: 3600 },
   payIp: { action: 'shop_pay:ip', max: 60, windowSeconds: 600 },
+  // Offer codes that did not apply, per shop and IP ("<tenant>:<ip>"): guessing stops; fail closed. No per-shop block,
+  // so one guesser cannot switch off a shop's real codes (offers plan review 11).
+  codeIp: { action: 'shop_code:ip', max: 20, windowSeconds: 600 },
 } as const satisfies Record<string, Limit>
+
+/** Whether `subject` is already past the limit, WITHOUT counting an attempt. `failClosed`: true when the counter cannot be read. */
+export async function overLimit(limit: Limit, subject: string, now = new Date(), failClosed = false): Promise<boolean> {
+  const key = createHash('sha256').update(`${limit.action}:${subject.trim().toLowerCase()}`).digest('hex')
+  const windowMs = limit.windowSeconds * 1000
+  const windowStart = new Date(Math.floor(now.getTime() / windowMs) * windowMs)
+  try {
+    const rows = await db().execute<{ n: number }>(sql`select n from rate_limits where key = ${key} and window_start = ${windowStart.toISOString()}::timestamptz`)
+    return (rows[0]?.n ?? 0) >= limit.max
+  } catch (err) {
+    console.error('[overLimit]', limit.action, err instanceof Error ? err.message : err)
+    return failClosed
+  }
+}
 
 /** Counts one attempt; true when it is within the limit. `failClosed`: refuse when the counter cannot be read (placing orders). */
 export async function withinLimit(limit: Limit, subject: string, now = new Date(), failClosed = false): Promise<boolean> {

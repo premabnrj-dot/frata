@@ -96,6 +96,14 @@ export const isStanding = (o: Pick<OrderMoments, 'paymentMethod' | 'paidAt' | 's
 export const isHolding = (o: Pick<OrderMoments, 'paymentMethod' | 'paidAt' | 'switchedToCodAt' | 'cancelledAt' | 'payBy'>, now: Date) =>
   o.paymentMethod === 'prepaid' && !o.paidAt && !o.switchedToCodAt && !o.cancelledAt && !!o.payBy && o.payBy > now
 
+/**
+ * Whether an order is using an offer of `cls` right now (offers: limits, budgets, ₹ given). Order and shipping
+ * offers: standing or holding (an abandoned online order gives its use back). The pay-online saving: paid online,
+ * or still holding — a switch to COD gives it back (docs/plans/2026-11-08-offers.md, plan review 7).
+ */
+export const usesDiscount = (o: Pick<OrderMoments, 'paymentMethod' | 'paidAt' | 'switchedToCodAt' | 'cancelledAt' | 'payBy'>, cls: 'order' | 'shipping' | 'payment', now: Date) =>
+  cls === 'payment' ? (!!o.paidAt && !o.cancelledAt) || isHolding(o, now) : isStanding(o) || isHolding(o, now)
+
 /** States a merchant must act on today. */
 export const needsAction = (s: OrderState) => s === 'unconfirmed' || s === 'held' || s === 'refund_due' || s === 'ndr'
 

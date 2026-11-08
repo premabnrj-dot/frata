@@ -2,6 +2,7 @@ import 'server-only'
 import { randomUUID } from 'node:crypto'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import type { CleanAddress } from '@/domains/checkout/address'
+import { amountFor, type DiscountTerms } from '@/domains/checkout/discounts'
 import { quote, totalFor, type BagLine, type Quote } from '@/domains/checkout/quote'
 import { gstinState } from '@/domains/tax/gst'
 import type { Tx } from '@/lib/db'
@@ -10,7 +11,9 @@ import { variants } from '@/lib/db/schema-catalogue'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { orderToken, sha256, tokenHash } from '@/lib/crypto/secret-box'
-import { checkoutShop, variantRows } from '@/lib/queries/checkout'
+import { checkoutShop, liveOffers, variantRows } from '@/lib/queries/checkout'
+import { useOfRowSql } from '@/lib/db/discount-predicates'
+import { discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import { keysFor } from '@/lib/payments/keys'
 import { createOrder } from '@/lib/payments/razorpay'
 import { refreshShop } from '@/lib/queries/storefront'
@@ -28,12 +31,19 @@ import { refreshShop } from '@/lib/queries/storefront'
 // what the shopper saw is refused with the new quote; then the order number,
 // the order and its lines. Pay on delivery takes the stock now; an online
 // order holds it (derived from pay_by) and takes it when the payment lands.
+//
+// Offers (docs/plans/2026-11-08-offers.md): the live offers re-read here; every offer this bag
+// could get that has a limit or a budget locked in id order and counted (discountUseSql); one
+// over its limit, its per-phone limit or its budget simply drops out — the shopper sees the
+// usual "changed" with the new total, the same answer whichever limit it was (tenancy review).
 // =============================================================================
 
 export const HOLD_MINUTES = 20 // owner call 3
 
 export type PlaceInput = {
   idempotencyKey: string; bag: BagLine[]; address: CleanAddress; method: 'cod' | 'prepaid'; expectedTotal: number
+  /** The code the shopper typed, if any (one per order). */
+  code?: string | null
   /** What the shopper was shown and did, for the hypotheses (frata-unit-economics): first card tapped, attribution. */
   facts: { firstMethod?: 'cod' | 'prepaid' | null; attribution?: Record<string, string> }
 }
@@ -44,7 +54,7 @@ export type PlaceResult =
   | { kind: 'changed'; quote: Quote }
   | { kind: 'refused'; status: 404 | 409 | 422; error: string; quote?: Quote }
 
-const requestHashOf = (i: PlaceInput) => sha256(JSON.stringify([i.address.phone, i.method, [...i.bag].map((b) => [b.variantId, b.qty]).sort()]))
+const requestHashOf = (i: PlaceInput) => sha256(JSON.stringify([i.address.phone, i.method, [...i.bag].map((b) => [b.variantId, b.qty]).sort(), ...(i.code ? [i.code.trim().toUpperCase()] : [])]))
 
 export async function placeOrder(tenantId: string, input: PlaceInput, now = new Date()): Promise<PlaceResult> {
   const soldOut: string[] = []
@@ -64,7 +74,8 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     if (input.method === 'prepaid' && !shop.online) return { kind: 'refused', status: 422, error: 'Online payment is not available at this shop right now. Pay on delivery instead.' }
 
     const rows = await variantRows(tx, tenantId, input.bag.map((b) => b.variantId), now, { lock: true })
-    const q = quote(input.bag, rows, shop, now, input.address.pincode)
+    const offers = await fitOffers(tx, tenantId, await liveOffers(tx, tenantId, now), (o) => quote(input.bag, rows, shop, now, input.address.pincode, { offers: o, code: input.code }), input, now)
+    const q = quote(input.bag, rows, shop, now, input.address.pincode, { offers, code: input.code })
     if (q.empty) return { kind: 'refused', status: 422, error: 'Nothing in your bag can be bought right now.', quote: q }
     if (q.missing.length || q.lines.some((l) => l.problem) || totalFor(q, input.method) !== input.expectedTotal) return { kind: 'changed', quote: q }
     if (input.method === 'cod' && !q.cod.offer.offered) return { kind: 'refused', status: 422, error: 'Pay on delivery is not offered for this order. Pay online instead.', quote: q }
@@ -85,7 +96,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
 
     await tx.insert(orders).values({
       id, tenantId, number, paymentMethod: input.method,
-      subtotal: q.subtotal, shipping: q.shipping, codCharge: m.codCharge, gstTotal: m.gst, total: m.total, pricesIncludeGst: shop.pricesIncludeGst,
+      subtotal: q.subtotal, discount: m.discount, shipping: q.shipping, codCharge: m.codCharge, gstTotal: m.gst, total: m.total, pricesIncludeGst: shop.pricesIncludeGst,
       merchandiseNet: m.merchandiseNet, cogs,
       customerName: input.address.name, phone: input.address.phone, addressLine: input.address.addressLine, area: input.address.area, landmark: input.address.landmark,
       pincode: input.address.pincode, city: input.address.city, state: input.address.state, supplyState: input.address.state, shopState: gstinState(shop.gstin), sellerGstin: shop.gstin,
@@ -104,6 +115,11 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
       hsn: l.hsn, unitCost: costs.get(l.variantId) ?? null,
       kind: l.kind, shipsBy: l.shipsBy, leadMinDays: l.leadMinDays, leadMaxDays: l.leadMaxDays, position,
     })))
+    // What the order got, with the terms copied (the order keeps them whatever the offer becomes).
+    if (m.applied.length) await tx.insert(orderDiscounts).values(m.applied.map((a) => ({
+      tenantId, orderId: id, discountId: a.discountId, codeId: a.codeId, class: a.class, amount: a.amount, title: a.title, style: a.terms.style,
+      percentBps: a.terms.percentBps, amountOff: a.terms.amountOff, cap: a.terms.cap, minSubtotal: a.terms.minSubtotal,
+    })))
     if (cod) await takeStock(tx, tenantId, id, 'in_stock', soldOut)
     return { kind: 'new', id, number, method: input.method, total: m.total }
   })
@@ -114,6 +130,43 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
   if (placed.method === 'cod') return out
   const pay = await startPayment(tenantId, placed.id)
   return pay.ok ? { ...out, pay: pay.pay } : { ...out, payError: pay.error }
+}
+
+/**
+ * The live offers this placement may use. Every offer the bag could get that has a limit or a budget is locked, in
+ * id order, BEFORE anything is counted (no deadlock between two checkouts; plan review 8); an offer with no limit locks
+ * nothing, so a sitewide offer never queues a festive checkout. Then: an offer at its total or per-phone limit drops
+ * out; the bag is priced; an applied offer whose amount would cross its budget drops out and the bag is priced again.
+ */
+async function fitOffers(tx: Tx, tenantId: string, offers: DiscountTerms[], price: (o: DiscountTerms[]) => Quote, input: PlaceInput, now: Date): Promise<DiscountTerms[]> {
+  const typed = input.code ? input.code.trim().toUpperCase() : null
+  const subtotal = price([]).subtotal
+  const could = offers.filter((t) => (t.code === null || t.listed || t.code === typed) && (t.style === 'free_shipping' || amountFor(t, subtotal) > 0)).map((t) => t.id)
+  if (!could.length) return offers
+  const limited = await tx.execute<{ id: string; limit_total: number | null; limit_per_phone: number | null; budget: string | null }>(sql`
+    select id, limit_total, limit_per_phone, budget from ${discounts} where tenant_id = ${tenantId} and id in ${could}
+      and (limit_total is not null or limit_per_phone is not null or budget is not null) order by id for update`)
+  if (!limited.length) return offers
+  const used = new Map((await tx.execute<{ id: string; n: number; given: string; phone: number }>(sql`
+    select od.discount_id id, count(*)::int n, coalesce(sum(od.amount), 0)::bigint given, (count(*) filter (where o.phone = ${input.address.phone}))::int phone
+      from ${orderDiscounts} od join ${orders} o on o.tenant_id = od.tenant_id and o.id = od.order_id
+     where od.tenant_id = ${tenantId} and od.discount_id in ${limited.map((l) => l.id)} and ${useOfRowSql(now)} group by od.discount_id`)).map((u) => [u.id, u]))
+  const out = new Set(limited.filter((l) => {
+    const u = used.get(l.id)
+    return (l.limit_total !== null && (u?.n ?? 0) + 1 > l.limit_total) || (l.limit_per_phone !== null && (u?.phone ?? 0) + 1 > l.limit_per_phone)
+  }).map((l) => l.id))
+  // Budgets: as many passes as there are limited offers (each pass drops at least one, or stops).
+  for (let pass = 0; pass <= limited.length; pass++) {
+    const q = price(offers.filter((t) => !out.has(t.id)))
+    const m = input.method === 'cod' ? q.cod : q.prepaid
+    const over = m.applied.filter((a) => {
+      const l = limited.find((x) => x.id === a.discountId)
+      return l?.budget != null && Number(used.get(l.id)?.given ?? 0) + a.amount > Number(l.budget)
+    })
+    if (!over.length) break
+    for (const a of over) out.add(a.discountId)
+  }
+  return offers.filter((t) => !out.has(t.id))
 }
 
 /**

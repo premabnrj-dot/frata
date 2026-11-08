@@ -11,6 +11,6 @@ export async function POST(request: Request) {
   if (!r.ok) return r.response
   const out = await switchToCod(r.tenantId, r.body.token, r.body.expectedTotal)
   if (out.kind === 'changed') return reply({ changed: true, quote: publicQuote(out.quote) }, 409)
-  if (out.kind === 'refused') return reply({ error: out.error }, out.status)
+  if (out.kind === 'refused') return reply({ error: out.error, ...(out.codTotal !== undefined ? { codTotal: out.codTotal } : {}) }, out.status)
   return reply(out)
 }
