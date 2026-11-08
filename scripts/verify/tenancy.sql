@@ -959,6 +959,12 @@ do $$ declare n int; r record; begin
   update variants set stock = 1 where id = 'cdcdcdcd-0000-0000-0000-00000000003a';
   if (select restocked_at from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003a') is not null then raise exception 'FAIL: back within minutes counted as back in stock'; end if;
   update variants set stock = 0 where id = 'cdcdcdcd-0000-0000-0000-00000000003a';
+  -- Forging on the other paths: an insert, and an update that also moves stock.
+  insert into variants (id, tenant_id, product_id, option_values, price, stock, sold_out_at, restocked_at) values
+    ('cdcdcdcd-0000-0000-0000-00000000003d', '11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', '{3XL}', 100000, 0, now() - interval '9 days', now());
+  if (select sold_out_at is not null or restocked_at is not null from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003d') then raise exception 'FAIL: an insert wrote the stock times'; end if;
+  update variants set stock = 2, restocked_at = now(), sold_out_at = now() - interval '9 days' where id = 'cdcdcdcd-0000-0000-0000-00000000003d';
+  if (select sold_out_at is not null or restocked_at is not null from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003d') then raise exception 'FAIL: an update with stock wrote the stock times'; end if;
 end $$;
 commit;
 -- A day passes (as the owner, past the trigger).
@@ -975,6 +981,7 @@ end $$;
 commit;
 do $$ begin
   if (select prosecdef from pg_proc where proname = 'app_variant_stock_times') then raise exception 'FAIL: the stock-times trigger is a definer'; end if;
+  if (select tgenabled from pg_trigger where tgname = 'variants_stock_times') <> 'O' then raise exception 'FAIL: the stock-times trigger is off'; end if;
   if has_function_privilege('anon', 'app_variant_stock_times()', 'execute') or has_function_privilege('authenticated', 'app_variant_stock_times()', 'execute') then raise exception 'FAIL: API roles run the stock-times trigger'; end if;
   if (select restocked_at from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003b') is not null then raise exception 'FAIL: B''s variant changed'; end if;
 end $$;

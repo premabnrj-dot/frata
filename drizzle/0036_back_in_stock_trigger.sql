@@ -10,6 +10,10 @@
 --                           (a cancel returning the piece a COD order just took is not "back").
 -- Security invoker, search_path '': it only edits NEW; it reads nothing.
 -- =============================================================================
+-- Variants sold out today (stop when out) count as sold out from now: if they come back after a day, they are back.
+-- Before the trigger exists (it would put the old, empty value back).
+update variants set sold_out_at = now() where stock = 0 and when_out = 'stop' and archived_at is null;
+--> statement-breakpoint
 create or replace function app_variant_stock_times() returns trigger
   language plpgsql security invoker set search_path = '' as $$
 begin
@@ -28,9 +32,5 @@ end $$;
 --> statement-breakpoint
 revoke all on function app_variant_stock_times() from public, anon, authenticated, service_role;
 --> statement-breakpoint
-grant execute on function app_variant_stock_times() to frata_app;
---> statement-breakpoint
 create trigger variants_stock_times before insert or update on variants for each row execute function app_variant_stock_times();
---> statement-breakpoint
--- Variants sold out today (stop when out) count as sold out from now: if they come back after a day, they are back.
-update variants set sold_out_at = now() where stock = 0 and when_out = 'stop' and archived_at is null;
+

@@ -85,6 +85,8 @@ export type ThemeManifest = {
   defaults: Omit<ThemeSettings, keyof PageSettings> & Partial<PageSettings>
   allowed: { pairings: Pairing[]; headers: HeaderVariant[]; footers: FooterVariant[]; sections: SectionKey[]; heroMasks?: ('none' | 'arch')[] }
   home: SectionInput[]
+  /** Steps that move a layer from the previous version to this one (themes T3; pure, a vitest each). None while sections only grow. */
+  migrations?: ((layer: ThemeLayer) => ThemeLayer)[]
 }
 
 /** The merchant's layer. Content, never state (which revision is live is a publish row). */
