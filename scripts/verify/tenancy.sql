@@ -1077,4 +1077,42 @@ do $$ begin
   if (select tenant_id from discounts where id = 'd15c0000-0000-0000-0000-0000000000a2') is distinct from '11111111-1111-1111-1111-111111111111' then raise exception 'FAIL: the gift link moved the offer'; end if;
 end $$;
 
-\echo 'tenancy proof — all 35 checks passed'
+-- 36. Offers O·4 (docs/plans/2026-11-08-offers-o3-o4.md): Admin reads a shop's offers by the named columns only, sets
+-- only stopped_*, and a stop changes exactly the one row; the shop cannot clear it; platform totals are aggregates.
+begin; set local role frata_admin;
+do $$ declare n int; begin
+  if (select count(*) from discounts where id in ('d15c0000-0000-0000-0000-00000000000a', 'd15c0000-0000-0000-0000-00000000000b')) <> 2 then raise exception 'FAIL: admin cannot see offers to stop them'; end if;
+  perform id, tenant_id, title, style, starts_at, ends_at, started_at, paused_at, ended_at, stopped_at, stop_reason from discounts;
+  begin perform budget from discounts; raise exception 'FAIL: admin reads an offer budget'; exception when insufficient_privilege then null; end;
+  begin perform percent_bps from discounts; raise exception 'FAIL: admin reads an offer term'; exception when insufficient_privilege then null; end;
+  begin perform 1 from order_discounts; raise exception 'FAIL: admin reads offer uses'; exception when insufficient_privilege then null; end;
+  begin perform 1 from discount_codes; raise exception 'FAIL: admin reads codes'; exception when insufficient_privilege then null; end;
+  begin update discounts set title = 'x' where id = 'd15c0000-0000-0000-0000-00000000000b'; raise exception 'FAIL: admin changed an offer term'; exception when insufficient_privilege then null; end;
+  begin update discounts set ended_at = now() where id = 'd15c0000-0000-0000-0000-00000000000b'; raise exception 'FAIL: admin ended an offer'; exception when insufficient_privilege then null; end;
+  update discounts set stopped_at = now(), stopped_by = '99999999-9999-9999-9999-999999999999', stop_reason = 'Proof stop'
+   where id = 'd15c0000-0000-0000-0000-00000000000b' and ended_at is null and stopped_at is null;
+  get diagnostics n = row_count; if n <> 1 then raise exception 'FAIL: a stop changed % rows', n; end if;
+  begin update discounts set stopped_at = now() where id = 'd15c0000-0000-0000-0000-00000000000a'; raise exception 'FAIL: a stop without who and why';
+  exception when check_violation then null; end;
+  perform * from app_admin_offer_totals(now() - interval '100 years');
+end $$;
+commit;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+do $$ begin
+  if (select stop_reason from discounts where id = 'd15c0000-0000-0000-0000-00000000000b') is distinct from 'Proof stop' then raise exception 'FAIL: the shop does not see why its offer stopped'; end if;
+  begin update discounts set stopped_at = null, stopped_by = null, stop_reason = null where id = 'd15c0000-0000-0000-0000-00000000000b'; raise exception 'FAIL: the shop cleared a stop';
+  exception when insufficient_privilege then null; end;
+end $$;
+commit;
+do $$ begin
+  if (select stopped_at from discounts where id = 'd15c0000-0000-0000-0000-00000000000a') is not null then raise exception 'FAIL: a stop reached another offer'; end if;
+  if pg_get_function_result('app_admin_offer_totals(timestamptz)'::regprocedure) <> 'TABLE(tenant_id uuid, orders bigint, given bigint)' then raise exception 'FAIL: offer totals return more than aggregates'; end if;
+  if has_function_privilege('frata_app', 'app_admin_offer_totals(timestamptz)', 'execute') or has_function_privilege('anon', 'app_admin_offer_totals(timestamptz)', 'execute')
+     or has_function_privilege('service_role', 'app_admin_offer_totals(timestamptz)', 'execute') then raise exception 'FAIL: a non-admin role reads offer totals'; end if;
+  if (select count(*) from app_admin_offer_totals(now() - interval '100 years')) <> (select count(distinct tenant_id) from app_admin_offer_totals(now() - interval '100 years')) then raise exception 'FAIL: offer totals not one row per shop'; end if;
+  if has_column_privilege('frata_app', 'discounts', 'stopped_at', 'update') or has_column_privilege('frata_app', 'discounts', 'stop_reason', 'update') then raise exception 'FAIL: the shop may set a stop'; end if;
+end $$;
+update discounts set stopped_at = null, stopped_by = null, stop_reason = null where id = 'd15c0000-0000-0000-0000-00000000000b';
+
+\echo 'tenancy proof — all 36 checks passed'

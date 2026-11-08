@@ -193,12 +193,13 @@ describe.skipIf(!host)('offers at placement and after', () => {
         // liveDiscountSql agrees with offerStatus() on every shape.
         const now = new Date(), past = new Date(now.getTime() - 3_600_000), future = new Date(now.getTime() + 3_600_000)
         const shapes = [
-          { startedAt: null, pausedAt: null, endedAt: null, startsAt: past, endsAt: null },
-          { startedAt: past, pausedAt: null, endedAt: null, startsAt: past, endsAt: null },
-          { startedAt: past, pausedAt: null, endedAt: null, startsAt: future, endsAt: null },
-          { startedAt: past, pausedAt: past, endedAt: null, startsAt: past, endsAt: null },
-          { startedAt: past, pausedAt: null, endedAt: past, startsAt: past, endsAt: null },
-          { startedAt: past, pausedAt: null, endedAt: null, startsAt: new Date(past.getTime() - 1000), endsAt: past },
+          { startedAt: null, pausedAt: null, endedAt: null, startsAt: past, endsAt: null, stoppedAt: null },
+          { startedAt: past, pausedAt: null, endedAt: null, startsAt: past, endsAt: null, stoppedAt: null },
+          { startedAt: past, pausedAt: null, endedAt: null, startsAt: future, endsAt: null, stoppedAt: null },
+          { startedAt: past, pausedAt: past, endedAt: null, startsAt: past, endsAt: null, stoppedAt: null },
+          { startedAt: past, pausedAt: null, endedAt: past, startsAt: past, endsAt: null, stoppedAt: null },
+          { startedAt: past, pausedAt: null, endedAt: null, startsAt: new Date(past.getTime() - 1000), endsAt: past, stoppedAt: null },
+          { startedAt: past, pausedAt: null, endedAt: null, startsAt: past, endsAt: null, stoppedAt: past, stoppedBy: ME, stopReason: 'Proof stop' },
         ]
         for (const sh of shapes) {
           const [d] = await tx.insert(discounts).values({ tenantId: A, title: 'Shape', style: 'free_shipping', createdBy: ME, startedBy: sh.startedAt ? ME : null, ...sh }).returning({ id: discounts.id })

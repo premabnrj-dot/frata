@@ -167,7 +167,7 @@ async function showcase(tx: Tx, tenantId: string): Promise<{ shop: ShowOffer[]; 
   const rows = await tx.select({
     id: discounts.id, title: discounts.title, style: discounts.style, percentBps: discounts.percentBps, amountOff: discounts.amountOff, minSubtotal: discounts.minSubtotal,
     targets: discounts.targets, buyQty: discounts.buyQty, getQty: discounts.getQty, getBps: discounts.getBps, firstOrder: discounts.firstOrder, code: discountCodes.code,
-    startsAt: discounts.startsAt, endsAt: discounts.endsAt, startedAt: discounts.startedAt, pausedAt: discounts.pausedAt, endedAt: discounts.endedAt,
+    startsAt: discounts.startsAt, endsAt: discounts.endsAt, startedAt: discounts.startedAt, pausedAt: discounts.pausedAt, endedAt: discounts.endedAt, stoppedAt: discounts.stoppedAt,
   }).from(discounts).leftJoin(discountCodes, and(eq(discountCodes.tenantId, discounts.tenantId), eq(discountCodes.discountId, discounts.id), isNull(discountCodes.label)))
     .where(and(eq(discounts.tenantId, tenantId), sql`${discounts.startedAt} is not null and ${discounts.endedAt} is null and ${discounts.listed}`))
   if (!rows.length) return { shop: [], byProduct: () => [] }
@@ -186,7 +186,7 @@ async function showcase(tx: Tx, tenantId: string): Promise<{ shop: ShowOffer[]; 
     const label = (r.style === 'pay_online' ? barText(words, { code: null, endsAt: null }) : offerTerms(words)) + (r.code && !product ? ` · code ${r.code.toUpperCase()}` : '')
     return {
       offer: { label: product ? `${r.title}: ${offerTerms({ ...words, targets: 'all' })}` : label, badge: r.style === 'bxgy' ? bxgyText(words) : r.style === 'product_off' ? offOf(words, false) : null, product,
-        startsAt: r.startsAt.toISOString(), endsAt: iso(r.endsAt), startedAt: iso(r.startedAt), pausedAt: iso(r.pausedAt), endedAt: iso(r.endedAt) } satisfies ShowOffer,
+        startsAt: r.startsAt.toISOString(), endsAt: iso(r.endsAt), startedAt: iso(r.startedAt), pausedAt: iso(r.pausedAt), endedAt: iso(r.endedAt), stoppedAt: iso(r.stoppedAt) } satisfies ShowOffer,
       covers: !product ? null : r.targets === 'all' ? 'all' as const : new Set(targets.filter((t) => t.discountId === r.id).flatMap((t) => (t.productId ? [t.productId] : members[t.collectionId!] ?? []))),
     }
   })
@@ -334,13 +334,13 @@ export const shopSettingsFor = shopCached('shop', 'shop', (t) => coreShop(t))
 export const shopAnnouncement = shopCached('announce', 'shop', (tenantId) => withTenant(tenantId, async (tx) => {
   const [r] = await tx.select({
     title: discounts.title, style: discounts.style, percentBps: discounts.percentBps, amountOff: discounts.amountOff, minSubtotal: discounts.minSubtotal, listed: discounts.listed,
-    startsAt: discounts.startsAt, endsAt: discounts.endsAt, startedAt: discounts.startedAt, pausedAt: discounts.pausedAt, endedAt: discounts.endedAt, code: discountCodes.code,
+    startsAt: discounts.startsAt, endsAt: discounts.endsAt, startedAt: discounts.startedAt, pausedAt: discounts.pausedAt, endedAt: discounts.endedAt, stoppedAt: discounts.stoppedAt, code: discountCodes.code,
   }).from(discounts).leftJoin(discountCodes, and(eq(discountCodes.tenantId, discounts.tenantId), eq(discountCodes.discountId, discounts.id), isNull(discountCodes.label)))
     .where(and(eq(discounts.tenantId, tenantId), eq(discounts.announce, true))).limit(1)
   if (!r) return null
   const iso = (d: Date | null) => (d ? d.toISOString() : null)
   return { title: r.title, style: r.style, percentBps: r.percentBps, amountOff: r.amountOff === null ? null : Number(r.amountOff), minSubtotal: Number(r.minSubtotal),
-    code: r.listed && r.code ? r.code.toUpperCase() : null, startsAt: r.startsAt.toISOString(), endsAt: iso(r.endsAt), startedAt: iso(r.startedAt), pausedAt: iso(r.pausedAt), endedAt: iso(r.endedAt) }
+    code: r.listed && r.code ? r.code.toUpperCase() : null, startsAt: r.startsAt.toISOString(), endsAt: iso(r.endsAt), startedAt: iso(r.startedAt), pausedAt: iso(r.pausedAt), endedAt: iso(r.endedAt), stoppedAt: iso(r.stoppedAt) }
 }))
 export const shopCatalogue = shopCached('catalogue', 'catalogue', (t) => coreCatalogue(t, false))
 

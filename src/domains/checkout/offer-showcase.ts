@@ -10,11 +10,11 @@ import { offerStatus } from './offer-status'
 /** One offer as the shop shows it: its words, whether it is a product offer, and its timestamps (ISO). */
 export type ShowOffer = {
   label: string; badge: string | null; product: boolean
-  startsAt: string; endsAt: string | null; startedAt: string | null; pausedAt: string | null; endedAt: string | null
+  startsAt: string; endsAt: string | null; startedAt: string | null; pausedAt: string | null; endedAt: string | null; stoppedAt: string | null
 }
 
 const d = (s: string | null) => (s ? new Date(s) : null)
-const live = (o: ShowOffer, now: Date) => offerStatus({ startedAt: d(o.startedAt), pausedAt: d(o.pausedAt), endedAt: d(o.endedAt), startsAt: new Date(o.startsAt), endsAt: d(o.endsAt) }, now) === 'live'
+const live = (o: ShowOffer, now: Date) => offerStatus({ startedAt: d(o.startedAt), pausedAt: d(o.pausedAt), endedAt: d(o.endedAt), stoppedAt: d(o.stoppedAt), startsAt: new Date(o.startsAt), endsAt: d(o.endsAt) }, now) === 'live'
 
 /** The card's one offer tag: the first live product offer with a badge. */
 export const cardBadge = (offers: readonly ShowOffer[] | undefined, now: Date): { label: string } | null => {

@@ -28,6 +28,8 @@ export type OfferRow = {
   id: string; title: string; style: DiscountStyle; percentBps: number | null; amountOff: number | null; cap: number | null; minSubtotal: number
   limitTotal: number | null; limitPerPhone: number | null; budget: number | null
   startsAt: Date; endsAt: Date | null; startedAt: Date | null; pausedAt: Date | null; endedAt: Date | null
+  /** Stopped by Frrata (Admin's kill switch, O·4), and Frrata's reason, shown to the shop. */
+  stoppedAt: Date | null; stopReason: string | null
   listed: boolean; combinesWithPayment: boolean; announce: boolean; code: string | null; createdAt: Date
   status: OfferStatus
   /** Orders using it now (abandoned and cancelled ones gave theirs back). */
@@ -51,7 +53,7 @@ export async function listOffers(tenantId: string, now = new Date(), onlyId?: st
     const rows = await tx.select({
       id: discounts.id, title: discounts.title, style: discounts.style, percentBps: discounts.percentBps, amountOff: discounts.amountOff, cap: discounts.cap, minSubtotal: discounts.minSubtotal,
       limitTotal: discounts.limitTotal, limitPerPhone: discounts.limitPerPhone, budget: discounts.budget, startsAt: discounts.startsAt, endsAt: discounts.endsAt,
-      startedAt: discounts.startedAt, pausedAt: discounts.pausedAt, endedAt: discounts.endedAt, listed: discounts.listed, combinesWithPayment: discounts.combinesWithPayment,
+      startedAt: discounts.startedAt, pausedAt: discounts.pausedAt, endedAt: discounts.endedAt, stoppedAt: discounts.stoppedAt, stopReason: discounts.stopReason, listed: discounts.listed, combinesWithPayment: discounts.combinesWithPayment,
       announce: discounts.announce, createdAt: discounts.createdAt, code: discountCodes.code,
       targets: discounts.targets, buyQty: discounts.buyQty, getQty: discounts.getQty, getBps: discounts.getBps, giftVariantId: discounts.giftVariantId, firstOrder: discounts.firstOrder,
     }).from(discounts).leftJoin(discountCodes, and(eq(discountCodes.tenantId, discounts.tenantId), eq(discountCodes.discountId, discounts.id), isNull(discountCodes.label)))

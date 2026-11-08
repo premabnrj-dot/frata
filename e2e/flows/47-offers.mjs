@@ -5,10 +5,11 @@
 // unlisted code applies only when typed, and a wrong code reads one way. Every offer is ended in `finally`, so the
 // flows after this one see the shop's normal prices. Run after `checkout` (it connects Razorpay).
 // Guards: a discount the order does not record, a total that ignores the offer, a saving kept after a switch, a
-// code that leaks its existence, a console list that scrolls sideways on a phone.
+// code that leaks its existence, a console list that scrolls sideways on a phone. O·3: the 30-day strip. O·4: Admin
+// stops an offer with a reason; the shop's console says so and the bag loses it; the shop can only end it.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, FAKE_CHECKOUT, SHOP, playwright, signedIn, until } from '../lib.mjs'
+import { CONSOLE, FAKE_CHECKOUT, SHOP, USERS, playwright, signedIn, until } from '../lib.mjs'
 const { devices } = playwright
 
 export default {
@@ -170,6 +171,39 @@ export default {
         await bag.getByRole('button', { name: /One more/ }).click(); await bag.getByRole('button', { name: /One more/ }).click()
         await bag.getByText('−₹2,490').waitFor() // three ₹2,490 kurtas: one free
         await p.screenshot({ path: t.out('bag-bxgy'), fullPage: true })
+      })
+      await t.step('O·4: Admin stops the offer with a reason; the shop sees it stopped, the bag no longer gets it', async () => {
+        const F = USERS.frata
+        await db`insert into auth.users (id, email, email_confirmed_at) values (${F.id}, ${F.email}, now()) on conflict (id) do nothing`
+        await db`insert into platform_staff (user_id, email, role) values (${F.id}, ${F.email}, 'admin') on conflict (user_id) do nothing`
+        const ac = await signedIn(t.browser, 'frata', { viewport: { width: 1280, height: 900 } })
+        const a = await ac.newPage(); a.setDefaultTimeout(15_000); a.on('pageerror', (e) => t.errors.push(e.message))
+        await a.goto(CONSOLE + '/admin/offers')
+        await a.getByRole('heading', { level: 1, name: 'Offers' }).waitFor()
+        await a.getByRole('link', { name: 'Kesar Studio' }).click(); await a.waitForURL(/\/admin\/offers\/[0-9a-f-]{36}$/)
+        const card = a.getByRole('region', { name: 'Buy 2, get 1 free' })
+        await card.getByLabel(/Why stop it/).fill('Buy 2 get 1 is not allowed on sale stock')
+        await card.getByRole('button', { name: 'Stop Buy 2, get 1 free' }).click()
+        await a.getByText(/Stopped\. Shoppers no longer get it/).waitFor()
+        await a.getByRole('region', { name: 'Buy 2, get 1 free' }).getByText('Stopped by Frrata').waitFor()
+        await a.screenshot({ path: t.out('admin-stop'), fullPage: true })
+        const [d] = await db`select id, stopped_at, stop_reason from discounts where title = 'Buy 2, get 1 free' and ended_at is null`
+        assert.ok(d.stopped_at); assert.equal(d.stop_reason, 'Buy 2 get 1 is not allowed on sale stock')
+        assert.equal((await db`select count(*)::int n from audit_events where action = 'offer.stop' and target = ${d.id}`)[0].n, 1, 'the stop is audited')
+        // The shop's console: stopped, with Frrata's reason; it can end it and nothing else.
+        await c.goto(CONSOLE + `/console/offers/${d.id}`)
+        await c.getByText('Stopped by Frrata', { exact: true }).first().waitFor()
+        await c.getByText(/Buy 2 get 1 is not allowed on sale stock/).waitFor()
+        assert.equal(await c.getByRole('button', { name: 'Pause' }).count(), 0)
+        await c.getByRole('button', { name: 'End offer' }).waitFor()
+        await c.screenshot({ path: t.out('console-stopped'), fullPage: true })
+        // The bag: three kurtas, no piece free now.
+        await toBag()
+        const bag = p.getByRole('dialog', { name: 'Your bag' })
+        await bag.getByRole('button', { name: /One more/ }).click(); await bag.getByRole('button', { name: /One more/ }).click()
+        await bag.getByText('₹7,470').first().waitFor()
+        assert.equal(await bag.getByText('−₹2,490').count(), 0, 'a stopped offer gives nothing')
+        await ac.close()
       })
       await ctx.close()
     } finally {

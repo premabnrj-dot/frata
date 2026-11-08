@@ -16,10 +16,25 @@ import { orders } from './schema-orders'
 const c = (a: string, col: string) => sql.raw(`${a}.${col}`)
 const ts = (d: Date) => sql`${d.toISOString()}::timestamptz`
 
-/** offerStatus() === 'live': started, not paused or ended, inside its window. */
+/** offerStatus() === 'live': started, not paused, stopped or ended, inside its window. */
 export const liveDiscountSql = (now: Date, a = '"discounts"'): SQL =>
-  sql`(${c(a, 'started_at')} is not null and ${c(a, 'ended_at')} is null and ${c(a, 'paused_at')} is null and ${c(a, 'starts_at')} <= ${ts(now)}
+  sql`(${c(a, 'started_at')} is not null and ${c(a, 'ended_at')} is null and ${c(a, 'paused_at')} is null and ${c(a, 'stopped_at')} is null and ${c(a, 'starts_at')} <= ${ts(now)}
     and (${c(a, 'ends_at')} is null or ${c(a, 'ends_at')} > ${ts(now)}))`
+
+/** Running (the 20-offer limit, O·4): started, not ended (for good or by its end), not stopped. Paused and scheduled count. */
+export const runningDiscountSql = (now: Date, a = '"discounts"'): SQL =>
+  sql`(${c(a, 'started_at')} is not null and ${c(a, 'ended_at')} is null and ${c(a, 'stopped_at')} is null and (${c(a, 'ends_at')} is null or ${c(a, 'ends_at')} > ${ts(now)}))`
+
+/**
+ * How many offers a shop has running, under the shop's offers lock (held to the end of the caller's transaction):
+ * the ONE count behind the limit, read by a start (console) and by Admin's resume, so two at once cannot both pass.
+ */
+export async function runningOffers(tx: { execute: Tx['execute'] }, tenantId: string, now: Date, except?: string): Promise<number> {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'offers:' + tenantId}, 0))`)
+  const [r] = await tx.execute<{ n: number }>(sql`select count(*)::int n from discounts where tenant_id = ${tenantId} and ${runningDiscountSql(now, 'discounts')}
+    ${except ? sql`and id <> ${except}` : sql``}`)
+  return r?.n ?? 0
+}
 
 /** Whether the order at `o` is using the order_discounts row at `od` (its class decides the rule). */
 export const useOfRowSql = (now: Date, od = 'od', o = 'o'): SQL =>

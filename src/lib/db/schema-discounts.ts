@@ -39,6 +39,10 @@ export const discounts = pgTable('discounts', {
   pausedAt: at('paused_at'),
   /** Final: an ended offer never comes back (duplicate it instead). */
   endedAt: at('ended_at'),
+  /** Stopped by Frrata staff (Admin's kill switch, O·4): not live until Frrata resumes it. The shop cannot clear it. */
+  stoppedAt: at('stopped_at'),
+  stoppedBy: uuid('stopped_by'),
+  stopReason: text('stop_reason'),
   listed: boolean('listed').notNull().default(true),
   combinesWithPayment: boolean('combines_with_payment').notNull().default(true),
   /** Product offers: every product, or the products / collections in discount_targets (O·2). */
@@ -73,6 +77,8 @@ export const discounts = pgTable('discounts', {
   check('discounts_window', sql`${t.endsAt} is null or ${t.endsAt} > ${t.startsAt}`),
   check('discounts_title', sql`length(${t.title}) between 1 and 60`),
   check('discounts_started_by', sql`(${t.startedAt} is null) = (${t.startedBy} is null)`),
+  check('discounts_stopped', sql`(${t.stoppedAt} is null) = (${t.stoppedBy} is null) and (${t.stoppedAt} is null) = (${t.stopReason} is null)
+    and (${t.stopReason} is null or length(${t.stopReason}) between 3 and 300)`),
 ])
 
 /** What a product offer covers when its targets are products or collections (exactly one per row). */

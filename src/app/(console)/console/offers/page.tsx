@@ -37,7 +37,8 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
         {canBuild ? <div className="mt-3"><Link href="/console/offers/new?style=pay_online" className={button({ variant: 'secondary' })}>Start with “Pay online, save”</Link></div> : null}</Panel>
     </>
   )
-  const order: OfferStatus[] = ['live', 'scheduled', 'draft', 'paused', 'ended']
+  // Stopped (by Frrata, O·4) shows only when there is one.
+  const order: OfferStatus[] = ['live', 'scheduled', 'draft', 'paused', ...(count('stopped') ? ['stopped' as const] : []), 'ended']
   return (
     <>
       <PageHeader title="Offers" actions={add} />

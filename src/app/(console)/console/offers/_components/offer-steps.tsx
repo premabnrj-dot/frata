@@ -27,7 +27,7 @@ export function OfferSteps({ id, status, title }: { id: string; status: OfferSta
       {status === 'draft' && <Button onClick={() => run('start')} disabled={pending}>Start</Button>}
       {(status === 'live' || status === 'scheduled') && <Button variant="secondary" onClick={() => run('pause')} disabled={pending}>Pause</Button>}
       {status === 'paused' && <Button onClick={() => run('resume')} disabled={pending}>Resume</Button>}
-      <Button variant="ghost" onClick={() => setEnding(true)} disabled={pending}>End offer</Button>
+      <Button variant={status === 'stopped' ? 'secondary' : 'ghost'} onClick={() => setEnding(true)} disabled={pending}>End offer</Button>
       <Message m={msg} />
       <Dialog open={ending} onClose={() => setEnding(false)} title={`End “${title}”?`} description="Shoppers stop getting it now, and it never comes back. Orders that used it keep their discount. To run it again later, make a new offer."
         actions={<><Button variant="secondary" onClick={() => setEnding(false)}>Keep it</Button><Button variant="destructive" onClick={() => run('end')} disabled={pending}>End offer</Button></>} />

@@ -288,6 +288,20 @@
       "when": 1794114455204,
       "tag": "0040_offers_more_access",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1794116328014,
+      "tag": "0041_offers_stop",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1794116352117,
+      "tag": "0042_offers_stop_access",
+      "breakpoints": true
     }
   ]
 }

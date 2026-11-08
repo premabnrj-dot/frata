@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { offerStatus } from '../offer-status'
-import { parseOffer, toIst, type OfferValues } from '../offer-form'
+import { OFFER_TEMPLATES, parseOffer, toIst, type OfferValues } from '../offer-form'
 
 const base: OfferValues = { title: 'Diwali', style: 'order_off', kind: 'percent', value: '15', cap: '', min: '2999', code: 'diwali15', startsAt: '2026-11-15T00:00', endsAt: '2026-11-30T23:59',
   limitTotal: '', limitPerPhone: '1', budget: '40000', listed: true, combinesWithPayment: true, announce: false }
@@ -24,7 +24,7 @@ describe('parseOffer', () => {
 
 describe('offerStatus', () => {
   const now = new Date('2026-11-20T10:00:00Z')
-  const d = { startedAt: new Date('2026-11-10T00:00:00Z'), pausedAt: null, endedAt: null, startsAt: new Date('2026-11-15T00:00:00Z'), endsAt: new Date('2026-11-30T00:00:00Z') }
+  const d = { startedAt: new Date('2026-11-10T00:00:00Z'), pausedAt: null, endedAt: null, stoppedAt: null, startsAt: new Date('2026-11-15T00:00:00Z'), endsAt: new Date('2026-11-30T00:00:00Z') }
   it('draft, scheduled, live, paused, ended — ended beats everything', () => {
     expect(offerStatus({ ...d, startedAt: null }, now)).toBe('draft')
     expect(offerStatus({ ...d, startsAt: new Date('2026-11-21T00:00:00Z') }, now)).toBe('scheduled')
@@ -32,6 +32,12 @@ describe('offerStatus', () => {
     expect(offerStatus({ ...d, pausedAt: now }, now)).toBe('paused')
     expect(offerStatus({ ...d, endsAt: now }, now)).toBe('ended')
     expect(offerStatus({ ...d, startedAt: null, endedAt: now }, now)).toBe('ended')
+  })
+  it('stopped by Frrata beats paused and draft; ended still beats it', () => {
+    expect(offerStatus({ ...d, stoppedAt: now }, now)).toBe('stopped')
+    expect(offerStatus({ ...d, stoppedAt: now, pausedAt: now }, now)).toBe('stopped')
+    expect(offerStatus({ ...d, stoppedAt: now, startedAt: null }, now)).toBe('stopped')
+    expect(offerStatus({ ...d, stoppedAt: now, endedAt: now }, now)).toBe('ended')
   })
 })
 
@@ -71,5 +77,16 @@ describe('O·2 wording and form', () => {
     const tiered = parseOffer({ ...v, style: 'order_off', tiers: [{ min: '2999', value: '15' }, { min: '1999', value: '10' }] })
     expect(tiered.ok && tiered.patch.tiers).toEqual([{ min: 199900, percentBps: 1000, amountOff: null }, { min: 299900, percentBps: 1500, amountOff: null }])
     expect(parseOffer({ ...v, style: 'free_gift' }).ok).toBe(false)
+  })
+})
+
+describe('OFFER_TEMPLATES', () => {
+  it('each pre-fills a form that saves as it stands (a gift needs its piece chosen)', () => {
+    const blank: OfferValues = { title: '', style: 'order_off', kind: 'percent', value: '', cap: '', min: '', code: '', startsAt: '2026-11-15T00:00', endsAt: '', limitTotal: '', limitPerPhone: '', budget: '',
+      listed: true, combinesWithPayment: true, announce: false, targets: 'all', targetIds: [], buyQty: '2', getQty: '1', getPct: '100', giftVariantId: '', tiers: [], firstOrder: false }
+    for (const t of OFFER_TEMPLATES) {
+      const r = parseOffer({ ...blank, style: t.style, ...t.values, ...(t.style === 'free_gift' ? { giftVariantId: '11111111-1111-1111-1111-111111111111' } : {}) })
+      expect({ key: t.key, ok: r.ok, errors: r.ok ? null : r.errors }).toEqual({ key: t.key, ok: true, errors: null })
+    }
   })
 })

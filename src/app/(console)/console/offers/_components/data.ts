@@ -5,7 +5,7 @@ import { offerTerms } from '@/domains/checkout/offer-text'
 
 /** How a status reads, everywhere (list, offer page). */
 export const STATUS: Record<OfferStatus, { label: string; tone: 'ok' | 'warn' | 'info' | 'neutral' | 'danger' }> = {
-  live: { label: 'Live', tone: 'ok' }, scheduled: { label: 'Scheduled', tone: 'info' }, draft: { label: 'Draft', tone: 'neutral' }, paused: { label: 'Paused', tone: 'warn' }, ended: { label: 'Ended', tone: 'neutral' },
+  live: { label: 'Live', tone: 'ok' }, scheduled: { label: 'Scheduled', tone: 'info' }, draft: { label: 'Draft', tone: 'neutral' }, paused: { label: 'Paused', tone: 'warn' }, stopped: { label: 'Stopped by Frrata', tone: 'danger' }, ended: { label: 'Ended', tone: 'neutral' },
 }
 
 const rs = (p: number) => (p % 100 === 0 ? String(p / 100) : (p / 100).toFixed(2))

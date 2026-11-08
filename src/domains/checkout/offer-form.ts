@@ -5,6 +5,24 @@
 
 import { DISCOUNT_STYLES, type DiscountStyle } from './discounts'
 
+/**
+ * At most this many offers running at once per shop (started, not ended or stopped; paused and scheduled count). A
+ * platform constant (O·4); the signal to make it a per-plan setting is a merchant who needs more.
+ */
+/**
+ * "Start from" on New offer (O·4, plan review 8): a few common offers that pre-fill the form. Nothing is stored; the
+ * merchant changes anything before saving. Admin-edited templates wait until one needs changing without a deploy.
+ */
+export const OFFER_TEMPLATES = [
+  { key: 'diwali', name: 'Diwali sale', style: 'order_off', values: { title: 'Diwali sale', kind: 'percent', value: '15', min: '2999', announce: true } },
+  { key: 'pay_online', name: 'Pay online, save ₹50', style: 'pay_online', values: { title: 'Pay online, save', kind: 'amount', value: '50' } },
+  { key: 'bxgy', name: 'Buy 2 get 1', style: 'bxgy', values: { title: 'Buy 2, get 1 free', buyQty: '2', getQty: '1', getPct: '100' } },
+  { key: 'gift', name: 'Free gift above ₹2,999', style: 'free_gift', values: { title: 'Free gift above ₹2,999', min: '2999' } },
+] as const satisfies readonly { key: string; name: string; style: DiscountStyle; values: Partial<OfferValues> }[]
+
+export const MAX_RUNNING_OFFERS = 20
+export const RUNNING_FULL = `A shop can run ${MAX_RUNNING_OFFERS} offers at once. End one to start another.`
+
 export type OfferValues = {
   title: string; style: string; kind: string; value: string; cap: string; min: string; code: string
   startsAt: string; endsAt: string; limitTotal: string; limitPerPhone: string; budget: string
