@@ -218,6 +218,20 @@
       "when": 1794094396835,
       "tag": "0030_communication_access",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794098984043,
+      "tag": "0031_offers",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794099017311,
+      "tag": "0032_offers_access",
+      "breakpoints": true
     }
   ]
 }

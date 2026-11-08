@@ -825,4 +825,65 @@ do $$ begin
     raise exception 'FAIL: the WhatsApp routing reaches other roles'; end if;
 end $$;
 
-\echo 'tenancy proof — all 30 checks passed'
+-- 31. Offers (docs/specs/2026-11-08-coupons.md; tenancy review in docs/plans/2026-11-08-offers.md).
+insert into discounts (id, tenant_id, title, style, percent_bps, starts_at, created_by) values
+  ('d15c0000-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'B sale', 'order_off', 1000, now(), '99999999-9999-9999-9999-999999999999');
+insert into discount_codes (id, tenant_id, discount_id, code) values
+  ('c0de0000-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'd15c0000-0000-0000-0000-00000000000b', 'SALE10');
+insert into order_discounts (tenant_id, order_id, discount_id, code_id, class, amount, title, style, percent_bps, min_subtotal) values
+  ('22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-00000000000b', 'd15c0000-0000-0000-0000-00000000000b', 'c0de0000-0000-0000-0000-00000000000b', 'order', 10000, 'B sale', 'order_off', 1000, 0);
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if exists (select 1 from discounts) or exists (select 1 from discount_codes) or exists (select 1 from order_discounts) then raise exception 'FAIL: A sees B offers, codes or uses'; end if;
+  if exists (select 1 from price_history where tenant_id = '22222222-2222-2222-2222-222222222222') then raise exception 'FAIL: A sees B price history'; end if;
+  if exists (select 1 from discount_codes where upper(code) = 'SALE10') then raise exception 'FAIL: B code found under A'; end if;
+  update discounts set percent_bps = 9000; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A changed B offer'; end if;
+  begin insert into discounts (tenant_id, title, style, percent_bps, starts_at, created_by) values ('22222222-2222-2222-2222-222222222222', 'x', 'order_off', 1000, now(), '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: A made an offer in B';
+  exception when insufficient_privilege then null; end;
+  -- A's own offer; the same code as B's is fine (unique per shop only); a case-different duplicate in A is not.
+  insert into discounts (id, tenant_id, title, style, percent_bps, starts_at, created_by) values ('d15c0000-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 'A sale', 'order_off', 500, now(), '99999999-9999-9999-9999-999999999999');
+  insert into discount_codes (id, tenant_id, discount_id, code) values ('c0de0000-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 'd15c0000-0000-0000-0000-00000000000a', 'SALE10');
+  begin insert into discount_codes (tenant_id, discount_id, code) values ('11111111-1111-1111-1111-111111111111', 'd15c0000-0000-0000-0000-00000000000a', 'sale10'); raise exception 'FAIL: a case-different duplicate code';
+  exception when unique_violation then null; end;
+  -- A cannot attach a code to B's offer, nor point a use at B's order, offer or code.
+  begin insert into discount_codes (tenant_id, discount_id, code) values ('11111111-1111-1111-1111-111111111111', 'd15c0000-0000-0000-0000-00000000000b', 'GRAB1'); raise exception 'FAIL: A attached a code to B offer';
+  exception when foreign_key_violation then null; end;
+  begin insert into order_discounts (tenant_id, order_id, discount_id, class, amount, title, style, min_subtotal) values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-00000000000b', 'd15c0000-0000-0000-0000-00000000000a', 'order', 1, 'x', 'order_off', 0); raise exception 'FAIL: A use on B order';
+  exception when foreign_key_violation then null; end;
+  begin insert into order_discounts (tenant_id, order_id, discount_id, class, amount, title, style, min_subtotal) values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-00000000000a', 'd15c0000-0000-0000-0000-00000000000b', 'order', 1, 'x', 'order_off', 0); raise exception 'FAIL: A use of B offer';
+  exception when foreign_key_violation then null; end;
+  begin insert into order_discounts (tenant_id, order_id, discount_id, code_id, class, amount, title, style, min_subtotal) values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-00000000000a', 'd15c0000-0000-0000-0000-00000000000a', 'c0de0000-0000-0000-0000-00000000000b', 'order', 1, 'x', 'order_off', 0); raise exception 'FAIL: A use with B code';
+  exception when foreign_key_violation then null; end;
+  -- Nobody deletes; uses, codes and price history are never changed; tenant_id never moves.
+  begin delete from discounts; raise exception 'FAIL: app deleted an offer'; exception when insufficient_privilege then null; end;
+  begin update discount_codes set code = 'NEW1'; raise exception 'FAIL: app changed a code'; exception when insufficient_privilege then null; end;
+  begin update order_discounts set amount = 1; raise exception 'FAIL: app changed a use'; exception when insufficient_privilege then null; end;
+  begin update price_history set price = 1; raise exception 'FAIL: app changed price history'; exception when insufficient_privilege then null; end;
+  begin update discounts set tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: app moved an offer'; exception when insufficient_privilege then null; end;
+  -- The price trigger, as the app: A's price change writes one row for A; A cannot write history for B.
+  update variants set price = 120000 where id = 'cdcdcdcd-0000-0000-0000-00000000000a';
+  if (select count(*) from price_history where variant_id = 'cdcdcdcd-0000-0000-0000-00000000000a' and price = 120000) <> 1 then raise exception 'FAIL: the price change was not recorded'; end if;
+  update variants set price = 120000 where id = 'cdcdcdcd-0000-0000-0000-00000000000a';
+  if (select count(*) from price_history where variant_id = 'cdcdcdcd-0000-0000-0000-00000000000a' and price = 120000) <> 1 then raise exception 'FAIL: an unchanged price was recorded'; end if;
+  update variants set price = 1 where id = 'cdcdcdcd-0000-0000-0000-00000000000b'; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A repriced B'; end if;
+  begin insert into price_history (tenant_id, variant_id, price) values ('22222222-2222-2222-2222-222222222222', 'cdcdcdcd-0000-0000-0000-00000000000b', 1); raise exception 'FAIL: A wrote B price history';
+  exception when insufficient_privilege then null; end;
+end $$;
+commit;
+do $$ begin
+  if (select count(*) from price_history where variant_id = 'cdcdcdcd-0000-0000-0000-00000000000b' and price = 1) <> 0 then raise exception 'FAIL: B price history moved under A'; end if;
+  if exists (select 1 from variants v where not exists (select 1 from price_history h where h.tenant_id = v.tenant_id and h.variant_id = v.id)) then raise exception 'FAIL: a variant has no price history'; end if;
+  if has_table_privilege('frata_admin', 'discounts', 'select') or has_table_privilege('frata_admin', 'discount_codes', 'select') or has_table_privilege('frata_admin', 'order_discounts', 'select') or has_table_privilege('frata_admin', 'price_history', 'select') then
+    raise exception 'FAIL: staff read offers directly'; end if;
+  if has_table_privilege('anon', 'discounts', 'select') or has_table_privilege('authenticated', 'discount_codes', 'select') or has_table_privilege('service_role', 'order_discounts', 'select') or has_table_privilege('service_role', 'price_history', 'select') or has_table_privilege('service_role', 'discounts', 'select') then
+    raise exception 'FAIL: API roles reach offers'; end if;
+  if has_function_privilege('anon', 'app_record_price()', 'execute') or has_function_privilege('authenticated', 'app_record_price()', 'execute') then raise exception 'FAIL: API roles run the price trigger'; end if;
+end $$;
+-- An order's discount is the sum of its lines' (a snapshot kept honest).
+do $$ begin
+  if exists (select 1 from orders o where o.discount <> coalesce((select sum(l.line_discount) from order_lines l where l.tenant_id = o.tenant_id and l.order_id = o.id), 0)) then
+    raise exception 'FAIL: an order''s discount is not the sum of its lines'''; end if;
+end $$;
+
+\echo 'tenancy proof — all 31 checks passed'

@@ -29,6 +29,8 @@ export const orders = pgTable('orders', {
   /** What the customer pays, excluding GST: what profit.ts reads. Derived, never written. */
   netRevenue: money('net_revenue').generatedAlwaysAs(sql`total - gst_total`),
   /** The lines' taxable value: the base of Frrata's delivered-order fee (not shipping, not the COD fee). */
+  /** The offers' merchandise discount: Σ order_lines.line_discount, kept here as a snapshot (verify check; plan review). */
+  discount: money('discount').notNull().default(0),
   merchandiseNet: money('merchandise_net').notNull().default(0),
   /** From the lines' cost snapshot; null when any line's cost is unknown (unknown is not ₹0). */
   cogs: money('cogs'),
@@ -104,8 +106,9 @@ export const orders = pgTable('orders', {
   index('orders_tenant_holds').on(t.tenantId, t.payBy).where(sql`${t.paidAt} is null and ${t.cancelledAt} is null and ${t.payBy} is not null`),
   check('orders_payment_method', sql`${t.paymentMethod} in ('cod','prepaid')`),
   check('orders_money', sql`${t.subtotal} >= 0 and ${t.shipping} >= 0 and ${t.codCharge} >= 0 and ${t.gstTotal} >= 0 and ${t.total} >= 0`),
-  // The total is its parts (GST inside the prices when they include it).
-  check('orders_total', sql`${t.total} = ${t.subtotal} + ${t.shipping} + ${t.codCharge} + case when ${t.pricesIncludeGst} then 0 else ${t.gstTotal} end`),
+  // The total is its parts, less the offers' discount (GST inside the prices when they include it).
+  check('orders_total', sql`${t.total} = ${t.subtotal} - ${t.discount} + ${t.shipping} + ${t.codCharge} + case when ${t.pricesIncludeGst} then 0 else ${t.gstTotal} end`),
+  check('orders_discount', sql`${t.discount} >= 0 and ${t.discount} <= ${t.subtotal}`),
   check('orders_phone', sql`${t.phone} = '' or ${t.phone} ~ '^[6-9][0-9]{9}$'`),
   check('orders_pincode', sql`${t.pincode} = '' or ${t.pincode} ~ '^[1-9][0-9]{5}$'`),
   uniqueIndex('orders_tenant_invoice').on(t.tenantId, t.invoiceNumber),
