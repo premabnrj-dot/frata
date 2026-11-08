@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { listMerchants, PAGE_SIZE } from '@/lib/admin/merchants'
+import { shopTrialsFor } from '@/lib/admin/trials'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dateTimeIN, dayMonthIN, sinceIN } from '@/lib/format-date'
 
@@ -19,7 +20,11 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
   if (!staff.ok) return <Panel title={staff.message} />
   const sp = await searchParams
   const page = Math.max(1, Number(sp.page) || 1)
-  const { rows, total } = await listMerchants(staff, { page, q: sp.q?.trim() || undefined, now: new Date() })
+  const now = new Date()
+  const { rows, total } = await listMerchants(staff, { page, q: sp.q?.trim() || undefined, now })
+  // Trials TR0·4: each shop's trial, derived (src/domains/plans/trial.ts); a shop without a trial row has none.
+  const trials = await shopTrialsFor(staff, rows.map((r) => r.id), now)
+  const TRIAL: Record<string, string> = { building: 'Trial · not live yet', trial: 'Trial', ending: 'Trial ending', grace: 'Trial ended · grace', paused: 'Paused · no autopay', paid: '' }
   const pages = Math.ceil(total / PAGE_SIZE)
 
   return (
@@ -51,7 +56,11 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
                 </Td>
                 <Td cell="d">
                   {m.plan ? <Badge tone="info">{m.plan.name}</Badge> : <Badge tone="danger">No plan</Badge>}
-                  {m.plan?.trialEndsAt && m.plan.trialEndsAt > new Date() && <div className="whitespace-nowrap text-xs text-warn-text">Trial until {dayMonthIN(m.plan.trialEndsAt)}</div>}
+                  {(() => {
+                    const t = trials.get(m.id)
+                    if (t) return TRIAL[t.state] ? <div className={`whitespace-nowrap text-xs ${t.state === 'paused' || t.state === 'grace' ? 'text-danger-text' : 'text-warn-text'}`}>{TRIAL[t.state]}{t.state === 'trial' || t.state === 'ending' ? ` · ${t.daysLeft} days left` : ''}</div> : null
+                    return m.plan?.trialEndsAt && m.plan.trialEndsAt > now ? <div className="whitespace-nowrap text-xs text-warn-text">Trial until {dayMonthIN(m.plan.trialEndsAt)}</div> : null
+                  })()}
                 </Td>
                 <Td cell="c" className="text-xs md:text-sm">
                   {m.owner ? (m.owner.lastSignInAt ? <span className="text-muted-foreground">Signed in {sinceIN(m.owner.lastSignInAt, new Date())}</span> : <span className="text-warn-text">Never signed in</span>)

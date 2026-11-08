@@ -157,7 +157,11 @@ begin
   select * from public.shop_trials where tenant_id = p_tenant into s;
   if s.tenant_id is not null and s.started_at is not null then raise exception 'trial: the shop is live; its length is fixed (an extension remains)' using errcode = 'check_violation'; end if;
   if s.tenant_id is null then
-    insert into public.shop_trials (tenant_id, days, open_window_days, signed_up_at) select p_tenant, p_days, ts.open_window_days, now() from public.trial_settings ts where ts.id = 1;
+    -- A shop already live starts its trial now (the publish trigger only sees the first going-live).
+    insert into public.shop_trials (tenant_id, days, open_window_days, signed_up_at, started_at)
+      select p_tenant, p_days, ts.open_window_days, now(),
+             case when exists (select 1 from public.shop_settings ss where ss.tenant_id = p_tenant and ss.published_at is not null) then now() end
+        from public.trial_settings ts where ts.id = 1;
   else
     update public.shop_trials set days = p_days where tenant_id = p_tenant;
   end if;

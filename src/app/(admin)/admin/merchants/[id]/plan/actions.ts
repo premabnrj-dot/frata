@@ -6,7 +6,9 @@ import { fromRupees } from '@/domains/money/paise'
 import { PLAN_CODES } from '@/domains/plans/entitlements'
 import { nextMonthStartIST } from '@/domains/time/month'
 import { changeTenantPlan } from '@/lib/admin/plans'
-import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
+import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
+import { endShopTrial, extendShopTrial, setShopTrial, trialError } from '@/lib/admin/trials'
+import { revalidatePath } from 'next/cache'
 import { errName } from '@/lib/log'
 
 const Change = z.object({
@@ -39,4 +41,31 @@ export async function changePlanAction(form: FormData) {
     redirect(`/admin/merchants/${id}/plan?error=${encodeURIComponent('We could not change the plan. Nothing was saved.')}`)
   }
   redirect(`/admin/merchants/${id}?ok=${encodeURIComponent('Plan changed.')}`)
+}
+
+// ── Trials TR0·4: one shop's trial (ADMIN_ONLY; the definers check again, require the reason and audit it). ──
+const TrialBase = z.object({ tenantId: z.uuid(), reason: z.string().trim().min(3).max(240) })
+const TrialDays = TrialBase.extend({ days: z.coerce.number().int().min(7).max(90) })
+async function trialAction(form: FormData, schema: typeof TrialBase | typeof TrialDays, run: (staff: Extract<Awaited<ReturnType<typeof requireStaff>>, { ok: true }>, d: { tenantId: string; reason: string; days?: number }) => Promise<void>, done: string) {
+  const staff = await requireStaff(ADMIN_ONLY)
+  if (!staff.ok) redirect('/admin')
+  const id = String(form.get('tenantId') ?? '')
+  const back = `/admin/merchants/${/^[0-9a-f-]{36}$/.test(id) ? id : ''}/plan`
+  const p = schema.safeParse(Object.fromEntries(form))
+  if (!p.success) redirect(`${back}?error=${encodeURIComponent('A trial is 7 to 90 days for one shop, and needs a reason.')}`)
+  try { await run(staff, p.data) } catch (e) {
+    console.error('[trial.shop]', errName(e))
+    redirect(`${back}?error=${encodeURIComponent(trialError(e))}`)
+  }
+  revalidatePath(back)
+  redirect(`${back}?ok=${encodeURIComponent(done)}`)
+}
+export async function setShopTrialAction(form: FormData) {
+  await trialAction(form, TrialDays, (s, d) => setShopTrial(s, d.tenantId, d.days!, d.reason), 'Trial saved.')
+}
+export async function extendShopTrialAction(form: FormData) {
+  await trialAction(form, TrialBase, (s, d) => extendShopTrial(s, d.tenantId, d.reason), 'Trial extended by 7 days.')
+}
+export async function endShopTrialAction(form: FormData) {
+  await trialAction(form, TrialBase, (s, d) => endShopTrial(s, d.tenantId, d.reason), 'Trial ended.')
 }

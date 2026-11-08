@@ -175,6 +175,28 @@ export default {
         await riya.getByText('The change is cancelled.').waitFor()
         await until(async () => (await db`select count(*)::int n from tenant_plans where tenant_id = ${KESAR} and starts_at > now()`)[0].n === 0)
       })
+      await t.step('TR0: Admin sets the trial terms for new sign-ups (with a reason); gives a live shop a 14-day trial, sees it on Merchants, then ends it', async () => {
+        const meera = await open('frata', { viewport: { width: 1280, height: 900 } })
+        await meera.goto(CONSOLE + '/admin/plans#trials')
+        await meera.getByLabel(/^Length for new sign-ups/).fill('45')
+        await meera.getByLabel(/^Why \(kept/).fill('Festive campaign')
+        await meera.getByRole('button', { name: 'Save trial terms' }).click()
+        await meera.getByText('New sign-ups get 45 days from going live.').waitFor()
+        await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/plan`)
+        await meera.getByText('No trial.').waitFor()
+        await meera.getByLabel(/^Days, 7 to 90/).fill('14')
+        await meera.locator('#trial').getByLabel(/^Why$/).fill('Partner deal')
+        await meera.getByRole('button', { name: 'Give a trial' }).click()
+        await meera.getByText(/^\d+ days left · 14 days/).waitFor() // Kesar is live: the clock starts now
+        await meera.screenshot({ path: t.out('admin-trial'), fullPage: true })
+        await meera.goto(CONSOLE + '/admin/merchants?q=Kesar')
+        await meera.getByText(/Trial(?: ending)? · \d+ days left/).first().waitFor()
+        await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/plan`)
+        await meera.getByLabel(/^Why end it now/).fill('Test over')
+        await meera.getByRole('button', { name: 'End the trial now' }).click()
+        await meera.getByText('Trial ended.').waitFor()
+        assert.equal((await db`select count(*)::int n from audit_events where tenant_id = ${KESAR} and action in ('trial.set', 'trial.end')`)[0].n, 2)
+      })
     } finally {
       // Issued invoices, payments and credit notes are final (triggers): the test's own are removed with triggers off.
       await db.begin(async (x) => {
@@ -189,8 +211,11 @@ export default {
         await x`delete from frrata_invoice_fees where tenant_id = ${KESAR}`
       })
       await db`delete from tenant_plans where tenant_id = ${KESAR} and reason = 'Changed by the shop'`
+      await db`delete from shop_trials where tenant_id = ${KESAR}`
+      await db`update tenant_plans set trial_ends_at = null where tenant_id = ${KESAR}`
+      await db`update trial_settings set days = 30, open_window_days = 15 where id = 1`
       await db`delete from billing_accounts where tenant_id = ${KESAR}`
-      await db`delete from audit_events where tenant_id = ${KESAR} and action in ('billing.details', 'billing.plan.change', 'billing.plan.cancel')`
+      await db`delete from audit_events where tenant_id = ${KESAR} and action in ('billing.details', 'billing.plan.change', 'billing.plan.cancel', 'trial.set', 'trial.end')`
       await db`delete from orders where tenant_id = ${KESAR} and number = ${N}`
       await db`delete from members where tenant_id = ${KESAR} and user_id = ${USERS.staff.id}`
     }
