@@ -84,7 +84,11 @@ export default {
           await a.getByRole('button', { name: 'Release kesar-studio' }).click()
           await a.getByRole('status').filter({ hasText: 'kesar-studio released.' }).waitFor()
         } finally { await staff.close() }
-        await rename(p, 'kesar-studio')
+        // Not opened (the step before lifted it), so the change needs no confirm.
+        await p.goto(CONSOLE + '/console/settings/address')
+        await p.fill('#slug', 'kesar-studio'); await p.getByText('Available', { exact: true }).waitFor()
+        await p.getByRole('button', { name: 'Change to kesar-studio' }).click()
+        await p.getByRole('status').filter({ hasText: `Moved to kesar-studio.${SHOP_DOMAIN}` }).waitFor()
       })
     } finally {
       await owner.close()
