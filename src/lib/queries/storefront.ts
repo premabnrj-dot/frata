@@ -5,12 +5,13 @@ import { LOW_STOCK_AT } from '@/domains/catalogue/availability'
 import type { Chart } from '@/domains/catalogue/size-charts'
 import type { PolicyFacts } from '@/domains/policies/render'
 import type { DeliveryRules } from '@/domains/checkout/delivery'
-import { tenantForHost } from '@/lib/db/platform'
+import { tenantForHost, themeVersionRows } from '@/lib/db/platform'
 import { shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { owedSql, stateSql } from '@/lib/db/order-predicates'
 import { orderLines, orders } from '@/lib/db/schema-orders'
-import { liveRevision, revisionOf, type Revision } from '@/lib/themes/look'
+import { LIVE_DEPTH, recentPublishes, revisionOf, type Revision } from '@/lib/themes/look'
+import { liveOf, withdrawnKeys } from '@/domains/themes/release'
 import { withTenant } from '@/lib/db/tenant'
 import { discountCodes, discounts } from '@/lib/db/schema-discounts'
 import { SHOP_DOMAIN } from '@/lib/public-env'
@@ -228,8 +229,13 @@ async function lookup(handles: { current: string[]; old: Record<string, string> 
 export type StoredLook = { revisionId: string; themeKey: string; themeVersion: string; styleKey: string; settings: unknown }
 const stored = (r: Revision | null): StoredLook | null => (r ? { revisionId: r.id, themeKey: r.themeKey, themeVersion: r.themeVersion, styleKey: r.styleKey, settings: r.settings } : null)
 
-// Which revision is live, and which revision an id names, are src/lib/themes/look.ts's rules; read through it.
-const coreLook = (tenantId: string) => withTenant(tenantId, async (tx) => stored(await liveRevision(tx, tenantId)))
+// Which revision is live (liveOf), and which revision an id names, are src/lib/themes/look.ts's and release.ts's rules.
+// The shop caches its recent publishes; which versions are withdrawn is one platform read for every shop (tag
+// `themes`), so a withdraw is one revalidation, whatever the number of shops (T3 review).
+const corePublishes = (tenantId: string) => withTenant(tenantId, async (tx) => (await recentPublishes(tx, tenantId, LIVE_DEPTH)).map((p) => stored(p.revision)!))
+const versionStates = unstable_cache(() => themeVersionRows(), ['sf-theme-versions'], { tags: ['themes'], revalidate: 300 })
+/** After Admin withdraws or recalls a version: every shop re-reads which versions it may render. */
+export const refreshThemeVersions = () => revalidateTag('themes')
 
 /** A revision of THIS shop for its own preview (a draft or an old look). Another shop's id and a missing id read the same: null. */
 export const previewRevision = (tenantId: string, revisionId: string) => withTenant(tenantId, async (tx) => stored(await revisionOf(tx, tenantId, revisionId)))
@@ -249,9 +255,11 @@ async function coreBestSellers(tenantId: string, days: number): Promise<string[]
 
 // ── Exports: cached for shoppers, uncached for the merchant's preview ──────────
 
-export const shopLook = shopCached('look', 'shop', (t) => coreLook(t))
+const shopPublishes = shopCached('look', 'shop', (t) => corePublishes(t))
+/** The shop's live look: its newest publish whose version isn't withdrawn (liveOf). */
+export const shopLook = async (tenantId: string): Promise<StoredLook | null> => liveOf(await shopPublishes(tenantId), withdrawnKeys(await versionStates()))
 export const shopBestSellers = shopCached('best', 'catalogue', (t, days: number) => coreBestSellers(t, days), 3600)
-export const previewLook = (tenantId: string) => coreLook(tenantId)
+export const previewLook = async (tenantId: string): Promise<StoredLook | null> => liveOf(await corePublishes(tenantId), withdrawnKeys(await themeVersionRows()))
 export const previewBestSellers = (tenantId: string, days: number) => coreBestSellers(tenantId, days)
 
 export const shopSettingsFor = shopCached('shop', 'shop', (t) => coreShop(t))

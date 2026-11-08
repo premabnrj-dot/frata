@@ -989,4 +989,51 @@ do $$ begin
   if (select restocked_at from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003b') is not null then raise exception 'FAIL: B''s variant changed'; end if;
 end $$;
 
-\echo 'tenancy proof — all 33 checks passed'
+-- 34. Theme versions (themes T3): shops read when, never who or why; a stage is one shop's; decisions are final;
+--     the baseline can't be pulled; Admin counts looks by column, never reading a shop's settings.
+insert into theme_versions (id, theme_key, version) values ('7e7e7e7e-0000-0000-0000-00000000000a', 'editorial', '9.9.9');
+insert into theme_version_stages (tenant_id, version_id, staged_by) values ('22222222-2222-2222-2222-222222222222', '7e7e7e7e-0000-0000-0000-00000000000a', '99999999-9999-9999-9999-999999999999');
+begin; set local role frata_app;
+do $$ begin
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  perform id, theme_key, version, released_at, recalled_at, withdrawn_at from theme_versions;
+  begin perform released_by from theme_versions; raise exception 'FAIL: a shop reads who released a theme';
+  exception when insufficient_privilege then null; end;
+  begin perform recalled_reason from theme_versions; raise exception 'FAIL: a shop reads why a theme was recalled';
+  exception when insufficient_privilege then null; end;
+  begin insert into theme_versions (theme_key, version) values ('bazaar', '9.9.9'); raise exception 'FAIL: a shop added a theme version';
+  exception when insufficient_privilege then null; end;
+  begin update theme_versions set released_at = now(); raise exception 'FAIL: a shop released a theme';
+  exception when insufficient_privilege then null; end;
+  if exists (select 1 from theme_version_stages) then raise exception 'FAIL: A sees B''s staged versions'; end if;
+  begin insert into theme_version_stages (tenant_id, version_id, staged_by) values ('11111111-1111-1111-1111-111111111111', '7e7e7e7e-0000-0000-0000-00000000000a', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: a shop staged itself';
+  exception when insufficient_privilege then null; end;
+  perform set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+  if not exists (select 1 from theme_version_stages) then raise exception 'FAIL: B can''t see its own stage'; end if;
+end $$;
+commit;
+begin; set local role frata_admin;
+do $$ begin
+  update theme_versions set released_at = now(), released_by = '99999999-9999-9999-9999-999999999999' where id = '7e7e7e7e-0000-0000-0000-00000000000a';
+  begin update theme_versions set released_at = null where id = '7e7e7e7e-0000-0000-0000-00000000000a'; raise exception 'FAIL: a release was undone';
+  exception when check_violation then null; end;
+  begin update theme_versions set recalled_at = now(), recalled_by = '99999999-9999-9999-9999-999999999999', recalled_reason = 'x' where id = '7e7e7e7e-0000-0000-0000-00000000000a'; raise exception 'FAIL: a recall without a reason';
+  exception when check_violation then null; end;
+  begin update theme_versions set withdrawn_at = now(), withdrawn_by = '99999999-9999-9999-9999-999999999999', withdrawn_reason = 'a problem' where theme_key = 'classic' and version = '1.0.0'; raise exception 'FAIL: the baseline look was withdrawn';
+  exception when check_violation then null; end;
+  begin update theme_versions set theme_key = 'bazaar' where id = '7e7e7e7e-0000-0000-0000-00000000000a'; raise exception 'FAIL: Admin renamed a version';
+  exception when insufficient_privilege then null; end;
+  perform id, tenant_id, revision_id, published_at from shop_theme_publishes;
+  perform id, tenant_id, theme_key, theme_version from shop_theme_revisions;
+  begin perform settings from shop_theme_revisions; raise exception 'FAIL: staff read a shop''s look content';
+  exception when insufficient_privilege then null; end;
+end $$;
+commit;
+do $$ begin
+  if has_table_privilege('anon', 'theme_versions', 'select') or has_table_privilege('authenticated', 'theme_version_stages', 'select') or has_table_privilege('service_role', 'theme_versions', 'select') then raise exception 'FAIL: API roles reach theme versions'; end if;
+  if (select count(*) from theme_versions where released_at is not null) < 6 then raise exception 'FAIL: the build''s versions were not recorded as released'; end if;
+end $$;
+delete from theme_version_stages where version_id = '7e7e7e7e-0000-0000-0000-00000000000a';
+delete from theme_versions where id = '7e7e7e7e-0000-0000-0000-00000000000a';
+
+\echo 'tenancy proof — all 34 checks passed'

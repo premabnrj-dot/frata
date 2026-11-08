@@ -7,7 +7,9 @@ import { Menu } from '@/components/ui/menu'
 import { discardDraftAction, editLookAction, undoPublishAction } from '../actions'
 
 /** Customize (primary), Preview, More: what a merchant does with the published look and the draft. */
-export function LookActions({ canEdit, canPublish, hasDraft, undoFrom, support }: { canEdit: boolean; canPublish: boolean; hasDraft: boolean; undoFrom: string | null; support: boolean }) {
+export function LookActions({ canEdit, canPublish, hasDraft, undoFrom, restore = false, support }: { canEdit: boolean; canPublish: boolean; hasDraft: boolean; undoFrom: string | null
+  /** The live version was recalled: one tap puts the previous look back (Undo's rule: the newest earlier available look). */
+  restore?: boolean; support: boolean }) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -30,7 +32,8 @@ export function LookActions({ canEdit, canPublish, hasDraft, undoFrom, support }
   return (
     <div className="space-y-2 pt-1">
       <div className="flex flex-wrap gap-2">
-        <Button disabled={pending} onClick={customize}>Customize</Button>
+        {restore && undoFrom && <Button disabled={pending} onClick={() => run(() => undoPublishAction({ live: undoFrom }))}>Restore your previous look</Button>}
+        <Button variant={restore ? 'secondary' : undefined} className={restore ? 'after:hidden' : undefined} disabled={pending} onClick={customize}>Customize</Button>
         <a href="/console/preview" className={button({ variant: 'secondary' })}>Preview shop</a>
         <Menu items={items} />
       </div>

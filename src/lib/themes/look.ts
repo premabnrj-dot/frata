@@ -1,7 +1,8 @@
 import 'server-only'
 import { and, desc, eq, notExists, sql } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
-import { shopThemePublishes, shopThemeRevisions } from '@/lib/db/schema-themes'
+import { shopThemePublishes, shopThemeRevisions, themeVersionStages, themeVersions } from '@/lib/db/schema-themes'
+import { availableTo, liveOf, withdrawnKeys, type VersionRow } from '@/domains/themes/release'
 
 // =============================================================================
 // FILE: src/lib/themes/look.ts — the one module that reads or writes a shop's looks (themes plan § Review findings).
@@ -28,9 +29,28 @@ async function published(tx: Tx, tenantId: string, limit: number) {
   return rows.map((x) => ({ revision: x.r, publishedAt: x.p.publishedAt, publishedBy: x.p.publishedBy, publishedByEmail: x.p.publishedByEmail }))
 }
 
-/** The live look's revision (the storefront's read), or null: the shop has never published. */
+/** How far back the shop looks for a publish it may still render (a withdrawn version is skipped, T3). */
+export const LIVE_DEPTH = 10
+export const recentPublishes = published
+
+/**
+ * Which theme versions this shop may use (themes T3): the platform's decisions and this shop's stages. THE loader
+ * Try, the gallery, Customize, Restore, Publish and Undo ask (with availableTo / latestAvailable / liveOf).
+ */
+export async function themeAccess(tx: Tx, tenantId: string): Promise<{ rows: VersionRow[]; staged: Set<string>; bad: Set<string>; may: (key: string, version: string) => boolean }> {
+  const [rows, st] = await Promise.all([
+    tx.select({ id: themeVersions.id, themeKey: themeVersions.themeKey, version: themeVersions.version, releasedAt: themeVersions.releasedAt, recalledAt: themeVersions.recalledAt, withdrawnAt: themeVersions.withdrawnAt }).from(themeVersions),
+    tx.select({ versionId: themeVersionStages.versionId }).from(themeVersionStages).where(eq(themeVersionStages.tenantId, tenantId)),
+  ])
+  const staged = new Set(st.map((s) => s.versionId))
+  const may = (key: string, version: string) => { const r = rows.find((x) => x.themeKey === key && x.version === version) ?? null; return availableTo(r, !!r && staged.has(r.id)) }
+  return { rows, staged, bad: withdrawnKeys(rows), may }
+}
+
+/** The live look's revision (liveOf: the newest publish not on a withdrawn version), or null: never published. */
 export async function liveRevision(tx: Tx, tenantId: string): Promise<Revision | null> {
-  return (await published(tx, tenantId, 1))[0]?.revision ?? null
+  const { bad } = await themeAccess(tx, tenantId)
+  return liveOf((await published(tx, tenantId, LIVE_DEPTH)).map((p) => ({ ...p, themeKey: p.revision.themeKey, themeVersion: p.revision.themeVersion })), bad)?.revision ?? null
 }
 
 async function openDraft(tx: Tx, tenantId: string): Promise<Revision | null> {
@@ -42,13 +62,21 @@ async function openDraft(tx: Tx, tenantId: string): Promise<Revision | null> {
 }
 
 type Published = { revision: Revision; publishedAt: Date; publishedBy: string; publishedByEmail: string | null }
-export type Look = { live: Published | null; draft: Revision | null; history: Published[]; previous: Revision | null }
+export type Look = {
+  live: Published | null; draft: Revision | null; history: Published[]
+  /** Undo's target: the newest earlier look the shop may still use (not the live one, not recalled or withdrawn). */
+  previous: Revision | null
+  /** May the shop use this version (themeAccess)? */
+  may: (key: string, version: string) => boolean
+  access: Awaited<ReturnType<typeof themeAccess>>
+}
 
 /** Live, draft and history for the console (no other shop's rows can appear: the tenant is in every query). */
 export async function lookFor(tx: Tx, tenantId: string): Promise<Look> {
-  const history = await published(tx, tenantId, 50)
-  const live = history[0] ?? null
-  return { live, draft: await openDraft(tx, tenantId), history, previous: history.find((h) => h.revision.id !== live?.revision.id)?.revision ?? null }
+  const [history, access] = await Promise.all([published(tx, tenantId, 50), themeAccess(tx, tenantId)])
+  const live = liveOf(history.map((h) => ({ ...h, themeKey: h.revision.themeKey, themeVersion: h.revision.themeVersion })), access.bad)
+  const previous = history.find((h) => h.revision.id !== live?.revision.id && access.may(h.revision.themeKey, h.revision.themeVersion))?.revision ?? null
+  return { live: live ? { revision: live.revision, publishedAt: live.publishedAt, publishedBy: live.publishedBy, publishedByEmail: live.publishedByEmail } : null, draft: await openDraft(tx, tenantId), history, previous, may: access.may, access }
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
@@ -90,11 +118,14 @@ export async function saveDraft(tx: Tx, tenantId: string, who: Who, d: { revisio
 }
 
 /** Publish the draft the editor saw (its `version`). A shop with no publish row first records the look it has today. */
-export async function publishRevision(tx: Tx, tenantId: string, who: Who, d: { revisionId: string; version: number; baseline: () => { themeKey: string; themeVersion: string; styleKey: string; settings: object } }): Promise<'ok' | 'gone' | 'stale'> {
+export async function publishRevision(tx: Tx, tenantId: string, who: Who, d: { revisionId: string; version: number; baseline: () => { themeKey: string; themeVersion: string; styleKey: string; settings: object } }): Promise<'ok' | 'gone' | 'stale' | 'unavailable'> {
   await lockShop(tx, tenantId)
   const [r] = await tx.select().from(shopThemeRevisions).where(and(eq(shopThemeRevisions.tenantId, tenantId), eq(shopThemeRevisions.id, d.revisionId))).for('update')
   if (!r) return 'gone'
   if (r.version !== d.version) return 'stale'
+  // A version recalled or withdrawn (or never offered to this shop) can't go live (T3). A withdraw racing this needs
+  // no lock: render skips a withdrawn version anyway (liveOf).
+  if (!(await themeAccess(tx, tenantId)).may(r.themeKey, r.themeVersion)) return 'unavailable'
   if (!(await liveRevision(tx, tenantId))) {
     // Lazy baseline (plan § T1·1): the shop's look before its first publish, so History and Undo have it.
     const b = d.baseline()

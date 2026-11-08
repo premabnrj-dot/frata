@@ -76,8 +76,11 @@ export function carryOver(from: { manifest: ThemeManifest; layer: ThemeLayer }, 
   // Another version of the same theme (Editorial 1.0 → 1.1): everything the merchant made comes across (T2 review).
   if (from.manifest.key === to.key) {
     const style = to.styles.some((s) => s.key === from.layer.style) ? from.layer.style : to.styles[0]!.key
+    const parsed = (from.layer.home ?? []).map((s) => SectionSchema.safeParse(s)).flatMap((r) => (r.success ? [r.data] : []))
     const home = from.layer.home?.filter((s) => { const r = SectionSchema.safeParse(s); return r.success && to.allowed.sections.includes(r.data.key) })
-    return { layer: { style, ...(from.layer.settings ? { settings: from.layer.settings } : {}), ...(home ? { home } : {}) }, lost: [] }
+    // Moving back a version (a recall) can drop a section the earlier version lacks: say so (T3 review).
+    const lost = [...new Set(parsed.filter((s) => !to.allowed.sections.includes(s.key)).map((s) => `${SECTION_NAMES[s.key]} isn't in ${to.name} ${to.version}`))]
+    return { layer: { style, ...(from.layer.settings ? { settings: from.layer.settings } : {}), ...(home ? { home } : {}) }, lost }
   }
   const was = { ...PAGE_DEFAULTS, ...from.manifest.defaults, ...(from.layer.settings ?? {}) } as ThemeSettings
   const lost: string[] = []

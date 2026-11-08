@@ -36,6 +36,11 @@ describe('pages beyond Home (T2)', () => {
     const e = CATALOGUE.editorial!['1.0.0']!
     const layer = { style: e.styles.at(-1)!.key, settings: { corners: 'round' as const, header: 'minimal' as const }, home: e.home.slice(0, 1) }
     expect(carryOver({ manifest: e, layer }, { ...e, version: '1.1.0' })).toEqual({ layer, lost: [] })
+    // Back a version (a recall): a section the earlier one lacks drops, and says so.
+    const e11 = CATALOGUE.editorial!['1.1.0']!
+    const withLook = { style: 'haldi', home: [{ id: 'l', key: 'shop_the_look', heading: 'x' }, { id: 'r', key: 'rich_text', body: [] }] }
+    const back = carryOver({ manifest: e11, layer: withLook }, e)
+    expect(back.layer.home?.map((s) => (s as { id: string }).id)).toEqual(['r']); expect(back.lost).toEqual(['Shop the look isn’t in Editorial 1.0.0'.replace('’', "'")])
   })
   it('a stored version this build lacks renders with the nearest earlier one of the same theme, never Classic', () => {
     expect(manifestNear('editorial', '1.9.0')?.key).toBe('editorial')
