@@ -163,7 +163,7 @@ export default {
         await c.getByRole('region', { name: 'Last 30 days' }).getByText(/Too few to judge/).waitFor()
         // The list's ₹ kept column (the offer page shows no numbers under 30 orders: "too few to judge").
         await c.goto(CONSOLE + '/console/offers')
-        await c.getByRole('columnheader', { name: /₹ kept per delivered/ }).waitFor()
+        await c.getByRole('columnheader', { name: /₹ kept per order/ }).waitFor()
         // ₹ kept is a profit: staff and partners see the offers and their uses, never it (Ship S0·6).
         const S = USERS.staff
         await db`insert into auth.users (id, email, email_confirmed_at) values (${S.id}, ${S.email}, now()) on conflict (id) do nothing`
