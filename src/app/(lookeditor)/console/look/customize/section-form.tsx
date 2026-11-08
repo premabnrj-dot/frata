@@ -71,11 +71,12 @@ function Products({ s, set, c }: { s: SectionOf<'products'>; set: Set<SectionOf<
   return (<>
     <Text label="Heading" value={s.heading} max={40} onChange={(heading) => set({ ...s, heading })} />
     <Choice label="Show" value={src.kind} onChange={(kind) => set({ ...s, source: kind === 'best_sellers' ? { kind, days: 90 } : kind === 'collection' ? { kind, handle: c.collections[0]?.handle ?? 'none' } : kind === 'under_price' ? { kind, maxPaise: 99900 } : { kind } })}
-      options={[{ value: 'newest', label: 'New in' }, { value: 'best_sellers', label: 'Best sellers' }, { value: 'collection', label: 'A collection' }, { value: 'under_price', label: 'Under a price' }, { value: 'on_sale', label: 'On sale' }]} />
+      options={[{ value: 'newest', label: 'New in' }, { value: 'best_sellers', label: 'Best sellers' }, { value: 'collection', label: 'A collection' }, { value: 'under_price', label: 'Under a price' }, { value: 'on_sale', label: 'On sale' }, { value: 'back_in_stock', label: 'Back in stock' }]} />
     {src.kind === 'best_sellers' && <>
       <Choice label="Over" value={src.days} onChange={(days) => set({ ...s, source: { kind: 'best_sellers', days } })} options={[{ value: 30, label: '30 days' }, { value: 90, label: '90 days' }]} />
       <p className="text-xs text-muted-foreground">Ranked by delivered orders. Shoppers see the order, never the numbers.</p>
     </>}
+    {src.kind === 'back_in_stock' && <p className="text-xs text-muted-foreground">Pieces that sold out for a day or more and came back in the last 30 days, latest first. Hides itself when there are none.</p>}
     {src.kind === 'collection' && <Field label="Collection">{(id) => (
       <select id={id} value={src.handle} onChange={(e) => set({ ...s, source: { kind: 'collection', handle: e.target.value } })} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm">
         {c.collections.map((x) => <option key={x.handle} value={x.handle}>{x.title}</option>)}

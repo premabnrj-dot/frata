@@ -31,4 +31,15 @@ describe('sources', () => {
     expect(sourceProducts({ kind: 'best_sellers', days: 90 }, cat, now)).toEqual([])
   })
   it('a scheduled product appears at its moment', () => expect(sourceProducts({ kind: 'newest' }, cat, new Date('2026-11-10T00:00:00Z')).map((x) => x.id)[0]).toBe('later'))
+  it('back in stock: a size that came back in 30 days and can be bought now, latest first', () => {
+    const c = { collections: [], products: [
+      p('a', '2026-10-01T00:00:00Z', { variants: [v({ restockedAt: '2026-11-01T00:00:00Z' }), v({ values: ['M'] })] }),
+      p('b', '2026-10-01T00:00:00Z', { variants: [v({ restockedAt: '2026-11-06T00:00:00Z' })] }),
+      p('gone-again', '2026-10-01T00:00:00Z', { variants: [v({ restockedAt: '2026-11-06T00:00:00Z', stock: 0 })] }),
+      p('long-ago', '2026-10-01T00:00:00Z', { variants: [v({ restockedAt: '2026-09-01T00:00:00Z' })] }),
+      p('never', '2026-10-01T00:00:00Z'),
+      p('hidden', '2026-10-01T00:00:00Z', { status: 'unlisted', variants: [v({ restockedAt: '2026-11-06T00:00:00Z' })] }),
+    ] }
+    expect(sourceProducts({ kind: 'back_in_stock' }, c, now).map((x) => x.id)).toEqual(['b', 'a'])
+  })
 })

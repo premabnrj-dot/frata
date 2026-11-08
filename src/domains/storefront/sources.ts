@@ -13,6 +13,10 @@ export type Source =
   | { kind: 'collection'; handle: string }
   | { kind: 'under_price'; maxPaise: number }
   | { kind: 'on_sale' }
+  | { kind: 'back_in_stock' }
+
+/** Back in stock looks back this far (one constant: the source and anything that names it). */
+export const RESTOCK_DAYS = 30
 
 type Cat<P extends ListProduct> = { products: P[]; collections: (ListCollection & { handle: string })[] }
 
@@ -33,5 +37,12 @@ export function sourceProducts<P extends ListProduct>(src: Source, cat: Cat<P>, 
     }
     case 'under_price': return listed().filter((p) => { const pr = priceOf(p); return !!pr && pr.min <= src.maxPaise })
     case 'on_sale': return listed().filter((p) => p.variants.some((v) => v.compareAt !== null && v.compareAt > v.price))
+    // A variant that sold out for a day or more (the database decides: restocked_at) came back in the window and a
+    // shopper can buy it now (stock after pre-orders still owed). Latest first. One size back puts the product here.
+    case 'back_in_stock': {
+      const since = now.getTime() - RESTOCK_DAYS * 86_400_000
+      const back = (p: P) => Math.max(0, ...p.variants.filter((v) => v.restockedAt && v.stock > 0 && Date.parse(v.restockedAt) >= since).map((v) => Date.parse(v.restockedAt!)))
+      return listed().map((p) => [p, back(p)] as const).filter(([, t]) => t > 0).sort((a, b) => b[1] - a[1]).map(([p]) => p)
+    }
   }
 }

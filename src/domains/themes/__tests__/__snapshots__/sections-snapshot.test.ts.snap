@@ -422,6 +422,18 @@ exports[`section schemas > products keeps its shape 1`] = `
           ],
           "type": "object",
         },
+        {
+          "properties": {
+            "kind": {
+              "const": "back_in_stock",
+              "type": "string",
+            },
+          },
+          "required": [
+            "kind",
+          ],
+          "type": "object",
+        },
       ],
     },
     "viewAll": {

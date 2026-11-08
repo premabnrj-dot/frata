@@ -10,7 +10,9 @@
 import { availability, visibility, type Status, type VariantFacts, type WhenOut } from '@/domains/catalogue/availability'
 import { cleanRules, matches, type ProductFacts } from '@/domains/catalogue/collection-rules'
 
-export type ListVariant = { values: string[]; price: number; compareAt: number | null; stock: number; whenOut: WhenOut; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; preorderFull: boolean }
+export type ListVariant = { values: string[]; price: number; compareAt: number | null; stock: number; whenOut: WhenOut; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; preorderFull: boolean
+  /** When it came back after selling out (kept by the database; themes T2 Back in stock). Absent: unknown. */
+  restockedAt?: string | null }
 export type ListProduct = {
   id: string; title: string; status: string; publishAt: string | null; since: string
   categoryId: string | null; attributes: Record<string, string[]>; tags: string[]

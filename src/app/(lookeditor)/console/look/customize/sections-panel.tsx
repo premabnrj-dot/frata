@@ -11,7 +11,7 @@ import { MAX_PER_PAGE, SECTION_KINDS, SECTION_NAMES, type SectionInstance, type 
 const summary = (s: SectionInstance): string => {
   switch (s.key) {
     case 'hero': return s.layout === 'text' ? 'Words only' : s.image ? 'With a photo' : 'Needs a photo'
-    case 'products': return s.source.kind === 'newest' ? `New in · ${s.count}` : s.source.kind === 'best_sellers' ? `By delivered orders · ${s.source.days} days` : s.source.kind === 'collection' ? `A collection · ${s.count}` : s.source.kind === 'under_price' ? `Under a price · ${s.count}` : `On sale · ${s.count}`
+    case 'products': return s.source.kind === 'newest' ? `New in · ${s.count}` : s.source.kind === 'best_sellers' ? `By delivered orders · ${s.source.days} days` : s.source.kind === 'collection' ? `A collection · ${s.count}` : s.source.kind === 'under_price' ? `Under a price · ${s.count}` : s.source.kind === 'back_in_stock' ? `Back in stock · ${s.count}` : `On sale · ${s.count}`
     case 'collection_tiles': return s.mode === 'auto' ? `Automatic · ${s.count}` : `${s.handles.length} picked`
     case 'price_tiles': return `${s.bands.length} tiles`
     case 'promises': return `${s.show.length} promises`

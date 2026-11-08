@@ -99,7 +99,7 @@ async function coreShop(tenantId: string): Promise<StoreShop | null> {
 // ── The catalogue: every product a list can show, and the collections ───────────
 
 export type StoreImage = { id: string; base: string; widths: number[]; width: number; height: number; optionValue: string | null; alt: string }
-export type StoreVariant = { id: string; values: string[]; sku: string | null; price: number; compareAt: number | null; stock: number; whenOut: 'stop' | 'preorder' | 'made_to_order'; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; preorderFull: boolean }
+export type StoreVariant = { id: string; values: string[]; sku: string | null; price: number; compareAt: number | null; stock: number; whenOut: 'stop' | 'preorder' | 'made_to_order'; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; preorderFull: boolean; restockedAt: string | null }
 export type StoreColour = { value: string; family: string | null; hex: string | null; cropImageId: string | null; crop: { x: number; y: number; r: number } | null }
 export type StoreCard = {
   id: string; handle: string; title: string; status: string; publishAt: string | null; since: string
@@ -121,16 +121,18 @@ const variantCols = (tenantId: string) => ({
   owed: owedSql(tenantId, new Date()),
   id: variants.id, productId: variants.productId, values: variants.optionValues, sku: variants.sku, price: variants.price, compareAt: variants.compareAt,
   stock: variants.stock, whenOut: variants.whenOut, shipsBy: variants.shipsBy, leadMinDays: variants.leadMinDays, leadMaxDays: variants.leadMaxDays, cap: variants.preorderCap,
+  restockedAt: variants.restockedAt,
 })
 const imageCols = { id: productImages.id, productId: productImages.productId, base: productImages.base, widths: productImages.widths, width: productImages.width, height: productImages.height, optionValue: productImages.optionValue, alt: productImages.alt }
 const colourCols = { productId: productColours.productId, value: productColours.value, family: productColours.family, hex: productColours.hex, cropImageId: productColours.cropImageId, crop: productColours.crop }
 
-const toVariant = (v: { id: string; values: string[]; sku: string | null; price: number; compareAt: number | null; stock: number; owed: number; whenOut: string; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; cap: number | null }): StoreVariant => ({
+const toVariant = (v: { id: string; values: string[]; sku: string | null; price: number; compareAt: number | null; stock: number; owed: number; whenOut: string; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; cap: number | null; restockedAt: Date | null }): StoreVariant => ({
   id: v.id, values: v.values, sku: v.sku, price: Number(v.price), compareAt: v.compareAt === null ? null : Number(v.compareAt),
   // Shoppers learn "only N left" at LOW_STOCK_AT or below; above it, the count is not theirs to see.
   stock: Math.min(Math.max(0, v.stock - v.owed), LOW_STOCK_AT + 1), whenOut: v.whenOut as StoreVariant['whenOut'], shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays,
   // No orders before 1C, so pre-orders are full only at a cap of 0; 1C counts them.
   preorderFull: v.cap !== null && v.cap <= 0,
+  restockedAt: v.restockedAt ? v.restockedAt.toISOString() : null,
 })
 
 async function coreCatalogue(tenantId: string, drafts: boolean): Promise<StoreCatalogue> {

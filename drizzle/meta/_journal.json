@@ -246,6 +246,20 @@
       "when": 1794102686940,
       "tag": "0034_themes_access",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794103441810,
+      "tag": "0035_back_in_stock",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794103452357,
+      "tag": "0036_back_in_stock_trigger",
+      "breakpoints": true
     }
   ]
 }

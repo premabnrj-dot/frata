@@ -58,7 +58,7 @@ export const CollectionTilesSchema = z.object({
   shape: z.enum(['portrait', 'square', 'circle']).default('portrait'),
 })
 
-export const SOURCE_KEYS = ['newest', 'best_sellers', 'collection', 'under_price', 'on_sale'] as const
+export const SOURCE_KEYS = ['newest', 'best_sellers', 'collection', 'under_price', 'on_sale', 'back_in_stock'] as const
 export const SourceSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('newest') }),
   /** Ranked by delivered units over the window (server-side, ids only: ADR-0003). */
@@ -66,6 +66,8 @@ export const SourceSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('collection'), handle: z.string().regex(/^[a-z0-9-]{1,80}$/) }),
   z.object({ kind: z.literal('under_price'), maxPaise: z.number().int().positive().max(10_00_000_00) }),
   z.object({ kind: z.literal('on_sale') }),
+  /** Sold out a day or more, back in the last 30 days (variants.restocked_at, kept by the database). T2. */
+  z.object({ kind: z.literal('back_in_stock') }),
 ])
 
 export const ProductsSchema = z.object({

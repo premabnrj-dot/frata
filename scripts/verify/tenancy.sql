@@ -941,4 +941,42 @@ do $$ begin
      or has_table_privilege('service_role', 'shop_theme_revisions', 'select') then raise exception 'FAIL: API roles reach shop looks'; end if;
 end $$;
 
-\echo 'tenancy proof — all 32 checks passed'
+-- 33. Back in stock (themes T2): the database alone keeps sold_out_at / restocked_at; A can't move B's stock.
+insert into variants (id, tenant_id, product_id, option_values, price, stock, when_out, ships_by) values
+  ('cdcdcdcd-0000-0000-0000-00000000003a', '11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', '{XL}', 100000, 1, 'stop', null),
+  ('cdcdcdcd-0000-0000-0000-00000000003c', '11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', '{XXL}', 100000, 1, 'preorder', '2027-01-15'),
+  ('cdcdcdcd-0000-0000-0000-00000000003b', '22222222-2222-2222-2222-222222222222', 'eeeeeeee-0000-0000-0000-00000000000b', '{XL}', 100000, 0, 'stop', null);
+begin; set local role frata_app;
+do $$ declare n int; r record; begin
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  update variants set stock = 5 where id = 'cdcdcdcd-0000-0000-0000-00000000003b'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A moved B''s stock'; end if;
+  update variants set restocked_at = now(), sold_out_at = now() where id = 'cdcdcdcd-0000-0000-0000-00000000003a';
+  select * into r from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003a';
+  if r.restocked_at is not null or r.sold_out_at is not null then raise exception 'FAIL: the app wrote the stock times'; end if;
+  update variants set stock = 0 where id in ('cdcdcdcd-0000-0000-0000-00000000003a', 'cdcdcdcd-0000-0000-0000-00000000003c');
+  if (select sold_out_at from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003a') is null then raise exception 'FAIL: selling out was not recorded'; end if;
+  update variants set stock = 1 where id = 'cdcdcdcd-0000-0000-0000-00000000003a';
+  if (select restocked_at from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003a') is not null then raise exception 'FAIL: back within minutes counted as back in stock'; end if;
+  update variants set stock = 0 where id = 'cdcdcdcd-0000-0000-0000-00000000003a';
+end $$;
+commit;
+-- A day passes (as the owner, past the trigger).
+alter table variants disable trigger variants_stock_times;
+update variants set sold_out_at = now() - interval '2 days' where id in ('cdcdcdcd-0000-0000-0000-00000000003a', 'cdcdcdcd-0000-0000-0000-00000000003c');
+alter table variants enable trigger variants_stock_times;
+begin; set local role frata_app;
+do $$ begin
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  update variants set stock = 4 where id in ('cdcdcdcd-0000-0000-0000-00000000003a', 'cdcdcdcd-0000-0000-0000-00000000003c');
+  if (select restocked_at from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003a') is null then raise exception 'FAIL: back after a day not recorded'; end if;
+  if (select restocked_at from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003c') is not null then raise exception 'FAIL: a pre-order variant came "back"'; end if;
+end $$;
+commit;
+do $$ begin
+  if (select prosecdef from pg_proc where proname = 'app_variant_stock_times') then raise exception 'FAIL: the stock-times trigger is a definer'; end if;
+  if has_function_privilege('anon', 'app_variant_stock_times()', 'execute') or has_function_privilege('authenticated', 'app_variant_stock_times()', 'execute') then raise exception 'FAIL: API roles run the stock-times trigger'; end if;
+  if (select restocked_at from variants where id = 'cdcdcdcd-0000-0000-0000-00000000003b') is not null then raise exception 'FAIL: B''s variant changed'; end if;
+end $$;
+
+\echo 'tenancy proof — all 33 checks passed'
