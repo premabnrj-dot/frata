@@ -78,7 +78,7 @@ export async function issueMonth(staff: StaffOk, monthStart: Date, expected: { c
 export type InvoiceDetail = {
   invoice: DraftRow & { periodStart: Date; testMode: boolean; buyerName: string | null }
   lines: { description: string; quantity: number; taxable: number }[]
-  payments: { method: string; amount: number; utr: string | null; capturedAt: Date | null; failedAt: Date | null; failureReason: string | null; createdAt: Date }[]
+  payments: { method: string; amount: number; utr: string | null; capturedAt: Date | null; failedAt: Date | null; failureReason: string | null; overPaid: number; createdAt: Date }[]
   credits: { number: string; total: number; reason: string; issuedAt: Date }[]
 }
 
@@ -93,7 +93,7 @@ export async function invoiceDetail(staff: StaffOk, id: string): Promise<Invoice
   if (!i) return null
   const [lines, payments, credits, money] = await Promise.all([
     db.select({ description: frrataInvoiceLines.description, quantity: frrataInvoiceLines.quantity, taxable: frrataInvoiceLines.taxable }).from(frrataInvoiceLines).where(eq(frrataInvoiceLines.invoiceId, id)).orderBy(asc(frrataInvoiceLines.position)),
-    db.select({ method: frrataPayments.method, amount: frrataPayments.amount, utr: frrataPayments.utr, capturedAt: frrataPayments.capturedAt, failedAt: frrataPayments.failedAt, failureReason: frrataPayments.failureReason, createdAt: frrataPayments.createdAt })
+    db.select({ method: frrataPayments.method, amount: frrataPayments.amount, utr: frrataPayments.utr, capturedAt: frrataPayments.capturedAt, failedAt: frrataPayments.failedAt, failureReason: frrataPayments.failureReason, overPaid: frrataPayments.overPaid, createdAt: frrataPayments.createdAt })
       .from(frrataPayments).where(eq(frrataPayments.invoiceId, id)).orderBy(asc(frrataPayments.createdAt)),
     db.select({ number: frrataCreditNotes.number, total: frrataCreditNotes.total, reason: frrataCreditNotes.reason, issuedAt: frrataCreditNotes.issuedAt }).from(frrataCreditNotes).where(eq(frrataCreditNotes.invoiceId, id)).orderBy(asc(frrataCreditNotes.issuedAt)),
     moneyIn([id]),

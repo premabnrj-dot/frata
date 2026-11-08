@@ -11,6 +11,7 @@ import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { auditEvents } from '@/lib/db/schema'
 import { billingAccounts } from '@/lib/db/schema-billing'
 import { errName } from '@/lib/log'
+import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 
 // Billing details (billing B1; plan finding 10): owners and admins (a Frrata support visit may correct them, audited),
 // through asMember. Only the detail columns: frata_app holds no grant on the gateway or mandate columns (0048), so the
@@ -58,19 +59,32 @@ async function owner() {
   return { ok: true as const, me }
 }
 
+/** Each start calls the gateway (a customer or an order): ten a member per ten minutes, refused if the count is unreadable. */
+const tooMany = async (userId: string) => !(await withinLimit(LIMITS.billingMember, userId, new Date(), true))
+const TOO_MANY = 'Too many tries. Wait ten minutes, then try again.'
+/** The definer's own words ("pay: …") are safe to show; anything else is generic. */
+const said = (e: unknown) => /pay: (.{1,120})/.exec(e instanceof Error ? (e.cause instanceof Error ? e.cause.message : e.message) : '')?.[1]
+
 export async function startAutopay(method: string): Promise<Started> {
   const o = await owner(); if (!o.ok) return o
   if (method !== 'upi' && method !== 'card' && method !== 'emandate') return { ok: false, error: 'Choose UPI Autopay, a card or a bank mandate.' }
+  if (await tooMany(o.me.userId)) return { ok: false, error: TOO_MANY }
   try {
-    const r = await asMember(CAN_MANAGE, { action: 'billing.autopay.start', detail: { method } }, async (tx, auth) => {
+    // The gateway is never called inside a transaction (ADR-0006, security review): read, call, then record.
+    const read = await asMember(CAN_MANAGE, { action: 'billing.autopay.start', detail: { method } }, async (tx, auth) => {
       const [d] = await tx.execute<{ name: string; email: string; phone: string }>(sql`select coalesce(nullif(b.legal_name, ''), t.name) as name, coalesce(nullif(b.email, ''), s.support_email) as email, s.support_phone as phone
         from tenants t left join billing_accounts b on b.tenant_id = t.id left join shop_settings s on s.tenant_id = t.id where t.id = ${auth.membership.tenantId}`)
-      const customer = await createCustomer({ name: d?.name || 'Shop', email: d?.email || `shop-${auth.membership.tenantId.slice(0, 8)}@frrata.app`, contact: d?.phone || '9000000000' })
-      const order = await createMandateOrder({ customer: customer.id, method, maxAmount: MAX[method], receipt: `mandate:${auth.membership.tenantId.slice(0, 8)}:${Date.now()}` })
-      await tx.execute(sql`select app_begin_mandate(${customer.id}, ${order.id}, ${method}, ${MAX[method]}, ${auth.userId}::uuid)`)
-      return { order: order.id, customer: customer.id, amount: order.amount }
+      return { d, tenantId: auth.membership.tenantId, userId: auth.userId }
     })
-    return r.ok ? { ok: true, key: billingKeyId(), ...r.value } : { ok: false, error: r.error }
+    if (!read.ok) return { ok: false, error: read.error }
+    const { d, tenantId, userId } = read.value
+    const customer = await createCustomer({ name: d?.name || 'Shop', email: d?.email || `shop-${tenantId.slice(0, 8)}@frrata.app`, contact: d?.phone || '9000000000' })
+    const order = await createMandateOrder({ customer: customer.id, method, maxAmount: MAX[method], receipt: `mandate:${tenantId.slice(0, 8)}:${Date.now()}` })
+    const r = await asMember(CAN_MANAGE, { action: 'billing.autopay.begin', detail: { method } }, async (tx) => {
+      await tx.execute(sql`select app_begin_mandate(${customer.id}, ${order.id}, ${method}, ${MAX[method]}, ${userId}::uuid)`)
+    })
+    // Checkout needs the customer id to show the mandate; nothing else of the gateway's reaches the browser.
+    return r.ok ? { ok: true, key: billingKeyId(), order: order.id, customer: customer.id, amount: order.amount } : { ok: false, error: r.error }
   } catch (e) {
     console.error('[billing.autopay.start]', errName(e))
     return { ok: false, error: 'We could not start the set-up. Nothing was changed. Try again in a minute.' }
@@ -111,24 +125,36 @@ export async function stopAutopay(): Promise<{ ok: true } | { ok: false; error: 
 export async function startPayNow(invoiceId: string): Promise<Started> {
   const o = await owner(); if (!o.ok) return o
   if (!/^[0-9a-f-]{36}$/.test(invoiceId)) return { ok: false, error: 'Not found.' }
+  if (await tooMany(o.me.userId)) return { ok: false, error: TOO_MANY }
+  type Check = { number: string; due: string; test_mode: boolean; open_order: string | null; open_amount: string | null }
+  // What is due, and an open Pay-now order to reuse (two tabs, one order). Refused while an autopay debit is under way.
+  const check = async () => {
+    const r = await asMember(CAN_MANAGE, { action: 'billing.paynow.start', target: invoiceId }, async (tx) =>
+      (await tx.execute<Check>(sql`select * from app_billing_paynow_check(${invoiceId}::uuid)`))[0] ?? null)
+    if (!r.ok) throw Object.assign(new Error(r.error), { shown: r.error })
+    return r.value
+  }
   try {
-    const r = await asMember(CAN_MANAGE, { action: 'billing.paynow.start', target: invoiceId }, async (tx, auth) => {
-      const [i] = await tx.execute<{ number: string; due: string; test_mode: boolean }>(sql`select i.number, i.test_mode,
-          i.total - coalesce((select sum(amount) from frrata_payments p where p.invoice_id = i.id and p.captured_at is not null), 0)
-                  - coalesce((select sum(total) from frrata_credit_notes c where c.invoice_id = i.id), 0) as due
-        from frrata_invoices i where i.id = ${invoiceId}::uuid and i.tenant_id = ${auth.membership.tenantId} and i.number is not null`)
-      if (!i || Number(i.due) <= 0) return { error: 'Nothing is due on that invoice.' }
-      if (i.test_mode !== billingGatewayIsTest()) return { error: 'This invoice cannot be paid here.' }
-      const order = await createOrder({ amount: Number(i.due), receipt: `${i.number}:pay${Date.now() % 1_000_000}` })
-      await tx.execute(sql`select app_billing_checkout_begin(${invoiceId}::uuid, ${order.id}, ${Number(i.due)})`)
-      return { order: order.id, amount: Number(i.due) }
-    })
-    if (!r.ok) return { ok: false, error: r.error }
-    if ('error' in r.value) return { ok: false, error: r.value.error! }
-    return { ok: true, key: billingKeyId(), order: r.value.order, amount: r.value.amount }
+    const i = await check()
+    if (!i || Number(i.due) <= 0) return { ok: false, error: 'Nothing is due on that invoice.' }
+    if (i.test_mode !== billingGatewayIsTest()) return { ok: false, error: 'This invoice cannot be paid here.' }
+    const due = Number(i.due)
+    if (i.open_order && Number(i.open_amount) === due) return { ok: true, key: billingKeyId(), order: i.open_order, amount: due }
+    // The gateway, outside any transaction; then the order is recorded, unless another opened first (then that one).
+    const order = await createOrder({ amount: due, receipt: `${i.number}:pay${Date.now() % 1_000_000}` })
+    try {
+      const r = await asMember(CAN_MANAGE, { action: 'billing.paynow.open', target: invoiceId }, async (tx) => { await tx.execute(sql`select app_billing_checkout_begin(${invoiceId}::uuid, ${order.id}, ${due})`) })
+      if (!r.ok) return { ok: false, error: r.error }
+      return { ok: true, key: billingKeyId(), order: order.id, amount: due }
+    } catch (e) {
+      const again = await check()
+      if (again?.open_order && Number(again.open_amount) === Number(again.due)) return { ok: true, key: billingKeyId(), order: again.open_order, amount: Number(again.due) }
+      throw e
+    }
   } catch (e) {
-    console.error('[billing.paynow.start]', errName(e))
-    return { ok: false, error: 'We could not open the payment. Try again in a minute.' }
+    const shown = (e as { shown?: string }).shown ?? said(e)
+    if (!shown) console.error('[billing.paynow.start]', errName(e))
+    return { ok: false, error: shown ? `${shown.charAt(0).toUpperCase()}${shown.slice(1)}.` : 'We could not open the payment. Try again in a minute.' }
   }
 }
 

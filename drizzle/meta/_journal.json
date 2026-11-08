@@ -414,6 +414,20 @@
       "when": 1794159336813,
       "tag": "0058_plan_change",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1794159924610,
+      "tag": "0059_billing_payment_lease",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1794159928977,
+      "tag": "0060_billing_double_charge",
+      "breakpoints": true
     }
   ]
 }

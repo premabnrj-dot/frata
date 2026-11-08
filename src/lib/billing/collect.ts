@@ -1,6 +1,6 @@
 import 'server-only'
 import { nextStep } from '@/domains/billing/collect'
-import { beginBillingAttempt, billingAttemptResult, billingDue, billingNotice, billingUnsettled } from '@/lib/db/platform'
+import { applyBillingEvent, beginBillingAttempt, billingAttemptResult, billingDue, billingNotice, billingUnapplied, billingUnsettled, closeBillingAttempt } from '@/lib/db/platform'
 import { errName } from '@/lib/log'
 import { billingGatewayIsTest, isBillingGatewayConfigured, orderPayments } from './gateway'
 
@@ -16,13 +16,22 @@ export type CollectResult = { looked: number; notices: number; attempts: number;
 export async function collectDue(now: Date, deadline = Infinity): Promise<CollectResult> {
   const out: CollectResult = { looked: 0, notices: 0, attempts: 0, acknowledged: 0, skipped: 0, settled: 0 }
   // First, settle what a lost webhook left open, so a stuck attempt never blocks the next.
+  // Webhook events stored but not applied (a failed after()) go first: they may settle what follows.
+  for (const id of await billingUnapplied(5)) {
+    if (Date.now() > deadline) break
+    await applyBillingEvent(id).catch((e) => console.error('[billing] apply', errName(e)))
+  }
   if (isBillingGatewayConfigured()) {
     for (const u of await billingUnsettled(120)) {
       if (Date.now() > deadline) break
       try {
+        // Never reached the gateway (the sender stopped before making an order): nothing was charged; close it.
+        if (!u.order) { if (await closeBillingAttempt(u.paymentId, 'Not sent; a fresh notice follows')) out.settled++; continue }
         const items = (await orderPayments(u.order)).items
         const p = items.find((x) => x.status === 'captured') ?? items.find((x) => x.status === 'failed')
-        if (p && (await billingAttemptResult(u.order, p.id, p.status === 'captured', p.error_description ?? null))) out.settled++
+        if (p) { if (await billingAttemptResult(u.order, p.id, p.status === 'captured', p.error_description ?? null)) out.settled++ }
+        // An order and no payment two hours on: the charge never started (a pending one is listed). Close it.
+        else if (items.length === 0 && (await closeBillingAttempt(u.paymentId, 'Not sent; a fresh notice follows'))) out.settled++
       } catch (e) { console.error('[billing] settle', u.paymentId, errName(e)) }
     }
   }

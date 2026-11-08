@@ -77,4 +77,46 @@ describe.skipIf(!host)('collection on a real database', () => {
     await p.applyBillingEvent(id!)
     await p.applyBillingEvent(id!)
   })
+  it('never charged twice: Pay now and a debit never overlap, a debit is claimed once, a stale one closes uncharged', async () => {
+    const p = await import('@/lib/db/platform')
+    const { withTenant } = await import('@/lib/db/tenant')
+    const { sql } = await import('drizzle-orm')
+    const admin = await import('@/lib/admin/merchants')
+    const slug = `b3x-${Date.now()}`
+    const t2 = (await admin.createMerchant(staff, { name: 'B3 Twice', slug, host: `${slug}.frata.test`, ownerEmail: 'o@b3x.test', planCode: 'launch', trialEndsAt: null, now: ist('2026-10-01T00:00:00') })).id
+    const { draftInvoice } = await import('@/lib/billing/draft')
+    await draftInvoice(t2, NOV)
+    const b = await import('@/lib/admin/billing')
+    const ready = b.toIssue(await b.billingMonth(staff, NOV), NOV)
+    await b.issueMonth(staff, NOV, { count: ready.count, total: ready.total })
+    const inv = (await b.billingMonth(staff, NOV)).find((r) => r.tenantId === t2)!.id
+    const O = `order_b3x${Date.now()}`
+    await withTenant(t2, async (tx) => {
+      await tx.execute(sql`select app_begin_mandate('cust_b3x', ${O}, 'upi', 1500000, ${staff.userId}::uuid)`)
+      await tx.execute(sql`select app_complete_mandate(${O}, 'token_b3x')`)
+    })
+    const due = (await p.billingDue()).find((x) => x.invoiceId === inv)!.due
+    const asShop = (q: ReturnType<typeof sql>) => withTenant(t2, (tx) => tx.execute<Record<string, unknown>>(q))
+    // Pay now opens; a second order for the same invoice is refused (two tabs reuse the first); no debit begins.
+    await asShop(sql`select app_billing_checkout_begin(${inv}::uuid, ${`${O}_pay1`}, ${due})`)
+    expect((await asShop(sql`select * from app_billing_paynow_check(${inv}::uuid)`))[0]!.open_order).toBe(`${O}_pay1`)
+    await expect(asShop(sql`select app_billing_checkout_begin(${inv}::uuid, ${`${O}_pay2`}, ${due})`)).rejects.toThrow()
+    expect(await p.beginBillingAttempt(inv, 1)).toBeNull()
+    // The Pay now is abandoned (failed): now a debit begins, and Pay now is refused while it is open.
+    await p.billingAttemptResult(`${O}_pay1`, null, false, 'abandoned')
+    const pid = (await p.beginBillingAttempt(inv, 1))!
+    expect(pid).toBeTruthy()
+    await expect(asShop(sql`select * from app_billing_paynow_check(${inv}::uuid)`)).rejects.toThrow()
+    await expect(asShop(sql`select app_billing_checkout_begin(${inv}::uuid, ${`${O}_pay3`}, ${due})`)).rejects.toThrow()
+    // One sender only.
+    expect(await p.claimBillingAttempt(pid)).toBe(true)
+    expect(await p.claimBillingAttempt(pid)).toBe(false)
+    expect((await p.billingAttemptContext(pid))!.claimed).toBe(true)
+    // A credit note since: what is due is less than the attempt, so it closes uncharged.
+    await b.issueCreditNote(staff, inv, { taxable: 1000 as never, reason: 'Goodwill' })
+    const ctx = (await p.billingAttemptContext(pid))!
+    expect(ctx.due).toBeLessThan(ctx.amount)
+    expect(await p.closeBillingAttempt(pid, 'stale')).toBe(true)
+    expect((await p.billingDue()).find((x) => x.invoiceId === inv)!.pending).toBe(0)
+  })
 })

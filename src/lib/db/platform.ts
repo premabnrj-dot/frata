@@ -190,10 +190,26 @@ export async function beginBillingAttempt(invoiceId: string, attempt: number): P
   const [r] = await db().execute<{ id: string | null }>(sql`select app_billing_begin_attempt(${invoiceId}::uuid, ${attempt}) as id`)
   return r?.id ?? null
 }
-export type AttemptContext = { tenantId: string; amount: number; receipt: string; gatewayOrderId: string | null; customer: string | null; token: string | null; testMode: boolean }
+/** One unsettled debit: `due` is what the invoice owes NOW; `claimed`, whether a sender has taken it already. */
+export type AttemptContext = { tenantId: string; amount: number; receipt: string; gatewayOrderId: string | null; customer: string | null; token: string | null; testMode: boolean; due: number; claimed: boolean }
 export async function billingAttemptContext(paymentId: string): Promise<AttemptContext | null> {
   const [r] = await db().execute<Record<string, unknown>>(sql`select * from app_billing_attempt_context(${paymentId}::uuid)`)
-  return r ? { tenantId: r.tenant_id as string, amount: Number(r.amount), receipt: r.receipt as string, gatewayOrderId: (r.gateway_order_id as string) ?? null, customer: (r.customer as string) ?? null, token: (r.token as string) ?? null, testMode: !!r.test_mode } : null
+  return r ? { tenantId: r.tenant_id as string, amount: Number(r.amount), receipt: r.receipt as string, gatewayOrderId: (r.gateway_order_id as string) ?? null, customer: (r.customer as string) ?? null, token: (r.token as string) ?? null, testMode: !!r.test_mode, due: Number(r.due), claimed: !!r.claimed } : null
+}
+/** Takes the attempt for this sender, once (drizzle/0060). False: someone has it; charge nothing. */
+export async function claimBillingAttempt(paymentId: string): Promise<boolean> {
+  const [r] = await db().execute<{ ok: boolean }>(sql`select app_billing_attempt_claim(${paymentId}::uuid) as ok`)
+  return !!r?.ok
+}
+/** Closes an attempt that charged nothing (stale, or never reached the gateway); the next run sends a fresh notice. */
+export async function closeBillingAttempt(paymentId: string, reason: string): Promise<boolean> {
+  const [r] = await db().execute<{ ok: boolean }>(sql`select app_billing_attempt_close(${paymentId}::uuid, ${reason}) as ok`)
+  return !!r?.ok
+}
+/** Webhook events stored but never applied after `olderMinutes` (an after() that failed). */
+export async function billingUnapplied(olderMinutes: number): Promise<string[]> {
+  const rows = await db().execute<{ id: string }>(sql`select app_billing_unapplied(make_interval(mins => ${olderMinutes})) as id`)
+  return rows.map((r) => r.id)
 }
 export async function billingAttemptOrder(paymentId: string, order: string) {
   await db().execute(sql`select app_billing_attempt_order(${paymentId}::uuid, ${order})`)
@@ -210,8 +226,8 @@ export async function storeBillingEvent(eventId: string, type: string, payload: 
 export async function applyBillingEvent(id: string) {
   await db().execute(sql`select app_apply_billing_event(${id}::uuid)`)
 }
-/** Attempts still unsettled after `olderMinutes` (a lost webhook): ids and their gateway orders. */
-export async function billingUnsettled(olderMinutes: number): Promise<{ paymentId: string; order: string }[]> {
-  const rows = await db().execute<{ payment_id: string; gateway_order_id: string }>(sql`select * from app_billing_unsettled(make_interval(mins => ${olderMinutes}))`)
+/** Attempts still unsettled after `olderMinutes`: ids and their gateway orders (null: it never reached the gateway). */
+export async function billingUnsettled(olderMinutes: number): Promise<{ paymentId: string; order: string | null }[]> {
+  const rows = await db().execute<{ payment_id: string; gateway_order_id: string | null }>(sql`select * from app_billing_unsettled(make_interval(mins => ${olderMinutes}))`)
   return rows.map((r) => ({ paymentId: r.payment_id, order: r.gateway_order_id }))
 }

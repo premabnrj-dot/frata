@@ -170,6 +170,10 @@ export const frrataPayments = pgTable('frrata_payments', {
   capturedAt: at('captured_at'),
   failedAt: at('failed_at'),
   failureReason: text('failure_reason'),
+  /** Billing B3 (security review): the one sender that may charge this attempt took it at this moment; never twice. */
+  sendingAt: at('sending_at'),
+  /** Captured beyond what was due (a Pay now and a debit both landed): Frrata refunds this much. */
+  overPaid: money('over_paid').notNull().default(0),
   recordedBy: uuid('recorded_by'),
   createdAt: createdAt(),
 }, (t) => [

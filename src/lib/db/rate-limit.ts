@@ -39,6 +39,8 @@ export const LIMITS = {
   // PDF documents (Documents D1, security review 2026-11-08): a render is CPU; per member and per shop, fail closed.
   pdfMember: { action: 'pdf:member', max: 30, windowSeconds: 600 },
   pdfShop: { action: 'pdf:shop', max: 120, windowSeconds: 600 },
+  // Frrata's billing gateway (B3 security review): each start makes a gateway customer or order; per member, fail closed.
+  billingMember: { action: 'billing:member', max: 10, windowSeconds: 600 },
 } as const satisfies Record<string, Limit>
 
 /** Whether `subject` is already past the limit, WITHOUT counting an attempt. `failClosed`: true when the counter cannot be read. */
