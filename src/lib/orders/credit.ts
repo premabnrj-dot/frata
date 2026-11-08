@@ -2,7 +2,10 @@ import 'server-only'
 import { and, eq, sql } from 'drizzle-orm'
 import { fiscalYear } from '@/domains/counters/fiscal-year'
 import { invoice, type CreditReason } from '@/domains/orders/documents'
-import { applies, invoiceNumber, seriesFits } from '@/domains/orders/work'
+import { applies, invoiceNumber, InvoiceNumberTooLong, MAX_IN_YEAR, seriesFits } from '@/domains/orders/work'
+
+/** What a merchant reads when the year's credit series is full. */
+export const CREDIT_SERIES_FULL = `This year's credit notes are used up (${MAX_IN_YEAR.credit.toLocaleString('en-IN')}). Shorten the invoice series in Settings › Taxes and invoices to make room, or ask Frrata.`
 import { orderPrefix } from '@/domains/signup/slug'
 import type { Tx } from '@/lib/db'
 import { shopSettings, tenantCounters, tenants } from '@/lib/db/schema'
@@ -18,7 +21,13 @@ import { current, record, type Actor, type Done } from './work'
 // (tenant_counters kind 'credit', per financial year), taken in the same transaction, so a refusal leaves no gap.
 // =============================================================================
 
+/** This year's credit series is used up (past C9,999): thrown so the counter rolls back, said in words by the caller. */
+export class CreditSeriesFull extends Error {}
+
 export async function issueCredit(tx: Tx, tenantId: string, actor: Actor, orderId: string, now = new Date()): Promise<Done<{ number: string }>> {
+  // A credit note is permanent and reverses the sale in the shop's GST filings: the shop's own people only, never a
+  // Frrata support visit (security review 2026-11-08; as the address, payment keys and logo).
+  if (actor.kind === 'support') return { ok: false, error: 'Only the shop’s owner or an admin can issue a credit note.' }
   const c = await current(tx, tenantId, orderId, now)
   if (!c) return { ok: false, error: 'Order not found.' }
   if (!applies('credit', c.state)) return { ok: false, error: 'A credit note is for an order cancelled after packing, or one that came back.' }
@@ -36,7 +45,11 @@ export async function issueCredit(tx: Tx, tenantId: string, actor: Actor, orderI
   const [n] = await tx.insert(tenantCounters).values({ tenantId, kind: 'credit', period: fy, next: 2 })
     .onConflictDoUpdate({ target: [tenantCounters.tenantId, tenantCounters.kind, tenantCounters.period], set: { next: sql`${tenantCounters.next} + 1` } })
     .returning({ next: tenantCounters.next })
-  const number = invoiceNumber({ series: s?.series ?? '', orderPrefix: orderPrefix(s?.prefix ?? '', s?.name ?? ''), fiscalYear: fy, n: n!.next - 1, kind: 'credit' })
+  let number: string
+  try { number = invoiceNumber({ series: s?.series ?? '', orderPrefix: orderPrefix(s?.prefix ?? '', s?.name ?? ''), fiscalYear: fy, n: n!.next - 1, kind: 'credit' }) } catch (e) {
+    if (e instanceof InvoiceNumberTooLong) throw new CreditSeriesFull()
+    throw e
+  }
   const t = inv.totals
   await tx.insert(creditNotes).values({ tenantId, orderId, number, againstInvoice: inv.number, reason, taxable: t.taxable, cgst: t.cgst, sgst: t.sgst, igst: t.igst, total: t.total, issuedAt: now, issuedBy: actor.userId })
   return { ok: true, eventId: await record(tx, tenantId, orderId, actor, 'credit_noted', now, { reason }), number }

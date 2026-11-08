@@ -101,7 +101,7 @@ export function invoice(o: DocOrder, lines: DocLine[], shop: DocShop): Invoice |
 /** Why a packed sale was undone (Documents D3): cancelled after packing, or the parcel came back. */
 export const CREDIT_REASONS = ['cancelled', 'came_back'] as const
 export type CreditReason = (typeof CREDIT_REASONS)[number]
-export type IssuedCredit = { number: string; issuedAt: Date; reason: CreditReason }
+export type IssuedCredit = { number: string; issuedAt: Date; reason: CreditReason; against: string; total: number }
 
 /**
  * A credit note (Documents D3): the issued invoice reversed in full — the same lines, taxable values and tax heads,
@@ -111,5 +111,8 @@ export type IssuedCredit = { number: string; issuedAt: Date; reason: CreditReaso
 export function creditNote(o: DocOrder, lines: DocLine[], shop: DocShop, cn: IssuedCredit): Invoice | null {
   const inv = invoice(o, lines, shop)
   if (!inv) return null
+  // The figures it was issued with are stored (credit_notes): a rendering that disagrees is a broken document, never
+  // printed (impact review 2026-11-08: two copies need one comparison).
+  if (inv.number !== cn.against || inv.totals.total !== cn.total) throw new Error('credit note differs from what was issued')
   return { ...inv, kind: 'credit_note', number: cn.number, date: cn.issuedAt, cancelled: false, against: { number: inv.number, date: inv.date, reason: cn.reason } }
 }

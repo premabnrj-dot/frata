@@ -1322,6 +1322,7 @@ rollback;
 do $$ begin
   begin update credit_notes set number = number; raise exception 'FAIL: a credit note changed'; exception when check_violation then null; end;
   begin delete from credit_notes; raise exception 'FAIL: a credit note deleted'; exception when check_violation then null; end;
+  begin truncate credit_notes; raise exception 'FAIL: credit notes truncated'; exception when check_violation then null; end;
   if exists (select 1 from unnest(array['frata_admin', 'anon', 'authenticated', 'service_role']) r
              where has_any_column_privilege(r, 'credit_notes', 'select, insert, update, references') or has_table_privilege(r, 'credit_notes', 'select, insert, update, delete, truncate, references, trigger'))
   then raise exception 'FAIL: staff or API roles reach credit notes'; end if;

@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, eq, inArray } from 'drizzle-orm'
-import { MAX_DOCUMENTS, type CreditReason, type DocLine, type DocOrder, type DocShop, type IssuedCredit } from '@/domains/orders/documents'
+import { CREDIT_REASONS, MAX_DOCUMENTS, type CreditReason, type DocLine, type DocOrder, type DocShop, type IssuedCredit } from '@/domains/orders/documents'
 import { orderPrefix } from '@/domains/signup/slug'
 import { orderState, type OrderState } from '@/domains/orders/order-state'
 import { applies } from '@/domains/orders/work'
@@ -50,7 +50,7 @@ export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], 
     chargeTaxable: orderLines.chargeTaxable, chargeGst: orderLines.chargeGst,
   }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), inArray(orderLines.orderId, os.map((o) => o.id)))).orderBy(asc(orderLines.position))
   // Credit notes issued for these orders (Documents D3): only read when one is asked for.
-  const cns = kind === 'credit' ? await tx.select({ orderId: creditNotes.orderId, number: creditNotes.number, issuedAt: creditNotes.issuedAt, reason: creditNotes.reason })
+  const cns = kind === 'credit' ? await tx.select({ orderId: creditNotes.orderId, number: creditNotes.number, issuedAt: creditNotes.issuedAt, reason: creditNotes.reason, against: creditNotes.againstInvoice, total: creditNotes.total })
     .from(creditNotes).where(and(eq(creditNotes.tenantId, tenantId), inArray(creditNotes.orderId, os.map((o) => o.id)))) : []
   // In the order asked for (a bulk print keeps the queue's order).
   const byNumber = new Map(os.map((o) => [o.number, o]))
@@ -70,7 +70,7 @@ export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], 
       }
       // What the invoice froze at packing (an order packed before D2 froze nothing: no logo, no signatory or note).
       const cn = cns.find((x) => x.orderId === o.id)
-      return [{ n, o: doc, lines, frozen: { logo: invoiceLogo, signatory: invoiceSignatory ?? '', note: invoiceNote ?? '' }, credit: cn ? { number: cn.number, issuedAt: cn.issuedAt, reason: cn.reason as CreditReason } : null }]
+      return [{ n, o: doc, lines, frozen: { logo: invoiceLogo, signatory: invoiceSignatory ?? '', note: invoiceNote ?? '' }, credit: cn ? { number: cn.number, issuedAt: cn.issuedAt, reason: (CREDIT_REASONS as readonly string[]).includes(cn.reason) ? cn.reason as CreditReason : 'cancelled', against: cn.against, total: Number(cn.total) } : null }]
     }),
   }
 }

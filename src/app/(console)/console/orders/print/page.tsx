@@ -80,6 +80,7 @@ function Slip({ o, lines, shop }: { o: DocOrder; lines: DocLine[]; shop: DocShop
 const rate = (bps: number) => `${bps / 100}%`
 
 function Invoice({ o, lines, shop, frozen }: { o: DocOrder; lines: DocLine[]; shop: DocShop; frozen: Paper }) {
+  // An invoice or bill of supply only: credit notes are PDF-only (their kind never reaches these ternaries).
   const inv = invoice(o, lines, shop)
   if (!inv) return <article className="break-after-page p-6"><p className="font-mono">{o.number}</p><p>Not packed yet: its invoice is issued when it is marked packed.</p></article>
   const intra = inv.supply === 'intra'

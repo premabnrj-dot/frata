@@ -221,7 +221,7 @@ export const orderEvents = pgTable('order_events', {
   actorEmail: text('actor_email'),
   /** edited: the names of the fields changed. */
   fields: text('fields').array(),
-  /** cancelled: the reason code; undone: the kind undone. */
+  /** cancelled: the reason code; undone: the kind undone; credit_noted: why (cancelled, came_back). */
   reason: text('reason'),
   /** undone: the event this reverses. */
   undoes: uuid('undoes'),

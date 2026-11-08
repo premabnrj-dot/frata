@@ -80,12 +80,14 @@ describe('the credit note (Documents D3)', () => {
     const { creditNote } = await import('../documents')
     const o = order({ cancelledAt: new Date('2026-11-08T05:00:00Z') })
     const inv = invoice(o, lines, shop)!
-    const cn = creditNote(o, lines, shop, { number: 'KS/26-27/C0001', issuedAt: new Date('2026-11-08T06:00:00Z'), reason: 'cancelled' })!
+    const issued = { number: 'KS/26-27/C0001', issuedAt: new Date('2026-11-08T06:00:00Z'), reason: 'cancelled' as const, against: inv.number, total: inv.totals.total }
+    const cn = creditNote(o, lines, shop, issued)!
     expect(cn.kind).toBe('credit_note')
     expect([cn.number, cn.cancelled]).toEqual(['KS/26-27/C0001', false])
     expect(cn.against).toEqual({ number: 'KS/26-27/00001', date: inv.date, reason: 'cancelled' })
     expect(cn.totals).toEqual(inv.totals)
     expect(cn.lines).toEqual(inv.lines)
-    expect(creditNote(order({ invoiceNumber: null, packedAt: null }), lines, shop, { number: 'x', issuedAt: new Date(), reason: 'cancelled' })).toBeNull()
+    expect(creditNote(order({ invoiceNumber: null, packedAt: null }), lines, shop, issued)).toBeNull()
+    expect(() => creditNote(o, lines, shop, { ...issued, total: issued.total + 1 })).toThrow(/differs/)
   })
 })
