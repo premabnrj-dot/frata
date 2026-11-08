@@ -8,6 +8,7 @@ import type { StoreCatalogue, StoreCollection, StoreShop } from '@/lib/queries/s
 import { ProductGrid } from './card'
 import { JsonLd } from './json-ld'
 import { Photo } from './photo'
+import { fill, wordsFor, type Lang } from './words'
 import { Sections } from './sections'
 import { PolicyBody, POLICY_TITLE } from './policy'
 import type { Href } from './shell'
@@ -26,18 +27,20 @@ export function HomeView({ shop, cat, href, now, theme, bestSellers }: { shop: S
   )
 }
 
-export function AllView({ cat, href, now }: { cat: StoreCatalogue; href: Href; now: Date }) {
+export function AllView({ cat, href, now, lang }: { cat: StoreCatalogue; href: Href; now: Date; lang?: Lang }) {
   const listed = cat.products.filter((p) => isListed(p, now))
+  const w = wordsFor(lang)
   return (
     <section className={`${wrap} py-8`}>
-      <h1 className="mb-6 text-3xl" style={{ fontFamily: 'var(--store-display)' }}>Shop all</h1>
-      <ProductGrid products={listed} href={href} now={now} empty="New pieces are on their way." />
+      <h1 className="mb-6 text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{w.shopAll}</h1>
+      <ProductGrid products={listed} href={href} now={now} empty={w.emptyShop} lang={lang} />
     </section>
   )
 }
 
-export function CollectionView({ c, cat, href, now, top = 'title' }: { c: StoreCollection; cat: StoreCatalogue; href: Href; now: Date; top?: ThemeSettings['collectionTop'] }) {
+export function CollectionView({ c, cat, href, now, top = 'title', lang }: { c: StoreCollection; cat: StoreCatalogue; href: Href; now: Date; top?: ThemeSettings['collectionTop']; lang?: Lang }) {
   const items = inCollection(c, cat.products, now)
+  const w = wordsFor(lang)
   // Banner (themes T2): the first listed piece's first photo, as the category circles use; none, the title as today.
   const cover = top === 'banner' ? items.find((p) => p.images[0])?.images[0] ?? null : null
   if (cover) return (
@@ -51,14 +54,14 @@ export function CollectionView({ c, cat, href, now, top = 'title' }: { c: StoreC
           </div>
         </div>
       </div>
-      <section className={`${wrap} py-8`}><ProductGrid products={items} href={href} now={now} empty="Nothing here right now. New pieces are on their way." /></section>
+      <section className={`${wrap} py-8`}><ProductGrid products={items} href={href} now={now} empty={w.emptyCollection} lang={lang} /></section>
     </>
   )
   return (
     <section className={`${wrap} py-8`}>
       <h1 className="text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{c.title}</h1>
       {c.description && <p className="mt-2 max-w-prose text-store-sub">{c.description}</p>}
-      <div className="mt-6"><ProductGrid products={items} href={href} now={now} empty="Nothing here right now. New pieces are on their way." /></div>
+      <div className="mt-6"><ProductGrid products={items} href={href} now={now} empty={w.emptyCollection} lang={lang} /></div>
     </section>
   )
 }
@@ -89,21 +92,23 @@ export function OpeningSoon({ shop, href }: { shop: StoreShop; href: Href }) {
 }
 
 /** An archived product's page: 404, in words, with the newest pieces below. */
-export function GoneView({ title, cat, href, now }: { title: string; cat: StoreCatalogue; href: Href; now: Date }) {
+export function GoneView({ title, cat, href, now, lang }: { title: string; cat: StoreCatalogue; href: Href; now: Date; lang?: Lang }) {
+  const w = wordsFor(lang)
   return (
     <section className={`${wrap} py-10`}>
-      <h1 className="text-2xl" style={{ fontFamily: 'var(--store-display)' }}>{title} is no longer available</h1>
-      <p className="mt-2 text-store-sub">Here is what is new instead.</p>
-      <div className="mt-6"><ProductGrid products={cat.products.filter((p) => isListed(p, now)).slice(0, 8)} href={href} now={now} empty="New pieces are on their way." /></div>
+      <h1 className="text-2xl" style={{ fontFamily: 'var(--store-display)' }}>{fill(w.gone, { title })}</h1>
+      <p className="mt-2 text-store-sub">{w.goneSub}</p>
+      <div className="mt-6"><ProductGrid products={cat.products.filter((p) => isListed(p, now)).slice(0, 8)} href={href} now={now} empty={w.emptyShop} lang={lang} /></div>
     </section>
   )
 }
 
-export function ShopNotFound({ href }: { href: Href }) {
+export function ShopNotFound({ href, lang }: { href: Href; lang?: Lang }) {
+  const w = wordsFor(lang)
   return (
     <section className={`${wrap} grid min-h-[40vh] place-items-center py-16 text-center`}>
-      <div className="space-y-3"><h1 className="text-3xl" style={{ fontFamily: 'var(--store-display)' }}>This page is not here</h1>
-        <p><Link href={href('/products')} className="underline underline-offset-4">See everything in the shop</Link></p></div>
+      <div className="space-y-3"><h1 className="text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{w.notHere}</h1>
+        <p><Link href={href('/products')} className="underline underline-offset-4">{w.seeEverything}</Link></p></div>
     </section>
   )
 }

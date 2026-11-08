@@ -29,5 +29,5 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 export default async function Collection({ params }: { params: Params }) {
   const { shop, cat, c } = await load(params)
   const theme = themeOf(shop, await shopLook(shop.id))
-  return <CollectionView c={c} cat={cat} href={shopHref} now={new Date()} top={theme.settings.collectionTop} />
+  return <CollectionView c={c} cat={cat} href={shopHref} now={new Date()} top={theme.settings.collectionTop} lang={shop.shopLanguage} />
 }

@@ -40,7 +40,7 @@ export default async function ProductPage({ params }: { params: Params }) {
   const { shop, p, v } = await load(params)
   const now = new Date()
   // Archived: the shopper reads that it has gone, with new pieces below; noindex drops it from search (spec § Review findings).
-  if (v.gone) return <GoneView title={p.title} cat={await shopCatalogue(shop.id)} href={shopHref} now={now} />
+  if (v.gone) return <GoneView title={p.title} cat={await shopCatalogue(shop.id)} href={shopHref} now={now} lang={shop.shopLanguage} />
   const theme = themeOf(shop, await shopLook(shop.id))
   return <ProductView shop={shop} p={p} now={now} live layout={theme.settings} />
 }

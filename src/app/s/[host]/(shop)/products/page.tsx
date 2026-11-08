@@ -12,5 +12,5 @@ export async function generateMetadata({ params }: { params: Promise<{ host: str
 
 export default async function All({ params }: { params: Promise<{ host: string }> }) {
   const shop = await shopFor(params)
-  return <AllView cat={await shopCatalogue(shop.id)} href={shopHref} now={new Date()} />
+  return <AllView cat={await shopCatalogue(shop.id)} href={shopHref} now={new Date()} lang={shop.shopLanguage} />
 }

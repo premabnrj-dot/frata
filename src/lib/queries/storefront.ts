@@ -61,9 +61,13 @@ export async function shopIdForHost(host: string): Promise<string | null> {
 
 // ── The shop ───────────────────────────────────────────────────────────────────
 
+/** The language of the words Frrata writes on a shop (shop_settings.shop_language). */
+export type Lang = 'en' | 'hi'
 export type StoreShop = PolicyFacts & DeliveryRules & {
   id: string; slug: string; host: string; publishedAt: string | null; orderPrefix: string
   accent: string; displayFont: string; tagline: string; logoUrl: string | null; whatsapp: string; instagram: string
+  /** The words Frrata writes on the shop (themes T2). */
+  shopLanguage: Lang
   overrides: Record<string, string>; nav: { handle: string; title: string }[]
 }
 
@@ -74,7 +78,7 @@ async function coreShop(tenantId: string): Promise<StoreShop | null> {
       legalName: shopSettings.legalName, address: shopSettings.address, supportEmail: shopSettings.supportEmail, supportPhone: shopSettings.supportPhone,
       whatsapp: shopSettings.whatsapp, instagram: shopSettings.instagram,
       grievanceName: shopSettings.grievanceName, grievanceRole: shopSettings.grievanceRole, grievanceEmail: shopSettings.grievanceEmail, grievancePhone: shopSettings.grievancePhone,
-      accent: shopSettings.accent, displayFont: shopSettings.displayFont, tagline: shopSettings.tagline, logoUrl: shopSettings.logoUrl,
+      accent: shopSettings.accent, displayFont: shopSettings.displayFont, tagline: shopSettings.tagline, logoUrl: shopSettings.logoUrl, shopLanguage: shopSettings.shopLanguage,
       returnKind: shopSettings.returnKind, returnDays: shopSettings.returnDays,
       // COD limits are public: the Shipping policy states them.
       codOn: shopSettings.codOn, codMin: shopSettings.codMin, codMax: shopSettings.codMax, codCharge: shopSettings.codCharge,
@@ -89,7 +93,7 @@ async function coreShop(tenantId: string): Promise<StoreShop | null> {
     ])
     return {
       ...r, shopName: r.name, id: tenantId, host: hostFor(r.slug), publishedAt: r.publishedAt ? r.publishedAt.toISOString() : null,
-      returnKind: r.returnKind as PolicyFacts['returnKind'],
+      returnKind: r.returnKind as PolicyFacts['returnKind'], shopLanguage: r.shopLanguage === 'hi' ? 'hi' : 'en',
       codMin: Number(r.codMin), codMax: Number(r.codMax), codCharge: Number(r.codCharge), shippingFlat: Number(r.shippingFlat), freeShippingAbove: Number(r.freeShippingAbove),
       overrides: Object.fromEntries(pol.map((p) => [p.kind, p.body])), nav,
     }

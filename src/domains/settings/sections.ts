@@ -38,6 +38,7 @@ export type SectionKey = 'store' | 'contact' | 'brand' | 'policies' | 'payments'
  */
 export type Section = { key: SectionKey; title: string; intro: string; blocks: Block[]; preview: 'footer' | 'contact' | 'brand' | 'policy' | 'checkout' | 'invoice'; editors: readonly MemberRole[] }
 
+export const LANGUAGE_OPTIONS = [['en', 'English'], ['hi', 'हिन्दी (Hindi)']] as const
 export const RETURN_OPTIONS = [['exchange_or_refund', 'An exchange or a refund'], ['exchange_only', 'An exchange only'], ['refund_only', 'A refund only'], ['none', 'No returns']] as const
 export const RETURN_DAY_OPTIONS = [['3', '3 days'], ['7', '7 days'], ['10', '10 days'], ['15', '15 days'], ['30', '30 days']] as const
 
@@ -83,6 +84,9 @@ export const SECTIONS: readonly Section[] = [
     blocks: [
       { title: 'Look', fields: [
         { key: 'tagline', label: 'One line about your brand', kind: 'text', max: 150, wide: true, tip: 'Under your logo, and when your link is shared.' },
+      ] },
+      { title: 'Shop words', hint: 'The words Frrata writes on your shop: menus, buttons, delivery and returns. What you type stays as you typed it. Checkout stays in English for now.', fields: [
+        { key: 'shopLanguage', label: 'Show them in', kind: 'select', options: LANGUAGE_OPTIONS },
       ] },
     ],
   },

@@ -339,6 +339,8 @@ dialog[data-dialog][open]::backdrop { opacity: 1; }
 }
 [data-store-theme][data-headings="upper"] :is(h1, h2, h3) { text-transform: uppercase; letter-spacing: 0.12em; }
 [data-store-theme][data-hover="off"] .store-hover { display: none !important; }
+/* A Hindi shop (themes T2): Devanagari after Inter, so Latin stays Inter and Hindi words get a real face. */
+[data-store-theme][lang="hi"] { font-family: var(--font-inter), var(--font-store-deva), system-ui, sans-serif; }
 /* Product cards (themes T2): standard is today's; centred and framed restyle the same markup. */
 [data-store-theme][data-card="centred"] .store-card { text-align: center; }
 [data-store-theme][data-card="centred"] .store-swatches { justify-content: center; }

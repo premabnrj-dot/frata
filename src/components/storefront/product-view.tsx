@@ -7,11 +7,9 @@ import { isColourOption } from '@/domains/storefront/picker'
 import type { StoreProduct, StoreShop } from '@/lib/queries/storefront'
 import type { ThemeSettings } from '@/domains/themes/types'
 import { BuyBox, type OfferLine } from './buy-box'
+import { buyWords, fill, wordsFor, type Words } from './words'
 import { JsonLd } from './json-ld'
 
-const RETURN_WORDS: Record<string, (d: number) => string | null> = {
-  exchange_or_refund: (d) => `${d}-day returns and exchanges`, exchange_only: (d) => `${d}-day exchanges`, refund_only: (d) => `${d}-day returns`, none: () => 'No returns on this shop',
-}
 
 /** Details named from the taxonomy (and Frrata's additions), in the merchant's chosen order. */
 export function detailsOf(p: Pick<StoreProduct, 'attributes'>): { name: string; value: string }[] {
@@ -47,9 +45,11 @@ export function ProductView({ shop, p, now, live = false, layout, offers, below 
   const gender = p.attributes['target-gender']?.[0] ? describeAttribute('target-gender')?.values.find((v) => v.id === p.attributes['target-gender']![0])?.name ?? null : null
   const ci = p.options.findIndex(isColourOption)
   const model = p.modelHeight || p.modelSize ? `Model${p.modelHeight ? ` is ${p.modelHeight}` : ''}${p.modelHeight && p.modelSize ? ' and' : ''}${p.modelSize ? ` wears ${p.modelSize}` : ''}.` : null
-  const ret = RETURN_WORDS[shop.returnKind]?.(shop.returnDays) ?? null
+  const w = wordsFor(shop.shopLanguage)
+  const rt = w.returns[shop.returnKind as keyof Words['returns']]
+  const ret = rt ? fill(rt, { d: shop.returnDays }) : null
   const notes = [
-    `Ships in ${shop.dispatchDays} day${shop.dispatchDays === 1 ? '' : 's'} · arrives in ${shop.metroDays} days to metros, ${shop.restDays} elsewhere`,
+    fill(w.ships, { d: shop.dispatchDays, days: shop.dispatchDays === 1 ? w.day : w.days, m: shop.metroDays, r: shop.restDays }),
     ...(ret ? [ret] : []),
   ]
   const ld = productJsonLd({
@@ -65,20 +65,20 @@ export function ProductView({ shop, p, now, live = false, layout, offers, below 
       <BuyBox title={p.title} options={p.options} values={p.optionValues} variants={p.variants} colours={p.colours} images={p.images}
         chart={p.sizeChart && p.sizeChart.rows.length ? p.sizeChart : null} model={model} now={now.toISOString()}
         delivery={{ shippingFlat: shop.shippingFlat, freeShippingAbove: shop.freeShippingAbove, codOn: shop.codOn, codMin: shop.codMin, codMax: shop.codMax, codCharge: shop.codCharge }}
-        live={live} notes={notes} taxNote={shop.pricesIncludeGst ? 'Price includes GST.' : 'GST is added at checkout.'} gallery={layout?.gallery} offers={offers} />
+        live={live} notes={notes} taxNote={shop.pricesIncludeGst ? w.taxIncluded : w.taxAdded} w={buyWords(shop.shopLanguage)} gallery={layout?.gallery} offers={offers} />
       {layout?.details === 'folded'
         ? <div className="mt-8 max-w-2xl divide-y divide-store-line border-y border-store-line">
-            {p.description && <details><summary className="flex min-h-12 cursor-pointer items-center justify-between text-lg font-medium">About this piece<span aria-hidden="true">+</span></summary>
+            {p.description && <details><summary className="flex min-h-12 cursor-pointer items-center justify-between text-lg font-medium">{w.about}<span aria-hidden="true">+</span></summary>
               <div className="space-y-3 pb-4 leading-relaxed">{p.description.split(/\n{2,}/).map((t, i) => <p key={i} className="whitespace-pre-line">{t}</p>)}</div></details>}
-            {details.length > 0 && <details><summary className="flex min-h-12 cursor-pointer items-center justify-between text-lg font-medium">Details<span aria-hidden="true">+</span></summary>
+            {details.length > 0 && <details><summary className="flex min-h-12 cursor-pointer items-center justify-between text-lg font-medium">{w.details}<span aria-hidden="true">+</span></summary>
               <dl className="pb-4 text-sm">{details.map((d) => <div key={d.name} className="flex gap-4 py-2"><dt className="w-32 shrink-0 text-store-sub">{d.name}</dt><dd>{d.value}</dd></div>)}</dl></details>}
           </div>
         : <div className="mt-10 grid gap-8 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] md:gap-10">
             <div className="max-w-prose space-y-3 leading-relaxed">
-              {p.description && <><h2 className="text-lg font-medium">About this piece</h2>{p.description.split(/\n{2,}/).map((t, i) => <p key={i} className="whitespace-pre-line">{t}</p>)}</>}
+              {p.description && <><h2 className="text-lg font-medium">{w.about}</h2>{p.description.split(/\n{2,}/).map((t, i) => <p key={i} className="whitespace-pre-line">{t}</p>)}</>}
             </div>
             {details.length > 0 && (
-              <div><h2 className="mb-2 text-lg font-medium">Details</h2>
+              <div><h2 className="mb-2 text-lg font-medium">{w.details}</h2>
                 <dl className="divide-y divide-store-line border-y border-store-line text-sm">{details.map((d) => <div key={d.name} className="flex gap-4 py-2"><dt className="w-32 shrink-0 text-store-sub">{d.name}</dt><dd>{d.value}</dd></div>)}</dl>
               </div>
             )}

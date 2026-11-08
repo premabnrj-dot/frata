@@ -27,13 +27,19 @@ function* files(dir) {
 // holds marks a chunk that bundled it.
 const TAXONOMY = 'Traditional & Ceremonial Clothing > Kurtas'
 
-let found = [], taxonomy = []
+// The shop's words (src/components/storefront/words.ts, themes T2) are server-only: an island gets the strings it
+// shows as a prop, so a shop never downloads both languages. A phrase only that module holds marks a chunk that
+// bundled it (written as escapes so this file stays ASCII).
+const WORDS = '\u0907\u0938 \u0936\u0949\u092a \u092a\u0930 \u0935\u093e\u092a\u0938\u0940 \u0928\u0939\u0940\u0902 \u0939\u094b\u0924\u0940'
+
+let found = [], taxonomy = [], words = []
 try {
   for (const f of files(ROOT)) {
     const text = readFileSync(f, 'utf8')
     const hits = SENTINELS.filter(s => text.includes(s))
     if (hits.length) found.push(`${f}  (${hits.join(', ')})`)
     if (text.includes(TAXONOMY)) taxonomy.push(f)
+    if (text.includes(WORDS)) words.push(f)
   }
 } catch (e) {
   console.error(`check:client-bundle — no ${ROOT} to read; run it after next build.`)
@@ -52,6 +58,12 @@ if (taxonomy.length) {
   for (const f of taxonomy) console.error('  ' + f)
   console.error('\n  A client file imports a value from catalogue/taxonomy.ts. Import only types there;')
   console.error('  ask the server (findCategories, categoryDetails) or use catalogue/category-id.ts.')
+  process.exit(1)
+}
+if (words.length) {
+  console.error('check:client-bundle — the shop words module is in the browser bundle:')
+  for (const f of words) console.error('  ' + f)
+  console.error('\n  A client file imports storefront/words.ts. Pass the island its strings as a prop (buyWords).')
   process.exit(1)
 }
 console.log('check:client-bundle — clean')

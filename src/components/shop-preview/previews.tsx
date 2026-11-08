@@ -26,6 +26,7 @@ export type ShopFacts = PolicyFacts & {
   accent: string
   displayFont: string
   tagline: string
+  shopLanguage: string
   codMin: number
   codBlockedPincodes: string[]
   gstin: string | null
