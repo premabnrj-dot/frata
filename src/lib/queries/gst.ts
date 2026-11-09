@@ -20,7 +20,7 @@ import { documentsFor } from '@/lib/orders/documents'
 // =============================================================================
 
 export type GstShop = { name: string; legalName: string; gstin: string | null; scheme: string; band: TurnoverBand; filing: 'monthly' | 'quarterly'; homeState: string | null }
-export type Fix = { kind: 'no_hsn' | 'hsn_digits' | 'bad_gstin' | 'gap' | 'came_back'; count: number; examples: string[] }
+export type Fix = { kind: 'no_hsn' | 'hsn_digits' | 'bad_gstin' | 'gap' | 'came_back' | 'bad_note'; count: number; examples: string[] }
 /** Filing from Frrata (G2): the shop's portal session and this period's filing row. */
 export type GstFiling = { connected: boolean; username: string | null; pushedAt: Date | null; pushed: Liability | null; portal: Liability | null; filedAt: Date | null; arn: string | null }
 export type GstPeriod = { shop: GstShop; period: Period; prev: string; next: string | null; invoices: Invoice[]; notes: GstDoc[]; gstr: Gstr1; fixes: Fix[]; filing: GstFiling }
@@ -67,7 +67,7 @@ export async function gstPeriodIn(tx: Tx, tenantId: string, key: string | null, 
       .where(and(eq(creditNotes.tenantId, tenantId), inPeriod(creditNotes.issuedAt))),
   ])
   const numbers = [...new Set([...invoiced, ...credited].map((r) => r.n))]
-  const invoices: Invoice[] = [], notes: GstDoc[] = []
+  const invoices: Invoice[] = [], notes: GstDoc[] = [], broken: string[] = []
   for (let i = 0; i < numbers.length; i += BATCH) {
     const docs = await documentsFor(tx, tenantId, numbers.slice(i, i + BATCH), 'credit', now, BATCH)
     for (const d of docs.orders) {
@@ -76,7 +76,9 @@ export async function gstPeriodIn(tx: Tx, tenantId: string, key: string | null, 
       if (inv.date >= period.from && inv.date < period.to) invoices.push(inv)
       for (const c of d.credits) {
         if (c.issuedAt < period.from || c.issuedAt >= period.to) continue
-        const cn = creditNote(d.o, d.lines, docs.shop, c)
+        // One note that no longer renders (its stored total disagrees) must not take the period down: it is a Fix.
+        let cn: Invoice | null = null
+        try { cn = creditNote(d.o, d.lines, docs.shop, c) } catch { broken.push(c.number); continue }
         if (cn) notes.push({ doc: cn, of: inv })
       }
     }
@@ -84,6 +86,7 @@ export async function gstPeriodIn(tx: Tx, tenantId: string, key: string | null, 
   invoices.sort((a, b) => a.number.localeCompare(b.number))
   notes.sort((a, b) => a.doc.number.localeCompare(b.doc.number))
   const fixes = await fixesFor(tx, tenantId, shop, period, invoices)
+  if (broken.length) fixes.push({ kind: 'bad_note', count: broken.length, examples: broken.slice(0, 5) })
   const nextKey = shift(k, 1)
   const filing = await filingOf(tx, tenantId, shop.gstin, k, now)
   return { shop, period, prev: shift(k, -1), next: periodOf(nextKey)!.from <= now ? nextKey : null, invoices, notes, gstr: gstr1(invoices, notes), fixes, filing }

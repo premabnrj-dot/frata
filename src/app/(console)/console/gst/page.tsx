@@ -24,6 +24,7 @@ const FIX_WORDS: Record<Fix['kind'], { title: string; href: string; action: stri
   bad_gstin: { title: 'A business buyer’s GSTIN that doesn’t check out', href: '/console/orders', action: 'Open orders' },
   gap: { title: 'Invoice numbers missing from the series', href: '/console/orders', action: 'Open orders' },
   came_back: { title: 'Parcels that came back without a credit note', href: '/console/orders', action: 'Open orders' },
+  bad_note: { title: 'Credit notes left out: their figures no longer add up', href: '/console/orders', action: 'Open orders' },
 }
 
 /** Console › GST (GST app G1; approved mockup "The month", "Review", "For your CA"). */
