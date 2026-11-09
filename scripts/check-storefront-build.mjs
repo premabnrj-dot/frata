@@ -19,7 +19,8 @@ const BUDGET_KB = 120
 // Since 2026-11-09 (speed review, theme Signal) a page is counted as it loads: its own chunks plus every layout above it
 // (root, /s/[host], the group's), each file once. The ceilings were reset to what the pages really loaded that day
 // (home 112.8, product 119.4, checkout 120.2 kB JS; CSS 21.1 kB), with room for Signal's ≤ 1 kB of CSS.
-const TIGHT = { '/s/[host]/(shop)/products/[handle]/page': 120, '/s/[host]/(checkout)/checkout/page': 121 }
+// Product page 121 after merging search and sharing (its share button and barcode work): measured 120.0 kB that day.
+const TIGHT = { '/s/[host]/(shop)/products/[handle]/page': 121, '/s/[host]/(checkout)/checkout/page': 121 }
 // The shop's stylesheet (shared, render-blocking): every theme's rules land in it, so it has a ceiling too.
 const CSS_BUDGET_KB = 22
 const failures = []
