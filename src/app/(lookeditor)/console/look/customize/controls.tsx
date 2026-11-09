@@ -161,7 +161,7 @@ export function ImageField({ label, value, tenantId, onChange, library = [], sug
               <p className="text-xs font-medium text-muted-foreground">From your products</p>
               <div className="grid grid-cols-4 gap-1.5">
                 {library.slice(0, 8).map((p) => (
-                  <button key={p.base} type="button" title={p.title} onClick={() => onChange({ base: p.base, widths: p.widths, width: p.width, height: p.height, alt: p.alt || p.title, decorative: false, focus: null })}
+                  <button key={p.base} type="button" title={p.title} onClick={() => onChange({ base: p.base, widths: p.widths, width: p.width, height: p.height, alt: (p.alt || p.title).slice(0, 160), decorative: false, focus: null })}
                     className="aspect-square overflow-hidden rounded-lg bg-muted ring-offset-2 transition-[scale] duration-fast ease-snap hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring">
                     <img src={thumb(p)} alt={p.title} className="size-full object-cover" />
                   </button>

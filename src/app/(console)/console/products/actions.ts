@@ -18,6 +18,7 @@ import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { BLOB_READ_WRITE_TOKEN, BLOB_STORE_ID } from '@/lib/env'
 import type { Tx } from '@/lib/db'
 import { auditEvents, shopSettings, tenants } from '@/lib/db/schema'
+import { shopThemeRevisions } from '@/lib/db/schema-themes'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { archivedVariants, retireVariants } from '@/lib/catalogue/retire-variants'
 import { errName } from '@/lib/log'
@@ -307,7 +308,11 @@ export async function editPhoto(imageId: string, change: { move?: -1 | 1; option
       if (!img) throw new Stop({ ok: false, error: 'That photo is not in your shop.' })
       if (change.remove) {
         await tx.delete(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.id, imageId)))
-        return img
+        // A look may show this photo (Look v3: "From your products"): then its files stay, so a published or
+        // restorable look never loses its photo (security review 2026-11-09).
+        const [used] = await tx.select({ id: shopThemeRevisions.id }).from(shopThemeRevisions)
+          .where(and(eq(shopThemeRevisions.tenantId, tenantId), sql`position(${img.base} in ${shopThemeRevisions.settings}::text) > 0`)).limit(1)
+        return { ...img, inLook: !!used }
       }
       if (change.move) {
         const all = await tx.select({ id: productImages.id }).from(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, img.productId))).orderBy(productImages.position)
@@ -330,7 +335,7 @@ export async function editPhoto(imageId: string, change: { move?: -1 | 1; option
     refreshShop(r.tenantId, 'catalogue')
     // Delete the files only if the stored base is still exactly inside this shop's folder.
     const host = storeHost(BLOB_STORE_ID)
-    if (r.value && BLOB_READ_WRITE_TOKEN && host && acceptedBase(r.value.base, host, r.value.tenantId, 'products') === r.value.base) {
+    if (r.value && !r.value.inLook && BLOB_READ_WRITE_TOKEN && host && acceptedBase(r.value.base, host, r.value.tenantId, 'products') === r.value.base) {
       await del(r.value.widths.map((w) => urlFor(r.value!.base, w)), { token: BLOB_READ_WRITE_TOKEN }).catch((e) => console.error('[editPhoto] blob delete', errName(e)))
     }
     revalidatePath('/console/products', 'layout')

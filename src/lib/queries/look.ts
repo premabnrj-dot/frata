@@ -30,7 +30,7 @@ export async function editorData(tenantId: string): Promise<EditorData | null> {
       // Look v3: the shop's own product photos (each product's first), for "From your products" in a photo field.
       tx.select({ base: productImages.base, widths: productImages.widths, width: productImages.width, height: productImages.height, alt: productImages.alt, title: products.title })
         .from(productImages).innerJoin(products, and(eq(products.id, productImages.productId), eq(products.tenantId, productImages.tenantId)))
-        .where(and(eq(productImages.tenantId, tenantId), eq(productImages.position, 0))).orderBy(desc(productImages.createdAt)).limit(24),
+        .where(and(eq(productImages.tenantId, tenantId), eq(productImages.position, 0), eq(products.status, 'active'))).orderBy(desc(productImages.createdAt)).limit(24),
     ])
     return { draft: l.draft, live: l.live?.revision ?? null, facts, collections: cols, products: prods, photos }
   })
