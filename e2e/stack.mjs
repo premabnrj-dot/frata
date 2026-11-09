@@ -12,7 +12,7 @@
 import { execSync, spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, openSync } from 'node:fs'
-import { BILLING_KEYS, CONSOLE, META, OUT, PORTS, SHOP_DOMAIN, adminSql, until } from './lib.mjs'
+import { BILLING_KEYS, CONSOLE, META, MUX, OUT, PORTS, SHOP_DOMAIN, adminSql, until } from './lib.mjs'
 
 const ROOT = new URL('..', import.meta.url).pathname
 const PG_DIR = '/var/tmp/frata-e2e', PG_BIN = '/usr/lib/postgresql/16/bin', DB = 'frata_e2e'
@@ -67,6 +67,7 @@ export async function up({ build = true } = {}) {
   run('fake-auth', 'node', ['e2e/fakes/auth.mjs'], { PORT: String(PORTS.auth) })
   run('fake-razorpay', 'node', ['e2e/fakes/razorpay.mjs'], { PORT: String(PORTS.razorpay) })
   run('fake-meta', 'node', ['e2e/fakes/meta.mjs'], { PORT: String(PORTS.meta) })
+  run('fake-mux', 'node', ['e2e/fakes/mux.mjs'], { PORT: String(PORTS.mux), APP: `http://localhost:${PORTS.app}` })
   if (build) {
     // The database is migrated and seeded already: the build reads the plans, so the public pages' prices, the hero's
     // example order and the partner calculator render in e2e (impact review W·1).
@@ -83,6 +84,8 @@ export async function up({ build = true } = {}) {
     ...PUBLIC_ENV, DATABASE_URL: `postgres://frata_app:${pw}@${host}/${DB}`, ADMIN_DATABASE_URL: `postgres://frata_admin:${adminPw}@${host}/${DB}`, PAYMENT_KEYS_SECRET: 'e2e-only-secret', TRIAL_CLAIM_SECRET: 'e2e-trial-claim-secret', FRRATA_WA_PHONE_NUMBER_ID: '200000000099', FRRATA_WA_TOKEN: 'EAAe2efrratasignup', FRRATA_WA_SIGNUP_TEMPLATE: 'frrata_signup_code',
     RAZORPAY_API_BASE: `http://localhost:${PORTS.razorpay}`, BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_x_y', BLOB_STORE_ID: 'store_e2e', CRON_SECRET: 'e2e-cron', E2E_FIXTURES: '1', GSP_PROVIDER: 'fake', BILLING_TEST_ISSUE: '1', RAZORPAY_BILLING_KEY_ID: BILLING_KEYS.id, RAZORPAY_BILLING_KEY_SECRET: BILLING_KEYS.secret, RAZORPAY_BILLING_WEBHOOK_SECRET: BILLING_KEYS.webhook,
     META_APP_SECRET: META.appSecret, WA_VERIFY_TOKEN: META.verifyToken, META_GRAPH_BASE: `http://localhost:${PORTS.meta}`,
+    MUX_TOKEN_ID: MUX.tokenId, MUX_TOKEN_SECRET: MUX.tokenSecret, MUX_WEBHOOK_SECRET: MUX.webhook, MUX_ENVIRONMENT_ID: MUX.env,
+    MUX_API_BASE: `http://localhost:${PORTS.mux}`, MUX_STREAM_BASE: `http://localhost:${PORTS.mux}/stream`, MUX_IMAGE_BASE: `http://localhost:${PORTS.mux}/image`,
   })
   await until(async () => { try { return (await fetch(CONSOLE)).status > 0 } catch { return false } }, 60_000)
   return { db, adminUrl }

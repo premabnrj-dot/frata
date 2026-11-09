@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, eq, gt, inArray, isNull, sql } from 'drizzle-orm'
+import { and, eq, gt, inArray, isNull, lt, lte, sql } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
 import { withTenant } from '@/lib/db/tenant'
 import { tenantPlans } from '@/lib/db/schema'
@@ -38,14 +38,16 @@ export async function startVideo(tx: Tx, tenantId: string, memberId: string, mux
   const dayAgo = new Date(now.getTime() - 86_400_000), monthAgo = new Date(now.getTime() - 30 * 86_400_000)
   const recent = await tx.select(ROW).from(videos).where(gt(videos.createdAt, monthAgo))
   const [plan] = await tx.select({ trialEndsAt: tenantPlans.trialEndsAt }).from(tenantPlans)
-    .where(and(eq(tenantPlans.tenantId, tenantId), sql`${tenantPlans.startsAt} <= ${now}`)).orderBy(sql`${tenantPlans.startsAt} desc`).limit(1)
+    .where(and(eq(tenantPlans.tenantId, tenantId), lte(tenantPlans.startsAt, now))).orderBy(sql`${tenantPlans.startsAt} desc`).limit(1)
   const onTrial = !!plan?.trialEndsAt && plan.trialEndsAt > now
   const today = recent.filter((v) => v.createdAt > dayAgo).length
   if (today >= (onTrial ? PER_DAY_TRIAL : PER_DAY)) return { ok: false, error: onTrial ? 'Three videos a day on a trial. Try again tomorrow.' : 'Ten videos a day. Try again tomorrow.' }
   if (recent.length >= PER_MONTH) return { ok: false, error: 'Thirty videos a month. Remove one you don’t use, or try again next month.' }
   const live = await tx.select(ROW).from(videos).where(isNull(videos.removedAt))
   if (live.filter((v) => isLive(v, now)).length >= MAX_LIVE) return { ok: false, error: 'Your shop holds 20 videos. Remove one first.' }
-  const [r] = await tx.insert(videos).values({ tenantId, muxEnv, createdBy: memberId }).returning({ id: videos.id })
+  // Only these three columns: the app may insert nothing else (drizzle/0081, tenancy audit H1), and drizzle's insert
+  // would name every column (as DEFAULT), which Postgres checks too.
+  const [r] = await tx.execute<{ id: string }>(sql`insert into videos (tenant_id, mux_env, created_by) values (${tenantId}, ${muxEnv}, ${memberId}) returning id`) as unknown as { id: string }[]
   return { ok: true, id: r!.id }
 }
 
@@ -88,7 +90,7 @@ const SETTLED_MS = 2 * 60 * 60_000
 export async function releaseUnusedVideos(tx: Tx, tenantId: string, now: Date): Promise<number> {
   const used = await referenced(tx, tenantId)
   const cutoff = new Date(now.getTime() - SETTLED_MS)
-  const rows = await tx.select(ROW).from(videos).where(and(isNull(videos.removedAt), sql`${videos.createdAt} < ${cutoff}`))
+  const rows = await tx.select(ROW).from(videos).where(and(isNull(videos.removedAt), lt(videos.createdAt, cutoff)))
   const gone = rows.filter((v) => !used.has(v.id))
   for (const v of gone) await removeVideo(tx, tenantId, v, now)
   return gone.length

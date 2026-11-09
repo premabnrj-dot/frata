@@ -44,8 +44,15 @@ export async function createUpload(videoId: string, corsOrigin: string): Promise
   const r = await call('POST', '/video/v1/uploads', { cors_origin: corsOrigin, timeout: UPLOAD_TIMEOUT_S, new_asset_settings: { ...UPLOAD_SETTINGS, passthrough: videoId } })
   if (!r.ok) return r
   const d = (r.json as { data?: { id?: unknown; url?: unknown } } | null)?.data
-  if (typeof d?.id !== 'string' || !ID.test(d.id) || typeof d.url !== 'string' || !/^https:\/\/[^\s]+$/.test(d.url) || d.url.length > 4096) return { ok: false, why: 'bad_reply' }
+  if (typeof d?.id !== 'string' || !ID.test(d.id) || typeof d.url !== 'string' || !safeUploadUrl(d.url)) return { ok: false, why: 'bad_reply' }
   return { ok: true, uploadId: d.id, url: d.url }
+}
+
+/** https only; the local test's fake Mux (MUX_API_BASE, never Mux's own) may hand back its own http URL. */
+function safeUploadUrl(url: string): boolean {
+  if (url.length > 4096 || /\s/.test(url)) return false
+  if (/^https:\/\/[^/]+\//.test(url)) return true
+  try { return MUX_API_BASE !== 'https://api.mux.com' && new URL(url).origin === new URL(MUX_API_BASE).origin } catch { return false }
 }
 
 /** The asset as Mux holds it: the processor's source of truth, never an event's order. `null` = Mux has no such asset. */
