@@ -4,7 +4,7 @@ import { defaultDescription, defaultTitle, productJsonLd } from '@/domains/seo/d
 import { availability } from '@/domains/catalogue/availability'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { factsOf, priceOf } from '@/domains/storefront/listing'
-import { offerOf } from '@/domains/seo/tags'
+import { offerFor } from '@/domains/seo/tags'
 import { isColourOption } from '@/domains/storefront/picker'
 import type { StoreProduct, StoreShop } from '@/lib/queries/storefront'
 import type { ThemeSettings } from '@/domains/themes/types'
@@ -30,13 +30,12 @@ export function productSeo(shop: StoreShop, p: StoreProduct) {
     title: p.seoTitle || defaultTitle(p.title, colours, shop.shopName),
     description: p.seoDescription || defaultDescription({ title: p.title, fabric, minPrice: priceOf(p)?.min ?? null, codOn: shop.codOn, returnDays: shop.returnDays, returnKind: shop.returnKind, city: null }),
     url: `https://${shop.host}/products/${p.handle}`,
-    image: p.images[0] ? urlFor(p.images[0].base, pick(p.images[0].widths, 1200)) : null,
   }
 }
 
 /** The product's price and availability for its share tags (offerOf, src/domains/seo/tags.ts). */
 export function productOffer(p: StoreProduct, now: Date) {
-  const o = offerOf(p.variants.map((v) => { const a = availability(factsOf(v), now); return { price: v.price, compareAt: v.compareAt, google: a.google, canBuy: a.canBuy } }))
+  const o = offerFor(p, now)
   return o ? { ...o, id: p.id, groupId: p.id } : null
 }
 

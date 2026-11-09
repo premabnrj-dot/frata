@@ -173,7 +173,7 @@ export default {
         assert.equal(r.status, 200, `${path}: card served`)
         assert.equal(r.headers['content-type'], 'image/jpeg')
         assert.ok(r.body.length > 1000 && r.body.length <= 300_000, `${path}: ${r.body.length} bytes`)
-        assert.match(r.headers['cache-control'] ?? '', /immutable/)
+        assert.match(r.headers['cache-control'] ?? '', /^public, max-age=(86400|300), s-maxage=(86400|300)$/)
         // JPEG SOF0/SOF2 dimensions
         const dims = jpegSize(r.body)
         assert.deepEqual(dims, { w: 1200, h: 630 }, `${path}: 1200×630`)
@@ -188,7 +188,7 @@ export default {
       assert.equal((await getBytes('/og/product/not-a-uuid/0123456789abcdef.jpg')).status, 404)
       const stale = await getBytes(path.replace(/[0-9a-f]{16}\.jpg$/, '0000000000000000.jpg'))
       assert.equal(stale.status, 200, 'an old card address shows the current card')
-      assert.doesNotMatch(stale.headers['cache-control'] ?? '', /immutable/, 'briefly')
+      assert.match(stale.headers['cache-control'] ?? '', /max-age=300/, 'briefly')
       return `${seen.size} cards`
     })
 

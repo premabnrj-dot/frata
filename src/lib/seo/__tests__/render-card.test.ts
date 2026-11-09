@@ -4,7 +4,7 @@ import { cardHash, cardPath, type CardContent } from '../card'
 import { MAX_BYTES, photoUri, renderCard } from '../render-card'
 
 const colours = { bg: '#f3e7d7', text: '#1c1917', sub: '#57534e' }
-const product: CardContent = { kind: 'product', title: 'Chanderi kurta set', shopName: 'Kesar Studio', price: '₹2,490', mrp: '₹2,990', soldOut: false, cod: true, line: null, photos: ['https://x/a-1200.webp'], colours }
+const product: CardContent = { kind: 'product', title: 'Chanderi kurta set', shopName: 'Kesar Studio', price: '₹2,490', was: '₹2,990', soldOut: false, cod: true, line: null, photos: ['https://x/a-1200.webp'], colours }
 const webp = (w: number, h: number) => sharp({ create: { width: w, height: h, channels: 3, background: '#b45f3c' } }).webp().toBuffer()
 
 describe('share cards (S1·3–S1·4)', () => {
@@ -19,9 +19,9 @@ describe('share cards (S1·3–S1·4)', () => {
   }, 30_000)
   it('the shop card with no photos, a sold-out product, a collection without photos', async () => {
     for (const c of [
-      { ...product, kind: 'shop', title: null, price: null, mrp: null, line: 'Pay on delivery · 7-day returns', photos: [] },
+      { ...product, kind: 'shop', title: null, price: null, was: null, line: 'Pay on delivery · 7-day returns', photos: [] },
       { ...product, soldOut: true, photos: [] },
-      { ...product, kind: 'collection', price: null, mrp: null, line: 'From ₹1,290 · 24 styles', photos: [] },
+      { ...product, kind: 'collection', price: null, was: null, line: 'From ₹1,290 · 24 styles', photos: [] },
     ] as CardContent[]) {
       const jpg = await renderCard(c, [])
       expect((await sharp(jpg!).metadata()).format).toBe('jpeg')

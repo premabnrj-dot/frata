@@ -1,18 +1,17 @@
 import 'server-only'
 import { createHash } from 'node:crypto'
 import { pick, urlFor } from '@/domains/media/sizes'
-import { offerOf } from '@/domains/seo/tags'
-import { factsOf, inCollection, isListed, priceOf } from '@/domains/storefront/listing'
-import { availability } from '@/domains/catalogue/availability'
+import { offerFor } from '@/domains/seo/tags'
+import { inCollection, isListed, priceOf } from '@/domains/storefront/listing'
 import type { ResolvedTheme } from '@/domains/themes/types'
 import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
-import type { StoreCard, StoreCatalogue, StoreCollection, StoreProduct, StoreShop } from '@/lib/queries/storefront'
+import type { StoreCard, StoreCatalogue, StoreCollection, StoreShop } from '@/lib/queries/storefront'
 
 // =============================================================================
 // FILE: src/lib/seo/card.ts — WHAT A SHARE CARD SHOWS, AND ITS VERSION (search and sharing S1·2).
-// The card reads the same view model as the page (price as the buy box: the lowest price a shopper can buy at, the
-// M.R.P. beside it, never struck as a sale), and its hash covers everything drawn plus the template version, so an
+// The card reads the same view model as the page (price as the buy box: the lowest price a shopper can buy at, and
+// the price before a recent cut struck beside it — `compareAt`; the tag's M.R.P. is not drawn), and its hash covers everything drawn plus the template version, so an
 // edit makes a new image URL and every app fetches the new card. Only prices, names and photo addresses — never a
 // cost (ADR-0003). No Devanagari is drawn (Satori cannot shape it): a Hindi name is left to og:title.
 // =============================================================================
@@ -29,8 +28,8 @@ export type CardContent = {
   shopName: string | null
   /** "₹2,490"; null when there is nothing to buy at a price. */
   price: string | null
-  /** The M.R.P. beside the price, when above it. */
-  mrp: string | null
+  /** The price before a recent cut, struck beside the price (as the buy box: `compareAt`, never the tag's M.R.P.). */
+  was: string | null
   soldOut: boolean
   cod: boolean
   /** "From ₹1,290 · 24 styles" on a collection; "Pay on delivery · 7-day returns" on the shop card. */
@@ -47,11 +46,11 @@ const inr = (p: number) => formatInr(paise(p))
 const photo = (img: { base: string; widths: number[] } | undefined) => (img ? urlFor(img.base, pick(img.widths, 1200)) : null)
 const coloursOf = (theme: ResolvedTheme) => ({ bg: theme.schemes.tint.bg, text: theme.schemes.tint.text, sub: theme.schemes.tint.sub })
 
-export function productCard(shop: StoreShop, p: StoreProduct, theme: ResolvedTheme, now: Date): CardContent {
-  const o = offerOf(p.variants.map((v) => { const a = availability(factsOf(v), now); return { price: v.price, compareAt: v.compareAt, google: a.google, canBuy: a.canBuy } }))
+export function productCard(shop: StoreShop, p: StoreCard, theme: ResolvedTheme, now: Date): CardContent {
+  const o = offerFor(p, now)
   return {
     kind: 'product', title: drawable(p.title), shopName: drawable(shop.shopName),
-    price: o ? inr(o.pricePaise) : null, mrp: o?.mrpPaise ? inr(o.mrpPaise) : null, soldOut: !o || o.availability === 'out of stock',
+    price: o ? inr(o.pricePaise) : null, was: o?.wasPaise ? inr(o.wasPaise) : null, soldOut: !o || o.availability === 'out of stock',
     cod: shop.codOn, line: null, photos: [photo(p.images[0])].filter((x): x is string => !!x), colours: coloursOf(theme),
   }
 }
@@ -61,16 +60,16 @@ export function collectionCard(shop: StoreShop, c: StoreCollection, cat: StoreCa
   const prices = items.map((p) => priceOf(p)?.min ?? 0).filter((x) => x > 0)
   const line = items.length ? `${prices.length ? `From ${inr(Math.min(...prices))} · ` : ''}${items.length} ${items.length === 1 ? 'style' : 'styles'}` : null
   return {
-    kind: 'collection', title: drawable(c.title), shopName: drawable(shop.shopName), price: null, mrp: null, soldOut: false, cod: shop.codOn,
+    kind: 'collection', title: drawable(c.title), shopName: drawable(shop.shopName), price: null, was: null, soldOut: false, cod: shop.codOn,
     line, photos: items.slice(0, 4).map((p) => photo(p.images[0])).filter((x): x is string => !!x), colours: coloursOf(theme),
   }
 }
 
-export function shopCard(shop: StoreShop, best: StoreCard[], theme: ResolvedTheme, now: Date): CardContent {
-  const listed = best.filter((p) => isListed(p, now))
+export function shopCard(shop: StoreShop, products: StoreCard[], theme: ResolvedTheme, now: Date): CardContent {
+  const listed = products.filter((p) => isListed(p, now))
   const bits = [shop.codOn ? 'Pay on delivery' : null, shop.returnKind !== 'none' && shop.returnDays > 0 ? `${shop.returnDays}-day returns` : null].filter(Boolean)
   return {
-    kind: 'shop', title: null, shopName: drawable(shop.shopName), price: null, mrp: null, soldOut: false, cod: shop.codOn,
+    kind: 'shop', title: null, shopName: drawable(shop.shopName), price: null, was: null, soldOut: false, cod: shop.codOn,
     line: bits.length ? bits.join(' · ') : null, photos: listed.slice(0, 3).map((p) => photo(p.images[0])).filter((x): x is string => !!x), colours: coloursOf(theme),
   }
 }
@@ -88,7 +87,7 @@ export function cardPath(c: CardContent, id: string | null): string {
 
 /** Everything a card needs, read through the shop's cached loaders (the tenant is the host's: the caller's shop). */
 export type CardSource =
-  | { kind: 'product'; product: StoreProduct }
+  | { kind: 'product'; product: StoreCard }
   | { kind: 'collection'; collection: StoreCollection; cat: StoreCatalogue }
   | { kind: 'shop'; cat: StoreCatalogue }
 
@@ -96,4 +95,15 @@ export function cardOf(shop: StoreShop, src: CardSource, theme: ResolvedTheme, n
   if (src.kind === 'product') return productCard(shop, src.product, theme, now)
   if (src.kind === 'collection') return collectionCard(shop, src.collection, src.cat, theme, now)
   return shopCard(shop, src.cat.products, theme, now)
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+const FILE = /^([0-9a-f]{16})\.jpg$/
+/** A card address's parts — only the three canonical shapes; anything else is null (404, never drawn). */
+export function parseCardPath(parts: string[]): { kind: CardKind; id: string | null; hash: string } | null {
+  if (parts[0] === 'shop' && parts.length === 2) { const m = FILE.exec(parts[1]!); return m ? { kind: 'shop', id: null, hash: m[1]! } : null }
+  if ((parts[0] === 'product' || parts[0] === 'collection') && parts.length === 3 && UUID.test(parts[1]!)) {
+    const m = FILE.exec(parts[2]!); return m ? { kind: parts[0], id: parts[1]!, hash: m[1]! } : null
+  }
+  return null
 }

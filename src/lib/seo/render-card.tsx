@@ -48,7 +48,7 @@ function Band({ c }: { c: CardContent }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
         {c.soldOut ? <div style={{ display: 'flex', fontSize: 30, fontWeight: 600 }}>Sold out</div> : null}
         {!c.soldOut && c.cod ? <div style={{ display: 'flex', fontSize: 24, border: `2px solid ${P.chipLine}`, borderRadius: 999, padding: '6px 18px' }}>Pay on delivery</div> : null}
-        {c.mrp && !c.soldOut ? <div style={{ display: 'flex', fontSize: 26, opacity: 0.8 }}>{`M.R.P. ${c.mrp}`}</div> : null}
+        {c.was && !c.soldOut ? <div style={{ display: 'flex', fontSize: 30, opacity: 0.8, textDecoration: 'line-through' }}>{c.was}</div> : null}
         {c.price && !c.soldOut ? <div style={{ display: 'flex', fontSize: 54, fontWeight: 600 }}>{c.price}</div> : null}
       </div>
     </div>

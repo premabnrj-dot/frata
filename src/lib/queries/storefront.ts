@@ -386,11 +386,6 @@ export async function shopProduct(tenantId: string, handle: string): Promise<Loo
   return lookup(await shopHandles(tenantId), () => shopProductRow(tenantId, handle), handle)
 }
 
-/** A product by id for its share card (S1·3): this tenant's, never a draft; the card route checks reachability. */
-const shopHandleById = shopCached('handle-by-id', 'catalogue', (t, id: string) => withTenant(t, async (tx) =>
-  (await tx.select({ handle: products.handle }).from(products).where(and(eq(products.tenantId, t), eq(products.id, id), ne(products.status, 'draft'))))[0]?.handle ?? null))
-export const shopProductById = async (t: string, id: string): Promise<StoreProduct | null> => {
-  const h = await shopHandleById(t, id); const r = h ? await shopProduct(t, h) : null; return r?.kind === 'current' ? r.product : null }
 export const previewShop = (tenantId: string) => coreShop(tenantId)
 export const previewCatalogue = async (tenantId: string) => expand(await coreCatalogue(tenantId, true))
 export async function previewProduct(tenantId: string, handle: string): Promise<Lookup> {

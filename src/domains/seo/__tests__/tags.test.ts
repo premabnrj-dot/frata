@@ -7,11 +7,11 @@ const base: PageFacts = {
   description: 'Chanderi kurta set in cotton. From ₹2,490, Pay on delivery, 7-day exchange. A very long tail that goes on and on.',
   lang: 'en', indexable: true,
   image: { url: 'https://x/og.jpg', width: 1200, height: 630, alt: 'Rust chanderi kurta set', type: 'image/jpeg' },
-  product: { pricePaise: 249000, mrpPaise: 299000, availability: 'in stock', id: 'p1', groupId: 'p1' },
+  product: { pricePaise: 249000, wasPaise: 299000, availability: 'in stock', id: 'p1', groupId: 'p1' },
 }
 
 describe('pageTags (S1·1: the one writer of a shop page\'s tags)', () => {
-  it('a product: og:type product, price from paise, M.R.P. for Pinterest, a large card', () => {
+  it('a product: og:type product, price from paise, the before-cut price for Pinterest, a large card', () => {
     const t = pageTags(base)
     expect(t.canonical).toBe('https://kesar-studio.frrata.shop/products/chanderi-kurta-set')
     expect(t.og.url).toBe(t.canonical)
@@ -22,8 +22,8 @@ describe('pageTags (S1·1: the one writer of a shop page\'s tags)', () => {
     expect(Object.fromEntries(t.product)).toMatchObject({ 'product:price:amount': '2490.00', 'product:price:currency': 'INR', 'product:availability': 'in stock', 'og:price:standard_amount': '2990.00', 'product:brand': 'Kesar Studio' })
     expect(t.robots).toEqual({ index: true, follow: true, maxImagePreview: 'large' })
   })
-  it('no M.R.P. tag unless the price is lower; no product tags off a product', () => {
-    expect(Object.fromEntries(pageTags({ ...base, product: { ...base.product!, mrpPaise: 249000 } }).product)['og:price:standard_amount']).toBeUndefined()
+  it('no before-cut tag unless the price is lower; no product tags off a product', () => {
+    expect(Object.fromEntries(pageTags({ ...base, product: { ...base.product!, wasPaise: 249000 } }).product)['og:price:standard_amount']).toBeUndefined()
     const home = pageTags({ ...base, path: '/', product: undefined })
     expect(home.og.type).toBe('website')
     expect(home.product).toEqual([])
@@ -45,10 +45,10 @@ describe('offerOf (the price and stock a share card states)', () => {
     expect(offerOf([
       { price: 199000, compareAt: null, google: 'out_of_stock', canBuy: false },
       { price: 249000, compareAt: 299000, google: 'in_stock', canBuy: true },
-    ])).toEqual({ pricePaise: 249000, mrpPaise: 299000, availability: 'in stock' })
+    ])).toEqual({ pricePaise: 249000, wasPaise: 299000, availability: 'in stock' })
   })
   it('nothing to buy: the lowest price, out of stock; pre-order says so; no price, no offer', () => {
-    expect(offerOf([{ price: 199000, compareAt: 199000, google: 'out_of_stock', canBuy: false }])).toEqual({ pricePaise: 199000, mrpPaise: null, availability: 'out of stock' })
+    expect(offerOf([{ price: 199000, compareAt: 199000, google: 'out_of_stock', canBuy: false }])).toEqual({ pricePaise: 199000, wasPaise: null, availability: 'out of stock' })
     expect(offerOf([{ price: 99900, compareAt: null, google: 'preorder', canBuy: true }])!.availability).toBe('preorder')
     expect(offerOf([{ price: 0, compareAt: null, google: 'in_stock', canBuy: true }])).toBeNull()
   })

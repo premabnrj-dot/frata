@@ -94,6 +94,21 @@ verify command run and read, and `impact-reviewer` on its diff before the commit
   suspend). "Shop all" follows the shop's language. Open: the console's seo-panel still calls `shareCard` directly
   (the same function the builder uses); S1·7's share sheet reads `pageTags`.
 
+### S1·2–S1·4 as built (2026-11-09; security and impact reviews applied)
+- `src/lib/seo/card.ts` (what a card shows, its hash, `parseCardPath`) and `render-card.tsx` (next/og → sharp JPEG
+  ≤ 300 KB); `src/domains/seo/card-paper.ts` holds the card's fixed colours (check:hex allows it).
+- Changed from the plan after review: **no Blob storage** (a stored card would outlive a deleted photo, MED-3); the
+  CDN keeps a whole, current card a day, a stale address or a card missing a photo 5 minutes. Drawing is budgeted per
+  caller IP (60/h) then per shop (200/h), both fail closed; over budget a stale address is sent (302) to the current
+  one, a current one answers 503. Ids are looked up in the shop's cached catalogue — **listed products only** (no
+  unlisted cards, no query per random id). Photo URLs must match PATH_SHAPE in this shop's products folder; read
+  streamed with a 1 MB cap. Over 300 KB after quality 56 → 500 (not the shop card).
+- The card's struck price is `compareAt` (the price before a recent cut), as the buy box — not the tag's M.R.P.
+- Policies read the catalogue for the shop card's photos (one cached read; accepted).
+- Verified: unit tests for card content, addresses and rendering; 64-seo fetches every page's card as a crawler. The
+  e2e store has no reachable photos, so e2e cards are the no-photo layout; photo layouts are covered by the render
+  test and were looked at (`render-card.test.ts`, samples 2026-11-09).
+
 ## S·2 Search foundations
 - **S2·1 Descriptions everywhere** in `pageTags` (lists, collections trimmed to 155, policies, page n); Hindi titles.
 - **S2·2 Collections**: migration — `collections.seo_title`, `seo_description` (length checks);

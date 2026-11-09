@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.23.0
+  version: 2.24.0
   verified: 2026-11-08
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -305,6 +305,21 @@ shop can have or not (Messages, RTO Shield, Reviews…).
 - **Any storefront change** runs e2e `05-shop-look` (pixel diff against `e2e/baselines/`); an intended change
   regenerates them in the same commit: `UPDATE_BASELINES=1 npm run e2e -- --only shop-look`. Look's state changes:
   `look.int.test.ts` (real Postgres) and e2e `47-look`.
+
+## Search and sharing (S·1, 2026-11-09; spec docs/specs/2026-11-09-seo-and-sharing.md)
+
+- **One writer of a shop page's tags**: `pageTags` (`src/domains/seo/tags.ts`, pure), mapped to Next metadata by
+  `src/app/s/[host]/_meta.ts` (`shopTags`, `toMetadata`). No shop route builds tags by hand. `description` is always
+  set (null clears it): an unset key inherits the root layout's — Frrata's own words on a shop's card.
+- **og:type product and product:* tags** render as property= meta in the product page (`ProductTags`); React hoists
+  them into the static head only while nothing above the page suspends — no loading.tsx there.
+- **The offer** a page and its card state is `offerFor` (`src/domains/seo/tags.ts`): the lowest price a shopper can
+  buy at now, with that size's availability; `compareAt` is the struck before-cut price.
+- **Share cards** `src/app/s/[host]/og/[...card]/route.ts`: canonical paths only (`parseCardPath`), the host's shop,
+  ids found in its cached catalogue (listed products only — a random id costs no query), drawing budgeted per caller
+  then per shop, photos only from our store and this shop's folder (PATH_SHAPE), read capped at 1 MB, WebP checked by
+  sharp, reaching Satori only as data URIs. CDN a day; a stale address shows the current card for 5 minutes. No Blob
+  storage (a deleted photo would outlive the product).
 
 ## Outside world (ADR-0006)
 
