@@ -69,6 +69,15 @@ describe.skipIf(!host)('own domains', () => {
       expect((await platform.tenantForHost(dom))?.id).toBe(A)
       await su`update shop_domains set checked_at = null where id = ${c.claim.id}`
       expect((await own.checkDomainRow(A, c.claim.id, { forDialog: false })).state).toBe('connected')
+      // D2·9: once main, the console's links use the domain; back to the name on Undo.
+      const { mainHostFor } = await import('@/lib/queries/addresses')
+      const [{ slug }] = await su`select slug from tenants where id = ${A}`
+      const { shopHost } = await import('@/lib/public-env')
+      expect(await mainHostFor(A, slug as string)).toBe(shopHost(slug as string))
+      await su`select app_make_domain_main(${A}::uuid, ${owner}::uuid, ${c.claim.id}::uuid)`
+      expect(await mainHostFor(A, slug as string)).toBe(dom)
+      await su`select app_unmake_domain_main(${A}::uuid, ${owner}::uuid)`
+      expect(await mainHostFor(A, slug as string)).toBe(shopHost(slug as string))
       // Another shop's id is never checked under A.
       const [b] = await su`insert into shop_domains (tenant_id, host, apex, with_www, claimed_by) values ('22222222-2222-2222-2222-222222222222', ${'b' + dom}, ${'b' + dom}, false, 'aaaaaaaa-0000-0000-0000-000000000002') returning id`
       expect((await own.checkDomainRow(A, b!.id as string, { forDialog: false })).state).toBe('busy')

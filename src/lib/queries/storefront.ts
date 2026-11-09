@@ -3,6 +3,8 @@ import { checkoutGst } from '@/domains/tax/gstin'
 import { and, asc, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
 import { revalidateTag, unstable_cache } from 'next/cache'
 import { shopPauseIn } from './trial-pause'
+import { mainDomainIn } from './addresses'
+import { mainAddress } from '@/domains/addresses/names'
 import { coreAnnouncement } from './announcement'
 import { cache } from 'react'
 import { LOW_STOCK_AT } from '@/domains/catalogue/availability'
@@ -106,15 +108,17 @@ async function coreShop(tenantId: string): Promise<StoreShop | null> {
       gstin: shopSettings.gstin, gstScheme: shopSettings.gstScheme, homeState: shopSettings.homeState, b2bInvoices: shopSettings.b2bInvoices, turnoverBand: shopSettings.turnoverBand,
     }).from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId)).limit(1)
     if (!r) return null
-    const [pol, nav, pause] = await Promise.all([
+    const [pol, nav, pause, mainDomain] = await Promise.all([
       tx.select({ kind: shopPolicies.kind, body: shopPolicies.body }).from(shopPolicies).where(eq(shopPolicies.tenantId, tenantId)),
       // The header's collections: the first five by name (spec § Review findings).
       tx.select({ handle: collections.handle, title: collections.title }).from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)).limit(5),
       shopPauseIn(tx, tenantId),
+      // D2·9: the main address — the shop's main own domain, else its frrata name (canonical, share cards, sitemap…).
+      mainDomainIn(tx, tenantId),
     ])
     const { gstin, gstScheme, homeState, b2bInvoices, turnoverBand, ...facts } = r
     return {
-      ...facts, shopName: r.name, id: tenantId, gst: checkoutGst({ gstin, gstScheme, homeState, b2bInvoices, turnoverBand }), host: hostFor(r.slug), publishedAt: r.publishedAt ? r.publishedAt.toISOString() : null,
+      ...facts, shopName: r.name, id: tenantId, gst: checkoutGst({ gstin, gstScheme, homeState, b2bInvoices, turnoverBand }), host: mainAddress(hostFor(r.slug), mainDomain), publishedAt: r.publishedAt ? r.publishedAt.toISOString() : null,
       pause: pause ? { from: pause.from.toISOString(), to: pause.to ? pause.to.toISOString() : null } : null,
       returnKind: r.returnKind as PolicyFacts['returnKind'], shopLanguage: r.shopLanguage === 'hi' ? 'hi' : 'en',
       codMin: Number(r.codMin), codMax: Number(r.codMax), codCharge: Number(r.codCharge), shippingFlat: Number(r.shippingFlat), freeShippingAbove: Number(r.freeShippingAbove),
