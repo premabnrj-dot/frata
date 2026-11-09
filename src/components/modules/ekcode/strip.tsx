@@ -36,7 +36,7 @@ export function Strip({ mark }: { mark: ReactNode }) {
       </div>
       {!me.address && me.canSave && (
         <label className="flex items-start gap-2.5 text-sm">
-          <input type="checkbox" className="mt-0.5 h-[18px] w-[18px]" checked={save} onChange={(e) => setSave(e.target.checked)} />
+          <input type="checkbox" className="mt-0.5 size-5 shrink-0 accent-store-ink" checked={save} onChange={(e) => setSave(e.target.checked)} />
           <span>{EK.shop.saveAddress} EkCode</span>
         </label>
       )}

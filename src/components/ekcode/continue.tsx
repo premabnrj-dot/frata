@@ -125,8 +125,8 @@ export function Continue({ shop, back, notice, age }: { shop: string; back: stri
           <h1 className="text-xl font-semibold">{EK.phone.title}</h1>
           <label className="sr-only" htmlFor="ek-phone">{EK.phone.title}</label>
           <div className="flex h-12 overflow-hidden rounded-md border border-[var(--ek-sub)] bg-white focus-within:outline focus-within:outline-2 focus-within:outline-[var(--ek-ink)]">
-            <span className="grid place-items-center border-r border-[var(--ek-line)] px-3 font-mono text-[var(--ek-sub)]">+91</span>
-            <input id="ek-phone" className="min-w-0 flex-1 px-3 font-mono text-base outline-none" inputMode="numeric" autoComplete="tel-national" maxLength={14}
+            <span className="grid place-items-center border-r border-[var(--ek-line)] px-3 tabular-nums text-[var(--ek-sub)]">+91</span>
+            <input id="ek-phone" className="min-w-0 flex-1 px-3 tabular-nums text-base outline-none" inputMode="numeric" autoComplete="tel-national" maxLength={14}
               value={phone} onChange={(e) => setPhone(e.target.value.replace(/[^\d ]/g, ''))} placeholder="98450 12345" autoFocus />
           </div>
           {say && <p className={`text-sm ${say.bad ? 'text-[var(--ek-cursor)]' : ''}`} role="alert">{say.text}</p>}
@@ -139,7 +139,7 @@ export function Continue({ shop, back, notice, age }: { shop: string; back: stri
         <div className="grid gap-4">
           <h1 className="text-xl font-semibold" id="ek-code-h">{EK.code.title}</h1>
           <div className="flex items-center justify-between gap-3 text-sm text-[var(--ek-sub)]">
-            <span className="font-mono">{EK.code.sentTo(`+91 ${phone.replace(/\D/g, '').slice(-10, -5)} •••${phone.replace(/\D/g, '').slice(-2)}`)}</span>
+            <span className="tabular-nums">{EK.code.sentTo(`+91 ${phone.replace(/\D/g, '').slice(-10, -5)} •••${phone.replace(/\D/g, '').slice(-2)}`)}</span>
             <button type="button" className="underline underline-offset-2 text-[var(--ek-ink)]" onClick={() => { setStep('phone'); setSay(null) }}>{EK.code.change}</button>
           </div>
           <input ref={codeRef} aria-labelledby="ek-code-h" className={`${field} font-mono tracking-[0.5em] text-center text-xl`} inputMode="numeric" autoComplete="one-time-code" maxLength={6}
@@ -148,7 +148,7 @@ export function Continue({ shop, back, notice, age }: { shop: string; back: stri
           <a className={`${ghost} grid place-items-center border border-[var(--ek-sub)] sm:hidden`} href="whatsapp://">{EK.code.openWhatsApp}</a>
           {notArrived && <p className="text-sm font-medium">{EK.code.notArrived}</p>}
           <div className="flex items-center justify-between gap-3 text-sm">
-            {resendIn > 0 ? <span className="font-mono text-[var(--ek-sub)]">{EK.code.resendIn(resendIn)}</span>
+            {resendIn > 0 ? <span className="tabular-nums text-[var(--ek-sub)]">{EK.code.resendIn(resendIn)}</span>
               : <button type="button" className="underline underline-offset-2" disabled={busy} onClick={() => void send()}>{EK.code.resend}</button>}
             {notArrived && <a className="underline underline-offset-2" href={back}>{EK.code.guest}</a>}
           </div>
@@ -179,9 +179,9 @@ export function Continue({ shop, back, notice, age }: { shop: string; back: stri
           <h1 className="text-xl font-semibold">{EK.confirm.title(shop)}</h1>
           <div className="flex items-center gap-3 rounded-lg border border-[var(--ek-line)] bg-white p-3">
             <span className="grid h-10 w-10 place-items-center rounded-full bg-[var(--ek-line)] text-sm font-semibold">{(view.name ?? '?').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase()}</span>
-            <span className="grid"><b className="font-semibold">{view.name}</b><span className="font-mono text-xs text-[var(--ek-sub)]">{view.phone}</span></span>
+            <span className="grid"><b className="font-semibold">{view.name}</b><span className="tabular-nums text-xs text-[var(--ek-sub)]">{view.phone}</span></span>
           </div>
-          <fieldset className="grid gap-2">
+          {view.addresses.length > 0 && <fieldset className="grid gap-2">
             <legend className="mb-1.5 text-sm font-medium">{EK.confirm.deliverTo}</legend>
             {[...view.addresses, { id: '', label: EK.confirm.newAddress }].map((a) => (
               <label key={a.id || 'new'} className={`flex items-start gap-3 rounded-lg bg-white p-3 ${(address ?? '') === a.id ? 'border-2 border-[var(--ek-ink)]' : 'border border-[var(--ek-line)]'}`}>
@@ -189,7 +189,7 @@ export function Continue({ shop, back, notice, age }: { shop: string; back: stri
                 <span className="grid"><b className="font-medium">{a.label}</b>{!a.id && <span className="text-sm text-[var(--ek-sub)]">{EK.confirm.newAddressHint(shop)}</span>}</span>
               </label>
             ))}
-          </fieldset>
+          </fieldset>}
           <p className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--ek-sub)]">{EK.confirm.gets(shop)} {chips.map((c) => <span key={c} className="rounded-full bg-[var(--ek-line)] px-2 py-0.5 text-[var(--ek-ink)]">{c}</span>)}</p>
           {say && <p className="text-sm text-[var(--ek-cursor)]" role="alert">{say.text}</p>}
           <button className={primary} type="button" disabled={busy} onClick={() => void go()}>{EK.confirm.action}</button>

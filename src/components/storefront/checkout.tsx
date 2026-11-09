@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { STATES } from '@/domains/checkout/states'
 import { cleanMobile } from '@/domains/checkout/mobile'
 import { announcePlaced, moduleArm, usePrefill } from './module-events'
 import { waOptInText } from '@/domains/checkout/opt-in'
-import { b2bProblem, cleanGstin, gstinStateName, gstinValid } from '@/domains/tax/gstin'
+import { cleanGstin } from '@/domains/tax/gstin'
+import type { Biz, BizCheck } from './checkout-biz'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { OfferProgress, OfferRows, useQuote } from './bag'
 import { ATTR_KEY, bag, offerCode, useOfferCode } from './bag-store'
@@ -25,16 +26,8 @@ const FORM_KEY = 'frata.checkout.v1', PENDING_KEY = 'frata.pending.v1'
 const ss = { get: (k: string) => { try { return sessionStorage.getItem(k) } catch { return null } }, set: (k: string, v: string) => { try { sessionStorage.setItem(k, v) } catch { /* page only */ } }, del: (k: string) => { try { sessionStorage.removeItem(k) } catch { /* */ } } }
 const randomKey = () => { const b = new Uint8Array(16); crypto.getRandomValues(b); return btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') }
 
-declare global { interface Window { Razorpay?: new (o: object) => { open: () => void; on: (e: string, f: (r: unknown) => void) => void } } }
-function loadRazorpay(): Promise<boolean> {
-  if (window.Razorpay) return Promise.resolve(true)
-  return new Promise((res) => {
-    const s = document.createElement('script')
-    s.src = 'https://checkout.razorpay.com/v1/checkout.js'
-    s.onload = () => res(true); s.onerror = () => res(false)
-    document.head.appendChild(s)
-  })
-}
+// Its own chunk: only a shop that offers GST invoices shows it (checkout's first-load budget).
+const CheckoutBiz = lazy(() => import('./checkout-biz'))
 
 /** What a listed offer says it needs, in the shopper's words (the server decides; this only phrases it). */
 function needText(n: PublicListed['need']): string {
@@ -53,7 +46,9 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   waOptIn?: boolean
   /** What a module puts above the form (slot checkout.identity: EkCode's button or its signed-in strip). */
   identity?: React.ReactNode }) {
-  const [biz, setBiz] = useState<{ on: boolean; gstin: string; name: string }>({ on: false, gstin: '', name: '' })
+  const [biz, setBiz] = useState<Biz>({ on: false, gstin: '', name: '' })
+  const bizCheck = useRef<BizCheck | null>(null)
+  const registerBiz = useCallback((c: BizCheck) => { bizCheck.current = c }, [])
   const [f, setF] = useState<Form>(EMPTY)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [method, setMethod] = useState<'cod' | 'prepaid' | null>(null)
@@ -113,7 +108,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     if (f.city.trim().length < 2) e.city = 'Your town or city.'
     if (!f.state) e.state = 'Pick your state.'
     else if (gst.deliversWithin && f.state !== gst.deliversWithin) e.state = `This shop delivers within ${gst.deliversWithin} only.`
-    if (biz.on) { const why = b2bProblem(biz.gstin, biz.name, f.state); if (why) e[why.field === 'gstin' ? 'bizGstin' : 'bizName'] = why.error }
+    if (biz.on) { const why = bizCheck.current?.(biz, f.state) ?? null; if (why) e[why.field === 'gstin' ? 'bizGstin' : 'bizName'] = why.error }
     setErrors(e)
     if (Object.keys(e).length) { document.getElementById(Object.keys(e)[0]!)?.focus(); return false }
     return true
@@ -167,18 +162,9 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   }
 
   async function openPay(token: string, pay: Pay) {
-    if (!(await loadRazorpay()) || !window.Razorpay) { setBusy(false); setFailed({ token, total: pay.amount }); setMsg({ tone: 'error', text: 'Online payment could not open. Check your connection, or pay on delivery instead.' }); return }
-    const rzp = new window.Razorpay({
-      key: pay.keyId, amount: pay.amount, currency: 'INR', order_id: pay.razorpayOrderId, name: pay.shop,
-      prefill: { name: pay.name, contact: `+91${pay.phone}` },
-      handler: async (resp: { razorpay_payment_id: string; razorpay_signature: string }) => {
-        await api('/api/shop/orders/pay', { token, paymentId: resp.razorpay_payment_id, signature: resp.razorpay_signature })
-        done(token)
-      },
-      modal: { ondismiss: () => { setBusy(false); setFailed({ token, total: pay.amount }); setMsg({ tone: 'error', text: 'Payment did not go through. Nothing was charged. Try again, or pay on delivery instead: your details are kept.' }) } },
-    })
-    rzp.on('payment.failed', () => { void api('/api/shop/orders/pay', { token, failed: true }) })
-    rzp.open()
+    const fail = (text: string) => { setBusy(false); setFailed({ token, total: pay.amount }); setMsg({ tone: 'error', text }) }
+    try { const { openRazorpay } = await import('./checkout-pay'); await openRazorpay(token, pay, { done: () => done(token), failed: fail }) }
+    catch { fail('Online payment could not open. Check your connection, or pay on delivery instead.') }
   }
 
   async function retry() {
@@ -254,27 +240,10 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
       </fieldset>
 
       {gst.b2b ? (
-        <fieldset className="space-y-3 rounded-sm border border-store-line p-3">
-          <legend className="sr-only">GST invoice for a business</legend>
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <label htmlFor="biz" className="font-medium">Claim GST input credit</label>
-            <button id="biz" type="button" role="switch" aria-checked={biz.on} onClick={() => setBiz((b) => ({ ...b, on: !b.on }))}
-              className={`relative h-6 w-10 shrink-0 rounded-full transition-colors duration-fast ${biz.on ? 'bg-store-good' : 'bg-store-line'}`}>
-              <span aria-hidden className={`absolute left-0.5 top-0.5 size-5 rounded-full bg-store-paper shadow transition-transform duration-fast ${biz.on ? 'translate-x-4' : ''}`} />
-            </button>
-          </div>
-          {biz.on ? <>
-            <div><label htmlFor="bizGstin" className={label}>GSTIN</label>
-              <input id="bizGstin" value={biz.gstin} maxLength={15} autoCapitalize="characters" spellCheck={false} onChange={(e) => { setBiz((b) => ({ ...b, gstin: e.target.value.toUpperCase() })); setErrors((x) => { const n = { ...x }; delete n.bizGstin; return n }) }}
-                aria-invalid={!!errors.bizGstin || undefined} aria-describedby="bizGstin-err" className={`${field} font-mono`} />
-              {(() => { const g = cleanGstin(biz.gstin); const st = g.length === 15 && gstinValid(g) ? gstinStateName(g) : null
-                return errors.bizGstin ? <Err k="bizGstin" /> : st ? <p className="mt-1 text-xs text-store-good">✓ Registered in {st}</p> : null })()}</div>
-            <div><label htmlFor="bizName" className={label}>Business name</label>
-              <input id="bizName" value={biz.name} maxLength={120} autoComplete="organization" onChange={(e) => { setBiz((b) => ({ ...b, name: e.target.value })); setErrors((x) => { const n = { ...x }; delete n.bizName; return n }) }}
-                aria-invalid={!!errors.bizName || undefined} aria-describedby="bizName-err" className={field} />
-              <Err k="bizName" /></div>
-          </> : null}
-        </fieldset>
+        <Suspense fallback={null}>
+          <CheckoutBiz biz={biz} setBiz={setBiz} errors={errors} register={registerBiz} field={field} label={label} err={(k) => <Err k={k} />}
+            clear={(k) => setErrors((x) => { const n = { ...x }; delete n[k]; return n })} />
+        </Suspense>
       ) : null}
 
       {q && (q.offers.listed.length > 0 || code || typing) ? <>

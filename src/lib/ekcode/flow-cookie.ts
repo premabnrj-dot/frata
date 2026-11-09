@@ -5,7 +5,8 @@ import { ekOpen, ekSeal } from './keys'
 
 // =============================================================================
 // FILE: src/lib/ekcode/flow-cookie.ts — EKCODE.IN'S ONE COOKIE (P1 task 6; security M1). `__Host-ek_flow`: HttpOnly,
-// Secure, SameSite=Strict, 15 minutes, sealed whole. It holds the flow handle, the current code's id, the proof once
+// Secure, SameSite=Lax (Strict is not sent on the 303 from /begin, which a shop's page started), 15 minutes, sealed whole; the
+// POST routes refuse anything not same-origin (require-ek.ts). It holds the flow handle, the current code's id, the proof once
 // the code is right, and the number typed — so no request body can name a flow, a code or a proof.
 // =============================================================================
 
@@ -25,9 +26,9 @@ export async function readFlow(): Promise<FlowCookie | null> {
 }
 
 export async function writeFlow(v: FlowCookie) {
-  ;(await cookies()).set(EK_FLOW_COOKIE(), ekSeal(JSON.stringify(v), AAD), { httpOnly: true, secure: cookieSecure(), sameSite: 'strict', path: '/', maxAge: 15 * 60 })
+  ;(await cookies()).set(EK_FLOW_COOKIE(), ekSeal(JSON.stringify(v), AAD), { httpOnly: true, secure: cookieSecure(), sameSite: 'lax', path: '/', maxAge: 15 * 60 })
 }
 
 export async function clearFlow() {
-  ;(await cookies()).set(EK_FLOW_COOKIE(), '', { httpOnly: true, secure: cookieSecure(), sameSite: 'strict', path: '/', maxAge: 0 })
+  ;(await cookies()).set(EK_FLOW_COOKIE(), '', { httpOnly: true, secure: cookieSecure(), sameSite: 'lax', path: '/', maxAge: 0 })
 }
