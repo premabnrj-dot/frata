@@ -469,8 +469,9 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 74. **The dialog checks for itself** every 15 s while open: each record's chip crossfades to Found, "N of 3 found", then
     Securing (a scaleX bar) and Connected (the tick drawn once) with no press; **Check now** stays. Records:
     Copy per row, Copy all, **Send on WhatsApp** (the records written out).
-75. **Make main is gated and works like Publish**: off until "Razorpay approved it" is ticked (Razorpay fails live
-    payments from an unregistered website); a one-line confirm ("Bags in progress start empty."), the 1.3 s rani
+75. **Make main is gated and works like Publish**: the row keeps "Razorpay approved it" (never the dialog: Razorpay's
+    review takes 24–48 h) and Make main appears once it is ticked (Razorpay fails live payments from an unregistered
+    website); a one-line confirm ("Bags in progress start empty."), the 1.3 s rani
     Going-live line, then a popup with Copy, View your shop and Undo for 8 s.
 76. **A problem lives on its row** as a chip and one line with the fix; the red banner on every console page only
     after 24 h of failures; our own failure reads `Checking paused`, never red.

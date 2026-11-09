@@ -71,14 +71,14 @@ form uses the same rule (today it does not).
 
 **Connect a domain** (a page, three steps, resumable):
 1. **Your domain**: type `kesarstudio.in`. The naked domain is the main address and `www.kesarstudio.in` redirects to
-   it (owner, 2026-11-08); a subdomain like `shop.kesarstudio.in` works too. **Where did you buy
+   it (owner, 2026-11-08); a subdomain like `shop.kesarstudio.in` works too. **(Superseded by mockup v2, 2026-11-09: the DNS host is read from NS, never asked.)** **Where did you buy
    it?** GoDaddy · Hostinger · BigRock · Namecheap · Cloudflare · Other → the matching step-by-step guide.
 2. **Add these records** (each with Copy; values read from Vercel for this project, never hard-coded):
    - `TXT  _frrata  frrata-verify=7c1e…` — proves the domain is yours;
    - `A  @  76.76.21.21` (the value Vercel recommends for our project);
    - `CNAME  www  ….vercel-dns-017.com`.
    "Don't change your MX records: your email stays where it is." "Using Cloudflare? Set these to DNS only (grey cloud)."
-   **Check records** → each record turns green or says what is wrong in words.
+   **Check records** (v2: the dialog checks every 15 s by itself; **Check now** stays) → each record turns green or says what is wrong in words.
 3. **Securing**: "Getting a secure certificate (usually 5–10 minutes)" → **Connected** → the choice:
    **Make it your main address** (a dialog listing what happens) or **Keep it as a second address**.
 

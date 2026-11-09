@@ -70,28 +70,71 @@ domain (D2) and a name share one gate. Same screen as own domains (rules 72–76
 ## D·2 — Own domains (owner 2026-11-09: build now on Hobby with a once-a-day check; Pro before the first live merchant)
 No merchant is live yet, so Hobby's non-commercial terms don't bite (the first live payment on any shop needs Pro);
 legacy `crons` run at most once a day on Hobby (Vercel Schedules, beta since 2026-11-05, allow every 15 min within
-5,000 runs a period: an option, not a dependency), so the check runs daily and **Check records** runs the same check for one shop on demand. On upgrading to Pro, the schedule in
-`vercel.json` moves to the pace in D2·8 (one line) and nothing else changes. Migrations start at **0080**.
+5,000 runs a period: an option, not a dependency), so the background check wakes daily and the open dialog checks one
+shop's row on demand. **The code decides which rows are due** (every 10 min the first day after a claim, hourly after);
+the schedule only wakes it, so on Pro the change is the `vercel.json` line (a non-daily line on Hobby fails every
+deploy). **On Hobby, Make main turns on no 307** (architecture review 2: a daily check can't notice a domain leaving us
+in time): it makes the domain canonical, in the sitemap, share cards and links, while the frrata name keeps serving;
+the 307 turns on with a ≤ 15-min check (Pro). Migrations start at **0080**. **Hobby's capacity: 50 domains a project,
+3 taken (frrata.shop, \*.frrata.shop, www), apex + www per shop ≈ 23 shops, parked and unproven claims included.**
 
 **Cross-checked against main 2026-11-09** (themes, SEO, GST, reviews, Signal merged):
-- **The main address has one source on the shop:** `StoreShop.host` (`coreShop` in `src/lib/queries/storefront.ts`)
-  now feeds canonical and Open Graph (`src/domains/seo/tags.ts`), share cards (`/s/[host]/og`, `src/lib/seo/share*.ts`),
-  icons, sitemap and robots. D2·9 changes that one value to the main address (and refreshes `shop:<id>`); the console's
-  own `hostFor` callers (Make a link, Share, search, products, analytics `ownHosts`) read the same reader.
-- **Connect calls Vercel while the person waits** (ADR-0008, new on main): `domain.add` is an attempt row committed
-  before the request, so the records show at once; removal stays an outbox kind (it is days later, D2·7).
+- **The main address has no one source yet** (architecture review 3 corrected this): `hostFor` is `shopHost(slug)`, a
+  string join; `coreShop` (`storefront.ts:117`) and `setupFor` (`settings.ts:46`) derive it separately, and
+  `analytics/page.tsx`, `products/[handle]/page.tsx`, `settings/page.tsx`, `partner/page.tsx`, `admin/merchants.ts`,
+  `shop-actions.ts`, `address-form.tsx`, `shop-preview/previews.tsx` call `shopHost` or build it by hand; `platform.ts`
+  moves an old name to the frrata name (two hops once a domain is main); `api/shop/orders` reads only the request host
+  for `ownHosts`. → **D2·9**: a pure `mainAddress(facts)` read inside `coreShop` and `setupFor`, every caller above moved
+  to it, `hostFor` renamed `nameHost` (it is the frrata name, for cache tags and audit), and any change to what is main
+  or serving refreshes `shop:<id>` and every host tag of the shop.
+- **Connect does not call Vercel** (both reviews, BLOCKER/H1): adding before proof lets trial shops fill the 50 slots.
+  The records show at once from the project's own values (A and CNAME are the same for every domain on the project,
+  read once and cached; the TXT token is ours); `domain.add` is an **outbox** job after the shop's own TXT proof
+  (`drainSoon()`), as D2·4 always said. ADR-0008 is not used here.
 - **Screens follow mockup v2** (https://claude.ai/artifact/XrDQj61tSBe4YKvUrH76xt, owner asked 2026-11-09 for ease
   and smooth transitions; awaiting approval): one Addresses list, a dialog/sheet that polls every 15 s while open,
   the DNS provider read from NS (no question), Open <provider> DNS, Send on WhatsApp, Make main as Publish (1.3 s,
-  popup, Undo 8 s). **Approved by the owner 2026-11-09**; design rules 72–76.
+  popup, Undo 8 s). **Approved by the owner 2026-11-09**; design rules 72–76. Two changes from the reviews: the
+  "Razorpay approved it" tick lives on the row, not in the dialog (Razorpay's review takes 24–48 h; the dialog shows
+  Open Razorpay and Later); and the states the reviews listed are drawn (staff read-only, support visit, 4 of 4, 10 a day,
+  add failed with Check again, provider unknown, Frrata's capacity reached).
+
+**Review 2026-11-09 (architecture + security on the delta), decided:**
+- **Capacity (S·H1):** parked rows count against the shop's 4; a domain parks at most 30 days (owner told); one
+  project-wide count of hosts on Vercel refuses new claims 4 below the cap, failing closed; Vercel's limit error is our
+  failure (`Checking paused`), never "Waiting for records"; unproven claims let go after 48 h.
+- **The dialog's check (S·H2, A·5–6):** the action takes the row id only (the host comes from the row, under RLS);
+  `CAN_MANAGE_ADDRESS`; rate limits per member, shop and ipBucket plus a global budget, failing closed; the same
+  writer definer as D2·8 with a lease (`checked_at < now() - 10 s`), so tabs and the cron collapse into one check;
+  writes only on a change; never calls add or verify; each call times out in 4–5 s; the browser waits for each answer,
+  pauses when the tab is hidden and stops at Connected or after 20 min. The NS lookup runs after Continue, on the
+  registrable domain. Found chips ask the domain's own name servers (no negative caching at public resolvers, RFC 2308);
+  the proof keeps two-resolver agreement.
+- **409 and unknown outcomes (S·M1):** "already on this project" is success only when no other shop holds the host
+  live (database check); `dns_ok_at`/`cert_ok_at` are set only on a row with its own `proved_at`; `app_make_main`
+  requires `proved_at`, `cert_ok_at` and the domain on our project. "In use by another account": the first `_vercel`
+  value is stored and never re-added; verify only once DoH sees it. An unknown add is settled by reading the project's
+  domain, never by repeating it; a daily sweep compares the project's domains with live rows (orphans).
+- **The Razorpay gate (A·4, S·L1):** "taking live payments" is `canTakeOnline` (`payments/keys.ts`); the tick is per
+  address (`razorpay_ok_at`, `_by` on `shop_names` and `shop_domains`), written by a definer, owner/admin only, support
+  visits refused, audited, reset on rename and when the keys' merchant id changes; `app_make_main` enforces it while
+  live; **checkout offers online payment only on a host with the tick** (one pure function), and "Ready for live
+  payments" asks for the main host's tick.
+- **Small (A·11–12, S·L2–L3):** `src/domains/addresses/dns-hosts.ts` matches only listed NS suffixes, each row dated in
+  frata-integrations § Domains; unknown → no button; a deep link takes only the checked host, encoded. One `waText()`
+  helper replaces the five `wa.me` builders; Copy all and Send on WhatsApp come from one `recordsText()` (host, TXT,
+  A, CNAME, `_vercel` only). The Vercel connector re-checks the host shape, encodes it, and caps reply sizes; a found A
+  value is shown only as a checked IPv4 and never stored. Tokens are 128 bits.
+- **Preview builds (S·M3, open S1):** `DATABASE_URL` must be Production-only before D2·6 ships (`app_prove_domain`
+  trusts the app's resolver reading). Owner's step.
 - **Rename of a shop taking live payments** (owner: "take your call, plan the best ux", 2026-11-09) → **D1·9**.
 | Task | What | Verify |
 |---|---|---|
 | D2·0 | **Done 2026-11-09** (frata-integrations 1.15.0 § Razorpay): live payments fail from a website not registered on the shop's own Razorpay account — an own domain AND `<slug>.frrata.shop`. Dashboard › Account & Settings › Business website detail; additional websites only in the e-commerce category, manual review ~24–48 h; no API to read them, so the merchant confirms. → **D1·8** below, and Connect's Connected step shows "Add to Razorpay"; **Make main needs "Razorpay approved it"** while the shop takes live payments | `frata-integrations` |
 | D2·1 | **HSTS split** in next.config with `has: host` rules: `includeSubDomains` only for the console host and `*.SHOP_DOMAIN`; the default (own domains) `max-age=31536000` without it. Check Vercel's own default HSTS. Ships before any own domain is attached | e2e 12 per host |
-| D2·2 | Migration 0070 `shop_domains`: **id PK**; unique `(tenant_id, host) where removed_at is null`; unique `(host) where proved_at is not null and removed_at is null`; **token = 128 random bits per row**, never derived from the host and never changed by another shop's action; timestamps claimed/proved/added/dns_ok/cert_ok/failing_since/parked/main/removed + removed_reason/by; CHECK host lowercase, no trailing dot, not under `frrata.*`, `frata.*`, `vercel.app`, the console host. frata_app: select own rows only; **every write through definers**; frata_admin: select + `update(removed_*)`. `tenant_domains` rows moved in as **removed** (never as proved); `app_tenant_for_host` dropped one migration later | `verify:tenancy`: A can't read or prove B's row; B's claim on A's live host leaves A resolving and A's token unchanged; checking with A's token value doesn't prove B |
+| D2·2 | Migration 0080 `shop_domains`: **id PK**; unique `(tenant_id, host) where removed_at is null`; unique `(host) where proved_at is not null and removed_at is null`; **token = 128 random bits per row**, never derived from the host and never changed by another shop's action; timestamps claimed/proved/added/dns_ok/cert_ok/failing_since/parked/main/removed + removed_reason/by; CHECK host lowercase, no trailing dot, not under `frrata.*`, `frata.*`, `vercel.app`, the console host. frata_app: select own rows only; **every write through definers**; frata_admin: select + `update(removed_*)`. `tenant_domains` rows moved in as **removed** (never as proved); `app_tenant_for_host` dropped one migration later | `verify:tenancy`: A can't read or prove B's row; B's claim on A's live host leaves A resolving and A's token unchanged; checking with A's token value doesn't prove B |
 | D2·3 | Pure `src/domains/addresses/domains.ts`: `normaliseDomain` (Zod `.max(253)` first; lowercase; no scheme/path/port/`@ / : \ * _`/space; labels ≤ 63; no all-digit TLD; ASCII only, no `xn--`; not an IP; refuse `*.vercel.app`, console, `frrata.*`, `frata.*`, `.local`, `.internal`, `.test`, `.onion`, blocked domains; PSL-aware: refuse a bare suffix — `tldts`, server-only, one line in the plan on why); `stateOf(row, now)` → one tuple of badges (Main · Connected · Waiting for records · Securing · Not working · Disconnected) used by Words, rule 68 and the stress table alike; the 4-host cap | vitest table |
-| D2·4 | `src/lib/connectors/vercel/` (the one owner of the token: Production only, Sensitive, read in `env.ts`; refuse any base URL but `api.vercel.com`; never log a response body): add (with Vercel's own `www` → apex redirect at add time), verify, config, remove, through `fetchWithTimeout`. **Only add and remove are outbox kinds**; `drainSoon()` called after enqueue; config is a direct read. 409 counts as success only for "already on this project"; "in use by another account" shows the `_vercel` TXT and never sets `added_at` | unit with a fake; int: outbox row per add/remove |
+| D2·4 | `src/lib/connectors/vercel/` (the one owner of the token: Production only, Sensitive, read in `env.ts`; refuse any base URL but `api.vercel.com`; never log a response body): add (with Vercel's own `www` → apex redirect at add time), verify, config, remove, through `fetchWithTimeout`. **Only add and remove are outbox kinds** (add only after the shop's TXT proof); `drainSoon()` called after enqueue; config is a direct read; the project's A and CNAME values read once and cached for the records. 409 counts as success only for "already on this project"; "in use by another account" shows the `_vercel` TXT and never sets `added_at` | unit with a fake; int: outbox row per add/remove |
 | D2·5 | `src/lib/connectors/dns/`: TXT of `_frrata.<apex>` over DoH (Cloudflare and Google must agree); `redirect: 'error'`; 64 kB cap; answer name must equal the query; store yes/no, never the strings; an error or 429 is "unknown" and never starts the 24 h or 15-day clocks | unit with a fake resolver |
 | D2·6 | Definers: `app_claim_domain` (owner/admin or partner-before-handover as a named tuple `CAN_MANAGE_ADDRESS`, re-checked in SQL; support visits refused; 10 a day a shop); `app_prove_domain` — a proof matches **only its own row's token**; if another shop holds the host live: moves only when **both resolvers see the new token and neither sees the old one**, and a **main** domain waits **72 h** with its owner told (owner call 3) — then, in one locked statement, the old row gets removed_* and its `main_at` cleared, and the old shop's notice and cache refresh are written as outbox rows under that shop; both tokens visible → a dispute in Admin, no flip-flop; one live owner per apex (`www.` moves with it). `app_make_main` requires `cert_ok_at` | int per rule (squat, real owner, both visible, 72 h hold) |
 | D2·7 | **Removal parks first** (security H1): a removed or moved host stays on our project serving nothing (the lookup never serves an unproven/removed row) until the check sees A and CNAME pointing away from Vercel for 3 days in a row; only then `domain.remove` — and the sender re-checks in the database that **no other shop holds that host live** (tenancy C2) | int: B drops its claim on A's live host → Vercel never called |
@@ -144,7 +187,8 @@ legacy `crons` run at most once a day on Hobby (Vercel Schedules, beta since 202
   default, Vercel 409, report form limits (L1–L6).
 
 ## Owner calls — decided 2026-11-08
-1. **Vercel Pro before D·2: yes.** D·1 builds now on Hobby; D·2 waits for Pro and a frequent schedule (`vercel.json`).
+1. **Vercel Pro before D·2: yes** — revised 2026-11-09: D·2 builds on Hobby (daily background check, no 307 until a
+   ≤ 15-min check); Pro before the first live payment.
 2. **307 redirects to an own domain: yes.** Canonical and sitemap carry the SEO.
 3. **A 72-hour hold before a main domain moves** to a shop that proves it, the current owner told: yes. A non-main
    domain moves at once (both resolvers, old token gone).

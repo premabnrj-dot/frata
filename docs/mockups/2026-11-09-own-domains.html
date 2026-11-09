@@ -140,9 +140,9 @@ td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowra
     <li><b>Records appear at once</b> (a call the person waits on, ADR-0008). We read who hosts the domain's DNS ourselves, so there's no "Where did you buy it?" question, and we open that provider's DNS page with one button.</li>
     <li><b>The dialog checks for you</b> every 15 s while it's open. Each record flips to Found on its own, and the dialog moves to Securing, then Connected, without a press. "Check now" stays for impatient people. On Hobby the background check is daily; on Pro it moves to every 10 minutes.</li>
     <li><b>Send the records to whoever manages your domain</b> on WhatsApp, already written out.</li>
-    <li><b>Razorpay must approve the domain first</b> (found 9 Nov): live payments fail from a website not registered on the shop's own Razorpay account. Connected shows "Open Razorpay" and "Razorpay approved it"; Make main stays off until it's ticked. Razorpay has no API to check this, so we take the merchant's word. The same applies to <span class="mono">name.frrata.shop</span>, so it goes on the "Ready for live payments" list.</li>
+    <li><b>Razorpay must approve the domain first</b> (found 9 Nov): live payments fail from a website not registered on the shop's own Razorpay account. Connected shows "Open Razorpay"; the row keeps "Razorpay approved it" (Razorpay takes 24–48 h), and Make main appears once it's ticked. Checkout offers online payment only on an approved address. Razorpay has no API to check this, so we take the merchant's word. The same applies to <span class="mono">name.frrata.shop</span>, so it goes on the "Ready for live payments" list.</li>
     <li><b>Renaming a shop on live payments never stops checkout</b> (your call, 9 Nov): the new name opens the shop beside the old one, Razorpay reviews it live, and Make main switches over once "Razorpay approved it" is ticked. A shop in test mode renames in one step, as today.</li>
-    <li><b>Make main</b> works like Publish: a one-line confirm, a 1.3 s "Going live" line, then a popup with Copy, View shop and Undo for 8 s.</li>
+    <li><b>Make main</b> works like Publish: a one-line confirm, a 1.3 s "Going live" line, then a popup with Copy, View shop and Undo for 8 s. Until Pro, the frrata name keeps opening the shop instead of redirecting.</li>
     <li><b>Problems sit on their row</b> as a chip and one line with the fix. The red banner on every console page shows only after 24 h of failed checks. When the failure is on our side (hosting API down), the row says "Checking paused", never red.</li>
   </ul>
 
@@ -198,7 +198,6 @@ td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowra
             <div class="rec" style="grid-template-columns:minmax(0,1fr) auto">
               <span class="nv"><b>Razorpay</b><code id="rzp-host">kesarstudio.in</code></span>
               <a class="btn sm" href="https://dashboard.razorpay.com/app/website-app-settings" target="_blank" rel="noopener">Open Razorpay</a>
-              <label class="st" style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" id="rzp-ok"> Razorpay approved it</label>
             </div>
           </div>
         </div>
@@ -249,6 +248,15 @@ td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowra
       <li><span class="addr">kesarstudio.in <span class="chip c-danger">Proof record removed</span></span><span class="acts"><button type="button" class="btn sm">Check now</button></span><span class="line bad">Disconnects 27 Nov</span></li>
       <li><span class="addr">kesarstudio.in <span class="chip c-danger">Disconnected by Frrata</span></span><span class="acts"><button type="button" class="btn sm">Reply</button></span><span class="line bad">Reason: copies another brand (case 2211)</span></li>
       <li><span class="addr">kesarstudio.in <span class="chip c-n">Checking paused</span></span><span class="acts"></span></li>
+      <li><span class="addr">kesarstudio.in <span class="chip c-warn">Not added yet</span></span><span class="acts"><button type="button" class="btn sm">Check again</button></span></li>
+    </ul></section>
+    <section class="card"><header><h3>Limits and who sees what</h3></header><ul class="rows">
+      <li><span class="addr">Connect a domain <span class="chip c-n">4 of 4</span></span><span class="acts"><button type="button" class="btn sm" disabled>Connect a domain</button></span></li>
+      <li><span class="addr">Connect a domain <span class="chip c-n">10 today</span></span><span class="acts"><button type="button" class="btn sm" disabled>Connect a domain</button></span><span class="line warn">Try again tomorrow</span></li>
+      <li><span class="addr">Connect a domain <span class="chip c-n">Not available right now</span></span><span class="acts"><button type="button" class="btn sm" disabled>Connect a domain</button></span></li>
+      <li><span class="addr">Records <span class="chip c-n">DNS host unknown</span></span><span class="acts"><button type="button" class="btn sm">Copy all</button></span></li>
+      <li><span class="addr">Staff · support visit <span class="chip c-n">View only</span></span><span class="acts"></span></li>
+      <li><span class="addr">After Undo <span class="chip c-ok">Connected</span></span><span class="acts"><button type="button" class="btn sm">Make main</button></span></li>
     </ul></section>
   </div>
 
@@ -287,7 +295,7 @@ td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowra
 
   function drawRows() {
     $('rows').innerHTML = rows.map((r) => `<li><span class="addr">${r.name} <span class="chip ${r.chip[0]}">${r.chip[1]}</span></span><span class="acts">${
-      r.acts === 'copy' ? '<button type="button" class="btn sm" data-copy="' + r.name + '">Copy</button><a class="btn sm" href="#">Open</a>' : r.acts === 'main' ? '<button type="button" class="btn sm" data-main>Make main</button>' : ''
+      r.acts === 'copy' ? '<button type="button" class="btn sm" data-copy="' + r.name + '">Copy</button><a class="btn sm" href="#">Open</a>' : r.acts === 'main' ? '<span class="chip c-ok">Razorpay approved</span><button type="button" class="btn sm" data-main>Make main</button>' : r.acts === 'rzp' ? '<span class="chip c-warn">Razorpay not approved</span><a class="btn sm" href="https://dashboard.razorpay.com/app/website-app-settings" target="_blank" rel="noopener">Open Razorpay</a><button type="button" class="btn sm" data-rzp>Razorpay approved it</button>' : ''
     }</span></li>`).join('')
     $('open-connect').className = rows.length > 1 ? 'btn' : 'btn primary'
   }
@@ -349,9 +357,9 @@ td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowra
       later(2700, () => {
         $('securing').hidden = true; const c = $('connected'); c.hidden = false
         c.querySelectorAll('circle,path').forEach((e) => { e.style.animation = 'none'; e.getBoundingClientRect(); e.style.animation = '' })
-        rows = BASE.concat([{ name: domain, chip: ['c-ok', 'Connected'], acts: 'main' }, { name: 'www.' + domain, chip: ['c-n', 'Goes to ' + domain] }]); drawRows()
-        $('rzp').hidden = false; $('rzp-host').textContent = domain; $('rzp-ok').checked = false
-        next.hidden = false; next.disabled = true; next.textContent = 'Make it main'; cancel.textContent = 'Later'
+        $('rzp').hidden = false; $('rzp-host').textContent = domain
+        rows = BASE.concat([{ name: domain, chip: ['c-ok', 'Connected'], acts: 'rzp' }, { name: 'www.' + domain, chip: ['c-n', 'Goes to ' + domain] }]); drawRows()
+        next.hidden = true; cancel.textContent = 'Done'
       })
     }
   }
@@ -362,7 +370,6 @@ td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowra
 
   $('open-connect').onclick = () => { clear(); $('next').hidden = false; go(1); open($('dlg'), $('scrim')); setTimeout(() => $('dom').focus(), 50) }
   $('dom').oninput = checkDomain
-  $('rzp-ok').onchange = () => { $('next').disabled = !$('rzp-ok').checked }
   $('cancel').onclick = () => { clear(); shut($('dlg'), $('scrim')) }
   $('scrim').onclick = $('cancel').onclick
   $('next').onclick = () => { if (step === 1) go(2); else if (step === 3) { shut($('dlg'), $('scrim')); askMain() } }
@@ -372,6 +379,7 @@ td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowra
   stage.addEventListener('click', (e) => {
     const c = e.target.closest('[data-copy]'); if (c) { navigator.clipboard?.writeText(c.dataset.copy).catch(() => {}); toast('Copied') }
     if (e.target.closest('[data-main]')) askMain()
+    if (e.target.closest('[data-rzp]')) { rows = rows.map((r) => r.acts === 'rzp' ? { ...r, acts: 'main' } : r); drawRows(); toast('Saved') }
   })
 
   function askMain() { open($('confirm'), $('scrim2')); setTimeout(() => $('c-keep').focus(), 50) }
@@ -387,7 +395,7 @@ td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowra
       $('pop').classList.add('open'); later(8000, () => { $('p-undo').hidden = true })
     })
   }
-  $('p-undo').onclick = () => { $('pop').classList.remove('open'); rows = BASE.concat([{ name: domain, chip: ['c-ok', 'Connected'], acts: 'main' }, { name: 'www.' + domain, chip: ['c-n', 'Goes to ' + domain] }]); drawRows(); toast('kesar-studio.frrata.shop is main again') }
+  $('p-undo').onclick = () => { $('pop').classList.remove('open'); rows = [{ name: 'kesar-studio.frrata.shop', chip: ['c-main', 'Main'], acts: 'copy' }].concat([{ name: domain, chip: ['c-ok', 'Connected'], acts: 'main' }, { name: 'www.' + domain, chip: ['c-n', 'Goes to ' + domain] }]); drawRows(); toast('kesar-studio.frrata.shop is main again') }
   $('p-close').onclick = () => $('pop').classList.remove('open')
   $('p-copy').onclick = () => { navigator.clipboard?.writeText(domain).catch(() => {}); toast('Copied') }
   $('p-view').onclick = (e) => e.preventDefault()

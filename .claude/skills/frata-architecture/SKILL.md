@@ -2,9 +2,9 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.30.0
+  version: 2.31.0
   verified: 2026-11-09
-  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008 (proposed)]
+  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
 ---
 
@@ -533,7 +533,7 @@ through `asModule('gst', …)`, the Accountant's invite too (removing one works 
   (final). ₹ kept: `keptSql` takes off credited taxable and returned goods' cost.
 - **GSTR-1:** `domains/tax/gstr1.ts` from the documents; files in `gstr1-files.ts`; the period read is
   `queries/gst.ts gstPeriod(In)`, never cached. Filing (G2): `lib/gst/gsp.ts` (`gsp()` null = off; the fake never in
-  Production), the actions in `console/gst/actions.ts` write a `gst_attempts` row before each call (ADR-0008 draft),
+  Production), the actions in `console/gst/actions.ts` write a `gst_attempts` row before each call (ADR-0008, accepted 2026-11-09),
   `gst_filings` is final once filed (trigger).
 - **The Accountant** (`MEMBER_ROLES`): in `CONSOLE_ROLES` and `CAN_SEE_GST` only — never add it to an existing role tuple;
   `seesCosts` is false. Invited by the owner through the `app_*_accountant` definers.
