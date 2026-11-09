@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.16.0
+  version: 1.17.0
   verified: 2026-11-09
   decisions: [ADR-0006]
 ---
@@ -83,6 +83,22 @@ in razorpay.com/docs/sitemap.xml (most read 2026-10-08, a bulk rebuild).
   text not read]. (Corrects the 2026-11-06 note, which said "from 15 Oct 2026 [V]".)
 - Magic Checkout ~0.65–0.75% per order (competitor reference) [S, 2026-11-06].
 - No RBI/NPCI rule on cash on delivery found [U, 2026-11-07].
+- **Registered websites (checked 2026-11-09):** live payments are accepted only from websites registered on the
+  merchant's OWN account; "Razorpay fails the payments received on the unregistered websites" [V Custom Checkout page,
+  undated; Standard Checkout failure S, GHL 2025-12-12: "…from web domain - link.fastpaydirect.com has failed as it is
+  not registered"]. Keys apply to the websites whitelisted for the MID [V]. A platform's domain registered on another MID
+  does not carry over [S] — so **`<slug>.frrata.shop` must be registered on each shop's own account too**. Shopper sees
+  "Payment blocked as website does not match registered website(s)" [S, Zoho, undated]. Account action for trying [U];
+  test mode exempt [U].
+- Dashboard → Account & Settings → Business website detail: one main website plus five additional, additional only in
+  the e-commerce category; register before integrating; additional needs About, Contact, Pricing, T&C, Privacy, Refund
+  pages live, a sample invoice and a reason of ≥ 50 words; main = instant automated checks, additional = manual review,
+  "about 24-48 hours"; a sub-domain → "raise a request with our Support Team" [V, business-website-details +
+  dashboard/faqs, lastmod 2026-10-08]. No API to read a merchant's registered websites found [U]: the merchant confirms.
+- `callback_url`: "Ensure that the domain of the Callback URL is allowlisted" [V, standard/integration-steps, 2026-10-08].
+- Payment Links and Invoices need no website [V, payment-links/faqs + business-website-details, 2026-10-08]; UPI
+  Payment Links skip `callback_url` on Android [V]. UPI Intent on by default, desktop shows QR [V, upi-intent,
+  2026-10-08]. Instagram/Facebook in-app browsers: UPI Intent only [V Custom Checkout FAQ, undated; Standard U].
 
 ## Commerce law and checkout references (offers) — checked 2026-11-08 (research `docs/research/2026-11-08-coupons.md`)
 
@@ -407,7 +423,18 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
 - `_vercel` TXT only when another Vercel account uses the domain; a new value on re-add. Frrata adds its own TXT proof.
 - A record and www CNAME values are per project (76.76.21.21 or 216.198.79.1; `*.vercel-dns-017.com`); no IPv6;
   www recommended as primary [V 2026-09-18].
-- Pro: soft limit 100,000 domains a project; domain writes 100/60 s, verify 100/60 s, config reads 500/60 s [V].
+- Domains a project: Hobby 50, Pro "Unlimited" (soft 100,000) [V, plans/hobby 2026-09-14, limits 2026-09-16,
+  multi-tenant limits 2026-09-08]; whether the wildcard, apex, www and vercel.app count toward the 50 [U]. REST limits
+  name no plan: domain add/update/remove 100/60 s, verify 100/60 s, project domains read 500/60 s, DNS config 500/60 s
+  [V limits 2026-09-16; "same on Hobby" U]. Conflict: multi-tenant limits says add 100/h, verify 50/h, remove 100/h per
+  team [V 2026-09-08] — size batches to the per-hour numbers until Vercel confirms (checked 2026-11-09).
+- Hobby cron (`crons`, now "a legacy feature"): 100 a project, once a day, ±59 min; more frequent fails the deploy [V,
+  cron-jobs/usage-and-pricing 2026-07-15]. **Schedules** (public beta 2026-11-05, `schedules` in vercel.json): Hobby at
+  most every 15 min, jitter always 15; 100 static a deployment; 500 dynamic creations and 5,000 runs (scheduled +
+  manual) a billing period, then runs skipped; "limits may change" [V, schedules/limits + configuration; changelog
+  2026-11-05]. Too-frequent on deploy [U].
+- Hobby is "non-commercial personal use only"; "requesting or processing payment from visitors" is commercial [V,
+  fair-use-guidelines 2026-09-14]. **The first live payment on any shop needs Pro.**
 - Let's Encrypt, HTTP-01, "wait 5 to 10 minutes"; CAA must allow letsencrypt.org; proxies break issuance [V].
 - The middleware sees the custom host unchanged [V 2025-12-13].
 - Public Suffix List: Vercel advises it for tenant domains (myshopify.com, vercel.app, github.io are on it); a `_psl`

@@ -1,0 +1,412 @@
+<title>Frrata Own Domains</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a short note for the owner, then one live console you can click through, then the states and the motion table. Frrata tokens. */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--brand:#D61F69;--brand-text:#A8124F;--thread:#D61F69;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;--ink:#1C1917;--on-ink:#FAFAF9;
+  --scrim:rgb(28 25 23 / .45);
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;
+  --fast:120ms;--base:200ms;--slow:320ms;
+  --standard:cubic-bezier(.2,0,0,1);--entrance:cubic-bezier(0,0,0,1);--exit:cubic-bezier(.3,0,1,1);
+  --spring:linear(0,.22 7%,.6 17%,.86 27%,1.01 38%,1.04 46%,1.02 60%,1 100%);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--ink:#0B0A09;--scrim:rgb(0 0 0 / .6);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--ink:#0B0A09;--scrim:rgb(0 0 0 / .6);color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.55 var(--sans);margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:26px;line-height:1.2;margin:0 0 6px;text-wrap:balance}
+h2{font-size:18px;margin:44px 0 10px;display:flex;gap:10px;align-items:center;text-wrap:balance}
+h2::before{content:"";width:18px;height:2px;background:var(--thread);flex:none}
+h3{font-size:15px;margin:0}
+p{margin:0 0 10px;max-width:72ch}
+.k{font-size:12px;color:var(--sub)}.mono{font-family:var(--mono)}
+.note{display:grid;gap:6px;margin:14px 0 0;padding:0;list-style:none;max-width:80ch}
+.note li{padding-left:16px;position:relative}.note li::before{content:"";position:absolute;left:0;top:.7em;width:8px;height:2px;background:var(--thread)}
+/* console frame */
+.stage{position:relative;border:1px solid var(--border);border-radius:8px;background:var(--bg);overflow:hidden;min-height:560px}
+.bar{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--card)}
+.crumb{font-size:13px;color:var(--sub)}.crumb b{color:var(--fg);font-weight:600}
+.ctl{display:flex;gap:6px;flex-wrap:wrap}
+.page{padding:18px;display:grid;gap:14px;max-width:720px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;min-width:0}
+.card>header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px 8px}
+.rows{list-style:none;margin:0;padding:0 0 4px}
+.rows li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:10px 16px;border-top:1px solid var(--border)}
+.rows li:first-child{border-top:0}
+.rows .acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.addr{font:500 14px var(--mono);overflow-wrap:anywhere;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.line{grid-column:1/-1;font-size:12.5px}
+.line.bad{color:var(--danger-text)}.line.warn{color:var(--warn-text)}
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--fg);padding:0 12px;font:500 13px var(--sans);min-height:36px;cursor:pointer;white-space:nowrap;transition:background-color var(--fast) var(--standard),opacity var(--fast) var(--standard)}
+.btn:hover{background:var(--muted)}
+.btn:focus-visible,.input:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.primary:hover{opacity:.9}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.sm{min-height:30px;padding:0 9px;font-size:12.5px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 9px;font:500 12px var(--sans);white-space:nowrap}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-warn{background:var(--warn);color:var(--warn-text)}.c-n{background:var(--muted);color:var(--sub)}.c-danger{background:var(--danger);color:var(--danger-text)}.c-info{background:var(--info);color:var(--info-text)}
+.c-main{background:var(--fg);color:var(--bg)}
+.ico{width:14px;height:14px;flex:none}
+/* dialog / sheet */
+.scrim{position:absolute;inset:0;background:var(--scrim);opacity:0;transition:opacity var(--base) var(--exit),display var(--base) allow-discrete;display:none;z-index:5}
+.scrim.open{display:block;opacity:1;transition:opacity var(--base) var(--entrance),display var(--base) allow-discrete}
+@starting-style{.scrim.open{opacity:0}}
+.dlg{position:absolute;z-index:6;left:50%;top:48px;width:min(520px,calc(100% - 32px));translate:-50% 0;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgb(0 0 0 / .18);
+  opacity:0;scale:.98;display:none;transition:opacity var(--base) var(--exit),scale var(--base) var(--exit),display var(--base) allow-discrete;overflow:hidden}
+.dlg.open{display:block;opacity:1;scale:1;transition:opacity var(--base) var(--entrance),scale var(--base) var(--entrance),display var(--base) allow-discrete}
+@starting-style{.dlg.open{opacity:0;scale:.98}}
+.stage.phone .dlg{left:0;right:0;top:auto;bottom:0;width:100%;translate:0 0;border-radius:12px 12px 0 0;max-height:85%;overflow:auto;scale:1;transform:translateY(100%);opacity:1;
+  transition:transform var(--base) var(--exit),display var(--base) allow-discrete}
+.stage.phone .dlg.open{transform:translateY(0);transition:transform var(--slow) var(--spring),display var(--slow) allow-discrete}
+@starting-style{.stage.phone .dlg.open{transform:translateY(100%)}}
+.dh{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)}
+.dots{display:flex;gap:5px}.dots i{width:22px;height:3px;border-radius:2px;background:var(--border);transform-origin:left;transition:background-color var(--base) var(--standard)}.dots i.on{background:var(--fg)}
+.db{padding:16px;display:grid;gap:12px;min-height:250px;position:relative}
+.df{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--border);flex-wrap:wrap}
+.step{display:none;gap:12px}
+.step.on{display:grid;animation:stepIn var(--slow) var(--entrance)}
+.step.on.back{animation-name:stepBack}
+@keyframes stepIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+@keyframes stepBack{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:none}}
+label.f{display:grid;gap:4px;font-size:13px;font-weight:500}
+.input{border:1px solid var(--input);border-radius:6px;padding:0 10px;background:var(--card);color:var(--fg);font:14px var(--mono);min-height:40px;width:100%}
+.say{font-size:12.5px;min-height:1.4em}.say.ok{color:var(--ok-text)}.say.bad{color:var(--danger-text)}
+.facts{display:flex;gap:8px 16px;flex-wrap:wrap;font-size:13px}.facts span{color:var(--sub)}.facts b{font-weight:500;color:var(--fg)}
+/* records */
+.recs{border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.rec{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:9px 10px;border-top:1px solid var(--border);font-size:12.5px}
+.rec:first-child{border-top:0}
+.rec .t{font:600 11.5px var(--mono);color:var(--sub)}
+.rec .nv{display:grid;gap:2px;min-width:0}
+.rec code{font:12px var(--mono);overflow-wrap:anywhere}
+.rec .st{grid-column:2/-1}
+.state{position:relative;display:inline-grid}
+.state>*{grid-area:1/1;transition:opacity var(--base) var(--standard)}
+.state [hidden]{display:inline-flex!important;opacity:0;pointer-events:none}
+.chipbtn{border:0;background:none;padding:0;cursor:pointer;color:var(--fg)}
+.pulse{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 1.2s var(--standard) infinite}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+.track{height:3px;background:var(--muted);border-radius:2px;overflow:hidden}
+.track i{display:block;height:100%;background:var(--fg);transform-origin:left;transform:scaleX(0);transition:transform var(--slow) var(--standard)}
+.tick{width:40px;height:40px}
+.tick circle{stroke-dasharray:120;stroke-dashoffset:120;animation:draw var(--slow) var(--entrance) forwards}
+.tick path{stroke-dasharray:30;stroke-dashoffset:30;animation:draw var(--base) var(--entrance) var(--slow) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.done{display:grid;justify-items:center;text-align:center;gap:8px;padding:10px 0}
+/* going live + popup */
+.live{position:absolute;inset:auto 0 0 0;z-index:7;height:3px;background:transparent}
+.live i{display:block;height:100%;background:var(--thread);transform-origin:left;transform:scaleX(0)}
+.live.run i{animation:fill 1.3s var(--standard) forwards}
+@keyframes fill{to{transform:scaleX(1)}}
+.pop{position:absolute;z-index:8;right:16px;bottom:16px;width:min(360px,calc(100% - 32px));background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgb(0 0 0 / .18);padding:14px;display:none;gap:10px;
+  opacity:0;transform:translateY(8px);transition:opacity var(--base) var(--exit),transform var(--base) var(--exit),display var(--base) allow-discrete}
+.pop.open{display:grid;opacity:1;transform:none;transition:opacity var(--base) var(--entrance),transform var(--base) var(--entrance),display var(--base) allow-discrete}
+@starting-style{.pop.open{opacity:0;transform:translateY(8px)}}
+.undo{position:relative;overflow:hidden}
+.undo::after{content:"";position:absolute;left:0;bottom:0;height:2px;width:100%;background:var(--thread);transform-origin:left;animation:shrink 8s linear forwards}
+@keyframes shrink{to{transform:scaleX(0)}}
+.toast{position:absolute;z-index:8;left:50%;bottom:16px;translate:-50% 0;background:var(--ink);color:var(--on-ink);border-radius:6px;padding:8px 12px;font-size:13px;display:none;opacity:0;transition:opacity var(--base) var(--exit),display var(--base) allow-discrete}
+.toast.open{display:block;opacity:1;transition:opacity var(--base) var(--entrance),display var(--base) allow-discrete}
+@starting-style{.toast.open{opacity:0}}
+/* static boards */
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}.grid>*{min-width:0}
+.banner{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--danger);color:var(--danger-text);border-radius:6px;padding:8px 12px;font-size:13px}
+.tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}th{font-size:12px;color:var(--sub);font-weight:500}tr:last-child td{border-bottom:0}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.seg button{border:0;background:var(--card);color:var(--sub);font:500 12.5px var(--sans);padding:6px 10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.stage.phone .page{max-width:390px;margin:0 auto;padding:12px}
+.stage.phone{max-width:420px}
+.stage.calm *,.stage.calm *::before,.stage.calm *::after{animation-duration:1ms!important;transition-duration:var(--fast)!important;translate:none}
+.stage.calm .dlg,.stage.calm.phone .dlg{transform:none}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:1ms!important;animation-iteration-count:1!important;transition-duration:var(--fast)!important}}
+</style>
+
+<div class="wrap">
+  <p class="k mono">Mockup v2 · 9 Nov 2026 · D·2 own domains · replaces § 5–7 of the 8 Nov mockup · for the owner's approval</p>
+  <h1>Own domains, v2: fewer steps, nothing to press twice</h1>
+  <ul class="note">
+    <li><b>One list, one way in.</b> Settings › Shop address shows every address the shop has as rows; the main one carries a chip. "Connect a domain" opens a dialog (a sheet on a phone), not a page.</li>
+    <li><b>Records appear at once</b> (a call the person waits on, ADR-0008). We read who hosts the domain's DNS ourselves, so there's no "Where did you buy it?" question, and we open that provider's DNS page with one button.</li>
+    <li><b>The dialog checks for you</b> every 15 s while it's open. Each record flips to Found on its own, and the dialog moves to Securing, then Connected, without a press. "Check now" stays for impatient people. On Hobby the background check is daily; on Pro it moves to every 10 minutes.</li>
+    <li><b>Send the records to whoever manages your domain</b> on WhatsApp, already written out.</li>
+    <li><b>Razorpay must approve the domain first</b> (found 9 Nov): live payments fail from a website not registered on the shop's own Razorpay account. Connected shows "Open Razorpay"; the row keeps "Razorpay approved it" (Razorpay takes 24–48 h), and Make main appears once it's ticked. Checkout offers online payment only on an approved address. Razorpay has no API to check this, so we take the merchant's word. The same applies to <span class="mono">name.frrata.shop</span>, so it goes on the "Ready for live payments" list.</li>
+    <li><b>Renaming a shop on live payments never stops checkout</b> (your call, 9 Nov): the new name opens the shop beside the old one, Razorpay reviews it live, and Make main switches over once "Razorpay approved it" is ticked. A shop in test mode renames in one step, as today.</li>
+    <li><b>Make main</b> works like Publish: a one-line confirm, a 1.3 s "Going live" line, then a popup with Copy, View shop and Undo for 8 s. Until Pro, the frrata name keeps opening the shop instead of redirecting.</li>
+    <li><b>Problems sit on their row</b> as a chip and one line with the fix. The red banner on every console page shows only after 24 h of failed checks. When the failure is on our side (hosting API down), the row says "Checking paused", never red.</li>
+  </ul>
+
+  <h2>Click through it</h2>
+  <div class="row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+    <div class="seg" role="group" aria-label="Width"><button type="button" id="w-desk" aria-pressed="true">Computer</button><button type="button" id="w-phone" aria-pressed="false">Phone</button></div>
+    <div class="seg" role="group" aria-label="Motion"><button type="button" id="m-full" aria-pressed="true">Motion</button><button type="button" id="m-calm" aria-pressed="false">Reduced motion</button></div>
+    <button type="button" class="btn sm ghost" id="reset">Start again</button>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="bar"><span class="crumb">Settings › <b>Shop address</b></span></div>
+    <div class="page">
+      <section class="card" aria-labelledby="addr-h">
+        <header><h3 id="addr-h">Addresses</h3><button type="button" class="btn primary" id="open-connect">Connect a domain</button></header>
+        <ul class="rows" id="rows"></ul>
+      </section>
+    </div>
+
+    <div class="scrim" id="scrim"></div>
+    <div class="dlg" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-h">
+      <div class="dh"><h3 id="dlg-h">Connect a domain</h3><div class="dots" aria-hidden="true"><i id="d1" class="on"></i><i id="d2"></i><i id="d3"></i></div></div>
+      <div class="db">
+        <div class="step on" id="s1">
+          <label class="f" for="dom">Domain<input class="input" id="dom" autocomplete="off" spellcheck="false" placeholder="yourbrand.in" value="https://www.KesarStudio.in/"></label>
+          <div class="say" id="dom-say" aria-live="polite"></div>
+          <div class="facts" id="dom-facts" hidden><span>Main <b class="mono" id="f-apex">kesarstudio.in</b></span><span>Also <b class="mono" id="f-www">www.kesarstudio.in</b></span><span>DNS <b id="f-dns">GoDaddy</b></span></div>
+        </div>
+        <div class="step" id="s2">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="chip c-n" id="found"><span class="pulse"></span><span id="found-t">0 of 3 found</span></span>
+            <span class="k" id="checked">Checking every 15 s</span>
+          </div>
+          <div class="recs" id="recs"></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <a class="btn" href="https://dcc.godaddy.com/control/portfolio" target="_blank" rel="noopener">Open GoDaddy DNS</a>
+            <button type="button" class="btn" id="copy-all">Copy all</button>
+            <button type="button" class="btn" id="wa">Send on WhatsApp</button>
+            <button type="button" class="btn ghost" id="check-now">Check now</button>
+          </div>
+        </div>
+        <div class="step" id="s3">
+          <div id="securing" style="display:grid;gap:10px">
+            <div style="display:flex;justify-content:space-between;gap:8px"><b>Securing</b><span class="k mono" id="sec-t">kesarstudio.in</span></div>
+            <div class="track"><i id="sec-bar"></i></div>
+          </div>
+          <div class="done" id="connected" hidden>
+            <svg class="tick" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="19" fill="none" stroke="var(--ok-text)" stroke-width="2.5"/><path d="M14 22.5l5.5 5.5L30.5 17" fill="none" stroke="var(--ok-text)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <b class="mono">kesarstudio.in</b>
+            <span class="chip c-ok">Connected</span>
+          </div>
+          <div class="recs" id="rzp" hidden>
+            <div class="rec" style="grid-template-columns:minmax(0,1fr) auto">
+              <span class="nv"><b>Razorpay</b><code id="rzp-host">kesarstudio.in</code></span>
+              <a class="btn sm" href="https://dashboard.razorpay.com/app/website-app-settings" target="_blank" rel="noopener">Open Razorpay</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="df" id="foot">
+        <button type="button" class="btn ghost" id="cancel">Not now</button>
+        <button type="button" class="btn primary" id="next" disabled>Continue</button>
+      </div>
+    </div>
+
+    <div class="scrim" id="scrim2"></div>
+    <div class="dlg" id="confirm" role="dialog" aria-modal="true" aria-labelledby="c-h" style="top:90px">
+      <div class="dh"><h3 id="c-h">Make kesarstudio.in your main address?</h3></div>
+      <div class="db" style="min-height:0"><p style="margin:0">Bags in progress start empty.</p></div>
+      <div class="df"><button type="button" class="btn ghost" id="c-keep">Keep kesar-studio.frrata.shop</button><button type="button" class="btn primary" id="c-go">Make it main</button></div>
+    </div>
+
+    <div class="live" id="live"><i></i></div>
+    <div class="pop" id="pop" role="status">
+      <b>kesarstudio.in is your main address</b>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button type="button" class="btn sm" id="p-copy">Copy</button>
+        <a class="btn sm" href="#" id="p-view">View your shop</a>
+        <button type="button" class="btn sm undo" id="p-undo">Undo</button>
+        <button type="button" class="btn sm ghost" id="p-close">Close</button>
+      </div>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+  </div>
+
+  <h2>Every state of a row</h2>
+  <div class="grid">
+    <section class="card"><header><h3>Waiting and working</h3></header><ul class="rows">
+      <li><span class="addr">shop.rangthreads.in <span class="chip c-warn">Waiting for records · 1 of 2</span></span><span class="acts"><button type="button" class="btn sm">Continue</button></span></li>
+      <li><span class="addr">kesarstudio.in <span class="chip c-info">Securing</span></span><span class="acts"></span></li>
+      <li><span class="addr">kesarstudio.in <span class="chip c-ok">Connected</span> <span class="chip c-warn">Razorpay not approved</span></span><span class="acts"><a class="btn sm" href="#">Open Razorpay</a></span></li>
+      <li><span class="addr">kesar-jaipur.frrata.shop <span class="chip c-ok">Ready</span> <span class="chip c-warn">Razorpay not approved</span></span><span class="acts"><a class="btn sm" href="#">Open Razorpay</a></span></li>
+      <li><span class="addr">kesar-jaipur.frrata.shop <span class="chip c-ok">Ready</span> <span class="chip c-ok">Razorpay approved</span></span><span class="acts"><button type="button" class="btn sm">Make main</button></span></li>
+      <li><span class="addr">kesarstudio.in <span class="chip c-ok">Connected</span></span><span class="acts"><button type="button" class="btn sm">Make main</button></span></li>
+      <li><span class="addr">kesarstudio.in <span class="chip c-main">Main</span></span><span class="acts"><button type="button" class="btn sm">Copy</button></span></li>
+      <li><span class="addr">www.kesarstudio.in <span class="chip c-n">Goes to kesarstudio.in</span></span><span class="acts"></span></li>
+    </ul></section>
+    <section class="card"><header><h3>Needs you</h3></header><ul class="rows">
+      <li><span class="addr">kesarstudio.in <span class="chip c-danger">Not working</span></span><span class="acts"><button type="button" class="btn sm">Check now</button></span><span class="line bad">A record points to 3.110.44.9 · use 76.76.21.21</span></li>
+      <li><span class="addr">kesarstudio.in <span class="chip c-warn">Securing</span></span><span class="acts"><button type="button" class="btn sm">Check now</button></span><span class="line warn">Cloudflare proxy on · set both records to DNS only</span></li>
+      <li><span class="addr">kesarstudio.in <span class="chip c-warn">Securing</span></span><span class="acts"><button type="button" class="btn sm">Check now</button></span><span class="line warn">CAA blocks our certificate · add CAA 0 issue "letsencrypt.org"</span></li>
+      <li><span class="addr">kesarstudio.in <span class="chip c-warn">In use by another shop</span></span><span class="acts"><button type="button" class="btn sm">Show proof record</button></span></li>
+      <li><span class="addr">kesarstudio.in <span class="chip c-danger">Proof record removed</span></span><span class="acts"><button type="button" class="btn sm">Check now</button></span><span class="line bad">Disconnects 27 Nov</span></li>
+      <li><span class="addr">kesarstudio.in <span class="chip c-danger">Disconnected by Frrata</span></span><span class="acts"><button type="button" class="btn sm">Reply</button></span><span class="line bad">Reason: copies another brand (case 2211)</span></li>
+      <li><span class="addr">kesarstudio.in <span class="chip c-n">Checking paused</span></span><span class="acts"></span></li>
+      <li><span class="addr">kesarstudio.in <span class="chip c-warn">Not added yet</span></span><span class="acts"><button type="button" class="btn sm">Check again</button></span></li>
+    </ul></section>
+    <section class="card"><header><h3>Limits and who sees what</h3></header><ul class="rows">
+      <li><span class="addr">Connect a domain <span class="chip c-n">4 of 4</span></span><span class="acts"><button type="button" class="btn sm" disabled>Connect a domain</button></span></li>
+      <li><span class="addr">Connect a domain <span class="chip c-n">10 today</span></span><span class="acts"><button type="button" class="btn sm" disabled>Connect a domain</button></span><span class="line warn">Try again tomorrow</span></li>
+      <li><span class="addr">Connect a domain <span class="chip c-n">Not available right now</span></span><span class="acts"><button type="button" class="btn sm" disabled>Connect a domain</button></span></li>
+      <li><span class="addr">Records <span class="chip c-n">DNS host unknown</span></span><span class="acts"><button type="button" class="btn sm">Copy all</button></span></li>
+      <li><span class="addr">Staff · support visit <span class="chip c-n">View only</span></span><span class="acts"></span></li>
+      <li><span class="addr">After Undo <span class="chip c-ok">Connected</span></span><span class="acts"><button type="button" class="btn sm">Make main</button></span></li>
+    </ul></section>
+  </div>
+
+  <h2>On every console page, after 24 h of failures</h2>
+  <div class="banner"><span><b class="mono">kesarstudio.in</b> not working since 12 Nov · shoppers go to kesar-studio.frrata.shop</span><button type="button" class="btn sm">Fix it</button></div>
+
+  <h2>Motion, by pattern (design rules 22–29)</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>What</th><th>Moves</th><th>In</th><th>Out</th><th>Reduced motion</th></tr></thead>
+    <tbody>
+      <tr><td>Connect dialog (computer)</td><td>opacity, scale .98 → 1</td><td class="n">200 ms entrance</td><td class="n">200 ms exit</td><td>fade 120 ms</td></tr>
+      <tr><td>Connect sheet (phone)</td><td>translateY from the bottom, Back closes</td><td class="n">320 ms spring</td><td class="n">200 ms exit</td><td>fade 120 ms</td></tr>
+      <tr><td>Step 1 → 2 → 3</td><td>step slide 16 px from the side it comes from</td><td class="n">320 ms entrance</td><td>—</td><td>no slide</td></tr>
+      <tr><td>Step dots</td><td>colour</td><td class="n">200 ms</td><td>—</td><td>same</td></tr>
+      <tr><td>A record found</td><td>its chip crossfades (opacity); the row never moves</td><td class="n">200 ms</td><td>—</td><td>same</td></tr>
+      <tr><td>"Checking" dot</td><td>opacity pulse</td><td class="n">1.2 s loop</td><td>—</td><td>still</td></tr>
+      <tr><td>Securing</td><td>bar scaleX, one step per check</td><td class="n">320 ms</td><td>—</td><td>jumps</td></tr>
+      <tr><td>Connected</td><td>tick drawn once (circle, then check)</td><td class="n">320 + 200 ms</td><td>—</td><td>shown drawn</td></tr>
+      <tr><td>Make main confirm</td><td>as the dialog</td><td class="n">200 ms</td><td class="n">200 ms</td><td>fade</td></tr>
+      <tr><td>Going live</td><td>rani line scaleX across the foot</td><td class="n">1.3 s held</td><td>—</td><td>words only</td></tr>
+      <tr><td>Done popup</td><td>rises 8 px, fades</td><td class="n">200 ms</td><td class="n">200 ms</td><td>fade</td></tr>
+      <tr><td>Undo</td><td>line shrinks over 8 s</td><td class="n">8 s</td><td>—</td><td>"Undo for 8 seconds"</td></tr>
+      <tr><td>The Addresses list</td><td>nothing: rows change in place</td><td>—</td><td>—</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<script>
+(function(){
+  const $ = (id) => document.getElementById(id)
+  const stage = $('stage')
+  const BASE = [{ name: 'kesar-studio.frrata.shop', chip: ['c-main', 'Main'], acts: 'copy' }]
+  let rows = BASE.slice(), step = 1, timers = [], domain = 'kesarstudio.in'
+  const clear = () => { timers.forEach(clearTimeout); timers = [] }
+  const later = (ms, f) => timers.push(setTimeout(f, ms))
+
+  function drawRows() {
+    $('rows').innerHTML = rows.map((r) => `<li><span class="addr">${r.name} <span class="chip ${r.chip[0]}">${r.chip[1]}</span></span><span class="acts">${
+      r.acts === 'copy' ? '<button type="button" class="btn sm" data-copy="' + r.name + '">Copy</button><a class="btn sm" href="#">Open</a>' : r.acts === 'main' ? '<span class="chip c-ok">Razorpay approved</span><button type="button" class="btn sm" data-main>Make main</button>' : r.acts === 'rzp' ? '<span class="chip c-warn">Razorpay not approved</span><a class="btn sm" href="https://dashboard.razorpay.com/app/website-app-settings" target="_blank" rel="noopener">Open Razorpay</a><button type="button" class="btn sm" data-rzp>Razorpay approved it</button>' : ''
+    }</span></li>`).join('')
+    $('open-connect').className = rows.length > 1 ? 'btn' : 'btn primary'
+  }
+
+  // Step 1: the domain as typed becomes the domain we'll use, live.
+  function normalise(v) {
+    let s = v.trim().toLowerCase().replace(/^[a-z]+:\/\//, '').replace(/[/?#].*$/, '').replace(/\.$/, '')
+    if (s.startsWith('www.')) s = s.slice(4)
+    return s
+  }
+  function checkDomain() {
+    const d = normalise($('dom').value)
+    const ok = /^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(d) && !/(^|\.)frrata\.(shop|com)$/.test(d)
+    $('dom-say').className = 'say ' + (d ? (ok ? 'ok' : 'bad') : '')
+    $('dom-say').textContent = !d ? '' : ok ? '' : /frrata/.test(d) ? 'A Frrata address can’t be connected.' : 'Use a domain like yourbrand.in'
+    $('dom-facts').hidden = !ok
+    if (ok) { domain = d; $('f-apex').textContent = d; $('f-www').textContent = d.split('.').length > 2 ? '—' : 'www.' + d }
+    $('next').disabled = !ok
+  }
+
+  const RECS = () => [
+    { t: 'TXT', n: '_frrata', v: 'frrata-verify=7c1e9a42b8f0d6' },
+    { t: 'A', n: '@', v: '76.76.21.21' },
+    { t: 'CNAME', n: 'www', v: 'd41f8c2a.vercel-dns-017.com' },
+  ]
+  function drawRecs() {
+    $('recs').innerHTML = RECS().map((r, i) => `<div class="rec"><span class="t">${r.t}</span><span class="nv"><code>${r.n}</code><code>${r.v}</code></span>
+      <button type="button" class="btn sm" data-copy="${r.v}">Copy</button>
+      <span class="st state" id="st${i}"><span class="chip c-n"><span class="pulse"></span>Not found yet</span><span class="chip c-ok" hidden><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Found</span></span></div>`).join('')
+  }
+  let found = 0
+  function find(i) {
+    const s = $('st' + i); if (!s || !s.children[1].hidden) return
+    s.children[0].hidden = true; s.children[1].hidden = false
+    found++; $('found-t').textContent = `${found} of 3 found`
+    $('found').className = 'chip ' + (found === 3 ? 'c-ok' : 'c-n')
+    $('checked').textContent = 'Checked just now'
+    if (found === 3) later(700, () => go(3))
+  }
+
+  function go(n) {
+    const back = n < step; step = n
+    ;['s1', 's2', 's3'].forEach((id, i) => { const el = $(id); el.classList.toggle('on', i + 1 === n); el.classList.toggle('back', back) })
+    ;['d1', 'd2', 'd3'].forEach((id, i) => $(id).classList.toggle('on', i < n))
+    const next = $('next'), cancel = $('cancel')
+    if (n === 1) { next.textContent = 'Continue'; cancel.textContent = 'Not now'; checkDomain() }
+    if (n === 2) {
+      next.textContent = 'Continue'; next.disabled = true; cancel.textContent = 'Finish later'
+      found = 0; drawRecs(); $('found-t').textContent = '0 of 3 found'; $('found').className = 'chip c-n'; $('checked').textContent = 'Checking every 15 s'
+      rows = BASE.concat([{ name: domain, chip: ['c-warn', 'Waiting for records'] }]); drawRows()
+      later(1800, () => find(0)); later(3600, () => find(1)); later(5200, () => find(2))
+    }
+    if (n === 3) {
+      next.hidden = true; cancel.textContent = 'Close'
+      $('rzp').hidden = true; $('securing').hidden = false; $('connected').hidden = true; $('sec-t').textContent = domain
+      const bar = $('sec-bar'); bar.style.transform = 'scaleX(0)'
+      rows = BASE.concat([{ name: domain, chip: ['c-info', 'Securing'] }]); drawRows()
+      later(400, () => bar.style.transform = 'scaleX(.35)'); later(1300, () => bar.style.transform = 'scaleX(.7)'); later(2200, () => bar.style.transform = 'scaleX(1)')
+      later(2700, () => {
+        $('securing').hidden = true; const c = $('connected'); c.hidden = false
+        c.querySelectorAll('circle,path').forEach((e) => { e.style.animation = 'none'; e.getBoundingClientRect(); e.style.animation = '' })
+        $('rzp').hidden = false; $('rzp-host').textContent = domain
+        rows = BASE.concat([{ name: domain, chip: ['c-ok', 'Connected'], acts: 'rzp' }, { name: 'www.' + domain, chip: ['c-n', 'Goes to ' + domain] }]); drawRows()
+        next.hidden = true; cancel.textContent = 'Done'
+      })
+    }
+  }
+
+  function open(el, scrim) { el.classList.add('open'); scrim.classList.add('open') }
+  function shut(el, scrim) { el.classList.remove('open'); scrim.classList.remove('open') }
+  function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('open'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('open'), 2200) }
+
+  $('open-connect').onclick = () => { clear(); $('next').hidden = false; go(1); open($('dlg'), $('scrim')); setTimeout(() => $('dom').focus(), 50) }
+  $('dom').oninput = checkDomain
+  $('cancel').onclick = () => { clear(); shut($('dlg'), $('scrim')) }
+  $('scrim').onclick = $('cancel').onclick
+  $('next').onclick = () => { if (step === 1) go(2); else if (step === 3) { shut($('dlg'), $('scrim')); askMain() } }
+  $('check-now').onclick = () => { for (let i = 0; i < 3; i++) later(i * 250, () => find(i)) }
+  $('copy-all').onclick = () => { navigator.clipboard?.writeText(RECS().map((r) => `${r.t} ${r.n} ${r.v}`).join('\n')).catch(() => {}); toast('Copied 3 records') }
+  $('wa').onclick = () => toast('Opens WhatsApp with the three records written out')
+  stage.addEventListener('click', (e) => {
+    const c = e.target.closest('[data-copy]'); if (c) { navigator.clipboard?.writeText(c.dataset.copy).catch(() => {}); toast('Copied') }
+    if (e.target.closest('[data-main]')) askMain()
+    if (e.target.closest('[data-rzp]')) { rows = rows.map((r) => r.acts === 'rzp' ? { ...r, acts: 'main' } : r); drawRows(); toast('Saved') }
+  })
+
+  function askMain() { open($('confirm'), $('scrim2')); setTimeout(() => $('c-keep').focus(), 50) }
+  $('c-keep').onclick = () => shut($('confirm'), $('scrim2'))
+  $('scrim2').onclick = $('c-keep').onclick
+  $('c-go').onclick = () => {
+    shut($('confirm'), $('scrim2'))
+    const l = $('live'); l.classList.remove('run'); l.getBoundingClientRect(); l.classList.add('run')
+    toast('Going live')
+    later(1300, () => {
+      rows = [{ name: domain, chip: ['c-main', 'Main'], acts: 'copy' }, { name: 'www.' + domain, chip: ['c-n', 'Goes to ' + domain] }, { name: 'kesar-studio.frrata.shop', chip: ['c-n', 'Goes to ' + domain] }]
+      drawRows(); const u = $('p-undo'); u.classList.remove('undo'); u.getBoundingClientRect(); u.classList.add('undo')
+      $('pop').classList.add('open'); later(8000, () => { $('p-undo').hidden = true })
+    })
+  }
+  $('p-undo').onclick = () => { $('pop').classList.remove('open'); rows = [{ name: 'kesar-studio.frrata.shop', chip: ['c-main', 'Main'], acts: 'copy' }].concat([{ name: domain, chip: ['c-ok', 'Connected'], acts: 'main' }, { name: 'www.' + domain, chip: ['c-n', 'Goes to ' + domain] }]); drawRows(); toast('kesar-studio.frrata.shop is main again') }
+  $('p-close').onclick = () => $('pop').classList.remove('open')
+  $('p-copy').onclick = () => { navigator.clipboard?.writeText(domain).catch(() => {}); toast('Copied') }
+  $('p-view').onclick = (e) => e.preventDefault()
+
+  const seg = (a, b, on) => { $(a).setAttribute('aria-pressed', String(on)); $(b).setAttribute('aria-pressed', String(!on)) }
+  $('w-desk').onclick = () => { stage.classList.remove('phone'); seg('w-desk', 'w-phone', true) }
+  $('w-phone').onclick = () => { stage.classList.add('phone'); seg('w-desk', 'w-phone', false) }
+  $('m-full').onclick = () => { stage.classList.remove('calm'); seg('m-full', 'm-calm', true) }
+  $('m-calm').onclick = () => { stage.classList.add('calm'); seg('m-full', 'm-calm', false) }
+  $('reset').onclick = () => { clear(); rows = BASE.slice(); drawRows(); ['dlg', 'confirm', 'pop'].forEach((id) => $(id).classList.remove('open')); ['scrim', 'scrim2'].forEach((id) => $(id).classList.remove('open')); $('p-undo').hidden = false; $('dom').value = 'https://www.KesarStudio.in/' }
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if ($('confirm').classList.contains('open')) $('c-keep').onclick(); else if ($('dlg').classList.contains('open')) $('cancel').onclick() } })
+  drawRows(); checkDomain()
+})()
+</script>

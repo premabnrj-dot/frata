@@ -34,3 +34,9 @@ export function movedUrl(to: string, loc: { protocol: string; pathname: string; 
 /** The shop's old names that still lead to it (retired by the shop, not by Frrata), newest first. */
 export const oldNames = (names: readonly NameRow[]) =>
   names.filter((n) => n.retiredAt && !n.retiredByFrrata).sort((a, b) => b.retiredAt!.getTime() - a.retiredAt!.getTime()).map((n) => n.name)
+
+/**
+ * The ONE main address (D2·9): the shop's main own domain when it has one, else its frrata name. Canonical, Open Graph,
+ * structured data, sitemap, robots, share cards, Make a link and Copy link all read it (through coreShop / setupFor).
+ */
+export const mainAddress = (nameHost: string, mainDomain: string | null): string => mainDomain ?? nameHost

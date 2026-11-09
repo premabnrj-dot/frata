@@ -25,6 +25,7 @@ const ENTRY_POINTS = {
   'src/app/login/actions.ts': ['sign-in: emails a link and code to the address given (rate limited); the code proves the inbox', 'verifyOtp('],
   'src/app/auth/callback/route.ts': ['sign-in: trades the one-time code for a session', 'exchangeCodeForSession('],
   'src/app/api/cron/outbox/route.ts': ['Vercel Cron', 'isCronRequest('],
+  'src/app/api/cron/domains/route.ts': ['Vercel Cron', 'isCronRequest('],
   'src/app/api/webhooks/whatsapp/route.ts': ['Meta webhook: HMAC of the raw body with Frrata\'s app secret; each item routed by its own id through a definer', 'verifyMetaSignature('],
   'src/app/api/webhooks/razorpay/[key]/route.ts': ['Razorpay webhook: HMAC of the raw body with the shop\'s own secret, found by our key', 'verifyRazorpaySignature('],
   'src/app/api/webhooks/mux/route.ts': ['Mux webhook: HMAC of `t.body` with Frrata\'s webhook secret (current or previous), 5-minute window; each event routed by our video id and its upload id through a definer', 'verifyMuxSignature('],

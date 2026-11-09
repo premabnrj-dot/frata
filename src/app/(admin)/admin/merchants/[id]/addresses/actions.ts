@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { slugProblem } from '@/domains/signup/slug'
-import { addressAdminError, adminRenameShop, freezeAddress, merchantAddresses } from '@/lib/admin/addresses'
+import { addressAdminError, adminRenameShop, disconnectDomain, freezeAddress, merchantAddresses, merchantDomains } from '@/lib/admin/addresses'
 import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import { hostFor } from '@/lib/queries/storefront'
 import { refreshHosts, refreshShop } from '@/lib/storefront/refresh'
@@ -52,4 +52,24 @@ export async function freezeAddressAction(form: FormData) {
   if (!r.ok) fail(id, addressAdminError(r.error))
   revalidatePath(back(id))
   redirect(`${back(id)}?ok=${encodeURIComponent(d.frozen === 'yes' ? 'Address changes frozen.' : 'Address changes allowed.')}`)
+}
+
+// D2·11: Frrata disconnects a shop's domain (the shop sees "Disconnected by Frrata"; a host on Vercel parks).
+const Disconnect = z.object({ tenantId: z.uuid(), id: z.uuid(), reason: Reason })
+export async function disconnectDomainAction(form: FormData) {
+  const staff = await requireStaff(ADMIN_ONLY)
+  if (!staff.ok) redirect('/admin')
+  const tid = form.get('tenantId')
+  const p = Disconnect.safeParse(Object.fromEntries(form))
+  if (!p.success) fail(tid, addressAdminError('reason'))
+  const d = p.data!
+  const r = await disconnectDomain(staff, d.id, d.reason)
+  if (!r.ok) fail(tid, addressAdminError(r.error))
+  // The shop is the one the definer names (never the form's), and the host is read back from that shop's rows.
+  const shop = r.ok ? r.value : d.tenantId
+  const row = (await merchantDomains(staff, shop)).find((x) => x.id === d.id)
+  if (row) refreshHosts(row.host, ...(row.withWww ? [`www.${row.host}`] : []))
+  refreshShop(shop, 'shop')
+  revalidatePath(back(tid))
+  redirect(`${back(tid)}?ok=${encodeURIComponent(`${row?.host ?? 'The domain'} disconnected.`)}`)
 }

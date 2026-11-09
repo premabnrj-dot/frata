@@ -10,6 +10,7 @@ import { estimateOf } from '@/domains/settings/ship-costs'
 import { CAN_BUILD, CAN_MANAGE, CAN_SET_COSTS, requireMember } from '@/lib/auth/require-member'
 import { formatInr } from '@/lib/format'
 import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
+import { mainHostFor } from '@/lib/queries/addresses'
 import { shipCostsSeenBy, shopWithSettings } from '@/lib/queries/settings'
 import { paymentStatusFor } from '@/lib/queries/payments'
 import { shopFacts } from './_components/facts'
@@ -42,6 +43,7 @@ export default async function SettingsPage() {
   if (!shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const f = shopFacts(shop, SHOP_DOMAIN)
   const pay = await paymentStatusFor(auth.membership.tenantId).catch(() => null)
+  const mainHost = f.slug ? await mainHostFor(auth.membership.tenantId, f.slug).catch(() => shopHost(f.slug)) : ''
   const online = !pay ? 'Could not load' : !pay.connected ? 'Not connected: shoppers can pay on delivery only' : pay.problem ? 'Needs attention' : !pay.webhookSeenAt ? 'Connected · one step left in Razorpay' : pay.mode === 'test' ? 'Test mode' : 'Live · UPI, cards, netbanking'
   const onlineNeeds = !!pay && pay.connected && (!!pay.problem || !pay.webhookSeenAt)
   const missing = missingForLivePayments(f)
@@ -79,7 +81,7 @@ export default async function SettingsPage() {
           {owner && <Row href="/console/settings/online-payments" icon="payments" title="Online payments" summary={online} needs={onlineNeeds} />}
           {manages && <Row href="/console/settings/billing" icon="plans" title="Plan and billing" summary="Your plan, this month so far, invoices and billing details" />}
           {manages && <Row href="/console/settings/people" icon="people" title="People" summary="Who works on this shop" />}
-          {manages && <Row href="/console/settings/address" icon="address" title="Shop address" summary={shopHost(f.slug)} mono />}
+          {manages && <Row href="/console/settings/address" icon="address" title="Shop address" summary={mainHost} mono />}
           {seen !== null && (seen === undefined || seen.visible) && <Row href="/console/settings/shipping-costs" icon="shipped" title="Shipping costs" summary={shipSummary} needs={shipNeeds} />}
         </Section>
         <aside className="space-y-3">

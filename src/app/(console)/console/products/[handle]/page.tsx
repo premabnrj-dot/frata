@@ -10,6 +10,7 @@ import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { isBlobConfigured } from '@/lib/env'
 import { placeForPincode } from '@/lib/db/platform'
 import { shopHost } from '@/lib/public-env'
+import { mainHostFor } from '@/lib/queries/addresses'
 import { productForEdit, productHandleById, productIdByHandle } from '@/lib/queries/catalogue'
 import { chargesGst, type Scheme } from '@/domains/tax/gst'
 import { labelAsked, labelInput, readLabel } from '@/domains/catalogue/label'
@@ -72,6 +73,8 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
   }))
 
   const share = await shareFor(tenantId, { kind: 'product', id: p.id }, now).catch(() => null)
+  // D2·9: the product's page on the main address.
+  const address = await mainHostFor(tenantId, shop.slug).catch(() => shopHost(shop.slug))
   // One render time for the whole editor, server and browser alike (src/components/time/now.tsx, check:clock).
   return (
     <NowProvider at={now.toISOString()}>
@@ -90,7 +93,7 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
         label: labelInput(readLabel(p.label)),
       }}
       shop={{
-        name: shop.name, address: shopHost(shop.slug), skuPrefix: orderPrefix(shop.orderPrefix, shop.name),
+        name: shop.name, address, skuPrefix: orderPrefix(shop.orderPrefix, shop.name),
         codOn: shop.codOn, returnDays: shop.returnDays, returnKind: shop.returnKind, city: place?.city ?? null, costs: data.costs,
         gst: { charges: chargesGst({ gstin: shop.gstin, scheme: shop.gstScheme as Scheme }), inclusive: shop.pricesIncludeGst },
         sized: sellsSized(shop.sells), label: labelAsked(shop.sells), maker: [shop.legalName || shop.name, shop.legalAddress].filter(Boolean).join(', '),

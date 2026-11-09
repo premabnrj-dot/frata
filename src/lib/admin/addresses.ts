@@ -1,7 +1,8 @@
 import 'server-only'
 import { asc, desc, eq, isNotNull, sql } from 'drizzle-orm'
 import { adminDb } from '@/lib/db/admin'
-import { blockedNames, shopNames, tenants } from '@/lib/db/schema'
+import { tenants } from '@/lib/db/schema'
+import { blockedNames, shopDomains, shopNames } from '@/lib/db/schema-addresses'
 import type { StaffOk } from '@/lib/auth/require-staff'
 import { errName } from '@/lib/log'
 
@@ -54,7 +55,7 @@ export async function listBlocked(staff: StaffOk): Promise<BlockedRow[]> {
   return rows
 }
 
-const CODES = ['reason', 'bad_slug', 'not_staff', 'no_shop', 'slug_taken', 'not_retired'] as const
+const CODES = ['reason', 'bad_slug', 'not_staff', 'no_shop', 'slug_taken', 'not_retired', 'no_domain', 'no_claim'] as const
 export type AddressAdminError = (typeof CODES)[number] | 'unknown'
 
 async function definer<T>(where: string, run: () => Promise<T>): Promise<{ ok: true; value: T } | { ok: false; error: AddressAdminError }> {
@@ -111,8 +112,48 @@ const WORDS: Record<AddressAdminError, string> = {
   no_shop: 'That shop no longer exists.',
   slug_taken: 'That address is taken.',
   not_retired: 'Only an old name can be released.',
+  no_domain: 'That domain is no longer connected.',
+  no_claim: 'That claim is no longer waiting.',
   unknown: 'We could not save this. Nothing was changed.',
 }
 
 /** Admin's words for an address definer's refusal. */
 export const addressAdminError = (e: AddressAdminError) => WORDS[e]
+
+// ── Own domains D2·11: a shop's domains, the claims waiting for Frrata, and Admin's two writes (definers, 0084). ──
+export type AdminDomain = { id: string; tenantId: string; shop: string; host: string; withWww: boolean; provedAt: Date | null; addedAt: Date | null; dnsOkAt: Date | null; certOkAt: Date | null
+  mainAt: Date | null; failingSince: Date | null; contestAt: Date | null; razorpayOkAt: Date | null; vercelTxt: string | null; removedAt: Date | null; removedReason: string | null; claimedAt: Date }
+const domainCols = {
+  id: shopDomains.id, tenantId: shopDomains.tenantId, shop: tenants.name, host: shopDomains.host, withWww: shopDomains.withWww, provedAt: shopDomains.provedAt,
+  addedAt: shopDomains.addedAt, dnsOkAt: shopDomains.dnsOkAt, certOkAt: shopDomains.certOkAt, mainAt: shopDomains.mainAt, failingSince: shopDomains.failingSince, contestAt: shopDomains.contestAt,
+  razorpayOkAt: shopDomains.razorpayOkAt, vercelTxt: shopDomains.vercelTxt, removedAt: shopDomains.removedAt, removedReason: shopDomains.removedReason, claimedAt: shopDomains.claimedAt,
+}
+
+export async function merchantDomains(staff: StaffOk, tenantId: string): Promise<AdminDomain[]> {
+  void staff
+  return adminDb().select(domainCols).from(shopDomains).innerJoin(tenants, eq(tenants.id, shopDomains.tenantId))
+    .where(eq(shopDomains.tenantId, tenantId)).orderBy(desc(shopDomains.claimedAt)).limit(20)
+}
+
+/** Waiting for Frrata: claims held because another shop's main domain holds the apex, and main domains not working. */
+export async function domainsNeedingFrrata(staff: StaffOk): Promise<AdminDomain[]> {
+  void staff
+  return adminDb().select(domainCols).from(shopDomains).innerJoin(tenants, eq(tenants.id, shopDomains.tenantId))
+    .where(sql`${shopDomains.removedAt} is null and (${shopDomains.contestAt} is not null or (${shopDomains.mainAt} is not null and ${shopDomains.failingSince} is not null))`)
+    .orderBy(asc(shopDomains.claimedAt)).limit(200)
+}
+
+export function disconnectDomain(staff: StaffOk, id: string, reason: string) {
+  return definer('disconnectDomain', async () => {
+    const rows = await adminDb().execute<{ t: string }>(sql`select app_admin_disconnect_domain(${staff.userId}::uuid, ${id}::uuid, ${reason}) as t`)
+    return rows[0]!.t
+  })
+}
+
+/** Move a held claim's domain to its shop, or refuse the claim; returns the shops whose lookups change. */
+export function settleDomain(staff: StaffOk, claimId: string, move: boolean, reason: string) {
+  return definer('settleDomain', async () => {
+    const rows = await adminDb().execute<{ tenant_id: string }>(sql`select tenant_id from app_admin_settle_domain(${staff.userId}::uuid, ${claimId}::uuid, ${move}, ${reason})`)
+    return rows.map((r) => r.tenant_id)
+  })
+}

@@ -1,5 +1,5 @@
 # Shop addresses: a frrata.shop address for every shop, and the merchant's own domain
-Status: active · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/BStSSZeC35kgWfxQQ6VWNz (`docs/mockups/2026-11-08-shop-addresses.html`) · Approved: owner, 2026-11-08 ("shop addresses mockup approved", with one note: no descriptions or clarifications on screen — follow `frata-design-language` § Voice and § Labels; the words below are the build's)
+Status: active · Date: 2026-11-08 · Own domains (D·2) screens: mockup v2 https://claude.ai/artifact/XrDQj61tSBe4YKvUrH76xt (`docs/mockups/2026-11-09-own-domains.html`), approved by the owner 2026-11-09 · Mockup: https://claude.ai/artifact/BStSSZeC35kgWfxQQ6VWNz (`docs/mockups/2026-11-08-shop-addresses.html`) · Approved: owner, 2026-11-08 ("shop addresses mockup approved", with one note: no descriptions or clarifications on screen — follow `frata-design-language` § Voice and § Labels; the words below are the build's)
 Research: `docs/research/2026-11-08-shop-addresses.md` (integration-researcher and a codebase map, 2026-11-08).
 Owner, 2026-11-08: buys **frrata.shop**; "help me connect with the system"; plan how merchants get a subdomain and
 attach their own domain themselves; review every scenario, stress test, security, UX, the boundaries — what Admin
@@ -71,14 +71,14 @@ form uses the same rule (today it does not).
 
 **Connect a domain** (a page, three steps, resumable):
 1. **Your domain**: type `kesarstudio.in`. The naked domain is the main address and `www.kesarstudio.in` redirects to
-   it (owner, 2026-11-08); a subdomain like `shop.kesarstudio.in` works too. **Where did you buy
+   it (owner, 2026-11-08); a subdomain like `shop.kesarstudio.in` works too. **(Superseded by mockup v2, 2026-11-09: the DNS host is read from NS, never asked.)** **Where did you buy
    it?** GoDaddy · Hostinger · BigRock · Namecheap · Cloudflare · Other → the matching step-by-step guide.
 2. **Add these records** (each with Copy; values read from Vercel for this project, never hard-coded):
    - `TXT  _frrata  frrata-verify=7c1e…` — proves the domain is yours;
    - `A  @  76.76.21.21` (the value Vercel recommends for our project);
    - `CNAME  www  ….vercel-dns-017.com`.
    "Don't change your MX records: your email stays where it is." "Using Cloudflare? Set these to DNS only (grey cloud)."
-   **Check records** → each record turns green or says what is wrong in words.
+   **Check records** (v2: the dialog checks every 15 s by itself; **Check now** stays) → each record turns green or says what is wrong in words.
 3. **Securing**: "Getting a secure certificate (usually 5–10 minutes)" → **Connected** → the choice:
    **Make it your main address** (a dialog listing what happens) or **Keep it as a second address**.
 

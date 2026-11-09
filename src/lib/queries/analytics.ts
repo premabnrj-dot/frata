@@ -1,4 +1,7 @@
 import 'server-only'
+import { mainDomainIn } from './addresses'
+import { mainAddress } from '@/domains/addresses/names'
+import { shopHost } from '@/lib/public-env'
 import { and, asc, eq, isNull, sql, type SQL } from 'drizzle-orm'
 import { sourceOfInputs, type Channel } from '@/domains/analytics/source'
 import { keptOf, type KeptGroup } from '@/domains/orders/kept'
@@ -178,7 +181,9 @@ export async function sourcePage(tenantId: string, role: MemberRole, period: Per
 async function shopFactsIn(tx: Tx, tenantId: string) {
   const [r] = await tx.select({ slug: tenants.slug, name: tenants.name, prefix: shopSettings.orderPrefix, publishedAt: shopSettings.publishedAt })
     .from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId)).limit(1)
-  return { slug: r?.slug ?? null, open: !!r?.publishedAt, prefix: orderPrefix(r?.prefix ?? '', r?.name ?? '') }
+  // D2·9: Make a link uses the main address (the main own domain, else the frrata name).
+  const host = r?.slug ? mainAddress(shopHost(r.slug), await mainDomainIn(tx, tenantId)) : null
+  return { slug: r?.slug ?? null, host, open: !!r?.publishedAt, prefix: orderPrefix(r?.prefix ?? '', r?.name ?? '') }
 }
 
 /** The Analytics page in ONE snapshot transaction (speed review A1·7, P8): the numbers, Make a link's targets and the

@@ -6,6 +6,7 @@ import { shopModules } from '@/lib/queries/modules'
 import { errName } from '@/lib/log'
 import { claimDue, deferRow, GiveUp, markDead, markFailed, markSent, type OutboxRow } from './index'
 import { sendBillAttempt } from '@/lib/billing/debit'
+import { sendDomainAdd, sendDomainRemove } from '@/lib/domains/senders'
 import { sendReviewAsk } from '@/lib/modules/reviews/sender'
 import { sendAssetDelete, sendUploadCancel } from '@/lib/video/senders'
 import { E2E_FIXTURES, VERCEL_ENV } from '@/lib/env'
@@ -22,6 +23,10 @@ import { E2E_FIXTURES, VERCEL_ENV } from '@/lib/env'
 export const SENDERS: Record<string, (row: OutboxRow) => Promise<void>> = {
   // Billing B3: a debit attempt on Frrata's own gateway. Never paused by a module switch (finding 13: no module owns it).
   'bill:attempt': sendBillAttempt,
+  // Own domains D2·6: a proved host onto the Vercel project (never before its own proof).
+  'domain.add': sendDomainAdd,
+  // D2·7: a parked host off the project once it points away (kept when another shop holds it live).
+  'domain.remove': sendDomainRemove,
   // Reviews R1: the ask after delivery, on the shop's own WhatsApp number (Meta bills the merchant).
   'review:ask': sendReviewAsk,
   // V1 video: a removed video's Mux asset, and an upload URL nobody should use any more (ids from the row).

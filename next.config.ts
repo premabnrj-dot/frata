@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next'
-import { FRAMEABLE_HEADERS, SECURITY_HEADERS } from './src/lib/security-headers'
+import { FRAMEABLE_HEADERS, HSTS_PLATFORM, hostValue, platformHostPattern, SECURITY_HEADERS } from './src/lib/security-headers'
 import { shopRewrites } from './src/domains/tenancy/host'
-import { CONSOLE_HOST } from './src/lib/public-env'
+import { CONSOLE_HOST, SHOP_DOMAIN } from './src/lib/public-env'
 
 const config: NextConfig = {
   reactStrictMode: true,
@@ -23,8 +23,10 @@ const config: NextConfig = {
   async headers() {
     return [
       { source: '/:path((?!console/theme-preview/).*)', headers: SECURITY_HEADERS },
-      { source: '/console/theme-preview/:path*', has: [{ type: 'host', value: CONSOLE_HOST }], headers: FRAMEABLE_HEADERS },
-      { source: '/console/theme-preview/:path*', missing: [{ type: 'host', value: CONSOLE_HOST }], headers: SECURITY_HEADERS },
+      { source: '/console/theme-preview/:path*', has: [{ type: 'host', value: hostValue(CONSOLE_HOST) }], headers: FRAMEABLE_HEADERS },
+      { source: '/console/theme-preview/:path*', missing: [{ type: 'host', value: hostValue(CONSOLE_HOST) }], headers: SECURITY_HEADERS },
+      // Last, so it replaces the own-domain HSTS above on our own hosts (D2·1).
+      { source: '/:path*', has: [{ type: 'host', value: platformHostPattern(CONSOLE_HOST, SHOP_DOMAIN) }], headers: [HSTS_PLATFORM] },
     ]
   },
   images: {

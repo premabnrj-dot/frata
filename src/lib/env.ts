@@ -74,6 +74,18 @@ export const E2E_FIXTURES = process.env.E2E_FIXTURES === '1'
 export const GSP_PROVIDER = process.env.GSP_PROVIDER ?? ''
 export const VERCEL_ENV = process.env.VERCEL_ENV ?? ''
 
+// ── Own domains (shop addresses D2·4, D2·5) ──
+/** Vercel's API token (Production only, Sensitive) and the project it manages domains on. Unset: own domains are off. */
+export const VERCEL_API_TOKEN = process.env.VERCEL_API_TOKEN ?? ''
+export const VERCEL_PROJECT_ID = process.env.VERCEL_PROJECT_ID ?? ''
+export const VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID ?? ''
+/** A local fake for e2e only: honoured off Vercel and only on 127.0.0.1 (src/lib/connectors/vercel). */
+export const VERCEL_API_BASE = process.env.VERCEL_API_BASE ?? ''
+/** DNS-over-HTTPS fakes for e2e (both resolvers, same rule): honoured off Vercel and only on 127.0.0.1. */
+export const DOH_BASE = process.env.DOH_BASE ?? ''
+/** How many hosts the Vercel project may hold (Hobby 50, Pro 100,000 soft): claims stop 4 below it. */
+export const DOMAIN_CAPACITY = Number(process.env.DOMAIN_CAPACITY || 50)
+export const isOwnDomainsConfigured = () => VERCEL_API_TOKEN !== '' && VERCEL_PROJECT_ID !== ''
 /** Mux video (V1, docs/plans/2026-11-09-video-v1.md): Production only (never Preview while previews share the
  *  database). The token pair is Basic auth; the webhook secret signs Mux's events, the PREVIOUS one is accepted while
  *  a new webhook replaces the old (rotation = recreate). MUX_ENVIRONMENT_ID is the environment the token belongs to

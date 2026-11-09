@@ -6,6 +6,7 @@ vi.mock('@/lib/queries/modules', () => ({ shopModules: async () => ({ access: {}
 let env = { VERCEL_ENV: 'production', E2E_FIXTURES: false }
 vi.mock('@/lib/env', () => ({ get VERCEL_ENV() { return env.VERCEL_ENV }, get E2E_FIXTURES() { return env.E2E_FIXTURES } }))
 vi.mock('@/lib/modules/reviews/sender', () => ({ sendReviewAsk: vi.fn() }))
+vi.mock('@/lib/domains/senders', () => ({ sendDomainAdd: vi.fn(), sendDomainRemove: vi.fn() }))
 vi.mock('@/lib/billing/debit', () => ({ sendBillAttempt: vi.fn() }))
 vi.mock('../index', () => ({ GiveUp: class GiveUp extends Error {}, claimDue: vi.fn(), deferRow: vi.fn(), markDead: vi.fn(), markFailed: vi.fn(), markSent: vi.fn() }))
 const { eachLimited, drainOutbox } = await import('../drain')

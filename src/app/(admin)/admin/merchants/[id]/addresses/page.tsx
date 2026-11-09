@@ -7,13 +7,14 @@ import { Button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { RENAMES_AFTER_OPENING } from '@/domains/addresses/names'
-import { merchantAddresses, type NameView } from '@/lib/admin/addresses'
+import { merchantAddresses, merchantDomains, type NameView } from '@/lib/admin/addresses'
+import { DOMAIN_CHIP, domainState } from '@/domains/addresses/domain-state'
 import { merchantName } from '@/lib/admin/merchants'
 import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dayIN } from '@/lib/format-date'
 import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
 import { MerchantTabs } from '../tabs'
-import { adminRenameAction, freezeAddressAction } from './actions'
+import { adminRenameAction, disconnectDomainAction, freezeAddressAction } from './actions'
 
 export const metadata = { title: 'Addresses' }
 
@@ -30,7 +31,7 @@ export default async function MerchantAddressesPage({ params, searchParams }: { 
   if (!staff.ok) return <Panel title={staff.message} />
   const { id } = await params
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound()
-  const [name, a, sp, admin] = await Promise.all([merchantName(staff, id), merchantAddresses(staff, id), searchParams, requireStaff(ADMIN_ONLY)])
+  const [name, a, sp, admin, domains] = await Promise.all([merchantName(staff, id), merchantAddresses(staff, id), searchParams, requireStaff(ADMIN_ONLY), merchantDomains(staff, id)])
   if (!name || !a) notFound()
   const frozen = !!a.frozenAt
 
@@ -55,6 +56,34 @@ export default async function MerchantAddressesPage({ params, searchParams }: { 
       <p className="text-sm text-muted-foreground">
         {a.firstOpenedAt ? `Merchant changes: ${Math.min(a.renamesUsed, RENAMES_AFTER_OPENING)} of ${RENAMES_AFTER_OPENING} used` : 'Not opened yet'}
       </p>
+      {domains.length > 0 && (
+        <DataTable label={`${name}'s domains`} rows={admin.ok ? 'form' : 'list'}>
+          <DataTableHead><th>Domain</th><th>State</th><th>Since</th>{admin.ok && <th><span className="sr-only">Action</span></th>}</DataTableHead>
+          <DataTableBody>
+            {domains.map((d) => {
+              const c = DOMAIN_CHIP[domainState(d)]
+              return (
+                <DataTableRow key={d.id} dimmed={!!d.removedAt}>
+                  <Td cell="a" className="font-mono">{d.host}</Td>
+                  <Td cell="c"><Badge tone={c.tone}>{c.words}</Badge></Td>
+                  <Td cell="d">{dayIN(d.removedAt ?? d.mainAt ?? d.provedAt ?? d.claimedAt)}</Td>
+                  {admin.ok && (
+                    <Td cell="f">
+                      {!d.removedAt && (
+                        <form action={disconnectDomainAction} className="flex flex-wrap items-center gap-2">
+                          <input type="hidden" name="tenantId" value={id} /><input type="hidden" name="id" value={d.id} />
+                          <input name="reason" required minLength={3} maxLength={500} aria-label={`Why disconnect ${d.host}`} placeholder="Reason" className={`${field} min-w-0 flex-1`} />
+                          <Button type="submit" variant="secondary" size="wrap">Disconnect {d.host}</Button>
+                        </form>
+                      )}
+                    </Td>
+                  )}
+                </DataTableRow>
+              )
+            })}
+          </DataTableBody>
+        </DataTable>
+      )}
       {admin.ok && (
         <div className="grid gap-4 md:grid-cols-2 [&>*]:min-w-0">
           <Section title="Rename" className="text-sm">

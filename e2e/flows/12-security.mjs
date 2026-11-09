@@ -5,6 +5,7 @@
 //       nonce differs per request; the public pages and shops keep no nonce.
 //   S13 a Razorpay webhook body over the cap is refused before anything is read.
 //   D·0 the bare shop domain (frrata.shop in production, frata.test here) holds no shop: 307 to Frrata's site.
+//   D2·1 HSTS: includeSubDomains on the console host and *.SHOP_DOMAIN only; an own domain gets max-age=31536000.
 // =============================================================================
 import assert from 'node:assert/strict'
 import { request } from 'node:http'
@@ -47,13 +48,17 @@ export default {
     })
     await t.step('the bare shop domain sends people to Frrata\'s site (307 until frrata.com); a shop on it still opens', async () => {
       const head = (host) => new Promise((resolve, reject) => {
-        const r = request({ host: '127.0.0.1', port: PORTS.app, path: '/products?x=1', method: 'GET', headers: { host } }, (res) => { res.resume(); resolve({ status: res.statusCode, location: res.headers.location }) })
+        const r = request({ host: '127.0.0.1', port: PORTS.app, path: '/products?x=1', method: 'GET', headers: { host } }, (res) => { res.resume(); resolve({ status: res.statusCode, location: res.headers.location, hsts: res.headers['strict-transport-security'] }) })
         r.on('error', reject); r.end()
       })
       const apex = await head(SHOP_DOMAIN)
       assert.equal(apex.status, 307)
       assert.match(apex.location ?? '', /^https:\/\/localhost\/$/)
       assert.notEqual((await head(`kesar-studio.${SHOP_DOMAIN}`)).status, 308, 'a shop on the shop domain must not redirect')
+      // D2·1: includeSubDomains only on our own hosts; a merchant's own domain gets a year without it.
+      assert.equal((await head(`kesar-studio.${SHOP_DOMAIN}`)).hsts, 'max-age=63072000; includeSubDomains')
+      assert.equal((await head('localhost')).hsts, 'max-age=63072000; includeSubDomains')
+      assert.equal((await head('kesarstudio.example')).hsts, 'max-age=31536000')
     })
     await t.step('an oversized Razorpay webhook is refused with 413', async () => {
       const ctx = await t.browser.newContext()

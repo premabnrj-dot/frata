@@ -7,10 +7,10 @@ import { Button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { RESERVED } from '@/domains/signup/slug'
-import { HELD_LIMIT, heldNames, listBlocked, type BlockedKind } from '@/lib/admin/addresses'
+import { domainsNeedingFrrata, HELD_LIMIT, heldNames, listBlocked, type BlockedKind } from '@/lib/admin/addresses'
 import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dayIN } from '@/lib/format-date'
-import { blockNameAction, releaseNameAction, unblockNameAction } from './actions'
+import { blockNameAction, releaseNameAction, settleDomainAction, unblockNameAction } from './actions'
 
 export const metadata = { title: 'Names' }
 
@@ -21,13 +21,42 @@ const KIND: Record<BlockedKind, string> = { protected: 'Protected brand', offens
 export default async function NamesPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
-  const [blocked, held, sp, admin] = await Promise.all([listBlocked(staff), heldNames(staff), searchParams, requireStaff(ADMIN_ONLY)])
+  const [blocked, held, sp, admin, waiting] = await Promise.all([listBlocked(staff), heldNames(staff), searchParams, requireStaff(ADMIN_ONLY), domainsNeedingFrrata(staff)])
   const can = admin.ok
 
   return (
     <>
       <PageHeader title="Names" />
       <Notice ok={sp.ok} error={sp.error} />
+      {waiting.length > 0 && (
+        <Section title="Domains" flush>
+          <DataTable label="Domains waiting for Frrata" rows={can ? 'form' : 'list'}>
+            <DataTableHead><th>Domain</th><th>Shop</th><th>State</th><th>Since</th>{can && <th><span className="sr-only">Action</span></th>}</DataTableHead>
+            <DataTableBody>
+              {waiting.map((d) => (
+                <DataTableRow key={d.id}>
+                  <Td cell="a" className="font-mono">{d.host}</Td>
+                  <Td cell="c"><Link href={`/admin/merchants/${d.tenantId}/addresses`} className="underline-offset-2 hover:underline">{d.shop}</Link></Td>
+                  <Td cell="e">{d.contestAt ? <Badge tone="warn">Claimed · another shop&apos;s main</Badge> : <Badge tone="danger">Not working</Badge>}</Td>
+                  <Td cell="d">{dayIN(d.contestAt ?? d.failingSince ?? d.claimedAt)}</Td>
+                  {can && (
+                    <Td cell="f">
+                      {d.contestAt && (
+                        <form action={settleDomainAction} className="flex flex-wrap items-center gap-2">
+                          <input type="hidden" name="id" value={d.id} />
+                          <input name="reason" required minLength={3} maxLength={500} aria-label={`Why settle ${d.host}`} placeholder="Reason" className={`${field} min-w-0 flex-1`} />
+                          <Button type="submit" name="move" value="yes" variant="secondary" size="wrap">Move to {d.shop}</Button>
+                          <Button type="submit" name="move" value="no" variant="secondary" size="wrap">Refuse</Button>
+                        </form>
+                      )}
+                    </Td>
+                  )}
+                </DataTableRow>
+              ))}
+            </DataTableBody>
+          </DataTable>
+        </Section>
+      )}
       {can && (
         <Section title="Block a name" className="text-sm">
           <form action={blockNameAction} className="grid gap-3 md:grid-cols-[1fr_10rem_1fr_auto] md:items-end">

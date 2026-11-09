@@ -1,7 +1,11 @@
 import 'server-only'
-import { eq } from 'drizzle-orm'
-import { shopNames, tenants } from '@/lib/db/schema'
+import { and, asc, eq, isNotNull, isNull, or } from 'drizzle-orm'
+import { tenants } from '@/lib/db/schema'
+import { shopDomains, shopNames } from '@/lib/db/schema-addresses'
 import { withTenant } from '@/lib/db/tenant'
+import type { Tx } from '@/lib/db'
+import { mainAddress } from '@/domains/addresses/names'
+import { shopHost } from '@/lib/public-env'
 import type { NameRow } from '@/domains/addresses/names'
 
 // =============================================================================
@@ -21,4 +25,43 @@ export async function addressFacts(tenantId: string): Promise<AddressFacts | nul
     ])
     return t ? { slug: t.slug, firstOpenedAt: t.firstOpenedAt, renamesUsed: t.renamesUsed, frozen: t.frozenAt !== null, names } : null
   })
+}
+
+/** The shop's main own domain, read inside the caller's transaction (coreShop): null when its frrata name is main, or
+ * while the main domain is failing. */
+export async function mainDomainIn(tx: Tx, tenantId: string): Promise<string | null> {
+  const [r] = await tx.select({ host: shopDomains.host }).from(shopDomains)
+    // A main domain that is failing hands the shop back to its name (canonical, links) until it works again.
+    .where(and(eq(shopDomains.tenantId, tenantId), isNotNull(shopDomains.mainAt), isNull(shopDomains.removedAt), isNull(shopDomains.failingSince))).limit(1)
+  return r?.host ?? null
+}
+
+/** The shop's main address for the console's links (Make a link, a product's page, Settings): never cached. */
+export async function mainHostFor(tenantId: string, slug: string): Promise<string> {
+  return mainAddress(shopHost(slug), await withTenant(tenantId, (tx) => mainDomainIn(tx, tenantId)))
+}
+
+/** A domain row as Settings › Shop address shows it (D2·10): facts only; its state is derived (domainState). */
+export type DomainRow = {
+  id: string; host: string; withWww: boolean; claimedAt: Date; provedAt: Date | null; addedAt: Date | null; dnsOkAt: Date | null
+  certOkAt: Date | null; checkedAt: Date | null; failingSince: Date | null; mainAt: Date | null; razorpayOkAt: Date | null
+  contestAt: Date | null; vercelTxt: string | null; removedAt: Date | null; removedReason: string | null
+}
+
+/** The shop's own domains: live ones, and those Frrata or another shop took away (so the row can say so). */
+export async function shopDomainRows(tenantId: string): Promise<DomainRow[]> {
+  return withTenant(tenantId, (tx) => tx.select({
+    id: shopDomains.id, host: shopDomains.host, withWww: shopDomains.withWww, claimedAt: shopDomains.claimedAt, provedAt: shopDomains.provedAt,
+    addedAt: shopDomains.addedAt, dnsOkAt: shopDomains.dnsOkAt, certOkAt: shopDomains.certOkAt, checkedAt: shopDomains.checkedAt,
+    failingSince: shopDomains.failingSince, mainAt: shopDomains.mainAt, razorpayOkAt: shopDomains.razorpayOkAt, contestAt: shopDomains.contestAt,
+    vercelTxt: shopDomains.vercelTxt, removedAt: shopDomains.removedAt, removedReason: shopDomains.removedReason,
+  }).from(shopDomains).where(and(eq(shopDomains.tenantId, tenantId), or(isNull(shopDomains.removedAt), and(isNotNull(shopDomains.removedAt), or(eq(shopDomains.removedReason, 'moved'), eq(shopDomains.removedReason, 'frrata'))))))
+    .orderBy(asc(shopDomains.claimedAt)).limit(10))
+}
+
+/** What Continue needs for a claimed row (D2·10): its host and the token its TXT record carries (the shop's own row). */
+export async function domainClaimFor(tenantId: string, id: string): Promise<{ host: string; apex: string; withWww: boolean; token: string } | null> {
+  const [r] = await withTenant(tenantId, (tx) => tx.select({ host: shopDomains.host, apex: shopDomains.apex, withWww: shopDomains.withWww, token: shopDomains.token })
+    .from(shopDomains).where(and(eq(shopDomains.tenantId, tenantId), eq(shopDomains.id, id), isNull(shopDomains.removedAt))).limit(1))
+  return r ?? null
 }
