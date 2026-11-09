@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Mukta:wght@700&family=Bricolage+Grotesque:opsz,wght@12..96,600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
 <style>
-/* EkCode v1: the name and mark, the shopper's flow (shop → id.frrata.com → shop), the shopper's EkCode page, the merchant's Apps › EkCode, the states. Frrata tokens; the shop wears its own theme. */
+/* EkCode v1: the name and mark, the shopper's flow (shop → ekcode.in → shop), the shopper's EkCode page, the merchant's Apps › EkCode, the states. console tokens; the shop wears its own theme. */
 :root{
   --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--brand:#D61F69;--brand-text:#A8124F;--thread:#D61F69;--line:#D61F69;
   --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;--ink:#1C1917;--on-ink:#FAFAF9;--line-on-ink:#FF5C97;
@@ -102,7 +102,7 @@ nav.top a:hover{background:var(--muted)}
 @keyframes back{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.scr.on{animation:none}.ek-btn,.btn{transition:none}}
 
-/* id.frrata.com */
+/* ekcode.in */
 .id{background:var(--bg);color:var(--fg)}
 .id-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--border);background:var(--card)}
 .id-head .wm{font-size:20px}
@@ -304,11 +304,11 @@ details.hist[open] summary::after{content:"−"}
   <h1>EkCode · mockup v1</h1>
   <p class="k">Spec <span class="mono">docs/specs/2026-11-09-shopper-login.md</span> · ADR-0009 · 9 Nov 2026</p>
   <ul class="note">
-    <li><b>EkCode</b>: one code, every Frrata shop. Said "ek code". In plain text and code: EkCode.</li>
+    <li><b>EkCode</b>: one code, every shop that uses it. Said "ek code". Its own brand: the shopper sees EkCode, never the platform behind it.</li>
     <li>The mark (your pick, 9 Nov): एक in the box a shopper types a code into, with a rani cursor; "Code" open beside it. Alone, the box is the icon.</li>
     <li>Click through the phone. Change the scenario on the right.</li>
     <li>Words are English only; Devanagari appears in the mark alone.</li>
-    <li>Two calls for you are at the end: whether "Save this address to EkCode" starts ticked, and when to apply for the blue tick.</li>
+    <li>Three calls for you are at the end: "Save this address" ticked or not, the blue tick, and EkCode's own domain.</li>
   </ul>
 
   <nav class="top" aria-label="Sections"><div class="in">
@@ -322,7 +322,7 @@ details.hist[open] summary::after{content:"−"}
       <div class="lb rec">
         <h3>EkCode <span class="chip c-ok">Your pick</span></h3>
         <div class="big"><svg class="wm" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg></div>
-        <div class="k">Mukta 700, Devanagari and Latin from one family so the weights match. The box is a code cell; the rani bar is its cursor (Frrata's thread).</div>
+        <div class="k">Mukta 700, Devanagari and Latin from one family so the weights match. The box is a code cell; the rani bar is its cursor.</div>
       </div>
       <div class="lb ink on-ink">
         <h3>On ink</h3>
@@ -351,9 +351,9 @@ details.hist[open] summary::after{content:"−"}
       <div class="k">The words and the mark, no second icon. Ink on light themes, paper on dark ones; the shop never recolours it, so a shopper knows it from any shop (like Google's or Apple's sign-in button). 52 px tall, full width on a phone.</div>
     </div>
     <div class="dont">
-      <div class="card"><span class="x" aria-hidden="true">✕</span><b>Never in a shop's colours</b><span class="k">It is Frrata's sign-in, not the shop's.</span></div>
-      <div class="card"><span class="x" aria-hidden="true">✕</span><b>Never typed</b><span class="k">Always drawn from one file (outlined paths when built), like the frrata mark.</span></div>
-      <div class="card"><span class="x" aria-hidden="true">✕</span><b>Not the WhatsApp display name</b><span class="k">Meta: the name must match the business. The sender is "Frrata".</span></div>
+      <div class="card"><span class="x" aria-hidden="true">✕</span><b>Never in a shop's colours</b><span class="k">It is EkCode's sign-in, not the shop's.</span></div>
+      <div class="card"><span class="x" aria-hidden="true">✕</span><b>Never typed</b><span class="k">Always drawn from one file (outlined paths when built).</span></div>
+      <div class="card"><span class="x" aria-hidden="true">✕</span><b>Never a shop's name on WhatsApp</b><span class="k">The sender is EkCode; the shop is only named inside a message.</span></div>
     </div>
   </div>
 
@@ -392,7 +392,7 @@ details.hist[open] summary::after{content:"−"}
             <div style="flex:1"></div>
             <button class="btn ghost wide" type="button" data-go="checkout" data-back><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Back to Kesar Studio</button>
           </div>
-          <div class="id-foot"><span>by Frrata</span><span><a href="#calls">Privacy</a> · <a href="#calls">Terms</a></span></div>
+          <div class="id-foot"><span><a href="#calls">Privacy</a> · <a href="#calls">Terms</a></span></div>
         </section>
 
         <!-- 2 · code -->
@@ -410,7 +410,7 @@ details.hist[open] summary::after{content:"−"}
             <div class="row2"><span class="k mono" id="resend">Resend in 0:30</span><button class="link" type="button" id="emailme" hidden>Email me the code</button></div>
             <div style="flex:1"></div>
           </div>
-          <div class="id-foot"><span>by Frrata</span><span><a href="#calls">Privacy</a> · <a href="#calls">Terms</a></span></div>
+          <div class="id-foot"><span><a href="#calls">Privacy</a> · <a href="#calls">Terms</a></span></div>
         </section>
 
         <!-- 2b · email -->
@@ -424,7 +424,7 @@ details.hist[open] summary::after{content:"−"}
             <div style="flex:1"></div>
             <button class="btn ghost wide" type="button" data-go="phone" data-back><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Use another number</button>
           </div>
-          <div class="id-foot"><span>by Frrata</span><span><a href="#calls">Privacy</a> · <a href="#calls">Terms</a></span></div>
+          <div class="id-foot"><span><a href="#calls">Privacy</a> · <a href="#calls">Terms</a></span></div>
         </section>
 
         <!-- 2c · locked -->
@@ -436,7 +436,7 @@ details.hist[open] summary::after{content:"−"}
             <div style="flex:1"></div>
             <button class="btn primary wide" type="button" data-go="checkout" data-back>Check out as a guest</button>
           </div>
-          <div class="id-foot"><span>by Frrata</span><span><a href="#calls">Privacy</a> · <a href="#calls">Terms</a></span></div>
+          <div class="id-foot"><span><a href="#calls">Privacy</a> · <a href="#calls">Terms</a></span></div>
         </section>
 
         <!-- 3 · create (first time on EkCode) -->
@@ -446,16 +446,16 @@ details.hist[open] summary::after{content:"−"}
             <h3 data-en="Create your EkCode">Create your EkCode</h3>
             <label class="f"><span data-en="Your name">Your name</span><input class="input" id="nm" autocomplete="name" placeholder="Ananya Rao"></label>
             <ul class="notice">
-              <li><svg class="ico" aria-hidden="true"><use href="#i-user"/></svg><span data-en="Frrata keeps your name, phone and delivery addresses.">Frrata keeps your name, phone and delivery addresses.</span></li>
-              <li><svg class="ico" aria-hidden="true"><use href="#i-store"/></svg><span data-en="A shop on Frrata gets them only when you tap Continue there.">A shop on Frrata gets them only when you tap Continue there.</span></li>
-              <li><svg class="ico" aria-hidden="true"><use href="#i-x"/></svg><span data-en="Remove a shop or delete EkCode any time at id.frrata.com.">Remove a shop or delete EkCode any time at id.frrata.com.</span></li>
+              <li><svg class="ico" aria-hidden="true"><use href="#i-user"/></svg><span data-en="EkCode keeps your name, phone and delivery addresses.">EkCode keeps your name, phone and delivery addresses.</span></li>
+              <li><svg class="ico" aria-hidden="true"><use href="#i-store"/></svg><span data-en="A shop gets them only when you tap Continue there.">A shop gets them only when you tap Continue there.</span></li>
+              <li><svg class="ico" aria-hidden="true"><use href="#i-x"/></svg><span data-en="Remove a shop or delete EkCode any time at ekcode.in.">Remove a shop or delete EkCode any time at ekcode.in.</span></li>
             </ul>
             <p class="k" style="margin:0" data-en="For 18 and over.">For 18 and over.</p>
             <div style="flex:1"></div>
             <button class="btn primary wide" type="button" id="create" disabled data-en="Create my EkCode">Create my EkCode</button>
             <button class="btn ghost wide" type="button" data-go="guestback" data-en="Not now">Not now</button>
           </div>
-          <div class="id-foot"><span>by Frrata</span><span><a href="#calls">Privacy</a> · <a href="#calls">Terms</a></span></div>
+          <div class="id-foot"><span><a href="#calls">Privacy</a> · <a href="#calls">Terms</a></span></div>
         </section>
 
         <!-- 4 · confirm -->
@@ -477,7 +477,7 @@ details.hist[open] summary::after{content:"−"}
             <button class="btn primary wide" type="button" id="cont">Continue</button>
             <button class="btn ghost wide" type="button" data-go="phone" data-back id="notyou">Not you?</button>
           </div>
-          <div class="id-foot"><span>by Frrata</span><span><a href="#calls">Privacy</a> · <a href="#calls">Terms</a></span></div>
+          <div class="id-foot"><span><a href="#calls">Privacy</a> · <a href="#calls">Terms</a></span></div>
         </section>
 
         <!-- 5 · filled at the shop -->
@@ -493,7 +493,7 @@ details.hist[open] summary::after{content:"−"}
               <label><span>UPI, card, netbanking</span><input type="radio" name="pm" checked></label>
               <label><span>Pay on delivery · <span class="mono">+₹49</span></span><input type="radio" name="pm"></label>
             </div>
-            <label class="tick"><input type="checkbox"><span>Order updates for this order from Frrata on WhatsApp (Kesar Studio)</span></label>
+            <label class="tick"><input type="checkbox"><span>Order updates for this order from EkCode on WhatsApp</span></label>
             <button class="sbtn" type="button" data-go="done">Pay <span class="mono">₹2,490</span></button>
           </div>
         </section>
@@ -536,7 +536,7 @@ details.hist[open] summary::after{content:"−"}
         </div>
         <ol class="steps" id="steps">
           <li data-st="checkout">Shop · Continue with EkCode</li>
-          <li data-st="phone">id.frrata.com · phone</li>
+          <li data-st="phone">ekcode.in · phone</li>
           <li data-st="code">Code from WhatsApp</li>
           <li data-st="create">Create (first time only)</li>
           <li data-st="confirm">Continue to the shop</li>
@@ -547,7 +547,7 @@ details.hist[open] summary::after{content:"−"}
       <div class="card pad" style="display:grid;gap:8px">
         <h3 style="margin:0">Why each choice</h3>
         <ul class="note" style="margin:0">
-          <li><b>A real page on id.frrata.com</b>, not a pop-up or iframe: the shopper sees Frrata's address in the bar, and it works in Safari and Instagram's browser.</li>
+          <li><b>A real page on ekcode.in</b>, not a pop-up or iframe: the shopper sees EkCode's address in the bar, and it works in Safari and Instagram's browser.</li>
           <li><b>The shop's name stays in the header</b>, so the shopper always knows where they go back to.</li>
           <li><b>One field per screen, the keypad numeric</b>; the number checks itself as it is typed (10 digits, starts 6–9).</li>
           <li><b>The code fills itself</b> (<span class="mono">one-time-code</span>: iOS 26 keyboard, paste) and submits on the sixth digit; no Verify button.</li>
@@ -565,28 +565,28 @@ details.hist[open] summary::after{content:"−"}
   <h2 id="whatsapp">On WhatsApp</h2>
   <div class="grid g2">
     <div class="wa" aria-label="WhatsApp: sign-in code">
-      <div class="wa-h"><span class="pp" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M7 19V9.5A3.5 3.5 0 0 1 10.5 6H13" stroke="#FAFAF9" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M12 19v-6a3 3 0 0 1 3-3h2" stroke="#FF5C97" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg></span><span><b>Frrata <span style="color:#25D366" aria-label="Verified">●</span></b><small>Business account</small></span></div>
+      <div class="wa-h"><span class="pp" aria-hidden="true"><svg width="22" height="22" aria-hidden="true"><use href="#tl"/></svg></span><span><b>EkCode <span style="color:#25D366" aria-label="Verified">●</span></b><small>Business account</small></span></div>
       <div class="wa-b">
         <div class="bub"><b class="mono">482913</b> is your verification code. For your security, do not share this code.<br><span style="color:var(--wa-sub);font-size:12.5px">This code expires in 10 minutes.</span><small>7:27 pm</small><span class="cta">Copy code</span></div>
       </div>
     </div>
-    <div class="wa" aria-label="WhatsApp: order update from Frrata">
-      <div class="wa-h"><span class="pp" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M7 19V9.5A3.5 3.5 0 0 1 10.5 6H13" stroke="#FAFAF9" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M12 19v-6a3 3 0 0 1 3-3h2" stroke="#FF5C97" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg></span><span><b>Frrata <span style="color:#25D366" aria-label="Verified">●</span></b><small>Business account</small></span></div>
+    <div class="wa" aria-label="WhatsApp: order update from EkCode">
+      <div class="wa-h"><span class="pp" aria-hidden="true"><svg width="22" height="22" aria-hidden="true"><use href="#tl"/></svg></span><span><b>EkCode <span style="color:#25D366" aria-label="Verified">●</span></b><small>Business account</small></span></div>
       <div class="wa-b">
-        <div class="bub">Your order <b class="mono">KS-1042</b> from <b>Kesar Studio</b> has shipped. It should reach you by Thu, 13 Nov.<br><span style="color:var(--wa-sub);font-size:12.5px">via Frrata</span><small>11:04 am</small><span class="cta">Track order</span><span class="cta">Contact Kesar Studio</span></div>
+        <div class="bub">Your order <b class="mono">KS-1042</b> from <b>Kesar Studio</b> has shipped. It should reach you by Thu, 13 Nov.<br><span style="color:var(--wa-sub);font-size:12.5px">via EkCode</span><small>11:04 am</small><span class="cta">Track order</span><span class="cta">Contact Kesar Studio</span></div>
       </div>
     </div>
   </div>
   <ul class="note">
-    <li>Meta fixes the code message word for word; Frrata adds only the code, the security line and the expiry.</li>
-    <li>Order updates use one Frrata template per event, in Frrata's voice, with the shop's name as a detail and nothing promotional. They are sent only to shoppers who ticked the box and only while the shop has no number of its own. "Contact Kesar Studio" opens the shop's support.</li>
+    <li>Meta fixes the code message word for word; EkCode adds only the code, the security line and the expiry.</li>
+    <li>Order updates use one EkCode template per event, in EkCode's voice, with the shop's name as a detail and nothing promotional. They are sent only to shoppers who ticked the box and only while the shop has no number of its own. "Contact Kesar Studio" opens the shop's support.</li>
   </ul>
 
   <!-- ============ ACCOUNT ============ -->
-  <h2 id="account">Shopper's EkCode page · id.frrata.com</h2>
+  <h2 id="account">Shopper's EkCode page · ekcode.in</h2>
   <div class="flow">
     <div class="phone acct">
-      <div class="urlbar"><svg class="ico" aria-hidden="true"><use href="#i-lock"/></svg><b>id.frrata.com</b></div>
+      <div class="urlbar"><svg class="ico" aria-hidden="true"><use href="#i-lock"/></svg><b>ekcode.in</b></div>
       <div class="scr id on" style="min-height:0">
         <div class="id-head"><svg class="wm" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg><button class="btn sm ghost" type="button">Sign out</button></div>
         <div class="id-body">
@@ -620,7 +620,7 @@ details.hist[open] summary::after{content:"−"}
           </details>
           <button class="btn danger wide" type="button" data-dlg="ddel">Delete my EkCode</button>
         </div>
-        <div class="id-foot"><span>Questions: <a href="#calls">privacy@frrata.com</a></span><span><a href="#calls">Privacy</a></span></div>
+        <div class="id-foot"><span>Questions: <a href="#calls">privacy@ekcode.in</a></span><span><a href="#calls">Privacy</a></span></div>
       </div>
     </div>
     <div class="rail">
@@ -679,7 +679,7 @@ details.hist[open] summary::after{content:"−"}
             </div>
           </div>
           <div class="sec"><header><h3>Order updates on WhatsApp</h3><a class="btn sm" href="#console">Connect your number</a></header>
-            <ul class="rows"><li><span>From Frrata's number<br><span class="s">Until you connect your own</span></span><span class="mono">1,204 sent · Nov</span></li></ul>
+            <ul class="rows"><li><span>From EkCode's number<br><span class="s">Until you connect your own</span></span><span class="mono">1,204 sent · Nov</span></li></ul>
           </div>
         </div>
 
@@ -708,7 +708,7 @@ details.hist[open] summary::after{content:"−"}
             <ul class="rows">
               <li><span>Show at checkout</span><input class="sw" type="checkbox" role="switch" aria-label="Show at checkout" checked></li>
               <li><span>Compare with 1 in 10 shoppers <span class="info" title="They see the ordinary checkout, so Overview can show the difference EkCode makes.">i</span></span><input class="sw" type="checkbox" role="switch" aria-label="Compare with 1 in 10 shoppers" checked></li>
-              <li><span>Order updates from Frrata's number<br><span class="s">Until you connect your own</span></span><input class="sw" type="checkbox" role="switch" aria-label="Order updates from Frrata's number" checked></li>
+              <li><span>Order updates from EkCode's number<br><span class="s">Until you connect your own</span></span><input class="sw" type="checkbox" role="switch" aria-label="Order updates from EkCode's number" checked></li>
             </ul>
           </div>
         </div>
@@ -718,7 +718,7 @@ details.hist[open] summary::after{content:"−"}
   <ul class="note">
     <li>Free on every plan, so it is in "Grow" with "In your plan" and a switch: the network is worth more with every shop on it.</li>
     <li>"Shoppers" lists the people who continued on this shop: the leads. Export is for owner and admin only. Marketing is sent from Campaigns, never from here.</li>
-    <li>No "read" or "delivered" counts for Frrata's sends: Meta's terms keep WhatsApp data from reaching the shop. "Sent" is Frrata's own count.</li>
+    <li>No "read" or "delivered" counts for EkCode's sends: Meta's terms keep WhatsApp data from reaching the shop. "Sent" is EkCode's own count.</li>
     <li>Order updates cost the shop nothing extra until counsel clears a per-message charge (Meta forbids reselling its platform).</li>
   </ul>
 
@@ -728,7 +728,7 @@ details.hist[open] summary::after{content:"−"}
     <table class="tbl-states">
       <thead><tr><th>Screen</th><th>State</th><th>What shows</th></tr></thead>
       <tbody>
-        <tr><td>Shop checkout</td><td>EkCode off / paused by Frrata</td><td>No button; the ordinary checkout</td></tr>
+        <tr><td>Shop checkout</td><td>EkCode off or paused</td><td>No button; the ordinary checkout</td></tr>
         <tr><td></td><td>In the holdout (1 in 10)</td><td>No button</td></tr>
         <tr><td></td><td>Signed in on this shop</td><td>Filled, "Not you?" strip</td></tr>
         <tr><td>Phone</td><td>Typing</td><td>Send stays off until 10 digits starting 6–9; "Starts with 6, 7, 8 or 9" only after 10 digits</td></tr>
@@ -758,8 +758,12 @@ details.hist[open] summary::after{content:"−"}
   <div class="grid g2">
     <div class="card pad"><h3>1 · "Save this address to EkCode" at checkout</h3>
       <p>For a shopper who just created EkCode and types a new address. <b>Recommend: ticked</b>, because they created EkCode to have their addresses kept, and the notice they agreed to says so. The data law forbids pre-ticked <i>consent</i>; this is the use they already agreed to. Counsel confirms with the notice.</p></div>
-    <div class="card pad"><h3>2 · Blue tick for Frrata's number</h3>
-      <p>Meta asks for a verified business, 30 days on the platform and two-step verification; no fame test. <b>Recommend</b> applying 30 days after the number goes live (after the Pvt Ltd). Until then the chat shows the number with "Frrata" as its name.</p></div>
+    <div class="card pad"><h3>2 · Blue tick for EkCode's number</h3>
+      <p>Meta asks for a verified business, 30 days on the platform and two-step verification. <b>Recommend</b> applying 30 days after the number goes live.</p></div>
+    <div class="card pad"><h3>3 · EkCode needs its own name online</h3>
+      <p>A domain for the sign-in and the shopper's page (<span class="mono">ekcode.in</span> here, to buy), an email sender
+      on it for the fallback code, and EkCode shown as a brand of your verified business so Meta approves "EkCode" as the
+      WhatsApp name. The company behind EkCode is named once, in its privacy policy: the data law needs it.</p></div>
   </div>
 </div>
 
@@ -772,7 +776,7 @@ details.hist[open] summary::after{content:"−"}
     <ul class="check">
       <li><svg class="ico" aria-hidden="true"><use href="#i-ok"/></svg>Name, phone and address in one tap</li>
       <li><svg class="ico" aria-hidden="true"><use href="#i-ok"/></svg>Every phone checked on WhatsApp</li>
-      <li><svg class="ico" aria-hidden="true"><use href="#i-ok"/></svg>Shoppers from other Frrata shops</li>
+      <li><svg class="ico" aria-hidden="true"><use href="#i-ok"/></svg>Shoppers who used EkCode at other shops</li>
       <li><svg class="ico" aria-hidden="true"><use href="#i-ok"/></svg>Order updates until you connect your number</li>
     </ul>
     <div class="pricep"><span class="chip c-ok">In your plan</span><span class="mono">₹0</span></div>
@@ -786,7 +790,7 @@ details.hist[open] summary::after{content:"−"}
 </div>
 <div class="dlg" id="ddel" role="dialog" aria-modal="true" aria-labelledby="ddelh">
   <div class="dh" id="ddelh">Delete your EkCode?</div>
-  <div class="db"><span>Your name, addresses and phones go from Frrata. Shops keep orders you placed.</span></div>
+  <div class="db"><span>Your name, addresses and phones are deleted. Shops keep orders you placed.</span></div>
   <div class="df"><button class="btn" type="button" data-close>Keep</button><button class="btn danger" type="button" data-close>Delete</button></div>
 </div>
 <div class="dlg" id="dname" role="dialog" aria-modal="true" aria-labelledby="dnameh">
@@ -809,7 +813,7 @@ details.hist[open] summary::after{content:"−"}
     const from = order.indexOf(cur); cur = s
     $$('.scr[data-s]').forEach((e) => e.classList.toggle('on', e.dataset.s === s))
     const el = $(`.scr[data-s="${s}"]`); el.classList.toggle('back', !!back || order.indexOf(s) < from)
-    const [h, p] = (hosts[s] || 'id.frrata.com|/continue').split('|'); $('#host').textContent = h; $('#path').textContent = p
+    const [h, p] = (hosts[s] || 'ekcode.in|/continue').split('|'); $('#host').textContent = h; $('#path').textContent = p
     $$('#steps li').forEach((li) => li.classList.toggle('on', li.dataset.st === (s === 'email' || s === 'locked' ? 'code' : s === 'guestback' || s === 'done' ? 'filled' : s)))
     if (s === 'phone') setTimeout(() => $('#ph').focus({ preventScroll: true }), 50)
     if (s === 'code') startCode()

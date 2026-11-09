@@ -21,13 +21,16 @@ login. So a shared "Verify via Frrata" sender is only lawful as a Frrata account
    phone and an open consent, and that write a disclosure row (which shop received what, when). A shop never sees a
    EkCode id: it gets a pairwise pseudonym (HMAC of the account and the shop), so two shops cannot correlate a shopper.
 4. **WhatsApp is the only channel** for codes; email is the fallback. **No SMS** until the owner asks for it.
-5. **Transactional WhatsApp from Frrata's number** (order confirmed, shipped, delivered, COD confirmation) for shoppers who
+5. **Transactional WhatsApp from EkCode's number** (order confirmed, shipped, delivered, COD confirmation) for shoppers who
    hold a EkCode and opted in, until the shop connects its own number — subject to Meta's rules being confirmed
-   (checked 2026-11-09: allowed with conditions); the message is Frrata's own ("via Frrata"), the shop's name a
+   (checked 2026-11-09: allowed with conditions); the message is Frrata's own ("via EkCode"), the shop's name a
    variable, never promotional; no WhatsApp platform data (read/delivered status, "not on WhatsApp", BSUID) passes to
    the shop (Meta's platform terms §4.1).
 6. **Never**: fingerprinting visitors who never signed in; profiling or marketing to anyone under 18; selling or renting
    the network; marketing from EkCode (marketing stays in its own modules and the shop's own consents).
+7. **EkCode is the shopper-facing brand** (owner, 2026-11-09): its own domain, WhatsApp number and display name, and
+   email sender; nothing a shopper sees names Frrata. Frrata (the company) remains the Data Fiduciary and Meta's
+   verified business, named in EkCode's privacy policy.
 
 ## Why
 The network is the product's moat (a returning shopper filled in on a shop they have never visited) and the only lawful
