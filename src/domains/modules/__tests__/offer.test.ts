@@ -5,7 +5,7 @@ import { MODULE_KEYS, MODULES } from '../registry'
 
 const now = new Date('2026-11-07T10:00:00Z')
 const day = (n: number) => new Date(now.getTime() + n * 86_400_000)
-const none: ModuleFacts = { planFeatures: [], addons: [], switchedOn: [], paused: [] }
+const none: ModuleFacts = { planCode: 'growth', planFeatures: [], addons: [], switchedOn: [], paused: [] }
 const shipped = Object.fromEntries(MODULE_KEYS.map((k) => [k, MODULES[k].status]))
 afterEach(() => { for (const k of MODULE_KEYS) (MODULES[k] as { status: string }).status = shipped[k]! })
 const built = (k: keyof typeof MODULES, s: 'now' | 'next') => { (MODULES[k] as { status: string }).status = s }
@@ -18,6 +18,12 @@ describe('offerFor', () => {
     built('reviews', 'now')
     const o = offerFor('reviews', moduleAccess(none, now).reviews, 49900, now)
     expect(o).toMatchObject({ badge: 'Add-on · ₹499/mo', price: '₹499/mo + 18% GST', action: { kind: 'ask', label: 'Add Reviews · ₹499/mo' } })
+    built('reviews', 'next')
+  })
+  it('an add-on off its plans (Reviews on Launch) offers the plans, not an add', () => {
+    built('reviews', 'now')
+    const o = offerFor('reviews', moduleAccess({ ...none, planCode: 'launch' }, now).reviews, 49900, now, false)
+    expect(o).toMatchObject({ badge: 'In Growth and up', action: { kind: 'plans' } })
     built('reviews', 'next')
   })
   it('a trial counts its days down and says the price after', () => {

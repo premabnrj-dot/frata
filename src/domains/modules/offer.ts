@@ -21,7 +21,8 @@ export type Offer = {
   action: { kind: 'switch'; on: boolean } | { kind: 'ask'; label: string } | { kind: 'plans'; label: string } | { kind: 'none' }
 }
 
-export function offerFor(key: ModuleKey, a: ModuleAccess, addonPrice: number | null, now: Date): Offer {
+/** `canAdd`: whether this shop's plan may buy it as an add-on (addOnAllowed); false offers the plans instead. */
+export function offerFor(key: ModuleKey, a: ModuleAccess, addonPrice: number | null, now: Date, canAdd = true): Offer {
   const def = MODULES[key]
   const monthly = addonPrice !== null ? `${formatInr(paise(addonPrice))}/mo` : null
   if (def.status === 'next') {
@@ -29,7 +30,7 @@ export function offerFor(key: ModuleKey, a: ModuleAccess, addonPrice: number | n
   }
   if (a.paused) return { badge: 'Paused by Frrata', tone: 'warn', price: priceLine(a, monthly, now), action: { kind: 'switch', on: a.on } }
   if (a.granted) return { badge: a.how === 'trial' ? trialBadge(a, now) : a.how === 'add_on' ? 'Add-on' : 'In your plan', tone: a.how === 'trial' ? 'warn' : 'ok', price: priceLine(a, monthly, now), action: { kind: 'switch', on: a.on } }
-  if (def.billing === 'add_on' && monthly) return { badge: `Add-on · ${monthly}`, tone: 'neutral', price: `${monthly} + 18% GST`, action: { kind: 'ask', label: `Add ${def.name} · ${monthly}` } }
+  if (def.billing === 'add_on' && monthly && canAdd) return { badge: `Add-on · ${monthly}`, tone: 'neutral', price: `${monthly} + 18% GST`, action: { kind: 'ask', label: `Add ${def.name} · ${monthly}` } }
   return { badge: 'In Growth and up', tone: 'neutral', price: 'In Growth and up', action: { kind: 'plans', label: 'See plans' } }
 }
 

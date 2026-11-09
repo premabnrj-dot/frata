@@ -51,16 +51,16 @@ export default {
     await t.step('Admin: no trial of a module not built yet; a trial shows and can be ended', async () => {
       await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/modules`)
       await meera.getByRole('link', { name: 'Modules', exact: true }).first().waitFor()
-      // Every module a plan or add-on grants is still Next (Messages is core): a trial would run out unused, so no trial button yet.
-      assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial/ }).count(), 0)
+      // A module not built yet offers no trial (its days would run out unused); nor does one off its plans (Reviews: Growth and Scale).
+      assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial of (Reviews|True Profit)/ }).count(), 0)
       // A trial granted before (the row Admin writes when a module ships) shows its end and can be ended.
-      await db`insert into tenant_addons (tenant_id, module, trial_ends_at, reason, created_by) values (${KESAR}, 'reviews', now() + interval '30 days', '30-day trial', ${F.id})`
+      await db`insert into tenant_addons (tenant_id, module, trial_ends_at, reason, created_by) values (${KESAR}, 'true_profit', now() + interval '30 days', '30-day trial', ${F.id})`
       await meera.reload()
       await meera.getByText(/Trial until/).waitFor()
       await meera.screenshot({ path: t.out('admin-trial') })
       await meera.getByRole('button', { name: 'End trial' }).click()
-      await meera.getByText('Reviews ended.').waitFor()
-      const [b] = await db`select ends_at from tenant_addons where tenant_id = ${KESAR} and module = 'reviews'`
+      await meera.getByText('True Profit ended.').waitFor()
+      const [b] = await db`select ends_at from tenant_addons where tenant_id = ${KESAR} and module = 'true_profit'`
       assert.ok(b.ends_at)
       const audit = await db`select action from audit_events where tenant_id = ${KESAR} and action like 'module.%' order by at`
       assert.deepEqual(audit.map((r) => r.action), ['module.end'])

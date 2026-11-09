@@ -3,7 +3,8 @@ import { and, asc, eq, isNull, lt, sql } from 'drizzle-orm'
 import { computeBill, type AddonRow, type Bill, type FeeCredit, type FeeOrder, type PlanRow } from '@/domains/billing/bill'
 import { MODULES, type ModuleKey } from '@/domains/modules/registry'
 import { paise } from '@/domains/money/paise'
-import type { PlanCode } from '@/domains/plans/entitlements'
+import { currentPlan, type PlanCode } from '@/domains/plans/entitlements'
+import { addOnAllowed } from '@/domains/modules/access'
 import { gstinState } from '@/domains/tax/gst'
 import { shopPauseIn } from '@/lib/queries/trial-pause'
 
@@ -101,7 +102,10 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
 
   const planHistory: PlanRow[] = planRows.map((p) => ({ startsAt: p.startsAt, trialEndsAt: p.trialEndsAt, customMonthlyPrice: p.customMonthlyPrice === null ? null : paise(p.customMonthlyPrice),
     planVersion: { planCode: p.planCode as PlanCode, name: p.name, monthlyPrice: paise(p.monthlyPrice), includedOrders: p.includedOrders, feeBps: p.feeBps } }))
-  const addons: AddonRow[] = addonRows.map((a) => ({ module: a.module, name: MODULES[a.module as ModuleKey]?.name ?? a.module, monthlyPrice: paise(a.monthlyPrice), startsAt: a.startsAt, endsAt: a.endsAt, trialEndsAt: a.trialEndsAt }))
+  // An add-on sold only on some plans (Reviews: Growth and Scale) is billed only while the plan in force at the month's
+  // start allows it — the same rule access uses (addOnAllowed), so a shop never pays for what it cannot use.
+  const planAtStart = currentPlan(planHistory, monthStart)?.planVersion.planCode ?? null
+  const addons: AddonRow[] = addonRows.filter((a) => addOnAllowed(a.module as ModuleKey, planAtStart)).map((a) => ({ module: a.module, name: MODULES[a.module as ModuleKey]?.name ?? a.module, monthlyPrice: paise(a.monthlyPrice), startsAt: a.startsAt, endsAt: a.endsAt, trialEndsAt: a.trialEndsAt }))
   const feeOrders: FeeOrder[] = feeRows.map((o) => ({ orderId: o.id, number: `#${o.number}`, billableAt: new Date(o.at), rateAt: new Date(o.rate_at), merchandiseNet: Number(o.net) }))
   const credits: FeeCredit[] = creditRows.map((c) => ({ orderId: c.id, number: `#${c.number}`, fee: paise(Number(c.fee)), invoiceNumber: c.invoice }))
   const acc = account[0]

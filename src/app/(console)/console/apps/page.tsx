@@ -1,6 +1,7 @@
 import { PageHeader } from '@/components/layout/page-header'
 import { Panel } from '@/components/ui/panel'
 import { offerFor } from '@/domains/modules/offer'
+import { addOnAllowed } from '@/domains/modules/access'
 import { GROUPS, MODULE_KEYS, MODULES } from '@/domains/modules/registry'
 import { ANY_MEMBER, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { addonPriceList, shopModules } from '@/lib/queries/modules'
@@ -18,13 +19,13 @@ export default async function AppsPage() {
   const loaded = await Promise.all([shopModules(tenantId, now.toISOString()), addonPriceList(tenantId)])
     .catch((err) => { console.error('[apps]', err instanceof Error ? err.name : 'error'); return null })
   if (!loaded) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
-  const [{ access }, prices] = loaded
+  const [{ access, facts }, prices] = loaded
   const rows: AppRow[] = MODULE_KEYS.map((key) => {
     const def = MODULES[key], a = access[key]
     return {
       key, name: def.name, job: def.job, group: def.group, features: [...def.features], usage: def.usage ?? null,
       worksWith: def.dependsOn.map((d) => ({ name: MODULES[d].name, on: access[d].usable })),
-      offer: offerFor(key, a, prices[key]?.monthlyPrice ?? null, now),
+      offer: offerFor(key, a, prices[key]?.monthlyPrice ?? null, now, addOnAllowed(key, facts.planCode)),
       setup: a.on && a.usable && def.setup ? def.setup : null,
       ask: frataWhatsappLink(`Hi Frrata, please add ${def.name} to ${auth.membership.tenantName}.`),
     }

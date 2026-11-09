@@ -11,6 +11,8 @@ import { MODULE_KEYS, MODULES, type ModuleKey } from './registry'
 
 export type AddonFact = { id?: string; module: ModuleKey; startsAt: Date; endsAt: Date | null; trialEndsAt: Date | null }
 export type ModuleFacts = {
+  /** The plan in force ('launch' | 'growth' | 'scale'), or null with none: an add-on's `addOnFor` reads it. */
+  planCode: string | null
   planFeatures: readonly string[]
   addons: readonly AddonFact[]
   /** Modules with an open switch row (enabled, not disabled). */
@@ -44,10 +46,17 @@ export function liveAddon<A extends AddonFact>(addons: readonly A[], key: Module
   return live.find((a) => !a.trialEndsAt) ?? live.find((a) => a.trialEndsAt && a.trialEndsAt.getTime() > t) ?? null
 }
 
+/** May this plan buy (or trial) this add-on? */
+export const addOnAllowed = (key: ModuleKey, planCode: string | null): boolean => {
+  const only = MODULES[key].addOnFor
+  return !only || (planCode !== null && (only as readonly string[]).includes(planCode))
+}
+
 function grant(key: ModuleKey, f: ModuleFacts, now: Date): { how: How; trialEndsAt: Date | null } | null {
   const def = MODULES[key]
   if (def.billing === 'core') return { how: 'core', trialEndsAt: null }
   if (f.planFeatures.includes(key)) return { how: 'plan', trialEndsAt: null }
+  if (!addOnAllowed(key, f.planCode)) return null
   const a = liveAddon(f.addons, key, now)
   if (!a) return null
   return a.trialEndsAt ? { how: 'trial', trialEndsAt: a.trialEndsAt } : { how: 'add_on', trialEndsAt: null }
