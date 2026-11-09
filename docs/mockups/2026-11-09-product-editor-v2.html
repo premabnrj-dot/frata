@@ -1,0 +1,744 @@
+<title>Frrata Product Editor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a short note for the owner, then five views (desktop editor, phone, new product, fix before saving, what changed). Frrata console tokens. */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--thread:#D61F69;--brand-text:#A8124F;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;
+  --scrim:rgb(28 25 23 / .45);
+  --indigo-1:#2D3A6B;--indigo-2:#3F4F8A;--rust-1:#9A4A26;--rust-2:#B9643A;--ivory-1:#E8E0CC;--ivory-2:#F3EEDF;
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;
+  --fast:120ms;--base:200ms;--slow:320ms;
+  --standard:cubic-bezier(.2,0,0,1);--entrance:cubic-bezier(0,0,0,1);--exit:cubic-bezier(.3,0,1,1);
+  --spring:linear(0,.22 7%,.6 17%,.86 27%,1.01 38%,1.04 46%,1.02 60%,1 100%);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--scrim:rgb(0 0 0 / .6);
+  --ivory-1:#8E8774;--ivory-2:#A59E8A;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--scrim:rgb(0 0 0 / .6);
+  --ivory-1:#8E8774;--ivory-2:#A59E8A;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--sans);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 96px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:26px;line-height:1.2;margin:0 0 6px;text-wrap:balance}
+h2.v{font-size:18px;margin:36px 0 12px;display:flex;gap:10px;align-items:center;text-wrap:balance}
+h2.v::before{content:"";width:18px;height:2px;background:var(--thread);flex:none}
+p{margin:0 0 10px;max-width:72ch}
+.k{font-size:12px;color:var(--sub)}.mono{font-family:var(--mono);font-variant-ligatures:none}.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.note{display:grid;gap:6px;margin:12px 0 0;padding:0;list-style:none;max-width:84ch}
+.note li{padding-left:16px;position:relative}.note li::before{content:"";position:absolute;left:0;top:.72em;width:8px;height:2px;background:var(--thread)}
+nav.views{display:flex;gap:6px;flex-wrap:wrap;margin:20px 0 0;position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);padding-block:8px;border-bottom:1px solid var(--border)}
+nav.views a{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--border);color:var(--fg);text-decoration:none;font-weight:500;font-size:13px}
+nav.views a[aria-current="page"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+nav.views a:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+section.view[hidden]{display:none}
+
+/* ── primitives ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;min-width:0}
+.card>.hd{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px 0}
+.card>.bd{padding:12px 16px 16px;display:grid;gap:12px}
+.card h3{font-size:15px;font-weight:600;margin:0;display:flex;align-items:center;gap:6px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--fg);padding:0 12px;font:500 13px var(--sans);min-height:36px;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:var(--muted)}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.sm{min-height:30px;padding:0 9px;font-size:12.5px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+button:focus-visible,.input:focus-visible,select:focus-visible,summary:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.link{background:none;border:0;padding:0;color:var(--fg);text-decoration:underline;text-underline-offset:2px;font:inherit;cursor:pointer;min-height:24px;display:inline-flex;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 9px;font:500 12px var(--sans);white-space:nowrap}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-warn{background:var(--warn);color:var(--warn-text)}.c-n{background:var(--muted);color:var(--sub)}.c-danger{background:var(--danger);color:var(--danger-text)}.c-info{background:var(--info);color:var(--info-text)}
+.ico{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.ico.s{width:14px;height:14px}
+label.f{display:grid;gap:4px;font-size:13px;font-weight:500;min-width:0}
+.input{border:1px solid var(--input);border-radius:6px;padding:0 10px;background:var(--card);color:var(--fg);font:14px var(--sans);min-height:36px;width:100%;min-width:0}
+.input.mono{font-family:var(--mono)}
+textarea.input{padding:8px 10px;min-height:88px;resize:vertical;line-height:1.5}
+select.input{padding-right:6px}
+.opt{font-weight:400;color:var(--sub)}
+.err{color:var(--danger-text);font-size:12.5px}
+.input[aria-invalid="true"]{border-color:var(--danger-text)}
+
+/* segmented control (status, small value sets) */
+.seg{display:flex;border:1px solid var(--input);border-radius:6px;overflow:hidden;width:100%}
+.seg button{flex:1;min-height:36px;border:0;background:var(--card);color:var(--fg);font:500 13px var(--sans);cursor:pointer;border-left:1px solid var(--border);padding:0 6px;transition:background-color var(--fast) var(--standard)}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.pick{display:flex;flex-wrap:wrap;gap:6px}
+.pick button{min-height:32px;border:1px solid var(--input);background:var(--card);color:var(--fg);border-radius:999px;padding:0 12px;font:500 13px var(--sans);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.pick button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.pick button.add{border-style:dashed;color:var(--sub)}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:500;color:var(--info-text)}
+
+/* ── the console frame ── */
+.stage{border:1px solid var(--border);border-radius:8px;background:var(--bg);overflow:hidden;position:relative}
+.savebar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;background:var(--fg);color:var(--bg);flex-wrap:wrap;
+  transform-origin:top;transition:opacity var(--base) var(--exit),display var(--base) allow-discrete}
+.savebar[hidden]{display:none}
+.savebar .btn{border-color:var(--bg);background:transparent;color:var(--bg)}
+.savebar .btn.primary{background:var(--bg);color:var(--fg)}
+@starting-style{.savebar{opacity:0}}
+.ed{padding:18px 20px 28px;display:grid;gap:16px}
+.crumb{display:inline-flex;align-items:center;gap:4px;color:var(--sub);font-size:13px;text-decoration:none;min-height:24px}
+.head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.title{font-size:24px;font-weight:700;letter-spacing:-.01em;border:1px solid transparent;border-radius:6px;padding:2px 8px;margin:0 -8px;background:transparent;color:var(--fg);width:100%;font-family:var(--sans);min-width:0}
+.title:hover{border-color:var(--input)}.title:focus{border-color:var(--input);background:var(--card);outline:none}
+.meta{font-size:12.5px;color:var(--sub);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+.main{display:grid;gap:14px;min-width:0}
+.side{display:grid;gap:14px;position:sticky;top:12px;min-width:0}
+@media (max-width:900px){.cols{grid-template-columns:minmax(0,1fr)}.side{position:static;order:-1}}
+
+/* photos */
+.photos{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.ph{position:relative;aspect-ratio:4/5;border-radius:6px;overflow:hidden;border:1px solid var(--border);cursor:grab;max-width:100%}
+.ph.cover{grid-column:span 2;grid-row:span 2}
+.ph .lbl{position:absolute;left:6px;bottom:6px;display:flex;gap:4px;flex-wrap:wrap}
+.ph .lbl span{background:rgb(0 0 0 / .62);color:#fff;font-size:11px;padding:1px 6px;border-radius:4px}
+.ph .dot{position:absolute;right:6px;top:6px;width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgb(0 0 0 / .35)}
+.ph.add{display:grid;place-items:center;border:1.5px dashed var(--input);background:var(--card);color:var(--sub);cursor:pointer;font-size:12.5px;text-align:center;gap:2px;padding:6px}
+.fab-indigo{background:repeating-linear-gradient(115deg,var(--indigo-1) 0 6px,var(--indigo-2) 6px 7px),var(--indigo-1)}
+.fab-rust{background:repeating-linear-gradient(115deg,var(--rust-1) 0 6px,var(--rust-2) 6px 7px),var(--rust-1)}
+.fab-ivory{background:repeating-linear-gradient(115deg,var(--ivory-1) 0 6px,var(--ivory-2) 6px 7px),var(--ivory-1)}
+.ph .fig{position:absolute;inset:18% 26% 0;border-radius:40% 40% 4px 4px;background:rgb(255 255 255 / .14)}
+@media (max-width:900px){.photos{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media (max-width:640px){.photos{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* options */
+.optrow{display:grid;grid-template-columns:72px minmax(0,1fr);gap:10px;align-items:start}
+.optrow>b{font-size:13px;font-weight:500;padding-top:6px}
+.sw{width:14px;height:14px;border-radius:50%;border:1px solid rgb(0 0 0 / .2);flex:none}
+.sw.indigo{background:var(--indigo-2)}.sw.rust{background:var(--rust-2)}.sw.ivory{background:var(--ivory-2)}
+
+/* price and stock: grouped by colour */
+.grid{width:100%;border-collapse:collapse;font-size:13px}
+.grid th{font-size:11.5px;color:var(--sub);font-weight:500;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+.grid th.r,.grid td.r{text-align:right}
+.grid td{padding:5px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+.grid tr.grp td{background:var(--muted);padding:8px}
+.grp .gwrap{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.grp .gname{display:inline-flex;align-items:center;gap:8px;font-weight:600;background:none;border:0;color:var(--fg);font:600 13px var(--sans);cursor:pointer;min-height:28px;padding:0}
+.grp .gsum{color:var(--sub);font-size:12.5px}
+.grid .input{min-height:32px;font-family:var(--mono);font-size:13px;text-align:right;padding:0 8px}
+.grid select.input{font-family:var(--sans);text-align:left}
+.cell-price{width:96px}.cell-stock{width:112px}
+.stepper{display:inline-grid;grid-template-columns:28px 44px 28px;border:1px solid var(--input);border-radius:6px;overflow:hidden;height:32px}
+.stepper button{border:0;background:var(--card);color:var(--fg);cursor:pointer;display:grid;place-items:center}
+.stepper button:hover{background:var(--muted)}
+.stepper input{border:0;border-left:1px solid var(--border);border-right:1px solid var(--border);text-align:center;font:13px var(--mono);background:var(--card);color:var(--fg);width:44px;min-width:0}
+.sees{font-size:12px}
+.bulk{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:6px;background:var(--fg);color:var(--bg);font-size:13px}
+.bulk .btn{border-color:var(--bg);background:transparent;color:var(--bg);min-height:30px}
+.tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px}
+.tablewrap .grid tr:last-child td{border-bottom:0}
+input[type="checkbox"]{width:16px;height:16px;accent-color:var(--fg)}
+
+/* collapsed rows ("Add later" summaries) */
+.rows{display:grid}
+.rows details{border-top:1px solid var(--border)}
+.rows details:first-child{border-top:0}
+.rows summary{list-style:none;display:grid;grid-template-columns:minmax(0,1fr) auto 16px;gap:10px;align-items:center;padding:12px 16px;cursor:pointer;min-height:52px}
+.rows summary::-webkit-details-marker{display:none}
+.rows summary b{font-weight:600;font-size:14px}
+.rows summary .s{display:block;font-size:12.5px;color:var(--sub);font-weight:400;overflow-wrap:anywhere}
+.rows summary .chev{transition:rotate var(--base) var(--standard)}
+.rows details[open] summary .chev{rotate:90deg}
+.rows .in{padding:0 16px 16px;display:grid;gap:10px}
+.taxbar{display:grid;gap:4px;padding:10px 12px;border-radius:6px;background:var(--muted)}
+.taxbar .track{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--ok-text) 0 62%,var(--warn-text) 62% 100%);position:relative}
+.taxbar .track i{position:absolute;left:58%;top:-4px;width:2px;height:14px;background:var(--fg)}
+
+/* side cards */
+.check{display:grid;gap:2px;list-style:none;margin:0;padding:0}
+.check li a,.check li span.it{display:flex;align-items:center;gap:8px;min-height:30px;font-size:13px;color:var(--fg);text-decoration:none;border-radius:4px;padding:0 4px;margin:0 -4px}
+.check li a:hover{background:var(--muted)}
+.check .ok{color:var(--ok-text)}.check .todo{color:var(--warn-text)}
+.tier{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin-top:4px}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border-top:1px solid var(--border)}
+.facts div{background:var(--card);padding:10px 16px}
+.facts dt{font-size:11.5px;color:var(--sub)}.facts dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.combo{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--input);border-radius:6px;padding:6px 10px;min-height:40px}
+.combo .p{font-size:12px;color:var(--sub);overflow-wrap:anywhere}
+
+/* phone */
+.phonewrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),390px));gap:20px;justify-content:center}
+.phone{width:100%;max-width:390px;border:1px solid var(--border);border-radius:18px;overflow:hidden;background:var(--bg);position:relative;height:780px;display:grid;grid-template-rows:auto 1fr auto auto}
+.phone .top{padding:10px 14px;border-bottom:1px solid var(--border);background:var(--card);display:grid;gap:4px}
+.phone .scroll{overflow-y:auto;padding:12px;display:grid;gap:12px;align-content:start}
+.phone .title{font-size:20px}
+.pstrip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scroll-snap-type:x mandatory}
+.pstrip .ph{flex:0 0 108px;scroll-snap-align:start}
+.pstrip .ph.add{flex-basis:96px}
+.cgroup{display:grid;grid-template-columns:auto minmax(0,1fr) auto 16px;gap:10px;align-items:center;padding:12px 14px;border-top:1px solid var(--border);background:none;border-left:0;border-right:0;border-bottom:0;width:100%;text-align:left;color:var(--fg);font:inherit;cursor:pointer;min-height:56px}
+.cgroup:first-of-type{border-top:0}
+.cgroup b{font-weight:600}.cgroup .s{display:block;font-size:12.5px;color:var(--sub)}
+.psave{display:flex;gap:8px;padding:10px 12px;background:var(--fg);color:var(--bg);align-items:center;justify-content:space-between}
+.psave .btn{border-color:var(--bg);background:transparent;color:var(--bg)}.psave .btn.primary{background:var(--bg);color:var(--fg)}
+.pnav{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border);background:var(--card)}
+.pnav span{display:grid;place-items:center;gap:2px;font-size:11px;color:var(--sub);min-height:52px;padding-top:4px}
+.pnav span.on{color:var(--fg);font-weight:600}
+.statusrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.statusbtn{display:inline-flex;align-items:center;gap:6px;min-height:32px;border:1px solid var(--input);border-radius:999px;padding:0 10px;background:var(--card);color:var(--fg);font:500 13px var(--sans);cursor:pointer}
+.statusbtn i{width:8px;height:8px;border-radius:50%;background:var(--ok-text)}
+.sheet{position:absolute;inset:auto 0 0;background:var(--card);border-top:1px solid var(--border);border-radius:14px 14px 0 0;z-index:6;max-height:82%;display:grid;grid-template-rows:auto 1fr auto;
+  transform:translateY(100%);transition:transform var(--base) var(--exit),display var(--base) allow-discrete;display:none}
+.sheet.open{display:grid;transform:none;transition:transform var(--slow) var(--spring),display var(--slow) allow-discrete}
+@starting-style{.sheet.open{transform:translateY(100%)}}
+.scrim{position:absolute;inset:0;background:var(--scrim);z-index:5;opacity:0;display:none;transition:opacity var(--base) var(--exit),display var(--base) allow-discrete}
+.scrim.open{display:block;opacity:1;transition:opacity var(--base) var(--entrance),display var(--base) allow-discrete}
+@starting-style{.scrim.open{opacity:0}}
+.sheet .sh{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border)}
+.sheet .sb{overflow-y:auto;padding:10px 14px;display:grid;gap:2px}
+.sheet .sf{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.srow{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;min-height:52px;border-bottom:1px solid var(--border)}
+.srow:last-child{border-bottom:0}
+.srow b{font-family:var(--mono);font-weight:500}
+
+/* error summary */
+.errsum{border:2px solid var(--danger-text);border-radius:6px;background:var(--card);padding:12px 16px;display:grid;gap:6px}
+.errsum h3{color:var(--danger-text)}
+.errsum ul{margin:0;padding:0 0 0 18px;display:grid;gap:2px}
+.errsum a{color:var(--danger-text);text-underline-offset:2px}
+
+/* new product */
+.drop{display:grid;place-items:center;gap:6px;border:1.5px dashed var(--input);border-radius:8px;padding:28px 16px;text-align:center;background:var(--card)}
+.drop .big{width:28px;height:28px}
+.sugg{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:6px;background:var(--info);color:var(--info-text);font-size:13px}
+.sugg .btn{min-height:28px;border-color:var(--info-text);color:var(--info-text);background:transparent}
+.suggested{box-shadow:inset 3px 0 0 var(--info-text)}
+
+/* what changed */
+.cmp{width:100%;border-collapse:collapse;font-size:13.5px}
+.cmp th,.cmp td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+.cmp th{font-size:12px;color:var(--sub);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.cmp td:first-child{font-weight:600;white-space:nowrap}
+.cmp .src{font-size:12px;color:var(--sub)}
+.phase{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));margin-top:14px}
+.phase .card{padding:14px 16px;display:grid;gap:6px;align-content:start}
+.phase b{font-size:14px}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+@media (max-width:520px){.ed{padding:14px 12px 20px}.optrow{grid-template-columns:minmax(0,1fr)}.optrow>b{padding-top:0}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></symbol>
+  <symbol id="i-back" viewBox="0 0 16 16"><path d="M10 3.5 5.5 8 10 12.5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 16 16"><path d="M3 8h10"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="m3.5 8.5 3 3 6-7"/></symbol>
+  <symbol id="i-todo" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5"/></symbol>
+  <symbol id="i-cam" viewBox="0 0 16 16"><path d="M2.5 5.5h2l1.2-1.8h4.6l1.2 1.8h2v7h-11z"/><circle cx="8" cy="9" r="2.2"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 16 16"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></symbol>
+  <symbol id="i-more" viewBox="0 0 16 16"><circle cx="3.5" cy="8" r=".6"/><circle cx="8" cy="8" r=".6"/><circle cx="12.5" cy="8" r=".6"/></symbol>
+  <symbol id="i-close" viewBox="0 0 16 16"><path d="m4 4 8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-share" viewBox="0 0 16 16"><path d="M8 2.5v7M5 5.5l3-3 3 3M3.5 9v4h9V9"/></symbol>
+  <symbol id="i-home" viewBox="0 0 16 16"><path d="m2.5 7.5 5.5-4.5 5.5 4.5V13h-11z"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 16 16"><path d="M3.5 5.5h9l-.8 8h-7.4zM6 5.5V4.5a2 2 0 0 1 4 0v1"/></symbol>
+  <symbol id="i-shirt" viewBox="0 0 16 16"><path d="M5.5 2.5 2.5 4.5l1.5 2.5 1.5-.8v7.3h5V6.2l1.5.8 1.5-2.5-3-2c-.5 1-1.5 1.5-2.5 1.5s-2-.5-2.5-1.5z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 16 16"><path d="M3 4.5h10M3 8h10M3 11.5h10"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 16 16"><path d="M8 2.5v3M8 10.5v3M2.5 8h3M10.5 8h3"/></symbol>
+</svg>
+
+<div class="wrap">
+  <h1>Product editor, calmer</h1>
+  <p class="k">Kesar Studio · Chanderi kurta set · mockup for the owner, 9 Nov 2026. Click through: edit a price to see Save, open a colour, press Save in “Fix before saving”.</p>
+  <ul class="note">
+    <li>One place for each fact: status once (side), readiness once (two tiers), colour once (the swatch on its chip).</li>
+    <li>Price and stock grouped by colour, “same for all sizes” per colour, steppers for stock, select rows to change many at once.</li>
+    <li>What a merchant fills once and rarely touches (tax, search and sharing, the pack, extras) folds into one-line summaries.</li>
+    <li>Details: the ones Google asks for first, as chips; the rest behind “More details”.</li>
+    <li>Phone: status and the checklist at the top, colours as rows that open a sheet, Save above the bottom bar.</li>
+    <li>A failed save lists every problem at the top, each a link that opens and focuses its field.</li>
+  </ul>
+
+  <nav class="views" aria-label="Views">
+    <a href="#desktop">Desktop</a>
+    <a href="#phone">Phone</a>
+    <a href="#new">New product</a>
+    <a href="#fix">Fix before saving</a>
+    <a href="#changes">What changed</a>
+  </nav>
+
+  <!-- ═════════════ DESKTOP ═════════════ -->
+  <section class="view" id="v-desktop" data-view="desktop" aria-labelledby="h-desktop">
+    <h2 class="v" id="h-desktop">Desktop · editing a live product</h2>
+    <div class="stage">
+      <div class="savebar" id="savebar" hidden role="region" aria-label="Unsaved changes">
+        <span>Unsaved changes</span>
+        <span style="display:flex;gap:8px"><button class="btn sm" type="button" id="discard">Discard</button><button class="btn sm primary" type="button" id="save">Save</button></span>
+      </div>
+      <div class="ed">
+        <div style="display:grid;gap:4px">
+          <a class="crumb" href="#desktop"><svg class="ico s"><use href="#i-back"/></svg>Products</a>
+          <div class="head">
+            <div style="flex:1;min-width:min(100%,320px);display:grid;gap:2px">
+              <label for="t1" class="k" style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)">Product title</label>
+              <input id="t1" class="title" value="Chanderi kurta set" data-edit>
+              <div class="meta"><span class="mono">kesar-studio.frrata.shop/products/chanderi-kurta-set</span></div>
+            </div>
+            <div style="display:flex;gap:6px">
+              <a class="btn" href="#desktop"><svg class="ico"><use href="#i-eye"/></svg>Preview</a>
+              <button class="btn" type="button"><svg class="ico"><use href="#i-share"/></svg>Share</button>
+              <button class="btn" type="button" aria-label="More: duplicate, archive"><svg class="ico"><use href="#i-more"/></svg></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="cols">
+          <div class="main">
+            <!-- Photos -->
+            <div class="card" id="d-photos">
+              <div class="hd"><h3>Photos</h3><span class="k">5 · drag to reorder</span></div>
+              <div class="bd">
+                <div class="photos">
+                  <div class="ph cover fab-indigo" tabindex="0" aria-label="Cover photo, Indigo"><span class="fig"></span><span class="dot" style="background:var(--indigo-2)"></span><span class="lbl"><span>Cover</span><span>On model</span></span></div>
+                  <div class="ph fab-indigo" tabindex="0" aria-label="Photo 2, Indigo"><span class="dot" style="background:var(--indigo-2)"></span></div>
+                  <div class="ph fab-rust" tabindex="0" aria-label="Photo 3, Rust"><span class="fig"></span><span class="dot" style="background:var(--rust-2)"></span></div>
+                  <div class="ph fab-rust" tabindex="0" aria-label="Photo 4, Rust"><span class="dot" style="background:var(--rust-2)"></span></div>
+                  <div class="ph fab-ivory" tabindex="0" aria-label="Photo 5, Ivory"><span class="fig"></span><span class="dot" style="background:var(--ivory-2)"></span></div>
+                  <button class="ph add" type="button"><span><svg class="ico"><use href="#i-plus"/></svg><br>Add</span></button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="card">
+              <div class="bd" style="padding-top:14px">
+                <label class="f" for="desc">Description</label>
+                <textarea id="desc" class="input" data-edit>Handwoven chanderi in a straight kurta with palazzo and a sheer dupatta. Light enough for an afternoon pooja, sharp enough for a mehendi.</textarea>
+              </div>
+            </div>
+
+            <!-- Sizes and colours -->
+            <div class="card" id="d-options">
+              <div class="hd"><h3>Sizes and colours</h3></div>
+              <div class="bd">
+                <div class="optrow"><b>Size</b>
+                  <div class="pick" role="group" aria-label="Sizes">
+                    <button type="button" aria-pressed="false" data-edit>XS</button><button type="button" aria-pressed="true" data-edit>S</button><button type="button" aria-pressed="true" data-edit>M</button><button type="button" aria-pressed="true" data-edit>L</button><button type="button" aria-pressed="false" data-edit>XL</button><button type="button" aria-pressed="false" data-edit>XXL</button><button type="button" class="add"><svg class="ico s"><use href="#i-plus"/></svg>Other</button>
+                  </div>
+                </div>
+                <div class="optrow"><b>Colour</b>
+                  <div class="pick" role="group" aria-label="Colours">
+                    <button type="button" aria-pressed="true"><span class="sw indigo"></span>Indigo <span class="k">· Blue</span></button>
+                    <button type="button" aria-pressed="true"><span class="sw rust"></span>Rust <span class="k">· Orange</span></button>
+                    <button type="button" class="add"><svg class="ico s"><use href="#i-plus"/></svg>Colour</button>
+                  </div>
+                </div>
+                <button type="button" class="link" style="justify-self:start">Add an option (style, length)</button>
+              </div>
+            </div>
+
+            <!-- Price and stock -->
+            <div class="card" id="d-price">
+              <div class="hd"><h3>Price and stock</h3><button class="link" type="button" id="cols-more">SKU and barcode</button></div>
+              <div class="bd">
+                <div class="bulk" id="bulk" hidden><span id="bulk-n">2 selected</span><button class="btn sm" type="button">Set price</button><button class="btn sm" type="button">Set stock</button><button class="btn sm" type="button">When sold out</button></div>
+                <div class="tablewrap">
+                  <table class="grid" aria-label="Price and stock by colour and size">
+                    <thead><tr><th style="width:28px"><span class="k" style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)">Select</span></th><th>Size</th><th class="r">Price, ₹</th><th class="r">M.R.P., ₹</th><th>Stock</th><th>When sold out</th><th class="xcol" hidden>SKU</th></tr></thead>
+                    <tbody>
+                      <tr class="grp"><td colspan="7"><div class="gwrap">
+                        <button class="gname" type="button" aria-expanded="true" data-grp="indigo"><svg class="ico s"><use href="#i-chev"/></svg><span class="sw indigo"></span>Indigo</button>
+                        <span class="gsum num">₹2,490 · 9 in stock</span>
+                        <span style="margin-left:auto;display:flex;gap:8px;align-items:center"><span class="k">Your cost</span><input class="input num" style="width:88px;min-height:30px;text-align:right" value="1,180" aria-label="Your cost for Indigo, every size" data-edit></span>
+                      </div></td></tr>
+                      <tr data-of="indigo"><td><input type="checkbox" aria-label="Select Indigo S" data-sel></td><td class="mono">S</td><td class="r"><input class="input cell-price" value="2,490" aria-label="Price Indigo S" data-edit></td><td class="r"><input class="input cell-price" value="2,990" aria-label="MRP Indigo S" data-edit></td><td><span class="stepper"><button type="button" aria-label="One less"><svg class="ico s"><use href="#i-minus"/></svg></button><input value="0" aria-label="Stock Indigo S" inputmode="numeric" data-edit><button type="button" aria-label="One more"><svg class="ico s"><use href="#i-plus"/></svg></button></span></td><td><select class="input" aria-label="When Indigo S is sold out"><option>Stop selling</option><option selected>Pre-order · by 15 Dec</option><option>Make to order</option></select></td><td class="xcol mono" hidden>KS-CHAN-S-IND</td></tr>
+                      <tr data-of="indigo"><td><input type="checkbox" aria-label="Select Indigo M" data-sel></td><td class="mono">M</td><td class="r"><input class="input cell-price" value="2,490" aria-label="Price Indigo M" data-edit></td><td class="r"><input class="input cell-price" value="2,990" aria-label="MRP Indigo M" data-edit></td><td><span class="stepper"><button type="button" aria-label="One less"><svg class="ico s"><use href="#i-minus"/></svg></button><input value="5" aria-label="Stock Indigo M" inputmode="numeric" data-edit><button type="button" aria-label="One more"><svg class="ico s"><use href="#i-plus"/></svg></button></span></td><td><select class="input" aria-label="When Indigo M is sold out"><option selected>Stop selling</option><option>Pre-order</option><option>Make to order</option></select></td><td class="xcol mono" hidden>KS-CHAN-M-IND</td></tr>
+                      <tr data-of="indigo"><td><input type="checkbox" aria-label="Select Indigo L" data-sel></td><td class="mono">L</td><td class="r"><input class="input cell-price" value="2,490" aria-label="Price Indigo L" data-edit></td><td class="r"><input class="input cell-price" value="2,990" aria-label="MRP Indigo L" data-edit></td><td><span class="stepper"><button type="button" aria-label="One less"><svg class="ico s"><use href="#i-minus"/></svg></button><input value="4" aria-label="Stock Indigo L" inputmode="numeric" data-edit><button type="button" aria-label="One more"><svg class="ico s"><use href="#i-plus"/></svg></button></span></td><td><select class="input" aria-label="When Indigo L is sold out"><option selected>Stop selling</option><option>Pre-order</option><option>Make to order</option></select></td><td class="xcol mono" hidden>KS-CHAN-L-IND</td></tr>
+                      <tr class="grp"><td colspan="7"><div class="gwrap">
+                        <button class="gname" type="button" aria-expanded="false" data-grp="rust"><svg class="ico s" style="rotate:-90deg"><use href="#i-chev"/></svg><span class="sw rust"></span>Rust</button>
+                        <span class="gsum num">₹2,490 · 12 in stock · 1 sold out</span>
+                        <span style="margin-left:auto;display:flex;gap:8px;align-items:center"><span class="k">Your cost</span><input class="input num" style="width:88px;min-height:30px;text-align:right" value="1,180" aria-label="Your cost for Rust, every size" data-edit></span>
+                      </div></td></tr>
+                      <tr data-of="rust" hidden><td><input type="checkbox" aria-label="Select Rust S" data-sel></td><td class="mono">S</td><td class="r"><input class="input cell-price" value="2,490" aria-label="Price Rust S"></td><td class="r"><input class="input cell-price" value="2,990" aria-label="MRP Rust S"></td><td><span class="stepper"><button type="button" aria-label="One less"><svg class="ico s"><use href="#i-minus"/></svg></button><input value="5" aria-label="Stock Rust S"><button type="button" aria-label="One more"><svg class="ico s"><use href="#i-plus"/></svg></button></span></td><td><select class="input" aria-label="When Rust S is sold out"><option>Stop selling</option></select></td><td class="xcol mono" hidden>KS-CHAN-S-RUS</td></tr>
+                      <tr data-of="rust" hidden><td><input type="checkbox" aria-label="Select Rust M" data-sel></td><td class="mono">M</td><td class="r"><input class="input cell-price" value="2,490" aria-label="Price Rust M"></td><td class="r"><input class="input cell-price" value="2,990" aria-label="MRP Rust M"></td><td><span class="stepper"><button type="button" aria-label="One less"><svg class="ico s"><use href="#i-minus"/></svg></button><input value="7" aria-label="Stock Rust M"><button type="button" aria-label="One more"><svg class="ico s"><use href="#i-plus"/></svg></button></span></td><td><select class="input" aria-label="When Rust M is sold out"><option>Stop selling</option></select></td><td class="xcol mono" hidden>KS-CHAN-M-RUS</td></tr>
+                      <tr data-of="rust" hidden><td><input type="checkbox" aria-label="Select Rust L" data-sel></td><td class="mono">L</td><td class="r"><input class="input cell-price" value="2,490" aria-label="Price Rust L"></td><td class="r"><input class="input cell-price" value="2,990" aria-label="MRP Rust L"></td><td><span class="stepper"><button type="button" aria-label="One less"><svg class="ico s"><use href="#i-minus"/></svg></button><input value="0" aria-label="Stock Rust L"><button type="button" aria-label="One more"><svg class="ico s"><use href="#i-plus"/></svg></button></span></td><td><select class="input" aria-label="When Rust L is sold out"><option>Stop selling</option></select></td><td class="xcol mono" hidden>KS-CHAN-L-RUS</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Details -->
+            <div class="card" id="d-details">
+              <div class="hd"><h3>Details</h3><span class="k">Kurtas &amp; kurta sets</span></div>
+              <div class="bd">
+                <div class="optrow"><b>For</b><div class="pick" role="group" aria-label="Target gender"><button type="button" aria-pressed="true">Women</button><button type="button" aria-pressed="false">Men</button><button type="button" aria-pressed="false">Unisex</button></div></div>
+                <div class="optrow"><b>Age</b><div class="pick" role="group" aria-label="Age group"><button type="button" aria-pressed="true">Adults</button><button type="button" aria-pressed="false">Teens</button><button type="button" aria-pressed="false">Kids</button></div></div>
+                <div class="optrow"><b>Fabric</b><div class="pick" role="group" aria-label="Fabric"><button type="button" aria-pressed="true">Chanderi</button><button type="button" aria-pressed="false">Cotton</button><button type="button" aria-pressed="false">Linen</button><button type="button" class="add">More…</button></div></div>
+                <details>
+                  <summary class="link" style="list-style:none">More details · 8</summary>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px;margin-top:10px">
+                    <label class="f">Neckline<select class="input"><option>Choose</option><option>Round</option><option>V-neck</option><option>Mandarin</option></select></label>
+                    <label class="f">Sleeve<select class="input"><option>Choose</option><option>Three-quarter</option><option>Full</option></select></label>
+                    <label class="f">Occasion<select class="input"><option>Festive</option></select></label>
+                    <label class="f">Set includes<select class="input"><option>Kurta, palazzo, dupatta</option></select></label>
+                  </div>
+                </details>
+              </div>
+            </div>
+
+            <!-- Fit -->
+            <div class="card">
+              <div class="hd"><h3>Fit</h3></div>
+              <div class="bd">
+                <div class="combo"><div><b style="font-weight:500">Kurta set · Women</b><div class="p">XS–XXL · bust, waist, hip · cm · shared by 6 products</div></div><span style="display:flex;gap:10px"><button class="link" type="button">View</button><button class="link" type="button">Change</button></span></div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:10px">
+                  <label class="f" for="mh">Model's height <span class="opt">optional</span><input id="mh" class="input" value="5 ft 6 in" data-edit></label>
+                  <label class="f" for="mw">Wears <span class="opt">optional</span><input id="mw" class="input" value="S" data-edit></label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Set once, rarely touched -->
+            <div class="card rows" id="d-more">
+              <details id="d-tax">
+                <summary><span><b>Tax</b><span class="s">HSN 6211 · 5% up to ₹2,625 · pieces · made in India</span></span><span class="chip c-ok">Set</span><svg class="ico chev"><use href="#i-chev"/></svg></summary>
+                <div class="in">
+                  <label class="f">HSN code<input class="input mono" value="6211 · Track suits and other garments"></label>
+                  <div class="taxbar"><span class="num" style="font-size:13px"><b>5%</b> at ₹2,490 a piece including GST</span><span class="track"><i></i></span><span class="k">5% up to ₹2,625 incl. · 18% above</span></div>
+                </div>
+              </details>
+              <details>
+                <summary><span><b>Search and sharing</b><span class="s">Made for you from the title, colours and price</span></span><span class="chip c-n">Auto</span><svg class="ico chev"><use href="#i-chev"/></svg></summary>
+                <div class="in"><label class="f">Title in Google<input class="input" value="Chanderi kurta set in Indigo, Rust · Kesar Studio"></label></div>
+              </details>
+              <details>
+                <summary><span><b>Story and pairs</b><span class="s">2 stories · pairs with 1 product</span></span><span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary>
+                <div class="in"><p class="k" style="margin:0">The two cards your Look offers, as they are today.</p></div>
+              </details>
+            </div>
+          </div>
+
+          <aside class="side" aria-label="Status and organising">
+            <div class="card" id="d-status">
+              <div class="hd"><h3>Status</h3><button class="link" type="button" style="font-size:12.5px">Schedule</button></div>
+              <div class="bd">
+                <div class="seg" role="group" aria-label="Status">
+                  <button type="button" aria-pressed="false">Draft</button><button type="button" aria-pressed="true">Active</button><button type="button" aria-pressed="false">Unlisted</button>
+                </div>
+                <div class="tier"><span>Can sell</span><span class="chip c-ok">Ready</span></div>
+                <ul class="check">
+                  <li><span class="it"><svg class="ico ok"><use href="#i-check"/></svg>Photo, title, price</span></li>
+                  <li><span class="it"><svg class="ico ok"><use href="#i-check"/></svg>Something in stock</span></li>
+                  <li><span class="it"><svg class="ico ok"><use href="#i-check"/></svg>HSN code</span></li>
+                </ul>
+                <div class="tier"><span>Google and Meta</span><span class="chip c-warn">2 to add</span></div>
+                <ul class="check">
+                  <li><a href="#desktop" data-jump="d-options"><svg class="ico todo"><use href="#i-todo"/></svg>Colour family for Rust</a></li>
+                  <li><a href="#desktop" data-jump="d-details"><svg class="ico todo"><use href="#i-todo"/></svg>Neckline</a></li>
+                </ul>
+              </div>
+              <dl class="facts" style="margin:0">
+                <div><dt>Price</dt><dd>₹2,490</dd></div>
+                <div><dt>In stock</dt><dd>21 · 2 sold out</dd></div>
+              </dl>
+            </div>
+            <div class="card">
+              <div class="hd"><h3>Organise</h3></div>
+              <div class="bd">
+                <label class="f">Category
+                  <span class="combo"><span><span style="font-weight:500">Kurtas &amp; kurta sets</span><span class="p" style="display:block">Clothing › Traditional &amp; ceremonial</span></span><button class="link" type="button">Change</button></span>
+                </label>
+                <div class="f">Collections
+                  <div class="pick"><button type="button" aria-pressed="true">Festive edit</button><button type="button" class="add"><svg class="ico s"><use href="#i-plus"/></svg>Add</button></div>
+                  <span class="k" style="font-weight:400">Also in Kurtas, by its rules</span>
+                </div>
+                <label class="f" for="tags">Tags <span class="opt">for your own sorting</span><input id="tags" class="input" placeholder="Diwali 2026"></label>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════ PHONE ═════════════ -->
+  <section class="view" id="v-phone" data-view="phone" aria-labelledby="h-phone" hidden>
+    <h2 class="v" id="h-phone">Phone · the same product</h2>
+    <div class="phonewrap">
+      <div class="phone" id="phone1">
+        <div class="top">
+          <a class="crumb" href="#phone"><svg class="ico s"><use href="#i-back"/></svg>Products</a>
+          <input class="title" value="Chanderi kurta set" aria-label="Product title">
+          <div class="statusrow">
+            <button class="statusbtn" type="button"><i></i>Active<svg class="ico s"><use href="#i-chev"/></svg></button>
+            <button class="statusbtn" type="button" data-jump-phone="p-ready"><span class="chip c-warn" style="padding:0 6px">2</span>for Google and Meta</button>
+          </div>
+        </div>
+        <div class="scroll">
+          <div class="card"><div class="bd" style="padding:12px">
+            <div class="pstrip">
+              <div class="ph fab-indigo" style="aspect-ratio:4/5"><span class="fig"></span><span class="lbl"><span>Cover</span></span></div>
+              <div class="ph fab-indigo"></div>
+              <div class="ph fab-rust"><span class="fig"></span></div>
+              <div class="ph fab-ivory"><span class="fig"></span></div>
+              <button class="ph add" type="button"><span><svg class="ico"><use href="#i-cam"/></svg><br>Add</span></button>
+            </div>
+          </div></div>
+          <div class="card"><div class="bd" style="padding:12px"><label class="f" for="pdesc">Description</label><textarea id="pdesc" class="input" style="min-height:72px">Handwoven chanderi in a straight kurta with palazzo and a sheer dupatta.</textarea></div></div>
+          <div class="card">
+            <div class="hd" style="padding:12px 14px 4px"><h3>Price and stock</h3><span class="k">S · M · L</span></div>
+            <div>
+              <button class="cgroup" type="button" data-sheet="indigo"><span class="sw indigo"></span><span><b>Indigo</b><span class="s num">₹2,490 · 9 in stock · S on pre-order</span></span><span></span><svg class="ico"><use href="#i-chev"/></svg></button>
+              <button class="cgroup" type="button" data-sheet="rust"><span class="sw rust"></span><span><b>Rust</b><span class="s num">₹2,490 · 12 in stock · <span style="color:var(--warn-text)">L sold out</span></span></span><span></span><svg class="ico"><use href="#i-chev"/></svg></button>
+              <button class="cgroup" type="button" style="color:var(--sub)"><svg class="ico"><use href="#i-plus"/></svg><span>Add a size or colour</span><span></span><span></span></button>
+            </div>
+          </div>
+          <div class="card"><div class="hd" style="padding:12px 14px 0"><h3>Details</h3></div><div class="bd" style="padding:10px 14px 14px">
+            <div class="pick" role="group" aria-label="Target gender"><button type="button" aria-pressed="true">Women</button><button type="button" aria-pressed="false">Men</button><button type="button" aria-pressed="false">Unisex</button></div>
+            <div class="pick" role="group" aria-label="Fabric"><button type="button" aria-pressed="true">Chanderi</button><button type="button" aria-pressed="false">Cotton</button><button type="button" class="add">More…</button></div>
+            <span class="link">More details · 8</span>
+          </div></div>
+          <div class="card rows">
+            <details><summary><span><b>Fit</b><span class="s">Kurta set · Women · model 5 ft 6 in wears S</span></span><span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary></details>
+            <details><summary><span><b>Tax</b><span class="s">HSN 6211 · 5% up to ₹2,625</span></span><span class="chip c-ok">Set</span><svg class="ico chev"><use href="#i-chev"/></svg></summary></details>
+            <details><summary><span><b>Category and collections</b><span class="s">Kurtas &amp; kurta sets · Festive edit</span></span><span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary></details>
+            <details id="p-ready"><summary><span><b>Google and Meta</b><span class="s">Colour family for Rust · Neckline</span></span><span class="chip c-warn">2</span><svg class="ico chev"><use href="#i-chev"/></svg></summary></details>
+            <details><summary><span><b>Search and sharing</b><span class="s">Made for you</span></span><span class="chip c-n">Auto</span><svg class="ico chev"><use href="#i-chev"/></svg></summary></details>
+          </div>
+        </div>
+        <div class="psave"><span style="font-size:13px">Unsaved changes</span><span style="display:flex;gap:6px"><button class="btn sm" type="button">Discard</button><button class="btn sm primary" type="button">Save</button></span></div>
+        <div class="pnav"><span><svg class="ico"><use href="#i-home"/></svg>Home</span><span><svg class="ico"><use href="#i-bag"/></svg>Orders</span><span class="on"><svg class="ico"><use href="#i-shirt"/></svg>Products</span><span><svg class="ico"><use href="#i-menu"/></svg>More</span></div>
+        <div class="scrim" id="pscrim"></div>
+        <div class="sheet" id="psheet" role="dialog" aria-modal="true" aria-labelledby="psheet-h">
+          <div class="sh"><b id="psheet-h" style="display:flex;gap:8px;align-items:center"><span class="sw indigo" id="psheet-sw"></span><span id="psheet-name">Indigo</span></b><button class="btn ghost sm" type="button" data-close aria-label="Close"><svg class="ico"><use href="#i-close"/></svg></button></div>
+          <div class="sb">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px 0 10px">
+              <label class="f">Price, ₹ <span class="opt">every size</span><input class="input num" inputmode="decimal" value="2,490"></label>
+              <label class="f">Your cost, ₹<input class="input num" inputmode="decimal" value="1,180"></label>
+            </div>
+            <div class="srow"><b>S</b><span class="sees" style="color:var(--info-text)">Pre-order · by 15 Dec</span><span class="stepper"><button type="button" aria-label="One less"><svg class="ico s"><use href="#i-minus"/></svg></button><input value="0" inputmode="numeric" aria-label="Stock S"><button type="button" aria-label="One more"><svg class="ico s"><use href="#i-plus"/></svg></button></span></div>
+            <div class="srow"><b>M</b><span class="sees" style="color:var(--ok-text)">In stock</span><span class="stepper"><button type="button" aria-label="One less"><svg class="ico s"><use href="#i-minus"/></svg></button><input value="5" inputmode="numeric" aria-label="Stock M"><button type="button" aria-label="One more"><svg class="ico s"><use href="#i-plus"/></svg></button></span></div>
+            <div class="srow"><b>L</b><span class="sees" style="color:var(--ok-text)">Only 4 left</span><span class="stepper"><button type="button" aria-label="One less"><svg class="ico s"><use href="#i-minus"/></svg></button><input value="4" inputmode="numeric" aria-label="Stock L"><button type="button" aria-label="One more"><svg class="ico s"><use href="#i-plus"/></svg></button></span></div>
+            <button class="link" type="button" style="margin-top:8px">Different price per size, M.R.P., SKU</button>
+          </div>
+          <div class="sf"><button class="btn primary" type="button" data-close>Done</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════ NEW PRODUCT ═════════════ -->
+  <section class="view" id="v-new" data-view="new" aria-labelledby="h-new" hidden>
+    <h2 class="v" id="h-new">New product · photos first, the rest when you want</h2>
+    <div class="stage">
+      <div class="ed">
+        <div style="display:grid;gap:4px"><a class="crumb" href="#new"><svg class="ico s"><use href="#i-back"/></svg>Products</a><h3 style="font-size:24px;font-weight:700;margin:0">New product</h3></div>
+        <div class="cols">
+          <div class="main">
+            <div class="card"><div class="bd" style="padding-top:16px">
+              <div class="drop" id="drop">
+                <svg class="ico big"><use href="#i-cam"/></svg>
+                <b>Add photos</b>
+                <span class="k">From your phone or computer · the first is the cover</span>
+                <button class="btn primary" type="button" id="addph">Choose photos</button>
+              </div>
+              <div class="photos" id="newphotos" hidden>
+                <div class="ph cover fab-ivory"><span class="fig"></span><span class="lbl"><span>Cover</span></span></div>
+                <div class="ph fab-ivory"></div><div class="ph fab-indigo"><span class="fig"></span></div>
+                <button class="ph add" type="button"><span><svg class="ico"><use href="#i-plus"/></svg><br>Add</span></button>
+              </div>
+              <div class="sugg" id="sugg" hidden><svg class="ico"><use href="#i-spark"/></svg><span>Filled from your photos. Check each one.</span><button class="btn sm" type="button" id="accept">Keep all</button><button class="btn sm" type="button" id="clear">Clear</button></div>
+            </div></div>
+            <div class="card"><div class="bd" style="padding-top:16px">
+              <label class="f" for="nt">Title<input id="nt" class="input" placeholder="Chanderi kurta set"></label>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:10px">
+                <label class="f" for="np">Price, ₹<input id="np" class="input num" inputmode="decimal" placeholder="2,490"></label>
+                <label class="f" for="nm">M.R.P., ₹ <span class="opt">optional</span><input id="nm" class="input num" inputmode="decimal"></label>
+                <label class="f" for="ns">Stock, each size<input id="ns" class="input num" inputmode="numeric" placeholder="5"></label>
+              </div>
+              <div class="optrow"><b>Size</b><div class="pick" role="group" aria-label="Sizes"><button type="button" aria-pressed="false">XS</button><button type="button" aria-pressed="true">S</button><button type="button" aria-pressed="true">M</button><button type="button" aria-pressed="true">L</button><button type="button" aria-pressed="false">XL</button><button type="button" aria-pressed="false">Free size</button></div></div>
+              <div class="optrow"><b>Colour</b><div class="pick" role="group" aria-label="Colours" id="ncol"><button type="button" class="add"><svg class="ico s"><use href="#i-plus"/></svg>Colour</button></div></div>
+            </div></div>
+            <div class="card rows">
+              <details><summary><span><b>Description</b><span class="s">Add later</span></span><span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary><div class="in"><textarea class="input" id="ndesc" aria-label="Description"></textarea></div></details>
+              <details><summary><span><b>Category and details</b><span class="s" id="ncat">Add later</span></span><span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary></details>
+              <details><summary><span><b>Fit</b><span class="s">Kurta set · Women, from your last product</span></span><span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary></details>
+              <details><summary><span><b>Tax</b><span class="s">HSN 6211 · 5%, from the category</span></span><span class="chip c-ok">Set</span><svg class="ico chev"><use href="#i-chev"/></svg></summary></details>
+            </div>
+          </div>
+          <aside class="side">
+            <div class="card">
+              <div class="hd"><h3>Status</h3></div>
+              <div class="bd">
+                <div class="seg" role="group" aria-label="Status"><button type="button" aria-pressed="true">Draft</button><button type="button" aria-pressed="false" disabled>Active</button><button type="button" aria-pressed="false" disabled>Unlisted</button></div>
+                <div class="tier"><span>Can sell</span><span class="chip c-warn" id="ncan">3 to add</span></div>
+                <ul class="check">
+                  <li><a href="#new"><svg class="ico todo"><use href="#i-todo"/></svg>A photo</a></li>
+                  <li><a href="#new"><svg class="ico todo"><use href="#i-todo"/></svg>Title</a></li>
+                  <li><a href="#new"><svg class="ico todo"><use href="#i-todo"/></svg>Price</a></li>
+                  <li><span class="it"><svg class="ico ok"><use href="#i-check"/></svg>HSN code</span></li>
+                </ul>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" type="button">Save draft</button><button class="btn primary" type="button" disabled>Save and publish</button></div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════ FIX BEFORE SAVING ═════════════ -->
+  <section class="view" id="v-fix" data-view="fix" aria-labelledby="h-fix" hidden>
+    <h2 class="v" id="h-fix">Fix before saving · one list, each a link</h2>
+    <div class="stage">
+      <div class="savebar"><span>Unsaved changes</span><span style="display:flex;gap:8px"><button class="btn sm" type="button">Discard</button><button class="btn sm primary" type="button" id="fixsave">Save</button></span></div>
+      <div class="ed" style="max-width:760px">
+        <div class="errsum" id="errsum" tabindex="-1" role="alert" hidden>
+          <h3>2 things to fix</h3>
+          <ul>
+            <li><a href="#fix" data-fix="f-price">Price for Rust L is missing</a></li>
+            <li><a href="#fix" data-fix="f-hsn">HSN code has 5 digits; use 4, 6 or 8</a></li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="hd"><h3>Price and stock</h3></div>
+          <div class="bd"><div class="tablewrap"><table class="grid" aria-label="Rust sizes"><thead><tr><th>Size</th><th class="r">Price, ₹</th><th>Stock</th></tr></thead><tbody>
+            <tr class="grp"><td colspan="3"><div class="gwrap"><span class="gname"><span class="sw rust"></span>Rust</span></div></td></tr>
+            <tr><td class="mono">M</td><td class="r"><input class="input cell-price" value="2,490" aria-label="Price Rust M"></td><td class="num">7</td></tr>
+            <tr><td class="mono">L</td><td class="r"><input class="input cell-price" id="f-price" value="" aria-label="Price Rust L" aria-describedby="f-price-e"><div class="err" id="f-price-e" hidden>Price for Rust L is missing</div></td><td class="num">0</td></tr>
+          </tbody></table></div></div>
+        </div>
+        <div class="card rows">
+          <details id="fix-tax">
+            <summary><span><b>Tax</b><span class="s">HSN 62113 · pieces</span></span><span class="chip c-danger" id="taxchip" hidden>Fix</span><svg class="ico chev"><use href="#i-chev"/></svg></summary>
+            <div class="in"><label class="f" for="f-hsn">HSN code<input id="f-hsn" class="input mono" value="62113" aria-describedby="f-hsn-e"></label><div class="err" id="f-hsn-e" hidden>HSN code has 5 digits; use 4, 6 or 8</div></div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════ WHAT CHANGED ═════════════ -->
+  <section class="view" id="v-changes" data-view="changes" aria-labelledby="h-changes" hidden>
+    <h2 class="v" id="h-changes">What changed, and why</h2>
+    <div class="card" style="overflow-x:auto">
+      <table class="cmp">
+        <thead><tr><th>Part</th><th>Today</th><th>Proposed</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Length</td><td>11 cards; 3,341 px on a computer, 6,599 px on a phone</td><td>7 cards; set-once parts fold into one-line rows</td><td class="src">Shopify collapses heavy sections (Fall ’26, 28 Oct 2026)</td></tr>
+          <tr><td>Status</td><td>Header badge, Status card, Summary card; last on a phone</td><td>Once: a three-way switch in the side, first on a phone</td><td class="src">Shopify keeps status in a side panel that stays in view (28 Oct 2026)</td></tr>
+          <tr><td>Readiness</td><td>“Ready · 6 of 6” and a separate “Ready for” card</td><td>One checklist, two tiers: Can sell (needed to go live) and Google and Meta (advice); each item opens its field</td><td class="src">Meesho rejects uploads missing HSN or category attributes (base.com, 20 Aug 2026)</td></tr>
+          <tr><td>Colours</td><td>Option chips, then a second Colours list for family and swatch</td><td>One chip per colour carrying its swatch and family</td><td class="src">Shopify links the Colour option to the colour metafield for swatches (19 Oct 2026)</td></tr>
+          <tr><td>Price and stock</td><td>Seven fields per size and colour; a phone stacks each into a 340 px card</td><td>Grouped by colour; cost once per colour; stock steppers; select rows to set many; SKU and barcode on request; on a phone each colour opens a sheet</td><td class="src">Shopify variant redesign: groups, bulk select, table view (28 Oct 2026)</td></tr>
+          <tr><td>Details</td><td>11 “Choose…” dropdowns of equal weight</td><td>What Google asks first, as chips; the rest under More details</td><td class="src">NN/g: radios or buttons when options fit, dropdowns go wrong on phones (17 Jul 2026)</td></tr>
+          <tr><td>Size chart</td><td>The whole chart printed in the editor</td><td>One line (type, sizes, measures) with View and Change; the model beside it</td><td class="src">Myntra makes a size chart mandatory for apparel (vendor guide, undated)</td></tr>
+          <tr><td>Saving</td><td>A bar on change; errors beside fields only</td><td>Same bar; a failed save lists every problem at the top, each a link that opens and focuses its field</td><td class="src">GOV.UK error summary (updated Jun 2026)</td></tr>
+          <tr><td>New product</td><td>Title only, then the full editor</td><td>Photos, title, price, sizes; the rest folds with “Add later”; tax from the category</td><td class="src">Shopify guided setup asks media, title, description first (28 Oct 2026)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="phase">
+      <div class="card"><b>E·1 · Calmer editor</b><span class="k">Layout, status once, two-tier checklist, colour once, grouped price and stock, details as chips, folded rows, error summary, phone sheet. No new data.</span></div>
+      <div class="card"><b>E·2 · Photos first</b><span class="k">The new-product page above; photo per colour by tapping its chip; tax and size chart from the category and the last product.</span></div>
+      <div class="card"><b>E·3 · Filled from photos</b><span class="k">Title, category, colours and details suggested from the photos, each to keep or clear; needs the unit-economics review (a model call per product).</span></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const views = ['desktop','phone','new','fix','changes'];
+  const show = () => {
+    const h = location.hash.slice(1); const v = views.includes(h) ? h : 'desktop';
+    document.querySelectorAll('section.view').forEach((s) => { s.hidden = s.dataset.view !== v });
+    document.querySelectorAll('nav.views a').forEach((a) => { if (a.getAttribute('href') === '#' + v) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current') });
+  };
+  addEventListener('hashchange', show); show();
+
+  // Save bar on the first edit
+  const bar = document.getElementById('savebar');
+  document.querySelectorAll('#v-desktop [data-edit]').forEach((el) => {
+    const on = () => { bar.hidden = false };
+    el.addEventListener('input', on);
+    if (el.tagName === 'BUTTON') el.addEventListener('click', () => { el.setAttribute('aria-pressed', el.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); on() });
+  });
+  document.getElementById('discard').onclick = () => { bar.hidden = true };
+  document.getElementById('save').onclick = () => { bar.hidden = true };
+
+  // Toggle buttons (status, picks) that are not edits
+  document.querySelectorAll('.seg').forEach((g) => g.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b || b.disabled) return;
+    g.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+  }));
+  document.querySelectorAll('.pick button:not(.add):not([data-edit])').forEach((b) => b.addEventListener('click', () => {
+    if (b.closest('#d-options')) return;
+    b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+  }));
+
+  // Colour groups open and close
+  document.querySelectorAll('[data-grp]').forEach((b) => b.addEventListener('click', () => {
+    const open = b.getAttribute('aria-expanded') !== 'true';
+    b.setAttribute('aria-expanded', String(open));
+    b.querySelector('svg').style.rotate = open ? '0deg' : '-90deg';
+    document.querySelectorAll(`tr[data-of="${b.dataset.grp}"]`).forEach((r) => { r.hidden = !open });
+  }));
+
+  // Steppers
+  document.querySelectorAll('.stepper').forEach((s) => {
+    const [less, input, more] = [s.children[0], s.children[1], s.children[2]];
+    less.onclick = () => { input.value = Math.max(0, (+input.value || 0) - 1); input.dispatchEvent(new Event('input', { bubbles: true })) };
+    more.onclick = () => { input.value = (+input.value || 0) + 1; input.dispatchEvent(new Event('input', { bubbles: true })) };
+  });
+
+  // Row selection → bulk bar
+  const bulk = document.getElementById('bulk');
+  const sel = () => { const n = document.querySelectorAll('#v-desktop [data-sel]:checked').length; bulk.hidden = n === 0; document.getElementById('bulk-n').textContent = `${n} selected` };
+  document.querySelectorAll('#v-desktop [data-sel]').forEach((c) => c.addEventListener('change', sel));
+
+  // SKU and barcode on request
+  document.getElementById('cols-more').onclick = (e) => {
+    const on = document.querySelector('.xcol').hidden;
+    document.querySelectorAll('.xcol').forEach((x) => { x.hidden = !on });
+    e.currentTarget.textContent = on ? 'Hide SKU' : 'SKU and barcode';
+  };
+
+  // Checklist items jump to their field
+  document.querySelectorAll('[data-jump]').forEach((a) => a.addEventListener('click', (e) => {
+    e.preventDefault(); const t = document.getElementById(a.dataset.jump);
+    t.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+    t.style.outline = '2px solid var(--fg)'; setTimeout(() => { t.style.outline = '' }, 1200);
+  }));
+
+  // Phone: a colour opens its sheet
+  const scrim = document.getElementById('pscrim'), sheet = document.getElementById('psheet');
+  const close = () => { scrim.classList.remove('open'); sheet.classList.remove('open') };
+  document.querySelectorAll('[data-sheet]').forEach((b) => b.addEventListener('click', () => {
+    const c = b.dataset.sheet;
+    document.getElementById('psheet-name').textContent = c === 'rust' ? 'Rust' : 'Indigo';
+    document.getElementById('psheet-sw').className = 'sw ' + c;
+    scrim.classList.add('open'); sheet.classList.add('open'); sheet.querySelector('[data-close]').focus();
+  }));
+  scrim.onclick = close; sheet.querySelectorAll('[data-close]').forEach((b) => { b.onclick = close });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') close() });
+  document.querySelectorAll('[data-jump-phone]').forEach((b) => b.addEventListener('click', () => { const d = document.getElementById(b.dataset.jumpPhone); d.open = true; d.scrollIntoView({ block: 'nearest' }) }));
+
+  // New product: photos, then suggestions to keep or clear
+  document.getElementById('addph').onclick = () => {
+    document.getElementById('drop').hidden = true; document.getElementById('newphotos').hidden = false; document.getElementById('sugg').hidden = false;
+    const t = document.getElementById('nt'); t.value = 'Chanderi kurta set'; t.classList.add('suggested');
+    document.getElementById('ncol').insertAdjacentHTML('afterbegin', '<button type="button" aria-pressed="true" class="suggested"><span class="sw ivory"></span>Ivory</button><button type="button" aria-pressed="true" class="suggested"><span class="sw indigo"></span>Indigo</button>');
+    document.getElementById('ncat').textContent = 'Kurtas & kurta sets · Chanderi · Women';
+    document.getElementById('ncan').textContent = '1 to add';
+  };
+  const unmark = () => { document.querySelectorAll('#v-new .suggested').forEach((x) => x.classList.remove('suggested')); document.getElementById('sugg').hidden = true };
+  document.getElementById('accept').onclick = unmark;
+  document.getElementById('clear').onclick = () => { document.getElementById('nt').value = ''; document.querySelectorAll('#ncol .suggested').forEach((x) => x.remove()); document.getElementById('ncat').textContent = 'Add later'; unmark() };
+
+  // Fix before saving
+  document.getElementById('fixsave').onclick = () => {
+    const s = document.getElementById('errsum'); s.hidden = false; s.focus();
+    document.getElementById('f-price').setAttribute('aria-invalid','true'); document.getElementById('f-price-e').hidden = false;
+    document.getElementById('f-hsn').setAttribute('aria-invalid','true'); document.getElementById('f-hsn-e').hidden = false;
+    document.getElementById('fix-tax').open = true; document.getElementById('taxchip').hidden = false;
+  };
+  document.querySelectorAll('[data-fix]').forEach((a) => a.addEventListener('click', (e) => {
+    e.preventDefault(); const f = document.getElementById(a.dataset.fix); const d = f.closest('details'); if (d) d.open = true; f.focus();
+  }));
+})();
+</script>
