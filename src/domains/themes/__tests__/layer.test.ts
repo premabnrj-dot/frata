@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { CATALOGUE } from '../catalogue'
-import { brandColourProblem, carryOver, diffLayers, layerProblems, onColour } from '../layer'
+import { brandColourProblem, carryOver, layerProblems, onColour } from '../layer'
 import { readinessOf, truePromises, type ShopFacts } from '../readiness'
 import { resolveTheme } from '../resolve'
-import { SectionSchema, type SectionInstance } from '../sections'
+import { SectionSchema } from '../sections'
 
 const ed = CATALOGUE.editorial!['1.0.0']!, mi = CATALOGUE.minimal!['1.0.0']!, cl = CATALOGUE.classic!['1.0.0']!
 const sec = (x: unknown) => SectionSchema.parse(x)
@@ -62,15 +62,6 @@ describe('carryOver (Try another theme)', () => {
   })
 })
 
-describe('diffLayers (the publish list)', () => {
-  const h = (xs: unknown[]) => xs.map(sec) as SectionInstance[]
-  it('names what shoppers will see change', () => {
-    const a = { theme: 'editorial', style: 'haldi', settings: {}, home: h([{ id: 'n', key: 'products', heading: 'New', source: { kind: 'newest' }, count: 4 }, { id: 'o', key: 'promises', show: ['cod'] }]) }
-    const b = { theme: 'editorial', themeName: 'Editorial', style: 'rose', styleName: 'Rose', settings: { corners: 'round' as const }, home: h([{ id: 'o', key: 'promises', show: ['cod'], hidden: true }, { id: 'n', key: 'products', heading: 'New', source: { kind: 'newest' }, count: 4 }, { id: 'b', key: 'products', heading: 'Best', source: { kind: 'best_sellers' }, count: 4 }]) }
-    expect(diffLayers(a, b)).toEqual(['Colours: Rose', 'Corners', 'Shop by promise hidden', 'Products added', 'Sections moved'])
-    expect(diffLayers(null, b)).toEqual(['Theme: Editorial · Rose'])
-  })
-})
 
 describe('readiness (publish tier)', () => {
   const f: ShopFacts = { collections: [{ handle: 'kurtas', hasProducts: true }, { handle: 'empty', hasProducts: false }], codOn: true, freeShippingAbove: null, returnDays: 7, dispatchDays: 2 }

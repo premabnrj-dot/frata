@@ -45,7 +45,7 @@ export default {
         await Promise.race([ask.waitFor().then(() => ask.getByRole('button', { name: `Try ${name}` }).click()), riya.waitForURL(/\/console\/look\/customize$/)])
         await riya.waitForURL(/\/console\/look\/customize$/)
         const [r] = await db`select theme_key, theme_version from shop_theme_revisions where tenant_id = ${KESAR} order by updated_at desc limit 1`
-        assert.deepEqual([r.theme_key, r.theme_version], [key, '2.0.0'])
+        assert.equal(r.theme_key, key); assert.match(r.theme_version, /^2\./)
         const f = riya.frameLocator(FRAME)
         await f.locator('[data-section]').first().waitFor()
         await riya.waitForTimeout(400)

@@ -19,7 +19,7 @@ import { PreviewBridge } from './bridge'
 export const metadata: Metadata = { title: 'Look preview', robots: { index: false, follow: false } }
 export const dynamic = 'force-dynamic'
 
-export default async function LookPreview({ params }: { params: Promise<{ revision: string; path?: string[] }> }) {
+export default async function LookPreview({ params, searchParams }: { params: Promise<{ revision: string; path?: string[] }>; searchParams: Promise<{ as?: string }> }) {
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) notFound()
   const { revision, path = [] } = await params
@@ -32,7 +32,8 @@ export default async function LookPreview({ params }: { params: Promise<{ revisi
   // A theme with samples (2.0) fills an empty shop with sample pieces and missing photos with sample scenes, here only.
   const resolved = themeOf(shop, rev)
   const look = manifestOf(resolved.key, resolved.version)?.samples
-  const samples = !!look
+  // `?as=shop`: the shop as shoppers see it (no samples): the popup after Publish shows it behind itself.
+  const samples = !!look && (await searchParams).as !== 'shop'
   const theme = look ? withSampleImages(resolved, look) : resolved
   const cat = shellNeedsCatalogue(theme) ? await previewCatalogue(tenantId) : null
   const { circles, strip } = shellPictures(theme, cat && samples ? withSamples(cat, now) : cat, now)

@@ -3,11 +3,11 @@ import { ON_COLOUR } from './catalogue/kit'
 import { choicesFor } from './choices'
 import { contrast } from './contrast'
 import { SECTION_NAMES, SectionSchema, MAX_PER_PAGE, MAX_SECTIONS, shopPath, type SectionInstance } from './sections'
-import { FOOTERS, HEADERS, PAGE_DEFAULTS, PAIRINGS, type Hex, type Scheme, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
+import { FOOTERS, HEADERS, HEADER_NAMES, PAGE_DEFAULTS, PAIRINGS, type Hex, type Scheme, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
 
 // =============================================================================
 // FILE: src/domains/themes/layer.ts — the merchant's layer: its save schema, the brand colour rule, switching
-// themes (carryOver) and the publish dialog's change list (diffLayers). Pure.
+// themes (carryOver). Pure. (The publish dialog's change list went with Look v3: Publish is one line, owner 2026-11-09.)
 // =============================================================================
 
 const hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/).transform((h) => h.toUpperCase() as Hex)
@@ -117,7 +117,7 @@ export function carryOver(from: { manifest: ThemeManifest; layer: ThemeLayer }, 
   }
   if (was.header !== from.manifest.defaults.header) {
     if (to.allowed.headers.includes(was.header)) settings.header = was.header
-    else lost.push(`The ${was.header === 'circles' ? 'category circles' : was.header} header isn't in ${to.name}`)
+    else lost.push(`The ${HEADER_NAMES[was.header]} header isn't in ${to.name}`)
   }
   const sections = (from.layer.home ?? from.manifest.home).flatMap((s) => { const r = SectionSchema.safeParse(s); return r.success ? [r.data] : [] })
   const kept = sections.filter((s) => to.allowed.sections.includes(s.key))
@@ -125,37 +125,4 @@ export function carryOver(from: { manifest: ThemeManifest; layer: ThemeLayer }, 
   // Keep the merchant's own Home only if they changed it; an untouched Home takes the new theme's.
   const changed = JSON.stringify(from.layer.home ?? null) !== 'null'
   return { layer: { style: to.styles[0]!.key, settings, ...(changed ? { home: kept } : {}) }, lost }
-}
-
-/** The publish dialog's list: what a shopper will see change, in words (mockup "Publish"). */
-export function diffLayers(a: { theme: string; style: string; settings: Partial<ThemeSettings>; home: SectionInstance[] } | null, b: { theme: string; themeName: string; style: string; styleName: string; settings: Partial<ThemeSettings>; home: SectionInstance[] }): string[] {
-  if (!a || a.theme !== b.theme) return [`Theme: ${b.themeName} · ${b.styleName}`]
-  const out: string[] = []
-  if (a.style !== b.style) out.push(`Colours: ${b.styleName}`)
-  for (const k of Object.keys({ ...a.settings, ...b.settings }) as (keyof ThemeSettings)[]) {
-    if (JSON.stringify(a.settings[k] ?? null) !== JSON.stringify(b.settings[k] ?? null)) out.push(SETTING_NAMES[k])
-  }
-  const before = new Map(a.home.map((s) => [s.id, s]))
-  const after = new Map(b.home.map((s) => [s.id, s]))
-  for (const s of b.home) {
-    const was = before.get(s.id)
-    if (!was) out.push(`${SECTION_NAMES[s.key]} added`)
-    else if (!was.hidden && s.hidden) out.push(`${SECTION_NAMES[s.key]} hidden`)
-    else if (was.hidden && !s.hidden) out.push(`${SECTION_NAMES[s.key]} shown`)
-    else if (JSON.stringify(was) !== JSON.stringify(s)) out.push(`${SECTION_NAMES[s.key]} changed`)
-  }
-  for (const s of a.home) if (!after.has(s.id)) out.push(`${SECTION_NAMES[s.key]} removed`)
-  const order = (h: SectionInstance[]) => h.filter((s) => before.has(s.id) && after.has(s.id)).map((s) => s.id).join()
-  if (order(a.home) !== order(b.home)) out.push('Sections moved')
-  return [...new Set(out)]
-}
-
-export const SETTING_NAMES: Record<keyof ThemeSettings, string> = {
-  pairing: 'Type', headings: 'Headings', size: 'Type size', corners: 'Corners', buttons: 'Buttons', spacing: 'Spacing', photo: 'Photo shape',
-  hoverPhoto: 'Second photo on hover', phoneColumns: 'Columns on a phone', header: 'Header', sticky: 'Sticky header', bottomTabs: 'Bottom tabs',
-  announcement: 'Announcement bar', footer: 'Footer', social: 'Social links', motion: 'Motion', brandColour: 'Brand colour',
-  gallery: 'Product photos', details: 'About and details', card: 'Product cards', desktopColumns: 'Columns on a computer',
-  collectionTop: 'Top of a collection', buttonShape: 'Button shape', buttonMotion: 'Button motion', cardHover: 'Card hover',
-  entrance: 'Page entrance', reveal: 'Sections rise in', buyBoxSticky: 'Buy box beside photos', buyBar: 'Add to bag bar on phones',
-  footerScheme: 'Footer colours', checkout: 'Checkout',
 }

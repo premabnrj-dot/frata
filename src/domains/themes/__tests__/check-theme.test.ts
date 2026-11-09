@@ -78,3 +78,13 @@ describe('the gate itself', () => {
     expect(src).not.toMatch(/schema-orders|domains\/orders\/profit|costPrice|cogs|freight/i)
   })
 })
+
+describe('the brand colour picks (Look v3)', () => {
+  it('each reads on every light scheme of every 2.x theme', async () => {
+    const { BRAND_COLOUR_PICKS } = await import('../catalogue/kit')
+    const { brandColourProblem } = await import('../layer')
+    for (const m of all.filter((x) => x.version.startsWith('2.'))) for (const st of m.styles) for (const c of BRAND_COLOUR_PICKS) {
+      expect(brandColourProblem(c, [st.schemes.paper, st.schemes.tint ?? st.schemes.paper]), `${m.key}@${m.version} ${st.key} ${c}`).toBeNull()
+    }
+  })
+})

@@ -122,9 +122,9 @@ from it).
   photo on hover `store-hover` (off with `data-hover="off"`); motion obeys `data-motion`.
 - Customizer patterns: every change is one Undo step and an autosave 800 ms later ("Saving…" / "Saved" / "Not saved"
   in a `role=status`); a stale draft says who changed it and offers Reload; move up/down buttons beside drag; Add a
-  section is picture cards by kind, a full kind says its limit ("At most 2 on a page"); a section that blocks Publish
-  says "needs you" in the list; Publish lists what shoppers will see change, then the person who published sees
-  "Published" with Undo; a partner or staff sees "Ask the owner to publish"; support sees but can't change.
+  section is the searchable library (Look v3 below); a section that blocks Publish says "needs you" in the list;
+  Publish is the one-line confirm, Going live, then the popup over the shop (Look v3 below); a partner or staff sees
+  "Ask the owner to publish"; support sees but can't change.
 - Pages beyond Home (T2 mockup https://claude.ai/artifact/H9wfYHs6Uq3Vod7rbRvHsM): the customizer's page picker
   opens that page's panel (Product page: photos swipe/with thumbnails, About and details open/folded; Collection
   page: title/banner); cards (standard/centred/framed) and computer columns (4/3) apply to every grid. One tag per

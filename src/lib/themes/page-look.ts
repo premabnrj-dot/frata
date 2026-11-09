@@ -1,6 +1,6 @@
 import 'server-only'
 import type { Circle, StripPiece } from '@/components/storefront/shell'
-import { inCollection, isListed } from '@/domains/storefront/listing'
+import { inCollection } from '@/domains/storefront/listing'
 import { sourceProducts } from '@/domains/storefront/sources'
 import { resolveStored } from '@/domains/themes/resolve'
 import type { ResolvedTheme } from '@/domains/themes/types'
@@ -32,7 +32,7 @@ export function shellPictures(t: ResolvedTheme, cat: StoreCatalogue | null, now:
 }
 /** The Instagram strip: the newest six listed pieces that have a photo. */
 export function stripOf(cat: StoreCatalogue, now: Date): StripPiece[] {
-  return sourceProducts({ kind: 'newest' }, cat, now, []).filter((p) => isListed(p, now) && p.images[0]).slice(0, 6).map((p) => ({ handle: (p as { handle: string }).handle, title: p.title, image: p.images[0]! }))
+  return sourceProducts({ kind: 'newest' }, cat, now, []).filter((p) => p.images[0]).slice(0, 6).map((p) => ({ handle: p.handle, title: p.title, image: p.images[0]! }))
 }
 
 /** The Best sellers windows this Home uses (read only those; each read is cached an hour). */

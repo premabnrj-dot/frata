@@ -13,13 +13,17 @@ export function PublishConfirm({ themeName, shopOpen, blocking, error, pending, 
   onCancel: () => void; onPublish: () => void; onFix: (text: string) => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const cancel = useRef(onCancel); cancel.current = onCancel
+  // Once per opening (impact review: a new onCancel each render re-ran this and pulled focus back): focus Not yet,
+  // close on Esc or a click outside (the Publish button toggles it itself), and give focus back to Publish after.
   useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null
     ref.current?.querySelector<HTMLElement>('[data-autofocus]')?.focus()
-    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel() }
-    const out = (e: PointerEvent) => { if (ref.current && !ref.current.contains(e.target as Node) && !(e.target as Element).closest('[aria-expanded]')) onCancel() }
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') cancel.current() }
+    const out = (e: PointerEvent) => { if (ref.current && !ref.current.contains(e.target as Node) && !(e.target as Element).closest('[data-publish]')) cancel.current() }
     document.addEventListener('keydown', key); document.addEventListener('pointerdown', out)
-    return () => { document.removeEventListener('keydown', key); document.removeEventListener('pointerdown', out) }
-  }, [onCancel])
+    return () => { document.removeEventListener('keydown', key); document.removeEventListener('pointerdown', out); if (opener?.isConnected) opener.focus() }
+  }, [])
   return (
     <div ref={ref} role="dialog" aria-labelledby="pub-q" className="absolute right-0 top-full z-40 mt-2 w-72 origin-top-right space-y-1 rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-lg transition-[opacity,scale] duration-fast ease-entrance starting:scale-95 starting:opacity-0">
       <p id="pub-q" className="font-semibold">Publish {themeName}?</p>

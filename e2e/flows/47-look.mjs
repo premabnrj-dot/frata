@@ -68,6 +68,11 @@ export default {
       await riya.getByLabel('Any colour', { exact: true }).fill('#7a1f2b')
       await until(async () => { const [r] = await db`select style_key, settings from shop_theme_revisions where id = ${rev}`; return r.style_key === 'genda' && r.settings.settings?.brandColour === '#7A1F2B' }, 10_000)
       await riya.getByRole('status').getByText('Saved').waitFor()
+      // Saved: leaving asks nothing (Look v3 asks only while a change is still on its way).
+      await riya.getByRole('link', { name: '‹ Look' }).click()
+      await riya.waitForURL(/\/console\/look$/)
+      await riya.goto(CONSOLE + '/console/look/customize')
+      await riya.getByRole('tab', { name: 'Style' }).waitFor()
     })
 
     await t.step('Sections: add Rich text, move it up, hide New in; every change saved', async () => {

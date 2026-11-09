@@ -35,7 +35,6 @@ export type EditorProps = {
   styles: StyleOption[]; allowed: { pairings: Pairing[]; headers: HeaderVariant[]; footers: FooterVariant[]; sections: SectionKey[] }
   /** The designs made for this theme (Look v3: shown first, "Made for <theme>"). */
   made: { headers?: HeaderVariant[]; footers?: FooterVariant[]; sections?: SectionKey[] }
-  live: { theme: string; style: string; settings: Partial<ThemeSettings>; home: SectionInstance[] } | null
   facts: ShopFacts; formCtx: FormCtx; targets: LinkTarget[]; fonts: Record<Pairing, string>
   /** The shop's address, for the preview's address bar. */
   address: string
@@ -82,19 +81,24 @@ export function Editor(p: EditorProps) {
   // While a change saves, the preview dims; it comes back as the shop redraws with it (motion system: a theme or
   // setting change fades old into new in 200 ms, never a jump).
   const post = (m: object) => frame.current?.contentWindow?.postMessage(m, window.location.origin)
+  // Whether a save is waiting on its 800 ms (state, so "leave before it saves?" reads it truly; the ref holds the timer).
+  const [due, setDue] = useState(false)
   const save = useCallback(async () => {
+    timer.current = null; setDue(false)
     setStatus('saving')
     const { layer: l, style: s } = latest.current
     const r = await saveLookAction({ revisionId: p.revisionId, version: version.current, style: s, layer: l })
     if (!r.ok) { setStatus({ error: r.error }); return }
     version.current = r.version; setStatus('saved'); post({ type: 'refresh' })
   }, [p.revisionId])
-  const schedule = () => { if (timer.current) clearTimeout(timer.current); timer.current = setTimeout(save, 800) }
+  const schedule = () => { if (timer.current) clearTimeout(timer.current); timer.current = setTimeout(save, 800); setDue(true) }
 
   const change = (next: Layer, nextStyle = style) => {
     if (stuck) return
     setPast((h) => [...h.slice(-49), { layer, style }]); setFuture([])
     setLayer(next); setStyle(nextStyle); schedule()
+    // A removal's Undo is for that removal only: the next change ends it (impact review 2026-11-09).
+    setToast(null)
   }
   const undo = () => { const prev = past.at(-1); if (!prev || stuck) return; setPast((h) => h.slice(0, -1)); setFuture((f) => [{ layer, style }, ...f]); setLayer(prev.layer); setStyle(prev.style); schedule() }
   const redo = () => { const nxt = future[0]; if (!nxt || stuck) return; setFuture((f) => f.slice(1)); setPast((h) => [...h, { layer, style }]); setLayer(nxt.layer); setStyle(nxt.style); schedule() }
@@ -128,7 +132,7 @@ export function Editor(p: EditorProps) {
     ro.observe(el); return () => ro.disconnect()
   }, [])
   // Leaving while a change is still on its way asks first (Look v3 § Confirmations).
-  const unsaved = status !== 'saved' || timer.current !== null
+  const unsaved = status !== 'saved' || due
   useEffect(() => {
     if (!unsaved) return
     const warn = (e: BeforeUnloadEvent) => { e.preventDefault() }
@@ -161,9 +165,11 @@ export function Editor(p: EditorProps) {
     go()
   }
   const go = () => start(async () => {
-    if (timer.current) { clearTimeout(timer.current); timer.current = null; await save() }
-    const [r] = await Promise.all([publishLookAction({ revisionId: p.revisionId, version: version.current }), new Promise((ok) => setTimeout(ok, GOING_LIVE_MS))])
-    if (!r.ok) { setGoing(false); setPubError(r.error); setAsk(true) }
+    try {
+      if (timer.current) { clearTimeout(timer.current); timer.current = null; await save() }
+      const [r] = await Promise.all([publishLookAction({ revisionId: p.revisionId, version: version.current }), new Promise((ok) => setTimeout(ok, GOING_LIVE_MS))])
+      if (!r.ok) { setGoing(false); setPubError(r.error); setAsk(true) }
+    } catch { setGoing(false); setPubError('We couldn’t publish. Your draft is safe; try again.'); setAsk(true) }
   })
 
   const panel = (
@@ -200,7 +206,7 @@ export function Editor(p: EditorProps) {
         <a href={`/console/theme-preview/${p.revisionId}${path}`} target="_blank" rel="noopener" className="hidden min-h-9 content-center rounded-md border border-input px-3 text-sm sm:block">Full preview</a>
         {p.canPublish ? (
           <span className="relative">
-            <Button onClick={() => { setPubError(null); setAsk((a) => !a) }} disabled={stuck || going} aria-expanded={ask}>{going ? 'Publishing…' : 'Publish'}</Button>
+            <Button data-publish onClick={() => { setPubError(null); setAsk((a) => !a) }} disabled={stuck || going} aria-expanded={ask}>{going ? 'Publishing…' : 'Publish'}</Button>
             {ask && <PublishConfirm themeName={p.themeName} shopOpen={p.shopOpen} blocking={blocking.map((b) => b.text)} error={pubError} pending={pending}
               onCancel={() => setAsk(false)} onPublish={publish} onFix={(text) => { const i = issues.find((x) => x.text === text); setAsk(false); setTab('sections'); setPage('home'); if (i) setSelected(i.sectionId) }} />}
           </span>

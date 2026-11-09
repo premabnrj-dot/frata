@@ -41,8 +41,6 @@ export default async function Customize() {
   if (!m) redirect('/console/look')
   const stored = data.draft.settings as { settings?: object; home?: unknown[] }
   const draft = resolveTheme(m, { style: data.draft.styleKey, ...stored })
-  const liveM = data.live ? manifestOf(data.live.themeKey, data.live.themeVersion) : null
-  const live = data.live && liveM ? (() => { const l = resolveTheme(liveM, { style: data.live.styleKey, ...(data.live.settings as object) }); return { theme: l.key, style: l.style, settings: l.settings, home: l.home } })() : null
   const f = data.facts
   const tp = truePromises(f)
   const promiseWords = Object.fromEntries(PROMISES.map((k) => [k, {
@@ -65,7 +63,7 @@ export default async function Customize() {
         layer={{ settings: draft.settings, home: draft.home }}
         styles={m.styles.map((s) => ({ key: s.key, name: s.name, swatches: [s.schemes.paper.accent, s.schemes.tint?.bg ?? s.schemes.paper.chip, s.schemes.ink?.bg ?? s.schemes.paper.text], light: [s.schemes.paper, s.schemes.tint ?? s.schemes.paper] }))}
         allowed={{ pairings: m.allowed.pairings, headers: m.allowed.headers, footers: m.allowed.footers, sections: m.allowed.sections }} made={m.made ?? {}}
-        live={live} facts={{ collections: f.collections, codOn: f.codOn, freeShippingAbove: f.freeShippingAbove, returnDays: f.returnDays, dispatchDays: f.dispatchDays }}
+        facts={{ collections: f.collections, codOn: f.codOn, freeShippingAbove: f.freeShippingAbove, returnDays: f.returnDays, dispatchDays: f.dispatchDays }}
         formCtx={{ tenantId: t, targets, collections: data.collections, products: data.products, photos: data.photos, shopName: shop.shopName, masks: m.allowed.heroMasks ?? ['none'], promiseWords,
           schemes: [{ key: 'paper', name: schemeNames.paper ?? 'Paper' }, { key: 'tint', name: schemeNames.tint ?? 'Tint' }, { key: 'ink', name: schemeNames.ink ?? 'Ink' }] }}
         targets={targets} fonts={Object.fromEntries(PAIRINGS.map((p) => [p, displayFamily(p)])) as Record<Pairing, string>}

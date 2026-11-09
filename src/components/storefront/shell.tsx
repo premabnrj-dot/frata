@@ -286,7 +286,7 @@ function StripFooter({ f, href, social, w, painted, strip }: { f: ShellShop; hre
           {social && f.instagram && <p className="py-3 text-center text-sm"><a href={igLink(f.instagram)} rel="noopener" className="underline underline-offset-4">@{f.instagram.replace(/^@/, '')}</a></p>}
         </div>
       )}
-      <div className="-mt-16"><CompactFooter f={f} href={href} social={social && !f.instagram} w={w} painted={painted} /></div>
+      <div className="-mt-16"><CompactFooter f={f} href={href} social={social} w={w} painted={painted} /></div>
     </div>
   )
 }

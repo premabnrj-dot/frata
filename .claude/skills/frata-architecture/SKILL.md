@@ -259,7 +259,7 @@ shop can have or not (Messages, RTO Shield, Reviews…).
 
 - A shop's look is **data over one section library**: `src/domains/themes/` (types, `resolveTheme` — the ONE merge
   of manifest → style → the merchant's layer — `contrast`, section SAVE schemas, `readinessOf`, `carryOver`,
-  `diffLayers`, `baselineRevision`) and `src/components/storefront/sections/` (server components). Rendering reads
+  `baselineRevision`) and `src/components/storefront/sections/` (server components). Rendering reads
   only `ResolvedTheme`; settings reach CSS as `--store-*` custom properties and `data-*` attributes on the shell.
 - **Manifests** are typed files `src/domains/themes/catalogue/<theme>/<semver>.ts`, listed in `catalogue/index.ts`.
   A released file never changes; a new version is a new file. Theme colours live there and nowhere else

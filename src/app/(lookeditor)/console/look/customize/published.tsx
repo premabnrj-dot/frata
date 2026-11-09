@@ -22,7 +22,7 @@ export function Published({ liveId, address, shopOpen, undoFrom }: { liveId: str
   const copy = async () => { try { await navigator.clipboard.writeText(`https://${address}`); setCopied(true); setTimeout(() => setCopied(false), 1800) } catch { /* the address stays selectable */ } }
   return (
     <main className="relative h-dvh overflow-hidden bg-muted">
-      <iframe title="Your shop with its new look" src={`/console/theme-preview/${liveId}`} tabIndex={-1} aria-hidden="true" className="pointer-events-none size-full" />
+      <iframe title="Your shop with its new look" src={`/console/theme-preview/${liveId}?as=shop`} tabIndex={-1} aria-hidden="true" className="pointer-events-none size-full" />
       <Dialog open onClose={() => router.push('/console/look')} title="Your shop has its new look" className="w-[min(28rem,calc(100vw-2rem))]"
         description={shopOpen ? 'Shoppers see it on their next visit.' : 'Shoppers see it when your shop opens.'}
         actions={<>
