@@ -111,10 +111,12 @@ export async function checkDomainAction(id: string): Promise<{ ok: true; check: 
   return { ok: true, check }
 }
 
-const WRITE_CODES = ['not_owner', 'no_domain', 'not_ready', 'razorpay'] as const
+const WRITE_CODES = ['not_owner', 'no_domain', 'not_ready', 'razorpay', 'frozen', 'no_renames_left', 'one_added', 'bad_slug', 'slug_taken', 'no_name'] as const
 const WRITE_WORDS: Record<string, string> = {
   not_owner: ERR_WORDS.not_owner, no_domain: 'This domain is no longer connected', not_ready: 'Not connected yet',
   razorpay: 'Razorpay must approve this domain first', unknown: 'We could not change it. Nothing was changed.',
+  frozen: 'Address changes are frozen', no_renames_left: 'No changes left', one_added: 'One new address at a time',
+  bad_slug: 'Letters, digits and hyphens only', slug_taken: 'Taken', no_name: 'This address is no longer the shop’s',
 }
 type Done = { ok: true } | { ok: false; error: string }
 
@@ -164,5 +166,38 @@ export async function removeDomainAction(id: string): Promise<Done> {
   const hosts = await hostsOf(who.tenantId, await slugOf(who.tenantId))
   const r = await write('domain.removed', id, (tx, w) => tx.execute(sql`select app_remove_domain(${w.tenantId}::uuid, ${w.userId}::uuid, ${id}::uuid)`))
   if (r.ok) { refreshShop(who.tenantId, 'shop'); refreshHosts(...hosts); revalidatePath('/console/settings/address') }
+  return r.ok ? { ok: true } : r
+}
+
+// ── D1·8 + D1·9: the shop's frrata names on live payments (add beside, Razorpay's word, let go). ──
+const Slug = z.string().trim().toLowerCase().max(30)
+
+/** D1·9: add a new frrata name beside the current one (it serves at once, for Razorpay to review). */
+export async function addShopNameAction(slug: string): Promise<Done> {
+  const p = Slug.safeParse(slug)
+  if (!p.success) return { ok: false, error: WRITE_WORDS.bad_slug! }
+  const r = await write('shop.name_added', p.data, (tx, w) => tx.execute(sql`select app_add_shop_name(${w.tenantId}::uuid, ${w.userId}::uuid, ${p.data})`))
+  if (r.ok) { refreshHosts(shopHost(p.data)); revalidatePath('/console/settings/address') }
+  return r.ok ? { ok: true } : r
+}
+
+/** D1·9: let the added name go (never main, so nothing redirects from it). */
+export async function dropAddedNameAction(): Promise<Done> {
+  let dropped: string | null = null
+  const r = await write('shop.name_dropped', undefined, async (tx, w) => {
+    const [x] = await tx.execute<{ n: string | null }>(sql`select app_drop_added_name(${w.tenantId}::uuid, ${w.userId}::uuid) as n`)
+    dropped = x?.n ?? null
+  })
+  if (r.ok && dropped) refreshHosts(shopHost(dropped))
+  if (r.ok) revalidatePath('/console/settings/address')
+  return r.ok ? { ok: true } : r
+}
+
+/** D1·8: "Razorpay approved it" on one of the shop's live frrata names. */
+export async function nameRazorpayOkAction(name: string, ok: boolean): Promise<Done> {
+  const p = Slug.safeParse(name)
+  if (!p.success) return { ok: false, error: WRITE_WORDS.unknown! }
+  const r = await write('shop.name_razorpay_ok', p.data, (tx, w) => tx.execute(sql`select app_name_razorpay_ok(${w.tenantId}::uuid, ${w.userId}::uuid, ${p.data}, ${ok === true})`))
+  if (r.ok) revalidatePath('/console/settings/address')
   return r.ok ? { ok: true } : r
 }

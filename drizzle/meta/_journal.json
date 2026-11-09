@@ -596,6 +596,20 @@
       "when": 1794248389290,
       "tag": "0084_own_domains_definers",
       "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1794249751145,
+      "tag": "0085_names_razorpay",
+      "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1794249752371,
+      "tag": "0086_names_razorpay_definers",
+      "breakpoints": true
     }
   ]
 }

@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   if (!r.ok) return r.response
   const now = new Date()
   const code = await codeToTry(r.tenantId, r.ip, r.body.code)
-  const { shop, rows, offers, typed } = await quoteData(r.tenantId, r.body.bag.map((b) => b.variantId), now, code)
+  const { shop, rows, offers, typed } = await quoteData(r.tenantId, r.body.bag.map((b) => b.variantId), now, code, r.host)
   if (!shop?.open) return reply({ error: 'This shop is not taking orders right now.' }, 404)
   const q = quote(r.body.bag, rows, shop, now, r.body.pincode, { offers, code: typed })
   // A typed code that was not tried (too many guesses) reads exactly like one that does not apply.

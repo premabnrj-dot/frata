@@ -598,6 +598,40 @@ do $$ declare a uuid; b uuid; begin
 end $$;
 rollback;
 
+begin;
+-- Shop addresses D1·8 + D1·9 (0085/0086): a shop on live payments adds a name beside its current one (taken for
+-- everyone, serving, never redirecting), makes it main through the rename, or lets it go; one added name at a time;
+-- "Razorpay approved it" is per name, owners and admins only.
+update shop_settings set published_at = now() where tenant_id = '22222222-2222-2222-2222-222222222222';
+set local role frata_app;
+do $$ declare r record; begin
+  begin perform app_add_shop_name('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000001', 'proof-b-next'); raise exception 'FAIL: staff added a name';
+  exception when raise_exception then if sqlerrm <> 'not_owner' then raise; end if; end;
+  perform app_add_shop_name('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-next');
+  select * into r from app_shop_for_name('proof-b-next');
+  if r.id <> '22222222-2222-2222-2222-222222222222' or r.retired or r.current_name = 'proof-b-next' then raise exception 'FAIL: an added name must serve beside the current one'; end if;
+  if app_name_check('proof-b-next') <> 'taken' then raise exception 'FAIL: an added name looked free'; end if;
+  begin perform app_add_shop_name('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-other'); raise exception 'FAIL: two added names';
+  exception when raise_exception then if sqlerrm <> 'one_added' then raise; end if; end;
+  begin perform app_change_shop_address('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', 'proof-b-next'); raise exception 'FAIL: A took B''s added name';
+  exception when raise_exception then if sqlerrm <> 'slug_taken' then raise; end if; end;
+  begin perform app_name_razorpay_ok('22222222-2222-2222-2222-222222222222', '99999999-9999-9999-9999-999999999999', 'proof-b-next', true); raise exception 'FAIL: A''s owner ticked B''s name';
+  exception when raise_exception then if sqlerrm <> 'not_owner' then raise; end if; end;
+  perform app_name_razorpay_ok('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-next', true);
+  perform app_change_shop_address('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-next');
+  select * into r from app_shop_for_name('proof-b');
+  if not r.retired or r.current_name <> 'proof-b-next' then raise exception 'FAIL: making the added name main must retire the old one'; end if;
+  perform app_add_shop_name('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-third');
+  if app_drop_added_name('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002') <> 'proof-b-third' then raise exception 'FAIL: drop'; end if;
+  if app_name_check('proof-b-third') <> 'ok' then raise exception 'FAIL: a dropped added name must be free'; end if;
+end $$;
+reset role;
+do $$ begin
+  if (select razorpay_ok_at from shop_names where name = 'proof-b-next') is null or (select added_at from shop_names where name = 'proof-b-next') is not null then raise exception 'FAIL: the tick stays with the name; added_at clears when it becomes main'; end if;
+  if has_function_privilege('anon', 'app_add_shop_name(uuid,uuid,text)', 'execute') then raise exception 'FAIL: anon adds names'; end if;
+end $$;
+rollback;
+
 -- 20. Catalogue: own shop only, and a child row can never point at another shop's product.
 insert into product_types (id, tenant_id, name, size_chart) values
   ('dddddddd-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'Kurta', '{"columns":[],"rows":[],"howToMeasure":""}');
@@ -2119,4 +2153,4 @@ do $$ begin
   then raise exception 'FAIL: an API role runs the Mux definer'; end if;
 end $$;
 
-\echo 'tenancy proof — all 59 checks passed'
+\echo 'tenancy proof — all 60 checks passed'

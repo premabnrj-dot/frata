@@ -18,8 +18,17 @@ export const shopNames = pgTable('shop_names', {
   createdAt: createdAt(),
   retiredAt: timestamp('retired_at', { withTimezone: true }),
   retiredByFrrata: boolean('retired_by_frrata').notNull().default(false),
+  /** D1·9: a name added beside the current one (a shop on live payments renames in two steps); serves, never redirects;
+   * becomes current through app_change_shop_address, or is let go after 14 days. */
+  addedAt: timestamp('added_at', { withTimezone: true }),
+  /** D1·8: the merchant's word that Razorpay approved this address (no Razorpay API exists to check); who and when. */
+  razorpayOkAt: timestamp('razorpay_ok_at', { withTimezone: true }),
+  razorpayOkBy: uuid('razorpay_ok_by'),
 }, (t) => [
-  uniqueIndex('shop_names_current').on(t.tenantId).where(sql`retired_at is null`),
+  uniqueIndex('shop_names_current').on(t.tenantId).where(sql`retired_at is null and added_at is null`),
+  uniqueIndex('shop_names_added').on(t.tenantId).where(sql`added_at is not null and retired_at is null`),
+  check('shop_names_razorpay_by', sql`(${t.razorpayOkAt} is null) = (${t.razorpayOkBy} is null)`),
+  check('shop_names_added_live', sql`${t.addedAt} is null or (${t.retiredAt} is null and not ${t.retiredByFrrata})`),
   index('shop_names_tenant').on(t.tenantId),
   check('shop_names_lower', sql`${t.name} = lower(${t.name})`),
 ])

@@ -53,7 +53,7 @@ export default {
         const c = p.getByRole('dialog', { name: `Make ${OWN_DOMAIN} your main address?` })
         await c.getByText('Bags in progress start empty.').waitFor()
         await c.getByRole('button', { name: 'Make it main' }).click()
-        await p.locator('#content').getByText(`${OWN_DOMAIN} is your main address`).waitFor()
+        await p.getByRole('status').filter({ hasText: `${OWN_DOMAIN} is your main address` }).getByRole('link', { name: 'View your shop' }).waitFor()
         const s = await t.browser.newContext(); const q = await s.newPage()
         await q.goto(SHOP + '/')
         assert.equal(await q.locator('link[rel="canonical"]').getAttribute('href'), `https://${OWN_DOMAIN}/`)

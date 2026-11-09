@@ -9,6 +9,7 @@ import { slugProblem } from '@/domains/signup/slug'
 import { RENAMES_AFTER_OPENING } from '@/domains/addresses/names'
 import type { AddressCheck } from '@/app/start/actions'
 import { changeAddress, checkShopAddress } from '../actions'
+import { addShopNameAction } from './domain-actions'
 import { Section } from '@/components/layout/section'
 import { PageHeader } from '@/components/layout/page-header'
 
@@ -18,8 +19,10 @@ const WORDS: Record<AddressCheck['state'], string> = { ok: 'Available', taken: '
  * The shop's frrata.shop address (shop addresses D·1; spec § Words on screen: the address, its state, the limit, nothing
  * else). Free before the first opening (`left` null); two changes after it, confirmed in a dialog.
  */
-export function AddressForm({ current: first, shopDomain, left: firstLeft, old: firstOld, frozen, support }: {
+export function AddressForm({ current: first, shopDomain, left: firstLeft, old: firstOld, frozen, support, twoStep = false, adding = null }: {
   current: string; shopDomain: string; left: number | null; old: string[]; frozen: boolean; support: boolean
+  /** D1·9: on live payments a new name is ADDED beside the current one (Make main follows once Razorpay approves it). */
+  twoStep?: boolean; adding?: string | null
 }) {
   const router = useRouter()
   // What a rename changes is known at once: the screen updates itself, not only when the refresh lands.
@@ -30,7 +33,7 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
   const [confirming, setConfirming] = useState(false)
   const [pending, start] = useTransition()
   const changed = slug !== current
-  const locked = support || frozen || left === 0
+  const locked = support || frozen || left === 0 || (twoStep && !!adding)
 
   useEffect(() => {
     if (!changed) { setState(null); return }
@@ -40,6 +43,12 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
     return () => clearTimeout(t)
   }, [slug, changed])
 
+  const add = () => start(async () => {
+    const r = await addShopNameAction(slug)
+    setConfirming(false)
+    setMsg(r.ok ? { ok: true, text: `Added ${slug}.${shopDomain}` } : { ok: false, text: r.error })
+    if (r.ok) { setSlug(current); router.refresh() }
+  })
   const change = () => start(async () => {
     const r = await changeAddress(slug)
     setConfirming(false)
@@ -53,6 +62,7 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
     router.refresh()
   })
   const line = frozen ? 'Address changes paused by Frrata'
+    : twoStep && adding ? 'One new address at a time'
     : state ? WORDS[state.state]
     : left === null ? null : left === 0 ? 'No changes left' : `${left} ${left === 1 ? 'change' : 'changes'} left`
 
@@ -82,16 +92,16 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="secondary" disabled={!changed || pending} onClick={() => setSlug(current)}>Keep {current}</Button>
             <Button type="button" disabled={!changed || state?.state !== 'ok' || pending}
-              onClick={() => (left === null ? change() : setConfirming(true))}>{pending ? 'Changing…' : `Change to ${slug || '…'}`}</Button>
+              onClick={() => (left === null ? change() : setConfirming(true))}>{pending ? 'Changing…' : `${twoStep ? 'Add' : 'Change to'} ${slug || '…'}`}</Button>
           </div>
         )}
       </Section>
-      <Dialog open={confirming} onClose={() => setConfirming(false)} title={`Change to ${slug}.${shopDomain}?`}
+      <Dialog open={confirming} onClose={() => setConfirming(false)} title={`${twoStep ? 'Add' : 'Change to'} ${slug}.${shopDomain}?`}
         actions={<>
           <Button type="button" variant="secondary" data-autofocus onClick={() => setConfirming(false)}>Keep {current}</Button>
-          <Button type="button" disabled={pending} onClick={change}>{pending ? 'Changing…' : `Change to ${slug}`}</Button>
+          <Button type="button" disabled={pending} onClick={twoStep ? add : change}>{pending ? 'Changing…' : `${twoStep ? 'Add' : 'Change to'} ${slug}`}</Button>
         </>}>
-        <p className="text-sm">{left !== null && `${RENAMES_AFTER_OPENING - left + 1} of ${RENAMES_AFTER_OPENING} changes`}</p>
+        <p className="text-sm">{twoStep ? `Make it main once Razorpay approves it · ${RENAMES_AFTER_OPENING - (left ?? 0) + 1} of ${RENAMES_AFTER_OPENING} changes` : left !== null && `${RENAMES_AFTER_OPENING - left + 1} of ${RENAMES_AFTER_OPENING} changes`}</p>
       </Dialog>
     </div>
   )

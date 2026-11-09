@@ -100,7 +100,8 @@ export default {
       // Whatever happened above, the seed is whole again: its one name, no history, its first opening, no renames used.
       // (The last step restored it through the app, which refreshed every host's lookup; this is the backstop.)
       await db`delete from shop_names where tenant_id = ${T} and name <> 'kesar-studio'`
-      await db`insert into shop_names (name, tenant_id) values ('kesar-studio', ${T}) on conflict (name) do update set retired_at = null, retired_by_frrata = false`
+      await db`insert into shop_names (name, tenant_id) values ('kesar-studio', ${T}) on conflict (name) do update set retired_at = null, retired_by_frrata = false, added_at = null`
+      await db`update shop_names set razorpay_ok_at = coalesce(razorpay_ok_at, now()), razorpay_ok_by = coalesce(razorpay_ok_by, 'cccccccc-0000-0000-0000-000000000001') where name = 'kesar-studio'`
       await db`update tenants set slug = 'kesar-studio', renames_used = 0, first_opened_at = ${opened} where id = ${T}`
     }
   },

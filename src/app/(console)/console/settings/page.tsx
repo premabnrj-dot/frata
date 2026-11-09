@@ -10,7 +10,7 @@ import { estimateOf } from '@/domains/settings/ship-costs'
 import { CAN_BUILD, CAN_MANAGE, CAN_SET_COSTS, requireMember } from '@/lib/auth/require-member'
 import { formatInr } from '@/lib/format'
 import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
-import { mainHostFor } from '@/lib/queries/addresses'
+import { liveNamesFor, mainHostFor } from '@/lib/queries/addresses'
 import { shipCostsSeenBy, shopWithSettings } from '@/lib/queries/settings'
 import { paymentStatusFor } from '@/lib/queries/payments'
 import { shopFacts } from './_components/facts'
@@ -46,7 +46,12 @@ export default async function SettingsPage() {
   const mainHost = f.slug ? await mainHostFor(auth.membership.tenantId, f.slug).catch(() => shopHost(f.slug)) : ''
   const online = !pay ? 'Could not load' : !pay.connected ? 'Not connected: shoppers can pay on delivery only' : pay.problem ? 'Needs attention' : !pay.webhookSeenAt ? 'Connected · one step left in Razorpay' : pay.mode === 'test' ? 'Test mode' : 'Live · UPI, cards, netbanking'
   const onlineNeeds = !!pay && pay.connected && (!!pay.problem || !pay.webhookSeenAt)
-  const missing = missingForLivePayments(f)
+  // D1·8: Razorpay fails live payments from an address not registered on the shop's account — the main one must be
+  // approved (the merchant's word; checkout offers online payment only on an approved address).
+  const names = pay?.connected && pay.mode === 'live' ? await liveNamesFor(auth.membership.tenantId).catch(() => []) : []
+  const current = names.find((n) => !n.added)
+  const missing: { label: string; section: string }[] = [...missingForLivePayments(f),
+    ...(current && !current.razorpayOk ? [{ label: `Add ${shopHost(current.name)} in Razorpay`, section: 'address' }] : [])]
   const policyGaps = POLICY_PAGES.filter(([k]) => missingFacts(renderPolicy(k, f, inr)).length).length
 
   const summary: Record<SectionKey, string> = {
