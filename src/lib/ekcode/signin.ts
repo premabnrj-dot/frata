@@ -86,3 +86,11 @@ export async function continueToShop(flow: FlowCookie, addressId: string | null)
   u.searchParams.set('state', g.state)
   return u.toString()
 }
+
+/** The shop this sign-in came from (name and host), from the sealed cookie's flow; null when there is none or it expired. */
+export async function currentShop(): Promise<{ name: string; host: string } | null> {
+  const { readFlow } = await import('./flow-cookie')
+  const flow = await readFlow()
+  const v = flow ? await vault.flowView(tokenDigest(flow.h)) : null
+  return v ? { name: v.shop_name, host: v.host } : null
+}

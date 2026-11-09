@@ -30,6 +30,10 @@ export const dayMonthLongIN = (d: Date) =>
 export const dateTimeIN = (d: Date) =>
   d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: IST })
 
+/** "7:42 pm" (IST): a time later today, as a wait says it (EkCode's "Try again at"). */
+export const timeIN = (d: Date) =>
+  d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: IST })
+
 /** How long ago, as a queue says it: "just now", "5 min ago", "2 h ago", else the day. */
 export function sinceIN(at: Date | string, now: Date): string {
   const d = typeof at === 'string' ? new Date(at) : at

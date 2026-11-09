@@ -41,6 +41,14 @@
   --ring: #1C1917;
   --scrim: color-mix(in srgb, var(--foreground) 45%, transparent); /* behind a dialog: the ink at 45%, in both themes */
   --brand: #D61F69;              /* rani — the mark and brand moments; never a button fill, a number or a status */
+  /* EkCode (its own brand, frata-design-language § EkCode): the same on every shop theme and in both modes, so a
+     shopper knows the button anywhere. Ink and paper meet 17:1; the cursor is rani (rani-on-ink on ink). */
+  --ek-ink: #1C1917;
+  --ek-paper: #FAFAF9;
+  --ek-cursor: #D61F69;
+  --ek-cursor-on-ink: #FF5C97;
+  --ek-sub: #5F5A55;
+  --ek-line: #DEDBD7;
   --brand-foreground: #FFFFFF;
   --brand-text: #A8124F;         /* rani as words (rani deep): the only way the brand colour is text */
   --brand-on-ink: #FF4F93;       /* rani on an ink surface (the monogram's thread, an icon's tinge on ink) */
@@ -69,6 +77,8 @@
 
 /* DARK — written and gated, NOT switched on (owner call 2, 2026-11-07): nothing sets data-theme yet. */
 :root[data-theme="dark"] {
+  /* EkCode is the same in both modes (its own brand). */
+  --ek-ink: #1C1917; --ek-paper: #FAFAF9; --ek-cursor: #D61F69; --ek-cursor-on-ink: #FF5C97; --ek-sub: #5F5A55; --ek-line: #DEDBD7;
   --scrim: color-mix(in srgb, #000 60%, transparent); /* dark: the ink is light, so the veil is black */
   --background: #141211;
   --foreground: #EDEAE6;
