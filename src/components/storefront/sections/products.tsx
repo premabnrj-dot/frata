@@ -21,12 +21,19 @@ export function Products({ s, ctx }: { s: SectionOf<'products'>; ctx: SectionCtx
   const h = `${s.id}-h`
   const lang = ctx.shop.shopLanguage
   if (s.layout === 'tabs') {
+    const ranked = s.source.kind === 'best_sellers' ? ctx.bestSellers?.[s.source.days] ?? [] : []
+    const at = new Map(ranked.map((id, i) => [id, i]))
+    const rankOf = (id: string) => at.get(id) ?? ranked.length
     // No tabs picked: the shop's first collections (up to 5), so a new theme shows tabs before the merchant picks.
     const handles = s.tabs.length ? s.tabs : ctx.cat.collections.map((c) => c.handle)
     const tabs = handles.flatMap((handle) => {
       const c = ctx.cat.collections.find((x) => x.handle === handle)
       if (!c) return []
-      const list = inCollection(c, ctx.cat.products, ctx.now).slice(0, Math.min(s.count, MAX_PER_TAB))
+      // Best sellers in each tab when the source says so (delivered orders, the same ranking as the grid); else the
+      // collection's own order (impact review: the tabs must be what the label says).
+      const pieces = inCollection(c, ctx.cat.products, ctx.now)
+      const ordered = ranked.length ? [...pieces].sort((a, b) => rankOf(a.id) - rankOf(b.id)) : pieces
+      const list = ordered.slice(0, Math.min(s.count, MAX_PER_TAB))
       return list.length ? [{ c, list }] : []
     }).slice(0, MAX_TABS)
     if (!tabs.length) return null

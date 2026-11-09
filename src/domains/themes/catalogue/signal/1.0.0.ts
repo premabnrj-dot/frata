@@ -10,7 +10,7 @@ import { minimal_2_1_0 } from '../minimal/2.1.0'
 export const signal_1_0_0: ThemeManifest = {
   key: 'signal', version: '1.0.0', name: 'Signal',
   job: 'Bags, footwear and accessories. Your product, front and centre.',
-  goodFor: ['accessories', 'footwear', 'jewellery', 'men', 'western'],
+  goodFor: ['accessories', 'footwear', 'jewellery', 'men'],
   features: [
     'A floating header over your first photo',
     'Your colour as the signal: section labels, one bold band',
