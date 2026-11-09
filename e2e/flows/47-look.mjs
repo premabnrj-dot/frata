@@ -181,7 +181,7 @@ export default {
       await riya.getByLabel('Page').selectOption('home')
       await riya.getByRole('tab', { name: 'Sections' }).click()
       await riya.getByRole('button', { name: 'Add a section', exact: true }).click()
-      await riya.getByRole('dialog', { name: 'Add a section' }).getByRole('button', { name: /^Products/ }).click()
+      await riya.getByRole('dialog', { name: 'Add a section' }).getByRole('list').getByRole('button', { name: /^Products/ }).click()
       await riya.getByRole('button', { name: 'Back in stock' }).click()
       await until(async () => { const [r] = await db`select settings from shop_theme_revisions where id = ${draft}`; return (r.settings.home ?? []).some((s) => s.source?.kind === 'back_in_stock') }, 10_000)
     })

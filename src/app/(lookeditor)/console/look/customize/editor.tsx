@@ -155,8 +155,12 @@ export function Editor(p: EditorProps) {
   // Publish (Look v3): a small confirm, then the preview says "Going live" while it publishes (held at least
   // GOING_LIVE_MS inside the same transition, so the page can't change under it), then this page re-renders with no
   // draft and shows the success popup over the live shop (published.tsx).
-  const publish = () => start(async () => {
+  const publish = () => {
+    // Shown at once: state set inside the transition would wait for it to end.
     setPubError(null); setAsk(false); setGoing(true)
+    go()
+  }
+  const go = () => start(async () => {
     if (timer.current) { clearTimeout(timer.current); timer.current = null; await save() }
     const [r] = await Promise.all([publishLookAction({ revisionId: p.revisionId, version: version.current }), new Promise((ok) => setTimeout(ok, GOING_LIVE_MS))])
     if (!r.ok) { setGoing(false); setPubError(r.error); setAsk(true) }

@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.3.0
+  version: 5.4.0
   verified: 2026-11-09
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -155,6 +155,24 @@ from it).
   grievance officer.
 - **Sample pieces** fill the customizer's preview of an empty shop, tagged "Sample", drawn (never photographed), and
   never reach a shop; a photo section still needs the merchant's own photo to publish.
+- **Look v3** (owner-approved 2026-11-09, mockup https://claude.ai/artifact/N3ATeKr1XxgTvEiPLjN2tq):
+  **Frrata Themes** is the tile lockup (`<ThemesLockup>`: monogram + "themes", "by Frrata" under it; `size="sm"` is
+  the card badge), never "by Frrata" in words. The preview opens on a **computer**, the shop drawn at 1280 px and
+  scaled to fit in a browser frame with the shop's address; Phone is one tap. **Publish is a small confirm** under the
+  button (one line, no list of changes; only what blocks it, each with Fix), then the preview says **Going live**
+  (a sweep and the header's rani line filling, held ≥ 1.3 s), then a popup over the live shop: its address (Copy),
+  Undo, Keep editing, View your shop (a new tab). Never a page of its own.
+- **Confirm what loses work or changes the shop**: Discard draft, Undo last publish ("Put Classic back on your
+  shop?"), Restore over an open draft, Try a theme over another theme's draft, leaving the customizer before a save
+  lands. Removing a section is a toast with Undo, not a dialog; hide, move and style changes ask nothing.
+- **Style panel**: groups that open and close, each saying what it is set to; colour styles as colour bars with a
+  check; brand colour as swatches plus Any colour; buttons as real buttons that show their hover; header, footer and
+  photo layouts as pictures; up to four short choices as a sliding segmented control (`Segmented`).
+- **A photo field**: drop, paste or choose, or one of the shop's product photos; the photo shows at once under a
+  progress ring while it uploads; tap it to set the point it keeps in view; replace and remove on the photo;
+  description suggestions; a failure says what to do (an iPhone HEIC says how to share it as a JPEG).
+- **Section library**: search by name, words and tags (`/`), kinds with counts, picture cards, "Fits <theme>" on by
+  default, "Made for <theme>" first, a full section greyed with its limit, "Adds below <section>".
 - **Even rhythm** (2.0 themes): the same space above and below every section but a full-bleed one. Horizontal rails
   snap to their padding (`scroll-px-4`), never past it.
 

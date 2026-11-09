@@ -52,10 +52,20 @@ export default {
         await riya.screenshot({ path: t.out(`${key}-home`) })
         // Only the choices this theme offers.
         await riya.getByRole('tab', { name: 'Style' }).click()
+        await riya.waitForTimeout(300)
+        await riya.screenshot({ path: t.out(`${key}-style`) })
         await riya.getByRole('button', { name: own, exact: true }).first().waitFor({ state: 'attached', timeout: 2000 }).catch(() => {})
         assert.equal(await riya.getByRole('button', { name: notOwn, exact: true }).count(), 0, `${name} doesn't offer ${notOwn}`)
         // A click on a section in the preview selects it here.
         await riya.getByRole('tab', { name: /Sections/ }).click()
+        if (key === 'editorial') {
+          await riya.getByRole('button', { name: 'Add a section', exact: true }).click()
+          const lib = riya.getByRole('dialog', { name: 'Add a section' })
+          await lib.getByPlaceholder('Search sections').fill('photo')
+          await riya.waitForTimeout(300)
+          await riya.screenshot({ path: t.out('library') })
+          await lib.getByRole('button', { name: 'Close' }).click()
+        }
         await f.locator('[data-section]').nth(1).locator(':scope > *').first().click({ position: { x: 20, y: 20 } })
         await riya.getByRole('button', { name: '‹ Sections' }).waitFor()
         await riya.getByRole('button', { name: '‹ Sections' }).click()

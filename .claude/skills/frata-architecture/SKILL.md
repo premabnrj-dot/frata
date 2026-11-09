@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.24.0
+  version: 2.25.0
   verified: 2026-11-08
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -321,6 +321,15 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   entrance wrapper (server, reads nothing, `display: contents` when off).
 - **A section is guarded**: `Guarded` calls the section's own function (Hero({ s, ctx }) …, never <Hero/>) in try/catch (`unstable_rethrow` first); a throw
   leaves it out of the shop and names it in the preview.
+- **Look v3**: a manifest says what was made for it (`made: { headers, footers, sections }`, each within its own
+  allowed lists: check:theme); the forms and the library read it ("Made for <theme>" first). New designs ship in a
+  theme's next minor version (2.1: header `panel`, `overlay`; footer `gram`), never by editing a released one. The
+  header and footer pictures come from one catalogue read (`shellNeedsCatalogue` / `shellPictures`). "Over the photo"
+  is CSS keyed on the page opening with a full-bleed hero photo (`[data-lead] [data-bleed] img`). A layer's photo may
+  be the shop's own product photo (`acceptedBase(…, 'products')` as well as `'theme'`, same tenant only); a photo's
+  `focus` is additive. Publish holds "Going live" inside the same transition as the action (≥ 1.3 s), so the
+  customizer can't re-render under it; the re-render with no draft is the success popup (published.tsx), over the
+  live revision's framed preview. Section search is pure (`searchSections` in sections.ts, tested).
 - **Any storefront change** runs e2e `05-shop-look` (pixel diff against `e2e/baselines/`); an intended change
   regenerates them in the same commit: `UPDATE_BASELINES=1 npm run e2e -- --only shop-look`. Look's state changes:
   `look.int.test.ts` (real Postgres) and e2e `47-look`.
