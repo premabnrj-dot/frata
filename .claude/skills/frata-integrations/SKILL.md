@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.15.0
+  version: 1.16.0
   verified: 2026-11-09
   decisions: [ADR-0006]
 ---
@@ -438,11 +438,31 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   copy-code button text ≤ 25; no URLs, media or emojis; one-tap Android, zero-tap Android only, iOS < 26 no autofill
   [V, authentication templates + copy-code pages, undated]. Frrata's own WABA: Primary Business Location India, INR.
   Whether a Tech Provider's app may also send from the provider's own WABA: [U] — use a separate app/system user.
+  Rechecked 2026-11-09: no brand variable (the shop is known only by the sending number's display name); delivered to the
+  primary device only; TTL default 10 min, `message_send_ttl_seconds` 30–900, undelivered → dropped and not charged
+  [V-undated, authentication-templates, time-to-live]. **A web shop gets copy code only** (one-tap/zero-tap need an Android
+  app). Cannot go to a username-only user (BSUID) [V-undated, business-scoped-user-ids].
+- **One business, one Messaging account** (2026-11-09): "Sharing a Messaging account across multiple businesses is against
+  policy" [V-undated, authentication-best-practices]; no speaking for a business "without permission" [V, policy
+  2026-09-23]; Twilio Verify ended its shared sender on 1 Mar 2024 [V, twilio docs 2026-03-09]. → **No central Frrata
+  sender for shop logins**: a shop's code goes from the shop's own number (Embedded Signup), billed to the merchant;
+  Frrata's number only where Frrata is the business (its own sign-up; a Frrata account, if one is ever built). Reverse
+  wa.me OTP: no Meta rule [U], and a username user's message may carry no phone → weak proof. No third-party "Sign in
+  with WhatsApp" [U]. Pair rate 1 / 6 s to one user (burst 45, 131056); 80 msg/s per number [V-undated].
 - **SMS (India)**: TRAI Direction 18 Nov 2025 — every template variable pre-tagged (e.g. `#url#`), non-compliant templates
   rejected; values checked against whitelisted domains, numbers, links [V, TRAI PR 133/2025]. TCCCPR Third Amendment
   18 Sep 2026: a misused header or template suspended within 6 h [V, TRAI PR 119/2026]. DLT entity ~₹5,900, 2–7 business
   days; header and template 1–3 days each [S]. Delivery time: [U]. MSG91 ₹0.25→₹0.16 per SMS by volume + 18% GST [V,
-  undated]; Twilio India $0.0083/segment, Verify $0.05 per success + channel [V, Oct 2026].
+  undated]; MSG91 OTP ₹0.25→₹0.18 + GST [V-undated, 2026-11-09]; Twilio India **$0.0832**/segment ("current as of October
+  2026"; corrects $0.0083) [V, 2026-11-09], Verify $0.05 per success + channel [not rechecked]; Gupshup ~₹0.17, Kaleyra
+  ~₹0.18 per OTP [S, competitor, 2026-05].
+- **TCCCPR 2nd Amendment** (12 Feb 2025) [V, gazette PDF read 2026-11-09]: OTP for e-commerce / app login is Transactional
+  (within 30 min of the customer's action, no explicit consent); headers suffixed -P/-S/-T/-G; entity registration =
+  physical verification + biometric of the authorised person; headers/templates unused 90 days deactivated; ≤ 2
+  telemarketers in the chain. **One platform header for many brands: [U]** — a TSP confirms before building.
+- **Other logins** (2026-11-09): Truecaller Mobile Web SDK Android browsers only, price [U]; Google sign-in: FedCM on, each
+  origin registered [V-undated]; passkeys: Related Origin Requests ≤ 5 labels → per shop domain, never platform-wide [V,
+  passkeys.dev 2026-02-05].
 - **Supabase phone OTP**: MessageBird, Twilio, Vonage, TextLocal (community); WhatsApp via Twilio only; Send SMS hook
   (Standard Webhooks, HTTP 5 s) [V, undated]. **Not used**: the sign-up code is a Frrata row sent through the outbox
   (ADR-0006), a business check, not a login.
