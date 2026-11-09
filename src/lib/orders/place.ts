@@ -138,7 +138,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     })
     // A checked phone (EkCode, plan task 3): link the order to the shop's customer only when the session's phone is this
     // order's phone — the session found by its token's hash inside this tenant, never anything in the body.
-    if (input.session) await linkCustomer(tx, id, input.session, input.address.phone)
+    if (input.session) await linkCustomer(tx, tenantId, id, input.session, input.address.phone)
     await tx.insert(orderLines).values(live.map((l, position) => ({
       ...m.shares[position]!,
       lineDiscount: m.lines[position]!.discount, productDiscount: m.lines[position]!.productDiscount, taxableValue: m.lines[position]!.taxable, gstBps: m.lines[position]!.gstBps, gst: m.lines[position]!.gst,

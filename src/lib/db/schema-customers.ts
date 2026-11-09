@@ -1,6 +1,6 @@
 // =============================================================================
 // FILE: src/lib/db/schema-customers.ts — A SHOP'S OWN SHOPPERS (EkCode P1 task 3; ADR-0010: shaped for Messages M·1
-// too). Tenant tables: grant, RLS and policy in drizzle/0085. One row per phone per shop — a guest and an EkCode
+// too). Tenant tables: grant, RLS and policy in drizzle/0087. One row per phone per shop — a guest and an EkCode
 // shopper are the same row; `pairwise` is the shop's random EkCode id for them (never an account id). Sessions are
 // the shop's own first-party sign-in (`__Host-shop_s`; only the token's sha256 is kept). Consents are per shop, per
 // purpose, per channel and sender, with the notice version agreed to. Composite keys throughout, so no row can point

@@ -252,10 +252,13 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   `src/domains/<key>/`, `src/lib/modules/<key>/` (its tables too: `src/lib/modules/reviews/schema.ts`, listed in
   `drizzle.config.ts`), `src/components/modules/<key>/`, `src/app/(console)/console/apps/<key>/`, its shopper API
   `src/app/api/shop/<key>/` and its shop pages in the `src/app/s/[host]/(<key>)/` group; core reaches it only through
-  the hooks `check:modules` lists: `<ModuleSlot name="order.side" | "home.tile">` (`src/components/modules/slots.tsx`),
+  the hooks `check:modules` lists: `<ModuleSlot>` / `<Slot name="order.side" | "home.tile" | "checkout.identity">` (`src/components/modules/slots.tsx`),
   the product page's `productExtras` (`src/components/modules/storefront.tsx`: what goes under a product and its
   rating, from one read; the rating is the markup's `aggregateRating`), the `SENDERS` map (`src/lib/outbox/drain.ts`),
   the console layout, the webhooks. Add a filler, not an import to a core page.
+  In the shop's client checkout a module talks through `src/components/storefront/module-events.ts` only: it fills the
+  form with a `shop:prefill` event, hears the placed order's address on `shop:placed`, and names the arm it showed in
+  sessionStorage `shop:arm:<key>` (EkCode P1).
 - **An add-on sold only on some plans** says so in the registry (`addOnFor`, Reviews: Growth and Scale). Off those
   plans an add-on or trial row grants nothing (`addOnAllowed`), Admin offers no trial, and the bill drops it; a plan
   that includes the module stops the add-on's bill too (`addOnBillable`, from the plan at the month's start).

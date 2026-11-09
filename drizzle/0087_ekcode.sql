@@ -328,7 +328,13 @@ create or replace function ekcode_limits() returns jsonb language sql stable sec
 create or replace function ekcode_plan_of(p_tenant uuid) returns text language sql stable security definer set search_path = '' as $$
   select p.code from public.tenant_plans tp join public.plan_versions pv on pv.id = tp.plan_version_id join public.plans p on p.id = pv.plan_id
    where tp.tenant_id = p_tenant and tp.starts_at <= now() order by tp.starts_at desc limit 1 $$;--> statement-breakpoint
-revoke all on function ekcode_limits(), ekcode_plan_of(uuid), ekcode_codes_one_outcome() from public, anon, authenticated, service_role;--> statement-breakpoint
+-- A host EkCode may return to: a shop's platform address (no shop_domains row), or its own domain whose DNS check
+-- passed in the last 24 hours — a lapsed domain someone else now points must never receive a grant (security M6).
+create or replace function ekcode_host_ok(p_tenant uuid, p_host text) returns boolean language sql stable security definer set search_path = '' as $$
+  select not exists (select 1 from public.shop_domains d where d.host = p_host)
+      or exists (select 1 from public.shop_domains d where d.host = p_host and d.tenant_id = p_tenant and d.proved_at is not null
+                   and d.removed_at is null and d.dns_ok_at > now() - interval '24 hours') $$;--> statement-breakpoint
+revoke all on function ekcode_limits(), ekcode_plan_of(uuid), ekcode_codes_one_outcome(), ekcode_host_ok(uuid, text) from public, anon, authenticated, service_role;--> statement-breakpoint
 -- ── A flow, made by the shop's server: tenant and host from the request's Host (requireShop), never a URL. ──
 create or replace function app_ekcode_start_flow(p_tenant uuid, p_host text, p_handle_digest text, p_state text, p_challenge text, p_arm text)
   returns boolean language plpgsql volatile security definer set search_path = '' as $$
@@ -336,6 +342,7 @@ begin
   if p_handle_digest !~ '^[0-9a-f]{64}$' or p_host !~ '^[a-z0-9.-]{3,253}$' then raise exception 'ekcode: bad flow' using errcode = 'invalid_parameter_value'; end if;
   if not (select s.sign_in from public.ekcode_settings s order by s.version desc limit 1) then return false; end if;
   if exists (select 1 from public.ekcode_shop_controls c where c.tenant_id = p_tenant and c.paused_at is not null) then return false; end if;
+  if not public.ekcode_host_ok(p_tenant, p_host) then return false; end if;
   insert into public.ekcode_flows (handle_digest, tenant_id, host, state, challenge, arm) values (p_handle_digest, p_tenant, p_host, p_state, p_challenge, p_arm);
   return true;
 end $$;--> statement-breakpoint
@@ -376,6 +383,9 @@ begin
   if v_net >= (l->>'perNetworkHour')::int then return query select 'wait'::text, now() + interval '1 hour', 0::smallint; return; end if;
   select count(*) into v_n from public.ekcode_codes k where k.net_wide = p_net_wide and k.created_at > now() - interval '1 hour';
   if v_n >= (l->>'perWideNetworkHour')::int then return query select 'wait'::text, now() + interval '1 hour', 0::smallint; return; end if;
+  -- The caps that bound spend are counted under their own locks, so a burst from many numbers can't pass together.
+  perform pg_advisory_xact_lock(hashtext('ekcode:global'));
+  perform pg_advisory_xact_lock(hashtext('ekcode:shop:' || f.tenant_id::text));
   select count(*) into v_n from public.ekcode_codes k where k.created_at > now() - interval '1 hour';
   if v_n >= (l->>'globalHour')::int then return query select 'wait'::text, now() + interval '5 minutes', 0::smallint; return; end if;
   -- Per shop, a day, by plan (or raised by Admin).
@@ -432,7 +442,9 @@ begin
   if not (k.code_hmac = any(p_code_hmacs)) then
     return query select false, greatest(v_max - k.tries, 0), false, null::uuid, null::text, null::text, null::jsonb; return; end if;
   update public.ekcode_codes set verified_at = now(), proof_digest = p_proof_digest, proof_expires_at = now() + interval '10 minutes' where id = k.id;
-  select * into a from public.ekcode_accounts x where x.phone_key = k.phone_key and x.deleted_at is null;
+  -- The account was found at issue with every live key (k.account_id); after a pepper rotation it moves to the newest.
+  select * into a from public.ekcode_accounts x where (x.id = k.account_id or x.phone_key = k.phone_key) and x.deleted_at is null limit 1;
+  if a.id is not null and a.phone_key <> k.phone_key then update public.ekcode_accounts set phone_key = k.phone_key where id = a.id; end if;
   return query select true, v_max - k.tries, a.id is not null, a.seal_ref, a.name_sealed, a.phone_sealed,
     coalesce((select jsonb_agg(jsonb_build_object('id', d.id, 'label', d.label) order by d.last_used_at desc nulls last, d.created_at desc)
       from public.ekcode_addresses d where d.account_id = a.id and d.deleted_at is null), '[]'::jsonb);
@@ -453,7 +465,7 @@ begin
   if k.id is null then return false; end if;
   if p_notice_version !~ '^ekcode-network@[0-9]+$' then raise exception 'ekcode: bad notice' using errcode = 'invalid_parameter_value'; end if;
   perform pg_advisory_xact_lock(hashtext('ekcode:phone:' || k.phone_key));
-  if exists (select 1 from public.ekcode_accounts a where a.phone_key = k.phone_key and a.deleted_at is null) then return false; end if;
+  if k.account_id is not null or exists (select 1 from public.ekcode_accounts a where a.phone_key = k.phone_key and a.deleted_at is null) then return false; end if;
   insert into public.ekcode_accounts (phone_key, phone_sealed, name_sealed, seal_ref) values (k.phone_key, p_phone_sealed, p_name_sealed, p_seal_ref) returning id into v_id;
   insert into public.ekcode_consents (account_id, kind, notice_version) values (v_id, 'network', p_notice_version);
   update public.ekcode_codes set account_id = v_id where id = k.id;
@@ -470,7 +482,7 @@ begin
   if p_code_digest !~ '^[0-9a-f]{64}$' then raise exception 'ekcode: bad code' using errcode = 'invalid_parameter_value'; end if;
   k := public.ekcode_proof(p_handle_digest, p_proof_digest);
   if k.id is null then return; end if;
-  select * into a from public.ekcode_accounts x where x.phone_key = k.phone_key and x.deleted_at is null;
+  select * into a from public.ekcode_accounts x where (x.id = k.account_id or x.phone_key = k.phone_key) and x.deleted_at is null limit 1;
   if a.id is null then return; end if;
   if p_with_address is not null then
     if not exists (select 1 from public.ekcode_addresses d where d.id = p_with_address and d.account_id = a.id and d.deleted_at is null) then return; end if;
@@ -494,6 +506,7 @@ begin
   if g.code_digest is null or g.used_at is not null or g.expires_at <= now() then return; end if;
   select * into f from public.ekcode_flows x where x.id = g.flow_id;
   if f.tenant_id <> p_tenant or f.host <> p_host or f.challenge <> p_challenge then return; end if;
+  if not public.ekcode_host_ok(p_tenant, p_host) then return; end if;
   select * into a from public.ekcode_accounts x where x.id = g.account_id and x.deleted_at is null;
   if a.id is null then return; end if;
   update public.ekcode_grants set used_at = now(), save_token_digest = case when p_save_digest ~ '^[0-9a-f]{64}$' then p_save_digest end where code_digest = g.code_digest;
@@ -572,6 +585,9 @@ begin
   delete from public.ekcode_grants where created_at < now() - interval '2 days';
   update public.ekcode_codes set net_narrow = null, net_wide = null where created_at < now() - interval '7 days' and net_narrow is not null;
   delete from public.ekcode_flows where started_at < now() - interval '30 days';
+  -- The shop's side (security L2): a sealed address lives 24 h, a save token 24 h; only those columns are touched.
+  update public.customer_sessions set prefill_sealed = null, prefill_expires_at = null where prefill_expires_at < now();
+  update public.customer_sessions set save_token_sealed = null where save_token_sealed is not null and created_at < now() - interval '24 hours';
 end $$;--> statement-breakpoint
 -- ── Admin (frata_admin; admin role re-checked from the uid; every write audited with a reason). Counts only. ──
 create or replace function ekcode_staff(p_uid uuid, p_admin boolean) returns text language sql stable security definer set search_path = '' as $$
@@ -595,7 +611,7 @@ begin
   past as (select coalesce(sum(x.started), 0) s, coalesce(sum(x.codes), 0) c, coalesce(sum(x.delivered), 0) d, coalesce(sum(x.verified), 0) v,
       coalesce(sum(x.created), 0) cr, coalesce(sum(x.continued), 0) co from public.ekcode_daily x where x.day >= v_from)
   select (select count(*) from public.ekcode_accounts a where a.deleted_at is null),
-    (select count(distinct k.account_id) from public.ekcode_codes k where k.verified_at > now() - interval '30 days'),
+    (select case when n < 5 then null else n end from (select count(distinct k.account_id) n from public.ekcode_codes k where k.verified_at > now() - interval '30 days') a),
     (select case when n < 5 then null else n end from (select count(*) n from (select p.account_id from public.ekcode_pairs p group by 1 having count(*) > 1) m) q),
     past.s + today.s, past.c + today.c, past.d + today.d, past.v + today.v, past.cr + today.cr, past.co + today.co,
     (select coalesce(max(n), 0) from (select count(*) n from public.ekcode_codes k where k.created_at > now() - interval '1 day' group by date_trunc('minute', k.created_at)) pm),
@@ -611,7 +627,9 @@ begin
   if p_days not in (1, 7, 30) then raise exception 'ekcode: bad period' using errcode = 'invalid_parameter_value'; end if;
   return query
   select t.id, t.name, public.ekcode_plan_of(t.id),
-    coalesce(sum(d.started), 0)::bigint, coalesce(sum(d.codes), 0)::bigint, coalesce(sum(d.verified), 0)::bigint, coalesce(sum(d.continued), 0)::bigint,
+    -- Counts under 5 are not shown (tenancy S1): a single shopper is never readable from a row.
+    case when coalesce(sum(d.started), 0) < 5 then null else sum(d.started) end::bigint, case when coalesce(sum(d.codes), 0) < 5 then null else sum(d.codes) end::bigint,
+    case when coalesce(sum(d.verified), 0) < 5 then null else sum(d.verified) end::bigint, case when coalesce(sum(d.continued), 0) < 5 then null else sum(d.continued) end::bigint,
     (select count(*) from public.ekcode_codes k where k.tenant_id = t.id and k.delivered_at >= date_trunc('month', now() at time zone 'Asia/Kolkata') at time zone 'Asia/Kolkata'),
     c.breaker_at, c.paused_at, c.raised_cap
   from public.tenants t

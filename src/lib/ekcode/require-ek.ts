@@ -6,6 +6,7 @@ import { clientIp } from '@/lib/http/client-ip'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { ekcodeConfigured } from './keys'
 import { scheme } from './cookie-name'
+import { readCapped } from './webhook'
 
 // =============================================================================
 // FILE: src/lib/ekcode/require-ek.ts — THE CHECK EVERY EKCODE.IN API CALL PASSES (security review H1, M1): the request
@@ -30,8 +31,8 @@ export async function requireEk<T extends z.ZodTypeAny>(request: Request, schema
   if (!schema) return { ok: true, body: undefined as z.output<T>, net }
   let json: unknown
   try {
-    const text = await request.text()
-    if (text.length > 4096) return { ok: false, response: ekReply({ error: 'Too large' }, 413) }
+    const text = await readCapped(request, 4096)
+    if (text === null) return { ok: false, response: ekReply({ error: 'Too large' }, 413) }
     json = JSON.parse(text)
   } catch { return { ok: false, response: ekReply({ error: 'Bad request' }, 400) } }
   const parsed = schema.safeParse(json)

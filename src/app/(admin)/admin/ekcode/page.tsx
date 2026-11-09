@@ -78,9 +78,9 @@ async function Shops({ staff, days }: { staff: Parameters<typeof ekShops>[0]; da
         {shops.map((r) => (
           <DataTableRow key={r.tenant_id}>
             <Td cell="a" className="font-medium">{r.shop}</Td>
-            <Td cell="c" className="text-right font-mono">{r.codes}</Td>
-            <Td cell="c" className="text-right font-mono">{r.codes ? `${Math.round((r.verified / r.codes) * 100)}%` : '—'}</Td>
-            <Td cell="c" className="text-right font-mono">{r.continued}</Td>
+            <Td cell="c" className="text-right font-mono">{n(r.codes)}</Td>
+            <Td cell="c" className="text-right font-mono">{r.codes && r.verified != null ? `${Math.round((r.verified / r.codes) * 100)}%` : '—'}</Td>
+            <Td cell="c" className="text-right font-mono">{n(r.continued)}</Td>
             <Td cell="d">{r.paused_at ? <Badge tone="warn">Paused</Badge> : r.breaker_at ? <Badge tone="warn">Breaker</Badge> : <Badge tone="ok">OK</Badge>}{r.raised_cap ? <span className="ml-2 text-xs text-muted-foreground">cap {r.raised_cap}/day</span> : null}</Td>
             <Td cell="f" className="text-right">
               <form action={shopControlAction} className="flex justify-end gap-2">

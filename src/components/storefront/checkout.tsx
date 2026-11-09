@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { STATES } from '@/domains/checkout/states'
 import { cleanMobile } from '@/domains/checkout/mobile'
+import { announcePlaced, moduleArm, usePrefill } from './module-events'
 import { waOptInText } from '@/domains/checkout/opt-in'
 import { b2bProblem, cleanGstin, gstinStateName, gstinValid } from '@/domains/tax/gstin'
 import { pick, urlFor } from '@/domains/media/sizes'
@@ -74,11 +75,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     try { const saved = JSON.parse(ss.get(FORM_KEY) ?? 'null'); if (saved) setF({ ...EMPTY, ...saved }) } catch { /* */ }
   }, [])
   useEffect(() => { ss.set(FORM_KEY, JSON.stringify(f)) }, [f])
-  // A module may fill the form (EkCode's signed-in shopper): a generic event, so core never imports a module.
-  useEffect(() => {
-    const fill = (e: Event) => { const d = (e as CustomEvent<Partial<Form>>).detail; setF((x) => ({ ...x, ...Object.fromEntries(Object.entries(d ?? {}).filter(([k, v]) => k in EMPTY && typeof v === 'string' && v)) })) }
-    window.addEventListener('shop:prefill', fill); return () => window.removeEventListener('shop:prefill', fill)
-  }, [])
+  usePrefill(EMPTY, setF)
   useEffect(() => { if (q && !seen.current) seen.current = q }, [q])
   const set = (k: keyof Form, v: string) => { setF((x) => ({ ...x, [k]: v })); setErrors((e) => { const n = { ...e }; delete n[k]; return n }) }
 
@@ -142,11 +139,11 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     if (!attempt.current || attempt.current.sig !== sig) attempt.current = { sig, key: randomKey() }
     let attribution: Record<string, string> = {}
     try { attribution = JSON.parse(ss.get(ATTR_KEY) ?? '{}') } catch { /* */ }
-    const ek = ss.get('shop:arm:ekcode')
+    const ek = moduleArm('ekcode')
     const r = await api<{ token: string; method: 'cod' | 'prepaid'; total: number; pay: Pay | null; payError: string | null }>('/api/shop/orders', {
       idempotencyKey: attempt.current.key, bag: items, method, expectedTotal: total, ...(code ? { code, via: offerCode.via() } : {}),
       address: { phone: f.phone, name: f.name, pincode: f.pincode, addressLine: f.addressLine, area: f.area, landmark: f.landmark, city: f.city, state: f.state },
-      facts: { firstMethod: firstMethod.current, attribution, ...(ek === 'shown' || ek === 'held' ? { ekcode: ek } : {}) },
+      facts: { firstMethod: firstMethod.current, attribution, ...(ek ? { ekcode: ek } : {}) },
       ...(gst.b2b && biz.on ? { b2b: { gstin: cleanGstin(biz.gstin), name: biz.name.trim() } } : {}),
       ...(waOptIn && optIn ? { waOptIn: true } : {}),
     })
@@ -204,8 +201,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   }
 
   function done(token: string) {
-    // A module may act on the placed order's address (EkCode's "Save this address"): a generic event, no import.
-    window.dispatchEvent(new CustomEvent('shop:placed', { detail: { addressLine: f.addressLine, area: f.area, landmark: f.landmark, city: f.city, state: f.state, pincode: f.pincode } }))
+    announcePlaced({ addressLine: f.addressLine, area: f.area, landmark: f.landmark, city: f.city, state: f.state, pincode: f.pincode })
     bag.clear(); ss.del(FORM_KEY); ss.del(PENDING_KEY)
     window.location.assign(`/orders#t=${token}`)
   }

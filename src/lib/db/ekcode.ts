@@ -51,8 +51,11 @@ export const redeem = async (codeDigest: string, challenge: string, tenantId: st
   return rows[0] ?? null
 }
 
-export const saveAddress = async (saveDigest: string, tenantId: string, addressId: string, label: string, sealed: string) =>
-  (await one<{ ok: boolean }>(sql`select app_ekcode_save_address(${saveDigest}, ${tenantId}::uuid, ${addressId}::uuid, ${label}, ${sealed}) as ok`))?.ok === true
+/** Runs inside the shop's transaction when one is passed, so the spent save token and the address commit together. */
+export const saveAddress = async (saveDigest: string, tenantId: string, addressId: string, label: string, sealed: string, tx?: { execute: (q: ReturnType<typeof sql>) => Promise<unknown> }) => {
+  const rows = (await (tx ?? db()).execute(sql`select app_ekcode_save_address(${saveDigest}, ${tenantId}::uuid, ${addressId}::uuid, ${label}, ${sealed}) as ok`)) as unknown as { ok: boolean }[]
+  return rows[0]?.ok === true
+}
 
 export const storeEvent = async (eventKey: string, wamid: string, status: string, error: number | null, at: Date) =>
   (await one<{ ok: boolean }>(sql`select app_ekcode_store_event(${eventKey}, ${wamid}, ${status}, ${error}::int, ${at.toISOString()}::timestamptz) as ok`))?.ok === true

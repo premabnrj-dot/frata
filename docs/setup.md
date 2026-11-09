@@ -304,9 +304,10 @@ plan will use; the plan may rename one, and this list follows it.
      `EKCODE_META_APP_SECRET` (Sensitive, the EkCode app's secret)
    - Two key rings, Sensitive, each entry `openssl rand -base64 32`: `EKCODE_PHONE_PEPPERS` = `p1:<key>` (phone
      lookups) and `EKCODE_SEAL_KEYS` = `k1:<key>` (sealed phones, names and addresses). Keep copies in a password
-     manager. **To rotate**: put the new entry first (`k2:<new>,k1:<old>`) and redeploy — old data still opens and is
-     re-sealed as it is read; remove an old entry only when Admin says nothing uses it (peppers: 12 months). Never just
-     replace a key: that locks every shopper out.
+     manager. **To rotate**: put the new entry first (`k2:<new>,k1:<old>`) and redeploy — new data uses the new key, old
+     data still opens, and an account moves to the newest phone key at its next sign-in. **Never remove an old entry**
+     (there is no re-seal job yet: an old seal key still opens every value sealed with it), and never just replace one:
+     that locks every shopper out.
    Push to `main` (or Redeploy). Test: a demo shop → Continue with EkCode → your own mobile → the code arrives.
 
 **C. Before EkCode reaches a real shopper**

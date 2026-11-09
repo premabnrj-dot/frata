@@ -10,8 +10,8 @@ import { cleanMobile } from '@/domains/checkout/mobile'
 // only (drizzle/0087). Staff never list shoppers or read an address; every write carries a reason into the audit log.
 // =============================================================================
 
-export type EkStats = { accounts: number; active: number; multi_shop: number | null; started: number; codes: number; delivered: number; verified: number; created: number; continued: number; peak_minute: number; codes_month: number }
-export type EkShop = { tenant_id: string; shop: string; plan: string | null; started: number; codes: number; verified: number; continued: number; delivered_month: number; breaker_at: Date | null; paused_at: Date | null; raised_cap: number | null }
+export type EkStats = { accounts: number; active: number | null; multi_shop: number | null; started: number; codes: number; delivered: number; verified: number; created: number; continued: number; peak_minute: number; codes_month: number }
+export type EkShop = { tenant_id: string; shop: string; plan: string | null; started: number | null; codes: number | null; verified: number | null; continued: number | null; delivered_month: number; breaker_at: Date | null; paused_at: Date | null; raised_cap: number | null }
 export type EkSettings = { version: number; sign_in: boolean; limits: Record<string, unknown>; reason: string; at: Date }
 
 const num = <T extends Record<string, unknown>>(r: T) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, typeof v === 'string' && /^\d+$/.test(v) ? Number(v) : v])) as T

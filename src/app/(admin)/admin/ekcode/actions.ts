@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
-import { ekBlockNumber, ekSetLimits, ekSettings, ekShopControl } from '@/lib/admin/ekcode'
+import { ekBlockNumber, ekSetLimits, ekShopControl } from '@/lib/admin/ekcode'
 import { LIMIT_BOUNDS } from '@/domains/ekcode-core/limits'
 
 const back = (tab: string, k: 'ok' | 'error', m: string) => `/admin/ekcode?tab=${tab}&${k}=${encodeURIComponent(m)}`
@@ -35,7 +35,6 @@ export async function limitsAction(form: FormData) {
   const signIn = form.get('signIn') === 'on'
   try { await ekSetLimits(staff, signIn, limits, reason.data) }
   catch { redirect(back('controls', 'error', `A limit is outside its bounds (tries ${LIMIT_BOUNDS.triesPerCode.join('–')}, codes per number ${LIMIT_BOUNDS.perNumber10m.join('–')}).`)) }
-  void ekSettings
   redirect(back('controls', 'ok', 'Limits saved.'))
 }
 

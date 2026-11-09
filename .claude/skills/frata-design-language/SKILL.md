@@ -879,6 +879,9 @@ saving we cannot show from their own orders.
   address; "Not you?" is one tap everywhere; footer Privacy · Terms only.
 - **Limits are allowances, never charges** (owner): an order-update meter on the Apps row (amber at 80%); past it,
   "More updates" offers wait until the 1st, move up a plan, or connect your own number.
+- **EkCode's colours** are tokens in `src/app/base.css`, the same in both modes and on every shop theme: `--ek-ink`
+  (#1C1917) and `--ek-paper` (#FAFAF9) — 17:1 —, `--ek-cursor` (rani, on paper) and `--ek-cursor-on-ink`, `--ek-sub`,
+  `--ek-line` (decorative). The mark is `src/components/ekcode/mark.tsx`, drawn from `mark-paths.ts`.
 - **Admin › EkCode** shows counts, costs and health, never a list of shoppers or an address; the one way in is "Find
   an account" by exact number with a reason, logged.
 

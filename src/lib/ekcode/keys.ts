@@ -1,6 +1,6 @@
 import 'server-only'
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
-import { E2E_FIXTURES, EKCODE_META_APP_SECRET, EKCODE_PHONE_PEPPERS, EKCODE_SEAL_KEYS, EKCODE_WA_AUTH_TEMPLATE, EKCODE_WA_PHONE_NUMBER_ID, EKCODE_WA_TOKEN } from '@/lib/env'
+import { EKCODE_META_APP_SECRET, EKCODE_PHONE_PEPPERS, EKCODE_SEAL_KEYS, EKCODE_WA_AUTH_TEMPLATE, EKCODE_WA_PHONE_NUMBER_ID, EKCODE_WA_TOKEN } from '@/lib/env'
 import { EKCODE_HOST } from '@/lib/public-env'
 import { hashes, openRing, parseRing, sealRing, type Ring } from '@/lib/crypto/key-ring'
 
@@ -19,8 +19,6 @@ const ring = () => (rings ??= { peppers: parseRing(EKCODE_PHONE_PEPPERS), seals:
 export const ekcodeConfigured = () =>
   !!(EKCODE_HOST && EKCODE_WA_PHONE_NUMBER_ID && EKCODE_WA_TOKEN && EKCODE_WA_AUTH_TEMPLATE && EKCODE_META_APP_SECRET
     && ring().peppers.length && ring().seals.length)
-/** In the e2e stack the fakes stand in for Meta; the rings and host must still be set. */
-export const ekcodeTesting = () => E2E_FIXTURES
 
 /** A 10-digit Indian mobile → the hash to store and every hash to look it up by. */
 export const phoneKeys = (mobile: string) => hashes(ring().peppers, 'phone', mobile)

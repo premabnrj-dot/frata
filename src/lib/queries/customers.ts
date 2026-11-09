@@ -4,6 +4,7 @@ import { and, eq, gt, isNull, sql } from 'drizzle-orm'
 import { withTenant } from '@/lib/db/tenant'
 import { customerSessions, shopCustomers } from '@/lib/db/schema-customers'
 import { orders } from '@/lib/db/schema-orders'
+import { cleanMobile } from '@/domains/checkout/mobile'
 import { redeem, saveAddress } from '@/lib/db/ekcode'
 import { open, seal } from '@/lib/crypto/secret-box'
 import { ekOpen, ekSeal, randomToken, tokenDigest } from '@/lib/ekcode/keys'
@@ -36,6 +37,7 @@ export async function signInFromEkcode(tenantId: string, host: string, code: str
   return withTenant(tenantId, async (tx) => {
     const r = await redeem(tokenDigest(code), challenge, tenantId, host, tokenDigest(saveToken), tx)
     if (!r) return null
+    // r.seal_ref only opens the sealed values here; it is the same at every shop, so it is NEVER stored or returned.
     const name = ekOpen(r.name_sealed, `ekcode_accounts:name:${r.seal_ref}`)
     const phone = ekOpen(r.phone_sealed, `ekcode_accounts:phone:${r.seal_ref}`)
     if (!name || !phone || !/^[6-9][0-9]{9}$/.test(phone)) return null
@@ -64,7 +66,7 @@ export async function prefillFor(tenantId: string, token: string): Promise<Prefi
     const [s] = await tx.select({ id: customerSessions.id, prefill: customerSessions.prefillSealed, prefillUntil: customerSessions.prefillExpiresAt,
       save: customerSessions.saveTokenSealed, name: shopCustomers.name, phone: shopCustomers.phone })
       .from(customerSessions).innerJoin(shopCustomers, and(eq(shopCustomers.tenantId, customerSessions.tenantId), eq(shopCustomers.id, customerSessions.customerId)))
-      .where(and(eq(customerSessions.tokenDigest, tokenDigest(token)), isNull(customerSessions.revokedAt), gt(customerSessions.expiresAt, sql`now()`)))
+      .where(and(eq(customerSessions.tenantId, tenantId), eq(customerSessions.tokenDigest, tokenDigest(token)), isNull(customerSessions.revokedAt), gt(customerSessions.expiresAt, sql`now()`)))
       .limit(1)
     if (!s) return null
     let address: Address | null = null, addressLabel: string | null = null
@@ -82,7 +84,7 @@ export async function prefillFor(tenantId: string, token: string): Promise<Prefi
 export async function forgetSession(tenantId: string, token: string): Promise<void> {
   if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return
   await withTenant(tenantId, (tx) => tx.update(customerSessions).set({ revokedAt: new Date(), prefillSealed: null, saveTokenSealed: null })
-    .where(and(eq(customerSessions.tokenDigest, tokenDigest(token)), isNull(customerSessions.revokedAt))))
+    .where(and(eq(customerSessions.tenantId, tenantId), eq(customerSessions.tokenDigest, tokenDigest(token)), isNull(customerSessions.revokedAt))))
 }
 
 /** "Save this address to EkCode", after the order: the session's save token, used once (and spent by the definer). */
@@ -93,28 +95,27 @@ export async function saveToEkcode(tenantId: string, token: string, label: strin
   if (!clean || !name) return false
   return withTenant(tenantId, async (tx) => {
     const [s] = await tx.select({ id: customerSessions.id, save: customerSessions.saveTokenSealed }).from(customerSessions)
-      .where(and(eq(customerSessions.tokenDigest, tokenDigest(token)), isNull(customerSessions.revokedAt), gt(customerSessions.expiresAt, sql`now()`)))
+      .where(and(eq(customerSessions.tenantId, tenantId), eq(customerSessions.tokenDigest, tokenDigest(token)), isNull(customerSessions.revokedAt), gt(customerSessions.expiresAt, sql`now()`)))
       .limit(1).for('update')
     if (!s?.save) return false
-    await tx.update(customerSessions).set({ saveTokenSealed: null }).where(eq(customerSessions.id, s.id))
+    await tx.update(customerSessions).set({ saveTokenSealed: null }).where(and(eq(customerSessions.tenantId, tenantId), eq(customerSessions.id, s.id)))
     const saveToken = open(s.save, tenantId, saveAad(s.id))
     if (!saveToken) return false
     const addressId = randomUUID()
-    return saveAddress(tokenDigest(saveToken), tenantId, addressId, name, ekSeal(JSON.stringify(clean), `ekcode_addresses:sealed:${addressId}`))
+    return saveAddress(tokenDigest(saveToken), tenantId, addressId, name, ekSeal(JSON.stringify(clean), `ekcode_addresses:sealed:${addressId}`), tx)
   })
 }
 
 type Tx = Parameters<Parameters<typeof withTenant>[1]>[0]
 
 /** Inside placeOrder's own transaction: the order points at the session's customer only when the phones match. */
-export async function linkCustomer(tx: Tx, orderId: string, token: string, phone: string): Promise<void> {
+export async function linkCustomer(tx: Tx, tenantId: string, orderId: string, token: string, phone: string): Promise<void> {
   if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return
-  const { cleanMobile } = await import('@/domains/checkout/mobile')
   const mobile = cleanMobile(phone)
   if (!mobile) return
   const [c] = await tx.select({ id: shopCustomers.id }).from(customerSessions)
     .innerJoin(shopCustomers, and(eq(shopCustomers.tenantId, customerSessions.tenantId), eq(shopCustomers.id, customerSessions.customerId)))
-    .where(and(eq(customerSessions.tokenDigest, tokenDigest(token)), isNull(customerSessions.revokedAt), gt(customerSessions.expiresAt, sql`now()`), eq(shopCustomers.phone, mobile)))
+    .where(and(eq(customerSessions.tenantId, tenantId), eq(customerSessions.tokenDigest, tokenDigest(token)), isNull(customerSessions.revokedAt), gt(customerSessions.expiresAt, sql`now()`), eq(shopCustomers.phone, mobile)))
     .limit(1)
-  if (c) await tx.update(orders).set({ customerId: c.id }).where(eq(orders.id, orderId))
+  if (c) await tx.update(orders).set({ customerId: c.id }).where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId)))
 }

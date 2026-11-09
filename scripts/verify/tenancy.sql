@@ -2274,6 +2274,16 @@ do $$ declare v record; g record; ph2 text := 'p1:' || repeat('b', 64); ch text 
   if exists (select 1 from app_ekcode_grant(repeat('c', 64), repeat('8', 64), 'efefefef-0000-0000-0000-00000000000a', repeat('6', 64))) then raise exception 'FAIL: a grant carried another shopper''s address'; end if;
 end $$;
 rollback;
+-- A shop's own domain whose DNS check is stale (or another shop's) never starts a flow (security M6).
+insert into shop_domains (tenant_id, host, apex, with_www, claimed_by, proved_at, added_at, dns_ok_at) values
+  ('11111111-1111-1111-1111-111111111111', 'lapsed.proof-a.test', 'proof-a.test', false, '99999999-9999-9999-9999-999999999999', now() - interval '30 days', now() - interval '30 days', now() - interval '2 days');
+begin; set local role frata_app;
+do $$ begin
+  if app_ekcode_start_flow('11111111-1111-1111-1111-111111111111', 'lapsed.proof-a.test', repeat('d', 64), repeat('s', 43), 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM', 'shown')
+  then raise exception 'FAIL: a stale own domain started an EkCode flow'; end if;
+end $$;
+rollback;
+delete from shop_domains where host = 'lapsed.proof-a.test';
 -- The shop's own shoppers; an order cannot point at another shop's customer; staff read nothing of it.
 insert into shop_customers (id, tenant_id, phone, name) values ('cececece-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', '9845012345', 'B shopper');
 begin; set local role frata_app;
@@ -2298,9 +2308,15 @@ do $$ declare v record; begin
            where n.nspname = 'public' and (p.proname like 'app\_ekcode\_%' or p.proname like 'app\_admin\_ekcode\_%') loop
     if not v.prosecdef or not ('search_path=""' = any(v.proconfig)) then raise exception 'FAIL: % is not a pinned definer', v.proname; end if;
     if has_function_privilege('public', v.oid, 'execute') or has_function_privilege('anon', v.oid, 'execute') or has_function_privilege('authenticated', v.oid, 'execute')
+       or has_function_privilege('service_role', v.oid, 'execute')
     then raise exception 'FAIL: % runs for an API role', v.proname; end if;
     if v.proname like 'app\_admin\_%' and has_function_privilege('frata_app', v.oid, 'execute') then raise exception 'FAIL: the app runs %', v.proname; end if;
     if v.proname like 'app\_ekcode\_%' and has_function_privilege('frata_admin', v.oid, 'execute') then raise exception 'FAIL: staff run %', v.proname; end if;
+  end loop;
+  -- The internal helpers run for no role at all.
+  for v in select p.oid, p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname like 'ekcode\_%' loop
+    if exists (select 1 from unnest(array['public', 'anon', 'authenticated', 'service_role', 'frata_app', 'frata_admin']) r where has_function_privilege(r, v.oid, 'execute'))
+    then raise exception 'FAIL: the helper % runs for a role', v.proname; end if;
   end loop;
 end $$;
 
