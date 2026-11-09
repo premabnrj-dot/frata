@@ -3,6 +3,22 @@
 What a merchant (or Frata staff) can do now that they could not before, newest first. One entry per closed
 phase; the detail is in its plan.
 
+## 2026-11-09 — Look v3 ([mockup](https://claude.ai/artifact/N3ATeKr1XxgTvEiPLjN2tq), research § 11 in [themes pro-grade](research/2026-11-08-themes-pro-grade.md))
+
+- **Frrata Themes:** the gallery wears the Frrata Themes tile; each card carries it.
+- **The customizer opens on a computer:** the shop drawn full width and scaled to fit, Phone one tap away.
+- **Publish in one line:** a small confirm, the preview says Going live, then a popup over the shop with its address,
+  View your shop, Keep editing and Undo. No separate page.
+- **Confirmations** before discarding a draft, undoing a publish, restoring over a draft, trying another theme over a
+  draft, and leaving before a save lands; removing a section is undone from a toast.
+- **Style in groups:** colour bars, swatches, buttons that show their hover, header, footer and photo layouts as
+  pictures, sliding choices.
+- **Photos:** drop, paste or choose, or pick one of your product photos; a progress ring; tap to set what stays in
+  view; description suggestions; plain-words fixes when an upload fails.
+- **Add a section:** search, kinds with counts, picture cards, what fits the theme and what was made for it.
+- **New designs (2.1):** Editorial's shop-panel header and over-the-photo header, Studio's over-the-photo header,
+  and the Instagram strip footer for all three.
+
 ## 2026-11-09 — Themes 2.0: three themes, each with a job ([plan](plans/2026-11-09-themes-three.md), [showcase](https://claude.ai/artifact/8bvMF5mdhJQkVDayoVjabc))
 
 - **Look › Themes offers three:** Editorial (occasion and designer wear; Atelier's arch lives here), Bazaar (big
