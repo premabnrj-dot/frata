@@ -212,7 +212,14 @@ Addresses list and the Connect dialog (`settings/address/domains.tsx`, actions i
 asMember, support refused, rate limits failing closed); Admin: a merchant's domains with Disconnect (reason), and
 Admin › Names › Domains with held claims to Move or Refuse (app_admin_disconnect_domain, app_admin_settle_domain).
 Not built: the 307 from the frrata name (Pro), notices to a shop that loses a domain (notifications), Admin's
-Domain health beyond "Not working", the partner-before-handover path, one `waText()` helper. e2e `53-domains` with
+Domain health beyond "Not working", the partner-before-handover path, one `waText()` helper. **Built differently
+from mockup v2 (impact review 2026-11-09), to do next:** Make main ends in the Undo toast, not a popup with Copy and
+View your shop; no 24 h banner on every console page yet; a Disconnected row has no Reply (needs T·1's notices); the
+problem rows show "Not working" with one line, not each fix (proxy, CAA, proof removed — the dialog shows the stray
+A record); step 1 shows the tidied domain, not Main / Also www / DNS host (the DNS host shows on step 2).
+**Open for the owner before the first live merchant (security review D2·10 H1):** connecting is capped per member,
+shop, IP and platform (and a day's claims platform-wide), but any shop may connect; the reviewers advise "paid or
+phone-verified shops only". The certificate check is a HEAD over the system resolver (accepted: one bit, own shop). e2e `53-domains` with
 `e2e/fakes/domains.mjs`. Still to do: drop `app_tenant_for_host` (0008) in the next migration. Tests: connectors (unit, faked fetch), proofs 56, int
 `src/lib/domains/__tests__/own-domains.int.test.ts`.
 
