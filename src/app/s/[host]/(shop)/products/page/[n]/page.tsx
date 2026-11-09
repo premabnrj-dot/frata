@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { wordsFor } from '@/components/storefront/words'
 import { notFound } from 'next/navigation'
 import { AllView } from '@/components/storefront/pages'
 import { isListed, pageOf, pageParam } from '@/domains/storefront/listing'
@@ -24,7 +25,7 @@ async function load(params: Params) {
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { shop, page } = await load(params)
-  return toMetadata(shopTags(shop, { kind: 'list', path: `/products/page/${page}`, title: `Shop all · page ${page} | ${shop.shopName}`, shareTitle: `Shop all · page ${page}`, description: null, image: null }))
+  return toMetadata(shopTags(shop, { path: `/products/page/${page}`, title: `${wordsFor(shop.shopLanguage).shopAll} · page ${page} | ${shop.shopName}`, shareTitle: `${wordsFor(shop.shopLanguage).shopAll} · page ${page}`, description: null, image: null }))
 }
 
 export default async function AllPage({ params }: { params: Params }) {

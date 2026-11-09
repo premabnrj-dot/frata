@@ -5,13 +5,15 @@ import type { StoreShop } from '@/lib/queries/storefront'
 /**
  * A shop page's tags (src/domains/seo/tags.ts, the one writer) as Next metadata. og:type for a product and the
  * product:* tags are not in Next's Open Graph types: <ProductTags> renders them as property= meta tags, which React
- * places in the <head> of the static page (64-seo checks the raw head).
+ * places in the <head> of the static page (64-seo checks the raw head). That holds while nothing above the product
+ * page suspends: a loading.tsx or Suspense boundary there would move them into the body.
  */
 export function toMetadata(t: PageTags): Metadata {
   const img = t.og.image
   return {
     title: { absolute: t.title },
-    ...(t.description ? { description: t.description } : {}),
+    // Always set (null clears): an unset key keeps the layout's and Next copies it into og/twitter.
+    description: t.description,
     alternates: { canonical: t.canonical },
     robots: t.robots.index ? { index: true, follow: true, 'max-image-preview': 'large' } : { index: false, follow: false },
     openGraph: {

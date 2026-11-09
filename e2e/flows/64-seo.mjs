@@ -71,7 +71,7 @@ export default {
       }
       // S1·1: one builder — a product card with its price (Meta, Pinterest), a large X card, the locale, large previews.
       const h = head((await get(`/products/${product.handle}`, CRAWLERS.facebook)).body)
-      assert.equal(h.one('og:type'), 'product', 'og:type product')
+      assert.deepEqual(h.prop('og:type'), ['product'], 'exactly one og:type, product')
       assert.ok(prices.includes(Math.round(Number(h.one('product:price:amount')) * 100)), `product:price:amount ${h.one('product:price:amount')} is a variant's price`)
       assert.equal(h.one('product:price:currency'), 'INR')
       assert.match(h.one('product:availability') ?? '', /^(in stock|out of stock|preorder)$/)
@@ -115,6 +115,11 @@ export default {
           const canonical = head(r.body).link('canonical')[0]
           assert.equal(canonical, `https://${HOST}${path === '/' ? '/' : path}`, `${path} ${name}: canonical`)
         }
+      }
+      // A shop's card never carries Frrata's own words (the root layout's description).
+      for (const path of ['/products', '/policies/returns']) {
+        const h = head((await get(path, CRAWLERS.whatsapp)).body)
+        for (const k of ['description', 'og:description', 'twitter:description']) assert.doesNotMatch(h.one(k) ?? '', /Frrata|Fashion commerce/, `${path} ${k}`)
       }
       const home = head((await get('/', CRAWLERS.facebook)).body)
       assert.ok(home.one('og:title') && home.one('og:url'), 'home: og:title and og:url')

@@ -86,6 +86,14 @@ verify command run and read, and `impact-reviewer` on its diff before the commit
   cards), frata-architecture (`src/domains/seo/`, the image and icon routes, `shopLink` presets), frata-gotchas
   (htmlLimitedBots; og other tags are `name=`), version bumps; spec status per phase.
 
+### S1·1 as built (2026-11-09; impact review applied)
+- `src/domains/seo/` holds defaults (moved from catalogue), `pageTags` and `offerOf` (the lowest price a shopper can
+  buy at, with that size's availability). `s/[host]/_meta.ts` maps tags to Next metadata; description is always set
+  (null clears it — Frrata's root description reached shop cards otherwise; the shop layout sets null too).
+- Product `og:type` and `product:*` render as property= meta in the page (React hoists them; nothing above the page may
+  suspend). "Shop all" follows the shop's language. Open: the console's seo-panel still calls `shareCard` directly
+  (the same function the builder uses); S1·7's share sheet reads `pageTags`.
+
 ## S·2 Search foundations
 - **S2·1 Descriptions everywhere** in `pageTags` (lists, collections trimmed to 155, policies, page n); Hindi titles.
 - **S2·2 Collections**: migration — `collections.seo_title`, `seo_description` (length checks);

@@ -10,7 +10,7 @@ export const revalidate = 60
 export async function generateMetadata({ params }: { params: Promise<{ host: string }> }): Promise<Metadata> {
   const shop = await shopFor(params)
   const description = shop.tagline || `${shop.shopName}: shop online${shop.codOn ? ', pay on delivery' : ''}.`
-  return toMetadata(shopTags(shop, { kind: 'home', path: '/', title: shop.shopName, shareTitle: shop.shopName, description, image: null }))
+  return toMetadata(shopTags(shop, { path: '/', title: shop.shopName, shareTitle: shop.shopName, description, image: null }))
 }
 
 export default async function Home({ params }: { params: Promise<{ host: string }> }) {

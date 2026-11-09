@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const shop = await shopFor(params)
   const { page } = await params
   if (!isPage(page)) notFound()
-  return toMetadata(shopTags(shop, { kind: 'policy', path: `/policies/${page}`, title: `${POLICY_TITLE[page]} | ${shop.shopName}`, shareTitle: POLICY_TITLE[page], description: null, image: null }))
+  return toMetadata(shopTags(shop, { path: `/policies/${page}`, title: `${POLICY_TITLE[page]} | ${shop.shopName}`, shareTitle: POLICY_TITLE[page], description: null, image: null }))
 }
 
 export default async function Policy({ params }: { params: Params }) {

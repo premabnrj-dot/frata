@@ -9,14 +9,12 @@
 
 import { shareCard } from './defaults'
 
-export type PageKind = 'home' | 'product' | 'collection' | 'list' | 'policy'
 /** A share image; `height` null for a photo whose height is not known (until the generated card, S1·3). */
 export type ShareImage = { url: string; width: number; height: number | null; alt: string; type: 'image/jpeg' | 'image/webp' }
 /** Google's product availability words, as Meta and Pinterest read them. */
 export type ProductAvailability = 'in stock' | 'out of stock' | 'preorder'
 
 export type PageFacts = {
-  kind: PageKind
   /** The shop's host, e.g. kesar-studio.frrata.shop; the canonical is built from it and `path`, never from the request. */
   host: string
   /** Absolute path of the clean page: '/', '/products/kurta'. */
@@ -71,4 +69,19 @@ export function pageTags(f: PageFacts): PageTags {
     twitter: { card: f.image ? 'summary_large_image' : 'summary', imageAlt: f.image?.alt ?? null },
     product,
   }
+}
+
+const SCHEMA_WORDS: Record<'in_stock' | 'out_of_stock' | 'preorder', ProductAvailability> = { in_stock: 'in stock', out_of_stock: 'out of stock', preorder: 'preorder' }
+export type OfferVariant = { price: number; compareAt: number | null; google: 'in_stock' | 'out_of_stock' | 'preorder'; canBuy: boolean }
+
+/**
+ * A product's price and availability for its share tags: the lowest price a shopper can buy at now (and that size's
+ * availability); when nothing can be bought, the lowest price, out of stock. The M.R.P. only when it is above it.
+ */
+export function offerOf(variants: OfferVariant[]): { pricePaise: number; mrpPaise: number | null; availability: ProductAvailability } | null {
+  const priced = variants.filter((v) => v.price > 0)
+  if (!priced.length) return null
+  const pool = priced.some((v) => v.canBuy) ? priced.filter((v) => v.canBuy) : priced
+  const v = pool.reduce((a, b) => (b.price < a.price ? b : a))
+  return { pricePaise: v.price, mrpPaise: v.compareAt && v.compareAt > v.price ? v.compareAt : null, availability: v.canBuy ? SCHEMA_WORDS[v.google] : 'out of stock' }
 }

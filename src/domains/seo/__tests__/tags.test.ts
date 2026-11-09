@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { amountOf, pageTags, type PageFacts } from '../tags'
+import { amountOf, offerOf, pageTags, type PageFacts } from '../tags'
 
 const base: PageFacts = {
-  kind: 'product', host: 'kesar-studio.frrata.shop', path: '/products/chanderi-kurta-set', shopName: 'Kesar Studio',
+  host: 'kesar-studio.frrata.shop', path: '/products/chanderi-kurta-set', shopName: 'Kesar Studio',
   title: 'Chanderi kurta set | Kesar Studio', shareTitle: 'Chanderi kurta set',
   description: 'Chanderi kurta set in cotton. From ₹2,490, Pay on delivery, 7-day exchange. A very long tail that goes on and on.',
   lang: 'en', indexable: true,
@@ -24,7 +24,7 @@ describe('pageTags (S1·1: the one writer of a shop page\'s tags)', () => {
   })
   it('no M.R.P. tag unless the price is lower; no product tags off a product', () => {
     expect(Object.fromEntries(pageTags({ ...base, product: { ...base.product!, mrpPaise: 249000 } }).product)['og:price:standard_amount']).toBeUndefined()
-    const home = pageTags({ ...base, kind: 'home', path: '/', product: undefined })
+    const home = pageTags({ ...base, path: '/', product: undefined })
     expect(home.og.type).toBe('website')
     expect(home.product).toEqual([])
   })
@@ -37,5 +37,19 @@ describe('pageTags (S1·1: the one writer of a shop page\'s tags)', () => {
   it('amounts: paise to a two-place decimal', () => {
     expect(amountOf(99)).toBe('0.99')
     expect(amountOf(129900)).toBe('1299.00')
+  })
+})
+
+describe('offerOf (the price and stock a share card states)', () => {
+  it('the lowest price a shopper can buy at; a sold-out cheaper size is not the price', () => {
+    expect(offerOf([
+      { price: 199000, compareAt: null, google: 'out_of_stock', canBuy: false },
+      { price: 249000, compareAt: 299000, google: 'in_stock', canBuy: true },
+    ])).toEqual({ pricePaise: 249000, mrpPaise: 299000, availability: 'in stock' })
+  })
+  it('nothing to buy: the lowest price, out of stock; pre-order says so; no price, no offer', () => {
+    expect(offerOf([{ price: 199000, compareAt: 199000, google: 'out_of_stock', canBuy: false }])).toEqual({ pricePaise: 199000, mrpPaise: null, availability: 'out of stock' })
+    expect(offerOf([{ price: 99900, compareAt: null, google: 'preorder', canBuy: true }])!.availability).toBe('preorder')
+    expect(offerOf([{ price: 0, compareAt: null, google: 'in_stock', canBuy: true }])).toBeNull()
   })
 })

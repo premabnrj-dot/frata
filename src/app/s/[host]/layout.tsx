@@ -15,7 +15,8 @@ export const dynamic = 'force-static'
 /** A shop's tabs are the shop's, never "… · Frrata": this stops the root template (impact review U·2a). Its pages set
  * absolute titles ("Shop all | Kesar Studio"); the bag, checkout and order pages keep their plain ones. */
 // No platform icon on a shop's tab (brand spec): an empty icon until shops get their own favicon.
-export const metadata = { title: { template: '%s', default: 'Shop' }, icons: { icon: 'data:,' } }
+// No description either: Frrata's own (root layout) would otherwise reach a shop's share cards (impact review S1·1).
+export const metadata = { title: { template: '%s', default: 'Shop' }, description: null, icons: { icon: 'data:,' } }
 
 /** A shop's old name leads to its current one (shop addresses D·1): see MovedTo. */
 export default async function ShopRoot({ children, params }: { children: React.ReactNode; params: Promise<{ host: string }> }) {

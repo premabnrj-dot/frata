@@ -23,7 +23,7 @@ async function load(params: Params) {
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { shop, c } = await load(params)
-  return toMetadata(shopTags(shop, { kind: 'collection', path: `/collections/${c.handle}`, title: `${c.title} | ${shop.shopName}`, shareTitle: c.title, description: c.description || null, image: null }))
+  return toMetadata(shopTags(shop, { path: `/collections/${c.handle}`, title: `${c.title} | ${shop.shopName}`, shareTitle: c.title, description: c.description || null, image: null }))
 }
 
 export default async function Collection({ params }: { params: Params }) {

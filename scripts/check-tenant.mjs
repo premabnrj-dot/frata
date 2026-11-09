@@ -108,7 +108,7 @@ for (const file of walk('src')) {
     failures.push(`${file}  shopper read with a bare select() or returning() — name the columns a shopper sees`)
   }
   // 6c. Shop pages are static and shared: nothing per-request, and no preview switch (drafts would enter the shared cache).
-  if (file.startsWith('src/app/s/') && /(?<!image-)\bpreview|searchParams|\bcookies\(|\bheaders\(|draftMode/.test(text)) {
+  if (file.startsWith('src/app/s/') && /(?<!max-image-)\bpreview|searchParams|\bcookies\(|\bheaders\(|draftMode/.test(text)) {
     failures.push(`${file}  shop page reads the request or a preview switch — pages are cached for every shopper; preview lives under /console/preview`)
   }
   // 6d. One cache helper: shopCached in src/lib/queries/storefront.ts puts the tenant in every key and tag.
