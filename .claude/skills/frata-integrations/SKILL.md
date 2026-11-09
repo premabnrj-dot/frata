@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.13.0
+  version: 1.14.0
   verified: 2026-11-09
   decisions: [ADR-0006]
 ---
@@ -494,3 +494,48 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
 - Credit notes declared by 30 Nov after the FY [S, 2026-11]; RTO cancel vs credit note: [U], a CA rules.
 - Unverified (no current primary source): six IRPs, 24 h IRN cancellation, B2C dynamic QR, the 30-day IRP limit, HSN
   Table 12 digits, Tables 14/15 for own sites.
+
+## Mux (video) — checked 2026-11-09 (integration-researcher; Mux doc pages carry no date: [V-undated] = read that day)
+
+- **Account**: one Frrata-owned Mux org; an environment per tier (development, production), each with its own assets,
+  tokens, signing keys and webhooks; a token works only in its environment; only an org admin creates tokens; Mux keeps a
+  hash, a lost secret is gone. Mux Video Read+Write to create uploads/assets; System write for webhooks/signing keys
+  [V-undated, core/make-api-requests + core/mux-fundamentals]. A platform secret in Vercel env (Production only), not a
+  tenant credential. Tenancy is our table (asset id → shop); `passthrough` ≤ 255 and `meta.*` may be public: no personal
+  data [V-undated, create-asset].
+- **Direct upload**: `POST https://api.mux.com/video/v1/uploads` {cors_origin (the console origin), new_asset_settings
+  {playback_policies:["public"], video_quality:"basic", static_renditions:[{resolution:"highest"}]}, timeout} — timeout
+  default 3600 s, min 60, max 604800 → {id, url, status:"waiting"}; the browser PUTs the file to `url` (resumable; UpChunk,
+  chunks in 256 KB multiples) [V-undated, create-direct-upload + upload-files-directly]. Max file size undocumented [U];
+  max asset 12 h; no duration cap in the API → check `duration` on ready [V-undated / S].
+- **Webhooks**: `mux-signature: t=<unix>,v1=<hex>`, HMAC-SHA256 over `t + "." + raw body` with the endpoint's secret;
+  SDK tolerance 5 min; secret returned once at creation; rotation = recreate the webhook [U, no endpoint]; non-2xx retried
+  24 h, 5 s per attempt, duplicates even after 2xx, ordering undocumented; per environment [V-undated,
+  core/verify-webhook-signatures + listen-for-webhooks + manage-webhooks]. Key on the envelope `id` [U whether stable
+  across retries]; after any event GET the asset. Events: video.upload.{created,asset_created,cancelled,errored},
+  video.asset.{created,ready,errored,updated,deleted,warning}, video.asset.static_rendition.{created,ready,skipped,
+  deleted,errored} [V-undated].
+- **Playback**: `static_renditions` is current, `mp4_support` deprecated, never both [V-undated, enable-static-mp4-
+  renditions]. Values highest | audio-only | 2160p…270p (no capped-1080p / low); no upscaling; a silent video gets
+  highest.mp4, audio-only skipped. MP4 `https://stream.mux.com/{PLAYBACK_ID}/highest.mp4`; HLS `…/{PLAYBACK_ID}.m3u8`
+  (native only in Safari/Edge). Poster `https://image.mux.com/{PLAYBACK_ID}/thumbnail.webp?time=&width=&fit_mode=`;
+  animated ≤ 10 s, ≤ 640 px. Signed IDs need a JWT per URL and per audience (v, t, g, s) [V-undated].
+- **Mux Player for Web is in maintenance mode** — Video.js for new work [V-undated, guides/mux-player-web]; ~900 KB
+  minified [V, blog 2026-01-21]. Frrata's loops use a plain <video> with no player.
+- **Price** (pay as you go, first tier; pricing/video, read 2026-11-09): basic input free; storage basic/plus $0.002400
+  (720p) / $0.003000 (1080p) per min per month, basic has a ONE-MONTH MINIMUM; delivery $0.000800 / $0.001000 per min
+  after 100,000 free a month (per org), billed at the delivered resolution, buffered segments and MP4 minutes count; MP4
+  storage $0.000600 / $0.000750 per rendition-min per month; advanced (sized) rendition prep $0.008000 / $0.010000 per
+  min; $20 monthly credit; Free plan up to 10 videos [S]. Price changes apply to the next bill after notice [V, Terms
+  2026-10-12]. Never hard-code a rate.
+- **Limits**: per environment + org cap — POST bucket 20, 1/s; others 100, 5/s; 429 + x-ratelimit-* [V, changelog
+  2026-06-03 + make-api-requests]. Test assets (`test: true`) free, watermarked, 10 s, deleted after 24 h [V-undated].
+- **Delete**: `DELETE /video/v1/assets/{id}` → 204, "all its data"; deleting a playback ID may let a current viewer finish
+  [V-undated]. No undo documented [U].
+- **Residency**: no region choice, no India [U]; DPA sub-processors AWS (hosting), Cloudflare (delivery) [S, DPA
+  2026-10-12 via snippet].
+- **Terms** (2026-10-12): licence "non-sublicensable"; no "sublicense, resell"; no letting users permanently download or
+  redistribute content [V]. Whether hosting merchants' videos inside Frrata is "resell": [U] — ask Mux in writing
+  before launch.
+- Alternatives: Cloudflare Stream $5/1,000 min stored, $1/1,000 min delivered [V 2026-10-27]; Bunny Stream from
+  $0.005/GB CDN, Asia standard $0.03/GB, $1 minimum [V-undated].

@@ -56,7 +56,19 @@ Order (owner, 2026-11-09): **S0 → S1 → V1 → S2 → S3.**
   aspect; grant, RLS, policy, tenancy.sql check). The shop plays a **plain muted `<video>`** of Mux's MP4 rendition with
   Mux's poster image: no player script on the shop (budget). One video per section; Replace and Remove (Remove deletes
   the Mux asset). Mux credentials: Production only, sealed in env, never in a preview (S1 of the last security review:
-  previews share the database). Facts and prices: `frata-integrations` § Mux, dated, before V1's plan.
+  previews share the database). Facts and prices: `frata-integrations` § Mux (checked 2026-11-09).
+  **Decided from the research:** upload settings `video_quality: basic` (free encoding), `playback_policies: public`
+  (a signed URL per view would break the shop's cache), `static_renditions: [highest]` (`mp4_support` is deprecated),
+  `max_resolution_tier: 1080p`; the shop shows a loop only when its MP4 rendition is ready, not on `asset.ready`;
+  **30 s cap**, checked on ready (Mux can't cap duration), longer ones refused and deleted; **no Mux Player** (in
+  maintenance mode; ~900 KB) — a plain `<video>`, `stream.mux.com`/`image.mux.com` added to the shop's CSP; webhook
+  `/api/webhooks/mux` keyed `mux:<envelope id>`, the processor GETs the asset rather than trusting event order; a
+  merchant's Remove deletes our row first, then an outbox `mux.asset.delete` (404 = done); uploads go through the
+  outbox's token bucket (Mux allows 20 POSTs a burst, 1/s). Previews use Mux's development environment and free test
+  assets. **Setup (owner, 2026-11-09):** pay as you go; Production token in hand; webhook URL
+  `https://frata.vercel.app/api/webhooks/mux`; env names `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `MUX_WEBHOOK_SECRET`
+  (Production, Sensitive) and a separate Development environment's set for Preview; signing keys unused (public playback). **Before launch (owner):** ask Mux in writing that hosting merchants' videos inside Frrata is allowed under
+  their "non-sublicensable / no resell" terms, and where data is stored; add Mux to Frrata's sub-processors.
 - **S2 · Story sections**: `spotlight`, `story_fan`, `statement`; Hero and Spotlight take a V1 loop.
 - **S3 · Product stories**: per product up to six stories (photo, title, text, up to three numbered callouts), shown
   stacked under the gallery and as "1 / 6" slides; "Pair it with" (two pieces, added to the bag from the page).
@@ -84,8 +96,11 @@ Order (owner, 2026-11-09): **S0 → S1 → V1 → S2 → S3.**
   resolved inside the shop.
 - **Motion and visuals**: entrance/reveal from the existing 2.0 choices; the fan uses the base duration and the
   standard easing; reduced motion shows the cards side by side, still.
-- **Unit economics**: S1 and S3 none. **V1 costs Frrata** Mux encoding, storage and delivery for every shop's videos:
-  run `unit-economics-reviewer` on the Mux prices (being verified) with caps (60 s per video, one per section, poster
+- **Unit economics**: S1 and S3 none. **V1 costs Frrata** Mux storage and delivery (encoding is free on basic). At first-
+  tier rates (2026-11-09), a shop with 10 loops of 15 s and 50,000 plays a month of one loop: storage ≈ $0.01, delivery ≈
+  $12.50 at 1080p ($10 at 720p); the 100,000 free delivery minutes a month are for all of Frrata, not per shop. If every
+  view loaded all 10 loops it would be 10× — so playback starts only in view and `preload="none"` is the main lever.
+  Run `unit-economics-reviewer` on these figures with caps (30 s per video, one per section, poster
   first, `preload="none"` on phones, the smallest rendition that looks right); if the cost per shop is material, video
   is a Growth/Scale feature (like the GST app) rather than every plan. S0's sample loops are Frrata's own, few, fixed.
 - **Blast radius**: new enum values on shared settings (header, card, labels) change no existing theme's defaults; the
@@ -96,8 +111,9 @@ Order (owner, 2026-11-09): **S0 → S1 → V1 → S2 → S3.**
   button (Messages module ships its widget), custom font upload (a licensing path for merchant-owned fonts).
 
 ## Facts used
-- Mux (direct uploads, webhooks, MP4 renditions, posters, pricing): being verified 2026-11-09 by `integration-researcher`;
-  lands in `frata-integrations` § Mux with dates before V1's plan.
+- Mux (direct uploads, webhooks, MP4 renditions, posters, pricing, limits, terms): `frata-integrations` § Mux, checked
+  2026-11-09 (integration-researcher); unverified: max upload size, data residency, secret rotation, whether a loop's
+  replays are billed again.
 - Mokobara's platform, theme name and typeface: read from the live page's `window.Shopify.theme` and computed styles,
   2026-11-09.
 - Schibsted Grotesk: open-source (SIL OFL), on Google Fonts; to be self-hosted like the current pairings.
