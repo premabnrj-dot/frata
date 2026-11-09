@@ -2,9 +2,9 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.26.0
+  version: 2.27.0
   verified: 2026-11-09
-  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
+  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008 (proposed)]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
 ---
 
@@ -474,6 +474,29 @@ Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
 - **Prior price** is derived from `price_history` (`priorPriceSql`, `lib/db/price-predicates.ts`):
   the lowest price in the 30 days before the current one took effect, shown only within 30 days
   of the change. `variants.compare_at` is the M.R.P. (`mrp`), never a struck price.
+
+## GST (plan docs/plans/2026-11-09-gst-core-and-categories.md, built 2026-11-09)
+
+**The split.** GST in the **core** is always on and correct at the source: rates, invoices, credit notes. The **GST
+app** (Console › GST) only READS the documents as issued (`invoice()` / `creditNote()` in `domains/orders/documents.ts`)
+— it never edits a document and never recomputes a tax head.
+- **The rate:** `domains/tax/rates.ts` `RATE_TABLES` — dated (`from`), matched by the longest HSN prefix, the ₹2,500
+  per-piece slab (after discounts) for chapters 61–64. The date is the order's `placedAt`, never the clock (`taxOrder`,
+  `rateFor` take it). An unknown HSN is never guessed: the merchant's own rate (`products.gst_bps`) or the line is not
+  sellable for a registered shop (quote 'gone'; publish refused). A new rate is a new dated table, never an edit.
+- **Who charges:** `chargesGst({ gstin, scheme })` only — regular with a GSTIN. Composition: bill of supply with the
+  declaration. Unregistered or composition: delivery within `home_state` only (s.24), at placement too.
+- **B2B:** `b2bProblem` (checksum + the GSTIN's state = delivery state), no autofill; buyer fields freeze with the invoice
+  (`app_buyer_fixed` trigger); off at ₹5 crore and above until e-invoicing.
+- **Credit notes:** `domains/orders/credits.ts` (what is left of each line; return pro rata by quantity, discount by value
+  at each line's rate, goodwill no GST in its own G series, reversal takes the rest), lines in `credit_note_lines`
+  (final). ₹ kept: `keptSql` takes off credited taxable and returned goods' cost.
+- **GSTR-1:** `domains/tax/gstr1.ts` from the documents; files in `gstr1-files.ts`; the period read is
+  `queries/gst.ts gstPeriod(In)`, never cached. Filing (G2): `lib/gst/gsp.ts` (`gsp()` null = off; the fake never in
+  Production), the actions in `console/gst/actions.ts` write a `gst_attempts` row before each call (ADR-0008 draft),
+  `gst_filings` is final once filed (trigger).
+- **The Accountant** (`MEMBER_ROLES`): in `CONSOLE_ROLES` and `CAN_SEE_GST` only — never add it to an existing role tuple;
+  `seesCosts` is false. Invited by the owner through the `app_*_accountant` definers.
 
 ## Config
 

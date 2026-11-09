@@ -1,5 +1,5 @@
 # GST in the core, the GST app, and Frrata beyond fashion — one plan
-Status: proposal, awaiting the owner · Date: 2026-11-09 · Mockup (phases 1–2): https://claude.ai/artifact/M4VfNAgqFHYmhCxFwZmepE
+Status: **phases 1–5 built** (owner approved 2026-11-09, autonomous run; phase 5 ships switched off) · Date: 2026-11-09 · Mockup (phases 1–2): https://claude.ai/artifact/M4VfNAgqFHYmhCxFwZmepE
 Revises: `docs/research/2026-11-09-all-categories.md` § 5 (phases C0–C5) and `docs/specs/2026-11-09-gst-module.md`
 § Phases (G0–G4). Owner, 2026-11-09: "GST filing would be an app, but there is work in the general modules where GST
 compliance needs to be added."
@@ -101,6 +101,21 @@ month; a pre-flight list (HSN gaps, duplicates) before export; Tally XML; invoic
 | 10 | CAs import Tally XML and Zoho | Tally XML in G1's exports; Zoho Books later; the month's pack emailed to the accountant | 3 |
 | 11 | A separate paid "GST app" is compared with $10 apps | GST in the core and the app's exports in every tier; push and file included in Growth (no add-on price) | — |
 | 12 | A merchant at ≥ ₹5 cr with B2B sales needs IRNs from day one | Turnover ≥ ₹5 cr: B2B at checkout off (with the reason) until e-invoice ships (G3) | 1 |
+
+## 5c. As built (2026-11-09) — and where it differs from the plan
+- **Phases 1–3** as planned (migrations 0070–0072). Exports: `/console/gst/export?p=&f=json|sheets|register|tally`,
+  no-store, limited per member. Frrata's own invoices are not in the CA's files yet (they show Frrata's fee: G1·b).
+- **No automatic credit note when a parcel comes back** (deviation): a final document would make the outcome
+  impossible to undo if the parcel is re-delivered; the Fix list names RTO parcels with an invoice and no note, and
+  the CA rules (owner call 6). Reversal from the order page issues it in one tap.
+- **Phase 4** built without its own mockup, in the approved design language (owner: "take best decision"):
+  `products.label` (0073), the declarations on the product page, returns wording by category, the editor by
+  category. Not built: sample sets per category, the Admin category column and wave switch, neutral copy beyond the
+  editor ("About this piece" stays).
+- **Phase 5** behind `GSP_PROVIDER` (unset in Vercel = off; the in-process fake is refused in Production), tables
+  0074, draft **ADR-0008** (an interactive call is an attempt row before it is a request) for the owner to sign. A
+  real GSP is a second implementation of `src/lib/gst/gsp.ts` after two quotes and counsel's ECO opinion (call 7).
+  DSC filing for companies: not built (EVC only).
 
 ## 6. Owner calls
 1. GST compliance is **core** (every shop, every plan, always on); filing is the **app**. *Recommended.*
