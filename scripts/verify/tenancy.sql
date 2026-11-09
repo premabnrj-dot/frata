@@ -1839,22 +1839,32 @@ insert into videos (id, tenant_id, mux_env, created_by) values
   ('dededede-0000-0000-0000-00000000000c', '22222222-2222-2222-2222-222222222222', 'prod1', '99999999-9999-9999-9999-999999999999');
 begin; set local role frata_app;
 select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
-do $$ declare a uuid; begin
+do $$ declare a uuid; n int; begin
   if exists (select 1 from videos) then raise exception 'FAIL: A sees B videos'; end if;
   begin insert into videos (tenant_id, mux_env, created_by) values ('22222222-2222-2222-2222-222222222222', 'prod1', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: A wrote a B video';
   exception when insufficient_privilege then null; end;
   update videos set removed_at = now() where id = 'dededede-0000-0000-0000-00000000000b';
+  get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A removed a B video'; end if;
+  -- Mux's ids never arrive with the row: only shop, environment and member are inserted (audit H1).
+  begin insert into videos (tenant_id, mux_env, created_by, asset_id) values ('11111111-1111-1111-1111-111111111111', 'prod1', '99999999-9999-9999-9999-999999999999', 'asForged'); raise exception 'FAIL: a row was inserted with an asset id';
+  exception when insufficient_privilege then null; end;
+  begin insert into videos (tenant_id, mux_env, created_by, created_at) values ('11111111-1111-1111-1111-111111111111', 'prod1', '99999999-9999-9999-9999-999999999999', '2000-01-01'); raise exception 'FAIL: a row was back-dated';
+  exception when insufficient_privilege then null; end;
   insert into videos (tenant_id, mux_env, created_by) values ('11111111-1111-1111-1111-111111111111', 'prod1', '99999999-9999-9999-9999-999999999999') returning id into a;
   update videos set upload_id = 'upA1' where id = a;
   begin update videos set upload_id = 'upA2' where id = a; raise exception 'FAIL: an upload id changed'; exception when check_violation then null; end;
   begin update videos set tenant_id = '22222222-2222-2222-2222-222222222222' where id = a; raise exception 'FAIL: a video moved shop'; exception when insufficient_privilege then null; end;
   begin update videos set mux_env = 'dev1' where id = a; raise exception 'FAIL: a video changed environment'; exception when insufficient_privilege then null; end;
+  begin update videos set id = gen_random_uuid() where id = a; raise exception 'FAIL: a video changed id'; exception when insufficient_privilege then null; end;
+  begin update videos set created_by = gen_random_uuid() where id = a; raise exception 'FAIL: a video changed member'; exception when insufficient_privilege then null; end;
+  begin update videos set created_at = '2000-01-01' where id = a; raise exception 'FAIL: a video was back-dated'; exception when insufficient_privilege then null; end;
+  update videos set asset_id = 'asA1', playback_id = 'pbA1', removed_at = now() where id = a;
+  begin update videos set asset_id = 'asA2' where id = a; raise exception 'FAIL: an asset id changed'; exception when check_violation then null; end;
+  begin update videos set playback_id = 'pbA2' where id = a; raise exception 'FAIL: a playback id changed'; exception when check_violation then null; end;
+  begin update videos set removed_at = null where id = a; raise exception 'FAIL: a removed video came back'; exception when check_violation then null; end;
   begin delete from videos; raise exception 'FAIL: the app deleted a video'; exception when insufficient_privilege then null; end;
 end $$;
 rollback;
-do $$ begin
-  if (select removed_at from videos where id = 'dededede-0000-0000-0000-00000000000b') is not null then raise exception 'FAIL: A removed a B video'; end if;
-end $$;
 begin; set local role frata_app;
 do $$ declare t uuid; begin
   -- No shop set: the definer routes; the caller never names a shop.
@@ -1877,6 +1887,7 @@ do $$ begin
 end $$;
 begin; set local role frata_app;
 do $$ begin
+  if app_store_mux_event('dev1', 'ev-10', 'video.asset.static_rendition.ready', null, null, 'asB1', 'ready') is not null then raise exception 'FAIL: a rendition from another environment reached a row'; end if;
   if app_store_mux_event('prod1', 'ev-9', 'video.asset.static_rendition.ready', null, null, 'asB1', 'ready') is distinct from '22222222-2222-2222-2222-222222222222' then raise exception 'FAIL: a rendition did not reach its row'; end if;
 end $$;
 commit;
@@ -1884,9 +1895,11 @@ do $$ begin
   if (select array_agg(k order by k) from webhook_events e, jsonb_object_keys(e.payload) k where e.event_key = 'mux:prod1:ev-9') is distinct from array['asset_id', 'status', 'type', 'upload_id', 'video']
   then raise exception 'FAIL: a Mux event stored more than its five fields'; end if;
   if (select payload->>'video' from webhook_events where event_key = 'mux:prod1:ev-9') is distinct from 'dededede-0000-0000-0000-00000000000b' then raise exception 'FAIL: a rendition event lost its row'; end if;
-  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['select', 'insert', 'update', 'delete']) p where has_table_privilege(r, 'videos', p))
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['select', 'insert', 'update']) p where has_any_column_privilege(r, 'videos', p))
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_table_privilege(r, 'videos', 'delete'))
   then raise exception 'FAIL: another role reads or writes videos'; end if;
-  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r where has_function_privilege(r, 'app_store_mux_event(text, text, text, uuid, text, text, text)', 'execute'))
+  if has_table_privilege('frata_app', 'videos', 'delete') then raise exception 'FAIL: the app may delete a video'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_store_mux_event(text, text, text, uuid, text, text, text)', 'execute'))
   then raise exception 'FAIL: an API role runs the Mux definer'; end if;
 end $$;
 

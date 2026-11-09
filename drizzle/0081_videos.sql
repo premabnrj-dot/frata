@@ -26,13 +26,16 @@ CREATE TABLE "videos" (
 --> statement-breakpoint
 ALTER TABLE "videos" ADD CONSTRAINT "videos_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "videos_shop" ON "videos" USING btree ("tenant_id","created_at");--> statement-breakpoint
--- V1 video (docs/plans/2026-11-09-video-v1.md): the shop's own rows (ADR-0002). The app inserts and updates named
--- columns only, never deletes (the upload caps count every row); ids, once set, never change (trigger).
+-- V1 video (docs/plans/2026-11-09-video-v1.md): the shop's own rows (ADR-0002). The app inserts a pending row (shop,
+-- environment, member) and updates named columns only, never deletes (the upload caps count every row); Mux's ids
+-- are written only after a row exists, and once set never change (trigger; tenancy audit 2026-11-09, H1).
 revoke all on videos from anon, authenticated, service_role;
 --> statement-breakpoint
 alter table videos enable row level security;
 --> statement-breakpoint
-grant select, insert on videos to frata_app;
+grant select on videos to frata_app;
+--> statement-breakpoint
+grant insert (tenant_id, mux_env, created_by) on videos to frata_app;
 --> statement-breakpoint
 grant update (upload_id, asset_id, playback_id, duration_ms, width, height, ready_at, mp4_ready_at, errored_at, error, removed_at) on videos to frata_app;
 --> statement-breakpoint
@@ -54,7 +57,9 @@ create trigger videos_ids_once before update on videos for each row execute func
 -- the event must carry OUR row id (passthrough) AND the row's upload id, from the same Mux environment; a pending row
 -- whose upload id is still unknown (a crash after Mux answered) takes it from the event once; a rendition event, which
 -- names only its asset, reaches a row whose asset id is already set. Only known event types;
--- the payload stored is the five fields the processor needs, never the upload URL. Returns the shop, or null.
+-- the payload stored is the five fields the processor needs, never the upload URL. An event for a removed row still
+-- routes (the processor queues the asset's delete). Returns the shop, or null both when nothing matches and when the
+-- event was stored before: the route answers 200 either way.
 create or replace function app_store_mux_event(p_env text, p_event_id text, p_type text, p_video uuid, p_upload_id text, p_asset_id text, p_status text) returns uuid
   language plpgsql volatile security definer set search_path = '' as $$
 declare t uuid; known text; inserted uuid;
@@ -69,7 +74,8 @@ begin
   then return null; end if;
   if p_video is not null and p_upload_id is not null then
     -- Upload and asset events: our row id and the row's upload id, both.
-    select v.tenant_id, v.upload_id into t, known from public.videos v where v.id = p_video and v.mux_env = p_env;
+    -- Locked, so two events racing for a pending row can't both claim it with different upload ids (audit M1).
+    select v.tenant_id, v.upload_id into t, known from public.videos v where v.id = p_video and v.mux_env = p_env for update;
     if t is null or (known is not null and known <> p_upload_id) then return null; end if;
     if known is null then update public.videos set upload_id = p_upload_id where id = p_video and upload_id is null; end if;
   elsif p_type like 'video.asset.static_rendition.%' and p_asset_id is not null then
