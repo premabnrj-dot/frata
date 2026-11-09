@@ -6,7 +6,7 @@ import { uploadProblem, VIDEO_TYPES } from '@/domains/video/state'
 import { asMember } from '@/lib/auth/as-member'
 import { CAN_BUILD, requireMember } from '@/lib/auth/require-member'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
-import { isVideoConfigured, MUX_ENVIRONMENT_ID } from '@/lib/env'
+import { isVideoConfigured, MUX_ENVIRONMENT_ID, MUX_IMAGE_BASE } from '@/lib/env'
 import { errName } from '@/lib/log'
 import { drainSoon } from '@/lib/outbox/drain'
 import { CONSOLE_HOST } from '@/lib/public-env'
@@ -79,10 +79,17 @@ export async function cancelVideoUploadAction(input: unknown): Promise<R> {
 }
 
 /** The field asks while a video is getting ready (polled with backoff); derived from the row, so a reload agrees. */
-export async function videoStatusAction(input: unknown): Promise<R<{ state: Awaited<ReturnType<typeof videoStatusFor>> }>> {
+export type VideoStatus = { kind: 'removed' | 'failed' | 'uploading' | 'preparing' | 'playable'; tooLong: boolean; durationMs: number | null; poster: string | null }
+export async function videoStatusAction(input: unknown): Promise<R<{ status: VideoStatus | null }>> {
   const p = z.object({ id: z.uuid() }).safeParse(input)
   if (!p.success) return { ok: false, error: 'Unknown video.' }
   const auth = await requireMember(CAN_BUILD)
   if (!auth.ok) return { ok: false, error: auth.message }
-  return { ok: true, state: await videoStatusFor(auth.membership.tenantId, p.data.id, new Date()) }
+  const s = await videoStatusFor(auth.membership.tenantId, p.data.id, new Date())
+  if (!s) return { ok: true, status: null }
+  return { ok: true, status: {
+    kind: s.kind, tooLong: s.kind === 'failed' && s.why === 'too_long', durationMs: s.durationMs,
+    // Mux's still of the loop, for the field (never the shop: the shop's first paint is the section's own photo).
+    poster: s.kind === 'playable' ? `${MUX_IMAGE_BASE}/${s.playbackId}/thumbnail.webp?width=480&time=1` : null,
+  } }
 }

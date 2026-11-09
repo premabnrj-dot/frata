@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { PROMISES, SECTION_NAMES, type SectionInstance, type SectionOf } from '@/domains/themes/sections'
 import { Choice, Field, ImageField, LinkPicker, Switch, Text, paiseToRupees, rupeesToPaise, type LibraryPhoto, type LinkTarget } from './controls'
 import { Icon } from '@/components/icons/icon'
+import { VideoField } from './video-field'
 
 // One section's settings (themes spec § Sections: every field, type and limit). The form edits a copy; every
 // change goes through `set`, which the editor turns into an undo step and an autosave.
@@ -24,9 +25,18 @@ export type FormCtx = {
   photos: LibraryPhoto[]; shopName: string
   /** The shop's products, newest first (Shop the look picks from them). */
   products: { handle: string; title: string }[]
+  /** V1: the sections this theme lets carry a loop, and whether video is switched on for shops (Mux is set up). */
+  video?: { sections: readonly ('hero' | 'image_text')[]; on: boolean }
 }
 
 type Set<S> = (s: S) => void
+
+/** A section with its loop set, or with no `video` key at all once removed (stored layers stay as before). */
+function withVideo<S extends { video?: { id: string } }>(s: S, video: { id: string } | undefined): S {
+  if (video) return { ...s, video }
+  const { video: _drop, ...rest } = s
+  return rest as S
+}
 
 function Bound({ label, value, max, shopField, onChange }: { label: string; value: { from: 'shopName' | 'tagline' } | { text: string } | undefined; max: number; shopField: 'shopName' | 'tagline'; onChange: (v: { from: 'shopName' | 'tagline' } | { text: string } | undefined) => void }) {
   const bound = !!value && 'from' in value
@@ -54,6 +64,7 @@ function Hero({ s, set, c }: { s: SectionOf<'hero'>; set: Set<SectionOf<'hero'>>
   return (<>
     <Choice label="Layout" value={s.layout} onChange={(layout) => set({ ...s, layout })} options={[{ value: 'text', label: 'Words only' }, { value: 'image_text', label: 'Words on a photo' }, { value: 'split', label: 'Photo beside words' }, { value: 'image', label: 'Photo only' }]} />
     {s.layout !== 'text' && <ImageField label="Photo" value={s.image} tenantId={c.tenantId} library={c.photos} suggest={['text' in s.heading ? s.heading.text : '', c.shopName]} onChange={(image) => set({ ...s, image })} />}
+    {s.layout !== 'text' && c.video?.sections.includes('hero') && <VideoField value={s.video} on={c.video.on} onChange={(video) => set(withVideo(s, video))} />}
     <Bound label="Heading" value={s.heading} max={60} shopField="shopName" onChange={(heading) => set({ ...s, heading: heading ?? { from: 'shopName' } })} />
     {s.layout !== 'image' && <Bound label="Line under it" value={s.text} max={160} shopField="tagline" onChange={(text) => set({ ...s, text })} />}
     {s.layout !== 'image' && <ButtonFields value={s.button} targets={c.targets} onChange={(button) => set({ ...s, button })} />}
@@ -133,6 +144,7 @@ function Promises({ s, set, c }: { s: SectionOf<'promises'>; set: Set<SectionOf<
 function ImageText({ s, set, c }: { s: SectionOf<'image_text'>; set: Set<SectionOf<'image_text'>>; c: FormCtx }) {
   return (<>
     <ImageField label="Photo" value={s.image} tenantId={c.tenantId} library={c.photos} suggest={[s.heading, c.shopName]} onChange={(image) => set({ ...s, image })} />
+    {c.video?.sections.includes('image_text') && <VideoField value={s.video} on={c.video.on} onChange={(video) => set(withVideo(s, video))} />}
     {c.labels && <Text label="Label above the heading" value={s.label} max={24} onChange={(label) => set({ ...s, label })} />}
     <Text label="Heading" value={s.heading} max={60} onChange={(heading) => set({ ...s, heading })} />
     <Text label="Text (a blank line starts a new paragraph)" value={s.text} max={600} multiline onChange={(text) => set({ ...s, text })} />

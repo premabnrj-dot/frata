@@ -23,12 +23,16 @@ import type { Href } from '../shell'
 // =============================================================================
 
 export type SectionCtx = { shop: StoreShop; cat: StoreCatalogue; theme: ResolvedTheme; href: Href; now: Date; bestSellers?: Partial<Record<30 | 90, string[]>>
+  /** V1: the live look's playable videos (id → playback id); a section names one by id. */
+  videos?: LookVideos
   /** The page's first section: only its photos load ahead of the rest (speed review P15: four `priority` images competed). */
   lead?: boolean
   /** The customizer's preview: a section that fails says so there (on the shop it is left out). */
   preview?: boolean }
 import { Button, H2, Label, Paint, Sized, pad, rupees, said, wrap } from './parts'
 import { Products } from './products'
+import { Loop } from './loop'
+import type { LookVideos } from '@/lib/themes/page-look'
 
 function Hero({ s, ctx }: { s: SectionOf<'hero'>; ctx: SectionCtx }) {
   const heading = said(s.heading, ctx.shop), text = said(s.text, ctx.shop)
@@ -51,6 +55,7 @@ function Hero({ s, ctx }: { s: SectionOf<'hero'>; ctx: SectionCtx }) {
       <section className={`${wrap} ${pad} grid items-center gap-8 sm:grid-cols-2`}>
         <div className={`relative overflow-hidden bg-store-chip ${s.mask === 'arch' ? 'rounded-t-full' : 'rounded-[var(--store-radius)]'} aspect-[4/5]`}>
           <Photo p={img} focus={img.focus} alt={img.alt} sizes="(min-width: 640px) 50vw, 100vw" priority={!!ctx.lead} className="absolute inset-0 h-full w-full object-cover" />
+          <Loop id={s.video?.id} videos={ctx.videos} />
         </div>
         <div className="space-y-4">{title}{text && <p className="max-w-xl text-lg text-store-sub">{text}</p>}<Button b={s.button} href={ctx.href} /></div>
       </section>
@@ -60,6 +65,7 @@ function Hero({ s, ctx }: { s: SectionOf<'hero'>; ctx: SectionCtx }) {
   return (
     <section data-bleed="" className={`relative ${tall} overflow-hidden bg-store-chip`}>
       <Photo p={img} focus={img.focus} alt={s.layout === 'image' ? heading : img.alt} sizes="100vw" priority={!!ctx.lead} className="absolute inset-0 h-full w-full object-cover" />
+      <Loop id={s.video?.id} videos={ctx.videos} />
       {s.layout === 'image_text' && (
         <div className={`relative z-10 flex ${tall} ${centred ? 'items-center justify-center text-center' : 'items-end'} bg-linear-to-t from-black/45 via-black/10 to-transparent`}>
           <div className={`${wrap} w-full space-y-3 py-10 text-white`}>{title}{text && <p className={`max-w-xl text-lg ${centred ? 'mx-auto' : ''}`}>{text}</p>}<Button b={s.button} href={ctx.href} /></div>
@@ -151,6 +157,7 @@ function ImageText({ s, ctx }: { s: SectionOf<'image_text'>; ctx: SectionCtx }) 
     <section aria-labelledby={h} className={`${wrap} ${pad} grid items-center gap-8 sm:grid-cols-2`}>
       <div className={`relative aspect-[4/5] overflow-hidden rounded-[var(--store-radius)] bg-store-chip ${s.side === 'right' ? 'sm:order-2' : ''}`}>
         <Photo p={s.image} focus={s.image.focus} alt={s.image.decorative ? '' : s.image.alt} sizes="(min-width: 640px) 50vw, 100vw" className="absolute inset-0 h-full w-full object-cover" />
+        <Loop id={s.video?.id} videos={ctx.videos} />
       </div>
       <div className="space-y-4">
         <Label text={s.label} /><H2 id={h}>{s.heading}</H2>

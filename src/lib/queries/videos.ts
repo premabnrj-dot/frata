@@ -128,3 +128,7 @@ export async function playableVideos(tx: Tx, ids: string[], now: Date): Promise<
   for (const v of rows) { const s = videoState(v, now); if (s.kind === 'playable') out[v.id] = { playbackId: s.playbackId, width: v.width, height: v.height } }
   return out
 }
+
+/** The shop's read (cached in storefront.ts shopVideos) and the preview's (uncached): ids are the look's, comma-joined. */
+export const playableVideosFor = (tenantId: string, key: string) => withTenant(tenantId, (tx) => playableVideos(tx, key ? key.split(',').slice(0, 40) : [], new Date()))
+export const previewVideos = playableVideosFor
