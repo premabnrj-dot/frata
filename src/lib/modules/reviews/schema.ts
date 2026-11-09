@@ -33,6 +33,10 @@ export const reviewRequests = pgTable('review_requests', {
   sentAt: at('sent_at'),
   remindedAt: at('reminded_at'),
   openedAt: at('opened_at'),
+  /** Meta's ids for the ask and the reminder: delivery statuses and a Stop press arrive with these, often with no
+   *  phone at all (BSUID users), so they are what a webhook matches on (integration check 2026-11-09). */
+  wamid: text('wamid'),
+  reminderWamid: text('reminder_wamid'),
   /** The last send that failed for good (template refused, number gone): the reason is a code, never a phone. */
   failedAt: at('failed_at'),
   failCode: text('fail_code'),
@@ -42,6 +46,8 @@ export const reviewRequests = pgTable('review_requests', {
   uniqueIndex('review_requests_tenant_order').on(t.tenantId, t.orderId),
   uniqueIndex('review_requests_tenant_token').on(t.tenantId, t.tokenHash),
   index('review_requests_remind').on(t.tenantId, t.sentAt).where(sql`${t.remindedAt} is null and ${t.sentAt} is not null`),
+  uniqueIndex('review_requests_wamid').on(t.tenantId, t.wamid),
+  uniqueIndex('review_requests_reminder_wamid').on(t.tenantId, t.reminderWamid),
   check('review_requests_nonce', sql`${t.tokenNonce} ~ '^[0-9a-f]{32}$'`),
 ])
 

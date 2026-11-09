@@ -17,7 +17,7 @@ export const ASK_BODY = 'Hi {{1}}, how is your {{2}} from {{3}}? Tap below to te
 /** What Meta is asked to create, for a shop at `host` (the link's base: the shop's own address). */
 export function templateDefinition(host: string) {
   return {
-    name: REVIEW_TEMPLATE, language: REVIEW_TEMPLATE_LANG, category: 'UTILITY',
+    name: REVIEW_TEMPLATE, language: REVIEW_TEMPLATE_LANG, category: 'UTILITY', parameter_format: 'POSITIONAL',
     components: [
       { type: 'BODY', text: ASK_BODY, example: { body_text: [['Ananya', 'Chanderi kurta set', 'Kesar Studio']] } },
       { type: 'BUTTONS', buttons: [

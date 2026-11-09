@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.14.0
+  version: 1.15.0
   verified: 2026-11-09
   decisions: [ADR-0006]
 ---
@@ -161,7 +161,7 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
 - **Alternatives** (no current dated API page): Delhivery One (token, Settings > API Setup), iThink (access token
   + secret from iThink), Shipway (username + licence key) [U].
 
-## Meta — checked 2026-11-07 (WhatsApp: integration-researcher; spec docs/specs/2026-11-07-communication.md)
+## Meta — checked 2026-11-07 (WhatsApp: integration-researcher; spec docs/specs/2026-11-07-communication.md; templates, sends, errors, webhooks, opt-in rechecked 2026-11-09 — docs moved to developers.facebook.com/documentation/business-messaging/whatsapp/, pages undated)
 
 - **Tech Provider**: business verification, App Review (two screencasts: a message sent and received,
   template creation), access verification. Onboarding limit **10 new customers per rolling 7 days by
@@ -212,18 +212,41 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
   ₹0.1150 [S, watsberry 2026-10-01; whautomate "October 1, 2026"; Gallabox lists 0.1323 = +15%, inferred markup].
   Authentication-international (₹2.4971 [S]) applies only when the WABA's Primary Business Location differs from the
   user's country; India's rose 1 Apr 2026; 30-day notice [V, pricing + authentication-international-rates, undated,
-  read 2026-11-08]. Utility/auth volume tiers per market, monthly [V].
+  read 2026-11-08]. Utility/auth volume tiers per market, monthly [V]. Prices change only on the 1st of a quarter, ≥ 1
+  month's notice; charged on delivery [V, …/pricing, 2026-11-09]. India's utility rate stays [S].
 - **Limits**: per business portfolio, shared by its numbers: 250 → 2,000 → 10,000 → 100,000 → unlimited [V].
-- **Templates**: marketing / utility / authentication; mixed content (an order update with a promo) is
-  marketing; WhatsApp may re-categorise; review up to 24 h; body ≤1024; ≤10 buttons [V].
+- **Templates** (rechecked 2026-11-09, …/templates/components + template-categorization + utility-templates, undated):
+  marketing / utility / authentication; body ≤ 1024; ≤ 10 buttons, ≤ 2 URL, ≤ 10 quick reply, quick replies grouped apart
+  from the rest; button text ≤ 25; URL ≤ 2000 with ONE variable at the end. Positional `example.body_text` is nested
+  `[[…]]`; a URL button's `example` is the full URL in Meta's table but the suffix only in its JSON (conflict on Meta's
+  page) [V-undated]. `parameter_format` NAMED|POSITIONAL, default unstated → always send it [U]. A `#` in a URL button: no
+  source [U] (Reviews keeps the token as the last path segment and moves it into the fragment on its own page).
+  Create → `{id, status, category}` [V]. Since 9 Apr 2025 a "utility" template judged marketing is APPROVED AS MARKETING;
+  recurring re-checks with 1-day notice (none for warned businesses since 16 Apr 2025); 60 days to appeal. A feedback ask
+  is utility only if tied to a specific order; generic asks and mixed content are marketing [V-undated]. Utility is paced
+  only after a utility template was paused [V-undated].
+- **Send errors** (…/support/error-codes, undated, 2026-11-09) [V-undated]: 131026 undeliverable (not on WhatsApp, ToS not
+  accepted, old app); **131051 = unsupported message type** (our bug, not the recipient); 131042 payment method; 131056
+  same-pair rate limit (retry later); 131049 ecosystem limit (wait ≥ 24 h); 131050 user stopped MARKETING; 132000 param
+  count; 132001 template missing/not approved; 132015 paused; 132016 disabled for good (new template); 133010 number not
+  registered; 368/131031 WABA restricted; 190 token expired; 130429 throughput. Sync vs webhook per code: undocumented
+  [U] → handle both. Send response = accepted, not delivered; keep `messages[0].id` (the wamid).
 - **Webhooks**: verify GET `hub.mode=subscribe`, `hub.verify_token`, reply 200 + `hub.challenge`; POST `object:"whatsapp_business_account"`,
   `entry[].id` (the WABA, by the payload shape [U]), `changes[{field,value}]`; `X-Hub-Signature-256: sha256=<hex>` = HMAC-SHA256 with the
   app secret (Meta says "payload"; we hash the raw bytes); retries up to 7 days, duplicates possible; ≤3 MB [V, webhooks/overview +
-  create-webhook-endpoint, 2026-11-07]. Fields include messages, message_template_status_update, account_update, account_review_update,
+  create-webhook-endpoint, 2026-11-07]. Fields include messages, message_template_status_update, template_category_update,
+  message_template_quality_update, message_template_components_update, user_preferences, account_update, account_review_update,
   account_alerts, phone_number_quality_update, phone_number_name_update, payment_configuration_update, history, smb_app_state_sync,
-  smb_message_echoes [V]. Media URLs live **5 minutes** and need the token [V]. Usernames: a BSUID, phone may be absent [V].
-- No agent concept in the Cloud API; policy requires a human escalation path; opt-in must name the
-  business; opt-outs honoured on or off WhatsApp [V, policy 23 Sep 2026].
+  smb_message_echoes [V-undated, 2026-11-09]. Template status: `event` ∈ APPROVED, ARCHIVED, UNARCHIVED, DELETED, DISABLED,
+  FLAGGED, IN_APPEAL, LIMIT_EXCEEDED, LOCKED, PAUSED, PENDING, REINSTATED, PENDING_DELETION, REJECTED; `message_template_id`
+  is a JSON INTEGER (compare as a string); also name, language, reason, message_template_category. template_category_update:
+  notice {new_category (current), correct_category, category_update_timestamp +24 h}, done {previous_category, new_category}.
+  Quick reply in: messages[].type "button", button {payload, text}, context.id = the template's wamid. Statuses sent,
+  delivered, played, read, failed + errors[].code; `recipient_id`/`wa_id`/`from` may be ABSENT (BSUID users) → match on the
+  wamid, never on the phone [V-undated, …/webhooks/reference/*, 2026-11-09]. Media URLs live **5 minutes** and need the token [V]. Usernames: a BSUID, phone may be absent [V].
+- No agent concept in the Cloud API; policy requires a human escalation path; opt-outs honoured on or off WhatsApp, no
+  mechanism prescribed [V, whatsappbusiness.com/policy, 2026-09-23]. "Opt-in must name the business" is in the developer
+  page, not the policy [V-undated, …/getting-opt-in, 2026-11-09].
 - **Conversions API** (rechecked 2026-11-08; Meta's server-event page shows no date, so treat as unverified-current):
   `event_time` ≤ 7 days before sending, and ONE older event fails the WHOLE request; `event_name` may be a custom
   event; `action_source` ∈ email, website, app, phone_call, chat, physical_store, system_generated,

@@ -135,7 +135,7 @@ export async function startHistorySync(token: string, phoneNumberId: string): Pr
 export type TemplateState = { id: string; status: string; category: string | null }
 
 /** Creates a template in the shop's own account (a name already there is read back, not created twice). */
-export async function createTemplate(token: string, wabaId: string, def: { name: string; language: string; category: string; components: unknown[] }): Promise<TemplateState | 'rejected' | null> {
+export async function createTemplate(token: string, wabaId: string, def: { name: string; language: string; category: string; parameter_format?: string; components: unknown[] }): Promise<TemplateState | 'rejected' | null> {
   if (!META_ID.test(wabaId)) return null
   const made = await graph('POST', `/${wabaId}/message_templates`, token, def)
   if (tokenRejected(made)) return 'rejected'

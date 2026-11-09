@@ -6,9 +6,9 @@ import { phoneHmac, reviewToken } from '@/lib/crypto/secret-box'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { tokenFor } from '@/lib/modules/communication/connection'
-import { sendTemplate } from '@/lib/modules/communication/graph'
+import { sendTemplate, templateState } from '@/lib/modules/communication/graph'
 import { shopSettingsFor } from '@/lib/queries/storefront'
-import type { OutboxRow } from '@/lib/outbox'
+import { GiveUp, type OutboxRow } from '@/lib/outbox'
 import { reviewRequests, reviews, reviewSettings, waOptOuts } from './schema'
 
 // =============================================================================
@@ -46,18 +46,30 @@ export async function sendReviewAsk(row: OutboxRow): Promise<void> {
     const wa = await tokenFor(tx, tenantId)
     if (!wa) return { wait: 'connection' as const }
     const [line] = await tx.select({ title: orderLines.title }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id))).orderBy(asc(orderLines.id)).limit(1)
-    return { send: { request: r, phone: o.phone, name: o.customerName, product: line?.title ?? 'order', token: wa.token, phoneNumberId: wa.row.phoneNumberId } }
+    return { send: { request: r, phone: o.phone, name: o.customerName, product: line?.title ?? 'order', token: wa.token, phoneNumberId: wa.row.phoneNumberId, wabaId: wa.row.wabaId } }
   })
   if ('skip' in job) return
   // Waiting on the shop (template not approved yet, WhatsApp not connected): a retry later, with our own words.
   if ('wait' in job) throw new Error(job.wait === 'template' ? 'the review template is not approved yet' : 'WhatsApp is not connected')
-  const { request, phone, name, product, token, phoneNumberId } = job.send
+  const { request, phone, name, product, token, phoneNumberId, wabaId } = job.send
   const link = reviewToken(tenantId, request.orderId, request.tokenNonce)
   const sent = await sendTemplate(token, phoneNumberId, phone, REVIEW_TEMPLATE, REVIEW_TEMPLATE_LANG, askComponents({ firstName: firstNameOf(name), product, shop: shop.shopName, token: link }))
+  const mark = (set: Partial<typeof reviewRequests.$inferInsert>) => withTenant(tenantId, (tx) => tx.update(reviewRequests).set(set).where(and(eq(reviewRequests.tenantId, tenantId), eq(reviewRequests.id, request.id))))
   if (!sent.ok) {
-    // 131026: not on WhatsApp · 131047: outside the window (never for a template) · 132xxx: the template itself.
-    if (sent.code === 131026 || sent.code === 131051) { await withTenant(tenantId, (tx) => tx.update(reviewRequests).set({ failedAt: now, failCode: `meta_${sent.code}` }).where(and(eq(reviewRequests.tenantId, tenantId), eq(reviewRequests.id, request.id)))); return }
+    // Error codes: frata-integrations § Send errors (checked 2026-11-09).
+    // The shopper cannot get it (not on WhatsApp, ToS not accepted): done, with the reason.
+    if (sent.code === 131026) { await mark({ failedAt: now, failCode: 'meta_131026' }); return }
+    // Our request is malformed (unsupported type, wrong parameter count or format): retrying never helps.
+    if (sent.code === 131051 || sent.code === 132000 || sent.code === 132012) throw new GiveUp(`the review message is malformed (${sent.code})`)
+    // The template is not usable now (not approved, paused, disabled for good): read its state back, so every
+    // later send waits on the template gate instead of failing one by one.
+    if (sent.code === 132001 || sent.code === 132015 || sent.code === 132016) {
+      const st = await templateState(token, wabaId, REVIEW_TEMPLATE)
+      if (st && st !== 'rejected') await withTenant(tenantId, (tx) => tx.update(reviewSettings).set({ templateId: st.id, templateStatus: sent.code === 132016 ? 'DISABLED' : st.status, templateCategory: st.category, templateAt: now }).where(eq(reviewSettings.tenantId, tenantId)))
+      throw new Error('the review template is not approved yet')
+    }
+    if (sent.code === 131042) throw new Error('WhatsApp needs a payment method (WhatsApp Manager)')
     throw new Error(sent.rejected ? 'WhatsApp needs reconnecting' : `WhatsApp refused the send (${sent.code ?? sent.status})`)
   }
-  await withTenant(tenantId, (tx) => tx.update(reviewRequests).set(p.reminder ? { remindedAt: now } : { sentAt: now, failCode: null }).where(and(eq(reviewRequests.tenantId, tenantId), eq(reviewRequests.id, request.id))))
+  await mark(p.reminder ? { remindedAt: now, reminderWamid: sent.wamid } : { sentAt: now, wamid: sent.wamid, failCode: null })
 }

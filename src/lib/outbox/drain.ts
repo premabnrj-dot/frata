@@ -4,7 +4,7 @@ import { outboxDecision } from '@/domains/modules/access'
 import { moduleForKind } from '@/domains/modules/registry'
 import { shopModules } from '@/lib/queries/modules'
 import { errName } from '@/lib/log'
-import { claimDue, deferRow, markDead, markFailed, markSent, type OutboxRow } from './index'
+import { claimDue, deferRow, GiveUp, markDead, markFailed, markSent, type OutboxRow } from './index'
 import { sendBillAttempt } from '@/lib/billing/debit'
 import { sendReviewAsk } from '@/lib/modules/reviews/sender'
 import { E2E_FIXTURES, VERCEL_ENV } from '@/lib/env'
@@ -55,6 +55,7 @@ export async function drainOutbox(deadline: number): Promise<{ claimed: number; 
         await markSent(row.id)
         sent++
       } catch (err) {
+        if (err instanceof GiveUp) { await markDead(row.id, err.message); continue }
         // Our own refusals keep their words; a database or sender error only its name and code (S10: a drizzle
         // error carries its parameters).
         await markFailed(row.id, row.attempts, err instanceof Error && !('cause' in err) && err.name === 'Error' ? err.message : errName(err))

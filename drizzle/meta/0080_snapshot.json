@@ -1,5 +1,5 @@
 {
-  "id": "f558c6ca-dc3d-4d2d-b3f1-c8a42322ec49",
+  "id": "a0a9d104-e2fc-42c0-b13a-f210c13debde",
   "prevId": "da175f87-ecd8-4097-89cd-6733ccc419b9",
   "version": "7",
   "dialect": "postgresql",
@@ -10685,6 +10685,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "wamid": {
+          "name": "wamid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reminder_wamid": {
+          "name": "reminder_wamid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "failed_at": {
           "name": "failed_at",
           "type": "timestamp with time zone",
@@ -10759,6 +10771,48 @@
           ],
           "isUnique": false,
           "where": "\"review_requests\".\"reminded_at\" is null and \"review_requests\".\"sent_at\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "review_requests_wamid": {
+          "name": "review_requests_wamid",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "wamid",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "review_requests_reminder_wamid": {
+          "name": "review_requests_reminder_wamid",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "reminder_wamid",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
