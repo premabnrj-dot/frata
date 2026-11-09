@@ -52,6 +52,21 @@ Held with Release in the row) rather than one table. Telling the shop about Frra
 check it). A rename (D1) re-asks it for the new name, since the old host stops taking checkout. Razorpay's sub-domain
 route is "raise a request with Support": the item links the steps in docs/setup.md, written once with a real account.
 
+**D1·9 — a rename never stops live payments (decided 2026-11-09).** Blocking a rename until "Added in Razorpay" can't
+work: Razorpay reviews the website live, and the new name serves nothing until it exists. So, when the shop's Razorpay
+keys are live (`payment_keys.mode = 'live'`, derived), a new frrata.shop name goes the way an own domain does:
+1. **Add the new name**: it is recorded at once (taken for everyone, no limit used) and **opens the shop beside the
+   current one**, without redirecting, so Razorpay can review it and checkout keeps working on the main name.
+   The row reads `kesar-jaipur.frrata.shop · Ready · Razorpay not approved` with Open Razorpay.
+2. **"Razorpay approved it"** (owner/admin tick, stored with who and when) turns on **Make main**, which is today's
+   rename (`app_change_shop_address`: the old name retires and redirects, a change is used), with the Publish-style
+   confirm, Going live and Undo for 8 s.
+3. A name added but not made main in 14 days is let go (free again, no change used); one such name at a time.
+A shop in test mode, or not yet on Razorpay, keeps the one-step rename. Schema: `shop_names.added_at` for a name that
+serves but is not current (the lookup serves it as current, never redirects it; the partial unique index stays on
+`retired_at is null and added_at is null`); the D1·8 tick lives per name (`shop_names.razorpay_ok_at`, `_by`), so a
+domain (D2) and a name share one gate. Same screen as own domains (rules 72–76): it is another row in Addresses.
+
 ## D·2 — Own domains (owner 2026-11-09: build now on Hobby with a once-a-day check; Pro before the first live merchant)
 No merchant is live yet, so Hobby's non-commercial terms don't bite (the first live payment on any shop needs Pro);
 legacy `crons` run at most once a day on Hobby (Vercel Schedules, beta since 2026-11-05, allow every 15 min within
@@ -69,8 +84,7 @@ legacy `crons` run at most once a day on Hobby (Vercel Schedules, beta since 202
   and smooth transitions; awaiting approval): one Addresses list, a dialog/sheet that polls every 15 s while open,
   the DNS provider read from NS (no question), Open <provider> DNS, Send on WhatsApp, Make main as Publish (1.3 s,
   popup, Undo 8 s). **Approved by the owner 2026-11-09**; design rules 72–76.
-- **Rename of a shop taking live payments** (owner didn't choose; default taken): the rename confirm gains one line,
-  "Card and UPI payments need Razorpay to approve the new address." Renaming is not blocked.
+- **Rename of a shop taking live payments** (owner: "take your call, plan the best ux", 2026-11-09) → **D1·9**.
 | Task | What | Verify |
 |---|---|---|
 | D2·0 | **Done 2026-11-09** (frata-integrations 1.15.0 § Razorpay): live payments fail from a website not registered on the shop's own Razorpay account — an own domain AND `<slug>.frrata.shop`. Dashboard › Account & Settings › Business website detail; additional websites only in the e-commerce category, manual review ~24–48 h; no API to read them, so the merchant confirms. → **D1·8** below, and Connect's Connected step shows "Add to Razorpay"; **Make main needs "Razorpay approved it"** while the shop takes live payments | `frata-integrations` |
