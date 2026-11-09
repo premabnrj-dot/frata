@@ -135,6 +135,12 @@ export const reviewSettings = pgTable('review_settings', {
   widgetOn: boolean('widget_on').notNull().default(true),
   cardStars: boolean('card_stars').notNull().default(true),
   nameDefault: text('name_default').notNull().default('initial'),
+  /** The ask template in the shop's own WhatsApp account (template.ts): Meta's id, status and category, as last
+   *  read or pushed by Meta's webhook. Sends go only while it is APPROVED and UTILITY (H-utility). */
+  templateId: text('template_id'),
+  templateStatus: text('template_status'),
+  templateCategory: text('template_category'),
+  templateAt: at('template_at'),
   updatedAt: at('updated_at').notNull().defaultNow(),
 }, (t) => [
   check('review_settings_ask', sql`${t.askAfterDays} in (${nums(ASK_DAYS)})`),

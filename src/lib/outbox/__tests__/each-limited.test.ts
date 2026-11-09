@@ -2,6 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('server-only', () => ({}))
 vi.mock('next/server', () => ({ after: () => {} }))
 vi.mock('@/lib/queries/modules', () => ({ shopModules: async () => ({ access: {} }) }))
+// The drain runs only in production or e2e (security review H4): this test is the production case.
+let env = { VERCEL_ENV: 'production', E2E_FIXTURES: false }
+vi.mock('@/lib/env', () => ({ get VERCEL_ENV() { return env.VERCEL_ENV }, get E2E_FIXTURES() { return env.E2E_FIXTURES } }))
+vi.mock('@/lib/modules/reviews/sender', () => ({ sendReviewAsk: vi.fn() }))
+vi.mock('@/lib/billing/debit', () => ({ sendBillAttempt: vi.fn() }))
 vi.mock('../index', () => ({ claimDue: vi.fn(), deferRow: vi.fn(), markDead: vi.fn(), markFailed: vi.fn(), markSent: vi.fn() }))
 const { eachLimited, drainOutbox } = await import('../drain')
 const idx = await import('../index')
@@ -21,6 +26,13 @@ describe('drainOutbox (speed review P5)', () => {
     const r = await drainOutbox(Date.now() + 10_000)
     expect(r.claimed).toBe(51)
     expect(idx.claimDue).toHaveBeenCalledTimes(3)
+  })
+  it('a preview build never drains (it may share production’s database)', async () => {
+    env = { VERCEL_ENV: 'preview', E2E_FIXTURES: false }
+    vi.mocked(idx.claimDue).mockReset().mockResolvedValue([{ id: 'r', kind: 'x', tenantId: 't', attempts: 1 }] as never)
+    expect((await drainOutbox(Date.now() + 10_000)).claimed).toBe(0)
+    expect(idx.claimDue).not.toHaveBeenCalled()
+    env = { VERCEL_ENV: 'production', E2E_FIXTURES: false }
   })
   it('stops at the deadline', async () => {
     vi.mocked(idx.claimDue).mockReset().mockResolvedValue([] as never)

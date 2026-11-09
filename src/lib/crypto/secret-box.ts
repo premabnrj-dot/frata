@@ -45,5 +45,14 @@ export function open(sealed: string, tenantId: string, field: string): string | 
 
 /** An order's link token: HMAC of its id (128 bits), so a retry can give the same link back; only its hash is stored. */
 export const orderToken = (orderId: string) => createHmac('sha256', key('order-links v1')).update(orderId).digest().subarray(0, 16).toString('base64url')
+/**
+ * A review link (Reviews R1): HMAC over the shop, the order and the request's random nonce, so a link can be reissued
+ * (a new nonce) and never opens another shop's order (security review M1). 22 characters, URL-safe. Never stored:
+ * the request keeps tokenHash(token).
+ */
+export const reviewToken = (tenantId: string, orderId: string, nonceHex: string) =>
+  createHmac('sha256', key('review-links v1')).update(`${tenantId}|${orderId}|${nonceHex}`).digest().subarray(0, 16).toString('base64url')
+/** A phone as the shop's opt-out list keeps it: a keyed hash, per shop (security review H3). Never the number. */
+export const phoneHmac = (tenantId: string, phone: string) => createHmac('sha256', key('wa-opt-outs v1')).update(`${tenantId}|${phone}`).digest('hex')
 export const tokenHash = (token: string) => createHash('sha256').update(token).digest('hex')
 export const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')

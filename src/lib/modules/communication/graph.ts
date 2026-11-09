@@ -129,3 +129,44 @@ export async function startHistorySync(token: string, phoneNumberId: string): Pr
   return a.ok && b.ok
 }
 
+
+// ── Templates and sends (Reviews R1 task 6b; facts: frata-integrations § WhatsApp, checked 2026-11-07) ──────────────
+
+export type TemplateState = { id: string; status: string; category: string | null }
+
+/** Creates a template in the shop's own account (a name already there is read back, not created twice). */
+export async function createTemplate(token: string, wabaId: string, def: { name: string; language: string; category: string; components: unknown[] }): Promise<TemplateState | 'rejected' | null> {
+  if (!META_ID.test(wabaId)) return null
+  const made = await graph('POST', `/${wabaId}/message_templates`, token, def)
+  if (tokenRejected(made)) return 'rejected'
+  if (made.ok && typeof made.json.id === 'string' && META_ID.test(made.json.id)) {
+    return { id: made.json.id, status: String(made.json.status ?? 'PENDING'), category: typeof made.json.category === 'string' ? made.json.category : def.category }
+  }
+  return templateState(token, wabaId, def.name)
+}
+
+/** The template's status and category as Meta has it now (APPROVED, PENDING, REJECTED, PAUSED, DISABLED). */
+export async function templateState(token: string, wabaId: string, name: string): Promise<TemplateState | 'rejected' | null> {
+  if (!META_ID.test(wabaId) || !/^[a-z0-9_]{1,512}$/.test(name)) return null
+  const r = await graph('GET', `/${wabaId}/message_templates`, token, undefined, { name, fields: 'id,name,status,category' })
+  if (tokenRejected(r)) return 'rejected'
+  if (!r.ok) return null
+  const t = ((r.json.data as Record<string, unknown>[] | undefined) ?? []).find((x) => x.name === name)
+  return t && typeof t.id === 'string' && META_ID.test(t.id) ? { id: t.id, status: String(t.status ?? ''), category: typeof t.category === 'string' ? t.category : null } : null
+}
+
+export type SendResult = { ok: true; wamid: string } | { ok: false; code: number | null; status: number; rejected: boolean }
+
+/** Sends an approved template to one Indian mobile (10 digits). Never logs the number or the body. */
+export async function sendTemplate(token: string, phoneNumberId: string, mobile10: string, name: string, language: string, components: unknown[]): Promise<SendResult> {
+  if (!META_ID.test(phoneNumberId) || !/^[6-9][0-9]{9}$/.test(mobile10)) return { ok: false, code: null, status: 0, rejected: false }
+  const r = await graph('POST', `/${phoneNumberId}/messages`, token, {
+    messaging_product: 'whatsapp', recipient_type: 'individual', to: `91${mobile10}`, type: 'template',
+    template: { name, language: { code: language }, components },
+  })
+  if (r.ok) {
+    const id = ((r.json.messages as { id?: unknown }[] | undefined) ?? [])[0]?.id
+    return typeof id === 'string' && /^wamid\.[A-Za-z0-9_=+\-./]{4,200}$/.test(id) ? { ok: true, wamid: id } : { ok: false, code: null, status: 200, rejected: false }
+  }
+  return { ok: false, code: r.code, status: r.status, rejected: tokenRejected(r) }
+}
