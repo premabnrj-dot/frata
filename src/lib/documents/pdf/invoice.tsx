@@ -1,6 +1,6 @@
 import 'server-only'
 import { Page, Text, View } from '@react-pdf/renderer'
-import type { Invoice } from '@/domains/orders/documents'
+import { CREDIT_REASON_WORDS, type Invoice } from '@/domains/orders/documents'
 import { PAPER } from '@/domains/documents/paper'
 import { paise } from '@/domains/money/paise'
 import { formatInr } from '@/lib/format'
@@ -17,7 +17,7 @@ const rate = (bps: number) => `${bps / 100}%`
 export function InvoicePage({ inv, order, brand, contact }: { inv: Invoice; order: string; brand: Brand; contact: string }) {
   // A credit note keeps its invoice's tax treatment: GST heads when the seller was registered (CGST Rule 53).
   const credit = inv.kind === 'credit_note'
-  const tax = inv.kind === 'tax_invoice' || (credit && !!inv.seller.gstin)
+  const tax = (inv.kind === 'tax_invoice' || (credit && !!inv.seller.gstin && inv.lines.some((l) => l.rateBps > 0 || l.cgst + l.sgst + l.igst > 0) )) && !inv.goodwill
   const intra = inv.supply === 'intra'
   const offs = inv.totals.discount > 0
   const head = ['Item', 'HSN', 'Qty', ...(offs ? ['Value', 'Discount'] : []), 'Taxable value', ...(tax ? ['Rate', ...(intra ? ['CGST', 'SGST'] : ['IGST'])] : []), 'Total']
@@ -35,7 +35,7 @@ export function InvoicePage({ inv, order, brand, contact }: { inv: Invoice; orde
     <Page size="A4" style={s.page}>
       {inv.cancelled ? <Text style={{ position: 'absolute', top: 120, right: 50, transform: 'rotate(-8deg)', borderWidth: 3, borderColor: PAPER.stamp, color: PAPER.stamp, fontSize: 22, fontWeight: 600, paddingHorizontal: 10, paddingVertical: 2 }}>CANCELLED</Text> : null}
       <Masthead brand={brand} title={credit ? 'Credit note' : tax ? 'Tax invoice' : 'Bill of supply'} reference={inv.number} meta={`${dayIN(inv.date)} · order ${order}`} />
-      {inv.against ? <Text style={{ ...s.sub, marginTop: -6, marginBottom: 8 }}>Against {tax ? 'tax invoice' : 'bill of supply'} {inv.against.number} of {dayIN(inv.against.date)} · {inv.against.reason === 'cancelled' ? 'order cancelled after the invoice was issued' : 'the parcel came back'} · the amounts below are credited in full.</Text> : null}
+      {inv.against ? <Text style={{ ...s.sub, marginTop: -6, marginBottom: 8 }}>Against {tax ? 'tax invoice' : 'bill of supply'} {inv.against.number} of {dayIN(inv.against.date)} · {CREDIT_REASON_WORDS[inv.against.reason]}{inv.against.reason === 'cancelled' || inv.against.reason === 'came_back' ? ' · the amounts below are credited' : ''}.</Text> : null}
       <View style={s.two}>
         <View style={s.col}><Text style={s.label}>SELLER</Text><Text style={{ fontWeight: 600 }}>{inv.seller.name}</Text><Text>{inv.seller.address}</Text>
           <Text>{inv.seller.gstin ? `GSTIN ${inv.seller.gstin}` : 'Not registered for GST'}</Text></View>

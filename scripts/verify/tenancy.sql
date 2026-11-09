@@ -1401,8 +1401,17 @@ do $$ declare n int; begin
   begin insert into credit_notes (tenant_id, order_id, number, against_invoice, reason, taxable, cgst, sgst, igst, total, issued_by) values ('22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-0000000c0e0b', 'B/26-27/C0002', 'x', 'cancelled', 0, 0, 0, 0, 0, '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: A wrote a credit note in B';
   exception when insufficient_privilege then null; end;
   insert into credit_notes (tenant_id, order_id, number, against_invoice, reason, taxable, cgst, sgst, igst, total, issued_by) values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-0000000c0e0a', 'A/26-27/C0001', 'A/26-27/00001', 'came_back', 100, 9, 9, 0, 118, '99999999-9999-9999-9999-999999999999');
-  begin insert into credit_notes (tenant_id, order_id, number, against_invoice, reason, taxable, cgst, sgst, igst, total, issued_by) values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-0000000c0e0a', 'A/26-27/C0002', 'A/26-27/00001', 'came_back', 100, 9, 9, 0, 118, '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: two credit notes for one order';
+  -- GST phase 2 (0071): several notes per order are allowed (part returns, discounts); a number never twice.
+  begin insert into credit_notes (tenant_id, order_id, number, against_invoice, reason, taxable, cgst, sgst, igst, total, issued_by) values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-0000000c0e0a', 'A/26-27/C0001', 'A/26-27/00001', 'came_back', 100, 9, 9, 0, 118, '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: one credit note number twice';
   exception when unique_violation then null; end;
+  -- A goodwill note carries no GST.
+  begin insert into credit_notes (tenant_id, order_id, number, against_invoice, reason, kind, taxable, cgst, sgst, igst, total, issued_by) values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-0000000c0e0a', 'A/26-27/G0001', 'A/26-27/00001', 'goodwill', 'goodwill', 100, 9, 9, 0, 118, '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: a goodwill note with GST';
+  exception when check_violation then null; end;
+  -- credit_note_lines: A sees and writes its own only; never B's order line or B's note.
+  if exists (select 1 from credit_note_lines) then raise exception 'FAIL: A sees B credit note lines'; end if;
+  begin insert into credit_note_lines (tenant_id, credit_note_id, order_line_id, qty, taxable, gst, gst_bps) select '22222222-2222-2222-2222-222222222222', gen_random_uuid(), gen_random_uuid(), 1, 0, 0, 0; raise exception 'FAIL: A wrote B credit note lines';
+  exception when insufficient_privilege then null; end;
+  begin update credit_note_lines set qty = qty; exception when insufficient_privilege then null; end;
   begin update credit_notes set total = total; raise exception 'FAIL: the app changed a credit note'; exception when insufficient_privilege then null; end;
   begin delete from credit_notes; raise exception 'FAIL: the app deleted a credit note'; exception when insufficient_privilege then null; end;
 end $$;

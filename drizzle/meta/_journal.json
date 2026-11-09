@@ -498,6 +498,13 @@
       "when": 1794219037126,
       "tag": "0070_serious_payback",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1794220148880,
+      "tag": "0071_vengeful_raider",
+      "breakpoints": true
     }
   ]
 }

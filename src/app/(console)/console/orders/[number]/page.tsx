@@ -81,11 +81,13 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
     <>
       <PageHeader title={label} back={{ href: '/console/orders', label: 'Orders' }}
         badges={<><Badge tone={pay.tone}><Icon name={pay.icon} className="mr-1 inline size-3.5 align-[-2px]" />{pay.label}</Badge><Badge tone={s.tone}>{s.label}</Badge></>}
-        meta={<>Placed {dateTimeIN(o.placedAt)}{o.invoiceNumber ? <> · Invoice <span className="font-mono">{o.invoiceNumber}</span></> : null}{d.credit ? <> · Credit note <span className="font-mono">{d.credit.number}</span></> : null}</>}
+        meta={<>Placed {dateTimeIN(o.placedAt)}{o.invoiceNumber ? <> · Invoice <span className="font-mono">{o.invoiceNumber}</span></> : null}{d.credits.length ? <> · Credit {d.credits.length === 1 ? 'note' : 'notes'} {d.credits.map((c, i) => <span key={c.number}>{i ? ', ' : ''}<span className="font-mono">{c.number}</span></span>)}</> : null}</>}
         actions={<OrderActions orderId={o.id} number={label} primary={primary}
           print={{ slip: may('print', state, role) ? printHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? printHref('invoice', [o.number]) : null }}
-          pdf={{ slip: may('print', state, role) ? pdfHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? pdfHref('invoice', [o.number]) : null, credit: d.credit ? pdfHref('credit', [o.number]) : null }}
-          credit={{ may: !d.credit && !!o.invoiceNumber && may('credit', state, role), number: d.credit?.number ?? null }} riskWarning={riskWarning} heldPaid={state === 'held' && !!o.paidAt}
+          pdf={{ slip: may('print', state, role) ? pdfHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? pdfHref('invoice', [o.number]) : null, credit: d.credits.length ? pdfHref('credit', [o.number]) : null }}
+          credit={{ may: !d.credit && !!o.invoiceNumber && may('credit', state, role), number: d.credit?.number ?? null }}
+          part={o.invoiceNumber && may('part_credit', state, role) ? { inclusive: o.pricesIncludeGst, lines: lines.map((l) => ({ id: l.id, title: [l.title, ...l.optionValues].join(' · '), qty: l.qty,
+            left: l.qty - d.credits.reduce((a, c) => a + c.lines.filter((x) => x.lineId === l.id).reduce((b, x) => b + x.qty, 0), 0) })) } : null} riskWarning={riskWarning} heldPaid={state === 'held' && !!o.paidAt}
           may={{ hold: can.hold, unhold: can.unhold, cancel: can.cancel, pack: can.pack, confirm: can.confirm }}
           refund={refund} refundLabel={formatInr(paise(refund))} stockTaken={lines.some((l) => l.stockTakenAt)} />} />
 
