@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { shareImage } from '@/lib/seo/share-image'
 import { CollectionView } from '@/components/storefront/pages'
 import { shopCatalogue, shopLook } from '@/lib/queries/storefront'
 import { themeOf } from '@/lib/themes/page-look'
@@ -22,8 +23,8 @@ async function load(params: Params) {
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
-  const { shop, c } = await load(params)
-  return toMetadata(shopTags(shop, { path: `/collections/${c.handle}`, title: `${c.title} | ${shop.shopName}`, shareTitle: c.title, description: c.description || null, image: null }))
+  const { shop, cat, c } = await load(params)
+  return toMetadata(shopTags(shop, { path: `/collections/${c.handle}`, title: `${c.title} | ${shop.shopName}`, shareTitle: c.title, description: c.description || null, image: await shareImage(shop, { kind: 'collection', collection: c, cat }, `${c.title} — ${shop.shopName}`, new Date()) }))
 }
 
 export default async function Collection({ params }: { params: Params }) {

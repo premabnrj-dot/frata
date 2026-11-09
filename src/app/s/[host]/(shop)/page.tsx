@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { shareImage } from '@/lib/seo/share-image'
 import { HomeView } from '@/components/storefront/pages'
 import { shopBestSellers, shopCatalogue, shopLook } from '@/lib/queries/storefront'
 import { bestSellersFor, themeOf } from '@/lib/themes/page-look'
@@ -10,7 +11,7 @@ export const revalidate = 60
 export async function generateMetadata({ params }: { params: Promise<{ host: string }> }): Promise<Metadata> {
   const shop = await shopFor(params)
   const description = shop.tagline || `${shop.shopName}: shop online${shop.codOn ? ', pay on delivery' : ''}.`
-  return toMetadata(shopTags(shop, { path: '/', title: shop.shopName, shareTitle: shop.shopName, description, image: null }))
+  return toMetadata(shopTags(shop, { path: '/', title: shop.shopName, shareTitle: shop.shopName, description, image: await shareImage(shop, { kind: 'shop', cat: await shopCatalogue(shop.id) }, shop.shopName, new Date()) }))
 }
 
 export default async function Home({ params }: { params: Promise<{ host: string }> }) {

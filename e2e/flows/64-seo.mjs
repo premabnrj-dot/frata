@@ -6,6 +6,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import http from 'node:http'
+import { writeFileSync } from 'node:fs'
 import { PORTS, SHOP_DOMAIN } from '../lib.mjs'
 
 const HOST = `kesar-studio.${SHOP_DOMAIN}`
@@ -29,6 +30,28 @@ function get(path, ua, host = HOST) {
     })
     r.on('error', reject); r.setTimeout(15_000, () => r.destroy(new Error(`timeout ${path}`))); r.end()
   })
+}
+
+function getBytes(path, host = HOST) {
+  return new Promise((resolve, reject) => {
+    const r = http.request({ host: '127.0.0.1', port: PORTS.app, path, method: 'GET', headers: { host, 'user-agent': CRAWLERS.whatsapp } }, (res) => {
+      const chunks = []
+      res.on('data', (c) => chunks.push(c))
+      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks) }))
+    })
+    r.on('error', reject); r.setTimeout(30_000, () => r.destroy(new Error(`timeout ${path}`))); r.end()
+  })
+}
+/** A JPEG's size from its first frame header (SOF0–SOF3). */
+function jpegSize(b) {
+  let i = 2
+  while (i < b.length) {
+    if (b[i] !== 0xff) return null
+    const m = b[i + 1], len = b.readUInt16BE(i + 2)
+    if (m >= 0xc0 && m <= 0xc3) return { h: b.readUInt16BE(i + 5), w: b.readUInt16BE(i + 7) }
+    i += 2 + len
+  }
+  return null
 }
 
 const unescape = (s) => s.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')
@@ -131,6 +154,42 @@ export default {
       assert.equal(draft.status, 404)
       const bag = head((await get('/bag', CRAWLERS.google)).body)
       assert.match(bag.one('robots') ?? '', /noindex/)
+    })
+
+    await t.step('S1·3: every page shares a 1200×630 JPEG card under 300 KB; odd addresses never draw one', async () => {
+      const [c] = await db`select c.handle from collections c join tenants tn on tn.id = c.tenant_id where tn.slug = 'kesar-studio' order by c.handle limit 1`
+      const seen = new Set()
+      for (const path of ['/', `/products/${product.handle}`, `/collections/${c.handle}`, '/products', '/policies/returns']) {
+        const h = head((await get(path, CRAWLERS.whatsapp)).body)
+        const img = h.one('og:image')
+        assert.match(img ?? '', new RegExp(`^https://${HOST.replace(/\./g, '\\.')}/og/(product|collection)/[0-9a-f-]{36}/[0-9a-f]{16}\\.jpg$|^https://${HOST.replace(/\./g, '\\.')}/og/shop/[0-9a-f]{16}\\.jpg$`), `${path}: og:image is a card`)
+        assert.equal(h.one('og:image:type'), 'image/jpeg', `${path}: type`)
+        assert.equal(h.one('og:image:width'), '1200'); assert.equal(h.one('og:image:height'), '630')
+        assert.ok(h.one('og:image:alt'), `${path}: alt`)
+        assert.equal(h.one('twitter:card'), 'summary_large_image', `${path}: X card`)
+        if (seen.has(img)) continue
+        seen.add(img)
+        const r = await getBytes(new URL(img).pathname)
+        assert.equal(r.status, 200, `${path}: card served`)
+        assert.equal(r.headers['content-type'], 'image/jpeg')
+        assert.ok(r.body.length > 1000 && r.body.length <= 300_000, `${path}: ${r.body.length} bytes`)
+        assert.match(r.headers['cache-control'] ?? '', /immutable/)
+        // JPEG SOF0/SOF2 dimensions
+        const dims = jpegSize(r.body)
+        assert.deepEqual(dims, { w: 1200, h: 630 }, `${path}: 1200×630`)
+        writeFileSync(t.out(`card-${seen.size}`).replace(/\.png$/, '.jpg'), r.body)
+      }
+      const [draft] = await db`select id from products where handle = 'secret-draft'`
+      const productCard = [...seen].find((u) => u.includes('/og/product/'))
+      const path = new URL(productCard).pathname
+      assert.equal((await getBytes(`${path}?v=2`)).status, 308, 'a query string redirects, never draws')
+      assert.equal((await getBytes(path.toUpperCase().replace('/OG/', '/og/'))).status, 404, 'capitals: not a card')
+      assert.equal((await getBytes(`/og/product/${draft.id}/0123456789abcdef.jpg`)).status, 404, 'a draft has no card')
+      assert.equal((await getBytes('/og/product/not-a-uuid/0123456789abcdef.jpg')).status, 404)
+      const stale = await getBytes(path.replace(/[0-9a-f]{16}\.jpg$/, '0000000000000000.jpg'))
+      assert.equal(stale.status, 200, 'an old card address shows the current card')
+      assert.doesNotMatch(stale.headers['cache-control'] ?? '', /immutable/, 'briefly')
+      return `${seen.size} cards`
     })
 
     await t.step('robots.txt allows crawling and names the sitemap; the sitemap lists the product', async () => {

@@ -18,8 +18,6 @@ export function widthsFor(sourceWidth: number): number[] {
 }
 
 export const urlFor = (base: string, width: number) => `${base}-${width}.webp`
-/** The type of every photo `urlFor` names. */
-export const PHOTO_TYPE = 'image/webp' as const
 
 /** srcset for an <img>: each pre-made width. */
 export function srcSet(base: string, widths: readonly number[]): string {
