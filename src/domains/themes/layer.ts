@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { ON_COLOUR } from './catalogue/kit'
 import { choicesFor } from './choices'
 import { contrast } from './contrast'
-import { SECTION_NAMES, SectionSchema, MAX_PER_PAGE, MAX_SECTIONS, shopPath, type SectionInstance } from './sections'
+import { SECTION_NAMES, SectionSchema, MAX_PER_PAGE, MAX_SECTIONS, shopPath, type SectionInstance, VIDEO_KEYS, type VideoKey } from './sections'
 import { MenusSchema, SiteSchema, menusProblem, siteProblem } from './site'
 import { FOOTERS, HEADERS, HEADER_NAMES, PAGE_DEFAULTS, PAIRINGS, type Hex, type Scheme, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
 
@@ -133,7 +133,7 @@ export function carryOver(from: { manifest: ThemeManifest; layer: ThemeLayer }, 
   const kept = sections.filter((s) => to.allowed.sections.includes(s.key))
   for (const s of sections) if (!to.allowed.sections.includes(s.key)) lost.push(`${SECTION_NAMES[s.key]} isn't in ${to.name}`)
   // V1: the section comes across; its video stays only where the new theme offers video there (resolve drops it).
-  if (kept.some((s) => (s.key === 'hero' || s.key === 'image_text') && s.video && !(to.allowed.videoSections ?? []).includes(s.key))) lost.push(`Videos aren't in ${to.name}; the photos show`)
+  if (kept.some((s) => (VIDEO_KEYS as readonly string[]).includes(s.key) && 'video' in s && s.video && !(to.allowed.videoSections ?? []).includes(s.key as VideoKey))) lost.push(`Videos aren't in ${to.name}; the photos show`)
   // Keep the merchant's own Home only if they changed it; an untouched Home takes the new theme's.
   const changed = JSON.stringify(from.layer.home ?? null) !== 'null'
   // Site settings are the theme's own (owner 2026-11-09: a new theme brings its palette, type and icons); menus are

@@ -2,7 +2,7 @@
 
 import { MAX_TABS, type ProductLayout, type SectionScheme } from '@/domains/themes/sections'
 import { useState } from 'react'
-import { PROMISES, SECTION_NAMES, type SectionInstance, type SectionOf } from '@/domains/themes/sections'
+import { PROMISES, SECTION_NAMES, type SectionInstance, type SectionOf, type VideoKey } from '@/domains/themes/sections'
 import { Choice, Field, ImageField, LinkPicker, Switch, Text, paiseToRupees, rupeesToPaise, type LibraryPhoto, type LinkTarget } from './controls'
 import { Icon } from '@/components/icons/icon'
 import { VideoField } from './video-field'
@@ -26,7 +26,7 @@ export type FormCtx = {
   /** The shop's products, newest first (Shop the look picks from them). */
   products: { handle: string; title: string }[]
   /** V1: the sections this theme lets carry a loop, and whether video is switched on for shops (Mux is set up). */
-  video?: { sections: readonly ('hero' | 'image_text')[]; on: boolean }
+  video?: { sections: readonly VideoKey[]; on: boolean }
 }
 
 type Set<S> = (s: S) => void

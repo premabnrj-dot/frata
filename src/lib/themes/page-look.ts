@@ -3,6 +3,7 @@ import type { Circle, StripPiece } from '@/components/storefront/shell'
 import { inCollection } from '@/domains/storefront/listing'
 import { sourceProducts } from '@/domains/storefront/sources'
 import { resolveStored } from '@/domains/themes/resolve'
+import { VIDEO_KEYS } from '@/domains/themes/sections'
 import type { ResolvedTheme } from '@/domains/themes/types'
 import type { StoreCatalogue, StoreShop, StoredLook } from '@/lib/queries/storefront'
 
@@ -47,6 +48,6 @@ export async function bestSellersFor(t: ResolvedTheme, read: (days: number) => P
 export type LookVideos = Record<string, { playbackId: string; width: number | null; height: number | null }>
 /** V1: the videos this Home's sections name (only where the theme offers video: resolveTheme dropped the rest). */
 export async function videosFor(t: ResolvedTheme, read: (key: string) => Promise<LookVideos>): Promise<LookVideos> {
-  const ids = [...new Set(t.home.flatMap((s) => ((s.key === 'hero' || s.key === 'image_text') && s.video && !s.hidden ? [s.video.id] : [])))].sort()
+  const ids = [...new Set(t.home.flatMap((s) => ((VIDEO_KEYS as readonly string[]).includes(s.key) && 'video' in s && s.video && !s.hidden ? [s.video.id] : [])))].sort()
   return ids.length ? read(ids.join(',')) : {}
 }

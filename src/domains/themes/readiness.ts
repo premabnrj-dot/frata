@@ -66,7 +66,21 @@ export function readinessOf(home: SectionInstance[], f: ShopFacts, now: Date): I
         if (!s.show.some((k) => t.includes(k))) add(false, 'none of these promises is true for your shop today, so it shows nothing')
         break
       }
-      default: break
+      // Signal 1.2 (S2): an empty story section shows nothing and never stops a first publish (spec: "empty (hidden)");
+      // a photo without a description, or a link with no name, still blocks.
+      case 'story_fan': {
+        const shown = s.cards.filter((c) => c.image)
+        if (shown.length < 3) add(false, 'add 3 cards with photos, or it shows nothing')
+        if (s.cards.some((c) => altMissing(c.image))) add(true, 'describe each card’s photo for people who can’t see it')
+        if (s.cards.some((c) => c.link && !c.title.trim() && (!c.image || c.image.decorative || !c.image.alt.trim()))) add(true, 'give each linked card a title')
+        break
+      }
+      case 'statement':
+        if (!s.image || !s.wordmark.trim()) add(false, 'add a photo and a wordmark, or it shows nothing')
+        if (altMissing(s.image)) add(true, 'describe the photo for people who can’t see it')
+        break
+      case 'rich_text': case 'price_tiles': break
+      default: s satisfies never
     }
   }
   return out

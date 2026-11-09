@@ -51,7 +51,8 @@ function cleanImages<L extends { home?: unknown[] }>(layer: L, tenantId: string)
       const s = p.data
       // Exhaustive: a new section with a photo can't be missed (tenancy audit 2026-11-08: Shop the look was).
       switch (s.key) {
-        case 'hero': case 'image_text': case 'drop_teaser': case 'shop_the_look': return { ...s, image: fix(s.image) }
+        case 'hero': case 'image_text': case 'drop_teaser': case 'shop_the_look': case 'statement': return { ...s, image: fix(s.image) }
+        case 'story_fan': return { ...s, cards: s.cards.map((c) => ({ ...c, image: fix(c.image) ?? null })) }
         case 'logos': return { ...s, images: s.images.map((i) => fix(i)!) }
         case 'collection_tiles': case 'products': case 'price_tiles': case 'promises': case 'rich_text': return s
         default: return s satisfies never

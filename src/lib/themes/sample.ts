@@ -69,6 +69,15 @@ export function withSampleImages<T extends { home: import('@/domains/themes/sect
   const scene = SAMPLE_SCENES[look]
   // A story photo from the shop's own set (a bag for a bags shop), the clothing set's anarkali otherwise.
   const piece = set === 'clothing' ? SAMPLE_SCENES.piece : { ...SAMPLE_SCENES.piece, base: `/themes/samples/${SAMPLE_SETS[set][0]!.name}` }
+  // Signal S2: a story fan with too few photos borrows the set's pieces (five cards when it has none); a statement
+  // borrows the scene. Preview only, as every sample.
+  const pieceAt = (i: number) => {
+    const ps = set === 'clothing' ? [] : SAMPLE_SETS[set]
+    return ps.length ? { ...SAMPLE_SCENES.piece, base: `/themes/samples/${ps[i % ps.length]!.name}` } : piece
+  }
   return { ...t, home: t.home.map((s) => s.key === 'hero' && s.layout !== 'text' && !s.image ? { ...s, image: scene }
-    : (s.key === 'image_text' || s.key === 'shop_the_look') && !s.image ? { ...s, image: piece } : s) }
+    : (s.key === 'image_text' || s.key === 'shop_the_look' || s.key === 'statement') && !s.image ? { ...s, image: s.key === 'statement' ? scene : piece }
+    : s.key === 'story_fan' && s.cards.filter((c) => c.image).length < 3
+      ? { ...s, cards: (s.cards.length >= 3 ? s.cards : [...s.cards, ...Array.from({ length: 5 - s.cards.length }, () => ({ image: null, title: '', link: null }))]).map((c, i) => (c.image ? c : { ...c, image: pieceAt(i) })) }
+    : s) }
 }

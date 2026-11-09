@@ -1,0 +1,8 @@
+[
+  { "id": "spot", "key": "image_text", "layout": "spotlight", "label": "In spotlight", "heading": "Built for the 8:10 local.", "text": "Water-shy canvas.", "button": { "label": "Explore", "link": "/collections/backpacks" } },
+  { "id": "hero-script", "key": "hero", "layout": "image_text", "script": "Monsoon Edit", "heading": { "text": "The Roam tote" } },
+  { "id": "fan", "key": "story_fan", "heading": "Roam, out in the city", "cards": [{ "title": "The commute", "link": "/products" }, { "image": null }] },
+  { "id": "fan-blank", "key": "story_fan" },
+  { "id": "said", "key": "statement", "eyebrow": "Made for", "wordmark": "the long way" },
+  { "id": "said-blank", "key": "statement" }
+]

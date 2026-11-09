@@ -272,6 +272,10 @@ exports[`section schemas > hero keeps its shape 1`] = `
       ],
       "type": "string",
     },
+    "script": {
+      "maxLength": 32,
+      "type": "string",
+    },
     "text": {
       "anyOf": [
         {
@@ -302,6 +306,187 @@ exports[`section schemas > hero keeps its shape 1`] = `
           "type": "object",
         },
       ],
+    },
+    "video": {
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+      },
+      "required": [
+        "id",
+      ],
+      "type": "object",
+    },
+  },
+  "required": [
+    "id",
+    "key",
+    "heading",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`section schemas > image_text keeps its shape 1`] = `
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "button": {
+      "anyOf": [
+        {
+          "properties": {
+            "label": {
+              "maxLength": 24,
+              "type": "string",
+            },
+            "link": {
+              "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+              "type": "string",
+            },
+          },
+          "required": [
+            "label",
+            "link",
+          ],
+          "type": "object",
+        },
+        {
+          "type": "null",
+        },
+      ],
+      "default": null,
+    },
+    "heading": {
+      "maxLength": 60,
+      "type": "string",
+    },
+    "hidden": {
+      "default": false,
+      "type": "boolean",
+    },
+    "id": {
+      "pattern": "^[a-z0-9-]{1,40}$",
+      "type": "string",
+    },
+    "image": {
+      "anyOf": [
+        {
+          "properties": {
+            "alt": {
+              "default": "",
+              "maxLength": 160,
+              "type": "string",
+            },
+            "base": {
+              "maxLength": 300,
+              "type": "string",
+            },
+            "decorative": {
+              "default": false,
+              "type": "boolean",
+            },
+            "focus": {
+              "anyOf": [
+                {
+                  "properties": {
+                    "x": {
+                      "maximum": 100,
+                      "minimum": 0,
+                      "type": "number",
+                    },
+                    "y": {
+                      "maximum": 100,
+                      "minimum": 0,
+                      "type": "number",
+                    },
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+              "default": null,
+            },
+            "height": {
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "type": "integer",
+            },
+            "width": {
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "type": "integer",
+            },
+            "widths": {
+              "items": {
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991,
+                "type": "integer",
+              },
+              "maxItems": 4,
+              "minItems": 1,
+              "type": "array",
+            },
+          },
+          "required": [
+            "base",
+            "widths",
+            "width",
+            "height",
+          ],
+          "type": "object",
+        },
+        {
+          "type": "null",
+        },
+      ],
+      "default": null,
+    },
+    "key": {
+      "const": "image_text",
+      "type": "string",
+    },
+    "label": {
+      "default": "",
+      "maxLength": 24,
+      "type": "string",
+    },
+    "layout": {
+      "enum": [
+        "spotlight",
+      ],
+      "type": "string",
+    },
+    "scheme": {
+      "default": "paper",
+      "enum": [
+        "paper",
+        "tint",
+        "ink",
+        "signal",
+      ],
+      "type": "string",
+    },
+    "side": {
+      "default": "left",
+      "enum": [
+        "left",
+        "right",
+      ],
+      "type": "string",
+    },
+    "text": {
+      "default": "",
+      "maxLength": 600,
+      "type": "string",
     },
     "video": {
       "properties": {
@@ -510,6 +695,286 @@ exports[`section schemas > products keeps its shape 1`] = `
     "heading",
     "source",
     "count",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`section schemas > statement keeps its shape 1`] = `
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "eyebrow": {
+      "default": "",
+      "maxLength": 24,
+      "type": "string",
+    },
+    "hidden": {
+      "default": false,
+      "type": "boolean",
+    },
+    "id": {
+      "pattern": "^[a-z0-9-]{1,40}$",
+      "type": "string",
+    },
+    "image": {
+      "anyOf": [
+        {
+          "properties": {
+            "alt": {
+              "default": "",
+              "maxLength": 160,
+              "type": "string",
+            },
+            "base": {
+              "maxLength": 300,
+              "type": "string",
+            },
+            "decorative": {
+              "default": false,
+              "type": "boolean",
+            },
+            "focus": {
+              "anyOf": [
+                {
+                  "properties": {
+                    "x": {
+                      "maximum": 100,
+                      "minimum": 0,
+                      "type": "number",
+                    },
+                    "y": {
+                      "maximum": 100,
+                      "minimum": 0,
+                      "type": "number",
+                    },
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+              "default": null,
+            },
+            "height": {
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "type": "integer",
+            },
+            "width": {
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "type": "integer",
+            },
+            "widths": {
+              "items": {
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991,
+                "type": "integer",
+              },
+              "maxItems": 4,
+              "minItems": 1,
+              "type": "array",
+            },
+          },
+          "required": [
+            "base",
+            "widths",
+            "width",
+            "height",
+          ],
+          "type": "object",
+        },
+        {
+          "type": "null",
+        },
+      ],
+      "default": null,
+    },
+    "key": {
+      "const": "statement",
+      "type": "string",
+    },
+    "scheme": {
+      "default": "paper",
+      "enum": [
+        "paper",
+        "tint",
+        "ink",
+        "signal",
+      ],
+      "type": "string",
+    },
+    "wordmark": {
+      "default": "",
+      "maxLength": 32,
+      "type": "string",
+    },
+  },
+  "required": [
+    "id",
+    "key",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`section schemas > story_fan keeps its shape 1`] = `
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "cards": {
+      "default": [],
+      "items": {
+        "properties": {
+          "image": {
+            "anyOf": [
+              {
+                "properties": {
+                  "alt": {
+                    "default": "",
+                    "maxLength": 160,
+                    "type": "string",
+                  },
+                  "base": {
+                    "maxLength": 300,
+                    "type": "string",
+                  },
+                  "decorative": {
+                    "default": false,
+                    "type": "boolean",
+                  },
+                  "focus": {
+                    "anyOf": [
+                      {
+                        "properties": {
+                          "x": {
+                            "maximum": 100,
+                            "minimum": 0,
+                            "type": "number",
+                          },
+                          "y": {
+                            "maximum": 100,
+                            "minimum": 0,
+                            "type": "number",
+                          },
+                        },
+                        "required": [
+                          "x",
+                          "y",
+                        ],
+                        "type": "object",
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
+                    "default": null,
+                  },
+                  "height": {
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991,
+                    "type": "integer",
+                  },
+                  "width": {
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991,
+                    "type": "integer",
+                  },
+                  "widths": {
+                    "items": {
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991,
+                      "type": "integer",
+                    },
+                    "maxItems": 4,
+                    "minItems": 1,
+                    "type": "array",
+                  },
+                },
+                "required": [
+                  "base",
+                  "widths",
+                  "width",
+                  "height",
+                ],
+                "type": "object",
+              },
+              {
+                "type": "null",
+              },
+            ],
+            "default": null,
+          },
+          "link": {
+            "anyOf": [
+              {
+                "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                "type": "string",
+              },
+              {
+                "type": "null",
+              },
+            ],
+            "default": null,
+          },
+          "title": {
+            "default": "",
+            "maxLength": 40,
+            "type": "string",
+          },
+        },
+        "type": "object",
+      },
+      "maxItems": 7,
+      "type": "array",
+    },
+    "heading": {
+      "default": "",
+      "maxLength": 60,
+      "type": "string",
+    },
+    "hidden": {
+      "default": false,
+      "type": "boolean",
+    },
+    "id": {
+      "pattern": "^[a-z0-9-]{1,40}$",
+      "type": "string",
+    },
+    "key": {
+      "const": "story_fan",
+      "type": "string",
+    },
+    "label": {
+      "default": "",
+      "maxLength": 24,
+      "type": "string",
+    },
+    "scheme": {
+      "default": "paper",
+      "enum": [
+        "paper",
+        "tint",
+        "ink",
+        "signal",
+      ],
+      "type": "string",
+    },
+    "text": {
+      "default": "",
+      "maxLength": 160,
+      "type": "string",
+    },
+  },
+  "required": [
+    "id",
+    "key",
   ],
   "type": "object",
 }

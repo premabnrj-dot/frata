@@ -21,6 +21,8 @@ const summary = (s: SectionInstance): string => {
     case 'rich_text': return s.heading || 'Text'
     case 'logos': return `${s.images.length} logos`
     case 'shop_the_look': return `${s.pieces.length} of 4 pieces`
+    case 'story_fan': return `${s.cards.filter((c) => c.image).length} of 7 cards`
+    case 'statement': return s.wordmark || 'Needs a wordmark'
   }
 }
 
@@ -37,6 +39,8 @@ export function blank(key: SectionKey, id: string, now: Date): SectionInstance {
     case 'rich_text': return { id, key, hidden: false, scheme: 'paper', heading: '', body: [], align: 'left' }
     case 'logos': return { id, key, hidden: false, scheme: 'paper', heading: 'As seen in', images: [] }
     case 'shop_the_look': return { id, key, hidden: false, scheme: 'paper', image: null, heading: 'Shop the look', pieces: [] }
+    case 'story_fan': return { id, key, hidden: false, scheme: 'paper', label: '', heading: 'Out in the city', text: '', cards: [] }
+    case 'statement': return { id, key, hidden: false, scheme: 'ink', eyebrow: 'Made for', wordmark: 'the long way', image: null }
   }
 }
 
