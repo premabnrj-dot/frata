@@ -1,12 +1,13 @@
 'use client'
 
+import { SELL_LABELS, type SellKey } from '@/domains/catalogue/sell-keys'
+
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { PINCODE_SHAPE, slugFor, slugProblem } from '@/domains/signup/slug'
 import { checkAddress, createMyShop, lookupPincode, sendSignupCode, verifySignupCode, type AddressCheck } from './actions'
 
-const SELL_LABELS = [['women', 'Women'], ['men', 'Men'], ['kids', 'Kids'], ['ethnic', 'Ethnic wear'], ['accessories', 'Accessories'], ['footwear', 'Footwear']] as const
 type Step = 'name' | 'pickup' | 'plan' | 'phone' | 'sells'
 /** A plan card as the sign-up shows it (prices with GST from the server; never a cost). */
 export type SignupPlan = { code: string; name: string; price: string; included: string; fee: string }
@@ -206,15 +207,15 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
       {step === 'sells' && (
         <div key="sells" className={`space-y-4 ${anim}`}>
           <h1 className="text-2xl font-semibold tracking-tight">What do you sell?</h1>
-          <p className="text-sm text-muted-foreground">Pick any. We start your size charts from it; you can change every value.</p>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="What you sell">
+          <p className="text-sm text-muted-foreground">Pick any. It sets your starting HSN codes, size charts and product fields; you can change every value.</p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="group" aria-label="What you sell">
             {SELL_LABELS.map(([k, label]) => {
               const on = sells.includes(k)
               return (
                 <button key={k} type="button" aria-pressed={on}
                   onClick={() => setSells(on ? sells.filter((x) => x !== k) : [...sells, k])}
-                  className="h-10 rounded-full border border-input px-4 text-sm transition-colors duration-fast aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground">
-                  {label}
+                  className="flex min-h-14 items-center gap-2.5 rounded-xl border border-input bg-card px-3 text-left text-sm font-medium transition-[border-color,box-shadow] duration-fast aria-pressed:border-foreground aria-pressed:shadow-[inset_0_0_0_1px_var(--color-foreground)]">
+                  <SellIcon k={k} />{label}
                 </button>
               )
             })}
@@ -230,4 +231,14 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
       )}
     </div>
   )
+}
+
+/** A line drawing per category (decorative; the words say what it is). */
+function SellIcon({ k }: { k: SellKey }) {
+  const d: Record<SellKey, string> = {
+    women: 'M9 3h6l1 5-2 1 2 12H8l2-12-2-1z', men: 'M8 3l4 2 4-2 4 4-3 3v11H7V10L4 7z', kids: 'M12 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM8 9h8l-1 6h-6zM9 15l-1 6M15 15l1 6',
+    ethnic: 'M12 3l3 4-1 3 3 11H7l3-11-1-3z', footwear: 'M3 16c4 0 6-2 8-6l3 3c2 2 4 3 7 3v3H3z', accessories: 'M5 9h14l-1.5 11h-11zM9 9a3 3 0 0 1 6 0',
+    jewellery: 'M6 4h12l3 5-9 11L3 9zM3 9h18', beauty: 'M9 3h6v4l2 3v10H7V10l2-3z', wellness: 'M12 21c-5-3-8-7-8-11a4 4 0 0 1 8-1 4 4 0 0 1 8 1c0 4-3 8-8 11z',
+  }
+  return <svg viewBox="0 0 24 24" aria-hidden="true" className="size-6 shrink-0 fill-none stroke-current stroke-[1.5] text-muted-foreground"><path d={d[k]} strokeLinecap="round" strokeLinejoin="round" /></svg>
 }

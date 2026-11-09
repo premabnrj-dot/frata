@@ -16,12 +16,19 @@
 // =============================================================================
 
 import { stateCode } from '@/domains/checkout/states'
-import { gstHeads, split, supplyKind } from '@/domains/tax/gst'
+import { chargesGst, gstHeads, split, supplyKind, type Scheme } from '@/domains/tax/gst'
+
+/** A consignment above ₹50,000 travels with an e-way bill (CGST Rule 138; state limits differ, the GST app says). Paise. */
+export const EWAY_BILL_FROM = 5_000_000
 import { collect, sharesOf, type StoredLine, type StoredOrder } from './amounts'
 
-export type DocLine = StoredLine & { unitPrice: number; lineDiscount: number; title: string; optionValues: string[]; qty: number; sku: string | null; hsn: string | null; imageBase: string | null; imageWidths: number[] | null }
+export type DocLine = StoredLine & { unitPrice: number; lineDiscount: number; title: string; optionValues: string[]; qty: number; sku: string | null; hsn: string | null; imageBase: string | null; imageWidths: number[] | null
+  /** The unit invoiced (GST UQC); orders before 0070 read NOS. */
+  uqc?: string }
 export type DocOrder = StoredOrder & {
   number: string; placedAt: Date; packedAt: Date | null; invoiceNumber: string | null; sellerGstin: string | null
+  /** The seller's scheme when placed (regular | composition); a business buyer's GSTIN and name (a B2B invoice). */
+  sellerScheme?: string | null; buyerGstin?: string | null; buyerName?: string
   /** The seller as it was at packing; null before packing (the invoice then is not issued). */
   sellerName: string | null; sellerAddress: string | null
   customerName: string; phone: string; addressLine: string; area: string; landmark: string; city: string; pincode: string; state: string; supplyState: string | null
@@ -55,13 +62,18 @@ export function packingSlip(o: DocOrder, lines: DocLine[], shop: DocShop): Packi
  * `gross` and `discount` are before GST at the line's rate (an offer's discount, recorded on the invoice: CGST s.15(3)(a)),
  * so gross − discount = taxable (Rule 46); the charges' share sits in gross and taxable alike.
  */
-export type InvoiceLine = { title: string; hsn: string | null; qty: number; gross: number; discount: number; taxable: number; rateBps: number; cgst: number; sgst: number; igst: number; total: number }
+export type InvoiceLine = { title: string; hsn: string | null; qty: number; uqc: string; gross: number; discount: number; taxable: number; rateBps: number; cgst: number; sgst: number; igst: number; total: number }
 export type Invoice = {
   kind: 'tax_invoice' | 'bill_of_supply' | 'credit_note'; number: string; date: Date; cancelled: boolean
   /** A credit note's original invoice (CGST Rule 53: its number and date), and why the sale was undone. */
   against?: { number: string; date: Date; reason: CreditReason }
   seller: { name: string; address: string; gstin: string | null }
-  buyer: { name: string; lines: string[] }
+  /** A bill of supply from a composition seller says so (CGST Rule 49): "composition taxable person, not eligible to collect tax". */
+  composition: boolean
+  /** `gstin` and `business`: a business buyer's GST invoice (B2B); the delivery address is bill-to and ship-to. */
+  buyer: { name: string; lines: string[]; gstin: string | null; business: string | null }
+  /** An e-way bill is needed for a consignment over ₹50,000 (generated in the GST app, G3). */
+  needsEwayBill: boolean
   placeOfSupply: { state: string; code: string | null }
   supply: 'intra' | 'inter'
   lines: InvoiceLine[]
@@ -75,7 +87,8 @@ export type Invoice = {
 /** Null until packed: the invoice number is issued at packing (owner call 3), so there is nothing to print before. */
 export function invoice(o: DocOrder, lines: DocLine[], shop: DocShop): Invoice | null {
   if (!o.invoiceNumber || !o.packedAt) return null
-  const kind = o.sellerGstin ? 'tax_invoice' : 'bill_of_supply'
+  // A tax invoice when the seller charged GST (regular scheme); a bill of supply otherwise (not registered, composition).
+  const kind = chargesGst({ gstin: o.sellerGstin, scheme: (o.sellerScheme ?? 'regular') as Scheme }) ? 'tax_invoice' : 'bill_of_supply'
   const code = stateCode(o.supplyState ?? o.state)
   const supply = supplyKind(o.sellerGstin, code)
   const shares = sharesOf(lines, o)
@@ -85,13 +98,15 @@ export function invoice(o: DocOrder, lines: DocLine[], shop: DocShop): Invoice |
     const heads = kind === 'tax_invoice' ? gstHeads(gst, supply) : { cgst: 0, sgst: 0, igst: 0 }
     // The discount before GST: the line's gross value before GST at its rate, less its stored taxable value.
     const discount = l.lineDiscount ? split(l.unitPrice * l.qty, l.gstBps, o.pricesIncludeGst).taxable - l.taxableValue : 0
-    return { title: [l.title, ...l.optionValues].join(' · '), hsn: l.hsn, qty: l.qty, gross: taxable + discount, discount, taxable, rateBps: kind === 'tax_invoice' ? l.gstBps : 0, ...heads, total: taxable + heads.cgst + heads.sgst + heads.igst }
+    return { title: [l.title, ...l.optionValues].join(' · '), hsn: l.hsn, qty: l.qty, uqc: l.uqc ?? 'NOS', gross: taxable + discount, discount, taxable, rateBps: kind === 'tax_invoice' ? l.gstBps : 0, ...heads, total: taxable + heads.cgst + heads.sgst + heads.igst }
   })
   const sum = (k: keyof Pick<InvoiceLine, 'gross' | 'discount' | 'taxable' | 'cgst' | 'sgst' | 'igst' | 'total'>) => out.reduce((a, l) => a + l[k], 0)
   return {
     kind, number: o.invoiceNumber, date: o.packedAt, cancelled: !!o.cancelledAt,
     seller: { name: o.sellerName ?? (shop.legalName || shop.name), address: o.sellerAddress ?? shop.address, gstin: o.sellerGstin },
-    buyer: { name: o.customerName, lines: addressLines(o) },
+    composition: !!o.sellerGstin && o.sellerScheme === 'composition',
+    buyer: { name: o.customerName, lines: addressLines(o), gstin: kind === 'tax_invoice' ? o.buyerGstin ?? null : null, business: kind === 'tax_invoice' && o.buyerGstin ? o.buyerName || null : null },
+    needsEwayBill: o.total > EWAY_BILL_FROM,
     placeOfSupply: { state: o.supplyState ?? o.state, code }, supply,
     lines: out, totals: { gross: sum('gross'), discount: sum('discount'), taxable: sum('taxable'), cgst: sum('cgst'), sgst: sum('sgst'), igst: sum('igst'), total: sum('total') },
     pricesIncludeGst: o.pricesIncludeGst, charges: { delivery: o.shipping, cod: o.codCharge },

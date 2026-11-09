@@ -12,6 +12,8 @@ const Body = z.object({
   // Attribution as the shop's capture kept it: anything (junk in sessionStorage never stops an order); cleanAttribution
   // keeps the listed keys only, and the 32 kB body cap bounds the size.
   facts: z.object({ firstMethod: z.enum(['cod', 'prepaid']).nullable().optional(), attribution: z.unknown().optional() }).optional(),
+  // A business buyer's GST invoice (checked again in placeOrder: tax/gstin.ts). Capped here.
+  b2b: z.object({ gstin: z.string().max(20), name: z.string().max(120) }).nullable().optional(),
 })
 
 export async function POST(request: Request) {
@@ -26,7 +28,7 @@ export async function POST(request: Request) {
   const attribution = cleanAttribution(r.body.facts?.attribution, { ownHosts: [host, host.replace(/^www\./, ''), `www.${host.replace(/^www\./, '')}`], shopDomain: SHOP_DOMAIN, consoleHost: CONSOLE_HOST })
   try {
     const code = await codeToTry(r.tenantId, r.ip, r.body.code)
-    const out = await placeOrder(r.tenantId, { idempotencyKey: r.body.idempotencyKey, bag: r.body.bag, address: address.data, method: r.body.method, expectedTotal: r.body.expectedTotal, code, via: r.body.via, facts: { firstMethod: r.body.facts?.firstMethod ?? null, attribution } })
+    const out = await placeOrder(r.tenantId, { idempotencyKey: r.body.idempotencyKey, bag: r.body.bag, address: address.data, method: r.body.method, expectedTotal: r.body.expectedTotal, code, via: r.body.via, b2b: r.body.b2b ?? null, facts: { firstMethod: r.body.facts?.firstMethod ?? null, attribution } })
     // A code that did not apply counts against the guess limit here as on /quote (one rule: codeTried).
     await codeTried(r.tenantId, r.ip, r.body.code, !code ? 'not_applied' : out.kind === 'changed' ? out.quote.offers.code : out.kind === 'placed' ? out.code ?? 'applied' : 'applied')
     if (out.kind === 'changed') return reply({ changed: true, quote: publicQuote(out.quote) }, 409)

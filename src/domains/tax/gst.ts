@@ -1,12 +1,11 @@
 // =============================================================================
 // FILE: src/domains/tax/gst.ts
 //
-// GST ON WHAT A FASHION SHOP SELLS, per line, rounded per line so the invoice
-// (1D) adds up to the order. Apparel (HSN chapters 61, 62) and footwear (64):
-// 5% when the sale value of a piece is up to ₹2,500, 18% above — Notification
-// 9/2025-Central Tax (Rate), w.e.f. 22 Sep 2025 (text read 2026-11-07; the
-// owner's CA confirms before the first invoice). Other goods: 18% until a rate
-// is set for them (conservative). A shop with no GSTIN charges none.
+// GST ON WHAT A SHOP SELLS, per line, rounded per line so the invoice (1D) adds
+// up to the order. The rates are the dated table in rates.ts (GST 2.0: the
+// ₹2,500 slab for apparel, made-ups and footwear; flat rates for the rest); a
+// code it lacks is never guessed (plan 2026-11-09-gst-core-and-categories).
+// A shop with no GSTIN, or on the composition scheme, charges none.
 //
 // Prices may include GST (the default) or not. The ₹2,500 test is on the
 // taxable value per piece: an inclusive ₹2,600 is ₹2,476.19 at 5% → 5%. Between
@@ -18,19 +17,24 @@
 // rate (no current primary source; CA to confirm). Pure; paise throughout.
 // =============================================================================
 
+import { rateOn } from './rates'
+
 export const SLAB_PAISE = 250_000
 export const LOW_BPS = 500
 export const HIGH_BPS = 1_800
 
-const SLAB_CHAPTERS = ['61', '62', '64']
-
-/** The rate for one piece, from its HSN and its price (as shown, with or without GST). */
-export function rateFor(hsn: string | null, unitPrice: number, pricesIncludeGst: boolean): number {
-  const chapter = (hsn ?? '').replace(/\D/g, '').slice(0, 2)
-  if (!SLAB_CHAPTERS.includes(chapter)) return HIGH_BPS
-  const taxable = pricesIncludeGst ? (unitPrice * 10_000) / (10_000 + LOW_BPS) : unitPrice
-  return taxable <= SLAB_PAISE ? LOW_BPS : HIGH_BPS
+/**
+ * The rate for one piece (as shown, with or without GST) on `date` (the order's placing: the tax the shopper saw is the
+ * tax invoiced; plan review 2026-11-09). The rate table is `rates.ts`; `own` is the merchant's rate for a code the table
+ * lacks (or, on repricing, the line's stored rate). Null: no rate is known, and a registered shop can't sell it.
+ */
+export function rateFor(hsn: string | null, unitPrice: number, pricesIncludeGst: boolean, date: Date = new Date(), own?: number | null): number | null {
+  return rateOn(hsn, unitPrice, pricesIncludeGst, date, own)
 }
+
+/** Whether a seller charges GST: registered on the regular scheme. A composition seller has a GSTIN but charges none. */
+export type Scheme = 'regular' | 'composition'
+export const chargesGst = (s: { gstin: string | null; scheme: Scheme | null | undefined }) => !!s.gstin && (s.scheme ?? 'regular') === 'regular'
 
 /** An amount split into taxable value and GST at `bps`. */
 export function split(amount: number, bps: number, inclusive: boolean): { taxable: number; gst: number } {
@@ -51,7 +55,9 @@ export function apportion(total: number, weights: number[]): number[] {
   return out
 }
 
-export type TaxLine = { gross: number; unitPrice: number; hsn: string | null }
+export type TaxLine = { gross: number; unitPrice: number; hsn: string | null
+  /** The merchant's rate for a code the table lacks, or a stored line's rate on repricing. */
+  own?: number | null }
 export type TaxedLine = { bps: number; taxable: number; gst: number }
 /** A line's share of the charges (delivery + COD fee), taxed at the line's own rate. */
 export type ChargeShare = { chargeTaxable: number; chargeGst: number }
@@ -64,9 +70,10 @@ export function shareCharges(taxed: Pick<TaxedLine, 'bps' | 'taxable'>[], charge
 }
 
 /** GST on each line and on the charges (delivery + COD fee) shared over the lines. `registered` false: no GST at all. */
-export function taxOrder(lines: TaxLine[], charges: number, o: { registered: boolean; pricesIncludeGst: boolean }): { lines: (TaxedLine & ChargeShare)[]; chargesGst: number; chargesTaxable: number } {
+export function taxOrder(lines: TaxLine[], charges: number, o: { registered: boolean; pricesIncludeGst: boolean; date?: Date }): { lines: (TaxedLine & ChargeShare)[]; chargesGst: number; chargesTaxable: number } {
+  // A line with no known rate never reaches here from checkout (quote() refuses it); 0 is the last resort only.
   const taxed = o.registered
-    ? lines.map((l) => { const bps = rateFor(l.hsn, l.unitPrice, o.pricesIncludeGst); return { bps, ...split(l.gross, bps, o.pricesIncludeGst) } })
+    ? lines.map((l) => { const bps = rateFor(l.hsn, l.unitPrice, o.pricesIncludeGst, o.date ?? new Date(), l.own) ?? 0; return { bps, ...split(l.gross, bps, o.pricesIncludeGst) } })
     : lines.map((l) => ({ bps: 0, taxable: l.gross, gst: 0 }))
   const shares = shareCharges(taxed, charges, o.pricesIncludeGst)
   const out = taxed.map((t, i) => ({ ...t, ...shares[i]! }))

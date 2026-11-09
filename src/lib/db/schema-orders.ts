@@ -101,6 +101,11 @@ export const orders = pgTable('orders', {
   cancelNote: text('cancel_note'),
   /** The shop's GSTIN when the order was placed (null: not registered then): the invoice reads this, never today's settings. */
   sellerGstin: text('seller_gstin'),
+  /** The seller's GST scheme when placed (regular | composition; null: not registered). What decides "charges GST" (tax/gst.ts chargesGst). */
+  sellerScheme: text('seller_scheme'),
+  /** A business buyer's GSTIN and name, asked at checkout (a B2B invoice); fixed once the invoice is issued. */
+  buyerGstin: text('buyer_gstin'),
+  buyerName: text('buyer_name').notNull().default(''),
   // The seller as it was at packing (1D·7): an issued invoice never follows a later change to Settings.
   sellerName: text('seller_name'),
   sellerAddress: text('seller_address'),
@@ -114,6 +119,8 @@ export const orders = pgTable('orders', {
   index('orders_tenant_placed').on(t.tenantId, t.placedAt),
   // Best sellers by delivered units (themes T1·3): the shop's delivered orders in a window.
   index('orders_tenant_delivered').on(t.tenantId, t.deliveredAt).where(sql`${t.deliveredAt} is not null`),
+  // The GST month: invoices by their date (packing), for GSTR-1 (plan review 2026-11-09).
+  index('orders_tenant_packed').on(t.tenantId, t.packedAt).where(sql`${t.packedAt} is not null`),
   // Every lookup leads with the tenant: a unique on the value alone would tell another shop that a value exists.
   uniqueIndex('orders_tenant_token').on(t.tenantId, t.tokenHash),
   uniqueIndex('orders_tenant_idempotency').on(t.tenantId, t.idempotencyKey),
@@ -134,6 +141,9 @@ export const orders = pgTable('orders', {
   uniqueIndex('orders_tenant_invoice').on(t.tenantId, t.invoiceNumber),
   check('orders_invoice_when_packed', sql`(${t.invoiceNumber} is null) = (${t.packedAt} is null)`),
   check('orders_invoice_length', sql`${t.invoiceNumber} is null or length(${t.invoiceNumber}) <= 16`),
+  check('orders_seller_scheme', sql`${t.sellerScheme} is null or ${t.sellerScheme} in ('regular','composition')`),
+  check('orders_buyer_gstin', sql`${t.buyerGstin} is null or ${t.buyerGstin} ~ '^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$'`),
+  check('orders_buyer_name', sql`length(${t.buyerName}) <= 120`),
   check('orders_cancel_reason', sql`${t.cancelReason} is null or (${t.cancelledAt} is not null and ${t.cancelReason} in ('fake','customer_cancelled','unreachable','out_of_stock','cant_deliver','other'))`),
 ])
 
@@ -161,6 +171,8 @@ export const orderLines = pgTable('order_lines', {
   gstBps: integer('gst_bps').notNull().default(0),
   gst: money('gst').notNull().default(0),
   hsn: text('hsn'),
+  /** The unit as invoiced (products.uqc when placed). */
+  uqc: text('uqc').notNull().default('NOS'),
   /** The merchant's cost of one piece, when known. Server only: never selected by a shopper's route (ADR-0003). */
   unitCost: money('unit_cost'),
   /** How it was sold: in_stock (stock taken), preorder (ships by), made_to_order (lead days). */

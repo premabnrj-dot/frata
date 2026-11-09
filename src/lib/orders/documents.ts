@@ -38,13 +38,13 @@ export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], 
   const os = await tx.select({
     ...momentColumns, id: orders.id, number: orders.number, paymentMethod: orders.paymentMethod, paidAt: orders.paidAt, switchedToCodAt: orders.switchedToCodAt, cancelledAt: orders.cancelledAt,
     subtotal: orders.subtotal, shipping: orders.shipping, codCharge: orders.codCharge, gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst,
-    placedAt: orders.placedAt, packedAt: orders.packedAt, invoiceNumber: orders.invoiceNumber, sellerGstin: orders.sellerGstin, sellerName: orders.sellerName, sellerAddress: orders.sellerAddress, invoiceLogo: orders.invoiceLogo, invoiceSignatory: orders.invoiceSignatory, invoiceNote: orders.invoiceNote,
+    placedAt: orders.placedAt, packedAt: orders.packedAt, invoiceNumber: orders.invoiceNumber, sellerGstin: orders.sellerGstin, sellerScheme: orders.sellerScheme, buyerGstin: orders.buyerGstin, buyerName: orders.buyerName, sellerName: orders.sellerName, sellerAddress: orders.sellerAddress, invoiceLogo: orders.invoiceLogo, invoiceSignatory: orders.invoiceSignatory, invoiceNote: orders.invoiceNote,
     customerName: orders.customerName, phone: orders.phone, addressLine: orders.addressLine, area: orders.area, landmark: orders.landmark,
     city: orders.city, pincode: orders.pincode, state: orders.state, supplyState: orders.supplyState,
   }).from(orders).where(and(eq(orders.tenantId, tenantId), inArray(orders.number, wanted)))
   if (!os.length) return { shop, paper, orders: [], skipped: [] }
   const ls = await tx.select({
-    orderId: orderLines.orderId, title: orderLines.title, optionValues: orderLines.optionValues, qty: orderLines.qty, sku: orderLines.sku, hsn: orderLines.hsn,
+    orderId: orderLines.orderId, title: orderLines.title, optionValues: orderLines.optionValues, qty: orderLines.qty, sku: orderLines.sku, hsn: orderLines.hsn, uqc: orderLines.uqc,
     imageBase: orderLines.imageBase, imageWidths: orderLines.imageWidths, taxableValue: orderLines.taxableValue, gst: orderLines.gst, gstBps: orderLines.gstBps,
     unitPrice: orderLines.unitPrice, lineDiscount: orderLines.lineDiscount,
     chargeTaxable: orderLines.chargeTaxable, chargeGst: orderLines.chargeGst,

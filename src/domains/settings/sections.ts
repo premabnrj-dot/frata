@@ -162,18 +162,9 @@ export const SECTIONS: readonly Section[] = [
 
 export const sectionFor = (key: string): Section | undefined => SECTIONS.find((s) => s.key === key)
 
-/** GSTIN: 15 characters; the last is a checksum (GSTN's mod-36 scheme). */
-export function gstinValid(raw: string): boolean {
-  const g = raw.toUpperCase()
-  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(g)) return false
-  const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-  let sum = 0
-  for (let i = 0; i < 14; i++) {
-    const p = chars.indexOf(g[i]!) * (i % 2 === 0 ? 1 : 2)
-    sum += Math.floor(p / 36) + (p % 36)
-  }
-  return chars[(36 - (sum % 36)) % 36] === g[14]
-}
+/** GSTIN checks live in domains/tax/gstin.ts (checkout uses them too). */
+export { gstinValid } from '../tax/gstin'
+import { gstinValid } from '../tax/gstin'
 
 const MOBILE = /^[6-9][0-9]{9}$/
 /** "+91 98270-41000" → "9827041000"; null when it is not an Indian mobile number. */

@@ -16,6 +16,7 @@
 import { istDayKey } from '../time/day'
 import { availability, visibility, type Status, type WhenOut } from '@/domains/catalogue/availability'
 import type { ChargeShare } from '@/domains/tax/gst'
+import { rateOn } from '@/domains/tax/rates'
 import { codFor, shippingFor, type Cod, type DeliveryRules } from './delivery'
 import { planOffers, priceMethod, type Applied, type DiscountTerms, type Listed, type MethodLine, type TypedCode } from './discounts'
 
@@ -36,6 +37,10 @@ export type VariantRow = {
   /** Pre-order units not yet packed: when stock arrives, these are owed it first. */
   owed: number
   hsn: string | null
+  /** The merchant's GST rate for a code the rate table lacks (products.gst_bps); null: the table decides. */
+  ownBps?: number | null
+  /** The unit invoiced (products.uqc). */
+  uqc?: string
   image: { base: string; widths: number[] } | null
 }
 
@@ -51,6 +56,8 @@ export type QuoteLine = {
   image: { base: string; widths: number[] } | null; unitPrice: number; compareAt: number | null
   requested: number; qty: number; kind: LineKind; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null
   gross: number; hsn: string | null
+  /** The unit as invoiced (GST UQC). */
+  uqc: string
   problem: LineProblem | null
 }
 /**
@@ -130,6 +137,9 @@ export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Dat
     const requested = Math.max(1, Math.min(MAX_QTY, Math.floor(b.qty) || 1))
     if (!v) { missing.push(b.variantId); return [] }
     const s = sellable(v, requested, now)
+    // A registered shop can't sell a piece whose GST rate isn't known (no HSN, or a code the table lacks with no rate
+    // of the merchant's own): never a guessed rate (plan 2026-11-09-gst-core-and-categories § 2).
+    if (r.registered && s.qty > 0 && rateOn(v.hsn, v.price, r.pricesIncludeGst, now, v.ownBps) === null) return [{ v, requested, qty: 0, kind: s.kind, problem: 'gone' as const }]
     return [{ v, requested, ...s }]
   })
   const live = draft.filter((d) => d.qty > 0)
@@ -143,8 +153,8 @@ export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Dat
   const shipApplied: Applied | null = waived ? { discountId: plan.freeShipping!.id, codeId: plan.freeShipping!.codeId, class: 'shipping', title: plan.freeShipping!.title, amount: waived, terms: plan.freeShipping! } : null
   const offer = codFor(afterOrder, r, pincode)
   const codCharge = offer.offered ? offer.charge : 0
-  const priced = live.map((d, i) => ({ gross: d.v.price * d.qty, qty: d.qty, hsn: d.v.hsn, productDiscount: plan.productDisc[i]! }))
-  const tax = { registered: r.registered, pricesIncludeGst: r.pricesIncludeGst }
+  const priced = live.map((d, i) => ({ gross: d.v.price * d.qty, qty: d.qty, hsn: d.v.hsn, productDiscount: plan.productDisc[i]!, own: d.v.ownBps ?? null }))
+  const tax = { registered: r.registered, pricesIncludeGst: r.pricesIncludeGst, date: now }
   const pre = priceMethod(priced, plan.order?.amount ?? 0, plan.payment?.amount ?? 0, shipping, tax)
   const cod = priceMethod(priced, plan.order?.amount ?? 0, 0, shipping + codCharge, tax)
   const appliedFor = (...a: (Applied | null)[]) => a.filter((x): x is Applied => x !== null)
@@ -153,7 +163,7 @@ export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Dat
     variantId: d.v.variantId, productId: d.v.productId, handle: d.v.handle, title: d.v.title, options: d.v.options, values: d.v.values, sku: d.v.sku,
     image: d.v.image, unitPrice: d.v.price, compareAt: d.v.compareAt, requested: d.requested, qty: d.qty, kind: d.kind,
     shipsBy: d.kind === 'preorder' ? d.v.shipsBy : null, leadMinDays: d.kind === 'made_to_order' ? d.v.leadMinDays : null, leadMaxDays: d.kind === 'made_to_order' ? d.v.leadMaxDays : null,
-    gross: d.v.price * d.qty, hsn: d.v.hsn, problem: d.problem,
+    gross: d.v.price * d.qty, hsn: d.v.hsn, uqc: d.v.uqc ?? 'NOS', problem: d.problem,
   }))
   const shares = (m: typeof pre) => m.lines.map(({ chargeTaxable, chargeGst }) => ({ chargeTaxable, chargeGst }))
   return {

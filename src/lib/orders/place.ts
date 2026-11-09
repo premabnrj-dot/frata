@@ -6,6 +6,8 @@ import { amountFor, candidates, classOf, normalCode, stepReached, type DiscountT
 import { priorOrderSql } from '@/lib/db/order-predicates'
 import { quote, totalFor, type BagLine, type Quote } from '@/domains/checkout/quote'
 import { gstinState } from '@/domains/tax/gst'
+import { b2bProblem, cleanGstin, stateName } from '@/domains/tax/gstin'
+import { stateCode } from '@/domains/checkout/states'
 import type { Tx } from '@/lib/db'
 import { tenantCounters } from '@/lib/db/schema'
 import { variants } from '@/lib/db/schema-catalogue'
@@ -47,6 +49,8 @@ export type PlaceInput = {
   code?: string | null; via?: 'typed' | 'link'
   /** What the shopper was shown and did, for the hypotheses (frata-unit-economics): first card tapped, attribution. */
   facts: { firstMethod?: 'cod' | 'prepaid' | null; attribution?: Record<string, string> }
+  /** A business buyer asking for a GST invoice: their GSTIN and registered name (checked here again: tax/gstin.ts). */
+  b2b?: { gstin: string; name: string } | null
 }
 export type Pay = { keyId: string; razorpayOrderId: string; amount: number; name: string; phone: string; shop: string }
 export type Placed = { kind: 'placed'; token: string; number: number; method: 'cod' | 'prepaid'; total: number; pay: Pay | null; payError?: string
@@ -57,7 +61,7 @@ export type PlaceResult =
   | { kind: 'changed'; quote: Quote }
   | { kind: 'refused'; status: 404 | 409 | 422; error: string; quote?: Quote }
 
-const requestHashOf = (i: PlaceInput) => sha256(JSON.stringify([i.address.phone, i.method, [...i.bag].map((b) => [b.variantId, b.qty]).sort(), ...(i.code ? [normalCode(i.code)] : [])]))
+const requestHashOf = (i: PlaceInput) => sha256(JSON.stringify([i.address.phone, i.method, [...i.bag].map((b) => [b.variantId, b.qty]).sort(), ...(i.code ? [normalCode(i.code)] : []), ...(i.b2b ? [cleanGstin(i.b2b.gstin)] : [])]))
 
 export async function placeOrder(tenantId: string, input: PlaceInput, now = new Date()): Promise<PlaceResult> {
   const soldOut: string[] = []
@@ -75,6 +79,17 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     if (!shop || !shop.open) return { kind: 'refused', status: 404, error: 'This shop is not taking orders right now.' }
     // Abandoned online orders lose the shopper's details after 90 days: the daily cron (src/lib/orders/erase.ts).
     if (input.method === 'prepaid' && !shop.online) return { kind: 'refused', status: 422, error: 'Online payment is not available at this shop right now. Pay on delivery instead.' }
+    // A shop that doesn't charge GST (not registered, or composition) sells within its own state only: inter-state
+    // supply of goods needs a regular registration (CGST s.24(i)). Checkout says so before this; this is the lock.
+    if (shop.scheme !== 'regular' && shop.homeState && stateCode(input.address.state) !== shop.homeState)
+      return { kind: 'refused', status: 422, error: `This shop delivers within ${stateName(shop.homeState)} only.` }
+    let buyer: { gstin: string; name: string } | null = null
+    if (input.b2b) {
+      if (!shop.b2b) return { kind: 'refused', status: 422, error: 'This shop can’t issue GST invoices to businesses right now. Turn off “Claim GST input credit” to order.' }
+      const why = b2bProblem(input.b2b.gstin, input.b2b.name, input.address.state)
+      if (why) return { kind: 'refused', status: 422, error: why.error }
+      buyer = { gstin: cleanGstin(input.b2b.gstin), name: input.b2b.name.trim() }
+    }
 
     const rows = await variantRows(tx, tenantId, input.bag.map((b) => b.variantId), now, { lock: true })
     const typed = await codeFor(tx, tenantId, input.code, now)
@@ -103,7 +118,8 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
       subtotal: q.subtotal, discount: m.discount, shipping: q.shipping, codCharge: m.codCharge, gstTotal: m.gst, total: m.total, pricesIncludeGst: shop.pricesIncludeGst,
       merchandiseNet: m.merchandiseNet, cogs,
       customerName: input.address.name, phone: input.address.phone, addressLine: input.address.addressLine, area: input.address.area, landmark: input.address.landmark,
-      pincode: input.address.pincode, city: input.address.city, state: input.address.state, supplyState: input.address.state, shopState: gstinState(shop.gstin), sellerGstin: shop.gstin,
+      pincode: input.address.pincode, city: input.address.city, state: input.address.state, supplyState: input.address.state, shopState: gstinState(shop.gstin), sellerGstin: shop.gstin, sellerScheme: shop.scheme,
+      buyerGstin: buyer?.gstin ?? null, buyerName: buyer?.name ?? '',
       arrivesFrom: q.arrives?.from ?? null, arrivesTo: q.arrives?.to ?? null, returnDays: shop.returnDays, returnKind: shop.returnKind,
       tokenHash: tokenHash(orderToken(id)), idempotencyKey: input.idempotencyKey, requestHash: reqHash,
       payBy: cod ? null : new Date(now.getTime() + HOLD_MINUTES * 60_000),
@@ -116,7 +132,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
       lineDiscount: m.lines[position]!.discount, productDiscount: m.lines[position]!.productDiscount, taxableValue: m.lines[position]!.taxable, gstBps: m.lines[position]!.gstBps, gst: m.lines[position]!.gst,
       tenantId, orderId: id, variantId: l.variantId, productId: l.productId, title: l.title, optionValues: l.values, sku: l.sku,
       imageBase: l.image?.base ?? null, imageWidths: l.image?.widths ?? null, qty: l.qty, unitPrice: l.unitPrice, compareAt: l.compareAt,
-      hsn: l.hsn, unitCost: costs.get(l.variantId) ?? null,
+      hsn: l.hsn, uqc: l.uqc, unitCost: costs.get(l.variantId) ?? null,
       kind: l.kind, shipsBy: l.shipsBy, leadMinDays: l.leadMinDays, leadMaxDays: l.leadMaxDays, position,
     })))
     // What the order got, with its value terms copied (a tier: the step reached). Buy X get Y, gift and target terms are

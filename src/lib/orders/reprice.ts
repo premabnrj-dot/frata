@@ -2,6 +2,7 @@ import 'server-only'
 import { and, eq } from 'drizzle-orm'
 import type { Repriced, StoredPricing } from '@/domains/orders/amounts'
 import type { Tx } from '@/lib/db'
+import { chargesGst, type Scheme } from '@/domains/tax/gst'
 import { orderDiscounts } from '@/lib/db/schema-discounts'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 
@@ -17,15 +18,19 @@ export type StoredOrderPricing = StoredPricing & { lineIds: string[] }
 
 /** The lines as sold (in position order, with their ids) and the offers the order got. */
 export async function storedPricing(tx: Tx, tenantId: string, orderId: string, o: { shipping: number; sellerGstin: string | null; pricesIncludeGst: boolean }): Promise<StoredOrderPricing> {
-  const lines = await tx.select({ id: orderLines.id, unitPrice: orderLines.unitPrice, qty: orderLines.qty, hsn: orderLines.hsn, productDiscount: orderLines.productDiscount }).from(orderLines)
+  // The order's own facts decide its tax: its seller scheme (a composition seller charges none) and the day it was
+  // placed (the rate table in force then), never today's settings (plan review 2026-11-09, finding 4).
+  const [ord] = await tx.select({ sellerScheme: orders.sellerScheme, placedAt: orders.placedAt }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId)))
+  const lines = await tx.select({ id: orderLines.id, unitPrice: orderLines.unitPrice, qty: orderLines.qty, hsn: orderLines.hsn, productDiscount: orderLines.productDiscount, gstBps: orderLines.gstBps }).from(orderLines)
     .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId))).orderBy(orderLines.position)
   const applied = await tx.select({ class: orderDiscounts.class, amount: orderDiscounts.amount }).from(orderDiscounts)
     .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, orderId)))
   return {
     lineIds: lines.map((l) => l.id),
-    lines: lines.map((l) => ({ unitPrice: Number(l.unitPrice), qty: l.qty, hsn: l.hsn, productDiscount: Number(l.productDiscount) })),
+    lines: lines.map((l) => ({ unitPrice: Number(l.unitPrice), qty: l.qty, hsn: l.hsn, productDiscount: Number(l.productDiscount), gstBps: l.gstBps })),
     applied: applied.map((a) => ({ class: a.class as 'product' | 'order' | 'shipping' | 'payment', amount: Number(a.amount) })),
-    shipping: o.shipping, registered: !!o.sellerGstin, pricesIncludeGst: o.pricesIncludeGst,
+    shipping: o.shipping, registered: chargesGst({ gstin: o.sellerGstin, scheme: (ord?.sellerScheme ?? 'regular') as Scheme }), pricesIncludeGst: o.pricesIncludeGst,
+    placedAt: ord?.placedAt ?? undefined,
   }
 }
 

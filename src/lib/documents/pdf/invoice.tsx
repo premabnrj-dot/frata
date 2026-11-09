@@ -9,7 +9,7 @@ import { Footer, Masthead, s, Table, Totals, type Brand } from './blocks'
 
 // The tax invoice or bill of supply (Documents D1): exactly invoice()'s figures (src/domains/orders/documents.ts),
 // frozen at packing — nothing here computes tax. CGST Rule 46 particulars, adding what the print page lacked: reverse
-// charge (No), the unit (pcs) and the authorised signatory. Cancelled after packing: the same number, stamped.
+// charge (No), the unit (the product's GST unit, UQC) and the authorised signatory. Cancelled after packing: the same number, stamped.
 
 const rs = (p: number) => formatInr(paise(p), { decimals: true })
 const rate = (bps: number) => `${bps / 100}%`
@@ -22,7 +22,7 @@ export function InvoicePage({ inv, order, brand, contact }: { inv: Invoice; orde
   const offs = inv.totals.discount > 0
   const head = ['Item', 'HSN', 'Qty', ...(offs ? ['Value', 'Discount'] : []), 'Taxable value', ...(tax ? ['Rate', ...(intra ? ['CGST', 'SGST'] : ['IGST'])] : []), 'Total']
   const widths = [5, 1.4, 1, ...(offs ? [1.8, 1.8] : []), 2, ...(tax ? [1, ...(intra ? [1.6, 1.6] : [1.8])] : []), 2]
-  const rows = inv.lines.map((l) => [l.title, l.hsn, `${l.qty} pcs`, ...(offs ? [rs(l.gross), l.discount ? `−${rs(l.discount)}` : '—'] : []), rs(l.taxable),
+  const rows = inv.lines.map((l) => [l.title, l.hsn, `${l.qty} ${l.uqc}`, ...(offs ? [rs(l.gross), l.discount ? `−${rs(l.discount)}` : '—'] : []), rs(l.taxable),
     ...(tax ? [rate(l.rateBps), ...(intra ? [rs(l.cgst), rs(l.sgst)] : [rs(l.igst)])] : []), rs(l.total)])
   const right = head.map((_, i) => i).filter((i) => i >= 2)
   const totals: [string, string][] = [
@@ -39,7 +39,9 @@ export function InvoicePage({ inv, order, brand, contact }: { inv: Invoice; orde
       <View style={s.two}>
         <View style={s.col}><Text style={s.label}>SELLER</Text><Text style={{ fontWeight: 600 }}>{inv.seller.name}</Text><Text>{inv.seller.address}</Text>
           <Text>{inv.seller.gstin ? `GSTIN ${inv.seller.gstin}` : 'Not registered for GST'}</Text></View>
-        <View style={s.col}><Text style={s.label}>BILL TO AND SHIP TO</Text><Text style={{ fontWeight: 600 }}>{inv.buyer.name}</Text>{inv.buyer.lines.map((l) => <Text key={l}>{l}</Text>)}
+        <View style={s.col}><Text style={s.label}>BILL TO AND SHIP TO</Text>
+          {inv.buyer.business ? <><Text style={{ fontWeight: 600 }}>{inv.buyer.business}</Text><Text>GSTIN {inv.buyer.gstin}</Text><Text>Attn: {inv.buyer.name}</Text></> : <Text style={{ fontWeight: 600 }}>{inv.buyer.name}</Text>}
+          {inv.buyer.lines.map((l) => <Text key={l}>{l}</Text>)}
           <Text>Place of supply: {inv.placeOfSupply.state}{inv.placeOfSupply.code ? ` (${inv.placeOfSupply.code})` : ''}</Text>
           {tax ? <Text>Tax payable on reverse charge: No</Text> : null}</View>
       </View>
@@ -48,7 +50,8 @@ export function InvoicePage({ inv, order, brand, contact }: { inv: Invoice; orde
       <View style={{ marginTop: 10, gap: 2 }}>
         {inv.charges.delivery || inv.charges.cod ? <Text style={s.sub}>Delivery{inv.charges.cod ? ' and the pay-on-delivery fee' : ''} ({[inv.charges.delivery ? rs(inv.charges.delivery) : null, inv.charges.cod ? rs(inv.charges.cod) : null].filter(Boolean).join(' + ')}) are shared across the items above, at each item's rate.</Text> : null}
         {inv.pricesIncludeGst && tax ? <Text style={s.sub}>Prices include GST.</Text> : null}
-        {!tax ? <Text style={s.sub}>The seller is not registered for GST; no GST is charged.</Text> : null}
+        {!tax && inv.composition ? <Text style={s.sub}>Composition taxable person, not eligible to collect tax on supplies.</Text> : null}
+        {!tax && !inv.composition ? <Text style={s.sub}>The seller is not registered for GST; no GST is charged.</Text> : null}
       </View>
       <View style={{ ...s.row, marginTop: 18, alignItems: 'flex-end' }} wrap={false}>
         <Text style={{ flex: 1, color: PAPER.sub, paddingRight: 20 }}>{brand.note ?? ''}</Text>

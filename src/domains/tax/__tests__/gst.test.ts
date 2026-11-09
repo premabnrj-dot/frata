@@ -10,8 +10,8 @@ describe('GST on apparel', () => {
     expect(rateFor('6104', 250000, false)).toBe(500)
     expect(rateFor('6104', 250001, false)).toBe(1800)
     expect(rateFor('6403', 199900, true)).toBe(500)
-    expect(rateFor('7117', 99900, true)).toBe(1800) // not apparel: 18% until set
-    expect(rateFor(null, 99900, true)).toBe(1800)
+    expect(rateFor('7117', 99900, true)).toBe(300) // imitation jewellery: 3% (rates.ts)
+    expect(rateFor(null, 99900, true)).toBeNull() // no HSN: no rate, never a guess
   })
   it('splits inclusive and exclusive amounts', () => {
     expect(split(249000, 500, true)).toEqual({ taxable: 237143, gst: 11857 })
