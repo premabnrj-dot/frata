@@ -51,7 +51,9 @@ export function handleChange(oldHandle: string, newHandle: string, everPublished
 }
 
 export type LdVariant = { sku: string | null; gtin?: string | null; values: string[]; price: number; availability: Availability; image: string | null }
-export type LdProduct = { name: string; description: string; url: string; groupId: string; brand: string; options: string[]; variants: LdVariant[]; images: string[]; material: string | null; gender: string | null }
+/** A rating the page itself shows (Reviews): average 1–5 and how many. Never at 0 reviews (Google). */
+export type LdRating = { value: number; count: number }
+export type LdProduct = { rating?: LdRating | null; name: string; description: string; url: string; groupId: string; brand: string; options: string[]; variants: LdVariant[]; images: string[]; material: string | null; gender: string | null }
 
 const SCHEMA_AVAIL: Record<Availability['google'], string> = { in_stock: 'https://schema.org/InStock', out_of_stock: 'https://schema.org/OutOfStock', preorder: 'https://schema.org/PreOrder' }
 
@@ -70,7 +72,8 @@ export function productJsonLd(p: LdProduct): object {
   // Identifiers (S2·3): the SKU is also the brand's part number (MPN); the barcode only when one was typed.
   const ids = (v: LdVariant) => ({ ...(v.sku ? { sku: v.sku, mpn: v.sku } : {}), ...(v.gtin ? { gtin: v.gtin } : {}) })
   const props = (values: string[]) => Object.fromEntries(p.options.map((o, i) => [/^colou?rs?$/i.test(o) ? 'color' : /^sizes?$/i.test(o) ? 'size' : o.toLowerCase(), values[i]]).filter(([k]) => k === 'color' || k === 'size'))
-  const common = { brand: { '@type': 'Brand', name: p.brand }, description: p.description, ...(p.material ? { material: p.material } : {}), ...(p.gender ? { audience: { '@type': 'PeopleAudience', suggestedGender: p.gender } } : {}) }
+  const aggregate = p.rating && p.rating.count > 0 ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: Math.round(p.rating.value * 10) / 10, reviewCount: p.rating.count, bestRating: 5, worstRating: 1 } } : {}
+  const common = { ...aggregate, brand: { '@type': 'Brand', name: p.brand }, description: p.description, ...(p.material ? { material: p.material } : {}), ...(p.gender ? { audience: { '@type': 'PeopleAudience', suggestedGender: p.gender } } : {}) }
   if (p.variants.length <= 1 || !p.options.length) {
     const v = p.variants[0]
     return { '@context': 'https://schema.org', '@type': 'Product', name: p.name, url: p.url, image: p.images, ...(v ? ids(v) : {}), ...common, ...(v ? { offers: offer(v) } : {}) }

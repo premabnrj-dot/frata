@@ -3,6 +3,7 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import { GoneView } from '@/components/storefront/pages'
 import { shareImage } from '@/lib/seo/share-image'
 import { productOffer, productSeo, ProductView } from '@/components/storefront/product-view'
+import { productExtras } from '@/components/modules/storefront'
 import { ProductTags } from '@/components/storefront/product-tags'
 import { JsonLd } from '@/components/storefront/json-ld'
 import { breadcrumbJsonLd } from '@/domains/seo/defaults'
@@ -56,10 +57,11 @@ export default async function ProductPage({ params }: { params: Params }) {
   if (v.gone) return <GoneView title={p.title} cat={await shopCatalogue(shop.id)} href={shopHref} now={now} lang={shop.shopLanguage} />
   const theme = themeOf(shop, await shopLook(shop.id))
   const base = `https://${shop.host}`
+  const extras = await productExtras({ tenantId: shop.id, productId: p.id, at: now.toISOString() })
   return (
     <>
       <ProductTags tags={await tagsOf(shop, p, v.indexable, now)} />
-      <ProductView shop={shop} p={p} now={now} live layout={theme.settings} />
+      <ProductView shop={shop} p={p} now={now} live layout={theme.settings} below={extras.below} rating={extras.rating} />
       <JsonLd data={breadcrumbJsonLd([{ name: shop.shopName, url: `${base}/` }, { name: p.title, url: `${base}/products/${p.handle}` }])} />
     </>
   )

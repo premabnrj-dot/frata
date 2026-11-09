@@ -27,6 +27,12 @@ describe('seo defaults', () => {
     expect(ld.hasVariant[0].offers).toMatchObject({ price: '2490.5', priceCurrency: 'INR', availability: 'https://schema.org/InStock' })
     expect(ld.hasVariant[1].offers.availability).toBe('https://schema.org/PreOrder'); expect(ld.hasVariant[1].color).toBe('Indigo')
     expect(ld.hasVariant[0]).toMatchObject({ sku: 'A', mpn: 'A', gtin: '4006381333931' }); expect(ld.hasVariant[1].gtin).toBeUndefined()
+    expect(ld.aggregateRating).toBeUndefined()
+  })
+  it('a rating the page shows goes on the group, rounded; none at 0 reviews (Reviews R1)', () => {
+    const base = { name: 'Kurta', description: 'd', url: 'https://k/p', groupId: 'g', brand: 'Kesar', options: [], images: [], material: null, gender: null, variants: [] }
+    expect((productJsonLd({ ...base, rating: { value: 4.64, count: 46 } }) as Record<string, any>).aggregateRating).toEqual({ '@type': 'AggregateRating', ratingValue: 4.6, reviewCount: 46, bestRating: 5, worstRating: 1 })
+    expect((productJsonLd({ ...base, rating: { value: 0, count: 0 } }) as Record<string, any>).aggregateRating).toBeUndefined()
   })
 })
 

@@ -1,7 +1,7 @@
 import { pdpLines } from '@/domains/checkout/offer-showcase'
 import { describeAttribute } from '@/domains/catalogue/taxonomy'
 import { labelRows, readLabel } from '@/domains/catalogue/label'
-import { defaultDescription, defaultTitle, productJsonLd } from '@/domains/seo/defaults'
+import { defaultDescription, defaultTitle, productJsonLd, type LdRating } from '@/domains/seo/defaults'
 import { availability } from '@/domains/catalogue/availability'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { factsOf, priceOf } from '@/domains/storefront/listing'
@@ -41,12 +41,14 @@ export function productOffer(p: StoreProduct, now: Date) {
 }
 
 /** The product page (spec § Product page). Server-rendered; the choices are one client island. */
-export function ProductView({ shop, p, now, live = false, layout, offers, below }: {
+export function ProductView({ shop, p, now, live = false, layout, offers, below, rating }: {
   shop: StoreShop; p: StoreProduct; now: Date; live?: boolean
   /** The theme's product page (T2); absent = today's layout. */
   layout?: Pick<ThemeSettings, 'gallery' | 'details'> & Partial<Pick<ThemeSettings, 'buyBoxSticky' | 'buyBar' | 'bottomTabs'>>
   /** Offers O·2's lines after the price, and what modules put under the page (Reviews, Size and fit): nothing without them. */
   offers?: OfferLine[]; below?: React.ReactNode
+  /** The rating `below` shows (src/components/modules/storefront.tsx): the same figure goes into the markup. */
+  rating?: LdRating | null
 }) {
   const seo = productSeo(shop, p)
   // The taxonomy's details, then what the pack says (label.ts: Legal Metrology declarations, beauty and wellness).
@@ -62,6 +64,7 @@ export function ProductView({ shop, p, now, live = false, layout, offers, below 
     ...(ret ? [ret] : []),
   ]
   const ld = productJsonLd({
+    rating,
     name: p.title, description: seo.description, url: seo.url, groupId: p.id, brand: shop.shopName, options: p.options, material: details.find((d) => d.name === 'Fabric')?.value ?? null, gender,
     images: p.images.slice(0, 6).map((i) => urlFor(i.base, pick(i.widths, 1200))),
     variants: p.variants.filter((v) => v.price > 0).map((v) => {

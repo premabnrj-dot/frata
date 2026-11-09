@@ -18,11 +18,14 @@ const KEYS = [...(registry.match(/MODULE_KEYS = \[([^\]]*)\]/)?.[1] ?? '').match
 /** The hook points: where core may import a module's code, and why. */
 const HOOKS = {
   'src/components/modules/slots.tsx': 'the slot map: which module fills which slot',
+  'src/components/modules/storefront.tsx': 'the shop\'s product hook: what a module puts under a product, and its rating',
+  'src/lib/outbox/drain.ts': 'the SENDERS map: a module registers its outbox senders (the cron route only drains)',
   'src/app/api/cron/outbox/route.ts': 'the sender registry: a module registers its outbox senders',
   'src/app/(console)/console/layout.tsx': 'the nav builder: a usable module adds its nav item',
 }
 const HOOK_DIRS = [['src/app/api/webhooks/', 'a module\'s inbound webhook route']]
-const owned = (key) => [`src/domains/${key}/`, `src/lib/modules/${key}/`, `src/components/modules/${key}/`, `src/app/(console)/console/apps/${key}/`]
+// A module's own shopper routes too: its API under api/shop/<key>/ and its pages in the shop's (<key>) route group.
+const owned = (key) => [`src/domains/${key}/`, `src/lib/modules/${key}/`, `src/components/modules/${key}/`, `src/app/(console)/console/apps/${key}/`, `src/app/api/shop/${key}/`, `src/app/s/[host]/(${key})/`]
 
 const walk = (dir) => readdirSync(dir).flatMap((n) => {
   const p = join(dir, n).replaceAll('\\', '/')
