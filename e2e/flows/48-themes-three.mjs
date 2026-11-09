@@ -40,6 +40,9 @@ export default {
         const d = riya.getByRole('dialog', { name })
         await d.getByText('Version 2.0.0', { exact: false }).waitFor()
         await d.getByRole('button', { name: `Try ${name} in a draft` }).click()
+        // The open draft is another theme's: trying this one asks first (Look v3).
+        const ask = riya.getByRole('dialog', { name: `Try ${name}?` })
+        await Promise.race([ask.waitFor().then(() => ask.getByRole('button', { name: `Try ${name}` }).click()), riya.waitForURL(/\/console\/look\/customize$/)])
         await riya.waitForURL(/\/console\/look\/customize$/)
         const [r] = await db`select theme_key, theme_version from shop_theme_revisions where tenant_id = ${KESAR} order by updated_at desc limit 1`
         assert.deepEqual([r.theme_key, r.theme_version], [key, '2.0.0'])
@@ -48,7 +51,7 @@ export default {
         await riya.waitForTimeout(400)
         await riya.screenshot({ path: t.out(`${key}-home`) })
         // Only the choices this theme offers.
-        await riya.getByRole('tab', { name: 'Theme settings' }).click()
+        await riya.getByRole('tab', { name: 'Style' }).click()
         await riya.getByRole('button', { name: own, exact: true }).first().waitFor({ state: 'attached', timeout: 2000 }).catch(() => {})
         assert.equal(await riya.getByRole('button', { name: notOwn, exact: true }).count(), 0, `${name} doesn't offer ${notOwn}`)
         // A click on a section in the preview selects it here.
@@ -83,14 +86,15 @@ export default {
     await t.step('Studio published: split header, statement footer, a focused checkout with every legal line', async () => {
       // The sample scene fills the preview only: a photo Hero still needs the merchant's own photo before Publish.
       await riya.getByRole('button', { name: 'Publish', exact: true }).click()
-      const d = riya.getByRole('dialog', { name: /Publish Studio/ })
+      const d = riya.getByRole('dialog', { name: 'Publish Studio?' })
       await d.getByText('Hero: add a photo').waitFor()
+      assert.ok(await d.getByRole('button', { name: 'Publish', exact: true }).isDisabled(), 'a blocked publish can’t be pressed')
       await d.getByRole('button', { name: 'Not yet' }).click()
       await riya.getByRole('button', { name: 'Hide Hero' }).click()
       await until(async () => { const [r] = await db`select settings from shop_theme_revisions where tenant_id = ${KESAR} and theme_key = 'minimal' order by updated_at desc limit 1`; return (r.settings.home ?? []).some((s) => s.key === 'hero' && s.hidden) }, 10_000)
       await riya.getByRole('button', { name: 'Publish', exact: true }).click()
       await d.getByRole('button', { name: 'Publish', exact: true }).click()
-      await riya.getByRole('heading', { level: 1, name: 'Published' }).waitFor()
+      await riya.getByRole('dialog', { name: 'Your shop has its new look' }).waitFor()
       await until(async () => /data-entrance="rise"/.test(await shopHtml()), 15_000)
       const home = await shopHtml()
       assert.match(home, /data-button-motion="lift"/)
@@ -104,6 +108,7 @@ export default {
       await riya.goto(CONSOLE + '/console/look')
       await riya.getByRole('button', { name: 'More' }).click()
       await riya.getByRole('menuitem', { name: 'Undo last publish' }).click()
+      await riya.getByRole('dialog', { name: /back on your shop\?$/ }).getByRole('button', { name: 'Put it back' }).click()
       await until(async () => !/data-entrance="rise"/.test(await shopHtml()), 15_000)
     })
   },

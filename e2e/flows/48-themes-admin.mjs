@@ -70,10 +70,13 @@ export default {
       await riya.goto(CONSOLE + '/console/look')
       await riya.getByRole('button', { name: 'Bazaar', exact: true }).click()
       await riya.getByRole('dialog', { name: 'Bazaar' }).getByRole('button', { name: 'Try Bazaar in a draft' }).click()
+      // A draft of another theme is open: trying Bazaar asks first (Look v3).
+      const ask = riya.getByRole('dialog', { name: 'Try Bazaar?' })
+      await Promise.race([ask.waitFor().then(() => ask.getByRole('button', { name: 'Try Bazaar' }).click()), riya.waitForURL(/\/console\/look\/customize$/)])
       await riya.waitForURL(/\/console\/look\/customize$/)
       await riya.getByRole('button', { name: 'Publish', exact: true }).click()
-      await riya.getByRole('dialog', { name: /Publish Bazaar/ }).getByRole('button', { name: 'Publish', exact: true }).click()
-      await riya.getByRole('heading', { level: 1, name: 'Published' }).waitFor()
+      await riya.getByRole('dialog', { name: /^Publish Bazaar/ }).getByRole('button', { name: 'Publish', exact: true }).click()
+      await riya.getByRole('dialog', { name: 'Your shop has its new look' }).waitFor()
       // Bazaar has the phone tab bar; the look before it doesn't.
       await until(async () => /Shop tabs/.test(await shopHtml()), 15_000)
       await meera.goto(CONSOLE + '/admin/themes/bazaar/1.0.0')

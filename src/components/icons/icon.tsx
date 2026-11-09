@@ -27,6 +27,8 @@ const ICONS = {
   reviews: ['M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z', 'M10 12.2l1.5 1.5 2.7-2.7'],
   menu: ['M4 7h16 M4 17h16', 'M4 12h16'],
   close: ['M6 6l12 12', 'M18 6 6 18'],
+  search: ['M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z', 'M20 20l-4-4'],
+  upload: ['M4 17v3h16v-3', 'M12 15V4 M7.5 8.5 12 4l4.5 4.5'],
   // The merchant's day (brand book chapter 4): ready for pages and empty states.
   cod: ['M3 7h18v10H3z', 'M9.5 9.5h5 M9.5 12h5 M9.5 9.5c3 0 3 3 0 3l3.5 3'],
   prepaid: ['M7.5 3h9v18h-9z', 'M10 12.2l1.6 1.6 3-3.2'],

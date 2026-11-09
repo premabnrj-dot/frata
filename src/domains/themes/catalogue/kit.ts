@@ -18,3 +18,5 @@ export const style = (key: string, name: string, schemes: Style['schemes'], sche
 export const ON_COLOUR = { light: '#FFFFFF', dark: '#1F1A17' } as const satisfies Record<string, Hex>
 /** Where the brand-colour picker starts (a deep wine that reads on every light scheme). */
 export const BRAND_COLOUR_START: Hex = '#7A1F2B'
+/** Look v3: a few readable starting points beside "Any colour" (each reads on every light scheme of the 2.x themes). */
+export const BRAND_COLOUR_PICKS: Hex[] = ['#7A1F2B', '#8A4B12', '#2F3E73', '#1E5C4A', '#1F1A17']

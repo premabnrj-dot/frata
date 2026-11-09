@@ -15,12 +15,15 @@ const waLink = (n: string) => `https://wa.me/${n.replace(/\D/g, '')}`
 const igLink = (h: string) => `https://instagram.com/${h.replace(/^@/, '')}`
 
 export type Circle = { handle: string; title: string; image: PhotoData | null }
+export type StripPiece = { handle: string; title: string; image: PhotoData }
 
 /** Every shop page: the theme's tokens, settings and display face, its header and footer. Props only.
  *  No theme passed: Classic from the shop's settings (the look every shop had before themes). */
-export function ShopShell({ shop, href, banner, children, gated = false, live = false, capture = false, theme, circles = [], focused = false }: { shop: ShellShop; href: Href; banner?: React.ReactNode; children: React.ReactNode; gated?: boolean; live?: boolean
+export function ShopShell({ shop, href, banner, children, gated = false, live = false, capture = false, theme, circles = [], strip = [], focused = false }: { shop: ShellShop; href: Href; banner?: React.ReactNode; children: React.ReactNode; gated?: boolean; live?: boolean
   /** Record how the shopper arrived (Analytics A·1): the real shop only, never a console preview (which may be `live`). */
   capture?: boolean; theme?: ResolvedTheme; circles?: Circle[]
+  /** The Instagram strip footer's pieces (newest first, ≤ 6): each its first photo and its page. */
+  strip?: StripPiece[]
   /** The focused checkout (2.0 choice): the logo and the legal footer only; no menu, announcement, tabs or social links. */
   focused?: boolean }) {
   const t = theme ?? classicFromSettings(shop.accent, shop.displayFont)
@@ -33,15 +36,16 @@ export function ShopShell({ shop, href, banner, children, gated = false, live = 
       {!focused && (banner ?? (s.announcement && !gated && <Announcement a={s.announcement} t={t} href={href} />))}
       <header className={`border-b border-store-line ${s.sticky && !focused ? 'sticky top-0 z-30 bg-store-paper' : ''}`}>
         {focused ? <div className="mx-auto flex max-w-6xl justify-center px-4 py-4 sm:px-6"><Logo shop={shop} href={href} upper={s.header === 'minimal' || s.headings === 'upper'} className="text-lg font-semibold tracking-[0.12em]" /></div>
-          : s.header === 'centred' || s.header === 'minimal'
+          : s.header === 'centred' || s.header === 'minimal' || s.header === 'overlay'
           ? <MenuHeader shop={shop} href={href} gated={gated} live={live} minimal={s.header === 'minimal'} w={w} />
+          : s.header === 'panel' ? <MenuHeader shop={shop} href={href} gated={gated} live={live} minimal={false} w={w} panel={circles} />
           : s.header === 'split' ? <SplitHeader shop={shop} href={href} gated={gated} live={live} w={w} />
           : <ClassicHeader shop={shop} href={href} gated={gated} live={live} w={w} />}
         {s.header === 'circles' && !bare && circles.length > 0 && <CircleRow circles={circles} href={href} w={w} />}
       </header>
       <main id="main" className={`flex-1 ${tabs ? 'pb-16 sm:pb-0' : ''}`}>{children}</main>
       <div style={s.footerScheme !== 'paper' ? schemeVars(t, s.footerScheme) as React.CSSProperties : undefined} className={s.footerScheme !== 'paper' ? 'contents' : undefined}>
-        <ShopFooter f={shop} href={href} variant={focused ? 'compact' : s.footer} social={s.social && !focused} w={w} painted={s.footerScheme !== 'paper'} />
+        <ShopFooter f={shop} href={href} variant={focused ? 'compact' : s.footer} social={s.social && !focused} w={w} painted={s.footerScheme !== 'paper'} strip={strip} />
       </div>
       {tabs && <BottomTabs href={href} live={live} w={w} />}
       {/* How the shopper arrived: on every page of the real shop, never in a console preview (Analytics A·1). */}
@@ -77,8 +81,10 @@ function ClassicHeader({ shop, href, gated, live, w }: { shop: ShellShop; href: 
   )
 }
 
-/** Centred logo (or Minimal: tracked, uppercase): a menu on the left that opens with no script (<details>). */
-function MenuHeader({ shop, href, gated, live, minimal, w }: { shop: ShellShop; href: Href; gated: boolean; live: boolean; minimal: boolean; w: Words }) {
+/** Centred logo (or Minimal: tracked, uppercase): a menu on the left that opens with no script (<details>).
+ *  With `panel` (2.1 "Centred with a shop panel"): on a computer the collections row starts with Shop, which opens a
+ *  panel of the collections' pictures. */
+function MenuHeader({ shop, href, gated, live, minimal, w, panel }: { shop: ShellShop; href: Href; gated: boolean; live: boolean; minimal: boolean; w: Words; panel?: Circle[] }) {
   return (
     <>
       <div className="mx-auto grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-3 sm:px-6">
@@ -98,7 +104,22 @@ function MenuHeader({ shop, href, gated, live, minimal, w }: { shop: ShellShop; 
         <div className="flex justify-end">{!gated && live && <BagButton checkoutHref={href('/checkout')} shopHref={href('/products')} label={w.bag} count={[w.bagOne, w.bagMany]} />}</div>
       </div>
       {!gated && !minimal && shop.nav.length > 0 && (
-        <nav aria-label={w.collectionsNav} className="hidden justify-center gap-2 border-t border-store-line text-sm sm:flex">
+        <nav aria-label={w.collectionsNav} className="relative hidden justify-center gap-2 border-t border-store-line text-sm sm:flex">
+          {panel && panel.length > 0 && (
+            <details className="group">
+              <summary className="cursor-pointer list-none px-3 py-2.5 font-medium [&::-webkit-details-marker]:hidden">{w.shopAll}</summary>
+              <div className="absolute inset-x-0 top-full z-40 border-y border-store-line bg-store-paper">
+                <ul className="mx-auto grid max-w-6xl grid-cols-4 gap-4 px-6 py-6 lg:grid-cols-6">
+                  {panel.map((c) => (
+                    <li key={c.handle}><Link href={href(`/collections/${c.handle}`)} className="group/t block space-y-2">
+                      <span className="relative block aspect-[4/5] overflow-hidden rounded-[var(--store-radius)] bg-store-chip">{c.image && <Photo p={c.image} alt="" sizes="180px" className="absolute inset-0 h-full w-full object-cover" />}</span>
+                      <span className="block text-sm">{c.title}</span>
+                    </Link></li>
+                  ))}
+                </ul>
+              </div>
+            </details>
+          )}
           {shop.nav.map((c) => <Link key={c.handle} href={href(`/collections/${c.handle}`)} className="px-3 py-2.5">{c.title}</Link>)}
         </nav>
       )}
@@ -171,9 +192,10 @@ function BottomTabs({ href, live, w }: { href: Href; live: boolean; w: Words }) 
 }
 
 /** The footer on every page (inside the shell, which sets --store-display). */
-export function ShopFooter({ f, href, variant = 'three', social = true, w = wordsFor(f.shopLanguage), painted = false }: { f: ShellShop; href: Href; variant?: FooterVariant; social?: boolean; w?: Words
+export function ShopFooter({ f, href, variant = 'three', social = true, w = wordsFor(f.shopLanguage), painted = false, strip = [] }: { f: ShellShop; href: Href; variant?: FooterVariant; social?: boolean; w?: Words
   /** Painted in another scheme (footer colours, 2.0): its own background, edge to edge. */
-  painted?: boolean }) {
+  painted?: boolean; strip?: StripPiece[] }) {
+  if (variant === 'gram') return <StripFooter f={f} href={href} social={social} w={w} painted={painted} strip={strip} />
   if (variant === 'compact') return <CompactFooter f={f} href={href} social={social} w={w} painted={painted} />
   if (variant === 'statement') return <StatementFooter f={f} href={href} social={social} w={w} painted={painted} />
   return (
@@ -244,5 +266,27 @@ function StatementFooter({ f, href, social, w, painted }: { f: ShellShop; href: 
         <p aria-hidden="true" className="truncate border-t border-store-line pt-6 text-[clamp(2.5rem,11vw,8rem)] leading-none tracking-tight" style={{ fontFamily: 'var(--store-display)' }}>{f.shopName}</p>
       </div>
     </footer>
+  )
+}
+
+/** Instagram strip (2.1): the newest pieces' photos in a row (each opens its page), the shop's Instagram, then the
+ *  compact footer's legal lines (none is removed). No Instagram embed: the photos are the shop's own. */
+function StripFooter({ f, href, social, w, painted, strip }: { f: ShellShop; href: Href; social: boolean; w: Words; painted: boolean; strip: StripPiece[] }) {
+  return (
+    <div className="mt-16">
+      {strip.length > 0 && (
+        <div className="border-t border-store-line">
+          <ul className="grid grid-cols-3 gap-0.5 sm:grid-cols-6">
+            {strip.slice(0, 6).map((p) => (
+              <li key={p.handle}><Link href={href(`/products/${p.handle}`)} className="group relative block aspect-square overflow-hidden bg-store-chip">
+                <Photo p={p.image} alt={p.title} sizes="(min-width: 640px) 17vw, 33vw" className="absolute inset-0 h-full w-full object-cover" />
+              </Link></li>
+            ))}
+          </ul>
+          {social && f.instagram && <p className="py-3 text-center text-sm"><a href={igLink(f.instagram)} rel="noopener" className="underline underline-offset-4">@{f.instagram.replace(/^@/, '')}</a></p>}
+        </div>
+      )}
+      <div className="-mt-16"><CompactFooter f={f} href={href} social={social && !f.instagram} w={w} painted={painted} /></div>
+    </div>
   )
 }

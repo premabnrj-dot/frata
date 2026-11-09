@@ -429,6 +429,11 @@ img[data-photo]::before { content: ""; position: absolute; inset: 0; background:
 /* Even rhythm (the 2.0 themes): the same space above and below every section but a full-bleed one. */
 [data-store-theme][data-rhythm="even"] [data-section]:not([data-key="hero"], [data-key="drop_teaser"]) > section { padding-block: calc(var(--store-space) * 1.75rem); }
 @media (min-width: 640px) { [data-store-theme][data-rhythm="even"] [data-section]:not([data-key="hero"], [data-key="drop_teaser"]) > section { padding-block: calc(var(--store-space) * 2.75rem); } }
+/* Over the photo (2.1 header): only when the page opens with a full-bleed hero photo, the header lies on it in
+   white over a soft shade; anywhere else it is the centred header. A menu or panel it opens keeps the shop's ink. */
+[data-store-theme][data-header="overlay"]:has(> main [data-lead] [data-bleed] img) > header { position: absolute; inset-inline: 0; z-index: 30; background: transparent; border-color: transparent; color: #fff; }
+[data-store-theme][data-header="overlay"]:has(> main [data-lead] [data-bleed] img) > header::before { content: ""; position: absolute; inset: 0 0 -3rem; z-index: -1; pointer-events: none; background: linear-gradient(to bottom, rgb(0 0 0 / 0.45), transparent); }
+[data-store-theme][data-header="overlay"] > header .bg-store-paper { color: var(--store-ink); }
 /* The page entrance (a template around each shop page): fade or rise, from 0.6 so the largest paint is never held
    back, ending on no transform (fill backwards only: a leftover transform would pin fixed bars to the page). */
 .store-enter { display: contents; }

@@ -1,7 +1,7 @@
 'use client'
 
 import type { ThemeSettings } from '@/domains/themes/types'
-import { Choice, Offered, OfferedSwitch } from './controls'
+import { Choice, OfferedSwitch, Tiles } from './controls'
 import type { Choices } from '@/domains/themes/choices'
 
 // The product page and collection page panels (themes T2, mockup board "Customizer · Product page"): what every page
@@ -11,7 +11,8 @@ export function PageForm({ page, settings, choices, set }: { page: 'product' | '
   return (
     <div className="space-y-6">
       {page === 'product' ? <>
-        <Offered label="Photos" value={settings.gallery} list={choices.gallery} onChange={(gallery) => set({ gallery })} all={[{ value: 'swipe', label: 'Two across' }, { value: 'stack', label: 'Stacked' }, { value: 'thumbs', label: 'Thumbnails under' }, { value: 'rail', label: 'Thumbnails beside' }]} />
+        <Tiles label="Photos" cols={2} value={settings.gallery} onChange={(gallery) => set({ gallery })}
+          options={(choices.gallery ?? ['swipe', 'thumbs', 'rail', 'stack']).map((v) => ({ value: v, label: GALLERY_NAMES[v], picture: <GalleryPicture v={v} /> }))} />
         <OfferedSwitch label="Buy box stays beside the photos (computers)" on={settings.buyBoxSticky} list={choices.buyBoxSticky} onChange={(buyBoxSticky) => set({ buyBoxSticky })} />
         <OfferedSwitch label="Add to bag bar on phones" on={settings.buyBar} list={choices.buyBar} onChange={(buyBar) => set({ buyBar })} />
         <Choice label="About and details" value={settings.details} onChange={(details) => set({ details })} options={[{ value: 'open', label: 'Open' }, { value: 'folded', label: 'Folded' }]} />
@@ -25,4 +26,18 @@ export function PageForm({ page, settings, choices, set }: { page: 'product' | '
       <p className="text-xs text-muted-foreground">Reviews, size help and offers appear in their places when you turn them on in Apps and Offers.</p>
     </div>
   )
+}
+
+const GALLERY_NAMES = { swipe: 'Two across', stack: 'Stacked', thumbs: 'Thumbnails under', rail: 'Thumbnails beside' } as const
+/** Each product-photo layout, drawn: photos in grey, the buy box in ink (decorative). */
+function GalleryPicture({ v }: { v: keyof typeof GALLERY_NAMES }) {
+  const r = (x: number, y: number, w: number, h: number, o = 0.3, k?: string) => <rect key={k ?? `${x}${y}${w}${h}`} x={x} y={y} width={w} height={h} rx={1.5} fill="currentColor" opacity={o} />
+  const box = <>{r(76, 6, 36, 5, 0.8)}{r(76, 15, 24, 3, 0.5)}{r(76, 26, 36, 7, 0.9)}</>
+  const b = {
+    swipe: <>{r(6, 4, 64, 22)}{r(6, 28, 31, 14)}{r(39, 28, 31, 14)}{box}</>,
+    stack: <>{r(6, 4, 64, 18)}{r(6, 24, 64, 18)}{box}</>,
+    thumbs: <>{r(6, 4, 64, 28)}{[0, 1, 2, 3].map((i) => r(6 + i * 16.5, 34, 14, 8, 0.45, `t${i}`))}{box}</>,
+    rail: <>{[0, 1, 2].map((i) => r(6, 4 + i * 13, 10, 11, 0.45, `t${i}`))}{r(19, 4, 51, 38)}{box}</>,
+  }[v]
+  return <svg viewBox="0 0 118 46" className="h-11 w-full text-foreground" aria-hidden="true">{b}</svg>
 }

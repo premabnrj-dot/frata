@@ -24,12 +24,12 @@ export const PAIRINGS = ['fraunces', 'cormorant', 'inter', 'playfair', 'dmserif'
 export type Pairing = (typeof PAIRINGS)[number]
 export const PAIRING_NAMES: Record<Pairing, string> = { fraunces: 'Fraunces', cormorant: 'Cormorant', inter: 'Inter', playfair: 'Playfair Display', dmserif: 'DM Serif Display' }
 
-export const HEADERS = ['classic', 'centred', 'minimal', 'circles', 'split'] as const
+export const HEADERS = ['classic', 'centred', 'minimal', 'circles', 'split', 'panel', 'overlay'] as const
 export type HeaderVariant = (typeof HEADERS)[number]
-export const HEADER_NAMES: Record<HeaderVariant, string> = { classic: 'Classic', centred: 'Centred logo', minimal: 'Minimal', circles: 'Category circles', split: 'Split' }
-export const FOOTERS = ['three', 'compact', 'statement'] as const
+export const HEADER_NAMES: Record<HeaderVariant, string> = { classic: 'Classic', centred: 'Centred logo', minimal: 'Minimal', circles: 'Category circles', split: 'Split', panel: 'Centred with a shop panel', overlay: 'Over the photo' }
+export const FOOTERS = ['three', 'compact', 'statement', 'gram'] as const
 export type FooterVariant = (typeof FOOTERS)[number]
-export const FOOTER_NAMES: Record<FooterVariant, string> = { three: 'Three columns', compact: 'Compact', statement: 'Statement' }
+export const FOOTER_NAMES: Record<FooterVariant, string> = { three: 'Three columns', compact: 'Compact', statement: 'Statement', gram: 'Instagram strip' }
 
 export type Announcement = { text: string; link: string | null; scheme: SchemeKey }
 
@@ -119,6 +119,8 @@ export type ThemeManifest = {
     choices?: Choices }
   /** 2.0: the customizer's preview fills an empty shop with sample pieces, and a missing hero photo with this sample scene. */
   samples?: 'festive' | 'studio'
+  /** 2.1: the designs made for this theme (shown first, "Made for <theme>"); the rest it allows "fit" it (Look v3). */
+  made?: { headers?: HeaderVariant[]; footers?: FooterVariant[]; sections?: SectionKey[] }
   /** 2.0: every section below the hero gets the same space above and below it (the 1.x themes keep their spacing). */
   rhythm?: 'even'
   home: SectionInput[]

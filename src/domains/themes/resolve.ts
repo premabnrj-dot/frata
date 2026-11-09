@@ -146,5 +146,6 @@ export function settingAttrs(t: ResolvedTheme): Record<string, string> {
     ...(t.settings.entrance !== 'none' ? { 'data-entrance': t.settings.entrance } : {}),
     ...(t.settings.reveal ? { 'data-reveal': 'on' } : {}),
     ...(t.rhythm ? { 'data-rhythm': t.rhythm } : {}),
+    ...(t.settings.header === 'overlay' ? { 'data-header': 'overlay' } : {}),
   }
 }

@@ -7,7 +7,7 @@ import { ShopShell } from '@/components/storefront/shell'
 import { Panel } from '@/components/ui/panel'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { previewCatalogue, previewLook, previewShop } from '@/lib/queries/storefront'
-import { circlesOf, themeOf } from '@/lib/themes/page-look'
+import { shellNeedsCatalogue, shellPictures, themeOf } from '@/lib/themes/page-look'
 
 // The merchant's own shop, as shoppers will see it — drafts and unlisted
 // pieces included, never cached, never indexed (storefront spec § Preview).
@@ -27,7 +27,7 @@ export default async function Preview({ params }: { params: Promise<{ path?: str
   if (!shop) notFound()
   const now = new Date()
   const theme = themeOf(shop, await previewLook(tenantId))
-  const circles = theme.settings.header === 'circles' ? circlesOf(await previewCatalogue(tenantId), now) : []
+  const { circles, strip } = shellPictures(theme, shellNeedsCatalogue(theme) ? await previewCatalogue(tenantId) : null, now)
   const { body, note } = await previewPage({ tenantId, shop, path, href, now, theme })
 
   const banner = (
@@ -40,7 +40,7 @@ export default async function Preview({ params }: { params: Promise<{ path?: str
   )
   return (
     <div className="-m-4 sm:-m-6">
-      <ShopShell shop={shop} href={href} banner={banner} theme={theme} circles={circles}>{body}</ShopShell>
+      <ShopShell shop={shop} href={href} banner={banner} theme={theme} circles={circles} strip={strip}>{body}</ShopShell>
       {!shop.publishedAt && <details className="mx-4 my-6 text-sm"><summary className="cursor-pointer">What shoppers see now</summary><OpeningSoon shop={shop} href={href} /></details>}
     </div>
   )

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { PROMISES, SECTION_NAMES, type SectionInstance, type SectionOf } from '@/domains/themes/sections'
-import { Choice, Field, ImageField, LinkPicker, Switch, Text, paiseToRupees, rupeesToPaise, type LinkTarget } from './controls'
+import { Choice, Field, ImageField, LinkPicker, Switch, Text, paiseToRupees, rupeesToPaise, type LibraryPhoto, type LinkTarget } from './controls'
 import { Icon } from '@/components/icons/icon'
 
 // One section's settings (themes spec § Sections: every field, type and limit). The form edits a copy; every
@@ -15,6 +15,8 @@ export type FormCtx = {
   schemes: { key: 'paper' | 'tint' | 'ink'; name: string }[]
   masks: ('none' | 'arch')[]
   promiseWords: Record<(typeof PROMISES)[number], { text: string; true: boolean }>
+  /** The shop's product photos (each product's first, newest first): "From your products" in a photo field (Look v3). */
+  photos: LibraryPhoto[]; shopName: string
   /** The shop's products, newest first (Shop the look picks from them). */
   products: { handle: string; title: string }[]
 }
@@ -46,7 +48,7 @@ function ButtonFields({ value, targets, onChange }: { value: { label: string; li
 function Hero({ s, set, c }: { s: SectionOf<'hero'>; set: Set<SectionOf<'hero'>>; c: FormCtx }) {
   return (<>
     <Choice label="Layout" value={s.layout} onChange={(layout) => set({ ...s, layout })} options={[{ value: 'text', label: 'Words only' }, { value: 'image_text', label: 'Words on a photo' }, { value: 'split', label: 'Photo beside words' }, { value: 'image', label: 'Photo only' }]} />
-    {s.layout !== 'text' && <ImageField label="Photo" value={s.image} tenantId={c.tenantId} onChange={(image) => set({ ...s, image })} />}
+    {s.layout !== 'text' && <ImageField label="Photo" value={s.image} tenantId={c.tenantId} library={c.photos} suggest={['text' in s.heading ? s.heading.text : '', c.shopName]} onChange={(image) => set({ ...s, image })} />}
     <Bound label="Heading" value={s.heading} max={60} shopField="shopName" onChange={(heading) => set({ ...s, heading: heading ?? { from: 'shopName' } })} />
     {s.layout !== 'image' && <Bound label="Line under it" value={s.text} max={160} shopField="tagline" onChange={(text) => set({ ...s, text })} />}
     {s.layout !== 'image' && <ButtonFields value={s.button} targets={c.targets} onChange={(button) => set({ ...s, button })} />}
@@ -118,7 +120,7 @@ function Promises({ s, set, c }: { s: SectionOf<'promises'>; set: Set<SectionOf<
 
 function ImageText({ s, set, c }: { s: SectionOf<'image_text'>; set: Set<SectionOf<'image_text'>>; c: FormCtx }) {
   return (<>
-    <ImageField label="Photo" value={s.image} tenantId={c.tenantId} onChange={(image) => set({ ...s, image })} />
+    <ImageField label="Photo" value={s.image} tenantId={c.tenantId} library={c.photos} suggest={[s.heading, c.shopName]} onChange={(image) => set({ ...s, image })} />
     <Text label="Heading" value={s.heading} max={60} onChange={(heading) => set({ ...s, heading })} />
     <Text label="Text (a blank line starts a new paragraph)" value={s.text} max={600} multiline onChange={(text) => set({ ...s, text })} />
     <ButtonFields value={s.button} targets={c.targets} onChange={(button) => set({ ...s, button })} />
@@ -131,7 +133,7 @@ function Drop({ s, set, c }: { s: SectionOf<'drop_teaser'>; set: Set<SectionOf<'
   return (<>
     <Text label="Heading" value={s.heading} max={60} onChange={(heading) => set({ ...s, heading })} />
     <Field label="When (India time)" hint="It hides itself once this has passed.">{(id) => <input id={id} type="datetime-local" value={local} onChange={(e) => e.target.value && set({ ...s, at: `${e.target.value}:00+05:30` })} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" />}</Field>
-    <ImageField label="Photo (optional)" value={s.image} tenantId={c.tenantId} onChange={(image) => set({ ...s, image })} />
+    <ImageField label="Photo (optional)" value={s.image} tenantId={c.tenantId} library={c.photos} suggest={[s.heading, c.shopName]} onChange={(image) => set({ ...s, image })} />
   </>)
 }
 
@@ -166,7 +168,7 @@ function Look({ s, set, c }: { s: SectionOf<'shop_the_look'>; set: Set<SectionOf
   const unused = c.products.filter((p) => !s.pieces.some((x) => x.handle === p.handle))
   return (<>
     <Text label="Heading" value={s.heading} max={60} onChange={(heading) => set({ ...s, heading })} />
-    <ImageField label="Photo" value={s.image} tenantId={c.tenantId} onChange={(image) => set({ ...s, image })} />
+    <ImageField label="Photo" value={s.image} tenantId={c.tenantId} library={c.photos} suggest={[s.heading, c.shopName]} onChange={(image) => set({ ...s, image })} />
     {s.image && (
       <div className="space-y-1">
         <button type="button" onClick={place} disabled={!piece} aria-label={piece ? `Put piece ${at + 1}’s dot where you tap` : 'Add a piece first'} className="relative block w-full overflow-hidden rounded-md">

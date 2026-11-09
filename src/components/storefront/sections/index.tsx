@@ -70,7 +70,7 @@ function Hero({ s, ctx }: { s: SectionOf<'hero'>; ctx: SectionCtx }) {
     return (
       <section className={`${wrap} ${pad} grid items-center gap-8 sm:grid-cols-2`}>
         <div className={`relative overflow-hidden bg-store-chip ${s.mask === 'arch' ? 'rounded-t-full' : 'rounded-[var(--store-radius)]'} aspect-[4/5]`}>
-          <Photo p={img} alt={img.alt} sizes="(min-width: 640px) 50vw, 100vw" priority={!!ctx.lead} className="absolute inset-0 h-full w-full object-cover" />
+          <Photo p={img} focus={img.focus} alt={img.alt} sizes="(min-width: 640px) 50vw, 100vw" priority={!!ctx.lead} className="absolute inset-0 h-full w-full object-cover" />
         </div>
         <div className="space-y-4">{title}{text && <p className="max-w-xl text-lg text-store-sub">{text}</p>}<Button b={s.button} href={ctx.href} /></div>
       </section>
@@ -78,8 +78,8 @@ function Hero({ s, ctx }: { s: SectionOf<'hero'>; ctx: SectionCtx }) {
   }
   const centred = s.position === 'centre'
   return (
-    <section className={`relative ${tall} overflow-hidden bg-store-chip`}>
-      <Photo p={img} alt={s.layout === 'image' ? heading : img.alt} sizes="100vw" priority={!!ctx.lead} className="absolute inset-0 h-full w-full object-cover" />
+    <section data-bleed="" className={`relative ${tall} overflow-hidden bg-store-chip`}>
+      <Photo p={img} focus={img.focus} alt={s.layout === 'image' ? heading : img.alt} sizes="100vw" priority={!!ctx.lead} className="absolute inset-0 h-full w-full object-cover" />
       {s.layout === 'image_text' && (
         <div className={`relative z-10 flex ${tall} ${centred ? 'items-center justify-center text-center' : 'items-end'} bg-linear-to-t from-black/45 via-black/10 to-transparent`}>
           <div className={`${wrap} w-full space-y-3 py-10 text-white`}>{title}{text && <p className={`max-w-xl text-lg ${centred ? 'mx-auto' : ''}`}>{text}</p>}<Button b={s.button} href={ctx.href} /></div>
@@ -189,7 +189,7 @@ function ImageText({ s, ctx }: { s: SectionOf<'image_text'>; ctx: SectionCtx }) 
   return (
     <section aria-labelledby={h} className={`${wrap} ${pad} grid items-center gap-8 sm:grid-cols-2`}>
       <div className={`relative aspect-[4/5] overflow-hidden rounded-[var(--store-radius)] bg-store-chip ${s.side === 'right' ? 'sm:order-2' : ''}`}>
-        <Photo p={s.image} alt={s.image.decorative ? '' : s.image.alt} sizes="(min-width: 640px) 50vw, 100vw" className="absolute inset-0 h-full w-full object-cover" />
+        <Photo p={s.image} focus={s.image.focus} alt={s.image.decorative ? '' : s.image.alt} sizes="(min-width: 640px) 50vw, 100vw" className="absolute inset-0 h-full w-full object-cover" />
       </div>
       <div className="space-y-4">
         <H2 id={h}>{s.heading}</H2>
@@ -205,7 +205,7 @@ function DropTeaser({ s, ctx }: { s: SectionOf<'drop_teaser'>; ctx: SectionCtx }
   if (at.getTime() <= ctx.now.getTime()) return null
   return (
     <section aria-label={s.heading} className={`relative overflow-hidden bg-store-button text-store-on-button`}>
-      {s.image && <Photo p={s.image} alt={s.image.decorative ? '' : s.image.alt} sizes="100vw" className="absolute inset-0 h-full w-full object-cover opacity-40" />}
+      {s.image && <Photo p={s.image} focus={s.image.focus} alt={s.image.decorative ? '' : s.image.alt} sizes="100vw" className="absolute inset-0 h-full w-full object-cover opacity-40" />}
       <div className={`${wrap} relative ${pad} text-center`}>
         <p className="text-3xl sm:text-5xl" style={{ fontFamily: 'var(--store-display)' }}><Sized>{s.heading}</Sized></p>
         <p className="mt-3 text-base">{dayIN(at)}</p>
@@ -241,7 +241,7 @@ function Logos({ s }: { s: SectionOf<'logos'> }) {
     <section aria-labelledby={h} className={`${wrap} ${pad} space-y-4 text-center`}>
       <h2 id={h} className="text-sm uppercase tracking-[0.2em] text-store-sub">{s.heading}</h2>
       <ul className="flex flex-wrap items-center justify-center gap-x-10 gap-y-6">
-        {s.images.map((img, i) => <li key={i} className="relative h-10 w-28"><Photo p={img} alt={img.alt} sizes="112px" className="absolute inset-0 h-full w-full object-contain" /></li>)}
+        {s.images.map((img, i) => <li key={i} className="relative h-10 w-28"><Photo p={img} focus={img.focus} alt={img.alt} sizes="112px" className="absolute inset-0 h-full w-full object-contain" /></li>)}
       </ul>
     </section>
   )
@@ -257,7 +257,7 @@ function ShopTheLook({ s, ctx }: { s: SectionOf<'shop_the_look'>; ctx: SectionCt
   return (
     <section aria-labelledby={h} className={`${wrap} ${pad} grid items-start gap-8 sm:grid-cols-2`}>
       <div className="relative aspect-[4/5] overflow-hidden rounded-[var(--store-radius)] bg-store-chip">
-        <Photo p={s.image} alt={s.image.decorative ? '' : s.image.alt} sizes="(min-width: 640px) 50vw, 100vw" className="absolute inset-0 h-full w-full object-cover" />
+        <Photo p={s.image} focus={s.image.focus} alt={s.image.decorative ? '' : s.image.alt} sizes="(min-width: 640px) 50vw, 100vw" className="absolute inset-0 h-full w-full object-cover" />
         {pieces.map((x, i) => (
           <Link key={x.handle} href={ctx.href(`/products/${x.handle}`)} style={{ left: `${x.x}%`, top: `${x.y}%` }} aria-label={`${i + 1}: ${x.p.title}`}
             className="absolute grid size-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-store-paper text-sm font-semibold text-store-ink shadow">{i + 1}</Link>

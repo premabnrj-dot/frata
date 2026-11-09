@@ -33,6 +33,8 @@ type Layer = { settings: ThemeSettings; home: SectionInstance[] }
 export type EditorProps = {
   revisionId: string; version: number; themeName: string; style: string; layer: Layer
   styles: StyleOption[]; allowed: { pairings: Pairing[]; headers: HeaderVariant[]; footers: FooterVariant[]; sections: SectionKey[] }
+  /** The designs made for this theme (Look v3: shown first, "Made for <theme>"). */
+  made: { headers?: HeaderVariant[]; footers?: FooterVariant[]; sections?: SectionKey[] }
   live: { theme: string; style: string; settings: Partial<ThemeSettings>; home: SectionInstance[] } | null
   facts: ShopFacts; formCtx: FormCtx; targets: LinkTarget[]; fonts: Record<Pairing, string>
   /** The shop's address, for the preview's address bar. */
@@ -162,8 +164,8 @@ export function Editor(p: EditorProps) {
 
   const panel = (
     <div className="space-y-4">
-      <div role="tablist" aria-label="Edit" className="flex gap-5 border-b border-border text-sm">
-        {(['sections', 'theme'] as const).map((t) => <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`py-3 ${tab === t ? 'border-b-2 border-foreground font-semibold' : 'text-muted-foreground'}`}>{t === 'theme' ? 'Theme settings' : page === 'product' ? 'Product page' : page === 'collection' ? 'Collection page' : 'Sections'}</button>)}
+      <div role="tablist" aria-label="Edit" className="grid grid-flow-col auto-cols-fr rounded-lg bg-muted p-0.5 text-sm">
+        {(['sections', 'theme'] as const).map((t) => <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`min-h-9 rounded-md font-medium transition-[background-color,color] duration-fast ${tab === t ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{t === 'theme' ? 'Style' : page === 'product' ? 'Product page' : page === 'collection' ? 'Collection page' : 'Sections'}</button>)}
       </div>
       {tab === 'sections' && page !== 'home' && <PageForm page={page} settings={layer.settings} choices={p.choices} set={(s) => change({ ...layer, settings: { ...layer.settings, ...s } })} />}
       {tab === 'sections' && page === 'home' && (sel ? (
@@ -174,10 +176,10 @@ export function Editor(p: EditorProps) {
           <button type="button" onClick={() => { change({ ...layer, home: layer.home.filter((x) => x.id !== sel.id) }); setSelected(null); say(`${SECTION_NAMES[sel.key]} removed`) }} className="min-h-9 text-sm text-danger-text underline underline-offset-4">Remove this section</button>
         </div>
       ) : (
-        <SectionsPanel home={layer.home} selected={selected} allowed={p.allowed.sections} issues={issueMap} now={now}
+        <SectionsPanel home={layer.home} selected={selected} allowed={p.allowed.sections} made={p.made.sections ?? []} themeName={p.themeName} issues={issueMap} now={now}
           onSelect={setSelected} onChange={(home, id) => { change({ ...layer, home }); if (id) setSelected(id) }} />
       ))}
-      {tab === 'theme' && <ThemeForm settings={layer.settings} style={style} styles={p.styles} allowed={p.allowed} choices={p.choices} schemes={p.formCtx.schemes} targets={p.targets} fonts={p.fonts}
+      {tab === 'theme' && <ThemeForm settings={layer.settings} style={style} styles={p.styles} allowed={p.allowed} made={p.made} themeName={p.themeName} choices={p.choices} schemes={p.formCtx.schemes} targets={p.targets} fonts={p.fonts}
         set={(s) => change({ ...layer, settings: { ...layer.settings, ...s } })} setStyle={(k) => change(layer, k)} />}
     </div>
   )
@@ -204,7 +206,7 @@ export function Editor(p: EditorProps) {
       {typeof status === 'object' && <p role="alert" className="bg-danger px-4 py-2 text-sm text-danger-text">{status.error} {stuck && <button type="button" onClick={() => router.refresh()} className="underline">Reload</button>}</p>}
 
       <div className="flex min-h-0 flex-1 flex-col-reverse md:flex-row">
-        <aside aria-label="Edit" className="h-[46dvh] shrink-0 overflow-y-auto border-t border-border bg-card md:h-auto md:w-[380px] md:border-r md:border-t-0">{panel}</aside>
+        <aside aria-label="Edit" className="h-[46dvh] shrink-0 overflow-y-auto border-t border-border bg-card p-4 md:h-auto md:w-[380px] md:border-r md:border-t-0">{panel}</aside>
         <section aria-label="Preview" className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted">
           <div className="flex flex-wrap items-center gap-2 px-4 pt-3">
             <Segmented label="Preview size" value={device} onChange={setDevice} options={(Object.keys(DEVICES) as Device[]).map((k) => ({ value: k, label: DEVICES[k].label }))} />
@@ -215,7 +217,7 @@ export function Editor(p: EditorProps) {
             <span className="ml-auto hidden font-mono text-xs text-muted-foreground sm:inline">{d.w} px · {Math.round(scale * 100)}%</span>
           </div>
           <div ref={stage} className="relative min-h-0 flex-1 overflow-hidden p-3 md:p-4">
-            <div className="mx-auto overflow-hidden rounded-xl border border-border bg-card shadow-[0_12px_32px_-12px_rgb(0_0_0/0.25)] transition-[width] duration-slow ease-standard" style={{ width: d.w * scale }}>
+            <div className="mx-auto overflow-hidden rounded-xl border border-border bg-card shadow-xl transition-[width] duration-slow ease-standard" style={{ width: d.w * scale }}>
               <div className="flex items-center gap-2 border-b border-border bg-muted px-3 py-1.5" aria-hidden="true">
                 <span className="flex gap-1.5"><i className="size-2.5 rounded-full bg-border" /><i className="size-2.5 rounded-full bg-border" /><i className="size-2.5 rounded-full bg-border" /></span>
                 <span className="min-w-0 flex-1 truncate rounded-md bg-card px-2 py-0.5 font-mono text-xs text-muted-foreground">{p.address}{path}</span>
@@ -223,7 +225,7 @@ export function Editor(p: EditorProps) {
               <div className="relative overflow-hidden" style={{ height: frameH * scale }}>
                 <iframe ref={frame} title="Your shop with this look" src={`/console/theme-preview/${p.revisionId}${path}`}
                   className={`origin-top-left bg-card transition-opacity duration-base ease-standard ${status === 'saving' ? 'opacity-70' : ''}`} style={{ width: d.w, height: frameH, transform: `scale(${scale})` }} />
-                {going && <div aria-hidden="true" className="pointer-events-none absolute inset-0 grid justify-items-center"><span className="absolute inset-0 animate-going-sweep bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--color-card)_70%,transparent)_45%,color-mix(in_srgb,var(--color-brand)_16%,transparent)_50%,transparent_60%)] bg-[length:300%_100%]" />
+                {going && <div aria-hidden="true" className="pointer-events-none absolute inset-0 grid justify-items-center"><span className="absolute inset-0 animate-going-sweep bg-linear-to-r from-transparent via-brand/15 to-transparent bg-[length:300%_100%]" />
                   <span className="relative mt-6 flex items-center gap-2 self-start rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background shadow-lg"><span className="size-4 animate-spin rounded-full border-2 border-background/30 border-t-brand" />Going live</span></div>}
               </div>
             </div>

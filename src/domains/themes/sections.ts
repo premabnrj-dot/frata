@@ -26,6 +26,8 @@ export const ImageSchema = z.object({
   alt: text(160).default(''),
   /** Ticked: empty alt on purpose (a pattern, a texture). Unticked with empty alt blocks publishing. */
   decorative: z.boolean().default(false),
+  /** Look v3: the point the photo keeps in view when a section crops it, in % from the left and top (null: centre). */
+  focus: z.object({ x: z.number().min(0).max(100), y: z.number().min(0).max(100) }).nullable().default(null),
 })
 export type ThemeImage = z.infer<typeof ImageSchema>
 
@@ -155,10 +157,45 @@ export const SECTION_NAMES: Record<SectionKey, string> = {
   hero: 'Hero', collection_tiles: 'Collection tiles', products: 'Products', price_tiles: 'Price tiles', promises: 'Shop by promise',
   image_text: 'Image with text', drop_teaser: 'Drop teaser', rich_text: 'Rich text', logos: 'Logos', shop_the_look: 'Shop the look',
 }
-/** The Add sheet's kinds (mockup "Add a section"); empty kinds are not shown. */
+/** The section library's kinds, in order (Look v3 § Sections); a kind with nothing the theme offers is not shown. */
 export const SECTION_KINDS: { name: string; keys: SectionKey[] }[] = [
+  { name: 'Banners', keys: ['hero', 'drop_teaser'] },
   { name: 'Products', keys: ['products', 'price_tiles'] },
   { name: 'Collections', keys: ['collection_tiles'] },
-  { name: 'Images and story', keys: ['hero', 'image_text', 'shop_the_look', 'drop_teaser', 'rich_text', 'logos'] },
-  { name: 'Trust', keys: ['promises'] },
+  { name: 'Story', keys: ['image_text', 'shop_the_look', 'rich_text'] },
+  { name: 'Trust', keys: ['promises', 'logos'] },
 ]
+
+/** What the library says about each section, and the words it is found by (search: name, then words, then tags). */
+export const SECTION_INFO: Record<SectionKey, { blurb: string; tags: string[] }> = {
+  hero: { blurb: 'A big photo or your name, with one button', tags: ['banner', 'photo', 'top', 'cover', 'header image', 'welcome'] },
+  drop_teaser: { blurb: 'A date for your next drop; hides itself after', tags: ['launch', 'countdown', 'coming soon', 'new collection', 'date'] },
+  products: { blurb: 'New in, best sellers, a collection, a price, on sale', tags: ['grid', 'catalogue', 'new arrivals', 'bestsellers', 'sale', 'carousel', 'rail', 'back in stock'] },
+  price_tiles: { blurb: 'Shop by budget, from your prices', tags: ['budget', 'price', 'under', 'cheap', 'affordable', 'rupees'] },
+  collection_tiles: { blurb: 'Your collections as tiles or circles', tags: ['categories', 'category', 'circles', 'collections', 'shop by'] },
+  image_text: { blurb: 'Your story beside a photo', tags: ['about', 'story', 'brand', 'maker', 'craft', 'photo'] },
+  shop_the_look: { blurb: 'One photo, up to four pieces pinned on it', tags: ['lookbook', 'outfit', 'styled', 'pins', 'complete the look'] },
+  rich_text: { blurb: 'A few paragraphs in your words', tags: ['text', 'words', 'paragraph', 'note', 'size promise', 'made to order'] },
+  promises: { blurb: 'Pay on delivery, exchanges, dispatch: from your settings', tags: ['trust', 'cod', 'cash on delivery', 'returns', 'exchange', 'shipping', 'free shipping'] },
+  logos: { blurb: 'Press or partner logos', tags: ['press', 'as seen in', 'featured', 'partners', 'trust'] },
+}
+
+/**
+ * The library's search (pure): the sections whose name, words or tags hold every word typed, best first (a name
+ * match before a words match before a tag match). An empty query keeps the order given.
+ */
+export function searchSections(query: string, keys: readonly SectionKey[]): SectionKey[] {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+  if (!words.length) return [...keys]
+  const score = (k: SectionKey) => {
+    const name = SECTION_NAMES[k].toLowerCase(), info = SECTION_INFO[k], blurb = info.blurb.toLowerCase(), tags = info.tags.join(' ').toLowerCase()
+    let total = 0
+    for (const w of words) {
+      const s = name.includes(w) ? 3 : blurb.includes(w) ? 2 : tags.includes(w) ? 1 : 0
+      if (!s) return 0
+      total += s
+    }
+    return total
+  }
+  return keys.map((k, i) => ({ k, i, s: score(k) })).filter((x) => x.s > 0).sort((a, b) => b.s - a.s || a.i - b.i).map((x) => x.k)
+}

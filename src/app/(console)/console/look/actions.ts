@@ -31,12 +31,13 @@ const SUPPORT = 'Frrata support can look, not change the shop’s look.'
 const audit = (tx: Parameters<Parameters<typeof asMember>[2]>[0], a: { membership: { tenantId: string }; userId: string; email: string | null }, action: string, target?: string) =>
   tx.insert(auditEvents).values({ tenantId: a.membership.tenantId, actorUserId: a.userId, actorEmail: a.email, actorKind: 'member', action, target: target ?? null })
 
-/** Every photo a layer names, rebuilt by acceptedBase for THIS shop's theme folder; one that isn't refuses the save. */
+/** Every photo a layer names, rebuilt by acceptedBase for THIS shop's theme folder — or its product photos (Look v3:
+ *  "From your products"); a photo from anywhere else refuses the save. */
 function cleanImages<L extends { home?: unknown[] }>(layer: L, tenantId: string): L | null {
   const host = storeHost(BLOB_STORE_ID)
   const fix = (img: { base: string } | null | undefined) => {
     if (!img) return img
-    const base = host ? acceptedBase(img.base, host, tenantId, 'theme') : null
+    const base = host ? acceptedBase(img.base, host, tenantId, 'theme') ?? acceptedBase(img.base, host, tenantId, 'products') : null
     if (!base) throw new Error('image')
     return { ...img, base }
   }

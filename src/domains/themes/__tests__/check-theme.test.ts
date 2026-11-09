@@ -22,6 +22,10 @@ describe.each(all.map((m) => [name(m), m] as const))('%s', (_n, m) => {
     expect(m.allowed.pairings).toContain(m.defaults.pairing)
     expect(m.allowed.headers).toContain(m.defaults.header)
     expect(m.allowed.footers).toContain(m.defaults.footer)
+    // What a theme says was made for it is something it offers (Look v3: "Made for <theme>").
+    for (const h of m.made?.headers ?? []) expect(m.allowed.headers).toContain(h)
+    for (const f of m.made?.footers ?? []) expect(m.allowed.footers).toContain(f)
+    for (const k of m.made?.sections ?? []) expect(m.allowed.sections).toContain(k)
   })
   it('Home: valid sections from the library, allowed by the theme, unique ids, ≤ 20', () => {
     expect(m.home.length).toBeLessThanOrEqual(20)
