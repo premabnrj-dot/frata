@@ -32,12 +32,14 @@ export type SectionCtx = { shop: StoreShop; cat: StoreCatalogue; theme: Resolved
 import { Button, H2, Label, Paint, Sized, pad, rupees, said, wrap } from './parts'
 import { Products } from './products'
 import { Loop, LoopPoster } from './loop'
+import { Spotlight, Statement, StoryFan } from './story'
 import type { LookVideos } from '@/lib/themes/page-look'
 
 function Hero({ s, ctx }: { s: SectionOf<'hero'>; ctx: SectionCtx }) {
   const heading = said(s.heading, ctx.shop), text = said(s.text, ctx.shop)
   if (!heading) return null
-  const title = <h1 className="max-w-3xl text-4xl leading-[1.05] sm:text-6xl" style={{ fontFamily: 'var(--store-display)' }}><Sized>{heading}</Sized></h1>
+  // Signal 1.2: a handwritten line above the heading (resolve keeps it only where the theme offers it).
+  const title = <>{s.script && <p className="store-script store-script-hero">{s.script}</p>}<h1 className="max-w-3xl text-4xl leading-[1.05] sm:text-6xl" style={{ fontFamily: 'var(--store-display)' }}><Sized>{heading}</Sized></h1></>
   // V1: a playable loop stands in for a missing photo (its first frame paints first).
   const loop = s.video && ctx.videos?.[s.video.id] ? s.video.id : undefined
   if (s.layout === 'text' || (!s.image && !loop)) {
@@ -259,11 +261,13 @@ function One({ s, ctx }: { s: SectionInstance; ctx: SectionCtx }): React.ReactNo
     case 'products': return Products({ s, ctx })
     case 'price_tiles': return PriceTiles({ s, ctx })
     case 'promises': return Promises({ s, ctx })
-    case 'image_text': return ImageText({ s, ctx })
+    case 'image_text': return s.layout === 'spotlight' ? Spotlight({ s, ctx }) : ImageText({ s, ctx })
     case 'drop_teaser': return DropTeaser({ s, ctx })
     case 'rich_text': return RichText({ s, ctx })
     case 'logos': return Logos({ s })
     case 'shop_the_look': return ShopTheLook({ s, ctx })
+    case 'story_fan': return StoryFan({ s, ctx })
+    case 'statement': return Statement({ s })
   }
 }
 
