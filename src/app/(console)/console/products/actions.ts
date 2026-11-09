@@ -383,3 +383,4 @@ export async function createType(name: string, copyFrom: string | null): Promise
     return { ok: false, error: 'We could not create the type.' }
   }
 }
+
