@@ -164,6 +164,7 @@ tr:last-child td{border-bottom:0}
           <h3>GST</h3>
           <div class="month"><button aria-label="Previous month">‹</button><b>October 2026</b><button aria-label="Next month">›</button></div>
           <span class="chip" id="m-state">2 to fix</span>
+          <span class="chip">Monthly · next due 11 Nov</span>
           <span style="flex:1"></span>
           <span class="chip c-ok"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M5 12l5 5 9-10"/></svg>Portal connected until 28 Nov</span>
         </div>
@@ -291,6 +292,14 @@ tr:last-child td{border-bottom:0}
     <div class="bar" style="background:var(--warn);color:var(--warn-text)"><span>A filed return can't be changed. Corrections go into GSTR-1A before GSTR-3B.</span></div>
     <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn">Not yet</button><button class="btn primary">File</button></div>
   </div>
+  <div class="sheet" role="dialog" aria-label="File GSTR-1 for a company" style="margin-top:18px">
+    <div style="display:flex;align-items:center;gap:8px"><b style="font-size:16px">File GSTR-1 for October 2026</b><span class="chip">Private limited</span></div>
+    <div class="ol">
+      <div><div style="display:grid;gap:2px"><b>Pushed from Frrata</b><span class="sub" style="font-size:13px">Totals match ✓</span></div></div>
+      <div><div style="display:grid;gap:2px"><b>Sign on gst.gov.in with your DSC</b><span class="sub" style="font-size:13px">Returns › GSTR-1 › File with DSC</span></div></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn">Open the GST portal</button><button class="btn primary">I've filed it</button></div>
+  </div>
 
   <!-- ── 5 · Registration ── -->
   <h2 id="setup">Settings › Taxes › Registration</h2>
@@ -303,7 +312,7 @@ tr:last-child td{border-bottom:0}
         <button role="radio" aria-checked="false" data-r="none"><span class="o"></span><span><b>Not registered</b><span>Bill of supply · within your state</span></span></button>
       </div>
       <div class="field" id="gstin-f"><label for="gstin">GSTIN</label><input class="input mono" id="gstin" value="08ABCPM1234K1Z5"><span class="chip c-ok" style="justify-self:start">Kesar Studio LLP · Active · Jaipur, Rajasthan</span></div>
-      <div class="field" id="freq-f"><label>Filing</label><div class="seg" id="freq"><button aria-pressed="true">Monthly</button><button aria-pressed="false">Quarterly (IFF)</button></div></div>
+      <div class="field" id="freq-f"><label>Filing</label><div class="seg" id="freq"><button aria-pressed="true">Monthly</button><button aria-pressed="false">Quarterly, B2B monthly (IFF)</button></div></div>
       <div class="field" id="aato-f"><label>Turnover last year</label><div class="seg" id="aato"><button aria-pressed="true" data-a="1">Under ₹5 crore</button><button aria-pressed="false" data-a="2">₹5–10 crore</button><button aria-pressed="false" data-a="3">₹10 crore or more</button></div></div>
       <div class="rules" id="rules"></div>
     </div>
@@ -356,9 +365,11 @@ tr:last-child td{border-bottom:0}
       <a href="#ca"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>GSTR-1 for the offline tool<span>JSON</span></a>
       <a href="#ca"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>GSTR-1 tables<span>Excel</span></a>
       <a href="#ca"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Sales register<span>CSV</span></a>
+      <a href="#ca"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Vouchers for Tally<span>XML</span></a>
       <a href="#ca"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>GSTR-3B working (outward, from GSTR-1)<span>Excel</span></a>
       <a href="#ca"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Frrata's invoices to you (input credit)<span>PDF · CSV</span></a>
     </div>
+    <div class="tg" style="display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px"><span>Email the month's pack to Anil Jain &amp; Co on the 2nd</span><button class="sw" role="switch" aria-checked="true" aria-label="Email the month's pack to the accountant"></button></div>
   </div>
 
   <!-- ── 8 · Phone ── -->

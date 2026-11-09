@@ -1,5 +1,5 @@
 # GST module: from every invoice to a filed GSTR-1
-Status: draft (research + design, awaiting the owner) · Date: 2026-11-09 · Mockup: https://claude.ai/artifact/NsxiFFFBorTsi9sct7zWgs (`docs/mockups/2026-11-09-gst-module.html`) · Approved: —
+Status: draft (research + design, awaiting the owner; revised by `docs/plans/2026-11-09-gst-core-and-categories.md` — the core vs the app, and the Shopify-apps cross-check) · Date: 2026-11-09 · Mockup: https://claude.ai/artifact/NsxiFFFBorTsi9sct7zWgs (`docs/mockups/2026-11-09-gst-module.html`) · Approved: —
 
 ## Goal
 Ranked problem **(2) GST and category compliance** (North star as proposed in `docs/research/2026-11-09-all-categories.md`
@@ -79,7 +79,7 @@ the period view, GSTR-1 data, any GSP connection.
 |---|---|---|
 | G0 (with C0) | set HSN and unit per product; a rate table for W0–W1 (CA-signed); B2B GSTIN at checkout; partial-return credit notes | ~1 agent-week |
 | G1 | the GST page: month view, Review, Fix list, exports for the CA; Accountant role | ~1.5 |
-| G2 | connect the GST portal through a GSP; push GSTR-1; file with EVC; ARN kept | ~1.5 + GSP contract |
+| G2 | connect the GST portal through a GSP; push GSTR-1; file with EVC (proprietors, firms) — a company or LLP signs on the portal with its DSC; ARN kept | ~1.5 + GSP contract |
 | G3 | e-invoice (IRN) for B2B at ≥ ₹5 cr; e-way bill ≥ ₹50,000; GSTR-1A for a filed month | ~1.5 |
 | G4 | CA firms: many shops in one view (a partner type), month status across clients | ~1 |
 

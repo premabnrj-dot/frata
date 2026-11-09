@@ -167,6 +167,16 @@ tr:last-child td{border-bottom:0}
       </div>
     </div>
     <div class="card">
+      <h4>Angrakha kurta <span class="chip c-warn">Price in the 5% / 18% gap</span></h4>
+      <div class="rate"><b>18%</b>
+        <div class="slab"><span style="font-size:13px">At ₹2,790 including GST</span>
+          <div class="slabbar" aria-hidden="true"><i style="left:56%"></i></div>
+          <div class="ends"><span>5% up to ₹2,625 incl.</span><span>18% from ₹2,951 incl.</span></div>
+        </div>
+      </div>
+      <div class="row"><button class="btn">Price at ₹2,625</button><button class="btn">Keep ₹2,790 at 18%</button></div>
+    </div>
+    <div class="card">
       <h4>Brass jhumka <span class="chip c-warn">Needs HSN</span></h4>
       <div class="field hsn"><label for="hs2">HSN code</label><input class="input" id="hs2" placeholder="Search by name or code" value="earring">
         <div class="list" role="listbox" aria-label="HSN codes">
@@ -223,13 +233,22 @@ tr:last-child td{border-bottom:0}
         <div class="box">
           <div class="tg"><span>Claim GST input credit</span><button class="sw" role="switch" aria-checked="true" aria-label="Claim GST input credit" id="b2b"></button></div>
           <div id="b2bf" style="display:grid;gap:8px">
-            <div class="field"><label for="bg">GSTIN</label><input class="input mono" id="bg" value="29ABCFS4421K1Z7"></div>
-            <div class="field"><label for="bn">Business name</label><input class="input" id="bn" value="Studio Neel LLP"></div>
+            <div class="field"><label for="bg">GSTIN</label><input class="input mono" id="bg" value="29ABCFS4421K1Z7"><span style="font-size:12px;color:#1E7B52">✓ Karnataka · Studio Neel LLP</span></div>
           </div>
         </div>
         <div class="box" style="font-size:13px">
           <div class="row"><span>Chanderi kurta set × 2</span><span class="spacer"></span><span class="num">₹4,980</span></div>
           <div class="row" style="color:var(--s-sub)"><span>IGST 5% · Karnataka</span><span class="spacer"></span><span class="num">incl. ₹237.14</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="phone shop" aria-label="Checkout: GSTIN state differs from the billing state">
+      <div class="in">
+        <b style="font:500 20px var(--serif)">Checkout</b>
+        <div class="box">
+          <div class="tg"><span>Claim GST input credit</span><button class="sw" role="switch" aria-checked="true" aria-label="Claim GST input credit"></button></div>
+          <div class="field"><label for="bg2">GSTIN</label><input class="input mono" id="bg2" value="27AAICA1234F1Z0" aria-invalid="true"></div>
+          <div class="note">This GSTIN is registered in Maharashtra. Use a Maharashtra billing address, or turn this off.</div>
         </div>
       </div>
     </div>
@@ -269,8 +288,15 @@ tr:last-child td{border-bottom:0}
       <div class="ln"><input type="checkbox" class="cb" checked aria-label="Chanderi kurta set"><span>Chanderi kurta set · M · Rust</span><span class="qty"><button aria-label="Fewer">−</button><span>1</span><button aria-label="More">+</button></span><span class="num sub">of 2</span></div>
       <div class="ln"><input type="checkbox" class="cb" aria-label="Brass jhumka"><span>Brass jhumka</span><span class="qty"><button aria-label="Fewer">−</button><span>0</span><button aria-label="More">+</button></span><span class="num sub">of 1</span></div>
     </div>
-    <div class="field" id="discf" hidden><label for="da">Discount</label><input class="input" id="da" value="₹300"><span class="sub" style="font-size:12px">Shared over the lines by value; the buyer reverses the credit.</span></div>
+    <div id="discf" hidden style="display:grid;gap:10px">
+      <div class="radios" role="radiogroup" aria-label="Kind of discount" id="dk">
+        <button role="radio" aria-checked="true"><span class="o"></span><span><b>Agreed before the sale</b><span>Reduces GST · in GSTR-1</span></span></button>
+        <button role="radio" aria-checked="false"><span class="o"></span><span><b>Goodwill</b><span>No change to GST</span></span></button>
+      </div>
+      <div class="field"><label for="da">Discount</label><input class="input" id="da" value="₹300"></div>
+    </div>
     <div class="sum"><span>Taxable value</span><b>₹2,371.43</b><span>IGST 5%</span><b>₹118.57</b><span>Credit note total</span><b>₹2,490.00</b></div>
+    <div class="row" style="font-size:13px"><span class="chip c-info">Came back</span><span class="sub">Parcels that come back get their credit note on their own.</span></div>
     <div class="row"><span class="chip">Can be issued until 30 Nov 2027</span><span class="spacer"></span><button class="btn">Not now</button><button class="btn primary">Issue credit note</button></div>
   </div>
 </div>
@@ -282,7 +308,7 @@ document.querySelectorAll('#hsnlist [role=option]').forEach(o=>o.addEventListene
 let reg='regular',aato='1';const rules=document.getElementById('rules');
 function draw(){const on=(t,y)=>`<span class="chip ${y?'c-ok':''}">${y?'✓':'—'} ${t}</span>`;const r=reg==='regular';
   document.getElementById('gf').hidden=reg==='none';document.getElementById('af').hidden=!r;
-  rules.innerHTML=r?[on('Tax invoices',1),on('B2B at checkout',1),on(aato==='1'?'HSN 4 digits on B2B':'HSN 6 digits',1),on('E-invoice on B2B',aato!=='1'),on('E-way bill ≥ ₹50,000',1)].join('')
+  rules.innerHTML=r?[on('Tax invoices',1),on(aato==='1'?'B2B at checkout':'B2B at checkout off until e-invoicing',aato==='1'),on(aato==='1'?'HSN 4 digits on B2B':'HSN 6 digits',1),on('E-way bill ≥ ₹50,000',1)].join('')
     :[on('Bill of supply',1),on('Delivers within Rajasthan only',1),on(reg==='comp'?'"Composition taxable person" on bills':'No GST charged',1)].join('')}
 document.querySelectorAll('#reg [role=radio]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#reg [role=radio]').forEach(x=>x.setAttribute('aria-checked',x===b));reg=b.dataset.r;draw()}));
 document.querySelectorAll('#aato button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#aato button').forEach(x=>x.setAttribute('aria-pressed',x===b));aato=b.dataset.a;draw()}));
@@ -293,4 +319,5 @@ document.querySelectorAll('.sw').forEach(s=>s.addEventListener('click',()=>{cons
 document.querySelectorAll('.cat:not([disabled])').forEach(c=>c.addEventListener('click',()=>c.setAttribute('aria-pressed',c.getAttribute('aria-pressed')!=='true')));
 // Credit note kind
 document.querySelectorAll('#why button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#why button').forEach(x=>x.setAttribute('aria-pressed',x===b));const d=b.dataset.w==='disc';document.getElementById('retl').hidden=d;document.getElementById('discf').hidden=!d}));
+document.querySelectorAll('#dk [role=radio]').forEach(b=>b.addEventListener('click',()=>document.querySelectorAll('#dk [role=radio]').forEach(x=>x.setAttribute('aria-checked',x===b))));
 </script>

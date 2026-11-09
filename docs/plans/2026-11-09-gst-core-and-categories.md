@@ -1,5 +1,5 @@
 # GST in the core, the GST app, and Frrata beyond fashion — one plan
-Status: proposal, awaiting the owner · Date: 2026-11-09 · Mockup (phases 1–2): see § Links
+Status: proposal, awaiting the owner · Date: 2026-11-09 · Mockup (phases 1–2): https://claude.ai/artifact/M4VfNAgqFHYmhCxFwZmepE
 Revises: `docs/research/2026-11-09-all-categories.md` § 5 (phases C0–C5) and `docs/specs/2026-11-09-gst-module.md`
 § Phases (G0–G4). Owner, 2026-11-09: "GST filing would be an app, but there is work in the general modules where GST
 compliance needs to be added."
@@ -68,16 +68,51 @@ Frrata's own GST invoices.
 9. impact-reviewer, security-reviewer, tenancy-auditor (new columns), unit-economics none (no price change).
 10. Skills: frata-architecture (rate table rule, core vs app), frata-integrations (rates with sources), changelog.
 
+## 5b. Cross-check against the GST apps on Shopify (research 2026-11-09; listings, docs, Community threads)
+**What they are:** a dozen apps at $0–20 a month (WebPlanex GST Invoice India, GST Pro, AppSaaz, GST Hero, Swipe,
+Zoho Books, Tally connectors…). They print invoices, credit notes on refund, GSTR-1/3B reports; AppSaaz (launched
+10 Aug 2026) already pushes and files GSTR-1 with the OTP from inside Shopify. **So reports and filing alone are not
+a moat**; the bar is low and cheap.
+
+**Why Frrata still wins:** Shopify does not compute GST to Indian rules: one tax line, no CGST/SGST split, the place
+of supply from the fulfilment location (same-state orders get IGST), no price slab (Shopify Help, 22 Sep 2025;
+Community, Sep 2025–Apr 2026). Apps either reprint Shopify's lines or compute their own, so **charged ≠ invoiced**
+(Swipe review Jun 2026; Razorpay thread Nov 2025). The GSTIN field at checkout is Plus-only, so apps bolt it on the
+cart. Frrata owns the checkout: **one engine computes the tax the shopper pays, the invoice, the credit note and
+GSTR-1.** That, not the reports, is the pitch.
+
+**Taken from them:** a live GSTIN check as the buyer types (format, state code, check digit) and a correction window
+until packing; the legal name filled from the portal; every credit note linked to its invoice, gap-free FY numbering;
+the portal's totals shown before the OTP; accountant access without the store login and reports emailed to the CA each
+month; a pre-flight list (HSN gaps, duplicates) before export; Tally XML; invoices on WhatsApp; a due-date calendar.
+
+**Where the plan was weak, and the fix (now in the phases):**
+| # | Gap | Fix | Phase |
+|---|---|---|---|
+| 1 | Prices including GST between ₹2,625 and ₹2,950 have no self-consistent slab (at 5% the value is over ₹2,500, at 18% under) — Indian fashion prices sit there | A CA-signed rule for the band (today: tested at 5% → 18%); the product's Tax panel and the GST Fix list warn and suggest a price outside the band; order coupons shared to lines before the slab (already) | 1 |
+| 2 | A discount after the sale reduces GST only if agreed before the sale (s.15(3)(b), s.34); otherwise it is a commercial credit note with no tax effect | Two kinds: "agreed before the sale" (GST credit note, the invoice's rate and HSN) and "goodwill" (no GST change, not in GSTR-1); time-barred at 30 Nov after the FY | 2 |
+| 3 | COD-heavy shops: every RTO after packing needs a credit note; B2C notes net in Table 7 (9B only inter-state > ₹1 lakh); Table 13 must list cancelled numbers | RTO credit notes issued automatically on "came back" (a CA rules first); the app nets them per GSTR-1's tables and lists cancelled numbers | 2, 3 |
+| 4 | Quarterly filers (QRMP with IFF), GSTR-3B and GSTR-1A missing from the "month" | The app's period follows Filing: Monthly, or Quarterly with IFF for B2B in months 1–2; 3B outward summary shown and exported; GSTR-1A in G3 | 3 |
+| 5 | **Companies and LLPs must sign with a DSC, not an EVC OTP**; many D2C brands are Pvt Ltd | G2: EVC for proprietors and firms; a company or LLP pushes from Frrata and signs on the portal with its DSC (Frrata signs with a DSC later, only if asked) | 5 |
+| 6 | Several GSTINs (a warehouse in another state) | A location per GSTIN with its own series and place of supply: Scale tier, with Locations (roadmap) | later |
+| 7 | Frrata as an e-commerce operator (s.52 TCS) if it ever collects money | An ADR now: money stays merchant-owned (Razorpay sub-merchant accounts); a lawyer's opinion attached before G2 | 1 (ADR) |
+| 8 | B2B: the GSTIN's state must match the billing state; place of supply for goods is where delivery ends | Checkout checks the state code against the billing state; place of supply from the ship-to state | 1 |
+| 9 | HSN codes must come from the portal's master; 4 or 6 digits by turnover | The HSN search uses the portal's master list (dated), digits enforced by the band | 1 |
+| 10 | CAs import Tally XML and Zoho | Tally XML in G1's exports; Zoho Books later; the month's pack emailed to the accountant | 3 |
+| 11 | A separate paid "GST app" is compared with $10 apps | GST in the core and the app's exports in every tier; push and file included in Growth (no add-on price) | — |
+| 12 | A merchant at ≥ ₹5 cr with B2B sales needs IRNs from day one | Turnover ≥ ₹5 cr: B2B at checkout off (with the reason) until e-invoice ships (G3) | 1 |
+
 ## 6. Owner calls
 1. GST compliance is **core** (every shop, every plan, always on); filing is the **app**. *Recommended.*
 2. Phase order 1 → 5 as above (tax-correct core first, filing after the month view is trusted). *Recommended.*
 3. Unknown HSN is refused, never guessed at 18%; a registered shop can't publish a product without HSN. *Recommended.*
 4. A shop without a GSTIN, or on composition, ships only within its state. *Recommended (s.24).*
 5. Phase 1 opens W0 only (fashion, footwear, accessories, jewellery); beauty and wellness in phase 4. *Recommended.*
-6. A CA engaged now for the rate table and three rulings (accessories rates, RTO treatment, delivery/COD fee). *Required.*
+6. A CA engaged now for the rate table and four rulings: accessories rates, the ₹2,625–2,950 inclusive band, RTO treatment, delivery/COD fee. *Required.*
+7. An ADR that money stays merchant-owned (Frrata is not an e-commerce operator collecting TCS), with a lawyer's opinion before G2. *Required.*
 
 ## Links
-- Phase 1–2 mockup: see the published artifact (link added on publish)
+- Phase 1–2 mockup (GST in the core): https://claude.ai/artifact/M4VfNAgqFHYmhCxFwZmepE (`docs/mockups/2026-11-09-gst-core.html`)
 - GST module mockup (the app): https://claude.ai/artifact/NsxiFFFBorTsi9sct7zWgs
 - All-categories brief: https://claude.ai/artifact/K8ac7qDBZ3i8onD8vpEsoa
 - Product roadmap: https://claude.ai/artifact/P5zdSXPUSPRBJUSN32v3ay
