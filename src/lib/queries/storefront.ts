@@ -47,9 +47,10 @@ type Loader<A extends unknown[], R> = (tenantId: string, ...a: A) => Promise<R>
 // React cache() on top (speed review P3): unstable_cache does not merge misses already in flight, and layout,
 // generateMetadata and page render in parallel — each ran the same queries on its own connection.
 // 'reviews' / 'reviews:product' (Reviews R1, speed review 4): a shopper's review purges its own product, never the shop.
+const productKey = (v: unknown) => { if (typeof v !== 'string' || !v) throw new Error('reviews:product needs the product id first'); return v }
 function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop' | 'catalogue' | 'reviews' | 'reviews:product', fn: Loader<A, R>, revalidate = 60): Loader<A, R> {
   return cache((tenantId: string, ...a: A) => unstable_cache(() => fn(tenantId, ...a), ['sf', name, tenantId, ...a.map(String)], {
-    tags: [`shop:${tenantId}`, ...(scope === 'catalogue' ? [`shop:${tenantId}:catalogue`] : scope === 'reviews' ? [`shop:${tenantId}:reviews`] : scope === 'reviews:product' ? [`shop:${tenantId}:reviews:${a[0]}`] : [])], revalidate,
+    tags: [`shop:${tenantId}`, ...(scope === 'catalogue' ? [`shop:${tenantId}:catalogue`] : scope === 'reviews' ? [`shop:${tenantId}:reviews`] : scope === 'reviews:product' ? [`shop:${tenantId}:reviews:${productKey(a[0])}`] : [])], revalidate,
   })())
 }
 

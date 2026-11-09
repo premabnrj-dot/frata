@@ -4,10 +4,10 @@
 // React only, never as HTML or with links made clickable.
 // =============================================================================
 
-export const LIMITS = { title: 100, body: 2000, reply: 1000 } as const
+export const LIMITS = { title: 100, body: 2000, reply: 1000, name: 60 } as const
 
 // eslint-disable-next-line no-control-regex
-const STRIP = /[\u0000-\u0009\u000B-\u001F\u007F-\u009F​-‏‪-‮⁦-⁩﻿]/g
+const STRIP = /[\u0000-\u0009\u000B-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g
 
 export function cleanText(raw: unknown, max: number): string {
   const s = String(raw ?? '').normalize('NFC').replace(STRIP, '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim()
@@ -15,11 +15,12 @@ export function cleanText(raw: unknown, max: number): string {
 }
 
 /** The name a review shows, chosen by its author (never typed): "Ananya R.", "Ananya" or "Anonymous". */
-export type NameChoice = 'initial' | 'first' | 'anon'
+export const NAME_CHOICES = ['initial', 'first', 'anon'] as const
+export type NameChoice = (typeof NAME_CHOICES)[number]
 export function displayName(fullName: string, choice: NameChoice): string {
-  const parts = cleanText(fullName, 80).split(/\s+/).filter(Boolean)
+  const parts = cleanText(fullName, LIMITS.name).split(/\s+/).filter(Boolean)
   if (choice === 'anon' || !parts.length) return 'Anonymous'
   const first = parts[0]!.charAt(0).toUpperCase() + parts[0]!.slice(1)
-  if (choice === 'first' || parts.length < 2) return first
-  return `${first} ${parts[parts.length - 1]!.charAt(0).toUpperCase()}.`
+  if (choice === 'first' || parts.length < 2) return first.slice(0, LIMITS.name)
+  return `${first.slice(0, LIMITS.name - 3)} ${parts[parts.length - 1]!.charAt(0).toUpperCase()}.`
 }

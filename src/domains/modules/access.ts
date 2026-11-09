@@ -48,9 +48,20 @@ export function liveAddon<A extends AddonFact>(addons: readonly A[], key: Module
 
 /** May this plan buy (or trial) this add-on? */
 export const addOnAllowed = (key: ModuleKey, planCode: string | null): boolean => {
-  const only = MODULES[key].addOnFor
+  const def = MODULES[key] as (typeof MODULES)[ModuleKey] | undefined
+  if (!def) return false
+  const only = def.addOnFor
   return !only || (planCode !== null && (only as readonly string[]).includes(planCode))
 }
+
+/**
+ * Is an add-on row billed this month? Only while the plan in force at the month's start may buy it AND does not
+ * already include it (Growth → Scale: Reviews comes with Scale, so the add-on stops). A downgrade stops the bill as
+ * it stops access; the row stays and bills again only if the shop returns to a plan that sells it. The plan at the
+ * month's start decides the whole month, as the plan's own bill does (in arrears).
+ */
+export const addOnBillable = (key: ModuleKey, planCode: string | null, planFeatures: readonly string[]): boolean =>
+  addOnAllowed(key, planCode) && !planFeatures.includes(key)
 
 function grant(key: ModuleKey, f: ModuleFacts, now: Date): { how: How; trialEndsAt: Date | null } | null {
   const def = MODULES[key]

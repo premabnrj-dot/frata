@@ -24,6 +24,7 @@ export async function productExtras(ctx: ProductContext): Promise<ProductExtras>
   const { access } = await shopModules(ctx.tenantId, ctx.at)
   const live = PRODUCT.filter((f) => access[f.module].usable)
   if (!live.length) return NONE
-  const got = await Promise.all(live.map((f) => f.load(ctx).catch(() => NONE)))
+  // A filler that fails leaves the page whole (logged by name only, never the error's text: S10).
+  const got = await Promise.all(live.map((f) => f.load(ctx).catch((e: unknown) => { console.error(`[productExtras:${f.module}]`, e instanceof Error ? e.name : 'error'); return NONE })))
   return { below: got.some((g) => g.below) ? <>{got.map((g, i) => <div key={live[i]!.module}>{g.below}</div>)}</> : null, rating: got.find((g) => g.rating)?.rating ?? null }
 }

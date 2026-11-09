@@ -4,7 +4,7 @@ import { computeBill, type AddonRow, type Bill, type FeeCredit, type FeeOrder, t
 import { MODULES, type ModuleKey } from '@/domains/modules/registry'
 import { paise } from '@/domains/money/paise'
 import { currentPlan, type PlanCode } from '@/domains/plans/entitlements'
-import { addOnAllowed } from '@/domains/modules/access'
+import { addOnBillable } from '@/domains/modules/access'
 import { gstinState } from '@/domains/tax/gst'
 import { shopPauseIn } from '@/lib/queries/trial-pause'
 
@@ -75,7 +75,7 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
   const at = billableAtSql('o')
   const [planRows, addonRows, feeRows, creditRows, prev, planBilled, account] = await Promise.all([
     tx.select({ startsAt: tenantPlans.startsAt, trialEndsAt: tenantPlans.trialEndsAt, customMonthlyPrice: tenantPlans.customMonthlyPrice,
-      planCode: plans.code, name: plans.name, version: planVersions.version, monthlyPrice: planVersions.monthlyPrice, includedOrders: planVersions.includedOrders, feeBps: planVersions.feeBps })
+      planCode: plans.code, name: plans.name, version: planVersions.version, features: planVersions.features, monthlyPrice: planVersions.monthlyPrice, includedOrders: planVersions.includedOrders, feeBps: planVersions.feeBps })
       .from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(plans, eq(plans.id, planVersions.planId))
       .where(eq(tenantPlans.tenantId, tenantId)).orderBy(asc(tenantPlans.startsAt)),
     tx.select({ module: tenantAddons.module, startsAt: tenantAddons.startsAt, endsAt: tenantAddons.endsAt, trialEndsAt: tenantAddons.trialEndsAt, monthlyPrice: addonPrices.monthlyPrice })
@@ -102,10 +102,9 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
 
   const planHistory: PlanRow[] = planRows.map((p) => ({ startsAt: p.startsAt, trialEndsAt: p.trialEndsAt, customMonthlyPrice: p.customMonthlyPrice === null ? null : paise(p.customMonthlyPrice),
     planVersion: { planCode: p.planCode as PlanCode, name: p.name, monthlyPrice: paise(p.monthlyPrice), includedOrders: p.includedOrders, feeBps: p.feeBps } }))
-  // An add-on sold only on some plans (Reviews: Growth and Scale) is billed only while the plan in force at the month's
-  // start allows it — the same rule access uses (addOnAllowed), so a shop never pays for what it cannot use.
-  const planAtStart = currentPlan(planHistory, monthStart)?.planVersion.planCode ?? null
-  const addons: AddonRow[] = addonRows.filter((a) => addOnAllowed(a.module as ModuleKey, planAtStart)).map((a) => ({ module: a.module, name: MODULES[a.module as ModuleKey]?.name ?? a.module, monthlyPrice: paise(a.monthlyPrice), startsAt: a.startsAt, endsAt: a.endsAt, trialEndsAt: a.trialEndsAt }))
+  // An add-on is billed only while the plan at the month's start sells it and does not include it (addOnBillable).
+  const atStart = currentPlan(planRows, monthStart)
+  const addons: AddonRow[] = addonRows.filter((a) => addOnBillable(a.module as ModuleKey, atStart?.planCode ?? null, atStart?.features ?? [])).map((a) => ({ module: a.module, name: MODULES[a.module as ModuleKey]?.name ?? a.module, monthlyPrice: paise(a.monthlyPrice), startsAt: a.startsAt, endsAt: a.endsAt, trialEndsAt: a.trialEndsAt }))
   const feeOrders: FeeOrder[] = feeRows.map((o) => ({ orderId: o.id, number: `#${o.number}`, billableAt: new Date(o.at), rateAt: new Date(o.rate_at), merchandiseNet: Number(o.net) }))
   const credits: FeeCredit[] = creditRows.map((c) => ({ orderId: c.id, number: `#${c.number}`, fee: paise(Number(c.fee)), invoiceNumber: c.invoice }))
   const acc = account[0]

@@ -1,5 +1,5 @@
 // =============================================================================
-// FILE: src/lib/db/schema-reviews.ts — Reviews (docs/plans/2026-11-09-reviews-r1.md; access in the same migration).
+// FILE: src/lib/modules/reviews/schema.ts — Reviews (docs/plans/2026-11-09-reviews-r1.md; access in the same migration).
 //
 // Tenant first in every key, composite foreign keys so a row can never point at another shop's order, line,
 // product or review (tenancy audit R1). Where a review is (held, published, hidden, removed) is derived from its
@@ -9,9 +9,17 @@
 
 import { sql } from 'drizzle-orm'
 import { boolean, check, foreignKey, index, integer, pgTable, primaryKey, smallint, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
-import { at, createdAt, id, tenants } from './schema'
-import { products } from './schema-catalogue'
-import { orders } from './schema-orders'
+import { at, createdAt, id, tenants } from '@/lib/db/schema'
+import { sqlList } from '@/domains/tenancy/roles'
+import { HIDE_REASONS, HOLD_REASONS, REPORT_REASONS } from '@/domains/reviews/moderation'
+import { FITS } from '@/domains/reviews/summary'
+import { ASK_DAYS, DEFAULT_ASK, MAX_PHOTOS, REMINDER_DAYS, REVIEW_TYPES } from '@/domains/reviews/schedule'
+import { LIMITS, NAME_CHOICES } from '@/domains/reviews/text'
+
+const nums = (xs: readonly number[]) => sql.raw(xs.join(','))
+const words = (xs: readonly string[]) => sql.raw(sqlList(xs))
+import { products } from '@/lib/db/schema-catalogue'
+import { orders } from '@/lib/db/schema-orders'
 
 /** One ask per order: the link's hash (never the token), when it was sent, reminded, opened. */
 export const reviewRequests = pgTable('review_requests', {
@@ -42,7 +50,7 @@ export const reviews = pgTable('reviews', {
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   /** Null for an imported review. */
   requestId: uuid('request_id'),
-  /** Null for an imported review, or once its order is erased (the review stays, unlinked). */
+  /** Null for an imported review, or once its line is deleted (the review stays, unlinked; an erased order takes it). */
   orderLineId: uuid('order_line_id'),
   productId: uuid('product_id').notNull(),
   source: text('source').notNull().default('request'),
@@ -75,10 +83,10 @@ export const reviews = pgTable('reviews', {
   check('reviews_rating', sql`${t.rating} between 1 and 5`),
   check('reviews_source', sql`${t.source} in ('request','import')`),
   check('reviews_request_source', sql`(${t.source} = 'request') = (${t.requestId} is not null)`),
-  check('reviews_fit', sql`${t.fit} is null or ${t.fit} in ('small','true','large')`),
-  check('reviews_text', sql`length(${t.title}) <= 100 and length(${t.body}) <= 2000 and length(${t.reply}) <= 1000 and length(${t.displayName}) between 1 and 60`),
-  check('reviews_held_reason', sql`(${t.heldAt} is null) = (${t.heldReason} is null)`),
-  check('reviews_hidden_reason', sql`(${t.hiddenAt} is null) = (${t.hiddenReason} is null)`),
+  check('reviews_fit', sql`${t.fit} is null or ${t.fit} in (${words(FITS.map((f) => f.key))})`),
+  check('reviews_text', sql`length(${t.title}) <= ${sql.raw(String(LIMITS.title))} and length(${t.body}) <= ${sql.raw(String(LIMITS.body))} and length(${t.reply}) <= ${sql.raw(String(LIMITS.reply))} and length(${t.displayName}) between 1 and ${sql.raw(String(LIMITS.name))}`),
+  check('reviews_held_reason', sql`(${t.heldAt} is null) = (${t.heldReason} is null) and (${t.heldReason} is null or ${t.heldReason} in (${words(HOLD_REASONS)}))`),
+  check('reviews_hidden_reason', sql`(${t.hiddenAt} is null) = (${t.hiddenReason} is null) and (${t.hiddenReason} is null or ${t.hiddenReason} in (${words(HIDE_REASONS.map((r) => r.key))}))`),
 ])
 
 /** A review's photos: in this shop's reviews folder, under the request they were uploaded for (security review H2). */
@@ -96,7 +104,8 @@ export const reviewPhotos = pgTable('review_photos', {
   foreignKey({ name: 'review_photos_review_fk', columns: [t.tenantId, t.reviewId], foreignColumns: [reviews.tenantId, reviews.id] }).onDelete('cascade'),
   uniqueIndex('review_photos_tenant_base').on(t.tenantId, t.base),
   index('review_photos_review').on(t.tenantId, t.reviewId),
-  check('review_photos_base', sql`${t.base} like ('https://%/tenants/' || ${t.tenantId}::text || '/reviews/%')`),
+  // Anchored (tenancy audit R1): our Blob host, this shop's reviews folder, one request folder, one file stem.
+  check('review_photos_base', sql`${t.base} ~ ('^https://[a-z0-9]+\.public\.blob\.vercel-storage\.com/tenants/' || ${t.tenantId}::text || '/reviews/[0-9a-f-]{36}/[0-9a-f-]{36}$')`),
 ])
 
 /** A shopper's report. The IP only as a keyed hash (security review M4); reports never hide a review on their own. */
@@ -111,16 +120,16 @@ export const reviewReports = pgTable('review_reports', {
   foreignKey({ name: 'review_reports_review_fk', columns: [t.tenantId, t.reviewId], foreignColumns: [reviews.tenantId, reviews.id] }).onDelete('cascade'),
   uniqueIndex('review_reports_once').on(t.tenantId, t.reviewId, t.ipHash),
   index('review_reports_review').on(t.tenantId, t.reviewId),
-  check('review_reports_reason', sql`${t.reason} in ('abuse','not_about_product','personal_data','spam','unlawful','fake')`),
+  check('review_reports_reason', sql`${t.reason} in (${words(REPORT_REASONS)})`),
 ])
 
 /** The shop's review settings (one row; absent = the defaults in src/domains/reviews). */
 export const reviewSettings = pgTable('review_settings', {
   tenantId: uuid('tenant_id').primaryKey().references(() => tenants.id, { onDelete: 'cascade' }),
-  askAfterDays: smallint('ask_after_days').notNull().default(5),
-  remindAfterDays: smallint('remind_after_days').notNull().default(3),
-  reviewType: text('review_type').notNull().default('both'),
-  maxPhotos: smallint('max_photos').notNull().default(5),
+  askAfterDays: smallint('ask_after_days').notNull().default(DEFAULT_ASK.askAfterDays),
+  remindAfterDays: smallint('remind_after_days').notNull().default(DEFAULT_ASK.remindAfterDays),
+  reviewType: text('review_type').notNull().default(REVIEW_TYPES[0]),
+  maxPhotos: smallint('max_photos').notNull().default(MAX_PHOTOS),
   fitQuestion: boolean('fit_question').notNull().default(true),
   approveEach: boolean('approve_each').notNull().default(false),
   widgetOn: boolean('widget_on').notNull().default(true),
@@ -128,11 +137,11 @@ export const reviewSettings = pgTable('review_settings', {
   nameDefault: text('name_default').notNull().default('initial'),
   updatedAt: at('updated_at').notNull().defaultNow(),
 }, (t) => [
-  check('review_settings_ask', sql`${t.askAfterDays} in (1,3,5,7,10,14)`),
-  check('review_settings_remind', sql`${t.remindAfterDays} in (0,3,5)`),
-  check('review_settings_type', sql`${t.reviewType} in ('both','text','photo')`),
-  check('review_settings_photos', sql`${t.maxPhotos} between 1 and 5`),
-  check('review_settings_name', sql`${t.nameDefault} in ('initial','first','anon')`),
+  check('review_settings_ask', sql`${t.askAfterDays} in (${nums(ASK_DAYS)})`),
+  check('review_settings_remind', sql`${t.remindAfterDays} in (${nums(REMINDER_DAYS)})`),
+  check('review_settings_type', sql`${t.reviewType} in (${words(REVIEW_TYPES)})`),
+  check('review_settings_photos', sql`${t.maxPhotos} between 1 and ${sql.raw(String(MAX_PHOTOS))}`),
+  check('review_settings_name', sql`${t.nameDefault} in (${words(NAME_CHOICES)})`),
 ])
 
 /** Phones that said Stop, per shop, as a keyed hash only (security review H3): checked before every send. */

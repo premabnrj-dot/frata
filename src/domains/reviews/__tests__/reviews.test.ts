@@ -7,15 +7,18 @@ import { askable, askWindow, DEFAULT_ASK, linkValid, reminderDue } from '../sche
 
 const now = new Date('2026-11-09T10:00:00Z')
 const ago = (h: number) => new Date(now.getTime() - h * 3_600_000)
-const base = { createdAt: ago(1), heldAt: null, approvedAt: null, hiddenAt: null, authorDeletedAt: null }
+const base = { createdAt: ago(1), heldAt: null, heldReason: null, approvedAt: null, hiddenAt: null, authorDeletedAt: null }
 
 describe('reviewState', () => {
   it('published unless held, hidden or removed; a held review goes live by itself after 72 h', () => {
     expect(reviewState(base, now)).toBe('published')
-    expect(reviewState({ ...base, heldAt: ago(1) }, now)).toBe('held')
-    expect(reviewState({ ...base, createdAt: ago(73), heldAt: ago(73) }, now)).toBe('published')
-    expect(reviewState({ ...base, heldAt: ago(1), approvedAt: ago(0.5) }, now)).toBe('published')
-    expect(publishesAt({ ...base, heldAt: ago(1) }, now)?.getTime()).toBe(ago(1).getTime() + AUTO_PUBLISH_MS)
+    expect(reviewState({ ...base, heldAt: ago(1), heldReason: 'language' }, now)).toBe('held')
+    for (const heldReason of ['language', 'spam', 'approve_each']) expect(reviewState({ ...base, createdAt: ago(73), heldAt: ago(73), heldReason }, now)).toBe('published')
+    // Photos wait for the shop, however long (security review M5).
+    expect(reviewState({ ...base, createdAt: ago(500), heldAt: ago(500), heldReason: 'photos' }, now)).toBe('held')
+    expect(publishesAt({ ...base, heldAt: ago(1), heldReason: 'photos' }, now)).toBeNull()
+    expect(reviewState({ ...base, heldAt: ago(1), heldReason: 'photos', approvedAt: ago(0.5) }, now)).toBe('published')
+    expect(publishesAt({ ...base, heldAt: ago(1), heldReason: 'spam' }, now)?.getTime()).toBe(ago(1).getTime() + AUTO_PUBLISH_MS)
   })
   it('hidden never publishes by itself; the author’s delete wins', () => {
     expect(reviewState({ ...base, createdAt: ago(500), hiddenAt: ago(499) }, now)).toBe('hidden')
@@ -37,8 +40,11 @@ describe('screen (the same for every review: never by rating)', () => {
     expect(screen('Lovely fabric', { approveEach: false, photos: 2 }).hold).toBe('photos')
     expect(screen('Lovely fabric, fits true to size', o)).toEqual({ hide: null, hold: null })
   })
-  it('sizes and prices are not phone numbers', () => {
+  it('sizes, prices and missing spaces are not contact details', () => {
     expect(screen('Bought size 32, paid 2490 for it', o).hide).toBeNull()
+    for (const t of ['Loved it.In short, perfect', 'Fits well.Me and my sister', 'Nice fabric.Co-ord set', 'Size M.In love', 'Great.com fort'])
+      expect(screen(t, o).hide).toBeNull()
+    expect(screen('see kesar.in for more', o).hide).toBe('contact')
   })
 })
 
@@ -83,11 +89,12 @@ describe('schedule', () => {
     expect([w.from.getTime(), w.to.getTime()]).toEqual([d(7).getTime(), d(5).getTime()])
   })
   it('delivered (or returned) with an opt-in; never RTO, cancelled, unopted or opted out', () => {
-    const ok = { deliveredAt: d(5), rtoAt: null, cancelledAt: null, waOptInAt: d(9), optedOut: false }
-    expect(askable(ok)).toBe(true)
-    expect(askable({ ...ok, rtoAt: d(4) })).toBe(false)
-    expect(askable({ ...ok, waOptInAt: null })).toBe(false)
-    expect(askable({ ...ok, optedOut: true })).toBe(false)
+    const moments = { placedAt: d(9), paymentMethod: 'cod', payBy: null, paidAt: null, switchedToCodAt: null, confirmedAt: d(9), heldAt: null, packedAt: d(8), shippedAt: d(8), ndrAt: null, deliveredAt: d(5), rtoInitiatedAt: null, rtoDeliveredAt: null, lostAt: null, cancelledAt: null }
+    const ok = { ...moments, waOptInAt: d(9), optedOut: false } as Parameters<typeof askable>[0]
+    expect(askable(ok, now)).toBe(true)
+    expect(askable({ ...ok, rtoInitiatedAt: d(4) }, now)).toBe(false)
+    expect(askable({ ...ok, waOptInAt: null }, now)).toBe(false)
+    expect(askable({ ...ok, optedOut: true }, now)).toBe(false)
   })
   it('one reminder after the set days, none when off; links last 60 days', () => {
     expect(reminderDue(d(3), DEFAULT_ASK, now)).toBe(true)

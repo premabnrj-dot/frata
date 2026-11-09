@@ -1767,11 +1767,11 @@ insert into reviews (id, tenant_id, request_id, order_line_id, product_id, ratin
   select 'bdbdbdbd-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'bcbcbcbc-0000-0000-0000-00000000000b', l.id, 'eeeeeeee-0000-0000-0000-00000000000b', 5, 'Priya S.'
     from order_lines l where l.tenant_id = '22222222-2222-2222-2222-222222222222' and l.order_id = 'acacacac-0000-0000-0000-00000000000b';
 insert into review_photos (tenant_id, review_id, base, widths, width, height) values
-  ('22222222-2222-2222-2222-222222222222', 'bdbdbdbd-0000-0000-0000-00000000000b', 'https://s.public.blob.vercel-storage.com/tenants/22222222-2222-2222-2222-222222222222/reviews/bcbcbcbc/p1', '{400}', 400, 500);
+  ('22222222-2222-2222-2222-222222222222', 'bdbdbdbd-0000-0000-0000-00000000000b', 'https://s.public.blob.vercel-storage.com/tenants/22222222-2222-2222-2222-222222222222/reviews/bcbcbcbc-0000-0000-0000-00000000000b/0f0f0f0f-0000-0000-0000-000000000001', '{400}', 400, 500);
 insert into review_reports (tenant_id, review_id, reason, ip_hash) values ('22222222-2222-2222-2222-222222222222', 'bdbdbdbd-0000-0000-0000-00000000000b', 'spam', 'iph-b');
 insert into review_settings (tenant_id) values ('22222222-2222-2222-2222-222222222222');
 insert into wa_opt_outs (tenant_id, phone_hmac) values ('22222222-2222-2222-2222-222222222222', 'ph-b');
-select set_config('proof.b_line', (select id::text from order_lines where tenant_id = '22222222-2222-2222-2222-222222222222' limit 1), false);
+select set_config('proof.b_line', (select order_line_id::text from reviews where id = 'bdbdbdbd-0000-0000-0000-00000000000b'), false);
 begin; set local role frata_app;
 select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
 do $$ declare n int; begin
@@ -1790,12 +1790,23 @@ do $$ declare n int; begin
     ('11111111-1111-1111-1111-111111111111', gen_random_uuid(), 'eeeeeeee-0000-0000-0000-00000000000a', 'import', 1, 'X');
     raise exception 'FAIL: a review points at a line that is not this shop''s'; exception when foreign_key_violation then null; end;
   begin insert into review_photos (tenant_id, review_id, base, widths, width, height) values
-    ('11111111-1111-1111-1111-111111111111', 'bdbdbdbd-0000-0000-0000-00000000000b', 'https://s.public.blob.vercel-storage.com/tenants/11111111-1111-1111-1111-111111111111/reviews/x/p', '{400}', 1, 1);
+    ('11111111-1111-1111-1111-111111111111', 'bdbdbdbd-0000-0000-0000-00000000000b', 'https://s.public.blob.vercel-storage.com/tenants/11111111-1111-1111-1111-111111111111/reviews/bcbcbcbc-0000-0000-0000-00000000000a/0f0f0f0f-0000-0000-0000-000000000004', '{400}', 1, 1);
     raise exception 'FAIL: A photo on B review'; exception when foreign_key_violation then null; end;
   insert into reviews (id, tenant_id, product_id, source, rating, display_name) values ('bdbdbdbd-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', 'import', 4, 'Asha K.');
   begin insert into review_photos (tenant_id, review_id, base, widths, width, height) values
-    ('11111111-1111-1111-1111-111111111111', 'bdbdbdbd-0000-0000-0000-00000000000a', 'https://s.public.blob.vercel-storage.com/tenants/22222222-2222-2222-2222-222222222222/reviews/x/p', '{400}', 1, 1);
+    ('11111111-1111-1111-1111-111111111111', 'bdbdbdbd-0000-0000-0000-00000000000a', 'https://s.public.blob.vercel-storage.com/tenants/22222222-2222-2222-2222-222222222222/reviews/bcbcbcbc-0000-0000-0000-00000000000a/0f0f0f0f-0000-0000-0000-000000000005', '{400}', 1, 1);
     raise exception 'FAIL: A photo stored in B folder'; exception when check_violation then null; end;
+  -- Anchored: a second /tenants/ segment, a foreign host and a stray suffix are all refused (tenancy audit R1).
+  begin insert into review_photos (tenant_id, review_id, base, widths, width, height) values ('11111111-1111-1111-1111-111111111111', 'bdbdbdbd-0000-0000-0000-00000000000a',
+    'https://s.public.blob.vercel-storage.com/tenants/22222222-2222-2222-2222-222222222222/reviews/x/p#/tenants/11111111-1111-1111-1111-111111111111/reviews/', '{400}', 1, 1);
+    raise exception 'FAIL: a photo path smuggled into B folder'; exception when check_violation then null; end;
+  begin insert into review_photos (tenant_id, review_id, base, widths, width, height) values ('11111111-1111-1111-1111-111111111111', 'bdbdbdbd-0000-0000-0000-00000000000a',
+    'https://evil.example/tenants/11111111-1111-1111-1111-111111111111/reviews/bcbcbcbc-0000-0000-0000-00000000000a/0f0f0f0f-0000-0000-0000-000000000002', '{400}', 1, 1);
+    raise exception 'FAIL: a photo on a foreign host'; exception when check_violation then null; end;
+  insert into review_photos (tenant_id, review_id, base, widths, width, height) values ('11111111-1111-1111-1111-111111111111', 'bdbdbdbd-0000-0000-0000-00000000000a',
+    'https://s.public.blob.vercel-storage.com/tenants/11111111-1111-1111-1111-111111111111/reviews/bcbcbcbc-0000-0000-0000-00000000000a/0f0f0f0f-0000-0000-0000-000000000003', '{400}', 1, 1);
+  begin insert into reviews (tenant_id, request_id, product_id, rating, display_name) values ('11111111-1111-1111-1111-111111111111', 'bcbcbcbc-0000-0000-0000-00000000000b', 'eeeeeeee-0000-0000-0000-00000000000a', 3, 'X');
+    raise exception 'FAIL: A review on B request'; exception when foreign_key_violation then null; end;
   begin insert into wa_opt_outs (tenant_id, phone_hmac) values ('22222222-2222-2222-2222-222222222222', 'ph-x'); raise exception 'FAIL: A wrote B opt-outs';
   exception when insufficient_privilege then null; end;
   insert into wa_opt_outs (tenant_id, phone_hmac) values ('11111111-1111-1111-1111-111111111111', 'ph-a');
@@ -1804,9 +1815,16 @@ do $$ declare n int; begin
 end $$;
 rollback;
 do $$ begin
-  if exists (select 1 from unnest(array['anon', 'authenticated', 'frata_admin']) r,
-             unnest(array['review_requests', 'reviews', 'review_photos', 'review_reports', 'review_settings', 'wa_opt_outs']) t
-             where has_table_privilege(r, t, 'select') or has_table_privilege(r, t, 'insert')) then raise exception 'FAIL: another role reads or writes reviews'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r,
+             unnest(array['review_requests', 'reviews', 'review_photos', 'review_reports', 'review_settings', 'wa_opt_outs']) t,
+             unnest(array['select', 'insert', 'update', 'delete']) p
+             where has_table_privilege(r, t, p)) then raise exception 'FAIL: another role reads or writes reviews'; end if;
+end $$;
+-- A deleted line unlinks its review and keeps its shop (set null on order_line_id only).
+do $$ begin
+  delete from order_lines where id = current_setting('proof.b_line')::uuid;
+  if (select tenant_id from reviews where id = 'bdbdbdbd-0000-0000-0000-00000000000b') <> '22222222-2222-2222-2222-222222222222'
+     or (select order_line_id from reviews where id = 'bdbdbdbd-0000-0000-0000-00000000000b') is not null then raise exception 'FAIL: set null touched tenant_id or kept the line'; end if;
 end $$;
 
 \echo 'tenancy proof — all 54 checks passed'

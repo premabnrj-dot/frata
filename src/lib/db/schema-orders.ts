@@ -136,6 +136,7 @@ export const orders = pgTable('orders', {
   index('orders_inflight_idx').on(t.tenantId, t.placedAt.desc()).where(sql`${t.rtoDeliveredAt} is null and (${t.rtoInitiatedAt} is not null or (${t.deliveredAt} is null and ${t.lostAt} is null and ${t.cancelledAt} is null and (${t.packedAt} is not null or ${t.shippedAt} is not null or ${t.ndrAt} is not null)))`),
   check('orders_freight', sql`(${t.forwardShipping} is null or ${t.forwardShipping} >= 0) and (${t.rtoShipping} is null or ${t.rtoShipping} >= 0) and (${t.courierCodFee} is null or ${t.courierCodFee} >= 0)`),
   check('orders_payment_method', sql`${t.paymentMethod} in ('cod','prepaid')`),
+  check('orders_wa_opt_in', sql`(${t.waOptInAt} is null) = (${t.waOptInNotice} is null)`),
   check('orders_money', sql`${t.subtotal} >= 0 and ${t.shipping} >= 0 and ${t.codCharge} >= 0 and ${t.gstTotal} >= 0 and ${t.total} >= 0`),
   // The total is its parts, less the offers' discount (GST inside the prices when they include it).
   check('orders_total', sql`${t.total} = ${t.subtotal} - ${t.discount} + ${t.shipping} + ${t.codCharge} + case when ${t.pricesIncludeGst} then 0 else ${t.gstTotal} end`),

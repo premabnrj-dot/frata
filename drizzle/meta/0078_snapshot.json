@@ -1,5 +1,5 @@
 {
-  "id": "f2c93e40-ccc3-48e2-b8bf-285fdac8c0bc",
+  "id": "da175f87-ecd8-4097-89cd-6733ccc419b9",
   "prevId": "1200e98c-8d01-4683-b4b3-dbdbf108e03b",
   "version": "7",
   "dialect": "postgresql",
@@ -5385,6 +5385,10 @@
           "name": "orders_payment_method",
           "value": "\"orders\".\"payment_method\" in ('cod','prepaid')"
         },
+        "orders_wa_opt_in": {
+          "name": "orders_wa_opt_in",
+          "value": "(\"orders\".\"wa_opt_in_at\" is null) = (\"orders\".\"wa_opt_in_notice\" is null)"
+        },
         "orders_money": {
           "name": "orders_money",
           "value": "\"orders\".\"subtotal\" >= 0 and \"orders\".\"shipping\" >= 0 and \"orders\".\"cod_charge\" >= 0 and \"orders\".\"gst_total\" >= 0 and \"orders\".\"total\" >= 0"
@@ -10482,7 +10486,7 @@
       "checkConstraints": {
         "review_photos_base": {
           "name": "review_photos_base",
-          "value": "\"review_photos\".\"base\" like ('https://%/tenants/' || \"review_photos\".\"tenant_id\"::text || '/reviews/%')"
+          "value": "\"review_photos\".\"base\" ~ ('^https://[a-z0-9]+.public.blob.vercel-storage.com/tenants/' || \"review_photos\".\"tenant_id\"::text || '/reviews/[0-9a-f-]{36}/[0-9a-f-]{36}$')"
         }
       },
       "isRLSEnabled": false
@@ -11252,11 +11256,11 @@
         },
         "reviews_held_reason": {
           "name": "reviews_held_reason",
-          "value": "(\"reviews\".\"held_at\" is null) = (\"reviews\".\"held_reason\" is null)"
+          "value": "(\"reviews\".\"held_at\" is null) = (\"reviews\".\"held_reason\" is null) and (\"reviews\".\"held_reason\" is null or \"reviews\".\"held_reason\" in ('language','spam','approve_each','photos'))"
         },
         "reviews_hidden_reason": {
           "name": "reviews_hidden_reason",
-          "value": "(\"reviews\".\"hidden_at\" is null) = (\"reviews\".\"hidden_reason\" is null)"
+          "value": "(\"reviews\".\"hidden_at\" is null) = (\"reviews\".\"hidden_reason\" is null) and (\"reviews\".\"hidden_reason\" is null or \"reviews\".\"hidden_reason\" in ('abuse','not_about_product','personal_data','spam','unlawful','contact'))"
         }
       },
       "isRLSEnabled": false

@@ -8,7 +8,7 @@ CREATE TABLE "review_photos" (
 	"height" integer NOT NULL,
 	"position" smallint DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "review_photos_base" CHECK ("review_photos"."base" like ('https://%/tenants/' || "review_photos"."tenant_id"::text || '/reviews/%'))
+	CONSTRAINT "review_photos_base" CHECK ("review_photos"."base" ~ ('^https://[a-z0-9]+.public.blob.vercel-storage.com/tenants/' || "review_photos"."tenant_id"::text || '/reviews/[0-9a-f-]{36}/[0-9a-f-]{36}$'))
 );
 --> statement-breakpoint
 CREATE TABLE "review_reports" (
@@ -85,8 +85,8 @@ CREATE TABLE "reviews" (
 	CONSTRAINT "reviews_request_source" CHECK (("reviews"."source" = 'request') = ("reviews"."request_id" is not null)),
 	CONSTRAINT "reviews_fit" CHECK ("reviews"."fit" is null or "reviews"."fit" in ('small','true','large')),
 	CONSTRAINT "reviews_text" CHECK (length("reviews"."title") <= 100 and length("reviews"."body") <= 2000 and length("reviews"."reply") <= 1000 and length("reviews"."display_name") between 1 and 60),
-	CONSTRAINT "reviews_held_reason" CHECK (("reviews"."held_at" is null) = ("reviews"."held_reason" is null)),
-	CONSTRAINT "reviews_hidden_reason" CHECK (("reviews"."hidden_at" is null) = ("reviews"."hidden_reason" is null))
+	CONSTRAINT "reviews_held_reason" CHECK (("reviews"."held_at" is null) = ("reviews"."held_reason" is null) and ("reviews"."held_reason" is null or "reviews"."held_reason" in ('language','spam','approve_each','photos'))),
+	CONSTRAINT "reviews_hidden_reason" CHECK (("reviews"."hidden_at" is null) = ("reviews"."hidden_reason" is null) and ("reviews"."hidden_reason" is null or "reviews"."hidden_reason" in ('abuse','not_about_product','personal_data','spam','unlawful','contact')))
 );
 --> statement-breakpoint
 CREATE TABLE "wa_opt_outs" (
@@ -120,11 +120,13 @@ CREATE UNIQUE INDEX "reviews_tenant_line" ON "reviews" USING btree ("tenant_id",
 CREATE INDEX "reviews_product_list" ON "reviews" USING btree ("tenant_id","product_id","created_at" DESC NULLS LAST) WHERE "reviews"."hidden_at" is null and "reviews"."author_deleted_at" is null;--> statement-breakpoint
 CREATE INDEX "reviews_held" ON "reviews" USING btree ("tenant_id","created_at") WHERE "reviews"."held_at" is not null and "reviews"."approved_at" is null and "reviews"."hidden_at" is null;--> statement-breakpoint
 CREATE INDEX "reviews_hidden" ON "reviews" USING btree ("tenant_id","hidden_at") WHERE "reviews"."hidden_at" is not null;--> statement-breakpoint
--- A review outlives its order's erasure, unlinked: set null on order_line_id only (a plain set null would null
--- tenant_id). PG 15+ column list. Composite, so a review can never point at another shop's line (tenancy audit R1).
+ALTER TABLE "orders" ADD CONSTRAINT "orders_wa_opt_in" CHECK (("orders"."wa_opt_in_at" is null) = ("orders"."wa_opt_in_notice" is null));--> statement-breakpoint
+-- A deleted LINE unlinks its review (set null on order_line_id only; a plain set null would null tenant_id; PG 15+).
+-- An erased ORDER takes its request and the review with it (cascade): the review is the shopper's own words.
+-- Composite, so a review can never point at another shop's line (tenancy audit R1).
 ALTER TABLE "reviews" ADD CONSTRAINT "reviews_line_fk" FOREIGN KEY ("tenant_id","order_line_id") REFERENCES "public"."order_lines"("tenant_id","id") ON DELETE SET NULL ("order_line_id");--> statement-breakpoint
 -- Access (ADR-0002). Every table: tenant rows only, for frata_app; nothing for anon, authenticated or frata_admin.
-revoke all on review_requests, reviews, review_photos, review_reports, review_settings, wa_opt_outs from anon, authenticated;--> statement-breakpoint
+revoke all on review_requests, reviews, review_photos, review_reports, review_settings, wa_opt_outs from anon, authenticated, service_role;--> statement-breakpoint
 alter table review_requests enable row level security;--> statement-breakpoint
 alter table reviews enable row level security;--> statement-breakpoint
 alter table review_photos enable row level security;--> statement-breakpoint

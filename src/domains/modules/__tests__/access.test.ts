@@ -86,6 +86,13 @@ describe('addOnFor (owner 2026-11-09: Reviews on Growth and Scale only)', () => 
     expect(moduleAccess({ ...none, planCode: 'scale', planFeatures: ['reviews'] }, now).reviews.how).toBe('plan')
     expect([addOnAllowed('reviews', 'launch'), addOnAllowed('reviews', 'scale'), addOnAllowed('true_profit', 'launch')]).toEqual([false, true, true])
   })
+  it('billed only while the plan sells it and does not include it', async () => {
+    const { addOnBillable } = await import('../access')
+    expect(addOnBillable('reviews', 'growth', [])).toBe(true)
+    expect(addOnBillable('reviews', 'scale', ['reviews'])).toBe(false) // Growth → Scale: it comes with the plan
+    expect(addOnBillable('reviews', 'launch', [])).toBe(false) // a downgrade stops the bill
+    expect(addOnBillable('nope' as never, 'growth', [])).toBe(false)
+  })
 })
 
 describe('registry', () => {
