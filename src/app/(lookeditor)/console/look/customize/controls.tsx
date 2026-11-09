@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useState } from 'react'
+import { useId, useLayoutEffect, useRef, useState } from 'react'
 import { uploadPhoto } from '@/app/(console)/console/products/_components/upload-photos'
 import type { ThemeImage } from '@/domains/themes/sections'
 import { Switch as Toggle } from '@/components/ui/switch'
@@ -115,3 +115,25 @@ export function ImageField({ label, value, tenantId, onChange }: { label: string
 
 export const rupeesToPaise = (s: string) => { const n = Number(s.replace(/[₹,\s]/g, '')); return Number.isFinite(n) && n > 0 ? Math.round(n * 100) : null }
 export const paiseToRupees = (p: number | null) => (p === null ? '' : String(Math.round(p / 100)))
+
+/**
+ * A segmented control (Look v3): real buttons in a track, the chosen one carried by a thumb that slides on the snap
+ * curve. Use it for 2–4 short choices; more, or choices that need a picture, are Tiles.
+ */
+export function Segmented<T extends string | number>({ label, value, options, onChange, full = false }: { label: string; value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; full?: boolean }) {
+  const track = useRef<HTMLDivElement>(null)
+  const [thumb, setThumb] = useState<{ x: number; w: number } | null>(null)
+  useLayoutEffect(() => {
+    const el = track.current?.querySelector<HTMLElement>('[aria-pressed="true"]')
+    if (el) setThumb({ x: el.offsetLeft, w: el.offsetWidth })
+  }, [value, options.length])
+  return (
+    <div ref={track} role="group" aria-label={label} className={`relative isolate rounded-lg bg-muted p-0.5 ${full ? 'grid auto-cols-fr grid-flow-col' : 'inline-flex'}`}>
+      {thumb && <span aria-hidden="true" className="absolute inset-y-0.5 -z-10 rounded-md bg-card shadow-sm transition-[translate,width] duration-base ease-snap" style={{ width: thumb.w, translate: `${thumb.x}px 0` }} />}
+      {options.map((o) => (
+        <button key={String(o.value)} type="button" aria-pressed={o.value === value} onClick={() => onChange(o.value)}
+          className={`min-h-8 rounded-md px-3 text-sm font-medium transition-colors duration-fast ${o.value === value ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{o.label}</button>
+      ))}
+    </div>
+  )
+}

@@ -62,11 +62,11 @@ export default async function LookPage() {
               {' · '}<Link href="/console/look/history" className="underline underline-offset-4">History</Link>
             </p>
             {l.draft && <p className="flex flex-wrap items-center gap-2 text-sm"><Badge tone="warn">Draft</Badge>{draftName !== liveM.name ? `${draftName}: ` : ''}You have unpublished changes · saved {dateTimeIN(l.draft.updatedAt)}</p>}
-            <LookActions canEdit={canEdit} canPublish={canPublish} hasDraft={!!l.draft} undoFrom={l.previous && canPublish ? l.live!.revision.id : null} restore={!liveOk && !!l.previous && canPublish} support={support} />
+            <LookActions canEdit={canEdit} canPublish={canPublish} hasDraft={!!l.draft} undoFrom={l.previous && canPublish ? l.live!.revision.id : null} restore={!liveOk && !!l.previous && canPublish} support={support} previousName={l.previous ? `${manifestOf(l.previous.themeKey, l.previous.themeVersion)?.name ?? l.previous.themeKey}` : null} />
           </div>
         </div>
       </Section>
-      <Gallery themes={themes} canEdit={canEdit} sorted={sells.size > 0} />
+      <Gallery themes={themes} canEdit={canEdit} sorted={sells.size > 0} draft={l.draft && draftName ? { key: l.draft.themeKey, name: draftName } : null} />
     </>
   )
 }

@@ -35,7 +35,7 @@ export default async function Customize() {
   if (!data) {
     const j = await justPublished(t, auth.userId, new Date())
     if (!j) redirect('/console/look')
-    return <Published undoFrom={j.canUndo && (CAN_MANAGE as readonly string[]).includes(role) ? j.liveId : null} />
+    return <Published liveId={j.liveId} address={shop.host} shopOpen={!!shop.publishedAt} undoFrom={j.canUndo && (CAN_MANAGE as readonly string[]).includes(role) ? j.liveId : null} />
   }
   const m = manifestOf(data.draft.themeKey, data.draft.themeVersion)
   if (!m) redirect('/console/look')
@@ -69,7 +69,7 @@ export default async function Customize() {
         formCtx={{ tenantId: t, targets, collections: data.collections, products: data.products, masks: m.allowed.heroMasks ?? ['none'], promiseWords,
           schemes: [{ key: 'paper', name: schemeNames.paper ?? 'Paper' }, { key: 'tint', name: schemeNames.tint ?? 'Tint' }, { key: 'ink', name: schemeNames.ink ?? 'Ink' }] }}
         targets={targets} fonts={Object.fromEntries(PAIRINGS.map((p) => [p, displayFamily(p)])) as Record<Pairing, string>}
-        canPublish={(CAN_MANAGE as readonly string[]).includes(role)} shopOpen={!!shop.publishedAt} nowIso={new Date().toISOString()}
+        address={shop.host} canPublish={(CAN_MANAGE as readonly string[]).includes(role)} shopOpen={!!shop.publishedAt} nowIso={new Date().toISOString()}
         // A theme with samples (2.0): with no piece or collection of its own yet, the page picker opens a sample one.
         firstProduct={data.products[0]?.handle ?? (sampled ? SAMPLE_FIRST.product : null)} firstCollection={data.collections[0]?.handle ?? (sampled ? SAMPLE_FIRST.collection : null)}
         choices={choicesOf(m)}

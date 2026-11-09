@@ -374,6 +374,14 @@ img[data-photo]::before { content: ""; position: absolute; inset: 0; background:
    utility still wins (an unlayered rule would beat it and lay the tile over the whole page). */
 @layer base { img[data-photo] { position: relative; } }
 
+/* Publishing (Look v3): the customizer's preview says "Going live" — a sweep across the shop and the header's rani
+   line filling — for as long as the publish takes (at least 1.3 s). Reduced motion: no sweep, the line shows full. */
+@keyframes going-sweep { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@keyframes going-live { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@utility animate-going-sweep { animation: going-sweep 1300ms var(--ease-standard) forwards; }
+@utility animate-going-live { animation: going-live 1300ms var(--ease-standard) forwards; }
+@media (prefers-reduced-motion: reduce) { .animate-going-sweep { animation: none; } .animate-going-live { animation: none; transform: none; } }
+
 /* Add to bag: the bag's count hops 4 px on the snap curve when it changes (a new key replays it). */
 @keyframes count-hop { from { transform: translateY(-4px); } to { transform: none; } }
 @utility animate-count { animation: count-hop 200ms var(--ease-snap); }
