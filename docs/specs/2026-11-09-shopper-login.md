@@ -1,6 +1,6 @@
 # EkCode — one tap, recognised at every Frrata shop (shopper identity network, as an app)
-Status: draft (owner direction 2026-11-09) · Date: 2026-11-09 · Mockup: https://claude.ai/artifact/A33Xi8HVfsAyZqQ2pn7uKu
-(`docs/mockups/2026-11-09-ekcode.html`, v3) · Approved: pending
+Status: active · Date: 2026-11-09 · Mockup: https://claude.ai/artifact/A33Xi8HVfsAyZqQ2pn7uKu
+(`docs/mockups/2026-11-09-ekcode.html`, v4) · Approved: owner, 2026-11-09
 Decision: `docs/decisions/0009-shopper-network.md` · Research: `docs/research/2026-11-09-shopper-login.md`.
 
 **Name (owner, 2026-11-09).** **EkCode**: one code, every Frrata shop; said "ek code"; `ekcode_*` in code. Devanagari
@@ -20,7 +20,9 @@ beside it; Mukta 700 for both scripts. The box alone is the icon (filled ink bel
 button is ink on light themes, paper on dark, never in a shop's colours. Drawn once as paths when built; never typed.
 WhatsApp's display name is "EkCode" (Brand, above).
 
-## Owner calls (2026-11-09, on mockup v1)
+## Owner calls (2026-11-09)
+- Mockup approved (v4), with: no charge past the allowance; English only until the owner plans other languages;
+  grievance contact **Priti Bag, privacy@ekcode.in**.
 1. "Save this address to EkCode" at checkout starts **ticked** for a shopper with an EkCode (counsel confirms the notice
    covers it).
 2. Apply for the blue tick 30 days after EkCode's number goes live.
@@ -121,21 +123,13 @@ Guest checkout stays. Desktop: the code goes to the phone and is typed on the de
 - **Order updates from EkCode's number: a monthly allowance by plan**, 4 per included order — Launch 600, Growth 6,000,
   Scale 20,000 — at no charge (Frrata's cost at full use ₹69 / ₹690 / ₹2,300; 0.9% / 2.0% / 3.5% of that shop's
   revenue at ₹2,000 per order, an assumption). Counted on *delivered* messages, reset on the 1st (IST).
-- **Past the allowance, the merchant chooses** (Console › Apps › EkCode › Raise limit):
-  - **Stop at the allowance** (default): updates from EkCode's number pause until the 1st; sign-in codes never stop.
-  - **Keep sending, up to a monthly ceiling** they pick (₹500 · ₹1,000 · ₹2,500, before GST): each delivered
-    update past the allowance is **added to the merchant's next monthly Frrata bill** at ₹0.20 + GST (proposed),
-    one line "EkCode order updates · N × ₹0.20". Postpaid, never prepaid: **no wallet, no top-up balance** (RBI). At
-    the ceiling, sending pauses as above. Owner/admin only; changes logged.
-  - **Connect your own number**: the allowance stops applying; Meta bills the shop directly.
-  - At 80% of the allowance, and at 80% of the ceiling, the console shows it on the Apps row and in "Needs you".
-- **Counsel first** (§ 9): Meta's terms forbid reselling the WhatsApp platform. The extra-usage line ships only after
-  counsel confirms it is EkCode's service charge, not resale; until then "Keep sending" is hidden and shops stop at
-  the allowance. The allowance itself (free) needs no clearance.
-- Prices and allowances are a versioned row (`ekcode_pricing`: allowance per plan, price per update in paise, ceilings,
-  from-date), set in Admin › EkCode › Controls; the bill reads the version in force on each message's delivery date.
-  The line is built by the existing monthly bill (`src/lib/billing/draft.ts`) from delivered counts — one number,
-  computed once.
+- **Past the allowance (owner, 2026-11-09): no charge per message, ever.** Updates from EkCode's number pause until
+  the 1st (IST); sign-in codes never stop. Console › Apps › EkCode › More updates offers: **wait until the 1st**,
+  **move up a plan** (the next plan's allowance), or **connect your own number** (no allowance; Meta bills the shop).
+  At 80% the Apps row turns amber and "Needs you" says so.
+- Allowances are a versioned row (`ekcode_pricing`: allowance and codes a day per plan, from-date), set in Admin ›
+  EkCode › Controls. Frrata's cost is carried inside its fee; nothing about WhatsApp is itemised on the merchant's bill,
+  so Meta's no-resale clause is not touched.
 - Market: KwikPass 5,000 logins/mo free; checkout bundles 2.5–3.5% of GMV. `unit-economics-reviewer` runs on these
   numbers before the P3 plan.
 - **Abuse limits (not pricing):** Indian mobiles only; 3 codes per number / 10 min; 5 tries per code; 20 codes per
@@ -158,11 +152,11 @@ marketing.
 ## 9. Open checks before the mockup is final
 - ~~Meta policy for order updates from EkCode's number~~ — checked 2026-11-09: allowed with conditions (EkCode's voice,
   shop as a variable, opt-in names EkCode, no platform data to merchants, no promo); § 1 and `frata-integrations` hold
-  the facts. Left for counsel: whether the extra-usage line on the merchant's bill is "resale" (§ 6).
+  the facts. No per-message charge to merchants (owner), so the resale question is closed.
 - **ekcode.in** bought (owner), with its site naming the business (for Meta's display-name check) and an email sender
   on it (SPF/DKIM/DMARC) for the fallback code.
-- Counsel on the network notice (English only, owner; DPDP s.5(3) lets a person ask for it in a scheduled language: how
-  we answer that), the merchant DPA and Meta's resale clause (before launch; DPDP binds 13 May 2027).
+- Counsel on the network notice (English only until the owner plans other languages), the privacy policy and terms,
+  the merchant DPA and "Save this address" ticked (before launch; DPDP binds 13 May 2027).
 - Blue tick for EkCode's number: verified portfolio, 30 days on the platform, two-step verification (after the Pvt Ltd).
 
 ## 10. Where EkCode runs (no separate product, no public API)

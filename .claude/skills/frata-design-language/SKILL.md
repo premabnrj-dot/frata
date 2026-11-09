@@ -842,7 +842,7 @@ saving we cannot show from their own orders.
   `data-store-drawer` (rule 25a). A list longer than 48 is paged at its own
   addresses (`/products/page/N`), each cached on its own.
 - Checkout: one page, at most 7 fields, phone first, pincode fills city and
-  state, labels above fields. No shopper OTP until DLT registration (Phase 2);
+  state, labels above fields. Shopper sign-in is EkCode only (§ EkCode; no SMS OTP);
   COD rules and the To confirm queue carry the risk. No merchant cost ever
   reaches this surface (ADR-0003).
 - **Sizes are buttons**, sold-out shown and still readable; Add to bag stays
@@ -862,6 +862,25 @@ saving we cannot show from their own orders.
 - **Search and sharing for a collection** is the product's panel (`SeoPanel folder="collections"`), closed by
   default; its address stays under the name, and a changed address says the old one will send shoppers here.
 - **Barcode** is an optional column after SKU in the variant grid, digits only; it is never asked for.
+
+## EkCode (owner-approved 2026-11-09; spec `docs/specs/2026-11-09-shopper-login.md`, mockup https://claude.ai/artifact/A33Xi8HVfsAyZqQ2pn7uKu)
+
+- **A brand of its own.** Nothing a shopper sees names Frrata: ekcode.in pages, the notice, WhatsApp (sender
+  "EkCode"), email, checkout lines. Merchants meet it as an app in the console.
+- **The mark** is drawn, never typed: एक inside one rounded code box with a rani cursor under it, "Code" open beside
+  it, Mukta 700 for both scripts. The box alone (filled ink below 48 px; ए alone at 16 px) is the icon. Devanagari
+  appears only in the mark: **every word on every screen is English** until the owner plans other languages.
+- **The shop's button** is "Continue with" + the mark, ink on light themes and paper on dark, 52 px, full width on a
+  phone, never in the shop's colours, above the guest form with an "or" divider. Guest checkout always stays.
+- **ekcode.in screens**: a real page (top-level, never a pop-up or iframe); the shop's name and initial top right;
+  one field per screen; the number checks itself as typed (10 digits, 6–9); the code field is `one-time-code`, fills
+  itself and submits on the sixth digit (no Verify button); "Open WhatsApp" on a phone; email offered only when
+  needed; consent is its own tap, never pre-ticked; the shopper sees exactly what the shop gets and picks the
+  address; "Not you?" is one tap everywhere; footer Privacy · Terms only.
+- **Limits are allowances, never charges** (owner): an order-update meter on the Apps row (amber at 80%); past it,
+  "More updates" offers wait until the 1st, move up a plan, or connect your own number.
+- **Admin › EkCode** shows counts, costs and health, never a list of shoppers or an address; the one way in is "Find
+  an account" by exact number with a reason, logged.
 
 ## Share cards (search and sharing S1, owner-approved mockup 2026-11-09)
 

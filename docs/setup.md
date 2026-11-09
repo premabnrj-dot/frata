@@ -248,10 +248,8 @@ plan will use; the plan may rename one, and this list follows it.
 3. **A new SIM** that has never been on WhatsApp, for EkCode's number. Not Frrata's sign-up number: EkCode needs its
    own, named "EkCode".
 4. **Counsel** (an Indian privacy/tech lawyer), with the spec and mockup: (a) EkCode's notice, privacy policy and terms;
-   (b) the merchant terms' data-processing clause; (c) "Save this address to EkCode" starting ticked; (d) whether the
-   extra order-update line on the merchant's bill is resale under Meta's platform terms §4.1; (e) how to answer a
-   request for the notice in a scheduled language (DPDP s.5(3)).
-5. **A named grievance contact** for EkCode (a person and `privacy@ekcode.in`): the data law needs one.
+   (b) the merchant terms' data-processing clause; (c) "Save this address to EkCode" starting ticked; (d) English only until the owner plans other languages.
+5. **Grievance contact**: Priti Bag, `privacy@ekcode.in` (owner, 2026-11-09). Create the mailbox on ekcode.in.
 6. Optional: a trademark search and filing for "EkCode" (classes 9, 35, 42).
 
 **B. When the agent says the ekcode.in pages are deployed (first P1 task)**
@@ -297,6 +295,5 @@ plan will use; the plan may rename one, and this list follows it.
 
 **D. Later**
 - **Vercel Pro and the 5-minute outbox schedule** before order updates from EkCode's number (P3).
-- Counsel's answer on A4 (d) before "Keep sending" (extra order updates on the merchant's bill) is switched on.
 - **Blue tick**: 30 days after the number goes live → WhatsApp Manager → the number → Request Official Business Account.
-- Confirm the allowances (600 / 6,000 / 20,000) and ₹0.20 per extra update after the pricing review.
+- Confirm the allowances (600 / 6,000 / 20,000) after the pricing review.
