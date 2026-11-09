@@ -1,5 +1,5 @@
 {
-  "id": "4da48e6a-ceb0-45ce-9c78-040fad26d6ee",
+  "id": "c5afcf81-274e-4c82-bfc0-5744fa42931b",
   "prevId": "da175f87-ecd8-4097-89cd-6733ccc419b9",
   "version": "7",
   "dialect": "postgresql",
@@ -159,59 +159,6 @@
         "audit_events_kind": {
           "name": "audit_events_kind",
           "value": "\"audit_events\".\"actor_kind\" in ('member','staff','support')"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.blocked_names": {
-      "name": "blocked_names",
-      "schema": "",
-      "columns": {
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "reason": {
-          "name": "reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "blocked_names_kind": {
-          "name": "blocked_names_kind",
-          "value": "\"blocked_names\".\"kind\" in ('protected','offensive','domain')"
-        },
-        "blocked_names_lower": {
-          "name": "blocked_names_lower",
-          "value": "\"blocked_names\".\"name\" = lower(\"blocked_names\".\"name\")"
         }
       },
       "isRLSEnabled": false
@@ -872,345 +819,6 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.shop_domains": {
-      "name": "shop_domains",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "host": {
-          "name": "host",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "with_www": {
-          "name": "with_www",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "token": {
-          "name": "token",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "claimed_at": {
-          "name": "claimed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "claimed_by": {
-          "name": "claimed_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "proved_at": {
-          "name": "proved_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "added_at": {
-          "name": "added_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "vercel_txt": {
-          "name": "vercel_txt",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "dns_ok_at": {
-          "name": "dns_ok_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "cert_ok_at": {
-          "name": "cert_ok_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "checked_at": {
-          "name": "checked_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "failing_since": {
-          "name": "failing_since",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "main_at": {
-          "name": "main_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "razorpay_ok_at": {
-          "name": "razorpay_ok_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "razorpay_ok_by": {
-          "name": "razorpay_ok_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "parked_at": {
-          "name": "parked_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "removed_at": {
-          "name": "removed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "removed_reason": {
-          "name": "removed_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "removed_by": {
-          "name": "removed_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "shop_domains_claim": {
-          "name": "shop_domains_claim",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "host",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "removed_at is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "shop_domains_live": {
-          "name": "shop_domains_live",
-          "columns": [
-            {
-              "expression": "host",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "proved_at is not null and removed_at is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "shop_domains_main": {
-          "name": "shop_domains_main",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "main_at is not null and removed_at is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "shop_domains_due": {
-          "name": "shop_domains_due",
-          "columns": [
-            {
-              "expression": "checked_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "removed_at is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "shop_domains_tenant_id_tenants_id_fk": {
-          "name": "shop_domains_tenant_id_tenants_id_fk",
-          "tableFrom": "shop_domains",
-          "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "shop_domains_host": {
-          "name": "shop_domains_host",
-          "value": "\"shop_domains\".\"host\" = lower(\"shop_domains\".\"host\") and \"shop_domains\".\"host\" !~ '\\.$' and length(\"shop_domains\".\"host\") between 4 and 253 and \"shop_domains\".\"host\" ~ '^[a-z0-9.-]+$'\n    and \"shop_domains\".\"host\" !~ '(^|\\.)(frrata|frata)\\.[a-z]+$' and \"shop_domains\".\"host\" !~ '(^|\\.)vercel\\.app$'"
-        },
-        "shop_domains_token": {
-          "name": "shop_domains_token",
-          "value": "\"shop_domains\".\"token\" ~ '^[0-9a-f]{32}$'"
-        },
-        "shop_domains_main_needs": {
-          "name": "shop_domains_main_needs",
-          "value": "\"shop_domains\".\"main_at\" is null or (\"shop_domains\".\"proved_at\" is not null and \"shop_domains\".\"cert_ok_at\" is not null)"
-        },
-        "shop_domains_removed": {
-          "name": "shop_domains_removed",
-          "value": "(\"shop_domains\".\"removed_at\" is null) = (\"shop_domains\".\"removed_reason\" is null)"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.shop_names": {
-      "name": "shop_names",
-      "schema": "",
-      "columns": {
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "retired_at": {
-          "name": "retired_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "retired_by_frrata": {
-          "name": "retired_by_frrata",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        }
-      },
-      "indexes": {
-        "shop_names_current": {
-          "name": "shop_names_current",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "retired_at is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "shop_names_tenant": {
-          "name": "shop_names_tenant",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "shop_names_tenant_id_tenants_id_fk": {
-          "name": "shop_names_tenant_id_tenants_id_fk",
-          "tableFrom": "shop_names",
-          "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "shop_names_lower": {
-          "name": "shop_names_lower",
-          "value": "\"shop_names\".\"name\" = lower(\"shop_names\".\"name\")"
-        }
-      },
       "isRLSEnabled": false
     },
     "public.shop_policies": {
@@ -1954,68 +1562,6 @@
           "value": "\"tenant_counters\".\"next\" >= 1"
         }
       },
-      "isRLSEnabled": false
-    },
-    "public.tenant_domains": {
-      "name": "tenant_domains",
-      "schema": "",
-      "columns": {
-        "host": {
-          "name": "host",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "tenant_domains_tenant": {
-          "name": "tenant_domains_tenant",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "tenant_domains_tenant_id_tenants_id_fk": {
-          "name": "tenant_domains_tenant_id_tenants_id_fk",
-          "tableFrom": "tenant_domains",
-          "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.tenant_plans": {
@@ -10585,6 +10131,507 @@
           "value": "(\"gst_filings\".\"filed_at\" is null) = (\"gst_filings\".\"arn\" is null) and (\"gst_filings\".\"filed_at\" is null) = (\"gst_filings\".\"filed_by\" is null)"
         }
       },
+      "isRLSEnabled": false
+    },
+    "public.blocked_names": {
+      "name": "blocked_names",
+      "schema": "",
+      "columns": {
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "blocked_names_kind": {
+          "name": "blocked_names_kind",
+          "value": "\"blocked_names\".\"kind\" in ('protected','offensive','domain')"
+        },
+        "blocked_names_lower": {
+          "name": "blocked_names_lower",
+          "value": "\"blocked_names\".\"name\" = lower(\"blocked_names\".\"name\")"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.shop_domains": {
+      "name": "shop_domains",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "host": {
+          "name": "host",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "apex": {
+          "name": "apex",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "with_www": {
+          "name": "with_www",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "md5(gen_random_uuid()::text || gen_random_uuid()::text)"
+        },
+        "claimed_at": {
+          "name": "claimed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "claimed_by": {
+          "name": "claimed_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "proved_at": {
+          "name": "proved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "added_at": {
+          "name": "added_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vercel_txt": {
+          "name": "vercel_txt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dns_ok_at": {
+          "name": "dns_ok_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cert_ok_at": {
+          "name": "cert_ok_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "checked_at": {
+          "name": "checked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "failing_since": {
+          "name": "failing_since",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "main_at": {
+          "name": "main_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "razorpay_ok_at": {
+          "name": "razorpay_ok_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "razorpay_ok_by": {
+          "name": "razorpay_ok_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "parked_at": {
+          "name": "parked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "removed_at": {
+          "name": "removed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "removed_reason": {
+          "name": "removed_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "removed_by": {
+          "name": "removed_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "shop_domains_claim": {
+          "name": "shop_domains_claim",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "host",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "removed_at is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "shop_domains_live": {
+          "name": "shop_domains_live",
+          "columns": [
+            {
+              "expression": "host",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "proved_at is not null and removed_at is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "shop_domains_live_apex": {
+          "name": "shop_domains_live_apex",
+          "columns": [
+            {
+              "expression": "apex",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "proved_at is not null and removed_at is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "shop_domains_main": {
+          "name": "shop_domains_main",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "main_at is not null and removed_at is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "shop_domains_due": {
+          "name": "shop_domains_due",
+          "columns": [
+            {
+              "expression": "checked_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "removed_at is null or parked_at is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "shop_domains_tenant_id_tenants_id_fk": {
+          "name": "shop_domains_tenant_id_tenants_id_fk",
+          "tableFrom": "shop_domains",
+          "tableTo": "tenants",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "shop_domains_token_unique": {
+          "name": "shop_domains_token_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "shop_domains_host": {
+          "name": "shop_domains_host",
+          "value": "\"shop_domains\".\"host\" = lower(\"shop_domains\".\"host\") and \"shop_domains\".\"host\" !~ '\\.$' and length(\"shop_domains\".\"host\") between 4 and 253 and \"shop_domains\".\"host\" ~ '^[a-z0-9.-]+$'\n    and \"shop_domains\".\"host\" !~ '^www\\.' and \"shop_domains\".\"host\" !~ '(^|\\.)(frrata|frata)\\.' and \"shop_domains\".\"host\" !~ '(^|\\.)vercel\\.app$'\n    and \"shop_domains\".\"host\" ~ '^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$'\n    and (\"shop_domains\".\"host\" = \"shop_domains\".\"apex\" or \"shop_domains\".\"host\" like '%.' || \"shop_domains\".\"apex\")"
+        },
+        "shop_domains_token": {
+          "name": "shop_domains_token",
+          "value": "\"shop_domains\".\"token\" ~ '^[0-9a-f]{32}$'"
+        },
+        "shop_domains_main_needs": {
+          "name": "shop_domains_main_needs",
+          "value": "\"shop_domains\".\"main_at\" is null or (\"shop_domains\".\"proved_at\" is not null and \"shop_domains\".\"cert_ok_at\" is not null)"
+        },
+        "shop_domains_removed": {
+          "name": "shop_domains_removed",
+          "value": "(\"shop_domains\".\"removed_at\" is null) = (\"shop_domains\".\"removed_reason\" is null)"
+        },
+        "shop_domains_after_proof": {
+          "name": "shop_domains_after_proof",
+          "value": "\"shop_domains\".\"proved_at\" is not null or (\"shop_domains\".\"added_at\" is null and \"shop_domains\".\"dns_ok_at\" is null and \"shop_domains\".\"cert_ok_at\" is null and \"shop_domains\".\"razorpay_ok_at\" is null and \"shop_domains\".\"main_at\" is null)"
+        },
+        "shop_domains_parked": {
+          "name": "shop_domains_parked",
+          "value": "\"shop_domains\".\"parked_at\" is null or \"shop_domains\".\"removed_at\" is not null"
+        },
+        "shop_domains_removed_not_main": {
+          "name": "shop_domains_removed_not_main",
+          "value": "\"shop_domains\".\"main_at\" is null or \"shop_domains\".\"removed_at\" is null"
+        },
+        "shop_domains_razorpay_by": {
+          "name": "shop_domains_razorpay_by",
+          "value": "(\"shop_domains\".\"razorpay_ok_at\" is null) = (\"shop_domains\".\"razorpay_ok_by\" is null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.shop_names": {
+      "name": "shop_names",
+      "schema": "",
+      "columns": {
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "retired_at": {
+          "name": "retired_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "retired_by_frrata": {
+          "name": "retired_by_frrata",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {
+        "shop_names_current": {
+          "name": "shop_names_current",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "retired_at is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "shop_names_tenant": {
+          "name": "shop_names_tenant",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "shop_names_tenant_id_tenants_id_fk": {
+          "name": "shop_names_tenant_id_tenants_id_fk",
+          "tableFrom": "shop_names",
+          "tableTo": "tenants",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "shop_names_lower": {
+          "name": "shop_names_lower",
+          "value": "\"shop_names\".\"name\" = lower(\"shop_names\".\"name\")"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.tenant_domains": {
+      "name": "tenant_domains",
+      "schema": "",
+      "columns": {
+        "host": {
+          "name": "host",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "tenant_domains_tenant": {
+          "name": "tenant_domains_tenant",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "tenant_domains_tenant_id_tenants_id_fk": {
+          "name": "tenant_domains_tenant_id_tenants_id_fk",
+          "tableFrom": "tenant_domains",
+          "tableTo": "tenants",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.review_photos": {

@@ -18,5 +18,5 @@
   {"file": "src/domains/addresses/domains.ts", "text": "frata.in", "why": "a refused host: no shop may connect a domain under Frrata's old platform names (shop addresses D2·3), never shown"},
   {"file": "src/domains/addresses/domains.ts", "text": "frata.store", "why": "a refused host: no shop may connect a domain under Frrata's old platform names (shop addresses D2·3), never shown"},
   {"file": "src/domains/addresses/domains.ts", "text": "frata.test", "why": "a refused host: no shop may connect a domain under Frrata's old platform names (shop addresses D2·3), never shown"},
-  {"file": "src/lib/db/schema-addresses.ts", "text": "!~ '(^|\\.)(frrata|frata)\\.[a-z]+$' and", "why": "the database CHECK refusing a host under Frrata's old and new names (D2·2), never shown"}
+  {"file": "src/lib/db/schema-addresses.ts", "text": "!~ '(^|\\.)(frrata|frata)\\.' and", "why": "the database CHECK refusing a host under Frrata's old and new names (D2·2), never shown"}
 ]

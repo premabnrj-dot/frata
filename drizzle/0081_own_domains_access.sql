@@ -19,3 +19,8 @@ grant select on shop_domains to frata_admin;
 
 --> statement-breakpoint
 create policy admin_read on shop_domains for select to frata_admin using (true);
+
+--> statement-breakpoint
+-- shop_domains is the one record of own domains from here (tenancy audit D2·2): the old table is empty in
+-- production and Admin may no longer add to it; app_tenant_for_host stops reading it when the lookup moves (D2·6).
+revoke insert, update, delete on tenant_domains from frata_admin;

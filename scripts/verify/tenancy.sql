@@ -383,33 +383,65 @@ end $$;
 rollback;
 
 begin;
--- Own domains D2·2 (0080/0081): a shop reads only its own domain rows and writes none; a host is live for one shop
--- at most; a host under Frrata's or Vercel's domains, a short token, or a main domain without proof is refused.
-insert into shop_domains (tenant_id, host, with_www, token, claimed_by) values
-  ('11111111-1111-1111-1111-111111111111', 'proof-a.in', true, repeat('a', 32), '99999999-9999-9999-9999-999999999999'),
-  ('22222222-2222-2222-2222-222222222222', 'proof-a.in', true, repeat('b', 32), 'aaaaaaaa-0000-0000-0000-000000000002');
+-- Own domains D2·2 (0080/0081): a shop reads only its own domain rows and writes none; one live shop per apex (www and
+-- subdomains included); the database makes every token and none repeats; nothing happens before a row's own proof; a
+-- parked row is a removed one; Frrata's, Vercel's and www hosts are refused; Admin writes nothing directly.
+insert into shop_domains (tenant_id, host, apex, with_www, claimed_by) values
+  ('11111111-1111-1111-1111-111111111111', 'proof-a.in', 'proof-a.in', true, '99999999-9999-9999-9999-999999999999'),
+  ('22222222-2222-2222-2222-222222222222', 'proof-a.in', 'proof-a.in', true, 'aaaaaaaa-0000-0000-0000-000000000002'),
+  ('22222222-2222-2222-2222-222222222222', 'shop.proof-a.in', 'proof-a.in', false, 'aaaaaaaa-0000-0000-0000-000000000002');
 update shop_domains set proved_at = now() where tenant_id = '11111111-1111-1111-1111-111111111111';
-do $$ begin
-  begin update shop_domains set proved_at = now() where tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: two shops hold one host live';
+do $$ declare t text; begin
+  if (select count(distinct token) from shop_domains) <> 3 or exists (select 1 from shop_domains where token !~ '^[0-9a-f]{32}$') then raise exception 'FAIL: tokens must be the database''s, 128-bit and distinct'; end if;
+  select token into t from shop_domains where tenant_id = '11111111-1111-1111-1111-111111111111';
+  begin update shop_domains set token = t where host = 'shop.proof-a.in'; raise exception 'FAIL: B copied A''s token';
   exception when unique_violation then null; end;
-  begin insert into shop_domains (tenant_id, host, with_www, token, claimed_by) values ('22222222-2222-2222-2222-222222222222', 'shop.frrata.shop', false, repeat('c', 32), 'aaaaaaaa-0000-0000-0000-000000000002'); raise exception 'FAIL: a Frrata host was claimed';
+  begin update shop_domains set proved_at = now() where tenant_id = '22222222-2222-2222-2222-222222222222' and host = 'proof-a.in'; raise exception 'FAIL: two shops hold one host live';
+  exception when unique_violation then null; end;
+  begin update shop_domains set proved_at = now() where host = 'shop.proof-a.in'; raise exception 'FAIL: a second shop went live under the same apex';
+  exception when unique_violation then null; end;
+  begin insert into shop_domains (tenant_id, host, apex, with_www, claimed_by) values ('22222222-2222-2222-2222-222222222222', 'www.proof-b.in', 'proof-b.in', false, 'aaaaaaaa-0000-0000-0000-000000000002'); raise exception 'FAIL: a www host was claimed on its own';
   exception when check_violation then null; end;
-  begin insert into shop_domains (tenant_id, host, with_www, token, claimed_by) values ('22222222-2222-2222-2222-222222222222', 'x.vercel.app', false, repeat('c', 32), 'aaaaaaaa-0000-0000-0000-000000000002'); raise exception 'FAIL: a vercel.app host was claimed';
+  begin insert into shop_domains (tenant_id, host, apex, with_www, claimed_by) values ('22222222-2222-2222-2222-222222222222', 'shop.frrata.co.in', 'frrata.co.in', false, 'aaaaaaaa-0000-0000-0000-000000000002'); raise exception 'FAIL: a Frrata host was claimed';
   exception when check_violation then null; end;
-  begin insert into shop_domains (tenant_id, host, with_www, token, claimed_by) values ('22222222-2222-2222-2222-222222222222', 'proof-b.in', false, 'short', 'aaaaaaaa-0000-0000-0000-000000000002'); raise exception 'FAIL: a short token';
+  begin insert into shop_domains (tenant_id, host, apex, with_www, claimed_by) values ('22222222-2222-2222-2222-222222222222', 'x.vercel.app', 'x.vercel.app', false, 'aaaaaaaa-0000-0000-0000-000000000002'); raise exception 'FAIL: a vercel.app host was claimed';
   exception when check_violation then null; end;
-  begin update shop_domains set main_at = now() where tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: main without proof';
+  begin insert into shop_domains (tenant_id, host, apex, with_www, claimed_by) values ('22222222-2222-2222-2222-222222222222', 'other.in', 'proof-b.in', false, 'aaaaaaaa-0000-0000-0000-000000000002'); raise exception 'FAIL: a host outside its apex';
   exception when check_violation then null; end;
+  begin update shop_domains set cert_ok_at = now() where host = 'shop.proof-a.in'; raise exception 'FAIL: a certificate before the row''s own proof';
+  exception when check_violation then null; end;
+  begin update shop_domains set parked_at = now() where tenant_id = '11111111-1111-1111-1111-111111111111'; raise exception 'FAIL: parked but not removed';
+  exception when check_violation then null; end;
+  begin update shop_domains set main_at = now() where tenant_id = '11111111-1111-1111-1111-111111111111'; raise exception 'FAIL: main without a certificate';
+  exception when check_violation then null; end;
+  insert into shop_domains (tenant_id, host, apex, with_www, claimed_by, proved_at, cert_ok_at) values ('11111111-1111-1111-1111-111111111111', 'proof-a2.in', 'proof-a2.in', true, '99999999-9999-9999-9999-999999999999', now(), now());
+  update shop_domains set cert_ok_at = now() where tenant_id = '11111111-1111-1111-1111-111111111111';
+  begin update shop_domains set main_at = now() where tenant_id = '11111111-1111-1111-1111-111111111111'; raise exception 'FAIL: two main domains for one shop';
+  exception when unique_violation then null; end;
 end $$;
+set local role frata_admin;
+do $$ begin
+  begin update shop_domains set removed_at = now(), removed_reason = 'x'; raise exception 'FAIL: Admin writes a domain directly';
+  exception when insufficient_privilege then null; end;
+  begin insert into tenant_domains (host, tenant_id) values ('proof-old.in', '11111111-1111-1111-1111-111111111111'); raise exception 'FAIL: Admin still adds to tenant_domains';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
 set local role frata_app;
 select set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
-do $$ declare n int; begin
+do $$ begin
   if exists (select 1 from shop_domains where tenant_id = '11111111-1111-1111-1111-111111111111') then raise exception 'FAIL: B reads A''s domains'; end if;
   if not exists (select 1 from shop_domains where tenant_id = '22222222-2222-2222-2222-222222222222') then raise exception 'FAIL: B can''t read its own domains'; end if;
   begin update shop_domains set proved_at = now(); raise exception 'FAIL: the app writes a domain';
   exception when insufficient_privilege then null; end;
-  begin insert into shop_domains (tenant_id, host, with_www, token, claimed_by) values ('22222222-2222-2222-2222-222222222222', 'proof-c.in', false, repeat('d', 32), 'aaaaaaaa-0000-0000-0000-000000000002'); raise exception 'FAIL: the app claims a domain directly';
+  begin delete from shop_domains; raise exception 'FAIL: the app deletes a domain';
   exception when insufficient_privilege then null; end;
+  begin insert into shop_domains (tenant_id, host, apex, with_www, claimed_by) values ('22222222-2222-2222-2222-222222222222', 'proof-c.in', 'proof-c.in', false, 'aaaaaaaa-0000-0000-0000-000000000002'); raise exception 'FAIL: the app claims a domain directly';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+do $$ begin
+  if has_table_privilege('anon', 'shop_domains', 'select') or has_table_privilege('authenticated', 'shop_domains', 'select') or has_table_privilege('service_role', 'shop_domains', 'select') then raise exception 'FAIL: an API role reads shop_domains'; end if;
 end $$;
 rollback;
 
