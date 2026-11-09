@@ -1,6 +1,6 @@
 # EkCode — one tap, recognised at every Frrata shop (shopper identity network, as an app)
 Status: draft (owner direction 2026-11-09) · Date: 2026-11-09 · Mockup: https://claude.ai/artifact/A33Xi8HVfsAyZqQ2pn7uKu
-(`docs/mockups/2026-11-09-ekcode.html`, v1) · Approved: pending
+(`docs/mockups/2026-11-09-ekcode.html`, v2) · Approved: pending
 Decision: `docs/decisions/0009-shopper-network.md` · Research: `docs/research/2026-11-09-shopper-login.md`.
 
 **Name (owner, 2026-11-09).** **EkCode**: one code, every Frrata shop; said "ek code"; `ekcode_*` in code. Devanagari
@@ -19,6 +19,12 @@ data law needs the fiduciary's identity and contact. Merchants meet EkCode as an
 beside it; Mukta 700 for both scripts. The box alone is the icon (filled ink below 48 px; ए alone at 16 px). The shop
 button is ink on light themes, paper on dark, never in a shop's colours. Drawn once as paths when built; never typed.
 WhatsApp's display name is "EkCode" (Brand, above).
+
+## Owner calls (2026-11-09, on mockup v1)
+1. "Save this address to EkCode" at checkout starts **ticked** for a shopper with an EkCode (counsel confirms the notice
+   covers it).
+2. Apply for the blue tick 30 days after EkCode's number goes live.
+3. EkCode gets its own domain, email sender and WhatsApp number (owner to buy and set up; `ekcode.in` is a placeholder).
 
 ## Owner direction (2026-11-09)
 - A **Frrata account network** for authentication (ADR-0009): the shopper signs in to Frrata, recognised everywhere.
@@ -142,15 +148,56 @@ marketing.
   we answer that), the merchant DPA and Meta's resale clause (before launch; DPDP binds 13 May 2027).
 - Blue tick for EkCode's number: verified portfolio, 30 days on the platform, two-step verification (after the Pvt Ltd).
 
+## 10. Where EkCode runs (no separate product, no public API)
+EkCode is **a brand, not a second system**. It runs in Frrata's one deployment, on its own host:
+- `ekcode.in` is routed by host in `src/middleware.ts`, the way a shop's host is, to its own route group
+  (`src/app/(ekcode)/`) with its own layout, look and `__Host-` cookie. It shares nothing visible with the console or a
+  shop. Pages: the public home, Privacy, Terms, Contact, `/continue` (sign-in and Continue) and the shopper's page.
+- A Frrata shop opens `ekcode.in/continue` by a top-level redirect and gets a one-time code back (§ 3); its server
+  exchanges the code **inside the same deployment** through the definers (§ 2). No API keys, no SDK, no webhooks
+  between EkCode and the shops: they share one database and one release.
+- **Not like GoKwik on Shopify.** GoKwik is an outside company, so it must expose an API, an app listing and a script
+  for stores it doesn't run. EkCode only serves Frrata shops, so it needs none of that. Cost: one more domain on the
+  Vercel project; no new service, database, deploy or bill.
+- **Later, if EkCode is sold to stores outside Frrata** (Shopify, WooCommerce): then it gets the outside pieces — an
+  OAuth-style "Continue with EkCode" for any site (client id, registered return URLs, PKCE), a script button, a
+  merchant sign-up and per-sign-in billing. Signal: the owner decides to sell EkCode on its own. The pairwise ids,
+  consent log and brand already fit that; only the door changes.
+
+## 11. Frrata Admin › EkCode (staff; mockup § Admin)
+The whole network seen and steered by Frrata staff (`requireStaff`; writes admin-role only, each with a reason, in
+Admin › Activity). **Staff see counts, costs and health — never a shopper's address or a list of shoppers.**
+- **Overview**: accounts, signed in (30 d), shops with EkCode on, shoppers on 2+ shops; the sign-in steps (tapped →
+  number in → code arrived → code right → continued); cost this month (codes and order updates, delivered × Meta's
+  dated rate, with GST; per sign-in; email codes); "Needs you" (breakers, paused templates, requests near their due date).
+- **Shops**: per shop — on/off, sign-ins, share of codes right, cost, order updates, state (OK, Breaker, Own number,
+  Off by shop); Pause EkCode for one shop (reason; the shop sees "Paused").
+- **WhatsApp**: EkCode's number (name approved, quality, daily limit and the next step, blue tick date), every template's
+  state (approved, in review, paused until, disabled), refusals in 24 h (not on WhatsApp → email, too many to one
+  person, held back).
+- **Privacy**: rights requests (erase, copy, correct, complaint) with the 90-day due date; erase only after a code to
+  the account's number; "Find an account" by exact number with a reason — shows when made, how many shops and phones,
+  never who or where, and is logged; the notice and its versions (agreed counts); the breach steps (Board in 72 h).
+- **Controls**: switches for every shop (sign-in, email fallback, order updates from EkCode's number); limits (codes per
+  number, tries per code, codes per network, codes per shop, the breaker's threshold); blocked numbers with reasons.
+- **Data for it**, all behind definers like the vault: `ekcode_flows` (one row per sign-in attempt: shop, started,
+  number_in, code_sent, delivered, verified, account_created, continued, abandoned — timestamps only, state derived;
+  no phone), `ekcode_settings` (the switches and limits, versioned), `ekcode_blocks`, `ekcode_requests`,
+  `ekcode_staff_lookups`. `frata_admin` calls `ekcode_admin_stats(period)` (aggregates only),
+  `ekcode_admin_shops(period)`, `ekcode_admin_lookup(phone, reason)` (logged, admin role) and the setters. Nothing in
+  Admin reads `ekcode_accounts` or `ekcode_addresses` directly.
+
 ## Phases (each its own plan; mockup first)
 - **P0** — EkCode's WhatsApp number (under Frrata's verified business) + auth template (owner's WhatsApp Business setup), the ekcode.in domain and site, email
   sender; policy answer (§ 9); unit-economics review.
 - **P1** — EkCode sign-in on shops: the vault, definers, codes (WhatsApp, email fallback), the confirm screen, shop
-  sessions, checkout prefill; R0 net first (e2e: phone → code → confirm → filled; a second shop → one tap).
+  sessions, checkout prefill; the ekcode.in host and its public pages; Admin › EkCode Overview, Shops and Controls
+  (the switches, limits, breaker and blocks must exist before the first real code); R0 net first (e2e: phone → code →
+  confirm → filled; a second shop → one tap).
 - **P2** — "Continue as …" one tap (remembered device), the shopper's page (shops, addresses, disclosures, forget,
-  delete), the Apps page with leads and consent.
-- **P3** — order updates from EkCode's number for shops without their own (if § 9 allows), metered on the invoice, the
-  quality breaker.
+  delete), the Apps page with leads and consent; Admin › Privacy (requests, lookup, notice versions).
+- **P3** — order updates from EkCode's number for shops without their own (allowed, § 9), cost inside Frrata's fee until
+  counsel clears a line, the quality breaker; Admin › WhatsApp (templates per event, refusals).
 - Review agents (tenancy, security, architecture, speed, unit economics) on each plan before code.
 
 ## Design review (headline; full review per phase plan)

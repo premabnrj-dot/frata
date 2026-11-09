@@ -6,17 +6,17 @@
 :root{
   --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--brand:#D61F69;--brand-text:#A8124F;--thread:#D61F69;--line:#D61F69;
   --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;--ink:#1C1917;--on-ink:#FAFAF9;--line-on-ink:#FF5C97;
-  --wa:#E7FFDB;--wa-bg:#EFEAE2;--wa-head:#F0F2F5;--wa-text:#111B21;--wa-sub:#667781;--wa-link:#027EB5;
+  --admin-bar:#B88600;--wa:#E7FFDB;--wa-bg:#EFEAE2;--wa-head:#F0F2F5;--wa-text:#111B21;--wa-sub:#667781;--wa-link:#027EB5;
   --scrim:rgb(28 25 23 / .45);
   --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--display:"Bricolage Grotesque","Inter",sans-serif;--deva:"Mukta",sans-serif;
   --fast:120ms;--base:200ms;--slow:320ms;
   --standard:cubic-bezier(.2,0,0,1);--entrance:cubic-bezier(0,0,0,1);--exit:cubic-bezier(.3,0,1,1);
   --spring:linear(0,.22 7%,.6 17%,.86 27%,1.01 38%,1.04 46%,1.02 60%,1 100%);
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;--line:#FF5C97;
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--admin-bar:#F2C25B;--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;--line:#FF5C97;
   --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--ink:#0B0A09;--scrim:rgb(0 0 0 / .6);
   --wa:#005C4B;--wa-bg:#0B141A;--wa-head:#202C33;--wa-text:#E9EDEF;--wa-sub:#8696A0;--wa-link:#53BDEB;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;--line:#FF5C97;
+:root[data-theme="dark"]{--admin-bar:#F2C25B;--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;--line:#FF5C97;
   --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--ink:#0B0A09;--scrim:rgb(0 0 0 / .6);
   --wa:#005C4B;--wa-bg:#0B141A;--wa-head:#202C33;--wa-text:#E9EDEF;--wa-sub:#8696A0;--wa-link:#53BDEB;color-scheme:dark}
 *{box-sizing:border-box}
@@ -272,6 +272,13 @@ details.hist summary::-webkit-details-marker{display:none}
 details.hist summary::after{content:"+";font:500 16px var(--mono);color:var(--sub)}
 details.hist[open] summary::after{content:"−"}
 
+/* admin frame */
+.anav{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px;background:var(--ink);color:var(--on-ink)}
+.anav-l{display:flex;gap:10px;align-items:center}
+.crumb-ink{font-size:13px;color:#C9C3BC}
+.adm .tabs button[aria-selected="true"]::after{background:var(--admin-bar)}
+.adm .stat .n .k{font-size:14px}
+.adm select.input{appearance:auto}
 /* states table */
 .tbl-states{min-width:640px}
 .tbl-states td:first-child{font-weight:500;white-space:nowrap}
@@ -301,18 +308,18 @@ details.hist[open] summary::after{content:"−"}
 </svg>
 
 <div class="wrap">
-  <h1>EkCode · mockup v1</h1>
+  <h1>EkCode · mockup v2</h1>
   <p class="k">Spec <span class="mono">docs/specs/2026-11-09-shopper-login.md</span> · ADR-0009 · 9 Nov 2026</p>
   <ul class="note">
     <li><b>EkCode</b>: one code, every shop that uses it. Said "ek code". Its own brand: the shopper sees EkCode, never the platform behind it.</li>
     <li>The mark (your pick, 9 Nov): एक in the box a shopper types a code into, with a rani cursor; "Code" open beside it. Alone, the box is the icon.</li>
     <li>Click through the phone. Change the scenario on the right.</li>
     <li>Words are English only; Devanagari appears in the mark alone.</li>
-    <li>Three calls for you are at the end: "Save this address" ticked or not, the blue tick, and EkCode's own domain.</li>
+    <li>Your three calls are in (end of page). New in this version: Frrata Admin › EkCode, and the signed-out ekcode.in page.</li>
   </ul>
 
   <nav class="top" aria-label="Sections"><div class="in">
-    <a href="#logo">Name and mark</a><a href="#shopper">Shopper flow</a><a href="#whatsapp">On WhatsApp</a><a href="#account">Shopper's EkCode page</a><a href="#console">Console › Apps</a><a href="#states">States</a><a href="#calls">Your calls</a>
+    <a href="#logo">Name and mark</a><a href="#shopper">Shopper flow</a><a href="#whatsapp">On WhatsApp</a><a href="#account">Shopper's EkCode page</a><a href="#console">Console › Apps</a><a href="#admin">Admin</a><a href="#states">States</a><a href="#calls">Your calls</a>
   </div></nav>
 
   <!-- ============ LOGO ============ -->
@@ -624,7 +631,17 @@ details.hist[open] summary::after{content:"−"}
       </div>
     </div>
     <div class="rail">
+      <div class="phone" style="max-width:none">
+        <div class="urlbar"><svg class="ico" aria-hidden="true"><use href="#i-lock"/></svg><b>ekcode.in</b></div>
+        <div class="id" style="padding:28px 18px 18px;display:grid;gap:14px;justify-items:start">
+          <svg class="wm" style="font-size:40px" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg>
+          <h3 style="font:600 22px/1.2 var(--display);margin:0">One code for checkout at every shop that shows EkCode</h3>
+          <button class="btn primary" type="button">Sign in to your EkCode</button>
+          <div class="k" style="display:flex;gap:12px;flex-wrap:wrap"><a href="#calls">Privacy</a><a href="#calls">Terms</a><a href="#calls">Contact</a></div>
+        </div>
+      </div>
       <div class="card pad"><ul class="note" style="margin:0">
+        <li><b>ekcode.in signed out</b> (above): the public page Meta checks for the "EkCode" name, and where a shopper manages their EkCode.</li>
         <li>Signing in here uses the same phone, code and email fallback; a remembered phone opens straight to this page.</li>
         <li><b>Remove</b> a shop: it keeps the orders already placed and is never filled in again until the shopper continues there.</li>
         <li><b>Delete my EkCode</b>: account, addresses and devices go; shops keep only orders they fulfilled. The data law asks that withdrawing be as easy as giving, so it is one button and one confirm.</li>
@@ -648,7 +665,7 @@ details.hist[open] summary::after{content:"−"}
       </div>
     </div>
 
-    <div class="cframe">
+    <div class="cframe" data-tabs>
       <div class="cbar"><span class="crumb">Apps › <b>EkCode</b></span><span style="display:flex;gap:8px;align-items:center"><span class="chip c-ok">On</span></span></div>
       <div class="cpage">
         <div class="tabs" role="tablist" aria-label="EkCode">
@@ -722,6 +739,156 @@ details.hist[open] summary::after{content:"−"}
     <li>Order updates cost the shop nothing extra until counsel clears a per-message charge (Meta forbids reselling its platform).</li>
   </ul>
 
+  <!-- ============ ADMIN ============ -->
+  <h2 id="admin">Frrata Admin › EkCode</h2>
+  <div class="cframe adm" data-tabs>
+    <div class="anav"><span class="anav-l"><span class="chip c-warn">STAFF</span><b>Admin</b><span class="crumb-ink">› EkCode</span></span><span class="crumb-ink">Priya · admin</span></div>
+    <div class="cpage">
+      <div class="tabs" role="tablist" aria-label="EkCode in Admin">
+        <button role="tab" aria-selected="true" data-tab="a-ov">Overview</button>
+        <button role="tab" aria-selected="false" data-tab="a-sh">Shops</button>
+        <button role="tab" aria-selected="false" data-tab="a-wa">WhatsApp</button>
+        <button role="tab" aria-selected="false" data-tab="a-pr">Privacy</button>
+        <button role="tab" aria-selected="false" data-tab="a-ct">Controls</button>
+      </div>
+
+      <div class="tp on" data-tp="a-ov">
+        <div class="row2"><div class="filters" style="padding:0" role="group" aria-label="Period"><button class="fchip" type="button" aria-pressed="false">Today</button><button class="fchip" type="button" aria-pressed="true">7 days</button><button class="fchip" type="button" aria-pressed="false">30 days</button></div></div>
+        <div class="stats">
+          <div class="stat"><span class="n">48,210</span><span class="l">EkCode accounts</span></div>
+          <div class="stat"><span class="n">12,904</span><span class="l">Signed in · 30 days</span></div>
+          <div class="stat"><span class="n">214<span class="k"> / 260</span></span><span class="l">Shops with EkCode on</span></div>
+          <div class="stat"><span class="n">18%</span><span class="l">Shoppers on 2+ shops</span></div>
+        </div>
+        <div class="grid g2">
+          <div class="sec"><header><h3>Sign-in, step by step</h3><span class="k">7 days</span></header>
+            <div class="cmp">
+              <div class="bar"><span>Tapped</span><span class="t"><i style="width:100%"></i></span><span class="v">10,000</span></div>
+              <div class="bar"><span>Number in</span><span class="t"><i style="width:81%"></i></span><span class="v">81%</span></div>
+              <div class="bar"><span>Code arrived</span><span class="t"><i style="width:78%"></i></span><span class="v">78%</span></div>
+              <div class="bar"><span>Code right</span><span class="t"><i style="width:73%"></i></span><span class="v">73%</span></div>
+              <div class="bar"><span>Continued</span><span class="t"><i style="width:70%"></i></span><span class="v">70%</span></div>
+            </div>
+          </div>
+          <div class="sec"><header><h3>Cost</h3><span class="k">Nov so far · with GST</span></header>
+            <ul class="rows">
+              <li><span>Sign-in codes<br><span class="s">8,804 delivered</span></span><span class="mono">₹1,195</span></li>
+              <li><span>Order updates<br><span class="s">28,310 delivered</span></span><span class="mono">₹3,842</span></li>
+              <li><span>Per sign-in</span><span class="mono">₹0.16</span></li>
+              <li><span>Email codes<br><span class="s">6% of codes · 212 not on WhatsApp</span></span><span class="mono">₹0</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="sec"><header><h3>Needs you</h3></header>
+          <ul class="rows">
+            <li><span><span class="chip c-warn">Breaker</span> Noor Ethnic: 1,240 codes, 9% right<br><span class="s">Codes paused for this shop since 2:10 pm</span></span><button class="btn sm" type="button" data-dlg="adm-why">Review Noor Ethnic</button></li>
+            <li><span><span class="chip c-warn">Paused 3 h</span> Template "order delivered"<br><span class="s">Low quality · back at 6:40 pm</span></span><button class="btn sm ghost" type="button" data-atab="a-wa">See WhatsApp</button></li>
+            <li><span><span class="chip c-info">Due in 12 days</span> Erasure request · email<br><span class="s">Received 1 Oct</span></span><button class="btn sm ghost" type="button" data-atab="a-pr">See Privacy</button></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tp" data-tp="a-sh">
+        <div class="sec">
+          <header><h3>Shops</h3><input class="input" style="max-width:240px;min-height:36px;font-size:13.5px" placeholder="Find a shop" aria-label="Find a shop"></header>
+          <div class="tblw"><table>
+            <thead><tr><th>Shop</th><th>EkCode</th><th class="num">Sign-ins · 7 d</th><th class="num">Code right</th><th class="num">Cost · Nov</th><th class="num">Updates</th><th>State</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>Kesar Studio</td><td><span class="chip c-ok">On</span></td><td class="num">418</td><td class="num">76%</td><td class="num">₹184</td><td class="num">1,204</td><td><span class="chip c-ok">OK</span></td><td><button class="btn sm ghost" type="button" data-dlg="adm-pause">Pause</button></td></tr>
+              <tr><td>Noor Ethnic</td><td><span class="chip c-ok">On</span></td><td class="num">112</td><td class="num">9%</td><td class="num">₹169</td><td class="num">0</td><td><span class="chip c-warn">Breaker</span></td><td><button class="btn sm ghost" type="button" data-dlg="adm-why">Review</button></td></tr>
+              <tr><td>Juhi Handloom</td><td><span class="chip c-ok">On</span></td><td class="num">203</td><td class="num">74%</td><td class="num">₹96</td><td class="num">640</td><td><span class="chip c-n">Own number</span></td><td><button class="btn sm ghost" type="button" data-dlg="adm-pause">Pause</button></td></tr>
+              <tr><td>Nila Jewels</td><td><span class="chip c-n">Off</span></td><td class="num">—</td><td class="num">—</td><td class="num">₹0</td><td class="num">0</td><td><span class="chip c-n">Off by shop</span></td><td></td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <div class="tp" data-tp="a-wa">
+        <div class="sec"><header><h3>EkCode's number</h3><span class="chip c-ok">Quality high</span></header>
+          <ul class="rows">
+            <li><span>Number</span><span class="mono">+91 80 4718 2200</span></li>
+            <li><span>Name on WhatsApp</span><span>EkCode <span class="chip c-ok">Approved</span></span></li>
+            <li><span>Daily limit<br><span class="s">Next step at 5,000 a day for 7 days</span></span><span class="mono">10,000</span></li>
+            <li><span>Blue tick</span><span class="chip c-n">Apply from 9 Dec</span></li>
+          </ul>
+        </div>
+        <div class="sec"><header><h3>Templates</h3></header>
+          <ul class="rows">
+            <li><span>Sign-in code<br><span class="s">Authentication</span></span><span class="chip c-ok">Approved</span></li>
+            <li><span>Order confirmed<br><span class="s">Utility</span></span><span class="chip c-ok">Approved</span></li>
+            <li><span>Order shipped<br><span class="s">Utility</span></span><span class="chip c-ok">Approved</span></li>
+            <li><span>Order delivered<br><span class="s">Utility · low quality</span></span><span class="chip c-warn">Paused · back 6:40 pm</span></li>
+            <li><span>Confirm COD<br><span class="s">Utility</span></span><span class="chip c-info">In review</span></li>
+          </ul>
+        </div>
+        <div class="sec"><header><h3>Refused by WhatsApp</h3><span class="k">24 h</span></header>
+          <ul class="rows">
+            <li><span>Not on WhatsApp<br><span class="s">Sent to email instead</span></span><span class="mono">212</span></li>
+            <li><span>Too many to one person</span><span class="mono">9</span></li>
+            <li><span>Held back by WhatsApp</span><span class="mono">3</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tp" data-tp="a-pr">
+        <div class="sec"><header><h3>Requests</h3><span class="k">Answer within 90 days</span></header>
+          <div class="tblw"><table>
+            <thead><tr><th>Request</th><th>From</th><th>Received</th><th>Due</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>Erase</td><td>Email</td><td>1 Oct</td><td><span class="chip c-warn">21 Nov</span></td><td><button class="btn sm" type="button" data-dlg="adm-erase">Verify and erase</button></td></tr>
+              <tr><td>Copy of my data</td><td>Email</td><td>4 Nov</td><td><span class="chip c-n">2 Feb</span></td><td><button class="btn sm ghost" type="button">Send copy</button></td></tr>
+              <tr><td>Complaint</td><td>privacy@ekcode.in</td><td>8 Nov</td><td><span class="chip c-n">6 Feb</span></td><td><button class="btn sm ghost" type="button">Open</button></td></tr>
+            </tbody>
+          </table></div>
+        </div>
+        <div class="grid g2">
+          <div class="sec"><header><h3>Find an account</h3><span class="info" title="Shows only when it was made, how many shops and phones. Never addresses. Every look is logged with your reason.">i</span></header>
+            <div class="pad" style="display:grid;gap:10px;padding-top:0">
+              <div class="tel"><span>+91</span><input inputmode="numeric" aria-label="Phone" placeholder="98450 12345"></div>
+              <select class="input" aria-label="Reason" style="font-size:14px"><option>Reason…</option><option>Request from the shopper</option><option>Abuse report</option><option>Legal order</option></select>
+              <button class="btn" type="button" disabled>Look up</button>
+            </div>
+          </div>
+          <div class="sec"><header><h3>Notice</h3><button class="btn sm" type="button">New version</button></header>
+            <ul class="rows">
+              <li><span>v1 · English<br><span class="s">Since 9 Nov</span></span><span class="mono">48,210 agreed</span></li>
+              <li><span>Breach steps<br><span class="s">Board within 72 h</span></span><a class="btn sm ghost" href="#admin">Open</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="tp" data-tp="a-ct">
+        <div class="sec"><header><h3>For every shop</h3></header>
+          <ul class="rows">
+            <li><span>Sign-in with EkCode</span><input class="sw" type="checkbox" role="switch" aria-label="Sign-in with EkCode, every shop" checked data-dlg-sw="adm-sw"></li>
+            <li><span>Email code when WhatsApp fails</span><input class="sw" type="checkbox" role="switch" aria-label="Email code when WhatsApp fails" checked data-dlg-sw="adm-sw"></li>
+            <li><span>Order updates from EkCode's number</span><input class="sw" type="checkbox" role="switch" aria-label="Order updates from EkCode's number" checked data-dlg-sw="adm-sw"></li>
+          </ul>
+        </div>
+        <div class="sec"><header><h3>Limits</h3><button class="btn sm" type="button">Change limits</button></header>
+          <ul class="rows">
+            <li><span>Codes per number</span><span class="mono">3 / 10 min</span></li>
+            <li><span>Tries per code</span><span class="mono">5</span></li>
+            <li><span>Codes per network</span><span class="mono">20 / hour</span></li>
+            <li><span>Codes per shop</span><span class="mono">2,000 / day</span></li>
+            <li><span>Breaker<br><span class="s">Codes right below this, after 200 codes</span></span><span class="mono">40%</span></li>
+          </ul>
+        </div>
+        <div class="sec"><header><h3>Blocked</h3><button class="btn sm" type="button">Block a number</button></header>
+          <ul class="rows">
+            <li><span class="mono">+91 70000 •••12</span><span style="display:flex;gap:8px;align-items:center"><span class="s">Pumping codes · 3 Nov</span><button class="btn sm ghost" type="button">Unblock</button></span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  <ul class="note">
+    <li>Staff see counts, costs and health, never a shopper's address or a list of shoppers. The one way in is "Find an account" by exact number, with a reason, logged; it shows how many shops and phones, not who or where.</li>
+    <li>Every switch and limit change asks for a reason and lands in Admin › Activity. Admin role only; support staff see Overview.</li>
+    <li>Cost is delivered messages × Meta's dated rate, so it matches Meta's bill.</li>
+  </ul>
+
   <!-- ============ STATES ============ -->
   <h2 id="states">States</h2>
   <div class="card" style="overflow-x:auto">
@@ -749,6 +916,10 @@ details.hist[open] summary::after{content:"−"}
         <tr><td>Console</td><td>No sign-ins yet</td><td>Numbers show "—"; Shoppers: "None yet"</td></tr>
         <tr><td></td><td>Staff, not owner/admin</td><td>No Export</td></tr>
         <tr><td></td><td>Phone width</td><td>Stats 2 × 2; the table scrolls inside its card</td></tr>
+        <tr><td>Admin</td><td>Support role</td><td>Overview only; no switches, limits, lookup or exports</td></tr>
+        <tr><td></td><td>Breaker trips</td><td>The shop's codes stop; a "Needs you" row; the shopper gets "Try again later" and guest checkout</td></tr>
+        <tr><td></td><td>Template paused</td><td>Order updates for that event wait; codes unaffected; a "Needs you" row</td></tr>
+        <tr><td></td><td>A request near 90 days</td><td>Due date turns amber at 14 days</td></tr>
       </tbody>
     </table>
   </div>
@@ -756,11 +927,11 @@ details.hist[open] summary::after{content:"−"}
   <!-- ============ CALLS ============ -->
   <h2 id="calls">Your calls</h2>
   <div class="grid g2">
-    <div class="card pad"><h3>1 · "Save this address to EkCode" at checkout</h3>
+    <div class="card pad"><h3>1 · "Save this address to EkCode" at checkout <span class="chip c-ok">Ticked · you, 9 Nov</span></h3>
       <p>For a shopper who just created EkCode and types a new address. <b>Recommend: ticked</b>, because they created EkCode to have their addresses kept, and the notice they agreed to says so. The data law forbids pre-ticked <i>consent</i>; this is the use they already agreed to. Counsel confirms with the notice.</p></div>
-    <div class="card pad"><h3>2 · Blue tick for EkCode's number</h3>
+    <div class="card pad"><h3>2 · Blue tick for EkCode's number <span class="chip c-ok">Agreed</span></h3>
       <p>Meta asks for a verified business, 30 days on the platform and two-step verification. <b>Recommend</b> applying 30 days after the number goes live.</p></div>
-    <div class="card pad"><h3>3 · EkCode needs its own name online</h3>
+    <div class="card pad"><h3>3 · EkCode needs its own name online <span class="chip c-ok">Agreed</span></h3>
       <p>A domain for the sign-in and the shopper's page (<span class="mono">ekcode.in</span> here, to buy), an email sender
       on it for the fallback code, and EkCode shown as a brand of your verified business so Meta approves "EkCode" as the
       WhatsApp name. The company behind EkCode is named once, in its privacy policy: the data law needs it.</p></div>
@@ -797,6 +968,30 @@ details.hist[open] summary::after{content:"−"}
   <div class="dh" id="dnameh">Your name</div>
   <div class="db"><input class="input" value="Ananya Rao" aria-label="Your name" autocomplete="name"></div>
   <div class="df"><button class="btn" type="button" data-close>Cancel</button><button class="btn primary" type="button" data-close>Save</button></div>
+</div>
+<div class="dlg" id="adm-why" role="dialog" aria-modal="true" aria-labelledby="adm-whyh">
+  <div class="dh" id="adm-whyh">Noor Ethnic · codes paused</div>
+  <div class="db"><ul class="rows" style="margin:0 -18px">
+    <li><span>Codes since 6 am</span><span class="mono">1,240</span></li>
+    <li><span>Right</span><span class="mono">9%</span></li>
+    <li><span>From one network</span><span class="mono">71%</span></li>
+  </ul></div>
+  <div class="df"><button class="btn" type="button" data-close>Keep paused</button><button class="btn" type="button" data-close>Pause EkCode for Noor Ethnic</button><button class="btn primary" type="button" data-close>Resume Noor Ethnic's codes</button></div>
+</div>
+<div class="dlg" id="adm-pause" role="dialog" aria-modal="true" aria-labelledby="adm-pauseh">
+  <div class="dh" id="adm-pauseh">Pause EkCode for Kesar Studio?</div>
+  <div class="db"><label class="f">Reason<input class="input" placeholder="Shown in Activity" style="font-family:var(--sans);font-size:14px"></label><span class="k">The shop sees "Paused" on its EkCode row.</span></div>
+  <div class="df"><button class="btn" type="button" data-close>Keep it on</button><button class="btn danger" type="button" data-close>Pause for Kesar Studio</button></div>
+</div>
+<div class="dlg" id="adm-erase" role="dialog" aria-modal="true" aria-labelledby="adm-eraseh">
+  <div class="dh" id="adm-eraseh">Verify, then erase</div>
+  <div class="db"><span>We send a code to the account's number on WhatsApp. Erasure runs once the shopper reads it back to you.</span><div class="tel"><span>+91</span><input inputmode="numeric" aria-label="Account number" placeholder="98450 12345"></div></div>
+  <div class="df"><button class="btn" type="button" data-close>Not now</button><button class="btn primary" type="button" data-close>Send code</button></div>
+</div>
+<div class="dlg" id="adm-sw" role="dialog" aria-modal="true" aria-labelledby="adm-swh">
+  <div class="dh" id="adm-swh">Turn <span id="adm-sw-to">off</span> "<span id="adm-sw-what"></span>" for every shop?</div>
+  <div class="db"><label class="f">Reason<input class="input" placeholder="Shown in Activity" style="font-family:var(--sans);font-size:14px"></label></div>
+  <div class="df"><button class="btn" type="button" data-close>Leave as it was</button><button class="btn danger" type="button" data-close>Change for every shop</button></div>
 </div>
 <div class="toast" id="toast" role="status"></div>
 <button class="btn sm theme-t" type="button" id="theme">Dark</button>
@@ -910,11 +1105,14 @@ details.hist[open] summary::after{content:"−"}
   })
   // keep wrong-code lockout reachable: five fails
   // tabs
-  $$('[data-tab]').forEach((t) => t.addEventListener('click', () => {
-    $$('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === t)))
-    $$('[data-tp]').forEach((p) => p.classList.toggle('on', p.dataset.tp === t.dataset.tab))
-  }))
-  $$('.fchip').forEach((c) => c.addEventListener('click', () => $$('.fchip').forEach((x) => x.setAttribute('aria-pressed', String(x === c)))))
+  function tab(root, id) {
+    $$('[data-tab]', root).forEach((x) => x.setAttribute('aria-selected', String(x.dataset.tab === id)))
+    $$('[data-tp]', root).forEach((p) => p.classList.toggle('on', p.dataset.tp === id))
+  }
+  $$('[data-tab]').forEach((t) => t.addEventListener('click', () => tab(t.closest('[data-tabs]'), t.dataset.tab)))
+  $$('[data-atab]').forEach((b) => b.addEventListener('click', () => tab(b.closest('[data-tabs]'), b.dataset.atab)))
+  $$('.filters').forEach((g) => $$('.fchip', g).forEach((c) => c.addEventListener('click', () => $$('.fchip', g).forEach((x) => x.setAttribute('aria-pressed', String(x === c))))))
+  $$('[data-dlg-sw]').forEach((sw) => sw.addEventListener('change', () => { $('#adm-sw-what').textContent = sw.getAttribute('aria-label').replace(', every shop', ''); $('#adm-sw-to').textContent = sw.checked ? 'on' : 'off'; open('adm-sw') }))
   // dialogs
   let opener = null
   function open(id) { opener = document.activeElement; $('#scrim').classList.add('open'); const d = $('#' + id); d.classList.add('open'); (d.querySelector('[data-close]') || d).focus() }
