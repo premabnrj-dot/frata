@@ -137,6 +137,33 @@ verify command run and read, and `impact-reviewer` on its diff before the commit
   stays under the name). The intro was already plain text above the grid. e2e 64-seo renames, follows the 308, reads
   the title, is refused another's old address, goes back.
 
+### S2·3 identifiers and S2·7 as built (2026-11-09)
+- `variants.gtin` (`drizzle/0071_variant_gtin.sql`, check `variants_gtin`): optional; `cleanGtin`
+  (`src/domains/catalogue/gtin.ts`) checks the digit; one barcode per size within a product. The grid's Barcode column
+  sits after SKU. **MPN = the SKU** (derive, never duplicate): no `variants.mpn`. **`products.no_barcode` waits for
+  S·4** — only a Merchant feed reads `identifier_exists`; JSON-LD simply leaves `gtin` out. Brand, colour, size,
+  material were already in the markup.
+- The shop shell: a "Skip to content" link first (both languages), `main` focusable; a 2 px focus ring in the shop's own
+  ink (`[data-store-theme] :focus-visible`). The UX net (e2e 90-ux) now measures five shop pages at every width
+  (targets ≥ 24 px, contrast, skip link) and Tabs through a product page.
+
+### S·3 as built (2026-11-09) — the mockup's "Search" board, what can be true before S·4
+- Console › Store › **Search and sharing** (`/console/search`, CAN_BUILD): Share shop; **To fix · N** — photos without a
+  description, collections without an intro, products with the same title (live products only; `seoFixFacts`, three
+  reads in one transaction; `seoFixes` in `src/domains/seo/fixes.ts` is pure), each with a link to the first thing to
+  fix, gone when done; "Nothing to fix" otherwise. **On Google**: Home's title and description
+  (`shop_settings.seo_title`/`seo_description`, `drizzle/0072_shop_seo.sql`; `homeSeo` gives the defaults), with the
+  result drawn as Google does.
+- **Waits for S·4** (each needs Google connected to be true): the barcode fix ("Add or mark none" — and with it
+  `products.no_barcode`), the Connected list, "Searches that found you".
+
+### S2·5 decision (2026-11-09)
+- `<html lang>` stays `en-IN`; a Hindi shop's own wrapper already carries `lang="hi"` (`src/components/storefront/shell.tsx`),
+  which is what screen readers use, and Google reads a page's language from its text, not the attribute. Moving
+  `<html>` into per-surface root layouts means moving every top-level route (the site, login, start, partners, choose,
+  handover, auth) into a group and losing the shared not-found — a large change for a signal no reader uses.
+  **Comes back** when hreflang does (a shop with both languages), which needs per-surface roots anyway.
+
 ## S·2 Search foundations
 - **S2·1 Descriptions everywhere** in `pageTags` (lists, collections trimmed to 155, policies, page n); Hindi titles.
 - **S2·2 Collections**: migration — `collections.seo_title`, `seo_description` (length checks);

@@ -7,6 +7,7 @@
 // =============================================================================
 
 import { istDayKey } from '../time/day'
+import { cleanGtin } from './gtin'
 import { cleanOptions, combinations, handleFor, keyOf, type Option } from './variants'
 
 /** "2,490" or "2490.50" → 249050 paise; null when it is not a price. */
@@ -26,7 +27,7 @@ export function rupeesText(paise: number | null): string {
 
 export type WhenOutInput = 'stop' | 'preorder' | 'made_to_order'
 export type VariantInput = {
-  values: string[]; price: string; compareAt: string; cost: string; stock: string; sku: string
+  values: string[]; price: string; compareAt: string; cost: string; stock: string; sku: string; gtin?: string
   whenOut?: WhenOutInput; shipsBy?: string; leadMin?: string; leadMax?: string; cap?: string
 }
 export type ColourInput = { value: string; family: string | null; hex: string | null; crop: { imageId: string; x: number; y: number; r: number } | null }
@@ -37,7 +38,7 @@ export type ProductInput = {
   attributes?: Record<string, string[]>; colours?: ColourInput[]; tags?: string[]
 }
 export type CleanVariant = {
-  values: string[]; price: number; compareAt: number | null; unitCost: number | null; stock: number; sku: string | null
+  values: string[]; price: number; compareAt: number | null; unitCost: number | null; stock: number; sku: string | null; gtin: string | null
   whenOut: WhenOutInput; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; preorderCap: number | null
 }
 export type CleanProduct = Omit<ProductInput, 'options' | 'variants' | 'handle' | 'seoTitle' | 'seoDescription' | 'colours' | 'tags' | 'attributes' | 'categoryId'> & {
@@ -60,6 +61,7 @@ export function cleanProduct(p: ProductInput, now: Date): { ok: true; product: C
   const byKey = new Map(p.variants.map((v) => [keyOf(v.values.map((x) => x.trim().replace(/\s+/g, ' '))), v]))
   const variants: CleanVariant[] = []
   const skus = new Map<string, string>()
+  const gtins = new Map<string, string>()
   if (opts.ok) {
     for (const values of combinations(opts.options)) {
       const k = keyOf(values), v = byKey.get(k)
@@ -77,6 +79,11 @@ export function cleanProduct(p: ProductInput, now: Date): { ok: true; product: C
       if (sku && !/^[A-Za-z0-9._/-]{1,40}$/.test(sku)) errors[cell('sku')] = 'Letters, digits and - _ . / only.'
       else if (sku && skus.has(sku.toUpperCase())) errors[cell('sku')] = `Also used by ${skus.get(sku.toUpperCase())}.`
       if (sku) skus.set(sku.toUpperCase(), values.join(' / ') || 'this product')
+      // The barcode (S2·3): optional; when typed, a real one (check digit) and not on two sizes.
+      const gtinText = (v?.gtin ?? '').trim(), gtin = gtinText ? cleanGtin(gtinText) : null
+      if (gtinText && !gtin) errors[cell('gtin')] = 'A barcode of 8, 12, 13 or 14 digits, as printed.'
+      else if (gtin && gtins.has(gtin)) errors[cell('gtin')] = `Also used by ${gtins.get(gtin)}.`
+      if (gtin) gtins.set(gtin, values.join(' / ') || 'this product')
       // When it runs out: pre-order needs a ship-by date within a year (Google's limit); made to order needs lead days.
       const whenOut: WhenOutInput = v?.whenOut === 'preorder' || v?.whenOut === 'made_to_order' ? v.whenOut : 'stop'
       let shipsBy: string | null = null, leadMinDays: number | null = null, leadMaxDays: number | null = null, preorderCap: number | null = null
@@ -93,7 +100,7 @@ export function cleanProduct(p: ProductInput, now: Date): { ok: true; product: C
         if (!Number.isInteger(a) || a < 1 || a > 120 || !Number.isInteger(b) || b < a || b > 120) errors[cell('lead')] = 'Days to make it: 1 to 120, the second not below the first.'
         else { leadMinDays = a; leadMaxDays = b }
       }
-      variants.push({ values, price: price ?? 0, compareAt, unitCost, stock: Number(stockText) || 0, sku, whenOut, shipsBy, leadMinDays, leadMaxDays, preorderCap })
+      variants.push({ values, price: price ?? 0, compareAt, unitCost, stock: Number(stockText) || 0, sku, gtin, whenOut, shipsBy, leadMinDays, leadMaxDays, preorderCap })
     }
   }
   const handle = (p.handle ?? '').trim().toLowerCase() || handleFor(title)

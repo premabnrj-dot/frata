@@ -154,7 +154,7 @@ export async function saveProduct(productId: string, version: number, input: Pro
       for (const [i, values] of plan.wanted.entries()) {
         const v = byKey.get(keyOf(values))!
         const data = {
-          price: v.price, compareAt: v.compareAt, ...(costs ? { unitCost: v.unitCost } : {}), stock: v.stock, sku: v.sku, position: i,
+          price: v.price, compareAt: v.compareAt, ...(costs ? { unitCost: v.unitCost } : {}), stock: v.stock, sku: v.sku, gtin: v.gtin, position: i,
           whenOut: v.whenOut, shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays, preorderCap: v.preorderCap,
         }
         const kept = plan.keep.find((k) => keyOf(k.optionValues) === keyOf(values))

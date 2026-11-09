@@ -254,6 +254,26 @@ export default {
       await ctx.close()
     })
 
+    await t.step('S·3: Search and sharing lists the fixes with links, and Home’s own title reaches Google', async () => {
+      const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 900 } })
+      const p = await ctx.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message))
+      await p.goto(`${CONSOLE}/console/search`)
+      await p.getByRole('heading', { name: /^(To fix · \d+|Nothing to fix)$/ }).waitFor()
+      for (const a of await p.locator('#fixes a').all()) assert.match(await a.getAttribute('href'), /^\/console\/(products|collections)\//)
+      await p.getByLabel('Page title').fill('Kesar Studio — handwoven kurtas')
+      await p.getByRole('button', { name: 'Save', exact: true }).click()
+      await p.getByText('Saved.').waitFor()
+      await p.screenshot({ path: t.out('search-page') })
+      const deadline = Date.now() + 70_000
+      let title
+      do { title = head((await get('/', CRAWLERS.google)).body).title; if (title === 'Kesar Studio — handwoven kurtas') break; await new Promise((r) => setTimeout(r, 2000)) } while (Date.now() < deadline)
+      assert.equal(title, 'Kesar Studio — handwoven kurtas')
+      await p.getByLabel('Page title').fill('')
+      await p.getByRole('button', { name: 'Save', exact: true }).click()
+      await p.getByText('Saved.').waitFor()
+      await ctx.close()
+    })
+
     await t.step('S1·6: the shop has its own icon (its initial or logo, never Frrata\'s), served as PNG', async () => {
       const h = head((await get('/', CRAWLERS.google)).body)
       const icons = [...h.raw.matchAll(/<link\b[^>]*rel="(?:icon|apple-touch-icon)"[^>]*>/g)].map((x) => x[0].match(/href="([^"]+)"/)[1])

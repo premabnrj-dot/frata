@@ -8,7 +8,7 @@ const card = {
   id: 'p1', handle: 'kurta', title: 'Kurta', status: 'active', publishAt: null, since: '2026-11-01T00:00:00.000Z', options: ['Size', 'Colour'],
   categoryId: null, tags: [], attributes: { fabric: ['cotton'] },
   images: [img('a', { optionValue: 'Rani' }), img('b'), img('c', { widths: [400, 800] }), img('d', { optionValue: 'Neel' }), img('e')],
-  variants: [{ id: 'v1', values: ['M', 'Rani'], sku: 'K-M', price: 129900, compareAt: null, mrp: 149900, stock: 3, whenOut: 'stop' as const, shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderFull: false, restockedAt: null }],
+  variants: [{ id: 'v1', values: ['M', 'Rani'], sku: 'K-M', gtin: null, price: 129900, compareAt: null, mrp: 149900, stock: 3, whenOut: 'stop' as const, shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderFull: false, restockedAt: null }],
   colours: [{ value: 'Rani', family: 'pink', hex: '#d61f69', cropImageId: 'e', crop: { x: 0.5, y: 0.5, r: 0.2 } }, { value: 'Neel', family: null, hex: null, cropImageId: null, crop: null }],
 }
 

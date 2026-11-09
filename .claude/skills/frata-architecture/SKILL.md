@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.27.0
+  version: 2.28.0
   verified: 2026-11-09
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -361,6 +361,12 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   then per shop, photos only from our store and this shop's folder (PATH_SHAPE), read capped at 1 MB, WebP checked by
   sharp, reaching Satori only as data URIs. CDN a day; a stale address shows the current card for 5 minutes. No Blob
   storage (a deleted photo would outlive the product).
+- **Old addresses are history rows, append-only** (`product_handle_history`, `collection_handle_history`: select +
+  insert for frata_app, cascade with their row). A rename appends the old handle; another row's old handle is refused
+  ("uses (or used)"); going back to one's own needs nothing (the current handle is looked up first). Collections'
+  old → current map rides in the cached catalogue entry (`movedCollections`); the route 308s before its 404.
+- **Identifiers**: `variants.gtin` (check digit in `src/domains/catalogue/gtin.ts`); the MPN in markup is the SKU, never
+  a second column. Like the SKU, the gtin is dropped from the cached catalogue entry (only the product page reads it).
 
 ## Outside world (ADR-0006)
 

@@ -27,7 +27,7 @@ const card = (p: Piece, i: number): StoreProduct => {
     id, handle: id, title: p.title, status: 'active', publishAt: null, // Dated long ago, so a shop's own pieces always come first in New in.
     since: new Date(Date.UTC(2020, 0, 1) - p.days * 86_400_000).toISOString(),
     options: ['Size'], images: [img('', 0), img('-b', 1), img('-d', 2)],
-    variants: sizes.map((s, j) => ({ id: `${id}-v${j}`, values: [s], sku: null, price: p.price, compareAt: p.was ?? null, mrp: null, stock: p.soldOut || (i === 0 && s === 'XL') ? 0 : 8, whenOut: 'stop' as const, shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderFull: false, restockedAt: null })),
+    variants: sizes.map((s, j) => ({ id: `${id}-v${j}`, values: [s], sku: null, gtin: null, price: p.price, compareAt: p.was ?? null, mrp: null, stock: p.soldOut || (i === 0 && s === 'XL') ? 0 : 8, whenOut: 'stop' as const, shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderFull: false, restockedAt: null })),
     colours: [{ value: p.colour, family: null, hex: p.hex, cropImageId: null, crop: null }],
     categoryId: null, attributes: {}, tags: [], description: p.about, modelHeight: '', modelSize: '', optionValues: [sizes], seoTitle: '', seoDescription: '',
     typeName: null, sizeChart: p.type === 'saree' ? null : CHART, sample: true,

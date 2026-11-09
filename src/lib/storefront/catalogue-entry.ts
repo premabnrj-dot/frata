@@ -23,7 +23,7 @@ export const listPhotos = (imgs: StoreImage[], colours: Pick<StoreColour, 'cropI
 type Blanks<T> = { [K in keyof T as null extends T[K] ? K : T[K] extends boolean ? K : never]-?: null extends T[K] ? null : false }
 // A list never shows a SKU (the product page reads its own row), every photo shares its folder's address, and
 // most photos have every width we make.
-const VARIANT_BLANK: Blanks<StoreVariant> = { sku: null, compareAt: null, mrp: null, shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderFull: false, restockedAt: null }
+const VARIANT_BLANK: Blanks<StoreVariant> = { sku: null, gtin: null, compareAt: null, mrp: null, shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderFull: false, restockedAt: null }
 const IMAGE_BLANK: Blanks<StoreImage> = { optionValue: null }
 const COLOUR_BLANK: Blanks<StoreColour> = { family: null, hex: null, cropImageId: null, crop: null }
 const dropBlank = <T extends object>(o: T): T => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && v !== false)) as T
@@ -36,7 +36,7 @@ export function compactCard(card: Omit<StoreCard, 'offers'>, offerIdx: number[],
     images: listPhotos(card.images, card.colours).map((im) => dropBlank({ ...im,
       base: photoPrefix && im.base.startsWith(photoPrefix) ? im.base.slice(photoPrefix.length) : im.base,
       widths: fullWidths(im.widths) ? null : im.widths }) as unknown as StoreImage),
-    variants: card.variants.map((v) => dropBlank({ ...v, sku: null })),
+    variants: card.variants.map((v) => dropBlank({ ...v, sku: null, gtin: null })),
     colours: card.colours.map(dropBlank),
   }
 }

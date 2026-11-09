@@ -83,6 +83,8 @@ export const variants = pgTable('variants', {
   productId: uuid('product_id').notNull(),
   optionValues: text('option_values').array().notNull().default(sql`'{}'::text[]`),
   sku: text('sku'),
+  /** The barcode (GTIN-8/12/13/14, check digit verified: catalogue/gtin.ts); optional (S2·3). MPN is the SKU. */
+  gtin: text('gtin'),
   price: money('price').notNull(),
   compareAt: money('compare_at'),
   /** What it costs the merchant. Unknown is null, never 0. Read on the server only (ADR-0003). */
@@ -108,6 +110,7 @@ export const variants = pgTable('variants', {
   foreignKey({ name: 'variants_product_fk', columns: [t.tenantId, t.productId], foreignColumns: [products.tenantId, products.id] }).onDelete('cascade'),
   // tenant_id first: a unique check fires before the foreign key, so without it another shop could probe which sizes a product has (tenancy audit).
   uniqueIndex('variants_tenant_product_options').on(t.tenantId, t.productId, t.optionValues),
+  check('variants_gtin', sql`${t.gtin} is null or ${t.gtin} ~ '^([0-9]{8}|[0-9]{12,14})$'`),
   uniqueIndex('variants_tenant_sku').on(t.tenantId, t.sku).where(sql`${t.sku} is not null`),
   index('variants_tenant_product').on(t.tenantId, t.productId),
   check('variants_money', sql`${t.price} >= 0 and (${t.compareAt} is null or ${t.compareAt} >= 0) and (${t.unitCost} is null or ${t.unitCost} >= 0)`),

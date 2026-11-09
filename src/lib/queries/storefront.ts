@@ -78,7 +78,7 @@ export type StoreShop = PolicyFacts & DeliveryRules & {
   id: string; slug: string; host: string; publishedAt: string | null; orderPrefix: string
   /** Trials TR1·9: the pause window (ISO); the page decides at render (pausedAt), so the 60 s cache never delays it. */
   pause: { from: string; to: string | null } | null
-  accent: string; displayFont: string; tagline: string; logoUrl: string | null; whatsapp: string; instagram: string
+  accent: string; displayFont: string; tagline: string; seoTitle: string; seoDescription: string; logoUrl: string | null; whatsapp: string; instagram: string
   /** The words Frrata writes on the shop (themes T2). */
   shopLanguage: Lang
   overrides: Record<string, string>; nav: { handle: string; title: string }[]
@@ -91,7 +91,7 @@ async function coreShop(tenantId: string): Promise<StoreShop | null> {
       legalName: shopSettings.legalName, address: shopSettings.address, supportEmail: shopSettings.supportEmail, supportPhone: shopSettings.supportPhone,
       whatsapp: shopSettings.whatsapp, instagram: shopSettings.instagram,
       grievanceName: shopSettings.grievanceName, grievanceRole: shopSettings.grievanceRole, grievanceEmail: shopSettings.grievanceEmail, grievancePhone: shopSettings.grievancePhone,
-      accent: shopSettings.accent, displayFont: shopSettings.displayFont, tagline: shopSettings.tagline, logoUrl: shopSettings.logoUrl, shopLanguage: shopSettings.shopLanguage,
+      accent: shopSettings.accent, displayFont: shopSettings.displayFont, tagline: shopSettings.tagline, seoTitle: shopSettings.seoTitle, seoDescription: shopSettings.seoDescription, logoUrl: shopSettings.logoUrl, shopLanguage: shopSettings.shopLanguage,
       returnKind: shopSettings.returnKind, returnDays: shopSettings.returnDays,
       // COD limits are public: the Shipping policy states them.
       codOn: shopSettings.codOn, codMin: shopSettings.codMin, codMax: shopSettings.codMax, codCharge: shopSettings.codCharge,
@@ -118,7 +118,7 @@ async function coreShop(tenantId: string): Promise<StoreShop | null> {
 // ── The catalogue: every product a list can show, and the collections ───────────
 
 export type StoreImage = { id: string; base: string; widths: number[]; width: number; height: number; optionValue: string | null; alt: string }
-export type StoreVariant = { id: string; values: string[]; sku: string | null; price: number
+export type StoreVariant = { id: string; values: string[]; sku: string | null; gtin: string | null; price: number
   /** The 30-day prior price when the price was cut within 30 days (derived); null otherwise. */
   compareAt: number | null
   /** The tag's M.R.P. as the merchant typed it (never struck through). */
@@ -147,7 +147,7 @@ const MAX_LISTED = 600
  */
 const variantCols = (tenantId: string) => ({
   owed: owedSql(tenantId, new Date()),
-  id: variants.id, productId: variants.productId, values: variants.optionValues, sku: variants.sku, price: variants.price,
+  id: variants.id, productId: variants.productId, values: variants.optionValues, sku: variants.sku, gtin: variants.gtin, price: variants.price,
   // The struck "was" price is DERIVED, never typed (E-Commerce Amendment Rules 2026, from 1 Jan 2027; offers O·2 plan
   // review 10): the lowest price in the 30 days before today's price took effect (the price carried into that window
   // included), shown only within 30 days of that change. A raise-then-cut never shows a saving. The merchant's typed
@@ -160,8 +160,8 @@ const variantCols = (tenantId: string) => ({
 const imageCols = { id: productImages.id, productId: productImages.productId, base: productImages.base, widths: productImages.widths, width: productImages.width, height: productImages.height, optionValue: productImages.optionValue, alt: productImages.alt }
 const colourCols = { productId: productColours.productId, value: productColours.value, family: productColours.family, hex: productColours.hex, cropImageId: productColours.cropImageId, crop: productColours.crop }
 
-const toVariant = (v: { id: string; values: string[]; sku: string | null; price: number; compareAt: string | number | null; mrp: number | null; stock: number; owed: number; whenOut: string; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; cap: number | null; restockedAt: Date | null }): StoreVariant => ({
-  id: v.id, values: v.values, sku: v.sku, price: Number(v.price), compareAt: v.compareAt !== null && Number(v.compareAt) > Number(v.price) ? Number(v.compareAt) : null,
+const toVariant = (v: { id: string; values: string[]; sku: string | null; gtin: string | null; price: number; compareAt: string | number | null; mrp: number | null; stock: number; owed: number; whenOut: string; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; cap: number | null; restockedAt: Date | null }): StoreVariant => ({
+  id: v.id, values: v.values, sku: v.sku, gtin: v.gtin, price: Number(v.price), compareAt: v.compareAt !== null && Number(v.compareAt) > Number(v.price) ? Number(v.compareAt) : null,
   mrp: v.mrp === null ? null : Number(v.mrp),
   // Shoppers learn "only N left" at LOW_STOCK_AT or below; above it, the count is not theirs to see.
   stock: Math.min(Math.max(0, v.stock - v.owed), LOW_STOCK_AT + 1), whenOut: v.whenOut as StoreVariant['whenOut'], shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays,

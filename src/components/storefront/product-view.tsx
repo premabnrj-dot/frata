@@ -64,7 +64,7 @@ export function ProductView({ shop, p, now, live = false, layout, offers, below 
     images: p.images.slice(0, 6).map((i) => urlFor(i.base, pick(i.widths, 1200))),
     variants: p.variants.filter((v) => v.price > 0).map((v) => {
       const img = ci >= 0 ? p.images.find((i) => i.optionValue === v.values[ci]) : undefined
-      return { sku: v.sku, values: v.values, price: v.price, availability: availability(factsOf(v), now), image: img ? urlFor(img.base, pick(img.widths, 1200)) : null }
+      return { sku: v.sku, gtin: v.gtin, values: v.values, price: v.price, availability: availability(factsOf(v), now), image: img ? urlFor(img.base, pick(img.widths, 1200)) : null }
     }),
   })
   return (

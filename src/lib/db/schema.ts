@@ -268,6 +268,9 @@ export const shopSettings = pgTable('shop_settings', {
   /** The words Frrata writes on the shop (menus, buttons, delivery words): en or hi (themes T2). What the merchant types stays as typed. */
   shopLanguage: text('shop_language').notNull().default('en'),
   tagline: text('tagline').notNull().default(''),
+  /** Home on Google (search and sharing S·3): empty uses the defaults (seo/defaults.ts homeSeo). */
+  seoTitle: text('seo_title').notNull().default(''),
+  seoDescription: text('seo_description').notNull().default(''),
   logoUrl: text('logo_url'),
   sells: text('sells').array().notNull().default(sql`'{}'::text[]`),
   returnDays: integer('return_days').notNull().default(7),
@@ -310,6 +313,7 @@ export const shopSettings = pgTable('shop_settings', {
   check('shop_settings_accent', sql`${t.accent} in ('oxide','indigo','moss','wine','ink')`),
   check('shop_settings_font', sql`${t.displayFont} in ('fraunces','cormorant','inter')`),
   check('shop_settings_language', sql`${t.shopLanguage} in ('en','hi')`),
+  check('shop_settings_seo', sql`length(${t.seoTitle}) <= 200 and length(${t.seoDescription}) <= 400`),
   check('shop_settings_return_kind', sql`${t.returnKind} in ('exchange_or_refund','exchange_only','refund_only','none')`),
   check('shop_settings_sells', sql`${t.sells} <@ array['women','men','kids','ethnic','accessories','footwear']::text[]`),
   check('shop_settings_money', sql`${t.codMin} >= 0 and ${t.codMax} >= 0 and ${t.codCharge} >= 0 and ${t.shippingFlat} >= 0 and ${t.freeShippingAbove} >= 0`),

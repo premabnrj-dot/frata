@@ -52,6 +52,7 @@ export default {
         ['console-settings-address', 'owner', '/console/settings/address'],
         ['console-settings-payments', 'owner', '/console/settings/online-payments'],
         ['console-product-new', 'owner', '/console/products/new'],
+        ['console-search', 'owner', '/console/search'],
         // Analytics (A1·6): the page and a source's page (ux-stress.sql tags its own orders, so it exists), every width.
         ['console-analytics', 'owner', '/console/analytics'],
         ['console-analytics-source', 'owner', '/console/analytics/instagram-bio'],
@@ -70,11 +71,17 @@ export default {
         ['site-partners', 'anon', '/partners'],
         ['site-login', 'anon', '/login'],
         ['site-start', 'anon', '/start'],
+        // The shop (search and sharing S2·7): the same net in the shop's own look — skip link, 24 px targets, contrast.
+        ['shop-home', 'anon', SHOP + '/'],
+        ['shop-product', 'anon', SHOP + '/products/chanderi-kurta-set'],
+        ['shop-collection', 'anon', SHOP + '/collections/kurtas'],
+        ['shop-list', 'anon', SHOP + '/products'],
+        ['shop-bag', 'anon', SHOP + '/bag'],
       ]
       const measure = async (ctx, page, path, w, label, h = 800) => {
         const p = await ctx.newPage(); p.on('pageerror', (e) => t.errors.push(`${page} ${label}: ${e.message}`))
         await p.setViewportSize({ width: w, height: h })
-        const res = await p.goto(CONSOLE + path, { waitUntil: 'load' }); await p.evaluate(() => document.fonts.ready)
+        const res = await p.goto(path.startsWith('http') ? path : CONSOLE + path, { waitUntil: 'load' }); await p.evaluate(() => document.fonts.ready)
         // A page that answers "not found" would be measured as a 404 and pass (impact review A1·7).
         if (!res || res.status() >= 400) fail('status', page, label, `HTTP ${res?.status()}`)
         const m = await p.evaluate(MEASURE, { phone: w < 768 })
@@ -82,9 +89,9 @@ export default {
         if (m.tableScroll.length) fail('table-scroll', page, label, m.tableScroll.join('; '))
         if (m.targets.length) fail('target', page, label, `${m.targets.length}: ${m.targets.slice(0, 3).join('; ')}`, m.targets.length)
         if (m.contrast.length) fail('contrast', page, label, `${m.contrast.length}: ${m.contrast.slice(0, 3).join('; ')}`, m.contrast.length)
-        if (!page.startsWith('site-') && m.current !== 1) fail('nav-current', page, label, `${m.current} marked`)
+        if (!page.startsWith('site-') && !page.startsWith('shop-') && m.current !== 1) fail('nav-current', page, label, `${m.current} marked`)
         if (!m.skip) fail('skip-link', page, label, 'first focusable is not "Skip to content"')
-        if (label === '1280') {
+        if (label === '1280' && !page.startsWith('shop-')) {
           if (!/ · /.test(m.title) || /^Product · Fr+ata$/i.test(m.title)) fail('title', page, label, `"${m.title}"`)
           if (m.shadowEdge.length) fail('shadow-edge', page, label, m.shadowEdge.join('; '))
         }
@@ -122,8 +129,8 @@ export default {
           await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
         })
         const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' })
-        for (const [page, path] of [['console-orders', '/console/orders'], ['console-product', '/console/products/chanderi-kurta-set']]) {
-          const p = await ctx.newPage(); await p.goto(CONSOLE + path)
+        for (const [page, path] of [['console-orders', '/console/orders'], ['console-product', '/console/products/chanderi-kurta-set'], ['shop-product', SHOP + '/products/chanderi-kurta-set']]) {
+          const p = await ctx.newPage(); await p.goto(path.startsWith('http') ? path : CONSOLE + path)
           for (let i = 0; i < 15; i++) {
             await p.keyboard.press('Tab'); await settle(p)
             const f = await p.evaluate(FOCUS)

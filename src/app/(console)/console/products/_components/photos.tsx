@@ -46,7 +46,7 @@ export function Photos({ productId, tenantId, photos, colours, enabled, title = 
   const act = (id: string, change: Parameters<typeof editPhoto>[1]) => start(async () => { const r = await editPhoto(id, change); if (!r.ok) setError(r.error); setConfirm(null); router.refresh() })
 
   return (
-    <div className="space-y-3">
+    <div id="photos" className="scroll-mt-20 space-y-3">
       <div className="flex flex-wrap gap-3">
         {photos.map((ph, i) => (
           <figure key={ph.id} className="w-32 space-y-1">

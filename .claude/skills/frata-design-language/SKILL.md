@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.6.0
+  version: 5.7.0
   verified: 2026-11-09
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -799,6 +799,12 @@ saving we cannot show from their own orders.
   2023): shipping, the COD fee. A total that changes says so ("Price updated
   to ₹2,690") before payment, never after.
 - A failed payment returns to a filled form, never an empty one.
+- **Keyboard and screen readers, every theme** (search and sharing S2·7): "Skip to content" is the first Tab stop
+  (the shop's language), the focus ring is 2 px in the shop's own ink (`[data-store-theme] :focus-visible`), and
+  every control is ≥ 24 px — e2e 90-ux measures five shop pages at every width, so a theme that breaks one fails.
+- **Search and sharing for a collection** is the product's panel (`SeoPanel folder="collections"`), closed by
+  default; its address stays under the name, and a changed address says the old one will send shoppers here.
+- **Barcode** is an optional column after SKU in the variant grid, digits only; it is never asked for.
 
 ## Share cards (search and sharing S1, owner-approved mockup 2026-11-09)
 

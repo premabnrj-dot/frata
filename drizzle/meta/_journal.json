@@ -498,6 +498,20 @@
       "when": 1794226887285,
       "tag": "0070_collection_seo",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1794227387925,
+      "tag": "0071_variant_gtin",
+      "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1794227633480,
+      "tag": "0072_shop_seo",
+      "breakpoints": true
     }
   ]
 }

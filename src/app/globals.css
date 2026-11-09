@@ -452,6 +452,9 @@ img[data-photo]::before { content: ""; position: absolute; inset: 0; background:
   }
 }
 /* The customizer's selected section, in its preview only (theme-preview bridge). */
+/* Search and sharing S2·7: a focus ring in the shop's own ink on every theme and scheme (WCAG 2.4.7, 2.4.11). */
+[data-store-theme] :focus-visible { outline: 2px solid var(--store-ink); outline-offset: 2px; }
+[data-store-theme] main:focus { outline: none; }
 [data-store-theme] [data-picked] { outline: 2px solid var(--color-info-text); outline-offset: 4px; }
 /* In the customizer's frame (the bridge sets data-inspect): a section under the pointer is outlined and clickable. */
 [data-inspect] [data-store-theme] [data-section] > :not([data-picked]):hover { outline: 1px dashed var(--color-info-text); outline-offset: 4px; cursor: pointer; }
