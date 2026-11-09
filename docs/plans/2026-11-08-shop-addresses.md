@@ -68,7 +68,9 @@ legacy `crons` run at most once a day on Hobby (Vercel Schedules, beta since 202
 - **Screens follow mockup v2** (https://claude.ai/artifact/XrDQj61tSBe4YKvUrH76xt, owner asked 2026-11-09 for ease
   and smooth transitions; awaiting approval): one Addresses list, a dialog/sheet that polls every 15 s while open,
   the DNS provider read from NS (no question), Open <provider> DNS, Send on WhatsApp, Make main as Publish (1.3 s,
-  popup, Undo 8 s). Nothing in D2·10 is built before it is approved.
+  popup, Undo 8 s). **Approved by the owner 2026-11-09**; design rules 72–76.
+- **Rename of a shop taking live payments** (owner didn't choose; default taken): the rename confirm gains one line,
+  "Card and UPI payments need Razorpay to approve the new address." Renaming is not blocked.
 | Task | What | Verify |
 |---|---|---|
 | D2·0 | **Done 2026-11-09** (frata-integrations 1.15.0 § Razorpay): live payments fail from a website not registered on the shop's own Razorpay account — an own domain AND `<slug>.frrata.shop`. Dashboard › Account & Settings › Business website detail; additional websites only in the e-commerce category, manual review ~24–48 h; no API to read them, so the merchant confirms. → **D1·8** below, and Connect's Connected step shows "Add to Razorpay"; **Make main needs "Razorpay approved it"** while the shop takes live payments | `frata-integrations` |

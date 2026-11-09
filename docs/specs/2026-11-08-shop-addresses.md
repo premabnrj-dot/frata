@@ -1,5 +1,5 @@
 # Shop addresses: a frrata.shop address for every shop, and the merchant's own domain
-Status: active · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/BStSSZeC35kgWfxQQ6VWNz (`docs/mockups/2026-11-08-shop-addresses.html`) · Approved: owner, 2026-11-08 ("shop addresses mockup approved", with one note: no descriptions or clarifications on screen — follow `frata-design-language` § Voice and § Labels; the words below are the build's)
+Status: active · Date: 2026-11-08 · Own domains (D·2) screens: mockup v2 https://claude.ai/artifact/XrDQj61tSBe4YKvUrH76xt (`docs/mockups/2026-11-09-own-domains.html`), approved by the owner 2026-11-09 · Mockup: https://claude.ai/artifact/BStSSZeC35kgWfxQQ6VWNz (`docs/mockups/2026-11-08-shop-addresses.html`) · Approved: owner, 2026-11-08 ("shop addresses mockup approved", with one note: no descriptions or clarifications on screen — follow `frata-design-language` § Voice and § Labels; the words below are the build's)
 Research: `docs/research/2026-11-08-shop-addresses.md` (integration-researcher and a codebase map, 2026-11-08).
 Owner, 2026-11-08: buys **frrata.shop**; "help me connect with the system"; plan how merchants get a subdomain and
 attach their own domain themselves; review every scenario, stress test, security, UX, the boundaries — what Admin

@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.9.0
+  version: 5.10.0
   verified: 2026-11-09
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -457,6 +457,23 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
     empty."). Anything else is an (i) tip or not said.
 71. **Trust and safety actions** (Admin) name the shop on the button and require a reason the shop will read; the shop
     sees the reason and a **Reply**, never who reported it.
+
+**Own domains v2** (owner-approved 2026-11-09, mockup https://claude.ai/artifact/XrDQj61tSBe4YKvUrH76xt; replaces the
+8 Nov mockup's § 5–7):
+
+72. **One Addresses list** on Settings › Shop address: every address a row (mono, its state chip, actions beside it);
+    the main one carries a `Main` chip; rows change in place and never animate (rule 28).
+73. **Connect is a `Dialog`** (a sheet on a phone, rule 27) of three steps (Domain · Records · Securing) with step dots
+    and the step slide; the domain is cleaned as typed (`https://www.KesarStudio.in/` → `kesarstudio.in`, www added),
+    the DNS host is read, never asked, and opens with **Open <provider> DNS**.
+74. **The dialog checks for itself** every 15 s while open: each record's chip crossfades to Found, "N of 3 found", then
+    Securing (a scaleX bar) and Connected (the tick drawn once) with no press; **Check now** stays. Records:
+    Copy per row, Copy all, **Send on WhatsApp** (the records written out).
+75. **Make main is gated and works like Publish**: off until "Razorpay approved it" is ticked (Razorpay fails live
+    payments from an unregistered website); a one-line confirm ("Bags in progress start empty."), the 1.3 s rani
+    Going-live line, then a popup with Copy, View your shop and Undo for 8 s.
+76. **A problem lives on its row** as a chip and one line with the fix; the red banner on every console page only
+    after 24 h of failures; our own failure reads `Checking paused`, never red.
 
 ## Storefront as built (1B, 2026-11-07)
 
