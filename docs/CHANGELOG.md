@@ -16,10 +16,10 @@ phase; the detail is in its plan.
 - **Credit notes done right:** several per order — items brought back (part quantities), a discount agreed before
   the sale, goodwill (its own G series, no GST), what is left on a reversal — up to 30 November after the invoice's
   year. ₹ kept takes off what they gave back.
-- **Console › GST:** the month or quarter, what to fix (missing HSN, short HSN, a bad GSTIN, series gaps, parcels back
+- **The GST app** (Growth and Scale; switch it on in Apps): the month or quarter, what to fix (missing HSN, short HSN, a bad GSTIN, series gaps, parcels back
   without a credit note), the GSTR-1 tables, and the files for your CA: GSTR-1 JSON for the offline tool, the tables as
   CSV, a sales register, Tally vouchers.
-- **An Accountant:** invite your CA; they see GST and documents only — never costs or profit.
+- **An Accountant** (with the GST app): invite your CA; they see GST and documents only — never costs or profit.
 - **Beauty and wellness:** sign up as a beauty or wellness shop; products carry what the pack says (net quantity,
   best before, who made or packed it, ingredients, how to use) on the product page; returns say sealed only; no size
   chart or model sections where nothing is sized.

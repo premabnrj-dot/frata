@@ -1,4 +1,4 @@
-import { asMember } from '@/lib/auth/as-member'
+import { asModule } from '@/lib/auth/as-module'
 import { CAN_SEE_GST } from '@/domains/tenancy/roles'
 import { contentDisposition } from '@/domains/documents/paper'
 import { hsnEntry } from '@/domains/tax/rates'
@@ -8,7 +8,7 @@ import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { errName } from '@/lib/log'
 
 // =============================================================================
-// FILE: src/app/(console)/console/gst/export/route.ts — A PERIOD'S FILES FOR THE CA (GST app G1).
+// FILE: src/app/(console)/console/apps/gst/export/route.ts — A PERIOD'S FILES FOR THE CA (GST app G1).
 // GET ?p=2026-10|2026-Q3&f=json|sheets|register|tally. Owner, admin or accountant (CAN_SEE_GST), inside the member's
 // own shop; a Frrata support visit is audited (the files carry buyers' names and GSTINs). Limited per member, failing
 // closed. Never cached, never sniffed. Built from the documents as issued (queries/gst.ts): nothing is recomputed.
@@ -22,7 +22,7 @@ const TYPES: Record<Format, string> = { json: 'application/json', sheets: 'text/
 const SHEET_NAMES: Record<string, string> = { b2b: 'B2B', b2cl: 'B2CL', b2cs: 'B2CS', cdnr: 'CDNR', cdnur: 'CDNUR', nil: 'NIL', hsn: 'HSN', docs: 'DOCS' }
 
 const text = (status: number, body: string) => new Response(
-  `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="referrer" content="no-referrer"><title>GST</title><body style="font:16px system-ui;max-width:32rem;margin:4rem auto;padding:0 1rem"><p>${body.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)}</p><p><a href="/console/gst">Back to GST</a></p>`,
+  `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="referrer" content="no-referrer"><title>GST</title><body style="font:16px system-ui;max-width:32rem;margin:4rem auto;padding:0 1rem"><p>${body.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)}</p><p><a href="/console/apps/gst">Back to GST</a></p>`,
   { status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'" } })
 
 export async function GET(request: Request) {
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
   if (p && !/^\d{4}-(\d{2}|Q[1-4])$/.test(p)) return text(400, 'That isn’t a GST period.')
   const now = new Date()
   try {
-    const r = await asMember(CAN_SEE_GST, { action: 'gst.export', detail: { period: p, format: f } }, async (tx, auth) => {
+    const r = await asModule('gst', CAN_SEE_GST, { action: 'gst.export', detail: { period: p, format: f } }, async (tx, auth) => {
       if (!(await withinLimit(LIMITS.gstExportMember, auth.userId, now, true))) return 'limited' as const
       return gstPeriodIn(tx, auth.membership.tenantId, p, now)
     })

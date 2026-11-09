@@ -136,6 +136,12 @@ month; a pre-flight list (HSN gaps, duplicates) before export; Tally XML; invoic
    (TCS facts as checked 2026-11-09, for that day: 0.5% of net taxable value since 10 July 2024, GSTR-8 by the 10th.)
 3. **Frrata's fee stays on the order as delivered**: a later return or credit note does not reduce it.
 
+## 6d. The GST app is a module (owner, 2026-11-09)
+Console › GST, its CA files and the Accountant login are the module `gst`: in the **Growth and Scale** plans
+(migration 0075 adds it to their current versions; Launch unchanged), shown only once the merchant switches it on in
+Apps, at `/console/apps/gst`. GST on invoices, credit notes, the rate table, Settings › Taxes and Products › HSN codes
+stays in the core for every plan: a shop on Launch still issues correct tax invoices.
+
 ## 6c. Filing from Frrata (G2): parked (owner, 2026-11-09)
 No GSP access is expected in the near future. G2 stays built and **off** (`GSP_PROVIDER` unset; the section never shows),
 and the product's filing path is the CA's files: the GSTR-1 JSON is uploaded on the GST portal (Returns › GSTR-1 ›

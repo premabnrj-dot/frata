@@ -7,6 +7,7 @@ import { compareLiability, liabilityOf, OTP_SHAPE, stepOf, USERNAME_SHAPE, type 
 import { hsnEntry } from '@/domains/tax/rates'
 import { gstr1Json } from '@/domains/tax/gstr1-files'
 import { asMember } from '@/lib/auth/as-member'
+import { asModule } from '@/lib/auth/as-module'
 import { open, seal } from '@/lib/crypto/secret-box'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { shopSettings } from '@/lib/db/schema'
@@ -17,7 +18,7 @@ import { errName } from '@/lib/log'
 import { gsp, GSP_ERROR_WORDS, type GspError } from '@/lib/gst/gsp'
 
 // =============================================================================
-// FILE: src/app/(console)/console/gst/actions.ts — FILING A PERIOD FROM FRRATA (GST app G2). Connect (portal OTP) → push (save the
+// FILE: src/app/(console)/console/apps/gst/actions.ts — FILING A PERIOD FROM FRRATA (GST app G2). Connect (portal OTP) → push (save the
 // GSTR-1 and read the portal's summary back) → file (EVC OTP; final; the ARN kept). Each call is an attempt row
 // committed BEFORE the request and closed after it (ADR-0006 as draft ADR-0008 reads it for interactive calls: an
 // OTP can't wait in an outbox). Owner, admin or the accountant; never a Frrata support visit (filing is the
@@ -36,7 +37,8 @@ const failed = (b: { ok: true; value: Started | Fail } | Fail): Fail | null => (
 
 /** Writes the attempt and returns its id, in its own transaction so the row exists before the request. */
 async function begin(kind: 'connect' | 'verify' | 'push' | 'file', period: string | null, prep?: (tx: Tx, tenantId: string, userId: string) => Promise<Out<Record<string, unknown>>>) {
-  return asMember(CAN_SEE_GST, { action: `gst.${kind}`, detail: { period } }, async (tx, auth): Promise<Started | Fail> => {
+  // A module's write: asModule asks whether the shop has GST on (its plan and its switch) before anything else.
+  return asModule('gst', CAN_SEE_GST, { action: `gst.${kind}`, detail: { period } }, async (tx, auth): Promise<Started | Fail> => {
     if (auth.membership.supportSessionId) return SUPPORT
     const tenantId = auth.membership.tenantId
     const pre = prep ? await prep(tx, tenantId, auth.userId) : { ok: true as const }
@@ -55,7 +57,7 @@ const words = (e: GspError) => GSP_ERROR_WORDS[e]
 const str = (v: unknown, max: number) => (typeof v === 'string' && v.length <= max ? v.trim() : '')
 const PERIOD = /^\d{4}-(\d{2}|Q[1-4])$/
 const NOT_PERIOD: Fail = { ok: false, error: 'That isn’t a GST period.' }
-const done = <T extends { ok: boolean }>(r: T) => { if (r.ok) revalidatePath('/console/gst'); return r }
+const done = <T extends { ok: boolean }>(r: T) => { if (r.ok) revalidatePath('/console/apps/gst'); return r }
 async function call<T>(f: () => Promise<({ ok: true } & T) | { ok: false; error: GspError }>): Promise<({ ok: true } & T) | { ok: false; error: GspError }> {
   try { return await f() } catch (err) { console.error('[gst/gsp]', errName(err)); return { ok: false, error: 'portal_down' } }
 }

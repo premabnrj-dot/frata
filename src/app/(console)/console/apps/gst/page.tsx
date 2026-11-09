@@ -9,6 +9,7 @@ import { requireMember } from '@/lib/auth/require-member'
 import { CAN_SEE_GST } from '@/domains/tenancy/roles'
 import { dayIN } from '@/lib/format-date'
 import { gstPeriod, type Fix } from '@/lib/queries/gst'
+import { shopModules } from '@/lib/queries/modules'
 import { ReviewTabs } from './review-tabs'
 import { FilePanel } from './file-panel'
 import { gsp } from '@/lib/gst/gsp'
@@ -32,10 +33,18 @@ export default async function GstPage({ searchParams }: { searchParams: Promise<
   const auth = await requireMember(CAN_SEE_GST)
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner, an admin or the accountant sees GST' : auth.message} />
   const now = new Date()
+  // GST (the app) is a module: in Growth and Scale, on once the shop switches it on in Apps. Invoices are GST-correct either way.
+  const gate = (await shopModules(auth.membership.tenantId, now.toISOString())).access.gst
+  if (!gate.usable) {
+    const manager = auth.membership.role === 'owner' || auth.membership.role === 'admin'
+    return <Panel title={gate.why === 'not_granted' ? 'GST is in the Growth and Scale plans' : gate.why === 'paused' ? 'GST is paused by Frrata. We’re on it.' : 'GST is off for this shop'}
+      action={manager ? <Link href={gate.why === 'not_granted' ? '/console/settings/billing' : '/console/apps'} className={button({ variant: 'secondary' })}>{gate.why === 'not_granted' ? 'See plans' : 'Turn it on in Apps'}</Link> : undefined}>
+      {manager ? null : 'Ask the shop’s owner to turn on GST in Apps.'}</Panel>
+  }
   const { p } = await searchParams
   const d = await gstPeriod(auth.membership.tenantId, p ?? null, now).catch((err) => { console.error('[gst]', err instanceof Error ? err.name : 'error'); return undefined })
   if (d === undefined) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
-  if (!d) return <Panel title="Nothing to file for that period yet" action={<Link href="/console/gst" className={button({ variant: 'secondary' })}>Last period</Link>} />
+  if (!d) return <Panel title="Nothing to file for that period yet" action={<Link href="/console/apps/gst" className={button({ variant: 'secondary' })}>Last period</Link>} />
   const { shop, period, gstr, fixes } = d
   if (!shop.gstin || shop.scheme !== 'regular') {
     return (
@@ -51,7 +60,7 @@ export default async function GstPage({ searchParams }: { searchParams: Promise<
   const toFix = fixes.reduce((a, f) => a + (f.kind === 'gap' ? 0 : f.count), 0)
   const due = dueDate(period, shop.filing)
   const q = `p=${encodeURIComponent(period.key)}`
-  const exp = (f: string) => `/console/gst/export?${q}&f=${f}`
+  const exp = (f: string) => `/console/apps/gst/export?${q}&f=${f}`
   const tax = gstr.totals
   // Filing from Frrata is behind a switch (lib/gst/gsp.ts): off, the page is the CA's files only. Never on a support visit.
   const filer = auth.membership.supportSessionId ? null : gsp()
@@ -62,9 +71,9 @@ export default async function GstPage({ searchParams }: { searchParams: Promise<
       <PageHeader title="GST" badges={<Badge tone={filed || !toFix ? 'ok' : 'warn'}>{filed ? 'Filed' : toFix ? `${toFix} to fix` : 'Ready'}</Badge>}
         meta={<>GSTIN <span className="font-mono">{shop.gstin}</span> · {shop.filing === 'monthly' ? 'Monthly' : 'Quarterly (IFF)'} · due {dayIN(due)}</>} />
       <nav aria-label="Period" className="flex items-center gap-1">
-        <Link href={`/console/gst?p=${d.prev}`} aria-label="Previous period" className="grid size-9 place-items-center rounded-md border border-input">‹</Link>
+        <Link href={`/console/apps/gst?p=${d.prev}`} aria-label="Previous period" className="grid size-9 place-items-center rounded-md border border-input">‹</Link>
         <span className="min-w-40 px-2 text-center font-semibold">{period.label}</span>
-        {d.next ? <Link href={`/console/gst?p=${d.next}`} aria-label="Next period" className="grid size-9 place-items-center rounded-md border border-input">›</Link> : <span className="grid size-9 place-items-center rounded-md border border-input opacity-40" aria-hidden="true">›</span>}
+        {d.next ? <Link href={`/console/apps/gst?p=${d.next}`} aria-label="Next period" className="grid size-9 place-items-center rounded-md border border-input">›</Link> : <span className="grid size-9 place-items-center rounded-md border border-input opacity-40" aria-hidden="true">›</span>}
       </nav>
 
       <ol className="grid overflow-hidden rounded-lg border border-border sm:grid-cols-3">

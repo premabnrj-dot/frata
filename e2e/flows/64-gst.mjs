@@ -31,6 +31,8 @@ export default {
     const cleanup = async () => db.begin(async (x) => {
       await x`set local session_replication_role = replica`
       for (const tbl of ['gst_attempts', 'gst_filings', 'gst_connections']) await x.unsafe(`delete from ${tbl} where tenant_id = $1`, [T])
+      await x`delete from tenant_modules where tenant_id = ${T} and module = 'gst'`
+      await x`delete from tenant_addons where tenant_id = ${T} and module = 'gst'`
       await x`delete from order_lines where tenant_id = ${T} and order_id in (select id from orders where tenant_id = ${T} and number in ${x(nums)})`
       await x`delete from orders where tenant_id = ${T} and number in ${x(nums)}`
     })
@@ -54,13 +56,28 @@ export default {
         await p.screenshot({ path: t.out('settings-taxes'), fullPage: true })
       })
 
+      await t.step('GST is a module: not in Launch; granted, it is switched on in Apps and only then in the nav', async () => {
+        await p.goto(CONSOLE + `/console/apps/gst?p=${key}`)
+        await p.getByText('GST is in the Growth and Scale plans').waitFor()
+        assert.equal(await p.getByRole('link', { name: 'GST', exact: true }).count(), 0, 'no GST in the nav before it is on')
+        assert.equal((await p.request.get(CONSOLE + `/console/apps/gst/export?p=${key}&f=json`)).status(), 403)
+        // Frrata grants it (as a Growth plan would), then the owner turns it on.
+        const [u] = await db`select user_id from members where tenant_id = ${T} and role = 'owner' limit 1`
+        await db`insert into tenant_addons (tenant_id, module, trial_ends_at, reason, created_by) values (${T}, 'gst', now() + interval '30 days', 'e2e: as in Growth', ${u.user_id})`
+        await p.goto(CONSOLE + '/console/apps')
+        await p.getByRole('switch', { name: 'GST' }).click()
+        await p.getByRole('link', { name: 'Set up' }).first().waitFor()
+        await p.goto(CONSOLE + '/console')
+        await p.getByRole('link', { name: 'GST', exact: true }).first().waitFor()
+      })
+
       await t.step('Console › GST: last month, its invoices and taxes, the CA files', async () => {
-        await p.goto(CONSOLE + `/console/gst?p=${key}`)
+        await p.goto(CONSOLE + `/console/apps/gst?p=${key}`)
         await p.getByRole('heading', { name: 'GST' }).waitFor()
         await p.getByText(String(gstin)).first().waitFor()
         await p.getByRole('heading', { name: 'For your CA' }).waitFor()
         await p.screenshot({ path: t.out('gst-month'), fullPage: true })
-        const r = await p.request.get(CONSOLE + `/console/gst/export?p=${key}&f=json`)
+        const r = await p.request.get(CONSOLE + `/console/apps/gst/export?p=${key}&f=json`)
         assert.equal(r.status(), 200)
         assert.match(r.headers()['cache-control'] ?? '', /no-store/)
         assert.match(r.headers()['content-disposition'] ?? '', /attachment; filename="GSTR1_/)
@@ -69,9 +86,9 @@ export default {
         const b2cs = j.b2cs ?? []
         assert.ok(b2cs.some((x) => x.sply_ty === 'INTER' && x.pos === '27'), 'Maharashtra in B2CS, inter-state')
         assert.ok(b2cs.some((x) => x.sply_ty === 'INTRA' && x.pos === '08'), 'Rajasthan in B2CS, intra-state')
-        const reg = await (await p.request.get(CONSOLE + `/console/gst/export?p=${key}&f=register`)).text()
+        const reg = await (await p.request.get(CONSOLE + `/console/apps/gst/export?p=${key}&f=register`)).text()
         assert.match(reg, /KS\/\d\d-\d\d\/90001/)
-        const bad = await p.request.get(CONSOLE + `/console/gst/export?p=${key}&f=pdf`)
+        const bad = await p.request.get(CONSOLE + `/console/apps/gst/export?p=${key}&f=pdf`)
         assert.equal(bad.status(), 400)
       })
 

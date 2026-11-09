@@ -16,6 +16,7 @@ import { BuildingBanner } from '@/components/nav/building-banner'
 import { myPartner, partnerClients } from '@/lib/db/partners'
 import { clientStage } from '@/domains/partners/stage'
 import { CAN_SEE_GST, CONSOLE_ROLES, ROLE_LABEL } from '@/domains/tenancy/roles'
+import { shopModules } from '@/lib/queries/modules'
 
 export const dynamic = 'force-dynamic'
 
@@ -87,8 +88,11 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const apps: NavItem = { href: '/console/apps', label: 'Apps', icon: 'apps' }
   const analytics: NavItem = { href: '/console/analytics', label: 'Analytics', icon: 'profit' }
   const activity: NavItem = { href: '/console/activity', label: 'Activity', icon: 'activity' }
-  const gst: NavItem = { href: '/console/gst', label: 'GST', icon: 'tax' }
-  const seesGst = (CAN_SEE_GST as readonly string[]).includes(role)
+  const gst: NavItem = { href: '/console/apps/gst', label: 'GST', icon: 'tax' }
+  // GST is a module (Growth and Scale, switched on in Apps): its nav item shows only when the shop can use it. The
+  // accountant always has it, so they land on a page that says why when it is off.
+  const gstOn = await shopModules(tenantId, now.toISOString()).then((m) => m.access.gst.usable).catch(() => false)
+  const seesGst = gstOn && (CAN_SEE_GST as readonly string[]).includes(role)
   const accountant = role === 'accountant'
   const groups: NavGroup[] = accountant ? [{ label: 'Taxes', items: [gst] }]
     : [{ label: 'Today', items: [home, orders, analytics] }, { label: 'Catalogue', items: [products, collections] }, { label: 'Store', items: [offers, ...(seesGst ? [gst] : []), look, apps, settings, activity] }]

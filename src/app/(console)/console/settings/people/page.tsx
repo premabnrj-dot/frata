@@ -9,6 +9,7 @@ import { dayIN } from '@/lib/format-date'
 import { RemovePartner } from './remove-partner'
 import { AccountantCard } from './accountant'
 import { accountantInvites } from '@/lib/db/accountants'
+import { shopModules } from '@/lib/queries/modules'
 import { CONSOLE_HOST } from '@/lib/public-env'
 import { ROLE_LABEL, type MemberRole } from '@/domains/tenancy/roles'
 
@@ -19,9 +20,11 @@ export const metadata = { title: 'People' }
 export default async function PeoplePage() {
   const auth = await requireMember(CAN_MANAGE)
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or an admin can see people' : auth.message} />
-  const [people, invites] = await Promise.all([
+  const [people, invites, gstOn] = await Promise.all([
     shopPeople(auth.membership.tenantId).catch((err) => { console.error('[people]', err instanceof Error ? err.name : err); return null }),
     accountantInvites(auth.membership.tenantId, auth.userId).catch(() => []),
+    // The accountant's login is part of the GST app: offered while GST is on; one already there can still be removed.
+    shopModules(auth.membership.tenantId, new Date().toISOString()).then((m) => m.access.gst.usable).catch(() => false),
   ])
   if (!people) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const canRemove = auth.membership.role === 'owner' && !auth.membership.supportSessionId
@@ -48,6 +51,7 @@ export default async function PeoplePage() {
       </ul></Section>
       {!auth.membership.supportSessionId && (() => {
         const acc = people.find((p) => p.role === 'accountant')
+        if (!gstOn && !acc && !invites.length) return null
         return <Section flush ariaLabel="Accountant"><AccountantCard member={acc ? { userId: acc.userId, email: acc.email } : null} invites={invites.map((i) => ({ id: i.id, email: i.email, expires: dayIN(i.expiresAt) }))} consoleUrl={CONSOLE_HOST} /></Section>
       })()}
     </div>

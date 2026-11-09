@@ -492,8 +492,10 @@ Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
 
 ## GST (plan docs/plans/2026-11-09-gst-core-and-categories.md, built 2026-11-09)
 
-**The split.** GST in the **core** is always on and correct at the source: rates, invoices, credit notes. The **GST
-app** (Console › GST) only READS the documents as issued (`invoice()` / `creditNote()` in `domains/orders/documents.ts`)
+**The split.** GST in the **core** is always on and correct at the source: rates, invoices, credit notes, Settings ›
+Taxes, Products › HSN codes — every shop, every plan. The **GST app** is the module `gst` (registry; billing `plan`:
+Growth and Scale, owner 2026-11-09), at `console/apps/gst/`, shown in the nav only when usable, its writes and export
+through `asModule('gst', …)`, the Accountant's invite too (removing one works with GST off). It only READS the documents as issued (`invoice()` / `creditNote()` in `domains/orders/documents.ts`)
 — it never edits a document and never recomputes a tax head.
 - **The rate:** `domains/tax/rates.ts` `RATE_TABLES` — dated (`from`), matched by the longest HSN prefix, the ₹2,500
   per-piece slab (after discounts) for chapters 61–64. The date is the order's `placedAt`, never the clock (`taxOrder`,

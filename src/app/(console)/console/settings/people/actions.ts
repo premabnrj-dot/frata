@@ -1,6 +1,7 @@
 'use server'
 
 import { errName } from '@/lib/log'
+import { asModule } from '@/lib/auth/as-module'
 
 import { revalidatePath } from 'next/cache'
 import { asMember } from '@/lib/auth/as-member'
@@ -43,7 +44,8 @@ export async function inviteShopAccountant(email: string): Promise<{ ok: true } 
   const e = String(email ?? '').trim().toLowerCase()
   if (!e || e.length > 254) return { ok: false, error: ACCOUNTANT.bad_email! }
   try {
-    const r = await asMember(CAN_INVITE_ACCOUNTANT, { action: 'shop.accountant_invited' }, async (tx, auth) => {
+    // Inviting is part of the GST app (a module): asModule refuses in words when GST is off or not in the plan.
+    const r = await asModule('gst', CAN_INVITE_ACCOUNTANT, { action: 'shop.accountant_invited' }, async (tx, auth) => {
       if (auth.membership.supportSessionId) return { ok: false as const, error: 'not_manager' }
       return inviteAccountant(tx, auth.membership.tenantId, auth.userId, e)
     })
