@@ -42,7 +42,7 @@ export async function addDomain(h: string, redirectTo?: string): Promise<AddResu
   if (r.status === 200 || r.status === 201) return { ok: true }
   const c = code(r.json)
   // A 409's codes aren't documented with certainty [U]: ask whether it is on OUR project instead of trusting the code.
-  // On ours is success only when the database says no other shop holds it live (the sender checks that first).
+  // On ours is success: only a proved row is ever added, and one shop at most holds an apex live (0080's index).
   if (r.status === 409) {
     const here = await projectDomain(h)
     if (here?.onProject) return { ok: true }

@@ -39,12 +39,23 @@ export async function txtSeen(name: string, value: string): Promise<Seen> {
   return has.every(Boolean) ? 'yes' : has.some(Boolean) ? 'unknown' : 'no'
 }
 
-/** The TXT values at `name` that BOTH resolvers return (null: one couldn't answer). The proof reads this. */
-export async function txtValues(name: string): Promise<string[] | null> {
-  const both = await Promise.all(RESOLVERS.map((r) => ask(r, name, 'TXT')))
-  if (both.some((a) => a === null)) return null
-  const [x, y] = both.map((a) => a!.map(txtOf)) as [string[], string[]]
-  return [...new Set(x.filter((v) => y.includes(v)))].filter((v) => v.length <= 255).slice(0, 20)
+/** The TXT values at `name`: those BOTH resolvers return (a proof reads only these) and those EITHER does (an old
+ *  owner's token in one is enough to hold a move). null when a resolver couldn't answer. */
+export async function txtValues(name: string): Promise<{ both: string[]; any: string[] } | null> {
+  const got = await Promise.all(RESOLVERS.map((r) => ask(r, name, 'TXT')))
+  if (got.some((a) => a === null)) return null
+  const [x, y] = got.map((a) => a!.map(txtOf).filter((v) => v.length <= 255)) as [string[], string[]]
+  return { both: [...new Set(x.filter((v) => y.includes(v)))].slice(0, 20), any: [...new Set([...x, ...y])].slice(0, 40) }
+}
+
+/** Loopback, private, link-local, CGNAT, multicast and reserved IPv4: never a name server we query directly. */
+export const isPublicV4 = (ip: string) => {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(ip)
+  if (!m) return false
+  const [a, b] = [Number(m[1]), Number(m[2])]
+  if ([m[1], m[2], m[3], m[4]].some((x) => Number(x) > 255)) return false
+  return !(a === 0 || a === 10 || a === 127 || a >= 224 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254)
+    || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 192 && b === 0) || (a === 198 && (b === 18 || b === 19)))
 }
 
 /** One resolver, the other if it can't answer. */
@@ -87,11 +98,11 @@ export async function txtAtSource(name: string, value: string, apex: string): Pr
   if (FAKE) return txtSeen(name, value)
   const ns = (await nameServers(apex))[0]
   if (!ns) return 'unknown'
-  const ip = (await first(ns, 'A'))?.find((x) => /^\d{1,3}(\.\d{1,3}){3}$/.test(x))
+  const ip = (await first(ns, 'A'))?.find(isPublicV4)
   if (!ip) return 'unknown'
-  const r = new Resolver({ timeout: MS, tries: 1 })
-  r.setServers([ip])
   try {
+    const r = new Resolver({ timeout: MS, tries: 1 })
+    r.setServers([ip])
     const rows = await r.resolveTxt(name)
     return rows.some((chunks) => chunks.join('') === value) ? 'yes' : 'no'
   } catch (e) {

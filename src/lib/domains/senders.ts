@@ -12,14 +12,17 @@ import type { OutboxRow } from '@/lib/outbox'
 
 /** Outbox `domain.add`: put a proved host (and its www, sent to it) on the project, then record what Vercel said. */
 export async function sendDomainAdd(row: OutboxRow): Promise<void> {
-  const p = row.payload as { id?: string; host?: string; www?: string | null }
-  if (!p.id || !/^[0-9a-f-]{36}$/.test(p.id) || !p.host) throw new Error('domain.add without its row')
+  const id = (row.payload as { id?: string }).id
+  if (!id || !/^[0-9a-f-]{36}$/.test(id)) throw new Error('domain.add without its row')
+  // Re-read: only a row still this shop's, proved, live and not yet added (removed meanwhile → nothing to add).
+  const [p] = await withTenant(row.tenantId, (tx) => tx.execute<{ host: string; www: string | null }>(sql`select * from app_domain_add_due(${id}::uuid)`))
+  if (!p) return
   const main = await addDomain(p.host)
   if (!main.ok && main.why !== 'other_account') throw new Error(`domain.add: ${main.why}`)
   if (main.ok && p.www) {
     const w = await addDomain(p.www, p.host)
     if (!w.ok && w.why !== 'other_account') throw new Error(`domain.add www: ${w.why}`)
   }
-  await withTenant(row.tenantId, (tx) => tx.execute(sql`select app_domain_added(${p.id}::uuid, ${main.ok}, ${main.ok ? null : main.vercelTxt})`))
+  await withTenant(row.tenantId, (tx) => tx.execute(sql`select app_domain_added(${id}::uuid, ${main.ok}, ${main.ok ? null : main.vercelTxt})`))
 }
 

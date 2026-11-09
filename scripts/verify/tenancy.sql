@@ -461,27 +461,29 @@ do $$ declare a uuid; a2 uuid; b uuid; ta text; tb text; r record; begin
   begin perform app_claim_domain('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-y.in', 'proof-y.in', true, 5); raise exception 'FAIL: the project''s room was ignored';
   exception when raise_exception then if sqlerrm <> 'capacity' then raise; end if; end;
   perform app_claim_domain('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'shop.proof-y.in', 'proof-y.in', false, 47);
+  begin perform app_claim_domain('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'www2.proof-y.in', 'proof-y.in', false, 47); raise exception 'FAIL: a second host of the same apex';
+  exception when raise_exception then if sqlerrm <> 'same_apex' then raise; end if; end;
   begin perform app_claim_domain('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-z.in', 'proof-z.in', true, 47); raise exception 'FAIL: more than 4 hosts';
   exception when raise_exception then if sqlerrm <> 'four_hosts' then raise; end if; end;
 
   perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
   if exists (select 1 from app_domain_lease(b)) then raise exception 'FAIL: A leased B''s row'; end if;
-  if (select x.state from app_domain_record(b, array['frrata-verify=' || tb], 'yes', 'yes', 'yes') x) <> 'gone' then raise exception 'FAIL: A wrote B''s row'; end if;
+  if (select x.state from app_domain_record(b, array['frrata-verify=' || tb], array['frrata-verify=' || tb], 'yes', 'yes', 'yes', 47) x) <> 'gone' then raise exception 'FAIL: A wrote B''s row'; end if;
   if not exists (select 1 from app_domain_lease(a)) then raise exception 'FAIL: A can''t lease its own row'; end if;
   if exists (select 1 from app_domain_lease(a)) then raise exception 'FAIL: two leases within 10 s'; end if;
-  select * into r from app_domain_record(a, array['frrata-verify=' || tb], 'no', 'no', 'no');
+  select * into r from app_domain_record(a, array['frrata-verify=' || tb], array['frrata-verify=' || tb], 'no', 'no', 'no', 47);
   if r.state <> 'waiting' then raise exception 'FAIL: another row''s token proved A (%)', r.state; end if;
-  select * into r from app_domain_record(a, array['frrata-verify=' || ta], 'no', 'no', 'no');
+  select * into r from app_domain_record(a, array['frrata-verify=' || ta], array['frrata-verify=' || ta], 'no', 'no', 'no', 47);
   if r.state <> 'waiting' or not r.add_now then raise exception 'FAIL: A''s own token must prove it and ask for the add (% %)', r.state, r.add_now; end if;
   if exists (select 1 from app_shop_for_domain('proof-x.in')) then raise exception 'FAIL: a domain served before it was on our project'; end if;
   perform app_domain_added(a, true, null);
-  select * into r from app_domain_record(a, array['frrata-verify=' || ta], 'yes', 'yes', 'yes');
+  select * into r from app_domain_record(a, array['frrata-verify=' || ta], array['frrata-verify=' || ta], 'yes', 'yes', 'yes', 47);
   if r.state <> 'connected' then raise exception 'FAIL: A should be connected (%)', r.state; end if;
   if (select s.id from app_shop_for_domain('proof-x.in') s) <> '11111111-1111-1111-1111-111111111111' then raise exception 'FAIL: the lookup must serve A'; end if;
 
   -- B shows both tokens: a dispute, nothing moves.
   perform set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
-  select * into r from app_domain_record(b, array['frrata-verify=' || tb, 'frrata-verify=' || ta], 'yes', 'yes', 'yes');
+  select * into r from app_domain_record(b, array['frrata-verify=' || tb, 'frrata-verify=' || ta], array['frrata-verify=' || tb, 'frrata-verify=' || ta], 'yes', 'yes', 'yes', 47);
   if r.state <> 'dispute' then raise exception 'FAIL: both tokens must be a dispute (%)', r.state; end if;
 end $$;
 reset role;
@@ -500,16 +502,36 @@ do $$ declare a uuid; b uuid; tb text; r record; begin
   perform app_make_domain_main('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', a);
   perform set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
   select d.id, d.token into b, tb from shop_domains d where d.tenant_id = '22222222-2222-2222-2222-222222222222' and d.host = 'proof-x.in';
-  select * into r from app_domain_record(b, array['frrata-verify=' || tb], 'yes', 'yes', 'yes');
+  select * into r from app_domain_record(b, array['frrata-verify=' || tb], array['frrata-verify=' || tb], 'yes', 'yes', 'yes', 47);
   if r.state <> 'held' then raise exception 'FAIL: a main domain must wait 72 h (%)', r.state; end if;
 end $$;
 reset role;
-update shop_domains set contest_at = now() - interval '73 hours' where tenant_id = '22222222-2222-2222-2222-222222222222' and host = 'proof-x.in';
+update shop_domains set contest_at = now() - interval '73 hours', checked_at = null where tenant_id = '22222222-2222-2222-2222-222222222222' and host = 'proof-x.in';
 set local role frata_app;
 select set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
 do $$ declare b uuid; tb text; r record; begin
   select d.id, d.token into b, tb from shop_domains d where d.tenant_id = '22222222-2222-2222-2222-222222222222' and d.host = 'proof-x.in';
-  select * into r from app_domain_record(b, array['frrata-verify=' || tb], 'yes', 'yes', 'yes');
+  -- A main domain still waits after 72 h: it moves only by Admin until its owner can be told.
+  select * into r from app_domain_record(b, array['frrata-verify=' || tb], array['frrata-verify=' || tb], 'yes', 'yes', 'yes', 47);
+  if r.state <> 'held' then raise exception 'FAIL: a main domain moved by itself (%)', r.state; end if;
+end $$;
+reset role;
+update shop_domains set main_at = null where tenant_id = '11111111-1111-1111-1111-111111111111' and host = 'proof-x.in';
+set local role frata_app;
+select set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+do $$ declare b uuid; tb text; ta text; r record; begin
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  select d.token into ta from shop_domains d where d.tenant_id = '11111111-1111-1111-1111-111111111111' and d.host = 'proof-x.in';
+  perform set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+  select d.id, d.token into b, tb from shop_domains d where d.tenant_id = '22222222-2222-2222-2222-222222222222' and d.host = 'proof-x.in';
+  if ta is null then raise exception 'FAIL: the proof could not read A''s token'; end if;
+  -- One resolver still shows A's token: no move.
+  select * into r from app_domain_record(b, array['frrata-verify=' || tb], array['frrata-verify=' || tb, 'frrata-verify=' || ta], 'yes', 'yes', 'yes', 47);
+  if r.state <> 'dispute' then raise exception 'FAIL: one resolver with the old token must hold the move (%)', r.state; end if;
+  -- The project is full: the proof waits, nothing is added.
+  select * into r from app_domain_record(b, array['frrata-verify=' || tb], array['frrata-verify=' || tb], 'yes', 'yes', 'yes', 1);
+  if r.state <> 'paused' or r.add_now then raise exception 'FAIL: a full project must pause the proof (% %)', r.state, r.add_now; end if;
+  select * into r from app_domain_record(b, array['frrata-verify=' || tb], array['frrata-verify=' || tb], 'yes', 'yes', 'yes', 47);
   if r.state <> 'connected' or r.add_now then raise exception 'FAIL: B takes the domain already on our project (% %)', r.state, r.add_now; end if;
   if (select s.id from app_shop_for_domain('proof-x.in') s) <> '22222222-2222-2222-2222-222222222222' then raise exception 'FAIL: the moved domain must serve B'; end if;
 end $$;

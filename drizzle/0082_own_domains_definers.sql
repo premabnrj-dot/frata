@@ -33,6 +33,10 @@ begin
   -- A second press of Continue: the same claim back.
   select * into v_row from public.shop_domains d where d.tenant_id = p_tenant and d.host = p_host and d.removed_at is null;
   if found then return query select v_row.id, v_row.token; return; end if;
+  -- One live host per apex (0080): a second host of the same apex for this shop is refused, not "moved" from itself.
+  if exists (select 1 from public.shop_domains d where d.tenant_id = p_tenant and d.apex = p_apex and d.host <> p_host and d.removed_at is null) then
+    raise exception 'same_apex' using errcode = 'P0001';
+  end if;
   if (select count(*) from public.shop_domains d where d.tenant_id = p_tenant and d.claimed_at > now() - interval '1 day') >= 10 then
     raise exception 'ten_today' using errcode = 'P0001';
   end if;
@@ -73,9 +77,11 @@ end;
 $$;
 
 --> statement-breakpoint
--- ── What the check saw. p_seen: the TXT values BOTH resolvers agree on at _frrata.<apex> (null: they couldn't
---    answer). p_points / p_cert / p_on_project: 'yes' | 'no' | 'unknown'. Returns whether Vercel must add it now. ──
-create or replace function app_domain_record(p_id uuid, p_seen text[], p_points text, p_cert text, p_on_project text)
+-- ── What the check saw. p_seen: the TXT values BOTH resolvers agree on at _frrata.<apex> (a proof reads only these);
+--    p_any: every value EITHER returned (an old owner's token still in one is enough to hold a move); null: couldn't
+--    answer. p_points / p_cert / p_on_project: 'yes' | 'no' | 'unknown'. p_room: hosts the project may hold for shops.
+--    Returns whether Vercel must add it now; 'paused' when the project is full (our failure, never the merchant's). ──
+create or replace function app_domain_record(p_id uuid, p_seen text[], p_any text[], p_points text, p_cert text, p_on_project text, p_room int)
   returns table (state text, add_now boolean)
   language plpgsql volatile security definer set search_path = '' as $$
 #variable_conflict use_column
@@ -91,8 +97,10 @@ begin
 
   if r.proved_at is null then
     if p_seen is null or not (('frrata-verify=' || r.token) = any (p_seen)) then
-      -- Not proved: let go after 48 h.
-      if r.claimed_at < now() - interval '48 hours' then
+      -- Not proved: our token isn't there, so any hold we were counting starts again.
+      if r.contest_at is not null and p_seen is not null then update public.shop_domains d set contest_at = null where d.id = r.id; end if;
+      -- Let go after 48 h, but only on an answer (a resolver that couldn't answer never starts a clock).
+      if p_seen is not null and r.claimed_at < now() - interval '48 hours' then
         update public.shop_domains d set removed_at = now(), removed_reason = 'unproven' where d.id = r.id;
         return query select 'let_go'::text, false; return;
       end if;
@@ -101,19 +109,36 @@ begin
     -- Our token is there. Is the apex held live by another shop?
     select * into o from public.shop_domains d where d.apex = r.apex and d.proved_at is not null and d.removed_at is null and d.id <> r.id for update;
     if found then
-      if ('frrata-verify=' || o.token) = any (p_seen) then
+      if p_any is null or ('frrata-verify=' || o.token) = any (p_any) then
         update public.shop_domains d set contest_at = null where d.id = r.id;
         return query select 'dispute'::text, false; return;
       end if;
+      -- A MAIN domain never moves by itself until its owner can be told (owner call 3's "told"; notifications, E plan):
+      -- it waits for Admin (D2·11), with contest_at recording since when. A non-main one moves to whoever proves DNS.
       if o.main_at is not null then
         if r.contest_at is null then update public.shop_domains d set contest_at = now() where d.id = r.id; end if;
-        if coalesce(r.contest_at, now()) > now() - interval '72 hours' then return query select 'held'::text, false; return; end if;
+        return query select 'held'::text, false; return;
       end if;
       -- Two statements, in this order: the old row leaves (removed_reason 'moved' is its record; the host stays on our
       -- project for its new shop), then ours is proved.
-      update public.shop_domains d set removed_at = now(), removed_reason = 'moved', main_at = null where d.id = o.id;
+      -- A different host of the same apex leaves the old one on Vercel: it parks (counted, and D2·7 removes it).
+      update public.shop_domains d set removed_at = now(), removed_reason = 'moved', main_at = null,
+          parked_at = case when d.added_at is not null and d.host <> r.host then now() end
+       where d.id = o.id;
     end if;
-    update public.shop_domains d set proved_at = now(), contest_at = null where d.id = r.id returning * into r;
+    -- The project's room, counted again at the proof (claims pass the claim check together): full → paused, no add.
+    perform pg_advisory_xact_lock(hashtext('shop_domains_capacity'));
+    if (select coalesce(sum(1 + d.with_www::int), 0) from public.shop_domains d
+         where d.id <> r.id and (d.added_at is not null or d.proved_at is not null) and (d.removed_at is null or d.parked_at is not null))
+       + 1 + r.with_www::int > p_room then
+      return query select 'paused'::text, false; return;
+    end if;
+    begin
+      update public.shop_domains d set proved_at = now(), contest_at = null where d.id = r.id returning * into r;
+    exception when unique_violation then
+      -- Another shop proved the same apex at the same moment: a dispute, never a silent loss.
+      return query select 'dispute'::text, false; return;
+    end;
   end if;
 
   update public.shop_domains d set
@@ -144,11 +169,23 @@ create or replace function app_domain_added(p_id uuid, p_ok boolean, p_vercel_tx
   language plpgsql volatile security definer set search_path = '' as $$
 #variable_conflict use_column
 begin
+  -- Removed while the add was on its way: it is on Vercel now, so it parks (counted; D2·7 takes it off).
   update public.shop_domains d set
       added_at = case when p_ok then coalesce(d.added_at, now()) else d.added_at end,
-      vercel_txt = case when not p_ok and p_vercel_txt is not null and d.vercel_txt is null then left(p_vercel_txt, 255) else d.vercel_txt end
+      parked_at = case when p_ok and d.removed_at is not null then coalesce(d.parked_at, now()) else d.parked_at end,
+      vercel_txt = case when not p_ok and p_vercel_txt is not null and d.vercel_txt is null and d.removed_at is null then left(p_vercel_txt, 255) else d.vercel_txt end
    where d.id = p_id and d.tenant_id = public.app_current_tenant() and d.proved_at is not null;
 end;
+$$;
+
+--> statement-breakpoint
+-- ── The sender's re-read: the host to add, only while the row is this shop's, proved, live and not yet added. ──
+create or replace function app_domain_add_due(p_id uuid)
+  returns table (host text, www text)
+  language sql stable security definer set search_path = '' as $$
+    select d.host, case when d.with_www then 'www.' || d.apex end
+      from public.shop_domains d
+     where d.id = p_id and d.tenant_id = public.app_current_tenant() and d.proved_at is not null and d.removed_at is null and d.added_at is null
 $$;
 
 --> statement-breakpoint
@@ -257,13 +294,13 @@ create or replace function app_shop_for_domain(p_host text)
 $$;
 
 --> statement-breakpoint
-revoke all on function app_claim_domain(uuid, uuid, text, text, boolean, int), app_domain_lease(uuid), app_domain_record(uuid, text[], text, text, text),
-  app_domain_added(uuid, boolean, text), app_make_domain_main(uuid, uuid, uuid), app_unmake_domain_main(uuid, uuid),
+revoke all on function app_claim_domain(uuid, uuid, text, text, boolean, int), app_domain_lease(uuid), app_domain_record(uuid, text[], text[], text, text, text, int),
+  app_domain_added(uuid, boolean, text), app_domain_add_due(uuid), app_make_domain_main(uuid, uuid, uuid), app_unmake_domain_main(uuid, uuid),
   app_domain_razorpay_ok(uuid, uuid, uuid, boolean), app_remove_domain(uuid, uuid, uuid), app_shop_for_domain(text)
   from public, anon, authenticated, service_role;
 
 --> statement-breakpoint
-grant execute on function app_claim_domain(uuid, uuid, text, text, boolean, int), app_domain_lease(uuid), app_domain_record(uuid, text[], text, text, text),
-  app_domain_added(uuid, boolean, text), app_make_domain_main(uuid, uuid, uuid), app_unmake_domain_main(uuid, uuid),
+grant execute on function app_claim_domain(uuid, uuid, text, text, boolean, int), app_domain_lease(uuid), app_domain_record(uuid, text[], text[], text, text, text, int),
+  app_domain_added(uuid, boolean, text), app_domain_add_due(uuid), app_make_domain_main(uuid, uuid, uuid), app_unmake_domain_main(uuid, uuid),
   app_domain_razorpay_ok(uuid, uuid, uuid, boolean), app_remove_domain(uuid, uuid, uuid), app_shop_for_domain(text)
   to frata_app;

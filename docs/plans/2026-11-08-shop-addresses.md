@@ -193,7 +193,18 @@ app_shop_for_domain); `tenantForHost` reads app_shop_for_domain for an own domai
 is CAN_MANAGE (owners and admins; partners not yet — the plan's partner-before-handover waits for a reason); a proved
 row the check finds on our project counts as added (a move, or a lost add answer); the old shop is not yet told of a
 move (notifications, E plan) — its row records `removed_reason = 'moved'`. Vercel's 409 codes are unverified, so a 409
-asks whether the domain is on our project instead. Tests: connectors (unit, faked fetch), proofs 56, int
+asks whether the domain is on our project instead. **Review fixes (tenancy + security, 2026-11-09):** a moved or
+removed-before-add host parks (counted, D2·7 removes it); the sender re-reads its row (app_domain_add_due); the room is
+counted again at the proof under the same lock (full → `paused`, never an add); the old owner's token in EITHER
+resolver holds a move; a race on the proof is a dispute; let-go only on a real answer; one host per apex per shop
+(`same_apex`); names under free shared suffixes (duckdns.org, github.io) refused; the direct name-server query refuses
+non-public addresses; a new proof refreshes the host's cached lookup; the check catches and logs `errName` only.
+**A main domain never moves by itself until its owner can be told** (owner call 3's "told" needs notifications, the E
+plan): it waits for Admin (D2·11), `contest_at` records since when; a non-main one moves to whoever proves DNS.
+**D2·10's actions must:** `requireMember(CAN_MANAGE)` with support visits refused; Zod (raw ≤ 300, row id uuid only);
+rate limits per member, shop and ipBucket plus a global budget for Vercel reads and DoH, failing closed; reply named
+fields only; catch all, log `errName`; connect only on a paid or verified shop with a global daily claim budget.
+Still to do: drop `app_tenant_for_host` (0008) in the next migration. Tests: connectors (unit, faked fetch), proofs 56, int
 `src/lib/domains/__tests__/own-domains.int.test.ts`.
 
 ## Owner calls — decided 2026-11-08

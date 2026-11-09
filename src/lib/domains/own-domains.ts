@@ -7,6 +7,7 @@ import { withTenant } from '@/lib/db/tenant'
 import { caaBlocks, nameServers, pointsAt, txtAtSource, txtValues, type Seen } from '@/lib/connectors/dns'
 import { projectDomain, projectRecords, type ProjectRecords } from '@/lib/connectors/vercel'
 import { DOMAIN_CAPACITY, isOwnDomainsConfigured } from '@/lib/env'
+import { refreshHosts } from '@/lib/storefront/refresh'
 import { CONSOLE_HOST, SHOP_DOMAIN } from '@/lib/public-env'
 import { enqueue } from '@/lib/outbox'
 import { drainSoon } from '@/lib/outbox/drain'
@@ -32,9 +33,9 @@ const PLATFORM_HOSTS = 3
 
 export type Record3 = { type: 'TXT' | 'A' | 'CNAME'; name: string; value: string }
 export type Claimed = { id: string; facts: DomainFacts; records: Record3[]; dnsHost: DnsHost | null }
-export type ClaimError = DomainProblem | 'not_owner' | 'frozen' | 'blocked' | 'ten_today' | 'four_hosts' | 'capacity' | 'off' | 'unknown'
+export type ClaimError = DomainProblem | 'not_owner' | 'frozen' | 'blocked' | 'same_apex' | 'ten_today' | 'four_hosts' | 'capacity' | 'off' | 'unknown'
 
-const CLAIM_CODES = ['not_owner', 'frozen', 'blocked', 'ten_today', 'four_hosts', 'capacity'] as const
+const CLAIM_CODES = ['not_owner', 'frozen', 'blocked', 'same_apex', 'ten_today', 'four_hosts', 'capacity'] as const
 const codeOf = <T extends string>(err: unknown, codes: readonly T[]): T | null => {
   const msg = (err as { cause?: { message?: string } })?.cause?.message ?? (err instanceof Error ? err.message : '')
   return codes.find((c) => msg.includes(c)) ?? null
@@ -69,7 +70,7 @@ export async function claimDomain(tenantId: string, uid: string, raw: string): P
   }
 }
 
-export type CheckState = 'waiting' | 'securing' | 'connected' | 'not_working' | 'dispute' | 'held' | 'let_go' | 'unknown' | 'gone' | 'busy'
+export type CheckState = 'waiting' | 'securing' | 'connected' | 'not_working' | 'dispute' | 'held' | 'paused' | 'let_go' | 'unknown' | 'gone' | 'busy'
 export type Check = { state: CheckState; found: { txt: Seen; points: Seen; www: Seen | null }; stray: string | null; caa: Seen }
 
 /** A text[] parameter that survives being empty or null (drizzle spreads a JS array into a list). */
@@ -87,6 +88,15 @@ async function certLive(host: string): Promise<Seen> {
  */
 export async function checkDomainRow(tenantId: string, id: string, opts: { forDialog: boolean }): Promise<Check> {
   const idle: Check = { state: 'busy', found: { txt: 'unknown', points: 'unknown', www: null }, stray: null, caa: 'unknown' }
+  try {
+    return await check(tenantId, id, opts, idle)
+  } catch (err) {
+    console.error('[checkDomainRow]', errName(err))
+    return { ...idle, state: 'unknown' }
+  }
+}
+
+async function check(tenantId: string, id: string, opts: { forDialog: boolean }, idle: Check): Promise<Check> {
   const [lease] = await withTenant(tenantId, (tx) => tx.execute<{ host: string; apex: string; with_www: boolean; token: string; proved: boolean; added: boolean; main: boolean }>(
     sql`select * from app_domain_lease(${id}::uuid)`))
   if (!lease) return idle
@@ -107,11 +117,13 @@ export async function checkDomainRow(tenantId: string, id: string, opts: { forDi
   const on: Seen = onProject === null ? 'unknown' : onProject.onProject ? 'yes' : 'no'
   const out = await withTenant(tenantId, async (tx) => {
     const [r] = await tx.execute<{ state: CheckState; add_now: boolean }>(
-      sql`select * from app_domain_record(${id}::uuid, ${textArray(both)}, ${point.seen}, ${cert}, ${on})`)
-    if (r?.add_now) await enqueue(tx, { tenantId, kind: 'domain.add', dedupeKey: `domain.add:${id}`, payload: { id, host: lease.host, www: lease.with_www ? `www.${lease.apex}` : null } })
+      sql`select * from app_domain_record(${id}::uuid, ${textArray(both?.both ?? null)}, ${textArray(both?.any ?? null)}, ${point.seen}, ${cert}, ${on}, ${DOMAIN_CAPACITY - PLATFORM_HOSTS})`)
+    if (r?.add_now) await enqueue(tx, { tenantId, kind: 'domain.add', dedupeKey: `domain.add:${id}:${Math.floor(Date.now() / 3_600_000)}`, payload: { id, host: lease.host, www: lease.with_www ? `www.${lease.apex}` : null } })
     return r
   })
   if (out?.add_now) drainSoon()
-  const txt: Seen = lease.proved ? 'yes' : both?.includes(value) ? 'yes' : chip
+  // Proved just now (a move included): the host's cached lookup must stop serving whoever held it (security L4).
+  if (!lease.proved && both?.both.includes(value)) refreshHosts(lease.host, ...(lease.with_www ? [`www.${lease.apex}`] : []))
+  const txt: Seen = lease.proved ? 'yes' : both?.both.includes(value) ? 'yes' : chip
   return { state: out?.state ?? 'unknown', found: { txt, points: point.seen, www: www?.seen ?? null }, stray: point.found, caa }
 }

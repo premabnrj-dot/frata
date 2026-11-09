@@ -49,6 +49,9 @@ export function checkDomain(raw: string, opts: { consoleHost: string; shopDomain
   const p = parse(host, { allowPrivateDomains: true })
   if (!p.isIcann && !p.isPrivate) return { ok: false, problem: 'tld' }
   if (!p.domain) return { ok: false, problem: 'suffix' }
+  // A name under a free shared suffix (x.duckdns.org, x.github.io): not the merchant's own, and free to make by the
+  // dozen — it would fill our project's room (security review D2·6 M3).
+  if (p.isPrivate) return { ok: false, problem: 'reserved' }
   // www.<apex> means the apex: connect the apex and send www to it (Vercel's own redirect, D2·4).
   const main = host === `www.${p.domain}` ? p.domain : host
   return { ok: true, facts: { host: main, apex: p.domain, www: main === p.domain ? `www.${p.domain}` : null } }

@@ -4,6 +4,8 @@
 import { afterAll, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/outbox/drain', () => ({ drainSoon: vi.fn() }))
+const refreshed: string[] = []
+vi.mock('@/lib/storefront/refresh', () => ({ refreshHosts: (...h: string[]) => { refreshed.push(...h) } }))
 
 const host = process.env.INT_DB_HOST
 const dbName = process.env.INT_DB_NAME ?? 'frata_proof'
@@ -57,7 +59,8 @@ describe.skipIf(!host)('own domains', () => {
       txtLive = true
       const r = await own.checkDomainRow(A, c.claim.id, { forDialog: false })
       expect(r.found.txt).toBe('yes')
-      const [q] = await su`select kind, payload from outbox where dedupe_key = ${`domain.add:${c.claim.id}`}`
+      expect(refreshed).toEqual([dom, `www.${dom}`])
+      const [q] = await su`select kind, payload from outbox where dedupe_key like ${`domain.add:${c.claim.id}:%`}`
       expect(q?.kind).toBe('domain.add')
       expect(await platform.tenantForHost(dom)).toBeNull()
 
