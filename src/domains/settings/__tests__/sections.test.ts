@@ -35,10 +35,20 @@ describe('parseSection', () => {
     if (!r.ok) expect(Object.keys(r.errors).sort()).toEqual(['codBlockedPincodes', 'codCharge', 'codMin'])
   })
   it('normalises GSTIN, empty GSTIN is null, HSN shape', () => {
-    const ok = parseSection(s('taxes'), { pricesIncludeGst: true, gstin: ' 27aapfu0939f1zv ', defaultHsn: '6211', invoiceSeries: 'KS/' })
-    expect(ok.ok && ok.patch.gstin).toBe('27AAPFU0939F1ZV')
-    const none = parseSection(s('taxes'), { pricesIncludeGst: false, gstin: '', defaultHsn: '6211', invoiceSeries: '' })
-    expect(none.ok && none.patch.gstin).toBeNull()
+    const base = { turnoverBand: 'under_5cr', gstFiling: 'monthly', b2bInvoices: true, defaultHsn: '6211', invoiceSeries: 'KS/' }
+    const ok = parseSection(s('taxes'), { ...base, gstRegistration: 'regular', pricesIncludeGst: true, gstin: ' 27aapfu0939f1zv ' })
+    expect(ok.ok && ok.patch).toMatchObject({ gstin: '27AAPFU0939F1ZV', gstScheme: 'regular', homeState: '27', b2bInvoices: true })
+    expect(ok.ok && 'gstRegistration' in ok.patch).toBe(false)
+    const none = parseSection(s('taxes'), { ...base, gstRegistration: 'none', pricesIncludeGst: false, gstin: '27AAPFU0939F1ZV', homeState: '08' })
+    expect(none.ok && none.patch).toMatchObject({ gstin: null, homeState: '08' })
+    expect(parseSection(s('taxes'), { ...base, gstRegistration: 'none', gstin: '' }).ok).toBe(false) // the state is needed
+    expect(parseSection(s('taxes'), { ...base, gstRegistration: 'regular', gstin: '' }).ok).toBe(false) // the GSTIN is needed
+    const comp = parseSection(s('taxes'), { ...base, gstRegistration: 'composition', gstin: '29AAGCB7383J1Z4', pricesIncludeGst: false })
+    expect(comp.ok && comp.patch).toMatchObject({ gstScheme: 'composition', homeState: '29', b2bInvoices: false })
+    const big = parseSection(s('taxes'), { ...base, gstRegistration: 'regular', gstin: '29AAGCB7383J1Z4', turnoverBand: 'over_10cr', b2bInvoices: true })
+    expect(big.ok && big.patch.b2bInvoices).toBe(false) // business invoices wait for e-invoicing
+    expect(formValues(s('taxes'), { gstin: null, gstScheme: 'regular' }).gstRegistration).toBe('none')
+    expect(formValues(s('taxes'), { gstin: '29AAGCB7383J1Z4', gstScheme: 'composition' }).gstRegistration).toBe('composition')
     const bad = parseSection(s('taxes'), { pricesIncludeGst: true, gstin: '', defaultHsn: '62', invoiceSeries: '' })
     expect(bad.ok).toBe(false)
   })
@@ -58,7 +68,7 @@ describe('parseSection', () => {
 
 describe('formValues', () => {
   it('is the inverse of parseSection for every section', () => {
-    const stored = { name: 'Kesar', orderPrefix: 'KS', legalName: 'Kesar LLP', originCountry: 'India', address: 'Indore', supportEmail: 'a@b.in', supportPhone: '9827041000', whatsapp: '', instagram: 'k', grievanceName: 'R', grievanceRole: '', grievanceEmail: 'g@b.in', grievancePhone: '9827041001', accent: 'oxide', displayFont: 'fraunces', tagline: '', shopLanguage: 'hi', returnKind: 'exchange_or_refund', returnDays: 7, codOn: true, codMin: 0, codMax: 300000, codCharge: 4900, codBlockedPincodes: ['793001'], shippingFlat: 7900, freeShippingAbove: 199900, dispatchDays: 2, metroDays: 4, restDays: 7, pricesIncludeGst: true, gstin: null, defaultHsn: '6211', invoiceSeries: 'KS/', docSignatory: 'R. Sharma', docNote: 'Exchanges within 7 days.', slipSize: 'label' }
+    const stored = { name: 'Kesar', orderPrefix: 'KS', legalName: 'Kesar LLP', originCountry: 'India', address: 'Indore', supportEmail: 'a@b.in', supportPhone: '9827041000', whatsapp: '', instagram: 'k', grievanceName: 'R', grievanceRole: '', grievanceEmail: 'g@b.in', grievancePhone: '9827041001', accent: 'oxide', displayFont: 'fraunces', tagline: '', shopLanguage: 'hi', returnKind: 'exchange_or_refund', returnDays: 7, codOn: true, codMin: 0, codMax: 300000, codCharge: 4900, codBlockedPincodes: ['793001'], shippingFlat: 7900, freeShippingAbove: 199900, dispatchDays: 2, metroDays: 4, restDays: 7, pricesIncludeGst: true, gstin: null, gstScheme: 'regular', homeState: '23', turnoverBand: 'under_5cr', gstFiling: 'monthly', b2bInvoices: true, defaultHsn: '6211', invoiceSeries: 'KS/', docSignatory: 'R. Sharma', docNote: 'Exchanges within 7 days.', slipSize: 'label' }
     for (const sec of SECTIONS) {
       const r = parseSection(sec, formValues(sec, stored))
       expect(r.ok, sec.key).toBe(true)

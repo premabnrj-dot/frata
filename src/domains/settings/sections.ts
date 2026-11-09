@@ -11,8 +11,9 @@
 import { EMAIL_SHAPE, PINCODE_SHAPE } from '../signup/slug'
 import { seriesFits } from '../orders/work'
 import { CAN_BUILD, type MemberRole } from '../tenancy/roles'
+import { STATE_CODE } from '../checkout/states'
 
-export type FieldKind = 'text' | 'textarea' | 'email' | 'phone' | 'rupees' | 'days' | 'select' | 'switch' | 'gstin' | 'hsn' | 'pincodes'
+export type FieldKind = 'text' | 'textarea' | 'email' | 'phone' | 'rupees' | 'days' | 'select' | 'switch' | 'gstin' | 'hsn' | 'pincodes' | 'radio' | 'segmented' | 'state'
 
 export type Field = {
   key: string
@@ -28,6 +29,10 @@ export type Field = {
   wide?: boolean
   /** Printed on documents: refuse web addresses (a PDF viewer would make them links). */
   noLinks?: boolean
+  /** Radio cards: the second line under each option (its consequence, in a few words). */
+  notes?: Record<string, string>
+  /** Shown (and checked, and saved) only while another field holds one of these values. */
+  showIf?: { key: string; in: readonly string[] }
 }
 
 export type Block = { title: string; hint?: string; tip?: string; fields: Field[] }
@@ -40,6 +45,9 @@ export type SectionKey = 'store' | 'contact' | 'brand' | 'policies' | 'payments'
  */
 export type Section = { key: SectionKey; title: string; intro: string; blocks: Block[]; preview: 'footer' | 'contact' | 'brand' | 'policy' | 'checkout' | 'invoice'; editors: readonly MemberRole[] }
 
+export const REGISTRATION_OPTIONS = [['regular', 'Regular'], ['composition', 'Composition'], ['none', 'Not registered']] as const
+export const TURNOVER_OPTIONS = [['under_5cr', 'Under ₹5 crore'], ['5_to_10cr', '₹5–10 crore'], ['over_10cr', '₹10 crore or more']] as const
+export const FILING_OPTIONS = [['monthly', 'Monthly'], ['quarterly', 'Quarterly (IFF)']] as const
 export const LANGUAGE_OPTIONS = [['en', 'English'], ['hi', 'हिन्दी (Hindi)']] as const
 export const RETURN_OPTIONS = [['exchange_or_refund', 'An exchange or a refund'], ['exchange_only', 'An exchange only'], ['refund_only', 'A refund only'], ['none', 'No returns']] as const
 export const SLIP_SIZE_OPTIONS = [['a4', 'A4 paper'], ['label', '4×6 label (thermal printer)']] as const
@@ -135,10 +143,20 @@ export const SECTIONS: readonly Section[] = [
     editors: CAN_BUILD,
     key: 'taxes', title: 'Taxes and invoices', intro: 'GST on your prices and invoices.', preview: 'invoice',
     blocks: [
-      { title: 'GST', fields: [
-        { key: 'pricesIncludeGst', label: 'My prices include GST', kind: 'switch', wide: true },
-        { key: 'gstin', label: 'GSTIN', kind: 'gstin', hint: 'Leave empty if you are not registered. Your shop then issues a bill of supply, never a “tax invoice”.' },
-        { key: 'defaultHsn', label: 'Default HSN code', kind: 'hsn', tip: 'Each product can have its own.' },
+      { title: 'Registration', fields: [
+        { key: 'gstRegistration', label: 'Registration', kind: 'radio', wide: true, options: REGISTRATION_OPTIONS,
+          notes: { regular: 'Tax invoices', composition: 'Bill of supply · within your state', none: 'Bill of supply · within your state' } },
+        { key: 'gstin', label: 'GSTIN', kind: 'gstin', showIf: { key: 'gstRegistration', in: ['regular', 'composition'] } },
+        { key: 'homeState', label: 'Your business is in', kind: 'state', showIf: { key: 'gstRegistration', in: ['none'] }, hint: 'Your shop delivers within this state only: selling to another state needs a GSTIN.' },
+        { key: 'turnoverBand', label: 'Turnover last year', kind: 'segmented', wide: true, options: TURNOVER_OPTIONS, showIf: { key: 'gstRegistration', in: ['regular'] },
+          tip: 'All your GSTINs on one PAN, last financial year. It sets the HSN digits on invoices (4 under ₹5 crore, 6 above) and when e-invoicing applies.' },
+        { key: 'gstFiling', label: 'GSTR-1', kind: 'segmented', wide: true, options: FILING_OPTIONS, showIf: { key: 'gstRegistration', in: ['regular'] } },
+      ] },
+      { title: 'Prices and business buyers', fields: [
+        { key: 'pricesIncludeGst', label: 'My prices include GST', kind: 'switch', wide: true, showIf: { key: 'gstRegistration', in: ['regular'] } },
+        { key: 'b2bInvoices', label: 'Businesses can ask for a GST invoice at checkout', kind: 'switch', wide: true, showIf: { key: 'gstRegistration', in: ['regular'] },
+          tip: 'They enter their GSTIN and get an invoice they can claim input credit on. Turns itself off at ₹5 crore and above until e-invoicing is set up.' },
+        { key: 'defaultHsn', label: 'HSN code new products start with', kind: 'hsn' },
       ] },
       { title: 'Invoice numbers', hint: 'One series a financial year, never reused. A new series starts on 1 April.', fields: [
         { key: 'invoiceSeries', label: 'Series prefix', kind: 'text', max: 5, hint: 'Up to 4 characters, or 5 ending in / or -.', tip: 'Like KS/. The year and the number follow it: KS/26-27/00001.' },
@@ -209,6 +227,8 @@ function check(section: Section, values: Values): { patch: Patch; errors: Record
   const errors: Record<string, string> = {}
   const patch: Patch = {}
   for (const f of section.blocks.flatMap((b) => b.fields)) {
+    // A field shown only for another choice is neither checked nor saved while hidden.
+    if (f.showIf && !f.showIf.in.includes(String(values[f.showIf.key] ?? ''))) continue
     const raw = values[f.key]
     if (f.kind === 'switch') { patch[f.key] = raw === true; continue }
     if (f.kind === 'pincodes') {
@@ -248,6 +268,14 @@ function check(section: Section, values: Values): { patch: Patch; errors: Record
         if (!/^\d{1,2}$/.test(s) || Number(s) > 30) errors[f.key] = 'A number of days, up to 30.'
         else patch[f.key] = Number(s)
         break
+      case 'radio': case 'segmented':
+        if (!f.options!.some(([v]) => v === s)) errors[f.key] = 'Choose one.'
+        else patch[f.key] = s
+        break
+      case 'state':
+        if (!Object.values(STATE_CODE).includes(s)) errors[f.key] = 'Choose your state.'
+        else patch[f.key] = s
+        break
       case 'select':
         if (!f.options!.some(([v]) => v === s)) errors[f.key] = 'Choose one.'
         else patch[f.key] = /^\d+$/.test(s) ? Number(s) : s
@@ -271,8 +299,25 @@ function check(section: Section, values: Values): { patch: Patch; errors: Record
     const min = patch.codMin as number, max = patch.codMax as number
     if (max > 0 && min > max) errors.codMin = 'Lower than the highest value.'
   }
+  if (section.key === 'taxes') taxesPatch(values, patch, errors)
   for (const k of Object.keys(errors)) delete patch[k]
   return { patch, errors }
+}
+
+/**
+ * Registration is one choice on screen and two columns (plan 2026-11-09-gst-core-and-categories, review finding 3):
+ * "Not registered" is no GSTIN; Regular and Composition need one and set gst_scheme. The shop's state comes from the
+ * GSTIN when there is one. Business invoices are off at ₹5 crore and above until e-invoicing is set up.
+ */
+function taxesPatch(values: Values, patch: Patch, errors: Record<string, string>) {
+  const reg = String(values.gstRegistration ?? 'none')
+  delete patch.gstRegistration
+  if (reg === 'none') { patch.gstin = null; patch.gstScheme = 'regular'; if (!patch.homeState && !errors.homeState) errors.homeState = 'Choose your state.'; return }
+  patch.gstScheme = reg
+  if (!patch.gstin && !errors.gstin) errors.gstin = 'Your GSTIN, as registered.'
+  if (typeof patch.gstin === 'string') patch.homeState = patch.gstin.slice(0, 2)
+  if (reg === 'composition') { patch.pricesIncludeGst = true; patch.b2bInvoices = false }
+  if (reg === 'regular' && patch.turnoverBand && patch.turnoverBand !== 'under_5cr') patch.b2bInvoices = false
 }
 
 /** Stored values → what the form shows (rupees as text, lists as text). The inverse of parseSection. */
@@ -280,7 +325,8 @@ export function formValues(section: Section, stored: Record<string, unknown>): V
   const v: Values = {}
   for (const f of section.blocks.flatMap((b) => b.fields)) {
     const x = stored[f.key]
-    if (f.kind === 'switch') v[f.key] = x === true
+    if (f.key === 'gstRegistration') v[f.key] = stored.gstin ? String(stored.gstScheme ?? 'regular') : 'none'
+    else if (f.kind === 'switch') v[f.key] = x === true
     else if (f.kind === 'rupees') v[f.key] = String(Math.round(Number(x ?? 0) / 100))
     else if (f.kind === 'pincodes') v[f.key] = (Array.isArray(x) ? x : []).join(', ')
     else v[f.key] = x == null ? '' : String(x)

@@ -16,6 +16,7 @@ import { DocLogo } from './doc-logo'
 import { Section } from '@/components/layout/section'
 import { PageHeader } from '@/components/layout/page-header'
 import { Switch } from '@/components/ui/switch'
+import { STATES, STATE_CODE } from '@/domains/checkout/states'
 
 /**
  * One settings page: the fields its section defines, ONE explicit save, an
@@ -79,12 +80,13 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <form className="space-y-4" noValidate onSubmit={(e) => { e.preventDefault(); if (dirty) save() }}>
           {section.key === 'documents' && <DocLogo tenantId={tenantId} current={facts.docLogo} />}
-          {section.blocks.map((b) => (
+          {section.blocks.map((b) => ({ b, shown: b.fields.filter((f) => !f.showIf || f.showIf.in.includes(String(values[f.showIf.key] ?? ''))) })).filter(({ shown }) => shown.length).map(({ b, shown }) => (
             <Section key={b.title}>
               <h2 className="flex items-center text-section font-semibold">{b.title}{b.tip ? <InfoTip about={b.title.toLowerCase()}>{b.tip}</InfoTip> : null}</h2>
               {b.hint && <p className="-mt-1 text-sm text-muted-foreground">{b.hint}</p>}
               <div className="grid gap-3 sm:grid-cols-2">
-                {b.fields.map((f) => <FieldInput key={f.key} f={f} value={values[f.key]} error={errors[f.key]} onChange={(v) => set(f.key, v)} />)}
+                {shown.map((f) => <FieldInput key={f.key} f={f} value={values[f.key]} error={errors[f.key]} onChange={(v) => set(f.key, v)}
+                  locked={f.key === 'b2bInvoices' && values.turnoverBand !== undefined && values.turnoverBand !== 'under_5cr' ? 'Off at ₹5 crore and above until e-invoicing is set up.' : undefined} />)}
               </div>
             </Section>
           ))}
@@ -112,7 +114,9 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
 /** "(optional)" only where a field can really be left empty; a dropdown or a number always holds a value. */
 const CAN_BE_BLANK = new Set(['text', 'textarea', 'email', 'phone', 'gstin', 'pincodes'])
 
-function FieldInput({ f, value, error, onChange }: { f: Field; value: Values[string] | undefined; error?: string; onChange: (v: string | boolean) => void }) {
+function FieldInput({ f, value, error, onChange, locked }: { f: Field; value: Values[string] | undefined; error?: string; onChange: (v: string | boolean) => void
+  /** Held off for a reason another field gives (said under it). */
+  locked?: string }) {
   const id = `f-${f.key}`
   const described = `${id}-h`
   const base = 'w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text'
@@ -122,9 +126,46 @@ function FieldInput({ f, value, error, onChange }: { f: Field; value: Values[str
   const tip = f.tip ? <InfoTip about={f.label.toLowerCase()}>{f.tip}</InfoTip> : null
   if (f.kind === 'switch') {
     return (
-      <div className="flex items-center justify-between gap-3 sm:col-span-2">
-        <span className="flex items-center"><label htmlFor={id} className="text-sm font-medium">{f.label}</label>{tip}</span>
-        <Switch id={id} on={value === true} onChange={(v) => onChange(v)} />
+      <div className="space-y-1 sm:col-span-2">
+        <div className="flex items-center justify-between gap-3">
+          <span className="flex items-center"><label htmlFor={id} className="text-sm font-medium">{f.label}</label>{tip}</span>
+          <Switch id={id} on={!locked && value === true} disabled={!!locked} onChange={(v) => onChange(v)} />
+        </div>
+        {locked && <p className="text-xs text-muted-foreground">{locked}</p>}
+      </div>
+    )
+  }
+  if (f.kind === 'radio') {
+    return (
+      <fieldset className="space-y-1.5 sm:col-span-2">
+        <legend className="sr-only">{f.label}</legend>
+        <div role="radiogroup" aria-label={f.label} className="grid gap-2 sm:grid-cols-3">
+          {f.options!.map(([o, l]) => {
+            const on = value === o
+            return (
+              <button key={o} id={on ? id : undefined} type="button" role="radio" aria-checked={on} onClick={() => onChange(o)}
+                className={`flex items-start gap-3 rounded-lg border p-3 text-left transition-[border-color,box-shadow] duration-fast ${on ? 'border-foreground shadow-[inset_0_0_0_1px_var(--color-foreground)]' : 'border-border hover:border-input'}`}>
+                <span aria-hidden="true" className={`mt-0.5 size-4 shrink-0 rounded-full border-2 ${on ? 'border-[5px] border-foreground' : 'border-input'}`} />
+                <span><span className="block text-sm font-medium">{l}</span>{f.notes?.[o] && <span className="block text-xs text-muted-foreground">{f.notes[o]}</span>}</span>
+              </button>
+            )
+          })}
+        </div>
+        {help}
+      </fieldset>
+    )
+  }
+  if (f.kind === 'segmented') {
+    return (
+      <div className={`space-y-1 ${f.wide ? 'sm:col-span-2' : ''}`}>
+        <div className="flex items-center"><span id={`${id}-l`} className="text-sm font-medium">{f.label}</span>{tip}</div>
+        <div role="radiogroup" aria-labelledby={`${id}-l`} className="inline-flex max-w-full flex-wrap gap-0.5 rounded-lg bg-muted p-0.5">
+          {f.options!.map(([o, l]) => (
+            <button key={o} id={value === o ? id : undefined} type="button" role="radio" aria-checked={value === o} onClick={() => onChange(o)}
+              className={`min-h-9 rounded-md px-3 text-sm font-medium transition-[background-color,color] duration-fast ${value === o ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{l}</button>
+          ))}
+        </div>
+        {help}
       </div>
     )
   }
@@ -132,6 +173,7 @@ function FieldInput({ f, value, error, onChange }: { f: Field; value: Values[str
   const v = typeof value === 'string' ? value : ''
   let input: React.ReactNode
   if (f.kind === 'textarea' || f.kind === 'pincodes') input = <textarea {...common} rows={3} maxLength={f.max} value={v} onChange={(e) => onChange(e.target.value)} className={`${base} py-2 ${f.kind === 'pincodes' ? 'font-mono' : ''}`} />
+  else if (f.kind === 'state') input = <select {...common} value={v} onChange={(e) => onChange(e.target.value)} className={`${base} h-10 md:h-9`}><option value="">Choose</option>{STATES.map((st) => <option key={st} value={STATE_CODE[st]}>{st}</option>)}</select>
   else if (f.kind === 'select') input = <select {...common} value={v} onChange={(e) => onChange(e.target.value)} className={`${base} h-10 md:h-9`}>{f.options!.map(([o, l]) => <option key={o} value={o}>{l}</option>)}</select>
   else {
     const numeric = f.kind === 'rupees' || f.kind === 'days' || f.kind === 'hsn'
