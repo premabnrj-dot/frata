@@ -18,7 +18,8 @@ import { join } from 'node:path'
 /** Functions that establish who is calling, and refuse who may not. */
 // shopRequest (src/lib/http/shop-api.ts) is requireShop plus a Zod body and a per-shop limit, for /api/shop/*.
 // moduleGate (src/lib/auth/as-module.ts) is requireMember plus the module's on/off check, for reads and non-writing actions.
-const CHOKEPOINTS = ['requireMember', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest']
+// requireEk (src/lib/ekcode/require-ek.ts) is EkCode's host check: Host = EKCODE_HOST, same-origin JSON POSTs, a per-network limit.
+const CHOKEPOINTS = ['requireMember', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest', 'requireEk']
 
 /** Entry points that check their own credential: file → [what it is, a token that must appear in it]. */
 const ENTRY_POINTS = {

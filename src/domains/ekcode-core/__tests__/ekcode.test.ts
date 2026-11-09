@@ -94,3 +94,12 @@ describe('notice and words', () => {
     expect(EK.code.resendIn(5)).toBe('Resend in 0:05')
   })
 })
+
+describe('leadingZeroBits', async () => {
+  const { leadingZeroBits } = await import('../limits')
+  it('counts zero bits from the left', () => {
+    expect(leadingZeroBits(new Uint8Array([0, 0, 0x0f, 0xff]))).toBe(20)
+    expect(leadingZeroBits(new Uint8Array([0x80]))).toBe(0)
+    expect(leadingZeroBits(new Uint8Array([0, 0]))).toBe(16)
+  })
+})

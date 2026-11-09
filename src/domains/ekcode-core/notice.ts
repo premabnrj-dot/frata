@@ -1,5 +1,5 @@
 // =============================================================================
-// FILE: src/domains/ekcode/notice.ts — WHAT A SHOPPER AGREES TO, and what a shop receives (spec § 5; owner: English
+// FILE: src/domains/ekcode-core/notice.ts — WHAT A SHOPPER AGREES TO, and what a shop receives (spec § 5; owner: English
 // only until other languages are planned). The text and its version live here once; the consent row stores the
 // version (`ekcode-network@1`) so what was agreed can always be shown again. Draft for counsel (plan task 11). Pure.
 // =============================================================================

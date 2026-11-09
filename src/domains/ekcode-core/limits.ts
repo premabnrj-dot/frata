@@ -1,5 +1,5 @@
 // =============================================================================
-// FILE: src/domains/ekcode/limits.ts — EKCODE'S LIMITS AS DATA (plan task 1; reviews 2026-11-09). The SQL definer
+// FILE: src/domains/ekcode-core/limits.ts — EKCODE'S LIMITS AS DATA (plan task 1; reviews 2026-11-09). The SQL definer
 // `ekcode_issue_code` enforces them atomically from the `ekcode_settings` row; this file is the seed for that row, the
 // bounds Admin cannot cross, and what the tests check. Pure.
 // =============================================================================
@@ -80,4 +80,14 @@ export function breakerTripped(sent: number, right: number, l: Pick<Limits, 'bre
 /** A shop's daily cap: its plan's, or the higher number Admin raised it to. */
 export function shopDayCap(plan: PlanKey, raisedTo: number | null, l: Pick<Limits, 'perShopDay'> = DEFAULT_LIMITS): number {
   return Math.max(l.perShopDay[plan], raisedTo ?? 0)
+}
+
+/** The number of leading zero bits in a hash (proof of work, security H4). Pure; the browser and the server agree. */
+export function leadingZeroBits(bytes: Uint8Array): number {
+  let n = 0
+  for (const b of bytes) {
+    if (b === 0) { n += 8; continue }
+    return n + Math.clz32(b) - 24
+  }
+  return n
 }

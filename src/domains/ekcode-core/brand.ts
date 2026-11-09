@@ -1,5 +1,5 @@
 // =============================================================================
-// FILE: src/domains/ekcode/brand.ts — EVERY WORD A SHOPPER READS FROM EKCODE, in one place (frata-design-language §
+// FILE: src/domains/ekcode-core/brand.ts — EVERY WORD A SHOPPER READS FROM EKCODE, in one place (frata-design-language §
 // EkCode: its own brand; nothing a shopper sees names the platform behind it — `check:ekcode-brand` reads this file).
 // English only (owner). Short, verb first. Pure.
 // =============================================================================

@@ -6,7 +6,7 @@
 // that re-check a proof. Phones, codes and network buckets are keyed hashes ("p1:<hex>", key id first); names, phones
 // and addresses are sealed by the app with a key ring and the row's address as AAD. A shop never sees an account id:
 // its id for a shopper is the random `ekcode_pairs.pairwise`, deleted when the shopper forgets that shop. Where a
-// sign-in has got to is derived (src/domains/ekcode/flow.ts) — there is no status column.
+// sign-in has got to is derived (src/domains/ekcode-core/flow.ts) — there is no status column.
 // =============================================================================
 
 import { sql } from 'drizzle-orm'

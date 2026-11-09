@@ -1,5 +1,5 @@
 // =============================================================================
-// FILE: src/domains/ekcode/flow.ts — WHERE ONE SIGN-IN HAS GOT TO, derived from its timestamps (no status column:
+// FILE: src/domains/ekcode-core/flow.ts — WHERE ONE SIGN-IN HAS GOT TO, derived from its timestamps (no status column:
 // CLAUDE.md "derive, never duplicate"). A flow row holds only started, number_in and account_created; the code rows
 // and the grant say the rest (architecture review 4). Pure.
 // =============================================================================

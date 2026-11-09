@@ -1,5 +1,5 @@
 // =============================================================================
-// FILE: src/domains/ekcode/holdout.ts — WHO DOESN'T SEE EKCODE, so "with vs without" compares like with like (spec
+// FILE: src/domains/ekcode-core/holdout.ts — WHO DOESN'T SEE EKCODE, so "with vs without" compares like with like (spec
 // § Goal; unit-economics review: pooled across shops). The id is a random first-party id the checkout keeps in the
 // shopper's own browser — never a fingerprint (ADR-0009 point 6). Pure.
 // =============================================================================
