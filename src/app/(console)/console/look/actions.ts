@@ -110,7 +110,7 @@ export async function saveLookAction(input: unknown): Promise<R<{ version: numbe
     const clean = cleanImages({ ...layer, settings: parsed.settings, ...(parsed.site ? { site: parsed.site } : {}), ...(parsed.menus ? { menus: parsed.menus } : {}) }, t)
     if (!clean) return { error: 'A photo didn’t come from this shop. Upload it again.' }
     // V1: a video id must be one of this shop's own, not removed; anything else is dropped (the photo shows).
-    const kept = await cleanVideos(tx, clean)
+    const kept = await cleanVideos(tx, t, clean)
     const s = await saveDraft(tx, t, { userId: auth.userId, email: auth.email }, { revisionId: rev.id, version: p.data.version, styleKey: p.data.style, settings: kept })
     if (!s.ok) return { error: s.why === 'stale' ? `${rev.updatedByEmail ?? 'Someone'} changed this draft a moment ago. Reload to see their changes.` : s.why === 'published' ? 'This look was published. Reload to keep editing.' : 'This draft is gone. Reload.' }
     return { version: s.version }

@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { uploadProblem, VIDEO_TYPES } from '@/domains/video/state'
 import { asMember } from '@/lib/auth/as-member'
 import { CAN_BUILD, requireMember } from '@/lib/auth/require-member'
-import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
+import { LIMITS, overLimit, withinLimit } from '@/lib/db/rate-limit'
 import { isVideoConfigured, MUX_ENVIRONMENT_ID, MUX_IMAGE_BASE } from '@/lib/env'
 import { errName } from '@/lib/log'
 import { drainSoon } from '@/lib/outbox/drain'
@@ -39,20 +39,26 @@ export async function startVideoUploadAction(input: unknown): Promise<R<{ videoI
   if (why) return { ok: false, error: why }
   if (!isVideoConfigured()) return { ok: false, error: 'Video isn’t switched on for shops yet.' }
   const now = new Date()
+  // Who, and the limits, BEFORE the transaction: a limit is its own connection, never one taken while a transaction
+  // holds another (speed review P4). Frrata's hourly limit is only checked here and counted once a start goes ahead,
+  // so a shop past its own caps can't use it up for everyone (security review MED-1).
+  const me = await requireMember(CAN_BUILD)
+  if (!me.ok) return { ok: false, error: me.message }
+  if (me.membership.supportSessionId) return { ok: false, error: SUPPORT }
+  if (!(await withinLimit(LIMITS.videoStartMember, me.userId, now, true)) || (await overLimit(LIMITS.videoStartAll, 'all', now, true))) return { ok: false, error: BUSY }
   const r = await asMember(CAN_BUILD, { action: 'video.start' }, async (tx, auth) => {
-    if (auth.membership.supportSessionId) return { error: SUPPORT }
-    if (!(await withinLimit(LIMITS.videoStartMember, auth.userId, now, true)) || !(await withinLimit(LIMITS.videoStartAll, 'all', now, true))) return { error: BUSY }
     const s = await startVideo(tx, auth.membership.tenantId, auth.userId, MUX_ENVIRONMENT_ID, now)
     return s.ok ? { id: s.id } : { error: s.error }
   })
   if (!r.ok) return r
   if ('error' in r.value) return { ok: false, error: r.value.error as string }
+  await withinLimit(LIMITS.videoStartAll, 'all', now, true)
   const videoId = r.value.id
   // The row is committed; now the call. Its outcome is written in its own transaction either way.
   const up = await createUpload(videoId, await consoleOrigin()).catch((e) => { console.error('[video] upload', errName(e)); return { ok: false as const, why: 'unavailable' as const } })
-  const w = await asMember(CAN_BUILD, { action: 'video.upload' }, async (tx) => {
-    if (up.ok) await setUpload(tx, videoId, up.uploadId)
-    else await failVideo(tx, videoId, `upload_${up.why}`, new Date())
+  const w = await asMember(CAN_BUILD, { action: 'video.upload' }, async (tx, auth) => {
+    if (up.ok) await setUpload(tx, auth.membership.tenantId, videoId, up.uploadId)
+    else await failVideo(tx, auth.membership.tenantId, videoId, `upload_${up.why}`, new Date())
     return {}
   })
   if (!up.ok) return { ok: false, error: up.why === 'rate_limited' ? BUSY : 'Video didn’t start. Try again in a minute.' }
@@ -66,7 +72,7 @@ export async function cancelVideoUploadAction(input: unknown): Promise<R> {
   if (!p.success) return { ok: false, error: 'Nothing to cancel.' }
   const r = await asMember(CAN_BUILD, { action: 'video.cancel' }, async (tx, auth) => {
     if (auth.membership.supportSessionId) return { error: SUPPORT }
-    const v = await videoOf(tx, p.data.id)
+    const v = await videoOf(tx, auth.membership.tenantId, p.data.id)
     if (!v) return { error: 'Nothing to cancel.' }
     if (v.readyAt || v.removedAt) return {}
     await removeVideo(tx, auth.membership.tenantId, v, new Date())

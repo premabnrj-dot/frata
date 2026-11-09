@@ -10,12 +10,26 @@ import { MAX_BODY, muxEventFields, verifyMuxSignature } from '@/lib/video/webhoo
 // (drizzle/0081 app_store_mux_event) by OUR video id and its upload id, in our own Mux environment. Stored, answered
 // 200 at once (Mux retries for 24 h), processed in after() by reading the asset from Mux (src/lib/video/process.ts).
 
+async function readCapped(request: Request, max: number): Promise<string | null> {
+  if (!request.body) return ''
+  const reader = request.body.getReader(), chunks: Uint8Array[] = []
+  let n = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    n += value.byteLength
+    if (n > max) { await reader.cancel().catch(() => {}); return null }
+    chunks.push(value)
+  }
+  return Buffer.concat(chunks).toString('utf8')
+}
+
 export async function POST(request: Request) {
-  // Refused before the body is read (security review: the WhatsApp route reads first).
+  // Refused before the body is read, and read with a running count (a chunked body has no Content-Length).
   const len = Number(request.headers.get('content-length') ?? '0')
   if (!Number.isFinite(len) || len > MAX_BODY) return NextResponse.json({ error: 'too large' }, { status: 413 })
-  const raw = await request.text()
-  if (raw.length > MAX_BODY) return NextResponse.json({ error: 'too large' }, { status: 413 })
+  const raw = await readCapped(request, MAX_BODY)
+  if (raw === null) return NextResponse.json({ error: 'too large' }, { status: 413 })
   if (!verifyMuxSignature(raw, request.headers.get('mux-signature'), [MUX_WEBHOOK_SECRET, MUX_WEBHOOK_SECRET_PREVIOUS], Math.floor(Date.now() / 1000))) {
     return NextResponse.json({ error: 'bad signature' }, { status: 401 })
   }

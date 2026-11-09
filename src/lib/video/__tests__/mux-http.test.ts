@@ -22,9 +22,11 @@ describe('createUpload', () => {
     expect(await createUpload('row-1', 'https://frata.vercel.app')).toEqual({ ok: false, why: 'bad_reply' })
   })
   it('says why when Mux refuses, limits or is down', async () => {
-    fetchMock.mockResolvedValueOnce(reply(429)).mockResolvedValueOnce(reply(503)).mockResolvedValueOnce(reply(401)).mockRejectedValueOnce(new Error('timeout'))
+    fetchMock.mockResolvedValueOnce(reply(429)).mockResolvedValueOnce(reply(503)).mockResolvedValueOnce(reply(401)).mockResolvedValueOnce(reply(400)).mockRejectedValueOnce(new Error('timeout'))
     expect((await createUpload('r', 'o')) as unknown).toEqual({ ok: false, why: 'rate_limited' })
     expect((await createUpload('r', 'o')) as unknown).toEqual({ ok: false, why: 'unavailable' })
+    // A wrong token is retried, never "Mux refused this request".
+    expect((await createUpload('r', 'o')) as unknown).toEqual({ ok: false, why: 'unauthorized' })
     expect((await createUpload('r', 'o')) as unknown).toEqual({ ok: false, why: 'refused' })
     expect((await createUpload('r', 'o')) as unknown).toEqual({ ok: false, why: 'unavailable' })
   })

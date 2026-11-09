@@ -24,19 +24,21 @@ export function VideoField({ value, onChange, on }: { value: { id: string } | un
   const xhr = useRef<XMLHttpRequest | null>(null)
 
   // While a video is getting ready, ask again: 2, 4, 8 … 30 s; stop once it plays, failed or is gone.
+  // Keyed on the id (a rebuilt section object doesn't restart it); five failed asks in a row stop it (a lost session).
+  const videoId = value?.id
   useEffect(() => {
-    if (!value || progress !== null) return
-    let wait = 2000, stop = false, timer: ReturnType<typeof setTimeout> | undefined
+    if (!videoId || progress !== null) return
+    let wait = 2000, stop = false, misses = 0, timer: ReturnType<typeof setTimeout> | undefined
     const ask = async () => {
-      const r = await videoStatusAction({ id: value.id }).catch(() => null)
+      const r = await videoStatusAction({ id: videoId }).catch(() => null)
       if (stop) return
-      if (r?.ok) setStatus(r.status)
+      if (r?.ok) { setStatus(r.status); misses = 0 } else misses++
       const k = r?.ok ? r.status?.kind : null
-      if (k === 'uploading' || k === 'preparing' || !r?.ok) { timer = setTimeout(ask, wait); wait = Math.min(wait * 2, 30_000) }
+      if ((k === 'uploading' || k === 'preparing' || !r?.ok) && misses < 5) { timer = setTimeout(ask, wait); wait = Math.min(wait * 2, 30_000) }
     }
     void ask()
     return () => { stop = true; clearTimeout(timer) }
-  }, [value, progress])
+  }, [videoId, progress])
 
   const pick = async (f: File | undefined) => {
     if (!f) return

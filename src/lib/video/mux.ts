@@ -13,7 +13,7 @@ import { MUX_API_BASE, MUX_TOKEN_ID, MUX_TOKEN_SECRET } from '@/lib/env'
 export const UPLOAD_SETTINGS = { video_quality: 'basic', playback_policies: ['public'], static_renditions: [{ resolution: 'highest' }], max_resolution_tier: '720p' } as const
 export const UPLOAD_TIMEOUT_S = 900
 
-export type MuxFail = { ok: false; why: 'not_configured' | 'refused' | 'rate_limited' | 'unavailable' | 'bad_reply' }
+export type MuxFail = { ok: false; why: 'not_configured' | 'unauthorized' | 'refused' | 'rate_limited' | 'unavailable' | 'bad_reply' }
 export type MuxAsset = {
   id: string; status: 'preparing' | 'ready' | 'errored'; passthrough: string | null; uploadId: string | null
   playbackId: string | null; durationMs: number | null; width: number | null; height: number | null; mp4Ready: boolean
@@ -32,6 +32,8 @@ async function call(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, bod
     })
   } catch { return { ok: false, why: 'unavailable' } }
   if (res.status === 429) return { ok: false, why: 'rate_limited' }
+  // A wrong or rotated token: retried, never counted as Mux refusing this request (security review LOW-2).
+  if (res.status === 401 || res.status === 403) return { ok: false, why: 'unauthorized' }
   if (res.status >= 500) return { ok: false, why: 'unavailable' }
   if (res.status === 404 || res.status === 204) return { ok: true, status: res.status, json: null }
   if (res.status >= 400) return { ok: false, why: 'refused' }

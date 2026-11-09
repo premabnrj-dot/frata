@@ -14,11 +14,14 @@ import { cancelUpload, deleteAsset, getAsset } from './mux'
 async function rowFor(o: OutboxRow) {
   const videoId = (o.payload as { videoId?: unknown })?.videoId
   if (typeof videoId !== 'string') throw new GiveUp('no video id')
-  const v = await withTenant(o.tenantId, (tx) => videoOf(tx, videoId))
+  const v = await withTenant(o.tenantId, (tx) => videoOf(tx, o.tenantId, videoId))
   if (!v) throw new GiveUp('no such video')
   if (v.muxEnv !== MUX_ENVIRONMENT_ID) throw new Error('another Mux environment')
+  // Only a removed or failed video is ever deleted or closed (security review LOW-2).
+  if (!v.removedAt && !v.erroredAt) throw new GiveUp('video is in use')
   return v
 }
+// Mux refusing the request itself is final; a bad token (unauthorized), a limit or an outage is retried.
 const fail = (r: { ok: false; why: string }) => { if (r.why === 'refused') throw new GiveUp(`mux refused`); throw new Error(`mux ${r.why}`) }
 
 /** Delete the asset of a removed video, after Mux confirms it is this video's (tenancy audit 2026-11-09, H1). */

@@ -18,7 +18,11 @@ import { db, poolReleased, type Tx } from './index'
 // never from a URL, a form field or a request body.
 // =============================================================================
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function withTenant<T>(tenantId: string, work: (tx: Tx) => Promise<T>, opts?: { snapshot?: boolean }): Promise<T> {
+  // A shop id that isn't one is a bug upstream (2026-11-09: the outbox handed senders `undefined`); never run with it.
+  if (typeof tenantId !== 'string' || !UUID.test(tenantId)) throw new Error('withTenant: not a shop id')
   try {
     return await withTenantTx(tenantId, work, opts)
   } finally {

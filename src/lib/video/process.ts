@@ -4,10 +4,10 @@ import { MAX_LOOP_MS, videoState } from '@/domains/video/state'
 import { webhookEvents } from '@/lib/db/schema'
 import { videos } from '@/lib/db/schema-themes'
 import { withTenant } from '@/lib/db/tenant'
+import { MUX_ENVIRONMENT_ID } from '@/lib/env'
 import { errName } from '@/lib/log'
-import { enqueue } from '@/lib/outbox'
 import { drainSoon } from '@/lib/outbox/drain'
-import { failVideo, videoOf } from '@/lib/queries/videos'
+import { failVideo, queueAssetDelete, videoOf } from '@/lib/queries/videos'
 import { refreshShop } from '@/lib/storefront/refresh'
 import { getAsset } from './mux'
 
@@ -42,7 +42,7 @@ export async function processMux(tenantId: string): Promise<number> {
     }
   }
   if (queued) drainSoon()
-  if (playable) refreshShop(tenantId, 'shop')
+  if (playable) refreshShop(tenantId, 'videos')
   return n
 }
 
@@ -51,42 +51,50 @@ const done = (tenantId: string, id: string, type: string, error: string | null) 
   tx.update(webhookEvents).set({ processedAt: sql`now()`, payload: { type }, lastError: error }).where(and(eq(webhookEvents.tenantId, tenantId), eq(webhookEvents.id, id))))
 
 async function one(tenantId: string, videoId: string, ev: Pending['payload']): Promise<{ playable: boolean; queued: boolean }> {
-  const v = await withTenant(tenantId, (tx) => videoOf(tx, videoId))
+  const v = await withTenant(tenantId, (tx) => videoOf(tx, tenantId, videoId))
   if (!v) return { playable: false, queued: false }
+  // Another Mux environment's row is never looked at with this token (its 404 would read as "gone"): the event waits.
+  if (v.muxEnv !== MUX_ENVIRONMENT_ID) throw new Error('another Mux environment')
   const assetId = v.assetId ?? (typeof ev.asset_id === 'string' ? ev.asset_id : null)
   if (!assetId) {
     // Mux says the upload itself failed or was cancelled: there is no asset to look at.
-    if (ev.type === 'video.upload.errored' || ev.type === 'video.upload.cancelled') await withTenant(tenantId, (tx) => failVideo(tx, v.id, ev.type === 'video.upload.cancelled' ? 'cancelled' : 'upload_errored', new Date()))
+    if (ev.type === 'video.upload.errored' || ev.type === 'video.upload.cancelled') await withTenant(tenantId, (tx) => failVideo(tx, tenantId, v.id, ev.type === 'video.upload.cancelled' ? 'cancelled' : 'upload_errored', new Date()))
     return { playable: false, queued: false }
   }
   const got = await getAsset(assetId)
   if (!got.ok) throw new Error(`mux ${got.why}`)
   const a = got.asset
   // Not this row's asset (a stale upload, another environment's): nothing is written.
-  if (a && (a.passthrough !== v.id || (v.uploadId && a.uploadId && a.uploadId !== v.uploadId))) return { playable: false, queued: false }
+  if (a && (a.passthrough !== v.id || (v.uploadId !== null && a.uploadId !== v.uploadId))) return { playable: false, queued: false }
   const before = videoState(v, new Date()).kind
-  return withTenant(tenantId, async (tx) => {
+  const r = await withTenant(tenantId, async (tx) => {
     const now = new Date()
-    const queue = async () => { await enqueue(tx, { tenantId, kind: 'mux.asset.delete', dedupeKey: `mux.asset.delete:${v.id}`, payload: { videoId: v.id } }); return true }
+    const mine = and(eq(videos.tenantId, tenantId), eq(videos.id, v.id))
+    const queue = async () => { await queueAssetDelete(tx, tenantId, v.id); return true }
+    // Gone at Mux: "Didn't work" only when the row already held that asset (nothing else proves it was this row's).
+    if (!a) { if (v.assetId && !v.removedAt && !v.erroredAt) await failVideo(tx, tenantId, v.id, 'asset_gone', now); return { queued: false } }
     // Mux keeps the asset id once we know it (the trigger refuses a second one).
-    if (!v.assetId && a) await tx.update(videos).set({ assetId }).where(and(eq(videos.id, v.id), isNull(videos.assetId)))
-    if (!a) { if (!v.removedAt && !v.erroredAt) await failVideo(tx, v.id, 'asset_gone', now); return { playable: false, queued: false } }
+    if (!v.assetId) await tx.update(videos).set({ assetId }).where(and(mine, isNull(videos.assetId)))
     // Removed while it uploaded, or already failed: it should not exist at Mux.
-    if (v.removedAt || v.erroredAt) return { playable: false, queued: await queue() }
-    if (a.status === 'errored') { await failVideo(tx, v.id, 'asset_errored', now); return { playable: false, queued: await queue() } }
-    if (a.status !== 'ready') return { playable: false, queued: false }
-    if (a.durationMs !== null && a.durationMs > MAX_LOOP_MS) {
-      await tx.update(videos).set({ durationMs: a.durationMs }).where(eq(videos.id, v.id))
-      await failVideo(tx, v.id, 'too_long', now)
-      return { playable: false, queued: await queue() }
+    if (v.removedAt || v.erroredAt) return { queued: await queue() }
+    if (a.status === 'errored') { await failVideo(tx, tenantId, v.id, 'asset_errored', now); return { queued: await queue() } }
+    // Not ready, or ready without a length yet (the 15 s cap can't be checked): look again on the next event.
+    if (a.status !== 'ready' || a.durationMs === null) return { queued: false }
+    if (a.durationMs > MAX_LOOP_MS) {
+      await tx.update(videos).set({ durationMs: a.durationMs }).where(mine)
+      await failVideo(tx, tenantId, v.id, 'too_long', now)
+      return { queued: await queue() }
     }
     await tx.update(videos).set({
       ...(v.playbackId ? {} : a.playbackId ? { playbackId: a.playbackId } : {}),
       durationMs: a.durationMs, width: a.width, height: a.height,
       ...(v.readyAt ? {} : { readyAt: now }),
       ...(a.mp4Ready && !v.mp4ReadyAt && (v.playbackId || a.playbackId) ? { mp4ReadyAt: now } : {}),
-    }).where(eq(videos.id, v.id))
-    const after = await videoOf(tx, v.id)
-    return { playable: before !== 'playable' && !!after && videoState(after, now).kind === 'playable', queued: false }
+    }).where(mine)
+    return { queued: false }
   })
+  const after = await withTenant(tenantId, (tx) => videoOf(tx, tenantId, v.id))
+  const now = after ? videoState(after, new Date()).kind : 'removed'
+  // The shop's video entry changes when a loop starts playing, or a playing one stops (security review LOW-6).
+  return { playable: (before === 'playable') !== (now === 'playable'), queued: r.queued }
 }

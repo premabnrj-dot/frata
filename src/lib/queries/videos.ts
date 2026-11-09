@@ -3,7 +3,7 @@ import { and, eq, gt, inArray, isNull, lt, lte, sql } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
 import { withTenant } from '@/lib/db/tenant'
 import { tenantPlans } from '@/lib/db/schema'
-import { shopThemeRevisions, videos } from '@/lib/db/schema-themes'
+import { shopThemePublishes, shopThemeRevisions, videos } from '@/lib/db/schema-themes'
 import { enqueue } from '@/lib/outbox'
 import { isLive, MAX_LIVE, videoState, type VideoRow, type VideoState } from '@/domains/video/state'
 
@@ -24,8 +24,8 @@ const ROW = {
 }
 export type Video = VideoRow & { id: string; assetId: string | null; muxEnv: string; durationMs: number | null; width: number | null; height: number | null }
 
-export async function videoOf(tx: Tx, id: string): Promise<Video | null> {
-  const [v] = await tx.select(ROW).from(videos).where(eq(videos.id, id))
+export async function videoOf(tx: Tx, tenantId: string, id: string): Promise<Video | null> {
+  const [v] = await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), eq(videos.id, id)))
   return v ?? null
 }
 
@@ -36,14 +36,14 @@ export async function videoOf(tx: Tx, id: string): Promise<Video | null> {
 export async function startVideo(tx: Tx, tenantId: string, memberId: string, muxEnv: string, now: Date): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtext('videos:' || ${tenantId}))`)
   const dayAgo = new Date(now.getTime() - 86_400_000), monthAgo = new Date(now.getTime() - 30 * 86_400_000)
-  const recent = await tx.select(ROW).from(videos).where(gt(videos.createdAt, monthAgo))
+  const recent = await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), gt(videos.createdAt, monthAgo)))
   const [plan] = await tx.select({ trialEndsAt: tenantPlans.trialEndsAt }).from(tenantPlans)
     .where(and(eq(tenantPlans.tenantId, tenantId), lte(tenantPlans.startsAt, now))).orderBy(sql`${tenantPlans.startsAt} desc`).limit(1)
   const onTrial = !!plan?.trialEndsAt && plan.trialEndsAt > now
   const today = recent.filter((v) => v.createdAt > dayAgo).length
   if (today >= (onTrial ? PER_DAY_TRIAL : PER_DAY)) return { ok: false, error: onTrial ? 'Three videos a day on a trial. Try again tomorrow.' : 'Ten videos a day. Try again tomorrow.' }
   if (recent.length >= PER_MONTH) return { ok: false, error: 'Thirty videos a month. Remove one you don’t use, or try again next month.' }
-  const live = await tx.select(ROW).from(videos).where(isNull(videos.removedAt))
+  const live = await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), isNull(videos.removedAt)))
   if (live.filter((v) => isLive(v, now)).length >= MAX_LIVE) return { ok: false, error: 'Your shop holds 20 videos. Remove one first.' }
   // Only these three columns: the app may insert nothing else (drizzle/0081, tenancy audit H1), and drizzle's insert
   // would name every column (as DEFAULT), which Postgres checks too.
@@ -52,30 +52,40 @@ export async function startVideo(tx: Tx, tenantId: string, memberId: string, mux
 }
 
 /** Mux answered with the upload: the row now knows it (the webhook definer routes by it). */
-export async function setUpload(tx: Tx, id: string, uploadId: string) {
-  await tx.update(videos).set({ uploadId }).where(and(eq(videos.id, id), isNull(videos.uploadId)))
+export async function setUpload(tx: Tx, tenantId: string, id: string, uploadId: string) {
+  await tx.update(videos).set({ uploadId }).where(and(eq(videos.tenantId, tenantId), eq(videos.id, id), isNull(videos.uploadId)))
 }
 
 /** The upload couldn't be made, or Mux said the asset failed: "Didn't work". */
-export async function failVideo(tx: Tx, id: string, error: string, now: Date) {
-  await tx.update(videos).set({ erroredAt: now, error: error.slice(0, 40) }).where(and(eq(videos.id, id), isNull(videos.erroredAt)))
+export async function failVideo(tx: Tx, tenantId: string, id: string, error: string, now: Date) {
+  await tx.update(videos).set({ erroredAt: now, error: error.slice(0, 40) }).where(and(eq(videos.tenantId, tenantId), eq(videos.id, id), isNull(videos.erroredAt)))
 }
+
+/** Queue the Mux asset's deletion (the sender confirms with Mux that it is this row's before deleting). */
+export const queueAssetDelete = (tx: Tx, tenantId: string, videoId: string) =>
+  enqueue(tx, { tenantId, kind: 'mux.asset.delete', dedupeKey: `mux.asset.delete:${videoId}`, payload: { videoId } })
 
 /**
  * Removed for good: the row says so and the Mux side is queued in the same transaction (an asset is deleted, an upload
  * still open is closed). Used by Cancel, and at publish or discard for videos nothing references any more.
  */
 export async function removeVideo(tx: Tx, tenantId: string, v: Pick<Video, 'id' | 'uploadId' | 'assetId' | 'removedAt'>, now: Date) {
-  if (!v.removedAt) await tx.update(videos).set({ removedAt: now }).where(and(eq(videos.id, v.id), isNull(videos.removedAt)))
-  if (v.assetId) await enqueue(tx, { tenantId, kind: 'mux.asset.delete', dedupeKey: `mux.asset.delete:${v.id}`, payload: { videoId: v.id } })
+  if (!v.removedAt) await tx.update(videos).set({ removedAt: now }).where(and(eq(videos.tenantId, tenantId), eq(videos.id, v.id), isNull(videos.removedAt)))
+  if (v.assetId) await queueAssetDelete(tx, tenantId, v.id)
   else if (v.uploadId) await enqueue(tx, { tenantId, kind: 'mux.upload.cancel', dedupeKey: `mux.upload.cancel:${v.id}`, payload: { videoId: v.id } })
 }
 
-/** The videos any stored look of the shop references (the open draft, the live look and its history: Undo works). */
+/** Publishes an Undo can still reach: their looks keep their videos (beyond them, history shows the photo). */
+const KEEP_PUBLISHES = 5
+
+/** The videos the shop's open draft or its recent publishes reference (speed review: never every revision ever). */
 async function referenced(tx: Tx, tenantId: string): Promise<Set<string>> {
   const rows = await tx.execute<{ id: string }>(sql`
-    select distinct s->'video'->>'id' as id from ${shopThemeRevisions} r, jsonb_array_elements(coalesce(r.settings->'home', '[]'::jsonb)) s
-    where r.tenant_id = ${tenantId} and jsonb_typeof(s->'video') = 'object'`)
+    select distinct s->'video'->>'id' as id
+    from ${shopThemeRevisions} r, jsonb_array_elements(coalesce(r.settings->'home', '[]'::jsonb)) s
+    where r.tenant_id = ${tenantId} and jsonb_typeof(s->'video') = 'object'
+      and (r.id in (select p.revision_id from ${shopThemePublishes} p where p.tenant_id = ${tenantId} order by p.published_at desc limit ${KEEP_PUBLISHES})
+           or not exists (select 1 from ${shopThemePublishes} p where p.tenant_id = ${tenantId} and p.revision_id = r.id))`)
   return new Set((rows as unknown as { id: string }[]).map((r) => r.id).filter(Boolean))
 }
 
@@ -83,54 +93,58 @@ async function referenced(tx: Tx, tenantId: string): Promise<Set<string>> {
 const SETTLED_MS = 2 * 60 * 60_000
 
 /**
- * At publish and at discard: every video no stored look references, and older than an upload could still be, is
- * removed and its Mux side queued. Draft edits (Replace, Remove) only detach; nothing is deleted while a look can come
- * back to it (architecture review 2026-11-09, finding 5).
+ * At publish and at discard: every video neither the draft nor a recent publish references, and older than an upload
+ * could still be, is removed and its Mux side queued. Draft edits (Replace, Remove) only detach; nothing is deleted
+ * while Undo can come back to it (architecture review 2026-11-09, finding 5).
  */
 export async function releaseUnusedVideos(tx: Tx, tenantId: string, now: Date): Promise<number> {
   const used = await referenced(tx, tenantId)
   const cutoff = new Date(now.getTime() - SETTLED_MS)
-  const rows = await tx.select(ROW).from(videos).where(and(isNull(videos.removedAt), lt(videos.createdAt, cutoff)))
+  const rows = await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), isNull(videos.removedAt), lt(videos.createdAt, cutoff)))
   const gone = rows.filter((v) => !used.has(v.id))
   for (const v of gone) await removeVideo(tx, tenantId, v, now)
   return gone.length
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 /**
  * The save check (architecture review minor): a video id in a saved look must be one of this shop's own rows, not
- * removed. Anything else is dropped from the section (the photo shows). Returns the layer, and whether it changed.
+ * removed. Anything else is dropped from the section (the photo shows). Ids that aren't uuids never reach the query.
  */
-export async function cleanVideos<L extends { home?: unknown[] }>(tx: Tx, layer: L): Promise<L> {
-  const ids = (layer.home ?? []).flatMap((s) => { const id = (s as { video?: { id?: unknown } })?.video?.id; return typeof id === 'string' ? [id] : [] })
-  if (!ids.length) return layer
-  const ok = new Set((await tx.select({ id: videos.id }).from(videos).where(and(inArray(videos.id, ids), isNull(videos.removedAt)))).map((r) => r.id))
+export async function cleanVideos<L extends { home?: unknown[] }>(tx: Tx, tenantId: string, layer: L): Promise<L> {
+  const idOf = (s: unknown) => { const id = (s as { video?: { id?: unknown } } | null)?.video?.id; return typeof id === 'string' && UUID.test(id) ? id : null }
+  const ids = (layer.home ?? []).flatMap((s) => { const id = idOf(s); return id ? [id] : [] })
+  const ok = ids.length ? new Set((await tx.select({ id: videos.id }).from(videos).where(and(eq(videos.tenantId, tenantId), inArray(videos.id, ids), isNull(videos.removedAt)))).map((r) => r.id)) : new Set<string>()
   const home = (layer.home ?? []).map((s) => {
-    const v = (s as { video?: { id?: unknown } })?.video
-    if (v === undefined || (typeof v?.id === 'string' && ok.has(v.id))) return s
+    if ((s as { video?: unknown } | null)?.video === undefined) return s
+    const id = idOf(s)
+    if (id && ok.has(id)) return s
     const { video: _drop, ...rest } = s as Record<string, unknown>
     return rest
   })
-  return { ...layer, home }
+  return layer.home ? { ...layer, home } : layer
 }
 
 /** The console's field: one video's state, derived. */
-export async function videoStatus(tx: Tx, id: string, now: Date): Promise<(VideoState & { durationMs: number | null; width: number | null; height: number | null }) | null> {
-  const v = await videoOf(tx, id)
+export async function videoStatus(tx: Tx, tenantId: string, id: string, now: Date): Promise<(VideoState & { durationMs: number | null; width: number | null; height: number | null }) | null> {
+  const v = await videoOf(tx, tenantId, id)
   return v ? { ...videoState(v, now), durationMs: v.durationMs, width: v.width, height: v.height } : null
 }
 
 /** The status read the console polls while a video is getting ready (its own short transaction). */
-export const videoStatusFor = (tenantId: string, id: string, now: Date) => withTenant(tenantId, (tx) => videoStatus(tx, id, now))
+export const videoStatusFor = (tenantId: string, id: string, now: Date) => withTenant(tenantId, (tx) => videoStatus(tx, tenantId, id, now))
 
 /** For the shop: the playable videos among these ids (the live look's), id → playback id and size. */
-export async function playableVideos(tx: Tx, ids: string[], now: Date): Promise<Record<string, { playbackId: string; width: number | null; height: number | null }>> {
-  if (!ids.length) return {}
-  const rows = await tx.select(ROW).from(videos).where(and(inArray(videos.id, ids.slice(0, 40)), isNull(videos.removedAt)))
+export async function playableVideos(tx: Tx, tenantId: string, ids: string[], now: Date): Promise<Record<string, { playbackId: string; width: number | null; height: number | null }>> {
+  const valid = ids.filter((i) => UUID.test(i)).slice(0, 40)
+  if (!valid.length) return {}
+  const rows = await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), inArray(videos.id, valid), isNull(videos.removedAt)))
   const out: Record<string, { playbackId: string; width: number | null; height: number | null }> = {}
   for (const v of rows) { const s = videoState(v, now); if (s.kind === 'playable') out[v.id] = { playbackId: s.playbackId, width: v.width, height: v.height } }
   return out
 }
 
 /** The shop's read (cached in storefront.ts shopVideos) and the preview's (uncached): ids are the look's, comma-joined. */
-export const playableVideosFor = (tenantId: string, key: string) => withTenant(tenantId, (tx) => playableVideos(tx, key ? key.split(',').slice(0, 40) : [], new Date()))
+export const playableVideosFor = (tenantId: string, key: string) => withTenant(tenantId, (tx) => playableVideos(tx, tenantId, key ? key.split(',') : [], new Date()))
 export const previewVideos = playableVideosFor

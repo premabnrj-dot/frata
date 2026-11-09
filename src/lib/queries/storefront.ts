@@ -47,9 +47,9 @@ type Loader<A extends unknown[], R> = (tenantId: string, ...a: A) => Promise<R>
 // generateMetadata and page render in parallel — each ran the same queries on its own connection.
 // 'reviews' / 'reviews:product' (Reviews R1, speed review 4): a shopper's review purges its own product, never the shop.
 const productKey = (v: unknown) => { if (typeof v !== 'string' || !v) throw new Error('reviews:product needs the product id first'); return v }
-function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop' | 'catalogue' | 'reviews' | 'reviews:product', fn: Loader<A, R>, revalidate = 60): Loader<A, R> {
+function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop' | 'catalogue' | 'reviews' | 'reviews:product' | 'videos', fn: Loader<A, R>, revalidate = 60): Loader<A, R> {
   return cache((tenantId: string, ...a: A) => unstable_cache(() => fn(tenantId, ...a), ['sf', name, tenantId, ...a.map(String)], {
-    tags: [`shop:${tenantId}`, ...(scope === 'catalogue' ? [`shop:${tenantId}:catalogue`] : scope === 'reviews' ? [`shop:${tenantId}:reviews`] : scope === 'reviews:product' ? [`shop:${tenantId}:reviews:${productKey(a[0])}`] : [])], revalidate,
+    tags: [`shop:${tenantId}`, ...(scope === 'catalogue' || scope === 'videos' ? [`shop:${tenantId}:${scope}`] : scope === 'reviews' ? [`shop:${tenantId}:reviews`] : scope === 'reviews:product' ? [`shop:${tenantId}:reviews:${productKey(a[0])}`] : [])], revalidate,
   })())
 }
 
@@ -351,8 +351,8 @@ export const shopLook = async (tenantId: string): Promise<StoredLook | null> => 
 export const shopBestSellers = shopCached('best', 'catalogue', (t, days: number) => coreBestSellers(t, days), 3600)
 export const previewLook = async (tenantId: string): Promise<StoredLook | null> => liveOf(await corePublishes(tenantId), withdrawnKeys(await themeVersionRows()))
 export const previewBestSellers = (tenantId: string, days: number) => coreBestSellers(tenantId, days)
-// V1: the live look's playable videos, keyed by its sorted ids (never a draft's: security review 7); the shop tag refreshes it.
-export const shopVideos = shopCached('videos', 'shop', (t, key: string) => playableVideosFor(t, key), 3600)
+// V1: the live look's playable videos, keyed by its sorted ids (never a draft's); its own tag, so a video turning ready never rebuilds the shop.
+export const shopVideos = shopCached('videos', 'videos', (t, key: string) => playableVideosFor(t, key), 3600)
 
 // v2: the shop gained seoTitle/seoDescription (S·3); an entry that survives a deploy must not meet the old shape.
 export const shopSettingsFor = shopCached('shop-v2', 'shop', (t) => coreShop(t))
