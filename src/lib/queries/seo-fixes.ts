@@ -18,7 +18,7 @@ export async function seoFixFacts(tenantId: string): Promise<FixFacts> {
         .where(and(eq(collections.tenantId, tenantId), sql`btrim(${collections.description}) = ''`)),
       tx.select({ handle: products.handle }).from(products)
         .where(and(eq(products.tenantId, tenantId), inArray(products.status, [...LIVE]), sql`lower(${products.title}) in (
-          select lower(p2.title) from products p2 where p2.tenant_id = ${tenantId} and p2.status in ('active','unlisted') group by lower(p2.title) having count(*) > 1)`))
+          select lower(p2.title) from products p2 where p2.tenant_id = ${tenantId} and p2.status in (${sql.join(LIVE.map((s) => sql`${s}`), sql`, `)}) group by lower(p2.title) having count(*) > 1)`))
         .orderBy(asc(products.handle)),
     ])
     return {

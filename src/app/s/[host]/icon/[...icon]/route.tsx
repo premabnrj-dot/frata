@@ -14,7 +14,7 @@ import { shopForRoute } from '../../_shop'
 // FILE: src/app/s/[host]/icon/[...icon]/route.tsx — A SHOP'S ICON (search and sharing S1·6), as the share-card route:
 // canonical paths only (/icon/<32|180|192|512>/<hash16>.png, no query string), the host's shop, the logo only from our
 // own store and this shop's brand folder (PATH_SHAPE), read capped and checked by sharp, drawing budgeted per caller
-// then per shop. A day on the CDN when current; 5 minutes when stale. Opening-soon shops get one too (a tab needs it).
+// then per shop. A day on the CDN when current; a stale hash 302s to the current one (5 minutes). Opening-soon shops get one too (a tab needs it).
 // =============================================================================
 
 export const dynamic = 'force-dynamic'
@@ -35,6 +35,8 @@ export async function GET(req: Request, { params }: { params: Params }) {
   const now = new Date() // clock-ok: a route handler, run per request on the server
   const c = iconContent(shop, themeOf(shop, await shopLook(shop.id)))
   const current = iconHash(c) === m[1]
+  // A stale or made-up hash goes to the current icon before it can spend the shop's drawing budget (security review).
+  if (!current) return new Response(null, { status: 302, headers: { location: `/icon/${size}/${iconHash(c)}.png`, 'cache-control': 'public, max-age=300' } })
   if (!(await withinLimit(LIMITS.ogRenderIp, await clientIp(), now, true) && await withinLimit(LIMITS.ogRender, shop.id, now, true))) {
     return new Response('Busy', { status: 503, headers: { ...NO_STORE, 'retry-after': '600' } })
   }

@@ -46,6 +46,7 @@ function clean(c: CollectionInput) {
 
 /** Create (id null) or save a collection. */
 export async function saveCollection(id: string | null, input: CollectionInput): Promise<Result<{ handle: string }>> {
+  if (id !== null && (typeof id !== 'string' || !/^[0-9a-f-]{36}$/.test(id))) return { ok: false, error: 'That collection is not in your shop.' }
   const { errors, value: c } = clean(input)
   if (Object.keys(errors).length) return { ok: false, error: 'Some fields need a look before saving.', errors }
   try {

@@ -284,6 +284,9 @@ export default {
         assert.equal(r.status, 200); assert.equal(r.headers['content-type'], 'image/png')
       }
       assert.equal((await getBytes(icons[0].replace(/\/icon\/\d+\//, '/icon/64/'))).status, 404, 'only the listed sizes')
+      const stale = await getBytes(icons[0].replace(/[0-9a-f]{16}\.png$/, '0000000000000000.png'))
+      assert.equal(stale.status, 302, 'a stale icon address points at the current one, drawing nothing')
+      assert.equal((await get('/collections/constructor', CRAWLERS.google)).status, 404, 'an object key is not an old address')
       const vp = h.raw.match(/<meta name="theme-color" content="([^"]+)"/)
       assert.ok(vp, 'theme-color')
     })

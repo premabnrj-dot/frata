@@ -22,7 +22,9 @@ async function load(params: Params) {
   if (!/^[a-z0-9-]{1,80}$/.test(handle)) notFound()
   const cat = await shopCatalogue(shop.id)
   const c = cat.collections.find((x) => x.handle === handle)
-  const to = !c && cat.movedCollections?.[handle]
+  // Own keys only: `constructor` is a valid handle (security review).
+  const moved = cat.movedCollections ?? {}
+  const to = !c && Object.hasOwn(moved, handle) ? moved[handle] : undefined
   if (to) permanentRedirect(`/collections/${to}`)
   if (!c) notFound()
   return { shop, cat, c }
