@@ -61,7 +61,7 @@ export default async function ProductPage({ params }: { params: Params }) {
   return (
     <>
       <ProductTags tags={await tagsOf(shop, p, v.indexable, now)} />
-      <ProductView shop={shop} p={p} now={now} live layout={theme.settings} below={extras.below} rating={extras.rating} />
+      <ProductView shop={shop} p={p} now={now} live layout={theme.settings} extras={theme.product} below={extras.below} rating={extras.rating} />
       <JsonLd data={breadcrumbJsonLd([{ name: shop.shopName, url: `${base}/` }, { name: p.title, url: `${base}/products/${p.handle}` }])} />
     </>
   )

@@ -35,6 +35,8 @@ export type BuyBoxProps = {
   w: BuyWords
   /** Offers that apply to this product (Offers O·2 fills it from liveOffers), after the price; display only, the quote prices. */
   offers?: OfferLine[]
+  /** Signal S3: server-drawn slots — stories under the photos (a stacked gallery), "Pair it with" under the button. */
+  belowGallery?: React.ReactNode; belowBuy?: React.ReactNode
 }
 /** One offer line as a shopper reads it: "10% off with UPI", and when it ends if it really does. */
 export type OfferLine = { label: string; ends: string | null }
@@ -90,7 +92,8 @@ export function BuyBox(p: BuyBoxProps) {
 
   return (
     <div className="grid gap-6 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] md:gap-10">
-      <Gallery photos={photos} title={p.title} kind={p.gallery ?? 'swipe'} w={p.w} />
+      {p.belowGallery ? <div className="min-w-0"><Gallery photos={photos} title={p.title} kind={p.gallery ?? 'swipe'} w={p.w} />{p.belowGallery}</div>
+        : <Gallery photos={photos} title={p.title} kind={p.gallery ?? 'swipe'} w={p.w} />}
       <div className={`min-w-0 space-y-5 ${p.stickyBox ? 'md:sticky md:top-24 md:self-start' : ''}`}>
         <div className="space-y-2">
           <h1 className="store-pdp-title text-2xl leading-tight sm:text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{p.title}</h1>
@@ -137,6 +140,7 @@ export function BuyBox(p: BuyBoxProps) {
         {/* A sold-out size: the button stays, greyed and saying so (Google's merchant rule 2026: not hidden). */}
         <button ref={buyRef} type="button" onClick={add} aria-disabled={a && !a.canBuy ? true : undefined} className="store-btn store-buy h-12 w-full rounded-[var(--store-radius)] transition-transform duration-fast ease-standard active:scale-97 aria-disabled:opacity-50 aria-disabled:active:scale-100 bg-store-button text-base font-medium text-store-on-button">{a && !a.canBuy ? p.w.soldOut : a?.kind === 'preorder' ? p.w.preorder : p.w.addToBag}</button>
         {note && <p role="alert" className="text-sm">{note}</p>}
+        {p.belowBuy}
 
         {/* The shop's true promises; a theme on tiles shows each with its icon (Signal's trust row). */}
         <ul className="store-promises space-y-1.5 border-t border-store-line pt-4 text-sm">

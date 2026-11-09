@@ -51,4 +51,4 @@ export const pairAction = (p: { options: string[]; buyableVariants: number }): '
   p.options.length === 0 && p.buyableVariants === 1 ? 'add' : 'choose'
 
 /** A piece as the editor's "Pair it with" card shows it (src/lib/queries/catalogue.ts reads it). */
-export type Piece = { id: string; title: string; status: string; base: string | null; widths: number[] | null; price: number | null; sizes: number; buyable: boolean }
+export type Piece = { id: string; title: string; status: string; options: string[]; base: string | null; widths: number[] | null; price: number | null; sizes: number; buyable: boolean }

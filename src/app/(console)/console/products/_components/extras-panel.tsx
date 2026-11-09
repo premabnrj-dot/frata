@@ -5,7 +5,7 @@ import { Icon } from '@/components/icons/icon'
 import { Money } from '@/components/data/numeric'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { paise } from '@/domains/money/paise'
-import { MAX_NOTES, MAX_PAIRS, MAX_STORIES, STORY_LIMITS, type Piece, type Story } from '@/domains/catalogue/stories'
+import { MAX_NOTES, MAX_PAIRS, MAX_STORIES, pairAction, STORY_LIMITS, type Piece, type Story } from '@/domains/catalogue/stories'
 import { findPieces } from '../actions'
 import type { Photo } from './photos'
 
@@ -105,7 +105,7 @@ function pieceLine(p: Piece) {
   if (p.status === 'archived') return <span className="text-danger-text">Archived: not shown on the shop</span>
   if (p.status === 'draft') return <span className="text-danger-text">Draft: not shown on the shop</span>
   if (!p.buyable) return <span className="text-danger-text">Sold out: not shown until it’s back</span>
-  return <>{p.price !== null && <Money paise={paise(p.price)} />}{' · '}{p.sizes > 1 ? `${p.sizes} sizes: Choose on the shop` : 'one size: Add on the shop'}</>
+  return <>{p.price !== null && <Money paise={paise(p.price)} />}{' · '}{pairAction({ options: p.options, buyableVariants: p.sizes }) === 'add' ? 'one size: Add on the shop' : `${p.sizes > 1 ? `${p.sizes} sizes` : p.options.join(', ')}: Choose on the shop`}</>
 }
 
 export function PairsPanel({ productId, pairs, onChange, error }: { productId: string; pairs: Piece[]; onChange: (p: Piece[]) => void; error?: string }) {

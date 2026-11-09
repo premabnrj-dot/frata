@@ -155,6 +155,8 @@ export type ResolvedTheme = {
   rhythm?: 'even'
   /** From the manifest (Signal 1.2): the heading scale. */
   scale?: 'signal'
+  /** From the manifest (Signal 1.3): the product page's stories and "Pair it with" (absent: neither). */
+  product?: { stories: boolean; pairs: boolean }
   /** Site settings (Look v4): the merchant's palette (already painted into schemes), text styles and icons. */
   site: SiteSettings
   /** The menus the merchant made (absent: the shop's default; menusOf). */

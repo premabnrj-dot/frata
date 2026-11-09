@@ -207,7 +207,7 @@ export async function searchPieces(tenantId: string, productId: string, q: strin
 /** A piece as the "Pair it with" card shows it: cover, lowest price, how many sizes, whether any can be bought now
  *  (stock, or pre-order / made to order: the editor's hint; the shop decides with availability()). */
 const pieceCols = (tenantId: string) => ({
-  id: products.id, title: products.title, status: products.status, base: productImages.base, widths: productImages.widths,
+  id: products.id, title: products.title, status: products.status, options: products.options, base: productImages.base, widths: productImages.widths,
   price: sql<number | null>`(select min(v.price)::float8 from ${variants} v where v.tenant_id = ${tenantId} and v.product_id = "products"."id" and v.archived_at is null)`,
   sizes: sql<number>`(select count(*)::int from ${variants} v where v.tenant_id = ${tenantId} and v.product_id = "products"."id" and v.archived_at is null)`,
   buyable: sql<boolean>`coalesce((select bool_or(v.stock > 0 or v.when_out <> 'stop') from ${variants} v where v.tenant_id = ${tenantId} and v.product_id = "products"."id" and v.archived_at is null), false)`,

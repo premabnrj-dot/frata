@@ -6,10 +6,11 @@ import { coreAnnouncement } from './announcement'
 import { cache } from 'react'
 import { LOW_STOCK_AT } from '@/domains/catalogue/availability'
 import type { Chart } from '@/domains/catalogue/size-charts'
+import { readStories, type Story } from '@/domains/catalogue/stories'
 import type { PolicyFacts } from '@/domains/policies/render'
 import type { DeliveryRules } from '@/domains/checkout/delivery'
 import { tenantForHost, themeVersionRows } from '@/lib/db/platform'
-import { collectionHandleHistory, collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
+import { collectionHandleHistory, collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, productPairs, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { owedSql, stateSql } from '@/lib/db/order-predicates'
 import { priorPriceSql } from '@/lib/db/price-predicates'
 import { orderLines, orders } from '@/lib/db/schema-orders'
@@ -230,6 +231,9 @@ async function coreCatalogue(tenantId: string, drafts: boolean): Promise<Catalog
 export type StoreProduct = StoreCard & {
   description: string; modelHeight: string; modelSize: string; optionValues: string[][]; seoTitle: string; seoDescription: string
   typeName: string | null; sizeChart: Chart | null; label: Record<string, unknown>; originCountry: string | null
+  /** Signal S3: the piece's stories, and up to two pieces to pair with (raw status and publishAt: listed and buyable
+   *  are decided at render, so a scheduled drop goes live by the clock; drafts never come). */
+  stories: Story[]; pairs: StoreCard[]
 }
 /** current: this handle is the product's; moved: an old handle, with the current one; gone: none. */
 export type Lookup = { kind: 'current'; product: StoreProduct } | { kind: 'moved'; to: string } | { kind: 'none' }
@@ -252,22 +256,37 @@ async function coreProduct(tenantId: string, handle: string, drafts: boolean): P
       since: sql<string>`coalesce(${products.publishAt}, ${products.publishedAt}, ${products.createdAt})`, options: products.options, optionValues: products.optionValues,
       categoryId: products.taxonomyCategory, tags: products.tags, description: products.description, modelHeight: products.modelHeight, modelSize: products.modelSize,
       seoTitle: products.seoTitle, seoDescription: products.seoDescription, typeName: productTypes.name, sizeChart: productTypes.sizeChart, label: products.label, originCountry: products.originCountry,
+      stories: products.stories,
     }).from(products).leftJoin(productTypes, and(eq(productTypes.id, products.typeId), eq(productTypes.tenantId, tenantId)))
       .where(and(eq(products.tenantId, tenantId), eq(products.handle, handle), drafts ? sql`true` : ne(products.status, 'draft'))).limit(1)
     if (!p) return null
     const mine = <T extends { tenantId: unknown; productId: unknown }>(t: T) => and(eq(t.tenantId as never, tenantId), eq(t.productId as never, p.id))
-    const [vs, imgs, cols, attrs] = await Promise.all([
+    // Signal S3: the paired pieces (≤ 2, never a draft, even in the preview), their variants and first photo, in the same round.
+    const paired = sql`(select pp.paired_id from ${productPairs} pp where pp.tenant_id = ${tenantId} and pp.product_id = ${p.id})`
+    const [vs, imgs, cols, attrs, pps, pvs, pimgs, sh] = await Promise.all([
       tx.select(variantCols(tenantId)).from(variants).where(and(mine(variants), sql`${variants.archivedAt} is null`)).orderBy(asc(variants.position)),
       tx.select(imageCols).from(productImages).where(mine(productImages)).orderBy(asc(productImages.position)),
       tx.select(colourCols).from(productColours).where(mine(productColours)),
       tx.select({ attribute: productAttributes.attribute, values: productAttributes.values }).from(productAttributes).where(mine(productAttributes)),
+      tx.select({ id: products.id, handle: products.handle, title: products.title, status: products.status, publishAt: products.publishAt, options: products.options, categoryId: products.taxonomyCategory, tags: products.tags,
+        since: sql<string>`coalesce(${products.publishAt}, ${products.publishedAt}, ${products.createdAt})` })
+        .from(productPairs).innerJoin(products, and(eq(products.tenantId, productPairs.tenantId), eq(products.id, productPairs.pairedId)))
+        .where(and(eq(productPairs.tenantId, tenantId), eq(productPairs.productId, p.id), ne(products.status, 'draft'))).orderBy(asc(productPairs.position)),
+      tx.select(variantCols(tenantId)).from(variants).where(and(eq(variants.tenantId, tenantId), sql`${variants.productId} in ${paired}`, sql`${variants.archivedAt} is null`)).orderBy(asc(variants.position)),
+      tx.select(imageCols).from(productImages).where(and(eq(productImages.tenantId, tenantId), sql`${productImages.productId} in ${paired}`, eq(productImages.position, 0))),
+      showcase(tx, tenantId),
     ])
+    const pairs: StoreCard[] = pps.map((q) => ({
+      ...q, publishAt: q.publishAt ? q.publishAt.toISOString() : null, since: new Date(q.since).toISOString(),
+      images: pimgs.filter((i) => i.productId === q.id).map(({ productId: _, ...i }) => i), variants: pvs.filter((v) => v.productId === q.id).map(toVariant),
+      colours: [], attributes: {}, offers: [...sh.byProduct(q.id), ...sh.shop],
+    }))
     return {
       ...p, publishAt: p.publishAt ? p.publishAt.toISOString() : null, since: new Date(p.since).toISOString(),
       images: imgs.map(({ productId: _, ...i }) => i), variants: vs.map(toVariant), colours: cols.map(({ productId: _, ...c }) => c),
       attributes: Object.fromEntries(attrs.map((a) => [a.attribute, a.values])), sizeChart: p.sizeChart ?? null, typeName: p.typeName ?? null,
       // Its own product offers, then the shop's (raw; live decided at render).
-      offers: await showcase(tx, tenantId).then((sh) => [...sh.byProduct(p.id), ...sh.shop]),
+      offers: [...sh.byProduct(p.id), ...sh.shop], stories: readStories(p.stories), pairs,
     }
   })
 }
@@ -353,7 +372,8 @@ export async function collectionMembersIn(tx: Tx, tenantId: string): Promise<Rec
 
 export const collectionMembers = shopCached('collection-members', 'catalogue', (tenantId): Promise<Record<string, string[]>> => withTenant(tenantId, (tx) => collectionMembersIn(tx, tenantId)))
 const shopHandles = shopCached('handles', 'catalogue', (t) => coreHandles(t, false))
-const shopProductRow = shopCached('product', 'catalogue', (t, handle: string) => coreProduct(t, handle, false))
+// v2 (Signal S3): stories and pairs joined the entry. Tagged catalogue, so a paired piece's price or sell-out purges it too.
+const shopProductRow = shopCached('product-v2', 'catalogue', (t, handle: string) => coreProduct(t, handle, false))
 export async function shopProduct(tenantId: string, handle: string): Promise<Lookup> {
   return lookup(await shopHandles(tenantId), () => shopProductRow(tenantId, handle), handle)
 }
