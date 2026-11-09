@@ -57,8 +57,8 @@ function subscribe(l: () => void) {
 const EMPTY: BagItem[] = []
 export const useBag = () => useSyncExternalStore(subscribe, bag.get, () => EMPTY)
 
-/** Open the bag drawer from anywhere (Add to bag, the header). */
-export const openBag = () => window.dispatchEvent(new Event('frata:open-bag'))
+/** Open the bag drawer from anywhere (Add to bag, the header); `added` names the line just put in, which the drawer marks. */
+export const openBag = (added?: string) => window.dispatchEvent(new CustomEvent('frata:open-bag', { detail: added ?? null }))
 
 // The offer code the shopper typed (one per order), for this tab: every quote and the order carry it. A shop link
 // with ?code=… fills it (a creator's or a WhatsApp broadcast's link). Never a price: the server decides what it does.

@@ -36,7 +36,9 @@ const kindLine = (l: PublicQuote['lines'][number]) => l.kind === 'preorder' && l
   : l.kind === 'made_to_order' ? `Made to order · ${l.leadMinDays}–${l.leadMaxDays} days to make` : null
 
 /** The bag's lines with − / + and Remove, and every charge named before checkout. One component: drawer and page. */
-export function BagContents({ onCheckout, onKeepShopping }: { onCheckout: () => void; onKeepShopping: () => void }) {
+export function BagContents({ onCheckout, onKeepShopping, added = null }: { onCheckout: () => void; onKeepShopping: () => void
+  /** The line Add to bag just put in: the drawer says so and marks it with the theme's accent. */
+  added?: string | null }) {
   const { items, q, error } = useQuote()
   // Lines the server says are gone or were cut: the bag follows, and says so once.
   const [notes, setNotes] = useState<string[]>([])
@@ -51,17 +53,18 @@ export function BagContents({ onCheckout, onKeepShopping }: { onCheckout: () => 
   if (!items.length) return (
     <div className="py-10 text-center">
       <p className="mb-4">Your bag is empty.</p>
-      <button type="button" onClick={onKeepShopping} className="h-12 w-full rounded-sm bg-store-ink text-store-paper">See what is new</button>
+      <button type="button" onClick={onKeepShopping} className="store-btn store-buy h-12 w-full rounded-[var(--store-radius)] bg-store-button text-store-on-button">See what is new</button>
     </div>
   )
   const buyable = q?.lines.filter((l) => l.qty > 0) ?? []
   return (
     <div className="space-y-3">
+      {added && items.some((i) => i.variantId === added) && <p role="status" className="store-added-note text-sm font-medium">Added to your bag</p>}
       {notes.map((t) => <p key={t} role="status" className="border-l-2 border-store-accent bg-store-chip px-3 py-2 text-sm">{t}</p>)}
       {error && <p role="alert" className="text-sm text-store-bad">{error}</p>}
       <ul className="divide-y divide-store-line">
         {(q?.lines ?? []).map((l) => (
-          <li key={l.variantId} className="flex gap-3 py-3">
+          <li key={l.variantId} data-added={l.variantId === added || undefined} className="store-bag-line flex gap-3 py-3">
             {l.image ? <img src={urlFor(l.image.base, pick(l.image.widths, 160))} alt="" width={56} height={70} className="h-[70px] w-14 shrink-0 rounded-sm bg-store-chip object-cover" /> : <span className="h-[70px] w-14 shrink-0 rounded-sm bg-store-chip" />}
             <div className="min-w-0 flex-1 space-y-1">
               <p className="leading-snug">{l.title}</p>
@@ -69,7 +72,7 @@ export function BagContents({ onCheckout, onKeepShopping }: { onCheckout: () => 
               {kindLine(l) && <p className="text-xs text-store-sub">{kindLine(l)}</p>}
               {l.problem === 'sold_out' || l.problem === 'gone' ? <p className="text-sm text-store-bad">{l.problem === 'gone' ? 'No longer sold.' : 'Sold out since you added it.'} <button type="button" className="underline" onClick={() => bag.remove(l.variantId)}>Remove</button></p> : (
                 <div className="flex items-center justify-between gap-2">
-                  <span className="inline-flex items-center rounded-sm border border-store-line">
+                  <span className="store-qty inline-flex items-center rounded-[var(--store-radius)] border border-store-line">
                     <button type="button" aria-label={`One fewer ${l.title}`} className="grid size-10 place-items-center text-lg" onClick={() => bag.set(l.variantId, l.qty - 1)}>−</button>
                     <span className="min-w-6 text-center tabular-nums" aria-live="polite">{l.qty}</span>
                     <button type="button" aria-label={`One more ${l.title}`} className="grid size-10 place-items-center text-lg" disabled={l.qty >= 10} onClick={() => bag.set(l.variantId, l.qty + 1)}>+</button>
@@ -89,9 +92,9 @@ export function BagContents({ onCheckout, onKeepShopping }: { onCheckout: () => 
           <p className="flex justify-between"><span>Delivery</span><span>{q.shipping ? inr(q.shipping) : 'Free'}</span></p>
           {q.cod ? q.cod.charge > 0 && <p className="flex justify-between text-store-sub"><span>Pay on delivery adds {inr(q.cod.charge)}</span><span>if you choose it</span></p>
             : <p className="text-store-sub">{codWhyNotText(q.codWhyNot)}</p>}
-          <p className="flex justify-between pt-1 text-base font-medium"><span>Total</span><span className="tabular-nums">{inr(q.prepaid)}</span></p>
-          <button type="button" onClick={onCheckout} className="mt-2 h-12 w-full rounded-sm bg-store-ink text-base font-medium text-store-paper">Checkout</button>
-          <button type="button" onClick={onKeepShopping} className="h-12 w-full rounded-sm border border-store-ink">Keep shopping</button>
+          <p className="flex justify-between pt-1 text-base font-medium"><span>Total</span><span className="store-price tabular-nums">{inr(q.prepaid)}</span></p>
+          <button type="button" onClick={onCheckout} className="store-btn store-buy mt-2 h-12 w-full rounded-[var(--store-radius)] bg-store-button text-base font-medium text-store-on-button">Checkout</button>
+          <button type="button" onClick={onKeepShopping} className="store-btn-2 h-12 w-full rounded-[var(--store-radius)] border border-store-ink">Keep shopping</button>
         </div>
       )}
       {!q && !error && <p className="text-sm text-store-sub">Pricing your bag…</p>}
@@ -124,9 +127,10 @@ export function BagButton({ checkoutHref, shopHref, label = 'Bag', count = ['Bag
   count?: [string, string] }) {
   const items = useBag()
   const [open, setOpen] = useState(false)
+  const [added, setAdded] = useState<string | null>(null)
   const ref = useRef<HTMLDialogElement>(null)
   useEffect(() => {
-    const o = () => setOpen(true)
+    const o = (e: Event) => { setAdded(typeof (e as CustomEvent).detail === 'string' ? (e as CustomEvent<string>).detail : null); setOpen(true) }
     window.addEventListener('frata:open-bag', o)
     return () => window.removeEventListener('frata:open-bag', o)
   }, [])
@@ -138,12 +142,12 @@ export function BagButton({ checkoutHref, shopHref, label = 'Bag', count = ['Bag
         {icon ? <>{icon}{n > 0 && <span key={n} className="absolute right-0.5 top-0.5 grid min-w-4 animate-count place-items-center rounded-full bg-store-accent px-1 text-[0.625rem] font-medium leading-4 text-store-on-accent">{n}</span>}</>
           : <>{label}{n ? <> · <span key={n} className="inline-block animate-count">{n}</span></> : ''}</>}
       </button>
-      <dialog ref={ref} data-store-drawer onClose={() => setOpen(false)} aria-label="Your bag"
+      <dialog ref={ref} data-store-drawer onClose={() => { setOpen(false); setAdded(null) }} aria-label="Your bag"
         className="m-0 ml-auto h-dvh max-h-none w-full max-w-md overflow-y-auto bg-store-paper p-0 text-store-ink">
         {open && (
           <div className="p-5">
             <div className="mb-2 flex items-center justify-between"><h2 className="text-lg font-medium">Your bag</h2><button type="button" onClick={() => setOpen(false)} className="grid size-11 place-items-center text-xl" aria-label="Close bag"><Icon name="close" className="size-4" /></button></div>
-            <BagContents onCheckout={() => { window.location.href = checkoutHref }} onKeepShopping={() => { setOpen(false); if (!n) window.location.href = shopHref }} />
+            <BagContents added={added} onCheckout={() => { window.location.href = checkoutHref }} onKeepShopping={() => { setOpen(false); if (!n) window.location.href = shopHref }} />
           </div>
         )}
       </dialog>

@@ -465,6 +465,23 @@ img[data-photo]::before { content: ""; position: absolute; inset: 0; background:
 [data-store-theme][data-labels="plain"] .store-label { color: var(--store-sub); }
 /* The grotesk voice: buttons, prices and headings in the display face. */
 [data-store-theme][data-voice="grotesk"] :is(.store-btn, .store-price, h1, h2, h3) { font-family: var(--store-display); letter-spacing: -0.01em; }
+/* Signal's product page, bag and checkout (mockup board "Product page"): the grotesk voice sets the type, the tiles the
+   surfaces (data-voice and data-card are only ever on the shop's root). Every theme: the line just added is marked with the accent. */
+.store-promise-i { display: none; }
+.store-added-note { color: var(--store-good); }
+.store-bag-line[data-added] { box-shadow: inset 3px 0 0 var(--store-accent); padding-inline-start: 0.75rem; }
+[data-voice] .store-pdp-title { font-weight: 600; letter-spacing: -0.02em; }
+[data-voice] .store-pdp-price .store-price { font-weight: 700; font-size: 1.5rem; }
+[data-voice] :is(.store-buy, .store-btn-2, .store-added-note, [data-store-drawer] h2, .store-opt-legend > span > span:first-child) { font: 700 0.8125rem/1 var(--store-display); letter-spacing: 0.08em; text-transform: uppercase; }
+[data-card="tile"] :is(.store-opt, .store-field, .store-pay, .store-qty, .store-btn-2, main input:is([type="search"], [type="email"]), main select) { border-color: transparent; background: var(--store-chip); }
+[data-card="tile"] .store-opt { min-width: 3.25rem; min-height: 3.25rem; }
+[data-card="tile"] :is(.store-opt[aria-pressed="true"], .store-pay:has(:checked)) { background: var(--store-chip); color: var(--store-ink); box-shadow: inset 0 0 0 2px var(--store-ink); }
+[data-card="tile"] .store-field:focus { background: var(--store-paper); border-color: var(--store-ink); }
+[data-card="tile"] .store-offers li { width: fit-content; padding: 0.375rem 0.625rem; border-radius: 3px; background: color-mix(in srgb, var(--store-accent) 12%, transparent); color: var(--store-ink); }
+[data-card="tile"] .store-promises { display: grid; gap: 0.625rem; border: 0; padding: 0.875rem 1rem; background: var(--store-chip); }
+[data-card="tile"] .store-promises li { display: flex; gap: 0.625rem; align-items: center; }
+[data-card="tile"] .store-promise-i { display: block; flex: none; width: 1.125rem; height: 1.125rem; }
+[data-card="tile"] .store-bag-line :is(img, span:first-child) { border-radius: 0; }
 /* Tabs by collection (CSS only): pills over the grid; the checked radio's panel shows (≤ 5 tabs). */
 .store-tab-row { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--store-chip); overflow-x: auto; max-width: 100%; }
 .store-tab { cursor: pointer; white-space: nowrap; border-radius: 999px; padding: 0.5rem 0.875rem; font-size: 0.8125rem; color: var(--store-sub); }
