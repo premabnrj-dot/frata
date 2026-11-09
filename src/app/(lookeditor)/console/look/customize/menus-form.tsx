@@ -35,7 +35,9 @@ function edit(xs: MenuItem[], p: Path, f: (list: MenuItem[], i: number) => MenuI
 }
 const depthOf = (x: MenuItem): number => (x.children.length ? 1 + Math.max(...x.children.map(depthOf)) : 1)
 
-export function MenusForm({ menus, own, set, targets, icons }: {
+export function MenusForm({ menus, own, set, targets, icons, rowLimit = null }: {
+  /** The header's row shows this many top links on a computer (Split: 5); the rest are in its phone menu only. */
+  rowLimit?: number | null
   /** What the shop shows now (menusOf: the merchant's, else the defaults). */
   menus: Menus
   /** What the merchant made (absent: the default). */
@@ -49,7 +51,7 @@ export function MenusForm({ menus, own, set, targets, icons }: {
   const [open, setOpen] = useState<string | null>(null)
   const items = menus[which] ?? []
   const put = (xs: MenuItem[] | null) => set({ ...own, [which]: xs })
-  const warnings = which === 'main' ? menuWarnings(items) : []
+  const warnings = which === 'main' ? [...menuWarnings(items), ...(rowLimit && items.length > rowLimit ? [`The Split header shows the first ${rowLimit} on a computer.`] : [])] : []
   const add = () => {
     if (items.length >= MAX[which]) return
     // A new tab starts as the next one a shop usually has (each needs an icon); a new link as a plain link.

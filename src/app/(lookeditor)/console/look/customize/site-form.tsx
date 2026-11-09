@@ -5,7 +5,7 @@ import { useState } from 'react'
 import type { IconName } from '@/domains/icons/names'
 import { clampSize, ICON_LIBRARIES, ICON_STROKES, PALETTE_NAMES, PALETTE_ROLES, paletteProblem, TEXT_NAMES, TEXT_RANGE, TEXT_STYLES, textOf, type IconLibrary, type Palette, type SiteSettings, type TextStyle, type TextStyleKey } from '@/domains/themes/site'
 import { onColour } from '@/domains/themes/layer'
-import type { Hex } from '@/domains/themes/types'
+import type { Hex, Scheme } from '@/domains/themes/types'
 import { Field, Group, Segmented, Switch } from './controls'
 
 // =============================================================================
@@ -25,8 +25,10 @@ const ICONS = {
   type: ic('M5 7V5h14v2M9 19h6M12 5v14'), icons: ic('M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z'), brand: ic('M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z'),
 }
 
-export function SiteForm({ site, set, presets, icons }: {
+export function SiteForm({ site, set, presets, icons, theme }: {
   site: SiteSettings
+  /** The style's light schemes (paper, tint): what the palette keeps from it must read too. */
+  theme: Scheme[]
   set: (s: SiteSettings) => void
   /** The theme's own styles as palettes (where a merchant's palette starts). */
   presets: { name: string; palette: Palette }[]
@@ -34,7 +36,7 @@ export function SiteForm({ site, set, presets, icons }: {
 }) {
   return (
     <div>
-      <Colours site={site} set={set} presets={presets} />
+      <Colours site={site} set={set} presets={presets} theme={theme} />
       <Group title="Text styles" icon={ICONS.type} value={Object.keys(site.text).length ? `${Object.keys(site.text).length} set` : 'The theme’s'}>
         <div className="divide-y divide-border rounded-xl border border-border">
           {TEXT_STYLES.map((k) => <TextRow key={k} k={k} site={site} set={set} />)}
@@ -60,15 +62,15 @@ export function SiteForm({ site, set, presets, icons }: {
   )
 }
 
-function Colours({ site, set, presets }: { site: SiteSettings; set: (s: SiteSettings) => void; presets: { name: string; palette: Palette }[] }) {
+function Colours({ site, set, presets, theme }: { site: SiteSettings; set: (s: SiteSettings) => void; presets: { name: string; palette: Palette }[]; theme: Scheme[] }) {
   // The palette being picked: a colour that doesn't read stays here (with why) and is never saved.
   const [draft, setDraft] = useState<Palette | null>(site.palette)
   const shown = draft ?? site.palette
-  const why = shown ? paletteProblem(shown) : null
-  const pick = (p: Palette | null) => { setDraft(p); if (!p || !paletteProblem(p)) set({ ...site, palette: p }) }
+  const why = shown ? paletteProblem(shown, theme) : null
+  const pick = (p: Palette | null) => { setDraft(p); if (!p || !paletteProblem(p, theme)) set({ ...site, palette: p }) }
   return (
     <Group title="Colours" icon={ICONS.colour} value={site.palette ? 'Your palette' : 'The theme’s'} open>
-      <Switch label="My own palette" on={!!shown} onChange={(on) => pick(on ? presets[0]!.palette : null)} />
+      {presets.length > 0 && <Switch label="My own palette" on={!!shown} onChange={(on) => pick(on ? presets[0]!.palette : null)} />}
       {shown && <>
         <div role="radiogroup" aria-label="Start from" className="flex flex-wrap gap-2">
           {presets.map((p) => {

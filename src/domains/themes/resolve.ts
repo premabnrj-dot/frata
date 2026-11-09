@@ -2,7 +2,7 @@ import { manifestNear, manifestOf } from './catalogue'
 import { choicesFor } from './choices'
 import { LayerSchema, SettingsSchema, onColour, brandColourProblem } from './layer'
 import { SectionSchema, type SectionInstance } from './sections'
-import { readMenus, readSite, textOf, TEXT_STYLES } from './site'
+import { paletteProblem, readMenus, readSite, textOf, TEXT_STYLES } from './site'
 import { FEEL_DEFAULTS, PAGE_DEFAULTS, PAIRINGS, type ChoiceKey, type Pairing, type ResolvedTheme, type Scheme, type SchemeKey, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
 
 // =============================================================================
@@ -82,6 +82,8 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
   // Site settings (Look v4): the merchant's palette paints the paper scheme (and a tint's accent and buttons); it was
   // contrast-checked at save and is again here (readSite drops a palette that no longer reads).
   const site = readSite(layer.site)
+  // Checked against this style too: the palette keeps the theme's sale and saving colours and its tint.
+  if (site.palette && paletteProblem(site.palette, [schemes.paper, schemes.tint])) site.palette = null
   if (site.palette) {
     const p = site.palette, onA = onColour(p.accent), onB = onColour(p.primary)
     schemes = {

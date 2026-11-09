@@ -45,8 +45,8 @@ export async function previewPage(o: { tenantId: string; shop: StoreShop; path: 
     const c = cat.collections.find((x) => x.handle === b)
     return { body: c ? <CollectionView c={c} cat={cat} href={href} now={now} top={theme.settings.collectionTop} lang={shop.shopLanguage} /> : <ShopNotFound href={href} lang={shop.shopLanguage} />, note: null }
   }
-  // The bag and the checkout (Look v4: page-aware editing opens them). The bag lives in the browser; the preview's is
-  // the merchant's own, and the checkout prices it on the server as the shop's does.
+  // The bag and the checkout (Look v4: page-aware editing opens them), for their look: the bag here is the console's
+  // own (empty), and the shop APIs answer only on the shop's host, so nothing is priced or placed from a preview.
   if (a === 'bag' && !b) return { body: <BagPage />, note: null }
   if (a === 'checkout' && !b) return { body: <Checkout shopName={shop.shopName} legalName={shop.legalName} privacyHref={href('/policies/privacy')} returnLine={checkoutReturnLine(shop.returnKind, shop.returnDays)} />, note: null }
   if (a === 'policies' && b && b in POLICY_TITLE) return { body: <PolicyView shop={shop} page={b as keyof typeof POLICY_TITLE} />, note: null }

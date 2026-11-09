@@ -7,6 +7,7 @@ import { CATALOGUE, manifestNear, manifestOf } from '@/domains/themes/catalogue'
 import { latestAvailable } from '@/domains/themes/release'
 import { brandColourProblem, carryOver, LayerSchema, layerProblems } from '@/domains/themes/layer'
 import { readinessOf } from '@/domains/themes/readiness'
+import { paletteProblem, type Palette } from '@/domains/themes/site'
 import { baselineRevision, resolveTheme } from '@/domains/themes/resolve'
 import { SectionSchema } from '@/domains/themes/sections'
 import { THEME_KEYS } from '@/lib/db/schema-themes'
@@ -99,6 +100,9 @@ export async function saveLookAction(input: unknown): Promise<R<{ version: numbe
     const layer = p.data.layer as { settings?: { brandColour?: string | null }; home?: unknown[] }
     const colour = layer.settings?.brandColour
     if (colour) { const sch = resolveTheme(m, { style: p.data.style }).schemes; const why = brandColourProblem(colour, [sch.paper, sch.tint]); if (why) return { error: why } }
+    // A palette must read with what it keeps from this style (sale and saving words, the tint).
+    const pal = (p.data.layer.site as { palette?: Palette | null } | undefined)?.palette
+    if (pal) { const sch = resolveTheme(m, { style: p.data.style }).schemes; const why = paletteProblem({ ...pal }, [sch.paper, sch.tint]); if (why) return { error: why } }
     // Stored as parsed: unknown settings keys are dropped (tenancy audit 2026-11-08).
     const parsed = LayerSchema.parse(layer)
     const clean = cleanImages({ ...layer, settings: parsed.settings, ...(parsed.site ? { site: parsed.site } : {}), ...(parsed.menus ? { menus: parsed.menus } : {}) }, t)

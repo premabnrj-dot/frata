@@ -19,7 +19,7 @@ import { ThemeForm, type StyleOption } from './theme-form'
 import { Icon } from '@/components/icons/icon'
 import { PublishConfirm } from './publish-confirm'
 import { Segmented } from './controls'
-import { menusOf, type Menus, type Palette, type SiteSettings } from '@/domains/themes/site'
+import { menusOf, siteIsDefault, type Menus, type Palette, type SiteSettings } from '@/domains/themes/site'
 import { MenusForm } from './menus-form'
 import { SiteForm, type IconPreviews } from './site-form'
 
@@ -192,7 +192,9 @@ export function Editor(p: EditorProps) {
     <div className="space-y-4">
       <div className="flex items-center gap-2"><button type="button" onClick={() => setSiteOpen(false)} className="text-sm text-muted-foreground">‹ {p.themeName}</button></div>
       <h2 className="text-lg font-semibold">Site settings</h2>
-      <SiteForm site={site} presets={p.presets} icons={p.icons} set={(x) => change({ ...layer, site: x })} />
+      <SiteForm site={site} presets={p.presets} icons={p.icons} theme={p.styles.find((s) => s.key === style)?.light ?? []}
+        // Back to the defaults = not set (impact review 2026-11-09: trying another theme then loses nothing).
+        set={(x) => { const { site: _, ...rest } = layer; change(siteIsDefault(x) ? rest : { ...rest, site: x }) }} />
     </div>
   ) : (
     <div className="space-y-4">
@@ -200,7 +202,7 @@ export function Editor(p: EditorProps) {
         {(['sections', 'menus', 'theme'] as const).map((t) => <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`min-h-9 rounded-md font-medium transition-[background-color,color] duration-fast ${tab === t ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{t === 'theme' ? 'Style' : t === 'menus' ? 'Menus' : page === 'home' ? 'Sections' : PAGE_NAMES[page]}</button>)}
       </div>
       {tab === 'sections' && page !== 'home' && <PageForm page={page} settings={layer.settings} choices={p.choices} set={setSettings} openSite={() => setSiteOpen(true)} />}
-      {tab === 'menus' && <MenusForm menus={menus} own={layer.menus ?? {}} targets={p.targets} icons={icons} set={(m) => change({ ...layer, menus: m })} />}
+      {tab === 'menus' && <MenusForm menus={menus} own={layer.menus ?? {}} rowLimit={layer.settings.header === 'split' ? 5 : null} targets={p.targets} icons={icons} set={(m) => change({ ...layer, menus: m })} />}
       {tab === 'sections' && page === 'home' && (sel ? (
         <div className="space-y-4">
           <button type="button" onClick={() => setSelected(null)} className="text-sm text-muted-foreground">‹ Sections</button>
@@ -213,7 +215,7 @@ export function Editor(p: EditorProps) {
           onSelect={setSelected} onChange={(home, id) => { change({ ...layer, home }); if (id) setSelected(id) }} />
       ))}
       {tab === 'theme' && <ThemeForm settings={layer.settings} style={style} styles={p.styles} allowed={p.allowed} made={p.made} themeName={p.themeName} choices={p.choices} schemes={p.formCtx.schemes} targets={p.targets} fonts={p.fonts}
-        set={setSettings} setStyle={(k) => change(layer, k)} onPage={(pg) => { if (pg === 'collection' ? p.firstCollection : true) setPage(pg) }} />}
+        set={setSettings} setStyle={(k) => change(layer, k)} paletteOn={!!site.palette} openSite={() => setSiteOpen(true)} onPage={(pg) => { if (pg === 'collection' ? p.firstCollection : true) setPage(pg) }} />}
     </div>
   )
 

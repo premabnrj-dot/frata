@@ -24,7 +24,7 @@ const ICONS = {
   motion: ic('M4 12h10M4 7h6M4 17h6M16 8l4 4-4 4'),
 }
 
-export function ThemeForm({ settings, style, styles, allowed, made, themeName, choices, schemes, targets, fonts, set, setStyle, onPage }: {
+export function ThemeForm({ settings, style, styles, allowed, made, themeName, choices, schemes, targets, fonts, set, setStyle, onPage, paletteOn = false, openSite }: {
   settings: ThemeSettings; style: string; styles: StyleOption[]
   allowed: { pairings: Pairing[]; headers: HeaderVariant[]; footers: FooterVariant[] }
   made: { headers?: HeaderVariant[]; footers?: FooterVariant[] }; themeName: string
@@ -33,6 +33,8 @@ export function ThemeForm({ settings, style, styles, allowed, made, themeName, c
   set: (s: Partial<ThemeSettings>) => void; setStyle: (k: string) => void
   /** Page-aware (Look v4): a group about a page opens that page in the preview. */
   onPage?: (page: 'home' | 'collection') => void
+  /** Site settings › Colours is on (Look v4): it sets the accent, so the brand colour here steps aside. */
+  paletteOn?: boolean; openSite?: () => void
 }) {
   const current = styles.find((s) => s.key === style) ?? styles[0]!
   const brandWhy = settings.brandColour ? brandColourProblem(settings.brandColour, current.light) : null
@@ -54,6 +56,7 @@ export function ThemeForm({ settings, style, styles, allowed, made, themeName, c
             </button>
           ))}
         </div>
+        {paletteOn ? <button type="button" onClick={openSite} className="flex min-h-10 w-full items-center justify-between rounded-md border border-input px-3 text-sm">Your palette is in Site settings<span aria-hidden="true">›</span></button> :
         <div className="space-y-2">
           <Switch label="My own brand colour" on={!!settings.brandColour} onChange={(on) => set({ brandColour: on ? BRAND_COLOUR_START : null })} />
           {settings.brandColour && <>
@@ -64,7 +67,7 @@ export function ThemeForm({ settings, style, styles, allowed, made, themeName, c
             </div>
             {brandWhy && <p role="alert" className="text-sm text-danger-text">{brandWhy}</p>}
           </>}
-        </div>
+        </div>}
       </Group>
 
       <Group title="Type" icon={ICONS.type} value={PAIRING_NAMES[settings.pairing]}>

@@ -68,12 +68,18 @@ export const SiteSchema = z.object({
 }).partial()
 
 /** Why a palette can't be used (null: it can): every pair a shop page puts together must read. */
-export function paletteProblem(p: Palette): string | null {
+/** With `theme` (the style's light schemes, paper first): the colours the palette keeps from the theme (sale, saving
+ *  and problem words, and the tint's background) must read on it too (impact review 2026-11-09: a dark background
+ *  passed while the price-off words didn't). */
+export function paletteProblem(p: Palette, theme?: Scheme[]): string | null {
   if (contrast(p.text, p.background) < 4.5) return 'Text is hard to read on the background.'
   if (contrast(p.muted, p.background) < 4.5) return 'Muted words are hard to read on the background.'
   if (contrast(p.text, p.surface) < 4.5) return 'Text is hard to read on the surface colour.'
   if (contrast(p.accent, p.background) < 3) return 'The accent is too faint on the background.'
   if (Math.max(contrast(ON_COLOUR.light, p.primary), contrast(ON_COLOUR.dark, p.primary)) < 4.5) return 'Button words would be hard to read on the primary colour.'
+  const paper = theme?.[0]
+  if (paper && Math.min(contrast(paper.sale, p.background), contrast(paper.good, p.background), contrast(paper.bad, p.background)) < 4.5) return 'Sale and saving words would be hard to read on this background. Pick a lighter one.'
+  for (const t of theme?.slice(1) ?? []) if (contrast(p.accent, t.bg) < 3) return 'The accent is too faint on the theme’s tinted sections.'
   return null
 }
 /** A theme style's paper scheme as a palette (where a merchant's palette starts). */
@@ -84,7 +90,7 @@ export const clampSize = (k: TextStyleKey, n: number) => Math.min(TEXT_RANGE[k][
 /** A text style as set (over the defaults), sizes held to the style's range. */
 export function textOf(site: SiteSettings, k: TextStyleKey): TextStyle {
   const t = { ...TEXT_DEFAULTS[k], ...site.text[k] }
-  return { ...t, desk: clampSize(k, t.desk), phone: clampSize(k, Math.min(t.phone, TEXT_RANGE[k][1])) }
+  return { ...t, desk: clampSize(k, t.desk), phone: clampSize(k, t.phone) }
 }
 
 // ── Menus ───────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -136,8 +142,21 @@ export function readSite(raw: unknown): SiteSettings {
   return { palette, text, icons: ic?.success && ic.data ? ic.data : SITE_DEFAULTS.icons }
 }
 /** A stored layer's menus, menu by menu (null: the shop's default for that menu). */
+/** Deeper or bigger than any menu can be (walked with a loop, before Zod's recursive parse: a deeply nested body
+ *  must be refused, not overflow the stack; security review 2026-11-09). */
+function tooBig(raw: unknown): boolean {
+  const stack: [unknown, number][] = [[raw, 0]]
+  let n = 0
+  while (stack.length) {
+    const [x, d] = stack.pop()!
+    if (++n > 2000 || d > 2 * (MENU_LIMITS.depth + 2)) return true
+    if (Array.isArray(x)) { for (const y of x) stack.push([y, d + 1]) }
+    else if (x && typeof x === 'object') { for (const k of ['main', 'footer', 'tabs', 'children'] as const) if (Object.hasOwn(x, k)) stack.push([(x as Record<string, unknown>)[k], d + 1]) }
+  }
+  return false
+}
 export function readMenus(raw: unknown): Partial<Menus> {
-  if (!raw || typeof raw !== 'object') return {}
+  if (!raw || typeof raw !== 'object' || tooBig(raw)) return {}
   const out: Partial<Menus> = {}
   for (const k of ['main', 'footer', 'tabs'] as const) {
     if (!Object.hasOwn(raw, k)) continue
@@ -155,8 +174,12 @@ export function siteProblem(raw: unknown): string | null {
 /** Why submitted menus can't be saved (null: they can). */
 export function menusProblem(raw: unknown): string | null {
   if (raw === undefined) return null
+  if (tooBig(raw)) return 'Main menu: At most 3 levels'
   const p = MenusSchema.safeParse(raw)
   if (!p.success) { const i = p.error.issues[0]; return `${i?.path[0] === 'tabs' ? 'Phone tabs' : i?.path[0] === 'footer' ? 'Footer menu' : 'Main menu'}: ${i?.message ?? 'not valid'}` }
   const ids = [...(p.data.main ?? []), ...(p.data.footer ?? []), ...(p.data.tabs ?? [])].flatMap(function all(x: MenuItem): string[] { return [x.id, ...x.children.flatMap(all)] })
   return new Set(ids).size === ids.length ? null : 'Two menu items share an id'
 }
+
+/** Site settings the merchant hasn't changed from the defaults: stored as absent, so trying another theme loses nothing. */
+export const siteIsDefault = (x: SiteSettings) => !x.palette && !Object.keys(x.text).length && x.icons.library === SITE_DEFAULTS.icons.library && x.icons.stroke === SITE_DEFAULTS.icons.stroke

@@ -17,7 +17,7 @@ export default {
   name: 'themes-three',
   async run(t) {
     const { db } = t
-    const open = async (who, opts) => { const ctx = await signedIn(t.browser, who, opts); const p = await ctx.newPage(); p.setDefaultTimeout(15_000); p.on('pageerror', (e) => t.errors.push(e.message)); return p }
+    const open = async (who, opts) => { const ctx = await signedIn(t.browser, who, opts); const p = await ctx.newPage(); p.setDefaultTimeout(15_000); p.on('pageerror', (e) => t.errors.push(`${e.message} at ${p.url()}`)); return p }
     const riya = await open('owner', { viewport: { width: 1440, height: 900 } })
 
     await t.step('Released by Admin: the gallery offers the three 2.0 themes', async () => {

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { CATALOGUE } from '../catalogue'
 import { carryOver, layerProblems } from '../layer'
-import { resolveStored, resolveTheme } from '../resolve'
-import { menusOf, menusProblem, menuWarnings, paletteOf, paletteProblem, readMenus, readSite, siteProblem, textOf, SITE_DEFAULTS, TEXT_DEFAULTS, type MenuItem } from '../site'
+import { resolveStored, resolveTheme, settingAttrs, settingVars } from '../resolve'
+import { menusOf, menusProblem, menuWarnings, paletteOf, paletteProblem, readMenus, readSite, siteIsDefault, siteProblem, textOf, SITE_DEFAULTS, TEXT_DEFAULTS, type MenuItem } from '../site'
 
 const ed = CATALOGUE.editorial!['2.1.0']!, ba = CATALOGUE.bazaar!['2.1.0']!
 const good = { primary: '#1F1A17', accent: '#7A1F2B', background: '#FFFFFF', surface: '#F4F1EC', text: '#1F1A17', muted: '#5E5650' }
@@ -18,8 +18,25 @@ describe('site settings', () => {
     expect(siteProblem({ palette: { ...good, text: 'red' } })).toMatch(/Site settings/)
     expect(siteProblem(undefined)).toBeNull()
   })
-  it("every theme style's paper scheme is a usable palette", () => {
-    for (const m of [ed, ba, CATALOGUE.minimal!['2.1.0']!]) for (const s of m.styles) expect(paletteProblem(paletteOf(s.schemes.paper)), `${m.key}/${s.key}`).toBeNull()
+  it("every theme style's paper scheme is a usable palette, with what it keeps from the style", () => {
+    for (const vs of Object.values(CATALOGUE)) for (const m of Object.values(vs)) for (const st of m.styles) {
+      const light = [st.schemes.paper, st.schemes.tint ?? st.schemes.paper]
+      expect(paletteProblem(paletteOf(st.schemes.paper), light), `${m.key} ${m.version}/${st.key}`).toBeNull()
+    }
+  })
+  it('a dark background is refused where the theme’s sale and saving words would not read on it', () => {
+    const sch = resolveTheme(ed, { style: ed.styles[0]!.key }).schemes
+    const dark = { primary: '#F4F1EC', accent: '#F2C14E', background: '#111111', surface: '#1E1E1E', text: '#F4F1EC', muted: '#BDB5AC' }
+    expect(paletteProblem(dark as never, [sch.paper, sch.tint])).toMatch(/Sale and saving/)
+    expect(resolveTheme(ed, { style: ed.styles[0]!.key, site: { palette: dark } }).site.palette).toBeNull()
+  })
+  it('a shop that set nothing gets exactly the custom properties and attributes it had', () => {
+    for (const m of [ed, ba, CATALOGUE.classic!['1.0.0']!]) {
+      const t = resolveTheme(m, { style: m.styles[0]!.key })
+      expect(Object.keys(settingVars(t)).filter((k) => k.startsWith('--t-') || k === '--icon-stroke')).toEqual([])
+      expect(Object.keys(settingAttrs(t)).filter((k) => k.startsWith('data-t-'))).toEqual([])
+    }
+    expect(siteIsDefault(SITE_DEFAULTS)).toBe(true); expect(siteIsDefault({ ...SITE_DEFAULTS, icons: { library: 'solid', stroke: 'regular' } })).toBe(false)
   })
   it('absent = the theme exactly; a palette paints paper and the tint’s buttons', () => {
     const plain = resolveTheme(ed, { style: ed.styles[0]!.key })
@@ -52,6 +69,11 @@ describe('menus', () => {
     expect(menusProblem({ tabs: [it_('a')] })).toMatch(/icon/)
     expect(menusProblem({ tabs: ['a', 'b', 'c', 'd', 'e', 'f'].map((x) => it_(x, [], 'home')) })).toMatch(/Phone tabs/)
     expect(menusProblem({ main: [it_('a'), it_('a')] })).toMatch(/share an id/)
+  })
+  it('a menu nested far too deep is refused, not a stack overflow', () => {
+    let x: MenuItem = it_('z'); for (let i = 0; i < 5000; i++) x = { ...it_(`a${i}`), children: [x] }
+    expect(menusProblem({ main: [x] })).toMatch(/3 levels/); expect(readMenus({ main: [x] })).toEqual({})
+    expect(layerProblems({ settings: {}, menus: { main: [x] } })[0]).toMatch(/3 levels/)
   })
   it('links stay inside the shop', () => {
     expect(menusProblem({ main: [{ ...it_('a'), link: 'https://evil.example' }] })).not.toBeNull()

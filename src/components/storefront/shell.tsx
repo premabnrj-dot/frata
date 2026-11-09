@@ -79,7 +79,8 @@ function ClassicHeader(p: HeaderProps) {
     <>
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
         <Logo shop={shop} href={href} className="mr-auto text-lg font-semibold tracking-[0.12em] sm:text-xl" />
-        {!gated && <nav aria-label={w.shopNav} className="-mr-2 flex items-center gap-1 text-sm">
+        {/* The collections row scrolls as before; a merchant's menu doesn't (its sub-menus open below it). */}
+        {!gated && <nav aria-label={w.shopNav} className={`-mr-2 flex items-center gap-1 text-sm ${own ? '' : 'overflow-x-auto'}`}>
           {own ? <MenuRow items={own} href={href} set={set} className="hidden gap-1 sm:flex" link="px-2 py-2" /> : <>
             <Link href={href('/products')} className="whitespace-nowrap px-2 py-2">{w.shopAll}</Link>
             {shop.nav.map((c) => <Link key={c.handle} href={href(`/collections/${c.handle}`)} className="hidden whitespace-nowrap px-2 py-2 sm:inline">{c.title}</Link>)}
@@ -87,7 +88,14 @@ function ClassicHeader(p: HeaderProps) {
           {live && <Bag {...p} />}
         </nav>}
       </div>
-      {!gated && own && own.length > 0 && (
+      {/* A phone: the top links in a row; with sub-links, the menu sheet instead (they'd be out of reach in a row). */}
+      {!gated && own && own.some((x) => x.children.length) && (
+        <details className="relative border-t border-store-line sm:hidden">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 text-sm [&::-webkit-details-marker]:hidden"><MenuIcon set={set} />{w.menu}</summary>
+          <nav aria-label={w.menu} className="max-h-[70dvh] overflow-y-auto border-t border-store-line px-4 pb-3 text-base"><MenuDrawer items={own} href={href} set={set} w={w} /></nav>
+        </details>
+      )}
+      {!gated && own && own.length > 0 && !own.some((x) => x.children.length) && (
         <nav aria-label={w.collectionsNav} className="flex gap-1 overflow-x-auto border-t border-store-line px-2 text-sm sm:hidden">
           {own.map((x) => <Link key={x.id} href={href(x.link)} className="inline-flex items-center gap-1.5 whitespace-nowrap px-2 py-2.5">{x.icon && <ShopIcon name={x.icon} set={set} className="size-4" />}{x.label}</Link>)}
         </nav>
@@ -162,7 +170,7 @@ function SplitHeader(p: HeaderProps) {
     <div className="mx-auto grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-3 sm:px-6">
       <div className="min-w-0">
         {!gated && <>
-          <nav aria-label={w.shopNav} className="hidden gap-1 text-sm sm:flex">
+          <nav aria-label={w.shopNav} className={`hidden gap-1 text-sm sm:flex ${own ? '' : 'overflow-x-auto'}`}>
             {own ? <MenuRow items={own.slice(0, 5)} href={href} set={set} className="gap-1" link="px-2 py-2" /> : <>
               <Link href={href('/products')} className="store-nav whitespace-nowrap px-2 py-2">{w.shopAll}</Link>
               {shop.nav.slice(0, 4).map((c) => <Link key={c.handle} href={href(`/collections/${c.handle}`)} className="store-nav whitespace-nowrap px-2 py-2">{c.title}</Link>)}

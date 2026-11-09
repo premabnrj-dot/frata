@@ -18,7 +18,7 @@ export default {
   name: 'themes-v4',
   async run(t) {
     const { db } = t
-    const open = async (who, opts) => { const ctx = await signedIn(t.browser, who, opts); const p = await ctx.newPage(); p.setDefaultTimeout(15_000); p.on('pageerror', (e) => t.errors.push(e.message)); return p }
+    const open = async (who, opts) => { const ctx = await signedIn(t.browser, who, opts); const p = await ctx.newPage(); p.setDefaultTimeout(15_000); p.on('pageerror', (e) => t.errors.push(`${e.message} at ${p.url()}`)); return p }
     const riya = await open('owner', { viewport: { width: 1440, height: 900 } })
     const draft = async () => (await db`select settings from shop_theme_revisions where tenant_id = ${KESAR} order by updated_at desc limit 1`)[0]?.settings ?? {}
     const saved = (f) => until(async () => f(await draft()), 10_000)
