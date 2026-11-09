@@ -2,6 +2,7 @@ import 'server-only'
 import { Resolver } from 'node:dns/promises'
 import { DOH_BASE } from '@/lib/env'
 import { cappedJson, fakeBase } from '../http'
+import { fetchWithTimeout } from '@/lib/http/timeout'
 
 // =============================================================================
 // FILE: src/lib/connectors/dns/index.ts — WHAT THE INTERNET SEES FOR A DOMAIN (shop addresses D2·5).
@@ -109,4 +110,15 @@ export async function txtAtSource(name: string, value: string, apex: string): Pr
     const c = (e as { code?: string }).code
     return c === 'ENOTFOUND' || c === 'ENODATA' ? 'no' : 'unknown'
   }
+}
+
+/**
+ * Is a certificate live on `host`: does it answer over HTTPS at all (any status — the TLS handshake is the check)?
+ * The fake answers for e2e. "unknown" on any failure: a certificate is never taken away on one bad answer.
+ */
+export async function certificateLive(host: string): Promise<Seen> {
+  if (!/^[a-z0-9.-]{4,253}$/.test(host)) return 'unknown'
+  if (FAKE) return (await cappedJson(`${FAKE}/cert?${new URLSearchParams({ host })}`, {}, { ms: MS, cap: CAP })).status === 200 ? 'yes' : 'unknown'
+  try { await fetchWithTimeout(`https://${host}/`, { method: 'HEAD', redirect: 'manual', cache: 'no-store' }, MS); return 'yes' }
+  catch { return 'unknown' }
 }

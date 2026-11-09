@@ -56,3 +56,10 @@ export async function shopDomainRows(tenantId: string): Promise<DomainRow[]> {
   }).from(shopDomains).where(and(eq(shopDomains.tenantId, tenantId), or(isNull(shopDomains.removedAt), and(isNotNull(shopDomains.removedAt), or(eq(shopDomains.removedReason, 'moved'), eq(shopDomains.removedReason, 'frrata'))))))
     .orderBy(asc(shopDomains.claimedAt)).limit(10))
 }
+
+/** What Continue needs for a claimed row (D2·10): its host and the token its TXT record carries (the shop's own row). */
+export async function domainClaimFor(tenantId: string, id: string): Promise<{ host: string; apex: string; withWww: boolean; token: string } | null> {
+  const [r] = await withTenant(tenantId, (tx) => tx.select({ host: shopDomains.host, apex: shopDomains.apex, withWww: shopDomains.withWww, token: shopDomains.token })
+    .from(shopDomains).where(and(eq(shopDomains.tenantId, tenantId), eq(shopDomains.id, id), isNull(shopDomains.removedAt))).limit(1))
+  return r ?? null
+}

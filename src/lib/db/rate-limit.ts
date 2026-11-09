@@ -38,6 +38,13 @@ export const LIMITS = {
   uploadShop: { action: 'upload:shop', max: 800, windowSeconds: 3600 },
   // PDF documents (Documents D1, security review 2026-11-08): a render is CPU; per member and per shop, fail closed.
   pdfMember: { action: 'pdf:member', max: 30, windowSeconds: 600 },
+  // Own domains D2·10 (security review 2026-11-09): claims per member and shop; the dialog's 15 s check per member,
+  // shop and IP bucket, and one budget for all shops (Vercel reads and DoH are shared); all fail closed.
+  domainClaimMember: { action: 'domain_claim:member', max: 20, windowSeconds: 3600 },
+  domainCheckMember: { action: 'domain_check:member', max: 120, windowSeconds: 600 },
+  domainCheckShop: { action: 'domain_check:shop', max: 160, windowSeconds: 600 },
+  domainCheckIp: { action: 'domain_check:ip', max: 200, windowSeconds: 600 },
+  domainCheckAll: { action: 'domain_check:all', max: 3000, windowSeconds: 600 },
   pdfShop: { action: 'pdf:shop', max: 120, windowSeconds: 600 },
   // GST exports (GST app G1): a period's documents rendered whole; per member, fail closed.
   gstExportMember: { action: 'gst_export:member', max: 30, windowSeconds: 600 },

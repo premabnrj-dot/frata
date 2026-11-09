@@ -4,7 +4,7 @@ import { checkDomain, type DomainFacts, type DomainProblem } from '@/domains/add
 import { dnsHostOf, type DnsHost } from '@/domains/addresses/dns-hosts'
 import { claimDomainRow } from '@/lib/db/platform'
 import { withTenant } from '@/lib/db/tenant'
-import { caaBlocks, nameServers, pointsAt, txtAtSource, txtValues, type Seen } from '@/lib/connectors/dns'
+import { caaBlocks, certificateLive, nameServers, pointsAt, txtAtSource, txtValues, type Seen } from '@/lib/connectors/dns'
 import { projectDomain, projectRecords, type ProjectRecords } from '@/lib/connectors/vercel'
 import { DOMAIN_CAPACITY, isOwnDomainsConfigured } from '@/lib/env'
 import { refreshHosts } from '@/lib/storefront/refresh'
@@ -12,7 +12,6 @@ import { CONSOLE_HOST, SHOP_DOMAIN } from '@/lib/public-env'
 import { enqueue } from '@/lib/outbox'
 import { drainSoon } from '@/lib/outbox/drain'
 import { errName } from '@/lib/log'
-import { fetchWithTimeout } from '@/lib/http/timeout'
 
 // =============================================================================
 // FILE: src/lib/domains/own-domains.ts — CONNECT, CHECK AND ADD AN OWN DOMAIN (shop addresses D2·4–D2·6).
@@ -76,12 +75,6 @@ export type Check = { state: CheckState; found: { txt: Seen; points: Seen; www: 
 /** A text[] parameter that survives being empty or null (drizzle spreads a JS array into a list). */
 const textArray = (v: string[] | null) => (v === null ? sql`null::text[]` : sql`array[${sql.join(v.map((x) => sql`${x}`), sql`, `)}]::text[]`)
 
-/** A certificate is live when the host answers over HTTPS at all (any status): the TLS handshake is the check. */
-async function certLive(host: string): Promise<Seen> {
-  try { await fetchWithTimeout(`https://${host}/`, { method: 'HEAD', redirect: 'manual', cache: 'no-store' }, 4_000); return 'yes' }
-  catch { return 'unknown' }
-}
-
 /**
  * Checks one row of this shop (the dialog's poll, Check now and the background check alike). `busy`: checked under
  * 10 s ago (the lease), so nothing was looked up. Never calls Vercel's add or verify.
@@ -113,7 +106,7 @@ async function check(tenantId: string, id: string, opts: { forDialog: boolean },
     caaBlocks(lease.apex),
     lease.proved ? projectDomain(lease.host) : Promise.resolve(null),
   ])
-  const cert = lease.proved && point.seen === 'yes' && onProject?.onProject ? await certLive(lease.host) : 'unknown'
+  const cert = lease.proved && point.seen === 'yes' && onProject?.onProject ? await certificateLive(lease.host) : 'unknown'
   const on: Seen = onProject === null ? 'unknown' : onProject.onProject ? 'yes' : 'no'
   const out = await withTenant(tenantId, async (tx) => {
     const [r] = await tx.execute<{ state: CheckState; add_now: boolean }>(
