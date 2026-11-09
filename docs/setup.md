@@ -50,8 +50,8 @@ and `+`, which break the URL (the app now refuses such a URL with a message
 that never includes it — `src/lib/db/url.ts`).
 
 Vercel → frata → Settings → Environment Variables → `DATABASE_URL`,
-type **Sensitive**, Production + Preview. Never the `postgres` user: it
-bypasses every tenant policy.
+type **Sensitive**, **Production only** (checked 2026-11-09: it is; a preview build must never reach the
+production database — security review S1). Never the `postgres` user: it bypasses every tenant policy.
 
 ### 3. Supabase auth URLs — Authentication → URL Configuration
 

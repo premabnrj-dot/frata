@@ -125,8 +125,8 @@ the 307 turns on with a ≤ 15-min check (Pro). Migrations start at **0080**. **
   helper replaces the five `wa.me` builders; Copy all and Send on WhatsApp come from one `recordsText()` (host, TXT,
   A, CNAME, `_vercel` only). The Vercel connector re-checks the host shape, encodes it, and caps reply sizes; a found A
   value is shown only as a checked IPv4 and never stored. Tokens are 128 bits.
-- **Preview builds (S·M3, open S1):** `DATABASE_URL` must be Production-only before D2·6 ships (`app_prove_domain`
-  trusts the app's resolver reading). Owner's step.
+- **Preview builds (S·M3, S1):** `DATABASE_URL` and `ADMIN_DATABASE_URL` are Production-only in Vercel (checked
+  2026-11-09, names and targets only); `docs/setup.md` said Production + Preview and now says Production only.
 - **Rename of a shop taking live payments** (owner: "take your call, plan the best ux", 2026-11-09) → **D1·9**.
 | Task | What | Verify |
 |---|---|---|
