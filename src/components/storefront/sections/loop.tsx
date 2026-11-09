@@ -1,5 +1,6 @@
 import { MUX_STREAM_BASE } from '@/lib/env'
 import type { LookVideos } from '@/lib/themes/page-look'
+import { mp4Name } from '@/domains/video/state'
 
 /**
  * V1: a section's muted loop, laid over its photo (the photo is the first paint and stays the fallback). No source
@@ -9,5 +10,5 @@ import type { LookVideos } from '@/lib/themes/page-look'
 export function Loop({ id, videos }: { id: string | undefined; videos: LookVideos | undefined }) {
   const v = id ? videos?.[id] : undefined
   if (!v || !/^[A-Za-z0-9]{1,64}$/.test(v.playbackId)) return null
-  return <video data-loop={`${MUX_STREAM_BASE}/${v.playbackId}/highest.mp4`} muted loop playsInline preload="none" aria-hidden="true" tabIndex={-1} disablePictureInPicture className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-base ease-standard" />
+  return <video data-loop={`${MUX_STREAM_BASE}/${v.playbackId}/${mp4Name(v.width, v.height)}.mp4`} muted loop playsInline preload="none" aria-hidden="true" tabIndex={-1} disablePictureInPicture className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-base ease-standard" />
 }

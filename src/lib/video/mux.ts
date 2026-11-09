@@ -1,6 +1,7 @@
 import 'server-only'
 import { fetchWithTimeout } from '@/lib/http/timeout'
 import { MUX_API_BASE, MUX_TOKEN_ID, MUX_TOKEN_SECRET } from '@/lib/env'
+import { mp4Name } from '@/domains/video/state'
 
 // =============================================================================
 // FILE: src/lib/video/mux.ts — the four calls Frrata makes to Mux (V1, docs/plans/2026-11-09-video-v1.md;
@@ -8,9 +9,10 @@ import { MUX_API_BASE, MUX_TOKEN_ID, MUX_TOKEN_SECRET } from '@/lib/env'
 // videos row), delete and cancel are outbox kinds (ADR-0006). Never logs a URL, an id with a token, or a body.
 // =============================================================================
 
-/** The upload settings decided by the reviews: free encoding, public playback (the shop's cache), one MP4 at the
- *  highest rendition the 720p tier gives, an upload URL alive 15 minutes. */
-export const UPLOAD_SETTINGS = { video_quality: 'basic', playback_policies: ['public'], static_renditions: [{ resolution: 'highest' }], max_resolution_tier: '720p' } as const
+/** The upload settings decided by the reviews: free encoding, public playback (the shop's cache), and two MP4s — 720p
+ *  (what the shop plays when the source is larger) and highest (what it plays when the source is 720p or smaller,
+ *  where Mux skips the 720p file). No max_resolution_tier: Mux takes only 1080p and up (the default). */
+export const UPLOAD_SETTINGS = { video_quality: 'basic', playback_policies: ['public'], static_renditions: [{ resolution: '720p' }, { resolution: 'highest' }] } as const
 export const UPLOAD_TIMEOUT_S = 900
 
 export type MuxFail = { ok: false; why: 'not_configured' | 'unauthorized' | 'refused' | 'rate_limited' | 'unavailable' | 'bad_reply' }
@@ -94,8 +96,10 @@ export function parseAsset(d: unknown): MuxAsset | null {
   const video = tracks.find((t) => t?.type === 'video')
   const dim = (n: unknown) => (typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 8192 ? n : null)
   const files = (a.static_renditions as { files?: unknown } | undefined)?.files
+  // Ready when the file the shop will play is ready (mp4Name: 720p from a larger source, else highest).
+  const want = mp4Name(dim(video?.max_width), dim(video?.max_height))
   const mp4Ready = Array.isArray(files) && (files as { name?: unknown; resolution?: unknown; status?: unknown }[])
-    .some((f) => f?.status === 'ready' && (f.resolution === 'highest' || f.name === 'highest.mp4'))
+    .some((f) => f?.status === 'ready' && (f.resolution === want || f.name === `${want}.mp4`))
   return {
     id: a.id, status, passthrough: typeof a.passthrough === 'string' ? a.passthrough : null,
     uploadId: typeof a.upload_id === 'string' && ID.test(a.upload_id) ? a.upload_id : null,

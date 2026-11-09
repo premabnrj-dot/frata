@@ -34,8 +34,10 @@ async function arrive(up, body) {
   Object.assign(a, { status: 'ready', duration: long ? 20.04 : 1.0, playback_ids: [{ id: 'pb' + hex(8), policy: 'public' }], tracks: [{ type: 'video', max_width: 96, max_height: 54 }] })
   await hook('video.asset.ready', { ...a })
   await sleep(300)
-  a.static_renditions = { files: [{ id: 'r' + hex(4), name: 'highest.mp4', resolution: 'highest', status: 'ready', ext: 'mp4' }] }
-  await hook('video.asset.static_rendition.ready', { id: a.static_renditions.files[0].id, asset_id: a.id, status: 'ready' })
+  // The fixture is 96×54: Mux skips the 720p file (no upscaling) and makes highest.
+  a.static_renditions = { files: [{ id: 'r' + hex(4), name: '720p.mp4', resolution: '720p', status: 'skipped', ext: 'mp4' }, { id: 'r' + hex(4), name: 'highest.mp4', resolution: 'highest', status: 'ready', ext: 'mp4' }] }
+  await hook('video.asset.static_rendition.skipped', { id: a.static_renditions.files[0].id, asset_id: a.id, status: 'skipped' })
+  await hook('video.asset.static_rendition.ready', { id: a.static_renditions.files[1].id, asset_id: a.id, status: 'ready' })
 }
 
 http.createServer((req, res) => {
@@ -53,6 +55,13 @@ http.createServer((req, res) => {
     if (!authOk(req)) return send(res, 401, { error: { type: 'unauthorized' } })
     const json = body.length ? JSON.parse(body.toString()) : {}
     if (req.method === 'POST' && p === '/video/v1/uploads') {
+      // Refuses what Mux refuses (2026-11-09: a 720p max_resolution_tier reached production as a 400 on every upload).
+      const nas = json.new_asset_settings ?? {}
+      const bad = (nas.max_resolution_tier !== undefined && !['1080p', '1440p', '2160p'].includes(nas.max_resolution_tier))
+        || (nas.video_quality !== undefined && !['basic', 'plus', 'premium'].includes(nas.video_quality))
+        || (nas.static_renditions ?? []).some((r) => !['highest', 'audio-only', '2160p', '1440p', '1080p', '720p', '540p', '480p', '360p', '270p'].includes(r?.resolution))
+        || 'mp4_support' in nas || typeof json.cors_origin !== 'string' || (nas.passthrough ?? '').length > 255
+      if (bad) return send(res, 400, { error: { type: 'invalid_parameters', messages: ['new_asset_settings is invalid'] } })
       const id = 'up' + hex(8)
       const up = { id, url: `${BASE}/_upload/${id}`, status: 'waiting', timeout: json.timeout, cors_origin: json.cors_origin, new_asset_settings: json.new_asset_settings }
       uploads.set(id, up); return send(res, 201, { data: up })

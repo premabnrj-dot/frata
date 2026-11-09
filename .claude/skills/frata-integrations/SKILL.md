@@ -582,8 +582,11 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   before launch.
 - Alternatives: Cloudflare Stream $5/1,000 min stored, $1/1,000 min delivered [V 2026-10-27]; Bunny Stream from
   $0.005/GB CDN, Asia standard $0.03/GB, $1 minimum [V-undated].
+- **`max_resolution_tier` takes only `1080p` | `1440p` | `2160p`** (default 1080p) [V, api-reference create-direct-upload,
+  2026-11-09]: a `720p` tier is a 400 on every upload (it reached production that day). 720p is a static rendition size.
 - **As built (V1, 2026-11-09)**: `src/lib/video/mux.ts` — upload {cors_origin, timeout 900, new_asset_settings {basic,
-  public, static_renditions [highest], max_resolution_tier 720p, passthrough = our videos row id}}; the asset's
+  public, static_renditions [720p, highest], no tier, passthrough = our videos row id}}; the shop plays 720p.mp4 from a
+  source above 720p, else highest.mp4 (Mux skips 720p rather than upscale; `mp4Name`, src/domains/video/state.ts); the asset's
   passthrough and upload_id are checked before anything is written; the envelope's `environment.id` must equal
   `MUX_ENVIRONMENT_ID`. Unverified on a real Mux account until the owner's first upload: the upload URL's host
   (no CSP depends on it), where `passthrough` and `upload_id` appear on upload vs asset events (the definer accepts
