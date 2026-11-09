@@ -40,6 +40,9 @@ for (const [k, files] of Object.entries(build)) {
   for (const f of files) if (/\.(css|js)$/.test(f) && /bricolage/i.test(readFileSync(join('.next', f), 'utf8'))) failures.push(`${k}  loads the shell's display face (Bricolage) through ${f}`)
   // The customizer's sample pieces never reach a shop's browser (src/lib/themes/sample.ts): no sample photo path, no sample id.
   for (const f of files) if (f.endsWith('.js') && /\/themes\/samples\//.test(readFileSync(join('.next', f), 'utf8'))) failures.push(`${k}  carries the customizer's sample pieces through ${f}`)
+  // Icons are drawn on the server (src/components/storefront/icon.tsx): their path data never reaches a shop's
+  // browser. Two markers, the line set's bag and the solid set's bag (src/domains/icons/data.ts).
+  for (const f of files) if (f.endsWith('.js') && /M3\.103 6\.034h17\.794|M239\.89,198\.12l-14\.26-12/.test(readFileSync(join('.next', f), 'utf8'))) failures.push(`${k}  carries the shop's icon data through ${f} (draw icons on the server, pass the element)`)
   const css = files.filter((f) => f.endsWith('.css')).reduce((a, f) => a + gz(f), 0) / 1024
   if (css > CSS_BUDGET_KB) failures.push(`${k}  loads ${css.toFixed(1)} kB of CSS gzipped (budget ${CSS_BUDGET_KB} kB)`)
   if (!k.endsWith('/page')) continue

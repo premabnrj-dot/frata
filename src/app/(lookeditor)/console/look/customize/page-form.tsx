@@ -1,16 +1,26 @@
 'use client'
 
 import type { ThemeSettings } from '@/domains/themes/types'
-import { Choice, OfferedSwitch, Tiles } from './controls'
+import { Choice, Offered, OfferedSwitch, Tiles } from './controls'
 import type { Choices } from '@/domains/themes/choices'
 
-// The product page and collection page panels (themes T2, mockup board "Customizer · Product page"): what every page
-// of that kind wears. Every default is what shops had before T2. Cards and columns show on every grid.
+// The page panels (themes T2; Look v4 page-aware: mockup board "Page options"): what every page of that kind wears,
+// from what the theme offers. Every default is what shops had before T2. Cards and columns show on every grid. Bag
+// and Checkout hold money: one well-tested layout each for every theme, styled by Site settings (owner 2026-11-09).
 
-export function PageForm({ page, settings, choices, set }: { page: 'product' | 'collection'; settings: ThemeSettings; choices: Choices; set: (s: Partial<ThemeSettings>) => void }) {
+type Page = 'product' | 'collection' | 'all' | 'bag' | 'checkout'
+export function PageForm({ page, settings, choices, set, openSite }: { page: Page; settings: ThemeSettings; choices: Choices; set: (s: Partial<ThemeSettings>) => void; openSite: () => void }) {
+  const site = <button type="button" onClick={openSite} className="flex min-h-10 w-full items-center justify-between rounded-md border border-input px-3 text-sm">Colours, text and icons<span aria-hidden="true">›</span></button>
+  if (page === 'bag') return <div className="space-y-6">{site}</div>
+  if (page === 'checkout') return (
+    <div className="space-y-6">
+      <Offered label="Checkout" value={settings.checkout} list={choices.checkout} onChange={(checkout) => set({ checkout })} all={[{ value: 'standard', label: 'With your menu' }, { value: 'focused', label: 'Focused' }]} />
+      {site}
+    </div>
+  )
   return (
     <div className="space-y-6">
-      {page === 'product' ? <>
+      {page === 'all' ? null : page === 'product' ? <>
         <Tiles label="Photos" cols={2} value={settings.gallery} onChange={(gallery) => set({ gallery })}
           options={(choices.gallery ?? ['swipe', 'thumbs', 'rail', 'stack']).map((v) => ({ value: v, label: GALLERY_NAMES[v], picture: <GalleryPicture v={v} /> }))} />
         <OfferedSwitch label="Buy box stays beside the photos (computers)" on={settings.buyBoxSticky} list={choices.buyBoxSticky} onChange={(buyBoxSticky) => set({ buyBoxSticky })} />

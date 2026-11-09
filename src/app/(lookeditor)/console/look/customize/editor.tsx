@@ -19,6 +19,9 @@ import { ThemeForm, type StyleOption } from './theme-form'
 import { Icon } from '@/components/icons/icon'
 import { PublishConfirm } from './publish-confirm'
 import { Segmented } from './controls'
+import { menusOf, type Menus, type Palette, type SiteSettings } from '@/domains/themes/site'
+import { MenusForm } from './menus-form'
+import { SiteForm, type IconPreviews } from './site-form'
 
 // =============================================================================
 // The customizer (approved mockup "Customizer", "Customizer on a phone", "Publish"). One draft revision:
@@ -29,7 +32,11 @@ import { Segmented } from './controls'
 //   - Publish lists what shoppers will see change and anything that blocks it (readiness), then offers Undo.
 // =============================================================================
 
-type Layer = { settings: ThemeSettings; home: SectionInstance[] }
+/** site and menus only once the merchant sets them (absent = the theme's own and the shop's default menus). */
+type Layer = { settings: ThemeSettings; home: SectionInstance[]; site?: SiteSettings; menus?: Partial<Menus> }
+/** The pages the preview can open (Look v4: page-aware editing). */
+export type EditPage = 'home' | 'product' | 'collection' | 'all' | 'bag' | 'checkout'
+const PAGE_NAMES: Record<EditPage, string> = { home: 'Home', product: 'Product page', collection: 'Collection page', all: 'Shop all', bag: 'Bag', checkout: 'Checkout' }
 export type EditorProps = {
   revisionId: string; version: number; themeName: string; style: string; layer: Layer
   styles: StyleOption[]; allowed: { pairings: Pairing[]; headers: HeaderVariant[]; footers: FooterVariant[]; sections: SectionKey[] }
@@ -41,6 +48,8 @@ export type EditorProps = {
   canPublish: boolean; shopOpen: boolean; nowIso: string; firstProduct: string | null; firstCollection: string | null
   /** What this theme offers for each choice (choicesFor; null = any value). */
   choices: Choices
+  /** Site settings (Look v4): the resolved site (defaults filled), the theme's styles as palettes, the shop's icons drawn on the server. */
+  site: SiteSettings; presets: { name: string; palette: Palette }[]; icons: IconPreviews
 }
 
 
@@ -58,14 +67,17 @@ export function Editor(p: EditorProps) {
   const [style, setStyle] = useState(p.style)
   const [past, setPast] = useState<{ layer: Layer; style: string }[]>([])
   const [future, setFuture] = useState<{ layer: Layer; style: string }[]>([])
-  const [tab, setTab] = useState<'sections' | 'theme'>('sections')
+  const [tab, setTab] = useState<'sections' | 'menus' | 'theme'>('sections')
+  // The gear (Look v4): Site settings take the panel; the panel folds to a rail of icons.
+  const [siteOpen, setSiteOpen] = useState(false)
+  const [folded, setFolded] = useState(false)
   const [selected, setSelected] = useState<string | null>(null)
   const [device, setDevice] = useState<Device>('desktop')
   const [ask, setAsk] = useState(false)
   const [going, setGoing] = useState(false)
   const stage = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState({ w: 0, h: 0 })
-  const [page, setPage] = useState<'home' | 'product' | 'collection'>('home')
+  const [page, setPage] = useState<EditPage>('home')
   const [status, setStatus] = useState<Status>('saved')
   const [pubError, setPubError] = useState<string | null>(null)
   const [pending, start] = useTransition()
@@ -150,7 +162,9 @@ export function Editor(p: EditorProps) {
   const issueMap = new Map(issues.map((i) => [i.sectionId, i.text]))
   const styleName = p.styles.find((s) => s.key === style)?.name ?? style
   const sel = layer.home.find((s) => s.id === selected) ?? null
-  const path = page === 'product' && p.firstProduct ? `/products/${p.firstProduct}` : page === 'collection' && p.firstCollection ? `/collections/${p.firstCollection}` : ''
+  const path = page === 'product' && p.firstProduct ? `/products/${p.firstProduct}` : page === 'collection' && p.firstCollection ? `/collections/${p.firstCollection}` : page === 'all' ? '/products' : page === 'bag' ? '/bag' : page === 'checkout' ? '/checkout' : ''
+  const site = layer.site ?? p.site
+  const menus = menusOf(layer.menus, p.formCtx.collections)
   const d = DEVICES[device]
   // The shop drawn at the device width, scaled to the stage (never above 100%); the phone keeps its own width.
   const scale = box.w ? Math.min(1, (box.w - (device === 'phone' ? 32 : 24)) / d.w) : device === 'phone' ? 1 : 0.6
@@ -172,12 +186,21 @@ export function Editor(p: EditorProps) {
     } catch { setGoing(false); setPubError('We couldn’t publish. Your draft is safe; try again.'); setAsk(true) }
   })
 
-  const panel = (
+  const setSettings = (s: Partial<ThemeSettings>) => change({ ...layer, settings: { ...layer.settings, ...s } })
+  const icons = p.icons[site.icons.library]
+  const panel = siteOpen ? (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2"><button type="button" onClick={() => setSiteOpen(false)} className="text-sm text-muted-foreground">‹ {p.themeName}</button></div>
+      <h2 className="text-lg font-semibold">Site settings</h2>
+      <SiteForm site={site} presets={p.presets} icons={p.icons} set={(x) => change({ ...layer, site: x })} />
+    </div>
+  ) : (
     <div className="space-y-4">
       <div role="tablist" aria-label="Edit" className="grid grid-flow-col auto-cols-fr rounded-lg bg-muted p-0.5 text-sm">
-        {(['sections', 'theme'] as const).map((t) => <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`min-h-9 rounded-md font-medium transition-[background-color,color] duration-fast ${tab === t ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{t === 'theme' ? 'Style' : page === 'product' ? 'Product page' : page === 'collection' ? 'Collection page' : 'Sections'}</button>)}
+        {(['sections', 'menus', 'theme'] as const).map((t) => <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`min-h-9 rounded-md font-medium transition-[background-color,color] duration-fast ${tab === t ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{t === 'theme' ? 'Style' : t === 'menus' ? 'Menus' : page === 'home' ? 'Sections' : PAGE_NAMES[page]}</button>)}
       </div>
-      {tab === 'sections' && page !== 'home' && <PageForm page={page} settings={layer.settings} choices={p.choices} set={(s) => change({ ...layer, settings: { ...layer.settings, ...s } })} />}
+      {tab === 'sections' && page !== 'home' && <PageForm page={page} settings={layer.settings} choices={p.choices} set={setSettings} openSite={() => setSiteOpen(true)} />}
+      {tab === 'menus' && <MenusForm menus={menus} own={layer.menus ?? {}} targets={p.targets} icons={icons} set={(m) => change({ ...layer, menus: m })} />}
       {tab === 'sections' && page === 'home' && (sel ? (
         <div className="space-y-4">
           <button type="button" onClick={() => setSelected(null)} className="text-sm text-muted-foreground">‹ Sections</button>
@@ -190,12 +213,12 @@ export function Editor(p: EditorProps) {
           onSelect={setSelected} onChange={(home, id) => { change({ ...layer, home }); if (id) setSelected(id) }} />
       ))}
       {tab === 'theme' && <ThemeForm settings={layer.settings} style={style} styles={p.styles} allowed={p.allowed} made={p.made} themeName={p.themeName} choices={p.choices} schemes={p.formCtx.schemes} targets={p.targets} fonts={p.fonts}
-        set={(s) => change({ ...layer, settings: { ...layer.settings, ...s } })} setStyle={(k) => change(layer, k)} />}
+        set={setSettings} setStyle={(k) => change(layer, k)} onPage={(pg) => { if (pg === 'collection' ? p.firstCollection : true) setPage(pg) }} />}
     </div>
   )
 
   return (
-    <div className="flex h-dvh flex-col bg-background text-foreground">
+    <div className="flex h-dvh flex-col bg-background text-foreground" style={{ '--icon-stroke': { thin: '1', regular: '1.5', bold: '2' }[site.icons.stroke] } as React.CSSProperties}>
       <header className="relative flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-card px-3 py-2">
         <Link href="/console/look" onClick={(e) => { if (unsaved) { e.preventDefault(); setLeaving(true) } }} className="min-h-10 content-center text-sm">‹ Look</Link>
         <span className="font-semibold">{p.themeName} · {styleName}</span><Badge tone="warn">Draft</Badge>
@@ -216,14 +239,32 @@ export function Editor(p: EditorProps) {
       {typeof status === 'object' && <p role="alert" className="bg-danger px-4 py-2 text-sm text-danger-text">{status.error} {stuck && <button type="button" onClick={() => router.refresh()} className="underline">Reload</button>}</p>}
 
       <div className="flex min-h-0 flex-1 flex-col-reverse md:flex-row">
-        <aside aria-label="Edit" className="h-[46dvh] shrink-0 overflow-y-auto border-t border-border bg-card p-4 md:h-auto md:w-[380px] md:border-r md:border-t-0">{panel}</aside>
+        {folded ? (
+          // Folded (Look v4): a rail of icons on a computer; each opens the panel where it points.
+          <nav aria-label="Edit" className="hidden shrink-0 flex-col items-center gap-1 border-r border-border bg-card py-3 md:flex md:w-14">
+            {([['site', 'gear', 'Site settings'], ['sections', 'rows', 'Sections'], ['menus', 'menu', 'Menus'], ['theme', 'brand', 'Style']] as const).map(([k, ic, label]) => (
+              <button key={k} type="button" aria-label={label} title={label} onClick={() => { setFolded(false); if (k === 'site') setSiteOpen(true); else { setSiteOpen(false); setTab(k) } }}
+                className="grid size-10 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><Icon name={ic} className="size-5" /></button>
+            ))}
+          </nav>
+        ) : null}
+        <aside aria-label="Edit" className={`h-[46dvh] shrink-0 overflow-y-auto border-t border-border bg-card p-4 md:h-auto md:w-[380px] md:border-r md:border-t-0 ${folded ? 'md:hidden' : ''}`}>
+          <div className="mb-3 flex items-center gap-2">
+            <button type="button" aria-label="Site settings" aria-pressed={siteOpen} onClick={() => setSiteOpen((o) => !o)} className={`flex min-h-9 items-center gap-2 rounded-md border px-2.5 text-sm font-medium ${siteOpen ? 'border-foreground' : 'border-input'}`}><Icon name="gear" className="size-4" />Site</button>
+            <span className="flex-1" />
+            <button type="button" aria-label="Fold the panel" onClick={() => setFolded(true)} className="hidden size-9 place-items-center rounded-md text-muted-foreground hover:bg-muted md:grid"><Icon name="back" className="size-4" /></button>
+          </div>
+          {panel}
+        </aside>
         <section aria-label="Preview" className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted">
           <div className="flex flex-wrap items-center gap-2 px-4 pt-3">
             <Segmented label="Preview size" value={device} onChange={setDevice} options={(Object.keys(DEVICES) as Device[]).map((k) => ({ value: k, label: DEVICES[k].label }))} />
             <label className="sr-only" htmlFor="page-pick">Page</label>
-            <select id="page-pick" value={page} onChange={(e) => setPage(e.target.value as typeof page)} className="h-9 rounded-md border border-input bg-card px-2 text-sm">
+            <select id="page-pick" value={page} onChange={(e) => { setPage(e.target.value as EditPage); setSelected(null) }} className="h-9 rounded-md border border-input bg-card px-2 text-sm">
               <option value="home">Home</option>{p.firstProduct && <option value="product">A product</option>}{p.firstCollection && <option value="collection">A collection</option>}
+              <option value="all">Shop all</option><option value="bag">Bag</option><option value="checkout">Checkout</option>
             </select>
+            <span className="text-sm text-muted-foreground">Editing: <b className="font-medium text-foreground">{PAGE_NAMES[page]}</b></span>
             <span className="ml-auto hidden font-mono text-xs text-muted-foreground sm:inline">{d.w} px · {Math.round(scale * 100)}%</span>
           </div>
           <div ref={stage} className="relative min-h-0 flex-1 overflow-hidden p-3 md:p-4">

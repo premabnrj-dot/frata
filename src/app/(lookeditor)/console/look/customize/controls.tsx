@@ -205,12 +205,13 @@ export function Segmented<T extends string | number>({ label, value, options, on
  * A group of settings that opens and closes (Look v3): its name, an icon, what it is set to now, and a chevron.
  * The body grows open (grid rows 0fr → 1fr, a 200 ms transition; reduced motion: at once).
  */
-export function Group({ title, icon, value, children, open: start = false }: { title: string; icon: React.ReactNode; value?: string; children: React.ReactNode; open?: boolean }) {
+/** A folding group. `onOpen` (Look v4, page-aware): opening it can open its page in the preview. */
+export function Group({ title, icon, value, children, open: start = false, onOpen }: { title: string; icon: React.ReactNode; value?: string; children: React.ReactNode; open?: boolean; onOpen?: () => void }) {
   const [open, setOpen] = useState(start)
   const id = useId()
   return (
     <section className="border-b border-border">
-      <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)} className="flex min-h-12 w-full items-center gap-3 px-1 text-left font-semibold">
+      <button type="button" aria-expanded={open} aria-controls={id} onClick={() => { if (!open) onOpen?.(); setOpen((o) => !o) }} className="flex min-h-12 w-full items-center gap-3 px-1 text-left font-semibold">
         <span className="text-muted-foreground" aria-hidden="true">{icon}</span><span>{title}</span>
         {value && <span className="ml-auto max-w-[45%] truncate text-xs font-normal text-muted-foreground">{value}</span>}
         <svg viewBox="0 0 24 24" aria-hidden="true" className={`size-4 shrink-0 fill-none stroke-current stroke-2 transition-transform duration-base ease-standard ${value ? '' : 'ml-auto'} ${open ? 'rotate-180' : ''}`}><path d="M6 9l6 6 6-6" /></svg>

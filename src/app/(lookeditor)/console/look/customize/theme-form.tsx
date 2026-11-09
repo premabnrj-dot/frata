@@ -21,16 +21,18 @@ const ICONS = {
   colour: ic('M12 3a9 9 0 1 0 0 18c1 0 1.5-.8 1.5-1.6 0-1.3-1-1.7-1-2.9 0-1 .8-1.5 1.8-1.5H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8z'),
   type: ic('M4 7V5h16v2M9 19h6M12 5v14'), shape: ic('M4 4h7v7H4zM13 13h7v7h-7z'), button: ic('M3 8h18v8H3zM8 12h8'),
   products: ic('M4 4h7v9H4zM13 4h7v9h-7zM4 16h7M13 16h7'), header: ic('M3 4h18v16H3zM3 9h18'), footer: ic('M3 4h18v16H3zM3 15h18'),
-  motion: ic('M4 12h10M4 7h6M4 17h6M16 8l4 4-4 4'), checkout: ic('M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2'),
+  motion: ic('M4 12h10M4 7h6M4 17h6M16 8l4 4-4 4'),
 }
 
-export function ThemeForm({ settings, style, styles, allowed, made, themeName, choices, schemes, targets, fonts, set, setStyle }: {
+export function ThemeForm({ settings, style, styles, allowed, made, themeName, choices, schemes, targets, fonts, set, setStyle, onPage }: {
   settings: ThemeSettings; style: string; styles: StyleOption[]
   allowed: { pairings: Pairing[]; headers: HeaderVariant[]; footers: FooterVariant[] }
   made: { headers?: HeaderVariant[]; footers?: FooterVariant[] }; themeName: string
   choices: Choices; schemes: { key: 'paper' | 'tint' | 'ink'; name: string }[]
   targets: LinkTarget[]; fonts: Record<Pairing, string>
   set: (s: Partial<ThemeSettings>) => void; setStyle: (k: string) => void
+  /** Page-aware (Look v4): a group about a page opens that page in the preview. */
+  onPage?: (page: 'home' | 'collection') => void
 }) {
   const current = styles.find((s) => s.key === style) ?? styles[0]!
   const brandWhy = settings.brandColour ? brandColourProblem(settings.brandColour, current.light) : null
@@ -91,14 +93,14 @@ export function ThemeForm({ settings, style, styles, allowed, made, themeName, c
         <Offered label="Shape" value={settings.buttonShape} list={choices.buttonShape} onChange={(buttonShape) => set({ buttonShape })} all={[{ value: 'theme', label: 'Follows corners' }, { value: 'pill', label: 'Pill' }]} />
       </Group>
 
-      <Group title="Products" icon={ICONS.products} value={`${settings.photo} · ${settings.phoneColumns} on a phone`}>
+      <Group title="Products" icon={ICONS.products} onOpen={() => onPage?.('collection')} value={`${settings.photo} · ${settings.phoneColumns} on a phone`}>
         <div className="space-y-1.5"><p className="text-sm font-medium">Photo shape</p><Segmented label="Photo shape" full value={settings.photo} onChange={(photo) => set({ photo, ...(photo === '4:5' ? { phoneColumns: 2 as const } : {}) })} options={[{ value: '4:5', label: '4:5' }, { value: '3:4', label: '3:4' }, { value: '1:1', label: '1:1' }]} /></div>
         <Offered label="Columns on a phone" value={settings.phoneColumns} list={choices.phoneColumns} onChange={(phoneColumns) => set({ phoneColumns })} all={[{ value: 2, label: '2' }, ...(settings.photo === '4:5' ? [] : [{ value: 3 as const, label: '3' }])]} />
         <Offered label="Cards on hover" value={settings.cardHover} list={choices.cardHover} onChange={(cardHover) => set({ cardHover })} all={[{ value: 'none', label: 'Still' }, { value: 'lift', label: 'Lift' }, { value: 'zoom', label: 'Zoom photo' }]} />
         <Switch label="Second photo on hover (computers)" on={settings.hoverPhoto} onChange={(hoverPhoto) => set({ hoverPhoto })} />
       </Group>
 
-      <Group title="Header" icon={ICONS.header} value={HEADER_NAMES[settings.header]}>
+      <Group title="Header" icon={ICONS.header} onOpen={() => onPage?.('home')} value={HEADER_NAMES[settings.header]}>
         <Tiles label="Design" cols={2} value={settings.header} onChange={(header) => set({ header })}
           options={first(allowed.headers, made.headers).map((h) => ({ value: h, label: HEADER_NAMES[h], picture: <HeaderPicture v={h} />, badge: badge(made.headers, h) }))} />
         <Switch label="Stays at the top when scrolling" on={settings.sticky} onChange={(sticky) => set({ sticky })} />
@@ -113,7 +115,7 @@ export function ThemeForm({ settings, style, styles, allowed, made, themeName, c
         <p className="text-sm text-muted-foreground">Logo: <Link href="/console/settings/brand" className="underline underline-offset-4">Settings › Brand</Link></p>
       </Group>
 
-      <Group title="Footer" icon={ICONS.footer} value={FOOTER_NAMES[settings.footer]}>
+      <Group title="Footer" icon={ICONS.footer} onOpen={() => onPage?.('home')} value={FOOTER_NAMES[settings.footer]}>
         <Tiles label="Design" cols={2} value={settings.footer} onChange={(footer) => set({ footer })}
           options={first(allowed.footers, made.footers).map((f) => ({ value: f, label: FOOTER_NAMES[f], picture: <FooterPicture v={f} />, badge: badge(made.footers, f) }))} />
         <Offered label="Colours" value={settings.footerScheme} list={choices.footerScheme} onChange={(footerScheme) => set({ footerScheme })} all={schemes.map((x) => ({ value: x.key, label: x.name }))} />
@@ -128,11 +130,6 @@ export function ThemeForm({ settings, style, styles, allowed, made, themeName, c
         </>}
       </Group>
 
-      {choices.checkout && choices.checkout.length > 1 && (
-        <Group title="Checkout" icon={ICONS.checkout} value={settings.checkout === 'focused' ? 'Focused' : 'With your menu'}>
-          <Offered label="Checkout" value={settings.checkout} list={choices.checkout} onChange={(checkout) => set({ checkout })} all={[{ value: 'standard', label: 'With your menu' }, { value: 'focused', label: 'Focused' }]} />
-        </Group>
-      )}
     </div>
   )
 }

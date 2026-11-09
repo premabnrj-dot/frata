@@ -4,6 +4,9 @@ import type { ResolvedTheme } from '@/domains/themes/types'
 import { previewBestSellers, previewCatalogue as readCatalogue, previewProduct, type StoreShop } from '@/lib/queries/storefront'
 import { bestSellersFor } from '@/lib/themes/page-look'
 import { isSampleHandle, sampleProduct, withSamples } from '@/lib/themes/sample'
+import { BagPage } from './bag-page'
+import { Checkout } from './checkout'
+import { checkoutReturnLine } from './checkout-lines'
 import { AllView, CollectionView, GoneView, HomeView, PolicyView, ShopNotFound } from './pages'
 import { POLICY_TITLE } from './policy'
 import { ProductView } from './product-view'
@@ -42,6 +45,10 @@ export async function previewPage(o: { tenantId: string; shop: StoreShop; path: 
     const c = cat.collections.find((x) => x.handle === b)
     return { body: c ? <CollectionView c={c} cat={cat} href={href} now={now} top={theme.settings.collectionTop} lang={shop.shopLanguage} /> : <ShopNotFound href={href} lang={shop.shopLanguage} />, note: null }
   }
+  // The bag and the checkout (Look v4: page-aware editing opens them). The bag lives in the browser; the preview's is
+  // the merchant's own, and the checkout prices it on the server as the shop's does.
+  if (a === 'bag' && !b) return { body: <BagPage />, note: null }
+  if (a === 'checkout' && !b) return { body: <Checkout shopName={shop.shopName} legalName={shop.legalName} privacyHref={href('/policies/privacy')} returnLine={checkoutReturnLine(shop.returnKind, shop.returnDays)} />, note: null }
   if (a === 'policies' && b && b in POLICY_TITLE) return { body: <PolicyView shop={shop} page={b as keyof typeof POLICY_TITLE} />, note: null }
   return { body: <ShopNotFound href={href} lang={shop.shopLanguage} />, note: null }
 }

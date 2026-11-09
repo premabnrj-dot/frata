@@ -1,3 +1,4 @@
+import { ShopIcon } from '../icon'
 import Link from 'next/link'
 import { unstable_rethrow } from 'next/navigation'
 import { errName } from '@/lib/log'
@@ -168,16 +169,17 @@ function Promises({ s, ctx }: { s: SectionOf<'promises'>; ctx: SectionCtx }) {
   const f = ctx.shop
   const t = truePromises({ collections: [], codOn: f.codOn, freeShippingAbove: f.freeShippingAbove, returnDays: f.returnDays, dispatchDays: f.dispatchDays })
   const w = wordsFor(f.shopLanguage).promise
-  const words = s.show.filter((k) => t.includes(k)).map((k) =>
+  const ICON = { cod: 'cash', free_shipping: 'truck', returns: 'return', dispatch: 'package' } as const
+  const words = s.show.filter((k) => t.includes(k)).map((k) => [k,
     k === 'cod' ? w.cod
       : k === 'free_shipping' ? fill(w.freeShipping, { above: rupees(f.freeShippingAbove!) })
         : k === 'returns' ? fill(f.returnKind === 'exchange_only' ? w.exchange : f.returnKind === 'refund_only' ? w.returns : w.exchangeOrReturns, { d: f.returnDays })
-          : fill(f.dispatchDays === 1 ? w.shipsDay : w.shipsDays, { d: f.dispatchDays }))
+          : fill(f.dispatchDays === 1 ? w.shipsDay : w.shipsDays, { d: f.dispatchDays })] as const)
   if (!words.length) return null
   return (
     <section aria-label={w.label} className={`${wrap} ${pad}`}>
       <ul className="grid grid-cols-2 gap-3 text-center text-sm sm:grid-cols-4">
-        {words.map((w) => <li key={w} className="rounded-[var(--store-radius)] border border-store-line px-3 py-5">{w}</li>)}
+        {words.map(([k, w]) => <li key={k} className="flex flex-col items-center gap-2 rounded-[var(--store-radius)] border border-store-line px-3 py-5">{k in ICON && <ShopIcon name={ICON[k as keyof typeof ICON]} set={ctx.theme.site.icons} className="size-6 text-store-accent" />}{w}</li>)}
       </ul>
     </section>
   )

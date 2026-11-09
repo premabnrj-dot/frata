@@ -35,13 +35,15 @@ export default async function LookPreview({ params, searchParams }: { params: Pr
   // `?as=shop`: the shop as shoppers see it (no samples): the popup after Publish shows it behind itself.
   const samples = !!look && (await searchParams).as !== 'shop'
   const theme = look ? withSampleImages(resolved, look) : resolved
-  const cat = shellNeedsCatalogue(theme) ? await previewCatalogue(tenantId) : null
+  // The checkout as the shop draws it: focused when the theme's checkout is Focused (ShopFrame's rule).
+  const focused = path[0] === 'checkout' && theme.settings.checkout === 'focused'
+  const cat = shellNeedsCatalogue(theme) && !focused ? await previewCatalogue(tenantId) : null
   const { circles, strip } = shellPictures(theme, cat && samples ? withSamples(cat, now) : cat, now)
   const { body } = await previewPage({ tenantId, shop, path, href, now, theme, samples })
   return (
     <>
       {/* The page entrance wrapper, as on the shop ((shop)/template.tsx), so "Pages arrive" shows here too. */}
-      <ShopShell shop={shop} href={href} theme={theme} circles={circles} strip={strip} live><div className="store-enter">{body}</div></ShopShell>
+      <ShopShell shop={shop} href={href} theme={theme} circles={circles} strip={strip} live focused={focused}><div className="store-enter">{body}</div></ShopShell>
       <PreviewBridge />
     </>
   )
