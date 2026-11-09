@@ -186,6 +186,16 @@ the 307 turns on with a ≤ 15-min check (Pro). Migrations start at **0080**. **
   new powers (M5); PSL before D·2 and no shop cookies or pixels until then (M6); tuples, caps, DoH hygiene, HSTS
   default, Vercel 409, report form limits (L1–L6).
 
+**D2·4–D2·6 as built (2026-11-09):** `src/lib/connectors/{http,vercel,dns}`; `src/domains/addresses/{domain-input,domains,
+dns-hosts}.ts`; `src/lib/domains/{own-domains,senders}.ts`; migration 0082 (app_claim_domain, app_domain_lease,
+app_domain_record, app_domain_added, app_make_domain_main/unmake, app_domain_razorpay_ok, app_remove_domain,
+app_shop_for_domain); `tenantForHost` reads app_shop_for_domain for an own domain. Decided in the build: who may connect
+is CAN_MANAGE (owners and admins; partners not yet — the plan's partner-before-handover waits for a reason); a proved
+row the check finds on our project counts as added (a move, or a lost add answer); the old shop is not yet told of a
+move (notifications, E plan) — its row records `removed_reason = 'moved'`. Vercel's 409 codes are unverified, so a 409
+asks whether the domain is on our project instead. Tests: connectors (unit, faked fetch), proofs 56, int
+`src/lib/domains/__tests__/own-domains.int.test.ts`.
+
 ## Owner calls — decided 2026-11-08
 1. **Vercel Pro before D·2: yes** — revised 2026-11-09: D·2 builds on Hobby (daily background check, no 307 until a
    ≤ 15-min check); Pro before the first live payment.

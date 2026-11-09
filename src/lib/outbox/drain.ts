@@ -6,6 +6,7 @@ import { shopModules } from '@/lib/queries/modules'
 import { errName } from '@/lib/log'
 import { claimDue, deferRow, markDead, markFailed, markSent, type OutboxRow } from './index'
 import { sendBillAttempt } from '@/lib/billing/debit'
+import { sendDomainAdd } from '@/lib/domains/senders'
 
 // =============================================================================
 // FILE: src/lib/outbox/drain.ts — sending what the outbox holds (speed review P5, 2026-11-08)
@@ -19,6 +20,8 @@ import { sendBillAttempt } from '@/lib/billing/debit'
 export const SENDERS: Record<string, (row: OutboxRow) => Promise<void>> = {
   // Billing B3: a debit attempt on Frrata's own gateway. Never paused by a module switch (finding 13: no module owns it).
   'bill:attempt': sendBillAttempt,
+  // Own domains D2·6: a proved host onto the Vercel project (never before its own proof).
+  'domain.add': sendDomainAdd,
 }
 const BATCH = 25
 

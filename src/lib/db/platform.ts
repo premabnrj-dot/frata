@@ -21,12 +21,14 @@ import { errName } from '@/lib/log'
 /**
  * Which shop a storefront host belongs to. A platform address (<slug>.<shop
  * domain>) is found by its slug, so changing the shop domain is an environment
- * change; any other host is a merchant's own domain (tenant_domains).
+ * change; any other host is a merchant's own domain (shop_domains; tenant_domains is retired, app_tenant_for_host
+ * goes in a later migration).
  */
 export async function tenantForHost(host: string): Promise<{ id: string; name: string; movedTo: string | null } | null> {
   const slug = shopSlugFromHost(host, SHOP_DOMAIN)
   if (!slug) {
-    const rows = await db().execute<{ id: string; name: string }>(sql`select id, name from app_tenant_for_host(${host})`)
+    // Own domains D2·6: a proved host on our project (shop_domains). www.<host> never reaches here: Vercel sends it on.
+    const rows = await db().execute<{ id: string; name: string }>(sql`select id, name from app_shop_for_domain(${host})`)
     return rows[0] ? { ...rows[0], movedTo: null } : null
   }
   // Any name the shop has had (shop addresses D·1): an old one leads to the current; one Frrata retired leads nowhere.
@@ -134,6 +136,13 @@ export async function changeShopAddress(tenantId: string, uid: string, slug: str
     if (!code) console.error('[changeShopAddress]', errName(err))
     return { ok: false, error: code ?? 'unknown' }
   }
+}
+
+/** Own domains D2·6: the claim (app_claim_domain checks who, the caps and the project's room; it makes the token). */
+export async function claimDomainRow(tenantId: string, uid: string, f: { host: string; apex: string; withWww: boolean }, room: number): Promise<{ id: string; token: string }> {
+  const [row] = await db().execute<{ id: string; token: string }>(
+    sql`select c.id, c.token from app_claim_domain(${tenantId}::uuid, ${uid}::uuid, ${f.host}, ${f.apex}, ${f.withWww}, ${room}) c`)
+  return row!
 }
 
 /** A Razorpay webhook's shop and its (encrypted) secret, from the key in its URL: before any tenant is known. */

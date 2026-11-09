@@ -1,5 +1,5 @@
 {
-  "id": "c5afcf81-274e-4c82-bfc0-5744fa42931b",
+  "id": "c9cdc296-ef31-4444-84f9-6827e93bf95a",
   "prevId": "da175f87-ecd8-4097-89cd-6733ccc419b9",
   "version": "7",
   "dialect": "postgresql",
@@ -10279,6 +10279,12 @@
         },
         "failing_since": {
           "name": "failing_since",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contest_at": {
+          "name": "contest_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false

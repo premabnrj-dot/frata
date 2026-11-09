@@ -69,6 +69,8 @@ export const shopDomains = pgTable('shop_domains', {
   certOkAt: timestamp('cert_ok_at', { withTimezone: true }),
   checkedAt: timestamp('checked_at', { withTimezone: true }),
   failingSince: timestamp('failing_since', { withTimezone: true }),
+  /** When this claim first found the host held live by another shop with that shop's proof gone (the 72 h hold). */
+  contestAt: timestamp('contest_at', { withTimezone: true }),
   mainAt: timestamp('main_at', { withTimezone: true }),
   razorpayOkAt: timestamp('razorpay_ok_at', { withTimezone: true }),
   razorpayOkBy: uuid('razorpay_ok_by'),

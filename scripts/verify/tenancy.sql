@@ -445,6 +445,82 @@ do $$ begin
 end $$;
 rollback;
 
+begin;
+-- Own domains D2·6 (0082): claims are the shop's, owners and admins only, capped; a check writes only its own shop's
+-- row (B's id under A matches nothing); a proof is this row's own token seen by both resolvers; a live apex moves only
+-- when its token is gone (a main one after 72 h), both tokens seen is a dispute; main needs proof, certificate, the
+-- project and — on live payments — Razorpay's approval; only a proved row on our project serves.
+set local role frata_app;
+do $$ declare a uuid; a2 uuid; b uuid; ta text; tb text; r record; begin
+  begin perform app_claim_domain('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-x.in', 'proof-x.in', true, 47); raise exception 'FAIL: B''s owner claimed for A';
+  exception when raise_exception then if sqlerrm <> 'not_owner' then raise; end if; end;
+  select c.id, c.token into a, ta from app_claim_domain('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', 'proof-x.in', 'proof-x.in', true, 47) c;
+  select c.id into a2 from app_claim_domain('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', 'proof-x.in', 'proof-x.in', true, 47) c;
+  if a2 <> a then raise exception 'FAIL: a second Continue made a second claim'; end if;
+  select c.id, c.token into b, tb from app_claim_domain('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-x.in', 'proof-x.in', true, 47) c;
+  begin perform app_claim_domain('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-y.in', 'proof-y.in', true, 5); raise exception 'FAIL: the project''s room was ignored';
+  exception when raise_exception then if sqlerrm <> 'capacity' then raise; end if; end;
+  perform app_claim_domain('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'shop.proof-y.in', 'proof-y.in', false, 47);
+  begin perform app_claim_domain('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-z.in', 'proof-z.in', true, 47); raise exception 'FAIL: more than 4 hosts';
+  exception when raise_exception then if sqlerrm <> 'four_hosts' then raise; end if; end;
+
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  if exists (select 1 from app_domain_lease(b)) then raise exception 'FAIL: A leased B''s row'; end if;
+  if (select x.state from app_domain_record(b, array['frrata-verify=' || tb], 'yes', 'yes', 'yes') x) <> 'gone' then raise exception 'FAIL: A wrote B''s row'; end if;
+  if not exists (select 1 from app_domain_lease(a)) then raise exception 'FAIL: A can''t lease its own row'; end if;
+  if exists (select 1 from app_domain_lease(a)) then raise exception 'FAIL: two leases within 10 s'; end if;
+  select * into r from app_domain_record(a, array['frrata-verify=' || tb], 'no', 'no', 'no');
+  if r.state <> 'waiting' then raise exception 'FAIL: another row''s token proved A (%)', r.state; end if;
+  select * into r from app_domain_record(a, array['frrata-verify=' || ta], 'no', 'no', 'no');
+  if r.state <> 'waiting' or not r.add_now then raise exception 'FAIL: A''s own token must prove it and ask for the add (% %)', r.state, r.add_now; end if;
+  if exists (select 1 from app_shop_for_domain('proof-x.in')) then raise exception 'FAIL: a domain served before it was on our project'; end if;
+  perform app_domain_added(a, true, null);
+  select * into r from app_domain_record(a, array['frrata-verify=' || ta], 'yes', 'yes', 'yes');
+  if r.state <> 'connected' then raise exception 'FAIL: A should be connected (%)', r.state; end if;
+  if (select s.id from app_shop_for_domain('proof-x.in') s) <> '11111111-1111-1111-1111-111111111111' then raise exception 'FAIL: the lookup must serve A'; end if;
+
+  -- B shows both tokens: a dispute, nothing moves.
+  perform set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+  select * into r from app_domain_record(b, array['frrata-verify=' || tb, 'frrata-verify=' || ta], 'yes', 'yes', 'yes');
+  if r.state <> 'dispute' then raise exception 'FAIL: both tokens must be a dispute (%)', r.state; end if;
+end $$;
+reset role;
+-- A's domain is main; A takes live payments: B must wait 72 h, and A's Make main needed Razorpay's approval.
+insert into payment_keys (tenant_id, key_id, key_secret_enc, webhook_secret_enc, webhook_key, mode, webhook_seen_at) values
+  ('11111111-1111-1111-1111-111111111111', 'rzp_live_proofproof', 'x', 'x', 'k_proof_a', 'live', now()) on conflict do nothing;
+set local role frata_app;
+do $$ declare a uuid; b uuid; tb text; r record; begin
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  select d.id into a from shop_domains d where d.tenant_id = '11111111-1111-1111-1111-111111111111' and d.host = 'proof-x.in';
+  begin perform app_make_domain_main('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', a); raise exception 'FAIL: main on live payments without Razorpay''s approval';
+  exception when raise_exception then if sqlerrm <> 'razorpay' then raise; end if; end;
+  begin perform app_domain_razorpay_ok('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000002', a, true); raise exception 'FAIL: another shop''s owner ticked Razorpay';
+  exception when raise_exception then if sqlerrm <> 'not_owner' then raise; end if; end;
+  perform app_domain_razorpay_ok('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', a, true);
+  perform app_make_domain_main('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', a);
+  perform set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+  select d.id, d.token into b, tb from shop_domains d where d.tenant_id = '22222222-2222-2222-2222-222222222222' and d.host = 'proof-x.in';
+  select * into r from app_domain_record(b, array['frrata-verify=' || tb], 'yes', 'yes', 'yes');
+  if r.state <> 'held' then raise exception 'FAIL: a main domain must wait 72 h (%)', r.state; end if;
+end $$;
+reset role;
+update shop_domains set contest_at = now() - interval '73 hours' where tenant_id = '22222222-2222-2222-2222-222222222222' and host = 'proof-x.in';
+set local role frata_app;
+select set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+do $$ declare b uuid; tb text; r record; begin
+  select d.id, d.token into b, tb from shop_domains d where d.tenant_id = '22222222-2222-2222-2222-222222222222' and d.host = 'proof-x.in';
+  select * into r from app_domain_record(b, array['frrata-verify=' || tb], 'yes', 'yes', 'yes');
+  if r.state <> 'connected' or r.add_now then raise exception 'FAIL: B takes the domain already on our project (% %)', r.state, r.add_now; end if;
+  if (select s.id from app_shop_for_domain('proof-x.in') s) <> '22222222-2222-2222-2222-222222222222' then raise exception 'FAIL: the moved domain must serve B'; end if;
+end $$;
+reset role;
+do $$ begin
+  if (select removed_reason from shop_domains where tenant_id = '11111111-1111-1111-1111-111111111111' and host = 'proof-x.in') <> 'moved'
+     or (select main_at from shop_domains where tenant_id = '11111111-1111-1111-1111-111111111111' and host = 'proof-x.in') is not null then raise exception 'FAIL: A''s row must leave as moved, no longer main'; end if;
+  if has_function_privilege('anon', 'app_claim_domain(uuid,uuid,text,text,boolean,int)', 'execute') or has_function_privilege('frata_admin', 'app_claim_domain(uuid,uuid,text,text,boolean,int)', 'execute') then raise exception 'FAIL: claim callable outside the app'; end if;
+end $$;
+rollback;
+
 -- 20. Catalogue: own shop only, and a child row can never point at another shop's product.
 insert into product_types (id, tenant_id, name, size_chart) values
   ('dddddddd-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'Kurta', '{"columns":[],"rows":[],"howToMeasure":""}');
@@ -1893,4 +1969,4 @@ do $$ begin
      or (select order_line_id from reviews where id = 'bdbdbdbd-0000-0000-0000-00000000000b') is not null then raise exception 'FAIL: set null touched tenant_id or kept the line'; end if;
 end $$;
 
-\echo 'tenancy proof — all 55 checks passed'
+\echo 'tenancy proof — all 56 checks passed'

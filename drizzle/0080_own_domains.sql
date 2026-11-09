@@ -14,6 +14,7 @@ CREATE TABLE "shop_domains" (
 	"cert_ok_at" timestamp with time zone,
 	"checked_at" timestamp with time zone,
 	"failing_since" timestamp with time zone,
+	"contest_at" timestamp with time zone,
 	"main_at" timestamp with time zone,
 	"razorpay_ok_at" timestamp with time zone,
 	"razorpay_ok_by" uuid,
