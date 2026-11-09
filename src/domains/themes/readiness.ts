@@ -27,11 +27,12 @@ export function readinessOf(home: SectionInstance[], f: ShopFacts, now: Date): I
     const add = (blocks: boolean, text: string) => out.push({ sectionId: s.id, blocks, text: `${name}: ${text}` })
     switch (s.key) {
       case 'hero':
-        if (s.layout !== 'text' && !s.image) add(true, 'add a photo')
+        // V1: a video stands in for the photo (the shop paints the video's first frame); a photo stays optional then.
+        if (s.layout !== 'text' && !s.image && !s.video) add(true, 'add a photo or a video')
         if (altMissing(s.image)) add(true, 'describe the photo for people who can’t see it')
         break
       case 'image_text':
-        if (!s.image) add(true, 'add a photo')
+        if (!s.image && !s.video) add(true, 'add a photo or a video')
         if (altMissing(s.image)) add(true, 'describe the photo for people who can’t see it')
         break
       case 'shop_the_look':

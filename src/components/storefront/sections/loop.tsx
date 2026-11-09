@@ -1,4 +1,4 @@
-import { MUX_STREAM_BASE } from '@/lib/env'
+import { MUX_IMAGE_BASE, MUX_STREAM_BASE } from '@/lib/env'
 import type { LookVideos } from '@/lib/themes/page-look'
 
 /**
@@ -10,4 +10,15 @@ export function Loop({ id, videos }: { id: string | undefined; videos: LookVideo
   const v = id ? videos?.[id] : undefined
   if (!v || !/^[A-Za-z0-9]{1,64}$/.test(v.playbackId)) return null
   return <video data-loop={`${MUX_STREAM_BASE}/${v.playbackId}/highest.mp4`} muted loop playsInline preload="none" aria-hidden="true" tabIndex={-1} disablePictureInPicture className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-base ease-standard" />
+}
+
+/**
+ * A section with a loop and no photo of its own: the loop's first frame (Mux's still at 0 s, so the fade into the
+ * loop is seamless) is the first paint, fetched first when it opens the page. Decorative: the heading says what it is.
+ */
+export function LoopPoster({ id, videos, lead, width }: { id: string | undefined; videos: LookVideos | undefined; lead: boolean; width: number }) {
+  const v = id ? videos?.[id] : undefined
+  if (!v || !/^[A-Za-z0-9]{1,64}$/.test(v.playbackId)) return null
+  return <img src={`${MUX_IMAGE_BASE}/${v.playbackId}/thumbnail.webp?time=0&width=${width}`} alt="" width={v.width ?? undefined} height={v.height ?? undefined}
+    fetchPriority={lead ? 'high' : 'auto'} loading={lead ? 'eager' : 'lazy'} decoding="async" className="absolute inset-0 h-full w-full object-cover" />
 }

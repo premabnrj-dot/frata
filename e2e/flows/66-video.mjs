@@ -84,6 +84,12 @@ export default {
         await until(async () => !(await loop.getAttribute('class')).includes('opacity-0'), 15_000)
         assert.equal(await loop.evaluate((v) => v.muted && v.loop && !v.paused), true, 'muted, looping, playing')
         await p.screenshot({ path: t.out('video-ready') })
+        // A video stands in for the Hero's photo: Publish doesn't ask for one (the owner's first real upload, 2026-11-09).
+        await p.getByRole('button', { name: 'Publish', exact: true }).click()
+        const pub = p.getByRole('dialog', { name: /^Publish/ })
+        await pub.waitFor()
+        assert.equal(await pub.getByText(/Hero: add a photo/).count(), 0, 'no photo asked for with a video')
+        await pub.getByRole('button', { name: 'Not yet' }).click().catch(() => p.keyboard.press('Escape'))
         // Reduced motion: the photo stays and the loop never loads (no source, nothing fetched).
         const still = await signedIn(t.browser, 'owner', { viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })
         const q = await still.newPage()
