@@ -24,7 +24,7 @@ export async function sendCode(uid: string, mobile: string): Promise<string | nu
   const code = String(randomInt(0, 1_000_000)).padStart(6, '0')
   const id = await signupCodeIssue(uid, phone.hmac, codeHmac(uid, code), phone.version)
   if (!id) return null
-  return (await sendAuthCode(FRRATA_WA_TOKEN, FRRATA_WA_PHONE_NUMBER_ID, `91${mobile}`, FRRATA_WA_SIGNUP_TEMPLATE, FRRATA_WA_TEMPLATE_LANG, code)) ? id : null
+  return (await sendAuthCode(FRRATA_WA_TOKEN, FRRATA_WA_PHONE_NUMBER_ID, `91${mobile}`, FRRATA_WA_SIGNUP_TEMPLATE, FRRATA_WA_TEMPLATE_LANG, code, 600)).ok ? id : null
 }
 
 export async function checkCode(uid: string, id: string, code: string): Promise<boolean> {
