@@ -210,6 +210,9 @@ test with up to 100 accounts) and **after "Connect Google" is built** (the scope
 
 ### Video for shops: Frrata's Mux (V1, 2026-11-09)
 
+State (2026-11-09): steps 1–3 done by the owner (four variables, Production only, Sensitive); step 4's redeploy is
+this commit's build; Signal 1.1.0's release and a first real upload are next.
+
 Facts: frata-integrations § Mux. Built and tested end to end against a stand-in; nothing calls Mux until these are set.
 1. In Mux, the **Production** environment: copy its **environment id** (Settings › Environments; not a secret).
 2. Vercel → `frata` → Settings → Environment Variables, **Production only, Sensitive** (never Preview: previews share
