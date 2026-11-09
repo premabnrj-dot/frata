@@ -9,16 +9,6 @@ export const NO_UPLOAD_AFTER_MS = 2 * 60_000
 export const NOT_READY_AFTER_MS = (900 + 600) * 1000
 /** The longest loop a shop shows (unit-economics review 2026-11-09): longer ones are refused on ready. */
 export const MAX_LOOP_MS = 15_000
-/**
- * Which MP4 the shop plays (unit-economics review: 720p, billed at the delivered resolution). Mux makes a 720p file
- * only from a larger source (no upscaling; it skips it otherwise), so a source whose shorter side is above 720 plays
- * `720p.mp4`, and anything smaller plays `highest.mp4` (then 720p or less anyway). Mux's max_resolution_tier takes
- * only 1080p and up, so the cap lives here, not there (2026-11-09: a 720p tier made every upload a 400).
- */
-export function mp4Name(width: number | null, height: number | null): '720p' | 'highest' {
-  return width !== null && height !== null && Math.min(width, height) > 720 ? '720p' : 'highest'
-}
-
 /** Live videos a shop may hold (pending or ready, not removed or failed). */
 export const MAX_LIVE = 20
 export const MAX_BYTES = 64 * 1024 * 1024

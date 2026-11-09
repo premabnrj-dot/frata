@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { CATALOGUE, manifestOf } from '../catalogue'
 import { carryOver } from '../layer'
 import { resolveTheme } from '../resolve'
+import { readinessOf } from '../readiness'
+import { SectionSchema } from '../sections'
 
 // V1: a loop shows only in a theme that lists the section in allowed.videoSections (Signal 1.1.0: hero, image_text).
 const VID = { id: '6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b' }
@@ -37,5 +39,19 @@ describe('trying another theme', () => {
   it('says nothing when the new theme offers video there too', () => {
     const r = carryOver({ manifest: manifestOf('signal', '1.0.0')!, layer: { style: 'cobalt', home } }, manifestOf('signal', '1.1.0')!)
     expect(r.lost.some((l) => l.startsWith('Videos'))).toBe(false)
+  })
+})
+
+describe('a video stands in for the photo', () => {
+  const f = { collections: [], codOn: true, freeShippingAbove: null, returnDays: 7, dispatchDays: 2 }
+  const now = new Date('2026-11-09T10:00:00Z')
+  const blocks = (s: object) => readinessOf([SectionSchema.parse(s)], f, now).filter((x) => x.blocks).map((x) => x.text)
+  it('a Hero or Image with text with a video needs no photo (nor a description of one)', () => {
+    expect(blocks({ id: 'h', key: 'hero', layout: 'image_text', heading: { text: 'Roam' }, video: VID })).toEqual([])
+    expect(blocks({ id: 's', key: 'image_text', heading: 'Why', video: VID })).toEqual([])
+  })
+  it('with neither, it asks for one or the other', () => {
+    expect(blocks({ id: 'h', key: 'hero', layout: 'image_text', heading: { text: 'Roam' } })).toEqual(['Hero: add a photo or a video'])
+    expect(blocks({ id: 's', key: 'image_text', heading: 'Why' })).toEqual(['Image with text: add a photo or a video'])
   })
 })

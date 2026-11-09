@@ -63,7 +63,7 @@ function ButtonFields({ value, targets, onChange }: { value: { label: string; li
 function Hero({ s, set, c }: { s: SectionOf<'hero'>; set: Set<SectionOf<'hero'>>; c: FormCtx }) {
   return (<>
     <Choice label="Layout" value={s.layout} onChange={(layout) => set({ ...s, layout })} options={[{ value: 'text', label: 'Words only' }, { value: 'image_text', label: 'Words on a photo' }, { value: 'split', label: 'Photo beside words' }, { value: 'image', label: 'Photo only' }]} />
-    {s.layout !== 'text' && <ImageField label="Photo" value={s.image} tenantId={c.tenantId} library={c.photos} suggest={['text' in s.heading ? s.heading.text : '', c.shopName]} onChange={(image) => set({ ...s, image })} />}
+    {s.layout !== 'text' && <ImageField label={s.video ? 'Photo (optional with a video)' : 'Photo'} value={s.image} tenantId={c.tenantId} library={c.photos} suggest={['text' in s.heading ? s.heading.text : '', c.shopName]} onChange={(image) => set({ ...s, image })} />}
     {s.layout !== 'text' && c.video?.sections.includes('hero') && <VideoField value={s.video} on={c.video.on} onChange={(video) => set(withVideo(s, video))} />}
     <Bound label="Heading" value={s.heading} max={60} shopField="shopName" onChange={(heading) => set({ ...s, heading: heading ?? { from: 'shopName' } })} />
     {s.layout !== 'image' && <Bound label="Line under it" value={s.text} max={160} shopField="tagline" onChange={(text) => set({ ...s, text })} />}
@@ -143,7 +143,7 @@ function Promises({ s, set, c }: { s: SectionOf<'promises'>; set: Set<SectionOf<
 
 function ImageText({ s, set, c }: { s: SectionOf<'image_text'>; set: Set<SectionOf<'image_text'>>; c: FormCtx }) {
   return (<>
-    <ImageField label="Photo" value={s.image} tenantId={c.tenantId} library={c.photos} suggest={[s.heading, c.shopName]} onChange={(image) => set({ ...s, image })} />
+    <ImageField label={s.video ? 'Photo (optional with a video)' : 'Photo'} value={s.image} tenantId={c.tenantId} library={c.photos} suggest={[s.heading, c.shopName]} onChange={(image) => set({ ...s, image })} />
     {c.video?.sections.includes('image_text') && <VideoField value={s.video} on={c.video.on} onChange={(video) => set(withVideo(s, video))} />}
     {c.labels && <Text label="Label above the heading" value={s.label} max={24} onChange={(label) => set({ ...s, label })} />}
     <Text label="Heading" value={s.heading} max={60} onChange={(heading) => set({ ...s, heading })} />
