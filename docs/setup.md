@@ -207,3 +207,18 @@ test with up to 100 accounts) and **after "Connect Google" is built** (the scope
 14. Audience → **Publish app**; Verification Center → Prepare for verification → paste the per-scope reasons (we write
     them) and the video link → Submit. Reply to Google's emails quickly; sensitive scopes take up to ~10 business days.
     Do not publish before this: an unverified production app allows only 100 users for its whole life.
+
+### Video for shops: Frrata's Mux (V1, 2026-11-09)
+
+Facts: frata-integrations § Mux. Built and tested end to end against a stand-in; nothing calls Mux until these are set.
+1. In Mux, the **Production** environment: copy its **environment id** (Settings › Environments; not a secret).
+2. Vercel → `frata` → Settings → Environment Variables, **Production only, Sensitive** (never Preview: previews share
+   the production database): `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET` (the access token pair), `MUX_ENVIRONMENT_ID` (step 1).
+3. Mux → Settings → Webhooks (Production environment): URL `https://frata.vercel.app/api/webhooks/mux`; copy its
+   signing secret into `MUX_WEBHOOK_SECRET` (Production, Sensitive). `MUX_WEBHOOK_SECRET_PREVIOUS` stays unset (used
+   only while a new webhook replaces the old one). Signing keys are not used (playback is public).
+4. Redeploy (push to `main`), then Admin › Themes → **Signal 1.1.0** → Release (1.0.0 has no video; shops move up when
+   they next try or update the theme).
+5. Before launch: ask Mux in writing that hosting merchants' loops inside Frrata is allowed, and where data is stored;
+   add Mux to Frrata's sub-processors.
+

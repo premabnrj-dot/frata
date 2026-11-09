@@ -562,3 +562,10 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   before launch.
 - Alternatives: Cloudflare Stream $5/1,000 min stored, $1/1,000 min delivered [V 2026-10-27]; Bunny Stream from
   $0.005/GB CDN, Asia standard $0.03/GB, $1 minimum [V-undated].
+- **As built (V1, 2026-11-09)**: `src/lib/video/mux.ts` — upload {cors_origin, timeout 900, new_asset_settings {basic,
+  public, static_renditions [highest], max_resolution_tier 720p, passthrough = our videos row id}}; the asset's
+  passthrough and upload_id are checked before anything is written; the envelope's `environment.id` must equal
+  `MUX_ENVIRONMENT_ID`. Unverified on a real Mux account until the owner's first upload: the upload URL's host
+  (no CSP depends on it), where `passthrough` and `upload_id` appear on upload vs asset events (the definer accepts
+  either route), the static rendition file's shape (`name: highest.mp4` / `resolution: highest`, `status: ready`), and
+  whether a looped MP4's replays are billed again (measure in the development environment) [U].
