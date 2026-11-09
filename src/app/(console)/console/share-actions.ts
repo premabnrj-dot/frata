@@ -19,10 +19,12 @@ export async function shareQr(kind: unknown, id: unknown): Promise<{ ok: true; p
     // Through asMember (check:actions): a support visit making a QR code is audited like any console action.
     const r = await asMember(ANY_MEMBER, { action: 'share.qr', target: target.kind }, async (_tx, auth) => {
       const s = await shareFor(auth.membership.tenantId, target)
-      return s?.ready ? QRCode.toDataURL(s.links.share_qr, { errorCorrectionLevel: 'M', margin: 2, width: 512 }) : null
+      return s?.ready ? s.links.share_qr : null
     })
     if (!r.ok) return { ok: false, error: r.error }
-    return r.value ? { ok: true, png: r.value } : { ok: false, error: 'Not shareable yet.' }
+    if (!r.value) return { ok: false, error: 'Not shareable yet.' }
+    // Drawn after the transaction closes: no connection is held while the PNG is made.
+    return { ok: true, png: await QRCode.toDataURL(r.value, { errorCorrectionLevel: 'M', margin: 2, width: 512 }) }
   } catch (err) {
     console.error('[shareQr]', err instanceof Error ? err.name : 'error')
     return { ok: false, error: 'We could not make the QR code. Try again.' }

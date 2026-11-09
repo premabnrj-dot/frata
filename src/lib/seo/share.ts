@@ -2,6 +2,7 @@ import 'server-only'
 import { SHARE_PRESETS, shopLink, type SharePreset } from '@/domains/analytics/link'
 import { isListed } from '@/domains/storefront/listing'
 import { shopCatalogue, shopSettingsFor } from '@/lib/queries/storefront'
+import { pausedAt } from '@/lib/queries/trial-pause'
 import type { CardSource } from './card'
 import { shareImage } from './share-image'
 
@@ -35,7 +36,8 @@ export async function shareFor(tenantId: string, target: ShareTarget, now = new 
     const c = cat.collections.find((x) => x.id === target.id)
     if (c) { src = { kind: 'collection', collection: c, cat }; path = `/collections/${c.handle}`; title = c.title }
   } else src = { kind: 'shop', cat }
-  const ready = !!shop.publishedAt && !!src
+  // Open to shoppers: published and not paused (a paused shop shows "Back soon", trials TR1·9).
+  const ready = !!shop.publishedAt && !pausedAt(shop.pause, now) && !!src
   const origin = `https://${shop.host}`
   const links = Object.fromEntries((Object.keys(SHARE_PRESETS) as SharePreset[]).map((k) => [k, shopLink(origin, path, { preset: k })])) as Record<SharePreset, string>
   const card = ready && src ? (await shareImage(shop, src, title, now)).url : null

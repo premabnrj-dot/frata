@@ -12,8 +12,9 @@
 import { cleanValue, type Attribution } from './attribution'
 
 /** Bumped whenever the rule changes; the page says so with the date (spec: numbers never jump without a word). */
-export const CLASSIFIER_VERSION = 1
-export const CLASSIFIER_SINCE = '2026-11-08'
+export const CLASSIFIER_VERSION = 2
+/** v2 (2026-11-09): the Share button's copied link and QR code read "Shared link" and "QR code" (were "Other · …"). */
+export const CLASSIFIER_SINCE = '2026-11-09'
 
 /** The click ids that decide a source, by what they mean: SQL readers test these same lists (attribution-sql.ts). */
 export const GOOGLE_ADS_KEYS = ['gclid', 'gbraid', 'wbraid', 'gad_source'] as const

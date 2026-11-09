@@ -39,7 +39,7 @@ export function ShareSheet({ share, target }: { share: ShareData; target: ShareT
           {qr && (
             <div className="flex items-center gap-3">
               <img src={qr} alt={`QR code for ${share.title}`} width={128} height={128} className="size-32 rounded-sm border border-border" />
-              <a href={qr} download={`${share.title.replace(/[^\w-]+/g, '-').toLowerCase() || 'shop'}-qr.png`} className="text-sm font-medium underline">Download</a>
+              <a href={qr} download={`${share.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'shop'}-qr.png`} className="text-sm font-medium underline">Download</a>
             </div>
           )}
           <div className="flex gap-2">
