@@ -12,8 +12,9 @@
 import { cleanValue, type Attribution } from './attribution'
 
 /** Bumped whenever the rule changes; the page says so with the date (spec: numbers never jump without a word). */
-export const CLASSIFIER_VERSION = 1
-export const CLASSIFIER_SINCE = '2026-11-08'
+export const CLASSIFIER_VERSION = 2
+/** v2 (2026-11-09): the Share button's copied link and QR code read "Shared link" and "QR code" (were "Other · …"). */
+export const CLASSIFIER_SINCE = '2026-11-09'
 
 /** The click ids that decide a source, by what they mean: SQL readers test these same lists (attribution-sql.ts). */
 export const GOOGLE_ADS_KEYS = ['gclid', 'gbraid', 'wbraid', 'gad_source'] as const
@@ -51,7 +52,7 @@ const PAID = new Set(['cpc', 'ppc', 'paid', 'paid_social', 'paidsocial', 'ad', '
 /** How a medium is said after its channel ("Instagram bio", "WhatsApp broadcast"). */
 const MEDIUM_WORD: Record<string, string> = {
   bio: 'bio', story: 'story', stories: 'story', reel: 'reel', post: 'post', dm: 'DM', broadcast: 'broadcast', status: 'status',
-  chat: 'chat', group: 'group', email: '', newsletter: '', organic: '', social: '', referral: '',
+  chat: 'chat', group: 'group', share: 'share', email: '', newsletter: '', organic: '', social: '', referral: '',
 }
 
 /** Referring sites by their host (GA4's source list and the in-app shims; www. ignored). */
@@ -103,6 +104,9 @@ export function classifySource(a: Attribution, creator: { label: string; code: s
       const word = MEDIUM_WORD[med] ?? med
       return make(ch, word ? `${CHANNEL_LABEL[ch]} ${word}` : CHANNEL_LABEL[ch], campaign)
     }
+    // The console's Share button (link.ts SHARE_PRESETS): its copied link and its printed QR code read as such.
+    if (src === 'share') return make('other', 'Shared link', campaign)
+    if (src === 'qr') return make('other', 'QR code', campaign)
     // A value the merchant (or someone) typed: kept as its own row under Other.
     return make('other', `Other · ${src.slice(0, 40)}`, campaign)
   }

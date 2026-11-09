@@ -45,7 +45,7 @@ function lineText(tab: string, l: TileLine, now: Date): { node: React.ReactNode;
   }
 }
 
-export function Today({ s, setup, now }: { s: TodaySummary | null; setup: Setup; now: Date }) {
+export function Today({ s, setup, now, share }: { s: TodaySummary | null; setup: Setup; now: Date; share?: React.ReactNode }) {
   const lines: Record<(typeof TILES)[number]['tab'], TileLine> = {
     to_confirm: toConfirmLine(s?.counts.to_confirm ?? null, s ? s.high : null, s?.next?.since ?? null),
     to_pack: waitLine(s?.counts.to_pack ?? null, s?.oldest.to_pack ?? null),
@@ -125,7 +125,7 @@ export function Today({ s, setup, now }: { s: TodaySummary | null; setup: Setup;
         </Link>
       ) : (
         // The way to close the shop again lives with the checklist: always one tap from Home (impact review U·4).
-        <p className="text-sm text-muted-foreground"><Badge tone="ok">Shop open</Badge> <Link href="/console/setup" className="inline-flex min-h-6 items-center underline">Setup, or close the shop for now</Link></p>
+        <div className="flex flex-wrap items-center gap-3"><p className="text-sm text-muted-foreground"><Badge tone="ok">Shop open</Badge> <Link href="/console/setup" className="inline-flex min-h-6 items-center underline">Setup, or close the shop for now</Link></p>{share}</div>
       )}
     </div>
   )

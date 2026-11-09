@@ -31,6 +31,7 @@ const ENTRY_POINTS = {
   // Public, read-only, cached per shop: the shop comes from the host the middleware wrote (shopFor checks its shape).
   'src/app/s/[host]/sitemap.xml/route.ts': ['a shop\'s sitemap: public, read-only', 'shopForRoute('],
   'src/app/s/[host]/robots.txt/route.ts': ['a shop\'s robots.txt: public, read-only', 'shopForRoute('],
+  'src/app/s/[host]/og/[...card]/route.ts': ['a shop\'s share card: public, read-only, canonical ids looked up inside the host\'s shop', 'shopForRoute('],
 }
 
 const walk = dir => readdirSync(dir).flatMap(n => {

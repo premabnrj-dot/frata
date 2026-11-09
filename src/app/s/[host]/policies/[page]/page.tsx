@@ -1,12 +1,14 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { shareImage } from '@/lib/seo/share-image'
 import { PolicyView } from '@/components/storefront/pages'
 import { POLICY_TITLE } from '@/components/storefront/policy'
 import { ShopShell } from '@/components/storefront/shell'
-import { shopLook } from '@/lib/queries/storefront'
+import { shopCatalogue, shopLook } from '@/lib/queries/storefront'
 import { themeOf } from '@/lib/themes/page-look'
 import type { PolicyPage } from '@/domains/policies/render'
-import { robotsFor, shopFor, shopHref } from '../../_shop'
+import { shopFor, shopHref } from '../../_shop'
+import { shopTags, toMetadata } from '../../_meta'
 
 // Policies are live before the shop opens: payment providers read them during KYC.
 export const revalidate = 60
@@ -19,7 +21,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const shop = await shopFor(params)
   const { page } = await params
   if (!isPage(page)) notFound()
-  return { title: { absolute: `${POLICY_TITLE[page]} | ${shop.shopName}` }, alternates: { canonical: `https://${shop.host}/policies/${page}` }, robots: robotsFor(shop) }
+  return toMetadata(shopTags(shop, { path: `/policies/${page}`, title: `${POLICY_TITLE[page]} | ${shop.shopName}`, shareTitle: POLICY_TITLE[page], description: null, image: await shareImage(shop, { kind: 'shop', cat: await shopCatalogue(shop.id) }, shop.shopName, new Date()) }))
 }
 
 export default async function Policy({ params }: { params: Params }) {

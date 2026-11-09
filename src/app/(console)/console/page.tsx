@@ -8,6 +8,8 @@ import { todaySummary } from '@/lib/queries/today'
 import { Checklist } from './_components/checklist'
 import { OpenMoment } from './_components/open-moment'
 import { Today } from './_components/today'
+import { ShareSheet } from './_components/share-sheet'
+import { shareFor } from '@/lib/seo/share'
 
 // =============================================================================
 // FILE: src/app/(console)/console/page.tsx — Home
@@ -36,10 +38,12 @@ export default async function ConsoleHome() {
   // A failed summary is a page of "Couldn't count", never of zeros.
   const s = setup.open ? await todaySummary(tenantId, now).catch((err) => { console.error('[today]', err instanceof Error ? err.name : 'error'); return null }) : null
 
+  // Share the shop (search and sharing S1·7); a failed read only hides the button.
+  const share = setup.open ? await shareFor(tenantId, { kind: 'shop' }, now).catch(() => null) : null
   return (
     <OpenMoment key={tenantId} address={setup.address} header={<PageHeader title={setup.open ? 'Today' : 'Home'}
       meta={<>{setup.name} · <span className="font-mono">{setup.address}</span>{setup.open ? ` · ${todayLongIN(now)}` : ''}</>} />}>
-      {setup.open ? <Today s={s} setup={setup} now={now} /> : <Checklist setup={setup} canManage={canManage} />}
+      {setup.open ? <Today s={s} setup={setup} now={now} share={share ? <ShareSheet share={share} target={{ kind: 'shop' }} /> : null} /> : <Checklist setup={setup} canManage={canManage} />}
     </OpenMoment>
   )
 }

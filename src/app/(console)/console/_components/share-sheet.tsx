@@ -1,0 +1,55 @@
+'use client'
+
+import { useRef, useState, useTransition } from 'react'
+import { Button } from '@/components/ui/button'
+import { Dialog } from '@/components/ui/dialog'
+import type { ShareData, ShareTarget } from '@/lib/seo/share'
+import { shareQr } from '../share-actions'
+
+/** Share a product, a collection or the shop (search and sharing S1·7, as the approved mockup): the card every app
+ *  shows, then WhatsApp, Instagram, Facebook, QR code and the link. Each link carries its channel's tags. */
+export function ShareSheet({ share, target }: { share: ShareData; target: ShareTarget }) {
+  const [open, setOpen] = useState(false)
+  const [said, setSaid] = useState('')
+  const [qr, setQr] = useState<string | null>(null)
+  const [pending, start] = useTransition()
+  const linkRef = useRef<HTMLInputElement>(null)
+  const copy = (text: string, done: string) => (navigator.clipboard?.writeText(text) ?? Promise.reject(new Error('no clipboard'))).then(
+    () => setSaid(done),
+    () => { if (linkRef.current) { linkRef.current.value = text; linkRef.current.select() } setSaid('Selected: copy it with your keyboard.') },
+  )
+  const makeQr = () => start(async () => {
+    const r = await shareQr(target.kind, 'id' in target ? target.id : null)
+    if (r.ok) setQr(r.png); else setSaid(r.error)
+  })
+  const opt = 'flex min-h-16 flex-col items-center justify-center gap-1 rounded-md border border-border bg-card px-2 text-xs font-medium hover:bg-muted'
+  return (
+    <>
+      <Button variant="secondary" disabled={!share.ready} onClick={() => { setSaid(''); setQr(null); setOpen(true) }}>Share</Button>
+      <Dialog open={open} onClose={() => setOpen(false)} title={`Share ${share.title}`}
+        actions={<Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Done</Button>}>
+        <div className="space-y-3">
+          {share.card && <img src={share.card} alt="" width={1200} height={630} className="aspect-[1200/630] w-full rounded-md border border-border object-cover" />}
+          <div className="grid grid-cols-4 gap-2">
+            <a className={opt} href={share.whatsapp} target="_blank" rel="noopener noreferrer">WhatsApp</a>
+            <button type="button" className={opt} onClick={() => copy(share.links.share_instagram, 'Copied for Instagram.')}>Instagram</button>
+            <a className={opt} href={share.facebook} target="_blank" rel="noopener noreferrer">Facebook</a>
+            <button type="button" className={opt} disabled={pending} onClick={makeQr}>QR code</button>
+          </div>
+          {qr && (
+            <div className="flex items-center gap-3">
+              <img src={qr} alt={`QR code for ${share.title}`} width={128} height={128} className="size-32 rounded-sm border border-border" />
+              <a href={qr} download={`${share.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'shop'}-qr.png`} className="text-sm font-medium underline">Download</a>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <label htmlFor="share-link" className="sr-only">Link</label>
+            <input id="share-link" ref={linkRef} readOnly defaultValue={share.links.share_copy} className="h-10 min-w-0 flex-1 rounded-md border border-input bg-muted px-2 font-mono text-xs" />
+            <Button onClick={() => copy(share.links.share_copy, 'Link copied.')}>Copy link</Button>
+          </div>
+          <p role="status" className="text-sm text-ok-text">{said}</p>
+        </div>
+      </Dialog>
+    </>
+  )
+}

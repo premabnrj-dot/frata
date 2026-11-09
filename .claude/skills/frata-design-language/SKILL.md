@@ -204,7 +204,7 @@ Two surfaces, two looks. **The console is neutral, dense and numeric. The
 fashion lives in the storefront.** Patterns below are taken from Ekatan's admin
 (its `ekatan3d-design-language`) and Shopify's admin, which merchants already know.
 
-## Tokens (`src/app/globals.css` — the only file with a hex; `check:hex`)
+## Tokens (`src/app/globals.css` — the console's only hex; images drawn outside CSS — PDFs, share cards — keep their palette in one allowed file each; `check:hex`)
 
 - `--primary` (ink) is interaction: buttons, focus. `--brand` is **rani**
   (#D61F69, the frrata mark; brand spec 2026-11-07): never a button fill, a
@@ -816,3 +816,16 @@ saving we cannot show from their own orders.
   2023): shipping, the COD fee. A total that changes says so ("Price updated
   to ₹2,690") before payment, never after.
 - A failed payment returns to a filled form, never an empty one.
+
+## Share cards (search and sharing S1, owner-approved mockup 2026-11-09)
+
+What a link to a shop page shows in WhatsApp, Instagram DMs, Facebook, X, iMessage and Telegram. Drawn by
+`src/lib/seo/render-card.tsx`; what each shows is `src/lib/seo/card.ts`.
+- **1200×630 JPEG, ≤ 300 KB** (WhatsApp drops larger; JPEG is the only format every app documents). One per page
+  version: an edit is a new address.
+- **Product**: the photo fills the card; one dark band — shop name, "Pay on delivery" when COD is on, the price in
+  large digits; a recent cut struck beside it as the buy box (`compareAt`; the tag's M.R.P. is not drawn); "Sold out"
+  replaces the price. **Collection**: one large photo with the name and "From ₹… · N styles", three small. **Shop**
+  (also lists and policies): the name on the theme's tint, its promises, three photos. No photo: name, shop, price.
+- **Few words, no Devanagari drawn** (Satori cannot shape it; Hindi goes in og:title and og:description). Apple: avoid
+  text-heavy images. og:image:alt describes the photo, not a caption.

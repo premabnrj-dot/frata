@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defaultDescription, defaultTitle, handleChange, productJsonLd, shareCard, variantUrl } from '../seo'
+import { defaultDescription, defaultTitle, handleChange, productJsonLd, shareCard, variantUrl } from '../defaults'
 
 describe('seo defaults', () => {
   it('title: colour only when there is one; shop once at the end', () => {

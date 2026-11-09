@@ -20,5 +20,3 @@ export async function shopForRoute(params: Promise<{ host: string }>): Promise<S
 /** Links on a shop are its own paths (the middleware adds /s/<host>). */
 export const shopHref = (path: string) => path
 
-/** Search engines: a shop that is opening soon is not indexed. */
-export const robotsFor = (shop: StoreShop, indexable = true) => (shop.publishedAt && indexable ? undefined : { index: false, follow: false })

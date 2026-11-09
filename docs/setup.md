@@ -163,3 +163,46 @@ business once the company exists to lift that.
      (tenancy audit 2026-11-08; `check:tenant` lists `outbox` in OPEN_FOR_APP until then).
 - **Preview deployments must not hold the production database** (review S1): in Vercel, take `DATABASE_URL` off
   Preview (or point Preview at a Supabase branch) and turn on Deployment Protection for previews.
+
+### Frrata's Google app (Search Console and Google Shopping for merchants — search and sharing S·4)
+
+Facts and sources: frata-integrations § Google (checked 2026-11-09). Two stages: **now** (prepare, verify the brand,
+test with up to 100 accounts) and **after "Connect Google" is built** (the scope review needs a video of it working).
+
+**Now — before the console**
+1. Own **frrata.com** and verify it in Search Console as a *Domain* property (DNS TXT record at `@`), signed in with
+   the Google account that will own the Cloud project. Keep the TXT record for good.
+2. Publish on frrata.com: a homepage that says what Frrata does with Search Console and Google Shopping (not only a
+   login page, linking the privacy policy); a privacy policy (`/privacy`) naming the Google data read (search queries and
+   clicks, sitemaps, site ownership, product listings), how it is used and stored, that it is never shared or sent to
+   ad platforms (Google's Limited Use policy); terms (`/terms`).
+3. The console's sign-in callback should live on a frrata.com host (e.g. `app.frrata.com`): every redirect host must be
+   an authorized, verified domain, and frata.vercel.app is not ours to verify. (Plan this with own domains.)
+
+**Now — Google Cloud console**
+4. console.cloud.google.com → create two projects: **frrata-prod** and **frrata-dev** (Google requires one per tier;
+   previews and localhost use dev).
+5. In each: APIs & Services → Library → enable **Google Search Console API**, **Site Verification API**, **Merchant API**.
+6. Google Auth Platform (console.developers.google.com/auth/overview) → **Get started**: App name `Frrata`, user support
+   email, Audience **External**, developer contact email.
+7. **Branding**: logo `docs/brand/png/frrata-icon-120.png`; home page `https://frrata.com/`, privacy
+   `https://frrata.com/privacy`, terms `https://frrata.com/terms`; Authorized domains: `frrata.com` (add it first).
+8. **Clients → Create client → Web application**, name "Frrata web": JavaScript origin `https://app.frrata.com`; redirect
+   URI the exact callback S·4 uses (we will send it). **Download the secret at once — it is shown only once**; it goes
+   into Vercel (Production only), never in chat. The dev project gets its own client for `http://localhost:3000`.
+9. **Data Access → Add or remove scopes → Manually add**: `https://www.googleapis.com/auth/webmasters`,
+   `https://www.googleapis.com/auth/siteverification.verify_only`, `https://www.googleapis.com/auth/content`. Take a
+   screenshot of which table (non-sensitive / sensitive / restricted) each lands in and send it to us.
+10. **Audience**: stay in **Testing**; add up to 100 test users (you, pilot merchants). In Testing, connections expire
+    after 7 days.
+11. **Branding → Verify branding** (minutes; a manual review 2–3 business days), then **Publish branding** within 7 days.
+12. Merchant API registration: create Frrata's own Merchant Center account (frrata.com as its verified website, you as
+    Admin); we call `registerGcp` once from each project (not per merchant).
+
+**Later — once "Connect Google" works (S·4)**
+13. Record an English video, upload it to YouTube as **Unlisted**: the click on Connect Google, the consent screen
+    showing "Frrata", the address bar with `client_id=…`, and each permission in use (searches appear, a sitemap is
+    submitted, the shop's address is verified, a product appears in Merchant Center).
+14. Audience → **Publish app**; Verification Center → Prepare for verification → paste the per-scope reasons (we write
+    them) and the video link → Submit. Reply to Google's emails quickly; sensitive scopes take up to ~10 business days.
+    Do not publish before this: an unverified production app allows only 100 users for its whole life.

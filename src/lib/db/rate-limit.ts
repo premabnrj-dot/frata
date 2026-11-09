@@ -55,6 +55,10 @@ export const LIMITS = {
   signupCodePhoneDay: { action: 'signup_code:phone_day', max: 5, windowSeconds: 86400 },
   signupCodeUserDay: { action: 'signup_code:user_day', max: 8, windowSeconds: 86400 },
   signupCodeAll: { action: 'signup_code:all', max: 300, windowSeconds: 3600 },
+  // Share cards drawn per shop (search and sharing S1·3): a drawn card is stored and cached, so this bounds misuse
+  // (odd paths cannot reach it), not real sharing. Fails closed.
+  ogRender: { action: 'og:render', max: 200, windowSeconds: 3600 },
+  ogRenderIp: { action: 'og:render:ip', max: 60, windowSeconds: 3600 },
 } as const satisfies Record<string, Limit>
 
 /** Whether `subject` is already past the limit, WITHOUT counting an attempt. `failClosed`: true when the counter cannot be read. */

@@ -1,9 +1,12 @@
 import type { Metadata } from 'next'
+import { wordsFor } from '@/components/storefront/words'
 import { notFound } from 'next/navigation'
+import { shareImage } from '@/lib/seo/share-image'
 import { AllView } from '@/components/storefront/pages'
 import { isListed, pageOf, pageParam } from '@/domains/storefront/listing'
 import { shopCatalogue } from '@/lib/queries/storefront'
-import { robotsFor, shopFor, shopHref } from '../../../../_shop'
+import { shopFor, shopHref } from '../../../../_shop'
+import { shopTags, toMetadata } from '../../../../_meta'
 
 // Page 2 onward of Shop all (speed review P2): its own address, so each page is cached on its own.
 export const revalidate = 60
@@ -23,7 +26,7 @@ async function load(params: Params) {
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { shop, page } = await load(params)
-  return { title: { absolute: `Shop all · page ${page} | ${shop.shopName}` }, alternates: { canonical: `https://${shop.host}/products/page/${page}` }, robots: robotsFor(shop) }
+  return toMetadata(shopTags(shop, { path: `/products/page/${page}`, title: `${wordsFor(shop.shopLanguage).shopAll} · page ${page} | ${shop.shopName}`, shareTitle: `${wordsFor(shop.shopLanguage).shopAll} · page ${page}`, description: null, image: await shareImage(shop, { kind: 'shop', cat: await shopCatalogue(shop.id) }, shop.shopName, new Date()) }))
 }
 
 export default async function AllPage({ params }: { params: Params }) {

@@ -1,6 +1,6 @@
 # ADR-0005: Vercel (bom1) for the app, Supabase (ap-south-1) for data, auth and jobs
 
-Status: accepted · 2026-11-06 · amended 2026-11-06 (files: Vercel Blob) · amended 2026-11-08 (AWS, owner)
+Status: accepted · 2026-11-06 · amended 2026-11-06 (files: Vercel Blob) · amended 2026-11-08 (AWS, owner) · amended 2026-11-09 (share images, owner)
 
 ## Decision
 - One Next.js app on Vercel serves the console and every storefront, routed by
@@ -21,6 +21,11 @@ Status: accepted · 2026-11-06 · amended 2026-11-06 (files: Vercel Blob) · ame
   resized once in the browser (400/800/1200/1600 WebP) and served as they are,
   with no per-view image transforms. `BLOB_READ_WRITE_TOKEN` is read only in
   `src/lib/env.ts`.
+- **Share images are the one exception to "WebP only"** (owner, 2026-11-09; spec
+  `docs/specs/2026-11-09-seo-and-sharing.md`): link-preview cards (1200×630) and shop icons are rendered on the
+  server as JPEG/PNG, because WhatsApp, Facebook and LinkedIn document JPEG and PNG only. Each is made once per
+  content version (a hashed URL), stored in Blob under the shop's own path and served from there — still no
+  per-view transform.
 - Deploy by pushing to `main`; never `vercel deploy` (no commit behind it).
 - **AWS: allowed service by service, not as a second host** (owner, 2026-11-08; replaces "No AWS"). The app,
   data, auth and jobs stay on Vercel and Supabase. An AWS service may be used when it does one job better or cheaper

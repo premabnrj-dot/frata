@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { shareImage } from '@/lib/seo/share-image'
 import { CollectionView } from '@/components/storefront/pages'
 import { inCollection, pageOf, pageParam } from '@/domains/storefront/listing'
 import { shopCatalogue, shopLook } from '@/lib/queries/storefront'
 import { themeOf } from '@/lib/themes/page-look'
-import { robotsFor, shopFor, shopHref } from '../../../../../_shop'
+import { shopFor, shopHref } from '../../../../../_shop'
+import { shopTags, toMetadata } from '../../../../../_meta'
 
 // Page 2 onward of a collection (speed review P2): its own address, so each page is cached on its own.
 export const revalidate = 60
@@ -25,8 +27,8 @@ async function load(params: Params) {
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
-  const { shop, c, page } = await load(params)
-  return { title: { absolute: `${c.title} · page ${page} | ${shop.shopName}` }, alternates: { canonical: `https://${shop.host}/collections/${c.handle}/page/${page}` }, robots: robotsFor(shop) }
+  const { shop, cat, c, page, now } = await load(params)
+  return toMetadata(shopTags(shop, { path: `/collections/${c.handle}/page/${page}`, title: `${c.title} · page ${page} | ${shop.shopName}`, shareTitle: `${c.title} · page ${page}`, description: null, image: await shareImage(shop, { kind: 'collection', collection: c, cat }, `${c.title} — ${shop.shopName}`, now) }))
 }
 
 export default async function CollectionPage({ params }: { params: Params }) {

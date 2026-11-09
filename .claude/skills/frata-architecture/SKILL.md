@@ -347,6 +347,21 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   regenerates them in the same commit: `UPDATE_BASELINES=1 npm run e2e -- --only shop-look`. Look's state changes:
   `look.int.test.ts` (real Postgres) and e2e `47-look`.
 
+## Search and sharing (S·1, 2026-11-09; spec docs/specs/2026-11-09-seo-and-sharing.md)
+
+- **One writer of a shop page's tags**: `pageTags` (`src/domains/seo/tags.ts`, pure), mapped to Next metadata by
+  `src/app/s/[host]/_meta.ts` (`shopTags`, `toMetadata`). No shop route builds tags by hand. `description` is always
+  set (null clears it): an unset key inherits the root layout's — Frrata's own words on a shop's card.
+- **og:type product and product:* tags** render as property= meta in the product page (`ProductTags`); React hoists
+  them into the static head only while nothing above the page suspends — no loading.tsx there.
+- **The offer** a page and its card state is `offerFor` (`src/domains/seo/tags.ts`): the lowest price a shopper can
+  buy at now, with that size's availability; `compareAt` is the struck before-cut price.
+- **Share cards** `src/app/s/[host]/og/[...card]/route.ts`: canonical paths only (`parseCardPath`), the host's shop,
+  ids found in its cached catalogue (listed products only — a random id costs no query), drawing budgeted per caller
+  then per shop, photos only from our store and this shop's folder (PATH_SHAPE), read capped at 1 MB, WebP checked by
+  sharp, reaching Satori only as data URIs. CDN a day; a stale address shows the current card for 5 minutes. No Blob
+  storage (a deleted photo would outlive the product).
+
 ## Outside world (ADR-0006)
 
 - Outbound: `enqueue(tx, { kind, dedupeKey, payload })`; register a sender for

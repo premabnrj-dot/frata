@@ -60,7 +60,7 @@ export const products = pgTable('products', {
   publishedAt: at('published_at'),
   /** Shopify taxonomy category id (src/domains/catalogue/taxonomy/apparel.json), e.g. aa-1-23-7. */
   taxonomyCategory: text('taxonomy_category'),
-  /** Empty = made from the templates in src/domains/catalogue/seo.ts. */
+  /** Empty = made from the templates in src/domains/seo/defaults.ts. */
   seoTitle: text('seo_title').notNull().default(''),
   seoDescription: text('seo_description').notNull().default(''),
   tags: text('tags').array().notNull().default(sql`'{}'::text[]`),

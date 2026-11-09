@@ -236,7 +236,7 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
   order creation, not automatic. Reels creator affiliate links launched in
   India in 2026 (3–15% commission) [S].
 
-## Google — checked 2026-11-06 (Ads and GA4 rechecked 2026-11-08 for analytics A·3)
+## Google — checked 2026-11-06 (Ads and GA4 rechecked 2026-11-08; OAuth verification, Search Console and Merchant API rechecked 2026-11-09)
 
 - **Offline click conversions:** since 15 Jun 2026 the Google Ads API's `UploadClickConversions` fails
   (`CUSTOMER_NOT_ALLOWLISTED_FOR_THIS_FEATURE`) for a project that did not upload between 17 Dec 2025 and 15 Jun 2026;
@@ -251,9 +251,30 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
 
 - Content API for Shopping sunset 18 Aug 2026, degradation from 1 Sep → build
   only on **Merchant API v1** [V, Google].
-- Sensitive OAuth scopes need brand verification; Google Ads needs a developer
-  token with brand verification [U, founder].
-- Never send Google user data to ad platforms (Google API policy) [U, founder].
+- **OAuth app (Search Console + Merchant API), checked 2026-11-09** [V unless tagged; support.google.com/cloud and
+  developers.google.com pages undated except oauth2/policies 2026-08-05 and the User Data Policy 2024-02-15]: Google Auth
+  Platform pages Overview, Branding, Audience, Clients, Data Access, Verification Center; External. A separate Cloud
+  project per tier (dev, prod) — previews never use the prod client; no wildcard redirect URIs.
+- Scopes, the smallest set: `webmasters` (sitemaps.submit, sites.add; reads queries too), `siteverification.verify_only`
+  (getToken + insert; makes the user an owner), `content` (Merchant API, asked only when Merchant Center is connected).
+  Category of each: [U] — only the console's Data Access page shows it; record it there. Merchant API: OAuth
+  verification review is mandatory [V]. CASA only for restricted scopes [V]; none known restricted [U].
+- Branding: logo ≤ 1 MB, 120×120 square (docs/brand/png/frrata-icon-120.png); a logo or name on the consent screen needs
+  brand verification (minutes automated, 2–3 business days manual); a pass lasts 7 days before publishing; scope review
+  needs published branding. Homepage on a Search-Console-verified domain (by the project's Owner/Editor), not only a login
+  page; privacy policy on the same domain; authorized domains before redirect URIs.
+- Scope verification: a justification per scope (why narrower is not enough); a YouTube Unlisted video in English
+  showing the app name, client_id in the address bar and each scope's feature. Apps in development or testing are not
+  eligible → submit only once "Connect Google" works. Estimates: brand 2–3, sensitive up to 10 business days, restricted
+  6 weeks + CASA.
+- Testing mode: ≤ 100 test users; refresh tokens expire after 7 days. Production unverified: "unverified app" screen,
+  100 new users for the project's LIFETIME, never reset. 100 refresh tokens per account per client; unused 6 months →
+  invalid. The client secret is shown once.
+- Merchant API developer registration: `registerGcp` once per Cloud project on Frrata's OWN production Merchant Center
+  (verified website, Admin caller), not per merchant; else 401 UNAUTHENTICATED.
+- No business, legal-entity or India-specific Google OAuth requirement found [U].
+- Never send Google user data to ad platforms: Limited Use forbids "transferring or selling user data to third parties
+  like advertising platforms" [V, User Data Policy 2024-02-15]. Google Ads developer token + brand verification [U, founder].
 
 ## Attribution signals (landing URL + referrer) — checked 2026-11-08 (integration-researcher, for analytics A1·2)
 

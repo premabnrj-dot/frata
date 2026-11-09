@@ -145,3 +145,16 @@ describe('foldSources', () => {
     expect(other!.kept).toMatchObject({ kept: 500, counted: 2, leftOut: 1 })
   })
 })
+
+describe('Share button links (search and sharing S1·7)', () => {
+  it('each share link is tagged, on the shop, and reads back as its channel', async () => {
+    const { shopLink, SHARE_PRESETS } = await import('../link')
+    const { classifySource } = await import('../source')
+    const want: Record<string, string> = { share_whatsapp: 'WhatsApp share', share_instagram: 'Instagram share', share_facebook: 'Facebook share', share_copy: 'Shared link', share_qr: 'QR code' }
+    for (const k of Object.keys(SHARE_PRESETS) as (keyof typeof SHARE_PRESETS)[]) {
+      const u = new URL(shopLink('https://kesar.frrata.shop', '/products/kurta', { preset: k }))
+      expect(u.origin).toBe('https://kesar.frrata.shop')
+      expect(classifySource({ utm_source: u.searchParams.get('utm_source')!, utm_medium: u.searchParams.get('utm_medium')! }, null).label).toBe(want[k])
+    }
+  })
+})
