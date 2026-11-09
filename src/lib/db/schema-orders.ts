@@ -48,6 +48,10 @@ export const orders = pgTable('orders', {
   // ── The shopper, for delivery only (DPDP notice at checkout). Erased from abandoned orders after 90 days.
   customerName: text('customer_name').notNull().default(''),
   phone: text('phone').notNull().default(''),
+  /** The shopper ticked "order updates and a review request on WhatsApp" (unticked by default: DPDP s.6; owner
+   *  2026-11-09). Null = never asked or said no: such an order is never messaged. The notice's version and language. */
+  waOptInAt: timestamp('wa_opt_in_at', { withTimezone: true }),
+  waOptInNotice: text('wa_opt_in_notice'),
   addressLine: text('address_line').notNull().default(''),
   landmark: text('landmark').notNull().default(''),
   pincode: text('pincode').notNull().default(''),

@@ -1758,4 +1758,55 @@ do $$ begin
              where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: another role runs the accountant definers'; end if;
 end $$;
 
-\echo 'tenancy proof — all 53 checks passed'
+-- 54. Reviews (0078): requests, reviews, photos, reports, settings and opt-outs are the shop's own; a row can never
+-- point at another shop's order, line, product or review; a photo lives in its own shop's folder; a Stop is never
+-- undone by the app; staff (frata_admin) read none of it.
+insert into review_requests (id, tenant_id, order_id, token_nonce, token_hash) values
+  ('bcbcbcbc-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-00000000000b', repeat('b', 32), 'th-b');
+insert into reviews (id, tenant_id, request_id, order_line_id, product_id, rating, display_name)
+  select 'bdbdbdbd-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'bcbcbcbc-0000-0000-0000-00000000000b', l.id, 'eeeeeeee-0000-0000-0000-00000000000b', 5, 'Priya S.'
+    from order_lines l where l.tenant_id = '22222222-2222-2222-2222-222222222222' and l.order_id = 'acacacac-0000-0000-0000-00000000000b';
+insert into review_photos (tenant_id, review_id, base, widths, width, height) values
+  ('22222222-2222-2222-2222-222222222222', 'bdbdbdbd-0000-0000-0000-00000000000b', 'https://s.public.blob.vercel-storage.com/tenants/22222222-2222-2222-2222-222222222222/reviews/bcbcbcbc/p1', '{400}', 400, 500);
+insert into review_reports (tenant_id, review_id, reason, ip_hash) values ('22222222-2222-2222-2222-222222222222', 'bdbdbdbd-0000-0000-0000-00000000000b', 'spam', 'iph-b');
+insert into review_settings (tenant_id) values ('22222222-2222-2222-2222-222222222222');
+insert into wa_opt_outs (tenant_id, phone_hmac) values ('22222222-2222-2222-2222-222222222222', 'ph-b');
+select set_config('proof.b_line', (select id::text from order_lines where tenant_id = '22222222-2222-2222-2222-222222222222' limit 1), false);
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if exists (select 1 from review_requests) or exists (select 1 from reviews) or exists (select 1 from review_photos) or exists (select 1 from review_reports)
+     or exists (select 1 from review_settings) or exists (select 1 from wa_opt_outs) then raise exception 'FAIL: A sees B review rows'; end if;
+  update reviews set hidden_at = now(), hidden_reason = 'spam'; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A hid B review'; end if;
+  delete from reviews; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A deleted B review'; end if;
+  begin insert into review_requests (tenant_id, order_id, token_nonce, token_hash) values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-00000000000b', repeat('a', 32), 'th-a');
+    raise exception 'FAIL: A asked about B order'; exception when foreign_key_violation then null; end;
+  begin insert into reviews (tenant_id, product_id, source, rating, display_name) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000b', 'import', 1, 'X');
+    raise exception 'FAIL: A reviewed B product'; exception when foreign_key_violation then null; end;
+  begin insert into reviews (tenant_id, order_line_id, product_id, source, rating, display_name) values
+    ('11111111-1111-1111-1111-111111111111', current_setting('proof.b_line')::uuid, 'eeeeeeee-0000-0000-0000-00000000000a', 'import', 1, 'X');
+    raise exception 'FAIL: A reviewed B order line'; exception when foreign_key_violation then null; end;
+  begin insert into reviews (tenant_id, order_line_id, product_id, source, rating, display_name) values
+    ('11111111-1111-1111-1111-111111111111', gen_random_uuid(), 'eeeeeeee-0000-0000-0000-00000000000a', 'import', 1, 'X');
+    raise exception 'FAIL: a review points at a line that is not this shop''s'; exception when foreign_key_violation then null; end;
+  begin insert into review_photos (tenant_id, review_id, base, widths, width, height) values
+    ('11111111-1111-1111-1111-111111111111', 'bdbdbdbd-0000-0000-0000-00000000000b', 'https://s.public.blob.vercel-storage.com/tenants/11111111-1111-1111-1111-111111111111/reviews/x/p', '{400}', 1, 1);
+    raise exception 'FAIL: A photo on B review'; exception when foreign_key_violation then null; end;
+  insert into reviews (id, tenant_id, product_id, source, rating, display_name) values ('bdbdbdbd-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', 'import', 4, 'Asha K.');
+  begin insert into review_photos (tenant_id, review_id, base, widths, width, height) values
+    ('11111111-1111-1111-1111-111111111111', 'bdbdbdbd-0000-0000-0000-00000000000a', 'https://s.public.blob.vercel-storage.com/tenants/22222222-2222-2222-2222-222222222222/reviews/x/p', '{400}', 1, 1);
+    raise exception 'FAIL: A photo stored in B folder'; exception when check_violation then null; end;
+  begin insert into wa_opt_outs (tenant_id, phone_hmac) values ('22222222-2222-2222-2222-222222222222', 'ph-x'); raise exception 'FAIL: A wrote B opt-outs';
+  exception when insufficient_privilege then null; end;
+  insert into wa_opt_outs (tenant_id, phone_hmac) values ('11111111-1111-1111-1111-111111111111', 'ph-a');
+  begin delete from wa_opt_outs; raise exception 'FAIL: the app undid a Stop'; exception when insufficient_privilege then null; end;
+  begin delete from review_requests; raise exception 'FAIL: the app deleted a request'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'frata_admin']) r,
+             unnest(array['review_requests', 'reviews', 'review_photos', 'review_reports', 'review_settings', 'wa_opt_outs']) t
+             where has_table_privilege(r, t, 'select') or has_table_privilege(r, t, 'insert')) then raise exception 'FAIL: another role reads or writes reviews'; end if;
+end $$;
+
+\echo 'tenancy proof — all 54 checks passed'
