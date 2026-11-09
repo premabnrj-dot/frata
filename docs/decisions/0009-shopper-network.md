@@ -23,7 +23,9 @@ login. So a shared "Verify via Frrata" sender is only lawful as a Frrata account
 4. **WhatsApp is the only channel** for codes; email is the fallback. **No SMS** until the owner asks for it.
 5. **Transactional WhatsApp from Frrata's number** (order confirmed, shipped, delivered, COD confirmation) for shoppers who
    hold a Pehchaan and opted in, until the shop connects its own number — subject to Meta's rules being confirmed
-   (integration check 2026-11-09); the message is Frrata's own ("via Frrata"), the shop's name a variable.
+   (checked 2026-11-09: allowed with conditions); the message is Frrata's own ("via Frrata"), the shop's name a
+   variable, never promotional; no WhatsApp platform data (read/delivered status, "not on WhatsApp", BSUID) passes to
+   the shop (Meta's platform terms §4.1).
 6. **Never**: fingerprinting visitors who never signed in; profiling or marketing to anyone under 18; selling or renting
    the network; marketing from Pehchaan (marketing stays in its own modules and the shop's own consents).
 
@@ -34,8 +36,9 @@ one shop never reaches another's data, and Frrata's own app code cannot read the
 
 ## Consequences
 - Counsel reviews the notice and the DPA before launch; DPDP duties bind from 13 May 2027 at the latest.
-- Frrata's WhatsApp quality rating is shared by every shop: a shop whose shoppers block "Frrata" harms all. Per-shop
-  send limits and a breaker are part of the design.
-- Frrata pays Meta for Pehchaan codes and for transactional messages it sends; metered per shop and billed on the
-  monthly invoice (no wallet: RBI).
+- Frrata's WhatsApp quality is shared by every shop: a low-quality template is paused, then disabled for all, and blocks
+  limit growth. One template per order event, per-shop send limits and a breaker are part of the design.
+- Frrata pays Meta for Pehchaan codes and for transactional messages it sends, metered per shop. Meta's terms forbid
+  reselling the platform, so the cost is carried inside Frrata's fee until counsel clears a per-message line (no
+  wallet: RBI).
 - `tenancy-auditor`, `security-reviewer`, `unit-economics-reviewer` and `architecture-reviewer` run on the plan before code.

@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.17.0
+  version: 1.18.0
   verified: 2026-11-09
   decisions: [ADR-0006]
 ---
@@ -229,8 +229,28 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
   Authentication-international (₹2.4971 [S]) applies only when the WABA's Primary Business Location differs from the
   user's country; India's rose 1 Apr 2026; 30-day notice [V, pricing + authentication-international-rates, undated,
   read 2026-11-08]. Utility/auth volume tiers per market, monthly [V]. Prices change only on the 1st of a quarter, ≥ 1
-  month's notice; charged on delivery [V, …/pricing, 2026-11-09]. India's utility rate stays [S].
-- **Limits**: per business portfolio, shared by its numbers: 250 → 2,000 → 10,000 → 100,000 → unlimited [V].
+  month's notice; charged on delivery [V, …/pricing, 2026-11-09]. India's utility rate stays [S]. Tiers: utility list
+  rate to 25M/month, auth to 750K/month, then −6% … −30% (auth −6% = ₹0.1081); counted per portfolio, market and
+  category [S, chatmaxima "Rates effective October 1, 2026"; V-undated aggregation, pricing, 2026-11-09].
+- **Limits**: per business portfolio, shared by its numbers: 250 → 2,000 → 10,000 → 100,000 → unlimited; at 2,000+ one
+  step within 6 h when quality is high across all numbers and templates AND ≥ half the limit was used in 7 days; since
+  7 Oct 2025 a quality drop no longer lowers the limit, but a low-quality template pauses 3 h, then 6 h, then is
+  disabled [V-undated, messaging-limits + upcoming-messaging-limits-changes + template-pausing, 2026-11-09]. Each
+  number 80 mps; 1,000 mps needs unlimited + 100K unique users in 24 h + quality ≥ yellow [V-undated, throughput].
+  Whether authentication counts toward the limit: not stated [U].
+- **Pehchaan transactional from Frrata's number** (checked 2026-11-09): no Meta page addresses a platform messaging its
+  own account holders about third-party sellers' orders [V absence: policy 2026-09-23, template-categorization,
+  template-review]. Lawful shape: Frrata-owned utility templates in Frrata's voice, the shop's name a body variable
+  ("via Frrata"), no promo; the opt-in names Frrata ("clearly state the business's name") [V-undated, getting-opt-in];
+  separate opt-in per category [V-undated]. Platform terms §4.1 (2026-09-23) [V]: no sharing WhatsApp Platform Data
+  with third parties (→ no read/delivered/not-on-WhatsApp status or BSUID shown to a merchant); no "resell, or rent the
+  WhatsApp Business Platform" (→ per-message re-billing to merchants: counsel first [U]); no misrepresenting
+  "affiliation". Precedent: Razorpay Magic Checkout sends from "Razorpay's WhatsApp handle", merchant name editable
+  [V-undated]; Shiprocket auto-sends for 3 lakh+ brands, sender unstated [S, 2026-05-01]; GoKwik [U].
+- **Display name / blue tick** (2026-11-09): "Frrata" fits the clear-relationship rule; never a shop's name in it [S,
+  360dialog]. Official Business Account: policy compliance, ≥ 30 days on the platform, verified portfolio, two-step
+  verification, approved display name; no notability test stated; reapply after 30 days [V-undated,
+  official-business-accounts]. A second number adds its own throughput and quality, not daily capacity [V-undated].
 - **Templates** (rechecked 2026-11-09, …/templates/components + template-categorization + utility-templates, undated):
   marketing / utility / authentication; body ≤ 1024; ≤ 10 buttons, ≤ 2 URL, ≤ 10 quick reply, quick replies grouped apart
   from the rest; button text ≤ 25; URL ≤ 2000 with ONE variable at the end. Positional `example.body_text` is nested
@@ -473,7 +493,9 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   policy" [V-undated, authentication-best-practices]; no speaking for a business "without permission" [V, policy
   2026-09-23]; Twilio Verify ended its shared sender on 1 Mar 2024 [V, twilio docs 2026-03-09]. → **No central Frrata
   sender for shop logins**: a shop's code goes from the shop's own number (Embedded Signup), billed to the merchant;
-  Frrata's number only where Frrata is the business (its own sign-up; a Frrata account, if one is ever built). Reverse
+  Frrata's number only where Frrata is the business (its own sign-up and Pehchaan logins, ADR-0009 — auth uses "New account creation" / "Account integrity, access, or
+  recovery" [V-undated, template-categorization]; no rule that the code names the app signed into [V absence]; the
+  sign-in screen says "Frrata"). Reverse
   wa.me OTP: no Meta rule [U], and a username user's message may carry no phone → weak proof. No third-party "Sign in
   with WhatsApp" [U]. Pair rate 1 / 6 s to one user (burst 45, 131056); 80 msg/s per number [V-undated].
 - **SMS (India)**: TRAI Direction 18 Nov 2025 — every template variable pre-tagged (e.g. `#url#`), non-compliant templates

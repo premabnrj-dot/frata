@@ -22,12 +22,17 @@ per sign-in.
 | Message | Sent from | Why it is allowed | Who pays Meta |
 |---|---|---|---|
 | Pehchaan sign-in code | **Frrata's number** (display name Frrata) | Frrata is the business the shopper signs into (its own login) | Frrata |
-| Order updates (confirmed, shipped, delivered, COD confirm) | the **shop's own number** when connected; else **Frrata's number** for shoppers with Pehchaan who opted in | as Frrata's own message "via Frrata", the shop's name a variable — **pending the policy check** (§ 9) | the sender |
+| Order updates (confirmed, shipped, delivered, COD confirm) | the **shop's own number** when connected; else **Frrata's number** for shoppers with Pehchaan who opted in | Frrata's own utility template in Frrata's voice, "via Frrata", the shop's name a variable; no Meta rule against it, Razorpay does the same (checked 2026-11-09, § 9) | the sender |
 | Reviews ask, marketing | the shop's own number only | the shop's own relationship | the merchant |
 - Authentication: copy-code template only on the web (one-tap/zero-tap need an Android app); fixed body, no brand variable
   (fine: it is Frrata's own code); TTL 10 min (`message_send_ttl_seconds` 600; undelivered → dropped, not charged).
-- One number serves every shop, so its **quality rating is shared**: per-shop daily caps, and a shop whose shoppers block
-  or report Frrata's messages is moved to "connect your own number" for order updates (sign-in codes are unaffected).
+- One number serves every shop, so its **quality is shared**: a low-quality template is paused 3 h, then 6 h, then
+  disabled for every shop, and low quality blocks the next limit step (it no longer lowers the limit). So: one template
+  per order event, separate from the sign-in template; per-shop daily caps; a shop whose shoppers block or report
+  Frrata's messages is moved to "connect your own number" for order updates (sign-in codes are unaffected).
+- **Meta's terms (§4.1, 23 Sep 2026)**: no WhatsApp platform data reaches a merchant from Frrata's number (no
+  read/delivered status, "not on WhatsApp", BSUID) — the shop sees Frrata's own order events only; no shop name or logo
+  in Frrata's display name; templates never promotional. The Apps page counts messages sent, not read.
 - Limits: Frrata's portfolio must reach **unlimited** (verified business, quality) before broad launch; 80 msg/s per
   number; pair rate 1 / 6 s → resend waits ≥ 30 s.
 
@@ -86,14 +91,16 @@ Guest checkout stays. Desktop: the code goes to the phone and is typed on the de
   You can remove a shop or delete Pehchaan any time at id.frrata.com." + [Create my Pehchaan] (never preselected).
 - **Per shop (each first visit):** "Share your name, phone and address with Kesar Studio?" — items listed, [Continue].
 - **Marketing (optional, the shop's, unticked):** "Send me new drops from Kesar Studio on WhatsApp" → `customer_consents`.
-- **Order updates from Frrata (unticked, checkout):** "Order updates on WhatsApp from Frrata for this order" — names
-  Frrata as the sender (§ 9 decides the exact wording).
+- **Order updates from Frrata (unticked, checkout):** "Order updates for this order from Frrata on WhatsApp (Kesar
+  Studio)" — Meta requires the opt-in to name the sender (Frrata); the shop's name keeps it expected.
 
 ## 6. Billing, metering, abuse
 - **Sign-in codes: free to merchants, in every plan** (Frrata's cost: ₹0.115 + GST per delivered code; the network is
   the moat — every shop should switch it on). Codes metered in `pehchaan_codes` for Frrata's own costing.
-- **Order updates from Frrata's number:** billed to the shop per delivered message on the monthly invoice (₹0.20
-  proposed; Meta utility ₹0.115 + GST) until it connects its own number (then Meta bills it directly). No wallet (RBI).
+- **Order updates from Frrata's number:** Meta's terms forbid reselling the WhatsApp platform, and a per-message line
+  on the merchant's invoice could read as resale. **Until counsel clears it, the cost (₹0.115 + GST each) is carried
+  inside Frrata's fee**, not itemised; per-shop caps bound it. Counsel may allow a ₹0.20 "order updates" line. Once the
+  shop connects its own number, Meta bills it directly. No wallet (RBI).
 - Market: KwikPass 5,000 logins/mo free; checkout bundles 2.5–3.5% of GMV — Pehchaan free + per-message updates is a
   clear story. `unit-economics-reviewer` runs on it.
 - **Abuse:** Indian mobiles only (no international pumping); limits per phone, IP /64 and shop, failing closed; a
@@ -111,11 +118,12 @@ shop's `customer_consents` and send from the shop's own channels. Pehchaan never
 marketing.
 
 ## 9. Open checks before the mockup is final
-- **Meta policy for order updates from Frrata's number** (integration-researcher running, 2026-11-09): marketplace vs
-  impersonation, wording, opt-in naming Frrata, quality risk. If not allowed, order updates go only from the shop's own
-  number and § 1's middle row is removed.
+- ~~Meta policy for order updates from Frrata's number~~ — checked 2026-11-09: allowed with conditions (Frrata's voice,
+  shop as a variable, opt-in names Frrata, no platform data to merchants, no promo); § 1 and `frata-integrations` hold
+  the facts. Left for counsel: whether per-message billing is "resale" (§ 6).
 - **frrata.com** live with `id.` (owner) and **frratamail.com** sending (SPF/DKIM/DMARC) for the email fallback.
-- Counsel on the network notice and the merchant DPA (before launch; DPDP binds 13 May 2027).
+- Counsel on the network notice, the merchant DPA and Meta's resale clause (before launch; DPDP binds 13 May 2027).
+- Blue tick for Frrata's number: verified portfolio, 30 days on the platform, two-step verification (after the Pvt Ltd).
 
 ## Phases (each its own plan; mockup first)
 - **P0** — Frrata's WhatsApp number + Pehchaan auth template (owner's WhatsApp Business setup), id.frrata.com, email
