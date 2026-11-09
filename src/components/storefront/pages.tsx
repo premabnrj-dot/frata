@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { PolicyPage } from '@/domains/policies/render'
-import { shopJsonLd } from '@/domains/catalogue/seo'
+import { shopJsonLd } from '@/domains/seo/defaults'
 import { inCollection, isListed, pageOf } from '@/domains/storefront/listing'
 import { classicFromSettings } from '@/domains/themes/resolve'
 import type { ResolvedTheme, ThemeSettings } from '@/domains/themes/types'

@@ -9,7 +9,7 @@ import { LeaveDialog, Message, SaveBar, useLeaveGuard } from '@/components/ui/un
 import { Money } from '@/components/data/numeric'
 import type { Status } from '@/domains/catalogue/availability'
 import { parseRupees, readiness, type ColourInput } from '@/domains/catalogue/product-form'
-import { defaultDescription, defaultTitle } from '@/domains/catalogue/seo'
+import { defaultDescription, defaultTitle } from '@/domains/seo/defaults'
 import { combinations, handleFor, keyOf, skuFor, type Option } from '@/domains/catalogue/variants'
 import { paise } from '@/domains/money/paise'
 import { pick, urlFor } from '@/domains/media/sizes'

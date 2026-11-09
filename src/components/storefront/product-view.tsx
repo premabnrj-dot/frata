@@ -1,9 +1,10 @@
 import { pdpLines } from '@/domains/checkout/offer-showcase'
 import { describeAttribute } from '@/domains/catalogue/taxonomy'
-import { defaultDescription, defaultTitle, productJsonLd } from '@/domains/catalogue/seo'
+import { defaultDescription, defaultTitle, productJsonLd } from '@/domains/seo/defaults'
 import { availability } from '@/domains/catalogue/availability'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { factsOf, priceOf } from '@/domains/storefront/listing'
+import type { ProductAvailability } from '@/domains/seo/tags'
 import { isColourOption } from '@/domains/storefront/picker'
 import type { StoreProduct, StoreShop } from '@/lib/queries/storefront'
 import type { ThemeSettings } from '@/domains/themes/types'
@@ -31,6 +32,15 @@ export function productSeo(shop: StoreShop, p: StoreProduct) {
     url: `https://${shop.host}/products/${p.handle}`,
     image: p.images[0] ? urlFor(p.images[0].base, pick(p.images[0].widths, 1200)) : null,
   }
+}
+
+/** The product's price and availability for its share tags: the lowest price as the buy box shows it, and whether any size can be bought. */
+export function productOffer(p: StoreProduct, now: Date): { pricePaise: number; mrpPaise: number | null; availability: ProductAvailability; id: string; groupId: string } | null {
+  const price = priceOf(p)
+  if (!price) return null
+  const av = p.variants.map((v) => availability(factsOf(v), now))
+  const state: ProductAvailability = av.some((a) => a.google === 'in_stock') ? 'in stock' : av.some((a) => a.google === 'preorder') ? 'preorder' : 'out of stock'
+  return { pricePaise: price.min, mrpPaise: price.compareAt, availability: state, id: p.id, groupId: p.id }
 }
 
 /** The product page (spec § Product page). Server-rendered; the choices are one client island. */

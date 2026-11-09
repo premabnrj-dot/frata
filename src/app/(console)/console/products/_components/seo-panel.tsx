@@ -1,7 +1,7 @@
 'use client'
 
 import { InfoTip } from '@/components/ui/info-tip'
-import { DESCRIPTION_WARN_AT, shareCard, TITLE_WARN_AT } from '@/domains/catalogue/seo'
+import { DESCRIPTION_WARN_AT, shareCard, TITLE_WARN_AT } from '@/domains/seo/defaults'
 import { pick, urlFor } from '@/domains/media/sizes'
 import type { Photo } from './photos'
 import { Icon } from '@/components/icons/icon'

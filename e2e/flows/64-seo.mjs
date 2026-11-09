@@ -69,6 +69,18 @@ export default {
         assert.ok(r.body.length < 1_000_000, `${name}: page under 1 MB (Apple, Meta)`)
         assert.ok(Buffer.byteLength(r.body.slice(0, r.body.indexOf('</head>'))) < 300_000, `${name}: <head> in the first 300 KB (WhatsApp)`)
       }
+      // S1·1: one builder — a product card with its price (Meta, Pinterest), a large X card, the locale, large previews.
+      const h = head((await get(`/products/${product.handle}`, CRAWLERS.facebook)).body)
+      assert.equal(h.one('og:type'), 'product', 'og:type product')
+      assert.ok(prices.includes(Math.round(Number(h.one('product:price:amount')) * 100)), `product:price:amount ${h.one('product:price:amount')} is a variant's price`)
+      assert.equal(h.one('product:price:currency'), 'INR')
+      assert.match(h.one('product:availability') ?? '', /^(in stock|out of stock|preorder)$/)
+      assert.equal(h.one('og:locale'), 'en_IN')
+      assert.equal(h.one('twitter:card'), 'summary_large_image')
+      assert.ok(h.one('og:image:alt'), 'og:image:alt')
+      assert.ok((h.one('og:description') ?? '').length <= 80, 'og:description within WhatsApp\'s 80')
+      assert.doesNotMatch(h.one('og:title') ?? '', /Kesar Studio/, 'og:title without the shop name')
+      assert.match(h.one('robots') ?? '', /max-image-preview:large/)
       return Object.keys(CRAWLERS).join(', ')
     })
 

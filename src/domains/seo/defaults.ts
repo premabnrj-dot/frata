@@ -1,5 +1,5 @@
 // =============================================================================
-// FILE: src/domains/catalogue/seo.ts
+// FILE: src/domains/seo/defaults.ts
 //
 // SEARCH AND SHARING, MADE FOR EVERY PRODUCT (owner-approved 2026-11-06).
 // The merchant may override title and description; empty means these
@@ -9,7 +9,7 @@
 // Pure: money in paise, rendered to rupees only here at the edge.
 // =============================================================================
 
-import type { Availability } from './availability'
+import type { Availability } from '../catalogue/availability'
 
 /** Google shows no fixed length; these are when to warn that a phone may shorten it. */
 export const TITLE_WARN_AT = 60
