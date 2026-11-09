@@ -1,5 +1,5 @@
 # Theme: Signal
-Status: draft · Date: 2026-11-09 · Mockup: https://claude.ai/artifact/9XNT3KFJziXEyaKyDa48dr (docs/mockups/2026-11-09-theme-signal.html) · Approved: —
+Status: active · Date: 2026-11-09 · Mockup: https://claude.ai/artifact/9XNT3KFJziXEyaKyDa48dr (docs/mockups/2026-11-09-theme-signal.html) · Approved: owner, 2026-11-09 (mockup v3)
 
 ## Goal
 North star **(5) a premium-looking storefront**, and through it (4) mobile conversion. Brands whose product is the hero
