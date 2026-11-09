@@ -4,7 +4,8 @@ Mockup: https://claude.ai/artifact/P4wfSezqiVxzG4D7FsrnYM · Approved: owner, 20
 the one exception to "WebP only" — ADR-0005 amended; order S·0 → S·1 → S·2; Google's app review started now for S·4)
 
 Reviewed 2026-11-09 by architecture-reviewer, security-reviewer and tenancy-auditor; every finding is folded into the
-tasks below (§ Review findings lists them). S·3–S·5 get their own plans when S·2 closes. Every task ends with its
+tasks below (§ Review findings lists them). S·3–S·5 get their own plans when S·2 closes. **S·4 is parked** (owner, 2026-11-09): everything for it is in
+`docs/plans/2026-11-09-seo-s4-google-parked.md`. Every task ends with its
 verify command run and read, and `impact-reviewer` on its diff before the commit (frata-planning rule 5).
 
 ## Regression net first (rule 5)
@@ -108,6 +109,14 @@ verify command run and read, and `impact-reviewer` on its diff before the commit
 - Verified: unit tests for card content, addresses and rendering; 64-seo fetches every page's card as a crawler. The
   e2e store has no reachable photos, so e2e cards are the no-photo layout; photo layouts are covered by the render
   test and were looked at (`render-card.test.ts`, samples 2026-11-09).
+
+### S1·7 as built (2026-11-09)
+- Share on the product editor, the collection editor and Home (open shops): the card, WhatsApp (`wa.me`), Instagram
+  (copied), Facebook (sharer), a QR code (server action, kind and id only, through asMember), Copy link. Links from
+  `shopLink` with `SHARE_PRESETS`; Analytics reads "WhatsApp share", "Instagram share", "Facebook share", "Shared link",
+  "QR code". Shareable only when the shop is open and the page listed (the button is disabled otherwise) — the
+  console preview route for drafts was not needed. Open: S1·6 (logo setter, shop icons), S1·5's firewall check (owner),
+  S1·8 held.
 
 ## S·2 Search foundations
 - **S2·1 Descriptions everywhere** in `pageTags` (lists, collections trimmed to 155, policies, page n); Hindi titles.
