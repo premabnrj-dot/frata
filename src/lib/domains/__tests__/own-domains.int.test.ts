@@ -71,7 +71,7 @@ describe.skipIf(!host)('own domains', () => {
       expect((await own.checkDomainRow(A, c.claim.id, { forDialog: false })).state).toBe('connected')
       // D2·9: once main, the console's links use the domain; back to the name on Undo.
       const { mainHostFor } = await import('@/lib/queries/addresses')
-      const [{ slug }] = await su`select slug from tenants where id = ${A}`
+      const slug = (await su`select slug from tenants where id = ${A}`)[0]!.slug
       const { shopHost } = await import('@/lib/public-env')
       expect(await mainHostFor(A, slug as string)).toBe(shopHost(slug as string))
       await su`select app_make_domain_main(${A}::uuid, ${owner}::uuid, ${c.claim.id}::uuid)`
