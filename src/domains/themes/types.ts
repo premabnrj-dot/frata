@@ -5,7 +5,7 @@
 // only ResolvedTheme. No CSS, no HTML, no script ever comes from a layer.
 // =============================================================================
 
-import type { SectionInput, SectionInstance, SectionKey } from './sections'
+import type { ProductLayout, SectionInput, SectionInstance, SectionKey, SectionScheme } from './sections'
 import type { Menus, SiteSettings } from './site'
 
 export type Hex = `#${string}`
@@ -116,6 +116,8 @@ export type ThemeManifest = {
   /** Page settings (T2) may be left out: PAGE_DEFAULTS fills them. */
   defaults: Omit<ThemeSettings, keyof PageSettings | keyof FeelSettings> & Partial<PageSettings & FeelSettings>
   allowed: { pairings: Pairing[]; headers: HeaderVariant[]; footers: FooterVariant[]; sections: SectionKey[]; heroMasks?: ('none' | 'arch')[]
+    /** The products section's layouts and the colour schemes a section may wear (Signal plan T1); absent = today's. */
+    productLayouts?: ProductLayout[]; sectionSchemes?: SectionScheme[]
     /** 2.0: the values this theme offers for a setting (choicesFor). A key left out keeps the values every 1.x theme had. */
     choices?: Choices }
   /** 2.0: the customizer's preview fills an empty shop with sample pieces, and a missing hero photo with this sample scene. */

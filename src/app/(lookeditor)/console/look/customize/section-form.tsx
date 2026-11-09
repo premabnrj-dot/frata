@@ -14,6 +14,8 @@ export type FormCtx = {
   collections: { handle: string; title: string }[]
   schemes: { key: 'paper' | 'tint' | 'ink'; name: string }[]
   masks: ('none' | 'arch')[]
+  /** The products section's layouts this theme offers (Signal plan T1). */
+  layouts: readonly ('grid' | 'rail')[]
   promiseWords: Record<(typeof PROMISES)[number], { text: string; true: boolean }>
   /** The shop's product photos (each product's first, newest first): "From your products" in a photo field (Look v3). */
   photos: LibraryPhoto[]; shopName: string
@@ -89,7 +91,7 @@ function Products({ s, set, c }: { s: SectionOf<'products'>; set: Set<SectionOf<
       </select>)}</Field>}
     {src.kind === 'under_price' && <Field label="Under, in ₹">{(id) => <input id={id} inputMode="numeric" defaultValue={paiseToRupees(src.maxPaise)} onBlur={(e) => { const p = rupeesToPaise(e.target.value); if (p) set({ ...s, source: { kind: 'under_price', maxPaise: p } }) }} className="h-10 w-full rounded-md border border-input bg-card px-3 font-mono text-sm" />}</Field>}
     <Choice label="How many" value={s.count} onChange={(count) => set({ ...s, count })} options={[4, 8, 12, 24].map((n) => ({ value: n as 4 | 8 | 12 | 24, label: String(n) }))} />
-    <Choice label="Layout" value={s.layout} onChange={(layout) => set({ ...s, layout })} options={[{ value: 'grid', label: 'Grid' }, { value: 'rail', label: 'Swipe row' }]} />
+    <Choice label="Layout" value={s.layout} onChange={(layout) => set({ ...s, layout })} options={([{ value: 'grid', label: 'Grid' }, { value: 'rail', label: 'Swipe row' }] as const).filter((o) => c.layouts.includes(o.value))} />
     {(src.kind === 'newest' || src.kind === 'collection') && <Switch label="“See all” link" on={s.viewAll} onChange={(viewAll) => set({ ...s, viewAll })} />}
   </>)
 }

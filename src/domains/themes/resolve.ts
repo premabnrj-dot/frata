@@ -1,7 +1,7 @@
 import { manifestNear, manifestOf } from './catalogue'
 import { choicesFor } from './choices'
 import { LayerSchema, SettingsSchema, onColour, brandColourProblem } from './layer'
-import { SectionSchema, type SectionInstance } from './sections'
+import { PRODUCT_LAYOUTS, SECTION_SCHEMES, SectionSchema, type SectionInstance } from './sections'
 import { paletteProblem, readMenus, readSite, textOf, TEXT_STYLES } from './site'
 import { FEEL_DEFAULTS, PAGE_DEFAULTS, PAIRINGS, type ChoiceKey, type Pairing, type ResolvedTheme, type Scheme, type SchemeKey, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
 
@@ -93,11 +93,17 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
     }
   }
   const masks = m.allowed.heroMasks ?? ['none']
+  const layouts = m.allowed.productLayouts ?? PRODUCT_LAYOUTS, schemesOk = m.allowed.sectionSchemes ?? SECTION_SCHEMES
   const raw = parsed.success && parsed.data.home ? parsed.data.home : m.home
   const home = raw.flatMap((s): SectionInstance[] => {
     const p = SectionSchema.safeParse(s)
     if (!p.success || !m.allowed.sections.includes(p.data.key)) return []
-    return [p.data.key === 'hero' && !masks.includes(p.data.mask) ? { ...p.data, mask: 'none' } : p.data]
+    let x = p.data
+    if (x.key === 'hero' && !masks.includes(x.mask)) x = { ...x, mask: 'none' }
+    // Signal plan T1: a layout or scheme this theme doesn't offer falls back to today's default (never renders).
+    if (x.key === 'products' && !layouts.includes(x.layout)) x = { ...x, layout: 'grid' }
+    if ('scheme' in x && !schemesOk.includes(x.scheme)) x = { ...x, scheme: 'paper' }
+    return [x]
   })
   return { key: m.key, version: m.version, style: style.key, schemes, settings, home, ...(m.rhythm ? { rhythm: m.rhythm } : {}), site, menus: readMenus(layer.menus) }
 }
