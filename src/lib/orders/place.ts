@@ -1,4 +1,5 @@
 import 'server-only'
+import { WA_OPT_IN_NOTICE } from '@/domains/checkout/opt-in'
 import { randomUUID } from 'node:crypto'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import type { CleanAddress } from '@/domains/checkout/address'
@@ -51,6 +52,8 @@ export type PlaceInput = {
   facts: { firstMethod?: 'cod' | 'prepaid' | null; attribution?: Record<string, string> }
   /** A business buyer asking for a GST invoice: their GSTIN and registered name (checked here again: tax/gstin.ts). */
   b2b?: { gstin: string; name: string } | null
+  /** The shopper ticked the WhatsApp opt-in (src/domains/checkout/opt-in.ts): stored with the notice they read. */
+  waOptIn?: boolean
 }
 export type Pay = { keyId: string; razorpayOrderId: string; amount: number; name: string; phone: string; shop: string }
 export type Placed = { kind: 'placed'; token: string; number: number; method: 'cod' | 'prepaid'; total: number; pay: Pay | null; payError?: string
@@ -117,6 +120,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
       id, tenantId, number, paymentMethod: input.method,
       subtotal: q.subtotal, discount: m.discount, shipping: q.shipping, codCharge: m.codCharge, gstTotal: m.gst, total: m.total, pricesIncludeGst: shop.pricesIncludeGst,
       merchandiseNet: m.merchandiseNet, cogs,
+      waOptInAt: input.waOptIn ? now : null, waOptInNotice: input.waOptIn ? WA_OPT_IN_NOTICE : null,
       customerName: input.address.name, phone: input.address.phone, addressLine: input.address.addressLine, area: input.address.area, landmark: input.address.landmark,
       pincode: input.address.pincode, city: input.address.city, state: input.address.state, supplyState: input.address.state, shopState: gstinState(shop.gstin), sellerGstin: shop.gstin, sellerScheme: shop.scheme,
       buyerGstin: buyer?.gstin ?? null, buyerName: buyer?.name ?? '',

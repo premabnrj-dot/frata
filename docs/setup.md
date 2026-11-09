@@ -99,7 +99,8 @@ Until these are set, Console › Apps › Messages says "WhatsApp isn't switched
    allowed. Copy its **configuration id**. Add `frata.vercel.app` (and the console host) to the app's allowed domains.
 3. **Webhook**: WhatsApp → Configuration → callback URL `https://<console host>/api/webhooks/whatsapp`, verify token = the
    value you set as `WA_VERIFY_TOKEN`. Subscribe the fields `messages`, `smb_message_echoes`, `history`,
-   `smb_app_state_sync`, `account_update`, `phone_number_quality_update`, `phone_number_name_update`.
+   `smb_app_state_sync`, `account_update`, `phone_number_quality_update`, `phone_number_name_update`, and for Reviews
+   `message_template_status_update` and `template_category_update` (the review template's approval and category).
 4. Vercel → frata → Environment Variables (Production):
    - `NEXT_PUBLIC_META_APP_ID` (the app id) and `NEXT_PUBLIC_WA_CONFIG_ID` (step 2): public, shown to Meta's popup.
    - `META_APP_SECRET` (Sensitive): App settings → Basic → App secret.

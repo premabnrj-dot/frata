@@ -22,6 +22,9 @@ export async function enqueue(
 
 export type OutboxRow = typeof outbox.$inferSelect
 
+/** A sender's "this row can never succeed" (a malformed request of ours): the row stops at once with its reason. */
+export class GiveUp extends Error { constructor(message: string) { super(message); this.name = 'GiveUp' } }
+
 /**
  * Claims up to `limit` due rows. FOR UPDATE SKIP LOCKED lets two sweeps run at
  * once without sending a message twice. Bumps attempts and pushes the next try

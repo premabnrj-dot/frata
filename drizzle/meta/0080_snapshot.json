@@ -1,5 +1,5 @@
 {
-  "id": "ce7599fa-3812-4d7c-8e74-c329d89fe595",
+  "id": "a0a9d104-e2fc-42c0-b13a-f210c13debde",
   "prevId": "da175f87-ecd8-4097-89cd-6733ccc419b9",
   "version": "7",
   "dialect": "postgresql",
@@ -8189,189 +8189,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.videos": {
-      "name": "videos",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "mux_env": {
-          "name": "mux_env",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "upload_id": {
-          "name": "upload_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "asset_id": {
-          "name": "asset_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "playback_id": {
-          "name": "playback_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "duration_ms": {
-          "name": "duration_ms",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "width": {
-          "name": "width",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "height": {
-          "name": "height",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "ready_at": {
-          "name": "ready_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "mp4_ready_at": {
-          "name": "mp4_ready_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "errored_at": {
-          "name": "errored_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "error": {
-          "name": "error",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "removed_at": {
-          "name": "removed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "videos_shop": {
-          "name": "videos_shop",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "videos_tenant_id_tenants_id_fk": {
-          "name": "videos_tenant_id_tenants_id_fk",
-          "tableFrom": "videos",
-          "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "videos_upload_id_unique": {
-          "name": "videos_upload_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "upload_id"
-          ]
-        },
-        "videos_asset_id_unique": {
-          "name": "videos_asset_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "asset_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "videos_env": {
-          "name": "videos_env",
-          "value": "\"videos\".\"mux_env\" ~ '^[A-Za-z0-9_-]{1,40}$'"
-        },
-        "videos_ids": {
-          "name": "videos_ids",
-          "value": "(\"videos\".\"upload_id\" is null or \"videos\".\"upload_id\" ~ '^[A-Za-z0-9]{1,128}$') and (\"videos\".\"asset_id\" is null or \"videos\".\"asset_id\" ~ '^[A-Za-z0-9]{1,128}$') and (\"videos\".\"playback_id\" is null or \"videos\".\"playback_id\" ~ '^[A-Za-z0-9]{1,64}$')"
-        },
-        "videos_error": {
-          "name": "videos_error",
-          "value": "(\"videos\".\"errored_at\" is null) = (\"videos\".\"error\" is null) and (\"videos\".\"error\" is null or length(\"videos\".\"error\") <= 40)"
-        },
-        "videos_size": {
-          "name": "videos_size",
-          "value": "(\"videos\".\"width\" is null or \"videos\".\"width\" between 1 and 8192) and (\"videos\".\"height\" is null or \"videos\".\"height\" between 1 and 8192) and (\"videos\".\"duration_ms\" is null or \"videos\".\"duration_ms\" between 0 and 43200000)"
-        },
-        "videos_playable": {
-          "name": "videos_playable",
-          "value": "\"videos\".\"mp4_ready_at\" is null or (\"videos\".\"ready_at\" is not null and \"videos\".\"playback_id\" is not null)"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.billing_accounts": {
       "name": "billing_accounts",
       "schema": "",
@@ -10868,6 +10685,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "wamid": {
+          "name": "wamid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reminder_wamid": {
+          "name": "reminder_wamid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "failed_at": {
           "name": "failed_at",
           "type": "timestamp with time zone",
@@ -10942,6 +10771,48 @@
           ],
           "isUnique": false,
           "where": "\"review_requests\".\"reminded_at\" is null and \"review_requests\".\"sent_at\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "review_requests_wamid": {
+          "name": "review_requests_wamid",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "wamid",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "review_requests_reminder_wamid": {
+          "name": "review_requests_reminder_wamid",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "reminder_wamid",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -11069,6 +10940,30 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'initial'"
+        },
+        "template_id": {
+          "name": "template_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "template_status": {
+          "name": "template_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "template_category": {
+          "name": "template_category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "template_at": {
+          "name": "template_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "updated_at": {
           "name": "updated_at",

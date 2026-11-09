@@ -62,7 +62,7 @@ export const MODULES: Record<ModuleKey, ModuleDef> = {
     features: ['Profit per delivered order', 'By product, size and colour', 'RTO cost by pincode', 'By campaign, on delivered orders'],
   },
   reviews: {
-    key: 'reviews', name: 'Reviews', job: 'Photo reviews after delivery, on the product page.', group: 'grow', billing: 'add_on', status: 'next', dependsOn: ['communication'], outboxKinds: [], addOnFor: ['growth', 'scale'],
+    key: 'reviews', name: 'Reviews', job: 'Photo reviews after delivery, on the product page.', group: 'grow', billing: 'add_on', status: 'next', dependsOn: ['communication'], outboxKinds: ['review:ask'], addOnFor: ['growth', 'scale'],
     usage: 'WhatsApp asks are billed by Meta',
     features: ['A WhatsApp ask after delivery', 'Photos and stars on the product page', 'Delivered buyers only', 'You approve each one', 'Stars in Google results'],
   },

@@ -1830,7 +1830,7 @@ do $$ begin
      or (select order_line_id from reviews where id = 'bdbdbdbd-0000-0000-0000-00000000000b') is not null then raise exception 'FAIL: set null touched tenant_id or kept the line'; end if;
 end $$;
 
--- 55. Videos (V1, 0080): the shop's own rows; the app never deletes one or changes its shop, environment or ids once
+-- 55. Videos (V1, 0081): the shop's own rows; the app never deletes one or changes its shop, environment or ids once
 -- set; Mux's events reach a shop only through the definer, with our row id AND the row's upload id from the same
 -- environment (or, for a rendition, an asset id already on the row); the stored payload is five fields.
 insert into videos (id, tenant_id, mux_env, upload_id, created_by) values

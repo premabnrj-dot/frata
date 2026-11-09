@@ -83,7 +83,7 @@ export const themeVersionStages = pgTable('theme_version_stages', {
 ])
 
 /**
- * A shop's videos (V1, docs/plans/2026-11-09-video-v1.md; access drizzle/0080). Hosted on Mux; the row is written
+ * A shop's videos (V1, docs/plans/2026-11-09-video-v1.md; access drizzle/0081). Hosted on Mux; the row is written
  * BEFORE the upload is created (ADR-0008) and its state is derived from the timestamps (src/domains/video/state.ts):
  * pending → ready (asset) → playable (MP4 rendition); errored; removed. Never deleted by the app: the per-day and
  * per-month upload caps count every row. `mux_env` is the Mux environment the row was made in; an event or a

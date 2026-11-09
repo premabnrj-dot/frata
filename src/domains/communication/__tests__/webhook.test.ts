@@ -12,6 +12,12 @@ describe('splitWebhook', () => {
       '200000000001:status:wamid.C3xyz:delivered', '200000000001:status:wamid.C3xyz:read'])
     expect(items.every((i) => i.route.by === 'number' && i.route.id === '200000000001')).toBe(true)
   })
+  it('a status keeps its id, status, time and error codes — never the recipient phone or pricing (security M7)', () => {
+    const [i] = splitWebhook(post([{ field: 'messages', value: { metadata: meta, statuses: [{ id: 'wamid.C3xyz', status: 'failed', timestamp: '1794230000', recipient_id: '919829043210',
+      pricing: { category: 'utility' }, errors: [{ code: 131026, title: 'Message undeliverable', error_data: { details: 'x' } }] }] } }]))
+    expect(i!.value).toEqual({ metadata: { phone_number_id: '200000000001' }, status: { id: 'wamid.C3xyz', status: 'failed', timestamp: '1794230000', errors: [{ code: 131026 }] } })
+    expect(JSON.stringify(i!.value)).not.toContain('9829043210')
+  })
   it('account changes route by the account and are keyed by digest', () => {
     const [i] = splitWebhook(post([{ field: 'phone_number_quality_update', value: { display_phone_number: '919845012345', event: 'FLAGGED' } }]))
     expect(i).toMatchObject({ route: { by: 'account', id: '100000000001' }, digest: true, key: null })
