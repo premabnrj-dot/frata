@@ -1,6 +1,6 @@
 # EkCode — one tap, recognised at every Frrata shop (shopper identity network, as an app)
-Status: draft (owner direction 2026-11-09) · Date: 2026-11-09 · Mockup: https://claude.ai/artifact/A33Xi8HVfsAyZqQ2pn7uKu
-(`docs/mockups/2026-11-09-ekcode.html`, v3) · Approved: pending
+Status: active · Date: 2026-11-09 · Mockup: https://claude.ai/artifact/A33Xi8HVfsAyZqQ2pn7uKu
+(`docs/mockups/2026-11-09-ekcode.html`, v4) · Approved: owner, 2026-11-09
 Decision: `docs/decisions/0009-shopper-network.md` · Research: `docs/research/2026-11-09-shopper-login.md`.
 
 **Name (owner, 2026-11-09).** **EkCode**: one code, every Frrata shop; said "ek code"; `ekcode_*` in code. Devanagari
@@ -20,7 +20,9 @@ beside it; Mukta 700 for both scripts. The box alone is the icon (filled ink bel
 button is ink on light themes, paper on dark, never in a shop's colours. Drawn once as paths when built; never typed.
 WhatsApp's display name is "EkCode" (Brand, above).
 
-## Owner calls (2026-11-09, on mockup v1)
+## Owner calls (2026-11-09)
+- Mockup approved (v4), with: no charge past the allowance; English only until the owner plans other languages;
+  grievance contact **Priti Bag, privacy@ekcode.in**.
 1. "Save this address to EkCode" at checkout starts **ticked** for a shopper with an EkCode (counsel confirms the notice
    covers it).
 2. Apply for the blue tick 30 days after EkCode's number goes live.
@@ -29,7 +31,9 @@ WhatsApp's display name is "EkCode" (Brand, above).
 ## Owner direction (2026-11-09)
 - A **Frrata account network** for authentication (ADR-0009): the shopper signs in to Frrata, recognised everywhere.
 - **Transactional WhatsApp from EkCode's number** until the merchant connects their own (the Messages module).
-- **No SMS** — not integrated or planned until the owner asks. Fallback is an email code.
+- **No SMS** — not integrated or planned until the owner asks. **No email code in P1** (review 2026-11-09: an email code
+  proves an email, never a phone; it must not open an account keyed by the phone). P2 adds email as a second sign-in the
+  shopper verifies on their own EkCode page.
 - Strictly identity and lead capture; marketing stays in its own modules.
 
 ## Goal
@@ -68,8 +72,9 @@ per sign-in.
 - `ekcode_devices` (account, token_hash, created_at, last_seen_at, revoked_at) — the "remember this phone" on
   ekcode.in (§ 3)
 **Per shop (tenant tables, normal RLS):**
-- `shop_customers` (tenant, id, **pairwise id** = HMAC(account, tenant) — a shop never holds the account id; phone, name
-  as the shopper confirmed them; first_seen, source; unique (tenant, pairwise id))
+- `shop_customers` (tenant, id, **pairwise id** — a random id per (account, shop) from `ekcode_pairs`, deletable on
+  "forget"; a shop never holds the account id; phone, name; first_seen, source; unique (tenant, phone): guests and
+  EkCode shoppers in one row, shaped for Messages M·1, ADR-0010)
 - `customer_sessions` (tenant, customer, token_hash, expires_at, revoked_at) — the shop's own first-party session
 - `customer_consents` (tenant, customer, purpose marketing_whatsapp|marketing_email, notice_version, given/withdrawn)
 **Definers (the only doors):** `ekcode_issue_code`, `ekcode_verify_code` (returns a short-lived proof),
@@ -87,18 +92,18 @@ under-18 profiling (an age line in the notice); delete = account and vault gone,
   third-party cookie — those fail in Safari and Instagram's browser); ekcode.in recognises the device, shows
   "Continue as Ananya ••••3210 to Kesar Studio" with what will be shared, and returns to the shop with a one-time code the
   shop's server exchanges (PKCE-style: state + verifier; code single-use, 60 s, bound to the shop host). No code typed.
-- **New device:** phone → WhatsApp code from EkCode → the same confirm screen. Email code when WhatsApp fails (§ 4).
+- **New device:** phone → WhatsApp code from EkCode → the same confirm screen. If the code doesn't arrive: Resend or
+  guest checkout (§ 4).
 - **On each shop:** its own first-party session cookie (`__Host-`, HttpOnly, Secure, SameSite=Lax, 30 days), a
   `customer_sessions` row. Cached shop pages never read it: sign-in is a client island + `shopRequest` routes (no-store).
 - Custom domains work the same way (the return URL is the shop's verified host; open redirects refused).
 
 ## 4. Flows and the fallback state machine
 ```
-shop: "Continue with EkCode" → top-level to ekcode.in/continue?shop=<host>&state&challenge
+shop: "Continue with EkCode" → shop's /api/shop/ekcode/start (flow made server-side) → ekcode.in/continue?flow=<handle>
   ├─ device known ─────────────────────────────→ CONFIRM ("Share name, phone, address with Kesar Studio")
   └─ device unknown → PHONE (+91, [6-9]) → CODE_SENT via WhatsApp (attempt row before the call — ADR-0008)
-        ├─ send fails 131026 (not on WhatsApp) → EMAIL (ask the email; code by email from ekcode.in (email))
-        ├─ no "delivered" in 20 s ............ → offer "Email me the code instead"
+        ├─ not delivered in 20 s (or 131026; never said aloud) → "Didn't get it?" Resend · Check out as a guest
         ├─ ≤ 5 tries per code; ≤ 3 codes / 10 min / phone; ≤ 20 / hour per IP /64 → LOCKED 15 min
         └─ VERIFIED (+ "remember this phone") → CONFIRM
 CONFIRM → (first time on EkCode: the network notice + its own tap) → back to the shop with a one-time code
@@ -121,25 +126,21 @@ Guest checkout stays. Desktop: the code goes to the phone and is typed on the de
 - **Order updates from EkCode's number: a monthly allowance by plan**, 4 per included order — Launch 600, Growth 6,000,
   Scale 20,000 — at no charge (Frrata's cost at full use ₹69 / ₹690 / ₹2,300; 0.9% / 2.0% / 3.5% of that shop's
   revenue at ₹2,000 per order, an assumption). Counted on *delivered* messages, reset on the 1st (IST).
-- **Past the allowance, the merchant chooses** (Console › Apps › EkCode › Raise limit):
-  - **Stop at the allowance** (default): updates from EkCode's number pause until the 1st; sign-in codes never stop.
-  - **Keep sending, up to a monthly ceiling** they pick (₹500 · ₹1,000 · ₹2,500, before GST): each delivered
-    update past the allowance is **added to the merchant's next monthly Frrata bill** at ₹0.20 + GST (proposed),
-    one line "EkCode order updates · N × ₹0.20". Postpaid, never prepaid: **no wallet, no top-up balance** (RBI). At
-    the ceiling, sending pauses as above. Owner/admin only; changes logged.
-  - **Connect your own number**: the allowance stops applying; Meta bills the shop directly.
-  - At 80% of the allowance, and at 80% of the ceiling, the console shows it on the Apps row and in "Needs you".
-- **Counsel first** (§ 9): Meta's terms forbid reselling the WhatsApp platform. The extra-usage line ships only after
-  counsel confirms it is EkCode's service charge, not resale; until then "Keep sending" is hidden and shops stop at
-  the allowance. The allowance itself (free) needs no clearance.
-- Prices and allowances are a versioned row (`ekcode_pricing`: allowance per plan, price per update in paise, ceilings,
-  from-date), set in Admin › EkCode › Controls; the bill reads the version in force on each message's delivery date.
-  The line is built by the existing monthly bill (`src/lib/billing/draft.ts`) from delivered counts — one number,
-  computed once.
+- **Past the allowance (owner, 2026-11-09): no charge per message, ever.** Updates from EkCode's number pause until
+  the 1st (IST); sign-in codes never stop. Console › Apps › EkCode › More updates offers: **wait until the 1st**,
+  **move up a plan** (the next plan's allowance), or **connect your own number** (no allowance; Meta bills the shop).
+  At 80% the Apps row turns amber and "Needs you" says so.
+- **P3 (review 2026-11-09, recommended)**: the allowance is the larger of 600 / 6,000 / 20,000 and 4 × orders placed
+  this month; a COD confirmation never pauses. Costs are stated net of delivery (1.07 / 2.20 / 3.77% of that shop's
+  revenue at ₹2,000), ex GST: Frrata reclaims the GST on Meta's invoice (owner, 2026-11-09).
+- Allowances are a versioned row (`ekcode_pricing`: allowance and codes a day per plan, from-date), set in Admin ›
+  EkCode › Controls. Frrata's cost is carried inside its fee; nothing about WhatsApp is itemised on the merchant's bill,
+  so Meta's no-resale clause is not touched.
 - Market: KwikPass 5,000 logins/mo free; checkout bundles 2.5–3.5% of GMV. `unit-economics-reviewer` runs on these
   numbers before the P3 plan.
 - **Abuse limits (not pricing):** Indian mobiles only; 3 codes per number / 10 min; 5 tries per code; 20 codes per
-  network (/64) per hour, a challenge after the 2nd; per-shop codes per day Launch 500 · Growth 2,000 · Scale 6,000
+  network (/64) per hour, a proof of work after the 2nd (no vendor); per-shop codes per day Launch 100 · Growth 600 ·
+  Scale 2,000 (review 2026-11-09; caps the worst month at ₹345 / ₹2,070 / ₹6,900)
   (Admin can raise one shop); the breaker when < 40% of a shop's codes are right after 200; failing closed; codes never
   logged; proofs single-use.
 - **Meta's own cap**: unique people per 24 h on EkCode's number (2,000 → 10,000 → 100,000 → unlimited) is shared by
@@ -158,17 +159,17 @@ marketing.
 ## 9. Open checks before the mockup is final
 - ~~Meta policy for order updates from EkCode's number~~ — checked 2026-11-09: allowed with conditions (EkCode's voice,
   shop as a variable, opt-in names EkCode, no platform data to merchants, no promo); § 1 and `frata-integrations` hold
-  the facts. Left for counsel: whether the extra-usage line on the merchant's bill is "resale" (§ 6).
+  the facts. No per-message charge to merchants (owner), so the resale question is closed.
 - **ekcode.in** bought (owner), with its site naming the business (for Meta's display-name check) and an email sender
   on it (SPF/DKIM/DMARC) for the fallback code.
-- Counsel on the network notice (English only, owner; DPDP s.5(3) lets a person ask for it in a scheduled language: how
-  we answer that), the merchant DPA and Meta's resale clause (before launch; DPDP binds 13 May 2027).
+- Counsel on the network notice (English only until the owner plans other languages), the privacy policy and terms,
+  the merchant DPA and "Save this address" ticked (before launch; DPDP binds 13 May 2027).
 - Blue tick for EkCode's number: verified portfolio, 30 days on the platform, two-step verification (after the Pvt Ltd).
 
 ## 10. Where EkCode runs (no separate product, no public API)
 EkCode is **a brand, not a second system**. It runs in Frrata's one deployment, on its own host:
 - `ekcode.in` is routed by host in `src/middleware.ts`, the way a shop's host is, to its own route group
-  (`src/app/(ekcode)/`) with its own layout, look and `__Host-` cookie. It shares nothing visible with the console or a
+  (`src/app/ek/`, `src/app/api/ek/`) with its own layout, look and `__Host-` cookie. It shares nothing visible with the console or a
   shop. Pages: the public home, Privacy, Terms, Contact, `/continue` (sign-in and Continue) and the shopper's page.
 - A Frrata shop opens `ekcode.in/continue` by a top-level redirect and gets a one-time code back (§ 3); its server
   exchanges the code **inside the same deployment** through the definers (§ 2). No API keys, no SDK, no webhooks
@@ -207,7 +208,7 @@ Admin › Activity). **Staff see counts, costs and health — never a shopper's 
 ## Phases (each its own plan; mockup first)
 - **P0** — EkCode's WhatsApp number (under Frrata's verified business) + auth template (owner's WhatsApp Business setup), the ekcode.in domain and site, email
   sender; policy answer (§ 9); unit-economics review.
-- **P1** — EkCode sign-in on shops: the vault, definers, codes (WhatsApp, email fallback), the confirm screen, shop
+- **P1** — EkCode sign-in on shops: the vault, definers, WhatsApp codes (no email: § Owner direction), the confirm screen, shop
   sessions, checkout prefill; the ekcode.in host and its public pages; Admin › EkCode Overview, Shops and Controls
   (the switches, limits, breaker and blocks must exist before the first real code); R0 net first (e2e: phone → code →
   confirm → filled; a second shop → one tap).
@@ -222,6 +223,6 @@ Admin › Activity). **Staff see counts, costs and health — never a shopper's 
 - **Security**: top-level redirect with state + PKCE, exact return host, single-use proofs and codes, `__Host-` cookies,
   HMACs only, limits fail closed, breach runbook.
 - **Performance**: shop pages stay cached (island + no-store API); one definer call per step.
-- **Reliability**: ADR-0008 attempt rows; Meta drops undelivered after TTL (free); email fallback.
+- **Reliability**: ADR-0008 attempt rows; Meta drops undelivered after TTL (free); Resend or guest checkout.
 - **YAGNI**: no SMS, no one-tap/zero-tap (app only), no reverse OTP, no FedCM/iframes, no platform passkeys, no
   fingerprinting, no marketing.

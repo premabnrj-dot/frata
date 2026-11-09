@@ -16,6 +16,7 @@ import { discountUses, liveDiscountSql } from '@/lib/db/discount-predicates'
 import { discountCodes, discountTargets, discountTiers, discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import { collectionMembers, collectionMembersIn } from './storefront'
 import { canTakeOnline, keysFor } from '@/lib/payments/keys'
+import { hostApprovedIn } from './addresses'
 
 // =============================================================================
 // WHAT CHECKOUT READS (shopper-facing: check:tenant rule 6 — named columns
@@ -58,7 +59,9 @@ export type CheckoutShop = ShopRules & { open: boolean; published: boolean; name
 
 /** The shop's checkout rules; `open` (taking NEW orders) read here, inside the transaction (not the 60 s cached lookup).
  *  `published`: live at all — an order already placed in a paused shop still finishes (switch to COD, retry payment). */
-export async function checkoutShop(tx: Tx, tenantId: string): Promise<CheckoutShop | null> {
+/** `host`: the address the shopper is on (quote, placing an order); online payment needs it approved in Razorpay (D1·8).
+ *  Without it (a placed order's retry, its page) the order already chose: only the keys decide. */
+export async function checkoutShop(tx: Tx, tenantId: string, host: string | null): Promise<CheckoutShop | null> {
   const [s] = await tx.select({
     name: tenants.name, slug: tenants.slug, publishedAt: shopSettings.publishedAt, gstin: shopSettings.gstin, pricesIncludeGst: shopSettings.pricesIncludeGst,
     shippingFlat: shopSettings.shippingFlat, freeShippingAbove: shopSettings.freeShippingAbove, codOn: shopSettings.codOn, codMin: shopSettings.codMin, codMax: shopSettings.codMax,
@@ -75,7 +78,7 @@ export async function checkoutShop(tx: Tx, tenantId: string): Promise<CheckoutSh
     // Business invoices: a regular registration, the shop's switch, and under ₹5 cr until e-invoicing ships (rates.ts b2bAllowed).
     b2b: scheme === 'regular' && b2bInvoices && b2bAllowed(turnoverBand as TurnoverBand),
     shippingFlat: Number(s.shippingFlat), freeShippingAbove: Number(s.freeShippingAbove), codMin: Number(s.codMin), codMax: Number(s.codMax), codCharge: Number(s.codCharge),
-    online: canTakeOnline(await keysFor(tx, tenantId)),
+    online: canTakeOnline(await keysFor(tx, tenantId)) && (host === null || await hostApprovedIn(tx, tenantId, host)),
   }
 }
 
@@ -131,8 +134,8 @@ export async function codeFor(tx: Tx, tenantId: string, text: string | null | un
   return { text: t, discountId: r?.discountId ?? null, codeId: r?.codeId ?? null }
 }
 
-export const quoteData = (tenantId: string, ids: string[], now: Date, code?: string | null) =>
-  withTenant(tenantId, async (tx) => ({ shop: await checkoutShop(tx, tenantId), rows: await variantRows(tx, tenantId, ids, now), offers: await liveOffers(tx, tenantId, now), typed: await codeFor(tx, tenantId, code, now) }))
+export const quoteData = (tenantId: string, ids: string[], now: Date, code: string | null, host: string) =>
+  withTenant(tenantId, async (tx) => ({ shop: await checkoutShop(tx, tenantId, host), rows: await variantRows(tx, tenantId, ids, now), offers: await liveOffers(tx, tenantId, now), typed: await codeFor(tx, tenantId, code, now) }))
 
 /** What the shopper's order page shows — masked address and phone (owner call 4). Found by the link token's hash only. */
 export async function orderPage(tx: Tx, tenantId: string, tokenHash: string) {

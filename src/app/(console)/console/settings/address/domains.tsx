@@ -10,7 +10,8 @@ import { Toaster, useToast } from '@/components/ui/toast'
 import { tidyDomain } from '@/domains/addresses/domain-input'
 import { DOMAIN_CHIP, type DomainState } from '@/domains/addresses/domain-state'
 import type { Record3 } from '@/lib/domains/own-domains'
-import { checkDomainAction, connectDomainAction, domainRecordsAction, makeMainAction, razorpayOkAction, removeDomainAction, undoMainAction, type Connected } from './domain-actions'
+import { checkDomainAction, connectDomainAction, domainRecordsAction, dropAddedNameAction, makeMainAction, nameRazorpayOkAction, razorpayOkAction, removeDomainAction, undoMainAction, type Connected } from './domain-actions'
+import { changeAddress } from '../actions'
 
 // =============================================================================
 // FILE: settings/address/domains.tsx — OWN DOMAINS (D2·10; mockup v2 https://claude.ai/artifact/XrDQj61tSBe4YKvUrH76xt,
@@ -28,56 +29,83 @@ const POLL_FOR_MS = 20 * 60_000
 type Step = 1 | 2 | 3
 type Found = 'yes' | 'no' | 'unknown'
 
-export function Domains(props: { nameHost: string; rows: DomainView[]; livePayments: boolean; available: boolean; canManage: boolean }) {
+/** A frrata name the shop serves on: the current one, and one added beside it (D1·9), with Razorpay's approval (D1·8). */
+export type NameView = { name: string; host: string; added: boolean; razorpayOk: boolean }
+
+type Props = { nameHost: string; names: NameView[]; rows: DomainView[]; livePayments: boolean; available: boolean; canManage: boolean; left: number | null }
+/** What Make main is asked for: a connected domain, or the frrata name added beside the current one (a rename). */
+type Making = { kind: 'domain'; host: string; d: DomainView } | { kind: 'name'; host: string; name: string }
+
+export function Domains(props: Props) {
   return <Toaster><DomainsInner {...props} /></Toaster>
 }
 
-function DomainsInner({ nameHost, rows, livePayments, available, canManage }: { nameHost: string; rows: DomainView[]; livePayments: boolean; available: boolean; canManage: boolean }) {
+function DomainsInner({ nameHost, names, rows, livePayments, available, canManage, left }: Props) {
   const router = useRouter()
   const toast = useToast()
-  const [, start] = useTransition()
   const [open, setOpen] = useState<null | { resume?: string }>(null)
-  const [confirm, setConfirm] = useState<DomainView | null>(null)
+  const [confirm, setConfirm] = useState<Making | null>(null)
   const [remove, setRemove] = useState<DomainView | null>(null)
   const [going, setGoing] = useState(false)
+  const [madeMain, setMadeMain] = useState<{ host: string; undo: boolean } | null>(null) // the popup after Make main (rule 75)
   const [busy, setBusy] = useState<string | null>(null)
   const live = rows.filter((r) => r.state !== 'moved' && r.state !== 'disconnected')
   const main = rows.find((r) => r.state === 'main' || r.state === 'not_working')
   const full = live.reduce((n, r) => n + 1 + (r.www ? 1 : 0), 0) >= 4
 
-  const act = (id: string, run: () => Promise<{ ok: boolean; error?: string }>, ok?: string) => {
+  // Writes run outside any transition, and the page is fetched afresh once the write has finished: the update a server
+  // action carries back now and then never applied, and a transition around it then stayed pending (frata-gotchas).
+  const act = async (id: string, run: () => Promise<{ ok: boolean; error?: string }>, ok?: string) => {
     setBusy(id)
-    start(async () => {
-      const r = await run().catch(() => ({ ok: false, error: 'We could not change it. Nothing was changed.' }))
-      setBusy(null)
-      if (!r.ok) toast({ text: r.error ?? 'We could not change it. Nothing was changed.' })
-      else { if (ok) toast({ text: ok }); router.refresh() }
-    })
+    const r = await run().catch(() => ({ ok: false, error: 'We could not change it. Nothing was changed.' }))
+    setBusy(null)
+    if (!r.ok) { toast({ text: r.error ?? 'We could not change it. Nothing was changed.' }); return }
+    if (ok) toast({ text: ok })
+    router.refresh()
   }
 
-  const makeMain = (d: DomainView) => {
+  // Stable, so the popup's 8 s window is not restarted by this list's re-renders.
+  const closePopup = useCallback(() => setMadeMain(null), [])
+  // Undo closes the popup, then runs like any other write here.
+  const undoPopup = useCallback(() => { setMadeMain(null); act('name', () => undoMainAction()) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const makeMain = (m: Making) => {
     setConfirm(null)
     setGoing(true)
     const began = Date.now() // clock-ok: in a handler or timer, never at render
-    start(async () => {
-      const r = await makeMainAction(d.id).catch(() => ({ ok: false as const, error: 'We could not change it. Nothing was changed.' }))
+    void (async () => {
+      const run = m.kind === 'domain' ? makeMainAction(m.d.id) : changeAddress(m.name)
+      const r = await run.catch(() => ({ ok: false as const, error: 'We could not change it. Nothing was changed.' }))
       await new Promise((res) => setTimeout(res, Math.max(0, 1300 - (Date.now() - began)))) // clock-ok: in a handler or timer, never at render
       setGoing(false)
       if (!r.ok) { toast({ text: r.error }); return }
       router.refresh()
-      toast({ text: `${d.host} is your main address`, undo: async () => { const u = await undoMainAction(); router.refresh(); return u } })
-    })
+      // A name made main while a domain is main is the shop's frrata name, not its main address: a toast says so.
+      if (m.kind === 'name' && main) toast({ text: `${m.host} is your frrata address` })
+      // A rename used a change: no Undo (going back is another change). A domain's Undo puts the name back.
+      else setMadeMain({ host: m.host, undo: m.kind === 'domain' })
+    })()
   }
 
   return (
-    <Section title="Addresses" flush action={!canManage ? <Badge>View only</Badge> : available && (
+    <Section title="Custom domain" flush action={!canManage ? <Badge>View only</Badge> : available && (
       <span className="flex items-center gap-2">{full && <Badge>4 of 4</Badge>}<Button variant={live.length ? 'secondary' : 'primary'} disabled={full} onClick={() => setOpen({})}>Connect a domain</Button></span>)}>
       {going && <div aria-hidden className="h-0.5 w-full origin-left animate-going-live bg-thread" />}
       <ul className="divide-y divide-border">
-        <Row host={nameHost} chip={main && main.state === 'main' ? null : { tone: 'neutral', words: 'Main' }}>
-          {canManage && main && <Button size="wrap" variant="secondary" disabled={busy === 'name'} onClick={() => act('name', () => undoMainAction(), `${nameHost} is your main address`)}>Make main</Button>}
-          <CopyOpen host={nameHost} />
-        </Row>
+        {names.map((n) => {
+          const needsRzp = livePayments && !n.razorpayOk
+          return (
+            <Row key={n.name} host={n.host} chip={n.added ? { tone: 'ok', words: 'Ready' } : main && main.state === 'main' ? null : { tone: 'neutral', words: 'Main' }}
+              extra={needsRzp ? <Badge tone="warn">Razorpay not approved</Badge> : null}>
+              {canManage && needsRzp && <a className={button({ variant: 'secondary', size: 'wrap' })} href={RAZORPAY} target="_blank" rel="noopener noreferrer">Open Razorpay</a>}
+              {canManage && needsRzp && <Button size="wrap" variant="secondary" disabled={busy === n.name} onClick={() => act(n.name, () => nameRazorpayOkAction(n.name, true), 'Saved')}>Razorpay approved it</Button>}
+              {canManage && !n.added && main && !needsRzp && <Button size="wrap" variant="secondary" disabled={busy === 'name'} onClick={() => act('name', () => undoMainAction(), `${nameHost} is your main address`)}>Make main</Button>}
+              {canManage && n.added && !needsRzp && <Button size="wrap" variant="secondary" onClick={() => setConfirm({ kind: 'name', host: n.host, name: n.name })}>Make main</Button>}
+              {!n.added && <CopyOpen host={n.host} />}
+              {canManage && n.added && <Button size="wrap" variant="ghost" disabled={busy === n.name} onClick={() => act(n.name, () => dropAddedNameAction(), 'Removed')}>Remove</Button>}
+            </Row>
+          )
+        })}
         {rows.map((d) => {
           const c = DOMAIN_CHIP[d.state]
           const needsRzp = livePayments && d.state === 'connected' && !d.razorpayOk
@@ -89,7 +117,7 @@ function DomainsInner({ nameHost, rows, livePayments, available, canManage }: { 
               {canManage && (d.state === 'securing' || d.state === 'not_working') && <Button size="wrap" variant="secondary" disabled={busy === d.id} onClick={() => act(d.id, () => checkDomainAction(d.id).then((r) => (r.ok ? { ok: true } : r)))}>Check now</Button>}
               {canManage && needsRzp && <a className={button({ variant: 'secondary', size: 'wrap' })} href={RAZORPAY} target="_blank" rel="noopener noreferrer">Open Razorpay</a>}
               {canManage && needsRzp && <Button size="wrap" variant="secondary" disabled={busy === d.id} onClick={() => act(d.id, () => razorpayOkAction(d.id, true), 'Saved')}>Razorpay approved it</Button>}
-              {canManage && d.canMain && <Button size="wrap" variant="secondary" onClick={() => setConfirm(d)}>Make main</Button>}
+              {canManage && d.canMain && <Button size="wrap" variant="secondary" onClick={() => setConfirm({ kind: 'domain', host: d.host, d })}>Make main</Button>}
               {(d.state === 'main' || d.state === 'connected') && <CopyOpen host={d.host} />}
               {canManage && d.state !== 'moved' && d.state !== 'disconnected' && <Button size="wrap" variant="ghost" onClick={() => setRemove(d)}>Remove</Button>}
             </Row>
@@ -99,7 +127,9 @@ function DomainsInner({ nameHost, rows, livePayments, available, canManage }: { 
         })}
       </ul>
       {open && <Connect resume={open.resume} onClose={() => { setOpen(null); router.refresh() }} />}
-      <Dialog open={!!confirm} onClose={() => setConfirm(null)} title={`Make ${confirm?.host ?? ''} your main address?`} description="Bags in progress start empty."
+      {madeMain && <MainPopup host={madeMain.host} onClose={closePopup} onUndo={madeMain.undo ? undoPopup : null} />}
+      <Dialog open={!!confirm} onClose={() => setConfirm(null)} title={confirm?.kind === 'name' && main ? `Make ${confirm.host} your frrata address?` : `Make ${confirm?.host ?? ''} your main address?`}
+        description={`${confirm?.kind === 'name' && left !== null ? (left === 1 ? 'Uses your last change. ' : `Uses 1 of ${left} changes left. `) : ''}Bags in progress start empty.`}
         actions={<><Button variant="secondary" data-autofocus onClick={() => setConfirm(null)}>Keep {main?.host ?? nameHost}</Button><Button onClick={() => confirm && makeMain(confirm)}>Make it main</Button></>} />
       <Dialog open={!!remove} onClose={() => setRemove(null)} title={`Remove ${remove?.host ?? ''}?`}
         actions={<><Button variant="secondary" data-autofocus onClick={() => setRemove(null)}>Keep it</Button><Button variant="destructive" onClick={() => { const d = remove!; setRemove(null); act(d.id, () => removeDomainAction(d.id), 'Removed') }}>Remove {remove?.host ?? ''}</Button></>} />
@@ -264,5 +294,37 @@ function Connect({ resume, onClose }: { resume?: string; onClose: () => void }) 
         )}
       </div>
     </Dialog>
+  )
+}
+
+/**
+ * After Make main (rule 75, like Publish): the new main address with Copy and View your shop, and Undo for 8 s (its bar
+ * empties; under reduced motion the words say so). It rises in place; Escape or Close dismisses it.
+ */
+function MainPopup({ host, onClose, onUndo }: { host: string; onClose: () => void; onUndo: (() => void) | null }) {
+  const toast = useToast()
+  const [undo, setUndo] = useState(onUndo !== null)
+  // The 8 s window starts once, when the popup opens (its bar's animation starts then too).
+  useEffect(() => { const t = setTimeout(() => setUndo(false), 8000); return () => clearTimeout(t) }, [])
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [onClose])
+  return (
+    <div role="status" className="fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-50 mx-auto grid max-w-md animate-rise gap-2 rounded-md border border-border bg-card p-3 shadow-lg md:bottom-6">
+      <p className="text-sm font-semibold"><span className="font-mono">{host}</span> is your main address</p>
+      <div className="flex flex-wrap gap-1.5">
+        <Button size="wrap" variant="secondary" onClick={() => { void navigator.clipboard?.writeText(`https://${host}`).then(() => toast({ text: 'Copied' }), () => {}) }}>Copy</Button>
+        <a className={button({ variant: 'secondary', size: 'wrap' })} href={`https://${host}`} target="_blank" rel="noopener noreferrer">View your shop</a>
+        {undo && onUndo && (
+          <Button size="wrap" variant="secondary" className="relative overflow-hidden" onClick={onUndo}>
+            Undo<span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 animate-undo-window bg-thread motion-reduce:hidden" />
+            <span className="sr-only">for 8 seconds</span>
+          </Button>
+        )}
+        <Button size="wrap" variant="ghost" onClick={onClose}>Close</Button>
+      </div>
+    </div>
   )
 }

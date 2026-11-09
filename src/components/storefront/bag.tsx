@@ -11,6 +11,8 @@ export function useQuote(pincode?: string) {
   const items = useBag()
   const code = useOfferCode()
   const [q, setQ] = useState<PublicQuote | null>(null)
+  // Online payment on this address (keys live and, on live keys, the address approved in Razorpay: D1·8).
+  const [online, setOnline] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   // A half-typed pincode is not a new price: only a whole one re-prices the bag (and re-sends the code).
@@ -21,15 +23,15 @@ export function useQuote(pincode?: string) {
     if (!items.length) { setQ(null); return null }
     const n = ++seq.current
     setLoading(true)
-    const r = await api<{ quote: PublicQuote }>('/api/shop/quote', { bag: items, ...(pincode && /^[1-9][0-9]{5}$/.test(pincode) ? { pincode } : {}), ...(code ? { code } : {}) })
+    const r = await api<{ quote: PublicQuote; online: boolean }>('/api/shop/quote', { bag: items, ...(pincode && /^[1-9][0-9]{5}$/.test(pincode) ? { pincode } : {}), ...(code ? { code } : {}) })
     if (n !== seq.current) return null
     setLoading(false)
     if (!r.ok) { setError(r.data.error ?? 'Could not load your bag.'); return null }
-    setError(null); setQ(r.data.quote)
+    setError(null); setQ(r.data.quote); setOnline(r.data.online !== false)
     return r.data.quote
   }, [key]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { void refresh() }, [refresh])
-  return { items, q, error, loading, refresh }
+  return { items, q, online, error, loading, refresh }
 }
 
 const kindLine = (l: PublicQuote['lines'][number]) => l.kind === 'preorder' && l.shipsBy ? `Pre-order · ships by ${new Date(`${l.shipsBy}T00:00:00+05:30`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })}`

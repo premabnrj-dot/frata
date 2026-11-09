@@ -20,10 +20,26 @@ export default {
       await p.goto(CONSOLE + '/console/settings/address')
       await p.fill('#slug', to)
       await p.getByText('Available', { exact: true }).waitFor()
-      await p.getByRole('button', { name: `Change to ${to}` }).click()
-      const dlg = p.getByRole('dialog', { name: `Change to ${to}.${SHOP_DOMAIN}?` }); await dlg.waitFor()
-      await dlg.getByRole('button', { name: `Change to ${to}` }).click()
-      await p.getByRole('status').filter({ hasText: `Moved to ${to}.${SHOP_DOMAIN}` }).waitFor()
+      // Live payments (the seed's keys are live): the new name is added beside the current one, ticked as approved by
+      // Razorpay, then made main (D1·9).
+      await p.getByRole('button', { name: `Add ${to}` }).click()
+      const dlg = p.getByRole('dialog', { name: `Add ${to}.${SHOP_DOMAIN}?` }); await dlg.waitFor()
+      await dlg.getByRole('button', { name: `Add ${to}` }).click()
+      await p.getByRole('status').filter({ hasText: `Added ${to}.${SHOP_DOMAIN}` }).waitFor()
+      const row = p.getByRole('listitem').filter({ hasText: `${to}.${SHOP_DOMAIN}` })
+      await row.getByText('Razorpay not approved').waitFor()
+      assert.equal(await p.locator('#slug').isDisabled(), true, 'one added name at a time')
+      assert.equal(await row.getByRole('button', { name: 'Make main' }).count(), 0, 'Make main waits for Razorpay')
+      await row.getByRole('button', { name: 'Razorpay approved it' }).click()
+      await row.getByRole('button', { name: 'Make main' }).click()
+      const c = p.getByRole('dialog', { name: `Make ${to}.${SHOP_DOMAIN} your main address?` })
+      await c.getByText(/Uses (1 of 2 changes left|your last change)\. Bags in progress start empty\./).waitFor()
+      await c.getByRole('button', { name: 'Make it main' }).click()
+      const popup = p.getByRole('status').filter({ hasText: `${to}.${SHOP_DOMAIN} is your main address` })
+      await popup.getByRole('link', { name: 'View your shop' }).waitFor()
+      assert.equal(await popup.getByRole('button', { name: 'Undo' }).count(), 0, 'a rename has no Undo (going back is another change)')
+      await popup.getByRole('button', { name: 'Close' }).click()
+      await p.waitForFunction((v) => document.querySelector('#slug')?.value === v, to)
     }
     try {
       const p = await owner.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message))
@@ -100,7 +116,8 @@ export default {
       // Whatever happened above, the seed is whole again: its one name, no history, its first opening, no renames used.
       // (The last step restored it through the app, which refreshed every host's lookup; this is the backstop.)
       await db`delete from shop_names where tenant_id = ${T} and name <> 'kesar-studio'`
-      await db`insert into shop_names (name, tenant_id) values ('kesar-studio', ${T}) on conflict (name) do update set retired_at = null, retired_by_frrata = false`
+      await db`insert into shop_names (name, tenant_id) values ('kesar-studio', ${T}) on conflict (name) do update set retired_at = null, retired_by_frrata = false, added_at = null`
+      await db`update shop_names set razorpay_ok_at = coalesce(razorpay_ok_at, now()), razorpay_ok_by = coalesce(razorpay_ok_by, 'cccccccc-0000-0000-0000-000000000001') where name = 'kesar-studio'`
       await db`update tenants set slug = 'kesar-studio', renames_used = 0, first_opened_at = ${opened} where id = ${T}`
     }
   },

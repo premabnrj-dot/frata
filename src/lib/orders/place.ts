@@ -46,6 +46,8 @@ export const HOLD_MINUTES = 20 // owner call 3
 
 export type PlaceInput = {
   idempotencyKey: string; bag: BagLine[]; address: CleanAddress; method: 'cod' | 'prepaid'; expectedTotal: number
+  /** The address the shopper is on: online payment needs it approved in Razorpay (D1·8). */
+  host: string
   /** The code the shopper typed, if any (one per order), and whether it came from a shop link (?code=). */
   code?: string | null; via?: 'typed' | 'link'
   /** What the shopper was shown and did, for the hypotheses (frata-unit-economics): first card tapped, attribution. */
@@ -78,7 +80,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
       if (prior.requestHash !== reqHash) return { kind: 'refused', status: 409, error: 'This checkout was already used for a different order. Reload the page.' }
       return { kind: 'new', id: prior.id, number: prior.number, method: prior.method as 'cod' | 'prepaid', total: Number(prior.total) }
     }
-    const shop = await checkoutShop(tx, tenantId)
+    const shop = await checkoutShop(tx, tenantId, input.host)
     if (!shop || !shop.open) return { kind: 'refused', status: 404, error: 'This shop is not taking orders right now.' }
     // Abandoned online orders lose the shopper's details after 90 days: the daily cron (src/lib/orders/erase.ts).
     if (input.method === 'prepaid' && !shop.online) return { kind: 'refused', status: 422, error: 'Online payment is not available at this shop right now. Pay on delivery instead.' }
@@ -233,7 +235,7 @@ export async function startPayment(tenantId: string, orderId: string): Promise<{
     const [r] = await tx.select({ number: orders.number, rzp: orders.razorpayOrderId, checkout: orders.checkout, name: orders.customerName, phone: orders.phone, paidAt: orders.paidAt, cancelledAt: orders.cancelledAt, switched: orders.switchedToCodAt })
       .from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId)))
     const keys = await keysFor(tx, tenantId)
-    const shop = await checkoutShop(tx, tenantId)
+    const shop = await checkoutShop(tx, tenantId, null)
     return r ? { ...r, keys, shopName: shop?.name ?? '' } : null
   })
   if (!o || o.paidAt || o.cancelledAt || o.switched) return { ok: false, error: 'This order is not waiting for an online payment.' }

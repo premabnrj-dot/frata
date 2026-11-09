@@ -17,6 +17,7 @@ import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
 import { addressFacts, domainClaimFor, shopDomainRows } from '@/lib/queries/addresses'
 import { refreshHosts, refreshShop } from '@/lib/storefront/refresh'
 import { checkDomain } from '@/domains/addresses/domains'
+import { slugProblem } from '@/domains/signup/slug'
 
 // =============================================================================
 // FILE: settings/address/domain-actions.ts — OWN DOMAINS FROM SETTINGS › SHOP ADDRESS (D2·10; mockup v2, rules 72–76).
@@ -48,10 +49,14 @@ async function hostsOf(tenantId: string, slug: string | null): Promise<string[]>
 }
 /** The shop's own name, read on the server (never taken from the browser: security review D2·10 L1). */
 const slugOf = async (tenantId: string) => (await addressFacts(tenantId).catch(() => null))?.slug ?? null
+/** What every write here re-renders: the console layout, as the rename does. A page-only revalidatePath of the page the
+ *  action ran from left the caller's transition pending now and then, its update never applied (frata-gotchas). */
+const CONSOLE_LAYOUT = '/console'
+
 async function refreshAll(who: Who) {
   refreshShop(who.tenantId, 'shop')
   refreshHosts(...(await hostsOf(who.tenantId, await slugOf(who.tenantId))))
-  revalidatePath('/console/settings/address')
+  revalidatePath(CONSOLE_LAYOUT, 'layout')
 }
 
 /** Every limit must pass, each failing closed. */
@@ -74,7 +79,7 @@ export async function connectDomainAction(raw: string): Promise<Connected | { ok
   try {
     const r = await claimDomain(who.tenantId, who.userId, input.data)
     if (!r.ok) return { ok: false, error: ERR_WORDS[r.error] }
-    revalidatePath('/console/settings/address')
+    revalidatePath(CONSOLE_LAYOUT, 'layout')
     return { ok: true, id: r.claim.id, host: r.claim.facts.host, www: r.claim.facts.www, records: r.claim.records, dns: r.claim.dnsHost }
   } catch (err) {
     console.error('[connectDomainAction]', errName(err))
@@ -107,14 +112,16 @@ export async function checkDomainAction(id: string): Promise<{ ok: true; check: 
   if (!who || !Id.safeParse(id).success) return { ok: false, error: ERR_WORDS.support }
   if (!(await checkLimits(who))) return { ok: false, error: ERR_WORDS.busy }
   const check = await checkDomainRow(who.tenantId, id, { forDialog: true })
-  if (check.state === 'connected') revalidatePath('/console/settings/address')
+  if (check.state === 'connected') revalidatePath(CONSOLE_LAYOUT, 'layout')
   return { ok: true, check }
 }
 
-const WRITE_CODES = ['not_owner', 'no_domain', 'not_ready', 'razorpay'] as const
+const WRITE_CODES = ['not_owner', 'no_domain', 'not_ready', 'razorpay', 'frozen', 'no_renames_left', 'one_added', 'bad_slug', 'slug_taken', 'no_name'] as const
 const WRITE_WORDS: Record<string, string> = {
   not_owner: ERR_WORDS.not_owner, no_domain: 'This domain is no longer connected', not_ready: 'Not connected yet',
   razorpay: 'Razorpay must approve this domain first', unknown: 'We could not change it. Nothing was changed.',
+  frozen: 'Address changes are frozen', no_renames_left: 'No changes left', one_added: 'One new address at a time',
+  bad_slug: 'Letters, digits and hyphens only', slug_taken: 'Taken', no_name: 'This address is no longer the shop’s',
 }
 type Done = { ok: true } | { ok: false; error: string }
 
@@ -154,7 +161,7 @@ export async function undoMainAction(): Promise<Done> {
 export async function razorpayOkAction(id: string, ok: boolean): Promise<Done> {
   if (!Id.safeParse(id).success) return { ok: false, error: WRITE_WORDS.unknown! }
   const r = await write('domain.razorpay_ok', id, (tx, w) => tx.execute(sql`select app_domain_razorpay_ok(${w.tenantId}::uuid, ${w.userId}::uuid, ${id}::uuid, ${ok === true})`))
-  if (r.ok) revalidatePath('/console/settings/address')
+  if (r.ok) revalidatePath(CONSOLE_LAYOUT, 'layout')
   return r.ok ? { ok: true } : r
 }
 
@@ -163,6 +170,42 @@ export async function removeDomainAction(id: string): Promise<Done> {
   if (!who || !Id.safeParse(id).success) return { ok: false, error: ERR_WORDS.support }
   const hosts = await hostsOf(who.tenantId, await slugOf(who.tenantId))
   const r = await write('domain.removed', id, (tx, w) => tx.execute(sql`select app_remove_domain(${w.tenantId}::uuid, ${w.userId}::uuid, ${id}::uuid)`))
-  if (r.ok) { refreshShop(who.tenantId, 'shop'); refreshHosts(...hosts); revalidatePath('/console/settings/address') }
+  if (r.ok) { refreshShop(who.tenantId, 'shop'); refreshHosts(...hosts); revalidatePath(CONSOLE_LAYOUT, 'layout') }
+  return r.ok ? { ok: true } : r
+}
+
+// ── D1·8 + D1·9: the shop's frrata names on live payments (add beside, Razorpay's word, let go). ──
+const Slug = z.string().trim().toLowerCase().max(30)
+
+/** D1·9: add a new frrata name beside the current one (it serves at once, for Razorpay to review). */
+export async function addShopNameAction(slug: string): Promise<Done> {
+  const p = Slug.safeParse(slug)
+  if (!p.success) return { ok: false, error: WRITE_WORDS.bad_slug! }
+  // The same words a rename refuses (www, admin, pay…): the SQL holds the shape, not the reserved list.
+  const problem = slugProblem(p.data)
+  if (problem) return { ok: false, error: problem === 'reserved' ? 'That address is reserved' : WRITE_WORDS.bad_slug! }
+  const r = await write('shop.name_added', p.data, (tx, w) => tx.execute(sql`select app_add_shop_name(${w.tenantId}::uuid, ${w.userId}::uuid, ${p.data})`))
+  if (r.ok) { refreshHosts(shopHost(p.data)); revalidatePath(CONSOLE_LAYOUT, 'layout') }
+  return r.ok ? { ok: true } : r
+}
+
+/** D1·9: let the added name go (never main, so nothing redirects from it). */
+export async function dropAddedNameAction(): Promise<Done> {
+  let dropped: string | null = null
+  const r = await write('shop.name_dropped', undefined, async (tx, w) => {
+    const [x] = await tx.execute<{ n: string | null }>(sql`select app_drop_added_name(${w.tenantId}::uuid, ${w.userId}::uuid) as n`)
+    dropped = x?.n ?? null
+  })
+  if (r.ok && dropped) refreshHosts(shopHost(dropped))
+  if (r.ok) revalidatePath(CONSOLE_LAYOUT, 'layout')
+  return r.ok ? { ok: true } : r
+}
+
+/** D1·8: "Razorpay approved it" on one of the shop's live frrata names. */
+export async function nameRazorpayOkAction(name: string, ok: boolean): Promise<Done> {
+  const p = Slug.safeParse(name)
+  if (!p.success) return { ok: false, error: WRITE_WORDS.unknown! }
+  const r = await write('shop.name_razorpay_ok', p.data, (tx, w) => tx.execute(sql`select app_name_razorpay_ok(${w.tenantId}::uuid, ${w.userId}::uuid, ${p.data}, ${ok === true})`))
+  if (r.ok) revalidatePath(CONSOLE_LAYOUT, 'layout')
   return r.ok ? { ok: true } : r
 }

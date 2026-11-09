@@ -208,15 +208,36 @@ test with up to 100 accounts) and **after "Connect Google" is built** (the scope
     them) and the video link → Submit. Reply to Google's emails quickly; sensitive scopes take up to ~10 business days.
     Do not publish before this: an unverified production app allows only 100 users for its whole life.
 
-### Own domains (shop addresses D·2) — when you turn them on
+### Own domains (shop addresses D·2) — turning them on (owner, ~5 minutes)
 
-Vercel → frata → Settings → Environment Variables, each **Production only** (never Preview: a preview build must not
-add or remove production domains), type **Sensitive** for the token:
-- `VERCEL_API_TOKEN` — a token from Vercel → Account Settings → Tokens, scoped to the team.
-- `VERCEL_PROJECT_ID` — Project → Settings → General → Project ID.
-- `VERCEL_TEAM_ID` — Team → Settings → General → Team ID.
-- `DOMAIN_CAPACITY` — optional: 50 on Hobby (the default), raise it on Pro.
-Until they are set, Settings › Shop address shows no Connect button and the domain check does nothing.
+State (2026-11-09): built and live in production, switched off until these three variables exist. Nothing calls
+Vercel's API until then.
+
+**1. Create the token (Vercel → your avatar → Account Settings → Tokens, https://vercel.com/account/tokens):**
+- Create Token → Name `frrata-domains` → Scope **premabnrj-dot's projects** (the team, not your personal account) →
+  Expiration: 1 year (put the renewal date in your calendar; an expired token turns connecting off, nothing breaks).
+- Copy the token once (Vercel shows it only now). Never paste it in chat, a commit or a document.
+
+**2. Add three variables (Vercel → `frata` → Settings → Environment Variables → Add New):**
+
+| Key | Value | Environments | Sensitive |
+|---|---|---|---|
+| `VERCEL_API_TOKEN` | the token from step 1 | **Production only** (untick Preview and Development) | **Yes** |
+| `VERCEL_PROJECT_ID` | `prj_7FMo28q5WaWJTR8knTAo6lpe443v` | Production only | no (not a secret) |
+| `VERCEL_TEAM_ID` | `team_bqC0of2bJVsfNi2b8fKOPaEx` | Production only | no (not a secret) |
+
+The two IDs are this project's and team's (read from Vercel 2026-11-09; also under Project → Settings → General →
+Project ID, and Team → Settings → General → Team ID). Optional: `DOMAIN_CAPACITY` — leave unset on Hobby (50); set
+it to `100000` after moving to Pro. Never Preview: a preview build must not add or remove production domains.
+
+**3. Redeploy:** Deployments → the latest Production deployment → ⋯ → Redeploy (or any push to `main`).
+
+**4. Check:** Settings › Shop address in the console shows **Connect a domain**. If it doesn't, the token or project id
+is missing or not in Production.
+
+On Vercel Pro later: the background check's schedule in `vercel.json` moves to every 10 minutes (one line), and the
+frrata name starts redirecting to a main domain (D2·9 follow-up).
+
 ### Video for shops: Frrata's Mux (V1, 2026-11-09)
 
 State (2026-11-09): steps 1–3 done by the owner (four variables, Production only, Sensitive); step 4's redeploy is
@@ -248,31 +269,31 @@ plan will use; the plan may rename one, and this list follows it.
 3. **A new SIM** that has never been on WhatsApp, for EkCode's number. Not Frrata's sign-up number: EkCode needs its
    own, named "EkCode".
 4. **Counsel** (an Indian privacy/tech lawyer), with the spec and mockup: (a) EkCode's notice, privacy policy and terms;
-   (b) the merchant terms' data-processing clause; (c) "Save this address to EkCode" starting ticked; (d) whether the
-   extra order-update line on the merchant's bill is resale under Meta's platform terms §4.1; (e) how to answer a
-   request for the notice in a scheduled language (DPDP s.5(3)).
-5. **A named grievance contact** for EkCode (a person and `privacy@ekcode.in`): the data law needs one.
+   (b) the merchant terms' data-processing clause; (c) "Save this address to EkCode" starting ticked; (d) English only until the owner plans other languages.
+5. **Grievance contact**: Priti Bag, `privacy@ekcode.in` (owner, 2026-11-09). Create the mailbox on ekcode.in.
 6. Optional: a trademark search and filing for "EkCode" (classes 9, 35, 42).
 
 **B. When the agent says the ekcode.in pages are deployed (first P1 task)**
 1. **DNS.** Vercel → frata → Settings → Domains → add `ekcode.in` and `www.ekcode.in`; at the registrar add the records
    Vercel shows (A `76.76.21.21` for the apex and a CNAME for www, or whatever Vercel lists). Wait for "Valid".
-2. **EkCode's WhatsApp number** — in Frrata's existing business portfolio (business.facebook.com), not a new one:
+2. **EkCode's WhatsApp number** — in **its own business portfolio** "EkCode" (business.facebook.com → Create a business
+   portfolio; India, INR; same company), not Frrata's: a restriction on Frrata's merchant-side (Tech Provider) portfolio
+   cannot stop sign-in, and the daily limits are not shared (ADR-0010). Verify this portfolio too (A2's documents):
    - WhatsApp Manager → Add WhatsApp account "EkCode" → add the SIM's number → display name **EkCode** → verify by SMS
      or call. Meta checks the name against ekcode.in, which must be live (B1). Copy the **Phone number ID**.
    - Payment settings: the portfolio's card covers it (INR + GST).
    - Message templates → Create → **Authentication**, name `ekcode_signin_code`, English, **Copy code**, security
      line on, expires in **10 minutes**. Note the language code (`en` or `en_US`).
    - Two-step verification: set a 6-digit PIN on the number (needed for the blue tick later).
-3. **The app and its webhook.** In the Meta app used for Frrata's own number (developers.facebook.com), add EkCode's
-   WhatsApp account. WhatsApp → Configuration → callback URL `https://frata.vercel.app/api/webhooks/ekcode`, verify
+3. **The app and its webhook.** developers.facebook.com → Create app (Business) linked to the EkCode portfolio → add
+   WhatsApp. WhatsApp → Configuration → callback URL `https://frata.vercel.app/api/webhooks/ekcode`, verify
    token = `EKCODE_WA_VERIFY_TOKEN` below; subscribe `messages`, `message_template_status_update`,
    `template_category_update`, `phone_number_quality_update`, `phone_number_name_update`. App → Settings → Basic →
    Privacy policy URL `https://ekcode.in/privacy`; switch the app to **Live**.
-4. **Token.** Business settings → System users → the existing admin system user → Assign assets: EkCode's WhatsApp
-   account (full control) → Generate token, never expires, `whatsapp_business_messaging` +
+4. **Token.** EkCode portfolio → Business settings → System users → Add (Admin) → Assign assets: the app and EkCode's
+   WhatsApp account (full control) → Generate token, never expires, `whatsapp_business_messaging` +
    `whatsapp_business_management`.
-5. **Email for the fallback code (Amazon SES, Mumbai).** AWS console → SES (ap-south-1) → Identities → Create identity →
+5. **Email (P2, not needed for P1 — no email codes until a shopper verifies an email on their EkCode page).** AWS console → SES (ap-south-1) → Identities → Create identity →
    Domain `ekcode.in` → add the 3 DKIM CNAMEs and the MAIL FROM records it shows at the registrar → request
    **production access** (use case: one-time sign-in codes, ~1–2k a day). IAM → a user allowed only `ses:SendEmail`
    from that identity → access key. DMARC TXT at `_dmarc.ekcode.in`: `v=DMARC1; p=none; rua=mailto:privacy@ekcode.in`.
@@ -280,11 +301,12 @@ plan will use; the plan may rename one, and this list follows it.
    - `EKCODE_HOST` = `ekcode.in`
    - `EKCODE_WA_PHONE_NUMBER_ID` (B2), `EKCODE_WA_TOKEN` (B4, Sensitive), `EKCODE_WA_AUTH_TEMPLATE` =
      `ekcode_signin_code`, `EKCODE_WA_TEMPLATE_LANG` (B2), `EKCODE_WA_VERIFY_TOKEN` (Sensitive, `openssl rand -hex 16`),
-     `EKCODE_META_APP_SECRET` (Sensitive, the app's secret; skip if it is the same app as `META_APP_SECRET`)
-   - `EKCODE_SES_ACCESS_KEY_ID`, `EKCODE_SES_SECRET_ACCESS_KEY` (Sensitive), `EKCODE_EMAIL_FROM` = `codes@ekcode.in`
-   - Three keys, each `openssl rand -base64 32`, Sensitive, **never changed once shoppers exist** (changing one breaks
-     every account or every shop's ids): `EKCODE_PHONE_PEPPER` (phone lookups), `EKCODE_PAIRWISE_KEY` (each shop's
-     shopper id), `EKCODE_SEAL_KEY` (sealed phones and addresses). Keep a copy in a password manager.
+     `EKCODE_META_APP_SECRET` (Sensitive, the EkCode app's secret)
+   - Two key rings, Sensitive, each entry `openssl rand -base64 32`: `EKCODE_PHONE_PEPPERS` = `p1:<key>` (phone
+     lookups) and `EKCODE_SEAL_KEYS` = `k1:<key>` (sealed phones, names and addresses). Keep copies in a password
+     manager. **To rotate**: put the new entry first (`k2:<new>,k1:<old>`) and redeploy — old data still opens and is
+     re-sealed as it is read; remove an old entry only when Admin says nothing uses it (peppers: 12 months). Never just
+     replace a key: that locks every shopper out.
    Push to `main` (or Redeploy). Test: a demo shop → Continue with EkCode → your own mobile → the code arrives.
 
 **C. Before EkCode reaches a real shopper**
@@ -297,6 +319,5 @@ plan will use; the plan may rename one, and this list follows it.
 
 **D. Later**
 - **Vercel Pro and the 5-minute outbox schedule** before order updates from EkCode's number (P3).
-- Counsel's answer on A4 (d) before "Keep sending" (extra order updates on the merchant's bill) is switched on.
 - **Blue tick**: 30 days after the number goes live → WhatsApp Manager → the number → Request Official Business Account.
-- Confirm the allowances (600 / 6,000 / 20,000) and ₹0.20 per extra update after the pricing review.
+- Confirm the allowances (600 / 6,000 / 20,000) after the pricing review.

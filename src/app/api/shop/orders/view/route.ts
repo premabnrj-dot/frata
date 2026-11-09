@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   const r = await shopRequest(request, Body, LIMITS.payIp)
   if (!r.ok) return r.response
   await processEvents(r.tenantId).catch(() => 0)
-  const data = await withTenant(r.tenantId, async (tx) => ({ o: await orderPage(tx, r.tenantId, tokenHash(r.body.token)), shop: await checkoutShop(tx, r.tenantId) }))
+  const data = await withTenant(r.tenantId, async (tx) => ({ o: await orderPage(tx, r.tenantId, tokenHash(r.body.token)), shop: await checkoutShop(tx, r.tenantId, null) }))
   if (!data.o || !data.shop) return reply({ error: 'Not found' }, 404)
   const o = data.o
   return reply({

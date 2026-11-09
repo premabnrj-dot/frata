@@ -14,7 +14,7 @@ const MAX_BODY = 32 * 1024
 export const reply = (data: unknown, status = 200) => NextResponse.json(data, { status, headers: noStore })
 
 export async function shopRequest<T extends z.ZodTypeAny>(request: Request, schema: T, limit: Limit, failClosed = false):
-  Promise<{ ok: true; tenantId: string; body: z.output<T>; ip: string } | { ok: false; response: NextResponse }> {
+  Promise<{ ok: true; tenantId: string; host: string; body: z.output<T>; ip: string } | { ok: false; response: NextResponse }> {
   const shop = await requireShop(request)
   if (!shop.ok) return { ok: false, response: reply({ error: shop.error }, shop.status) }
   const ip = await clientIp()
@@ -30,7 +30,8 @@ export async function shopRequest<T extends z.ZodTypeAny>(request: Request, sche
   } catch { return { ok: false, response: reply({ error: 'Bad request' }, 400) } }
   const parsed = schema.safeParse(json)
   if (!parsed.success) return { ok: false, response: reply({ error: 'Bad request', fields: Object.fromEntries(parsed.error.issues.map((i) => [String(i.path.join('.')), i.message])) }, 400) }
-  return { ok: true, tenantId: shop.tenantId, body: parsed.data, ip }
+  // `host`: the shop's own address the request came through (requireShop checked it), for D1·8's per-host Razorpay gate.
+  return { ok: true, tenantId: shop.tenantId, host: shop.host, body: parsed.data, ip }
 }
 
 export const Bag = z.array(z.object({ variantId: z.string().uuid(), qty: z.number().int().min(1).max(10) })).min(1).max(20)

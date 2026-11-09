@@ -124,6 +124,8 @@ policies. Environment variables live in Vercel; `.env.example` lists names only.
   default grants, so the REST endpoint must stay off). Never turn it back on.
 - **A cross-brand shopper network outside EkCode.** The one network is EkCode (ADR-0009): a Frrata account the
   shopper signs into, its own tables behind definers, pairwise ids per shop, consent logged. No other cross-shop data.
+- **A shop's marketing from EkCode's number.** EkCode sends sign-in codes and transactional updates only; a shop's
+  marketing goes from its own number through the Marketing Messages API (ADR-0010).
 - **SMS** (OTP or otherwise). Not integrated or planned until the owner asks (owner, 2026-11-09).
 - **Frrata collecting a shopper's payment for a merchant.** Money goes to the shop's own Razorpay account and COD
   to the shop; that keeps Frrata out of GST TCS (s.52) as an e-commerce operator (owner, 2026-11-09). A change

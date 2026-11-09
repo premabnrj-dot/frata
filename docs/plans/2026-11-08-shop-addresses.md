@@ -67,6 +67,19 @@ serves but is not current (the lookup serves it as current, never redirects it; 
 `retired_at is null and added_at is null`); the D1·8 tick lives per name (`shop_names.razorpay_ok_at`, `_by`), so a
 domain (D2) and a name share one gate. Same screen as own domains (rules 72–76): it is another row in Addresses.
 
+**Built 2026-11-09 (0085, 0086), with the review's changes:**
+- "Live payments" is live keys whose webhook has worked (`takesLivePayments`, the definers' own test), everywhere.
+- The server holds the rule, not only the UI: on live payments an opened shop's rename (`needs_razorpay`) and the way
+  back from a main domain (`razorpay`) land only on a name Razorpay approved. Checkout offers Pay online only where the
+  quote allows it on that address; the host is required wherever checkout decides.
+- Make main on a name confirms ("Uses 1 of 2 changes left") and shows the popup **without Undo**: going back is another
+  change. With a domain main, the name becomes the shop's frrata address (a toast says so).
+- A shop may add one of its own old names back; letting an added name go (Remove, 14 days, Frrata's block) is one
+  routine, `app_let_go_names`: an old name is old again (it redirects), a new one is free. Past 14 days a new added
+  name serves nothing at once; the next write that reads it, or the daily sweep in the domains cron, lets it go.
+- Frrata takes an added name down by blocking the name (Admin › Names); Admin shows it as **Added**.
+- The card is **Custom domain** (owner, 2026-11-09).
+
 ## D·2 — Own domains (owner 2026-11-09: build now on Hobby with a once-a-day check; Pro before the first live merchant)
 No merchant is live yet, so Hobby's non-commercial terms don't bite (the first live payment on any shop needs Pro);
 legacy `crons` run at most once a day on Hobby (Vercel Schedules, beta since 2026-11-05, allow every 15 min within

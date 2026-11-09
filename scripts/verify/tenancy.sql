@@ -598,6 +598,108 @@ do $$ declare a uuid; b uuid; begin
 end $$;
 rollback;
 
+begin;
+-- Shop addresses D1·8 + D1·9 (0085/0086): a shop on live payments adds a name beside its current one (taken for
+-- everyone, serving, never redirecting), makes it main through the rename, or lets it go; one added name at a time;
+-- "Razorpay approved it" is per name, owners and admins only.
+update shop_settings set published_at = now() where tenant_id = '22222222-2222-2222-2222-222222222222';
+set local role frata_app;
+do $$ declare r record; begin
+  begin perform app_add_shop_name('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000001', 'proof-b-next'); raise exception 'FAIL: staff added a name';
+  exception when raise_exception then if sqlerrm <> 'not_owner' then raise; end if; end;
+  perform app_add_shop_name('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-next');
+  select * into r from app_shop_for_name('proof-b-next');
+  if r.id <> '22222222-2222-2222-2222-222222222222' or r.retired or r.current_name = 'proof-b-next' then raise exception 'FAIL: an added name must serve beside the current one'; end if;
+  if app_name_check('proof-b-next') <> 'taken' then raise exception 'FAIL: an added name looked free'; end if;
+  begin perform app_add_shop_name('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-other'); raise exception 'FAIL: two added names';
+  exception when raise_exception then if sqlerrm <> 'one_added' then raise; end if; end;
+  begin perform app_change_shop_address('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', 'proof-b-next'); raise exception 'FAIL: A took B''s added name';
+  exception when raise_exception then if sqlerrm <> 'slug_taken' then raise; end if; end;
+  begin perform app_name_razorpay_ok('22222222-2222-2222-2222-222222222222', '99999999-9999-9999-9999-999999999999', 'proof-b-next', true); raise exception 'FAIL: A''s owner ticked B''s name';
+  exception when raise_exception then if sqlerrm <> 'not_owner' then raise; end if; end;
+  perform app_name_razorpay_ok('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-next', true);
+  perform app_change_shop_address('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-next');
+  select * into r from app_shop_for_name('proof-b');
+  if not r.retired or r.current_name <> 'proof-b-next' then raise exception 'FAIL: making the added name main must retire the old one'; end if;
+  perform app_add_shop_name('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-third');
+  if app_drop_added_name('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002') <> 'proof-b-third' then raise exception 'FAIL: drop'; end if;
+  if app_name_check('proof-b-third') <> 'ok' then raise exception 'FAIL: a dropped added name must be free'; end if;
+end $$;
+reset role;
+do $$ begin
+  if (select razorpay_ok_at from shop_names where name = 'proof-b-next') is null or (select added_at from shop_names where name = 'proof-b-next') is not null then raise exception 'FAIL: the tick stays with the name; added_at clears when it becomes main'; end if;
+  if has_function_privilege('anon', 'app_add_shop_name(uuid,uuid,text)', 'execute') then raise exception 'FAIL: anon adds names'; end if;
+  if has_function_privilege('anon', 'app_drop_added_name(uuid,uuid)', 'execute') or has_function_privilege('anon', 'app_name_razorpay_ok(uuid,uuid,text,boolean)', 'execute')
+     or has_function_privilege('anon', 'app_let_go_added_names()', 'execute') then raise exception 'FAIL: anon reaches a name definer'; end if;
+  if has_function_privilege('frata_app', 'app_let_go_names(uuid,text,boolean)', 'execute') or has_function_privilege('frata_admin', 'app_let_go_names(uuid,text,boolean)', 'execute') then
+    raise exception 'FAIL: the internal let-go is callable'; end if;
+end $$;
+-- The review's cases (2026-11-09): another shop's owner, a staff member, an old name added back, the 14 days, the
+-- live-payments rule on the server, the way back from a main domain, and Frrata's takedown.
+update tenants set first_opened_at = coalesce(first_opened_at, now()) where id = '22222222-2222-2222-2222-222222222222';
+insert into platform_staff (user_id, email, role) values ('aaaaaaaa-0000-0000-0000-0000000000ff', 'staff@proof.test', 'admin') on conflict do nothing;
+set local role frata_app;
+do $$ declare r record; n int; begin
+  perform app_add_shop_name('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-four');
+  begin perform app_drop_added_name('22222222-2222-2222-2222-222222222222', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: A''s owner dropped B''s name';
+  exception when raise_exception then if sqlerrm <> 'not_owner' then raise; end if; end;
+  begin perform app_name_razorpay_ok('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', 'proof-b-four', true); raise exception 'FAIL: A ticked B''s name in its own shop';
+  exception when raise_exception then if sqlerrm <> 'no_name' then raise; end if; end;
+  begin perform app_name_razorpay_ok('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000001', 'proof-b-four', true); raise exception 'FAIL: staff ticked a name';
+  exception when raise_exception then if sqlerrm <> 'not_owner' then raise; end if; end;
+  perform app_drop_added_name('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002');
+  -- An old name of the shop added back serves directly; let go again, it redirects again (never free for others).
+  perform app_add_shop_name('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b');
+  select * into r from app_shop_for_name('proof-b');
+  if r.retired then raise exception 'FAIL: an old name added back must serve'; end if;
+  if app_drop_added_name('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002') <> 'proof-b' then raise exception 'FAIL: drop the old name'; end if;
+  select * into r from app_shop_for_name('proof-b');
+  if r.id is null or not r.retired then raise exception 'FAIL: an old name let go must redirect again'; end if;
+  begin perform app_add_shop_name('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', 'proof-b'); raise exception 'FAIL: A added B''s old name';
+  exception when raise_exception then if sqlerrm <> 'slug_taken' then raise; end if; end;
+  perform app_add_shop_name('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-exp');
+end $$;
+reset role;
+update shop_names set added_at = now() - interval '15 days', created_at = now() - interval '15 days' where name = 'proof-b-exp';
+insert into payment_keys (tenant_id, key_id, key_secret_enc, webhook_secret_enc, webhook_key, mode, webhook_seen_at) values
+  ('22222222-2222-2222-2222-222222222222', 'rzp_live_proofprfb', 'x', 'x', 'k_proof_b', 'live', now()) on conflict do nothing;
+set local role frata_app;
+do $$ declare r record; n int; begin
+  select count(*) into n from app_shop_for_name('proof-b-exp');
+  if n <> 0 then raise exception 'FAIL: an added name past 14 days must serve nothing'; end if;
+  begin perform app_name_razorpay_ok('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-exp', true); raise exception 'FAIL: ticked an expired name';
+  exception when raise_exception then if sqlerrm <> 'no_name' then raise; end if; end;
+  if not exists (select 1 from app_let_go_added_names() x where x = 'proof-b-exp') then raise exception 'FAIL: the sweep'; end if;
+  if app_name_check('proof-b-exp') <> 'ok' then raise exception 'FAIL: an expired added name must be free again'; end if;
+  -- Live payments: the rename lands only on a name Razorpay approved.
+  perform app_add_shop_name('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-live');
+  begin perform app_change_shop_address('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-live'); raise exception 'FAIL: live rename to an unapproved name';
+  exception when raise_exception then if sqlerrm <> 'needs_razorpay' then raise; end if; end;
+  begin perform app_change_shop_address('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002', 'proof-b-oneshot'); raise exception 'FAIL: live one-step rename';
+  exception when raise_exception then if sqlerrm <> 'needs_razorpay' then raise; end if; end;
+end $$;
+reset role;
+set local role frata_admin;
+do $$ begin
+  perform app_admin_block_name('aaaaaaaa-0000-0000-0000-0000000000ff', 'proof-b-live', 'protected', 'Copies another brand');
+end $$;
+reset role;
+do $$ begin
+  if exists (select 1 from shop_names where name = 'proof-b-live') then raise exception 'FAIL: blocking must take the added name down'; end if;
+  if not exists (select 1 from audit_events where tenant_id = '22222222-2222-2222-2222-222222222222' and action = 'shop.name_taken_down' and target = 'proof-b-live') then raise exception 'FAIL: takedown audit'; end if;
+end $$;
+-- The way back from a main domain: on live payments, only to an approved name.
+update shop_names set razorpay_ok_at = null, razorpay_ok_by = null where tenant_id = '22222222-2222-2222-2222-222222222222';
+insert into shop_domains (tenant_id, host, apex, with_www, claimed_by, proved_at, added_at, dns_ok_at, cert_ok_at, main_at, razorpay_ok_at, razorpay_ok_by)
+  values ('22222222-2222-2222-2222-222222222222', 'proofb-back.in', 'proofb-back.in', false, 'aaaaaaaa-0000-0000-0000-000000000002', now(), now(), now(), now(), now(), now(), 'aaaaaaaa-0000-0000-0000-000000000002');
+set local role frata_app;
+do $$ begin
+  begin perform app_unmake_domain_main('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000002'); raise exception 'FAIL: back to an unapproved name on live payments';
+  exception when raise_exception then if sqlerrm <> 'razorpay' then raise; end if; end;
+end $$;
+reset role;
+rollback;
+
 -- 20. Catalogue: own shop only, and a child row can never point at another shop's product.
 insert into product_types (id, tenant_id, name, size_chart) values
   ('dddddddd-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'Kurta', '{"columns":[],"rows":[],"howToMeasure":""}');
@@ -2120,7 +2222,7 @@ do $$ begin
 end $$;
 
 
--- 60. Signal S3 (0085): a product's pairings are the shop's own rows, and a pair can never name another shop's product
+-- 62. Signal S3 (0087): a product's pairings are the shop's own rows, and a pair can never name another shop's product
 -- (composite FKs, not an id array); stories stay inside the products policy, with a size backstop.
 insert into products (id, tenant_id, handle, title) values ('eeeeeeee-0000-0000-0000-0000000000a2', '11111111-1111-1111-1111-111111111111', 'a-strap', 'A strap');
 insert into products (id, tenant_id, handle, title) values ('eeeeeeee-0000-0000-0000-0000000000b2', '22222222-2222-2222-2222-222222222222', 'b-strap', 'B strap');
@@ -2155,4 +2257,4 @@ do $$ begin
   if exists (select 1 from product_pairs where paired_id = 'eeeeeeee-0000-0000-0000-0000000000b2') then raise exception 'FAIL: a pair outlived its product'; end if;
 end $$;
 
-\echo 'tenancy proof — all 60 checks passed'
+\echo 'tenancy proof — all 62 checks passed'

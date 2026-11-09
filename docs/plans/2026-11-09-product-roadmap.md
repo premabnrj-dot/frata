@@ -69,7 +69,7 @@ GSP calls, AI image credits). Horizon: **Now** Nov–Dec 2026 · **Next** Q1 202
 ### Talk (messages and service)
 | Item | B/I | Tier | When | Status |
 |---|---|---|---|---|
-| WhatsApp order updates, one inbox | Build | C + U | — | built (Messages) |
+| WhatsApp order updates, one inbox | Build | C + U | — | connect + health built (C1); order messages, inbox planned (C2, C3) |
 | Instagram DM in the same inbox; assisted orders from a chat | Build | C | Next | — |
 | Abandoned bag and broadcasts to delivered buyers, on the Marketing Messages API, with DPDP consent | Build | G + U | Next (before Apr 2027) | planned (Cart flows) |
 | AI reply suggestions (a human sends) | Integrate (LLM) | G | Later | — |

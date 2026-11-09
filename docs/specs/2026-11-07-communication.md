@@ -1,5 +1,6 @@
 # M2·1 Communication: connect WhatsApp, order messages, a team inbox
 Status: draft · Date: 2026-11-07 · Mockup: https://claude.ai/artifact/GuKHwcfZDU47yrZbK4AjR9 (screens 4–11) · Approved: owner chose Communication as the first module (2026-11-07); spec pending
+> **Re-cut under ADR-0010 (2026-11-09) before M·1:** Messages sits beside EkCode on one engine (sender rule, `customer_consents`, template engine, `whatsapp.send`). Where this draft disagrees, ADR-0010 wins.
 Depends on: `docs/specs/2026-11-07-modules-foundation.md` (it is the first module in the registry).
 Facts: § Facts used. All checked 2026-11-07 against Meta's docs by `integration-researcher`.
 

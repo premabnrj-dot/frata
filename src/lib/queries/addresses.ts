@@ -1,11 +1,13 @@
 import 'server-only'
-import { and, asc, eq, isNotNull, isNull, or } from 'drizzle-orm'
+import { and, asc, eq, isNotNull, isNull, or, sql } from 'drizzle-orm'
 import { tenants } from '@/lib/db/schema'
 import { shopDomains, shopNames } from '@/lib/db/schema-addresses'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
 import { mainAddress } from '@/domains/addresses/names'
-import { shopHost } from '@/lib/public-env'
+import { bannerDue } from '@/domains/addresses/domain-state'
+import { shopSlugFromHost } from '@/domains/tenancy/host'
+import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
 import type { NameRow } from '@/domains/addresses/names'
 
 // =============================================================================
@@ -64,4 +66,39 @@ export async function domainClaimFor(tenantId: string, id: string): Promise<{ ho
   const [r] = await withTenant(tenantId, (tx) => tx.select({ host: shopDomains.host, apex: shopDomains.apex, withWww: shopDomains.withWww, token: shopDomains.token })
     .from(shopDomains).where(and(eq(shopDomains.tenantId, tenantId), eq(shopDomains.id, id), isNull(shopDomains.removedAt))).limit(1))
   return r ?? null
+}
+
+/** The console's red banner (design rule 76): the shop's main domain, failing for 24 h or more; null otherwise. */
+export async function failingMainFor(tenantId: string, now: Date): Promise<{ host: string; since: Date; nameHost: string } | null> {
+  const [r] = await withTenant(tenantId, (tx) => tx.select({ host: shopDomains.host, since: shopDomains.failingSince, slug: tenants.slug }).from(shopDomains)
+    .innerJoin(tenants, eq(tenants.id, shopDomains.tenantId)).where(and(eq(shopDomains.tenantId, tenantId), isNotNull(shopDomains.mainAt), isNull(shopDomains.removedAt), isNotNull(shopDomains.failingSince))).limit(1))
+  if (!r?.since || !bannerDue(r.since, now)) return null
+  return { host: r.host, since: r.since, nameHost: shopHost(r.slug) }
+}
+
+/**
+ * D1·8: has the merchant said Razorpay approved this host? Checkout offers online payment on a host only then (Razorpay
+ * fails live payments from an unregistered website). An own domain or its www; else the shop's frrata name.
+ */
+export async function hostApprovedIn(tx: Tx, tenantId: string, host: string): Promise<boolean> {
+  const h = host.toLowerCase()
+  const slug = shopSlugFromHost(h, SHOP_DOMAIN)
+  if (slug !== null) {
+    const [n] = await tx.select({ ok: shopNames.razorpayOkAt }).from(shopNames)
+      .where(and(eq(shopNames.tenantId, tenantId), eq(shopNames.name, slug), isNull(shopNames.retiredAt))).limit(1)
+    return !!n?.ok
+  }
+  if (h.endsWith(`.${SHOP_DOMAIN.toLowerCase()}`)) return false
+  const bare = h.startsWith('www.') ? h.slice(4) : h
+  const [d] = await tx.select({ ok: shopDomains.razorpayOkAt }).from(shopDomains)
+    .where(and(eq(shopDomains.tenantId, tenantId), eq(shopDomains.host, bare), isNull(shopDomains.removedAt))).limit(1)
+  return !!d?.ok
+}
+
+/** D1·8/D1·9: the shop's live names (current, and one added beside it) with Razorpay's approval. */
+export async function liveNamesFor(tenantId: string): Promise<{ name: string; added: boolean; razorpayOk: boolean }[]> {
+  const rows = await withTenant(tenantId, (tx) => tx.select({ name: shopNames.name, addedAt: shopNames.addedAt, ok: shopNames.razorpayOkAt }).from(shopNames)
+    .where(and(eq(shopNames.tenantId, tenantId), isNull(shopNames.retiredAt), sql`not (${shopNames.addedAt} is not null and ${shopNames.addedAt} < now() - interval '14 days')`))
+    .orderBy(asc(shopNames.createdAt)).limit(2))
+  return rows.map((r) => ({ name: r.name, added: r.addedAt !== null, razorpayOk: r.ok !== null }))
 }

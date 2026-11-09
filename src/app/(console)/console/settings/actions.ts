@@ -113,6 +113,7 @@ const ADDRESS_ERRORS: Record<string, string> = {
   not_owner: 'Only the owner or an admin of this shop can change its address.',
   frozen: 'Frrata has paused address changes for this shop.',
   no_renames_left: 'No changes left.',
+  needs_razorpay: 'Razorpay must approve this address first.',
   bad_slug: 'Letters, digits and hyphens, at least 3.',
   slug_taken: 'That address is taken. Try another.',
 }

@@ -124,6 +124,19 @@ export default {
       }
     })
 
+    await t.step('an address Razorpay has not approved offers pay on delivery only (D1·8); approved, online is back', async () => {
+      const [tick] = await db`select razorpay_ok_at, razorpay_ok_by from shop_names where name = 'kesar-studio'`
+      await db`update shop_names set razorpay_ok_at = null, razorpay_ok_by = null where name = 'kesar-studio'`
+      try {
+        await toCheckout('Rust', 'S')
+        await p.getByText('Pay on delivery', { exact: true }).first().waitFor()
+        assert.equal(await p.getByText('Pay online', { exact: true }).count(), 0, 'online payment on an unapproved address')
+      } finally {
+        await db`update shop_names set razorpay_ok_at = ${tick.razorpay_ok_at}, razorpay_ok_by = ${tick.razorpay_ok_by} where name = 'kesar-studio'`
+      }
+      await toCheckout('Rust', 'S'); await p.getByText('Pay online', { exact: true }).waitFor()
+    })
+
     await t.step('online order: paid, stock taken once, the webhook after the browser changes nothing but the fee', async () => {
       const before = await stock('{S,Rust}')
       await toCheckout('Rust', 'S'); await p.getByText('Pay online', { exact: true }).click()

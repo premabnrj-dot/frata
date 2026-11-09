@@ -2,7 +2,7 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.8.0
+  version: 2.9.0
   verified: 2026-11-08
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
@@ -123,6 +123,13 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
 | Fixed costs | ₹17 L/month placeholder | Itemise: people, infra, support, compliance |
 | Break-even | ~471 tenants | Recompute from tier mix and delivered-order fee |
 | Funding need | ~₹3.15 cr | Recompute after the above |
+| EkCode codes per order (until P2's remembered phone) | 0.6–1.5 (review 2026-11-09) | Delivered `ekcode_codes` ÷ orders, 3 design partners, 4 weeks |
+| EkCode order-update opt-in | 30–60% (review 2026-11-09) | `customer_consents` (sender ekcode) ÷ EkCode orders |
+| EkCode cost to Frrata a month, Launch / Growth / Scale | ₹42.50 / ₹425 / ₹1,417 expected; worst ₹67 / ₹673 / ₹2,243 (ex GST) | Admin › EkCode cost, month 1 |
+| Checkout lift that pays EkCode back | ≥ 2.1% / 3.0% / 4.6% | The pooled holdout (1 in 10), stop at ±2 points at 95% |
+| Checked-phone COD RTO | 1 point lower (hypothesis) | Checked vs unchecked COD, same pincodes |
+| GST on Meta's invoice recoverable | **Yes (owner, 2026-11-09)**: EkCode costs are ex GST | Confirm on the first invoice's issuer |
+| Break-even with EkCode | ~471 → 513–541 tenants | Recompute when 471 is rebuilt |
 
 Partner share (owner, 2026-11-07; unit-economics review 2026-11-07) — a cut of Frata's
 COLLECTED revenue (plan fee + delivered-order fee, ex GST, net of refunds), not of

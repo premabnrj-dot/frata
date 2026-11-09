@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.18.0
+  version: 1.19.0
   verified: 2026-11-09
   decisions: [ADR-0006]
 ---
@@ -185,6 +185,11 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
   messages, ≥10 active clients, ≥90% quality [V].
 - **No credit line**: customers add their own payment method in WhatsApp Manager; Meta bills them [V,
   solution-providers/overview]. India accounts must bill in **INR by 31 Dec 2026**, else delivery stops 1 Jan 2027 [V].
+  A Multi-Partner Solution (MPS) with a Solution Partner lets clients share its credit line (no card in WhatsApp
+  Manager); the Solution Partner is "Bill To Party"; no Meta page lets a Tech Provider invoice message fees — the Tech
+  Provider "will bill for other services"; becoming a Solution Partner is "a lengthy process" [V-undated,
+  solution-providers/overview + multi-partner-solutions + share-and-revoke-credit-lines, 2026-11-09]. BSP terms
+  (Gupshup ~$0.001/msg fee, WhatsApp at actuals; 360dialog requires MPS for Tech Providers) are vendor-only [S].
 - **Embedded Signup**: v4 (8 Oct 2025) is the default; v2/v3 were deprecated 15 Oct 2026 and are served as v4. **v5 released 20 Oct 2026**
   (`extras:{version:"v5"}`): coexistence on by default, session data has NO `waba_id` (`messaging_account_ids`, `primary_waac_ids`,
   `is_on_biz_app` instead) [V, embedded-signup/versions + version-5, 2026-11-07]. Frrata builds on v4 and reads ids on the server.
@@ -221,7 +226,8 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
 - **Coexistence** (Business app + Cloud API on one number): app 2.24.17+; history (6 months) and contacts
   sync once, within 24 h of onboarding; app-sent messages arrive as `smb_message_echoes`; 20 mps fixed;
   broadcast lists read-only, groups not synced, companions unlinked; disconnects after ~14 days without
-  opening the app [V]. Available in India [S only].
+  opening the app [V]. India since 2025-05-05 [V, changelog]; multi-solution conversations: several partners on one
+  number, so a merchant can keep another tool alongside [V, 2026-01-29].
 - **Pricing**: per message since 1 Jul 2025. **From 1 Oct 2026 in-window utility and service messages are
   charged**; 1,000 free service messages per number per month [V]. Free entry point: Click-to-WhatsApp ads
   only, window up to 7 days [V]. India before GST: marketing ₹0.8631; utility, authentication, service
@@ -426,7 +432,16 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
 - **WhatsApp:** India marketing ₹0.8631, utility ₹0.115 (+GST) [S, 2026-09-30]. Per-user marketing limit adapts to
   engagement; 131049 = wait 24 h; messages inside the window don't count. Cloud API stops marketing on 13 Oct 2027 (no
   marketing for accounts created from 13 Apr 2027) → Marketing Messages API. Separate opt-in per category advised
-  [V-undated, developers.facebook.com].
+  [V-undated, developers.facebook.com]. MM API GA 19 Nov 2025; India unrestricted; Tech Providers may onboard clients;
+  same billing as Cloud API; "max price" open beta 1 Oct 2026 for Solution-Partner-shared accounts only; 131063 when a
+  merchant disabled Cloud API marketing [V, marketing-messages changelog 2026-10-19]. Free entry point window (CTWA)
+  "up to 7 days" [V-undated, pricing, 2026-11-09].
+- **WhatsApp commerce (2026-11-09):** Payments API India — deep integration Razorpay/PayU/Billdesk/Zaakpay; Enhanced
+  Payment Links Razorpay (PayU, Cashfree allowlisted); `order_details` / `order_status` messages. Flows (forms) go in
+  templates, data endpoint optional, not on WhatsApp Web. CAPI for business messaging accepts OrderDelivered,
+  OrderReturned, OrderCanceled, CartAbandoned [V-undated]. Tech Provider portfolio restrictions have taken down every
+  connected merchant at once (Meta developer forum, 2026-07 to 10) [S] → keep EkCode's number outside the Tech
+  Provider's portfolio.
 - **Web push:** iOS 16.4+ only as a Home Screen web app; ask from a tap; a push not shown makes Safari revoke the
   permission [V-undated, developer.apple.com]. Chrome rate-limits disruptive senders (≥ 1,000/min) [V 2026-01-06]. A
   subscription belongs to one origin's service worker: a shop that changes domain loses its subscribers [V spec / U].

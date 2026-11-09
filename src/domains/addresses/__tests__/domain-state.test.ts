@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canMakeMain, domainState, type DomainFacts } from '../domain-state'
+import { bannerDue, canMakeMain, domainState, type DomainFacts } from '../domain-state'
 import { mainAddress } from '../names'
 
 const base: DomainFacts = { provedAt: null, addedAt: null, dnsOkAt: null, certOkAt: null, failingSince: null, mainAt: null, razorpayOkAt: null, contestAt: null, vercelTxt: null, removedAt: null, removedReason: null }
@@ -32,5 +32,14 @@ describe('mainAddress (one main address, D2·9)', () => {
   it('is the main domain when there is one, else the frrata name', () => {
     expect(mainAddress('kesar.frrata.shop', 'kesarstudio.in')).toBe('kesarstudio.in')
     expect(mainAddress('kesar.frrata.shop', null)).toBe('kesar.frrata.shop')
+  })
+})
+
+describe('bannerDue (the console banner, design rule 76)', () => {
+  const now = new Date('2026-11-09T12:00:00Z')
+  it('waits 24 h from the first failure, then shows', () => {
+    expect(bannerDue(null, now)).toBe(false)
+    expect(bannerDue(new Date('2026-11-08T12:00:01Z'), now)).toBe(false)
+    expect(bannerDue(new Date('2026-11-08T12:00:00Z'), now)).toBe(true)
   })
 })

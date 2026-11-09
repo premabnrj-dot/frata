@@ -8,6 +8,7 @@ import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { requireMember } from '@/lib/auth/require-member'
 import { BillingBanner } from './_components/billing-banner'
+import { DomainBanner } from './_components/domain-banner'
 import { toConfirmCount } from '@/lib/queries/orders'
 import { supportVisit } from '@/lib/queries/support'
 import { TenantCheck } from '@/components/shell/tenant-check'
@@ -105,6 +106,8 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       <TenantCheck tenantId={tenantId} staff={auth.staffRole !== null || places.length > 1} />
       {/* Billing B3: a failed payment to Frrata, for owners and admins (never on a support visit, never a block). */}
       {!supportSessionId && (role === 'owner' || role === 'admin') && <Suspense fallback={null}><BillingBanner membership={auth.membership} /></Suspense>}
+      {/* Own domains: a main domain failing for 24 h (design rule 76). */}
+      {!supportSessionId && (role === 'owner' || role === 'admin') && <Suspense fallback={null}><DomainBanner membership={auth.membership} /></Suspense>}
       {children}
     </AppShell>
   )

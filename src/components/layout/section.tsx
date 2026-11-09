@@ -24,7 +24,8 @@ export function Section({ title, action, children, className, id, labelledBy, fl
     <Tag id={id} aria-label={ariaLabel} aria-labelledby={labelledBy ?? (title ? h : undefined)}
       className={cn('rounded-md border border-border bg-card', flush ? 'overflow-hidden' : 'space-y-3 p-4 md:p-5', className)}>
       {(title || action) && (
-        <div className="flex items-start justify-between gap-3">
+        // A flush card's rows draw their own padding (px-4); its header lines up with them and centres its action.
+        <div className={cn('flex justify-between gap-3', flush ? 'items-center px-4 pt-3 pb-1' : 'items-start')}>
           {title && <h2 id={h} className="text-section font-semibold">{title}</h2>}
           {action && <div className="shrink-0">{action}</div>}
         </div>

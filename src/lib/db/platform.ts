@@ -132,10 +132,16 @@ export async function changeShopAddress(tenantId: string, uid: string, slug: str
     return { ok: true }
   } catch (err) {
     const msg = (err as { cause?: { message?: string } })?.cause?.message ?? (err instanceof Error ? err.message : '')
-    const code = ['not_owner', 'frozen', 'no_renames_left', 'bad_slug', 'slug_taken'].find((c) => msg.includes(c))
+    const code = ['not_owner', 'frozen', 'no_renames_left', 'needs_razorpay', 'bad_slug', 'slug_taken'].find((c) => msg.includes(c))
     if (!code) console.error('[changeShopAddress]', errName(err))
     return { ok: false, error: code ?? 'unknown' }
   }
+}
+
+/** D1·9: added names past their 14 days, let go across shops (the daily sweep); their names, for the host lookups. */
+export async function letGoAddedNames(): Promise<string[]> {
+  const rows = await db().execute<{ n: string }>(sql`select n from app_let_go_added_names() as n`)
+  return rows.map((r) => r.n)
 }
 
 /** Own domains D2·8: rows due a check, across shops (ids only; each is checked in its own shop's transaction). */
