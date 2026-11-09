@@ -238,7 +238,7 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
   disabled [V-undated, messaging-limits + upcoming-messaging-limits-changes + template-pausing, 2026-11-09]. Each
   number 80 mps; 1,000 mps needs unlimited + 100K unique users in 24 h + quality ≥ yellow [V-undated, throughput].
   Whether authentication counts toward the limit: not stated [U].
-- **Pehchaan transactional from Frrata's number** (checked 2026-11-09): no Meta page addresses a platform messaging its
+- **EkCode transactional from Frrata's number** (checked 2026-11-09): no Meta page addresses a platform messaging its
   own account holders about third-party sellers' orders [V absence: policy 2026-09-23, template-categorization,
   template-review]. Lawful shape: Frrata-owned utility templates in Frrata's voice, the shop's name a body variable
   ("via Frrata"), no promo; the opt-in names Frrata ("clearly state the business's name") [V-undated, getting-opt-in];
@@ -493,7 +493,7 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   policy" [V-undated, authentication-best-practices]; no speaking for a business "without permission" [V, policy
   2026-09-23]; Twilio Verify ended its shared sender on 1 Mar 2024 [V, twilio docs 2026-03-09]. → **No central Frrata
   sender for shop logins**: a shop's code goes from the shop's own number (Embedded Signup), billed to the merchant;
-  Frrata's number only where Frrata is the business (its own sign-up and Pehchaan logins, ADR-0009 — auth uses "New account creation" / "Account integrity, access, or
+  Frrata's number only where Frrata is the business (its own sign-up and EkCode logins, ADR-0009 — auth uses "New account creation" / "Account integrity, access, or
   recovery" [V-undated, template-categorization]; no rule that the code names the app signed into [V absence]; the
   sign-in screen says "Frrata"). Reverse
   wa.me OTP: no Meta rule [U], and a username user's message may carry no phone → weak proof. No third-party "Sign in

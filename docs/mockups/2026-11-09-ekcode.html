@@ -1,0 +1,939 @@
+<title>EkCode Mockup</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Mukta:wght@700&family=Bricolage+Grotesque:opsz,wght@12..96,600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
+<style>
+/* EkCode v1: the name and mark, the shopper's flow (shop → id.frrata.com → shop), the shopper's EkCode page, the merchant's Apps › EkCode, the states. Frrata tokens; the shop wears its own theme. */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--brand:#D61F69;--brand-text:#A8124F;--thread:#D61F69;--line:#D61F69;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;--ink:#1C1917;--on-ink:#FAFAF9;--line-on-ink:#FF5C97;
+  --wa:#E7FFDB;--wa-bg:#EFEAE2;--wa-head:#F0F2F5;--wa-text:#111B21;--wa-sub:#667781;--wa-link:#027EB5;
+  --scrim:rgb(28 25 23 / .45);
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--display:"Bricolage Grotesque","Inter",sans-serif;--deva:"Mukta",sans-serif;
+  --fast:120ms;--base:200ms;--slow:320ms;
+  --standard:cubic-bezier(.2,0,0,1);--entrance:cubic-bezier(0,0,0,1);--exit:cubic-bezier(.3,0,1,1);
+  --spring:linear(0,.22 7%,.6 17%,.86 27%,1.01 38%,1.04 46%,1.02 60%,1 100%);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;--line:#FF5C97;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--ink:#0B0A09;--scrim:rgb(0 0 0 / .6);
+  --wa:#005C4B;--wa-bg:#0B141A;--wa-head:#202C33;--wa-text:#E9EDEF;--wa-sub:#8696A0;--wa-link:#53BDEB;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;--line:#FF5C97;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--ink:#0B0A09;--scrim:rgb(0 0 0 / .6);
+  --wa:#005C4B;--wa-bg:#0B141A;--wa-head:#202C33;--wa-text:#E9EDEF;--wa-sub:#8696A0;--wa-link:#53BDEB;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:14px/1.55 var(--sans);margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding-block:28px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font:600 28px/1.15 var(--display);margin:0 0 6px;text-wrap:balance}
+h2{font-size:18px;margin:48px 0 12px;display:flex;gap:10px;align-items:center;text-wrap:balance;scroll-margin-top:64px}
+h2::before{content:"";width:18px;height:2px;background:var(--thread);flex:none}
+h3{font-size:15px;margin:0 0 8px}
+p{margin:0 0 10px;max-width:72ch}
+.k{font-size:12px;color:var(--sub)}.mono{font-family:var(--mono)}
+.note{display:grid;gap:6px;margin:14px 0 0;padding:0;list-style:none;max-width:84ch}
+.note li{padding-left:16px;position:relative}.note li::before{content:"";position:absolute;left:0;top:.7em;width:8px;height:2px;background:var(--thread)}
+nav.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--border);margin:18px 0 0}
+nav.top .in{display:flex;gap:4px;overflow-x:auto;padding:8px 0;scrollbar-width:none}
+nav.top a{color:var(--fg);text-decoration:none;font:500 13px var(--sans);padding:6px 10px;border-radius:6px;white-space:nowrap}
+nav.top a:hover{background:var(--muted)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;min-width:0}
+.pad{padding:16px}
+.grid{display:grid;gap:16px}
+@media (min-width:860px){.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 9px;font:500 12px var(--sans);white-space:nowrap}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-warn{background:var(--warn);color:var(--warn-text)}.c-n{background:var(--muted);color:var(--sub)}.c-danger{background:var(--danger);color:var(--danger-text)}.c-info{background:var(--info);color:var(--info-text)}
+.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--fg);padding:0 14px;font:500 14px var(--sans);min-height:44px;cursor:pointer;white-space:nowrap;transition:background-color var(--fast) var(--standard),opacity var(--fast) var(--standard),transform var(--fast) var(--standard)}
+.btn:hover{background:var(--muted)}
+.btn:active{transform:scale(.98)}
+.btn:focus-visible,.input:focus-visible,a:focus-visible,.sw:focus-visible,.opt:focus-within,.scn:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.primary::after{content:"";position:absolute;left:6px;right:6px;bottom:4px;height:2px;background:var(--thread);transform:scaleX(.33);transform-origin:left;transition:transform var(--fast) var(--standard)}
+.btn.primary:hover::after,.btn.primary:focus-visible::after{transform:scaleX(1)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.ghost:hover{background:var(--muted)}
+.btn.sm{min-height:32px;padding:0 10px;font-size:13px}
+.btn.wide{width:100%}
+.btn.danger{color:var(--danger-text);border-color:var(--danger-text)}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.btn[disabled]::after{display:none}
+.link{background:none;border:0;padding:0;color:var(--fg);font:500 13px var(--sans);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px;cursor:pointer;min-height:24px}
+.ico{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* the mark */
+.wm{display:inline-block;height:1.15em;width:auto;vertical-align:-.25em;color:var(--fg);--line-c:var(--line)}
+.wm text{font-family:var(--deva);font-weight:700}
+.on-ink .wm,.wm.paper{color:var(--on-ink);--line-c:var(--line-on-ink)}
+.tile{display:inline-block;width:1em;height:1em;vertical-align:-.15em;flex:none}
+.tile text{font-family:var(--deva);font-weight:700}
+.logo-board{display:grid;gap:16px}
+.lb{display:grid;gap:12px;padding:20px;border-radius:8px;border:1px solid var(--border);background:var(--card)}
+.lb.rec{border:2px solid var(--fg)}
+.lb .big{font-size:56px;line-height:1}
+.lb.ink{background:var(--ink);border-color:var(--ink);color:var(--on-ink)}
+.sizes{display:flex;gap:18px;align-items:end;flex-wrap:wrap}
+.sizes figure{margin:0;display:grid;gap:6px;justify-items:center}
+.sizes figcaption{font:12px var(--mono);color:var(--sub)}
+.dont{display:grid;gap:10px}
+@media (min-width:860px){.dont{grid-template-columns:repeat(3,1fr)}}
+.dont .card{padding:14px;display:grid;gap:8px}
+.dont .x{font-size:28px;line-height:1}
+
+/* EkCode button (on any shop) */
+.ek-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:52px;border-radius:999px;border:0;background:#1C1917;color:#FAFAF9;font:500 15px var(--sans);cursor:pointer;padding:0 18px;transition:transform var(--fast) var(--standard)}
+.ek-btn:active{transform:scale(.98)}
+.ek-btn .wm{font-size:22px;color:#FAFAF9;--line-c:#FF5C97}
+.ek-btn .tile{font-size:24px}
+.ek-btn.paper{background:#FAFAF9;color:#1C1917}
+.ek-btn.paper .wm{color:#1C1917;--line-c:#D61F69}
+.ek-btn:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+
+/* phone frames */
+.flow{display:grid;gap:20px;align-items:start}
+@media (min-width:980px){.flow{grid-template-columns:400px 1fr}}
+.phone{width:100%;max-width:392px;margin:0 auto;border:1px solid var(--border);border-radius:28px;background:var(--card);overflow:hidden;box-shadow:0 1px 0 var(--border)}
+.urlbar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--muted);border-bottom:1px solid var(--border);font:12.5px var(--sans);color:var(--sub)}
+.urlbar b{color:var(--fg);font-weight:500}
+.urlbar .ico{width:13px;height:13px}
+.screen{min-height:640px;position:relative;overflow:hidden}
+.scr{display:none;min-height:640px;flex-direction:column}
+.scr.on{display:flex;animation:in var(--slow) var(--entrance)}
+.scr.on.back{animation-name:back}
+@keyframes in{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+@keyframes back{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.scr.on{animation:none}.ek-btn,.btn{transition:none}}
+
+/* id.frrata.com */
+.id{background:var(--bg);color:var(--fg)}
+.id-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--border);background:var(--card)}
+.id-head .wm{font-size:20px}
+.id-head .to{display:inline-flex;align-items:center;gap:6px;font:500 13px var(--sans);color:var(--sub)}
+.shopdot{width:22px;height:22px;border-radius:50%;background:#B4532A;color:#FFF8EE;display:grid;place-items:center;font:600 11px "Fraunces",serif;flex:none}
+.id-body{padding:22px 18px 18px;display:grid;gap:16px;align-content:start;flex:1}
+.id-body h3{font:600 22px/1.2 var(--display);margin:0;text-wrap:balance}
+.id-foot{padding:12px 18px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px;color:var(--sub);border-top:1px solid var(--border)}
+.id-foot a{color:var(--sub)}
+.f{display:grid;gap:6px;font:500 13px var(--sans)}
+.input{border:1px solid var(--input);border-radius:6px;padding:0 12px;background:var(--card);color:var(--fg);font:16px var(--sans);min-height:48px;width:100%}
+.input.mono{font-family:var(--mono)}
+.tel{display:flex;border:1px solid var(--input);border-radius:6px;background:var(--card);min-height:48px;overflow:hidden}
+.tel:focus-within{outline:2px solid var(--fg);outline-offset:2px}
+.tel span{display:grid;place-items:center;padding:0 12px;border-right:1px solid var(--border);font:16px var(--mono);color:var(--sub)}
+.tel input{border:0;outline:0;flex:1;min-width:0;padding:0 12px;font:16px var(--mono);background:transparent;color:var(--fg);letter-spacing:.02em}
+.say{font-size:13px;min-height:1.4em;margin:0}.say.bad{color:var(--danger-text)}.say.ok{color:var(--ok-text)}
+.cells{position:relative;display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.cells i{display:grid;place-items:center;height:56px;border:1px solid var(--input);border-radius:8px;background:var(--card);font:500 22px var(--mono);font-style:normal;transition:border-color var(--fast) var(--standard)}
+.cells i.cur{border:2px solid var(--fg)}
+.cells.bad i{border-color:var(--danger-text);animation:nudge 240ms var(--standard)}
+.cells.ok i{border-color:var(--ok-text);color:var(--ok-text)}
+@keyframes nudge{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+@media (prefers-reduced-motion:reduce){.cells.bad i{animation:none}}
+.cells input{position:absolute;inset:0;opacity:0;width:100%;font-size:16px;cursor:text}
+.row2{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.who{display:flex;gap:12px;align-items:center;padding:14px;border:1px solid var(--border);border-radius:8px;background:var(--card)}
+.av{width:40px;height:40px;border-radius:50%;background:var(--muted);display:grid;place-items:center;font:600 14px var(--sans);flex:none}
+.who b{display:block;font-weight:600}
+.opts{display:grid;gap:8px}
+.opt{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:start;padding:12px 14px;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer}
+.opt:has(input:checked){border:2px solid var(--fg);padding:11px 13px}
+.opt input{margin:3px 0 0;width:18px;height:18px;accent-color:var(--fg)}
+.opt small{grid-column:2;color:var(--sub);font-size:13px}
+.shares{display:flex;gap:6px;flex-wrap:wrap}
+.notice{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.notice li{display:grid;grid-template-columns:20px 1fr;gap:10px;align-items:start}
+.notice .ico{margin-top:2px}
+.lang{display:inline-flex;border:1px solid var(--border);border-radius:999px;padding:2px}
+.lang button{border:0;background:none;border-radius:999px;padding:2px 10px;font:500 12.5px var(--sans);color:var(--sub);cursor:pointer;min-height:28px}
+.lang button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.spin{width:18px;height:18px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp 700ms linear infinite}
+@keyframes sp{to{transform:rotate(1turn)}}
+
+/* Kesar Studio (the shop's theme) */
+.shop{--s-bg:#F7F2EA;--s-fg:#2B1D14;--s-sub:#6E5B4C;--s-line:#E2D6C6;--s-card:#FFFCF7;--s-acc:#B4532A;background:var(--s-bg);color:var(--s-fg);font-family:var(--sans)}
+.shop-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--s-line)}
+.shop-head b{font:600 17px "Fraunces",serif;letter-spacing:.14em}
+.shop-head span{font-size:12.5px;color:var(--s-sub)}
+.shop-body{padding:18px;display:grid;gap:14px;align-content:start;flex:1}
+.shop h4{font:500 24px/1.15 "Fraunces",serif;margin:0}
+.bagline{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--s-line);border-radius:10px;background:var(--s-card);font-size:13.5px}
+.bagline .th{width:40px;height:48px;border-radius:6px;background:linear-gradient(160deg,#C9764A,#8E3F22);flex:none}
+.or{display:flex;align-items:center;gap:10px;color:var(--s-sub);font-size:12.5px}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--s-line)}
+.sf{display:grid;gap:5px;font:500 13px var(--sans)}
+.sin{border:1px solid #B9A894;border-radius:8px;min-height:48px;padding:0 12px;font:16px var(--sans);background:var(--s-card);color:var(--s-fg);width:100%}
+.sin:focus-visible{outline:2px solid var(--s-fg);outline-offset:2px}
+.sbtn{min-height:52px;border-radius:999px;border:0;background:var(--s-fg);color:var(--s-bg);font:600 15px var(--sans);width:100%;cursor:pointer}
+.filled{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 12px;border-radius:10px;background:var(--s-card);border:1px solid var(--s-line);font-size:13px}
+.filled .wm{font-size:15px;color:var(--s-fg);--line-c:#D61F69}
+.addr{padding:12px 14px;border:2px solid var(--s-fg);border-radius:10px;background:var(--s-card);font-size:13.5px;line-height:1.45}
+.tick{display:grid;grid-template-columns:20px 1fr;gap:10px;align-items:start;font-size:13.5px}
+.tick input{width:18px;height:18px;margin:1px 0 0;accent-color:var(--s-fg)}
+.pm{display:grid;gap:8px}
+.pm label{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border:1px solid var(--s-line);border-radius:10px;background:var(--s-card);font-size:14px}
+.pm label:has(input:checked){border:2px solid var(--s-fg);padding:11px 13px}
+.pm input{accent-color:var(--s-fg)}
+
+/* scenario rail */
+.rail{display:grid;gap:14px}
+.scns{display:flex;flex-wrap:wrap;gap:8px}
+.scn{border:1px solid var(--input);background:var(--card);color:var(--fg);border-radius:999px;padding:0 14px;min-height:36px;font:500 13px var(--sans);cursor:pointer}
+.scn[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:2px;counter-reset:s}
+.steps li{display:grid;grid-template-columns:28px 1fr;gap:8px;padding:8px 10px;border-radius:6px;color:var(--sub);font-size:13.5px;counter-increment:s}
+.steps li::before{content:counter(s);font:500 12px var(--mono);display:grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1px solid var(--border)}
+.steps li.on{background:var(--muted);color:var(--fg)}
+.steps li.on::before{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.steps li.skip{opacity:.45;text-decoration:line-through}
+
+/* WhatsApp preview */
+.wa{border-radius:14px;overflow:hidden;border:1px solid var(--border);background:var(--wa-bg);color:var(--wa-text);font-family:var(--sans)}
+.wa-h{display:flex;gap:10px;align-items:center;padding:10px 12px;background:var(--wa-head)}
+.wa-h .pp{width:34px;height:34px;border-radius:50%;background:#1C1917;display:grid;place-items:center;flex:none}
+.wa-h b{font-weight:600;font-size:14px;display:flex;gap:4px;align-items:center}
+.wa-h small{display:block;font-size:12px;color:var(--wa-sub)}
+.wa-b{padding:14px 12px;display:grid;gap:8px}
+.bub{background:var(--card);border-radius:8px;max-width:88%;padding:8px 10px 6px;font-size:13.5px;line-height:1.45;box-shadow:0 1px .5px rgb(0 0 0 / .13)}
+:root[data-theme="dark"] .bub{background:#202C33}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bub{background:#202C33}}
+.bub small{display:block;text-align:right;font-size:11px;color:var(--wa-sub)}
+.bub .cta{display:block;text-align:center;border-top:1px solid color-mix(in srgb,var(--wa-sub) 30%,transparent);margin:8px -10px -6px;padding:9px;color:var(--wa-link);font-weight:500}
+
+/* console */
+.cframe{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)}
+.cbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--card)}
+.crumb{font-size:13px;color:var(--sub)}.crumb b{color:var(--fg);font-weight:600}
+.cpage{padding:18px;display:grid;gap:16px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.tabs button{border:0;background:none;padding:10px 12px;font:500 13.5px var(--sans);color:var(--sub);cursor:pointer;position:relative;white-space:nowrap;min-height:40px}
+.tabs button[aria-selected="true"]{color:var(--fg)}
+.tabs button[aria-selected="true"]::after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:2px;background:var(--thread)}
+.tp{display:none}.tp.on{display:grid;gap:16px}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+@media (min-width:860px){.stats{grid-template-columns:repeat(4,1fr)}}
+.stat{background:var(--card);padding:14px 16px;display:grid;gap:2px;min-width:0}
+.stat .n{font:500 24px var(--mono);letter-spacing:-.01em}
+.stat .l{font-size:12.5px;color:var(--sub)}
+.sec{background:var(--card);border:1px solid var(--border);border-radius:6px}
+.sec>header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px 10px;flex-wrap:wrap}
+.sec>header h3{margin:0;font-size:15px}
+.rows{list-style:none;margin:0;padding:0}
+.rows li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:12px 16px;border-top:1px solid var(--border)}
+.rows .s{font-size:12.5px;color:var(--sub)}
+.cmp{display:grid;gap:10px;padding:4px 16px 16px}
+.bar{display:grid;grid-template-columns:96px 1fr 56px;gap:10px;align-items:center;font-size:13px}
+.bar .t{height:10px;border-radius:5px;background:var(--muted);overflow:hidden}
+.bar .t i{display:block;height:100%;background:var(--fg);border-radius:5px}
+.bar .t i.lt{background:var(--input)}
+.bar .v{font:500 13px var(--mono);text-align:right}
+.tblw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:620px}
+th{font:500 12px var(--sans);color:var(--sub);text-align:left;padding:8px 16px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--muted)}
+td{padding:11px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+td.num,th.num{text-align:right;font-family:var(--mono)}
+.filters{display:flex;gap:6px;flex-wrap:wrap;padding:0 16px 12px}
+.fchip{border:1px solid var(--border);background:var(--card);color:var(--fg);border-radius:999px;padding:0 12px;min-height:32px;font:500 13px var(--sans);cursor:pointer}
+.fchip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.sw{appearance:none;width:40px;height:24px;border-radius:999px;background:var(--input);position:relative;cursor:pointer;flex:none;margin:0;transition:background-color var(--fast) var(--standard)}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--card);transition:transform var(--base) var(--spring)}
+.sw:checked{background:var(--fg)}.sw:checked::after{transform:translateX(16px)}
+.approw{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:14px 16px}
+.apptile{width:40px;height:40px;border-radius:8px;display:grid;place-items:center;background:var(--muted)}
+.apptile .tile{font-size:28px}
+.approw b{font-weight:600}
+.approw .s{font-size:13px;color:var(--sub)}
+.info{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;border:1px solid var(--input);font:600 11px var(--sans);color:var(--sub);cursor:help;vertical-align:1px}
+
+/* dialogs (shared) */
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:40;display:none}
+.scrim.open{display:block;animation:fade var(--base) var(--entrance)}
+@keyframes fade{from{opacity:0}}
+.dlg{position:fixed;z-index:41;left:50%;top:12vh;translate:-50% 0;width:min(460px,calc(100% - 32px));background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 32px rgb(0 0 0 / .2);display:none}
+.dlg.open{display:block;animation:pop var(--base) var(--entrance)}
+@keyframes pop{from{opacity:0;scale:.98}}
+@media (max-width:640px){.dlg{top:auto;bottom:0;left:0;translate:none;width:100%;border-radius:14px 14px 0 0}.dlg.open{animation:up var(--slow) var(--spring)}@keyframes up{from{transform:translateY(100%)}}}
+.dlg .dh{padding:16px 18px 6px;font:600 17px var(--sans)}
+.dlg .db{padding:4px 18px 14px;display:grid;gap:10px;font-size:14px}
+.dlg .df{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px 16px;flex-wrap:wrap}
+.check{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.check li{display:grid;grid-template-columns:18px 1fr;gap:8px}
+.pricep{background:var(--muted);border-radius:6px;padding:12px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+
+/* account page */
+.acct .id-body{gap:20px}
+.acct section{display:grid;gap:8px}
+.acct h5{margin:0;font:600 13px var(--sans);color:var(--sub);text-transform:none}
+.list{border:1px solid var(--border);border-radius:8px;background:var(--card);overflow:hidden}
+.list>div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid var(--border)}
+.list>div:first-child{border-top:0}
+.list .s{font-size:12.5px;color:var(--sub)}
+.list .t{min-width:0}
+.list b{font-weight:600;font-size:14px}
+details.hist summary{cursor:pointer;font:500 13px var(--sans);list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:32px}
+details.hist summary::-webkit-details-marker{display:none}
+details.hist summary::after{content:"+";font:500 16px var(--mono);color:var(--sub)}
+details.hist[open] summary::after{content:"−"}
+
+/* states table */
+.tbl-states{min-width:640px}
+.tbl-states td:first-child{font-weight:500;white-space:nowrap}
+.toast{position:fixed;left:50%;bottom:24px;translate:-50% 0;background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;font:500 13.5px var(--sans);z-index:60;display:none}
+.toast.on{display:block;animation:pop var(--base) var(--entrance)}
+.theme-t{position:fixed;right:14px;bottom:14px;z-index:30}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="wm" viewBox="0 0 330 100"><rect x="3" y="5" width="126" height="90" rx="16" fill="none" stroke="currentColor" stroke-width="6"/><text x="66" y="72" text-anchor="middle" font-family="Mukta" font-weight="700" font-size="76" fill="currentColor">एक</text><rect x="48" y="80" width="36" height="5" rx="2.5" fill="var(--line-c,#D61F69)"/><text x="142" y="72" font-family="Mukta" font-weight="700" font-size="76" fill="currentColor">Code</text></symbol>
+    <symbol id="tl" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="var(--tile-bg,#1C1917)"/><text x="32" y="42" text-anchor="middle" font-family="Mukta" font-weight="700" font-size="36" fill="var(--tile-fg,#FAFAF9)">एक</text><rect x="22" y="48" width="20" height="3.2" rx="1.6" fill="var(--tile-line,#FF5C97)"/></symbol>
+    <symbol id="tlo" viewBox="0 0 64 64"><rect x="2.5" y="2.5" width="59" height="59" rx="13" fill="var(--card)" stroke="currentColor" stroke-width="4"/><text x="32" y="42" text-anchor="middle" font-family="Mukta" font-weight="700" font-size="36" fill="currentColor">एक</text><rect x="22" y="48" width="20" height="3.2" rx="1.6" fill="var(--line)"/></symbol>
+    <symbol id="tl16" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#1C1917"/><text x="32" y="46" text-anchor="middle" font-family="Mukta" font-weight="700" font-size="50" fill="#FAFAF9">ए</text><rect x="20" y="52" width="24" height="7" rx="3" fill="#FF5C97"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+    <symbol id="i-wa" viewBox="0 0 24 24"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19z"/><path d="M9.5 9.5c0 2.5 2.5 5 5 5l1-1.5-2-1-1 1c-1-.5-2-1.5-2.5-2.5l1-1-1-2z"/></symbol>
+    <symbol id="i-store" viewBox="0 0 24 24"><path d="M4 9l1.5-5h13L20 9"/><path d="M4 9h16v2a3 3 0 0 1-5.3 2 3 3 0 0 1-5.4 0A3 3 0 0 1 4 11z"/><path d="M5.5 14v6h13v-6"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-ok" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4 7l8 6 8-6"/></symbol>
+    <symbol id="i-dl" viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <h1>EkCode · mockup v1</h1>
+  <p class="k">Spec <span class="mono">docs/specs/2026-11-09-shopper-login.md</span> · ADR-0009 · 9 Nov 2026</p>
+  <ul class="note">
+    <li><b>EkCode</b>: one code, every Frrata shop. Said "ek code". In plain text and code: EkCode.</li>
+    <li>The mark (your pick, 9 Nov): एक in the box a shopper types a code into, with a rani cursor; "Code" open beside it. Alone, the box is the icon.</li>
+    <li>Click through the phone. Change the scenario on the right.</li>
+    <li>Words are English only; Devanagari appears in the mark alone.</li>
+    <li>Two calls for you are at the end: whether "Save this address to EkCode" starts ticked, and when to apply for the blue tick.</li>
+  </ul>
+
+  <nav class="top" aria-label="Sections"><div class="in">
+    <a href="#logo">Name and mark</a><a href="#shopper">Shopper flow</a><a href="#whatsapp">On WhatsApp</a><a href="#account">Shopper's EkCode page</a><a href="#console">Console › Apps</a><a href="#states">States</a><a href="#calls">Your calls</a>
+  </div></nav>
+
+  <!-- ============ LOGO ============ -->
+  <h2 id="logo">Name and mark</h2>
+  <div class="logo-board">
+    <div class="grid g2">
+      <div class="lb rec">
+        <h3>EkCode <span class="chip c-ok">Your pick</span></h3>
+        <div class="big"><svg class="wm" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg></div>
+        <div class="k">Mukta 700, Devanagari and Latin from one family so the weights match. The box is a code cell; the rani bar is its cursor (Frrata's thread).</div>
+      </div>
+      <div class="lb ink on-ink">
+        <h3>On ink</h3>
+        <div class="big"><svg class="wm" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg></div>
+        <div class="k" style="color:#C9C3BC">Cursor in rani-on-ink (#FF5C97).</div>
+      </div>
+    </div>
+    <div class="lb">
+      <h3>The box alone: app icon, button, favicon</h3>
+      <div class="sizes">
+        <figure><svg width="96" height="96" aria-hidden="true"><use href="#tl"/></svg><figcaption>96</figcaption></figure>
+        <figure><svg width="48" height="48" aria-hidden="true"><use href="#tl"/></svg><figcaption>48</figcaption></figure>
+        <figure><svg width="24" height="24" aria-hidden="true"><use href="#tl"/></svg><figcaption>24</figcaption></figure>
+        <figure><svg width="16" height="16" aria-hidden="true"><use href="#tl16"/></svg><figcaption>16 · ए only</figcaption></figure>
+        <figure><svg width="64" height="64" aria-hidden="true"><use href="#tlo"/></svg><figcaption>outline</figcaption></figure>
+        <figure><svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><clipPath id="cc"><circle cx="32" cy="32" r="32"/></clipPath><g clip-path="url(#cc)"><use href="#tl"/></g></svg><figcaption>circle crop</figcaption></figure>
+      </div>
+      <div class="k">Filled ink below 48 px, so it survives small. At 16 px, ए alone.</div>
+    </div>
+    <div class="lb">
+      <h3>The button a shop shows (every theme)</h3>
+      <div class="grid g2">
+        <div style="background:#F7F2EA;padding:16px;border-radius:8px"><button class="ek-btn" type="button"><span>Continue with</span><svg class="wm" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg></button></div>
+        <div style="background:#16181D;padding:16px;border-radius:8px"><button class="ek-btn paper" type="button" style="--tile-bg:#1C1917"><span>Continue with</span><svg class="wm" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg></button></div>
+      </div>
+      <div class="k">The words and the mark, no second icon. Ink on light themes, paper on dark ones; the shop never recolours it, so a shopper knows it from any shop (like Google's or Apple's sign-in button). 52 px tall, full width on a phone.</div>
+    </div>
+    <div class="dont">
+      <div class="card"><span class="x" aria-hidden="true">✕</span><b>Never in a shop's colours</b><span class="k">It is Frrata's sign-in, not the shop's.</span></div>
+      <div class="card"><span class="x" aria-hidden="true">✕</span><b>Never typed</b><span class="k">Always drawn from one file (outlined paths when built), like the frrata mark.</span></div>
+      <div class="card"><span class="x" aria-hidden="true">✕</span><b>Not the WhatsApp display name</b><span class="k">Meta: the name must match the business. The sender is "Frrata".</span></div>
+    </div>
+  </div>
+
+  <!-- ============ SHOPPER FLOW ============ -->
+  <h2 id="shopper">Shopper flow</h2>
+  <div class="flow">
+    <div class="phone" id="phone">
+      <div class="urlbar" id="url"><svg class="ico" aria-hidden="true"><use href="#i-lock"/></svg><b id="host">kesarstudio.in</b><span id="path">/checkout</span></div>
+      <div class="screen">
+
+        <!-- 0 · shop checkout -->
+        <section class="scr shop on" data-s="checkout" aria-label="Kesar Studio checkout">
+          <div class="shop-head"><b>KESAR</b><span>Bag · 1</span></div>
+          <div class="shop-body">
+            <div class="bagline"><span style="display:flex;gap:10px;align-items:center"><span class="th" aria-hidden="true"></span><span>Rust Chanderi kurta · M</span></span><b class="mono">₹2,490</b></div>
+            <h4>Checkout</h4>
+            <button class="ek-btn" type="button" data-go="start"><span>Continue with</span><svg class="wm" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg></button>
+            <div class="or">or</div>
+            <label class="sf">Phone<input class="sin" inputmode="tel" autocomplete="tel-national" placeholder="98450 12345"></label>
+            <label class="sf">Full name<input class="sin" autocomplete="name"></label>
+            <label class="sf">Pincode<input class="sin" inputmode="numeric" autocomplete="postal-code"></label>
+            <button class="sbtn" type="button" disabled style="opacity:.5">Continue to payment</button>
+          </div>
+        </section>
+
+        <!-- 1 · phone -->
+        <section class="scr id" data-s="phone" aria-label="EkCode: phone">
+          <div class="id-head"><svg class="wm" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg><span class="to"><span class="shopdot" aria-hidden="true">K</span>Kesar Studio</span></div>
+          <div class="id-body">
+            <h3>Your WhatsApp number</h3>
+            <div class="f"><label for="ph" class="sr">WhatsApp number</label>
+              <div class="tel"><span>+91</span><input id="ph" inputmode="numeric" autocomplete="tel-national" maxlength="11" placeholder="98450 12345" aria-describedby="phsay"></div>
+              <p class="say" id="phsay" aria-live="polite"></p>
+            </div>
+            <button class="btn primary wide" type="button" id="send" disabled><svg class="ico" aria-hidden="true"><use href="#i-wa"/></svg>Send code on WhatsApp</button>
+            <div style="flex:1"></div>
+            <button class="btn ghost wide" type="button" data-go="checkout" data-back><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Back to Kesar Studio</button>
+          </div>
+          <div class="id-foot"><span>by Frrata</span><span><a href="#calls">Privacy</a> · <a href="#calls">Terms</a></span></div>
+        </section>
+
+        <!-- 2 · code -->
+        <section class="scr id" data-s="code" aria-label="EkCode: code">
+          <div class="id-head"><svg class="wm" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg><span class="to"><span class="shopdot" aria-hidden="true">K</span>Kesar Studio</span></div>
+          <div class="id-body">
+            <h3 id="codeh">Enter the code</h3>
+            <div class="row2"><span class="k" id="sentto">On WhatsApp · <span class="mono">+91 98450 12345</span></span><button class="link" type="button" data-go="phone" data-back>Change</button></div>
+            <div class="cells" id="cells">
+              <i></i><i></i><i></i><i></i><i></i><i></i>
+              <input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-labelledby="codeh" aria-describedby="codesay">
+            </div>
+            <p class="say" id="codesay" aria-live="polite"></p>
+            <a class="btn wide" id="openwa" href="#whatsapp"><svg class="ico" aria-hidden="true"><use href="#i-wa"/></svg>Open WhatsApp</a>
+            <div class="row2"><span class="k mono" id="resend">Resend in 0:30</span><button class="link" type="button" id="emailme" hidden>Email me the code</button></div>
+            <div style="flex:1"></div>
+          </div>
+          <div class="id-foot"><span>by Frrata</span><span><a href="#calls">Privacy</a> · <a href="#calls">Terms</a></span></div>
+        </section>
+
+        <!-- 2b · email -->
+        <section class="scr id" data-s="email" aria-label="EkCode: email">
+          <div class="id-head"><svg class="wm" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg><span class="to"><span class="shopdot" aria-hidden="true">K</span>Kesar Studio</span></div>
+          <div class="id-body">
+            <h3>Your email</h3>
+            <p class="say bad" id="nowa" hidden>+91 98450 12345 isn't on WhatsApp.</p>
+            <label class="f">Email<input class="input" id="em" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com"></label>
+            <button class="btn primary wide" type="button" id="sendem" disabled><svg class="ico" aria-hidden="true"><use href="#i-mail"/></svg>Send code by email</button>
+            <div style="flex:1"></div>
+            <button class="btn ghost wide" type="button" data-go="phone" data-back><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Use another number</button>
+          </div>
+          <div class="id-foot"><span>by Frrata</span><span><a href="#calls">Privacy</a> · <a href="#calls">Terms</a></span></div>
+        </section>
+
+        <!-- 2c · locked -->
+        <section class="scr id" data-s="locked" aria-label="EkCode: locked">
+          <div class="id-head"><svg class="wm" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg><span class="to"><span class="shopdot" aria-hidden="true">K</span>Kesar Studio</span></div>
+          <div class="id-body">
+            <h3>Too many tries</h3>
+            <p class="say bad">Try again at <span class="mono">7:42 pm</span>.</p>
+            <div style="flex:1"></div>
+            <button class="btn primary wide" type="button" data-go="checkout" data-back>Check out as a guest</button>
+          </div>
+          <div class="id-foot"><span>by Frrata</span><span><a href="#calls">Privacy</a> · <a href="#calls">Terms</a></span></div>
+        </section>
+
+        <!-- 3 · create (first time on EkCode) -->
+        <section class="scr id" data-s="create" aria-label="EkCode: create">
+          <div class="id-head"><svg class="wm" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg><span class="to"><span class="shopdot" aria-hidden="true">K</span>Kesar Studio</span></div>
+          <div class="id-body" id="createbody">
+            <h3 data-en="Create your EkCode">Create your EkCode</h3>
+            <label class="f"><span data-en="Your name">Your name</span><input class="input" id="nm" autocomplete="name" placeholder="Ananya Rao"></label>
+            <ul class="notice">
+              <li><svg class="ico" aria-hidden="true"><use href="#i-user"/></svg><span data-en="Frrata keeps your name, phone and delivery addresses.">Frrata keeps your name, phone and delivery addresses.</span></li>
+              <li><svg class="ico" aria-hidden="true"><use href="#i-store"/></svg><span data-en="A shop on Frrata gets them only when you tap Continue there.">A shop on Frrata gets them only when you tap Continue there.</span></li>
+              <li><svg class="ico" aria-hidden="true"><use href="#i-x"/></svg><span data-en="Remove a shop or delete EkCode any time at id.frrata.com.">Remove a shop or delete EkCode any time at id.frrata.com.</span></li>
+            </ul>
+            <p class="k" style="margin:0" data-en="For 18 and over.">For 18 and over.</p>
+            <div style="flex:1"></div>
+            <button class="btn primary wide" type="button" id="create" disabled data-en="Create my EkCode">Create my EkCode</button>
+            <button class="btn ghost wide" type="button" data-go="guestback" data-en="Not now">Not now</button>
+          </div>
+          <div class="id-foot"><span>by Frrata</span><span><a href="#calls">Privacy</a> · <a href="#calls">Terms</a></span></div>
+        </section>
+
+        <!-- 4 · confirm -->
+        <section class="scr id" data-s="confirm" aria-label="EkCode: continue to the shop">
+          <div class="id-head"><svg class="wm" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg><span class="to"><span class="shopdot" aria-hidden="true">K</span>Kesar Studio</span></div>
+          <div class="id-body">
+            <h3 id="cfh">Continue to Kesar Studio</h3>
+            <div class="who"><span class="av" id="av">AR</span><span><b id="cfname">Ananya Rao</b><span class="k mono">+91 98450 •••45</span></span></div>
+            <fieldset style="border:0;padding:0;margin:0;display:grid;gap:8px" id="addrset">
+              <legend class="f" style="margin-bottom:6px">Deliver to</legend>
+              <div class="opts" id="addrs">
+                <label class="opt"><input type="radio" name="ad" checked><span><b>Home</b></span><small>14 Lavelle Rd, Ashok Nagar, Bengaluru 560001</small></label>
+                <label class="opt"><input type="radio" name="ad"><span><b>Office</b></span><small>3rd floor, 80 Feet Rd, Koramangala, Bengaluru 560034</small></label>
+                <label class="opt"><input type="radio" name="ad"><span><b>New address</b></span><small>Fill it in at Kesar Studio</small></label>
+              </div>
+            </fieldset>
+            <div class="shares" aria-label="Kesar Studio gets"><span class="k">Kesar Studio gets</span><span class="chip c-n">Name</span><span class="chip c-n">Phone</span><span class="chip c-n" id="adchip">This address</span></div>
+            <div style="flex:1"></div>
+            <button class="btn primary wide" type="button" id="cont">Continue</button>
+            <button class="btn ghost wide" type="button" data-go="phone" data-back id="notyou">Not you?</button>
+          </div>
+          <div class="id-foot"><span>by Frrata</span><span><a href="#calls">Privacy</a> · <a href="#calls">Terms</a></span></div>
+        </section>
+
+        <!-- 5 · filled at the shop -->
+        <section class="scr shop" data-s="filled" aria-label="Kesar Studio checkout, filled">
+          <div class="shop-head"><b>KESAR</b><span>Bag · 1</span></div>
+          <div class="shop-body">
+            <div class="filled"><span style="display:flex;gap:8px;align-items:center;min-width:0"><svg class="wm" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg><span id="fillname">Ananya Rao</span></span><button class="link" type="button" data-go="checkout" data-back style="color:var(--s-fg)">Not you?</button></div>
+            <h4>Checkout</h4>
+            <label class="sf">Phone<input class="sin mono" value="98450 12345" inputmode="tel" autocomplete="tel-national"></label>
+            <div class="sf"><span>Deliver to</span><div class="addr" id="filladdr"><b>Ananya Rao</b><br>14 Lavelle Rd, Ashok Nagar<br>Bengaluru 560001 · <span class="mono">+91 98450 12345</span></div></div>
+            <label class="tick" id="savetick" hidden><input type="checkbox"><span>Save this address to <svg class="wm" style="font-size:13px;color:var(--s-fg)" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg></span></label>
+            <div class="pm" role="radiogroup" aria-label="Payment">
+              <label><span>UPI, card, netbanking</span><input type="radio" name="pm" checked></label>
+              <label><span>Pay on delivery · <span class="mono">+₹49</span></span><input type="radio" name="pm"></label>
+            </div>
+            <label class="tick"><input type="checkbox"><span>Order updates for this order from Frrata on WhatsApp (Kesar Studio)</span></label>
+            <button class="sbtn" type="button" data-go="done">Pay <span class="mono">₹2,490</span></button>
+          </div>
+        </section>
+
+        <!-- 5b · guest back (Not now) -->
+        <section class="scr shop" data-s="guestback" aria-label="Kesar Studio checkout, phone verified">
+          <div class="shop-head"><b>KESAR</b><span>Bag · 1</span></div>
+          <div class="shop-body">
+            <h4>Checkout</h4>
+            <label class="sf">Phone<input class="sin mono" value="98450 12345" inputmode="tel" autocomplete="tel-national"></label>
+            <label class="sf">Full name<input class="sin" autocomplete="name"></label>
+            <label class="sf">Pincode<input class="sin" inputmode="numeric" autocomplete="postal-code"></label>
+            <button class="sbtn" type="button" disabled style="opacity:.5">Continue to payment</button>
+          </div>
+        </section>
+
+        <!-- 6 · done -->
+        <section class="scr shop" data-s="done" aria-label="Order placed">
+          <div class="shop-head"><b>KESAR</b><span>Bag · 0</span></div>
+          <div class="shop-body">
+            <h4>Order KS-1042 placed</h4>
+            <p style="margin:0;color:var(--s-sub)">Arrives Thu, 13 Nov</p>
+            <div style="flex:1"></div>
+            <button class="sbtn" type="button" data-go="checkout" data-back>Start again</button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div class="rail">
+      <div class="card pad" style="display:grid;gap:12px">
+        <h3 style="margin:0">Scenario</h3>
+        <div class="scns" role="group" aria-label="Scenario">
+          <button class="scn" type="button" aria-pressed="true" data-scn="new">New to EkCode</button>
+          <button class="scn" type="button" aria-pressed="false" data-scn="known">EkCode, new phone</button>
+          <button class="scn" type="button" aria-pressed="false" data-scn="device">Known on this phone</button>
+          <button class="scn" type="button" aria-pressed="false" data-scn="nowa">Not on WhatsApp</button>
+          <button class="scn" type="button" aria-pressed="false" data-scn="slow">Code slow</button>
+          <button class="scn" type="button" aria-pressed="false" data-scn="wrong">Wrong code</button>
+        </div>
+        <ol class="steps" id="steps">
+          <li data-st="checkout">Shop · Continue with EkCode</li>
+          <li data-st="phone">id.frrata.com · phone</li>
+          <li data-st="code">Code from WhatsApp</li>
+          <li data-st="create">Create (first time only)</li>
+          <li data-st="confirm">Continue to the shop</li>
+          <li data-st="filled">Back at the shop, filled in</li>
+        </ol>
+        <p class="k" style="margin:0" id="hint">Any 6 digits work. The code auto-submits on the sixth.</p>
+      </div>
+      <div class="card pad" style="display:grid;gap:8px">
+        <h3 style="margin:0">Why each choice</h3>
+        <ul class="note" style="margin:0">
+          <li><b>A real page on id.frrata.com</b>, not a pop-up or iframe: the shopper sees Frrata's address in the bar, and it works in Safari and Instagram's browser.</li>
+          <li><b>The shop's name stays in the header</b>, so the shopper always knows where they go back to.</li>
+          <li><b>One field per screen, the keypad numeric</b>; the number checks itself as it is typed (10 digits, starts 6–9).</li>
+          <li><b>The code fills itself</b> (<span class="mono">one-time-code</span>: iOS 26 keyboard, paste) and submits on the sixth digit; no Verify button.</li>
+          <li><b>"Open WhatsApp"</b> on a phone, because a web shop gets a copy-code button only (Meta).</li>
+          <li><b>Email appears only when needed</b>: at once if the number isn't on WhatsApp, after 20 s if the code hasn't arrived.</li>
+          <li><b>Consent is its own tap</b>, never pre-ticked (DPDP).</li>
+          <li><b>The shopper sees exactly what the shop gets</b> and chooses the address; "Not you?" is one tap everywhere.</li>
+          <li><b>Guest checkout never goes away.</b></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ WHATSAPP ============ -->
+  <h2 id="whatsapp">On WhatsApp</h2>
+  <div class="grid g2">
+    <div class="wa" aria-label="WhatsApp: sign-in code">
+      <div class="wa-h"><span class="pp" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M7 19V9.5A3.5 3.5 0 0 1 10.5 6H13" stroke="#FAFAF9" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M12 19v-6a3 3 0 0 1 3-3h2" stroke="#FF5C97" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg></span><span><b>Frrata <span style="color:#25D366" aria-label="Verified">●</span></b><small>Business account</small></span></div>
+      <div class="wa-b">
+        <div class="bub"><b class="mono">482913</b> is your verification code. For your security, do not share this code.<br><span style="color:var(--wa-sub);font-size:12.5px">This code expires in 10 minutes.</span><small>7:27 pm</small><span class="cta">Copy code</span></div>
+      </div>
+    </div>
+    <div class="wa" aria-label="WhatsApp: order update from Frrata">
+      <div class="wa-h"><span class="pp" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M7 19V9.5A3.5 3.5 0 0 1 10.5 6H13" stroke="#FAFAF9" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M12 19v-6a3 3 0 0 1 3-3h2" stroke="#FF5C97" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg></span><span><b>Frrata <span style="color:#25D366" aria-label="Verified">●</span></b><small>Business account</small></span></div>
+      <div class="wa-b">
+        <div class="bub">Your order <b class="mono">KS-1042</b> from <b>Kesar Studio</b> has shipped. It should reach you by Thu, 13 Nov.<br><span style="color:var(--wa-sub);font-size:12.5px">via Frrata</span><small>11:04 am</small><span class="cta">Track order</span><span class="cta">Contact Kesar Studio</span></div>
+      </div>
+    </div>
+  </div>
+  <ul class="note">
+    <li>Meta fixes the code message word for word; Frrata adds only the code, the security line and the expiry.</li>
+    <li>Order updates use one Frrata template per event, in Frrata's voice, with the shop's name as a detail and nothing promotional. They are sent only to shoppers who ticked the box and only while the shop has no number of its own. "Contact Kesar Studio" opens the shop's support.</li>
+  </ul>
+
+  <!-- ============ ACCOUNT ============ -->
+  <h2 id="account">Shopper's EkCode page · id.frrata.com</h2>
+  <div class="flow">
+    <div class="phone acct">
+      <div class="urlbar"><svg class="ico" aria-hidden="true"><use href="#i-lock"/></svg><b>id.frrata.com</b></div>
+      <div class="scr id on" style="min-height:0">
+        <div class="id-head"><svg class="wm" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg><button class="btn sm ghost" type="button">Sign out</button></div>
+        <div class="id-body">
+          <div class="who"><span class="av">AR</span><span style="flex:1;min-width:0"><b>Ananya Rao</b><span class="k mono">+91 98450 12345</span></span><button class="btn sm" type="button" data-dlg="dname">Edit</button></div>
+          <section aria-labelledby="h-shops"><h5 id="h-shops">Shops</h5>
+            <div class="list" id="shoplist">
+              <div><span class="t"><b>Kesar Studio</b><br><span class="s">Name · phone · Home · 9 Nov</span></span><button class="btn sm" type="button" data-rm="Kesar Studio">Remove</button></div>
+              <div><span class="t"><b>Juhi Handloom</b><br><span class="s">Name · phone · Office · 2 Nov</span></span><button class="btn sm" type="button" data-rm="Juhi Handloom">Remove</button></div>
+              <div><span class="t"><b>Nila Jewels</b><br><span class="s">Name · phone · 28 Oct</span></span><button class="btn sm" type="button" data-rm="Nila Jewels">Remove</button></div>
+            </div>
+          </section>
+          <section aria-labelledby="h-addr"><h5 id="h-addr">Addresses</h5>
+            <div class="list">
+              <div><span class="t"><b>Home</b><br><span class="s">14 Lavelle Rd, Bengaluru 560001</span></span><button class="btn sm" type="button">Edit</button></div>
+              <div><span class="t"><b>Office</b><br><span class="s">80 Feet Rd, Koramangala 560034</span></span><button class="btn sm" type="button">Edit</button></div>
+            </div>
+            <button class="btn wide" type="button"><svg class="ico" aria-hidden="true"><use href="#i-pin"/></svg>Add address</button>
+          </section>
+          <section aria-labelledby="h-dev"><h5 id="h-dev">Phones and computers</h5>
+            <div class="list">
+              <div><span class="t"><b>This phone</b><br><span class="s">Remembered until 7 Feb</span></span><button class="btn sm" type="button">Forget</button></div>
+              <div><span class="t"><b>1 other</b><br><span class="s">Chrome · Windows · 2 Nov</span></span><button class="btn sm" type="button">Sign out</button></div>
+            </div>
+          </section>
+          <details class="hist"><summary>What shops got</summary>
+            <div class="list" style="margin-top:8px">
+              <div><span class="t"><b>Kesar Studio</b><br><span class="s">Name, phone, Home</span></span><span class="s mono">9 Nov, 7:28 pm</span></div>
+              <div><span class="t"><b>Juhi Handloom</b><br><span class="s">Name, phone, Office</span></span><span class="s mono">2 Nov, 1:10 pm</span></div>
+              <div><span class="t"><b>Nila Jewels</b><br><span class="s">Name, phone</span></span><span class="s mono">28 Oct, 9:42 pm</span></div>
+            </div>
+          </details>
+          <button class="btn danger wide" type="button" data-dlg="ddel">Delete my EkCode</button>
+        </div>
+        <div class="id-foot"><span>Questions: <a href="#calls">privacy@frrata.com</a></span><span><a href="#calls">Privacy</a></span></div>
+      </div>
+    </div>
+    <div class="rail">
+      <div class="card pad"><ul class="note" style="margin:0">
+        <li>Signing in here uses the same phone, code and email fallback; a remembered phone opens straight to this page.</li>
+        <li><b>Remove</b> a shop: it keeps the orders already placed and is never filled in again until the shopper continues there.</li>
+        <li><b>Delete my EkCode</b>: account, addresses and devices go; shops keep only orders they fulfilled. The data law asks that withdrawing be as easy as giving, so it is one button and one confirm.</li>
+        <li>"What shops got" is the disclosure log: every time a shop received something.</li>
+        <li>Grievance contact in the footer (data law).</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <!-- ============ CONSOLE ============ -->
+  <h2 id="console">Console › Apps</h2>
+  <div class="grid">
+    <div class="cframe">
+      <div class="cbar"><span class="crumb">Apps › <b>Grow</b></span></div>
+      <div class="sec" style="margin:16px;border-radius:6px">
+        <div class="approw">
+          <span class="apptile"><svg class="tile" aria-hidden="true"><use href="#tl"/></svg></span>
+          <span style="min-width:0"><button class="link" type="button" data-dlg="dapp" style="font-size:14px;font-weight:600;text-decoration:none">EkCode</button><br><span class="s">Shoppers filled in at checkout</span></span>
+          <span style="display:flex;gap:10px;align-items:center"><span class="chip c-ok">In your plan</span><input class="sw" type="checkbox" role="switch" aria-label="EkCode" checked></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="cframe">
+      <div class="cbar"><span class="crumb">Apps › <b>EkCode</b></span><span style="display:flex;gap:8px;align-items:center"><span class="chip c-ok">On</span></span></div>
+      <div class="cpage">
+        <div class="tabs" role="tablist" aria-label="EkCode">
+          <button role="tab" aria-selected="true" data-tab="ov">Overview</button>
+          <button role="tab" aria-selected="false" data-tab="ld">Shoppers</button>
+          <button role="tab" aria-selected="false" data-tab="st">Settings</button>
+        </div>
+
+        <div class="tp on" data-tp="ov">
+          <div class="stats">
+            <div class="stat"><span class="n">37%</span><span class="l">Orders filled in · today</span></div>
+            <div class="stat"><span class="n">418</span><span class="l">Sign-ins · 7 days</span></div>
+            <div class="stat"><span class="n">61%</span><span class="l">New to your shop</span></div>
+            <div class="stat"><span class="n">71%</span><span class="l">COD from a checked phone</span></div>
+          </div>
+          <div class="grid g2">
+            <div class="sec"><header><h3>Checkout completed <span class="info" title="1 in 10 shoppers don't see EkCode, so the two numbers compare like with like.">i</span></h3><span class="k">30 days</span></header>
+              <div class="cmp">
+                <div class="bar"><span>With EkCode</span><span class="t"><i style="width:64%"></i></span><span class="v">64%</span></div>
+                <div class="bar"><span>Without</span><span class="t"><i class="lt" style="width:52%"></i></span><span class="v">52%</span></div>
+              </div>
+            </div>
+            <div class="sec"><header><h3>COD returned to you</h3><span class="k">30 days</span></header>
+              <div class="cmp">
+                <div class="bar"><span>Checked phone</span><span class="t"><i style="width:22%"></i></span><span class="v">9.8%</span></div>
+                <div class="bar"><span>Not checked</span><span class="t"><i class="lt" style="width:41%"></i></span><span class="v">18.4%</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="sec"><header><h3>Order updates on WhatsApp</h3><a class="btn sm" href="#console">Connect your number</a></header>
+            <ul class="rows"><li><span>From Frrata's number<br><span class="s">Until you connect your own</span></span><span class="mono">1,204 sent · Nov</span></li></ul>
+          </div>
+        </div>
+
+        <div class="tp" data-tp="ld">
+          <div class="sec">
+            <header><h3>Shoppers</h3><button class="btn sm" type="button" id="exp"><svg class="ico" aria-hidden="true"><use href="#i-dl"/></svg>Export</button></header>
+            <div class="filters" role="group" aria-label="Show">
+              <button class="fchip" type="button" aria-pressed="true">All · 1,126</button>
+              <button class="fchip" type="button" aria-pressed="false">Said yes to WhatsApp · 312</button>
+              <button class="fchip" type="button" aria-pressed="false">No order yet · 208</button>
+            </div>
+            <div class="tblw"><table>
+              <thead><tr><th>Shopper</th><th>Phone</th><th>First here</th><th>From</th><th class="num">Orders</th><th>WhatsApp</th></tr></thead>
+              <tbody>
+                <tr><td>Ananya Rao</td><td class="mono">+91 98450 12345</td><td>9 Nov</td><td>Instagram</td><td class="num">1</td><td><span class="chip c-ok">Yes</span></td></tr>
+                <tr><td>Meera Iyer</td><td class="mono">+91 99000 41822</td><td>9 Nov</td><td>Google</td><td class="num">0</td><td><span class="chip c-n">—</span></td></tr>
+                <tr><td>Farah Khan</td><td class="mono">+91 98201 77310</td><td>8 Nov</td><td>Direct</td><td class="num">3</td><td><span class="chip c-ok">Yes</span></td></tr>
+                <tr><td>Ritika Sen</td><td class="mono">+91 90070 55218</td><td>8 Nov</td><td>Instagram</td><td class="num">1</td><td><span class="chip c-n">—</span></td></tr>
+              </tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <div class="tp" data-tp="st">
+          <div class="sec">
+            <ul class="rows">
+              <li><span>Show at checkout</span><input class="sw" type="checkbox" role="switch" aria-label="Show at checkout" checked></li>
+              <li><span>Compare with 1 in 10 shoppers <span class="info" title="They see the ordinary checkout, so Overview can show the difference EkCode makes.">i</span></span><input class="sw" type="checkbox" role="switch" aria-label="Compare with 1 in 10 shoppers" checked></li>
+              <li><span>Order updates from Frrata's number<br><span class="s">Until you connect your own</span></span><input class="sw" type="checkbox" role="switch" aria-label="Order updates from Frrata's number" checked></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <ul class="note">
+    <li>Free on every plan, so it is in "Grow" with "In your plan" and a switch: the network is worth more with every shop on it.</li>
+    <li>"Shoppers" lists the people who continued on this shop: the leads. Export is for owner and admin only. Marketing is sent from Campaigns, never from here.</li>
+    <li>No "read" or "delivered" counts for Frrata's sends: Meta's terms keep WhatsApp data from reaching the shop. "Sent" is Frrata's own count.</li>
+    <li>Order updates cost the shop nothing extra until counsel clears a per-message charge (Meta forbids reselling its platform).</li>
+  </ul>
+
+  <!-- ============ STATES ============ -->
+  <h2 id="states">States</h2>
+  <div class="card" style="overflow-x:auto">
+    <table class="tbl-states">
+      <thead><tr><th>Screen</th><th>State</th><th>What shows</th></tr></thead>
+      <tbody>
+        <tr><td>Shop checkout</td><td>EkCode off / paused by Frrata</td><td>No button; the ordinary checkout</td></tr>
+        <tr><td></td><td>In the holdout (1 in 10)</td><td>No button</td></tr>
+        <tr><td></td><td>Signed in on this shop</td><td>Filled, "Not you?" strip</td></tr>
+        <tr><td>Phone</td><td>Typing</td><td>Send stays off until 10 digits starting 6–9; "Starts with 6, 7, 8 or 9" only after 10 digits</td></tr>
+        <tr><td></td><td>Sending</td><td>Spinner in the button; screen holds</td></tr>
+        <tr><td></td><td>Not on WhatsApp</td><td>Straight to email: "+91 … isn't on WhatsApp."</td></tr>
+        <tr><td>Code</td><td>Waiting</td><td>Resend counts down from 0:30</td></tr>
+        <tr><td></td><td>No delivery in 20 s</td><td>"Email me the code" appears</td></tr>
+        <tr><td></td><td>Wrong</td><td>Cells shake once, clear; "Code doesn't match · 4 tries left"</td></tr>
+        <tr><td></td><td>Expired (10 min)</td><td>"Code expired" + Resend</td></tr>
+        <tr><td></td><td>Locked (5 tries, or 3 codes in 10 min)</td><td>"Too many tries · Try again at 7:42 pm"; Check out as a guest</td></tr>
+        <tr><td>Create</td><td>First time on EkCode</td><td>Name + the notice; Create stays off until a name</td></tr>
+        <tr><td></td><td>Not now</td><td>Back to the shop; nothing shared</td></tr>
+        <tr><td>Continue to shop</td><td>No saved address</td><td>Name and phone only; the address filled in at the shop</td></tr>
+        <tr><td></td><td>Back failed (shop down)</td><td>"Kesar Studio isn't answering" + Try again; nothing shared</td></tr>
+        <tr><td>Shopper's page</td><td>No shops yet</td><td>"Shops" empty: "None yet"</td></tr>
+        <tr><td></td><td>Remove a shop</td><td>Confirm; the row leaves; toast with Undo for 5 s</td></tr>
+        <tr><td></td><td>Delete</td><td>Confirm naming what goes; then signed out to a "Deleted" page</td></tr>
+        <tr><td>Console</td><td>No sign-ins yet</td><td>Numbers show "—"; Shoppers: "None yet"</td></tr>
+        <tr><td></td><td>Staff, not owner/admin</td><td>No Export</td></tr>
+        <tr><td></td><td>Phone width</td><td>Stats 2 × 2; the table scrolls inside its card</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============ CALLS ============ -->
+  <h2 id="calls">Your calls</h2>
+  <div class="grid g2">
+    <div class="card pad"><h3>1 · "Save this address to EkCode" at checkout</h3>
+      <p>For a shopper who just created EkCode and types a new address. <b>Recommend: ticked</b>, because they created EkCode to have their addresses kept, and the notice they agreed to says so. The data law forbids pre-ticked <i>consent</i>; this is the use they already agreed to. Counsel confirms with the notice.</p></div>
+    <div class="card pad"><h3>2 · Blue tick for Frrata's number</h3>
+      <p>Meta asks for a verified business, 30 days on the platform and two-step verification; no fame test. <b>Recommend</b> applying 30 days after the number goes live (after the Pvt Ltd). Until then the chat shows the number with "Frrata" as its name.</p></div>
+  </div>
+</div>
+
+<!-- dialogs -->
+<div class="scrim" id="scrim"></div>
+<div class="dlg" id="dapp" role="dialog" aria-modal="true" aria-labelledby="dapph">
+  <div class="dh" id="dapph"><svg class="wm" style="font-size:20px" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg></div>
+  <div class="db">
+    <span>Shoppers filled in at checkout</span>
+    <ul class="check">
+      <li><svg class="ico" aria-hidden="true"><use href="#i-ok"/></svg>Name, phone and address in one tap</li>
+      <li><svg class="ico" aria-hidden="true"><use href="#i-ok"/></svg>Every phone checked on WhatsApp</li>
+      <li><svg class="ico" aria-hidden="true"><use href="#i-ok"/></svg>Shoppers from other Frrata shops</li>
+      <li><svg class="ico" aria-hidden="true"><use href="#i-ok"/></svg>Order updates until you connect your number</li>
+    </ul>
+    <div class="pricep"><span class="chip c-ok">In your plan</span><span class="mono">₹0</span></div>
+  </div>
+  <div class="df"><button class="btn" type="button" data-close>Not now</button><button class="btn primary" type="button" data-close>Turn on EkCode</button></div>
+</div>
+<div class="dlg" id="drm" role="dialog" aria-modal="true" aria-labelledby="drmh">
+  <div class="dh" id="drmh">Remove <span id="rmname">Kesar Studio</span>?</div>
+  <div class="db"><span>It keeps orders you placed. It won't be filled in next time.</span></div>
+  <div class="df"><button class="btn" type="button" data-close>Keep</button><button class="btn danger" type="button" id="rmgo">Remove</button></div>
+</div>
+<div class="dlg" id="ddel" role="dialog" aria-modal="true" aria-labelledby="ddelh">
+  <div class="dh" id="ddelh">Delete your EkCode?</div>
+  <div class="db"><span>Your name, addresses and phones go from Frrata. Shops keep orders you placed.</span></div>
+  <div class="df"><button class="btn" type="button" data-close>Keep</button><button class="btn danger" type="button" data-close>Delete</button></div>
+</div>
+<div class="dlg" id="dname" role="dialog" aria-modal="true" aria-labelledby="dnameh">
+  <div class="dh" id="dnameh">Your name</div>
+  <div class="db"><input class="input" value="Ananya Rao" aria-label="Your name" autocomplete="name"></div>
+  <div class="df"><button class="btn" type="button" data-close>Cancel</button><button class="btn primary" type="button" data-close>Save</button></div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<button class="btn sm theme-t" type="button" id="theme">Dark</button>
+
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)]
+  const hosts = { checkout: 'kesarstudio.in|/checkout', filled: 'kesarstudio.in|/checkout', guestback: 'kesarstudio.in|/checkout', done: 'kesarstudio.in|/order/KS-1042' }
+  let scn = 'new', tries = 0, timer = null
+  const addrsHTML = document.querySelector('#addrs').innerHTML, addrHTML = document.querySelector('#filladdr').innerHTML
+  const order = ['checkout', 'phone', 'code', 'email', 'locked', 'create', 'confirm', 'filled', 'guestback', 'done']
+  let cur = 'checkout'
+  function go(s, back) {
+    const from = order.indexOf(cur); cur = s
+    $$('.scr[data-s]').forEach((e) => e.classList.toggle('on', e.dataset.s === s))
+    const el = $(`.scr[data-s="${s}"]`); el.classList.toggle('back', !!back || order.indexOf(s) < from)
+    const [h, p] = (hosts[s] || 'id.frrata.com|/continue').split('|'); $('#host').textContent = h; $('#path').textContent = p
+    $$('#steps li').forEach((li) => li.classList.toggle('on', li.dataset.st === (s === 'email' || s === 'locked' ? 'code' : s === 'guestback' || s === 'done' ? 'filled' : s)))
+    if (s === 'phone') setTimeout(() => $('#ph').focus({ preventScroll: true }), 50)
+    if (s === 'code') startCode()
+    if (s === 'email') setTimeout(() => $('#em').focus({ preventScroll: true }), 50)
+    if (s === 'filled') { $('#savetick').hidden = scn !== 'new'; if ($('#savetick input')) $('#savetick input').checked = true }
+    if (s !== 'code') clearInterval(timer)
+  }
+  function skipMarks() {
+    $$('#steps li').forEach((li) => li.classList.remove('skip'))
+    if (scn !== 'new') $('[data-st="create"]').classList.add('skip')
+    if (scn === 'device') { $('[data-st="phone"]').classList.add('skip'); $('[data-st="code"]').classList.add('skip') }
+  }
+  // scenario
+  $$('.scn').forEach((b) => b.addEventListener('click', () => {
+    scn = b.dataset.scn; $('#addrs').innerHTML = addrsHTML; $('#filladdr').innerHTML = addrHTML; $('#adchip').hidden = false; $('#cfname').textContent = $('#fillname').textContent = 'Ananya Rao'; $('#av').textContent = 'AR'; $('#nm').value = ''; $('#create').disabled = true; $$('.scn').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); tries = 0
+    skipMarks(); go('checkout', true)
+    $('#hint').textContent = { new: 'Any 6 digits work. The code auto-submits on the sixth.', known: 'Has EkCode, new phone: code, then straight to Continue.', device: 'Remembered phone: one tap from the shop to Continue.', nowa: 'Meta answers "not on WhatsApp": straight to email.', slow: 'No delivery in 20 s: "Email me the code" appears (sped up here).', wrong: 'First code you type is wrong; the second works. Five wrong: locked.' }[scn]
+  }))
+  // start
+  $$('[data-go]').forEach((b) => b.addEventListener('click', () => {
+    let t = b.dataset.go
+    if (t === 'start') t = scn === 'device' ? 'confirm' : 'phone'
+    go(t, b.hasAttribute('data-back'))
+  }))
+  // phone
+  const ph = $('#ph'), send = $('#send'), phsay = $('#phsay')
+  ph.addEventListener('input', () => {
+    const d = ph.value.replace(/\D/g, '').slice(0, 10)
+    ph.value = d.length > 5 ? d.slice(0, 5) + ' ' + d.slice(5) : d
+    const ok = /^[6-9]\d{9}$/.test(d); send.disabled = !ok
+    phsay.className = 'say' + (d.length === 10 && !ok ? ' bad' : ''); phsay.textContent = d.length === 10 && !ok ? 'Starts with 6, 7, 8 or 9' : ''
+  })
+  ph.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !send.disabled) send.click() })
+  send.addEventListener('click', () => {
+    const lbl = send.innerHTML; send.innerHTML = '<span class="spin" aria-hidden="true"></span><span class="sr">Sending</span>'; send.disabled = true
+    setTimeout(() => {
+      send.innerHTML = lbl; send.disabled = false
+      $('#sentto').innerHTML = 'On WhatsApp · <span class="mono">+91 ' + (ph.value || '98450 12345') + '</span>'
+      if (scn === 'nowa') { $('#nowa').hidden = false; go('email') } else { $('#nowa').hidden = true; go('code') }
+    }, 650)
+  })
+  // code
+  const code = $('#code'), cells = $('#cells'), codesay = $('#codesay')
+  function paint() {
+    const v = code.value; $$('i', cells).forEach((c, i) => { c.textContent = v[i] || ''; c.classList.toggle('cur', document.activeElement === code && i === Math.min(v.length, 5)) })
+  }
+  function startCode() {
+    code.value = ''; cells.className = 'cells'; codesay.textContent = ''; codesay.className = 'say'; $('#emailme').hidden = true; paint()
+    setTimeout(() => code.focus({ preventScroll: true }), 60)
+    let left = 30; const r = $('#resend'); r.textContent = 'Resend in 0:30'; clearInterval(timer)
+    timer = setInterval(() => {
+      left--; const shown = scn === 'slow' ? 4 : 20
+      if (30 - left >= shown && left > 0 && scn !== 'nowa') $('#emailme').hidden = false
+      if (left <= 0) { clearInterval(timer); r.innerHTML = '<button class="link" type="button" id="rs">Resend</button>'; $('#rs').onclick = () => { startCode() } }
+      else r.textContent = 'Resend in 0:' + String(left).padStart(2, '0')
+    }, scn === 'slow' ? 250 : 1000)
+  }
+  code.addEventListener('focus', paint); code.addEventListener('blur', paint)
+  code.addEventListener('input', () => {
+    code.value = code.value.replace(/\D/g, '').slice(0, 6); cells.className = 'cells'; codesay.textContent = ''; paint()
+    if (code.value.length === 6) {
+      if (scn === 'wrong' && tries < 1) {
+        tries++; cells.className = 'cells bad'; codesay.className = 'say bad'; codesay.textContent = "Code doesn't match · " + (5 - tries) + ' tries left'
+        setTimeout(() => { code.value = ''; paint() }, 420); return
+      }
+      cells.className = 'cells ok'; codesay.className = 'say ok'; codesay.textContent = 'Checked'
+      clearInterval(timer)
+      setTimeout(() => go(scn === 'new' ? 'create' : 'confirm'), 450)
+    }
+  })
+  $('#emailme').addEventListener('click', () => { $('#nowa').hidden = true; go('email') })
+  // email
+  const em = $('#em'), sendem = $('#sendem')
+  em.addEventListener('input', () => { sendem.disabled = !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em.value) })
+  sendem.addEventListener('click', () => { $('#sentto').innerHTML = 'By email · <span class="mono">' + em.value.replace(/^(.).*(@.*)$/, '$1•••$2') + '</span>'; go('code'); $('#openwa').hidden = true; $('#emailme').hidden = true })
+  // create
+  const nm = $('#nm'), create = $('#create')
+  nm.addEventListener('input', () => { create.disabled = nm.value.trim().length < 2 })
+  create.addEventListener('click', () => {
+    const n = nm.value.trim(); $('#cfname').textContent = n; $('#fillname').textContent = n
+    $('#av').textContent = n.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+    $('#addrs').innerHTML = '<label class="opt"><input type="radio" name="ad" checked><span><b>New address</b></span><small>Fill it in at Kesar Studio</small></label>'
+    $('#adchip').hidden = true
+    $('#filladdr').innerHTML = '<span style="color:var(--s-sub)">Add a delivery address</span>'
+    go('confirm')
+  })
+  $('#addrs').addEventListener('change', () => {
+    const t = $('#addrs input:checked').closest('label').querySelector('b').textContent
+    $('#adchip').hidden = t === 'New address'
+  })
+  $('#cont').addEventListener('click', () => {
+    const b = $('#cont'); b.innerHTML = '<span class="spin" aria-hidden="true"></span><span class="sr">Going back</span>'
+    setTimeout(() => { b.textContent = 'Continue'; go('filled') }, 600)
+  })
+  // keep wrong-code lockout reachable: five fails
+  // tabs
+  $$('[data-tab]').forEach((t) => t.addEventListener('click', () => {
+    $$('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === t)))
+    $$('[data-tp]').forEach((p) => p.classList.toggle('on', p.dataset.tp === t.dataset.tab))
+  }))
+  $$('.fchip').forEach((c) => c.addEventListener('click', () => $$('.fchip').forEach((x) => x.setAttribute('aria-pressed', String(x === c)))))
+  // dialogs
+  let opener = null
+  function open(id) { opener = document.activeElement; $('#scrim').classList.add('open'); const d = $('#' + id); d.classList.add('open'); (d.querySelector('[data-close]') || d).focus() }
+  function close() { $('#scrim').classList.remove('open'); $$('.dlg.open').forEach((d) => d.classList.remove('open')); opener && opener.focus({ preventScroll: true }) }
+  $$('[data-dlg]').forEach((b) => b.addEventListener('click', () => open(b.dataset.dlg)))
+  $$('[data-close]').forEach((b) => b.addEventListener('click', close))
+  $('#scrim').addEventListener('click', close)
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close() })
+  let rmRow = null
+  $$('[data-rm]').forEach((b) => b.addEventListener('click', () => { rmRow = b.closest('div'); $('#rmname').textContent = b.dataset.rm; open('drm') }))
+  $('#rmgo').addEventListener('click', () => {
+    const row = rmRow, name = $('#rmname').textContent; close(); row.hidden = true
+    toast(name + ' removed', () => { row.hidden = false })
+  })
+  $('#exp').addEventListener('click', () => toast('shoppers-2026-11-09.csv'))
+  function toast(msg, undo) {
+    const t = $('#toast'); t.innerHTML = ''; t.append(msg)
+    if (undo) { const u = document.createElement('button'); u.className = 'link'; u.style.cssText = 'color:inherit;margin-left:12px'; u.textContent = 'Undo'; u.onclick = () => { undo(); t.classList.remove('on') }; t.append(u) }
+    t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 5000)
+  }
+  $('#theme').addEventListener('click', () => {
+    const r = document.documentElement, dark = r.dataset.theme !== 'dark'; r.dataset.theme = dark ? 'dark' : 'light'; $('#theme').textContent = dark ? 'Light' : 'Dark'
+  })
+  skipMarks(); go('checkout')
+})()
+</script>
