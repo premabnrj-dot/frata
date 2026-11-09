@@ -1,6 +1,6 @@
 # Frata roadmap
 
-Status: proposed · 2026-11-06 · Approved: pending
+Status: proposed · 2026-11-06 · Approved: pending · Next roadmap (proposal 2026-11-09): `docs/plans/2026-11-09-product-roadmap.md`
 Mockups: Phase A https://claude.ai/artifact/7mikx6osVqgKjs84oERW5k · Phase 1 https://claude.ai/artifact/QJ3N5knGqGZniMCsZJn7Fu
 
 Order (owner, 2026-11-06): Admin (A1, A2) first, then Phase 1.

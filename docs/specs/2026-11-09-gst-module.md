@@ -121,6 +121,19 @@ the period view, GSTR-1 data, any GSP connection.
   role touches every role tuple (Accountant added to none but GST's); the checkout state lock for unregistered shops
   touches checkout and the shop's pincode check.
 
+## Added from the back-office report (2026-11-09, search/sharing session; a CA confirms)
+- The ₹2,500 slab follows the per-piece taxable value **after invoice discounts**: decided per line at checkout after
+  offers (the code already rates the discounted piece: `src/domains/checkout/discounts.ts`).
+- **From 1 Nov 2026** a post-sale discount reduces the value only through a credit note, with the buyer reversing ITC
+  (s.15(3)(b), Notification 03/2026-CT, 26 Oct 2026) [S]: G0 issues it as a credit note, never an edit.
+- **ARQP** (annual return, quarterly payment) is optional for ≤ ₹5 cr B2C-only sellers [S, 2026-10-12]: a filing
+  option in Registration (G3).
+- **GST rates change once a year, from 1 April** [S]: the rate table is versioned by effective date (G0).
+- **IMS into the rules from the April 2027 return** [S]: buyer-side, stays with the CA; Frrata's own invoices to the
+  merchant appear in their IMS.
+- Invoice numbers: ≤ 16 characters, consecutive and unique per FY; letters, digits, `-` and `/`, not starting with
+  either (Rule 46(b)) [S, 2026-10]: the series check already holds this (work.ts).
+
 ## Out of scope (and what brings it back)
 GSTR-3B filing, ITC, IMS, GSTR-9 (3 CAs ask); purchases and expenses (a merchant asks to keep books in Frrata); TDS/TCS
 (Frrata confirmed as an ECO); multi-GSTIN shops (a shop with a second state warehouse).
