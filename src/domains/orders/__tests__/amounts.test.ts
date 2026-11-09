@@ -4,7 +4,7 @@ import { charged, collect, paidOnline, refundDue, reprice, sharesOf, type Stored
 
 // Two kurtas (₹2,490 at 5%, ₹3,200 at 18%), ₹79 delivery, ₹49 COD fee, prices include GST — as checkout stores them.
 const gross = [{ gross: 249000, unitPrice: 249000, hsn: '6211' }, { gross: 320000, unitPrice: 320000, hsn: '6211' }]
-const atCheckout = (charges: number) => taxOrder(gross, charges, { registered: true, pricesIncludeGst: true })
+const atCheckout = (charges: number) => taxOrder(gross, charges, { registered: true, pricesIncludeGst: true, date: new Date('2026-11-09T06:00:00Z') })
 const lines = (withShares: boolean, charges = 7900 + 4900): StoredLine[] => atCheckout(charges).lines.map((l) => ({
   taxableValue: l.taxable, gst: l.gst, gstBps: l.bps, chargeTaxable: withShares ? l.chargeTaxable : null, chargeGst: withShares ? l.chargeGst : null,
 }))
@@ -43,7 +43,7 @@ describe('amounts', () => {
 
 describe('reprice (offers)', () => {
   // A ₹2,650 kurta with ₹100 off paying online: 5% online, 18% on delivery (the slab after the discount).
-  const s = { lines: [{ unitPrice: 265000, qty: 1, hsn: '6211', productDiscount: 0 }], applied: [{ class: 'payment' as const, amount: 10000 }], shipping: 0, registered: true, pricesIncludeGst: true }
+  const s = { lines: [{ unitPrice: 265000, qty: 1, hsn: '6211', productDiscount: 0 }], applied: [{ class: 'payment' as const, amount: 10000 }], shipping: 0, registered: true, pricesIncludeGst: true, placedAt: new Date('2026-11-09T06:00:00Z') }
   const rules = { shippingFlat: 0, freeShippingAbove: 0, codOn: true, codMin: 0, codMax: 0, codCharge: 4900 }
   it('prepaid keeps the saving; on delivery drops it and adds the fee, each at its own rate', () => {
     const pre = reprice(s, 'prepaid')

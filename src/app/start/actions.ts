@@ -1,10 +1,9 @@
 'use server'
 
 import { z } from 'zod'
-import { eq } from 'drizzle-orm'
-import { SELLS, shopSettings } from '@/lib/db/schema'
+import { SELLS } from '@/lib/db/schema'
 import { startingHsn } from '@/domains/catalogue/sell-keys'
-import { withTenant } from '@/lib/db/tenant'
+import { setStartingHsn } from '@/lib/queries/settings'
 import { errName } from '@/lib/log'
 import { PINCODE_SHAPE, slugProblem } from '@/domains/signup/slug'
 import { requireUser } from '@/lib/auth/require-user'
@@ -73,7 +72,7 @@ export async function createMyShop(input: unknown): Promise<{ ok: true; trial: b
   if (r.ok) {
     // A new product's starting HSN, from what the shop sells (plan 2026-11-09-gst-core-and-categories § 2): a prefill,
     // never a fallback. Best effort: the shop exists either way, and Settings › Taxes shows and changes it.
-    await withTenant(r.tenantId, (tx) => tx.update(shopSettings).set({ defaultHsn: startingHsn(sells) }).where(eq(shopSettings.tenantId, r.tenantId))).catch((e) => console.error('[createMyShop] starting hsn', errName(e)))
+    await setStartingHsn(r.tenantId, startingHsn(sells)).catch((e) => console.error('[createMyShop] starting hsn', errName(e)))
     refreshHosts(hostFor(slug)); return { ok: true, trial: r.trial }
   }
   const field = r.error === 'slug_taken' || r.error === 'bad_slug' ? 'slug' : r.error === 'bad_name' ? 'name' : r.error === 'bad_pincode' ? 'pickup' : r.error === 'bad_code' ? 'phone' : undefined

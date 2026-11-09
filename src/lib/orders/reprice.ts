@@ -30,7 +30,7 @@ export async function storedPricing(tx: Tx, tenantId: string, orderId: string, o
     lines: lines.map((l) => ({ unitPrice: Number(l.unitPrice), qty: l.qty, hsn: l.hsn, productDiscount: Number(l.productDiscount), gstBps: l.gstBps })),
     applied: applied.map((a) => ({ class: a.class as 'product' | 'order' | 'shipping' | 'payment', amount: Number(a.amount) })),
     shipping: o.shipping, registered: chargesGst({ gstin: o.sellerGstin, scheme: (ord?.sellerScheme ?? 'regular') as Scheme }), pricesIncludeGst: o.pricesIncludeGst,
-    placedAt: ord?.placedAt ?? undefined,
+    placedAt: ord!.placedAt,
   }
 }
 

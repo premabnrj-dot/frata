@@ -43,7 +43,7 @@ export type StoredPricing = {
   applied: { class: 'product' | 'order' | 'shipping' | 'payment'; amount: number }[]
   shipping: number; registered: boolean; pricesIncludeGst: boolean
   /** When the order was placed: its rates are the table's on that day (the tax the shopper saw), never today's. */
-  placedAt?: Date
+  placedAt: Date
 }
 
 export type Repriced = MethodPrice & { codCharge: number }

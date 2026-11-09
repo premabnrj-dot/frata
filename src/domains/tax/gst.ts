@@ -28,7 +28,7 @@ export const HIGH_BPS = 1_800
  * tax invoiced; plan review 2026-11-09). The rate table is `rates.ts`; `own` is the merchant's rate for a code the table
  * lacks (or, on repricing, the line's stored rate). Null: no rate is known, and a registered shop can't sell it.
  */
-export function rateFor(hsn: string | null, unitPrice: number, pricesIncludeGst: boolean, date: Date = new Date(), own?: number | null): number | null {
+export function rateFor(hsn: string | null, unitPrice: number, pricesIncludeGst: boolean, date: Date, own?: number | null): number | null {
   return rateOn(hsn, unitPrice, pricesIncludeGst, date, own)
 }
 
@@ -70,10 +70,10 @@ export function shareCharges(taxed: Pick<TaxedLine, 'bps' | 'taxable'>[], charge
 }
 
 /** GST on each line and on the charges (delivery + COD fee) shared over the lines. `registered` false: no GST at all. */
-export function taxOrder(lines: TaxLine[], charges: number, o: { registered: boolean; pricesIncludeGst: boolean; date?: Date }): { lines: (TaxedLine & ChargeShare)[]; chargesGst: number; chargesTaxable: number } {
+export function taxOrder(lines: TaxLine[], charges: number, o: { registered: boolean; pricesIncludeGst: boolean; date: Date }): { lines: (TaxedLine & ChargeShare)[]; chargesGst: number; chargesTaxable: number } {
   // A line with no known rate never reaches here from checkout (quote() refuses it); 0 is the last resort only.
   const taxed = o.registered
-    ? lines.map((l) => { const bps = rateFor(l.hsn, l.unitPrice, o.pricesIncludeGst, o.date ?? new Date(), l.own) ?? 0; return { bps, ...split(l.gross, bps, o.pricesIncludeGst) } })
+    ? lines.map((l) => { const bps = rateFor(l.hsn, l.unitPrice, o.pricesIncludeGst, o.date, l.own) ?? 0; return { bps, ...split(l.gross, bps, o.pricesIncludeGst) } })
     : lines.map((l) => ({ bps: 0, taxable: l.gross, gst: 0 }))
   const shares = shareCharges(taxed, charges, o.pricesIncludeGst)
   const out = taxed.map((t, i) => ({ ...t, ...shares[i]! }))

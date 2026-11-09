@@ -111,7 +111,7 @@ describe('quote with offers', () => {
 
 describe('priceMethod', () => {
   it('spreads to the paise and sums exactly', () => {
-    const m = priceMethod([{ gross: 100001, qty: 1, hsn: '6211', productDiscount: 0 }, { gross: 33333, qty: 3, hsn: '6211', productDiscount: 0 }, { gross: 7, qty: 1, hsn: null, productDiscount: 0 }], 9999, 1001, 7900, { registered: true, pricesIncludeGst: true })
+    const m = priceMethod([{ gross: 100001, qty: 1, hsn: '6211', productDiscount: 0 }, { gross: 33333, qty: 3, hsn: '6211', productDiscount: 0 }, { gross: 7, qty: 1, hsn: null, productDiscount: 0 }], 9999, 1001, 7900, { registered: true, pricesIncludeGst: true, date: new Date('2026-11-09T06:00:00Z') })
     expect(m.discount).toBe(11000)
     expect(m.lines.reduce((a, l) => a + l.discount, 0)).toBe(11000)
     expect(m.total).toBe(100001 + 33333 + 7 - 11000 + 7900)

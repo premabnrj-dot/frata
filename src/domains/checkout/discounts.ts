@@ -247,7 +247,7 @@ export type MethodPrice = {
  * the payment discount spread over what is left in proportion, each line taxed at the rate of its own discounted
  * piece, the charges shared over the lines at their rates.
  */
-export function priceMethod(lines: PriceLine[], orderAmount: number, paymentAmount: number, charges: number, o: { registered: boolean; pricesIncludeGst: boolean; date?: Date }): MethodPrice {
+export function priceMethod(lines: PriceLine[], orderAmount: number, paymentAmount: number, charges: number, o: { registered: boolean; pricesIncludeGst: boolean; date: Date }): MethodPrice {
   const gross = lines.map((l) => l.gross)
   const subtotal = gross.reduce((a, b) => a + b, 0)
   const prod = lines.map((l) => l.productDiscount)
