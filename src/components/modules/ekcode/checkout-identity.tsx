@@ -1,7 +1,7 @@
 import { EkMark } from '@/components/ekcode/mark'
 import { EK } from '@/domains/ekcode-core/brand'
 import { ekcodeConfigured } from '@/lib/ekcode/keys'
-import { EkcodeIsland } from './island'
+import { EkcodeIslandLazy as EkcodeIsland } from './island-lazy'
 
 // =============================================================================
 // FILE: src/components/modules/ekcode/checkout-identity.tsx — "Continue with EkCode" on a shop's checkout (slot

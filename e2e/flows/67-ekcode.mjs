@@ -5,7 +5,7 @@
 // codes lock; a forged return, another host's EkCode paths and the shop paths on EkCode's host are refused.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { EKCODE, PORTS, SHOP } from '../lib.mjs'
+import { EKCODE, PORTS, SHOP, until } from '../lib.mjs'
 
 const EK = `http://${EKCODE.host}`
 const PHONE = '9811122233', PHONE2 = '9811122244'
@@ -68,6 +68,21 @@ export default {
         assert.ok(c?.pairwise, 'the shop holds a pairwise id, never an account id')
       })
 
+      await t.step('a COD order from the signed-in shopper: linked to the customer, the arm kept, the new address saved to EkCode', async () => {
+        await p.fill('#pincode', '302001'); await p.fill('#city', 'Jaipur')
+        await p.fill('#addressLine', 'B-14, Tilak Marg'); await p.fill('#area', 'C-Scheme'); await p.selectOption('#state', 'Rajasthan')
+        await p.getByLabel(/Save this address to/).waitFor()
+        await p.getByText('Pay on delivery', { exact: true }).click()
+        await p.getByRole('button', { name: /Place order/ }).click(); await p.waitForURL(/\/orders#t=/)
+        const [o] = await db`select o.customer_id, o.checkout->>'ekcode' as arm, c.phone from orders o left join shop_customers c on c.tenant_id = o.tenant_id and c.id = o.customer_id
+          where o.tenant_id = ${shop.id} order by o.placed_at desc limit 1`
+        assert.equal(o.phone, PHONE, 'the order is linked to the signed-in shopper (same phone)')
+        assert.equal(o.arm, 'shown', "the order keeps the holdout arm it was shown")
+        await until(async () => Number((await db`select count(*)::int n from ekcode_addresses`)[0].n) === 1, 10_000)
+        await p.goto(SHOP + '/checkout') // back to the bag-less checkout for the next step
+        await toCheckout()
+      })
+
       await t.step('"Not you?" signs out; the button is back', async () => {
         await p.getByRole('button', { name: 'Not you?' }).click()
         await p.getByRole('link', { name: /Continue with/ }).waitFor()
@@ -76,9 +91,11 @@ export default {
       await t.step('the same shopper again: code → Continue, no Create', async () => {
         await signIn(PHONE)
         await p.getByRole('heading', { name: `Continue to ${shop.name}` }).waitFor()
+        await p.getByRole('radio', { name: /Home/ }).waitFor() // the address saved with the first order is offered
         await p.getByRole('button', { name: 'Continue', exact: true }).click()
         await p.waitForURL(/\/checkout#ek$/)
         await p.getByText('Ananya Rao').waitFor()
+        await until(async () => (await p.inputValue('#addressLine')) === 'B-14, Tilak Marg', 10_000)
         await p.getByRole('button', { name: 'Not you?' }).click()
       })
 

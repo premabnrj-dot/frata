@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+// Not a shop page: the app's stylesheet, as every non-shop entry adds (src/app/layout.tsx).
+import '../globals.css'
 import Link from 'next/link'
 import { EkMark } from '@/components/ekcode/mark'
 import { EK_ICON as icon } from '@/components/ekcode/icon'

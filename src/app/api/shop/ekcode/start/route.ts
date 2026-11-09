@@ -4,6 +4,7 @@ import { tenantForHost } from '@/lib/db/platform'
 import { clientIp } from '@/lib/http/client-ip'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { beginAtShop } from '@/lib/ekcode/handshake'
+import { scheme } from '@/lib/ekcode/cookie-name'
 import { ekcodeOnAt } from '@/lib/modules/ekcode/gate'
 
 // "Continue with EkCode" (a plain link: no script on checkout). The flow is made here, from this request's own Host
@@ -14,7 +15,7 @@ const headers = { 'cache-control': 'private, no-store', 'referrer-policy': 'no-r
 export async function GET(request: Request) {
   const shop = await requireShop(request)
   if (!shop.ok) return new NextResponse(null, { status: shop.status, headers })
-  const back = NextResponse.redirect(new URL('/checkout', request.url), { status: 303, headers })
+  const back = NextResponse.redirect(`${scheme()}://${shop.host}/checkout`, { status: 303, headers })
   const t = await tenantForHost(shop.host)
   if (!t || t.movedTo || !(await ekcodeOnAt(shop.tenantId))) return back
   if (!(await withinLimit(LIMITS.ekStartIp, await clientIp(), new Date(), true))) return back

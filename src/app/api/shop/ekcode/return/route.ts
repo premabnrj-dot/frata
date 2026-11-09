@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireShop } from '@/lib/auth/require-shop'
 import { finishAtShop, setSession } from '@/lib/ekcode/handshake'
+import { scheme } from '@/lib/ekcode/cookie-name'
 import { signInFromEkcode } from '@/lib/queries/customers'
 
 // Back from ekcode.in with a one-time code: state checked against this shop's own cookie, the grant redeemed for THIS
@@ -13,7 +14,8 @@ export async function GET(request: Request) {
   if (!shop.ok) return new NextResponse(null, { status: shop.status, headers })
   const q = new URL(request.url).searchParams
   const code = q.get('code') ?? '', state = q.get('state') ?? ''
-  const back = (hash: string) => NextResponse.redirect(new URL(`/checkout${hash}`, request.url), { status: 303, headers })
+  // To this shop's own host (from requireShop), never request.url.
+  const back = (hash: string) => NextResponse.redirect(`${scheme()}://${shop.host}/checkout${hash}`, { status: 303, headers })
   if (!/^[A-Za-z0-9_-]{43}$/.test(code) || !/^[A-Za-z0-9_-]{43}$/.test(state)) return back('')
   const challenge = await finishAtShop(state)
   if (!challenge) return back('')
