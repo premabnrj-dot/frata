@@ -7,7 +7,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import { CONSOLE, SHOP, signedIn } from '../lib.mjs'
-import { OWN_DOMAIN, PORTS } from '../constants.mjs'
+import { OWN_DOMAIN, PORTS, SHOP_DOMAIN } from '../constants.mjs'
 
 const FAKE = `http://127.0.0.1:${PORTS.domains}`
 const dns = (name, type, data) => fetch(`${FAKE}/_test/dns`, { method: 'POST', body: JSON.stringify({ name, type, data }) })
@@ -57,15 +57,24 @@ export default {
         const c = p.getByRole('dialog', { name: `Make ${OWN_DOMAIN} your main address?` })
         await c.getByText('Bags in progress start empty.').waitFor()
         await c.getByRole('button', { name: 'Make it main' }).click()
-        await p.getByRole('status').filter({ hasText: `${OWN_DOMAIN} is your main address` }).getByRole('link', { name: 'View your shop' }).waitFor()
+        const popup = p.getByRole('status').filter({ hasText: `${OWN_DOMAIN} is your main address` })
+        await popup.getByRole('link', { name: 'View your shop' }).waitFor()
+        // Undo lives 8 s: used at once, it puts the name back.
+        await popup.getByRole('button', { name: 'Undo' }).click()
+        await row.getByRole('button', { name: 'Make main' }).waitFor()
+        // Made main again (closed, no Undo): the canonical moves and the domain opens the shop.
+        await row.getByRole('button', { name: 'Make main' }).click()
+        await p.getByRole('dialog', { name: `Make ${OWN_DOMAIN} your main address?` }).getByRole('button', { name: 'Make it main' }).click()
+        await popup.getByRole('button', { name: 'Close' }).click()
         const s = await t.browser.newContext(); const q = await s.newPage()
         await q.goto(SHOP + '/')
         assert.equal(await q.locator('link[rel="canonical"]').getAttribute('href'), `https://${OWN_DOMAIN}/`)
         const r = await q.goto(`http://${OWN_DOMAIN}/`)
         assert.equal(r?.status(), 200, 'the own domain opens the shop')
         await s.close()
-        await p.getByRole('button', { name: 'Undo' }).click()
-        await p.getByRole('listitem').filter({ hasText: OWN_DOMAIN }).getByRole('button', { name: 'Make main' }).waitFor()
+        // Back to the frrata name from its own row (approved, so the server lets it be main again).
+        await p.getByRole('listitem').filter({ hasText: `kesar-studio.${SHOP_DOMAIN}` }).getByRole('button', { name: 'Make main' }).click()
+        await row.getByRole('button', { name: 'Make main' }).waitFor()
       })
       await t.step('Remove: confirmed, and the row leaves the list', async () => {
         await p.getByRole('listitem').filter({ hasText: OWN_DOMAIN }).getByRole('button', { name: 'Remove' }).click()

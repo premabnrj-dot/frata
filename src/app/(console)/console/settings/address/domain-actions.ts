@@ -49,10 +49,14 @@ async function hostsOf(tenantId: string, slug: string | null): Promise<string[]>
 }
 /** The shop's own name, read on the server (never taken from the browser: security review D2·10 L1). */
 const slugOf = async (tenantId: string) => (await addressFacts(tenantId).catch(() => null))?.slug ?? null
+/** What every write here re-renders: the console layout, as the rename does. A page-only revalidatePath of the page the
+ *  action ran from left the caller's transition pending now and then, its update never applied (frata-gotchas). */
+const CONSOLE_LAYOUT = '/console'
+
 async function refreshAll(who: Who) {
   refreshShop(who.tenantId, 'shop')
   refreshHosts(...(await hostsOf(who.tenantId, await slugOf(who.tenantId))))
-  revalidatePath('/console/settings/address')
+  revalidatePath(CONSOLE_LAYOUT, 'layout')
 }
 
 /** Every limit must pass, each failing closed. */
@@ -75,7 +79,7 @@ export async function connectDomainAction(raw: string): Promise<Connected | { ok
   try {
     const r = await claimDomain(who.tenantId, who.userId, input.data)
     if (!r.ok) return { ok: false, error: ERR_WORDS[r.error] }
-    revalidatePath('/console/settings/address')
+    revalidatePath(CONSOLE_LAYOUT, 'layout')
     return { ok: true, id: r.claim.id, host: r.claim.facts.host, www: r.claim.facts.www, records: r.claim.records, dns: r.claim.dnsHost }
   } catch (err) {
     console.error('[connectDomainAction]', errName(err))
@@ -108,7 +112,7 @@ export async function checkDomainAction(id: string): Promise<{ ok: true; check: 
   if (!who || !Id.safeParse(id).success) return { ok: false, error: ERR_WORDS.support }
   if (!(await checkLimits(who))) return { ok: false, error: ERR_WORDS.busy }
   const check = await checkDomainRow(who.tenantId, id, { forDialog: true })
-  if (check.state === 'connected') revalidatePath('/console/settings/address')
+  if (check.state === 'connected') revalidatePath(CONSOLE_LAYOUT, 'layout')
   return { ok: true, check }
 }
 
@@ -157,7 +161,7 @@ export async function undoMainAction(): Promise<Done> {
 export async function razorpayOkAction(id: string, ok: boolean): Promise<Done> {
   if (!Id.safeParse(id).success) return { ok: false, error: WRITE_WORDS.unknown! }
   const r = await write('domain.razorpay_ok', id, (tx, w) => tx.execute(sql`select app_domain_razorpay_ok(${w.tenantId}::uuid, ${w.userId}::uuid, ${id}::uuid, ${ok === true})`))
-  if (r.ok) revalidatePath('/console/settings/address')
+  if (r.ok) revalidatePath(CONSOLE_LAYOUT, 'layout')
   return r.ok ? { ok: true } : r
 }
 
@@ -166,7 +170,7 @@ export async function removeDomainAction(id: string): Promise<Done> {
   if (!who || !Id.safeParse(id).success) return { ok: false, error: ERR_WORDS.support }
   const hosts = await hostsOf(who.tenantId, await slugOf(who.tenantId))
   const r = await write('domain.removed', id, (tx, w) => tx.execute(sql`select app_remove_domain(${w.tenantId}::uuid, ${w.userId}::uuid, ${id}::uuid)`))
-  if (r.ok) { refreshShop(who.tenantId, 'shop'); refreshHosts(...hosts); revalidatePath('/console/settings/address') }
+  if (r.ok) { refreshShop(who.tenantId, 'shop'); refreshHosts(...hosts); revalidatePath(CONSOLE_LAYOUT, 'layout') }
   return r.ok ? { ok: true } : r
 }
 
@@ -181,7 +185,7 @@ export async function addShopNameAction(slug: string): Promise<Done> {
   const problem = slugProblem(p.data)
   if (problem) return { ok: false, error: problem === 'reserved' ? 'That address is reserved' : WRITE_WORDS.bad_slug! }
   const r = await write('shop.name_added', p.data, (tx, w) => tx.execute(sql`select app_add_shop_name(${w.tenantId}::uuid, ${w.userId}::uuid, ${p.data})`))
-  if (r.ok) { refreshHosts(shopHost(p.data)); revalidatePath('/console/settings/address') }
+  if (r.ok) { refreshHosts(shopHost(p.data)); revalidatePath(CONSOLE_LAYOUT, 'layout') }
   return r.ok ? { ok: true } : r
 }
 
@@ -193,7 +197,7 @@ export async function dropAddedNameAction(): Promise<Done> {
     dropped = x?.n ?? null
   })
   if (r.ok && dropped) refreshHosts(shopHost(dropped))
-  if (r.ok) revalidatePath('/console/settings/address')
+  if (r.ok) revalidatePath(CONSOLE_LAYOUT, 'layout')
   return r.ok ? { ok: true } : r
 }
 
@@ -202,6 +206,6 @@ export async function nameRazorpayOkAction(name: string, ok: boolean): Promise<D
   const p = Slug.safeParse(name)
   if (!p.success) return { ok: false, error: WRITE_WORDS.unknown! }
   const r = await write('shop.name_razorpay_ok', p.data, (tx, w) => tx.execute(sql`select app_name_razorpay_ok(${w.tenantId}::uuid, ${w.userId}::uuid, ${p.data}, ${ok === true})`))
-  if (r.ok) revalidatePath('/console/settings/address')
+  if (r.ok) revalidatePath(CONSOLE_LAYOUT, 'layout')
   return r.ok ? { ok: true } : r
 }

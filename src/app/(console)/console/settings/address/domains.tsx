@@ -43,7 +43,6 @@ export function Domains(props: Props) {
 function DomainsInner({ nameHost, names, rows, livePayments, available, canManage, left }: Props) {
   const router = useRouter()
   const toast = useToast()
-  const [, start] = useTransition()
   const [open, setOpen] = useState<null | { resume?: string }>(null)
   const [confirm, setConfirm] = useState<Making | null>(null)
   const [remove, setRemove] = useState<DomainView | null>(null)
@@ -54,25 +53,27 @@ function DomainsInner({ nameHost, names, rows, livePayments, available, canManag
   const main = rows.find((r) => r.state === 'main' || r.state === 'not_working')
   const full = live.reduce((n, r) => n + 1 + (r.www ? 1 : 0), 0) >= 4
 
-  const act = (id: string, run: () => Promise<{ ok: boolean; error?: string }>, ok?: string) => {
+  // Writes run outside any transition, and the page is fetched afresh once the write has finished: the update a server
+  // action carries back now and then never applied, and a transition around it then stayed pending (frata-gotchas).
+  const act = async (id: string, run: () => Promise<{ ok: boolean; error?: string }>, ok?: string) => {
     setBusy(id)
-    start(async () => {
-      const r = await run().catch(() => ({ ok: false, error: 'We could not change it. Nothing was changed.' }))
-      setBusy(null)
-      if (!r.ok) toast({ text: r.error ?? 'We could not change it. Nothing was changed.' })
-      else { if (ok) toast({ text: ok }); router.refresh() }
-    })
+    const r = await run().catch(() => ({ ok: false, error: 'We could not change it. Nothing was changed.' }))
+    setBusy(null)
+    if (!r.ok) { toast({ text: r.error ?? 'We could not change it. Nothing was changed.' }); return }
+    if (ok) toast({ text: ok })
+    router.refresh()
   }
 
   // Stable, so the popup's 8 s window is not restarted by this list's re-renders.
   const closePopup = useCallback(() => setMadeMain(null), [])
-  const undoPopup = useCallback(async () => { const u = await undoMainAction(); setMadeMain(null); router.refresh(); if (!u.ok) toast({ text: u.error }) }, [router, toast])
+  // Undo closes the popup, then runs like any other write here.
+  const undoPopup = useCallback(() => { setMadeMain(null); act('name', () => undoMainAction()) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const makeMain = (m: Making) => {
     setConfirm(null)
     setGoing(true)
     const began = Date.now() // clock-ok: in a handler or timer, never at render
-    start(async () => {
+    void (async () => {
       const run = m.kind === 'domain' ? makeMainAction(m.d.id) : changeAddress(m.name)
       const r = await run.catch(() => ({ ok: false as const, error: 'We could not change it. Nothing was changed.' }))
       await new Promise((res) => setTimeout(res, Math.max(0, 1300 - (Date.now() - began)))) // clock-ok: in a handler or timer, never at render
@@ -83,7 +84,7 @@ function DomainsInner({ nameHost, names, rows, livePayments, available, canManag
       if (m.kind === 'name' && main) toast({ text: `${m.host} is your frrata address` })
       // A rename used a change: no Undo (going back is another change). A domain's Undo puts the name back.
       else setMadeMain({ host: m.host, undo: m.kind === 'domain' })
-    })
+    })()
   }
 
   return (
@@ -300,10 +301,9 @@ function Connect({ resume, onClose }: { resume?: string; onClose: () => void }) 
  * After Make main (rule 75, like Publish): the new main address with Copy and View your shop, and Undo for 8 s (its bar
  * empties; under reduced motion the words say so). It rises in place; Escape or Close dismisses it.
  */
-function MainPopup({ host, onClose, onUndo }: { host: string; onClose: () => void; onUndo: (() => Promise<void>) | null }) {
+function MainPopup({ host, onClose, onUndo }: { host: string; onClose: () => void; onUndo: (() => void) | null }) {
   const toast = useToast()
   const [undo, setUndo] = useState(onUndo !== null)
-  const [pending, start] = useTransition()
   // The 8 s window starts once, when the popup opens (its bar's animation starts then too).
   useEffect(() => { const t = setTimeout(() => setUndo(false), 8000); return () => clearTimeout(t) }, [])
   useEffect(() => {
@@ -318,7 +318,7 @@ function MainPopup({ host, onClose, onUndo }: { host: string; onClose: () => voi
         <Button size="wrap" variant="secondary" onClick={() => { void navigator.clipboard?.writeText(`https://${host}`).then(() => toast({ text: 'Copied' }), () => {}) }}>Copy</Button>
         <a className={button({ variant: 'secondary', size: 'wrap' })} href={`https://${host}`} target="_blank" rel="noopener noreferrer">View your shop</a>
         {undo && onUndo && (
-          <Button size="wrap" variant="secondary" className="relative overflow-hidden" disabled={pending} onClick={() => start(onUndo)}>
+          <Button size="wrap" variant="secondary" className="relative overflow-hidden" onClick={onUndo}>
             Undo<span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 animate-undo-window bg-thread motion-reduce:hidden" />
             <span className="sr-only">for 8 seconds</span>
           </Button>

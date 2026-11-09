@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { InfoTip } from '@/components/ui/info-tip'
@@ -24,7 +24,6 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
   /** D1·9: on live payments a new name is ADDED beside the current one (Make main follows once Razorpay approves it). */
   twoStep?: boolean; adding?: string | null
 }) {
-  const router = useRouter()
   // What a rename changes is known at once: the screen updates itself, not only when the refresh lands.
   const [{ current, left, old }, setFacts] = useState({ current: first, left: firstLeft, old: firstOld })
   const [slug, setSlug] = useState(first)
@@ -35,7 +34,16 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
   const [state, setState] = useState<AddressCheck | null>(null)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [confirming, setConfirming] = useState(false)
-  const [pending, start] = useTransition()
+  const router = useRouter()
+  // Plain pending, not useTransition, and the page fetched afresh once the write has finished: the update a server action
+  // carries back now and then never applied, and a transition around it then stayed pending ("Adding…"; frata-gotchas).
+  const [pending, setPending] = useState(false)
+  const run = async (fn: () => Promise<boolean>) => {
+    setPending(true)
+    let ok = false
+    try { ok = await fn() } catch { setMsg({ ok: false, text: 'We could not change it. Nothing was changed.' }) } finally { setPending(false) }
+    if (ok) router.refresh()
+  }
   const changed = slug !== current
   const locked = support || frozen || left === 0 || (twoStep && !!adding)
 
@@ -47,23 +55,24 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
     return () => clearTimeout(t)
   }, [slug, changed])
 
-  const add = () => start(async () => {
+  const add = () => run(async () => {
     const r = await addShopNameAction(slug)
     setConfirming(false)
     setMsg(r.ok ? { ok: true, text: `Added ${slug}.${shopDomain}` } : { ok: false, text: r.error })
-    if (r.ok) { setSlug(current); router.refresh() }
+    if (r.ok) setSlug(current)
+    return r.ok
   })
-  const change = () => start(async () => {
+  const change = () => run(async () => {
     const r = await changeAddress(slug)
     setConfirming(false)
     setMsg(r.ok ? { ok: true, text: `Moved to ${slug}.${shopDomain}` } : { ok: false, text: r.error })
-    if (!r.ok) return
+    if (!r.ok) return false
     setFacts((f) => ({
       current: slug,
       left: f.left === null ? null : Math.max(0, f.left - 1),
       old: f.left === null ? f.old.filter((n) => n !== slug) : [f.current, ...f.old.filter((n) => n !== slug)],
     }))
-    router.refresh()
+    return true
   })
   const line = frozen ? 'Address changes paused by Frrata'
     : twoStep && adding ? 'One new address at a time'

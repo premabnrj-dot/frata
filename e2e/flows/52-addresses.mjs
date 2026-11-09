@@ -26,9 +26,9 @@ export default {
       const dlg = p.getByRole('dialog', { name: `Add ${to}.${SHOP_DOMAIN}?` }); await dlg.waitFor()
       await dlg.getByRole('button', { name: `Add ${to}` }).click()
       await p.getByRole('status').filter({ hasText: `Added ${to}.${SHOP_DOMAIN}` }).waitFor()
-      assert.equal(await p.locator('#slug').isDisabled(), true, 'one added name at a time')
       const row = p.getByRole('listitem').filter({ hasText: `${to}.${SHOP_DOMAIN}` })
-      await row.getByText('Razorpay not approved').waitFor({ timeout: 20_000 }).catch(async (e) => { await p.screenshot({ path: `e2e/.out/52-dbg-${to}.png`, fullPage: true }); throw e }) // after the page's refresh lands
+      await row.getByText('Razorpay not approved').waitFor()
+      assert.equal(await p.locator('#slug').isDisabled(), true, 'one added name at a time')
       assert.equal(await row.getByRole('button', { name: 'Make main' }).count(), 0, 'Make main waits for Razorpay')
       await row.getByRole('button', { name: 'Razorpay approved it' }).click()
       await row.getByRole('button', { name: 'Make main' }).click()
