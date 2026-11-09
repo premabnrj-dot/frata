@@ -231,7 +231,7 @@ export default {
       const rename = async (from, to, title) => {
         await p.goto(`${CONSOLE}/console/collections/${from}`)
         await p.getByLabel('Address').fill(to)
-        await p.getByText('Search and sharing', { exact: true }).click()
+        await p.locator('summary', { hasText: 'Search and sharing' }).click()
         await p.getByLabel('Page title').fill(title)
         await p.getByRole('button', { name: 'Save', exact: true }).click()
         await p.waitForURL(`${CONSOLE}/console/collections/${to}`)

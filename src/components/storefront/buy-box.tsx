@@ -105,7 +105,7 @@ export function BuyBox(p: BuyBoxProps) {
           <fieldset key={o} ref={i === si ? sizesRef : undefined} className="space-y-2">
             <legend className="flex w-full items-baseline justify-between text-sm">
               <span><span className="font-medium">{o}</span>{picked[i] && <span className="text-store-sub">: {picked[i]}</span>}</span>
-              {i === si && p.chart && p.chart.rows.length > 0 && <button type="button" className="underline underline-offset-4" onClick={() => setGuide(true)}>{p.w.sizeGuide}</button>}
+              {i === si && p.chart && p.chart.rows.length > 0 && <button type="button" className="inline-flex min-h-6 items-center underline underline-offset-4" onClick={() => setGuide(true)}>{p.w.sizeGuide}</button>}
             </legend>
             <div className="flex flex-wrap gap-2">
               {(p.values[i] ?? []).map((val) => {
