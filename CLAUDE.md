@@ -122,8 +122,9 @@ policies. Environment variables live in Vercel; `.env.example` lists names only.
   auth only; `anon` and `authenticated` hold no grant on any table, and the
   Data API is switched off (owner, 2026-11-07: `service_role` keeps Supabase's
   default grants, so the REST endpoint must stay off). Never turn it back on.
-- **A cross-brand shopper data network.** Not before DPDP consent design
-  (obligations from 13 May 2027) and a decision superseding ADR-0002.
+- **A cross-brand shopper network outside EkCode.** The one network is EkCode (ADR-0009): a Frrata account the
+  shopper signs into, its own tables behind definers, pairwise ids per shop, consent logged. No other cross-shop data.
+- **SMS** (OTP or otherwise). Not integrated or planned until the owner asks (owner, 2026-11-09).
 - **Frrata collecting a shopper's payment for a merchant.** Money goes to the shop's own Razorpay account and COD
   to the shop; that keeps Frrata out of GST TCS (s.52) as an e-commerce operator (owner, 2026-11-09). A change
   that routes a shopper's money through Frrata needs the owner and the CA first.
