@@ -1,5 +1,5 @@
 # Search and sharing — found on Google, sold in a WhatsApp chat
-Status: draft · Date: 2026-11-09 · Mockup: https://claude.ai/artifact/P4wfSezqiVxzG4D7FsrnYM · Approved: pending
+Status: active · Date: 2026-11-09 · Mockup: https://claude.ai/artifact/P4wfSezqiVxzG4D7FsrnYM · Approved: owner, 2026-11-09 (share images JPEG — the one exception to "WebP only"; order S·0 → S·1 → S·2; Google app review started now)
 
 Research: `docs/research/2026-11-09-seo-audit.md` (what the code does), `docs/research/2026-11-09-seo.md` (Google,
 competitors, keywords, accessibility), `docs/research/2026-11-09-link-previews.md` (WhatsApp, Instagram, Facebook, X,
