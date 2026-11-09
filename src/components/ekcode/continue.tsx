@@ -23,12 +23,16 @@ const post = async (path: string, body: unknown) => {
   return { status: r.status, data: (await r.json().catch(() => ({}))) as Record<string, unknown> }
 }
 
-/** sha256(nonce|counter) with `bits` leading zero bits, found in a worker made from a blob (CSP worker-src blob:). */
+/** sha256(nonce|counter) with `bits` leading zero bits, found in a worker made from a blob (CSP worker-src blob:). -1: this
+ * browser cannot (no Web Crypto, which needs https), so the screen says so instead of waiting for ever. */
 function solve(c: Pow): Promise<number> {
-  const src = `onmessage=async e=>{const{nonce,bits}=e.data;const enc=new TextEncoder();for(let i=0;;i++){const h=new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(nonce+'|'+i)));let z=0;for(const b of h){if(b===0){z+=8;continue}z+=Math.clz32(b)-24;break}if(z>=bits){postMessage(i);return}}}`
+  const src = `onmessage=async e=>{try{const{nonce,bits}=e.data;const enc=new TextEncoder();for(let i=0;;i++){const h=new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(nonce+'|'+i)));let z=0;for(const b of h){if(b===0){z+=8;continue}z+=Math.clz32(b)-24;break}if(z>=bits){postMessage(i);return}}}catch{postMessage(-1)}}`
   const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }))
   const w = new Worker(url)
-  return new Promise((ok) => { w.onmessage = (e) => { ok(e.data as number); w.terminate(); URL.revokeObjectURL(url) }; w.postMessage(c) })
+  return new Promise((ok) => {
+    const end = (n: number) => { ok(n); w.terminate(); URL.revokeObjectURL(url) }
+    w.onmessage = (e) => end(e.data as number); w.onerror = () => end(-1); w.postMessage(c)
+  })
 }
 
 const field = 'h-12 w-full rounded-md border border-[var(--ek-sub)] bg-white px-3 text-base text-[var(--ek-ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ek-ink)]'
@@ -70,6 +74,7 @@ export function Continue({ shop, back, notice, age }: { shop: string; back: stri
       setStep('slow')
       const c = r.data.challenge as Pow
       const counter = await solve(c)
+      if (counter < 0) { setBusy(false); setStep('phone'); return setSay({ bad: true, text: EK.error }) }
       return send({ ...c, counter })
     }
     setBusy(false)

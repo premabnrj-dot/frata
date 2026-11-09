@@ -5,6 +5,7 @@
 // codes lock; a forged return, another host's EkCode paths and the shop paths on EkCode's host are refused.
 // =============================================================================
 import assert from 'node:assert/strict'
+import http from 'node:http'
 import { EKCODE, PORTS, SHOP, until } from '../lib.mjs'
 
 const EK = `http://${EKCODE.host}`
@@ -30,7 +31,12 @@ export default {
     const p = await ctx.newPage(); p.setDefaultTimeout(30_000); p.on('pageerror', (e) => t.errors.push(e.message))
     const toCheckout = async () => {
       await p.goto(SHOP + '/products/chanderi-kurta-set', { waitUntil: 'domcontentloaded' })
-      await p.getByRole('button', { name: /^Rust/ }).click(); await p.getByRole('button', { name: 'M', exact: true }).click()
+      // Any colour and size still in stock on the (cached) page: flows before this one buy the same kurta.
+      for (const colour of [/^Rust/, /^Indigo/]) {
+        await p.getByRole('button', { name: colour }).click()
+        const size = p.getByRole('button', { name: /^[SM]$/ })
+        if (await size.count()) { await size.first().click(); break }
+      }
       await p.getByRole('button', { name: /Add to bag|Pre-order/ }).click(); await p.getByRole('dialog', { name: 'Your bag' }).waitFor()
       await p.getByRole('button', { name: 'Checkout' }).click(); await p.waitForURL(/\/checkout/)
     }
@@ -48,6 +54,9 @@ export default {
 
     try {
       await t.step('a new shopper: phone → code → Create → Continue → filled in at the shop', async () => {
+        // The checkout page is cached for 60 s: read its HTML until it carries EkCode's button, then check out.
+        const html = () => new Promise((res, rej) => http.get({ host: '127.0.0.1', port: PORTS.app, path: '/checkout', headers: { host: new URL(SHOP).host } }, (r) => { let b = ''; r.on('data', (c) => (b += c)); r.on('end', () => res(b)) }).on('error', rej))
+        await until(async () => (await html()).includes('/api/shop/ekcode/start'), 90_000)
         await toCheckout()
         await p.getByRole('link', { name: /Continue with/ }).waitFor()
         await p.screenshot({ path: t.out('button'), fullPage: true })
@@ -124,6 +133,10 @@ export default {
           assert.equal(x?.status(), 404, `${path} is not served on a shop`)
         }
       })
+    } catch (e) {
+      // The context closes below, before the runner's own shot of open pages: keep what this page showed.
+      await p.screenshot({ path: t.out('at-failure'), fullPage: true }).catch(() => {}); console.log(`     at failure: ${p.url()}`)
+      throw e
     } finally {
       await ctx.close()
     }

@@ -486,7 +486,7 @@ begin
   if a.id is null then return; end if;
   if p_with_address is not null then
     if not exists (select 1 from public.ekcode_addresses d where d.id = p_with_address and d.account_id = a.id and d.deleted_at is null) then return; end if;
-    v_items := v_items || 'address';
+    v_items := array_append(v_items, 'address');
   end if;
   update public.ekcode_codes set proof_used_at = now() where id = k.id and proof_used_at is null;
   if not found then return; end if;
