@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
-import './globals.css'
+// The shop's own sheet (Signal S2-0); every non-shop entry adds globals.css (the app sheet) after it.
+import './shop.css'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
 // Not preloaded (speed review P6): the console's figures face; on a shop's page it was a 40 kB download ahead of

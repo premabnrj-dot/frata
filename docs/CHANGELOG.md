@@ -3,6 +3,14 @@
 What a merchant (or Frata staff) can do now that they could not before, newest first. One entry per closed
 phase; the detail is in its plan.
 
+## 2026-11-09 — Signal 1.2.0: the story half ([plan](plans/2026-11-09-signal-s2.md))
+
+- **Three new sections for Signal:** a **Spotlight** (words beside a wide photo or loop), a **Story fan** (3 to 7 story
+  cards fanned out) and a **Statement** (a full-width photo with a handwritten line), plus a handwritten line above the
+  Hero and bigger, tighter headings. Every option is editable in the customizer. Released in Admin › Themes.
+- **Faster shops for every theme:** a shop page now loads 15.6 kB of CSS instead of 22.5 kB (the console's styles
+  no longer ship to shoppers).
+
 ## 2026-11-09 — Video loops (Signal 1.1.0) ([plan](plans/2026-11-09-video-v1.md))
 
 - **A short silent loop in the Hero and in Image with text**, on Signal 1.1.0: add an MP4 or MOV up to 15 seconds,

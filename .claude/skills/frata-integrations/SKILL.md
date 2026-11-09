@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.17.0
+  version: 1.19.0
   verified: 2026-11-09
   decisions: [ADR-0006]
 ---
@@ -185,6 +185,11 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
   messages, ≥10 active clients, ≥90% quality [V].
 - **No credit line**: customers add their own payment method in WhatsApp Manager; Meta bills them [V,
   solution-providers/overview]. India accounts must bill in **INR by 31 Dec 2026**, else delivery stops 1 Jan 2027 [V].
+  A Multi-Partner Solution (MPS) with a Solution Partner lets clients share its credit line (no card in WhatsApp
+  Manager); the Solution Partner is "Bill To Party"; no Meta page lets a Tech Provider invoice message fees — the Tech
+  Provider "will bill for other services"; becoming a Solution Partner is "a lengthy process" [V-undated,
+  solution-providers/overview + multi-partner-solutions + share-and-revoke-credit-lines, 2026-11-09]. BSP terms
+  (Gupshup ~$0.001/msg fee, WhatsApp at actuals; 360dialog requires MPS for Tech Providers) are vendor-only [S].
 - **Embedded Signup**: v4 (8 Oct 2025) is the default; v2/v3 were deprecated 15 Oct 2026 and are served as v4. **v5 released 20 Oct 2026**
   (`extras:{version:"v5"}`): coexistence on by default, session data has NO `waba_id` (`messaging_account_ids`, `primary_waac_ids`,
   `is_on_biz_app` instead) [V, embedded-signup/versions + version-5, 2026-11-07]. Frrata builds on v4 and reads ids on the server.
@@ -221,7 +226,8 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
 - **Coexistence** (Business app + Cloud API on one number): app 2.24.17+; history (6 months) and contacts
   sync once, within 24 h of onboarding; app-sent messages arrive as `smb_message_echoes`; 20 mps fixed;
   broadcast lists read-only, groups not synced, companions unlinked; disconnects after ~14 days without
-  opening the app [V]. Available in India [S only].
+  opening the app [V]. India since 2025-05-05 [V, changelog]; multi-solution conversations: several partners on one
+  number, so a merchant can keep another tool alongside [V, 2026-01-29].
 - **Pricing**: per message since 1 Jul 2025. **From 1 Oct 2026 in-window utility and service messages are
   charged**; 1,000 free service messages per number per month [V]. Free entry point: Click-to-WhatsApp ads
   only, window up to 7 days [V]. India before GST: marketing ₹0.8631; utility, authentication, service
@@ -229,8 +235,28 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
   Authentication-international (₹2.4971 [S]) applies only when the WABA's Primary Business Location differs from the
   user's country; India's rose 1 Apr 2026; 30-day notice [V, pricing + authentication-international-rates, undated,
   read 2026-11-08]. Utility/auth volume tiers per market, monthly [V]. Prices change only on the 1st of a quarter, ≥ 1
-  month's notice; charged on delivery [V, …/pricing, 2026-11-09]. India's utility rate stays [S].
-- **Limits**: per business portfolio, shared by its numbers: 250 → 2,000 → 10,000 → 100,000 → unlimited [V].
+  month's notice; charged on delivery [V, …/pricing, 2026-11-09]. India's utility rate stays [S]. Tiers: utility list
+  rate to 25M/month, auth to 750K/month, then −6% … −30% (auth −6% = ₹0.1081); counted per portfolio, market and
+  category [S, chatmaxima "Rates effective October 1, 2026"; V-undated aggregation, pricing, 2026-11-09].
+- **Limits**: per business portfolio, shared by its numbers: 250 → 2,000 → 10,000 → 100,000 → unlimited; at 2,000+ one
+  step within 6 h when quality is high across all numbers and templates AND ≥ half the limit was used in 7 days; since
+  7 Oct 2025 a quality drop no longer lowers the limit, but a low-quality template pauses 3 h, then 6 h, then is
+  disabled [V-undated, messaging-limits + upcoming-messaging-limits-changes + template-pausing, 2026-11-09]. Each
+  number 80 mps; 1,000 mps needs unlimited + 100K unique users in 24 h + quality ≥ yellow [V-undated, throughput].
+  Whether authentication counts toward the limit: not stated [U].
+- **EkCode transactional from Frrata's number** (checked 2026-11-09): no Meta page addresses a platform messaging its
+  own account holders about third-party sellers' orders [V absence: policy 2026-09-23, template-categorization,
+  template-review]. Lawful shape: Frrata-owned utility templates in Frrata's voice, the shop's name a body variable
+  ("via Frrata"), no promo; the opt-in names Frrata ("clearly state the business's name") [V-undated, getting-opt-in];
+  separate opt-in per category [V-undated]. Platform terms §4.1 (2026-09-23) [V]: no sharing WhatsApp Platform Data
+  with third parties (→ no read/delivered/not-on-WhatsApp status or BSUID shown to a merchant); no "resell, or rent the
+  WhatsApp Business Platform" (→ per-message re-billing to merchants: counsel first [U]); no misrepresenting
+  "affiliation". Precedent: Razorpay Magic Checkout sends from "Razorpay's WhatsApp handle", merchant name editable
+  [V-undated]; Shiprocket auto-sends for 3 lakh+ brands, sender unstated [S, 2026-05-01]; GoKwik [U].
+- **Display name / blue tick** (2026-11-09): "Frrata" fits the clear-relationship rule; never a shop's name in it [S,
+  360dialog]. Official Business Account: policy compliance, ≥ 30 days on the platform, verified portfolio, two-step
+  verification, approved display name; no notability test stated; reapply after 30 days [V-undated,
+  official-business-accounts]. A second number adds its own throughput and quality, not daily capacity [V-undated].
 - **Templates** (rechecked 2026-11-09, …/templates/components + template-categorization + utility-templates, undated):
   marketing / utility / authentication; body ≤ 1024; ≤ 10 buttons, ≤ 2 URL, ≤ 10 quick reply, quick replies grouped apart
   from the rest; button text ≤ 25; URL ≤ 2000 with ONE variable at the end. Positional `example.body_text` is nested
@@ -406,7 +432,16 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
 - **WhatsApp:** India marketing ₹0.8631, utility ₹0.115 (+GST) [S, 2026-09-30]. Per-user marketing limit adapts to
   engagement; 131049 = wait 24 h; messages inside the window don't count. Cloud API stops marketing on 13 Oct 2027 (no
   marketing for accounts created from 13 Apr 2027) → Marketing Messages API. Separate opt-in per category advised
-  [V-undated, developers.facebook.com].
+  [V-undated, developers.facebook.com]. MM API GA 19 Nov 2025; India unrestricted; Tech Providers may onboard clients;
+  same billing as Cloud API; "max price" open beta 1 Oct 2026 for Solution-Partner-shared accounts only; 131063 when a
+  merchant disabled Cloud API marketing [V, marketing-messages changelog 2026-10-19]. Free entry point window (CTWA)
+  "up to 7 days" [V-undated, pricing, 2026-11-09].
+- **WhatsApp commerce (2026-11-09):** Payments API India — deep integration Razorpay/PayU/Billdesk/Zaakpay; Enhanced
+  Payment Links Razorpay (PayU, Cashfree allowlisted); `order_details` / `order_status` messages. Flows (forms) go in
+  templates, data endpoint optional, not on WhatsApp Web. CAPI for business messaging accepts OrderDelivered,
+  OrderReturned, OrderCanceled, CartAbandoned [V-undated]. Tech Provider portfolio restrictions have taken down every
+  connected merchant at once (Meta developer forum, 2026-07 to 10) [S] → keep EkCode's number outside the Tech
+  Provider's portfolio.
 - **Web push:** iOS 16.4+ only as a Home Screen web app; ask from a tap; a push not shown makes Safari revoke the
   permission [V-undated, developer.apple.com]. Chrome rate-limits disruptive senders (≥ 1,000/min) [V 2026-01-06]. A
   subscription belongs to one origin's service worker: a shop that changes domain loses its subscribers [V spec / U].
@@ -473,7 +508,9 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   policy" [V-undated, authentication-best-practices]; no speaking for a business "without permission" [V, policy
   2026-09-23]; Twilio Verify ended its shared sender on 1 Mar 2024 [V, twilio docs 2026-03-09]. → **No central Frrata
   sender for shop logins**: a shop's code goes from the shop's own number (Embedded Signup), billed to the merchant;
-  Frrata's number only where Frrata is the business (its own sign-up; a Frrata account, if one is ever built). Reverse
+  Frrata's number only where Frrata is the business (its own sign-up and EkCode logins, ADR-0009 — auth uses "New account creation" / "Account integrity, access, or
+  recovery" [V-undated, template-categorization]; no rule that the code names the app signed into [V absence]; the
+  sign-in screen says "Frrata"). Reverse
   wa.me OTP: no Meta rule [U], and a username user's message may carry no phone → weak proof. No third-party "Sign in
   with WhatsApp" [U]. Pair rate 1 / 6 s to one user (burst 45, 131056); 80 msg/s per number [V-undated].
 - **SMS (India)**: TRAI Direction 18 Nov 2025 — every template variable pre-tagged (e.g. `#url#`), non-compliant templates

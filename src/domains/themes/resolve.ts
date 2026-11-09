@@ -1,7 +1,7 @@
 import { manifestNear, manifestOf } from './catalogue'
 import { choicesFor } from './choices'
 import { LayerSchema, SettingsSchema, onColour, brandColourProblem } from './layer'
-import { PRODUCT_LAYOUTS, SECTION_SCHEMES, SectionSchema, type SectionInstance } from './sections'
+import { PRODUCT_LAYOUTS, SECTION_SCHEMES, SectionSchema, type SectionInstance, VIDEO_KEYS } from './sections'
 import { paletteProblem, readMenus, readSite, textOf, TEXT_STYLES } from './site'
 import { FEEL_DEFAULTS, PAGE_DEFAULTS, PAIRINGS, type ChoiceKey, type Pairing, type ResolvedTheme, type Scheme, type SchemeKey, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
 
@@ -96,6 +96,7 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
   }
   const masks = m.allowed.heroMasks ?? ['none']
   const layouts = m.allowed.productLayouts ?? PRODUCT_LAYOUTS, schemesOk = m.allowed.sectionSchemes ?? SECTION_SCHEMES, videoOk = m.allowed.videoSections ?? []
+  const spotlightOk = (m.allowed.imageTextLayouts ?? []).includes('spotlight'), scriptOk = !!m.allowed.heroScript
   const raw = parsed.success && parsed.data.home ? parsed.data.home : m.home
   const home = raw.flatMap((s): SectionInstance[] => {
     const p = SectionSchema.safeParse(s)
@@ -106,10 +107,13 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
     if (x.key === 'products' && !layouts.includes(x.layout)) x = { ...x, layout: 'grid' }
     if ('scheme' in x && !schemesOk.includes(x.scheme)) x = { ...x, scheme: 'paper' }
     // V1: a theme that doesn't offer video in this section never renders one; the photo shows.
-    if ((x.key === 'hero' || x.key === 'image_text') && x.video && !videoOk.includes(x.key)) { const { video: _drop, ...rest } = x; x = rest }
+    if ((x.key === 'hero' || x.key === 'image_text') && (VIDEO_KEYS as readonly string[]).includes(x.key) && x.video && !videoOk.includes(x.key)) { const { video: _drop, ...rest } = x; x = rest }
+    // Signal 1.2 (S2): the Spotlight layout and the Hero's script line only where the theme offers them.
+    if (x.key === 'image_text' && x.layout && !spotlightOk) { const { layout: _drop, ...rest } = x; x = rest }
+    if (x.key === 'hero' && x.script !== undefined && !scriptOk) { const { script: _drop, ...rest } = x; x = rest }
     return [x]
   })
-  return { key: m.key, version: m.version, style: style.key, schemes, settings, home, ...(m.rhythm ? { rhythm: m.rhythm } : {}), site, menus: readMenus(layer.menus) }
+  return { key: m.key, version: m.version, style: style.key, schemes, settings, home, ...(m.rhythm ? { rhythm: m.rhythm } : {}), ...(m.scale ? { scale: m.scale } : {}), site, menus: readMenus(layer.menus) }
 }
 
 /**
@@ -195,6 +199,7 @@ export function settingAttrs(t: ResolvedTheme): Record<string, string> {
     ...(t.settings.entrance !== 'none' ? { 'data-entrance': t.settings.entrance } : {}),
     ...(t.settings.reveal ? { 'data-reveal': 'on' } : {}),
     ...(t.rhythm ? { 'data-rhythm': t.rhythm } : {}),
+    ...(t.scale ? { 'data-scale': t.scale } : {}),
     ...(t.settings.header === 'overlay' || t.settings.header === 'float' ? { 'data-header': t.settings.header } : {}),
     // Theme Signal: labels as pills or plain, the rail counter, and the grotesk voice on buttons and prices.
     ...(t.settings.labels !== 'none' ? { 'data-labels': t.settings.labels } : {}),

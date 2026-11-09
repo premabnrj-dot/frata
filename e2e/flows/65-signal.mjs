@@ -24,7 +24,8 @@ export default {
     const p = await ctx.newPage(); p.setDefaultTimeout(15_000); p.on('pageerror', (e) => t.errors.push(`${e.message} at ${p.url()}`))
     try {
       await t.step('Released by Admin: Signal is in the gallery; tried in a draft, the preview wears it', async () => {
-        await db`insert into theme_versions (theme_key, version, released_at) values ('signal', '1.0.0', now()) on conflict (theme_key, version) do update set released_at = now(), recalled_at = null, withdrawn_at = null`
+        // Every Signal version released: a new draft takes the newest (1.2.0, S2).
+        await db`insert into theme_versions (theme_key, version, released_at) values ('signal', '1.0.0', now()), ('signal', '1.1.0', now()), ('signal', '1.2.0', now()) on conflict (theme_key, version) do update set released_at = now(), recalled_at = null, withdrawn_at = null`
         await db`update shop_settings set sells = '{accessories}' where tenant_id = ${KESAR}`
         await p.goto(CONSOLE + '/console/look')
         await p.getByRole('button', { name: 'Signal', exact: true }).click()
@@ -42,8 +43,62 @@ export default {
         await f.locator('.store-label', { hasText: 'Bestsellers' }).waitFor()
         await f.locator('.store-tab').first().waitFor()
         await f.locator('[data-card="tile"]').waitFor({ state: 'attached' })
+        // S2 (1.2.0): the board's story half and type scale, filled with the bags set's samples in the preview.
+        const [rev] = await db`select theme_version from shop_theme_revisions where tenant_id = ${KESAR} and theme_key = 'signal' order by updated_at desc limit 1`
+        assert.equal(rev.theme_version, '1.2.0')
+        await f.locator('[data-scale="signal"]').waitFor({ state: 'attached' })
+        await f.locator('.store-script-hero', { hasText: 'New season' }).waitFor()
+        await f.locator('.store-spotlight').getByText('In spotlight').waitFor()
+        assert.equal(await f.locator('.store-fan > li').count(), 5, 'the fan borrows five sample cards')
+        await f.locator('.store-statement .store-script', { hasText: 'the long way' }).waitFor({ state: 'attached' })
+        const h2 = await f.locator('[data-section="best"] h2').evaluate((e) => parseFloat(getComputedStyle(e).fontSize))
+        assert.ok(h2 >= 22, `section headings use the scale (${h2}px)`)
         await p.waitForTimeout(500)
         await p.screenshot({ path: t.out('signal-customize') })
+      })
+
+      await t.step('Story sections in the customizer: add a Story fan and a Statement, edit them, the preview follows', async () => {
+        await p.getByRole('tab', { name: 'Sections' }).click()
+        await p.getByRole('button', { name: /^Story fan/ }).first().click()
+        await p.getByLabel('Heading', { exact: true }).fill('Roam, out in the city')
+        await p.getByRole('button', { name: /^Add a card/ }).click()
+        await p.getByText('Card 1', { exact: true }).waitFor()
+        await p.frameLocator(FRAME).getByText('Roam, out in the city').waitFor()
+        await p.getByRole('button', { name: '‹ Sections' }).click()
+        await p.getByRole('button', { name: /^Statement/ }).first().click()
+        await p.getByLabel('Handwritten line').fill('the long road')
+        await p.frameLocator(FRAME).locator('.store-statement .store-script', { hasText: 'the long road' }).waitFor({ state: 'attached' })
+        await p.getByRole('button', { name: '‹ Sections' }).click()
+        await p.getByRole('button', { name: /^Hero/ }).first().click()
+        await p.getByLabel('Handwritten line above (optional)').fill('Monsoon Edit')
+        await p.frameLocator(FRAME).locator('.store-script-hero', { hasText: 'Monsoon Edit' }).waitFor()
+        await p.getByRole('button', { name: '‹ Sections' }).click()
+        await p.getByRole('button', { name: /^Image with text/ }).first().click()
+        await p.getByRole('radio', { name: 'Spotlight' }).or(p.getByRole('button', { name: 'Spotlight', exact: true })).first().waitFor()
+        await p.getByRole('button', { name: '‹ Sections' }).click()
+        // The library offers both, "made for" Signal.
+        await p.getByRole('button', { name: 'Add a section', exact: true }).click()
+        const lib = p.getByRole('dialog', { name: 'Add a section' })
+        await lib.getByRole('button', { name: /^Story fan/ }).waitFor()
+        await lib.getByRole('button', { name: /^Statement/ }).waitFor()
+        await p.keyboard.press('Escape')
+        await p.screenshot({ path: t.out('signal-story-forms') })
+        // As a shopper with motion on sees them: the fan fanned out (middle card forward), the statement once scrolled to.
+        const [r] = await db`select id from shop_theme_revisions where tenant_id = ${KESAR} and theme_key = 'signal' order by updated_at desc limit 1`
+        const moving = await signedIn(t.browser, 'owner', { viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' })
+        const q = await moving.newPage()
+        await q.goto(CONSOLE + `/console/theme-preview/${r.id}`)
+        const fan = q.locator('.store-fan')
+        await fan.scrollIntoViewIfNeeded()
+        const xs = await fan.locator('li').evaluateAll((ls) => ls.map((l) => Math.round(l.getBoundingClientRect().x)))
+        const zs = await fan.locator('li').evaluateAll((ls) => ls.map((l) => Number(getComputedStyle(l).zIndex)))
+        assert.ok(xs.every((x, i) => i === 0 || x > xs[i - 1]), 'cards fan left to right')
+        assert.equal(zs.indexOf(Math.max(...zs)), Math.floor((zs.length - 1) / 2), 'the middle card is forward')
+        await fan.screenshot({ path: t.out('signal-fan-motion') })
+        const st = q.locator('.store-statement')
+        await st.scrollIntoViewIfNeeded(); await q.waitForTimeout(400)
+        await st.screenshot({ path: t.out('signal-statement') })
+        await moving.close()
       })
 
       await t.step('The preview on its own, a computer and a phone: home and a sample bag', async () => {

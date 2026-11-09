@@ -77,7 +77,7 @@ export default async function Customize() {
         allowed={{ pairings: m.allowed.pairings, headers: m.allowed.headers, footers: m.allowed.footers, sections: m.allowed.sections }} made={m.made ?? {}}
         facts={{ collections: f.collections, codOn: f.codOn, freeShippingAbove: f.freeShippingAbove, returnDays: f.returnDays, dispatchDays: f.dispatchDays }}
         formCtx={{ tenantId: t, targets, collections: data.collections, products: data.products, photos: data.photos, shopName: shop.shopName, masks: m.allowed.heroMasks ?? ['none'], layouts: m.allowed.productLayouts ?? PRODUCT_LAYOUTS, labels: (choicesFor(m, 'labels') ?? ['none']).some((x) => x !== 'none'), promiseWords,
-          video: { sections: m.allowed.videoSections ?? [], on: isVideoConfigured() },
+          video: { sections: m.allowed.videoSections ?? [], on: isVideoConfigured() }, spotlight: (m.allowed.imageTextLayouts ?? []).includes('spotlight'), heroScript: !!m.allowed.heroScript,
           schemes: ([{ key: 'paper', name: schemeNames.paper ?? 'Paper' }, { key: 'tint', name: schemeNames.tint ?? 'Tint' }, { key: 'ink', name: schemeNames.ink ?? 'Ink' }, { key: 'signal', name: 'Your colour' }] as const).filter((x) => (m.allowed.sectionSchemes ?? SECTION_SCHEMES).includes(x.key)) }}
         targets={targets} fonts={Object.fromEntries(PAIRINGS.map((p) => [p, displayFamily(p)])) as Record<Pairing, string>}
         address={shop.host} canPublish={(CAN_MANAGE as readonly string[]).includes(role)} shopOpen={!!shop.publishedAt} nowIso={new Date().toISOString()}

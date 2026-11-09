@@ -80,3 +80,27 @@ describe('sample sets by what the shop sells (theme Signal plan S0-1)', () => {
     expect(samplePieces('footwear')[0]!.sizeChart).toBeNull()
   })
 })
+
+describe('withSampleImages fills the story sections (Signal S2, preview only)', () => {
+  const own = { base: 'https://x/own', widths: [400], width: 4, height: 5, alt: 'Mine', decorative: false, focus: null }
+  const fanOf = (cards: object[]) => ({ home: [{ id: 'f', key: 'story_fan' as const, hidden: false, scheme: 'paper' as const, label: '', heading: '', text: '', cards: cards as never }] })
+  const cards = (t: { home: { key: string }[] }) => (t.home[0] as unknown as { cards: { image: { base: string } | null }[] }).cards
+  it('an empty fan gets five different pieces from the shop\'s own set', () => {
+    for (const set of ['clothing', 'accessories', 'footwear'] as const) {
+      const c = cards(withSampleImages(fanOf([]), 'signal', set))
+      expect(c).toHaveLength(5)
+      expect(new Set(c.map((x) => x.image!.base)).size).toBeGreaterThan(1)
+      for (const x of c) expect(existsSync(join('public', `${x.image!.base}-400.webp`))).toBe(true)
+    }
+  })
+  it('a fan with three own photos is left alone; one with fewer keeps its photos and fills the rest', () => {
+    const three = [{ image: own, title: '', link: null }, { image: own, title: '', link: null }, { image: own, title: '', link: null }]
+    expect(cards(withSampleImages(fanOf(three), 'signal', 'accessories')).map((x) => x.image!.base)).toEqual(['https://x/own', 'https://x/own', 'https://x/own'])
+    const one = cards(withSampleImages(fanOf([{ image: own, title: '', link: null }]), 'signal', 'accessories'))
+    expect(one[0]!.image!.base).toBe('https://x/own'); expect(one).toHaveLength(5)
+  })
+  it('a statement with no photo borrows the scene', () => {
+    const t = withSampleImages({ home: [{ id: 's', key: 'statement' as const, hidden: false, scheme: 'ink' as const, eyebrow: '', wordmark: 'w', image: null }] }, 'signal', 'accessories')
+    expect((t.home[0] as unknown as { image: { base: string } }).image.base).toBe(SAMPLE_SCENES.signal.base)
+  })
+})

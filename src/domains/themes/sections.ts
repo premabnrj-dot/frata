@@ -61,6 +61,8 @@ export const HeroSchema = z.object({
   height: z.enum(['short', 'tall']).default('tall'),
   /** Atelier's arched photo; only where a theme allows it (manifest.allowed.heroMasks). */
   mask: z.enum(['none', 'arch']).default('none'),
+  /** Signal 1.2 (S2): a handwritten line above the heading (Caveat), where the theme offers it (allowed.heroScript). */
+  script: text(32).optional(),
 })
 
 export const CollectionTilesSchema = z.object({
@@ -121,6 +123,9 @@ export const PromisesSchema = z.object({
 
 export const ImageTextSchema = z.object({
   id, key: z.literal('image_text'), hidden, scheme, label,
+  /** Signal 1.2 (S2): `spotlight` = words beside a wide photo or loop on a tile; absent = beside (every older theme).
+   *  Offered where a theme lists it (allowed.imageTextLayouts). Optional, so older looks resolve exactly as before. */
+  layout: z.enum(['spotlight']).optional(),
   image: ImageSchema.nullable().default(null),
   video,
   heading: text(60),
@@ -161,31 +166,57 @@ export const ShopTheLookSchema = z.object({
   pieces: z.array(z.object({ handle: z.string().regex(/^[a-z0-9-]{1,100}$/), x: pin, y: pin })).max(4).default([]),
 })
 
+/** Signal 1.2 (S2): story cards fanned out, the middle one forward. Lenient (a blank one parses: autosave); fewer than
+ *  three cards with photos shows nothing (readiness says so, never blocking). */
+export const MAX_CARDS = 7
+export const StoryFanSchema = z.object({
+  id, key: z.literal('story_fan'), hidden, scheme, label,
+  heading: text(60).default(''),
+  text: text(160).default(''),
+  cards: z.array(z.object({
+    image: ImageSchema.nullable().default(null),
+    title: text(40).default(''),
+    link: shopPath.nullable().default(null),
+  })).max(MAX_CARDS).default([]),
+})
+
+/** Signal 1.2 (S2): a full-bleed photo with a small line and a handwritten wordmark ("Made for" · "the long way"). */
+export const StatementSchema = z.object({
+  id, key: z.literal('statement'), hidden, scheme,
+  eyebrow: text(24).default(''),
+  wordmark: text(32).default(''),
+  image: ImageSchema.nullable().default(null),
+})
+
 export const SectionSchema = z.discriminatedUnion('key', [
   HeroSchema, CollectionTilesSchema, ProductsSchema, PriceTilesSchema, PromisesSchema, ImageTextSchema, DropTeaserSchema, RichTextSchema, LogosSchema,
-  ShopTheLookSchema,
+  ShopTheLookSchema, StoryFanSchema, StatementSchema,
 ])
+/** The sections that may carry a V1 loop (where a theme lists them in allowed.videoSections): one list, read everywhere. */
+export const VIDEO_KEYS = ['hero', 'image_text'] as const
+export type VideoKey = (typeof VIDEO_KEYS)[number]
 export type SectionInstance = z.infer<typeof SectionSchema>
 /** A section as written in a manifest or a stored layer: defaults may be left out. */
 export type SectionInput = z.input<typeof SectionSchema>
 export type SectionKey = SectionInstance['key']
 export type SectionOf<K extends SectionKey> = Extract<SectionInstance, { key: K }>
-export const SECTION_KEYS: SectionKey[] = ['hero', 'collection_tiles', 'products', 'price_tiles', 'promises', 'image_text', 'drop_teaser', 'rich_text', 'logos', 'shop_the_look']
+export const SECTION_KEYS: SectionKey[] = ['hero', 'collection_tiles', 'products', 'price_tiles', 'promises', 'image_text', 'drop_teaser', 'rich_text', 'logos', 'shop_the_look', 'story_fan', 'statement']
 
 /** How many of each a page may hold (spec § Sections). */
-export const MAX_PER_PAGE: Record<SectionKey, number> = { hero: 3, collection_tiles: 3, products: 8, price_tiles: 1, promises: 1, image_text: 4, drop_teaser: 1, rich_text: 4, logos: 1, shop_the_look: 2 }
+export const MAX_PER_PAGE: Record<SectionKey, number> = { hero: 3, collection_tiles: 3, products: 8, price_tiles: 1, promises: 1, image_text: 4, drop_teaser: 1, rich_text: 4, logos: 1, shop_the_look: 2, story_fan: 2, statement: 2 }
 export const MAX_SECTIONS = 20
 
 export const SECTION_NAMES: Record<SectionKey, string> = {
   hero: 'Hero', collection_tiles: 'Collection tiles', products: 'Products', price_tiles: 'Price tiles', promises: 'Shop by promise',
   image_text: 'Image with text', drop_teaser: 'Drop teaser', rich_text: 'Rich text', logos: 'Logos', shop_the_look: 'Shop the look',
+  story_fan: 'Story fan', statement: 'Statement',
 }
 /** The section library's kinds, in order (Look v3 § Sections); a kind with nothing the theme offers is not shown. */
 export const SECTION_KINDS: { name: string; keys: SectionKey[] }[] = [
   { name: 'Banners', keys: ['hero', 'drop_teaser'] },
   { name: 'Products', keys: ['products', 'price_tiles'] },
   { name: 'Collections', keys: ['collection_tiles'] },
-  { name: 'Story', keys: ['image_text', 'shop_the_look', 'rich_text'] },
+  { name: 'Story', keys: ['image_text', 'story_fan', 'statement', 'shop_the_look', 'rich_text'] },
   { name: 'Trust', keys: ['promises', 'logos'] },
 ]
 
@@ -198,6 +229,8 @@ export const SECTION_INFO: Record<SectionKey, { blurb: string; tags: string[] }>
   collection_tiles: { blurb: 'Your collections as tiles or circles', tags: ['categories', 'category', 'circles', 'collections', 'shop by'] },
   image_text: { blurb: 'Your story beside a photo', tags: ['about', 'story', 'brand', 'maker', 'craft', 'photo'] },
   shop_the_look: { blurb: 'One photo, up to four pieces pinned on it', tags: ['lookbook', 'outfit', 'styled', 'pins', 'complete the look'] },
+  story_fan: { blurb: 'Three to seven story cards, fanned out', tags: ['stories', 'cards', 'lifestyle', 'city', 'carousel', 'gallery', 'moments'] },
+  statement: { blurb: 'A full-width photo with a handwritten line', tags: ['wordmark', 'banner', 'quote', 'script', 'tagline', 'full width'] },
   rich_text: { blurb: 'A few paragraphs in your words', tags: ['text', 'words', 'paragraph', 'note', 'size promise', 'made to order'] },
   promises: { blurb: 'Pay on delivery, exchanges, dispatch: from your settings', tags: ['trust', 'cod', 'cash on delivery', 'returns', 'exchange', 'shipping', 'free shipping'] },
   logos: { blurb: 'Press or partner logos', tags: ['press', 'as seen in', 'featured', 'partners', 'trust'] },

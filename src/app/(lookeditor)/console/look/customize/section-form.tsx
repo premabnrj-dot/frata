@@ -2,10 +2,15 @@
 
 import { MAX_TABS, type ProductLayout, type SectionScheme } from '@/domains/themes/sections'
 import { useState } from 'react'
-import { PROMISES, SECTION_NAMES, type SectionInstance, type SectionOf } from '@/domains/themes/sections'
+import { PROMISES, SECTION_NAMES, type SectionInstance, type SectionOf, type VideoKey } from '@/domains/themes/sections'
 import { Choice, Field, ImageField, LinkPicker, Switch, Text, paiseToRupees, rupeesToPaise, type LibraryPhoto, type LinkTarget } from './controls'
 import { Icon } from '@/components/icons/icon'
 import { VideoField } from './video-field'
+import dynamic from 'next/dynamic'
+
+// Signal 1.2's story forms load only when one is opened (speed review: the customizer is over its script budget).
+const StoryFanForm = dynamic(() => import('./story-forms').then((m) => m.StoryFanForm))
+const StatementForm = dynamic(() => import('./story-forms').then((m) => m.StatementForm))
 
 // One section's settings (themes spec § Sections: every field, type and limit). The form edits a copy; every
 // change goes through `set`, which the editor turns into an undo step and an autosave.
@@ -26,7 +31,9 @@ export type FormCtx = {
   /** The shop's products, newest first (Shop the look picks from them). */
   products: { handle: string; title: string }[]
   /** V1: the sections this theme lets carry a loop, and whether video is switched on for shops (Mux is set up). */
-  video?: { sections: readonly ('hero' | 'image_text')[]; on: boolean }
+  video?: { sections: readonly VideoKey[]; on: boolean }
+  /** Signal 1.2 (S2): Image with text's Spotlight layout and the Hero's script line, where the theme offers them. */
+  spotlight?: boolean; heroScript?: boolean
 }
 
 type Set<S> = (s: S) => void
@@ -63,6 +70,7 @@ function ButtonFields({ value, targets, onChange }: { value: { label: string; li
 function Hero({ s, set, c }: { s: SectionOf<'hero'>; set: Set<SectionOf<'hero'>>; c: FormCtx }) {
   return (<>
     <Choice label="Layout" value={s.layout} onChange={(layout) => set({ ...s, layout })} options={[{ value: 'text', label: 'Words only' }, { value: 'image_text', label: 'Words on a photo' }, { value: 'split', label: 'Photo beside words' }, { value: 'image', label: 'Photo only' }]} />
+    {c.heroScript && s.layout !== 'image' && <Text label="Handwritten line above (optional)" value={s.script ?? ''} max={32} onChange={(script) => { const { script: _old, ...rest } = s; set(script ? { ...rest, script } : rest) }} />}
     {s.layout !== 'text' && <ImageField label={s.video ? 'Photo (optional with a video)' : 'Photo'} value={s.image} tenantId={c.tenantId} library={c.photos} suggest={['text' in s.heading ? s.heading.text : '', c.shopName]} onChange={(image) => set({ ...s, image })} />}
     {s.layout !== 'text' && c.video?.sections.includes('hero') && <VideoField value={s.video} on={c.video.on} onChange={(video) => set(withVideo(s, video))} />}
     <Bound label="Heading" value={s.heading} max={60} shopField="shopName" onChange={(heading) => set({ ...s, heading: heading ?? { from: 'shopName' } })} />
@@ -143,6 +151,7 @@ function Promises({ s, set, c }: { s: SectionOf<'promises'>; set: Set<SectionOf<
 
 function ImageText({ s, set, c }: { s: SectionOf<'image_text'>; set: Set<SectionOf<'image_text'>>; c: FormCtx }) {
   return (<>
+    {c.spotlight && <Choice label="Layout" value={s.layout ?? 'beside'} onChange={(v) => { const { layout: _old, ...rest } = s; set(v === 'spotlight' ? { ...rest, layout: 'spotlight' } : rest) }} options={[{ value: 'beside', label: 'Beside the photo' }, { value: 'spotlight', label: 'Spotlight' }]} />}
     <ImageField label={s.video ? 'Photo (optional with a video)' : 'Photo'} value={s.image} tenantId={c.tenantId} library={c.photos} suggest={[s.heading, c.shopName]} onChange={(image) => set({ ...s, image })} />
     {c.video?.sections.includes('image_text') && <VideoField value={s.video} on={c.video.on} onChange={(video) => set(withVideo(s, video))} />}
     {c.labels && <Text label="Label above the heading" value={s.label} max={24} onChange={(label) => set({ ...s, label })} />}
@@ -237,13 +246,16 @@ export function SectionForm({ s, set, c }: { s: SectionInstance; set: (s: Sectio
       case 'rich_text': return <Rich s={s} set={set} />
       case 'logos': return <Logos s={s} set={set} c={c} />
       case 'shop_the_look': return <Look s={s} set={set} c={c} />
+      case 'story_fan': return <StoryFanForm s={s} set={set} c={c} />
+      case 'statement': return <StatementForm s={s} set={set} c={c} />
     }
   })()
   return (
     <div className="space-y-4">
       <h2 className="text-base font-semibold">{SECTION_NAMES[s.key]}</h2>
       {body}
-      <Choice label="Colours" value={s.scheme} onChange={(scheme) => set({ ...s, scheme })} options={c.schemes.map((x) => ({ value: x.key, label: x.name }))} />
+      {/* The Statement is always white words on its darkened photo: no colours to choose. */}
+      {s.key !== 'statement' && <Choice label="Colours" value={s.scheme} onChange={(scheme) => set({ ...s, scheme })} options={c.schemes.map((x) => ({ value: x.key, label: x.name }))} />}
     </div>
   )
 }

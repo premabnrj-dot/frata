@@ -2,9 +2,9 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.10.1
+  version: 5.11.1
   verified: 2026-11-09
-  covers: ["src/app/globals.css", "src/components/**"]
+  covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
 
 # Frata design language
@@ -68,7 +68,7 @@ from it).
   from pictograms on a haldi-soft field, flat, no perspective, no faces, no
   stock art. One per page at most (the hero).
 - **Tokens**: `--illo-line`, `--illo-paper`, `--illo-fill`, `--illo-haldi`,
-  `--illo-haldi-soft`, `--illo-indigo-soft` (globals.css, both themes). Never
+  `--illo-haldi-soft`, `--illo-indigo-soft` (base.css, both themes). Never
   rani (rule 6), never on a control, never the only sign of anything:
   every graphic is `aria-hidden` beside words that say the same.
 - **UI icons are frrata's own** (§ UX foundation rule 20, § Brand rule 36). Pictograms are not icons.
@@ -204,7 +204,7 @@ Two surfaces, two looks. **The console is neutral, dense and numeric. The
 fashion lives in the storefront.** Patterns below are taken from Ekatan's admin
 (its `ekatan3d-design-language`) and Shopify's admin, which merchants already know.
 
-## Tokens (`src/app/globals.css` — the console's only hex; images drawn outside CSS — PDFs, share cards — keep their palette in one allowed file each; `check:hex`)
+## Tokens (`src/app/base.css` — shared by the app sheet `globals.css` and the shop sheet `shop.css` since Signal S2-0; the only hex; images drawn outside CSS — PDFs, share cards — keep their palette in one allowed file each; `check:hex`)
 
 - `--primary` (ink) is interaction: buttons, focus. `--brand` is **rani**
   (#D61F69, the frrata mark; brand spec 2026-11-07): never a button fill, a
@@ -294,6 +294,12 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
   sound or a player bar on the shop.
 - **Theme samples:** realistic photos only (credited in `public/themes/samples/*/CREDITS.json`); the merchant's own
   pieces always first.
+- **Story half (1.2, S2):** a Spotlight is Image with text on the tile, words .8fr beside a 2:1 photo or loop; a Story
+  fan is 3–7 cards, the middle forward, side cards' photos softened (titles stay full contrast), a swipe row on a phone,
+  side by side under reduced motion, a focused card brought forward; a Statement is a full-bleed photo under a ≥ 60 %
+  scrim, a small uppercase line and a handwritten wordmark. **One script face (Caveat), used only for a handwritten
+  line** (the Hero's, the Statement's), tilted −4° / −6°, never for body or buttons. Section headings 22–34 px, 600,
+  −0.02em, balanced. An empty story section shows nothing; it never stops a publish.
 
 ## Frata Admin (owner-approved, 2026-11-06)
 
@@ -836,7 +842,7 @@ saving we cannot show from their own orders.
   `data-store-drawer` (rule 25a). A list longer than 48 is paged at its own
   addresses (`/products/page/N`), each cached on its own.
 - Checkout: one page, at most 7 fields, phone first, pincode fills city and
-  state, labels above fields. No shopper OTP until DLT registration (Phase 2);
+  state, labels above fields. Shopper sign-in is EkCode only (§ EkCode; no SMS OTP);
   COD rules and the To confirm queue carry the risk. No merchant cost ever
   reaches this surface (ADR-0003).
 - **Sizes are buttons**, sold-out shown and still readable; Add to bag stays
@@ -856,6 +862,25 @@ saving we cannot show from their own orders.
 - **Search and sharing for a collection** is the product's panel (`SeoPanel folder="collections"`), closed by
   default; its address stays under the name, and a changed address says the old one will send shoppers here.
 - **Barcode** is an optional column after SKU in the variant grid, digits only; it is never asked for.
+
+## EkCode (owner-approved 2026-11-09; spec `docs/specs/2026-11-09-shopper-login.md`, mockup https://claude.ai/artifact/A33Xi8HVfsAyZqQ2pn7uKu)
+
+- **A brand of its own.** Nothing a shopper sees names Frrata: ekcode.in pages, the notice, WhatsApp (sender
+  "EkCode"), email, checkout lines. Merchants meet it as an app in the console.
+- **The mark** is drawn, never typed: एक inside one rounded code box with a rani cursor under it, "Code" open beside
+  it, Mukta 700 for both scripts. The box alone (filled ink below 48 px; ए alone at 16 px) is the icon. Devanagari
+  appears only in the mark: **every word on every screen is English** until the owner plans other languages.
+- **The shop's button** is "Continue with" + the mark, ink on light themes and paper on dark, 52 px, full width on a
+  phone, never in the shop's colours, above the guest form with an "or" divider. Guest checkout always stays.
+- **ekcode.in screens**: a real page (top-level, never a pop-up or iframe); the shop's name and initial top right;
+  one field per screen; the number checks itself as typed (10 digits, 6–9); the code field is `one-time-code`, fills
+  itself and submits on the sixth digit (no Verify button); "Open WhatsApp" on a phone; email offered only when
+  needed; consent is its own tap, never pre-ticked; the shopper sees exactly what the shop gets and picks the
+  address; "Not you?" is one tap everywhere; footer Privacy · Terms only.
+- **Limits are allowances, never charges** (owner): an order-update meter on the Apps row (amber at 80%); past it,
+  "More updates" offers wait until the 1st, move up a plan, or connect your own number.
+- **Admin › EkCode** shows counts, costs and health, never a list of shoppers or an address; the one way in is "Find
+  an account" by exact number with a reason, logged.
 
 ## Share cards (search and sharing S1, owner-approved mockup 2026-11-09)
 

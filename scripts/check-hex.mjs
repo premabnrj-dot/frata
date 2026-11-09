@@ -20,7 +20,7 @@ const ROOT = process.argv[2] ?? 'src'
 
 const EXEMPT = [
   // Where the tokens are DEFINED.
-  /^src\/app\/globals\.css$/,
+  /^src\/app\/base\.css$/, // the tokens live here since Signal S2-0 (globals.css and shop.css import it)
   // The share card's palette: an image drawn by next/og, outside the CSS tokens (search and sharing S1·4).
   /^src\/domains\/seo\/card-paper\.ts$/,
 ]

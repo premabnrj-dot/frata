@@ -5,7 +5,7 @@
 // only ResolvedTheme. No CSS, no HTML, no script ever comes from a layer.
 // =============================================================================
 
-import type { ProductLayout, SectionInput, SectionInstance, SectionKey, SectionScheme } from './sections'
+import type { ProductLayout, SectionInput, SectionInstance, SectionKey, SectionScheme, VideoKey } from './sections'
 import type { Menus, SiteSettings } from './site'
 
 export type Hex = `#${string}`
@@ -124,7 +124,9 @@ export type ThemeManifest = {
     /** The products section's layouts and the colour schemes a section may wear (Signal plan T1); absent = today's. */
     productLayouts?: ProductLayout[]; sectionSchemes?: SectionScheme[]
     /** V1: the sections that may carry a video loop; absent = none (every theme before Signal). */
-    videoSections?: ('hero' | 'image_text')[]
+    videoSections?: VideoKey[]
+    /** Signal 1.2 (S2): Image with text's Spotlight layout; the Hero's script line. Absent = not offered. */
+    imageTextLayouts?: 'spotlight'[]; heroScript?: boolean
     /** 2.0: the values this theme offers for a setting (choicesFor). A key left out keeps the values every 1.x theme had. */
     choices?: Choices }
   /** 2.0: the customizer's preview fills an empty shop with sample pieces, and a missing hero photo with this sample scene. */
@@ -133,6 +135,8 @@ export type ThemeManifest = {
   made?: { headers?: HeaderVariant[]; footers?: FooterVariant[]; sections?: SectionKey[] }
   /** 2.0: every section below the hero gets the same space above and below it (the 1.x themes keep their spacing). */
   rhythm?: 'even'
+  /** Signal 1.2 (S2): the bigger, tighter section headings (only where a version sets it: live 1.0/1.1 shops unchanged). */
+  scale?: 'signal'
   home: SectionInput[]
 }
 
@@ -147,6 +151,8 @@ export type ResolvedTheme = {
   home: SectionInstance[]
   /** From the manifest (2.0): even space between sections. */
   rhythm?: 'even'
+  /** From the manifest (Signal 1.2): the heading scale. */
+  scale?: 'signal'
   /** Site settings (Look v4): the merchant's palette (already painted into schemes), text styles and icons. */
   site: SiteSettings
   /** The menus the merchant made (absent: the shop's default; menusOf). */

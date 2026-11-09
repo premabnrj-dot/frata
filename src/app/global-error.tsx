@@ -1,4 +1,5 @@
 'use client'
+import './globals.css' // the app sheet (Signal S2-0)
 
 export default function GlobalError({ reset }: { reset: () => void }) {
   return (

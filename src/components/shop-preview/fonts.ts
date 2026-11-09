@@ -17,7 +17,13 @@ const schibsted = Schibsted_Grotesk({ subsets: ['latin', 'latin-ext'], weight: [
 const deva = localFont({ src: '../shell/noto/noto-sans-devanagari-devanagari-wght-normal.woff2', weight: '100 900', preload: false, adjustFontFallback: false, display: 'swap', variable: '--font-store-deva',
   declarations: [{ prop: 'unicode-range', value: 'U+0900-097F,U+1CD0-1CF9,U+200C-200D,U+25CC,U+A830-A839,U+A8E0-A8FF' }] })
 
-export const STORE_FONT_VARS = `${fraunces.variable} ${cormorant.variable} ${playfair.variable} ${dmserif.variable} ${schibsted.variable} ${deva.variable}`
+// Signal 1.2 (S2): Caveat 700 for the Hero's script line and the Statement's wordmark. Self-hosted, ASCII only and
+// without its contextual alternates (owner, 2026-11-09: 19.5 kB, not Google's 51 kB); OFL 1.1, no Reserved Font Name
+// (./caveat/OFL.txt). Not preloaded: a page fetches it only when it shows a script line. Other characters fall back
+// to the grotesk, never to a system "cursive".
+const script = localFont({ src: './caveat/caveat-700-ascii.woff2', weight: '700', preload: false, display: 'swap', variable: '--font-store-script', fallback: ['var(--store-display)'] })
+
+export const STORE_FONT_VARS = `${fraunces.variable} ${cormorant.variable} ${playfair.variable} ${dmserif.variable} ${schibsted.variable} ${deva.variable} ${script.variable}`
 
 /** The CSS font-family for a shop's display face (a theme's pairing; before themes, shop_settings.display_font). */
 export function displayFamily(font: string): string {

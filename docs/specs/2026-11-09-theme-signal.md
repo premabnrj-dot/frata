@@ -89,7 +89,7 @@ Order (owner, 2026-11-09): **S0 → S1 → V1 → S2 → S3.**
 - **KISS**: S1 is a manifest plus a handful of new enum values the renderers already switch on.
 - **Scalability / performance**: one more self-hosted font (≈ 25 kB woff2, one weight preloaded); the rail and tabs are
   server-rendered with CSS scroll (tabs swap with a small island, budget ≤ 2 kB); the shop page stays under its 120 kB
-  script and 20 kB CSS budgets (`check:storefront-build`); S3 stories add to the product's cached entry (cap 6 × 1 kB).
+  script and CSS budgets (`check:storefront-build`; shop CSS 15.6 kB since S2's own sheet, ceiling 16.6 kB); S3 stories add to the product's cached entry (cap 6 × 1 kB).
 - **Reliability**: V1's server calls to Mux (create upload, delete asset) go through `fetchWithTimeout`; an upload that
   never turns ready shows "Didn't work" after Mux's errored event or a timeout sweep; the webhook is idempotent.
 - **Security**: Mux's webhook verified by its signature header before parsing, size-capped; the direct-upload URL is

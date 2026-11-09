@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { SectionLibrary } from './section-library'
-import { SECTION_NAMES, type SectionInstance, type SectionKey } from '@/domains/themes/sections'
+import { SECTION_NAMES, type SectionInstance, type SectionKey, MAX_CARDS } from '@/domains/themes/sections'
 import { Icon } from '@/components/icons/icon'
 
 // The Sections tab (mockup "Customizer"): the Home's sections in order. Each row moves up or down (buttons: drag is
@@ -21,6 +21,8 @@ const summary = (s: SectionInstance): string => {
     case 'rich_text': return s.heading || 'Text'
     case 'logos': return `${s.images.length} logos`
     case 'shop_the_look': return `${s.pieces.length} of 4 pieces`
+    case 'story_fan': return `${s.cards.filter((c) => c.image).length} of ${MAX_CARDS} cards`
+    case 'statement': return s.wordmark || 'Needs a wordmark'
   }
 }
 
@@ -37,6 +39,8 @@ export function blank(key: SectionKey, id: string, now: Date): SectionInstance {
     case 'rich_text': return { id, key, hidden: false, scheme: 'paper', heading: '', body: [], align: 'left' }
     case 'logos': return { id, key, hidden: false, scheme: 'paper', heading: 'As seen in', images: [] }
     case 'shop_the_look': return { id, key, hidden: false, scheme: 'paper', image: null, heading: 'Shop the look', pieces: [] }
+    case 'story_fan': return { id, key, hidden: false, scheme: 'paper', label: '', heading: 'Out in the city', text: '', cards: [] }
+    case 'statement': return { id, key, hidden: false, scheme: 'ink', eyebrow: 'Made for', wordmark: 'the long way', image: null }
   }
 }
 
