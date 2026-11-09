@@ -78,8 +78,8 @@ Order (owner, 2026-11-09): **S0 → S1 → V1 → S2 → S3.**
 - **UI/UX**: shopper surface; every new section has empty (hidden), one, many, phone states in the mockup's spirit; the
   customizer adds three segmented choices and four library entries; signal colour reuses Look v4's readable-colour
   check (`brandColourProblem`); tabs are buttons with `aria-pressed`, the rail scrolls with keys, the fan is a list.
-- **Tenancy**: V1 adds `videos` (per shop; Mux ids are not secrets but are scoped to the shop's rows); S1–S2 store nothing new (the theme layer is the shop's own row). S3 adds `product_stories` (tenant_id,
-  product, position, photo, title, text, callouts jsonb capped) with grant, RLS, policy and a tenancy.sql check, and
+- **Tenancy**: V1 adds `videos` (per shop; Mux ids are not secrets but are scoped to the shop's rows); S1–S2 store nothing new (the theme layer is the shop's own row). S3 stores stories on the product (`products.stories`,
+  capped jsonb like `label`; owner 2026-11-09, plan docs/plans/2026-11-09-signal-s3.md) and pairs in `product_pairs` (composite FKs, grant, RLS, policy, a tenancy.sql check), and
   "pair it with" as a list of product ids checked against the shop's own products.
 - **Modularity**: manifest in `domains/themes/catalogue/signal/`, choices in `types.ts`, renderers in
   `components/storefront/sections/`; product stories are core catalogue (`domains/catalogue`), read with the product.

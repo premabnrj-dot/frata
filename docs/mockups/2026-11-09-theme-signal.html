@@ -402,13 +402,12 @@ button{font:inherit;color:inherit;cursor:pointer}
 
   <!-- ===================== PRODUCT EDITOR (S3) ===================== -->
   <h2 id="editor">Product editor <span class="ph">S3 · stories, pair it with</span></h2>
-  <p class="sub" style="margin:-6px 0 12px;font-size:13px">Two cards in Products › a product, under Details. Shown when the shop's look offers them (Signal 1.3).</p>
   <div class="frame"><div class="ed">
     <div class="card">
       <h4>Stories<span class="lim">2 of 6</span></h4>
-      <div class="story"><div class="ph"></div><div><b>A pocket for everything</b><small>3 notes · Laptop sleeve, 15.6″…</small></div><div class="act"><span>↑</span><span>↓</span><span>✕</span></div></div>
+      <div class="story"><div class="ph"></div><div><b>A pocket for everything</b><small>3 notes · Laptop sleeve, 15.6″…</small></div><div class="act"><span title="Move up"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span><span title="Move down"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span><span title="Remove"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div></div>
       <div class="open">
-        <div class="dropz" style="padding:22px"><b>Drop a photo</b><span class="sub" style="font-size:12px">or choose one · from your product photos</span></div>
+        <div class="dropz" style="padding:22px"><b>Drop a photo</b><span class="sub" style="font-size:12px">or choose one · or one of this product’s photos</span></div>
         <div><div class="lbl">Title <i>24 / 60</i></div><div class="inp">Long-weekend ready.</div></div>
         <div><div class="lbl">Text <i>96 / 300</i></div><div class="inp ta">The main compartment opens flat, with room for three days of clothes and a pouch for chargers.</div></div>
         <div class="lbl" style="margin:0">Numbered notes <i>2 of 3</i></div>
@@ -420,14 +419,37 @@ button{font:inherit;color:inherit;cursor:pointer}
     </div>
     <div class="card">
       <h4>Pair it with<span class="lim">1 of 2</span></h4>
-      <div class="pair"><div class="ph"></div><div><b style="font-size:13px">Strap Tag</b><br><small>₹490 · in stock</small></div><span class="vbtn">Remove</span></div>
-      <div class="search"><span>Find a piece…</span><span>⌕</span></div>
-      <div class="pair" style="border-style:dashed"><div class="ph"></div><div><b style="font-size:13px">Rain Cover</b><br><small>₹690 · 2 sizes: the shopper picks on its page</small></div><span class="vbtn">Add</span></div>
-      <h4 style="margin-top:8px">Empty states</h4>
-      <div class="addrow" style="text-align:left;font-weight:400"><b style="font-size:13px">Stories</b><span class="empty"> · Add a story: a photo, a title, a few words, up to 3 numbered notes. Up to 6.</span></div>
-      <div class="addrow" style="text-align:left;font-weight:400"><b style="font-size:13px">Pair it with</b><span class="empty"> · Pick up to 2 pieces shoppers can add from this page.</span></div>
+      <div class="pair"><div class="ph"></div><div><b style="font-size:13px">Strap Tag</b><br><small>₹490 · one size: Add on the shop</small></div><span class="vbtn">Remove</span></div>
+      <div class="search"><span>Find a piece…</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg></div>
+      <div class="pair" style="border-style:dashed"><div class="ph"></div><div><b style="font-size:13px">Daypack Mini</b><br><small>₹2,990 · 3 sizes: Choose on the shop</small></div><span class="vbtn">Add</span></div>
+      <div class="pair" style="border-style:dashed"><div class="ph"></div><div><b style="font-size:13px">Rain Cover</b><br><small>₹690 · one size</small></div><span class="vbtn">Add</span></div>
     </div>
   </div></div>
+  <div class="frame" style="margin-top:12px"><div class="ed">
+    <div class="card">
+      <h4>States</h4>
+      <div class="addrow" style="text-align:left;font-weight:400"><b style="font-size:13px">Stories · none yet</b><br><span class="empty">Add a story: a photo, a title, a few words, up to 3 numbered notes.</span></div>
+      <div class="story"><div class="ph"></div><div><b>Six of six</b><small>6 of 6 · no “Add a story” until one is removed</small></div><div class="act"><span title="Move up"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span><span title="Move down"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span><span title="Remove"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div></div>
+      <div class="dropz" style="border-color:#f3b0a8;text-align:left"><b style="color:#B42318">That photo didn’t come from this shop. Upload it again.</b></div>
+      <div class="addrow" style="text-align:left;font-weight:400"><b style="font-size:13px">Pair it with · none yet</b><br><span class="empty">Pick up to 2 pieces shoppers can add from this page.</span></div>
+    </div>
+    <div class="card">
+      <h4>States</h4>
+      <div class="search"><span>“zzz”</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg></div><p class="empty" style="margin:-4px 0 0">No piece called “zzz”.</p>
+      <div class="pair"><div class="ph" style="opacity:.5"></div><div><b style="font-size:13px">Old Tote</b><br><small style="color:#B42318">Archived: not shown on the shop</small></div><span class="vbtn">Remove</span></div>
+      <div class="pair"><div class="ph" style="opacity:.5"></div><div><b style="font-size:13px">Kora Tote</b><br><small style="color:#B42318">Sold out: not shown until it’s back</small></div><span class="vbtn">Remove</span></div>
+      <p class="empty" style="margin:0">2 of 2: the search closes. This product never appears in its own list.</p>
+    </div>
+  </div></div>
+  <div class="phones" style="margin-top:12px"><div><div class="phone" style="background:var(--card);padding:14px;display:grid;gap:10px">
+    <h4 style="margin:0;font-size:15px">Stories<span class="lim"> 2 of 6</span></h4>
+    <div class="story"><div class="ph"></div><div><b>A pocket for everything</b><small>3 notes</small></div><div class="act"><span title="Move up"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span><span title="Move down"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span><span title="Remove"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div></div>
+    <div class="story"><div class="ph"></div><div><b>Long-weekend ready</b><small>2 notes</small></div><div class="act"><span title="Move up"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span><span title="Move down"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span><span title="Remove"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div></div>
+    <div class="addrow">Add a story</div>
+    <h4 style="margin:6px 0 0;font-size:15px">Pair it with<span class="lim"> 1 of 2</span></h4>
+    <div class="pair"><div class="ph"></div><div><b style="font-size:13px">Strap Tag</b><br><small>₹490</small></div><span class="vbtn">Remove</span></div>
+    <div class="search"><span>Find a piece…</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg></div>
+  </div><p class="sub" style="text-align:center;font-size:12px">Phone</p></div></div>
 
   <!-- ===================== SAMPLES ===================== -->
   <h2 id="samples">Sample sets in the preview <span class="ph">S0</span></h2>
