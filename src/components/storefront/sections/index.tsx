@@ -3,16 +3,13 @@ import Link from 'next/link'
 import { unstable_rethrow } from 'next/navigation'
 import { errName } from '@/lib/log'
 import { inCollection, isListed, priceOf } from '@/domains/storefront/listing'
-import { lookPieces, sourceProducts } from '@/domains/storefront/sources'
+import { lookPieces } from '@/domains/storefront/sources'
 import { truePromises } from '@/domains/themes/readiness'
-import { schemeVars } from '@/domains/themes/resolve'
 import type { SectionInstance, SectionOf } from '@/domains/themes/sections'
 import type { ResolvedTheme } from '@/domains/themes/types'
 import { dayIN } from '@/lib/format-date'
-import { formatInr } from '@/lib/format'
-import { paise } from '@/domains/money/paise'
 import type { StoreCatalogue, StoreShop } from '@/lib/queries/storefront'
-import { ProductCard, ProductGrid } from '../card'
+import { ProductGrid } from '../card'
 import { fill, wordsFor } from '../words'
 import { Photo } from '../photo'
 import type { Href } from '../shell'
@@ -30,26 +27,8 @@ export type SectionCtx = { shop: StoreShop; cat: StoreCatalogue; theme: Resolved
   lead?: boolean
   /** The customizer's preview: a section that fails says so there (on the shop it is left out). */
   preview?: boolean }
-const wrap = 'mx-auto max-w-6xl px-4 sm:px-6'
-const pad = 'py-[calc(var(--store-space)*2.5rem)] sm:py-[calc(var(--store-space)*3.5rem)]'
-const rupees = (p: number) => formatInr(paise(p))
-/** Heading text at the theme's size (100% of the class's size for Regular). */
-const Sized = ({ children }: { children: React.ReactNode }) => <span className="[font-size:calc(var(--store-h-scale)*100%)]">{children}</span>
-const H2 = ({ id, children }: { id: string; children: React.ReactNode }) => <h2 id={id} className="text-xl" style={{ fontFamily: 'var(--store-display)' }}><Sized>{children}</Sized></h2>
-
-const said = (b: { from: 'shopName' | 'tagline' } | { text: string } | undefined, shop: StoreShop) =>
-  !b ? '' : 'text' in b ? b.text : b.from === 'shopName' ? shop.shopName : shop.tagline
-
-/** A section painted in a scheme other than the page's sets its own colour tokens. */
-function Paint({ s, theme, children }: { s: SectionInstance; theme: ResolvedTheme; children: React.ReactNode }) {
-  if (s.scheme === 'paper') return <>{children}</>
-  return <div className="bg-store-paper text-store-ink" style={schemeVars(theme, s.scheme) as React.CSSProperties}>{children}</div>
-}
-
-function Button({ b, href }: { b: { label: string; link: string } | null; href: Href }) {
-  if (!b || !b.label) return null
-  return <Link href={href(b.link)} className="store-btn inline-flex min-h-11 items-center rounded-[var(--store-radius)] bg-store-button px-5 text-sm font-medium text-store-on-button">{b.label}</Link>
-}
+import { Button, H2, Label, Paint, Sized, pad, rupees, said, wrap } from './parts'
+import { Products } from './products'
 
 function Hero({ s, ctx }: { s: SectionOf<'hero'>; ctx: SectionCtx }) {
   const heading = said(s.heading, ctx.shop), text = said(s.text, ctx.shop)
@@ -101,7 +80,7 @@ function CollectionTiles({ s, ctx }: { s: SectionOf<'collection_tiles'>; ctx: Se
   const shape = circle ? 'aspect-square rounded-full' : s.shape === 'square' ? 'aspect-square rounded-[var(--store-radius)]' : 'aspect-[4/5] rounded-[var(--store-radius)]'
   return (
     <section aria-labelledby={h} className={`${wrap} pb-[calc(var(--store-space)*3rem)]`}>
-      {s.heading ? <div className="mb-4"><H2 id={h}>{s.heading}</H2></div> : <h2 id={h} className="sr-only">{wordsFor(ctx.shop.shopLanguage).collectionsNav}</h2>}
+      {s.heading ? <div className="mb-4"><Label text={s.label} /><H2 id={h}>{s.heading}</H2></div> : <h2 id={h} className="sr-only">{wordsFor(ctx.shop.shopLanguage).collectionsNav}</h2>}
       <ul className={circle ? '-mx-4 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 sm:mx-0 sm:scroll-px-0 sm:flex-wrap sm:px-0' : '-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 sm:mx-0 sm:scroll-px-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0'}>
         {tiles.map(({ c, first }) => (
           <li key={c.id} className={circle ? 'w-24 shrink-0 snap-start text-center sm:w-28' : 'w-[70%] shrink-0 snap-start sm:w-auto'}>
@@ -114,26 +93,6 @@ function CollectionTiles({ s, ctx }: { s: SectionOf<'collection_tiles'>; ctx: Se
           </li>
         ))}
       </ul>
-    </section>
-  )
-}
-
-/** Where "See all" goes: only a page that shows the whole list (the cached shop has no query strings). */
-const allOf = (src: SectionOf<'products'>['source']) =>
-  src.kind === 'newest' ? '/products' : src.kind === 'collection' ? `/collections/${src.handle}` : null
-
-function Products({ s, ctx }: { s: SectionOf<'products'>; ctx: SectionCtx }) {
-  const ranked = s.source.kind === 'best_sellers' ? ctx.bestSellers?.[s.source.days] ?? [] : []
-  const list = sourceProducts(s.source, ctx.cat, ctx.now, ranked)
-  if (!list.length && s.source.kind !== 'newest') return null
-  const all = s.viewAll && list.length > s.count ? allOf(s.source) : null
-  const h = `${s.id}-h`
-  return (
-    <section aria-labelledby={h} className={wrap}>
-      <div className="mb-4 flex items-baseline justify-between"><h2 id={h} className="text-xl"><Sized>{s.heading}</Sized></h2>{all && <Link href={ctx.href(all)} className="text-sm underline underline-offset-4">{wordsFor(ctx.shop.shopLanguage).seeAll}</Link>}</div>
-      {s.layout === 'rail'
-        ? <ul className="-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:scroll-px-0 sm:px-0">{list.slice(0, s.count).map((p, i) => <div key={p.id} className="w-[44%] shrink-0 snap-start sm:w-[23%]"><ProductCard p={p} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} priority={!!ctx.lead && i < 2} /></div>)}</ul>
-        : <ProductGrid products={list.slice(0, s.count)} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} empty={wordsFor(ctx.shop.shopLanguage).emptyShop} lead={!!ctx.lead} />}
     </section>
   )
 }
@@ -194,7 +153,7 @@ function ImageText({ s, ctx }: { s: SectionOf<'image_text'>; ctx: SectionCtx }) 
         <Photo p={s.image} focus={s.image.focus} alt={s.image.decorative ? '' : s.image.alt} sizes="(min-width: 640px) 50vw, 100vw" className="absolute inset-0 h-full w-full object-cover" />
       </div>
       <div className="space-y-4">
-        <H2 id={h}>{s.heading}</H2>
+        <Label text={s.label} /><H2 id={h}>{s.heading}</H2>
         {s.text.split(/\n{2,}/).filter(Boolean).map((p, i) => <p key={i} className="max-w-prose leading-relaxed text-store-sub">{p}</p>)}
         <Button b={s.button} href={ctx.href} />
       </div>

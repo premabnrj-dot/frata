@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { CATALOGUE } from '../catalogue'
 import { BASE_CHOICES, choicesFor } from '../choices'
 import { readSettings, resolveTheme } from '../resolve'
-import { FEEL_DEFAULTS, type ThemeManifest } from '../types'
+import { FEEL_DEFAULTS, PAGE_DEFAULTS, type ThemeManifest } from '../types'
 
 // The 2.0 choices (plan 2026-11-09-themes-three, architecture review findings 2 and 7).
 const all: ThemeManifest[] = Object.values(CATALOGUE).flatMap((vs) => Object.values(vs))
-const v1 = all.filter((m) => m.version.startsWith('1.'))
+// The older generation: a 1.x theme with no choices of its own (Signal is a new theme at 1.0.0 that lists its choices).
+const v1 = all.filter((m) => m.version.startsWith('1.') && !m.allowed.choices)
 // Every value added with the 2.0 themes, as a layer.
 const NEW = { buttons: 'underline', gallery: 'stack', header: 'split', footer: 'statement', buttonShape: 'pill', buttonMotion: 'fill', cardHover: 'zoom', entrance: 'rise', reveal: true, buyBoxSticky: true, buyBar: true, footerScheme: 'ink', checkout: 'focused' } as const
 
@@ -34,7 +35,7 @@ describe('choicesFor', () => {
   })
   it('every default of every manifest is one of its own choices', () => {
     for (const m of all) for (const k of Object.keys(BASE_CHOICES) as (keyof typeof BASE_CHOICES)[]) {
-      const d = { ...FEEL_DEFAULTS, gallery: 'swipe', ...m.defaults } as Record<string, unknown>
+      const d = { ...FEEL_DEFAULTS, ...PAGE_DEFAULTS, ...m.defaults } as Record<string, unknown>
       const list = choicesFor(m, k)
       if (list) expect(list, `${m.key}@${m.version} ${k}`).toContain(d[k])
     }

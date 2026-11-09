@@ -1,7 +1,7 @@
 import { manifestNear, manifestOf } from './catalogue'
 import { choicesFor } from './choices'
 import { LayerSchema, SettingsSchema, onColour, brandColourProblem } from './layer'
-import { SectionSchema, type SectionInstance } from './sections'
+import { PRODUCT_LAYOUTS, SECTION_SCHEMES, SectionSchema, type SectionInstance } from './sections'
 import { paletteProblem, readMenus, readSite, textOf, TEXT_STYLES } from './site'
 import { FEEL_DEFAULTS, PAGE_DEFAULTS, PAIRINGS, type ChoiceKey, type Pairing, type ResolvedTheme, type Scheme, type SchemeKey, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
 
@@ -68,6 +68,8 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
     buyBar: c('buyBar'),
     footerScheme: c('footerScheme'),
     checkout: c('checkout'),
+    labels: c('labels'),
+    railCounter: c('railCounter'),
   }
   // 3 photo columns on a phone only with a squarer photo (spec § Theme settings).
   if (settings.phoneColumns === 3 && settings.photo === '4:5') settings.phoneColumns = 2
@@ -93,11 +95,17 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
     }
   }
   const masks = m.allowed.heroMasks ?? ['none']
+  const layouts = m.allowed.productLayouts ?? PRODUCT_LAYOUTS, schemesOk = m.allowed.sectionSchemes ?? SECTION_SCHEMES
   const raw = parsed.success && parsed.data.home ? parsed.data.home : m.home
   const home = raw.flatMap((s): SectionInstance[] => {
     const p = SectionSchema.safeParse(s)
     if (!p.success || !m.allowed.sections.includes(p.data.key)) return []
-    return [p.data.key === 'hero' && !masks.includes(p.data.mask) ? { ...p.data, mask: 'none' } : p.data]
+    let x = p.data
+    if (x.key === 'hero' && !masks.includes(x.mask)) x = { ...x, mask: 'none' }
+    // Signal plan T1: a layout or scheme this theme doesn't offer falls back to today's default (never renders).
+    if (x.key === 'products' && !layouts.includes(x.layout)) x = { ...x, layout: 'grid' }
+    if ('scheme' in x && !schemesOk.includes(x.scheme)) x = { ...x, scheme: 'paper' }
+    return [x]
   })
   return { key: m.key, version: m.version, style: style.key, schemes, settings, home, ...(m.rhythm ? { rhythm: m.rhythm } : {}), site, menus: readMenus(layer.menus) }
 }
@@ -128,8 +136,15 @@ export function resolveStored(row: { themeKey: string; themeVersion: string; sty
 }
 
 /** The CSS custom properties a section painted in `scheme` sets (the --store-* tokens the shop already uses). */
-export function schemeVars(t: ResolvedTheme, scheme: SchemeKey = 'paper'): Record<string, string> {
-  const s = t.schemes[scheme]
+/** Theme Signal's band: the shop's FINAL accent as the ground (after the brand colour and the palette), its readable
+ *  colour as the words and buttons. Derived here, never stored (architecture review finding 4). */
+function signalScheme(t: ResolvedTheme): Scheme {
+  const p = t.schemes.paper
+  return { ...p, bg: p.accent, text: p.onAccent, sub: p.onAccent, line: p.onAccent, chip: p.accent, accent: p.onAccent, onAccent: p.accent, button: p.onAccent, onButton: p.accent, good: p.onAccent, bad: p.onAccent, sale: p.onAccent }
+}
+
+export function schemeVars(t: ResolvedTheme, scheme: SchemeKey | 'signal' = 'paper'): Record<string, string> {
+  const s = scheme === 'signal' ? signalScheme(t) : t.schemes[scheme]
   return {
     '--store-paper': s.bg, '--store-ink': s.text, '--store-sub': s.sub, '--store-line': s.line, '--store-chip': s.chip,
     '--store-good': s.good, '--store-bad': s.bad, '--store-accent': s.accent,
@@ -178,7 +193,10 @@ export function settingAttrs(t: ResolvedTheme): Record<string, string> {
     ...(t.settings.entrance !== 'none' ? { 'data-entrance': t.settings.entrance } : {}),
     ...(t.settings.reveal ? { 'data-reveal': 'on' } : {}),
     ...(t.rhythm ? { 'data-rhythm': t.rhythm } : {}),
-    ...(t.settings.header === 'overlay' ? { 'data-header': 'overlay' } : {}),
+    ...(t.settings.header === 'overlay' || t.settings.header === 'float' ? { 'data-header': t.settings.header } : {}),
+    // Theme Signal: labels as pills or plain, the rail counter, and the grotesk voice on buttons and prices.
+    ...(t.settings.labels !== 'none' ? { 'data-labels': t.settings.labels } : {}),
+    ...(t.settings.pairing === 'schibsted' ? { 'data-voice': 'grotesk' } : {}),
     // Look v4: one attribute per text style the merchant set (globals.css applies only those).
     ...Object.fromEntries(TEXT_STYLES.filter((k) => t.site.text[k]).map((k) => [`data-t-${k}`, ''])),
   }

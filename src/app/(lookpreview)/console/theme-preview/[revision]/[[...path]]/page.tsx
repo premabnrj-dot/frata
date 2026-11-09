@@ -6,7 +6,7 @@ import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { previewCatalogue, previewRevision, previewShop } from '@/lib/queries/storefront'
 import { shellNeedsCatalogue, shellPictures, themeOf } from '@/lib/themes/page-look'
 import { manifestOf } from '@/domains/themes/catalogue'
-import { withSampleImages, withSamples } from '@/lib/themes/sample'
+import { withSampleImages, sampleSetFor, withSamples } from '@/lib/themes/sample'
 import { PreviewBridge } from './bridge'
 
 // =============================================================================
@@ -34,11 +34,11 @@ export default async function LookPreview({ params, searchParams }: { params: Pr
   const look = manifestOf(resolved.key, resolved.version)?.samples
   // `?as=shop`: the shop as shoppers see it (no samples): the popup after Publish shows it behind itself.
   const samples = !!look && (await searchParams).as !== 'shop'
-  const theme = look ? withSampleImages(resolved, look) : resolved
+  const theme = look && samples ? withSampleImages(resolved, look, sampleSetFor(shop.sells)) : resolved
   // The checkout as the shop draws it: focused when the theme's checkout is Focused (ShopFrame's rule).
   const focused = path[0] === 'checkout' && theme.settings.checkout === 'focused'
   const cat = shellNeedsCatalogue(theme) && !focused ? await previewCatalogue(tenantId) : null
-  const { circles, strip } = shellPictures(theme, cat && samples ? withSamples(cat, now) : cat, now)
+  const { circles, strip } = shellPictures(theme, cat && samples ? withSamples(cat, now, sampleSetFor(shop.sells)) : cat, now)
   const { body } = await previewPage({ tenantId, shop, path, href, now, theme, samples })
   return (
     <>

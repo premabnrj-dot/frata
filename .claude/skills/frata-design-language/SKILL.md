@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.7.0
+  version: 5.9.0
   verified: 2026-11-09
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -278,6 +278,22 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
   changed (an irreversible consequence: Rule 0 allows it), then the EVC OTP.
 - **The pack (beauty, wellness):** "On the pack" section — net quantity with a unit segment, best before in months,
   "Made or packed by" with a one-tap "We pack it"; the product page lists the declarations in the Details table.
+
+## Theme Signal (owner-approved 2026-11-09; spec `docs/specs/2026-11-09-theme-signal.md`, mockup https://claude.ai/artifact/9XNT3KFJziXEyaKyDa48dr)
+- **One signal colour as a system:** the merchant's accent is used for section labels (pills), one full-bleed band and
+  focus/selection, never for body text or large fills elsewhere; checked readable with `brandColourProblem`.
+- **A grotesk voice** (Schibsted Grotesk for headings, labels, buttons and prices; body Inter, the shops' body face);
+  headings in sentence case, short, may end with a full stop;
+  uppercase only for labels and buttons, with letter-spacing.
+- **Products on grey tiles**, edge-to-edge with 2 px gutters; the name left, the price right, under the photo.
+- **Floating header:** a dark panel at the top left on a computer, a dark rounded bar on a phone, over the hero; solid
+  once scrolled.
+- **Rails say where you are:** a thin progress line and "01 / 10"; tabs are pill segments (`aria-pressed`), swipeable.
+- **Video in a section** (console): empty (Add a video · or Use a photo), uploading (progress, Cancel), getting ready,
+  ready (poster, length, Replace, Remove), didn't work (Choose another); a loop plays muted, only in view, never with
+  sound or a player bar on the shop.
+- **Theme samples:** realistic photos only (credited in `public/themes/samples/*/CREDITS.json`); the merchant's own
+  pieces always first.
 
 ## Frata Admin (owner-approved, 2026-11-06)
 

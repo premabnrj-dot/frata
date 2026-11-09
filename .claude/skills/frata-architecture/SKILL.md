@@ -266,6 +266,14 @@ shop can have or not (Messages, RTO Shield, Reviews…).
 
 ## Themes (T0–T3 built 2026-11-08; spec docs/specs/2026-11-08-themes.md, plan docs/plans/2026-11-08-themes.md)
 
+**New values on shared settings (theme Signal, 2026-11-09).** A new value of a setting every theme shares (a card, a
+header, a section layout or scheme) ships with a base choice list equal to TODAY's values (`BASE_CHOICES`,
+`allowed.productLayouts`, `allowed.sectionSchemes`), so only the theme that lists it can render it; the resolved-looks
+snapshot (`__tests__/resolved-looks.test.ts`) fails if any released theme's output moves. A scheme derived from the
+merchant's colour (`signal`) is computed at render (`schemeVars`) from the FINAL accent, never stored in a style.
+Samples follow what the shop sells (`sampleSetFor`), only in preview routes; every sample file is credited
+(`public/themes/samples/CREDITS.json`, `check:credits`). The storefront budget gate sums the layouts above a page.
+
 - A shop's look is **data over one section library**: `src/domains/themes/` (types, `resolveTheme` — the ONE merge
   of manifest → style → the merchant's layer — `contrast`, section SAVE schemas, `readinessOf`, `carryOver`,
   `baselineRevision`) and `src/components/storefront/sections/` (server components). Rendering reads

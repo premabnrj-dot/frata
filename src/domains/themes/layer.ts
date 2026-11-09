@@ -33,7 +33,7 @@ export const SettingsSchema = z.object({
   // T2, additive (each optional; absent = PAGE_DEFAULTS).
   gallery: z.enum(['swipe', 'thumbs', 'rail', 'stack']),
   details: z.enum(['open', 'folded']),
-  card: z.enum(['standard', 'centred', 'framed']),
+  card: z.enum(['standard', 'centred', 'framed', 'tile']),
   desktopColumns: z.union([z.literal(3), z.literal(4)]),
   collectionTop: z.enum(['title', 'banner']),
   // 2.0, additive (absent = FEEL_DEFAULTS; which values a theme may use: choicesFor).
@@ -46,6 +46,8 @@ export const SettingsSchema = z.object({
   buyBar: z.boolean(),
   footerScheme: z.enum(['paper', 'tint', 'ink']),
   checkout: z.enum(['standard', 'focused']),
+  labels: z.enum(['none', 'pill', 'plain']),
+  railCounter: z.boolean(),
 }).partial()
 
 /** A stored or submitted layer, checked for shape. Sections are checked one by one (and again at every read). */

@@ -56,3 +56,27 @@ describe('samples never reach a shop', () => {
     expect(readFileSync('src/lib/queries/storefront.ts', 'utf8')).not.toMatch(/from '@\/lib\/themes\/sample'|withSamples\(/)
   })
 })
+
+describe('sample sets by what the shop sells (theme Signal plan S0-1)', () => {
+  it('clothing wins; footwear alone is footwear; bags, jewellery or mixed accessories are accessories', async () => {
+    const { sampleSetFor } = await import('../sample')
+    expect(sampleSetFor(['women', 'footwear'])).toBe('clothing')
+    expect(sampleSetFor(['footwear'])).toBe('footwear')
+    expect(sampleSetFor(['accessories'])).toBe('accessories')
+    expect(sampleSetFor(['jewellery', 'footwear'])).toBe('accessories')
+    expect(sampleSetFor([])).toBe('clothing')
+    expect(sampleSetFor(['beauty'])).toBe('clothing')
+  })
+  it('every set has its photos, a first piece and collections of its own pieces; bags are one size, shoes UK sizes, no size chart', async () => {
+    const { samplePieces, sampleFirst } = await import('../sample')
+    for (const set of ['clothing', 'accessories', 'footwear'] as const) {
+      const ps = samplePieces(set)
+      expect(ps.length).toBeGreaterThanOrEqual(6)
+      for (const p of ps) for (const i of p.images) for (const w of i.widths) expect(existsSync(`public${i.base}-${w}.webp`), `${i.base}-${w}`).toBe(true)
+      expect(ps.map((p) => p.handle)).toContain(sampleFirst(set).product)
+    }
+    expect(samplePieces('accessories')[0]!.optionValues).toEqual([['One size']])
+    expect(samplePieces('footwear')[0]!.optionValues[0]![0]).toBe('UK 6')
+    expect(samplePieces('footwear')[0]!.sizeChart).toBeNull()
+  })
+})

@@ -3,6 +3,15 @@
 What a merchant (or Frata staff) can do now that they could not before, newest first. One entry per closed
 phase; the detail is in its plan.
 
+## 2026-11-09 — Theme Signal ([spec](specs/2026-11-09-theme-signal.md), [mockup](https://claude.ai/artifact/9XNT3KFJziXEyaKyDa48dr))
+
+- **Signal**, a fourth theme for bags, footwear, accessories and western wear: a floating header over your first photo,
+  your colour as the signal (section labels as pills, one bold band), products on grey tiles, best sellers in tabs by
+  collection, a swipe row that says where you are ("01 / 10"), a footer over your hero photo, a grotesk voice. In the
+  gallery once Frrata releases it in Admin › Themes.
+- **Previews by what you sell:** a shop that sells bags or footwear sees bags or shoes in the theme preview, not kurtas.
+  (Drawn for now; real photos replace them, each credited.)
+
 ## 2026-11-09 — GST in the core, the GST app, beyond fashion ([plan](plans/2026-11-09-gst-core-and-categories.md), [core mockup](https://claude.ai/artifact/M4VfNAgqFHYmhCxFwZmepE), [app mockup](https://claude.ai/artifact/NsxiFFFBorTsi9sct7zWgs))
 
 - **Settings › Taxes as choices:** registration (Regular, Composition, Not registered) as radios, turnover and

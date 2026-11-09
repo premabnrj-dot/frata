@@ -55,7 +55,10 @@ export function readinessOf(home: SectionInstance[], f: ShopFacts, now: Date): I
         }
         break
       case 'products':
-        if (s.source.kind === 'collection' && !has.has(s.source.handle)) add(false, 'its collection was deleted, so it shows nothing')
+        if (s.layout === 'tabs') {
+          if (s.tabs.some((h) => !has.has(h))) add(false, 'a collection in its tabs was deleted')
+          if (s.tabs.length && !s.tabs.some((h) => has.get(h))) add(false, 'none of its tabs has products, so it shows nothing')
+        } else if (s.source.kind === 'collection' && !has.has(s.source.handle)) add(false, 'its collection was deleted, so it shows nothing')
         break
       case 'promises': {
         const t = truePromises(f)

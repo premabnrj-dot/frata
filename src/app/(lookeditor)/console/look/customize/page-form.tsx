@@ -31,8 +31,10 @@ export function PageForm({ page, settings, choices, set, openSite }: { page: Pag
         <p className="text-xs text-muted-foreground">Banner uses the collection’s first piece’s photo. With no photo, the title shows.</p>
       </>}
       <h3 className="pt-2 text-sm font-semibold">Product cards (every grid)</h3>
-      <Choice label="Card" value={settings.card} onChange={(card) => set({ card })} options={[{ value: 'standard', label: 'Standard' }, { value: 'centred', label: 'Centred' }, { value: 'framed', label: 'Framed' }]} />
-      <Choice label="Columns on a computer" value={settings.desktopColumns} onChange={(desktopColumns) => set({ desktopColumns })} options={[{ value: 4, label: '4' }, { value: 3, label: '3' }]} />
+      <Offered label="Card" value={settings.card} list={choices.card} onChange={(card) => set({ card })} all={[{ value: 'tile', label: 'Grey tile' }, { value: 'standard', label: 'Standard' }, { value: 'centred', label: 'Centred' }, { value: 'framed', label: 'Framed' }]} />
+      <Offered label="Section labels" value={settings.labels} list={choices.labels} onChange={(labels) => set({ labels })} all={[{ value: 'pill', label: 'Pill' }, { value: 'plain', label: 'Plain' }, { value: 'none', label: 'None' }]} />
+      <OfferedSwitch label="Swipe rows show 01 / 10" on={settings.railCounter} list={choices.railCounter} onChange={(railCounter) => set({ railCounter })} />
+      <Offered label="Columns on a computer" value={settings.desktopColumns} list={choices.desktopColumns} onChange={(desktopColumns) => set({ desktopColumns })} all={[{ value: 4, label: '4' }, { value: 3, label: '3' }]} />
       <p className="text-xs text-muted-foreground">Reviews, size help and offers appear in their places when you turn them on in Apps and Offers.</p>
     </div>
   )

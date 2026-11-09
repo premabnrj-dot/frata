@@ -5,7 +5,7 @@
 // only ResolvedTheme. No CSS, no HTML, no script ever comes from a layer.
 // =============================================================================
 
-import type { SectionInput, SectionInstance, SectionKey } from './sections'
+import type { ProductLayout, SectionInput, SectionInstance, SectionKey, SectionScheme } from './sections'
 import type { Menus, SiteSettings } from './site'
 
 export type Hex = `#${string}`
@@ -21,16 +21,16 @@ export type Scheme = {
 export type Style = { key: string; name: string; schemes: Partial<Record<SchemeKey, Scheme>> & { paper: Scheme }; schemeNames?: Partial<Record<SchemeKey, string>> }
 
 /** Curated display faces; body is always Inter. Bricolage is Frrata's own face and never ships to a shop (brand rule 35). */
-export const PAIRINGS = ['fraunces', 'cormorant', 'inter', 'playfair', 'dmserif'] as const
+export const PAIRINGS = ['fraunces', 'cormorant', 'inter', 'playfair', 'dmserif', 'schibsted'] as const
 export type Pairing = (typeof PAIRINGS)[number]
-export const PAIRING_NAMES: Record<Pairing, string> = { fraunces: 'Fraunces', cormorant: 'Cormorant', inter: 'Inter', playfair: 'Playfair Display', dmserif: 'DM Serif Display' }
+export const PAIRING_NAMES: Record<Pairing, string> = { fraunces: 'Fraunces', cormorant: 'Cormorant', inter: 'Inter', playfair: 'Playfair Display', dmserif: 'DM Serif Display', schibsted: 'Schibsted Grotesk' }
 
-export const HEADERS = ['classic', 'centred', 'minimal', 'circles', 'split', 'panel', 'overlay'] as const
+export const HEADERS = ['classic', 'centred', 'minimal', 'circles', 'split', 'panel', 'overlay', 'float'] as const
 export type HeaderVariant = (typeof HEADERS)[number]
-export const HEADER_NAMES: Record<HeaderVariant, string> = { classic: 'Classic', centred: 'Centred logo', minimal: 'Minimal', circles: 'Category circles', split: 'Split', panel: 'Centred with a shop panel', overlay: 'Over the photo' }
-export const FOOTERS = ['three', 'compact', 'statement', 'gram'] as const
+export const HEADER_NAMES: Record<HeaderVariant, string> = { classic: 'Classic', centred: 'Centred logo', minimal: 'Minimal', circles: 'Category circles', split: 'Split', panel: 'Centred with a shop panel', overlay: 'Over the photo', float: 'Floating' }
+export const FOOTERS = ['three', 'compact', 'statement', 'gram', 'photo'] as const
 export type FooterVariant = (typeof FOOTERS)[number]
-export const FOOTER_NAMES: Record<FooterVariant, string> = { three: 'Three columns', compact: 'Compact', statement: 'Statement', gram: 'Instagram strip' }
+export const FOOTER_NAMES: Record<FooterVariant, string> = { three: 'Three columns', compact: 'Compact', statement: 'Statement', gram: 'Instagram strip', photo: 'Over a photo' }
 
 export type Announcement = { text: string; link: string | null; scheme: SchemeKey }
 
@@ -67,7 +67,8 @@ export type PageSettings = {
   gallery: 'swipe' | 'thumbs' | 'rail' | 'stack'
   /** "About this piece" and "Details": open (today) or folded into disclosures. */
   details: 'open' | 'folded'
-  card: 'standard' | 'centred' | 'framed'
+  /** tile (theme Signal): the photo on a grey tile, edge to edge, the name and price under it. */
+  card: 'standard' | 'centred' | 'framed' | 'tile'
   desktopColumns: 3 | 4
   /** A collection page's top: its title (today) or a banner of its photo. */
   collectionTop: 'title' | 'banner'
@@ -96,8 +97,12 @@ export type FeelSettings = {
   footerScheme: SchemeKey
   /** focused: the checkout keeps the logo and the legal footer only (no menu, no announcement, no tabs). */
   checkout: 'standard' | 'focused'
+  /** Theme Signal: a section's label above its heading, as a pill in the accent, as plain small capitals, or not shown. */
+  labels: 'none' | 'pill' | 'plain'
+  /** Theme Signal: a swipe row says where you are ("01 / 10" and a progress line). */
+  railCounter: boolean
 }
-export const FEEL_DEFAULTS: FeelSettings = { buttonShape: 'theme', buttonMotion: 'press', cardHover: 'none', entrance: 'none', reveal: false, buyBoxSticky: false, buyBar: false, footerScheme: 'paper', checkout: 'standard' }
+export const FEEL_DEFAULTS: FeelSettings = { buttonShape: 'theme', buttonMotion: 'press', cardHover: 'none', entrance: 'none', reveal: false, buyBoxSticky: false, buyBar: false, footerScheme: 'paper', checkout: 'standard', labels: 'none', railCounter: false }
 
 /** The settings a theme may narrow per key (allowed.choices). Header, footer and type have their own lists. */
 export type ChoiceKey = Exclude<keyof ThemeSettings, 'pairing' | 'header' | 'footer' | 'announcement' | 'brandColour'>
@@ -116,10 +121,12 @@ export type ThemeManifest = {
   /** Page settings (T2) may be left out: PAGE_DEFAULTS fills them. */
   defaults: Omit<ThemeSettings, keyof PageSettings | keyof FeelSettings> & Partial<PageSettings & FeelSettings>
   allowed: { pairings: Pairing[]; headers: HeaderVariant[]; footers: FooterVariant[]; sections: SectionKey[]; heroMasks?: ('none' | 'arch')[]
+    /** The products section's layouts and the colour schemes a section may wear (Signal plan T1); absent = today's. */
+    productLayouts?: ProductLayout[]; sectionSchemes?: SectionScheme[]
     /** 2.0: the values this theme offers for a setting (choicesFor). A key left out keeps the values every 1.x theme had. */
     choices?: Choices }
   /** 2.0: the customizer's preview fills an empty shop with sample pieces, and a missing hero photo with this sample scene. */
-  samples?: 'festive' | 'studio'
+  samples?: 'festive' | 'studio' | 'signal'
   /** 2.1: the designs made for this theme (shown first, "Made for <theme>"); the rest it allows "fit" it (Look v3). */
   made?: { headers?: HeaderVariant[]; footers?: FooterVariant[]; sections?: SectionKey[] }
   /** 2.0: every section below the hero gets the same space above and below it (the 1.x themes keep their spacing). */

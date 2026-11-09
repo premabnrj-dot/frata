@@ -3,7 +3,7 @@ import { statusLabel, visibility, type Status } from '@/domains/catalogue/availa
 import type { ResolvedTheme } from '@/domains/themes/types'
 import { previewBestSellers, previewCatalogue as readCatalogue, previewProduct, type StoreShop } from '@/lib/queries/storefront'
 import { bestSellersFor } from '@/lib/themes/page-look'
-import { isSampleHandle, sampleProduct, withSamples } from '@/lib/themes/sample'
+import { isSampleHandle, sampleProduct, sampleSetFor, withSamples } from '@/lib/themes/sample'
 import { BagPage } from './bag-page'
 import { Checkout } from './checkout'
 import { checkoutReturnLine } from './checkout-lines'
@@ -18,8 +18,10 @@ export async function previewPage(o: { tenantId: string; shop: StoreShop; path: 
   /** The customizer's look preview of a theme with samples (never /console/preview, which shows the shop as shoppers see it). */
   samples?: boolean }): Promise<{ body: React.ReactNode; note: string | null }> {
   const { tenantId, shop, path, href, now, theme, samples = false } = o
+  // Which sample set: by what the shop sells (theme Signal plan S0-1).
+  const set = sampleSetFor(shop.sells)
   const [a, b, ...rest] = path
-  const previewCatalogue = async (t: string) => { const c = await readCatalogue(t); return samples ? withSamples(c, now) : c }
+  const previewCatalogue = async (t: string) => { const c = await readCatalogue(t); return samples ? withSamples(c, now, set) : c }
   if (rest.length) return { body: <ShopNotFound href={href} lang={shop.shopLanguage} />, note: null }
   if (!a) {
     const best = await bestSellersFor(theme, (d) => previewBestSellers(tenantId, d))
@@ -30,7 +32,7 @@ export async function previewPage(o: { tenantId: string; shop: StoreShop; path: 
     const r = await previewProduct(tenantId, b)
     if (r.kind === 'moved') redirect(href(`/products/${r.to}`))
     // A sample piece's page: only when the shop has no product of its own at this address. Not live: the bag is off.
-    const sample = r.kind === 'none' && samples && isSampleHandle(b) ? sampleProduct(b) : null
+    const sample = r.kind === 'none' && samples && isSampleHandle(b) ? sampleProduct(b, set) : null
     if (sample) return { body: <ProductView shop={shop} p={sample} now={now} layout={theme.settings} />, note: null }
     if (r.kind === 'none') return { body: <ShopNotFound href={href} lang={shop.shopLanguage} />, note: null }
     const p = r.product

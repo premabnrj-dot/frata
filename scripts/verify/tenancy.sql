@@ -1758,7 +1758,7 @@ do $$ begin
              where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: another role runs the accountant definers'; end if;
 end $$;
 
--- 54. Reviews (0078): requests, reviews, photos, reports, settings and opt-outs are the shop's own; a row can never
+-- 54. Reviews (0079): requests, reviews, photos, reports, settings and opt-outs are the shop's own; a row can never
 -- point at another shop's order, line, product or review; a photo lives in its own shop's folder; a Stop is never
 -- undone by the app; staff (frata_admin) read none of it.
 insert into review_requests (id, tenant_id, order_id, token_nonce, token_hash) values
