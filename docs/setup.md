@@ -293,7 +293,7 @@ plan will use; the plan may rename one, and this list follows it.
 4. **Token.** EkCode portfolio → Business settings → System users → Add (Admin) → Assign assets: the app and EkCode's
    WhatsApp account (full control) → Generate token, never expires, `whatsapp_business_messaging` +
    `whatsapp_business_management`.
-5. **Email for the fallback code (Amazon SES, Mumbai).** AWS console → SES (ap-south-1) → Identities → Create identity →
+5. **Email (P2, not needed for P1 — no email codes until a shopper verifies an email on their EkCode page).** AWS console → SES (ap-south-1) → Identities → Create identity →
    Domain `ekcode.in` → add the 3 DKIM CNAMEs and the MAIL FROM records it shows at the registrar → request
    **production access** (use case: one-time sign-in codes, ~1–2k a day). IAM → a user allowed only `ses:SendEmail`
    from that identity → access key. DMARC TXT at `_dmarc.ekcode.in`: `v=DMARC1; p=none; rua=mailto:privacy@ekcode.in`.
@@ -302,10 +302,11 @@ plan will use; the plan may rename one, and this list follows it.
    - `EKCODE_WA_PHONE_NUMBER_ID` (B2), `EKCODE_WA_TOKEN` (B4, Sensitive), `EKCODE_WA_AUTH_TEMPLATE` =
      `ekcode_signin_code`, `EKCODE_WA_TEMPLATE_LANG` (B2), `EKCODE_WA_VERIFY_TOKEN` (Sensitive, `openssl rand -hex 16`),
      `EKCODE_META_APP_SECRET` (Sensitive, the EkCode app's secret)
-   - `EKCODE_SES_ACCESS_KEY_ID`, `EKCODE_SES_SECRET_ACCESS_KEY` (Sensitive), `EKCODE_EMAIL_FROM` = `codes@ekcode.in`
-   - Three keys, each `openssl rand -base64 32`, Sensitive, **never changed once shoppers exist** (changing one breaks
-     every account or every shop's ids): `EKCODE_PHONE_PEPPER` (phone lookups), `EKCODE_PAIRWISE_KEY` (each shop's
-     shopper id), `EKCODE_SEAL_KEY` (sealed phones and addresses). Keep a copy in a password manager.
+   - Two key rings, Sensitive, each entry `openssl rand -base64 32`: `EKCODE_PHONE_PEPPERS` = `p1:<key>` (phone
+     lookups) and `EKCODE_SEAL_KEYS` = `k1:<key>` (sealed phones, names and addresses). Keep copies in a password
+     manager. **To rotate**: put the new entry first (`k2:<new>,k1:<old>`) and redeploy — old data still opens and is
+     re-sealed as it is read; remove an old entry only when Admin says nothing uses it (peppers: 12 months). Never just
+     replace a key: that locks every shopper out.
    Push to `main` (or Redeploy). Test: a demo shop → Continue with EkCode → your own mobile → the code arrives.
 
 **C. Before EkCode reaches a real shopper**
