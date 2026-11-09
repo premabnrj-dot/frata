@@ -82,10 +82,12 @@ function Colours({ site, set, presets }: { site: SiteSettings; set: (s: SiteSett
         </div>
         <ul className="divide-y divide-border rounded-xl border border-border">
           {PALETTE_ROLES.map((r) => (
-            <li key={r} className="flex items-center gap-3 px-3 py-2">
-              <Field label={PALETTE_NAMES[r].name}>{(id) => <input id={id} type="color" value={shown[r]} onChange={(e) => pick({ ...shown, [r]: e.target.value.toUpperCase() as Hex })} className="h-8 w-12 cursor-pointer rounded-md border border-input" />}</Field>
-              <span className="text-xs text-muted-foreground">{PALETTE_NAMES[r].use}</span>
-              <span className="ml-auto font-mono text-xs text-muted-foreground">{shown[r]}</span>
+            <li key={r}>
+              <label className="flex min-h-12 cursor-pointer items-center gap-3 px-3 py-1.5">
+                <input type="color" value={shown[r]} onChange={(e) => pick({ ...shown, [r]: e.target.value.toUpperCase() as Hex })} aria-label={PALETTE_NAMES[r].name} className="h-8 w-10 shrink-0 cursor-pointer rounded-md border border-input" />
+                <span className="min-w-0"><span className="block text-sm font-medium">{PALETTE_NAMES[r].name}</span><span className="block truncate text-xs text-muted-foreground">{PALETTE_NAMES[r].use}</span></span>
+                <span className="ml-auto font-mono text-xs text-muted-foreground">{shown[r]}</span>
+              </label>
             </li>
           ))}
         </ul>

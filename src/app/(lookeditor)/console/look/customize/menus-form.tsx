@@ -20,6 +20,10 @@ const MAX: Record<Which, number> = { main: MENU_LIMITS.items, footer: MENU_LIMIT
 /** Words a merchant might search an icon by, beyond its name. */
 const ICON_WORDS: Partial<Record<IconName, string>> = { bag: 'cart shopping', cash: 'cod money rupee', card: 'pay upi', truck: 'delivery shipping', return: 'exchange', chat: 'help support message', pin: 'address location store', sparkle: 'new', flame: 'sale hot', dress: 'women kurta', shirt: 'men', camera: 'instagram', whatsapp: 'chat', grid: 'shop all categories', percent: 'offer discount sale', crown: 'premium bestseller' }
 
+const TAB_STARTS: { label: string; link: string; icon: IconName }[] = [
+  { label: 'Home', link: '/', icon: 'home' }, { label: 'Shop', link: '/products', icon: 'grid' }, { label: 'New', link: '/products', icon: 'sparkle' },
+  { label: 'Help', link: '/policies/contact', icon: 'chat' }, { label: 'Returns', link: '/policies/returns', icon: 'return' },
+]
 const newId = () => `m-${Math.random().toString(36).slice(2, 10)}`
 type Path = number[]
 const at = (xs: MenuItem[], p: Path): MenuItem => p.slice(1).reduce((x, i) => x.children[i]!, xs[p[0]!]!)
@@ -48,7 +52,9 @@ export function MenusForm({ menus, own, set, targets, icons }: {
   const warnings = which === 'main' ? menuWarnings(items) : []
   const add = () => {
     if (items.length >= MAX[which]) return
-    const x: MenuItem = { id: newId(), label: which === 'tabs' ? 'Home' : 'New link', link: '/', icon: which === 'tabs' ? 'home' : null, children: [] }
+    // A new tab starts as the next one a shop usually has (each needs an icon); a new link as a plain link.
+    const next = TAB_STARTS.find((t) => !items.some((x) => x.label === t.label)) ?? TAB_STARTS[0]!
+    const x: MenuItem = which === 'tabs' ? { id: newId(), ...next, children: [] } : { id: newId(), label: 'New link', link: '/', icon: null, children: [] }
     put([...items, x]); setOpen(x.id)
   }
   const move = (p: Path, d: -1 | 1) => put(edit(items, p, (l, i) => { const j = i + d; if (j < 0 || j >= l.length) return l; const n = [...l]; [n[i], n[j]] = [n[j]!, n[i]!]; return n }))
