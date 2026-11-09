@@ -112,6 +112,8 @@ export const variants = pgTable('variants', {
   uniqueIndex('variants_tenant_product_options').on(t.tenantId, t.productId, t.optionValues),
   check('variants_gtin', sql`${t.gtin} is null or ${t.gtin} ~ '^([0-9]{8}|[0-9]{12,14})$'`),
   uniqueIndex('variants_tenant_sku').on(t.tenantId, t.sku).where(sql`${t.sku} is not null`),
+  // One barcode names one size in a shop (Google refuses duplicates; impact review S2·3).
+  uniqueIndex('variants_tenant_gtin').on(t.tenantId, t.gtin).where(sql`${t.gtin} is not null`),
   index('variants_tenant_product').on(t.tenantId, t.productId),
   check('variants_money', sql`${t.price} >= 0 and (${t.compareAt} is null or ${t.compareAt} >= 0) and (${t.unitCost} is null or ${t.unitCost} >= 0)`),
   check('variants_stock', sql`${t.stock} >= 0`),

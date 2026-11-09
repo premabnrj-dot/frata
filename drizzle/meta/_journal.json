@@ -512,6 +512,13 @@
       "when": 1794227633480,
       "tag": "0072_shop_seo",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1794228473829,
+      "tag": "0073_variant_gtin_unique",
+      "breakpoints": true
     }
   ]
 }

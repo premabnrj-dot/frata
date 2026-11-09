@@ -173,7 +173,7 @@ verify command run and read, and `impact-reviewer` on its diff before the commit
   frata_admin check), proof rows as §21. Renaming to a retired handle refused; the 308 lookup joins collections on the
   tenant. Editor disclosure as the mockup; the intro rendered as plain text above the grid.
 - **S2·3 Structured data**: BreadcrumbList, WebSite, ItemList, OnlineStore + free-shipping threshold and handling time;
-  Product + brand, `gtin`/`mpn` (nullable `variants.gtin`, `variants.mpn`, `products.no_barcode`, length checks),
+  Product + brand, `gtin`/`mpn` (*superseded by § S2·3 as built: `variants.gtin` only, MPN = SKU, `no_barcode` with S·4*),
   colour, size, material. Kept out of `shopCatalogue` (880 kB of 1 MB at 600 products); a test: markup = page.
   `speed-reviewer` on this task.
 - **S2·4 Sitemap**: its own narrow read; image entries; `lastmod` = `updated_at` only once `updated_at` moves on real

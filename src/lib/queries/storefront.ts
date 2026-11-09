@@ -2,6 +2,7 @@ import 'server-only'
 import { and, asc, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
 import { revalidateTag, unstable_cache } from 'next/cache'
 import { shopPauseIn } from './trial-pause'
+import { coreAnnouncement } from './announcement'
 import { cache } from 'react'
 import { LOW_STOCK_AT } from '@/domains/catalogue/availability'
 import type { Chart } from '@/domains/catalogue/size-charts'
@@ -346,25 +347,17 @@ export const shopBestSellers = shopCached('best', 'catalogue', (t, days: number)
 export const previewLook = async (tenantId: string): Promise<StoredLook | null> => liveOf(await corePublishes(tenantId), withdrawnKeys(await themeVersionRows()))
 export const previewBestSellers = (tenantId: string, days: number) => coreBestSellers(tenantId, days)
 
-export const shopSettingsFor = shopCached('shop', 'shop', (t) => coreShop(t))
+// v2: the shop gained seoTitle/seoDescription (S·3); an entry that survives a deploy must not meet the old shape.
+export const shopSettingsFor = shopCached('shop-v2', 'shop', (t) => coreShop(t))
 
 /**
  * The offer in the shop's announcement bar (one at most), as RAW terms and timestamps: whether it is live is decided
  * when the page renders (offerStatus) — pages regenerate every 60 s, so up to a minute late. Shopper-safe fields only — never a limit, budget or count (ADR-0003).
  */
-export const shopAnnouncement = shopCached('announce', 'shop', (tenantId) => withTenant(tenantId, async (tx) => {
-  const [r] = await tx.select({
-    title: discounts.title, style: discounts.style, percentBps: discounts.percentBps, amountOff: discounts.amountOff, minSubtotal: discounts.minSubtotal, listed: discounts.listed,
-    startsAt: discounts.startsAt, endsAt: discounts.endsAt, startedAt: discounts.startedAt, pausedAt: discounts.pausedAt, endedAt: discounts.endedAt, stoppedAt: discounts.stoppedAt, code: discountCodes.code,
-  }).from(discounts).leftJoin(discountCodes, and(eq(discountCodes.tenantId, discounts.tenantId), eq(discountCodes.discountId, discounts.id), isNull(discountCodes.label)))
-    .where(and(eq(discounts.tenantId, tenantId), eq(discounts.announce, true))).limit(1)
-  if (!r) return null
-  const iso = (d: Date | null) => (d ? d.toISOString() : null)
-  return { title: r.title, style: r.style, percentBps: r.percentBps, amountOff: r.amountOff === null ? null : Number(r.amountOff), minSubtotal: Number(r.minSubtotal),
-    code: r.listed && r.code ? r.code.toUpperCase() : null, startsAt: r.startsAt.toISOString(), endsAt: iso(r.endsAt), startedAt: iso(r.startedAt), pausedAt: iso(r.pausedAt), endedAt: iso(r.endedAt), stoppedAt: iso(r.stoppedAt) }
-}))
+export const shopAnnouncement = shopCached('announce', 'shop', coreAnnouncement)
 // A new key: the entry's shape changed (offers by index), and a cache that survives a deploy must not meet the old one.
-const shopCatalogueEntry = shopCached('catalogue-v2', 'catalogue', (t) => coreCatalogue(t, false))
+// v3: collections gained seoTitle/seoDescription and the entry movedCollections (S2·2).
+const shopCatalogueEntry = shopCached('catalogue-v3', 'catalogue', (t) => coreCatalogue(t, false))
 export const shopCatalogue = async (tenantId: string): Promise<StoreCatalogue> => expand(await shopCatalogueEntry(tenantId))
 /** The entry exactly as the cache stores it (its size is what Next's 2 MB limit reads; catalogue-size.int.test.ts). */
 export const catalogueEntry = (tenantId: string) => coreCatalogue(tenantId, false)

@@ -89,7 +89,7 @@ internal names and can stay).
   `[data-tinge]` frames (the navs, the More sheet) set it. Nothing in `:root`, so it is off in tables by default.
 - **No second copies:** `--illo-haldi` is `var(--haldi)`; the mark's paths live once in `mark-paths.ts`; the app
   icon is generated from them (`/frrata-icon`, `/frrata-apple-icon`), its hex held equal to the tokens by a test. Shop
-  tabs never show it (the shop layout sets an empty icon).
+  tabs never show it (a shop wears its own logo or initial: `src/lib/seo/icon.ts`, search and sharing S1·6).
 - **Bricolage** is the latin subset, weight axis only (41,344 bytes; budget 48 KB), committed under
   `src/components/shell/display/`. It loads through `SHELL_FONT_VARS` only, `--font-display` falls back to the Noto
   stack, and `check:storefront-build` fails if a shop page's CSS or JS carries it.

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "variants_tenant_gtin" ON "variants" USING btree ("tenant_id","gtin") WHERE "variants"."gtin" is not null;

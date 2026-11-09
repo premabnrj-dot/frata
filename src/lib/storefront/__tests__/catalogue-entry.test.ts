@@ -29,4 +29,8 @@ describe('the cached catalogue card (speed review P1, impact review)', () => {
     const out = expand({ photoPrefix: photoPrefixOf([base('a')]), collections: [], offers: [], products: [compactCard(odd, [], photoPrefixOf([base('a')]))] }).products[0]!
     expect(out.images[0]).toMatchObject({ base: 'https://elsewhere.example/x', widths: [400] })
   })
+  it('old addresses (S2·2): an entry cached before they existed expands to none', () => {
+    expect(expand({ photoPrefix: '', collections: [], offers: [], products: [] }).movedCollections).toEqual({})
+    expect(expand({ photoPrefix: '', collections: [], offers: [], products: [], movedCollections: { kurtas: 'kurtas-and-sets' } }).movedCollections).toEqual({ kurtas: 'kurtas-and-sets' })
+  })
 })

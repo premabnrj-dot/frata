@@ -219,7 +219,8 @@ export default {
       assert.equal(ldOfType(home, 'WebSite').length, 1, 'WebSite')
       assert.ok(ldOfType(home, 'OnlineStore')[0].hasShippingService.handlingTime, 'handling time')
       const col = await get(`/collections/${c.handle}`, CRAWLERS.google)
-      if (col.status === 200) assert.equal(ldOfType(jsonLd(col.body), 'ItemList').length, 1, 'ItemList')
+      assert.equal(col.status, 200, `/collections/${c.handle}`)
+      assert.equal(ldOfType(jsonLd(col.body), 'ItemList').length, 1, 'ItemList')
       const sm = (await get('/sitemap.xml', CRAWLERS.google)).body
       assert.match(sm, /<image:image><image:loc>https:\/\//)
       for (const h of ['/products', '/policies/returns']) assert.ok(head((await get(h, CRAWLERS.google)).body).one('description'), `${h}: description`)
