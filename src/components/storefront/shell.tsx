@@ -3,7 +3,10 @@ import { displayFamily, STORE_FONT_VARS } from '@/components/shop-preview/fonts'
 import type { PolicyFacts } from '@/domains/policies/render'
 import { classicFromSettings, schemeVars, settingAttrs, settingVars } from '@/domains/themes/resolve'
 import type { FooterVariant, ResolvedTheme } from '@/domains/themes/types'
+import type { MenuItem } from '@/domains/themes/site'
 import { BagButton } from './bag'
+import { ShopIcon, type IconSet } from './icon'
+import { FooterMenu, MenuDrawer, MenuRow } from './nav'
 import { CaptureAttribution } from './capture'
 import { wordsFor, type Lang, type Words } from './words'
 import { Photo, type PhotoData } from './photo'
@@ -31,23 +34,28 @@ export function ShopShell({ shop, href, banner, children, gated = false, live = 
   const bare = gated || focused
   const tabs = s.bottomTabs && !bare
   const w = wordsFor(shop.shopLanguage)
+  // Look v4: the shop's icon set, and the merchant's own main menu (none: the collections, exactly as before menus).
+  const set = t.site.icons
+  const own = t.menus.main ?? null
+  const hp = { shop, href, gated, live, w, set, own }
   return (
     <div data-store-theme="" lang={shop.shopLanguage === 'hi' ? 'hi' : undefined} {...settingAttrs(t)} className={`${STORE_FONT_VARS} flex min-h-dvh flex-col`} style={{ ...settingVars(t), '--store-display': displayFamily(s.pairing) } as React.CSSProperties}>
       {!focused && (banner ?? (s.announcement && !gated && <Announcement a={s.announcement} t={t} href={href} />))}
       <header className={`border-b border-store-line ${s.sticky && !focused ? 'sticky top-0 z-30 bg-store-paper' : ''}`}>
         {focused ? <div className="mx-auto flex max-w-6xl justify-center px-4 py-4 sm:px-6"><Logo shop={shop} href={href} upper={s.header === 'minimal' || s.headings === 'upper'} className="text-lg font-semibold tracking-[0.12em]" /></div>
           : s.header === 'centred' || s.header === 'minimal' || s.header === 'overlay'
-          ? <MenuHeader shop={shop} href={href} gated={gated} live={live} minimal={s.header === 'minimal'} w={w} />
-          : s.header === 'panel' ? <MenuHeader shop={shop} href={href} gated={gated} live={live} minimal={false} w={w} panel={circles} />
-          : s.header === 'split' ? <SplitHeader shop={shop} href={href} gated={gated} live={live} w={w} />
-          : <ClassicHeader shop={shop} href={href} gated={gated} live={live} w={w} />}
+          ? <MenuHeader {...hp} minimal={s.header === 'minimal'} />
+          : s.header === 'panel' ? <MenuHeader {...hp} minimal={false} panel={circles} />
+          : s.header === 'split' ? <SplitHeader {...hp} />
+          : <ClassicHeader {...hp} />}
         {s.header === 'circles' && !bare && circles.length > 0 && <CircleRow circles={circles} href={href} w={w} />}
       </header>
       <main id="main" className={`flex-1 ${tabs ? 'pb-16 sm:pb-0' : ''}`}>{children}</main>
       <div style={s.footerScheme !== 'paper' ? schemeVars(t, s.footerScheme) as React.CSSProperties : undefined} className={s.footerScheme !== 'paper' ? 'contents' : undefined}>
+        {!bare && t.menus.footer && t.menus.footer.length > 0 && <FooterMenu items={t.menus.footer} href={href} set={set} w={w} />}
         <ShopFooter f={shop} href={href} variant={focused ? 'compact' : s.footer} social={s.social && !focused} w={w} painted={s.footerScheme !== 'paper'} strip={strip} />
       </div>
-      {tabs && <BottomTabs href={href} live={live} w={w} />}
+      {tabs && <BottomTabs href={href} live={live} w={w} set={set} own={t.menus.tabs ?? null} />}
       {/* How the shopper arrived: on every page of the real shop, never in a console preview (Analytics A·1). */}
       <CaptureAttribution capture={capture} />
     </div>
@@ -61,18 +69,30 @@ const Logo = ({ shop, href, className, upper = true }: { shop: ShellShop; href: 
 )
 
 /** Today's header, exactly. */
-function ClassicHeader({ shop, href, gated, live, w }: { shop: ShellShop; href: Href; gated: boolean; live: boolean; w: Words }) {
+type HeaderProps = { shop: ShellShop; href: Href; gated: boolean; live: boolean; w: Words; set: IconSet; own: MenuItem[] | null }
+const Bag = ({ href, live, w, set }: HeaderProps) => live ? <BagButton checkoutHref={href('/checkout')} shopHref={href('/products')} label={w.bag} count={[w.bagOne, w.bagMany]} icon={<ShopIcon name="bag" set={set} />} /> : null
+const MenuIcon = ({ set }: { set: IconSet }) => <ShopIcon name="menu" set={set} className="size-6" />
+
+function ClassicHeader(p: HeaderProps) {
+  const { shop, href, gated, live, w, set, own } = p
   return (
     <>
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
         <Logo shop={shop} href={href} className="mr-auto text-lg font-semibold tracking-[0.12em] sm:text-xl" />
-        {!gated && <nav aria-label={w.shopNav} className="-mr-2 flex gap-1 overflow-x-auto text-sm">
-          <Link href={href('/products')} className="whitespace-nowrap px-2 py-2">{w.shopAll}</Link>
-          {shop.nav.map((c) => <Link key={c.handle} href={href(`/collections/${c.handle}`)} className="hidden whitespace-nowrap px-2 py-2 sm:inline">{c.title}</Link>)}
-          {live && <BagButton checkoutHref={href('/checkout')} shopHref={href('/products')} label={w.bag} count={[w.bagOne, w.bagMany]} />}
+        {!gated && <nav aria-label={w.shopNav} className="-mr-2 flex items-center gap-1 text-sm">
+          {own ? <MenuRow items={own} href={href} set={set} className="hidden gap-1 sm:flex" link="px-2 py-2" /> : <>
+            <Link href={href('/products')} className="whitespace-nowrap px-2 py-2">{w.shopAll}</Link>
+            {shop.nav.map((c) => <Link key={c.handle} href={href(`/collections/${c.handle}`)} className="hidden whitespace-nowrap px-2 py-2 sm:inline">{c.title}</Link>)}
+          </>}
+          {live && <Bag {...p} />}
         </nav>}
       </div>
-      {!gated && shop.nav.length > 0 && (
+      {!gated && own && own.length > 0 && (
+        <nav aria-label={w.collectionsNav} className="flex gap-1 overflow-x-auto border-t border-store-line px-2 text-sm sm:hidden">
+          {own.map((x) => <Link key={x.id} href={href(x.link)} className="inline-flex items-center gap-1.5 whitespace-nowrap px-2 py-2.5">{x.icon && <ShopIcon name={x.icon} set={set} className="size-4" />}{x.label}</Link>)}
+        </nav>
+      )}
+      {!gated && !own && shop.nav.length > 0 && (
         <nav aria-label={w.collectionsNav} className="flex gap-1 overflow-x-auto border-t border-store-line px-2 text-sm sm:hidden">
           {shop.nav.map((c) => <Link key={c.handle} href={href(`/collections/${c.handle}`)} className="whitespace-nowrap px-2 py-2.5">{c.title}</Link>)}
         </nav>
@@ -84,26 +104,34 @@ function ClassicHeader({ shop, href, gated, live, w }: { shop: ShellShop; href: 
 /** Centred logo (or Minimal: tracked, uppercase): a menu on the left that opens with no script (<details>).
  *  With `panel` (2.1 "Centred with a shop panel"): on a computer the collections row starts with Shop, which opens a
  *  panel of the collections' pictures. */
-function MenuHeader({ shop, href, gated, live, minimal, w, panel }: { shop: ShellShop; href: Href; gated: boolean; live: boolean; minimal: boolean; w: Words; panel?: Circle[] }) {
+function MenuHeader(p: HeaderProps & { minimal: boolean; panel?: Circle[] }) {
+  const { shop, href, gated, minimal, w, panel, set, own } = p
   return (
     <>
       <div className="mx-auto grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-3 sm:px-6">
         <div>
           {!gated && (
             <details className="relative">
-              <summary aria-label={w.menu} className="grid size-11 cursor-pointer list-none place-items-center text-xl [&::-webkit-details-marker]:hidden">≡</summary>
-              <nav aria-label={w.menu} className="absolute left-0 top-12 z-40 w-64 space-y-1 rounded-[var(--store-radius)] border border-store-line bg-store-paper p-3 text-base shadow-sm">
-                <Link href={href('/products')} className="block py-2">{w.shopAll}</Link>
-                {shop.nav.map((c) => <Link key={c.handle} href={href(`/collections/${c.handle}`)} className="block py-2">{c.title}</Link>)}
+              <summary aria-label={w.menu} className="grid size-11 cursor-pointer list-none place-items-center [&::-webkit-details-marker]:hidden"><MenuIcon set={set} /></summary>
+              <nav aria-label={w.menu} className="absolute left-0 top-12 z-40 max-h-[70dvh] w-64 space-y-1 overflow-y-auto rounded-[var(--store-radius)] border border-store-line bg-store-paper p-3 text-base shadow-sm">
+                {own ? <MenuDrawer items={own} href={href} set={set} w={w} /> : <>
+                  <Link href={href('/products')} className="block py-2">{w.shopAll}</Link>
+                  {shop.nav.map((c) => <Link key={c.handle} href={href(`/collections/${c.handle}`)} className="block py-2">{c.title}</Link>)}
+                </>}
                 <Link href={href('/policies/contact')} className="block py-2 text-store-sub">{w.contact}</Link>
               </nav>
             </details>
           )}
         </div>
         <Logo shop={shop} href={href} upper={minimal} className={minimal ? 'text-sm font-bold tracking-[0.24em]' : 'text-2xl font-semibold tracking-[0.12em] sm:text-3xl'} />
-        <div className="flex justify-end">{!gated && live && <BagButton checkoutHref={href('/checkout')} shopHref={href('/products')} label={w.bag} count={[w.bagOne, w.bagMany]} />}</div>
+        <div className="flex justify-end">{!gated && <Bag {...p} />}</div>
       </div>
-      {!gated && !minimal && shop.nav.length > 0 && (
+      {!gated && !minimal && own && own.length > 0 && (
+        <nav aria-label={w.collectionsNav} className="relative hidden justify-center border-t border-store-line text-sm sm:flex">
+          <MenuRow items={own} href={href} set={set} className="justify-center gap-2" />
+        </nav>
+      )}
+      {!gated && !minimal && !own && shop.nav.length > 0 && (
         <nav aria-label={w.collectionsNav} className="relative hidden justify-center gap-2 border-t border-store-line text-sm sm:flex">
           {panel && panel.length > 0 && (
             <details className="group">
@@ -128,27 +156,32 @@ function MenuHeader({ shop, href, gated, live, minimal, w, panel }: { shop: Shel
 }
 
 /** Split (2.0): the collections on the left, the logo centred, the bag on the right; a phone gets the menu sheet. */
-function SplitHeader({ shop, href, gated, live, w }: { shop: ShellShop; href: Href; gated: boolean; live: boolean; w: Words }) {
+function SplitHeader(p: HeaderProps) {
+  const { shop, href, gated, w, set, own } = p
   return (
     <div className="mx-auto grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-3 sm:px-6">
       <div className="min-w-0">
         {!gated && <>
-          <nav aria-label={w.shopNav} className="hidden gap-1 overflow-x-auto text-sm sm:flex">
-            <Link href={href('/products')} className="store-nav whitespace-nowrap px-2 py-2">{w.shopAll}</Link>
-            {shop.nav.slice(0, 4).map((c) => <Link key={c.handle} href={href(`/collections/${c.handle}`)} className="store-nav whitespace-nowrap px-2 py-2">{c.title}</Link>)}
+          <nav aria-label={w.shopNav} className="hidden gap-1 text-sm sm:flex">
+            {own ? <MenuRow items={own.slice(0, 5)} href={href} set={set} className="gap-1" link="px-2 py-2" /> : <>
+              <Link href={href('/products')} className="store-nav whitespace-nowrap px-2 py-2">{w.shopAll}</Link>
+              {shop.nav.slice(0, 4).map((c) => <Link key={c.handle} href={href(`/collections/${c.handle}`)} className="store-nav whitespace-nowrap px-2 py-2">{c.title}</Link>)}
+            </>}
           </nav>
           <details className="relative sm:hidden">
-            <summary aria-label={w.menu} className="grid size-11 cursor-pointer list-none place-items-center text-xl [&::-webkit-details-marker]:hidden">≡</summary>
-            <nav aria-label={w.menu} className="absolute left-0 top-12 z-40 w-64 space-y-1 rounded-[var(--store-radius)] border border-store-line bg-store-paper p-3 text-base shadow-sm">
-              <Link href={href('/products')} className="block py-2">{w.shopAll}</Link>
-              {shop.nav.map((c) => <Link key={c.handle} href={href(`/collections/${c.handle}`)} className="block py-2">{c.title}</Link>)}
+            <summary aria-label={w.menu} className="grid size-11 cursor-pointer list-none place-items-center [&::-webkit-details-marker]:hidden"><MenuIcon set={set} /></summary>
+            <nav aria-label={w.menu} className="absolute left-0 top-12 z-40 max-h-[70dvh] w-64 space-y-1 overflow-y-auto rounded-[var(--store-radius)] border border-store-line bg-store-paper p-3 text-base shadow-sm">
+              {own ? <MenuDrawer items={own} href={href} set={set} w={w} /> : <>
+                <Link href={href('/products')} className="block py-2">{w.shopAll}</Link>
+                {shop.nav.map((c) => <Link key={c.handle} href={href(`/collections/${c.handle}`)} className="block py-2">{c.title}</Link>)}
+              </>}
               <Link href={href('/policies/contact')} className="block py-2 text-store-sub">{w.contact}</Link>
             </nav>
           </details>
         </>}
       </div>
       <Logo shop={shop} href={href} upper className="text-base font-bold tracking-[0.2em] sm:text-lg" />
-      <div className="flex justify-end">{!gated && live && <BagButton checkoutHref={href('/checkout')} shopHref={href('/products')} label={w.bag} count={[w.bagOne, w.bagMany]} />}</div>
+      <div className="flex justify-end">{!gated && <Bag {...p} />}</div>
     </div>
   )
 }
@@ -178,15 +211,21 @@ function Announcement({ a, t, href }: { a: NonNullable<ResolvedTheme['settings']
   )
 }
 
-/** Phones only: Home, Shop, Search, Bag (Search opens Shop all until a search page exists). */
-function BottomTabs({ href, live, w }: { href: Href; live: boolean; w: Words }) {
-  const tab = 'flex min-h-14 flex-col items-center justify-center text-xs'
+/** Phones only: Home, Shop, Search, Bag (Search opens Shop all until a search page exists), each with its icon; or
+ *  the merchant's own tabs (Look v4: 2–5, each an icon and words). */
+function BottomTabs({ href, live, w, set, own }: { href: Href; live: boolean; w: Words; set: IconSet; own: MenuItem[] | null }) {
+  const tab = 'flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs'
+  if (own && own.length) return (
+    <nav aria-label={w.tabsNav} className="fixed inset-x-0 bottom-0 z-30 grid border-t border-store-line bg-store-paper sm:hidden" style={{ gridTemplateColumns: `repeat(${own.length}, minmax(0, 1fr))` }}>
+      {own.map((x) => <Link key={x.id} href={href(x.link)} className={tab}>{x.icon && <ShopIcon name={x.icon} set={set} />}<span className="max-w-full truncate px-1">{x.label}</span></Link>)}
+    </nav>
+  )
   return (
     <nav aria-label={w.tabsNav} className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-store-line bg-store-paper sm:hidden">
-      <Link href={href('/')} className={tab}>{w.home}</Link>
-      <Link href={href('/products')} className={tab}>{w.shop}</Link>
-      <Link href={href('/products')} className={tab}>{w.search}</Link>
-      {live ? <Link href={href('/bag')} className={tab}>{w.bag}</Link> : <span className={`${tab} text-store-sub`}>{w.bag}</span>}
+      <Link href={href('/')} className={tab}><ShopIcon name="home" set={set} />{w.home}</Link>
+      <Link href={href('/products')} className={tab}><ShopIcon name="grid" set={set} />{w.shop}</Link>
+      <Link href={href('/products')} className={tab}><ShopIcon name="search" set={set} />{w.search}</Link>
+      {live ? <Link href={href('/bag')} className={tab}><ShopIcon name="bag" set={set} />{w.bag}</Link> : <span className={`${tab} text-store-sub`}><ShopIcon name="bag" set={set} />{w.bag}</span>}
     </nav>
   )
 }

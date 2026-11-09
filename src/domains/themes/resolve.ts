@@ -2,7 +2,7 @@ import { manifestNear, manifestOf } from './catalogue'
 import { choicesFor } from './choices'
 import { LayerSchema, SettingsSchema, onColour, brandColourProblem } from './layer'
 import { SectionSchema, type SectionInstance } from './sections'
-import { readMenus, readSite } from './site'
+import { readMenus, readSite, textOf, TEXT_STYLES } from './site'
 import { FEEL_DEFAULTS, PAGE_DEFAULTS, PAIRINGS, type ChoiceKey, type Pairing, type ResolvedTheme, type Scheme, type SchemeKey, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
 
 // =============================================================================
@@ -145,7 +145,25 @@ export function settingVars(t: ResolvedTheme): Record<string, string> {
     ...schemeVars(t),
     '--store-radius': RADIUS[t.settings.corners], '--store-ratio': RATIO[t.settings.photo], '--store-cols': String(t.settings.phoneColumns),
     '--store-h-scale': HSCALE[t.settings.size], '--store-space': GAP[t.settings.spacing], '--store-dcols': String(t.settings.desktopColumns),
+    ...siteVars(t),
   }
+}
+
+const STROKE = { thin: '1', regular: '1.5', bold: '2' } as const
+/** Site settings as custom properties (Look v4): the icon stroke, and each text style the merchant set (a style
+ *  left alone sets nothing, so the storefront's own classes stay exactly as they were). */
+function siteVars(t: ResolvedTheme): Record<string, string> {
+  const out: Record<string, string> = t.site.icons.stroke !== 'regular' ? { '--icon-stroke': STROKE[t.site.icons.stroke] } : {}
+  for (const k of TEXT_STYLES) {
+    if (!t.site.text[k]) continue
+    const x = textOf(t.site, k)
+    Object.assign(out, {
+      [`--t-${k}-d`]: `${x.desk}px`, [`--t-${k}-p`]: `${x.phone}px`, [`--t-${k}-w`]: String(x.weight),
+      [`--t-${k}-f`]: x.family === 'heading' ? 'var(--store-display)' : 'var(--font-inter), system-ui, sans-serif',
+      [`--t-${k}-c`]: x.upper ? 'uppercase' : 'none', [`--t-${k}-s`]: x.wide ? '0.08em' : 'normal',
+    })
+  }
+  return out
 }
 export function settingAttrs(t: ResolvedTheme): Record<string, string> {
   return {
@@ -159,5 +177,7 @@ export function settingAttrs(t: ResolvedTheme): Record<string, string> {
     ...(t.settings.reveal ? { 'data-reveal': 'on' } : {}),
     ...(t.rhythm ? { 'data-rhythm': t.rhythm } : {}),
     ...(t.settings.header === 'overlay' ? { 'data-header': 'overlay' } : {}),
+    // Look v4: one attribute per text style the merchant set (globals.css applies only those).
+    ...Object.fromEntries(TEXT_STYLES.filter((k) => t.site.text[k]).map((k) => [`data-t-${k}`, ''])),
   }
 }

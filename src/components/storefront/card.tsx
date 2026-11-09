@@ -35,7 +35,7 @@ export function ProductCard({ p, href, now, priority = false, badge = null, lang
           {tag && <span className="absolute left-2 top-2 rounded-[var(--store-radius)] bg-store-paper/90 px-1.5 py-0.5 text-xs">{tag}</span>}
         </div>
         <p className="line-clamp-2 text-sm leading-snug">{p.title}</p>
-        {price && <p className="text-sm"><span className="font-medium">{price.min !== price.max ? fill(w.from, { price: money(price.min) }) : money(price.min)}</span>{price.compareAt && <s className="ml-1.5 text-store-sub">{money(price.compareAt)}</s>}</p>}
+        {price && <p className="text-sm"><span className="store-price font-medium">{price.min !== price.max ? fill(w.from, { price: money(price.min) }) : money(price.min)}</span>{price.compareAt && <s className="ml-1.5 text-store-sub">{money(price.compareAt)}</s>}</p>}
       </Link>
       {colours.length > 1 && (
         <ul className="store-swatches mt-1.5 flex gap-1.5 overflow-x-auto pb-1" aria-label={fill(w.colours, { n: colours.length })}>

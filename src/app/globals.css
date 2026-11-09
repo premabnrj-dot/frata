@@ -455,6 +455,26 @@ img[data-photo]::before { content: ""; position: absolute; inset: 0; background:
 [data-store-theme] [data-picked] { outline: 2px solid var(--color-info-text); outline-offset: 4px; }
 /* In the customizer's frame (the bridge sets data-inspect): a section under the pointer is outlined and clickable. */
 [data-inspect] [data-store-theme] [data-section] > :not([data-picked]):hover { outline: 1px dashed var(--color-info-text); outline-offset: 4px; cursor: pointer; }
+/* ── Site settings › Text styles (Look v4): only a style the merchant set (its data-t-* attribute) changes anything.
+   Family is !important because headings carry an inline display face. Phone size first, the computer's from 640 px. ── */
+[data-store-theme][data-t-display] main [data-key="hero"] h1 { font-size: var(--t-display-p); font-weight: var(--t-display-w); font-family: var(--t-display-f) !important; text-transform: var(--t-display-c); letter-spacing: var(--t-display-s); }
+[data-store-theme][data-t-h1] main h1:not([data-key="hero"] h1) { font-size: var(--t-h1-p); font-weight: var(--t-h1-w); font-family: var(--t-h1-f) !important; text-transform: var(--t-h1-c); letter-spacing: var(--t-h1-s); }
+[data-store-theme][data-t-h2] main h2 { font-size: var(--t-h2-p); font-weight: var(--t-h2-w); font-family: var(--t-h2-f) !important; text-transform: var(--t-h2-c); letter-spacing: var(--t-h2-s); }
+[data-store-theme][data-t-h3] main h3 { font-size: var(--t-h3-p); font-weight: var(--t-h3-w); font-family: var(--t-h3-f) !important; text-transform: var(--t-h3-c); letter-spacing: var(--t-h3-s); }
+[data-store-theme][data-t-body] main { font-size: var(--t-body-p); font-weight: var(--t-body-w); font-family: var(--t-body-f) !important; text-transform: var(--t-body-c); letter-spacing: var(--t-body-s); }
+[data-store-theme][data-t-small] main :is(.text-xs, .text-sm):not(.store-btn, .store-price) { font-size: var(--t-small-p); font-weight: var(--t-small-w); font-family: var(--t-small-f) !important; text-transform: var(--t-small-c); letter-spacing: var(--t-small-s); }
+[data-store-theme][data-t-button] .store-btn { font-size: var(--t-button-p); font-weight: var(--t-button-w); font-family: var(--t-button-f) !important; text-transform: var(--t-button-c); letter-spacing: var(--t-button-s); }
+[data-store-theme][data-t-price] .store-price { font-size: var(--t-price-p); font-weight: var(--t-price-w); font-family: var(--t-price-f) !important; text-transform: var(--t-price-c); letter-spacing: var(--t-price-s); }
+@media (min-width: 640px) {
+  [data-store-theme][data-t-display] main [data-key="hero"] h1 { font-size: var(--t-display-d); }
+  [data-store-theme][data-t-h1] main h1:not([data-key="hero"] h1) { font-size: var(--t-h1-d); }
+  [data-store-theme][data-t-h2] main h2 { font-size: var(--t-h2-d); }
+  [data-store-theme][data-t-h3] main h3 { font-size: var(--t-h3-d); }
+  [data-store-theme][data-t-body] main { font-size: var(--t-body-d); }
+  [data-store-theme][data-t-small] main :is(.text-xs, .text-sm):not(.store-btn, .store-price) { font-size: var(--t-small-d); }
+  [data-store-theme][data-t-button] .store-btn { font-size: var(--t-button-d); }
+  [data-store-theme][data-t-price] .store-price { font-size: var(--t-price-d); }
+}
 [data-store-theme][data-accent="indigo"] { --store-accent: #2E3A63; }
 [data-store-theme][data-accent="moss"] { --store-accent: #3F5B3A; }
 [data-store-theme][data-accent="wine"] { --store-accent: #7A1F2B; }

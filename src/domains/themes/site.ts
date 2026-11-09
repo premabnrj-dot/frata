@@ -1,6 +1,7 @@
 import { z } from 'zod'
+import { ON_COLOUR } from './catalogue/kit'
 import { contrast } from './contrast'
-import { ICON_NAMES, type IconName } from '../icons/data'
+import { ICON_NAMES, type IconName } from '../icons/names'
 import { shopPath } from './sections'
 import type { Hex, Scheme } from './types'
 
@@ -72,7 +73,7 @@ export function paletteProblem(p: Palette): string | null {
   if (contrast(p.muted, p.background) < 4.5) return 'Muted words are hard to read on the background.'
   if (contrast(p.text, p.surface) < 4.5) return 'Text is hard to read on the surface colour.'
   if (contrast(p.accent, p.background) < 3) return 'The accent is too faint on the background.'
-  if (Math.max(contrast('#FFFFFF', p.primary), contrast('#1F1A17', p.primary)) < 4.5) return 'Button words would be hard to read on the primary colour.'
+  if (Math.max(contrast(ON_COLOUR.light, p.primary), contrast(ON_COLOUR.dark, p.primary)) < 4.5) return 'Button words would be hard to read on the primary colour.'
   return null
 }
 /** A theme style's paper scheme as a palette (where a merchant's palette starts). */
