@@ -298,7 +298,7 @@ plan will use; the plan may rename one, and this list follows it.
    **production access** (use case: one-time sign-in codes, ~1–2k a day). IAM → a user allowed only `ses:SendEmail`
    from that identity → access key. DMARC TXT at `_dmarc.ekcode.in`: `v=DMARC1; p=none; rua=mailto:privacy@ekcode.in`.
 6. **Vercel → frata → Environment Variables, Production only** (a preview must never send from EkCode's number):
-   - `EKCODE_HOST` = `ekcode.in`
+   - `NEXT_PUBLIC_EKCODE_HOST` = `ekcode.in` (public: the host the shops redirect to; unset = EkCode off everywhere)
    - `EKCODE_WA_PHONE_NUMBER_ID` (B2), `EKCODE_WA_TOKEN` (B4, Sensitive), `EKCODE_WA_AUTH_TEMPLATE` =
      `ekcode_signin_code`, `EKCODE_WA_TEMPLATE_LANG` (B2), `EKCODE_WA_VERIFY_TOKEN` (Sensitive, `openssl rand -hex 16`),
      `EKCODE_META_APP_SECRET` (Sensitive, the EkCode app's secret)

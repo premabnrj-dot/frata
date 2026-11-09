@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.32.0
+  version: 2.33.0
   verified: 2026-11-09
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -393,6 +393,27 @@ after it. A class a shop page uses from outside the shop's folders must be added
   old → current map rides in the cached catalogue entry (`movedCollections`); the route 308s before its 404.
 - **Identifiers**: `variants.gtin` (check digit in `src/domains/catalogue/gtin.ts`); the MPN in markup is the SKU, never
   a second column. Like the SKU, the gtin is dropped from the cached catalogue entry (only the product page reads it).
+
+## EkCode (P1 built 2026-11-09; ADR-0009, ADR-0010; plan docs/plans/2026-11-09-ekcode-p1.md)
+
+- **A second public host.** `NEXT_PUBLIC_EKCODE_HOST` (ekcode.in) is a `routeFor` kind of its own
+  (`src/domains/tenancy/host.ts`): only `/`, `/privacy`, `/terms`, `/contact`, `/continue`, `/api/ek/*` and `/_next/*`
+  answer there; `/ek` and `/api/ek` are a 404 everywhere else; it is never a shop (`requireShop` refuses it) and never
+  the console (no Supabase session). Its pages are `src/app/ek/` reached through the rewrite; `/continue` gets a nonce
+  CSP from the middleware's ekcode branch.
+- **Platform tables with no door but definers.** The vault (`ekcode_*`, drizzle/0087): `revoke all` from every role, one
+  `restrictive` `definer_only` policy `using (false)`, definers pinned to `search_path ''` and executable by exactly one
+  role; `check:tenant` fails any table grant on them. Scope always comes from a server-made handle (the shop's own
+  request makes the flow), never from an argument a caller chooses. No definer returns an account id; a shop's id for
+  a shopper is a random `ekcode_pairs` row.
+- **The handshake** is PKCE: the shop keeps `state.verifier` in its own cookie, ekcode.in gets only a random handle,
+  the return URL is built from the flow row, the grant is a 60-second one-time code stored as a hash, and redeem
+  checks tenant, host and `S256(verifier)` in one update. Copy this for any cross-host return.
+- **Keys that rotate**: `src/lib/crypto/key-ring.ts` — rings "id:secret,…" newest first, the key id inside every
+  sealed value and keyed hash; new entries go in front, old values still open. Payment secrets stay on secret-box.
+- **A module never imported by core**: the checkout gains a slot (`checkout.identity`) and generic window events
+  (`shop:prefill`, `shop:placed`); a brand mark ships as server-rendered SVG, never as path data in a client chunk.
+- `src/domains/ekcode/` belongs to the module (check:modules); shared rules are `src/domains/ekcode-core/`.
 
 ## Outside world (ADR-0006)
 
