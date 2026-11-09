@@ -35,4 +35,8 @@ export const DOMAIN_CHIP: Record<DomainState, { tone: Tone; words: string }> = {
 }
 
 /** Make main is offered on a connected domain; on live payments, only once Razorpay approved it. */
+/** The console's red banner (design rule 76): a main domain failing this long is the merchant's to fix. */
+export const BANNER_AFTER_MS = 24 * 3_600_000
+export const bannerDue = (failingSince: Date | null, now: Date) => !!failingSince && now.getTime() - failingSince.getTime() >= BANNER_AFTER_MS
+
 export const canMakeMain = (d: DomainFacts, livePayments: boolean) => domainState(d) === 'connected' && (!livePayments || !!d.razorpayOkAt)

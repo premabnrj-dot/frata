@@ -16,7 +16,7 @@ import { errName } from '@/lib/log'
 import { BLOCKED_KINDS, type BlockedKind } from '@/domains/addresses/names'
 export { BLOCKED_KINDS, type BlockedKind }
 
-export type NameView = { name: string; createdAt: Date; retiredAt: Date | null; retiredByFrrata: boolean }
+export type NameView = { name: string; createdAt: Date; retiredAt: Date | null; retiredByFrrata: boolean; addedAt: Date | null }
 export type MerchantAddresses = { slug: string; frozenAt: Date | null; firstOpenedAt: Date | null; renamesUsed: number; names: NameView[] }
 
 /** The shop's names: the current one first, then old ones, newest first. */
@@ -25,7 +25,7 @@ export async function merchantAddresses(staff: StaffOk, tenantId: string): Promi
   const db = adminDb()
   const [[t], names] = await Promise.all([
     db.select({ slug: tenants.slug, frozenAt: tenants.addressFrozenAt, firstOpenedAt: tenants.firstOpenedAt, renamesUsed: tenants.renamesUsed }).from(tenants).where(eq(tenants.id, tenantId)).limit(1),
-    db.select({ name: shopNames.name, createdAt: shopNames.createdAt, retiredAt: shopNames.retiredAt, retiredByFrrata: shopNames.retiredByFrrata })
+    db.select({ name: shopNames.name, createdAt: shopNames.createdAt, retiredAt: shopNames.retiredAt, retiredByFrrata: shopNames.retiredByFrrata, addedAt: shopNames.addedAt })
       .from(shopNames).where(eq(shopNames.tenantId, tenantId))
       .orderBy(sql`${shopNames.retiredAt} is not null`, desc(shopNames.retiredAt)),
   ])

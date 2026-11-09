@@ -21,6 +21,8 @@ export const metadata = { title: 'Addresses' }
 const field = 'h-10 rounded-md border border-input bg-card px-3 text-sm'
 
 function state(n: NameView) {
+  // D1·9: a name added beside the current one (block it in Names to take it down).
+  if (!n.retiredAt && n.addedAt) return <Badge tone="info">Added</Badge>
   if (!n.retiredAt) return <Badge tone="ok">Current</Badge>
   return n.retiredByFrrata ? <Badge tone="warn">Old · no redirect</Badge> : <Badge>Old · redirects</Badge>
 }

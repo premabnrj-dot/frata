@@ -5,6 +5,8 @@
 //  - the platform totals (a definer, aggregates only) agree with discountUses, the app's own count.
 import { beforeAll, describe, expect, it } from 'vitest'
 
+const HOST = 'kesar-studio.frata.test' // COD only here: the host need not be approved in Razorpay (D1·8)
+
 const host = process.env.INT_DB_HOST
 const dbName = process.env.INT_DB_NAME ?? 'frata_proof'
 const pass = process.env.INT_DB_PASSWORD ?? 'x'
@@ -43,7 +45,7 @@ describe.skipIf(!host)('Admin › Offers: the kill switch and the totals', () =>
       await withTenant(B, (tx) => tx.insert(discountCodes).values({ tenantId: B, discountId: D, code: `STOP${stamp}` }))
       const seen = async () => {
         const now = new Date()
-        const q = await quoteData(B, [], now)
+        const q = await quoteData(B, [], now, null, HOST)
         const code = await withTenant(B, (tx) => codeFor(tx, B, `stop${stamp}`, now))
         const row = (await listOffers(B, now, D))[0]!
         return { quoted: q.offers.some((o) => o.id === D), code: code?.discountId === D, bar: row.announce && offerStatus(row, now) === 'live', status: row.status, why: row.stopReason }

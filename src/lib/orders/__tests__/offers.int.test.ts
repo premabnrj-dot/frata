@@ -6,6 +6,9 @@
 // Test 2 is rolled back; test 1 commits (placeOrder opens its own transactions) and cleans up in `finally`.
 import { describe, expect, it } from 'vitest'
 
+/** The shopper's host: none of these tests pays online, so it need not be approved in Razorpay (D1·8). */
+const HOST = 'kesar-studio.frata.test'
+
 const host = process.env.INT_DB_HOST
 const dbName = process.env.INT_DB_NAME ?? 'frata_proof'
 const pass = process.env.INT_DB_PASSWORD ?? 'x'
@@ -42,11 +45,11 @@ describe.skipIf(!host)('offers at placement and after', () => {
     try {
       const bag = [{ variantId: made.variant, qty: 1 }]
       const now = new Date()
-      const data = await quoteData(A, [made.variant], now)
+      const data = await quoteData(A, [made.variant], now, null, HOST)
       const q = quote(bag, data.rows, data.shop!, now, '302021', { offers: data.offers })
       expect(q.cod.discount).toBe(42000) // 15% of ₹2,800, offered to both before either places
       const key = (n: number) => `int${stamp}${n}`.padEnd(22, 'x').slice(0, 22)
-      const [r1, r2] = await Promise.all([1, 2].map((n) => placeOrder(A, { idempotencyKey: key(n), bag, address: address(`98290${String(stamp).slice(-4)}${n}`), method: 'cod', expectedTotal: q.cod.total, facts: {} })))
+      const [r1, r2] = await Promise.all([1, 2].map((n) => placeOrder(A, { host: HOST, idempotencyKey: key(n), bag, address: address(`98290${String(stamp).slice(-4)}${n}`), method: 'cod', expectedTotal: q.cod.total, facts: {} })))
       const kinds = [r1!.kind, r2!.kind].sort()
       expect(kinds).toEqual(['changed', 'placed'])
       const loser = [r1, r2].find((r) => r!.kind === 'changed')!
@@ -64,7 +67,7 @@ describe.skipIf(!host)('offers at placement and after', () => {
         const used = await tx.select({ cls: orderDiscounts.class, amount: orderDiscounts.amount, title: orderDiscounts.title }).from(orderDiscounts).where(eq(orderDiscounts.orderId, o!.id))
         expect(used).toEqual([{ cls: 'order', amount: 42000, title: 'One left' }])
         // The offer is now full: the quote no longer offers it.
-        const again = await quoteData(A, [made.variant], new Date())
+        const again = await quoteData(A, [made.variant], new Date(), null, HOST)
         expect(again.offers.map((x) => x.id)).not.toContain(made.discount)
       })
     } finally {
@@ -167,9 +170,9 @@ describe.skipIf(!host)('offers at placement and after', () => {
       const bag = [{ variantId: made.variant, qty: 1 }]
       const key = (n: number) => `lim${stamp}${n}`.padEnd(22, 'y').slice(0, 22)
       const place = async (n: number, phone: string) => {
-        const now = new Date(), data = await quoteData(A, [made.variant], now)
+        const now = new Date(), data = await quoteData(A, [made.variant], now, null, HOST)
         const q = quote(bag, data.rows, data.shop!, now, '302021', { offers: data.offers })
-        const r = await placeOrder(A, { idempotencyKey: key(n), bag, address: address(phone), method: 'cod', expectedTotal: q.cod.total, facts: {} })
+        const r = await placeOrder(A, { host: HOST, idempotencyKey: key(n), bag, address: address(phone), method: 'cod', expectedTotal: q.cod.total, facts: {} })
         if (r.kind === 'placed') placed.push((await withTenant(A, (tx) => tx.select({ id: orders.id }).from(orders).where(and(eq(orders.tenantId, A), eq(orders.idempotencyKey, key(n))))))[0]!.id)
         return { q, r }
       }
@@ -252,9 +255,9 @@ describe.skipIf(!host)('offers at placement and after', () => {
       const bag = [{ variantId: made.variant, qty: 1 }]
       const key = (n: number) => `o2${stamp}${n}`.padEnd(22, 'z').slice(0, 22)
       const place = async (n: number, phone: string, code?: string) => {
-        const now = new Date(), data = await quoteData(A, [made.variant], now, code)
+        const now = new Date(), data = await quoteData(A, [made.variant], now, code ?? null, HOST)
         const q = quote(bag, data.rows, data.shop!, now, '302021', { offers: data.offers, code: data.typed })
-        const r = await placeOrder(A, { idempotencyKey: key(n), bag, address: address(phone), method: 'cod', expectedTotal: q.cod.total, code, facts: {} })
+        const r = await placeOrder(A, { host: HOST, idempotencyKey: key(n), bag, address: address(phone), method: 'cod', expectedTotal: q.cod.total, code, facts: {} })
         if (r.kind === 'placed') placed.push((await withTenant(A, (tx) => tx.select({ id: orders.id }).from(orders).where(and(eq(orders.tenantId, A), eq(orders.idempotencyKey, key(n))))))[0]!.id)
         return { q, r }
       }

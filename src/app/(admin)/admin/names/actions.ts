@@ -8,6 +8,7 @@ import { addressAdminError, BLOCKED_KINDS, blockName, domainsNeedingFrrata, rele
 import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import { hostFor } from '@/lib/queries/storefront'
 import { refreshHosts, refreshShop } from '@/lib/storefront/refresh'
+import { shopHost } from '@/lib/public-env'
 import { checkDomainRow } from '@/lib/domains/own-domains'
 
 // Shop addresses D1·7: Admin › Names. Admin role only (the definers in 0069 check again, need a reason and audit).
@@ -38,6 +39,8 @@ export async function blockNameAction(form: FormData) {
   const r = await blockName(staff, d)
   if (!r.ok) go('error', addressAdminError(r.error))
   if (r.ok && !r.value) go('error', 'Already blocked.')
+  // A shop's added name of this name was taken down with the block (0086): its host lookup must stop serving it.
+  if (d.kind !== 'domain') refreshHosts(shopHost(d.name))
   revalidatePath('/admin/names')
   go('ok', `${d.name} blocked.`)
 }

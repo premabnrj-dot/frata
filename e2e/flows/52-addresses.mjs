@@ -28,11 +28,17 @@ export default {
       await p.getByRole('status').filter({ hasText: `Added ${to}.${SHOP_DOMAIN}` }).waitFor()
       assert.equal(await p.locator('#slug').isDisabled(), true, 'one added name at a time')
       const row = p.getByRole('listitem').filter({ hasText: `${to}.${SHOP_DOMAIN}` })
-      await row.getByText('Razorpay not approved').waitFor({ timeout: 20_000 }) // after the page's refresh lands
+      await row.getByText('Razorpay not approved').waitFor({ timeout: 20_000 }).catch(async (e) => { await p.screenshot({ path: `e2e/.out/52-dbg-${to}.png`, fullPage: true }); throw e }) // after the page's refresh lands
       assert.equal(await row.getByRole('button', { name: 'Make main' }).count(), 0, 'Make main waits for Razorpay')
       await row.getByRole('button', { name: 'Razorpay approved it' }).click()
       await row.getByRole('button', { name: 'Make main' }).click()
-      await p.getByText(`${to}.${SHOP_DOMAIN} is your main address`).first().waitFor()
+      const c = p.getByRole('dialog', { name: `Make ${to}.${SHOP_DOMAIN} your main address?` })
+      await c.getByText(/Uses (1 of 2 changes left|your last change)\. Bags in progress start empty\./).waitFor()
+      await c.getByRole('button', { name: 'Make it main' }).click()
+      const popup = p.getByRole('status').filter({ hasText: `${to}.${SHOP_DOMAIN} is your main address` })
+      await popup.getByRole('link', { name: 'View your shop' }).waitFor()
+      assert.equal(await popup.getByRole('button', { name: 'Undo' }).count(), 0, 'a rename has no Undo (going back is another change)')
+      await popup.getByRole('button', { name: 'Close' }).click()
       await p.waitForFunction((v) => document.querySelector('#slug')?.value === v, to)
     }
     try {

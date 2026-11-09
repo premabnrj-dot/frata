@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { isCronRequest } from '@/lib/auth/cron'
-import { domainsDue } from '@/lib/db/platform'
+import { domainsDue, letGoAddedNames } from '@/lib/db/platform'
 import { checkDomainRow, checkParkedRow } from '@/lib/domains/own-domains'
 import { isOwnDomainsConfigured } from '@/lib/env'
 import { errName } from '@/lib/log'
 import { drainOutbox, eachLimited } from '@/lib/outbox/drain'
+import { shopHost } from '@/lib/public-env'
+import { refreshHosts } from '@/lib/storefront/refresh'
 
 // ENTRY POINT credential: CRON_SECRET via isCronRequest (scripts/check-actions.mjs).
 // Own domains D2·8: the background check. The database decides which rows are due (app_domains_due: every 10 min the
@@ -16,6 +18,9 @@ const AT_ONCE = 4
 
 export async function GET(request: Request) {
   if (!isCronRequest(request)) return new NextResponse(null, { status: 401 })
+  // D1·9: added names past their 14 days are let go (free for anyone), whether or not own domains are on.
+  const letGo = await letGoAddedNames().catch((e) => { console.error('[cron] names', errName(e)); return [] })
+  if (letGo.length) refreshHosts(...letGo.map(shopHost))
   if (!isOwnDomainsConfigured()) return NextResponse.json({ off: true })
   const started = Date.now()
   let checked = 0

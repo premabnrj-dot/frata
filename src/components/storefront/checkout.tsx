@@ -62,7 +62,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   // The Pay on delivery total of the order already placed, when the server says it differs from the bag's (an offer ran
   // out or ended during the hold): shown first, then sent as the total the shopper agreed to.
   const [codTotal, setCodTotal] = useState<number | null>(null)
-  const { q, error: quoteError, refresh } = useQuote(f.pincode)
+  const { q, online, error: quoteError, refresh } = useQuote(f.pincode)
   const seen = useRef<PublicQuote | null>(null)
   const attempt = useRef<{ sig: string; key: string } | null>(null)
 
@@ -94,6 +94,8 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   const [draftCode, setDraftCode] = useState('')
   const lines = q?.lines.filter((l) => l.qty > 0) ?? []
 
+  // Online payment is not offered on this address (D1·8): a choice made before the quote said so is undone.
+  useEffect(() => { if (!online && method === 'prepaid') setMethod(null) }, [online, method])
   const choose = (m: 'cod' | 'prepaid') => { if (!firstMethod.current) firstMethod.current = m; setMethod(m); setMsg(null) }
 
   function check(): boolean {
@@ -302,7 +304,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
 
       <h2 className={sect}>Payment</h2>
       <div role="radiogroup" aria-label="How to pay" className="space-y-2">
-        {q && (
+        {q && online && (
           <label className={`store-pay block cursor-pointer rounded-[var(--store-radius)] border bg-store-paper p-3 ${method === 'prepaid' ? 'border-store-ink shadow-[0_0_0_1px_var(--store-ink)]' : 'border-store-line'}`}>
             <span className="flex items-center gap-2"><input type="radio" name="pay" checked={method === 'prepaid'} onChange={() => choose('prepaid')} className="accent-store-ink" /><b className="font-medium">Pay online</b><span className="ml-auto tabular-nums">{inr(q.prepaid)}</span></span>
             <span className="ml-6 block text-sm text-store-sub">UPI, cards, netbanking. Opens Razorpay.{saving ? <b className="ml-1 font-medium text-store-good">Saves {inr(saving.amount)}</b> : null}</span>

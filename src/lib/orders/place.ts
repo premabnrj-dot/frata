@@ -47,7 +47,7 @@ export const HOLD_MINUTES = 20 // owner call 3
 export type PlaceInput = {
   idempotencyKey: string; bag: BagLine[]; address: CleanAddress; method: 'cod' | 'prepaid'; expectedTotal: number
   /** The address the shopper is on: online payment needs it approved in Razorpay (D1·8). */
-  host?: string
+  host: string
   /** The code the shopper typed, if any (one per order), and whether it came from a shop link (?code=). */
   code?: string | null; via?: 'typed' | 'link'
   /** What the shopper was shown and did, for the hypotheses (frata-unit-economics): first card tapped, attribution. */
@@ -235,7 +235,7 @@ export async function startPayment(tenantId: string, orderId: string): Promise<{
     const [r] = await tx.select({ number: orders.number, rzp: orders.razorpayOrderId, checkout: orders.checkout, name: orders.customerName, phone: orders.phone, paidAt: orders.paidAt, cancelledAt: orders.cancelledAt, switched: orders.switchedToCodAt })
       .from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId)))
     const keys = await keysFor(tx, tenantId)
-    const shop = await checkoutShop(tx, tenantId)
+    const shop = await checkoutShop(tx, tenantId, null)
     return r ? { ...r, keys, shopName: shop?.name ?? '' } : null
   })
   if (!o || o.paidAt || o.cancelledAt || o.switched) return { ok: false, error: 'This order is not waiting for an online payment.' }

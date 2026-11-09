@@ -13,6 +13,7 @@ import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
 import { liveNamesFor, mainHostFor } from '@/lib/queries/addresses'
 import { shipCostsSeenBy, shopWithSettings } from '@/lib/queries/settings'
 import { paymentStatusFor } from '@/lib/queries/payments'
+import { takesLivePayments } from '@/lib/payments/keys'
 import { shopFacts } from './_components/facts'
 import { Section } from '@/components/layout/section'
 import { errName } from '@/lib/log'
@@ -48,7 +49,7 @@ export default async function SettingsPage() {
   const onlineNeeds = !!pay && pay.connected && (!!pay.problem || !pay.webhookSeenAt)
   // D1·8: Razorpay fails live payments from an address not registered on the shop's account — the main one must be
   // approved (the merchant's word; checkout offers online payment only on an approved address).
-  const names = pay?.connected && pay.mode === 'live' ? await liveNamesFor(auth.membership.tenantId).catch(() => []) : []
+  const names = takesLivePayments(pay) ? await liveNamesFor(auth.membership.tenantId).catch(() => []) : []
   const current = names.find((n) => !n.added)
   const missing: { label: string; section: string }[] = [...missingForLivePayments(f),
     ...(current && !current.razorpayOk ? [{ label: `Add ${shopHost(current.name)} in Razorpay`, section: 'address' }] : [])]

@@ -17,6 +17,7 @@ import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
 import { addressFacts, domainClaimFor, shopDomainRows } from '@/lib/queries/addresses'
 import { refreshHosts, refreshShop } from '@/lib/storefront/refresh'
 import { checkDomain } from '@/domains/addresses/domains'
+import { slugProblem } from '@/domains/signup/slug'
 
 // =============================================================================
 // FILE: settings/address/domain-actions.ts — OWN DOMAINS FROM SETTINGS › SHOP ADDRESS (D2·10; mockup v2, rules 72–76).
@@ -176,6 +177,9 @@ const Slug = z.string().trim().toLowerCase().max(30)
 export async function addShopNameAction(slug: string): Promise<Done> {
   const p = Slug.safeParse(slug)
   if (!p.success) return { ok: false, error: WRITE_WORDS.bad_slug! }
+  // The same words a rename refuses (www, admin, pay…): the SQL holds the shape, not the reserved list.
+  const problem = slugProblem(p.data)
+  if (problem) return { ok: false, error: problem === 'reserved' ? 'That address is reserved' : WRITE_WORDS.bad_slug! }
   const r = await write('shop.name_added', p.data, (tx, w) => tx.execute(sql`select app_add_shop_name(${w.tenantId}::uuid, ${w.userId}::uuid, ${p.data})`))
   if (r.ok) { refreshHosts(shopHost(p.data)); revalidatePath('/console/settings/address') }
   return r.ok ? { ok: true } : r

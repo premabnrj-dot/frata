@@ -22,6 +22,10 @@ export type PaymentStatus =
   | { connected: true; keyId: string; mode: 'test' | 'live'; connectedAt: Date; webhookSeenAt: Date | null; lastEventAt: Date | null; problem: string | null
       webhookKey: string; webhookSecret: string | null }
 
+/** Live payments, as the definers test them (0084, 0086): live keys whose webhook has worked. The ONE reading for
+ *  "Razorpay must approve an address first" (D1·8), on Settings and on the address page alike. */
+export const takesLivePayments = (p: PaymentStatus | null): boolean => !!p && p.connected && p.mode === 'live' && !!p.webhookSeenAt
+
 /** Save checked keys. A reconnect keeps the webhook (key and secret) so the merchant does not redo it in Razorpay. */
 export async function saveKeys(tx: Tx, tenantId: string, k: Keys): Promise<void> {
   const mode = modeOf(k.keyId)
