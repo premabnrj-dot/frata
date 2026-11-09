@@ -52,6 +52,9 @@ export const products = pgTable('products', {
   gstBps: integer('gst_bps'),
   /** What the pack says, shown on the product page (domains/catalogue/label.ts): net quantity, maker, best before, ingredients. */
   label: jsonb('label').$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+  /** Signal S3: up to 6 stories (photo, title, text, ≤ 3 numbered notes), validated by domains/catalogue/stories.ts
+   *  (the real limit: characters); the CHECK below is a looser backstop in bytes. */
+  stories: jsonb('stories').$type<unknown[]>().notNull().default(sql`'[]'::jsonb`),
   /** draft · active · unlisted · archived (PRODUCT_STATUSES). Who can find it; availability is per variant and derived. */
   status: text('status').notNull().default('draft'),
   /** Active but hidden until this moment (a scheduled drop). Null: live as soon as active. */
@@ -85,6 +88,7 @@ export const products = pgTable('products', {
   index('products_tenant_status').on(t.tenantId, t.status),
   check('products_handle', sql`${t.handle} ~ '^[a-z0-9]([a-z0-9-]{0,98}[a-z0-9])?$'`),
   check('products_title', sql`length(${t.title}) between 1 and 140`),
+  check('products_stories', sql`jsonb_typeof(${t.stories}) = 'array' and jsonb_array_length(${t.stories}) <= 6 and octet_length(${t.stories}::text) < 16384`),
 ])
 
 /** One size × colour (or the single variant of a product without options). */
@@ -257,3 +261,22 @@ export const collectionProducts = pgTable('collection_products', {
   foreignKey({ name: 'collection_products_product_fk', columns: [t.tenantId, t.productId], foreignColumns: [products.tenantId, products.id] }).onDelete('cascade'),
   index('collection_products_product').on(t.tenantId, t.productId),
 ])
+
+/**
+ * Signal S3 · "Pair it with": up to 2 pieces offered on a product's page. A table, not an id array, so the database
+ * refuses another shop's product (composite FKs, like collection_products; tenancy review 2026-11-09). ≤ 2 per product
+ * is the save's (products/actions via lib/catalogue/extras.ts); never itself (CHECK).
+ */
+export const productPairs = pgTable('product_pairs', {
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').notNull(),
+  pairedId: uuid('paired_id').notNull(),
+  position: integer('position').notNull().default(0),
+}, (t) => [
+  primaryKey({ columns: [t.tenantId, t.productId, t.pairedId] }),
+  foreignKey({ name: 'product_pairs_product_fk', columns: [t.tenantId, t.productId], foreignColumns: [products.tenantId, products.id] }).onDelete('cascade'),
+  foreignKey({ name: 'product_pairs_paired_fk', columns: [t.tenantId, t.pairedId], foreignColumns: [products.tenantId, products.id] }).onDelete('cascade'),
+  check('product_pairs_not_self', sql`${t.productId} <> ${t.pairedId}`),
+  check('product_pairs_position', sql`${t.position} between 0 and 1`),
+])
+
