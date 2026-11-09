@@ -3,6 +3,58 @@
 What a merchant (or Frata staff) can do now that they could not before, newest first. One entry per closed
 phase; the detail is in its plan.
 
+## 2026-11-09 — Look v4: site settings, icons, menus, page-aware editing ([mockup](https://claude.ai/artifact/MmC6BnAps1XXSWyfy7PfSL), [research](research/2026-11-09-look-v4.md))
+
+- **Site settings behind the gear:** your own palette of six colours (checked as you pick: it says when words would
+  be hard to read), eight text styles with a computer and a phone size, weight, capitals and spacing, and the shop's
+  icons. A new theme brings its own; another version of the same theme keeps yours.
+- **Shop icons:** Line, Duotone or Solid, with a stroke weight; the menu, the bag, the phone tabs and the promise tiles
+  wear them. Drawn on the server: no icon font, no extra script.
+- **Menus:** your main menu (three levels, an icon beside any link), a footer menu and your own phone tabs; links
+  only to your shop's pages; a searchable icon picker. Untouched, the menu is your collections, as before. Menus come
+  across when you try another theme.
+- **Every page in the preview:** Shop all, Bag and Checkout join Home, a product and a collection; the top bar says
+  which page you're editing, and a page's options open with it.
+- **A panel that folds** to a rail of icons on a computer.
+
+## 2026-11-09 — Look v3 ([mockup](https://claude.ai/artifact/N3ATeKr1XxgTvEiPLjN2tq), research § 11 in [themes pro-grade](research/2026-11-08-themes-pro-grade.md))
+
+- **Frrata Themes:** the gallery wears the Frrata Themes tile; each card carries it.
+- **The customizer opens on a computer:** the shop drawn full width and scaled to fit, Phone one tap away.
+- **Publish in one line:** a small confirm, the preview says Going live, then a popup over the shop with its address,
+  View your shop, Keep editing and Undo. No separate page.
+- **Confirmations** before discarding a draft, undoing a publish, restoring over a draft, trying another theme over a
+  draft, and leaving before a save lands; removing a section is undone from a toast.
+- **Style in groups:** colour bars, swatches, buttons that show their hover, header, footer and photo layouts as
+  pictures, sliding choices.
+- **Photos:** drop, paste or choose, or pick one of your product photos; a progress ring; tap to set what stays in
+  view; description suggestions; plain-words fixes when an upload fails.
+- **Add a section:** search, kinds with counts, picture cards, what fits the theme and what was made for it.
+- **New designs (2.1):** Editorial's shop-panel header and over-the-photo header, Studio's over-the-photo header,
+  and the Instagram strip footer for all three.
+
+## 2026-11-09 — Themes 2.0: three themes, each with a job ([plan](plans/2026-11-09-themes-three.md), [showcase](https://claude.ai/artifact/8bvMF5mdhJQkVDayoVjabc))
+
+- **Look › Themes offers three:** Editorial (occasion and designer wear; Atelier's arch lives here), Bazaar (big
+  catalogues and sales), Studio (contemporary and basics; Minimal renamed). Shops on Classic or Atelier keep their look.
+- **Each theme its own choices:** product photos (two across, stacked, thumbnails under or beside), a buy box that
+  stays beside the photos, an Add to bag bar on phones, button style, shape and hover (press, lift, sheen), card hover,
+  pages that fade or rise in, sections that rise as you scroll, a Split header, a Statement footer, footer colours, and
+  a focused checkout (logo and legal footer only).
+- **Sample pieces in the customizer:** a shop with fewer than four pieces sees drawn sample pieces and photos in its
+  draft preview, never on the shop.
+- **Customizer:** click a section in the preview to edit it; a section that fails is left out of the shop.
+
+## 2026-11-08 — Shop addresses D·0–D·1 ([plan](plans/2026-11-08-shop-addresses.md), [spec](specs/2026-11-08-shop-addresses.md))
+
+- **Every shop is at `name.frrata.shop`**; frrata.shop itself goes to Frrata.
+- **Settings › Shop address:** change the name; free until the shop first opens, then two changes. An old address
+  keeps working: it leads to the new one on the same page with its link tags, so Instagram links keep counting.
+- **A name is never given to a second shop:** a shop's old names stay its own, for sign-up, partners and Admin alike.
+- **Admin › Merchant › Addresses:** the shop's names; Frrata's rename (with a reason; the old name serves nothing);
+  freeze address changes.
+- **Admin › Names:** block a protected brand, an offensive word or a domain; release a held name with a reason.
+
 ## 2026-11-08 — Analytics A·1 ([plan](plans/2026-11-08-analytics-a1.md), [spec](specs/2026-11-08-analytics-a1.md))
 
 - **Console › Analytics** (`/console/analytics`): where this period's orders came from (7, 30 or 90 days against the

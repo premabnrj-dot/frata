@@ -17,7 +17,7 @@ export const shopThemeRevisions = pgTable('shop_theme_revisions', {
   themeKey: text('theme_key').notNull(),
   themeVersion: text('theme_version').notNull(),
   styleKey: text('style_key').notNull(),
-  /** The merchant's layer: { settings?, home? }. Content, parsed by the theme's schemas at every save and read. */
+  /** The merchant's layer: { settings?, home?, site?, menus? } (site and menus: Look v4). Content, parsed by the theme's schemas at every save and read. */
   settings: jsonb('settings').notNull(),
   /** Optimistic lock: bumped by every save; a save or publish naming an older one is refused. */
   version: integer('version').notNull().default(1),

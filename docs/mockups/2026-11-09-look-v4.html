@@ -1,0 +1,353 @@
+<title>Frrata Look v4</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,600&family=Cormorant+Garamond:wght@500;600&family=Fraunces:opsz,wght@9..144,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: boards stacked — the customizer frame (collapsible panel, page-aware), Site settings, Icons, Menus, page options, the roadmap. Frrata console tokens; one store style (Editorial · Haldi). */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--brand:#D61F69;--focus:#3451B2;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--info:#EDF2FE;--info-text:#3451B2;
+  --s-bg:#F6F1E8;--s-text:#1F1A17;--s-sub:#5C5046;--s-tint:#F3E3C3;--s-accent:#9A5B0C;--s-chip:#EFE6D8;--s-line:#E3D9C9;
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--display:"Bricolage Grotesque","Inter",sans-serif;--serif:"Cormorant Garamond",Georgia,serif;--mono:"JetBrains Mono",ui-monospace,monospace;
+  --fast:120ms;--base:200ms;--slow:320ms;--ease:cubic-bezier(.2,0,0,1);--snap:linear(0,.16 6%,.55 16%,.88 30%,.98 46%,1);--spring:linear(0,.13 6%,.5 16%,.86 28%,1.02 40%,1.04 50%,1.01 66%,1);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--focus:#9CB1FF;--ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--info:#151C33;--info-text:#9CB1FF;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--focus:#9CB1FF;--ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--info:#151C33;--info-text:#9CB1FF;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--sans);margin:0}
+.wrap{max-width:1220px;margin:0 auto;padding-block:20px 90px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+nav.boards{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--bg);display:flex;gap:6px;overflow-x:auto;padding:10px 0;border-bottom:1px solid var(--border)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:31;background:var(--bg)}
+nav.boards a{white-space:nowrap;color:var(--sub);text-decoration:none;font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--border)}
+nav.boards a:hover{color:var(--fg);border-color:var(--fg)}
+h1{font:600 26px/1.15 var(--display);margin:18px 0 2px}
+h2{font-size:17px;margin:48px 0 14px;display:flex;gap:10px;align-items:center;scroll-margin-top:70px}
+h2::before{content:"";width:18px;height:2px;background:var(--brand);flex:none}
+.sub{color:var(--sub)}
+.frame{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+svg.i{width:18px;height:18px;flex:none}
+.btn{position:relative;display:inline-flex;align-items:center;gap:6px;border-radius:8px;border:1px solid var(--border);background:var(--card);padding:0 12px;min-height:36px;font-weight:500;transition:scale var(--fast) var(--ease)}
+.btn:active{scale:.97}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.primary::after{content:"";position:absolute;left:6px;right:6px;bottom:0;height:2px;background:var(--brand);transform-origin:left;scale:.33 1;transition:scale var(--fast)}
+.btn.primary:hover::after{scale:1 1}
+.ibtn{width:36px;height:36px;display:grid;place-items:center;border-radius:8px;border:1px solid var(--border);background:var(--card);transition:background-color var(--fast)}
+.ibtn:hover{background:var(--muted)}.ibtn[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:500;white-space:nowrap;background:var(--muted)}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-info{background:var(--info);color:var(--info-text)}.c-warn{background:var(--warn);color:var(--warn-text)}
+.seg{display:inline-grid;grid-auto-flow:column;background:var(--muted);border-radius:9px;padding:2px;gap:2px}
+.seg button{border:0;background:transparent;border-radius:7px;padding:5px 11px;font-size:13px;font-weight:500;color:var(--sub);transition:background-color var(--fast),color var(--fast)}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--fg);box-shadow:0 1px 2px rgb(0 0 0/.1)}
+/* ── customizer frame ── */
+.cz{display:grid;grid-template-columns:var(--pw,340px) minmax(0,1fr);transition:grid-template-columns var(--slow) var(--ease);min-height:600px}
+.cz[data-collapsed]{--pw:56px}
+.cz>*{min-width:0}
+.top{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.top .name{font-weight:600}
+.pagepick{display:flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:8px;padding:0 10px;min-height:36px;background:var(--card)}
+.pagepick select{border:0;background:transparent;font:inherit;color:var(--fg)}
+.panel{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;position:relative}
+.rail{display:none;flex-direction:column;gap:6px;padding:10px;align-items:center}
+.cz[data-collapsed] .rail{display:flex}.cz[data-collapsed] .pbody{display:none}
+.pbody{padding:12px 14px;display:grid;gap:12px;align-content:start;overflow-y:auto;max-height:640px}
+.ctx{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--info);color:var(--info-text);font-size:13px}
+.grp{border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.grp>b{display:flex;align-items:center;gap:8px;padding:10px 12px;font-size:13px}
+.grp>b span{margin-left:auto;font-weight:400;color:var(--sub);font-size:12px}
+.grp .in{padding:0 12px 12px;display:grid;gap:10px}
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.tile{border:1px solid var(--border);border-radius:10px;padding:6px;background:var(--card);font-size:11px;text-align:center;display:grid;gap:4px;transition:border-color var(--fast)}
+.tile[aria-pressed="true"]{border-color:var(--fg);box-shadow:inset 0 0 0 1px var(--fg)}
+.tile .pv{height:34px;border-radius:6px;background:var(--muted);position:relative}
+.tile .pv i{position:absolute;background:var(--input);opacity:.5;border-radius:2px}
+.tg{display:flex;justify-content:space-between;align-items:center;font-size:13px;gap:10px}
+.sw{width:38px;height:22px;border-radius:999px;border:0;background:var(--input);position:relative;flex:none}
+.sw::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:translate var(--base) var(--spring)}
+.sw[aria-checked="true"]{background:var(--ok-text)}.sw[aria-checked="true"]::after{translate:16px 0}
+.stage{background:var(--muted);padding:14px;display:grid;gap:10px;align-content:start;min-width:0}
+.browser{border-radius:12px;overflow:hidden;background:var(--card);border:1px solid var(--border);box-shadow:0 12px 32px -12px rgb(0 0 0/.25)}
+.chrome{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--muted);border-bottom:1px solid var(--border)}
+.chrome i{width:9px;height:9px;border-radius:50%;background:var(--border)}
+.addr{flex:1;min-width:0;font:12px var(--mono);color:var(--sub);background:var(--card);border-radius:6px;padding:3px 10px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;transition:color var(--base)}
+.site{background:var(--s-bg);color:var(--s-text);min-height:420px;position:relative;transition:opacity var(--base)}
+.site[data-switch]{opacity:.35}
+.shd{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:12px 20px;border-bottom:1px solid var(--s-line)}
+.shd .logo{font:600 20px var(--serif);letter-spacing:.08em}
+.shd .ic{display:flex;gap:14px;justify-content:flex-end;color:var(--s-text)}
+.shd .ic svg{width:20px;height:20px}
+.snav{display:flex;justify-content:center;gap:22px;padding:8px;font-size:13px;border-bottom:1px solid var(--s-line)}
+.snav span{display:flex;align-items:center;gap:6px}.snav svg{width:16px;height:16px}
+.hl{position:relative;outline:2px solid transparent;outline-offset:-2px;transition:outline-color var(--base)}
+.hl[data-on]{outline-color:var(--focus)}
+.hl[data-on]::before{content:attr(data-label);position:absolute;left:6px;top:6px;background:var(--focus);color:#fff;font:600 10px var(--sans);padding:1px 6px;border-radius:3px;z-index:2}
+.pdp{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;padding:20px}
+.pdp .ph{aspect-ratio:4/5;background:linear-gradient(160deg,var(--s-tint),var(--s-chip))}
+.pdp h3{font:600 26px var(--serif);margin:0}
+.sizes{display:flex;gap:6px}.sizes span{border:1px solid var(--s-line);padding:6px 10px;font-size:12px}
+.buy{display:block;text-align:center;background:var(--s-text);color:var(--s-bg);padding:10px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin-top:6px}
+.trust{display:grid;gap:8px;margin-top:10px;font-size:12px}.trust div{display:flex;gap:8px;align-items:center}.trust svg{width:18px;height:18px;color:var(--s-accent)}
+.home .hero{height:220px;background:linear-gradient(160deg,var(--s-tint),var(--s-chip));display:flex;align-items:flex-end;padding:20px;font:600 40px var(--serif)}
+.home .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px 20px}.home .g4 i{aspect-ratio:4/5;background:var(--s-chip)}
+.co{display:grid;grid-template-columns:1.2fr 1fr;gap:18px;padding:20px}
+.co .f{display:grid;gap:8px}.co .f i{display:block;height:34px;border:1px solid var(--s-line);background:#fff8}
+.co .sum{background:var(--s-chip);padding:14px;display:grid;gap:8px;font-size:12px;align-content:start}
+.co .sum .row{display:flex;justify-content:space-between}
+.bar{height:6px;border-radius:9px;background:var(--s-line);overflow:hidden}.bar i{display:block;height:100%;width:68%;background:var(--s-accent)}
+/* ── site settings ── */
+.ss{display:grid;grid-template-columns:220px minmax(0,1fr)}
+.ss>*{min-width:0}
+.ssnav{border-right:1px solid var(--border);padding:10px;display:grid;gap:2px;align-content:start}
+.ssnav button{display:flex;gap:10px;align-items:center;border:0;background:transparent;border-radius:8px;padding:9px 10px;text-align:left;font-size:13px;color:var(--sub)}
+.ssnav button[aria-current="true"]{background:var(--muted);color:var(--fg);font-weight:600}
+.ssbody{padding:16px 18px;display:grid;gap:14px;align-content:start}
+.pal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tok{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card)}
+.tok .sw2{height:56px;display:flex;align-items:flex-end;justify-content:space-between;padding:6px 8px;font:600 12px var(--mono)}
+.tok .m{padding:8px 10px;display:grid;gap:2px;font-size:12px}
+.tok .m b{font-size:13px}
+.kits{display:flex;gap:8px;flex-wrap:wrap}
+.kit{border:1px solid var(--border);border-radius:10px;padding:6px;display:flex;gap:3px;background:var(--card)}
+.kit[aria-pressed="true"]{border-color:var(--fg);box-shadow:inset 0 0 0 1px var(--fg)}
+.kit i{width:18px;height:28px;border-radius:4px}
+.typo{display:grid;gap:6px}
+.trow{display:grid;grid-template-columns:90px minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--border);border-radius:10px;padding:8px 12px;background:var(--card);text-align:left}
+.trow[aria-pressed="true"]{border-color:var(--fg)}
+.trow .tag{font:500 11px var(--mono);color:var(--sub)}
+.trow .smp{color:var(--s-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trow .meta{font:11px var(--mono);color:var(--sub);white-space:nowrap}
+.edit{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;padding:12px;border:1px dashed var(--input);border-radius:12px}
+.edit label{display:grid;gap:4px;font-size:12px;color:var(--sub)}
+.edit select,.edit input{min-height:34px;border:1px solid var(--input);border-radius:8px;background:var(--card);color:var(--fg);padding:0 8px;font:inherit}
+/* ── icons ── */
+.libs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.lib{border:1px solid var(--border);border-radius:12px;background:var(--card);text-align:left;padding:0;overflow:hidden;transition:border-color var(--fast)}
+.lib[aria-pressed="true"]{border-color:var(--fg);box-shadow:inset 0 0 0 1px var(--fg)}
+.lib .g{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;padding:16px;background:var(--s-bg);color:var(--s-text)}
+.lib .g svg{width:24px;height:24px;justify-self:center}
+.lib .m{padding:10px 12px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border)}
+.lib .m b{font-weight:600}.lib .m span.r{margin-left:auto;font:11px var(--mono);color:var(--sub)}
+.line{fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.duo .t{fill:currentColor;opacity:.22;stroke:none}.duo{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.solid{fill:currentColor;stroke:none}
+/* ── menus ── */
+.mm{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.mm>*{min-width:0}
+.tree{padding:14px;display:grid;gap:6px;border-right:1px solid var(--border);align-content:start}
+.item{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:10px;padding:8px 10px;background:var(--card);transition:translate var(--base) var(--ease),box-shadow var(--fast)}
+.item.child{margin-left:28px}
+.item .grip{color:var(--sub);cursor:grab}
+.item .ico{width:30px;height:30px;border-radius:8px;border:1px dashed var(--input);display:grid;place-items:center;background:var(--muted)}
+.item .ico svg{width:18px;height:18px}
+.item .lbl{font-weight:500}.item .lk{font:11px var(--mono);color:var(--sub);margin-left:auto}
+.item[data-drag]{box-shadow:0 10px 24px -8px rgb(0 0 0/.35);translate:0 -2px}
+.add{border:1.5px dashed var(--input);border-radius:10px;padding:8px;text-align:center;color:var(--sub);background:transparent}
+.picker{position:relative;margin:4px 0 6px 28px;border:1px solid var(--border);border-radius:12px;padding:10px;background:var(--card);box-shadow:0 12px 32px -10px rgb(0 0 0/.25);display:grid;gap:8px}
+.picker input{min-height:34px;border:1px solid var(--input);border-radius:8px;padding:0 10px;background:var(--card);color:var(--fg);font:inherit}
+.pg{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.pg button{aspect-ratio:1;border:1px solid transparent;border-radius:8px;background:var(--muted);display:grid;place-items:center;transition:scale var(--fast) var(--snap)}
+.pg button:hover{scale:1.08}.pg button[aria-pressed="true"]{border-color:var(--fg);background:var(--card)}
+.pg svg{width:18px;height:18px}
+.mprev{padding:14px;display:grid;gap:12px;background:var(--muted)}
+.drawer{width:260px;max-width:100%;background:var(--s-bg);color:var(--s-text);border-radius:12px;overflow:hidden;box-shadow:0 12px 30px -12px rgb(0 0 0/.3);justify-self:center}
+.drawer .r{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--s-line);font-size:14px}
+.drawer .r svg{width:20px;height:20px;color:var(--s-accent)}
+.drawer .r.sub{padding-left:42px;font-size:13px;color:var(--s-sub)}
+/* ── page options ── */
+.pages{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.pages>*{min-width:0}
+.pcard{border:1px solid var(--border);border-radius:12px;background:var(--card);overflow:hidden}
+.pcard header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);font-weight:600}
+.pcard ul{margin:0;padding:10px 12px 12px 28px;display:grid;gap:4px;font-size:13px}
+.pcard .theme{margin-left:auto}
+/* ── roadmap ── */
+.road{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.road>div{border:1px solid var(--border);border-radius:12px;background:var(--card);padding:14px;display:grid;gap:6px;align-content:start}
+.road b{font-size:14px}.road ul{margin:0;padding-left:18px;display:grid;gap:3px;font-size:13px;color:var(--sub)}
+.road .when{font:600 11px var(--mono);color:var(--brand)}
+@media (max-width:900px){.cz{grid-template-columns:minmax(0,1fr)}.cz[data-collapsed] .pbody{display:grid}.cz .rail{display:none!important}.panel{border-right:0;border-bottom:1px solid var(--border)}.ss,.mm{grid-template-columns:minmax(0,1fr)}.ssnav{border-right:0;border-bottom:1px solid var(--border);grid-auto-flow:column;overflow-x:auto}.tree{border-right:0}.pdp,.co{grid-template-columns:1fr}.home .g4{grid-template-columns:1fr 1fr}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- line set (Lucide-like) -->
+  <symbol id="l-bag" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M5 8h14l-1 12H6z"/><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
+  <symbol id="l-cart" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M3 4h2l2.4 11h10.2L20 7H6.2"/><circle fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" cx="9" cy="19" r="1.5"/><circle fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" cx="17" cy="19" r="1.5"/></symbol>
+  <symbol id="l-search" viewBox="0 0 24 24"><circle fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" cx="11" cy="11" r="7"/><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M20 20l-4-4"/></symbol>
+  <symbol id="l-user" viewBox="0 0 24 24"><circle fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" cx="12" cy="8" r="4"/><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></symbol>
+  <symbol id="l-heart" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></symbol>
+  <symbol id="l-truck" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M3 6h11v10H3zM14 9h4l3 3v4h-7"/><circle fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" cx="7" cy="18" r="1.8"/><circle fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" cx="17" cy="18" r="1.8"/></symbol>
+  <symbol id="l-return" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M9 14L4 9l5-5"/><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M4 9h10a6 6 0 0 1 0 12h-3"/></symbol>
+  <symbol id="l-cash" viewBox="0 0 24 24"><rect fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" x="2.5" y="6" width="19" height="12" rx="2"/><circle fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" cx="12" cy="12" r="2.6"/></symbol>
+  <symbol id="l-menu" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h16M4 17h10"/></symbol>
+  <symbol id="l-chat" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M4 20l1.5-4A8 8 0 1 1 9 19.2z"/></symbol>
+  <symbol id="l-tag" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M3 12V4h8l10 10-8 8z"/><circle fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" cx="7.5" cy="7.5" r="1.4"/></symbol>
+  <symbol id="l-spark" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/></symbol>
+  <!-- dual tone -->
+  <symbol id="d-bag" viewBox="0 0 24 24"><path fill="currentColor" opacity=".22" stroke="none" d="M5 8h14l-1 12H6z"/><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></g></symbol>
+  <symbol id="d-cart" viewBox="0 0 24 24"><path fill="currentColor" opacity=".22" stroke="none" d="M6.2 7H20l-2.4 8H7.4z"/><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.4 11h10.2L20 7H6.2"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></g></symbol>
+  <symbol id="d-search" viewBox="0 0 24 24"><circle fill="currentColor" opacity=".22" stroke="none" cx="11" cy="11" r="7"/><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></g></symbol>
+  <symbol id="d-user" viewBox="0 0 24 24"><circle fill="currentColor" opacity=".22" stroke="none" cx="12" cy="8" r="4"/><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></g></symbol>
+  <symbol id="d-heart" viewBox="0 0 24 24"><path fill="currentColor" opacity=".22" stroke="none" d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></symbol>
+  <symbol id="d-truck" viewBox="0 0 24 24"><path fill="currentColor" opacity=".22" stroke="none" d="M3 6h11v10H3z"/><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h11v10H3zM14 9h4l3 3v4h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></g></symbol>
+  <symbol id="d-return" viewBox="0 0 24 24"><path fill="currentColor" opacity=".22" stroke="none" d="M14 9a6 6 0 0 1 0 12h-3V9z"/><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></g></symbol>
+  <symbol id="d-cash" viewBox="0 0 24 24"><rect fill="currentColor" opacity=".22" stroke="none" x="2.5" y="6" width="19" height="12" rx="2"/><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/></g></symbol>
+  <symbol id="d-menu" viewBox="0 0 24 24"><rect fill="currentColor" opacity=".22" stroke="none" x="3" y="5" width="18" height="14" rx="3"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M7 9h10M7 12h10M7 15h6"/></symbol>
+  <symbol id="d-chat" viewBox="0 0 24 24"><path fill="currentColor" opacity=".22" stroke="none" d="M4 20l1.5-4A8 8 0 1 1 9 19.2z"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M4 20l1.5-4A8 8 0 1 1 9 19.2z"/></symbol>
+  <symbol id="d-tag" viewBox="0 0 24 24"><path fill="currentColor" opacity=".22" stroke="none" d="M3 12V4h8l10 10-8 8z"/><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="7.5" r="1.4"/></g></symbol>
+  <symbol id="d-spark" viewBox="0 0 24 24"><path fill="currentColor" opacity=".22" stroke="none" d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/></symbol>
+  <!-- solid -->
+  <symbol id="s-bag" viewBox="0 0 24 24"><path fill="currentColor" d="M8 7V6a4 4 0 0 1 8 0v1h3.2l-1.1 13.4a1 1 0 0 1-1 .9H6.9a1 1 0 0 1-1-.9L4.8 7zm2 0h4V6a2 2 0 0 0-4 0z"/></symbol>
+  <symbol id="s-cart" viewBox="0 0 24 24"><path fill="currentColor" d="M3 3h2.8l.5 2H21l-3 10H7.6L5 4.6V5H3zm6 16a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm10 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></symbol>
+  <symbol id="s-search" viewBox="0 0 24 24"><path fill="currentColor" d="M11 3a8 8 0 0 1 6.3 12.9l4.4 4.4-1.4 1.4-4.4-4.4A8 8 0 1 1 11 3z"/></symbol>
+  <symbol id="s-user" viewBox="0 0 24 24"><circle fill="currentColor" cx="12" cy="8" r="4.5"/><path fill="currentColor" d="M3.5 21c1.4-4.6 4.6-7 8.5-7s7.1 2.4 8.5 7z"/></symbol>
+  <symbol id="s-heart" viewBox="0 0 24 24"><path fill="currentColor" d="M12 21s-8-5-8-11.2A4.8 4.8 0 0 1 12 6.7a4.8 4.8 0 0 1 8 3.1C20 16 12 21 12 21z"/></symbol>
+  <symbol id="s-truck" viewBox="0 0 24 24"><path fill="currentColor" d="M2 5h13v4h3.5l3.5 3.5V17h-2a2.5 2.5 0 0 1-5 0h-4a2.5 2.5 0 0 1-5 0H2z"/></symbol>
+  <symbol id="s-return" viewBox="0 0 24 24"><path fill="currentColor" d="M9 3.6 3.6 9 9 14.4V10.5h5a4.5 4.5 0 0 1 0 9h-3v2.5h3a7 7 0 0 0 0-14H9z"/></symbol>
+  <symbol id="s-cash" viewBox="0 0 24 24"><path fill="currentColor" d="M2 6.5A1.5 1.5 0 0 1 3.5 5h17A1.5 1.5 0 0 1 22 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-17A1.5 1.5 0 0 1 2 17.5zM12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z"/></symbol>
+  <symbol id="s-menu" viewBox="0 0 24 24"><path fill="currentColor" d="M3 5.5h18v2.6H3zm0 5.2h18v2.6H3zm0 5.2h12v2.6H3z"/></symbol>
+  <symbol id="s-chat" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.7 15L2 22l5.1-1.3A10 10 0 1 0 12 2z"/></symbol>
+  <symbol id="s-tag" viewBox="0 0 24 24"><path fill="currentColor" d="M2 11.6V3h8.6L22 14.4 13.4 23zM7 8.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/></symbol>
+  <symbol id="s-spark" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"/></symbol>
+  <!-- console UI -->
+  <symbol id="u-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="u-collapse" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 4v16M15 10l-2 2 2 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="u-grip" viewBox="0 0 24 24"><g fill="currentColor"><circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/></g></symbol>
+  <symbol id="u-sections" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="u-brush" viewBox="0 0 24 24"><path d="M14 4l6 6-8 8H6v-6z M4 20h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="u-nav" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="16" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="u-type" viewBox="0 0 24 24"><path d="M4 7V5h16v2M9 19h6M12 5v14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="u-palette" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1 0 1.5-.8 1.5-1.6 0-1.3-1-1.7-1-2.9 0-1 .8-1.5 1.8-1.5H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8z" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="u-shapes" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="17" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="u-id" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="11" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M13 10h5M13 14h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+</svg>
+
+<div class="wrap">
+<nav class="boards" aria-label="Boards">
+  <a href="#customizer">Customizer</a><a href="#site">Site settings</a><a href="#icons">Icons</a><a href="#menus">Menus</a><a href="#pages">Page options</a><a href="#future">Ahead</a>
+</nav>
+<h1>Look v4</h1>
+<p class="sub">Mockup · 9 Nov 2026 · Site settings, icons, menus, page-aware editing</p>
+
+<!-- ============ 1 CUSTOMIZER ============ -->
+<h2 id="customizer">Customizer</h2>
+<div class="frame">
+  <div class="top">
+    <button class="ibtn" id="collapse" aria-label="Collapse the panel" aria-pressed="false"><svg class="i"><use href="#u-collapse"/></svg></button>
+    <span class="name">Editorial · Haldi</span><span class="chip c-warn">Draft</span>
+    <button class="ibtn" id="gear" aria-label="Site settings" title="Site settings"><svg class="i"><use href="#u-gear"/></svg></button>
+    <span style="flex:1"></span>
+    <span class="pagepick"><span class="sub" style="font-size:12px">Editing</span><select id="pg" aria-label="Page"><option value="home">Home</option><option value="product" selected>Product page</option><option value="collection">Collection page</option><option value="cart">Bag</option><option value="checkout">Checkout</option></select></span>
+    <span class="seg" role="group" aria-label="Preview size"><button aria-pressed="true">Computer</button><button aria-pressed="false">Phone</button></span>
+    <button class="btn primary">Publish</button>
+  </div>
+  <div class="cz" id="cz">
+    <aside class="panel" aria-label="Edit">
+      <div class="rail"><button class="ibtn" aria-label="Sections"><svg class="i"><use href="#u-sections"/></svg></button><button class="ibtn" aria-label="Style"><svg class="i"><use href="#u-brush"/></svg></button><button class="ibtn" aria-label="Menus"><svg class="i"><use href="#u-nav"/></svg></button><button class="ibtn" aria-label="Site settings"><svg class="i"><use href="#u-gear"/></svg></button></div>
+      <div class="pbody" id="pbody"></div>
+    </aside>
+    <section class="stage" aria-label="Preview">
+      <div class="browser"><div class="chrome"><i></i><i></i><i></i><span class="addr" id="addr">kesar-studio.frrata.shop/products/haldi-kurta</span></div>
+        <div class="site" id="site"></div></div>
+    </section>
+  </div>
+</div>
+
+<!-- ============ 2 SITE SETTINGS ============ -->
+<h2 id="site">Site settings</h2>
+<div class="frame ss">
+  <nav class="ssnav" id="ssnav" aria-label="Site settings">
+    <button data-t="colours" aria-current="true"><svg class="i"><use href="#u-palette"/></svg>Colours</button>
+    <button data-t="type" aria-current="false"><svg class="i"><use href="#u-type"/></svg>Typography</button>
+    <button data-t="buttons" aria-current="false"><svg class="i"><use href="#u-shapes"/></svg>Buttons and fields</button>
+    <button data-t="icons" aria-current="false"><svg class="i"><use href="#l-spark"/></svg>Icons</button>
+    <button data-t="brand" aria-current="false"><svg class="i"><use href="#u-id"/></svg>Brand</button>
+  </nav>
+  <div class="ssbody" id="ssbody"></div>
+</div>
+
+<!-- ============ 3 ICONS ============ -->
+<h2 id="icons">Icons</h2>
+<div class="libs" id="libs"></div>
+
+<!-- ============ 4 MENUS ============ -->
+<h2 id="menus">Menus</h2>
+<div class="frame mm">
+  <div class="tree" id="tree">
+    <div class="seg" role="group" aria-label="Menu" style="justify-self:start"><button aria-pressed="true">Main menu</button><button aria-pressed="false">Footer</button><button aria-pressed="false">Phone tabs</button></div>
+  </div>
+  <div class="mprev"><span class="sub" style="font-size:12px">Phone drawer</span><div class="drawer" id="drawer"></div></div>
+</div>
+
+<!-- ============ 5 PAGES ============ -->
+<h2 id="pages">Page options</h2>
+<div class="pages">
+  <div class="pcard"><header>Product page<span class="chip theme c-ok">Editorial</span></header><ul><li>Photos: stacked · thumbnails beside · two across</li><li>Buy box beside photos</li><li>Size guide: link · button · open under sizes</li><li>Promises under Add to bag, with icons</li><li>Complete the look · You may also like</li><li>Sticky Add to bag on phones</li></ul></div>
+  <div class="pcard"><header>Collection page<span class="chip theme c-ok">Editorial</span></header><ul><li>Top: title · banner · banner with words</li><li>Filters: side · drawer · chips</li><li>Columns 3 · 4 · phone 2</li><li>Card: standard · centred · framed</li><li>Load: pages · show more</li></ul></div>
+  <div class="pcard"><header>Bag<span class="chip theme">Every theme</span></header><ul><li>Drawer · page</li><li>Free-delivery bar</li><li>Pay on delivery line</li><li>Pair it with (one row)</li></ul></div>
+  <div class="pcard"><header>Checkout<span class="chip theme">Every theme</span></header><ul><li>Focused · with your menu</li><li>Summary: side · on top, folded on phones</li><li>Trust row with icons</li><li>Colours from Site settings</li></ul></div>
+</div>
+
+<!-- ============ 6 AHEAD ============ -->
+<h2 id="future">Ahead</h2>
+<div class="road">
+  <div><span class="when">P1 · NOW</span><b>Site settings and pages</b><ul><li>Gear: colours, typography, buttons, icons, brand</li><li>Theme settings stay the theme's own</li><li>Page picker follows what you edit</li><li>Collapsible panel</li></ul></div>
+  <div><span class="when">P2</span><b>Menus and icons</b><ul><li>Main, footer and phone-tab menus</li><li>Icon picker, three libraries</li><li>Mega menu with pictures (Editorial)</li><li>Bag and checkout options</li></ul></div>
+  <div><span class="when">P3</span><b>Brand kit</b><ul><li>Colours from your logo or Instagram</li><li>Saved kits to switch between</li><li>Contrast fixed as you pick</li></ul></div>
+  <div><span class="when">P4</span><b>Festive and smart</b><ul><li>Schedule a look for a sale</li><li>A brief → a styled draft</li><li>Templates per product kind</li><li>Speed and access score, live</li></ul></div>
+</div>
+</div>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)]
+const ic=(id)=>`<svg class="i"><use href="#${id}"/></svg>`
+let lib='d'
+// ---------- page-aware customizer ----------
+const PANELS={
+ home:{ctx:'Home',addr:'',groups:[['Sections','6 sections'],['Hero','Image with text']]},
+ product:{ctx:'Product page · Editorial',addr:'/products/haldi-kurta',groups:[['Photos','Stacked',['Stacked','Beside','Two across','Under']],['Buy box','Beside photos'],['Promises','3 with icons'],['Size guide','Under sizes']]},
+ collection:{ctx:'Collection page · Editorial',addr:'/collections/kurtas',groups:[['Top','Banner',['Title','Banner','Banner + words','None']],['Filters','Drawer'],['Grid','3 across']]},
+ cart:{ctx:'Bag · every theme',addr:'/bag',groups:[['Bag opens as','Drawer',['Drawer','Page']],['Free-delivery bar','On'],['Pair it with','On']]},
+ checkout:{ctx:'Checkout · every theme',addr:'/checkout',groups:[['Layout','Focused',['Focused','With menu']],['Summary','Side'],['Trust row','3 icons']]},
+}
+function drawSite(p){const h=`<div class="shd"><span>${ic(lib+'-menu')}</span><span class="logo">Kesar Studio</span><span class="ic">${ic(lib+'-search')}${ic(lib+'-heart')}${ic(lib+'-bag')}</span></div><div class="snav"><span>${ic(lib+'-spark')}New in</span><span>${ic(lib+'-tag')}Sale</span><span>Kurtas</span><span>Sarees</span></div>`
+ const body={home:`<div class="home"><div class="hero hl" data-label="Hero">Kesar Studio</div><div class="g4"><i></i><i></i><i></i><i></i></div></div>`,
+  product:`<div class="pdp"><div class="ph hl" data-on data-label="Photos"></div><div><h3>Haldi block-print kurta</h3><b>₹2,490</b><div class="sizes" style="margin-top:10px"><span>S</span><span>M</span><span>L</span><span>XL</span></div><span class="buy">Add to bag</span><div class="trust hl" data-label="Promises"><div>${ic(lib+'-cash')}Pay on delivery</div><div>${ic(lib+'-return')}7-day exchange</div><div>${ic(lib+'-truck')}Ships in 2 days</div></div></div></div>`,
+  collection:`<div class="home"><div class="hero hl" data-on data-label="Top" style="height:140px;font-size:32px">Kurtas</div><div class="g4"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>`,
+  cart:`<div class="co"><div class="f"><b style="font:600 22px var(--serif)">Your bag</b><i></i><i></i><div class="hl" data-on data-label="Free-delivery bar"><div style="font-size:12px;margin-bottom:6px">₹510 more for free delivery</div><div class="bar"><i></i></div></div></div><div class="sum"><div class="row"><span>Subtotal</span><b>₹2,490</b></div><span class="buy">Checkout</span></div></div>`,
+  checkout:`<div class="co"><div class="f"><b>Delivery</b><i></i><i></i><i></i><b>Pay</b><i></i></div><div class="sum hl" data-on data-label="Summary"><div class="row"><span>Haldi kurta</span><b>₹2,490</b></div><div class="row"><span>Delivery</span><b>Free</b></div><div class="trust">${['cash','return','truck'].map((k,i)=>`<div>${ic(lib+'-'+k)}${['Pay on delivery','Easy exchange','Ships in 2 days'][i]}</div>`).join('')}</div></div></div>`}[p]
+ return (p==='checkout'?`<div class="shd" style="grid-template-columns:1fr"><span class="logo" style="justify-self:center">Kesar Studio</span></div>`:h)+body}
+function setPage(p){const s=$('#site');s.setAttribute('data-switch','');setTimeout(()=>{s.innerHTML=drawSite(p);s.removeAttribute('data-switch')},160);$('#addr').textContent='kesar-studio.frrata.shop'+PANELS[p].addr
+ $('#pbody').innerHTML=`<div class="ctx">${ic('u-brush')}${PANELS[p].ctx}</div>`+PANELS[p].groups.map(([n,v,t])=>`<div class="grp"><b>${n}<span>${v}</span></b>${t?`<div class="in"><div class="tiles">${t.map((x,i)=>`<button class="tile" aria-pressed="${i===0}"><span class="pv"><i style="left:8%;top:12%;width:${i?40:84}%;height:76%"></i>${i?'<i style="left:54%;top:12%;width:38%;height:76%"></i>':''}</span>${x}</button>`).join('')}</div></div>`:''}</div>`).join('')+`<div class="tg"><span>Sticky Add to bag on phones</span><button class="sw" role="switch" aria-checked="true" aria-label="Sticky Add to bag on phones"></button></div>`
+ $$('#pbody .sw').forEach(w=>w.onclick=()=>w.setAttribute('aria-checked',w.getAttribute('aria-checked')!=='true'))
+ $$('#pbody .tile').forEach(t=>t.onclick=()=>{$$('.tile',t.parentElement).forEach(x=>x.setAttribute('aria-pressed',x===t));const h=$('#site .hl[data-on]');if(h){h.removeAttribute('data-on');void h.offsetWidth;h.setAttribute('data-on','')}})}
+$('#pg').onchange=e=>setPage(e.target.value)
+$('#collapse').onclick=()=>{const c=$('#cz'),on=!c.hasAttribute('data-collapsed');c.toggleAttribute('data-collapsed',on);$('#collapse').setAttribute('aria-pressed',on)}
+$('#gear').onclick=()=>location.hash='site'
+$$('.seg').forEach(g=>g.addEventListener('click',e=>{const b=e.target.closest('button');if(b)$$('button',g).forEach(x=>x.setAttribute('aria-pressed',x===b))}))
+// ---------- site settings ----------
+const TOK=[['Primary','Buttons, links','#1F1A17','#F6F1E8'],['Accent','Badges, prices off','#9A5B0C','#FFFFFF'],['Background','Page','#F6F1E8','#1F1A17'],['Surface','Cards, bars','#EFE6D8','#1F1A17'],['Text','Words','#1F1A17','#F6F1E8'],['Muted','Second words','#5C5046','#FFFFFF']]
+const TYPE=[['Display','Cormorant · 64 / 40 · 600','Haldi, for the mehendi','var(--serif)',30],['H1','Cormorant · 44 / 32 · 600','Kurtas and sets','var(--serif)',24],['H2','Cormorant · 30 / 24 · 600','New in','var(--serif)',20],['H3','Inter · 18 / 16 · 600','About this piece','var(--sans)',16],['Body','Inter · 16 / 15 · 400','Hand-block printed cotton in a warm turmeric yellow.','var(--sans)',14],['Small','Inter · 13 / 12 · 400','Price includes GST','var(--sans)',12],['Button','Inter · 13 · 600 · UPPER · 0.08em','ADD TO BAG','var(--sans)',12],['Price','Inter · 18 / 16 · 600 · tabular','₹2,490','var(--sans)',16]]
+const SS={
+ colours:()=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><b>Palette</b><div class="kits">${[['#F6F1E8','#F3E3C3','#9A5B0C','#1F1A17'],['#F3F4F8','#E3E6F2','#2F3E73','#1B2340'],['#FBF3F1','#F4E0E3','#9B3550','#3A1E22'],['#EFE8DC','#E4DACA','#23402F','#1F2A22']].map((k,i)=>`<button class="kit" aria-pressed="${i===0}" aria-label="Palette ${i+1}">${k.map(c=>`<i style="background:${c}"></i>`).join('')}</button>`).join('')}</div></div>
+  <div class="pal">${TOK.map(([n,u,c,on])=>`<div class="tok"><div class="sw2" style="background:${c};color:${on}"><span>Aa</span><span>${c}</span></div><div class="m"><b>${n}</b><span class="sub">${u}</span><span class="chip c-ok" style="justify-self:start">Reads well</span></div></div>`).join('')}</div>`,
+ type:()=>`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><b>Text styles</b><span class="seg"><button aria-pressed="true">Computer</button><button aria-pressed="false">Phone</button></span></div><div class="typo">${TYPE.map(([t,m,s,f,px],i)=>`<button class="trow" aria-pressed="${i===1}" style="background:${i===1?'var(--muted)':'var(--card)'}"><span class="tag">${t}</span><span class="smp" style="font-family:${f};font-size:${px}px;font-weight:600">${s}</span><span class="meta">${m}</span></button>`).join('')}</div>
+  <div class="edit"><label>Font<select><option>Cormorant</option><option>Fraunces</option><option>Playfair</option><option>Inter</option></select></label><label>Size · computer<input type="range" min="28" max="60" value="44"></label><label>Size · phone<input type="range" min="22" max="44" value="32"></label><label>Weight<select><option>600</option><option>500</option><option>700</option></select></label><label>Case<select><option>As typed</option><option>UPPERCASE</option></select></label><label>Spacing<select><option>Normal</option><option>Wide</option></select></label></div>`,
+ buttons:()=>`<b>Buttons and fields</b><div class="pal">${['Primary','Secondary','Text link'].map((n,i)=>`<div class="tok"><div class="sw2" style="background:var(--s-bg);justify-content:center;align-items:center;height:72px"><span style="font:600 11px var(--sans);letter-spacing:.08em;padding:8px 14px;${i===0?'background:var(--s-text);color:var(--s-bg)':i===1?'border:1px solid var(--s-text);color:var(--s-text)':'color:var(--s-text);border-bottom:1px solid'}">SHOP</span></div><div class="m"><b>${n}</b><span class="sub">Shape · corners · hover</span></div></div>`).join('')}<div class="tok"><div class="sw2" style="background:var(--s-bg);align-items:center;height:72px;padding:12px"><span style="flex:1;border:1px solid var(--s-line);background:#fff;height:34px"></span></div><div class="m"><b>Fields</b><span class="sub">Border · corners</span></div></div></div>`,
+ icons:()=>`<b>Icons</b><div class="libs">${libCards()}</div>`,
+ brand:()=>`<b>Brand</b><div class="pal"><div class="tok"><div class="sw2" style="background:var(--s-bg);color:var(--s-text);justify-content:center;align-items:center;height:72px;font:600 22px var(--serif);letter-spacing:.1em">Kesar Studio</div><div class="m"><b>Logo</b><span class="sub">Wide · square · on dark</span></div></div><div class="tok"><div class="sw2" style="background:var(--s-text);color:var(--s-bg);justify-content:center;align-items:center;height:72px;font:600 26px var(--serif)">K</div><div class="m"><b>Tab icon</b><span class="sub">Made from your logo</span></div></div><div class="tok"><div class="sw2" style="background:linear-gradient(160deg,var(--s-tint),var(--s-chip));height:72px"></div><div class="m"><b>Share image</b><span class="sub">WhatsApp and Instagram links</span></div></div></div>`,
+}
+function libCards(){return [['l','Line','Lucide','~0.3 kB each'],['d','Duotone','Phosphor','~0.4 kB each'],['s','Solid','Filled','~0.3 kB each']].map(([k,n,src,sz])=>`<button class="lib" aria-pressed="${k===lib}" data-lib="${k}"><span class="g">${['bag','cart','search','user','heart','truck','return','cash','menu','chat','tag','spark'].map(x=>ic(k+'-'+x)).join('')}</span><span class="m"><b>${n}</b><span class="sub">${src}</span><span class="r">${sz}</span></span></button>`).join('')}
+function setSS(t){$$('#ssnav button').forEach(b=>b.setAttribute('aria-current',b.dataset.t===t));$('#ssbody').innerHTML=SS[t]();bindLibs($('#ssbody'))}
+$('#ssnav').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setSS(b.dataset.t)})
+function bindLibs(root){$$('.lib',root).forEach(b=>b.onclick=()=>{lib=b.dataset.lib;$('#libs').innerHTML=libCards();bindLibs($('#libs'));if(root!==$('#libs')){root.querySelector('.libs').innerHTML=libCards();bindLibs(root)}setPage($('#pg').value);drawMenu()})}
+// ---------- menus ----------
+const MENU=[['spark','New in','/collections/new',0],['tag','Sale','/collections/sale',0],['bag','Kurtas','/collections/kurtas',0],['','Haldi kurtas','/collections/haldi',1],['','Chikankari','/collections/chikan',1],['heart','Wedding edit','/collections/wedding',0],['chat','Talk to us','WhatsApp',0]]
+function drawMenu(){$('#tree').querySelectorAll('.item,.add,.picker').forEach(n=>n.remove())
+ MENU.forEach(([i,l,k,c],ix)=>{const d=document.createElement('div');d.className='item'+(c?' child':'');d.innerHTML=`<span class="grip">${ic('u-grip')}</span><button class="ico" aria-label="Icon for ${l}">${i?ic(lib+'-'+i):'<span class="sub" style="font-size:16px">+</span>'}</button><span class="lbl">${l}</span><span class="lk">${k}</span>`;$('#tree').append(d)
+  if(ix===2){const p=document.createElement('div');p.className='picker';p.innerHTML=`<input placeholder="Search icons" aria-label="Search icons"><div class="seg"><button aria-pressed="${lib==='l'}">Line</button><button aria-pressed="${lib==='d'}">Duotone</button><button aria-pressed="${lib==='s'}">Solid</button></div><div class="pg">${['bag','cart','search','user','heart','truck','return','cash','menu','chat','tag','spark','bag','heart','tag','spark'].map((x,j)=>`<button aria-pressed="${j===0}" aria-label="${x}">${ic(lib+'-'+x)}</button>`).join('')}</div>`;$('#tree').append(p);$$('.pg button',p).forEach(b=>b.onclick=()=>$$('.pg button',p).forEach(x=>x.setAttribute('aria-pressed',x===b)))}})
+ const a=document.createElement('button');a.className='add';a.textContent='Add an item';$('#tree').append(a)
+ $('#drawer').innerHTML=MENU.map(([i,l,,c])=>`<div class="r${c?' sub':''}">${!c&&i?ic(lib+'-'+i):c?'':'<span style="width:20px"></span>'}${l}</div>`).join('')
+ $$('#tree .item').forEach(it=>{it.onpointerdown=()=>it.setAttribute('data-drag','');it.onpointerup=it.onpointerleave=()=>it.removeAttribute('data-drag')})}
+$('#libs').innerHTML=libCards();bindLibs($('#libs'))
+setPage('product');setSS('colours');drawMenu()
+</script>

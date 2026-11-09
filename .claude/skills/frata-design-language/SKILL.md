@@ -2,8 +2,8 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.2.0
-  verified: 2026-11-08
+  version: 5.6.0
+  verified: 2026-11-09
   covers: ["src/app/globals.css", "src/components/**"]
 ---
 
@@ -100,10 +100,13 @@ from it).
   notes as (i) tips, and a muted "Next" band. Connected → the number card (mono phone, name · which apps, Quality,
   Limit, Chats from the app; More: Check again, Disconnect) and "Needs you" rows: a badge (Blocks messages / By 31
   Dec / Quality low / In review), the need in words, one action. Meta's raw values never show.
-- **Admin**: merchant tabs Overview · Modules · Plan. The Modules tab is a table
+- **Admin**: merchant tabs Overview · Modules · Plan · Addresses. The Modules tab is a table
   (Module, Granted by, Merchant, Usable, action: "Give a 30-day trial of X",
   "End trial"). Admin › Modules pauses a module "for everyone" with a reason;
   the shop sees "Paused by Frrata". Admin writes are admin-role only.
+  The Addresses tab lists the shop's names (Current · Old · redirects · Old · no redirect), then "Rename <shop>'s
+  address" and "Freeze <shop>'s address", each with a reason. Admin › Names: block a name or domain, unblock or
+  release with a reason in the row; Frrata's own words listed, read-only.
 
 ## Shop themes (approved mockups 2026-11-08, T0–T2 built)
 
@@ -119,9 +122,9 @@ from it).
   photo on hover `store-hover` (off with `data-hover="off"`); motion obeys `data-motion`.
 - Customizer patterns: every change is one Undo step and an autosave 800 ms later ("Saving…" / "Saved" / "Not saved"
   in a `role=status`); a stale draft says who changed it and offers Reload; move up/down buttons beside drag; Add a
-  section is picture cards by kind, a full kind says its limit ("At most 2 on a page"); a section that blocks Publish
-  says "needs you" in the list; Publish lists what shoppers will see change, then the person who published sees
-  "Published" with Undo; a partner or staff sees "Ask the owner to publish"; support sees but can't change.
+  section is the searchable library (Look v3 below); a section that blocks Publish says "needs you" in the list;
+  Publish is the one-line confirm, Going live, then the popup over the shop (Look v3 below); a partner or staff sees
+  "Ask the owner to publish"; support sees but can't change.
 - Pages beyond Home (T2 mockup https://claude.ai/artifact/H9wfYHs6Uq3Vod7rbRvHsM): the customizer's page picker
   opens that page's panel (Product page: photos swipe/with thumbnails, About and details open/folded; Collection
   page: title/banner); cards (standard/centred/framed) and computer columns (4/3) apply to every grid. One tag per
@@ -133,6 +136,56 @@ from it).
   or withdrew it (their previous look is live, nothing lost). Admin › Themes says every decision is final and names
   the shops it touches; a destructive decision is a red-labelled form with a required reason, not a typed phrase.
 - Colours and type live in Look only; Settings › Brand keeps the logo and tagline and previews them in the published look.
+- **Three themes, each a job** (owner, 2026-11-08 night; plan `docs/plans/2026-11-09-themes-three.md`):
+  **Editorial** — occasion and designer wear: photos stacked large beside a buy box that stays, Cormorant, square,
+  a sheen on buttons, photos that grow, pages that fade in, sections that rise, statement footer in ink, focused
+  checkout. **Bazaar** — big catalogues and sales: circles, bottom tabs, three across, framed cards that lift,
+  thumbnails under the photo, pill buttons that press, a phone Add to bag bar, tinted footer. **Studio** —
+  contemporary and basics: split header, uppercase Inter, underlined buttons, two photos across beside a buy box
+  that stays, pages that rise, statement footer in black, focused checkout. A new look is a new value a theme
+  offers, never a fourth theme without a new job.
+- **A theme offers its own choices**; the customizer shows a choice only when the theme offers two or more values
+  (one value is no choice). Names merchants read: Photos (Two across, Stacked, Thumbnails under, Thumbnails beside);
+  Buttons Style (Solid, Outline, Underlined), Shape (Follows corners, Pill), On hover (Press, Lift, Sheen); Cards on
+  hover (Still, Lift, Zoom photo); Pages arrive (At once, Fade, Rise); Checkout (With your menu, Focused).
+- **2.0 motion**: transform and opacity only; hover motion inside `(hover: hover)`; a page arrives from opacity 0.6
+  (never 0, so the largest paint isn't held), ending on no transform; sections rise with a scroll timeline, never
+  the first; `Motion: None` and reduced motion stop all of it. Add to bag stays a filled button in every style.
+- **Legal lines never leave**: Statement and the focused checkout keep the policies, legal name, address and
+  grievance officer.
+- **Sample pieces** fill the customizer's preview of an empty shop, tagged "Sample", drawn (never photographed), and
+  never reach a shop; a photo section still needs the merchant's own photo to publish.
+- **Look v3** (owner-approved 2026-11-09, mockup https://claude.ai/artifact/N3ATeKr1XxgTvEiPLjN2tq):
+  **Frrata Themes** is the tile lockup (`<ThemesLockup>`: monogram + "themes", "by Frrata" under it; `size="sm"` is
+  the card badge), never "by Frrata" in words. The preview opens on a **computer**, the shop drawn at 1280 px and
+  scaled to fit in a browser frame with the shop's address; Phone is one tap. **Publish is a small confirm** under the
+  button (one line, no list of changes; only what blocks it, each with Fix), then the preview says **Going live**
+  (a sweep and the header's rani line filling, held ≥ 1.3 s), then a popup over the live shop: its address (Copy),
+  Undo, Keep editing, View your shop (a new tab). Never a page of its own.
+- **Confirm what loses work or changes the shop**: Discard draft, Undo last publish ("Put Classic back on your
+  shop?"), Restore over an open draft, Try a theme over another theme's draft, leaving the customizer before a save
+  lands. Removing a section is a toast with Undo, not a dialog; hide, move and style changes ask nothing.
+- **Style panel**: groups that open and close, each saying what it is set to; colour styles as colour bars with a
+  check; brand colour as swatches plus Any colour; buttons as real buttons that show their hover; header, footer and
+  photo layouts as pictures; up to four short choices as a sliding segmented control (`Segmented`).
+- **A photo field**: drop, paste or choose, or one of the shop's product photos; the photo shows at once under a
+  progress ring while it uploads; tap it to set the point it keeps in view; replace and remove on the photo;
+  description suggestions; a failure says what to do (an iPhone HEIC says how to share it as a JPEG).
+- **Section library**: search by name, words and tags (`/`), kinds with counts, picture cards, "Fits <theme>" on by
+  default, "Made for <theme>" first, a full section greyed with its limit, "Adds below <section>".
+- **Look v4** (owner-approved 2026-11-09, mockup https://claude.ai/artifact/MmC6BnAps1XXSWyfy7PfSL): three layers,
+  shown apart — **Site settings** behind the gear ("Site" at the top of the panel: Colours, Text styles, Icons,
+  Brand), **Style** (the theme's own choices), **page options** (each page in the page picker: Home, a product, a
+  collection, Shop all, Bag, Checkout; "Editing: <page>"; opening Style › Products opens a collection). Bag and
+  Checkout are one layout for every theme (money pages), styled by Site settings. A palette is checked as it is
+  picked ("Reads well" or why, never saved unreadable). The panel folds to a rail of icons on a computer.
+  **Shop icons**: Line (Lucide), Duotone, Solid (Phosphor), one stroke (Thin 1, Regular 1.5, Bold 2), inline SVG,
+  `currentColor`; an icon sits beside words in menus and tabs, never instead of them (the bag in the header is the
+  one icon alone: its name and count are its label). No text glyph as an icon (≡ is gone). **Menus**: Main (3
+  levels), Footer (1), Phone tabs (≤ 5, each an icon); moved by Up, Down, Under the one above, Out a level (thumb
+  first); every level that opens starts with "View all"; soft warnings past 7 top items or 10 under one.
+- **Even rhythm** (2.0 themes): the same space above and below every section but a full-bleed one. Horizontal rails
+  snap to their padding (`scroll-px-4`), never past it.
 
 ## Partner workspace (approved mockup 2026-11-07)
 
@@ -543,7 +596,7 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     plain words.
 20a. **No Unicode glyph stands in for a control** (owner-approved 2026-11-08): ↑ ↓ ◉ ↶ ↷ × › are drawn
     in `icon.tsx` (`up`, `down`, `eye`/`eyeOff`, `undo`, `redo`, `close`, `chevron`, `drag`). Two nav items
-    never share a glyph (Admin: Merchants `merchants`, Themes `themes`, Partners `partners`, Staff `staff`;
+    never share a glyph (Admin: Merchants `merchants`, Themes `themes`, Partners `partners`, Staff `staff`, Names `address`;
     the partner workspace: Your details `details`). A row that opens something ends in a `chevron`; a status
     pill says "Needs you" only when it does. How an order is paid is a neutral badge with its icon (`cod`,
     `prepaid`): only the order's state is coloured. A count that is still going says so ("Today · so far").

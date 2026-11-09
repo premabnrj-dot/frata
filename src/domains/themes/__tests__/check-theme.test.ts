@@ -22,6 +22,10 @@ describe.each(all.map((m) => [name(m), m] as const))('%s', (_n, m) => {
     expect(m.allowed.pairings).toContain(m.defaults.pairing)
     expect(m.allowed.headers).toContain(m.defaults.header)
     expect(m.allowed.footers).toContain(m.defaults.footer)
+    // What a theme says was made for it is something it offers (Look v3: "Made for <theme>").
+    for (const h of m.made?.headers ?? []) expect(m.allowed.headers).toContain(h)
+    for (const f of m.made?.footers ?? []) expect(m.allowed.footers).toContain(f)
+    for (const k of m.made?.sections ?? []) expect(m.allowed.sections).toContain(k)
   })
   it('Home: valid sections from the library, allowed by the theme, unique ids, ≤ 20', () => {
     expect(m.home.length).toBeLessThanOrEqual(20)
@@ -72,5 +76,15 @@ describe('the gate itself', () => {
   it('no section imports a type that can carry a merchant cost (ADR-0003)', () => {
     const src = readFileSync('src/components/storefront/sections/index.tsx', 'utf8') + readFileSync('src/domains/themes/sections.ts', 'utf8')
     expect(src).not.toMatch(/schema-orders|domains\/orders\/profit|costPrice|cogs|freight/i)
+  })
+})
+
+describe('the brand colour picks (Look v3)', () => {
+  it('each reads on every light scheme of every 2.x theme', async () => {
+    const { BRAND_COLOUR_PICKS } = await import('../catalogue/kit')
+    const { brandColourProblem } = await import('../layer')
+    for (const m of all.filter((x) => x.version.startsWith('2.'))) for (const st of m.styles) for (const c of BRAND_COLOUR_PICKS) {
+      expect(brandColourProblem(c, [st.schemes.paper, st.schemes.tint ?? st.schemes.paper]), `${m.key}@${m.version} ${st.key} ${c}`).toBeNull()
+    }
   })
 })

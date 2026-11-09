@@ -7,6 +7,7 @@ import { CATALOGUE, manifestNear, manifestOf } from '@/domains/themes/catalogue'
 import { latestAvailable } from '@/domains/themes/release'
 import { brandColourProblem, carryOver, LayerSchema, layerProblems } from '@/domains/themes/layer'
 import { readinessOf } from '@/domains/themes/readiness'
+import { paletteProblem, type Palette } from '@/domains/themes/site'
 import { baselineRevision, resolveTheme } from '@/domains/themes/resolve'
 import { SectionSchema } from '@/domains/themes/sections'
 import { THEME_KEYS } from '@/lib/db/schema-themes'
@@ -31,12 +32,13 @@ const SUPPORT = 'Frrata support can look, not change the shop’s look.'
 const audit = (tx: Parameters<Parameters<typeof asMember>[2]>[0], a: { membership: { tenantId: string }; userId: string; email: string | null }, action: string, target?: string) =>
   tx.insert(auditEvents).values({ tenantId: a.membership.tenantId, actorUserId: a.userId, actorEmail: a.email, actorKind: 'member', action, target: target ?? null })
 
-/** Every photo a layer names, rebuilt by acceptedBase for THIS shop's theme folder; one that isn't refuses the save. */
+/** Every photo a layer names, rebuilt by acceptedBase for THIS shop's theme folder — or its product photos (Look v3:
+ *  "From your products"); a photo from anywhere else refuses the save. */
 function cleanImages<L extends { home?: unknown[] }>(layer: L, tenantId: string): L | null {
   const host = storeHost(BLOB_STORE_ID)
   const fix = (img: { base: string } | null | undefined) => {
     if (!img) return img
-    const base = host ? acceptedBase(img.base, host, tenantId, 'theme') : null
+    const base = host ? acceptedBase(img.base, host, tenantId, 'theme') ?? acceptedBase(img.base, host, tenantId, 'products') : null
     if (!base) throw new Error('image')
     return { ...img, base }
   }
@@ -81,7 +83,7 @@ export async function tryThemeAction(input: unknown): Promise<R<{ revisionId: st
   return { ok: true, ...r.value }
 }
 
-const Save = z.object({ revisionId: z.uuid(), version: z.number().int().positive(), style: z.string().regex(/^[a-z0-9-]{1,40}$/), layer: z.object({ settings: z.unknown(), home: z.array(z.unknown()).optional() }) })
+const Save = z.object({ revisionId: z.uuid(), version: z.number().int().positive(), style: z.string().regex(/^[a-z0-9-]{1,40}$/), layer: z.object({ settings: z.unknown(), home: z.array(z.unknown()).optional(), site: z.unknown().optional(), menus: z.unknown().optional() }) })
 
 export async function saveLookAction(input: unknown): Promise<R<{ version: number }>> {
   const p = Save.safeParse(input)
@@ -98,8 +100,12 @@ export async function saveLookAction(input: unknown): Promise<R<{ version: numbe
     const layer = p.data.layer as { settings?: { brandColour?: string | null }; home?: unknown[] }
     const colour = layer.settings?.brandColour
     if (colour) { const sch = resolveTheme(m, { style: p.data.style }).schemes; const why = brandColourProblem(colour, [sch.paper, sch.tint]); if (why) return { error: why } }
+    // A palette must read with what it keeps from this style (sale and saving words, the tint).
+    const pal = (p.data.layer.site as { palette?: Palette | null } | undefined)?.palette
+    if (pal) { const sch = resolveTheme(m, { style: p.data.style }).schemes; const why = paletteProblem({ ...pal }, [sch.paper, sch.tint]); if (why) return { error: why } }
     // Stored as parsed: unknown settings keys are dropped (tenancy audit 2026-11-08).
-    const clean = cleanImages({ ...layer, settings: LayerSchema.parse(layer).settings }, t)
+    const parsed = LayerSchema.parse(layer)
+    const clean = cleanImages({ ...layer, settings: parsed.settings, ...(parsed.site ? { site: parsed.site } : {}), ...(parsed.menus ? { menus: parsed.menus } : {}) }, t)
     if (!clean) return { error: 'A photo didn’t come from this shop. Upload it again.' }
     const s = await saveDraft(tx, t, { userId: auth.userId, email: auth.email }, { revisionId: rev.id, version: p.data.version, styleKey: p.data.style, settings: clean })
     if (!s.ok) return { error: s.why === 'stale' ? `${rev.updatedByEmail ?? 'Someone'} changed this draft a moment ago. Reload to see their changes.` : s.why === 'published' ? 'This look was published. Reload to keep editing.' : 'This draft is gone. Reload.' }

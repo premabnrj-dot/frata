@@ -130,6 +130,8 @@ export type StoreCard = {
   categoryId: string | null; attributes: Record<string, string[]>; tags: string[]
   /** Offers the shop shows on this product, raw (live decided at render: offer-showcase.ts). */
   offers?: ShowOffer[]
+  /** A sample piece in the customizer's preview (src/lib/themes/sample.ts); never set by a read here. */
+  sample?: true
 }
 export type StoreCollection = { id: string; handle: string; title: string; description: string; kind: 'manual' | 'auto'; matchAll: boolean; rules: unknown[]; sort: string; productIds: string[] }
 export type StoreCatalogue = { products: StoreCard[]; collections: StoreCollection[] }

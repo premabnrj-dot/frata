@@ -117,7 +117,9 @@ export function OfferProgress({ q }: { q: PublicQuote }) {
 }
 
 /** The header's bag button and the drawer it opens (also opened by Add to bag). */
-export function BagButton({ checkoutHref, shopHref, label = 'Bag', count = ['Bag, 1 item', 'Bag, {n} items'] }: { checkoutHref: string; shopHref: string; label?: string
+export function BagButton({ checkoutHref, shopHref, label = 'Bag', count = ['Bag, 1 item', 'Bag, {n} items'], icon }: { checkoutHref: string; shopHref: string; label?: string
+  /** The shop's bag icon, drawn on the server (Look v4): shown in place of the word, the count on it; the name stays. */
+  icon?: React.ReactNode
   /** The button's name with a count, one and many (the shop's words; the name starts with the visible label). */
   count?: [string, string] }) {
   const items = useBag()
@@ -132,7 +134,10 @@ export function BagButton({ checkoutHref, shopHref, label = 'Bag', count = ['Bag
   const n = items.reduce((a, i) => a + i.qty, 0)
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="whitespace-nowrap px-2 py-2 text-sm" aria-label={(n === 1 ? count[0] : count[1]).replace('{n}', String(n))}>{label}{n ? <> · <span key={n} className="inline-block animate-count">{n}</span></> : ''}</button>
+      <button type="button" onClick={() => setOpen(true)} className={icon ? 'relative grid size-11 place-items-center' : 'whitespace-nowrap px-2 py-2 text-sm'} aria-label={(n === 1 ? count[0] : count[1]).replace('{n}', String(n))}>
+        {icon ? <>{icon}{n > 0 && <span key={n} className="absolute right-0.5 top-0.5 grid min-w-4 animate-count place-items-center rounded-full bg-store-accent px-1 text-[0.625rem] font-medium leading-4 text-store-on-accent">{n}</span>}</>
+          : <>{label}{n ? <> · <span key={n} className="inline-block animate-count">{n}</span></> : ''}</>}
+      </button>
       <dialog ref={ref} data-store-drawer onClose={() => setOpen(false)} aria-label="Your bag"
         className="m-0 ml-auto h-dvh max-h-none w-full max-w-md overflow-y-auto bg-store-paper p-0 text-store-ink">
         {open && (

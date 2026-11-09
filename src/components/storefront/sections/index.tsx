@@ -1,4 +1,7 @@
+import { ShopIcon } from '../icon'
 import Link from 'next/link'
+import { unstable_rethrow } from 'next/navigation'
+import { errName } from '@/lib/log'
 import { inCollection, isListed, priceOf } from '@/domains/storefront/listing'
 import { lookPieces, sourceProducts } from '@/domains/storefront/sources'
 import { truePromises } from '@/domains/themes/readiness'
@@ -24,7 +27,9 @@ import type { Href } from '../shell'
 
 export type SectionCtx = { shop: StoreShop; cat: StoreCatalogue; theme: ResolvedTheme; href: Href; now: Date; bestSellers?: Partial<Record<30 | 90, string[]>>
   /** The page's first section: only its photos load ahead of the rest (speed review P15: four `priority` images competed). */
-  lead?: boolean }
+  lead?: boolean
+  /** The customizer's preview: a section that fails says so there (on the shop it is left out). */
+  preview?: boolean }
 const wrap = 'mx-auto max-w-6xl px-4 sm:px-6'
 const pad = 'py-[calc(var(--store-space)*2.5rem)] sm:py-[calc(var(--store-space)*3.5rem)]'
 const rupees = (p: number) => formatInr(paise(p))
@@ -66,7 +71,7 @@ function Hero({ s, ctx }: { s: SectionOf<'hero'>; ctx: SectionCtx }) {
     return (
       <section className={`${wrap} ${pad} grid items-center gap-8 sm:grid-cols-2`}>
         <div className={`relative overflow-hidden bg-store-chip ${s.mask === 'arch' ? 'rounded-t-full' : 'rounded-[var(--store-radius)]'} aspect-[4/5]`}>
-          <Photo p={img} alt={img.alt} sizes="(min-width: 640px) 50vw, 100vw" priority={!!ctx.lead} className="absolute inset-0 h-full w-full object-cover" />
+          <Photo p={img} focus={img.focus} alt={img.alt} sizes="(min-width: 640px) 50vw, 100vw" priority={!!ctx.lead} className="absolute inset-0 h-full w-full object-cover" />
         </div>
         <div className="space-y-4">{title}{text && <p className="max-w-xl text-lg text-store-sub">{text}</p>}<Button b={s.button} href={ctx.href} /></div>
       </section>
@@ -74,8 +79,8 @@ function Hero({ s, ctx }: { s: SectionOf<'hero'>; ctx: SectionCtx }) {
   }
   const centred = s.position === 'centre'
   return (
-    <section className={`relative ${tall} overflow-hidden bg-store-chip`}>
-      <Photo p={img} alt={s.layout === 'image' ? heading : img.alt} sizes="100vw" priority={!!ctx.lead} className="absolute inset-0 h-full w-full object-cover" />
+    <section data-bleed="" className={`relative ${tall} overflow-hidden bg-store-chip`}>
+      <Photo p={img} focus={img.focus} alt={s.layout === 'image' ? heading : img.alt} sizes="100vw" priority={!!ctx.lead} className="absolute inset-0 h-full w-full object-cover" />
       {s.layout === 'image_text' && (
         <div className={`relative z-10 flex ${tall} ${centred ? 'items-center justify-center text-center' : 'items-end'} bg-linear-to-t from-black/45 via-black/10 to-transparent`}>
           <div className={`${wrap} w-full space-y-3 py-10 text-white`}>{title}{text && <p className={`max-w-xl text-lg ${centred ? 'mx-auto' : ''}`}>{text}</p>}<Button b={s.button} href={ctx.href} /></div>
@@ -97,7 +102,7 @@ function CollectionTiles({ s, ctx }: { s: SectionOf<'collection_tiles'>; ctx: Se
   return (
     <section aria-labelledby={h} className={`${wrap} pb-[calc(var(--store-space)*3rem)]`}>
       {s.heading ? <div className="mb-4"><H2 id={h}>{s.heading}</H2></div> : <h2 id={h} className="sr-only">{wordsFor(ctx.shop.shopLanguage).collectionsNav}</h2>}
-      <ul className={circle ? '-mx-4 flex snap-x gap-4 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0' : '-mx-4 flex snap-x gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0'}>
+      <ul className={circle ? '-mx-4 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 sm:mx-0 sm:scroll-px-0 sm:flex-wrap sm:px-0' : '-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 sm:mx-0 sm:scroll-px-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0'}>
         {tiles.map(({ c, first }) => (
           <li key={c.id} className={circle ? 'w-24 shrink-0 snap-start text-center sm:w-28' : 'w-[70%] shrink-0 snap-start sm:w-auto'}>
             <Link href={href(`/collections/${c.handle}`)} className="group block">
@@ -127,7 +132,7 @@ function Products({ s, ctx }: { s: SectionOf<'products'>; ctx: SectionCtx }) {
     <section aria-labelledby={h} className={wrap}>
       <div className="mb-4 flex items-baseline justify-between"><h2 id={h} className="text-xl"><Sized>{s.heading}</Sized></h2>{all && <Link href={ctx.href(all)} className="text-sm underline underline-offset-4">{wordsFor(ctx.shop.shopLanguage).seeAll}</Link>}</div>
       {s.layout === 'rail'
-        ? <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">{list.slice(0, s.count).map((p, i) => <div key={p.id} className="w-[44%] shrink-0 snap-start sm:w-[23%]"><ProductCard p={p} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} priority={!!ctx.lead && i < 2} /></div>)}</ul>
+        ? <ul className="-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:scroll-px-0 sm:px-0">{list.slice(0, s.count).map((p, i) => <div key={p.id} className="w-[44%] shrink-0 snap-start sm:w-[23%]"><ProductCard p={p} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} priority={!!ctx.lead && i < 2} /></div>)}</ul>
         : <ProductGrid products={list.slice(0, s.count)} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} empty={wordsFor(ctx.shop.shopLanguage).emptyShop} lead={!!ctx.lead} />}
     </section>
   )
@@ -164,16 +169,17 @@ function Promises({ s, ctx }: { s: SectionOf<'promises'>; ctx: SectionCtx }) {
   const f = ctx.shop
   const t = truePromises({ collections: [], codOn: f.codOn, freeShippingAbove: f.freeShippingAbove, returnDays: f.returnDays, dispatchDays: f.dispatchDays })
   const w = wordsFor(f.shopLanguage).promise
-  const words = s.show.filter((k) => t.includes(k)).map((k) =>
+  const ICON = { cod: 'cash', free_shipping: 'truck', returns: 'return', dispatch: 'package' } as const
+  const words = s.show.filter((k) => t.includes(k)).map((k) => [k,
     k === 'cod' ? w.cod
       : k === 'free_shipping' ? fill(w.freeShipping, { above: rupees(f.freeShippingAbove!) })
         : k === 'returns' ? fill(f.returnKind === 'exchange_only' ? w.exchange : f.returnKind === 'refund_only' ? w.returns : w.exchangeOrReturns, { d: f.returnDays })
-          : fill(f.dispatchDays === 1 ? w.shipsDay : w.shipsDays, { d: f.dispatchDays }))
+          : fill(f.dispatchDays === 1 ? w.shipsDay : w.shipsDays, { d: f.dispatchDays })] as const)
   if (!words.length) return null
   return (
     <section aria-label={w.label} className={`${wrap} ${pad}`}>
       <ul className="grid grid-cols-2 gap-3 text-center text-sm sm:grid-cols-4">
-        {words.map((w) => <li key={w} className="rounded-[var(--store-radius)] border border-store-line px-3 py-5">{w}</li>)}
+        {words.map(([k, w]) => <li key={k} className="flex flex-col items-center gap-2 rounded-[var(--store-radius)] border border-store-line px-3 py-5">{k in ICON && <ShopIcon name={ICON[k as keyof typeof ICON]} set={ctx.theme.site.icons} className="size-6 text-store-accent" />}{w}</li>)}
       </ul>
     </section>
   )
@@ -185,7 +191,7 @@ function ImageText({ s, ctx }: { s: SectionOf<'image_text'>; ctx: SectionCtx }) 
   return (
     <section aria-labelledby={h} className={`${wrap} ${pad} grid items-center gap-8 sm:grid-cols-2`}>
       <div className={`relative aspect-[4/5] overflow-hidden rounded-[var(--store-radius)] bg-store-chip ${s.side === 'right' ? 'sm:order-2' : ''}`}>
-        <Photo p={s.image} alt={s.image.decorative ? '' : s.image.alt} sizes="(min-width: 640px) 50vw, 100vw" className="absolute inset-0 h-full w-full object-cover" />
+        <Photo p={s.image} focus={s.image.focus} alt={s.image.decorative ? '' : s.image.alt} sizes="(min-width: 640px) 50vw, 100vw" className="absolute inset-0 h-full w-full object-cover" />
       </div>
       <div className="space-y-4">
         <H2 id={h}>{s.heading}</H2>
@@ -201,7 +207,7 @@ function DropTeaser({ s, ctx }: { s: SectionOf<'drop_teaser'>; ctx: SectionCtx }
   if (at.getTime() <= ctx.now.getTime()) return null
   return (
     <section aria-label={s.heading} className={`relative overflow-hidden bg-store-button text-store-on-button`}>
-      {s.image && <Photo p={s.image} alt={s.image.decorative ? '' : s.image.alt} sizes="100vw" className="absolute inset-0 h-full w-full object-cover opacity-40" />}
+      {s.image && <Photo p={s.image} focus={s.image.focus} alt={s.image.decorative ? '' : s.image.alt} sizes="100vw" className="absolute inset-0 h-full w-full object-cover opacity-40" />}
       <div className={`${wrap} relative ${pad} text-center`}>
         <p className="text-3xl sm:text-5xl" style={{ fontFamily: 'var(--store-display)' }}><Sized>{s.heading}</Sized></p>
         <p className="mt-3 text-base">{dayIN(at)}</p>
@@ -237,7 +243,7 @@ function Logos({ s }: { s: SectionOf<'logos'> }) {
     <section aria-labelledby={h} className={`${wrap} ${pad} space-y-4 text-center`}>
       <h2 id={h} className="text-sm uppercase tracking-[0.2em] text-store-sub">{s.heading}</h2>
       <ul className="flex flex-wrap items-center justify-center gap-x-10 gap-y-6">
-        {s.images.map((img, i) => <li key={i} className="relative h-10 w-28"><Photo p={img} alt={img.alt} sizes="112px" className="absolute inset-0 h-full w-full object-contain" /></li>)}
+        {s.images.map((img, i) => <li key={i} className="relative h-10 w-28"><Photo p={img} focus={img.focus} alt={img.alt} sizes="112px" className="absolute inset-0 h-full w-full object-contain" /></li>)}
       </ul>
     </section>
   )
@@ -253,7 +259,7 @@ function ShopTheLook({ s, ctx }: { s: SectionOf<'shop_the_look'>; ctx: SectionCt
   return (
     <section aria-labelledby={h} className={`${wrap} ${pad} grid items-start gap-8 sm:grid-cols-2`}>
       <div className="relative aspect-[4/5] overflow-hidden rounded-[var(--store-radius)] bg-store-chip">
-        <Photo p={s.image} alt={s.image.decorative ? '' : s.image.alt} sizes="(min-width: 640px) 50vw, 100vw" className="absolute inset-0 h-full w-full object-cover" />
+        <Photo p={s.image} focus={s.image.focus} alt={s.image.decorative ? '' : s.image.alt} sizes="(min-width: 640px) 50vw, 100vw" className="absolute inset-0 h-full w-full object-cover" />
         {pieces.map((x, i) => (
           <Link key={x.handle} href={ctx.href(`/products/${x.handle}`)} style={{ left: `${x.x}%`, top: `${x.y}%` }} aria-label={`${i + 1}: ${x.p.title}`}
             className="absolute grid size-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-store-paper text-sm font-semibold text-store-ink shadow">{i + 1}</Link>
@@ -274,18 +280,35 @@ function ShopTheLook({ s, ctx }: { s: SectionOf<'shop_the_look'>; ctx: SectionCt
   )
 }
 
-function One({ s, ctx }: { s: SectionInstance; ctx: SectionCtx }) {
+/** One section's markup, computed now (each section is a plain function of its settings and data, called directly,
+ *  so the guard below sees anything it throws while it reads its data). */
+function One({ s, ctx }: { s: SectionInstance; ctx: SectionCtx }): React.ReactNode {
   switch (s.key) {
-    case 'hero': return <Hero s={s} ctx={ctx} />
-    case 'collection_tiles': return <CollectionTiles s={s} ctx={ctx} />
-    case 'products': return <Products s={s} ctx={ctx} />
-    case 'price_tiles': return <PriceTiles s={s} ctx={ctx} />
-    case 'promises': return <Promises s={s} ctx={ctx} />
-    case 'image_text': return <ImageText s={s} ctx={ctx} />
-    case 'drop_teaser': return <DropTeaser s={s} ctx={ctx} />
-    case 'rich_text': return <RichText s={s} ctx={ctx} />
-    case 'logos': return <Logos s={s} />
-    case 'shop_the_look': return <ShopTheLook s={s} ctx={ctx} />
+    case 'hero': return Hero({ s, ctx })
+    case 'collection_tiles': return CollectionTiles({ s, ctx })
+    case 'products': return Products({ s, ctx })
+    case 'price_tiles': return PriceTiles({ s, ctx })
+    case 'promises': return Promises({ s, ctx })
+    case 'image_text': return ImageText({ s, ctx })
+    case 'drop_teaser': return DropTeaser({ s, ctx })
+    case 'rich_text': return RichText({ s, ctx })
+    case 'logos': return Logos({ s })
+    case 'shop_the_look': return ShopTheLook({ s, ctx })
+  }
+}
+
+/**
+ * One section, guarded: a section that throws while it renders is left out of the page (the rest of the shop still
+ * renders) and named in the customizer's preview. Called as a function so the guard sees its errors; Next's own
+ * control-flow errors pass through (architecture review 2026-11-09, finding 5). Logs the error's name only.
+ */
+export function Guarded({ s, ctx }: { s: SectionInstance; ctx: SectionCtx }) {
+  try {
+    return One({ s, ctx })
+  } catch (e) {
+    unstable_rethrow(e)
+    console.error('section failed', s.key, errName(e))
+    return ctx.preview ? <div role="status" className="mx-4 my-6 grid min-h-28 place-items-center rounded-[var(--store-radius)] border border-dashed border-store-sub p-4 text-center text-sm text-store-sub sm:mx-6">This section couldn’t be shown. Hide it or undo the last change.</div> : null
   }
 }
 
@@ -294,7 +317,7 @@ export function Sections({ list, ctx }: { list: SectionInstance[]; ctx: SectionC
     <>
       {list.filter((s) => !s.hidden).map((s, i) => (
         <Paint key={s.id} s={s} theme={ctx.theme}>
-          <div data-section={s.id} className="contents"><One s={s} ctx={{ ...ctx, lead: i === 0 }} /></div>
+          <div data-section={s.id} data-key={s.key} data-lead={i === 0 ? '' : undefined} className="contents"><Guarded s={s} ctx={{ ...ctx, lead: i === 0 }} /></div>
         </Paint>
       ))}
     </>

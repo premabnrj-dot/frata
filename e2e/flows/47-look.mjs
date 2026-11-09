@@ -1,7 +1,7 @@
 // =============================================================================
 // FLOW: look — themes T1 (docs/specs/2026-11-08-themes.md): Console › Look shows today's look (Classic, recorded by
 // the migration), the gallery, a theme's details; Try opens a draft that shoppers don't see; the customizer saves
-// (style, brand colour refused when too light, sections added, moved, hidden); Publish lists the changes and the
+// (style, brand colour refused when too light, sections added, moved, hidden); Publish asks in one line, the
 // shop changes; History restores; Undo puts the old look back. A partner edits but can't publish; another shop's
 // revision can't be previewed; only the preview may be framed, and only by the console.
 // =============================================================================
@@ -21,7 +21,7 @@ export default {
     const open = async (who, opts) => { const ctx = await signedIn(t.browser, who, opts); const p = await ctx.newPage(); p.setDefaultTimeout(15_000); p.on('pageerror', (e) => t.errors.push(e.message)); return p }
     const riya = await open('owner', { viewport: { width: 1280, height: 900 } })
 
-    await t.step('Look: today’s look is Classic, recorded; five themes, free', async () => {
+    await t.step('Look: today’s look is Classic, recorded; three themes to try, free', async () => {
       // Production shops got their look recorded by the migration; this seed shop is made after the migrations, so it
       // has none yet and renders Classic from its settings (its first publish records it: checked under History).
       const [{ n }] = await db`select count(*)::int n from shop_theme_publishes where tenant_id = ${KESAR}`
@@ -29,7 +29,10 @@ export default {
       await riya.goto(CONSOLE + '/console/look')
       await riya.getByRole('heading', { level: 1, name: 'Look' }).waitFor()
       await riya.getByRole('heading', { name: 'Classic · Oxide' }).waitFor()
-      for (const name of ['Classic', 'Editorial', 'Bazaar', 'Minimal', 'Atelier']) await riya.getByRole('button', { name, exact: true }).waitFor()
+      // Three themes are offered (plan 2026-11-09-themes-three); Classic and Atelier still render, but aren't offered.
+      // The 2.0 versions aren't released in this seed, so the gallery shows each theme's released 1.x (Minimal, not Studio).
+      for (const name of ['Editorial', 'Bazaar', 'Minimal']) await riya.getByRole('button', { name, exact: true }).waitFor()
+      for (const name of ['Classic', 'Atelier']) assert.equal(await riya.getByRole('button', { name, exact: true }).count(), 0, `${name} is not offered`)
       await riya.screenshot({ path: t.out('look'), fullPage: true })
       const phone = await open('owner', { viewport: { width: 390, height: 844 } })
       await phone.goto(CONSOLE + '/console/look')
@@ -49,24 +52,34 @@ export default {
       await riya.waitForURL(/\/console\/look\/customize$/)
       ;[{ id: rev }] = await db`select id from shop_theme_revisions where tenant_id = ${KESAR} and theme_key = 'bazaar'`
       assert.ok(!/Shop tabs/.test(await shopHtml()), 'shoppers see no draft')
+      // The preview opens on a computer (Look v3); Bazaar's tab bar is a phone's.
+      await riya.getByRole('group', { name: 'Preview size' }).getByRole('button', { name: 'Phone' }).click()
       await riya.frameLocator('iframe[title="Your shop with this look"]').getByRole('navigation', { name: 'Shop tabs' }).waitFor()
+      await riya.getByRole('group', { name: 'Preview size' }).getByRole('button', { name: 'Computer' }).click()
       await riya.screenshot({ path: t.out('customizer') })
     })
 
     await t.step('Theme settings: a style, a brand colour (a too-light one refused), saved', async () => {
-      await riya.getByRole('tab', { name: 'Theme settings' }).click()
+      await riya.getByRole('tab', { name: 'Style' }).click()
       await riya.getByText('Genda', { exact: true }).click()
       await riya.getByRole('switch', { name: 'My own brand colour' }).click()
-      await riya.getByLabel('Brand colour', { exact: true }).fill('#f2e6c8')
+      await riya.getByLabel('Any colour', { exact: true }).fill('#f2e6c8')
       await riya.getByText('Too light on this background. Pick a deeper shade.').first().waitFor()
-      await riya.getByLabel('Brand colour', { exact: true }).fill('#7a1f2b')
+      await riya.getByLabel('Any colour', { exact: true }).fill('#7a1f2b')
       await until(async () => { const [r] = await db`select style_key, settings from shop_theme_revisions where id = ${rev}`; return r.style_key === 'genda' && r.settings.settings?.brandColour === '#7A1F2B' }, 10_000)
       await riya.getByRole('status').getByText('Saved').waitFor()
+      // Saved: leaving asks nothing (Look v3 asks only while a change is still on its way).
+      await riya.getByRole('link', { name: '‹ Look' }).click()
+      await riya.waitForURL(/\/console\/look$/)
+      await riya.goto(CONSOLE + '/console/look/customize')
+      await riya.getByRole('tab', { name: 'Style' }).waitFor()
     })
 
     await t.step('Sections: add Rich text, move it up, hide New in; every change saved', async () => {
       await riya.getByRole('tab', { name: 'Sections' }).click()
-      await riya.getByRole('button', { name: '+ Add a section' }).click()
+      await riya.getByRole('button', { name: 'Add a section', exact: true }).click()
+      // The library (Look v3): search finds it by a word in its description.
+      await riya.getByRole('dialog', { name: 'Add a section' }).getByPlaceholder('Search sections').fill('paragraphs')
       await riya.getByRole('dialog', { name: 'Add a section' }).getByRole('button', { name: /^Rich text/ }).click()
       await riya.getByLabel('Text (a blank line starts a new paragraph)').fill('Every piece is hand-finished in Jaipur.')
       // T1·0: from the autosave landing to the preview showing it (budget 1 s p75 on a laptop; 2 s here, a busy CI box).
@@ -87,13 +100,18 @@ export default {
       await until(async () => { const [r] = await db`select settings from shop_theme_revisions where id = ${rev}`; return (r.settings.home ?? []).some((s) => s.key === 'products' && s.hidden) }, 10_000)
     })
 
-    await t.step('Publish: the change list, then the shop changes; Undo is offered', async () => {
+    await t.step('Publish: one line to confirm, the preview goes live, then a popup over the shop; Undo is offered', async () => {
       await riya.getByRole('button', { name: 'Publish', exact: true }).click()
-      const d = riya.getByRole('dialog', { name: /Publish Bazaar · Genda/ })
-      await d.getByText('Theme: Bazaar · Genda').waitFor()
+      const d = riya.getByRole('dialog', { name: 'Publish Bazaar?' })
+      await d.getByText('Shoppers see it on their next visit.').waitFor()
       await riya.screenshot({ path: t.out('publish') })
       await d.getByRole('button', { name: 'Publish', exact: true }).click()
-      await riya.getByRole('heading', { level: 1, name: 'Published' }).waitFor()
+      await riya.getByText('Going live').waitFor()
+      await riya.screenshot({ path: t.out('going-live') })
+      const done = riya.getByRole('dialog', { name: 'Your shop has its new look' })
+      await done.waitFor()
+      await done.getByRole('link', { name: 'View your shop' }).waitFor()
+      await riya.screenshot({ path: t.out('published') })
       // The first publish recorded the look before it (lazy baseline): two rows, the older one Classic.
       const pubs = await db`select r.theme_key from shop_theme_publishes p join shop_theme_revisions r on r.id = p.revision_id where p.tenant_id = ${KESAR} order by p.published_at, p.id`
       assert.deepEqual(pubs.map((x) => x.theme_key), ['classic', 'bazaar'])
@@ -101,7 +119,7 @@ export default {
       assert.ok(/hand-finished in Jaipur/.test(await shopHtml()), 'the published sections are on the shop')
       const audit = await db`select action from audit_events where tenant_id = ${KESAR} and action = 'look.publish'`
       assert.equal(audit.length, 1)
-      await riya.getByRole('link', { name: 'Back to Look' }).click()
+      await riya.keyboard.press('Escape')
       await riya.getByRole('heading', { name: 'Bazaar · Genda' }).waitFor()
     })
 
@@ -110,6 +128,9 @@ export default {
       await riya.getByText('Bazaar · Genda').waitFor()
       await riya.getByText('Classic · Oxide').waitFor()
       await riya.getByRole('button', { name: 'Restore' }).first().click()
+      // Restoring with a draft open asks first: it replaces that draft (Look v3).
+      const ask = riya.getByRole('dialog', { name: /^Restore the look from/ })
+      if (await ask.isVisible().catch(() => false)) await ask.getByRole('button', { name: 'Restore as draft' }).click()
       await riya.waitForURL(/\/console\/look\/customize$/)
       assert.ok(/Shop tabs/.test(await shopHtml()), 'restoring makes a draft, not a publish')
     })
@@ -118,6 +139,7 @@ export default {
       await riya.goto(CONSOLE + '/console/look')
       await riya.getByRole('button', { name: 'More' }).click()
       await riya.getByRole('menuitem', { name: 'Undo last publish' }).click()
+      await riya.getByRole('dialog', { name: /back on your shop\?$/ }).getByRole('button', { name: 'Put it back' }).click()
       await riya.getByRole('heading', { name: 'Classic · Oxide' }).waitFor()
       await shopSays(/Shop tabs/, false)
       await riya.getByText('You have unpublished changes').waitFor()
@@ -143,7 +165,7 @@ export default {
       await riya.goto(CONSOLE + '/console/look/customize')
       await riya.getByLabel('Page').selectOption('product')
       await riya.getByRole('tab', { name: 'Product page' }).click()
-      await riya.getByRole('button', { name: 'With thumbnails' }).click()
+      await riya.getByRole('button', { name: 'Thumbnails under' }).click()
       await riya.getByRole('button', { name: 'Framed' }).click()
       const [{ id: draft }] = await db`select r.id from shop_theme_revisions r where r.tenant_id = ${KESAR} and not exists (select 1 from shop_theme_publishes p where p.revision_id = r.id) order by r.created_at desc limit 1`
       await riya.getByRole('button', { name: 'Folded' }).click()
@@ -163,8 +185,8 @@ export default {
       await db`update products set description = ${pr.description} where id = ${pr.id}`
       await riya.getByLabel('Page').selectOption('home')
       await riya.getByRole('tab', { name: 'Sections' }).click()
-      await riya.getByRole('button', { name: '+ Add a section' }).click()
-      await riya.getByRole('dialog', { name: 'Add a section' }).getByRole('button', { name: /^Products/ }).click()
+      await riya.getByRole('button', { name: 'Add a section', exact: true }).click()
+      await riya.getByRole('dialog', { name: 'Add a section' }).getByRole('list').getByRole('button', { name: /^Products/ }).click()
       await riya.getByRole('button', { name: 'Back in stock' }).click()
       await until(async () => { const [r] = await db`select settings from shop_theme_revisions where id = ${draft}`; return (r.settings.home ?? []).some((s) => s.source?.kind === 'back_in_stock') }, 10_000)
     })

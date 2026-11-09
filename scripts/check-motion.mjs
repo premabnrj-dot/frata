@@ -34,6 +34,8 @@ export const EXCEPTIONS = {
   draw: { props: ['stroke-dashoffset'], ms: LIMIT_MS, why: 'the one brand moment, a check drawn once (rule 26): stroke-dashoffset is paint only' },
   'nav-run': { props: [], ms: 1400, why: 'the progress bar creeping while a move is on its way; it is interrupted when the page lands' },
   'undo-window': { props: [], ms: 8000, why: 'the 8 s Undo window, shown as a shrinking bar (1D, § Work queues 4)' },
+  'going-live': { props: [], ms: 1400, why: 'publishing a look: the header line fills while the publish runs (Look v3), like nav-run' },
+  'going-sweep': { props: ['background-position'], ms: 1400, why: 'publishing a look: a light sweeps across the preview while it goes live (Look v3); paint only, inside the preview frame' },
 }
 const LAYOUT = /(?:^|[\s,_'"`])(?:all|(?:max-|min-)?(?:width|height)|top|left|right|bottom|inset(?:-[\w-]+)?|margin(?:-[\w-]+)?|padding(?:-[\w-]+)?|gap|row-gap|column-gap|flex-basis|flex|grid-template-(?:rows|columns)|font-size|line-height)(?=$|[\s,_;'"`])/
 const KEYWORDS = new Set(['linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'step-start', 'step-end', 'infinite', 'both', 'forwards', 'backwards', 'none', 'normal', 'reverse', 'alternate', 'alternate-reverse', 'running', 'paused', 'initial', 'inherit', 'unset'])

@@ -2,7 +2,8 @@
 Status: active (reviewed 2026-11-08: architecture, tenancy, security; owner calls decided) ·
 Date: 2026-11-08 · Spec: `docs/specs/2026-11-08-shop-addresses.md` (approved by the owner 2026-11-08 with the note "no
 descriptions or clarifications": spec § Words on screen) · Research: `docs/research/2026-11-08-shop-addresses.md`.
-D·0 is live (frrata.shop, main bce936b).
+D·0 is live (frrata.shop, main bce936b). D·1 is live: D1·1–D1·6 at main 98de1bb (migrations 0067, 0068), D1·7 Admin
+with migration 0069. Migrations were renumbered after the trials work took 0064–0066.
 
 Gates on every task: `npm test`, `npm run typecheck`, int tests with `INT_DB_HOST`, `verify:tenancy` for every
 migration, `impact-reviewer` on the task's diff, e2e for the flows it touches. A `claude/**` push never deploys; main
@@ -35,6 +36,16 @@ so production never runs code against a database it doesn't match. Every new or 
 | D1·5 | **Built as a browser move, not a 307 (2026-11-08, for the owner to confirm):** a shop page can't see its query string without becoming per-request, so a server redirect from an old name would drop `?utm_…` — Instagram links would lose their tags for Analytics. An old name renders the page (canonical = the current address, so search engines move) and the shop layout moves the browser to the same path, query and `#` on the current address (`movedUrl`, pure and tested: `//evil.com` and `/\evil.com` stay on our host; `/orders` never moves). The 307 of owner call 2 applies to D·2's own domains, where the move happens before the page is cached | e2e 52; `names.test.ts` |
 | D1·6 | Settings › Shop address (spec § Words): Change with "N changes left"; staff read-only; support visits refused server-side (banner already says why — no per-button reasons) | e2e 52 + 90 at 390 px |
 | D1·7 | Admin (aal2 not chosen: owner call 5, accepted risk): Addresses tab (names), **Rename <shop>'s address** (reason ≤ 500, no redirect), **Freeze address changes**; Admin › Names (protected, offensive, blocked domains; release = delete a retired `shop_names` row with a reason, refreshing its host). Close and takedown for the `admin` staff role only | admin int; e2e 90 |
+
+**D1·7 as built (tenancy audit 2026-11-08, safe):** rename, freeze and release are admin-role definers (0069) that
+audit themselves; blocked names are Admin rows with an audit row. Accepted, as in 0063: a definer trusts the
+`p_staff` uuid the Admin code passes (any frata_admin code could pass an admin's id); a stronger lock would read a
+transaction-local `app.staff_id` set by `adminDb`. A release's reason is written to the former holder's audit rows:
+staff never name another merchant in it.
+Built differently from mockup § 8 (impact review): Admin › Names is three parts (Blocked, Frrata's words read-only,
+Held with Release in the row) rather than one table. Telling the shop about Frrata's rename, freeze or release (spec
+§ 3, design rule 71: the reason and a Reply) comes with T·1's notices; until then the shop's address page shows
+"frozen" and the audit log keeps the reason.
 
 ## D·2 — Own domains (needs Vercel Pro: owner call 1)
 | Task | What | Verify |

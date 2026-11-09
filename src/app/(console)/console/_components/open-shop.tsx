@@ -11,7 +11,9 @@ export function OpenShop({ address, open, ready, canManage }: { address: string;
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   /** The one brand moment (rule 26) is drawn by the page's OpenMoment, which outlives this checklist. */
   const moment = useOpenMoment()
-  const [pending, start] = useTransition()
+  const [, start] = useTransition()
+  // Busy only while the action itself runs: a transition also waits for the page's re-render, which can lag (e2e 90-ux).
+  const [pending, setPending] = useState(false)
   // What the last successful action made true, until the page's own render agrees: the action's revalidation and
   // a late, stale render can arrive in either order (e2e 90-ux, 2026-11-07 and again 2026-11-08), and the button
   // must never offer to close a shop the merchant just closed.
@@ -19,7 +21,8 @@ export function OpenShop({ address, open, ready, canManage }: { address: string;
   useEffect(() => { if (known !== null && open === known) setKnown(null) }, [open, known])
   const isOpen = known ?? open
   const run = (fn: typeof openShop, done: string) => start(async () => {
-    const r = await fn()
+    setPending(true)
+    const r = await fn().finally(() => setPending(false))
     // Opening says so through the moment; closing (and any failure) says so here.
     setMsg(r.ok ? (fn === openShop && moment ? null : { ok: true, text: done }) : { ok: false, text: r.error })
     setAsk(false)

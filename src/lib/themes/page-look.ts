@@ -1,6 +1,7 @@
 import 'server-only'
-import type { Circle } from '@/components/storefront/shell'
+import type { Circle, StripPiece } from '@/components/storefront/shell'
 import { inCollection } from '@/domains/storefront/listing'
+import { sourceProducts } from '@/domains/storefront/sources'
 import { resolveStored } from '@/domains/themes/resolve'
 import type { ResolvedTheme } from '@/domains/themes/types'
 import type { StoreCatalogue, StoreShop, StoredLook } from '@/lib/queries/storefront'
@@ -18,6 +19,20 @@ export function circlesOf(cat: StoreCatalogue, now: Date): Circle[] {
     const first = inCollection(c, cat.products, now)[0]
     return first ? [{ handle: c.handle, title: c.title, image: first.images[0] ?? null }] : []
   }).slice(0, 8)
+}
+
+/** Whether this look's header or footer draws from the catalogue (circles, the shop panel, the Instagram strip). */
+export const shellNeedsCatalogue = (t: ResolvedTheme) => t.settings.header === 'circles' || t.settings.header === 'panel' || t.settings.footer === 'gram'
+/** The header's pictures (circles, or the shop panel) and the footer's strip, from one catalogue read. */
+export function shellPictures(t: ResolvedTheme, cat: StoreCatalogue | null, now: Date): { circles: Circle[]; strip: StripPiece[] } {
+  if (!cat) return { circles: [], strip: [] }
+  const circles = t.settings.header === 'circles' || t.settings.header === 'panel' ? circlesOf(cat, now) : []
+  const strip = t.settings.footer === 'gram' ? stripOf(cat, now) : []
+  return { circles, strip }
+}
+/** The Instagram strip: the newest six listed pieces that have a photo. */
+export function stripOf(cat: StoreCatalogue, now: Date): StripPiece[] {
+  return sourceProducts({ kind: 'newest' }, cat, now, []).filter((p) => p.images[0]).slice(0, 6).map((p) => ({ handle: p.handle, title: p.title, image: p.images[0]! }))
 }
 
 /** The Best sellers windows this Home uses (read only those; each read is cached an hour). */

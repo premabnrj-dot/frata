@@ -9,7 +9,7 @@ import type { Href } from './shell'
 import { fill, wordsFor, type Lang } from './words'
 import { Swatch, type SwatchColour, type SwatchImage } from './swatch'
 
-export type CardProduct = Omit<ListProduct, 'colours'> & { handle: string; options: string[]; images: (PhotoData & SwatchImage & { optionValue: string | null })[]; colours: (SwatchColour & { family: string | null })[] }
+export type CardProduct = Omit<ListProduct, 'colours'> & { sample?: true; handle: string; options: string[]; images: (PhotoData & SwatchImage & { optionValue: string | null })[]; colours: (SwatchColour & { family: string | null })[] }
 
 export const money = (p: number) => formatInr(paise(p))
 
@@ -20,7 +20,8 @@ export function ProductCard({ p, href, now, priority = false, badge = null, lang
   const price = priceOf(p)
   const w = wordsFor(lang)
   const t = cardTag(p, now)
-  const tag = (t ? w.tag[t] : null) ?? (badge ?? cardBadge(p.offers, now))?.label ?? null
+  // A sample piece (the customizer's preview only) says so before anything else.
+  const tag = p.sample ? 'Sample' : (t ? w.tag[t] : null) ?? (badge ?? cardBadge(p.offers, now))?.label ?? null
   const [cover, second] = p.images
   const ci = p.options.findIndex(isColourOption)
   const colours = ci >= 0 ? [...new Set(p.variants.map((v) => v.values[ci]!))] : []
@@ -34,7 +35,7 @@ export function ProductCard({ p, href, now, priority = false, badge = null, lang
           {tag && <span className="absolute left-2 top-2 rounded-[var(--store-radius)] bg-store-paper/90 px-1.5 py-0.5 text-xs">{tag}</span>}
         </div>
         <p className="line-clamp-2 text-sm leading-snug">{p.title}</p>
-        {price && <p className="text-sm"><span className="font-medium">{price.min !== price.max ? fill(w.from, { price: money(price.min) }) : money(price.min)}</span>{price.compareAt && <s className="ml-1.5 text-store-sub">{money(price.compareAt)}</s>}</p>}
+        {price && <p className="text-sm"><span className="store-price font-medium">{price.min !== price.max ? fill(w.from, { price: money(price.min) }) : money(price.min)}</span>{price.compareAt && <s className="ml-1.5 text-store-sub">{money(price.compareAt)}</s>}</p>}
       </Link>
       {colours.length > 1 && (
         <ul className="store-swatches mt-1.5 flex gap-1.5 overflow-x-auto pb-1" aria-label={fill(w.colours, { n: colours.length })}>

@@ -18,6 +18,7 @@ export const money = (name: string) => bigint(name, { mode: 'number' })
 
 import { MEMBER_ROLES, sqlList, type MemberRole } from '@/domains/tenancy/roles'
 import { PLAN_GRANTABLE } from '@/domains/modules/registry'
+import type { BlockedKind } from '@/domains/addresses/names'
 export { MEMBER_ROLES, type MemberRole }
 
 export const tenants = pgTable('tenants', {
@@ -29,7 +30,7 @@ export const tenants = pgTable('tenants', {
   createdAt: createdAt(),
   /** The first time the shop opened to shoppers; set once by a trigger, never cleared by a close (renames count from it). */
   firstOpenedAt: timestamp('first_opened_at', { withTimezone: true }),
-  /** Frrata froze address changes (a name or domain dispute); set by Admin. */
+  /** Frrata froze address changes (a name or domain dispute); set only through app_admin_freeze_address (0069). */
   addressFrozenAt: timestamp('address_frozen_at', { withTimezone: true }),
   /** Renames since the first opening: the limit's one count, raised only by app_change_shop_address (taking back an old name counts too). */
   renamesUsed: integer('renames_used').notNull().default(0),
@@ -38,7 +39,7 @@ export const tenants = pgTable('tenants', {
 /**
  * Every name a shop has had (shop addresses D·1). The primary key means a name is never given to a second shop; the
  * current one has no `retired_at`. A retired name redirects to the current one unless Frrata retired it. Written only by
- * the trigger on `tenants` and the rename definer (drizzle/0065); `tenants.slug` mirrors the current row.
+ * the trigger on `tenants` and the rename and release definers (drizzle/0068, 0069); `tenants.slug` mirrors the current row.
  */
 export const shopNames = pgTable('shop_names', {
   name: text('name').primaryKey(),
@@ -55,7 +56,7 @@ export const shopNames = pgTable('shop_names', {
 /** Names and domains no shop may take: protected brands, offensive words, blocked domains (Admin, with a reason). Frrata's own routing words stay in code (RESERVED). */
 export const blockedNames = pgTable('blocked_names', {
   name: text('name').primaryKey(),
-  kind: text('kind').notNull(),
+  kind: text('kind').$type<BlockedKind>().notNull(),
   reason: text('reason').notNull(),
   createdBy: uuid('created_by'),
   createdAt: createdAt(),

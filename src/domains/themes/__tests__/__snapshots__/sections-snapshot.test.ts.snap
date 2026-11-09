@@ -164,6 +164,33 @@ exports[`section schemas > hero keeps its shape 1`] = `
               "default": false,
               "type": "boolean",
             },
+            "focus": {
+              "anyOf": [
+                {
+                  "properties": {
+                    "x": {
+                      "maximum": 100,
+                      "minimum": 0,
+                      "type": "number",
+                    },
+                    "y": {
+                      "maximum": 100,
+                      "minimum": 0,
+                      "type": "number",
+                    },
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                  ],
+                  "type": "object",
+                },
+                {
+                  "type": "null",
+                },
+              ],
+              "default": null,
+            },
             "height": {
               "exclusiveMinimum": 0,
               "maximum": 9007199254740991,

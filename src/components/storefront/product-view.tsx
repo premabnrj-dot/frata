@@ -43,7 +43,7 @@ export function productOffer(p: StoreProduct, now: Date) {
 export function ProductView({ shop, p, now, live = false, layout, offers, below }: {
   shop: StoreShop; p: StoreProduct; now: Date; live?: boolean
   /** The theme's product page (T2); absent = today's layout. */
-  layout?: Pick<ThemeSettings, 'gallery' | 'details'>
+  layout?: Pick<ThemeSettings, 'gallery' | 'details'> & Partial<Pick<ThemeSettings, 'buyBoxSticky' | 'buyBar' | 'bottomTabs'>>
   /** Offers O·2's lines after the price, and what modules put under the page (Reviews, Size and fit): nothing without them. */
   offers?: OfferLine[]; below?: React.ReactNode
 }) {
@@ -72,7 +72,7 @@ export function ProductView({ shop, p, now, live = false, layout, offers, below 
       <BuyBox title={p.title} options={p.options} values={p.optionValues} variants={p.variants.map(({ restockedAt: _, ...v }) => v)} colours={p.colours} images={p.images}
         chart={p.sizeChart && p.sizeChart.rows.length ? p.sizeChart : null} model={model} now={now.toISOString()}
         delivery={{ shippingFlat: shop.shippingFlat, freeShippingAbove: shop.freeShippingAbove, codOn: shop.codOn, codMin: shop.codMin, codMax: shop.codMax, codCharge: shop.codCharge }}
-        live={live} notes={notes} taxNote={shop.pricesIncludeGst ? w.taxIncluded : w.taxAdded} w={buyWords(shop.shopLanguage)} gallery={layout?.gallery} offers={offers ?? pdpLines(p.offers, now)} />
+        live={live} notes={notes} taxNote={shop.pricesIncludeGst ? w.taxIncluded : w.taxAdded} w={buyWords(shop.shopLanguage)} gallery={layout?.gallery} stickyBox={layout?.buyBoxSticky} buyBar={layout?.buyBar} aboveTabs={layout?.bottomTabs} offers={offers ?? pdpLines(p.offers, now)} />
       {layout?.details === 'folded'
         ? <div className="mt-8 max-w-2xl divide-y divide-store-line border-y border-store-line">
             {p.description && <details><summary className="flex min-h-12 cursor-pointer items-center justify-between text-lg font-medium">{w.about}<span aria-hidden="true">+</span></summary>

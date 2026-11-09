@@ -59,6 +59,8 @@ export default {
         ['admin-staff', 'frata', '/admin/staff'],
         ['admin-merchant-new', 'frata', '/admin/merchants/new'],
         ['admin-merchant-plan', 'frata', `/admin/merchants/${KESAR}/plan`],
+        ['admin-merchant-addresses', 'frata', `/admin/merchants/${KESAR}/addresses`],
+        ['admin-names', 'frata', '/admin/names'],
         ['admin-merchant-support', 'frata', `/admin/merchants/${M1}/support`],
         ['admin-plan-edit', 'frata', '/admin/plans/launch'],
         // A merchant with a very long name: its header and its "Open … console" button (impact review U·2b).

@@ -2,8 +2,8 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.24.0
-  verified: 2026-11-08
+  version: 2.27.0
+  verified: 2026-11-09
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
 ---
@@ -259,7 +259,7 @@ shop can have or not (Messages, RTO Shield, Reviews…).
 
 - A shop's look is **data over one section library**: `src/domains/themes/` (types, `resolveTheme` — the ONE merge
   of manifest → style → the merchant's layer — `contrast`, section SAVE schemas, `readinessOf`, `carryOver`,
-  `diffLayers`, `baselineRevision`) and `src/components/storefront/sections/` (server components). Rendering reads
+  `baselineRevision`) and `src/components/storefront/sections/` (server components). Rendering reads
   only `ResolvedTheme`; settings reach CSS as `--store-*` custom properties and `data-*` attributes on the shell.
 - **Manifests** are typed files `src/domains/themes/catalogue/<theme>/<semver>.ts`, listed in `catalogue/index.ts`.
   A released file never changes; a new version is a new file. Theme colours live there and nowhere else
@@ -302,6 +302,47 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   the view words them. Checkout, bag drawer, emails, invoices and policy pages stay English for now.
 - **check:theme** is a vitest (`src/domains/themes/__tests__/check-theme.test.ts`): manifests are TS. It holds
   styles 1–5, allowed sections, sources, ≤ 20 sections and contrast for every scheme.
+- **2.0 choices** (plan `docs/plans/2026-11-09-themes-three.md`): `FeelSettings` (button shape/motion, card hover,
+  entrance, reveal, buy box, phone bar, footer colours, checkout) are additive with today's look as `FEEL_DEFAULTS`.
+  **Which values a theme may use is `choicesFor(m, key)`** (`src/domains/themes/choices.ts`), read by `resolveTheme`
+  AND the forms: a manifest lists its values in `allowed.choices`; a key it leaves out gets `BASE_CHOICES` (only what
+  every 1.x theme had), so a 1.x theme can never render a 2.0 value. A stored layer is read **key by key**
+  (`readSettings`): a value this build can't read drops only itself. `carryOver` brings across only what the
+  merchant chose (never the old theme's defaults, never Classic's recorded font).
+- **Gallery** = `OFFERED` (Editorial, Bazaar, Studio); `CATALOGUE` holds every theme in the build. Classic stays the
+  baseline; Atelier lives on inside Editorial 2.
+- **Sample pieces** (`src/lib/themes/sample.ts`, data in `catalogue/samples.ts`, photos in `public/themes/samples/`
+  from `scripts/themes/make-samples.mjs`) are merged **only** by the theme-preview route, after the preview read,
+  when the shop lists fewer than 4 pieces and the manifest has `samples`. Never in a cached read, never on a shop
+  (shop hosts are rewritten, so the files can't be served there; `check-storefront-build` fails a shop chunk naming
+  them; `sample.test.ts` pins who imports the module). A real product at a `sample-` handle wins.
+- **Checkout** has its own route group `(checkout)` with `ShopFrame` (`src/app/s/[host]/_frame.tsx`, shared with
+  `(shop)`): Focused = the shell's `focused` (logo + compact legal footer). `(shop)/template.tsx` is the page
+  entrance wrapper (server, reads nothing, `display: contents` when off).
+- **A section is guarded**: `Guarded` calls the section's own function (Hero({ s, ctx }) …, never <Hero/>) in try/catch (`unstable_rethrow` first); a throw
+  leaves it out of the shop and names it in the preview.
+- **Look v3**: a manifest says what was made for it (`made: { headers, footers, sections }`, each within its own
+  allowed lists: check:theme); the forms and the library read it ("Made for <theme>" first). New designs ship in a
+  theme's next minor version (2.1: header `panel`, `overlay`; footer `gram`), never by editing a released one. The
+  header and footer pictures come from one catalogue read (`shellNeedsCatalogue` / `shellPictures`). "Over the photo"
+  is CSS keyed on the page opening with a full-bleed hero photo (`[data-lead] [data-bleed] img`). A layer's photo may
+  be the shop's own product photo (`acceptedBase(…, 'products')` as well as `'theme'`, same tenant only); a photo's
+  `focus` is additive. Publish holds "Going live" inside the same transition as the action (≥ 1.3 s), so the
+  customizer can't re-render under it; the re-render with no draft is the success popup (published.tsx), over the
+  live revision's framed preview. Section search is pure (`searchSections` in sections.ts, tested).
+- **Look v4** (owner-approved 2026-11-09, research `docs/research/2026-11-09-look-v4.md`): the layer gains `site`
+  (palette of six roles, text styles, icon library + stroke) and `menus` (main / footer / tabs), both in
+  `src/domains/themes/site.ts` (pure). Saved through `layerProblems` (siteProblem, menusProblem first, in the
+  merchant's words; an unreadable palette is refused) and stored as parsed; read **part by part** (`readSite`,
+  `readMenus`: a bad part drops only itself; a stored palette that no longer reads is ignored). Absent = the theme
+  exactly: a text style sets CSS only when set (`data-t-<style>` + `--t-*`), the palette paints paper (and the tint's
+  accent and buttons) only when set, the default main menu is the collections (`menusOf`). **carryOver:** another
+  theme → menus come across, site does not (owner: "Theme's own"); another version of the same major → both.
+  Menu links are `shopPath` only (the shop's own pages). **Icons** are data (`src/domains/icons/data.ts`, generated by
+  `scripts/icons/build-icons.mjs` from lucide-static (ISC) and @phosphor-icons/core (MIT); NOTICE.md) drawn by the
+  server-only `ShopIcon`; client code imports `icons/names.ts` only; a client island gets the rendered element as a
+  prop (BagButton `icon`); `check-storefront-build` fails a shop chunk holding icon paths. The theme preview also
+  draws `/bag` and `/checkout` (the shop APIs resolve the shop by host, so the console's preview can't place orders).
 - **Any storefront change** runs e2e `05-shop-look` (pixel diff against `e2e/baselines/`); an intended change
   regenerates them in the same commit: `UPDATE_BASELINES=1 npm run e2e -- --only shop-look`. Look's state changes:
   `look.int.test.ts` (real Postgres) and e2e `47-look`.
