@@ -293,7 +293,7 @@ plan will use; the plan may rename one, and this list follows it.
 4. **Token.** EkCode portfolio → Business settings → System users → Add (Admin) → Assign assets: the app and EkCode's
    WhatsApp account (full control) → Generate token, never expires, `whatsapp_business_messaging` +
    `whatsapp_business_management`.
-5. **Email (P2, not needed for P1 — no email codes until a shopper verifies an email on their EkCode page).** AWS console → SES (ap-south-1) → Identities → Create identity →
+5. **Email — not now (owner, 2026-11-09: planned once SES is connected).** When it is planned: AWS console → SES (ap-south-1) → Identities → Create identity →
    Domain `ekcode.in` → add the 3 DKIM CNAMEs and the MAIL FROM records it shows at the registrar → request
    **production access** (use case: one-time sign-in codes, ~1–2k a day). IAM → a user allowed only `ses:SendEmail`
    from that identity → access key. DMARC TXT at `_dmarc.ekcode.in`: `v=DMARC1; p=none; rua=mailto:privacy@ekcode.in`.
