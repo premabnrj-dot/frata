@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { STATES } from '@/domains/checkout/states'
+import { cleanMobile } from '@/domains/checkout/mobile'
 import { waOptInText } from '@/domains/checkout/opt-in'
 import { b2bProblem, cleanGstin, gstinStateName, gstinValid } from '@/domains/tax/gstin'
 import { pick, urlFor } from '@/domains/media/sizes'
@@ -100,7 +101,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
 
   function check(): boolean {
     const e: Record<string, string> = {}
-    if (!/^[6-9][0-9]{9}$/.test(f.phone.replace(/\D/g, '').replace(/^(91|0)(?=\d{10}$)/, ''))) e.phone = 'A 10-digit mobile number.'
+    if (!cleanMobile(f.phone)) e.phone = 'A 10-digit mobile number.'
     if (f.name.trim().length < 2) e.name = 'Your full name, as on the door.'
     if (!/^[1-9][0-9]{5}$/.test(f.pincode)) e.pincode = 'A 6-digit pincode.'
     if (f.addressLine.trim().length < 5) e.addressLine = 'House number and street.'

@@ -22,4 +22,7 @@ export const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID ?? ''
 export const WA_CONFIG_ID = process.env.NEXT_PUBLIC_WA_CONFIG_ID ?? ''
 export const isWhatsAppSignupConfigured = () => META_APP_ID !== '' && WA_CONFIG_ID !== ''
 
+/** EkCode's own host (ekcode.in). Empty = EkCode's pages are not served anywhere (src/domains/tenancy/host.ts). */
+export const EKCODE_HOST = (process.env.NEXT_PUBLIC_EKCODE_HOST ?? '').toLowerCase()
+
 export const isAuthConfigured = () => SUPABASE_URL !== '' && SUPABASE_ANON_KEY !== ''

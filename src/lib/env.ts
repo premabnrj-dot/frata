@@ -40,6 +40,18 @@ export const FRRATA_WA_TEMPLATE_LANG = process.env.FRRATA_WA_TEMPLATE_LANG || 'e
 
 /** Frrata as the supplier on its own invoices (billing B2). FRRATA_GSTIN unset = test mode: invoices go out in a TEST
  *  series, printed "not a tax invoice". All four are set together, with the CA, before real billing. */
+/** EkCode (ADR-0009, P1): its own WhatsApp number and Meta app (in EkCode's own portfolio, ADR-0010), and two key rings
+ *  ("id:secret,id:secret", newest first; rotate by putting a new entry in front — never by replacing one). All of
+ *  them set (and NEXT_PUBLIC_EKCODE_HOST) = EkCode can be switched on; any unset = the button never shows. */
+export const EKCODE_WA_PHONE_NUMBER_ID = process.env.EKCODE_WA_PHONE_NUMBER_ID ?? ''
+export const EKCODE_WA_TOKEN = process.env.EKCODE_WA_TOKEN ?? ''
+export const EKCODE_WA_AUTH_TEMPLATE = process.env.EKCODE_WA_AUTH_TEMPLATE ?? ''
+export const EKCODE_WA_TEMPLATE_LANG = process.env.EKCODE_WA_TEMPLATE_LANG || 'en'
+export const EKCODE_WA_VERIFY_TOKEN = process.env.EKCODE_WA_VERIFY_TOKEN ?? ''
+export const EKCODE_META_APP_SECRET = process.env.EKCODE_META_APP_SECRET ?? ''
+export const EKCODE_PHONE_PEPPERS = process.env.EKCODE_PHONE_PEPPERS ?? ''
+export const EKCODE_SEAL_KEYS = process.env.EKCODE_SEAL_KEYS ?? ''
+
 export const FRRATA_GSTIN = process.env.FRRATA_GSTIN ?? ''
 export const FRRATA_LEGAL_NAME = process.env.FRRATA_LEGAL_NAME ?? ''
 export const FRRATA_ADDRESS = process.env.FRRATA_ADDRESS ?? ''
