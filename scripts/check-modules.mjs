@@ -19,6 +19,7 @@ const KEYS = [...(registry.match(/MODULE_KEYS = \[([^\]]*)\]/)?.[1] ?? '').match
 const HOOKS = {
   'src/components/modules/slots.tsx': 'the slot map: which module fills which slot',
   'src/components/modules/storefront.tsx': 'the shop\'s product hook: what a module puts under a product, and its rating',
+  'src/lib/modules/hooks.ts': 'the WhatsApp handlers: what a module does with an item Communication stored',
   'src/lib/outbox/drain.ts': 'the SENDERS map: a module registers its outbox senders (the cron route only drains)',
   'src/app/api/cron/outbox/route.ts': 'the daily run: it drains the outbox and runs each module\'s sweep',
   'src/app/(console)/console/layout.tsx': 'the nav builder: a usable module adds its nav item',

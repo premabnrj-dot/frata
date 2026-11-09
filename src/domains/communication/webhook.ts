@@ -56,7 +56,10 @@ export function splitWebhook(body: unknown): WaItem[] {
         }
         for (const s of arr(value.statuses)) {
           const id = str(obj(s)?.id), st = str(obj(s)?.status)
-          if (WAMID.test(id) && STATUS.test(st)) out.push({ route, field, key: `${route.id}:status:${id}:${st}`, digest: false, at, value: { metadata: value.metadata, status: s } })
+          // Trimmed (security review M7): a status keeps its message id, status, time and error codes — never the
+          // recipient's phone (recipient_id) or Meta's pricing block.
+          const errs = arr(obj(s)?.errors).map((e) => ({ code: typeof obj(e)?.code === 'number' ? obj(e)!.code : null }))
+          if (WAMID.test(id) && STATUS.test(st)) out.push({ route, field, key: `${route.id}:status:${id}:${st}`, digest: false, at, value: { metadata: { phone_number_id: number }, status: { id, status: st, timestamp: str(obj(s)?.timestamp), ...(errs.length ? { errors: errs } : {}) } } })
         }
         continue
       }

@@ -6,6 +6,8 @@ import { webhookEvents } from '@/lib/db/schema'
 import { withTenant } from '@/lib/db/tenant'
 import { HEALTH_FIELDS, KEEP_FIELDS, splitWebhook } from '@/domains/communication/webhook'
 import { closeConnection, refreshHealth, SYSTEM_ACTOR } from './connection'
+import { WHATSAPP_HANDLERS } from '../hooks'
+import { errName } from '@/lib/log'
 
 // =============================================================================
 // FILE: src/lib/modules/communication/webhook.ts — Meta's webhook for Messages (ADR-0006, inbound).
@@ -24,7 +26,11 @@ export async function storeWebhook(body: unknown): Promise<string[]> {
     // value and the entry's time: Meta's retry collapses; the same event sent again later is a new row.
     const tail = item.key ?? `${item.route.id}:${item.field}:${createHash('sha256').update(JSON.stringify([item.at, item.value])).digest('hex').slice(0, 32)}`
     const t = await storeWhatsAppEvent(item.route.by, item.route.id, tail, { field: item.field, value: item.value, about: item.route.id })
-    if (t) shops.add(t)
+    if (!t) continue
+    shops.add(t)
+    // Newly stored only (a retry stores nothing new): other modules act on it (Reviews: a Stop, a failed ask, the
+    // template's status). Stored first, so a handler that fails loses nothing; the item stays for the inbox.
+    for (const h of WHATSAPP_HANDLERS) await h(t, item.field, item.value, new Date()).catch((e: unknown) => console.error('[whatsapp] handler', errName(e)))
   }
   return [...shops]
 }
