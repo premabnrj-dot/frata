@@ -81,7 +81,7 @@ export const MODULES: Record<ModuleKey, ModuleDef> = {
     features: ['GSTR-1 tables, month or quarter', 'What to fix before you file', 'GSTR-1 JSON, sheets, sales register, Tally', 'A login for your accountant'],
   },
   ekcode: {
-    key: 'ekcode', name: 'EkCode', job: 'Shoppers filled in at checkout.', group: 'grow', billing: 'core', status: 'next', dependsOn: [], outboxKinds: [],
+    key: 'ekcode', name: 'EkCode', job: 'Shoppers filled in at checkout.', group: 'grow', billing: 'core', status: 'now', dependsOn: [], outboxKinds: [],
     features: ['Name, phone and address in one tap', 'Every phone checked on WhatsApp', 'Shoppers from other shops that use EkCode'],
   },
   cart_flows: {
