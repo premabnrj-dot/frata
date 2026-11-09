@@ -40,10 +40,24 @@ let client: ReturnType<typeof drizzle<typeof schema>> | null = null
 const released: (() => void)[] = []
 export const poolReleased = () => { for (const f of released) f() }
 
+/**
+ * Attached once, whichever pool opens first. Every query (both pools, through drizzle's logger) also counts as a
+ * release, so a request whose last query ran outside withTenant (accessFor, every Admin read) still holds the
+ * function open until its connections idle out. Without it a frozen instance kept Admin's sockets, and the next
+ * request waited on a dead one: Admin pages that hung (owner, 2026-11-09).
+ */
+let attached = false
+export function attachPool() {
+  if (attached || !process.env.VERCEL) return
+  attached = true
+  attachDatabasePool({ options: { idleTimeoutMillis: POOL.idle_timeout * 1000 }, on: (_event: 'release', listener: () => void) => { released.push(listener) } })
+}
+export const releaseOnQuery = { logQuery: () => poolReleased() }
+
 export function db() {
   if (!client) {
-    client = drizzle(postgres(parseDatabaseUrl(DATABASE_URL, 'frata_app'), POOL), { schema })
-    if (process.env.VERCEL) attachDatabasePool({ options: { idleTimeoutMillis: POOL.idle_timeout * 1000 }, on: (_event: 'release', listener: () => void) => { released.push(listener) } })
+    attachPool()
+    client = drizzle(postgres(parseDatabaseUrl(DATABASE_URL, 'frata_app'), POOL), { schema, logger: releaseOnQuery })
   }
   return client
 }
