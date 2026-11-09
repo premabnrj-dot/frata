@@ -29,6 +29,7 @@ export default {
             const r = await lighthouse(SHOP + path, { port: chrome.port, output: 'json', logLevel: 'error', onlyCategories: ['performance', 'accessibility', 'seo'] })
             const c = r.lhr.categories
             runs.push({ performance: Math.round(c.performance.score * 100), accessibility: Math.round(c.accessibility.score * 100), seo: Math.round(c.seo.score * 100), cls: r.lhr.audits['cumulative-layout-shift'].numericValue,
+              shifts: (r.lhr.audits['layout-shifts']?.details?.items ?? []).slice(0, 3).map((x) => `${x.node?.selector ?? '?'} ${Number(x.score ?? 0).toFixed(3)}`),
               failing: Object.values(r.lhr.audits).filter((a) => a.score !== null && a.score < 1 && ['accessibility', 'seo'].some((k) => c[k].auditRefs.some((x) => x.id === a.id && x.weight > 0))).map((a) => a.id) })
           }
           const m = { performance: median(runs.map((r) => r.performance)), accessibility: median(runs.map((r) => r.accessibility)), seo: median(runs.map((r) => r.seo)), cls: median(runs.map((r) => r.cls)) }
@@ -36,7 +37,7 @@ export default {
           console.log(`     speed › ${name}: perf ${m.performance}, a11y ${m.accessibility}, SEO ${m.seo}, CLS ${m.cls.toFixed(3)}`)
           assert.ok(m.accessibility >= BUDGET.accessibility, `${name} accessibility ${m.accessibility} (failing: ${rows.at(-1).failing.join(', ')})`)
           assert.ok(m.seo >= BUDGET.seo, `${name} SEO ${m.seo} (failing: ${rows.at(-1).failing.join(', ')})`)
-          assert.ok(m.cls <= BUDGET.cls, `${name} layout shift ${m.cls.toFixed(3)}`)
+          assert.ok(m.cls <= BUDGET.cls, `${name} layout shift ${m.cls.toFixed(3)} (moved: ${[...new Set(runs.flatMap((r) => r.shifts))].join('; ')})`)
           assert.ok(m.performance >= BUDGET.performance, `${name} performance ${m.performance}`)
         })
       }
