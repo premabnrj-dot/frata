@@ -1,5 +1,5 @@
 # Plan: three purposeful themes (Editorial 2, Bazaar 2, Studio) with deeper options and sample content
-Status: built (2.0.0 versions await release in Admin) · Date: 2026-11-09 · Showcase: https://claude.ai/artifact/8bvMF5mdhJQkVDayoVjabc · Research: `docs/research/2026-11-08-themes-pro-grade.md` · Mockup: https://claude.ai/artifact/S2bPoCzyBPKA1NW4BesKfz
+Status: live (2026-11-09: main 344c964 deployed; Editorial, Bazaar and Studio 2.0.0 released by the owner's go, audited) · Date: 2026-11-09 · Showcase: https://claude.ai/artifact/8bvMF5mdhJQkVDayoVjabc · Research: `docs/research/2026-11-08-themes-pro-grade.md` · Mockup: https://claude.ai/artifact/S2bPoCzyBPKA1NW4BesKfz
 Owner, 2026-11-08 (night, then away until morning): "let's execute this plan and make existing themes distinctive,
 purposeful, better, use dummy data/demo data … options: product page styling, image gallery styling, button motions,
 transitions, checkout page styles, nav bar styles, footer options … just have 3 with each having its own purpose,
