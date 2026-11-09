@@ -59,6 +59,11 @@ export const LIMITS = {
   // (odd paths cannot reach it), not real sharing. Fails closed.
   ogRender: { action: 'og:render', max: 200, windowSeconds: 3600 },
   ogRenderIp: { action: 'og:render:ip', max: 60, windowSeconds: 3600 },
+  // Video uploads (V1, security review 2026-11-09 finding 1): each start asks Mux for an upload URL (a bucket of 20 per
+  // environment, shared by every shop) and can cost a month's storage; per member, and for all of Frrata. Fail closed.
+  // The per-shop day and month caps count the shop's own videos rows (src/lib/queries/videos.ts).
+  videoStartMember: { action: 'video_start:member', max: 10, windowSeconds: 600 },
+  videoStartAll: { action: 'video_start:all', max: 200, windowSeconds: 3600 },
 } as const satisfies Record<string, Limit>
 
 /** Whether `subject` is already past the limit, WITHOUT counting an attempt. `failClosed`: true when the counter cannot be read. */

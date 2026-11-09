@@ -17,6 +17,8 @@ import { auditEvents } from '@/lib/db/schema'
 import { BLOB_STORE_ID } from '@/lib/env'
 import { refreshShop } from '@/lib/queries/storefront'
 import { lookFacts } from '@/lib/themes/facts'
+import { drainSoon } from '@/lib/outbox/drain'
+import { cleanVideos, releaseUnusedVideos } from '@/lib/queries/videos'
 import { discardDraft, lookFor, newDraft, publishRevision, revisionOf, saveDraft, themeAccess, undoPublish } from '@/lib/themes/look'
 
 // =============================================================================
@@ -107,7 +109,9 @@ export async function saveLookAction(input: unknown): Promise<R<{ version: numbe
     const parsed = LayerSchema.parse(layer)
     const clean = cleanImages({ ...layer, settings: parsed.settings, ...(parsed.site ? { site: parsed.site } : {}), ...(parsed.menus ? { menus: parsed.menus } : {}) }, t)
     if (!clean) return { error: 'A photo didn’t come from this shop. Upload it again.' }
-    const s = await saveDraft(tx, t, { userId: auth.userId, email: auth.email }, { revisionId: rev.id, version: p.data.version, styleKey: p.data.style, settings: clean })
+    // V1: a video id must be one of this shop's own, not removed; anything else is dropped (the photo shows).
+    const kept = await cleanVideos(tx, clean)
+    const s = await saveDraft(tx, t, { userId: auth.userId, email: auth.email }, { revisionId: rev.id, version: p.data.version, styleKey: p.data.style, settings: kept })
     if (!s.ok) return { error: s.why === 'stale' ? `${rev.updatedByEmail ?? 'Someone'} changed this draft a moment ago. Reload to see their changes.` : s.why === 'published' ? 'This look was published. Reload to keep editing.' : 'This draft is gone. Reload.' }
     return { version: s.version }
   })
@@ -137,10 +141,12 @@ export async function publishLookAction(input: unknown): Promise<R> {
     })
     if (out !== 'ok') return { error: out === 'stale' ? 'The draft changed after you opened Publish. Look again, then publish.' : out === 'unavailable' ? `${m.name} ${rev.themeVersion} isn’t offered by Frrata any more, so it can’t be published. Try the theme again for its current version, or restore an earlier look.` : 'This draft is gone. Reload.' }
     await audit(tx, auth, 'look.publish', `${m.name} · ${rev.styleKey}`)
-    return {}
+    // V1: videos no stored look uses any more are removed now, their Mux side queued in this transaction.
+    return { freed: await releaseUnusedVideos(tx, t, new Date()) }
   })
   if (!r.ok) return r
   if ('error' in r.value) return { ok: false, error: r.value.error as string }
+  if (r.value.freed) drainSoon()
   refreshShop(r.tenantId, 'shop')
   revalidatePath('/console/look')
   return { ok: true }
@@ -219,10 +225,12 @@ export async function editLookAction(): Promise<R<{ revisionId: string; lost: st
 export async function discardDraftAction(): Promise<R> {
   const r = await asMember(CAN_BUILD, { action: 'look.discard' }, async (tx, auth) => {
     if (auth.membership.supportSessionId) return { error: SUPPORT }
-    return (await discardDraft(tx, auth.membership.tenantId)) ? {} : { error: 'There is no draft.' }
+    if (!(await discardDraft(tx, auth.membership.tenantId))) return { error: 'There is no draft.' }
+    return { freed: await releaseUnusedVideos(tx, auth.membership.tenantId, new Date()) }
   })
   if (!r.ok) return r
   if ('error' in r.value) return { ok: false, error: r.value.error as string }
+  if (r.value.freed) drainSoon()
   revalidatePath('/console/look')
   return { ok: true }
 }
