@@ -159,6 +159,7 @@ export function HeaderPicture({ v }: { v: HeaderVariant }) {
     split: <>{bar(8, 11, 30, 3, 0.45)}{bar(46, 9, 28, 6)}{bar(104, 10, 8, 5)}</>,
     panel: <>{bar(8, 8, 8, 5)}{bar(44, 7, 32, 6)}{bar(104, 8, 8, 5)}{bar(8, 18, 104, 22, 0.15)}{[0, 1, 2].map((i) => bar(14 + i * 34, 22, 26, 14, 0.35, `p${i}`))}</>,
     overlay: <>{bar(0, 0, 120, 44, 0.28)}{bar(8, 9, 8, 5, 1)}{bar(44, 8, 32, 6, 1)}{bar(104, 9, 8, 5, 1)}</>,
+    float: <>{bar(0, 0, 120, 44, 0.2)}{bar(6, 5, 30, 26, 0.95)}{bar(10, 10, 18, 3, 0.25)}{bar(10, 16, 14, 2, 0.25)}{bar(10, 21, 16, 2, 0.25)}</>,
   }
   return <svg viewBox="0 0 120 44" className="h-11 w-full text-foreground" aria-hidden="true">{b[v]}</svg>
 }
@@ -169,6 +170,7 @@ export function FooterPicture({ v }: { v: FooterVariant }) {
     compact: <>{bar(40, 10, 40, 4)}{bar(24, 20, 72, 3, 0.4)}{bar(32, 28, 56, 3, 0.4)}</>,
     statement: <>{bar(8, 8, 30, 3, 0.4)}{bar(64, 8, 20, 3, 0.4)}{bar(90, 8, 22, 3, 0.4)}{bar(8, 22, 76, 14, 0.9)}</>,
     gram: <>{[0, 1, 2, 3, 4].map((i) => bar(8 + i * 21.5, 6, 18, 18, 0.35, `g${i}`))}{bar(36, 30, 48, 3, 0.5)}{bar(28, 37, 64, 2.5, 0.3)}</>,
+    photo: <>{bar(0, 0, 120, 44, 0.75)}{bar(8, 10, 26, 6, 0.15)}{bar(64, 10, 20, 3, 0.15)}{bar(90, 10, 22, 3, 0.15)}{bar(64, 18, 18, 3, 0.15)}</>,
   }
   return <svg viewBox="0 0 120 44" className="h-11 w-full text-foreground" aria-hidden="true">{b[v]}</svg>
 }

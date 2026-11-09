@@ -1,5 +1,6 @@
 'use client'
 
+import type { ProductLayout } from '@/domains/themes/sections'
 import { useState } from 'react'
 import { PROMISES, SECTION_NAMES, type SectionInstance, type SectionOf } from '@/domains/themes/sections'
 import { Choice, Field, ImageField, LinkPicker, Switch, Text, paiseToRupees, rupeesToPaise, type LibraryPhoto, type LinkTarget } from './controls'
@@ -15,7 +16,7 @@ export type FormCtx = {
   schemes: { key: 'paper' | 'tint' | 'ink'; name: string }[]
   masks: ('none' | 'arch')[]
   /** The products section's layouts this theme offers (Signal plan T1). */
-  layouts: readonly ('grid' | 'rail')[]
+  layouts: readonly ProductLayout[]
   promiseWords: Record<(typeof PROMISES)[number], { text: string; true: boolean }>
   /** The shop's product photos (each product's first, newest first): "From your products" in a photo field (Look v3). */
   photos: LibraryPhoto[]; shopName: string

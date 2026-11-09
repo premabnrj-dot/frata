@@ -28,11 +28,11 @@ const summary = (s: SectionInstance): string => {
 export function blank(key: SectionKey, id: string, now: Date): SectionInstance {
   switch (key) {
     case 'hero': return { id, key, hidden: false, scheme: 'paper', layout: 'text', heading: { from: 'shopName' }, text: { from: 'tagline' }, image: null, button: null, position: 'bottom_left', height: 'tall', mask: 'none' }
-    case 'collection_tiles': return { id, key, hidden: false, scheme: 'paper', heading: '', mode: 'auto', handles: [], count: 6, shape: 'portrait' }
-    case 'products': return { id, key, hidden: false, scheme: 'paper', heading: 'Best sellers', source: { kind: 'best_sellers', days: 90 }, count: 8, viewAll: true, layout: 'grid' }
+    case 'collection_tiles': return { id, key, hidden: false, scheme: 'paper', label: '', heading: '', mode: 'auto', handles: [], count: 6, shape: 'portrait' }
+    case 'products': return { id, key, hidden: false, scheme: 'paper', heading: 'Best sellers', source: { kind: 'best_sellers', days: 90 }, count: 8, viewAll: true, layout: 'grid', label: '', tabs: [] }
     case 'price_tiles': return { id, key, hidden: false, scheme: 'paper', heading: 'Shop by budget', bands: [{ minPaise: null, maxPaise: 99900 }, { minPaise: null, maxPaise: 199900 }] }
     case 'promises': return { id, key, hidden: false, scheme: 'paper', show: ['cod', 'returns', 'dispatch'] }
-    case 'image_text': return { id, key, hidden: false, scheme: 'paper', image: null, heading: 'Our story', text: '', button: null, side: 'left' }
+    case 'image_text': return { id, key, hidden: false, scheme: 'paper', label: '', image: null, heading: 'Our story', text: '', button: null, side: 'left' }
     case 'drop_teaser': return { id, key, hidden: false, scheme: 'ink', heading: 'New collection', at: new Date(now.getTime() + 7 * 86_400_000 + 5.5 * 3_600_000).toISOString().slice(0, 16) + ':00+05:30', image: null }
     case 'rich_text': return { id, key, hidden: false, scheme: 'paper', heading: '', body: [], align: 'left' }
     case 'logos': return { id, key, hidden: false, scheme: 'paper', heading: 'As seen in', images: [] }

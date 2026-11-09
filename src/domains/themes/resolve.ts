@@ -68,6 +68,8 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
     buyBar: c('buyBar'),
     footerScheme: c('footerScheme'),
     checkout: c('checkout'),
+    labels: c('labels'),
+    railCounter: c('railCounter'),
   }
   // 3 photo columns on a phone only with a squarer photo (spec § Theme settings).
   if (settings.phoneColumns === 3 && settings.photo === '4:5') settings.phoneColumns = 2
@@ -134,8 +136,15 @@ export function resolveStored(row: { themeKey: string; themeVersion: string; sty
 }
 
 /** The CSS custom properties a section painted in `scheme` sets (the --store-* tokens the shop already uses). */
-export function schemeVars(t: ResolvedTheme, scheme: SchemeKey = 'paper'): Record<string, string> {
-  const s = t.schemes[scheme]
+/** Theme Signal's band: the shop's FINAL accent as the ground (after the brand colour and the palette), its readable
+ *  colour as the words and buttons. Derived here, never stored (architecture review finding 4). */
+function signalScheme(t: ResolvedTheme): Scheme {
+  const p = t.schemes.paper
+  return { ...p, bg: p.accent, text: p.onAccent, sub: p.onAccent, line: p.onAccent, chip: p.accent, accent: p.onAccent, onAccent: p.accent, button: p.onAccent, onButton: p.accent }
+}
+
+export function schemeVars(t: ResolvedTheme, scheme: SchemeKey | 'signal' = 'paper'): Record<string, string> {
+  const s = scheme === 'signal' ? signalScheme(t) : t.schemes[scheme]
   return {
     '--store-paper': s.bg, '--store-ink': s.text, '--store-sub': s.sub, '--store-line': s.line, '--store-chip': s.chip,
     '--store-good': s.good, '--store-bad': s.bad, '--store-accent': s.accent,

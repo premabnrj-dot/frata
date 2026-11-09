@@ -17,6 +17,7 @@ export const BASE_CHOICES: { [K in ChoiceKey]?: readonly ThemeSettings[K][] } = 
   // Theme Signal plan T1 (architecture review finding 1): today's values, so a value added later reaches only the
   // themes that list it.
   card: ['standard', 'centred', 'framed'], desktopColumns: [4, 3],
+  labels: ['none'], railCounter: [false],
 }
 
 /** The values `m` allows for `key`; null = any value the schema accepts. */
@@ -25,7 +26,7 @@ export function choicesFor<K extends ChoiceKey>(m: Pick<ThemeManifest, 'allowed'
 }
 
 /** The choices the customizer's forms ask a theme about (2.0: a theme offers its own values; one value is no choice). */
-export const CHOICE_FORM_KEYS = ['corners', 'buttons', 'phoneColumns', 'gallery', 'buttonShape', 'buttonMotion', 'cardHover', 'entrance', 'reveal', 'buyBoxSticky', 'buyBar', 'footerScheme', 'checkout', 'card', 'desktopColumns'] as const satisfies readonly ChoiceKey[]
+export const CHOICE_FORM_KEYS = ['corners', 'buttons', 'phoneColumns', 'gallery', 'buttonShape', 'buttonMotion', 'cardHover', 'entrance', 'reveal', 'buyBoxSticky', 'buyBar', 'footerScheme', 'checkout', 'card', 'desktopColumns', 'labels', 'railCounter'] as const satisfies readonly ChoiceKey[]
 export type Choices = { [K in (typeof CHOICE_FORM_KEYS)[number]]: readonly ThemeSettings[K][] | null }
 /** What `m` offers for every choice the forms show. */
 export const choicesOf = (m: Pick<ThemeManifest, 'allowed'>): Choices => Object.fromEntries(CHOICE_FORM_KEYS.map((k) => [k, choicesFor(m, k)])) as Choices

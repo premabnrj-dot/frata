@@ -11,9 +11,14 @@ import { z } from 'zod'
 
 const id = z.string().regex(/^[a-z0-9-]{1,40}$/)
 const text = (max: number) => z.string().max(max)
-export const SECTION_SCHEMES = ['paper', 'tint', 'ink'] as const
-export type SectionScheme = (typeof SECTION_SCHEMES)[number]
-const scheme = z.enum(SECTION_SCHEMES).default('paper')
+/** Every scheme a section can wear: `signal` (theme Signal) is drawn from the final accent (schemeVars), never stored
+ *  in a style. SECTION_SCHEMES is what a theme offers unless it says (allowed.sectionSchemes). */
+export const ALL_SECTION_SCHEMES = ['paper', 'tint', 'ink', 'signal'] as const
+export type SectionScheme = (typeof ALL_SECTION_SCHEMES)[number]
+export const SECTION_SCHEMES: readonly SectionScheme[] = ['paper', 'tint', 'ink']
+const scheme = z.enum(ALL_SECTION_SCHEMES).default('paper')
+/** A short label above a section's heading (theme Signal: shown as a pill or plain where the theme offers labels). */
+const label = text(24).default('')
 const hidden = z.boolean().default(false)
 
 /** A link inside the shop only: never an outside URL (spec § Sections rules). */
@@ -53,7 +58,7 @@ export const HeroSchema = z.object({
 })
 
 export const CollectionTilesSchema = z.object({
-  id, key: z.literal('collection_tiles'), hidden, scheme,
+  id, key: z.literal('collection_tiles'), hidden, scheme, label,
   heading: text(40).default(''),
   /** auto: the shop's collections that have products, in title order, first `count` · picked: these, in this order. */
   mode: z.enum(['auto', 'picked']).default('auto'),
@@ -74,8 +79,12 @@ export const SourceSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('back_in_stock') }),
 ])
 
-export const PRODUCT_LAYOUTS = ['grid', 'rail'] as const
-export type ProductLayout = (typeof PRODUCT_LAYOUTS)[number]
+export const ALL_PRODUCT_LAYOUTS = ['grid', 'rail', 'tabs'] as const
+export type ProductLayout = (typeof ALL_PRODUCT_LAYOUTS)[number]
+/** What a theme offers unless it says (allowed.productLayouts): tabs are Signal's. */
+export const PRODUCT_LAYOUTS: readonly ProductLayout[] = ['grid', 'rail']
+/** Tabs (theme Signal): up to 5 collections, up to 8 pieces each (speed review: the tab section stays under 80 kB of HTML). */
+export const MAX_TABS = 5, MAX_PER_TAB = 8
 export const ProductsSchema = z.object({
   id, key: z.literal('products'), hidden, scheme,
   heading: text(40),
@@ -83,7 +92,10 @@ export const ProductsSchema = z.object({
   count: z.union([z.literal(4), z.literal(8), z.literal(12), z.literal(24)]),
   /** "See all" when the source has more than `count`: only where a page shows the whole list (Shop all, a collection). */
   viewAll: z.boolean().default(true),
-  layout: z.enum(PRODUCT_LAYOUTS).default('grid'),
+  layout: z.enum(ALL_PRODUCT_LAYOUTS).default('grid'),
+  label,
+  /** layout tabs: the collections, one tab each, by handle (the source is then ignored). */
+  tabs: z.array(z.string().regex(/^[a-z0-9-]{1,80}$/)).max(MAX_TABS).default([]),
 })
 
 const band = z.object({ minPaise: z.number().int().min(0).nullable(), maxPaise: z.number().int().positive().nullable() })
@@ -102,7 +114,7 @@ export const PromisesSchema = z.object({
 })
 
 export const ImageTextSchema = z.object({
-  id, key: z.literal('image_text'), hidden, scheme,
+  id, key: z.literal('image_text'), hidden, scheme, label,
   image: ImageSchema.nullable().default(null),
   heading: text(60),
   text: text(600).default(''),
