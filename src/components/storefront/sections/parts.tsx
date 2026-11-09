@@ -16,6 +16,9 @@ export const rupees = (p: number) => formatInr(paise(p))
 export const Sized = ({ children }: { children: React.ReactNode }) => <span className="[font-size:calc(var(--store-h-scale)*100%)]">{children}</span>
 export const H2 = ({ id, children }: { id: string; children: React.ReactNode }) => <h2 id={id} className="text-xl" style={{ fontFamily: 'var(--store-display)' }}><Sized>{children}</Sized></h2>
 
+/** A section's label above its heading (theme Signal): shown only where the theme offers labels (globals.css). */
+export const Label = ({ text }: { text: string }) => (text ? <span className="store-label">{text}</span> : null)
+
 export const said = (b: { from: 'shopName' | 'tagline' } | { text: string } | undefined, shop: StoreShop) =>
   !b ? '' : 'text' in b ? b.text : b.from === 'shopName' ? shop.shopName : shop.tagline
 

@@ -65,8 +65,10 @@ export const SAMPLE_SCENES = {
 
 /** The preview's theme: a photo Hero or an Image with text that has no photo yet shows a sample scene (the shop
  *  itself still needs the merchant's photo before Publish: readiness is unchanged). */
-export function withSampleImages<T extends { home: import('@/domains/themes/sections').SectionInstance[] }>(t: T, look: 'festive' | 'studio' | 'signal' = 'festive'): T {
+export function withSampleImages<T extends { home: import('@/domains/themes/sections').SectionInstance[] }>(t: T, look: 'festive' | 'studio' | 'signal' = 'festive', set: SampleSet = 'clothing'): T {
   const scene = SAMPLE_SCENES[look]
+  // A story photo from the shop's own set (a bag for a bags shop), the clothing set's anarkali otherwise.
+  const piece = set === 'clothing' ? SAMPLE_SCENES.piece : { ...SAMPLE_SCENES.piece, base: `/themes/samples/${SAMPLE_SETS[set][0]!.name}` }
   return { ...t, home: t.home.map((s) => s.key === 'hero' && s.layout !== 'text' && !s.image ? { ...s, image: scene }
-    : (s.key === 'image_text' || s.key === 'shop_the_look') && !s.image ? { ...s, image: SAMPLE_SCENES.piece } : s) }
+    : (s.key === 'image_text' || s.key === 'shop_the_look') && !s.image ? { ...s, image: piece } : s) }
 }

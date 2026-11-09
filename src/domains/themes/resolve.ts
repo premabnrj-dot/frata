@@ -140,7 +140,7 @@ export function resolveStored(row: { themeKey: string; themeVersion: string; sty
  *  colour as the words and buttons. Derived here, never stored (architecture review finding 4). */
 function signalScheme(t: ResolvedTheme): Scheme {
   const p = t.schemes.paper
-  return { ...p, bg: p.accent, text: p.onAccent, sub: p.onAccent, line: p.onAccent, chip: p.accent, accent: p.onAccent, onAccent: p.accent, button: p.onAccent, onButton: p.accent }
+  return { ...p, bg: p.accent, text: p.onAccent, sub: p.onAccent, line: p.onAccent, chip: p.accent, accent: p.onAccent, onAccent: p.accent, button: p.onAccent, onButton: p.accent, good: p.onAccent, bad: p.onAccent, sale: p.onAccent }
 }
 
 export function schemeVars(t: ResolvedTheme, scheme: SchemeKey | 'signal' = 'paper'): Record<string, string> {
@@ -193,7 +193,10 @@ export function settingAttrs(t: ResolvedTheme): Record<string, string> {
     ...(t.settings.entrance !== 'none' ? { 'data-entrance': t.settings.entrance } : {}),
     ...(t.settings.reveal ? { 'data-reveal': 'on' } : {}),
     ...(t.rhythm ? { 'data-rhythm': t.rhythm } : {}),
-    ...(t.settings.header === 'overlay' ? { 'data-header': 'overlay' } : {}),
+    ...(t.settings.header === 'overlay' || t.settings.header === 'float' ? { 'data-header': t.settings.header } : {}),
+    // Theme Signal: labels as pills or plain, the rail counter, and the grotesk voice on buttons and prices.
+    ...(t.settings.labels !== 'none' ? { 'data-labels': t.settings.labels } : {}),
+    ...(t.settings.pairing === 'schibsted' ? { 'data-voice': 'grotesk' } : {}),
     // Look v4: one attribute per text style the merchant set (globals.css applies only those).
     ...Object.fromEntries(TEXT_STYLES.filter((k) => t.site.text[k]).map((k) => [`data-t-${k}`, ''])),
   }

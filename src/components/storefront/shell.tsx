@@ -9,7 +9,7 @@ import { FooterMenu } from './nav'
 import { CaptureAttribution } from './capture'
 import { wordsFor, type Lang, type Words } from './words'
 import type { PhotoData } from './photo'
-import { CircleRow, ClassicHeader, Logo, MenuHeader, SplitHeader } from './headers'
+import { CircleRow, ClassicHeader, FloatHeader, Logo, MenuHeader, SplitHeader } from './headers'
 import { ShopFooter } from './footers'
 export { ShopFooter } from './footers'
 
@@ -47,13 +47,15 @@ export function ShopShell({ shop, href, banner, children, gated = false, live = 
           ? <MenuHeader {...hp} minimal={s.header === 'minimal'} />
           : s.header === 'panel' ? <MenuHeader {...hp} minimal={false} panel={circles} />
           : s.header === 'split' ? <SplitHeader {...hp} />
+          : s.header === 'float' ? <FloatHeader {...hp} />
           : <ClassicHeader {...hp} />}
         {s.header === 'circles' && !bare && circles.length > 0 && <CircleRow circles={circles} href={href} w={w} />}
       </header>
       <main id="main" className={`flex-1 ${tabs ? 'pb-16 sm:pb-0' : ''}`}>{children}</main>
       <div style={s.footerScheme !== 'paper' ? schemeVars(t, s.footerScheme) as React.CSSProperties : undefined} className={s.footerScheme !== 'paper' ? 'contents' : undefined}>
         {!bare && t.menus.footer && t.menus.footer.length > 0 && <FooterMenu items={t.menus.footer} href={href} set={set} w={w} />}
-        <ShopFooter f={shop} href={href} variant={focused ? 'compact' : s.footer} social={s.social && !focused} w={w} painted={s.footerScheme !== 'paper'} strip={strip} />
+        <ShopFooter f={shop} href={href} variant={focused ? 'compact' : s.footer} social={s.social && !focused} w={w} painted={s.footerScheme !== 'paper'} strip={strip}
+          photo={s.footer === 'photo' && !focused ? (t.home.find((x) => x.key === 'hero' && x.image) as { image?: PhotoData } | undefined)?.image ?? null : null} />
       </div>
       {tabs && <BottomTabs href={href} live={live} w={w} set={set} own={t.menus.tabs ?? null} />}
       {/* How the shopper arrived: on every page of the real shop, never in a console preview (Analytics A·1). */}

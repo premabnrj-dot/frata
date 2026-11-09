@@ -434,6 +434,52 @@ img[data-photo]::before { content: ""; position: absolute; inset: 0; background:
 [data-store-theme][data-header="overlay"]:has(> main [data-lead] [data-bleed] img) > header { position: absolute; inset-inline: 0; z-index: 30; background: transparent; border-color: transparent; color: #fff; }
 [data-store-theme][data-header="overlay"]:has(> main [data-lead] [data-bleed] img) > header::before { content: ""; position: absolute; inset: 0 0 -3rem; z-index: -1; pointer-events: none; background: linear-gradient(to bottom, rgb(0 0 0 / 0.45), transparent); }
 [data-store-theme][data-header="overlay"] > header .bg-store-paper { color: var(--store-ink); }
+/* Theme Signal (spec docs/specs/2026-11-09-theme-signal.md): the floating header — a dark panel at the top left on a
+   computer, a dark rounded bar on a phone; over the first photo when the page opens with one, in the flow otherwise. */
+[data-store-theme][data-header="float"] > header { border-color: transparent; background: transparent; }
+.store-float-panel, .store-float-bar { background: color-mix(in srgb, #111 92%, transparent); color: #fff; border-radius: var(--store-radius); }
+.store-float-panel { display: none; }
+.store-float-bar { display: flex; align-items: center; gap: 0.75rem; margin: 0.625rem; padding: 0 0.875rem; min-height: 2.875rem; }
+.store-float-link { display: block; padding: 0.3rem 0.25rem; border-radius: 2px; }
+.store-float-link:hover, .store-float-link:focus-visible { background: var(--store-accent); color: var(--store-on-accent); }
+@media (min-width: 640px) {
+  .store-float-bar { display: none; }
+  .store-float-panel { display: flex; align-items: center; gap: 1.25rem; margin: 0.75rem; padding: 0.625rem 1rem; }
+  .store-float-menu { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+  [data-store-theme][data-header="float"]:has(> main [data-lead] [data-bleed] img) > header { position: absolute; inset-inline: 0; z-index: 30; pointer-events: none; }
+  [data-store-theme][data-header="float"]:has(> main [data-lead] [data-bleed] img) .store-float-panel { pointer-events: auto; display: grid; gap: 0.25rem; width: 11rem; padding: 0.75rem; }
+  [data-store-theme][data-header="float"]:has(> main [data-lead] [data-bleed] img) .store-float-logo { padding-bottom: 0.5rem; border-bottom: 1px solid rgb(255 255 255 / 0.18); margin-bottom: 0.25rem; }
+  [data-store-theme][data-header="float"]:has(> main [data-lead] [data-bleed] img) .store-float-menu { display: grid; }
+}
+[data-store-theme][data-header="float"]:has(> main [data-lead] [data-bleed] img) > header .store-float-bar { position: absolute; inset-inline: 0; top: 0; z-index: 30; }
+/* Grey-tile cards: the photo on the tile, edge to edge with 2 px gutters, the words inside the tile. */
+[data-store-theme][data-card="tile"] ul:has(> .store-card) { column-gap: 2px; row-gap: 2px; }
+[data-store-theme][data-card="tile"] .store-card { background: var(--store-chip); }
+[data-store-theme][data-card="tile"] .store-card > a { padding-bottom: 0.75rem; }
+[data-store-theme][data-card="tile"] .store-card > a > div:first-child { border-radius: 0; background: transparent; }
+[data-store-theme][data-card="tile"] .store-card p, [data-store-theme][data-card="tile"] .store-swatches { padding-inline: 0.75rem; }
+/* Section labels above a heading: a pill in the accent, or plain small capitals. */
+.store-label { display: none; }
+[data-store-theme][data-labels] .store-label { display: inline-block; margin-bottom: 0.5rem; font: 600 0.6875rem/1 var(--store-display); letter-spacing: 0.09em; text-transform: uppercase; }
+[data-store-theme][data-labels="pill"] .store-label { padding: 0.375rem 0.5rem 0.3rem; border-radius: 3px; background: var(--store-accent); color: var(--store-on-accent); }
+[data-store-theme][data-labels="plain"] .store-label { color: var(--store-sub); }
+/* The grotesk voice: buttons, prices and headings in the display face. */
+[data-store-theme][data-voice="grotesk"] :is(.store-btn, .store-price, h1, h2, h3) { font-family: var(--store-display); letter-spacing: -0.01em; }
+/* Tabs by collection (CSS only): pills over the grid; the checked radio's panel shows (≤ 5 tabs). */
+.store-tab-row { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--store-chip); overflow-x: auto; max-width: 100%; }
+.store-tab { cursor: pointer; white-space: nowrap; border-radius: 999px; padding: 0.5rem 0.875rem; font-size: 0.8125rem; color: var(--store-sub); }
+.store-tab:has(:checked) { background: var(--store-paper); color: var(--store-ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.1); }
+.store-tab:has(:focus-visible) { outline: 2px solid var(--store-ink); outline-offset: 2px; }
+.store-tab-panel { display: none; }
+.store-tabs:has(.store-tab:nth-child(1) :checked) .store-tab-panel[data-tab="0"],
+.store-tabs:has(.store-tab:nth-child(2) :checked) .store-tab-panel[data-tab="1"],
+.store-tabs:has(.store-tab:nth-child(3) :checked) .store-tab-panel[data-tab="2"],
+.store-tabs:has(.store-tab:nth-child(4) :checked) .store-tab-panel[data-tab="3"],
+.store-tabs:has(.store-tab:nth-child(5) :checked) .store-tab-panel[data-tab="4"] { display: block; }
+/* A swipe row says where you are: a thin line and 01 / 10. */
+.store-counter { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.75rem; font-size: 0.75rem; color: var(--store-sub); font-variant-numeric: tabular-nums; }
+.store-counter i { position: relative; display: block; width: 8rem; height: 2px; background: var(--store-line); }
+.store-counter i::before { content: ""; position: absolute; inset: 0; transform-origin: left; transform: scaleX(max(0.1, var(--at, 0))); background: var(--store-ink); }
 /* The page entrance (a template around each shop page): fade or rise, from 0.6 so the largest paint is never held
    back, ending on no transform (fill backwards only: a leftover transform would pin fixed bars to the page). */
 .store-enter { display: contents; }

@@ -158,3 +158,33 @@ export function CircleRow({ circles, href, w }: { circles: Circle[]; href: Href;
   )
 }
 
+
+/** Floating (theme Signal): on a computer a dark panel at the top left with the logo, the menu and the bag; on a phone a
+ *  dark rounded bar. Over the first photo when the page opens with one (globals.css, like Over the photo), in the
+ *  page's flow otherwise. No script: the phone's menu is a <details>. */
+export function FloatHeader(p: HeaderProps) {
+  const { shop, href, gated, live, w, set, own } = p
+  const links = own ? own.map((x) => ({ key: x.id, link: x.link, label: x.label }))
+    : [{ key: 'all', link: '/products', label: w.shopAll }, ...shop.nav.map((c) => ({ key: c.handle, link: `/collections/${c.handle}`, label: c.title }))]
+  return (
+    <div className="store-float">
+      <div className="store-float-panel">
+        <Logo shop={shop} href={href} upper={false} className="store-float-logo text-lg font-semibold" />
+        {!gated && <nav aria-label={w.shopNav} className="store-float-menu text-sm">{links.slice(0, 9).map((x) => <Link key={x.key} href={href(x.link)} className="store-float-link">{x.label}</Link>)}</nav>}
+        {live && <div className="store-float-util text-sm"><Bag {...p} /></div>}
+      </div>
+      <div className="store-float-bar">
+        {!gated && (
+          <details className="relative">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden" aria-label={w.menu}><MenuIcon set={set} /></summary>
+            <nav aria-label={w.menu} className="absolute left-0 top-full z-40 mt-2 max-h-[70dvh] w-64 overflow-y-auto rounded-[var(--store-radius)] bg-store-paper p-3 text-base text-store-ink shadow-lg">
+              {own ? <MenuDrawer items={own} href={href} set={set} w={w} /> : links.map((x) => <Link key={x.key} href={href(x.link)} className="block py-2">{x.label}</Link>)}
+            </nav>
+          </details>
+        )}
+        <Logo shop={shop} href={href} upper={false} className="store-float-logo flex-1 text-base font-semibold" />
+        {live && <Bag {...p} />}
+      </div>
+    </div>
+  )
+}

@@ -533,6 +533,13 @@
       "when": 1794227505594,
       "tag": "0075_smooth_gambit",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1794231887295,
+      "tag": "0076_secret_moira_mactaggert",
+      "breakpoints": true
     }
   ]
 }

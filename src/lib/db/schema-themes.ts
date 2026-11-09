@@ -9,7 +9,7 @@ import { sql } from 'drizzle-orm'
 import { check, foreignKey, index, integer, jsonb, pgTable, primaryKey, text, unique, uuid } from 'drizzle-orm/pg-core'
 import { at, id, tenants } from './schema'
 
-export const THEME_KEYS = ['classic', 'editorial', 'bazaar', 'minimal', 'atelier'] as const
+export const THEME_KEYS = ['classic', 'editorial', 'bazaar', 'minimal', 'atelier', 'signal'] as const
 
 export const shopThemeRevisions = pgTable('shop_theme_revisions', {
   id: id(),
@@ -30,7 +30,7 @@ export const shopThemeRevisions = pgTable('shop_theme_revisions', {
 }, (t) => [
   unique('shop_theme_revisions_tenant_id').on(t.tenantId, t.id),
   index('shop_theme_revisions_recent').on(t.tenantId, t.createdAt),
-  check('shop_theme_revisions_key', sql`${t.themeKey} in ('classic','editorial','bazaar','minimal','atelier')`),
+  check('shop_theme_revisions_key', sql`${t.themeKey} in ('classic','editorial','bazaar','minimal','atelier','signal')`),
   check('shop_theme_revisions_version_shape', sql`${t.themeVersion} ~ '^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}$'`),
   check('shop_theme_revisions_style_shape', sql`${t.styleKey} ~ '^[a-z0-9-]{1,40}$'`),
   check('shop_theme_revisions_size', sql`octet_length(${t.settings}::text) <= 65536`),

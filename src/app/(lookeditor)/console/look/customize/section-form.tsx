@@ -1,6 +1,6 @@
 'use client'
 
-import type { ProductLayout } from '@/domains/themes/sections'
+import { MAX_TABS, type ProductLayout, type SectionScheme } from '@/domains/themes/sections'
 import { useState } from 'react'
 import { PROMISES, SECTION_NAMES, type SectionInstance, type SectionOf } from '@/domains/themes/sections'
 import { Choice, Field, ImageField, LinkPicker, Switch, Text, paiseToRupees, rupeesToPaise, type LibraryPhoto, type LinkTarget } from './controls'
@@ -13,10 +13,12 @@ export type FormCtx = {
   tenantId: string
   targets: LinkTarget[]
   collections: { handle: string; title: string }[]
-  schemes: { key: 'paper' | 'tint' | 'ink'; name: string }[]
+  schemes: { key: SectionScheme; name: string }[]
   masks: ('none' | 'arch')[]
   /** The products section's layouts this theme offers (Signal plan T1). */
   layouts: readonly ProductLayout[]
+  /** Whether this theme shows section labels (theme Signal): then each section asks for its label. */
+  labels: boolean
   promiseWords: Record<(typeof PROMISES)[number], { text: string; true: boolean }>
   /** The shop's product photos (each product's first, newest first): "From your products" in a photo field (Look v3). */
   photos: LibraryPhoto[]; shopName: string
@@ -64,6 +66,7 @@ function Hero({ s, set, c }: { s: SectionOf<'hero'>; set: Set<SectionOf<'hero'>>
 function Tiles({ s, set, c }: { s: SectionOf<'collection_tiles'>; set: Set<SectionOf<'collection_tiles'>>; c: FormCtx }) {
   const toggle = (h: string) => set({ ...s, handles: s.handles.includes(h) ? s.handles.filter((x) => x !== h) : [...s.handles, h].slice(0, 8) })
   return (<>
+    {c.labels && <Text label="Label above the heading" value={s.label} max={24} onChange={(label) => set({ ...s, label })} />}
     <Text label="Heading (optional)" value={s.heading} max={40} onChange={(heading) => set({ ...s, heading })} />
     <Choice label="Which collections" value={s.mode} onChange={(mode) => set({ ...s, mode })} options={[{ value: 'auto', label: 'Automatic' }, { value: 'picked', label: 'I’ll pick' }]} />
     {s.mode === 'auto'
@@ -92,7 +95,13 @@ function Products({ s, set, c }: { s: SectionOf<'products'>; set: Set<SectionOf<
       </select>)}</Field>}
     {src.kind === 'under_price' && <Field label="Under, in ₹">{(id) => <input id={id} inputMode="numeric" defaultValue={paiseToRupees(src.maxPaise)} onBlur={(e) => { const p = rupeesToPaise(e.target.value); if (p) set({ ...s, source: { kind: 'under_price', maxPaise: p } }) }} className="h-10 w-full rounded-md border border-input bg-card px-3 font-mono text-sm" />}</Field>}
     <Choice label="How many" value={s.count} onChange={(count) => set({ ...s, count })} options={[4, 8, 12, 24].map((n) => ({ value: n as 4 | 8 | 12 | 24, label: String(n) }))} />
-    <Choice label="Layout" value={s.layout} onChange={(layout) => set({ ...s, layout })} options={([{ value: 'grid', label: 'Grid' }, { value: 'rail', label: 'Swipe row' }] as const).filter((o) => c.layouts.includes(o.value))} />
+    <Choice label="Layout" value={s.layout} onChange={(layout) => set({ ...s, layout })} options={([{ value: 'grid', label: 'Grid' }, { value: 'rail', label: 'Swipe row' }, { value: 'tabs', label: 'Tabs by collection' }] as const).filter((o) => c.layouts.includes(o.value))} />
+    {s.layout === 'tabs' && <fieldset className="space-y-1"><legend className="text-sm font-medium">Tabs (up to {MAX_TABS})</legend>
+      {c.collections.map((x) => { const on = s.tabs.includes(x.handle); return (
+        <label key={x.handle} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={on} disabled={!on && s.tabs.length >= MAX_TABS} onChange={() => set({ ...s, tabs: on ? s.tabs.filter((h) => h !== x.handle) : [...s.tabs, x.handle] })} />{x.title}</label>
+      ) })}
+    </fieldset>}
+    {c.labels && <Text label="Label above the heading" value={s.label} max={24} onChange={(label) => set({ ...s, label })} />}
     {(src.kind === 'newest' || src.kind === 'collection') && <Switch label="“See all” link" on={s.viewAll} onChange={(viewAll) => set({ ...s, viewAll })} />}
   </>)
 }
@@ -124,6 +133,7 @@ function Promises({ s, set, c }: { s: SectionOf<'promises'>; set: Set<SectionOf<
 function ImageText({ s, set, c }: { s: SectionOf<'image_text'>; set: Set<SectionOf<'image_text'>>; c: FormCtx }) {
   return (<>
     <ImageField label="Photo" value={s.image} tenantId={c.tenantId} library={c.photos} suggest={[s.heading, c.shopName]} onChange={(image) => set({ ...s, image })} />
+    {c.labels && <Text label="Label above the heading" value={s.label} max={24} onChange={(label) => set({ ...s, label })} />}
     <Text label="Heading" value={s.heading} max={60} onChange={(heading) => set({ ...s, heading })} />
     <Text label="Text (a blank line starts a new paragraph)" value={s.text} max={600} multiline onChange={(text) => set({ ...s, text })} />
     <ButtonFields value={s.button} targets={c.targets} onChange={(button) => set({ ...s, button })} />

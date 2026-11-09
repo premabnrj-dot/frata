@@ -1,0 +1,2 @@
+ALTER TABLE "shop_theme_revisions" DROP CONSTRAINT "shop_theme_revisions_key";--> statement-breakpoint
+ALTER TABLE "shop_theme_revisions" ADD CONSTRAINT "shop_theme_revisions_key" CHECK ("shop_theme_revisions"."theme_key" in ('classic','editorial','bazaar','minimal','atelier','signal'));

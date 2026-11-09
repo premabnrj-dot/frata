@@ -214,7 +214,7 @@ export function Editor(p: EditorProps) {
         <SectionsPanel home={layer.home} selected={selected} allowed={p.allowed.sections} made={p.made.sections ?? []} themeName={p.themeName} issues={issueMap} now={now}
           onSelect={setSelected} onChange={(home, id) => { change({ ...layer, home }); if (id) setSelected(id) }} />
       ))}
-      {tab === 'theme' && <ThemeForm settings={layer.settings} style={style} styles={p.styles} allowed={p.allowed} made={p.made} themeName={p.themeName} choices={p.choices} schemes={p.formCtx.schemes} targets={p.targets} fonts={p.fonts}
+      {tab === 'theme' && <ThemeForm settings={layer.settings} style={style} styles={p.styles} allowed={p.allowed} made={p.made} themeName={p.themeName} choices={p.choices} schemes={p.formCtx.schemes.flatMap((x) => (x.key === 'signal' ? [] : [{ key: x.key, name: x.name }]))} targets={p.targets} fonts={p.fonts}
         set={setSettings} setStyle={(k) => change(layer, k)} paletteOn={!!site.palette} openSite={() => setSiteOpen(true)} onPage={(pg) => { if (pg === 'collection' ? p.firstCollection : true) setPage(pg) }} />}
     </div>
   )

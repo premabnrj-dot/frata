@@ -1,3 +1,4 @@
+import { choicesFor } from '@/domains/themes/choices'
 import { PRODUCT_LAYOUTS, SECTION_SCHEMES } from '@/domains/themes/sections'
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
@@ -74,8 +75,8 @@ export default async function Customize() {
         styles={m.styles.map((s) => ({ key: s.key, name: s.name, swatches: [s.schemes.paper.accent, s.schemes.tint?.bg ?? s.schemes.paper.chip, s.schemes.ink?.bg ?? s.schemes.paper.text], light: [s.schemes.paper, s.schemes.tint ?? s.schemes.paper] }))}
         allowed={{ pairings: m.allowed.pairings, headers: m.allowed.headers, footers: m.allowed.footers, sections: m.allowed.sections }} made={m.made ?? {}}
         facts={{ collections: f.collections, codOn: f.codOn, freeShippingAbove: f.freeShippingAbove, returnDays: f.returnDays, dispatchDays: f.dispatchDays }}
-        formCtx={{ tenantId: t, targets, collections: data.collections, products: data.products, photos: data.photos, shopName: shop.shopName, masks: m.allowed.heroMasks ?? ['none'], layouts: m.allowed.productLayouts ?? PRODUCT_LAYOUTS, promiseWords,
-          schemes: ([{ key: 'paper', name: schemeNames.paper ?? 'Paper' }, { key: 'tint', name: schemeNames.tint ?? 'Tint' }, { key: 'ink', name: schemeNames.ink ?? 'Ink' }] as const).filter((x) => (m.allowed.sectionSchemes ?? SECTION_SCHEMES).includes(x.key)) }}
+        formCtx={{ tenantId: t, targets, collections: data.collections, products: data.products, photos: data.photos, shopName: shop.shopName, masks: m.allowed.heroMasks ?? ['none'], layouts: m.allowed.productLayouts ?? PRODUCT_LAYOUTS, labels: (choicesFor(m, 'labels') ?? ['none']).some((x) => x !== 'none'), promiseWords,
+          schemes: ([{ key: 'paper', name: schemeNames.paper ?? 'Paper' }, { key: 'tint', name: schemeNames.tint ?? 'Tint' }, { key: 'ink', name: schemeNames.ink ?? 'Ink' }, { key: 'signal', name: 'Your colour' }] as const).filter((x) => (m.allowed.sectionSchemes ?? SECTION_SCHEMES).includes(x.key)) }}
         targets={targets} fonts={Object.fromEntries(PAIRINGS.map((p) => [p, displayFamily(p)])) as Record<Pairing, string>}
         address={shop.host} canPublish={(CAN_MANAGE as readonly string[]).includes(role)} shopOpen={!!shop.publishedAt} nowIso={new Date().toISOString()}
         // A theme with samples (2.0): with no piece or collection of its own yet, the page picker opens a sample one.

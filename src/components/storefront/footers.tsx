@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { FooterVariant } from '@/domains/themes/types'
 import { wordsFor, type Words } from './words'
-import { Photo } from './photo'
+import { Photo, type PhotoData } from './photo'
 
 import type { Href, ShellShop, StripPiece } from './shell'
 
@@ -11,9 +11,12 @@ const waLink = (n: string) => `https://wa.me/${n.replace(/\D/g, '')}`
 const igLink = (h: string) => `https://instagram.com/${h.replace(/^@/, '')}`
 
 /** The footer on every page (inside the shell, which sets --store-display). */
-export function ShopFooter({ f, href, variant = 'three', social = true, w = wordsFor(f.shopLanguage), painted = false, strip = [] }: { f: ShellShop; href: Href; variant?: FooterVariant; social?: boolean; w?: Words
+export function ShopFooter({ f, href, variant = 'three', social = true, w = wordsFor(f.shopLanguage), painted = false, strip = [], photo = null }: { f: ShellShop; href: Href; variant?: FooterVariant; social?: boolean; w?: Words
   /** Painted in another scheme (footer colours, 2.0): its own background, edge to edge. */
-  painted?: boolean; strip?: StripPiece[] }) {
+  painted?: boolean; strip?: StripPiece[]
+  /** Over a photo (theme Signal): the page's first hero photo; none: the statement footer. */
+  photo?: PhotoData | null }) {
+  if (variant === 'photo') return photo ? <PhotoFooter f={f} href={href} social={social} w={w} photo={photo} /> : <StatementFooter f={f} href={href} social={social} w={w} painted={painted} />
   if (variant === 'gram') return <StripFooter f={f} href={href} social={social} w={w} painted={painted} strip={strip} />
   if (variant === 'compact') return <CompactFooter f={f} href={href} social={social} w={w} painted={painted} />
   if (variant === 'statement') return <StatementFooter f={f} href={href} social={social} w={w} painted={painted} />
@@ -107,5 +110,33 @@ export function StripFooter({ f, href, social, w, painted, strip }: { f: ShellSh
       )}
       <div className="-mt-16"><CompactFooter f={f} href={href} social={social} w={w} painted={painted} /></div>
     </div>
+  )
+}
+
+/** Over a photo (theme Signal): the hero's photo darkened behind the policies and the law's lines; lazy, never first. */
+export function PhotoFooter({ f, href, social, w, photo }: { f: ShellShop; href: Href; social: boolean; w: Words; photo: PhotoData }) {
+  return (
+    <footer className="relative mt-16 overflow-hidden text-white">
+      <Photo p={photo} alt="" sizes="100vw" className="absolute inset-0 h-full w-full object-cover" />
+      <div className="absolute inset-0 bg-black/70" aria-hidden="true" />
+      <div className="relative mx-auto grid max-w-6xl gap-8 px-4 py-14 text-sm sm:grid-cols-3 sm:px-6">
+        <div className="space-y-2">
+          <p className="text-2xl font-semibold" style={{ fontFamily: 'var(--store-display)' }}>{f.shopName}</p>
+          {f.tagline && <p className="text-white/80">{f.tagline}</p>}
+          {social && <p className="flex gap-4">
+            {f.instagram && <a href={igLink(f.instagram)} rel="noopener" className="underline underline-offset-4">Instagram</a>}
+            {f.whatsapp && <a href={waLink(f.whatsapp)} rel="noopener" className="underline underline-offset-4">WhatsApp</a>}
+          </p>}
+        </div>
+        <nav aria-label={w.policiesNav}><ul className="space-y-1.5">
+          {(['shipping', 'returns', 'privacy', 'terms', 'contact'] as const).map((k) => <li key={k}><Link href={href(`/policies/${k}`)} className="hover:underline">{w.policy[k]}</Link></li>)}
+        </ul></nav>
+        <div className="space-y-1 text-white/80">
+          {f.legalName && <p>{f.legalName}</p>}
+          {f.address && <p className="whitespace-pre-line">{f.address}</p>}
+          {f.grievanceName && <p>{`${w.grievance}: `}{f.grievanceName}{f.grievanceEmail ? `, ${f.grievanceEmail}` : ''}</p>}
+        </div>
+      </div>
+    </footer>
   )
 }

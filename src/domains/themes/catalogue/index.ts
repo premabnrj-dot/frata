@@ -11,6 +11,7 @@ import { editorial_2_1_0 } from './editorial/2.1.0'
 import { minimal_1_0_0 } from './minimal/1.0.0'
 import { minimal_2_0_0 } from './minimal/2.0.0'
 import { minimal_2_1_0 } from './minimal/2.1.0'
+import { signal_1_0_0 } from './signal/1.0.0'
 
 // The themes in this build. A version is added as a new file and listed here; a listed file never changes (T3's
 // git gate enforces it).
@@ -20,6 +21,7 @@ export const CATALOGUE: Record<string, Record<string, ThemeManifest>> = {
   bazaar: { '1.0.0': bazaar_1_0_0, '2.0.0': bazaar_2_0_0, '2.1.0': bazaar_2_1_0 },
   minimal: { '1.0.0': minimal_1_0_0, '2.0.0': minimal_2_0_0, '2.1.0': minimal_2_1_0 },
   atelier: { '1.0.0': atelier_1_0_0 },
+  signal: { '1.0.0': signal_1_0_0 },
 }
 
 export function manifestOf(key: string, version: string): ThemeManifest | null {
@@ -44,4 +46,4 @@ export const cmpSemver = (a: string, b: string) => { const x = a.split('.').map(
  * look of a shop that never published and the fallback; Atelier lives on inside Editorial 2. A shop already on
  * either keeps its look (and its card at the top of Look).
  */
-export const OFFERED = ['editorial', 'bazaar', 'minimal'] as const
+export const OFFERED = ['editorial', 'bazaar', 'minimal', 'signal'] as const

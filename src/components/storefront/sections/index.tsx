@@ -27,7 +27,7 @@ export type SectionCtx = { shop: StoreShop; cat: StoreCatalogue; theme: Resolved
   lead?: boolean
   /** The customizer's preview: a section that fails says so there (on the shop it is left out). */
   preview?: boolean }
-import { Button, H2, Paint, Sized, pad, rupees, said, wrap } from './parts'
+import { Button, H2, Label, Paint, Sized, pad, rupees, said, wrap } from './parts'
 import { Products } from './products'
 
 function Hero({ s, ctx }: { s: SectionOf<'hero'>; ctx: SectionCtx }) {
@@ -80,7 +80,7 @@ function CollectionTiles({ s, ctx }: { s: SectionOf<'collection_tiles'>; ctx: Se
   const shape = circle ? 'aspect-square rounded-full' : s.shape === 'square' ? 'aspect-square rounded-[var(--store-radius)]' : 'aspect-[4/5] rounded-[var(--store-radius)]'
   return (
     <section aria-labelledby={h} className={`${wrap} pb-[calc(var(--store-space)*3rem)]`}>
-      {s.heading ? <div className="mb-4"><H2 id={h}>{s.heading}</H2></div> : <h2 id={h} className="sr-only">{wordsFor(ctx.shop.shopLanguage).collectionsNav}</h2>}
+      {s.heading ? <div className="mb-4"><Label text={s.label} /><H2 id={h}>{s.heading}</H2></div> : <h2 id={h} className="sr-only">{wordsFor(ctx.shop.shopLanguage).collectionsNav}</h2>}
       <ul className={circle ? '-mx-4 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 sm:mx-0 sm:scroll-px-0 sm:flex-wrap sm:px-0' : '-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 sm:mx-0 sm:scroll-px-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0'}>
         {tiles.map(({ c, first }) => (
           <li key={c.id} className={circle ? 'w-24 shrink-0 snap-start text-center sm:w-28' : 'w-[70%] shrink-0 snap-start sm:w-auto'}>
@@ -153,7 +153,7 @@ function ImageText({ s, ctx }: { s: SectionOf<'image_text'>; ctx: SectionCtx }) 
         <Photo p={s.image} focus={s.image.focus} alt={s.image.decorative ? '' : s.image.alt} sizes="(min-width: 640px) 50vw, 100vw" className="absolute inset-0 h-full w-full object-cover" />
       </div>
       <div className="space-y-4">
-        <H2 id={h}>{s.heading}</H2>
+        <Label text={s.label} /><H2 id={h}>{s.heading}</H2>
         {s.text.split(/\n{2,}/).filter(Boolean).map((p, i) => <p key={i} className="max-w-prose leading-relaxed text-store-sub">{p}</p>)}
         <Button b={s.button} href={ctx.href} />
       </div>
