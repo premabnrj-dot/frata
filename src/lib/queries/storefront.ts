@@ -279,7 +279,7 @@ async function coreProduct(tenantId: string, handle: string, drafts: boolean): P
     const pairs: StoreCard[] = pps.map((q) => ({
       ...q, publishAt: q.publishAt ? q.publishAt.toISOString() : null, since: new Date(q.since).toISOString(),
       images: pimgs.filter((i) => i.productId === q.id).map(({ productId: _, ...i }) => i), variants: pvs.filter((v) => v.productId === q.id).map(toVariant),
-      colours: [], attributes: {}, offers: [...sh.byProduct(q.id), ...sh.shop],
+      colours: [], attributes: {}, // no offers: a pair row shows its plain price (speed review: no dead bytes per pair)
     }))
     return {
       ...p, publishAt: p.publishAt ? p.publishAt.toISOString() : null, since: new Date(p.since).toISOString(),

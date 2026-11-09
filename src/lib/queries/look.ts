@@ -55,7 +55,7 @@ export async function justPublished(tenantId: string, userId: string, now: Date)
 /** Signal S3: does the live or the draft look offer product stories / "Pair it with"? (The product editor shows its
  *  cards then, or when the product already has some, so they can always be removed.) Inside the caller's transaction. */
 export async function extrasOffered(tx: Tx, tenantId: string): Promise<{ stories: boolean; pairs: boolean }> {
-  const revs = [await liveRevision(tx, tenantId), await openDraft(tx, tenantId)]
+  const revs = await Promise.all([liveRevision(tx, tenantId), openDraft(tx, tenantId)])
   const allowed = revs.map((r) => (r ? manifestNear(r.themeKey, r.themeVersion)?.allowed : undefined))
   return { stories: allowed.some((a) => !!a?.productStories), pairs: allowed.some((a) => !!a?.pairWith) }
 }
