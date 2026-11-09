@@ -1,5 +1,5 @@
 # EkCode — one tap, recognised at every Frrata shop (shopper identity network, as an app)
-Status: active · Date: 2026-11-09 · Mockup: https://claude.ai/artifact/A33Xi8HVfsAyZqQ2pn7uKu
+Status: active (P1 built and in production 2026-11-09; P2–P3 to come) · Date: 2026-11-09 · Mockup: https://claude.ai/artifact/A33Xi8HVfsAyZqQ2pn7uKu
 (`docs/mockups/2026-11-09-ekcode.html`, v4) · Approved: owner, 2026-11-09
 Decision: `docs/decisions/0009-shopper-network.md` · Research: `docs/research/2026-11-09-shopper-login.md`.
 
