@@ -1,7 +1,6 @@
 import Link from 'next/link'
-import { availability, visibility, type Status } from '@/domains/catalogue/availability'
-import { pairAction, type Story } from '@/domains/catalogue/stories'
-import { factsOf, priceOf } from '@/domains/storefront/listing'
+import type { Story } from '@/domains/catalogue/stories'
+import { pairRowsOf } from '@/domains/storefront/pairs'
 import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
 import type { StoreCard } from '@/lib/queries/storefront'
@@ -9,6 +8,7 @@ import { Photo } from './photo'
 import { PairAdd } from './pair-add'
 import { fill } from './fill'
 import type { BuyWords, Words } from './words'
+import type { Href } from './shell'
 
 // Signal S3 (board "Product page"): the piece's stories and "Pair it with", drawn on the server — no script for the
 // stories (a scroll-snap row), one tiny island for Add. Offered by Signal 1.3 (allowed.productStories, pairWith).
@@ -63,26 +63,21 @@ export function StoriesSlides({ stories, w }: { stories: Story[]; w: Words }) {
   )
 }
 
-/** "Pair it with" under the buy button: a listed, buyable piece; Add when it has one size, else Choose (its page). */
-export function PairRows({ pairs, now, live, w, bw }: { pairs: StoreCard[]; now: Date; live: boolean; w: Words; bw: BuyWords }) {
-  const rows = pairs.flatMap((q) => {
-    if (!visibility(q.status as Status, q.publishAt ? new Date(q.publishAt) : null, now).canBuy) return []
-    const buyable = q.variants.filter((v) => v.price > 0 && availability(factsOf(v), now).canBuy)
-    const price = priceOf(q)
-    return buyable.length && price ? [{ q, price: price.min, act: pairAction({ options: q.options, buyableVariants: q.variants.length }), only: buyable[0]! }] : []
-  })
+/** "Pair it with" under the buy button (which pieces and how: pairRowsOf). `href` keeps the preview's links inside it. */
+export function PairRows({ pairs, now, live, w, bw, href }: { pairs: StoreCard[]; now: Date; live: boolean; w: Words; bw: BuyWords; href: Href }) {
+  const rows = pairRowsOf(pairs, now)
   if (!rows.length) return null
   return (
     <div className="store-pair space-y-1.5">
       <h2 className="text-sm font-semibold">{w.pairWith}</h2>
       <ul className="space-y-1.5">
-        {rows.map(({ q, price, act, only }) => (
+        {rows.map(({ piece: q, price, act, variantId }) => (
           <li key={q.id} className="store-pair-row grid grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-3 bg-store-chip p-2">
             {q.images[0] ? <Photo p={q.images[0]} alt="" sizes="52px" low className="size-13 bg-store-paper object-cover" /> : <span className="size-13 bg-store-paper" />}
-            <Link href={`/products/${q.handle}`} className="min-w-0 truncate text-sm">{q.title} · {formatInr(paise(price))}</Link>
+            <Link href={href(`/products/${q.handle}`)} className="min-w-0 truncate text-sm">{q.title} · {formatInr(paise(price))}</Link>
             {act === 'add'
-              ? <PairAdd variantId={only.id} label={w.pairAdd} done={w.pairAdded} sr={fill(w.pairAddSr, { title: q.title })} live={live} preview={bw.preview} />
-              : <Link href={`/products/${q.handle}`} aria-label={fill(w.pairChooseSr, { title: q.title })} className="inline-flex min-h-11 shrink-0 items-center rounded-[var(--store-radius)] border border-store-ink px-3 text-xs font-bold uppercase tracking-wider">{w.pairChoose}</Link>}
+              ? <PairAdd variantId={variantId} label={w.pairAdd} done={w.pairAdded} sr={fill(w.pairAddSr, { title: q.title })} live={live} preview={bw.preview} />
+              : <Link href={href(`/products/${q.handle}`)} aria-label={fill(w.pairChooseSr, { title: q.title })} className="inline-flex min-h-11 shrink-0 items-center rounded-[var(--store-radius)] border border-store-ink px-3 text-xs font-bold uppercase tracking-wider">{w.pairChoose}</Link>}
           </li>
         ))}
       </ul>

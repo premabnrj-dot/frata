@@ -1,10 +1,9 @@
 import 'server-only'
-import { and, asc, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
 import { productPairs, products } from '@/lib/db/schema-catalogue'
 import { acceptedBase, WIDTHS } from '@/domains/media/sizes'
 import { MAX_PAIRS, type Story } from '@/domains/catalogue/stories'
-export { cleanPairIds } from '@/domains/catalogue/stories'
 
 // =============================================================================
 // FILE: src/lib/catalogue/extras.ts — the server's half of a product's stories and pairings (Signal S3): a story
@@ -36,11 +35,4 @@ export async function savePairs(tx: Tx, tenantId: string, productId: string, ids
   await tx.delete(productPairs).where(and(eq(productPairs.tenantId, tenantId), eq(productPairs.productId, productId)))
   if (wanted.length) await tx.insert(productPairs).values(wanted.map((pairedId, position) => ({ tenantId, productId, pairedId, position })))
   return true
-}
-
-/** The product's pairings in order (the editor's card). */
-export async function pairIdsOf(tx: Tx, tenantId: string, productId: string): Promise<string[]> {
-  const rows = await tx.select({ id: productPairs.pairedId }).from(productPairs)
-    .where(and(eq(productPairs.tenantId, tenantId), eq(productPairs.productId, productId))).orderBy(asc(productPairs.position))
-  return rows.map((r) => r.id)
 }

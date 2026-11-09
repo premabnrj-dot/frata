@@ -11,6 +11,7 @@ import type { StoreProduct, StoreShop } from '@/lib/queries/storefront'
 import type { ThemeSettings } from '@/domains/themes/types'
 import { BuyBox, type OfferLine } from './buy-box'
 import { PairRows, StoriesSlides, StoriesStacked } from './product-stories'
+import type { Href } from './shell'
 import { buyWords, fill, wordsFor } from './words'
 import { JsonLd } from './json-ld'
 
@@ -42,10 +43,12 @@ export function productOffer(p: StoreProduct, now: Date) {
 }
 
 /** The product page (spec § Product page). Server-rendered; the choices are one client island. */
-export function ProductView({ shop, p, now, live = false, layout, offers, below, rating, extras }: {
+export function ProductView({ shop, p, now, live = false, layout, offers, below, rating, extras, href = (x) => x }: {
   shop: StoreShop; p: StoreProduct; now: Date; live?: boolean
   /** Signal 1.3: whether the theme shows the piece's stories and its pairings (ResolvedTheme.product). */
   extras?: { stories: boolean; pairs: boolean }
+  /** Links to other pieces (Pair it with): the preview keeps them inside it; the shop's are plain paths. */
+  href?: Href
   /** The theme's product page (T2); absent = today's layout. */
   layout?: Pick<ThemeSettings, 'gallery' | 'details'> & Partial<Pick<ThemeSettings, 'buyBoxSticky' | 'buyBar' | 'bottomTabs'>>
   /** Offers O·2's lines after the price, and what modules put under the page (Reviews, Size and fit): nothing without them. */
@@ -77,7 +80,7 @@ export function ProductView({ shop, p, now, live = false, layout, offers, below,
   })
   const stacked = layout?.gallery === 'stack'
   const stories = extras?.stories ? p.stories : []
-  const pairs = extras?.pairs ? <PairRows pairs={p.pairs} now={now} live={live} w={w} bw={buyWords(shop.shopLanguage)} /> : null
+  const pairs = extras?.pairs ? <PairRows pairs={p.pairs} now={now} live={live} w={w} bw={buyWords(shop.shopLanguage)} href={href} /> : null
   return (
     <article className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
       <BuyBox title={p.title} options={p.options} values={p.optionValues} variants={p.variants.map(({ restockedAt: _, ...v }) => v)} colours={p.colours} images={p.images}

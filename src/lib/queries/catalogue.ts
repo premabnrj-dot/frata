@@ -115,7 +115,7 @@ export async function productForEdit(tenantId: string, productId: string, role: 
       gstin: shopSettings.gstin, gstScheme: shopSettings.gstScheme, turnoverBand: shopSettings.turnoverBand, pricesIncludeGst: shopSettings.pricesIncludeGst, sells: shopSettings.sells, legalName: shopSettings.legalName, legalAddress: shopSettings.address })
       .from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
     return { product, variants: vs, images: imgs, types, colours, attributes: attrs, collections: cols, memberOf: member.map((m) => m.collectionId), shop: shop ?? null, costs,
-      pairs: pairRows, offers: { stories: offers.stories || product.stories.length > 0, pairs: offers.pairs || pairRows.length > 0 } }
+      pairs: pairRows.map(toPiece), offers: { stories: offers.stories || product.stories.length > 0, pairs: offers.pairs || pairRows.length > 0 } }
   })
 }
 
@@ -201,15 +201,17 @@ export async function searchPieces(tenantId: string, productId: string, q: strin
   return withTenant(tenantId, (tx) => tx.select(pieceCols(tenantId))
     .from(products).leftJoin(productImages, and(eq(productImages.tenantId, products.tenantId), eq(productImages.productId, products.id), eq(productImages.position, 0)))
     .where(and(eq(products.tenantId, tenantId), sql`${products.id} <> ${productId}`, inArray(products.status, ['active', 'unlisted']), sql`${products.title} ilike ${like}`))
-    .orderBy(asc(products.title)).limit(8))
+    .orderBy(asc(products.title)).limit(8).then((rs) => rs.map(toPiece)))
 }
 
 /** A piece as the "Pair it with" card shows it: cover, lowest price, how many sizes, whether any can be bought now
- *  (stock, or pre-order / made to order: the editor's hint; the shop decides with availability()). */
+ *  (stock, or pre-order / made to order: the editor's hint — a full pre-order still reads as buyable; the shop decides
+ *  with availability()). */
 const pieceCols = (tenantId: string) => ({
   id: products.id, title: products.title, status: products.status, options: products.options, base: productImages.base, widths: productImages.widths,
-  price: sql<number | null>`(select min(v.price)::float8 from ${variants} v where v.tenant_id = ${tenantId} and v.product_id = "products"."id" and v.archived_at is null)`,
+  price: sql<string | number | null>`(select min(v.price)::bigint from ${variants} v where v.tenant_id = ${tenantId} and v.product_id = "products"."id" and v.archived_at is null)`,
   sizes: sql<number>`(select count(*)::int from ${variants} v where v.tenant_id = ${tenantId} and v.product_id = "products"."id" and v.archived_at is null)`,
-  buyable: sql<boolean>`coalesce((select bool_or(v.stock > 0 or v.when_out <> 'stop') from ${variants} v where v.tenant_id = ${tenantId} and v.product_id = "products"."id" and v.archived_at is null), false)`,
+  buyable: sql<boolean>`coalesce((select bool_or(v.price > 0 and (v.stock > 0 or v.when_out <> 'stop')) from ${variants} v where v.tenant_id = ${tenantId} and v.product_id = "products"."id" and v.archived_at is null), false)`,
 })
-export type { Piece } from '@/domains/catalogue/stories'
+// bigint comes back as text: paise stay integers (ADR-0004), turned into a number here, as the list's prices are.
+const toPiece = <T extends { price: string | number | null }>(r: T) => ({ ...r, price: r.price === null ? null : Number(r.price) })

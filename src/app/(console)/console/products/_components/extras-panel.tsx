@@ -105,10 +105,10 @@ function pieceLine(p: Piece) {
   if (p.status === 'archived') return <span className="text-danger-text">Archived: not shown on the shop</span>
   if (p.status === 'draft') return <span className="text-danger-text">Draft: not shown on the shop</span>
   if (!p.buyable) return <span className="text-danger-text">Sold out: not shown until it’s back</span>
-  return <>{p.price !== null && <Money paise={paise(p.price)} />}{' · '}{pairAction({ options: p.options, buyableVariants: p.sizes }) === 'add' ? 'one size: Add on the shop' : `${p.sizes > 1 ? `${p.sizes} sizes` : p.options.join(', ')}: Choose on the shop`}</>
+  return <>{p.price !== null && <Money paise={paise(p.price)} />}{' · '}{pairAction({ options: p.options, variants: p.sizes }) === 'add' ? 'one size: Add on the shop' : `${p.sizes > 1 ? `${p.sizes} sizes` : p.options.join(', ')}: Choose on the shop`}</>
 }
 
-export function PairsPanel({ productId, pairs, onChange, error }: { productId: string; pairs: Piece[]; onChange: (p: Piece[]) => void; error?: string }) {
+export function PairsPanel({ productId, pairs, onChange }: { productId: string; pairs: Piece[]; onChange: (p: Piece[]) => void }) {
   const [q, setQ] = useState('')
   const [found, setFound] = useState<Piece[] | null>(null)
   useEffect(() => {
@@ -131,7 +131,6 @@ export function PairsPanel({ productId, pairs, onChange, error }: { productId: s
     <div className="space-y-2">
       <h2 className="text-section font-semibold">Pair it with{pairs.length > 0 && <Count n={pairs.length} of={MAX_PAIRS} />}</h2>
       {pairs.length === 0 && <p className="text-sm text-muted-foreground">Pick up to 2 pieces shoppers can add from this page.</p>}
-      {error && <p role="alert" className="text-sm font-medium text-danger-text">{error}</p>}
       {pairs.length > 0 && <ul className="space-y-2">{pairs.map((p) => row(p, <button type="button" className={btn} aria-label={`Remove ${p.title}`} onClick={() => onChange(pairs.filter((x) => x.id !== p.id))}>Remove</button>))}</ul>}
       {pairs.length < MAX_PAIRS && <>
         <div className="relative">

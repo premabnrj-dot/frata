@@ -57,7 +57,7 @@ export type CleanProduct = Omit<ProductInput, 'options' | 'variants' | 'handle' 
   /** Undefined when the form sent no label panel. */
   label?: Label
   /** Signal S3: undefined when the form sent no stories / pairs card. */
-  stories?: Story[]; pairs?: unknown
+  stories?: Story[]; pairs?: string[]
 }
 
 /**
@@ -82,7 +82,7 @@ export function cleanTax(t: TaxInput, now: Date, digits = 4): { ok: true; tax: C
 import { HSN_SHAPE, OWN_RATES, ruleOn } from '../tax/rates'
 import { isUqc, type Uqc } from '../tax/units'
 import { cleanLabel, type Label, type LabelInput } from './label'
-import { cleanStories, type Story } from './stories'
+import { cleanPairIds, cleanStories, type Story } from './stories'
 
 export const HANDLE_SHAPE = /^[a-z0-9]([a-z0-9-]{0,98}[a-z0-9])?$/
 const DATE = /^\d{4}-\d{2}-\d{2}$/
@@ -161,7 +161,7 @@ export function cleanProduct(p: ProductInput, now: Date): { ok: true; product: C
   const stories = p.stories !== undefined ? cleanStories(p.stories) : null
   if (stories && !stories.ok) errors.stories = stories.error
   if (Object.keys(errors).length) return { ok: false, errors }
-  return { ok: true, product: { ...(tax?.ok ? { tax: tax.tax } : {}), ...(label?.ok ? { label: label.label } : {}), ...(stories?.ok ? { stories: stories.stories } : {}), ...(p.pairs !== undefined ? { pairs: p.pairs } : {}), title, description: p.description.trim(), typeId: p.typeId, modelHeight: p.modelHeight.trim().slice(0, 30), modelSize: p.modelSize.trim().slice(0, 10), options: opts.ok ? opts.options : [], variants,
+  return { ok: true, product: { ...(tax?.ok ? { tax: tax.tax } : {}), ...(label?.ok ? { label: label.label } : {}), ...(stories?.ok ? { stories: stories.stories } : {}), ...(p.pairs !== undefined ? { pairs: cleanPairIds(p.pairs, '') } : {}), title, description: p.description.trim(), typeId: p.typeId, modelHeight: p.modelHeight.trim().slice(0, 30), modelSize: p.modelSize.trim().slice(0, 10), options: opts.ok ? opts.options : [], variants,
     handle, seoTitle, seoDescription, categoryId: p.categoryId ?? null, attributes: p.attributes ?? {}, colours, tags } }
 }
 

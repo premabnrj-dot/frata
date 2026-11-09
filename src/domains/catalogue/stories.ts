@@ -24,7 +24,6 @@ export const StorySchema = z.object({
   notes: z.array(z.string().max(STORY_LIMITS.note)).max(MAX_NOTES).default([]),
 })
 export type Story = z.infer<typeof StorySchema>
-export type StoryPhoto = z.infer<typeof photo>
 
 /** The stories as saved: trimmed; a story with nothing in it is dropped; empty notes dropped. */
 export function cleanStories(input: unknown): { ok: true; stories: Story[] } | { ok: false; error: string } {
@@ -48,8 +47,8 @@ export function cleanPairIds(input: unknown, self: string): string[] {
 
 /** What a shopper is offered for a paired piece: Add only with no options (one variant) and buyable; else Choose (its
  *  page), so a sized piece is never put in the bag without its size (architecture review 6). */
-export const pairAction = (p: { options: string[]; buyableVariants: number }): 'add' | 'choose' =>
-  p.options.length === 0 && p.buyableVariants === 1 ? 'add' : 'choose'
+export const pairAction = (p: { options: string[]; variants: number }): 'add' | 'choose' =>
+  p.options.length === 0 && p.variants === 1 ? 'add' : 'choose'
 
 /** A piece as the editor's "Pair it with" card shows it (src/lib/queries/catalogue.ts reads it). */
 export type Piece = { id: string; title: string; status: string; options: string[]; base: string | null; widths: number[] | null; price: number | null; sizes: number; buyable: boolean }

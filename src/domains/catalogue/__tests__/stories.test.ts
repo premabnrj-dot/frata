@@ -37,8 +37,8 @@ describe('cleanPairIds, any case', () => {
 
 describe('pairAction', () => {
   it('Add only for a piece with no options and one buyable variant; a sized piece is chosen on its page', () => {
-    expect(pairAction({ options: [], buyableVariants: 1 })).toBe('add')
-    expect(pairAction({ options: ['Size'], buyableVariants: 1 })).toBe('choose')
-    expect(pairAction({ options: [], buyableVariants: 0 })).toBe('choose')
+    expect(pairAction({ options: [], variants: 1 })).toBe('add')
+    expect(pairAction({ options: ['Size'], variants: 1 })).toBe('choose')
+    expect(pairAction({ options: [], variants: 0 })).toBe('choose')
   })
 })

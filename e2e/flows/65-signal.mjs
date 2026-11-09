@@ -176,6 +176,9 @@ export default {
           }
           await p.getByRole('button', { name: 'Add Strap Tag to bag' }).click()
           await p.getByText('This is a preview: shoppers add to their bag here.').waitFor()
+          // Choose opens the piece inside the preview (impact review: links keep the preview's prefix).
+          await p.getByRole('link', { name: `Choose a size of ${b.title}` }).click()
+          await p.waitForURL(new RegExp(`/console/theme-preview/${r.id}/products/${b.handle}$`))
         } finally {
           await db`update products set stories = '[]' where id = ${a.id}`
           await db`delete from product_pairs where tenant_id = ${KESAR}`
