@@ -293,3 +293,35 @@ style, "skin").
   web.dev web platform October 2026 (2026-10-29). Webflow breakpoint canvas (2026-09-02); Framer page edit (2026-09-15).
 - Not verified (no current source): Shopify editor error states; section counts for Impulse, Be Yours, Broadcast;
   Twenty Twenty-Five counts; NN/g or Baymard research on page builders; Horizon's nesting depth.
+
+## 11. Look v3 (owner, 2026-11-09) and how Frrata builds sections
+
+Mockup: https://claude.ai/artifact/N3ATeKr1XxgTvEiPLjN2tq (`docs/mockups/2026-11-09-look-v3.html`). Owner calls so far:
+lockup **B · The tile** (monogram + "themes", "by frrata" under it); the preview defaults to **Computer**, drawn at
+1280 px and scaled to fit; **Publish is a small confirm** (no change list), then the preview itself goes live (a sweep
+and a filling rani bar), then a success popup with the shop's address, View your shop (new tab), Keep editing, Undo.
+
+**Header and footer as predesigned choices per theme.** Each theme lists its header and footer designs in its
+manifest (`allowed.headers` / `allowed.footers`, as today) and marks the ones made for it (`made: [...]`). The picker is
+picture cards ("Made for Editorial" first, then "Fits Editorial"); the on/off options that apply to every design
+(stays at the top, announcement bar, menu) sit under the cards. New designs to add: Centred with a menu panel,
+Over the photo (Editorial); Instagram strip footer.
+
+**Section library.** One dialog: search across name, words and tags (`/` focuses it, matches highlighted, an empty
+result suggests words), kinds down the side with counts (Banners, Products, Collections, Story, Trust, Promotions,
+From your apps), picture cards drawn from the section's own preset, a "Fits <theme>" filter on by default, a full
+section greyed with its limit, and "Adds below <section>" so the merchant knows where it lands.
+
+**How Frrata builds a section and fits it to a theme** (the pipeline the catalogue and gates hold):
+1. **Brief** — the job, the page it belongs on, its kind (the library's category) and tags (its mood: occasion,
+   value, minimal…).
+2. **Contract** — the save schema (additive only), named parts, every state with a fixture (full, one item, long
+   text, no photo, Hindi, each scheme).
+3. **Presets** — 2–4 named starting arrangements; each draws its library card.
+4. **Theme fit** — a theme opts in by listing the section in its manifest and saying how it wears it:
+   `fits: { lookbook: { preset: 'single', scheme: 'tint', recommended: true } }`. Recommended sections come first and
+   say "Made for <theme>"; a section a theme doesn't list is not offered there. A section added to a released theme
+   ships as that theme's next minor version (Editorial 2.1), never by editing 2.0.
+5. **Gates** — check:theme (schema, presets, fit keys), contrast per scheme, visual shots per theme × preset, the
+   speed budget, accessibility.
+6. **Release** — merge, then Admin › Themes: stage to a pilot shop, then release to everyone.

@@ -311,11 +311,65 @@ svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 @starting-style{.toast{opacity:0;translate:-50% 12px}}
 .toast[hidden]{display:none}
 .toast button{background:none;border:0;color:inherit;text-decoration:underline;font-weight:600}
+
+/* ── header / footer presets ── */
+.presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;padding:18px 20px}
+.presets>*{min-width:0}
+.pcard{display:block;width:100%;border:1px solid var(--border);border-radius:12px;background:var(--card);padding:0;text-align:left;overflow:hidden;transition:border-color var(--fast),translate var(--base) var(--ease-standard)}
+@media (hover:hover){.pcard:hover{translate:0 -2px;border-color:var(--input)}}
+.pcard[aria-pressed="true"]{border-color:var(--fg);box-shadow:inset 0 0 0 1px var(--fg)}
+.pcard .draw{display:block;height:96px;background:var(--s-bg);border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.pcard .draw i{position:absolute;background:var(--s-text);border-radius:2px}
+.pcard .pm{padding:10px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pcard .pm b{font-weight:600}
+.pcard .pm .chip{margin-left:auto}
+.popts{display:flex;gap:24px;flex-wrap:wrap;padding:0 20px 18px;align-items:flex-end}
+.popts .tg{min-width:200px}
+/* ── section library ── */
+.libtop{display:flex;gap:10px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.search{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;border:1px solid var(--input);border-radius:10px;padding:0 10px;min-height:40px;background:var(--card)}
+.search:focus-within{outline:2px solid var(--focus);outline-offset:1px}
+.search input{flex:1;border:0;outline:0;background:transparent;color:var(--fg);font:inherit;min-width:0}
+.kbd{font:11px var(--mono);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--sub)}
+.fitchip{border:1px solid var(--border);background:var(--card)}.fitchip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.libbody{display:grid;grid-template-columns:190px minmax(0,1fr);min-height:420px}
+.cats{border-right:1px solid var(--border);padding:10px 8px;display:grid;align-content:start;gap:2px}
+.cats button{display:flex;justify-content:space-between;align-items:center;border:0;background:transparent;border-radius:8px;padding:8px 10px;text-align:left;font-size:13px;color:var(--sub)}
+.cats button:hover{background:var(--muted)}
+.cats button[aria-current="true"]{background:var(--muted);color:var(--fg);font-weight:600}
+.cats button span{font:11px var(--mono)}
+.cards{padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;align-content:start}
+.cards>*{min-width:0}
+.scard{display:block;width:100%;border:1px solid var(--border);border-radius:12px;background:var(--card);padding:0;text-align:left;overflow:hidden;transition:border-color var(--fast),translate var(--base) var(--ease-standard),opacity var(--base)}
+@media (hover:hover){.scard:hover{translate:0 -2px;border-color:var(--input)}}
+.scard[disabled]{opacity:.5;pointer-events:none}
+.scard .draw{display:block;height:110px;background:var(--s-bg);position:relative;overflow:hidden;border-bottom:1px solid var(--border)}
+.scard .draw i{position:absolute;border-radius:2px}
+.scard .sm{padding:10px 12px;display:grid;gap:4px}
+.scard .sm .t{display:flex;align-items:center;gap:6px;font-weight:600}
+.scard .sm .t .chip{margin-left:auto;font-size:10px;padding:1px 8px}
+.scard mark{background:color-mix(in srgb,var(--brand) 22%,transparent);color:inherit;border-radius:2px}
+.empty{grid-column:1/-1;text-align:center;padding:40px 10px;color:var(--sub)}
+.libfoot{display:flex;justify-content:space-between;gap:10px;padding:10px 16px;border-top:1px solid var(--border);font-size:12px;flex-wrap:wrap}
+/* ── pipeline ── */
+.pipe{list-style:none;margin:0;padding:18px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;counter-reset:st}
+.pipe li{counter-increment:st;border:1px solid var(--border);border-radius:10px;padding:12px;display:grid;gap:2px;position:relative;background:var(--card)}
+.pipe li::before{content:counter(st);font:600 12px var(--mono);color:var(--brand-text)}
+.pipe li span{font-size:12px;color:var(--sub)}
+.fitgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;padding:0 20px 20px}
+.fitgrid>*{min-width:0}
+.fitcol{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--card)}
+.fith{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--sub);padding:8px 12px;border-bottom:1px solid var(--border)}
+.code{margin:0;padding:12px;font:12px/1.6 var(--mono);white-space:pre-wrap;overflow-x:auto}
+.mini-fit{display:flex;gap:6px;flex-wrap:wrap;padding:12px 12px 6px}
+.fitcol>.sub{padding:0 12px 12px}
+@media (max-width:640px){.libbody{grid-template-columns:minmax(0,1fr)}.cats{border-right:0;border-bottom:1px solid var(--border);grid-auto-flow:column;overflow-x:auto}.cats button{white-space:nowrap}}
 @media (max-width:900px){.cz{grid-template-columns:minmax(0,1fr)}.panel{border-right:0;border-bottom:1px solid var(--border);max-height:none}}
 @media (max-width:480px){.tiles{grid-template-columns:repeat(2,1fr)}.bstyles{grid-template-columns:repeat(3,minmax(0,1fr))}}
 </style>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
   <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
   <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></symbol>
@@ -334,7 +388,7 @@ svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 
 <div class="wrap">
 <nav class="boards" aria-label="Boards">
-  <a href="#brand">Frrata Themes</a><a href="#gallery">Look</a><a href="#panel">Customizer</a><a href="#upload">Photos</a><a href="#confirm">Confirmations</a>
+  <a href="#brand">Frrata Themes</a><a href="#gallery">Look</a><a href="#panel">Customizer</a><a href="#upload">Photos</a><a href="#navs">Header and footer</a><a href="#library">Sections</a><a href="#build">How we build</a><a href="#confirm">Confirmations</a>
 </nav>
 <h1>Look v3</h1>
 <p class="sub">Mockup · 9 Nov 2026</p>
@@ -467,6 +521,54 @@ svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stro
   </div></div>
 </div>
 
+<!-- ============ NAV / FOOTER PRESETS ============ -->
+<h2 id="navs">Header and footer</h2>
+<div class="frame">
+  <div class="look-head"><div class="seg" role="group" aria-label="Part" id="partseg" style="width:auto"><span class="thumb"></span><button aria-pressed="true" data-k="header">Header</button><button aria-pressed="false" data-k="footer">Footer</button></div><span class="sub" style="font-size:13px">Editorial</span></div>
+  <div class="presets" id="presets"></div>
+  <div class="popts"><div class="tg"><span>Stays at the top</span><button class="sw" role="switch" aria-checked="true" aria-label="Stays at the top"></button></div><div class="tg"><span>Announcement bar</span><button class="sw" role="switch" aria-checked="false" aria-label="Announcement bar"></button></div><div class="fld" style="min-width:200px"><span class="lab">Menu</span><div class="seg" role="group" aria-label="Menu"><span class="thumb"></span><button aria-pressed="true">Collections</button><button aria-pressed="false">Custom</button></div></div></div>
+</div>
+
+<!-- ============ SECTION LIBRARY ============ -->
+<h2 id="library">Sections</h2>
+<div class="frame lib2">
+  <div class="libtop"><div class="search"><svg class="i"><use href="#i-search"/></svg><input id="q" placeholder="Search sections" aria-label="Search sections" autocomplete="off"><span class="kbd">/</span></div><button class="chip fitchip" id="fitchip" aria-pressed="true"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>Fits Editorial</button></div>
+  <div class="libbody">
+    <nav class="cats" id="cats" aria-label="Kinds"></nav>
+    <div class="cards" id="secCards"></div>
+  </div>
+  <div class="libfoot"><span class="sub" id="libcount"></span><span class="sub">Adds below <b>Hero</b></span></div>
+</div>
+
+<!-- ============ HOW WE BUILD ============ -->
+<h2 id="build">How Frrata builds a section</h2>
+<div class="frame">
+  <ol class="pipe">
+    <li><b>Brief</b><span>job · page · kind</span></li>
+    <li><b>Contract</b><span>schema · parts · states</span></li>
+    <li><b>Presets</b><span>2–4 named starts</span></li>
+    <li><b>Theme fit</b><span>which themes · which preset · colours</span></li>
+    <li><b>Gates</b><span>contrast · shots · speed · a11y</span></li>
+    <li><b>Release</b><span>theme x.y · stage · everyone</span></li>
+  </ol>
+  <div class="fitgrid">
+    <div class="fitcol"><div class="fith">Section · Lookbook</div><pre class="code">kind: 'story'
+tags: ['occasion', 'editorial', 'photo-led']
+presets:
+  scroll   — photos side by side
+  grid     — 2 × 2 with words
+  single   — one big photo, pinned pieces
+states: full · 1 photo · no pieces · Hindi</pre></div>
+    <div class="fitcol"><div class="fith">Theme · Editorial 2.1</div><pre class="code">sections:  [... , 'lookbook']
+fits:
+  lookbook: { preset: 'single', scheme: 'tint',
+              recommended: true }
+headers:   centred · split · centred-mega
+footers:   statement · three · compact</pre></div>
+    <div class="fitcol"><div class="fith">What a merchant sees</div><div class="mini-fit"><span class="chip c-ok">Made for Editorial</span><span class="chip">Fits Studio</span><span class="chip" style="opacity:.55">Not in Bazaar</span></div><div class="sub" style="font-size:13px">Recommended first · the theme’s own preset and colours when added · not offered where it doesn’t fit</div></div>
+  </div>
+</div>
+
 <!-- ============ 6 CONFIRM ============ -->
 <h2 id="confirm">Confirmations</h2>
 <div class="confirms">
@@ -538,4 +640,56 @@ $('#copyurl').onclick=async()=>{try{await navigator.clipboard.writeText('kesar-s
 // ---------- toast ----------
 function showToast(t,undo=true){const x=$('#toast');x.firstElementChild.textContent=t;$('#toastUndo').hidden=!undo;x.hidden=false;clearTimeout(showToast.t);showToast.t=setTimeout(()=>x.hidden=true,3500)}
 $('#demoToast').onclick=()=>showToast('Hero removed');$('#toastUndo').onclick=()=>$('#toast').hidden=true
+
+// ---------- header / footer presets ----------
+const H=[
+ {n:'Centred',fit:'Made for Editorial',d:[[42,14,16,6],[6,14,6,6],[88,14,6,6],[30,30,40,3]],on:true},
+ {n:'Centred with menu panel',fit:'Made for Editorial',d:[[42,14,16,6],[6,14,6,6],[88,14,6,6],[6,30,88,46,.12]]},
+ {n:'Split',fit:'Fits',d:[[6,14,24,4],[42,14,16,6],[88,14,6,6]]},
+ {n:'Over the photo',fit:'Made for Editorial',d:[[0,0,100,100,.18],[42,14,16,6,1,'#fff'],[6,14,6,6,1,'#fff']]},
+ {n:'Classic',fit:'Fits',d:[[6,14,18,6],[60,15,26,4],[88,14,6,6]]},
+]
+const F=[
+ {n:'Statement',fit:'Made for Editorial',d:[[6,14,30,4],[50,14,16,20,.5],[74,14,16,20,.5],[6,60,70,24]],ink:true,on:true},
+ {n:'Three columns',fit:'Fits',d:[[6,20,22,22,.5],[38,20,22,22,.5],[70,20,22,22,.5]]},
+ {n:'Compact',fit:'Fits',d:[[30,30,40,5],[20,48,60,4,.5],[25,62,50,4,.5]]},
+ {n:'Instagram strip',fit:'Made for Editorial',d:[[6,12,14,30],[22,12,14,30],[38,12,14,30],[54,12,14,30],[70,12,14,30],[6,60,60,4,.5]]},
+]
+function drawP(d,ink){return d.map(([x,y,w,h,o=1,c])=>`<i style="left:${x}%;top:${y}%;width:${w}%;height:${h}%;opacity:${o};${c?`background:${c}`:ink?'background:var(--s-bg)':''}"></i>`).join('')}
+function renderPresets(k){const L=k==='footer'?F:H;$('#presets').innerHTML=L.map((p,i)=>`<button class="pcard" aria-pressed="${!!p.on}"><span class="draw" style="${p.ink?'background:var(--s-text)':''}">${drawP(p.d,p.ink)}</span><span class="pm"><b>${p.n}</b><span class="chip ${p.fit.startsWith('Made')?'c-ok':''}">${p.fit==='Fits'?'Fits Editorial':p.fit}</span></span></button>`).join('')}
+$('#partseg').addEventListener('click',e=>{const b=e.target.closest('button');if(b)renderPresets(b.dataset.k)})
+$('#presets').addEventListener('click',e=>{const b=e.target.closest('.pcard');if(!b)return;$$('#presets .pcard').forEach(x=>x.setAttribute('aria-pressed',x===b));saving()})
+renderPresets('header')
+// ---------- section library ----------
+const SECS=[
+ ['Hero','Banners','Photo with words, split, or words only','hero banner photo top',true,[[0,0,100,100,.25],[8,58,50,10],[8,74,24,8]]],
+ ['Sale banner','Banners','A band with an end date','sale offer countdown festive',true,[[0,20,100,60,.9],[30,40,40,10,1,'#fff']]],
+ ['Products','Products','New in, best sellers, a collection, on sale','grid new best sellers catalogue',true,[[6,10,20,70,.25],[29,10,20,70,.25],[52,10,20,70,.25],[75,10,20,70,.25]]],
+ ['Product rail','Products','A row to swipe','carousel slider row',true,[[6,15,28,70,.25],[37,15,28,70,.25],[68,15,28,70,.25]]],
+ ['Price tiles','Products','Under ₹999, Under ₹1,999','budget price filter',false,[[6,30,40,30,.25],[54,30,40,30,.25]]],
+ ['Collection tiles','Collections','Your collections as pictures','categories tiles',true,[[6,10,28,60,.3],[37,10,28,60,.3],[68,10,28,60,.3]]],
+ ['Category circles','Collections','Round, like Instagram stories','circles stories categories',false,[[8,25,16,50,.3],[30,25,16,50,.3],[52,25,16,50,.3],[74,25,16,50,.3]]],
+ ['Image with text','Story','Your brand story beside a photo','about story brand maker',true,[[6,10,44,80,.3],[56,30,36,8],[56,46,30,5,.4]]],
+ ['Shop the look','Story','Pieces pinned on a photo','lookbook outfit pins',true,[[6,10,44,80,.3],[20,30,6,8,1,'#fff'],[56,30,36,6],[56,46,36,6,.4]]],
+ ['Lookbook','Story','A shoot, with its pieces','editorial campaign photos',true,[[6,10,28,80,.3],[37,10,28,80,.3],[68,10,28,80,.3]]],
+ ['Rich text','Story','A few paragraphs','text words paragraph',true,[[25,30,50,8],[20,48,60,4,.4],[22,58,56,4,.4]]],
+ ['Shop by promise','Trust','Pay on delivery, returns, dispatch','cod returns shipping trust',true,[[6,30,28,40,.15],[37,30,28,40,.15],[68,30,28,40,.15]]],
+ ['Logos and press','Trust','As seen in','press logos featured',true,[[10,40,15,15,.4],[32,40,15,15,.4],[54,40,15,15,.4],[76,40,15,15,.4]]],
+ ['Drop teaser','Promotions','A date and a name','launch countdown drop',true,[[0,0,100,100,.85],[25,40,50,12,1,'#fff']]],
+ ['Reviews','From your apps','Stars and fit notes','reviews ratings fit',true,[[6,20,40,50,.15],[54,20,40,50,.15]]],
+]
+const CATS=['All','Banners','Products','Collections','Story','Trust','Promotions','From your apps']
+let cat='All',fitOnly=true
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))
+const hl=(t,q)=>{if(!q)return esc(t);const i=t.toLowerCase().indexOf(q);return i<0?esc(t):esc(t.slice(0,i))+'<mark>'+esc(t.slice(i,i+q.length))+'</mark>'+esc(t.slice(i+q.length))}
+function renderLib(){const q=$('#q').value.trim().toLowerCase();const m=SECS.filter(s=>(cat==='All'||s[1]===cat)&&(!fitOnly||s[4])&&(!q||(s[0]+' '+s[2]+' '+s[3]).toLowerCase().includes(q)))
+ $('#cats').innerHTML=CATS.map(c=>`<button aria-current="${c===cat}" data-c="${c}">${c}<span>${SECS.filter(s=>(c==='All'||s[1]===c)&&(!fitOnly||s[4])).length}</span></button>`).join('')
+ $('#secCards').innerHTML=m.length?m.map(s=>`<button class="scard" ${s[0]==='Sale banner'?'disabled title="At most 1 on a page"':''}><span class="draw">${s[5].map(([x,y,w,h,o=1,c])=>`<i style="left:${x}%;top:${y}%;width:${w}%;height:${h}%;opacity:${o};background:${c||'var(--s-text)'}"></i>`).join('')}</span><span class="sm"><span class="t">${hl(s[0],q)}${s[4]?'<span class="chip c-ok">Fits</span>':''}</span><span class="sub" style="font-size:12px">${hl(s[2],q)}</span></span></button>`).join(''):`<div class="empty">Nothing called “${esc(q)}”. Try “photo”, “sale” or “reviews”.</div>`
+ $('#libcount').textContent=m.length+' of '+SECS.length}
+$('#q').oninput=renderLib
+$('#cats').addEventListener('click',e=>{const b=e.target.closest('button');if(b){cat=b.dataset.c;renderLib()}})
+$('#fitchip').onclick=()=>{fitOnly=!fitOnly;$('#fitchip').setAttribute('aria-pressed',fitOnly);renderLib()}
+$('#secCards').addEventListener('click',e=>{const b=e.target.closest('.scard');if(b){showToast(b.querySelector('.t').textContent.replace('Fits','').trim()+' added',true)}})
+document.addEventListener('keydown',e=>{if(e.key==='/'&&document.activeElement.tagName!=='INPUT'){e.preventDefault();$('#q').focus()}})
+renderLib()
 </script>
