@@ -1,6 +1,6 @@
 # EkCode — one tap, recognised at every Frrata shop (shopper identity network, as an app)
 Status: draft (owner direction 2026-11-09) · Date: 2026-11-09 · Mockup: https://claude.ai/artifact/A33Xi8HVfsAyZqQ2pn7uKu
-(`docs/mockups/2026-11-09-ekcode.html`, v2) · Approved: pending
+(`docs/mockups/2026-11-09-ekcode.html`, v3) · Approved: pending
 Decision: `docs/decisions/0009-shopper-network.md` · Research: `docs/research/2026-11-09-shopper-login.md`.
 
 **Name (owner, 2026-11-09).** **EkCode**: one code, every Frrata shop; said "ek code"; `ekcode_*` in code. Devanagari
@@ -115,18 +115,35 @@ Guest checkout stays. Desktop: the code goes to the phone and is typed on the de
 - **Order updates from EkCode (unticked, checkout):** "Order updates for this order from EkCode on WhatsApp" — Meta
   requires the opt-in to name the sender (EkCode); the messages name the shop.
 
-## 6. Billing, metering, abuse
-- **Sign-in codes: free to merchants, in every plan** (Frrata's cost: ₹0.115 + GST per delivered code; the network is
-  the moat — every shop should switch it on). Codes metered in `ekcode_codes` for Frrata's own costing.
-- **Order updates from EkCode's number:** Meta's terms forbid reselling the WhatsApp platform, and a per-message line
-  on the merchant's invoice could read as resale. **Until counsel clears it, the cost (₹0.115 + GST each) is carried
-  inside Frrata's fee**, not itemised; per-shop caps bound it. Counsel may allow a ₹0.20 "order updates" line. Once the
-  shop connects its own number, Meta bills it directly. No wallet (RBI).
-- Market: KwikPass 5,000 logins/mo free; checkout bundles 2.5–3.5% of GMV — EkCode free + per-message updates is a
-  clear story. `unit-economics-reviewer` runs on it.
-- **Abuse:** Indian mobiles only (no international pumping); limits per phone, IP /64 and shop, failing closed; a
-  challenge after the 2nd code from one IP; a breaker when a shop's codes sent ≫ verified; per-shop daily caps on Frrata's
-  number; codes never logged; proofs single-use.
+## 6. Billing, metering, limits (owner, 2026-11-09)
+- **Sign-in codes: free and unlimited on every plan** (Frrata's cost ₹0.115 + GST per delivered code; ~₹26 / ₹259 /
+  ₹863 a month at 1.5 codes per order for Launch / Growth / Scale). Metered in `ekcode_codes` for Frrata's own costing.
+- **Order updates from EkCode's number: a monthly allowance by plan**, 4 per included order — Launch 600, Growth 6,000,
+  Scale 20,000 — at no charge (Frrata's cost at full use ₹69 / ₹690 / ₹2,300; 0.9% / 2.0% / 3.5% of that shop's
+  revenue at ₹2,000 per order, an assumption). Counted on *delivered* messages, reset on the 1st (IST).
+- **Past the allowance, the merchant chooses** (Console › Apps › EkCode › Raise limit):
+  - **Stop at the allowance** (default): updates from EkCode's number pause until the 1st; sign-in codes never stop.
+  - **Keep sending, up to a monthly ceiling** they pick (₹500 · ₹1,000 · ₹2,500, before GST): each delivered
+    update past the allowance is **added to the merchant's next monthly Frrata bill** at ₹0.20 + GST (proposed),
+    one line "EkCode order updates · N × ₹0.20". Postpaid, never prepaid: **no wallet, no top-up balance** (RBI). At
+    the ceiling, sending pauses as above. Owner/admin only; changes logged.
+  - **Connect your own number**: the allowance stops applying; Meta bills the shop directly.
+  - At 80% of the allowance, and at 80% of the ceiling, the console shows it on the Apps row and in "Needs you".
+- **Counsel first** (§ 9): Meta's terms forbid reselling the WhatsApp platform. The extra-usage line ships only after
+  counsel confirms it is EkCode's service charge, not resale; until then "Keep sending" is hidden and shops stop at
+  the allowance. The allowance itself (free) needs no clearance.
+- Prices and allowances are a versioned row (`ekcode_pricing`: allowance per plan, price per update in paise, ceilings,
+  from-date), set in Admin › EkCode › Controls; the bill reads the version in force on each message's delivery date.
+  The line is built by the existing monthly bill (`src/lib/billing/draft.ts`) from delivered counts — one number,
+  computed once.
+- Market: KwikPass 5,000 logins/mo free; checkout bundles 2.5–3.5% of GMV. `unit-economics-reviewer` runs on these
+  numbers before the P3 plan.
+- **Abuse limits (not pricing):** Indian mobiles only; 3 codes per number / 10 min; 5 tries per code; 20 codes per
+  network (/64) per hour, a challenge after the 2nd; per-shop codes per day Launch 500 · Growth 2,000 · Scale 6,000
+  (Admin can raise one shop); the breaker when < 40% of a shop's codes are right after 200; failing closed; codes never
+  logged; proofs single-use.
+- **Meta's own cap**: unique people per 24 h on EkCode's number (2,000 → 10,000 → 100,000 → unlimited) is shared by
+  every shop; onboarding pace follows it (Admin › WhatsApp shows the step). Whether codes count: unknown, assume yes.
 
 ## 7. Lead generation (in scope)
 A shopper who continues with EkCode on a shop is that shop's lead (pairwise customer, source from Analytics). Console
@@ -141,7 +158,7 @@ marketing.
 ## 9. Open checks before the mockup is final
 - ~~Meta policy for order updates from EkCode's number~~ — checked 2026-11-09: allowed with conditions (EkCode's voice,
   shop as a variable, opt-in names EkCode, no platform data to merchants, no promo); § 1 and `frata-integrations` hold
-  the facts. Left for counsel: whether per-message billing is "resale" (§ 6).
+  the facts. Left for counsel: whether the extra-usage line on the merchant's bill is "resale" (§ 6).
 - **ekcode.in** bought (owner), with its site naming the business (for Meta's display-name check) and an email sender
   on it (SPF/DKIM/DMARC) for the fallback code.
 - Counsel on the network notice (English only, owner; DPDP s.5(3) lets a person ask for it in a scheduled language: how

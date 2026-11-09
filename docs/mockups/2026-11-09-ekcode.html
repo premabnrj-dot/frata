@@ -272,6 +272,9 @@ details.hist summary::-webkit-details-marker{display:none}
 details.hist summary::after{content:"+";font:500 16px var(--mono);color:var(--sub)}
 details.hist[open] summary::after{content:"−"}
 
+.meter{height:8px;border-radius:4px;background:var(--muted);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--warn-text)}
+.ceil{display:grid;gap:8px}
 /* admin frame */
 .anav{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px;background:var(--ink);color:var(--on-ink)}
 .anav-l{display:flex;gap:10px;align-items:center}
@@ -308,7 +311,7 @@ details.hist[open] summary::after{content:"−"}
 </svg>
 
 <div class="wrap">
-  <h1>EkCode · mockup v2</h1>
+  <h1>EkCode · mockup v3</h1>
   <p class="k">Spec <span class="mono">docs/specs/2026-11-09-shopper-login.md</span> · ADR-0009 · 9 Nov 2026</p>
   <ul class="note">
     <li><b>EkCode</b>: one code, every shop that uses it. Said "ek code". Its own brand: the shopper sees EkCode, never the platform behind it.</li>
@@ -695,8 +698,12 @@ details.hist[open] summary::after{content:"−"}
               </div>
             </div>
           </div>
-          <div class="sec"><header><h3>Order updates on WhatsApp</h3><a class="btn sm" href="#console">Connect your number</a></header>
-            <ul class="rows"><li><span>From EkCode's number<br><span class="s">Until you connect your own</span></span><span class="mono">1,204 sent · Nov</span></li></ul>
+          <div class="sec"><header><h3>Order updates on WhatsApp</h3><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" type="button" data-dlg="draise">Raise limit</button><a class="btn sm ghost" href="#console">Connect your number</a></span></header>
+            <div class="pad" style="display:grid;gap:8px;padding-top:0">
+              <div class="row2"><span>From EkCode's number</span><span class="mono">4,812 of 6,000 · Nov</span></div>
+              <div class="meter" role="meter" aria-valuemin="0" aria-valuemax="6000" aria-valuenow="4812" aria-label="Order updates used this month"><i style="width:80.2%"></i></div>
+              <div class="row2"><span class="s">After 6,000: <b id="raise-now">stop until 1 Dec</b></span><span class="s">Included in Growth</span></div>
+            </div>
           </div>
         </div>
 
@@ -736,7 +743,7 @@ details.hist[open] summary::after{content:"−"}
     <li>Free on every plan, so it is in "Grow" with "In your plan" and a switch: the network is worth more with every shop on it.</li>
     <li>"Shoppers" lists the people who continued on this shop: the leads. Export is for owner and admin only. Marketing is sent from Campaigns, never from here.</li>
     <li>No "read" or "delivered" counts for EkCode's sends: Meta's terms keep WhatsApp data from reaching the shop. "Sent" is EkCode's own count.</li>
-    <li>Order updates cost the shop nothing extra until counsel clears a per-message charge (Meta forbids reselling its platform).</li>
+    <li>Order updates are included up to the plan's allowance. Past it the owner chooses: stop, or keep sending up to a ceiling they set, added to the next Frrata bill (postpaid, no wallet). That choice appears once counsel clears it; Meta forbids reselling its platform.</li>
   </ul>
 
   <!-- ============ ADMIN ============ -->
@@ -866,12 +873,22 @@ details.hist[open] summary::after{content:"−"}
             <li><span>Order updates from EkCode's number</span><input class="sw" type="checkbox" role="switch" aria-label="Order updates from EkCode's number" checked data-dlg-sw="adm-sw"></li>
           </ul>
         </div>
+        <div class="sec"><header><h3>Order updates by plan</h3><button class="btn sm" type="button">New version</button></header>
+          <div class="tblw"><table>
+            <thead><tr><th>Plan</th><th class="num">Included a month</th><th class="num">Codes a day</th><th class="num">Past the limit</th></tr></thead>
+            <tbody>
+              <tr><td>Launch</td><td class="num">600</td><td class="num">500</td><td class="num">₹0.20</td></tr>
+              <tr><td>Growth</td><td class="num">6,000</td><td class="num">2,000</td><td class="num">₹0.20</td></tr>
+              <tr><td>Scale</td><td class="num">20,000</td><td class="num">6,000</td><td class="num">₹0.20</td></tr>
+            </tbody>
+          </table></div>
+          <ul class="rows"><li><span>v1 · from 1 Dec<br><span class="s">"Keep sending" stays hidden until counsel clears it</span></span><span class="chip c-warn">Waiting on counsel</span></li></ul>
+        </div>
         <div class="sec"><header><h3>Limits</h3><button class="btn sm" type="button">Change limits</button></header>
           <ul class="rows">
             <li><span>Codes per number</span><span class="mono">3 / 10 min</span></li>
             <li><span>Tries per code</span><span class="mono">5</span></li>
             <li><span>Codes per network</span><span class="mono">20 / hour</span></li>
-            <li><span>Codes per shop</span><span class="mono">2,000 / day</span></li>
             <li><span>Breaker<br><span class="s">Codes right below this, after 200 codes</span></span><span class="mono">40%</span></li>
           </ul>
         </div>
@@ -914,7 +931,11 @@ details.hist[open] summary::after{content:"−"}
         <tr><td></td><td>Remove a shop</td><td>Confirm; the row leaves; toast with Undo for 5 s</td></tr>
         <tr><td></td><td>Delete</td><td>Confirm naming what goes; then signed out to a "Deleted" page</td></tr>
         <tr><td>Console</td><td>No sign-ins yet</td><td>Numbers show "—"; Shoppers: "None yet"</td></tr>
-        <tr><td></td><td>Staff, not owner/admin</td><td>No Export</td></tr>
+        <tr><td></td><td>Staff, not owner/admin</td><td>No Export, no Raise limit</td></tr>
+        <tr><td></td><td>80% of the allowance</td><td>Amber meter; a "Needs you" row with Raise limit</td></tr>
+        <tr><td></td><td>Allowance used, "Stop"</td><td>"Paused until 1 Dec" on the row; codes keep working</td></tr>
+        <tr><td></td><td>Past the allowance, "Keep sending"</td><td>"1,240 extra · ₹248 on your Dec bill"; at the ceiling, paused as above</td></tr>
+        <tr><td></td><td>Own number connected</td><td>No meter; "From your number"</td></tr>
         <tr><td></td><td>Phone width</td><td>Stats 2 × 2; the table scrolls inside its card</td></tr>
         <tr><td>Admin</td><td>Support role</td><td>Overview only; no switches, limits, lookup or exports</td></tr>
         <tr><td></td><td>Breaker trips</td><td>The shop's codes stop; a "Needs you" row; the shopper gets "Try again later" and guest checkout</td></tr>
@@ -992,6 +1013,19 @@ details.hist[open] summary::after{content:"−"}
   <div class="dh" id="adm-swh">Turn <span id="adm-sw-to">off</span> "<span id="adm-sw-what"></span>" for every shop?</div>
   <div class="db"><label class="f">Reason<input class="input" placeholder="Shown in Activity" style="font-family:var(--sans);font-size:14px"></label></div>
   <div class="df"><button class="btn" type="button" data-close>Leave as it was</button><button class="btn danger" type="button" data-close>Change for every shop</button></div>
+</div>
+<div class="dlg" id="draise" role="dialog" aria-modal="true" aria-labelledby="draiseh">
+  <div class="dh" id="draiseh">After 6,000 order updates</div>
+  <div class="db">
+    <div class="opts ceil" role="radiogroup" aria-label="After the limit">
+      <label class="opt"><input type="radio" name="ceil" value="stop" checked><span><b>Stop until 1 Dec</b></span><small>Sign-in codes keep working</small></label>
+      <label class="opt"><input type="radio" name="ceil" value="500"><span><b>Keep sending, up to <span class="mono">₹500</span> + GST more</b></span><small class="mono">≈ 2,500 updates</small></label>
+      <label class="opt"><input type="radio" name="ceil" value="1,000"><span><b>Keep sending, up to <span class="mono">₹1,000</span> + GST more</b></span><small class="mono">≈ 5,000 updates</small></label>
+      <label class="opt"><input type="radio" name="ceil" value="2,500"><span><b>Keep sending, up to <span class="mono">₹2,500</span> + GST more</b></span><small class="mono">≈ 12,500 updates</small></label>
+    </div>
+    <p class="k" style="margin:0" id="raise-money" hidden><span class="mono">₹0.20</span> + GST per delivered update past 6,000, on your next Frrata bill.</p>
+  </div>
+  <div class="df"><button class="btn" type="button" data-close>Keep as it is</button><button class="btn primary" type="button" id="raise-save">Save</button></div>
 </div>
 <div class="toast" id="toast" role="status"></div>
 <button class="btn sm theme-t" type="button" id="theme">Dark</button>
@@ -1128,6 +1162,12 @@ details.hist[open] summary::after{content:"−"}
     toast(name + ' removed', () => { row.hidden = false })
   })
   $('#exp').addEventListener('click', () => toast('shoppers-2026-11-09.csv'))
+  $$('input[name="ceil"]').forEach((r) => r.addEventListener('change', () => { $('#raise-money').hidden = r.value === 'stop' }))
+  $('#raise-save').addEventListener('click', () => {
+    const v = $('input[name="ceil"]:checked').value; close()
+    $('#raise-now').textContent = v === 'stop' ? 'stop until 1 Dec' : 'keep sending, up to ₹' + v + ' + GST on your bill'
+    toast(v === 'stop' ? 'Stops at 6,000' : 'Up to ₹' + v + ' more this month')
+  })
   function toast(msg, undo) {
     const t = $('#toast'); t.innerHTML = ''; t.append(msg)
     if (undo) { const u = document.createElement('button'); u.className = 'link'; u.style.cssText = 'color:inherit;margin-left:12px'; u.textContent = 'Undo'; u.onclick = () => { undo(); t.classList.remove('on') }; t.append(u) }
