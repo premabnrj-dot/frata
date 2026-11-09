@@ -369,6 +369,73 @@ end;
 $$;
 
 --> statement-breakpoint
+-- ── D2·11 Admin (admin role, a reason, audited): disconnect a shop's domain; settle a held claim (move or refuse). ──
+create or replace function app_admin_disconnect_domain(p_staff uuid, p_id uuid, p_reason text)
+  returns uuid
+  language plpgsql volatile security definer set search_path = '' as $$
+#variable_conflict use_column
+declare
+  v_email text;
+  r public.shop_domains%rowtype;
+begin
+  if length(btrim(coalesce(p_reason, ''))) not between 3 and 500 then raise exception 'reason' using errcode = 'P0001'; end if;
+  select s.email into v_email from public.platform_staff s where s.user_id = p_staff and s.role = 'admin';
+  if v_email is null then raise exception 'not_staff' using errcode = 'P0001'; end if;
+  update public.shop_domains d set removed_at = now(), removed_reason = 'frrata', removed_by = p_staff, main_at = null,
+      parked_at = case when d.added_at is not null then now() end
+   where d.id = p_id and d.removed_at is null returning * into r;
+  if not found then raise exception 'no_domain' using errcode = 'P0001'; end if;
+  insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
+    values (r.tenant_id, p_staff, v_email, 'staff', 'domain.disconnected', r.host, jsonb_build_object('reason', btrim(p_reason)));
+  return r.tenant_id;
+end;
+$$;
+
+--> statement-breakpoint
+-- A held claim (another shop holds the apex as its main): move it to the claimant, or refuse the claim. Returns the
+-- shops whose hosts must be refreshed.
+create or replace function app_admin_settle_domain(p_staff uuid, p_claim uuid, p_move boolean, p_reason text)
+  returns table (tenant_id uuid)
+  language plpgsql volatile security definer set search_path = '' as $$
+#variable_conflict use_column
+declare
+  v_email text;
+  c public.shop_domains%rowtype;
+  o public.shop_domains%rowtype;
+begin
+  if length(btrim(coalesce(p_reason, ''))) not between 3 and 500 then raise exception 'reason' using errcode = 'P0001'; end if;
+  select s.email into v_email from public.platform_staff s where s.user_id = p_staff and s.role = 'admin';
+  if v_email is null then raise exception 'not_staff' using errcode = 'P0001'; end if;
+  select * into c from public.shop_domains d where d.id = p_claim and d.removed_at is null and d.proved_at is null and d.contest_at is not null for update;
+  if not found then raise exception 'no_claim' using errcode = 'P0001'; end if;
+  select * into o from public.shop_domains d where d.apex = c.apex and d.proved_at is not null and d.removed_at is null for update;
+  if not p_move then
+    update public.shop_domains d set removed_at = now(), removed_reason = 'refused', removed_by = p_staff where d.id = c.id;
+    insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
+      values (c.tenant_id, p_staff, v_email, 'staff', 'domain.claim_refused', c.host, jsonb_build_object('reason', btrim(p_reason)));
+    return query select c.tenant_id; return;
+  end if;
+  if found then
+    update public.shop_domains d set removed_at = now(), removed_reason = 'moved', main_at = null, removed_by = p_staff,
+        parked_at = case when d.added_at is not null and d.host <> c.host then now() end
+     where d.id = o.id;
+    insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
+      values (o.tenant_id, p_staff, v_email, 'staff', 'domain.moved_away', o.host, jsonb_build_object('reason', btrim(p_reason)));
+  end if;
+  update public.shop_domains d set proved_at = now(), contest_at = null where d.id = c.id;
+  insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
+    values (c.tenant_id, p_staff, v_email, 'staff', 'domain.moved_here', c.host, jsonb_build_object('reason', btrim(p_reason)));
+  return query select c.tenant_id union select o.tenant_id where o.tenant_id is not null;
+end;
+$$;
+
+--> statement-breakpoint
+revoke all on function app_admin_disconnect_domain(uuid, uuid, text), app_admin_settle_domain(uuid, uuid, boolean, text) from public, anon, authenticated, service_role;
+
+--> statement-breakpoint
+grant execute on function app_admin_disconnect_domain(uuid, uuid, text), app_admin_settle_domain(uuid, uuid, boolean, text) to frata_admin;
+
+--> statement-breakpoint
 revoke all on function app_claim_domain(uuid, uuid, text, text, boolean, int), app_domain_lease(uuid), app_domain_record(uuid, text[], text[], text, text, text, int),
   app_domain_added(uuid, boolean, text), app_domain_add_due(uuid), app_make_domain_main(uuid, uuid, uuid), app_unmake_domain_main(uuid, uuid),
   app_domain_razorpay_ok(uuid, uuid, uuid, boolean), app_remove_domain(uuid, uuid, uuid), app_shop_for_domain(text),

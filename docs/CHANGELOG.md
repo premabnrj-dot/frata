@@ -78,6 +78,18 @@ phase; the detail is in its plan.
   draft preview, never on the shop.
 - **Customizer:** click a section in the preview to edit it; a section that fails is left out of the shop.
 
+## 2026-11-09 — Own domains D·2 ([plan](plans/2026-11-08-shop-addresses.md), [mockup](https://claude.ai/artifact/XrDQj61tSBe4YKvUrH76xt))
+
+- **Connect your own domain** from Settings › Shop address: type it any way (`https://www.KesarStudio.in/`), the three
+  records show at once with Open <your DNS> and Send on WhatsApp, and the dialog finds them by itself, secures the
+  domain and says Connected.
+- **Make it your main address:** the shop's links, Google's address, share cards and Make a link move to it; Undo for
+  8 s. On live payments, Razorpay must approve the domain first ("Razorpay approved it" on the row).
+- **Remove a domain** at any time; one taken by another shop or by Frrata says so on its row.
+- **Admin:** disconnect a shop's domain with a reason; settle a claim on another shop's main domain (move or refuse).
+- Until Vercel Pro: the check runs daily (and while the dialog is open), and the frrata name keeps opening the shop
+  instead of redirecting.
+
 ## 2026-11-08 — Shop addresses D·0–D·1 ([plan](plans/2026-11-08-shop-addresses.md), [spec](specs/2026-11-08-shop-addresses.md))
 
 - **Every shop is at `name.frrata.shop`**; frrata.shop itself goes to Frrata.

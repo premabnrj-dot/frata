@@ -4,10 +4,10 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { SLUG_SHAPE } from '@/domains/signup/slug'
-import { addressAdminError, BLOCKED_KINDS, blockName, releaseName, unblockName } from '@/lib/admin/addresses'
+import { addressAdminError, BLOCKED_KINDS, blockName, domainsNeedingFrrata, releaseName, settleDomain, unblockName } from '@/lib/admin/addresses'
 import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import { hostFor } from '@/lib/queries/storefront'
-import { refreshHosts } from '@/lib/storefront/refresh'
+import { refreshHosts, refreshShop } from '@/lib/storefront/refresh'
 
 // Shop addresses D1·7: Admin › Names. Admin role only (the definers in 0069 check again, need a reason and audit).
 
@@ -64,4 +64,20 @@ export async function releaseNameAction(form: FormData) {
   refreshHosts(hostFor(d.name))
   revalidatePath('/admin/names')
   go('ok', `${d.name} released.`)
+}
+
+// D2·11: a held claim (another shop's main domain holds the apex) — Frrata moves it to the claimant, or refuses it.
+const Settle = z.object({ id: z.uuid(), move: z.enum(['yes', 'no']), reason: Reason })
+export async function settleDomainAction(form: FormData) {
+  const staff = await admin()
+  const p = Settle.safeParse(Object.fromEntries(form))
+  if (!p.success) go('error', reasonOr(p.error, addressAdminError('unknown')))
+  const d = p.data!
+  const claim = (await domainsNeedingFrrata(staff)).find((x) => x.id === d.id)
+  const r = await settleDomain(staff, d.id, d.move === 'yes', d.reason)
+  if (!r.ok) go('error', addressAdminError(r.error))
+  if (r.ok) for (const t of r.value) refreshShop(t, 'shop')
+  if (claim) refreshHosts(claim.host, ...(claim.withWww ? [`www.${claim.host}`] : []))
+  revalidatePath('/admin/names')
+  go('ok', d.move === 'yes' ? `${claim?.host ?? 'The domain'} moved to ${claim?.shop ?? 'the shop'}.` : 'Claim refused.')
 }

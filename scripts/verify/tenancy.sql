@@ -574,6 +574,30 @@ do $$ declare a uuid; r record; begin
 end $$;
 rollback;
 
+begin;
+-- Own domains D2·11 (0082): Admin disconnects and settles held claims — admin role only, a reason, audited; support is refused.
+insert into platform_staff (user_id, email, role) values ('aaaaaaaa-0000-0000-0000-0000000000ff', 'staff@proof.test', 'admin'), ('aaaaaaaa-0000-0000-0000-0000000000fe', 'support@proof.test', 'support') on conflict do nothing;
+insert into shop_domains (tenant_id, host, apex, with_www, claimed_by, proved_at, added_at, dns_ok_at, cert_ok_at, main_at) values
+  ('11111111-1111-1111-1111-111111111111', 'proof-adm.in', 'proof-adm.in', true, '99999999-9999-9999-9999-999999999999', now(), now(), now(), now(), now());
+insert into shop_domains (tenant_id, host, apex, with_www, claimed_by, contest_at) values
+  ('22222222-2222-2222-2222-222222222222', 'proof-adm.in', 'proof-adm.in', true, 'aaaaaaaa-0000-0000-0000-000000000002', now());
+set local role frata_admin;
+do $$ declare a uuid; b uuid; begin
+  select id into a from shop_domains where tenant_id = '11111111-1111-1111-1111-111111111111' and host = 'proof-adm.in';
+  select id into b from shop_domains where tenant_id = '22222222-2222-2222-2222-222222222222' and host = 'proof-adm.in';
+  begin perform app_admin_settle_domain('aaaaaaaa-0000-0000-0000-0000000000fe', b, true, 'Support tried'); raise exception 'FAIL: support settled a claim';
+  exception when raise_exception then if sqlerrm <> 'not_staff' then raise; end if; end;
+  begin perform app_admin_disconnect_domain('aaaaaaaa-0000-0000-0000-0000000000ff', a, 'x'); raise exception 'FAIL: no reason';
+  exception when raise_exception then if sqlerrm <> 'reason' then raise; end if; end;
+  perform app_admin_settle_domain('aaaaaaaa-0000-0000-0000-0000000000ff', b, true, 'Trademark holder proved it');
+  if (select removed_reason from shop_domains where id = a) <> 'moved' or (select proved_at from shop_domains where id = b) is null then raise exception 'FAIL: settle must move A''s domain to B'; end if;
+  if (select count(*) from audit_events where action in ('domain.moved_away', 'domain.moved_here') and target = 'proof-adm.in') <> 2 then raise exception 'FAIL: both shops'' audit rows'; end if;
+  perform app_admin_disconnect_domain('aaaaaaaa-0000-0000-0000-0000000000ff', b, 'Phishing report');
+  if (select removed_reason from shop_domains where id = b) <> 'frrata' then raise exception 'FAIL: disconnect'; end if;
+  if has_function_privilege('frata_app', 'app_admin_disconnect_domain(uuid,uuid,text)', 'execute') then raise exception 'FAIL: the app can disconnect'; end if;
+end $$;
+rollback;
+
 -- 20. Catalogue: own shop only, and a child row can never point at another shop's product.
 insert into product_types (id, tenant_id, name, size_chart) values
   ('dddddddd-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'Kurta', '{"columns":[],"rows":[],"howToMeasure":""}');
@@ -2022,4 +2046,4 @@ do $$ begin
      or (select order_line_id from reviews where id = 'bdbdbdbd-0000-0000-0000-00000000000b') is not null then raise exception 'FAIL: set null touched tenant_id or kept the line'; end if;
 end $$;
 
-\echo 'tenancy proof — all 57 checks passed'
+\echo 'tenancy proof — all 58 checks passed'

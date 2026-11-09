@@ -194,7 +194,7 @@ function Connect({ resume, onClose }: { resume?: string; onClose: () => void }) 
       : <Button variant="secondary" data-autofocus onClick={onClose}>{secure >= 1 ? 'Done' : 'Close'}</Button>
 
   return (
-    <Dialog open onClose={onClose} title="Connect a domain" actions={footer} className="sm:max-w-lg">
+    <Dialog open onClose={onClose} title="Connect a domain" actions={footer} >
       <div className="mb-3 flex gap-1.5" aria-hidden>{[1, 2, 3].map((n) => <span key={n} className={`h-0.5 w-6 rounded-full transition-colors duration-base ease-standard ${n <= step ? 'bg-foreground' : 'bg-border'}`} />)}</div>
       <div key={step} className={back ? 'animate-step-back' : 'animate-step-forward'}>
         {step === 1 && (
@@ -216,11 +216,10 @@ function Connect({ resume, onClose }: { resume?: string; onClose: () => void }) 
             </div>
             <ul className="divide-y divide-border rounded-md border border-border">
               {claim?.records.map((r, i) => (
-                <li key={`${r.type}${r.name}`} className="grid grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-3 py-2 text-xs">
-                  <span className="font-mono font-semibold text-muted-foreground">{r.type}</span>
-                  <span className="grid min-w-0 gap-0.5 font-mono [overflow-wrap:anywhere]"><span>{r.name}</span><span>{r.value}</span></span>
+                <li key={`${r.type}${r.name}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-3 py-2 text-xs">
+                  <span className="grid min-w-0 gap-0.5 font-mono [overflow-wrap:anywhere]"><span><b className="text-muted-foreground">{r.type}</b> {r.name}</span><span>{r.value}</span></span>
                   <Button size="wrap" variant="secondary" onClick={() => copy(r.value)}>Copy</Button>
-                  <span className="col-start-2 col-end-4">{found[i] === 'yes' ? <Badge tone="ok">Found</Badge> : <Badge tone="neutral">Not found yet</Badge>}</span>
+                  <span className="col-span-2">{found[i] === 'yes' ? <Badge tone="ok">Found</Badge> : <Badge tone="neutral">Not found yet</Badge>}</span>
                 </li>
               ))}
             </ul>

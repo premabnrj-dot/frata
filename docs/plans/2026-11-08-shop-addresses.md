@@ -204,7 +204,16 @@ plan): it waits for Admin (D2·11), `contest_at` records since when; a non-main 
 **D2·10's actions must:** `requireMember(CAN_MANAGE)` with support visits refused; Zod (raw ≤ 300, row id uuid only);
 rate limits per member, shop and ipBucket plus a global budget for Vercel reads and DoH, failing closed; reply named
 fields only; catch all, log `errName`; connect only on a paid or verified shop with a global daily claim budget.
-Still to do: drop `app_tenant_for_host` (0008) in the next migration. Tests: connectors (unit, faked fetch), proofs 56, int
+**D2·7–D2·11 as built (2026-11-09):** parked hosts come off Vercel after 3 days pointing away or 30 days parked, kept
+when another shop holds the apex live (`domain.remove`, app_parked_*); the background check `/api/cron/domains` (daily
+on Hobby; app_domains_due decides what is due); one main address (`mainAddress`, read in `coreShop` — now
+`src/lib/queries/store-shop.ts` — `setupFor`, Make a link, a product's page, Settings); Settings › Shop address has the
+Addresses list and the Connect dialog (`settings/address/domains.tsx`, actions in `domain-actions.ts` through
+asMember, support refused, rate limits failing closed); Admin: a merchant's domains with Disconnect (reason), and
+Admin › Names › Domains with held claims to Move or Refuse (app_admin_disconnect_domain, app_admin_settle_domain).
+Not built: the 307 from the frrata name (Pro), notices to a shop that loses a domain (notifications), Admin's
+Domain health beyond "Not working", the partner-before-handover path, one `waText()` helper. e2e `53-domains` with
+`e2e/fakes/domains.mjs`. Still to do: drop `app_tenant_for_host` (0008) in the next migration. Tests: connectors (unit, faked fetch), proofs 56, int
 `src/lib/domains/__tests__/own-domains.int.test.ts`.
 
 ## Owner calls — decided 2026-11-08
