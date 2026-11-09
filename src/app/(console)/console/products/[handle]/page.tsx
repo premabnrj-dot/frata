@@ -12,6 +12,8 @@ import { placeForPincode } from '@/lib/db/platform'
 import { shopHost } from '@/lib/public-env'
 import { productForEdit, productHandleById, productIdByHandle } from '@/lib/queries/catalogue'
 import { ProductEditor } from '../_components/product-editor'
+import { ShareSheet } from '../../_components/share-sheet'
+import { shareFor } from '@/lib/seo/share'
 import { NowProvider } from '@/components/time/now'
 
 /** The tab names the product ("Linen kurta set · Kesar Studio"), never "Product" (stress test S14). */
@@ -66,6 +68,7 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
     in: c.kind === 'manual' ? data.memberOf.includes(c.id) : matches(c.rules as Rule[], c.matchAll === 1, facts),
   }))
 
+  const share = await shareFor(tenantId, { kind: 'product', id: p.id }, now).catch(() => null)
   // One render time for the whole editor, server and browser alike (src/components/time/now.tsx, check:clock).
   return (
     <NowProvider at={now.toISOString()}>
@@ -89,6 +92,7 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
       families={COLOUR_FAMILIES}
       photos={data.images.map((i) => ({ id: i.id, base: i.base, widths: i.widths, optionValue: i.optionValue, width: i.width, height: i.height }))}
       types={data.types}
+      share={share ? <ShareSheet share={share} target={{ kind: 'product', id: p.id }} /> : null}
     />
     </NowProvider>
   )

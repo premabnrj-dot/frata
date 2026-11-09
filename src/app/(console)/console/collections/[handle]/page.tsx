@@ -6,6 +6,8 @@ import { collectionForEdit } from '@/lib/queries/catalogue'
 import { CollectionEditor } from '../_components/collection-editor'
 import { fromRules } from '../_components/rule-rows'
 import { categoryNames, editorData } from '../_components/data'
+import { ShareSheet } from '../../_components/share-sheet'
+import { shareFor } from '@/lib/seo/share'
 
 export const metadata = { title: 'Collection' }
 
@@ -18,5 +20,6 @@ export default async function CollectionPage({ params }: { params: Promise<{ han
   if (c === undefined || !data) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   if (!c) notFound()
   const rules = c.rules as Rule[]
-  return <CollectionEditor key={c.id + c.updatedAt.toISOString()} initial={{ id: c.id, title: c.title, handle: c.handle, description: c.description, kind: c.kind as 'manual', matchAll: c.matchAll === 1, rules: fromRules(rules, categoryNames(rules)), sort: c.sort, productIds: c.productIds }} {...data} />
+  const share = await shareFor(auth.membership.tenantId, { kind: 'collection', id: c.id }).catch(() => null)
+  return <CollectionEditor key={c.id + c.updatedAt.toISOString()} initial={{ id: c.id, title: c.title, handle: c.handle, description: c.description, kind: c.kind as 'manual', matchAll: c.matchAll === 1, rules: fromRules(rules, categoryNames(rules)), sort: c.sort, productIds: c.productIds }} {...data} share={share ? <ShareSheet share={share} target={{ kind: 'collection', id: c.id }} /> : null} />
 }

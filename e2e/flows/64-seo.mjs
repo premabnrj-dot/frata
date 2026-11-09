@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict'
 import http from 'node:http'
 import { writeFileSync } from 'node:fs'
-import { PORTS, SHOP_DOMAIN } from '../lib.mjs'
+import { CONSOLE, PORTS, SHOP_DOMAIN, signedIn } from '../lib.mjs'
 
 const HOST = `kesar-studio.${SHOP_DOMAIN}`
 const CRAWLERS = {
@@ -190,6 +190,26 @@ export default {
       assert.equal(stale.status, 200, 'an old card address shows the current card')
       assert.match(stale.headers['cache-control'] ?? '', /max-age=300/, 'briefly')
       return `${seen.size} cards`
+    })
+
+    await t.step('S1·7: the owner shares a product — its card, WhatsApp and Facebook links tagged, a QR code, the link', async () => {
+      const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 390, height: 844 } })
+      const p = await ctx.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message))
+      await p.goto(`${CONSOLE}/console/products/${product.handle}`)
+      await p.getByRole('button', { name: 'Share', exact: true }).click()
+      const d = p.getByRole('dialog', { name: `Share ${product.title}` }); await d.waitFor()
+      assert.match(await d.locator('img').first().getAttribute('src'), /\/og\/product\/[0-9a-f-]{36}\/[0-9a-f]{16}\.jpg$/)
+      const wa = new URL(await d.getByRole('link', { name: 'WhatsApp' }).getAttribute('href'))
+      assert.equal(wa.host, 'wa.me')
+      assert.match(wa.searchParams.get('text'), /utm_source=whatsapp&utm_medium=share/)
+      const fb = new URL(await d.getByRole('link', { name: 'Facebook' }).getAttribute('href'))
+      assert.match(fb.searchParams.get('u'), new RegExp(`^https://${HOST.replace(/\./g, '\\.')}/products/${product.handle}\\?utm_source=facebook`))
+      assert.match(await d.getByLabel('Link').inputValue(), /utm_source=share&utm_medium=link$/)
+      await d.getByRole('button', { name: 'QR code' }).click()
+      await d.getByRole('img', { name: `QR code for ${product.title}` }).waitFor()
+      await p.screenshot({ path: t.out('share-sheet') })
+      await d.getByRole('button', { name: 'Done' }).click()
+      await ctx.close()
     })
 
     await t.step('robots.txt allows crawling and names the sitemap; the sitemap lists the product', async () => {

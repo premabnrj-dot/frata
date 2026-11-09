@@ -22,7 +22,7 @@ const FIELDS: [Rule['field'], string][] = [['category', 'Category is'], ['attrib
 const SORTS: [string, string][] = [['newest', 'Newest first'], ['price_low', 'Price, low to high'], ['price_high', 'Price, high to low'], ['title', 'Name, A to Z'], ['manual', 'The order you pick']]
 
 /** A collection: name and address, then hand-picked products or rules with a live count. */
-export function CollectionEditor({ initial, products, families, attrOptions }: { initial: EditorCollection; products: ProductPick[]; families: { id: string; name: string }[]; attrOptions: AttrOption[] }) {
+export function CollectionEditor({ initial, products, families, attrOptions, share }: { initial: EditorCollection; products: ProductPick[]; families: { id: string; name: string }[]; attrOptions: AttrOption[]; share?: React.ReactNode }) {
   const router = useRouter()
   const [saved, setSaved] = useState(initial)
   const [d, setD] = useState(initial)
@@ -67,7 +67,7 @@ export function CollectionEditor({ initial, products, families, attrOptions }: {
   return (
     <div className="max-w-3xl">
       {dirty && initial.id && <SaveBar pending={pending} onSave={save} onDiscard={() => { setD(saved); setErrors({}) }} />}
-      <PageHeader title={initial.id ? saved.title : 'New collection'} back={{ href: '/console/collections', label: 'Collections' }} />
+      <PageHeader title={initial.id ? saved.title : 'New collection'} back={{ href: '/console/collections', label: 'Collections' }} actions={share} />
       <Message m={msg} />
       <div className="mt-4 space-y-4">
         <Section>

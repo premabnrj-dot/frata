@@ -48,8 +48,10 @@ const isColour = (name: string) => /^colou?rs?$/i.test(name)
  * model, then Search and sharing (closed). Side: Status, Summary, Organise,
  * Ready for. Photos save as added; Status is its own action; the rest is one Save.
  */
-export function ProductEditor({ initial, shop, photos, types, tenantId, blobReady, allCollections, families }: {
+export function ProductEditor({ initial, shop, photos, types, tenantId, blobReady, allCollections, families, share }: {
   initial: EditorProduct; shop: EditorShop; photos: Photo[]; types: TypeRow[]; tenantId: string; blobReady: boolean; allCollections: CollectionChip[]; families: Family[]
+  /** The Share button (search and sharing S1·7), made on the server for this shop. */
+  share?: React.ReactNode
 }) {
   const router = useRouter()
   const now = useNow()
@@ -126,6 +128,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
           (stress test S7). One line of text: Enter does nothing, unless an input method is still composing a word. */}
       <PageHeader title={d.title || 'New product'} back={{ href: '/console/products', label: 'Products' }}
         badges={<StatusBadge status={status} publishAt={publishAt} now={now} />}
+        actions={share}
         titleSlot={<div className="min-w-0 flex-1">
           <label htmlFor="title" className="sr-only">Product title</label>
           <textarea id="title" rows={1} value={d.title} maxLength={140} aria-invalid={!!errors.title || undefined} placeholder="Product title"
