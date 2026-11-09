@@ -24,6 +24,8 @@ import { SizeChartPanel, type TypeRow } from './size-chart'
 import { StatusBadge } from './status-badge'
 import { StatusCard } from './status-card'
 import { TaxPanel } from './tax-panel'
+import { LabelPanel } from './label-panel'
+import { labelMissing, readLabel, type LabelInput } from '@/domains/catalogue/label'
 import type { TaxInput } from '@/domains/catalogue/product-form'
 import { inGap, ruleOn } from '@/domains/tax/rates'
 import { useNow } from '@/components/time/now'
@@ -38,12 +40,17 @@ export type EditorProduct = {
   handle: string; seoTitle: string; seoDescription: string; tags: string[]
   category: PickedCategory | null; attributes: Record<string, string[]>; collections: string[]; colours: ColourInput[]
   tax: TaxInput
+  label: LabelInput
 }
 export type EditorShop = { name: string; address: string; skuPrefix: string; codOn: boolean; returnDays: number; returnKind: string; city: string | null
   /** Whether this viewer sees and sets the cost of goods (`seesCosts`): when false, the column is not there and a save keeps the stored cost. */
   costs: boolean
   /** GST: whether the shop charges it (regular scheme), and whether its prices include it. */
-  gst: { charges: boolean; inclusive: boolean } }
+  gst: { charges: boolean; inclusive: boolean }
+  /** What the shop sells: sized (clothing, footwear) shows the size chart and the model; label asks what the pack says. */
+  sized: boolean; label: boolean
+  /** The shop's legal name and address, for "We pack it". */
+  maker: string }
 
 type Draft = Omit<EditorProduct, 'id' | 'version' | 'status' | 'publishAt' | 'everLive'>
 const isColour = (name: string) => /^colou?rs?$/i.test(name)
@@ -82,6 +89,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
     hasSizes: d.options.some((o) => /^sizes?$/i.test(o.name)), chartRows: type?.sizeChart.rows.length ?? 0,
     anyBuyable: cells.some((c) => shopperSees(c, now).canBuy),
     taxReady: shop.gst.charges ? /^\d{4}(\d{2})?(\d{2})?$/.test(d.tax.hsn) && (ruleOn(d.tax.hsn, now) !== null || !!d.tax.ownBps) : undefined,
+    labelMissing: shop.label ? labelMissing(readLabel({ ...d.label, maker: d.label.maker.trim(), shelfMonths: Number(d.label.shelf) || null })) : undefined,
   })
 
   // Defaults for search and sharing, from the product's own facts (seo.ts).
@@ -99,7 +107,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
         title: d.title, description: d.description, typeId: d.typeId, modelHeight: d.modelHeight, modelSize: d.modelSize, options: d.options,
         variants: combos.map((c) => ({ values: c, ...(d.cells[keyOf(c)] ?? EMPTY_CELL) })),
         handle: d.handle, seoTitle: d.seoTitle, seoDescription: d.seoDescription, categoryId: d.category?.id ?? null,
-        attributes: d.attributes, colours: d.colours, tags: d.tags, tax: d.tax,
+        attributes: d.attributes, colours: d.colours, tags: d.tags, tax: d.tax, ...(shop.label ? { label: d.label } : {}),
       }, d.collections)
       if (r.ok) {
         setSaved(d); setVersion(r.version); setErrors({}); setConflict(false)
@@ -168,14 +176,15 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
             <h2 className="flex items-center text-section font-semibold">Details<InfoTip about="details">Asked for by the product’s category. Shoppers filter by them, and Google and Meta read them. Values marked · are Frrata’s, for Indian crafts and fabrics; each is sent to Google as its nearest standard value.</InfoTip></h2>
             <DetailsPanel attributes={d.category?.attributes ?? []} values={d.attributes} onChange={(attributes) => set({ attributes })} />
           </Section>
-          <Section><h2 className="text-section font-semibold">Size chart</h2><SizeChartPanel types={types} typeId={d.typeId} onType={(typeId) => set({ typeId })} /></Section>
-          <Section>
+          {shop.label && <Section><h2 className="text-section font-semibold">On the pack</h2><LabelPanel label={d.label} onChange={(label) => set({ label })} errors={errors} maker={shop.maker} /></Section>}
+          {shop.sized && <Section><h2 className="text-section font-semibold">Size chart</h2><SizeChartPanel types={types} typeId={d.typeId} onType={(typeId) => set({ typeId })} /></Section>}
+          {shop.sized && <Section>
             <h2 className="text-section font-semibold">The model in the photos</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1"><label htmlFor="mh" className="block text-sm font-medium">Height <span className="font-normal text-muted-foreground">(optional)</span></label><input id="mh" value={d.modelHeight} maxLength={30} placeholder="5 ft 6 in" onChange={(e) => set({ modelHeight: e.target.value })} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
               <div className="space-y-1"><label htmlFor="ms" className="block text-sm font-medium">Wears <span className="font-normal text-muted-foreground">(optional)</span></label><input id="ms" value={d.modelSize} maxLength={10} placeholder="S" onChange={(e) => set({ modelSize: e.target.value })} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
             </div>
-          </Section>
+          </Section>}
           <SeoPanel handle={d.handle} onHandle={(handle) => set({ handle })} seoTitle={d.seoTitle} onSeoTitle={(seoTitle) => set({ seoTitle })} seoDescription={d.seoDescription} onSeoDescription={(seoDescription) => set({ seoDescription })}
             defaults={defaults} address={shop.address} cover={photos[0]} everLive={everLive} errors={errors} />
         </div>

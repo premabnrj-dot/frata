@@ -8,6 +8,7 @@ import { cleanProduct, readiness, type ProductInput } from '@/domains/catalogue/
 import { hsnDigitsFor, ruleOn, type TurnoverBand } from '@/domains/tax/rates'
 import { chargesGst, type Scheme } from '@/domains/tax/gst'
 import { sellsSized } from '@/domains/catalogue/sell-keys'
+import { labelAsked, labelMissing, readLabel } from '@/domains/catalogue/label'
 import { availability, type Status, type WhenOut } from '@/domains/catalogue/availability'
 import { attributesFor, categoryById, cleanAttributes, COLOUR_FAMILIES, searchCategories } from '@/domains/catalogue/taxonomy'
 import { keyOf, reconcile, skuFor, uniqueSku } from '@/domains/catalogue/variants'
@@ -104,7 +105,7 @@ export async function saveProduct(productId: string, version: number, input: Pro
         if (p.tax.hsn.length < digits) throw new Stop({ ok: false, error: 'Some fields need a look before saving.', errors: { 'tax.hsn': `At your turnover, invoices need ${digits} digits of HSN.` } })
       }
       const [row] = await tx.update(products).set({
-        ...(p.tax ? { hsn: p.tax.hsn, uqc: p.tax.uqc, gstBps: p.tax.gstBps, originCountry: p.tax.originCountry } : {}),
+        ...(p.tax ? { hsn: p.tax.hsn, uqc: p.tax.uqc, gstBps: p.tax.gstBps, originCountry: p.tax.originCountry } : {}), ...(p.label ? { label: p.label } : {}),
         title: p.title, description: p.description, typeId: p.typeId, modelHeight: p.modelHeight, modelSize: p.modelSize,
         options: p.options.map((o) => o.name), optionValues: p.options.map((o) => o.values),
         handle: p.handle, seoTitle: p.seoTitle, seoDescription: p.seoDescription, taxonomyCategory: category?.id ?? null, tags: p.tags,
@@ -213,9 +214,10 @@ export async function setStatus(productId: string, status: Status, publishAt: st
         const now = new Date()
         const anyBuyable = vs.some((v) => availability({ stock: v.stock, whenOut: v.whenOut as WhenOut, shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays, preorderCap: v.preorderCap }, now).canBuy)
         // A shop that charges GST can't sell a piece with no known rate (quote() refuses it): so it can't go live without one.
-        const [tax] = await tx.select({ gstin: shopSettings.gstin, scheme: shopSettings.gstScheme }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
+        const [tax] = await tx.select({ gstin: shopSettings.gstin, scheme: shopSettings.gstScheme, sells: shopSettings.sells }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
         const taxReady = tax && chargesGst({ gstin: tax.gstin, scheme: tax.scheme as Scheme }) ? !!p.hsn && (ruleOn(p.hsn, now) !== null || p.gstBps !== null) : undefined
-        const missing = readiness({ title: p.title, photos: n, prices: vs.map((v) => v.price), hasSizes: p.options.some((o) => /^sizes?$/i.test(o)), chartRows: chart?.rows.length ?? 0, anyBuyable, taxReady }).filter((x) => !x.ok)
+        const missing = readiness({ title: p.title, photos: n, prices: vs.map((v) => v.price), hasSizes: p.options.some((o) => /^sizes?$/i.test(o)), chartRows: chart?.rows.length ?? 0, anyBuyable, taxReady,
+          labelMissing: tax && labelAsked(tax.sells) ? labelMissing(readLabel(p.label)) : undefined }).filter((x) => !x.ok)
         if (missing.length) throw new Stop({ ok: false, error: `Before shoppers can see it: ${missing.map((m) => m.label.toLowerCase()).join(', ')}.` })
       }
       const goesLive = live && (!when || when <= new Date())

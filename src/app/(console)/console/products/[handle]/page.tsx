@@ -12,6 +12,8 @@ import { placeForPincode } from '@/lib/db/platform'
 import { shopHost } from '@/lib/public-env'
 import { productForEdit, productHandleById, productIdByHandle } from '@/lib/queries/catalogue'
 import { chargesGst, type Scheme } from '@/domains/tax/gst'
+import { labelAsked, labelInput, readLabel } from '@/domains/catalogue/label'
+import { sellsSized } from '@/domains/catalogue/sell-keys'
 import { ProductEditor } from '../_components/product-editor'
 import { NowProvider } from '@/components/time/now'
 
@@ -82,11 +84,13 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
         attributes, collections: collections.filter((c) => c.kind === 'manual' && c.in).map((c) => c.id),
         colours: data.colours.map((c) => ({ value: c.value, family: c.family, hex: c.hex, crop: c.cropImageId && c.crop ? { imageId: c.cropImageId, ...c.crop } : null })),
         tax: { hsn: p.hsn ?? '', uqc: p.uqc, ownBps: p.gstBps === null ? '' : String(p.gstBps), origin: p.originCountry ?? '' },
+        label: labelInput(readLabel(p.label)),
       }}
       shop={{
         name: shop.name, address: shopHost(shop.slug), skuPrefix: orderPrefix(shop.orderPrefix, shop.name),
         codOn: shop.codOn, returnDays: shop.returnDays, returnKind: shop.returnKind, city: place?.city ?? null, costs: data.costs,
         gst: { charges: chargesGst({ gstin: shop.gstin, scheme: shop.gstScheme as Scheme }), inclusive: shop.pricesIncludeGst },
+        sized: sellsSized(shop.sells), label: labelAsked(shop.sells), maker: [shop.legalName || shop.name, shop.legalAddress].filter(Boolean).join(', '),
       }}
       allCollections={collections}
       families={COLOUR_FAMILIES}

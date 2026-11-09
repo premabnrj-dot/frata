@@ -1,0 +1,2 @@
+ALTER TABLE "products" ADD COLUMN "label" jsonb DEFAULT '{}'::jsonb NOT NULL;--> statement-breakpoint
+ALTER TABLE "products" ADD CONSTRAINT "products_label" CHECK (jsonb_typeof("products"."label") = 'object' and pg_column_size("products"."label") < 8192);

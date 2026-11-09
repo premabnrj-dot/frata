@@ -95,7 +95,7 @@ async function coreShop(tenantId: string): Promise<StoreShop | null> {
       whatsapp: shopSettings.whatsapp, instagram: shopSettings.instagram,
       grievanceName: shopSettings.grievanceName, grievanceRole: shopSettings.grievanceRole, grievanceEmail: shopSettings.grievanceEmail, grievancePhone: shopSettings.grievancePhone,
       accent: shopSettings.accent, displayFont: shopSettings.displayFont, tagline: shopSettings.tagline, logoUrl: shopSettings.logoUrl, shopLanguage: shopSettings.shopLanguage,
-      returnKind: shopSettings.returnKind, returnDays: shopSettings.returnDays,
+      returnKind: shopSettings.returnKind, returnDays: shopSettings.returnDays, sells: shopSettings.sells,
       // COD limits are public: the Shipping policy states them.
       codOn: shopSettings.codOn, codMin: shopSettings.codMin, codMax: shopSettings.codMax, codCharge: shopSettings.codCharge,
       shippingFlat: shopSettings.shippingFlat, freeShippingAbove: shopSettings.freeShippingAbove,
@@ -257,7 +257,7 @@ async function coreCatalogue(tenantId: string, drafts: boolean): Promise<Catalog
 
 export type StoreProduct = StoreCard & {
   description: string; modelHeight: string; modelSize: string; optionValues: string[][]; seoTitle: string; seoDescription: string
-  typeName: string | null; sizeChart: Chart | null
+  typeName: string | null; sizeChart: Chart | null; label: Record<string, unknown>; originCountry: string | null
 }
 /** current: this handle is the product's; moved: an old handle, with the current one; gone: none. */
 export type Lookup = { kind: 'current'; product: StoreProduct } | { kind: 'moved'; to: string } | { kind: 'none' }
@@ -279,7 +279,7 @@ async function coreProduct(tenantId: string, handle: string, drafts: boolean): P
       id: products.id, handle: products.handle, title: products.title, status: products.status, publishAt: products.publishAt,
       since: sql<string>`coalesce(${products.publishAt}, ${products.publishedAt}, ${products.createdAt})`, options: products.options, optionValues: products.optionValues,
       categoryId: products.taxonomyCategory, tags: products.tags, description: products.description, modelHeight: products.modelHeight, modelSize: products.modelSize,
-      seoTitle: products.seoTitle, seoDescription: products.seoDescription, typeName: productTypes.name, sizeChart: productTypes.sizeChart,
+      seoTitle: products.seoTitle, seoDescription: products.seoDescription, typeName: productTypes.name, sizeChart: productTypes.sizeChart, label: products.label, originCountry: products.originCountry,
     }).from(products).leftJoin(productTypes, and(eq(productTypes.id, products.typeId), eq(productTypes.tenantId, tenantId)))
       .where(and(eq(products.tenantId, tenantId), eq(products.handle, handle), drafts ? sql`true` : ne(products.status, 'draft'))).limit(1)
     if (!p) return null

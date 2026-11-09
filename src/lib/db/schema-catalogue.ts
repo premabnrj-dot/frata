@@ -50,6 +50,8 @@ export const products = pgTable('products', {
   uqc: text('uqc').notNull().default('NOS'),
   /** The merchant's GST rate (bps) for an HSN the rate table lacks (tax/rates.ts), as their CA advises. Null: the table decides. */
   gstBps: integer('gst_bps'),
+  /** What the pack says, shown on the product page (domains/catalogue/label.ts): net quantity, maker, best before, ingredients. */
+  label: jsonb('label').$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
   /** draft · active · unlisted · archived (PRODUCT_STATUSES). Who can find it; availability is per variant and derived. */
   status: text('status').notNull().default('draft'),
   /** Active but hidden until this moment (a scheduled drop). Null: live as soon as active. */
@@ -76,6 +78,7 @@ export const products = pgTable('products', {
   // GST (plan 2026-11-09-gst-core-and-categories): an HSN is 4, 6 or 8 digits; the unit is a GST code; the merchant's own rate a GST 2.0 slab.
   check('products_hsn', sql`${t.hsn} is null or ${t.hsn} ~ '^[0-9]{4}([0-9]{2}){0,2}$'`),
   check('products_uqc', sql`${t.uqc} in ('NOS','PCS','PRS','SET','PAC','BOX','KGS','GMS','LTR','MLT','MTR')`),
+  check('products_label', sql`jsonb_typeof(${t.label}) = 'object' and pg_column_size(${t.label}) < 8192`),
   check('products_gst_bps', sql`${t.gstBps} is null or ${t.gstBps} in (0, 300, 500, 1800, 4000)`),
   check('products_status', sql`${t.status} in ('draft','active','unlisted','archived')`),
   check('products_seo', sql`length(${t.seoTitle}) <= 200 and length(${t.seoDescription}) <= 400`),

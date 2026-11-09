@@ -30,7 +30,7 @@ const card = (p: Piece, i: number): StoreProduct => {
     variants: sizes.map((s, j) => ({ id: `${id}-v${j}`, values: [s], sku: null, price: p.price, compareAt: p.was ?? null, mrp: null, stock: p.soldOut || (i === 0 && s === 'XL') ? 0 : 8, whenOut: 'stop' as const, shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderFull: false, restockedAt: null })),
     colours: [{ value: p.colour, family: null, hex: p.hex, cropImageId: null, crop: null }],
     categoryId: null, attributes: {}, tags: [], description: p.about, modelHeight: '', modelSize: '', optionValues: [sizes], seoTitle: '', seoDescription: '',
-    typeName: null, sizeChart: p.type === 'saree' ? null : CHART, sample: true,
+    typeName: null, sizeChart: p.type === 'saree' ? null : CHART, label: {}, originCountry: null, sample: true,
   }
 }
 

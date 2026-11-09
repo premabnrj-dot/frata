@@ -1,5 +1,6 @@
 import { pdpLines } from '@/domains/checkout/offer-showcase'
 import { describeAttribute } from '@/domains/catalogue/taxonomy'
+import { labelRows, readLabel } from '@/domains/catalogue/label'
 import { defaultDescription, defaultTitle, productJsonLd } from '@/domains/catalogue/seo'
 import { availability } from '@/domains/catalogue/availability'
 import { pick, urlFor } from '@/domains/media/sizes'
@@ -42,7 +43,8 @@ export function ProductView({ shop, p, now, live = false, layout, offers, below 
   offers?: OfferLine[]; below?: React.ReactNode
 }) {
   const seo = productSeo(shop, p)
-  const details = detailsOf(p)
+  // The taxonomy's details, then what the pack says (label.ts: Legal Metrology declarations, beauty and wellness).
+  const details = [...detailsOf(p), ...labelRows(readLabel(p.label), p.originCountry)]
   const gender = p.attributes['target-gender']?.[0] ? describeAttribute('target-gender')?.values.find((v) => v.id === p.attributes['target-gender']![0])?.name ?? null : null
   const ci = p.options.findIndex(isColourOption)
   const w = wordsFor(shop.shopLanguage)
@@ -72,7 +74,7 @@ export function ProductView({ shop, p, now, live = false, layout, offers, below 
             {p.description && <details><summary className="flex min-h-12 cursor-pointer items-center justify-between text-lg font-medium">{w.about}<span aria-hidden="true">+</span></summary>
               <div className="space-y-3 pb-4 leading-relaxed">{p.description.split(/\n{2,}/).map((t, i) => <p key={i} className="whitespace-pre-line">{t}</p>)}</div></details>}
             {details.length > 0 && <details><summary className="flex min-h-12 cursor-pointer items-center justify-between text-lg font-medium">{w.details}<span aria-hidden="true">+</span></summary>
-              <dl className="pb-4 text-sm">{details.map((d) => <div key={d.name} className="flex gap-4 py-2"><dt className="w-32 shrink-0 text-store-sub">{d.name}</dt><dd>{d.value}</dd></div>)}</dl></details>}
+              <dl className="pb-4 text-sm">{details.map((d) => <div key={d.name} className="flex gap-4 py-2"><dt className="w-32 shrink-0 text-store-sub">{d.name}</dt><dd className="whitespace-pre-line">{d.value}</dd></div>)}</dl></details>}
           </div>
         : <div className="mt-10 grid gap-8 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] md:gap-10">
             <div className="max-w-prose space-y-3 leading-relaxed">
@@ -80,7 +82,7 @@ export function ProductView({ shop, p, now, live = false, layout, offers, below 
             </div>
             {details.length > 0 && (
               <div><h2 className="mb-2 text-lg font-medium">{w.details}</h2>
-                <dl className="divide-y divide-store-line border-y border-store-line text-sm">{details.map((d) => <div key={d.name} className="flex gap-4 py-2"><dt className="w-32 shrink-0 text-store-sub">{d.name}</dt><dd>{d.value}</dd></div>)}</dl>
+                <dl className="divide-y divide-store-line border-y border-store-line text-sm">{details.map((d) => <div key={d.name} className="flex gap-4 py-2"><dt className="w-32 shrink-0 text-store-sub">{d.name}</dt><dd className="whitespace-pre-line">{d.value}</dd></div>)}</dl>
               </div>
             )}
           </div>}

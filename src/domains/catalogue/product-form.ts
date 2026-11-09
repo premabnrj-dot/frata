@@ -37,6 +37,8 @@ export type ProductInput = {
   attributes?: Record<string, string[]>; colours?: ColourInput[]; tags?: string[]
   /** GST (plan 2026-11-09-gst-core-and-categories § 2): HSN, the unit, the merchant's rate for a code the table lacks, made in. */
   tax?: TaxInput
+  /** What the pack says (label.ts): asked of beauty and wellness shops. */
+  label?: LabelInput
 }
 export type TaxInput = { hsn: string; uqc: string; ownBps: string; origin: string }
 export type CleanTax = { hsn: string | null; uqc: Uqc; gstBps: number | null; originCountry: string | null }
@@ -44,11 +46,13 @@ export type CleanVariant = {
   values: string[]; price: number; compareAt: number | null; unitCost: number | null; stock: number; sku: string | null
   whenOut: WhenOutInput; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; preorderCap: number | null
 }
-export type CleanProduct = Omit<ProductInput, 'options' | 'variants' | 'handle' | 'seoTitle' | 'seoDescription' | 'colours' | 'tags' | 'attributes' | 'categoryId' | 'tax'> & {
+export type CleanProduct = Omit<ProductInput, 'options' | 'variants' | 'handle' | 'seoTitle' | 'seoDescription' | 'colours' | 'tags' | 'attributes' | 'categoryId' | 'tax' | 'label'> & {
   options: Option[]; variants: CleanVariant[]; handle: string; seoTitle: string; seoDescription: string; categoryId: string | null
   attributes: Record<string, string[]>; colours: ColourInput[]; tags: string[]
   /** Undefined when the form sent no tax panel (the save leaves the stored values). */
   tax?: CleanTax
+  /** Undefined when the form sent no label panel. */
+  label?: Label
 }
 
 /**
@@ -72,6 +76,7 @@ export function cleanTax(t: TaxInput, now: Date, digits = 4): { ok: true; tax: C
 
 import { HSN_SHAPE, OWN_RATES, ruleOn } from '../tax/rates'
 import { isUqc, type Uqc } from '../tax/units'
+import { cleanLabel, type Label, type LabelInput } from './label'
 
 export const HANDLE_SHAPE = /^[a-z0-9]([a-z0-9-]{0,98}[a-z0-9])?$/
 const DATE = /^\d{4}-\d{2}-\d{2}$/
@@ -139,8 +144,10 @@ export function cleanProduct(p: ProductInput, now: Date): { ok: true; product: C
   }))
   const tax = p.tax ? cleanTax(p.tax, now) : null
   if (tax && !tax.ok) Object.assign(errors, Object.fromEntries(Object.entries(tax.errors).map(([k, v]) => [`tax.${k}`, v])))
+  const label = p.label ? cleanLabel(p.label) : null
+  if (label && !label.ok) Object.assign(errors, Object.fromEntries(Object.entries(label.errors).map(([k, v]) => [`label.${k}`, v])))
   if (Object.keys(errors).length) return { ok: false, errors }
-  return { ok: true, product: { ...(tax?.ok ? { tax: tax.tax } : {}), title, description: p.description.trim(), typeId: p.typeId, modelHeight: p.modelHeight.trim().slice(0, 30), modelSize: p.modelSize.trim().slice(0, 10), options: opts.ok ? opts.options : [], variants,
+  return { ok: true, product: { ...(tax?.ok ? { tax: tax.tax } : {}), ...(label?.ok ? { label: label.label } : {}), title, description: p.description.trim(), typeId: p.typeId, modelHeight: p.modelHeight.trim().slice(0, 30), modelSize: p.modelSize.trim().slice(0, 10), options: opts.ok ? opts.options : [], variants,
     handle, seoTitle, seoDescription, categoryId: p.categoryId ?? null, attributes: p.attributes ?? {}, colours, tags } }
 }
 
@@ -149,8 +156,11 @@ export type Readiness = { label: string; ok: boolean }[]
 /** What a product needs before shoppers see it — shown as a list, Publish stays off until all are met. */
 export function readiness(p: { title: string; photos: number; prices: number[]; hasSizes: boolean; chartRows: number; anyBuyable: boolean
   /** A shop that charges GST: false until the product has an HSN with a known rate (or the merchant's own). Absent: not asked. */
-  taxReady?: boolean }): Readiness {
+  taxReady?: boolean
+  /** A beauty or wellness shop: what the pack must say that is still missing (label.ts labelMissing). Absent: not asked. */
+  labelMissing?: string[] }): Readiness {
   return [
+    ...(p.labelMissing === undefined ? [] : [{ label: p.labelMissing.length ? `Its label: ${p.labelMissing.join(', ')}` : 'Its label details', ok: !p.labelMissing.length }]),
     ...(p.taxReady === undefined ? [] : [{ label: 'Its HSN code', ok: p.taxReady }]),
     { label: 'A name', ok: !!p.title.trim() },
     { label: 'At least one photo', ok: p.photos > 0 },
