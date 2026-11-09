@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.4.0
+  version: 5.5.0
   verified: 2026-11-09
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -173,6 +173,17 @@ from it).
   description suggestions; a failure says what to do (an iPhone HEIC says how to share it as a JPEG).
 - **Section library**: search by name, words and tags (`/`), kinds with counts, picture cards, "Fits <theme>" on by
   default, "Made for <theme>" first, a full section greyed with its limit, "Adds below <section>".
+- **Look v4** (owner-approved 2026-11-09, mockup https://claude.ai/artifact/MmC6BnAps1XXSWyfy7PfSL): three layers,
+  shown apart — **Site settings** behind the gear ("Site" at the top of the panel: Colours, Text styles, Icons,
+  Brand), **Style** (the theme's own choices), **page options** (each page in the page picker: Home, a product, a
+  collection, Shop all, Bag, Checkout; "Editing: <page>"; opening Style › Products opens a collection). Bag and
+  Checkout are one layout for every theme (money pages), styled by Site settings. A palette is checked as it is
+  picked ("Reads well" or why, never saved unreadable). The panel folds to a rail of icons on a computer.
+  **Shop icons**: Line (Lucide), Duotone, Solid (Phosphor), one stroke (Thin 1, Regular 1.5, Bold 2), inline SVG,
+  `currentColor`; an icon sits beside words in menus and tabs, never instead of them (the bag in the header is the
+  one icon alone: its name and count are its label). No text glyph as an icon (≡ is gone). **Menus**: Main (3
+  levels), Footer (1), Phone tabs (≤ 5, each an icon); moved by Up, Down, Under the one above, Out a level (thumb
+  first); every level that opens starts with "View all"; soft warnings past 7 top items or 10 under one.
 - **Even rhythm** (2.0 themes): the same space above and below every section but a full-bleed one. Horizontal rails
   snap to their padding (`scroll-px-4`), never past it.
 

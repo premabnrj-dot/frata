@@ -3,6 +3,20 @@
 What a merchant (or Frata staff) can do now that they could not before, newest first. One entry per closed
 phase; the detail is in its plan.
 
+## 2026-11-09 — Look v4: site settings, icons, menus, page-aware editing ([mockup](https://claude.ai/artifact/MmC6BnAps1XXSWyfy7PfSL), [research](research/2026-11-09-look-v4.md))
+
+- **Site settings behind the gear:** your own palette of six colours (checked as you pick: it says when words would
+  be hard to read), eight text styles with a computer and a phone size, weight, capitals and spacing, and the shop's
+  icons. A new theme brings its own; another version of the same theme keeps yours.
+- **Shop icons:** Line, Duotone or Solid, with a stroke weight; the menu, the bag, the phone tabs and the promise tiles
+  wear them. Drawn on the server: no icon font, no extra script.
+- **Menus:** your main menu (three levels, an icon beside any link), a footer menu and your own phone tabs; links
+  only to your shop's pages; a searchable icon picker. Untouched, the menu is your collections, as before. Menus come
+  across when you try another theme.
+- **Every page in the preview:** Shop all, Bag and Checkout join Home, a product and a collection; the top bar says
+  which page you're editing, and a page's options open with it.
+- **A panel that folds** to a rail of icons on a computer.
+
 ## 2026-11-09 — Look v3 ([mockup](https://claude.ai/artifact/N3ATeKr1XxgTvEiPLjN2tq), research § 11 in [themes pro-grade](research/2026-11-08-themes-pro-grade.md))
 
 - **Frrata Themes:** the gallery wears the Frrata Themes tile; each card carries it.
