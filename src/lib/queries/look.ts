@@ -3,7 +3,9 @@ import { and, asc, desc, eq, sql } from 'drizzle-orm'
 import { productImages, products } from '@/lib/db/schema-catalogue'
 import { withTenant } from '@/lib/db/tenant'
 import { lookFacts } from '@/lib/themes/facts'
-import { lookFor, revisionOf, type Look, type Revision } from '@/lib/themes/look'
+import { liveRevision, lookFor, openDraft, revisionOf, type Look, type Revision } from '@/lib/themes/look'
+import { manifestNear } from '@/domains/themes/catalogue'
+import type { Tx } from '@/lib/db'
 import type { ShopFacts } from '@/domains/themes/readiness'
 import { collections } from '@/lib/db/schema-catalogue'
 
@@ -48,4 +50,12 @@ export async function justPublished(tenantId: string, userId: string, now: Date)
     if (!l.live || l.live.publishedBy !== userId || now.getTime() - l.live.publishedAt.getTime() > 10 * 60_000) return null
     return { liveId: l.live.revision.id, canUndo: !!l.previous }
   })
+}
+
+/** Signal S3: does the live or the draft look offer product stories / "Pair it with"? (The product editor shows its
+ *  cards then, or when the product already has some, so they can always be removed.) Inside the caller's transaction. */
+export async function extrasOffered(tx: Tx, tenantId: string): Promise<{ stories: boolean; pairs: boolean }> {
+  const revs = [await liveRevision(tx, tenantId), await openDraft(tx, tenantId)]
+  const allowed = revs.map((r) => (r ? manifestNear(r.themeKey, r.themeVersion)?.allowed : undefined))
+  return { stories: allowed.some((a) => !!a?.productStories), pairs: allowed.some((a) => !!a?.pairWith) }
 }

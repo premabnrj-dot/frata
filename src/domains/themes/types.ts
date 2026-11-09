@@ -127,6 +127,8 @@ export type ThemeManifest = {
     videoSections?: VideoKey[]
     /** Signal 1.2 (S2): Image with text's Spotlight layout; the Hero's script line. Absent = not offered. */
     imageTextLayouts?: 'spotlight'[]; heroScript?: boolean
+    /** Signal 1.3 (S3): stories on the product page; "Pair it with" under the buy box. Absent = not offered. */
+    productStories?: boolean; pairWith?: boolean
     /** 2.0: the values this theme offers for a setting (choicesFor). A key left out keeps the values every 1.x theme had. */
     choices?: Choices }
   /** 2.0: the customizer's preview fills an empty shop with sample pieces, and a missing hero photo with this sample scene. */

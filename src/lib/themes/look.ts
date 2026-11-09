@@ -68,7 +68,7 @@ export async function liveRevision(tx: Tx, tenantId: string): Promise<Revision |
   return liveOf(await liveCandidates(tx, tenantId), bad)?.revision ?? null
 }
 
-async function openDraft(tx: Tx, tenantId: string): Promise<Revision | null> {
+export async function openDraft(tx: Tx, tenantId: string): Promise<Revision | null> {
   const [r] = await tx.select().from(shopThemeRevisions).where(and(
     eq(shopThemeRevisions.tenantId, tenantId),
     notExists(tx.select({ x: sql`1` }).from(shopThemePublishes).where(and(eq(shopThemePublishes.tenantId, tenantId), eq(shopThemePublishes.revisionId, shopThemeRevisions.id)))),

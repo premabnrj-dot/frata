@@ -9,6 +9,8 @@ import { collectionProducts, collections, productAttributes, productColours, pro
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
 import { shopSettings, tenants } from '@/lib/db/schema'
+import { productPairs } from '@/lib/db/schema-catalogue'
+import { extrasOffered } from './look'
 
 // The console's catalogue reads (1A). Every one inside withTenant with an
 // explicit tenant where. These include the merchant's own unit cost: they are
@@ -88,7 +90,7 @@ export async function productForEdit(tenantId: string, productId: string, role: 
     const [product] = await tx.select().from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId))).limit(1)
     if (!product) return null
     const mine = <T extends { tenantId: unknown; productId: unknown }>(t: T) => and(eq(t.tenantId as never, tenantId), eq(t.productId as never, productId))
-    const [vs0, imgs, types, colours, attrs, cols, member, costs] = await Promise.all([
+    const [vs0, imgs, types, colours, attrs, cols, member, costs, pairRows, offers] = await Promise.all([
       tx.select().from(variants).where(and(mine(variants), isNull(variants.archivedAt))).orderBy(asc(variants.position)),
       tx.select().from(productImages).where(mine(productImages)).orderBy(asc(productImages.position)),
       tx.select({
@@ -101,12 +103,19 @@ export async function productForEdit(tenantId: string, productId: string, role: 
       tx.select({ id: collections.id, title: collections.title, kind: collections.kind, matchAll: collections.matchAll, rules: collections.rules }).from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)),
       tx.select({ collectionId: collectionProducts.collectionId }).from(collectionProducts).where(mine(collectionProducts)),
       costsVisibleIn(tx, tenantId, role),
+      // Signal S3: its pairings (title and first photo for the card) and whether the look offers the cards.
+      tx.select(pieceCols(tenantId))
+        .from(productPairs).innerJoin(products, and(eq(products.tenantId, productPairs.tenantId), eq(products.id, productPairs.pairedId)))
+        .leftJoin(productImages, and(eq(productImages.tenantId, products.tenantId), eq(productImages.productId, products.id), eq(productImages.position, 0)))
+        .where(mine(productPairs)).orderBy(asc(productPairs.position)),
+      extrasOffered(tx, tenantId),
     ])
     const vs = costs ? vs0 : vs0.map((v) => ({ ...v, unitCost: null }))
     const [shop] = await tx.select({ name: tenants.name, slug: tenants.slug, orderPrefix: shopSettings.orderPrefix, codOn: shopSettings.codOn, returnDays: shopSettings.returnDays, returnKind: shopSettings.returnKind, pickup: shopSettings.pickupPincode,
       gstin: shopSettings.gstin, gstScheme: shopSettings.gstScheme, turnoverBand: shopSettings.turnoverBand, pricesIncludeGst: shopSettings.pricesIncludeGst, sells: shopSettings.sells, legalName: shopSettings.legalName, legalAddress: shopSettings.address })
       .from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
-    return { product, variants: vs, images: imgs, types, colours, attributes: attrs, collections: cols, memberOf: member.map((m) => m.collectionId), shop: shop ?? null, costs }
+    return { product, variants: vs, images: imgs, types, colours, attributes: attrs, collections: cols, memberOf: member.map((m) => m.collectionId), shop: shop ?? null, costs,
+      pairs: pairRows, offers: { stories: offers.stories || product.stories.length > 0, pairs: offers.pairs || pairRows.length > 0 } }
   })
 }
 
@@ -182,3 +191,25 @@ export async function productsByIds(tenantId: string, ids: string[]) {
   if (!ids.length) return []
   return withTenant(tenantId, (tx) => tx.select({ id: products.id, title: products.title }).from(products).where(and(eq(products.tenantId, tenantId), inArray(products.id, ids))))
 }
+
+/** Signal S3, "Pair it with": up to 8 of this shop's pieces whose title matches (listed or unlisted; never this product).
+ *  ILIKE on the title is fine at today's catalogue sizes (plan P10). */
+export async function searchPieces(tenantId: string, productId: string, q: string) {
+  const term = q.trim().slice(0, 60)
+  if (!term) return []
+  const like = `%${term.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
+  return withTenant(tenantId, (tx) => tx.select(pieceCols(tenantId))
+    .from(products).leftJoin(productImages, and(eq(productImages.tenantId, products.tenantId), eq(productImages.productId, products.id), eq(productImages.position, 0)))
+    .where(and(eq(products.tenantId, tenantId), sql`${products.id} <> ${productId}`, inArray(products.status, ['active', 'unlisted']), sql`${products.title} ilike ${like}`))
+    .orderBy(asc(products.title)).limit(8))
+}
+
+/** A piece as the "Pair it with" card shows it: cover, lowest price, how many sizes, whether any can be bought now
+ *  (stock, or pre-order / made to order: the editor's hint; the shop decides with availability()). */
+const pieceCols = (tenantId: string) => ({
+  id: products.id, title: products.title, status: products.status, base: productImages.base, widths: productImages.widths,
+  price: sql<number | null>`(select min(v.price)::float8 from ${variants} v where v.tenant_id = ${tenantId} and v.product_id = "products"."id" and v.archived_at is null)`,
+  sizes: sql<number>`(select count(*)::int from ${variants} v where v.tenant_id = ${tenantId} and v.product_id = "products"."id" and v.archived_at is null)`,
+  buyable: sql<boolean>`coalesce((select bool_or(v.stock > 0 or v.when_out <> 'stop') from ${variants} v where v.tenant_id = ${tenantId} and v.product_id = "products"."id" and v.archived_at is null), false)`,
+})
+export type { Piece } from '@/domains/catalogue/stories'

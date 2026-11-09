@@ -3,7 +3,6 @@
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { del } from '@vercel/blob'
-import { cleanChart, type Chart } from '@/domains/catalogue/size-charts'
 import { cleanProduct, readiness, type ProductInput } from '@/domains/catalogue/product-form'
 import { hsnDigitsFor, ruleOn, type TurnoverBand } from '@/domains/tax/rates'
 import { chargesGst, type Scheme } from '@/domains/tax/gst'
@@ -15,34 +14,29 @@ import { keyOf, reconcile, skuFor, uniqueSku } from '@/domains/catalogue/variant
 import { orderPrefix } from '@/domains/signup/slug'
 import { acceptedBase, storeHost, WIDTHS, urlFor } from '@/domains/media/sizes'
 import { photosAreWebp } from '@/lib/media/uploaded'
+import { checkStoryPhotos, cleanPairIds, savePairs } from '@/lib/catalogue/extras'
+import type { Piece } from '@/domains/catalogue/stories'
 import { refreshShop } from '@/lib/queries/storefront'
+import { searchPieces } from '@/lib/queries/catalogue'
 import { asMember } from '@/lib/auth/as-member'
+import { memberAudit } from '@/lib/auth/member-audit'
 import { costsVisibleIn } from '@/lib/queries/settings'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { BLOB_READ_WRITE_TOKEN, BLOB_STORE_ID } from '@/lib/env'
-import type { Tx } from '@/lib/db'
-import { auditEvents, shopSettings, tenants } from '@/lib/db/schema'
+import { shopSettings, tenants } from '@/lib/db/schema'
 import { shopThemeRevisions } from '@/lib/db/schema-themes'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { archivedVariants, retireVariants } from '@/lib/catalogue/retire-variants'
 import { ensureTypes, freeHandle, handleFree } from '@/lib/catalogue/handles'
 import { errName } from '@/lib/log'
 
-// Catalogue changes (1A). Any member may edit products (staff run catalogues);
-// every write goes through asMember, so a support visit is audited in the same
-// transaction. The tenant is always the member's, never an argument.
+// Catalogue changes (1A). Any member may edit products (staff run catalogues); every write goes through asMember, so a
+// support visit is audited in the same transaction. The tenant is always the member's, never an argument.
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string; errors?: Record<string, string>; conflict?: boolean }
 class Stop extends Error { constructor(public result: { ok: false; error: string; errors?: Record<string, string>; conflict?: boolean }) { super('stop') } }
 
 const reason = errName
-
-async function memberAudit(tx: Tx, auth: { userId: string; email: string | null; membership: { tenantId: string; supportSessionId: string | null } }, action: string, target?: string) {
-  if (!auth.membership.supportSessionId) {
-    await tx.insert(auditEvents).values({ tenantId: auth.membership.tenantId, actorUserId: auth.userId, actorEmail: auth.email, actorKind: 'member', action, target: target ?? null })
-  }
-}
-
 export async function createProduct(input: { title: string }): Promise<Result<{ id: string; handle: string }>> {
   const title = String(input?.title ?? '').trim().replace(/\s+/g, ' ')
   if (!title || title.length > 140) return { ok: false, error: 'Give your product a name of up to 140 characters.' }
@@ -77,6 +71,8 @@ export async function saveProduct(productId: string, version: number, input: Pro
   const parsed = cleanProduct(input, new Date())
   if (!parsed.ok) return { ok: false, error: 'Some fields need a look before saving.', errors: parsed.errors }
   const p = parsed.product
+  // Signal S3: a story photo is WebP (read outside the transaction), then this shop's own, rebuilt inside it.
+  if (!(await photosAreWebp((p.stories ?? []).flatMap((s) => (s.image ? [s.image] : []))))) return { ok: false, error: 'That file is not a photo we made. Upload it again.' }
   // Category, details and colour families are checked against the standard lists here, on the server.
   const category = categoryById(p.categoryId)
   const attrs = cleanAttributes(category?.id ?? null, p.attributes)
@@ -85,6 +81,8 @@ export async function saveProduct(productId: string, version: number, input: Pro
   try {
     const r = await asMember(ANY_MEMBER, { action: 'product.save', target: p.title }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
+      const stories = p.stories ? checkStoryPhotos(p.stories, tenantId, storeHost(BLOB_STORE_ID)) : null
+      if (p.stories && !stories) throw new Stop({ ok: false, error: 'That photo didn’t come from this shop. Upload it again.' })
       if (p.typeId) {
         const [t] = await tx.select({ id: productTypes.id }).from(productTypes).where(and(eq(productTypes.tenantId, tenantId), eq(productTypes.id, p.typeId)))
         if (!t) throw new Stop({ ok: false, error: 'That product type is not in your shop.' })
@@ -105,13 +103,15 @@ export async function saveProduct(productId: string, version: number, input: Pro
         if (p.tax.hsn.length < digits) throw new Stop({ ok: false, error: 'Some fields need a look before saving.', errors: { 'tax.hsn': `At your turnover, invoices need ${digits} digits of HSN.` } })
       }
       const [row] = await tx.update(products).set({
-        ...(p.tax ? { hsn: p.tax.hsn, uqc: p.tax.uqc, gstBps: p.tax.gstBps, originCountry: p.tax.originCountry } : {}), ...(p.label ? { label: p.label } : {}),
+        ...(p.tax ? { hsn: p.tax.hsn, uqc: p.tax.uqc, gstBps: p.tax.gstBps, originCountry: p.tax.originCountry } : {}), ...(p.label ? { label: p.label } : {}), ...(stories ? { stories } : {}),
         title: p.title, description: p.description, typeId: p.typeId, modelHeight: p.modelHeight, modelSize: p.modelSize,
         options: p.options.map((o) => o.name), optionValues: p.options.map((o) => o.values),
         handle: p.handle, seoTitle: p.seoTitle, seoDescription: p.seoDescription, taxonomyCategory: category?.id ?? null, tags: p.tags,
         version: sql`${products.version} + 1`, updatedAt: new Date(),
       }).where(and(eq(products.tenantId, tenantId), eq(products.id, productId), eq(products.version, version))).returning({ version: products.version })
       if (!row) throw new Stop({ ok: false, conflict: true, error: 'Someone saved this product while you were editing. Reload to see their changes.' })
+      // Signal S3: pairings are this shop's products only (and the FKs agree), saved under the same version check.
+      if (p.pairs !== undefined && !(await savePairs(tx, tenantId, productId, cleanPairIds(p.pairs, productId)))) throw new Stop({ ok: false, error: 'A piece to pair isn’t in your shop. Pick it again.' })
 
       const existing = await tx.select({ id: variants.id, optionValues: variants.optionValues }).from(variants)
         .where(and(eq(variants.tenantId, tenantId), eq(variants.productId, productId), isNull(variants.archivedAt)))
@@ -248,6 +248,11 @@ export async function findCategories(q: string) {
   return searchCategories(String(q ?? '').slice(0, 60)).map((c) => ({ id: c.id, name: c.name, path: c.path }))
 }
 
+/** "Pair it with"'s piece search (Signal S3): this shop's pieces only, never this product. */
+export async function findPieces(productId: string, q: string): Promise<Piece[]> {
+  const auth = await requireMember(ANY_MEMBER)
+  return auth.ok && typeof q === 'string' && typeof productId === 'string' && /^[0-9a-f-]{36}$/.test(productId) ? searchPieces(auth.membership.tenantId, productId, q) : []
+}
 /** The details a category asks for, for the editor. */
 export async function categoryDetails(id: string) {
   const auth = await requireMember(ANY_MEMBER)
@@ -303,7 +308,9 @@ export async function editPhoto(imageId: string, change: { move?: -1 | 1; option
         // restorable look never loses its photo (security review 2026-11-09).
         const [used] = await tx.select({ id: shopThemeRevisions.id }).from(shopThemeRevisions)
           .where(and(eq(shopThemeRevisions.tenantId, tenantId), sql`position(${img.base} in ${shopThemeRevisions.settings}::text) > 0`)).limit(1)
-        return { ...img, inLook: !!used }
+        const [inStory] = used ? [used] : await tx.select({ id: products.id }).from(products) // or a story (Signal S3)
+          .where(and(eq(products.tenantId, tenantId), sql`position(${img.base} in ${products.stories}::text) > 0`)).limit(1)
+        return { ...img, inLook: !!(used || inStory) }
       }
       if (change.move) {
         const all = await tx.select({ id: productImages.id }).from(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, img.productId))).orderBy(productImages.position)
@@ -337,54 +344,3 @@ export async function editPhoto(imageId: string, change: { move?: -1 | 1; option
     return { ok: false, error: 'We could not change the photo.' }
   }
 }
-
-/** A product type's size chart, shared by every product of that type. */
-export async function saveSizeChart(typeId: string, chart: Chart): Promise<Result> {
-  const c = cleanChart(chart)
-  if (!c.ok) return { ok: false, error: c.error }
-  try {
-    const r = await asMember(ANY_MEMBER, { action: 'size_chart.save', target: typeId }, async (tx, auth) => {
-      const tenantId = auth.membership.tenantId
-      const [row] = await tx.update(productTypes).set({ sizeChart: c.chart, updatedAt: new Date() })
-        .where(and(eq(productTypes.tenantId, tenantId), eq(productTypes.id, typeId))).returning({ name: productTypes.name })
-      if (!row) throw new Stop({ ok: false, error: 'That product type is not in your shop.' })
-      await memberAudit(tx, auth, 'size_chart.save', row.name)
-    })
-    if (!r.ok) return { ok: false, error: r.error }
-    refreshShop(r.tenantId, 'catalogue')
-    revalidatePath('/console/products', 'layout')
-    return { ok: true }
-  } catch (err) {
-    if (err instanceof Stop) return err.result
-    console.error('[saveSizeChart]', reason(err))
-    return { ok: false, error: 'We could not save the size chart.' }
-  }
-}
-
-/** A new product type, starting from an empty chart or a copy of another type's. */
-export async function createType(name: string, copyFrom: string | null): Promise<Result<{ id: string }>> {
-  const n = String(name ?? '').trim().replace(/\s+/g, ' ')
-  if (!n || n.length > 60) return { ok: false, error: 'A name of up to 60 characters, like Saree.' }
-  try {
-    const r = await asMember(ANY_MEMBER, { action: 'product_type.create', target: n }, async (tx, auth) => {
-      const tenantId = auth.membership.tenantId
-      let chart: Chart = { columns: [], rows: [], howToMeasure: '' }
-      if (copyFrom) {
-        const [src] = await tx.select({ c: productTypes.sizeChart }).from(productTypes).where(and(eq(productTypes.tenantId, tenantId), eq(productTypes.id, copyFrom)))
-        if (src) chart = src.c
-      }
-      const [row] = await tx.insert(productTypes).values({ tenantId, name: n, sizeChart: chart }).onConflictDoNothing().returning({ id: productTypes.id })
-      if (!row) throw new Stop({ ok: false, error: `You already have a type called ${n}.` })
-      await memberAudit(tx, auth, 'product_type.create', n)
-      return row.id
-    })
-    if (!r.ok) return { ok: false, error: r.error }
-    refreshShop(r.tenantId, 'catalogue')
-    return { ok: true, id: r.value }
-  } catch (err) {
-    if (err instanceof Stop) return err.result
-    console.error('[createType]', reason(err))
-    return { ok: false, error: 'We could not create the type.' }
-  }
-}
-

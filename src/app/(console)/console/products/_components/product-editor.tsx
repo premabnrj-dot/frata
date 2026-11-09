@@ -25,6 +25,8 @@ import { StatusBadge } from './status-badge'
 import { StatusCard } from './status-card'
 import { TaxPanel } from './tax-panel'
 import { LabelPanel } from './label-panel'
+import { PairsPanel, StoriesPanel } from './extras-panel'
+import type { Piece, Story } from '@/domains/catalogue/stories'
 import { labelMissing, readLabel, type LabelInput } from '@/domains/catalogue/label'
 import type { TaxInput } from '@/domains/catalogue/product-form'
 import { inGap, ruleOn } from '@/domains/tax/rates'
@@ -41,6 +43,8 @@ export type EditorProduct = {
   category: PickedCategory | null; attributes: Record<string, string[]>; collections: string[]; colours: ColourInput[]
   tax: TaxInput
   label: LabelInput
+  /** Signal S3: present only when the look offers the card or the product already has some (so it can be removed). */
+  stories?: Story[]; pairs?: Piece[]
 }
 export type EditorShop = { name: string; address: string; skuPrefix: string; codOn: boolean; returnDays: number; returnKind: string; city: string | null
   /** Whether this viewer sees and sets the cost of goods (`seesCosts`): when false, the column is not there and a save keeps the stored cost. */
@@ -110,6 +114,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
         variants: combos.map((c) => ({ values: c, ...(d.cells[keyOf(c)] ?? EMPTY_CELL) })),
         handle: d.handle, seoTitle: d.seoTitle, seoDescription: d.seoDescription, categoryId: d.category?.id ?? null,
         attributes: d.attributes, colours: d.colours, tags: d.tags, tax: d.tax, ...(shop.label ? { label: d.label } : {}),
+        ...(d.stories ? { stories: d.stories } : {}), ...(d.pairs ? { pairs: d.pairs.map((p) => p.id) } : {}),
       }, d.collections)
       if (r.ok) {
         setSaved(d); setVersion(r.version); setErrors({}); setConflict(false)
@@ -188,6 +193,8 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
               <div className="space-y-1"><label htmlFor="ms" className="block text-sm font-medium">Wears <span className="font-normal text-muted-foreground">(optional)</span></label><input id="ms" value={d.modelSize} maxLength={10} placeholder="S" onChange={(e) => set({ modelSize: e.target.value })} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
             </div>
           </Section>}
+          {d.stories && <Section><StoriesPanel stories={d.stories} onChange={(stories) => set({ stories })} photos={photos} tenantId={tenantId} enabled={blobReady} error={errors.stories} /></Section>}
+          {d.pairs && <Section><PairsPanel productId={id} pairs={d.pairs} onChange={(pairs) => set({ pairs })} /></Section>}
           <SeoPanel handle={d.handle} onHandle={(handle) => set({ handle })} seoTitle={d.seoTitle} onSeoTitle={(seoTitle) => set({ seoTitle })} seoDescription={d.seoDescription} onSeoDescription={(seoDescription) => set({ seoDescription })}
             defaults={defaults} address={shop.address} cover={photos[0]} everLive={everLive} errors={errors} />
         </div>
