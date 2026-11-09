@@ -7,6 +7,8 @@ import { hsnDigitsFor, type TurnoverBand } from '@/domains/tax/rates'
 import type { Tx } from '@/lib/db'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { creditNotes, orders } from '@/lib/db/schema-orders'
+import { gstConnections, gstFilings } from '@/lib/db/schema-gst'
+import type { Liability } from '@/domains/tax/gsp'
 import { withTenant } from '@/lib/db/tenant'
 import { documentsFor } from '@/lib/orders/documents'
 
@@ -19,7 +21,9 @@ import { documentsFor } from '@/lib/orders/documents'
 
 export type GstShop = { name: string; legalName: string; gstin: string | null; scheme: string; band: TurnoverBand; filing: 'monthly' | 'quarterly'; homeState: string | null }
 export type Fix = { kind: 'no_hsn' | 'hsn_digits' | 'bad_gstin' | 'gap' | 'came_back'; count: number; examples: string[] }
-export type GstPeriod = { shop: GstShop; period: Period; prev: string; next: string | null; invoices: Invoice[]; notes: GstDoc[]; gstr: Gstr1; fixes: Fix[] }
+/** Filing from Frrata (G2): the shop's portal session and this period's filing row. */
+export type GstFiling = { connected: boolean; username: string | null; pushedAt: Date | null; pushed: Liability | null; portal: Liability | null; filedAt: Date | null; arn: string | null }
+export type GstPeriod = { shop: GstShop; period: Period; prev: string; next: string | null; invoices: Invoice[]; notes: GstDoc[]; gstr: Gstr1; fixes: Fix[]; filing: GstFiling }
 
 const BATCH = 1000
 
@@ -81,7 +85,17 @@ export async function gstPeriodIn(tx: Tx, tenantId: string, key: string | null, 
   notes.sort((a, b) => a.doc.number.localeCompare(b.doc.number))
   const fixes = await fixesFor(tx, tenantId, shop, period, invoices)
   const nextKey = shift(k, 1)
-  return { shop, period, prev: shift(k, -1), next: periodOf(nextKey)!.from <= now ? nextKey : null, invoices, notes, gstr: gstr1(invoices, notes), fixes }
+  const filing = await filingOf(tx, tenantId, shop.gstin, k, now)
+  return { shop, period, prev: shift(k, -1), next: periodOf(nextKey)!.from <= now ? nextKey : null, invoices, notes, gstr: gstr1(invoices, notes), fixes, filing }
+}
+
+async function filingOf(tx: Tx, tenantId: string, gstin: string | null, key: string, now: Date): Promise<GstFiling> {
+  if (!gstin) return { connected: false, username: null, pushedAt: null, pushed: null, portal: null, filedAt: null, arn: null }
+  const [[c], [f]] = await Promise.all([
+    tx.select({ username: gstConnections.username, live: sql<boolean>`${gstConnections.tokenEnc} is not null and ${gstConnections.expiresAt} > ${now.toISOString()}::timestamptz` }).from(gstConnections).where(and(eq(gstConnections.tenantId, tenantId), eq(gstConnections.gstin, gstin))),
+    tx.select().from(gstFilings).where(and(eq(gstFilings.tenantId, tenantId), eq(gstFilings.gstin, gstin), eq(gstFilings.period, key))),
+  ])
+  return { connected: !!c?.live, username: c?.username ?? null, pushedAt: f?.pushedAt ?? null, pushed: (f?.ours as Liability | undefined) ?? null, portal: (f?.portal as Liability | null | undefined) ?? null, filedAt: f?.filedAt ?? null, arn: f?.arn ?? null }
 }
 
 /** What stops a clean return, each with up to five examples (invoice or order numbers). */

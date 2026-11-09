@@ -1419,7 +1419,8 @@ rollback;
 do $$ begin
   begin update credit_notes set number = number; raise exception 'FAIL: a credit note changed'; exception when check_violation then null; end;
   begin delete from credit_notes; raise exception 'FAIL: a credit note deleted'; exception when check_violation then null; end;
-  begin truncate credit_notes; raise exception 'FAIL: credit notes truncated'; exception when check_violation then null; end;
+  -- Refused by the final trigger, or (since 0071) by credit_note_lines' foreign key before it: either way never emptied.
+  begin truncate credit_notes; raise exception 'FAIL: credit notes truncated'; exception when check_violation or feature_not_supported then null; end;
   if exists (select 1 from unnest(array['frata_admin', 'anon', 'authenticated', 'service_role']) r
              where has_any_column_privilege(r, 'credit_notes', 'select, insert, update, references') or has_table_privilege(r, 'credit_notes', 'select, insert, update, delete, truncate, references, trigger'))
   then raise exception 'FAIL: staff or API roles reach credit notes'; end if;
@@ -1689,4 +1690,34 @@ do $$ begin
   if has_function_privilege('frata_app', 'app_accept_handover(uuid,uuid)', 'execute') then raise exception 'FAIL: the app may still accept a handover without its claim'; end if;
 end $$;
 
-\echo 'tenancy proof — all 51 checks passed'
+-- 51. GST filing (GST app G2, 0074): connections, filings and attempts are the shop's own; a filed period is final for
+-- everyone; an attempt changes its outcome once, and the app may change nothing else on it.
+insert into gst_filings (tenant_id, gstin, period, ours, pushed_at, pushed_by) values ('22222222-2222-2222-2222-222222222222', '27AAAAA0000A1Z5', '2026-10', '{}', now(), '99999999-9999-9999-9999-999999999999');
+insert into gst_connections (tenant_id, gstin, username, connected_by) values ('22222222-2222-2222-2222-222222222222', '27AAAAA0000A1Z5', 'shopb', '99999999-9999-9999-9999-999999999999');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare a uuid; begin
+  if exists (select 1 from gst_filings) or exists (select 1 from gst_connections) or exists (select 1 from gst_attempts) then raise exception 'FAIL: A sees B GST filing rows'; end if;
+  begin insert into gst_filings (tenant_id, gstin, period, ours, pushed_at, pushed_by) values ('22222222-2222-2222-2222-222222222222', '27AAAAA0000A1Z5', '2026-11', '{}', now(), '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: A wrote a B filing';
+  exception when insufficient_privilege then null; end;
+  insert into gst_filings (tenant_id, gstin, period, ours, pushed_at, pushed_by) values ('11111111-1111-1111-1111-111111111111', '23AAAAA0000A1Z5', '2026-10', '{}', now(), '99999999-9999-9999-9999-999999999999');
+  update gst_filings set portal = '{}', filed_at = now(), filed_by = '99999999-9999-9999-9999-999999999999', arn = 'AA2310260000001';
+  begin update gst_filings set arn = 'x'; raise exception 'FAIL: a filed period changed'; exception when check_violation then null; end;
+  begin delete from gst_filings; raise exception 'FAIL: the app deleted a filing'; exception when insufficient_privilege then null; end;
+  insert into gst_attempts (tenant_id, kind, actor) values ('11111111-1111-1111-1111-111111111111', 'push', '99999999-9999-9999-9999-999999999999') returning id into a;
+  update gst_attempts set outcome = 'ok', ended_at = now() where id = a;
+  begin update gst_attempts set outcome = 'failed' where id = a; raise exception 'FAIL: an attempt''s outcome changed twice'; exception when check_violation then null; end;
+  begin update gst_attempts set kind = 'file' where id = a; raise exception 'FAIL: the app changed an attempt''s kind'; exception when insufficient_privilege then null; end;
+  begin delete from gst_attempts; raise exception 'FAIL: the app deleted an attempt'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+do $$ begin
+  -- Even the owner of the table can't change or delete a filed period (the trigger, not only the grant).
+  update gst_filings set filed_at = now(), filed_by = pushed_by, arn = 'AA2710260000001' where tenant_id = '22222222-2222-2222-2222-222222222222';
+  begin update gst_filings set arn = 'x' where tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: a filed period changed'; exception when check_violation then null; end;
+  begin delete from gst_filings where tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: a filed period deleted'; exception when check_violation then null; end;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r, unnest(array['gst_connections', 'gst_filings', 'gst_attempts']) t where has_table_privilege(r, t, 'select'))
+  then raise exception 'FAIL: an API role reads GST filing rows'; end if;
+end $$;
+
+\echo 'tenancy proof — all 52 checks passed'

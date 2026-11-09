@@ -10,6 +10,9 @@ import { CAN_SEE_GST } from '@/domains/tenancy/roles'
 import { dayIN } from '@/lib/format-date'
 import { gstPeriod, type Fix } from '@/lib/queries/gst'
 import { ReviewTabs } from './review-tabs'
+import { FilePanel } from './file-panel'
+import { gsp } from '@/lib/gst/gsp'
+import { liabilityOf, stepOf } from '@/domains/tax/gsp'
 
 export const metadata = { title: 'GST' }
 export const dynamic = 'force-dynamic'
@@ -49,6 +52,9 @@ export default async function GstPage({ searchParams }: { searchParams: Promise<
   const q = `p=${encodeURIComponent(period.key)}`
   const exp = (f: string) => `/console/gst/export?${q}&f=${f}`
   const tax = gstr.totals
+  // Filing from Frrata is behind a switch (lib/gst/gsp.ts): off, the page is the CA's files only. Never on a support visit.
+  const filer = auth.membership.supportSessionId ? null : gsp()
+  const ours = liabilityOf(gstr)
   return (
     <div className="space-y-4">
       <PageHeader title="GST" badges={<Badge tone={toFix ? 'warn' : 'ok'}>{toFix ? `${toFix} to fix` : 'Ready'}</Badge>}
@@ -87,6 +93,15 @@ export default async function GstPage({ searchParams }: { searchParams: Promise<
       )}
 
       <ReviewTabs gstr={gstr} />
+
+      {filer && (
+        <Section ariaLabel="File from Frrata">
+          <h2 className="text-section font-semibold">File from Frrata</h2>
+          <FilePanel period={period.key} step={stepOf({ connected: d.filing.connected, filed: !!d.filing.filedAt, pushed: d.filing.pushed, now: ours, portal: d.filing.portal })}
+            ours={ours} portal={d.filing.portal} username={d.filing.username} pushedAt={d.filing.pushedAt?.toISOString() ?? null}
+            filedAt={d.filing.filedAt?.toISOString() ?? null} arn={d.filing.arn} gspName={filer.name} />
+        </Section>
+      )}
 
       <Section ariaLabel="For your CA">
         <h2 className="text-section font-semibold">For your CA</h2>
