@@ -18,13 +18,27 @@ export const CONTENT_SECURITY_POLICY = [
   "base-uri 'self'",
 ].join('; ')
 
+/**
+ * HSTS (shop addresses D2·1): `includeSubDomains` only on hosts that are ours — the console host and every
+ * `*.SHOP_DOMAIN`. Any other host is a merchant's own domain, where it would force HTTPS on subdomains we don't serve
+ * (their blog, their mail webmail): there, one year without it. next.config.ts sends the default everywhere and the
+ * platform value on our hosts (a later matching entry replaces a header of the same name).
+ */
+export const HSTS_OWN_DOMAIN = { key: 'Strict-Transport-Security', value: 'max-age=31536000' }
+export const HSTS_PLATFORM = { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' }
+const esc = (s: string) => s.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+/** Next's `has: host` value: a regex anchored by Next, matched against the lowercased host without its port. */
+export function platformHostPattern(consoleHost: string, shopDomain: string): string {
+  return `(?:${esc(consoleHost)}|(?:[a-z0-9-]+\\.)?${esc(shopDomain)})`
+}
+
 export const SECURITY_HEADERS: { key: string; value: string }[] = [
   { key: 'Content-Security-Policy', value: CONTENT_SECURITY_POLICY },
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), usb=()' },
-  { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+  HSTS_OWN_DOMAIN,
 ]
 
 /** The customizer's look preview only: the console may frame it (themes spec § Preview). Same policy otherwise. */

@@ -43,3 +43,19 @@ describe('signed-in policy', () => {
     expect(sessionCookieOptions(true).secure).toBe(false)
   })
 })
+
+// Shop addresses D2·1: includeSubDomains only on our own hosts; a merchant's own domain gets a year without it.
+describe('HSTS by host', () => {
+  it('own domains get max-age=31536000; the console host and *.SHOP_DOMAIN get includeSubDomains, last', async () => {
+    const { CONSOLE_HOST, SHOP_DOMAIN } = await import('../public-env')
+    const rules = await config.headers!()
+    const hsts = (r: (typeof rules)[number]) => r.headers.find((h) => h.key === 'Strict-Transport-Security')?.value
+    expect(hsts(rules[0]!)).toBe('max-age=31536000')
+    const last = rules[rules.length - 1]!
+    expect(hsts(last)).toBe('max-age=63072000; includeSubDomains')
+    // Next anchors the value and matches the lowercased host without its port.
+    const re = new RegExp(`^${last.has![0]!.value}$`)
+    for (const h of [CONSOLE_HOST, SHOP_DOMAIN, `kesar-studio.${SHOP_DOMAIN}`]) expect(re.test(h)).toBe(true)
+    for (const h of ['kesarstudio.in', `www.kesarstudio.in`, `kesar.${SHOP_DOMAIN}.evil.in`, `a.b.${SHOP_DOMAIN}`, `x${SHOP_DOMAIN}`]) expect(re.test(h)).toBe(false)
+  })
+})
