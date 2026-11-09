@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import type { ModuleAccess } from '@/domains/modules/access'
 import type { ModuleKey } from '@/domains/modules/registry'
 import { shopModules } from '@/lib/queries/modules'
+import { EkcodeCheckout } from '@/components/modules/ekcode/checkout-identity'
 
 // =============================================================================
 // FILE: src/components/modules/slots.tsx — where modules plug into core pages.
@@ -10,11 +11,11 @@ import { shopModules } from '@/lib/queries/modules'
 // <Slot name="order.side" …/> and never imports a module; this map says which
 // module fills which slot (check:modules allows imports of module code only
 // here and at the other named hook points). A filler renders only when its
-// module is usable for the shop (moduleAccess). Two slots for now (YAGNI,
+// module is usable for the shop (moduleAccess). Three slots for now (YAGNI,
 // architecture review 2026-11-07); a module adds its line here when it ships.
 // =============================================================================
 
-export const SLOT_NAMES = ['order.side', 'home.tile'] as const
+export const SLOT_NAMES = ['order.side', 'home.tile', 'checkout.identity'] as const
 export type SlotName = (typeof SLOT_NAMES)[number]
 export type SlotContext = { tenantId: string; orderId?: string }
 
@@ -22,6 +23,8 @@ type Filler = { module: ModuleKey; Component: ComponentType<SlotContext> }
 const FILLERS: Record<SlotName, Filler[]> = {
   'order.side': [],
   'home.tile': [],
+  // Above the guest form on a shop's checkout (EkCode P1): the button, the holdout, and the signed-in strip.
+  'checkout.identity': [{ module: 'ekcode', Component: EkcodeCheckout }],
 }
 
 export function Slot({ name, ctx, access }: { name: SlotName; ctx: SlotContext; access: Record<ModuleKey, ModuleAccess> }) {

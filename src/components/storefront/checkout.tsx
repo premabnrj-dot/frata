@@ -45,11 +45,13 @@ function needText(n: PublicListed['need']): string {
   return 'When you pay online'
 }
 
-export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = { deliversWithin: null, b2b: false }, waOptIn = false }: { shopName: string; legalName: string; privacyHref: string; returnLine: string | null
+export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = { deliversWithin: null, b2b: false }, waOptIn = false, identity }: { shopName: string; legalName: string; privacyHref: string; returnLine: string | null
   /** GST (plan 2026-11-09-gst-core-and-categories): a shop without a regular GSTIN delivers within its state; business buyers may ask for a GST invoice. */
   gst?: { deliversWithin: string | null; b2b: boolean }
   /** Show the WhatsApp opt-in (the shop has WhatsApp connected): unticked, naming the shop. */
-  waOptIn?: boolean }) {
+  waOptIn?: boolean
+  /** What a module puts above the form (slot checkout.identity: EkCode's button or its signed-in strip). */
+  identity?: React.ReactNode }) {
   const [biz, setBiz] = useState<{ on: boolean; gstin: string; name: string }>({ on: false, gstin: '', name: '' })
   const [f, setF] = useState<Form>(EMPTY)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -72,6 +74,11 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     try { const saved = JSON.parse(ss.get(FORM_KEY) ?? 'null'); if (saved) setF({ ...EMPTY, ...saved }) } catch { /* */ }
   }, [])
   useEffect(() => { ss.set(FORM_KEY, JSON.stringify(f)) }, [f])
+  // A module may fill the form (EkCode's signed-in shopper): a generic event, so core never imports a module.
+  useEffect(() => {
+    const fill = (e: Event) => { const d = (e as CustomEvent<Partial<Form>>).detail; setF((x) => ({ ...x, ...Object.fromEntries(Object.entries(d ?? {}).filter(([k, v]) => k in EMPTY && typeof v === 'string' && v)) })) }
+    window.addEventListener('shop:prefill', fill); return () => window.removeEventListener('shop:prefill', fill)
+  }, [])
   useEffect(() => { if (q && !seen.current) seen.current = q }, [q])
   const set = (k: keyof Form, v: string) => { setF((x) => ({ ...x, [k]: v })); setErrors((e) => { const n = { ...e }; delete n[k]; return n }) }
 
@@ -135,10 +142,11 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     if (!attempt.current || attempt.current.sig !== sig) attempt.current = { sig, key: randomKey() }
     let attribution: Record<string, string> = {}
     try { attribution = JSON.parse(ss.get(ATTR_KEY) ?? '{}') } catch { /* */ }
+    const ek = ss.get('shop:arm:ekcode')
     const r = await api<{ token: string; method: 'cod' | 'prepaid'; total: number; pay: Pay | null; payError: string | null }>('/api/shop/orders', {
       idempotencyKey: attempt.current.key, bag: items, method, expectedTotal: total, ...(code ? { code, via: offerCode.via() } : {}),
       address: { phone: f.phone, name: f.name, pincode: f.pincode, addressLine: f.addressLine, area: f.area, landmark: f.landmark, city: f.city, state: f.state },
-      facts: { firstMethod: firstMethod.current, attribution },
+      facts: { firstMethod: firstMethod.current, attribution, ...(ek === 'shown' || ek === 'held' ? { ekcode: ek } : {}) },
       ...(gst.b2b && biz.on ? { b2b: { gstin: cleanGstin(biz.gstin), name: biz.name.trim() } } : {}),
       ...(waOptIn && optIn ? { waOptIn: true } : {}),
     })
@@ -196,6 +204,8 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   }
 
   function done(token: string) {
+    // A module may act on the placed order's address (EkCode's "Save this address"): a generic event, no import.
+    window.dispatchEvent(new CustomEvent('shop:placed', { detail: { addressLine: f.addressLine, area: f.area, landmark: f.landmark, city: f.city, state: f.state, pincode: f.pincode } }))
     bag.clear(); ss.del(FORM_KEY); ss.del(PENDING_KEY)
     window.location.assign(`/orders#t=${token}`)
   }
@@ -218,6 +228,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
       <h1 className="text-2xl" style={{ fontFamily: 'var(--store-display)' }}>Checkout</h1>
       {msg && <p role="alert" className={`mt-4 border-l-2 px-3 py-2 text-sm ${msg.tone === 'changed' ? 'border-store-accent bg-store-chip' : 'border-store-bad bg-store-chip'}`}>{msg.text}</p>}
       {quoteError && <p role="alert" className="mt-4 text-sm text-store-bad">{quoteError}</p>}
+      {identity && <div className="mt-4 grid gap-3">{identity}</div>}
 
       <fieldset disabled={!!failed} className="disabled:opacity-60">
         <h2 className={sect}>Contact</h2>

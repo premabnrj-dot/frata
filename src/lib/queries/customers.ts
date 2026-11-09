@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { and, eq, gt, isNull, sql } from 'drizzle-orm'
 import { withTenant } from '@/lib/db/tenant'
 import { customerSessions, shopCustomers } from '@/lib/db/schema-customers'
+import { orders } from '@/lib/db/schema-orders'
 import { redeem, saveAddress } from '@/lib/db/ekcode'
 import { open, seal } from '@/lib/crypto/secret-box'
 import { ekOpen, ekSeal, randomToken, tokenDigest } from '@/lib/ekcode/keys'
@@ -101,4 +102,19 @@ export async function saveToEkcode(tenantId: string, token: string, label: strin
     const addressId = randomUUID()
     return saveAddress(tokenDigest(saveToken), tenantId, addressId, name, ekSeal(JSON.stringify(clean), `ekcode_addresses:sealed:${addressId}`))
   })
+}
+
+type Tx = Parameters<Parameters<typeof withTenant>[1]>[0]
+
+/** Inside placeOrder's own transaction: the order points at the session's customer only when the phones match. */
+export async function linkCustomer(tx: Tx, orderId: string, token: string, phone: string): Promise<void> {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return
+  const { cleanMobile } = await import('@/domains/checkout/mobile')
+  const mobile = cleanMobile(phone)
+  if (!mobile) return
+  const [c] = await tx.select({ id: shopCustomers.id }).from(customerSessions)
+    .innerJoin(shopCustomers, and(eq(shopCustomers.tenantId, customerSessions.tenantId), eq(shopCustomers.id, customerSessions.customerId)))
+    .where(and(eq(customerSessions.tokenDigest, tokenDigest(token)), isNull(customerSessions.revokedAt), gt(customerSessions.expiresAt, sql`now()`), eq(shopCustomers.phone, mobile)))
+    .limit(1)
+  if (c) await tx.update(orders).set({ customerId: c.id }).where(eq(orders.id, orderId))
 }
