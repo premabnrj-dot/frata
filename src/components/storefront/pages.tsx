@@ -5,6 +5,7 @@ import { inCollection, isListed, pageOf } from '@/domains/storefront/listing'
 import { classicFromSettings } from '@/domains/themes/resolve'
 import type { ResolvedTheme, ThemeSettings } from '@/domains/themes/types'
 import type { StoreCatalogue, StoreCollection, StoreShop } from '@/lib/queries/storefront'
+import type { LookVideos } from '@/lib/themes/page-look'
 import { ProductGrid } from './card'
 import { JsonLd } from './json-ld'
 import { Photo } from './photo'
@@ -16,11 +17,11 @@ import type { Href } from './shell'
 const wrap = 'mx-auto max-w-6xl px-4 sm:px-6'
 
 /** Home: the shop's theme's sections, then the shop's structured data. T0: Classic from the shop's settings. */
-export function HomeView({ shop, cat, href, now, theme, bestSellers, preview = false }: { shop: StoreShop; cat: StoreCatalogue; href: Href; now: Date; theme?: ResolvedTheme; bestSellers?: Partial<Record<30 | 90, string[]>>; preview?: boolean }) {
+export function HomeView({ shop, cat, href, now, theme, bestSellers, videos, preview = false }: { shop: StoreShop; cat: StoreCatalogue; href: Href; now: Date; theme?: ResolvedTheme; bestSellers?: Partial<Record<30 | 90, string[]>>; videos?: LookVideos; preview?: boolean }) {
   const t = theme ?? classicFromSettings(shop.accent, shop.displayFont)
   return (
     <>
-      <Sections list={t.home} ctx={{ shop, cat, theme: t, href, now, bestSellers, preview }} />
+      <Sections list={t.home} ctx={{ shop, cat, theme: t, href, now, bestSellers, videos, preview }} />
       <JsonLd data={shopJsonLd({ name: shop.shopName, url: `https://${shop.host}`, logo: shop.logoUrl, sameAs: shop.instagram ? [`https://instagram.com/${shop.instagram.replace(/^@/, '')}`] : [],
         returnDays: shop.returnDays, returnKind: shop.returnKind, shippingFlat: shop.shippingFlat, freeShippingAbove: shop.freeShippingAbove, metroDays: shop.metroDays, restDays: shop.restDays, dispatchDays: shop.dispatchDays })} />
       {!preview && <JsonLd data={websiteJsonLd(shop.shopName, `https://${shop.host}/`)} />}

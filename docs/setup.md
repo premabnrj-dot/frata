@@ -99,7 +99,8 @@ Until these are set, Console › Apps › Messages says "WhatsApp isn't switched
    allowed. Copy its **configuration id**. Add `frata.vercel.app` (and the console host) to the app's allowed domains.
 3. **Webhook**: WhatsApp → Configuration → callback URL `https://<console host>/api/webhooks/whatsapp`, verify token = the
    value you set as `WA_VERIFY_TOKEN`. Subscribe the fields `messages`, `smb_message_echoes`, `history`,
-   `smb_app_state_sync`, `account_update`, `phone_number_quality_update`, `phone_number_name_update`.
+   `smb_app_state_sync`, `account_update`, `phone_number_quality_update`, `phone_number_name_update`, and for Reviews
+   `message_template_status_update` and `template_category_update` (the review template's approval and category).
 4. Vercel → frata → Environment Variables (Production):
    - `NEXT_PUBLIC_META_APP_ID` (the app id) and `NEXT_PUBLIC_WA_CONFIG_ID` (step 2): public, shown to Meta's popup.
    - `META_APP_SECRET` (Sensitive): App settings → Basic → App secret.
@@ -216,3 +217,20 @@ add or remove production domains), type **Sensitive** for the token:
 - `VERCEL_TEAM_ID` — Team → Settings → General → Team ID.
 - `DOMAIN_CAPACITY` — optional: 50 on Hobby (the default), raise it on Pro.
 Until they are set, Settings › Shop address shows no Connect button and the domain check does nothing.
+### Video for shops: Frrata's Mux (V1, 2026-11-09)
+
+State (2026-11-09): steps 1–3 done by the owner (four variables, Production only, Sensitive); step 4's redeploy is
+this commit's build; Signal 1.1.0's release and a first real upload are next.
+
+Facts: frata-integrations § Mux. Built and tested end to end against a stand-in; nothing calls Mux until these are set.
+1. In Mux, the **Production** environment: copy its **environment id** (Settings › Environments; not a secret).
+2. Vercel → `frata` → Settings → Environment Variables, **Production only, Sensitive** (never Preview: previews share
+   the production database): `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET` (the access token pair), `MUX_ENVIRONMENT_ID` (step 1).
+3. Mux → Settings → Webhooks (Production environment): URL `https://frata.vercel.app/api/webhooks/mux`; copy its
+   signing secret into `MUX_WEBHOOK_SECRET` (Production, Sensitive). `MUX_WEBHOOK_SECRET_PREVIOUS` stays unset (used
+   only while a new webhook replaces the old one). Signing keys are not used (playback is public).
+4. Redeploy (push to `main`), then Admin › Themes → **Signal 1.1.0** → Release (1.0.0 has no video; shops move up when
+   they next try or update the theme).
+5. Before launch: ask Mux in writing that hosting merchants' loops inside Frrata is allowed, and where data is stored;
+   add Mux to Frrata's sub-processors.
+

@@ -43,3 +43,10 @@ export async function bestSellersFor(t: ResolvedTheme, read: (days: number) => P
   const ws = bestSellerWindows(t)
   return Object.fromEntries(await Promise.all(ws.map(async (d) => [d, await read(d)] as const)))
 }
+
+export type LookVideos = Record<string, { playbackId: string; width: number | null; height: number | null }>
+/** V1: the videos this Home's sections name (only where the theme offers video: resolveTheme dropped the rest). */
+export async function videosFor(t: ResolvedTheme, read: (key: string) => Promise<LookVideos>): Promise<LookVideos> {
+  const ids = [...new Set(t.home.flatMap((s) => ((s.key === 'hero' || s.key === 'image_text') && s.video && !s.hidden ? [s.video.id] : [])))].sort()
+  return ids.length ? read(ids.join(',')) : {}
+}

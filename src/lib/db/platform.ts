@@ -159,7 +159,7 @@ export async function paymentWebhookFor(key: string): Promise<{ tenantId: string
 }
 
 /** Shops with a provider's events still to process (the daily safety net; read with no tenant set, which the policy allows). */
-export async function shopsWithPendingEvents(provider: 'razorpay' | 'whatsapp' = 'razorpay'): Promise<string[]> {
+export async function shopsWithPendingEvents(provider: 'razorpay' | 'whatsapp' | 'mux' = 'razorpay'): Promise<string[]> {
   const rows = await db().execute<{ t: string }>(sql`select t from app_pending_event_shops(${provider}) as t`)
   return rows.map((r) => r.t)
 }
@@ -173,6 +173,13 @@ export async function shopsToErase(before: Date): Promise<string[]> {
 // ── Messages (WhatsApp, drizzle/0030) ──────────────────────────────────────────
 /** Stores one verified WhatsApp item for the shop whose open connection has this id, under OUR key
  *  "whatsapp:<shop>:<tail>". The definer finds the shop; returns it when a new row landed (null: no shop, or a retry). */
+/** A Mux event, routed by the definer (drizzle/0081): our row id AND the row's upload id, or a rendition's asset id
+ *  already on a row, in the same environment. The shop, or null (nothing matched, or stored before). */
+export async function storeMuxEvent(f: { env: string; eventId: string; type: string; video: string | null; uploadId: string | null; assetId: string | null; status: string | null }): Promise<string | null> {
+  const rows = await db().execute<{ t: string | null }>(sql`select app_store_mux_event(${f.env}, ${f.eventId}, ${f.type}, ${f.video}::uuid, ${f.uploadId}, ${f.assetId}, ${f.status}) as t`)
+  return rows[0]?.t ?? null
+}
+
 export async function storeWhatsAppEvent(by: 'number' | 'account', metaId: string, tail: string, payload: object): Promise<string | null> {
   const rows = await db().execute<{ t: string | null }>(sql`select app_store_wa_event(${by}, ${metaId}, ${tail}, ${JSON.stringify(payload)}::jsonb) as t`)
   return rows[0]?.t ?? null

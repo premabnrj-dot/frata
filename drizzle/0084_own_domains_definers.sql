@@ -4,7 +4,7 @@
 -- Every write to shop_domains is one of these. The rules:
 --   · who: owners and admins (CAN_MANAGE), re-checked here from members; the check's writers run inside the shop's
 --     own transaction and match `id = p_id and tenant_id = app_current_tenant()` together (definers bypass RLS);
---   · a claim is the shop's alone; a host and its apex are live for one shop at most (unique indexes, 0080);
+--   · a claim is the shop's alone; a host and its apex are live for one shop at most (unique indexes, 0082);
 --   · nothing reaches Vercel before the row's own proof: app_domain_record says when to add (an outbox row);
 --   · a proof is only what BOTH resolvers saw at _frrata.<apex>, and only this row's own token proves it. If another
 --     shop holds the apex live: it moves only when its token is gone and ours is there; a MAIN domain waits 72 h
@@ -33,7 +33,7 @@ begin
   -- A second press of Continue: the same claim back.
   select * into v_row from public.shop_domains d where d.tenant_id = p_tenant and d.host = p_host and d.removed_at is null;
   if found then return query select v_row.id, v_row.token; return; end if;
-  -- One live host per apex (0080): a second host of the same apex for this shop is refused, not "moved" from itself.
+  -- One live host per apex (0082): a second host of the same apex for this shop is refused, not "moved" from itself.
   if exists (select 1 from public.shop_domains d where d.tenant_id = p_tenant and d.apex = p_apex and d.host <> p_host and d.removed_at is null) then
     raise exception 'same_apex' using errcode = 'P0001';
   end if;

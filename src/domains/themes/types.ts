@@ -123,6 +123,8 @@ export type ThemeManifest = {
   allowed: { pairings: Pairing[]; headers: HeaderVariant[]; footers: FooterVariant[]; sections: SectionKey[]; heroMasks?: ('none' | 'arch')[]
     /** The products section's layouts and the colour schemes a section may wear (Signal plan T1); absent = today's. */
     productLayouts?: ProductLayout[]; sectionSchemes?: SectionScheme[]
+    /** V1: the sections that may carry a video loop; absent = none (every theme before Signal). */
+    videoSections?: ('hero' | 'image_text')[]
     /** 2.0: the values this theme offers for a setting (choicesFor). A key left out keeps the values every 1.x theme had. */
     choices?: Choices }
   /** 2.0: the customizer's preview fills an empty shop with sample pieces, and a missing hero photo with this sample scene. */

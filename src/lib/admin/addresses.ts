@@ -120,7 +120,7 @@ const WORDS: Record<AddressAdminError, string> = {
 /** Admin's words for an address definer's refusal. */
 export const addressAdminError = (e: AddressAdminError) => WORDS[e]
 
-// ── Own domains D2·11: a shop's domains, the claims waiting for Frrata, and Admin's two writes (definers, 0082). ──
+// ── Own domains D2·11: a shop's domains, the claims waiting for Frrata, and Admin's two writes (definers, 0084). ──
 export type AdminDomain = { id: string; tenantId: string; shop: string; host: string; withWww: boolean; provedAt: Date | null; addedAt: Date | null; dnsOkAt: Date | null; certOkAt: Date | null
   mainAt: Date | null; failingSince: Date | null; contestAt: Date | null; razorpayOkAt: Date | null; vercelTxt: string | null; removedAt: Date | null; removedReason: string | null; claimedAt: Date }
 const domainCols = {

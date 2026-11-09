@@ -2,7 +2,9 @@ import { redirect } from 'next/navigation'
 import { statusLabel, visibility, type Status } from '@/domains/catalogue/availability'
 import type { ResolvedTheme } from '@/domains/themes/types'
 import { previewBestSellers, previewCatalogue as readCatalogue, previewProduct, type StoreShop } from '@/lib/queries/storefront'
-import { bestSellersFor } from '@/lib/themes/page-look'
+import { bestSellersFor, videosFor } from '@/lib/themes/page-look'
+import { previewVideos } from '@/lib/queries/videos'
+import { LoopPlayer } from './sections/loop-player'
 import { isSampleHandle, sampleProduct, sampleSetFor, withSamples } from '@/lib/themes/sample'
 import { BagPage } from './bag-page'
 import { Checkout } from './checkout'
@@ -24,8 +26,8 @@ export async function previewPage(o: { tenantId: string; shop: StoreShop; path: 
   const previewCatalogue = async (t: string) => { const c = await readCatalogue(t); return samples ? withSamples(c, now, set) : c }
   if (rest.length) return { body: <ShopNotFound href={href} lang={shop.shopLanguage} />, note: null }
   if (!a) {
-    const best = await bestSellersFor(theme, (d) => previewBestSellers(tenantId, d))
-    return { body: <HomeView shop={shop} cat={await previewCatalogue(tenantId)} href={href} now={now} theme={theme} bestSellers={best} preview />, note: null }
+    const [best, videos] = await Promise.all([bestSellersFor(theme, (d) => previewBestSellers(tenantId, d)), videosFor(theme, (k) => previewVideos(tenantId, k))])
+    return { body: <><HomeView shop={shop} cat={await previewCatalogue(tenantId)} href={href} now={now} theme={theme} bestSellers={best} videos={videos} preview />{Object.keys(videos).length > 0 && <LoopPlayer />}</>, note: null }
   }
   if (a === 'products' && !b) return { body: <AllView cat={await previewCatalogue(tenantId)} href={href} now={now} lang={shop.shopLanguage} />, note: null }
   if (a === 'products' && b && /^[a-z0-9-]{1,100}$/.test(b)) {

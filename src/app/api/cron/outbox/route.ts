@@ -1,4 +1,5 @@
 import { processWhatsApp } from '@/lib/modules/communication/webhook'
+import { processMux } from '@/lib/video/process'
 import { NextResponse } from 'next/server'
 import { isCronRequest } from '@/lib/auth/cron'
 import { drainOutbox, eachLimited } from '@/lib/outbox/drain'
@@ -46,6 +47,11 @@ export async function GET(request: Request) {
   })
   await eachLimited(await shopsWithPendingEvents('whatsapp'), SHOPS_AT_ONCE, async (tenantId) => {
     const n = await processWhatsApp(tenantId, new Date()).catch((e) => { console.error('[cron] whatsapp', tenantId, errName(e)); return 0 })
+    events += n
+  })
+  // Mux events (V1): processed on arrival; this catches a lost after() or a Mux outage.
+  await eachLimited(await shopsWithPendingEvents('mux'), SHOPS_AT_ONCE, async (tenantId) => {
+    const n = await processMux(tenantId).catch((e) => { console.error('[cron] mux', tenantId, errName(e)); return 0 })
     events += n
   })
   return NextResponse.json({ claimed, sent, events, erased, billing, collection })

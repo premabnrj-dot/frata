@@ -383,7 +383,7 @@ end $$;
 rollback;
 
 begin;
--- Own domains D2·2 (0080/0081): a shop reads only its own domain rows and writes none; one live shop per apex (www and
+-- Own domains D2·2 (0082/0083): a shop reads only its own domain rows and writes none; one live shop per apex (www and
 -- subdomains included); the database makes every token and none repeats; nothing happens before a row's own proof; a
 -- parked row is a removed one; Frrata's, Vercel's and www hosts are refused; Admin writes nothing directly.
 insert into shop_domains (tenant_id, host, apex, with_www, claimed_by) values
@@ -446,7 +446,7 @@ end $$;
 rollback;
 
 begin;
--- Own domains D2·6 (0082): claims are the shop's, owners and admins only, capped; a check writes only its own shop's
+-- Own domains D2·6 (0084): claims are the shop's, owners and admins only, capped; a check writes only its own shop's
 -- row (B's id under A matches nothing); a proof is this row's own token seen by both resolvers; a live apex moves only
 -- when its token is gone (a main one after 72 h), both tokens seen is a dispute; main needs proof, certificate, the
 -- project and — on live payments — Razorpay's approval; only a proved row on our project serves.
@@ -544,7 +544,7 @@ end $$;
 rollback;
 
 begin;
--- Own domains D2·7/D2·8 (0082): a removed host on Vercel parks; 3 days pointing away (or 30 days parked) and it comes
+-- Own domains D2·7/D2·8 (0084): a removed host on Vercel parks; 3 days pointing away (or 30 days parked) and it comes
 -- off — unless another shop holds that apex live (then it stays, and only the row lets go); the due list is ids only.
 insert into shop_domains (tenant_id, host, apex, with_www, claimed_by, proved_at, added_at, dns_ok_at, cert_ok_at) values
   ('11111111-1111-1111-1111-111111111111', 'proof-park.in', 'proof-park.in', true, '99999999-9999-9999-9999-999999999999', now(), now(), now(), now());
@@ -575,7 +575,7 @@ end $$;
 rollback;
 
 begin;
--- Own domains D2·11 (0082): Admin disconnects and settles held claims — admin role only, a reason, audited; support is refused.
+-- Own domains D2·11 (0084): Admin disconnects and settles held claims — admin role only, a reason, audited; support is refused.
 insert into platform_staff (user_id, email, role) values ('aaaaaaaa-0000-0000-0000-0000000000ff', 'staff@proof.test', 'admin'), ('aaaaaaaa-0000-0000-0000-0000000000fe', 'support@proof.test', 'support') on conflict do nothing;
 insert into shop_domains (tenant_id, host, apex, with_www, claimed_by, proved_at, added_at, dns_ok_at, cert_ok_at, main_at) values
   ('11111111-1111-1111-1111-111111111111', 'proof-adm.in', 'proof-adm.in', true, '99999999-9999-9999-9999-999999999999', now(), now(), now(), now(), now());
@@ -2046,4 +2046,77 @@ do $$ begin
      or (select order_line_id from reviews where id = 'bdbdbdbd-0000-0000-0000-00000000000b') is not null then raise exception 'FAIL: set null touched tenant_id or kept the line'; end if;
 end $$;
 
-\echo 'tenancy proof — all 58 checks passed'
+-- 55. Videos (V1, 0081): the shop's own rows; the app never deletes one or changes its shop, environment or ids once
+-- set; Mux's events reach a shop only through the definer, with our row id AND the row's upload id from the same
+-- environment (or, for a rendition, an asset id already on the row); the stored payload is five fields.
+insert into videos (id, tenant_id, mux_env, upload_id, created_by) values
+  ('dededede-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'prod1', 'upB1', '99999999-9999-9999-9999-999999999999');
+insert into videos (id, tenant_id, mux_env, created_by) values
+  ('dededede-0000-0000-0000-00000000000c', '22222222-2222-2222-2222-222222222222', 'prod1', '99999999-9999-9999-9999-999999999999');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare a uuid; n int; begin
+  if exists (select 1 from videos) then raise exception 'FAIL: A sees B videos'; end if;
+  begin insert into videos (tenant_id, mux_env, created_by) values ('22222222-2222-2222-2222-222222222222', 'prod1', '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: A wrote a B video';
+  exception when insufficient_privilege then null; end;
+  update videos set removed_at = now() where id = 'dededede-0000-0000-0000-00000000000b';
+  get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A removed a B video'; end if;
+  -- Mux's ids never arrive with the row: only shop, environment and member are inserted (audit H1).
+  begin insert into videos (tenant_id, mux_env, created_by, asset_id) values ('11111111-1111-1111-1111-111111111111', 'prod1', '99999999-9999-9999-9999-999999999999', 'asForged'); raise exception 'FAIL: a row was inserted with an asset id';
+  exception when insufficient_privilege then null; end;
+  begin insert into videos (tenant_id, mux_env, created_by, created_at) values ('11111111-1111-1111-1111-111111111111', 'prod1', '99999999-9999-9999-9999-999999999999', '2000-01-01'); raise exception 'FAIL: a row was back-dated';
+  exception when insufficient_privilege then null; end;
+  insert into videos (tenant_id, mux_env, created_by) values ('11111111-1111-1111-1111-111111111111', 'prod1', '99999999-9999-9999-9999-999999999999') returning id into a;
+  update videos set upload_id = 'upA1' where id = a;
+  begin update videos set upload_id = 'upA2' where id = a; raise exception 'FAIL: an upload id changed'; exception when check_violation then null; end;
+  begin update videos set tenant_id = '22222222-2222-2222-2222-222222222222' where id = a; raise exception 'FAIL: a video moved shop'; exception when insufficient_privilege then null; end;
+  begin update videos set mux_env = 'dev1' where id = a; raise exception 'FAIL: a video changed environment'; exception when insufficient_privilege then null; end;
+  begin update videos set id = gen_random_uuid() where id = a; raise exception 'FAIL: a video changed id'; exception when insufficient_privilege then null; end;
+  begin update videos set created_by = gen_random_uuid() where id = a; raise exception 'FAIL: a video changed member'; exception when insufficient_privilege then null; end;
+  begin update videos set created_at = '2000-01-01' where id = a; raise exception 'FAIL: a video was back-dated'; exception when insufficient_privilege then null; end;
+  update videos set asset_id = 'asA1', playback_id = 'pbA1', removed_at = now() where id = a;
+  begin update videos set asset_id = 'asA2' where id = a; raise exception 'FAIL: an asset id changed'; exception when check_violation then null; end;
+  begin update videos set playback_id = 'pbA2' where id = a; raise exception 'FAIL: a playback id changed'; exception when check_violation then null; end;
+  begin update videos set removed_at = null where id = a; raise exception 'FAIL: a removed video came back'; exception when check_violation then null; end;
+  begin delete from videos; raise exception 'FAIL: the app deleted a video'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+begin; set local role frata_app;
+do $$ declare t uuid; begin
+  -- No shop set: the definer routes; the caller never names a shop.
+  if app_store_mux_event('prod1', 'ev-1', 'video.asset.ready', 'dededede-0000-0000-0000-00000000000b', 'upX', 'asB1', 'ready') is not null then raise exception 'FAIL: a wrong upload id reached a shop'; end if;
+  if app_store_mux_event('dev1', 'ev-2', 'video.asset.ready', 'dededede-0000-0000-0000-00000000000b', 'upB1', 'asB1', 'ready') is not null then raise exception 'FAIL: another environment reached a shop'; end if;
+  if app_store_mux_event('prod1', 'ev-3', 'video.upload.created', 'dededede-0000-0000-0000-00000000000b', 'upB1', null, 'waiting') is not null then raise exception 'FAIL: an unlisted event type was stored'; end if;
+  if app_store_mux_event('prod1', 'ev-4', 'video.asset.ready', null, 'upB1', 'asB1', 'ready') is not null then raise exception 'FAIL: an event with no row id was routed'; end if;
+  if app_store_mux_event('prod1', 'ev-5', 'video.asset.static_rendition.ready', null, null, 'asB1', 'ready') is not null then raise exception 'FAIL: a rendition reached a row with no asset id'; end if;
+  t := app_store_mux_event('prod1', 'ev-6', 'video.asset.ready', 'dededede-0000-0000-0000-00000000000b', 'upB1', 'asB1', 'ready');
+  if t is distinct from '22222222-2222-2222-2222-222222222222' then raise exception 'FAIL: a right event did not reach its shop'; end if;
+  if app_store_mux_event('prod1', 'ev-6', 'video.asset.ready', 'dededede-0000-0000-0000-00000000000b', 'upB1', 'asB1', 'ready') is not null then raise exception 'FAIL: a retry was stored twice'; end if;
+  -- A pending row whose upload id is unknown takes it once; then a different one is refused.
+  if app_store_mux_event('prod1', 'ev-7', 'video.upload.asset_created', 'dededede-0000-0000-0000-00000000000c', 'upC1', 'asC1', 'asset_created') is distinct from '22222222-2222-2222-2222-222222222222' then raise exception 'FAIL: a pending row did not take its upload id'; end if;
+  if app_store_mux_event('prod1', 'ev-8', 'video.upload.asset_created', 'dededede-0000-0000-0000-00000000000c', 'upC2', 'asC2', 'asset_created') is not null then raise exception 'FAIL: a second upload id reached a row'; end if;
+  if exists (select 1 from webhook_events where provider = 'mux') then raise exception 'FAIL: the app reads Mux events with no shop set'; end if;
+end $$;
+rollback;
+do $$ begin
+  update videos set asset_id = 'asB1' where id = 'dededede-0000-0000-0000-00000000000b';
+end $$;
+begin; set local role frata_app;
+do $$ begin
+  if app_store_mux_event('dev1', 'ev-10', 'video.asset.static_rendition.ready', null, null, 'asB1', 'ready') is not null then raise exception 'FAIL: a rendition from another environment reached a row'; end if;
+  if app_store_mux_event('prod1', 'ev-9', 'video.asset.static_rendition.ready', null, null, 'asB1', 'ready') is distinct from '22222222-2222-2222-2222-222222222222' then raise exception 'FAIL: a rendition did not reach its row'; end if;
+end $$;
+commit;
+do $$ begin
+  if (select array_agg(k order by k) from webhook_events e, jsonb_object_keys(e.payload) k where e.event_key = 'mux:prod1:ev-9') is distinct from array['asset_id', 'status', 'type', 'upload_id', 'video']
+  then raise exception 'FAIL: a Mux event stored more than its five fields'; end if;
+  if (select payload->>'video' from webhook_events where event_key = 'mux:prod1:ev-9') is distinct from 'dededede-0000-0000-0000-00000000000b' then raise exception 'FAIL: a rendition event lost its row'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['select', 'insert', 'update']) p where has_any_column_privilege(r, 'videos', p))
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_table_privilege(r, 'videos', 'delete'))
+  then raise exception 'FAIL: another role reads or writes videos'; end if;
+  if has_table_privilege('frata_app', 'videos', 'delete') then raise exception 'FAIL: the app may delete a video'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_store_mux_event(text, text, text, uuid, text, text, text)', 'execute'))
+  then raise exception 'FAIL: an API role runs the Mux definer'; end if;
+end $$;
+
+\echo 'tenancy proof — all 59 checks passed'

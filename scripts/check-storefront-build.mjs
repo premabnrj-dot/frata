@@ -22,7 +22,7 @@ const BUDGET_KB = 120
 // Product page 121 after merging search and sharing (its share button and barcode work): measured 120.0 kB that day.
 const TIGHT = { '/s/[host]/(shop)/products/[handle]/page': 121, '/s/[host]/(checkout)/checkout/page': 121 }
 // The shop's stylesheet (shared, render-blocking): every theme's rules land in it, so it has a ceiling too.
-const CSS_BUDGET_KB = 22
+const CSS_BUDGET_KB = 22.5 // 22.2 measured 2026-11-09 after Signal's product page, bag and checkout (owner asked); was 22
 const failures = []
 const read = (f) => JSON.parse(readFileSync(join('.next', f), 'utf8'))
 if (!existsSync('.next/prerender-manifest.json')) { console.error('check:storefront-build — no .next to read; run it after next build.'); process.exit(1) }

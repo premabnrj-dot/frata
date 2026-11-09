@@ -95,7 +95,7 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
     }
   }
   const masks = m.allowed.heroMasks ?? ['none']
-  const layouts = m.allowed.productLayouts ?? PRODUCT_LAYOUTS, schemesOk = m.allowed.sectionSchemes ?? SECTION_SCHEMES
+  const layouts = m.allowed.productLayouts ?? PRODUCT_LAYOUTS, schemesOk = m.allowed.sectionSchemes ?? SECTION_SCHEMES, videoOk = m.allowed.videoSections ?? []
   const raw = parsed.success && parsed.data.home ? parsed.data.home : m.home
   const home = raw.flatMap((s): SectionInstance[] => {
     const p = SectionSchema.safeParse(s)
@@ -105,6 +105,8 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
     // Signal plan T1: a layout or scheme this theme doesn't offer falls back to today's default (never renders).
     if (x.key === 'products' && !layouts.includes(x.layout)) x = { ...x, layout: 'grid' }
     if ('scheme' in x && !schemesOk.includes(x.scheme)) x = { ...x, scheme: 'paper' }
+    // V1: a theme that doesn't offer video in this section never renders one; the photo shows.
+    if ((x.key === 'hero' || x.key === 'image_text') && x.video && !videoOk.includes(x.key)) { const { video: _drop, ...rest } = x; x = rest }
     return [x]
   })
   return { key: m.key, version: m.version, style: style.key, schemes, settings, home, ...(m.rhythm ? { rhythm: m.rhythm } : {}), site, menus: readMenus(layer.menus) }

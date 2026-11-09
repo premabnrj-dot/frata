@@ -63,11 +63,12 @@ Order (owner, 2026-11-09): **S0 → S1 → V1 → S2 → S3.**
   **30 s cap**, checked on ready (Mux can't cap duration), longer ones refused and deleted; **no Mux Player** (in
   maintenance mode; ~900 KB) — a plain `<video>`, `stream.mux.com`/`image.mux.com` added to the shop's CSP; webhook
   `/api/webhooks/mux` keyed `mux:<envelope id>`, the processor GETs the asset rather than trusting event order; a
-  merchant's Remove deletes our row first, then an outbox `mux.asset.delete` (404 = done); uploads go through the
-  outbox's token bucket (Mux allows 20 POSTs a burst, 1/s). Previews use Mux's development environment and free test
-  assets. **Setup (owner, 2026-11-09):** pay as you go; Production token in hand; webhook URL
+  merchant's Remove deletes our row first, then an outbox `mux.asset.delete` (404 = done); uploads are an attempt row
+  then the call (ADR-0008), under per-shop and platform caps (Mux allows 20 POSTs a burst, 1/s). Reviews 2026-11-09:
+  720p, clips ≤ 15 s, one loop playing at a time, no CSP change, and **no Mux in Preview** while previews share the
+  production database (plan docs/plans/2026-11-09-video-v1.md). **Setup (owner, 2026-11-09):** pay as you go; Production token in hand; webhook URL
   `https://frata.vercel.app/api/webhooks/mux`; env names `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `MUX_WEBHOOK_SECRET`
-  (Production, Sensitive) and a separate Development environment's set for Preview; signing keys unused (public playback). **Before launch (owner):** ask Mux in writing that hosting merchants' videos inside Frrata is allowed under
+  (Production, Sensitive) only — none in Preview until it has its own database; signing keys unused (public playback). **Before launch (owner):** ask Mux in writing that hosting merchants' videos inside Frrata is allowed under
   their "non-sublicensable / no resell" terms, and where data is stored; add Mux to Frrata's sub-processors.
 - **S2 · Story sections**: `spotlight`, `story_fan`, `statement`; Hero and Spotlight take a V1 loop.
 - **S3 · Product stories**: per product up to six stories (photo, title, text, up to three numbered callouts), shown

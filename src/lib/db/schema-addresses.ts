@@ -1,6 +1,6 @@
 // =============================================================================
 // FILE: src/lib/db/schema-addresses.ts — A SHOP'S ADDRESSES (shop addresses D·1 names, D·2 own domains; plan
-// docs/plans/2026-11-08-shop-addresses.md; access: drizzle/0068, 0069, 0081). tenants.slug mirrors the current name.
+// docs/plans/2026-11-08-shop-addresses.md; access: drizzle/0068, 0069, 0083). tenants.slug mirrors the current name.
 // =============================================================================
 import { sql } from 'drizzle-orm'
 import { boolean, check, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'

@@ -86,3 +86,17 @@ export const DOH_BASE = process.env.DOH_BASE ?? ''
 /** How many hosts the Vercel project may hold (Hobby 50, Pro 100,000 soft): claims stop 4 below it. */
 export const DOMAIN_CAPACITY = Number(process.env.DOMAIN_CAPACITY || 50)
 export const isOwnDomainsConfigured = () => VERCEL_API_TOKEN !== '' && VERCEL_PROJECT_ID !== ''
+/** Mux video (V1, docs/plans/2026-11-09-video-v1.md): Production only (never Preview while previews share the
+ *  database). The token pair is Basic auth; the webhook secret signs Mux's events, the PREVIOUS one is accepted while
+ *  a new webhook replaces the old (rotation = recreate). MUX_ENVIRONMENT_ID is the environment the token belongs to
+ *  (not a secret): every video row records it, and an event from another environment is refused. */
+export const MUX_TOKEN_ID = process.env.MUX_TOKEN_ID ?? ''
+export const MUX_TOKEN_SECRET = process.env.MUX_TOKEN_SECRET ?? ''
+export const MUX_WEBHOOK_SECRET = process.env.MUX_WEBHOOK_SECRET ?? ''
+export const MUX_WEBHOOK_SECRET_PREVIOUS = process.env.MUX_WEBHOOK_SECRET_PREVIOUS ?? ''
+export const MUX_ENVIRONMENT_ID = process.env.MUX_ENVIRONMENT_ID ?? ''
+/** e2e only (the fake Mux): in Production only Mux's own hosts are used, whatever these say (security review L6). */
+export const MUX_API_BASE = VERCEL_ENV === 'production' ? 'https://api.mux.com' : process.env.MUX_API_BASE || 'https://api.mux.com'
+export const MUX_STREAM_BASE = VERCEL_ENV === 'production' ? 'https://stream.mux.com' : process.env.MUX_STREAM_BASE || 'https://stream.mux.com'
+export const MUX_IMAGE_BASE = VERCEL_ENV === 'production' ? 'https://image.mux.com' : process.env.MUX_IMAGE_BASE || 'https://image.mux.com'
+export const isVideoConfigured = () => MUX_TOKEN_ID !== '' && MUX_TOKEN_SECRET !== '' && MUX_WEBHOOK_SECRET !== '' && /^[A-Za-z0-9_-]{1,40}$/.test(MUX_ENVIRONMENT_ID)

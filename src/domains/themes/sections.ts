@@ -43,6 +43,11 @@ const bound = (max: number) => z.union([z.object({ from: z.enum(['shopName', 'ta
 
 const button = z.object({ label: text(24), link: shopPath }).nullable().default(null)
 
+/** V1: one of the shop's own videos (a `videos` row, checked to be the shop's at save); shown only where the theme
+ *  lists the section in allowed.videoSections, and only once playable. The photo stays: it is the first paint and the
+ *  fallback whenever the video can't play. */
+const video = z.object({ id: z.string().uuid() }).optional()
+
 export const HeroSchema = z.object({
   id, key: z.literal('hero'), hidden, scheme,
   /** text: words only (Classic) · image_text: words over a photo · split: photo beside words · image: photo only. */
@@ -50,6 +55,7 @@ export const HeroSchema = z.object({
   heading: bound(60),
   text: bound(160).optional(),
   image: ImageSchema.nullable().default(null),
+  video,
   button,
   position: z.enum(['bottom_left', 'centre']).default('bottom_left'),
   height: z.enum(['short', 'tall']).default('tall'),
@@ -116,6 +122,7 @@ export const PromisesSchema = z.object({
 export const ImageTextSchema = z.object({
   id, key: z.literal('image_text'), hidden, scheme, label,
   image: ImageSchema.nullable().default(null),
+  video,
   heading: text(60),
   text: text(600).default(''),
   button,

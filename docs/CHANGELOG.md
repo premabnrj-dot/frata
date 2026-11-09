@@ -3,6 +3,15 @@
 What a merchant (or Frata staff) can do now that they could not before, newest first. One entry per closed
 phase; the detail is in its plan.
 
+## 2026-11-09 — Video loops (Signal 1.1.0) ([plan](plans/2026-11-09-video-v1.md))
+
+- **A short silent loop in the Hero and in Image with text**, on Signal 1.1.0: add an MP4 or MOV up to 15 seconds,
+  watch it upload and get ready, Replace or Remove it. The shop plays it muted, only while it's on screen, one at a
+  time, over the section's photo; with reduced motion or a data saver, the photo stays. Switched on once Frrata sets
+  up Mux and releases Signal 1.1.0.
+- **Signal across the shop:** the product page (tiles for sizes, offers as chips, a trust row), adding to the bag
+  ("Added to your bag", the line marked), the bag, checkout and the photo footer wear the theme.
+
 ## 2026-11-09 — Theme Signal ([spec](specs/2026-11-09-theme-signal.md), [mockup](https://claude.ai/artifact/9XNT3KFJziXEyaKyDa48dr))
 
 - **Signal**, a fourth theme for bags, footwear, accessories and western wear: a floating header over your first photo,

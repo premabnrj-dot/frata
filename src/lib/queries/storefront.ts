@@ -23,6 +23,7 @@ import type { Tx } from '@/lib/db'
 import { shopHost } from '@/lib/public-env'
 import { cleanRules, matches } from '@/domains/catalogue/collection-rules'
 import { productFactsIn } from './catalogue'
+import { playableVideosFor } from './videos'
 import { compactCard, expand, photoPrefixOf, type CatalogueEntry } from '@/lib/storefront/catalogue-entry'
 
 // =============================================================================
@@ -30,12 +31,10 @@ import { compactCard, expand, photoPrefixOf, type CatalogueEntry } from '@/lib/s
 // - Named columns only (check:tenant 6b): no merchant cost, weight, raw stock
 //   (clamped to LOW_STOCK_AT + 1, which availability() reads the same), cap
 //   (only whether pre-orders are full), HSN, pickup pincode or COD pincodes.
-// - RAW rows, dates as ISO strings: visibility() and availability() run at
-//   render, because a cached `now` would hide a scheduled drop forever.
-// - shop* loaders are cached per tenant (shopCached: tenant first in the key
-//   and in every tag, 60 s backstop); preview* loaders are the same core,
-//   uncached, drafts included, for /console/preview only. No exported loader
-//   takes a preview flag.
+// - RAW rows, dates as ISO strings: visibility() and availability() run at render, because a cached `now` would hide
+//   a scheduled drop forever.
+// - shop* loaders are cached per tenant (shopCached: tenant first in the key and in every tag, 60 s backstop);
+//   preview* loaders are the same core, uncached, drafts included, for /console/preview only. None takes a preview flag.
 // =============================================================================
 
 type Loader<A extends unknown[], R> = (tenantId: string, ...a: A) => Promise<R>
@@ -46,9 +45,9 @@ type Loader<A extends unknown[], R> = (tenantId: string, ...a: A) => Promise<R>
 // generateMetadata and page render in parallel — each ran the same queries on its own connection.
 // 'reviews' / 'reviews:product' (Reviews R1, speed review 4): a shopper's review purges its own product, never the shop.
 const productKey = (v: unknown) => { if (typeof v !== 'string' || !v) throw new Error('reviews:product needs the product id first'); return v }
-function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop' | 'catalogue' | 'reviews' | 'reviews:product', fn: Loader<A, R>, revalidate = 60): Loader<A, R> {
+function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop' | 'catalogue' | 'reviews' | 'reviews:product' | 'videos', fn: Loader<A, R>, revalidate = 60): Loader<A, R> {
   return cache((tenantId: string, ...a: A) => unstable_cache(() => fn(tenantId, ...a), ['sf', name, tenantId, ...a.map(String)], {
-    tags: [`shop:${tenantId}`, ...(scope === 'catalogue' ? [`shop:${tenantId}:catalogue`] : scope === 'reviews' ? [`shop:${tenantId}:reviews`] : scope === 'reviews:product' ? [`shop:${tenantId}:reviews:${productKey(a[0])}`] : [])], revalidate,
+    tags: [`shop:${tenantId}`, ...(scope === 'catalogue' || scope === 'videos' ? [`shop:${tenantId}:${scope}`] : scope === 'reviews' ? [`shop:${tenantId}:reviews`] : scope === 'reviews:product' ? [`shop:${tenantId}:reviews:${productKey(a[0])}`] : [])], revalidate,
   })())
 }
 
@@ -288,8 +287,7 @@ const stored = (r: Revision | null): StoredLook | null => (r ? { revisionId: r.i
 // The shop caches its recent publishes; which versions are withdrawn is one platform read for every shop (tag
 // `themes`), so a withdraw is one revalidation, whatever the number of shops (T3 review).
 const corePublishes = (tenantId: string) => withTenant(tenantId, async (tx) => (await liveCandidates(tx, tenantId)).map((p) => stored(p.revision)!))
-// The cache hands back JSON (dates as strings): only whether a date is set matters to withdrawnKeys, so the rows are
-// read as they come.
+// The cache hands back JSON (dates as strings): only whether a date is set matters to withdrawnKeys (read as they come).
 const versionStates = unstable_cache(() => themeVersionRows(), ['sf-theme-versions'], { tags: ['themes'], revalidate: 300 })
 /** After Admin withdraws or recalls a version: every shop re-reads which versions it may render. */
 export const refreshThemeVersions = () => revalidateTag('themes')
@@ -319,6 +317,8 @@ export const shopLook = async (tenantId: string): Promise<StoredLook | null> => 
 export const shopBestSellers = shopCached('best', 'catalogue', (t, days: number) => coreBestSellers(t, days), 3600)
 export const previewLook = async (tenantId: string): Promise<StoredLook | null> => liveOf(await corePublishes(tenantId), withdrawnKeys(await themeVersionRows()))
 export const previewBestSellers = (tenantId: string, days: number) => coreBestSellers(tenantId, days)
+// V1: the live look's playable videos, keyed by its sorted ids (never a draft's); its own tag, so a video turning ready never rebuilds the shop.
+export const shopVideos = shopCached('videos', 'videos', (t, key: string) => playableVideosFor(t, key), 3600)
 
 // v2: the shop gained seoTitle/seoDescription (S·3); an entry that survives a deploy must not meet the old shape.
 export const shopSettingsFor = shopCached('shop-v2', 'shop', (t) => coreShop(t))

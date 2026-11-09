@@ -15,7 +15,7 @@ import { errName } from '@/lib/log'
 
 // =============================================================================
 // FILE: src/lib/domains/own-domains.ts — CONNECT, CHECK AND ADD AN OWN DOMAIN (shop addresses D2·4–D2·6).
-// The rules live in drizzle/0082 (the definers) and src/domains/addresses (the shapes); this file only carries facts
+// The rules live in drizzle/0084 (the definers) and src/domains/addresses (the shapes); this file only carries facts
 // between the internet and them:
 //   · claim: shape (checkDomain), then app_claim_domain (who, caps, the token); the records come from the project's
 //     own values, so they show at once — nothing reaches Vercel before the row's own proof;

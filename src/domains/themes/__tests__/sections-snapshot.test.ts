@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import { CollectionTilesSchema, HeroSchema, ProductsSchema, SectionSchema } from '../sections'
-import stored from './fixtures/stored-sections-v1.json'
+import storedV1 from './fixtures/stored-sections-v1.json'
+import storedV2 from './fixtures/stored-sections-v2.json'
+
+const stored = [...storedV1, ...storedV2]
 
 // Section schemas change ADDITIVELY only (themes plan, architecture review): a stored layer must stay valid
 // forever. A new optional field with a default updates this snapshot on purpose; anything else is a new section key.

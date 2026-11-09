@@ -132,6 +132,8 @@ export function carryOver(from: { manifest: ThemeManifest; layer: ThemeLayer }, 
   const sections = (from.layer.home ?? from.manifest.home).flatMap((s) => { const r = SectionSchema.safeParse(s); return r.success ? [r.data] : [] })
   const kept = sections.filter((s) => to.allowed.sections.includes(s.key))
   for (const s of sections) if (!to.allowed.sections.includes(s.key)) lost.push(`${SECTION_NAMES[s.key]} isn't in ${to.name}`)
+  // V1: the section comes across; its video stays only where the new theme offers video there (resolve drops it).
+  if (kept.some((s) => (s.key === 'hero' || s.key === 'image_text') && s.video && !(to.allowed.videoSections ?? []).includes(s.key))) lost.push(`Videos aren't in ${to.name}; the photos show`)
   // Keep the merchant's own Home only if they changed it; an untouched Home takes the new theme's.
   const changed = JSON.stringify(from.layer.home ?? null) !== 'null'
   // Site settings are the theme's own (owner 2026-11-09: a new theme brings its palette, type and icons); menus are

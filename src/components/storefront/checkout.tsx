@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { STATES } from '@/domains/checkout/states'
+import { waOptInText } from '@/domains/checkout/opt-in'
 import { b2bProblem, cleanGstin, gstinStateName, gstinValid } from '@/domains/tax/gstin'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { OfferProgress, OfferRows, useQuote } from './bag'
@@ -43,9 +44,11 @@ function needText(n: PublicListed['need']): string {
   return 'When you pay online'
 }
 
-export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = { deliversWithin: null, b2b: false } }: { shopName: string; legalName: string; privacyHref: string; returnLine: string | null
+export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = { deliversWithin: null, b2b: false }, waOptIn = false }: { shopName: string; legalName: string; privacyHref: string; returnLine: string | null
   /** GST (plan 2026-11-09-gst-core-and-categories): a shop without a regular GSTIN delivers within its state; business buyers may ask for a GST invoice. */
-  gst?: { deliversWithin: string | null; b2b: boolean } }) {
+  gst?: { deliversWithin: string | null; b2b: boolean }
+  /** Show the WhatsApp opt-in (the shop has WhatsApp connected): unticked, naming the shop. */
+  waOptIn?: boolean }) {
   const [biz, setBiz] = useState<{ on: boolean; gstin: string; name: string }>({ on: false, gstin: '', name: '' })
   const [f, setF] = useState<Form>(EMPTY)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -53,6 +56,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   const firstMethod = useRef<'cod' | 'prepaid' | null>(null)
   const [landmark, setLandmark] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [optIn, setOptIn] = useState(false)
   const [msg, setMsg] = useState<{ tone: 'error' | 'changed'; text: string } | null>(null)
   const [failed, setFailed] = useState<{ token: string; total: number } | null>(null)
   // The Pay on delivery total of the order already placed, when the server says it differs from the bag's (an offer ran
@@ -133,6 +137,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
       address: { phone: f.phone, name: f.name, pincode: f.pincode, addressLine: f.addressLine, area: f.area, landmark: f.landmark, city: f.city, state: f.state },
       facts: { firstMethod: firstMethod.current, attribution },
       ...(gst.b2b && biz.on ? { b2b: { gstin: cleanGstin(biz.gstin), name: biz.name.trim() } } : {}),
+      ...(waOptIn && optIn ? { waOptIn: true } : {}),
     })
     if (!r.ok) {
       setBusy(false)
@@ -192,7 +197,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     window.location.assign(`/orders#t=${token}`)
   }
 
-  const field = 'h-11 w-full rounded-sm border border-store-sub/45 bg-store-paper px-3 text-base aria-invalid:border-store-bad'
+  const field = 'store-field h-11 w-full rounded-[var(--store-radius)] border border-store-sub/45 bg-store-paper px-3 text-base aria-invalid:border-store-bad'
   const Err = ({ k }: { k: string }) => (errors[k] ? <p id={`${k}-err`} className="mt-1 text-sm text-store-bad">{errors[k]}</p> : null)
   const label = 'mb-1 block text-sm font-medium'
   const sect = 'mb-2 mt-6 text-xs font-semibold uppercase tracking-[0.1em] text-store-sub'
@@ -214,7 +219,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
       <fieldset disabled={!!failed} className="disabled:opacity-60">
         <h2 className={sect}>Contact</h2>
         <label htmlFor="phone" className={label}>Mobile number</label>
-        <div className="flex"><span className="grid h-11 place-items-center rounded-l-sm border border-r-0 border-store-sub/45 bg-store-chip px-3 text-store-sub">+91</span>
+        <div className="flex"><span className="store-field grid h-11 place-items-center rounded-l-[var(--store-radius)] border border-r-0 border-store-sub/45 bg-store-chip px-3 text-store-sub">+91</span>
           <input id="phone" inputMode="tel" autoComplete="tel-national" value={f.phone} onChange={(e) => set('phone', e.target.value)} aria-invalid={!!errors.phone || undefined} aria-describedby="phone-help phone-err" className={`${field} rounded-l-none`} /></div>
         <p id="phone-help" className="mt-1 text-xs text-store-sub">The courier calls this number to deliver.</p><Err k="phone" />
 
@@ -288,16 +293,23 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
         </div>
       ) : <button type="button" className="mt-1 min-h-11 text-sm underline" onClick={() => setTyping(true)}>Have a code?</button>)}
 
+      {waOptIn ? (
+        <label className="mt-4 flex min-h-11 cursor-pointer items-start gap-3 text-sm">
+          <input type="checkbox" checked={optIn} onChange={(e) => setOptIn(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-store-ink" />
+          <span>{waOptInText(shopName)}</span>
+        </label>
+      ) : null}
+
       <h2 className={sect}>Payment</h2>
       <div role="radiogroup" aria-label="How to pay" className="space-y-2">
         {q && (
-          <label className={`block cursor-pointer rounded-sm border bg-store-paper p-3 ${method === 'prepaid' ? 'border-store-ink shadow-[0_0_0_1px_var(--store-ink)]' : 'border-store-line'}`}>
+          <label className={`store-pay block cursor-pointer rounded-[var(--store-radius)] border bg-store-paper p-3 ${method === 'prepaid' ? 'border-store-ink shadow-[0_0_0_1px_var(--store-ink)]' : 'border-store-line'}`}>
             <span className="flex items-center gap-2"><input type="radio" name="pay" checked={method === 'prepaid'} onChange={() => choose('prepaid')} className="accent-store-ink" /><b className="font-medium">Pay online</b><span className="ml-auto tabular-nums">{inr(q.prepaid)}</span></span>
             <span className="ml-6 block text-sm text-store-sub">UPI, cards, netbanking. Opens Razorpay.{saving ? <b className="ml-1 font-medium text-store-good">Saves {inr(saving.amount)}</b> : null}</span>
           </label>
         )}
         {q && (codOk ? (
-          <label className={`block cursor-pointer rounded-sm border bg-store-paper p-3 ${method === 'cod' ? 'border-store-ink shadow-[0_0_0_1px_var(--store-ink)]' : 'border-store-line'}`}>
+          <label className={`store-pay block cursor-pointer rounded-[var(--store-radius)] border bg-store-paper p-3 ${method === 'cod' ? 'border-store-ink shadow-[0_0_0_1px_var(--store-ink)]' : 'border-store-line'}`}>
             <span className="flex items-center gap-2"><input type="radio" name="pay" checked={method === 'cod'} onChange={() => choose('cod')} className="accent-store-ink" /><b className="font-medium">Pay on delivery</b><span className="ml-auto tabular-nums">{inr(q.cod!.total)}</span></span>
             <span className="ml-6 block text-sm text-store-sub">{q.cod!.charge ? `Includes a ${inr(q.cod!.charge)} Pay on delivery fee. ` : ''}Cash or UPI to the courier.{saving ? ` No ${inr(saving.amount)} online saving.` : ''}</span>
           </label>
@@ -332,7 +344,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-store-line bg-store-paper px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3 shadow-store-bar">
         <div className="mx-auto max-w-lg">
           <p className="flex justify-between text-sm"><span className="text-store-sub">{method === 'cod' ? 'Pay on delivery' : method === 'prepaid' ? 'Pay online' : 'Choose how to pay'}</span><b className="tabular-nums">{q ? inr(failed && method !== 'cod' ? failed.total : total) : '…'}</b></p>
-          <button type="submit" disabled={busy || !q || q.empty || (!method && !failed)} className="mt-2 h-12 w-full rounded-sm bg-store-ink text-base font-medium text-store-paper disabled:opacity-60">{busy ? 'Placing your order…' : button}</button>
+          <button type="submit" disabled={busy || !q || q.empty || (!method && !failed)} className="store-btn store-buy mt-2 h-12 w-full rounded-[var(--store-radius)] bg-store-button text-base font-medium text-store-on-button disabled:opacity-60">{busy ? 'Placing your order…' : button}</button>
         </div>
       </div>
     </form>

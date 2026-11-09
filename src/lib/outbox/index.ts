@@ -22,15 +22,25 @@ export async function enqueue(
 
 export type OutboxRow = typeof outbox.$inferSelect
 
+/** A sender's "this row can never succeed" (a malformed request of ours): the row stops at once with its reason. */
+export class GiveUp extends Error { constructor(message: string) { super(message); this.name = 'GiveUp' } }
+
 /**
  * Claims up to `limit` due rows. FOR UPDATE SKIP LOCKED lets two sweeps run at
  * once without sending a message twice. Bumps attempts and pushes the next try
  * out (1, 4, 9 … minutes) BEFORE the send, so a crash mid-send retries later.
  */
+type RawRow = { id: string; tenant_id: string; kind: string; dedupe_key: string; payload: unknown; attempts: number; next_attempt_at: Date | string; sent_at: Date | string | null; dead_at: Date | string | null; last_error: string | null; created_at: Date | string }
+const when = (v: Date | string | null) => (v === null ? null : new Date(v))
+/** A raw row as the table names its columns, in the shape every sender reads (a raw execute returns snake_case: found
+ *  by e2e 66-video, 2026-11-09; until then `row.tenantId` was undefined for every sender). */
+export const fromRaw = (r: RawRow): OutboxRow => ({
+  id: r.id, tenantId: r.tenant_id, kind: r.kind, dedupeKey: r.dedupe_key, payload: r.payload as OutboxRow['payload'], attempts: r.attempts,
+  nextAttemptAt: new Date(r.next_attempt_at), sentAt: when(r.sent_at), deadAt: when(r.dead_at), lastError: r.last_error, createdAt: new Date(r.created_at),
+})
+
 export async function claimDue(limit = 25): Promise<OutboxRow[]> {
-  // A raw execute returns the columns' own names (tenant_id): map them to the row's type, or row.tenantId is undefined
-  // (found by e2e 53: a sender ran with no shop, and the drain's module check read no shop either).
-  const rows = await db().execute<Record<string, unknown>>(sql`
+  return (await db().execute<RawRow>(sql`
     update outbox set attempts = attempts + 1,
       next_attempt_at = now() + make_interval(mins => (attempts + 1) * (attempts + 1))
     where id in (
@@ -38,11 +48,7 @@ export async function claimDue(limit = 25): Promise<OutboxRow[]> {
       where sent_at is null and dead_at is null and next_attempt_at <= now()
       order by next_attempt_at limit ${limit}
       for update skip locked)
-    returning *`)
-  return rows.map((r) => ({
-    id: r.id, tenantId: r.tenant_id, kind: r.kind, dedupeKey: r.dedupe_key, payload: r.payload, attempts: r.attempts,
-    nextAttemptAt: r.next_attempt_at, sentAt: r.sent_at, deadAt: r.dead_at, lastError: r.last_error, createdAt: r.created_at,
-  }) as OutboxRow)
+    returning *`) as unknown as RawRow[]).map(fromRaw)
 }
 
 export const MAX_ATTEMPTS = 8
