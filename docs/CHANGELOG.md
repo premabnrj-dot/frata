@@ -24,7 +24,8 @@ phase; the detail is in its plan.
   best before, who made or packed it, ingredients, how to use) on the product page; returns say sealed only; no size
   chart or model sections where nothing is sized.
 - **File from Frrata** (built, switched off): connect the GST portal with its OTP, push GSTR-1, see the portal's
-  totals beside ours, file with the EVC OTP and keep the ARN. On only once a GSP is contracted and counsel has opined.
+  totals beside ours, file with the EVC OTP and keep the ARN. Parked: no GSP access is expected soon; the CA's GSTR-1
+  JSON is uploaded on the GST portal instead.
 
 ## 2026-11-09 — Look v4: site settings, icons, menus, page-aware editing ([mockup](https://claude.ai/artifact/MmC6BnAps1XXSWyfy7PfSL), [research](research/2026-11-09-look-v4.md))
 

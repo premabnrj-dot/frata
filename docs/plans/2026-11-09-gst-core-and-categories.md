@@ -136,7 +136,12 @@ month; a pre-flight list (HSN gaps, duplicates) before export; Tally XML; invoic
    (TCS facts as checked 2026-11-09, for that day: 0.5% of net taxable value since 10 July 2024, GSTR-8 by the 10th.)
 3. **Frrata's fee stays on the order as delivered**: a later return or credit note does not reduce it.
 
-## 6c. Turning filing on (G2): what is needed
+## 6c. Filing from Frrata (G2): parked (owner, 2026-11-09)
+No GSP access is expected in the near future. G2 stays built and **off** (`GSP_PROVIDER` unset; the section never shows),
+and the product's filing path is the CA's files: the GSTR-1 JSON is uploaded on the GST portal (Returns › GSTR-1 ›
+Prepare offline › Upload) by the merchant or their CA, after a look in the offline tool for the first period. If G2 is
+still parked by May 2027, remove `src/lib/gst/gsp.ts`, the File panel and actions, and the 0074 tables (keep ADR-0008).
+What it would take, should a GSP become possible:
 - **A GSP contract** (two quotes; the GSTN list of GSPs): sandbox and production credentials, their per-call price,
   the APIs for GSTR-1 save, summary, file with EVC (and DSC for companies), and an uptime commitment.
 - **Their facts in `frata-integrations`**, dated: auth (app key, OTP session lifetime), payload version, error codes.
