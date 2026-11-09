@@ -1,6 +1,6 @@
 # All categories: should Frrata stop being fashion-only? GTM, product and codebase plan
 
-Status: research + proposal, awaiting the owner · Date: 2026-11-09 · Asked by the owner the same day
+Status: research + proposal, awaiting the owner · Date: 2026-11-09 · Brief: https://claude.ai/artifact/K8ac7qDBZ3i8onD8vpEsoa (`docs/mockups/2026-11-09-all-categories.html`) · GST mockup: https://claude.ai/artifact/NsxiFFFBorTsi9sct7zWgs
 Sources: every market fact carries its page's date; "undated" = read live 2026-11-09; "UNVERIFIED" = no source from the
 last 12 months. Money rows are hypotheses (frata-unit-economics rule 1): figure · source · test.
 
