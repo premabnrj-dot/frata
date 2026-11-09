@@ -255,20 +255,22 @@ plan will use; the plan may rename one, and this list follows it.
 **B. When the agent says the ekcode.in pages are deployed (first P1 task)**
 1. **DNS.** Vercel → frata → Settings → Domains → add `ekcode.in` and `www.ekcode.in`; at the registrar add the records
    Vercel shows (A `76.76.21.21` for the apex and a CNAME for www, or whatever Vercel lists). Wait for "Valid".
-2. **EkCode's WhatsApp number** — in Frrata's existing business portfolio (business.facebook.com), not a new one:
+2. **EkCode's WhatsApp number** — in **its own business portfolio** "EkCode" (business.facebook.com → Create a business
+   portfolio; India, INR; same company), not Frrata's: a restriction on Frrata's merchant-side (Tech Provider) portfolio
+   cannot stop sign-in, and the daily limits are not shared (ADR-0010). Verify this portfolio too (A2's documents):
    - WhatsApp Manager → Add WhatsApp account "EkCode" → add the SIM's number → display name **EkCode** → verify by SMS
      or call. Meta checks the name against ekcode.in, which must be live (B1). Copy the **Phone number ID**.
    - Payment settings: the portfolio's card covers it (INR + GST).
    - Message templates → Create → **Authentication**, name `ekcode_signin_code`, English, **Copy code**, security
      line on, expires in **10 minutes**. Note the language code (`en` or `en_US`).
    - Two-step verification: set a 6-digit PIN on the number (needed for the blue tick later).
-3. **The app and its webhook.** In the Meta app used for Frrata's own number (developers.facebook.com), add EkCode's
-   WhatsApp account. WhatsApp → Configuration → callback URL `https://frata.vercel.app/api/webhooks/ekcode`, verify
+3. **The app and its webhook.** developers.facebook.com → Create app (Business) linked to the EkCode portfolio → add
+   WhatsApp. WhatsApp → Configuration → callback URL `https://frata.vercel.app/api/webhooks/ekcode`, verify
    token = `EKCODE_WA_VERIFY_TOKEN` below; subscribe `messages`, `message_template_status_update`,
    `template_category_update`, `phone_number_quality_update`, `phone_number_name_update`. App → Settings → Basic →
    Privacy policy URL `https://ekcode.in/privacy`; switch the app to **Live**.
-4. **Token.** Business settings → System users → the existing admin system user → Assign assets: EkCode's WhatsApp
-   account (full control) → Generate token, never expires, `whatsapp_business_messaging` +
+4. **Token.** EkCode portfolio → Business settings → System users → Add (Admin) → Assign assets: the app and EkCode's
+   WhatsApp account (full control) → Generate token, never expires, `whatsapp_business_messaging` +
    `whatsapp_business_management`.
 5. **Email for the fallback code (Amazon SES, Mumbai).** AWS console → SES (ap-south-1) → Identities → Create identity →
    Domain `ekcode.in` → add the 3 DKIM CNAMEs and the MAIL FROM records it shows at the registrar → request
@@ -278,7 +280,7 @@ plan will use; the plan may rename one, and this list follows it.
    - `EKCODE_HOST` = `ekcode.in`
    - `EKCODE_WA_PHONE_NUMBER_ID` (B2), `EKCODE_WA_TOKEN` (B4, Sensitive), `EKCODE_WA_AUTH_TEMPLATE` =
      `ekcode_signin_code`, `EKCODE_WA_TEMPLATE_LANG` (B2), `EKCODE_WA_VERIFY_TOKEN` (Sensitive, `openssl rand -hex 16`),
-     `EKCODE_META_APP_SECRET` (Sensitive, the app's secret; skip if it is the same app as `META_APP_SECRET`)
+     `EKCODE_META_APP_SECRET` (Sensitive, the EkCode app's secret)
    - `EKCODE_SES_ACCESS_KEY_ID`, `EKCODE_SES_SECRET_ACCESS_KEY` (Sensitive), `EKCODE_EMAIL_FROM` = `codes@ekcode.in`
    - Three keys, each `openssl rand -base64 32`, Sensitive, **never changed once shoppers exist** (changing one breaks
      every account or every shop's ids): `EKCODE_PHONE_PEPPER` (phone lookups), `EKCODE_PAIRWISE_KEY` (each shop's
