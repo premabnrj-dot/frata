@@ -124,4 +124,7 @@ policies. Environment variables live in Vercel; `.env.example` lists names only.
   default grants, so the REST endpoint must stay off). Never turn it back on.
 - **A cross-brand shopper data network.** Not before DPDP consent design
   (obligations from 13 May 2027) and a decision superseding ADR-0002.
+- **Frrata collecting a shopper's payment for a merchant.** Money goes to the shop's own Razorpay account and COD
+  to the shop; that keeps Frrata out of GST TCS (s.52) as an e-commerce operator (owner, 2026-11-09). A change
+  that routes a shopper's money through Frrata needs the owner and the CA first.
 - **Instagram in-app checkout.** Not available in India; DMs create assisted orders.
