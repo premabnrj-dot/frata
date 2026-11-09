@@ -1,147 +1,138 @@
-# Shopper login — sign in on a shop with WhatsApp, SMS fallback (KwikPass-style), as an app
-Status: draft (owner decisions in § 8) · Date: 2026-11-09 · Mockup: after § 8 is decided · Approved: pending
-Research: `docs/research/2026-11-09-shopper-login.md` (Meta, TRAI, competitors, DPDP, browsers — dated).
+# Pehchaan — one tap, recognised at every Frrata shop (shopper identity network, as an app)
+Status: draft (owner direction 2026-11-09; mockup next) · Date: 2026-11-09 · Mockup: pending · Approved: pending
+Decision: `docs/decisions/0009-shopper-network.md` · Research: `docs/research/2026-11-09-shopper-login.md`.
+
+**Name.** *Pehchaan* (पहचान, "recognition"): what the shopper gets — known at every shop. The shopper sees one button,
+"Continue with Pehchaan", and a small "by Frrata". In Console › Apps it is "Pehchaan — shoppers known at checkout".
+
+## Owner direction (2026-11-09)
+- A **Frrata account network** for authentication (ADR-0009): the shopper signs in to Frrata, recognised everywhere.
+- **Transactional WhatsApp from Frrata's number** until the merchant connects their own (the Messages module).
+- **No SMS** — not integrated or planned until the owner asks. Fallback is an email code.
+- Strictly identity and lead capture; marketing stays in its own modules.
 
 ## Goal
-North star (4) mobile checkout conversion and (1) COD/RTO: a returning shopper is filled in (name, phone, address) in one
-code, and every login proves the phone — a verified number is the first input RTO Shield scores. **Measures**: checkout
-completion with vs without a login (holdout per shop); share of COD orders from a verified phone; RTO on verified vs
-unverified COD; cost per login (₹, by channel).
+North star (4) mobile checkout conversion and (1) COD/RTO. A shopper who has bought on any Frrata shop is filled in on
+another in one tap; every sign-in proves the phone, the first input RTO Shield scores; shops without their own WhatsApp
+still send order updates. **Measures**: checkout completion with vs without Pehchaan (holdout per shop); share of orders
+from a verified phone; RTO on verified vs unverified COD; network size (Pehchaan accounts; shops a shopper uses); cost
+per sign-in.
 
-## Job
-A shopper on any shop taps "Continue with WhatsApp", gets a code from **that shop's** WhatsApp number (or by SMS), and is
-signed in on that shop with their past address ready; the shop gets a verified, consented customer (a lead) without a
-developer. Strictly identity and lead capture — marketing is its own module (§ 7).
+## 1. Who sends what (WhatsApp)
+| Message | Sent from | Why it is allowed | Who pays Meta |
+|---|---|---|---|
+| Pehchaan sign-in code | **Frrata's number** (display name Frrata) | Frrata is the business the shopper signs into (its own login) | Frrata |
+| Order updates (confirmed, shipped, delivered, COD confirm) | the **shop's own number** when connected; else **Frrata's number** for shoppers with Pehchaan who opted in | as Frrata's own message "via Frrata", the shop's name a variable — **pending the policy check** (§ 9) | the sender |
+| Reviews ask, marketing | the shop's own number only | the shop's own relationship | the merchant |
+- Authentication: copy-code template only on the web (one-tap/zero-tap need an Android app); fixed body, no brand variable
+  (fine: it is Frrata's own code); TTL 10 min (`message_send_ttl_seconds` 600; undelivered → dropped, not charged).
+- One number serves every shop, so its **quality rating is shared**: per-shop daily caps, and a shop whose shoppers block
+  or report Frrata's messages is moved to "connect your own number" for order updates (sign-in codes are unaffected).
+- Limits: Frrata's portfolio must reach **unlimited** (verified business, quality) before broad launch; 80 msg/s per
+  number; pair rate 1 / 6 s → resend waits ≥ 30 s.
 
-## What exists (built, reused)
-- **Messages module**: each merchant's own WhatsApp Business account via Meta Embedded Signup (Tech Provider), sealed token
-  (`wa_connections`), template creation and sends (`src/lib/modules/communication/graph.ts`), webhook routing per shop.
-- **Frrata's own WhatsApp number** sends copy-code authentication templates for merchant sign-up
-  (`src/lib/trials/signup-code.ts`, `sendAuthCode` in `src/lib/meta/graph.ts`) — Frrata is the business there.
-- Keyed, versioned phone HMACs (`claimKey('phone', …)`), derived keys (`src/lib/crypto/secret-box.ts`), rate limits that
-  fail closed, `ipBucket` (/64), ADR-0008 attempt rows for calls a person waits on, the unticked WhatsApp opt-in at
-  checkout (`orders.wa_opt_in_at`), order links by token, the module registry (add-ons, plan limits), the billing engine.
-- **Rules already decided**: no cross-brand shopper data network before DPDP consent design and a decision superseding
-  ADR-0002 (CLAUDE.md); never a wallet reselling WhatsApp credit (RBI; product roadmap); shopper OTP waits for DLT
-  (roadmap Phase 2, item 6).
+## 2. The network (identity graph) and isolation
+**Platform tables (outside every tenant; `frata_app` holds NO grant — definers only, each re-checking proof):**
+- `pehchaan_accounts` (id, phone_hmac — platform pepper, versioned; phone sealed; name; created_at; deleted_at)
+- `pehchaan_addresses` (account, sealed address, label, last_used_at) — what the shopper saved, edits by them only
+- `pehchaan_consents` (account, kind: `network` | `share:<pairwise shop id>`, notice_version, lang, given_at, withdrawn_at)
+- `pehchaan_disclosures` (account, pairwise shop id, what: phone/name/address, at) — every reveal, for the shopper's page
+- `pehchaan_codes` (account or phone_hmac, channel whatsapp|email, code_hmac, sent_at, delivered_at, failed_code, tries,
+  expires_at, shop pairwise id, ip_hash) — the ADR-0008 attempt row and the meter
+- `pehchaan_devices` (account, token_hash, created_at, last_seen_at, revoked_at) — the "remember this phone" on
+  id.frrata.com (§ 3)
+**Per shop (tenant tables, normal RLS):**
+- `shop_customers` (tenant, id, **pairwise id** = HMAC(account, tenant) — a shop never holds the account id; phone, name
+  as the shopper confirmed them; first_seen, source; unique (tenant, pairwise id))
+- `customer_sessions` (tenant, customer, token_hash, expires_at, revoked_at) — the shop's own first-party session
+- `customer_consents` (tenant, customer, purpose marketing_whatsapp|marketing_email, notice_version, given/withdrawn)
+**Definers (the only doors):** `pehchaan_issue_code`, `pehchaan_verify_code` (returns a short-lived proof),
+`pehchaan_share(proof, tenant, items)` (needs the proof AND an open share consent; writes the disclosure; returns only
+the items confirmed), `pehchaan_forget_shop`, `pehchaan_delete`. Proofs are single-use, minutes long, bound to the
+phone, the shop and the device.
+**Rules:** a shop learns nothing about a shopper until the shopper confirms on that shop; addresses go to a shop once,
+per order or per confirmed save; two shops cannot correlate (pairwise ids, tenant-keyed hashes); no fingerprinting; no
+under-18 profiling (an age line in the notice); delete = account and vault gone, shops keep only the orders they fulfilled.
 
-## 1. Shared platform WABA vs the shop's own (BYO)
-**Meta does not allow one WhatsApp account to send login codes for many businesses** (research § 1). So:
-- **WhatsApp codes come from the shop's own number** (the Messages module, already Embedded Signup). The template is
-  created in the shop's account at Turn-on; the shopper sees the shop's display name in the chat; Meta bills the merchant.
-  Copy-code template only (a web shop gets nothing else: § 2 of the research).
-- **The zero-config default is SMS** under Frrata's DLT entity and a `-T` (transactional) header, if a TSP confirms one
-  platform header may carry OTPs for many brands ([U] today; L0 task). If it may not, the default is **email code** and
-  SMS needs the merchant's own DLT (biometric registration — offered, never required).
-- **"Verify via Frrata" on WhatsApp is possible only as a Frrata account** — the shopper signs in to *Frrata*, which
-  then tells the shop who they are (Razorpay's and Shop's model). That is the cross-store network of § 2, phase L3.
-- Limits that matter on a shop's number: a new portfolio reaches 250 unique users / 24 h (whether OTPs count: [U]) — the
-  Turn-on screen says so and SMS takes the overflow; pair rate 1 / 6 s → resend waits ≥ 30 s anyway; 80 msg/s is never
-  the limit for a shop.
+## 3. Sessions and domains
+- **id.frrata.com** (needs frrata.com — owner preparing): Pehchaan's own first-party domain. A device that signed in once
+  keeps a `__Host-` cookie there (90 days, revocable from the account page).
+- **"Continue as Ananya" (one tap):** the shop opens id.frrata.com by a **top-level navigation** (never an iframe or a
+  third-party cookie — those fail in Safari and Instagram's browser); id.frrata.com recognises the device, shows
+  "Continue as Ananya ••••3210 to Kesar Studio" with what will be shared, and returns to the shop with a one-time code the
+  shop's server exchanges (PKCE-style: state + verifier; code single-use, 60 s, bound to the shop host). No code typed.
+- **New device:** phone → WhatsApp code from Frrata → the same confirm screen. Email code when WhatsApp fails (§ 4).
+- **On each shop:** its own first-party session cookie (`__Host-`, HttpOnly, Secure, SameSite=Lax, 30 days), a
+  `customer_sessions` row. Cached shop pages never read it: sign-in is a client island + `shopRequest` routes (no-store).
+- Custom domains work the same way (the return URL is the shop's verified host; open redirects refused).
 
-## 2. Cross-store identity (the network) — two layers, one switch
-**L1 (per shop, ships first):** a shop's customers are its own. `shop_customers` keyed by a **tenant-keyed** phone HMAC
-(HMAC(key, tenant ‖ phone)), so two shops' rows cannot be joined even by Frrata's own queries. The address is
-**derived from the shop's own orders** by that phone (no address table: derive, never duplicate). Frrata is the shop's
-processor (DPA in the merchant terms).
-
-**L3 (Frrata account, the network effect) — only after a new ADR, counsel, and before/with DPDP (13 May 2027):**
-- Frrata is a **Data Fiduciary** for it: its own notice (itemised: phone, name, delivery addresses; purpose: "so other
-  shops on Frrata can fill them in"), its own consent tap (never preselected), one-tap "Forget me on other shops", a
-  contact, breach runbook, rights within 90 days. English + Hindi.
-- Platform tables, outside every tenant: `frrata_ids` (global phone HMAC with a platform pepper, versioned),
-  `frrata_vault` (addresses sealed per shopper key; `frata_app` holds **no grant** — read only through a SECURITY
-  DEFINER that requires a fresh verified login for that phone and an open network consent, and writes a
-  `network_disclosures` row: which shop received what, when), `network_consents` (notice version, given, withdrawn).
-- A shop never reads another shop's rows; it receives only what the shopper confirms on its own page ("Use this address?
-  Saved from your Frrata account") after a code — the OTPless pattern: exists → consent → reveal.
-- No fingerprinting of visitors who never log in (GoKwik does it; a DPDP liability). No profiling of under-18s.
-
-**Sessions and domains (both layers):** no third-party cookies, no iframes, no FedCM in the foundation — they fail in
-Safari and in Instagram's in-app browser. Each shop host gets its own first-party session cookie (`__Host-`, HttpOnly,
-Secure, SameSite=Lax, 30 days sliding, `customer_sessions` row with its hash; revoke on sign-out). Recognition across
-shops is the **verified phone looked up on the server** (one deployment serves every shop, custom domains included);
-a new shop always needs one code. Cached shop pages never read the session: login state lives in a client island and
-`shopRequest` API routes (no-store), so ISR is untouched (`.claude/rules/storefront.md`).
-
-## 3. Flows and the fallback state machine
-Web gets **copy code** (no one-tap/zero-tap without an Android app). The input is `autocomplete="one-time-code"`,
-`inputmode="numeric"`; iOS 26+ offers the code from the keyboard. Desktop: the code goes to the phone, typed on the
-desktop — no QR needed. The reverse "send this code on WhatsApp" flow is not built (a username user arrives without a
-phone: weak proof).
-
+## 4. Flows and the fallback state machine
 ```
-idle → phone (cleanMobile: +91, [6-9], 10 digits; risk checks) → choose channel
-  WhatsApp if the shop's number is connected and its template APPROVED, else SMS, else email
-→ SENT (attempt row committed BEFORE the request — ADR-0008; code HMAC only; TTL = code life, 10 min;
-        message_send_ttl_seconds = 600)
-  ├─ send fails 131026 (not on WhatsApp) ........ → SMS at once (one tap saved)
-  ├─ no "delivered" in 20 s (our timer, tuned) .. → offer "Get it by SMS" (never automatic: the WhatsApp code may still land)
-  ├─ "Didn't get it?" after 30 s ............... → resend once on the same channel, or switch
-  ├─ code entered: ≤ 5 tries per code ........... → VERIFIED → session; else LOCKED 15 min
-  └─ TTL passed ................................ → EXPIRED (a new code needed)
-VERIFIED → prefill from this shop's orders (L1) or, with network consent, "Use this address?" (L3)
+shop: "Continue with Pehchaan" → top-level to id.frrata.com/continue?shop=<host>&state&challenge
+  ├─ device known ─────────────────────────────→ CONFIRM ("Share name, phone, address with Kesar Studio")
+  └─ device unknown → PHONE (+91, [6-9]) → CODE_SENT via WhatsApp (attempt row before the call — ADR-0008)
+        ├─ send fails 131026 (not on WhatsApp) → EMAIL (ask the email; code by email from frratamail.com)
+        ├─ no "delivered" in 20 s ............ → offer "Email me the code instead"
+        ├─ ≤ 5 tries per code; ≤ 3 codes / 10 min / phone; ≤ 20 / hour per IP /64 → LOCKED 15 min
+        └─ VERIFIED (+ "remember this phone") → CONFIRM
+CONFIRM → (first time on Pehchaan: the network notice + its own tap) → back to the shop with a one-time code
+shop server exchanges → shop_customers + session → checkout filled; "Not you?" signs out
 ```
-Limits: ≤ 3 codes per phone per 10 min and 10 per day per shop; ≤ 20 per IP /64 per hour; the code is 6 digits,
-random, compared by HMAC in constant time. Login is never required to buy (guest checkout stays).
+Guest checkout stays. Desktop: the code goes to the phone and is typed on the desktop. No SMS. No reverse wa.me flow.
 
-## 4. Billing, metering, abuse
-- **WhatsApp**: Meta bills the merchant directly (their own account) — no pass-through, no wallet (RBI rule above).
-- **SMS / email**: Frrata pays (~₹0.21–0.30 per SMS incl. GST). Metered as rows (`login_attempts`: tenant, channel,
-  outcome, cost in paise) → one line on the merchant's monthly Frrata invoice through the existing billing engine.
-- **Price (to decide, § 8)** — the market: KwikPass 5,000 logins/mo free, 20,000 for $20; checkout bundles 2.5–3.5% of
-  GMV; nobody else prices login alone. Recommended shape: the module **in the plan** with a monthly SMS allowance (Launch
-  500, Growth 3,000, Scale 10,000), then SMS at a flat ₹0.40 each; WhatsApp logins unlimited (merchant's Meta cost).
-  `unit-economics-reviewer` runs on the figures.
-- **Abuse (OTP pumping)**: Indian mobiles only (+91, [6-9]) — international toll fraud is impossible by construction;
-  per-phone, per-IP, per-shop limits (fail closed); a per-shop daily SMS ceiling with an alert; a challenge (Turnstile)
-  after the 2nd code from one IP; a pumping signature — sent ≫ verified for a shop in an hour — trips a breaker that
-  moves the shop to WhatsApp/email only until reviewed; codes never logged; costs visible to the merchant.
+## 5. Consent (DPDP) — the words the shopper reads
+- **Network notice (once, on id.frrata.com, English/Hindi):** "Pehchaan by Frrata keeps your name, phone and delivery
+  addresses so shops on Frrata can fill them in when you ask. We share them with a shop only when you tap Continue there.
+  You can remove a shop or delete Pehchaan any time at id.frrata.com." + [Create my Pehchaan] (never preselected).
+- **Per shop (each first visit):** "Share your name, phone and address with Kesar Studio?" — items listed, [Continue].
+- **Marketing (optional, the shop's, unticked):** "Send me new drops from Kesar Studio on WhatsApp" → `customer_consents`.
+- **Order updates from Frrata (unticked, checkout):** "Order updates on WhatsApp from Frrata for this order" — names
+  Frrata as the sender (§ 9 decides the exact wording).
 
-## 5. Data model (L1)
-All tenant tables: `tenant_id` first, composite keys, grant + RLS + policy + proof rows, no `frata_admin` grant.
-- `shop_customers` (tenant, id, phone_hmac — tenant-keyed, phone (as orders keep it), name, verified_at, created_at;
-  unique (tenant, phone_hmac)). Orders gain nothing: a customer's orders are found by phone (derived).
-- `login_attempts` (tenant, id, phone_hmac, channel, code_hmac, sent_at, delivered_at, failed_code, verified_at,
-  expires_at, tries, cost_paise, ip_hash) — the ADR-0008 attempt row and the meter in one.
-- `customer_sessions` (tenant, id, customer_id, token_hash, created_at, last_seen_at, expires_at, revoked_at).
-- `customer_consents` (tenant, customer_id, purpose: `marketing_whatsapp` | `marketing_email`, notice_version, given_at,
-  withdrawn_at) — the lead's consent, separate from login (Razorpay separates them too).
-- Module `shopper_login` (registry), its folders per check:modules; the login widget is a storefront hook (like Reviews).
+## 6. Billing, metering, abuse
+- **Sign-in codes: free to merchants, in every plan** (Frrata's cost: ₹0.115 + GST per delivered code; the network is
+  the moat — every shop should switch it on). Codes metered in `pehchaan_codes` for Frrata's own costing.
+- **Order updates from Frrata's number:** billed to the shop per delivered message on the monthly invoice (₹0.20
+  proposed; Meta utility ₹0.115 + GST) until it connects its own number (then Meta bills it directly). No wallet (RBI).
+- Market: KwikPass 5,000 logins/mo free; checkout bundles 2.5–3.5% of GMV — Pehchaan free + per-message updates is a
+  clear story. `unit-economics-reviewer` runs on it.
+- **Abuse:** Indian mobiles only (no international pumping); limits per phone, IP /64 and shop, failing closed; a
+  challenge after the 2nd code from one IP; a breaker when a shop's codes sent ≫ verified; per-shop daily caps on Frrata's
+  number; codes never logged; proofs single-use.
 
-## 6. Lead generation (in scope)
-A verified login is a lead **for that shop only**: phone, name, first-seen source (Analytics' attribution), last order.
-An optional, unticked "Send me new drops and offers on WhatsApp" at login records `customer_consents`. Console › Apps ›
-Shopper login: logins, verified share, by channel, cost, leads with consent, export (owner/admin, formula-escaped).
+## 7. Lead generation (in scope)
+A shopper who continues with Pehchaan on a shop is that shop's lead (pairwise customer, source from Analytics). Console
+› Apps › Pehchaan: sign-ins, new vs returning network shoppers ("37% of today's buyers were filled in"), leads with
+marketing consent, export (owner/admin). Marketing itself is not sent from here.
 
-## 7. Marketing is a separate module (already planned)
-Planned elsewhere and kept apart: Email campaigns (E·4, `docs/specs/2026-11-08-messaging.md`), Cart flows (registry),
-WhatsApp broadcasts on Meta's **Marketing Messages API** (marketing leaves the Cloud API 13 Apr / 13 Oct 2027:
-`docs/plans/2026-11-09-product-roadmap.md`). They read `customer_consents`; this module never sends marketing.
+## 8. Marketing stays separate (planned)
+Email campaigns (E·4), Cart flows, WhatsApp broadcasts on Meta's Marketing Messages API (2027 move): they read the
+shop's `customer_consents` and send from the shop's own channels. Pehchaan never markets, and Frrata's number never sends
+marketing.
 
-## 8. Owner decisions before the mockup
-1. Accept: **no central WhatsApp sender for shop logins** (Meta policy). WhatsApp from the shop's own number; zero-config
-   default = SMS under Frrata's DLT if a TSP confirms, else email code.
-2. **The network (Frrata account, L3)**: plan it as a later phase behind a new ADR + counsel review, or not at all.
-3. **Price**: in plans with an SMS allowance (recommended), or an add-on.
-4. **DLT**: register Frrata as an entity with a transactional header (weeks; biometric of the authorised person) — start now.
-5. Name in Apps: "Shopper login" (or "WhatsApp login").
+## 9. Open checks before the mockup is final
+- **Meta policy for order updates from Frrata's number** (integration-researcher running, 2026-11-09): marketplace vs
+  impersonation, wording, opt-in naming Frrata, quality risk. If not allowed, order updates go only from the shop's own
+  number and § 1's middle row is removed.
+- **frrata.com** live with `id.` (owner) and **frratamail.com** sending (SPF/DKIM/DMARC) for the email fallback.
+- Counsel on the network notice and the merchant DPA (before launch; DPDP binds 13 May 2027).
 
-## Phases
-- **L0** — decisions (§ 8); TSP confirmation for one platform header; DLT registration; `unit-economics-reviewer`.
-- **L1** — per-shop login: WhatsApp (shop's number) + SMS/email fallback, sessions, prefill from the shop's own orders,
-  "My orders"; R0 net first (e2e of the state machine with the Meta fake and an SMS fake).
-- **L2** — leads and consent, the Apps page, metering on the invoice, the abuse breaker.
-- **L3** — Frrata account (network), only with § 8.2 yes and the ADR.
+## Phases (each its own plan; mockup first)
+- **P0** — Frrata's WhatsApp number + Pehchaan auth template (owner's WhatsApp Business setup), id.frrata.com, email
+  sender; policy answer (§ 9); unit-economics review.
+- **P1** — Pehchaan sign-in on shops: the vault, definers, codes (WhatsApp, email fallback), the confirm screen, shop
+  sessions, checkout prefill; R0 net first (e2e: phone → code → confirm → filled; a second shop → one tap).
+- **P2** — "Continue as …" one tap (remembered device), the shopper's page (shops, addresses, disclosures, forget,
+  delete), the Apps page with leads and consent.
+- **P3** — order updates from Frrata's number for shops without their own (if § 9 allows), metered on the invoice, the
+  quality breaker.
+- Review agents (tenancy, security, architecture, speed, unit economics) on each plan before code.
 
-## Design review (short; full review with the agents after § 8)
-- **Tenancy**: L1 adds tenant tables only; tenant-keyed HMACs make cross-shop joins impossible; the tenant comes from the
-  shop host (`requireShop`), never the body. L3's platform tables are definer-only with a disclosure log.
-- **Security**: codes as HMACs, constant-time compare, attempt rows, limits fail closed, no code or phone in logs, cookie
-  `__Host-`, session token hashed at rest, sign-out revokes.
-- **Performance**: no session read in cached pages; login is an island + API; one statement per lookup.
-- **Reliability**: ADR-0008 (the shopper waits), Meta drops undelivered after TTL (free), SMS provider behind
-  `fetchWithTimeout`, failures shown in words with the next channel.
-- **Unit economics**: WhatsApp cost is the merchant's; SMS is Frrata's → allowance + flat price; reviewer to run.
-- **YAGNI**: no one-tap/zero-tap (needs an app), no reverse-OTP, no FedCM/iframes, no passkeys platform-wide (≤ 5
-  origins), no Truecaller (Android browser only, terms unknown), no fingerprinting.
+## Design review (headline; full review per phase plan)
+- **Tenancy**: platform tables definer-only, no `frata_app` grant; pairwise ids; disclosure log; shop data unchanged.
+- **Security**: top-level redirect with state + PKCE, exact return host, single-use proofs and codes, `__Host-` cookies,
+  HMACs only, limits fail closed, breach runbook.
+- **Performance**: shop pages stay cached (island + no-store API); one definer call per step.
+- **Reliability**: ADR-0008 attempt rows; Meta drops undelivered after TTL (free); email fallback.
+- **YAGNI**: no SMS, no one-tap/zero-tap (app only), no reverse OTP, no FedCM/iframes, no platform passkeys, no
+  fingerprinting, no marketing.
