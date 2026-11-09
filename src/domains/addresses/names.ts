@@ -9,6 +9,10 @@
 
 export const RENAMES_AFTER_OPENING = 2
 
+/** What Admin may block (blocked_names.kind): Frrata's own routing words stay in code (RESERVED). */
+export const BLOCKED_KINDS = ['protected', 'offensive', 'domain'] as const
+export type BlockedKind = (typeof BLOCKED_KINDS)[number]
+
 export type NameRow = { name: string; retiredAt: Date | null; retiredByFrrata: boolean }
 
 /** Renames left: null while the shop has never opened (unlimited then), else 0–2. */

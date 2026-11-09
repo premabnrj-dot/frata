@@ -168,12 +168,12 @@ do $$ begin
 end $$;
 commit;
 
--- 13. No app_* function is callable by public, anon or authenticated; neither app role bypasses RLS.
+-- 13. No app_* function is callable by public, anon, authenticated or service_role; neither app role bypasses RLS.
 do $$ declare f record; begin
   for f in select p.oid::regprocedure as sig from pg_proc p join pg_namespace n on n.oid = p.pronamespace
            where n.nspname = 'public' and p.proname like 'app\_%' loop
     if has_function_privilege('anon', f.sig, 'execute') or has_function_privilege('authenticated', f.sig, 'execute')
-       or has_function_privilege('public', f.sig, 'execute') then
+       or has_function_privilege('public', f.sig, 'execute') or has_function_privilege('service_role', f.sig, 'execute') then
       raise exception 'FAIL: % is callable by an API role', f.sig;
     end if;
   end loop;
@@ -286,7 +286,7 @@ do $$ declare n int; begin
 end $$;
 rollback;
 begin;
--- Shop addresses D·1 (0065): after the first opening, two renames; the old names stay the shop's (retired, redirecting)
+-- Shop addresses D·1 (0067/0068): after the first opening, two renames; the old names stay the shop's (retired, redirecting)
 -- and no other shop can take them, by any creator; a close doesn't reset the count; a freeze refuses; Frrata's rename
 -- retires without a redirect; the app reads only its own names.
 update shop_settings set published_at = now() where tenant_id = '22222222-2222-2222-2222-222222222222';
@@ -340,6 +340,45 @@ do $$ declare r record; begin
   if not r.by_frrata then raise exception 'FAIL: Frrata''s rename must not redirect'; end if;
   begin update tenants set slug = 'admin-direct' where id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: Admin wrote a slug directly';
   exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+begin;
+-- Shop addresses D1·7 (0069): Admin's address writes are for the admin role only (support is refused in SQL); a freeze
+-- goes through its definer (no direct write); a release frees only a retired name, never a shop's current one.
+insert into platform_staff (user_id, email, role) values ('aaaaaaaa-0000-0000-0000-0000000000ff', 'staff@proof.test', 'admin'), ('aaaaaaaa-0000-0000-0000-0000000000fe', 'support@proof.test', 'support') on conflict do nothing;
+do $$ declare f text; begin
+  foreach f in array array['app_admin_rename_shop(uuid,uuid,text,text)', 'app_admin_freeze_address(uuid,uuid,boolean,text)', 'app_admin_release_name(uuid,text,text)',
+                           'app_admin_block_name(uuid,text,text,text)', 'app_admin_unblock_name(uuid,text,text)'] loop
+    if has_function_privilege('frata_app', f, 'execute') or has_function_privilege('service_role', f, 'execute') then raise exception 'FAIL: % is callable outside Admin', f; end if;
+    if not has_function_privilege('frata_admin', f, 'execute') then raise exception 'FAIL: Admin cannot call %', f; end if;
+  end loop;
+end $$;
+insert into shop_names (name, tenant_id, retired_at) values ('proof-b-old', '22222222-2222-2222-2222-222222222222', now());
+set local role frata_admin;
+do $$ begin
+  begin perform app_admin_rename_shop('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-0000000000fe', 'proof-b-support', 'Support tried'); raise exception 'FAIL: support renamed a shop';
+  exception when raise_exception then if sqlerrm <> 'not_staff' then raise; end if; end;
+  begin perform app_admin_freeze_address('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-0000000000fe', true, 'Support tried'); raise exception 'FAIL: support froze a shop';
+  exception when raise_exception then if sqlerrm <> 'not_staff' then raise; end if; end;
+  begin perform app_admin_release_name('aaaaaaaa-0000-0000-0000-0000000000fe', 'proof-b-old', 'Support tried'); raise exception 'FAIL: support released a name';
+  exception when raise_exception then if sqlerrm <> 'not_staff' then raise; end if; end;
+  begin update tenants set address_frozen_at = now() where id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: Admin froze a shop without its definer';
+  exception when insufficient_privilege then null; end;
+  begin perform app_admin_block_name('aaaaaaaa-0000-0000-0000-0000000000fe', 'proof-brand', 'protected', 'Support tried'); raise exception 'FAIL: support blocked a name';
+  exception when raise_exception then if sqlerrm <> 'not_staff' then raise; end if; end;
+  begin insert into blocked_names (name, kind, reason) values ('proof-direct', 'protected', 'Direct'); raise exception 'FAIL: Admin blocked a name without its definer';
+  exception when insufficient_privilege then null; end;
+  if not app_admin_block_name('aaaaaaaa-0000-0000-0000-0000000000ff', 'proof-brand', 'protected', 'Trademark') then raise exception 'FAIL: block did not add'; end if;
+  if app_name_check('proof-brand') <> 'taken' then raise exception 'FAIL: a blocked name looked free'; end if;
+  if not app_admin_unblock_name('aaaaaaaa-0000-0000-0000-0000000000ff', 'proof-brand', 'Licence') then raise exception 'FAIL: unblock did not remove'; end if;
+  begin perform app_admin_release_name('aaaaaaaa-0000-0000-0000-0000000000ff', 'proof-b', 'Current name'); raise exception 'FAIL: a current name was released';
+  exception when raise_exception then if sqlerrm <> 'not_retired' then raise; end if; end;
+  perform app_admin_freeze_address('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-0000000000ff', true, 'Phishing report');
+  if (select address_frozen_at from tenants where id = '22222222-2222-2222-2222-222222222222') is null then raise exception 'FAIL: the freeze did not hold'; end if;
+  if app_admin_release_name('aaaaaaaa-0000-0000-0000-0000000000ff', 'proof-b-old', 'Owner asked') <> '22222222-2222-2222-2222-222222222222' then raise exception 'FAIL: release must name the shop that held it'; end if;
+  if app_name_check('proof-b-old') <> 'ok' then raise exception 'FAIL: a released name stayed taken'; end if;
+  if (select count(*) from audit_events where action in ('shop.address_frozen', 'shop.name_released') and tenant_id = '22222222-2222-2222-2222-222222222222') <> 2
+     or (select count(*) from audit_events where action in ('name.blocked', 'name.unblocked') and target = 'proof-brand') <> 2 then raise exception 'FAIL: Admin''s address writes must be audited'; end if;
 end $$;
 rollback;
 
@@ -1641,4 +1680,4 @@ do $$ begin
   if has_function_privilege('frata_app', 'app_accept_handover(uuid,uuid)', 'execute') then raise exception 'FAIL: the app may still accept a handover without its claim'; end if;
 end $$;
 
-\echo 'tenancy proof — all 50 checks passed'
+\echo 'tenancy proof — all 51 checks passed'
