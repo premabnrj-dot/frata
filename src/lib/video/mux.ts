@@ -1,7 +1,6 @@
 import 'server-only'
 import { fetchWithTimeout } from '@/lib/http/timeout'
 import { MUX_API_BASE, MUX_TOKEN_ID, MUX_TOKEN_SECRET } from '@/lib/env'
-import { mp4Name } from '@/domains/video/state'
 
 // =============================================================================
 // FILE: src/lib/video/mux.ts — the four calls Frrata makes to Mux (V1, docs/plans/2026-11-09-video-v1.md;
@@ -9,10 +8,11 @@ import { mp4Name } from '@/domains/video/state'
 // videos row), delete and cancel are outbox kinds (ADR-0006). Never logs a URL, an id with a token, or a body.
 // =============================================================================
 
-/** The upload settings decided by the reviews: free encoding, public playback (the shop's cache), and two MP4s — 720p
- *  (what the shop plays when the source is larger) and highest (what it plays when the source is 720p or smaller,
- *  where Mux skips the 720p file). No max_resolution_tier: Mux takes only 1080p and up (the default). */
-export const UPLOAD_SETTINGS = { video_quality: 'basic', playback_policies: ['public'], static_renditions: [{ resolution: '720p' }, { resolution: 'highest' }] } as const
+/** The upload settings: free encoding, public playback (the shop's cache), one standard `highest` MP4 (no prep cost,
+ *  any source size; up to 1080p, Mux's default tier). Mux refuses a 720p tier (tiers are 1080p and up) and refuses
+ *  mixing `highest` with sized renditions (2026-11-09, both found as 400s in production). Delivering 720p instead
+ *  would need a sized rendition (paid prep, none for a smaller source): a later cost lever, not V1. */
+export const UPLOAD_SETTINGS = { video_quality: 'basic', playback_policies: ['public'], static_renditions: [{ resolution: 'highest' }] } as const
 export const UPLOAD_TIMEOUT_S = 900
 
 export type MuxFail = { ok: false; why: 'not_configured' | 'unauthorized' | 'refused' | 'rate_limited' | 'unavailable' | 'bad_reply' }
@@ -38,7 +38,14 @@ async function call(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, bod
   if (res.status === 401 || res.status === 403) return { ok: false, why: 'unauthorized' }
   if (res.status >= 500) return { ok: false, why: 'unavailable' }
   if (res.status === 404 || res.status === 204) return { ok: true, status: res.status, json: null }
-  if (res.status >= 400) return { ok: false, why: 'refused' }
+  if (res.status >= 400) {
+    // Mux says why ({ error: { type, messages } }): its words only, never our URL or token (2026-11-09: a refused
+    // upload in production said nothing more than "refused").
+    const e = await res.json().catch(() => null) as { error?: { type?: unknown; messages?: unknown } } | null
+    const msgs = Array.isArray(e?.error?.messages) ? e.error.messages.filter((m): m is string => typeof m === 'string').join('; ') : ''
+    console.error('[mux] refused', method, path.split('/').slice(0, 4).join('/'), res.status, String(e?.error?.type ?? '').slice(0, 40), msgs.slice(0, 300))
+    return { ok: false, why: 'refused' }
+  }
   try { return { ok: true, status: res.status, json: await res.json() } } catch { return { ok: false, why: 'bad_reply' } }
 }
 
@@ -96,10 +103,8 @@ export function parseAsset(d: unknown): MuxAsset | null {
   const video = tracks.find((t) => t?.type === 'video')
   const dim = (n: unknown) => (typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 8192 ? n : null)
   const files = (a.static_renditions as { files?: unknown } | undefined)?.files
-  // Ready when the file the shop will play is ready (mp4Name: 720p from a larger source, else highest).
-  const want = mp4Name(dim(video?.max_width), dim(video?.max_height))
   const mp4Ready = Array.isArray(files) && (files as { name?: unknown; resolution?: unknown; status?: unknown }[])
-    .some((f) => f?.status === 'ready' && (f.resolution === want || f.name === `${want}.mp4`))
+    .some((f) => f?.status === 'ready' && (f.resolution === 'highest' || f.name === 'highest.mp4'))
   return {
     id: a.id, status, passthrough: typeof a.passthrough === 'string' ? a.passthrough : null,
     uploadId: typeof a.upload_id === 'string' && ID.test(a.upload_id) ? a.upload_id : null,

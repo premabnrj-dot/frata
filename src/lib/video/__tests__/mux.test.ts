@@ -12,12 +12,6 @@ describe('parseAsset', () => {
   it('reads what the shop needs: the public playback id, length, size, whether the MP4 is ready', () => {
     expect(parseAsset(asset)).toEqual({ id: 'as1', status: 'ready', passthrough: 'row', uploadId: 'up1', playbackId: 'pub123', durationMs: 12480, width: 1280, height: 720, mp4Ready: true })
   })
-  it('a source larger than 720p plays the 720p file; a smaller one plays highest (Mux skips 720p there)', () => {
-    const big = { ...asset, tracks: [{ type: 'video', max_width: 1080, max_height: 1920 }] }
-    expect(parseAsset({ ...big, static_renditions: { files: [{ name: 'highest.mp4', resolution: 'highest', status: 'ready' }, { name: '720p.mp4', resolution: '720p', status: 'preparing' }] } })?.mp4Ready).toBe(false)
-    expect(parseAsset({ ...big, static_renditions: { files: [{ name: '720p.mp4', resolution: '720p', status: 'ready' }] } })?.mp4Ready).toBe(true)
-    expect(parseAsset({ ...asset, static_renditions: { files: [{ name: '720p.mp4', resolution: '720p', status: 'skipped' }, { name: 'highest.mp4', resolution: 'highest', status: 'ready' }] } })?.mp4Ready).toBe(true)
-  })
   it('the MP4 is ready only when Mux says that file is ready', () => {
     expect(parseAsset({ ...asset, static_renditions: { files: [{ name: 'highest.mp4', resolution: 'highest', status: 'preparing' }] } })?.mp4Ready).toBe(false)
     expect(parseAsset({ ...asset, static_renditions: undefined })?.mp4Ready).toBe(false)
@@ -34,9 +28,9 @@ describe('parseAsset', () => {
 })
 
 describe('UPLOAD_SETTINGS', () => {
-  it('holds the reviews\' decisions: basic, public, a 720p and a highest MP4, no tier Mux refuses', () => {
-    expect(UPLOAD_SETTINGS).toEqual({ video_quality: 'basic', playback_policies: ['public'], static_renditions: [{ resolution: '720p' }, { resolution: 'highest' }] })
-    // Mux's max_resolution_tier takes 1080p, 1440p or 2160p only (2026-11-09: 720p made every upload a 400).
+  it('basic, public, one highest MP4, and nothing Mux refuses', () => {
+    expect(UPLOAD_SETTINGS).toEqual({ video_quality: 'basic', playback_policies: ['public'], static_renditions: [{ resolution: 'highest' }] })
+    // Mux refuses a tier below 1080p, and `highest` mixed with sized renditions (2026-11-09: both 400s in production).
     expect('max_resolution_tier' in UPLOAD_SETTINGS).toBe(false)
   })
 })

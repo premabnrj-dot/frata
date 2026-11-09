@@ -75,7 +75,7 @@ export default {
         const st = await fake()
         const up = st.uploads.find((u) => u.id === first.upload_id)
         assert.equal(up.new_asset_settings.passthrough, first.id, 'Mux carries our row id')
-        assert.deepEqual(up.new_asset_settings.static_renditions, [{ resolution: '720p' }, { resolution: 'highest' }]); assert.equal(up.timeout, 900); assert.equal(up.cors_origin, CONSOLE)
+        assert.deepEqual(up.new_asset_settings.static_renditions, [{ resolution: 'highest' }]); assert.equal(up.timeout, 900); assert.equal(up.cors_origin, CONSOLE)
         // Saved into the draft, and the preview draws it over the section's photo, then plays it once in view.
         await until(async () => { const [r] = await db`select settings from shop_theme_revisions where tenant_id = ${KESAR} and theme_key = 'signal' order by updated_at desc limit 1`; return JSON.stringify(r.settings).includes(first.id) }, 10_000)
         const loop = p.frameLocator(FRAME).locator(`video[data-loop*="${first.playback_id}"]`)
