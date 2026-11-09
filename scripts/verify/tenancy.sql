@@ -1803,6 +1803,9 @@ do $$ declare n int; begin
   begin insert into review_photos (tenant_id, review_id, base, widths, width, height) values ('11111111-1111-1111-1111-111111111111', 'bdbdbdbd-0000-0000-0000-00000000000a',
     'https://evil.example/tenants/11111111-1111-1111-1111-111111111111/reviews/bcbcbcbc-0000-0000-0000-00000000000a/0f0f0f0f-0000-0000-0000-000000000002', '{400}', 1, 1);
     raise exception 'FAIL: a photo on a foreign host'; exception when check_violation then null; end;
+  begin insert into review_photos (tenant_id, review_id, base, widths, width, height) values ('11111111-1111-1111-1111-111111111111', 'bdbdbdbd-0000-0000-0000-00000000000a',
+    'https://sxpublicxblobxvercel-storagexcom/tenants/11111111-1111-1111-1111-111111111111/reviews/bcbcbcbc-0000-0000-0000-00000000000a/0f0f0f0f-0000-0000-0000-000000000006', '{400}', 1, 1);
+    raise exception 'FAIL: the host pattern''s dots match any character'; exception when check_violation then null; end;
   insert into review_photos (tenant_id, review_id, base, widths, width, height) values ('11111111-1111-1111-1111-111111111111', 'bdbdbdbd-0000-0000-0000-00000000000a',
     'https://s.public.blob.vercel-storage.com/tenants/11111111-1111-1111-1111-111111111111/reviews/bcbcbcbc-0000-0000-0000-00000000000a/0f0f0f0f-0000-0000-0000-000000000003', '{400}', 1, 1);
   begin insert into reviews (tenant_id, request_id, product_id, rating, display_name) values ('11111111-1111-1111-1111-111111111111', 'bcbcbcbc-0000-0000-0000-00000000000b', 'eeeeeeee-0000-0000-0000-00000000000a', 3, 'X');

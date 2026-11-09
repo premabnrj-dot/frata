@@ -10486,7 +10486,7 @@
       "checkConstraints": {
         "review_photos_base": {
           "name": "review_photos_base",
-          "value": "\"review_photos\".\"base\" ~ ('^https://[a-z0-9]+.public.blob.vercel-storage.com/tenants/' || \"review_photos\".\"tenant_id\"::text || '/reviews/[0-9a-f-]{36}/[0-9a-f-]{36}$')"
+          "value": "\"review_photos\".\"base\" ~ ('^https://[a-z0-9]+\\.public\\.blob\\.vercel-storage\\.com/tenants/' || \"review_photos\".\"tenant_id\"::text || '/reviews/[0-9a-f-]{36}/[0-9a-f-]{36}$')"
         }
       },
       "isRLSEnabled": false

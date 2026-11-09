@@ -105,7 +105,7 @@ export const reviewPhotos = pgTable('review_photos', {
   uniqueIndex('review_photos_tenant_base').on(t.tenantId, t.base),
   index('review_photos_review').on(t.tenantId, t.reviewId),
   // Anchored (tenancy audit R1): our Blob host, this shop's reviews folder, one request folder, one file stem.
-  check('review_photos_base', sql`${t.base} ~ ('^https://[a-z0-9]+\.public\.blob\.vercel-storage\.com/tenants/' || ${t.tenantId}::text || '/reviews/[0-9a-f-]{36}/[0-9a-f-]{36}$')`),
+  check('review_photos_base', sql`${t.base} ~ ('^https://[a-z0-9]+\\.public\\.blob\\.vercel-storage\\.com/tenants/' || ${t.tenantId}::text || '/reviews/[0-9a-f-]{36}/[0-9a-f-]{36}$')`),
 ])
 
 /** A shopper's report. The IP only as a keyed hash (security review M4); reports never hide a review on their own. */

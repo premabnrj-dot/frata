@@ -8,7 +8,7 @@ CREATE TABLE "review_photos" (
 	"height" integer NOT NULL,
 	"position" smallint DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "review_photos_base" CHECK ("review_photos"."base" ~ ('^https://[a-z0-9]+.public.blob.vercel-storage.com/tenants/' || "review_photos"."tenant_id"::text || '/reviews/[0-9a-f-]{36}/[0-9a-f-]{36}$'))
+	CONSTRAINT "review_photos_base" CHECK ("review_photos"."base" ~ ('^https://[a-z0-9]+\.public\.blob\.vercel-storage\.com/tenants/' || "review_photos"."tenant_id"::text || '/reviews/[0-9a-f-]{36}/[0-9a-f-]{36}$'))
 );
 --> statement-breakpoint
 CREATE TABLE "review_reports" (
