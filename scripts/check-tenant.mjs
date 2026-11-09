@@ -171,6 +171,10 @@ for (const { name, table, body, forApp } of finalPolicies.values()) {
   else if (/app_current_tenant\(\)\s+is\s+null/.test(body)) failures.push(`policy ${name} on ${table}  opens every shop when no tenant is set (app_current_tenant() is null) — only OPEN_FOR_APP tables may`)
 }
 
+// EkCode's vault (ADR-0009, drizzle/0087): no app role is ever granted a table; definers are the only door.
+for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?"?(ekcode_[a-z_]+)/g)) {
+  failures.push(`grant on ${m[1]}  — the EkCode vault has no table grants; add a definer instead (ADR-0009)`)
+}
 if (failures.length) {
   for (const f of failures) console.error(f)
   console.error(`check:tenant — ${failures.length} problem(s). See .claude/skills/frata-architecture/SKILL.md § Tenancy.`)
