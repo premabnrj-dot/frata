@@ -47,9 +47,15 @@ Held with Release in the row) rather than one table. Telling the shop about Frra
 § 3, design rule 71: the reason and a Reply) comes with T·1's notices; until then the shop's address page shows
 "frozen" and the audit log keeps the reason.
 
+**D1·8 (found by D2·0, before the first live payment):** Settings › "Ready for live payments" gains one item, "Add
+<slug>.frrata.shop in Razorpay" (Open Razorpay; the merchant ticks "Added", stored with who and when; no API exists to
+check it). A rename (D1) re-asks it for the new name, since the old host stops taking checkout. Razorpay's sub-domain
+route is "raise a request with Support": the item links the steps in docs/setup.md, written once with a real account.
+
 ## D·2 — Own domains (owner 2026-11-09: build now on Hobby with a once-a-day check; Pro before the first live merchant)
-No merchant is live yet, so Hobby's non-commercial terms don't bite; Hobby's cron runs at most once a day, so the
-check runs daily and **Check records** runs the same check for one shop on demand. On upgrading to Pro, the schedule in
+No merchant is live yet, so Hobby's non-commercial terms don't bite (the first live payment on any shop needs Pro);
+legacy `crons` run at most once a day on Hobby (Vercel Schedules, beta since 2026-11-05, allow every 15 min within
+5,000 runs a period: an option, not a dependency), so the check runs daily and **Check records** runs the same check for one shop on demand. On upgrading to Pro, the schedule in
 `vercel.json` moves to the pace in D2·8 (one line) and nothing else changes. Migrations start at **0080**.
 
 **Cross-checked against main 2026-11-09** (themes, SEO, GST, reviews, Signal merged):
@@ -65,7 +71,7 @@ check runs daily and **Check records** runs the same check for one shop on deman
   popup, Undo 8 s). Nothing in D2·10 is built before it is approved.
 | Task | What | Verify |
 |---|---|---|
-| D2·0 | **Razorpay check first** (integration-researcher): does Standard Checkout care about the merchant's registered website domain | `frata-integrations` |
+| D2·0 | **Done 2026-11-09** (frata-integrations 1.15.0 § Razorpay): live payments fail from a website not registered on the shop's own Razorpay account — an own domain AND `<slug>.frrata.shop`. Dashboard › Account & Settings › Business website detail; additional websites only in the e-commerce category, manual review ~24–48 h; no API to read them, so the merchant confirms. → **D1·8** below, and Connect's Connected step shows "Add to Razorpay"; **Make main needs "Razorpay approved it"** while the shop takes live payments | `frata-integrations` |
 | D2·1 | **HSTS split** in next.config with `has: host` rules: `includeSubDomains` only for the console host and `*.SHOP_DOMAIN`; the default (own domains) `max-age=31536000` without it. Check Vercel's own default HSTS. Ships before any own domain is attached | e2e 12 per host |
 | D2·2 | Migration 0070 `shop_domains`: **id PK**; unique `(tenant_id, host) where removed_at is null`; unique `(host) where proved_at is not null and removed_at is null`; **token = 128 random bits per row**, never derived from the host and never changed by another shop's action; timestamps claimed/proved/added/dns_ok/cert_ok/failing_since/parked/main/removed + removed_reason/by; CHECK host lowercase, no trailing dot, not under `frrata.*`, `frata.*`, `vercel.app`, the console host. frata_app: select own rows only; **every write through definers**; frata_admin: select + `update(removed_*)`. `tenant_domains` rows moved in as **removed** (never as proved); `app_tenant_for_host` dropped one migration later | `verify:tenancy`: A can't read or prove B's row; B's claim on A's live host leaves A resolving and A's token unchanged; checking with A's token value doesn't prove B |
 | D2·3 | Pure `src/domains/addresses/domains.ts`: `normaliseDomain` (Zod `.max(253)` first; lowercase; no scheme/path/port/`@ / : \ * _`/space; labels ≤ 63; no all-digit TLD; ASCII only, no `xn--`; not an IP; refuse `*.vercel.app`, console, `frrata.*`, `frata.*`, `.local`, `.internal`, `.test`, `.onion`, blocked domains; PSL-aware: refuse a bare suffix — `tldts`, server-only, one line in the plan on why); `stateOf(row, now)` → one tuple of badges (Main · Connected · Waiting for records · Securing · Not working · Disconnected) used by Words, rule 68 and the stress table alike; the 4-host cap | vitest table |

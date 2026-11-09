@@ -140,6 +140,7 @@ td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowra
     <li><b>Records appear at once</b> (a call the person waits on, ADR-0008). We read who hosts the domain's DNS ourselves, so there's no "Where did you buy it?" question, and we open that provider's DNS page with one button.</li>
     <li><b>The dialog checks for you</b> every 15 s while it's open. Each record flips to Found on its own, and the dialog moves to Securing, then Connected, without a press. "Check now" stays for impatient people. On Hobby the background check is daily; on Pro it moves to every 10 minutes.</li>
     <li><b>Send the records to whoever manages your domain</b> on WhatsApp, already written out.</li>
+    <li><b>Razorpay must approve the domain first</b> (found 9 Nov): live payments fail from a website not registered on the shop's own Razorpay account. Connected shows "Open Razorpay" and "Razorpay approved it"; Make main stays off until it's ticked. Razorpay has no API to check this, so we take the merchant's word. The same applies to <span class="mono">name.frrata.shop</span>, so it goes on the "Ready for live payments" list.</li>
     <li><b>Make main</b> works like Publish: a one-line confirm, a 1.3 s "Going live" line, then a popup with Copy, View shop and Undo for 8 s.</li>
     <li><b>Problems sit on their row</b> as a chip and one line with the fix. The red banner on every console page shows only after 24 h of failed checks. When the failure is on our side (hosting API down), the row says "Checking paused", never red.</li>
   </ul>
@@ -192,6 +193,13 @@ td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowra
             <b class="mono">kesarstudio.in</b>
             <span class="chip c-ok">Connected</span>
           </div>
+          <div class="recs" id="rzp" hidden>
+            <div class="rec" style="grid-template-columns:minmax(0,1fr) auto">
+              <span class="nv"><b>Razorpay</b><code id="rzp-host">kesarstudio.in</code></span>
+              <a class="btn sm" href="https://dashboard.razorpay.com/app/website-app-settings" target="_blank" rel="noopener">Open Razorpay</a>
+              <label class="st" style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" id="rzp-ok"> Razorpay approved it</label>
+            </div>
+          </div>
         </div>
       </div>
       <div class="df" id="foot">
@@ -225,6 +233,7 @@ td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowra
     <section class="card"><header><h3>Waiting and working</h3></header><ul class="rows">
       <li><span class="addr">shop.rangthreads.in <span class="chip c-warn">Waiting for records · 1 of 2</span></span><span class="acts"><button type="button" class="btn sm">Continue</button></span></li>
       <li><span class="addr">kesarstudio.in <span class="chip c-info">Securing</span></span><span class="acts"></span></li>
+      <li><span class="addr">kesarstudio.in <span class="chip c-ok">Connected</span> <span class="chip c-warn">Razorpay not approved</span></span><span class="acts"><a class="btn sm" href="#">Open Razorpay</a></span></li>
       <li><span class="addr">kesarstudio.in <span class="chip c-ok">Connected</span></span><span class="acts"><button type="button" class="btn sm">Make main</button></span></li>
       <li><span class="addr">kesarstudio.in <span class="chip c-main">Main</span></span><span class="acts"><button type="button" class="btn sm">Copy</button></span></li>
       <li><span class="addr">www.kesarstudio.in <span class="chip c-n">Goes to kesarstudio.in</span></span><span class="acts"></span></li>
@@ -330,7 +339,7 @@ td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowra
     }
     if (n === 3) {
       next.hidden = true; cancel.textContent = 'Close'
-      $('securing').hidden = false; $('connected').hidden = true; $('sec-t').textContent = domain
+      $('rzp').hidden = true; $('securing').hidden = false; $('connected').hidden = true; $('sec-t').textContent = domain
       const bar = $('sec-bar'); bar.style.transform = 'scaleX(0)'
       rows = BASE.concat([{ name: domain, chip: ['c-info', 'Securing'] }]); drawRows()
       later(400, () => bar.style.transform = 'scaleX(.35)'); later(1300, () => bar.style.transform = 'scaleX(.7)'); later(2200, () => bar.style.transform = 'scaleX(1)')
@@ -338,7 +347,8 @@ td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowra
         $('securing').hidden = true; const c = $('connected'); c.hidden = false
         c.querySelectorAll('circle,path').forEach((e) => { e.style.animation = 'none'; e.getBoundingClientRect(); e.style.animation = '' })
         rows = BASE.concat([{ name: domain, chip: ['c-ok', 'Connected'], acts: 'main' }, { name: 'www.' + domain, chip: ['c-n', 'Goes to ' + domain] }]); drawRows()
-        next.hidden = false; next.disabled = false; next.textContent = 'Make it main'; cancel.textContent = 'Later'
+        $('rzp').hidden = false; $('rzp-host').textContent = domain; $('rzp-ok').checked = false
+        next.hidden = false; next.disabled = true; next.textContent = 'Make it main'; cancel.textContent = 'Later'
       })
     }
   }
@@ -349,6 +359,7 @@ td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowra
 
   $('open-connect').onclick = () => { clear(); $('next').hidden = false; go(1); open($('dlg'), $('scrim')); setTimeout(() => $('dom').focus(), 50) }
   $('dom').oninput = checkDomain
+  $('rzp-ok').onchange = () => { $('next').disabled = !$('rzp-ok').checked }
   $('cancel').onclick = () => { clear(); shut($('dlg'), $('scrim')) }
   $('scrim').onclick = $('cancel').onclick
   $('next').onclick = () => { if (step === 1) go(2); else if (step === 3) { shut($('dlg'), $('scrim')); askMain() } }

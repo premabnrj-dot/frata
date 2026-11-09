@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.29.0
+  version: 2.30.0
   verified: 2026-11-09
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008 (proposed)]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -563,5 +563,6 @@ Server secrets in `src/lib/env.ts`, public values in `src/lib/public-env.ts`,
 ## Hosting (ADR-0005)
 
 Vercel `bom1` + Supabase ap-south-1. Storefront routes set `revalidate`;
-console routes are dynamic. Cron schedules in `vercel.json` (Hobby allows daily
-only; Pro allows more). Migrations: see CLAUDE.md § Deploying.
+console routes are dynamic. Cron schedules in `vercel.json`: legacy `crons` are daily on Hobby,
+per minute on Pro; Vercel Schedules (public beta 2026-11-05) allow every 15 min on Hobby within 5,000 runs a billing
+period (frata-integrations § Domains). Build for daily; a beta schedule is an option, not a dependency. Migrations: see CLAUDE.md § Deploying.
