@@ -46,6 +46,10 @@ begin
   end if;
   -- The project's room: hosts on Vercel now (live or parked) plus proven claims about to be added. One lock for all shops.
   perform pg_advisory_xact_lock(hashtext('shop_domains_capacity'));
+  -- And a platform-wide day's claims (security review D2·10 H1): free trial shops can't queue up the room between them.
+  if (select count(*) from public.shop_domains d where d.claimed_at > now() - interval '1 day') >= greatest(10, p_capacity) then
+    raise exception 'capacity' using errcode = 'P0001';
+  end if;
   select coalesce(sum(1 + d.with_www::int), 0) into v_used from public.shop_domains d
    where (d.added_at is not null or d.proved_at is not null) and (d.removed_at is null or d.parked_at is not null);
   if v_used + 1 + p_with_www::int > p_capacity - 4 then raise exception 'capacity' using errcode = 'P0001'; end if;
@@ -346,13 +350,14 @@ end;
 $$;
 
 --> statement-breakpoint
--- ── D2·7's sender: what to take off Vercel, re-read in the database. `keep`: another shop now holds that host live
---    (a move), so it stays on the project and only this row lets go of it (tenancy C2). ──
+-- ── D2·7's sender: what to take off Vercel, re-read in the database. keep_host / keep_www: another row now holds that
+--    exact host (or www of that apex) live, so it stays on the project; everything else comes off (tenancy C2). ──
 create or replace function app_domain_remove_due(p_id uuid)
-  returns table (host text, www text, keep boolean)
+  returns table (host text, www text, keep_host boolean, keep_www boolean)
   language sql stable security definer set search_path = '' as $$
     select d.host, case when d.with_www then 'www.' || d.apex end,
-           exists (select 1 from public.shop_domains o where o.id <> d.id and o.apex = d.apex and o.proved_at is not null and o.removed_at is null)
+           exists (select 1 from public.shop_domains o where o.id <> d.id and o.host = d.host and o.proved_at is not null and o.removed_at is null),
+           exists (select 1 from public.shop_domains o where o.id <> d.id and o.apex = d.apex and o.with_www and o.proved_at is not null and o.removed_at is null)
       from public.shop_domains d
      where d.id = p_id and d.tenant_id = public.app_current_tenant() and d.parked_at is not null
 $$;
@@ -422,7 +427,11 @@ begin
     insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
       values (o.tenant_id, p_staff, v_email, 'staff', 'domain.moved_away', o.host, jsonb_build_object('reason', btrim(p_reason)));
   end if;
-  update public.shop_domains d set proved_at = now(), contest_at = null where d.id = c.id;
+  -- The same host already on our project (the old holder's): it serves the claimant at once; any other host is added by
+  -- the next check (Admin's action runs one at once).
+  update public.shop_domains d set proved_at = now(), contest_at = null,
+      added_at = case when o.host = c.host and o.added_at is not null then now() end
+   where d.id = c.id;
   insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
     values (c.tenant_id, p_staff, v_email, 'staff', 'domain.moved_here', c.host, jsonb_build_object('reason', btrim(p_reason)));
   return query select c.tenant_id union select o.tenant_id where o.tenant_id is not null;

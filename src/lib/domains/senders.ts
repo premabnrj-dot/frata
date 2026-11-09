@@ -30,12 +30,12 @@ export async function sendDomainAdd(row: OutboxRow): Promise<void> {
 export async function sendDomainRemove(row: OutboxRow): Promise<void> {
   const id = (row.payload as { id?: string }).id
   if (!id || !/^[0-9a-f-]{36}$/.test(id)) throw new Error('domain.remove without its row')
-  const [p] = await withTenant(row.tenantId, (tx) => tx.execute<{ host: string; www: string | null; keep: boolean }>(sql`select * from app_domain_remove_due(${id}::uuid)`))
+  const [p] = await withTenant(row.tenantId, (tx) => tx.execute<{ host: string; www: string | null; keep_host: boolean; keep_www: boolean }>(sql`select * from app_domain_remove_due(${id}::uuid)`))
   if (!p) return
-  if (!p.keep) {
-    for (const h of [p.host, ...(p.www ? [p.www] : [])]) {
-      if ((await removeDomain(h)) === 'error') throw new Error('domain.remove: vercel')
-    }
+  // Off the project: every host of this row that no other live row holds now (a move keeps exactly what moved).
+  const off = [...(p.keep_host ? [] : [p.host]), ...(p.www && !p.keep_www ? [p.www] : [])]
+  for (const h of off) {
+    if ((await removeDomain(h)) === 'error') throw new Error('domain.remove: vercel')
   }
   await withTenant(row.tenantId, (tx) => tx.execute(sql`select app_domain_unparked(${id}::uuid)`))
 }

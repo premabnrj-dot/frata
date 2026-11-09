@@ -28,7 +28,9 @@ export type OutboxRow = typeof outbox.$inferSelect
  * out (1, 4, 9 … minutes) BEFORE the send, so a crash mid-send retries later.
  */
 export async function claimDue(limit = 25): Promise<OutboxRow[]> {
-  return db().execute<OutboxRow>(sql`
+  // A raw execute returns the columns' own names (tenant_id): map them to the row's type, or row.tenantId is undefined
+  // (found by e2e 53: a sender ran with no shop, and the drain's module check read no shop either).
+  const rows = await db().execute<Record<string, unknown>>(sql`
     update outbox set attempts = attempts + 1,
       next_attempt_at = now() + make_interval(mins => (attempts + 1) * (attempts + 1))
     where id in (
@@ -36,7 +38,11 @@ export async function claimDue(limit = 25): Promise<OutboxRow[]> {
       where sent_at is null and dead_at is null and next_attempt_at <= now()
       order by next_attempt_at limit ${limit}
       for update skip locked)
-    returning *`) as unknown as Promise<OutboxRow[]>
+    returning *`)
+  return rows.map((r) => ({
+    id: r.id, tenantId: r.tenant_id, kind: r.kind, dedupeKey: r.dedupe_key, payload: r.payload, attempts: r.attempts,
+    nextAttemptAt: r.next_attempt_at, sentAt: r.sent_at, deadAt: r.dead_at, lastError: r.last_error, createdAt: r.created_at,
+  }) as OutboxRow)
 }
 
 export const MAX_ATTEMPTS = 8

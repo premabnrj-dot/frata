@@ -64,7 +64,12 @@ describe.skipIf(!host)('own domains', () => {
       expect(q?.kind).toBe('domain.add')
       expect(await platform.tenantForHost(dom)).toBeNull()
 
-      await sendDomainAdd({ ...(q as object), tenantId: A } as never)
+      // Through claimDue, as the drain does: the row must carry its own shop (e2e 53 found tenant_id unmapped).
+      const { claimDue } = await import('@/lib/outbox')
+      await su`update outbox set next_attempt_at = now() where dedupe_key like ${`domain.add:${c.claim.id}:%`}`
+      const due = (await claimDue(50)).find((x) => x.kind === 'domain.add')!
+      expect(due.tenantId).toBe(A)
+      await sendDomainAdd(due)
       expect(calls.filter((x) => x.startsWith('POST https://api.vercel.com/v10/projects/prj_1/domains')).length).toBe(2)
       expect((await platform.tenantForHost(dom))?.id).toBe(A)
       await su`update shop_domains set checked_at = null where id = ${c.claim.id}`

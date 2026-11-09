@@ -29,7 +29,7 @@ export default {
         await dlg.getByText(OWN_DOMAIN, { exact: true }).waitFor()
         await dlg.getByRole('button', { name: 'Continue' }).click()
         await dlg.getByText('0 of 3 found').waitFor()
-        for (const n of ['_frrata', '@', 'www']) await dlg.getByText(n, { exact: true }).first().waitFor()
+        for (const n of ['TXT _frrata', 'A @', 'CNAME www']) await dlg.getByText(n, { exact: true }).waitFor()
         await dlg.getByRole('link', { name: 'Open GoDaddy DNS' }).waitFor()
         await dlg.getByRole('button', { name: 'Copy all' }).waitFor()
         assert.match(await dlg.getByRole('link', { name: 'Send on WhatsApp' }).getAttribute('href'), /^https:\/\/wa\.me\/\?text=/)
@@ -66,10 +66,14 @@ export default {
       await t.step('Remove: confirmed, and the row leaves the list', async () => {
         await p.getByRole('listitem').filter({ hasText: OWN_DOMAIN }).getByRole('button', { name: 'Remove' }).click()
         await p.getByRole('dialog', { name: `Remove ${OWN_DOMAIN}?` }).getByRole('button', { name: `Remove ${OWN_DOMAIN}` }).click()
-        await p.getByRole('listitem').filter({ hasText: OWN_DOMAIN }).waitFor({ state: 'detached' })
+        await p.getByRole('listitem').filter({ hasText: OWN_DOMAIN }).first().waitFor({ state: 'detached' })
+        const s = await t.browser.newContext(); const q = await s.newPage()
+        assert.equal((await q.goto(`http://${OWN_DOMAIN}/`))?.status(), 404, 'a removed domain must stop opening the shop')
+        await s.close()
       })
     } finally {
       await owner.close()
+      if (process.env.E2E_DEBUG) console.log(JSON.stringify({ rows: await db`select host, proved_at, added_at, dns_ok_at, cert_ok_at, checked_at, removed_reason from shop_domains where tenant_id = ${T}`, outbox: await db`select kind, attempts, last_error, sent_at from outbox where kind like 'domain.%'`, added: await (await fetch(`${FAKE}/_test/added`)).json() }))
       await db`delete from outbox where kind like 'domain.%'`
       await db`delete from shop_domains where tenant_id = ${T}`
       await fetch(`${FAKE}/_test/reset`)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
@@ -20,7 +20,7 @@ import { checkDomainAction, connectDomainAction, domainRecordsAction, makeMainAc
 // in a list. Words: Rule 0 — labels, values, chips and the fix.
 // =============================================================================
 
-export type DomainView = { id: string; host: string; www: string | null; state: DomainState; razorpayOk: boolean }
+export type DomainView = { id: string; host: string; www: string | null; state: DomainState; razorpayOk: boolean; canMain: boolean }
 
 const RAZORPAY = 'https://dashboard.razorpay.com/app/website-app-settings'
 const POLL_MS = 15_000
@@ -28,11 +28,11 @@ const POLL_FOR_MS = 20 * 60_000
 type Step = 1 | 2 | 3
 type Found = 'yes' | 'no' | 'unknown'
 
-export function Domains(props: { nameHost: string; slug: string; rows: DomainView[]; livePayments: boolean; available: boolean; canManage: boolean }) {
+export function Domains(props: { nameHost: string; rows: DomainView[]; livePayments: boolean; available: boolean; canManage: boolean }) {
   return <Toaster><DomainsInner {...props} /></Toaster>
 }
 
-function DomainsInner({ nameHost, slug, rows, livePayments, available, canManage }: { nameHost: string; slug: string; rows: DomainView[]; livePayments: boolean; available: boolean; canManage: boolean }) {
+function DomainsInner({ nameHost, rows, livePayments, available, canManage }: { nameHost: string; rows: DomainView[]; livePayments: boolean; available: boolean; canManage: boolean }) {
   const router = useRouter()
   const toast = useToast()
   const [, start] = useTransition()
@@ -60,36 +60,41 @@ function DomainsInner({ nameHost, slug, rows, livePayments, available, canManage
     setGoing(true)
     const began = Date.now() // clock-ok: in a handler or timer, never at render
     start(async () => {
-      const r = await makeMainAction(d.id, slug).catch(() => ({ ok: false as const, error: 'We could not change it. Nothing was changed.' }))
+      const r = await makeMainAction(d.id).catch(() => ({ ok: false as const, error: 'We could not change it. Nothing was changed.' }))
       await new Promise((res) => setTimeout(res, Math.max(0, 1300 - (Date.now() - began)))) // clock-ok: in a handler or timer, never at render
       setGoing(false)
       if (!r.ok) { toast({ text: r.error }); return }
       router.refresh()
-      toast({ text: `${d.host} is your main address`, undo: async () => { const u = await undoMainAction(slug); router.refresh(); return u } })
+      toast({ text: `${d.host} is your main address`, undo: async () => { const u = await undoMainAction(); router.refresh(); return u } })
     })
   }
 
   return (
-    <Section title="Addresses" action={canManage && available && <Button variant={live.length ? 'secondary' : 'primary'} disabled={full} onClick={() => setOpen({})}>Connect a domain</Button>} flush>
+    <Section title="Addresses" flush action={!canManage ? <Badge>View only</Badge> : available && (
+      <span className="flex items-center gap-2">{full && <Badge>4 of 4</Badge>}<Button variant={live.length ? 'secondary' : 'primary'} disabled={full} onClick={() => setOpen({})}>Connect a domain</Button></span>)}>
       {going && <div aria-hidden className="h-0.5 w-full origin-left animate-going-live bg-thread" />}
       <ul className="divide-y divide-border">
-        <Row host={nameHost} chip={main ? null : { tone: 'neutral', words: 'Main' }}>
+        <Row host={nameHost} chip={main && main.state === 'main' ? null : { tone: 'neutral', words: 'Main' }}>
+          {canManage && main && <Button size="wrap" variant="secondary" disabled={busy === 'name'} onClick={() => act('name', () => undoMainAction(), `${nameHost} is your main address`)}>Make main</Button>}
           <CopyOpen host={nameHost} />
         </Row>
         {rows.map((d) => {
           const c = DOMAIN_CHIP[d.state]
           const needsRzp = livePayments && d.state === 'connected' && !d.razorpayOk
           return (
-            <Row key={d.id} host={d.host} chip={c} extra={needsRzp ? <Badge tone="warn">Razorpay not approved</Badge> : null}
+            <Fragment key={d.id}>
+            <Row host={d.host} chip={c} extra={needsRzp ? <Badge tone="warn">Razorpay not approved</Badge> : null}
               line={d.state === 'not_working' ? `Shoppers go to ${nameHost}` : null}>
               {canManage && (d.state === 'waiting' || d.state === 'held' || d.state === 'other_account') && <Button size="wrap" variant="secondary" onClick={() => setOpen({ resume: d.id })}>Continue</Button>}
               {canManage && (d.state === 'securing' || d.state === 'not_working') && <Button size="wrap" variant="secondary" disabled={busy === d.id} onClick={() => act(d.id, () => checkDomainAction(d.id).then((r) => (r.ok ? { ok: true } : r)))}>Check now</Button>}
               {canManage && needsRzp && <a className={button({ variant: 'secondary', size: 'wrap' })} href={RAZORPAY} target="_blank" rel="noopener noreferrer">Open Razorpay</a>}
               {canManage && needsRzp && <Button size="wrap" variant="secondary" disabled={busy === d.id} onClick={() => act(d.id, () => razorpayOkAction(d.id, true), 'Saved')}>Razorpay approved it</Button>}
-              {canManage && d.state === 'connected' && !needsRzp && <Button size="wrap" variant="secondary" onClick={() => setConfirm(d)}>Make main</Button>}
+              {canManage && d.canMain && <Button size="wrap" variant="secondary" onClick={() => setConfirm(d)}>Make main</Button>}
               {(d.state === 'main' || d.state === 'connected') && <CopyOpen host={d.host} />}
-              {canManage && d.state !== 'main' && d.state !== 'moved' && d.state !== 'disconnected' && <Button size="wrap" variant="ghost" onClick={() => setRemove(d)}>Remove</Button>}
+              {canManage && d.state !== 'moved' && d.state !== 'disconnected' && <Button size="wrap" variant="ghost" onClick={() => setRemove(d)}>Remove</Button>}
             </Row>
+            {d.www && (d.state === 'main' || d.state === 'connected' || d.state === 'not_working') && <Row host={d.www} chip={{ tone: 'neutral', words: `Goes to ${d.host}` }} />}
+            </Fragment>
           )
         })}
       </ul>
@@ -97,7 +102,7 @@ function DomainsInner({ nameHost, slug, rows, livePayments, available, canManage
       <Dialog open={!!confirm} onClose={() => setConfirm(null)} title={`Make ${confirm?.host ?? ''} your main address?`} description="Bags in progress start empty."
         actions={<><Button variant="secondary" data-autofocus onClick={() => setConfirm(null)}>Keep {main?.host ?? nameHost}</Button><Button onClick={() => confirm && makeMain(confirm)}>Make it main</Button></>} />
       <Dialog open={!!remove} onClose={() => setRemove(null)} title={`Remove ${remove?.host ?? ''}?`}
-        actions={<><Button variant="secondary" data-autofocus onClick={() => setRemove(null)}>Keep it</Button><Button variant="destructive" onClick={() => { const d = remove!; setRemove(null); act(d.id, () => removeDomainAction(d.id, slug), 'Removed') }}>Remove {remove?.host ?? ''}</Button></>} />
+        actions={<><Button variant="secondary" data-autofocus onClick={() => setRemove(null)}>Keep it</Button><Button variant="destructive" onClick={() => { const d = remove!; setRemove(null); act(d.id, () => removeDomainAction(d.id), 'Removed') }}>Remove {remove?.host ?? ''}</Button></>} />
     </Section>
   )
 }
@@ -135,6 +140,7 @@ function Connect({ resume, onClose }: { resume?: string; onClose: () => void }) 
   const [found, setFound] = useState<Found[]>([])
   const [checked, setChecked] = useState<string>('Checking every 15 s')
   const [secure, setSecure] = useState(0)
+  const [stray, setStray] = useState<string | null>(null)
   const [pending, start] = useTransition()
   const stopAt = useRef(0) // set when checking starts (never read at render)
   const go = (s: Step) => { setBack(s < step); setStep(s) }
@@ -155,10 +161,11 @@ function Connect({ resume, onClose }: { resume?: string; onClose: () => void }) 
     if (c.state === 'busy') return 'again' as const
     setChecked('Checked just now')
     setFound([c.found.txt, c.found.points, ...(c.found.www === null ? [] : [c.found.www])])
+    setStray(c.stray)
     if (c.state === 'securing') { setSecure((v) => Math.min(0.9, v + 0.35)); if (step !== 3) go(3) }
     if (c.state === 'connected') { setSecure(1); if (step !== 3) go(3); return 'stop' as const }
     if (c.state === 'dispute' || c.state === 'held') setError('In use by another shop')
-    if (c.state === 'paused') setError('Checking paused')
+    if (c.state === 'paused') setChecked('Checking paused')
     return 'again' as const
   }, [claim, step]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -186,6 +193,10 @@ function Connect({ resume, onClose }: { resume?: string; onClose: () => void }) 
   })
   const copy = (text: string, what = 'Copied') => { void navigator.clipboard?.writeText(text).then(() => toast({ text: what }), () => {}) }
   const done = found.filter((f) => f === 'yes').length
+  const checkNow = () => {
+    stopAt.current = Date.now() + POLL_FOR_MS // clock-ok: a click handler, never at render
+    start(async () => { await poll() })
+  }
 
   const footer = step === 1
     ? <><Button variant="secondary" data-autofocus onClick={onClose}>Not now</Button><Button disabled={!shown || pending} onClick={connect}>Continue</Button></>
@@ -223,12 +234,13 @@ function Connect({ resume, onClose }: { resume?: string; onClose: () => void }) 
                 </li>
               ))}
             </ul>
+            {stray && claim && <p className="text-xs text-warn-text">A record points to {stray} · use {claim.records.find((r) => r.type === 'A')?.value}</p>}
             {claim && (
               <div className="flex flex-wrap gap-1.5">
                 {claim.dns && <a className={button({ variant: 'secondary', size: 'wrap' })} href={claim.dns.url} target="_blank" rel="noopener noreferrer">Open {claim.dns.name} DNS</a>}
                 <Button size="wrap" variant="secondary" onClick={() => copy(recordsText(claim.host, claim.records), 'Copied 3 records')}>Copy all</Button>
                 <a className={button({ variant: 'secondary', size: 'wrap' })} href={`https://wa.me/?text=${encodeURIComponent(recordsText(claim.host, claim.records))}`} target="_blank" rel="noopener noreferrer">Send on WhatsApp</a>
-                <Button size="wrap" variant="ghost" disabled={pending} onClick={() => { stopAt.current = Date.now() + POLL_FOR_MS; start(async () => { await poll() }) }}>Check now</Button> // clock-ok: in a handler or timer, never at render
+                <Button size="wrap" variant="ghost" disabled={pending} onClick={checkNow}>Check now</Button>
               </div>
             )}
           </div>
@@ -242,6 +254,7 @@ function Connect({ resume, onClose }: { resume?: string; onClose: () => void }) 
               </>
             ) : (
               <div className="grid justify-items-center gap-2 py-2 text-center">
+                <svg aria-hidden viewBox="0 0 44 44" className="size-10 text-ok-text"><circle cx="22" cy="22" r="19" fill="none" stroke="currentColor" strokeWidth="2.5" pathLength={1} className="animate-draw-circle" /><path d="M14 22.5l5.5 5.5L30.5 17" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" pathLength={1} className="animate-draw-tick" /></svg>
                 <span className="font-mono font-semibold">{claim?.host}</span>
                 <Badge tone="ok">Connected</Badge>
                 <a className={button({ variant: 'secondary', size: 'wrap' })} href={RAZORPAY} target="_blank" rel="noopener noreferrer">Open Razorpay</a>

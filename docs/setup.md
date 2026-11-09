@@ -206,3 +206,13 @@ test with up to 100 accounts) and **after "Connect Google" is built** (the scope
 14. Audience → **Publish app**; Verification Center → Prepare for verification → paste the per-scope reasons (we write
     them) and the video link → Submit. Reply to Google's emails quickly; sensitive scopes take up to ~10 business days.
     Do not publish before this: an unverified production app allows only 100 users for its whole life.
+
+### Own domains (shop addresses D·2) — when you turn them on
+
+Vercel → frata → Settings → Environment Variables, each **Production only** (never Preview: a preview build must not
+add or remove production domains), type **Sensitive** for the token:
+- `VERCEL_API_TOKEN` — a token from Vercel → Account Settings → Tokens, scoped to the team.
+- `VERCEL_PROJECT_ID` — Project → Settings → General → Project ID.
+- `VERCEL_TEAM_ID` — Team → Settings → General → Team ID.
+- `DOMAIN_CAPACITY` — optional: 50 on Hobby (the default), raise it on Pro.
+Until they are set, Settings › Shop address shows no Connect button and the domain check does nothing.

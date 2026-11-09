@@ -27,10 +27,12 @@ export async function addressFacts(tenantId: string): Promise<AddressFacts | nul
   })
 }
 
-/** The shop's main own domain, read inside the caller's transaction (coreShop): null when its frrata name is main. */
+/** The shop's main own domain, read inside the caller's transaction (coreShop): null when its frrata name is main, or
+ * while the main domain is failing. */
 export async function mainDomainIn(tx: Tx, tenantId: string): Promise<string | null> {
   const [r] = await tx.select({ host: shopDomains.host }).from(shopDomains)
-    .where(and(eq(shopDomains.tenantId, tenantId), isNotNull(shopDomains.mainAt), isNull(shopDomains.removedAt))).limit(1)
+    // A main domain that is failing hands the shop back to its name (canonical, links) until it works again.
+    .where(and(eq(shopDomains.tenantId, tenantId), isNotNull(shopDomains.mainAt), isNull(shopDomains.removedAt), isNull(shopDomains.failingSince))).limit(1)
   return r?.host ?? null
 }
 

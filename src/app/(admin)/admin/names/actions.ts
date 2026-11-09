@@ -8,6 +8,7 @@ import { addressAdminError, BLOCKED_KINDS, blockName, domainsNeedingFrrata, rele
 import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import { hostFor } from '@/lib/queries/storefront'
 import { refreshHosts, refreshShop } from '@/lib/storefront/refresh'
+import { checkDomainRow } from '@/lib/domains/own-domains'
 
 // Shop addresses D1·7: Admin › Names. Admin role only (the definers in 0069 check again, need a reason and audit).
 
@@ -73,11 +74,14 @@ export async function settleDomainAction(form: FormData) {
   const p = Settle.safeParse(Object.fromEntries(form))
   if (!p.success) go('error', reasonOr(p.error, addressAdminError('unknown')))
   const d = p.data!
-  const claim = (await domainsNeedingFrrata(staff)).find((x) => x.id === d.id)
+  const waiting = await domainsNeedingFrrata(staff)
+  const claim = waiting.find((x) => x.id === d.id)
   const r = await settleDomain(staff, d.id, d.move === 'yes', d.reason)
   if (!r.ok) go('error', addressAdminError(r.error))
   if (r.ok) for (const t of r.value) refreshShop(t, 'shop')
-  if (claim) refreshHosts(claim.host, ...(claim.withWww ? [`www.${claim.host}`] : []))
+  // Both shops' hosts of that apex stop pointing where they did; a moved claim is checked at once (it queues the add).
+  if (claim) refreshHosts(claim.host, `www.${claim.host}`, ...waiting.filter((x) => x.host.endsWith(claim.host) || claim.host.endsWith(x.host)).map((x) => x.host))
+  if (claim && d.move === 'yes') await checkDomainRow(claim.tenantId, claim.id, { forDialog: false })
   revalidatePath('/admin/names')
   go('ok', d.move === 'yes' ? `${claim?.host ?? 'The domain'} moved to ${claim?.shop ?? 'the shop'}.` : 'Claim refused.')
 }

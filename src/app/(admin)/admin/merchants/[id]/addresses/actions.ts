@@ -63,11 +63,13 @@ export async function disconnectDomainAction(form: FormData) {
   const p = Disconnect.safeParse(Object.fromEntries(form))
   if (!p.success) fail(tid, addressAdminError('reason'))
   const d = p.data!
-  const row = (await merchantDomains(staff, d.tenantId)).find((x) => x.id === d.id)
   const r = await disconnectDomain(staff, d.id, d.reason)
   if (!r.ok) fail(tid, addressAdminError(r.error))
+  // The shop is the one the definer names (never the form's), and the host is read back from that shop's rows.
+  const shop = r.ok ? r.value : d.tenantId
+  const row = (await merchantDomains(staff, shop)).find((x) => x.id === d.id)
   if (row) refreshHosts(row.host, ...(row.withWww ? [`www.${row.host}`] : []))
-  refreshShop(d.tenantId, 'shop')
+  refreshShop(shop, 'shop')
   revalidatePath(back(tid))
   redirect(`${back(tid)}?ok=${encodeURIComponent(`${row?.host ?? 'The domain'} disconnected.`)}`)
 }

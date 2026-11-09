@@ -7,7 +7,7 @@ import { withTenant } from '@/lib/db/tenant'
 import { caaBlocks, certificateLive, nameServers, pointsAt, txtAtSource, txtValues, type Seen } from '@/lib/connectors/dns'
 import { projectDomain, projectRecords, type ProjectRecords } from '@/lib/connectors/vercel'
 import { DOMAIN_CAPACITY, isOwnDomainsConfigured } from '@/lib/env'
-import { refreshHosts } from '@/lib/storefront/refresh'
+import { refreshHosts, refreshShop } from '@/lib/storefront/refresh'
 import { CONSOLE_HOST, SHOP_DOMAIN } from '@/lib/public-env'
 import { enqueue } from '@/lib/outbox'
 import { drainSoon } from '@/lib/outbox/drain'
@@ -115,6 +115,8 @@ async function check(tenantId: string, id: string, opts: { forDialog: boolean },
     return r
   })
   if (out?.add_now) drainSoon()
+  // A main domain's health decides the shop's main address (mainDomainIn): its pages follow at once.
+  if (lease.main) refreshShop(tenantId, 'shop')
   // Proved just now (a move included): the host's cached lookup must stop serving whoever held it (security L4).
   if (!lease.proved && both?.both.includes(value)) refreshHosts(lease.host, ...(lease.with_www ? [`www.${lease.apex}`] : []))
   const txt: Seen = lease.proved ? 'yes' : both?.both.includes(value) ? 'yes' : chip

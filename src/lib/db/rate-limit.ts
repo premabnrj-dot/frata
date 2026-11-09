@@ -41,6 +41,9 @@ export const LIMITS = {
   // Own domains D2·10 (security review 2026-11-09): claims per member and shop; the dialog's 15 s check per member,
   // shop and IP bucket, and one budget for all shops (Vercel reads and DoH are shared); all fail closed.
   domainClaimMember: { action: 'domain_claim:member', max: 20, windowSeconds: 3600 },
+  domainClaimShop: { action: 'domain_claim:shop', max: 20, windowSeconds: 3600 },
+  domainClaimIp: { action: 'domain_claim:ip', max: 30, windowSeconds: 3600 },
+  domainClaimAll: { action: 'domain_claim:all', max: 300, windowSeconds: 3600 },
   domainCheckMember: { action: 'domain_check:member', max: 120, windowSeconds: 600 },
   domainCheckShop: { action: 'domain_check:shop', max: 160, windowSeconds: 600 },
   domainCheckIp: { action: 'domain_check:ip', max: 200, windowSeconds: 600 },

@@ -568,7 +568,7 @@ do $$ declare a uuid; r record; begin
   select d.id into a from shop_domains d where d.host = 'proof-park.in';
   if not app_parked_record(a, 'no') then raise exception 'FAIL: 3 days away must come off'; end if;
   select * into r from app_domain_remove_due(a);
-  if r.host <> 'proof-park.in' or r.www <> 'www.proof-park.in' or r.keep then raise exception 'FAIL: remove_due (% % %)', r.host, r.www, r.keep; end if;
+  if r.host <> 'proof-park.in' or r.www <> 'www.proof-park.in' or r.keep_host or r.keep_www then raise exception 'FAIL: remove_due (% % % %)', r.host, r.www, r.keep_host, r.keep_www; end if;
   perform app_domain_unparked(a);
   if (select parked_at from shop_domains where id = a) is not null then raise exception 'FAIL: unparked'; end if;
 end $$;

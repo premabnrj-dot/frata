@@ -9,12 +9,12 @@ import { projectRecords } from '@/lib/connectors/vercel'
 import { sql } from 'drizzle-orm'
 import { asMember } from '@/lib/auth/as-member'
 import type { Tx } from '@/lib/db'
-import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
+import { LIMITS, withinLimit, type Limit } from '@/lib/db/rate-limit'
 import { checkDomainRow, claimDomain, recordsFor, type Check, type ClaimError, type Record3 } from '@/lib/domains/own-domains'
 import { clientIp, ipBucket } from '@/lib/http/client-ip'
 import { errName } from '@/lib/log'
 import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
-import { domainClaimFor, shopDomainRows } from '@/lib/queries/addresses'
+import { addressFacts, domainClaimFor, shopDomainRows } from '@/lib/queries/addresses'
 import { refreshHosts, refreshShop } from '@/lib/storefront/refresh'
 import { checkDomain } from '@/domains/addresses/domains'
 
@@ -46,11 +46,21 @@ async function hostsOf(tenantId: string, slug: string | null): Promise<string[]>
   const rows = await shopDomainRows(tenantId).catch(() => [])
   return [...(slug ? [shopHost(slug)] : []), ...rows.flatMap((r) => [r.host, ...(r.withWww ? [`www.${r.host}`] : [])])]
 }
-async function refreshAll(who: Who, slug: string | null) {
+/** The shop's own name, read on the server (never taken from the browser: security review D2·10 L1). */
+const slugOf = async (tenantId: string) => (await addressFacts(tenantId).catch(() => null))?.slug ?? null
+async function refreshAll(who: Who) {
   refreshShop(who.tenantId, 'shop')
-  refreshHosts(...(await hostsOf(who.tenantId, slug)))
+  refreshHosts(...(await hostsOf(who.tenantId, await slugOf(who.tenantId))))
   revalidatePath('/console/settings/address')
 }
+
+/** Every limit must pass, each failing closed. */
+async function within(limits: [Limit, string][]): Promise<boolean> {
+  const now = new Date()
+  for (const [limit, subject] of limits) if (!(await withinLimit(limit, subject, now, true))) return false
+  return true
+}
+const checkLimits = async (who: Who) => within([[LIMITS.domainCheckMember, who.userId], [LIMITS.domainCheckShop, who.tenantId], [LIMITS.domainCheckIp, ipBucket(await clientIp())], [LIMITS.domainCheckAll, 'all']])
 
 export type Connected = { ok: true; id: string; host: string; www: string | null; records: Record3[]; dns: { name: string; url: string } | null }
 
@@ -60,7 +70,7 @@ export async function connectDomainAction(raw: string): Promise<Connected | { ok
   if (!who) return { ok: false, error: ERR_WORDS.support }
   const input = z.string().max(300).safeParse(raw)
   if (!input.success) return { ok: false, error: ERR_WORDS.shape }
-  if (!(await withinLimit(LIMITS.domainClaimMember, who.userId, new Date(), true))) return { ok: false, error: ERR_WORDS.busy }
+  if (!(await within([[LIMITS.domainClaimMember, who.userId], [LIMITS.domainClaimShop, who.tenantId], [LIMITS.domainClaimIp, ipBucket(await clientIp())], [LIMITS.domainClaimAll, 'all']]))) return { ok: false, error: ERR_WORDS.busy }
   try {
     const r = await claimDomain(who.tenantId, who.userId, input.data)
     if (!r.ok) return { ok: false, error: ERR_WORDS[r.error] }
@@ -76,6 +86,7 @@ export async function connectDomainAction(raw: string): Promise<Connected | { ok
 export async function domainRecordsAction(id: string): Promise<Connected | { ok: false; error: string }> {
   const who = await owner()
   if (!who || !Id.safeParse(id).success) return { ok: false, error: ERR_WORDS.support }
+  if (!(await checkLimits(who))) return { ok: false, error: ERR_WORDS.busy }
   try {
     const c = await domainClaimFor(who.tenantId, id)
     if (!c) return { ok: false, error: ERR_WORDS.unknown }
@@ -94,11 +105,7 @@ export async function domainRecordsAction(id: string): Promise<Connected | { ok:
 export async function checkDomainAction(id: string): Promise<{ ok: true; check: Check } | { ok: false; error: string }> {
   const who = await owner()
   if (!who || !Id.safeParse(id).success) return { ok: false, error: ERR_WORDS.support }
-  const ip = ipBucket(await clientIp())
-  const now = new Date()
-  for (const [limit, subject] of [[LIMITS.domainCheckMember, who.userId], [LIMITS.domainCheckShop, who.tenantId], [LIMITS.domainCheckIp, ip], [LIMITS.domainCheckAll, 'all']] as const) {
-    if (!(await withinLimit(limit, subject, now, true))) return { ok: false, error: ERR_WORDS.busy }
-  }
+  if (!(await checkLimits(who))) return { ok: false, error: ERR_WORDS.busy }
   const check = await checkDomainRow(who.tenantId, id, { forDialog: true })
   if (check.state === 'connected') revalidatePath('/console/settings/address')
   return { ok: true, check }
@@ -122,24 +129,25 @@ async function write(action: string, target: string | undefined, run: (tx: Tx, w
     })
     return r.ok ? { ok: true, who: r.value } : { ok: false, error: r.error }
   } catch (err) {
-    const msg = (err as { cause?: { message?: string } })?.cause?.message ?? (err instanceof Error ? err.message : '')
-    if (msg === 'support') return { ok: false, error: ERR_WORDS.support }
-    const code = WRITE_CODES.find((c) => msg.includes(c))
+    if (err instanceof Error && err.message === 'support') return { ok: false, error: ERR_WORDS.support }
+    // Our definers raise exactly a code (P0001); anything else is unknown (never matched inside a query's text).
+    const cause = (err as { cause?: { code?: string; message?: string } })?.cause
+    const code = cause?.code === 'P0001' ? WRITE_CODES.find((c) => cause.message === c) : undefined
     if (!code) console.error(`[${action}]`, errName(err))
     return { ok: false, error: WRITE_WORDS[code ?? 'unknown']! }
   }
 }
 
-export async function makeMainAction(id: string, slug: string | null): Promise<Done> {
+export async function makeMainAction(id: string): Promise<Done> {
   if (!Id.safeParse(id).success) return { ok: false, error: WRITE_WORDS.unknown! }
   const r = await write('domain.made_main', id, (tx, w) => tx.execute(sql`select app_make_domain_main(${w.tenantId}::uuid, ${w.userId}::uuid, ${id}::uuid)`))
-  if (r.ok && r.who) await refreshAll(r.who, slug)
+  if (r.ok && r.who) await refreshAll(r.who)
   return r.ok ? { ok: true } : r
 }
 
-export async function undoMainAction(slug: string | null): Promise<Done> {
+export async function undoMainAction(): Promise<Done> {
   const r = await write('domain.main_back_to_name', undefined, (tx, w) => tx.execute(sql`select app_unmake_domain_main(${w.tenantId}::uuid, ${w.userId}::uuid)`))
-  if (r.ok && r.who) await refreshAll(r.who, slug)
+  if (r.ok && r.who) await refreshAll(r.who)
   return r.ok ? { ok: true } : r
 }
 
@@ -150,10 +158,10 @@ export async function razorpayOkAction(id: string, ok: boolean): Promise<Done> {
   return r.ok ? { ok: true } : r
 }
 
-export async function removeDomainAction(id: string, slug: string | null): Promise<Done> {
+export async function removeDomainAction(id: string): Promise<Done> {
   const who = await owner()
   if (!who || !Id.safeParse(id).success) return { ok: false, error: ERR_WORDS.support }
-  const hosts = await hostsOf(who.tenantId, slug)
+  const hosts = await hostsOf(who.tenantId, await slugOf(who.tenantId))
   const r = await write('domain.removed', id, (tx, w) => tx.execute(sql`select app_remove_domain(${w.tenantId}::uuid, ${w.userId}::uuid, ${id}::uuid)`))
   if (r.ok) { refreshShop(who.tenantId, 'shop'); refreshHosts(...hosts); revalidatePath('/console/settings/address') }
   return r.ok ? { ok: true } : r
