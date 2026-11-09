@@ -2221,4 +2221,87 @@ do $$ begin
   then raise exception 'FAIL: an API role runs the Mux definer'; end if;
 end $$;
 
-\echo 'tenancy proof — all 61 checks passed'
+-- 62. EkCode (0087): no role reads the vault; every step needs a server-made flow handle and a fresh proof; a grant
+-- redeems once, only at its own shop and host with the right challenge; a save token works once at its own shop; an
+-- issue reply never says whether an account exists; the shop's customers, sessions and consents are its own; an order
+-- cannot point at another shop's customer; staff get counts, never a name, phone or address.
+begin; set local role frata_app;
+do $$ declare v record; g record; ph text := 'p1:' || repeat('a', 64); ph2 text := 'p1:' || repeat('b', 64);
+  ch text := 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM'; st text := repeat('s', 43);
+begin
+  begin perform 1 from ekcode_accounts; raise exception 'FAIL: the app reads EkCode accounts'; exception when insufficient_privilege then null; end;
+  begin perform 1 from ekcode_codes; raise exception 'FAIL: the app reads EkCode codes'; exception when insufficient_privilege then null; end;
+  begin insert into ekcode_flows (handle_digest, tenant_id, host, state, challenge, arm) values (repeat('9', 64), '11111111-1111-1111-1111-111111111111', 'x.test', st, ch, 'shown');
+    raise exception 'FAIL: the app writes a flow directly'; exception when insufficient_privilege then null; end;
+  if not app_ekcode_start_flow('11111111-1111-1111-1111-111111111111', 'proof-a.frata.test', repeat('a', 64), st, ch, 'shown') then raise exception 'FAIL: a flow did not start'; end if;
+  perform app_ekcode_start_flow('22222222-2222-2222-2222-222222222222', 'proof-b.frata.test', repeat('b', 64), st, ch, 'shown');
+  if (select shop_name from app_ekcode_flow_view(repeat('a', 64))) is distinct from 'Proof A' then raise exception 'FAIL: the flow showed another shop'; end if;
+  -- A first code: ok, no proof of work; the same reply for a number with or without an account (no account yet here).
+  select * into v from app_ekcode_issue_code(repeat('a', 64), array[ph], 'cdcdcdcd-0000-0000-0000-00000000000a', 'p1:' || repeat('c', 64), 'p1:' || repeat('1', 64), 'p1:' || repeat('2', 64), 0::smallint);
+  if v.verdict <> 'ok' then raise exception 'FAIL: a first code was refused (%)', v.verdict; end if;
+  -- Another flow's handle cannot try this code.
+  if (select ok from app_ekcode_verify(repeat('b', 64), 'cdcdcdcd-0000-0000-0000-00000000000a', array['p1:' || repeat('c', 64)], repeat('e', 64))) then raise exception 'FAIL: another flow verified a code'; end if;
+  select * into v from app_ekcode_verify(repeat('a', 64), 'cdcdcdcd-0000-0000-0000-00000000000a', array['p1:' || repeat('d', 64)], repeat('e', 64));
+  if v.ok or v.tries_left <> 4 then raise exception 'FAIL: a wrong code verified or did not count'; end if;
+  select * into v from app_ekcode_verify(repeat('a', 64), 'cdcdcdcd-0000-0000-0000-00000000000a', array['p1:' || repeat('c', 64)], repeat('e', 64));
+  if not v.ok or v.has_account then raise exception 'FAIL: the right code did not verify'; end if;
+  -- The proof works only with its own flow.
+  if app_ekcode_create_account(repeat('b', 64), repeat('e', 64), 'abababab-0000-0000-0000-00000000000a', 'sealed-phone', 'sealed-name', 'ekcode-network@1') then raise exception 'FAIL: a proof used from another flow'; end if;
+  if not app_ekcode_create_account(repeat('a', 64), repeat('e', 64), 'abababab-0000-0000-0000-00000000000a', 'sealed-phone', 'sealed-name', 'ekcode-network@1') then raise exception 'FAIL: the account was not made'; end if;
+  if exists (select 1 from app_ekcode_grant(repeat('b', 64), repeat('e', 64), null, repeat('f', 64))) then raise exception 'FAIL: a grant from another flow'; end if;
+  select * into g from app_ekcode_grant(repeat('a', 64), repeat('e', 64), null, repeat('f', 64));
+  if g.host is distinct from 'proof-a.frata.test' or g.state is distinct from st then raise exception 'FAIL: the grant did not return to its own shop'; end if;
+  if exists (select 1 from app_ekcode_grant(repeat('a', 64), repeat('e', 64), null, repeat('7', 64))) then raise exception 'FAIL: a proof made two grants'; end if;
+  -- Redeem: only shop A, its host, the right challenge; once.
+  if exists (select 1 from app_ekcode_redeem(repeat('f', 64), ch, '22222222-2222-2222-2222-222222222222', 'proof-a.frata.test', null)) then raise exception 'FAIL: another shop redeemed the grant'; end if;
+  if exists (select 1 from app_ekcode_redeem(repeat('f', 64), ch, '11111111-1111-1111-1111-111111111111', 'evil.test', null)) then raise exception 'FAIL: another host redeemed the grant'; end if;
+  if exists (select 1 from app_ekcode_redeem(repeat('f', 64), repeat('x', 43), '11111111-1111-1111-1111-111111111111', 'proof-a.frata.test', null)) then raise exception 'FAIL: a wrong verifier redeemed the grant'; end if;
+  select * into v from app_ekcode_redeem(repeat('f', 64), ch, '11111111-1111-1111-1111-111111111111', 'proof-a.frata.test', repeat('5', 64));
+  if v.pairwise is null or v.name_sealed <> 'sealed-name' or v.address_id is not null then raise exception 'FAIL: the right redeem failed'; end if;
+  if exists (select 1 from app_ekcode_redeem(repeat('f', 64), ch, '11111111-1111-1111-1111-111111111111', 'proof-a.frata.test', null)) then raise exception 'FAIL: a grant redeemed twice'; end if;
+  if app_ekcode_save_address(repeat('5', 64), '22222222-2222-2222-2222-222222222222', 'efefefef-0000-0000-0000-00000000000a', 'Home', 'sealed') then raise exception 'FAIL: another shop saved an address'; end if;
+  if not app_ekcode_save_address(repeat('5', 64), '11111111-1111-1111-1111-111111111111', 'efefefef-0000-0000-0000-00000000000a', 'Home', 'sealed') then raise exception 'FAIL: the save did not work'; end if;
+  if app_ekcode_save_address(repeat('5', 64), '11111111-1111-1111-1111-111111111111', 'efefefef-0000-0000-0000-00000000000b', 'Office', 'sealed') then raise exception 'FAIL: a save token worked twice'; end if;
+end $$;
+commit;
+-- A second shopper's address can never ride on the first one's grant.
+begin; set local role frata_app;
+do $$ declare v record; g record; ph2 text := 'p1:' || repeat('b', 64); ch text := 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM'; st text := repeat('s', 43); begin
+  perform app_ekcode_start_flow('11111111-1111-1111-1111-111111111111', 'proof-a.frata.test', repeat('c', 64), st, ch, 'shown');
+  select * into v from app_ekcode_issue_code(repeat('c', 64), array[ph2], 'cdcdcdcd-0000-0000-0000-00000000000b', 'p1:' || repeat('c', 64), 'p1:' || repeat('3', 64), 'p1:' || repeat('4', 64), 0::smallint);
+  select * into v from app_ekcode_verify(repeat('c', 64), 'cdcdcdcd-0000-0000-0000-00000000000b', array['p1:' || repeat('c', 64)], repeat('8', 64));
+  perform app_ekcode_create_account(repeat('c', 64), repeat('8', 64), 'abababab-0000-0000-0000-00000000000b', 'p2', 'n2', 'ekcode-network@1');
+  if exists (select 1 from app_ekcode_grant(repeat('c', 64), repeat('8', 64), 'efefefef-0000-0000-0000-00000000000a', repeat('6', 64))) then raise exception 'FAIL: a grant carried another shopper''s address'; end if;
+end $$;
+rollback;
+-- The shop's own shoppers; an order cannot point at another shop's customer; staff read nothing of it.
+insert into shop_customers (id, tenant_id, phone, name) values ('cececece-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', '9845012345', 'B shopper');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  if exists (select 1 from shop_customers) or exists (select 1 from customer_sessions) or exists (select 1 from customer_consents) then raise exception 'FAIL: A sees B shoppers'; end if;
+  begin insert into customer_sessions (tenant_id, customer_id, token_digest, expires_at) values ('11111111-1111-1111-1111-111111111111', 'cececece-0000-0000-0000-00000000000b', repeat('t', 64), now() + interval '1 day');
+    raise exception 'FAIL: A opened a session for B''s shopper'; exception when foreign_key_violation then null; end;
+  begin update orders set customer_id = 'cececece-0000-0000-0000-00000000000b' where tenant_id = '11111111-1111-1111-1111-111111111111';
+    if found then raise exception 'FAIL: an order pointed at another shop''s customer'; end if; exception when foreign_key_violation then null; end;
+end $$;
+rollback;
+do $$ declare v record; begin
+  if exists (select 1 from unnest(array['frata_app', 'frata_admin', 'anon', 'authenticated', 'service_role']) r, pg_tables t
+             where t.schemaname = 'public' and t.tablename like 'ekcode\_%' and (has_table_privilege(r, t.tablename, 'select') or has_table_privilege(r, t.tablename, 'insert')
+               or has_table_privilege(r, t.tablename, 'update') or has_table_privilege(r, t.tablename, 'delete')))
+  then raise exception 'FAIL: a role holds a privilege on an EkCode table'; end if;
+  if exists (select 1 from unnest(array['frata_admin', 'anon', 'authenticated', 'service_role']) r, unnest(array['shop_customers', 'customer_sessions', 'customer_consents']) t where has_table_privilege(r, t, 'select'))
+  then raise exception 'FAIL: another role reads a shop''s shoppers'; end if;
+  -- Every EkCode definer: security definer, search_path pinned, never PUBLIC; app ones never to frata_admin, admin ones never to frata_app.
+  for v in select p.oid, p.proname, p.prosecdef, p.proconfig from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+           where n.nspname = 'public' and (p.proname like 'app\_ekcode\_%' or p.proname like 'app\_admin\_ekcode\_%') loop
+    if not v.prosecdef or not ('search_path=""' = any(v.proconfig)) then raise exception 'FAIL: % is not a pinned definer', v.proname; end if;
+    if has_function_privilege('public', v.oid, 'execute') or has_function_privilege('anon', v.oid, 'execute') or has_function_privilege('authenticated', v.oid, 'execute')
+    then raise exception 'FAIL: % runs for an API role', v.proname; end if;
+    if v.proname like 'app\_admin\_%' and has_function_privilege('frata_app', v.oid, 'execute') then raise exception 'FAIL: the app runs %', v.proname; end if;
+    if v.proname like 'app\_ekcode\_%' and has_function_privilege('frata_admin', v.oid, 'execute') then raise exception 'FAIL: staff run %', v.proname; end if;
+  end loop;
+end $$;
+
+\echo 'tenancy proof — all 62 checks passed'

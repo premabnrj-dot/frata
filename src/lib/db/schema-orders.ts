@@ -80,6 +80,8 @@ export const orders = pgTable('orders', {
   switchedToCodAt: timestamp('switched_to_cod_at', { withTimezone: true }),
   /** What the shopper was shown and did (hypotheses in frata-unit-economics): totals shown, first card tapped, attribution. */
   checkout: jsonb('checkout').$type<Record<string, unknown>>(),
+  /** The shop's customer, set only when this order's phone is that customer's (EkCode P1; composite FK in 0085). */
+  customerId: uuid('customer_id'),
   erasedAt: timestamp('erased_at', { withTimezone: true }),
   placedAt: timestamp('placed_at', { withTimezone: true }).notNull(),
   confirmedAt: timestamp('confirmed_at', { withTimezone: true }),

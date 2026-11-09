@@ -20,7 +20,7 @@ export type AppRow = {
 
 const ICON: Record<ModuleKey, IconName> = {
   communication: 'messages', rto_shield: 'risk', ship: 'shipped', true_profit: 'profit', reviews: 'reviews',
-  marketplace_export: 'stock', size_fit: 'size', cart_flows: 'orders', gst: 'tax',
+  marketplace_export: 'stock', size_fit: 'size', cart_flows: 'orders', gst: 'tax', ekcode: 'people',
 }
 const TONE = { ok: 'ok', info: 'info', neutral: 'neutral', warn: 'warn' } as const
 
