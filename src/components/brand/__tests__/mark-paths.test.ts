@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { HEX, STITCH, THREAD, WORD, threadPath } from '../mark-paths'
 
-const css = readFileSync('src/app/globals.css', 'utf8')
+const css = readFileSync('src/app/base.css', 'utf8')
 const light = css.slice(css.indexOf(':root {'), css.indexOf('}', css.indexOf(':root {')))
 const token = (name: string) => light.match(new RegExp(`--${name}:\\s*(#[0-9A-Fa-f]{6})`))?.[1]?.toUpperCase()
 

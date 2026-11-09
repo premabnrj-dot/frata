@@ -1,0 +1,11 @@
+/* A merchant's shop pages (Signal S2-0, speed review 2026-11-09): Tailwind from the shop's own sources only, so the
+   console's classes never ship to a shopper. Loaded by the root layout; every other page loads globals.css after it
+   (a superset, so its rules win in the right order). A class a shop page uses from elsewhere must be listed here. */
+@import "tailwindcss" source(none);
+@source "../components/storefront";
+@source "../components/modules";
+@source "../components/icons";
+@source "./s";
+@source "../domains/themes";
+@source "../lib/themes";
+@import "./base.css";

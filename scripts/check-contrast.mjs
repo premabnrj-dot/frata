@@ -4,7 +4,7 @@
 //
 // Fails: a colour token pair below WCAG 2.2 AA, in light OR dark.
 //
-// Reads the token blocks of src/app/globals.css (`:root {` and
+// Reads the token blocks of src/app/base.css (`:root {` and
 // `:root[data-theme="dark"] {`), resolves var(), and checks:
 //   text      ≥ 4.5:1 — every X / X-foreground and X / X-text pair, body,
 //                        secondary text on every surface, the reversed mark;
@@ -105,7 +105,7 @@ export function check(css) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const file = process.argv[2] ?? 'src/app/globals.css'
+  const file = process.argv[2] ?? 'src/app/base.css'
   if (!existsSync(file)) { console.error(`check:contrast — no such file: ${file}`); process.exit(2) }
   const problems = check(readFileSync(file, 'utf8'))
   if (problems.length) { console.error(`check:contrast — ${file}\n  ${problems.join('\n  ')}`); process.exit(1) }

@@ -1,3 +1,4 @@
+import './globals.css' // the app sheet (Signal S2-0)
 import Link from 'next/link'
 import { ConsolePreview } from '@/components/brand/console-preview'
 import { Journey } from '@/components/brand/journey'

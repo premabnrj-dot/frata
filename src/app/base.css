@@ -1,0 +1,555 @@
+/* The shared half of both stylesheets (Signal S2-0): tokens, @theme, @utility and every rule. Imported by
+   globals.css (the app: console, admin, public pages, previews) and shop.css (a merchant's shop pages). */
+
+/* =============================================================================
+   FRRATA TOKENS — the ONLY file where a colour is written as a hex.
+   scripts/check-hex.mjs fails a hex or a raw palette class anywhere else.
+
+   Console: neutral, dense, numbers first. The fashion lives in the storefront,
+   which gets its own theme tokens per merchant (frata-design-language).
+
+   --primary is INTERACTION (buttons, focus). --brand is rani, the frrata mark
+   (brand spec 2026-11-07): never a button fill, a number or a status. It shows
+   as a TINGE: --thread (the 2 px line under a primary button, the current tab,
+   the loading bar, a link's underline) and one detail per icon (--icon-accent,
+   set only inside [data-tinge] frames). Rani as text is --brand-text only.
+   Borders, not shadows: only floating things (popover, menu) get a shadow.
+   Every text pair below is ≥ 4.5:1 on its background; field edges, focus and
+   status marks are ≥ 3:1 — in light and in dark. scripts/check-contrast.mjs
+   reads this file and holds every pair (frata-design-language § UX foundation).
+   ========================================================================== */
+
+:root {
+  --background: #FAFAF9;
+  --foreground: #1C1917;
+  --card: #FFFFFF;
+  --card-foreground: #1C1917;
+  --popover: #FFFFFF;
+  --popover-foreground: #1C1917;
+  --primary: #1C1917;            /* ink */
+  --primary-foreground: #FFFFFF;
+  --secondary: #F2F1EF;
+  --secondary-foreground: #1C1917;
+  --muted: #F2F1EF;
+  --muted-foreground: #5F5A55;
+  --accent: #F2F1EF;             /* neutral hover surface, NOT the brand */
+  --accent-foreground: #1C1917;
+  --destructive: #C62A2F;
+  --destructive-foreground: #FFFFFF;
+  --border: #DEDBD7;
+  --input: #8C857F;              /* FIELD EDGE: fields, selects, checkboxes, switches, secondary buttons (3.64:1) */
+  --ring: #1C1917;
+  --scrim: color-mix(in srgb, var(--foreground) 45%, transparent); /* behind a dialog: the ink at 45%, in both themes */
+  --brand: #D61F69;              /* rani — the mark and brand moments; never a button fill, a number or a status */
+  --brand-foreground: #FFFFFF;
+  --brand-text: #A8124F;         /* rani as words (rani deep): the only way the brand colour is text */
+  --brand-on-ink: #FF4F93;       /* rani on an ink surface (the monogram's thread, an icon's tinge on ink) */
+  --thread: #D61F69;             /* THE THREAD: a 2 px line, never text (≥ 3:1 on primary and card) */
+  /* Brand-surface companions (sign-in, the website, empty-state drawings): never on a control, never text. */
+  --haldi: #F2B233;
+  --neel: #23307A;
+
+  /* Status pairs: background, then the text that sits on it. */
+  --ok: #E9F6EC;      --ok-text: #1E7B52;
+  --warn: #FFF5C2;    --warn-text: #8A5000;
+  --danger: #FFEFEF;  --danger-text: #C02A2F;
+  --info: #EDF2FE;    --info-text: #3451B2;
+  --neutral: #F2F1EF; --neutral-text: #5F5A55;
+  /* Status MARKS: the solid dot/square beside a word, a progress fill, later a chart series. Never text. */
+  --ok-mark: #1E7B52; --warn-mark: #A86400; --danger-mark: #C02A2F; --info-mark: #3451B2;
+  /* The support-mode banner (ADR-0007) and nothing else. */
+  --support: #8A5000; --support-foreground: #FFFFFF;
+  /* ILLUSTRATION — pictograms and spot illustrations only (frata-design-language § Graphic language).
+     Ink line on paper, one warm fill, two accents. Never on a control, never rani, never the only sign of anything. */
+  --illo-line: #1C1917; --illo-paper: #FFFFFF; --illo-fill: #EFEBE5;
+  --illo-haldi: var(--haldi); --illo-haldi-soft: #FBEFD2; --illo-indigo-soft: #DCE3F5;
+
+  --radius: 0.375rem;
+}
+
+/* DARK — written and gated, NOT switched on (owner call 2, 2026-11-07): nothing sets data-theme yet. */
+:root[data-theme="dark"] {
+  --scrim: color-mix(in srgb, #000 60%, transparent); /* dark: the ink is light, so the veil is black */
+  --background: #141211;
+  --foreground: #EDEAE6;
+  --card: #1C1A18;
+  --card-foreground: #EDEAE6;
+  --popover: #1C1A18;
+  --popover-foreground: #EDEAE6;
+  --primary: #EDEAE6;
+  --primary-foreground: #141211;
+  --secondary: #262320;
+  --secondary-foreground: #EDEAE6;
+  --muted: #262320;
+  --muted-foreground: #A9A29B;
+  --accent: #262320;
+  --accent-foreground: #EDEAE6;
+  --destructive: #F59A9C;
+  --destructive-foreground: #141211;
+  --border: #34302C;
+  --input: #6E6760;
+  --ring: #EDEAE6;
+  --brand: #FF4F93;
+  --brand-foreground: #141211;
+  --brand-text: #FF7DAE;
+  --brand-on-ink: #A8124F;       /* dark: the "ink" surface is light */
+  --thread: #D61F69;
+  --haldi: #D9A440;
+  --neel: #A9B5F4;
+  --ok: #0F2A1C;      --ok-text: #7FD3A6;
+  --warn: #33290A;    --warn-text: #F2C14E;
+  --danger: #3A1416;  --danger-text: #F59A9C;
+  --info: #16203D;    --info-text: #A3B6F5;
+  --neutral: #262320; --neutral-text: #A9A29B;
+  --ok-mark: #7FD3A6; --warn-mark: #F2C14E; --danger-mark: #F59A9C; --info-mark: #A3B6F5;
+  --support: #8A5000; --support-foreground: #FFFFFF;
+  --illo-line: #EDEAE6; --illo-paper: #1C1A18; --illo-fill: #2A2623;
+  --illo-haldi: var(--haldi); --illo-haldi-soft: #3A3018; --illo-indigo-soft: #222B44;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-text: var(--brand-text);
+  --color-brand-on-ink: var(--brand-on-ink);
+  --color-thread: var(--thread);
+  --color-haldi: var(--haldi);
+  --color-neel: var(--neel);
+  --color-ok: var(--ok);
+  --color-ok-text: var(--ok-text);
+  --color-warn: var(--warn);
+  --color-warn-text: var(--warn-text);
+  --color-danger: var(--danger);
+  --color-danger-text: var(--danger-text);
+  --color-info: var(--info);
+  --color-info-text: var(--info-text);
+  --color-neutral: var(--neutral);
+  --color-neutral-text: var(--neutral-text);
+  --color-ok-mark: var(--ok-mark);
+  --color-warn-mark: var(--warn-mark);
+  --color-danger-mark: var(--danger-mark);
+  --color-info-mark: var(--info-mark);
+  --color-support: var(--support);
+  --color-support-foreground: var(--support-foreground);
+  --color-illo-line: var(--illo-line);
+  --color-illo-paper: var(--illo-paper);
+  --color-illo-fill: var(--illo-fill);
+  --color-illo-haldi: var(--illo-haldi);
+  --color-illo-haldi-soft: var(--illo-haldi-soft);
+  --color-illo-indigo-soft: var(--illo-indigo-soft);
+
+  /* The Section title (every card, Console and Admin): text-section font-semibold. Never --text-card (collides with --color-card). */
+  --text-section: 15px;
+  --text-section--line-height: 1.4;
+
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains);
+  --font-display: var(--font-display-stack);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+
+  /* Motion. Tailwind v4 reads duration-* from --transition-duration-*, not --duration-*. */
+  --transition-duration-fast: 120ms;
+  --transition-duration-base: 200ms;
+  --transition-duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-entrance: cubic-bezier(0, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.3, 0, 1, 1);
+  /* Springs (owner-approved 2026-11-08, frata-design-language § Motion system): only for what travels across the
+     screen. --ease-spring overshoots about 4% (phone sheets, drawers, the bag); --ease-snap settles without one
+     (switches, a count that hops). Never on a desktop dialog, a number, or Admin. linear(): Baseline 2026-06. */
+  --ease-spring: linear(0, 0.13 6%, 0.5 16%, 0.86 28%, 1.02 40%, 1.04 50%, 1.01 66%, 1);
+  --ease-snap: linear(0, 0.16 6%, 0.55 16%, 0.88 30%, 0.98 46%, 1);
+
+  /* Borders, not shadows. */
+  --shadow-xs: 0 0 #0000;
+  --shadow-sm: 0 0 #0000;
+  --shadow: 0 0 #0000;
+  --shadow-md: 0 0 #0000;
+  /* The two named shadows that exist: the storefront's fixed pay bar, and the swatch crop's ring and dimmed surround. */
+  --shadow-store-bar: 0 -6px 14px rgb(31 26 23 / 0.06);
+  --shadow-crop: 0 0 0 1px rgb(0 0 0 / 0.5), 0 0 0 999px rgb(0 0 0 / 0.35);
+}
+
+/* THE BLOCK PRINT (brand spec, chapter 5): a repeat tile from the mark's quarter circle (the r's arm) and circle
+   (the a's bowl), like a Bagru block. Brand surfaces only (sign-in, brand empty states), at 5%, never behind text
+   you work with. A mask over a token, so it follows the theme. */
+@utility block-print {
+  position: relative; isolation: isolate;
+  &::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0.06; background: var(--block-print-ink, var(--neel));
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48' fill='none' stroke='black' stroke-width='3'%3E%3Ccircle cx='24' cy='24' r='8'/%3E%3Cpath d='M0 24a24 24 0 0 1 24-24M24 48a24 24 0 0 1 24-24'/%3E%3C/svg%3E") repeat 0 0 / 48px 48px; }
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  html { @apply font-sans; }
+  body { @apply bg-background text-foreground antialiased; }
+  /* Order numbers and figures: no ligatures (JetBrains Mono joins -- and ->). */
+  [data-shell] :is(.font-mono, code, kbd) { font-variant-ligatures: none; }
+
+  /* FOCUS in Console and Admin ([data-shell], both layouts): 2 px solid, 2 px gap; paper-coloured on ink.
+     Scoped so the storefront keeps its own (frata-design-language § UX foundation rule 5). */
+  /* The shell's stack: Inter, then Noto for Indic names (src/components/shell/fonts.ts). */
+  [data-shell] { --font-shell: var(--font-inter), var(--font-noto-deva), var(--font-noto-beng), var(--font-noto-guru), var(--font-noto-taml), system-ui, sans-serif; font-family: var(--font-shell); }
+  /* The display face (page titles, the brand moment): Bricolage, then the same Indic fallbacks, since a title can be a name. */
+  [data-shell] { --font-display-stack: var(--font-bricolage), var(--font-noto-deva), var(--font-noto-beng), var(--font-noto-guru), var(--font-noto-taml), var(--font-inter), system-ui, sans-serif; }
+  [data-script] { line-height: 1.8; }
+  /* TABLES ON A PHONE BECOME ROWS (rule 15; src/components/data/data-table.tsx): one DOM, reflowed. */
+  @media (max-width: 767px) {
+    table[data-rows] { display: block; }
+    table[data-rows] > thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    table[data-rows] > tbody { display: block; }
+    table[data-rows="list"] > tbody > tr { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "a b" "c d" "e e" "f f"; column-gap: 0.75rem; row-gap: 0.125rem; padding: 0.625rem 0.75rem; min-height: 3.5rem; }
+    table[data-rows="list"] > tbody > tr > td { display: block; padding: 0 !important; min-width: 0; }
+    table[data-rows="list"] td[data-cell="a"] { grid-area: a; } table[data-rows="list"] td[data-cell="b"] { grid-area: b; justify-self: end; text-align: right; }
+    table[data-rows="list"] td[data-cell="c"] { grid-area: c; } table[data-rows="list"] td[data-cell="d"] { grid-area: d; justify-self: end; text-align: right; }
+    table[data-rows="list"] td[data-cell="e"] { grid-area: e; } table[data-rows="list"] td[data-cell="f"] { grid-area: f; }
+    table[data-rows] td[data-cell="hide"] { display: none !important; }
+    /* The row's own link covers the row (one target); any other link or button in it stays above. */
+    table[data-rows="list"] [data-row-link]::after { content: ""; position: absolute; inset: 0; }
+    table[data-rows="list"] td :is(a:not([data-row-link]), button, input, select, textarea, summary, label) { position: relative; z-index: 1; }
+    table[data-rows="form"] > tbody > tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem 0.75rem; padding: 0.75rem; }
+    table[data-rows="form"] > tbody > tr > td { display: block; padding: 0 !important; min-width: 0; }
+    table[data-rows="form"] td[data-cell="full"] { grid-column: 1 / -1; }
+    table[data-rows="form"] td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 0.125rem; font-size: 0.75rem; color: var(--muted-foreground); }
+    table[data-rows="form"] td :is(input, select) { width: 100% !important; } /* over the desktop w-16, w-40 … utilities */
+  }
+  /* A list while the next view loads (src/components/shell/nav-progress.tsx sets aria-busy after 150 ms). */
+  main#content :is(table, [data-list]) { transition: opacity var(--transition-duration-fast) var(--ease-standard); }
+  main#content[aria-busy="true"] :is(table, [data-list]) { opacity: 0.55; }
+  /* The phone's More sheet is open: the page behind does not scroll (src/components/shell/nav.tsx). */
+  html:has(dialog[data-more][open]) { overflow: hidden; }
+  /* The document keeps the scroll (A7): keep a focused or scrolled-to element clear of the sticky support banner
+     and of the phone's fixed bottom bar. */
+  html:has([data-support-banner]) { scroll-padding-top: 3.5rem; }
+  @media (max-width: 767px) { html:has([data-shell] main#content) { scroll-padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px)); } }
+  /* THE TINGE (brand spec, chapter 4): one detail per icon in rani, only inside a frame that asks for it
+     (data-tinge: the navs and the More sheet). Outside one, icons are one colour: in a table, colour means status. */
+  [data-tinge] { --icon-accent: var(--brand); }
+  [data-surface="ink"] [data-tinge], [data-surface="ink"][data-tinge] { --icon-accent: var(--brand-on-ink); }
+  /* The /partners calculator (website spec W·1): no script — the checked radio's panel shows. Values: SHARE_CHOICES. */
+  [data-calc] [data-panel] { display: none; } /* hidden here, not with a `hidden` utility: utilities outrank this layer, so the checked panel never showed (visual changes, 2026-11-08) */
+  [data-calc]:has(input[value="1"]:checked) [data-panel="1"], [data-calc]:has(input[value="3"]:checked) [data-panel="3"],
+  [data-calc]:has(input[value="5"]:checked) [data-panel="5"], [data-calc]:has(input[value="10"]:checked) [data-panel="10"] { display: grid; }
+  /* A link in a working page: ink words, a thread-coloured underline (brand spec, chapter 5). */
+  [data-shell] main#content a.underline { text-decoration-color: var(--thread); text-decoration-thickness: 1.5px; }
+  [data-shell] :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  [data-shell] [data-surface="ink"] :focus-visible { outline-color: var(--primary-foreground); }
+  [data-shell] [data-support-banner] :focus-visible { outline-color: var(--support-foreground); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important; /* a delayed second part (the brand moment's tick) appears at once too */
+    transition-duration: 0.01ms !important;
+  }
+  /* Reduced motion removes movement, not meaning (rule 25, owner 2026-11-08): what opens and closes still fades,
+     in 120 ms, without travelling or scaling. */
+  [data-pop], dialog[data-dialog], dialog[data-dialog]::backdrop, [data-toast], [data-store-drawer], [data-store-drawer]::backdrop {
+    transform: none !important; transition-property: opacity, overlay, display !important; transition-duration: var(--transition-duration-fast) !important;
+  }
+}
+
+/* A step of a flow enters from the side it came from (frata-design-language § Motion). */
+@keyframes step-in-forward { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+@keyframes step-in-back { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
+:root { --duration-flash: 800ms; } /* a changed value flashes once (Phase 1 rule); named, not a Tailwind duration */
+@keyframes value-flash { from { background-color: var(--warn); } to { background-color: transparent; } }
+@utility animate-step-forward { animation: step-in-forward 320ms cubic-bezier(0, 0, 0, 1); }
+@utility animate-step-back { animation: step-in-back 320ms cubic-bezier(0, 0, 0, 1); }
+/* A bar that appears in place (Unsaved changes): it rises 8 px and fades in, never slides in like a step. */
+@keyframes rise-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@utility animate-rise { animation: rise-in 200ms cubic-bezier(0, 0, 0, 1); }
+/* A dialog drawn by hand (the leave-without-saving alert): the dialog's own entrance, fade and scale from .97. */
+@keyframes pop-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: none; } }
+@utility animate-pop { animation: pop-in 200ms cubic-bezier(0, 0, 0, 1); }
+@utility animate-value-flash { animation: value-flash var(--duration-flash) cubic-bezier(0.2, 0, 0, 1); }
+/* The shell (plan U · U·2a, motion rules 22–23): the progress bar creeps to 80 % while a move is on its way. (The
+   phone's More sheet is a [data-dialog] sheet: in on the spring, out in 200 ms.) Transform and scale only (rule 22). */
+/* `scale`, the same property Tailwind's scale-x-* sets: animating transform as well would multiply the two. */
+@keyframes nav-run { from { scale: 0 1; } to { scale: 0.8 1; } }
+@utility animate-nav-run { animation: nav-run 1400ms cubic-bezier(0.3, 0, 1, 1); }
+/* THE ONE BRAND MOMENT (rule 26): "Your shop is open", a check drawn once — the circle in 320 ms, then the tick in
+   200 ms. stroke-dashoffset is paint only (no layout), the one named exception to rule 22 (check:motion). */
+@keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@utility animate-draw-circle { stroke-dasharray: 1; animation: draw 320ms cubic-bezier(0, 0, 0, 1) both; }
+@utility animate-draw-tick { stroke-dasharray: 1; animation: draw 200ms cubic-bezier(0, 0, 0, 1) 320ms both; }
+
+/* ── 1D·3 primitives: enter and exit as a pair, opacity and transform only, CSS only (§ UX foundation rules 22–23).
+   Tips 120 ms; dialogs, menus and toasts 200 ms. Native <dialog> and [popover] give focus, Esc and the top layer;
+   @starting-style animates their first frame and allow-discrete keeps them painted while they leave. ── */
+[data-pop] {
+  opacity: 0; transform: translateY(-4px);
+  transition: opacity var(--transition-duration-base) var(--ease-exit), transform var(--transition-duration-base) var(--ease-exit),
+    overlay var(--transition-duration-base) allow-discrete, display var(--transition-duration-base) allow-discrete;
+}
+[data-pop]:popover-open { opacity: 1; transform: none; transition-timing-function: var(--ease-entrance); }
+@starting-style { [data-pop]:popover-open { opacity: 0; transform: translateY(-4px); } }
+[data-pop="tip"] { transition-duration: var(--transition-duration-fast); }
+
+dialog[data-dialog] {
+  opacity: 0; transform: scale(0.97);
+  transition: opacity var(--transition-duration-base) var(--ease-exit), transform var(--transition-duration-base) var(--ease-exit),
+    overlay var(--transition-duration-base) allow-discrete, display var(--transition-duration-base) allow-discrete;
+}
+dialog[data-dialog][open] { opacity: 1; transform: none; transition-timing-function: var(--ease-entrance); }
+@starting-style { dialog[data-dialog][open] { opacity: 0; transform: scale(0.97); } }
+/* On a phone the dialog is a sheet from the bottom, 320 ms in and out (spec U · U3; Android's Back closes it, a close
+   request: src/components/ui/dialog.tsx). Unlayered, so it wins over the dialog's own m-auto/width/rounded utilities. */
+@media (max-width: 767px) {
+  dialog[data-dialog] {
+    margin: auto 0 0; width: 100%; max-width: none; max-height: 85dvh; border-radius: 1rem 1rem 0 0; border-bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px); opacity: 1; transform: translateY(100%);
+    transition-duration: var(--transition-duration-slow);
+  }
+  dialog[data-dialog][open] { transform: none; transition-timing-function: var(--ease-spring); }
+  @starting-style { dialog[data-dialog][open] { opacity: 1; transform: translateY(100%); } }
+}
+dialog[data-dialog]::backdrop {
+  background: var(--scrim); opacity: 0;
+  transition: opacity var(--transition-duration-base) var(--ease-standard), overlay var(--transition-duration-base) allow-discrete, display var(--transition-duration-base) allow-discrete;
+}
+dialog[data-dialog][open]::backdrop { opacity: 1; }
+@starting-style { dialog[data-dialog][open]::backdrop { opacity: 0; } }
+/* On a phone the scrim keeps pace with the 320 ms sheet. */
+@media (max-width: 767px) { dialog[data-dialog]::backdrop { transition-duration: var(--transition-duration-slow); } }
+
+[data-toast] { transition: opacity var(--transition-duration-base) var(--ease-entrance), transform var(--transition-duration-base) var(--ease-entrance); }
+@starting-style { [data-toast] { opacity: 0; transform: translateY(12px); } }
+[data-toast][data-leaving] { opacity: 0; transform: translateY(12px); transition-timing-function: var(--ease-exit); }
+/* The Undo window as a bar that empties; under reduced motion the words say it instead (rule 25). */
+@keyframes undo-window { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@utility animate-undo-window { animation: undo-window 8s linear forwards; transform-origin: left; }
+
+/* The shop's drawers (motion system 2026-11-08): the bag comes in from the side, the size guide up from the bottom
+   on a phone (a dialog on a computer), each on the spring in 320 ms and out in 200 ms, over the shop's own scrim.
+   They used to appear with no motion over raw black. Reduced motion: a 120 ms fade (above); data-motion="none": none. */
+dialog[data-store-drawer] {
+  transform: translateX(100%);
+  transition: transform var(--transition-duration-base) var(--ease-exit), overlay var(--transition-duration-base) allow-discrete, display var(--transition-duration-base) allow-discrete;
+}
+dialog[data-store-drawer="sheet"] { transform: translateY(100%); }
+dialog[data-store-drawer][open] { transform: none; transition-duration: var(--transition-duration-slow); transition-timing-function: var(--ease-spring); }
+@starting-style { dialog[data-store-drawer][open] { transform: translateX(100%); } dialog[data-store-drawer="sheet"][open] { transform: translateY(100%); } }
+@media (min-width: 640px) {
+  dialog[data-store-drawer="sheet"] { transform: scale(0.97); opacity: 0; transition-property: transform, opacity, overlay, display; }
+  dialog[data-store-drawer="sheet"][open] { transform: none; opacity: 1; transition-duration: var(--transition-duration-base); transition-timing-function: var(--ease-entrance); }
+  @starting-style { dialog[data-store-drawer="sheet"][open] { transform: scale(0.97); opacity: 0; } }
+}
+dialog[data-store-drawer]::backdrop {
+  background: color-mix(in srgb, var(--store-ink, #1F1A17) 45%, transparent); opacity: 0;
+  transition: opacity var(--transition-duration-base) var(--ease-standard), overlay var(--transition-duration-base) allow-discrete, display var(--transition-duration-base) allow-discrete;
+}
+dialog[data-store-drawer][open]::backdrop { opacity: 1; }
+@starting-style { dialog[data-store-drawer][open]::backdrop { opacity: 0; } }
+
+/* A shop photo before it paints, or if it never does (visual change 1, 2026-11-08): the shop's chip tile with a small
+   garment, under the photo; a broken one is covered by the same tile, so neither the browser's glyph nor the alt
+   text shows. (A broken <img> takes pseudo-elements; the alt stays for screen readers.) */
+img[data-photo] { background: var(--store-chip, #EFE8DE) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%235A4A3C' stroke-opacity='.55' stroke-width='1.2' stroke-linejoin='round'%3E%3Cpath d='M5 2.5 3 4 1.5 7l2 1V14h9V8l2-1L13 4l-2-1.5c-.5 1-1.6 1.6-3 1.6S5.5 3.5 5 2.5z'/%3E%3C/svg%3E") center / 24px no-repeat; color: transparent; }
+img[data-photo]::before { content: ""; position: absolute; inset: 0; background: inherit; }
+/* The cover needs its photo to be positioned: relative by default, in the base layer, so a photo's own `absolute`
+   utility still wins (an unlayered rule would beat it and lay the tile over the whole page). */
+@layer base { img[data-photo] { position: relative; } }
+
+/* Publishing (Look v3): the customizer's preview says "Going live" — a sweep across the shop and the header's rani
+   line filling — for as long as the publish takes (at least 1.3 s). Reduced motion: no sweep, the line shows full. */
+@keyframes going-sweep { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@keyframes going-live { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@utility animate-going-sweep { animation: going-sweep 1300ms var(--ease-standard) forwards; }
+@utility animate-going-live { animation: going-live 1300ms var(--ease-standard) forwards; }
+@media (prefers-reduced-motion: reduce) { .animate-going-sweep { animation: none; } .animate-going-live { animation: none; transform: none; } }
+
+/* Add to bag: the bag's count hops 4 px on the snap curve when it changes (a new key replays it). */
+@keyframes count-hop { from { transform: translateY(-4px); } to { transform: none; } }
+@utility animate-count { animation: count-hop 200ms var(--ease-snap); }
+
+/* ── A merchant's shop (storefront and its previews). Fixed light paper: it is
+   their brand, not the viewer's OS theme. Accent = shop_settings.accent. ── */
+[data-store-theme] {
+  --store-paper: #F6F1EA; --store-ink: #1F1A17; --store-sub: #5A4A3C; --store-line: #E2D9CC; --store-chip: #EFE8DE;
+  --store-good: #1E6B47; --store-bad: #A8321F; --store-accent: #8A3B1F;
+  --store-on-accent: #F6F1EA; --store-button: #1F1A17; --store-on-button: #F6F1EA; --store-sale: #A8321F;
+  /* Theme settings (themes spec § Theme settings); the shell sets each from the shop's theme. */
+  --store-radius: var(--radius-sm); --store-ratio: 4 / 5; --store-cols: 2; --store-h-scale: 1; --store-space: 1;
+  background: var(--store-paper); color: var(--store-ink);
+}
+[data-store-theme][data-headings="upper"] :is(h1, h2, h3) { text-transform: uppercase; letter-spacing: 0.12em; }
+[data-store-theme][data-hover="off"] .store-hover { display: none !important; }
+/* A Hindi shop (themes T2): Devanagari after Inter, so Latin stays Inter and Hindi words get a real face. */
+[data-store-theme][lang="hi"] { font-family: var(--font-inter), var(--font-store-deva), system-ui, sans-serif; }
+/* Product cards (themes T2): standard is today's; centred and framed restyle the same markup. */
+[data-store-theme][data-card="centred"] .store-card { text-align: center; }
+[data-store-theme][data-card="centred"] .store-swatches { justify-content: center; }
+[data-store-theme][data-card="framed"] .store-card { box-shadow: inset 0 0 0 1px var(--store-line); border-radius: var(--store-radius); padding: 0.5rem 0.5rem 0.75rem; }
+[data-store-theme][data-buttons="outline"] .store-btn { background: transparent; color: var(--store-ink); box-shadow: inset 0 0 0 1px var(--store-ink); }
+[data-store-theme][data-motion="none"] * { transition: none !important; animation: none !important; }
+/* ── The 2.0 theme choices (plan 2026-11-09-themes-three). Each rule targets a value that isn't today's, so a 1.x
+   look's CSS is unchanged; data-motion="none" (above) and reduced motion stop every movement here. ── */
+[data-store-theme][data-button-shape="pill"] .store-btn { border-radius: 9999px; }
+/* Underline buttons (Studio): a section's button reads as underlined words; Add to bag stays a filled button. */
+[data-store-theme][data-buttons="underline"] .store-btn:not(.store-buy) { background: transparent; color: inherit; border-radius: 0; padding-inline: 0; min-height: 2.25rem; text-decoration: underline; text-underline-offset: 0.4em; text-decoration-thickness: 1px; letter-spacing: 0.08em; text-transform: uppercase; }
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  [data-store-theme][data-button-motion="lift"] .store-btn { transition: translate var(--transition-duration-base) var(--ease-standard); }
+  [data-store-theme][data-button-motion="lift"] .store-btn:hover { translate: 0 -2px; }
+  /* Fill: a sheen sweeps across from the left (a transform on a layer under the words). */
+  [data-store-theme][data-button-motion="fill"] .store-btn { position: relative; isolation: isolate; overflow: hidden; }
+  [data-store-theme][data-button-motion="fill"] .store-btn::before { content: ""; position: absolute; inset: 0; z-index: -1; background: color-mix(in srgb, currentColor 16%, transparent); transform: scaleX(0); transform-origin: left; transition: transform var(--transition-duration-slow) var(--ease-standard); }
+  [data-store-theme][data-button-motion="fill"] .store-btn:hover::before { transform: scaleX(1); }
+  /* Cards: lift (the card rises; its shadow is a layer that fades in) or zoom (the photo grows inside its frame). */
+  [data-store-theme][data-card-hover="lift"] .store-card { position: relative; transition: translate var(--transition-duration-base) var(--ease-standard); }
+  [data-store-theme][data-card-hover="lift"] .store-card::after { content: ""; position: absolute; inset: -0.5rem; z-index: -1; border-radius: var(--store-radius); box-shadow: 0 10px 24px -12px color-mix(in srgb, var(--store-ink) 35%, transparent); opacity: 0; transition: opacity var(--transition-duration-base) var(--ease-standard); pointer-events: none; }
+  [data-store-theme][data-card-hover="lift"] .store-card:hover { translate: 0 -4px; }
+  [data-store-theme][data-card-hover="lift"] .store-card:hover::after { opacity: 1; }
+  [data-store-theme][data-card-hover="zoom"] .store-card img { transition: scale var(--transition-duration-slow) var(--ease-standard); }
+  [data-store-theme][data-card-hover="zoom"] .store-card:hover img { scale: 1.05; }
+}
+/* Even rhythm (the 2.0 themes): the same space above and below every section but a full-bleed one. */
+[data-store-theme][data-rhythm="even"] [data-section]:not([data-key="hero"], [data-key="drop_teaser"]) > section { padding-block: calc(var(--store-space) * 1.75rem); }
+@media (min-width: 640px) { [data-store-theme][data-rhythm="even"] [data-section]:not([data-key="hero"], [data-key="drop_teaser"]) > section { padding-block: calc(var(--store-space) * 2.75rem); } }
+/* Over the photo (2.1 header): only when the page opens with a full-bleed hero photo, the header lies on it in
+   white over a soft shade; anywhere else it is the centred header. A menu or panel it opens keeps the shop's ink. */
+[data-store-theme][data-header="overlay"]:has(> main [data-lead] [data-bleed] img) > header { position: absolute; inset-inline: 0; z-index: 30; background: transparent; border-color: transparent; color: #fff; }
+[data-store-theme][data-header="overlay"]:has(> main [data-lead] [data-bleed] img) > header::before { content: ""; position: absolute; inset: 0 0 -3rem; z-index: -1; pointer-events: none; background: linear-gradient(to bottom, rgb(0 0 0 / 0.45), transparent); }
+[data-store-theme][data-header="overlay"] > header .bg-store-paper { color: var(--store-ink); }
+/* Theme Signal (spec docs/specs/2026-11-09-theme-signal.md): the floating header — a dark panel at the top left on a
+   computer, a dark rounded bar on a phone; over the first photo when the page opens with one, in the flow otherwise. */
+[data-store-theme][data-header="float"] > header { border-color: transparent; background: transparent; }
+.store-float-panel, .store-float-bar { background: color-mix(in srgb, #111 92%, transparent); color: #fff; border-radius: var(--store-radius); }
+.store-float-panel { display: none; }
+.store-float-bar { display: flex; align-items: center; gap: 0.75rem; margin: 0.625rem; padding: 0 0.875rem; min-height: 2.875rem; }
+.store-float-link { display: block; padding: 0.3rem 0.25rem; border-radius: 2px; }
+.store-float-link:hover, .store-float-link:focus-visible { background: var(--store-accent); color: var(--store-on-accent); }
+@media (min-width: 640px) {
+  .store-float-bar { display: none; }
+  .store-float-panel { display: flex; align-items: center; gap: 1.25rem; margin: 0.75rem; padding: 0.625rem 1rem; }
+  .store-float-menu { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+  [data-store-theme][data-header="float"]:has(> main [data-lead] [data-bleed] img) > header { position: absolute; inset-inline: 0; z-index: 30; pointer-events: none; }
+  [data-store-theme][data-header="float"]:has(> main [data-lead] [data-bleed] img) .store-float-panel { pointer-events: auto; display: grid; gap: 0.25rem; width: 11rem; padding: 0.75rem; }
+  [data-store-theme][data-header="float"]:has(> main [data-lead] [data-bleed] img) .store-float-logo { padding-bottom: 0.5rem; border-bottom: 1px solid rgb(255 255 255 / 0.18); margin-bottom: 0.25rem; }
+  [data-store-theme][data-header="float"]:has(> main [data-lead] [data-bleed] img) .store-float-menu { display: grid; }
+}
+[data-store-theme][data-header="float"]:has(> main [data-lead] [data-bleed] img) > header .store-float-bar { position: absolute; inset-inline: 0; top: 0; z-index: 30; }
+/* Grey-tile cards: the photo on the tile, edge to edge with 2 px gutters, the words inside the tile. */
+[data-store-theme][data-card="tile"] ul:has(> .store-card) { column-gap: 2px; row-gap: 2px; }
+[data-store-theme][data-card="tile"] .store-card { background: var(--store-chip); }
+[data-store-theme][data-card="tile"] .store-card > a { padding-bottom: 0.75rem; }
+[data-store-theme][data-card="tile"] .store-card > a > div:first-child { border-radius: 0; background: transparent; }
+[data-store-theme][data-card="tile"] .store-card p, [data-store-theme][data-card="tile"] .store-swatches { padding-inline: 0.75rem; }
+/* Section labels above a heading: a pill in the accent, or plain small capitals. */
+.store-label { display: none; }
+[data-store-theme][data-labels] .store-label { display: inline-block; margin-bottom: 0.5rem; font: 600 0.6875rem/1 var(--store-display); letter-spacing: 0.09em; text-transform: uppercase; }
+[data-store-theme][data-labels="pill"] .store-label { padding: 0.375rem 0.5rem 0.3rem; border-radius: 3px; background: var(--store-accent); color: var(--store-on-accent); }
+[data-store-theme][data-labels="plain"] .store-label { color: var(--store-sub); }
+/* The grotesk voice: buttons, prices and headings in the display face. */
+[data-store-theme][data-voice="grotesk"] :is(.store-btn, .store-price, h1, h2, h3) { font-family: var(--store-display); letter-spacing: -0.01em; }
+/* Signal's product page, bag and checkout (mockup board "Product page"): the grotesk voice sets the type, the tiles the
+   surfaces (data-voice and data-card are only ever on the shop's root). Every theme: the line just added is marked with the accent. */
+.store-promise-i { display: none; }
+.store-added-note { color: var(--store-good); }
+.store-bag-line[data-added] { box-shadow: inset 3px 0 0 var(--store-accent); padding-inline-start: 0.75rem; }
+[data-voice] .store-pdp-title { font-weight: 600; letter-spacing: -0.02em; }
+[data-voice] .store-pdp-price .store-price { font-weight: 700; font-size: 1.5rem; }
+[data-voice] :is(.store-buy, .store-btn-2, .store-added-note, [data-store-drawer] h2, .store-opt-legend > span > span:first-child) { font: 700 0.8125rem/1 var(--store-display); letter-spacing: 0.08em; text-transform: uppercase; }
+[data-card="tile"] :is(.store-opt, .store-field, .store-pay, .store-qty, .store-btn-2, main input:is([type="search"], [type="email"]), main select) { border-color: transparent; background: var(--store-chip); }
+[data-card="tile"] .store-opt { min-width: 3.25rem; min-height: 3.25rem; }
+[data-card="tile"] :is(.store-opt[aria-pressed="true"], .store-pay:has(:checked)) { background: var(--store-chip); color: var(--store-ink); box-shadow: inset 0 0 0 2px var(--store-ink); }
+[data-card="tile"] .store-field:focus { background: var(--store-paper); border-color: var(--store-ink); }
+[data-card="tile"] .store-offers li { width: fit-content; padding: 0.375rem 0.625rem; border-radius: 3px; background: color-mix(in srgb, var(--store-accent) 12%, transparent); color: var(--store-ink); }
+[data-card="tile"] .store-promises { display: grid; gap: 0.625rem; border: 0; padding: 0.875rem 1rem; background: var(--store-chip); }
+[data-card="tile"] .store-promises li { display: flex; gap: 0.625rem; align-items: center; }
+[data-card="tile"] .store-promise-i { display: block; flex: none; width: 1.125rem; height: 1.125rem; }
+[data-card="tile"] .store-bag-line :is(img, span:first-child) { border-radius: 0; }
+/* Tabs by collection (CSS only): pills over the grid; the checked radio's panel shows (≤ 5 tabs). */
+.store-tab-row { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--store-chip); overflow-x: auto; max-width: 100%; }
+.store-tab { cursor: pointer; white-space: nowrap; border-radius: 999px; padding: 0.5rem 0.875rem; font-size: 0.8125rem; color: var(--store-sub); }
+.store-tab:has(:checked) { background: var(--store-paper); color: var(--store-ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.1); }
+.store-tab:has(:focus-visible) { outline: 2px solid var(--store-ink); outline-offset: 2px; }
+.store-tab-panel { display: none; }
+.store-tabs:has(.store-tab:nth-child(1) :checked) .store-tab-panel[data-tab="0"],
+.store-tabs:has(.store-tab:nth-child(2) :checked) .store-tab-panel[data-tab="1"],
+.store-tabs:has(.store-tab:nth-child(3) :checked) .store-tab-panel[data-tab="2"],
+.store-tabs:has(.store-tab:nth-child(4) :checked) .store-tab-panel[data-tab="3"],
+.store-tabs:has(.store-tab:nth-child(5) :checked) .store-tab-panel[data-tab="4"] { display: block; }
+/* A swipe row says where you are: a thin line and 01 / 10. */
+.store-counter { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.75rem; font-size: 0.75rem; color: var(--store-sub); font-variant-numeric: tabular-nums; }
+.store-counter i { position: relative; display: block; width: 8rem; height: 2px; background: var(--store-line); }
+.store-counter i::before { content: ""; position: absolute; inset: 0; transform-origin: left; transform: scaleX(max(0.1, var(--at, 0))); background: var(--store-ink); }
+/* The page entrance (a template around each shop page): fade or rise, from 0.6 so the largest paint is never held
+   back, ending on no transform (fill backwards only: a leftover transform would pin fixed bars to the page). */
+.store-enter { display: contents; }
+[data-store-theme]:is([data-entrance="fade"], [data-entrance="rise"]) .store-enter { display: block; }
+@keyframes store-enter-fade { from { opacity: 0.6; } to { opacity: 1; } }
+@keyframes store-enter-rise { from { opacity: 0.6; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  [data-store-theme][data-entrance="fade"] .store-enter { animation: store-enter-fade var(--transition-duration-base) var(--ease-entrance) backwards; }
+  [data-store-theme][data-entrance="rise"] .store-enter { animation: store-enter-rise var(--transition-duration-slow) var(--ease-entrance) backwards; }
+}
+/* Sections rise in as they scroll into view: never the first (the largest paint); no script. */
+@keyframes store-reveal { from { opacity: 0.2; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-store-theme][data-reveal="on"] [data-section]:not([data-lead]) > * { animation: store-reveal linear backwards; animation-timeline: view(); animation-range: entry 0% entry 60%; }
+  }
+}
+/* The customizer's selected section, in its preview only (theme-preview bridge). */
+/* Search and sharing S2·7: a focus ring in the shop's own ink on every theme and scheme (WCAG 2.4.7, 2.4.11). */
+[data-store-theme] :focus-visible { outline: 2px solid var(--store-ink); outline-offset: 2px; }
+[data-store-theme] main:focus { outline: none; }
+[data-store-theme] [data-picked] { outline: 2px solid var(--color-info-text); outline-offset: 4px; }
+/* In the customizer's frame (the bridge sets data-inspect): a section under the pointer is outlined and clickable. */
+[data-inspect] [data-store-theme] [data-section] > :not([data-picked]):hover { outline: 1px dashed var(--color-info-text); outline-offset: 4px; cursor: pointer; }
+/* ── Site settings › Text styles (Look v4): only a style the merchant set (its data-t-* attribute) changes anything.
+   Family is !important because headings carry an inline display face. Phone size first, the computer's from 640 px. ── */
+[data-store-theme][data-t-display] main [data-key="hero"] h1 { font-size: var(--t-display-p); font-weight: var(--t-display-w); font-family: var(--t-display-f) !important; text-transform: var(--t-display-c); letter-spacing: var(--t-display-s); }
+[data-store-theme][data-t-h1] main h1:not([data-key="hero"] h1) { font-size: var(--t-h1-p); font-weight: var(--t-h1-w); font-family: var(--t-h1-f) !important; text-transform: var(--t-h1-c); letter-spacing: var(--t-h1-s); }
+[data-store-theme][data-t-h2] main h2 { font-size: var(--t-h2-p); font-weight: var(--t-h2-w); font-family: var(--t-h2-f) !important; text-transform: var(--t-h2-c); letter-spacing: var(--t-h2-s); }
+[data-store-theme][data-t-h3] main h3 { font-size: var(--t-h3-p); font-weight: var(--t-h3-w); font-family: var(--t-h3-f) !important; text-transform: var(--t-h3-c); letter-spacing: var(--t-h3-s); }
+[data-store-theme][data-t-body] main { font-size: var(--t-body-p); font-weight: var(--t-body-w); font-family: var(--t-body-f) !important; text-transform: var(--t-body-c); letter-spacing: var(--t-body-s); }
+[data-store-theme][data-t-small] main :is(.text-xs, .text-sm):not(.store-btn, .store-price) { font-size: var(--t-small-p); font-weight: var(--t-small-w); font-family: var(--t-small-f) !important; text-transform: var(--t-small-c); letter-spacing: var(--t-small-s); }
+[data-store-theme][data-t-button] .store-btn { font-size: var(--t-button-p); font-weight: var(--t-button-w); font-family: var(--t-button-f) !important; text-transform: var(--t-button-c); letter-spacing: var(--t-button-s); }
+[data-store-theme][data-t-price] .store-price { font-size: var(--t-price-p); font-weight: var(--t-price-w); font-family: var(--t-price-f) !important; text-transform: var(--t-price-c); letter-spacing: var(--t-price-s); }
+@media (min-width: 640px) {
+  [data-store-theme][data-t-display] main [data-key="hero"] h1 { font-size: var(--t-display-d); }
+  [data-store-theme][data-t-h1] main h1:not([data-key="hero"] h1) { font-size: var(--t-h1-d); }
+  [data-store-theme][data-t-h2] main h2 { font-size: var(--t-h2-d); }
+  [data-store-theme][data-t-h3] main h3 { font-size: var(--t-h3-d); }
+  [data-store-theme][data-t-body] main { font-size: var(--t-body-d); }
+  [data-store-theme][data-t-small] main :is(.text-xs, .text-sm):not(.store-btn, .store-price) { font-size: var(--t-small-d); }
+  [data-store-theme][data-t-button] .store-btn { font-size: var(--t-button-d); }
+  [data-store-theme][data-t-price] .store-price { font-size: var(--t-price-d); }
+}
+[data-store-theme][data-accent="indigo"] { --store-accent: #2E3A63; }
+[data-store-theme][data-accent="moss"] { --store-accent: #3F5B3A; }
+[data-store-theme][data-accent="wine"] { --store-accent: #7A1F2B; }
+[data-store-theme][data-accent="ink"] { --store-accent: #1F1A17; }
+@theme inline {
+  --color-store-paper: var(--store-paper); --color-store-ink: var(--store-ink); --color-store-sub: var(--store-sub);
+  --color-store-line: var(--store-line); --color-store-chip: var(--store-chip); --color-store-good: var(--store-good);
+  --color-store-bad: var(--store-bad); --color-store-accent: var(--store-accent);
+  --color-store-on-accent: var(--store-on-accent); --color-store-button: var(--store-button); --color-store-on-button: var(--store-on-button);
+  --color-store-sale: var(--store-sale);
+}

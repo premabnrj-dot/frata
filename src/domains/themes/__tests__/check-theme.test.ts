@@ -53,7 +53,7 @@ describe.each(all.map((m) => [name(m), m] as const))('%s', (_n, m) => {
 
 describe('Classic is today’s shop', () => {
   it('its paper scheme equals the --store-* values in globals.css (one look until T1 removes the CSS copy)', () => {
-    const css = readFileSync('src/app/globals.css', 'utf8')
+    const css = readFileSync('src/app/base.css', 'utf8')
     const val = (v: string) => new RegExp(`--store-${v}:\\s*(#[0-9A-Fa-f]{6})`).exec(css)?.[1]?.toUpperCase()
     const s = CATALOGUE.classic!['1.0.0']!.styles.find((x) => x.key === 'oxide')!.schemes.paper
     expect([s.bg, s.text, s.sub, s.line, s.chip, s.good, s.bad, s.accent]).toEqual(['paper', 'ink', 'sub', 'line', 'chip', 'good', 'bad', 'accent'].map(val))

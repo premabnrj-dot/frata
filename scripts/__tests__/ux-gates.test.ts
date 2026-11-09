@@ -12,10 +12,10 @@ const file = (name: string, text: string) => { const p = join(dir, name); writeF
 
 describe('check:contrast', () => {
   it('passes the real tokens, light and dark', () => {
-    expect(check(readFileSync('src/app/globals.css', 'utf8'))).toEqual([])
+    expect(check(readFileSync('src/app/base.css', 'utf8'))).toEqual([])
   })
   it('fails the old field edge (1.72:1), a dark token left undefined, and a colour in no pair', () => {
-    const css = readFileSync('src/app/globals.css', 'utf8')
+    const css = readFileSync('src/app/base.css', 'utf8')
       .replace('--input: #8C857F;', '--input: #C9C5C0;')
       .replace(/(:root\[data-theme="dark"\] \{[^}]*?)\n {2}--ring: #EDEAE6;/, '$1')
       .replace('--radius: 0.375rem;', '--radius: 0.375rem; --sparkle: #FF00FF;')

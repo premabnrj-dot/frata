@@ -1,3 +1,4 @@
+import './globals.css' // the app sheet (Signal S2-0)
 import { Panel } from '@/components/ui/panel'
 
 export default function NotFound() {

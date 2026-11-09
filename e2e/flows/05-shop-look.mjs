@@ -47,7 +47,8 @@ async function warm(url) {
 }
 
 async function shoot(page, url, moving = DATES) {
-  if (url.startsWith(SHOP)) await warm(url)
+  // Cached pages (shops, and the public site's plans) may answer from the build first: wait until they settle.
+  if (url.startsWith(SHOP) || new URL(url).pathname === '/') await warm(url)
   await page.goto(url, { waitUntil: 'networkidle' })
   await page.evaluate(() => document.fonts.ready)
   // Lazy images below the fold: scroll through once so every image has loaded (or failed) before the capture.
