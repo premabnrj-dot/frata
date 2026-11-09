@@ -101,6 +101,6 @@ describe('withSampleImages fills the story sections (Signal S2, preview only)', 
   })
   it('a statement with no photo borrows the scene', () => {
     const t = withSampleImages({ home: [{ id: 's', key: 'statement' as const, hidden: false, scheme: 'ink' as const, eyebrow: '', wordmark: 'w', image: null }] }, 'signal', 'accessories')
-    expect((t.home[0] as { image: { base: string } }).image.base).toBe(SAMPLE_SCENES.signal.base)
+    expect((t.home[0] as unknown as { image: { base: string } }).image.base).toBe(SAMPLE_SCENES.signal.base)
   })
 })
