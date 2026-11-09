@@ -1,0 +1,196 @@
+<title>Messages and EkCode</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Mukta:wght@700&family=Bricolage+Grotesque:opsz,wght@12..96,600&display=swap">
+<style>
+/* Decision brief: the answer first, then the ladder a merchant climbs, the one sender rule, what is shared, the options, the facts, the calls. Frrata tokens. */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--thread:#D61F69;--line:#D61F69;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;--ink:#1C1917;--on-ink:#FAFAF9;
+  --wa:#1E7B52;
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--display:"Bricolage Grotesque","Inter",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--line:#FF5C97;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--ink:#0B0A09;--wa:#6FD3A0;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--line:#FF5C97;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--ink:#0B0A09;--wa:#6FD3A0;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.6 var(--sans);margin:0}
+.wrap{max-width:1040px;margin:0 auto;padding-block:32px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font:600 30px/1.15 var(--display);margin:0 0 8px;text-wrap:balance}
+h2{font-size:18px;margin:44px 0 12px;display:flex;gap:10px;align-items:center;text-wrap:balance;scroll-margin-top:60px}
+h2::before{content:"";width:18px;height:2px;background:var(--thread);flex:none}
+h3{font-size:15px;margin:0 0 6px}
+p{margin:0 0 10px;max-width:72ch}
+.k{font-size:12.5px;color:var(--sub)}.mono{font-family:var(--mono)}
+nav.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--border);margin-top:18px}
+nav.top .in{display:flex;gap:4px;overflow-x:auto;padding:8px 0;scrollbar-width:none}
+nav.top a{color:var(--fg);text-decoration:none;font:500 13px var(--sans);padding:6px 10px;border-radius:6px;white-space:nowrap}
+nav.top a:hover{background:var(--muted)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:18px;min-width:0}
+.grid{display:grid;gap:14px}
+@media (min-width:820px){.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}}
+.chip{display:inline-flex;align-items:center;border-radius:999px;padding:1px 9px;font:500 12px var(--sans);white-space:nowrap}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-warn{background:var(--warn);color:var(--warn-text)}.c-n{background:var(--muted);color:var(--sub)}.c-danger{background:var(--danger);color:var(--danger-text)}.c-info{background:var(--info);color:var(--info-text)}
+.answer{border:2px solid var(--fg);border-radius:10px;padding:20px;display:grid;gap:10px;background:var(--card)}
+.answer b.big{font:600 20px/1.3 var(--display)}
+.list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.list li{padding-left:18px;position:relative}
+.list li::before{content:"";position:absolute;left:0;top:.75em;width:9px;height:2px;background:var(--thread)}
+.wm{height:1.15em;width:auto;vertical-align:-.25em;color:var(--fg)}
+.wm text{font-family:"Mukta",sans-serif;font-weight:700}
+/* ladder */
+.ladder{display:grid;gap:12px}
+@media (min-width:820px){.ladder{grid-template-columns:repeat(3,1fr)}}
+.rung{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;display:grid;gap:8px;align-content:start;position:relative}
+.rung .n{font:500 12px var(--mono);color:var(--sub)}
+.rung h3{font:600 17px/1.25 var(--display);margin:0}
+.rung .how{font-size:13px;color:var(--sub)}
+.rung.now{border:2px solid var(--fg)}
+/* sender rule */
+.flow{overflow-x:auto}
+.flow svg{display:block;min-width:720px;width:100%;height:auto}
+.flow text{font-family:var(--sans);fill:var(--fg)}
+.flow .sub{fill:var(--sub);font-size:11.5px}
+.flow .box{fill:var(--card);stroke:var(--border)}
+.flow .dec{fill:var(--muted);stroke:var(--border)}
+.flow .out-shop{fill:var(--ok);stroke:var(--ok-text)}
+.flow .out-ek{fill:var(--card);stroke:var(--fg);stroke-width:2}
+.flow .out-mail{fill:var(--info);stroke:var(--info-text)}
+.flow .arr{stroke:var(--sub);stroke-width:1.5;fill:none}
+.flow .lbl{font-size:11px;fill:var(--sub)}
+/* tables */
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:8px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:640px}
+th{font:500 12px var(--sans);color:var(--sub);text-align:left;padding:9px 14px;background:var(--muted);border-bottom:1px solid var(--border)}
+td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:0}
+.opt{display:grid;gap:6px}
+.opt.rec{border:2px solid var(--fg)}
+.calls{counter-reset:c;display:grid;gap:10px;list-style:none;margin:0;padding:0}
+.calls li{counter-increment:c;display:grid;grid-template-columns:30px 1fr;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px}
+.calls li::before{content:counter(c);display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--fg);color:var(--bg);font:500 13px var(--mono)}
+.theme-t{position:fixed;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:6;border:1px solid var(--input);background:var(--card);color:var(--fg);border-radius:6px;font:500 13px var(--sans);padding:6px 10px;cursor:pointer}
+.theme-t:focus-visible,a:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="wm" viewBox="0 0 330 100"><rect x="3" y="5" width="126" height="90" rx="16" fill="none" stroke="currentColor" stroke-width="6"/><text x="66" y="72" text-anchor="middle" font-family="Mukta" font-weight="700" font-size="76" fill="currentColor">एक</text><rect x="48" y="80" width="36" height="5" rx="2.5" fill="var(--line)"/><text x="142" y="72" font-family="Mukta" font-weight="700" font-size="76" fill="currentColor">Code</text></symbol>
+</defs></svg>
+
+<div class="wrap">
+  <h1>Messages and EkCode</h1>
+  <p class="k">Research 9 Nov 2026 · codebase map, Meta's rules (checked today), 14 products in India · full notes <span class="mono">docs/research/2026-11-09-messages-and-ekcode.md</span></p>
+
+  <nav class="top" aria-label="Sections"><div class="in">
+    <a href="#answer">Answer</a><a href="#ladder">The ladder</a><a href="#rule">Who sends</a><a href="#shared">One engine</a><a href="#options">Options</a><a href="#facts">Facts</a><a href="#market">Market</a><a href="#calls">Your calls</a>
+  </div></nav>
+
+  <h2 id="answer">The answer</h2>
+  <div class="answer">
+    <b class="big">Keep Messages beside EkCode, not inside it, and build one messaging engine under both.</b>
+    <ul class="list">
+      <li><svg class="wm" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg> stays the shopper's identity brand and the <b>zero-setup sender</b>: sign-in codes, and order updates for shops that haven't connected a number.</li>
+      <li><b>Messages</b> is the merchant's own number, in the shop's own name: order and COD messages, the team inbox, cart recovery, broadcasts. Like Interakt, but already wired to the store.</li>
+      <li>Underneath, <b>one system</b>: one contact and consent list per shop, one rule for who sends, one template engine, one send queue, one webhook, one Admin view.</li>
+    </ul>
+    <p class="k" style="margin:0">Why not one brand: Meta allows one business per WhatsApp account and forbids speaking for another business, so a shop's marketing can't come from EkCode's number. Every shop's broadcasts would also share one quality rating. No product in the market does it: GoKwik keeps KwikPass and KwikEngage as two apps that share data.</p>
+  </div>
+
+  <h2 id="ladder">The ladder a merchant climbs</h2>
+  <div class="ladder">
+    <div class="rung now"><span class="n">1 · day one · nothing to set up</span><h3><svg class="wm" viewBox="0 0 330 100" role="img" aria-label="EkCode"><use href="#wm"/></svg> on</h3>
+      <ul class="list"><li>Shoppers filled in at checkout</li><li>Order updates from EkCode's number, within the plan's allowance</li><li>Leads list</li></ul>
+      <span class="how">Approved 9 Nov. Free on every plan.</span></div>
+    <div class="rung"><span class="n">2 · one tap: Connect your number</span><h3>Messages</h3>
+      <ul class="list"><li>Order updates switch to the shop's own name by themselves</li><li>COD confirmation by reply</li><li>Team inbox, quick replies</li><li>Keeps the WhatsApp Business app and 180 days of chats</li></ul>
+      <span class="how">Every plan. Meta bills the shop directly; no markup, no wallet.</span></div>
+    <div class="rung"><span class="n">3 · Growth and up</span><h3>Grow</h3>
+      <ul class="list"><li>Cart recovery, back in stock</li><li>Broadcasts (Meta's new marketing API from day one)</li><li>Click-to-WhatsApp ads judged on delivered orders</li><li>Pay in chat (Razorpay link)</li></ul>
+      <span class="how">Needs the shop's own number and the shopper's marketing consent.</span></div>
+  </div>
+
+  <h2 id="rule">Who sends: one rule, never the merchant's job</h2>
+  <div class="flow card" style="padding:12px">
+    <svg viewBox="0 0 980 300" role="img" aria-labelledby="fl-t">
+      <title id="fl-t">For each message: marketing only from the shop's number with consent; order messages from the shop's number if connected, else EkCode's number if the shopper opted in and the allowance has room, else email; sign-in codes only from EkCode.</title>
+      <rect class="box" x="10" y="120" width="150" height="60" rx="8"/><text x="85" y="146" text-anchor="middle" font-size="14" font-weight="600">An event</text><text x="85" y="164" text-anchor="middle" class="sub">order, cart, sign-in</text>
+      <path class="arr" d="M160 150 H200"/>
+      <rect class="dec" x="200" y="120" width="150" height="60" rx="8"/><text x="275" y="146" text-anchor="middle" font-size="14" font-weight="600">What kind?</text><text x="275" y="164" text-anchor="middle" class="sub">from the event</text>
+      <path class="arr" d="M350 140 C380 140 380 40 410 40"/><text x="300" y="80" class="lbl">marketing</text>
+      <path class="arr" d="M350 150 H410"/><text x="368" y="144" class="lbl">order</text>
+      <path class="arr" d="M350 160 C380 160 380 260 410 260"/><text x="366" y="236" class="lbl">sign-in</text>
+      <rect class="out-shop" x="410" y="12" width="250" height="56" rx="8"/><text x="535" y="36" text-anchor="middle" font-size="13.5" font-weight="600">Shop's own number</text><text x="535" y="54" text-anchor="middle" class="sub">only with consent · marketing API</text>
+      <rect class="dec" x="410" y="122" width="200" height="56" rx="8"/><text x="510" y="146" text-anchor="middle" font-size="13.5" font-weight="600">Shop number connected?</text><text x="510" y="164" text-anchor="middle" class="sub">and healthy</text>
+      <path class="arr" d="M610 140 C640 140 640 40 660 40"/><text x="626" y="96" class="lbl">yes</text>
+      <path class="arr" d="M610 160 H660"/><text x="628" y="154" class="lbl">no</text>
+      <rect class="dec" x="660" y="122" width="170" height="56" rx="8"/><text x="745" y="146" text-anchor="middle" font-size="13.5" font-weight="600">Opted in, room left?</text><text x="745" y="164" text-anchor="middle" class="sub">EkCode allowance</text>
+      <path class="arr" d="M745 178 V260 H660"/><text x="752" y="222" class="lbl">yes</text>
+      <path class="arr" d="M830 150 C850 150 850 92 870 92"/><text x="846" y="128" class="lbl">no</text>
+      <rect class="out-mail" x="870" y="66" width="100" height="52" rx="8"/><text x="920" y="90" text-anchor="middle" font-size="13.5" font-weight="600">Email</text><text x="920" y="107" text-anchor="middle" class="sub">or nothing</text>
+      <rect class="out-ek" x="410" y="232" width="250" height="56" rx="8"/><text x="535" y="256" text-anchor="middle" font-size="13.5" font-weight="600">EkCode's number</text><text x="535" y="274" text-anchor="middle" class="sub">sign-in codes · order updates "via EkCode"</text>
+          </svg>
+  </div>
+  <p class="k">One pure function (<span class="mono">src/domains/messaging/route.ts</span>). The order page shows which sender was used. A shop that connects its number moves every order update to its own name, with nothing to switch.</p>
+
+  <h2 id="shared">One engine under both</h2>
+  <div class="grid g3">
+    <div class="card"><h3>One contact list per shop</h3><p class="k" style="margin:0">EkCode's per-shop contact <span class="mono">shop_customers</span> is the shop's contact book. Consents per shop (order updates, WhatsApp marketing, email marketing) with notice version and time. Stops per sender. EkCode's network data never used for marketing.</p></div>
+    <div class="card"><h3>One checkout tick</h3><p class="k" style="margin:0">Worded by sender: "Order updates from Kesar Studio on WhatsApp" when the shop has a number; "…from EkCode on WhatsApp" when not. Never two ticks.</p></div>
+    <div class="card"><h3>One template engine</h3><p class="k" style="margin:0">Order templates generated from the order's state, checked before sending to Meta (no price, offer or link that makes Meta call it marketing at 7.5× the price), created in the shop's account on connect.</p></div>
+    <div class="card"><h3>One send queue</h3><p class="k" style="margin:0">One outbox kind <span class="mono">whatsapp.send</span> for both numbers; same retries, same 24-hour back-off when Meta holds marketing (131049), same delivered counts.</p></div>
+    <div class="card"><h3>One webhook</h3><p class="k" style="margin:0">Meta's events routed by number to the shop or to EkCode; the 200-row bug that can starve health events is fixed first.</p></div>
+    <div class="card"><h3>One Admin view</h3><p class="k" style="margin:0">Admin › EkCode (approved) gains Messages health: shops' numbers, quality, templates paused, Meta spend per shop.</p></div>
+  </div>
+
+  <h2 id="options">The four options</h2>
+  <div class="grid g2">
+    <div class="card opt"><h3>A · Everything under EkCode <span class="chip c-danger">No</span></h3><p class="k" style="margin:0">Breaks Meta's one-business rule for shop marketing; one bad shop could pause broadcasts for all; consent is per shop; shoppers can't tell who writes.</p></div>
+    <div class="card opt"><h3>B · Two separate products <span class="chip c-warn">Works, costly</span></h3><p class="k" style="margin:0">Two contact lists, two consent models, two template sets, two webhooks, two checkout ticks. The duplication the codebase already shows signs of.</p></div>
+    <div class="card opt rec"><h3>C · One engine, two senders <span class="chip c-ok">Recommended</span></h3><p class="k" style="margin:0">EkCode for identity and zero-setup updates; Messages for the shop's own number; everything below shared. Matches how GoKwik and Razorpay split it, without their seams.</p></div>
+    <div class="card opt"><h3>D · Resell messages via a Meta Solution Partner <span class="chip c-n">Later</span></h3><p class="k" style="margin:0">Their credit line pays Meta, so the merchant adds no card. But they are the billed party; Frrata still can't add message fees to its invoice. Worth it only if the card step stops merchants.</p></div>
+  </div>
+
+  <h2 id="facts">What Meta allows (checked 9 Nov 2026)</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Fact</th><th>What it means for us</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td>One business per WhatsApp account; no speaking for another business</td><td>Shop marketing only from the shop's number</td><td>Policy, 23 Sep 2026</td></tr>
+      <tr><td>Tech Provider (Frrata today): Meta bills the merchant; we bill "other services"</td><td>No markup, no wallet; our fee is the plan</td><td>Meta partner docs</td></tr>
+      <tr><td>Solution Partner credit line can pay for clients (they are "Bill To Party")</td><td>Option D later, to remove the card step</td><td>Meta partner docs</td></tr>
+      <tr><td>Marketing Messages API live; Cloud API marketing ends 13 Oct 2027 (none for accounts made from 13 Apr 2027)</td><td>Build broadcasts and cart recovery on it from the start</td><td>Meta changelog, 19 Oct 2026</td></tr>
+      <tr><td>India: marketing ₹0.8631, utility/auth ₹0.115 + GST; in-window utility charged since 1 Oct 2026</td><td>Order updates cheap; marketing 7.5×: keep promos out of order templates</td><td>Meta pricing; aggregators</td></tr>
+      <tr><td>Coexistence in India: keep the Business app; 20 msgs/s; broadcast lists read-only</td><td>Connect by default with coexistence</td><td>Meta changelog, 5 May 2025</td></tr>
+      <tr><td>Pay in chat (Razorpay link), forms in chat, CAPI "OrderDelivered"</td><td>Ads judged on delivered orders; COD-to-prepaid in chat</td><td>Meta docs</td></tr>
+      <tr><td>A Tech Provider's restriction has taken down all its merchants at once</td><td>EkCode in its own Meta portfolio</td><td>Meta developer forum, Jul–Oct 2026</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2 id="market">The market (India, 2026)</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Product</th><th>What it is</th><th>Price</th><th>How it bills</th></tr></thead>
+    <tbody>
+      <tr><td>Interakt</td><td>Inbox, catalog, COD-to-prepaid, cart, ads</td><td class="mono">$55–69/mo + 20–25%</td><td>Credits</td></tr>
+      <tr><td>WATI</td><td>Inbox, broadcasts, bots</td><td class="mono">₹2,999–18,499/mo + 18–30%</td><td>Credits, unused not refunded</td></tr>
+      <tr><td>AiSensy</td><td>Broadcasts, bots</td><td class="mono">from ₹1,500/mo</td><td>Prepaid credits</td></tr>
+      <tr><td>Gallabox · Zoko · DoubleTick</td><td>Inbox, COD flows</td><td class="mono">₹999 – $170/mo</td><td>"0% markup" claims</td></tr>
+      <tr><td>GoKwik KwikEngage + KwikPass</td><td>Two apps, shared data</td><td class="mono">$40/mo + usage</td><td>Usage; "wallet drained"</td></tr>
+      <tr><td>Shiprocket Engage</td><td>COD confirm, NDR, cart</td><td class="mono">₹2.49 / order</td><td>Per order · rated 2.3</td></tr>
+      <tr><td>Shopify Messaging</td><td>WhatsApp marketing</td><td class="mono">~2× Meta</td><td>Shopify bills</td></tr>
+      <tr><td>WhatsApp Business app</td><td>Free, Business AI in India</td><td class="mono">₹0</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+  <p class="k">What merchants complain about, in order: numbers restricted or quality dropping; templates rejected or turned into marketing; wallets, credits and markups; losing the app after moving to the API; slow onboarding; support passed around. Frrata answers each: coexistence, linted templates, no wallet or markup, one-tap connect, and messages tied to the order, COD risk and profit it already owns.</p>
+
+  <h2 id="calls">Your calls</h2>
+  <ol class="calls">
+    <li><span><b>Option C</b>: Messages beside EkCode, one engine underneath.</span></li>
+    <li><span><b>EkCode's number in its own Meta business portfolio</b> (same company, verified once more), so a restriction on the merchant side can't stop sign-in, and the daily limits aren't shared. Changes setup step B2.</span></li>
+    <li><span><b>Billing</b>: Meta bills merchants for their own number now (no markup, no wallet); a Solution Partner only later, if the card step stops merchants.</span></li>
+    <li><span><b>Plans</b>: inbox and order messages in every plan; cart recovery, broadcasts and ads from Growth.</span></li>
+    <li><span><b>Order of work</b>: EkCode P1 → M·1 order messages (EkCode's updates ride the same pipeline) → M·2 inbox → M·3 grow → M·4 ads and pay-in-chat. Each phase gets its own mockup.</span></li>
+  </ol>
+</div>
+<button class="theme-t" type="button" id="theme">Dark</button>
+<script>
+(() => { const b = document.getElementById('theme'); b.addEventListener('click', () => { const r = document.documentElement, d = r.dataset.theme !== 'dark'; r.dataset.theme = d ? 'dark' : 'light'; b.textContent = d ? 'Light' : 'Dark' }) })()
+</script>
