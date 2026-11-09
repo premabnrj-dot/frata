@@ -32,6 +32,8 @@ export type ShopFacts = PolicyFacts & {
   gstin: string | null
   defaultHsn: string
   invoiceSeries: string
+  /** The shop's logo (Settings › Brand, S1·6): its 400-wide WebP in the brand folder. */
+  logoUrl?: string | null
   docLogo: string | null
   docSignatory: string
   docNote: string

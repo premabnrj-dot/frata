@@ -16,7 +16,7 @@ export function shopFacts(shop: Row, shopDomain: string): ShopFacts {
     codOn: s.codOn, codMin: s.codMin, codMax: s.codMax, codCharge: s.codCharge, codBlockedPincodes: s.codBlockedPincodes,
     shippingFlat: s.shippingFlat, freeShippingAbove: s.freeShippingAbove, dispatchDays: s.dispatchDays, metroDays: s.metroDays, restDays: s.restDays,
     pricesIncludeGst: s.pricesIncludeGst, gstin: s.gstin, defaultHsn: s.defaultHsn, invoiceSeries: s.invoiceSeries,
-    docLogo: s.docLogo, docSignatory: s.docSignatory, docNote: s.docNote, slipSize: s.slipSize,
+    logoUrl: s.logoUrl, docLogo: s.docLogo, docSignatory: s.docSignatory, docNote: s.docNote, slipSize: s.slipSize,
   }
 }
 

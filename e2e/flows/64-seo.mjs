@@ -212,6 +212,20 @@ export default {
       await ctx.close()
     })
 
+    await t.step('S1·6: the shop has its own icon (its initial or logo, never Frrata\'s), served as PNG', async () => {
+      const h = head((await get('/', CRAWLERS.google)).body)
+      const icons = [...h.raw.matchAll(/<link\b[^>]*rel="(?:icon|apple-touch-icon)"[^>]*>/g)].map((x) => x[0].match(/href="([^"]+)"/)[1])
+      assert.ok(icons.length >= 2, `icon links: ${icons.join(', ')}`)
+      for (const href of icons) {
+        assert.match(href, /^\/icon\/(32|180|192|512)\/[0-9a-f]{16}\.png$/)
+        const r = await getBytes(href)
+        assert.equal(r.status, 200); assert.equal(r.headers['content-type'], 'image/png')
+      }
+      assert.equal((await getBytes(icons[0].replace(/\/icon\/\d+\//, '/icon/64/'))).status, 404, 'only the listed sizes')
+      const vp = h.raw.match(/<meta name="theme-color" content="([^"]+)"/)
+      assert.ok(vp, 'theme-color')
+    })
+
     await t.step('robots.txt allows crawling and names the sitemap; the sitemap lists the product', async () => {
       const robots = await get('/robots.txt', CRAWLERS.google)
       assert.equal(robots.status, 200)

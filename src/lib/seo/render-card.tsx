@@ -30,10 +30,12 @@ async function fontsFor() {
 }
 
 /** A photo's bytes → a JPEG data URI cropped to the box, or null for anything that is not a sane WebP. */
-export async function photoUri(bytes: Buffer, w: number, h: number): Promise<string | null> {
+export async function photoUri(bytes: Buffer, w: number, h: number, fit: 'cover' | 'contain' = 'cover'): Promise<string | null> {
   try {
     const img = sharp(bytes, { limitInputPixels: 4_000_000, failOn: 'error' })
     if ((await img.metadata()).format !== 'webp') return null
+    // A logo (contain) keeps its transparency and its shape: a PNG no larger than 512 a side.
+    if (fit === 'contain') return `data:image/png;base64,${(await img.resize(512, 512, { fit: 'inside', withoutEnlargement: true }).png().toBuffer()).toString('base64')}`
     const out = await img.resize(w, h, { fit: 'cover', position: 'attention' }).jpeg({ quality: 82 }).toBuffer()
     return `data:image/jpeg;base64,${out.toString('base64')}`
   } catch { return null }

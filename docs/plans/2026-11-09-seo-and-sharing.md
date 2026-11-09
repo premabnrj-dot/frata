@@ -118,6 +118,14 @@ verify command run and read, and `impact-reviewer` on its diff before the commit
   console preview route for drafts was not needed. Open: S1·6 (logo setter, shop icons), S1·5's firewall check (owner),
   S1·8 held.
 
+### S1·6 as built (2026-11-09)
+- Settings › Brand › Logo: uploaded through the photo pipeline into the shop's brand folder (WebP; logos from 120 px),
+  accepted only by `acceptedBase(…,'brand')` with WebP bytes; `shop_settings.logo_url` = its 400 rung; never by a support
+  visit; the shop's caches refreshed.
+- `/icon/<32|180|192|512>/<hash>.png` (s/[host]/icon): the logo on the theme's tint, or the initial; the same rules as
+  the card route (canonical, budgeted, own-folder logo only). The shop layout's icons and apple icon point at it, theme
+  colour from the theme. Root `/favicon.ico` stays the platform's (accepted).
+
 ## S·2 Search foundations
 - **S2·1 Descriptions everywhere** in `pageTags` (lists, collections trimmed to 155, policies, page n); Hindi titles.
 - **S2·2 Collections**: migration — `collections.seo_title`, `seo_description` (length checks);
