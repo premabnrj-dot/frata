@@ -20,10 +20,20 @@ export default {
       await p.goto(CONSOLE + '/console/settings/address')
       await p.fill('#slug', to)
       await p.getByText('Available', { exact: true }).waitFor()
-      await p.getByRole('button', { name: `Change to ${to}` }).click()
-      const dlg = p.getByRole('dialog', { name: `Change to ${to}.${SHOP_DOMAIN}?` }); await dlg.waitFor()
-      await dlg.getByRole('button', { name: `Change to ${to}` }).click()
-      await p.getByRole('status').filter({ hasText: `Moved to ${to}.${SHOP_DOMAIN}` }).waitFor()
+      // Live payments (the seed's keys are live): the new name is added beside the current one, ticked as approved by
+      // Razorpay, then made main (D1·9).
+      await p.getByRole('button', { name: `Add ${to}` }).click()
+      const dlg = p.getByRole('dialog', { name: `Add ${to}.${SHOP_DOMAIN}?` }); await dlg.waitFor()
+      await dlg.getByRole('button', { name: `Add ${to}` }).click()
+      await p.getByRole('status').filter({ hasText: `Added ${to}.${SHOP_DOMAIN}` }).waitFor()
+      assert.equal(await p.locator('#slug').isDisabled(), true, 'one added name at a time')
+      const row = p.getByRole('listitem').filter({ hasText: `${to}.${SHOP_DOMAIN}` })
+      await row.getByText('Razorpay not approved').waitFor({ timeout: 20_000 }) // after the page's refresh lands
+      assert.equal(await row.getByRole('button', { name: 'Make main' }).count(), 0, 'Make main waits for Razorpay')
+      await row.getByRole('button', { name: 'Razorpay approved it' }).click()
+      await row.getByRole('button', { name: 'Make main' }).click()
+      await p.getByText(`${to}.${SHOP_DOMAIN} is your main address`).first().waitFor()
+      await p.waitForFunction((v) => document.querySelector('#slug')?.value === v, to)
     }
     try {
       const p = await owner.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message))

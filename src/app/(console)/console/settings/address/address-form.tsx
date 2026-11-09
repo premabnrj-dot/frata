@@ -28,6 +28,10 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
   // What a rename changes is known at once: the screen updates itself, not only when the refresh lands.
   const [{ current, left, old }, setFacts] = useState({ current: first, left: firstLeft, old: firstOld })
   const [slug, setSlug] = useState(first)
+  // A change made elsewhere on the page (Make main on an added name) arrives as new props: take them in.
+  const facts = `${first}|${firstLeft}|${firstOld.join()}`
+  const [seen, setSeen] = useState(facts)
+  if (seen !== facts) { setSeen(facts); setFacts({ current: first, left: firstLeft, old: firstOld }); setSlug(first) }
   const [state, setState] = useState<AddressCheck | null>(null)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [confirming, setConfirming] = useState(false)
@@ -92,14 +96,14 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="secondary" disabled={!changed || pending} onClick={() => setSlug(current)}>Keep {current}</Button>
             <Button type="button" disabled={!changed || state?.state !== 'ok' || pending}
-              onClick={() => (left === null ? change() : setConfirming(true))}>{pending ? 'Changing…' : `${twoStep ? 'Add' : 'Change to'} ${slug || '…'}`}</Button>
+              onClick={() => (left === null ? change() : setConfirming(true))}>{pending ? (twoStep ? 'Adding…' : 'Changing…') : `${twoStep ? 'Add' : 'Change to'} ${slug || '…'}`}</Button>
           </div>
         )}
       </Section>
       <Dialog open={confirming} onClose={() => setConfirming(false)} title={`${twoStep ? 'Add' : 'Change to'} ${slug}.${shopDomain}?`}
         actions={<>
           <Button type="button" variant="secondary" data-autofocus onClick={() => setConfirming(false)}>Keep {current}</Button>
-          <Button type="button" disabled={pending} onClick={twoStep ? add : change}>{pending ? 'Changing…' : `${twoStep ? 'Add' : 'Change to'} ${slug}`}</Button>
+          <Button type="button" disabled={pending} onClick={twoStep ? add : change}>{pending ? (twoStep ? 'Adding…' : 'Changing…') : `${twoStep ? 'Add' : 'Change to'} ${slug}`}</Button>
         </>}>
         <p className="text-sm">{twoStep ? `Make it main once Razorpay approves it · ${RENAMES_AFTER_OPENING - (left ?? 0) + 1} of ${RENAMES_AFTER_OPENING} changes` : left !== null && `${RENAMES_AFTER_OPENING - left + 1} of ${RENAMES_AFTER_OPENING} changes`}</p>
       </Dialog>

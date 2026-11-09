@@ -49,7 +49,11 @@ export default {
         await p.getByRole('listitem').filter({ hasText: OWN_DOMAIN }).getByText('Connected', { exact: true }).waitFor()
       })
       await t.step('Make main: one-line confirm, then the canonical moves and the domain opens the shop; Undo puts the name back', async () => {
-        await p.getByRole('listitem').filter({ hasText: OWN_DOMAIN }).getByRole('button', { name: 'Make main' }).click()
+        // Live payments: Make main waits for the merchant's word that Razorpay approved the domain (D1·8).
+        const row = p.getByRole('listitem').filter({ hasText: OWN_DOMAIN })
+        await row.getByText('Razorpay not approved').waitFor()
+        await row.getByRole('button', { name: 'Razorpay approved it' }).click()
+        await row.getByRole('button', { name: 'Make main' }).click()
         const c = p.getByRole('dialog', { name: `Make ${OWN_DOMAIN} your main address?` })
         await c.getByText('Bags in progress start empty.').waitFor()
         await c.getByRole('button', { name: 'Make it main' }).click()
