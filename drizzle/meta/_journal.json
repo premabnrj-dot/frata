@@ -505,6 +505,13 @@
       "when": 1794220148880,
       "tag": "0071_vengeful_raider",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1794220854556,
+      "tag": "0072_tricky_saracen",
+      "breakpoints": true
     }
   ]
 }

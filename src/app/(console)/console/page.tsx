@@ -1,5 +1,6 @@
 import { PageHeader } from '@/components/layout/page-header'
 import { Panel } from '@/components/ui/panel'
+import { redirect } from 'next/navigation'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { todayLongIN } from '@/lib/format-date'
 import { setupFor } from '@/lib/queries/settings'
@@ -23,6 +24,9 @@ export async function generateMetadata() {
 }
 
 export default async function ConsoleHome() {
+  // The accountant's console is GST (GST plan phase 3): Home is the shop's day, not theirs.
+  const who = await requireMember(['accountant'])
+  if (who.ok) redirect('/console/gst')
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
   const tenantId = auth.membership.tenantId, canManage = auth.membership.role !== 'staff'

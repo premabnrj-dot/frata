@@ -27,8 +27,10 @@ export { MAX_DOCUMENTS }
 /** Settings › Documents (D2): the logo for paper, the signatory and the invoice note — today's (slips), or as an invoice froze them. */
 export type Paper = { logo: string | null; signatory: string; note: string }
 
-export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], kind: 'slip' | 'invoice' | 'credit', now = new Date()): Promise<{ shop: DocShop; paper: Paper; orders: { n: number; o: DocOrder; lines: DocLine[]; frozen: Paper; credit: IssuedCredit | null; credits: IssuedCredit[] }[]; skipped: { number: string; state: OrderState }[] }> {
-  const wanted = [...new Set(numbers.filter((n) => Number.isSafeInteger(n) && n > 0))].slice(0, MAX_DOCUMENTS)
+export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], kind: 'slip' | 'invoice' | 'credit', now = new Date(),
+  /** The GST app reads a period's documents in batches above the print cap (MAX_DOCUMENTS is for a print page). */
+  cap = MAX_DOCUMENTS): Promise<{ shop: DocShop; paper: Paper; orders: { n: number; o: DocOrder; lines: DocLine[]; frozen: Paper; credit: IssuedCredit | null; credits: IssuedCredit[] }[]; skipped: { number: string; state: OrderState }[] }> {
+  const wanted = [...new Set(numbers.filter((n) => Number.isSafeInteger(n) && n > 0))].slice(0, cap)
   const [s] = await tx.select({ name: tenants.name, legalName: shopSettings.legalName, address: shopSettings.address, prefix: shopSettings.orderPrefix,
     logo: shopSettings.docLogo, signatory: shopSettings.docSignatory, note: shopSettings.docNote })
     .from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))

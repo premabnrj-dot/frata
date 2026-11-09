@@ -151,7 +151,7 @@ export const invites = pgTable('invites', {
 }, (t) => [
   index('invites_tenant').on(t.tenantId),
   index('invites_email_open').on(t.email).where(sql`${t.acceptedAt} is null and ${t.revokedAt} is null`),
-  check('invites_role', sql`${t.role} in ('owner','admin','staff')`),
+  check('invites_role', sql`${t.role} in ('owner','admin','staff','accountant')`),
   check('invites_email_lower', sql`${t.email} = lower(${t.email})`),
 ])
 
