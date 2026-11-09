@@ -1,7 +1,7 @@
 import { manifestNear, manifestOf } from './catalogue'
 import { choicesFor } from './choices'
 import { LayerSchema, SettingsSchema, onColour, brandColourProblem } from './layer'
-import { PRODUCT_LAYOUTS, SECTION_SCHEMES, SectionSchema, type SectionInstance } from './sections'
+import { PRODUCT_LAYOUTS, SECTION_SCHEMES, SectionSchema, type SectionInstance, VIDEO_KEYS } from './sections'
 import { paletteProblem, readMenus, readSite, textOf, TEXT_STYLES } from './site'
 import { FEEL_DEFAULTS, PAGE_DEFAULTS, PAIRINGS, type ChoiceKey, type Pairing, type ResolvedTheme, type Scheme, type SchemeKey, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
 
@@ -107,7 +107,7 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
     if (x.key === 'products' && !layouts.includes(x.layout)) x = { ...x, layout: 'grid' }
     if ('scheme' in x && !schemesOk.includes(x.scheme)) x = { ...x, scheme: 'paper' }
     // V1: a theme that doesn't offer video in this section never renders one; the photo shows.
-    if ((x.key === 'hero' || x.key === 'image_text') && x.video && !videoOk.includes(x.key)) { const { video: _drop, ...rest } = x; x = rest }
+    if ((x.key === 'hero' || x.key === 'image_text') && (VIDEO_KEYS as readonly string[]).includes(x.key) && x.video && !videoOk.includes(x.key)) { const { video: _drop, ...rest } = x; x = rest }
     // Signal 1.2 (S2): the Spotlight layout and the Hero's script line only where the theme offers them.
     if (x.key === 'image_text' && x.layout && !spotlightOk) { const { layout: _drop, ...rest } = x; x = rest }
     if (x.key === 'hero' && x.script !== undefined && !scriptOk) { const { script: _drop, ...rest } = x; x = rest }

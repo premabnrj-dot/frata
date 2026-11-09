@@ -35,7 +35,8 @@ export function Spotlight({ s, ctx }: { s: SectionOf<'image_text'>; ctx: Section
 
 /**
  * Story cards fanned out, the middle one forward (a list; each card's place is set here: --d its offset from the
- * middle, --a its distance). Phone: a swipe row. Reduced motion: side by side (globals). A focused card comes forward.
+ * middle, --a its distance). Phone: a swipe row. Reduced motion or the theme's motion off: side by side (base.css). A
+ * focused card comes forward.
  */
 export function StoryFan({ s, ctx }: { s: SectionOf<'story_fan'>; ctx: SectionCtx }) {
   const cards = s.cards.filter((c) => c.image)

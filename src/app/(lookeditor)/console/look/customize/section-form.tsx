@@ -254,7 +254,8 @@ export function SectionForm({ s, set, c }: { s: SectionInstance; set: (s: Sectio
     <div className="space-y-4">
       <h2 className="text-base font-semibold">{SECTION_NAMES[s.key]}</h2>
       {body}
-      <Choice label="Colours" value={s.scheme} onChange={(scheme) => set({ ...s, scheme })} options={c.schemes.map((x) => ({ value: x.key, label: x.name }))} />
+      {/* The Statement is always white words on its darkened photo: no colours to choose. */}
+      {s.key !== 'statement' && <Choice label="Colours" value={s.scheme} onChange={(scheme) => set({ ...s, scheme })} options={c.schemes.map((x) => ({ value: x.key, label: x.name }))} />}
     </div>
   )
 }

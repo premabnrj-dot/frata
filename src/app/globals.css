@@ -1,5 +1,61 @@
 @import "tailwindcss";
 @import "./base.css";
 
+/* The console's own rules (Signal S2-0, speed review: they never reach a shop): the shell's fonts and focus, tables
+   that become rows on a phone, the calculator, the busy list, the tinge. Same layer as before, so nothing reorders. */
+@layer base {
+  /* Order numbers and figures: no ligatures (JetBrains Mono joins -- and ->). */
+  [data-shell] :is(.font-mono, code, kbd) { font-variant-ligatures: none; }
+
+  /* FOCUS in Console and Admin ([data-shell], both layouts): 2 px solid, 2 px gap; paper-coloured on ink.
+     Scoped so the storefront keeps its own (frata-design-language § UX foundation rule 5). */
+  /* The shell's stack: Inter, then Noto for Indic names (src/components/shell/fonts.ts). */
+  [data-shell] { --font-shell: var(--font-inter), var(--font-noto-deva), var(--font-noto-beng), var(--font-noto-guru), var(--font-noto-taml), system-ui, sans-serif; font-family: var(--font-shell); }
+  /* The display face (page titles, the brand moment): Bricolage, then the same Indic fallbacks, since a title can be a name. */
+  [data-shell] { --font-display-stack: var(--font-bricolage), var(--font-noto-deva), var(--font-noto-beng), var(--font-noto-guru), var(--font-noto-taml), var(--font-inter), system-ui, sans-serif; }
+  /* TABLES ON A PHONE BECOME ROWS (rule 15; src/components/data/data-table.tsx): one DOM, reflowed. */
+  @media (max-width: 767px) {
+    table[data-rows] { display: block; }
+    table[data-rows] > thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    table[data-rows] > tbody { display: block; }
+    table[data-rows="list"] > tbody > tr { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "a b" "c d" "e e" "f f"; column-gap: 0.75rem; row-gap: 0.125rem; padding: 0.625rem 0.75rem; min-height: 3.5rem; }
+    table[data-rows="list"] > tbody > tr > td { display: block; padding: 0 !important; min-width: 0; }
+    table[data-rows="list"] td[data-cell="a"] { grid-area: a; } table[data-rows="list"] td[data-cell="b"] { grid-area: b; justify-self: end; text-align: right; }
+    table[data-rows="list"] td[data-cell="c"] { grid-area: c; } table[data-rows="list"] td[data-cell="d"] { grid-area: d; justify-self: end; text-align: right; }
+    table[data-rows="list"] td[data-cell="e"] { grid-area: e; } table[data-rows="list"] td[data-cell="f"] { grid-area: f; }
+    table[data-rows] td[data-cell="hide"] { display: none !important; }
+    /* The row's own link covers the row (one target); any other link or button in it stays above. */
+    table[data-rows="list"] [data-row-link]::after { content: ""; position: absolute; inset: 0; }
+    table[data-rows="list"] td :is(a:not([data-row-link]), button, input, select, textarea, summary, label) { position: relative; z-index: 1; }
+    table[data-rows="form"] > tbody > tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem 0.75rem; padding: 0.75rem; }
+    table[data-rows="form"] > tbody > tr > td { display: block; padding: 0 !important; min-width: 0; }
+    table[data-rows="form"] td[data-cell="full"] { grid-column: 1 / -1; }
+    table[data-rows="form"] td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 0.125rem; font-size: 0.75rem; color: var(--muted-foreground); }
+    table[data-rows="form"] td :is(input, select) { width: 100% !important; } /* over the desktop w-16, w-40 … utilities */
+  }
+  /* A list while the next view loads (src/components/shell/nav-progress.tsx sets aria-busy after 150 ms). */
+  main#content :is(table, [data-list]) { transition: opacity var(--transition-duration-fast) var(--ease-standard); }
+  main#content[aria-busy="true"] :is(table, [data-list]) { opacity: 0.55; }
+  /* The phone's More sheet is open: the page behind does not scroll (src/components/shell/nav.tsx). */
+  html:has(dialog[data-more][open]) { overflow: hidden; }
+  /* The document keeps the scroll (A7): keep a focused or scrolled-to element clear of the sticky support banner
+     and of the phone's fixed bottom bar. */
+  html:has([data-support-banner]) { scroll-padding-top: 3.5rem; }
+  @media (max-width: 767px) { html:has([data-shell] main#content) { scroll-padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px)); } }
+  /* THE TINGE (brand spec, chapter 4): one detail per icon in rani, only inside a frame that asks for it
+     (data-tinge: the navs and the More sheet). Outside one, icons are one colour: in a table, colour means status. */
+  [data-tinge] { --icon-accent: var(--brand); }
+  [data-surface="ink"] [data-tinge], [data-surface="ink"][data-tinge] { --icon-accent: var(--brand-on-ink); }
+  /* The /partners calculator (website spec W·1): no script — the checked radio's panel shows. Values: SHARE_CHOICES. */
+  [data-calc] [data-panel] { display: none; } /* hidden here, not with a `hidden` utility: utilities outrank this layer, so the checked panel never showed (visual changes, 2026-11-08) */
+  [data-calc]:has(input[value="1"]:checked) [data-panel="1"], [data-calc]:has(input[value="3"]:checked) [data-panel="3"],
+  [data-calc]:has(input[value="5"]:checked) [data-panel="5"], [data-calc]:has(input[value="10"]:checked) [data-panel="10"] { display: grid; }
+  /* A link in a working page: ink words, a thread-coloured underline (brand spec, chapter 5). */
+  [data-shell] main#content a.underline { text-decoration-color: var(--thread); text-decoration-thickness: 1.5px; }
+  [data-shell] :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  [data-shell] [data-surface="ink"] :focus-visible { outline-color: var(--primary-foreground); }
+  [data-shell] [data-support-banner] :focus-visible { outline-color: var(--support-foreground); }
+}
+
 /* Which sheet this is (scripts/check-storefront-build.mjs: a shop page must never load the app sheet). */
 :root { --frrata-sheet-app: 1; }

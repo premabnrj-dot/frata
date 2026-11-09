@@ -72,7 +72,7 @@ export function withSampleImages<T extends { home: import('@/domains/themes/sect
   // Signal S2: a story fan with too few photos borrows the set's pieces (five cards when it has none); a statement
   // borrows the scene. Preview only, as every sample.
   const pieceAt = (i: number) => {
-    const ps = set === 'clothing' ? [] : SAMPLE_SETS[set]
+    const ps = SAMPLE_SETS[set]
     return ps.length ? { ...SAMPLE_SCENES.piece, base: `/themes/samples/${ps[i % ps.length]!.name}` } : piece
   }
   return { ...t, home: t.home.map((s) => s.key === 'hero' && s.layout !== 'text' && !s.image ? { ...s, image: scene }

@@ -22,7 +22,7 @@ const BUDGET_KB = 120
 // Product page 121 after merging search and sharing (its share button and barcode work): measured 120.0 kB that day.
 const TIGHT = { '/s/[host]/(shop)/products/[handle]/page': 121, '/s/[host]/(checkout)/checkout/page': 121 }
 // The shop's stylesheet (shared, render-blocking): every theme's rules land in it, so it has a ceiling too.
-const CSS_BUDGET_KB = 16.6 // 15.6 measured 2026-11-09 after Signal S2-2 (story sections, Caveat face, scale) + 1 kB; the shop's own sheet since S2-0 (was 22.5)
+const CSS_BUDGET_KB = 15.9 // 14.9 measured 2026-11-09 after Signal S2 (story sections, Caveat, scale; console rules moved to the app sheet) + 1 kB; was 22.5 before the shop's own sheet
 const failures = []
 const read = (f) => JSON.parse(readFileSync(join('.next', f), 'utf8'))
 if (!existsSync('.next/prerender-manifest.json')) { console.error('check:storefront-build — no .next to read; run it after next build.'); process.exit(1) }
@@ -64,11 +64,18 @@ for (const [k, files] of Object.entries(build)) {
   if (kb > limit) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${limit} kB) — split what the first paint does not need`)
 }
 
-// …and the console must load it (its classes live only there).
+// …and every page that isn't a shop must load it (its classes live only there): the console, Admin, the partner
+// pages, the customizer and its preview, login and the public site. Each depends on one small layout (S2-0).
 {
-  const consoleKey = Object.keys(build).find((k) => k.startsWith('/(console)') && k.endsWith('/page'))
-  const files = consoleKey ? [...(build['/layout'] ?? []), ...Object.entries(build).filter(([k]) => consoleKey.startsWith(k.replace(/\/layout$/, '')) && k.endsWith('/layout')).flatMap(([, v]) => v), ...build[consoleKey]] : []
-  if (!consoleKey || !files.some((f) => f.endsWith('.css') && readFileSync(join('.next', f), 'utf8').includes('--frrata-sheet-app'))) failures.push(`${consoleKey ?? 'the console'}  doesn't load the app's stylesheet (src/app/globals.css)`)
+  const has = (f) => f.endsWith('.css') && readFileSync(join('.next', f), 'utf8').includes('--frrata-sheet-app')
+  const pages = Object.keys(build).filter((k) => k.endsWith('/page') && !k.startsWith('/s/') && !k.startsWith('/api/') && !/\/(frrata-(apple-)?icon)/.test(k))
+  for (const k of pages) {
+    const parts = k.split('/').slice(0, -1)
+    const above = ['/layout', ...parts.map((_, i) => `${parts.slice(0, i + 1).join('/')}/layout`).filter((l) => l !== '/layout' && build[l])]
+    const files = [...new Set([...above.flatMap((l) => build[l] ?? []), ...build[k]])]
+    if (!files.some(has)) failures.push(`${k}  doesn't load the app's stylesheet (src/app/globals.css): give its group a layout that imports it`)
+  }
+  if (!pages.length) failures.push('no app pages found to check for the app stylesheet')
 }
 if (failures.length) {
   console.error('check:storefront-build:')

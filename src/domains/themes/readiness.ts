@@ -71,8 +71,10 @@ export function readinessOf(home: SectionInstance[], f: ShopFacts, now: Date): I
       case 'story_fan': {
         const shown = s.cards.filter((c) => c.image)
         if (shown.length < 3) add(false, 'add 3 cards with photos, or it shows nothing')
-        if (s.cards.some((c) => altMissing(c.image))) add(true, 'describe each card’s photo for people who can’t see it')
-        if (s.cards.some((c) => c.link && !c.title.trim() && (!c.image || c.image.decorative || !c.image.alt.trim()))) add(true, 'give each linked card a title')
+        // A card's title is its name on the shop (its photo is then decoration): a description is asked only of an
+        // untitled card, and a linked card needs a title or a described photo (a link must have a name).
+        if (shown.some((c) => !c.title.trim() && !c.link && altMissing(c.image))) add(true, 'describe each untitled card’s photo for people who can’t see it')
+        if (shown.some((c) => c.link && !c.title.trim() && (c.image!.decorative || !c.image!.alt.trim()))) add(true, 'give each linked card a title')
         break
       }
       case 'statement':

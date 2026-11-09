@@ -2,9 +2,9 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.10.0
+  version: 5.11.0
   verified: 2026-11-09
-  covers: ["src/app/globals.css", "src/components/**"]
+  covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
 
 # Frata design language
@@ -68,7 +68,7 @@ from it).
   from pictograms on a haldi-soft field, flat, no perspective, no faces, no
   stock art. One per page at most (the hero).
 - **Tokens**: `--illo-line`, `--illo-paper`, `--illo-fill`, `--illo-haldi`,
-  `--illo-haldi-soft`, `--illo-indigo-soft` (globals.css, both themes). Never
+  `--illo-haldi-soft`, `--illo-indigo-soft` (base.css, both themes). Never
   rani (rule 6), never on a control, never the only sign of anything:
   every graphic is `aria-hidden` beside words that say the same.
 - **UI icons are frrata's own** (§ UX foundation rule 20, § Brand rule 36). Pictograms are not icons.
@@ -204,7 +204,7 @@ Two surfaces, two looks. **The console is neutral, dense and numeric. The
 fashion lives in the storefront.** Patterns below are taken from Ekatan's admin
 (its `ekatan3d-design-language`) and Shopify's admin, which merchants already know.
 
-## Tokens (`src/app/globals.css` — the console's only hex; images drawn outside CSS — PDFs, share cards — keep their palette in one allowed file each; `check:hex`)
+## Tokens (`src/app/base.css` — shared by the app sheet `globals.css` and the shop sheet `shop.css` since Signal S2-0; the only hex; images drawn outside CSS — PDFs, share cards — keep their palette in one allowed file each; `check:hex`)
 
 - `--primary` (ink) is interaction: buttons, focus. `--brand` is **rani**
   (#D61F69, the frrata mark; brand spec 2026-11-07): never a button fill, a

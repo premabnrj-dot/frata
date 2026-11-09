@@ -47,3 +47,27 @@ describe('the story sections never stop a first publish', () => {
     expect(issues({ id: 'st', key: 'statement', wordmark: 'the long way', image: img() })).toEqual([])
   })
 })
+
+describe('trying another theme says what doesn\'t come across', () => {
+  it('the Spotlight and the handwritten line', async () => {
+    const { carryOver } = await import('../layer')
+    const r = carryOver({ manifest: manifestOf('signal', '1.2.0')!, layer: { style: 'cobalt', home } }, manifestOf('editorial', '2.1.0')!)
+    expect(r.lost).toEqual(expect.arrayContaining(["Spotlight shows as Image with text in Editorial", "The Hero's handwritten line isn't in Editorial"]))
+    const same = carryOver({ manifest: manifestOf('signal', '1.2.0')!, layer: { style: 'cobalt', home } }, manifestOf('signal', '1.2.0')!)
+    expect(same.lost.some((l) => /Spotlight|handwritten/.test(l))).toBe(false)
+  })
+})
+
+describe('a card\'s title is its name', () => {
+  const f = { collections: [], codOn: true, freeShippingAbove: null, returnDays: 7, dispatchDays: 2 }
+  const now = new Date('2026-11-09T10:00:00Z')
+  const blocks = (cards: object[]) => readinessOf([SectionSchema.parse({ id: 'f', key: 'story_fan', cards })], f, now).filter((x) => x.blocks).map((x) => x.text)
+  const img = (alt: string) => ({ base: 'https://x/p', widths: [400], width: 4, height: 5, alt, decorative: false, focus: null })
+  it('a titled card needs no photo description; an untitled one does', () => {
+    expect(blocks([{ image: img(''), title: 'One' }, { image: img(''), title: 'Two' }, { image: img(''), title: 'Three' }])).toEqual([])
+    expect(blocks([{ image: img(''), title: 'One' }, { image: img(''), title: 'Two' }, { image: img(''), title: '' }])).toEqual(['Story fan: describe each untitled card’s photo for people who can’t see it'])
+  })
+  it('a card with no photo is never judged (it isn\'t shown)', () => {
+    expect(blocks([{ image: null, title: '', link: '/products' }])).toEqual([])
+  })
+})

@@ -338,7 +338,7 @@ HTML.
 
 | Done by hand | Becomes |
 |---|---|
-| Computing contrast of token pairs (this review) | `scripts/check-contrast.mjs` in `npm test`: parses `globals.css`, text pairs ≥ 4.5, field, focus and marks ≥ 3, light and dark; run against its own file first |
+| Computing contrast of token pairs (this review) | `scripts/check-contrast.mjs` in `npm test`: parses `base.css` (since Signal S2-0; was `globals.css`), text pairs ≥ 4.5, field, focus and marks ≥ 3, light and dark; run against its own file first |
 | Spotting off-scale sizes and inline card frames | `scripts/check-scale.mjs`: `text-[Npx]`, `p-[…]` and the inline frame string outside `src/components/` |
 | The stress test (boot, seed, 4 widths, zoom, measure) | `e2e/flows/90-ux.mjs` (U0); the `e2e-runner` agent reads its screenshots |
 | Comparing screens against the design language | No new agent. `architecture-reviewer` already covers UI/UX, and `impact-reviewer` covers callers. Reconsider if a third reviewer pass repeats the same checks |
