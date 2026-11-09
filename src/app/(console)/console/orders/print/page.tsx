@@ -98,7 +98,7 @@ function Invoice({ o, lines, shop, frozen }: { o: DocOrder; lines: DocLine[]; sh
           <p className="font-semibold">{inv.seller.name}</p><p className="whitespace-pre-line">{inv.seller.address}</p>
           {inv.seller.gstin ? <p>GSTIN <span className="font-mono">{inv.seller.gstin}</span></p> : <p>Not registered for GST</p>}</section>
         <section aria-label="Buyer"><p className="text-xs uppercase tracking-wide text-muted-foreground">Bill to and ship to</p>
-          <p className="font-semibold">{inv.buyer.name}</p>{inv.buyer.lines.map((l) => <p key={l}>{l}</p>)}
+          {inv.buyer.business ? <><p className="font-semibold">{inv.buyer.business}</p><p>GSTIN <span className="font-mono">{inv.buyer.gstin}</span></p><p>Attn: {inv.buyer.name}</p></> : <p className="font-semibold">{inv.buyer.name}</p>}{inv.buyer.lines.map((l) => <p key={l}>{l}</p>)}
           <p>Place of supply: {inv.placeOfSupply.state}{inv.placeOfSupply.code ? ` (${inv.placeOfSupply.code})` : ''}</p></section>
       </div>
       <table className="w-full">
@@ -111,7 +111,7 @@ function Invoice({ o, lines, shop, frozen }: { o: DocOrder; lines: DocLine[]; sh
         <tbody>
           {inv.lines.map((l, i) => (
             <tr key={i} className="border-b border-border">
-              <td className="py-1.5">{l.title}</td><td className="py-1.5 font-mono">{l.hsn ?? '—'}</td><td className="py-1.5 text-right font-mono">{l.qty}</td>
+              <td className="py-1.5">{l.title}</td><td className="py-1.5 font-mono">{l.hsn ?? '—'}</td><td className="py-1.5 text-right font-mono">{l.qty} {l.uqc}</td>
               {offs ? <><td className="py-1.5 text-right"><Money paise={paise(l.gross)} decimals /></td><td className="py-1.5 text-right">{l.discount ? <>−<Money paise={paise(l.discount)} decimals /></> : '—'}</td></> : null}
               <td className="py-1.5 text-right"><Money paise={paise(l.taxable)} decimals /></td>
               {inv.kind === 'tax_invoice' ? <><td className="py-1.5 text-right font-mono">{rate(l.rateBps)}</td>{intra ? <><td className="py-1.5 text-right"><Money paise={paise(l.cgst)} decimals /></td><td className="py-1.5 text-right"><Money paise={paise(l.sgst)} decimals /></td></> : <td className="py-1.5 text-right"><Money paise={paise(l.igst)} decimals /></td>}</> : null}
@@ -130,7 +130,7 @@ function Invoice({ o, lines, shop, frozen }: { o: DocOrder; lines: DocLine[]; sh
       <div className="space-y-1 text-xs text-muted-foreground">
         {inv.charges.delivery || inv.charges.cod ? <p>Delivery{inv.charges.cod ? ' and the pay-on-delivery fee' : ''} ({[inv.charges.delivery ? formatInr(paise(inv.charges.delivery), { decimals: true }) : null, inv.charges.cod ? formatInr(paise(inv.charges.cod), { decimals: true }) : null].filter(Boolean).join(' + ')}) are part of the supply and included in each item&apos;s value above.</p> : null}
         {inv.pricesIncludeGst && inv.kind === 'tax_invoice' ? <p>Prices include GST.</p> : null}
-        {inv.kind === 'bill_of_supply' ? <p>The seller is not registered for GST; no GST is charged.</p> : null}
+        {inv.kind === 'bill_of_supply' ? <p>{inv.composition ? 'Composition taxable person, not eligible to collect tax on supplies.' : 'The seller is not registered for GST; no GST is charged.'}</p> : null}
       </div>
       {/* As the invoice froze them at packing (Documents D2), the same as its PDF. */}
       <div className="flex items-end justify-between gap-6 pt-4 text-xs">

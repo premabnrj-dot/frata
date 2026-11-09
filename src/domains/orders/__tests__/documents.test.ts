@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { taxOrder } from '@/domains/tax/gst'
 import { priceMethod } from '@/domains/checkout/discounts'
-import { addressLines, invoice, packingSlip, type DocLine, type DocOrder } from '../documents'
+import { addressLines, creditNote, invoice, packingSlip, type DocLine, type DocOrder } from '../documents'
 
 const gross = [{ gross: 249000, unitPrice: 249000, hsn: '6211' }, { gross: 320000, unitPrice: 320000, hsn: '6211' }]
-const t = taxOrder(gross, 7900 + 4900, { registered: true, pricesIncludeGst: true })
+const t = taxOrder(gross, 7900 + 4900, { registered: true, pricesIncludeGst: true, date: new Date('2026-11-09T06:00:00Z') })
 const lines: DocLine[] = t.lines.map((l, i) => ({
   taxableValue: l.taxable, gst: l.gst, gstBps: l.bps, chargeTaxable: l.chargeTaxable, chargeGst: l.chargeGst, unitPrice: gross[i]!.unitPrice, lineDiscount: 0,
   title: ['Chanderi kurta set', 'Silk kurta'][i]!, optionValues: ['M', 'Rust'], qty: 1, sku: `KS-${i}`, hsn: '6211', imageBase: null, imageWidths: null,
@@ -21,7 +21,7 @@ describe('the invoice', () => {
   it('an offer: value and discount before GST at each line rate, value − discount = taxable, totals = the order', () => {
     // ₹555 off a ₹2,800 kurta and a ₹900 dupatta; free delivery; paid online.
     const items = [{ gross: 280000, qty: 1, hsn: '6211', productDiscount: 0 }, { gross: 90000, qty: 1, hsn: '6211', productDiscount: 0 }]
-    const m = priceMethod(items, 55500, 0, 0, { registered: true, pricesIncludeGst: true })
+    const m = priceMethod(items, 55500, 0, 0, { registered: true, pricesIncludeGst: true, date: new Date('2026-11-09T06:00:00Z') })
     const ls: DocLine[] = m.lines.map((l, i) => ({ taxableValue: l.taxable, gst: l.gst, gstBps: l.gstBps, chargeTaxable: 0, chargeGst: 0, unitPrice: items[i]!.gross, lineDiscount: l.discount,
       title: ['Linen kurta', 'Mul dupatta'][i]!, optionValues: [], qty: 1, sku: null, hsn: '6211', imageBase: null, imageWidths: null }))
     const inv = invoice(order({ paymentMethod: 'prepaid', paidAt: new Date(), subtotal: 370000, shipping: 0, codCharge: 0, gstTotal: m.gst, total: m.total }), ls, shop)!
@@ -89,5 +89,25 @@ describe('the credit note (Documents D3)', () => {
     expect(cn.lines).toEqual(inv.lines)
     expect(creditNote(order({ invoiceNumber: null, packedAt: null }), lines, shop, issued)).toBeNull()
     expect(() => creditNote(o, lines, shop, { ...issued, total: issued.total + 1 })).toThrow(/differs/)
+  })
+})
+
+describe('credit notes after delivery (GST phase 2)', () => {
+  const withIds = lines.map((l, i) => ({ ...l, id: `line-${i}`, uqc: 'NOS' }))
+  const inv = invoice(order(), withIds, shop)!
+  it('a part return: the line at the invoice rate, CGST + SGST in the same state, totals as issued', () => {
+    const cl = [{ lineId: 'line-0', qty: 1, taxable: withIds[0]!.taxableValue, gst: withIds[0]!.gst, bps: withIds[0]!.gstBps }]
+    const total = cl[0]!.taxable + cl[0]!.gst
+    const cn = creditNote(order(), withIds, shop, { number: 'KS/26-27/C0002', issuedAt: new Date('2026-11-20T06:00:00Z'), reason: 'returned', against: inv.number, total, kind: 'return', lines: cl })!
+    expect(cn.kind).toBe('credit_note')
+    expect(cn.lines).toHaveLength(1)
+    expect(cn.lines[0]!.title).toMatch(/Chanderi kurta set/)
+    expect(cn.lines[0]!.cgst + cn.lines[0]!.sgst).toBe(cl[0]!.gst)
+    expect(cn.totals.total).toBe(total)
+  })
+  it('goodwill: one line, no GST, not a GST document', () => {
+    const cn = creditNote(order(), withIds, shop, { number: 'KS/26-27/G0001', issuedAt: new Date('2026-11-20T06:00:00Z'), reason: 'goodwill', against: inv.number, total: 30000, kind: 'goodwill' })!
+    expect(cn.goodwill).toBe(true)
+    expect(cn.totals).toMatchObject({ taxable: 30000, cgst: 0, sgst: 0, igst: 0, total: 30000 })
   })
 })

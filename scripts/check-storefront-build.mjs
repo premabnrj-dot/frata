@@ -14,7 +14,9 @@ import { join } from 'node:path'
 const BUDGET_KB = 120
 // The product page and the checkout carry the heaviest islands (buy box, bag, form): held lower so the 2.0 theme
 // choices (the phone buy bar) can't eat the last of the headroom (speed review 2026-11-09).
-const TIGHT = { '/s/[host]/(shop)/products/[handle]/page': 115, '/s/[host]/(checkout)/checkout/page': 115 }
+// Checkout 116 (2026-11-09): the business GST invoice (GSTIN checksum and state as typed, s.24 state notice) is +0.6 kB;
+// splitting it out with next/dynamic cost more in loader than it saved (measured 115.6 → 115.9).
+const TIGHT = { '/s/[host]/(shop)/products/[handle]/page': 115, '/s/[host]/(checkout)/checkout/page': 116 }
 // The shop's stylesheet (shared, render-blocking): every theme's rules land in it, so it has a ceiling too.
 const CSS_BUDGET_KB = 20
 const failures = []

@@ -36,6 +36,20 @@ export async function listProducts(tenantId: string, page = 0, status: 'draft' |
 
 export type ProductListRow = Awaited<ReturnType<typeof listProducts>>[number]
 
+/** Every product's tax (Products › HSN codes): its code, unit, own rate and lowest price; the shop's GST facts. Up to 2,000. */
+export async function productsTax(tenantId: string) {
+  return withTenant(tenantId, async (tx) => {
+    const [rows, [shop]] = await Promise.all([
+      tx.select({ id: products.id, title: products.title, handle: products.handle, status: products.status, hsn: products.hsn, uqc: products.uqc, gstBps: products.gstBps, typeName: productTypes.name,
+        minPrice: sql<number | null>`(select min(v.price)::bigint from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)` })
+        .from(products).leftJoin(productTypes, and(eq(productTypes.id, products.typeId), eq(productTypes.tenantId, tenantId)))
+        .where(and(eq(products.tenantId, tenantId), sql`${products.status} <> 'archived'`)).orderBy(asc(products.title)).limit(2000),
+      tx.select({ gstin: shopSettings.gstin, gstScheme: shopSettings.gstScheme, pricesIncludeGst: shopSettings.pricesIncludeGst, turnoverBand: shopSettings.turnoverBand }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)),
+    ])
+    return { rows: rows.map((r) => ({ ...r, minPrice: r.minPrice === null ? null : Number(r.minPrice) })), shop: shop ?? null }
+  })
+}
+
 /** How many products have each status (the list's tabs). */
 export async function statusCounts(tenantId: string): Promise<Record<string, number>> {
   const rows = await withTenant(tenantId, (tx) => tx.select({ status: products.status, n: count() }).from(products).where(eq(products.tenantId, tenantId)).groupBy(products.status))
@@ -89,7 +103,8 @@ export async function productForEdit(tenantId: string, productId: string, role: 
       costsVisibleIn(tx, tenantId, role),
     ])
     const vs = costs ? vs0 : vs0.map((v) => ({ ...v, unitCost: null }))
-    const [shop] = await tx.select({ name: tenants.name, slug: tenants.slug, orderPrefix: shopSettings.orderPrefix, codOn: shopSettings.codOn, returnDays: shopSettings.returnDays, returnKind: shopSettings.returnKind, pickup: shopSettings.pickupPincode })
+    const [shop] = await tx.select({ name: tenants.name, slug: tenants.slug, orderPrefix: shopSettings.orderPrefix, codOn: shopSettings.codOn, returnDays: shopSettings.returnDays, returnKind: shopSettings.returnKind, pickup: shopSettings.pickupPincode,
+      gstin: shopSettings.gstin, gstScheme: shopSettings.gstScheme, turnoverBand: shopSettings.turnoverBand, pricesIncludeGst: shopSettings.pricesIncludeGst, sells: shopSettings.sells, legalName: shopSettings.legalName, legalAddress: shopSettings.address })
       .from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
     return { product, variants: vs, images: imgs, types, colours, attributes: attrs, collections: cols, memberOf: member.map((m) => m.collectionId), shop: shop ?? null, costs }
   })

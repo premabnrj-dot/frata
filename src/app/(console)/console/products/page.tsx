@@ -37,7 +37,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   }
   return (
     <>
-      <PageHeader title="Products" actions={<><Link href="/console/collections" className={button({ variant: 'secondary' })}>Collections</Link>{add}</>} />
+      <PageHeader title="Products" actions={<><Link href="/console/products/tax" className={button({ variant: 'secondary' })}>HSN codes</Link><Link href="/console/collections" className={button({ variant: 'secondary' })}>Collections</Link>{add}</>} />
       <ViewTabs label="Filter by status" tabs={TABS.map(([k, label]) => ({
         href: k ? `/console/products?status=${k}` : '/console/products', label, current: (status ?? '') === k,
         count: k ? counts[k] ?? 0 : total - (counts.archived ?? 0),

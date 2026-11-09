@@ -151,7 +151,7 @@ export const invites = pgTable('invites', {
 }, (t) => [
   index('invites_tenant').on(t.tenantId),
   index('invites_email_open').on(t.email).where(sql`${t.acceptedAt} is null and ${t.revokedAt} is null`),
-  check('invites_role', sql`${t.role} in ('owner','admin','staff')`),
+  check('invites_role', sql`${t.role} in ('owner','admin','staff','accountant')`),
   check('invites_email_lower', sql`${t.email} = lower(${t.email})`),
 ])
 
@@ -288,7 +288,18 @@ export const shopSettings = pgTable('shop_settings', {
   restDays: integer('rest_days').notNull().default(7),
   pricesIncludeGst: boolean('prices_include_gst').notNull().default(true),
   gstin: text('gstin'),
+  /** The HSN a new product starts with (sign-up sets it from what the shop sells); never a fallback at checkout. */
   defaultHsn: text('default_hsn').notNull().default('6211'),
+  /** GST scheme while registered (gstin set): regular charges GST; composition issues a bill of supply. No GSTIN = not registered. */
+  gstScheme: text('gst_scheme').notNull().default('regular'),
+  /** The shop's state code ('08'): from the GSTIN when registered; set by hand when not (unregistered and composition shops sell within it). */
+  homeState: text('home_state'),
+  /** Last year's aggregate turnover (rates.ts TURNOVER_BANDS): sets the HSN digits and when e-invoicing applies. */
+  turnoverBand: text('turnover_band').notNull().default('under_5cr'),
+  /** How GSTR-1 is filed: every month, or quarterly with IFF for B2B in the first two months (QRMP). */
+  gstFiling: text('gst_filing').notNull().default('monthly'),
+  /** Business buyers may ask for a GST invoice at checkout (their GSTIN on it). Off above ₹5 cr until e-invoicing. */
+  b2bInvoices: boolean('b2b_invoices').notNull().default(true),
   invoiceSeries: text('invoice_series').notNull().default(''),
   /** Documents D2 (Settings › Documents): the signatory named on invoices, a footer note, the slip's default size. */
   /** The logo for paper: a PNG in the shop's Blob folder (tenants/<t>/documents/<uuid>.png), byte-checked when set. */
@@ -315,7 +326,12 @@ export const shopSettings = pgTable('shop_settings', {
   check('shop_settings_language', sql`${t.shopLanguage} in ('en','hi')`),
   check('shop_settings_seo', sql`length(${t.seoTitle}) <= 200 and length(${t.seoDescription}) <= 400`),
   check('shop_settings_return_kind', sql`${t.returnKind} in ('exchange_or_refund','exchange_only','refund_only','none')`),
-  check('shop_settings_sells', sql`${t.sells} <@ array['women','men','kids','ethnic','accessories','footwear']::text[]`),
+  check('shop_settings_sells', sql`${t.sells} <@ array['women','men','kids','ethnic','accessories','footwear','jewellery','beauty','wellness']::text[]`),
+  check('shop_settings_gst_scheme', sql`${t.gstScheme} in ('regular','composition')`),
+  check('shop_settings_home_state', sql`${t.homeState} is null or ${t.homeState} ~ '^[0-9]{2}$'`),
+  check('shop_settings_turnover', sql`${t.turnoverBand} in ('under_5cr','5_to_10cr','over_10cr')`),
+  check('shop_settings_gst_filing', sql`${t.gstFiling} in ('monthly','quarterly')`),
+  check('shop_settings_hsn', sql`${t.defaultHsn} ~ '^[0-9]{4}([0-9]{2}){0,2}$'`),
   check('shop_settings_money', sql`${t.codMin} >= 0 and ${t.codMax} >= 0 and ${t.codCharge} >= 0 and ${t.shippingFlat} >= 0 and ${t.freeShippingAbove} >= 0`),
   check('shop_settings_days', sql`${t.returnDays} between 0 and 60 and ${t.dispatchDays} between 0 and 30 and ${t.metroDays} between 0 and 30 and ${t.restDays} between 0 and 30`),
   check('shop_settings_gstin', sql`${t.gstin} is null or ${t.gstin} ~ '^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$'`),

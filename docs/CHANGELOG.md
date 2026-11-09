@@ -3,6 +3,30 @@
 What a merchant (or Frata staff) can do now that they could not before, newest first. One entry per closed
 phase; the detail is in its plan.
 
+## 2026-11-09 — GST in the core, the GST app, beyond fashion ([plan](plans/2026-11-09-gst-core-and-categories.md), [core mockup](https://claude.ai/artifact/M4VfNAgqFHYmhCxFwZmepE), [app mockup](https://claude.ai/artifact/NsxiFFFBorTsi9sct7zWgs))
+
+- **Settings › Taxes as choices:** registration (Regular, Composition, Not registered) as radios, turnover and
+  GSTR-1 filing as segments, prices include GST and business invoices as switches. Composition prints a bill of
+  supply with its declaration; a shop without a GSTIN or on composition delivers within its own state.
+- **Every product's tax:** an HSN found by words or digits, the rate it gives at this price (the ₹2,500 slab drawn),
+  the price band no slab rate fits with a one-tap reprice, your own rate for a code we don't know, the unit, made in.
+  Products › HSN codes sets them in bulk. A registered shop can't publish a product with no known rate.
+- **Business buyers at checkout:** "Claim GST input credit" with the GSTIN checked as typed and its state matched;
+  the invoice carries the buyer's GSTIN and business name.
+- **Credit notes done right:** several per order — items brought back (part quantities), a discount agreed before
+  the sale, goodwill (its own G series, no GST), what is left on a reversal — up to 30 November after the invoice's
+  year. ₹ kept takes off what they gave back.
+- **The GST app** (Growth and Scale; switch it on in Apps): the month or quarter, what to fix (missing HSN, short HSN, a bad GSTIN, series gaps, parcels back
+  without a credit note), the GSTR-1 tables, and the files for your CA: GSTR-1 JSON for the offline tool, the tables as
+  CSV, a sales register, Tally vouchers.
+- **An Accountant** (with the GST app): invite your CA; they see GST and documents only — never costs or profit.
+- **Beauty and wellness:** sign up as a beauty or wellness shop; products carry what the pack says (net quantity,
+  best before, who made or packed it, ingredients, how to use) on the product page; returns say sealed only; no size
+  chart or model sections where nothing is sized.
+- **File from Frrata** (built, switched off): connect the GST portal with its OTP, push GSTR-1, see the portal's
+  totals beside ours, file with the EVC OTP and keep the ARN. Parked: no GSP access is expected soon; the CA's GSTR-1
+  JSON is uploaded on the GST portal instead.
+
 ## 2026-11-09 — Look v4: site settings, icons, menus, page-aware editing ([mockup](https://claude.ai/artifact/MmC6BnAps1XXSWyfy7PfSL), [research](research/2026-11-09-look-v4.md))
 
 - **Site settings behind the gear:** your own palette of six colours (checked as you pick: it says when words would

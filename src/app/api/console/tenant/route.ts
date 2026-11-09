@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
+import { requireMember } from '@/lib/auth/require-member'
+import { CONSOLE_ROLES } from '@/domains/tenancy/roles'
 
 /**
  * GET /api/console/tenant — which shop a console request is for right now: the caller's own access
@@ -11,6 +12,6 @@ import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const auth = await requireMember(ANY_MEMBER)
+  const auth = await requireMember(CONSOLE_ROLES)
   return NextResponse.json({ tenantId: auth.ok ? auth.membership.tenantId : null }, { headers: { 'cache-control': 'no-store' } })
 }

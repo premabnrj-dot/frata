@@ -39,6 +39,12 @@ export const LIMITS = {
   // PDF documents (Documents D1, security review 2026-11-08): a render is CPU; per member and per shop, fail closed.
   pdfMember: { action: 'pdf:member', max: 30, windowSeconds: 600 },
   pdfShop: { action: 'pdf:shop', max: 120, windowSeconds: 600 },
+  // GST exports (GST app G1): a period's documents rendered whole; per member, fail closed.
+  gstExportMember: { action: 'gst_export:member', max: 30, windowSeconds: 600 },
+  // GST filing OTPs (G2): each asks the portal to text the shop's mobile; per shop, fail closed.
+  gstOtpShop: { action: 'gst_otp:shop', max: 10, windowSeconds: 3600 },
+  // OTPs typed (verify, file): a guess loop stops at the server, before the portal (security review M2).
+  gstOtpTry: { action: 'gst_otp_try:shop', max: 8, windowSeconds: 900 },
   // Frrata's billing gateway (B3 security review): each start makes a gateway customer or order; per member, fail closed.
   billingMember: { action: 'billing:member', max: 10, windowSeconds: 600 },
   // Sign-up WhatsApp codes (trials TR1, R2): per person, per phone and per IP; fail closed (a code costs Frrata a message).

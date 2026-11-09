@@ -236,7 +236,7 @@ export default {
     } finally {
       await owner.close()
       // A credit note is final (its trigger refuses a delete): the test's own is removed with triggers off.
-      await db.begin(async (x) => { await x`set local session_replication_role = replica`; await x`delete from credit_notes where tenant_id = ${T} and order_id in (select id from orders where tenant_id = ${T} and number between ${A} and ${top + 3})` })
+      await db.begin(async (x) => { await x`set local session_replication_role = replica`; await x`delete from credit_note_lines where tenant_id = ${T} and credit_note_id in (select id from credit_notes where tenant_id = ${T} and order_id in (select id from orders where tenant_id = ${T} and number between ${A} and ${top + 3}))`; await x`delete from credit_notes where tenant_id = ${T} and order_id in (select id from orders where tenant_id = ${T} and number between ${A} and ${top + 3})` })
       await db`delete from orders where tenant_id = ${T} and number between ${A} and ${top + 3}`
       await db`delete from orders where tenant_id = ${OTHER}`
       await db`delete from tenants where id = ${OTHER}`

@@ -10,9 +10,9 @@ const slip: PackingSlip = { shop: 'Kesar Studio', number: 'KS-1043', collect: 24
   lines: [{ title: 'Chanderi kurta set', options: 'Indigo · M', qty: 1, sku: 'KUR-CH-IN-M', imageBase: null, imageWidths: null }] }
 const inv: Invoice = { kind: 'tax_invoice', number: 'KS/26-27/00043', date: new Date('2026-11-07T06:00:00Z'), cancelled: false,
   seller: { name: 'Kesar Studio LLP', address: '12 MI Road, Jaipur 302001', gstin: '08AAAAA0000A1Z5' },
-  buyer: { name: 'श्री प्रिया शर्मा', lines: ['B-14, तिलक मार्ग', 'Jaipur 302001', 'Rajasthan'] },
+  buyer: { name: 'श्री प्रिया शर्मा', lines: ['B-14, तिलक मार्ग', 'Jaipur 302001', 'Rajasthan'], gstin: null, business: null }, composition: false, needsEwayBill: false,
   placeOfSupply: { state: 'Rajasthan', code: '08' }, supply: 'intra', pricesIncludeGst: true, charges: { delivery: 0, cod: 4900 },
-  lines: [{ title: 'Chanderi kurta set', hsn: '6204', qty: 1, gross: 198214, discount: 0, taxable: 198214, rateBps: 1200, cgst: 11893, sgst: 11893, igst: 0, total: 222000 }],
+  lines: [{ title: 'Chanderi kurta set', hsn: '6204', qty: 1, uqc: 'NOS', gross: 198214, discount: 0, taxable: 198214, rateBps: 1200, cgst: 11893, sgst: 11893, igst: 0, total: 222000 }],
   totals: { gross: 198214, discount: 0, taxable: 198214, cgst: 11893, sgst: 11893, igst: 0, total: 222000 } }
 
 const text = (b: Buffer) => b.toString('latin1')

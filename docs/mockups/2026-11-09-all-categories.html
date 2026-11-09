@@ -1,0 +1,245 @@
+<title>Frrata Beyond Fashion</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&display=swap">
+<style>
+/* Layout: a decision brief — the answer, the evidence, the waves, the price, what changes for each user, the code map, phases and calls. Frrata console tokens, brand pink as the one accent. */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--brand:#D61F69;--focus:#3451B2;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--info:#EDF2FE;--info-text:#3451B2;--danger:#FDECEC;--danger-text:#B42318;
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--display:"Bricolage Grotesque","Inter",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--focus:#9CB1FF;--ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--info:#18203A;--info-text:#9CB1FF;--danger:#3A1714;--danger-text:#FF9B8F;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--focus:#9CB1FF;--ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--info:#18203A;--info-text:#9CB1FF;--danger:#3A1714;--danger-text:#FF9B8F;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.6 var(--sans);margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 90px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:31;background:var(--bg)}
+nav.toc{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--bg);display:flex;gap:6px;overflow-x:auto;padding:10px 0;border-bottom:1px solid var(--border)}
+nav.toc a{white-space:nowrap;color:var(--sub);text-decoration:none;font-size:13px;padding:5px 11px;border-radius:999px;border:1px solid var(--border)}
+nav.toc a:hover{color:var(--fg);border-color:var(--fg)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+h1{font:700 clamp(28px,5vw,44px)/1.05 var(--display);margin:6px 0 10px;text-wrap:balance;max-width:20ch}
+h2{font:600 22px/1.2 var(--display);margin:52px 0 14px;scroll-margin-top:64px;display:flex;align-items:center;gap:10px}
+h2::before{content:"";width:18px;height:2px;background:var(--brand);flex:none}
+h3{font-size:15px;margin:0 0 6px}
+p{max-width:70ch;margin:0 0 10px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub)}
+.sub{color:var(--sub)}
+.answer{border:1px solid var(--border);border-radius:14px;background:var(--card);padding:20px;display:grid;gap:14px}
+.answer .big{font:600 20px/1.35 var(--display);max-width:52ch;text-wrap:balance}
+.answer .big b{color:var(--brand)}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card{border:1px solid var(--border);border-radius:12px;background:var(--card);padding:16px;min-width:0}
+.card p{font-size:14px;margin:0}
+.stat b{display:block;font:600 26px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--sub)}
+.src{font-size:12px;color:var(--sub);margin-top:6px}
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:640px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:12px;color:var(--sub);font-weight:500;background:var(--muted)}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chip{display:inline-flex;align-items:center;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:500;white-space:nowrap;background:var(--muted);color:var(--sub)}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-warn{background:var(--warn);color:var(--warn-text)}.c-info{background:var(--info);color:var(--info-text)}.c-danger{background:var(--danger);color:var(--danger-text)}
+.bars{display:grid;gap:8px}
+.brow{display:grid;grid-template-columns:150px minmax(0,1fr) 70px;gap:10px;align-items:center;font-size:13px}
+.track{height:10px;background:var(--muted);border-radius:999px;overflow:hidden}
+.track i{display:block;height:100%;background:var(--fg);border-radius:inherit}
+.track i.b{background:var(--brand)}
+.waves{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.wave{border:1px solid var(--border);border-radius:12px;padding:14px;background:var(--card);display:grid;gap:8px;align-content:start;min-width:0}
+.wave .n{font:600 13px var(--display);color:var(--brand)}
+.wave b{font-size:14px}
+.wave ul{margin:0;padding-left:16px;font-size:13px;color:var(--sub)}
+.calls{display:grid;gap:8px;counter-reset:c}
+.call{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:start;border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:var(--card)}
+.call::before{counter-increment:c;content:counter(c);width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--fg);color:var(--bg);font-size:12px;font-weight:600}
+.call p{margin:0;font-size:14px}
+.lane h3{display:flex;gap:8px;align-items:center}
+.lane ul{margin:0;padding-left:18px;font-size:14px;display:grid;gap:4px}
+.risk{display:grid;gap:6px;counter-reset:r;padding:0;margin:0;list-style:none}
+.risk li{display:grid;grid-template-columns:26px minmax(0,1fr);gap:8px;font-size:14px}
+.risk li::before{counter-increment:r;content:counter(r);color:var(--danger-text);font-weight:600}
+@media (max-width:900px){.g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.waves{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.g2,.g3,.g4,.waves{grid-template-columns:1fr}.brow{grid-template-columns:110px minmax(0,1fr) 56px}.call{grid-template-columns:30px minmax(0,1fr)}.call .chip{grid-column:2}}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">Decision brief · 9 Nov 2026 · for the owner</div>
+  <h1>Frrata beyond fashion</h1>
+  <p class="sub">Should Frrata accept every kind of seller? Research, GTM, what changes in the product and the code, and the calls to make. Source repo: docs/research/2026-11-09-all-categories.md · GST module: docs/specs/2026-11-09-gst-module.md</p>
+  <nav class="toc" aria-label="Sections">
+    <a href="#answer">Answer</a><a href="#evidence">Evidence</a><a href="#gtm">GTM</a><a href="#price">Price claim</a><a href="#waves">Waves</a><a href="#flows">Who it changes</a><a href="#code">Codebase</a><a href="#phases">Phases</a><a href="#calls">Your calls</a>
+  </nav>
+
+  <h2 id="answer">The answer</h2>
+  <div class="answer">
+    <div class="big">Yes, <b>remove the fashion-only limit</b>. Open categories <b>in waves</b>, each one only when its compliance pack is built.</div>
+    <div class="grid g4">
+      <div class="card"><h3>The label doesn't win</h3><p>Every competitor is horizontal. Depth in a workflow wins, not a category name.</p></div>
+      <div class="card"><h3>Fashion is the hard pool</h3><p>Biggest by count, slowest growth, worst RTO.</p></div>
+      <div class="card"><h3>Partners need one stack</h3><p>Agencies build for many categories. Fashion-only makes them run two platforms.</p></div>
+      <div class="card"><h3>But law differs by category</h3><p>FSSAI, Legal Metrology, BIS, CDSCO, HUID. Open a category before its pack and it's a legal exposure.</p></div>
+    </div>
+    <div class="card" style="background:var(--danger);border-color:transparent;color:var(--danger-text)"><h3>Fix now, fashion included</h3><p style="color:inherit">A product's HSN can't be set today. Every line uses the shop's 6211 (garments, 5%). Bags (18%) and jewellery (3%) are taxed at the garment rate. Phase C0 fixes it.</p></div>
+  </div>
+
+  <h2 id="evidence">Evidence</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Growth by category, India D2C</h3>
+      <div class="bars" role="img" aria-label="Growth by category">
+        <div class="brow"><span>Health / wellness</span><span class="track"><i class="b" style="width:96%"></i></span><span class="r">+46–48%</span></div>
+        <div class="brow"><span>Beauty &amp; personal care</span><span class="track"><i class="b" style="width:82%"></i></span><span class="r">+39–41%</span></div>
+        <div class="brow"><span>Jewellery</span><span class="track"><i style="width:62%"></i></span><span class="r">+31%</span></div>
+        <div class="brow"><span>FMCG</span><span class="track"><i style="width:64%"></i></span><span class="r">+32%</span></div>
+        <div class="brow"><span>Fashion</span><span class="track"><i style="width:44%"></i></span><span class="r">+17–28%</span></div>
+        <div class="brow"><span>Home furnishings</span><span class="track"><i style="width:38%"></i></span><span class="r">+19%</span></div>
+      </div>
+      <div class="src">Unicommerce D2C Report, Apr 2026 · ClickPost D2C Trends FY2026 (©2026)</div>
+    </div>
+    <div class="card">
+      <h3>RTO by category (vendor benchmark)</h3>
+      <div class="bars" role="img" aria-label="RTO by category">
+        <div class="brow"><span>Ethnic fashion</span><span class="track"><i class="b" style="width:90%"></i></span><span class="r">30–45%</span></div>
+        <div class="brow"><span>Fashion</span><span class="track"><i class="b" style="width:80%"></i></span><span class="r">25–40%</span></div>
+        <div class="brow"><span>Home</span><span class="track"><i style="width:50%"></i></span><span class="r">10–25%</span></div>
+        <div class="brow"><span>Electronics</span><span class="track"><i style="width:36%"></i></span><span class="r">8–18%</span></div>
+        <div class="brow"><span>Beauty</span><span class="track"><i style="width:30%"></i></span><span class="r">5–15%</span></div>
+        <div class="brow"><span>Grocery</span><span class="track"><i style="width:16%"></i></span><span class="r">2–8%</span></div>
+      </div>
+      <div class="src">base.com blog, 21 Sep 2026 (vendor data, not audited)</div>
+    </div>
+  </div>
+  <div class="grid g4" style="margin-top:14px">
+    <div class="card stat"><b>130,450</b><span>live Shopify stores in India</span><div class="src">StoreLeads, 6 Nov 2026</div></div>
+    <div class="card stat"><b>38.9%</b><span>of them sell apparel</span><div class="src">StoreLeads, 6 Nov 2026</div></div>
+    <div class="card stat"><b>~11,000</b><span>D2C brands in India</span><div class="src">Unicommerce, Apr 2026</div></div>
+    <div class="card stat"><b>$65 Bn</b><span>D2C GMV 2026, ~37% CAGR</span><div class="src">Inc42, 14 May 2026</div></div>
+  </div>
+  <div class="tw" style="margin-top:14px"><table>
+    <thead><tr><th>Who</th><th>What happened</th><th>Lesson</th></tr></thead>
+    <tbody>
+      <tr><td>Shiprocket</td><td>Began as a store builder (KartRocket), shut it in 2017, won on shipping; ₹2,342 Cr IPO filing (Dec 2025)</td><td>Own one painful workflow</td></tr>
+      <tr><td>Fynd</td><td>Fashion-first, horizontal in 2025, still ships fashion-only tools (Jun 2026)</td><td>Horizontal base, vertical depth</td></tr>
+      <tr><td>Dukaan</td><td>SMB → D2C → "every seller"; caps its fee at ₹200 per order</td><td>Horizontal with no moat is a price war</td></tr>
+      <tr><td>Vyapar</td><td>FY25 ₹69 Cr revenue, ₹63 Cr loss (Entrackr, 28 Nov 2025)</td><td>Broad SMB SaaS is expensive to sell</td></tr>
+    </tbody></table></div>
+
+  <h2 id="gtm">GTM</h2>
+  <div class="card" style="font:600 18px/1.4 var(--display)">Frrata: the Indian D2C store that does your GST, your COD and your marketing, with an expert who sets it up, for less than Shopify and its apps.</div>
+  <div class="tw" style="margin-top:14px"><table>
+    <thead><tr><th>Moat</th><th>What it is</th><th>How we'll know it's real</th></tr></thead>
+    <tbody>
+      <tr><td><b>GST and compliance</b></td><td>HSN-wise rates, invoices, credit notes, GSTR-1 checked and pushed, filed with one OTP; plus each category's legal fields. GST alone is copyable ($0–70/mo Shopify apps); GST + category law is not.</td><td>A design partner's CA files GSTR-1 from Frrata with no edits, 2 months running</td></tr>
+      <tr><td><b>Price</b></td><td>30–40% less than Shopify + a one-page checkout + a WhatsApp tool</td><td>Written quotes from Razorpay (Magic) and GoKwik: do they charge on COD?</td></tr>
+      <tr><td><b>Expert onboarding</b></td><td>A Frrata expert or partner sets up catalogue, GST, shipping, WhatsApp and theme; first order in 7 days. Agencies charge ₹45k–85k for this on Shopify.</td><td>Onboarding minutes per shop; 90-day retention, onboarded vs self-serve</td></tr>
+      <tr><td><b>All in one place</b></td><td>WhatsApp, SMS, email, Meta ads on delivered orders, analytics on ₹ kept, offers, RTO tools; ~90% of add-ons in the tier</td><td>Share of merchants who cancel 2+ other tools within 60 days</td></tr>
+    </tbody></table></div>
+  <div class="grid g4" style="margin-top:14px">
+    <div class="card"><h3>Partners and agencies</h3><p>Built (20% for 24 months). Now they can bring every client.</p></div>
+    <div class="card"><h3>Founders by category</h3><p>One design partner per wave as the case study, on Instagram.</p></div>
+    <div class="card"><h3>Switch from Shopify</h3><p>Free expert migration: products, customers, redirects.</p></div>
+    <div class="card"><h3>CA firms</h3><p>Each manages 50–200 small GSTINs. The GST module is their way in.</p></div>
+  </div>
+
+  <h2 id="price">The price claim, checked</h2>
+  <p>Monthly bill, Frrata at today's tiers vs Shopify + the India app stack, 15 merchant shapes (unit-economics review, repo formulas). Excludes the gateway, Shiprocket and Meta message charges, which both stacks pay.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Shape</th><th class="r">vs Shopify + checkout on all orders</th><th class="r">vs checkout on prepaid only</th><th class="r">vs no checkout app</th></tr></thead>
+    <tbody>
+      <tr><td>Fashion 150 orders</td><td class="r">16% less</td><td class="r">level</td><td class="r"><span class="chip c-danger">15% dearer</span></td></tr>
+      <tr><td>Fashion 1,500</td><td class="r">38% less</td><td class="r">16% less</td><td class="r"><span class="chip c-danger">9% dearer</span></td></tr>
+      <tr><td>Fashion 5,000</td><td class="r">53% less</td><td class="r">34% less</td><td class="r">4% less</td></tr>
+      <tr><td>Beauty 1,500</td><td class="r">47% less</td><td class="r">39% less</td><td class="r">27% less</td></tr>
+      <tr><td>Food 1,500</td><td class="r">45% less</td><td class="r">40% less</td><td class="r">27% less</td></tr>
+      <tr><td>Home 300</td><td class="r">26% less</td><td class="r">10% less</td><td class="r"><span class="chip c-danger">11% dearer</span></td></tr>
+      <tr><td>Electronics 300 @ ₹8,000</td><td class="r">38% less</td><td class="r">19% less</td><td class="r"><span class="chip c-danger">18% dearer</span></td></tr>
+      <tr><td>Jewellery 500 @ ₹6,000</td><td class="r">43% less</td><td class="r">35% less</td><td class="r">level</td></tr>
+    </tbody></table></div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><h3>Why it's dearer sometimes</h3><p>Shopify charges nothing on COD orders. Frrata's 2 / 1 / 0.5% is on every delivered order, so high order values and COD-heavy small shops pay more.</p></div>
+    <div class="card" style="border-color:var(--ok-text)"><h3>Fix: cap the fee per order</h3><p>Launch 1.5% up to ₹25 · Growth 1% up to ₹20 · Scale 0.5% up to ₹15. About 4% less revenue for Frrata (break-even ~471 → ~490 shops, scaled; the 471 itself needs rebuilding). Say "less than Shopify + checkout + WhatsApp tool".</p></div>
+  </div>
+
+  <h2 id="waves">Waves</h2>
+  <div class="waves">
+    <div class="wave"><span class="n">W0 · now</span><b>Fashion, footwear, accessories, imitation jewellery</b><ul><li>Product HSN in the editor</li><li>Accessories at their own rate</li></ul></div>
+    <div class="wave"><span class="n">W1</span><b>Beauty, personal care, wellness</b><ul><li>Rate table</li><li>Net quantity, unit, manufacturer</li><li>Batch and expiry</li><li>Not returnable once opened</li><li>Shades as an option</li></ul></div>
+    <div class="wave"><span class="n">W2</span><b>Home, kitchen, décor, gifting</b><ul><li>Weight and dimensions</li><li>Volumetric freight</li><li>Fragile, warranty</li></ul></div>
+    <div class="wave"><span class="n">W3</span><b>Packaged food and drinks</b><ul><li>FSSAI on page and invoice</li><li>Best-before, veg mark</li><li>No returns</li><li>RTO written off in profit</li></ul></div>
+    <div class="wave"><span class="n">W4</span><b>Electronics, fine jewellery</b><ul><li>BIS R-number, serials</li><li>HUID, 3% + making</li><li>E-way bill ≥ ₹50,000</li><li>Insurance in profit</li></ul></div>
+  </div>
+  <p class="sub" style="margin-top:10px">Never offered: alcohol, tobacco and e-cigarettes, drugs and medical devices, weapons.</p>
+
+  <h2 id="flows">What changes, for whom</h2>
+  <div class="grid g3">
+    <div class="card lane"><h3><span class="chip c-info">Merchant</span></h3><ul>
+      <li>Sign-up asks the category; it sets HSN, returns text, product fields, samples and theme ranking</li>
+      <li>Product editor: HSN with its rate, unit, weight and size, the category's legal fields; size chart only for apparel</li>
+      <li>One variant by default; options by category (Size, Shade, Weight, Pack of)</li>
+      <li>Returns policy worded by category</li>
+      <li>The GST module</li>
+    </ul></div>
+    <div class="card lane"><h3><span class="chip c-ok">Partner / developer</span></h3><ul>
+      <li>One workspace for every client, any category</li>
+      <li>A category-aware setup checklist to hand over</li>
+      <li>Same 20% share</li>
+      <li>Category packs documented</li>
+    </ul></div>
+    <div class="card lane"><h3><span class="chip c-warn">Frrata Admin</span></h3><ul>
+      <li>A shop's category and wave on its page</li>
+      <li>Waves switched on per shop for design partners first</li>
+      <li>Category filter in Merchants and Usage</li>
+      <li>Restricted goods list; review queue for "Other"</li>
+      <li>Onboarding minutes per shop</li>
+    </ul></div>
+  </div>
+
+  <h2 id="code">Codebase: about 190 places</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Area</th><th class="r">Places</th><th>The change</th></tr></thead>
+    <tbody>
+      <tr><td>Tax</td><td class="r">10</td><td>A dated HSN → rate table (CA-signed), the ₹2,500 slab only for garments and footwear; no line without an HSN; repricing keeps the order's stored rate; invoice unit from the product</td></tr>
+      <tr><td>Data model</td><td class="r">12</td><td>Category keys (DB check, sign-up function and validation, one deploy); no default HSN; size chart optional; legal fields; weight and size; quantity limit per product</td></tr>
+      <tr><td>Catalogue and editor</td><td class="r">30</td><td>Full category taxonomy (server-only, ids stable); synonyms and required attributes by category; neutral examples</td></tr>
+      <tr><td>Storefront and themes</td><td class="r">25</td><td>"Item" not "piece"; material by category for search; sample sets per category; theme fit by category</td></tr>
+      <tr><td>Returns and fit</td><td class="r">9</td><td>Policy text by category; Size &amp; fit for apparel only; RTO resale rate by category in profit</td></tr>
+      <tr><td>Ship</td><td class="r">3</td><td>Weight slabs, volumetric weight, fragile / liquid / battery</td></tr>
+      <tr><td>Onboarding and marketing</td><td class="r">9</td><td>Sign-up, checklist, landing and partner pages</td></tr>
+      <tr><td>Admin</td><td class="r">new</td><td>Category, wave switch, restricted goods review</td></tr>
+      <tr><td>Docs and skills</td><td class="r">~35</td><td>North star, roadmap, CLAUDE.md, design and economics skills</td></tr>
+      <tr><td>Tests and seed</td><td class="r">~50</td><td>A second seed shop (beauty, HSN 3304, no options); rate-table tests; a flow per wave</td></tr>
+    </tbody></table></div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><h3>Riskiest, in order</h3><ol class="risk">
+      <li>The rate table</li><li>The 6211 default and checkout fallback</li><li>Product HSN not editable</li><li>Repricing old orders at new rates</li><li>Invoice unit always "pcs"</li><li>Category keys changed in three places at once</li><li>Packaged-goods, FSSAI, BIS fields before their waves</li><li>Returns policy text</li><li>Taxonomy ids kept stable</li><li>Weight-based freight in profit</li></ol></div>
+    <div class="card"><h3>Already category-neutral</h3><p>Money, availability, the options and variants engine, collections rules, checkout, COD, RTO and risk, offers, invoice and credit-note mechanics, shipping settings, analytics, modules, WhatsApp, the themes engine, tenancy, Admin.</p></div>
+  </div>
+
+  <h2 id="phases">Phases</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Phase</th><th>Ships</th><th class="r">Size</th></tr></thead>
+    <tbody>
+      <tr><td><span class="chip c-danger">C0</span></td><td>Fix now: product HSN and unit, accessories at their own rate, no 6211 fallback, repricing keeps stored rates</td><td class="r">~3 days</td></tr>
+      <tr><td>C1</td><td>Category foundation: sign-up categories, rate table, taxonomy, neutral copy, returns text, Admin category and wave switch</td><td class="r">~1.5 weeks</td></tr>
+      <tr><td>C2</td><td>W1 pack: beauty and wellness; one design partner</td><td class="r">~1 week</td></tr>
+      <tr><td>GST</td><td>G0–G4: HSN, B2B, partial credit notes → the month view → push and file through a GSP → e-invoice and e-way bill → CA firms</td><td class="r">~6.5 weeks</td></tr>
+      <tr><td>C3 · C4 · C5</td><td>W2 home · W3 food · W4 electronics and fine jewellery</td><td class="r">~3.5 weeks</td></tr>
+      <tr><td>P</td><td>The per-order fee cap, after the two quotes</td><td class="r">~2 days</td></tr>
+    </tbody></table></div>
+  <p class="sub" style="margin-top:10px">Agent-time estimates. Every phase opens with its own mockup for your sign-off.</p>
+
+  <h2 id="calls">Your calls</h2>
+  <div class="calls">
+    <div class="call"><p><b>Open all categories in waves</b>, each behind its compliance pack.</p><span class="chip c-ok">Recommended</span></div>
+    <div class="call"><p><b>Beauty and wellness first</b>, then home, food, electronics and fine jewellery.</p><span class="chip c-ok">Recommended</span></div>
+    <div class="call"><p><b>Cap the per-order fee</b> (1.5% ≤ ₹25 / 1% ≤ ₹20 / 0.5% ≤ ₹15), claim worded "than Shopify + checkout + WhatsApp tool".</p><span class="chip c-ok">After 2 quotes</span></div>
+    <div class="call"><p><b>Expert onboarding</b> included in Growth and Scale, paid once on Launch.</p><span class="chip c-ok">Recommended</span></div>
+    <div class="call"><p><b>C0 ships now</b>, whatever else you decide. It's a tax error today.</p><span class="chip c-danger">Urgent</span></div>
+    <div class="call"><p><b>Rewrite the North star</b>: "a small Indian D2C brand keeps more profit per delivered order, stays GST-compliant, and runs its store, messages and ads in one place without a developer."</p><span class="chip">Your words</span></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>Two days of checks before building</h3><p>Written quotes from Razorpay Magic and GoKwik on COD charges · the apps 30 Indian Shopify stores run · 3 beauty or wellness founders · a CA on the HSN → rate table and the accessories rate.</p></div>
+</div>

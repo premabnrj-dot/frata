@@ -1,7 +1,9 @@
 import 'server-only'
-import { and, eq, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { fiscalYear } from '@/domains/counters/fiscal-year'
 import { invoice, type CreditReason } from '@/domains/orders/documents'
+import { creditOpen, discountCredit, returnCredit, reversalCredit, type CreditKind, type CreditLine, type InvoicedLine, type Taken } from '@/domains/orders/credits'
+import { gstHeads } from '@/domains/tax/gst'
 import { applies, invoiceNumber, InvoiceNumberTooLong, MAX_IN_YEAR, seriesFits } from '@/domains/orders/work'
 
 /** What a merchant reads when the year's credit series is full. */
@@ -9,7 +11,7 @@ export const CREDIT_SERIES_FULL = `This year's credit notes are used up (${MAX_I
 import { orderPrefix } from '@/domains/signup/slug'
 import type { Tx } from '@/lib/db'
 import { shopSettings, tenantCounters, tenants } from '@/lib/db/schema'
-import { creditNotes } from '@/lib/db/schema-orders'
+import { creditNoteLines, creditNotes } from '@/lib/db/schema-orders'
 import { documentsFor } from './documents'
 import { current, record, type Actor, type Done } from './work'
 
@@ -24,33 +26,65 @@ import { current, record, type Actor, type Done } from './work'
 /** This year's credit series is used up (past C9,999): thrown so the counter rolls back, said in words by the caller. */
 export class CreditSeriesFull extends Error {}
 
-export async function issueCredit(tx: Tx, tenantId: string, actor: Actor, orderId: string, now = new Date()): Promise<Done<{ number: string }>> {
-  // A credit note is permanent and reverses the sale in the shop's GST filings: the shop's own people only, never a
-  // Frrata support visit (security review 2026-11-08; as the address, payment keys and logo).
+/** What a credit note is for (GST phase 2). None: the whole invoice (what is left of it) when the sale was undone. */
+export type CreditRequest =
+  | { kind: 'return'; lines: Record<string, number> }
+  /** `agreed`: agreed before the sale (reduces GST, s.15(3)(b)); otherwise goodwill (no GST effect). `amount` as the shopper reads it. */
+  | { kind: 'discount'; amount: number; agreed: boolean }
+
+export async function issueCredit(tx: Tx, tenantId: string, actor: Actor, orderId: string, now = new Date(), req?: CreditRequest): Promise<Done<{ number: string }>> {
+  // A credit note is permanent and changes the shop's GST filings: the shop's own people only, never a Frrata support
+  // visit (security review 2026-11-08; as the address, payment keys and logo).
   if (actor.kind === 'support') return { ok: false, error: 'Only the shop’s owner or an admin can issue a credit note.' }
   const c = await current(tx, tenantId, orderId, now)
   if (!c) return { ok: false, error: 'Order not found.' }
-  if (!applies('credit', c.state)) return { ok: false, error: 'A credit note is for an order cancelled after packing, or one that came back.' }
-  const [done] = await tx.select({ number: creditNotes.number }).from(creditNotes).where(and(eq(creditNotes.tenantId, tenantId), eq(creditNotes.orderId, orderId)))
-  if (done) return { ok: false, error: `Already credited: credit note ${done.number}.` }
-  const docs = await documentsFor(tx, tenantId, [c.o.number], 'invoice', now)
+  if (!req && !applies('credit', c.state)) return { ok: false, error: 'A credit note is for an order cancelled after packing, or one that came back.' }
+  if (req && !applies('part_credit', c.state)) return { ok: false, error: 'Items returned or a discount after the sale are credited once the order is delivered.' }
+  const docs = await documentsFor(tx, tenantId, [c.o.number], 'credit', now)
   const d = docs.orders[0]
   const inv = d ? invoice(d.o, d.lines, docs.shop) : null
-  if (!inv) return { ok: false, error: 'No invoice was issued for this order (it was cancelled before packing): there is nothing to credit.' }
-  const reason: CreditReason = c.state === 'cancelled' ? 'cancelled' : 'came_back'
+  if (!d || !inv) return { ok: false, error: 'No invoice was issued for this order (it was cancelled before packing): there is nothing to credit.' }
+  // The time limit: 30 November after the invoice's financial year (s.34(2)). A goodwill credit has none (not a GST document).
+  const goodwill = req?.kind === 'discount' && !req.agreed
+  if (!goodwill && !creditOpen(inv.date, now)) return { ok: false, error: 'The time for a credit note against this invoice ended on 30 November after its financial year.' }
+  // What earlier notes already took (a pre-0071 reversal took the whole invoice).
+  const prior = d.credits.filter((x) => x.kind !== 'goodwill')
+  if (prior.some((x) => !x.lines)) return { ok: false, error: `Already credited in full: credit note ${prior.find((x) => !x.lines)!.number}.` }
+  const taken: Taken[] = prior.flatMap((x) => x.lines ?? [])
+  const invoiced: InvoicedLine[] = d.lines.flatMap((l) => (l.id ? [{ lineId: l.id, qty: l.qty, taxable: l.taxableValue, gst: l.gst, chargeTaxable: l.chargeTaxable ?? 0, chargeGst: l.chargeGst ?? 0, bps: l.gstBps }] : []))
+  const tax = inv.kind === 'tax_invoice'
+  let lines: CreditLine[] = []
+  let kind: CreditKind, reason: CreditReason
+  if (!req) { lines = reversalCredit(invoiced, taken); kind = 'reversal'; reason = c.state === 'cancelled' ? 'cancelled' : 'came_back'; if (!lines.length) return { ok: false, error: 'Everything on this invoice is credited already.' } }
+  else if (req.kind === 'return') { const r = returnCredit(invoiced, taken, req.lines); if (!r.ok) return r; lines = r.lines; kind = 'return'; reason = 'returned' }
+  else if (req.agreed) { const r = discountCredit(invoiced, taken, req.amount, inv.pricesIncludeGst); if (!r.ok) return r; lines = r.lines; kind = 'discount'; reason = 'discount' }
+  else {
+    if (!Number.isInteger(req.amount) || req.amount <= 0) return { ok: false, error: 'An amount in rupees.' }
+    // Never more than the invoice less everything credited so far, of any kind (unit-economics review 2026-11-09).
+    const room = inv.totals.total - d.credits.reduce((a, x) => a + x.total, 0)
+    if (req.amount > room) return { ok: false, error: room > 0 ? `At most ₹${(room / 100).toLocaleString('en-IN')} is left on this invoice.` : 'Everything on this invoice is credited already.' }
+    kind = 'goodwill'; reason = 'goodwill'
+  }
+  // A bill of supply carries no GST: its lines credit the value only.
+  if (!tax) lines = lines.map((l) => ({ ...l, taxable: l.taxable + l.gst, gst: 0, bps: 0 }))
+  const heads = lines.reduce((a, l) => { const h = gstHeads(l.gst, inv.supply); return { cgst: a.cgst + h.cgst, sgst: a.sgst + h.sgst, igst: a.igst + h.igst } }, { cgst: 0, sgst: 0, igst: 0 })
+  const taxable = kind === 'goodwill' ? (req as { amount: number }).amount : lines.reduce((a, l) => a + l.taxable, 0)
+  const total = taxable + heads.cgst + heads.sgst + heads.igst
   const [s] = await tx.select({ series: shopSettings.invoiceSeries, prefix: shopSettings.orderPrefix, name: tenants.name }).from(tenants)
     .innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
   if (s?.series && !seriesFits(s.series)) return { ok: false, error: 'The credit note number would be longer than GST allows (16 characters). Shorten the invoice series in Settings › Taxes and invoices.' }
   const fy = fiscalYear(now)
-  const [n] = await tx.insert(tenantCounters).values({ tenantId, kind: 'credit', period: fy, next: 2 })
+  // A goodwill credit has its own series (G0001…), so the GST credit series and GSTR-1's documents table stay clean.
+  const series = kind === 'goodwill' ? 'goodwill' : 'credit'
+  const [n] = await tx.insert(tenantCounters).values({ tenantId, kind: series, period: fy, next: 2 })
     .onConflictDoUpdate({ target: [tenantCounters.tenantId, tenantCounters.kind, tenantCounters.period], set: { next: sql`${tenantCounters.next} + 1` } })
     .returning({ next: tenantCounters.next })
   let number: string
-  try { number = invoiceNumber({ series: s?.series ?? '', orderPrefix: orderPrefix(s?.prefix ?? '', s?.name ?? ''), fiscalYear: fy, n: n!.next - 1, kind: 'credit' }) } catch (e) {
+  try { number = invoiceNumber({ series: s?.series ?? '', orderPrefix: orderPrefix(s?.prefix ?? '', s?.name ?? ''), fiscalYear: fy, n: n!.next - 1, kind: series }) } catch (e) {
     if (e instanceof InvoiceNumberTooLong) throw new CreditSeriesFull()
     throw e
   }
-  const t = inv.totals
-  await tx.insert(creditNotes).values({ tenantId, orderId, number, againstInvoice: inv.number, reason, taxable: t.taxable, cgst: t.cgst, sgst: t.sgst, igst: t.igst, total: t.total, issuedAt: now, issuedBy: actor.userId })
+  const [note] = await tx.insert(creditNotes).values({ tenantId, orderId, number, againstInvoice: inv.number, reason, kind, taxable, ...heads, total, issuedAt: now, issuedBy: actor.userId }).returning({ id: creditNotes.id })
+  if (lines.length) await tx.insert(creditNoteLines).values(lines.map((l) => ({ tenantId, creditNoteId: note!.id, orderLineId: l.lineId, qty: l.qty, taxable: l.taxable, gst: l.gst, gstBps: l.bps })))
   return { ok: true, eventId: await record(tx, tenantId, orderId, actor, 'credit_noted', now, { reason }), number }
 }

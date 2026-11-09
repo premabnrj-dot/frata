@@ -8,7 +8,8 @@ import { Dialog } from '@/components/ui/dialog'
 import { Menu, type MenuItem } from '@/components/ui/menu'
 import { Toaster, useToast } from '@/components/ui/toast'
 import { CANCEL_LABEL, CANCEL_REASONS, type CancelReason } from '@/domains/orders/work'
-import { cancelOrder, confirmOrder, holdOrder, issueCreditNote, packOrder, undoOrderAction, unholdOrder } from '../actions'
+import { cancelOrder, confirmOrder, holdOrder, issueCreditNote, issuePartCreditNote, packOrder, undoOrderAction, unholdOrder } from '../actions'
+import { PartCreditDialog, type PartLine } from './part-credit'
 
 // =============================================================================
 // FILE: src/app/(console)/console/orders/_components/order-actions.tsx
@@ -30,6 +31,8 @@ export type OrderActionsProps = {
   pdf?: { slip: string | null; invoice: string | null; credit?: string | null }
   /** Documents D3: whether this person may issue a credit note now, and the one issued. */
   credit?: { may: boolean; number: string | null }
+  /** GST phase 2: a credit note after delivery (returned items, a discount) when this person may, with each line's quantity left. */
+  part?: { inclusive: boolean; lines: PartLine[] } | null
   /** Which More items this person may use on this order now. */
   may: { hold: boolean; unhold: boolean; cancel: boolean; pack: boolean; confirm: boolean }
   /** High or unreadable risk: confirming is still allowed here (a person is looking), but it asks first. */
@@ -50,6 +53,7 @@ function Actions(p: OrderActionsProps) {
   const [cancelOpen, setCancelOpen] = useState(false)
   const [riskOpen, setRiskOpen] = useState(false)
   const [creditOpen, setCreditOpen] = useState(false)
+  const [partOpen, setPartOpen] = useState(false)
   const [reason, setReason] = useState<CancelReason | ''>('')
   const [note, setNote] = useState('')
   const [restock, setRestock] = useState(true)
@@ -87,6 +91,7 @@ function Actions(p: OrderActionsProps) {
     ...(p.pdf?.invoice ? [{ label: 'Download invoice (PDF)', href: p.pdf.invoice }] : []),
     ...(p.pdf?.credit ? [{ label: 'Download credit note (PDF)', href: p.pdf.credit }] : []),
     ...(p.credit?.may ? [{ label: 'Issue credit note…', onSelect: () => setCreditOpen(true) }] : []),
+    ...(p.part ? [{ label: 'Credit returned items or a discount…', onSelect: () => setPartOpen(true) }] : []),
     { label: 'Copy link', onSelect: () => { void navigator.clipboard?.writeText(window.location.href).then(() => toast({ text: 'Link copied.' }), () => toast({ text: 'Copy the address from the address bar.' })) } },
     ...(p.may.cancel && p.primary !== 'cancel' ? [{ label: 'Cancel order…', onSelect: () => setCancelOpen(true), danger: true }] : []),
   ]
@@ -117,8 +122,11 @@ function Actions(p: OrderActionsProps) {
       <Dialog open={riskOpen} onClose={() => setRiskOpen(false)} title={`Confirm ${p.number}?`} description={p.riskWarning}
         actions={<><Button variant="secondary" data-autofocus onClick={() => setRiskOpen(false)}>Not yet</Button><Button onClick={() => { setRiskOpen(false); void confirm() }}>Confirm anyway</Button></>} />
 
+      {p.part ? <PartCreditDialog open={partOpen} number={p.number} lines={p.part.lines} inclusive={p.part.inclusive} busy={busy} onClose={() => setPartOpen(false)}
+        onIssue={(req) => void run('credited', async () => { const r = await issuePartCreditNote(p.orderId, req); return r.ok ? { ...r, ok: true } : r }).then((r) => { if (r) setPartOpen(false) })} /> : null}
+
       <Dialog open={creditOpen} onClose={() => setCreditOpen(false)} title={`Issue a credit note for ${p.number}?`}
-        description="It reverses the whole invoice, with its own number from your credit-note series. A credit note is final: it cannot be changed or taken back."
+        description="It reverses what is left of the invoice, with its own number from your credit-note series. A credit note is final: it cannot be changed or taken back."
         actions={<><Button variant="secondary" data-autofocus onClick={() => setCreditOpen(false)}>Not now</Button><Button onClick={() => void run('credited', async () => { const r = await issueCreditNote(p.orderId); return r.ok ? { ...r, ok: true } : r }).then((r) => { if (r) setCreditOpen(false) })} aria-disabled={busy}>Issue credit note</Button></>} />
 
       <Dialog open={cancelOpen} onClose={() => { setCancelOpen(false); setError(null) }} title={`Cancel ${p.number}?`}

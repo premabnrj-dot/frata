@@ -36,9 +36,10 @@ export function presetsFor(sells: readonly (typeof SELL_KEYS)[number][]): Preset
     if (s === 'men') keys.add('mens_shirt')
     if (s === 'kids') keys.add('kids')
     if (s === 'footwear') keys.add('footwear')
-    if (s === 'accessories') keys.add('one_size')
+    if (s === 'accessories' || s === 'jewellery' || s === 'beauty' || s === 'wellness') keys.add('one_size')
   }
-  if (!keys.size) ['womens_kurta', 'mens_shirt', 'one_size'].forEach((k) => keys.add(k))
+  // Skipped the question: the common ones. A shop of jewellery or beauty only gets no garment charts.
+  if (!sells.length) ['womens_kurta', 'mens_shirt', 'one_size'].forEach((k) => keys.add(k))
   keys.add('one_size')
   return [...keys].map((k) => PRESETS[k]!)
 }

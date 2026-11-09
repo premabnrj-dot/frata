@@ -9,7 +9,7 @@
 // Pure: no React, no db (check:layers).
 // =============================================================================
 
-export const MODULE_KEYS = ['communication', 'rto_shield', 'ship', 'true_profit', 'reviews', 'marketplace_export', 'size_fit', 'cart_flows'] as const
+export const MODULE_KEYS = ['communication', 'rto_shield', 'ship', 'true_profit', 'reviews', 'marketplace_export', 'size_fit', 'cart_flows', 'gst'] as const
 export type ModuleKey = (typeof MODULE_KEYS)[number]
 
 /**
@@ -17,7 +17,7 @@ export type ModuleKey = (typeof MODULE_KEYS)[number]
  * include it; otherwise it is bought (or trialled) as an add-on at its addon_prices row.
  */
 export type Billing = 'core' | 'plan' | 'add_on'
-export type Group = 'talk' | 'deliver' | 'grow'
+export type Group = 'talk' | 'deliver' | 'grow' | 'run'
 /** `now`: built, can be switched on. `next`: listed so merchants see what is coming; never switchable. */
 export type Status = 'now' | 'next'
 
@@ -71,13 +71,19 @@ export const MODULES: Record<ModuleKey, ModuleDef> = {
     key: 'size_fit', name: 'Size and fit', job: 'Fewer size returns. Fit learned from returns.', group: 'grow', billing: 'plan', status: 'next', dependsOn: [], outboxKinds: [],
     features: ['A size finder on the product page', '"Runs small or large" from returns', 'Exchange first, refund second'],
   },
+  gst: {
+    key: 'gst', name: 'GST', job: 'Your GSTR-1 each month, and the files your CA needs.', group: 'run', billing: 'plan', status: 'now',
+    dependsOn: [], outboxKinds: [], setup: '/console/apps/gst',
+    // GST on every invoice and credit note is core, in every plan (plan 2026-11-09 § 1); this is the month's return.
+    features: ['GSTR-1 tables, month or quarter', 'What to fix before you file', 'GSTR-1 JSON, sheets, sales register, Tally', 'A login for your accountant'],
+  },
   cart_flows: {
     key: 'cart_flows', name: 'Cart flows', job: 'Bring back bags left behind.', group: 'grow', billing: 'plan', status: 'next', dependsOn: ['communication'], outboxKinds: [],
     usage: 'Meta bills messages', features: ['WhatsApp reminder for a left bag', 'Back-in-stock alerts', 'Only shoppers who agreed'],
   },
 }
 
-export const GROUPS: readonly [Group, string][] = [['talk', 'Talk'], ['deliver', 'Deliver'], ['grow', 'Grow']]
+export const GROUPS: readonly [Group, string][] = [['talk', 'Talk'], ['deliver', 'Deliver'], ['grow', 'Grow'], ['run', 'Run']]
 
 /** Modules a plan version may list in `features` (core ones are in every plan already). */
 export const PLAN_GRANTABLE: readonly ModuleKey[] = MODULE_KEYS.filter((k) => MODULES[k].billing !== 'core')

@@ -38,6 +38,8 @@ export type PolicyFacts = {
   codMax: number
   codCharge: number
   pricesIncludeGst: boolean
+  /** What the shop sells (shop_settings.sells): beauty and wellness return only sealed (hygiene), jewellery with its packaging. */
+  sells: readonly string[]
 }
 
 /** A run of text, or a fact from settings — `value` null when the merchant has not filled it in. */
@@ -45,6 +47,17 @@ export type Piece = { text: string } | { fact: string; value: string | null }
 
 const fact = (label: string, value: string | null | undefined): Piece => ({ fact: label, value: value && value.trim() ? value.trim() : null })
 const t = (text: string): Piece => ({ text })
+
+/** What a returned item must be, by what the shop sells (a mixed shop gets each line that applies). */
+function condition(sells: readonly string[]): string {
+  const has = (...k: string[]) => sells.some((x) => k.includes(x))
+  const fashion = sells.length === 0 || has('women', 'men', 'kids', 'ethnic', 'footwear', 'accessories')
+  return [
+    ...(fashion ? ['Clothes, footwear and accessories must be unused, unwashed and with their tags.'] : []),
+    ...(has('jewellery') ? ['Jewellery must be unworn, in its original packaging.'] : []),
+    ...(has('beauty', 'wellness') ? ['Beauty, personal care and wellness products can be returned only unopened, with their seal intact: once opened they can’t be taken back, for hygiene.'] : []),
+  ].join(' ')
+}
 
 /** Each page as paragraphs of pieces. `inr` formats paise; injected so this stays pure and shares the console's formatting. */
 export function renderPolicy(page: PolicyPage, f: PolicyFacts, inr: (paise: number) => string): Piece[][] {
@@ -55,7 +68,7 @@ export function renderPolicy(page: PolicyPage, f: PolicyFacts, inr: (paise: numb
         [t('Items cannot be returned or exchanged unless they arrive damaged, faulty or not what you ordered. Then write to '), fact('customer care email', f.supportEmail), t(' within 48 hours of delivery with a photo, and we will replace the item or refund you in full.')],
       ]
       return [
-        [t('You can ask for '), t({ exchange_or_refund: 'an exchange or a refund', exchange_only: 'an exchange', refund_only: 'a refund' }[f.returnKind]), t(' within '), fact('return window', `${f.returnDays} days`), t(' of delivery. Items must be unused, unwashed and with their tags.')],
+        [t('You can ask for '), t({ exchange_or_refund: 'an exchange or a refund', exchange_only: 'an exchange', refund_only: 'a refund' }[f.returnKind]), t(' within '), fact('return window', `${f.returnDays} days`), t(' of delivery. '), t(condition(f.sells))],
         [t('Write to '), fact('customer care email', f.supportEmail), t(' with your order number. We arrange the pickup where the courier serves your pincode.')],
         ...(f.returnKind !== 'exchange_only' ? [[t('Refunds go to the original payment method within 7 working days of the item reaching us. Pay on delivery orders are refunded by UPI or bank transfer.')]] : []),
         [t('Damaged, faulty or wrong items are always taken back, whatever the window.')],

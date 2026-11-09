@@ -1,0 +1,252 @@
+<title>Frrata Product Roadmap</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&display=swap">
+<style>
+/* Layout: a roadmap brief — the idea, the one data join, hard dates on a line, seven pillars as cards with build/integrate/skip, Now/Next/Later lanes, packaging, measures, calls. Frrata console tokens; brand pink marks "Now". */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--brand:#D61F69;--focus:#3451B2;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--info:#EDF2FE;--info-text:#3451B2;--danger:#FDECEC;--danger-text:#B42318;
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--display:"Bricolage Grotesque","Inter",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--focus:#9CB1FF;--ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--info:#18203A;--info-text:#9CB1FF;--danger:#3A1714;--danger-text:#FF9B8F;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--focus:#9CB1FF;--ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--info:#18203A;--info-text:#9CB1FF;--danger:#3A1714;--danger-text:#FF9B8F;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.6 var(--sans);margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding-block:28px 90px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:31;background:var(--bg)}
+nav.toc{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--bg);display:flex;gap:6px;overflow-x:auto;padding:10px 0;border-bottom:1px solid var(--border)}
+nav.toc a{white-space:nowrap;color:var(--sub);text-decoration:none;font-size:13px;padding:5px 11px;border-radius:999px;border:1px solid var(--border)}
+nav.toc a:hover{color:var(--fg);border-color:var(--fg)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub)}
+h1{font:700 clamp(30px,5.4vw,50px)/1.03 var(--display);margin:6px 0 12px;max-width:18ch;text-wrap:balance}
+h2{font:600 22px/1.2 var(--display);margin:54px 0 14px;scroll-margin-top:64px;display:flex;align-items:center;gap:10px}
+h2::before{content:"";width:18px;height:2px;background:var(--brand);flex:none}
+h3{font-size:15px;margin:0}
+p{max-width:70ch;margin:0 0 10px}
+.sub{color:var(--sub)}
+.card{border:1px solid var(--border);border-radius:12px;background:var(--card);padding:16px;min-width:0}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g5{grid-template-columns:repeat(5,minmax(0,1fr))}
+.chip{display:inline-flex;align-items:center;border-radius:999px;padding:1px 8px;font-size:11.5px;font-weight:500;white-space:nowrap;background:var(--muted);color:var(--sub)}
+.b{background:var(--ok);color:var(--ok-text)}.i{background:var(--info);color:var(--info-text)}.s{background:var(--muted);color:var(--sub);text-decoration:line-through}
+.now{background:var(--brand);color:#fff}.next{background:var(--fg);color:var(--bg)}.later{background:var(--muted);color:var(--fg)}.built{background:var(--ok);color:var(--ok-text)}
+/* the join */
+.join{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font:600 16px var(--display)}
+.join span{border:1px solid var(--border);border-radius:10px;padding:8px 12px;background:var(--card)}
+.join em{font-style:normal;color:var(--brand)}
+.outs{counter-reset:o;display:grid;gap:8px;margin-top:14px}
+.outs div{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;font-size:14px}
+.outs div::before{counter-increment:o;content:counter(o);width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--fg);color:var(--bg);font-size:12px;font-weight:600}
+/* dates */
+.line{position:relative;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;padding-top:22px}
+.line::before{content:"";position:absolute;left:0;right:0;top:9px;height:2px;background:var(--border)}
+.d{position:relative;font-size:13px}
+.d::before{content:"";position:absolute;top:-18px;left:0;width:12px;height:12px;border-radius:50%;background:var(--fg);border:2px solid var(--bg)}
+.d.hot::before{background:var(--brand)}
+.d b{display:block;font-variant-numeric:tabular-nums}
+.d span{color:var(--sub)}
+/* pillars */
+.pillar{display:grid;gap:10px;align-content:start}
+.pillar header{display:flex;align-items:center;gap:8px}
+.pillar header svg{width:20px;height:20px;flex:none;fill:none;stroke:var(--brand);stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.pillar header small{margin-left:auto;font-size:12px;color:var(--sub)}
+.items{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.items li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:center;font-size:13.5px;padding:6px 0;border-top:1px solid var(--border)}
+.items li:first-child{border-top:0}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.filters button{font:inherit;font-size:13px;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--sub);padding:4px 12px;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+/* lanes */
+.lanes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.lane{border:1px solid var(--border);border-radius:12px;background:var(--card);overflow:hidden;min-width:0}
+.lane h3{padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);background:var(--muted)}
+.lane h3 span{font-size:12px;font-weight:400;color:var(--sub)}
+.lane ol{margin:0;padding:10px 14px 14px 32px;display:grid;gap:8px;font-size:14px}
+.lane ol li b{font-weight:600}
+.lane ol li small{display:block;color:var(--sub);font-size:12px}
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:620px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:12px;color:var(--sub);font-weight:500;background:var(--muted)}
+tr:last-child td{border-bottom:0}
+td.c,th.c{text-align:center}
+.yes{color:var(--ok-text);font-weight:700}.no{color:var(--sub)}
+.calls{display:grid;gap:8px;counter-reset:c}
+.call{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:start;border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:var(--card)}
+.call::before{counter-increment:c;content:counter(c);width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--fg);color:var(--bg);font-size:12px;font-weight:600}
+.call p{margin:0;font-size:14px}
+.skip{display:flex;flex-wrap:wrap;gap:6px}
+@media (max-width:900px){.g3,.g5{grid-template-columns:repeat(2,minmax(0,1fr))}.lanes{grid-template-columns:1fr}.line{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:30px}}
+@media (max-width:600px){.g2,.g3,.g5{grid-template-columns:1fr}.line{grid-template-columns:repeat(2,minmax(0,1fr))}.call{grid-template-columns:30px minmax(0,1fr)}.call .chip{grid-column:2;justify-self:start}}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">Product roadmap · proposal · 9 Nov 2026</div>
+  <h1>Everything a D2C brand runs, in one place</h1>
+  <p class="sub">Themes, features and apps for Frrata: what gives us leverage, what to build, integrate or skip, and in what order. Built on the all-categories brief, the GST module spec and three research reports. Repo: docs/plans/2026-11-09-product-roadmap.md</p>
+  <nav class="toc" aria-label="Sections"><a href="#leverage">Leverage</a><a href="#dates">Hard dates</a><a href="#pillars">Pillars</a><a href="#order">Order</a><a href="#packaging">Packaging</a><a href="#measures">Measures</a><a href="#calls">Your calls</a></nav>
+
+  <h2 id="leverage">Leverage</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3 style="margin-bottom:10px">One data join nobody else holds</h3>
+      <div class="join" role="img" aria-label="order times delivery outcome times cost times GST times the message"><span>order</span><em>×</em><span>delivery outcome</span><em>×</em><span>cost</span><em>×</em><span>GST</span><em>×</em><span>the message that closed it</span></div>
+      <div class="outs">
+        <div>Profit per delivered order, live, by product, pincode, channel, campaign</div>
+        <div>COD and RTO built in: score, confirm on WhatsApp, nudge to prepaid, NDR</div>
+        <div>Delivered and RTO signals to Meta and Google; COD closes are invisible to the pixel</div>
+        <div>GST right at the source; GSTR-3B is now locked to GSTR-1</div>
+        <div>Priced per delivered order, capped; nobody else charges only on delivery</div>
+      </div>
+    </div>
+    <div class="grid" style="align-content:start">
+      <div class="card"><div class="eyebrow">The app tax today (modelled)</div><div style="font:600 28px var(--display)">₹20–33k / mo</div><p class="sub" style="margin:0">at ₹5 L GMV · ₹1.7–2.1 L at ₹50 L · mostly % fees on orders never delivered</p></div>
+      <div class="card"><div class="eyebrow">What Shopify leaves open in India</div><p style="margin:6px 0 0">COD risk and RTO · WhatsApp · GST invoices · Indian shipping</p></div>
+      <div class="card"><div class="eyebrow">Channel and service</div><p style="margin:6px 0 0">Partners at 20% for 24 months · expert onboarding (agencies charge ₹45–85k)</p></div>
+    </div>
+  </div>
+
+  <h2 id="dates">Hard dates</h2>
+  <div class="line">
+    <div class="d hot"><b>31 Dec 2026</b><span>WhatsApp billed in INR, or delivery stops</span></div>
+    <div class="d"><b>1 Jan 2027</b><span>E-way bill 14 digits; e-invoice scope widens</span></div>
+    <div class="d hot"><b>Q1 2027</b><span>Shop Pay to India (reported): ship COD depth first</span></div>
+    <div class="d"><b>Apr 2027</b><span>IMS in the rules; GST rates change yearly from 1 April</span></div>
+    <div class="d hot"><b>13 Apr / 13 Oct 2027</b><span>Marketing messages leave the Cloud API</span></div>
+    <div class="d hot"><b>13 May 2027</b><span>DPDP Phase III: consent, rights, erasure, 72 h breach notice</span></div>
+  </div>
+
+  <h2 id="pillars">Seven pillars</h2>
+  <div class="filters" role="group" aria-label="Show">
+    <button aria-pressed="true" data-f="all">All</button><button aria-pressed="false" data-f="now">Now</button><button aria-pressed="false" data-f="next">Next</button><button aria-pressed="false" data-f="later">Later</button><button aria-pressed="false" data-f="built">Built</button>
+  </div>
+  <div class="grid g3" id="pillars-grid">
+    <section class="card pillar"><header><svg viewBox="0 0 24 24"><path d="M4 9h16l-1 11H5zM8 9V6a4 4 0 0 1 8 0v3"/></svg><h3>Sell</h3><small>store, themes, checkout</small></header><ul class="items">
+      <li data-h="built">Themes 2.1 and Look v4<span class="chip b">build</span><span class="chip built">built</span></li>
+      <li data-h="now">Speed budget: LCP under 3 s on 4G<span class="chip b">build</span><span class="chip now">now</span></li>
+      <li data-h="now">COD risk at checkout: score, partial prepay, block<span class="chip b">build</span><span class="chip now">now</span></li>
+      <li data-h="now">B2B GST invoice at checkout<span class="chip b">build</span><span class="chip now">now</span></li>
+      <li data-h="next">Theme packs per category wave<span class="chip b">build</span><span class="chip next">next</span></li>
+      <li data-h="next">Lookbook hotspots, video, quick view, mega menu<span class="chip b">build</span><span class="chip next">next</span></li>
+      <li data-h="next">Google free listings and Shopping feed<span class="chip i">integrate</span><span class="chip next">next</span></li>
+      <li data-h="later">Marketplace export by wave<span class="chip b">build</span><span class="chip later">later</span></li>
+    </ul></section>
+    <section class="card pillar"><header><svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h3.5l3.5 3.5V16h-7zM7 18.5h.01M17 18.5h.01"/></svg><h3>Deliver</h3><small>ship, confirm, return</small></header><ul class="items">
+      <li data-h="built">Outcomes: delivered, RTO, lost<span class="chip b">build</span><span class="chip built">built</span></li>
+      <li data-h="now">RTO Shield: confirm COD on WhatsApp, COD→prepaid, NDR<span class="chip b">build</span><span class="chip now">now</span></li>
+      <li data-h="next">Shiprocket: labels, tracking, rates<span class="chip i">integrate</span><span class="chip next">next</span></li>
+      <li data-h="next">COD remittance matching<span class="chip b">build</span><span class="chip next">next</span></li>
+      <li data-h="next">Exchange-first returns, reverse pickup<span class="chip b">build</span><span class="chip next">next</span></li>
+    </ul></section>
+    <section class="card pillar"><header><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><h3>Talk</h3><small>messages and service</small></header><ul class="items">
+      <li data-h="built">WhatsApp order updates, one inbox<span class="chip b">build</span><span class="chip built">built</span></li>
+      <li data-h="now">INR billing for every merchant's WhatsApp<span class="chip b">build</span><span class="chip now">now</span></li>
+      <li data-h="now">Transactional email<span class="chip i">integrate</span><span class="chip now">now</span></li>
+      <li data-h="next">Instagram DMs in the inbox; orders from a chat<span class="chip b">build</span><span class="chip next">next</span></li>
+      <li data-h="next">Cart flows and broadcasts, new Marketing Messages API, with consent<span class="chip b">build</span><span class="chip next">next</span></li>
+      <li data-h="later">AI reply suggestions, a human sends<span class="chip i">integrate</span><span class="chip later">later</span></li>
+      <li data-h="later">Email campaigns once checkout collects email<span class="chip i">integrate</span><span class="chip later">later</span></li>
+    </ul></section>
+    <section class="card pillar"><header><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg><h3>Grow</h3><small>ads, creative, loyalty</small></header><ul class="items">
+      <li data-h="built">Analytics on ₹ kept after returns<span class="chip b">build</span><span class="chip built">built</span></li>
+      <li data-h="built">Offers and creator codes<span class="chip b">build</span><span class="chip built">built</span></li>
+      <li data-h="next">Delivered and RTO signals to Meta and Google; ad spend into profit<span class="chip b">build</span><span class="chip next">next</span></li>
+      <li data-h="next">True Profit by product, pincode, campaign<span class="chip b">build</span><span class="chip next">next</span></li>
+      <li data-h="next">Photo reviews, import from Judge.me<span class="chip b">build</span><span class="chip next">next</span></li>
+      <li data-h="later">Creative studio: AI product photos, labelled, by credits<span class="chip i">integrate</span><span class="chip later">later</span></li>
+      <li data-h="later">Ads from the catalogue via Meta and Google tools<span class="chip i">integrate</span><span class="chip later">later</span></li>
+      <li data-h="later">Loyalty, referral, store credit<span class="chip b">build</span><span class="chip later">later</span></li>
+    </ul></section>
+    <section class="card pillar"><header><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 14l6-6M9.5 8.5h.01M14.5 13.5h.01"/></svg><h3>Comply</h3><small>GST and law</small></header><ul class="items">
+      <li data-h="now">Product HSN, rate table, no garment default<span class="chip b">build</span><span class="chip now">now</span></li>
+      <li data-h="now">GST month, fix list, exports for the CA<span class="chip b">build</span><span class="chip now">now</span></li>
+      <li data-h="now">Post-sale discounts by credit note (from 1 Nov 2026)<span class="chip b">build</span><span class="chip now">now</span></li>
+      <li data-h="next">Push and file GSTR-1, approved by OTP<span class="chip i">integrate</span><span class="chip next">next</span></li>
+      <li data-h="next">DPDP: consent log, notices, rights, erasure<span class="chip b">build</span><span class="chip next">next</span></li>
+      <li data-h="next">Category law packs per wave<span class="chip b">build</span><span class="chip next">next</span></li>
+      <li data-h="later">E-invoice, e-way bill, GSTR-1A, ARQP<span class="chip i">integrate</span><span class="chip later">later</span></li>
+    </ul></section>
+    <section class="card pillar"><header><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4zM8 7V5h8v2M4 12h16"/></svg><h3>Run</h3><small>back office</small></header><ul class="items">
+      <li data-h="next">Settlement ledger: Razorpay and COD, money still to arrive<span class="chip b">build</span><span class="chip next">next</span></li>
+      <li data-h="later">Expenses pulled from Meta, Google, Shiprocket; landed cost<span class="chip b">build</span><span class="chip later">later</span></li>
+      <li data-h="later">Tally vouchers, then Zoho Books<span class="chip i">integrate</span><span class="chip later">later</span></li>
+      <li data-h="later">Purchase orders, bill of materials, job work<span class="chip b">build</span><span class="chip later">later</span></li>
+      <li data-h="later">Locations and stock transfers<span class="chip b">build</span><span class="chip later">later</span></li>
+      <li data-h="later">POS for pop-ups and stores, last<span class="chip b">build</span><span class="chip later">later</span></li>
+    </ul></section>
+    <section class="card pillar"><header><svg viewBox="0 0 24 24"><path d="M3 20c.8-3.3 3-5 5.5-5s4.7 1.7 5.5 5M8.5 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM15 12.5a2.7 2.7 0 1 0 0-5.4M16.5 15c2 .4 3.6 2 4.5 5"/></svg><h3>Team</h3><small>people, roles, approvals</small></header><ul class="items">
+      <li data-h="built">Owner, admin, staff, partner<span class="chip b">build</span><span class="chip built">built</span></li>
+      <li data-h="next">Accountant, agency, designer, catalogue, packer roles<span class="chip b">build</span><span class="chip next">next</span></li>
+      <li data-h="later">Approvals: catalogue and creative, draft → live<span class="chip b">build</span><span class="chip later">later</span></li>
+      <li data-h="later">Tasks and notes on orders, products, customers<span class="chip b">build</span><span class="chip later">later</span></li>
+    </ul></section>
+    <section class="card pillar" style="grid-column:span 2;align-content:start"><header><h3>Skipped on purpose</h3></header>
+      <div class="skip"><span class="chip s">team chat and drive</span><span class="chip s">own AI image or video models</span><span class="chip s">influencer marketplace</span><span class="chip s">corporate cards</span><span class="chip s">full accounting, payroll</span><span class="chip s">RCS and SMS marketing</span><span class="chip s">an AI agent that sends on its own</span><span class="chip s">a WhatsApp credit wallet</span></div>
+      <p class="sub" style="margin:4px 0 0;font-size:14px">WhatsApp groups and Google already own team chat. Meta and Google's ad tools already own targeting. Accounting goes to Tally and Zoho Books through exports.</p>
+    </section>
+  </div>
+
+  <h2 id="order">The order</h2>
+  <div class="lanes">
+    <div class="lane"><h3><span class="chip now">Now</span>Nov–Dec 2026</h3><ol>
+      <li><b>Product HSN and the rate table</b><small>a tax error today</small></li>
+      <li><b>RTO Shield</b><small>the core promise, before Shop Pay</small></li>
+      <li><b>WhatsApp INR billing</b><small>delivery stops 1 Jan otherwise</small></li>
+      <li><b>GST month and CA exports</b><small>the moat a CA can test; Accountant role</small></li>
+    </ol></div>
+    <div class="lane"><h3><span class="chip next">Next</span>Q1 2027</h3><ol>
+      <li><b>Categories foundation, beauty and wellness</b><small>the all-categories decision</small></li>
+      <li><b>Settlement ledger, COD remittances</b><small>money in, matched</small></li>
+      <li><b>DPDP consent and rights</b><small>by 13 May 2027</small></li>
+      <li><b>Cart flows and broadcasts, Instagram inbox</b><small>on the API that stays</small></li>
+      <li><b>Delivered signals to ads, True Profit</b><small>the ads edge</small></li>
+      <li><b>Push and file GSTR-1</b><small>after the month view is trusted</small></li>
+      <li><b>Exchange-first returns, reviews</b><small>fashion's own pain</small></li>
+    </ol></div>
+    <div class="lane"><h3><span class="chip later">Later</span>Q2–Q3 2027</h3><ol>
+      <li><b>Expenses, landed cost, Tally and Zoho Books</b><small>profit gets complete</small></li>
+      <li><b>Creative studio</b><small>credits and AI labels</small></li>
+      <li><b>Home, food, electronics and jewellery packs</b><small>with e-invoice and e-way bill</small></li>
+      <li><b>Procurement, locations, POS</b><small>Scale tier, last</small></li>
+    </ol></div>
+  </div>
+  <p class="sub" style="margin-top:10px;font-size:14px">Each item is its own phase with a spec and a mockup for your sign-off before it's built.</p>
+
+  <h2 id="packaging">Packaging · about 90% included</h2>
+  <div class="tw"><table>
+    <thead><tr><th></th><th class="c">Launch</th><th class="c">Growth</th><th class="c">Scale</th></tr></thead>
+    <tbody>
+      <tr><td>Store, themes, checkout, offers, COD risk, Messages, GST invoices and CA exports, analytics, partners</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td></tr>
+      <tr><td>RTO Shield, cart flows and broadcasts, ad signals, True Profit, reviews, returns, GST push and file, expenses, Tally and Zoho Books, creative studio, approvals</td><td class="c no">—</td><td class="c yes">✓</td><td class="c yes">✓</td></tr>
+      <tr><td>Procurement, locations, POS (per location), several GSTINs</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">✓</td></tr>
+      <tr><td>Expert onboarding</td><td class="c">one-time fee</td><td class="c yes">✓</td><td class="c yes">✓</td></tr>
+      <tr><td>Usage, passed through at cost</td><td colspan="3">Meta messages (Meta bills the merchant) · freight · GSP calls · AI image credits</td></tr>
+    </tbody></table></div>
+
+  <h2 id="measures">How we'll know</h2>
+  <div class="grid g5">
+    <div class="card"><h3>Sell</h3><p class="sub" style="font-size:14px;margin:4px 0 0">Conversion on mid-range Android</p></div>
+    <div class="card"><h3>Deliver</h3><p class="sub" style="font-size:14px;margin:4px 0 0">RTO on confirmed vs unconfirmed COD</p></div>
+    <div class="card"><h3>Talk</h3><p class="sub" style="font-size:14px;margin:4px 0 0">Share of orders touched by a message</p></div>
+    <div class="card"><h3>Grow</h3><p class="sub" style="font-size:14px;margin:4px 0 0">Delivered orders per ₹ of ad spend</p></div>
+    <div class="card"><h3>Comply</h3><p class="sub" style="font-size:14px;margin:4px 0 0">GSTR-1 filed with no edits by the CA</p></div>
+    <div class="card"><h3>Run</h3><p class="sub" style="font-size:14px;margin:4px 0 0">Money in matched without a spreadsheet</p></div>
+    <div class="card"><h3>Team</h3><p class="sub" style="font-size:14px;margin:4px 0 0">Shops with 3+ people working in Frrata</p></div>
+    <div class="card" style="grid-column:span 3"><h3>The business</h3><p class="sub" style="font-size:14px;margin:4px 0 0">Apps a merchant cancels within 60 days of moving to Frrata</p></div>
+  </div>
+
+  <h2 id="calls">Your calls</h2>
+  <div class="calls">
+    <div class="call"><p><b>Positioning:</b> the operating system for an Indian D2C brand, priced per delivered order.</p><span class="chip b">Recommended</span></div>
+    <div class="call"><p><b>The order:</b> compliance and RTO first, then the dated work (DPDP, the new WhatsApp marketing API), then growth tools; back office and POS last.</p><span class="chip b">Recommended</span></div>
+    <div class="call"><p><b>Build vs integrate</b> as above, and skip team chat and drive, own AI models, an influencer marketplace, corporate cards and full accounting.</p><span class="chip b">Recommended</span></div>
+    <div class="call"><p><b>AI creative as metered credits:</b> about ₹2–10 an image to Frrata, labelled as the IT Rules 2026 and ASCI ask.</p><span class="chip b">Recommended</span></div>
+    <div class="call"><p><b>POS last</b>, Scale only, priced per location.</p><span class="chip b">Recommended</span></div>
+    <div class="call"><p><b>Packaging</b> as above, with the per-order fee cap from the all-categories brief.</p><span class="chip b">Recommended</span></div>
+  </div>
+</div>
+<script>
+const fb=document.querySelectorAll('.filters button');
+fb.forEach(b=>b.addEventListener('click',()=>{fb.forEach(x=>x.setAttribute('aria-pressed',x===b));const f=b.dataset.f;document.querySelectorAll('#pillars-grid li[data-h]').forEach(li=>{li.hidden=f!=='all'&&li.dataset.h!==f})}));
+</script>

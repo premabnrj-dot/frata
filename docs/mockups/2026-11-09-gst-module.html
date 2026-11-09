@@ -1,0 +1,425 @@
+<title>Frrata GST</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: boards stacked, each a console screen at its real width — the month, Review, Fix, Connect, Push and file, Registration, HSN and checkout, For your CA, Phone. Frrata console tokens. */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--brand:#D61F69;--focus:#3451B2;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--info:#EDF2FE;--info-text:#3451B2;--danger:#FDECEC;--danger-text:#B42318;
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--display:"Bricolage Grotesque","Inter",sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;
+  --fast:120ms;--base:200ms;--slow:320ms;--ease:cubic-bezier(.2,0,0,1);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--focus:#9CB1FF;--ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--info:#18203A;--info-text:#9CB1FF;--danger:#3A1714;--danger-text:#FF9B8F;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--focus:#9CB1FF;--ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--info:#18203A;--info-text:#9CB1FF;--danger:#3A1714;--danger-text:#FF9B8F;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--sans);margin:0}
+.wrap{max-width:1220px;margin:0 auto;padding-block:20px 90px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:31;background:var(--bg)}
+nav.boards{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--bg);display:flex;gap:6px;overflow-x:auto;padding:10px 0;border-bottom:1px solid var(--border)}
+nav.boards a{white-space:nowrap;color:var(--sub);text-decoration:none;font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--border)}
+nav.boards a:hover{color:var(--fg);border-color:var(--fg)}
+h1{font:600 26px/1.15 var(--display);margin:18px 0 2px;text-wrap:balance}
+h2{font-size:17px;margin:48px 0 14px;display:flex;gap:10px;align-items:center;scroll-margin-top:70px}
+h2::before{content:"";width:18px;height:2px;background:var(--brand);flex:none}
+.sub{color:var(--sub)}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-size:12px}
+.frame{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:8px;border:1px solid var(--border);background:var(--card);padding:0 14px;min-height:38px;font-weight:500;transition:scale var(--fast) var(--ease)}
+.btn:active{scale:.97}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.primary::after{content:"";position:absolute;left:6px;right:6px;bottom:0;height:2px;background:var(--brand);transform-origin:left;scale:.33 1;transition:scale var(--fast) var(--ease)}
+.btn.primary:hover::after{scale:1 1}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:500;white-space:nowrap;background:var(--muted);color:var(--sub)}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-info{background:var(--info);color:var(--info-text)}.c-warn{background:var(--warn);color:var(--warn-text)}.c-danger{background:var(--danger);color:var(--danger-text)}
+.seg{display:inline-grid;grid-auto-flow:column;background:var(--muted);border-radius:9px;padding:2px;gap:2px;max-width:100%;overflow-x:auto}
+.seg button{border:0;background:transparent;border-radius:7px;padding:5px 11px;font-size:13px;font-weight:500;color:var(--sub);white-space:nowrap;transition:background-color var(--fast),color var(--fast)}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--fg);box-shadow:0 1px 2px rgb(0 0 0/.1)}
+.field{display:grid;gap:5px}
+.field label{font-size:13px;font-weight:500}
+.input{height:38px;border-radius:8px;border:1px solid var(--input);background:var(--card);padding:0 10px;width:100%}
+/* console chrome */
+.con{display:grid;grid-template-columns:200px minmax(0,1fr);min-height:560px}
+.side{border-right:1px solid var(--border);padding:14px 10px;display:grid;align-content:start;gap:2px;background:var(--card)}
+.side a{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px;color:var(--sub);text-decoration:none;font-size:13px}
+.side a[aria-current]{background:var(--muted);color:var(--fg);font-weight:600}
+.main{padding:20px 24px;display:grid;gap:18px;align-content:start;min-width:0}
+.head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.head h3{font:600 22px/1.2 var(--display);margin:0}
+.month{display:flex;align-items:center;gap:4px;border:1px solid var(--border);border-radius:8px;padding:2px}
+.month button{border:0;background:transparent;width:30px;height:30px;border-radius:6px}
+.month b{padding:0 6px;font-weight:600}
+/* steps */
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.step{padding:12px 14px;display:flex;gap:10px;align-items:center;border-right:1px solid var(--border);min-width:0}
+.step:last-child{border-right:0}
+.step .dot{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:600;background:var(--muted);color:var(--sub);flex:none;transition:background-color var(--base),color var(--base)}
+.step[data-s="done"] .dot{background:var(--ok);color:var(--ok-text)}
+.step[data-s="now"] .dot{background:var(--fg);color:var(--bg)}
+.step b{display:block;font-size:13px}
+.step span{font-size:12px;color:var(--sub)}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.kpi{border:1px solid var(--border);border-radius:12px;padding:12px;min-width:0}
+.kpi span{font-size:12px;color:var(--sub)}
+.kpi b{display:block;font-size:18px;font-variant-numeric:tabular-nums;margin-top:2px}
+.bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:12px;background:var(--muted)}
+.bar .grow{flex:1;min-width:180px}
+/* tables */
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:560px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+th{font-size:12px;color:var(--sub);font-weight:500;background:var(--muted)}
+td.r,th.r{text-align:right;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);overflow-x:auto}
+.tabs button{border:0;background:transparent;padding:9px 12px;font-size:13px;color:var(--sub);border-bottom:2px solid transparent;white-space:nowrap;display:flex;gap:6px;align-items:center}
+.tabs button[aria-selected="true"]{color:var(--fg);border-color:var(--fg);font-weight:600}
+.tabs small{font-size:11px;color:var(--sub);font-weight:400}
+.fix{display:grid;gap:8px}
+.fixrow{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;flex-wrap:wrap}
+.fixrow .t{flex:1;min-width:200px}
+.fixrow .t b{display:block;font-size:13px}
+.fixrow .t span{font-size:12px;color:var(--sub)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.card{border:1px solid var(--border);border-radius:12px;padding:16px;display:grid;gap:12px;align-content:start;background:var(--card);min-width:0}
+.card h4{margin:0;font-size:15px}
+.sheet{max-width:520px;margin:0 auto;border:1px solid var(--border);border-radius:16px;background:var(--card);box-shadow:0 20px 48px -20px rgb(0 0 0/.35);padding:20px;display:grid;gap:16px}
+.ol{display:grid;gap:12px;counter-reset:s}
+.ol>div{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start}
+.ol>div::before{counter-increment:s;content:counter(s);width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--muted);font-size:12px;font-weight:600}
+.portal{border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:12px}
+.portal .pb{background:#1F3A68;color:#fff;padding:6px 10px;display:flex;justify-content:space-between}
+.portal .pc{padding:10px;display:grid;gap:6px;background:var(--muted)}
+.portal .row{display:flex;justify-content:space-between;align-items:center;background:var(--card);border-radius:6px;padding:6px 8px}
+.portal .yes{display:flex;gap:6px}
+.portal .yes i{font-style:normal;padding:2px 8px;border-radius:4px;border:1px solid var(--border)}
+.portal .yes i.on{background:var(--ok-text);color:#fff;border-color:var(--ok-text)}
+.otp{display:flex;gap:8px}
+.otp input{width:44px;height:48px;text-align:center;font-size:20px;border-radius:8px;border:1px solid var(--input);background:var(--card)}
+.match{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:6px 14px;font-size:13px;align-items:center}
+.match .h{font-size:12px;color:var(--sub)}
+.tick{color:var(--ok-text);font-weight:600}
+.prog{height:4px;border-radius:999px;background:var(--muted);overflow:hidden}
+.prog i{display:block;height:100%;width:62%;background:var(--fg);border-radius:inherit}
+.rules{display:flex;flex-wrap:wrap;gap:6px}
+.who{display:grid;gap:8px}
+.who .p{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:10px}
+.av{width:28px;height:28px;border-radius:50%;background:var(--muted);display:grid;place-items:center;font-size:12px;font-weight:600;flex:none}
+.radios{display:grid;gap:6px}
+.radios button{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--card)}
+.radios button[aria-checked="true"]{border-color:var(--fg);box-shadow:inset 0 0 0 1px var(--fg)}
+.radios button b{display:block;font-size:13px}.radios button span{font-size:12px;color:var(--sub)}
+.radios .o{width:16px;height:16px;border-radius:50%;border:2px solid var(--input);flex:none}
+.radios button[aria-checked="true"] .o{border:5px solid var(--fg)}
+.hsnlist{border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.hsnlist div{display:flex;gap:10px;padding:8px 10px;border-bottom:1px solid var(--border);font-size:13px;align-items:center}
+.hsnlist div:last-child{border-bottom:0}
+.hsnlist div[aria-selected="true"]{background:var(--muted)}
+.hsnlist .mono{width:46px}
+.phone{width:360px;max-width:100%;margin:0 auto;border:8px solid var(--fg);border-radius:34px;overflow:hidden;background:var(--bg)}
+.phone .in{padding:14px;display:grid;gap:12px;min-height:640px;align-content:start}
+.shop{--sp:#F6F1E8;--si:#1F1A17;--ss:#5C5046;background:var(--sp);color:var(--si)}
+.shop .in{background:var(--sp)}
+.shop .box{border:1px solid #E3D9C9;border-radius:10px;padding:10px;display:grid;gap:8px;background:#fff;color:#1F1A17}
+.shop .box .input{border-color:#B9AEA2;background:#fff;color:#1F1A17}
+.tg{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px}
+.sw{width:38px;height:22px;border-radius:999px;border:0;background:var(--input);position:relative;flex:none}
+.sw::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:translate var(--base) var(--ease)}
+.sw[aria-checked="true"]{background:var(--ok-text)}.sw[aria-checked="true"]::after{translate:16px 0}
+.dl{display:grid;gap:8px}
+.dl a{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;text-decoration:none;color:var(--fg)}
+.dl a span{margin-left:auto;font-size:12px;color:var(--sub)}
+.notes{font-size:13px;color:var(--sub);max-width:70ch}
+@media (max-width:860px){.con{grid-template-columns:1fr}.side{display:none}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2,.grid3{grid-template-columns:1fr}.steps{grid-template-columns:1fr}.step{border-right:0;border-bottom:1px solid var(--border)}.main{padding:16px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <h1>GST module</h1>
+  <p class="sub">Mockup for sign-off · 9 Nov 2026 · spec docs/specs/2026-11-09-gst-module.md</p>
+  <nav class="boards" aria-label="Boards">
+    <a href="#month">The month</a><a href="#review">Review</a><a href="#connect">Connect</a><a href="#file">Push and file</a><a href="#setup">Registration</a><a href="#hsn">HSN and checkout</a><a href="#ca">For your CA</a><a href="#phone">Phone</a>
+  </nav>
+
+  <!-- ── 1 · The month ── -->
+  <h2 id="month">The month</h2>
+  <div class="frame">
+    <div class="con">
+      <nav class="side" aria-label="Console">
+        <a href="#month"><svg class="i" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9H4z"/></svg>Today</a>
+        <a href="#month"><svg class="i" viewBox="0 0 24 24"><path d="M5 7h14l-1 13H6zM9 7V5h6v2"/></svg>Orders</a>
+        <a href="#month"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16v12H4zM8 7V5h8v2"/></svg>Products</a>
+        <a href="#month" aria-current="page"><svg class="i" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z M9 14l6-6 M9.5 8.5h.01 M14.5 13.5h.01"/></svg>GST</a>
+        <a href="#month"><svg class="i" viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Analytics</a>
+        <a href="#month"><svg class="i" viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4 12h2M18 12h2M12 4v2M12 18v2"/></svg>Settings</a>
+      </nav>
+      <div class="main">
+        <div class="head">
+          <h3>GST</h3>
+          <div class="month"><button aria-label="Previous month">‹</button><b>October 2026</b><button aria-label="Next month">›</button></div>
+          <span class="chip" id="m-state">2 to fix</span>
+          <span class="chip">Monthly · next due 11 Nov</span>
+          <span style="flex:1"></span>
+          <span class="chip c-ok"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M5 12l5 5 9-10"/></svg>Portal connected until 28 Nov</span>
+        </div>
+        <div class="steps" id="steps">
+          <div class="step" data-s="now"><span class="dot">1</span><div><b>Fix</b><span id="s1">2 left</span></div></div>
+          <div class="step" data-s=""><span class="dot">2</span><div><b>Push to GST portal</b><span>GSTR-1</span></div></div>
+          <div class="step" data-s=""><span class="dot">3</span><div><b>File with OTP</b><span>Due 11 Nov</span></div></div>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><span>Invoices</span><b>1,284</b></div>
+          <div class="kpi"><span>Taxable value</span><b>₹21,46,310</b></div>
+          <div class="kpi"><span>CGST + SGST</span><b>₹38,912</b></div>
+          <div class="kpi"><span>IGST</span><b>₹74,606</b></div>
+          <div class="kpi"><span>Credit notes</span><b>−₹1,82,450</b></div>
+        </div>
+        <div class="bar">
+          <div class="grow"><b id="bar-t">Fix 2 things, then push.</b></div>
+          <button class="btn primary" id="act">Fix 2 things</button>
+        </div>
+        <div class="fix" id="fixes">
+          <div class="fixrow" data-fix="1"><span class="chip c-warn">3 products</span><div class="t"><b>No HSN code</b><span>Linen tote, Brass earrings, Gift box · 41 invoices</span></div><button class="btn" data-go="hsn">Set HSN</button></div>
+          <div class="fixrow" data-fix="2"><span class="chip c-warn">1 invoice</span><div class="t"><b>Buyer GSTIN not found</b><span>KS-2627-00418 · Aarna Boutique · 27AAICA1234F1Z0</span></div><button class="btn">Correct GSTIN</button><button class="btn">Make it a B2C sale</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2 · Review ── -->
+  <h2 id="review">Review</h2>
+  <div class="frame" style="padding:18px;display:grid;gap:14px">
+    <div class="tabs" role="tablist" aria-label="GSTR-1 tables" id="rtabs">
+      <button role="tab" aria-selected="true" data-t="b2cs">Other sales <small>B2CS · 1,262</small></button>
+      <button role="tab" aria-selected="false" data-t="b2b">Business sales <small>B2B · 14</small></button>
+      <button role="tab" aria-selected="false" data-t="b2cl">Large inter-state <small>B2CL · 8</small></button>
+      <button role="tab" aria-selected="false" data-t="cdn">Credit notes <small>CDNR · CDNUR · 96</small></button>
+      <button role="tab" aria-selected="false" data-t="hsn">HSN summary <small>B2B · B2C</small></button>
+      <button role="tab" aria-selected="false" data-t="docs">Documents issued</button>
+    </div>
+    <div class="tw" data-p="b2cs"><table>
+      <thead><tr><th>Place of supply</th><th class="r">Rate</th><th class="r">Taxable value</th><th class="r">IGST</th><th class="r">CGST</th><th class="r">SGST</th></tr></thead>
+      <tbody>
+        <tr><td>08 · Rajasthan</td><td class="r">5%</td><td class="r">₹6,12,480</td><td class="r">—</td><td class="r">₹15,312</td><td class="r">₹15,312</td></tr>
+        <tr><td>08 · Rajasthan</td><td class="r">18%</td><td class="r">₹46,200</td><td class="r">—</td><td class="r">₹4,158</td><td class="r">₹4,158</td></tr>
+        <tr><td>27 · Maharashtra</td><td class="r">5%</td><td class="r">₹5,24,900</td><td class="r">₹26,245</td><td class="r">—</td><td class="r">—</td></tr>
+        <tr><td>29 · Karnataka</td><td class="r">5%</td><td class="r">₹3,98,110</td><td class="r">₹19,906</td><td class="r">—</td><td class="r">—</td></tr>
+        <tr><td>07 · Delhi</td><td class="r">18%</td><td class="r">₹1,12,640</td><td class="r">₹20,275</td><td class="r">—</td><td class="r">—</td></tr>
+      </tbody></table></div>
+    <div class="tw" data-p="b2b" hidden><table>
+      <thead><tr><th>Buyer</th><th>GSTIN</th><th>Invoice</th><th class="r">Value</th><th class="r">Taxable</th><th class="r">Tax</th></tr></thead>
+      <tbody>
+        <tr><td>Studio Neel LLP</td><td class="mono">29ABCFS4421K1Z7</td><td class="mono">KS-2627-00402</td><td class="r">₹31,500</td><td class="r">₹30,000</td><td class="r">₹1,500</td></tr>
+        <tr><td>Aarna Boutique</td><td class="mono">27AAICA1234F1Z0 <span class="chip c-warn">Not found</span></td><td class="mono">KS-2627-00418</td><td class="r">₹12,600</td><td class="r">₹12,000</td><td class="r">₹600</td></tr>
+      </tbody></table></div>
+    <div class="tw" data-p="b2cl" hidden><table>
+      <thead><tr><th>Invoice</th><th>Place of supply</th><th class="r">Value</th><th class="r">Rate</th><th class="r">IGST</th></tr></thead>
+      <tbody><tr><td class="mono">KS-2627-00377</td><td>33 · Tamil Nadu</td><td class="r">₹1,18,000</td><td class="r">18%</td><td class="r">₹18,000</td></tr></tbody></table></div>
+    <div class="tw" data-p="cdn" hidden><table>
+      <thead><tr><th>Credit note</th><th>Against</th><th>Why</th><th class="r">Taxable</th><th class="r">Tax</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">KS-CN-2627-0031</td><td class="mono">KS-2627-00211</td><td>Came back</td><td class="r">₹2,371</td><td class="r">₹119</td></tr>
+        <tr><td class="mono">KS-CN-2627-0032</td><td class="mono">KS-2627-00230</td><td>Returned 1 of 2</td><td class="r">₹1,186</td><td class="r">₹59</td></tr>
+      </tbody></table></div>
+    <div class="tw" data-p="hsn" hidden><table>
+      <thead><tr><th>HSN</th><th>Description</th><th>Unit</th><th class="r">Quantity</th><th class="r">Rate</th><th class="r">Taxable</th><th class="r">Tax</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">6211</td><td>Women's garments, other</td><td>NOS</td><td class="r">1,104</td><td class="r">5%</td><td class="r">₹17,92,300</td><td class="r">₹89,615</td></tr>
+        <tr><td class="mono">6211</td><td>Women's garments, other</td><td>NOS</td><td class="r">38</td><td class="r">18%</td><td class="r">₹1,14,000</td><td class="r">₹20,520</td></tr>
+        <tr><td class="mono">7117</td><td>Imitation jewellery</td><td>NOS</td><td class="r">212</td><td class="r">3%</td><td class="r">₹1,59,010</td><td class="r">₹4,770</td></tr>
+      </tbody></table></div>
+    <div class="tw" data-p="docs" hidden><table>
+      <thead><tr><th>Documents</th><th>From</th><th>To</th><th class="r">Total</th><th class="r">Cancelled</th></tr></thead>
+      <tbody>
+        <tr><td>Invoices</td><td class="mono">KS-2627-00140</td><td class="mono">KS-2627-01431</td><td class="r">1,292</td><td class="r">8</td></tr>
+        <tr><td>Credit notes</td><td class="mono">KS-CN-2627-0021</td><td class="mono">KS-CN-2627-0116</td><td class="r">96</td><td class="r">0</td></tr>
+      </tbody></table></div>
+  </div>
+
+  <!-- ── 3 · Connect ── -->
+  <h2 id="connect">Connect the GST portal</h2>
+  <div class="sheet" role="dialog" aria-label="Connect the GST portal">
+    <div style="display:flex;align-items:center;gap:10px"><b style="font-size:16px">Connect the GST portal</b><span style="flex:1"></span><button class="btn" aria-label="Close" style="min-height:32px;padding:0 10px">✕</button></div>
+    <div class="ol">
+      <div><div style="display:grid;gap:8px"><b>On gst.gov.in, allow API access</b>
+        <div class="portal" aria-hidden="true">
+          <div class="pb"><span>GST · My Profile</span><span>Manage API Access</span></div>
+          <div class="pc">
+            <div class="row"><span>Enable API Request</span><span class="yes"><i class="on">Yes</i><i>No</i></span></div>
+            <div class="row"><span>Duration</span><span class="yes"><i>6 hours</i><i class="on">30 days</i></span></div>
+          </div>
+        </div></div></div>
+      <div><div class="field"><label for="gu">GST portal username</label><input class="input" id="gu" value="kesarstudio_jp"></div></div>
+      <div><div class="field"><label>OTP from the GST portal</label><div class="otp"><input aria-label="Digit 1" value="4"><input aria-label="Digit 2" value="8"><input aria-label="Digit 3" value="1"><input aria-label="Digit 4" value="0"><input aria-label="Digit 5" value="2"><input aria-label="Digit 6" value="6"></div><span class="sub" style="font-size:12px">Sent to •••• 3211</span></div></div>
+    </div>
+    <button class="btn primary">Connect</button>
+  </div>
+
+  <!-- ── 4 · Push and file ── -->
+  <h2 id="file">Push and file</h2>
+  <div class="grid3">
+    <div class="card">
+      <h4>Pushing GSTR-1</h4>
+      <div class="prog" aria-label="Pushing"><i></i></div>
+      <span class="sub" style="font-size:13px">1,284 invoices · 96 credit notes</span>
+    </div>
+    <div class="card">
+      <h4>The portal has your GSTR-1</h4>
+      <div class="match">
+        <span class="h"></span><span class="h">Frrata</span><span class="h">Portal</span><span></span>
+        <span>Taxable</span><span class="num">₹21,46,310</span><span class="num">₹21,46,310</span><span class="tick">✓</span>
+        <span>IGST</span><span class="num">₹74,606</span><span class="num">₹74,606</span><span class="tick">✓</span>
+        <span>CGST + SGST</span><span class="num">₹38,912</span><span class="num">₹38,912</span><span class="tick">✓</span>
+      </div>
+      <button class="btn primary" id="fileopen">File with OTP</button>
+    </div>
+    <div class="card">
+      <h4 style="display:flex;gap:8px;align-items:center">Filed <span class="chip c-ok">October 2026</span></h4>
+      <div style="display:grid;gap:4px;font-size:13px"><span class="sub">ARN</span><span class="mono">AA0810260412345</span><span class="sub">9 Nov 2026, 4:12 pm · Riya Mehta</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn">Acknowledgement</button><button class="btn">GSTR-3B working</button></div>
+    </div>
+  </div>
+  <div class="sheet" role="dialog" aria-label="File GSTR-1 for October 2026" style="margin-top:18px">
+    <b style="font-size:16px">File GSTR-1 for October 2026</b>
+    <div class="field"><label for="pan">PAN of the authorised signatory</label><input class="input mono" id="pan" value="ABCPM1234K"></div>
+    <div class="field"><label>OTP to the registered mobile</label><div class="otp"><input aria-label="Digit 1"><input aria-label="Digit 2"><input aria-label="Digit 3"><input aria-label="Digit 4"><input aria-label="Digit 5"><input aria-label="Digit 6"></div></div>
+    <div class="bar" style="background:var(--warn);color:var(--warn-text)"><span>A filed return can't be changed. Corrections go into GSTR-1A before GSTR-3B.</span></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn">Not yet</button><button class="btn primary">File</button></div>
+  </div>
+  <div class="sheet" role="dialog" aria-label="File GSTR-1 for a company" style="margin-top:18px">
+    <div style="display:flex;align-items:center;gap:8px"><b style="font-size:16px">File GSTR-1 for October 2026</b><span class="chip">Private limited</span></div>
+    <div class="ol">
+      <div><div style="display:grid;gap:2px"><b>Pushed from Frrata</b><span class="sub" style="font-size:13px">Totals match ✓</span></div></div>
+      <div><div style="display:grid;gap:2px"><b>Sign on gst.gov.in with your DSC</b><span class="sub" style="font-size:13px">Returns › GSTR-1 › File with DSC</span></div></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn">Open the GST portal</button><button class="btn primary">I've filed it</button></div>
+  </div>
+
+  <!-- ── 5 · Registration ── -->
+  <h2 id="setup">Settings › Taxes › Registration</h2>
+  <div class="grid2">
+    <div class="card">
+      <h4>Registration</h4>
+      <div class="radios" role="radiogroup" aria-label="Registration" id="reg">
+        <button role="radio" aria-checked="true" data-r="regular"><span class="o"></span><span><b>Regular</b><span>Tax invoices</span></span></button>
+        <button role="radio" aria-checked="false" data-r="comp"><span class="o"></span><span><b>Composition</b><span>Bill of supply · within your state</span></span></button>
+        <button role="radio" aria-checked="false" data-r="none"><span class="o"></span><span><b>Not registered</b><span>Bill of supply · within your state</span></span></button>
+      </div>
+      <div class="field" id="gstin-f"><label for="gstin">GSTIN</label><input class="input mono" id="gstin" value="08ABCPM1234K1Z5"><span class="chip c-ok" style="justify-self:start">Kesar Studio LLP · Active · Jaipur, Rajasthan</span></div>
+      <div class="field" id="freq-f"><label>Filing</label><div class="seg" id="freq"><button aria-pressed="true">Monthly</button><button aria-pressed="false">Quarterly, B2B monthly (IFF)</button></div></div>
+      <div class="field" id="aato-f"><label>Turnover last year</label><div class="seg" id="aato"><button aria-pressed="true" data-a="1">Under ₹5 crore</button><button aria-pressed="false" data-a="2">₹5–10 crore</button><button aria-pressed="false" data-a="3">₹10 crore or more</button></div></div>
+      <div class="rules" id="rules"></div>
+    </div>
+    <div class="card">
+      <h4>Who files</h4>
+      <div class="who">
+        <div class="p"><span class="av">RM</span><div style="flex:1;min-width:0"><b style="font-size:13px">Riya Mehta</b><div class="sub" style="font-size:12px">Owner</div></div><span class="chip c-ok">Files</span></div>
+        <div class="p"><span class="av">AJ</span><div style="flex:1;min-width:0"><b style="font-size:13px">Anil Jain &amp; Co</b><div class="sub" style="font-size:12px">Accountant · GST only</div></div><span class="chip c-info">Prepares · pushes</span></div>
+        <div class="p"><span class="av">PK</span><div style="flex:1;min-width:0"><b style="font-size:13px">Pooja K</b><div class="sub" style="font-size:12px">Staff</div></div><span class="chip">No access</span></div>
+      </div>
+      <button class="btn" style="justify-self:start">Invite your accountant</button>
+    </div>
+  </div>
+
+  <!-- ── 6 · HSN and checkout ── -->
+  <h2 id="hsn">HSN on a product · GST invoice at checkout</h2>
+  <div class="grid2">
+    <div class="card">
+      <h4>Linen tote</h4>
+      <div class="field"><label for="hs">HSN code</label><input class="input" id="hs" value="tote"></div>
+      <div class="hsnlist" role="listbox" aria-label="HSN codes">
+        <div role="option" aria-selected="true"><span class="mono">4202</span><span style="flex:1">Handbags, totes, wallets</span><span class="chip">18%</span></div>
+        <div role="option" aria-selected="false"><span class="mono">6305</span><span style="flex:1">Sacks and bags for packing</span><span class="chip">5%</span></div>
+        <div role="option" aria-selected="false"><span class="mono">6307</span><span style="flex:1">Other made-up textile articles</span><span class="chip">5%</span></div>
+      </div>
+      <div class="field"><label for="uqc">Sold by</label><select class="input" id="uqc"><option>Pieces (NOS)</option><option>Pairs (PRS)</option><option>Sets (SET)</option><option>Kilograms (KGS)</option><option>Litres (LTR)</option><option>Packs (PAC)</option></select></div>
+    </div>
+    <div class="phone shop" aria-label="Checkout on a phone">
+      <div class="in">
+        <b style="font-size:16px">Checkout</b>
+        <div class="box">
+          <div class="tg"><span>Claim GST input credit</span><button class="sw" role="switch" aria-checked="true" aria-label="Claim GST input credit" id="b2b"></button></div>
+          <div id="b2bf" style="display:grid;gap:8px">
+            <div class="field"><label for="bg">Your GSTIN</label><input class="input mono" id="bg" value="29ABCFS4421K1Z7"></div>
+            <span style="font-size:12px;color:#1E7B52">Studio Neel LLP · Bengaluru, Karnataka</span>
+          </div>
+        </div>
+        <div class="box" style="font-size:13px">
+          <div style="display:flex;justify-content:space-between"><span>Chanderi kurta set</span><span class="num">₹2,490</span></div>
+          <div style="display:flex;justify-content:space-between;color:#5C5046"><span>IGST 5%</span><span class="num">incl. ₹118.57</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 7 · For your CA ── -->
+  <h2 id="ca">For your CA</h2>
+  <div class="card" style="max-width:640px">
+    <div class="dl">
+      <a href="#ca"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>GSTR-1 for the offline tool<span>JSON</span></a>
+      <a href="#ca"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>GSTR-1 tables<span>Excel</span></a>
+      <a href="#ca"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Sales register<span>CSV</span></a>
+      <a href="#ca"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Vouchers for Tally<span>XML</span></a>
+      <a href="#ca"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>GSTR-3B working (outward, from GSTR-1)<span>Excel</span></a>
+      <a href="#ca"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Frrata's invoices to you (input credit)<span>PDF · CSV</span></a>
+    </div>
+    <div class="tg" style="display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px"><span>Email the month's pack to Anil Jain &amp; Co on the 2nd</span><button class="sw" role="switch" aria-checked="true" aria-label="Email the month's pack to the accountant"></button></div>
+  </div>
+
+  <!-- ── 8 · Phone ── -->
+  <h2 id="phone">Phone</h2>
+  <div class="phone">
+    <div class="in">
+      <div style="display:flex;align-items:center;gap:8px"><b style="font:600 20px var(--display)">GST</b><span style="flex:1"></span><span class="chip c-info">Pushed</span></div>
+      <div class="month" style="justify-self:start"><button aria-label="Previous month">‹</button><b>October 2026</b><button aria-label="Next month">›</button></div>
+      <div class="kpi"><span>Tax this month</span><b>₹1,13,518</b></div>
+      <div class="kpis" style="grid-template-columns:1fr 1fr">
+        <div class="kpi"><span>Invoices</span><b>1,284</b></div><div class="kpi"><span>Credit notes</span><b>96</b></div>
+      </div>
+      <div class="steps"><div class="step" data-s="done"><span class="dot">✓</span><div><b>Fixed</b></div></div><div class="step" data-s="done"><span class="dot">✓</span><div><b>Pushed</b><span>Totals match</span></div></div><div class="step" data-s="now"><span class="dot">3</span><div><b>File with OTP</b><span>Due 11 Nov</span></div></div></div>
+      <button class="btn primary" style="min-height:46px">File with OTP</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Review tabs
+const tabs=document.querySelectorAll('#rtabs [role=tab]');
+tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.setAttribute('aria-selected',x===t));document.querySelectorAll('[data-p]').forEach(p=>p.hidden=p.dataset.p!==t.dataset.t)}));
+// The month's one action moves with the state: Fix → Push → File → Filed
+let fixed=0,stage='fix';
+const act=document.getElementById('act'),barT=document.getElementById('bar-t'),st=document.querySelectorAll('#steps .step'),chip=document.getElementById('m-state'),s1=document.getElementById('s1');
+function draw(){
+  const left=2-fixed;
+  if(stage==='fix'){act.textContent=left?`Fix ${left} thing${left>1?'s':''}`:'Push to GST portal';barT.textContent=left?`Fix ${left} thing${left>1?'s':''}, then push.`:'Ready to push.';chip.textContent=left?`${left} to fix`:'Ready';chip.className='chip '+(left?'c-warn':'c-ok');s1.textContent=left?`${left} left`:'Done';st[0].dataset.s=left?'now':'done';st[1].dataset.s=left?'':'now'}
+  if(stage==='pushed'){act.textContent='File with OTP';barT.textContent='The portal has your GSTR-1. Totals match.';chip.textContent='Pushed';chip.className='chip c-info';st[1].dataset.s='done';st[2].dataset.s='now'}
+  if(stage==='filed'){act.textContent='Acknowledgement';barT.textContent='Filed · ARN AA0810260412345';chip.textContent='Filed';chip.className='chip c-ok';st[2].dataset.s='done'}
+}
+document.querySelectorAll('.fixrow button').forEach(b=>b.addEventListener('click',()=>{const r=b.closest('.fixrow');if(r.hidden)return;r.hidden=true;fixed++;draw()}));
+act.addEventListener('click',()=>{if(stage==='fix'&&fixed<2){document.querySelector('.fixrow:not([hidden]) button')?.click();return}if(stage==='fix'){stage='pushed'}else if(stage==='pushed'){stage='filed'}draw()});
+draw();
+// Registration: what applies follows the choices
+const rules=document.getElementById('rules');
+let reg='regular',aato='1';
+function rulesDraw(){
+  const on=(t,y)=>`<span class="chip ${y?'c-ok':''}">${y?'✓':'—'} ${t}</span>`;
+  const r=reg==='regular';
+  document.getElementById('gstin-f').hidden=reg==='none';document.getElementById('freq-f').hidden=!r;document.getElementById('aato-f').hidden=!r;
+  rules.innerHTML=r?[on('Tax invoices',1),on('GSTR-1',1),on(aato==='1'?'HSN 4 digits':'HSN 6 digits',1),on('E-invoice on B2B',aato!=='1'),on('IRN within 30 days',aato==='3'),on('E-way bill ≥ ₹50,000',1)].join('')
+    :[on('Bill of supply',1),on('Ships within Rajasthan only',1),on(reg==='comp'?'CMP-08':'GSTR-1',reg==='comp')].join('');
+}
+document.querySelectorAll('#reg [role=radio]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#reg [role=radio]').forEach(x=>x.setAttribute('aria-checked',x===b));reg=b.dataset.r;rulesDraw()}));
+document.querySelectorAll('#aato button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#aato button').forEach(x=>x.setAttribute('aria-pressed',x===b));aato=b.dataset.a;rulesDraw()}));
+document.querySelectorAll('#freq button').forEach(b=>b.addEventListener('click',()=>document.querySelectorAll('#freq button').forEach(x=>x.setAttribute('aria-pressed',x===b))));
+rulesDraw();
+// B2B switch at checkout
+const b2b=document.getElementById('b2b');b2b.addEventListener('click',()=>{const v=b2b.getAttribute('aria-checked')!=='true';b2b.setAttribute('aria-checked',v);document.getElementById('b2bf').hidden=!v});
+// HSN picker
+document.querySelectorAll('.hsnlist [role=option]').forEach(o=>o.addEventListener('click',()=>document.querySelectorAll('.hsnlist [role=option]').forEach(x=>x.setAttribute('aria-selected',x===o))));
+</script>

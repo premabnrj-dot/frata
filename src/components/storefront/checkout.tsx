@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { STATES } from '@/domains/checkout/states'
+import { b2bProblem, cleanGstin, gstinStateName, gstinValid } from '@/domains/tax/gstin'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { OfferProgress, OfferRows, useQuote } from './bag'
 import { ATTR_KEY, bag, offerCode, useOfferCode } from './bag-store'
@@ -42,7 +43,10 @@ function needText(n: PublicListed['need']): string {
   return 'When you pay online'
 }
 
-export function Checkout({ shopName, legalName, privacyHref, returnLine }: { shopName: string; legalName: string; privacyHref: string; returnLine: string | null }) {
+export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = { deliversWithin: null, b2b: false } }: { shopName: string; legalName: string; privacyHref: string; returnLine: string | null
+  /** GST (plan 2026-11-09-gst-core-and-categories): a shop without a regular GSTIN delivers within its state; business buyers may ask for a GST invoice. */
+  gst?: { deliversWithin: string | null; b2b: boolean } }) {
+  const [biz, setBiz] = useState<{ on: boolean; gstin: string; name: string }>({ on: false, gstin: '', name: '' })
   const [f, setF] = useState<Form>(EMPTY)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [method, setMethod] = useState<'cod' | 'prepaid' | null>(null)
@@ -97,6 +101,8 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
     if (f.area.trim().length < 2) e.area = 'Area or locality.'
     if (f.city.trim().length < 2) e.city = 'Your town or city.'
     if (!f.state) e.state = 'Pick your state.'
+    else if (gst.deliversWithin && f.state !== gst.deliversWithin) e.state = `This shop delivers within ${gst.deliversWithin} only.`
+    if (biz.on) { const why = b2bProblem(biz.gstin, biz.name, f.state); if (why) e[why.field === 'gstin' ? 'bizGstin' : 'bizName'] = why.error }
     setErrors(e)
     if (Object.keys(e).length) { document.getElementById(Object.keys(e)[0]!)?.focus(); return false }
     return true
@@ -118,7 +124,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
     if (!check()) return
     setBusy(true); setMsg(null)
     const items = bag.get()
-    const sig = JSON.stringify([items, method, f.phone, code])
+    const sig = JSON.stringify([items, method, f.phone, code, biz.on ? cleanGstin(biz.gstin) : null])
     if (!attempt.current || attempt.current.sig !== sig) attempt.current = { sig, key: randomKey() }
     let attribution: Record<string, string> = {}
     try { attribution = JSON.parse(ss.get(ATTR_KEY) ?? '{}') } catch { /* */ }
@@ -126,6 +132,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
       idempotencyKey: attempt.current.key, bag: items, method, expectedTotal: total, ...(code ? { code, via: offerCode.via() } : {}),
       address: { phone: f.phone, name: f.name, pincode: f.pincode, addressLine: f.addressLine, area: f.area, landmark: f.landmark, city: f.city, state: f.state },
       facts: { firstMethod: firstMethod.current, attribution },
+      ...(gst.b2b && biz.on ? { b2b: { gstin: cleanGstin(biz.gstin), name: biz.name.trim() } } : {}),
     })
     if (!r.ok) {
       setBusy(false)
@@ -228,7 +235,32 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine }: { sho
 
             <Err k="state" /></div>
         </div>
+        {gst.deliversWithin && f.state && f.state !== gst.deliversWithin && !errors.state ? <p className="text-sm text-store-bad">This shop delivers within {gst.deliversWithin} only.</p> : null}
       </fieldset>
+
+      {gst.b2b ? (
+        <fieldset className="space-y-3 rounded-sm border border-store-line p-3">
+          <legend className="sr-only">GST invoice for a business</legend>
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <label htmlFor="biz" className="font-medium">Claim GST input credit</label>
+            <button id="biz" type="button" role="switch" aria-checked={biz.on} onClick={() => setBiz((b) => ({ ...b, on: !b.on }))}
+              className={`relative h-6 w-10 shrink-0 rounded-full transition-colors duration-fast ${biz.on ? 'bg-store-good' : 'bg-store-line'}`}>
+              <span aria-hidden className={`absolute left-0.5 top-0.5 size-5 rounded-full bg-store-paper shadow transition-transform duration-fast ${biz.on ? 'translate-x-4' : ''}`} />
+            </button>
+          </div>
+          {biz.on ? <>
+            <div><label htmlFor="bizGstin" className={label}>GSTIN</label>
+              <input id="bizGstin" value={biz.gstin} maxLength={15} autoCapitalize="characters" spellCheck={false} onChange={(e) => { setBiz((b) => ({ ...b, gstin: e.target.value.toUpperCase() })); setErrors((x) => { const n = { ...x }; delete n.bizGstin; return n }) }}
+                aria-invalid={!!errors.bizGstin || undefined} aria-describedby="bizGstin-err" className={`${field} font-mono`} />
+              {(() => { const g = cleanGstin(biz.gstin); const st = g.length === 15 && gstinValid(g) ? gstinStateName(g) : null
+                return errors.bizGstin ? <Err k="bizGstin" /> : st ? <p className="mt-1 text-xs text-store-good">✓ Registered in {st}</p> : null })()}</div>
+            <div><label htmlFor="bizName" className={label}>Business name</label>
+              <input id="bizName" value={biz.name} maxLength={120} autoComplete="organization" onChange={(e) => { setBiz((b) => ({ ...b, name: e.target.value })); setErrors((x) => { const n = { ...x }; delete n.bizName; return n }) }}
+                aria-invalid={!!errors.bizName || undefined} aria-describedby="bizName-err" className={field} />
+              <Err k="bizName" /></div>
+          </> : null}
+        </fieldset>
+      ) : null}
 
       {q && (q.offers.listed.length > 0 || code || typing) ? <>
         <h2 className={sect}>Offers</h2>

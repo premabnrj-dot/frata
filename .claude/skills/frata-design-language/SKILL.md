@@ -262,6 +262,23 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 - No `loading.tsx` in the console (Ekatan: it made search-param navigation commit
   nothing in production); use a top progress bar.
 
+## Settings choices and GST (built 2026-11-09; mockups https://claude.ai/artifact/M4VfNAgqFHYmhCxFwZmepE, https://claude.ai/artifact/NsxiFFFBorTsi9sct7zWgs)
+- **Which control:** one of 2–4 exclusive choices that change what else is asked → **radio cards** (`kind: 'radio'`,
+  each with a short note: Registration). A short scale or cadence → a **segmented** control (`kind: 'segmented'`:
+  turnover, filing, a unit, months). On/off → a **switch**. A field that only applies to one choice is hidden until it
+  does (`showIf`), never shown disabled; a switch that can't apply (B2B at ₹5 crore and above) is shown locked with the
+  reason.
+- **Segmented, in code:** `role="radiogroup"` of `role="radio"` buttons, `aria-checked`, `min-h-9`, the picked one
+  `bg-card shadow-sm` on a `bg-muted` track (tax-panel, label-panel, settings-form).
+- **Tax on a product:** the HSN combobox shows the code, its words and its rate chip; the rate at this price is shown,
+  never explained; the inclusive-price gap is the one warning, with the price that fits as a button.
+- **Console › GST:** period stepper (‹ label ›), three steps (Fix · Check the tables · Send to your CA), five KPI tiles,
+  the Fix list with a count badge and one action each, the tables as tabs, the CA files as download rows. Filing (when
+  on): username → OTP → Connect; Push; Frrata vs GST portal totals with ✓ / ≠; a tick that says a filed return can't be
+  changed (an irreversible consequence: Rule 0 allows it), then the EVC OTP.
+- **The pack (beauty, wellness):** "On the pack" section — net quantity with a unit segment, best before in months,
+  "Made or packed by" with a one-tap "We pack it"; the product page lists the declarations in the Details table.
+
 ## Frata Admin (owner-approved, 2026-11-06)
 
 - **Admin looks unlike the console**: dark ink navigation with a "STAFF" tag

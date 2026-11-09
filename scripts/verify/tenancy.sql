@@ -1411,8 +1411,17 @@ do $$ declare n int; begin
   begin insert into credit_notes (tenant_id, order_id, number, against_invoice, reason, taxable, cgst, sgst, igst, total, issued_by) values ('22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-0000000c0e0b', 'B/26-27/C0002', 'x', 'cancelled', 0, 0, 0, 0, 0, '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: A wrote a credit note in B';
   exception when insufficient_privilege then null; end;
   insert into credit_notes (tenant_id, order_id, number, against_invoice, reason, taxable, cgst, sgst, igst, total, issued_by) values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-0000000c0e0a', 'A/26-27/C0001', 'A/26-27/00001', 'came_back', 100, 9, 9, 0, 118, '99999999-9999-9999-9999-999999999999');
-  begin insert into credit_notes (tenant_id, order_id, number, against_invoice, reason, taxable, cgst, sgst, igst, total, issued_by) values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-0000000c0e0a', 'A/26-27/C0002', 'A/26-27/00001', 'came_back', 100, 9, 9, 0, 118, '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: two credit notes for one order';
+  -- GST phase 2 (0071): several notes per order are allowed (part returns, discounts); a number never twice.
+  begin insert into credit_notes (tenant_id, order_id, number, against_invoice, reason, taxable, cgst, sgst, igst, total, issued_by) values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-0000000c0e0a', 'A/26-27/C0001', 'A/26-27/00001', 'came_back', 100, 9, 9, 0, 118, '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: one credit note number twice';
   exception when unique_violation then null; end;
+  -- A goodwill note carries no GST.
+  begin insert into credit_notes (tenant_id, order_id, number, against_invoice, reason, kind, taxable, cgst, sgst, igst, total, issued_by) values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-0000000c0e0a', 'A/26-27/G0001', 'A/26-27/00001', 'goodwill', 'goodwill', 100, 9, 9, 0, 118, '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: a goodwill note with GST';
+  exception when check_violation then null; end;
+  -- credit_note_lines: A sees and writes its own only; never B's order line or B's note.
+  if exists (select 1 from credit_note_lines) then raise exception 'FAIL: A sees B credit note lines'; end if;
+  begin insert into credit_note_lines (tenant_id, credit_note_id, order_line_id, qty, taxable, gst, gst_bps) select '22222222-2222-2222-2222-222222222222', gen_random_uuid(), gen_random_uuid(), 1, 0, 0, 0; raise exception 'FAIL: A wrote B credit note lines';
+  exception when insufficient_privilege then null; end;
+  begin update credit_note_lines set qty = qty; exception when insufficient_privilege then null; end;
   begin update credit_notes set total = total; raise exception 'FAIL: the app changed a credit note'; exception when insufficient_privilege then null; end;
   begin delete from credit_notes; raise exception 'FAIL: the app deleted a credit note'; exception when insufficient_privilege then null; end;
 end $$;
@@ -1420,7 +1429,8 @@ rollback;
 do $$ begin
   begin update credit_notes set number = number; raise exception 'FAIL: a credit note changed'; exception when check_violation then null; end;
   begin delete from credit_notes; raise exception 'FAIL: a credit note deleted'; exception when check_violation then null; end;
-  begin truncate credit_notes; raise exception 'FAIL: credit notes truncated'; exception when check_violation then null; end;
+  -- Refused by the final trigger, or (since 0071) by credit_note_lines' foreign key before it: either way never emptied.
+  begin truncate credit_notes; raise exception 'FAIL: credit notes truncated'; exception when check_violation or feature_not_supported then null; end;
   if exists (select 1 from unnest(array['frata_admin', 'anon', 'authenticated', 'service_role']) r
              where has_any_column_privilege(r, 'credit_notes', 'select, insert, update, references') or has_table_privilege(r, 'credit_notes', 'select, insert, update, delete, truncate, references, trigger'))
   then raise exception 'FAIL: staff or API roles reach credit notes'; end if;
@@ -1690,4 +1700,62 @@ do $$ begin
   if has_function_privilege('frata_app', 'app_accept_handover(uuid,uuid)', 'execute') then raise exception 'FAIL: the app may still accept a handover without its claim'; end if;
 end $$;
 
-\echo 'tenancy proof — all 51 checks passed'
+-- 51. GST filing (GST app G2, 0074): connections, filings and attempts are the shop's own; a filed period is final for
+-- everyone; an attempt changes its outcome once, and the app may change nothing else on it.
+insert into gst_filings (tenant_id, gstin, period, ours, pushed_at, pushed_by) values ('22222222-2222-2222-2222-222222222222', '27AAAAA0000A1Z5', '2026-10', '{}', now(), '99999999-9999-9999-9999-999999999999');
+insert into gst_connections (tenant_id, gstin, username, connected_by) values ('22222222-2222-2222-2222-222222222222', '27AAAAA0000A1Z5', 'shopb', '99999999-9999-9999-9999-999999999999');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare a uuid; begin
+  if exists (select 1 from gst_filings) or exists (select 1 from gst_connections) or exists (select 1 from gst_attempts) then raise exception 'FAIL: A sees B GST filing rows'; end if;
+  begin insert into gst_filings (tenant_id, gstin, period, ours, pushed_at, pushed_by) values ('22222222-2222-2222-2222-222222222222', '27AAAAA0000A1Z5', '2026-11', '{}', now(), '99999999-9999-9999-9999-999999999999'); raise exception 'FAIL: A wrote a B filing';
+  exception when insufficient_privilege then null; end;
+  insert into gst_filings (tenant_id, gstin, period, ours, pushed_at, pushed_by) values ('11111111-1111-1111-1111-111111111111', '23AAAAA0000A1Z5', '2026-10', '{}', now(), '99999999-9999-9999-9999-999999999999');
+  update gst_filings set portal = '{}', filed_at = now(), filed_by = '99999999-9999-9999-9999-999999999999', arn = 'AA2310260000001';
+  begin update gst_filings set arn = 'x'; raise exception 'FAIL: a filed period changed'; exception when check_violation then null; end;
+  begin delete from gst_filings; raise exception 'FAIL: the app deleted a filing'; exception when insufficient_privilege then null; end;
+  insert into gst_attempts (tenant_id, kind, actor) values ('11111111-1111-1111-1111-111111111111', 'push', '99999999-9999-9999-9999-999999999999') returning id into a;
+  update gst_attempts set outcome = 'ok', ended_at = now() where id = a;
+  begin update gst_attempts set outcome = 'failed' where id = a; raise exception 'FAIL: an attempt''s outcome changed twice'; exception when check_violation then null; end;
+  begin update gst_attempts set kind = 'file' where id = a; raise exception 'FAIL: the app changed an attempt''s kind'; exception when insufficient_privilege then null; end;
+  begin delete from gst_attempts; raise exception 'FAIL: the app deleted an attempt'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+do $$ begin
+  -- Even the owner of the table can't change or delete a filed period (the trigger, not only the grant).
+  update gst_filings set filed_at = now(), filed_by = pushed_by, arn = 'AA2710260000001' where tenant_id = '22222222-2222-2222-2222-222222222222';
+  begin update gst_filings set arn = 'x' where tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: a filed period changed'; exception when check_violation then null; end;
+  begin delete from gst_filings where tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: a filed period deleted'; exception when check_violation then null; end;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r, unnest(array['gst_connections', 'gst_filings', 'gst_attempts']) t where has_table_privilege(r, t, 'select'))
+  then raise exception 'FAIL: an API role reads GST filing rows'; end if;
+end $$;
+
+-- 52. The Accountant (0072): only an owner or admin of THIS shop invites, lists or revokes an accountant; the role is
+-- fixed; remove takes accountants only; no API role or staff runs the definers.
+insert into members (tenant_id, user_id, role) values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000052', 'staff');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare i uuid; begin
+  begin perform app_invite_accountant('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000052', 'ca@example.in'); raise exception 'FAIL: staff invited an accountant';
+  exception when others then if sqlerrm <> 'not_manager' then raise; end if; end;
+  begin perform app_invite_accountant('22222222-2222-2222-2222-222222222222', '99999999-9999-9999-9999-999999999999', 'ca@example.in'); raise exception 'FAIL: invited into another shop';
+  exception when others then if sqlerrm <> 'wrong_shop' then raise; end if; end;
+  i := app_invite_accountant('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', 'ca@example.in');
+  if (select count(*) from app_accountant_invites('99999999-9999-9999-9999-999999999999')) <> 1 then raise exception 'FAIL: the owner does not see the invite'; end if;
+  if exists (select 1 from app_accountant_invites('aaaaaaaa-0000-0000-0000-000000000052')) then raise exception 'FAIL: staff sees accountant invites'; end if;
+  begin perform app_remove_accountant('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', 'aaaaaaaa-0000-0000-0000-000000000052'); raise exception 'FAIL: remove took a staff member';
+  exception when others then if sqlerrm <> 'no_accountant' then raise; end if; end;
+  begin perform app_revoke_accountant_invite('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000052', i); raise exception 'FAIL: staff revoked an invite';
+  exception when others then if sqlerrm <> 'not_manager' then raise; end if; end;
+  perform app_revoke_accountant_invite('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', i);
+  begin perform app_revoke_accountant_invite('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', i); raise exception 'FAIL: an invite revoked twice';
+  exception when others then if sqlerrm <> 'no_invite' then raise; end if; end;
+end $$;
+rollback;
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r,
+             unnest(array['app_invite_accountant(uuid,uuid,text)', 'app_remove_accountant(uuid,uuid,uuid)', 'app_accountant_invites(uuid)', 'app_revoke_accountant_invite(uuid,uuid,uuid)']) f
+             where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: another role runs the accountant definers'; end if;
+end $$;
+
+\echo 'tenancy proof — all 53 checks passed'

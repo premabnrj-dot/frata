@@ -45,9 +45,9 @@ export async function documentFile(req: DocumentRequest, brand: Brand, contact: 
 }
 
 /** The documents for orders already read for ONE shop (documentsFor), as a request: invoices only once packed. */
-export function requestFor(kind: 'slip' | 'invoice' | 'credit', size: SlipSize, docs: { o: DocOrder; lines: DocLine[]; paper?: Pick<Brand, 'logo' | 'signatory' | 'note'>; credit?: IssuedCredit | null }[], shop: DocShop): DocumentRequest {
+export function requestFor(kind: 'slip' | 'invoice' | 'credit', size: SlipSize, docs: { o: DocOrder; lines: DocLine[]; paper?: Pick<Brand, 'logo' | 'signatory' | 'note'>; credit?: IssuedCredit | null; credits?: IssuedCredit[] }[], shop: DocShop): DocumentRequest {
   if (kind === 'slip') return { kind, size, slips: docs.map(({ o, lines }) => packingSlip(o, lines, shop)) }
-  if (kind === 'credit') return { kind, invoices: docs.flatMap(({ o, lines, paper, credit }) => { const cn = credit ? creditNote(o, lines, shop, credit) : null; return cn ? [{ inv: cn, order: o.number, paper }] : [] }) }
+  if (kind === 'credit') return { kind, invoices: docs.flatMap(({ o, lines, paper, credit, credits }) => (credits ?? (credit ? [credit] : [])).flatMap((c) => { const cn = creditNote(o, lines, shop, c); return cn ? [{ inv: cn, order: o.number, paper }] : [] })) }
   return { kind, invoices: docs.flatMap(({ o, lines, paper }) => { const inv = invoice(o, lines, shop); return inv ? [{ inv, order: o.number, paper }] : [] }) }
 }
 

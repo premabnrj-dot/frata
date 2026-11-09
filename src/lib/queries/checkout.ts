@@ -1,6 +1,8 @@
 import 'server-only'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import type { ShopRules, VariantRow } from '@/domains/checkout/quote'
+import { chargesGst, type Scheme } from '@/domains/tax/gst'
+import { b2bAllowed, type TurnoverBand } from '@/domains/tax/rates'
 import { DISCOUNT_STYLES, normalCode, type DiscountStyle, type DiscountTerms, type TypedCode } from '@/domains/checkout/discounts'
 import type { Tx } from '@/lib/db'
 import { shopSettings, tenants } from '@/lib/db/schema'
@@ -29,11 +31,10 @@ export async function variantRows(tx: Tx, tenantId: string, ids: string[], now: 
   if (!clean.length) return []
   // Place-order locks the bag's variants, in id order (no deadlocks), before anything is counted.
   if (opts.lock) await tx.execute(sql`select id from ${variants} where tenant_id = ${tenantId} and id in ${clean} order by id for update`)
-  const [settings] = await tx.select({ defaultHsn: shopSettings.defaultHsn }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
   const rows = await tx.select({
     variantId: variants.id, productId: products.id, handle: products.handle, title: products.title, status: products.status, publishAt: products.publishAt,
     options: products.options, values: variants.optionValues, sku: variants.sku, price: variants.price, compareAt: variants.compareAt, stock: variants.stock,
-    whenOut: variants.whenOut, shipsBy: variants.shipsBy, leadMinDays: variants.leadMinDays, leadMaxDays: variants.leadMaxDays, preorderCap: variants.preorderCap, hsn: products.hsn,
+    whenOut: variants.whenOut, shipsBy: variants.shipsBy, leadMinDays: variants.leadMinDays, leadMaxDays: variants.leadMaxDays, preorderCap: variants.preorderCap, hsn: products.hsn, ownBps: products.gstBps, uqc: products.uqc,
     held: sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id
       where l.tenant_id = ${tenantId} and l.variant_id = "variants"."id" and l.kind = 'in_stock' and ${holdingSql(now, 'o')})`,
     // Units owed to pre-orders not yet packed: stock that arrives for them is not for sale (plan review 2026-11-07).
@@ -46,11 +47,14 @@ export async function variantRows(tx: Tx, tenantId: string, ids: string[], now: 
     .where(and(eq(variants.tenantId, tenantId), inArray(variants.id, clean), sql`${variants.archivedAt} is null`))
   return rows.map((r) => ({
     ...r, price: Number(r.price), compareAt: r.compareAt === null ? null : Number(r.compareAt), whenOut: r.whenOut as VariantRow['whenOut'],
-    publishAt: r.publishAt ? r.publishAt.toISOString() : null, hsn: r.hsn ?? settings?.defaultHsn ?? null,
+    publishAt: r.publishAt ? r.publishAt.toISOString() : null,
+    // No fallback to the shop's default HSN (migration 0070 backfilled it onto the products): quote() refuses a piece with no known rate.
   }))
 }
 
-export type CheckoutShop = ShopRules & { open: boolean; published: boolean; name: string; slug: string; gstin: string | null; returnDays: number; returnKind: string; whatsapp: string; online: boolean }
+export type CheckoutShop = ShopRules & { open: boolean; published: boolean; name: string; slug: string; gstin: string | null; returnDays: number; returnKind: string; whatsapp: string; online: boolean
+  /** GST (plan 2026-11-09-gst-core-and-categories): the scheme while registered, the shop's state, whether business buyers may ask for a GST invoice. */
+  scheme: Scheme | null; homeState: string | null; b2b: boolean }
 
 /** The shop's checkout rules; `open` (taking NEW orders) read here, inside the transaction (not the 60 s cached lookup).
  *  `published`: live at all — an order already placed in a paused shop still finishes (switch to COD, retry payment). */
@@ -60,10 +64,16 @@ export async function checkoutShop(tx: Tx, tenantId: string): Promise<CheckoutSh
     shippingFlat: shopSettings.shippingFlat, freeShippingAbove: shopSettings.freeShippingAbove, codOn: shopSettings.codOn, codMin: shopSettings.codMin, codMax: shopSettings.codMax,
     codCharge: shopSettings.codCharge, codBlockedPincodes: shopSettings.codBlockedPincodes, dispatchDays: shopSettings.dispatchDays, metroDays: shopSettings.metroDays,
     restDays: shopSettings.restDays, returnDays: shopSettings.returnDays, returnKind: shopSettings.returnKind, whatsapp: shopSettings.whatsapp,
+    gstScheme: shopSettings.gstScheme, homeState: shopSettings.homeState, b2bInvoices: shopSettings.b2bInvoices, turnoverBand: shopSettings.turnoverBand,
   }).from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
   if (!s) return null
+  const { gstScheme, homeState, b2bInvoices, turnoverBand, ...rest } = s
+  const scheme = s.gstin ? (gstScheme as Scheme) : null
   return {
-    ...s, published: s.publishedAt !== null, open: s.publishedAt !== null && !pausedAt(await shopPauseIn(tx, tenantId), new Date()), registered: !!s.gstin,
+    ...rest, published: s.publishedAt !== null, open: s.publishedAt !== null && !pausedAt(await shopPauseIn(tx, tenantId), new Date()),
+    registered: chargesGst({ gstin: s.gstin, scheme }), scheme, homeState: s.gstin ? s.gstin.slice(0, 2) : homeState,
+    // Business invoices: a regular registration, the shop's switch, and under ₹5 cr until e-invoicing ships (rates.ts b2bAllowed).
+    b2b: scheme === 'regular' && b2bInvoices && b2bAllowed(turnoverBand as TurnoverBand),
     shippingFlat: Number(s.shippingFlat), freeShippingAbove: Number(s.freeShippingAbove), codMin: Number(s.codMin), codMax: Number(s.codMax), codCharge: Number(s.codCharge),
     online: canTakeOnline(await keysFor(tx, tenantId)),
   }

@@ -9,5 +9,5 @@ export const metadata: Metadata = { title: 'Checkout', robots: { index: false, f
 /** The one-page checkout: a static shell; the form prices the bag on the server. */
 export default async function CheckoutPage({ params }: { params: Promise<{ host: string }> }) {
   const shop = await shopFor(params)
-  return <Checkout shopName={shop.shopName} legalName={shop.legalName} privacyHref={shopHref('/policies/privacy')} returnLine={checkoutReturnLine(shop.returnKind, shop.returnDays)} />
+  return <Checkout shopName={shop.shopName} legalName={shop.legalName} privacyHref={shopHref('/policies/privacy')} returnLine={checkoutReturnLine(shop.returnKind, shop.returnDays)} gst={shop.gst} />
 }

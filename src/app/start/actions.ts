@@ -2,6 +2,9 @@
 
 import { z } from 'zod'
 import { SELLS } from '@/lib/db/schema'
+import { startingHsn } from '@/domains/catalogue/sell-keys'
+import { setStartingHsn } from '@/lib/queries/settings'
+import { errName } from '@/lib/log'
 import { PINCODE_SHAPE, slugProblem } from '@/domains/signup/slug'
 import { requireUser } from '@/lib/auth/require-user'
 import { hostFor, refreshHosts } from '@/lib/queries/storefront'
@@ -66,7 +69,12 @@ export async function createMyShop(input: unknown): Promise<{ ok: true; trial: b
   // The email key is the VERIFIED email from getUser() (requireUser), never a form value (trials T1).
   const r = await createShop({ uid: auth.userId, name, slug, pickup, sells, plan, email: claimKey('email', auth.email), codeId: signupCodeOn() ? codeId : null })
   // Misses are not cached, but a lookup made in the same minute is: clear it for the new address.
-  if (r.ok) { refreshHosts(hostFor(slug)); return { ok: true, trial: r.trial } }
+  if (r.ok) {
+    // A new product's starting HSN, from what the shop sells (plan 2026-11-09-gst-core-and-categories § 2): a prefill,
+    // never a fallback. Best effort: the shop exists either way, and Settings › Taxes shows and changes it.
+    await setStartingHsn(r.tenantId, startingHsn(sells)).catch((e) => console.error('[createMyShop] starting hsn', errName(e)))
+    refreshHosts(hostFor(slug)); return { ok: true, trial: r.trial }
+  }
   const field = r.error === 'slug_taken' || r.error === 'bad_slug' ? 'slug' : r.error === 'bad_name' ? 'name' : r.error === 'bad_pincode' ? 'pickup' : r.error === 'bad_code' ? 'phone' : undefined
   return { ok: false, field, hasShop: r.error === 'has_shop', error: SENTENCES[r.error] ?? 'We could not create your shop. Nothing was saved. Try again in a minute.' }
 }

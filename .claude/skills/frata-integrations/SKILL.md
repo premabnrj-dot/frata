@@ -468,8 +468,29 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
 - Frrata stores only the gateway's customer / token / mandate id and status, never card or bank details [U for the
   current RBI text].
 - GST (CBIC unreachable 2026-11-08): place of supply s.12(2) IGST and Circular 242/36/2024 [U, 2024-12-31]; Rule 46
-  incl. 16-character serial [U]; e-invoicing above ₹5 cr [S, 2026-03-13]; SAC for SaaS unresolved (998315 most cited)
+  incl. 16-character serial [U]; e-invoicing ₹5 cr AATO [S]; from 1 Jan 2027 also RCM-from-unregistered and import of services (N 04/2026-CT) [V, gazette via caalley, 2026-10-26]; SAC for SaaS unresolved (998315 most cited)
   [U]; TDS moved to Income-tax Act 2025 s.393 from 1 Apr 2026 [S]. **A CA confirms before the first invoice.**
 - Shopify reference: 30-day cycles, apps on a separate cycle; app plans priced in USD; India pays in INR (UPI; cards via
   Razorpay); unpaid → store frozen, no grace [V, help.shopify.com, undated]. Frrata never blocks a shop.
 - Details and the research table: `docs/research/2026-11-08-documents-and-billing.md` § Billing.
+
+## GST filing (GSP/ASP) — checked 2026-11-09 (integration-researcher; gst.gov.in, einvoice1, developer.gst.gov.in unreachable)
+- Filing by software only through a GSP; the taxpayer enables Manage API Access, 6 h or 30 days [S, Sovos undated]; an
+  OTP opens the session; the final filing is EVC (OTP) or DSC [V Zoho help, undated]. Taxpayers see and revoke ASP
+  tokens since 7 Nov 2025 [S, Tally 2026-10-14]. A direct taxpayer API: [U].
+- Zoho is a GSP. Books pushes GSTR-1 and files it by PAN + OTP; GSTR-3B pushed, filed on the portal; approvers are
+  Accountants/Admins (≤ 5) [V, undated]. Zoho Invoice: GSTR-1 only [V]. Books ₹899/₹749 (Standard) … ₹9,599/₹7,999
+  (Ultimate), monthly/yearly [V, undated]. TallyPrime and BUSY upload and file GSTR-1 [V, undated].
+- GSP returns-API prices unpublished (Quicko: onboarding + per call + renewal [V 2026-11-03]; Sandbox: sales [V
+  2026-10-09]). GSTZen: e-invoice ₹5,250/yr ≤ 500 a month per GSTIN; e-way bill 18p/35p; GSTIN validator ₹3,500 per
+  5,000 calls [V, undated]. 62 GSPs empanelled [S, Mar 2026].
+- E-way bill ₹50,000; Part B by the transporter; intra-state ₹1 lakh in DL, MH, TN, WB [S, Tally 2026-06-09]. EWB
+  numbers 14 digits (consolidated 11) from 1 Jan 2027 [V, GSTN 2026-11-04]: store as text.
+- GSTR-3B Tables 3.1/3.2 locked to GSTR-1 since Jul/Nov 2025; corrections via GSTR-1A before 3B [S, 2026-08-07].
+  Returns time-barred 3 years from the due date [S, Tally 2026-03].
+- Rule 14B (N 05/2026-CT): ECO-warehouse registration only for supplies through TCS-collecting ECOs [V, GSTN 2026-11-01].
+  No exemption found for own-website inter-state sellers (s.24) [S]. s.52 TCS only where the ECO collects the
+  consideration [S, undated]; Frrata as an ECO: [U], a lawyer confirms.
+- Credit notes declared by 30 Nov after the FY [S, 2026-11]; RTO cancel vs credit note: [U], a CA rules.
+- Unverified (no current primary source): six IRPs, 24 h IRN cancellation, B2C dynamic QR, the 30-day IRP limit, HSN
+  Table 12 digits, Tables 14/15 for own sites.

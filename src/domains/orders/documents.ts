@@ -16,12 +16,20 @@
 // =============================================================================
 
 import { stateCode } from '@/domains/checkout/states'
-import { gstHeads, split, supplyKind } from '@/domains/tax/gst'
-import { collect, sharesOf, type StoredLine, type StoredOrder } from './amounts'
+import { chargesGst, gstHeads, split, supplyKind, type Scheme } from '@/domains/tax/gst'
 
-export type DocLine = StoredLine & { unitPrice: number; lineDiscount: number; title: string; optionValues: string[]; qty: number; sku: string | null; hsn: string | null; imageBase: string | null; imageWidths: number[] | null }
+/** A consignment above ₹50,000 travels with an e-way bill (CGST Rule 138; state limits differ, the GST app says). Paise. */
+export const EWAY_BILL_FROM = 5_000_000
+import { collect, sharesOf, type StoredLine, type StoredOrder } from './amounts'
+import type { CreditKind, CreditLine } from './credits'
+
+export type DocLine = StoredLine & { id?: string; unitPrice: number; lineDiscount: number; title: string; optionValues: string[]; qty: number; sku: string | null; hsn: string | null; imageBase: string | null; imageWidths: number[] | null
+  /** The unit invoiced (GST UQC); orders before 0070 read NOS. */
+  uqc?: string }
 export type DocOrder = StoredOrder & {
   number: string; placedAt: Date; packedAt: Date | null; invoiceNumber: string | null; sellerGstin: string | null
+  /** The seller's scheme when placed (regular | composition); a business buyer's GSTIN and name (a B2B invoice). */
+  sellerScheme?: string | null; buyerGstin?: string | null; buyerName?: string
   /** The seller as it was at packing; null before packing (the invoice then is not issued). */
   sellerName: string | null; sellerAddress: string | null
   customerName: string; phone: string; addressLine: string; area: string; landmark: string; city: string; pincode: string; state: string; supplyState: string | null
@@ -55,19 +63,26 @@ export function packingSlip(o: DocOrder, lines: DocLine[], shop: DocShop): Packi
  * `gross` and `discount` are before GST at the line's rate (an offer's discount, recorded on the invoice: CGST s.15(3)(a)),
  * so gross − discount = taxable (Rule 46); the charges' share sits in gross and taxable alike.
  */
-export type InvoiceLine = { title: string; hsn: string | null; qty: number; gross: number; discount: number; taxable: number; rateBps: number; cgst: number; sgst: number; igst: number; total: number }
+export type InvoiceLine = { title: string; hsn: string | null; qty: number; uqc: string; gross: number; discount: number; taxable: number; rateBps: number; cgst: number; sgst: number; igst: number; total: number }
 export type Invoice = {
   kind: 'tax_invoice' | 'bill_of_supply' | 'credit_note'; number: string; date: Date; cancelled: boolean
   /** A credit note's original invoice (CGST Rule 53: its number and date), and why the sale was undone. */
   against?: { number: string; date: Date; reason: CreditReason }
   seller: { name: string; address: string; gstin: string | null }
-  buyer: { name: string; lines: string[] }
+  /** A bill of supply from a composition seller says so (CGST Rule 49): "composition taxable person, not eligible to collect tax". */
+  composition: boolean
+  /** `gstin` and `business`: a business buyer's GST invoice (B2B); the delivery address is bill-to and ship-to. */
+  buyer: { name: string; lines: string[]; gstin: string | null; business: string | null }
+  /** An e-way bill is needed for a consignment over ₹50,000 (generated in the GST app, G3). */
+  needsEwayBill: boolean
   placeOfSupply: { state: string; code: string | null }
   supply: 'intra' | 'inter'
   lines: InvoiceLine[]
   totals: { gross: number; discount: number; taxable: number; cgst: number; sgst: number; igst: number; total: number }
   /** True when the prices the shopper saw included GST (the line says so). */
   pricesIncludeGst: boolean
+  /** A goodwill credit: money back with no GST effect (not a GST document: no tax columns, never in GSTR-1). */
+  goodwill?: boolean
   /** What the charges were, for the line under the table (they are inside each line's value). */
   charges: { delivery: number; cod: number }
 }
@@ -75,7 +90,8 @@ export type Invoice = {
 /** Null until packed: the invoice number is issued at packing (owner call 3), so there is nothing to print before. */
 export function invoice(o: DocOrder, lines: DocLine[], shop: DocShop): Invoice | null {
   if (!o.invoiceNumber || !o.packedAt) return null
-  const kind = o.sellerGstin ? 'tax_invoice' : 'bill_of_supply'
+  // A tax invoice when the seller charged GST (regular scheme); a bill of supply otherwise (not registered, composition).
+  const kind = chargesGst({ gstin: o.sellerGstin, scheme: (o.sellerScheme ?? 'regular') as Scheme }) ? 'tax_invoice' : 'bill_of_supply'
   const code = stateCode(o.supplyState ?? o.state)
   const supply = supplyKind(o.sellerGstin, code)
   const shares = sharesOf(lines, o)
@@ -85,23 +101,33 @@ export function invoice(o: DocOrder, lines: DocLine[], shop: DocShop): Invoice |
     const heads = kind === 'tax_invoice' ? gstHeads(gst, supply) : { cgst: 0, sgst: 0, igst: 0 }
     // The discount before GST: the line's gross value before GST at its rate, less its stored taxable value.
     const discount = l.lineDiscount ? split(l.unitPrice * l.qty, l.gstBps, o.pricesIncludeGst).taxable - l.taxableValue : 0
-    return { title: [l.title, ...l.optionValues].join(' · '), hsn: l.hsn, qty: l.qty, gross: taxable + discount, discount, taxable, rateBps: kind === 'tax_invoice' ? l.gstBps : 0, ...heads, total: taxable + heads.cgst + heads.sgst + heads.igst }
+    return { title: [l.title, ...l.optionValues].join(' · '), hsn: l.hsn, qty: l.qty, uqc: l.uqc ?? 'NOS', gross: taxable + discount, discount, taxable, rateBps: kind === 'tax_invoice' ? l.gstBps : 0, ...heads, total: taxable + heads.cgst + heads.sgst + heads.igst }
   })
   const sum = (k: keyof Pick<InvoiceLine, 'gross' | 'discount' | 'taxable' | 'cgst' | 'sgst' | 'igst' | 'total'>) => out.reduce((a, l) => a + l[k], 0)
   return {
     kind, number: o.invoiceNumber, date: o.packedAt, cancelled: !!o.cancelledAt,
     seller: { name: o.sellerName ?? (shop.legalName || shop.name), address: o.sellerAddress ?? shop.address, gstin: o.sellerGstin },
-    buyer: { name: o.customerName, lines: addressLines(o) },
+    composition: !!o.sellerGstin && o.sellerScheme === 'composition',
+    buyer: { name: o.customerName, lines: addressLines(o), gstin: kind === 'tax_invoice' ? o.buyerGstin ?? null : null, business: kind === 'tax_invoice' && o.buyerGstin ? o.buyerName || null : null },
+    needsEwayBill: o.total > EWAY_BILL_FROM,
     placeOfSupply: { state: o.supplyState ?? o.state, code }, supply,
     lines: out, totals: { gross: sum('gross'), discount: sum('discount'), taxable: sum('taxable'), cgst: sum('cgst'), sgst: sum('sgst'), igst: sum('igst'), total: sum('total') },
     pricesIncludeGst: o.pricesIncludeGst, charges: { delivery: o.shipping, cod: o.codCharge },
   }
 }
 
-/** Why a packed sale was undone (Documents D3): cancelled after packing, or the parcel came back. */
-export const CREDIT_REASONS = ['cancelled', 'came_back'] as const
+/** Why a credit note was issued: the sale undone (cancelled after packing, the parcel came back), items returned after
+ *  delivery, a discount agreed before the sale given afterwards, or goodwill (GST plan phase 2). */
+export const CREDIT_REASONS = ['cancelled', 'came_back', 'returned', 'discount', 'goodwill'] as const
 export type CreditReason = (typeof CREDIT_REASONS)[number]
-export type IssuedCredit = { number: string; issuedAt: Date; reason: CreditReason; against: string; total: number }
+export const CREDIT_REASON_WORDS: Record<CreditReason, string> = {
+  cancelled: 'order cancelled after the invoice was issued', came_back: 'the parcel came back', returned: 'items returned',
+  discount: 'a discount agreed before the sale', goodwill: 'a goodwill credit, with no change to GST',
+}
+export type IssuedCredit = { number: string; issuedAt: Date; reason: CreditReason; against: string; total: number
+  kind?: CreditKind
+  /** What it credited, line by line (credit_note_lines); absent on a reversal issued before 0071 (it reversed the whole invoice). */
+  lines?: CreditLine[] }
 
 /**
  * A credit note (Documents D3): the issued invoice reversed in full — the same lines, taxable values and tax heads,
@@ -111,8 +137,30 @@ export type IssuedCredit = { number: string; issuedAt: Date; reason: CreditReaso
 export function creditNote(o: DocOrder, lines: DocLine[], shop: DocShop, cn: IssuedCredit): Invoice | null {
   const inv = invoice(o, lines, shop)
   if (!inv) return null
+  const against = { number: inv.number, date: inv.date, reason: cn.reason }
+  const zero = { gross: 0, discount: 0, taxable: 0, cgst: 0, sgst: 0, igst: 0, total: 0 }
+  let out: Invoice
+  if (cn.kind === 'goodwill') {
+    // Money back with no GST effect: one line, no tax columns (a goodwill credit is not a GST document).
+    out = { ...inv, kind: 'credit_note', number: cn.number, date: cn.issuedAt, cancelled: false, against, goodwill: true,
+      lines: [{ title: 'Goodwill credit', hsn: null, qty: 1, uqc: 'NOS', gross: cn.total, discount: 0, taxable: cn.total, rateBps: 0, cgst: 0, sgst: 0, igst: 0, total: cn.total }],
+      totals: { ...zero, gross: cn.total, taxable: cn.total, total: cn.total } }
+  } else if (cn.lines) {
+    // Part of the invoice (a return, a discount, or what was left to reverse): each line at the invoice's own rate.
+    const tax = inv.kind === 'tax_invoice'
+    const ls = cn.lines.map((c): InvoiceLine => {
+      const l = lines.find((x) => x.id === c.lineId)
+      const heads = tax ? gstHeads(c.gst, inv.supply) : { cgst: 0, sgst: 0, igst: 0 }
+      return { title: l ? [l.title, ...l.optionValues].join(' · ') : 'Item', hsn: l?.hsn ?? null, qty: c.qty, uqc: l?.uqc ?? 'NOS', gross: c.taxable, discount: 0, taxable: c.taxable, rateBps: tax ? c.bps : 0, ...heads, total: c.taxable + heads.cgst + heads.sgst + heads.igst }
+    })
+    const sum = (k: keyof typeof zero) => ls.reduce((a, l) => a + l[k], 0)
+    out = { ...inv, kind: 'credit_note', number: cn.number, date: cn.issuedAt, cancelled: false, against, lines: ls,
+      totals: { gross: sum('gross'), discount: 0, taxable: sum('taxable'), cgst: sum('cgst'), sgst: sum('sgst'), igst: sum('igst'), total: sum('total') } }
+  } else {
+    out = { ...inv, kind: 'credit_note', number: cn.number, date: cn.issuedAt, cancelled: false, against }
+  }
   // The figures it was issued with are stored (credit_notes): a rendering that disagrees is a broken document, never
   // printed (impact review 2026-11-08: two copies need one comparison).
-  if (inv.number !== cn.against || inv.totals.total !== cn.total) throw new Error('credit note differs from what was issued')
-  return { ...inv, kind: 'credit_note', number: cn.number, date: cn.issuedAt, cancelled: false, against: { number: inv.number, date: inv.date, reason: cn.reason } }
+  if (inv.number !== cn.against || out.totals.total !== cn.total) throw new Error('credit note differs from what was issued')
+  return out
 }

@@ -91,3 +91,8 @@ export async function planHistoryIn(tx: Tx, tenantId: string): Promise<{ startsA
   return tx.select({ startsAt: tenantPlans.startsAt, feeBps: planVersions.feeBps }).from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId))
     .where(eq(tenantPlans.tenantId, tenantId)).orderBy(tenantPlans.startsAt)
 }
+
+/** A new shop's starting HSN, from what it sells (sign-up, plan 2026-11-09-gst-core-and-categories): a prefill for new products. */
+export async function setStartingHsn(tenantId: string, hsn: string) {
+  await withTenant(tenantId, (tx) => tx.update(shopSettings).set({ defaultHsn: hsn }).where(eq(shopSettings.tenantId, tenantId)))
+}

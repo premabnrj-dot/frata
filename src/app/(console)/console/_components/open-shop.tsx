@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { closeShop, openShop } from '../shop-actions'
 import { useOpenMoment } from './open-moment'
@@ -11,25 +11,32 @@ export function OpenShop({ address, open, ready, canManage }: { address: string;
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   /** The one brand moment (rule 26) is drawn by the page's OpenMoment, which outlives this checklist. */
   const moment = useOpenMoment()
-  const [, start] = useTransition()
-  // Busy only while the action itself runs: a transition also waits for the page's re-render, which can lag (e2e 90-ux).
+  // Busy is this button's own, for the action's round trip only — never a React transition. A transition stays
+  // pending until Next has re-rendered the whole page after the action's revalidation; when that render is slow, or
+  // a stale one lands first, the button sat disabled (e2e 90-ux, failing on and off 2026-11-07 → 2026-11-09).
   const [pending, setPending] = useState(false)
-  // What the last successful action made true, until the page's own render agrees: the action's revalidation and
-  // a late, stale render can arrive in either order (e2e 90-ux, 2026-11-07 and again 2026-11-08), and the button
-  // must never offer to close a shop the merchant just closed.
+  // What the last successful action made true, until the page's own render agrees: the revalidation and a late,
+  // stale render can arrive in either order, and the button must never offer to close a shop just closed. The
+  // action's answer decides; the page's prop takes over again once it matches.
   const [known, setKnown] = useState<boolean | null>(null)
   useEffect(() => { if (known !== null && open === known) setKnown(null) }, [open, known])
   const isOpen = known ?? open
-  const run = (fn: typeof openShop, done: string) => start(async () => {
+  const run = async (fn: typeof openShop, done: string) => {
+    if (pending) return
     setPending(true)
-    const r = await fn().finally(() => setPending(false))
-    // Opening says so through the moment; closing (and any failure) says so here.
-    setMsg(r.ok ? (fn === openShop && moment ? null : { ok: true, text: done }) : { ok: false, text: r.error })
-    setAsk(false)
-    if (r.ok) { setKnown(fn === openShop); if (fn === openShop) moment?.opened(); else moment?.closed() }
-    // No router.refresh(): the action's revalidatePath already re-renders this page, and a second refresh raced it —
-    // a stale render (the shop still open) could land after the fresh one (e2e probe, 2026-11-07).
-  })
+    try {
+      const r = await fn()
+      // Opening says so through the moment; closing (and any failure) says so here.
+      setMsg(r.ok ? (fn === openShop && moment ? null : { ok: true, text: done }) : { ok: false, text: r.error })
+      setAsk(false)
+      if (r.ok) { setKnown(fn === openShop); if (fn === openShop) moment?.opened(); else moment?.closed() }
+    } catch {
+      setMsg({ ok: false, text: 'We could not reach Frrata. Nothing was changed; try again.' })
+    } finally {
+      setPending(false)
+    }
+    // No router.refresh(): the action's revalidatePath already re-renders this page.
+  }
   if (!canManage) return null
   return (
     <div className="space-y-2">
@@ -40,7 +47,7 @@ export function OpenShop({ address, open, ready, canManage }: { address: string;
         <div className="flex flex-wrap items-center gap-3 text-sm"><span>Shoppers can order from <span className="font-mono">{address}</span> now.</span><Button disabled={pending} onClick={() => run(openShop, `Your shop is open at ${address}.`)}>Open it</Button><button type="button" className="inline-flex min-h-6 items-center underline" onClick={() => setAsk(false)}>Not yet</button></div>
       ) : (
         // Just closed here: it was open a moment ago, so it is ready, whatever a late render still says (e2e 90-ux).
-        <Button disabled={!(ready || known === false) || pending} onClick={() => setAsk(true)}>Open my shop</Button>
+        <Button disabled={!(ready || known === false || open) || pending} onClick={() => setAsk(true)}>Open my shop</Button>
       )}
       {msg && !msg.ok && <p role="alert" className="text-sm text-danger-text">{msg.text}</p>}
       {/* One status region that is always there, so a screen reader hears what lands in it. */}

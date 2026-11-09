@@ -101,6 +101,11 @@ export const orders = pgTable('orders', {
   cancelNote: text('cancel_note'),
   /** The shop's GSTIN when the order was placed (null: not registered then): the invoice reads this, never today's settings. */
   sellerGstin: text('seller_gstin'),
+  /** The seller's GST scheme when placed (regular | composition; null: not registered). What decides "charges GST" (tax/gst.ts chargesGst). */
+  sellerScheme: text('seller_scheme'),
+  /** A business buyer's GSTIN and name, asked at checkout (a B2B invoice); fixed once the invoice is issued. */
+  buyerGstin: text('buyer_gstin'),
+  buyerName: text('buyer_name').notNull().default(''),
   // The seller as it was at packing (1D·7): an issued invoice never follows a later change to Settings.
   sellerName: text('seller_name'),
   sellerAddress: text('seller_address'),
@@ -114,6 +119,8 @@ export const orders = pgTable('orders', {
   index('orders_tenant_placed').on(t.tenantId, t.placedAt),
   // Best sellers by delivered units (themes T1·3): the shop's delivered orders in a window.
   index('orders_tenant_delivered').on(t.tenantId, t.deliveredAt).where(sql`${t.deliveredAt} is not null`),
+  // The GST month: invoices by their date (packing), for GSTR-1 (plan review 2026-11-09).
+  index('orders_tenant_packed').on(t.tenantId, t.packedAt).where(sql`${t.packedAt} is not null`),
   // Every lookup leads with the tenant: a unique on the value alone would tell another shop that a value exists.
   uniqueIndex('orders_tenant_token').on(t.tenantId, t.tokenHash),
   uniqueIndex('orders_tenant_idempotency').on(t.tenantId, t.idempotencyKey),
@@ -134,6 +141,9 @@ export const orders = pgTable('orders', {
   uniqueIndex('orders_tenant_invoice').on(t.tenantId, t.invoiceNumber),
   check('orders_invoice_when_packed', sql`(${t.invoiceNumber} is null) = (${t.packedAt} is null)`),
   check('orders_invoice_length', sql`${t.invoiceNumber} is null or length(${t.invoiceNumber}) <= 16`),
+  check('orders_seller_scheme', sql`${t.sellerScheme} is null or ${t.sellerScheme} in ('regular','composition')`),
+  check('orders_buyer_gstin', sql`${t.buyerGstin} is null or ${t.buyerGstin} ~ '^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$'`),
+  check('orders_buyer_name', sql`length(${t.buyerName}) <= 120`),
   check('orders_cancel_reason', sql`${t.cancelReason} is null or (${t.cancelledAt} is not null and ${t.cancelReason} in ('fake','customer_cancelled','unreachable','out_of_stock','cant_deliver','other'))`),
 ])
 
@@ -161,6 +171,8 @@ export const orderLines = pgTable('order_lines', {
   gstBps: integer('gst_bps').notNull().default(0),
   gst: money('gst').notNull().default(0),
   hsn: text('hsn'),
+  /** The unit as invoiced (products.uqc when placed). */
+  uqc: text('uqc').notNull().default('NOS'),
   /** The merchant's cost of one piece, when known. Server only: never selected by a shopper's route (ADR-0003). */
   unitCost: money('unit_cost'),
   /** How it was sold: in_stock (stock taken), preorder (ships by), made_to_order (lead days). */
@@ -175,6 +187,7 @@ export const orderLines = pgTable('order_lines', {
   chargeTaxable: money('charge_taxable'),
   chargeGst: money('charge_gst'),
 }, (t) => [
+  unique('order_lines_tenant_id_key').on(t.tenantId, t.id),
   foreignKey({ name: 'order_lines_order_fk', columns: [t.tenantId, t.orderId], foreignColumns: [orders.tenantId, orders.id] }).onDelete('cascade'),
   index('order_lines_order').on(t.tenantId, t.orderId),
   index('order_lines_variant').on(t.tenantId, t.variantId),
@@ -301,11 +314,42 @@ export const creditNotes = pgTable('credit_notes', {
   total: money('total').notNull(),
   issuedAt: at('issued_at').notNull().defaultNow(),
   issuedBy: uuid('issued_by').notNull(),
+  /**
+   * GST plan phase 2: `reversal` the whole invoice (or what is left of it) when the sale is undone; `return` lines or
+   * part quantities brought back after delivery; `discount` a discount agreed before the sale, given afterwards
+   * (s.15(3)(b)); `goodwill` money back with no GST effect (its own series, never in GSTR-1). Lines in credit_note_lines
+   * (a reversal issued before 0071 has none: it reversed the whole invoice).
+   */
+  kind: text('kind').notNull().default('reversal'),
 }, (t) => [
   foreignKey({ name: 'credit_notes_order_fk', columns: [t.tenantId, t.orderId], foreignColumns: [orders.tenantId, orders.id] }).onDelete('restrict'),
-  uniqueIndex('credit_notes_order').on(t.tenantId, t.orderId),
+  unique('credit_notes_tenant_id_key').on(t.tenantId, t.id),
+  index('credit_notes_order').on(t.tenantId, t.orderId),
+  index('credit_notes_issued').on(t.tenantId, t.issuedAt),
   uniqueIndex('credit_notes_number').on(t.tenantId, t.number),
-  check('credit_notes_reason', sql`${t.reason} in ('cancelled','came_back')`),
+  check('credit_notes_reason', sql`${t.reason} in ('cancelled','came_back','returned','discount','goodwill')`),
+  check('credit_notes_kind', sql`${t.kind} in ('reversal','return','discount','goodwill') and (${t.kind} <> 'goodwill' or (${t.cgst} = 0 and ${t.sgst} = 0 and ${t.igst} = 0))`),
   check('credit_notes_number_len', sql`length(${t.number}) <= 16`),
   check('credit_notes_money', sql`${t.taxable} >= 0 and ${t.cgst} >= 0 and ${t.sgst} >= 0 and ${t.igst} >= 0 and ${t.total} = ${t.taxable} + ${t.cgst} + ${t.sgst} + ${t.igst}`),
+])
+
+/**
+ * What a credit note credits, line by line (GST plan phase 2): the order line, the quantity, and the taxable value and
+ * GST at the INVOICE's own rate (a credit note keeps its invoice's rate and HSN). Final once written, as its note.
+ */
+export const creditNoteLines = pgTable('credit_note_lines', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'restrict' }),
+  creditNoteId: uuid('credit_note_id').notNull(),
+  orderLineId: uuid('order_line_id').notNull(),
+  qty: integer('qty').notNull(),
+  taxable: money('taxable').notNull(),
+  gst: money('gst').notNull(),
+  gstBps: integer('gst_bps').notNull(),
+}, (t) => [
+  foreignKey({ name: 'credit_note_lines_note_fk', columns: [t.tenantId, t.creditNoteId], foreignColumns: [creditNotes.tenantId, creditNotes.id] }).onDelete('restrict'),
+  foreignKey({ name: 'credit_note_lines_line_fk', columns: [t.tenantId, t.orderLineId], foreignColumns: [orderLines.tenantId, orderLines.id] }).onDelete('restrict'),
+  index('credit_note_lines_note').on(t.tenantId, t.creditNoteId),
+  index('credit_note_lines_line').on(t.tenantId, t.orderLineId),
+  check('credit_note_lines_money', sql`${t.qty} >= 0 and ${t.taxable} >= 0 and ${t.gst} >= 0 and ${t.gstBps} >= 0`),
 ])

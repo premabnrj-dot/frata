@@ -2,7 +2,7 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.7.0
+  version: 2.8.0
   verified: 2026-11-08
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
@@ -29,6 +29,17 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
   out, never ₹0. A source or an offer is judged on ₹ kept after returns, and per order with an outcome, never per
   delivered order alone. The fee is the plan version in force when the order becomes billable, the first of delivered
   and 30 days shipped (`feeForOrder`, billing's rule).
+- **Credit notes after delivery** (GST phase 2, 2026-11-09): a return, a discount agreed before the sale or goodwill
+  takes its **taxable** value off what the order earned (`creditedSql`, read by keptSql and Analytics alike; the GST on a
+  credit was never the merchant's money; goodwill carries none, so all of it comes off). Goodwill is capped at what is
+  left on the invoice. Returned goods' cost is **not** added back: nothing restocks on a credit — hypothesis **H-resale**
+  ("a returned piece is worth its full cost"), test: grade returns at 2–3 design partners for 4 weeks. Not yet counted:
+  the reverse-pickup freight on a return (~₹70; label figures "before return pickup" until a column records it).
+  **Owner, 2026-11-09:** Frrata's fee stays on the order as delivered (`merchandise_net`, billed in full): a later
+  return or credit note does not reduce it (Launch: ₹8.57 on a returned ₹450 piece). Say so where the fee is explained.
+- **The inclusive-price gap** (rates.ts, ₹2,625.01–₹2,950 with GST): one paisa above ₹2,625 moves a piece from 5% to 18%
+  (₹269.91 less kept on a ₹900-COGS piece); there, a discount down to ₹2,625 RAISES kept. "A blanket % off is a giveaway"
+  holds only below the gap; the console warns on prices in it.
 
 ## Rules
 

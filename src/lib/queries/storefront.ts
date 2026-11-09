@@ -1,4 +1,5 @@
 import 'server-only'
+import { checkoutGst } from '@/domains/tax/gstin'
 import { and, asc, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
 import { revalidateTag, unstable_cache } from 'next/cache'
 import { shopPauseIn } from './trial-pause'
@@ -83,6 +84,8 @@ export type StoreShop = PolicyFacts & DeliveryRules & {
   /** The words Frrata writes on the shop (themes T2). */
   shopLanguage: Lang
   overrides: Record<string, string>; nav: { handle: string; title: string }[]
+  /** GST at checkout (public facts; tax/gstin.ts checkoutGst). */
+  gst: { deliversWithin: string | null; b2b: boolean }
 }
 
 async function coreShop(tenantId: string): Promise<StoreShop | null> {
@@ -93,11 +96,12 @@ async function coreShop(tenantId: string): Promise<StoreShop | null> {
       whatsapp: shopSettings.whatsapp, instagram: shopSettings.instagram,
       grievanceName: shopSettings.grievanceName, grievanceRole: shopSettings.grievanceRole, grievanceEmail: shopSettings.grievanceEmail, grievancePhone: shopSettings.grievancePhone,
       accent: shopSettings.accent, displayFont: shopSettings.displayFont, tagline: shopSettings.tagline, seoTitle: shopSettings.seoTitle, seoDescription: shopSettings.seoDescription, logoUrl: shopSettings.logoUrl, shopLanguage: shopSettings.shopLanguage,
-      returnKind: shopSettings.returnKind, returnDays: shopSettings.returnDays,
+      returnKind: shopSettings.returnKind, returnDays: shopSettings.returnDays, sells: shopSettings.sells,
       // COD limits are public: the Shipping policy states them.
       codOn: shopSettings.codOn, codMin: shopSettings.codMin, codMax: shopSettings.codMax, codCharge: shopSettings.codCharge,
       shippingFlat: shopSettings.shippingFlat, freeShippingAbove: shopSettings.freeShippingAbove,
       dispatchDays: shopSettings.dispatchDays, metroDays: shopSettings.metroDays, restDays: shopSettings.restDays, pricesIncludeGst: shopSettings.pricesIncludeGst,
+      gstin: shopSettings.gstin, gstScheme: shopSettings.gstScheme, homeState: shopSettings.homeState, b2bInvoices: shopSettings.b2bInvoices, turnoverBand: shopSettings.turnoverBand,
     }).from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId)).limit(1)
     if (!r) return null
     const [pol, nav, pause] = await Promise.all([
@@ -106,8 +110,9 @@ async function coreShop(tenantId: string): Promise<StoreShop | null> {
       tx.select({ handle: collections.handle, title: collections.title }).from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)).limit(5),
       shopPauseIn(tx, tenantId),
     ])
+    const { gstin, gstScheme, homeState, b2bInvoices, turnoverBand, ...facts } = r
     return {
-      ...r, shopName: r.name, id: tenantId, host: hostFor(r.slug), publishedAt: r.publishedAt ? r.publishedAt.toISOString() : null,
+      ...facts, shopName: r.name, id: tenantId, gst: checkoutGst({ gstin, gstScheme, homeState, b2bInvoices, turnoverBand }), host: hostFor(r.slug), publishedAt: r.publishedAt ? r.publishedAt.toISOString() : null,
       pause: pause ? { from: pause.from.toISOString(), to: pause.to ? pause.to.toISOString() : null } : null,
       returnKind: r.returnKind as PolicyFacts['returnKind'], shopLanguage: r.shopLanguage === 'hi' ? 'hi' : 'en',
       codMin: Number(r.codMin), codMax: Number(r.codMax), codCharge: Number(r.codCharge), shippingFlat: Number(r.shippingFlat), freeShippingAbove: Number(r.freeShippingAbove),
@@ -257,7 +262,7 @@ async function coreCatalogue(tenantId: string, drafts: boolean): Promise<Catalog
 
 export type StoreProduct = StoreCard & {
   description: string; modelHeight: string; modelSize: string; optionValues: string[][]; seoTitle: string; seoDescription: string
-  typeName: string | null; sizeChart: Chart | null
+  typeName: string | null; sizeChart: Chart | null; label: Record<string, unknown>; originCountry: string | null
 }
 /** current: this handle is the product's; moved: an old handle, with the current one; gone: none. */
 export type Lookup = { kind: 'current'; product: StoreProduct } | { kind: 'moved'; to: string } | { kind: 'none' }
@@ -279,7 +284,7 @@ async function coreProduct(tenantId: string, handle: string, drafts: boolean): P
       id: products.id, handle: products.handle, title: products.title, status: products.status, publishAt: products.publishAt,
       since: sql<string>`coalesce(${products.publishAt}, ${products.publishedAt}, ${products.createdAt})`, options: products.options, optionValues: products.optionValues,
       categoryId: products.taxonomyCategory, tags: products.tags, description: products.description, modelHeight: products.modelHeight, modelSize: products.modelSize,
-      seoTitle: products.seoTitle, seoDescription: products.seoDescription, typeName: productTypes.name, sizeChart: productTypes.sizeChart,
+      seoTitle: products.seoTitle, seoDescription: products.seoDescription, typeName: productTypes.name, sizeChart: productTypes.sizeChart, label: products.label, originCountry: products.originCountry,
     }).from(products).leftJoin(productTypes, and(eq(productTypes.id, products.typeId), eq(productTypes.tenantId, tenantId)))
       .where(and(eq(products.tenantId, tenantId), eq(products.handle, handle), drafts ? sql`true` : ne(products.status, 'draft'))).limit(1)
     if (!p) return null

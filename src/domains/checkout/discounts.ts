@@ -228,7 +228,9 @@ export function planOffers(linesIn: PlanLine[] | number, offers: DiscountTerms[]
   return { productDisc, products, order, freeShipping: ship, payment, code: typed === null ? null : usedCode ? 'applied' : 'not_applied', listed }
 }
 
-export type PriceLine = { gross: number; qty: number; hsn: string | null; productDiscount: number }
+export type PriceLine = { gross: number; qty: number; hsn: string | null; productDiscount: number
+  /** The merchant's rate for a code the rate table lacks (rates.ts), or a stored line's rate on repricing. */
+  own?: number | null }
 /** `discount` is the line's whole discount; `productDiscount` the product offers' part of it (stored, never re-spread). */
 export type MethodLine = { discount: number; productDiscount: number; taxable: number; gstBps: number; gst: number } & ChargeShare
 export type MethodPrice = {
@@ -245,7 +247,7 @@ export type MethodPrice = {
  * the payment discount spread over what is left in proportion, each line taxed at the rate of its own discounted
  * piece, the charges shared over the lines at their rates.
  */
-export function priceMethod(lines: PriceLine[], orderAmount: number, paymentAmount: number, charges: number, o: { registered: boolean; pricesIncludeGst: boolean }): MethodPrice {
+export function priceMethod(lines: PriceLine[], orderAmount: number, paymentAmount: number, charges: number, o: { registered: boolean; pricesIncludeGst: boolean; date: Date }): MethodPrice {
   const gross = lines.map((l) => l.gross)
   const subtotal = gross.reduce((a, b) => a + b, 0)
   const prod = lines.map((l) => l.productDiscount)
@@ -253,7 +255,7 @@ export function priceMethod(lines: PriceLine[], orderAmount: number, paymentAmou
   const payShare = apportion(paymentAmount, gross.map((g, i) => g - prod[i]! - orderShare[i]!))
   const disc = lines.map((_, i) => prod[i]! + orderShare[i]! + payShare[i]!)
   const net = lines.map((l, i) => l.gross - disc[i]!)
-  const t = taxOrder(lines.map((l, i) => ({ gross: net[i]!, unitPrice: net[i]! / l.qty, hsn: l.hsn })), charges, o)
+  const t = taxOrder(lines.map((l, i) => ({ gross: net[i]!, unitPrice: net[i]! / l.qty, hsn: l.hsn, own: l.own ?? null })), charges, o)
   const out = t.lines.map((l, i) => ({ discount: disc[i]!, productDiscount: prod[i]!, taxable: l.taxable, gstBps: l.bps, gst: l.gst, chargeTaxable: l.chargeTaxable, chargeGst: l.chargeGst }))
   const discount = disc.reduce((a, b) => a + b, 0)
   const gst = out.reduce((a, l) => a + l.gst + l.chargeGst, 0)
