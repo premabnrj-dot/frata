@@ -15,6 +15,7 @@ export type { Lang }
 
 const EN = {
   skip: 'Skip to content', shopAll: 'Shop all', menu: 'Menu', contact: 'Contact', home: 'Home', shop: 'Shop', search: 'Search', bag: 'Bag', bagOne: 'Bag, 1 item', bagMany: 'Bag, {n} items',
+  pairWith: 'Pair it with', pairAdd: 'Add', pairAdded: 'Added', pairAddSr: 'Add {title} to bag', pairChoose: 'Choose', pairChooseSr: 'Choose a size of {title}', stories: 'The story', storyOf: '{i} / {n}',
   shopNav: 'Shop', collectionsNav: 'Collections', categoriesNav: 'Categories', tabsNav: 'Shop tabs', policiesNav: 'Policies', viewAll: 'View all', footerNav: 'More',
   // The page titles' one home (the policy pages themselves stay English: their text is legal wording, checked in English).
   policy: { ...POLICY_TITLE },
@@ -37,6 +38,7 @@ export type Words = typeof EN
 
 const HI: Words = {
   skip: 'सीधे सामग्री पर जाएँ', shopAll: 'सब देखें', menu: 'मेन्यू', contact: 'संपर्क', home: 'होम', shop: 'शॉप', search: 'खोजें', bag: 'बैग', bagOne: 'बैग, 1 आइटम', bagMany: 'बैग, {n} आइटम',
+  pairWith: 'इसके साथ लें', pairAdd: 'जोड़ें', pairAdded: 'जुड़ गया', pairAddSr: '{title} बैग में डालें', pairChoose: 'चुनें', pairChooseSr: '{title} का साइज़ चुनें', stories: 'कहानी', storyOf: '{i} / {n}',
   shopNav: 'शॉप', collectionsNav: 'कलेक्शन', categoriesNav: 'श्रेणियाँ', tabsNav: 'शॉप टैब', policiesNav: 'नीतियाँ', viewAll: 'सभी देखें', footerNav: 'और',
   policy: { shipping: 'शिपिंग', returns: 'वापसी और एक्सचेंज', privacy: 'प्राइवेसी', terms: 'बिक्री की शर्तें', contact: 'संपर्क करें' },
   grievance: 'शिकायत अधिकारी',

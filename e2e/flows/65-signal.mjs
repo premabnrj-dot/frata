@@ -24,8 +24,8 @@ export default {
     const p = await ctx.newPage(); p.setDefaultTimeout(15_000); p.on('pageerror', (e) => t.errors.push(`${e.message} at ${p.url()}`))
     try {
       await t.step('Released by Admin: Signal is in the gallery; tried in a draft, the preview wears it', async () => {
-        // Every Signal version released: a new draft takes the newest (1.2.0, S2).
-        await db`insert into theme_versions (theme_key, version, released_at) values ('signal', '1.0.0', now()), ('signal', '1.1.0', now()), ('signal', '1.2.0', now()) on conflict (theme_key, version) do update set released_at = now(), recalled_at = null, withdrawn_at = null`
+        // Every Signal version released: a new draft takes the newest (1.3.0, S3).
+        await db`insert into theme_versions (theme_key, version, released_at) values ('signal', '1.0.0', now()), ('signal', '1.1.0', now()), ('signal', '1.2.0', now()), ('signal', '1.3.0', now()) on conflict (theme_key, version) do update set released_at = now(), recalled_at = null, withdrawn_at = null`
         await db`update shop_settings set sells = '{accessories}' where tenant_id = ${KESAR}`
         await p.goto(CONSOLE + '/console/look')
         await p.getByRole('button', { name: 'Signal', exact: true }).click()
@@ -45,7 +45,7 @@ export default {
         await f.locator('[data-card="tile"]').waitFor({ state: 'attached' })
         // S2 (1.2.0): the board's story half and type scale, filled with the bags set's samples in the preview.
         const [rev] = await db`select theme_version from shop_theme_revisions where tenant_id = ${KESAR} and theme_key = 'signal' order by updated_at desc limit 1`
-        assert.equal(rev.theme_version, '1.2.0')
+        assert.equal(rev.theme_version, '1.3.0')
         await f.locator('[data-scale="signal"]').waitFor({ state: 'attached' })
         await f.locator('.store-script-hero', { hasText: 'New season' }).waitFor()
         await f.locator('.store-spotlight').getByText('In spotlight').waitFor()
@@ -133,6 +133,57 @@ export default {
         await p.evaluate(() => localStorage.removeItem('frata.bag.v1'))
         const [{ n: after }] = await db`select count(*)::int n from shop_theme_revisions where tenant_id = ${KESAR}`
         assert.ok(after >= before)
+      })
+
+      await t.step('S3: a story and two pairings in the product editor; Signal 1.3\'s product page shows them, Add and Choose', async () => {
+        const [a] = await db`select id, handle, title from products where tenant_id = ${KESAR} and handle = 'chanderi-kurta-set'`
+        const [b] = await db`insert into products (tenant_id, handle, title, status, published_at, options, option_values) values (${KESAR}, 'e2e-daypack-mini', 'Daypack Mini', 'active', now(), '{Size}', '[["S","M"]]') returning id, handle, title`
+        await db`insert into variants (tenant_id, product_id, price, stock, option_values) values (${KESAR}, ${b.id}, 299000, 4, '{S}'), (${KESAR}, ${b.id}, 299000, 4, '{M}')`
+        const [c] = await db`insert into products (tenant_id, handle, title, status, published_at) values (${KESAR}, 'e2e-strap-tag', 'Strap Tag', 'active', now()) returning id, handle, title`
+        await db`insert into variants (tenant_id, product_id, price, stock) values (${KESAR}, ${c.id}, 49000, 5)`
+        try {
+          await p.setViewportSize({ width: 1440, height: 900 })
+          await p.goto(CONSOLE + `/console/products/${a.handle}`)
+          await p.getByRole('heading', { name: 'Stories' }).waitFor()
+          await p.getByText('Pick up to 2 pieces shoppers can add from this page.').waitFor()
+          await p.getByRole('button', { name: 'Add a story' }).click()
+          await p.locator('#st-0').fill('A pocket for everything')
+          await p.locator('#sx-0').fill('The main compartment opens flat, with room for three days of clothes.')
+          await p.getByRole('button', { name: 'Add a note' }).click()
+          await p.getByLabel('Note 1', { exact: true }).fill('Opens flat like a suitcase')
+          for (const piece of [c, b]) {
+            await p.locator('#pair-find').fill(piece.title.slice(0, 8))
+            await p.getByRole('button', { name: `Add ${piece.title}` }).click()
+          }
+          assert.equal(await p.locator('#pair-find').count(), 0, '2 of 2: the search closes')
+          await p.screenshot({ path: t.out('signal-s3-editor'), fullPage: true })
+          await p.getByRole('button', { name: 'Save', exact: true }).first().click()
+          await p.getByText(/^Saved/).waitFor()
+          const [row] = await db`select stories from products where id = ${a.id}`
+          assert.equal(row.stories.length, 1); assert.deepEqual(row.stories[0].notes, ['Opens flat like a suitcase'])
+          const pairs = await db`select paired_id from product_pairs where product_id = ${a.id} order by position`
+          assert.deepEqual(pairs.map((x) => x.paired_id), [c.id, b.id])
+          // The preview of the Signal 1.3 draft: the story as a slide (one story: no counter), Add for one size, Choose for sizes.
+          const [r] = await db`select id from shop_theme_revisions where tenant_id = ${KESAR} and theme_key = 'signal' order by updated_at desc limit 1`
+          for (const [vp, tag] of [[{ width: 1440, height: 900 }, 'desktop'], [{ width: 390, height: 844 }, 'phone']]) {
+            await p.setViewportSize(vp)
+            await p.goto(CONSOLE + `/console/theme-preview/${r.id}/products/${a.handle}`)
+            await p.getByRole('heading', { name: 'A pocket for everything' }).waitFor()
+            await p.locator('.store-pair').getByText('Pair it with').waitFor()
+            await p.getByRole('button', { name: 'Add Strap Tag to bag' }).waitFor()
+            await p.getByRole('link', { name: `Choose a size of ${b.title}` }).waitFor()
+            await p.screenshot({ path: t.out(`signal-s3-product-${tag}`), fullPage: true })
+          }
+          await p.getByRole('button', { name: 'Add Strap Tag to bag' }).click()
+          await p.getByText('This is a preview: shoppers add to their bag here.').waitFor()
+          // Choose opens the piece inside the preview (impact review: links keep the preview's prefix).
+          await p.getByRole('link', { name: `Choose a size of ${b.title}` }).click()
+          await p.waitForURL(new RegExp(`/console/theme-preview/${r.id}/products/${b.handle}$`))
+        } finally {
+          await db`update products set stories = '[]' where id = ${a.id}`
+          await db`delete from product_pairs where tenant_id = ${KESAR}`
+          await db`delete from products where id in (${c.id}, ${b.id})`
+        }
       })
     } finally {
       await ctx.close()

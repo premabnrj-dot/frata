@@ -35,14 +35,14 @@ export async function previewPage(o: { tenantId: string; shop: StoreShop; path: 
     if (r.kind === 'moved') redirect(href(`/products/${r.to}`))
     // A sample piece's page: only when the shop has no product of its own at this address. Not live: the bag is off.
     const sample = r.kind === 'none' && samples && isSampleHandle(b) ? sampleProduct(b, set) : null
-    if (sample) return { body: <ProductView shop={shop} p={sample} now={now} layout={theme.settings} />, note: null }
+    if (sample) return { body: <ProductView shop={shop} p={sample} now={now} layout={theme.settings} extras={theme.product} href={href} />, note: null }
     if (r.kind === 'none') return { body: <ShopNotFound href={href} lang={shop.shopLanguage} />, note: null }
     const p = r.product
     const v = visibility(p.status as Status, p.publishAt ? new Date(p.publishAt) : null, now)
     const label = statusLabel(p.status as Status, p.publishAt ? new Date(p.publishAt) : null, now)
     const note = !v.reachable ? `${label}: shoppers ${v.gone ? 'read that it is no longer available' : 'get "page not found"'} here.`
       : !v.listed ? 'Unlisted: shoppers with the link see this page; it is not in lists or search.' : null
-    return { body: v.gone ? <GoneView title={p.title} cat={await previewCatalogue(tenantId)} href={href} now={now} lang={shop.shopLanguage} /> : <ProductView shop={shop} p={p} now={now} layout={theme.settings} />, note }
+    return { body: v.gone ? <GoneView title={p.title} cat={await previewCatalogue(tenantId)} href={href} now={now} lang={shop.shopLanguage} /> : <ProductView shop={shop} p={p} now={now} layout={theme.settings} extras={theme.product} href={href} />, note }
   }
   if (a === 'collections' && b) {
     const cat = await previewCatalogue(tenantId)

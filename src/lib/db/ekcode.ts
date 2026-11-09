@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm'
 import { db } from './index'
 
 // =============================================================================
-// FILE: src/lib/db/ekcode.ts — EVERY CALL INTO THE EKCODE VAULT (drizzle/0087), and nothing else. Each is one SECURITY
+// FILE: src/lib/db/ekcode.ts — EVERY CALL INTO THE EKCODE VAULT (drizzle/0088), and nothing else. Each is one SECURITY
 // DEFINER function that re-checks its own proof; this file only shapes arguments and answers. The app never reads an
 // ekcode_* table (it holds no grant). Callers: src/lib/ekcode/** and the EkCode routes. Never log an argument here.
 // =============================================================================

@@ -10,6 +10,8 @@ import { isColourOption } from '@/domains/storefront/picker'
 import type { StoreProduct, StoreShop } from '@/lib/queries/storefront'
 import type { ThemeSettings } from '@/domains/themes/types'
 import { BuyBox, type OfferLine } from './buy-box'
+import { PairRows, StoriesSlides, StoriesStacked } from './product-stories'
+import type { Href } from './shell'
 import { buyWords, fill, wordsFor } from './words'
 import { JsonLd } from './json-ld'
 
@@ -41,8 +43,12 @@ export function productOffer(p: StoreProduct, now: Date) {
 }
 
 /** The product page (spec § Product page). Server-rendered; the choices are one client island. */
-export function ProductView({ shop, p, now, live = false, layout, offers, below, rating }: {
+export function ProductView({ shop, p, now, live = false, layout, offers, below, rating, extras, href = (x) => x }: {
   shop: StoreShop; p: StoreProduct; now: Date; live?: boolean
+  /** Signal 1.3: whether the theme shows the piece's stories and its pairings (ResolvedTheme.product). */
+  extras?: { stories: boolean; pairs: boolean }
+  /** Links to other pieces (Pair it with): the preview keeps them inside it; the shop's are plain paths. */
+  href?: Href
   /** The theme's product page (T2); absent = today's layout. */
   layout?: Pick<ThemeSettings, 'gallery' | 'details'> & Partial<Pick<ThemeSettings, 'buyBoxSticky' | 'buyBar' | 'bottomTabs'>>
   /** Offers O·2's lines after the price, and what modules put under the page (Reviews, Size and fit): nothing without them. */
@@ -72,12 +78,17 @@ export function ProductView({ shop, p, now, live = false, layout, offers, below,
       return { sku: v.sku, gtin: v.gtin, values: v.values, price: v.price, availability: availability(factsOf(v), now), image: img ? urlFor(img.base, pick(img.widths, 1200)) : null }
     }),
   })
+  const stacked = layout?.gallery === 'stack'
+  const stories = extras?.stories ? p.stories : []
+  const pairs = extras?.pairs ? <PairRows pairs={p.pairs} now={now} live={live} w={w} bw={buyWords(shop.shopLanguage)} href={href} /> : null
   return (
     <article className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
       <BuyBox title={p.title} options={p.options} values={p.optionValues} variants={p.variants.map(({ restockedAt: _, ...v }) => v)} colours={p.colours} images={p.images}
         chart={p.sizeChart && p.sizeChart.rows.length ? p.sizeChart : null} model={model} now={now.toISOString()}
         delivery={{ shippingFlat: shop.shippingFlat, freeShippingAbove: shop.freeShippingAbove, codOn: shop.codOn, codMin: shop.codMin, codMax: shop.codMax, codCharge: shop.codCharge }}
-        live={live} notes={notes} taxNote={shop.pricesIncludeGst ? w.taxIncluded : w.taxAdded} w={buyWords(shop.shopLanguage)} gallery={layout?.gallery} stickyBox={layout?.buyBoxSticky} buyBar={layout?.buyBar} aboveTabs={layout?.bottomTabs} offers={offers ?? pdpLines(p.offers, now)} />
+        live={live} notes={notes} taxNote={shop.pricesIncludeGst ? w.taxIncluded : w.taxAdded} w={buyWords(shop.shopLanguage)} gallery={layout?.gallery} stickyBox={layout?.buyBoxSticky} buyBar={layout?.buyBar} aboveTabs={layout?.bottomTabs} offers={offers ?? pdpLines(p.offers, now)}
+        belowGallery={stacked && stories.length ? <StoriesStacked stories={stories} w={w} /> : undefined} belowBuy={pairs} />
+      {!stacked && <StoriesSlides stories={stories} w={w} />}
       {layout?.details === 'folded'
         ? <div className="mt-8 max-w-2xl divide-y divide-store-line border-y border-store-line">
             {p.description && <details><summary className="flex min-h-12 cursor-pointer items-center justify-between text-lg font-medium">{w.about}<span aria-hidden="true">+</span></summary>

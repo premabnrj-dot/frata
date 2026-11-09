@@ -55,7 +55,7 @@ export async function GET(request: Request) {
     const n = await processMux(tenantId).catch((e) => { console.error('[cron] mux', tenantId, errName(e)); return 0 })
     events += n
   })
-  // EkCode (P1): delivery reports not yet applied, then the daily roll-up and retention (ekcode_daily, 0087).
+  // EkCode (P1): delivery reports not yet applied, then the daily roll-up and retention (ekcode_daily, 0088).
   let ekcode = 0
   try { ekcode = await applyEkcodeEvents(1000); await dailyEkcode() } catch (e) { console.error('[cron] ekcode', errName(e)) }
   return NextResponse.json({ claimed, sent, events, erased, billing, collection, ekcode })

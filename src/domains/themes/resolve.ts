@@ -113,7 +113,8 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
     if (x.key === 'hero' && x.script !== undefined && !scriptOk) { const { script: _drop, ...rest } = x; x = rest }
     return [x]
   })
-  return { key: m.key, version: m.version, style: style.key, schemes, settings, home, ...(m.rhythm ? { rhythm: m.rhythm } : {}), ...(m.scale ? { scale: m.scale } : {}), site, menus: readMenus(layer.menus) }
+  return { key: m.key, version: m.version, style: style.key, schemes, settings, home, ...(m.rhythm ? { rhythm: m.rhythm } : {}), ...(m.scale ? { scale: m.scale } : {}),
+    ...(m.allowed.productStories || m.allowed.pairWith ? { product: { stories: !!m.allowed.productStories, pairs: !!m.allowed.pairWith } } : {}), site, menus: readMenus(layer.menus) }
 }
 
 /**

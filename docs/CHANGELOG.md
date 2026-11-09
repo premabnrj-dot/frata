@@ -3,6 +3,13 @@
 What a merchant (or Frata staff) can do now that they could not before, newest first. One entry per closed
 phase; the detail is in its plan.
 
+## 2026-11-09 — Signal 1.3.0: product stories and Pair it with ([plan](plans/2026-11-09-signal-s3.md))
+
+- **Stories on a product page:** up to six per piece, each a photo, a title, a few words and up to three numbered
+  notes, written in the product editor. On Signal 1.3 they sit under the photos, or as "1 / 6" slides.
+- **Pair it with:** pick up to two pieces in the editor; shoppers add a one-size piece straight to the bag from the
+  page, or open a sized one to choose. A piece that's sold out, archived or not yet live is left out by itself.
+
 ## 2026-11-09 — Signal 1.2.0: the story half ([plan](plans/2026-11-09-signal-s2.md))
 
 - **Three new sections for Signal:** a **Spotlight** (words beside a wide photo or loop), a **Story fan** (3 to 7 story

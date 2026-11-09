@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { inches, type Chart } from '@/domains/catalogue/size-charts'
-import { createType, saveSizeChart } from '../actions'
+import { createType, saveSizeChart } from '../type-actions'
 import { Icon } from '@/components/icons/icon'
 
 export type TypeRow = { id: string; name: string; sizeChart: Chart; uses: number }

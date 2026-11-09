@@ -277,10 +277,10 @@ merchant's colour (`signal`) is computed at render (`schemeVars`) from the FINAL
 Samples follow what the shop sells (`sampleSetFor`), only in preview routes; every sample file is credited
 (`public/themes/samples/CREDITS.json`, `check:credits`). The storefront budget gate sums the layouts above a page.
 
-**A new option on a released version is a new version (Signal 1.1, 1.2):** a released manifest never changes
+**A new option on a released version is a new version (Signal 1.1, 1.2, 1.3):** a released manifest never changes
 (`released-manifests` snapshot); an optional field (`video`, `script`, `layout: 'spotlight'`) keeps older looks
 byte-identical, and resolve drops it where the theme doesn't offer it (`allowed.videoSections`, `imageTextLayouts`,
-`heroScript`, `scale`). **Section schemas are lenient** (a blank one parses, so autosave never fails); whether it
+`heroScript`, `scale`, `productStories`/`pairWith` → `ResolvedTheme.product`). **Section schemas are lenient** (a blank one parses, so autosave never fails); whether it
 shows is readiness's, non-blocking for "empty (hidden)". **Two stylesheets (S2-0):** `src/app/shop.css` (Tailwind from
 the shop's sources only + `base.css`) is the root's; every non-shop entry adds `globals.css` (the full app sheet)
 after it. A class a shop page uses from outside the shop's folders must be added to `shop.css`'s `@source` list;
@@ -376,6 +376,20 @@ after it. A class a shop page uses from outside the shop's folders must be added
   regenerates them in the same commit: `UPDATE_BASELINES=1 npm run e2e -- --only shop-look`. Look's state changes:
   `look.int.test.ts` (real Postgres) and e2e `47-look`.
 
+## Catalogue links (Signal S3, 2026-11-09; plan docs/plans/2026-11-09-signal-s3.md)
+
+- **A link between two products is a table with composite FKs**, never an id array: `product_pairs` (tenant_id,
+  product_id, paired_id) → products (tenant_id, id) on both sides, so the database refuses another shop's product
+  (tenancy.sql §62). The save still selects the ids with an explicit tenant and refuses unless every one is found
+  (`savePairs`, one message for "not yours" and "missing").
+- **Content that belongs to one product lives on it** (`products.stories` jsonb, like `label`): Zod caps by
+  characters (`domains/catalogue/stories.ts`), a looser CHECK by bytes in the database.
+- **A photo a second place uses joins the in-use check:** `editPhoto` keeps the files while a look's settings or any
+  product's stories mention the base. A story photo is rebuilt with `acceptedBase(…, 'products')` on every save.
+- **The shop reads a page's linked pieces inside its own entry** (`coreProduct`: ≤ 2 pieces, variants, first photo,
+  in the same round; drafts never), tagged `catalogue` so a linked piece's change purges the page; which ones show,
+  at what price, Add or Choose, is one pure rule (`domains/storefront/pairs.ts`).
+
 ## Search and sharing (S·1, 2026-11-09; spec docs/specs/2026-11-09-seo-and-sharing.md)
 
 - **One writer of a shop page's tags**: `pageTags` (`src/domains/seo/tags.ts`, pure), mapped to Next metadata by
@@ -404,7 +418,7 @@ after it. A class a shop page uses from outside the shop's folders must be added
   answer there; `/ek` and `/api/ek` are a 404 everywhere else; it is never a shop (`requireShop` refuses it) and never
   the console (no Supabase session). Its pages are `src/app/ek/` reached through the rewrite; `/continue` gets a nonce
   CSP from the middleware's ekcode branch.
-- **Platform tables with no door but definers.** The vault (`ekcode_*`, drizzle/0087): `revoke all` from every role, one
+- **Platform tables with no door but definers.** The vault (`ekcode_*`, drizzle/0088): `revoke all` from every role, one
   `restrictive` `definer_only` policy `using (false)`, definers pinned to `search_path ''` and executable by exactly one
   role; `check:tenant` fails any table grant on them. Scope always comes from a server-made handle (the shop's own
   request makes the flow), never from an argument a caller chooses. No definer returns an account id; a shop's id for

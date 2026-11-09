@@ -6,7 +6,7 @@ import { recordExposure } from '@/lib/db/ekcode'
 import { tokenDigest } from '@/lib/ekcode/keys'
 
 // The holdout's denominator (spec § Goal): one beacon per visitor a day says which arm saw this shop's checkout. Only
-// the id's hash is kept, rolled up nightly and deleted (0087 app_ekcode_exposure, app_ekcode_daily).
+// the id's hash is kept, rolled up nightly and deleted (0088 app_ekcode_exposure, app_ekcode_daily).
 export const dynamic = 'force-dynamic'
 const Body = z.object({ arm: z.enum(['shown', 'held']), visitor: z.string().regex(/^[A-Za-z0-9_-]{22}$/) })
 

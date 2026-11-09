@@ -172,6 +172,24 @@ button{font:inherit;color:inherit;cursor:pointer}
 .cz .view{background:var(--muted);padding:18px;display:grid;place-items:start center}
 .cz .view .shop{width:100%;max-width:640px;border-radius:8px;box-shadow:0 8px 30px #00000014}
 /* video field (console) */
+.ed{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;padding:16px}
+.ed .card{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:14px;display:grid;gap:12px;align-content:start}
+.ed h4{margin:0;font-size:15px}.ed .lim{font-size:12px;color:var(--sub);font-weight:400;margin-left:6px}
+.story{border:1px solid var(--border);border-radius:8px;padding:10px;display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:10px;align-items:start}
+.story .ph{aspect-ratio:1;border-radius:6px;background:var(--muted)}
+.story b{font-size:13px;display:block}.story small{color:var(--sub);font-size:12px}
+.story .act{display:flex;gap:2px;color:var(--sub);font-size:13px}.story .act span{width:28px;height:28px;display:grid;place-items:center;border-radius:6px}
+.open{border:1.5px solid var(--fg);border-radius:8px;padding:12px;display:grid;gap:10px}
+.inp{border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;background:var(--card)}
+.inp.ta{min-height:54px;color:var(--sub)}.lbl{font-size:12.5px;font-weight:500;margin-bottom:4px;display:flex;justify-content:space-between}.lbl i{font-style:normal;color:var(--sub);font-weight:400}
+.note{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;align-items:center}.note .n{width:22px;height:22px;border-radius:999px;background:var(--fg);color:var(--card);font-size:11px;display:grid;place-items:center;font-weight:600}
+.addrow{border:1.5px dashed var(--border);border-radius:8px;padding:10px;text-align:center;font-size:13px;font-weight:500}
+.dropz{border:1.5px dashed var(--border);border-radius:8px;padding:16px;text-align:center;font-size:13px}.dropz b{display:block}
+.pair{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--border);border-radius:8px;padding:8px}
+.pair .ph{width:44px;height:52px;border-radius:5px;background:var(--muted)}.pair small{color:var(--sub)}
+.search{border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--sub);display:flex;justify-content:space-between}
+.empty{color:var(--sub);font-size:13px}
+@media (max-width:760px){.ed{grid-template-columns:1fr}}
 .vf{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;padding:16px}
 .vcard{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:12px;display:grid;gap:10px;align-content:start}
 .vcard h6{margin:0;font-size:12px;color:var(--sub);font-weight:500}
@@ -217,7 +235,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 
 <div class="wrap">
   <nav class="boards" aria-label="Boards">
-    <a href="#home">Home · computer</a><a href="#phone">Home · phone</a><a href="#product">Product page</a><a href="#customize">Customize</a><a href="#video">Video</a><a href="#samples">Samples</a><a href="#phases">Phases</a>
+    <a href="#home">Home · computer</a><a href="#phone">Home · phone</a><a href="#product">Product page</a><a href="#customize">Customize</a><a href="#video">Video</a><a href="#editor">Product editor</a><a href="#samples">Samples</a><a href="#phases">Phases</a>
   </nav>
   <h1>Signal</h1>
   <p class="sub">A theme for brands whose product is the hero: bags, footwear, accessories, western wear. One signal colour, one grotesk, grey tiles.</p>
@@ -380,6 +398,58 @@ button{font:inherit;color:inherit;cursor:pointer}
     <div class="vcard"><h6>Ready</h6><div class="thumb">▶<span class="dur">0:12</span></div><div class="vrow"><span>Plays muted, on loop</span><span><span class="vbtn">Replace</span> <span class="vbtn">Remove</span></span></div></div>
     <div class="vcard"><h6>Didn’t work</h6><div class="drop" style="border-color:#f3b0a8"><div class="bad"><b class="bad">This file can’t play</b><br>Try an MP4 under 30 s</div></div><div class="vrow"><span class="vbtn">Choose another</span></div></div>
   </div></div>
+
+
+  <!-- ===================== PRODUCT EDITOR (S3) ===================== -->
+  <h2 id="editor">Product editor <span class="ph">S3 · stories, pair it with</span></h2>
+  <div class="frame"><div class="ed">
+    <div class="card">
+      <h4>Stories<span class="lim">2 of 6</span></h4>
+      <div class="story"><div class="ph"></div><div><b>A pocket for everything</b><small>3 notes · Laptop sleeve, 15.6″…</small></div><div class="act"><span title="Move up"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span><span title="Move down"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span><span title="Remove"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div></div>
+      <div class="open">
+        <div class="dropz" style="padding:22px"><b>Drop a photo</b><span class="sub" style="font-size:12px">or choose one · or one of this product’s photos</span></div>
+        <div><div class="lbl">Title <i>24 / 60</i></div><div class="inp">Long-weekend ready.</div></div>
+        <div><div class="lbl">Text <i>96 / 300</i></div><div class="inp ta">The main compartment opens flat, with room for three days of clothes and a pouch for chargers.</div></div>
+        <div class="lbl" style="margin:0">Numbered notes <i>2 of 3</i></div>
+        <div class="note"><span class="n">1</span><div class="inp">Opens flat like a suitcase</div></div>
+        <div class="note"><span class="n">2</span><div class="inp">Charger pouch, inside the lid</div></div>
+        <div class="addrow" style="padding:7px">Add a note</div>
+      </div>
+      <div class="addrow">Add a story</div>
+    </div>
+    <div class="card">
+      <h4>Pair it with<span class="lim">1 of 2</span></h4>
+      <div class="pair"><div class="ph"></div><div><b style="font-size:13px">Strap Tag</b><br><small>₹490 · one size: Add on the shop</small></div><span class="vbtn">Remove</span></div>
+      <div class="search"><span>Find a piece…</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg></div>
+      <div class="pair" style="border-style:dashed"><div class="ph"></div><div><b style="font-size:13px">Daypack Mini</b><br><small>₹2,990 · 3 sizes: Choose on the shop</small></div><span class="vbtn">Add</span></div>
+      <div class="pair" style="border-style:dashed"><div class="ph"></div><div><b style="font-size:13px">Rain Cover</b><br><small>₹690 · one size</small></div><span class="vbtn">Add</span></div>
+    </div>
+  </div></div>
+  <div class="frame" style="margin-top:12px"><div class="ed">
+    <div class="card">
+      <h4>States</h4>
+      <div class="addrow" style="text-align:left;font-weight:400"><b style="font-size:13px">Stories · none yet</b><br><span class="empty">Add a story: a photo, a title, a few words, up to 3 numbered notes.</span></div>
+      <div class="story"><div class="ph"></div><div><b>Six of six</b><small>6 of 6 · no “Add a story” until one is removed</small></div><div class="act"><span title="Move up"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span><span title="Move down"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span><span title="Remove"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div></div>
+      <div class="dropz" style="border-color:#f3b0a8;text-align:left"><b style="color:#B42318">That photo didn’t come from this shop. Upload it again.</b></div>
+      <div class="addrow" style="text-align:left;font-weight:400"><b style="font-size:13px">Pair it with · none yet</b><br><span class="empty">Pick up to 2 pieces shoppers can add from this page.</span></div>
+    </div>
+    <div class="card">
+      <h4>States</h4>
+      <div class="search"><span>“zzz”</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg></div><p class="empty" style="margin:-4px 0 0">No piece called “zzz”.</p>
+      <div class="pair"><div class="ph" style="opacity:.5"></div><div><b style="font-size:13px">Old Tote</b><br><small style="color:#B42318">Archived: not shown on the shop</small></div><span class="vbtn">Remove</span></div>
+      <div class="pair"><div class="ph" style="opacity:.5"></div><div><b style="font-size:13px">Kora Tote</b><br><small style="color:#B42318">Sold out: not shown until it’s back</small></div><span class="vbtn">Remove</span></div>
+      <p class="empty" style="margin:0">2 of 2: the search closes. This product never appears in its own list.</p>
+    </div>
+  </div></div>
+  <div class="phones" style="margin-top:12px"><div><div class="phone" style="background:var(--card);padding:14px;display:grid;gap:10px">
+    <h4 style="margin:0;font-size:15px">Stories<span class="lim"> 2 of 6</span></h4>
+    <div class="story"><div class="ph"></div><div><b>A pocket for everything</b><small>3 notes</small></div><div class="act"><span title="Move up"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span><span title="Move down"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span><span title="Remove"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div></div>
+    <div class="story"><div class="ph"></div><div><b>Long-weekend ready</b><small>2 notes</small></div><div class="act"><span title="Move up"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span><span title="Move down"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg></span><span title="Remove"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div></div>
+    <div class="addrow">Add a story</div>
+    <h4 style="margin:6px 0 0;font-size:15px">Pair it with<span class="lim"> 1 of 2</span></h4>
+    <div class="pair"><div class="ph"></div><div><b style="font-size:13px">Strap Tag</b><br><small>₹490</small></div><span class="vbtn">Remove</span></div>
+    <div class="search"><span>Find a piece…</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg></div>
+  </div><p class="sub" style="text-align:center;font-size:12px">Phone</p></div></div>
 
   <!-- ===================== SAMPLES ===================== -->
   <h2 id="samples">Sample sets in the preview <span class="ph">S0</span></h2>

@@ -7,7 +7,7 @@ import { cleanMobile } from '@/domains/checkout/mobile'
 
 // =============================================================================
 // FILE: src/lib/admin/ekcode.ts — ADMIN › EKCODE (P1 task 10): counts, costs and controls, through the admin definers
-// only (drizzle/0087). Staff never list shoppers or read an address; every write carries a reason into the audit log.
+// only (drizzle/0088). Staff never list shoppers or read an address; every write carries a reason into the audit log.
 // =============================================================================
 
 export type EkStats = { accounts: number; active: number | null; multi_shop: number | null; started: number; codes: number; delivered: number; verified: number; created: number; continued: number; peak_minute: number; codes_month: number }

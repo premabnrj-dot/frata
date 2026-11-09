@@ -19,6 +19,7 @@ import { ProductEditor } from '../_components/product-editor'
 import { ShareSheet } from '../../_components/share-sheet'
 import { shareFor } from '@/lib/seo/share'
 import { NowProvider } from '@/components/time/now'
+import { readStories } from '@/domains/catalogue/stories'
 
 /** The tab names the product ("Linen kurta set · Kesar Studio"), never "Product" (stress test S14). */
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }) {
@@ -91,6 +92,7 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
         colours: data.colours.map((c) => ({ value: c.value, family: c.family, hex: c.hex, crop: c.cropImageId && c.crop ? { imageId: c.cropImageId, ...c.crop } : null })),
         tax: { hsn: p.hsn ?? '', uqc: p.uqc, ownBps: p.gstBps === null ? '' : String(p.gstBps), origin: p.originCountry ?? '' },
         label: labelInput(readLabel(p.label)),
+        ...(data.offers.stories ? { stories: readStories(p.stories) } : {}), ...(data.offers.pairs ? { pairs: data.pairs } : {}),
       }}
       shop={{
         name: shop.name, address, skuPrefix: orderPrefix(shop.orderPrefix, shop.name),

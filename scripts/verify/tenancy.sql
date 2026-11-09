@@ -2221,7 +2221,42 @@ do $$ begin
   then raise exception 'FAIL: an API role runs the Mux definer'; end if;
 end $$;
 
--- 62. EkCode (0087): no role reads the vault; every step needs a server-made flow handle and a fresh proof; a grant
+-- 62. Signal S3 (0087): a product's pairings are the shop's own rows, and a pair can never name another shop's product
+-- (composite FKs, not an id array); stories stay inside the products policy, with a size backstop.
+insert into products (id, tenant_id, handle, title) values ('eeeeeeee-0000-0000-0000-0000000000a2', '11111111-1111-1111-1111-111111111111', 'a-strap', 'A strap');
+insert into products (id, tenant_id, handle, title) values ('eeeeeeee-0000-0000-0000-0000000000b2', '22222222-2222-2222-2222-222222222222', 'b-strap', 'B strap');
+insert into product_pairs (tenant_id, product_id, paired_id) values ('22222222-2222-2222-2222-222222222222', 'eeeeeeee-0000-0000-0000-00000000000b', 'eeeeeeee-0000-0000-0000-0000000000b2');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if exists (select 1 from product_pairs) then raise exception 'FAIL: A sees B pairs'; end if;
+  insert into product_pairs (tenant_id, product_id, paired_id) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', 'eeeeeeee-0000-0000-0000-0000000000a2');
+  begin insert into product_pairs (tenant_id, product_id, paired_id) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', 'eeeeeeee-0000-0000-0000-0000000000b2');
+    raise exception 'FAIL: A paired a B product'; exception when foreign_key_violation then null; end;
+  begin insert into product_pairs (tenant_id, product_id, paired_id) values ('22222222-2222-2222-2222-222222222222', 'eeeeeeee-0000-0000-0000-00000000000b', 'eeeeeeee-0000-0000-0000-0000000000b2');
+    raise exception 'FAIL: A wrote a B pair'; exception when insufficient_privilege then null; end;
+  begin insert into product_pairs (tenant_id, product_id, paired_id) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', 'eeeeeeee-0000-0000-0000-00000000000a');
+    raise exception 'FAIL: a product paired with itself'; exception when check_violation then null; end;
+  update products set stories = '[{"title":"x"}]' where id = 'eeeeeeee-0000-0000-0000-00000000000b';
+  get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A wrote B stories'; end if;
+  begin update products set stories = (select jsonb_agg(jsonb_build_object('title', i)) from generate_series(1, 7) i) where id = 'eeeeeeee-0000-0000-0000-00000000000a';
+    raise exception 'FAIL: seven stories stored'; exception when check_violation then null; end;
+  begin update products set stories = '{}' where id = 'eeeeeeee-0000-0000-0000-00000000000a';
+    raise exception 'FAIL: stories stored as an object'; exception when check_violation then null; end;
+end $$;
+rollback;
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['select', 'insert', 'update', 'delete']) p where has_table_privilege(r, 'product_pairs', p))
+  then raise exception 'FAIL: another role reads or writes pairs'; end if;
+  -- (service_role keeps Supabase's defaults on the older tables — CLAUDE.md: the Data API stays off; the new table revokes it.)
+  if exists (select 1 from unnest(array['anon', 'authenticated']) r where has_column_privilege(r, 'products', 'stories', 'select'))
+  then raise exception 'FAIL: an API role reads stories'; end if;
+  -- Deleting a paired product removes the pair (cascade), never leaves a dangling id.
+  delete from products where id = 'eeeeeeee-0000-0000-0000-0000000000b2';
+  if exists (select 1 from product_pairs where paired_id = 'eeeeeeee-0000-0000-0000-0000000000b2') then raise exception 'FAIL: a pair outlived its product'; end if;
+end $$;
+
+-- 63. EkCode (0088): no role reads the vault; every step needs a server-made flow handle and a fresh proof; a grant
 -- redeems once, only at its own shop and host with the right challenge; a save token works once at its own shop; an
 -- issue reply never says whether an account exists; the shop's customers, sessions and consents are its own; an order
 -- cannot point at another shop's customer; staff get counts, never a name, phone or address.
@@ -2320,4 +2355,4 @@ do $$ declare v record; begin
   end loop;
 end $$;
 
-\echo 'tenancy proof — all 62 checks passed'
+\echo 'tenancy proof — all 63 checks passed'
