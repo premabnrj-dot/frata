@@ -18,7 +18,6 @@ export const money = (name: string) => bigint(name, { mode: 'number' })
 
 import { MEMBER_ROLES, sqlList, type MemberRole } from '@/domains/tenancy/roles'
 import { PLAN_GRANTABLE } from '@/domains/modules/registry'
-import type { BlockedKind } from '@/domains/addresses/names'
 export { MEMBER_ROLES, type MemberRole }
 
 export const tenants = pgTable('tenants', {
@@ -35,42 +34,6 @@ export const tenants = pgTable('tenants', {
   /** Renames since the first opening: the limit's one count, raised only by app_change_shop_address (taking back an old name counts too). */
   renamesUsed: integer('renames_used').notNull().default(0),
 })
-
-/**
- * Every name a shop has had (shop addresses D·1). The primary key means a name is never given to a second shop; the
- * current one has no `retired_at`. A retired name redirects to the current one unless Frrata retired it. Written only by
- * the trigger on `tenants` and the rename and release definers (drizzle/0068, 0069); `tenants.slug` mirrors the current row.
- */
-export const shopNames = pgTable('shop_names', {
-  name: text('name').primaryKey(),
-  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  createdAt: createdAt(),
-  retiredAt: timestamp('retired_at', { withTimezone: true }),
-  retiredByFrrata: boolean('retired_by_frrata').notNull().default(false),
-}, (t) => [
-  uniqueIndex('shop_names_current').on(t.tenantId).where(sql`retired_at is null`),
-  index('shop_names_tenant').on(t.tenantId),
-  check('shop_names_lower', sql`${t.name} = lower(${t.name})`),
-])
-
-/** Names and domains no shop may take: protected brands, offensive words, blocked domains (Admin, with a reason). Frrata's own routing words stay in code (RESERVED). */
-export const blockedNames = pgTable('blocked_names', {
-  name: text('name').primaryKey(),
-  kind: text('kind').$type<BlockedKind>().notNull(),
-  reason: text('reason').notNull(),
-  createdBy: uuid('created_by'),
-  createdAt: createdAt(),
-}, (t) => [
-  check('blocked_names_kind', sql`${t.kind} in ('protected','offensive','domain')`),
-  check('blocked_names_lower', sql`${t.name} = lower(${t.name})`),
-])
-
-/** A merchant's own storefront domain. A platform subdomain (`<slug>.SHOP_DOMAIN`) is never stored: it is found by slug. */
-export const tenantDomains = pgTable('tenant_domains', {
-  host: text('host').primaryKey(),
-  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  createdAt: createdAt(),
-}, (t) => [index('tenant_domains_tenant').on(t.tenantId)])
 
 /** Who may use a tenant's console. `user_id` is a Supabase auth user. */
 export const members = pgTable('members', {

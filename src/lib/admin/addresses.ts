@@ -1,7 +1,8 @@
 import 'server-only'
 import { asc, desc, eq, isNotNull, sql } from 'drizzle-orm'
 import { adminDb } from '@/lib/db/admin'
-import { blockedNames, shopNames, tenants } from '@/lib/db/schema'
+import { tenants } from '@/lib/db/schema'
+import { blockedNames, shopNames } from '@/lib/db/schema-addresses'
 import type { StaffOk } from '@/lib/auth/require-staff'
 import { errName } from '@/lib/log'
 

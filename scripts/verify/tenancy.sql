@@ -382,6 +382,37 @@ do $$ begin
 end $$;
 rollback;
 
+begin;
+-- Own domains D2·2 (0080/0081): a shop reads only its own domain rows and writes none; a host is live for one shop
+-- at most; a host under Frrata's or Vercel's domains, a short token, or a main domain without proof is refused.
+insert into shop_domains (tenant_id, host, with_www, token, claimed_by) values
+  ('11111111-1111-1111-1111-111111111111', 'proof-a.in', true, repeat('a', 32), '99999999-9999-9999-9999-999999999999'),
+  ('22222222-2222-2222-2222-222222222222', 'proof-a.in', true, repeat('b', 32), 'aaaaaaaa-0000-0000-0000-000000000002');
+update shop_domains set proved_at = now() where tenant_id = '11111111-1111-1111-1111-111111111111';
+do $$ begin
+  begin update shop_domains set proved_at = now() where tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: two shops hold one host live';
+  exception when unique_violation then null; end;
+  begin insert into shop_domains (tenant_id, host, with_www, token, claimed_by) values ('22222222-2222-2222-2222-222222222222', 'shop.frrata.shop', false, repeat('c', 32), 'aaaaaaaa-0000-0000-0000-000000000002'); raise exception 'FAIL: a Frrata host was claimed';
+  exception when check_violation then null; end;
+  begin insert into shop_domains (tenant_id, host, with_www, token, claimed_by) values ('22222222-2222-2222-2222-222222222222', 'x.vercel.app', false, repeat('c', 32), 'aaaaaaaa-0000-0000-0000-000000000002'); raise exception 'FAIL: a vercel.app host was claimed';
+  exception when check_violation then null; end;
+  begin insert into shop_domains (tenant_id, host, with_www, token, claimed_by) values ('22222222-2222-2222-2222-222222222222', 'proof-b.in', false, 'short', 'aaaaaaaa-0000-0000-0000-000000000002'); raise exception 'FAIL: a short token';
+  exception when check_violation then null; end;
+  begin update shop_domains set main_at = now() where tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: main without proof';
+  exception when check_violation then null; end;
+end $$;
+set local role frata_app;
+select set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+do $$ declare n int; begin
+  if exists (select 1 from shop_domains where tenant_id = '11111111-1111-1111-1111-111111111111') then raise exception 'FAIL: B reads A''s domains'; end if;
+  if not exists (select 1 from shop_domains where tenant_id = '22222222-2222-2222-2222-222222222222') then raise exception 'FAIL: B can''t read its own domains'; end if;
+  begin update shop_domains set proved_at = now(); raise exception 'FAIL: the app writes a domain';
+  exception when insufficient_privilege then null; end;
+  begin insert into shop_domains (tenant_id, host, with_www, token, claimed_by) values ('22222222-2222-2222-2222-222222222222', 'proof-c.in', false, repeat('d', 32), 'aaaaaaaa-0000-0000-0000-000000000002'); raise exception 'FAIL: the app claims a domain directly';
+  exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+
 -- 20. Catalogue: own shop only, and a child row can never point at another shop's product.
 insert into product_types (id, tenant_id, name, size_chart) values
   ('dddddddd-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'Kurta', '{"columns":[],"rows":[],"howToMeasure":""}');
@@ -1830,4 +1861,4 @@ do $$ begin
      or (select order_line_id from reviews where id = 'bdbdbdbd-0000-0000-0000-00000000000b') is not null then raise exception 'FAIL: set null touched tenant_id or kept the line'; end if;
 end $$;
 
-\echo 'tenancy proof — all 54 checks passed'
+\echo 'tenancy proof — all 55 checks passed'

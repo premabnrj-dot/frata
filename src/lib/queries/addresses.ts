@@ -1,6 +1,7 @@
 import 'server-only'
 import { eq } from 'drizzle-orm'
-import { shopNames, tenants } from '@/lib/db/schema'
+import { tenants } from '@/lib/db/schema'
+import { shopNames } from '@/lib/db/schema-addresses'
 import { withTenant } from '@/lib/db/tenant'
 import type { NameRow } from '@/domains/addresses/names'
 
