@@ -39,7 +39,7 @@ function Hero({ s, ctx }: { s: SectionOf<'hero'>; ctx: SectionCtx }) {
   const heading = said(s.heading, ctx.shop), text = said(s.text, ctx.shop)
   if (!heading) return null
   // Signal 1.2: a handwritten line above the heading (resolve keeps it only where the theme offers it).
-  const title = <>{s.script && <p className="store-script store-script-hero">{s.script}</p>}<h1 className="max-w-3xl text-4xl leading-[1.05] sm:text-6xl" style={{ fontFamily: 'var(--store-display)' }}><Sized>{heading}</Sized></h1></>
+  const title = <>{s.script?.trim() && <p className="store-script store-script-hero">{s.script}</p>}<h1 className="max-w-3xl text-4xl leading-[1.05] sm:text-6xl" style={{ fontFamily: 'var(--store-display)' }}><Sized>{heading}</Sized></h1></>
   // V1: a playable loop stands in for a missing photo (its first frame paints first).
   const loop = s.video && ctx.videos?.[s.video.id] ? s.video.id : undefined
   if (s.layout === 'text' || (!s.image && !loop)) {
