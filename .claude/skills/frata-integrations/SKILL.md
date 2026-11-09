@@ -619,4 +619,6 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   `MUX_ENVIRONMENT_ID`. Unverified on a real Mux account until the owner's first upload: the upload URL's host
   (no CSP depends on it), where `passthrough` and `upload_id` appear on upload vs asset events (the definer accepts
   either route), the static rendition file's shape (`name: highest.mp4` / `resolution: highest`, `status: ready`), and
-  whether a looped MP4's replays are billed again (measure in the development environment) [U].
+  ~~whether a looped MP4's replays are billed again~~ — measured 2026-11-09 on a real 12 s, 1080p, 3.0 MB loop in
+  Chromium: 4 replays in 50 s = ONE request (206, bytes=0-), no refetch; Mux serves the MP4 with `cache-control:
+  max-age=86400`, so a return visit within a day may cost nothing. Safari/iOS (range requests) not measured [S].
