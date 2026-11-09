@@ -29,6 +29,9 @@ export type ModuleDef = {
   group: Group
   billing: Billing
   status: Status
+  /** An add-on sold only on these plans (owner, 2026-11-09: Reviews on Growth and Scale); absent = any plan. A trial
+   *  or add-on row on another plan grants nothing, so a downgrade stops it. */
+  addOnFor?: readonly ('launch' | 'growth' | 'scale')[]
   /** Charged by someone else, named so the merchant is never surprised. */
   usage?: string
   /** What the merchant gets, 4–6 short lines (the details dialog). */
@@ -59,7 +62,7 @@ export const MODULES: Record<ModuleKey, ModuleDef> = {
     features: ['Profit per delivered order', 'By product, size and colour', 'RTO cost by pincode', 'By campaign, on delivered orders'],
   },
   reviews: {
-    key: 'reviews', name: 'Reviews', job: 'Photo reviews after delivery, on the product page.', group: 'grow', billing: 'add_on', status: 'next', dependsOn: ['communication'], outboxKinds: [],
+    key: 'reviews', name: 'Reviews', job: 'Photo reviews after delivery, on the product page.', group: 'grow', billing: 'add_on', status: 'next', dependsOn: ['communication'], outboxKinds: [], addOnFor: ['growth', 'scale'],
     usage: 'WhatsApp asks are billed by Meta',
     features: ['A WhatsApp ask after delivery', 'Photos and stars on the product page', 'Delivered buyers only', 'You approve each one', 'Stars in Google results'],
   },

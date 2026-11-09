@@ -4,7 +4,7 @@ import { adminDb } from '@/lib/db/admin'
 import { modulePauses, tenantAddons, tenantModules } from '@/lib/db/schema-modules'
 import type { StaffOk } from '@/lib/auth/require-staff'
 import { currentPlan } from '@/domains/plans/entitlements'
-import { liveAddon, moduleAccess, type ModuleAccess, type ModuleFacts } from '@/domains/modules/access'
+import { addOnAllowed, liveAddon, moduleAccess, type ModuleAccess, type ModuleFacts } from '@/domains/modules/access'
 import { isModuleKey, MODULES, PLAN_GRANTABLE, type ModuleKey } from '@/domains/modules/registry'
 import { auditStaff } from './audit'
 import { tenantPlanHistory } from './plans'
@@ -21,6 +21,7 @@ export const TRIAL_DAYS = 30
 export type MerchantModules = {
   access: Record<ModuleKey, ModuleAccess>
   planName: string | null
+  planCode: string | null
   switchedOnAt: Partial<Record<ModuleKey, Date>>
   /** The add-on or trial in force per module (the one an "End" acts on). */
   addonId: Partial<Record<ModuleKey, string>>
@@ -37,6 +38,7 @@ export async function merchantModules(staff: StaffOk, tenantId: string, now: Dat
   ])
   const plan = currentPlan(history.map((h) => ({ ...h, startsAt: h.tp.startsAt })), now)
   const facts: ModuleFacts = {
+    planCode: plan?.code ?? null,
     planFeatures: plan?.v.features ?? [],
     addons: addons.filter((a) => isModuleKey(a.module)).map((a) => ({ id: a.id, module: a.module as ModuleKey, startsAt: a.startsAt, endsAt: a.endsAt, trialEndsAt: a.trialEndsAt })),
     switchedOn: switches.map((s) => s.module).filter(isModuleKey),
@@ -47,12 +49,12 @@ export async function merchantModules(staff: StaffOk, tenantId: string, now: Dat
   for (const s of switches) if (isModuleKey(s.module)) switchedOnAt[s.module] = s.enabledAt
   const addonId: MerchantModules['addonId'] = {}
   for (const k of PLAN_GRANTABLE) { const a = liveAddon(facts.addons, k, now); if (a?.id) addonId[k] = a.id }
-  return { access, planName: plan?.name ?? null, switchedOnAt, addonId }
+  return { access, planName: plan?.name ?? null, planCode: plan?.code ?? null, switchedOnAt, addonId }
 }
 
 /** A free trial of a module the shop's plan does not grant. Refuses a module not built yet (its days would
  *  run out unused) and one the shop already has; two clicks give one trial (a lock per shop and module). */
-export async function giveTrial(staff: StaffOk, tenantId: string, module: ModuleKey, now: Date): Promise<'given' | 'has_it' | 'core' | 'next'> {
+export async function giveTrial(staff: StaffOk, tenantId: string, module: ModuleKey, now: Date): Promise<'given' | 'has_it' | 'core' | 'next' | 'off_plan'> {
   if (!PLAN_GRANTABLE.includes(module)) return 'core'
   if (MODULES[module].status === 'next') return 'next'
   const ends = new Date(now.getTime() + TRIAL_DAYS * 86_400_000)
@@ -60,6 +62,8 @@ export async function giveTrial(staff: StaffOk, tenantId: string, module: Module
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`trial:${tenantId}:${module}`}))`)
     const m = await merchantModules(staff, tenantId, now)
     if (m.access[module].granted) return 'has_it' as const
+    // Off-plan (Reviews on Launch): a trial row would grant nothing (addOnAllowed), so none is written.
+    if (!addOnAllowed(module, m.planCode)) return 'off_plan' as const
     await tx.insert(tenantAddons).values({ tenantId, module, startsAt: now, trialEndsAt: ends, reason: `${TRIAL_DAYS}-day trial`, createdBy: staff.userId })
     await auditStaff(tx, staff, { tenantId, action: 'module.trial', target: module, detail: { trialEndsAt: ends.toISOString() } })
     return 'given' as const

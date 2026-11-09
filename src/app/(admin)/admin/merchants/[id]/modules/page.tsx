@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
-import type { ModuleAccess } from '@/domains/modules/access'
+import { addOnAllowed, type ModuleAccess } from '@/domains/modules/access'
 import { MODULE_KEYS, MODULES, PLAN_GRANTABLE } from '@/domains/modules/registry'
 import { merchantName } from '@/lib/admin/merchants'
 import { merchantModules, TRIAL_DAYS } from '@/lib/admin/modules'
@@ -58,7 +58,7 @@ export default async function MerchantModulesPage({ params, searchParams }: { pa
             const a = m.access[k]
             const on = m.switchedOnAt[k]
             const addon = m.addonId[k]
-            const trialable = canChange && PLAN_GRANTABLE.includes(k) && !a.granted && MODULES[k].status === 'now'
+            const trialable = canChange && PLAN_GRANTABLE.includes(k) && !a.granted && MODULES[k].status === 'now' && addOnAllowed(k, m.planCode)
             return (
               <DataTableRow key={k} dimmed={MODULES[k].status === 'next'}>
                 <Td cell="a" className="font-medium">{MODULES[k].name}</Td>

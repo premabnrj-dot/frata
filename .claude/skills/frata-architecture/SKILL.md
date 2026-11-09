@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.28.0
+  version: 2.29.0
   verified: 2026-11-09
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008 (proposed)]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -249,11 +249,20 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   `whatsapp:<tenant>:<id>:<field>:<item>[:<status>]` (`src/domains/communication/webhook.ts`). An item for no
   open connection is not stored.
 - **Core never imports a module.** A module's code lives in
-  `src/domains/<key>/`, `src/lib/modules/<key>/`, `src/components/modules/<key>/`,
-  `src/app/(console)/console/apps/<key>/`; core reaches it only through the hooks
-  `check:modules` lists: `<ModuleSlot name="order.side" | "home.tile">`
-  (`src/components/modules/slots.tsx`), the outbox cron, the console layout, the
-  webhooks. Add a filler to `FILLERS`, not an import to a core page.
+  `src/domains/<key>/`, `src/lib/modules/<key>/` (its tables too: `src/lib/modules/reviews/schema.ts`, listed in
+  `drizzle.config.ts`), `src/components/modules/<key>/`, `src/app/(console)/console/apps/<key>/`, its shopper API
+  `src/app/api/shop/<key>/` and its shop pages in the `src/app/s/[host]/(<key>)/` group; core reaches it only through
+  the hooks `check:modules` lists: `<ModuleSlot name="order.side" | "home.tile">` (`src/components/modules/slots.tsx`),
+  the product page's `productExtras` (`src/components/modules/storefront.tsx`: what goes under a product and its
+  rating, from one read; the rating is the markup's `aggregateRating`), the `SENDERS` map (`src/lib/outbox/drain.ts`),
+  the console layout, the webhooks. Add a filler, not an import to a core page.
+- **An add-on sold only on some plans** says so in the registry (`addOnFor`, Reviews: Growth and Scale). Off those
+  plans an add-on or trial row grants nothing (`addOnAllowed`), Admin offers no trial, and the bill drops it; a plan
+  that includes the module stops the add-on's bill too (`addOnBillable`, from the plan at the month's start).
+- **A module's cached shop reads** use `moduleCached` (`src/lib/queries/storefront.ts`, still the one wrapper:
+  check:tenant 6d) with a scope: `'reviews'` (shop-wide, tag `shop:<t>:reviews`) or `'reviews:product'` (first
+  argument the product id, tag `shop:<t>:reviews:<product>`). `refreshReviews(tenant, product, shopWide)` purges:
+  a shopper's published review its product only; an owner's action both.
 
 ## Themes (T0–T3 built 2026-11-08; spec docs/specs/2026-11-08-themes.md, plan docs/plans/2026-11-08-themes.md)
 
@@ -379,7 +388,7 @@ Samples follow what the shop sells (`sampleSetFor`), only in preview routes; eve
 ## Outside world (ADR-0006)
 
 - Outbound: `enqueue(tx, { kind, dedupeKey, payload })`; register a sender for
-  the kind in `src/app/api/cron/outbox/route.ts` (move to `src/lib/connectors/<name>/`
+  the kind in the `SENDERS` map, `src/lib/outbox/drain.ts` (move to `src/lib/connectors/<name>/`
   when the first one lands). Every HTTP call: `fetchWithTimeout` (`check:fetch`).
 - Inbound: `src/app/api/webhooks/<provider>/route.ts` — read `request.text()`,
   verify the signature on that text, compute OUR key, insert with

@@ -19,6 +19,14 @@ export function refreshSoldOut(tenantId: string, now = Date.now()) {
   refreshShop(tenantId, 'catalogue')
   return true
 }
+/**
+ * Reviews (R1, speed review 4): a shopper's published review purges its product only (card stars catch up on the 60 s
+ * backstop); an owner's action purges the product and the shop's ratings at once.
+ */
+export function refreshReviews(tenantId: string, productId: string, shopWide: boolean) {
+  revalidateTag(`shop:${tenantId}:reviews:${productId}`)
+  if (shopWide) revalidateTag(`shop:${tenantId}:reviews`)
+}
 /** After an address change or a new shop: the host lookups for both addresses. */
 export function refreshHosts(...hosts: string[]) {
   for (const h of hosts) revalidateTag(`host:${h}`)

@@ -4,7 +4,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
 import { currentPlan } from '@/domains/plans/entitlements'
 import { addonPrices, modulePauses, tenantAddons, tenantModules } from '@/lib/db/schema-modules'
-import { planVersions, tenantPlans } from '@/lib/db/schema'
+import { plans as planRows, planVersions, tenantPlans } from '@/lib/db/schema'
 import { withTenant } from '@/lib/db/tenant'
 import { moduleAccess, type ModuleAccess, type ModuleFacts } from '@/domains/modules/access'
 import { ADD_ONS, isModuleKey, type ModuleKey } from '@/domains/modules/registry'
@@ -21,8 +21,8 @@ export type ShopModules = { facts: ModuleFacts; access: Record<ModuleKey, Module
 /** The facts, read in a transaction already set to this shop (an action's own, or withTenant's). */
 export async function readFactsIn(tx: Tx, tenantId: string, now: Date): Promise<ModuleFacts> {
   {
-    const plans = await tx.select({ features: planVersions.features, startsAt: tenantPlans.startsAt }).from(tenantPlans)
-      .innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId))
+    const plans = await tx.select({ features: planVersions.features, code: planRows.code, startsAt: tenantPlans.startsAt }).from(tenantPlans)
+      .innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(planRows, eq(planRows.id, planVersions.planId))
       .where(eq(tenantPlans.tenantId, tenantId))
     const plan = currentPlan(plans, now)
     const addons = await tx.select({ module: tenantAddons.module, startsAt: tenantAddons.startsAt, endsAt: tenantAddons.endsAt, trialEndsAt: tenantAddons.trialEndsAt })
@@ -31,6 +31,7 @@ export async function readFactsIn(tx: Tx, tenantId: string, now: Date): Promise<
       .where(and(eq(tenantModules.tenantId, tenantId), isNull(tenantModules.disabledAt)))
     const pauses = await tx.select({ module: modulePauses.module }).from(modulePauses).where(isNull(modulePauses.resumedAt))
     return {
+      planCode: plan?.code ?? null,
       planFeatures: plan?.features ?? [],
       addons: addons.filter((a) => isModuleKey(a.module)).map((a) => ({ ...a, module: a.module as ModuleKey })),
       switchedOn: switches.map((s) => s.module).filter(isModuleKey),

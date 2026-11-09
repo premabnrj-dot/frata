@@ -4,7 +4,7 @@ import { ADD_ONS, MODULE_KEYS, MODULES, PLAN_GRANTABLE } from '../registry'
 
 const now = new Date('2026-11-07T10:00:00Z')
 const day = (n: number) => new Date(now.getTime() + n * 86_400_000)
-const none: ModuleFacts = { planFeatures: [], addons: [], switchedOn: [], paused: [] }
+const none: ModuleFacts = { planCode: 'growth', planFeatures: [], addons: [], switchedOn: [], paused: [] }
 /** The registry with chosen modules marked built, so the access rules can be exercised before any module ships. */
 const built = (...keys: (keyof typeof MODULES)[]) => { for (const k of keys) (MODULES[k] as { status: string }).status = 'now' }
 const unbuilt = (...keys: (keyof typeof MODULES)[]) => { for (const k of keys) (MODULES[k] as { status: string }).status = 'next' }
@@ -73,6 +73,25 @@ describe('outboxDecision', () => {
       { id: 'p', module: 'reviews' as const, startsAt: day(-5), endsAt: null, trialEndsAt: null },
     ]
     expect(moduleAccess({ ...none, addons }, now).reviews.how).toBe('add_on')
+  })
+})
+
+describe('addOnFor (owner 2026-11-09: Reviews on Growth and Scale only)', () => {
+  it('a trial or add-on row grants nothing off those plans; the plan’s own feature always does', async () => {
+    const { addOnAllowed } = await import('../access')
+    const addons = [{ module: 'reviews' as const, startsAt: day(-2), endsAt: null, trialEndsAt: day(20) }]
+    expect(moduleAccess({ ...none, planCode: 'growth', addons }, now).reviews.granted).toBe(true)
+    expect(moduleAccess({ ...none, planCode: 'launch', addons }, now).reviews.granted).toBe(false)
+    expect(moduleAccess({ ...none, planCode: null, addons }, now).reviews.granted).toBe(false)
+    expect(moduleAccess({ ...none, planCode: 'scale', planFeatures: ['reviews'] }, now).reviews.how).toBe('plan')
+    expect([addOnAllowed('reviews', 'launch'), addOnAllowed('reviews', 'scale'), addOnAllowed('true_profit', 'launch')]).toEqual([false, true, true])
+  })
+  it('billed only while the plan sells it and does not include it', async () => {
+    const { addOnBillable } = await import('../access')
+    expect(addOnBillable('reviews', 'growth', [])).toBe(true)
+    expect(addOnBillable('reviews', 'scale', ['reviews'])).toBe(false) // Growth → Scale: it comes with the plan
+    expect(addOnBillable('reviews', 'launch', [])).toBe(false) // a downgrade stops the bill
+    expect(addOnBillable('nope' as never, 'growth', [])).toBe(false)
   })
 })
 
