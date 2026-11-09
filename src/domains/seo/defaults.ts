@@ -97,11 +97,23 @@ export function shopJsonLd(s: ShopLd): object {
     '@context': 'https://schema.org', '@type': 'OnlineStore', name: s.name, url: s.url, ...(s.logo ? { logo: s.logo } : {}), ...(s.sameAs.length ? { sameAs: s.sameAs } : {}),
     hasMerchantReturnPolicy: returns,
     hasShippingService: {
-      '@type': 'ShippingService', shippingConditions: {
-        '@type': 'ShippingConditions', shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'IN' },
-        shippingRate: { '@type': 'MonetaryAmount', value: rupees(s.shippingFlat).replace(/,/g, ''), currency: 'INR' },
-        transitTime: { '@type': 'ServicePeriod', duration: { '@type': 'QuantitativeValue', minValue: s.metroDays, maxValue: s.restDays, unitCode: 'DAY' } },
-      },
+      '@type': 'ShippingService',
+      // Days to dispatch before transit (S2·3; the data was already passed in).
+      handlingTime: { '@type': 'ServicePeriod', duration: { '@type': 'QuantitativeValue', minValue: 0, maxValue: s.dispatchDays, unitCode: 'DAY' } },
+      shippingConditions: [
+        {
+          '@type': 'ShippingConditions', shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'IN' },
+          shippingRate: { '@type': 'MonetaryAmount', value: rupees(s.shippingFlat).replace(/,/g, ''), currency: 'INR' },
+          transitTime: { '@type': 'ServicePeriod', duration: { '@type': 'QuantitativeValue', minValue: s.metroDays, maxValue: s.restDays, unitCode: 'DAY' } },
+        },
+        // Free above the shop's threshold (S2·3).
+        ...(s.shippingFlat > 0 && s.freeShippingAbove > 0 ? [{
+          '@type': 'ShippingConditions', shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'IN' },
+          orderValue: { '@type': 'MonetaryAmount', minValue: rupees(s.freeShippingAbove).replace(/,/g, ''), currency: 'INR' },
+          shippingRate: { '@type': 'MonetaryAmount', value: '0', currency: 'INR' },
+          transitTime: { '@type': 'ServicePeriod', duration: { '@type': 'QuantitativeValue', minValue: s.metroDays, maxValue: s.restDays, unitCode: 'DAY' } },
+        }] : []),
+      ],
     },
   }
 }
@@ -118,3 +130,14 @@ export const pageDescription = {
   collection: (title: string, own: string, shop: string) => (own.trim() ? trimmed(own) : `${title} from ${shop}.`),
   policy: (title: string, shop: string) => `${title} at ${shop}.`,
 }
+
+/** Where a page sits (S2·3): Home › Collection › Product, as Google shows it under the result. */
+export function breadcrumbJsonLd(items: { name: string; url: string }[]): object {
+  return { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: items.map((it, i) => ({ '@type': 'ListItem', position: i + 1, name: it.name, item: it.url })) }
+}
+
+/** The site itself (S2·3): its name, so Google shows the shop's name, not its address. */
+export const websiteJsonLd = (name: string, url: string): object => ({ '@context': 'https://schema.org', '@type': 'WebSite', name, url })
+
+/** A collection's products, in the order shown (S2·3). */
+export const itemListJsonLd = (urls: string[]): object => ({ '@context': 'https://schema.org', '@type': 'ItemList', itemListElement: urls.map((url, i) => ({ '@type': 'ListItem', position: i + 1, url })) })

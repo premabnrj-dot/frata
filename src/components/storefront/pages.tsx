@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { PolicyPage } from '@/domains/policies/render'
-import { shopJsonLd } from '@/domains/seo/defaults'
+import { shopJsonLd, websiteJsonLd } from '@/domains/seo/defaults'
 import { inCollection, isListed, pageOf } from '@/domains/storefront/listing'
 import { classicFromSettings } from '@/domains/themes/resolve'
 import type { ResolvedTheme, ThemeSettings } from '@/domains/themes/types'
@@ -23,6 +23,7 @@ export function HomeView({ shop, cat, href, now, theme, bestSellers, preview = f
       <Sections list={t.home} ctx={{ shop, cat, theme: t, href, now, bestSellers, preview }} />
       <JsonLd data={shopJsonLd({ name: shop.shopName, url: `https://${shop.host}`, logo: shop.logoUrl, sameAs: shop.instagram ? [`https://instagram.com/${shop.instagram.replace(/^@/, '')}`] : [],
         returnDays: shop.returnDays, returnKind: shop.returnKind, shippingFlat: shop.shippingFlat, freeShippingAbove: shop.freeShippingAbove, metroDays: shop.metroDays, restDays: shop.restDays, dispatchDays: shop.dispatchDays })} />
+      {!preview && <JsonLd data={websiteJsonLd(shop.shopName, `https://${shop.host}/`)} />}
     </>
   )
 }

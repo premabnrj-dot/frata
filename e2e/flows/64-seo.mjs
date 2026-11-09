@@ -212,6 +212,19 @@ export default {
       await ctx.close()
     })
 
+    await t.step('S2: breadcrumbs, the site, a collection\'s list, free shipping; the sitemap has photos and no empty collections', async () => {
+      const [c] = await db`select c.handle from collections c join tenants tn on tn.id = c.tenant_id where tn.slug = 'kesar-studio' order by c.handle limit 1`
+      assert.equal(ldOfType(jsonLd((await get(`/products/${product.handle}`, CRAWLERS.google)).body), 'BreadcrumbList').length, 1, 'product breadcrumb')
+      const home = jsonLd((await get('/', CRAWLERS.google)).body)
+      assert.equal(ldOfType(home, 'WebSite').length, 1, 'WebSite')
+      assert.ok(ldOfType(home, 'OnlineStore')[0].hasShippingService.handlingTime, 'handling time')
+      const col = await get(`/collections/${c.handle}`, CRAWLERS.google)
+      if (col.status === 200) assert.equal(ldOfType(jsonLd(col.body), 'ItemList').length, 1, 'ItemList')
+      const sm = (await get('/sitemap.xml', CRAWLERS.google)).body
+      assert.match(sm, /<image:image><image:loc>https:\/\//)
+      for (const h of ['/products', '/policies/returns']) assert.ok(head((await get(h, CRAWLERS.google)).body).one('description'), `${h}: description`)
+    })
+
     await t.step('S1·6: the shop has its own icon (its initial or logo, never Frrata\'s), served as PNG', async () => {
       const h = head((await get('/', CRAWLERS.google)).body)
       const icons = [...h.raw.matchAll(/<link\b[^>]*rel="(?:icon|apple-touch-icon)"[^>]*>/g)].map((x) => x[0].match(/href="([^"]+)"/)[1])

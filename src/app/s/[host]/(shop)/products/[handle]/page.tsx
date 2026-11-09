@@ -4,6 +4,8 @@ import { GoneView } from '@/components/storefront/pages'
 import { shareImage } from '@/lib/seo/share-image'
 import { productOffer, productSeo, ProductView } from '@/components/storefront/product-view'
 import { ProductTags } from '@/components/storefront/product-tags'
+import { JsonLd } from '@/components/storefront/json-ld'
+import { breadcrumbJsonLd } from '@/domains/seo/defaults'
 import type { StoreProduct, StoreShop } from '@/lib/queries/storefront'
 import { visibility, type Status } from '@/domains/catalogue/availability'
 import { shopCatalogue, shopLook, shopProduct } from '@/lib/queries/storefront'
@@ -53,5 +55,12 @@ export default async function ProductPage({ params }: { params: Params }) {
   // Archived: the shopper reads that it has gone, with new pieces below; noindex drops it from search (spec § Review findings).
   if (v.gone) return <GoneView title={p.title} cat={await shopCatalogue(shop.id)} href={shopHref} now={now} lang={shop.shopLanguage} />
   const theme = themeOf(shop, await shopLook(shop.id))
-  return <><ProductTags tags={await tagsOf(shop, p, v.indexable, now)} /><ProductView shop={shop} p={p} now={now} live layout={theme.settings} /></>
+  const base = `https://${shop.host}`
+  return (
+    <>
+      <ProductTags tags={await tagsOf(shop, p, v.indexable, now)} />
+      <ProductView shop={shop} p={p} now={now} live layout={theme.settings} />
+      <JsonLd data={breadcrumbJsonLd([{ name: shop.shopName, url: `${base}/` }, { name: p.title, url: `${base}/products/${p.handle}` }])} />
+    </>
+  )
 }

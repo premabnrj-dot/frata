@@ -3,6 +3,9 @@ import { pageDescription } from '@/domains/seo/defaults'
 import { notFound } from 'next/navigation'
 import { shareImage } from '@/lib/seo/share-image'
 import { CollectionView } from '@/components/storefront/pages'
+import { JsonLd } from '@/components/storefront/json-ld'
+import { breadcrumbJsonLd, itemListJsonLd } from '@/domains/seo/defaults'
+import { inCollection } from '@/domains/storefront/listing'
 import { shopCatalogue, shopLook } from '@/lib/queries/storefront'
 import { themeOf } from '@/lib/themes/page-look'
 import { shopFor, shopHref } from '../../../_shop'
@@ -31,5 +34,13 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 export default async function Collection({ params }: { params: Params }) {
   const { shop, cat, c } = await load(params)
   const theme = themeOf(shop, await shopLook(shop.id))
-  return <CollectionView c={c} cat={cat} href={shopHref} now={new Date()} top={theme.settings.collectionTop} lang={shop.shopLanguage} />
+  const now = new Date()
+  const base = `https://${shop.host}`
+  return (
+    <>
+      <CollectionView c={c} cat={cat} href={shopHref} now={now} top={theme.settings.collectionTop} lang={shop.shopLanguage} />
+      <JsonLd data={breadcrumbJsonLd([{ name: shop.shopName, url: `${base}/` }, { name: c.title, url: `${base}/collections/${c.handle}` }])} />
+      <JsonLd data={itemListJsonLd(inCollection(c, cat.products, now).slice(0, 24).map((p) => `${base}/products/${p.handle}`))} />
+    </>
+  )
 }
