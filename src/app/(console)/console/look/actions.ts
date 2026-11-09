@@ -82,7 +82,7 @@ export async function tryThemeAction(input: unknown): Promise<R<{ revisionId: st
   return { ok: true, ...r.value }
 }
 
-const Save = z.object({ revisionId: z.uuid(), version: z.number().int().positive(), style: z.string().regex(/^[a-z0-9-]{1,40}$/), layer: z.object({ settings: z.unknown(), home: z.array(z.unknown()).optional() }) })
+const Save = z.object({ revisionId: z.uuid(), version: z.number().int().positive(), style: z.string().regex(/^[a-z0-9-]{1,40}$/), layer: z.object({ settings: z.unknown(), home: z.array(z.unknown()).optional(), site: z.unknown().optional(), menus: z.unknown().optional() }) })
 
 export async function saveLookAction(input: unknown): Promise<R<{ version: number }>> {
   const p = Save.safeParse(input)
@@ -100,7 +100,8 @@ export async function saveLookAction(input: unknown): Promise<R<{ version: numbe
     const colour = layer.settings?.brandColour
     if (colour) { const sch = resolveTheme(m, { style: p.data.style }).schemes; const why = brandColourProblem(colour, [sch.paper, sch.tint]); if (why) return { error: why } }
     // Stored as parsed: unknown settings keys are dropped (tenancy audit 2026-11-08).
-    const clean = cleanImages({ ...layer, settings: LayerSchema.parse(layer).settings }, t)
+    const parsed = LayerSchema.parse(layer)
+    const clean = cleanImages({ ...layer, settings: parsed.settings, ...(parsed.site ? { site: parsed.site } : {}), ...(parsed.menus ? { menus: parsed.menus } : {}) }, t)
     if (!clean) return { error: 'A photo didn’t come from this shop. Upload it again.' }
     const s = await saveDraft(tx, t, { userId: auth.userId, email: auth.email }, { revisionId: rev.id, version: p.data.version, styleKey: p.data.style, settings: clean })
     if (!s.ok) return { error: s.why === 'stale' ? `${rev.updatedByEmail ?? 'Someone'} changed this draft a moment ago. Reload to see their changes.` : s.why === 'published' ? 'This look was published. Reload to keep editing.' : 'This draft is gone. Reload.' }

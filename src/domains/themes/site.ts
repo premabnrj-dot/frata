@@ -116,3 +116,46 @@ export function menuWarnings(xs: MenuItem[]): string[] {
   for (const x of xs) if (x.children.length > 10) out.push(`${x.label} has more than 10 items: split it.`)
   return out
 }
+
+// ── Reading a stored layer ──────────────────────────────────────────────────────────────────────────────────────
+/** A stored layer's site settings, part by part: a part this build can't read drops only itself (as readSettings). */
+export function readSite(raw: unknown): SiteSettings {
+  if (!raw || typeof raw !== 'object') return SITE_DEFAULTS
+  const r = raw as Record<string, unknown>
+  const pal = Object.hasOwn(r, 'palette') ? SiteSchema.shape.palette.safeParse(r.palette) : null
+  const palette = pal?.success && pal.data && !paletteProblem(pal.data as Palette) ? (pal.data as Palette) : null
+  const text: SiteSettings['text'] = {}
+  if (Object.hasOwn(r, 'text') && r.text && typeof r.text === 'object') {
+    for (const k of TEXT_STYLES) {
+      if (!Object.hasOwn(r.text, k)) continue
+      const p = style.safeParse((r.text as Record<string, unknown>)[k]); if (p.success && Object.keys(p.data).length) text[k] = p.data
+    }
+  }
+  const ic = Object.hasOwn(r, 'icons') ? SiteSchema.shape.icons.safeParse(r.icons) : null
+  return { palette, text, icons: ic?.success && ic.data ? ic.data : SITE_DEFAULTS.icons }
+}
+/** A stored layer's menus, menu by menu (null: the shop's default for that menu). */
+export function readMenus(raw: unknown): Partial<Menus> {
+  if (!raw || typeof raw !== 'object') return {}
+  const out: Partial<Menus> = {}
+  for (const k of ['main', 'footer', 'tabs'] as const) {
+    if (!Object.hasOwn(raw, k)) continue
+    const p = MenusSchema.shape[k].safeParse((raw as Record<string, unknown>)[k]); if (p.success && p.data) out[k] = p.data
+  }
+  return out
+}
+/** Why a submitted site block can't be saved (null: it can). */
+export function siteProblem(raw: unknown): string | null {
+  if (raw === undefined) return null
+  const p = SiteSchema.safeParse(raw)
+  if (!p.success) return 'Site settings: ' + (p.error.issues[0]?.message ?? 'not valid')
+  return p.data.palette ? paletteProblem(p.data.palette as Palette) : null
+}
+/** Why submitted menus can't be saved (null: they can). */
+export function menusProblem(raw: unknown): string | null {
+  if (raw === undefined) return null
+  const p = MenusSchema.safeParse(raw)
+  if (!p.success) { const i = p.error.issues[0]; return `${i?.path[0] === 'tabs' ? 'Phone tabs' : i?.path[0] === 'footer' ? 'Footer menu' : 'Main menu'}: ${i?.message ?? 'not valid'}` }
+  const ids = [...(p.data.main ?? []), ...(p.data.footer ?? []), ...(p.data.tabs ?? [])].flatMap(function all(x: MenuItem): string[] { return [x.id, ...x.children.flatMap(all)] })
+  return new Set(ids).size === ids.length ? null : 'Two menu items share an id'
+}

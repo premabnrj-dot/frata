@@ -2,6 +2,7 @@ import { manifestNear, manifestOf } from './catalogue'
 import { choicesFor } from './choices'
 import { LayerSchema, SettingsSchema, onColour, brandColourProblem } from './layer'
 import { SectionSchema, type SectionInstance } from './sections'
+import { readMenus, readSite } from './site'
 import { FEEL_DEFAULTS, PAGE_DEFAULTS, PAIRINGS, type ChoiceKey, type Pairing, type ResolvedTheme, type Scheme, type SchemeKey, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
 
 // =============================================================================
@@ -78,6 +79,17 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
     const c = settings.brandColour, on = onColour(c)
     schemes = { paper: { ...schemes.paper, accent: c, onAccent: on }, tint: { ...schemes.tint, accent: c, onAccent: on }, ink: schemes.ink }
   } else settings.brandColour = null
+  // Site settings (Look v4): the merchant's palette paints the paper scheme (and a tint's accent and buttons); it was
+  // contrast-checked at save and is again here (readSite drops a palette that no longer reads).
+  const site = readSite(layer.site)
+  if (site.palette) {
+    const p = site.palette, onA = onColour(p.accent), onB = onColour(p.primary)
+    schemes = {
+      paper: { ...schemes.paper, bg: p.background, text: p.text, sub: p.muted, chip: p.surface, accent: p.accent, onAccent: onA, button: p.primary, onButton: onB },
+      tint: { ...schemes.tint, accent: p.accent, onAccent: onA, button: p.primary, onButton: onB },
+      ink: schemes.ink,
+    }
+  }
   const masks = m.allowed.heroMasks ?? ['none']
   const raw = parsed.success && parsed.data.home ? parsed.data.home : m.home
   const home = raw.flatMap((s): SectionInstance[] => {
@@ -85,7 +97,7 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
     if (!p.success || !m.allowed.sections.includes(p.data.key)) return []
     return [p.data.key === 'hero' && !masks.includes(p.data.mask) ? { ...p.data, mask: 'none' } : p.data]
   })
-  return { key: m.key, version: m.version, style: style.key, schemes, settings, home, ...(m.rhythm ? { rhythm: m.rhythm } : {}) }
+  return { key: m.key, version: m.version, style: style.key, schemes, settings, home, ...(m.rhythm ? { rhythm: m.rhythm } : {}), site, menus: readMenus(layer.menus) }
 }
 
 /**
@@ -109,8 +121,8 @@ export function resolveStored(row: { themeKey: string; themeVersion: string; sty
   if (!row) return classicFromSettings(shop.accent, shop.displayFont)
   const m = manifestNear(row.themeKey, row.themeVersion)
   if (!m) return classicFromSettings(shop.accent, shop.displayFont)
-  const s = (row.settings ?? {}) as { settings?: Partial<ThemeSettings>; home?: unknown[] }
-  return resolveTheme(m, { style: row.styleKey, settings: s.settings, home: s.home })
+  const s = (row.settings ?? {}) as { settings?: Partial<ThemeSettings>; home?: unknown[]; site?: unknown; menus?: unknown }
+  return resolveTheme(m, { style: row.styleKey, settings: s.settings, home: s.home, site: s.site, menus: s.menus })
 }
 
 /** The CSS custom properties a section painted in `scheme` sets (the --store-* tokens the shop already uses). */

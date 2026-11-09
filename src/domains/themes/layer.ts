@@ -3,6 +3,7 @@ import { ON_COLOUR } from './catalogue/kit'
 import { choicesFor } from './choices'
 import { contrast } from './contrast'
 import { SECTION_NAMES, SectionSchema, MAX_PER_PAGE, MAX_SECTIONS, shopPath, type SectionInstance } from './sections'
+import { MenusSchema, SiteSchema, menusProblem, siteProblem } from './site'
 import { FOOTERS, HEADERS, HEADER_NAMES, PAGE_DEFAULTS, PAIRINGS, type Hex, type Scheme, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
 
 // =============================================================================
@@ -51,11 +52,18 @@ export const SettingsSchema = z.object({
 export const LayerSchema = z.object({
   settings: SettingsSchema.default({}),
   home: z.array(z.unknown()).max(MAX_SECTIONS).optional(),
+  // Look v4: site settings and menus, in the same layer (draft → publish → undo).
+  site: SiteSchema.optional(),
+  menus: MenusSchema.optional(),
 })
 export type StoredLayer = z.infer<typeof LayerSchema>
 
 /** Why a layer can't be saved as it is (shape and limits only). Empty: it can be saved. */
 export function layerProblems(layer: unknown): string[] {
+  // Site settings and menus first: their problems in the merchant's words.
+  const lr = (layer ?? {}) as { site?: unknown; menus?: unknown }
+  const own = [siteProblem(lr.site), menusProblem(lr.menus)].filter((x): x is string => !!x)
+  if (own.length) return own
   const p = LayerSchema.safeParse(layer)
   if (!p.success) return p.error.issues.map((i) => `${i.path.join('.') || 'look'}: ${i.message}`)
   const out: string[] = []
@@ -94,7 +102,7 @@ export function carryOver(from: { manifest: ThemeManifest; layer: ThemeLayer }, 
     const home = from.layer.home?.filter((s) => { const r = SectionSchema.safeParse(s); return r.success && to.allowed.sections.includes(r.data.key) })
     // Moving back a version (a recall) can drop a section the earlier version lacks: say so (T3 review).
     const lost = [...new Set(parsed.filter((s) => !to.allowed.sections.includes(s.key)).map((s) => `${SECTION_NAMES[s.key]} isn't in ${to.name} ${to.version}`))]
-    return { layer: { style, ...(from.layer.settings ? { settings: from.layer.settings } : {}), ...(home ? { home } : {}) }, lost }
+    return { layer: { style, ...(from.layer.settings ? { settings: from.layer.settings } : {}), ...(home ? { home } : {}), ...(from.layer.site !== undefined ? { site: from.layer.site } : {}), ...(from.layer.menus !== undefined ? { menus: from.layer.menus } : {}) }, lost }
   }
   const was = { ...PAGE_DEFAULTS, ...from.manifest.defaults, ...(from.layer.settings ?? {}) } as ThemeSettings
   const lost: string[] = []
@@ -124,5 +132,8 @@ export function carryOver(from: { manifest: ThemeManifest; layer: ThemeLayer }, 
   for (const s of sections) if (!to.allowed.sections.includes(s.key)) lost.push(`${SECTION_NAMES[s.key]} isn't in ${to.name}`)
   // Keep the merchant's own Home only if they changed it; an untouched Home takes the new theme's.
   const changed = JSON.stringify(from.layer.home ?? null) !== 'null'
-  return { layer: { style: to.styles[0]!.key, settings, ...(changed ? { home: kept } : {}) }, lost }
+  // Site settings are the theme's own (owner 2026-11-09: a new theme brings its palette, type and icons); menus are
+  // content and come across.
+  if (from.layer.site !== undefined) lost.push('Your site colours, text styles and icons')
+  return { layer: { style: to.styles[0]!.key, settings, ...(changed ? { home: kept } : {}), ...(from.layer.menus !== undefined ? { menus: from.layer.menus } : {}) }, lost }
 }

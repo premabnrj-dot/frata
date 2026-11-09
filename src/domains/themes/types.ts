@@ -6,6 +6,7 @@
 // =============================================================================
 
 import type { SectionInput, SectionInstance, SectionKey } from './sections'
+import type { Menus, SiteSettings } from './site'
 
 export type Hex = `#${string}`
 /** The colour roles a section can be painted in. Shown to merchants by the style's own names. */
@@ -127,7 +128,8 @@ export type ThemeManifest = {
 }
 
 /** The merchant's layer. Content, never state (which revision is live is a publish row). */
-export type ThemeLayer = { style: string; settings?: Partial<ThemeSettings>; home?: unknown[] }
+/** site and menus (Look v4): stored as parsed, read part by part (readSite, readMenus). */
+export type ThemeLayer = { style: string; settings?: Partial<ThemeSettings>; home?: unknown[]; site?: unknown; menus?: unknown }
 
 export type ResolvedTheme = {
   key: string; version: string; style: string
@@ -136,4 +138,8 @@ export type ResolvedTheme = {
   home: SectionInstance[]
   /** From the manifest (2.0): even space between sections. */
   rhythm?: 'even'
+  /** Site settings (Look v4): the merchant's palette (already painted into schemes), text styles and icons. */
+  site: SiteSettings
+  /** The menus the merchant made (absent: the shop's default; menusOf). */
+  menus: Partial<Menus>
 }
