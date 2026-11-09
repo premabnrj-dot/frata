@@ -146,7 +146,7 @@ export const SECTIONS: readonly Section[] = [
       { title: 'Registration', fields: [
         { key: 'gstRegistration', label: 'Registration', kind: 'radio', wide: true, options: REGISTRATION_OPTIONS,
           notes: { regular: 'Tax invoices', composition: 'Bill of supply · within your state', none: 'Bill of supply · within your state' } },
-        { key: 'gstin', label: 'GSTIN', kind: 'gstin', showIf: { key: 'gstRegistration', in: ['regular', 'composition'] } },
+        { key: 'gstin', label: 'GSTIN', kind: 'gstin', required: true, showIf: { key: 'gstRegistration', in: ['regular', 'composition'] } },
         { key: 'homeState', label: 'Your business is in', kind: 'state', showIf: { key: 'gstRegistration', in: ['none'] }, hint: 'Your shop delivers within this state only: selling to another state needs a GSTIN.' },
         { key: 'turnoverBand', label: 'Turnover last year', kind: 'segmented', wide: true, options: TURNOVER_OPTIONS, showIf: { key: 'gstRegistration', in: ['regular'] },
           tip: 'All your GSTINs on one PAN, last financial year. It sets the HSN digits on invoices (4 under ₹5 crore, 6 above) and when e-invoicing applies.' },

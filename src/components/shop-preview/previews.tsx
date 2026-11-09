@@ -30,6 +30,8 @@ export type ShopFacts = PolicyFacts & {
   codMin: number
   codBlockedPincodes: string[]
   gstin: string | null
+  /** Settings › Taxes (GST core 1). */
+  gstScheme: string; turnoverBand: string; gstFiling: string; homeState: string | null; b2bInvoices: boolean
   defaultHsn: string
   invoiceSeries: string
   docLogo: string | null
@@ -141,14 +143,14 @@ export function CheckoutPreview({ f }: { f: ShopFacts }) {
 }
 
 export function InvoicePreview({ f, fiscalYear }: { f: ShopFacts; fiscalYear: string }) {
-  const registered = !!f.gstin && gstinValid(f.gstin)
+  const registered = !!f.gstin && gstinValid(f.gstin) && f.gstScheme === 'regular'
   return (
     <Frame label="Your next invoice">
       <div className="space-y-2 bg-white p-4 text-[13px] text-[color:var(--store-ink)]">
         <b className="block text-[15px]">{registered ? 'Tax invoice' : 'Bill of supply'}</b>
         <p className="font-mono text-xs">{f.invoiceSeries}{fiscalYear}/0001</p>
         <p>{f.legalName || <Missing>legal business name</Missing>}<br /><span className="text-store-sub">{f.address || <Missing>registered address</Missing>}</span>{registered && <><br />GSTIN <span className="font-mono">{f.gstin}</span></>}</p>
-        <p className="text-xs text-store-sub">{registered ? `HSN ${f.defaultHsn} · CGST and SGST inside your state, IGST outside` : 'Not registered for GST: no tax is charged or shown.'}</p>
+        <p className="text-xs text-store-sub">{registered ? `HSN ${f.defaultHsn} · CGST and SGST inside your state, IGST outside` : (f.gstin && f.gstScheme === 'composition' ? 'Composition taxable person, not eligible to collect tax on supplies.' : 'Not registered for GST: no tax is charged or shown.')}</p>
         {(f.docNote || f.docSignatory) && (
           <div className="flex items-end justify-between gap-3 border-t border-store-line pt-2 text-xs">
             <span className="text-store-sub">{f.docNote}</span>

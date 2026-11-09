@@ -15,7 +15,7 @@ export function shopFacts(shop: Row, shopDomain: string): ShopFacts {
     returnKind: s.returnKind as ShopFacts['returnKind'], returnDays: s.returnDays, sells: s.sells,
     codOn: s.codOn, codMin: s.codMin, codMax: s.codMax, codCharge: s.codCharge, codBlockedPincodes: s.codBlockedPincodes,
     shippingFlat: s.shippingFlat, freeShippingAbove: s.freeShippingAbove, dispatchDays: s.dispatchDays, metroDays: s.metroDays, restDays: s.restDays,
-    pricesIncludeGst: s.pricesIncludeGst, gstin: s.gstin, defaultHsn: s.defaultHsn, invoiceSeries: s.invoiceSeries,
+    pricesIncludeGst: s.pricesIncludeGst, gstin: s.gstin, gstScheme: s.gstScheme, turnoverBand: s.turnoverBand, gstFiling: s.gstFiling, homeState: s.homeState, b2bInvoices: s.b2bInvoices, defaultHsn: s.defaultHsn, invoiceSeries: s.invoiceSeries,
     docLogo: s.docLogo, docSignatory: s.docSignatory, docNote: s.docNote, slipSize: s.slipSize,
   }
 }

@@ -48,8 +48,9 @@ export default {
       await t.step('Settings › Taxes: registration is a radio, turnover and filing are segments', async () => {
         await p.goto(CONSOLE + '/console/settings/taxes')
         assert.equal(await p.getByRole('radio', { name: 'Regular' }).isChecked(), true)
-        await p.getByRole('radio', { name: 'Under ₹5 crore' }).waitFor()
-        await p.getByRole('radio', { name: 'Monthly' }).waitFor()
+        assert.equal(await p.getByRole('radio', { name: 'Under ₹5 crore' }).isChecked(), true)
+        assert.equal(await p.getByRole('radio', { name: 'Monthly' }).isChecked(), true)
+        await p.getByText('Tax invoice', { exact: true }).first().waitFor() // the preview agrees with the form
         await p.screenshot({ path: t.out('settings-taxes'), fullPage: true })
       })
 
@@ -92,6 +93,7 @@ export default {
         await p.getByLabel('EVC OTP').fill('575757')
         await p.getByRole('button', { name: 'File GSTR-1' }).click()
         await p.getByText('GSTR-1 filed').waitFor()
+        await p.getByText('Filed', { exact: true }).first().waitFor() // the header says so too
         const [f] = await db`select arn, filed_at from gst_filings where tenant_id = ${T} and period = ${key}`
         assert.match(f?.arn ?? '', /^AA08/)
         await p.screenshot({ path: t.out('gst-filed'), fullPage: true })

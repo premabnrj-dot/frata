@@ -56,9 +56,10 @@ export default async function GstPage({ searchParams }: { searchParams: Promise<
   // Filing from Frrata is behind a switch (lib/gst/gsp.ts): off, the page is the CA's files only. Never on a support visit.
   const filer = auth.membership.supportSessionId ? null : gsp()
   const ours = liabilityOf(gstr)
+  const filed = !!d.filing.filedAt
   return (
     <div className="space-y-4">
-      <PageHeader title="GST" badges={<Badge tone={toFix ? 'warn' : 'ok'}>{toFix ? `${toFix} to fix` : 'Ready'}</Badge>}
+      <PageHeader title="GST" badges={<Badge tone={filed || !toFix ? 'ok' : 'warn'}>{filed ? 'Filed' : toFix ? `${toFix} to fix` : 'Ready'}</Badge>}
         meta={<>GSTIN <span className="font-mono">{shop.gstin}</span> · {shop.filing === 'monthly' ? 'Monthly' : 'Quarterly (IFF)'} · due {dayIN(due)}</>} />
       <nav aria-label="Period" className="flex items-center gap-1">
         <Link href={`/console/gst?p=${d.prev}`} aria-label="Previous period" className="grid size-9 place-items-center rounded-md border border-input">‹</Link>
@@ -67,7 +68,9 @@ export default async function GstPage({ searchParams }: { searchParams: Promise<
       </nav>
 
       <ol className="grid overflow-hidden rounded-lg border border-border sm:grid-cols-3">
-        {[[toFix ? 'now' : 'done', 'Fix', toFix ? `${toFix} left` : 'Done'], [toFix ? '' : 'now', 'Check the tables', `${gstr.totals.invoices} invoices · ${gstr.totals.creditNotes} credit notes`], ['', 'Send to your CA', 'GSTR-1 file, sheets, Tally']].map(([s, t, sub], i) => (
+        {(filed
+          ? [['done', 'Fix', 'Done'], ['done', 'Check the tables', `${gstr.totals.invoices} invoices · ${gstr.totals.creditNotes} credit notes`], ['done', 'Filed', `ARN ${d.filing.arn}`]]
+          : [[toFix ? 'now' : 'done', 'Fix', toFix ? `${toFix} left` : 'Done'], [toFix ? '' : 'now', 'Check the tables', `${gstr.totals.invoices} invoices · ${gstr.totals.creditNotes} credit notes`], ['', filer ? 'File or send to your CA' : 'Send to your CA', 'GSTR-1 file, sheets, Tally']]).map(([s, t, sub], i) => (
           <li key={t} className="flex items-center gap-3 border-b border-border p-3 last:border-0 sm:border-b-0 sm:border-r sm:last:border-r-0">
             <span aria-hidden="true" className={`grid size-7 shrink-0 place-items-center rounded-full text-xs font-semibold ${s === 'done' ? 'bg-ok text-ok-text' : s === 'now' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground'}`}>{s === 'done' ? '✓' : i + 1}</span>
             <span><b className="block text-sm">{t}</b><span className="text-xs text-muted-foreground">{sub}</span></span>

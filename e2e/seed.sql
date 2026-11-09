@@ -30,3 +30,4 @@ INSERT INTO public.variants (id, tenant_id, product_id, option_values, sku, pric
 
 -- GST core (0070): the seed's products predate the backfill; a registered shop sells only what has an HSN.
 UPDATE public.products SET hsn = '6211' WHERE hsn IS NULL;
+UPDATE public.shop_settings SET gstin = '08AAAAA0000A1Z2' WHERE gstin = '08AAAAA0000A1Z5'; -- a GSTIN whose check character holds (the console checks it)

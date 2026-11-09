@@ -20,7 +20,7 @@ export function ReviewTabs({ gstr }: { gstr: Gstr1 }) {
   const empty = (cols: number) => <tr><td colSpan={cols} className="px-3 py-6 text-center text-sm text-muted-foreground">None this period.</td></tr>
   return (
     <div className="space-y-3 rounded-lg border border-border p-3">
-      <div role="tablist" aria-label="GSTR-1 tables" className="flex gap-1 overflow-x-auto border-b border-border">
+      <div role="tablist" aria-label="GSTR-1 tables" className="flex gap-1 overflow-x-auto border-b border-border [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)]">
         {tabs.map(([k, l, code, n]) => (
           <button key={k} role="tab" aria-selected={t === k} onClick={() => setT(k)} className={`flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm ${t === k ? 'border-foreground font-semibold' : 'border-transparent text-muted-foreground'}`}>
             {l}<small className="text-xs font-normal text-muted-foreground">{code} · {n}</small>
