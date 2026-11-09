@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.10.0
+  version: 5.10.1
   verified: 2026-11-09
   covers: ["src/app/globals.css", "src/components/**"]
 ---
@@ -461,7 +461,7 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 **Own domains v2** (owner-approved 2026-11-09, mockup https://claude.ai/artifact/XrDQj61tSBe4YKvUrH76xt; replaces the
 8 Nov mockup's § 5–7):
 
-72. **One Addresses list** on Settings › Shop address: every address a row (mono, its state chip, actions beside it);
+72. **One address list, titled "Custom domain"** (owner 2026-11-09) on Settings › Shop address: every address a row (mono, its state chip, actions beside it);
     the main one carries a `Main` chip; rows change in place and never animate (rule 28).
 73. **Connect is a `Dialog`** (a sheet on a phone, rule 27) of three steps (Domain · Records · Securing) with step dots
     and the step slide; the domain is cleaned as typed (`https://www.KesarStudio.in/` → `kesarstudio.in`, www added),

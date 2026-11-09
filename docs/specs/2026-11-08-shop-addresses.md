@@ -118,7 +118,7 @@ limit someone must meet, and one risk line where an action can't be undone. Ever
 | Screen | Built as |
 |---|---|
 | Settings › Shop address | Card **Frrata address**: `kesar-studio.frrata.shop` · Copy · Open · **Change**; "2 changes left" (a limit); (i) "Old addresses keep working." Card **Your domains**: one row per host with its badge (Main · Connected · Waiting for records · Not working · Disconnected); **Connect a domain** |
-| Change name (dialog) | Field + "Available" / "Taken"; "1 of 2 changes"; **Change to kesar-jaipur** · **Keep kesar-studio** |
+| Change name (dialog) | Field + "Available" / "Taken"; "1 of 2 changes"; **Change to kesar-jaipur** · **Keep kesar-studio**. On live payments (D1·9, plan): **Add kesar-jaipur** → a row "Ready · Razorpay not approved" → **Razorpay approved it** → **Make main** (confirm, changes left; no Undo) |
 | Connect · 1 | Field **Domain**; chips **Bought at** GoDaddy · Hostinger · BigRock · Namecheap · Cloudflare · Other; **Continue**. (i) on Domain: "www.kesarstudio.in will go to kesarstudio.in." |
 | Connect · 2 | Table Type · Name · Value · State, Copy per row; **Check records**; "Checked 1 min ago". A failing row says only what to change: "Points to 3.110.44.9 · use 216.198.79.1". Cloudflare chosen → "Set to DNS only" (a requirement). Link "GoDaddy steps". (i) "Your email records stay as they are." |
 | Connect · 3 | Badge **Securing** → **Connected**; **Make main** · **Not now** |
