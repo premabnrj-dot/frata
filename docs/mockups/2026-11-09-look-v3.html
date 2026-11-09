@@ -174,7 +174,53 @@ svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .site .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px 22px}
 .site .grid4 i{aspect-ratio:4/5;background:var(--s-chip);display:block}
 .site .cta{display:inline-block;margin:0 22px 18px;font:500 11px var(--sans);letter-spacing:.08em;text-transform:uppercase;padding:10px 18px;background:var(--s-text);color:var(--s-bg)}
-.browser[data-device="phone"]{max-width:340px}
+.browser[data-device="phone"]{max-width:392px}
+.czwrap{position:relative}
+.ctop{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.cname{font-weight:600}
+.savestate{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--sub)}
+.savestate[data-s="saving"] .dotsave{background:var(--warn-text);animation:pulse 900ms ease-in-out infinite}
+.pubwrap{position:relative}
+.pop{position:absolute;right:0;top:calc(100% + 8px);z-index:20;width:260px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 32px rgb(0 0 0/.18);padding:14px;display:grid;gap:4px;transform-origin:top right;transition:opacity var(--fast) var(--ease-entrance),scale var(--fast) var(--ease-entrance)}
+@starting-style{.pop{opacity:0;scale:.96}}
+.pop[hidden]{display:none}
+.popf{display:flex;justify-content:flex-end;gap:6px;margin-top:10px}
+.pagepick{min-height:32px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--fg);padding:0 8px;font:inherit;font-size:13px}
+.zoom{margin-left:auto;font:12px var(--mono);color:var(--sub)}
+.pvstage{display:block}
+.browser{margin:0 auto}
+.viewport{position:relative;overflow:hidden}
+.site{width:1280px;transform-origin:top left;position:relative}
+.browser[data-device="phone"] .site{width:390px}
+.site .sect{padding:26px 40px}
+.site .sect b{font:600 22px var(--serif);display:block;margin-bottom:12px}
+.site .hero{height:420px;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:14px;padding:40px}
+.site .hero h4{font-size:64px}
+.site .hero .cta{margin:0}
+.site .grid4{padding:0}
+.site .promises{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;background:var(--s-tint)}
+.site .promises span{border:1px solid color-mix(in srgb,var(--s-text) 20%,transparent);padding:18px;text-align:center;font-size:14px}
+.site .foot{background:var(--s-text);color:var(--s-bg);padding:30px 40px;font:600 56px/1 var(--serif)}
+.browser[data-device="phone"] .site .hero{height:420px;padding:20px}.browser[data-device="phone"] .site .hero h4{font-size:40px}
+.browser[data-device="phone"] .site .sect{padding:20px}.browser[data-device="phone"] .site .grid4{grid-template-columns:1fr 1fr}
+.browser[data-device="phone"] .site .promises{grid-template-columns:1fr}.browser[data-device="phone"] .site .hd small{display:none}
+.browser[data-device="phone"] .site .foot{font-size:34px;padding:24px 20px}
+.golive{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity var(--base)}
+.golive[data-on]{opacity:1}
+.golive .sweep{position:absolute;inset:0;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--s-bg) 70%,transparent) 40%,color-mix(in srgb,var(--brand) 18%,transparent) 50%,transparent 60%);background-size:300% 100%;background-position:100% 0}
+.golive[data-on] .sweep{animation:sweep 1400ms var(--ease-standard) forwards}
+@keyframes sweep{to{background-position:0 0}}
+.golive .pill{position:absolute;left:50%;top:40px;translate:-50% 0;display:flex;align-items:center;gap:10px;background:var(--fg);color:var(--bg);border-radius:999px;padding:12px 22px;font:500 22px var(--sans);box-shadow:0 10px 30px rgb(0 0 0/.25)}
+.spin2{width:20px;height:20px;border-radius:50%;border:3px solid color-mix(in srgb,var(--bg) 35%,transparent);border-top-color:var(--brand);animation:spin 800ms linear infinite}
+@keyframes spin{to{rotate:360deg}}
+.livebar{height:3px;background:transparent}.livebar span{display:block;height:100%;background:var(--brand);transform:scaleX(0);transform-origin:left}
+.livebar span[data-on]{animation:fillx 1400ms var(--ease-standard) forwards}
+@keyframes fillx{to{transform:scaleX(1)}}
+@media (prefers-reduced-motion:reduce){.golive[data-on] .sweep,.spin2,.livebar span[data-on]{animation:none}.livebar span[data-on]{transform:none}}
+.czwrap .scrimx{position:absolute;inset:0;z-index:25;background:var(--scrim);border-radius:12px}
+.czwrap .scrimx[hidden]{display:none}
+.modal.done{position:absolute;z-index:26;left:50%;top:50%;translate:-50% -50%;width:min(440px,calc(100% - 32px))}
+@media (max-width:640px){.hide-s{display:none}}
 .browser[data-device="phone"] .grid4{grid-template-columns:1fr 1fr}
 .browser[data-device="phone"] .site .hero h4{font-size:30px}
 .phone{width:300px;max-width:100%;border:7px solid var(--fg);border-radius:28px;overflow:hidden;background:var(--s-bg);color:var(--s-text)}
@@ -288,7 +334,7 @@ svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 
 <div class="wrap">
 <nav class="boards" aria-label="Boards">
-  <a href="#brand">Frrata Themes</a><a href="#gallery">Look</a><a href="#panel">Customizer</a><a href="#upload">Photos</a><a href="#publish">Publish</a><a href="#confirm">Confirmations</a>
+  <a href="#brand">Frrata Themes</a><a href="#gallery">Look</a><a href="#panel">Customizer</a><a href="#upload">Photos</a><a href="#confirm">Confirmations</a>
 </nav>
 <h1>Look v3</h1>
 <p class="sub">Mockup · 9 Nov 2026</p>
@@ -322,7 +368,17 @@ svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 
 <!-- ============ 3 PANEL ============ -->
 <h2 id="panel">Customizer</h2>
-<div class="frame cz">
+<div class="frame czwrap" id="czwrap">
+<div class="ctop">
+  <a class="btn ghost" href="#gallery">‹ Look</a><span class="cname">Editorial · Haldi</span><span class="chip c-warn">Draft</span>
+  <span style="flex:1"></span>
+  <span class="savestate" id="topsave"><span class="dotsave"></span><span id="topsavet">Saved</span></span>
+  <button class="btn sec hide-s" id="fullBtn"><svg class="i"><use href="#i-ext"/></svg>Full preview</button>
+  <span class="pubwrap"><button class="btn primary" id="pubBtn" aria-expanded="false">Publish</button>
+    <span class="pop" id="pop" role="dialog" aria-labelledby="poph" hidden><b id="poph">Publish Editorial?</b><span class="sub">Shoppers see it on their next visit.</span><span class="popf"><button class="btn sec" id="popNo">Not yet</button><button class="btn primary" id="popYes">Publish</button></span></span>
+  </span>
+</div>
+<div class="cz">
   <aside class="panel" aria-label="Theme settings">
     <div class="tabs"><div class="seg" role="group" aria-label="Edit" id="tabseg" style="width:100%"><span class="thumb"></span><button aria-pressed="false">Sections</button><button aria-pressed="true">Style</button><button aria-pressed="false">Pages</button></div></div>
     <div class="scroll" id="groups">
@@ -365,12 +421,28 @@ svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stro
     <div class="savebar" id="savebar"><span class="dotsave"></span><span id="savet">Saved</span><span style="margin-left:auto">Draft · Editorial</span></div>
   </aside>
   <section class="pvw" aria-label="Preview">
-    <div class="pvbar"><div class="seg" role="group" aria-label="Preview size" id="devseg"><span class="thumb"></span><button aria-pressed="true" data-d="desktop">Computer</button><button aria-pressed="false" data-d="phone">Phone</button></div><span class="sub" style="font-size:12px;margin-left:auto">Home</span></div>
-    <div class="pvstage"><div class="browser" id="browser" data-device="desktop">
+    <div class="pvbar"><div class="seg" role="group" aria-label="Preview size" id="devseg"><span class="thumb"></span><button aria-pressed="true" data-d="desktop">Computer</button><button aria-pressed="false" data-d="phone">Phone</button></div><select class="pagepick" aria-label="Page"><option>Home</option><option>A product</option><option>A collection</option></select><span class="zoom" id="zoom">1280 px · 58%</span></div>
+    <div class="pvstage" id="pvstage"><div class="browser" id="browser" data-device="desktop">
       <div class="chrome"><span class="lights"><i></i><i></i><i></i></span><span class="addr">kesar-studio.frrata.shop</span></div>
-      <div class="site"><div class="hd"><small>Shop</small><span>Kesar Studio</span><small style="text-align:right">Bag</small></div><div class="hero"><h4>Kesar Studio</h4></div><div class="grid4"><i></i><i></i><i></i><i></i></div><span class="cta" id="cta">Shop the edit</span></div>
+      <div class="viewport" id="viewport"><div class="site" id="site">
+        <div class="hd"><small>Shop all · Festive edit · Kurtas</small><span>Kesar Studio</span><small style="text-align:right">Bag (0)</small></div>
+        <div class="hero"><h4>Kesar Studio</h4><span class="cta" id="cta">Shop the edit</span></div>
+        <div class="sect"><b>New in</b><div class="grid4"><i></i><i></i><i></i><i></i></div></div>
+        <div class="sect promises"><span>Pay on delivery</span><span>7-day exchange</span><span>Ships in 2 days</span></div>
+        <div class="foot"><span>Kesar Studio</span></div>
+        <div class="golive" id="golive"><span class="sweep"></span><span class="pill"><span class="spin2"></span>Going live</span></div>
+      </div></div>
+      <div class="livebar"><span id="livebar"></span></div>
     </div></div>
   </section>
+</div>
+<div class="scrimx" id="doneScrim" hidden></div>
+<div class="modal done" id="mDone" role="dialog" aria-labelledby="mdh" hidden>
+  <div class="hero-ok"><span class="mini"><i style="display:block;height:10px;margin-top:4px;background:var(--s-text);opacity:.6;width:40%;justify-self:center"></i><i style="display:block;background:linear-gradient(160deg,var(--s-tint),var(--s-chip))"></i></span><span class="badge"><svg class="i" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></div>
+  <header><h3 id="mdh">Your shop has its new look</h3></header>
+  <div class="body"><div class="url"><span>kesar-studio.frrata.shop</span><button class="btn ghost" style="min-height:30px;padding:0 6px" aria-label="Copy address" id="copyurl"><svg class="i"><use href="#i-copy"/></svg></button></div></div>
+  <footer><button class="btn ghost" id="undoPub">Undo</button><button class="btn sec" id="keep">Keep editing</button><a class="btn primary" href="#panel" id="viewShop"><svg class="i"><use href="#i-ext"/></svg>View your shop</a></footer>
+</div>
 </div>
 
 <!-- ============ 4 UPLOAD ============ -->
@@ -393,27 +465,6 @@ svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stro
     <div class="drop err"><div class="big">That’s a HEIC from an iPhone</div><div style="font-size:12px">We’ll turn it into a JPG for you</div><button class="btn sec" style="margin-top:6px">Convert and upload</button></div>
     <div class="drop err" style="min-height:90px"><div class="big">Upload stopped</div><button class="btn sec" style="margin-top:4px">Try again</button></div>
   </div></div>
-</div>
-
-<!-- ============ 5 PUBLISH ============ -->
-<h2 id="publish">Publish</h2>
-<div class="stage" id="pubStage">
-  <div class="scrimx"></div>
-  <div class="modal" id="mReview" role="dialog" aria-labelledby="mrh" style="width:min(420px,100%)">
-    <header><h3 id="mrh">Publish Editorial?</h3><span class="sub">Shoppers see it on their next visit.</span></header>
-    <footer style="border-top:0"><button class="btn sec" id="notyet">Not yet</button><button class="btn primary" id="doPub">Publish</button></footer>
-  </div>
-  <div class="modal" id="mWork" role="dialog" aria-label="Publishing" hidden style="width:min(420px,100%)">
-    <div class="apply" id="apply"><div class="win old"><i></i><i></i><i></i></div><div class="win new"><i></i><i></i><i></i></div></div>
-    <div class="thread-bar"><span id="tb"></span></div>
-    <header style="padding-bottom:18px"><h3 id="mwh" style="font-size:17px">Putting your new look live…</h3></header>
-  </div>
-  <div class="modal" id="mDone" role="dialog" aria-labelledby="mdh" hidden>
-    <div class="hero-ok"><span class="mini"><i style="display:block;height:10px;margin-top:4px;background:var(--s-text);opacity:.6;width:40%;justify-self:center"></i><i style="display:block;background:linear-gradient(160deg,var(--s-tint),var(--s-chip))"></i></span><span class="badge"><svg class="i" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span></div>
-    <header><h3 id="mdh">Your shop has its new look</h3></header>
-    <div class="body"><div class="url"><span>kesar-studio.frrata.shop</span><button class="btn ghost" style="min-height:30px;padding:0 6px" aria-label="Copy address" id="copyurl"><svg class="i"><use href="#i-copy"/></svg></button></div></div>
-    <footer><button class="btn ghost" id="undoPub">Undo</button><button class="btn sec" id="keep">Keep editing</button><a class="btn primary" href="#publish" id="viewShop"><svg class="i"><use href="#i-ext"/></svg>View your shop</a></footer>
-  </div>
 </div>
 
 <!-- ============ 6 CONFIRM ============ -->
@@ -443,7 +494,7 @@ const THEMES=[
 ]
 const mark=`<svg viewBox="-6 12 302 92" aria-hidden="true"><path d="M7 100 V42 A20 20 0 0 1 27 22 H38"/><path d="M0 53 H31"/><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M183 73 A20 20 0 1 1 143 73 A20 20 0 1 1 183 73"/><path d="M183 46 V100"/><path d="M208 30 V76 A17 17 0 0 0 225 93 H234"/><path d="M196 53 H230"/><path d="M287 73 A20 20 0 1 1 247 73 A20 20 0 1 1 287 73"/><path d="M287 46 V100"/><path class="thread" d="M51 77 A24 24 0 0 1 75 53 H86"/></svg>`
 function renderCards(){$('#cards').innerHTML=THEMES.map(t=>`<button class="tcard"><span class="pic" style="background:${t.tint}"><span class="ph" style="background:${t.bg}"><i style="margin-top:6px;height:6px;width:50%;justify-self:center;background:${t.ink};opacity:.7"></i><i style="background:linear-gradient(160deg,${t.tint},#0001)"></i><i style="display:grid;grid-template-columns:1fr 1fr;gap:4px;background:none"><i style="background:${t.ink};opacity:.12"></i><i style="background:${t.ink};opacity:.12"></i></i></span></span><span class="meta"><span class="row1"><span class="name">${t.n}</span>${t.use?'<span class="chip c-ok">In use</span>':''}<span style="margin-left:auto" class="ft-badge">${mark}themes</span></span><span class="sub" style="font-size:13px">${t.j}</span><span class="dots">${t.dots.map(d=>`<i style="background:${d}"></i>`).join('')}</span></span></button>`).join('')}
-setLock('a')
+setLock('b')
 // ---------- segmented controls with a sliding thumb ----------
 function seg(el){const btns=$$('button',el),th=$('.thumb',el);const place=()=>{const on=btns.find(b=>b.getAttribute('aria-pressed')==='true');if(!on)return;th.style.width=on.offsetWidth+'px';th.style.translate=(on.offsetLeft-3)+'px 0'};btns.forEach(b=>b.onclick=()=>{btns.forEach(x=>x.setAttribute('aria-pressed',x===b));place();saving()});place();addEventListener('resize',place)}
 $$('.seg').forEach(seg)
@@ -458,9 +509,16 @@ $('#brandsw').addEventListener('click',e=>{const b=e.target.closest('button');if
 $('#bstyles').addEventListener('click',e=>{const b=e.target.closest('.bs');if(!b)return;$$('#bstyles .bs').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#btnName').textContent='Solid · '+b.dataset.m;saving()})
 $$('.sw').forEach(s=>s.onclick=()=>{s.setAttribute('aria-checked',s.getAttribute('aria-checked')!=='true');saving()})
 $('#tsize').oninput=e=>{const v=+e.target.value;$('#tsizeo').textContent=v<96?'Compact':v<104?'Regular':'Large';$('.site .hero h4').style.fontSize=(40*v/100)+'px';saving()}
-$('#devseg').addEventListener('click',e=>{const b=e.target.closest('button');if(b)$('#browser').dataset.device=b.dataset.d})
-function flash(){const h=$('.site .hero');h.classList.remove('flash');void h.offsetWidth;h.classList.add('flash')}
-let st;function saving(){const b=$('#savebar');b.dataset.s='saving';$('#savet').textContent='Saving…';clearTimeout(st);st=setTimeout(()=>{b.dataset.s='';$('#savet').textContent='Saved'},900)}
+function fit(){const br=$('#browser'),site=$('#site'),vp=$('#viewport');const w=br.dataset.device==='phone'?390:1280;const avail=Math.min($('#pvstage').clientWidth,br.dataset.device==='phone'?392:9999)-2;const k=Math.min(1,avail/w);site.style.transform=`scale(${k})`;vp.style.height=(site.offsetHeight*k)+'px';br.style.maxWidth=br.dataset.device==='phone'?'392px':'100%';$('#zoom').textContent=`${w} px · ${Math.round(k*100)}%`}
+$('#devseg').addEventListener('click',e=>{const b=e.target.closest('button');if(b){$('#browser').dataset.device=b.dataset.d;requestAnimationFrame(fit)}})
+addEventListener('resize',fit);requestAnimationFrame(fit);setTimeout(fit,300)
+const pop=$('#pop');$('#pubBtn').onclick=()=>{pop.hidden=!pop.hidden;$('#pubBtn').setAttribute('aria-expanded',!pop.hidden)}
+$('#popNo').onclick=()=>{pop.hidden=true}
+$('#popYes').onclick=()=>{pop.hidden=true;const g=$('#golive'),lb=$('#livebar');$('#pubBtn').disabled=true;$('#pubBtn').textContent='Publishing…';g.removeAttribute('data-on');lb.removeAttribute('data-on');void g.offsetWidth;g.setAttribute('data-on','');lb.setAttribute('data-on','');setTimeout(()=>{g.removeAttribute('data-on');$('#doneScrim').hidden=false;$('#mDone').hidden=false;$('#pubBtn').textContent='Publish';$('#pubBtn').disabled=false},1500)}
+const closeDone=()=>{$('#mDone').hidden=true;$('#doneScrim').hidden=true;$('#livebar').removeAttribute('data-on')}
+$('#keep').onclick=closeDone;$('#undoPub').onclick=()=>{closeDone();showToast('Your earlier look is back',false)};$('#viewShop').onclick=(e)=>{e.preventDefault();closeDone()}
+function flash(){const h=$('#site .hero');h.classList.remove('flash');void h.offsetWidth;h.classList.add('flash')}
+let st;function saving(){const b=$('#savebar'),t=$('#topsave');b.dataset.s=t.dataset.s='saving';$('#savet').textContent=$('#topsavet').textContent='Saving…';clearTimeout(st);st=setTimeout(()=>{b.dataset.s=t.dataset.s='';$('#savet').textContent=$('#topsavet').textContent='Saved'},900)}
 // ---------- uploader ----------
 function drawArt(c,w,h,i){const x=c.getContext('2d');const g=x.createLinearGradient(0,0,w,h);const pal=[['#F3D9A4','#C9792B'],['#E3E6F2','#2F3E73'],['#F4E0E3','#9B3550'],['#E6F3EE','#0E6E5C'],['#EFE6D8','#7A2E2E'],['#E7E5E0','#555']][i%6];g.addColorStop(0,pal[0]);g.addColorStop(1,pal[1]);x.fillStyle=g;x.fillRect(0,0,w,h);x.fillStyle='rgba(255,255,255,.22)';x.beginPath();x.moveTo(w*.6,h);x.lineTo(w*.6,h*.35);x.arc(w*.75,h*.35,w*.15,Math.PI,0);x.lineTo(w*.9,h);x.fill();x.fillStyle='rgba(0,0,0,.25)';x.fillRect(w*.66,h*.4,w*.18,h*.45);return c.toDataURL()}
 const art=(i,w=320,h=200)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return drawArt(c,w,h,i)}
@@ -475,8 +533,7 @@ $('#donePrev').addEventListener('click',e=>{if(e.target.closest('.tools'))return
 $$('.sugg button').forEach(b=>b.onclick=()=>{$('#altin').value=b.textContent})
 $$('.ratio .chip').forEach(b=>b.onclick=()=>{$$('.ratio .chip').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#donePrev').style.aspectRatio=b.textContent==='Tall'?'16/10':b.textContent==='Wide'?'21/9':'1/1'})
 // ---------- publish ----------
-$('#doPub').onclick=()=>{$('#mReview').hidden=true;$('#mWork').hidden=false;const a=$('#apply');a.removeAttribute('data-go');void a.offsetWidth;a.setAttribute('data-go','');setTimeout(()=>{$('#mWork').hidden=true;$('#mDone').hidden=false},1300)}
-$('#notyet').onclick=$('#keep').onclick=$('#undoPub').onclick=()=>{$('#mDone').hidden=true;$('#mWork').hidden=true;$('#mReview').hidden=false}
+
 $('#copyurl').onclick=async()=>{try{await navigator.clipboard.writeText('kesar-studio.frrata.shop')}catch{}showToast('Address copied',false)}
 // ---------- toast ----------
 function showToast(t,undo=true){const x=$('#toast');x.firstElementChild.textContent=t;$('#toastUndo').hidden=!undo;x.hidden=false;clearTimeout(showToast.t);showToast.t=setTimeout(()=>x.hidden=true,3500)}
