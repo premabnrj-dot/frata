@@ -203,6 +203,9 @@ export const collections = pgTable('collections', {
   matchAll: integer('match_all').notNull().default(1),
   rules: jsonb('rules').$type<unknown[]>().notNull().default(sql`'[]'::jsonb`),
   sort: text('sort').notNull().default('newest'),
+  /** Search and sharing (S2·2): empty uses the defaults (seo/defaults.ts). */
+  seoTitle: text('seo_title').notNull().default(''),
+  seoDescription: text('seo_description').notNull().default(''),
   createdAt: createdAt(),
   updatedAt: at('updated_at').notNull().defaultNow(),
 }, (t) => [
@@ -212,6 +215,19 @@ export const collections = pgTable('collections', {
   check('collections_sort', sql`${t.sort} in ('manual','newest','price_low','price_high','title')`),
   check('collections_title', sql`length(${t.title}) between 1 and 80`),
   check('collections_handle', sql`${t.handle} ~ '^[a-z0-9]([a-z0-9-]{0,78}[a-z0-9])?$'`),
+  check('collections_seo', sql`length(${t.seoTitle}) <= 200 and length(${t.seoDescription}) <= 400`),
+])
+
+/** A collection's old addresses (S2·2): each redirects (308) to the collection. Append-only for the app. */
+export const collectionHandleHistory = pgTable('collection_handle_history', {
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  handle: text('handle').notNull(),
+  collectionId: uuid('collection_id').notNull(),
+  retiredAt: at('retired_at').notNull().defaultNow(),
+}, (t) => [
+  primaryKey({ columns: [t.tenantId, t.handle] }),
+  foreignKey({ name: 'collection_handle_history_collection_fk', columns: [t.tenantId, t.collectionId], foreignColumns: [collections.tenantId, collections.id] }).onDelete('cascade'),
+  index('collection_handle_history_collection').on(t.tenantId, t.collectionId),
 ])
 
 export const collectionProducts = pgTable('collection_products', {

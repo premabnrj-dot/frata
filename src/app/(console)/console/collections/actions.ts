@@ -8,7 +8,7 @@ import { refreshShop } from '@/lib/queries/storefront'
 import { asMember } from '@/lib/auth/as-member'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { auditEvents } from '@/lib/db/schema'
-import { collectionProducts, collections, products } from '@/lib/db/schema-catalogue'
+import { collectionHandleHistory, collectionProducts, collections, products } from '@/lib/db/schema-catalogue'
 import { productFacts } from '@/lib/queries/catalogue'
 import { errName } from '@/lib/log'
 
@@ -19,7 +19,7 @@ import { errName } from '@/lib/log'
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string; errors?: Record<string, string> }
 class Stop extends Error { constructor(public result: { ok: false; error: string; errors?: Record<string, string> }) { super('stop') } }
 
-export type CollectionInput = { title: string; handle: string; description: string; kind: 'manual' | 'auto'; matchAll: boolean; rules: unknown; sort: string; productIds: string[] }
+export type CollectionInput = { title: string; handle: string; description: string; seoTitle?: string; seoDescription?: string; kind: 'manual' | 'auto'; matchAll: boolean; rules: unknown; sort: string; productIds: string[] }
 const SORTS = ['manual', 'newest', 'price_low', 'price_high', 'title']
 const HANDLE = /^[a-z0-9]([a-z0-9-]{0,78}[a-z0-9])?$/
 
@@ -31,13 +31,17 @@ function clean(c: CollectionInput) {
   if (!HANDLE.test(handle) || handle.includes('--')) errors.handle = 'Lowercase letters, digits and hyphens.'
   const description = String(c.description ?? '').trim()
   if (description.length > 2000) errors.description = 'Up to 2,000 characters.'
+  const seoTitle = String(c.seoTitle ?? '').trim().replace(/\s+/g, ' ')
+  if (seoTitle.length > 200) errors.seoTitle = 'Up to 200 characters.'
+  const seoDescription = String(c.seoDescription ?? '').trim().replace(/\s+/g, ' ')
+  if (seoDescription.length > 400) errors.seoDescription = 'Up to 400 characters.'
   const kind = c.kind === 'auto' ? 'auto' : 'manual'
   const rules = kind === 'auto' ? cleanRules(c.rules) : []
   if (kind === 'auto' && !rules.length) errors.rules = 'Add at least one rule.'
   const sort = SORTS.includes(c.sort) ? c.sort : 'newest'
   if (kind === 'auto' && sort === 'manual') errors.sort = 'Automatic collections sort by newest, price or name.'
   const productIds = kind === 'manual' ? [...new Set((Array.isArray(c.productIds) ? c.productIds : []).filter((x) => typeof x === 'string' && /^[0-9a-f-]{36}$/.test(x)))].slice(0, 500) : []
-  return { errors, value: { title, handle, description, kind, matchAll: c.matchAll === false ? 0 : 1, rules, sort, productIds } }
+  return { errors, value: { title, handle, description, seoTitle, seoDescription, kind, matchAll: c.matchAll === false ? 0 : 1, rules, sort, productIds } }
 }
 
 /** Create (id null) or save a collection. */
@@ -48,10 +52,15 @@ export async function saveCollection(id: string | null, input: CollectionInput):
     const r = await asMember(ANY_MEMBER, { action: id ? 'collection.save' : 'collection.create', target: c.title }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
       const [clash] = await tx.select({ id: collections.id }).from(collections).where(and(eq(collections.tenantId, tenantId), eq(collections.handle, c.handle), id ? sql`${collections.id} <> ${id}` : sql`true`)).limit(1)
-      if (clash) throw new Stop({ ok: false, error: 'Another collection uses that address.', errors: { handle: 'Another collection uses this address.' } })
-      const data = { title: c.title, handle: c.handle, description: c.description, kind: c.kind, matchAll: c.matchAll, rules: c.rules, sort: c.sort, updatedAt: new Date() }
+      // Another collection's old address stays reserved: it redirects there (S2·2).
+      const [oldClash] = clash ? [] : await tx.select({ id: collectionHandleHistory.collectionId }).from(collectionHandleHistory).where(and(eq(collectionHandleHistory.tenantId, tenantId), eq(collectionHandleHistory.handle, c.handle), id ? sql`${collectionHandleHistory.collectionId} <> ${id}` : sql`true`)).limit(1)
+      if (clash || oldClash) throw new Stop({ ok: false, error: 'Another collection uses that address.', errors: { handle: 'Another collection uses (or used) this address.' } })
+      const data = { title: c.title, handle: c.handle, description: c.description, seoTitle: c.seoTitle, seoDescription: c.seoDescription, kind: c.kind, matchAll: c.matchAll, rules: c.rules, sort: c.sort, updatedAt: new Date() }
       let cid = id
       if (id) {
+        // A changed address: the old one keeps working and sends shoppers here (append-only; going back needs nothing).
+        const [cur] = await tx.select({ handle: collections.handle }).from(collections).where(and(eq(collections.tenantId, tenantId), eq(collections.id, id)))
+        if (cur && cur.handle !== c.handle) await tx.insert(collectionHandleHistory).values({ tenantId, handle: cur.handle, collectionId: id }).onConflictDoNothing()
         const [row] = await tx.update(collections).set(data).where(and(eq(collections.tenantId, tenantId), eq(collections.id, id))).returning({ id: collections.id })
         if (!row) throw new Stop({ ok: false, error: 'That collection is not in your shop.' })
       } else {

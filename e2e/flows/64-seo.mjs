@@ -225,6 +225,35 @@ export default {
       for (const h of ['/products', '/policies/returns']) assert.ok(head((await get(h, CRAWLERS.google)).body).one('description'), `${h}: description`)
     })
 
+    await t.step('S2·2: a renamed collection keeps its old address (308), its own page title, and can go back', async () => {
+      const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 900 } })
+      const p = await ctx.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message))
+      const rename = async (from, to, title) => {
+        await p.goto(`${CONSOLE}/console/collections/${from}`)
+        await p.getByLabel('Address').fill(to)
+        await p.getByText('Search and sharing', { exact: true }).click()
+        await p.getByLabel('Page title').fill(title)
+        await p.getByRole('button', { name: 'Save', exact: true }).click()
+        await p.waitForURL(`${CONSOLE}/console/collections/${to}`)
+      }
+      await rename('kurtas', 'kurtas-and-sets', 'Kurtas and sets online')
+      await p.screenshot({ path: t.out('collection-seo') })
+      const deadline = Date.now() + 70_000
+      let old
+      do { old = await get('/collections/kurtas', CRAWLERS.google); if (old.status === 308) break; await new Promise((r) => setTimeout(r, 2000)) } while (Date.now() < deadline)
+      assert.equal(old.status, 308, 'the old address redirects')
+      assert.equal(old.headers.location, '/collections/kurtas-and-sets')
+      assert.equal(head((await get('/collections/kurtas-and-sets', CRAWLERS.google)).body).title, 'Kurtas and sets online')
+      // Another collection may not take an old address; this one may go back to its own.
+      await p.goto(`${CONSOLE}/console/collections/festive-edit`)
+      await p.getByLabel('Address').fill('kurtas')
+      await p.getByRole('button', { name: 'Save', exact: true }).click()
+      await p.getByText('Another collection uses (or used) this address.').waitFor()
+      await p.getByRole('button', { name: 'Discard' }).click().catch(() => {})
+      await rename('kurtas-and-sets', 'kurtas', '')
+      await ctx.close()
+    })
+
     await t.step('S1·6: the shop has its own icon (its initial or logo, never Frrata\'s), served as PNG', async () => {
       const h = head((await get('/', CRAWLERS.google)).body)
       const icons = [...h.raw.matchAll(/<link\b[^>]*rel="(?:icon|apple-touch-icon)"[^>]*>/g)].map((x) => x[0].match(/href="([^"]+)"/)[1])

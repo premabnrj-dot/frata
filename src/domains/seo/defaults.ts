@@ -131,6 +131,11 @@ export const pageDescription = {
   policy: (title: string, shop: string) => `${title} at ${shop}.`,
 }
 
+/** A collection's page title and description (S2·2): the merchant's own, else made from its name and intro. */
+export function collectionSeo(c: { title: string; description: string; seoTitle: string; seoDescription: string }, shop: string) {
+  return { title: c.seoTitle.trim() || `${c.title} | ${shop}`, description: c.seoDescription.trim() ? trimmed(c.seoDescription) : pageDescription.collection(c.title, c.description, shop) }
+}
+
 /** Where a page sits (S2·3): Home › Collection › Product, as Google shows it under the result. */
 export function breadcrumbJsonLd(items: { name: string; url: string }[]): object {
   return { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: items.map((it, i) => ({ '@type': 'ListItem', position: i + 1, name: it.name, item: it.url })) }

@@ -7,7 +7,7 @@ import { shellNeedsCatalogue, shellPictures } from '../page-look'
 // The header's pictures and the footer's strip (Look v3): read only when a design needs them.
 const now = new Date('2026-11-09T06:00:00Z')
 const ed = CATALOGUE.editorial!['2.1.0']!
-const cat = { products: samplePieces(), collections: [{ id: 'c', handle: 'kurtas', title: 'Kurtas', description: '', kind: 'manual' as const, matchAll: true, rules: [], sort: 'manual', productIds: [samplePieces()[0]!.id] }] }
+const cat = { products: samplePieces(), collections: [{ id: 'c', handle: 'kurtas', title: 'Kurtas', description: '', seoTitle: '', seoDescription: '', kind: 'manual' as const, matchAll: true, rules: [], sort: 'manual', productIds: [samplePieces()[0]!.id] }] }
 
 describe('shell pictures', () => {
   it('no catalogue read for a header and footer that draw none', () => {

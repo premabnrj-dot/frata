@@ -11,5 +11,5 @@ export default async function NewCollectionPage({ searchParams }: { searchParams
   const data = await editorData(auth.membership.tenantId).catch(() => null)
   if (!data) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const kind = (await searchParams).kind === 'auto' ? 'auto' : 'manual'
-  return <CollectionEditor initial={{ id: null, title: '', handle: '', description: '', kind, matchAll: true, rules: kind === 'auto' ? [{ field: 'category', value: '' }] : [], sort: kind === 'auto' ? 'newest' : 'manual', productIds: [] }} {...data} />
+  return <CollectionEditor initial={{ id: null, title: '', handle: '', description: '', seoTitle: '', seoDescription: '', kind, matchAll: true, rules: kind === 'auto' ? [{ field: 'category', value: '' }] : [], sort: kind === 'auto' ? 'newest' : 'manual', productIds: [] }} {...data} />
 }

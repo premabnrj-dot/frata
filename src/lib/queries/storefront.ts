@@ -9,7 +9,7 @@ import type { PolicyFacts } from '@/domains/policies/render'
 import type { DeliveryRules } from '@/domains/checkout/delivery'
 import { tenantForHost, themeVersionRows } from '@/lib/db/platform'
 import { shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
-import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
+import { collectionHandleHistory, collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { owedSql, stateSql } from '@/lib/db/order-predicates'
 import { priorPriceSql } from '@/lib/db/price-predicates'
 import { orderLines, orders } from '@/lib/db/schema-orders'
@@ -133,8 +133,9 @@ export type StoreCard = {
   /** A sample piece in the customizer's preview (src/lib/themes/sample.ts); never set by a read here. */
   sample?: true
 }
-export type StoreCollection = { id: string; handle: string; title: string; description: string; kind: 'manual' | 'auto'; matchAll: boolean; rules: unknown[]; sort: string; productIds: string[] }
-export type StoreCatalogue = { products: StoreCard[]; collections: StoreCollection[] }
+export type StoreCollection = { id: string; handle: string; title: string; description: string; seoTitle: string; seoDescription: string; kind: 'manual' | 'auto'; matchAll: boolean; rules: unknown[]; sort: string; productIds: string[] }
+/** movedCollections: a collection's old address → its current one (S2·2; 308). */
+export type StoreCatalogue = { products: StoreCard[]; collections: StoreCollection[]; movedCollections?: Record<string, string> }
 
 /** A cached entry must stay well under the data cache's 2 MB: lists show at most this many products. */
 const MAX_LISTED = 600
@@ -227,9 +228,11 @@ async function coreCatalogue(tenantId: string, drafts: boolean): Promise<Catalog
       tx.select(imageCols).from(productImages).where(and(eq(productImages.tenantId, tenantId), inArray(productImages.productId, ids))).orderBy(asc(productImages.position)),
       tx.select(colourCols).from(productColours).where(and(eq(productColours.tenantId, tenantId), inArray(productColours.productId, ids))),
       tx.select({ productId: productAttributes.productId, attribute: productAttributes.attribute, values: productAttributes.values }).from(productAttributes).where(and(eq(productAttributes.tenantId, tenantId), inArray(productAttributes.productId, ids))),
-      tx.select({ id: collections.id, handle: collections.handle, title: collections.title, description: collections.description, kind: collections.kind, matchAll: collections.matchAll, rules: collections.rules, sort: collections.sort }).from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)),
+      tx.select({ id: collections.id, handle: collections.handle, title: collections.title, description: collections.description, seoTitle: collections.seoTitle, seoDescription: collections.seoDescription, kind: collections.kind, matchAll: collections.matchAll, rules: collections.rules, sort: collections.sort }).from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)),
       tx.select({ collectionId: collectionProducts.collectionId, productId: collectionProducts.productId }).from(collectionProducts).where(eq(collectionProducts.tenantId, tenantId)).orderBy(asc(collectionProducts.position)),
     ]) : [[], [], [], [], [], []] as const
+    const moved = await tx.select({ old: collectionHandleHistory.handle, to: collections.handle }).from(collectionHandleHistory)
+      .innerJoin(collections, and(eq(collections.id, collectionHandleHistory.collectionId), eq(collections.tenantId, tenantId))).where(eq(collectionHandleHistory.tenantId, tenantId))
     const show = await showcase(tx, tenantId)
     const photoPrefix = photoPrefixOf(imgs.map((i) => i.base))
     return {
@@ -244,6 +247,7 @@ async function coreCatalogue(tenantId: string, drafts: boolean): Promise<Catalog
         attributes: Object.fromEntries(attrs.filter((a) => a.productId === p.id).map((a) => [a.attribute, a.values])),
       }, show.indexFor(p.id), photoPrefix)),
       collections: colls.map((c) => ({ ...c, kind: c.kind as 'manual' | 'auto', matchAll: c.matchAll === 1, rules: c.rules, productIds: members.filter((m) => m.collectionId === c.id).map((m) => m.productId) })),
+      movedCollections: Object.fromEntries(moved.filter((m) => m.old !== m.to).map((m) => [m.old, m.to])),
     }
   })
 }

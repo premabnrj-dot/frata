@@ -126,6 +126,17 @@ verify command run and read, and `impact-reviewer` on its diff before the commit
   the card route (canonical, budgeted, own-folder logo only). The shop layout's icons and apple icon point at it, theme
   colour from the theme. Root `/favicon.ico` stays the platform's (accepted).
 
+### S2·2 as built (2026-11-09)
+- Migration `drizzle/0070_collection_seo.sql`: `collections.seo_title`/`seo_description` (≤ 200 / 400, check
+  `collections_seo`); `collection_handle_history` (PK tenant + handle, FK (tenant, collection) cascade, select + insert
+  only, RLS + policy in the same file, no frata_admin grant; proofs in `scripts/verify/tenancy.sql` § 21).
+- `saveCollection`: a changed address appends the old one; another collection's old address is refused ("uses (or
+  used)"); going back to its own needs nothing. The catalogue entry carries `movedCollections` (old → current, one
+  narrow read); both collection routes 308 an old address (page n keeps its page). Titles and descriptions from
+  `collectionSeo` (`src/domains/seo/defaults.ts`). The editor reuses `SeoPanel` (`folder="collections"`, the address
+  stays under the name). The intro was already plain text above the grid. e2e 64-seo renames, follows the 308, reads
+  the title, is refused another's old address, goes back.
+
 ## S·2 Search foundations
 - **S2·1 Descriptions everywhere** in `pageTags` (lists, collections trimmed to 155, policies, page n); Hindi titles.
 - **S2·2 Collections**: migration — `collections.seo_title`, `seo_description` (length checks);

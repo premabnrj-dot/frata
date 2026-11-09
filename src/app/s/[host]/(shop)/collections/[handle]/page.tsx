@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
-import { pageDescription } from '@/domains/seo/defaults'
-import { notFound } from 'next/navigation'
+import { collectionSeo } from '@/domains/seo/defaults'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { shareImage } from '@/lib/seo/share-image'
 import { CollectionView } from '@/components/storefront/pages'
 import { JsonLd } from '@/components/storefront/json-ld'
@@ -22,13 +22,16 @@ async function load(params: Params) {
   if (!/^[a-z0-9-]{1,80}$/.test(handle)) notFound()
   const cat = await shopCatalogue(shop.id)
   const c = cat.collections.find((x) => x.handle === handle)
+  const to = !c && cat.movedCollections?.[handle]
+  if (to) permanentRedirect(`/collections/${to}`)
   if (!c) notFound()
   return { shop, cat, c }
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { shop, cat, c } = await load(params)
-  return toMetadata(shopTags(shop, { path: `/collections/${c.handle}`, title: `${c.title} | ${shop.shopName}`, shareTitle: c.title, description: pageDescription.collection(c.title, c.description, shop.shopName), image: await shareImage(shop, { kind: 'collection', collection: c, cat }, `${c.title} — ${shop.shopName}`, new Date()) }))
+  const seo = collectionSeo(c, shop.shopName)
+  return toMetadata(shopTags(shop, { path: `/collections/${c.handle}`, title: seo.title, shareTitle: c.title, description: seo.description, image: await shareImage(shop, { kind: 'collection', collection: c, cat }, `${c.title} — ${shop.shopName}`, new Date()) }))
 }
 
 export default async function Collection({ params }: { params: Params }) {

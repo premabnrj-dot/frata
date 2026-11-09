@@ -10,7 +10,7 @@ import type { StoreCard, StoreCatalogue, StoreCollection, StoreColour, StoreImag
  * reads Postgres. `catalogue-size.int.test.ts` holds it under 1 MB at 600 products.
  */
 export type CachedCard = Omit<StoreCard, 'offers'> & { offerIdx: number[] }
-export type CatalogueEntry = { products: CachedCard[]; collections: StoreCollection[]; offers: ShowOffer[]; photoPrefix: string }
+export type CatalogueEntry = { products: CachedCard[]; collections: StoreCollection[]; movedCollections?: Record<string, string>; offers: ShowOffer[]; photoPrefix: string }
 /** The photos a list shows: the cover, the second (hover), each colour's first, and any photo a colour's swatch is cut from. */
 export const listPhotos = (imgs: StoreImage[], colours: Pick<StoreColour, 'cropImageId'>[] = []): StoreImage[] => {
   const crops = new Set(colours.map((c) => c.cropImageId).filter(Boolean))
@@ -44,7 +44,7 @@ export function compactCard(card: Omit<StoreCard, 'offers'>, offerIdx: number[],
 export const photoPrefixOf = (bases: string[]) => { const f = bases[0] ?? ''; return f.startsWith('https://') ? f.slice(0, f.lastIndexOf('/') + 1) : '' }
 
 export const expand = (e: CatalogueEntry): StoreCatalogue => ({
-  collections: e.collections,
+  collections: e.collections, movedCollections: e.movedCollections ?? {},
   products: e.products.map(({ offerIdx, ...c }) => ({
     ...c, offers: offerIdx.map((i) => e.offers[i]!),
     variants: c.variants.map((v) => ({ ...VARIANT_BLANK, ...v })),

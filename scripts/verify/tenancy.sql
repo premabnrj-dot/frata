@@ -429,6 +429,7 @@ insert into collections (id, tenant_id, handle, title, kind) values ('ffffffff-0
 insert into collection_products (tenant_id, collection_id, product_id) values ('22222222-2222-2222-2222-222222222222', 'ffffffff-0000-0000-0000-00000000000b', 'eeeeeeee-0000-0000-0000-00000000000b');
 insert into product_colours (tenant_id, product_id, value, family) values ('22222222-2222-2222-2222-222222222222', 'eeeeeeee-0000-0000-0000-00000000000b', 'Indigo', '2');
 insert into product_handle_history (tenant_id, handle, product_id) values ('22222222-2222-2222-2222-222222222222', 'old-b', 'eeeeeeee-0000-0000-0000-00000000000b');
+insert into collection_handle_history (tenant_id, handle, collection_id) values ('22222222-2222-2222-2222-222222222222', 'old-festive', 'ffffffff-0000-0000-0000-00000000000b');
 insert into product_attributes (tenant_id, product_id, attribute, values) values ('22222222-2222-2222-2222-222222222222', 'eeeeeeee-0000-0000-0000-00000000000b', 'fabric', '{frata:chanderi}');
 insert into product_images (id, tenant_id, product_id, base, widths, width, height) values
   ('abababab-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', 'https://s.public.blob.vercel-storage.com/tenants/11111111-1111-1111-1111-111111111111/products/a', '{400}', 1, 1),
@@ -446,6 +447,14 @@ do $$ declare n int; begin
   insert into product_handle_history (tenant_id, handle, product_id) values ('11111111-1111-1111-1111-111111111111', 'old-a', 'eeeeeeee-0000-0000-0000-00000000000a');
   begin update product_handle_history set product_id = 'eeeeeeee-0000-0000-0000-00000000000a'; raise exception 'FAIL: app re-pointed an old address'; exception when insufficient_privilege then null; end;
   begin delete from product_handle_history; raise exception 'FAIL: app deleted an old address'; exception when insufficient_privilege then null; end;
+  -- Collection addresses (S2·2): B's unseen, never pointed at B's collection, append-only.
+  if exists (select 1 from collection_handle_history) then raise exception 'FAIL: A sees B old collection addresses'; end if;
+  begin insert into collection_handle_history (tenant_id, handle, collection_id) values ('11111111-1111-1111-1111-111111111111', 'old-festive', 'ffffffff-0000-0000-0000-00000000000b'); raise exception 'FAIL: A pointed an address at B collection';
+  exception when foreign_key_violation then null; end;
+  begin insert into collection_handle_history (tenant_id, handle, collection_id) values ('22222222-2222-2222-2222-222222222222', 'sneaky', 'ffffffff-0000-0000-0000-00000000000b'); raise exception 'FAIL: A wrote B address history';
+  exception when insufficient_privilege then null; end;
+  begin update collection_handle_history set handle = 'x'; raise exception 'FAIL: app re-pointed an old collection address'; exception when insufficient_privilege then null; end;
+  begin delete from collection_handle_history; raise exception 'FAIL: app deleted an old collection address'; exception when insufficient_privilege then null; end;
   update collections set title = 'x'; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A renamed B collection'; end if;
   if exists (select 1 from product_attributes) then raise exception 'FAIL: A sees B details'; end if;
   update product_attributes set values = '{x}'; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A changed B details'; end if;
@@ -463,7 +472,8 @@ end $$;
 rollback;
 do $$ begin
   if has_table_privilege('frata_admin', 'collections', 'select') or has_table_privilege('frata_admin', 'product_colours', 'select') or has_table_privilege('frata_admin', 'product_attributes', 'select')
-    or has_table_privilege('frata_admin', 'collection_products', 'select') or has_table_privilege('frata_admin', 'product_handle_history', 'select') then raise exception 'FAIL: admin reads the product model directly'; end if;
+    or has_table_privilege('frata_admin', 'collection_products', 'select') or has_table_privilege('frata_admin', 'product_handle_history', 'select')
+    or has_table_privilege('frata_admin', 'collection_handle_history', 'select') then raise exception 'FAIL: admin reads the product model directly'; end if;
 end $$;
 
 -- 22. Checkout: orders, lines and payment keys — own shop only; a link token from B finds nothing under A; keys unreadable to staff.

@@ -45,7 +45,7 @@ const COLLECTIONS: [string, string, string[]][] = [
   ['occasion', 'Occasion', ['rani-anarkali', 'mehndi-saree']],
   ['everyday', 'Everyday', ['terracotta-coord', 'black-linen-shirt', 'sky-maxi']],
 ]
-const sampleCollections = (): StoreCollection[] => COLLECTIONS.map(([h, title, names]) => ({ id: `${SAMPLE_PREFIX}c-${h}`, handle: `${SAMPLE_PREFIX}${h}`, title, description: '', kind: 'manual', matchAll: true, rules: [], sort: 'manual', productIds: names.map((n) => `${SAMPLE_PREFIX}${n}`) }))
+const sampleCollections = (): StoreCollection[] => COLLECTIONS.map(([h, title, names]) => ({ id: `${SAMPLE_PREFIX}c-${h}`, handle: `${SAMPLE_PREFIX}${h}`, title, description: '', seoTitle: '', seoDescription: '', kind: 'manual', matchAll: true, rules: [], sort: 'manual', productIds: names.map((n) => `${SAMPLE_PREFIX}${n}`) }))
 
 /** The preview's catalogue: the shop's own, then the samples when it lists fewer than SAMPLES_BELOW pieces. */
 export function withSamples(cat: StoreCatalogue, now: Date): StoreCatalogue {

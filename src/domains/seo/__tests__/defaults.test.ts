@@ -38,4 +38,10 @@ describe('page descriptions (S2·1)', () => {
     expect(pageDescription.collection('Festive edit', '', 'Kesar Studio')).toBe('Festive edit from Kesar Studio.')
     expect(pageDescription.list('Kesar Studio', true)).toBe('Shop all of Kesar Studio: pay on delivery.')
   })
+  it('collection (S2·2): own title and description win; else name and intro', async () => {
+    const { collectionSeo } = await import('../defaults')
+    const c = { title: 'Festive edit', description: 'Silk for Diwali.', seoTitle: '', seoDescription: '' }
+    expect(collectionSeo(c, 'Kesar Studio')).toEqual({ title: 'Festive edit | Kesar Studio', description: 'Silk for Diwali.' })
+    expect(collectionSeo({ ...c, seoTitle: ' Diwali silk sarees ', seoDescription: 'Hand-woven.' }, 'Kesar Studio')).toEqual({ title: 'Diwali silk sarees', description: 'Hand-woven.' })
+  })
 })
