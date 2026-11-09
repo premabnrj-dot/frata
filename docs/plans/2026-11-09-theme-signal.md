@@ -1,5 +1,5 @@
 # Plan: Theme Signal — S0 and S1
-Status: active · Date: 2026-11-09 · Spec: docs/specs/2026-11-09-theme-signal.md (active, mockup approved by the owner
+Status: S0 + S1 built 2026-11-09 (V1, S2, S3 next) · Date: 2026-11-09 · Spec: docs/specs/2026-11-09-theme-signal.md (active, mockup approved by the owner
 2026-11-09) · Reviews: architecture-reviewer 2026-11-09 (findings 1–19, below), speed-reviewer 2026-11-09 (below)
 
 ## Decisions taken from the reviews (owner's "take the best decision" stands for these)
@@ -73,6 +73,12 @@ Status: active · Date: 2026-11-09 · Spec: docs/specs/2026-11-09-theme-signal.m
 |---|---|
 | Checking every sample file has a source and licence | `check:credits` gate |
 | Checking a new theme value doesn't leak into older themes | the T0 snapshot (any change to an old theme's resolved output fails) |
+
+## As built (2026-11-09)
+- T0, T1, T2, S0, S1-1…S1-5 as tasked; migration 0076 (the `signal` theme key) found by e2e and added.
+- **S1-4 deviation:** the product page uses Signal's existing choices (stacked gallery, sticky buy box, folded details,
+  grey tiles); the separate trust-icon row is not built (the ships / returns lines already say it). Back with S3.
+- S0's sets are drawn (bags, shoes) until the owner's photos arrive; each set swaps in by file name, credited.
 
 ## Later (not in this plan)
 V1 (Mux video) with the architecture review's V1 notes: ADR-0008 attempt row first, timestamps not status, renderer
