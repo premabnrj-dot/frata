@@ -171,6 +171,30 @@ button{font:inherit;color:inherit;cursor:pointer}
 .new{font:600 10.5px/1 var(--sans);color:var(--ok-text);background:var(--ok);padding:4px 6px;border-radius:999px}
 .cz .view{background:var(--muted);padding:18px;display:grid;place-items:start center}
 .cz .view .shop{width:100%;max-width:640px;border-radius:8px;box-shadow:0 8px 30px #00000014}
+/* video field (console) */
+.vf{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;padding:16px}
+.vcard{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:12px;display:grid;gap:10px;align-content:start}
+.vcard h6{margin:0;font-size:12px;color:var(--sub);font-weight:500}
+.drop{border:1.5px dashed var(--border);border-radius:8px;aspect-ratio:16/9;display:grid;place-items:center;text-align:center;font-size:13px;color:var(--sub);gap:4px}
+.drop b{color:var(--fg);font-weight:600}
+.thumb{aspect-ratio:16/9;border-radius:8px;background:linear-gradient(135deg,#2a2218,#4b3a26 50%,#16120d);position:relative;display:grid;place-items:center;color:#fff;font-size:12px;overflow:hidden}
+.thumb .dur{position:absolute;right:8px;bottom:8px;background:#000000a0;padding:3px 6px;border-radius:4px;font-variant-numeric:tabular-nums}
+.prog{height:4px;border-radius:9px;background:var(--muted);overflow:hidden}.prog i{display:block;height:100%;width:62%;background:var(--focus)}
+.vrow{display:flex;justify-content:space-between;align-items:center;font-size:13px;gap:8px}
+.vbtn{border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12.5px;background:var(--card)}
+.bad{color:#B42318}
+.shim{background:linear-gradient(90deg,var(--muted),var(--card),var(--muted));background-size:200% 100%}
+@media (prefers-reduced-motion:no-preference){.shim{animation:sh 1.4s linear infinite}}
+@keyframes sh{to{background-position:-200% 0}}
+.sets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.set{border:1px solid var(--border);border-radius:12px;background:var(--card);overflow:hidden}
+.set .g{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--g-tile)}
+.set .g i{aspect-ratio:4/5;display:block;background:var(--g-tile)}
+.set .g i.l{background:linear-gradient(170deg,#c8c9c4,#7f817c)}
+.set .g i.v{background:linear-gradient(135deg,#2a2218,#4b3a26);position:relative}
+.set .g i.v::after{content:"▶";position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:14px}
+.set p{margin:0;padding:10px 12px;font-size:13px;display:flex;justify-content:space-between}
+@media (max-width:860px){.sets{grid-template-columns:1fr}}
 /* phases */
 .phases{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .phase{border:1px solid var(--border);border-radius:12px;background:var(--card);padding:16px;display:grid;gap:8px;align-content:start}
@@ -193,7 +217,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 
 <div class="wrap">
   <nav class="boards" aria-label="Boards">
-    <a href="#home">Home · computer</a><a href="#phone">Home · phone</a><a href="#product">Product page</a><a href="#customize">Customize</a><a href="#phases">Phases</a>
+    <a href="#home">Home · computer</a><a href="#phone">Home · phone</a><a href="#product">Product page</a><a href="#customize">Customize</a><a href="#video">Video</a><a href="#samples">Samples</a><a href="#phases">Phases</a>
   </nav>
   <h1>Signal</h1>
   <p class="sub">A theme for brands whose product is the hero: bags, footwear, accessories, western wear. One signal colour, one grotesk, grey tiles.</p>
@@ -347,29 +371,57 @@ button{font:inherit;color:inherit;cursor:pointer}
     </div></div>
   </div></div>
 
+  <!-- ===================== VIDEO ===================== -->
+  <h2 id="video">Video in a section <span class="ph">V1 · Mux</span></h2>
+  <div class="frame"><div class="vf">
+    <div class="vcard"><h6>Hero · media</h6><div class="drop"><div><b>Add a video</b><br>MP4 or MOV · up to 60 s</div></div><div class="vrow"><span class="sub">or</span><span class="vbtn">Use a photo</span></div></div>
+    <div class="vcard"><h6>Uploading</h6><div class="drop shim"></div><div class="prog"><i></i></div><div class="vrow"><span>monsoon-edit.mp4 · 62%</span><span class="vbtn">Cancel</span></div></div>
+    <div class="vcard"><h6>Getting it ready</h6><div class="thumb shim" style="background:linear-gradient(90deg,#3a3a3a,#555,#3a3a3a);background-size:200% 100%"></div><div class="vrow"><span>Ready in about a minute</span></div></div>
+    <div class="vcard"><h6>Ready</h6><div class="thumb">▶<span class="dur">0:12</span></div><div class="vrow"><span>Plays muted, on loop</span><span><span class="vbtn">Replace</span> <span class="vbtn">Remove</span></span></div></div>
+    <div class="vcard"><h6>Didn’t work</h6><div class="drop" style="border-color:#f3b0a8"><div class="bad"><b class="bad">This file can’t play</b><br>Try an MP4 under 60 s</div></div><div class="vrow"><span class="vbtn">Choose another</span></div></div>
+  </div></div>
+
+  <!-- ===================== SAMPLES ===================== -->
+  <h2 id="samples">Sample sets in the preview <span class="ph">S0</span></h2>
+  <div class="sets">
+    <div class="set"><div class="g"><i></i><i></i><i class="l"></i><i class="l"></i><i></i><i class="v"></i></div><p><b>Bags</b><span class="sub">12 pieces · 6 scenes · 2 loops</span></p></div>
+    <div class="set"><div class="g"><i></i><i class="l"></i><i></i><i class="v"></i><i></i><i class="l"></i></div><p><b>Footwear</b><span class="sub">12 pieces · 6 scenes · 2 loops</span></p></div>
+    <div class="set"><div class="g"><i class="l"></i><i></i><i></i><i></i><i class="v"></i><i class="l"></i></div><p><b>Accessories</b><span class="sub">12 pieces · 6 scenes · 2 loops</span></p></div>
+  </div>
+
   <!-- ===================== PHASES ===================== -->
   <h2 id="phases">Phases</h2>
-  <div class="phases">
+  <div class="phases" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+    <div class="phase"><b>S0 · Sample sets</b><ul>
+      <li>Bags, footwear, accessories: by what the shop sells</li>
+      <li>Product shots on one grey, one light</li>
+      <li>Licensed lifestyle photos and loops, each credited</li>
+      <li>The merchant’s own pieces always shown first</li>
+    </ul></div>
     <div class="phase"><b>S1 · The theme</b><ul>
-      <li>Signal 1.0 in the gallery, made for bags, footwear, accessories, western wear</li>
-      <li>Type: Schibsted Grotesk, self-hosted</li>
-      <li>Floating header: a panel on a computer, a bar on a phone</li>
-      <li>Section labels as signal pills</li>
-      <li>Grey-tile product cards</li>
-      <li>Products by collection tabs; rail with a 01 / 10 counter</li>
-      <li>Signal band (the image with text, in the signal colour)</li>
-      <li>Photo footer</li>
+      <li>Signal 1.0 in the gallery</li>
+      <li>Schibsted Grotesk, self-hosted</li>
+      <li>Floating header: panel on a computer, bar on a phone</li>
+      <li>Signal-pill labels, grey-tile cards</li>
+      <li>Products by collection tabs; rail with a counter</li>
+      <li>Signal band, photo footer</li>
       <li>Product page: colour and compare tabs, delivery date, trust row</li>
     </ul></div>
+    <div class="phase"><b>V1 · Video (Mux)</b><ul>
+      <li>Upload straight to Mux from the editor</li>
+      <li>Ready when Mux says so</li>
+      <li>Plays as a plain muted loop, no player script</li>
+      <li>Replace and remove; one video per section</li>
+    </ul></div>
     <div class="phase"><b>S2 · Story sections</b><ul>
-      <li>Spotlight: label, headline, link beside a wide photo</li>
-      <li>Story fan: five photos fanned, swipe through</li>
-      <li>Statement photo: full-bleed with a script line</li>
-      <li>A short muted loop in Spotlight and Hero (MP4, 8 MB, poster frame)</li>
+      <li>Spotlight: label, headline, link beside a photo or loop</li>
+      <li>Story fan: five photos, swipe through</li>
+      <li>Statement photo with a script line</li>
+      <li>Hero takes a loop too</li>
     </ul></div>
     <div class="phase"><b>S3 · Product stories</b><ul>
-      <li>Per product: up to six stories (photo, title, text, callouts)</li>
-      <li>Shown stacked under the photos and as 1 / 6 slides</li>
+      <li>Up to six per product: photo or loop, title, text, callouts</li>
+      <li>Stacked under the photos and as 1 / 6 slides</li>
       <li>Pair it with: two pieces, added from the page</li>
     </ul></div>
   </div>

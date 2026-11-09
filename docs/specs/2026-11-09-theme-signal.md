@@ -36,13 +36,28 @@ designer or a developer.
   type styles, icons), menus, header and footer designs, gallery modes (`stack` exists), sticky buy box, phone buy bar,
   reveal motion. Most of S1 is new values on existing choices, not new machinery.
 
-## Design (mockup boards: Home · computer, Home · phone, Product page, Customize, Phases)
+## Design (mockup boards: Home · computer, Home · phone, Product page, Customize, Video, Samples, Phases)
+Order (owner, 2026-11-09): **S0 → S1 → V1 → S2 → S3.**
+- **S0 · Sample sets** (before S1, so its preview is real from day one): three sets chosen by `shop_settings.sells`
+  (bags, footwear, accessories), each 12 product pieces (front, back, detail on one grey and one light), 6 lifestyle
+  scenes and 2 loops. Product shots generated in one consistent studio setup (no people, brands or logos); lifestyle
+  photos and loops from free-licence stock (Pexels or Unsplash), loops hosted on Frrata's own Mux environment once V1
+  exists (posters until then). Every file has a row in `public/themes/samples/CREDITS.json` (source URL, licence,
+  date, what was changed); a gate fails a sample file with no credit. The merchant's own pieces always come first;
+  samples fill only what is empty, as today (`samples` in the manifest).
 - **S1 · The theme**: manifest `signal` 2.x; pairing `schibsted` (Schibsted Grotesk, OFL, self-hosted like the others);
   header `float`; section label style `pill | plain | none` (new choice); card `tile`; products section layouts
   `tabs` (by collection, up to 5) and `rail` with a counter; the image-with-text section's `signal` scheme (the band);
   footer `photo`; product page: colour/compare tabs, the delivery date line, the trust row from settings.
-- **S2 · Story sections**: `spotlight`, `story_fan`, `statement`; a short muted loop for Hero and Spotlight (see
-  Unit economics before building).
+- **V1 · Video foundation (Mux)**, also the base for reels later: the console asks our server for a Mux direct-upload
+  URL (`asModule`/`asMember`, per member and per shop limits); the browser uploads straight to Mux (never through our
+  functions); Mux's webhook (signature verified on the raw body, stored in `webhook_events` under our key, processed
+  later, ADR-0006) marks the video ready; a per-shop `videos` table (Mux asset and playback ids, status, duration,
+  aspect; grant, RLS, policy, tenancy.sql check). The shop plays a **plain muted `<video>`** of Mux's MP4 rendition with
+  Mux's poster image: no player script on the shop (budget). One video per section; Replace and Remove (Remove deletes
+  the Mux asset). Mux credentials: Production only, sealed in env, never in a preview (S1 of the last security review:
+  previews share the database). Facts and prices: `frata-integrations` § Mux, dated, before V1's plan.
+- **S2 · Story sections**: `spotlight`, `story_fan`, `statement`; Hero and Spotlight take a V1 loop.
 - **S3 · Product stories**: per product up to six stories (photo, title, text, up to three numbered callouts), shown
   stacked under the gallery and as "1 / 6" slides; "Pair it with" (two pieces, added to the bag from the page).
 
@@ -50,7 +65,7 @@ designer or a developer.
 - **UI/UX**: shopper surface; every new section has empty (hidden), one, many, phone states in the mockup's spirit; the
   customizer adds three segmented choices and four library entries; signal colour reuses Look v4's readable-colour
   check (`brandColourProblem`); tabs are buttons with `aria-pressed`, the rail scrolls with keys, the fan is a list.
-- **Tenancy**: S1–S2 store nothing new (the theme layer is the shop's own row). S3 adds `product_stories` (tenant_id,
+- **Tenancy**: V1 adds `videos` (per shop; Mux ids are not secrets but are scoped to the shop's rows); S1–S2 store nothing new (the theme layer is the shop's own row). S3 adds `product_stories` (tenant_id,
   product, position, photo, title, text, callouts jsonb capped) with grant, RLS, policy and a tenancy.sql check, and
   "pair it with" as a list of product ids checked against the shop's own products.
 - **Modularity**: manifest in `domains/themes/catalogue/signal/`, choices in `types.ts`, renderers in
@@ -62,14 +77,17 @@ designer or a developer.
 - **Scalability / performance**: one more self-hosted font (≈ 25 kB woff2, one weight preloaded); the rail and tabs are
   server-rendered with CSS scroll (tabs swap with a small island, budget ≤ 2 kB); the shop page stays under its 120 kB
   script and 20 kB CSS budgets (`check:storefront-build`); S3 stories add to the product's cached entry (cap 6 × 1 kB).
-- **Reliability**: nothing calls out.
-- **Security**: story text and callouts render as text only; photos through the existing upload path; pair-it-with ids
+- **Reliability**: V1's server calls to Mux (create upload, delete asset) go through `fetchWithTimeout`; an upload that
+  never turns ready shows "Didn't work" after Mux's errored event or a timeout sweep; the webhook is idempotent.
+- **Security**: Mux's webhook verified by its signature header before parsing, size-capped; the direct-upload URL is
+  created only for the member's own shop, with its CORS origin set to the console host; story text and callouts render as text only; photos through the existing upload path; pair-it-with ids
   resolved inside the shop.
 - **Motion and visuals**: entrance/reveal from the existing 2.0 choices; the fan uses the base duration and the
   standard easing; reduced motion shows the cards side by side, still.
-- **Unit economics**: S1 and S3 none. **S2's video loop** costs Frrata storage and bandwidth on Vercel Blob for every
-  view: run `unit-economics-reviewer` with a cap (8 MB, one per section, poster first, `preload=none` on phones) before
-  S2; if the cost per shop is material, video becomes a Growth/Scale feature.
+- **Unit economics**: S1 and S3 none. **V1 costs Frrata** Mux encoding, storage and delivery for every shop's videos:
+  run `unit-economics-reviewer` on the Mux prices (being verified) with caps (60 s per video, one per section, poster
+  first, `preload="none"` on phones, the smallest rendition that looks right); if the cost per shop is material, video
+  is a Growth/Scale feature (like the GST app) rather than every plan. S0's sample loops are Frrata's own, few, fixed.
 - **Blast radius**: new enum values on shared settings (header, card, labels) change no existing theme's defaults; the
   shop-look baselines gain Signal's pages; the customizer forms list the new choices only for themes that allow them.
 
@@ -78,6 +96,8 @@ designer or a developer.
   button (Messages module ships its widget), custom font upload (a licensing path for merchant-owned fonts).
 
 ## Facts used
+- Mux (direct uploads, webhooks, MP4 renditions, posters, pricing): being verified 2026-11-09 by `integration-researcher`;
+  lands in `frata-integrations` § Mux with dates before V1's plan.
 - Mokobara's platform, theme name and typeface: read from the live page's `window.Shopify.theme` and computed styles,
   2026-11-09.
 - Schibsted Grotesk: open-source (SIL OFL), on Google Fonts; to be self-hosted like the current pairings.
