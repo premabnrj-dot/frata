@@ -3,6 +3,18 @@
 What a merchant (or Frata staff) can do now that they could not before, newest first. One entry per closed
 phase; the detail is in its plan.
 
+## 2026-11-09 — Themes 2.0: three themes, each with a job ([plan](plans/2026-11-09-themes-three.md), [showcase](https://claude.ai/artifact/8bvMF5mdhJQkVDayoVjabc))
+
+- **Look › Themes offers three:** Editorial (occasion and designer wear; Atelier's arch lives here), Bazaar (big
+  catalogues and sales), Studio (contemporary and basics; Minimal renamed). Shops on Classic or Atelier keep their look.
+- **Each theme its own choices:** product photos (two across, stacked, thumbnails under or beside), a buy box that
+  stays beside the photos, an Add to bag bar on phones, button style, shape and hover (press, lift, sheen), card hover,
+  pages that fade or rise in, sections that rise as you scroll, a Split header, a Statement footer, footer colours, and
+  a focused checkout (logo and legal footer only).
+- **Sample pieces in the customizer:** a shop with fewer than four pieces sees drawn sample pieces and photos in its
+  draft preview, never on the shop.
+- **Customizer:** click a section in the preview to edit it; a section that fails is left out of the shop.
+
 ## 2026-11-08 — Shop addresses D·0–D·1 ([plan](plans/2026-11-08-shop-addresses.md), [spec](specs/2026-11-08-shop-addresses.md))
 
 - **Every shop is at `name.frrata.shop`**; frrata.shop itself goes to Frrata.
