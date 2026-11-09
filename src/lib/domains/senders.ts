@@ -1,6 +1,6 @@
 import 'server-only'
 import { sql } from 'drizzle-orm'
-import { addDomain } from '@/lib/connectors/vercel'
+import { addDomain, removeDomain } from '@/lib/connectors/vercel'
 import { withTenant } from '@/lib/db/tenant'
 import type { OutboxRow } from '@/lib/outbox'
 
@@ -26,3 +26,16 @@ export async function sendDomainAdd(row: OutboxRow): Promise<void> {
   await withTenant(row.tenantId, (tx) => tx.execute(sql`select app_domain_added(${id}::uuid, ${main.ok}, ${main.ok ? null : main.vercelTxt})`))
 }
 
+/** Outbox `domain.remove` (D2·7): take a parked host off the project — unless another shop now holds it live. */
+export async function sendDomainRemove(row: OutboxRow): Promise<void> {
+  const id = (row.payload as { id?: string }).id
+  if (!id || !/^[0-9a-f-]{36}$/.test(id)) throw new Error('domain.remove without its row')
+  const [p] = await withTenant(row.tenantId, (tx) => tx.execute<{ host: string; www: string | null; keep: boolean }>(sql`select * from app_domain_remove_due(${id}::uuid)`))
+  if (!p) return
+  if (!p.keep) {
+    for (const h of [p.host, ...(p.www ? [p.www] : [])]) {
+      if ((await removeDomain(h)) === 'error') throw new Error('domain.remove: vercel')
+    }
+  }
+  await withTenant(row.tenantId, (tx) => tx.execute(sql`select app_domain_unparked(${id}::uuid)`))
+}

@@ -543,6 +543,37 @@ do $$ begin
 end $$;
 rollback;
 
+begin;
+-- Own domains D2·7/D2·8 (0082): a removed host on Vercel parks; 3 days pointing away (or 30 days parked) and it comes
+-- off — unless another shop holds that apex live (then it stays, and only the row lets go); the due list is ids only.
+insert into shop_domains (tenant_id, host, apex, with_www, claimed_by, proved_at, added_at, dns_ok_at, cert_ok_at) values
+  ('11111111-1111-1111-1111-111111111111', 'proof-park.in', 'proof-park.in', true, '99999999-9999-9999-9999-999999999999', now(), now(), now(), now());
+set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare a uuid; r record; begin
+  select d.id into a from shop_domains d where d.host = 'proof-park.in';
+  perform app_remove_domain('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', a);
+  if (select parked_at from shop_domains where id = a) is null then raise exception 'FAIL: a removed host on Vercel must park'; end if;
+  if not exists (select 1 from app_domains_due(50) x where x.id = a and x.parked) then raise exception 'FAIL: a parked row must be due'; end if;
+  if not exists (select 1 from app_parked_lease(a)) then raise exception 'FAIL: the parked lease'; end if;
+  if app_parked_record(a, 'no') then raise exception 'FAIL: removed on the first day away'; end if;
+  perform set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+  if app_parked_record(a, 'no') or exists (select 1 from app_domain_remove_due(a)) then raise exception 'FAIL: B reached A''s parked row'; end if;
+end $$;
+reset role;
+update shop_domains set away_since = now() - interval '4 days' where host = 'proof-park.in';
+set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare a uuid; r record; begin
+  select d.id into a from shop_domains d where d.host = 'proof-park.in';
+  if not app_parked_record(a, 'no') then raise exception 'FAIL: 3 days away must come off'; end if;
+  select * into r from app_domain_remove_due(a);
+  if r.host <> 'proof-park.in' or r.www <> 'www.proof-park.in' or r.keep then raise exception 'FAIL: remove_due (% % %)', r.host, r.www, r.keep; end if;
+  perform app_domain_unparked(a);
+  if (select parked_at from shop_domains where id = a) is not null then raise exception 'FAIL: unparked'; end if;
+end $$;
+rollback;
+
 -- 20. Catalogue: own shop only, and a child row can never point at another shop's product.
 insert into product_types (id, tenant_id, name, size_chart) values
   ('dddddddd-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'Kurta', '{"columns":[],"rows":[],"howToMeasure":""}');
@@ -1991,4 +2022,4 @@ do $$ begin
      or (select order_line_id from reviews where id = 'bdbdbdbd-0000-0000-0000-00000000000b') is not null then raise exception 'FAIL: set null touched tenant_id or kept the line'; end if;
 end $$;
 
-\echo 'tenancy proof — all 56 checks passed'
+\echo 'tenancy proof — all 57 checks passed'

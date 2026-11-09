@@ -127,3 +127,25 @@ async function check(tenantId: string, id: string, opts: { forDialog: boolean },
   const txt: Seen = lease.proved ? 'yes' : both?.both.includes(value) ? 'yes' : chip
   return { state: out?.state ?? 'unknown', found: { txt, points: point.seen, www: www?.seen ?? null }, stray: point.found, caa }
 }
+
+/**
+ * D2·7: a parked host (removed, still on Vercel) — does it still point at us? Away 3 days in a row, or parked 30 days:
+ * an outbox `domain.remove` (the sender re-reads, and keeps a host another shop now holds live).
+ */
+export async function checkParkedRow(tenantId: string, id: string): Promise<'busy' | 'kept' | 'removing' | 'unknown'> {
+  try {
+    const [lease] = await withTenant(tenantId, (tx) => tx.execute<{ host: string; apex: string; with_www: boolean }>(sql`select * from app_parked_lease(${id}::uuid)`))
+    if (!lease) return 'busy'
+    const point = await pointsAt(lease.host, await projectRecords(PROBE), lease.host === lease.apex)
+    const removing = await withTenant(tenantId, async (tx) => {
+      const [r] = await tx.execute<{ r: boolean }>(sql`select app_parked_record(${id}::uuid, ${point.seen}) as r`)
+      if (r?.r) await enqueue(tx, { tenantId, kind: 'domain.remove', dedupeKey: `domain.remove:${id}:${Math.floor(Date.now() / 3_600_000)}`, payload: { id } })
+      return !!r?.r
+    })
+    if (removing) drainSoon()
+    return removing ? 'removing' : 'kept'
+  } catch (err) {
+    console.error('[checkParkedRow]', errName(err))
+    return 'unknown'
+  }
+}

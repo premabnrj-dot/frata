@@ -1,6 +1,6 @@
 {
-  "id": "0eb75e17-68cc-4b73-9629-67484df5d91f",
-  "prevId": "c9cdc296-ef31-4444-84f9-6827e93bf95a",
+  "id": "28a338c6-d064-4171-9f52-297b4bc719c6",
+  "prevId": "dd8f2053-cba2-45f5-9a4e-2867f0a92aca",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -10309,6 +10309,12 @@
         },
         "parked_at": {
           "name": "parked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "away_since": {
+          "name": "away_since",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false

@@ -75,6 +75,8 @@ export const shopDomains = pgTable('shop_domains', {
   razorpayOkAt: timestamp('razorpay_ok_at', { withTimezone: true }),
   razorpayOkBy: uuid('razorpay_ok_by'),
   parkedAt: timestamp('parked_at', { withTimezone: true }),
+  /** A parked host first seen pointing away from us; 3 days of that and it comes off Vercel (D2·7). */
+  awaySince: timestamp('away_since', { withTimezone: true }),
   removedAt: timestamp('removed_at', { withTimezone: true }),
   removedReason: text('removed_reason'),
   removedBy: uuid('removed_by'),

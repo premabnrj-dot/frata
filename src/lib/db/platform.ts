@@ -138,6 +138,12 @@ export async function changeShopAddress(tenantId: string, uid: string, slug: str
   }
 }
 
+/** Own domains D2·8: rows due a check, across shops (ids only; each is checked in its own shop's transaction). */
+export async function domainsDue(limit: number): Promise<{ tenantId: string; id: string; parked: boolean }[]> {
+  const rows = await db().execute<{ tenant_id: string; id: string; parked: boolean }>(sql`select tenant_id, id, parked from app_domains_due(${limit})`)
+  return rows.map((r) => ({ tenantId: r.tenant_id, id: r.id, parked: r.parked }))
+}
+
 /** Own domains D2·6: the claim (app_claim_domain checks who, the caps and the project's room; it makes the token). */
 export async function claimDomainRow(tenantId: string, uid: string, f: { host: string; apex: string; withWww: boolean }, room: number): Promise<{ id: string; token: string }> {
   const [row] = await db().execute<{ id: string; token: string }>(

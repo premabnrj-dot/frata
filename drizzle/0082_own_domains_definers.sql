@@ -294,13 +294,90 @@ create or replace function app_shop_for_domain(p_host text)
 $$;
 
 --> statement-breakpoint
+-- ── D2·8: which rows are due a check (the background job; ids only, never a host or a token). The pace is here, not in
+--    the schedule: every 10 min the first day after a claim, hourly after; parked rows hourly. On Hobby the job wakes
+--    once a day, so everything is due; on Pro the schedule line changes and nothing else. ──
+create or replace function app_domains_due(p_limit int)
+  returns table (tenant_id uuid, id uuid, parked boolean)
+  language sql stable security definer set search_path = '' as $$
+    select d.tenant_id, d.id, d.parked_at is not null
+      from public.shop_domains d
+     where (d.removed_at is null or d.parked_at is not null)
+       and (d.checked_at is null or d.checked_at < now() - case
+              when d.parked_at is null and d.claimed_at > now() - interval '1 day' then interval '10 minutes'
+              else interval '1 hour' end)
+     order by d.checked_at nulls first
+     limit greatest(1, least(p_limit, 500))
+$$;
+
+--> statement-breakpoint
+-- ── D2·7: a parked row's lease (its shop's own, every 10 s at most): the host to look at. ──
+create or replace function app_parked_lease(p_id uuid)
+  returns table (host text, apex text, with_www boolean)
+  language plpgsql volatile security definer set search_path = '' as $$
+#variable_conflict use_column
+begin
+  return query
+    with u as (
+      update public.shop_domains d set checked_at = now()
+       where d.id = p_id and d.tenant_id = public.app_current_tenant() and d.parked_at is not null
+         and (d.checked_at is null or d.checked_at < now() - interval '10 seconds')
+      returning d.host as h, d.apex as a, d.with_www as w)
+    select u.h, u.a, u.w from u;
+end;
+$$;
+
+--> statement-breakpoint
+-- ── D2·7: what a parked host points at. Away 3 days in a row, or parked 30 days: time to take it off Vercel. ──
+create or replace function app_parked_record(p_id uuid, p_points text)
+  returns boolean
+  language plpgsql volatile security definer set search_path = '' as $$
+#variable_conflict use_column
+declare
+  r public.shop_domains%rowtype;
+begin
+  if p_points not in ('yes','no','unknown') then raise exception 'bad_facts' using errcode = 'P0001'; end if;
+  update public.shop_domains d set away_since = case p_points when 'no' then coalesce(d.away_since, now()) when 'yes' then null else d.away_since end
+   where d.id = p_id and d.tenant_id = public.app_current_tenant() and d.parked_at is not null
+   returning * into r;
+  if not found then return false; end if;
+  return (r.away_since is not null and r.away_since < now() - interval '3 days') or r.parked_at < now() - interval '30 days';
+end;
+$$;
+
+--> statement-breakpoint
+-- ── D2·7's sender: what to take off Vercel, re-read in the database. `keep`: another shop now holds that host live
+--    (a move), so it stays on the project and only this row lets go of it (tenancy C2). ──
+create or replace function app_domain_remove_due(p_id uuid)
+  returns table (host text, www text, keep boolean)
+  language sql stable security definer set search_path = '' as $$
+    select d.host, case when d.with_www then 'www.' || d.apex end,
+           exists (select 1 from public.shop_domains o where o.id <> d.id and o.apex = d.apex and o.proved_at is not null and o.removed_at is null)
+      from public.shop_domains d
+     where d.id = p_id and d.tenant_id = public.app_current_tenant() and d.parked_at is not null
+$$;
+
+--> statement-breakpoint
+create or replace function app_domain_unparked(p_id uuid)
+  returns void
+  language plpgsql volatile security definer set search_path = '' as $$
+#variable_conflict use_column
+begin
+  update public.shop_domains d set parked_at = null, away_since = null
+   where d.id = p_id and d.tenant_id = public.app_current_tenant() and d.parked_at is not null;
+end;
+$$;
+
+--> statement-breakpoint
 revoke all on function app_claim_domain(uuid, uuid, text, text, boolean, int), app_domain_lease(uuid), app_domain_record(uuid, text[], text[], text, text, text, int),
   app_domain_added(uuid, boolean, text), app_domain_add_due(uuid), app_make_domain_main(uuid, uuid, uuid), app_unmake_domain_main(uuid, uuid),
-  app_domain_razorpay_ok(uuid, uuid, uuid, boolean), app_remove_domain(uuid, uuid, uuid), app_shop_for_domain(text)
+  app_domain_razorpay_ok(uuid, uuid, uuid, boolean), app_remove_domain(uuid, uuid, uuid), app_shop_for_domain(text),
+  app_domains_due(int), app_parked_lease(uuid), app_parked_record(uuid, text), app_domain_remove_due(uuid), app_domain_unparked(uuid)
   from public, anon, authenticated, service_role;
 
 --> statement-breakpoint
 grant execute on function app_claim_domain(uuid, uuid, text, text, boolean, int), app_domain_lease(uuid), app_domain_record(uuid, text[], text[], text, text, text, int),
   app_domain_added(uuid, boolean, text), app_domain_add_due(uuid), app_make_domain_main(uuid, uuid, uuid), app_unmake_domain_main(uuid, uuid),
-  app_domain_razorpay_ok(uuid, uuid, uuid, boolean), app_remove_domain(uuid, uuid, uuid), app_shop_for_domain(text)
+  app_domain_razorpay_ok(uuid, uuid, uuid, boolean), app_remove_domain(uuid, uuid, uuid), app_shop_for_domain(text),
+  app_domains_due(int), app_parked_lease(uuid), app_parked_record(uuid, text), app_domain_remove_due(uuid), app_domain_unparked(uuid)
   to frata_app;

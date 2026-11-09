@@ -6,6 +6,10 @@
     {
       "path": "/api/cron/outbox",
       "schedule": "17 3 * * *"
+    },
+    {
+      "path": "/api/cron/domains",
+      "schedule": "43 4 * * *"
     }
   ],
   "git": {

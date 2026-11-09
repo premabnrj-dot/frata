@@ -19,6 +19,7 @@ CREATE TABLE "shop_domains" (
 	"razorpay_ok_at" timestamp with time zone,
 	"razorpay_ok_by" uuid,
 	"parked_at" timestamp with time zone,
+	"away_since" timestamp with time zone,
 	"removed_at" timestamp with time zone,
 	"removed_reason" text,
 	"removed_by" uuid,

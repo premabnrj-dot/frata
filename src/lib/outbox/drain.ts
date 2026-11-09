@@ -6,7 +6,7 @@ import { shopModules } from '@/lib/queries/modules'
 import { errName } from '@/lib/log'
 import { claimDue, deferRow, markDead, markFailed, markSent, type OutboxRow } from './index'
 import { sendBillAttempt } from '@/lib/billing/debit'
-import { sendDomainAdd } from '@/lib/domains/senders'
+import { sendDomainAdd, sendDomainRemove } from '@/lib/domains/senders'
 
 // =============================================================================
 // FILE: src/lib/outbox/drain.ts — sending what the outbox holds (speed review P5, 2026-11-08)
@@ -22,6 +22,8 @@ export const SENDERS: Record<string, (row: OutboxRow) => Promise<void>> = {
   'bill:attempt': sendBillAttempt,
   // Own domains D2·6: a proved host onto the Vercel project (never before its own proof).
   'domain.add': sendDomainAdd,
+  // D2·7: a parked host off the project once it points away (kept when another shop holds it live).
+  'domain.remove': sendDomainRemove,
 }
 const BATCH = 25
 
