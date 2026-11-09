@@ -7,7 +7,8 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import crypto from 'node:crypto'
-import { CONSOLE, FAKE_CHECKOUT, RZP, RZP_KEYS, SHOP, playwright, signedIn, until } from '../lib.mjs'
+import http from 'node:http'
+import { CONSOLE, FAKE_CHECKOUT, PORTS, RZP, RZP_KEYS, SHOP, playwright, signedIn, until } from '../lib.mjs'
 const { devices } = playwright
 
 export default {
@@ -94,6 +95,33 @@ export default {
       assert.equal(line.unit_cost, line.now_cost, 'cost snapshotted from the variant'); assert.ok(line.unit_cost !== null)
       const text = (await p.textContent('article')).replace(/\s/g, '')
       assert.ok(!text.includes('Tilak') && !text.includes('9829043210'), 'address and phone masked')
+      const [{ wa_opt_in_at }] = await db`select wa_opt_in_at from orders where id = ${o.id}`
+      assert.equal(wa_opt_in_at, null, 'no WhatsApp opt-in unless the shopper ticks it')
+    })
+
+    await t.step('WhatsApp opt-in (Reviews R1 task 6): shown once the shop can message, unticked, naming the shop; only a tick is stored', async () => {
+      const [{ id: kesar }] = await db`select id from tenants where slug = 'kesar-studio'`
+      const [{ user_id: owner }] = await db`select user_id from members where tenant_id = ${kesar} and role = 'owner' limit 1`
+      const opened = await db`insert into tenant_modules (tenant_id, module, enabled_by) values (${kesar}, 'communication', ${owner}) on conflict do nothing returning id`
+      try {
+        const box = () => p.getByRole('checkbox', { name: 'Send me order updates and a review request from Kesar Studio on WhatsApp' })
+        // The checkout page is cached for 60 s: read its HTML (no quote, no rate limit) until it knows the shop can
+        // message, then check out once.
+        const html = () => new Promise((res, rej) => http.get({ host: '127.0.0.1', port: PORTS.app, path: '/checkout', headers: { host: new URL(SHOP).host } }, (r) => { let b = ''; r.on('data', (c) => (b += c)); r.on('end', () => res(b)) }).on('error', rej))
+        await until(async () => (await html()).includes('on WhatsApp'), 90_000)
+        await toCheckout('Rust', 'M')
+        await box().waitFor()
+        assert.equal(await box().isChecked(), false, 'unticked by default')
+        await p.fill('#phone', '98290 43299') // its own phone: the flow's other orders use up the per-phone hour
+        await box().check()
+        await p.getByText('Pay on delivery', { exact: true }).click()
+        await p.screenshot({ path: t.out('checkout-opt-in'), fullPage: true })
+        await p.getByRole('button', { name: /Place order/ }).click(); await p.waitForURL(/\/orders#t=/)
+        const o = await lastOrder()
+        assert.ok(o.wa_opt_in_at, 'the tick is stored with its time'); assert.equal(o.wa_opt_in_notice, 'v1-en')
+      } finally {
+        if (opened.length) await db`delete from tenant_modules where id = ${opened[0].id}`
+      }
     })
 
     await t.step('online order: paid, stock taken once, the webhook after the browser changes nothing but the fee', async () => {

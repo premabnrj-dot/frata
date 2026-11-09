@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { STATES } from '@/domains/checkout/states'
+import { waOptInText } from '@/domains/checkout/opt-in'
 import { b2bProblem, cleanGstin, gstinStateName, gstinValid } from '@/domains/tax/gstin'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { OfferProgress, OfferRows, useQuote } from './bag'
@@ -43,9 +44,11 @@ function needText(n: PublicListed['need']): string {
   return 'When you pay online'
 }
 
-export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = { deliversWithin: null, b2b: false } }: { shopName: string; legalName: string; privacyHref: string; returnLine: string | null
+export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = { deliversWithin: null, b2b: false }, waOptIn = false }: { shopName: string; legalName: string; privacyHref: string; returnLine: string | null
   /** GST (plan 2026-11-09-gst-core-and-categories): a shop without a regular GSTIN delivers within its state; business buyers may ask for a GST invoice. */
-  gst?: { deliversWithin: string | null; b2b: boolean } }) {
+  gst?: { deliversWithin: string | null; b2b: boolean }
+  /** Show the WhatsApp opt-in (the shop has WhatsApp connected): unticked, naming the shop. */
+  waOptIn?: boolean }) {
   const [biz, setBiz] = useState<{ on: boolean; gstin: string; name: string }>({ on: false, gstin: '', name: '' })
   const [f, setF] = useState<Form>(EMPTY)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -53,6 +56,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   const firstMethod = useRef<'cod' | 'prepaid' | null>(null)
   const [landmark, setLandmark] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [optIn, setOptIn] = useState(false)
   const [msg, setMsg] = useState<{ tone: 'error' | 'changed'; text: string } | null>(null)
   const [failed, setFailed] = useState<{ token: string; total: number } | null>(null)
   // The Pay on delivery total of the order already placed, when the server says it differs from the bag's (an offer ran
@@ -133,6 +137,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
       address: { phone: f.phone, name: f.name, pincode: f.pincode, addressLine: f.addressLine, area: f.area, landmark: f.landmark, city: f.city, state: f.state },
       facts: { firstMethod: firstMethod.current, attribution },
       ...(gst.b2b && biz.on ? { b2b: { gstin: cleanGstin(biz.gstin), name: biz.name.trim() } } : {}),
+      ...(waOptIn && optIn ? { waOptIn: true } : {}),
     })
     if (!r.ok) {
       setBusy(false)
@@ -287,6 +292,13 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
           <button type="button" disabled={!draftCode} onClick={() => offerCode.set(draftCode)} className="h-11 shrink-0 rounded-sm border border-store-ink px-4 text-sm font-medium disabled:opacity-50">Apply</button>
         </div>
       ) : <button type="button" className="mt-1 min-h-11 text-sm underline" onClick={() => setTyping(true)}>Have a code?</button>)}
+
+      {waOptIn ? (
+        <label className="mt-4 flex min-h-11 cursor-pointer items-start gap-3 text-sm">
+          <input type="checkbox" checked={optIn} onChange={(e) => setOptIn(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-store-ink" />
+          <span>{waOptInText(shopName)}</span>
+        </label>
+      ) : null}
 
       <h2 className={sect}>Payment</h2>
       <div role="radiogroup" aria-label="How to pay" className="space-y-2">
