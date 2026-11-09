@@ -23,6 +23,9 @@ import { SeoPanel } from './seo-panel'
 import { SizeChartPanel, type TypeRow } from './size-chart'
 import { StatusBadge } from './status-badge'
 import { StatusCard } from './status-card'
+import { TaxPanel } from './tax-panel'
+import type { TaxInput } from '@/domains/catalogue/product-form'
+import { inGap, ruleOn } from '@/domains/tax/rates'
 import { useNow } from '@/components/time/now'
 import { EMPTY_CELL, shopperSees, VariantGrid, type Cell } from './variant-grid'
 import { Section } from '@/components/layout/section'
@@ -34,10 +37,13 @@ export type EditorProduct = {
   status: Status; publishAt: string | null; everLive: boolean
   handle: string; seoTitle: string; seoDescription: string; tags: string[]
   category: PickedCategory | null; attributes: Record<string, string[]>; collections: string[]; colours: ColourInput[]
+  tax: TaxInput
 }
 export type EditorShop = { name: string; address: string; skuPrefix: string; codOn: boolean; returnDays: number; returnKind: string; city: string | null
   /** Whether this viewer sees and sets the cost of goods (`seesCosts`): when false, the column is not there and a save keeps the stored cost. */
-  costs: boolean }
+  costs: boolean
+  /** GST: whether the shop charges it (regular scheme), and whether its prices include it. */
+  gst: { charges: boolean; inclusive: boolean } }
 
 type Draft = Omit<EditorProduct, 'id' | 'version' | 'status' | 'publishAt' | 'everLive'>
 const isColour = (name: string) => /^colou?rs?$/i.test(name)
@@ -75,6 +81,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
     title: d.title, photos: photos.length, prices: cells.map((c) => parseRupees(c.price) ?? 0),
     hasSizes: d.options.some((o) => /^sizes?$/i.test(o.name)), chartRows: type?.sizeChart.rows.length ?? 0,
     anyBuyable: cells.some((c) => shopperSees(c, now).canBuy),
+    taxReady: shop.gst.charges ? /^\d{4}(\d{2})?(\d{2})?$/.test(d.tax.hsn) && (ruleOn(d.tax.hsn, now) !== null || !!d.tax.ownBps) : undefined,
   })
 
   // Defaults for search and sharing, from the product's own facts (seo.ts).
@@ -92,7 +99,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
         title: d.title, description: d.description, typeId: d.typeId, modelHeight: d.modelHeight, modelSize: d.modelSize, options: d.options,
         variants: combos.map((c) => ({ values: c, ...(d.cells[keyOf(c)] ?? EMPTY_CELL) })),
         handle: d.handle, seoTitle: d.seoTitle, seoDescription: d.seoDescription, categoryId: d.category?.id ?? null,
-        attributes: d.attributes, colours: d.colours, tags: d.tags,
+        attributes: d.attributes, colours: d.colours, tags: d.tags, tax: d.tax,
       }, d.collections)
       if (r.ok) {
         setSaved(d); setVersion(r.version); setErrors({}); setConflict(false)
@@ -148,6 +155,14 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
             {colourOpt && colourOpt.values.length > 0 && <ColoursPanel values={colourOpt.values} colours={d.colours} onChange={(colours) => set({ colours })} photos={photos} families={families} />}
             {combos.length > 0 && <VariantGrid options={opts} cells={d.cells} errors={errors} costs={shop.costs} autoSku={(values) => skuFor(shop.skuPrefix, d.handle || defaults.handle, values)}
               onChange={(k, patch) => { setD((x) => ({ ...x, cells: { ...x.cells, [k]: { ...(x.cells[k] ?? EMPTY_CELL), ...patch } } })); setMsg(null) }} />}
+          </Section>
+          <Section>
+            <h2 className="text-section font-semibold">Tax</h2>
+            <TaxPanel tax={d.tax} onChange={(tax) => set({ tax })} price={prices.length ? Math.min(...prices) : null} inclusive={shop.gst.inclusive} charges={shop.gst.charges} now={now} errors={errors}
+              onReprice={(to) => setD((x) => ({ ...x, cells: Object.fromEntries(Object.entries(x.cells).map(([k, c]) => {
+                const p = parseRupees(c.price)
+                return [k, p !== null && inGap(x.tax.hsn, p, shop.gst.inclusive, now) ? { ...c, price: String(to / 100) } : c]
+              })) }))} />
           </Section>
           <Section>
             <h2 className="flex items-center text-section font-semibold">Details<InfoTip about="details">Asked for by the product’s category. Shoppers filter by them, and Google and Meta read them. Values marked · are Frrata’s, for Indian crafts and fabrics; each is sent to Google as its nearest standard value.</InfoTip></h2>

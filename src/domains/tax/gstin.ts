@@ -46,3 +46,9 @@ export function b2bProblem(gstin: string, name: string, deliveryState: string): 
 
 /** The state a shop that doesn't charge GST (not registered, or composition) delivers within, by name (s.24). */
 export const stateName = (code: string | null) => (code ? STATES.find((s) => STATE_CODE[s] === code) ?? null : null)
+
+/** What checkout shows about GST: the state a shop without a regular GSTIN delivers within, and whether businesses may ask for a GST invoice. */
+export function checkoutGst(s: { gstin: string | null; gstScheme: string; homeState: string | null; b2bInvoices: boolean; turnoverBand: string }) {
+  const regular = !!s.gstin && s.gstScheme === 'regular'
+  return { deliversWithin: regular ? null : stateName(s.gstin ? s.gstin.slice(0, 2) : s.homeState), b2b: regular && s.b2bInvoices && s.turnoverBand === 'under_5cr' }
+}

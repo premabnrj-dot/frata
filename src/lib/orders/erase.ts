@@ -24,7 +24,7 @@ export async function eraseAbandoned(tenantId: string, now = new Date()): Promis
   return withTenant(tenantId, async (tx) => {
     // The click ids and the referring site go with the shopper's details (ERASED_KEYS: the one list); utm tags, the
     // merchant's own link names, stay for counts.
-    const r = await tx.update(orders).set({ customerName: '', phone: '', addressLine: '', area: '', landmark: '', erasedAt: now, checkout: stripTracking(orders.checkout) })
+    const r = await tx.update(orders).set({ customerName: '', phone: '', addressLine: '', area: '', landmark: '', buyerGstin: null, buyerName: '', erasedAt: now, checkout: stripTracking(orders.checkout) })
       .where(and(eq(orders.tenantId, tenantId), isNull(orders.erasedAt), isNull(orders.paidAt), isNull(orders.switchedToCodAt), eq(orders.paymentMethod, 'prepaid'),
         sql`${orders.placedAt} < ${before}::timestamptz`)).returning({ id: orders.id })
     return r.length

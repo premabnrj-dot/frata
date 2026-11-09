@@ -3,11 +3,14 @@
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { del } from '@vercel/blob'
-import { presetsFor, cleanChart, type Chart } from '@/domains/catalogue/size-charts'
+import { cleanChart, type Chart } from '@/domains/catalogue/size-charts'
 import { cleanProduct, readiness, type ProductInput } from '@/domains/catalogue/product-form'
+import { hsnDigitsFor, ruleOn, type TurnoverBand } from '@/domains/tax/rates'
+import { chargesGst, type Scheme } from '@/domains/tax/gst'
+import { sellsSized } from '@/domains/catalogue/sell-keys'
 import { availability, type Status, type WhenOut } from '@/domains/catalogue/availability'
 import { attributesFor, categoryById, cleanAttributes, COLOUR_FAMILIES, searchCategories } from '@/domains/catalogue/taxonomy'
-import { handleFor, keyOf, reconcile, skuFor, uniqueSku } from '@/domains/catalogue/variants'
+import { keyOf, reconcile, skuFor, uniqueSku } from '@/domains/catalogue/variants'
 import { orderPrefix } from '@/domains/signup/slug'
 import { acceptedBase, storeHost, WIDTHS, urlFor } from '@/domains/media/sizes'
 import { photosAreWebp } from '@/lib/media/uploaded'
@@ -21,6 +24,7 @@ import { auditEvents, shopSettings, tenants } from '@/lib/db/schema'
 import { shopThemeRevisions } from '@/lib/db/schema-themes'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { archivedVariants, retireVariants } from '@/lib/catalogue/retire-variants'
+import { ensureTypes, freeHandle, handleFree } from '@/lib/catalogue/handles'
 import { errName } from '@/lib/log'
 
 // Catalogue changes (1A). Any member may edit products (staff run catalogues);
@@ -38,29 +42,6 @@ async function memberAudit(tx: Tx, auth: { userId: string; email: string | null;
   }
 }
 
-/** The shop's starting size charts, made the first time they are needed (from what it said it sells). */
-async function ensureTypes(tx: Tx, tenantId: string) {
-  const existing = await tx.select({ id: productTypes.id }).from(productTypes).where(eq(productTypes.tenantId, tenantId)).limit(1)
-  if (existing.length) return
-  const [s] = await tx.select({ sells: shopSettings.sells }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
-  const presets = presetsFor((s?.sells ?? []) as Parameters<typeof presetsFor>[0])
-  await tx.insert(productTypes).values(presets.map((p) => ({ tenantId, name: p.name, sizeChart: p.chart }))).onConflictDoNothing()
-}
-
-/** A free handle: "linen-kurta-set", else "-2", "-3"… within this shop. */
-async function freeHandle(tx: Tx, tenantId: string, title: string, exceptId?: string): Promise<string> {
-  const base = handleFor(title) || 'product'
-  const taken = await tx.select({ handle: products.handle, id: products.id }).from(products)
-    .where(and(eq(products.tenantId, tenantId), sql`${products.handle} = ${base} or ${products.handle} like ${base + '-%'}`))
-  // Old addresses stay reserved for the product that had them (they redirect to it).
-  const old = await tx.select({ handle: productHandleHistory.handle, id: productHandleHistory.productId }).from(productHandleHistory)
-    .where(and(eq(productHandleHistory.tenantId, tenantId), sql`${productHandleHistory.handle} = ${base} or ${productHandleHistory.handle} like ${base + '-%'}`))
-  const used = new Set([...taken, ...old].filter((t) => t.id !== exceptId).map((t) => t.handle))
-  if (!used.has(base)) return base
-  for (let n = 2; n < 1000; n++) if (!used.has(`${base}-${n}`)) return `${base}-${n}`
-  return `${base}-${Date.now()}`
-}
-
 export async function createProduct(input: { title: string }): Promise<Result<{ id: string; handle: string }>> {
   const title = String(input?.title ?? '').trim().replace(/\s+/g, ' ')
   if (!title || title.length > 140) return { ok: false, error: 'Give your product a name of up to 140 characters.' }
@@ -69,11 +50,15 @@ export async function createProduct(input: { title: string }): Promise<Result<{ 
       const tenantId = auth.membership.tenantId
       await ensureTypes(tx, tenantId)
       const [first] = await tx.select({ id: productTypes.id }).from(productTypes).where(eq(productTypes.tenantId, tenantId)).orderBy(productTypes.name).limit(1)
+      // A new product starts with the shop's starting HSN (Settings › Taxes), and with sizes only when the shop sells
+      // sized things (clothing, footwear); a jewellery or beauty shop starts with one variant (all-categories § 2).
+      const [shop] = await tx.select({ hsn: shopSettings.defaultHsn, sells: shopSettings.sells }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
+      const sized = sellsSized(shop?.sells ?? [])
       const [p] = await tx.insert(products).values({
-        tenantId, title, handle: await freeHandle(tx, tenantId, title), typeId: first?.id ?? null,
-        options: ['Size'], optionValues: [['S', 'M', 'L']],
+        tenantId, title, handle: await freeHandle(tx, tenantId, title), typeId: sized ? first?.id ?? null : null, hsn: shop?.hsn ?? null,
+        ...(sized ? { options: ['Size'], optionValues: [['S', 'M', 'L']] } : {}),
       }).returning({ id: products.id, handle: products.handle })
-      await tx.insert(variants).values(['S', 'M', 'L'].map((v, i) => ({ tenantId, productId: p!.id, optionValues: [v], price: 0, position: i })))
+      await tx.insert(variants).values((sized ? [['S'], ['M'], ['L']] : [[]]).map((v, i) => ({ tenantId, productId: p!.id, optionValues: v, price: 0, position: i })))
       await memberAudit(tx, auth, 'product.create', title)
       return p!
     })
@@ -85,14 +70,6 @@ export async function createProduct(input: { title: string }): Promise<Result<{ 
     console.error('[createProduct]', reason(err))
     return { ok: false, error: 'We could not create the product. Nothing was saved.' }
   }
-}
-
-/** Is `handle` free for this product: not another product's, and not another product's old address. */
-async function handleFree(tx: Tx, tenantId: string, handle: string, productId: string) {
-  const [a] = await tx.select({ id: products.id }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.handle, handle), sql`${products.id} <> ${productId}`)).limit(1)
-  if (a) return false
-  const [b] = await tx.select({ id: productHandleHistory.productId }).from(productHandleHistory).where(and(eq(productHandleHistory.tenantId, tenantId), eq(productHandleHistory.handle, handle), sql`${productHandleHistory.productId} <> ${productId}`)).limit(1)
-  return !b
 }
 
 export async function saveProduct(productId: string, version: number, input: ProductInput, manualCollections: string[] = []): Promise<Result<{ version: number; handle: string }>> {
@@ -120,7 +97,14 @@ export async function saveProduct(productId: string, version: number, input: Pro
         // Going back to one of its own old addresses needs nothing more: the current handle is looked up first,
         // and history is append-only (frata_app holds no delete on it).
       }
+      // HSN digits by the shop's turnover band (rates.ts): 4 under ₹5 crore, 6 above.
+      if (p.tax?.hsn) {
+        const [band] = await tx.select({ b: shopSettings.turnoverBand }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
+        const digits = hsnDigitsFor((band?.b ?? 'under_5cr') as TurnoverBand)
+        if (p.tax.hsn.length < digits) throw new Stop({ ok: false, error: 'Some fields need a look before saving.', errors: { 'tax.hsn': `At your turnover, invoices need ${digits} digits of HSN.` } })
+      }
       const [row] = await tx.update(products).set({
+        ...(p.tax ? { hsn: p.tax.hsn, uqc: p.tax.uqc, gstBps: p.tax.gstBps, originCountry: p.tax.originCountry } : {}),
         title: p.title, description: p.description, typeId: p.typeId, modelHeight: p.modelHeight, modelSize: p.modelSize,
         options: p.options.map((o) => o.name), optionValues: p.options.map((o) => o.values),
         handle: p.handle, seoTitle: p.seoTitle, seoDescription: p.seoDescription, taxonomyCategory: category?.id ?? null, tags: p.tags,
@@ -228,7 +212,10 @@ export async function setStatus(productId: string, status: Status, publishAt: st
         const chart = p.typeId ? (await tx.select({ c: productTypes.sizeChart }).from(productTypes).where(and(eq(productTypes.tenantId, tenantId), eq(productTypes.id, p.typeId))))[0]?.c : null
         const now = new Date()
         const anyBuyable = vs.some((v) => availability({ stock: v.stock, whenOut: v.whenOut as WhenOut, shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays, preorderCap: v.preorderCap }, now).canBuy)
-        const missing = readiness({ title: p.title, photos: n, prices: vs.map((v) => v.price), hasSizes: p.options.some((o) => /^sizes?$/i.test(o)), chartRows: chart?.rows.length ?? 0, anyBuyable }).filter((x) => !x.ok)
+        // A shop that charges GST can't sell a piece with no known rate (quote() refuses it): so it can't go live without one.
+        const [tax] = await tx.select({ gstin: shopSettings.gstin, scheme: shopSettings.gstScheme }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
+        const taxReady = tax && chargesGst({ gstin: tax.gstin, scheme: tax.scheme as Scheme }) ? !!p.hsn && (ruleOn(p.hsn, now) !== null || p.gstBps !== null) : undefined
+        const missing = readiness({ title: p.title, photos: n, prices: vs.map((v) => v.price), hasSizes: p.options.some((o) => /^sizes?$/i.test(o)), chartRows: chart?.rows.length ?? 0, anyBuyable, taxReady }).filter((x) => !x.ok)
         if (missing.length) throw new Stop({ ok: false, error: `Before shoppers can see it: ${missing.map((m) => m.label.toLowerCase()).join(', ')}.` })
       }
       const goesLive = live && (!when || when <= new Date())
