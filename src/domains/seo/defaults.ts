@@ -105,3 +105,16 @@ export function shopJsonLd(s: ShopLd): object {
     },
   }
 }
+
+/** A description no longer than `max`, cut at a word (search and sharing S2·1: Google shows ~155 on a phone). */
+export function trimmed(text: string, max = DESCRIPTION_WARN_AT): string {
+  const t = text.replace(/\s+/g, ' ').trim()
+  return t.length <= max ? t : t.slice(0, max - 1).replace(/\s+\S*$/, '') + '…'
+}
+
+/** Descriptions for pages with none of their own (S2·1), from the shop's own facts. */
+export const pageDescription = {
+  list: (shop: string, codOn: boolean) => `Shop all of ${shop}${codOn ? ': pay on delivery' : ''}.`,
+  collection: (title: string, own: string, shop: string) => (own.trim() ? trimmed(own) : `${title} from ${shop}.`),
+  policy: (title: string, shop: string) => `${title} at ${shop}.`,
+}

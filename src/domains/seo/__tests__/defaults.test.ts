@@ -28,3 +28,14 @@ describe('seo defaults', () => {
     expect(ld.hasVariant[1].offers.availability).toBe('https://schema.org/PreOrder'); expect(ld.hasVariant[1].color).toBe('Indigo')
   })
 })
+
+describe('page descriptions (S2·1)', () => {
+  it('cut at a word under 155; defaults from the shop', async () => {
+    const { trimmed, pageDescription } = await import('../defaults')
+    const long = 'word '.repeat(60)
+    expect(trimmed(long).length).toBeLessThanOrEqual(155)
+    expect(trimmed(long).endsWith('…')).toBe(true)
+    expect(pageDescription.collection('Festive edit', '', 'Kesar Studio')).toBe('Festive edit from Kesar Studio.')
+    expect(pageDescription.list('Kesar Studio', true)).toBe('Shop all of Kesar Studio: pay on delivery.')
+  })
+})

@@ -90,7 +90,7 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
       }}
       allCollections={collections}
       families={COLOUR_FAMILIES}
-      photos={data.images.map((i) => ({ id: i.id, base: i.base, widths: i.widths, optionValue: i.optionValue, width: i.width, height: i.height }))}
+      photos={data.images.map((i) => ({ id: i.id, base: i.base, widths: i.widths, optionValue: i.optionValue, width: i.width, height: i.height, alt: i.alt ?? '' }))}
       types={data.types}
       share={share ? <ShareSheet share={share} target={{ kind: 'product', id: p.id }} /> : null}
     />

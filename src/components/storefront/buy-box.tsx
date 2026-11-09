@@ -134,7 +134,8 @@ export function BuyBox(p: BuyBoxProps) {
         ))}
 
         <p role="status" className={`min-h-5 text-sm ${a ? TONE[a.kind] : 'text-store-sub'}`}>{a ? labelOf(a, p.w) : p.options.length ? fill(p.w.pickToSee, { option: p.options.find((_, i) => picked[i] === null)?.toLowerCase() ?? p.w.size.toLowerCase() }) : ''}</p>
-        <button ref={buyRef} type="button" onClick={add} className="store-btn store-buy h-12 w-full rounded-[var(--store-radius)] transition-transform duration-fast ease-standard active:scale-97 bg-store-button text-base font-medium text-store-on-button">{a?.kind === 'preorder' ? p.w.preorder : p.w.addToBag}</button>
+        {/* A sold-out size: the button stays, greyed and saying so (Google's merchant rule 2026: not hidden). */}
+        <button ref={buyRef} type="button" onClick={add} aria-disabled={a && !a.canBuy ? true : undefined} className="store-btn store-buy h-12 w-full rounded-[var(--store-radius)] transition-transform duration-fast ease-standard active:scale-97 aria-disabled:opacity-50 aria-disabled:active:scale-100 bg-store-button text-base font-medium text-store-on-button">{a && !a.canBuy ? p.w.soldOut : a?.kind === 'preorder' ? p.w.preorder : p.w.addToBag}</button>
         {note && <p role="alert" className="text-sm">{note}</p>}
 
         <ul className="space-y-1.5 border-t border-store-line pt-4 text-sm">

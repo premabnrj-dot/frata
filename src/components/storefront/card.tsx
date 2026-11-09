@@ -29,7 +29,7 @@ export function ProductCard({ p, href, now, priority = false, badge = null, lang
     <li className="store-card group min-w-0">
       <Link href={href(`/products/${p.handle}`)} className="block space-y-2">
         <div className="relative aspect-[var(--store-ratio)] overflow-hidden rounded-[var(--store-radius)] bg-store-chip">
-          {cover ? <Photo p={cover} alt={p.title} sizes="(min-width: 1024px) 25vw, 50vw" priority={priority} className="absolute inset-0 h-full w-full object-cover" />
+          {cover ? <Photo p={cover} alt={cover.alt || p.title} sizes="(min-width: 1024px) 25vw, 50vw" priority={priority} className="absolute inset-0 h-full w-full object-cover" />
             : <span className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-store-sub">{p.title}</span>}
           {second && <Photo p={second} alt="" sizes="(min-width: 1024px) 25vw, 50vw" className="store-hover absolute inset-0 hidden h-full w-full object-cover opacity-0 transition-opacity duration-base [@media(hover:hover)]:block [@media(hover:hover)]:group-hover:opacity-100" />}
           {tag && <span className="absolute left-2 top-2 rounded-[var(--store-radius)] bg-store-paper/90 px-1.5 py-0.5 text-xs">{tag}</span>}
