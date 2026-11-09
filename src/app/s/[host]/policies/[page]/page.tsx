@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { pageDescription } from '@/domains/seo/defaults'
 import { notFound } from 'next/navigation'
 import { shareImage } from '@/lib/seo/share-image'
 import { PolicyView } from '@/components/storefront/pages'
@@ -21,7 +22,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const shop = await shopFor(params)
   const { page } = await params
   if (!isPage(page)) notFound()
-  return toMetadata(shopTags(shop, { path: `/policies/${page}`, title: `${POLICY_TITLE[page]} | ${shop.shopName}`, shareTitle: POLICY_TITLE[page], description: null, image: await shareImage(shop, { kind: 'shop', cat: await shopCatalogue(shop.id) }, shop.shopName, new Date()) }))
+  return toMetadata(shopTags(shop, { path: `/policies/${page}`, title: `${POLICY_TITLE[page]} | ${shop.shopName}`, shareTitle: POLICY_TITLE[page], description: pageDescription.policy(POLICY_TITLE[page], shop.shopName), image: await shareImage(shop, { kind: 'shop', cat: await shopCatalogue(shop.id) }, shop.shopName, new Date()) }))
 }
 
 export default async function Policy({ params }: { params: Params }) {

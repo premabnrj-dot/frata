@@ -105,7 +105,7 @@ export function BuyBox(p: BuyBoxProps) {
           <fieldset key={o} ref={i === si ? sizesRef : undefined} className="space-y-2">
             <legend className="flex w-full items-baseline justify-between text-sm">
               <span><span className="font-medium">{o}</span>{picked[i] && <span className="text-store-sub">: {picked[i]}</span>}</span>
-              {i === si && p.chart && p.chart.rows.length > 0 && <button type="button" className="underline underline-offset-4" onClick={() => setGuide(true)}>{p.w.sizeGuide}</button>}
+              {i === si && p.chart && p.chart.rows.length > 0 && <button type="button" className="inline-flex min-h-6 items-center underline underline-offset-4" onClick={() => setGuide(true)}>{p.w.sizeGuide}</button>}
             </legend>
             <div className="flex flex-wrap gap-2">
               {(p.values[i] ?? []).map((val) => {
@@ -134,7 +134,8 @@ export function BuyBox(p: BuyBoxProps) {
         ))}
 
         <p role="status" className={`min-h-5 text-sm ${a ? TONE[a.kind] : 'text-store-sub'}`}>{a ? labelOf(a, p.w) : p.options.length ? fill(p.w.pickToSee, { option: p.options.find((_, i) => picked[i] === null)?.toLowerCase() ?? p.w.size.toLowerCase() }) : ''}</p>
-        <button ref={buyRef} type="button" onClick={add} className="store-btn store-buy h-12 w-full rounded-[var(--store-radius)] transition-transform duration-fast ease-standard active:scale-97 bg-store-button text-base font-medium text-store-on-button">{a?.kind === 'preorder' ? p.w.preorder : p.w.addToBag}</button>
+        {/* A sold-out size: the button stays, greyed and saying so (Google's merchant rule 2026: not hidden). */}
+        <button ref={buyRef} type="button" onClick={add} aria-disabled={a && !a.canBuy ? true : undefined} className="store-btn store-buy h-12 w-full rounded-[var(--store-radius)] transition-transform duration-fast ease-standard active:scale-97 aria-disabled:opacity-50 aria-disabled:active:scale-100 bg-store-button text-base font-medium text-store-on-button">{a && !a.canBuy ? p.w.soldOut : a?.kind === 'preorder' ? p.w.preorder : p.w.addToBag}</button>
         {note && <p role="alert" className="text-sm">{note}</p>}
 
         <ul className="space-y-1.5 border-t border-store-line pt-4 text-sm">

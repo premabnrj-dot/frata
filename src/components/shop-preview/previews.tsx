@@ -34,6 +34,8 @@ export type ShopFacts = PolicyFacts & {
   gstScheme: string; turnoverBand: string; gstFiling: string; homeState: string | null; b2bInvoices: boolean
   defaultHsn: string
   invoiceSeries: string
+  /** The shop's logo (Settings › Brand, S1·6): its 400-wide WebP in the brand folder. */
+  logoUrl?: string | null
   docLogo: string | null
   docSignatory: string
   docNote: string

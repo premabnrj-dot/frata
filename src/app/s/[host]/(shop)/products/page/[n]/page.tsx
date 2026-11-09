@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { pageDescription } from '@/domains/seo/defaults'
 import { wordsFor } from '@/components/storefront/words'
 import { notFound } from 'next/navigation'
 import { shareImage } from '@/lib/seo/share-image'
@@ -26,7 +27,7 @@ async function load(params: Params) {
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { shop, page } = await load(params)
-  return toMetadata(shopTags(shop, { path: `/products/page/${page}`, title: `${wordsFor(shop.shopLanguage).shopAll} · page ${page} | ${shop.shopName}`, shareTitle: `${wordsFor(shop.shopLanguage).shopAll} · page ${page}`, description: null, image: await shareImage(shop, { kind: 'shop', cat: await shopCatalogue(shop.id) }, shop.shopName, new Date()) }))
+  return toMetadata(shopTags(shop, { path: `/products/page/${page}`, title: `${wordsFor(shop.shopLanguage).shopAll} · page ${page} | ${shop.shopName}`, shareTitle: `${wordsFor(shop.shopLanguage).shopAll} · page ${page}`, description: pageDescription.list(shop.shopName, shop.codOn), image: await shareImage(shop, { kind: 'shop', cat: await shopCatalogue(shop.id) }, shop.shopName, new Date()) }))
 }
 
 export default async function AllPage({ params }: { params: Params }) {

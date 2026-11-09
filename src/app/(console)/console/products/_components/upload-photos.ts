@@ -25,11 +25,12 @@ async function toWebp(bitmap: ImageBitmap, width: number): Promise<Blob> {
 }
 
 /** Resizes and uploads one photo; calls onProgress with 0–1. */
-export async function uploadPhoto(file: File, tenantId: string, onProgress: (p: number) => void, folder: 'products' | 'theme' = 'products'): Promise<Uploaded> {
+export async function uploadPhoto(file: File, tenantId: string, onProgress: (p: number) => void, folder: 'products' | 'theme' | 'brand' = 'products'): Promise<Uploaded> {
   if (!/^image\/(jpeg|png|webp|heic|heif)$/.test(file.type) && !/\.(jpe?g|png|webp|heic)$/i.test(file.name)) throw new Error(`${file.name} is not a photo.`)
   if (file.size > MAX_SOURCE_BYTES) throw new Error(`${file.name} is over 25 MB.`)
   const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => { throw new Error(`${file.name} could not be read. Save it as JPEG and try again.`) })
-  if (bitmap.width < 400) throw new Error(`${file.name} is ${bitmap.width} px wide; at least 400 px is needed.`)
+  // A logo may be small (drawn at 400 wide); a photo needs 400 px of its own.
+  if (bitmap.width < (folder === 'brand' ? 120 : 400)) throw new Error(`${file.name} is ${bitmap.width} px wide; at least ${folder === 'brand' ? 120 : 400} px is needed.`)
   const widths = widthsFor(bitmap.width)
   const id = crypto.randomUUID()
   let base = ''

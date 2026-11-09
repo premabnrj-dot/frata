@@ -123,6 +123,8 @@ export async function saveProduct(productId: string, version: number, input: Pro
       // Empty SKUs get a default (skuFor), unique against every other SKU in this shop.
       const [shop] = await tx.select({ prefix: shopSettings.orderPrefix, name: tenants.name }).from(shopSettings).innerJoin(tenants, eq(tenants.id, shopSettings.tenantId)).where(eq(shopSettings.tenantId, tenantId))
       const others = await tx.select({ sku: variants.sku }).from(variants).where(and(eq(variants.tenantId, tenantId), sql`${variants.productId} <> ${productId}`, sql`${variants.sku} is not null`))
+      const codes = p.variants.flatMap((v) => (v.gtin ? [v.gtin] : [])), [clash] = codes.length ? await tx.select({ gtin: variants.gtin }).from(variants).where(and(eq(variants.tenantId, tenantId), sql`${variants.productId} <> ${productId}`, inArray(variants.gtin, codes))).limit(1) : []
+      if (clash) throw new Stop({ ok: false, error: `Barcode ${clash.gtin} is already on another product in your shop.` })
       const taken = new Set(others.map((o) => o.sku!.toUpperCase()))
       p.variants.forEach((v) => { if (v.sku) taken.add(v.sku.toUpperCase()) })
       const prefix = orderPrefix(shop?.prefix ?? '', shop?.name ?? '')
@@ -135,11 +137,11 @@ export async function saveProduct(productId: string, version: number, input: Pro
       // The cost of goods only from whoever sees it (seesCosts); otherwise the stored cost stays as it was.
       const costs = await costsVisibleIn(tx, tenantId, auth.membership.role)
       // SKUs cleared first so two variants can swap SKUs in one save.
-      await tx.update(variants).set({ sku: null }).where(and(eq(variants.tenantId, tenantId), eq(variants.productId, productId)))
+      await tx.update(variants).set({ sku: null, gtin: null }).where(and(eq(variants.tenantId, tenantId), eq(variants.productId, productId)))
       for (const [i, values] of plan.wanted.entries()) {
         const v = byKey.get(keyOf(values))!
         const data = {
-          price: v.price, compareAt: v.compareAt, ...(costs ? { unitCost: v.unitCost } : {}), stock: v.stock, sku: v.sku, position: i,
+          price: v.price, compareAt: v.compareAt, ...(costs ? { unitCost: v.unitCost } : {}), stock: v.stock, sku: v.sku, gtin: v.gtin, position: i,
           whenOut: v.whenOut, shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays, preorderCap: v.preorderCap,
         }
         const kept = plan.keep.find((k) => keyOf(k.optionValues) === keyOf(values))

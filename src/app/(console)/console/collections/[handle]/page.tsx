@@ -21,5 +21,5 @@ export default async function CollectionPage({ params }: { params: Promise<{ han
   if (!c) notFound()
   const rules = c.rules as Rule[]
   const share = await shareFor(auth.membership.tenantId, { kind: 'collection', id: c.id }).catch(() => null)
-  return <CollectionEditor key={c.id + c.updatedAt.toISOString()} initial={{ id: c.id, title: c.title, handle: c.handle, description: c.description, kind: c.kind as 'manual', matchAll: c.matchAll === 1, rules: fromRules(rules, categoryNames(rules)), sort: c.sort, productIds: c.productIds }} {...data} share={share ? <ShareSheet share={share} target={{ kind: 'collection', id: c.id }} /> : null} />
+  return <CollectionEditor key={c.id + c.updatedAt.toISOString()} initial={{ id: c.id, title: c.title, handle: c.handle, description: c.description, seoTitle: c.seoTitle, seoDescription: c.seoDescription, kind: c.kind as 'manual', matchAll: c.matchAll === 1, rules: fromRules(rules, categoryNames(rules)), sort: c.sort, productIds: c.productIds }} {...data} share={share ? <ShareSheet share={share} target={{ kind: 'collection', id: c.id }} /> : null} />
 }

@@ -212,6 +212,86 @@ export default {
       await ctx.close()
     })
 
+    await t.step('S2: breadcrumbs, the site, a collection\'s list, free shipping; the sitemap has photos and no empty collections', async () => {
+      const [c] = await db`select c.handle from collections c join tenants tn on tn.id = c.tenant_id where tn.slug = 'kesar-studio' order by c.handle limit 1`
+      assert.equal(ldOfType(jsonLd((await get(`/products/${product.handle}`, CRAWLERS.google)).body), 'BreadcrumbList').length, 1, 'product breadcrumb')
+      const home = jsonLd((await get('/', CRAWLERS.google)).body)
+      assert.equal(ldOfType(home, 'WebSite').length, 1, 'WebSite')
+      assert.ok(ldOfType(home, 'OnlineStore')[0].hasShippingService.handlingTime, 'handling time')
+      const col = await get(`/collections/${c.handle}`, CRAWLERS.google)
+      assert.equal(col.status, 200, `/collections/${c.handle}`)
+      assert.equal(ldOfType(jsonLd(col.body), 'ItemList').length, 1, 'ItemList')
+      const sm = (await get('/sitemap.xml', CRAWLERS.google)).body
+      assert.match(sm, /<image:image><image:loc>https:\/\//)
+      for (const h of ['/products', '/policies/returns']) assert.ok(head((await get(h, CRAWLERS.google)).body).one('description'), `${h}: description`)
+    })
+
+    await t.step('S2·2: a renamed collection keeps its old address (308), its own page title, and can go back', async () => {
+      const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 900 } })
+      const p = await ctx.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message))
+      const rename = async (from, to, title) => {
+        await p.goto(`${CONSOLE}/console/collections/${from}`)
+        await p.getByLabel('Address').fill(to)
+        await p.locator('summary', { hasText: 'Search and sharing' }).click()
+        await p.getByLabel('Page title').fill(title)
+        await p.getByRole('button', { name: 'Save', exact: true }).click()
+        await p.waitForURL(`${CONSOLE}/console/collections/${to}`)
+      }
+      await rename('kurtas', 'kurtas-and-sets', 'Kurtas and sets online')
+      await p.screenshot({ path: t.out('collection-seo') })
+      const deadline = Date.now() + 70_000
+      let old
+      do { old = await get('/collections/kurtas', CRAWLERS.google); if (old.status === 308) break; await new Promise((r) => setTimeout(r, 2000)) } while (Date.now() < deadline)
+      assert.equal(old.status, 308, 'the old address redirects')
+      assert.equal(old.headers.location, '/collections/kurtas-and-sets')
+      assert.equal(head((await get('/collections/kurtas-and-sets', CRAWLERS.google)).body).title, 'Kurtas and sets online')
+      // Another collection may not take an old address; this one may go back to its own.
+      await p.goto(`${CONSOLE}/console/collections/festive-edit`)
+      await p.getByLabel('Address').fill('kurtas')
+      await p.getByRole('button', { name: 'Save', exact: true }).click()
+      await p.getByText('Another collection uses (or used) this address.').waitFor()
+      await p.getByRole('button', { name: 'Discard' }).click().catch(() => {})
+      await rename('kurtas-and-sets', 'kurtas', '')
+      await ctx.close()
+    })
+
+    await t.step('S·3: Search and sharing lists the fixes with links, and Home’s own title reaches Google', async () => {
+      const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 900 } })
+      const p = await ctx.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message))
+      await p.goto(`${CONSOLE}/console/search`)
+      await p.getByRole('heading', { name: /^(To fix · \d+|Nothing to fix)$/ }).waitFor()
+      for (const a of await p.locator('#fixes a').all()) assert.match(await a.getAttribute('href'), /^\/console\/(products|collections)\//)
+      await p.getByLabel('Page title').fill('Kesar Studio — handwoven kurtas')
+      await p.getByRole('button', { name: 'Save', exact: true }).click()
+      await p.getByText('Saved.').waitFor()
+      await p.screenshot({ path: t.out('search-page') })
+      const deadline = Date.now() + 70_000
+      let title
+      do { title = head((await get('/', CRAWLERS.google)).body).title; if (title === 'Kesar Studio — handwoven kurtas') break; await new Promise((r) => setTimeout(r, 2000)) } while (Date.now() < deadline)
+      assert.equal(title, 'Kesar Studio — handwoven kurtas')
+      await p.getByLabel('Page title').fill('')
+      await p.getByRole('button', { name: 'Save', exact: true }).click()
+      await p.getByText('Saved.').waitFor()
+      await ctx.close()
+    })
+
+    await t.step('S1·6: the shop has its own icon (its initial or logo, never Frrata\'s), served as PNG', async () => {
+      const h = head((await get('/', CRAWLERS.google)).body)
+      const icons = [...h.raw.matchAll(/<link\b[^>]*rel="(?:icon|apple-touch-icon)"[^>]*>/g)].map((x) => x[0].match(/href="([^"]+)"/)[1])
+      assert.ok(icons.length >= 2, `icon links: ${icons.join(', ')}`)
+      for (const href of icons) {
+        assert.match(href, /^\/icon\/(32|180|192|512)\/[0-9a-f]{16}\.png$/)
+        const r = await getBytes(href)
+        assert.equal(r.status, 200); assert.equal(r.headers['content-type'], 'image/png')
+      }
+      assert.equal((await getBytes(icons[0].replace(/\/icon\/\d+\//, '/icon/64/'))).status, 404, 'only the listed sizes')
+      const stale = await getBytes(icons[0].replace(/[0-9a-f]{16}\.png$/, '0000000000000000.png'))
+      assert.equal(stale.status, 302, 'a stale icon address points at the current one, drawing nothing')
+      assert.equal((await get('/collections/constructor', CRAWLERS.google)).status, 404, 'an object key is not an old address')
+      const vp = h.raw.match(/<meta name="theme-color" content="([^"]+)"/)
+      assert.ok(vp, 'theme-color')
+    })
+
     await t.step('robots.txt allows crawling and names the sitemap; the sitemap lists the product', async () => {
       const robots = await get('/robots.txt', CRAWLERS.google)
       assert.equal(robots.status, 200)

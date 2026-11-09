@@ -1,5 +1,5 @@
 # Search and sharing — plan (S·0, S·1, S·2)
-Status: active · Date: 2026-11-09 · Spec: `docs/specs/2026-11-09-seo-and-sharing.md` ·
+Status: done (S·0–S·3; S·4 parked, S1·8/S2·9 held for the outbox) · Date: 2026-11-09 · Spec: `docs/specs/2026-11-09-seo-and-sharing.md` ·
 Mockup: https://claude.ai/artifact/P4wfSezqiVxzG4D7FsrnYM · Approved: owner, 2026-11-09 (mockup; share images are JPEG,
 the one exception to "WebP only" — ADR-0005 amended; order S·0 → S·1 → S·2; Google's app review started now for S·4)
 
@@ -118,6 +118,58 @@ verify command run and read, and `impact-reviewer` on its diff before the commit
   console preview route for drafts was not needed. Open: S1·6 (logo setter, shop icons), S1·5's firewall check (owner),
   S1·8 held.
 
+### S1·6 as built (2026-11-09)
+- Settings › Brand › Logo: uploaded through the photo pipeline into the shop's brand folder (WebP; logos from 120 px),
+  accepted only by `acceptedBase(…,'brand')` with WebP bytes; `shop_settings.logo_url` = its 400 rung; never by a support
+  visit; the shop's caches refreshed.
+- `/icon/<32|180|192|512>/<hash>.png` (s/[host]/icon): the logo on the theme's tint, or the initial; the same rules as
+  the card route (canonical, budgeted, own-folder logo only). The shop layout's icons and apple icon point at it, theme
+  colour from the theme. Root `/favicon.ico` stays the platform's (accepted).
+
+### S2·2 as built (2026-11-09)
+- Migration `drizzle/0070_collection_seo.sql`: `collections.seo_title`/`seo_description` (≤ 200 / 400, check
+  `collections_seo`); `collection_handle_history` (PK tenant + handle, FK (tenant, collection) cascade, select + insert
+  only, RLS + policy in the same file, no frata_admin grant; proofs in `scripts/verify/tenancy.sql` § 21).
+- `saveCollection`: a changed address appends the old one; another collection's old address is refused ("uses (or
+  used)"); going back to its own needs nothing. The catalogue entry carries `movedCollections` (old → current, one
+  narrow read); both collection routes 308 an old address (page n keeps its page). Titles and descriptions from
+  `collectionSeo` (`src/domains/seo/defaults.ts`). The editor reuses `SeoPanel` (`folder="collections"`, the address
+  stays under the name). The intro was already plain text above the grid. e2e 64-seo renames, follows the 308, reads
+  the title, is refused another's old address, goes back.
+
+### S2·3 identifiers and S2·7 as built (2026-11-09)
+- `variants.gtin` (`drizzle/0071_variant_gtin.sql`, check `variants_gtin`): optional; `cleanGtin`
+  (`src/domains/catalogue/gtin.ts`) checks the digit; one barcode per size within a product. The grid's Barcode column
+  sits after SKU. **MPN = the SKU** (derive, never duplicate): no `variants.mpn`. **`products.no_barcode` waits for
+  S·4** — only a Merchant feed reads `identifier_exists`; JSON-LD simply leaves `gtin` out. Brand, colour, size,
+  material were already in the markup.
+- The shop shell: a "Skip to content" link first (both languages), `main` focusable; a 2 px focus ring in the shop's own
+  ink (`[data-store-theme] :focus-visible`). The UX net (e2e 90-ux) now measures five shop pages at every width
+  (targets ≥ 24 px, contrast, skip link) and Tabs through a product page.
+
+### S·3 as built (2026-11-09) — the mockup's "Search" board, what can be true before S·4
+- Console › Store › **Search and sharing** (`/console/search`, CAN_BUILD): Share shop; **To fix · N** — photos without a
+  description, collections without an intro, products with the same title (live products only; `seoFixFacts`, three
+  reads in one transaction; `seoFixes` in `src/domains/seo/fixes.ts` is pure), each with a link to the first thing to
+  fix, gone when done; "Nothing to fix" otherwise. **On Google**: Home's title and description
+  (`shop_settings.seo_title`/`seo_description`, `drizzle/0072_shop_seo.sql`; `homeSeo` gives the defaults), with the
+  result drawn as Google does.
+- **Waits for S·4** (each needs Google connected to be true): the barcode fix ("Add or mark none" — and with it
+  `products.no_barcode`), the Connected list, "Searches that found you".
+
+### S2·8 as built (2026-11-09)
+- `e2e/flows/95-speed.mjs` (Lighthouse 13.5.0 and chrome-launcher pinned): Home, a collection and a product at phone
+  settings, median of 3, perf ≥ 90 · a11y ≥ 95 · SEO ≥ 95 · CLS ≤ 0.05; a failure names what moved. It runs last, on the
+  stress shop (90-ux's long name and 60 products): it found the header re-wrapping a long name when the display font
+  arrived (0.073) — the logo is now one line. Last full run: 93/100/100 · 95/100/100 · 92/100/100, CLS ≤ 0.032.
+
+### S2·5 decision (2026-11-09)
+- `<html lang>` stays `en-IN`; a Hindi shop's own wrapper already carries `lang="hi"` (`src/components/storefront/shell.tsx`),
+  which is what screen readers use, and Google reads a page's language from its text, not the attribute. Moving
+  `<html>` into per-surface root layouts means moving every top-level route (the site, login, start, partners, choose,
+  handover, auth) into a group and losing the shared not-found — a large change for a signal no reader uses.
+  **Comes back** when hreflang does (a shop with both languages), which needs per-surface roots anyway.
+
 ## S·2 Search foundations
 - **S2·1 Descriptions everywhere** in `pageTags` (lists, collections trimmed to 155, policies, page n); Hindi titles.
 - **S2·2 Collections**: migration — `collections.seo_title`, `seo_description` (length checks);
@@ -127,7 +179,7 @@ verify command run and read, and `impact-reviewer` on its diff before the commit
   frata_admin check), proof rows as §21. Renaming to a retired handle refused; the 308 lookup joins collections on the
   tenant. Editor disclosure as the mockup; the intro rendered as plain text above the grid.
 - **S2·3 Structured data**: BreadcrumbList, WebSite, ItemList, OnlineStore + free-shipping threshold and handling time;
-  Product + brand, `gtin`/`mpn` (nullable `variants.gtin`, `variants.mpn`, `products.no_barcode`, length checks),
+  Product + brand, `gtin`/`mpn` (*superseded by § S2·3 as built: `variants.gtin` only, MPN = SKU, `no_barcode` with S·4*),
   colour, size, material. Kept out of `shopCatalogue` (880 kB of 1 MB at 600 products); a test: markup = page.
   `speed-reviewer` on this task.
 - **S2·4 Sitemap**: its own narrow read; image entries; `lastmod` = `updated_at` only once `updated_at` moves on real

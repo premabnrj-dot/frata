@@ -11,13 +11,14 @@ import { Icon } from '@/components/icons/icon'
  * already has a title, description and address made for it; this is for the
  * merchant who wants to change them. Empty fields use the defaults shown.
  */
-export function SeoPanel({ handle, onHandle, seoTitle, onSeoTitle, seoDescription, onSeoDescription, defaults, address, cover, everLive, errors }: {
-  handle: string; onHandle: (v: string) => void; seoTitle: string; onSeoTitle: (v: string) => void; seoDescription: string; onSeoDescription: (v: string) => void
-  defaults: { title: string; description: string; handle: string }; address: string; cover: Photo | undefined; everLive: boolean; errors: Record<string, string>
+export function SeoPanel({ handle, onHandle, seoTitle, onSeoTitle, seoDescription, onSeoDescription, defaults, address, cover, everLive = false, errors, folder = 'products' }: {
+  /** onHandle absent: the address is edited elsewhere on the page (a collection's sits under its name). */
+  handle: string; onHandle?: (v: string) => void; folder?: 'products' | 'collections'; seoTitle: string; onSeoTitle: (v: string) => void; seoDescription: string; onSeoDescription: (v: string) => void
+  defaults: { title: string; description: string; handle: string }; address: string; cover: Photo | undefined; everLive?: boolean; errors: Record<string, string>
 }) {
   const title = seoTitle.trim() || defaults.title
   const description = seoDescription.trim() || defaults.description
-  const url = `${address}/products/${handle || defaults.handle}`
+  const url = `${address}/${folder}/${handle || defaults.handle}`
   const share = shareCard(title.replace(/\s*\|[^|]*$/, ''), description)
   const count = (n: number, warn: number) => <span className={n > warn ? 'text-warn-text' : ''}>{n}{n > warn ? ` · phones may cut it after about ${warn}` : ''}</span>
   return (
@@ -56,7 +57,7 @@ export function SeoPanel({ handle, onHandle, seoTitle, onSeoTitle, seoDescriptio
           <textarea id="seo-desc" rows={3} value={seoDescription} maxLength={400} placeholder={defaults.description} aria-invalid={!!errors.seoDescription || undefined} onChange={(e) => onSeoDescription(e.target.value)} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm" />
           <p className="text-xs text-muted-foreground">{count(description.length, DESCRIPTION_WARN_AT)} characters.</p>
         </div>
-        <div className="space-y-1">
+        {onHandle && <div className="space-y-1">
           <label htmlFor="handle" className="block text-sm font-medium">Address</label>
           <div className="flex min-w-0 items-center rounded-md border border-input bg-card text-sm aria-invalid:border-danger-text focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring" aria-invalid={!!errors.handle || undefined}>
             <span className="shrink-0 truncate pl-3 font-mono text-xs text-muted-foreground">…/products/</span>
@@ -64,7 +65,7 @@ export function SeoPanel({ handle, onHandle, seoTitle, onSeoTitle, seoDescriptio
           </div>
           {errors.handle ? <p className="text-xs text-danger-text">{errors.handle}</p>
             : <p className="text-xs text-muted-foreground">{everLive ? 'It has been live: if you change it, the old address keeps working and sends shoppers here.' : 'Short words shoppers can read. Fixed once it has been live (a change then redirects).'}</p>}
-        </div>
+        </div>}
       </div>
     </details>
   )

@@ -11,7 +11,9 @@ import type { Circle, Href, ShellShop } from './shell'
 // The shop's headers (split from shell.tsx for theme Signal, plan S1-2; no visible change).
 
 export const Logo = ({ shop, href, className, upper = true }: { shop: ShellShop; href: Href; className: string; upper?: boolean }) => (
-  <Link href={href('/')} className={className} style={{ fontFamily: 'var(--store-display)' }}>
+  // One line, cut with an ellipsis: a long name that wrapped re-wrapped when the display font arrived and moved the
+  // page (layout shift 0.073 at 390 px, e2e 95-speed under the stress shop's name).
+  <Link href={href('/')} className={`min-w-0 truncate ${className}`} title={shop.shopName} style={{ fontFamily: 'var(--store-display)' }}>
     {shop.logoUrl ? <img src={shop.logoUrl} alt={shop.shopName} height={32} width={128} className="h-8 w-auto max-w-32 object-contain object-left" /> : upper ? shop.shopName.toUpperCase() : shop.shopName}
   </Link>
 )
@@ -64,7 +66,7 @@ export function MenuHeader(p: HeaderProps & { minimal: boolean; panel?: Circle[]
   const { shop, href, gated, minimal, w, panel, set, own } = p
   return (
     <>
-      <div className="mx-auto grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-3 sm:px-6">
+      <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_minmax(0,auto)_minmax(0,1fr)] items-center gap-2 px-4 py-3 sm:px-6">
         <div>
           {!gated && (
             <details className="relative">
@@ -115,7 +117,7 @@ export function MenuHeader(p: HeaderProps & { minimal: boolean; panel?: Circle[]
 export function SplitHeader(p: HeaderProps) {
   const { shop, href, gated, w, set, own } = p
   return (
-    <div className="mx-auto grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-3 sm:px-6">
+    <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_minmax(0,auto)_minmax(0,1fr)] items-center gap-2 px-4 py-3 sm:px-6">
       <div className="min-w-0">
         {!gated && <>
           <nav aria-label={w.shopNav} className={`hidden gap-1 text-sm sm:flex ${own ? '' : 'overflow-x-auto'}`}>

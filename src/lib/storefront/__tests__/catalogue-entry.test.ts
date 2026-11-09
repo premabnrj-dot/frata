@@ -8,7 +8,7 @@ const card = {
   id: 'p1', handle: 'kurta', title: 'Kurta', status: 'active', publishAt: null, since: '2026-11-01T00:00:00.000Z', options: ['Size', 'Colour'],
   categoryId: null, tags: [], attributes: { fabric: ['cotton'] },
   images: [img('a', { optionValue: 'Rani' }), img('b'), img('c', { widths: [400, 800] }), img('d', { optionValue: 'Neel' }), img('e')],
-  variants: [{ id: 'v1', values: ['M', 'Rani'], sku: 'K-M', price: 129900, compareAt: null, mrp: 149900, stock: 3, whenOut: 'stop' as const, shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderFull: false, restockedAt: null }],
+  variants: [{ id: 'v1', values: ['M', 'Rani'], sku: 'K-M', gtin: null, price: 129900, compareAt: null, mrp: 149900, stock: 3, whenOut: 'stop' as const, shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderFull: false, restockedAt: null }],
   colours: [{ value: 'Rani', family: 'pink', hex: '#d61f69', cropImageId: 'e', crop: { x: 0.5, y: 0.5, r: 0.2 } }, { value: 'Neel', family: null, hex: null, cropImageId: null, crop: null }],
 }
 
@@ -28,5 +28,9 @@ describe('the cached catalogue card (speed review P1, impact review)', () => {
     const odd = { ...card, images: [img('x', { base: 'https://elsewhere.example/x', widths: [400] })] }
     const out = expand({ photoPrefix: photoPrefixOf([base('a')]), collections: [], offers: [], products: [compactCard(odd, [], photoPrefixOf([base('a')]))] }).products[0]!
     expect(out.images[0]).toMatchObject({ base: 'https://elsewhere.example/x', widths: [400] })
+  })
+  it('old addresses (S2·2): an entry cached before they existed expands to none', () => {
+    expect(expand({ photoPrefix: '', collections: [], offers: [], products: [] }).movedCollections).toEqual({})
+    expect(expand({ photoPrefix: '', collections: [], offers: [], products: [], movedCollections: { kurtas: 'kurtas-and-sets' } }).movedCollections).toEqual({ kurtas: 'kurtas-and-sets' })
   })
 })

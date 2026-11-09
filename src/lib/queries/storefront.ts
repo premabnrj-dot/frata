@@ -3,6 +3,7 @@ import { checkoutGst } from '@/domains/tax/gstin'
 import { and, asc, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
 import { revalidateTag, unstable_cache } from 'next/cache'
 import { shopPauseIn } from './trial-pause'
+import { coreAnnouncement } from './announcement'
 import { cache } from 'react'
 import { LOW_STOCK_AT } from '@/domains/catalogue/availability'
 import type { Chart } from '@/domains/catalogue/size-charts'
@@ -10,7 +11,7 @@ import type { PolicyFacts } from '@/domains/policies/render'
 import type { DeliveryRules } from '@/domains/checkout/delivery'
 import { tenantForHost, themeVersionRows } from '@/lib/db/platform'
 import { shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
-import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
+import { collectionHandleHistory, collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { owedSql, stateSql } from '@/lib/db/order-predicates'
 import { priorPriceSql } from '@/lib/db/price-predicates'
 import { orderLines, orders } from '@/lib/db/schema-orders'
@@ -79,7 +80,7 @@ export type StoreShop = PolicyFacts & DeliveryRules & {
   id: string; slug: string; host: string; publishedAt: string | null; orderPrefix: string
   /** Trials TR1·9: the pause window (ISO); the page decides at render (pausedAt), so the 60 s cache never delays it. */
   pause: { from: string; to: string | null } | null
-  accent: string; displayFont: string; tagline: string; logoUrl: string | null; whatsapp: string; instagram: string
+  accent: string; displayFont: string; tagline: string; seoTitle: string; seoDescription: string; logoUrl: string | null; whatsapp: string; instagram: string
   /** The words Frrata writes on the shop (themes T2). */
   shopLanguage: Lang
   overrides: Record<string, string>; nav: { handle: string; title: string }[]
@@ -94,7 +95,7 @@ async function coreShop(tenantId: string): Promise<StoreShop | null> {
       legalName: shopSettings.legalName, address: shopSettings.address, supportEmail: shopSettings.supportEmail, supportPhone: shopSettings.supportPhone,
       whatsapp: shopSettings.whatsapp, instagram: shopSettings.instagram,
       grievanceName: shopSettings.grievanceName, grievanceRole: shopSettings.grievanceRole, grievanceEmail: shopSettings.grievanceEmail, grievancePhone: shopSettings.grievancePhone,
-      accent: shopSettings.accent, displayFont: shopSettings.displayFont, tagline: shopSettings.tagline, logoUrl: shopSettings.logoUrl, shopLanguage: shopSettings.shopLanguage,
+      accent: shopSettings.accent, displayFont: shopSettings.displayFont, tagline: shopSettings.tagline, seoTitle: shopSettings.seoTitle, seoDescription: shopSettings.seoDescription, logoUrl: shopSettings.logoUrl, shopLanguage: shopSettings.shopLanguage,
       returnKind: shopSettings.returnKind, returnDays: shopSettings.returnDays, sells: shopSettings.sells,
       // COD limits are public: the Shipping policy states them.
       codOn: shopSettings.codOn, codMin: shopSettings.codMin, codMax: shopSettings.codMax, codCharge: shopSettings.codCharge,
@@ -123,7 +124,7 @@ async function coreShop(tenantId: string): Promise<StoreShop | null> {
 // ── The catalogue: every product a list can show, and the collections ───────────
 
 export type StoreImage = { id: string; base: string; widths: number[]; width: number; height: number; optionValue: string | null; alt: string }
-export type StoreVariant = { id: string; values: string[]; sku: string | null; price: number
+export type StoreVariant = { id: string; values: string[]; sku: string | null; gtin: string | null; price: number
   /** The 30-day prior price when the price was cut within 30 days (derived); null otherwise. */
   compareAt: number | null
   /** The tag's M.R.P. as the merchant typed it (never struck through). */
@@ -138,8 +139,9 @@ export type StoreCard = {
   /** A sample piece in the customizer's preview (src/lib/themes/sample.ts); never set by a read here. */
   sample?: true
 }
-export type StoreCollection = { id: string; handle: string; title: string; description: string; kind: 'manual' | 'auto'; matchAll: boolean; rules: unknown[]; sort: string; productIds: string[] }
-export type StoreCatalogue = { products: StoreCard[]; collections: StoreCollection[] }
+export type StoreCollection = { id: string; handle: string; title: string; description: string; seoTitle: string; seoDescription: string; kind: 'manual' | 'auto'; matchAll: boolean; rules: unknown[]; sort: string; productIds: string[] }
+/** movedCollections: a collection's old address → its current one (S2·2; 308). */
+export type StoreCatalogue = { products: StoreCard[]; collections: StoreCollection[]; movedCollections?: Record<string, string> }
 
 /** A cached entry must stay well under the data cache's 2 MB: lists show at most this many products. */
 const MAX_LISTED = 600
@@ -151,7 +153,7 @@ const MAX_LISTED = 600
  */
 const variantCols = (tenantId: string) => ({
   owed: owedSql(tenantId, new Date()),
-  id: variants.id, productId: variants.productId, values: variants.optionValues, sku: variants.sku, price: variants.price,
+  id: variants.id, productId: variants.productId, values: variants.optionValues, sku: variants.sku, gtin: variants.gtin, price: variants.price,
   // The struck "was" price is DERIVED, never typed (E-Commerce Amendment Rules 2026, from 1 Jan 2027; offers O·2 plan
   // review 10): the lowest price in the 30 days before today's price took effect (the price carried into that window
   // included), shown only within 30 days of that change. A raise-then-cut never shows a saving. The merchant's typed
@@ -164,8 +166,8 @@ const variantCols = (tenantId: string) => ({
 const imageCols = { id: productImages.id, productId: productImages.productId, base: productImages.base, widths: productImages.widths, width: productImages.width, height: productImages.height, optionValue: productImages.optionValue, alt: productImages.alt }
 const colourCols = { productId: productColours.productId, value: productColours.value, family: productColours.family, hex: productColours.hex, cropImageId: productColours.cropImageId, crop: productColours.crop }
 
-const toVariant = (v: { id: string; values: string[]; sku: string | null; price: number; compareAt: string | number | null; mrp: number | null; stock: number; owed: number; whenOut: string; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; cap: number | null; restockedAt: Date | null }): StoreVariant => ({
-  id: v.id, values: v.values, sku: v.sku, price: Number(v.price), compareAt: v.compareAt !== null && Number(v.compareAt) > Number(v.price) ? Number(v.compareAt) : null,
+const toVariant = (v: { id: string; values: string[]; sku: string | null; gtin: string | null; price: number; compareAt: string | number | null; mrp: number | null; stock: number; owed: number; whenOut: string; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; cap: number | null; restockedAt: Date | null }): StoreVariant => ({
+  id: v.id, values: v.values, sku: v.sku, gtin: v.gtin, price: Number(v.price), compareAt: v.compareAt !== null && Number(v.compareAt) > Number(v.price) ? Number(v.compareAt) : null,
   mrp: v.mrp === null ? null : Number(v.mrp),
   // Shoppers learn "only N left" at LOW_STOCK_AT or below; above it, the count is not theirs to see.
   stock: Math.min(Math.max(0, v.stock - v.owed), LOW_STOCK_AT + 1), whenOut: v.whenOut as StoreVariant['whenOut'], shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays,
@@ -232,9 +234,11 @@ async function coreCatalogue(tenantId: string, drafts: boolean): Promise<Catalog
       tx.select(imageCols).from(productImages).where(and(eq(productImages.tenantId, tenantId), inArray(productImages.productId, ids))).orderBy(asc(productImages.position)),
       tx.select(colourCols).from(productColours).where(and(eq(productColours.tenantId, tenantId), inArray(productColours.productId, ids))),
       tx.select({ productId: productAttributes.productId, attribute: productAttributes.attribute, values: productAttributes.values }).from(productAttributes).where(and(eq(productAttributes.tenantId, tenantId), inArray(productAttributes.productId, ids))),
-      tx.select({ id: collections.id, handle: collections.handle, title: collections.title, description: collections.description, kind: collections.kind, matchAll: collections.matchAll, rules: collections.rules, sort: collections.sort }).from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)),
+      tx.select({ id: collections.id, handle: collections.handle, title: collections.title, description: collections.description, seoTitle: collections.seoTitle, seoDescription: collections.seoDescription, kind: collections.kind, matchAll: collections.matchAll, rules: collections.rules, sort: collections.sort }).from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)),
       tx.select({ collectionId: collectionProducts.collectionId, productId: collectionProducts.productId }).from(collectionProducts).where(eq(collectionProducts.tenantId, tenantId)).orderBy(asc(collectionProducts.position)),
     ]) : [[], [], [], [], [], []] as const
+    const moved = await tx.select({ old: collectionHandleHistory.handle, to: collections.handle }).from(collectionHandleHistory)
+      .innerJoin(collections, and(eq(collections.id, collectionHandleHistory.collectionId), eq(collections.tenantId, tenantId))).where(eq(collectionHandleHistory.tenantId, tenantId))
     const show = await showcase(tx, tenantId)
     const photoPrefix = photoPrefixOf(imgs.map((i) => i.base))
     return {
@@ -249,6 +253,7 @@ async function coreCatalogue(tenantId: string, drafts: boolean): Promise<Catalog
         attributes: Object.fromEntries(attrs.filter((a) => a.productId === p.id).map((a) => [a.attribute, a.values])),
       }, show.indexFor(p.id), photoPrefix)),
       collections: colls.map((c) => ({ ...c, kind: c.kind as 'manual' | 'auto', matchAll: c.matchAll === 1, rules: c.rules, productIds: members.filter((m) => m.collectionId === c.id).map((m) => m.productId) })),
+      movedCollections: Object.fromEntries(moved.filter((m) => m.old !== m.to).map((m) => [m.old, m.to])),
     }
   })
 }
@@ -347,25 +352,17 @@ export const shopBestSellers = shopCached('best', 'catalogue', (t, days: number)
 export const previewLook = async (tenantId: string): Promise<StoredLook | null> => liveOf(await corePublishes(tenantId), withdrawnKeys(await themeVersionRows()))
 export const previewBestSellers = (tenantId: string, days: number) => coreBestSellers(tenantId, days)
 
-export const shopSettingsFor = shopCached('shop', 'shop', (t) => coreShop(t))
+// v2: the shop gained seoTitle/seoDescription (S·3); an entry that survives a deploy must not meet the old shape.
+export const shopSettingsFor = shopCached('shop-v2', 'shop', (t) => coreShop(t))
 
 /**
  * The offer in the shop's announcement bar (one at most), as RAW terms and timestamps: whether it is live is decided
  * when the page renders (offerStatus) — pages regenerate every 60 s, so up to a minute late. Shopper-safe fields only — never a limit, budget or count (ADR-0003).
  */
-export const shopAnnouncement = shopCached('announce', 'shop', (tenantId) => withTenant(tenantId, async (tx) => {
-  const [r] = await tx.select({
-    title: discounts.title, style: discounts.style, percentBps: discounts.percentBps, amountOff: discounts.amountOff, minSubtotal: discounts.minSubtotal, listed: discounts.listed,
-    startsAt: discounts.startsAt, endsAt: discounts.endsAt, startedAt: discounts.startedAt, pausedAt: discounts.pausedAt, endedAt: discounts.endedAt, stoppedAt: discounts.stoppedAt, code: discountCodes.code,
-  }).from(discounts).leftJoin(discountCodes, and(eq(discountCodes.tenantId, discounts.tenantId), eq(discountCodes.discountId, discounts.id), isNull(discountCodes.label)))
-    .where(and(eq(discounts.tenantId, tenantId), eq(discounts.announce, true))).limit(1)
-  if (!r) return null
-  const iso = (d: Date | null) => (d ? d.toISOString() : null)
-  return { title: r.title, style: r.style, percentBps: r.percentBps, amountOff: r.amountOff === null ? null : Number(r.amountOff), minSubtotal: Number(r.minSubtotal),
-    code: r.listed && r.code ? r.code.toUpperCase() : null, startsAt: r.startsAt.toISOString(), endsAt: iso(r.endsAt), startedAt: iso(r.startedAt), pausedAt: iso(r.pausedAt), endedAt: iso(r.endedAt), stoppedAt: iso(r.stoppedAt) }
-}))
+export const shopAnnouncement = shopCached('announce', 'shop', coreAnnouncement)
 // A new key: the entry's shape changed (offers by index), and a cache that survives a deploy must not meet the old one.
-const shopCatalogueEntry = shopCached('catalogue-v2', 'catalogue', (t) => coreCatalogue(t, false))
+// v3: collections gained seoTitle/seoDescription and the entry movedCollections (S2·2).
+const shopCatalogueEntry = shopCached('catalogue-v3', 'catalogue', (t) => coreCatalogue(t, false))
 export const shopCatalogue = async (tenantId: string): Promise<StoreCatalogue> => expand(await shopCatalogueEntry(tenantId))
 /** The entry exactly as the cache stores it (its size is what Next's 2 MB limit reads; catalogue-size.int.test.ts). */
 export const catalogueEntry = (tenantId: string) => coreCatalogue(tenantId, false)

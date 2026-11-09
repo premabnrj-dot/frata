@@ -87,16 +87,17 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const apps: NavItem = { href: '/console/apps', label: 'Apps', icon: 'apps' }
   const analytics: NavItem = { href: '/console/analytics', label: 'Analytics', icon: 'profit' }
   const activity: NavItem = { href: '/console/activity', label: 'Activity', icon: 'activity' }
+  const search: NavItem = { href: '/console/search', label: 'Search and sharing', icon: 'search' }
   const gst: NavItem = { href: '/console/apps/gst', label: 'GST', icon: 'tax' }
   // GST is a module (Growth and Scale, switched on in Apps): owners and admins open it from Apps (its Set up link shows
   // once it is on), so the layout reads nothing more per page. The accountant's console is GST alone.
   const accountant = role === 'accountant'
   const groups: NavGroup[] = accountant ? [{ label: 'Taxes', items: [gst] }]
-    : [{ label: 'Today', items: [home, orders, analytics] }, { label: 'Catalogue', items: [products, collections] }, { label: 'Store', items: [offers, look, apps, settings, activity] }]
+    : [{ label: 'Today', items: [home, orders, analytics] }, { label: 'Catalogue', items: [products, collections] }, { label: 'Store', items: [offers, look, search, apps, settings, activity] }]
   const foot: NavItem[] = [{ href: '/console/preview', label: 'Preview shop', icon: 'external' }]
   if (auth.staffRole !== null && !supportSessionId) foot.push({ href: '/admin', label: 'Frrata Admin', icon: 'admin' })
   return (
-    <AppShell title={tenantName} navLabel="Console" groups={groups} tabs={accountant ? [gst] : [home, orders, products]} more={accountant ? [] : [analytics, collections, offers, look, apps, settings, activity]} foot={accountant ? [] : foot}
+    <AppShell title={tenantName} navLabel="Console" groups={groups} tabs={accountant ? [gst] : [home, orders, products]} more={accountant ? [] : [analytics, collections, offers, look, search, apps, settings, activity]} foot={accountant ? [] : foot}
       email={auth.email} tenantId={tenantId} places={places}
       banner={visit ? <SupportBanner storeName={tenantName} visit={visit} now={now} />
         : building ? <BuildingBanner shop={tenantName} inviteEmail={building.inviteEmail} /> : undefined}>

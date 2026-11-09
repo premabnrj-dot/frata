@@ -29,7 +29,7 @@ const card = (p: Piece, i: number): StoreProduct => {
     id, handle: id, title: p.title, status: 'active', publishAt: null, // Dated long ago, so a shop's own pieces always come first in New in.
     since: new Date(Date.UTC(2020, 0, 1) - p.days * 86_400_000).toISOString(),
     options: ['Size'], images: [img('', 0), img('-b', 1), img('-d', 2)],
-    variants: sizes.map((s, j) => ({ id: `${id}-v${j}`, values: [s], sku: null, price: p.price, compareAt: p.was ?? null, mrp: null, stock: p.soldOut || (i === 0 && (s === 'XL' || s === 'UK 9')) ? 0 : 8, whenOut: 'stop' as const, shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderFull: false, restockedAt: null })),
+    variants: sizes.map((s, j) => ({ id: `${id}-v${j}`, values: [s], sku: null, gtin: null, price: p.price, compareAt: p.was ?? null, mrp: null, stock: p.soldOut || (i === 0 && (s === 'XL' || s === 'UK 9')) ? 0 : 8, whenOut: 'stop' as const, shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderFull: false, restockedAt: null })),
     colours: [{ value: p.colour, family: null, hex: p.hex, cropImageId: null, crop: null }],
     categoryId: null, attributes: {}, tags: [], description: p.about, modelHeight: '', modelSize: '', optionValues: [sizes], seoTitle: '', seoDescription: '',
     typeName: null, sizeChart: p.type === 'top' || p.type === 'set' ? CHART : null, label: {}, originCountry: null, sample: true,
@@ -43,7 +43,7 @@ export const sampleFirst = (set: SampleSet = 'clothing') => ({ product: `${SAMPL
 export const SAMPLE_FIRST = sampleFirst('clothing')
 /** Do samples apply: a shop listing fewer than SAMPLES_BELOW pieces. */
 export const needsSamples = (listed: number) => listed < SAMPLES_BELOW
-const sampleCollections = (set: SampleSet): StoreCollection[] => SAMPLE_COLLECTIONS[set].map(([h, title, names]) => ({ id: `${SAMPLE_PREFIX}c-${h}`, handle: `${SAMPLE_PREFIX}${h}`, title, description: '', kind: 'manual', matchAll: true, rules: [], sort: 'manual', productIds: names.map((n) => `${SAMPLE_PREFIX}${n}`) }))
+const sampleCollections = (set: SampleSet): StoreCollection[] => SAMPLE_COLLECTIONS[set].map(([h, title, names]) => ({ id: `${SAMPLE_PREFIX}c-${h}`, handle: `${SAMPLE_PREFIX}${h}`, title, description: '', seoTitle: '', seoDescription: '', kind: 'manual', matchAll: true, rules: [], sort: 'manual', productIds: names.map((n) => `${SAMPLE_PREFIX}${n}`) }))
 
 /** The preview's catalogue: the shop's own, then the samples when it lists fewer than SAMPLES_BELOW pieces. */
 export function withSamples(cat: StoreCatalogue, now: Date, set: SampleSet = 'clothing'): StoreCatalogue {

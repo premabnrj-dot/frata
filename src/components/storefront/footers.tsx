@@ -27,8 +27,8 @@ export function ShopFooter({ f, href, variant = 'three', social = true, w = word
           <p className="text-lg" style={{ fontFamily: 'var(--store-display)' }}>{f.shopName}</p>
           {f.tagline && <p className="text-store-sub">{f.tagline}</p>}
           {social && <p className="flex gap-4">
-            {f.instagram && <a href={igLink(f.instagram)} rel="noopener" className="underline underline-offset-4">Instagram</a>}
-            {f.whatsapp && <a href={waLink(f.whatsapp)} rel="noopener" className="underline underline-offset-4">WhatsApp</a>}
+            {f.instagram && <a href={igLink(f.instagram)} rel="noopener" className="inline-flex min-h-6 items-center underline underline-offset-4">Instagram</a>}
+            {f.whatsapp && <a href={waLink(f.whatsapp)} rel="noopener" className="inline-flex min-h-6 items-center underline underline-offset-4">WhatsApp</a>}
           </p>}
         </div>
         <nav aria-label={w.policiesNav}><ul className="space-y-1.5">
@@ -54,8 +54,8 @@ export function CompactFooter({ f, href, social, w, painted }: { f: ShellShop; h
           {(['shipping', 'returns', 'privacy', 'terms', 'contact'] as const).map((k) => <li key={k}><Link href={href(`/policies/${k}`)} className="hover:underline">{w.policy[k]}</Link></li>)}
         </ul></nav>
         {social && (f.instagram || f.whatsapp) && <p className="flex justify-center gap-4">
-          {f.instagram && <a href={igLink(f.instagram)} rel="noopener" className="underline underline-offset-4">Instagram</a>}
-          {f.whatsapp && <a href={waLink(f.whatsapp)} rel="noopener" className="underline underline-offset-4">WhatsApp</a>}
+          {f.instagram && <a href={igLink(f.instagram)} rel="noopener" className="inline-flex min-h-6 items-center underline underline-offset-4">Instagram</a>}
+          {f.whatsapp && <a href={waLink(f.whatsapp)} rel="noopener" className="inline-flex min-h-6 items-center underline underline-offset-4">WhatsApp</a>}
         </p>}
         <p className="text-store-sub">{[f.legalName, f.address?.replace(/\n/g, ', '), f.grievanceName ? `${w.grievance}: ${f.grievanceName}${f.grievanceEmail ? `, ${f.grievanceEmail}` : ''}` : ''].filter(Boolean).join(' · ')}</p>
       </div>
@@ -72,8 +72,8 @@ export function StatementFooter({ f, href, social, w, painted }: { f: ShellShop;
           <div className="space-y-2">
             {f.tagline && <p className="max-w-sm text-base text-store-sub">{f.tagline}</p>}
             {social && <p className="flex gap-4">
-              {f.instagram && <a href={igLink(f.instagram)} rel="noopener" className="underline underline-offset-4">Instagram</a>}
-              {f.whatsapp && <a href={waLink(f.whatsapp)} rel="noopener" className="underline underline-offset-4">WhatsApp</a>}
+              {f.instagram && <a href={igLink(f.instagram)} rel="noopener" className="inline-flex min-h-6 items-center underline underline-offset-4">Instagram</a>}
+              {f.whatsapp && <a href={waLink(f.whatsapp)} rel="noopener" className="inline-flex min-h-6 items-center underline underline-offset-4">WhatsApp</a>}
             </p>}
           </div>
           <nav aria-label={w.policiesNav}><ul className="space-y-1.5">
@@ -105,7 +105,7 @@ export function StripFooter({ f, href, social, w, painted, strip }: { f: ShellSh
               </Link></li>
             ))}
           </ul>
-          {social && f.instagram && <p className="py-3 text-center text-sm"><a href={igLink(f.instagram)} rel="noopener" className="underline underline-offset-4">@{f.instagram.replace(/^@/, '')}</a></p>}
+          {social && f.instagram && <p className="py-3 text-center text-sm"><a href={igLink(f.instagram)} rel="noopener" className="inline-flex min-h-6 items-center underline underline-offset-4">@{f.instagram.replace(/^@/, '')}</a></p>}
         </div>
       )}
       <div className="-mt-16"><CompactFooter f={f} href={href} social={social} w={w} painted={painted} /></div>
@@ -124,8 +124,8 @@ export function PhotoFooter({ f, href, social, w, photo }: { f: ShellShop; href:
           <p className="text-2xl font-semibold" style={{ fontFamily: 'var(--store-display)' }}>{f.shopName}</p>
           {f.tagline && <p className="text-white/80">{f.tagline}</p>}
           {social && <p className="flex gap-4">
-            {f.instagram && <a href={igLink(f.instagram)} rel="noopener" className="underline underline-offset-4">Instagram</a>}
-            {f.whatsapp && <a href={waLink(f.whatsapp)} rel="noopener" className="underline underline-offset-4">WhatsApp</a>}
+            {f.instagram && <a href={igLink(f.instagram)} rel="noopener" className="inline-flex min-h-6 items-center underline underline-offset-4">Instagram</a>}
+            {f.whatsapp && <a href={waLink(f.whatsapp)} rel="noopener" className="inline-flex min-h-6 items-center underline underline-offset-4">WhatsApp</a>}
           </p>}
         </div>
         <nav aria-label={w.policiesNav}><ul className="space-y-1.5">

@@ -134,7 +134,7 @@ export function BagButton({ checkoutHref, shopHref, label = 'Bag', count = ['Bag
   const n = items.reduce((a, i) => a + i.qty, 0)
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={icon ? 'relative grid size-11 place-items-center' : 'whitespace-nowrap px-2 py-2 text-sm'} aria-label={(n === 1 ? count[0] : count[1]).replace('{n}', String(n))}>
+      <button type="button" onClick={() => setOpen(true)} className={icon ? 'relative grid size-11 shrink-0 place-items-center' : 'shrink-0 whitespace-nowrap px-2 py-2 text-sm'} aria-label={(n === 1 ? count[0] : count[1]).replace('{n}', String(n))}>
         {icon ? <>{icon}{n > 0 && <span key={n} className="absolute right-0.5 top-0.5 grid min-w-4 animate-count place-items-center rounded-full bg-store-accent px-1 text-[0.625rem] font-medium leading-4 text-store-on-accent">{n}</span>}</>
           : <>{label}{n ? <> · <span key={n} className="inline-block animate-count">{n}</span></> : ''}</>}
       </button>

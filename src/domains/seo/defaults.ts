@@ -50,7 +50,7 @@ export function handleChange(oldHandle: string, newHandle: string, everPublished
   return { changed, keepOld: changed && everPublished }
 }
 
-export type LdVariant = { sku: string | null; values: string[]; price: number; availability: Availability; image: string | null }
+export type LdVariant = { sku: string | null; gtin?: string | null; values: string[]; price: number; availability: Availability; image: string | null }
 export type LdProduct = { name: string; description: string; url: string; groupId: string; brand: string; options: string[]; variants: LdVariant[]; images: string[]; material: string | null; gender: string | null }
 
 const SCHEMA_AVAIL: Record<Availability['google'], string> = { in_stock: 'https://schema.org/InStock', out_of_stock: 'https://schema.org/OutOfStock', preorder: 'https://schema.org/PreOrder' }
@@ -67,16 +67,18 @@ export function productJsonLd(p: LdProduct): object {
     availability: SCHEMA_AVAIL[v.availability.google], itemCondition: 'https://schema.org/NewCondition',
     ...(v.availability.kind === 'preorder' ? { availabilityStarts: v.availability.availabilityDate } : {}),
   })
+  // Identifiers (S2·3): the SKU is also the brand's part number (MPN); the barcode only when one was typed.
+  const ids = (v: LdVariant) => ({ ...(v.sku ? { sku: v.sku, mpn: v.sku } : {}), ...(v.gtin ? { gtin: v.gtin } : {}) })
   const props = (values: string[]) => Object.fromEntries(p.options.map((o, i) => [/^colou?rs?$/i.test(o) ? 'color' : /^sizes?$/i.test(o) ? 'size' : o.toLowerCase(), values[i]]).filter(([k]) => k === 'color' || k === 'size'))
   const common = { brand: { '@type': 'Brand', name: p.brand }, description: p.description, ...(p.material ? { material: p.material } : {}), ...(p.gender ? { audience: { '@type': 'PeopleAudience', suggestedGender: p.gender } } : {}) }
   if (p.variants.length <= 1 || !p.options.length) {
     const v = p.variants[0]
-    return { '@context': 'https://schema.org', '@type': 'Product', name: p.name, url: p.url, image: p.images, ...(v?.sku ? { sku: v.sku } : {}), ...common, ...(v ? { offers: offer(v) } : {}) }
+    return { '@context': 'https://schema.org', '@type': 'Product', name: p.name, url: p.url, image: p.images, ...(v ? ids(v) : {}), ...common, ...(v ? { offers: offer(v) } : {}) }
   }
   return {
     '@context': 'https://schema.org', '@type': 'ProductGroup', name: p.name, url: p.url, productGroupID: p.groupId, ...common,
     variesBy: p.options.map((o) => (/^colou?rs?$/i.test(o) ? 'https://schema.org/color' : /^sizes?$/i.test(o) ? 'https://schema.org/size' : null)).filter(Boolean),
-    hasVariant: p.variants.map((v) => ({ '@type': 'Product', name: `${p.name} – ${v.values.join(', ')}`, ...(v.sku ? { sku: v.sku } : {}), image: v.image ? [v.image] : p.images, ...props(v.values), offers: offer(v) })),
+    hasVariant: p.variants.map((v) => ({ '@type': 'Product', name: `${p.name} – ${v.values.join(', ')}`, ...ids(v), image: v.image ? [v.image] : p.images, ...props(v.values), offers: offer(v) })),
   }
 }
 
@@ -97,11 +99,60 @@ export function shopJsonLd(s: ShopLd): object {
     '@context': 'https://schema.org', '@type': 'OnlineStore', name: s.name, url: s.url, ...(s.logo ? { logo: s.logo } : {}), ...(s.sameAs.length ? { sameAs: s.sameAs } : {}),
     hasMerchantReturnPolicy: returns,
     hasShippingService: {
-      '@type': 'ShippingService', shippingConditions: {
-        '@type': 'ShippingConditions', shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'IN' },
-        shippingRate: { '@type': 'MonetaryAmount', value: rupees(s.shippingFlat).replace(/,/g, ''), currency: 'INR' },
-        transitTime: { '@type': 'ServicePeriod', duration: { '@type': 'QuantitativeValue', minValue: s.metroDays, maxValue: s.restDays, unitCode: 'DAY' } },
-      },
+      '@type': 'ShippingService',
+      // Days to dispatch before transit (S2·3; the data was already passed in).
+      handlingTime: { '@type': 'ServicePeriod', duration: { '@type': 'QuantitativeValue', minValue: 0, maxValue: s.dispatchDays, unitCode: 'DAY' } },
+      shippingConditions: [
+        {
+          '@type': 'ShippingConditions', shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'IN' },
+          shippingRate: { '@type': 'MonetaryAmount', value: rupees(s.shippingFlat).replace(/,/g, ''), currency: 'INR' },
+          transitTime: { '@type': 'ServicePeriod', duration: { '@type': 'QuantitativeValue', minValue: s.metroDays, maxValue: s.restDays, unitCode: 'DAY' } },
+        },
+        // Free above the shop's threshold (S2·3).
+        ...(s.shippingFlat > 0 && s.freeShippingAbove > 0 ? [{
+          '@type': 'ShippingConditions', shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'IN' },
+          orderValue: { '@type': 'MonetaryAmount', minValue: rupees(s.freeShippingAbove).replace(/,/g, ''), currency: 'INR' },
+          shippingRate: { '@type': 'MonetaryAmount', value: '0', currency: 'INR' },
+          transitTime: { '@type': 'ServicePeriod', duration: { '@type': 'QuantitativeValue', minValue: s.metroDays, maxValue: s.restDays, unitCode: 'DAY' } },
+        }] : []),
+      ],
     },
   }
 }
+
+/** A description no longer than `max`, cut at a word (search and sharing S2·1: Google shows ~155 on a phone). */
+export function trimmed(text: string, max = DESCRIPTION_WARN_AT): string {
+  const t = text.replace(/\s+/g, ' ').trim()
+  return t.length <= max ? t : t.slice(0, max - 1).replace(/\s+\S*$/, '') + '…'
+}
+
+/** Descriptions for pages with none of their own (S2·1), from the shop's own facts. */
+export const pageDescription = {
+  list: (shop: string, codOn: boolean) => `Shop all of ${shop}${codOn ? ': pay on delivery' : ''}.`,
+  collection: (title: string, own: string, shop: string) => (own.trim() ? trimmed(own) : `${title} from ${shop}.`),
+  policy: (title: string, shop: string) => `${title} at ${shop}.`,
+}
+
+/** Home's title and description (S·3): the merchant's own, else the shop's name and tagline. */
+export function homeSeo(s: { shopName: string; tagline: string; codOn: boolean; seoTitle: string; seoDescription: string }) {
+  return {
+    title: s.seoTitle.trim() || s.shopName,
+    description: trimmed(s.seoDescription.trim() || s.tagline || `${s.shopName}: shop online${s.codOn ? ', pay on delivery' : ''}.`),
+  }
+}
+
+/** A collection's page title and description (S2·2): the merchant's own, else made from its name and intro. */
+export function collectionSeo(c: { title: string; description: string; seoTitle: string; seoDescription: string }, shop: string) {
+  return { title: c.seoTitle.trim() || `${c.title} | ${shop}`, description: c.seoDescription.trim() ? trimmed(c.seoDescription) : pageDescription.collection(c.title, c.description, shop) }
+}
+
+/** Where a page sits (S2·3): Home › Collection › Product, as Google shows it under the result. */
+export function breadcrumbJsonLd(items: { name: string; url: string }[]): object {
+  return { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: items.map((it, i) => ({ '@type': 'ListItem', position: i + 1, name: it.name, item: it.url })) }
+}
+
+/** The site itself (S2·3): its name, so Google shows the shop's name, not its address. */
+export const websiteJsonLd = (name: string, url: string): object => ({ '@context': 'https://schema.org', '@type': 'WebSite', name, url })
+
+/** A collection's products, in the order shown (S2·3). */
+export const itemListJsonLd = (urls: string[]): object => ({ '@context': 'https://schema.org', '@type': 'ItemList', itemListElement: urls.map((url, i) => ({ '@type': 'ListItem', position: i + 1, url })) })

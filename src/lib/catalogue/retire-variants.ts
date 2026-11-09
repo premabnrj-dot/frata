@@ -27,8 +27,8 @@ export async function retireVariants(tx: Tx, tenantId: string, ids: string[], no
   const sold = new Set((await tx.selectDistinct({ id: orderLines.variantId }).from(orderLines)
     .where(and(eq(orderLines.tenantId, tenantId), inArray(orderLines.variantId, ids)))).map((r) => r.id))
   const archived = ids.filter((id) => sold.has(id)), deleted = ids.filter((id) => !sold.has(id))
-  // An archived SKU is freed for reuse (the SKU index is partial on sku is not null).
-  if (archived.length) await tx.update(variants).set({ archivedAt: now, sku: null }).where(and(eq(variants.tenantId, tenantId), inArray(variants.id, archived)))
+  // An archived SKU and barcode are freed for reuse (both indexes are partial on not null).
+  if (archived.length) await tx.update(variants).set({ archivedAt: now, sku: null, gtin: null }).where(and(eq(variants.tenantId, tenantId), inArray(variants.id, archived)))
   if (deleted.length) await tx.delete(variants).where(and(eq(variants.tenantId, tenantId), inArray(variants.id, deleted)))
   return { ok: true, archived, deleted }
 }

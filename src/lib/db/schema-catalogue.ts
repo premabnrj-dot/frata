@@ -94,6 +94,8 @@ export const variants = pgTable('variants', {
   productId: uuid('product_id').notNull(),
   optionValues: text('option_values').array().notNull().default(sql`'{}'::text[]`),
   sku: text('sku'),
+  /** The barcode (GTIN-8/12/13/14, check digit verified: catalogue/gtin.ts); optional (S2·3). MPN is the SKU. */
+  gtin: text('gtin'),
   price: money('price').notNull(),
   compareAt: money('compare_at'),
   /** What it costs the merchant. Unknown is null, never 0. Read on the server only (ADR-0003). */
@@ -119,7 +121,10 @@ export const variants = pgTable('variants', {
   foreignKey({ name: 'variants_product_fk', columns: [t.tenantId, t.productId], foreignColumns: [products.tenantId, products.id] }).onDelete('cascade'),
   // tenant_id first: a unique check fires before the foreign key, so without it another shop could probe which sizes a product has (tenancy audit).
   uniqueIndex('variants_tenant_product_options').on(t.tenantId, t.productId, t.optionValues),
+  check('variants_gtin', sql`${t.gtin} is null or ${t.gtin} ~ '^([0-9]{8}|[0-9]{12,14})$'`),
   uniqueIndex('variants_tenant_sku').on(t.tenantId, t.sku).where(sql`${t.sku} is not null`),
+  // One barcode names one size in a shop (Google refuses duplicates; impact review S2·3).
+  uniqueIndex('variants_tenant_gtin').on(t.tenantId, t.gtin).where(sql`${t.gtin} is not null`),
   index('variants_tenant_product').on(t.tenantId, t.productId),
   check('variants_money', sql`${t.price} >= 0 and (${t.compareAt} is null or ${t.compareAt} >= 0) and (${t.unitCost} is null or ${t.unitCost} >= 0)`),
   check('variants_stock', sql`${t.stock} >= 0`),
@@ -214,6 +219,9 @@ export const collections = pgTable('collections', {
   matchAll: integer('match_all').notNull().default(1),
   rules: jsonb('rules').$type<unknown[]>().notNull().default(sql`'[]'::jsonb`),
   sort: text('sort').notNull().default('newest'),
+  /** Search and sharing (S2·2): empty uses the defaults (seo/defaults.ts). */
+  seoTitle: text('seo_title').notNull().default(''),
+  seoDescription: text('seo_description').notNull().default(''),
   createdAt: createdAt(),
   updatedAt: at('updated_at').notNull().defaultNow(),
 }, (t) => [
@@ -223,6 +231,19 @@ export const collections = pgTable('collections', {
   check('collections_sort', sql`${t.sort} in ('manual','newest','price_low','price_high','title')`),
   check('collections_title', sql`length(${t.title}) between 1 and 80`),
   check('collections_handle', sql`${t.handle} ~ '^[a-z0-9]([a-z0-9-]{0,78}[a-z0-9])?$'`),
+  check('collections_seo', sql`length(${t.seoTitle}) <= 200 and length(${t.seoDescription}) <= 400`),
+])
+
+/** A collection's old addresses (S2·2): each redirects (308) to the collection. Append-only for the app. */
+export const collectionHandleHistory = pgTable('collection_handle_history', {
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  handle: text('handle').notNull(),
+  collectionId: uuid('collection_id').notNull(),
+  retiredAt: at('retired_at').notNull().defaultNow(),
+}, (t) => [
+  primaryKey({ columns: [t.tenantId, t.handle] }),
+  foreignKey({ name: 'collection_handle_history_collection_fk', columns: [t.tenantId, t.collectionId], foreignColumns: [collections.tenantId, collections.id] }).onDelete('cascade'),
+  index('collection_handle_history_collection').on(t.tenantId, t.collectionId),
 ])
 
 export const collectionProducts = pgTable('collection_products', {

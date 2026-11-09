@@ -1,5 +1,5 @@
 {
-  "id": "65a37cfc-76dc-41fc-8911-6147c2439c90",
+  "id": "7f48f18a-9a6d-4a92-99bd-03ca0717523b",
   "prevId": "bf948646-86fc-4a19-826e-a39007aa6308",
   "version": "7",
   "dialect": "postgresql",
@@ -1167,6 +1167,20 @@
           "notNull": true,
           "default": "''"
         },
+        "seo_title": {
+          "name": "seo_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "seo_description": {
+          "name": "seo_description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
         "logo_url": {
           "name": "logo_url",
           "type": "text",
@@ -1434,6 +1448,10 @@
         "shop_settings_language": {
           "name": "shop_settings_language",
           "value": "\"shop_settings\".\"shop_language\" in ('en','hi')"
+        },
+        "shop_settings_seo": {
+          "name": "shop_settings_seo",
+          "value": "length(\"shop_settings\".\"seo_title\") <= 200 and length(\"shop_settings\".\"seo_description\") <= 400"
         },
         "shop_settings_return_kind": {
           "name": "shop_settings_return_kind",
@@ -2099,6 +2117,103 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.collection_handle_history": {
+      "name": "collection_handle_history",
+      "schema": "",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "handle": {
+          "name": "handle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "collection_id": {
+          "name": "collection_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "retired_at": {
+          "name": "retired_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "collection_handle_history_collection": {
+          "name": "collection_handle_history_collection",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "collection_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "collection_handle_history_tenant_id_tenants_id_fk": {
+          "name": "collection_handle_history_tenant_id_tenants_id_fk",
+          "tableFrom": "collection_handle_history",
+          "tableTo": "tenants",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "collection_handle_history_collection_fk": {
+          "name": "collection_handle_history_collection_fk",
+          "tableFrom": "collection_handle_history",
+          "tableTo": "collections",
+          "columnsFrom": [
+            "tenant_id",
+            "collection_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "collection_handle_history_tenant_id_handle_pk": {
+          "name": "collection_handle_history_tenant_id_handle_pk",
+          "columns": [
+            "tenant_id",
+            "handle"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.collection_products": {
       "name": "collection_products",
       "schema": "",
@@ -2275,6 +2390,20 @@
           "notNull": true,
           "default": "'newest'"
         },
+        "seo_title": {
+          "name": "seo_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "seo_description": {
+          "name": "seo_description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -2356,6 +2485,10 @@
         "collections_handle": {
           "name": "collections_handle",
           "value": "\"collections\".\"handle\" ~ '^[a-z0-9]([a-z0-9-]{0,78}[a-z0-9])?$'"
+        },
+        "collections_seo": {
+          "name": "collections_seo",
+          "value": "length(\"collections\".\"seo_title\") <= 200 and length(\"collections\".\"seo_description\") <= 400"
         }
       },
       "isRLSEnabled": false
@@ -3307,6 +3440,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "gtin": {
+          "name": "gtin",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "price": {
           "name": "price",
           "type": "bigint",
@@ -3452,6 +3591,28 @@
           "method": "btree",
           "with": {}
         },
+        "variants_tenant_gtin": {
+          "name": "variants_tenant_gtin",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "gtin",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"variants\".\"gtin\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "variants_tenant_product": {
           "name": "variants_tenant_product",
           "columns": [
@@ -3517,6 +3678,10 @@
       },
       "policies": {},
       "checkConstraints": {
+        "variants_gtin": {
+          "name": "variants_gtin",
+          "value": "\"variants\".\"gtin\" is null or \"variants\".\"gtin\" ~ '^([0-9]{8}|[0-9]{12,14})$'"
+        },
         "variants_money": {
           "name": "variants_money",
           "value": "\"variants\".\"price\" >= 0 and (\"variants\".\"compare_at\" is null or \"variants\".\"compare_at\" >= 0) and (\"variants\".\"unit_cost\" is null or \"variants\".\"unit_cost\" >= 0)"
@@ -7793,7 +7958,7 @@
       "checkConstraints": {
         "shop_theme_revisions_key": {
           "name": "shop_theme_revisions_key",
-          "value": "\"shop_theme_revisions\".\"theme_key\" in ('classic','editorial','bazaar','minimal','atelier','signal')"
+          "value": "\"shop_theme_revisions\".\"theme_key\" in ('classic','editorial','bazaar','minimal','atelier')"
         },
         "shop_theme_revisions_version_shape": {
           "name": "shop_theme_revisions_version_shape",

@@ -54,7 +54,7 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
   const place = shop.pickup ? await placeForPincode(shop.pickup).catch(() => null) : null
   // The editor gets rupees as text; the cost travels as `cost` (the merchant's own), and only to whoever seesCosts.
   const cells = Object.fromEntries(data.variants.map((v) => [keyOf(v.optionValues), {
-    price: v.price ? rupeesText(v.price) : '', compareAt: rupeesText(v.compareAt), cost: rupeesText(v.unitCost), stock: String(v.stock), sku: v.sku ?? '',
+    price: v.price ? rupeesText(v.price) : '', compareAt: rupeesText(v.compareAt), cost: rupeesText(v.unitCost), stock: String(v.stock), sku: v.sku ?? '', gtin: v.gtin ?? '',
     whenOut: v.whenOut as WhenOut, shipsBy: v.shipsBy ?? '', leadMin: v.leadMinDays ? String(v.leadMinDays) : '', leadMax: v.leadMaxDays ? String(v.leadMaxDays) : '', cap: v.preorderCap === null ? '' : String(v.preorderCap),
   }]))
   const attributes = Object.fromEntries(data.attributes.map((a) => [a.attribute, a.values]))
@@ -97,7 +97,7 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
       }}
       allCollections={collections}
       families={COLOUR_FAMILIES}
-      photos={data.images.map((i) => ({ id: i.id, base: i.base, widths: i.widths, optionValue: i.optionValue, width: i.width, height: i.height }))}
+      photos={data.images.map((i) => ({ id: i.id, base: i.base, widths: i.widths, optionValue: i.optionValue, width: i.width, height: i.height, alt: i.alt ?? '' }))}
       types={data.types}
       share={share ? <ShareSheet share={share} target={{ kind: 'product', id: p.id }} /> : null}
     />

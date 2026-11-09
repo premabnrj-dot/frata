@@ -19,9 +19,17 @@ describe('cleanProduct', () => {
     const r = cleanProduct(base, new Date())
     const rest = { whenOut: 'stop', shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderCap: null }
     expect(r.ok && r.product.variants).toEqual([
-      { values: ['S'], price: 249000, compareAt: 299000, unitCost: 98000, stock: 6, sku: 'KS-LK-S', ...rest },
-      { values: ['M'], price: 249000, compareAt: null, unitCost: null, stock: 0, sku: null, ...rest }])
+      { values: ['S'], price: 249000, compareAt: 299000, unitCost: 98000, stock: 6, sku: 'KS-LK-S', gtin: null, ...rest },
+      { values: ['M'], price: 249000, compareAt: null, unitCost: null, stock: 0, sku: null, gtin: null, ...rest }])
     expect(r.ok && r.product.handle).toBe('linen-kurta-set')
+  })
+  it('a barcode (S2·3): optional; a real one, not on two sizes', () => {
+    const ok = cleanProduct({ ...base, variants: [{ ...base.variants[0]!, gtin: '400 6381 333931' }, base.variants[1]!] }, new Date())
+    expect(ok.ok && ok.product.variants[0]!.gtin).toBe('4006381333931')
+    const bad = cleanProduct({ ...base, variants: [{ ...base.variants[0]!, gtin: '4006381333932' }, { ...base.variants[1]!, gtin: '' }] }, new Date())
+    expect(!bad.ok && Object.keys(bad.errors)).toEqual(['v:S:gtin'])
+    const twice = cleanProduct({ ...base, variants: [{ ...base.variants[0]!, gtin: '4006381333931' }, { ...base.variants[1]!, gtin: '4006381333931' }] }, new Date())
+    expect(!twice.ok && Object.keys(twice.errors)).toEqual(['v:M:gtin'])
   })
   it('names the cell that is wrong', () => {
     const r = cleanProduct({ ...base, variants: [{ ...base.variants[0]!, compareAt: '2000' }, { ...base.variants[1]!, price: 'free', sku: 'ks-lk-s' }] }, new Date())

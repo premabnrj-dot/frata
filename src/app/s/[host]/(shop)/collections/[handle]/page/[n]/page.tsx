@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import { collectionSeo } from '@/domains/seo/defaults'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { shareImage } from '@/lib/seo/share-image'
 import { CollectionView } from '@/components/storefront/pages'
 import { inCollection, pageOf, pageParam } from '@/domains/storefront/listing'
@@ -21,6 +22,10 @@ async function load(params: Params) {
   if (!page || !/^[a-z0-9-]{1,80}$/.test(handle)) notFound()
   const cat = await shopCatalogue(shop.id)
   const c = cat.collections.find((x) => x.handle === handle)
+  // Own keys only: `constructor` is a valid handle (security review).
+  const moved = cat.movedCollections ?? {}
+  const to = !c && Object.hasOwn(moved, handle) ? moved[handle] : undefined
+  if (to) permanentRedirect(`/collections/${to}/page/${page}`)
   const now = new Date()
   if (!c || page > pageOf(inCollection(c, cat.products, now), page).pages) notFound()
   return { shop, cat, c, page, now }
@@ -28,7 +33,7 @@ async function load(params: Params) {
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { shop, cat, c, page, now } = await load(params)
-  return toMetadata(shopTags(shop, { path: `/collections/${c.handle}/page/${page}`, title: `${c.title} · page ${page} | ${shop.shopName}`, shareTitle: `${c.title} · page ${page}`, description: null, image: await shareImage(shop, { kind: 'collection', collection: c, cat }, `${c.title} — ${shop.shopName}`, now) }))
+  return toMetadata(shopTags(shop, { path: `/collections/${c.handle}/page/${page}`, title: `${c.title} · page ${page} | ${shop.shopName}`, shareTitle: `${c.title} · page ${page}`, description: collectionSeo(c, shop.shopName).description, image: await shareImage(shop, { kind: 'collection', collection: c, cat }, `${c.title} — ${shop.shopName}`, now) }))
 }
 
 export default async function CollectionPage({ params }: { params: Params }) {

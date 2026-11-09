@@ -9,7 +9,7 @@ import { useNow } from '@/components/time/now'
 import { Icon } from '@/components/icons/icon'
 
 export type Cell = Omit<VariantInput, 'values'>
-export const EMPTY_CELL: Cell = { price: '', compareAt: '', cost: '', stock: '0', sku: '', whenOut: 'stop', shipsBy: '', leadMin: '', leadMax: '', cap: '' }
+export const EMPTY_CELL: Cell = { price: '', compareAt: '', cost: '', stock: '0', sku: '', gtin: '', whenOut: 'stop', shipsBy: '', leadMin: '', leadMax: '', cap: '' }
 
 /** What shoppers see for one cell right now: derived, never typed (availability.ts). */
 export function shopperSees(c: Cell, now: Date) {
@@ -48,7 +48,7 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
   const input = (k: string, f: keyof Cell, label: string, mono = true, w = 'w-24', placeholder?: string) => (
     <div>
       <label htmlFor={`${f}-${rowId.get(k)}`} className="sr-only">{label}</label>
-      <input id={`${f}-${rowId.get(k)}`} value={(cells[k] ?? EMPTY_CELL)[f]} inputMode={f === 'sku' ? undefined : 'decimal'} aria-invalid={!!err(k, f) || undefined}
+      <input id={`${f}-${rowId.get(k)}`} value={(cells[k] ?? EMPTY_CELL)[f] ?? ''} inputMode={f === 'sku' ? undefined : f === 'gtin' ? 'numeric' : 'decimal'} aria-invalid={!!err(k, f) || undefined}
         title={err(k, f)} placeholder={placeholder} onChange={(e) => onChange(k, { [f]: e.target.value })}
         className={`h-8 ${w} rounded-md border border-input bg-card px-2 text-sm ${mono ? 'font-mono' : ''} aria-invalid:border-danger-text aria-invalid:bg-danger`} />
     </div>
@@ -72,14 +72,14 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
         {/* On a phone each size and colour becomes a card of labelled fields (data-rows="form", rule 15). */}
         <table data-rows="form" role="table" aria-label="Sizes, colours and stock" className="w-full text-sm">
           <thead role="rowgroup" className="bg-muted/50 text-left text-xs text-muted-foreground"><tr role="row" className="[&>th]:px-2 [&>th]:py-2">
-            <th role="columnheader">{options.map((o) => o.name).join(' / ') || 'Product'}</th><th role="columnheader">Price, ₹</th><th role="columnheader" title="The maximum retail price printed on the tag. Shown on the product page as M.R.P. incl. taxes; never sell above it. A struck “was” price comes only from a real price cut in the last 30 days.">M.R.P., ₹</th>{costs ? <th role="columnheader">Your cost, ₹</th> : null}<th role="columnheader">Stock</th><th role="columnheader">When it runs out</th><th role="columnheader">Shoppers see</th><th role="columnheader">SKU</th></tr></thead>
+            <th role="columnheader">{options.map((o) => o.name).join(' / ') || 'Product'}</th><th role="columnheader">Price, ₹</th><th role="columnheader" title="The maximum retail price printed on the tag. Shown on the product page as M.R.P. incl. taxes; never sell above it. A struck “was” price comes only from a real price cut in the last 30 days.">M.R.P., ₹</th>{costs ? <th role="columnheader">Your cost, ₹</th> : null}<th role="columnheader">Stock</th><th role="columnheader">When it runs out</th><th role="columnheader">Shoppers see</th><th role="columnheader">SKU</th><th role="columnheader">Barcode</th></tr></thead>
           {groups.map((grp) => {
             const shut = collapse && grp.label && !open[grp.label]
             const sold = grp.rows.filter((c) => !shopperSees(cells[keyOf(c)] ?? EMPTY_CELL, now).canBuy).length
             return (
               <tbody role="rowgroup" key={grp.label || 'all'} className="border-t border-border">
                 {grp.label && (
-                  <tr role="row" className="bg-card"><td role="cell" colSpan={8} data-cell="full" className="px-2 py-1.5">
+                  <tr role="row" className="bg-card"><td role="cell" colSpan={9} data-cell="full" className="px-2 py-1.5">
                     <button type="button" aria-expanded={!shut} className="flex min-h-6 w-full items-center gap-2 text-left font-medium" onClick={() => setOpen({ ...open, [grp.label]: shut ? true : false })}>
                       <span aria-hidden="true" className={`inline-block transition-transform duration-fast ${shut ? '' : 'rotate-90'}`}><Icon name="chevron" className="size-3.5" /></span>{grp.label}
                       <span className="text-xs font-normal text-muted-foreground">{grp.rows.length} · {sold ? `${sold} sold out` : 'all in stock'}</span>
@@ -89,7 +89,7 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
                 {!shut && grp.rows.map((c) => {
                   const k = keyOf(c)
                   const label = c.filter((_, i) => i !== g).join(' / ') || 'This product'
-                  const rowErr = ['price', 'compareAt', 'cost', 'stock', 'sku', 'shipsBy', 'cap', 'lead'].map((f) => err(k, f)).find(Boolean)
+                  const rowErr = ['price', 'compareAt', 'cost', 'stock', 'sku', 'gtin', 'shipsBy', 'cap', 'lead'].map((f) => err(k, f)).find(Boolean)
                   const cell = cells[k] ?? EMPTY_CELL
                   const sees = shopperSees(cell, now)
                   const i = rowId.get(k)
@@ -126,6 +126,7 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
                       </td>
                       <td role="cell" data-label="Shoppers see" className={`whitespace-nowrap text-xs ${SEES_TONE[sees.kind]}`}>{sees.label}</td>
                       <td role="cell" data-label="SKU">{input(k, 'sku', `SKU for ${c.join(' ')}`, true, 'w-40', autoSku(c))}</td>
+                      <td role="cell" data-label="Barcode">{input(k, 'gtin', `Barcode for ${c.join(' ')}`, true, 'w-36')}</td>
                     </tr>
                   )
                 })}

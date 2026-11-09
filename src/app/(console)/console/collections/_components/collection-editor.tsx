@@ -9,12 +9,14 @@ import { MAX_RULES } from '@/domains/catalogue/collection-rules'
 import { type Row, toRules } from './rule-rows'
 import { handleFor } from '@/domains/catalogue/variants'
 import { CategoryPicker } from '../../products/_components/organise-card'
+import { SeoPanel } from '../../products/_components/seo-panel'
+import { collectionSeo } from '@/domains/seo/defaults'
 import { deleteCollection, previewRules, saveCollection } from '../actions'
 import { Section } from '@/components/layout/section'
 import { PageHeader } from '@/components/layout/page-header'
 import { Icon } from '@/components/icons/icon'
 
-export type EditorCollection = { id: string | null; title: string; handle: string; description: string; kind: 'manual' | 'auto'; matchAll: boolean; rules: Row[]; sort: string; productIds: string[] }
+export type EditorCollection = { id: string | null; title: string; handle: string; description: string; seoTitle: string; seoDescription: string; kind: 'manual' | 'auto'; matchAll: boolean; rules: Row[]; sort: string; productIds: string[] }
 export type ProductPick = { id: string; title: string; status: string }
 export type AttrOption = { handle: string; value: string; label: string }
 
@@ -22,7 +24,7 @@ const FIELDS: [Rule['field'], string][] = [['category', 'Category is'], ['attrib
 const SORTS: [string, string][] = [['newest', 'Newest first'], ['price_low', 'Price, low to high'], ['price_high', 'Price, high to low'], ['title', 'Name, A to Z'], ['manual', 'The order you pick']]
 
 /** A collection: name and address, then hand-picked products or rules with a live count. */
-export function CollectionEditor({ initial, products, families, attrOptions, share }: { initial: EditorCollection; products: ProductPick[]; families: { id: string; name: string }[]; attrOptions: AttrOption[]; share?: React.ReactNode }) {
+export function CollectionEditor({ initial, products, families, attrOptions, share, shop }: { initial: EditorCollection; products: ProductPick[]; families: { id: string; name: string }[]; attrOptions: AttrOption[]; share?: React.ReactNode; shop: { name: string; address: string } }) {
   const router = useRouter()
   const [saved, setSaved] = useState(initial)
   const [d, setD] = useState(initial)
@@ -77,7 +79,8 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
           <div className="space-y-1"><label htmlFor="c-handle" className="block text-sm font-medium">Address</label>
             <div className="flex items-center rounded-md border border-input bg-card text-sm focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring"><span className="pl-3 font-mono text-xs text-muted-foreground">…/collections/</span>
               <input id="c-handle" value={d.handle} maxLength={80} placeholder={handleFor(d.title) || 'festive-edit'} onChange={(e) => set({ handle: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })} className="h-10 md:h-9 min-w-0 flex-1 bg-transparent pr-3 font-mono text-sm outline-none" /></div>
-            {errors.handle && <p className="text-xs text-danger-text">{errors.handle}</p>}</div>
+            {errors.handle ? <p className="text-xs text-danger-text">{errors.handle}</p>
+              : initial.id && d.handle && d.handle !== initial.handle ? <p className="text-xs text-muted-foreground">The old address will send shoppers here.</p> : null}</div>
           <div className="space-y-1"><label htmlFor="c-desc" className="block text-sm font-medium">Description <span className="font-normal text-muted-foreground">(optional, shown at the top of its page)</span></label>
             <textarea id="c-desc" rows={2} maxLength={2000} value={d.description} onChange={(e) => set({ description: e.target.value })} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm" /></div>
         </Section>
@@ -147,6 +150,8 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
           <div className="space-y-1"><label htmlFor="c-sort" className="block text-sm font-medium">Order on your shop</label>
             <select id="c-sort" value={d.sort} onChange={(e) => set({ sort: e.target.value })} className={field}>{SORTS.filter(([k]) => d.kind === 'manual' || k !== 'manual').map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
         </Section>
+        <SeoPanel folder="collections" handle={d.handle} seoTitle={d.seoTitle} onSeoTitle={(seoTitle) => set({ seoTitle })} seoDescription={d.seoDescription} onSeoDescription={(seoDescription) => set({ seoDescription })}
+          defaults={{ ...collectionSeo({ ...d, title: d.title || 'Collection', seoTitle: '', seoDescription: '' }, shop.name), handle: handleFor(d.title) || 'collection' }} address={shop.address} cover={undefined} errors={errors} />
         {!initial.id && <Button disabled={pending} onClick={save}>Create collection</Button>}
         {initial.id && (
           <Section className="text-sm">

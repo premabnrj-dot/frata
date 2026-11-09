@@ -12,6 +12,7 @@ import { POLICY_PAGES, type PolicyPage } from '@/domains/policies/render'
 import { draftPatch, sectionFor, type Field, type Values } from '@/domains/settings/sections'
 import { saveSection } from '../actions'
 import { PolicyPages } from './policy-pages'
+import { ShopLogo } from './shop-logo'
 import { DocLogo } from './doc-logo'
 import { Section } from '@/components/layout/section'
 import { PageHeader } from '@/components/layout/page-header'
@@ -79,6 +80,7 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
       <Message m={message} onReload={conflict ? () => window.location.reload() : undefined} />
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <form className="space-y-4" noValidate onSubmit={(e) => { e.preventDefault(); if (dirty) save() }}>
+          {section.key === 'brand' && <ShopLogo tenantId={tenantId} current={facts.logoUrl ?? null} />}
           {section.key === 'documents' && <DocLogo tenantId={tenantId} current={facts.docLogo} />}
           {section.blocks.map((b) => ({ b, shown: b.fields.filter((f) => !f.showIf || f.showIf.in.includes(String(values[f.showIf.key] ?? ''))) })).filter(({ shown }) => shown.length).map(({ b, shown }) => (
             <Section key={b.title}>
