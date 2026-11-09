@@ -26,10 +26,11 @@ export const CONTENT_SECURITY_POLICY = [
  */
 export const HSTS_OWN_DOMAIN = { key: 'Strict-Transport-Security', value: 'max-age=31536000' }
 export const HSTS_PLATFORM = { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' }
-const esc = (s: string) => s.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+/** A literal host as a `has: host` value (Next turns the value into an anchored regex: dots must be escaped). */
+export const hostValue = (s: string) => s.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 /** Next's `has: host` value: a regex anchored by Next, matched against the lowercased host without its port. */
 export function platformHostPattern(consoleHost: string, shopDomain: string): string {
-  return `(?:${esc(consoleHost)}|(?:[a-z0-9-]+\\.)?${esc(shopDomain)})`
+  return `(?:${hostValue(consoleHost)}|(?:[a-z0-9-]+\\.)?${hostValue(shopDomain)})`
 }
 
 export const SECURITY_HEADERS: { key: string; value: string }[] = [

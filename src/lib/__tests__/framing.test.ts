@@ -17,6 +17,11 @@ describe('framing headers', () => {
     expect(preview.map(frameOf).sort()).toEqual(['DENY', 'SAMEORIGIN'])
     const framed = preview.find((r) => frameOf(r) === 'SAMEORIGIN')!
     expect(framed.has?.[0]).toMatchObject({ type: 'host' })
+    // A dot in the console host is literal: frata-vercel.app is not frata.vercel.app (security review D·2 L4).
+    const { CONSOLE_HOST } = await import('../public-env')
+    const hostRe = new RegExp(`^${framed.has![0]!.value}$`)
+    expect(hostRe.test(CONSOLE_HOST)).toBe(true)
+    expect(hostRe.test(CONSOLE_HOST.replace('.', '-'))).toBe(false)
     expect(framed.headers.find((h) => h.key === 'Content-Security-Policy')?.value).toMatch(/frame-ancestors 'self'; object-src 'none'; base-uri 'self'/)
     expect(preview.find((r) => frameOf(r) === 'DENY')!.missing?.[0]).toMatchObject({ type: 'host' })
   })
