@@ -61,7 +61,7 @@ function cleanImages<L extends { home?: unknown[] }>(layer: L, tenantId: string)
 
 export async function tryThemeAction(input: unknown): Promise<R<{ revisionId: string; lost: string[] }>> {
   const p = z.object({ theme: z.enum(THEME_KEYS) }).safeParse(input)
-  if (!p.success) return { ok: false, error: 'Unknown theme.' }
+  if (!p.success) { console.error('[look.try] refused', typeof input === 'object' && input ? String((input as { theme?: unknown }).theme).slice(0, 40) : typeof input); return { ok: false, error: 'Unknown theme.' } }
   const r = await asMember(CAN_BUILD, { action: 'look.try', target: p.data.theme }, async (tx, auth) => {
     if (auth.membership.supportSessionId) return { error: SUPPORT }
     const t = auth.membership.tenantId

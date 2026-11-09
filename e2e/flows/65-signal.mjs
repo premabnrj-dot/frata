@@ -33,6 +33,9 @@ export default {
         const ask = p.getByRole('dialog', { name: 'Try Signal?' })
         await Promise.race([ask.waitFor().then(() => ask.getByRole('button', { name: 'Try Signal' }).click()), p.waitForURL(/\/console\/look\/customize$/)])
         await p.waitForURL(/\/console\/look\/customize$/)
+        // A shop that customised its home before carries those sections over (carryOver); this checks Signal's own.
+        await db`update shop_theme_revisions set settings = settings - 'home' where tenant_id = ${KESAR} and theme_key = 'signal' and id not in (select revision_id from shop_theme_publishes)`
+        await p.reload()
         const f = p.frameLocator(FRAME)
         await f.locator('[data-section]').first().waitFor()
         await f.locator('[data-header="float"]').waitFor({ state: 'attached' })
@@ -59,6 +62,20 @@ export default {
           await p.getByRole('heading', { name: 'Roam backpack' }).waitFor()
           await p.screenshot({ path: t.out(`signal-product-${tag}`), fullPage: true })
         }
+        // The bag and the checkout wear the theme too: tiles for the fields and the ways to pay, the theme's buttons.
+        const [v] = await db`select v.id from variants v join products p on p.id = v.product_id where p.tenant_id = ${KESAR} and p.status = 'active' limit 1`
+        await p.setViewportSize({ width: 1440, height: 900 })
+        await p.evaluate((id) => localStorage.setItem('frata.bag.v1', JSON.stringify([{ variantId: id, qty: 1 }])), v.id)
+        await p.goto(CONSOLE + `/console/theme-preview/${r.id}/bag`)
+        await p.getByRole('heading', { name: 'Your bag' }).waitFor()
+        await p.waitForTimeout(800)
+        await p.screenshot({ path: t.out('signal-bag-desktop'), fullPage: true })
+        await p.goto(CONSOLE + `/console/theme-preview/${r.id}/checkout`)
+        await p.locator('.store-field').first().waitFor()
+        await p.waitForTimeout(800)
+        assert.equal(await p.locator('.store-field').first().evaluate((e) => getComputedStyle(e).borderTopColor), 'rgba(0, 0, 0, 0)', 'checkout fields sit on tiles')
+        await p.screenshot({ path: t.out('signal-checkout-desktop'), fullPage: true })
+        await p.evaluate(() => localStorage.removeItem('frata.bag.v1'))
         const [{ n: after }] = await db`select count(*)::int n from shop_theme_revisions where tenant_id = ${KESAR}`
         assert.ok(after >= before)
       })

@@ -85,7 +85,7 @@ export function BuyBox(p: BuyBoxProps) {
     if (!p.live || !v) { setNote(p.w.preview); return }
     bag.add(v.id, 1)
     setNote(null)
-    openBag()
+    openBag(v.id)
   }
 
   return (
@@ -93,17 +93,17 @@ export function BuyBox(p: BuyBoxProps) {
       <Gallery photos={photos} title={p.title} kind={p.gallery ?? 'swipe'} w={p.w} />
       <div className={`min-w-0 space-y-5 ${p.stickyBox ? 'md:sticky md:top-24 md:self-start' : ''}`}>
         <div className="space-y-2">
-          <h1 className="text-2xl leading-tight sm:text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{p.title}</h1>
-          {shown && <p className="text-lg"><span className="store-price font-medium">{money(shown.price)}</span>
+          <h1 className="store-pdp-title text-2xl leading-tight sm:text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{p.title}</h1>
+          {shown && <p className="store-pdp-price text-lg"><span className="store-price font-medium">{money(shown.price)}</span>
             {shown.compareAt && shown.compareAt > shown.price && <><s className="ml-2 text-store-sub">{money(shown.compareAt)}</s><span className="ml-2 text-sm text-store-good">{fill(p.w.save, { amount: money(shown.compareAt - shown.price) })}</span></>}{shown.mrp && shown.mrp >= shown.price ? <span className="ml-2 text-xs text-store-sub">M.R.P. {money(shown.mrp)} incl. taxes</span> : null}</p>}
-          {p.offers && p.offers.length > 0 && <ul className="space-y-1 text-sm text-store-sale" aria-label={p.w.offers}>{p.offers.map((o) => <li key={o.label}>{o.label}{o.ends ? ` · ${o.ends}` : ''}</li>)}</ul>}
+          {p.offers && p.offers.length > 0 && <ul className="store-offers space-y-1 text-sm text-store-sale" aria-label={p.w.offers}>{p.offers.map((o) => <li key={o.label}>{o.label}{o.ends ? ` · ${o.ends}` : ''}</li>)}</ul>}
           <p className="text-xs text-store-sub">{p.taxNote}</p>
         </div>
 
         {/* Colour is chosen first (it changes the photos), then size; other options after. */}
         {order.map((i) => [p.options[i]!, i] as const).map(([o, i]) => (
           <fieldset key={o} ref={i === si ? sizesRef : undefined} className="space-y-2">
-            <legend className="flex w-full items-baseline justify-between text-sm">
+            <legend className="store-opt-legend flex w-full items-baseline justify-between text-sm">
               <span><span className="font-medium">{o}</span>{picked[i] && <span className="text-store-sub">: {picked[i]}</span>}</span>
               {i === si && p.chart && p.chart.rows.length > 0 && <button type="button" className="inline-flex min-h-6 items-center underline underline-offset-4" onClick={() => setGuide(true)}>{p.w.sizeGuide}</button>}
             </legend>
@@ -124,7 +124,7 @@ export function BuyBox(p: BuyBoxProps) {
                 }
                 return (
                   <button key={val} type="button" aria-pressed={on} onClick={() => choose(i, val)}
-                    className={`relative min-h-11 min-w-12 rounded-[var(--store-radius)] border px-3 text-sm ${on ? 'border-store-ink bg-store-ink text-store-paper' : 'border-store-line'} ${st.canBuy ? '' : 'text-store-sub line-through decoration-1'}`}>
+                    className={`store-opt relative min-h-11 min-w-12 rounded-[var(--store-radius)] border px-3 text-sm ${on ? 'border-store-ink bg-store-ink text-store-paper' : 'border-store-line'} ${st.canBuy ? '' : 'text-store-sub line-through decoration-1'}`}>
                     {val}<span className="sr-only">{st.canBuy ? '' : p.w.soldOutSr}</span>
                   </button>
                 )
@@ -138,10 +138,12 @@ export function BuyBox(p: BuyBoxProps) {
         <button ref={buyRef} type="button" onClick={add} aria-disabled={a && !a.canBuy ? true : undefined} className="store-btn store-buy h-12 w-full rounded-[var(--store-radius)] transition-transform duration-fast ease-standard active:scale-97 aria-disabled:opacity-50 aria-disabled:active:scale-100 bg-store-button text-base font-medium text-store-on-button">{a && !a.canBuy ? p.w.soldOut : a?.kind === 'preorder' ? p.w.preorder : p.w.addToBag}</button>
         {note && <p role="alert" className="text-sm">{note}</p>}
 
-        <ul className="space-y-1.5 border-t border-store-line pt-4 text-sm">
-          {cod?.offered && <li>{p.w.cod}{cod.charge > 0 ? fill(p.w.codExtra, { fee: money(cod.charge) }) : ''}</li>}
-          {shown && <li>{deliveryLine(shown.price, p.delivery, p.w)}</li>}
-          {p.notes.map((n) => <li key={n}>{n}</li>)}
+        {/* The shop's true promises; a theme on tiles shows each with its icon (Signal's trust row). */}
+        <ul className="store-promises space-y-1.5 border-t border-store-line pt-4 text-sm">
+          {cod?.offered && <li><PromiseIcon d={PAY} />{p.w.cod}{cod.charge > 0 ? fill(p.w.codExtra, { fee: money(cod.charge) }) : ''}</li>}
+          {shown && <li><PromiseIcon d={SHIP} />{deliveryLine(shown.price, p.delivery, p.w)}</li>}
+          {/* notes: dispatch first, then returns (product-view.tsx) */}
+          {p.notes.map((n, i) => <li key={n}><PromiseIcon d={i === 0 ? BOX : BACK} />{n}</li>)}
         </ul>
         {p.model && <p className="text-sm text-store-sub">{p.model}</p>}
       </div>
@@ -274,4 +276,10 @@ function SizeGuide({ chart, model, onClose, w }: { chart: Chart; model: string |
       </div>
     </dialog>
   )
+}
+
+const PAY = 'M3 7h18v12H3zM3 11h18', SHIP = 'M3 6h11v10H3zM14 10h4l3 3v3h-7M7 19a2 2 0 1 0 0-.1M17 19a2 2 0 1 0 0-.1', BACK = 'M4 12a8 8 0 1 0 3-6.2M4 4v4h4', BOX = 'M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8'
+/** A promise's icon: hidden unless the theme shows its promises as a trust row (globals.css, data-card="tile"). */
+function PromiseIcon({ d }: { d: string }) {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" className="store-promise-i"><path d={d} /></svg>
 }

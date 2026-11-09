@@ -81,3 +81,37 @@ export const themeVersionStages = pgTable('theme_version_stages', {
   primaryKey({ columns: [t.tenantId, t.versionId], name: 'theme_version_stages_pk' }),
   index('theme_version_stages_version').on(t.versionId),
 ])
+
+/**
+ * A shop's videos (V1, docs/plans/2026-11-09-video-v1.md; access drizzle/0081). Hosted on Mux; the row is written
+ * BEFORE the upload is created (ADR-0008) and its state is derived from the timestamps (src/domains/video/state.ts):
+ * pending → ready (asset) → playable (MP4 rendition); errored; removed. Never deleted by the app: the per-day and
+ * per-month upload caps count every row. `mux_env` is the Mux environment the row was made in; an event or a
+ * delete from another environment is refused (previews share this database).
+ */
+export const videos = pgTable('videos', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  muxEnv: text('mux_env').notNull(),
+  uploadId: text('upload_id').unique(),
+  assetId: text('asset_id').unique(),
+  playbackId: text('playback_id'),
+  durationMs: integer('duration_ms'),
+  width: integer('width'),
+  height: integer('height'),
+  createdAt: at('created_at').notNull().defaultNow(),
+  createdBy: uuid('created_by').notNull(),
+  readyAt: at('ready_at'),
+  mp4ReadyAt: at('mp4_ready_at'),
+  erroredAt: at('errored_at'),
+  /** Our word or Mux's code (too_long, upload_errored, asset_errored, cancelled), ≤ 40. */
+  error: text('error'),
+  removedAt: at('removed_at'),
+}, (t) => [
+  index('videos_shop').on(t.tenantId, t.createdAt),
+  check('videos_env', sql`${t.muxEnv} ~ '^[A-Za-z0-9_-]{1,40}$'`),
+  check('videos_ids', sql`(${t.uploadId} is null or ${t.uploadId} ~ '^[A-Za-z0-9]{1,128}$') and (${t.assetId} is null or ${t.assetId} ~ '^[A-Za-z0-9]{1,128}$') and (${t.playbackId} is null or ${t.playbackId} ~ '^[A-Za-z0-9]{1,64}$')`),
+  check('videos_error', sql`(${t.erroredAt} is null) = (${t.error} is null) and (${t.error} is null or length(${t.error}) <= 40)`),
+  check('videos_size', sql`(${t.width} is null or ${t.width} between 1 and 8192) and (${t.height} is null or ${t.height} between 1 and 8192) and (${t.durationMs} is null or ${t.durationMs} between 0 and 43200000)`),
+  check('videos_playable', sql`${t.mp4ReadyAt} is null or (${t.readyAt} is not null and ${t.playbackId} is not null)`),
+])

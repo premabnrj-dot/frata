@@ -46,6 +46,9 @@ export default {
         await riya.waitForURL(/\/console\/look\/customize$/)
         const [r] = await db`select theme_key, theme_version from shop_theme_revisions where tenant_id = ${KESAR} order by updated_at desc limit 1`
         assert.equal(r.theme_key, key); assert.match(r.theme_version, /^2\./)
+        // A shop that customised its home before carries those sections over (carryOver); these steps check the theme's own.
+        await db`update shop_theme_revisions set settings = settings - 'home' where tenant_id = ${KESAR} and theme_key = ${key} and id not in (select revision_id from shop_theme_publishes)`
+        await riya.reload()
         const f = riya.frameLocator(FRAME)
         await f.locator('[data-section]').first().waitFor()
         await riya.waitForTimeout(400)

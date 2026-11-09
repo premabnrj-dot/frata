@@ -115,23 +115,28 @@ export function StripFooter({ f, href, social, w, painted, strip }: { f: ShellSh
 
 /** Over a photo (theme Signal): the hero's photo darkened behind the policies and the law's lines; lazy, never first. */
 export function PhotoFooter({ f, href, social, w, photo }: { f: ShellShop; href: Href; social: boolean; w: Words; photo: PhotoData }) {
+  // Mockup board "Home · computer" (Signal): a bold wordmark, the links in columns, the legal lines in a quiet bar.
+  const link = 'inline-flex min-h-6 items-center text-white/75 transition-colors duration-fast hover:text-white'
   return (
     <footer className="relative mt-16 overflow-hidden text-white">
       <Photo p={photo} alt="" sizes="100vw" className="absolute inset-0 h-full w-full object-cover" />
-      <div className="absolute inset-0 bg-black/70" aria-hidden="true" />
-      <div className="relative mx-auto grid max-w-6xl gap-8 px-4 py-14 text-sm sm:grid-cols-3 sm:px-6">
-        <div className="space-y-2">
-          <p className="text-2xl font-semibold" style={{ fontFamily: 'var(--store-display)' }}>{f.shopName}</p>
-          {f.tagline && <p className="text-white/80">{f.tagline}</p>}
-          {social && <p className="flex gap-4">
-            {f.instagram && <a href={igLink(f.instagram)} rel="noopener" className="inline-flex min-h-6 items-center underline underline-offset-4">Instagram</a>}
-            {f.whatsapp && <a href={waLink(f.whatsapp)} rel="noopener" className="inline-flex min-h-6 items-center underline underline-offset-4">WhatsApp</a>}
-          </p>}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/80 to-black/90" aria-hidden="true" />
+      <div className="relative mx-auto max-w-6xl px-4 pb-8 pt-14 text-sm sm:px-6">
+        <div className="grid gap-8 sm:grid-cols-[1.3fr_1fr_1fr_1fr]">
+          <div className="space-y-2">
+            <p className="text-4xl font-bold leading-none tracking-[-0.03em] sm:text-5xl" style={{ fontFamily: 'var(--store-display)' }}>{f.shopName}</p>
+            {f.tagline && <p className="text-white/75">{f.tagline}</p>}
+          </div>
+          <nav aria-label={w.policiesNav} className="grid grid-cols-2 gap-8 sm:col-span-2">
+            <ul className="space-y-1">{(['shipping', 'returns', 'contact'] as const).map((k) => <li key={k}><Link href={href(`/policies/${k}`)} className={link}>{w.policy[k]}</Link></li>)}</ul>
+            <ul className="space-y-1">{(['privacy', 'terms'] as const).map((k) => <li key={k}><Link href={href(`/policies/${k}`)} className={link}>{w.policy[k]}</Link></li>)}</ul>
+          </nav>
+          {social && (f.instagram || f.whatsapp) ? <ul className="space-y-1">
+            {f.instagram && <li><a href={igLink(f.instagram)} rel="noopener" className={link}>Instagram</a></li>}
+            {f.whatsapp && <li><a href={waLink(f.whatsapp)} rel="noopener" className={link}>WhatsApp</a></li>}
+          </ul> : <div />}
         </div>
-        <nav aria-label={w.policiesNav}><ul className="space-y-1.5">
-          {(['shipping', 'returns', 'privacy', 'terms', 'contact'] as const).map((k) => <li key={k}><Link href={href(`/policies/${k}`)} className="hover:underline">{w.policy[k]}</Link></li>)}
-        </ul></nav>
-        <div className="space-y-1 text-white/80">
+        <div className="mt-12 flex flex-wrap gap-x-4 gap-y-1 border-t border-white/15 pt-4 text-xs text-white/60">
           {f.legalName && <p>{f.legalName}</p>}
           {f.address && <p className="whitespace-pre-line">{f.address}</p>}
           {f.grievanceName && <p>{`${w.grievance}: `}{f.grievanceName}{f.grievanceEmail ? `, ${f.grievanceEmail}` : ''}</p>}
