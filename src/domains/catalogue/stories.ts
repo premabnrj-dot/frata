@@ -13,7 +13,7 @@ export const STORY_LIMITS = { title: 60, text: 300, note: 60 } as const
 const photo = z.object({
   base: z.string().max(300),
   widths: z.array(z.number().int().positive()).min(1).max(4),
-  width: z.number().int().positive(), height: z.number().int().positive(),
+  width: z.number().int().positive().max(10000), height: z.number().int().positive().max(10000),
   alt: z.string().max(160).default(''),
   decorative: z.boolean().default(false),
 })
@@ -38,11 +38,12 @@ export function cleanStories(input: unknown): { ok: true; stories: Story[] } | {
 /** Stored stories as read back (the editor, the shop): anything that no longer parses reads as none. */
 export const readStories = (stored: unknown): Story[] => { const r = cleanStories(stored); return r.ok ? r.stories : [] }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 /** Pair ids as asked for: uuids only, each once, never the product itself, at most two (tenancy review M2). */
 export function cleanPairIds(input: unknown, self: string): string[] {
   if (!Array.isArray(input)) return []
-  return [...new Set(input.filter((x): x is string => typeof x === 'string' && UUID.test(x) && x !== self))].slice(0, MAX_PAIRS)
+  const me = self.toLowerCase()
+  return [...new Set(input.filter((x): x is string => typeof x === 'string' && UUID.test(x)).map((x) => x.toLowerCase()).filter((x) => x !== me))].slice(0, MAX_PAIRS)
 }
 
 /** What a shopper is offered for a paired piece: Add only with no options (one variant) and buyable; else Choose (its

@@ -31,7 +31,7 @@ export async function savePairs(tx: Tx, tenantId: string, productId: string, ids
   const wanted = ids.slice(0, MAX_PAIRS)
   if (wanted.length) {
     const found = await tx.select({ id: products.id }).from(products).where(and(eq(products.tenantId, tenantId), inArray(products.id, wanted)))
-    if (found.length !== wanted.length || wanted.includes(productId)) return false
+    if (found.length !== wanted.length || wanted.includes(productId.toLowerCase())) return false
   }
   await tx.delete(productPairs).where(and(eq(productPairs.tenantId, tenantId), eq(productPairs.productId, productId)))
   if (wanted.length) await tx.insert(productPairs).values(wanted.map((pairedId, position) => ({ tenantId, productId, pairedId, position })))

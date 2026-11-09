@@ -29,6 +29,12 @@ describe('cleanPairIds', () => {
   })
 })
 
+describe('cleanPairIds, any case', () => {
+  it('drops an upper-case copy of the product itself and duplicates in another case', () => {
+    expect(cleanPairIds([SELF.toUpperCase(), A, A.toUpperCase()], SELF)).toEqual([A])
+  })
+})
+
 describe('pairAction', () => {
   it('Add only for a piece with no options and one buyable variant; a sized piece is chosen on its page', () => {
     expect(pairAction({ options: [], buyableVariants: 1 })).toBe('add')

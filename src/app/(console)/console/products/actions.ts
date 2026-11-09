@@ -15,7 +15,7 @@ import { orderPrefix } from '@/domains/signup/slug'
 import { acceptedBase, storeHost, WIDTHS, urlFor } from '@/domains/media/sizes'
 import { photosAreWebp } from '@/lib/media/uploaded'
 import { checkStoryPhotos, cleanPairIds, savePairs } from '@/lib/catalogue/extras'
-import type { Piece } from '@/domains/catalogue/stories'
+import { UUID, type Piece } from '@/domains/catalogue/stories'
 import { refreshShop } from '@/lib/queries/storefront'
 import { searchPieces } from '@/lib/queries/catalogue'
 import { asMember } from '@/lib/auth/as-member'
@@ -251,7 +251,8 @@ export async function findCategories(q: string) {
 /** "Pair it with"'s piece search (Signal S3): this shop's pieces only, never this product. */
 export async function findPieces(productId: string, q: string): Promise<Piece[]> {
   const auth = await requireMember(ANY_MEMBER)
-  return auth.ok && typeof q === 'string' && typeof productId === 'string' && /^[0-9a-f-]{36}$/.test(productId) ? searchPieces(auth.membership.tenantId, productId, q) : []
+  if (!auth.ok || typeof q !== 'string' || typeof productId !== 'string' || !UUID.test(productId)) return []
+  return searchPieces(auth.membership.tenantId, productId, q).catch((err) => { console.error('[findPieces]', reason(err)); return [] })
 }
 /** The details a category asks for, for the editor. */
 export async function categoryDetails(id: string) {
