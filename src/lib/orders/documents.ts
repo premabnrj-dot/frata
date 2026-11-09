@@ -57,8 +57,11 @@ export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], 
     .from(creditNotes).where(and(eq(creditNotes.tenantId, tenantId), inArray(creditNotes.orderId, os.map((o) => o.id)))).orderBy(asc(creditNotes.issuedAt)) : []
   const cnl = cns.length ? await tx.select({ creditNoteId: creditNoteLines.creditNoteId, lineId: creditNoteLines.orderLineId, qty: creditNoteLines.qty, taxable: creditNoteLines.taxable, gst: creditNoteLines.gst, bps: creditNoteLines.gstBps })
     .from(creditNoteLines).where(and(eq(creditNoteLines.tenantId, tenantId), inArray(creditNoteLines.creditNoteId, cns.map((c) => c.id)))) : []
-  // In the order asked for (a bulk print keeps the queue's order).
+  // In the order asked for (a bulk print keeps the queue's order). Grouped once (speed review 2026-11-09: a filter per
+  // order was O(orders × lines), a second of CPU for a quarter's GST read).
   const byNumber = new Map(os.map((o) => [o.number, o]))
+  const group = <T, K>(rows: T[], key: (r: T) => K) => { const m = new Map<K, T[]>(); for (const r of rows) { const k = key(r); const a = m.get(k); if (a) a.push(r); else m.set(k, [r]) } return m }
+  const linesOf = group(ls, (l) => l.orderId), notesOf = group(cns, (c) => c.orderId), noteLinesOf = group(cnl, (l) => l.creditNoteId)
   // A slip only for an order that may go out (applies('print'), the same rule as the buttons): a typed link to an
   // unconfirmed COD order must not print "Collect ₹…" (architecture review 2026-11-07). Said, not silent.
   const skipped: { number: string; state: OrderState }[] = []
@@ -68,15 +71,15 @@ export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], 
       const o = byNumber.get(n)
       if (!o) return [] // unknown or another shop's number: silently not printed
       if (kind === 'slip') { const st = orderState(o, now); if (!applies('print', st)) { skipped.push({ number: `${prefix}-${n}`, state: st }); return [] } }
-      const lines = ls.filter((l) => l.orderId === o.id).map(({ orderId: _o, ...l }) => ({ ...l, taxableValue: Number(l.taxableValue), gst: Number(l.gst), unitPrice: Number(l.unitPrice), lineDiscount: Number(l.lineDiscount), chargeTaxable: l.chargeTaxable === null ? null : Number(l.chargeTaxable), chargeGst: l.chargeGst === null ? null : Number(l.chargeGst) }))
+      const lines = (linesOf.get(o.id) ?? []).map(({ orderId: _o, ...l }) => ({ ...l, taxableValue: Number(l.taxableValue), gst: Number(l.gst), unitPrice: Number(l.unitPrice), lineDiscount: Number(l.lineDiscount), chargeTaxable: l.chargeTaxable === null ? null : Number(l.chargeTaxable), chargeGst: l.chargeGst === null ? null : Number(l.chargeGst) }))
       const { invoiceLogo, invoiceSignatory, invoiceNote, ...stored } = o
       const doc: DocOrder = {
         ...stored, number: `${prefix}-${o.number}`, subtotal: Number(o.subtotal), shipping: Number(o.shipping), codCharge: Number(o.codCharge), gstTotal: Number(o.gstTotal), total: Number(o.total),
       }
       // What the invoice froze at packing (an order packed before D2 froze nothing: no logo, no signatory or note).
       // Every credit note on the order (GST phase 2: several), each with what it credited; a pre-0071 reversal has no lines.
-      const credits: IssuedCredit[] = cns.filter((x) => x.orderId === o.id).map((cn) => {
-        const ls2 = cnl.filter((l) => l.creditNoteId === cn.id).map((l) => ({ lineId: l.lineId, qty: l.qty, taxable: Number(l.taxable), gst: Number(l.gst), bps: l.bps }))
+      const credits: IssuedCredit[] = (notesOf.get(o.id) ?? []).map((cn) => {
+        const ls2 = (noteLinesOf.get(cn.id) ?? []).map((l) => ({ lineId: l.lineId, qty: l.qty, taxable: Number(l.taxable), gst: Number(l.gst), bps: l.bps }))
         return { number: cn.number, issuedAt: cn.issuedAt, reason: (CREDIT_REASONS as readonly string[]).includes(cn.reason) ? cn.reason as CreditReason : 'cancelled', against: cn.against, total: Number(cn.total),
           kind: cn.kind as CreditKind, ...(ls2.length ? { lines: ls2 } : {}) }
       })

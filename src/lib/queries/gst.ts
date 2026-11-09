@@ -25,7 +25,7 @@ export type Fix = { kind: 'no_hsn' | 'hsn_digits' | 'bad_gstin' | 'gap' | 'came_
 export type GstFiling = { connected: boolean; username: string | null; pushedAt: Date | null; pushed: Liability | null; portal: Liability | null; filedAt: Date | null; arn: string | null }
 export type GstPeriod = { shop: GstShop; period: Period; prev: string; next: string | null; invoices: Invoice[]; notes: GstDoc[]; gstr: Gstr1; fixes: Fix[]; filing: GstFiling }
 
-const BATCH = 1000
+const BATCH = 5000
 
 /** The previous period's key (the month or quarter before `key`). */
 function shift(key: string, by: number): string {
@@ -119,7 +119,7 @@ async function fixesFor(tx: Tx, tenantId: string, shop: GstShop, period: Period,
   const gaps = seriesGaps(fy.map((r) => r.n!).filter((n) => !/B\d+$/.test(n)))
   if (gaps.length) out.push({ kind: 'gap', count: gaps.length, examples: gaps.slice(0, 5) })
   // Parcels that came back with an invoice and no credit note (an RTO reverses the sale: CA rules on the treatment).
-  const back = await tx.select({ n: orders.number }).from(orders).where(and(eq(orders.tenantId, tenantId), isNotNull(orders.invoiceNumber), isNotNull(orders.rtoDeliveredAt), lt(orders.rtoDeliveredAt, period.to),
+  const back = await tx.select({ n: orders.number }).from(orders).where(and(eq(orders.tenantId, tenantId), isNotNull(orders.invoiceNumber), isNotNull(orders.rtoDeliveredAt), gte(orders.rtoDeliveredAt, fyStart), lt(orders.rtoDeliveredAt, period.to),
     sql`not exists (select 1 from ${creditNotes} cn where cn.tenant_id = ${orders.tenantId} and cn.order_id = ${orders.id})`)).limit(200)
   if (back.length) out.push({ kind: 'came_back', count: back.length, examples: back.slice(0, 5).map((r) => String(r.n)) })
   return out

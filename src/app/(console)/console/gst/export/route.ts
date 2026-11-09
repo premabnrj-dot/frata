@@ -59,8 +59,15 @@ export async function GET(request: Request) {
       body = tallyXml(d.shop.legalName || d.shop.name, d.invoices, notes)
       name = `Tally_vouchers_${base}.xml`
     }
-    // A BOM so Excel reads ₹ and Indian names in a CSV as UTF-8.
-    return new Response(f === 'sheets' || f === 'register' ? `﻿${body}` : body, {
+    // A BOM so Excel reads ₹ and Indian names in a CSV as UTF-8. Streamed in chunks: a quarter's Tally file runs to tens
+    // of MB, past what a buffered function response may carry (speed review 2026-11-09); a stream is not capped.
+    const bytes = new TextEncoder().encode(f === 'sheets' || f === 'register' ? `\uFEFF${body}` : body)
+    const CHUNK = 256 * 1024
+    let at = 0
+    const stream = new ReadableStream<Uint8Array>({
+      pull(c) { if (at >= bytes.length) { c.close(); return } c.enqueue(bytes.subarray(at, at + CHUNK)); at += CHUNK },
+    })
+    return new Response(stream, {
       headers: { 'Content-Type': TYPES[f], 'Content-Disposition': contentDisposition(name), 'Cache-Control': 'private, no-store', 'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff' },
     })
   } catch (err) {
