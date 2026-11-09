@@ -95,7 +95,7 @@ export const ProductsSchema = z.object({
   layout: z.enum(ALL_PRODUCT_LAYOUTS).default('grid'),
   label,
   /** layout tabs: the collections, one tab each, by handle (the source is then ignored). */
-  tabs: z.array(z.string().regex(/^[a-z0-9-]{1,80}$/)).max(MAX_TABS).default([]),
+  tabs: z.array(z.string().regex(/^[a-z0-9-]{1,80}$/)).max(MAX_TABS).refine((t) => new Set(t).size === t.length, 'Each collection once.').default([]),
 })
 
 const band = z.object({ minPaise: z.number().int().min(0).nullable(), maxPaise: z.number().int().positive().nullable() })

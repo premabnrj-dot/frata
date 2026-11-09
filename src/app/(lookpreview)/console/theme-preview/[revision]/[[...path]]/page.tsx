@@ -34,7 +34,7 @@ export default async function LookPreview({ params, searchParams }: { params: Pr
   const look = manifestOf(resolved.key, resolved.version)?.samples
   // `?as=shop`: the shop as shoppers see it (no samples): the popup after Publish shows it behind itself.
   const samples = !!look && (await searchParams).as !== 'shop'
-  const theme = look ? withSampleImages(resolved, look, sampleSetFor(shop.sells)) : resolved
+  const theme = look && samples ? withSampleImages(resolved, look, sampleSetFor(shop.sells)) : resolved
   // The checkout as the shop draws it: focused when the theme's checkout is Focused (ShopFrame's rule).
   const focused = path[0] === 'checkout' && theme.settings.checkout === 'focused'
   const cat = shellNeedsCatalogue(theme) && !focused ? await previewCatalogue(tenantId) : null

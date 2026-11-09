@@ -55,7 +55,7 @@ export function ShopShell({ shop, href, banner, children, gated = false, live = 
       <div style={s.footerScheme !== 'paper' ? schemeVars(t, s.footerScheme) as React.CSSProperties : undefined} className={s.footerScheme !== 'paper' ? 'contents' : undefined}>
         {!bare && t.menus.footer && t.menus.footer.length > 0 && <FooterMenu items={t.menus.footer} href={href} set={set} w={w} />}
         <ShopFooter f={shop} href={href} variant={focused ? 'compact' : s.footer} social={s.social && !focused} w={w} painted={s.footerScheme !== 'paper'} strip={strip}
-          photo={s.footer === 'photo' && !focused ? (t.home.find((x) => x.key === 'hero' && x.image) as { image?: PhotoData } | undefined)?.image ?? null : null} />
+          photo={s.footer === 'photo' && !focused ? (t.home.find((x) => x.key === 'hero' && !x.hidden && x.image) as { image?: PhotoData } | undefined)?.image ?? null : null} />
       </div>
       {tabs && <BottomTabs href={href} live={live} w={w} set={set} own={t.menus.tabs ?? null} />}
       {/* How the shopper arrived: on every page of the real shop, never in a console preview (Analytics A·1). */}
