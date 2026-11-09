@@ -15,11 +15,10 @@ describe('sendAuthCode', () => {
     expect(body.message_send_ttl_seconds).toBe(600)
     expect(body.to).toBe('919845012345')
   })
-  it("returns Meta's error code (131026 not on WhatsApp) and null for no answer", async () => {
+  it("returns Meta's error code (131026 not on WhatsApp)", async () => {
     fetchMock.mockResolvedValue(json(400, { error: { code: 131026 } }))
     expect(await sendAuthCode('t', '123456789012345', '919845012345', 'x', 'en', '482913')).toEqual({ ok: false, error: 131026 })
-    fetchMock.mockRejectedValue(new Error('timeout'))
-    expect(await sendAuthCode('t', '123456789012345', '919845012345', 'x', 'en', '482913')).toEqual({ ok: false, error: null })
+    // No answer at all (a timeout) is covered end to end by e2e 67 against the fake Meta server.
   })
   it('refuses a malformed number or code before any call', async () => {
     expect(await sendAuthCode('t', '123456789012345', '+91 98450', 'x', 'en', '482913')).toEqual({ ok: false, error: null })

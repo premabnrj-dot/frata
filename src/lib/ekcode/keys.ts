@@ -33,30 +33,18 @@ export const networkKeys = (bucket: string) => hashes(ring().peppers, 'net', buc
 export const ekSeal = (plain: string, aad: string) => sealRing(ring().seals, plain, aad)
 export const ekOpen = (sealed: string, aad: string) => openRing(ring().seals, sealed, aad)
 
-/** IPv4 → its /24; IPv6 → its /64 (narrow) and /48 (wide). Unknown → one shared bucket (counted, not trusted). */
-export function networkBuckets(ip: string): { narrow: string; wide: string } {
-  const v = String(ip ?? '').trim().toLowerCase()
-  const v4 = v.replace(/^::ffff:/, '')
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(v4)) {
-    const [a, b, c] = v4.split('.')
-    return { narrow: `4:${a}.${b}.${c}`, wide: `4:${a}.${b}` }
-  }
-  if (v.includes(':')) {
-    const full = expandV6(v)
-    if (full) return { narrow: `6:${full.slice(0, 4).join(':')}`, wide: `6:${full.slice(0, 3).join(':')}` }
-  }
+/**
+ * Network buckets from clientIp()'s answer (src/lib/http/client-ip.ts ipBucket: a full IPv4, or an IPv6 /64 written
+ * "a:b:c:d::/64"): IPv4 → its /24 (narrow) and /16 (wide); IPv6 → its /64 and /48. Anything else is one shared bucket
+ * (counted, never trusted).
+ */
+export function networkBuckets(bucket: string): { narrow: string; wide: string } {
+  const v = String(bucket ?? '').trim().toLowerCase()
+  const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.\d{1,3}$/.exec(v)
+  if (v4) return { narrow: `4:${v4[1]}.${v4[2]}.${v4[3]}`, wide: `4:${v4[1]}.${v4[2]}` }
+  const v6 = /^([0-9a-f]{1,4}):([0-9a-f]{1,4}):([0-9a-f]{1,4}):([0-9a-f]{1,4})::\/64$/.exec(v)
+  if (v6) return { narrow: `6:${v6.slice(1, 5).join(':')}`, wide: `6:${v6.slice(1, 4).join(':')}` }
   return { narrow: 'x:unknown', wide: 'x:unknown' }
-}
-
-function expandV6(v: string): string[] | null {
-  const [head, tail, extra] = v.split('::')
-  if (extra !== undefined) return null
-  const h = head ? head.split(':') : []
-  const t = tail !== undefined ? (tail ? tail.split(':') : []) : []
-  const missing = 8 - h.length - t.length
-  if (tail === undefined ? h.length !== 8 : missing < 0) return null
-  const all = [...h, ...Array(tail === undefined ? 0 : missing).fill('0'), ...t]
-  return all.every((x) => /^[0-9a-f]{1,4}$/.test(x)) ? all.map((x) => x.padStart(4, '0')) : null
 }
 
 /** 32 random bytes, URL-safe: states, verifiers, grant codes, session tokens, flow handles. */

@@ -18,11 +18,12 @@ describe('EkCode keys', async () => {
     expect(k.ekOpen(sealed, 'ekcode_accounts:name:a1')).toBe('Ananya Rao')
     expect(k.ekOpen(sealed, 'ekcode_accounts:name:a2')).toBeNull()
   })
-  it('network buckets: /24, /64 and /48; mapped v4; junk shares one bucket', async () => {
+  it('network buckets from ipBucket: /24 and /16, /64 and /48; junk shares one bucket', async () => {
     const { networkBuckets } = await import('../keys')
-    expect(networkBuckets('203.0.113.77')).toEqual({ narrow: '4:203.0.113', wide: '4:203.0' })
-    expect(networkBuckets('::ffff:203.0.113.77').narrow).toBe('4:203.0.113')
-    expect(networkBuckets('2001:db8:abcd:12:1::5')).toEqual({ narrow: '6:2001:0db8:abcd:0012', wide: '6:2001:0db8:abcd' })
+    const { ipBucket } = await import('@/lib/http/client-ip')
+    expect(networkBuckets(ipBucket('203.0.113.77'))).toEqual({ narrow: '4:203.0.113', wide: '4:203.0' })
+    expect(networkBuckets(ipBucket('::ffff:203.0.113.77')).narrow).toBe('4:203.0.113')
+    expect(networkBuckets(ipBucket('2001:db8:abcd:12:1::5'))).toEqual({ narrow: '6:2001:db8:abcd:12', wide: '6:2001:db8:abcd' })
     expect(networkBuckets('nonsense')).toEqual({ narrow: 'x:unknown', wide: 'x:unknown' })
   })
   it('S256, random tokens, six-digit codes, timing-safe compare', async () => {
