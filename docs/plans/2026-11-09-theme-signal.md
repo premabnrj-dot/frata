@@ -20,8 +20,9 @@ Status: active · Date: 2026-11-09 · Spec: docs/specs/2026-11-09-theme-signal.m
 - **Delivery line** (finding 8): S1 restyles today's estimate ("Ships in … · arrives in … days"). A date and a pincode
   check are a later task (cached HTML; `useNow`).
 - **Compare tab** cut (finding 9). Colours stay as swatches.
-- **Fonts** (finding 10): Schibsted Grotesk via next/font with `preload: false` (rule P6); a pairing → body mapping
-  (`--store-body`, default Inter) so Signal is one grotesk for everything.
+- **Fonts** (finding 10, speed review 2): Schibsted Grotesk for headings, labels, buttons and prices (one static weight
+  600, latin + ₹, ≤ 27 kB, `preload: false`); **body stays Inter**, which every shop page already preloads — a Schibsted
+  body would leave 48 kB of preloaded Inter unused on every Signal shop. Both are grotesks: the look holds.
 - **Version** (finding 15): `signal@1.0.0`, an `OFFERED` entry, released in Admin › Themes like the others.
 - **Interactivity** (finding 14): the float header is CSS (like `overlay`); tabs and the rail counter share ONE island
   ≤ 2 kB gz; tabs ≤ 5 collections × 8 products.
@@ -37,8 +38,7 @@ Status: active · Date: 2026-11-09 · Spec: docs/specs/2026-11-09-theme-signal.m
   checkout 120.2 kB JS; shop CSS 21.1 kB) as the new ceilings: home 120, product 120, checkout 121, CSS 22. Signal adds
   ≤ 1.0 kB CSS and ≤ 1 kB JS (home only), or 0 JS with CSS-only tabs.
 - **Font**: self-host ONE static weight (600) of Schibsted Grotesk, latin, plus a ₹-only subset (the latin file has no
-  ₹), ≤ 27 kB, `preload: false`. Inter stops being preloaded on shop pages (it is preloaded by the root layout for
-  every route): the console and admin keep it.
+  ₹), ≤ 27 kB, `preload: false`. Inter stays preloaded (it is the body face of every shop, Signal included).
 - **Tabs**: CSS-only radio tabs (0 JS); `count` ≤ 8 per tab, ≤ 5 tabs; hidden tabs render cover-only cards with
   `hidden` panels; `priority` only on the first tab's first two cards when the section opens the page; the tabs section
   ≤ 80 kB raw HTML. The catalogue cache entry is unchanged (tabs read the cached catalogue).
@@ -53,7 +53,7 @@ Status: active · Date: 2026-11-09 · Spec: docs/specs/2026-11-09-theme-signal.m
 |---|---|---|
 | T0 | Regression net: a vitest snapshot of `resolveTheme`, `settingAttrs`, `settingVars` for every released manifest with an empty and a full layer; shop-look green on a clean run | `npx vitest run src/domains/themes && npm run e2e -- --only shop-look` |
 | T1 | Narrowing: `BASE_CHOICES.card`/`desktopColumns`, `CHOICE_FORM_KEYS`, `<Offered>` in the page form; `allowed.productLayouts`/`schemes` in resolve and the forms | `npm test && npm run typecheck`, T0 snapshots unchanged |
-| T2 | Storefront gate sums layouts + page; budgets reset to measured; Inter not preloaded on shop pages | `npm run build` (the gate prints the real sums) |
+| T2 | Storefront gate sums layouts + page; budgets reset to measured (done 2026-11-09) | `npm run build` (the gate prints the real sums) |
 | S0-1 | `sampleSetFor(sells)` and the three sets (drawn until photos) | `npx vitest run src/lib/themes` |
 | S0-2 | `CREDITS.json` and `check:credits` (fails an uncredited file; run once with one planted, and against its own doc) | `node scripts/check-credits.mjs && npm test` |
 | S1-1 | Schema: header `float`, card `tile`, setting `labels`, section `label` text, products layout `tabs` and rail `counter`, footer `photo`, the derived `signal` scheme; pairing `schibsted` + body mapping | `npx vitest run src/domains/themes` (sections snapshot updated on purpose) |

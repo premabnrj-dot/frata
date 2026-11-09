@@ -16,9 +16,12 @@ const BUDGET_KB = 120
 // choices (the phone buy bar) can't eat the last of the headroom (speed review 2026-11-09).
 // Checkout 116 (2026-11-09): the business GST invoice (GSTIN checksum and state as typed, s.24 state notice) is +0.6 kB;
 // splitting it out with next/dynamic cost more in loader than it saved (measured 115.6 → 115.9).
-const TIGHT = { '/s/[host]/(shop)/products/[handle]/page': 115, '/s/[host]/(checkout)/checkout/page': 116 }
+// Since 2026-11-09 (speed review, theme Signal) a page is counted as it loads: its own chunks plus every layout above it
+// (root, /s/[host], the group's), each file once. The ceilings were reset to what the pages really loaded that day
+// (home 112.8, product 119.4, checkout 120.2 kB JS; CSS 21.1 kB), with room for Signal's ≤ 1 kB of CSS.
+const TIGHT = { '/s/[host]/(shop)/products/[handle]/page': 120, '/s/[host]/(checkout)/checkout/page': 121 }
 // The shop's stylesheet (shared, render-blocking): every theme's rules land in it, so it has a ceiling too.
-const CSS_BUDGET_KB = 20
+const CSS_BUDGET_KB = 22
 const failures = []
 const read = (f) => JSON.parse(readFileSync(join('.next', f), 'utf8'))
 if (!existsSync('.next/prerender-manifest.json')) { console.error('check:storefront-build — no .next to read; run it after next build.'); process.exit(1) }
@@ -45,10 +48,15 @@ for (const [k, files] of Object.entries(build)) {
   // Icons are drawn on the server (src/components/storefront/icon.tsx): their path data never reaches a shop's
   // browser. Two markers, the line set's bag and the solid set's bag (src/domains/icons/data.ts).
   for (const f of files) if (f.endsWith('.js') && /M3\.103 6\.034h17\.794|M239\.89,198\.12l-14\.26-12/.test(readFileSync(join('.next', f), 'utf8'))) failures.push(`${k}  carries the shop's icon data through ${f} (draw icons on the server, pass the element)`)
-  const css = files.filter((f) => f.endsWith('.css')).reduce((a, f) => a + gz(f), 0) / 1024
-  if (css > CSS_BUDGET_KB) failures.push(`${k}  loads ${css.toFixed(1)} kB of CSS gzipped (budget ${CSS_BUDGET_KB} kB)`)
   if (!k.endsWith('/page')) continue
-  const kb = files.filter((f) => f.endsWith('.js')).reduce((a, f) => a + gz(f), 0) / 1024
+  // Everything this page loads: the root layout, each layout on the way down, and the page (each file once).
+  const parts = k.split('/').slice(0, -1)
+  const above = ['/layout', ...parts.map((_, i) => `${parts.slice(0, i + 1).join('/')}/layout`).filter((l) => l !== '/layout' && build[l])]
+  const all = [...new Set([...above.flatMap((l) => build[l] ?? []), ...files])]
+  const css = all.filter((f) => f.endsWith('.css')).reduce((a, f) => a + gz(f), 0) / 1024
+  if (css > CSS_BUDGET_KB) failures.push(`${k}  loads ${css.toFixed(1)} kB of CSS gzipped (budget ${CSS_BUDGET_KB} kB)`)
+  const kb = all.filter((f) => f.endsWith('.js')).reduce((a, f) => a + gz(f), 0) / 1024
+  if (process.env.SHOW_BUDGETS) console.log(`  ${k}: ${kb.toFixed(1)} kB JS, ${css.toFixed(1)} kB CSS`)
   const limit = TIGHT[k] ?? BUDGET_KB
   if (kb > limit) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${limit} kB) — split what the first paint does not need`)
 }

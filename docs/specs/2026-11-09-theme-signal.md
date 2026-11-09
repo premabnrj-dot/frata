@@ -45,7 +45,7 @@ Order (owner, 2026-11-09): **S0 → S1 → V1 → S2 → S3.**
   exists (posters until then). Every file has a row in `public/themes/samples/CREDITS.json` (source URL, licence,
   date, what was changed); a gate fails a sample file with no credit. The merchant's own pieces always come first;
   samples fill only what is empty, as today (`samples` in the manifest).
-- **S1 · The theme**: manifest `signal` 2.x; pairing `schibsted` (Schibsted Grotesk, OFL, self-hosted like the others);
+- **S1 · The theme**: manifest `signal` 2.x; pairing `schibsted` (Schibsted Grotesk, OFL, self-hosted; headings, labels, buttons, prices; body stays Inter);
   header `float`; section label style `pill | plain | none` (new choice); card `tile`; products section layouts
   `tabs` (by collection, up to 5) and `rail` with a counter; the image-with-text section's `signal` scheme (the band);
   footer `photo`; product page: colour/compare tabs, the delivery date line, the trust row from settings.

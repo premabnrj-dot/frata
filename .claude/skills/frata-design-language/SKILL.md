@@ -282,7 +282,8 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 ## Theme Signal (owner-approved 2026-11-09; spec `docs/specs/2026-11-09-theme-signal.md`, mockup https://claude.ai/artifact/9XNT3KFJziXEyaKyDa48dr)
 - **One signal colour as a system:** the merchant's accent is used for section labels (pills), one full-bleed band and
   focus/selection, never for body text or large fills elsewhere; checked readable with `brandColourProblem`.
-- **One grotesk for everything** (Schibsted Grotesk); headings in sentence case, short, may end with a full stop;
+- **A grotesk voice** (Schibsted Grotesk for headings, labels, buttons and prices; body Inter, the shops' body face);
+  headings in sentence case, short, may end with a full stop;
   uppercase only for labels and buttons, with letter-spacing.
 - **Products on grey tiles**, edge-to-edge with 2 px gutters; the name left, the price right, under the photo.
 - **Floating header:** a dark panel at the top left on a computer, a dark rounded bar on a phone, over the hero; solid
