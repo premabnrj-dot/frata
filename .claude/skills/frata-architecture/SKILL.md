@@ -274,6 +274,15 @@ merchant's colour (`signal`) is computed at render (`schemeVars`) from the FINAL
 Samples follow what the shop sells (`sampleSetFor`), only in preview routes; every sample file is credited
 (`public/themes/samples/CREDITS.json`, `check:credits`). The storefront budget gate sums the layouts above a page.
 
+**A new option on a released version is a new version (Signal 1.1, 1.2):** a released manifest never changes
+(`released-manifests` snapshot); an optional field (`video`, `script`, `layout: 'spotlight'`) keeps older looks
+byte-identical, and resolve drops it where the theme doesn't offer it (`allowed.videoSections`, `imageTextLayouts`,
+`heroScript`, `scale`). **Section schemas are lenient** (a blank one parses, so autosave never fails); whether it
+shows is readiness's, non-blocking for "empty (hidden)". **Two stylesheets (S2-0):** `src/app/shop.css` (Tailwind from
+the shop's sources only + `base.css`) is the root's; every non-shop entry adds `globals.css` (the full app sheet)
+after it. A class a shop page uses from outside the shop's folders must be added to `shop.css`'s `@source` list;
+`check-storefront-build` fails a shop page that loads the app sheet.
+
 - A shop's look is **data over one section library**: `src/domains/themes/` (types, `resolveTheme` — the ONE merge
   of manifest → style → the merchant's layer — `contrast`, section SAVE schemas, `readinessOf`, `carryOver`,
   `baselineRevision`) and `src/components/storefront/sections/` (server components). Rendering reads

@@ -294,6 +294,12 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
   sound or a player bar on the shop.
 - **Theme samples:** realistic photos only (credited in `public/themes/samples/*/CREDITS.json`); the merchant's own
   pieces always first.
+- **Story half (1.2, S2):** a Spotlight is Image with text on the tile, words .8fr beside a 2:1 photo or loop; a Story
+  fan is 3–7 cards, the middle forward, side cards' photos softened (titles stay full contrast), a swipe row on a phone,
+  side by side under reduced motion, a focused card brought forward; a Statement is a full-bleed photo under a ≥ 60 %
+  scrim, a small uppercase line and a handwritten wordmark. **One script face (Caveat), used only for a handwritten
+  line** (the Hero's, the Statement's), tilted −4° / −6°, never for body or buttons. Section headings 22–34 px, 600,
+  −0.02em, balanced. An empty story section shows nothing; it never stops a publish.
 
 ## Frata Admin (owner-approved, 2026-11-06)
 
