@@ -1,2 +1,0 @@
-ALTER TABLE "variants" ADD COLUMN "gtin" text;--> statement-breakpoint
-ALTER TABLE "variants" ADD CONSTRAINT "variants_gtin" CHECK ("variants"."gtin" is null or "variants"."gtin" ~ '^([0-9]{8}|[0-9]{12,14})$');
