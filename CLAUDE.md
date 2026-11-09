@@ -70,7 +70,8 @@ browser chunk.
 **A CALL TO THE OUTSIDE WORLD IS A ROW BEFORE IT IS A REQUEST** (ADR-0006).
 Outbound: `enqueue()` into `outbox` inside the same transaction as the change.
 Inbound: a webhook is verified on its raw body, stored in `webhook_events`
-under our own idempotency key, answered at once, processed later.
+under our own idempotency key, answered at once, processed later. A call a person
+waits on (an OTP) is an attempt row committed before the request (ADR-0008).
 
 **Verify before claiming.** Run the command, read the output, then say it works.
 

@@ -126,6 +126,30 @@ month; a pre-flight list (HSN gaps, duplicates) before export; Tally XML; invoic
 6. A CA engaged now for the rate table and four rulings: accessories rates, the ₹2,625–2,950 inclusive band, RTO treatment, delivery/COD fee. *Required.*
 7. An ADR that money stays merchant-owned (Frrata is not an e-commerce operator collecting TCS), with a lawyer's opinion before G2. *Required.*
 
+## 6b. Owner answers, 2026-11-09
+1. **ADR-0008 signed** (an interactive call is an attempt row before it is a request).
+2. **Frrata counts as an e-commerce operator (ECO)** — the owner's position. What follows from it, checked 2026-11-09
+   against secondary sources (CA to confirm against the Act and notifications before anything is built):
+   - **TCS under s.52** is 0.5% of net taxable value (0.25% CGST + 0.25% SGST, or 0.5% IGST), halved from 1% by
+     Notification 15/2024 from 10 July 2024; returned monthly in **GSTR-8** by the 10th, with an annual GSTR-9B.
+   - It applies **only where the operator itself collects the consideration** [s.52(1)]. Today a shop's money goes to
+     the shop's own Razorpay account and COD remittance to the shop: Frrata collects none of it. If that holds, s.52
+     TCS — and the compulsory registrations tied to it (s.24(ix) for sellers, s.24(x) for the ECO) — would not bite;
+     if Frrata ever collects (a marketplace checkout, Route settling through Frrata), all of it does, in every state
+     with sellers. **The CA's ruling decides which; the counsel's opinion asked in call 7 is now this question.**
+   - Already consistent either way: unregistered and composition shops deliver within their own state only (built).
+   - To build only once the CA rules TCS applies: Frrata's TCS ledger per seller per month, GSTR-8 for Frrata, the
+     seller's TCS credit shown on Console › GST (their GSTR-2B), and an enrolment number for unregistered sellers.
+3. **Frrata's fee stays on the order as delivered**: a later return or credit note does not reduce it.
+
+## 6c. Turning filing on (G2): what is needed
+- **A GSP contract** (two quotes; the GSTN list of GSPs): sandbox and production credentials, their per-call price,
+  the APIs for GSTR-1 save, summary, file with EVC (and DSC for companies), and an uptime commitment.
+- **Their facts in `frata-integrations`**, dated: auth (app key, OTP session lifetime), payload version, error codes.
+- **A second `Gsp` implementation** in `src/lib/gst/gsp.ts` against their sandbox, then `GSP_PROVIDER=<name>` in
+  Vercel Production with the credentials as Sensitive variables. The fake stays e2e-only.
+- **The CA's sign-off** on one real period filed from the sandbox, and the owner's go to switch it on.
+
 ## Links
 - Phase 1–2 mockup (GST in the core): https://claude.ai/artifact/M4VfNAgqFHYmhCxFwZmepE (`docs/mockups/2026-11-09-gst-core.html`)
 - GST module mockup (the app): https://claude.ai/artifact/NsxiFFFBorTsi9sct7zWgs

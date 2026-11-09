@@ -1,6 +1,6 @@
 # ADR-0008: An interactive call is an attempt row before it is a request
 
-Status: **proposed** · 2026-11-09 · amends ADR-0006 · awaiting the owner's signature
+Status: accepted · 2026-11-09 · amends ADR-0006 · signed by the owner 2026-11-09
 
 ## Context
 Filing GSTR-1 through a GSP (GST app G2, plan `docs/plans/2026-11-09-gst-core-and-categories.md` § 3 phase 5) is a
