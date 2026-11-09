@@ -1,0 +1,180 @@
+{
+ "about": "Every file under public/themes/samples/ by its name (the part before -b/-d and the width). check:credits fails a file with no entry here, or one over its size budget.",
+ "entries": [
+  {
+   "name": "black-linen-shirt",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "black-sling",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "black-sneaker",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "brown-wallet",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "chalk-sneaker",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "cobalt-pouch",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "haldi-kurta",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "indigo-dabu",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "ink-tote",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "ivory-chikan",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "mehndi-saree",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "navy-backpack",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "olive-backpack",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "olive-sneaker",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "oxblood-loafer",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "rani-anarkali",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "rust-sling",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "sand-boot",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "scene-festive",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "scene-signal",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "scene-studio",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "sky-maxi",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "tan-loafer",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "tan-tote",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  },
+  {
+   "name": "terracotta-coord",
+   "source": "Frrata, drawn by scripts/themes/make-samples.mjs",
+   "licence": "Frrata own work",
+   "date": "2026-11-09",
+   "changed": "none"
+  }
+ ]
+}

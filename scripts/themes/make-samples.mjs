@@ -24,9 +24,29 @@ export const PIECES = [
   { name: 'black-linen-shirt', shape: 'shirt', base: '#222222', ink: '#444444', motif: 'plain', bg: ['#EDEDEA', '#DCDCD7'] },
   { name: 'sky-maxi', shape: 'dress', base: '#8DB4D9', ink: '#F4F8FC', motif: 'dots', bg: ['#EAF1F7', '#D5E3EF'] },
 ]
+// Signal's interim sets (theme Signal plan S0-1): bags and accessories, and footwear, drawn on the grey tile until the
+// owner's photos replace them. Same rule: drawn, nothing that could pass for a real product or brand.
+const G = ['#EFEFEC', '#E4E4E0']
+PIECES.push(
+  { name: 'navy-backpack', shape: 'backpack', base: '#1F2A44', ink: '#3550E0', motif: 'plain', bg: G },
+  { name: 'olive-backpack', shape: 'backpack', base: '#5E6B37', ink: '#E9E6DA', motif: 'plain', bg: G },
+  { name: 'tan-tote', shape: 'tote', base: '#8A5530', ink: '#5C3418', motif: 'plain', bg: G },
+  { name: 'ink-tote', shape: 'tote', base: '#2B2522', ink: '#9FC0E6', motif: 'plain', bg: G },
+  { name: 'rust-sling', shape: 'sling', base: '#B24A2C', ink: '#F1E3D6', motif: 'plain', bg: G },
+  { name: 'black-sling', shape: 'sling', base: '#202020', ink: '#3550E0', motif: 'plain', bg: G },
+  { name: 'brown-wallet', shape: 'wallet', base: '#5B3A22', ink: '#C79A6B', motif: 'plain', bg: G },
+  { name: 'cobalt-pouch', shape: 'pouch', base: '#22336B', ink: '#3550E0', motif: 'plain', bg: G },
+  { name: 'chalk-sneaker', shape: 'sneaker', base: '#EDEAE2', ink: '#3550E0', motif: 'plain', bg: G },
+  { name: 'black-sneaker', shape: 'sneaker', base: '#222222', ink: '#F2F2EE', motif: 'plain', bg: G },
+  { name: 'tan-loafer', shape: 'loafer', base: '#8C5A33', ink: '#5A361C', motif: 'plain', bg: G },
+  { name: 'oxblood-loafer', shape: 'loafer', base: '#5E1F24', ink: '#3A1215', motif: 'plain', bg: G },
+  { name: 'sand-boot', shape: 'boot', base: '#B48A5E', ink: '#7A5A3A', motif: 'plain', bg: G },
+  { name: 'olive-sneaker', shape: 'sneaker', base: '#6B7A3D', ink: '#F2F2EE', motif: 'plain', bg: G },
+)
 export const SCENES = [
   { name: 'scene-festive', a: '#F3D9A4', b: '#C9792B', ink: '#5A2E0E' },
   { name: 'scene-studio', a: '#E7E5E0', b: '#9A9893', ink: '#1F1F1F' },
+  { name: 'scene-signal', a: '#5B6470', b: '#1C2026', ink: '#0E1014' },
 ]
 
 const draw = String.raw`
@@ -60,6 +80,19 @@ function silhouette(ctx, shape, W, H) {
     ctx.moveTo(cx - 14 * u, top + 2 * u); ctx.quadraticCurveTo(cx + 4 * u, top - 2 * u, cx + 16 * u, top + 4 * u)
     ctx.lineTo(cx + 28 * u, top + H * 0.38); ctx.quadraticCurveTo(cx + 30 * u, top + H * 0.6, cx + 24 * u, top + H * 0.7)
     ctx.lineTo(cx - 26 * u, top + H * 0.7); ctx.quadraticCurveTo(cx - 30 * u, top + H * 0.5, cx - 20 * u, top + 24 * u); ctx.closePath()
+  } else if (shape === 'backpack') {
+    const w = 30 * u, t2 = top + 8 * u, b = top + H * 0.64; ctx.roundRect(cx - w, t2, 2 * w, b - t2, 12 * u)
+    ctx.moveTo(cx - 12 * u, t2); ctx.roundRect(cx - 12 * u, t2 - 10 * u, 24 * u, 12 * u, 6 * u)
+  } else if (shape === 'tote') {
+    const t2 = top + 18 * u, b = top + H * 0.62; ctx.moveTo(cx - 30 * u, t2); ctx.lineTo(cx + 30 * u, t2); ctx.lineTo(cx + 26 * u, b); ctx.lineTo(cx - 26 * u, b); ctx.closePath()
+  } else if (shape === 'sling') {
+    ctx.roundRect(cx - 30 * u, top + H * 0.3, 60 * u, H * 0.28, 16 * u)
+  } else if (shape === 'wallet' || shape === 'pouch') {
+    const h = shape === 'wallet' ? 0.2 : 0.26; ctx.roundRect(cx - 28 * u, top + H * 0.36, 56 * u, H * h, 4 * u)
+  } else if (shape === 'sneaker' || shape === 'loafer' || shape === 'boot') {
+    const sole = top + H * 0.6, hi = shape === 'boot' ? top + H * 0.2 : shape === 'sneaker' ? top + H * 0.38 : top + H * 0.44
+    ctx.moveTo(cx - 36 * u, sole); ctx.lineTo(cx - 34 * u, hi); ctx.quadraticCurveTo(cx - 20 * u, hi - 4 * u, cx - 10 * u, hi + (shape === 'boot' ? 0 : 6 * u))
+    ctx.quadraticCurveTo(cx + 8 * u, sole - 22 * u, cx + 30 * u, sole - 12 * u); ctx.quadraticCurveTo(cx + 40 * u, sole - 6 * u, cx + 38 * u, sole); ctx.closePath()
   } else if (shape === 'coord') {
     ctx.moveTo(cx - 9 * u, top); ctx.quadraticCurveTo(cx, top + 5 * u, cx + 9 * u, top); ctx.lineTo(cx + 22 * u, top + 5 * u); ctx.lineTo(cx + 28 * u, top + 22 * u)
     ctx.lineTo(cx + 20 * u, top + 24 * u); ctx.lineTo(cx + 19 * u, top + H * 0.3); ctx.lineTo(cx - 19 * u, top + H * 0.3); ctx.lineTo(cx - 20 * u, top + 24 * u); ctx.lineTo(cx - 28 * u, top + 22 * u); ctx.lineTo(cx - 22 * u, top + 5 * u); ctx.closePath()
@@ -69,13 +102,22 @@ function silhouette(ctx, shape, W, H) {
 function piece(p, W, H, view) {
   const c = document.createElement('canvas'); c.width = W; c.height = H; const ctx = c.getContext('2d'); const s = W / 400
   const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, view === 1 ? p.bg[1] : p.bg[0]); g.addColorStop(1, view === 1 ? p.bg[0] : p.bg[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H)
+  if (view === 2 && p.motif === 'plain' && p.bg[0] === '#EFEFEC') { ctx.fillStyle = p.base; ctx.fillRect(0, 0, W, H); ctx.fillStyle = p.ink; ctx.fillRect(0, H * .55, W, H * .04); for (let i = 0; i < 160; i++) { ctx.fillStyle = 'rgba(255,255,255,' + (0.03 + (i % 5) * .01) + ')'; ctx.fillRect((i * 97) % W, (i * 61) % H, 2 * s, 2 * s) } return c }
   if (view === 2) { ctx.fillStyle = pattern(ctx, p, s * 2.2); ctx.fillRect(0, 0, W, H); for (let i = 0; i < 7; i++) { const y = H * (0.1 + i * 0.13); const fg = ctx.createLinearGradient(0, y - 30 * s, 0, y + 30 * s); fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(.5, 'rgba(0,0,0,.14)'); fg.addColorStop(1, 'rgba(255,255,255,.06)'); ctx.fillStyle = fg; ctx.fillRect(0, y - 30 * s, W, 60 * s) } return c }
   ctx.fillStyle = 'rgba(0,0,0,.10)'; ctx.beginPath(); ctx.ellipse(W / 2, H * 0.9, W * 0.3, H * 0.025, 0, 0, 7); ctx.fill()
-  ctx.strokeStyle = shade(p.bg[1], .7); ctx.lineWidth = 3 * s; ctx.beginPath(); ctx.moveTo(W * .5, H * .06); ctx.lineTo(W * .5, H * .12); ctx.moveTo(W * .36, H * .16); ctx.quadraticCurveTo(W * .5, H * .08, W * .64, H * .16); ctx.stroke()
+  if (['kurta', 'shirt', 'anarkali', 'dress', 'saree', 'coord'].includes(p.shape)) { ctx.strokeStyle = shade(p.bg[1], .7); ctx.lineWidth = 3 * s; ctx.beginPath(); ctx.moveTo(W * .5, H * .06); ctx.lineTo(W * .5, H * .12); ctx.moveTo(W * .36, H * .16); ctx.quadraticCurveTo(W * .5, H * .08, W * .64, H * .16); ctx.stroke() }
   ctx.save(); if (view === 1) { ctx.translate(W, 0); ctx.scale(-1, 1) }
   silhouette(ctx, p.shape, W, H); ctx.fillStyle = pattern(ctx, p, s); ctx.fill()
   const sh = ctx.createLinearGradient(0, 0, W, 0); sh.addColorStop(0, 'rgba(0,0,0,.18)'); sh.addColorStop(.45, 'rgba(255,255,255,.06)'); sh.addColorStop(1, 'rgba(0,0,0,.22)'); ctx.fillStyle = sh; ctx.fill()
   if (p.motif === 'border') { ctx.save(); ctx.clip(); ctx.fillStyle = p.ink; ctx.fillRect(0, H * 0.8, W, H * 0.05); ctx.restore() }
+  const u = W / 100, cx = W / 2, top = H * 0.16
+  if (['backpack', 'tote', 'sling', 'wallet', 'pouch'].includes(p.shape)) { ctx.fillStyle = p.ink
+    if (p.shape === 'backpack') ctx.fillRect(cx - 2.5 * u, top + H * 0.3, 5 * u, H * 0.14)
+    if (p.shape === 'tote') { ctx.strokeStyle = p.ink; ctx.lineWidth = 3 * u; ctx.beginPath(); ctx.moveTo(cx - 14 * u, top + 18 * u); ctx.quadraticCurveTo(cx, top - 8 * u, cx + 14 * u, top + 18 * u); ctx.stroke() }
+    if (p.shape === 'sling') { ctx.strokeStyle = p.ink; ctx.lineWidth = 2.5 * u; ctx.beginPath(); ctx.moveTo(cx - 26 * u, top + H * 0.32); ctx.quadraticCurveTo(cx, top, cx + 26 * u, top + H * 0.32); ctx.stroke() }
+    if (p.shape === 'pouch') ctx.fillRect(cx - 28 * u, top + H * 0.36, 56 * u, 3 * u)
+    if (p.shape === 'wallet') ctx.fillRect(cx + 16 * u, top + H * 0.44, 8 * u, 4 * u) }
+  if (['sneaker', 'loafer', 'boot'].includes(p.shape)) { ctx.fillStyle = p.shape === 'sneaker' ? '#F4F4F0' : shade(p.base, .55); ctx.fillRect(cx - 37 * u, top + H * 0.6, 76 * u, 4 * u); if (p.shape === 'sneaker') { ctx.fillStyle = p.ink; ctx.fillRect(cx - 20 * u, top + H * 0.5, 26 * u, 2.5 * u) } }
   ctx.restore(); return c
 }
 function scene(sc, W, H) {
