@@ -1,5 +1,5 @@
 # Search and sharing — plan (S·0, S·1, S·2)
-Status: active · Date: 2026-11-09 · Spec: `docs/specs/2026-11-09-seo-and-sharing.md` ·
+Status: done (S·0–S·3; S·4 parked, S1·8/S2·9 held for the outbox) · Date: 2026-11-09 · Spec: `docs/specs/2026-11-09-seo-and-sharing.md` ·
 Mockup: https://claude.ai/artifact/P4wfSezqiVxzG4D7FsrnYM · Approved: owner, 2026-11-09 (mockup; share images are JPEG,
 the one exception to "WebP only" — ADR-0005 amended; order S·0 → S·1 → S·2; Google's app review started now for S·4)
 
@@ -156,6 +156,12 @@ verify command run and read, and `impact-reviewer` on its diff before the commit
   result drawn as Google does.
 - **Waits for S·4** (each needs Google connected to be true): the barcode fix ("Add or mark none" — and with it
   `products.no_barcode`), the Connected list, "Searches that found you".
+
+### S2·8 as built (2026-11-09)
+- `e2e/flows/95-speed.mjs` (Lighthouse 13.5.0 and chrome-launcher pinned): Home, a collection and a product at phone
+  settings, median of 3, perf ≥ 90 · a11y ≥ 95 · SEO ≥ 95 · CLS ≤ 0.05; a failure names what moved. It runs last, on the
+  stress shop (90-ux's long name and 60 products): it found the header re-wrapping a long name when the display font
+  arrived (0.073) — the logo is now one line. Last full run: 93/100/100 · 95/100/100 · 92/100/100, CLS ≤ 0.032.
 
 ### S2·5 decision (2026-11-09)
 - `<html lang>` stays `en-IN`; a Hindi shop's own wrapper already carries `lang="hi"` (`src/components/storefront/shell.tsx`),
