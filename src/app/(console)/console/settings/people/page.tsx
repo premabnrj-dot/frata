@@ -21,7 +21,7 @@ export default async function PeoplePage() {
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or an admin can see people' : auth.message} />
   const [people, invites] = await Promise.all([
     shopPeople(auth.membership.tenantId).catch((err) => { console.error('[people]', err instanceof Error ? err.name : err); return null }),
-    accountantInvites(auth.membership.tenantId).catch(() => []),
+    accountantInvites(auth.membership.tenantId, auth.userId).catch(() => []),
   ])
   if (!people) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const canRemove = auth.membership.role === 'owner' && !auth.membership.supportSessionId

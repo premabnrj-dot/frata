@@ -44,10 +44,12 @@ begin
 end $$;
 --> statement-breakpoint
 -- Open accountant invites of this shop (People shows them): email and expiry only.
-create or replace function app_accountant_invites() returns table (id uuid, email text, expires_at timestamptz)
+-- Only an owner or admin of the current shop sees the invites (tenancy audit 2026-11-09): anyone else gets none.
+create or replace function app_accountant_invites(p_uid uuid) returns table (id uuid, email text, expires_at timestamptz)
   language sql stable security definer set search_path = '' as $$
   select i.id, i.email, i.expires_at from public.invites i
    where i.tenant_id = public.app_current_tenant() and i.role = 'accountant' and i.accepted_at is null and i.revoked_at is null and i.expires_at > now()
+     and exists (select 1 from public.members m where m.tenant_id = i.tenant_id and m.user_id = p_uid and m.role in ('owner', 'admin'))
    order by i.created_at desc limit 20
 $$;
 --> statement-breakpoint
@@ -59,6 +61,7 @@ begin
     raise exception 'not_manager' using errcode = 'P0001';
   end if;
   update public.invites set revoked_at = now() where id = p_invite and tenant_id = p_tenant and role = 'accountant' and accepted_at is null and revoked_at is null;
+  if not found then raise exception 'no_invite' using errcode = 'P0001'; end if;
 end $$;
 --> statement-breakpoint
 -- People: the accountant sorts after staff (array_position is null for an unlisted role).
@@ -73,7 +76,7 @@ create or replace function app_shop_people() returns table (user_id uuid, email 
    order by array_position(array['owner','admin','partner','staff','accountant'], m.role), m.created_at
 $$;
 --> statement-breakpoint
-revoke all on function app_invite_accountant(uuid, uuid, text), app_remove_accountant(uuid, uuid, uuid), app_accountant_invites(), app_revoke_accountant_invite(uuid, uuid, uuid)
+revoke all on function app_invite_accountant(uuid, uuid, text), app_remove_accountant(uuid, uuid, uuid), app_accountant_invites(uuid), app_revoke_accountant_invite(uuid, uuid, uuid)
   from public, anon, authenticated, service_role, frata_admin;
 --> statement-breakpoint
-grant execute on function app_invite_accountant(uuid, uuid, text), app_remove_accountant(uuid, uuid, uuid), app_accountant_invites(), app_revoke_accountant_invite(uuid, uuid, uuid) to frata_app;
+grant execute on function app_invite_accountant(uuid, uuid, text), app_remove_accountant(uuid, uuid, uuid), app_accountant_invites(uuid), app_revoke_accountant_invite(uuid, uuid, uuid) to frata_app;

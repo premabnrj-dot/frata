@@ -60,7 +60,9 @@ export async function issueCredit(tx: Tx, tenantId: string, actor: Actor, orderI
   else if (req.agreed) { const r = discountCredit(invoiced, taken, req.amount, inv.pricesIncludeGst); if (!r.ok) return r; lines = r.lines; kind = 'discount'; reason = 'discount' }
   else {
     if (!Number.isInteger(req.amount) || req.amount <= 0) return { ok: false, error: 'An amount in rupees.' }
-    if (req.amount > inv.totals.total) return { ok: false, error: 'More than the invoice.' }
+    // Never more than the invoice less everything credited so far, of any kind (unit-economics review 2026-11-09).
+    const room = inv.totals.total - d.credits.reduce((a, x) => a + x.total, 0)
+    if (req.amount > room) return { ok: false, error: room > 0 ? `At most ₹${(room / 100).toLocaleString('en-IN')} is left on this invoice.` : 'Everything on this invoice is credited already.' }
     kind = 'goodwill'; reason = 'goodwill'
   }
   // A bill of supply carries no GST: its lines credit the value only.

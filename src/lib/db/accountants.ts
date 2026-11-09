@@ -33,9 +33,9 @@ export const revokeAccountantInvite = (tx: Tx, tenantId: string, uid: string, in
   savepointed(tx, 'revoke_accountant', sql`select app_revoke_accountant_invite(${tenantId}::uuid, ${uid}::uuid, ${invite}::uuid)`, 'revokeAccountantInvite')
 
 /** This shop's open accountant invites (email, expiry). */
-export async function accountantInvites(tenantId: string): Promise<{ id: string; email: string; expiresAt: Date }[]> {
+export async function accountantInvites(tenantId: string, uid: string): Promise<{ id: string; email: string; expiresAt: Date }[]> {
   return withTenant(tenantId, async (tx) => {
-    const rows = await tx.execute<{ id: string; email: string; expires_at: string }>(sql`select * from app_accountant_invites()`)
+    const rows = await tx.execute<{ id: string; email: string; expires_at: string }>(sql`select * from app_accountant_invites(${uid}::uuid)`)
     return rows.map((r) => ({ id: r.id, email: r.email, expiresAt: new Date(r.expires_at) }))
   })
 }

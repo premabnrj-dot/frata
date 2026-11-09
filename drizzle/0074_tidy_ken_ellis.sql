@@ -61,14 +61,14 @@ grant update (outcome, error, ended_at) on gst_attempts to frata_app;
 create policy tenant_rows on gst_connections for all to frata_app using (tenant_id = app_current_tenant()) with check (tenant_id = app_current_tenant());
 create policy tenant_rows on gst_filings for all to frata_app using (tenant_id = app_current_tenant()) with check (tenant_id = app_current_tenant());
 create policy tenant_rows on gst_attempts for all to frata_app using (tenant_id = app_current_tenant()) with check (tenant_id = app_current_tenant());
-create or replace function gst_filing_final() returns trigger language plpgsql as $$
+create or replace function gst_filing_final() returns trigger language plpgsql set search_path = '' as $$
 begin
   if tg_op = 'DELETE' or old.filed_at is not null then raise exception 'gst_filing_final' using errcode = 'check_violation'; end if;
   if new.tenant_id <> old.tenant_id or new.gstin <> old.gstin or new.period <> old.period then raise exception 'gst_filing_final' using errcode = 'check_violation'; end if;
   return new;
 end $$;
 create trigger gst_filings_final before update or delete on gst_filings for each row execute function gst_filing_final();
-create or replace function gst_attempt_once() returns trigger language plpgsql as $$
+create or replace function gst_attempt_once() returns trigger language plpgsql set search_path = '' as $$
 begin
   if old.outcome <> 'pending' or new.outcome = 'pending' then raise exception 'gst_attempt_once' using errcode = 'check_violation'; end if;
   return new;

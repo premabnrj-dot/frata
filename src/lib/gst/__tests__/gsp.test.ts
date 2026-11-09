@@ -9,11 +9,12 @@ async function load(env: Record<string, string>) {
 afterEach(() => { vi.unstubAllEnvs() })
 
 describe('the GSP switch', () => {
-  it('is off when unset, on for the fake in a preview or locally, off for the fake in Production', async () => {
+  it('is off when unset; the fake only off Vercel (never a preview: it shares the production database)', async () => {
     expect((await load({ GSP_PROVIDER: '', VERCEL_ENV: '' })).gsp()).toBeNull()
-    expect((await load({ GSP_PROVIDER: 'fake', VERCEL_ENV: 'preview' })).gsp()?.name).toBe('Test GSP')
+    expect((await load({ GSP_PROVIDER: 'fake', VERCEL_ENV: '' })).gsp()?.name).toBe('Test GSP')
+    expect((await load({ GSP_PROVIDER: 'fake', VERCEL_ENV: 'preview' })).gsp()).toBeNull()
     expect((await load({ GSP_PROVIDER: 'fake', VERCEL_ENV: 'production' })).gsp()).toBeNull()
-    expect((await load({ GSP_PROVIDER: 'cleartax', VERCEL_ENV: 'preview' })).gsp()).toBeNull()
+    expect((await load({ GSP_PROVIDER: 'cleartax', VERCEL_ENV: '' })).gsp()).toBeNull()
   })
   it('the fake: OTP, push, the summary read back, file once with the EVC OTP', async () => {
     const g = (await load({ GSP_PROVIDER: 'fake', VERCEL_ENV: '' })).gsp()!

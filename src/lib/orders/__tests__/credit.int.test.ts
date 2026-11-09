@@ -37,7 +37,7 @@ describe.skipIf(!host)('issueCredit on a real database', () => {
     const r = await withTenant(tenantId, (tx) => issueCredit(tx, tenantId, actor, ids.a, now))
     expect(r).toMatchObject({ ok: true, number: expect.stringMatching(/\/26-27\/C0001$/) })
     const again = await withTenant(tenantId, (tx) => issueCredit(tx, tenantId, actor, ids.a, now))
-    expect(again).toMatchObject({ ok: false, error: expect.stringMatching(/^Already credited/) })
+    expect(again).toMatchObject({ ok: false, error: expect.stringMatching(/^(Already credited|Everything on this invoice is credited already)/) })
     expect(await withTenant(tenantId, (tx) => issueCredit(tx, tenantId, actor, ids.b, now))).toMatchObject({ ok: false, error: expect.stringMatching(/No invoice was issued/) })
     const [cn] = await withTenant(tenantId, (tx) => tx.select().from(creditNotes).where(eq(creditNotes.orderId, ids.a)))
     expect([cn!.againstInvoice, cn!.reason, cn!.taxable, cn!.cgst + cn!.sgst, cn!.total]).toEqual(['CS/26-27/00001', 'cancelled', 237143, 11857, 249000])

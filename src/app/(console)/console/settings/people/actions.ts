@@ -1,5 +1,7 @@
 'use server'
 
+import { errName } from '@/lib/log'
+
 import { revalidatePath } from 'next/cache'
 import { asMember } from '@/lib/auth/as-member'
 import { removePartner } from '@/lib/db/partners'
@@ -25,7 +27,7 @@ export async function removeShopPartner(): Promise<{ ok: true } | { ok: false; e
     revalidatePath('/console/settings/people')
     return { ok: true }
   } catch (err) {
-    console.error('[removeShopPartner]', err instanceof Error ? err.name : err)
+    console.error('[removeShopPartner]', errName(err))
     return { ok: false, error: 'We could not remove the partner. Nothing was changed.' }
   }
 }
@@ -50,7 +52,7 @@ export async function inviteShopAccountant(email: string): Promise<{ ok: true } 
     revalidatePath('/console/settings/people')
     return { ok: true }
   } catch (err) {
-    console.error('[inviteShopAccountant]', err instanceof Error ? err.name : err)
+    console.error('[inviteShopAccountant]', errName(err))
     return { ok: false, error: 'We could not send the invite. Nothing was changed.' }
   }
 }
@@ -67,7 +69,7 @@ export async function removeShopAccountant(member: string): Promise<{ ok: true }
     revalidatePath('/console/settings/people')
     return { ok: true }
   } catch (err) {
-    console.error('[removeShopAccountant]', err instanceof Error ? err.name : err)
+    console.error('[removeShopAccountant]', errName(err))
     return { ok: false, error: 'We could not remove them. Nothing was changed.' }
   }
 }
@@ -84,7 +86,7 @@ export async function revokeShopAccountantInvite(invite: string): Promise<{ ok: 
     revalidatePath('/console/settings/people')
     return { ok: true }
   } catch (err) {
-    console.error('[revokeShopAccountantInvite]', err instanceof Error ? err.name : err)
+    console.error('[revokeShopAccountantInvite]', errName(err))
     return { ok: false, error: 'We could not cancel the invite.' }
   }
 }

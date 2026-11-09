@@ -1720,4 +1720,32 @@ do $$ begin
   then raise exception 'FAIL: an API role reads GST filing rows'; end if;
 end $$;
 
-\echo 'tenancy proof — all 52 checks passed'
+-- 52. The Accountant (0072): only an owner or admin of THIS shop invites, lists or revokes an accountant; the role is
+-- fixed; remove takes accountants only; no API role or staff runs the definers.
+insert into members (tenant_id, user_id, role) values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000052', 'staff');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare i uuid; begin
+  begin perform app_invite_accountant('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000052', 'ca@example.in'); raise exception 'FAIL: staff invited an accountant';
+  exception when others then if sqlerrm <> 'not_manager' then raise; end if; end;
+  begin perform app_invite_accountant('22222222-2222-2222-2222-222222222222', '99999999-9999-9999-9999-999999999999', 'ca@example.in'); raise exception 'FAIL: invited into another shop';
+  exception when others then if sqlerrm <> 'wrong_shop' then raise; end if; end;
+  i := app_invite_accountant('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', 'ca@example.in');
+  if (select count(*) from app_accountant_invites('99999999-9999-9999-9999-999999999999')) <> 1 then raise exception 'FAIL: the owner does not see the invite'; end if;
+  if exists (select 1 from app_accountant_invites('aaaaaaaa-0000-0000-0000-000000000052')) then raise exception 'FAIL: staff sees accountant invites'; end if;
+  begin perform app_remove_accountant('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', 'aaaaaaaa-0000-0000-0000-000000000052'); raise exception 'FAIL: remove took a staff member';
+  exception when others then if sqlerrm <> 'no_accountant' then raise; end if; end;
+  begin perform app_revoke_accountant_invite('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-0000-0000-0000-000000000052', i); raise exception 'FAIL: staff revoked an invite';
+  exception when others then if sqlerrm <> 'not_manager' then raise; end if; end;
+  perform app_revoke_accountant_invite('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', i);
+  begin perform app_revoke_accountant_invite('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', i); raise exception 'FAIL: an invite revoked twice';
+  exception when others then if sqlerrm <> 'no_invite' then raise; end if; end;
+end $$;
+rollback;
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r,
+             unnest(array['app_invite_accountant(uuid,uuid,text)', 'app_remove_accountant(uuid,uuid,uuid)', 'app_accountant_invites(uuid)', 'app_revoke_accountant_invite(uuid,uuid,uuid)']) f
+             where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: another role runs the accountant definers'; end if;
+end $$;
+
+\echo 'tenancy proof — all 53 checks passed'

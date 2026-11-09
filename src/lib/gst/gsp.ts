@@ -1,14 +1,14 @@
 import 'server-only'
 import { randomBytes } from 'node:crypto'
-import { GSP_PROVIDER, VERCEL_ENV } from '@/lib/env'
+import { E2E_FIXTURES, GSP_PROVIDER, VERCEL_ENV } from '@/lib/env'
 import { liabilityOfJson, type Liability } from '@/domains/tax/gsp'
 
 // =============================================================================
 // FILE: src/lib/gst/gsp.ts — THE GSP CONNECTOR (GST app G2). One interface for the calls a filing makes through a GST
 // Suvidha Provider: ask the portal for an OTP for the shop's username, verify it for a session, push (save) a GSTR-1,
 // read its summary back, and file it with an EVC OTP. Which GSP: GSP_PROVIDER. Only "fake" exists: an in-process
-// stand-in whose OTP is 575757, that reads the pushed JSON back as the portal's summary, and that is REFUSED in
-// Production (gsp() returns null there whatever the variable says). A real GSP is a second implementation, after the
+// stand-in whose OTP is 575757, that reads the pushed JSON back as the portal's summary, and that is REFUSED on
+// Vercel, Preview included (gsp() returns null there whatever the variable says). A real GSP is a second implementation, after the
 // contract and counsel's ECO opinion; its facts go in frata-integrations, dated.
 // ⚠️ Never log a session, an OTP or a payload: they are the shop's GST login and its buyers' details.
 // =============================================================================
@@ -67,9 +67,10 @@ const fake: Gsp = {
   },
 }
 
-/** The GSP this deployment files through, or null: filing is off (the switch). Never the fake in Production. */
+/** The GSP this deployment files through, or null: filing is off (the switch). The fake only off Vercel, in the e2e
+ *  stack or a test (a preview shares the production database: a fake filing there would be final; security M1). */
 export function gsp(): Gsp | null {
-  if (GSP_PROVIDER === 'fake' && VERCEL_ENV !== 'production') return fake
+  if (GSP_PROVIDER === 'fake' && VERCEL_ENV === '' && (E2E_FIXTURES || process.env.NODE_ENV === 'test')) return fake
   return null
 }
 

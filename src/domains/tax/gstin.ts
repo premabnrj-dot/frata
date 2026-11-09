@@ -39,7 +39,8 @@ export function b2bProblem(gstin: string, name: string, deliveryState: string): 
   if (!gstinValid(g)) return { field: 'gstin', error: 'A GSTIN is 15 characters, like 29ABCDE1234F1Z5, and its last character must match.' }
   const reg = gstinStateName(g)
   if (reg && deliveryState && reg !== deliveryState) return { field: 'gstin', error: `This GSTIN is registered in ${reg}. Use a ${reg} address, or turn this off.` }
-  const n = name.trim()
+  const n = name.replace(/\s+/g, ' ').trim()
+  if (/[\u0000-\u001f\u007f]/.test(name.replace(/[\t\r\n]/g, ' '))) return { field: 'name', error: 'Letters, digits and punctuation only.' }
   if (n.length < 2 || n.length > 120) return { field: 'name', error: 'The business name as registered.' }
   return null
 }

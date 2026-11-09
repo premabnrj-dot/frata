@@ -88,7 +88,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
       if (!shop.b2b) return { kind: 'refused', status: 422, error: 'This shop can’t issue GST invoices to businesses right now. Turn off “Claim GST input credit” to order.' }
       const why = b2bProblem(input.b2b.gstin, input.b2b.name, input.address.state)
       if (why) return { kind: 'refused', status: 422, error: why.error }
-      buyer = { gstin: cleanGstin(input.b2b.gstin), name: input.b2b.name.trim() }
+      buyer = { gstin: cleanGstin(input.b2b.gstin), name: input.b2b.name.replace(/\s+/g, ' ').trim() }
     }
 
     const rows = await variantRows(tx, tenantId, input.bag.map((b) => b.variantId), now, { lock: true })

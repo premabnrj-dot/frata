@@ -86,7 +86,7 @@ export default async function GstPage({ searchParams }: { searchParams: Promise<
             <li key={f.kind} className="flex flex-wrap items-center gap-3 px-4 py-3">
               <Badge tone={f.kind === 'gap' ? 'neutral' : 'warn'}>{f.count}</Badge>
               <span className="min-w-0 flex-1"><b className="block text-sm">{FIX_WORDS[f.kind].title}</b><span className="font-mono text-xs text-muted-foreground">{f.examples.join(', ')}{f.count > f.examples.length ? '…' : ''}</span></span>
-              {auth.membership.role !== 'accountant' || f.kind === 'no_hsn' || f.kind === 'hsn_digits' ? <Link href={FIX_WORDS[f.kind].href} className={button({ variant: 'secondary' })}>{FIX_WORDS[f.kind].action}</Link> : null}
+              {auth.membership.role !== 'accountant' ? <Link href={FIX_WORDS[f.kind].href} className={button({ variant: 'secondary' })}>{FIX_WORDS[f.kind].action}</Link> : null}
             </li>
           ))}
         </ul></Section>

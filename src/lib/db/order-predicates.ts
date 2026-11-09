@@ -178,6 +178,15 @@ export function feeBucketSql(a: string, feeChanges: readonly Date[]): SQL<number
 }
 
 /**
+ * What credit notes after delivery gave back (returned items, a discount agreed before the sale, goodwill), taxable
+ * value: it comes off what the order earned, in ₹ kept everywhere (keptSql, Analytics' windowSql). A reversal is the
+ * outcome itself. Returned goods' cost is NOT taken off COGS: nothing restocks on a credit, and a returned piece is
+ * often not sellable (hypothesis H-resale in frata-unit-economics; unit-economics review 2026-11-09).
+ */
+export const creditedSql = (a: string) =>
+  sql`(select coalesce(sum(cn.taxable), 0) from credit_notes cn where cn.tenant_id = ${c(a, 'tenant_id')} and cn.order_id = ${c(a, 'id')} and cn.kind in ('return', 'discount', 'goodwill'))`
+
+/**
  * ₹ KEPT, GROUPED (Analytics A·1; speed review: never one row per order). The expressions `keptOf`
  * (src/domains/orders/kept.ts) groups by, and what it sums: an order with an outcome (delivered, came back, lost) by
  * its outcome, the open shipment's provider, COD or not, which costs it knows, and the plan-fee bucket at its rate
@@ -191,17 +200,13 @@ export function keptSql(now: Date, a: string, feeChanges: readonly Date[], provi
   const provider = providerCol ?? openShipmentProviderSql(a)
   const cod = sql<boolean>`(${currentMethodSql(a)} = 'cod')`
   const bucket = feeBucketSql(a, feeChanges)
-  // GST phase 2: what credit notes after delivery gave back (returned items, a discount, goodwill) comes off what the
-  // order earned, and returned goods' cost off its COGS (they are back on the shelf). A reversal is the outcome itself.
-  const credited = sql`(select coalesce(sum(cn.taxable), 0) from credit_notes cn where cn.tenant_id = ${c(a, 'tenant_id')} and cn.order_id = ${c(a, 'id')} and cn.kind in ('return', 'discount', 'goodwill'))`
-  const returnedCost = sql`(select coalesce(sum(cl.qty * ol.unit_cost), 0) from credit_note_lines cl join credit_notes cn on cn.tenant_id = cl.tenant_id and cn.id = cl.credit_note_id
-    join order_lines ol on ol.tenant_id = cl.tenant_id and ol.id = cl.order_line_id where cn.tenant_id = ${c(a, 'tenant_id')} and cn.order_id = ${c(a, 'id')} and cn.kind = 'return')`
+  const credited = creditedSql(a)
   return {
     /** Only orders with an outcome. */
     where: sql`${st} in ('delivered', 'rto', 'rto_received', 'lost')`,
     /** The group's columns: outcome, provider, cod, bucket, then the sums. */
     columns: sql`${outcome} outcome, ${provider} provider, ${cod} cod, ${bucket} bucket, count(*)::int n,
-      coalesce(sum(${c(a, 'net_revenue')} - ${credited}), 0)::bigint net, sum(${c(a, 'cogs')} - ${returnedCost})::bigint cogs, sum(${c(a, 'forward_shipping')})::bigint fwd,
+      coalesce(sum(${c(a, 'net_revenue')} - ${credited}), 0)::bigint net, sum(${c(a, 'cogs')})::bigint cogs, sum(${c(a, 'forward_shipping')})::bigint fwd,
       sum(${c(a, 'rto_shipping')})::bigint rto, sum(${c(a, 'courier_cod_fee')})::bigint codfee, coalesce(sum(${c(a, 'gateway_fee')}), 0)::bigint gw,
       coalesce(sum(${c(a, 'merchandise_net')}), 0)::bigint base`,
     /** Group by these, after `lead` key columns of the caller's own placed first: the four group columns by position,

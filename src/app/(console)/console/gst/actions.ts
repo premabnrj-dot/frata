@@ -63,6 +63,7 @@ async function call<T>(f: () => Promise<({ ok: true } & T) | { ok: false; error:
 /** The shop's live session, opened; null when none or expired. */
 async function sessionOf(tx: Tx, tenantId: string, gstin: string, now: Date) {
   const [c] = await tx.select().from(gstConnections).where(and(eq(gstConnections.tenantId, tenantId), eq(gstConnections.gstin, gstin)))
+  if (c?.tokenEnc && (!c.expiresAt || c.expiresAt <= now)) await tx.update(gstConnections).set({ tokenEnc: null, expiresAt: null }).where(eq(gstConnections.id, c.id))
   if (!c?.tokenEnc || !c.expiresAt || c.expiresAt <= now) return null
   const s = open(c.tokenEnc, tenantId, FIELD)
   return s ? { session: s, username: c.username } : null
@@ -95,6 +96,7 @@ export async function gstVerify(txnIn: unknown, otpIn: unknown): Promise<Out> {
   if (!g) return OFF
   if (!OTP_SHAPE.test(otp)) return { ok: false, error: 'The OTP is six digits.' }
   const b = await begin('verify', null, async (_tx, tenantId) => {
+    if (!(await withinLimit(LIMITS.gstOtpTry, tenantId, new Date(), true))) return { ok: false, error: 'Too many OTPs tried. Wait 15 minutes.' }
     const t = open(txnSealed, tenantId, 'gsp_txn')?.split('|')
     return t?.length === 3 ? { ok: true, txn: t[0], username: t[1], gstin: t[2] } : { ok: false, error: words('otp_expired') }
   })
@@ -196,7 +198,10 @@ export async function gstFile(period: unknown, otpIn: unknown): Promise<Out<{ ar
   const g = gsp()
   if (!g) return OFF
   if (!OTP_SHAPE.test(otp)) return { ok: false, error: 'The OTP is six digits.' }
-  const b = await begin('file', key, async (tx, tenantId) => gate(await readyFor(tx, tenantId, key, new Date())) as Out<Record<string, unknown>>)
+  const b = await begin('file', key, async (tx, tenantId) => {
+    if (!(await withinLimit(LIMITS.gstOtpTry, tenantId, new Date(), true))) return { ok: false, error: 'Too many OTPs tried. Wait 15 minutes.' }
+    return gate(await readyFor(tx, tenantId, key, new Date())) as Out<Record<string, unknown>>
+  })
   const f = failed(b)
   if (f || !b.ok || !b.value.ok) return f!
   const { attempt, tenantId, prep } = b.value
