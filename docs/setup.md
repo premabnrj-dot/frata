@@ -208,15 +208,36 @@ test with up to 100 accounts) and **after "Connect Google" is built** (the scope
     them) and the video link → Submit. Reply to Google's emails quickly; sensitive scopes take up to ~10 business days.
     Do not publish before this: an unverified production app allows only 100 users for its whole life.
 
-### Own domains (shop addresses D·2) — when you turn them on
+### Own domains (shop addresses D·2) — turning them on (owner, ~5 minutes)
 
-Vercel → frata → Settings → Environment Variables, each **Production only** (never Preview: a preview build must not
-add or remove production domains), type **Sensitive** for the token:
-- `VERCEL_API_TOKEN` — a token from Vercel → Account Settings → Tokens, scoped to the team.
-- `VERCEL_PROJECT_ID` — Project → Settings → General → Project ID.
-- `VERCEL_TEAM_ID` — Team → Settings → General → Team ID.
-- `DOMAIN_CAPACITY` — optional: 50 on Hobby (the default), raise it on Pro.
-Until they are set, Settings › Shop address shows no Connect button and the domain check does nothing.
+State (2026-11-09): built and live in production, switched off until these three variables exist. Nothing calls
+Vercel's API until then.
+
+**1. Create the token (Vercel → your avatar → Account Settings → Tokens, https://vercel.com/account/tokens):**
+- Create Token → Name `frrata-domains` → Scope **premabnrj-dot's projects** (the team, not your personal account) →
+  Expiration: 1 year (put the renewal date in your calendar; an expired token turns connecting off, nothing breaks).
+- Copy the token once (Vercel shows it only now). Never paste it in chat, a commit or a document.
+
+**2. Add three variables (Vercel → `frata` → Settings → Environment Variables → Add New):**
+
+| Key | Value | Environments | Sensitive |
+|---|---|---|---|
+| `VERCEL_API_TOKEN` | the token from step 1 | **Production only** (untick Preview and Development) | **Yes** |
+| `VERCEL_PROJECT_ID` | `prj_7FMo28q5WaWJTR8knTAo6lpe443v` | Production only | no (not a secret) |
+| `VERCEL_TEAM_ID` | `team_bqC0of2bJVsfNi2b8fKOPaEx` | Production only | no (not a secret) |
+
+The two IDs are this project's and team's (read from Vercel 2026-11-09; also under Project → Settings → General →
+Project ID, and Team → Settings → General → Team ID). Optional: `DOMAIN_CAPACITY` — leave unset on Hobby (50); set
+it to `100000` after moving to Pro. Never Preview: a preview build must not add or remove production domains.
+
+**3. Redeploy:** Deployments → the latest Production deployment → ⋯ → Redeploy (or any push to `main`).
+
+**4. Check:** Settings › Shop address in the console shows **Connect a domain**. If it doesn't, the token or project id
+is missing or not in Production.
+
+On Vercel Pro later: the background check's schedule in `vercel.json` moves to every 10 minutes (one line), and the
+frrata name starts redirecting to a main domain (D2·9 follow-up).
+
 ### Video for shops: Frrata's Mux (V1, 2026-11-09)
 
 State (2026-11-09): steps 1–3 done by the owner (four variables, Production only, Sensitive); step 4's redeploy is
