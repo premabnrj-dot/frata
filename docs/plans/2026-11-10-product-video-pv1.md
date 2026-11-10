@@ -1,5 +1,5 @@
 # Plan: PV·1 — one video per product (a reel or a landscape film)
-Status: draft (reviews running) · Date: 2026-11-10 · Spec: docs/specs/2026-11-09-product-video.md (approved: owner,
+Status: building (console on main; shop next) · Date: 2026-11-10 · Spec: docs/specs/2026-11-09-product-video.md (approved: owner,
 2026-11-10, "execute") · Mockup: https://claude.ai/artifact/Gs8ym9wnZvLxL2HgV71hbk · Builds on V1
 (docs/plans/2026-11-09-video-v1.md) · Facts: frata-integrations § Mux
 
@@ -338,3 +338,21 @@ The owner said "we're not letting people download". What Mux allows:
   - a signed poster with a long token (a still frame, cheap).
 - The proposal goes to the owner with PV1-4, before the shop serves any product video. Videos uploaded before then
   get a signed playback id added and their public id deleted (Mux: add signed first, then delete public).
+
+## Impact and security reviews of the console chunk (2026-11-10)
+- Fixed:
+  - refusals come before the insert (MED-1);
+  - set skips unchanged values;
+  - module off cancels queued 720p prep;
+  - separate limit keys per use;
+  - the card says "Not on your shop yet" until PV1-4 (`ON_SHOP`);
+  - a failed read never offers Add;
+  - the nearest frame shows as the cover.
+- With PV1-4:
+  - an int test over `queries/videos.ts` (caps, release, use filters) and a unit test of the processor's `one()`;
+  - `releaseProductVideos` from the outbox cron, not only at a start;
+  - what archiving a product does to its video;
+  - split `storefront.ts` (388 of 400 lines) before the product entry gains the video;
+  - dead exports (`VIDEO_USES`, `NOT_READY_AFTER_MS`, `MAX_BYTES`, `UPLOAD_TIMEOUT_S`);
+  - `minShortSide` in `USE_LIMITS`;
+  - one `consoleOrigin`.

@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.34.0
+  version: 2.35.0
   verified: 2026-11-09
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -268,6 +268,13 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   check:tenant 6d) with a scope: `'reviews'` (shop-wide, tag `shop:<t>:reviews`) or `'reviews:product'` (first
   argument the product id, tag `shop:<t>:reviews:<product>`). `refreshReviews(tenant, product, shopWide)` purges:
   a shopper's published review its product only; an owner's action both.
+- **One product's cached entry** (`shopProductRow`) uses `shopCached` scope `'catalogue:product'`: tags
+  `shop:<t>:catalogue` and `shop:<t>:product:<handle>`. `refreshProduct(tenant, handle)` purges that product only
+  (product video, PV·1); a catalogue change still purges them all.
+- **Videos** (`videos`, V1) carry `use` (`loop` | `product`), set at insert and never updated (drizzle/0090). Every
+  read filters by use: the Look never reads, cancels or releases a product's video. A product's link is
+  `product_videos` (one per product, tenant in every key). `mux.rendition.create` (outbox) adds its 720p after the
+  checks; the Product video module's `outboxKinds` cancels it when the module is turned off.
 
 ## Themes (T0–T3 built 2026-11-08; spec docs/specs/2026-11-08-themes.md, plan docs/plans/2026-11-08-themes.md)
 

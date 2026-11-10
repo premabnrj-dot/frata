@@ -672,6 +672,10 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   $0.005/GB CDN, Asia standard $0.03/GB, $1 minimum [V-undated].
 - **`max_resolution_tier` takes only `1080p` | `1440p` | `2160p`** (default 1080p) [V, api-reference create-direct-upload,
   2026-11-09]: a `720p` tier is a 400 on every upload (it reached production that day). 720p is a static rendition size.
+- **As built (PV·1, 2026-11-10)**: a product video uploads with no static rendition (basic, timeout 3600) and gets
+  its 720p from `POST /video/v1/assets/{id}/static-renditions {resolution: '720p'}` (outbox `mux.rendition.create`) only
+  after 6–60 s and a short side ≥ 720 pass; rendition webhooks route by `asset_id`. Unverified on a real Mux account
+  until the owner's first product upload.
 - **As built (V1, 2026-11-09)**: `src/lib/video/mux.ts` — upload {cors_origin, timeout 900, new_asset_settings {basic,
   public, static_renditions [highest], no tier, passthrough = our videos row id}}; the shop plays highest.mp4 (≤ 1080p).
   **`highest` can't be mixed with sized renditions** (720p, 480p…) [V, guides/enable-static-mp4-renditions, 2026-11-09]: a

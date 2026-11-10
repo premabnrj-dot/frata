@@ -1,5 +1,5 @@
 # Product video: a reel or a landscape film on each product
-Status: draft · Date: 2026-11-09 · Mockup: https://claude.ai/artifact/Gs8ym9wnZvLxL2HgV71hbk (`docs/mockups/2026-11-09-product-video.html`) · Approved: waiting for the owner
+Status: draft · Date: 2026-11-09 · Mockup: https://claude.ai/artifact/Gs8ym9wnZvLxL2HgV71hbk (`docs/mockups/2026-11-09-product-video.html`) · Approved: owner, 2026-11-10 ("execute") · Status: building (PV·1)
 
 ## Goal
 Ranked problems 2 (size and fit returns) and 5 (a premium-looking storefront); also 1 (COD/RTO), since a parcel refused

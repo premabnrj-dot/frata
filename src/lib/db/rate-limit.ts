@@ -74,6 +74,9 @@ export const LIMITS = {
   // The per-shop day and month caps count the shop's own videos rows (src/lib/queries/videos.ts).
   videoStartMember: { action: 'video_start:member', max: 10, windowSeconds: 600 },
   videoStartAll: { action: 'video_start:all', max: 200, windowSeconds: 3600 },
+  // Product videos (PV·1): their own keys, so a shop's product uploads never use up the Look's (impact review 2026-11-10).
+  productVideoStartMember: { action: 'product_video_start:member', max: 10, windowSeconds: 600 },
+  productVideoStartAll: { action: 'product_video_start:all', max: 200, windowSeconds: 3600 },
   // EkCode (P1; security review): starting a sign-in from a shop (per network); every ekcode.in API call (per network);
   // a proof-of-work nonce is used once. All fail closed: a code costs Frrata a message.
   ekStartIp: { action: 'ek_start:ip', max: 30, windowSeconds: 600 },

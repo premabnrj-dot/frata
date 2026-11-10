@@ -28,7 +28,7 @@ export async function processMux(tenantId: string): Promise<number> {
     .where(and(eq(webhookEvents.tenantId, tenantId), eq(webhookEvents.provider, 'mux'), isNull(webhookEvents.processedAt)))
     .orderBy(webhookEvents.receivedAt).limit(50)) as Pending[]
   let n = 0, playable = false, queued = false
-  const products = new Set<string>()
+  const handles = new Set<string>()
   // One look at Mux per video, however many events it sent (about five per asset).
   const seen = new Map<string, Awaited<ReturnType<typeof one>>>()
   for (const e of events) {
@@ -37,7 +37,7 @@ export async function processMux(tenantId: string): Promise<number> {
       if (typeof videoId === 'string' && !seen.has(videoId)) seen.set(videoId, await one(tenantId, videoId, e.payload))
       const r = typeof videoId === 'string' ? seen.get(videoId)! : { playable: false, queued: false, product: false, handle: null }
       playable ||= r.playable && !r.product; queued ||= r.queued
-      if (r.playable && r.product && r.handle) products.add(r.handle)
+      if (r.playable && r.product && r.handle) handles.add(r.handle)
       await done(tenantId, e.id, e.payload.type ?? 'unknown', null)
       n++
     } catch (err) {
@@ -48,7 +48,7 @@ export async function processMux(tenantId: string): Promise<number> {
   if (queued) drainSoon()
   if (playable) refreshShop(tenantId, 'videos')
   // PV·1: a product's video lives in that product's own entry (its own tag, never the catalogue's: speed review).
-  for (const h of products) refreshProduct(tenantId, h)
+  for (const h of handles) refreshProduct(tenantId, h)
   return n
 }
 

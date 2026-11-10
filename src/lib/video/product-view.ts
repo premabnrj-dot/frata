@@ -9,6 +9,9 @@ import type { Video } from '@/lib/queries/videos'
 // shop's own builder, so signed playback changes one place (owner 2026-11-10: "we're not letting people download").
 // =============================================================================
 
+/** The shop shows product video (PV1-4). Until then the card says so, instead of where it will show. */
+export const ON_SHOP = false
+
 export type ProductVideoButton = 'model' | 'wear' | 'none'
 export const BUTTONS: readonly ProductVideoButton[] = ['model', 'wear', 'none']
 

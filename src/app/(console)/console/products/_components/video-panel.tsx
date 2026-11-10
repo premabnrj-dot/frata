@@ -34,7 +34,9 @@ function lengthOf(f: File): Promise<number | null> {
   })
 }
 
-export function VideoPanel({ productId, initial, blocked, title }: { productId: string; initial: ProductVideoView | null
+export function VideoPanel({ productId, initial, blocked, title, onShop }: { productId: string; initial: ProductVideoView | null
+  /** Whether the shop shows product video yet (PV1-4). */
+  onShop: boolean
   /** Why this shop can't add a video now (the module's words; `apps` when switching it on in Apps is the way on), or
    *  null. A video it has can still be removed. */
   blocked: { words: string; apps: boolean } | null; title: string }) {
@@ -107,6 +109,8 @@ export function VideoPanel({ productId, initial, blocked, title }: { productId: 
   const badge = k === 'playable' ? <Badge tone="ok">Ready</Badge> : k === 'failed' ? <Badge tone="danger">Didn’t work</Badge>
     : k === 'sending' || k === 'uploading' ? <Badge tone="info">Uploading</Badge> : k === 'preparing' ? <Badge tone="info">Getting it ready</Badge> : null
   const reel = video?.shape?.startsWith('Reel')
+  // The cover is the frame nearest the saved time (the default, 1 s, sits between the strip's frames on a long video).
+  const chosen = video?.frames.length ? video.frames.reduce((a, f) => (Math.abs(f.ms - video.posterMs) < Math.abs(a.ms - video.posterMs) ? f : a)).ms : null
 
   return (
     <Section id="video" title="Video" action={badge}>
@@ -150,14 +154,14 @@ export function VideoPanel({ productId, initial, blocked, title }: { productId: 
             <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-sm">
               <dt className="text-muted-foreground">Shape</dt><dd>{video.shape}{video.size && <span className="text-muted-foreground"> · {video.size}</span>}</dd>
               <dt className="text-muted-foreground">Length</dt><dd className="font-mono tabular-nums">{video.length}</dd>
-              <dt className="text-muted-foreground">Shows</dt><dd>Second in the photos{video.button !== 'none' && ' · beside the sizes'}</dd>
+              <dt className="text-muted-foreground">Shows</dt><dd>{onShop ? <>Second in the photos{video.button !== 'none' && ' · beside the sizes'}</> : 'Not on your shop yet'}</dd>
             </dl>
             <div className="grid gap-1.5">
               <span className="text-sm font-medium" id={`${inputId}-frames`}>Cover frame</span>
               <div role="group" aria-labelledby={`${inputId}-frames`} className="flex gap-1 overflow-x-auto pb-1">
                 {video.frames.map((f) => (
-                  <button key={f.ms} type="button" aria-pressed={f.ms === video.posterMs} aria-label={`Frame at ${f.ms / 1000} seconds`} onClick={() => void set({ posterMs: f.ms })}
-                    className={`shrink-0 overflow-hidden rounded-sm border-2 ${reel ? 'aspect-[9/16] w-11' : 'aspect-video w-20'} ${f.ms === video.posterMs ? 'border-foreground' : 'border-transparent'}`}>
+                  <button key={f.ms} type="button" aria-pressed={f.ms === chosen} aria-label={`Frame at ${f.ms / 1000} seconds`} onClick={() => void set({ posterMs: f.ms })}
+                    className={`shrink-0 overflow-hidden rounded-sm border-2 ${reel ? 'aspect-[9/16] w-11' : 'aspect-video w-20'} ${f.ms === chosen ? 'border-foreground' : 'border-transparent'}`}>
                     <img src={f.url} alt="" loading="lazy" className="size-full object-cover" />
                   </button>
                 ))}

@@ -48,7 +48,7 @@ export async function startProductVideoAction(input: unknown): Promise<R<{ video
   const me = await requireMember(ANY_MEMBER)
   if (!me.ok) return { ok: false, error: me.message }
   if (me.membership.supportSessionId) return { ok: false, error: SUPPORT }
-  if (!(await withinLimit(LIMITS.videoStartMember, me.userId, now, true)) || (await overLimit(LIMITS.videoStartAll, 'all', now, true))) return { ok: false, error: BUSY }
+  if (!(await withinLimit(LIMITS.productVideoStartMember, me.userId, now, true)) || (await overLimit(LIMITS.productVideoStartAll, 'all', now, true))) return { ok: false, error: BUSY }
   const r = await asModule('product_video', ANY_MEMBER, { action: 'product.video.start', target: p.data.productId }, async (tx, auth) => {
     const tenantId = auth.membership.tenantId
     const product = await productOfShop(tx, tenantId, p.data.productId)
@@ -60,7 +60,7 @@ export async function startProductVideoAction(input: unknown): Promise<R<{ video
   })
   if (!r.ok) return r
   if ('error' in r.value) return { ok: false, error: r.value.error as string }
-  await withinLimit(LIMITS.videoStartAll, 'all', now, true)
+  await withinLimit(LIMITS.productVideoStartAll, 'all', now, true)
   const { id: videoId, handle, replaced } = r.value
   if (replaced) { refreshProduct(r.tenantId, handle); drainSoon() }
   const up = await createUpload(videoId, await consoleOrigin(), 'product').catch((e) => { console.error('[product-video] upload', errName(e)); return { ok: false as const, why: 'unavailable' as const } })
