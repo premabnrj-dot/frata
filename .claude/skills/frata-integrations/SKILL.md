@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.21.0
+  version: 1.22.0
   verified: 2026-11-10
   decisions: [ADR-0006]
 ---
@@ -657,7 +657,9 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   (720p) / $0.003000 (1080p) per min per month, basic has a ONE-MONTH MINIMUM; delivery $0.000800 / $0.001000 per min
   after 100,000 free a month (per org), billed at the delivered resolution, buffered segments and MP4 minutes count; MP4
   storage $0.000600 / $0.000750 per rendition-min per month; advanced (sized) rendition prep $0.008000 / $0.010000 per
-  min; $20 monthly credit; Free plan up to 10 videos [S]. Price changes apply to the next bill after notice [V, Terms
+  min; $20 monthly credit (pay as you go); Launch $20/mo for $100, Scale $500/mo for $1,000, credits reset each cycle
+  [V-undated, pricing/video + pricing.md, 2026-11-10]; Free plan up to 10 assets, 100,000 delivery min/month [V,
+  changelog video-free-plan 2025-05-01]. Price changes apply to the next bill after notice [V, Terms
   2026-10-12]. Never hard-code a rate.
 - **Limits**: per environment + org cap — POST bucket 20, 1/s; others 100, 5/s; 429 + x-ratelimit-* [V, changelog
   2026-06-03 + make-api-requests]. Test assets (`test: true`) free, watermarked, 10 s, deleted after 24 h [V-undated].
@@ -687,3 +689,32 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   ~~whether a looped MP4's replays are billed again~~ — measured 2026-11-09 on a real 12 s, 1080p, 3.0 MB loop in
   Chromium: 4 replays in 50 s = ONE request (206, bytes=0-), no refetch; Mux serves the MP4 with `cache-control:
   max-age=86400`, so a return visit within a day may cost nothing. Safari/iOS (range requests) not measured [S].
+
+## Infrastructure usage (Admin › Infrastructure) — checked 2026-11-10 (integration-researcher; Mux and Supabase docs undated: V-undated = read that day)
+
+- **Mux Delivery Usage** `GET /video/v1/delivery-usage` (page, limit 100, asset_id, live_stream_id, timeframe[] epoch s):
+  per asset `delivered_seconds`, `delivered_seconds_by_resolution` (only non-zero tiers), asset_duration, asset_state;
+  only assets > 0 s, sorted by usage; hourly, last 90 days, ending ≥ 12 h ago [V-undated]. Token: Video Read [U].
+- **Mux storage** only through Usage Exports `GET /system/v1/usage/exports` (daily UTC CSVs, ready ≥ 08:00 UTC next day,
+  not on Free, enabled in the dashboard, system-scoped token); totals ≠ invoice [V-undated, changelog 2026-06-30].
+- **No Mux API for the bill, plan or credits** [V absence]. Cost pace = Frrata's estimate from dated rates, labelled.
+- **Mux Data**: free for Mux-hosted video; needs `mux-embed` + `env_key` on the page (the shop's plain <video> sends
+  none; adding it is a shopper-browser script and viewer data: a DPDP decision). Metrics `/data/v1/metrics/{id}/overall`,
+  errors `/data/v1/errors`, Mux Data Read [V-undated].
+- **Mux alerts**: email only, ≤ 3 per org, ~hourly, dashboard-set, not on Free, cap nothing; no usage webhook found [U].
+- **Supabase Free**: 500 MB DB, 5 GB egress + 5 GB cached, 50,000 MAU, 1 GB storage, 2 projects, paused after 1 week idle;
+  over limits → one grace period, then pause / read-only / 402 [V-undated, pricing + billing-faq]. **Pro** from $25, $10
+  compute credit (one default-size project), 8 GB disk, 250 GB egress, 100,000 MAU, 100 GB storage; spend cap on by
+  default (blocks the item to next cycle; not compute/IPv4/PITR). No threshold alerts; email after exceeding only.
+- **Management API**: `/v1/projects/{ref}/analytics/endpoints/usage.api-counts` and `usage.api-requests-count`
+  (analytics_usage_read, 30/min); `/v1/organizations/{slug}` → plan; no org usage/egress/MAU/invoice endpoint [V-undated].
+- **Scoped personal access tokens** GA 2026-10-06 (the default): per project, read or read-write per permission [V
+  changelog]. The dashboard's token: frata only, Usage Analytics Read, Logs Read, Organization Settings Read; never
+  Database or Project Settings write.
+- **Metrics**: `<ref>.supabase.co/customer/v1/privileged/metrics` needs a secret key (bypasses RLS) → NOT used
+  (CLAUDE.md: no service-role key). Use `GET /v1/projects/{ref}/analytics/endpoints/metrics` (analytics_logs_read,
+  Prometheus; same series as privileged: U). Beta [V-undated; blog 2025-12-16].
+- **Plain SQL**: pg_database_size needs CONNECT; pg_stat_activity nulls other roles' details; pg_stat_statements text
+  needs pg_read_all_stats (installed on frata, 2026-11-10) → a definer returning aggregates, not a pg_monitor grant to
+  frata_admin (ADR-0007). Max connections / pooler clients: Nano and Micro 60/200, Small 90/400, Medium 120/600, Large
+  160/800 [V-undated, compute-and-disk]. frata on 2026-11-10: Free plan, 19 MB, 15/60 connections.

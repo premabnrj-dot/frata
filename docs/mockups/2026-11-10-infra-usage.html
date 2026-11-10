@@ -192,9 +192,9 @@ tr:last-child td { border-bottom: 0 }
 
       <div class="tabpanel" id="tab-mux" role="tabpanel" aria-labelledby="t-mux" hidden>
         <div class="kpis">
-          <div class="kpi"><span>Month to date</span><b>$6.10</b><small>Storage, MP4s, 720p prep, delivery</small></div>
+          <div class="kpi"><span>Month to date · estimate</span><b>$6.10</b><small>Storage, MP4s, 720p prep, delivery</small></div>
           <div class="kpi"><span>On pace for</span><b>$18.40</b><div class="pace" aria-hidden="true"><i style="width:37%"></i><u style="left:calc(100% - 2px)"></u></div><small>Budget $50</small></div>
-          <div class="kpi"><span>Delivered this month</span><b>31,200 min</b><small>of 100,000 free · on pace for 93,600</small></div>
+          <div class="kpi"><span>Delivered · to 12 h ago</span><b>31,200 min</b><small>of 100,000 free · on pace for 93,600</small></div>
           <div class="kpi"><span>Live videos</span><b>184</b><small>142 product · 42 Look loops · 2,780 min stored</small></div>
         </div>
         <section class="card" aria-labelledby="h-mn">
@@ -221,16 +221,16 @@ tr:last-child td { border-bottom: 0 }
         <div class="grid2">
           <section class="card" aria-labelledby="h-mv">
             <div class="ch"><h2 id="h-mv">Most watched</h2><span class="meta">This month</span></div>
-            <div class="tbl"><table><thead><tr><th>Video</th><th>Shop</th><th class="n">Minutes</th><th class="n">Plays</th></tr></thead><tbody>
-              <tr><td>Chanderi kurta set · reel</td><td>Kesar Studio</td><td class="n">11.9K</td><td class="n">29.8K</td></tr>
-              <tr><td>Banarasi saree · drape</td><td>Neel &amp; Co</td><td class="n">4.2K</td><td class="n">6.1K</td></tr>
-              <tr><td>Home · Hero loop</td><td>Rangrez</td><td class="n">2.8K</td><td class="n">—</td></tr>
-              <tr><td>Block-print dupatta · reel</td><td>Mitti Loom</td><td class="n">1.6K</td><td class="n">3.9K</td></tr>
+            <div class="tbl"><table><thead><tr><th>Video</th><th>Shop</th><th class="n">Minutes</th><th class="n">Share</th></tr></thead><tbody>
+              <tr><td>Chanderi kurta set · reel</td><td>Kesar Studio</td><td class="n">11.9K</td><td class="n">38%</td></tr>
+              <tr><td>Banarasi saree · drape</td><td>Neel &amp; Co</td><td class="n">4.2K</td><td class="n">13%</td></tr>
+              <tr><td>Home · Hero loop</td><td>Rangrez</td><td class="n">2.8K</td><td class="n">9%</td></tr>
+              <tr><td>Block-print dupatta · reel</td><td>Mitti Loom</td><td class="n">1.6K</td><td class="n">5%</td></tr>
             </tbody></table></div>
           </section>
           <section class="card" aria-labelledby="h-ms">
             <div class="ch"><h2 id="h-ms">By shop</h2><span class="meta">Against the plan’s caps</span></div>
-            <div class="tbl"><table><thead><tr><th>Shop</th><th>Plan</th><th class="n">Live</th><th class="n">Delivered</th><th class="n">Cost</th></tr></thead><tbody>
+            <div class="tbl"><table><thead><tr><th>Shop</th><th>Plan</th><th class="n">Live</th><th class="n">Delivered</th><th class="n">Est. cost</th></tr></thead><tbody>
               <tr><td>Kesar Studio</td><td>Growth</td><td class="n">38 / 1,000</td><td class="n">14.1K min</td><td class="n">$2.10</td></tr>
               <tr><td>Neel &amp; Co</td><td>Launch</td><td class="n">22 / 300</td><td class="n">6.0K min</td><td class="n">$1.05</td></tr>
               <tr><td>Rangrez</td><td>Launch</td><td class="n">9 / 300</td><td class="n">3.3K min</td><td class="n">$0.52</td></tr>
@@ -246,20 +246,20 @@ tr:last-child td { border-bottom: 0 }
             <div class="rule"><span><b>Uploads that didn’t fit over 20% in a day</b><br><span class="meta">Too long, too short or under 720p</span></span><span class="sw2" aria-label="On"></span></div>
           </div>
         </section>
-        <div class="src"><span>Mux delivery usage · daily, per video · pulled every 6 h</span><span>Stored and MP4 minutes · Frrata’s videos rows</span><span>Uploads · Frrata, live</span><span>Prices · frata-integrations § Mux, read 9 Nov 2026</span></div>
+        <div class="src"><span>Mux delivery usage · hourly, per video, 12 h behind · pulled every 6 h</span><span>Stored and MP4 minutes · Frrata’s videos rows</span><span>Uploads · Frrata, live</span><span>Costs · Frrata’s estimate from Mux’s rates (Mux has no bill API)</span></div>
       </div>
 
       <div class="tabpanel" id="tab-supa" role="tabpanel" aria-labelledby="t-supa" hidden>
         <div class="kpis">
           <div class="kpi"><span>Plan</span><b>Free</b><small>Mumbai · Postgres 17</small></div>
           <div class="kpi"><span>Database</span><b>19 MB</b><small>of 500 MB</small></div>
-          <div class="kpi"><span>Connections</span><b>15 / 60</b><small>1 running a query now</small></div>
+          <div class="kpi"><span>Connections</span><b>15 / 60</b><small>1 busy · pooler 200</small></div>
           <div class="kpi"><span>Cache hits</span><b>99.99%</b><small>Reads served from memory</small></div>
         </div>
         <section class="card" aria-labelledby="h-sn">
           <div class="ch"><h2 id="h-sn">Needs you</h2><span class="badge b-warn">1</span></div>
           <div class="alerts">
-            <div class="al"><span class="badge b-warn">Soon</span><div><p><b>The database is on Supabase’s Free plan</b></p><p class="why">Free pauses a project after a week with no activity, and has no backups to restore</p></div><button class="btn" type="button">See Pro</button></div>
+            <div class="al"><span class="badge b-warn">Soon</span><div><p><b>The database is on Supabase’s Free plan</b></p><p class="why">Free pauses after a week with no activity; over its limits, shops can turn read-only or offline · Pro from $25</p></div><button class="btn" type="button">See Pro</button></div>
           </div>
         </section>
         <div class="grid2">
@@ -305,7 +305,7 @@ tr:last-child td { border-bottom: 0 }
             </div>
           </section>
         </div>
-        <div class="src"><span>Connections, size, queries · Frrata’s own read of Postgres, live</span><span>Plan and billing · Supabase Management API, daily</span><span>Outbox and webhooks · Frrata, live</span></div>
+        <div class="src"><span>Connections, size, queries · Frrata’s own read of Postgres, live</span><span>Plan · Supabase Management API, daily · read-only token for this project</span><span>API requests · Management API, hourly</span><span>Outbox and webhooks · Frrata, live</span></div>
       </div>
     </main>
   </div>
