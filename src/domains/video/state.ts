@@ -96,3 +96,21 @@ export function clock(ms: number): string {
   const s = Math.round(ms / 1000)
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
+
+/** The console's cover-frame strip: eight times across the length, on whole seconds (0, 3, 6 … for a 24 s reel). */
+export function coverFrames(durationMs: number | null): number[] {
+  const s = Math.floor((durationMs ?? 0) / 1000)
+  if (s < 1) return [0]
+  const step = Math.max(1, Math.floor(s / 8))
+  return Array.from({ length: 8 }, (_, i) => i * step * 1000).filter((ms) => ms < s * 1000 || ms === 0)
+}
+
+/** A product video that didn't fit, in words (the length or size it was, and the limit). */
+export function failedWords(why: FailedWhy, durationMs: number | null, width: number | null, height: number | null, use: VideoUse = 'product'): string {
+  const L = USE_LIMITS[use]
+  const short = width && height ? Math.min(width, height) : null
+  if (why === 'too_long') return `${durationMs ? `${clock(durationMs)} is too long` : 'Too long'} · up to ${clock(L.maxMs)}`
+  if (why === 'too_short') return `${durationMs ? `${clock(durationMs)} is too short` : 'Too short'} · at least ${clock(L.minMs)}`
+  if (why === 'too_small') return `${short ? `${short}p is too small` : 'Too small'} · at least 720p`
+  return 'Didn’t work'
+}

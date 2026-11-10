@@ -3,7 +3,7 @@
 // The owner adds a reel to Chanderi kurta set: it goes straight to "Mux", asks for one 720p MP4 and an hour to upload,
 // and the card says Ready with its shape and length. The owner picks a cover frame and the button's words. The shop
 // shows the video second in the gallery and "See it on a model · 0:24" beside the sizes; either opens the viewer
-// (the 720p MP4, Add to bag, Escape returns focus). A Look discard leaves it alone. Remove deletes it at Mux. A 70 s
+// (the 720p MP4, Add to bag, Escape returns focus): that step joins with the shop (PV1-4; it is in 8a732d3's copy). A Look discard leaves it alone. Remove deletes it at Mux. A 70 s
 // file is too long, a 3 s one too short, one under 720p says so; each asset is deleted.
 // Guards: a product video deleted by the Look's cleanup; the shop downloading video before a tap; a lost upload.
 // =============================================================================
@@ -29,6 +29,7 @@ export default {
         await x`delete from outbox where tenant_id = ${KESAR} and kind like 'mux.%'`
         await x`delete from webhook_events where tenant_id = ${KESAR} and provider = 'mux'`
         await x`delete from videos where tenant_id = ${KESAR}`
+        await x`delete from tenant_modules where tenant_id = ${KESAR} and module = 'product_video'`
       })
     }
     await cleanup()
@@ -38,6 +39,13 @@ export default {
     const latest = async () => (await db`select id, upload_id, asset_id, playback_id, mp4_ready_at, duration_ms, width, height, error, removed_at, use from videos where tenant_id = ${KESAR} order by created_at desc limit 1`)[0]
     try {
       let v
+      await t.step('Product video off: the card says where to turn it on, and nothing can be added', async () => {
+        await p.goto(CONSOLE + PRODUCT)
+        await card().getByRole('link', { name: 'Turn on Product video in Apps.' }).waitFor()
+        assert.equal(await card().getByText('Add a video').count(), 0)
+        await db`insert into tenant_modules (tenant_id, module, enabled_by) values (${KESAR}, 'product_video', ${USERS.owner.id})`
+      })
+
       await t.step('Add a video: straight to Mux as a product video (720p, an hour); Ready says reel and 0:24', async () => {
         await p.goto(CONSOLE + PRODUCT)
         await card().getByText('Add a video').waitFor()
@@ -60,34 +68,6 @@ export default {
         await until(async () => { const [l] = await db`select button, poster_ms from product_videos where tenant_id = ${KESAR}`; return l.button === 'wear' && l.poster_ms === 6000 }, 10_000)
         await card().getByRole('button', { name: 'See it on a model' }).click()
         await until(async () => { const [l] = await db`select button from product_videos where tenant_id = ${KESAR}`; return l.button === 'model' }, 10_000)
-      })
-
-      await t.step('The shop: the tile second, nothing downloaded before a tap; the viewer plays the 720p MP4; Add to bag; Escape', async () => {
-        const s = await t.browser.newContext({ viewport: { width: 390, height: 844 } }); const q = await s.newPage(); q.setDefaultTimeout(15_000)
-        const media = []; q.on('request', (r) => { if (/\.mp4/.test(r.url())) media.push(r.url()) })
-        await until(async () => { await q.goto(SHOP + '/products/chanderi-kurta-set'); return (await q.getByRole('button', { name: 'Play video, 0:24' }).count()) > 0 }, 70_000)
-        const tile = q.getByRole('button', { name: 'Play video, 0:24' })
-        const items = await q.getByRole('list', { name: /photos/i }).first().getByRole('listitem').all()
-        assert.ok(items.length >= 2 && (await items[1].getByRole('button', { name: 'Play video, 0:24' }).count()) === 1, 'the video is second')
-        const opener = q.getByRole('button', { name: 'See it on a model · 0:24' })
-        await opener.waitFor()
-        await q.waitForTimeout(800)
-        assert.equal(media.length, 0, 'no video before a tap')
-        await opener.click()
-        const dlg = q.getByRole('dialog', { name: 'Video: Chanderi kurta set' })
-        await dlg.waitFor()
-        const src = await dlg.locator('video').evaluate((el) => el.currentSrc || el.getAttribute('src'))
-        assert.match(src, new RegExp(`/${v.playback_id}/720p\\.mp4$`))
-        await dlg.getByRole('button', { name: 'Pause' }).waitFor()
-        await dlg.getByRole('button', { name: /^M$/ }).click()
-        await dlg.getByRole('button', { name: /^Add to bag/ }).click()
-        await q.keyboard.press('Escape')
-        await dlg.waitFor({ state: 'hidden' })
-        assert.equal(await opener.evaluate((el) => el === document.activeElement), true, 'focus back on what opened it')
-        await tile.click()
-        await dlg.waitFor()
-        await q.keyboard.press('Escape')
-        await s.close()
       })
 
       await t.step('A Look discard leaves the product video alone', async () => {

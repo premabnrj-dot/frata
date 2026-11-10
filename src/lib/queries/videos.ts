@@ -4,7 +4,7 @@ import type { Tx } from '@/lib/db'
 import { withTenant } from '@/lib/db/tenant'
 import { planVersions, plans, tenantPlans } from '@/lib/db/schema'
 import { shopThemePublishes, shopThemeRevisions, videos } from '@/lib/db/schema-themes'
-import { productVideos } from '@/lib/db/schema-catalogue'
+import { products, productVideos } from '@/lib/db/schema-catalogue'
 import { enqueue } from '@/lib/outbox'
 import { capPlan, isLive, MAX_LIVE, notReadyAfterMs, PRODUCT_VIDEO_CAPS, PRODUCT_VIDEO_FAILS_PER_DAY, PRODUCT_VIDEO_PER_HOUR, videoState, type VideoRow, type VideoState, type VideoUse } from '@/domains/video/state'
 
@@ -80,6 +80,22 @@ export async function productVideoFor(tx: Tx, tenantId: string, productId: strin
     .where(and(eq(productVideos.tenantId, tenantId), eq(productVideos.productId, productId), eq(videos.use, 'product'))).limit(1)
   return r ? asVideo(r) : null
 }
+
+/** A product of this shop, by id (its handle, for the product's cache tag), read in the caller's transaction. */
+export async function productOfShop(tx: Tx, tenantId: string, productId: string): Promise<{ id: string; handle: string; title: string } | null> {
+  const [p] = await tx.select({ id: products.id, handle: products.handle, title: products.title }).from(products)
+    .where(and(eq(products.tenantId, tenantId), eq(products.id, productId))).limit(1)
+  return p ?? null
+}
+
+/** The cover frame and the button's words (the only columns the app may update, drizzle/0090). */
+export async function setProductVideo(tx: Tx, tenantId: string, productId: string, change: { posterMs?: number; button?: string }): Promise<boolean> {
+  const r = await tx.update(productVideos).set(change).where(and(eq(productVideos.tenantId, tenantId), eq(productVideos.productId, productId))).returning({ v: productVideos.videoId })
+  return r.length > 0
+}
+
+/** The console's read of a product's video (its own short transaction): the page and the status poll. */
+export const productVideoOf = (tenantId: string, productId: string) => withTenant(tenantId, (tx) => productVideoFor(tx, tenantId, productId))
 
 /** Link a new product video (the start's own row) to its product. */
 export async function linkProductVideo(tx: Tx, tenantId: string, productId: string, videoId: string) {

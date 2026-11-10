@@ -65,10 +65,12 @@ const isColour = (name: string) => /^colou?rs?$/i.test(name)
  * model, then Search and sharing (closed). Side: Status, Summary, Organise,
  * Ready for. Photos save as added; Status is its own action; the rest is one Save.
  */
-export function ProductEditor({ initial, shop, photos, types, tenantId, blobReady, allCollections, families, share }: {
+export function ProductEditor({ initial, shop, photos, types, tenantId, blobReady, allCollections, families, share, video }: {
   initial: EditorProduct; shop: EditorShop; photos: Photo[]; types: TypeRow[]; tenantId: string; blobReady: boolean; allCollections: CollectionChip[]; families: Family[]
   /** The Share button (search and sharing S1·7), made on the server for this shop. */
   share?: React.ReactNode
+  /** The Video card (PV·1), made on the server: it saves as it changes, outside the one Save. */
+  video?: React.ReactNode
 }) {
   const router = useRouter()
   const now = useNow()
@@ -165,6 +167,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
             <textarea id="desc" rows={4} maxLength={5000} value={d.description} onChange={(e) => set({ description: e.target.value })} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm" placeholder="Fabric, fit, care. Shoppers read this before the size chart." />
           </Section>
           <Section><h2 className="flex items-center text-section font-semibold">Photos<InfoTip about="photos">The first is the cover: show the piece on a person. A large photo is fine; it is resized before it uploads.</InfoTip></h2><Photos productId={id} tenantId={tenantId} photos={photos} colours={colourOpt?.values ?? []} enabled={blobReady} title={d.title} /></Section>
+          {video}
           <Section>
             <h2 className="flex items-center text-section font-semibold">Sizes, colours and stock<InfoTip about="sizes, colours and stock">{shop.costs ? 'Your cost is never shown to shoppers: it is how Frrata works out profit on each order. ' : ''}When it runs out applies at 0 stock: stop selling, take pre-orders, or make to order. An empty SKU is made for you when you save.</InfoTip></h2>
             <OptionsEditor options={d.options} onChange={(options) => set({ options })} error={errors.options} />

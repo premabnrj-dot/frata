@@ -86,3 +86,19 @@ describe('product video caps by plan (owner, 2026-11-10)', () => {
     for (let i = 1; i < order.length; i++) for (const f of ['perDay', 'perMonth', 'live', 'minutes'] as const) expect(order[i]![f]).toBeGreaterThan(order[i - 1]![f])
   })
 })
+
+import { coverFrames, failedWords } from '../state'
+describe('coverFrames and failedWords (PV·1 console)', () => {
+  it('eight whole-second frames across the length', () => {
+    expect(coverFrames(24_400)).toEqual([0, 3000, 6000, 9000, 12000, 15000, 18000, 21000])
+    expect(coverFrames(60_000)).toEqual([0, 7000, 14000, 21000, 28000, 35000, 42000, 49000])
+    expect(coverFrames(6_000)).toEqual([0, 1000, 2000, 3000, 4000, 5000])
+    expect(coverFrames(null)).toEqual([0])
+  })
+  it('says the length or size and the limit', () => {
+    expect(failedWords('too_long', 70_000, 1080, 1920)).toBe('1:10 is too long · up to 1:00')
+    expect(failedWords('too_short', 3_000, 1080, 1920)).toBe('0:03 is too short · at least 0:06')
+    expect(failedWords('too_small', 24_000, 640, 360)).toBe('360p is too small · at least 720p')
+    expect(failedWords('didnt_work', null, null, null)).toBe('Didn’t work')
+  })
+})
