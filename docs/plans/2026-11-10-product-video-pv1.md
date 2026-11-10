@@ -312,3 +312,29 @@ product entry's tag; written down as a choice: bounded by uploads, never by shop
    - spec status active;
    - frata-design-language;
    - the owner's go-ahead before production migrations and `main`.
+
+## Progress, 2026-11-10 (owner: "continue and push after significant work that can be tested"; "merge the work on main")
+- Done since the stop:
+  - the fake Mux's add-rendition endpoint;
+  - caps by plan (`PRODUCT_VIDEO_CAPS`, owner: "keep generous monthly cap plan wise");
+  - the per-product cache tag; Look actions loop-only;
+  - **PV1-3, the console**: `products/video-actions.ts`, `video-panel.tsx` under Photos, `src/lib/video/product-view.ts`
+    (every product-video Mux URL built in one place).
+  - e2e 68 now covers the console only. The shop step returns with PV1-4 (its text is in 8a732d3's copy of the flow).
+- The browser refuses a file over a minute before uploading (the cost is in the file). Too short is left to the
+  server, because a short file is cheap.
+- The Product video module is core and is switched on in Apps. Until then, the card links there.
+
+## Signed playback: owner decision needed (research 2026-11-10, frata-integrations § Mux, Signed playback)
+The owner said "we're not letting people download". What Mux allows:
+- **Signed URLs** stop a link working after it expires. They do not stop a shopper saving the MP4 while the token
+  is valid. Only DRM stops capture, and DRM cannot serve MP4s (it needs HLS and a player library: out of PV·1's
+  budget).
+- **Each fresh token is a new URL**, so the browser cache misses and Mux bills the delivery again. The shop's cached
+  HTML would need a token longer than its cache life, or a token fetched on tap.
+- What PV·1 can do without DRM:
+  - `controlsList="nodownload"`, no picture-in-picture, no context menu on the player;
+  - signed, short-lived MP4 URLs fetched when the viewer opens (a shop route), so a copied link stops working;
+  - a signed poster with a long token (a still frame, cheap).
+- The proposal goes to the owner with PV1-4, before the shop serves any product video. Videos uploaded before then
+  get a signed playback id added and their public id deleted (Mux: add signed first, then delete public).

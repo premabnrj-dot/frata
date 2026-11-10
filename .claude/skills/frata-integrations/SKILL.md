@@ -2,8 +2,8 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.20.0
-  verified: 2026-11-09
+  version: 1.21.0
+  verified: 2026-11-10
   decisions: [ADR-0006]
 ---
 
@@ -607,7 +607,7 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
 - Unverified (no current primary source): six IRPs, 24 h IRN cancellation, B2C dynamic QR, the 30-day IRP limit, HSN
   Table 12 digits, Tables 14/15 for own sites.
 
-## Mux (video) — checked 2026-11-09 (integration-researcher; Mux doc pages carry no date: [V-undated] = read that day)
+## Mux (video) — checked 2026-11-09, signed playback 2026-11-10 (integration-researcher; Mux doc pages carry no date: [V-undated] = read that day)
 
 - **Account**: one Frrata-owned Mux org; an environment per tier (development, production), each with its own assets,
   tokens, signing keys and webhooks; a token works only in its environment; only an org admin creates tokens; Mux keeps a
@@ -631,7 +631,26 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   renditions]. Values highest | audio-only | 2160p…270p (no capped-1080p / low); no upscaling; a silent video gets
   highest.mp4, audio-only skipped. MP4 `https://stream.mux.com/{PLAYBACK_ID}/highest.mp4`; HLS `…/{PLAYBACK_ID}.m3u8`
   (native only in Safari/Edge). Poster `https://image.mux.com/{PLAYBACK_ID}/thumbnail.webp?time=&width=&fit_mode=`;
-  animated ≤ 10 s, ≤ 640 px. Signed IDs need a JWT per URL and per audience (v, t, g, s) [V-undated].
+  animated ≤ 10 s, ≤ 640 px. Signed IDs: see Signed playback below.
+- **Signed playback (checked 2026-11-10)** [V-undated unless tagged; guides/secure-video-playback, api-reference
+  system/signing-keys, stream/streaming, image/thumbnails, prompts/video-paywall (Last updated 2026-11-06)]:
+  - Signing key: `POST /system/v1/signing-keys` (or the dashboard) → `data {id, private_key, created_at}`, a 2048-bit RSA
+    pair, `private_key` base64 of a PEM; the access token needs System write; one key set per environment; rotate by
+    adding a key and deleting the old one after its URLs expire.
+  - JWT RS256; claims `sub` playback id, `aud` v|t|g|s|d, `exp` epoch seconds, `kid` IN THE CLAIMS (Mux's Node SDK
+    v14 header is only {alg, typ}). No min or max expiry documented [U]; SDK default 7 d, no `iat`; exp ≥ now +
+    duration, and an expired URL stops mid-play.
+  - MP4 `stream.mux.com/{id}/{rendition name}?token=`, HLS `{id}.m3u8?token=`; the MP4's `aud` is not stated (`v` by
+    inference) [U]; one token for both [U]. The file name is the rendition's `name` (`720p.mp4` expected, not shown) [U].
+  - Thumbnail: options (time, width, height, fit_mode) are top-level CLAIMS (`aud` t); the URL carries ONLY
+    `?token=`, and any other query parameter breaks the signature.
+  - A `token=` on a public id fails. An asset can hold several playback ids; a public one plays anywhere, so a signed
+    asset keeps none (add the signed id first, then delete the public one). Direct uploads accept
+    `playback_policies: ["signed"]`.
+  - **A signed MP4 can still be saved while its token is valid.** Mux points to DRM against downloads, and DRM ids
+    can't serve static renditions. `controlsList` is not in Mux's docs [U].
+  - A new token is a new URL, so no browser-cache hit (the 24 h cache measured 2026-11-09): token life is a cost
+    decision (`frata-unit-economics`).
 - **Mux Player for Web is in maintenance mode** — Video.js for new work [V-undated, guides/mux-player-web]; ~900 KB
   minified [V, blog 2026-01-21]. Frrata's loops use a plain <video> with no player.
 - **Price** (pay as you go, first tier; pricing/video, read 2026-11-09): basic input free; storage basic/plus $0.002400
