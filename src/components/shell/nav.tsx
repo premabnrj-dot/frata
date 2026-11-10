@@ -36,11 +36,13 @@ function currentHref(path: string, items: NavItem[]): string | null {
 export function SidebarNav({ label, groups, ink = false }: { label: string; groups: NavGroup[]; ink?: boolean }) {
   const path = usePathname()
   const on = currentHref(path, flat(groups.flatMap((g) => g.items)))
-  const link = (i: NavItem, sub = false) => {
+  // `row`: the link shares its row with a chevron, so it fills the row; alone in the column it keeps its height
+  // (flex-1 in a flex column sets a zero basis and squeezed every item to its text — owner, 2026-11-10).
+  const link = (i: NavItem, sub = false, row = false) => {
     const cur = i.href === on
     return (
       <Link key={i.href} href={i.href} aria-current={cur ? 'page' : undefined}
-        className={`relative flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 text-sm transition-colors duration-fast ease-standard ${sub ? 'h-8 pl-8' : 'h-9'} ${cur ? 'font-semibold' : ''} ${ink
+        className={`relative flex ${row ? 'min-w-0 flex-1' : ''} shrink-0 items-center gap-2.5 rounded-md px-2 text-sm transition-colors duration-fast ease-standard ${sub ? 'h-8 pl-8' : 'h-9'} ${cur ? 'font-semibold' : ''} ${ink
           ? (cur ? 'bg-primary-foreground/15' : 'hover:bg-primary-foreground/10')
           : (cur ? 'bg-accent' : 'hover:bg-accent')}`}>
         {cur && <span aria-hidden="true" className={`absolute -left-2.5 top-2 bottom-2 w-[3px] rounded-r ${ink ? 'bg-warn' : 'bg-thread'}`} />}
@@ -65,7 +67,7 @@ export function SidebarNav({ label, groups, ink = false }: { label: string; grou
 }
 
 /** An item with children: its link, a chevron that folds them, and the children. Open by default; the choice is kept. */
-function Folder({ item, on, ink, link }: { item: NavItem; on: string | null; ink: boolean; link: (i: NavItem, sub?: boolean) => ReactNode }) {
+function Folder({ item, on, ink, link }: { item: NavItem; on: string | null; ink: boolean; link: (i: NavItem, sub?: boolean, row?: boolean) => ReactNode }) {
   const key = `nav:folded:${item.href}`
   const [folded, setFolded] = useState(false)
   useEffect(() => { try { setFolded(localStorage.getItem(key) === '1') } catch { /* page only */ } }, [key])
@@ -77,7 +79,7 @@ function Folder({ item, on, ink, link }: { item: NavItem; on: string | null; ink
   return (
     <>
       <div className="flex items-center">
-        {link(item)}
+        {link(item, false, true)}
         <button type="button" onClick={toggle} aria-expanded={!folded} aria-controls={list} aria-label={`${folded ? 'Show' : 'Hide'} ${item.label.toLowerCase()} in use`}
           className={`ml-0.5 inline-grid size-8 shrink-0 place-items-center rounded-md ${ink ? 'hover:bg-primary-foreground/10' : 'hover:bg-accent'}`}>
           <Icon name="chevron" className={`size-3.5 transition-transform duration-fast ease-standard ${folded ? '' : 'rotate-90'} ${ink ? 'opacity-70' : 'text-muted-foreground'}`} />
