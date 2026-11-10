@@ -112,11 +112,11 @@ export function VideoPanel({ productId, initial, blocked, title }: { productId: 
     <Section id="video" title="Video" action={badge}>
       {k === 'none' ? (
         blocked ? <p className="text-sm text-muted-foreground">{blocked.apps ? <Link href="/console/apps" className="font-medium text-foreground underline underline-offset-4">{blocked.words}</Link> : blocked.words}</p> : (
-          <label htmlFor={inputId} className="grid min-h-24 cursor-pointer place-items-center gap-1 rounded-md border border-dashed border-input p-4 text-center transition-colors duration-fast ease-standard hover:bg-accent">
+          <button type="button" disabled={busy} onClick={() => input.current?.click()} className="grid min-h-24 w-full cursor-pointer place-items-center gap-1 rounded-md border border-dashed border-input p-4 text-center transition-colors duration-fast ease-standard hover:bg-accent">
             <Icon name="video" className="size-6 text-muted-foreground" />
             <span className="text-sm font-medium">Add a video</span>
             <span className="text-xs text-muted-foreground">MP4 or MOV · 0:06 to 1:00 · a reel or a film</span>
-          </label>
+          </button>
         )
       ) : k === 'sending' ? (
         <div role="status" className="space-y-2 rounded-md bg-muted p-3 text-sm">
@@ -136,7 +136,7 @@ export function VideoPanel({ productId, initial, blocked, title }: { productId: 
       ) : k === 'failed' ? (
         <div role="alert" className="flex flex-wrap items-center gap-3 rounded-md border border-danger-text/40 bg-danger p-3 text-sm text-danger-text">
           <span className="flex-1">{video?.failed}</span>
-          {blocked ? null : <label htmlFor={inputId} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.current?.click() } }} className="cursor-pointer font-medium underline underline-offset-4">Choose another</label>}
+          {blocked ? null : <button type="button" disabled={busy} onClick={() => input.current?.click()} className="font-medium underline underline-offset-4">Choose another</button>}
           <button type="button" disabled={busy} onClick={() => void remove()} className="font-medium underline underline-offset-4">Remove</button>
         </div>
       ) : video && (
@@ -179,7 +179,8 @@ export function VideoPanel({ productId, initial, blocked, title }: { productId: 
           </div>
         </div>
       )}
-      <input ref={input} id={inputId} type="file" accept="video/mp4,video/quicktime" className="sr-only" tabIndex={-1} disabled={busy || (!!blocked && !video)}
+      {/* Opened by the buttons above (Add a video, Choose another, Replace), so it is not a control of its own. */}
+      <input ref={input} type="file" accept="video/mp4,video/quicktime" className="sr-only" tabIndex={-1} aria-hidden="true" disabled={busy || (!!blocked && !video)}
         onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = '' }} />
       {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
       <Dialog open={ask === 'remove'} onClose={() => setAsk(null)} title="Remove the video?" description={`It comes off ${title} at once and is deleted.`}
