@@ -6,7 +6,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import http from 'node:http'
-import { EKCODE, PORTS, SHOP, until } from '../lib.mjs'
+import { CONSOLE, EKCODE, PORTS, SHOP, signedIn, until } from '../lib.mjs'
 
 const EK = `http://${EKCODE.host}`
 const PHONE = '9811122233', PHONE2 = '9811122244'
@@ -119,6 +119,27 @@ export default {
         for (let i = 0; i < 5; i++) { await p.getByLabel('Enter the code').fill(wrong); if (i < 4) await p.getByText(/Code doesn't match/).waitFor() }
         await p.getByRole('heading', { name: 'Too many tries' }).waitFor()
         await p.getByRole('link', { name: 'Check out as a guest' }).waitFor()
+      })
+
+      await t.step('the console: EkCode under Apps (folds away), its page lists the shopper', async () => {
+        const ctx2 = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 860 } })
+        const q = await ctx2.newPage(); q.setDefaultTimeout(15_000); q.on('pageerror', (e) => t.errors.push(e.message))
+        try {
+          await q.goto(CONSOLE + '/console')
+          const nav = q.getByRole('navigation', { name: 'Console', exact: true })
+          await nav.getByRole('link', { name: 'EkCode', exact: true }).waitFor()
+          await nav.getByRole('button', { name: 'Hide apps in use' }).click()
+          await nav.getByRole('link', { name: 'EkCode', exact: true }).waitFor({ state: 'detached' })
+          await nav.getByRole('button', { name: 'Show apps in use' }).click()
+          await nav.getByRole('link', { name: 'EkCode', exact: true }).click()
+          await q.getByRole('heading', { level: 1, name: 'EkCode' }).waitFor()
+          await q.getByText('Sign-ins · 7 days').waitFor()
+          await q.screenshot({ path: t.out('console-overview'), fullPage: true })
+          await q.getByRole('link', { name: 'Shoppers', exact: true }).click()
+          await q.getByText('Ananya Rao').waitFor()
+          assert.equal((await q.getByRole('row', { name: /Ananya Rao/ }).getByRole('cell').last().innerText()).trim(), '1', 'her order is counted')
+          await q.screenshot({ path: t.out('console-shoppers'), fullPage: true })
+        } finally { await ctx2.close() }
       })
 
       await t.step('refused: a forged return, EkCode paths on a shop, shop paths on EkCode', async () => {

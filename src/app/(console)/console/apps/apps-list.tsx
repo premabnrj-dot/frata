@@ -7,7 +7,8 @@ import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Button, button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
-import { Icon, type IconName } from '@/components/icons/icon'
+import { Icon } from '@/components/icons/icon'
+import { MODULE_ICON } from '@/components/modules/icons'
 import type { Offer } from '@/domains/modules/offer'
 import type { Group, ModuleKey } from '@/domains/modules/registry'
 import { setModuleAction } from './actions'
@@ -18,10 +19,7 @@ export type AppRow = {
   worksWith: { name: string; on: boolean }[]; offer: Offer; ask: string; setup: string | null
 }
 
-const ICON: Record<ModuleKey, IconName> = {
-  communication: 'messages', rto_shield: 'risk', ship: 'shipped', true_profit: 'profit', reviews: 'reviews',
-  marketplace_export: 'stock', size_fit: 'size', cart_flows: 'orders', gst: 'tax', ekcode: 'people',
-}
+const ICON = MODULE_ICON
 const TONE = { ok: 'ok', info: 'info', neutral: 'neutral', warn: 'warn' } as const
 
 function Tile({ k, size = 'md' }: { k: ModuleKey; size?: 'md' | 'lg' }) {

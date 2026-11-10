@@ -14,8 +14,12 @@ import { Icon, type IconName } from '@/components/icons/icon'
 // the server/client line). The count pill is a server-rendered slot.
 // =============================================================================
 
-export type NavItem = { href: string; label: string; icon: IconName; badge?: ReactNode; exact?: boolean }
+/** `children`: entries shown under this one (Apps lists the shop's active apps), folded and unfolded by its chevron. */
+export type NavItem = { href: string; label: string; icon: IconName; badge?: ReactNode; exact?: boolean; children?: NavItem[] }
 export type NavGroup = { label: string; items: NavItem[] }
+
+/** Every item, its children after it (for finding the current one). */
+const flat = (items: NavItem[]): NavItem[] => items.flatMap((i) => [i, ...(i.children ?? [])])
 
 /** The item a path belongs to: exact for home-like items, else the longest matching prefix. */
 function currentHref(path: string, items: NavItem[]): string | null {
@@ -31,29 +35,56 @@ function currentHref(path: string, items: NavItem[]): string | null {
 /** ≥ 768 px: the sidebar's groups. The current item: a 3 px bar, semibold, aria-current (never colour alone). */
 export function SidebarNav({ label, groups, ink = false }: { label: string; groups: NavGroup[]; ink?: boolean }) {
   const path = usePathname()
-  const on = currentHref(path, groups.flatMap((g) => g.items))
+  const on = currentHref(path, flat(groups.flatMap((g) => g.items)))
+  const link = (i: NavItem, sub = false) => {
+    const cur = i.href === on
+    return (
+      <Link key={i.href} href={i.href} aria-current={cur ? 'page' : undefined}
+        className={`relative flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 text-sm transition-colors duration-fast ease-standard ${sub ? 'h-8 pl-8' : 'h-9'} ${cur ? 'font-semibold' : ''} ${ink
+          ? (cur ? 'bg-primary-foreground/15' : 'hover:bg-primary-foreground/10')
+          : (cur ? 'bg-accent' : 'hover:bg-accent')}`}>
+        {cur && <span aria-hidden="true" className={`absolute -left-2.5 top-2 bottom-2 w-[3px] rounded-r ${ink ? 'bg-warn' : 'bg-thread'}`} />}
+        <Icon name={i.icon} current={cur} className={`size-4 shrink-0 ${cur ? '' : ink ? 'opacity-70' : 'text-muted-foreground'}`} />
+        <span className="truncate">{i.label}</span>
+        {i.badge}
+      </Link>
+    )
+  }
   return (
     <nav aria-label={label} data-tinge className="flex flex-col gap-0.5">
       {groups.map((g) => (
         <div key={g.label} className="flex flex-col gap-0.5">
           {g.label && <p className={`px-2 pb-1 pt-3 text-xs font-medium ${ink ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>{g.label}</p>}
-          {g.items.map((i) => {
-            const cur = i.href === on
-            return (
-              <Link key={i.href} href={i.href} aria-current={cur ? 'page' : undefined}
-                className={`relative flex h-9 items-center gap-2.5 rounded-md px-2 text-sm transition-colors duration-fast ease-standard ${cur ? 'font-semibold' : ''} ${ink
-                  ? (cur ? 'bg-primary-foreground/15' : 'hover:bg-primary-foreground/10')
-                  : (cur ? 'bg-accent' : 'hover:bg-accent')}`}>
-                {cur && <span aria-hidden="true" className={`absolute -left-2.5 top-2 bottom-2 w-[3px] rounded-r ${ink ? 'bg-warn' : 'bg-thread'}`} />}
-                <Icon name={i.icon} current={cur} className={`size-4 shrink-0 ${cur ? '' : ink ? 'opacity-70' : 'text-muted-foreground'}`} />
-                <span className="truncate">{i.label}</span>
-                {i.badge}
-              </Link>
-            )
-          })}
+          {g.items.map((i) => i.children?.length
+            ? <Folder key={i.href} item={i} on={on} ink={ink} link={link} />
+            : link(i))}
         </div>
       ))}
     </nav>
+  )
+}
+
+/** An item with children: its link, a chevron that folds them, and the children. Open by default; the choice is kept. */
+function Folder({ item, on, ink, link }: { item: NavItem; on: string | null; ink: boolean; link: (i: NavItem, sub?: boolean) => ReactNode }) {
+  const key = `nav:folded:${item.href}`
+  const [folded, setFolded] = useState(false)
+  useEffect(() => { try { setFolded(localStorage.getItem(key) === '1') } catch { /* page only */ } }, [key])
+  const toggle = () => setFolded((f) => { try { localStorage.setItem(key, f ? '0' : '1') } catch { /* page only */ } return !f })
+  // A child page is never hidden: folded or not, the current one stays in view.
+  const kids = item.children ?? []
+  const shown = folded ? kids.filter((c) => c.href === on) : kids
+  const list = `nav-kids-${item.href.replace(/\W+/g, '-')}`
+  return (
+    <>
+      <div className="flex items-center">
+        {link(item)}
+        <button type="button" onClick={toggle} aria-expanded={!folded} aria-controls={list} aria-label={`${folded ? 'Show' : 'Hide'} ${item.label.toLowerCase()} in use`}
+          className={`ml-0.5 inline-grid size-8 shrink-0 place-items-center rounded-md ${ink ? 'hover:bg-primary-foreground/10' : 'hover:bg-accent'}`}>
+          <Icon name="chevron" className={`size-3.5 transition-transform duration-fast ease-standard ${folded ? '' : 'rotate-90'} ${ink ? 'opacity-70' : 'text-muted-foreground'}`} />
+        </button>
+      </div>
+      <div id={list} className="flex flex-col gap-0.5">{shown.map((c) => link(c, true))}</div>
+    </>
   )
 }
 
@@ -63,8 +94,8 @@ export function SidebarNav({ label, groups, ink = false }: { label: string; grou
  */
 export function BottomBar({ label, tabs, more, moreFoot, ink = false }: { label: string; tabs: NavItem[]; more: NavItem[]; moreFoot?: ReactNode; ink?: boolean }) {
   const path = usePathname()
-  const on = currentHref(path, [...tabs, ...more])
-  const inMore = more.some((i) => i.href === on)
+  const on = currentHref(path, flat([...tabs, ...more]))
+  const inMore = flat(more).some((i) => i.href === on)
   const [open, setOpen] = useState(false)
   const sheet = useRef<HTMLDialogElement>(null)
   const opener = useRef<HTMLButtonElement>(null)
@@ -113,9 +144,9 @@ export function BottomBar({ label, tabs, more, moreFoot, ink = false }: { label:
           <span aria-hidden="true" className="mx-auto h-1 w-9 rounded-full bg-border" />
           <button type="button" autoFocus onClick={() => setOpen(false)} aria-label="Close" className="inline-grid size-10 place-items-center rounded-md hover:bg-accent"><Icon name="close" className="size-5" /></button>
         </div>
-        {more.map((i) => (
+        {more.flatMap((i) => [{ i, sub: false }, ...(i.children ?? []).map((c) => ({ i: c, sub: true }))]).map(({ i, sub }) => (
           <Link key={i.href} href={i.href} aria-current={i.href === on ? 'page' : undefined} onClick={() => setOpen(false)}
-            className={`flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm hover:bg-accent ${i.href === on ? 'bg-accent font-semibold' : ''}`}>
+            className={`flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm hover:bg-accent ${sub ? 'pl-11' : ''} ${i.href === on ? 'bg-accent font-semibold' : ''}`}>
             <Icon name={i.icon} className="size-5 text-muted-foreground" />{i.label}
           </Link>
         ))}

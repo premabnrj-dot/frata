@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.33.0
+  version: 2.34.0
   verified: 2026-11-09
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -226,6 +226,8 @@ shop can have or not (Messages, RTO Shield, Reviews…).
 - **One registry**: `src/domains/modules/registry.ts` (`MODULE_KEYS`, `MODULES`).
   Billing `core | plan | add_on`; `status: 'next'` until it is built. Plan
   features are `PLAN_GRANTABLE` (the plan_versions CHECK is generated from it).
+  A module's own page is its `setup` (`/console/apps/<module>`); while the module is on and usable it is listed
+  under Apps in the console nav (`src/app/(console)/console/layout.tsx`, foldable; icons `src/components/modules/icons.ts`).
 - **"Usable" is decided once**: `moduleAccess(facts, now)` in
   `src/domains/modules/access.ts` (granted by core, plan, add-on or trial;
   switched on; not paused; dependencies usable). Badges and buttons come from
