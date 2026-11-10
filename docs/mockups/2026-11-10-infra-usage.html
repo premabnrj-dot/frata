@@ -97,11 +97,18 @@ tr:last-child td { border-bottom: 0 }
 .banner { background: var(--bad); color: #fff; border-radius: 6px; padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center }
 .banner p { margin: 0 } .banner .btn { background: #fff; color: #a12020; border-color: #fff }
 .example { font-size: 12px; color: var(--sub) }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto }
+.tabs button { font: inherit; font-size: 14px; font-weight: 500; background: transparent; border: 0; border-bottom: 2px solid transparent; color: var(--sub); padding: 8px 12px; cursor: pointer; display: flex; gap: 8px; align-items: center; white-space: nowrap }
+.tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--fg); font-weight: 600 }
+.tabpanel { display: grid; gap: 16px; min-width: 0 }
+.live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ok) }
+.live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok) }
+.mono { font-family: var(--mono); font-size: 12px }
 </style>
 
 <div class="mock">
   <div class="switch">
-    <span>Mockup state</span>
+    <span>Vercel state</span>
     <div class="seg" role="group" aria-label="Mockup state">
       <button type="button" data-s="normal" aria-pressed="true">Normal month</button>
       <button type="button" data-s="spike" aria-pressed="false">Bot spike</button>
@@ -131,6 +138,13 @@ tr:last-child td { border-bottom: 0 }
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button">Open Vercel usage</button><button class="btn primary" type="button">Check now</button></div>
       </div>
 
+      <div class="tabs" role="tablist" aria-label="Service">
+        <button type="button" role="tab" id="t-vercel" aria-controls="tab-vercel" aria-selected="true">Vercel <span id="tbV"></span></button>
+        <button type="button" role="tab" id="t-mux" aria-controls="tab-mux" aria-selected="false">Mux <span class="badge b-warn">1</span></button>
+        <button type="button" role="tab" id="t-supa" aria-controls="tab-supa" aria-selected="false">Supabase <span class="badge b-warn">1</span></button>
+      </div>
+
+      <div class="tabpanel" id="tab-vercel" role="tabpanel" aria-labelledby="t-vercel">
       <div class="kpis" id="kpis"></div>
 
       <section class="card" aria-labelledby="h-needs">
@@ -174,6 +188,125 @@ tr:last-child td { border-bottom: 0 }
       </div>
 
       <div class="src" id="src"></div>
+      </div>
+
+      <div class="tabpanel" id="tab-mux" role="tabpanel" aria-labelledby="t-mux" hidden>
+        <div class="kpis">
+          <div class="kpi"><span>Month to date</span><b>$6.10</b><small>Storage, MP4s, 720p prep, delivery</small></div>
+          <div class="kpi"><span>On pace for</span><b>$18.40</b><div class="pace" aria-hidden="true"><i style="width:37%"></i><u style="left:calc(100% - 2px)"></u></div><small>Budget $50</small></div>
+          <div class="kpi"><span>Delivered this month</span><b>31,200 min</b><small>of 100,000 free · on pace for 93,600</small></div>
+          <div class="kpi"><span>Live videos</span><b>184</b><small>142 product · 42 Look loops · 2,780 min stored</small></div>
+        </div>
+        <section class="card" aria-labelledby="h-mn">
+          <div class="ch"><h2 id="h-mn">Needs you</h2><span class="badge b-warn">1</span></div>
+          <div class="alerts">
+            <div class="al"><span class="badge b-warn">Soon</span><div><p><b>One video is 38% of delivery</b></p><p class="why">Kesar Studio · Chanderi kurta set · 11,900 min in 10 days · shared on Instagram</p></div><button class="btn" type="button">Open the product</button></div>
+          </div>
+        </section>
+        <div class="grid2">
+          <section class="card" aria-labelledby="h-mm">
+            <div class="ch"><h2 id="h-mm">This month</h2><span class="meta">Day 10 of 30</span></div>
+            <div class="meters">
+              <div class="m"><div class="row"><span>Delivered minutes</span><span class="num">31.2K / 100K free</span></div><div class="bar"><i style="width:31%;background:var(--s1)"></i></div></div>
+              <div class="m"><div class="row"><span>Stored minutes</span><span class="num">2,780 · $6.67 a month</span></div><div class="bar"><i style="width:28%;background:var(--s1)"></i></div></div>
+              <div class="m"><div class="row"><span>720p MP4 minutes</span><span class="num">1,960 · $1.18 a month</span></div><div class="bar"><i style="width:20%;background:var(--s1)"></i></div></div>
+              <div class="m"><div class="row"><span>Uploads today</span><span class="num">23 · 4 didn’t fit</span></div><div class="bar"><i style="width:23%;background:var(--s1)"></i></div></div>
+            </div>
+          </section>
+          <section class="card" aria-labelledby="h-mc">
+            <div class="ch"><h2 id="h-mc">Delivered minutes, last 30 days</h2></div>
+            <div class="chart"><svg id="muxChart" viewBox="0 0 560 200" role="img" aria-label="Delivered minutes a day, last 30 days"></svg></div>
+          </section>
+        </div>
+        <div class="grid2">
+          <section class="card" aria-labelledby="h-mv">
+            <div class="ch"><h2 id="h-mv">Most watched</h2><span class="meta">This month</span></div>
+            <div class="tbl"><table><thead><tr><th>Video</th><th>Shop</th><th class="n">Minutes</th><th class="n">Plays</th></tr></thead><tbody>
+              <tr><td>Chanderi kurta set · reel</td><td>Kesar Studio</td><td class="n">11.9K</td><td class="n">29.8K</td></tr>
+              <tr><td>Banarasi saree · drape</td><td>Neel &amp; Co</td><td class="n">4.2K</td><td class="n">6.1K</td></tr>
+              <tr><td>Home · Hero loop</td><td>Rangrez</td><td class="n">2.8K</td><td class="n">—</td></tr>
+              <tr><td>Block-print dupatta · reel</td><td>Mitti Loom</td><td class="n">1.6K</td><td class="n">3.9K</td></tr>
+            </tbody></table></div>
+          </section>
+          <section class="card" aria-labelledby="h-ms">
+            <div class="ch"><h2 id="h-ms">By shop</h2><span class="meta">Against the plan’s caps</span></div>
+            <div class="tbl"><table><thead><tr><th>Shop</th><th>Plan</th><th class="n">Live</th><th class="n">Delivered</th><th class="n">Cost</th></tr></thead><tbody>
+              <tr><td>Kesar Studio</td><td>Growth</td><td class="n">38 / 1,000</td><td class="n">14.1K min</td><td class="n">$2.10</td></tr>
+              <tr><td>Neel &amp; Co</td><td>Launch</td><td class="n">22 / 300</td><td class="n">6.0K min</td><td class="n">$1.05</td></tr>
+              <tr><td>Rangrez</td><td>Launch</td><td class="n">9 / 300</td><td class="n">3.3K min</td><td class="n">$0.52</td></tr>
+              <tr><td>Mitti Loom</td><td>Trial</td><td class="n">5 / 50</td><td class="n">1.9K min</td><td class="n">$0.31</td></tr>
+            </tbody></table></div>
+          </section>
+        </div>
+        <section class="card" aria-labelledby="h-mr">
+          <div class="ch"><h2 id="h-mr">Alerts</h2><button class="btn" type="button">Edit</button></div>
+          <div>
+            <div class="rule"><span><b>Delivered minutes on pace past the free 100,000</b><br><span class="meta">Then $0.0008 a minute at 720p</span></span><span class="sw2" aria-label="On"></span></div>
+            <div class="rule"><span><b>One video over 25% of delivery</b><br><span class="meta">A reel shared outside the shop</span></span><span class="sw2" aria-label="On"></span></div>
+            <div class="rule"><span><b>Uploads that didn’t fit over 20% in a day</b><br><span class="meta">Too long, too short or under 720p</span></span><span class="sw2" aria-label="On"></span></div>
+          </div>
+        </section>
+        <div class="src"><span>Mux delivery usage · daily, per video · pulled every 6 h</span><span>Stored and MP4 minutes · Frrata’s videos rows</span><span>Uploads · Frrata, live</span><span>Prices · frata-integrations § Mux, read 9 Nov 2026</span></div>
+      </div>
+
+      <div class="tabpanel" id="tab-supa" role="tabpanel" aria-labelledby="t-supa" hidden>
+        <div class="kpis">
+          <div class="kpi"><span>Plan</span><b>Free</b><small>Mumbai · Postgres 17</small></div>
+          <div class="kpi"><span>Database</span><b>19 MB</b><small>of 500 MB</small></div>
+          <div class="kpi"><span>Connections</span><b>15 / 60</b><small>1 running a query now</small></div>
+          <div class="kpi"><span>Cache hits</span><b>99.99%</b><small>Reads served from memory</small></div>
+        </div>
+        <section class="card" aria-labelledby="h-sn">
+          <div class="ch"><h2 id="h-sn">Needs you</h2><span class="badge b-warn">1</span></div>
+          <div class="alerts">
+            <div class="al"><span class="badge b-warn">Soon</span><div><p><b>The database is on Supabase’s Free plan</b></p><p class="why">Free pauses a project after a week with no activity, and has no backups to restore</p></div><button class="btn" type="button">See Pro</button></div>
+          </div>
+        </section>
+        <div class="grid2">
+          <section class="card" aria-labelledby="h-sl">
+            <div class="ch"><h2 id="h-sl">Now</h2><span class="live">Live · every 30 s</span></div>
+            <div class="tbl"><table><thead><tr><th>Connections</th><th class="n">Open</th><th class="n">Busy</th></tr></thead><tbody>
+              <tr><td>The shop and console <span class="mono">frata_app</span></td><td class="n">9</td><td class="n">1</td></tr>
+              <tr><td>Admin <span class="mono">frata_admin</span></td><td class="n">1</td><td class="n">0</td></tr>
+              <tr><td>Supabase’s own</td><td class="n">5</td><td class="n">0</td></tr>
+            </tbody></table></div>
+            <div class="meters">
+              <div class="m"><div class="row"><span>Outbox waiting</span><span class="num">3 · oldest 40 s</span></div><div class="bar"><i style="width:3%;background:var(--s1)"></i></div></div>
+              <div class="m"><div class="row"><span>Outbox failed today</span><span class="num">0</span></div><div class="bar"><i style="width:0%;background:var(--s1)"></i></div></div>
+              <div class="m"><div class="row"><span>Webhooks not processed</span><span class="num">0</span></div><div class="bar"><i style="width:0%;background:var(--s1)"></i></div></div>
+            </div>
+          </section>
+          <section class="card" aria-labelledby="h-sq">
+            <div class="ch"><h2 id="h-sq">Slowest queries</h2><span class="meta">Since the last reset · total time</span></div>
+            <div class="tbl"><table><thead><tr><th>Query</th><th class="n">Calls</th><th class="n">Mean</th><th class="n">Total</th></tr></thead><tbody>
+              <tr><td class="mono">select … from products join variants …</td><td class="n">48.2K</td><td class="n">3.1 ms</td><td class="n">149 s</td></tr>
+              <tr><td class="mono">select … from shop_hosts where host = $1</td><td class="n">211K</td><td class="n">0.4 ms</td><td class="n">84 s</td></tr>
+              <tr><td class="mono">insert into outbox …</td><td class="n">3.9K</td><td class="n">1.2 ms</td><td class="n">5 s</td></tr>
+            </tbody></table></div>
+          </section>
+        </div>
+        <div class="grid2">
+          <section class="card" aria-labelledby="h-sb">
+            <div class="ch"><h2 id="h-sb">Biggest tables</h2></div>
+            <div class="tbl"><table><thead><tr><th>Table</th><th class="n">Rows</th><th class="n">Size</th></tr></thead><tbody>
+              <tr><td class="mono">audit_log</td><td class="n">41K</td><td class="n">6.2 MB</td></tr>
+              <tr><td class="mono">webhook_events</td><td class="n">9.8K</td><td class="n">3.9 MB</td></tr>
+              <tr><td class="mono">outbox</td><td class="n">6.1K</td><td class="n">1.7 MB</td></tr>
+              <tr><td class="mono">products</td><td class="n">212</td><td class="n">0.4 MB</td></tr>
+            </tbody></table></div>
+          </section>
+          <section class="card" aria-labelledby="h-sr">
+            <div class="ch"><h2 id="h-sr">Alerts</h2><button class="btn" type="button">Edit</button></div>
+            <div>
+              <div class="rule"><span><b>Connections over 80%</b><br><span class="meta">48 of 60 for 5 minutes</span></span><span class="sw2" aria-label="On"></span></div>
+              <div class="rule"><span><b>Database over 80% of the plan</b><br><span class="meta">400 MB of 500 MB</span></span><span class="sw2" aria-label="On"></span></div>
+              <div class="rule"><span><b>Outbox waiting over 10 minutes</b><br><span class="meta">Messages, payments and couriers fall behind</span></span><span class="sw2" aria-label="On"></span></div>
+              <div class="rule"><span><b>A query over 1 second on average</b><br><span class="meta">From the slowest queries</span></span><span class="sw2" aria-label="On"></span></div>
+            </div>
+          </section>
+        </div>
+        <div class="src"><span>Connections, size, queries · Frrata’s own read of Postgres, live</span><span>Plan and billing · Supabase Management API, daily</span><span>Outbox and webhooks · Frrata, live</span></div>
+      </div>
     </main>
   </div>
 </div>
@@ -215,7 +348,8 @@ tr:last-child td { border-bottom: 0 }
   function render() {
     const s = S[state]
     $('meta').textContent = s.meta
-    $('navDot').hidden = !s.alerts.length; $('navDot').textContent = s.alerts.length
+    $('navDot').hidden = false; $('navDot').textContent = s.alerts.length + 2
+    $('tbV').innerHTML = s.alerts.length ? `<span class="badge b-bad">${s.alerts.length}</span>` : '<span class="badge b-ok">OK</span>'
     $('banner').innerHTML = state === 'paused' || state === 'hobby' ? `<div class="banner" role="alert"><p><b>Every shop is offline.</b> ${state === 'paused' ? 'Vercel paused production at the $100 budget.' : 'Hobby’s 4 CPU-hours are used up.'}</p><button class="btn" type="button">${state === 'paused' ? 'Raise the budget and resume' : 'Upgrade to Pro'}</button></div>` : ''
     const pct = s.budget ? Math.min(100, s.proj / s.budget * 100) : 0
     $('kpis').innerHTML = state === 'hobby'
@@ -257,6 +391,17 @@ tr:last-child td { border-bottom: 0 }
       : '<span>Vercel billing API · daily, per project · pulled hourly</span><span>Vercel spend webhook · every few minutes</span><span>Production check · every 5 min, outside Vercel</span><span>Mux delivery · daily</span><span>Shop counts · Frrata, every 5 min</span>'
     document.querySelectorAll('[data-s]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.s === state)))
     document.querySelectorAll('[data-v]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === view)))
+  }
+  const tabs = ['vercel', 'mux', 'supa']
+  tabs.forEach((t) => $('t-' + t).onclick = () => tabs.forEach((u) => { $('t-' + u).setAttribute('aria-selected', String(u === t)); $('tab-' + u).hidden = u !== t }))
+  {
+    const svg = $('muxChart'), W = 560, H = 200, L = 44, B = 24, T = 10, top = 6000
+    const vals = Array.from({ length: 30 }, (_, i) => i < 20 ? 0 : Math.round(1700 + Math.sin(i) * 300 + (i === 26 ? 2600 : i === 27 ? 1900 : 0)))
+    const y = (v) => T + (H - T - B) * (1 - v / top), bw = (W - L - 8) / 30
+    let g = ''
+    for (const t of [0, 3000, 6000]) g += `<line x1="${L}" x2="${W - 4}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/><text x="${L - 6}" y="${y(t) + 4}" text-anchor="end" font-size="10" fill="var(--sub)" font-family="var(--mono)">${t / 1000}K</text>`
+    vals.forEach((v, i) => { const x = L + i * bw + 1; g += `<rect x="${x}" y="${y(v)}" width="${bw - 2}" height="${y(0) - y(v)}" fill="${i === 26 || i === 27 ? 'var(--s4)' : 'var(--s1)'}"/>`; if ((i + 1) % 5 === 0 || i === 0) g += `<text x="${x + bw / 2}" y="${H - 8}" text-anchor="middle" font-size="10" fill="var(--sub)">${i + 1} Nov</text>` })
+    svg.innerHTML = g
   }
   document.querySelectorAll('[data-s]').forEach((b) => b.onclick = () => { state = b.dataset.s; render() })
   document.querySelectorAll('[data-v]').forEach((b) => b.onclick = () => { view = b.dataset.v; render() })
