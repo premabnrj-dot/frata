@@ -37,7 +37,9 @@ export async function videoOf(tx: Tx, tenantId: string, id: string): Promise<Vid
  * A pending row, under the shop's caps, read and written under a per-shop lock so two starts can't race past them
  * (security review finding 1). The caller commits it, then asks Mux for the upload.
  */
-export async function startVideo(tx: Tx, tenantId: string, memberId: string, muxEnv: string, now: Date, use: VideoUse = 'loop'): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+export async function startVideo(tx: Tx, tenantId: string, memberId: string, muxEnv: string, now: Date, use: VideoUse = 'loop',
+  /** A product video: its product (the shop's own, checked by the caller) and the video it replaces, if any. */
+  product?: { productId: string; replaces?: string }): Promise<{ ok: true; id: string; replaced?: boolean } | { ok: false; error: string }> {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtext('videos:' || ${tenantId}))`)
   const dayAgo = new Date(now.getTime() - 86_400_000), monthAgo = new Date(now.getTime() - 30 * 86_400_000)
   const recent = (await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), gt(videos.createdAt, monthAgo), eq(videos.use, use)))).map(asVideo)
@@ -45,7 +47,10 @@ export async function startVideo(tx: Tx, tenantId: string, memberId: string, mux
     .leftJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).leftJoin(plans, eq(plans.id, planVersions.planId))
     .where(and(eq(tenantPlans.tenantId, tenantId), lte(tenantPlans.startsAt, now))).orderBy(sql`${tenantPlans.startsAt} desc`).limit(1)
   const onTrial = !!plan?.trialEndsAt && plan.trialEndsAt > now
-  if (use === 'product') return startProduct(tx, tenantId, memberId, muxEnv, now, recent, capPlan(plan?.code ?? null, onTrial))
+  if (use === 'product') {
+    if (!product) return { ok: false, error: 'Choose a product.' }
+    return startProduct(tx, tenantId, memberId, muxEnv, now, recent, capPlan(plan?.code ?? null, onTrial), product)
+  }
   const today = recent.filter((v) => v.createdAt > dayAgo).length
   if (today >= (onTrial ? PER_DAY_TRIAL : PER_DAY)) return { ok: false, error: onTrial ? 'Three videos a day on a trial. Try again tomorrow.' : 'Ten videos a day. Try again tomorrow.' }
   if (recent.length >= PER_MONTH) return { ok: false, error: 'Thirty videos a month. Remove one you don’t use, or try again next month.' }
@@ -57,9 +62,14 @@ export async function startVideo(tx: Tx, tenantId: string, memberId: string, mux
   return { ok: true, id: r!.id }
 }
 
-/** startVideo for a product's video: its own caps, then the row (use = 'product'). The caller links it to the product
- *  in the same transaction. A net first: product videos nothing links, past their window, are released. */
-async function startProduct(tx: Tx, tenantId: string, memberId: string, muxEnv: string, now: Date, recent: Video[], plan: ReturnType<typeof capPlan>): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+/** startVideo for a product's video, under the lock: one per product (a replace names the video it replaces, so a
+ *  second tab can't drop one unseen), its own caps, then the row (use = 'product') and its link. Every refusal comes
+ *  BEFORE the insert, so a refused start costs the shop nothing (security review MED-1, 2026-11-10). A net first:
+ *  product videos nothing links, past their window, are released. */
+async function startProduct(tx: Tx, tenantId: string, memberId: string, muxEnv: string, now: Date, recent: Video[], plan: ReturnType<typeof capPlan>,
+  product: { productId: string; replaces?: string }): Promise<{ ok: true; id: string; replaced: boolean } | { ok: false; error: string }> {
+  const current = await productVideoFor(tx, tenantId, product.productId)
+  if (current && current.id !== product.replaces) return { ok: false, error: 'One video per product · Replace it' }
   await releaseProductVideos(tx, tenantId, now)
   const C = PRODUCT_VIDEO_CAPS[plan], dayAgo = now.getTime() - 86_400_000, hourAgo = now.getTime() - 3_600_000
   const today = recent.filter((v) => v.createdAt.getTime() > dayAgo)
@@ -69,8 +79,10 @@ async function startProduct(tx: Tx, tenantId: string, memberId: string, muxEnv: 
   if (recent.length >= C.perMonth) return { ok: false, error: `${C.perMonth} videos a month on your plan.` }
   const live = (await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), isNull(videos.removedAt), eq(videos.use, 'product')))).map(asVideo)
   if (live.filter((v) => isLive(v, now)).length >= C.live) return { ok: false, error: `Your shop holds ${C.live} product videos on its plan. Remove one first.` }
+  if (current) await unlinkProductVideo(tx, tenantId, product.productId, now)
   const [r] = await tx.execute<{ id: string }>(sql`insert into videos (tenant_id, mux_env, created_by, use) values (${tenantId}, ${muxEnv}, ${memberId}, 'product') returning id`) as unknown as { id: string }[]
-  return { ok: true, id: r!.id }
+  await linkProductVideo(tx, tenantId, product.productId, r!.id)
+  return { ok: true, id: r!.id, replaced: !!current }
 }
 
 /** A product's video: its link and the video row (product videos only). */

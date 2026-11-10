@@ -88,7 +88,9 @@ export const MODULES: Record<ModuleKey, ModuleDef> = {
   product_video: {
     // PV·1 (docs/plans/2026-11-10-product-video-pv1.md): core, so every plan has it; a module, so Admin › Modules can
     // pause it for everyone while each shop's delivered minutes have no budget yet (unit-economics review 2026-11-10).
-    key: 'product_video', name: 'Product video', job: 'A reel or a film on each product.', group: 'grow', billing: 'core', status: 'now', dependsOn: [], outboxKinds: [],
+    key: 'product_video', name: 'Product video', job: 'A reel or a film on each product.', group: 'grow', billing: 'core', status: 'now', dependsOn: [],
+    // Off stops paid 720p prep still queued; never the deletes or cancels (security review LOW-2, 2026-11-10).
+    outboxKinds: ['mux.rendition.create'],
     usage: 'Up to a minute each, one per product',
     features: ['A reel or a landscape film on each product', 'Second in the photos, and beside the sizes', 'Plays only when a shopper taps it', 'Price, sizes and Add to bag under the video'],
   },

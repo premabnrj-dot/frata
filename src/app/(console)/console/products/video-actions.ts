@@ -11,7 +11,7 @@ import { isVideoConfigured, MUX_ENVIRONMENT_ID } from '@/lib/env'
 import { errName } from '@/lib/log'
 import { drainSoon } from '@/lib/outbox/drain'
 import { CONSOLE_HOST } from '@/lib/public-env'
-import { failVideo, linkProductVideo, productOfShop, productVideoFor, productVideoOf, setProductVideo, setUpload, startVideo, unlinkProductVideo } from '@/lib/queries/videos'
+import { failVideo, productOfShop, productVideoFor, productVideoOf, setProductVideo, setUpload, startVideo, unlinkProductVideo } from '@/lib/queries/videos'
 import { refreshProduct } from '@/lib/storefront/refresh'
 import { createUpload } from '@/lib/video/mux'
 import { BUTTONS, productVideoView, type ProductVideoView } from '@/lib/video/product-view'
@@ -28,7 +28,6 @@ type R<T = object> = ({ ok: true } & T) | { ok: false; error: string }
 const SUPPORT = 'Support visits can look but not change videos.'
 const BUSY = 'Too many videos in the last few minutes. Try again shortly.'
 const NOT_STARTED = 'Video didn’t start. Try again in a minute.'
-const ONE = 'One video per product · Replace it'
 const id = z.uuid()
 
 async function consoleOrigin(): Promise<string> {
@@ -54,16 +53,10 @@ export async function startProductVideoAction(input: unknown): Promise<R<{ video
     const tenantId = auth.membership.tenantId
     const product = await productOfShop(tx, tenantId, p.data.productId)
     if (!product) return { error: 'That product isn’t in your shop.' }
-    const s0 = await startVideo(tx, tenantId, auth.userId, MUX_ENVIRONMENT_ID, now, 'product')
+    // One per product, the caps, the row and its link: all under the shop's lock, refusals before the insert.
+    const s0 = await startVideo(tx, tenantId, auth.userId, MUX_ENVIRONMENT_ID, now, 'product', { productId: product.id, replaces: p.data.replaces })
     if (!s0.ok) return { error: s0.error }
-    // One per product (PV·1): replacing names the video it replaces, so a second tab can't drop one unseen.
-    const current = await productVideoFor(tx, tenantId, product.id)
-    if (current) {
-      if (current.id !== p.data.replaces) return { error: ONE }
-      await unlinkProductVideo(tx, tenantId, product.id, now)
-    }
-    await linkProductVideo(tx, tenantId, product.id, s0.id)
-    return { id: s0.id, handle: product.handle, replaced: !!current }
+    return { id: s0.id, handle: product.handle, replaced: !!s0.replaced }
   })
   if (!r.ok) return r
   if ('error' in r.value) return { ok: false, error: r.value.error as string }
@@ -113,14 +106,16 @@ export async function setProductVideoAction(input: unknown): Promise<R> {
     if (!product || !v || v.removedAt) return { error: 'This product has no video.' }
     if (p.data.posterMs !== undefined && v.durationMs !== null && p.data.posterMs > v.durationMs) return { error: 'Choose a frame inside the video.' }
     const change: { posterMs?: number; button?: string } = {}
-    if (p.data.posterMs !== undefined) change.posterMs = p.data.posterMs
-    if (p.data.button !== undefined) change.button = p.data.button
+    if (p.data.posterMs !== undefined && p.data.posterMs !== v.posterMs) change.posterMs = p.data.posterMs
+    if (p.data.button !== undefined && p.data.button !== v.button) change.button = p.data.button
+    // Nothing changed: no write, and the product's cached page is left alone (security review LOW-1).
+    if (!Object.keys(change).length) return { handle: null }
     await setProductVideo(tx, tenantId, product.id, change)
     return { handle: product.handle }
   })
   if (!r.ok) return r
   if ('error' in r.value) return { ok: false, error: r.value.error as string }
-  refreshProduct(r.tenantId, r.value.handle)
+  if (r.value.handle) refreshProduct(r.tenantId, r.value.handle)
   return { ok: true }
 }
 
