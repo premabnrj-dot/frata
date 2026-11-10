@@ -1,0 +1,265 @@
+<title>Admin Infrastructure</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: Frrata Admin's frame (dark ink sidebar, STAFF tag) around one page: a state switcher for the mockup, the month's bill and pace, what needs you, meters, 30 days by service, projects, alert rules, sources. */
+:root {
+  --bg: #f7f6f3; --card: #ffffff; --fg: #1d1b19; --sub: #6a645d; --line: #e6e1da; --muted: #f1eee9;
+  --nav: #1d1b19; --nav-fg: #e9e5df; --nav-sub: #9b948b; --primary: #1d1b19; --on-primary: #fbfaf8; --rani: #c41a5e;
+  --ok-bg: #e5f3ea; --ok: #1e6b3d; --warn-bg: #fdf1d8; --warn: #8a5a00; --bad-bg: #fbe6e6; --bad: #a12020; --info-bg: #e7eefb; --info: #234e9a;
+  --s1: #1d1b19; --s2: #8f8880; --s3: #cfc8bf; --s4: #c41a5e;
+  --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121110; --card: #1b1a18; --fg: #f1eee9; --sub: #a59e95; --line: #2f2c29; --muted: #23211f;
+  --nav: #0b0a09; --nav-fg: #e9e5df; --nav-sub: #8a837a; --primary: #f1eee9; --on-primary: #121110; --rani: #f06a9e;
+  --ok-bg: #12301f; --ok: #7fd3a0; --warn-bg: #3a2b0c; --warn: #f2c66b; --bad-bg: #3d1515; --bad: #ff9b9b; --info-bg: #172744; --info: #9fbdf5;
+  --s1: #f1eee9; --s2: #8f8880; --s3: #4a4642; --s4: #f06a9e; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121110; --card: #1b1a18; --fg: #f1eee9; --sub: #a59e95; --line: #2f2c29; --muted: #23211f;
+  --nav: #0b0a09; --nav-fg: #e9e5df; --nav-sub: #8a837a; --primary: #f1eee9; --on-primary: #121110; --rani: #f06a9e;
+  --ok-bg: #12301f; --ok: #7fd3a0; --warn-bg: #3a2b0c; --warn: #f2c66b; --bad-bg: #3d1515; --bad: #ff9b9b; --info-bg: #172744; --info: #9fbdf5;
+  --s1: #f1eee9; --s2: #8f8880; --s3: #4a4642; --s4: #f06a9e; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 14px/1.5 var(--sans) }
+.mock { padding-block: 16px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 14px; max-width: 1240px; margin: 0 auto }
+.switch { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; color: var(--sub) }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 6px; padding: 2px; gap: 2px; background: var(--card) }
+.seg button { font: inherit; font-size: 13px; border: 0; background: transparent; color: var(--fg); padding: 5px 10px; border-radius: 4px; cursor: pointer }
+.seg button[aria-pressed="true"] { background: var(--primary); color: var(--on-primary) }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--rani); outline-offset: 2px }
+
+.frame { display: grid; grid-template-columns: 220px minmax(0, 1fr); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-height: 760px; background: var(--bg) }
+@media (max-width: 820px) { .frame { grid-template-columns: minmax(0, 1fr) } .side { display: none } }
+.side { background: var(--nav); color: var(--nav-fg); padding: 16px 12px; display: grid; align-content: start; gap: 4px }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; padding: 4px 8px 14px }
+.staff { background: #fdf1d8; color: #8a5a00; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 3px; letter-spacing: .04em }
+.side a { color: var(--nav-fg); text-decoration: none; padding: 7px 8px; border-radius: 5px; font-size: 13px; display: flex; justify-content: space-between }
+.side a.on { background: rgb(255 255 255 / .1); font-weight: 600 }
+.side .grp { color: var(--nav-sub); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 12px 8px 4px }
+.dot { background: #a12020; color: #fff; font-size: 11px; border-radius: 9px; padding: 0 6px; font-weight: 700 }
+
+main { padding: 20px; display: grid; gap: 16px; align-content: start; min-width: 0 }
+.ph { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: flex-start }
+.ph h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin: 0 }
+.meta { color: var(--sub); font-size: 13px }
+.btn { font: inherit; font-size: 13px; font-weight: 500; border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 6px; padding: 6px 12px; cursor: pointer }
+.btn.primary { background: var(--primary); color: var(--on-primary); border-color: var(--primary) }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: grid; gap: 12px; min-width: 0 }
+.card h2 { font-size: 15px; font-weight: 600; margin: 0 }
+.ch { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap }
+.badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 4px; white-space: nowrap }
+.b-ok { background: var(--ok-bg); color: var(--ok) } .b-warn { background: var(--warn-bg); color: var(--warn) } .b-bad { background: var(--bad-bg); color: var(--bad) } .b-info { background: var(--info-bg); color: var(--info) } .b-n { background: var(--muted); color: var(--sub) }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums }
+
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px }
+@media (max-width: 980px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+.kpi { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; display: grid; gap: 4px; min-width: 0 }
+.kpi span { font-size: 12px; color: var(--sub) }
+.kpi b { font-family: var(--mono); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums }
+.kpi small { font-size: 12px; color: var(--sub) }
+.pace { height: 6px; border-radius: 3px; background: var(--muted); overflow: hidden; position: relative }
+.pace i { position: absolute; inset: 0 auto 0 0; background: var(--s1) }
+.pace u { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--rani) }
+
+.alerts { display: grid; gap: 0; border-top: 1px solid var(--line) }
+.al { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line) }
+.al p { margin: 0 } .al .why { color: var(--sub); font-size: 13px }
+@media (max-width: 560px) { .al { grid-template-columns: minmax(0, 1fr) } }
+.empty { color: var(--sub); padding: 8px 0 }
+
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px }
+@media (max-width: 980px) { .grid2 { grid-template-columns: minmax(0, 1fr) } }
+.meters { display: grid; gap: 12px }
+.m { display: grid; gap: 4px }
+.m .row { display: flex; justify-content: space-between; gap: 8px; font-size: 13px }
+.bar { height: 8px; border-radius: 4px; background: var(--muted); overflow: hidden }
+.bar i { display: block; height: 100% }
+
+.chart { overflow-x: auto }
+.chart svg { display: block; width: 100%; min-width: 560px; height: auto }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--sub) }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px }
+
+.tbl { overflow-x: auto }
+table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 13px }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line) }
+th { font-size: 12px; color: var(--sub); font-weight: 600 }
+td.n, th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap }
+tr:last-child td { border-bottom: 0 }
+.rule { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line) }
+.rule:last-child { border-bottom: 0 }
+.sw2 { width: 34px; height: 20px; border-radius: 10px; background: var(--primary); position: relative; flex: none }
+.sw2::after { content: ""; position: absolute; top: 3px; right: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--on-primary) }
+.src { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12px; color: var(--sub) }
+.banner { background: var(--bad); color: #fff; border-radius: 6px; padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center }
+.banner p { margin: 0 } .banner .btn { background: #fff; color: #a12020; border-color: #fff }
+.example { font-size: 12px; color: var(--sub) }
+</style>
+
+<div class="mock">
+  <div class="switch">
+    <span>Mockup state</span>
+    <div class="seg" role="group" aria-label="Mockup state">
+      <button type="button" data-s="normal" aria-pressed="true">Normal month</button>
+      <button type="button" data-s="spike" aria-pressed="false">Bot spike</button>
+      <button type="button" data-s="paused" aria-pressed="false">Over budget, paused</button>
+      <button type="button" data-s="hobby" aria-pressed="false">On Hobby</button>
+    </div>
+    <span class="example">Example figures for about 20 shops on Pro.</span>
+  </div>
+
+  <div class="frame">
+    <nav class="side" aria-label="Admin">
+      <div class="brand">frrata <span class="staff">STAFF</span></div>
+      <a href="#">Merchants</a><a href="#">Partners</a><a href="#">Support</a><a href="#">Activity</a>
+      <span class="grp">Platform</span>
+      <a href="#">Plans</a><a href="#">Modules</a><a href="#">Themes</a><a href="#">Names</a>
+      <a href="#" class="on">Infrastructure <span class="dot" id="navDot" hidden></span></a>
+      <a href="#">Staff</a>
+    </nav>
+
+    <main>
+      <div id="banner"></div>
+      <div class="ph">
+        <div style="display:grid;gap:4px">
+          <h1>Infrastructure</h1>
+          <span class="meta" id="meta"></span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button">Open Vercel usage</button><button class="btn primary" type="button">Check now</button></div>
+      </div>
+
+      <div class="kpis" id="kpis"></div>
+
+      <section class="card" aria-labelledby="h-needs">
+        <div class="ch"><h2 id="h-needs">Needs you</h2><span id="needCount"></span></div>
+        <div class="alerts" id="alerts"></div>
+      </section>
+
+      <div class="grid2">
+        <section class="card" aria-labelledby="h-m">
+          <div class="ch"><h2 id="h-m">This month</h2><span class="meta" id="mPace"></span></div>
+          <div class="meters" id="meters"></div>
+        </section>
+        <section class="card" aria-labelledby="h-c">
+          <div class="ch"><h2 id="h-c">Last 30 days</h2>
+            <div class="seg" role="group" aria-label="Measure"><button type="button" data-v="cost" aria-pressed="true">Cost</button><button type="button" data-v="cpu" aria-pressed="false">CPU hours</button></div></div>
+          <div class="legend" id="legend"></div>
+          <div class="chart"><svg id="chart" viewBox="0 0 560 220" role="img" aria-label="Daily usage, last 30 days"></svg></div>
+        </section>
+      </div>
+
+      <section class="card" aria-labelledby="h-p">
+        <div class="ch"><h2 id="h-p">By project</h2><span class="meta">Month to date</span></div>
+        <div class="tbl"><table><thead><tr><th>Project</th><th class="n">CPU hours</th><th class="n">Requests</th><th class="n">Cost</th><th class="n">Share</th><th></th></tr></thead><tbody id="projects"></tbody></table></div>
+      </section>
+
+      <div class="grid2">
+        <section class="card" aria-labelledby="h-r">
+          <div class="ch"><h2 id="h-r">Alerts</h2><button class="btn" type="button">Edit</button></div>
+          <div>
+            <div class="rule"><span><b>On pace past the budget</b><br><span class="meta">Projected bill over <span class="num">$100</span></span></span><span class="sw2" aria-label="On"></span></div>
+            <div class="rule"><span><b>A day over 3× normal</b><br><span class="meta">CPU or requests against the 7-day average</span></span><span class="sw2" aria-label="On"></span></div>
+            <div class="rule"><span><b>Vercel’s spend alert</b><br><span class="meta">50%, 75% and 100% of <span class="num">$100</span> · pauses production at 100%</span></span><span class="sw2" aria-label="On"></span></div>
+            <div class="rule"><span><b>One shop or project over 40%</b><br><span class="meta">Of the month’s requests</span></span><span class="sw2" aria-label="On"></span></div>
+            <div class="rule"><span><b>Send to</b><br><span class="meta">Email to admins · WhatsApp to the owner</span></span><span></span></div>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="h-s">
+          <div class="ch"><h2 id="h-s">Top shops by requests</h2><span class="meta">From Frrata’s own counts · today</span></div>
+          <div class="tbl"><table><thead><tr><th>Shop</th><th class="n">Requests</th><th class="n">Bots</th><th class="n">Est. cost</th></tr></thead><tbody id="shops"></tbody></table></div>
+        </section>
+      </div>
+
+      <div class="src" id="src"></div>
+    </main>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id)
+  const usd = (n) => '$' + (n >= 100 ? Math.round(n).toLocaleString('en-US') : n.toFixed(2))
+  const fmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'K' : String(n)
+  // 30 days of example data: compute, CDN, storage+other, Mux (in $) and CPU hours.
+  const days = (spikeAt, paused) => Array.from({ length: 30 }, (_, i) => {
+    const d = i + 1, base = 1 + Math.sin(i / 3) * 0.15 + i * 0.012
+    let k = spikeAt && i >= spikeAt ? 3.6 - (i - spikeAt) * 0.4 : 1
+    if (k < 1) k = 1
+    if (paused && i > 26) k = 0.05
+    return { d, compute: +(0.42 * base * k).toFixed(2), cdn: +(0.36 * base * Math.max(1, k * 0.8)).toFixed(2), other: 0.08, mux: +(0.22 * base).toFixed(2), cpu: +(1.6 * base * k).toFixed(1) }
+  })
+  const S = {
+    normal: { meta: 'Pro · billing period 1–30 Nov · Vercel data to 9 Nov, 23:59 · spend checked 4 min ago', mtd: 18.6, proj: 42, budget: 100, credit: 20, prod: ['ok', 'Serving'], alerts: [], days: days(0, false),
+      meters: [['Usage credit', 18.6, 20, '$'], ['Active CPU', 41, null, 'h'], ['CDN requests', 4.1e6, 10e6, ''], ['Mux delivery', 31e3, 100e3, 'min']],
+      projects: [['frata', 38.2, 3.6e6, 15.9, 85], ['ekatanv2', 2.1, 0.3e6, 1.8, 10], ['10 others', 0.7, 0.2e6, 0.9, 5]],
+      shops: [['Kesar Studio', 61e3, '4%', 0.19], ['Neel & Co', 44e3, '6%', 0.14], ['Rangrez', 31e3, '3%', 0.10], ['Mitti Loom', 22e3, '9%', 0.07]] },
+    spike: { meta: 'Pro · billing period 1–30 Nov · Vercel data to 9 Nov, 23:59 · spend checked 2 min ago', mtd: 36.4, proj: 104, budget: 100, credit: 20, prod: ['ok', 'Serving'], days: days(24, false),
+      alerts: [['b-bad', 'CPU 3.6× normal', 'Since 8 Nov, 02:00 · Mitti Loom · 71% of its requests are bots', 'Block bots on Mitti Loom'], ['b-warn', 'On pace for $104', 'Budget $100 · production pauses at 100%', 'Raise the budget']],
+      meters: [['Usage credit', 20, 20, '$'], ['Active CPU', 96, null, 'h'], ['CDN requests', 8.8e6, 10e6, ''], ['Mux delivery', 33e3, 100e3, 'min']],
+      projects: [['frata', 91.5, 8.1e6, 33.2, 91], ['ekatanv2', 2.4, 0.4e6, 2.1, 6], ['10 others', 0.8, 0.3e6, 1.1, 3]],
+      shops: [['Mitti Loom', 612e3, '71%', 2.05], ['Kesar Studio', 63e3, '4%', 0.20], ['Neel & Co', 45e3, '6%', 0.14], ['Rangrez', 30e3, '3%', 0.10]] },
+    paused: { meta: 'Pro · billing period 1–30 Nov · production paused at 9 Nov, 21:40', mtd: 100, proj: 100, budget: 100, credit: 20, prod: ['bad', 'Paused'], days: days(20, true),
+      alerts: [['b-bad', 'Production is paused', 'Vercel paused every project at the $100 budget, 9 Nov 21:40 · shops answer 503', 'Raise the budget and resume'], ['b-bad', 'CPU 3.6× normal', 'Since 5 Nov · Mitti Loom · 71% bots', 'Block bots on Mitti Loom']],
+      meters: [['Usage credit', 20, 20, '$'], ['Active CPU', 288, null, 'h'], ['CDN requests', 9.9e6, 10e6, ''], ['Mux delivery', 29e3, 100e3, 'min']],
+      projects: [['frata', 270, 9.4e6, 96.1, 96], ['ekatanv2', 2.6, 0.3e6, 2.4, 3], ['10 others', 0.9, 0.2e6, 1.5, 1]],
+      shops: [['Mitti Loom', 1.9e6, '71%', 6.40], ['Kesar Studio', 58e3, '4%', 0.18], ['Neel & Co', 41e3, '6%', 0.13], ['Rangrez', 28e3, '3%', 0.09]] },
+    hobby: { meta: 'Hobby · Vercel shares no costs on Hobby · usage from Frrata’s own counts', mtd: 0, proj: 0, budget: 0, credit: 0, prod: ['bad', 'Paused for 30 days'], days: null,
+      alerts: [['b-bad', 'Paused by Hobby’s 4 CPU-hours', 'Shared by 12 projects · unpauses 10 Dec · Hobby can’t buy more', 'Upgrade to Pro']],
+      meters: [['Active CPU', 4.32, 4, 'h'], ['Invocations', 241e3, 1e6, ''], ['CDN requests', 250e3, 1e6, ''], ['Functions storage', 9.66, 10, 'GB']],
+      projects: [], shops: [['Kesar Studio', 9e3, '—', null], ['Neel & Co', 4e3, '—', null]] },
+  }
+  let state = 'normal', view = 'cost'
+  function render() {
+    const s = S[state]
+    $('meta').textContent = s.meta
+    $('navDot').hidden = !s.alerts.length; $('navDot').textContent = s.alerts.length
+    $('banner').innerHTML = state === 'paused' || state === 'hobby' ? `<div class="banner" role="alert"><p><b>Every shop is offline.</b> ${state === 'paused' ? 'Vercel paused production at the $100 budget.' : 'Hobby’s 4 CPU-hours are used up.'}</p><button class="btn" type="button">${state === 'paused' ? 'Raise the budget and resume' : 'Upgrade to Pro'}</button></div>` : ''
+    const pct = s.budget ? Math.min(100, s.proj / s.budget * 100) : 0
+    $('kpis').innerHTML = state === 'hobby'
+      ? `<div class="kpi"><span>Production</span><b style="color:var(--bad)">Paused</b><small>Unpauses 10 Dec</small></div><div class="kpi"><span>Active CPU</span><b>4 h 19 m</b><small>of 4 h · 12 projects</small></div><div class="kpi"><span>Bill</span><b>$0</b><small>Hobby</small></div><div class="kpi"><span>On Pro now</span><b>$20</b><small>a month, $20 credit included</small></div>`
+      : `<div class="kpi"><span>Month to date</span><b>${usd(s.mtd)}</b><small>After the $20 credit: ${usd(Math.max(0, s.mtd - 20) + 20)}</small></div>
+         <div class="kpi"><span>On pace for</span><b style="color:${s.proj > s.budget ? 'var(--bad)' : s.proj > s.budget * 0.75 ? 'var(--warn)' : 'var(--fg)'}">${usd(s.proj)}</b><div class="pace" aria-hidden="true"><i style="width:${pct}%"></i><u style="left:calc(100% - 2px)"></u></div><small>Budget ${usd(s.budget)}</small></div>
+         <div class="kpi"><span>Production</span><b style="color:var(--${s.prod[0]})">${s.prod[1]}</b><small>${state === 'paused' ? 'Since 9 Nov, 21:40' : 'frrata.shop · 200 · 0.18 s'}</small></div>
+         <div class="kpi"><span>Per shop</span><b>${usd(s.mtd / 20)}</b><small>20 live shops · this month</small></div>`
+    $('needCount').innerHTML = s.alerts.length ? `<span class="badge b-bad">${s.alerts.length}</span>` : '<span class="badge b-ok">All clear</span>'
+    $('alerts').innerHTML = s.alerts.length ? s.alerts.map(([b, t, w, a]) => `<div class="al"><span class="badge ${b}">${b === 'b-bad' ? 'Now' : 'Soon'}</span><div><p><b>${t}</b></p><p class="why">${w}</p></div><button class="btn" type="button">${a}</button></div>`).join('') : '<p class="empty">Nothing needs you.</p>'
+    $('mPace').textContent = state === 'hobby' ? 'Hobby caps' : 'Day 10 of 30'
+    $('meters').innerHTML = s.meters.map(([n, v, cap, u]) => {
+      const p = cap ? Math.min(100, v / cap * 100) : Math.min(100, v / 300 * 100), col = cap && v >= cap ? 'var(--bad)' : cap && v / cap > 0.75 ? 'var(--warn)' : 'var(--s1)'
+      const val = u === '$' ? `${usd(v)} / ${usd(cap)}` : u === 'h' ? `${v} h${cap ? ' / ' + cap + ' h' : ' · $' + (v * 0.14).toFixed(2)}` : u === 'GB' ? `${v} / ${cap} GB` : u === 'min' ? `${fmt(v)} / ${fmt(cap)} free min` : `${fmt(v)} / ${fmt(cap)}`
+      return `<div class="m"><div class="row"><span>${n}</span><span class="num">${val}</span></div><div class="bar"><i style="width:${p}%;background:${col}"></i></div></div>`
+    }).join('')
+    // chart
+    const svg = $('chart'), W = 560, H = 220, L = 40, B = 24, T = 10
+    if (!s.days) { svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" font-size="13" fill="var(--sub)">Vercel shares daily costs on Pro only</text>`; $('legend').innerHTML = ''; }
+    else {
+      const keys = view === 'cost' ? [['compute', 'var(--s1)', 'Compute'], ['cdn', 'var(--s2)', 'CDN'], ['other', 'var(--s3)', 'Storage, other'], ['mux', 'var(--s4)', 'Mux']] : [['cpu', 'var(--s1)', 'CPU hours']]
+      $('legend').innerHTML = keys.map(([, c, n]) => `<span><span class="sw" style="background:${c}"></span>${n}</span>`).join('')
+      const tot = (d) => keys.reduce((a, [k]) => a + d[k], 0), max = Math.max(...s.days.map(tot)) * 1.15
+      const top = view === 'cost' ? Math.ceil(max) : Math.ceil(max / 2) * 2
+      const y = (v) => T + (H - T - B) * (1 - v / top), bw = (W - L - 8) / 30
+      let g = ''
+      for (const t of [0, top / 2, top]) g += `<line x1="${L}" x2="${W - 4}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/><text x="${L - 6}" y="${y(t) + 4}" text-anchor="end" font-size="10" fill="var(--sub)" font-family="var(--mono)">${view === 'cost' ? '$' + t.toFixed(t < 10 ? 1 : 0) : t + 'h'}</text>`
+      s.days.forEach((d, i) => {
+        let acc = 0; const x = L + i * bw + 1
+        for (const [k, c] of keys) { const v = d[k]; g += `<rect x="${x}" y="${y(acc + v)}" width="${bw - 2}" height="${y(acc) - y(acc + v)}" fill="${c}"/>`; acc += v }
+        if (d.d % 5 === 0 || d.d === 1) g += `<text x="${x + bw / 2}" y="${H - 8}" text-anchor="middle" font-size="10" fill="var(--sub)">${d.d} Nov</text>`
+      })
+      svg.innerHTML = g
+    }
+    $('projects').innerHTML = s.projects.length ? s.projects.map(([n, c, r, cost, sh]) => `<tr><td>${n}${n === 'frata' ? ' <span class="badge b-n">Frrata</span>' : ''}</td><td class="n">${c}</td><td class="n">${fmt(r)}</td><td class="n">${usd(cost)}</td><td class="n">${sh}%</td><td><div class="bar" style="width:80px"><i style="width:${sh}%;background:var(--s1)"></i></div></td></tr>`).join('') : '<tr><td colspan="6" class="meta">Per project on Pro only</td></tr>'
+    $('shops').innerHTML = s.shops.map(([n, r, b, c]) => `<tr><td>${n}</td><td class="n">${fmt(r)}</td><td class="n" style="${parseInt(b) > 50 ? 'color:var(--bad)' : ''}">${b}</td><td class="n">${c == null ? '—' : usd(c)}</td></tr>`).join('')
+    $('src').innerHTML = state === 'hobby'
+      ? '<span>Vercel billing API · none on Hobby</span><span>Spend webhook · Pro only</span><span>Shop counts · Frrata, every 5 min</span>'
+      : '<span>Vercel billing API · daily, per project · pulled hourly</span><span>Vercel spend webhook · every few minutes</span><span>Production check · every 5 min, outside Vercel</span><span>Mux delivery · daily</span><span>Shop counts · Frrata, every 5 min</span>'
+    document.querySelectorAll('[data-s]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.s === state)))
+    document.querySelectorAll('[data-v]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === view)))
+  }
+  document.querySelectorAll('[data-s]').forEach((b) => b.onclick = () => { state = b.dataset.s; render() })
+  document.querySelectorAll('[data-v]').forEach((b) => b.onclick = () => { view = b.dataset.v; render() })
+  render()
+})()
+</script>
