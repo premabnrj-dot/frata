@@ -82,6 +82,7 @@ export const MODULES: Record<ModuleKey, ModuleDef> = {
   },
   ekcode: {
     key: 'ekcode', name: 'EkCode', job: 'Shoppers filled in at checkout.', group: 'grow', billing: 'core', status: 'now', dependsOn: [], outboxKinds: [],
+    setup: '/console/apps/ekcode',
     features: ['Name, phone and address in one tap', 'Every phone checked on WhatsApp', 'Shoppers from other shops that use EkCode'],
   },
   product_video: {
