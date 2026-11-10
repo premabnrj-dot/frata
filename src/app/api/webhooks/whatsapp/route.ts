@@ -1,7 +1,7 @@
 import { after, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'node:crypto'
 import { META_APP_SECRET, WA_VERIFY_TOKEN } from '@/lib/env'
-import { verifyMetaSignature } from '@/lib/modules/communication/signature'
+import { verifyMetaSignature } from '@/lib/meta/signature'
 import { processWhatsApp, storeWebhook } from '@/lib/modules/communication/webhook'
 
 // ENTRY POINT credential: Meta's X-Hub-Signature-256 over the raw body with Frrata's app secret (scripts/check-actions.mjs).

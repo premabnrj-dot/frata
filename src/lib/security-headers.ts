@@ -29,8 +29,9 @@ export const HSTS_PLATFORM = { key: 'Strict-Transport-Security', value: 'max-age
 /** A literal host as a `has: host` value (Next turns the value into an anchored regex: dots must be escaped). */
 export const hostValue = (s: string) => s.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 /** Next's `has: host` value: a regex anchored by Next, matched against the lowercased host without its port. */
-export function platformHostPattern(consoleHost: string, shopDomain: string): string {
-  return `(?:${hostValue(consoleHost)}|(?:[a-z0-9-]+\\.)?${hostValue(shopDomain)})`
+export function platformHostPattern(consoleHost: string, shopDomain: string, ekcodeHost = ''): string {
+  const ek = ekcodeHost ? `|(?:www\\.)?${hostValue(ekcodeHost)}` : ''
+  return `(?:${hostValue(consoleHost)}|(?:[a-z0-9-]+\\.)?${hostValue(shopDomain)}${ek})`
 }
 
 export const SECURITY_HEADERS: { key: string; value: string }[] = [
@@ -64,6 +65,26 @@ export function signedInCsp(nonce: string, dev: boolean, framed = false): string
 }
 
 /** The console-host paths that render per request behind a sign-in (or lead to one). `/partners` is the public page, not `/partner`. */
+/**
+ * EkCode's /continue (security review M2): scripts by nonce only, calls to its own host only, the proof-of-work worker
+ * from a blob, nothing framed, forms only to itself, no referrer leaves.
+ */
+export function ekcodeCsp(nonce: string, dev: boolean): string {
+  return [
+    "default-src 'self'",
+    `script-src 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ''}`,
+    "connect-src 'self'",
+    "img-src 'self' data:",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'",
+    "worker-src 'self' blob:",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "base-uri 'none'",
+    "object-src 'none'",
+  ].join('; ')
+}
+
 const SIGNED_IN = ['/console', '/admin', '/partner', '/choose', '/handover', '/login', '/start', '/auth']
 export function isSignedInPath(path: string): boolean {
   return SIGNED_IN.some((p) => path === p || path.startsWith(`${p}/`))

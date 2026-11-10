@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.19.0
+  version: 1.20.0
   verified: 2026-11-09
   decisions: [ADR-0006]
 ---
@@ -253,6 +253,11 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
   WhatsApp Business Platform" (→ per-message re-billing to merchants: counsel first [U]); no misrepresenting
   "affiliation". Precedent: Razorpay Magic Checkout sends from "Razorpay's WhatsApp handle", merchant name editable
   [V-undated]; Shiprocket auto-sends for 3 lakh+ brands, sender unstated [S, 2026-05-01]; GoKwik [U].
+- **EkCode's number, as built (P1, 2026-11-09):** its own Meta app in its own portfolio (ADR-0010); copy-code
+  authentication template `ekcode_signin_code`, sent with `message_send_ttl_seconds` 600 from `sendAuthCode`
+  (`src/lib/meta/graph.ts`, which now returns the wamid or Meta's error code); delivery reports at
+  `/api/webhooks/ekcode` (its own app secret), trimmed to wamid, status, error and time; 130429 retried once after 2 s;
+  131026 never shown to the shopper (Meta §4.1). No email (owner, until SES is planned).
 - **Display name / blue tick** (2026-11-09): "Frrata" fits the clear-relationship rule; never a shop's name in it [S,
   360dialog]. Official Business Account: policy compliance, ≥ 30 days on the platform, verified portfolio, two-step
   verification, approved display name; no notability test stated; reapply after 30 days [V-undated,

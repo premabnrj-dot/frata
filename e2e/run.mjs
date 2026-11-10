@@ -8,7 +8,7 @@
 // =============================================================================
 import { readdirSync, writeFileSync } from 'node:fs'
 import { OUT, SHOP_DOMAIN, PORTS, playwright } from './lib.mjs'
-import { OWN_DOMAIN } from './constants.mjs'
+import { EKCODE, OWN_DOMAIN } from './constants.mjs'
 const { chromium } = playwright
 import { down, up } from './stack.mjs'
 
@@ -24,7 +24,7 @@ try {
   stack = await up({ build: !process.argv.includes('--no-build') })
   for (const f of files) {
     const flow = (await import(`./flows/${f}`)).default
-    const browser = await chromium.launch({ args: [`--host-resolver-rules=MAP *.${SHOP_DOMAIN} 127.0.0.1:${PORTS.app}, MAP ${OWN_DOMAIN} 127.0.0.1:${PORTS.app}, MAP www.${OWN_DOMAIN} 127.0.0.1:${PORTS.app}`] })
+    const browser = await chromium.launch({ args: [`--host-resolver-rules=MAP *.${SHOP_DOMAIN} 127.0.0.1:${PORTS.app}, MAP ${OWN_DOMAIN} 127.0.0.1:${PORTS.app}, MAP www.${OWN_DOMAIN} 127.0.0.1:${PORTS.app}, MAP ${EKCODE.host} 127.0.0.1:${PORTS.app}`] })
     // Screenshots are taken with reduced motion unless a flow asks otherwise: a dialog caught half faded in told
     // nothing (motion system 2026-11-08). A flow that tests motion passes reducedMotion: 'no-preference'.
     const newContext = browser.newContext.bind(browser)

@@ -252,10 +252,13 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   `src/domains/<key>/`, `src/lib/modules/<key>/` (its tables too: `src/lib/modules/reviews/schema.ts`, listed in
   `drizzle.config.ts`), `src/components/modules/<key>/`, `src/app/(console)/console/apps/<key>/`, its shopper API
   `src/app/api/shop/<key>/` and its shop pages in the `src/app/s/[host]/(<key>)/` group; core reaches it only through
-  the hooks `check:modules` lists: `<ModuleSlot name="order.side" | "home.tile">` (`src/components/modules/slots.tsx`),
+  the hooks `check:modules` lists: `<ModuleSlot>` / `<Slot name="order.side" | "home.tile" | "checkout.identity">` (`src/components/modules/slots.tsx`),
   the product page's `productExtras` (`src/components/modules/storefront.tsx`: what goes under a product and its
   rating, from one read; the rating is the markup's `aggregateRating`), the `SENDERS` map (`src/lib/outbox/drain.ts`),
   the console layout, the webhooks. Add a filler, not an import to a core page.
+  In the shop's client checkout a module talks through `src/components/storefront/module-events.ts` only: it fills the
+  form with a `shop:prefill` event, hears the placed order's address on `shop:placed`, and names the arm it showed in
+  sessionStorage `shop:arm:<key>` (EkCode P1).
 - **An add-on sold only on some plans** says so in the registry (`addOnFor`, Reviews: Growth and Scale). Off those
   plans an add-on or trial row grants nothing (`addOnAllowed`), Admin offers no trial, and the bill drops it; a plan
   that includes the module stops the add-on's bill too (`addOnBillable`, from the plan at the month's start).
@@ -407,6 +410,27 @@ after it. A class a shop page uses from outside the shop's folders must be added
   old → current map rides in the cached catalogue entry (`movedCollections`); the route 308s before its 404.
 - **Identifiers**: `variants.gtin` (check digit in `src/domains/catalogue/gtin.ts`); the MPN in markup is the SKU, never
   a second column. Like the SKU, the gtin is dropped from the cached catalogue entry (only the product page reads it).
+
+## EkCode (P1 built 2026-11-09; ADR-0009, ADR-0010; plan docs/plans/2026-11-09-ekcode-p1.md)
+
+- **A second public host.** `NEXT_PUBLIC_EKCODE_HOST` (ekcode.in) is a `routeFor` kind of its own
+  (`src/domains/tenancy/host.ts`): only `/`, `/privacy`, `/terms`, `/contact`, `/continue`, `/api/ek/*` and `/_next/*`
+  answer there; `/ek` and `/api/ek` are a 404 everywhere else; it is never a shop (`requireShop` refuses it) and never
+  the console (no Supabase session). Its pages are `src/app/ek/` reached through the rewrite; `/continue` gets a nonce
+  CSP from the middleware's ekcode branch.
+- **Platform tables with no door but definers.** The vault (`ekcode_*`, drizzle/0088): `revoke all` from every role, one
+  `restrictive` `definer_only` policy `using (false)`, definers pinned to `search_path ''` and executable by exactly one
+  role; `check:tenant` fails any table grant on them. Scope always comes from a server-made handle (the shop's own
+  request makes the flow), never from an argument a caller chooses. No definer returns an account id; a shop's id for
+  a shopper is a random `ekcode_pairs` row.
+- **The handshake** is PKCE: the shop keeps `state.verifier` in its own cookie, ekcode.in gets only a random handle,
+  the return URL is built from the flow row, the grant is a 60-second one-time code stored as a hash, and redeem
+  checks tenant, host and `S256(verifier)` in one update. Copy this for any cross-host return.
+- **Keys that rotate**: `src/lib/crypto/key-ring.ts` — rings "id:secret,…" newest first, the key id inside every
+  sealed value and keyed hash; new entries go in front, old values still open. Payment secrets stay on secret-box.
+- **A module never imported by core**: the checkout gains a slot (`checkout.identity`) and generic window events
+  (`shop:prefill`, `shop:placed`); a brand mark ships as server-rendered SVG, never as path data in a client chunk.
+- `src/domains/ekcode/` belongs to the module (check:modules); shared rules are `src/domains/ekcode-core/`.
 
 ## Outside world (ADR-0006)
 

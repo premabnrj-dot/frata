@@ -23,6 +23,7 @@ const SURFACES = ['background', 'card', 'popover', 'primary', 'secondary', 'mute
 const STATUS = ['ok', 'warn', 'danger', 'info', 'neutral']
 /** Tokens that are not read as text or as an edge a person must see, with why. */
 const DECORATIVE = {
+  'ek-line': 'EkCode pages: separates content (cards, rules); never the only sign of a control',
   border: 'separates content (cards, table rules); never the only sign of a control (rule 2)',
   scrim: 'the veil behind an open dialog (the ink at 45%); nothing is read on it',
   // Illustration (frata-design-language § Graphic language): aria-hidden, the same words always beside them.
@@ -47,6 +48,8 @@ export function pairs() {
     ['brand-text', 'background', TEXT], ['brand-text', 'card', TEXT], ['brand-text', 'muted', TEXT], ['brand-text', 'accent', TEXT],
     // The website's Neel band: paper numbers and words on it (website spec W·1); rani on the ink stage.
     ['primary-foreground', 'neel', TEXT], ['brand-on-ink', 'primary', TEXT])
+  // EkCode's own brand (frata-design-language § EkCode): words on paper and on ink, the cursor on both.
+  p.push(['ek-ink', 'ek-paper', TEXT], ['ek-paper', 'ek-ink', TEXT], ['ek-sub', 'ek-paper', TEXT], ['ek-cursor', 'ek-paper', NONTEXT], ['ek-cursor-on-ink', 'ek-ink', NONTEXT])
   p.push(['input', 'card', NONTEXT], ['input', 'background', NONTEXT], ['ring', 'background', NONTEXT], ['ring', 'card', NONTEXT],
     ['primary-foreground', 'primary', NONTEXT] /* the focus ring on ink */,
     // The thread under a primary (ink) or secondary (card) button, the current tab, the loading bar; the tinge on ink.

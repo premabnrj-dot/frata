@@ -11,6 +11,7 @@ export const SLUG_SHAPE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])$/
 
 /** Addresses a shop may not take: ours, or ones a shopper could mistake for ours. */
 export const RESERVED = new Set([
+  'ekcode',
   'www', 'app', 'api', 'admin', 'console', 'frata', 'frrata', 'help', 'support', 'status', 'mail', 'email',
   'shop', 'store', 'stores', 'login', 'signin', 'signup', 'account', 'billing', 'pay', 'payments',
   'checkout', 'cdn', 'static', 'assets', 'blog', 'docs', 'demo', 'test', 'staging', 'dev', 'root',

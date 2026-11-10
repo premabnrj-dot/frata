@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { shopSlugFromHost, platformHost, surfaceFor } from '../host'
+import { routeFor, shopRewrites, shopSlugFromHost, platformHost, surfaceFor } from '../host'
 
 describe('surfaceFor', () => {
   it('knows the console', () => {
@@ -78,5 +78,35 @@ describe('routeFor and shopRewrites: /s/ is reachable only through the rewrite',
     expect(shopHostParam('localhost')).toBeNull()
     expect(shopHostParam('frata.vercel.app')).toBeNull()
     expect(shopHostParam('%E0%A4')).toBeNull()
+  })
+})
+
+describe('EkCode host (P1 task 6)', () => {
+  const EK = 'ekcode.test'
+  const r = (host: string, path: string) => routeFor(host, path, 'app.frata.test', false, 'frata.store', EK).kind
+  it('serves only its own pages and API; www goes to the apex', () => {
+    for (const p of ['/', '/privacy', '/terms', '/contact', '/continue', '/api/ek/code', '/_next/static/x.js']) expect(r(EK, p)).toBe('ekcode')
+    for (const p of ['/console', '/login', '/api/shop/quote', '/s/x', '/ek', '/checkout', '/api/webhooks/whatsapp']) expect(r(EK, p)).toBe('not_found')
+    expect(r('www.ekcode.test', '/')).toBe('ekcode_www')
+  })
+  it('its paths are a 404 on every other host', () => {
+    for (const host of ['app.frata.test', 'kesar.frata.store', 'shop.brand.in', 'x.vercel.app']) {
+      expect(r(host, '/ek')).toBe('not_found')
+      expect(r(host, '/ek/continue')).toBe('not_found')
+      expect(r(host, '/api/ek/code')).toBe('not_found')
+    }
+  })
+  it('is never a storefront, and off when no EkCode host is set', () => {
+    expect(surfaceFor(EK, 'app.frata.test', EK)).toEqual({ kind: 'ekcode', www: false })
+    expect(surfaceFor(EK, 'app.frata.test').kind).toBe('storefront')
+  })
+  it('rewrites its pages to /ek first, and leaves it out of the shop rewrite', () => {
+    const rules = shopRewrites('app.frata.test', EK)
+    expect(rules[0]!.destination).toBe('/ek/:page')
+    expect(rules[1]!.destination).toBe('/ek')
+    const shop = rules.find((x) => x.destination.startsWith('/s/'))!
+    expect(new RegExp(`^${shop.missing[0]!.value}$`).test(EK)).toBe(true)
+    expect(new RegExp(`^${shop.missing[0]!.value}$`).test('www.ekcode.test')).toBe(true)
+    expect(new RegExp(`^${shop.missing[0]!.value}$`).test('kesar.frata.store')).toBe(false)
   })
 })

@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next'
 import { FRAMEABLE_HEADERS, HSTS_PLATFORM, hostValue, platformHostPattern, SECURITY_HEADERS } from './src/lib/security-headers'
 import { shopRewrites } from './src/domains/tenancy/host'
-import { CONSOLE_HOST, SHOP_DOMAIN } from './src/lib/public-env'
+import { CONSOLE_HOST, EKCODE_HOST, SHOP_DOMAIN } from './src/lib/public-env'
 
 const config: NextConfig = {
   reactStrictMode: true,
@@ -15,7 +15,7 @@ const config: NextConfig = {
   outputFileTracingIncludes: { '/**': ['./src/lib/documents/fonts/**', './node_modules/pdfkit/js/standard-fonts/**/*.cjs', './node_modules/pdfkit/package.json'] },
   // Every other host is a shop, served from /s/<host>/… (src/domains/tenancy/host.ts).
   async rewrites() {
-    return { beforeFiles: shopRewrites(CONSOLE_HOST), afterFiles: [], fallback: [] }
+    return { beforeFiles: shopRewrites(CONSOLE_HOST, EKCODE_HOST), afterFiles: [], fallback: [] }
   },
   // Every response may not be framed (DENY), except the customizer's look preview on the console host, which the
   // console itself frames (themes spec § Preview; a later entry can't remove X-Frame-Options, so the global entry
@@ -26,7 +26,7 @@ const config: NextConfig = {
       { source: '/console/theme-preview/:path*', has: [{ type: 'host', value: hostValue(CONSOLE_HOST) }], headers: FRAMEABLE_HEADERS },
       { source: '/console/theme-preview/:path*', missing: [{ type: 'host', value: hostValue(CONSOLE_HOST) }], headers: SECURITY_HEADERS },
       // Last, so it replaces the own-domain HSTS above on our own hosts (D2·1).
-      { source: '/:path*', has: [{ type: 'host', value: platformHostPattern(CONSOLE_HOST, SHOP_DOMAIN) }], headers: [HSTS_PLATFORM] },
+      { source: '/:path*', has: [{ type: 'host', value: platformHostPattern(CONSOLE_HOST, SHOP_DOMAIN, EKCODE_HOST) }], headers: [HSTS_PLATFORM] },
     ]
   },
   images: {

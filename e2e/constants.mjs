@@ -6,6 +6,10 @@ export const MUX = { tokenId: 'e2e-mux-token', tokenSecret: 'e2e-mux-secret', we
 export const OWN_DOMAIN = 'kesarstudio-e2e.in'
 /** Frrata's Meta app in the local test: a stand-in Graph API (e2e/fakes/meta.mjs) knows these. */
 export const META = { appId: '1234567890', appSecret: 'e2e-meta-app-secret', configId: '9876543210', verifyToken: 'e2e-verify-token' }
+/** EkCode in the local test (P1): its host, its own number and app on the fake Meta, and key rings (test-only). */
+// ekcode.localhost: a *.localhost host is a secure context to Chromium over http, so Web Crypto (the proof of work) runs.
+export const EKCODE = { host: 'ekcode.localhost', token: 'EAAe2eekcodecodes', number: '200000000088', template: 'ekcode_signin_code', appSecret: 'e2e-ekcode-app-secret', verifyToken: 'e2e-ekcode-verify',
+  peppers: 'p1:e2e-ekcode-pepper-0123456789abcdefghijk', seals: 'k1:e2e-ekcode-seal-key-0123456789abcdefghi', notOnWhatsApp: '7000000000' }
 export const SHOP_DOMAIN = 'frata.test'
 export const SHOP = `http://kesar-studio.${SHOP_DOMAIN}`
 export const CONSOLE = `http://localhost:${PORTS.app}`
