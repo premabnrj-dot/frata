@@ -73,7 +73,8 @@ export async function cancelVideoUploadAction(input: unknown): Promise<R> {
   const r = await asMember(CAN_BUILD, { action: 'video.cancel' }, async (tx, auth) => {
     if (auth.membership.supportSessionId) return { error: SUPPORT }
     const v = await videoOf(tx, auth.membership.tenantId, p.data.id)
-    if (!v) return { error: 'Nothing to cancel.' }
+    // A Look's loops only (PV·1, security review MED-2): a product's video is never the Look's to cancel.
+    if (!v || v.use !== 'loop') return { error: 'Nothing to cancel.' }
     if (v.readyAt || v.removedAt) return {}
     await removeVideo(tx, auth.membership.tenantId, v, new Date())
     return { queued: true }

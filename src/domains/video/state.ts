@@ -17,6 +17,24 @@ export const USE_LIMITS = {
   product: { maxMs: 60_000, minMs: 6_000, maxBytes: 250 * 1024 * 1024, timeoutS: 3600, rendition: '720p' },
 } as const satisfies Record<VideoUse, { maxMs: number; minMs: number; maxBytes: number; timeoutS: number; rendition: string }>
 
+/**
+ * Product video caps by plan (owner, 2026-11-10: "generous, plan-wise"; about 5–10× the use the unit-economics review
+ * modelled). Uploads started count in every state (each may have cost a month of storage). `minutes` is the monthly
+ * delivered-minutes budget, enforced once Mux's delivery-usage API is wired (PV·1b); recorded here, once.
+ */
+export type CapPlan = 'trial' | 'launch' | 'growth' | 'scale'
+export const PRODUCT_VIDEO_CAPS: Record<CapPlan, { perDay: number; perMonth: number; live: number; minutes: number }> = {
+  trial: { perDay: 5, perMonth: 20, live: 50, minutes: 2_000 },
+  launch: { perDay: 20, perMonth: 150, live: 300, minutes: 10_000 },
+  growth: { perDay: 40, perMonth: 400, live: 1_000, minutes: 40_000 },
+  scale: { perDay: 80, perMonth: 1_000, live: 3_000, minutes: 120_000 },
+}
+/** On every plan: uploads in an hour, and failed fits (too long, short or small) in a day before uploads stop until tomorrow. */
+export const PRODUCT_VIDEO_PER_HOUR = 5, PRODUCT_VIDEO_FAILS_PER_DAY = 3
+/** Which column of the caps a shop reads: a trial, else its plan (no plan reads as Launch). */
+export const capPlan = (code: string | null, onTrial: boolean): CapPlan =>
+  onTrial ? 'trial' : code === 'growth' || code === 'scale' ? code : 'launch'
+
 /** Mux's upload URL lives for the use's window; a video still not ready 10 minutes after that, or a row whose upload
  *  Mux never confirmed within 2 minutes (ADR-0008's unknown outcome), didn't work. */
 export const NO_UPLOAD_AFTER_MS = 2 * 60_000

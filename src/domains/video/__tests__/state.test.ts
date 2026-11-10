@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clock, isLive, uploadProblem, USE_LIMITS, videoShape, videoState, type VideoRow } from '../state'
+import { capPlan, clock, isLive, PRODUCT_VIDEO_CAPS, uploadProblem, USE_LIMITS, videoShape, videoState, type VideoRow } from '../state'
 
 const T0 = new Date('2026-11-09T10:00:00Z')
 const at = (s: number) => new Date(T0.getTime() + s * 1000)
@@ -74,5 +74,15 @@ describe('product videos', () => {
     expect(clock(24_400)).toBe('0:24')
     expect(clock(59_600)).toBe('1:00')
     expect(clock(6_000)).toBe('0:06')
+  })
+})
+
+describe('product video caps by plan (owner, 2026-11-10)', () => {
+  it('a trial reads trial; a plan its own; none reads Launch; each plan more generous than the last', () => {
+    expect(capPlan('scale', true)).toBe('trial')
+    expect(capPlan('growth', false)).toBe('growth')
+    expect(capPlan(null, false)).toBe('launch')
+    const order = (['trial', 'launch', 'growth', 'scale'] as const).map((k) => PRODUCT_VIDEO_CAPS[k])
+    for (let i = 1; i < order.length; i++) for (const f of ['perDay', 'perMonth', 'live', 'minutes'] as const) expect(order[i]![f]).toBeGreaterThan(order[i - 1]![f])
   })
 })

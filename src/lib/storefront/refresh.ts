@@ -27,6 +27,10 @@ export function refreshReviews(tenantId: string, productId: string, shopWide: bo
   revalidateTag(`shop:${tenantId}:reviews:${productId}`)
   if (shopWide) revalidateTag(`shop:${tenantId}:reviews`)
 }
+/** PV·1: one product's own entry (its video turned playable, went, or its cover changed), never the catalogue. */
+export function refreshProduct(tenantId: string, handle: string) {
+  revalidateTag(`shop:${tenantId}:product:${handle}`)
+}
 /** After an address change or a new shop: the host lookups for both addresses. */
 export function refreshHosts(...hosts: string[]) {
   for (const h of hosts) revalidateTag(`host:${h}`)

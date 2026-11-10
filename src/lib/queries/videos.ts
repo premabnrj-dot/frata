@@ -2,11 +2,11 @@ import 'server-only'
 import { and, eq, gt, inArray, isNull, lt, lte, sql } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
 import { withTenant } from '@/lib/db/tenant'
-import { tenantPlans } from '@/lib/db/schema'
+import { planVersions, plans, tenantPlans } from '@/lib/db/schema'
 import { shopThemePublishes, shopThemeRevisions, videos } from '@/lib/db/schema-themes'
 import { productVideos } from '@/lib/db/schema-catalogue'
 import { enqueue } from '@/lib/outbox'
-import { isLive, MAX_LIVE, notReadyAfterMs, videoState, type VideoRow, type VideoState, type VideoUse } from '@/domains/video/state'
+import { capPlan, isLive, MAX_LIVE, notReadyAfterMs, PRODUCT_VIDEO_CAPS, PRODUCT_VIDEO_FAILS_PER_DAY, PRODUCT_VIDEO_PER_HOUR, videoState, type VideoRow, type VideoState, type VideoUse } from '@/domains/video/state'
 
 // =============================================================================
 // FILE: src/lib/queries/videos.ts — a shop's videos (V1, docs/plans/2026-11-09-video-v1.md; access drizzle/0081).
@@ -17,12 +17,8 @@ import { isLive, MAX_LIVE, notReadyAfterMs, videoState, type VideoRow, type Vide
 
 /** Uploads a shop may START, in every state (removed and failed count: each one may have cost Frrata). Loops (V1). */
 export const PER_DAY = 10, PER_DAY_TRIAL = 3, PER_MONTH = 30
-/**
- * Product videos (PV·1; unit-economics and security reviews 2026-11-10): counted over their own rows only, so neither
- * use eats the other's. A failed upload (too long, too short, too small) may still have cost a month of storage, so
- * three in a day stop the shop's uploads until tomorrow.
- */
-export const PRODUCT_CAPS = { perDay: 20, perDayTrial: 5, perMonth: 100, perMonthTrial: 20, perHour: 5, failsPerDay: 3, live: 200 } as const
+// Product videos (PV·1) count their own rows only, so neither use eats the other's; their caps are by plan
+// (src/domains/video/state.ts PRODUCT_VIDEO_CAPS, owner 2026-11-10).
 
 const ROW = {
   id: videos.id, uploadId: videos.uploadId, assetId: videos.assetId, playbackId: videos.playbackId, muxEnv: videos.muxEnv,
@@ -45,10 +41,11 @@ export async function startVideo(tx: Tx, tenantId: string, memberId: string, mux
   await tx.execute(sql`select pg_advisory_xact_lock(hashtext('videos:' || ${tenantId}))`)
   const dayAgo = new Date(now.getTime() - 86_400_000), monthAgo = new Date(now.getTime() - 30 * 86_400_000)
   const recent = (await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), gt(videos.createdAt, monthAgo), eq(videos.use, use)))).map(asVideo)
-  const [plan] = await tx.select({ trialEndsAt: tenantPlans.trialEndsAt }).from(tenantPlans)
+  const [plan] = await tx.select({ trialEndsAt: tenantPlans.trialEndsAt, code: plans.code }).from(tenantPlans)
+    .leftJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).leftJoin(plans, eq(plans.id, planVersions.planId))
     .where(and(eq(tenantPlans.tenantId, tenantId), lte(tenantPlans.startsAt, now))).orderBy(sql`${tenantPlans.startsAt} desc`).limit(1)
   const onTrial = !!plan?.trialEndsAt && plan.trialEndsAt > now
-  if (use === 'product') return startProduct(tx, tenantId, memberId, muxEnv, now, recent, onTrial)
+  if (use === 'product') return startProduct(tx, tenantId, memberId, muxEnv, now, recent, capPlan(plan?.code ?? null, onTrial))
   const today = recent.filter((v) => v.createdAt > dayAgo).length
   if (today >= (onTrial ? PER_DAY_TRIAL : PER_DAY)) return { ok: false, error: onTrial ? 'Three videos a day on a trial. Try again tomorrow.' : 'Ten videos a day. Try again tomorrow.' }
   if (recent.length >= PER_MONTH) return { ok: false, error: 'Thirty videos a month. Remove one you don’t use, or try again next month.' }
@@ -62,16 +59,16 @@ export async function startVideo(tx: Tx, tenantId: string, memberId: string, mux
 
 /** startVideo for a product's video: its own caps, then the row (use = 'product'). The caller links it to the product
  *  in the same transaction. A net first: product videos nothing links, past their window, are released. */
-async function startProduct(tx: Tx, tenantId: string, memberId: string, muxEnv: string, now: Date, recent: Video[], onTrial: boolean): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+async function startProduct(tx: Tx, tenantId: string, memberId: string, muxEnv: string, now: Date, recent: Video[], plan: ReturnType<typeof capPlan>): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   await releaseProductVideos(tx, tenantId, now)
-  const C = PRODUCT_CAPS, dayAgo = now.getTime() - 86_400_000, hourAgo = now.getTime() - 3_600_000
+  const C = PRODUCT_VIDEO_CAPS[plan], dayAgo = now.getTime() - 86_400_000, hourAgo = now.getTime() - 3_600_000
   const today = recent.filter((v) => v.createdAt.getTime() > dayAgo)
-  if (today.filter((v) => v.error === 'too_long' || v.error === 'too_short' || v.error === 'too_small').length >= C.failsPerDay) return { ok: false, error: 'Three videos didn’t fit today. Check the length (6 seconds to a minute) and try again tomorrow.' }
-  if (recent.filter((v) => v.createdAt.getTime() > hourAgo).length >= C.perHour) return { ok: false, error: 'Five videos in the last hour. Try again shortly.' }
-  if (today.length >= (onTrial ? C.perDayTrial : C.perDay)) return { ok: false, error: onTrial ? 'Five videos a day on a trial. Try again tomorrow.' : 'Twenty videos a day. Try again tomorrow.' }
-  if (recent.length >= (onTrial ? C.perMonthTrial : C.perMonth)) return { ok: false, error: onTrial ? 'Twenty videos a month on a trial.' : 'A hundred videos a month. Try again next month.' }
+  if (today.filter((v) => v.error === 'too_long' || v.error === 'too_short' || v.error === 'too_small').length >= PRODUCT_VIDEO_FAILS_PER_DAY) return { ok: false, error: 'Three videos didn’t fit today. Check the length (6 seconds to a minute) and try again tomorrow.' }
+  if (recent.filter((v) => v.createdAt.getTime() > hourAgo).length >= PRODUCT_VIDEO_PER_HOUR) return { ok: false, error: `${PRODUCT_VIDEO_PER_HOUR} videos in the last hour. Try again shortly.` }
+  if (today.length >= C.perDay) return { ok: false, error: `${C.perDay} videos a day on your plan. Try again tomorrow.` }
+  if (recent.length >= C.perMonth) return { ok: false, error: `${C.perMonth} videos a month on your plan.` }
   const live = (await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), isNull(videos.removedAt), eq(videos.use, 'product')))).map(asVideo)
-  if (live.filter((v) => isLive(v, now)).length >= C.live) return { ok: false, error: 'Your shop holds 200 product videos. Remove one first.' }
+  if (live.filter((v) => isLive(v, now)).length >= C.live) return { ok: false, error: `Your shop holds ${C.live} product videos on its plan. Remove one first.` }
   const [r] = await tx.execute<{ id: string }>(sql`insert into videos (tenant_id, mux_env, created_by, use) values (${tenantId}, ${muxEnv}, ${memberId}, 'product') returning id`) as unknown as { id: string }[]
   return { ok: true, id: r!.id }
 }
@@ -194,13 +191,14 @@ export async function cleanVideos<L extends { home?: unknown[] }>(tx: Tx, tenant
 }
 
 /** The console's field: one video's state, derived. */
-export async function videoStatus(tx: Tx, tenantId: string, id: string, now: Date): Promise<(VideoState & { durationMs: number | null; width: number | null; height: number | null }) | null> {
+export async function videoStatus(tx: Tx, tenantId: string, id: string, now: Date, use: VideoUse = 'loop'): Promise<(VideoState & { durationMs: number | null; width: number | null; height: number | null }) | null> {
   const v = await videoOf(tx, tenantId, id)
-  return v ? { ...videoState(v, now), durationMs: v.durationMs, width: v.width, height: v.height } : null
+  // One use per caller (PV·1): the Look's field never reads a product's video, nor the reverse.
+  return v && v.use === use ? { ...videoState(v, now), durationMs: v.durationMs, width: v.width, height: v.height } : null
 }
 
 /** The status read the console polls while a video is getting ready (its own short transaction). */
-export const videoStatusFor = (tenantId: string, id: string, now: Date) => withTenant(tenantId, (tx) => videoStatus(tx, tenantId, id, now))
+export const videoStatusFor = (tenantId: string, id: string, now: Date, use: VideoUse = 'loop') => withTenant(tenantId, (tx) => videoStatus(tx, tenantId, id, now, use))
 
 /** For the shop: the playable videos among these ids (the live look's), id → playback id and size. */
 export async function playableVideos(tx: Tx, tenantId: string, ids: string[], now: Date): Promise<Record<string, { playbackId: string; width: number | null; height: number | null }>> {

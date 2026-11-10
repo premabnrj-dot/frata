@@ -3,13 +3,14 @@ import { and, eq, isNull, sql } from 'drizzle-orm'
 import { USE_LIMITS, videoState } from '@/domains/video/state'
 import { webhookEvents } from '@/lib/db/schema'
 import { videos } from '@/lib/db/schema-themes'
+import { productVideos, products } from '@/lib/db/schema-catalogue'
 import { withTenant } from '@/lib/db/tenant'
 import { MUX_ENVIRONMENT_ID } from '@/lib/env'
 import { errName } from '@/lib/log'
 import { drainSoon } from '@/lib/outbox/drain'
 import { failVideo, queueAssetDelete, videoOf } from '@/lib/queries/videos'
 import { enqueue } from '@/lib/outbox'
-import { refreshShop } from '@/lib/storefront/refresh'
+import { refreshProduct, refreshShop } from '@/lib/storefront/refresh'
 import { getAsset, mp4ReadyFor } from './mux'
 
 // =============================================================================
@@ -26,15 +27,17 @@ export async function processMux(tenantId: string): Promise<number> {
   const events = await withTenant(tenantId, (tx) => tx.select({ id: webhookEvents.id, payload: webhookEvents.payload }).from(webhookEvents)
     .where(and(eq(webhookEvents.tenantId, tenantId), eq(webhookEvents.provider, 'mux'), isNull(webhookEvents.processedAt)))
     .orderBy(webhookEvents.receivedAt).limit(50)) as Pending[]
-  let n = 0, playable = false, queued = false, product = false
+  let n = 0, playable = false, queued = false
+  const products = new Set<string>()
   // One look at Mux per video, however many events it sent (about five per asset).
   const seen = new Map<string, Awaited<ReturnType<typeof one>>>()
   for (const e of events) {
     const videoId = e.payload.video
     try {
       if (typeof videoId === 'string' && !seen.has(videoId)) seen.set(videoId, await one(tenantId, videoId, e.payload))
-      const r = typeof videoId === 'string' ? seen.get(videoId)! : { playable: false, queued: false, product: false }
-      playable ||= r.playable && !r.product; product ||= r.playable && r.product; queued ||= r.queued
+      const r = typeof videoId === 'string' ? seen.get(videoId)! : { playable: false, queued: false, product: false, handle: null }
+      playable ||= r.playable && !r.product; queued ||= r.queued
+      if (r.playable && r.product && r.handle) products.add(r.handle)
       await done(tenantId, e.id, e.payload.type ?? 'unknown', null)
       n++
     } catch (err) {
@@ -44,8 +47,8 @@ export async function processMux(tenantId: string): Promise<number> {
   }
   if (queued) drainSoon()
   if (playable) refreshShop(tenantId, 'videos')
-  // PV·1: a product's video lives in the product's own entry (the catalogue's tag).
-  if (product) refreshShop(tenantId, 'catalogue')
+  // PV·1: a product's video lives in that product's own entry (its own tag, never the catalogue's: speed review).
+  for (const h of products) refreshProduct(tenantId, h)
   return n
 }
 
@@ -53,9 +56,9 @@ export async function processMux(tenantId: string): Promise<number> {
 const done = (tenantId: string, id: string, type: string, error: string | null) => withTenant(tenantId, (tx) =>
   tx.update(webhookEvents).set({ processedAt: sql`now()`, payload: { type }, lastError: error }).where(and(eq(webhookEvents.tenantId, tenantId), eq(webhookEvents.id, id))))
 
-async function one(tenantId: string, videoId: string, ev: Pending['payload']): Promise<{ playable: boolean; queued: boolean; product: boolean }> {
+async function one(tenantId: string, videoId: string, ev: Pending['payload']): Promise<{ playable: boolean; queued: boolean; product: boolean; handle: string | null }> {
   const v = await withTenant(tenantId, (tx) => videoOf(tx, tenantId, videoId))
-  if (!v) return { playable: false, queued: false, product: false }
+  if (!v) return { playable: false, queued: false, product: false, handle: null }
   const use = v.use ?? 'loop', lim = USE_LIMITS[use], product = use === 'product'
   // Another Mux environment's row is never looked at with this token (its 404 would read as "gone"): the event waits.
   if (v.muxEnv !== MUX_ENVIRONMENT_ID) throw new Error('another Mux environment')
@@ -63,16 +66,20 @@ async function one(tenantId: string, videoId: string, ev: Pending['payload']): P
   if (!assetId) {
     // Mux says the upload itself failed or was cancelled: there is no asset to look at.
     if (ev.type === 'video.upload.errored' || ev.type === 'video.upload.cancelled') await withTenant(tenantId, (tx) => failVideo(tx, tenantId, v.id, ev.type === 'video.upload.cancelled' ? 'cancelled' : 'upload_errored', new Date()))
-    return { playable: false, queued: false, product }
+    return { playable: false, queued: false, product, handle: null }
   }
   const got = await getAsset(assetId)
   if (!got.ok) throw new Error(`mux ${got.why}`)
   const a = got.asset
   // Not this row's asset (a stale upload, another environment's): nothing is written.
-  if (a && (a.passthrough !== v.id || (v.uploadId !== null && a.uploadId !== v.uploadId))) return { playable: false, queued: false, product }
+  if (a && (a.passthrough !== v.id || (v.uploadId !== null && a.uploadId !== v.uploadId))) return { playable: false, queued: false, product, handle: null }
   const before = videoState(v, new Date()).kind
+  let handle: string | null = null
   const r = await withTenant(tenantId, async (tx) => {
     const now = new Date()
+    // The product this video shows on, read in this same transaction (speed review 6: no extra round trip).
+    if (product) handle = (await tx.select({ h: products.handle }).from(productVideos).innerJoin(products, and(eq(products.tenantId, productVideos.tenantId), eq(products.id, productVideos.productId)))
+      .where(and(eq(productVideos.tenantId, tenantId), eq(productVideos.videoId, v.id))).limit(1))[0]?.h ?? null
     const mine = and(eq(videos.tenantId, tenantId), eq(videos.id, v.id))
     const queue = async () => { await queueAssetDelete(tx, tenantId, v.id); return true }
     // Gone at Mux: "Didn't work" only when the row already held that asset (nothing else proves it was this row's).
@@ -111,5 +118,5 @@ async function one(tenantId: string, videoId: string, ev: Pending['payload']): P
   const after = await withTenant(tenantId, (tx) => videoOf(tx, tenantId, v.id))
   const now = after ? videoState(after, new Date()).kind : 'removed'
   // The shop's video entry changes when a loop starts playing, or a playing one stops (security review LOW-6).
-  return { playable: (before === 'playable') !== (now === 'playable'), queued: r.queued, product }
+  return { playable: (before === 'playable') !== (now === 'playable'), queued: r.queued, product, handle }
 }

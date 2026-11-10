@@ -48,7 +48,8 @@ export default {
         assert.equal(v.use, 'product'); assert.ok(v.playback_id && v.mp4_ready_at, 'playable')
         assert.deepEqual([v.width, v.height, v.duration_ms], [1080, 1920, 24400])
         const up = (await fake()).uploads.find((u) => u.id === v.upload_id)
-        assert.deepEqual(up.new_asset_settings.static_renditions, [{ resolution: '720p' }]); assert.equal(up.timeout, 3600)
+        assert.equal(up.new_asset_settings.static_renditions, undefined, 'no MP4 asked for at upload'); assert.equal(up.timeout, 3600)
+        assert.deepEqual((await fake()).renditions.filter((r) => r.asset === v.asset_id).map((r) => r.resolution), ['720p'], 'the 720p, once, after the checks')
         const [link] = await db`select video_id, button, poster_ms from product_videos where tenant_id = ${KESAR}`
         assert.equal(link.video_id, v.id); assert.equal(link.button, 'model')
       })
@@ -119,6 +120,7 @@ export default {
           const r = await latest()
           assert.equal(r.error, error)
           await until(async () => (await fake()).deleted.includes(r.asset_id), 15_000)
+          assert.ok(!(await fake()).renditions.some((x) => x.asset === r.asset_id), 'no 720p prep for a refused video')
           await card().getByRole('button', { name: 'Choose another' }).waitFor()
         })
       }
