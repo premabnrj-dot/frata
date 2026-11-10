@@ -107,8 +107,13 @@ export const videos = pgTable('videos', {
   /** Our word or Mux's code (too_long, upload_errored, asset_errored, cancelled), ≤ 40. */
   error: text('error'),
   removedAt: at('removed_at'),
+  /** PV·1: a Look section's loop or a product's video (src/domains/video/state.ts USE_LIMITS); set once, at insert. */
+  use: text('use').notNull().default('loop'),
 }, (t) => [
   index('videos_shop').on(t.tenantId, t.createdAt),
+  // For composite foreign keys from other tables (product_videos): a link can only name its own shop's video.
+  unique('videos_tenant_id_key').on(t.tenantId, t.id),
+  check('videos_use', sql`${t.use} in ('loop', 'product')`),
   check('videos_env', sql`${t.muxEnv} ~ '^[A-Za-z0-9_-]{1,40}$'`),
   check('videos_ids', sql`(${t.uploadId} is null or ${t.uploadId} ~ '^[A-Za-z0-9]{1,128}$') and (${t.assetId} is null or ${t.assetId} ~ '^[A-Za-z0-9]{1,128}$') and (${t.playbackId} is null or ${t.playbackId} ~ '^[A-Za-z0-9]{1,64}$')`),
   check('videos_error', sql`(${t.erroredAt} is null) = (${t.error} is null) and (${t.error} is null or length(${t.error}) <= 40)`),

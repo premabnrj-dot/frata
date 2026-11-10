@@ -2,6 +2,8 @@
 // The API (uploads, assets, delete, cancel) behind Basic auth; an upload URL on this host that takes the browser's PUT;
 // then signed webhooks back to the app, as Mux sends them: upload.asset_created, asset.ready, static_rendition.ready.
 // A file holding the bytes "LONG" becomes a 20-second asset (the too-long path). Serves the MP4 and the poster.
+// PV·1: the rendition asked for is the one made (`720p.mp4` for a product); a product upload is a 24.4 s reel at
+// 1080 × 1920; "XLONG" is 70 s, "SHORT" 3 s, and "SMALL" makes Mux skip the 720p (a smaller source).
 import http from 'node:http'
 import crypto from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -26,16 +28,19 @@ async function hook(type, data) {
 }
 
 async function arrive(up, body) {
-  const long = body.includes(Buffer.from('LONG'))
+  const has = (m) => body.includes(Buffer.from(m))
+  const res = up.new_asset_settings.static_renditions?.[0]?.resolution ?? 'highest', product = res !== 'highest'
+  const duration = has('XLONG') ? 70.04 : has('LONG') ? 20.04 : has('SHORT') ? 3.0 : product ? 24.4 : 1.0
   const a = { id: 'as' + hex(8), status: 'preparing', passthrough: up.new_asset_settings.passthrough, upload_id: up.id, playback_ids: [], tracks: [], duration: undefined, static_renditions: { files: [] } }
   assets.set(a.id, a); up.status = 'asset_created'; up.asset_id = a.id
   await hook('video.upload.asset_created', { ...up })
   await sleep(300)
-  Object.assign(a, { status: 'ready', duration: long ? 20.04 : 1.0, playback_ids: [{ id: 'pb' + hex(8), policy: 'public' }], tracks: [{ type: 'video', max_width: 96, max_height: 54 }] })
+  Object.assign(a, { status: 'ready', duration, playback_ids: [{ id: 'pb' + hex(8), policy: 'public' }], tracks: [{ type: 'video', max_width: product ? 1080 : 96, max_height: product ? 1920 : 54 }] })
   await hook('video.asset.ready', { ...a })
   await sleep(300)
-  a.static_renditions = { files: [{ id: 'r' + hex(4), name: 'highest.mp4', resolution: 'highest', status: 'ready', ext: 'mp4' }] }
-  await hook('video.asset.static_rendition.ready', { id: a.static_renditions.files[0].id, asset_id: a.id, status: 'ready' })
+  const status = has('SMALL') && product ? 'skipped' : 'ready'
+  a.static_renditions = { files: [{ id: 'r' + hex(4), name: `${res}.mp4`, resolution: res, status, ext: 'mp4' }] }
+  await hook(`video.asset.static_rendition.${status}`, { id: a.static_renditions.files[0].id, asset_id: a.id, status })
 }
 
 http.createServer((req, res) => {

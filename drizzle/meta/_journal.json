@@ -624,6 +624,20 @@
       "when": 1794264393505,
       "tag": "0088_ekcode",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1794281197134,
+      "tag": "0089_product_videos",
+      "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1794281208501,
+      "tag": "0090_product_videos_access",
+      "breakpoints": true
     }
   ]
 }

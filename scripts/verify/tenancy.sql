@@ -2355,4 +2355,47 @@ do $$ declare v record; begin
   end loop;
 end $$;
 
-\echo 'tenancy proof — all 63 checks passed'
+-- 64. Product video PV·1 (0089/0090): a link is the shop's own row both ways; it names only the shop's own product
+-- (composite FK) and its own video, a product's (trigger, before the FK and the policy: each case is caught by its own
+-- code); its keys never change; videos.use is set at insert only; no other role holds anything on it.
+insert into videos (id, tenant_id, mux_env, created_by, use) values
+  ('dededede-0000-0000-0000-0000000000a1', '11111111-1111-1111-1111-111111111111', 'prod1', '99999999-9999-9999-9999-999999999999', 'product'),
+  ('dededede-0000-0000-0000-0000000000a2', '11111111-1111-1111-1111-111111111111', 'prod1', '99999999-9999-9999-9999-999999999999', 'loop'),
+  ('dededede-0000-0000-0000-0000000000b1', '22222222-2222-2222-2222-222222222222', 'prod1', '99999999-9999-9999-9999-999999999999', 'product');
+insert into product_videos (tenant_id, product_id, video_id) values ('22222222-2222-2222-2222-222222222222', 'eeeeeeee-0000-0000-0000-00000000000b', 'dededede-0000-0000-0000-0000000000b1');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if exists (select 1 from product_videos) then raise exception 'FAIL: A reads B product videos'; end if;
+  update product_videos set button = 'none'; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A changed a B product video'; end if;
+  delete from product_videos; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A deleted a B product video'; end if;
+  begin insert into product_videos (tenant_id, product_id, video_id) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000b', 'dededede-0000-0000-0000-0000000000a1'); raise exception 'FAIL: A linked its video to a B product';
+  exception when foreign_key_violation then null; end;
+  begin insert into product_videos (tenant_id, product_id, video_id) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', 'dededede-0000-0000-0000-0000000000b1'); raise exception 'FAIL: A linked a B video';
+  exception when check_violation then null; end;
+  begin insert into product_videos (tenant_id, product_id, video_id) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', 'dededede-0000-0000-0000-0000000000a2'); raise exception 'FAIL: a loop became a product video';
+  exception when check_violation then null; end;
+  insert into product_videos (tenant_id, product_id, video_id) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', 'dededede-0000-0000-0000-0000000000a1');
+  update product_videos set button = 'wear', poster_ms = 6000; get diagnostics n = row_count; if n <> 1 then raise exception 'FAIL: own cover frame and words not saved'; end if;
+  begin update product_videos set video_id = 'dededede-0000-0000-0000-0000000000a2'; raise exception 'FAIL: a link changed its video'; exception when insufficient_privilege then null; end;
+  begin update product_videos set product_id = 'eeeeeeee-0000-0000-0000-0000000000a2'; raise exception 'FAIL: a link changed its product'; exception when insufficient_privilege then null; end;
+  begin update product_videos set tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: a link moved shop'; exception when insufficient_privilege then null; end;
+  begin update videos set use = 'loop' where id = 'dededede-0000-0000-0000-0000000000a1'; raise exception 'FAIL: a video changed its use'; exception when insufficient_privilege then null; end;
+  begin insert into videos (tenant_id, mux_env, created_by, use) values ('11111111-1111-1111-1111-111111111111', 'prod1', '99999999-9999-9999-9999-999999999999', 'reel'); raise exception 'FAIL: a video with an unknown use'; exception when check_violation then null; end;
+end $$;
+rollback;
+do $$ begin
+  if (select count(*) from pg_constraint where conrelid = 'product_videos'::regclass and contype = 'f' and conname in ('product_videos_product_fk', 'product_videos_video_fk')
+      and array_length(conkey, 1) = 2) <> 2 then raise exception 'FAIL: a product video key is not shop-scoped'; end if;
+  if not exists (select 1 from pg_policies where tablename = 'product_videos' and policyname = 'tenant_rows' and qual like '%app_current_tenant()%' and with_check like '%app_current_tenant()%')
+  then raise exception 'FAIL: product_videos has no shop policy both ways'; end if;
+  if not (select relrowsecurity from pg_class where oid = 'product_videos'::regclass) then raise exception 'FAIL: product_videos without RLS'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['select', 'insert', 'update']) p where has_any_column_privilege(r, 'product_videos', p))
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_table_privilege(r, 'product_videos', 'delete'))
+  then raise exception 'FAIL: another role reads or writes product videos'; end if;
+  if has_column_privilege('frata_app', 'videos', 'use', 'update') then raise exception 'FAIL: the app may change a video''s use'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r where has_function_privilege(r, 'product_video_is_product()', 'execute'))
+  then raise exception 'FAIL: an API role runs the product video trigger'; end if;
+end $$;
+
+\echo 'tenancy proof — all 64 checks passed'

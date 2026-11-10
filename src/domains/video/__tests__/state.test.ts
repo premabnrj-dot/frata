@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isLive, uploadProblem, videoState, type VideoRow } from '../state'
+import { clock, isLive, uploadProblem, USE_LIMITS, videoShape, videoState, type VideoRow } from '../state'
 
 const T0 = new Date('2026-11-09T10:00:00Z')
 const at = (s: number) => new Date(T0.getTime() + s * 1000)
@@ -39,5 +39,40 @@ describe('uploadProblem', () => {
     expect(uploadProblem('video/webm', 10)).toMatch(/MP4 or MOV/)
     expect(uploadProblem('video/mp4', 0)).toMatch(/Choose a video/)
     expect(uploadProblem('video/mp4', 64 * 1024 * 1024 + 1)).toMatch(/64 MB/)
+  })
+})
+
+// PV·1 (docs/plans/2026-11-10-product-video-pv1.md): a product's video has its own limits; a loop's are unchanged.
+describe('product videos', () => {
+  const p = (o: Partial<VideoRow> = {}): VideoRow => row({ use: 'product', ...o })
+  it('limits per use: a loop ≤ 15 s and 64 MB, a product 6–60 s and 250 MB', () => {
+    expect(USE_LIMITS.loop).toMatchObject({ maxMs: 15_000, minMs: 0, maxBytes: 64 * 1024 * 1024, timeoutS: 900 })
+    expect(USE_LIMITS.product).toMatchObject({ maxMs: 60_000, minMs: 6_000, maxBytes: 250 * 1024 * 1024, timeoutS: 3600, rendition: '720p' })
+  })
+  it('a product upload has the hour Mux gives it, then ten minutes, before "didn\'t work"', () => {
+    expect(videoState(p({ uploadId: 'up' }), at(3600 + 599)).kind).toBe('uploading')
+    expect(videoState(p({ uploadId: 'up' }), at(3600 + 601))).toEqual({ kind: 'failed', why: 'didnt_work' })
+  })
+  it('too long, too short and under 720p each say so', () => {
+    expect(videoState(p({ erroredAt: at(5), error: 'too_long' }), at(6))).toEqual({ kind: 'failed', why: 'too_long' })
+    expect(videoState(p({ erroredAt: at(5), error: 'too_short' }), at(6))).toEqual({ kind: 'failed', why: 'too_short' })
+    expect(videoState(p({ erroredAt: at(5), error: 'too_small' }), at(6))).toEqual({ kind: 'failed', why: 'too_small' })
+  })
+  it('uploadProblem by use: 250 MB for a product, 64 MB for a loop', () => {
+    expect(uploadProblem('video/quicktime', 250 * 1024 * 1024, 'product')).toBeNull()
+    expect(uploadProblem('video/mp4', 250 * 1024 * 1024 + 1, 'product')).toMatch(/250 MB/)
+    expect(uploadProblem('video/mp4', 64 * 1024 * 1024 + 1)).toMatch(/64 MB/)
+  })
+  it('the shape a shopper sees, from the file', () => {
+    expect(videoShape(1080, 1920)).toBe('reel')
+    expect(videoShape(1920, 1080)).toBe('film')
+    expect(videoShape(1080, 1080)).toBe('square')
+    expect(videoShape(1080, 1350)).toBe('reel')
+    expect(videoShape(null, null)).toBeNull()
+  })
+  it('the length in minutes and seconds', () => {
+    expect(clock(24_400)).toBe('0:24')
+    expect(clock(59_600)).toBe('1:00')
+    expect(clock(6_000)).toBe('0:06')
   })
 })

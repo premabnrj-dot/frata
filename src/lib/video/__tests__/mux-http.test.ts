@@ -17,6 +17,12 @@ describe('createUpload', () => {
     expect(init.headers.authorization).toBe(`Basic ${Buffer.from('tid:tsecret').toString('base64')}`)
     expect(JSON.parse(init.body)).toEqual({ cors_origin: 'https://frata.vercel.app', timeout: 900, new_asset_settings: { video_quality: 'basic', playback_policies: ['public'], static_renditions: [{ resolution: 'highest' }], passthrough: 'row-1' } })
   })
+  it('a product video asks for the 720p MP4 and an hour to upload (PV·1)', async () => {
+    fetchMock.mockResolvedValue(reply(201, { data: { id: 'up2', url: 'https://storage.googleapis.com/video-uploads/y?sig=1', status: 'waiting' } }))
+    await createUpload('row-2', 'https://frata.vercel.app', 'product')
+    const [, init] = fetchMock.mock.calls[0]!
+    expect(JSON.parse(init.body)).toEqual({ cors_origin: 'https://frata.vercel.app', timeout: 3600, new_asset_settings: { video_quality: 'basic', playback_policies: ['public'], static_renditions: [{ resolution: '720p' }], passthrough: 'row-2' } })
+  })
   it('never hands a non-https URL to the browser', async () => {
     fetchMock.mockResolvedValue(reply(201, { data: { id: 'up1', url: 'http://evil.example/x' } }))
     expect(await createUpload('row-1', 'https://frata.vercel.app')).toEqual({ ok: false, why: 'bad_reply' })

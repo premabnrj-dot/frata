@@ -10,6 +10,9 @@
 
 const ICONS = {
   home: ['M4 10.5 12 4l8 6.5V20H4z', 'M10 20v-4.5h4V20'],
+  // PV·1: product video (the Apps row, the console card) and the shop's play mark.
+  video: ['M3.5 6.5h12v11h-12z', 'M15.5 10.5 20.5 7.5v9l-5-3z'],
+  play: ['M12 3.5a8.5 8.5 0 1 1 0 17 8.5 8.5 0 0 1 0-17z', 'M10 8.5v7l5.5-3.5z'],
   orders: ['M5.5 8h13l-1 12h-11z', 'M9 8a3 3 0 0 1 6 0'],
   products: ['M9 3.5h6l4.5 3-2 4-2.5-1.2V20.5h-6V9.3L6.5 10.5l-2-4z', 'M12 3.5v4'],
   collections: ['M4 4h7v7H4zM4 13h7v7H4zM13 13h7v7h-7z', 'M13 4h7v7h-7z'],
