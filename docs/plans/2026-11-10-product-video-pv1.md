@@ -262,3 +262,53 @@ product entry's tag; written down as a choice: bounded by uploads, never by shop
    - sound on the first tap on iOS.
 4. **Mux's position on downloads of the public MP4.** Its terms forbid letting users permanently download content.
    Owner's call: write to Mux, or accept.
+
+## Where the build stopped (2026-11-10, owner: "stop at a point, we'll resume later")
+**Done and committed:**
+- Reviews (all five, plus the Mux recheck), folded in above.
+- PV1-0: the unit tests (green) and e2e `68-product-video.mjs`, red until the console and shop exist. The fake Mux
+  still makes the rendition named at upload. It needs the add-rendition endpoint
+  (`POST /video/v1/assets/{id}/static-renditions`) and its `static_rendition.*` hooks, routed by `asset_id`. The
+  flow's first step must expect no `static_renditions` at upload, and one create-rendition call after ready.
+- PV1-1: drizzle 0089/0090, the `product_video` module key, `npm run verify:tenancy` (64 checks).
+  **Not applied to production.**
+- PV1-2:
+  - `state.ts` and `mux.ts` per use: a product uploads with no MP4; `createRendition` (verified 2026-11-10).
+  - The processor: 6–60 s, short side ≥ 720, then outbox `mux.rendition.create`; a skipped rendition is too small.
+  - The sender `sendRenditionCreate`, registered in the drain.
+  - `queries/videos.ts`:
+    - per-use caps (`PRODUCT_CAPS`);
+    - `productVideoFor`, `linkProductVideo`, `unlinkProductVideo` (through `removeVideo`);
+    - `releaseProductVideos`, the net run at each product start;
+    - loop-only release, `cleanVideos` and `playableVideos`.
+- Icons `video` and `play`; the Apps icon for the module.
+
+**Next, in order:**
+1. **The fake Mux:** the add-rendition endpoint and its hooks; update step 1 of e2e 68.
+2. **Pipeline leftovers:**
+   - V1's look cancel and status actions refuse non-loop rows;
+   - the processor purges the product's own tag (`shop:{t}:product:{handle}`, the handle read in its write
+     transaction) instead of `catalogue`;
+   - `shopCached` gets that tag on `product-v3`;
+   - frata-integrations § Mux takes the recheck's lines (version 1.21.0).
+3. **PV1-3, the console:**
+   - `products/video-actions.ts` (start with `replaces`, cancel, remove, set; productId only; support refused; module
+     on; refresh the product tag);
+   - the shared `useVideoUpload` hook (polls only after the PUT finishes; `clock()` replaces `secs`);
+   - `video-panel.tsx` (states, cover-frame strip, button words, Replace, Remove);
+   - `productForEdit` carries the link;
+   - the browser reads the length before uploading.
+4. **PV1-4a, the island split** (≥ 1.5 kB freed, measured with `SHOW_BUDGETS=1 npm run build`), then **PV1-4, the
+   shop:**
+   - `mediaList` in `src/domains/catalogue/`;
+   - `coreProduct` left-joins the video (`product-v3`);
+   - the server-drawn tile slot and "See it on a model";
+   - `video-viewer.tsx` via `import()` on tap and preload on pointerdown;
+   - its own sizes and message; Add to bag closes it, then opens the bag;
+   - the shop words in English and Hindi; rule 27's exception.
+5. **PV1-5:**
+   - full e2e;
+   - `impact-reviewer` on the diff;
+   - spec status active;
+   - frata-design-language;
+   - the owner's go-ahead before production migrations and `main`.

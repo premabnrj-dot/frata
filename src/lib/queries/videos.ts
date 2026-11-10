@@ -4,8 +4,9 @@ import type { Tx } from '@/lib/db'
 import { withTenant } from '@/lib/db/tenant'
 import { tenantPlans } from '@/lib/db/schema'
 import { shopThemePublishes, shopThemeRevisions, videos } from '@/lib/db/schema-themes'
+import { productVideos } from '@/lib/db/schema-catalogue'
 import { enqueue } from '@/lib/outbox'
-import { isLive, MAX_LIVE, videoState, type VideoRow, type VideoState } from '@/domains/video/state'
+import { isLive, MAX_LIVE, notReadyAfterMs, videoState, type VideoRow, type VideoState, type VideoUse } from '@/domains/video/state'
 
 // =============================================================================
 // FILE: src/lib/queries/videos.ts — a shop's videos (V1, docs/plans/2026-11-09-video-v1.md; access drizzle/0081).
@@ -14,41 +15,106 @@ import { isLive, MAX_LIVE, videoState, type VideoRow, type VideoState } from '@/
 // in the same transaction as the change (ADR-0006).
 // =============================================================================
 
-/** Uploads a shop may START, in every state (removed and failed count: each one may have cost Frrata). */
+/** Uploads a shop may START, in every state (removed and failed count: each one may have cost Frrata). Loops (V1). */
 export const PER_DAY = 10, PER_DAY_TRIAL = 3, PER_MONTH = 30
+/**
+ * Product videos (PV·1; unit-economics and security reviews 2026-11-10): counted over their own rows only, so neither
+ * use eats the other's. A failed upload (too long, too short, too small) may still have cost a month of storage, so
+ * three in a day stop the shop's uploads until tomorrow.
+ */
+export const PRODUCT_CAPS = { perDay: 20, perDayTrial: 5, perMonth: 100, perMonthTrial: 20, perHour: 5, failsPerDay: 3, live: 200 } as const
 
 const ROW = {
   id: videos.id, uploadId: videos.uploadId, assetId: videos.assetId, playbackId: videos.playbackId, muxEnv: videos.muxEnv,
   durationMs: videos.durationMs, width: videos.width, height: videos.height, createdAt: videos.createdAt, readyAt: videos.readyAt,
-  mp4ReadyAt: videos.mp4ReadyAt, erroredAt: videos.erroredAt, error: videos.error, removedAt: videos.removedAt,
+  mp4ReadyAt: videos.mp4ReadyAt, erroredAt: videos.erroredAt, error: videos.error, removedAt: videos.removedAt, use: videos.use,
 }
-export type Video = VideoRow & { id: string; assetId: string | null; muxEnv: string; durationMs: number | null; width: number | null; height: number | null }
+export type Video = Omit<VideoRow, 'use'> & { id: string; assetId: string | null; muxEnv: string; durationMs: number | null; width: number | null; height: number | null; use: VideoUse }
+const asVideo = <T extends { use: string }>(r: T) => ({ ...r, use: (r.use === 'product' ? 'product' : 'loop') as VideoUse })
 
 export async function videoOf(tx: Tx, tenantId: string, id: string): Promise<Video | null> {
   const [v] = await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), eq(videos.id, id)))
-  return v ?? null
+  return v ? asVideo(v) : null
 }
 
 /**
  * A pending row, under the shop's caps, read and written under a per-shop lock so two starts can't race past them
  * (security review finding 1). The caller commits it, then asks Mux for the upload.
  */
-export async function startVideo(tx: Tx, tenantId: string, memberId: string, muxEnv: string, now: Date): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+export async function startVideo(tx: Tx, tenantId: string, memberId: string, muxEnv: string, now: Date, use: VideoUse = 'loop'): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtext('videos:' || ${tenantId}))`)
   const dayAgo = new Date(now.getTime() - 86_400_000), monthAgo = new Date(now.getTime() - 30 * 86_400_000)
-  const recent = await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), gt(videos.createdAt, monthAgo)))
+  const recent = (await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), gt(videos.createdAt, monthAgo), eq(videos.use, use)))).map(asVideo)
   const [plan] = await tx.select({ trialEndsAt: tenantPlans.trialEndsAt }).from(tenantPlans)
     .where(and(eq(tenantPlans.tenantId, tenantId), lte(tenantPlans.startsAt, now))).orderBy(sql`${tenantPlans.startsAt} desc`).limit(1)
   const onTrial = !!plan?.trialEndsAt && plan.trialEndsAt > now
+  if (use === 'product') return startProduct(tx, tenantId, memberId, muxEnv, now, recent, onTrial)
   const today = recent.filter((v) => v.createdAt > dayAgo).length
   if (today >= (onTrial ? PER_DAY_TRIAL : PER_DAY)) return { ok: false, error: onTrial ? 'Three videos a day on a trial. Try again tomorrow.' : 'Ten videos a day. Try again tomorrow.' }
   if (recent.length >= PER_MONTH) return { ok: false, error: 'Thirty videos a month. Remove one you don’t use, or try again next month.' }
-  const live = await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), isNull(videos.removedAt)))
+  const live = (await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), isNull(videos.removedAt), eq(videos.use, 'loop')))).map(asVideo)
   if (live.filter((v) => isLive(v, now)).length >= MAX_LIVE) return { ok: false, error: 'Your shop holds 20 videos. Remove one first.' }
   // Only these three columns: the app may insert nothing else (drizzle/0081, tenancy audit H1), and drizzle's insert
   // would name every column (as DEFAULT), which Postgres checks too.
   const [r] = await tx.execute<{ id: string }>(sql`insert into videos (tenant_id, mux_env, created_by) values (${tenantId}, ${muxEnv}, ${memberId}) returning id`) as unknown as { id: string }[]
   return { ok: true, id: r!.id }
+}
+
+/** startVideo for a product's video: its own caps, then the row (use = 'product'). The caller links it to the product
+ *  in the same transaction. A net first: product videos nothing links, past their window, are released. */
+async function startProduct(tx: Tx, tenantId: string, memberId: string, muxEnv: string, now: Date, recent: Video[], onTrial: boolean): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  await releaseProductVideos(tx, tenantId, now)
+  const C = PRODUCT_CAPS, dayAgo = now.getTime() - 86_400_000, hourAgo = now.getTime() - 3_600_000
+  const today = recent.filter((v) => v.createdAt.getTime() > dayAgo)
+  if (today.filter((v) => v.error === 'too_long' || v.error === 'too_short' || v.error === 'too_small').length >= C.failsPerDay) return { ok: false, error: 'Three videos didn’t fit today. Check the length (6 seconds to a minute) and try again tomorrow.' }
+  if (recent.filter((v) => v.createdAt.getTime() > hourAgo).length >= C.perHour) return { ok: false, error: 'Five videos in the last hour. Try again shortly.' }
+  if (today.length >= (onTrial ? C.perDayTrial : C.perDay)) return { ok: false, error: onTrial ? 'Five videos a day on a trial. Try again tomorrow.' : 'Twenty videos a day. Try again tomorrow.' }
+  if (recent.length >= (onTrial ? C.perMonthTrial : C.perMonth)) return { ok: false, error: onTrial ? 'Twenty videos a month on a trial.' : 'A hundred videos a month. Try again next month.' }
+  const live = (await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), isNull(videos.removedAt), eq(videos.use, 'product')))).map(asVideo)
+  if (live.filter((v) => isLive(v, now)).length >= C.live) return { ok: false, error: 'Your shop holds 200 product videos. Remove one first.' }
+  const [r] = await tx.execute<{ id: string }>(sql`insert into videos (tenant_id, mux_env, created_by, use) values (${tenantId}, ${muxEnv}, ${memberId}, 'product') returning id`) as unknown as { id: string }[]
+  return { ok: true, id: r!.id }
+}
+
+/** A product's video: its link and the video row (product videos only). */
+export async function productVideoFor(tx: Tx, tenantId: string, productId: string): Promise<(Video & { posterMs: number; button: string }) | null> {
+  const [r] = await tx.select({ ...ROW, posterMs: productVideos.posterMs, button: productVideos.button }).from(productVideos)
+    .innerJoin(videos, and(eq(videos.tenantId, productVideos.tenantId), eq(videos.id, productVideos.videoId)))
+    .where(and(eq(productVideos.tenantId, tenantId), eq(productVideos.productId, productId), eq(videos.use, 'product'))).limit(1)
+  return r ? asVideo(r) : null
+}
+
+/** Link a new product video (the start's own row) to its product. */
+export async function linkProductVideo(tx: Tx, tenantId: string, productId: string, videoId: string) {
+  await tx.insert(productVideos).values({ tenantId, productId, videoId })
+}
+
+/** Let a product's video go: the link goes, the row is removed and its Mux side queued (removeVideo). */
+export async function unlinkProductVideo(tx: Tx, tenantId: string, productId: string, now: Date): Promise<boolean> {
+  const v = await productVideoFor(tx, tenantId, productId)
+  if (!v) return false
+  await tx.delete(productVideos).where(and(eq(productVideos.tenantId, tenantId), eq(productVideos.productId, productId)))
+  await removeVideo(tx, tenantId, v, now)
+  return true
+}
+
+/**
+ * The net for product videos (architecture and security reviews 2026-11-10): rows nothing links (a crash between the
+ * row and its link, a product removed outside the app), and linked rows that failed, once past their upload window
+ * plus an hour, are released: unlinked, removed, their Mux side queued.
+ */
+export async function releaseProductVideos(tx: Tx, tenantId: string, now: Date): Promise<number> {
+  const cutoff = new Date(now.getTime() - notReadyAfterMs('product') - 3_600_000)
+  const rows = (await tx.select({ ...ROW, productId: productVideos.productId }).from(videos)
+    .leftJoin(productVideos, and(eq(productVideos.tenantId, videos.tenantId), eq(productVideos.videoId, videos.id)))
+    .where(and(eq(videos.tenantId, tenantId), eq(videos.use, 'product'), isNull(videos.removedAt), lt(videos.createdAt, cutoff)))).map(asVideo)
+  let n = 0
+  for (const v of rows) {
+    if (v.productId && videoState(v, now).kind !== 'failed') continue
+    if (v.productId) await tx.delete(productVideos).where(and(eq(productVideos.tenantId, tenantId), eq(productVideos.videoId, v.id)))
+    await removeVideo(tx, tenantId, v, now); n++
+  }
+  return n
 }
 
 /** Mux answered with the upload: the row now knows it (the webhook definer routes by it). */
@@ -100,7 +166,8 @@ const SETTLED_MS = 2 * 60 * 60_000
 export async function releaseUnusedVideos(tx: Tx, tenantId: string, now: Date): Promise<number> {
   const used = await referenced(tx, tenantId)
   const cutoff = new Date(now.getTime() - SETTLED_MS)
-  const rows = await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), isNull(videos.removedAt), lt(videos.createdAt, cutoff)))
+  // Loops only (PV·1): a product's video is never the Look's to release (releaseProductVideos is its net).
+  const rows = await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), isNull(videos.removedAt), lt(videos.createdAt, cutoff), eq(videos.use, 'loop')))
   const gone = rows.filter((v) => !used.has(v.id))
   for (const v of gone) await removeVideo(tx, tenantId, v, now)
   return gone.length
@@ -115,7 +182,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export async function cleanVideos<L extends { home?: unknown[] }>(tx: Tx, tenantId: string, layer: L): Promise<L> {
   const idOf = (s: unknown) => { const id = (s as { video?: { id?: unknown } } | null)?.video?.id; return typeof id === 'string' && UUID.test(id) ? id : null }
   const ids = (layer.home ?? []).flatMap((s) => { const id = idOf(s); return id ? [id] : [] })
-  const ok = ids.length ? new Set((await tx.select({ id: videos.id }).from(videos).where(and(eq(videos.tenantId, tenantId), inArray(videos.id, ids), isNull(videos.removedAt)))).map((r) => r.id)) : new Set<string>()
+  const ok = ids.length ? new Set((await tx.select({ id: videos.id }).from(videos).where(and(eq(videos.tenantId, tenantId), inArray(videos.id, ids), isNull(videos.removedAt), eq(videos.use, 'loop')))).map((r) => r.id)) : new Set<string>()
   const home = (layer.home ?? []).map((s) => {
     if ((s as { video?: unknown } | null)?.video === undefined) return s
     const id = idOf(s)
@@ -139,7 +206,7 @@ export const videoStatusFor = (tenantId: string, id: string, now: Date) => withT
 export async function playableVideos(tx: Tx, tenantId: string, ids: string[], now: Date): Promise<Record<string, { playbackId: string; width: number | null; height: number | null }>> {
   const valid = ids.filter((i) => UUID.test(i)).slice(0, 40)
   if (!valid.length) return {}
-  const rows = await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), inArray(videos.id, valid), isNull(videos.removedAt)))
+  const rows = (await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), inArray(videos.id, valid), isNull(videos.removedAt), eq(videos.use, 'loop')))).map(asVideo)
   const out: Record<string, { playbackId: string; width: number | null; height: number | null }> = {}
   for (const v of rows) { const s = videoState(v, now); if (s.kind === 'playable') out[v.id] = { playbackId: s.playbackId, width: v.width, height: v.height } }
   return out

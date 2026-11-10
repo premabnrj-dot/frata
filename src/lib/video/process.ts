@@ -8,6 +8,7 @@ import { MUX_ENVIRONMENT_ID } from '@/lib/env'
 import { errName } from '@/lib/log'
 import { drainSoon } from '@/lib/outbox/drain'
 import { failVideo, queueAssetDelete, videoOf } from '@/lib/queries/videos'
+import { enqueue } from '@/lib/outbox'
 import { refreshShop } from '@/lib/storefront/refresh'
 import { getAsset, mp4ReadyFor } from './mux'
 
@@ -85,8 +86,9 @@ async function one(tenantId: string, videoId: string, ev: Pending['payload']): P
     if (a.status !== 'ready' || a.durationMs === null) return { queued: false }
     // Outside the use's length (a loop ≤ 15 s; a product 6–60 s), or a product whose 720p Mux skipped (a smaller
     // source: it would never play): no playback id, and the asset goes.
+    const short = a.width !== null && a.height !== null ? Math.min(a.width, a.height) : null
     const why = a.durationMs > lim.maxMs ? 'too_long' : a.durationMs < lim.minMs ? 'too_short'
-      : product && a.renditions[lim.rendition] === 'skipped' ? 'too_small' : null
+      : product && ((short !== null && short < 720) || a.renditions[lim.rendition] === 'skipped') ? 'too_small' : null
     if (why) {
       await tx.update(videos).set({ durationMs: a.durationMs }).where(mine)
       await failVideo(tx, tenantId, v.id, why, now)
@@ -98,6 +100,12 @@ async function one(tenantId: string, videoId: string, ev: Pending['payload']): P
       ...(v.readyAt ? {} : { readyAt: now }),
       ...(mp4ReadyFor(a, use) && !v.mp4ReadyAt && (v.playbackId || a.playbackId) ? { mp4ReadyAt: now } : {}),
     }).where(mine)
+    // PV·1: a product's 720p MP4 is asked for only now, past the checks (unit-economics review 2026-11-10): a row in
+    // the outbox in this transaction (ADR-0006); the sender re-reads the row. Once per video (its dedupe key).
+    if (product && !a.renditions[lim.rendition] && !v.mp4ReadyAt) {
+      await enqueue(tx, { tenantId, kind: 'mux.rendition.create', dedupeKey: `mux.rendition.create:${v.id}`, payload: { videoId: v.id } })
+      return { queued: true }
+    }
     return { queued: false }
   })
   const after = await withTenant(tenantId, (tx) => videoOf(tx, tenantId, v.id))

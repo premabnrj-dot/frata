@@ -37,9 +37,9 @@ describe('UPLOAD_SETTINGS', () => {
 
 // PV·1: a product's video asks for one 720p MP4 (shop and feeds); a loop's settings are unchanged.
 describe('uploadSettings by use', () => {
-  it('a loop keeps highest; a product asks for 720p only (never mixed with highest)', () => {
+  it('a loop keeps highest; a product asks for no MP4 at upload (720p is added after the checks)', () => {
     expect(uploadSettings('loop')).toEqual(UPLOAD_SETTINGS)
-    expect(uploadSettings('product')).toEqual({ video_quality: 'basic', playback_policies: ['public'], static_renditions: [{ resolution: '720p' }] })
+    expect(uploadSettings('product')).toEqual({ video_quality: 'basic', playback_policies: ['public'] })
   })
 })
 

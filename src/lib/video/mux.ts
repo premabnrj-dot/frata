@@ -16,10 +16,11 @@ import { USE_LIMITS, type VideoUse } from '@/domains/video/state'
 export const UPLOAD_SETTINGS = { video_quality: 'basic', playback_policies: ['public'], static_renditions: [{ resolution: 'highest' }] } as const
 export const UPLOAD_TIMEOUT_S = USE_LIMITS.loop.timeoutS
 
-/** PV·1: a product's video asks for ONE sized MP4, 720p (shop and feeds; Google takes 720p and up), never mixed with
- *  `highest` (Mux refuses that). Paid prep per minute; none is made from a smaller source (the asset fails as too_small). */
+/** PV·1: a product's video is uploaded with NO MP4 (an HLS-only asset is valid). Its paid 720p rendition is added only
+ *  once the asset has passed the length and size checks (createRendition, from the outbox): a too-long or tiny upload
+ *  never costs prep (unit-economics review 2026-11-10). */
 export const uploadSettings = (use: VideoUse) => use === 'loop' ? UPLOAD_SETTINGS
-  : { video_quality: 'basic', playback_policies: ['public'], static_renditions: [{ resolution: USE_LIMITS[use].rendition }] } as const
+  : { video_quality: 'basic', playback_policies: ['public'] } as const
 
 export type MuxFail = { ok: false; why: 'not_configured' | 'unauthorized' | 'refused' | 'rate_limited' | 'unavailable' | 'bad_reply' }
 export type MuxAsset = {
@@ -87,6 +88,17 @@ export async function getAsset(assetId: string): Promise<{ ok: true; asset: MuxA
   if (r.status === 404) return { ok: true, asset: null }
   const asset = parseAsset((r.json as { data?: unknown } | null)?.data)
   return asset ? { ok: true, asset } : { ok: false, why: 'bad_reply' }
+}
+
+/**
+ * Add a static MP4 rendition to a ready asset (PV·1: a product's 720p). Mux answers 201 with the rendition preparing;
+ * its webhooks name the asset (`asset_id`), which the row already holds. 404: the asset is gone (done, nothing to make).
+ * [V-undated, Mux create-asset-static-rendition, read 2026-11-10]
+ */
+export async function createRendition(assetId: string, resolution: string): Promise<{ ok: true; gone: boolean } | MuxFail> {
+  if (!ID.test(assetId) || !/^\d{3,4}p$/.test(resolution)) return { ok: false, why: 'refused' }
+  const r = await call('POST', `/video/v1/assets/${assetId}/static-renditions`, { resolution })
+  return r.ok ? { ok: true, gone: r.status === 404 } : r
 }
 
 /** Delete an asset. Mux answering 404 is done too (it is already gone). */
