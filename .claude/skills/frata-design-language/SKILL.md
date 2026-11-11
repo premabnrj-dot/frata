@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.14.0
+  version: 5.15.0
   verified: 2026-11-11
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -330,7 +330,11 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 - **Rails say where you are:** a thin progress line and "01 / 10"; tabs are pill segments (`aria-pressed`), swipeable.
 - **Video in a section** (console): empty (Add a video · or Use a photo), uploading (progress, Cancel), getting ready,
   ready (poster, length, Replace, Remove), didn't work (Choose another); a loop plays muted, only in view, never with
-  sound or a player bar on the shop.
+  sound or a player bar on the shop. TS1b (owner 2026-11-11): a loop loads after 400 ms at half in view, one at a time;
+  a Home plays at most 3 (at 3, a loop field says "A Home plays at most 3 videos."); loops play a 720p MP4 at most.
+- **Designs that sell (TS1b):** a design draws what its board draws (a grid of 4, tiles ≤ 4, one featured piece); the
+  library greys a design with pieces or collections once 2 are on the page, saying why. A drop date reads "Drops Sat 14
+  Nov, 7 pm" (`dropLineIN`, India time; never a ticking count) and is left out once passed.
 - **Theme samples:** realistic photos only (credited in `public/themes/samples/*/CREDITS.json`); the merchant's own
   pieces always first.
 - **Story half (1.2, S2):** a Spotlight is Image with text on the tile, words .8fr beside a 2:1 photo or loop; a Story
@@ -871,7 +875,8 @@ saving we cannot show from their own orders.
 - Phone first, touch targets ≥ 44px. Photos from the 1A ladder (400–1600 WebP)
   through `srcSet`/`sizes` (`src/components/storefront/photo.tsx`), the largest
   paint eager with `fetchpriority=high`, the rest lazy; no `next/image` optimiser.
-  Only the first section's photos are `priority` (speed review P15), and no shop
+  At most 2 images a page are `priority` (P15; TS1b: `ProductGrid` is off unless its caller opens the page; a lead
+  design's photo ≤ 1). A card's cover has empty `alt` (its title names the link); its hover photo has one `src`. No shop
   font is preloaded (P6). A photo that has not painted, or never will, shows the
   shop's chip tile with a small garment drawn on it — never the browser's
   broken-image glyph or its alt text (`img[data-photo]`).

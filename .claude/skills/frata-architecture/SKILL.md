@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.39.0
+  version: 2.40.0
   verified: 2026-11-11
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -344,8 +344,23 @@ after it. A class a shop page uses from outside the shop's folders must be added
   only within its theme (`carryOver`), else a `lost` line names it. Blocks render in
   `src/components/storefront/blocks/` (server only; `check:tenant` 6e: no loader or db import), styled by `.store-b-*`
   rules (≤ 1.0 kB gz, `check-storefront-build`). The tree walk (`design-tree.ts`) has no Zod, for the customizer's
-  bundle (gated at 208 kB). Commerce, video and date blocks arrive in TS1 with the per-source loader; a fill never holds
-  a video (a design's video will be the section's own `video`).
+  bundle (gated at 208 kB).
+- **Commerce, video and date blocks (TS1b).** A product grid (4 pieces from a `SourceSchema` source; the theme's default
+  never a collection), a featured product, collection tiles (≤ 4, `tilesOf`, shared with the section), a video and a
+  drop date. They read the Home page's own catalogue and best-sellers ids (`ctx`): no statement, no loader in a block;
+  the per-source loader is TS1c's. A fill never holds a video id: a design's one loop is the section's own `video`,
+  kept only where the design has exactly one video block and the theme lists `design` in `videoSections`
+  (`keepDesignVideo`, in `designsForSave` and `resolveTheme`; `VIDEO_KEYS` includes `design`). The save
+  (`designsForSave(designs, home, { now, videoOk, loopsBefore })`) also refuses a 3rd design with pieces or collections
+  (`MAX_COMMERCE_DESIGNS`), a look that grows past `MAX_LOOPS` = 3 loops (one already past keeps them: `loopsBefore` from
+  the stored draft), and a drop date over 400 days away or unreadable. themeCheck: what only the owner chooses is
+  fill-marked; one video a design; a minor can't add pieces, collections or a video to a design already on shops.
+- **A loop's MP4 (TS1b, owner 2026-11-11).** A loop uploads with no MP4; past the checks the processor asks for a sized
+  one (`loopMp4`: 720p, or the largest size a smaller source fills) and records it in `videos.mp4` (0101–0102: set once)
+  in the transaction that enqueues `mux.rendition.create`. `mp4Of(row)` is the one rule for which file plays (a V1
+  loop's `highest`, a product's 720p).
+- **Eager images.** `ProductGrid`'s `lead` is off unless the caller asks; a page asks for ≤ 2 (`74-commerce` counts
+  them on Home, Shop all and a collection). `shopCatalogue` is expanded once a request (`cache()`): never sort it in place.
 - **Pages (Theme Studio TS1a; plan `docs/plans/2026-11-11-theme-studio-ts1.md`).** About and FAQ live in `shop_pages`
   (0099–0100: RLS, column grants, ≤ 20 a shop and one FAQ, addresses unique per shop, the cap under the `look:<t>` lock);
   their templates are Frrata's (`src/domains/pages/templates.ts`, TS0b blocks + the page-only FAQ block whose items may be

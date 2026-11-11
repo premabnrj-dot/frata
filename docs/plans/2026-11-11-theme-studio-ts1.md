@@ -236,8 +236,8 @@ looks byte-identical (resolved-looks snapshot).
   `videoSections` includes `design`; resolve's video rule reads `VIDEO_KEYS`, not two hard-coded keys. So a design
   without a video block can neither play one nor keep one alive (`releaseUnusedVideos` frees it: test).
   `cleanFill` and `fillText` list the poster; the poster counts as a photo in `designsCheck` and `designProblems`.
-- **Loops cost Frrata Mux minutes** (unit economics, 2026-11-11): see the owner question below; the plan assumes the
-  recommendation: **≤ 3 loops on a Home** across Hero, Image with text and design videos (the save refuses a 4th; old
+- **Loops cost Frrata Mux minutes** (unit economics, 2026-11-11; owner decided 2026-11-11, "Cap 3 + dwell + 720p"):
+  **≤ 3 loops on a Home** across Hero, Image with text and design videos (the save refuses a 4th; old
   looks keep theirs), a loop loads after **400 ms at 50 % in view** (dwell), and loops play the 720p rendition.
 - **Eager photos** (architecture 3; speed HIGH 1): `ProductGrid` defaults `lead = false` and every caller says what it
   wants: Shop all and a title-top collection pass `lead`, a banner collection `false` (its banner is the priority),
@@ -300,7 +300,7 @@ looks byte-identical (resolved-looks snapshot).
 ## Design review (frata-planning § 3)
 - **UI/UX:** board v2 (approved). States: a source with nothing listed (the block is left out; readiness says so,
   never blocking), an unlisted featured piece (left out), a passed date (left out), no video yet (the poster photo
-  shows), the card cap reached (the library greys the design with "24 product cards on this page already").
+  shows), 2 designs with pieces on the page (the library greys the third, saying why), 3 loops (a loop field says so).
 - **Tenancy:** no new table, no new read. Handles and collection picks resolve only against this shop's own cached
   catalogue; a video id only through `cleanVideos` (this shop's rows).
 - **Modularity:** blocks in `blocks.ts` (+ `FillSchema` variants for source, handle, tiles, date), renderers in
@@ -311,7 +311,7 @@ looks byte-identical (resolved-looks snapshot).
 - **Scalability / performance:** +0 statements; HTML/RSC by the gate; card cap; no new client script (server blocks).
 - **Reliability:** no outbound call (a video is already uploaded through V1's flow).
 - **Security:** fills tagged and capped; handle and source shapes as the sections'; video ownership by `cleanVideos`.
-- **Unit economics:** Mux delivery is per minute played and Frrata pays it (no per-shop minutes budget exists): the loop cap, dwell and 720p above; the owner decides (below).
+- **Unit economics:** Mux delivery is per minute played and Frrata pays it (no per-shop minutes budget exists): the loop cap, dwell and 720p above (owner 2026-11-11).
 - **Blast radius:** `Products` and `CollectionTiles` split (Home's sections must render byte-identically: e2e
   `05-shop-look` 0 px), `ProductGrid`'s `lead` default (Price tiles and every grid: priority only on the lead section),
   `VIDEO_KEYS`, resolve's video rule, `bestSellerWindows`, `designProblems`, the design form.
