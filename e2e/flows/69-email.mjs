@@ -96,6 +96,7 @@ export default {
       const [shop] = await db`select id from tenants where slug = 'kesar-studio'`
       // The shop's SES tenant is set up ahead in production (its own paced row); here it is already there.
       await db`insert into email_shops (tenant_id, ses_ready_at) values (${shop.id}, now()) on conflict (tenant_id) do update set ses_ready_at = now()`
+      await db`update variants set stock = 50 where tenant_id = ${shop.id} and archived_at is null` // two orders below, whatever the seed left
       const drain = () => fetch(`${CONSOLE}/api/cron/drain`, { headers: { authorization: 'Bearer e2e-cron' } })
       const ctx = await t.browser.newContext({ viewport: { width: 390, height: 844 } })
       const p = await ctx.newPage(); p.setDefaultTimeout(15_000); p.on('pageerror', (e) => t.errors.push(e.message))
