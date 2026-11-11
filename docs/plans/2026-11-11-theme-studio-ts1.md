@@ -206,7 +206,7 @@ The contact form; commerce blocks (TS1b); product and collection templates (TS1c
 ---
 
 # TS1b — commerce blocks (plan; board: TS0b board v2, approved 2026-11-11 "as drawn", its four TS1 designs)
-Status: draft (reviews on this plan; no new board: The drop, One piece, Behind the bench and The edits are drawn on
+Status: active (owner 2026-11-11: loops capped at 3 a Home with dwell and 720p; designs draw what the board draws) · reviews folded in; no new board: The drop, One piece, Behind the bench and The edits are drawn on
 https://claude.ai/artifact/DzD84DZsW6eGYQ6QkfJbM4 v2) · Date: 2026-11-11
 
 ## Goal
