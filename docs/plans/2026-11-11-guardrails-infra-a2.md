@@ -212,3 +212,58 @@ visitor counts in every plan) run on this plan. Their findings are folded in her
   - every definer refused to public, anon, authenticated, service_role and `frata_app`;
   - `admin_db_health()` has no text from `pg_stat_activity`, and a planted literal is absent;
   - `infra_*` refused to `frata_app`.
+
+### security-reviewer: fix before merge
+- **HIGH-1, the billing token.** A Vercel token carries its creator's whole role, so a token that reads team billing
+  is in practice an Owner token. If stolen, it can deploy into production with every secret, switch off the pause or
+  the firewall, and reach the other 11 projects.
+  - The Vercel tab uses a token made by a **Billing- or Viewer-role member**, if the recheck confirms such a token
+    reads `/v1/billing/charges` but gets 403 on deployments, env and firewall. Production only, Sensitive, 90-day
+    expiry.
+  - The puller probes a forbidden endpoint on every run and refuses the token if it gets a 2xx.
+  - Until such a token exists, the Vercel tab shows "Connect a billing-only token" and the spend webhook carries the
+    alerts.
+  - The existing `VERCEL_API_TOKEN` (domains) never gains billing.
+- **HIGH-2, ingest abuse can pause every shop:** each forged beacon is still an invocation, and the $50 budget then
+  pauses all shops.
+  - A Firewall rate rule on `/api/shop/e` (per IP, deny) goes live in G·2, before A2·2.
+  - The middleware skips `/api/shop/e`; `routeFor`'s check is repeated in the route.
+  - IPv6 counts per /64 (`ipBucket`).
+- **MED-1, spend webhook:**
+  - stored through a definer into its own table (as `app_store_billing_event`), keyed on sha256 of the raw body,
+    never a tenantless row in `webhook_events`;
+  - a 64 KB body cap; the hex length checked before `timingSafeEqual`; the payload's `teamId` must equal
+    `VERCEL_TEAM_ID`;
+  - the event is a trigger only: the puller confirms it against the billing data before any alert says "spent".
+- **MED-2, the salt:**
+  - the visitor hash takes a /24 (IPv4) or /48 (IPv6), not the full address;
+  - only a definer reads the salt; it is deleted and vacuumed daily;
+  - the backup window is written into the spec.
+- **MED-3, unknown hosts reach the main database:** a per-instance cache of host misses (60 s) and a per-IP cap ahead
+  of `requireShop` on the ingest, backed by the Firewall rule.
+- **MED-4, the firewall rule:**
+  - scope: shop hosts, own domains included;
+  - excluded: `/api/webhooks/*`, `/api/cron/*`, `/api/ek/*` and the OG and share-card routes;
+  - the verify list adds Google-InspectionTool, Storebot-Google, Telegram and iMessage previews;
+  - the change is made as the owner (a Vercel session, not the app's token), and the previous config is saved for
+    rollback.
+- **MED-5, forged content in the Console:**
+  - strict Zod with length caps;
+  - paths must match the shop's own path shapes; product ids must be uuids joined to the tenant's products;
+  - the referrer must be a bare hostname;
+  - sources and cities with fewer than 5 visitors fold into "Other" (k ≥ 5).
+- **LOW-1:** the `pg_stat_statements` filters (as the tenancy review), and statistics reset after any password change.
+- **LOW-2, the Supabase token:**
+  - Usage Analytics Read and Organization Settings Read only. **Logs Read stays off**, because logs carry emails and
+    IPs, so the Management API metrics endpoint is not used;
+  - a forbidden endpoint is probed on each pull.
+- **LOW-3, the settings action:** it calls `requireStaff(ADMIN_ONLY)` itself, with Zod caps and an audit row. Alerts
+  are evaluated in memory on page load and written only by the cron's definer.
+- **LOW-4:**
+  - the Mux token is Video Read only;
+  - every new env variable is Production only;
+  - the ingest reads its body with a running byte count;
+  - `ENTRY_POINTS` gains `/api/shop/e` and the two crons;
+  - partitions are dropped through a definer with `format('%I')`;
+  - errors inside `after()` log `errName` only;
+  - `npm audit` runs when `isbot` is added.
