@@ -55,6 +55,9 @@ for (const [k, files] of Object.entries(build)) {
   // Icons are drawn on the server (src/components/storefront/icon.tsx): their path data never reaches a shop's
   // browser. Two markers, the line set's bag and the solid set's bag (src/domains/icons/data.ts).
   for (const f of files) if (f.endsWith('.js') && /M3\.103 6\.034h17\.794|M239\.89,198\.12l-14\.26-12/.test(readFileSync(join('.next', f), 'utf8'))) failures.push(`${k}  carries the shop's icon data through ${f} (draw icons on the server, pass the element)`)
+  // The console's icon set (src/components/icons/icon.tsx) never reaches a shop's browser: the shop draws its own
+  // marks (close-mark.tsx; the console set cost every shop page about 2 kB, 2026-11-11). Marker: its `home` path.
+  for (const f of files) if (f.endsWith('.js') && readFileSync(join('.next', f), 'utf8').includes('M4 10.5 12 4l8 6.5V20H4z')) failures.push(`${k}  carries the console's icon set through ${f} (draw the mark in src/components/storefront)`)
   if (!k.endsWith('/page')) continue
   // Everything this page loads: the root layout, each layout on the way down, and the page (each file once).
   const parts = k.split('/').slice(0, -1)
