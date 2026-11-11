@@ -3,6 +3,9 @@ import { ekReply, requireEk } from '@/lib/ekcode/require-ek'
 import { readFlow } from '@/lib/ekcode/flow-cookie'
 import { create } from '@/lib/ekcode/signin'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 export const dynamic = 'force-dynamic'
 const Body = z.object({ name: z.string().min(2).max(80) })
 

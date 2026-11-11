@@ -4,6 +4,9 @@ import { LIMITS } from '@/lib/db/rate-limit'
 import { placeForPincode } from '@/lib/db/platform'
 import { reply, shopRequest } from '@/lib/http/shop-api'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // City and state for a typed pincode, from India Post's directory — to fill the address, nothing more.
 // (Whether a courier delivers there is the pincode check the owner deferred.)
 const Body = z.object({ pincode: z.string().regex(/^[1-9][0-9]{5}$/) })

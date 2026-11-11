@@ -1,5 +1,8 @@
 import { shopForRoute } from '../_shop'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // Not force-static: a 404 for an unknown host must never be cached (tenancy audit 2026-11-07). The rows are
 // cached by the loaders; the CDN keeps a real shop's answer five minutes.
 export const dynamic = 'force-dynamic'

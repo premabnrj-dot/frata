@@ -7,6 +7,9 @@ import { placeOrder } from '@/lib/orders/place'
 import { cleanAttribution } from '@/domains/analytics/attribution'
 import { CONSOLE_HOST, SHOP_DOMAIN } from '@/lib/public-env'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // Place an order. Limits fail closed here (a fake-COD script must not slip through a database hiccup).
 const Body = z.object({
   idempotencyKey: z.string().regex(/^[A-Za-z0-9_-]{22,43}$/), bag: Bag, address: z.unknown(), method: z.enum(['cod', 'prepaid']), expectedTotal: z.number().int().min(0), code: Code.optional(), via: z.enum(['typed', 'link']).optional(),

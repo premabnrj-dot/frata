@@ -5,6 +5,9 @@ import { verifyMetaSignature } from '@/lib/meta/signature'
 import { readCapped, storeEkcodeWebhook } from '@/lib/ekcode/webhook'
 import { applyEvents } from '@/lib/db/ekcode'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 60
+
 // ENTRY POINT credential: Meta's X-Hub-Signature-256 over the raw body with EkCode's own app secret (scripts/check-actions.mjs).
 // A second webhook URL because EkCode is a separate Meta app in its own portfolio, with its own secret (ADR-0010);
 // the signature check is shared (src/lib/meta). Stored trimmed, answered at once, applied in after() and by the cron.

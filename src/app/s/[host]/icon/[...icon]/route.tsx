@@ -10,6 +10,9 @@ import { photoUri } from '@/lib/seo/render-card'
 import { themeOf } from '@/lib/themes/page-look'
 import { shopForRoute } from '../../_shop'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // =============================================================================
 // FILE: src/app/s/[host]/icon/[...icon]/route.tsx — A SHOP'S ICON (search and sharing S1·6), as the share-card route:
 // canonical paths only (/icon/<32|180|192|512>/<hash16>.png, no query string), the host's shop, the logo only from our

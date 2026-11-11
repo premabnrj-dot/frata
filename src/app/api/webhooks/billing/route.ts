@@ -4,6 +4,9 @@ import { webhookSigned } from '@/lib/billing/gateway'
 import { applyBillingEvent, storeBillingEvent } from '@/lib/db/platform'
 import { errName } from '@/lib/log'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 60
+
 // ENTRY POINT credential: Frrata's OWN billing webhook secret (current or previous), HMAC of the raw body
 // (scripts/check-actions.mjs; plan finding 12). Separate from the shops' Razorpay webhooks. A 256 kB cap before anything
 // is read; the event is stored once under a hash of its signed body with a trimmed payload, answered at once, then applied

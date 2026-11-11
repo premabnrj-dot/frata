@@ -3,6 +3,9 @@ import { destinationAfterSignIn } from '@/lib/auth/after-sign-in'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { errName } from '@/lib/log'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // ENTRY POINT credential: the one-time code Supabase issued in the email link.
 // A link opened in another browser or app cannot be exchanged here (the code
 // verifier lives in the browser that asked), so it lands on the code entry —

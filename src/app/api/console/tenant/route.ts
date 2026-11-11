@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { requireMember } from '@/lib/auth/require-member'
 import { CONSOLE_ROLES } from '@/domains/tenancy/roles'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 /**
  * GET /api/console/tenant — which shop a console request is for right now: the caller's own access
  * (requireMember), so it only ever tells someone their own shop id. The shell's TenantCheck reads it after each

@@ -10,6 +10,9 @@ import { photoUri, renderCard } from '@/lib/seo/render-card'
 import { themeOf } from '@/lib/themes/page-look'
 import { shopForRoute } from '../../_shop'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // =============================================================================
 // FILE: src/app/s/[host]/og/[...card]/route.ts — A SHARE CARD (search and sharing S1·3; reviews 2026-11-09).
 // Only canonical paths are drawn: /og/product/<uuid>/<hash16>.jpg, /og/collection/<uuid>/<hash16>.jpg,

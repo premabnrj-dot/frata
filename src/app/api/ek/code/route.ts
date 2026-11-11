@@ -3,6 +3,9 @@ import { ekReply, requireEk } from '@/lib/ekcode/require-ek'
 import { readFlow, writeFlow } from '@/lib/ekcode/flow-cookie'
 import { codeArrived, sendCode } from '@/lib/ekcode/signin'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // POST: send a code to the typed number (with a proof-of-work answer when one was asked for). GET: has it arrived?
 // The flow and the code come from the sealed cookie only.
 export const dynamic = 'force-dynamic'

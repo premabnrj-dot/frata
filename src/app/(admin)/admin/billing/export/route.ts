@@ -4,6 +4,9 @@ import { gstRows } from '@/lib/admin/billing'
 import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import { errName } from '@/lib/log'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // The month's GST export for the CA (billing B2): issued invoices and credit notes, GSTR-1 style, as CSV. ADMIN_ONLY;
 // every cell quoted and formula characters neutralised (finding 17). Never cached.
 export const dynamic = 'force-dynamic'

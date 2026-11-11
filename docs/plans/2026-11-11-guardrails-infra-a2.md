@@ -372,3 +372,23 @@ Computed with `orderProfit`; the scratch model is in the session scratchpad.
   - § Hosting is now Pro.
 - frata-integrations: the recheck's facts, the billing API, the firewall API.
 - frata-gotchas: shop pages are CDN-cached (check `x-vercel-cache` before blaming the storefront for CPU).
+
+## Facts recheck (2026-11-11), folded in
+- **G·1:**
+  - Pro's default duration is 300 s, with an 800 s maximum.
+  - A layout's `maxDuration` reaches its pages and their Server Actions, never `route.ts`.
+  - **Built:** root layout 60 s; every route handler declares its own (60 for crons and routes that work in `after()`,
+    30 otherwise); `scripts/check-duration.mjs` in `npm test` keeps it so.
+  - **Owner step:** set the project's Default Max Duration to 60 s (Settings › Functions › Advanced) as the backstop.
+- **G·2:**
+  - Bot Protection is project-wide (no host scope).
+  - WhatsApp, Shiprocket and Mux are not verified bots. Googlebot, Bingbot, Storebot and facebookexternalhit
+    (Facebook, Instagram and Messenger previews) are.
+  - **Built:** `ops/firewall.json` (bypass `/api/webhooks/` and `/api/cron/`; bypass WhatsApp and Telegram previews on
+    GET and HEAD; Bot Protection and AI Bots in LOG).
+  - **Blocked:** the API answers 404 "config not found" until the firewall has been opened once in the dashboard.
+    **Owner step:** open Project frata › Firewall once; then the config is applied by API and read back.
+  - Challenge comes after a day of logs.
+- **pg_cron is available on frata (Free)** (`pg_available_extensions`), so A·2's rollups, partitions and salt run there.
+- **Role timeouts are set on production:** `frata_app` and `frata_admin` have statement 20 s, lock 10 s,
+  idle-in-transaction 30 s.

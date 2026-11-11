@@ -6,6 +6,9 @@ import { writeFlow } from '@/lib/ekcode/flow-cookie'
 import { scheme } from '@/lib/ekcode/cookie-name'
 import { EKCODE_HOST } from '@/lib/public-env'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // The shop's redirect lands here (top-level, ?flow=<handle> made by the shop's server): the handle goes into the sealed
 // cookie and the shopper sees /continue. Nothing about the shop comes from the query but the handle.
 export const dynamic = 'force-dynamic'

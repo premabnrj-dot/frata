@@ -2,8 +2,8 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.22.0
-  verified: 2026-11-10
+  version: 1.23.0
+  verified: 2026-11-11
   decisions: [ADR-0006]
 ---
 
@@ -718,3 +718,40 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   needs pg_read_all_stats (installed on frata, 2026-11-10) → a definer returning aggregates, not a pg_monitor grant to
   frata_admin (ADR-0007). Max connections / pooler clients: Nano and Micro 60/200, Small 90/400, Medium 120/600, Large
   160/800 [V-undated, compute-and-disk]. frata on 2026-11-10: Free plan, 19 MB, 15/60 connections.
+- **Supabase Cron** (pg_cron): every second to yearly; ≤ 8 concurrent, ≤ 10 min a job [V-undated 2026-11-11]. **Available
+  on frata on the Free plan** (`pg_available_extensions`, checked 2026-11-11; not installed yet). Free: 2 active projects
+  per org counted across all Owners and Admins (paused ones don't count); paused after "too little database activity over a
+  week" (app requests count; pg_cron-only writes: U) [V-undated, billing-faq + kb free-project-pausing].
+- **statement_timeout**: frata_app and frata_admin carry role-level `statement_timeout=20s, lock_timeout=10s,
+  idle_in_transaction_session_timeout=30s` (pg_roles, 2026-11-11). Session `SET` does not work on 6543; role-level via
+  Supavisor transaction mode [U, test with pg_sleep] [V-undated timeouts].
+- **Vercel billing** `GET /v1/billing/charges`: FOCUS v1.3 JSONL, daily, ≤ 1 year, per team; roles Owner, Member, Developer,
+  Security, Billing, Enterprise Viewer (not Pro Viewer); freshness undocumented [V 2026-11-11]. Tokens are Full, Team or
+  Project, all read-write (no read-only type); a project token is denied team-level resources, so charges need a team token
+  (U until tested) [V access-tokens 2026-09-08]. Least exposure on Pro: a token minted by the team's single Billing-role member.
+- **Vercel spend webhook** `budget.reached`: 50/75/100 %, then +100 % steps to 1,000 %; checked "every few minutes";
+  `x-vercel-signature` = HMAC-SHA1(raw body), the secret shown once on first save or printed once by `vercel billing budgets
+  set --webhook`; Owner or Billing only; no REST endpoint for budgets [V 2026-09-18 / CLI 2026-11-03].
+
+## Vercel platform (functions, firewall) — checked 2026-11-11 (integration-researcher; Vercel pages carry last_updated)
+
+- **Duration** (Fluid): Pro 300 s default, 800 s max, 1800 s beta per function only; the dashboard sets the project default
+  (Settings › Functions › Advanced); over the limit → terminated, 504 FUNCTION_INVOCATION_TIMEOUT, streaming time counts
+  [V 2026-08-24]. Next 15.5.29: a layout's `maxDuration` passes to the pages under it (nearest wins), **not to route.ts**;
+  Server Actions take the page's [V source + nextjs.org 2026-03-13]. vercel.json `functions` globs for App Router pages, and
+  precedence between the three settings [U].
+- **Bot Protection**: all plans, free, Off/Log/Challenge, **project-wide** (no host scope documented); verified bots skipped
+  (googlebot, bingbot, google-storebot, facebookexternalhit = Facebook/Instagram/Messenger previews, razorpay-webhook,
+  facebook-webhooks). **WhatsApp, Shiprocket and Mux are not verified** → Bypass custom rules before Challenge [V 2026-09-10;
+  WhatsApp failure S, community 2025-12-28].
+- **AI Bots**: all plans, free; AI Crawlers and AI Assistants set separately; log/deny (challenge: CLI and API yes, docs no);
+  applebot, amazonbot and meta-externalagent are ai_crawler (denying them drops Apple's Spotlight and Siri search) [V].
+- **Custom rules**: free, 40 per project on Pro; match host, path, raw_path, route, user_agent, method, header; operators
+  eq, pre, suf, sub, re, inc (+ negation); custom rules run before managed rulesets; live in ≤ 300 ms [V 2026-07-29/09-16].
+- **API**: PUT/PATCH `/v1/security/firewall/config?projectId=`; drafts promoted by `POST …/{configVersion}/activate` (whether
+  PUT goes live directly: U, read back `config/active`). Attack Mode `POST /v1/security/attack-mode` (projectId,
+  attackModeEnabled, attackModeActiveUntil), immediate, 1/6/24 h; own Functions and Crons pass; unverified callers
+  (WhatsApp, Shiprocket, Mux) may be blocked [V 2026-11-11 / 2026-08-11].
+- **isbot** 5.2.3 (2026-11-09), Unlicense (not MIT), no dependencies, ≈ 2.6 kB gzip [V registry; S bundlephobia].
+- **useReportWebVitals** (Next 15): TTFB, FCP, LCP, FID, CLS, INP; a client component; bundles next/dist/compiled/web-vitals
+  (upstream "~3K brotli'd"); a shopper-browser script, so a DPDP note like Mux Data [V 2025-06-16 + source].

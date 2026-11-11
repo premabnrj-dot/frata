@@ -3,6 +3,9 @@ import { webhookFor } from '@/lib/payments/keys'
 import { processEvents, storeRazorpayEvent } from '@/lib/orders/payment'
 import { RAZORPAY_BODY_LIMIT, razorpayEventKey, verifyRazorpaySignature } from '@/lib/webhooks/razorpay'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 60
+
 // ENTRY POINT credential: the shop's own webhook secret, found by the key in the URL (scripts/check-actions.mjs).
 // The tenant comes from OUR key, never the payload (ADR-0006). Stored, answered inside Razorpay's 5 s, then
 // processed at once in after() — a paid order must never wait for a daily cron (architecture review 2026-11-07).

@@ -5,6 +5,9 @@ import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { clearSession, sessionToken } from '@/lib/ekcode/handshake'
 import { forgetSession, prefillFor } from '@/lib/queries/customers'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // GET: what checkout fills in for this shop's signed-in shopper (no-store; 0 statements without a session).
 // POST: "Not you?" — the session ends and its prefill is gone.
 export const dynamic = 'force-dynamic'

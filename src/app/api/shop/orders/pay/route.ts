@@ -3,6 +3,9 @@ import { LIMITS } from '@/lib/db/rate-limit'
 import { reply, shopRequest, Token } from '@/lib/http/shop-api'
 import { confirmPayment, paymentFailed, processEvents } from '@/lib/orders/payment'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // Razorpay Checkout's reply in the browser: paid (signed) or failed. The order is found by its link token only.
 const Body = z.union([
   z.object({ token: Token, paymentId: z.string().regex(/^pay_[A-Za-z0-9]{6,40}$/), signature: z.string().regex(/^[a-f0-9]{64}$/) }),
