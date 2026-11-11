@@ -1,5 +1,5 @@
 # Apps A2 — one home for apps that are on, and the featured card
-Status: active · Date: 2026-11-11 · Mockup: the approved Apps gallery mockup v1 (owner 2026-11-11), screens "An app that
+Status: done · Date: 2026-11-11 · Mockup: the approved Apps gallery mockup v1 (owner 2026-11-11), screens "An app that
 is on" (EkCode drawn) and the featured card — https://claude.ai/artifact/6Th5A8X4YSXCcyozpzPLEg · Parent plan:
 `docs/plans/2026-11-11-apps-gallery.md` (phase A2) · Owner: "go ahead with A2" (2026-11-11)
 
