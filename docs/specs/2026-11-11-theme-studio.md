@@ -1,6 +1,6 @@
 # Theme Studio — Frrata staff and partners build themes; owners use them in Look
-Status: draft v2 (reviews folded in 2026-11-11) · Date: 2026-11-11 · Mockup: https://claude.ai/artifact/3Mpvh9zHQF6P4kJBihkmTd (v2) ·
-Approved: — · Research: `docs/research/2026-11-11-theme-studio.md` · Reviews (2026-11-11): architecture-reviewer,
+Status: active (mockup v2 approved by the owner 2026-11-11) · Date: 2026-11-11 · Mockup: https://claude.ai/artifact/3Mpvh9zHQF6P4kJBihkmTd (v2) ·
+Approved: owner, 2026-11-11 · Research: `docs/research/2026-11-11-theme-studio.md` · Reviews (2026-11-11): architecture-reviewer,
 tenancy-auditor, security-reviewer, speed-reviewer (§ Review findings) · Storefront API: parked
 
 Owner (2026-11-11): everything runs on Frrata. **Frrata staff** build gallery themes in Admin; **partners** build
