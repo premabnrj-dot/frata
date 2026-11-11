@@ -34,8 +34,6 @@ export type ModuleDef = {
   addOnFor?: readonly ('launch' | 'growth' | 'scale')[]
   /** Charged by someone else, named so the merchant is never surprised. */
   usage?: string
-  /** What the merchant gets, 3–6 short lines (Admin and the plan pages; the app page reads showcase.ts). */
-  features: readonly string[]
   dependsOn: readonly ModuleKey[]
   /** Where setting it up starts, once it is on. */
   setup?: string
@@ -47,43 +45,34 @@ export const MODULES: Record<ModuleKey, ModuleDef> = {
   communication: {
     key: 'communication', name: 'Messages', job: 'WhatsApp with customers. One inbox for your team.', group: 'talk', billing: 'core', status: 'now',
     usage: 'Meta bills messages', dependsOn: [], outboxKinds: [], setup: '/console/apps/communication',
-    features: ['Your own WhatsApp Business number', 'COD confirmation by reply', 'Shipped and delivered updates', 'One inbox for your team', 'Notes, assignment, quick replies'],
   },
   rto_shield: {
     key: 'rto_shield', name: 'RTO Shield', job: 'Confirm COD before you pack. Fewer refused parcels.', group: 'deliver', billing: 'plan', status: 'next', dependsOn: ['communication'], outboxKinds: [],
-    features: ['COD waits for a WhatsApp confirm', 'A COD commitment fee, your rule', 'Pincode and phone history', 'Uses your pay-online offer to nudge COD buyers'],
   },
   ship: {
     key: 'ship', name: 'Ship', job: 'Shiprocket labels, tracking, failed deliveries.', group: 'deliver', billing: 'core', status: 'next', usage: 'Shiprocket bills freight', dependsOn: [], outboxKinds: [],
-    features: ['Labels from the Pack button', 'A tracking page for shoppers', 'A queue of failed deliveries', 'Courier picked by rate and pincode'],
   },
   true_profit: {
     key: 'true_profit', name: 'True Profit', job: 'Profit by product, pincode and campaign.', group: 'run', billing: 'add_on', status: 'next', dependsOn: [], outboxKinds: [],
-    features: ['Profit per delivered order', 'By product, size and colour', 'RTO cost by pincode', 'By campaign, on delivered orders'],
   },
   reviews: {
     key: 'reviews', name: 'Reviews', job: 'Photo reviews after delivery, on the product page.', group: 'grow', billing: 'add_on', status: 'next', dependsOn: ['communication'], outboxKinds: ['review:ask'], addOnFor: ['growth', 'scale'],
     usage: 'WhatsApp asks are billed by Meta',
-    features: ['A WhatsApp ask after delivery', 'Photos and stars on the product page', 'Delivered buyers only', 'You approve each one', 'Stars in Google results'],
   },
   marketplace_export: {
     key: 'marketplace_export', name: 'Marketplace export', job: 'Your catalogue as Myntra, Ajio and Nykaa files.', group: 'grow', billing: 'add_on', status: 'next', dependsOn: [], outboxKinds: [],
-    features: ['Myntra, Ajio and Nykaa formats', 'Sizes and colours mapped', 'Problems listed before you upload'],
   },
   size_fit: {
     key: 'size_fit', name: 'Size and fit', job: 'Fewer size returns. Fit learned from returns.', group: 'grow', billing: 'plan', status: 'next', dependsOn: [], outboxKinds: [],
-    features: ['A size finder on the product page', '"Runs small or large" from returns', 'Exchange first, refund second'],
   },
   gst: {
     key: 'gst', name: 'GST', job: 'Your GSTR-1 each month, and the files your CA needs.', group: 'run', billing: 'plan', status: 'now',
     dependsOn: [], outboxKinds: [], setup: '/console/apps/gst',
     // GST on every invoice and credit note is core, in every plan (plan 2026-11-09 § 1); this is the month's return.
-    features: ['GSTR-1 tables, month or quarter', 'What to fix before you file', 'GSTR-1 JSON, sheets, sales register, Tally', 'A login for your accountant'],
   },
   ekcode: {
     key: 'ekcode', name: 'EkCode', job: 'Shoppers filled in at checkout.', group: 'grow', billing: 'core', status: 'now', dependsOn: [], outboxKinds: [],
     setup: '/console/apps/ekcode',
-    features: ['Name, phone and address in one tap', 'Every phone checked on WhatsApp', 'Shoppers from other shops that use EkCode'],
   },
   product_video: {
     // PV·1 (docs/plans/2026-11-10-product-video-pv1.md): core, so every plan has it; a module, so Admin › Modules can
@@ -92,11 +81,10 @@ export const MODULES: Record<ModuleKey, ModuleDef> = {
     // Off stops paid 720p prep still queued; never the deletes or cancels (security review LOW-2, 2026-11-10).
     outboxKinds: ['mux.rendition.create'],
     usage: 'Up to a minute each, one per product',
-    features: ['A reel or a landscape film on each product', 'Second in the photos, and beside the sizes', 'Plays only when a shopper taps it', 'Price, sizes and Add to bag under the video'],
   },
   cart_flows: {
     key: 'cart_flows', name: 'Cart flows', job: 'Bring back bags left behind.', group: 'talk', billing: 'plan', status: 'next', dependsOn: ['communication'], outboxKinds: [],
-    usage: 'Meta bills messages', features: ['WhatsApp reminder for a left bag', 'Back-in-stock alerts', 'Only shoppers who agreed'],
+    usage: 'Meta bills messages',
   },
 }
 

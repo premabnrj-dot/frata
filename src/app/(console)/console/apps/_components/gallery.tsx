@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Icon } from '@/components/icons/icon'
-import { FILTERS, type OfferFilter } from '@/domains/modules/offer'
+import { FILTERS, passes, type OfferFilter } from '@/domains/modules/offer'
 import type { Group, ModuleKey } from '@/domains/modules/registry'
 import { AppTile } from './tile'
 
@@ -21,7 +21,7 @@ export function AppsGallery({ cards, groups }: { cards: AppCard[]; groups: { key
   const mine = cards.filter((c) => c.mine)
   const counts = useMemo(() => Object.fromEntries(FILTERS.map(([f]) => [f, f === 'all' ? cards.length : cards.filter((c) => c.filter === f).length])), [cards])
   const needle = q.trim().toLowerCase()
-  const shown = cards.filter((c) => (filter === 'all' || c.filter === filter) && (!needle || `${c.name} ${c.job}`.toLowerCase().includes(needle)))
+  const shown = cards.filter((c) => passes(c, filter) && (!needle || `${c.name} ${c.job}`.toLowerCase().includes(needle)))
   return (
     <div className="space-y-6">
       {mine.length ? (

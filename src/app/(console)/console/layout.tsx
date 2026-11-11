@@ -104,8 +104,8 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const noticesItem: NavItem = { href: '/console/notices', label: 'Notices', icon: 'bell', badge: bell }
   const search: NavItem = { href: '/console/search', label: 'Search and sharing', icon: 'search' }
   const gst: NavItem = { href: '/console/apps/gst', label: 'GST', icon: 'tax' }
-  // GST is a module (Growth and Scale, switched on in Apps): owners and admins open it from Apps (its Set up link shows
-  // once it is on), so the layout reads nothing more per page. The accountant's console is GST alone.
+  // GST is a module (Growth and Scale, switched on in Apps): owners and admins open it from Apps (its card leads to its
+  // page), so the layout reads nothing more per page. The accountant's console is GST alone.
   const accountant = role === 'accountant'
   const groups: NavGroup[] = accountant ? [{ label: 'Taxes', items: [gst] }]
     : [{ label: 'Today', items: [home, orders, noticesItem, analytics] }, { label: 'Catalogue', items: [products, collections] }, { label: 'Store', items: [offers, look, search, apps, settings, activity] }]

@@ -19,7 +19,7 @@ const BILLING = { core: 'Every plan', plan: 'In plans', add_on: 'Add-on' } as co
 export default async function ModulesPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
-  const [pauses, sp, admin, interest] = await Promise.all([openPauses(), searchParams, requireStaff(ADMIN_ONLY), appInterest(staff).catch(() => null)])
+  const [pauses, sp, admin, interest] = await Promise.all([openPauses(), searchParams, requireStaff(ADMIN_ONLY), appInterest(staff).catch((err) => { console.error('[admin modules interest]', err instanceof Error ? err.name : 'error'); return null })])
   const now = new Date()
   const paused = new Map(pauses.map((p) => [p.module, p]))
   const asked = (k: string) => { const rows = (interest ?? []).filter((r) => r.module === k); return rows.length ? `${rows.length} ${rows.length === 1 ? 'shop' : 'shops'} asked` : '' }

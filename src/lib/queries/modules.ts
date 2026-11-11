@@ -54,17 +54,9 @@ export const shopModules = cache(async (tenantId: string, at: string): Promise<S
   return { facts, access: moduleAccess(facts, now) }
 })
 
-/** The current price of each add-on (newest version), in paise. Platform rows; read inside the shop's transaction. */
-export async function addonPriceList(tenantId: string): Promise<Partial<Record<ModuleKey, { id: string; monthlyPrice: number; version: number }>>> {
-  const rows = await withTenant(tenantId, (tx) => tx.execute<{ id: string; module: string; monthly_price: string; version: number }>(sql`
-    select distinct on (module) id, module, monthly_price, version from ${addonPrices} order by module, version desc`))
-  const out: Partial<Record<ModuleKey, { id: string; monthlyPrice: number; version: number }>> = {}
-  for (const r of rows) if (isModuleKey(r.module) && ADD_ONS.includes(r.module)) out[r.module] = { id: r.id, monthlyPrice: Number(r.monthly_price), version: r.version }
-  return out
-}
-
 type PriceList = Partial<Record<ModuleKey, { id: string; monthlyPrice: number; version: number }>>
 
+/** The current price of each add-on (newest version), in paise. Platform rows; read inside the shop's transaction. */
 async function pricesIn(tx: Tx): Promise<PriceList> {
   const rows = await tx.execute<{ id: string; module: string; monthly_price: string; version: number }>(sql`
     select distinct on (module) id, module, monthly_price, version from ${addonPrices} order by module, version desc`)

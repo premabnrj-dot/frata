@@ -6,6 +6,7 @@ import { Icon } from '@/components/icons/icon'
 import { Badge } from '@/components/ui/badge'
 import { InfoTip } from '@/components/ui/info-tip'
 import { connectWhatsAppAction } from './actions'
+import { settle } from '@/lib/settle'
 import { Journey } from '@/components/brand/journey'
 
 // =============================================================================
@@ -69,7 +70,7 @@ export function ConnectChoices({ ready, canManage, appId, configId, graphVersion
         try {
           const res = await connectWhatsAppAction({ code, hint: hint.current })
           if (!res.ok) { setBusy(null); setError(res.error); return }
-          router.refresh()
+          settle(router)
         } catch {
           setBusy(null); setError('We could not reach Frrata. Nothing was saved. Try again.')
         }

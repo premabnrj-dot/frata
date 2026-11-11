@@ -19,7 +19,7 @@ export default async function AppsPage() {
   const cards: AppCard[] = MODULE_KEYS.map((k) => {
     const def = MODULES[k], offer = offerOf(k, d, now)
     return { key: k, name: def.name, job: def.job, group: def.group, href: `/console/apps/${k}`, footer: offer.footer, locked: offer.locked,
-      state: offer.state, filter: offer.filter, mine: d.access[k].usable }
+      state: offer.state, filter: offer.filter, mine: d.access[k].usable || d.access[k].why === 'needs' }
   })
   return (
     <>
