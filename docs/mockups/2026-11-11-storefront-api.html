@@ -80,6 +80,7 @@ p{margin:0 0 10px;max-width:72ch}
 .radio input{margin:3px 0 0;accent-color:var(--fg)}
 .radio b{font-weight:600}.radio small{grid-column:2;color:var(--sub);font-size:12.5px}
 .radio:has(input:checked){border:2px solid var(--fg);padding:9px 11px}
+.radio:has(input:disabled){color:var(--sub);border-color:var(--border);cursor:not-allowed}
 label.f{display:grid;gap:4px;font-size:13px;font-weight:500}
 .input{border:1px solid var(--input);border-radius:6px;padding:0 10px;background:var(--card);color:var(--fg);font:14px var(--mono);min-height:40px;width:100%}
 .input.sans{font-family:var(--sans)}
@@ -172,11 +173,11 @@ table.t td.n,table.t th.n{text-align:right;font-family:var(--mono);font-variant-
 
 <div class="wrap">
   <h1>Storefront API</h1>
-  <p class="k">Mockup v1 · 2026-11-11 · Spec <span class="mono">docs/specs/2026-11-11-storefront-api.md</span> · for the owner's approval</p>
+  <p class="k">Mockup v2 · 2026-11-11 · reviews folded in · Spec <span class="mono">docs/specs/2026-11-11-storefront-api.md</span> · for the owner's approval</p>
   <ul class="note">
-    <li>A partner's own website reads the shop from Frrata and sends shoppers to Frrata's checkout. Checkout, offers, COD risk, EkCode and the shop's own Razorpay stay ours.</li>
-    <li>One console page: Settings › Website and API. Keys, webhooks, usage, the developer kit. Try it as the owner, the partner while building, or staff.</li>
-    <li>Claude lives on the partner's side: the developer kit gives their Claude the API, a starter and a skill.</li>
+    <li>A partner's own website reads the shop from Frrata and sends shoppers into Frrata's checkout with a cart link. Checkout, offers, COD rules, EkCode and the shop's own Razorpay stay ours.</li>
+    <li>SA1 is read-only: public keys (browser-safe) and test keys (before the shop opens). Private keys are SA2, webhooks SA3.</li>
+    <li>Claude lives on the partner's side: the developer kit gives their Claude the API, a starter site and a skill.</li>
   </ul>
   <nav class="views" aria-label="Boards">
     <a href="#console">Website and API</a><a href="#states">States</a><a href="#journey">Shopper's journey</a><a href="#partner">Partner</a><a href="#admin">Admin</a><a href="#docs">Docs</a><a href="#guardrails">Guardrails</a>
@@ -208,50 +209,29 @@ table.t td.n,table.t th.n{text-align:right;font-family:var(--mono);font-variant-
             <label class="radio"><input type="radio" name="site" value="else" id="site-else" checked><b>Runs elsewhere</b><small>Built on the Storefront API</small></label>
           </div>
           <div id="elsewhere" class="cb" style="padding:0">
-            <label class="f" for="origin">Website address<span class="fix"><span>https://</span><input id="origin" value="kesarstudio.in"></span></label>
+            <label class="f" for="origin">Website address
+              <select class="input" id="origin"><option>https://kesarstudio.in</option><option>https://www.kesarstudio.in</option></select></label>
+            <span class="k">From your connected domains</span>
             <div class="banner warn"><span>Your site must show your legal name, address, customer care and grievance officer.</span><span class="chip c-warn">From 1 Jan 2027</span></div>
           </div>
         </div>
       </section>
 
       <section class="card" aria-labelledby="c-h">
-        <header><h4 id="c-h">Checkout address</h4><span class="chip c-ok">Connected</span></header>
+        <header><h4 id="c-h">Checkout</h4><span class="chip c-ok">Razorpay approved it</span></header>
         <ul class="rows">
-          <li><span class="keyp">checkout.kesarstudio.in</span><span class="acts"><button class="btn sm ghost" data-copy="checkout.kesarstudio.in">Copy</button><a class="btn sm writeonly" href="#console">Change</a></span>
-            <span class="line">Payments: your Razorpay account</span></li>
+          <li><span class="addr" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="keyp">checkout.kesarstudio.in</span><span class="chip c-ink">Main</span></span><span class="acts"><button class="btn sm ghost" data-copy="checkout.kesarstudio.in">Copy</button><a class="btn sm writeonly" href="#console">Custom domain</a></span></li>
         </ul>
       </section>
 
       <section class="card" aria-labelledby="k-h">
         <header><h4 id="k-h">Keys</h4><button class="btn sm primary writeonly" id="newkey"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Create key</button></header>
         <ul class="rows" id="keys">
-          <li data-key="web"><span class="name">Website <span class="chip c-info">Public</span></span><span class="acts writeonly"><button class="btn sm danger" data-revoke="Website">Revoke</button></span>
-            <span class="line"><span class="mono">frs_pub_7Hk2…</span><span>kesarstudio.in</span><span>Used 2 min ago</span></span></li>
-          <li data-key="srv"><span class="name">Build server <span class="chip c-ink">Private</span></span><span class="acts writeonly"><button class="btn sm danger" data-revoke="Build server">Revoke</button></span>
-            <span class="line"><span class="mono">frs_sec_Qa91…</span><span>Made by Arc Studio</span><span>Used 1 h ago</span></span></li>
-          <li class="gone"><span class="name">Old website <span class="chip c-n">Revoked</span></span><span></span>
-            <span class="line"><span class="mono">frs_pub_k2Ld…</span><span>Revoked 4 Nov</span></span></li>
+          <li><span class="name">Website <span class="chip c-info">Public</span></span><span class="acts writeonly"><button class="btn sm danger" data-revoke="Website">Revoke</button></span>
+            <span class="line"><span class="mono">frs_pub_7Hk2qa…</span><span>Made by Arc Studio</span><span>Version 2026-12</span></span></li>
+          <li class="gone"><span class="name">Arc Studio dev <span class="chip c-n">Test · ended</span></span><span></span>
+            <span class="line"><span class="mono">frs_test_Lm2xQ9…</span><span>Ended when you opened</span></span></li>
         </ul>
-      </section>
-
-      <section class="card" aria-labelledby="h-h">
-        <header><h4 id="h-h">Webhooks</h4><button class="btn sm writeonly" id="newhook">Add endpoint</button></header>
-        <ul class="rows">
-          <li><span class="keyp">kesarstudio.in/api/frrata</span><span class="acts"><span class="chip c-ok">Working</span><button class="btn sm ghost writeonly" data-toast="Test sent · 200 in 180 ms">Send test</button></span>
-            <span class="line"><span>Products · Availability · Offers · Shop</span></span></li>
-          <li><span class="keyp">staging.kesarstudio.in/api/frrata</span><span class="acts"><span class="chip c-danger">Failing</span><button class="btn sm ghost writeonly" data-toast="Test sent · 502 Bad Gateway">Send test</button></span>
-            <span class="line bad"><span>502 since 2 h · turns off after 72 h</span></span></li>
-        </ul>
-      </section>
-
-      <section class="card" aria-labelledby="u-h">
-        <header><h4 id="u-h">Last 24 hours</h4><span class="chip c-n mono">2026-12</span></header>
-        <dl class="tiles" style="margin:0">
-          <div><dt>Requests</dt><dd>1,82,410</dd></div>
-          <div><dt>Errors</dt><dd>0.2%</dd></div>
-          <div><dt>Limited</dt><dd>41</dd></div>
-          <div><dt>Checkouts</dt><dd>3,118</dd></div>
-        </dl>
       </section>
 
       <section class="card" aria-labelledby="d-h">
@@ -273,34 +253,23 @@ table.t td.n,table.t th.n{text-align:right;font-family:var(--mono);font-variant-
       <div class="db" id="dk-form">
         <label class="f" for="kname">Name<input class="input sans" id="kname" value="Website" maxlength="40"></label>
         <div class="radios" role="radiogroup" aria-label="Kind">
-          <label class="radio"><input type="radio" name="kind" value="public" id="k-pub" checked><b>Public</b><small>In the browser · your website's address only</small></label>
-          <label class="radio"><input type="radio" name="kind" value="private" id="k-sec"><b>Private</b><small>On a server · never in the browser</small></label>
+          <label class="radio"><input type="radio" name="kind" value="public" id="k-pub" checked><b>Public</b><small>Safe in the browser</small></label>
+          <label class="radio" id="k-test-l"><input type="radio" name="kind" value="test" id="k-test"><b>Test</b><small id="k-test-s">Ends when you open · 30 days at most</small></label>
         </div>
-        <label class="f" for="korigin" id="korigin-f">Allowed website<span class="fix"><span>https://</span><input id="korigin" value="kesarstudio.in"></span></label>
       </div>
       <div class="db" id="dk-done" hidden>
         <div class="reveal">
           <span class="k">Shown once.</span>
-          <span class="keyp" id="newkeyval">frs_pub_9Tz4mW2qL8xVn3cR7bYk1JdE5hPa</span>
+          <span class="keyp" id="newkeyval">frs_pub_9Tz4mW2qL8xVn3cR7bYk1JdE5hPaK0x2Z</span>
           <span><button class="btn sm primary" id="copykey">Copy key</button></span>
         </div>
       </div>
       <div class="df"><button class="btn" data-close id="dk-cancel">Not now</button><button class="btn primary" id="dk-go">Create key</button></div>
     </div>
     <div class="dlg" id="dlg-revoke" role="dialog" aria-modal="true" aria-labelledby="dr-h">
-      <div class="dh"><h3 id="dr-h">Revoke Build server?</h3></div>
-      <div class="db"><p style="margin:0">Anything using it stops at once. This can't be undone.</p></div>
+      <div class="dh"><h3 id="dr-h">Revoke Website?</h3></div>
+      <div class="db"><p style="margin:0">Sites using it stop within a minute. This can't be undone.</p></div>
       <div class="df"><button class="btn" data-close>Keep key</button><button class="btn dangerfill" id="dr-go">Revoke key</button></div>
-    </div>
-    <div class="dlg" id="dlg-hook" role="dialog" aria-modal="true" aria-labelledby="dh-h">
-      <div class="dh"><h3 id="dh-h">Add endpoint</h3><button class="btn sm ghost" data-close aria-label="Close">✕</button></div>
-      <div class="db">
-        <label class="f" for="hurl">Address<span class="fix"><span>https://</span><input id="hurl" placeholder="kesarstudio.in/api/frrata"></span></label>
-        <fieldset style="border:0;padding:0;margin:0;display:grid;gap:6px"><legend class="k" style="padding:0;margin-bottom:4px">Events</legend>
-          <label><input type="checkbox" checked> Products</label><label><input type="checkbox" checked> Availability</label><label><input type="checkbox" checked> Collections</label><label><input type="checkbox"> Offers</label><label><input type="checkbox"> Shop</label>
-        </fieldset>
-      </div>
-      <div class="df"><button class="btn" data-close>Not now</button><button class="btn primary" data-close data-toast="Endpoint added · signing secret copied">Add endpoint</button></div>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
@@ -309,47 +278,47 @@ table.t td.n,table.t th.n{text-align:right;font-family:var(--mono);font-variant-
   <h2 id="states">States</h2>
   <div class="grid3">
     <div><section class="card"><div class="empty"><span class="picto"><svg width="40" height="40" viewBox="0 0 48 48" fill="none" stroke="var(--fg)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="6" y="10" width="36" height="26" rx="3"/><path d="M6 16h36"/><circle cx="34" cy="28" r="5" fill="var(--haldi-soft)"/><path d="M18 42h12"/></svg></span><h3>Your website runs on Frrata</h3><button class="btn primary">Use your own website</button></div></section><p class="cap">Off: the default for every shop.</p></div>
+    <div><section class="card"><div class="cb" style="padding-top:14px"><label class="f">Website address<select class="input" disabled><option>Connect a domain first</option></select></label><a class="btn sm" href="#console">Custom domain</a></div></section><p class="cap">No proved domain yet.</p></div>
     <div><section class="card"><header><h4>Keys</h4><button class="btn sm primary">Create key</button></header><div class="empty" style="padding-top:4px"><span class="k">No keys yet</span></div></section><p class="cap">On, before the first key.</p></div>
-    <div><section class="card"><div class="cb" style="padding-top:14px"><div class="reveal"><span class="k">Shown once.</span><span class="keyp">frs_sec_Qa91Lm7…</span><span><button class="btn sm primary">Copy key</button></span></div></div></section><p class="cap">A private key, just made. Leaving the dialog hides it for good.</p></div>
-    <div><div class="banner danger"><span>Webhook to staging.kesarstudio.in turned off after 72 h of errors</span><button class="btn sm">Turn on</button></div><p class="cap">On every console page until fixed.</p></div>
-    <div><div class="banner warn"><span>Build server still calls 2026-12 · ends 1 Feb 2028</span><a class="btn sm" href="#docs">What changed</a></div><p class="cap">An older version still in use.</p></div>
-    <div><div class="banner info"><span>Support · Kesar Studio · 22 min · View only</span></div><p class="cap">A support visit sees everything, changes nothing.</p></div>
-    <div><section class="card"><ul class="rows"><li class="gone"><span class="name">Build server <span class="chip c-n">Revoked</span></span><span></span><span class="line"><span>Revoked by you at handover</span></span></li></ul></section><p class="cap">Revoked: dimmed, no actions.</p></div>
-    <div><section class="card"><header><h4>Keys</h4><span class="chip c-n">View only</span></header><ul class="rows"><li><span class="name">Website <span class="chip c-info">Public</span></span><span></span></li></ul></section><p class="cap">Staff: read only, no Create or Revoke.</p></div>
+    <div><section class="card"><div class="cb" style="padding-top:14px"><div class="reveal"><span class="k">Shown once.</span><span class="keyp">frs_pub_9Tz4mW2q…</span><span><button class="btn sm primary">Copy key</button></span></div></div></section><p class="cap">A key, just made. Closing the dialog hides it for good.</p></div>
     <div><div class="banner warn"><span>Test key · Kesar Studio isn't open yet · orders can't be placed</span></div><p class="cap">A test key's checkout, before the shop opens.</p></div>
+    <div><div class="banner warn"><span>Website key still calls 2026-12 · ends 1 Feb 2028</span><a class="btn sm" href="#docs">What changed</a></div><p class="cap">An older version still in use.</p></div>
+    <div><div class="banner info"><span>Support · Kesar Studio · 22 min · View only</span></div><p class="cap">A support visit sees everything, changes nothing.</p></div>
+    <div><section class="card"><header><h4>Keys</h4><span class="chip c-n">View only</span></header><ul class="rows"><li><span class="name">Website <span class="chip c-info">Public</span></span><span></span></li></ul></section><p class="cap">Staff: read only.</p></div>
+    <div><section class="card"><header><h4>Checkout</h4><span class="chip c-warn">Waiting for Razorpay</span></header><ul class="rows"><li><span class="keyp">checkout.kesarstudio.in</span><span class="acts"><button class="btn sm" disabled>Make main</button></span></li></ul></section><p class="cap">Make main waits for Razorpay's approval (rule 75).</p></div>
   </div>
 
   <!-- ===================== JOURNEY ===================== -->
   <h2 id="journey">The shopper's journey</h2>
   <div class="grid3">
     <div><span class="who">Partner's site</span>
-      <div class="phonef"><div class="addrbar"><b>kesarstudio.in</b>/products/chanderi-kurta</div>
+      <div class="phonef"><div class="addrbar"><b>kesarstudio.in</b>/products/chanderi-kurta-set</div>
         <div class="sh"><div class="stile"><svg width="70" viewBox="0 0 100 120" aria-hidden="true"><rect x="22" y="18" width="56" height="90" rx="10" fill="#7a3b2e"/></svg></div>
           <div class="sline"><b>Chanderi kurta set</b><b>₹2,490</b></div><div class="sline sub"><span>Pay on delivery · ships in 2 days</span></div>
           <div style="display:flex;gap:6px"><span class="chip c-n">S</span><span class="chip c-n">M</span><span class="chip c-n">L</span></div>
           <div class="sbtn">Add to bag</div></div></div>
-      <p class="cap">Data from the API. The partner's design.</p></div>
-    <div><span class="who">Partner's bag → handoff</span>
+      <p class="cap">Data from the API, served from the CDN. The partner's design.</p></div>
+    <div><span class="who">Partner's bag → cart link</span>
       <div class="phonef"><div class="addrbar"><b>kesarstudio.in</b>/bag</div>
         <div class="sh"><div class="sline"><span>Chanderi kurta set · M</span><span>₹2,490</span></div><div class="sline"><span>Strap tag</span><span>₹490</span></div>
           <div class="sline sub"><span>Delivery and offers at checkout</span><span></span></div>
           <div class="sbtn">Checkout</div>
-          <div class="codebox" style="font-size:11px;white-space:pre-wrap">POST /2026-12/checkouts
-→ { checkoutUrl }</div></div></div>
-      <p class="cap">Their server or browser asks for a checkout; the shopper goes there.</p></div>
+          <div class="codebox" style="font-size:11px;white-space:pre-wrap">checkout.kesarstudio.in/cart
+  ?l=v_3kq:1,v_9pa:1</div></div></div>
+      <p class="cap">A plain link. Nothing is written until the shopper orders.</p></div>
     <div><span class="who">Frrata checkout</span>
-      <div class="phonef"><div class="addrbar"><b>checkout.kesarstudio.in</b>/h/…</div>
+      <div class="phonef"><div class="addrbar"><b>checkout.kesarstudio.in</b>/checkout</div>
         <div class="sh"><div class="back">‹ kesarstudio.in</div>
           <div class="sfield">Phone</div><div class="sfield">Pincode · 400050 · Mumbai</div>
           <div class="sline"><span>Pay online, save ₹50</span><span>₹2,930</span></div><div class="sline sub"><span>Pay on delivery</span><span>₹2,980</span></div>
           <div class="sbtn">Place order</div></div></div>
-      <p class="cap">The shop's checkout: offers, COD rules, EkCode, its own Razorpay.</p></div>
+      <p class="cap">The shop's own checkout: offers, COD rules, EkCode, its Razorpay.</p></div>
     <div><span class="who">Order page</span>
       <div class="phonef"><div class="addrbar"><b>checkout.kesarstudio.in</b>/orders/KS-1042</div>
         <div class="sh"><b style="font-size:18px">Order placed</b><div class="sline sub"><span>KS-1042 · arrives Thu 14 Nov</span></div>
           <div class="sline"><span>Packed · Shipped · Delivered</span><span></span></div>
           <div class="sbtn" style="background:var(--store-tile);color:var(--store-ink)">Back to kesarstudio.in</div></div></div>
-      <p class="cap">Orders land in the console as usual, marked "Came from: your website".</p></div>
+      <p class="cap">In the console as usual: "Came from: Your website".</p></div>
   </div>
 
   <!-- ===================== PARTNER ===================== -->
@@ -357,20 +326,19 @@ table.t td.n,table.t th.n{text-align:right;font-family:var(--mono);font-variant-
   <div class="grid2">
     <section class="card"><header><h4>Clients</h4></header>
       <ul class="rows">
-        <li><span class="name">Kesar Studio <span class="chip c-info">Building</span><span class="chip c-n">Own website</span></span><span class="acts"><button class="btn sm">Open</button></span><span class="line"><span>2 keys · 1 webhook</span></span></li>
+        <li><span class="name">Kesar Studio <span class="chip c-info">Building</span><span class="chip c-n">Own website</span></span><span class="acts"><button class="btn sm">Open</button></span><span class="line"><span>1 public key · 1 test key</span></span></li>
         <li><span class="name">Roam Bags <span class="chip c-ok">Open</span></span><span class="acts"><button class="btn sm">Open</button></span><span class="line"><span>Frrata theme · Signal</span></span></li>
       </ul></section>
-    <section class="card" style="position:relative"><div class="dh"><h3>Hand Kesar Studio to its owner</h3></div>
+    <section class="card"><div class="dh"><h3>Accept Kesar Studio</h3></div>
       <div class="db">
-        <label class="f" for="howner">Owner's email<input class="input sans" id="howner" value="riya@kesarstudio.in"></label>
         <ul class="rows" style="border:1px solid var(--border);border-radius:6px">
-          <li><span class="name">Website <span class="chip c-info">Public</span></span><span class="k">Stays</span></li>
-          <li><span class="name">Build server <span class="chip c-ink">Private</span></span><span class="k">Revoked</span></li>
+          <li><span class="name">Website <span class="chip c-info">Public</span></span><span class="k">Stays</span><span class="line"><span>Made by Arc Studio · runs kesarstudio.in</span></span></li>
+          <li><span class="name">Arc Studio dev <span class="chip c-n">Test</span></span><span class="k">Ends when you open</span></li>
         </ul>
-        <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked id="hrev"> Revoke my private keys at handover</label>
       </div>
-      <div class="df"><button class="btn">Not now</button><button class="btn primary">Send invite</button></div></section>
+      <div class="df"><button class="btn">Not now</button><button class="btn primary">Accept Kesar Studio</button></div></section>
   </div>
+  <p class="cap">The owner's Accept lists every key the partner made; each can be revoked from Settings at any time.</p>
 
   <!-- ===================== ADMIN ===================== -->
   <h2 id="admin">Admin › Storefront API</h2>
@@ -378,23 +346,23 @@ table.t td.n,table.t th.n{text-align:right;font-family:var(--mono);font-variant-
     <aside><span class="tag">STAFF</span><span>Merchants</span><span>Themes</span><span class="on">Storefront API</span><span>Partners</span></aside>
     <div style="padding:16px;display:grid;gap:14px;min-width:0">
       <section class="card"><header><h4>Versions</h4></header>
-        <div class="tw"><table class="t"><thead><tr><th>Version</th><th>State</th><th class="n">Shops</th><th class="n">Requests 24 h</th><th></th></tr></thead>
-          <tbody><tr><td class="mono">2027-06</td><td><span class="chip c-ok">Current</span></td><td class="n">31</td><td class="n">12,40,118</td><td><button class="btn sm danger">Pause for everyone</button></td></tr>
-          <tr><td class="mono">2026-12</td><td><span class="chip c-warn">Ends 1 Feb 2028</span></td><td class="n">9</td><td class="n">2,04,377</td><td><button class="btn sm danger">Pause for everyone</button></td></tr></tbody></table></div></section>
+        <div class="tw"><table class="t"><thead><tr><th>Version</th><th>State</th><th class="n">Shops</th><th class="n">Keys</th><th></th></tr></thead>
+          <tbody><tr><td class="mono">2027-06</td><td><span class="chip c-ok">Current</span></td><td class="n">31</td><td class="n">44</td><td><button class="btn sm danger">Pause for everyone</button></td></tr>
+          <tr><td class="mono">2026-12</td><td><span class="chip c-warn">Ends 1 Feb 2028</span></td><td class="n">9</td><td class="n">11</td><td><button class="btn sm danger">Pause for everyone</button></td></tr></tbody></table></div></section>
       <section class="card"><header><h4>Shops</h4></header>
-        <div class="tw"><table class="t"><thead><tr><th>Shop</th><th>Website</th><th class="n">Keys</th><th class="n">Requests 24 h</th><th class="n">Errors</th><th class="n">Checkouts</th></tr></thead>
-          <tbody><tr><td>Kesar Studio</td><td class="mono">kesarstudio.in</td><td class="n">2</td><td class="n">1,82,410</td><td class="n">0.2%</td><td class="n">3,118</td></tr>
-          <tr><td>Arc Denim</td><td class="mono">arcdenim.co</td><td class="n">3</td><td class="n">96,002</td><td class="n" style="color:var(--danger-text)">4.1%</td><td class="n">1,207</td></tr></tbody></table></div></section>
+        <div class="tw"><table class="t"><thead><tr><th>Shop</th><th>Website</th><th class="n">Keys</th><th>Last version seen</th></tr></thead>
+          <tbody><tr><td>Kesar Studio</td><td class="mono">kesarstudio.in</td><td class="n">1</td><td class="mono">2026-12 · today</td></tr>
+          <tr><td>Arc Denim</td><td class="mono">arcdenim.co</td><td class="n">2</td><td class="mono">2027-06 · today</td></tr></tbody></table></div></section>
     </div>
   </div>
-  <p class="cap">Counts only. No shopper, no key, no response body.</p>
+  <p class="cap">Counts only, from one definer. Traffic and errors live in Vercel Observability.</p>
 
   <!-- ===================== DOCS ===================== -->
   <h2 id="docs">Developer docs</h2>
   <div class="docs">
-    <aside><b>Start</b><a href="#docs">Keys</a><a href="#docs">Build with Claude</a><a href="#docs">Starter site</a><b>Reference</b><a href="#docs">Shop</a><a href="#docs">Products</a><a href="#docs" class="on">Product</a><a href="#docs">Collections</a><a href="#docs">Offers</a><a href="#docs">Pincodes</a><a href="#docs">Checkouts</a><b>Guides</b><a href="#docs">Webhooks</a><a href="#docs">Caching</a><a href="#docs">Legal block</a><a href="#docs">Versions</a></aside>
+    <aside><b>Start</b><a href="#docs">Keys</a><a href="#docs">Build with Claude</a><a href="#docs">Starter site</a><b>Reference</b><a href="#docs">Shop</a><a href="#docs">Products</a><a href="#docs" class="on">Product</a><a href="#docs">Collections</a><a href="#docs">Offers</a><a href="#docs">Search</a><b>Guides</b><a href="#docs">Cart link</a><a href="#docs">Caching</a><a href="#docs">Legal block</a><a href="#docs">Versions</a></aside>
     <main>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="verb">GET</span><span class="mono" style="overflow-wrap:anywhere">/2026-12/products/{handle}</span><span class="chip c-n">Public · Private</span></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="verb">GET</span><span class="mono" style="overflow-wrap:anywhere">/2026-12/k/{key}/products/{handle}</span><span class="chip c-n">Public · Test</span></div>
       <div class="codebox">{
   "handle": "chanderi-kurta-set",
   "title": "Chanderi kurta set",
@@ -407,27 +375,26 @@ table.t td.n,table.t th.n{text-align:right;font-family:var(--mono);font-variant-
   "images": [{ "base": "https://…/products/9f2…", "widths": [400, 800, 1200], "alt": "…" }],
   "stories": [], "pairs": [], "sizeChart": { … }, "offers": ["10% off with UPI"]
 }</div>
-      <p class="k" style="margin:0">Prices in paise. Availability is a kind, never a stock count above 3.</p>
+      <p class="k" style="margin:0">Prices in paise. <span class="mono">availability.kind</span> may gain values.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm">Try with a test key</button><button class="btn sm ghost" data-copy="npx frrata-storefront skill add">Copy Claude skill</button></div>
     </main>
   </div>
 
   <!-- ===================== GUARDRAILS ===================== -->
   <h2 id="guardrails">Guardrails</h2>
-  <p class="k">Every request takes the same path. A new module or field joins it; it never goes around it.</p>
   <div class="flow">
-    <div><b>Key</b><small>hash looked up by a definer; revoked or expired: 401</small></div>
-    <div><b>Limit</b><small>WAF per key and IP; handoffs also in Postgres, fail closed</small></div>
-    <div><b>Shop</b><small>from the key only; withTenant</small></div>
-    <div><b>Cached read</b><small>the same loaders as the shop's pages</small></div>
-    <div><b>Mapper</b><small>field by field; nothing serialises a row</small></div>
-    <div><b>Schema</b><small>Zod output per version; OpenAPI from it</small></div>
+    <div><b>Host</b><small>only api.frrata.shop answers; everywhere else 404</small></div>
+    <div><b>Key shape</b><small>kind, length, checksum, before any database read</small></div>
+    <div><b>Key lookup</b><small>one definer, cached 60 s; revoke purges</small></div>
+    <div><b>CDN / ISR</b><small>one regeneration per path per minute</small></div>
+    <div><b>Mapper</b><small>field by field from the shop's cached reads</small></div>
+    <div><b>Schema</b><small>the output of parse(); no open schemas</small></div>
   </div>
   <div class="ledger" style="margin-top:12px">
-    <div><h3>Gates</h3><ul><li><span class="mono">check:api</span>: every route through apiRequest; no cost field in any schema</li><li><span class="mono">released-api</span> snapshot per version</li><li><span class="mono">check:modules</span>: API_RESOURCES only</li><li>tenancy.sql: keys, webhooks, handoffs</li></ul></div>
-    <div><h3>Tests</h3><ul><li>Mapper per resource: every column filled, keys equal the schema</li><li>Int: key A never reads B</li><li>e2e 70: key → read → handoff → order</li><li>Starter built against the e2e stack</li></ul></div>
-    <div><h3>Skills and agents</h3><ul><li><span class="mono">frata-storefront-api</span> skill</li><li>Planning review heading: Storefront API</li><li><span class="mono">api-contract-reviewer</span> agent</li><li>Partner skill in the starter</li></ul></div>
-    <div><h3>Kill switches</h3><ul><li>Revoke a key</li><li>Website back to Frrata</li><li>Pause a version for everyone (Admin)</li><li>Module off: its resource answers not_available</li></ul></div>
+    <div><h3>Phases</h3><ul><li><b>SA0</b> route kind, ADR-0002, gates</li><li><b>SA1</b> read API, cart link, Website, kit</li><li><b>SA2</b> private keys with scopes</li><li><b>SA3</b> webhooks, after Vercel Pro</li></ul></div>
+    <div><h3>Gates</h3><ul><li><span class="mono">check:api</span>: chokepoint, open schemas, cost sentinels, no tenant from the request</li><li><span class="mono">released-api</span>: old ⊆ new</li><li><span class="mono">check-modules</span>: API paths and <span class="mono">API_RESOURCES</span></li><li>tenancy.sql 63+</li></ul></div>
+    <div><h3>Tests</h3><ul><li>Mapper per resource</li><li>Int: A's key never reads B; sentinel grep</li><li>e2e 70: key → read → cart link → order</li><li>The starter built in our CI, blocking</li></ul></div>
+    <div><h3>Skills, agents, switches</h3><ul><li><span class="mono">frata-storefront-api</span> skill + planning heading</li><li><span class="mono">api-contract-reviewer</span></li><li>Revoke · Website back to Frrata · pause a version</li></ul></div>
   </div>
 </div>
 
@@ -436,17 +403,15 @@ table.t td.n,table.t th.n{text-align:right;font-family:var(--mono);font-variant-
   const stage = document.getElementById('stage')
   const scrim = document.getElementById('scrim')
   const toast = document.getElementById('toast')
-  let open = null, tt = null
+  let open = null, tt = null, building = false
   const say = (t) => { toast.textContent = t; toast.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => toast.classList.remove('on'), 2200) }
   const show = (id) => { open = document.getElementById(id); scrim.classList.add('open'); open.classList.add('open'); const f = open.querySelector('input,button'); if (f) f.focus() }
   const hide = () => { if (!open) return; open.classList.remove('open'); scrim.classList.remove('open'); open = null }
   scrim.addEventListener('click', hide)
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide() })
-  document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => { if (b.dataset.toast) say(b.dataset.toast); hide() }))
-  document.querySelectorAll('[data-toast]:not([data-close])').forEach((b) => b.addEventListener('click', () => say(b.dataset.toast)))
+  document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', hide))
   const copy = async (text) => { try { await navigator.clipboard.writeText(text); say('Copied') } catch { say(text) } }
   document.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', () => copy(b.dataset.copy)))
-  // segmented controls
   document.querySelectorAll('.seg').forEach((seg) => seg.addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return
     seg.querySelectorAll('button').forEach((x) => x.setAttribute('aria-checked', String(x === b)))
@@ -454,33 +419,34 @@ table.t td.n,table.t th.n{text-align:right;font-family:var(--mono);font-variant-
     if (b.dataset.r) {
       stage.classList.toggle('ro', b.dataset.r === 'staff')
       document.getElementById('rochip').hidden = b.dataset.r !== 'staff'
-      document.getElementById('buildbanner').hidden = b.dataset.r !== 'partner'
+      building = b.dataset.r === 'partner'
+      document.getElementById('buildbanner').hidden = !building
     }
   }))
-  // website
   const sync = () => { document.getElementById('elsewhere').hidden = !document.getElementById('site-else').checked }
   document.querySelectorAll('input[name="site"]').forEach((r) => r.addEventListener('change', sync)); sync()
-  // create key
   const form = document.getElementById('dk-form'), done = document.getElementById('dk-done'), go = document.getElementById('dk-go'), cancel = document.getElementById('dk-cancel')
-  const kindSync = () => { document.getElementById('korigin-f').hidden = !document.getElementById('k-pub').checked }
-  document.querySelectorAll('input[name="kind"]').forEach((r) => r.addEventListener('change', kindSync))
-  document.getElementById('newkey').addEventListener('click', () => { form.hidden = false; done.hidden = true; go.hidden = false; cancel.textContent = 'Not now'; kindSync(); show('dlg-key') })
+  document.getElementById('newkey').addEventListener('click', () => {
+    const t = document.getElementById('k-test')
+    t.disabled = !building; document.getElementById('k-test-s').textContent = building ? 'Ends when you open · 30 days at most' : 'Only before the shop opens'
+    if (!building) document.getElementById('k-pub').checked = true
+    form.hidden = false; done.hidden = true; go.hidden = false; cancel.textContent = 'Not now'; show('dlg-key')
+  })
   go.addEventListener('click', () => {
     const pub = document.getElementById('k-pub').checked
     const name = document.getElementById('kname').value.trim() || 'Key'
-    const v = (pub ? 'frs_pub_' : 'frs_sec_') + '9Tz4mW2qL8xVn3cR7bYk1JdE5hPa'
+    const v = (pub ? 'frs_pub_' : 'frs_test_') + '9Tz4mW2qL8xVn3cR7bYk1JdE5hPaK0x2Z'
     document.getElementById('newkeyval').textContent = v
     form.hidden = true; done.hidden = false; go.hidden = true; cancel.textContent = 'Done'
     const li = document.createElement('li')
     li.innerHTML = '<span class="name"></span><span class="acts writeonly"><button class="btn sm danger">Revoke</button></span><span class="line"><span class="mono"></span><span>Just now</span></span>'
     li.querySelector('.name').textContent = name + ' '
-    const chip = document.createElement('span'); chip.className = 'chip ' + (pub ? 'c-info' : 'c-ink'); chip.textContent = pub ? 'Public' : 'Private'; li.querySelector('.name').append(chip)
-    li.querySelector('.mono').textContent = v.slice(0, 12) + '…'
+    const chip = document.createElement('span'); chip.className = 'chip ' + (pub ? 'c-info' : 'c-n'); chip.textContent = pub ? 'Public' : 'Test'; li.querySelector('.name').append(chip)
+    li.querySelector('.mono').textContent = v.slice(0, pub ? 14 : 15) + '…'
     li.querySelector('.danger').addEventListener('click', () => askRevoke(name, li))
     document.getElementById('keys').prepend(li)
   })
   document.getElementById('copykey').addEventListener('click', () => copy(document.getElementById('newkeyval').textContent))
-  // revoke
   let target = null
   const askRevoke = (name, li) => { target = li; document.getElementById('dr-h').textContent = 'Revoke ' + name + '?'; show('dlg-revoke') }
   document.querySelectorAll('[data-revoke]').forEach((b) => b.addEventListener('click', () => askRevoke(b.dataset.revoke, b.closest('li'))))
@@ -488,6 +454,5 @@ table.t td.n,table.t th.n{text-align:right;font-family:var(--mono);font-variant-
     if (target) { target.classList.add('gone'); const a = target.querySelector('.acts'); if (a) a.remove(); const n = target.querySelector('.name .chip'); if (n) { n.className = 'chip c-n'; n.textContent = 'Revoked' } }
     hide(); say('Key revoked')
   })
-  document.getElementById('newhook').addEventListener('click', () => show('dlg-hook'))
 })()
 </script>
