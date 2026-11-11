@@ -800,3 +800,13 @@ With 0.8–0.9 kB more, checkout fails too, and PV1-4a only frees room on the pr
     - **M2:** `orders_outcome_place` covers city too (it replaces `orders_outcome_pincode`).
     - **L3:** the visits read is one snapshot (repeatable read).
     - **Left:** merging the two vitals queries (L1); the pool of 5 shared with ingest (M3, re-measure after H2).
+- **A2·4 released 2026-11-11 (owner: "go ahead")** as `d69bf51`.
+  - drizzle/0101 applied to production through the Supabase API: 102 rows; `order_lines_product` and
+    `orders_outcome_place` are present and `orders_outcome_pincode` is gone.
+  - drizzle-analytics/0004 pasted by the owner.
+  - Deploy READY. Live: the beacon is on `demo.frrata.shop`, the ingest answers 403 to a forged Origin, and the console
+    redirects signed-out visitors.
+- **Seen while releasing, not A·2:** from 18:16 UTC, Admin pages (Themes, Merchants, Infrastructure) time out at 60 s
+  on the two deployments before `d69bf51`. No `frata_admin` session is open in Postgres and no lock is held, which fits
+  a dead pooled socket (frata-gotchas: Admin pages that hung on a socket frozen with the instance). To investigate
+  next, with the owner.
