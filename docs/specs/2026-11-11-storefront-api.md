@@ -1,5 +1,5 @@
 # Storefront API — a partner's own website on Frrata's catalogue and checkout
-Status: draft v2 (reviews folded in 2026-11-11) · Date: 2026-11-11 · Mockup: https://claude.ai/artifact/SKpPx1rfBu48w18HMNUK7u (v2) ·
+Status: parked (owner 2026-11-11: everything runs on Frrata for now; keep this for later, owners only) · was draft v2 (reviews folded in 2026-11-11) · Date: 2026-11-11 · Mockup: https://claude.ai/artifact/SKpPx1rfBu48w18HMNUK7u (v2) ·
 Approved: — · Research: `docs/research/2026-11-11-claude-builder.md` · Reviews (2026-11-11): architecture-reviewer,
 security-reviewer, tenancy-auditor, speed-reviewer (findings and where each went: § Review findings)
 
