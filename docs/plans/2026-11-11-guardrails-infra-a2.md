@@ -590,3 +590,43 @@ With 0.8–0.9 kB more, checkout fails too, and PV1-4a only frees room on the pr
   - an e2e flow: a shop page sends its beacon, a soft navigation adds a page view, add to bag sends `add_to_cart`, a
     bot or an unknown host or another Origin is refused or dropped, and after a fold Traffic's rows exist under the
     shop and no other.
+
+### security-reviewer on the A2·2 amendment (2026-11-11): the static script is sound; fixes folded in
+- **HIGH-1, the route is public at deploy:** `/api/shop/e` answers 404 before reading anything unless
+  `ANALYTICS_INGEST_ON` is set (Production only). The owner sets it only after the Firewall rate rule is live and the
+  privacy sentence (MED-6) is approved.
+- **HIGH-2, the WhatsApp bypass could skip the rate rule:**
+  - `ops/firewall.json` puts the `/api/shop/e` rate rule first;
+  - each link-preview bypass condition is ANDed with a path that doesn't start with `/api/`;
+  - owner step: the same change in the dashboard.
+- **MED-3, order and lookup:**
+  - `requireShop`: Origin before the lookup, with hits cached for 60 s;
+  - the order is method and content type, Origin equal to Host, then User-Agent (`isBot`), then a per-IP cap with
+    `ipBucket` (/64), then the body count (8 KB), then a 60 s miss memo, then `requireShop`, then a per-shop cap,
+    then Zod;
+  - both Maps are bounded LRUs.
+- **MED-4, paths:** `pathShape()` maps every path to the shop's own shapes (home, product or collection by handle,
+  bag, checkout, orders, policy) or `other` before storing. Tested.
+- **MED-5, personal data in utm values:** a value that looks like an email or a phone number is dropped at the route,
+  and the event still counts (`looksPersonal`, tested). k ≥ 5 stays on read: folding single days would erase small
+  shops' sources.
+- **MED-6, the privacy policy:** the shop's policy says it collects name, phone, email and address "and nothing else
+  without asking you". A sentence about counting visits (network, browser, city, pages; no cookie, nothing that
+  names a person, raw data deleted after 90 days) goes to the owner and the lawyer before `ANALYTICS_INGEST_ON`.
+  Proposed: "We count visits to this shop to see which pages and links work: the pages you open, your browser and an
+  approximate city. We don't use cookies for this, don't store your IP address, and can't tell who you are from it.
+  Visit records are deleted after 90 days."
+- **MED-7, forged product ids:** migration 0003 caps `product_daily` and `vitals_daily` at the top 1,000 products per
+  shop-day in the fold (it can't go in 0002, which is applied).
+- **LOW:**
+  - Forged text in the Console: referrer hosts and utm values render as text, never as links (A2·4).
+  - `purchase` comes from a sessionStorage flag set just before checkout leaves for the order page, never from the
+    static order page, and no order id or token is in a marker.
+  - The `/fe.js` exemption is exact (anchored with `$`), with tests that `/fe.js/x`, `/fe.json`, `/FE.JS` and
+    `/fe%2ejs` still rewrite.
+  - Data-centre ranges stay cut (YAGNI in the plan): Bot Protection, the firewall rate rule and `isBot` cover them,
+    and nothing is billed on tier-0 counts.
+  - `fe.js` never reads `href`, `hash`, `document.URL` or cookies, never writes to the DOM, refuses to run in a frame,
+    and checks `data-pid` is a uuid. `check:storefront-build` greps for these.
+  - Origin on `sendBeacon` is confirmed in Chromium by e2e. Firefox and WebKit aren't installed here: a manual check
+    on a phone before go-live.

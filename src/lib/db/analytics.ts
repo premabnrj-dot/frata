@@ -2,6 +2,7 @@ import 'server-only'
 import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
+import type { IngestBatch } from '@/domains/analytics/event'
 import { ANALYTICS_DATABASE_URL } from '@/lib/env'
 import * as schema from './analytics-schema'
 import { attachPool, POOL, poolReleased, releaseOnQuery } from './index'
@@ -45,13 +46,6 @@ export async function withAnalyticsTenant<T>(tenantId: string, work: (tx: Analyt
   } finally {
     poolReleased()
   }
-}
-
-/** A beacon's batch as ingest_events() takes it. A2·2 replaces the loose event type with src/domains/analytics/event.ts's
- * and tests one round trip: jsonb_to_recordset ignores a key it doesn't know, so a renamed key would store null. */
-export type IngestBatch = {
-  d: string; b: string; a: string; c: string
-  e: readonly Record<string, string | number | boolean | undefined>[]
 }
 
 /** Inserts waiting on the database at once, per instance, past which a beacon is dropped (speed review MED 7). */
