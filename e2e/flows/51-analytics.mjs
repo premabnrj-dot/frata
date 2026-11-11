@@ -19,6 +19,8 @@ export default {
     // Earlier flows place many orders from this machine: start this one's hour afresh (30 orders an hour per shop and IP;
     // the keys are hashed, so the throwaway database's limits are cleared whole).
     await db`delete from rate_limits`
+    // Two orders of a Rust M below: in stock whatever earlier flows bought (checkout's flow can leave it sold out).
+    await db`update variants set stock = 50 where tenant_id = ${T} and archived_at is null`
     // A creator's offer: 25% off, unlisted, only through its code (better than any automatic offer, so it is the one used).
     const [d] = await db`insert into discounts (tenant_id, title, style, percent_bps, starts_at, started_at, started_by, created_by, listed)
       values (${T}, 'Riya''s followers', 'order_off', 2500, now() - interval '1 minute', now(), ${USERS.owner.id}, ${USERS.owner.id}, false) returning id`

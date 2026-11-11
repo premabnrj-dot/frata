@@ -29,6 +29,13 @@
       "when": 1794409829013,
       "tag": "0003_product_cap",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794419299021,
+      "tag": "0004_brin_day",
+      "breakpoints": true
     }
   ]
 }

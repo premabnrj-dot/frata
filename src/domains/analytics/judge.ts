@@ -6,3 +6,6 @@ export const JUDGE_MIN = 30
 
 /** Whether a rate over `n` is shown. */
 export const judgeable = (n: number) => n >= JUDGE_MIN
+
+/** Visits (A·2): under this many in the window, shares of visits are "too few to judge" (the mockup's First days). */
+export const VISITS_MIN = 1000
