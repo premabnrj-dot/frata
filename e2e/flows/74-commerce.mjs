@@ -34,7 +34,7 @@ const deva = (n) => 'हाथ से बुना, प्राकृतिक 
 /** A real shop's photo: Blob's 16-character store host, all four widths (any phone photo makes them; speed review). */
 const BLOB = 'https://k7f3q9x2m4p8w1z6.public.blob.vercel-storage.com'
 /** The longest title a piece can have (140 characters), in two scripts. */
-const title = (i) => `हाथ से बुना चंदेरी कुर्ता सेट — Handwoven Chanderi kurta set with dupatta, natural dyes, no. ${i} `.padEnd(140, '·')
+const title = (i) => `हाथ से बुना चंदेरी कुर्ता सेट — Handwoven Chanderi kurta set with dupatta, natural dyes, no. ${i} in cotton silk with zari border`.padEnd(140, ' x').slice(0, 140)
 /** The words a page's designs may hold (PAGE_LIMITS.textBytes), as fillText counts them. */
 const TEXT_BYTES = 24_000
 const fillBytes = (fill) => Object.values(fill).flatMap((f) => f.kind === 'heading' ? [f.text] : f.kind === 'text' ? f.body.flat().flatMap((r) => [r.text, r.link ?? ''])
@@ -56,6 +56,10 @@ export default {
     await db`insert into collection_products ${db(cols.flatMap((c, k) => ids.filter((_, i) => k === 0 ? i < 6 : k === 1 ? i >= 6 : i % 4 === k - 2).map((p, n) => ({ tenant_id: KESAR, collection_id: c.id, product_id: p.id, position: n }))))}`
     const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 1440, height: 900 } })
     const p = await ctx.newPage(); p.setDefaultTimeout(15_000); p.on('pageerror', (e) => t.errors.push(`${e.message} at ${p.url()}`))
+    // Measurements are collected and asserted after Undo, so a page over budget never leaves the shop on this look for
+    // the flows after this one (90-ux read the gate's page once).
+    const misses = []
+    const check = (ok, why) => { if (!ok) misses.push(why) }
     const draft = async () => (await db`select id, settings from shop_theme_revisions where tenant_id = ${KESAR} and theme_key = 'signal' and id not in (select revision_id from shop_theme_publishes) order by updated_at desc limit 1`)[0]
     try {
       await t.step('The design form: The drop from the library; its date and its pieces are set and saved', async () => {
@@ -144,16 +148,16 @@ export default {
         // footer and the inline payload, so the designs open the page in this gate).
         const designs = parts.filter(([k]) => k.startsWith('w-')).reduce((n, [, b]) => n + b, 0)
         console.log(`     commerce › Home: HTML ${kb(html.body.length)}, RSC ${kb(rsc.body.length)}, designs ${kb(designs)}, eager ${eagerOf(text)}`)
-        assert.ok(designs <= BUDGET.designs, `the designs hold ${kb(designs)} of markup`)
-        assert.ok(html.body.length <= BUDGET.html, `Home HTML is ${kb(html.body.length)}`)
-        assert.ok(rsc.body.length <= BUDGET.rsc, `Home RSC is ${kb(rsc.body.length)}`)
-        assert.ok(eagerOf(text) <= BUDGET.eager, `Home asks for ${eagerOf(text)} images first`)
+        check(designs <= BUDGET.designs, `the designs hold ${kb(designs)} of markup`)
+        check(html.body.length <= BUDGET.html, `Home HTML is ${kb(html.body.length)}`)
+        check(rsc.body.length <= BUDGET.rsc, `Home RSC is ${kb(rsc.body.length)}`)
+        check(eagerOf(text) <= BUDGET.eager, `Home asks for ${eagerOf(text)} images first`)
       })
 
       await t.step('Shop all and a collection: ≤ 2 eager images each', async () => {
         for (const path of ['/products', `/collections/${PREFIX}`]) {
           const r = await cached(path)
-          assert.ok(eagerOf(r.body.toString()) <= BUDGET.eager, `${path} asks for ${eagerOf(r.body.toString())} images first`)
+          check(eagerOf(r.body.toString()) <= BUDGET.eager, `${path} asks for ${eagerOf(r.body.toString())} images first`)
         }
       })
 
@@ -164,6 +168,8 @@ export default {
         await p.getByRole('dialog', { name: /back on your shop\?$/ }).getByRole('button', { name: 'Put it back' }).click()
         await until(async () => !(await get('/')).body.toString().includes('data-design="the-drop"'), 15_000)
       })
+
+      await t.step('Within the budgets', async () => { assert.deepEqual(misses, []) })
     } finally {
       await ctx.close()
       await db.begin(async (x) => {
