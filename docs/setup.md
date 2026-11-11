@@ -358,8 +358,9 @@ plan will use; the plan may rename one, and this list follows it.
 **Status (2026-11-11): live.** ap-south-1; frratamail.app and notify.frrata.shop verified (SPF, DKIM, DMARC pass);
 SNS `frrata-ses` (SignatureVersion 2) confirmed to `/api/webhooks/ses`; sets `shops` and `notices`; tenant `frrata`;
 OIDC role `frrata-ses`; sign-in codes through the Supabase Send Email hook from `Frrata <notices@notify.frrata.shop>`.
-**Open:** SES production access (requested; sandbox until approved, so only verified addresses receive mail); the notices
-domain moves to Frrata's main domain when the shop domain moves (owner's plan: frrata.shop main site, frrata.store shops).
+**Production access granted (2026-11-11, case 179441775400698):** 50,000 a day, 14 a second; enforcement healthy. A send
+over 14 a second is throttled (429) and waits in the outbox (`Later`, no attempt spent). Ask for more in SES → Account
+dashboard before a festive sale nears either limit. **Open:** the notices domain moves to Frrata's main domain when the shop domain moves (owner's plan: frrata.shop main site, frrata.store shops).
 Nothing here passes through an agent: no AWS key exists anywhere (the app reaches SES through Vercel OIDC). Region
 **Asia Pacific (Mumbai) ap-south-1** for every step.
 
