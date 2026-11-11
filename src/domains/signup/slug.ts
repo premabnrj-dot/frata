@@ -15,6 +15,8 @@ export const RESERVED = new Set([
   'www', 'app', 'api', 'admin', 'console', 'frata', 'frrata', 'help', 'support', 'status', 'mail', 'email',
   'shop', 'store', 'stores', 'login', 'signin', 'signup', 'account', 'billing', 'pay', 'payments',
   'checkout', 'cdn', 'static', 'assets', 'blog', 'docs', 'demo', 'test', 'staging', 'dev', 'root',
+  // Frrata's notices sender on the shop domain (notify.<shop domain>, its bounce.<…> MAIL FROM): mail DNS, never a shop.
+  'notify', 'notices', 'bounce',
 ])
 
 /** "Kesar & Co." → "kesar-and-co". Letters outside a–z (Hindi, emoji) are dropped; the merchant types the rest. */

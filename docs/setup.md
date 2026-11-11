@@ -384,6 +384,8 @@ Nothing here passes through an agent: no AWS key exists anywhere (the app reache
    `*`. Copy the role ARN → Vercel `SES_ROLE_ARN`; your 12-digit account id → `SES_ACCOUNT_ID`.
 9. **Vercel env (Production only):** `SES_ROLE_ARN`, `SES_ACCOUNT_ID`, `SES_SNS_TOPIC_ARN`,
    `EMAIL_SHOP_DOMAIN=frratamail.app`, `EMAIL_NOTICES_FROM=Frrata <notices@notify.<Frrata's domain>>`, `EMAIL_KEYS`
+   **For now (owner, 2026-11-11): the notices domain is `notify.frrata.shop` until frrata.com is ready** (`notify`,
+   `notices` and `bounce` are reserved shop names, `src/domains/signup/slug.ts`).
    (`e1:` + 40 random characters; generate with `openssl rand -base64 30`).
 
 **B. When the agent says the email routes are deployed**
