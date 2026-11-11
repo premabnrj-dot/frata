@@ -266,5 +266,7 @@ export function SourcePicker({ value: src, collections, onChange, label = 'Show'
 /** A moment in India time, typed as a date and a time; stored as ISO with +05:30 (Drop teaser's input; TS1b: a design's
  *  date reuses it). Cleared: null. */
 export function WhenIST({ label, value, onChange, hint }: { label: string; value: string | null; onChange: (at: string | null) => void; hint?: string }) {
-  return <Field label={label} hint={hint}>{(id) => <input id={id} type="datetime-local" value={value ? value.slice(0, 16) : ''} onChange={(e) => onChange(e.target.value ? `${e.target.value}:00+05:30` : null)} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" />}</Field>
+  // Shown in India time whatever offset it was stored with (the schema takes any; this field writes +05:30).
+  const local = value && !Number.isNaN(Date.parse(value)) ? new Date(Date.parse(value) + 330 * 60_000).toISOString().slice(0, 16) : ''
+  return <Field label={label} hint={hint}>{(id) => <input id={id} type="datetime-local" value={local} onChange={(e) => onChange(e.target.value ? `${e.target.value}:00+05:30` : null)} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" />}</Field>
 }

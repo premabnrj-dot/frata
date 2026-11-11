@@ -52,7 +52,22 @@ export type VideoRow = {
   erroredAt: Date | null; error: string | null; removedAt: Date | null
   /** PV·1; absent on V1's callers, which only ever hold loops. */
   use?: VideoUse
+  /** TS1b: the MP4 asked for after the checks (null: the use's own). */
+  mp4?: string | null
 }
+/** TS1b (owner 2026-11-11: Frrata pays Mux per minute played, billed at the delivered resolution): a loop asks for its
+ *  MP4 once its checks pass — 720p, or from a smaller source the largest size it fills (Mux skips a sized rendition
+ *  larger than its source; `highest` can't be asked for alongside sized ones). A V1 loop keeps the `highest` it was
+ *  uploaded with. */
+const LOOP_SIZES = [720, 540, 480, 360, 270] as const
+export function loopMp4(width: number | null, height: number | null): string {
+  const short = width && height ? Math.min(width, height) : 720
+  return `${LOOP_SIZES.find((n) => short >= n) ?? 270}p`
+}
+/** The MP4 a video plays: the one asked for, else its use's own (a V1 loop's `highest`, a product's 720p). One rule:
+ *  the processor, the sender and the shop's <video> read it here. */
+export const mp4Of = (v: { mp4?: string | null; use?: VideoUse }): string => v.mp4 ?? USE_LIMITS[v.use ?? 'loop'].rendition
+
 export type FailedWhy = 'too_long' | 'too_short' | 'too_small' | 'didnt_work'
 const NAMED: readonly string[] = ['too_long', 'too_short', 'too_small']
 export type VideoState =

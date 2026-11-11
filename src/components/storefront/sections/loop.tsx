@@ -9,7 +9,9 @@ import type { LookVideos } from '@/lib/themes/page-look'
 export function Loop({ id, videos }: { id: string | undefined; videos: LookVideos | undefined }) {
   const v = id ? videos?.[id] : undefined
   if (!v || !/^[A-Za-z0-9]{1,64}$/.test(v.playbackId)) return null
-  return <video data-loop={`${MUX_STREAM_BASE}/${v.playbackId}/highest.mp4`} muted loop playsInline preload="none" aria-hidden="true" tabIndex={-1} disablePictureInPicture className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-base ease-standard" />
+  // TS1b: the MP4 the row plays (a sized one for a newer loop, 720p at most); only a name Mux makes is drawn.
+  const mp4 = v.mp4 && /^(?:highest|\d{3,4}p)$/.test(v.mp4) ? v.mp4 : 'highest'
+  return <video data-loop={`${MUX_STREAM_BASE}/${v.playbackId}/${mp4}.mp4`} muted loop playsInline preload="none" aria-hidden="true" tabIndex={-1} disablePictureInPicture className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-base ease-standard" />
 }
 
 /**

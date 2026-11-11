@@ -1,10 +1,9 @@
 import Link from 'next/link'
 import { lookPieces, sourceProducts, tilesOf } from '@/domains/storefront/sources'
-import { isListed, priceOf } from '@/domains/storefront/listing'
 import { resolveDesign, type RNode } from '@/domains/themes/blocks'
 import { GRID_PIECES, MAX_TILES, type SectionOf } from '@/domains/themes/sections'
 import { dropLineIN } from '@/lib/format-date'
-import { ProductGrid, money } from '../card'
+import { PriceLine, ProductGrid } from '../card'
 import { Photo } from '../photo'
 import type { SectionCtx } from '../sections'
 import { Loop, LoopPoster } from '../sections/loop'
@@ -61,16 +60,16 @@ export function BlockNode({ n, href, sid, cols, ctx, video }: { n: RNode; href: 
     case 'featured_product': {
       if (!ctx) return null
       // No piece picked (the preview only): the newest, marked, so the owner sees the block before picking.
-      const p = n.handle ? lookPieces([{ handle: n.handle }], ctx.cat.products, ctx.now)[0]?.p : ctx.cat.products.find((q) => isListed(q, ctx.now))
+      const p = n.handle ? lookPieces([{ handle: n.handle }], ctx.cat.products, ctx.now)[0]?.p : sourceProducts({ kind: 'newest' }, ctx.cat, ctx.now)[0]
       if (!p) return null
-      const cover = p.images[0], price = priceOf(p), w = wordsFor(ctx.shop.shopLanguage)
+      const cover = p.images[0], w = wordsFor(ctx.shop.shopLanguage)
       return (
         <Link href={href(`/products/${p.handle}`)} className="store-b-piece group" {...(n.handle ? {} : { 'data-example': '' })}>
           <div className="store-ph">
             {cover && <Photo p={cover} alt="" sizes={sizesFor(cols)} priority={!!n.eager} className="absolute inset-0 h-full w-full object-cover" />}
           </div>
           <p className="mt-3 text-lg leading-snug">{p.title}</p>
-          {price && <p className="store-price text-sm font-medium">{price.min !== price.max ? fill(w.from, { price: money(price.min) }) : money(price.min)}</p>}
+          <PriceLine p={p} lang={ctx.shop.shopLanguage} />
           <p className="mt-2 text-sm underline underline-offset-4">{w.viewPiece}</p>
         </Link>
       )

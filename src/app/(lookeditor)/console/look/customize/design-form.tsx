@@ -6,8 +6,7 @@ import type { Design, LeafBlock } from '@/domains/themes/blocks'
 import { accordionItems, fillFor, fillableOf } from '@/domains/themes/design-tree'
 import { MAX_TILES, type Fill, type SectionOf } from '@/domains/themes/sections'
 import { Choice, Field, ImageField, LinkPicker, SourcePicker, Text, WhenIST } from './controls'
-import type { FormCtx } from './section-form'
-import { VideoField } from './video-field'
+import { LoopField, type FormCtx } from './section-form'
 
 // Theme Studio TS0b: a design's form (board v2 "Fill one"). The fields the theme marks for the owner, in page order,
 // each with the theme's label. A field whose theme words are an example shows them greyed as a placeholder, marked
@@ -140,7 +139,7 @@ export function DesignForm({ s, set, c, d }: { s: SectionOf<'design'>; set: Set;
           const canLoop = !!c.video?.sections.includes('design')
           return (
             <div key={b.id} className="space-y-3">
-              {canLoop && <VideoField value={s.video} on={c.video!.on} onChange={(video) => { if (video) set({ ...s, video }); else { const { video: _drop, ...rest } = s; set(rest as SectionOf<'design'>) } }} />}
+              {canLoop && <LoopField value={s.video} c={c} onChange={(video) => { if (video) set({ ...s, video }); else { const { video: _drop, ...rest } = s; set(rest as SectionOf<'design'>) } }} />}
               <ImageField label={canLoop ? `${label}: photo before it plays` : label} value={poster} tenantId={c.tenantId} library={c.photos} suggest={[d.name, c.shopName]} onChange={(p) => put(b.id, { kind: 'video', poster: p })} />
             </div>
           )

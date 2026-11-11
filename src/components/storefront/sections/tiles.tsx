@@ -24,7 +24,7 @@ export function TileList({ tiles, shape, href, cols = 1 }: { tiles: Tile[]; shap
         <li key={c.id} className={item}>
           <Link href={href(`/collections/${c.handle}`)} className="group block">
             <div className={`relative ${tile} overflow-hidden bg-store-chip`}>
-              {first.images[0] && <Photo p={first.images[0]} alt="" sizes={sizes} className="absolute inset-0 h-full w-full object-cover transition-transform duration-slow group-hover:scale-[1.02]" />}
+              {first.images[0] && <Photo p={first.images[0]} alt="" sizes={sizes} max={1200} className="absolute inset-0 h-full w-full object-cover transition-transform duration-slow group-hover:scale-[1.02]" />}
             </div>
             <p className={circle ? 'mt-2 text-sm' : 'mt-2 text-base'}>{c.title}</p>
           </Link>

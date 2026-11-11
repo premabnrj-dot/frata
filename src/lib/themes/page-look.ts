@@ -68,7 +68,8 @@ export async function bestSellersFor(t: ResolvedTheme, read: (days: number) => P
   return Object.fromEntries(await Promise.all(ws.map(async (d) => [d, await read(d)] as const)))
 }
 
-export type LookVideos = Record<string, { playbackId: string; width: number | null; height: number | null }>
+/** `mp4` absent: a shop entry cached before TS1b (its loops are V1's: `highest`). */
+export type LookVideos = Record<string, { playbackId: string; width: number | null; height: number | null; mp4?: string }>
 /** V1: the videos this Home's sections name (only where the theme offers video: resolveTheme dropped the rest). */
 export async function videosFor(t: ResolvedTheme, read: (key: string) => Promise<LookVideos>): Promise<LookVideos> {
   const ids = [...new Set(t.home.flatMap((s) => ((VIDEO_KEYS as readonly string[]).includes(s.key) && 'video' in s && s.video && !s.hidden ? [s.video.id] : [])))].sort()

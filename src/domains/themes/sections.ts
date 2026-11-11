@@ -223,7 +223,7 @@ export const FillSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('collection_tiles'), mode: z.enum(['auto', 'picked']), handles: z.array(collectionHandle).max(MAX_TILES).refine(unique, 'Each collection once.') }),
   z.object({ kind: z.literal('video'), poster: ImageSchema.nullable() }),
   /** ISO only (no clock in domains): "≤ 400 days ahead" is the save's (designsForSave, with `now`). Null: cleared. */
-  z.object({ kind: z.literal('date'), at: z.string().datetime({ offset: true }).nullable() }),
+  z.object({ kind: z.literal('date'), at: z.string().max(32).datetime({ offset: true }).nullable() }),
 ])
 /** Each fill's caps equal its block's (blocks.ts uses the same text(), DesignBodySchema and AccordionItemSchema):
  *  keep them equal; a block with tighter limits must re-parse its fill in resolveDesign (security review LOW-3). */
@@ -278,6 +278,10 @@ export const SECTION_KEYS: SectionKey[] = ['hero', 'collection_tiles', 'products
 /** How many of each a page may hold (spec § Sections). */
 export const MAX_PER_PAGE: Record<SectionKey, number> = { hero: 3, collection_tiles: 3, products: 8, price_tiles: 1, promises: 1, image_text: 4, drop_teaser: 1, rich_text: 4, logos: 1, shop_the_look: 2, story_fan: 2, statement: 2, design: 4 }
 export const MAX_SECTIONS = 20
+/** TS1b: at most this many designs drawing pieces or collections on a page (the board's), and loops a Home plays
+ *  (owner 2026-11-11: Frrata pays Mux per minute played; a look already past it keeps its loops). Here, not in blocks.ts,
+ *  so the customizer's library and forms read them without the block catalogue. */
+export const MAX_COMMERCE_DESIGNS = 2, MAX_LOOPS = 3
 
 export const SECTION_NAMES: Record<SectionKey, string> = {
   hero: 'Hero', collection_tiles: 'Collection tiles', products: 'Products', price_tiles: 'Price tiles', promises: 'Shop by promise',

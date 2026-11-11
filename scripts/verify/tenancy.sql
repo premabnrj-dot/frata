@@ -2180,6 +2180,11 @@ do $$ declare a uuid; n int; begin
   begin update videos set asset_id = 'asA2' where id = a; raise exception 'FAIL: an asset id changed'; exception when check_violation then null; end;
   begin update videos set playback_id = 'pbA2' where id = a; raise exception 'FAIL: a playback id changed'; exception when check_violation then null; end;
   begin update videos set removed_at = null where id = a; raise exception 'FAIL: a removed video came back'; exception when check_violation then null; end;
+  -- TS1b: the MP4 asked for is recorded once (0102), and only a size Mux makes (0101).
+  update videos set mp4 = '720p' where id = a;
+  begin update videos set mp4 = '540p' where id = a; raise exception 'FAIL: a video''s MP4 changed'; exception when check_violation then null; end;
+  insert into videos (tenant_id, mux_env, created_by) values ('11111111-1111-1111-1111-111111111111', 'prod1', '99999999-9999-9999-9999-999999999999') returning id into a;
+  begin update videos set mp4 = 'highest' where id = a; raise exception 'FAIL: an MP4 Mux doesn''t make was stored'; exception when check_violation then null; end;
   begin delete from videos; raise exception 'FAIL: the app deleted a video'; exception when insufficient_privilege then null; end;
 end $$;
 rollback;

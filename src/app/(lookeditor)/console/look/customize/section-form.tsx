@@ -1,6 +1,6 @@
 'use client'
 
-import { MAX_TABS, type ProductLayout, type SectionScheme } from '@/domains/themes/sections'
+import { MAX_LOOPS, MAX_TABS, type ProductLayout, type SectionScheme } from '@/domains/themes/sections'
 import { useState } from 'react'
 import { PROMISES, sectionName, type SectionInstance, type SectionOf, type VideoKey } from '@/domains/themes/sections'
 import { Choice, Field, ImageField, LinkPicker, SourcePicker, Switch, Text, WhenIST, paiseToRupees, rupeesToPaise, type LibraryPhoto, type LinkTarget } from './controls'
@@ -35,6 +35,8 @@ export type FormCtx = {
   products: { handle: string; title: string }[]
   /** V1: the sections this theme lets carry a loop, and whether video is switched on for shops (Mux is set up). */
   video?: { sections: readonly VideoKey[]; on: boolean }
+  /** TS1b: the Home already plays MAX_LOOPS (a section without a loop offers none). */
+  loopsFull?: boolean
   /** Signal 1.2 (S2): Image with text's Spotlight layout and the Hero's script line, where the theme offers them. */
   spotlight?: boolean; heroScript?: boolean
   /** TS0b: this theme version's designs, by id (a design's form and readiness read them). */
@@ -42,6 +44,12 @@ export type FormCtx = {
 }
 
 type Set<S> = (s: S) => void
+
+/** A section's loop field, or the limit in words when the Home already plays MAX_LOOPS (owner 2026-11-11). */
+export function LoopField({ value, c, onChange }: { value: { id: string } | undefined; c: FormCtx; onChange: (v: { id: string } | undefined) => void }) {
+  if (!value && c.loopsFull) return <p className="text-sm text-muted-foreground">A Home plays at most {MAX_LOOPS} videos.</p>
+  return <VideoField value={value} on={!!c.video?.on} onChange={onChange} />
+}
 
 /** A section with its loop set, or with no `video` key at all once removed (stored layers stay as before). */
 function withVideo<S extends { video?: { id: string } }>(s: S, video: { id: string } | undefined): S {
@@ -77,7 +85,7 @@ function Hero({ s, set, c }: { s: SectionOf<'hero'>; set: Set<SectionOf<'hero'>>
     <Choice label="Layout" value={s.layout} onChange={(layout) => set({ ...s, layout })} options={[{ value: 'text', label: 'Words only' }, { value: 'image_text', label: 'Words on a photo' }, { value: 'split', label: 'Photo beside words' }, { value: 'image', label: 'Photo only' }]} />
     {c.heroScript && s.layout !== 'image' && <Text label="Handwritten line above (optional)" value={s.script ?? ''} max={32} onChange={(script) => { const { script: _old, ...rest } = s; set(script ? { ...rest, script } : rest) }} />}
     {s.layout !== 'text' && <ImageField label={s.video ? 'Photo (optional with a video)' : 'Photo'} value={s.image} tenantId={c.tenantId} library={c.photos} suggest={['text' in s.heading ? s.heading.text : '', c.shopName]} onChange={(image) => set({ ...s, image })} />}
-    {s.layout !== 'text' && c.video?.sections.includes('hero') && <VideoField value={s.video} on={c.video.on} onChange={(video) => set(withVideo(s, video))} />}
+    {s.layout !== 'text' && c.video?.sections.includes('hero') && <LoopField value={s.video} c={c} onChange={(video) => set(withVideo(s, video))} />}
     <Bound label="Heading" value={s.heading} max={60} shopField="shopName" onChange={(heading) => set({ ...s, heading: heading ?? { from: 'shopName' } })} />
     {s.layout !== 'image' && <Bound label="Line under it" value={s.text} max={160} shopField="tagline" onChange={(text) => set({ ...s, text })} />}
     {s.layout !== 'image' && <ButtonFields value={s.button} targets={c.targets} onChange={(button) => set({ ...s, button })} />}
@@ -147,7 +155,7 @@ function ImageText({ s, set, c }: { s: SectionOf<'image_text'>; set: Set<Section
   return (<>
     {c.spotlight && <Choice label="Layout" value={s.layout ?? 'beside'} onChange={(v) => { const { layout: _old, ...rest } = s; set(v === 'spotlight' ? { ...rest, layout: 'spotlight' } : rest) }} options={[{ value: 'beside', label: 'Beside the photo' }, { value: 'spotlight', label: 'Spotlight' }]} />}
     <ImageField label={s.video ? 'Photo (optional with a video)' : 'Photo'} value={s.image} tenantId={c.tenantId} library={c.photos} suggest={[s.heading, c.shopName]} onChange={(image) => set({ ...s, image })} />
-    {c.video?.sections.includes('image_text') && <VideoField value={s.video} on={c.video.on} onChange={(video) => set(withVideo(s, video))} />}
+    {c.video?.sections.includes('image_text') && <LoopField value={s.video} c={c} onChange={(video) => set(withVideo(s, video))} />}
     {c.labels && <Text label="Label above the heading" value={s.label} max={24} onChange={(label) => set({ ...s, label })} />}
     <Text label="Heading" value={s.heading} max={60} onChange={(heading) => set({ ...s, heading })} />
     <Text label="Text (a blank line starts a new paragraph)" value={s.text} max={600} multiline onChange={(text) => set({ ...s, text })} />

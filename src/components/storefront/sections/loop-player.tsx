@@ -18,23 +18,27 @@ export function LoopPlayer() {
     if (!all.length || matchMedia('(prefers-reduced-motion: reduce)').matches || (navigator as { connection?: { saveData?: boolean } }).connection?.saveData) return
     let on: HTMLVideoElement | null = null
     const waits = new Map<HTMLVideoElement, ReturnType<typeof setTimeout>>()
+    const seen = new Set<HTMLVideoElement>()
+    // One at a time: a loop waits while another still plays in view (two in view never both download: speed review).
     const play = (v: HTMLVideoElement) => {
       waits.delete(v)
+      if (on && on !== v && seen.has(on)) return
       if (on && on !== v) on.pause()
       if (!v.src) v.src = v.dataset.loop!
       on = v
       v.play().catch(() => {})
     }
+    // Already loaded: play at once; not yet: only after the dwell (a scroll past loads nothing).
+    const want = (v: HTMLVideoElement) => { if (v.src) play(v); else if (!waits.has(v)) waits.set(v, setTimeout(() => play(v), DWELL_MS)) }
     const io = new IntersectionObserver((es) => {
       for (const e of es) {
         const v = e.target as HTMLVideoElement
-        if (e.intersectionRatio >= 0.5) {
-          // Already loaded: play at once; not yet: only after the dwell (a scroll past loads nothing).
-          if (v.src) play(v)
-          else if (!waits.has(v)) waits.set(v, setTimeout(() => play(v), DWELL_MS))
-        } else {
-          clearTimeout(waits.get(v)); waits.delete(v)
-          v.pause(); if (on === v) on = null
+        if (e.intersectionRatio >= 0.5) { seen.add(v); want(v) }
+        else {
+          seen.delete(v); clearTimeout(waits.get(v)); waits.delete(v)
+          v.pause()
+          // The one playing left: the next loop still in view takes its turn.
+          if (on === v) { on = null; const next = [...seen][0]; if (next) want(next) }
         }
       }
     }, { threshold: [0, 0.5] })

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { accordionItems, blocksOf, fillFor, fillableOf } from './design-tree'
-import { AccordionItemSchema, BLOCK_ID, DesignBodySchema, GRID_PIECES, ImageSchema, MAX_PER_PAGE, SectionSchema, SourceSchema, VIDEO_KEYS, blockId, fillText, shopPath, type Fill, type SectionOf, type ThemeImage } from './sections'
+import { AccordionItemSchema, BLOCK_ID, DesignBodySchema, GRID_PIECES, ImageSchema, MAX_COMMERCE_DESIGNS, MAX_LOOPS, MAX_PER_PAGE, SectionSchema, SourceSchema, VIDEO_KEYS, blockId, fillText, shopPath, type Fill, type SectionOf, type ThemeImage } from './sections'
 
 // =============================================================================
 // FILE: src/domains/themes/blocks.ts — THE BLOCK CATALOGUE (Theme Studio spec § 2; plan docs/plans/2026-11-11-theme-studio-ts0b.md).
@@ -60,10 +60,6 @@ export type FillableKind = LeafBlock['kind']
 export const MAX_DESIGNS = 30, MAX_DESIGN_BLOCKS = 40
 /** TS1b: the kinds that draw product cards or collection tiles (≤ 2 such designs a page), and the media kinds. */
 export const COMMERCE_KINDS: readonly BlockKind[] = ['product_grid', 'featured_product', 'collection_tiles']
-export const MAX_COMMERCE_DESIGNS = 2
-/** Loops a Home plays, across Hero, Image with text and designs (owner 2026-11-11: Frrata pays Mux per minute played).
- *  The save refuses a look that grows past it; a look already past it keeps its loops. */
-export const MAX_LOOPS = 3
 /** A drop date at most this far ahead (the save; words, never a database error). */
 export const MAX_DATE_DAYS = 400
 /** Per page, across every design on it (speed review 2026-11-11): blocks, owner words in UTF-8 bytes, photos. */
@@ -265,6 +261,7 @@ export function designsForSave(designs: readonly Design[], home: readonly unknow
   const latest = ctx.now.getTime() + MAX_DATE_DAYS * 86_400_000
   for (const s of parsed) {
     if (s.key !== 'design') continue
+    if (Object.values(s.fill).some((f) => f.kind === 'date' && f.at && Number.isNaN(Date.parse(f.at)))) return { error: 'That drop date can’t be read. Pick it again.' }
     if (Object.values(s.fill).some((f) => f.kind === 'date' && f.at && Date.parse(f.at) > latest)) return { error: `A drop date can be at most ${MAX_DATE_DAYS} days away. Pick a nearer one.` }
   }
   return { home: out }
@@ -321,3 +318,4 @@ export function designsCheck(designs: readonly Design[], previous?: readonly Des
 }
 
 export { blocksOf, fillableOf, thumbOf } from './design-tree'
+export { MAX_COMMERCE_DESIGNS, MAX_LOOPS }

@@ -47,13 +47,15 @@ export async function sendRenditionCreate(o: OutboxRow) {
   const v = await withTenant(o.tenantId, (tx) => videoOf(tx, o.tenantId, videoId))
   if (!v) throw new GiveUp('no such video')
   if (v.muxEnv !== MUX_ENVIRONMENT_ID) throw new Error('another Mux environment')
-  if (v.use !== 'product' || v.removedAt || v.erroredAt || v.mp4ReadyAt || !v.assetId) return
+  // A product's 720p, or (TS1b) a loop's sized MP4 the processor recorded; a V1 loop (no record) never gets here.
+  const mp4 = v.use === 'product' ? USE_LIMITS.product.rendition : v.mp4
+  if (!mp4 || v.removedAt || v.erroredAt || v.mp4ReadyAt || !v.assetId) return
   const got = await getAsset(v.assetId)
   if (!got.ok) return fail(got)
   if (!got.asset) return // gone: nothing to make
   if (got.asset.passthrough !== v.id) throw new GiveUp('asset is not this video’s')
-  if (got.asset.renditions[USE_LIMITS.product.rendition]) return // already asked
-  const r = await createRendition(v.assetId, USE_LIMITS.product.rendition)
+  if (got.asset.renditions[mp4]) return // already asked
+  const r = await createRendition(v.assetId, mp4)
   if (!r.ok) fail(r)
 }
 
