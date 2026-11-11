@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.41.0
+  version: 2.42.0
   verified: 2026-11-11
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -668,7 +668,9 @@ through `asModule('gst', …)`, the Accountant's invite too (removing one works 
   (`app_buyer_fixed` trigger); off at ₹5 crore and above until e-invoicing.
 - **Credit notes:** `domains/orders/credits.ts` (what is left of each line; return pro rata by quantity, discount by value
   at each line's rate, goodwill no GST in its own G series, reversal takes the rest), lines in `credit_note_lines`
-  (final). ₹ kept: `keptSql` takes off credited taxable and returned goods' cost.
+  (final). ₹ kept: `keptSql` takes off credited taxable (`creditedSql`) and the cost of pieces a return put back in
+  stock (`cogsSql`). A return restocks only when ticked: `issueCredit`, same transaction, `restockOf` (never past what
+  the line sold less earlier restocks), recorded once in `credit_note_lines.restocked_qty`.
 - **GSTR-1:** `domains/tax/gstr1.ts` from the documents; files in `gstr1-files.ts`; the period read is
   `queries/gst.ts gstPeriod(In)`, never cached. Filing (G2): `lib/gst/gsp.ts` (`gsp()` null = off; the fake never in
   Production), the actions in `console/gst/actions.ts` write a `gst_attempts` row before each call (ADR-0008, accepted 2026-11-09),

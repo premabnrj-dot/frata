@@ -88,7 +88,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
           print={{ slip: may('print', state, role) ? printHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? printHref('invoice', [o.number]) : null }}
           pdf={{ slip: may('print', state, role) ? pdfHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? pdfHref('invoice', [o.number]) : null, credit: d.credits.length ? pdfHref('credit', [o.number]) : null }}
           credit={{ may: !d.credit && !!o.invoiceNumber && may('credit', state, role), number: d.credit?.number ?? null }}
-          part={o.invoiceNumber && may('part_credit', state, role) ? { inclusive: o.pricesIncludeGst, lines: lines.map((l) => ({ id: l.id, title: [l.title, ...l.optionValues].join(' · '), qty: l.qty,
+          part={o.invoiceNumber && may('part_credit', state, role) ? { inclusive: o.pricesIncludeGst, lines: lines.map((l) => ({ id: l.id, title: [l.title, ...l.optionValues].join(' · '), qty: l.qty, stocked: !!l.stockTakenAt,
             left: l.qty - d.credits.reduce((a, c) => a + c.lines.filter((x) => x.lineId === l.id).reduce((b, x) => b + x.qty, 0), 0) })) } : null} riskWarning={riskWarning} heldPaid={state === 'held' && !!o.paidAt}
           may={{ hold: can.hold, unhold: can.unhold, cancel: can.cancel, pack: can.pack, confirm: can.confirm }}
           refund={refund} refundLabel={formatInr(paise(refund))} stockTaken={lines.some((l) => l.stockTakenAt)} />} />

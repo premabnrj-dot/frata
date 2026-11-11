@@ -2,8 +2,8 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.9.0
-  verified: 2026-11-08
+  version: 2.10.0
+  verified: 2026-11-11
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
 
@@ -32,8 +32,12 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
 - **Credit notes after delivery** (GST phase 2, 2026-11-09): a return, a discount agreed before the sale or goodwill
   takes its **taxable** value off what the order earned (`creditedSql`, read by keptSql and Analytics alike; the GST on a
   credit was never the merchant's money; goodwill carries none, so all of it comes off). Goodwill is capped at what is
-  left on the invoice. Returned goods' cost is **not** added back: nothing restocks on a credit — hypothesis **H-resale**
-  ("a returned piece is worth its full cost"), test: grade returns at 2–3 design partners for 4 weeks. Not yet counted:
+  left on the invoice. **Returned pieces put back in stock** (2026-11-11: the return's "Put these pieces back in stock"
+  tick, on by default; `credit_note_lines.restocked_qty`) are back on sale, so their cost comes off the order's COGS:
+  `restocked_qty × order_lines.unit_cost` as stored at placement (`cogsSql`, keptSql and Analytics alike; a line with no
+  unit cost adds nothing back, never a guessed cost). A return **not** restocked keeps its cost, and a discount or
+  goodwill never restocks. Counting a restocked piece at its full cost is hypothesis **H-resale** ("a returned piece
+  is worth its full cost"), test: grade returns at 2–3 design partners for 4 weeks. Not yet counted:
   the reverse-pickup freight on a return (~₹70; label figures "before return pickup" until a column records it).
   **Owner, 2026-11-09:** Frrata's fee stays on the order as delivered (`merchandise_net`, billed in full): a later
   return or credit note does not reduce it (Launch: ₹8.57 on a returned ₹450 piece). Say so where the fee is explained.

@@ -10,7 +10,8 @@
 // orders by what decides their figure (outcome, provider, COD, which costs are known, the fee in force) and sums the
 // money; `orderProfit` is linear, so a group's figure is the sum of its orders' (the fee's per-order rounding aside).
 // Left out, and counted as left out: a delivered or lost order with unknown COGS, and freight still pending from the
-// courier (never read as ₹0). A return needs no COGS (the goods come back). Pure.
+// courier (never read as ₹0). A return needs no COGS (the goods come back). A group's COGS arrives net of the pieces
+// credit notes put back in stock after delivery (`cogsSql`, src/lib/db/order-predicates.ts): they are on sale again. Pure.
 // =============================================================================
 
 import { type Paise, paise } from '@/domains/money/paise'
@@ -26,6 +27,7 @@ export type KeptGroup = {
   cod: boolean
   /** Sums over the group's orders, in paise; null when its orders do not know it (the SQL groups known apart from unknown). */
   net: number
+  /** COGS less the cost of pieces put back in stock by a credit note (cogsSql). */
   cogs: number | null
   forward: number | null
   rto: number | null

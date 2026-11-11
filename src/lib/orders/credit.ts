@@ -1,8 +1,8 @@
 import 'server-only'
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, gt, sql } from 'drizzle-orm'
 import { fiscalYear } from '@/domains/counters/fiscal-year'
 import { invoice, type CreditReason } from '@/domains/orders/documents'
-import { creditOpen, discountCredit, returnCredit, reversalCredit, type CreditKind, type CreditLine, type InvoicedLine, type Taken } from '@/domains/orders/credits'
+import { creditOpen, discountCredit, restockOf, returnCredit, reversalCredit, type CreditKind, type CreditLine, type InvoicedLine, type Taken } from '@/domains/orders/credits'
 import { gstHeads } from '@/domains/tax/gst'
 import { applies, invoiceNumber, InvoiceNumberTooLong, MAX_IN_YEAR, seriesFits } from '@/domains/orders/work'
 
@@ -11,7 +11,8 @@ export const CREDIT_SERIES_FULL = `This year's credit notes are used up (${MAX_I
 import { orderPrefix } from '@/domains/signup/slug'
 import type { Tx } from '@/lib/db'
 import { shopSettings, tenantCounters, tenants } from '@/lib/db/schema'
-import { creditNoteLines, creditNotes } from '@/lib/db/schema-orders'
+import { variants } from '@/lib/db/schema-catalogue'
+import { creditNoteLines, creditNotes, orderLines } from '@/lib/db/schema-orders'
 import { documentsFor } from './documents'
 import { current, record, type Actor, type Done } from './work'
 
@@ -21,6 +22,10 @@ import { current, record, type Actor, type Done } from './work'
 // sale was then undone — cancelled after packing, or back at the shop — and only once. It reverses the invoice in
 // full: the figures are the invoice's own, from the frozen rows. Its number comes from the shop's credit series
 // (tenant_counters kind 'credit', per financial year), taken in the same transaction, so a refusal leaves no gap.
+// A return after delivery can put its pieces back in stock ("Put these pieces back in stock", as Came back's tick):
+// in the same transaction, once (with the note's own lines, which are final), never for a discount, goodwill or a
+// reversal (cancel and Came back restock on their own), never above what the line sold less earlier restocks
+// (restockOf). credit_note_lines.restocked_qty records it; ₹ kept takes those pieces' cost back off COGS.
 // =============================================================================
 
 /** This year's credit series is used up (past C9,999): thrown so the counter rolls back, said in words by the caller. */
@@ -28,11 +33,12 @@ export class CreditSeriesFull extends Error {}
 
 /** What a credit note is for (GST phase 2). None: the whole invoice (what is left of it) when the sale was undone. */
 export type CreditRequest =
-  | { kind: 'return'; lines: Record<string, number> }
+  /** `restock`: put the returned pieces back on their variants' stock (lines whose stock was taken). */
+  | { kind: 'return'; lines: Record<string, number>; restock: boolean }
   /** `agreed`: agreed before the sale (reduces GST, s.15(3)(b)); otherwise goodwill (no GST effect). `amount` as the shopper reads it. */
   | { kind: 'discount'; amount: number; agreed: boolean }
 
-export async function issueCredit(tx: Tx, tenantId: string, actor: Actor, orderId: string, now = new Date(), req?: CreditRequest): Promise<Done<{ number: string }>> {
+export async function issueCredit(tx: Tx, tenantId: string, actor: Actor, orderId: string, now = new Date(), req?: CreditRequest): Promise<Done<{ number: string; backInStock: string[] }>> {
   // A credit note is permanent and changes the shop's GST filings: the shop's own people only, never a Frrata support
   // visit (security review 2026-11-08; as the address, payment keys and logo).
   if (actor.kind === 'support') return { ok: false, error: 'Only the shop’s owner or an admin can issue a credit note.' }
@@ -84,7 +90,34 @@ export async function issueCredit(tx: Tx, tenantId: string, actor: Actor, orderI
     if (e instanceof InvoiceNumberTooLong) throw new CreditSeriesFull()
     throw e
   }
+  // Pieces back in stock: a return only, when asked (the order is locked by current(), so earlier restocks are settled).
+  const back = kind === 'return' && req?.kind === 'return' && req.restock ? await restockReturn(tx, tenantId, orderId, lines) : { restocked: {}, backInStock: [] }
   const [note] = await tx.insert(creditNotes).values({ tenantId, orderId, number, againstInvoice: inv.number, reason, kind, taxable, ...heads, total, issuedAt: now, issuedBy: actor.userId }).returning({ id: creditNotes.id })
-  if (lines.length) await tx.insert(creditNoteLines).values(lines.map((l) => ({ tenantId, creditNoteId: note!.id, orderLineId: l.lineId, qty: l.qty, taxable: l.taxable, gst: l.gst, gstBps: l.bps })))
-  return { ok: true, eventId: await record(tx, tenantId, orderId, actor, 'credit_noted', now, { reason }), number }
+  if (lines.length) await tx.insert(creditNoteLines).values(lines.map((l) => ({ tenantId, creditNoteId: note!.id, orderLineId: l.lineId, qty: l.qty, taxable: l.taxable, gst: l.gst, gstBps: l.bps, restockedQty: back.restocked[l.lineId] ?? 0 })))
+  return { ok: true, eventId: await record(tx, tenantId, orderId, actor, 'credit_noted', now, { reason }), number, backInStock: back.backInStock }
+}
+
+/**
+ * A return's pieces back on their variants (restockOf: lines whose stock was taken, never above what the line sold less
+ * earlier notes' restocks), in variant order as putStockBack. Says what each line actually put back (a variant gone
+ * meanwhile puts back nothing, so its cost is never added back) and which variants came back from 0.
+ */
+async function restockReturn(tx: Tx, tenantId: string, orderId: string, lines: CreditLine[]): Promise<{ restocked: Record<string, number>; backInStock: string[] }> {
+  const sold = await tx.select({ id: orderLines.id, qty: orderLines.qty, variantId: orderLines.variantId, takenAt: orderLines.stockTakenAt }).from(orderLines)
+    .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId)))
+  const prior = await tx.select({ lineId: creditNoteLines.orderLineId, restockedQty: creditNoteLines.restockedQty }).from(creditNoteLines)
+    .innerJoin(creditNotes, and(eq(creditNotes.tenantId, creditNoteLines.tenantId), eq(creditNotes.id, creditNoteLines.creditNoteId)))
+    .where(and(eq(creditNoteLines.tenantId, tenantId), eq(creditNotes.orderId, orderId), gt(creditNoteLines.restockedQty, 0)))
+  const ask = restockOf(lines, sold.map((l) => ({ lineId: l.id, qty: l.qty, stocked: !!l.variantId && !!l.takenAt })), prior)
+  const restocked: Record<string, number> = {}
+  const backInStock: string[] = []
+  for (const l of sold.filter((x) => x.variantId && ask[x.id]).sort((a, b) => String(a.variantId).localeCompare(String(b.variantId)))) {
+    const n = ask[l.id]!
+    const [v] = await tx.update(variants).set({ stock: sql`${variants.stock} + ${n}` })
+      .where(and(eq(variants.tenantId, tenantId), eq(variants.id, l.variantId!))).returning({ stock: variants.stock })
+    if (!v) continue
+    restocked[l.id] = n
+    if (v.stock - n <= 0 && !backInStock.includes(l.variantId!)) backInStock.push(l.variantId!)
+  }
+  return { restocked, backInStock }
 }

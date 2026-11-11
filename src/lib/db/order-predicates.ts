@@ -180,11 +180,25 @@ export function feeBucketSql(a: string, feeChanges: readonly Date[]): SQL<number
 /**
  * What credit notes after delivery gave back (returned items, a discount agreed before the sale, goodwill), taxable
  * value: it comes off what the order earned, in ₹ kept everywhere (keptSql, Analytics' windowSql). A reversal is the
- * outcome itself. Returned goods' cost is NOT taken off COGS: nothing restocks on a credit, and a returned piece is
- * often not sellable (hypothesis H-resale in frata-unit-economics; unit-economics review 2026-11-09).
+ * outcome itself. A returned piece's cost comes back only when it was put back in stock (`cogsSql`); a return not
+ * restocked keeps its cost (hypothesis H-resale in frata-unit-economics; unit-economics review 2026-11-09).
  */
 export const creditedSql = (a: string) =>
   sql`(select coalesce(sum(cn.taxable), 0) from credit_notes cn where cn.tenant_id = ${c(a, 'tenant_id')} and cn.order_id = ${c(a, 'id')} and cn.kind in ('return', 'discount', 'goodwill'))`
+
+/**
+ * The goods' cost of the pieces a return put back in stock (credit_note_lines.restocked_qty × the line's own unit cost,
+ * as stored at placement): back on sale, so no longer a cost of this order. A line with no unit cost adds nothing back
+ * (never a guessed cost; its order's COGS is unknown anyway). Only `return` notes restock (issueCredit).
+ */
+export const restockedCostSql = (a: string) =>
+  sql`(select coalesce(sum(l.restocked_qty * ol.unit_cost), 0) from credit_notes cn
+    join credit_note_lines l on l.tenant_id = cn.tenant_id and l.credit_note_id = cn.id
+    join order_lines ol on ol.tenant_id = l.tenant_id and ol.id = l.order_line_id
+   where cn.tenant_id = ${c(a, 'tenant_id')} and cn.order_id = ${c(a, 'id')} and cn.kind = 'return' and l.restocked_qty > 0)`
+
+/** The order's COGS for ₹ kept: as placed, less what returns put back in stock; null while unknown. keptSql and Analytics alike. */
+export const cogsSql = (a: string) => sql`(${c(a, 'cogs')} - ${restockedCostSql(a)})`
 
 /**
  * ₹ KEPT, GROUPED (Analytics A·1; speed review: never one row per order). The expressions `keptOf`
@@ -206,7 +220,7 @@ export function keptSql(now: Date, a: string, feeChanges: readonly Date[], provi
     where: sql`${st} in ('delivered', 'rto', 'rto_received', 'lost')`,
     /** The group's columns: outcome, provider, cod, bucket, then the sums. */
     columns: sql`${outcome} outcome, ${provider} provider, ${cod} cod, ${bucket} bucket, count(*)::int n,
-      coalesce(sum(${c(a, 'net_revenue')} - ${credited}), 0)::bigint net, sum(${c(a, 'cogs')})::bigint cogs, sum(${c(a, 'forward_shipping')})::bigint fwd,
+      coalesce(sum(${c(a, 'net_revenue')} - ${credited}), 0)::bigint net, sum(${cogsSql(a)})::bigint cogs, sum(${c(a, 'forward_shipping')})::bigint fwd,
       sum(${c(a, 'rto_shipping')})::bigint rto, sum(${c(a, 'courier_cod_fee')})::bigint codfee, coalesce(sum(${c(a, 'gateway_fee')}), 0)::bigint gw,
       coalesce(sum(${c(a, 'merchandise_net')}), 0)::bigint base`,
     /** Group by these, after `lead` key columns of the caller's own placed first: the four group columns by position,
