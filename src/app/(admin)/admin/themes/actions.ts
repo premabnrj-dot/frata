@@ -17,7 +17,7 @@ const list = (m: string) => `/admin/themes?error=${encodeURIComponent(m)}`
 const NOT_ADMIN = 'Only an admin can change theme versions.'
 const BAD_FORM = 'That form was incomplete. Nothing was changed.'
 
-async function admin() { const s = await requireStaff(ADMIN_ONLY); if (!s.ok) redirect(list(NOT_ADMIN)); return s }
+async function admin() { const s = await requireStaff(ADMIN_ONLY); if (!s.ok) redirect(list(s.reason === 'signed_out' ? 'Sign in again.' : NOT_ADMIN)); return s }
 
 export async function stageAction(form: FormData) {
   const staff = await admin()

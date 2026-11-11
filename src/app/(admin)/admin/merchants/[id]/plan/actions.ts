@@ -26,7 +26,7 @@ export async function changePlanAction(form: FormData) {
   const tid = z.uuid().safeParse(form.get('tenantId'))
   if (!tid.success) redirect(`/admin/merchants?error=${encodeURIComponent('That form was incomplete. Nothing was changed.')}`)
   const id = tid.data
-  if (!staff.ok) redirect(`/admin/merchants/${id}/plan?error=${encodeURIComponent('Only an admin can change a plan.')}`)
+  if (!staff.ok) redirect(`/admin/merchants/${id}/plan?error=${encodeURIComponent(staff.reason === 'signed_out' ? 'Sign in again.' : 'Only an admin can change a plan.')}`)
   const p = Change.safeParse(Object.fromEntries(form))
   if (!p.success) redirect(`/admin/merchants/${id}/plan?error=${encodeURIComponent('Check the plan and the custom price')}`)
   if (p.data.customPrice !== null && !p.data.reason) redirect(`/admin/merchants/${id}/plan?error=${encodeURIComponent('A custom price needs a reason')}`)
@@ -53,9 +53,10 @@ const TrialBase = z.object({ tenantId: z.uuid(), reason: z.string().trim().min(3
 const TrialDays = TrialBase.extend({ days: z.coerce.number().int().min(7).max(90) })
 async function trialAction(form: FormData, schema: typeof TrialBase | typeof TrialDays, run: (staff: Extract<Awaited<ReturnType<typeof requireStaff>>, { ok: true }>, d: { tenantId: string; reason: string; days?: number }) => Promise<void>, done: string) {
   const staff = await requireStaff(ADMIN_ONLY)
-  if (!staff.ok) redirect('/admin')
-  const id = String(form.get('tenantId') ?? '')
-  const back = `/admin/merchants/${/^[0-9a-f-]{36}$/.test(id) ? id : ''}/plan`
+  const tid = z.uuid().safeParse(form.get('tenantId'))
+  if (!tid.success) redirect(`/admin/merchants?error=${encodeURIComponent('That form was incomplete. Nothing was changed.')}`)
+  const back = `/admin/merchants/${tid.data}/plan`
+  if (!staff.ok) redirect(`${back}?error=${encodeURIComponent(staff.reason === 'signed_out' ? 'Sign in again.' : 'Only an admin can change a trial.')}`)
   const p = schema.safeParse(Object.fromEntries(form))
   if (!p.success) redirect(`${back}?error=${encodeURIComponent('A trial is 7 to 90 days for one shop, and needs a reason.')}`)
   try { await run(staff, p.data) } catch (e) {

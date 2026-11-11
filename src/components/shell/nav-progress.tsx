@@ -15,9 +15,12 @@ import { useEffect, useRef, useState } from 'react'
 // =============================================================================
 
 const START = 'frata:navigation-start'
+const END = 'frrata:navigation-end'
 
 /** For code that moves with router.push (the leave guard): show the bar as a link click would. */
 export function startNavigation() { window.dispatchEvent(new Event(START)) }
+/** A form whose action settled without a new URL (a redirect to the page already showing, or an error): stop the bar. */
+export function endNavigation() { window.dispatchEvent(new Event(END)) }
 
 export function NavProgress() {
   const path = usePathname(), search = useSearchParams()
@@ -36,9 +39,11 @@ export function NavProgress() {
       if (url.origin !== location.origin || (url.pathname === location.pathname && url.search === location.search)) return
       start()
     }
+    const end = () => { clear(); setState((s) => (s === 'run' ? 'done' : 'idle')); timers.current.push(window.setTimeout(() => setState('idle'), 400)) }
     document.addEventListener('click', onClick)
     window.addEventListener(START, start)
-    return () => { document.removeEventListener('click', onClick); window.removeEventListener(START, start); clear() }
+    window.addEventListener(END, end)
+    return () => { document.removeEventListener('click', onClick); window.removeEventListener(START, start); window.removeEventListener(END, end); clear() }
   }, [])
   // While a move runs, the page it leaves is marked busy, and its lists dim (rule 4: opacity only for loading; a
   // screen reader hears the region is busy). Lists never move; they dim and the new one replaces them.

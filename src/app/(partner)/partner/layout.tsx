@@ -5,7 +5,7 @@ import type { NavItem } from '@/components/shell/nav'
 import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { requirePartner } from '@/lib/auth/require-partner'
-import { accessFor } from '@/lib/db/platform'
+import { accessOf } from '@/lib/auth/session'
 import { ROLE_LABEL, type MemberRole } from '@/domains/tenancy/roles'
 
 export const dynamic = 'force-dynamic'
@@ -25,7 +25,7 @@ export default async function PartnerLayout({ children }: { children: React.Reac
       </main>
     )
   }
-  const access = await accessFor(auth.userId).catch(() => ({ memberships: [] as { tenantId: string; tenantName: string; role: string; supportSessionId: string | null }[] }))
+  const access = await accessOf(auth.userId).catch(() => ({ memberships: [] as { tenantId: string; tenantName: string; role: string; supportSessionId: string | null }[] }))
   const places: Place[] = [
     { href: '/partner', name: 'Partner workspace', role: '', current: true },
     ...access.memberships.filter((m) => !m.supportSessionId).map((m) => ({ href: '/console', name: m.tenantName, role: ROLE_LABEL[m.role as MemberRole] ?? m.role, current: false, tenantId: m.tenantId })),

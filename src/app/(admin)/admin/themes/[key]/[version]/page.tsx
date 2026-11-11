@@ -13,6 +13,7 @@ import { dayIN } from '@/lib/format-date'
 import { pullAction, releaseAction, stageAction, unstageAction } from '../../actions'
 import { StateBadge } from '../../state-badge'
 import { Submit } from '@/components/ui/submit'
+import { Button } from '@/components/ui/button'
 
 export const metadata = { title: 'Theme version' }
 
@@ -62,7 +63,7 @@ export default async function ThemeVersionPage({ params, searchParams }: { param
           <form method="get" className="mt-3 flex flex-wrap gap-2">
             <label className="sr-only" htmlFor="q">Find a shop</label>
             <input id="q" name="q" defaultValue={sp.q ?? ''} placeholder="Shop name" className={`${input} w-56`} />
-            <Submit variant="secondary">Find</Submit>
+            <Button type="submit" variant="secondary">Find</Button>
           </form>
           {results.length > 0 && <ul className="mt-2 space-y-2 text-sm">{results.map((s) => (
             <li key={s.id} className="flex items-center gap-3"><span className="flex-1">{s.name} <span className="text-muted-foreground">{s.slug}</span></span>

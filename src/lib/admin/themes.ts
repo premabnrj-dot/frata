@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, eq, isNull, sql } from 'drizzle-orm'
-import { adminDb } from '@/lib/db/admin'
+import { adminDb, type AdminTx } from '@/lib/db/admin'
 import { tenants } from '@/lib/db/schema'
 import { shopThemePublishes, shopThemeRevisions, themeVersionStages, themeVersions } from '@/lib/db/schema-themes'
 import type { StaffOk } from '@/lib/auth/require-staff'
@@ -45,15 +45,14 @@ export async function themeVersionsForAdmin(staff: StaffOk): Promise<AdminVersio
       .innerJoin(shopThemeRevisions, eq(shopThemeRevisions.id, shopThemePublishes.revisionId))
       .innerJoin(tenants, eq(tenants.id, shopThemePublishes.tenantId)),
   ])
-  const nameOf = new Map(pubs.map((p) => [p.tenantId, p.name]))
   // Each shop's live look by the shop's own rule (liveOf), so Admin's counts never disagree with what shoppers see.
   const bad = withdrawnKeys(rows)
-  const byShop = new Map<string, { themeKey: string; themeVersion: string; at: number; id: string }[]>()
-  for (const p of pubs) { const list = byShop.get(p.tenantId) ?? []; list.push({ themeKey: p.themeKey, themeVersion: p.themeVersion, at: p.publishedAt.getTime(), id: p.id }); byShop.set(p.tenantId, list) }
+  const byShop = new Map<string, { name: string; list: { themeKey: string; themeVersion: string; at: number; id: string }[] }>()
+  for (const p of pubs) { const shop = byShop.get(p.tenantId) ?? { name: p.name, list: [] }; shop.list.push({ themeKey: p.themeKey, themeVersion: p.themeVersion, at: p.publishedAt.getTime(), id: p.id }); byShop.set(p.tenantId, shop) }
   const live = new Map<string, { tenantId: string; name: string }[]>()
-  for (const [tenantId, list] of byShop) {
+  for (const [tenantId, { name, list }] of byShop) {
     const l = liveOf(list.sort((a, b) => b.at - a.at || b.id.localeCompare(a.id)), bad)
-    if (l) { const k = `${l.themeKey}@${l.themeVersion}`; live.set(k, [...(live.get(k) ?? []), { tenantId, name: nameOf.get(tenantId) ?? tenantId }]) }
+    if (l) { const k = `${l.themeKey}@${l.themeVersion}`; const at = live.get(k) ?? []; at.push({ tenantId, name }); live.set(k, at) }
   }
   const keys = new Set([...Object.values(CATALOGUE).flatMap((vs) => Object.values(vs).map((m) => `${m.key}@${m.version}`)), ...rows.map((r) => `${r.themeKey}@${r.version}`)])
   return [...keys].map((kv) => {
@@ -69,7 +68,7 @@ export async function themeVersionsForAdmin(staff: StaffOk): Promise<AdminVersio
   }).sort((a, b) => a.key.localeCompare(b.key) || cmpSemver(b.version, a.version))
 }
 
-type Tx = Parameters<Parameters<ReturnType<typeof adminDb>['transaction']>[0]>[0]
+type Tx = AdminTx
 /** The version's row, made on the first decision about it (there is no separate "Add": T3 review). */
 async function rowFor(tx: Tx, key: string, version: string): Promise<{ id: string } | null> {
   if (!manifestOf(key, version)) return null

@@ -4,7 +4,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('server-only', () => ({}))
-vi.mock('react', async (orig) => ({ ...(await orig<typeof import('react')>()), cache: <F extends (...a: never[]) => unknown>(f: F) => { let hit: unknown; let done = false; return ((...a: never[]) => (done ? hit : (done = true, hit = f(...a)))) as F } }))
+vi.mock('react', async (orig) => ({ ...(await orig<typeof import('react')>()), cache: <F extends (...a: never[]) => unknown>(f: F) => { const hits = new Map<string, unknown>(); return ((...a: never[]) => { const k = JSON.stringify(a); if (!hits.has(k)) hits.set(k, f(...a)); return hits.get(k) }) as F } }))
 vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }))
 vi.mock('@/lib/public-env', () => ({ isAuthConfigured: () => true }))
 vi.mock('@/lib/env', () => ({ isDatabaseConfigured: () => true, isAdminDatabaseConfigured: () => true }))
