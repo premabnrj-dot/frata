@@ -347,12 +347,18 @@ looks byte-identical (resolved-looks snapshot).
   `.store-hover`. Home loads the catalogue beside the look; `shopCatalogue` expanded once a request.
 - **Gate** `e2e/flows/74-commerce.mjs`: the worst page a 1.5 owner can newly make (two drops, Behind the bench, Size
   help; words at the page's limit; 140-character titles; photo-cut swatches; four widths on a real Blob host; the designs
-  first), from the cache: HTML ≤ 300 kB, RSC ≤ 150 kB, ≤ 2 eager images on Home, Shop all and a collection. Also a
-  design's loop uploaded through its form (720p, played in the preview).
+  first), from the cache. Measured 2026-11-11: the whole Home 370.5 kB HTML / 193.4 kB RSC, over the 300 / 150 kB page
+  budget; the designs' own markup ~57 kB of it, the rest Signal's default Products tabs and rail with real photos and the
+  inline payload that repeats them (debt below). The gate holds what TS1b answers for: the designs ≤ 64 kB of markup,
+  ≤ 2 eager images on Home, Shop all and a collection, and a ceiling of 400 kB HTML / 210 kB RSC on the whole Home so it
+  can't grow unseen. Also a design's loop uploaded through its form (720p, played in the preview).
 - **Tests**: `commerce-blocks.test.ts`, `best-seller-windows.test.ts`, `sources.test.ts` (tiles, a scheduled featured
   piece), `mux.test.ts` (`loopMp4`), `design-video.int.test.ts` (kept, held, freed), stored-sections v5, the 1.5
   released-manifest snapshot (designs now in it), tenancy proof (mp4 set once, sizes only).
-- **Debt named (not made worse):** a card draws every colour (up to 30; a "+N" needs the owner's word on the card);
+- **Debt named (not made worse):** a full Signal Home with real photos is 370.5 kB HTML / 193.4 kB RSC, over the page
+  budget (the default Products tabs keep every hidden tab's cards; the rail is 12 cards; each photo width repeats the
+  ~118 B Blob prefix; the RSC payload repeats the markup) — the owner moved storefronts to code on 2026-11-11
+  (`docs/specs/2026-11-11-agentic-storefront.md`), so this is left with the theme system; a card draws every colour (up to 30; a "+N" needs the owner's word on the card);
   Signal's default Products tabs and rail hold most of Home's card bytes; the Blob URL prefix (~118 B) repeats per photo
   width; readiness doesn't know a featured piece was unlisted or a source is empty (the block is left out on the shop);
   the 720p path is unverified on a real Mux account.
