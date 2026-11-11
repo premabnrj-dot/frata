@@ -9,7 +9,8 @@
 --                        input (a /24 or /48 network and the user agent, built by the app). The salt never leaves here.
 --   analytics_fold()     pg_cron every 15 minutes, definer: folds the events since the last fold into visitor_days
 --                        (one row per visitor-day, a bitmask of funnel steps), adds product and Web Vitals counts, then
---                        rebuilds the touched days' rollups (speed review HIGH 2: never a full recompute).
+--                        rebuilds the touched days' rollups from visitor_days (speed review HIGH 2: events are never
+--                        re-read; a day's rollups are rebuilt from its visitor-days, measured at 5.3 s at 10×).
 --   analytics_maintain() pg_cron hourly, definer: partitions 7 days ahead, raw events and visitor-days dropped after 90
 --                        days, rollups after 2 years (owner call 4), yesterday's salt deleted.
 -- Nobody but the owner reads events, visitor_days, the salts or a partition. No app role calls the fold or maintenance.
@@ -115,7 +116,7 @@ create policy tenant_rows on vitals_daily for select to frata_app using (tenant_
 
 -- ── The visitor ────────────────────────────────────────────────────────────────────────────────────────────────────
 -- 16 bytes of HMAC-SHA256(today's salt, shop id ‖ input). The shop id is fixed-length, so the concatenation is
--- unambiguous; the app length-prefixes the rest (src/domains/analytics/visitor.ts). A new salt each IST day: a visitor
+-- unambiguous; the app length-prefixes the rest (src/domains/analytics/visitor.ts, A2·2). A new salt each IST day: a visitor
 -- can't be followed from one day to the next, and nothing stored is linkable to a person once it is deleted.
 -- frata_app may call it for any shop (the ingest needs it): a hash reveals nothing, since frata_app reads no table
 -- that holds one (tenancy audit LOW, accepted).
@@ -137,7 +138,7 @@ end $$;
 
 -- ── The ingest ─────────────────────────────────────────────────────────────────────────────────────────────────────
 -- One beacon: {d: device, b: browser, a: in-app, c: city, e: [{k, l, p, pid, us, um, uc, rh, cc, gads, srs, fb, m, v}]}.
--- The route has checked it already (Zod, src/domains/analytics/event.ts); the table's checks and the caps here are the
+-- The route checks it first (Zod, src/domains/analytics/event.ts, A2·2); the table's checks and the caps here are the
 -- backstop. Invoker, so the events policy holds. The shop comes from the host the route resolved (never the body), as
 -- withTenant's does; it is set around the insert and the caller's setting is put back, and a call naming a shop other
 -- than the one the transaction already has is refused (tenancy audit 2026-11-11 HIGH: otherwise a later read in the same
@@ -154,11 +155,13 @@ begin
   if jsonb_array_length(p_batch -> 'e') > 50 then raise exception 'ingest_events: more than 50 events'; end if;
   perform set_config('app.tenant_id', p_tenant::text, true);
   select * into v from public.analytics_visitor(p_tenant, p_input);
-  insert into public.events (tenant_id, day, visitor, kind, landing, path, product_id, us, um, uc, rh, cc, gads, srs, fb, device, browser, in_app, city, metric, value)
-  select p_tenant, v.salt_day, v.visitor, e.k, coalesce(e.l, false), e.p, e.pid, e.us, e.um, e.uc, e.rh, e.cc,
+  -- Each event of a batch a microsecond after the one before, so "the day's first landing" is the batch's own order.
+  insert into public.events (tenant_id, day, at, visitor, kind, landing, path, product_id, us, um, uc, rh, cc, gads, srs, fb, device, browser, in_app, city, metric, value)
+  select p_tenant, v.salt_day, now() + (e.i - 1) * interval '1 microsecond', v.visitor, e.k, coalesce(e.l, false), e.p, e.pid, e.us, e.um, e.uc, e.rh, e.cc,
          coalesce(e.gads, false), coalesce(e.srs, false), coalesce(e.fb, false),
          coalesce(p_batch ->> 'd', ''), coalesce(p_batch ->> 'b', ''), coalesce(p_batch ->> 'a', ''), coalesce(p_batch ->> 'c', ''), e.m, e.v
-  from jsonb_to_recordset(p_batch -> 'e') as e(k text, l boolean, p text, pid uuid, us text, um text, uc text, rh text, cc text, gads boolean, srs boolean, fb boolean, m text, v integer);
+  from rows from (jsonb_to_recordset(p_batch -> 'e') as (k text, l boolean, p text, pid uuid, us text, um text, uc text, rh text, cc text, gads boolean, srs boolean, fb boolean, m text, v integer))
+    with ordinality as e(k, l, p, pid, us, um, uc, rh, cc, gads, srs, fb, m, v, i);
   get diagnostics n = row_count;
   perform set_config('app.tenant_id', was, true);
   return n;
@@ -347,7 +350,7 @@ do $$ begin perform analytics_maintain(); end $$;
 --> statement-breakpoint
 -- pg_cron, where the server has it (Supabase does; a throwaway Postgres doesn't, and the proof calls the functions).
 do $$ begin
-  if exists (select 1 from pg_available_extensions where name = 'pg_cron') then
+  if exists (select 1 from pg_available_extensions where name = 'pg_cron') and current_setting('shared_preload_libraries') like '%pg_cron%' then
     create extension if not exists pg_cron;
     perform cron.schedule('analytics-fold', '*/15 * * * *', 'select public.analytics_fold()');
     perform cron.schedule('analytics-maintain', '7 * * * *', 'select public.analytics_maintain()');

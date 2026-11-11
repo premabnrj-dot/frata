@@ -11,9 +11,10 @@ cd "$(dirname "$0")/../.."
 bash scripts/verify/apply-migrations.sh
 psql "$ADMIN_URL" -q -v ON_ERROR_STOP=1 -f scripts/verify/tenancy.sql
 if [ -z "${ANALYTICS_ADMIN_URL:-}" ]; then
-  server="${ADMIN_URL%/*}"; name="${ADMIN_URL##*/}"; name="${name%%\?*}_analytics"
-  psql "$server/postgres" -q -v ON_ERROR_STOP=1 -c "drop database if exists $name with (force)" -c "create database $name"
-  ANALYTICS_ADMIN_URL="$server/$name"
+  server="${ADMIN_URL%/*}"; last="${ADMIN_URL##*/}"; name="${last%%\?*}_analytics"
+  query=""; [[ "$last" == *\?* ]] && query="?${last#*\?}"
+  psql "$server/postgres$query" -q -v ON_ERROR_STOP=1 -c "drop database if exists $name with (force)" -c "create database $name"
+  ANALYTICS_ADMIN_URL="$server/$name$query"
 fi
 ANALYTICS_ADMIN_URL="$ANALYTICS_ADMIN_URL" bash scripts/verify/apply-analytics-migrations.sh
 psql "$ANALYTICS_ADMIN_URL" -q -v ON_ERROR_STOP=1 -f scripts/verify/analytics-tenancy.sql

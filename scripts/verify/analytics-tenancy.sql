@@ -172,13 +172,29 @@ begin
   end loop;
 end $$;
 
+-- Shop C: one visitor whose batch lands twice (Google, then Instagram: the batch's order decides), and 204 visitors
+-- each from its own site, so C's sources pass the top 200 and 5 fold into one rh = '*' row.
+do $$
+declare i integer;
+begin
+  perform ingest_events('33333333-3333-3333-3333-333333333333', 'order', '{"d":"phone","e":[{"k":"page_view","l":true,"us":"google"},{"k":"page_view","l":true,"us":"instagram"}]}');
+  for i in 1 .. 204 loop
+    perform ingest_events('33333333-3333-3333-3333-333333333333', 'site-' || i, jsonb_build_object('d', 'phone', 'e', jsonb_build_array(jsonb_build_object('k', 'page_view', 'l', true, 'rh', 'r' || i || '.example'))));
+  end loop;
+end $$;
+
 -- 7. The fold (as the owner, as pg_cron runs it): events older than the 1-minute lag are folded once.
 update events set at = at - interval '5 minutes';
 update fold_state set through = now() - interval '1 hour';
 create temp table fold1 as select analytics_fold() n;
 do $$ begin
   if (select n from fold1) <> 1 then raise exception 'FAIL: the fold touched % days, not 1', (select n from fold1); end if;
-  if (select count(*) from visitor_days) <> 62 then raise exception 'FAIL: % visitor-days, not 62', (select count(*) from visitor_days); end if;
+  if (select count(*) from visitor_days) <> 267 then raise exception 'FAIL: % visitor-days, not 267', (select count(*) from visitor_days); end if;
+  if (select us from visitor_days where tenant_id = '33333333-3333-3333-3333-333333333333' and views = 2) <> 'google' then raise exception 'FAIL: the first landing in a batch did not decide the source'; end if;
+  if (select count(*) from source_daily where tenant_id = '33333333-3333-3333-3333-333333333333' and rh <> '*') <> 200 then raise exception 'FAIL: shop C keeps % source rows, not 200', (select count(*) from source_daily where tenant_id = '33333333-3333-3333-3333-333333333333' and rh <> '*'); end if;
+  if (select (visitors, us, um, uc, cc, gads, srs, fb) from source_daily where tenant_id = '33333333-3333-3333-3333-333333333333' and rh = '*') is distinct from (5, ''::text, ''::text, ''::text, ''::text, false, false, false) then
+    raise exception 'FAIL: shop C''s sources past the top 200 are not one bare rh = ''*'' row of 5'; end if;
+  if exists (select 1 from source_daily where tenant_id <> '33333333-3333-3333-3333-333333333333' and rh = '*') then raise exception 'FAIL: another shop''s sources were folded by shop C''s count'; end if;
   if (select us from visitor_days where tenant_id = '11111111-1111-1111-1111-111111111111') <> 'instagram' then raise exception 'FAIL: a later landing replaced the day''s first source'; end if;
   if (select steps from visitor_days where tenant_id = '11111111-1111-1111-1111-111111111111') <> 7 then raise exception 'FAIL: shop A''s visitor steps are % (page, product, bag = 7)', (select steps from visitor_days where tenant_id = '11111111-1111-1111-1111-111111111111'); end if;
 end $$;
@@ -218,14 +234,16 @@ end $$;
 
 -- 10. A later slice adds, never doubles: one more event for A's visitor.
 begin; set local role frata_app;
-select ingest_events('11111111-1111-1111-1111-111111111111', '3|1.2.3|chrome-ua', '{"d":"phone","b":"chrome","a":"instagram","c":"Pune","e":[{"k":"begin_checkout"},{"k":"web_vital","m":"lcp","v":1800}]}');
+select ingest_events('11111111-1111-1111-1111-111111111111', '3|1.2.3|chrome-ua', '{"d":"phone","b":"chrome","a":"instagram","c":"Pune","e":[{"k":"begin_checkout"},{"k":"purchase"},{"k":"web_vital","m":"lcp","v":1800}]}');
 commit;
-update events set at = now() - interval '2 minutes' where kind = 'begin_checkout' or (kind = 'web_vital' and value = 1800);
+update events set at = now() - interval '2 minutes' where kind in ('begin_checkout', 'purchase') or (kind = 'web_vital' and value = 1800);
 update fold_state set through = now() - interval '3 minutes';  -- the first slice (5 minutes old) stays behind the watermark
 do $$ begin
   if analytics_fold() <> 1 then raise exception 'FAIL: the second slice was not folded'; end if;
-  if (select (visitors, views, checkout_visitors) from traffic_daily where tenant_id = '11111111-1111-1111-1111-111111111111') is distinct from (1, 2, 1) then
-    raise exception 'FAIL: a later slice changed shop A''s visits or missed its checkout'; end if;
+  if (select (visitors, views, checkout_visitors, ordered_visitors) from traffic_daily where tenant_id = '11111111-1111-1111-1111-111111111111') is distinct from (1, 2, 1, 1) then
+    raise exception 'FAIL: a later slice changed shop A''s visits or missed its checkout or order'; end if;
+  if (select ordered_visitors from source_daily where tenant_id = '11111111-1111-1111-1111-111111111111' and us = 'instagram') <> 1 then raise exception 'FAIL: the order is not on its visit''s source'; end if;
+  if (select ordered_visitors from city_daily where tenant_id = '11111111-1111-1111-1111-111111111111') <> 1 then raise exception 'FAIL: the order is not on its visit''s city'; end if;
   if (select n from vitals_daily where tenant_id = '11111111-1111-1111-1111-111111111111' and metric = 'lcp' and product_id = '00000000-0000-0000-0000-000000000000') <> 3 then
     raise exception 'FAIL: the second slice''s vitals did not add'; end if;
 end $$;
@@ -258,7 +276,20 @@ begin
 end $$;
 commit;
 
--- 12. Maintenance: raw events past 90 days go with their partition, yesterday's salt goes, rollups stay 2 years.
+-- 12. A fold across IST midnight: one event at 23:58 yesterday, one today; both days are folded and rebuilt.
+truncate events;
+do $$
+declare midnight timestamptz := date_trunc('day', now() at time zone 'Asia/Kolkata') at time zone 'Asia/Kolkata';
+begin
+  insert into events (tenant_id, day, at, visitor, kind, landing) values
+    ('44444444-4444-4444-4444-444444444444', ((midnight - interval '2 minutes') at time zone 'Asia/Kolkata')::date, midnight - interval '2 minutes', '\x0d', 'page_view', true),
+    ('44444444-4444-4444-4444-444444444444', (now() at time zone 'Asia/Kolkata')::date, now() - interval '2 minutes', '\x0d', 'page_view', true);
+  update fold_state set through = midnight - interval '10 minutes';
+  if analytics_fold() <> 2 then raise exception 'FAIL: a fold across midnight did not touch both days'; end if;
+  if (select count(*) from traffic_daily where tenant_id = '44444444-4444-4444-4444-444444444444') <> 2 then raise exception 'FAIL: a fold across midnight did not rebuild both days'; end if;
+end $$;
+
+-- 13. Maintenance: raw events past 90 days go with their partition, yesterday's salt goes, rollups stay 2 years.
 do $$
 declare old date := (now() at time zone 'Asia/Kolkata')::date - 100;
 begin
@@ -274,4 +305,4 @@ begin
   if analytics_maintain() <> 0 then raise exception 'FAIL: maintenance is not idempotent'; end if;
 end $$;
 
-\echo 'analytics tenancy proof — all 12 checks passed'
+\echo 'analytics tenancy proof — all 13 checks passed'

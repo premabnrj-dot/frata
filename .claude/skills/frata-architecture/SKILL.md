@@ -2,10 +2,10 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.35.0
-  verified: 2026-11-09
-  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008]
-  covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
+  version: 2.36.0
+  verified: 2026-11-11
+  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0011]
+  covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
 ---
 
 # Frata architecture
@@ -80,7 +80,7 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - Admin takes tenant ids from forms (it is cross-tenant by role); every Admin
   write still matches `tenant_id` **and** the row id together.
 
-### The analytics database (A·2, 2026-11-11; plan docs/plans/2026-11-11-guardrails-infra-a2.md § A2·1 as built)
+### The analytics database (A·2, ADR-0011, 2026-11-11; plan docs/plans/2026-11-11-guardrails-infra-a2.md § A2·1 as built)
 
 - Visits live in a **second Postgres** (`frata-analytics`), migrated from `drizzle-analytics/`
   (`drizzle.analytics.config.ts`, `npm run db:generate:analytics`), schema in `src/lib/db/analytics-schema.ts`.
@@ -90,6 +90,11 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - Raw events are written only through `ingest_events()` and read only by the fold. Partitions live in `ev`, which
   has no grant; a new grant there is a bug. Rollups keep raw source inputs, classified on read (§ Attribution).
 - Role settings there use `alter role … in database` (a throwaway server shares its roles with the main database).
+- Its migrations never go to the main project. Both databases are named `postgres`, and 0000 refuses to run there.
+  They reach the analytics project only as the paste from `scripts/ops/analytics-paste.mjs` (docs/setup.md
+  § Analytics database), never through the main account's Supabase tools.
+- Grant each object by name, with the exact privilege. TRUNCATE ignores RLS. No default-privilege grants, no
+  `alter policy` (drop and create), and nothing ever disables RLS. `check:tenant` § 8 fails each.
 
 ## Auth
 

@@ -8,6 +8,14 @@
 -- one set of roles, and the main database's 20 s statement timeout must not change (tenancy review, 2026-11-11).
 -- Passwords are set by the owner after this runs, as for the main database (docs/setup.md).
 -- =============================================================================
+-- NOT THE MAIN DATABASE. Both Supabase databases are called `postgres`; run here by mistake, the limits below would
+-- give the whole app a 2 s statement timeout (impact review 2026-11-11). This refuses before anything changes.
+do $$ begin
+  if to_regclass('public.tenants') is not null or to_regclass('public.orders') is not null then
+    raise exception 'drizzle-analytics: this is the main Frrata database, not the analytics one — nothing was applied';
+  end if;
+end $$;
+--> statement-breakpoint
 do $$ begin
   if not exists (select 1 from pg_roles where rolname = 'frata_app') then create role frata_app login noinherit nobypassrls; end if;
   if not exists (select 1 from pg_roles where rolname = 'frata_admin') then create role frata_admin login noinherit nobypassrls; end if;

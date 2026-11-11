@@ -93,8 +93,11 @@ for (const file of walk('src')) {
     if (/^\s*['"]use server['"]/m.test(text)) failures.push(`${file}  'use server' in src/lib/admin turns it into a public endpoint — put actions under src/app/(admin)`)
   }
   if (ANALYTICS_DB.test(text) && !file.startsWith('src/lib/db/') && !file.startsWith('src/lib/queries/') && !(file in ANALYTICS_IN_APP)) {
-    const onlyTypes = [...text.matchAll(/import\s+(type\s+)?\{[^}]*\}\s+from\s+['"]@\/lib\/db\/analytics['"]/g)].every(m => m[1])
-    if (!onlyTypes) failures.push(`${file}  imports the analytics connection — read through src/lib/queries (withAnalyticsTenant), or list it in ANALYTICS_IN_APP with why`)
+    // Type-only passes only when every import of the module is `import type { … }` (a namespace import or import()
+    // matches no brace form, so it counts as a value import: impact review 2026-11-11).
+    const all = [...text.matchAll(/(?:from\s+|import\(\s*)['"]@\/lib\/db\/analytics['"]/g)].length
+    const typeOnly = [...text.matchAll(/import\s+type\s+\{[^}]*\}\s+from\s+['"]@\/lib\/db\/analytics['"]/g)].length
+    if (!(all > 0 && typeOnly === all)) failures.push(`${file}  imports the analytics connection — read through src/lib/queries (withAnalyticsTenant), or list it in ANALYTICS_IN_APP with why`)
   }
   if (file.startsWith('src/app/') && TENANT_HELPER.test(text) && !(file in TENANT_IN_APP)) {
     failures.push(`${file}  imports withTenant in app code — read through src/lib/queries (or list it in TENANT_IN_APP with why)`)
@@ -210,6 +213,7 @@ for (const m of aSql.matchAll(/create policy\s+(\w+)\s+on\s+"?([a-z_.]+)"?([\s\S
     failures.push(`analytics policy ${name} on ${table}  must name frata_app (or frata_admin) and bind app_current_tenant(), or be restrictive false`)
   }
 }
+if (/\balter policy\b/.test(aSql)) failures.push('drizzle-analytics alters a policy — drop and create it, so this gate can read its whole body')
 if (/disable row level security|no force row level security/.test(aSql)) failures.push('drizzle-analytics turns row level security off somewhere (A·2)')
 if (/grant\s+[^;]*\b(truncate|all|references|trigger)\b[^;]*\bon\b/.test(aSql)) failures.push('drizzle-analytics grants TRUNCATE, ALL, REFERENCES or TRIGGER (TRUNCATE ignores RLS) — grant the exact privilege')
 if (/default privileges[^;]*\bgrant\b/.test(aSql)) failures.push('drizzle-analytics grants by default privileges — grant each object by name')

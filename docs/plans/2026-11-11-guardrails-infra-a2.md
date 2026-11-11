@@ -506,3 +506,30 @@ Computed with `orderProfit`; the scratch model is in the session scratchpad.
     - `frata_app` can hash for any shop: it reads nothing that holds a hash;
     - `pg_stat_user_tables` shows platform-wide daily event counts, not one shop's;
     - the relative-import case was already caught, because the gate resolves relative paths first.
+- **impact-reviewer on A2·1 (2026-11-11), folded:**
+  - **HIGH:**
+    - the gate's type-only escape now passes only when every import of the module is `import type { … }`, so a
+      namespace import or `import()` fails it;
+    - 0000 refuses to run on the main database (both Supabase databases are named `postgres`). This is proved: run
+      there, it raises and changes nothing.
+  - **MED:**
+    - § 8 fails on any `alter policy`, and on a policy that names no app role;
+    - the proof gains a 205-source shop (top 200, then one bare `rh = '*'` row of 5, no other shop folded), ordered
+      visitors (traffic, source, city), a batch's first landing (events in a batch now get microsecond-apart `at`), and
+      a fold across IST midnight. 13 checks in all.
+  - **Docs:**
+    - ADR-0011 (the second database);
+    - `docs/setup.md` § Analytics database (paste, password, URL);
+    - `scripts/ops/analytics-paste.mjs` derives the paste from the files and is checked on a fresh database and on the
+      main one (refused, rolled back);
+    - frata-verify 1.8.0 and frata-architecture 2.36.0 (covers `drizzle-analytics/**`);
+    - pg_cron is guarded on `shared_preload_libraries`.
+  - **Deferred, with their phase:**
+    - A2·2: `IngestBatch` takes its event type from `src/domains/analytics/event.ts`, with one round-trip test (an
+      unknown key is silently null); `withAnalyticsTenant` and `ingestBatch` are tested through the route's e2e flow
+      (UUID refusal, read only, the in-flight cap).
+    - A2·4: creator visits are labelled by joining `cc` to the main database's creators (`sourceOfInputs` needs label
+      and code); `rh = '*'` reads as "Other", never as a site.
+    - On apply: `cron.job` lists both jobs (the paste ends with that query).
+    - `CLAUDE.md` § Before you commit and § Migrations name only `drizzle/`. A line for `drizzle-analytics/` (pasted by
+      the owner; 0000 refuses the main database) is proposed to the owner, not written by an agent.
