@@ -3,7 +3,7 @@ import { cmpSemver } from './semver'
 import type { ThemeManifest } from './types'
 
 // =============================================================================
-// FILE: src/domains/themes/source.ts — where theme manifests come from (Theme Studio TS0a, ADR-0011). Every reader
+// FILE: src/domains/themes/source.ts — where theme manifests come from (Theme Studio TS0a, ADR-0012). Every reader
 // takes a ManifestSource instead of reaching the code catalogue, so a theme authored as data (TS2) joins without
 // another caller changing. `codeSource` is the code catalogue; `src/lib/themes/manifests.ts` hands each request the
 // source for its shop (today: the code catalogue). Pure. Only this file reads CATALOGUE for shops (check:layers).

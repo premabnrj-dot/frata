@@ -14,8 +14,8 @@ import { reviewRequests, reviews, reviewSettings, waOptOuts } from './schema'
 // =============================================================================
 // FILE: src/lib/modules/reviews/sender.ts — the outbox sender for `review:ask` (Reviews R1 task 6b).
 //
-// The payload is ids only ({ requestId, reminder? }): the outbox read policy has a no-shop branch, so no phone,
-// name, link or token ever sits in a row (tenancy audit). Everything is read again here, inside the shop's own
+// The payload is ids only ({ requestId, reminder? }): no phone, name, link or token ever sits in an outbox row
+// (tenancy audit; the claim runs through a definer across shops, drizzle/0096). Everything is read again here, inside the shop's own
 // transaction, and checked again at the moment of sending: still delivered, still opted in, not stopped, not
 // reviewed yet, the template approved and still UTILITY. A reason not to send is not an error — the row is done and
 // the request says why (fail_code: a code, never a phone or Meta's body). Meta's own refusals are errors (retried).

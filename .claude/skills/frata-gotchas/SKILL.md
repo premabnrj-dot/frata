@@ -2,7 +2,7 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a PDF download that saves as pdf.txt, MODULE_NOT_FOUND in production only, a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.15.0
+  version: 1.16.1
   verified: 2026-11-08
 ---
 
@@ -58,7 +58,7 @@ metadata:
 | An opacity or transform read in e2e is "wrong" now and then | It read the first frame of a 120–320 ms transition | `waitForFunction` on the value, or open the context with `reducedMotion: 'reduce'` |
 | Every stored Razorpay key stops opening ("not connected") | The key-derivation salt in `src/lib/crypto/secret-box.ts` ('frata') was changed, e.g. by the rename to Frrata | Never rename it; a known-token test pins it, and `check:name` allows it by name |
 | Shoppers' bags, saved checkout forms or shortcut settings vanish | A localStorage key (`frata.bag.v1` and the like) was renamed | Keys are internal: they keep the old spelling (`scripts/check-name.allow.json`) |
-| After a server action the button stays on "Adding…" / "Checking with Razorpay…" for good and the page never shows the change (now and then; the action's POST returned 200 with the new tree; seen on Settings › Shop address and Online payments) | Not found (Next 15.5, 2026-11-09). A `router.refresh()` started while the action's response still streams aborts it; without the refresh the action's own update still failed to commit now and then; a `useTransition` around it then never settles | On Settings › Shop address: plain `pending` state (no `useTransition`), and `router.refresh()` only after the action has resolved, outside any transition (`address-form.tsx`, `domains.tsx`). e2e still meets it ~1 step a run there and elsewhere: an open problem, not solved |
+| After a server action the button stays on "Adding…" / "Checking with Razorpay…" for good and the page never shows the change (now and then; the action's POST returned 200 with the new tree; seen on Settings › Shop address and Online payments) | Not found (Next 15.5, 2026-11-09). A `router.refresh()` started while the action's response still streams aborts it; without the refresh the action's own update still failed to commit now and then; a `useTransition` around it then never settles | On Settings › Shop address: plain `pending` state (no `useTransition`), and after the action has resolved `settle(router)` refreshes now and again 700 ms later, outside any transition (`src/app/(console)/console/settings/address/settle.ts`; 2026-11-11: a heavier console shell lost the race 2 runs in 3, the second refresh brought flow 52 to 6 green in 6 on a clean machine). e2e still meets it ~1 step a run there and elsewhere: an open problem, not solved |
 | After an action the page shows the OLD state for a while (e.g. "Closed." beside a checklist that still says open) | The action calls `revalidatePath` (which already re-renders the current page in its response) AND the component then calls `router.refresh()`: the two renders race and the stale one can land last | Rely on the action's `revalidatePath`; drop the extra `router.refresh()` (OpenShop, 2026-11-07: an e2e probe showed the DB closed and the UI open). 24 other call sites still do both — fix each when touched |
 | A sender's `row.tenantId` (or any camelCase field) is `undefined`; `withTenant` fails with Postgres 42601 | `db().execute(sql…)` returns rows as Postgres names the columns (`tenant_id`), whatever type it is cast to | Map raw rows explicitly: `claimDue` returns `fromRaw(r)` (`src/lib/outbox/index.ts`; found by e2e 66-video, 2026-11-09 — every outbox sender had it) |
 | `permission denied for table` on an insert the role should be allowed | A column-level grant (`grant insert (a, b, c)`), and drizzle's insert names EVERY column, as `DEFAULT` — Postgres checks those too | Insert with `sql` naming only the granted columns (`startVideo`, `src/lib/queries/videos.ts`) |
@@ -70,3 +70,10 @@ The console home baseline (`e2e/baselines/console-home-desktop.png`, flow 05 sho
 not a regression: mask the date in that shot or freeze the clock for flow 05 when next touching it. The same full run
 saw flow 46 messages stop at "Connecting…" twice at different steps, then pass 10/10 alone: the same class as the
 open action-commit flake above.
+
+## Build: "An error occurred in `next/font`. TypeError: Cannot read properties of null (reading '1')" (2026-11-11)
+`next/font/google` fetched Google's stylesheet and files during every build; an answer it could not parse failed the
+build at random (the same commit `964fdc0` built READY once and ERROR once on Vercel; local builds failed the same way).
+Every face is now self-hosted in `src/components/fonts/<face>/` (OFL 1.1, from Fontsource 5.3.0) and loaded with
+`next/font/local`; `check:fonts` refuses the Google loader. A face outside latin (₹ is U+20B9, latin-ext) needs its own
+latin-ext file with a `unicode-range` declaration: Inter's two faces meet in `--font-inter` (`src/app/base.css`).

@@ -19,7 +19,7 @@ accessibility (home, product, collection); **zero** shops changed without their 
 ## Phases (owner-approved order; each its own plan and mockup board)
 | Phase | Who gets what |
 |---|---|
-| **TS0a Seam** (invisible) | `ManifestSchema` (every code manifest parses it); `manifestsFor(tenant)` in `src/lib/themes/manifests.ts` read before any transaction and passed into the pure functions; every caller of `resolveStored`/`manifestNear`/`latestAvailable` migrated (~20 files) with 0 px proof; the publish-cache fixes below; ADR-0011 |
+| **TS0a Seam** (invisible) | `ManifestSchema` (every code manifest parses it); `manifestsFor(tenant)` in `src/lib/themes/manifests.ts` read before any transaction and passed into the pure functions; every caller of `resolveStored`/`manifestNear`/`latestAvailable` migrated (~20 files) with 0 px proof; the publish-cache fixes below; ADR-0012 |
 | **TS0b Blocks** | The block catalogue and the `design` section, shipped first inside a **minor version of a code theme** (e.g. Signal 1.4) and measured on real shops |
 | **TS1 Pages and templates (Look)** | About, Contact (WhatsApp + business details), FAQ; product and collection page layouts from blocks; as code themes' features, for owners |
 | **TS2 Staff studio (Admin)** | Frrata's team builds and releases gallery themes; second-person approval |
@@ -35,7 +35,7 @@ required parts (2026-03-18). Not taken: free breakpoints (Wix), no review (Frame
 
 ## Design
 
-### 1. The model (ADR-0011: manifests may be authored data)
+### 1. The model (ADR-0012: manifests may be authored data)
 A theme is a **manifest**, from code (today) or from the studio (data), with one schema and the same guarantees:
 validated, immutable once a version exists, versioned.
 - **Design system:** today's typed `ThemeSettings` and styles. **Every colour matches `^#[0-9A-Fa-f]{6}$`** (security H1:
@@ -204,7 +204,7 @@ closed; the key Production only.
   `set_audience`/`offer_update` with B's tenant write nothing; `shop_pages` cross-tenant checks; approval by the
   submitter refused; a version's manifest can't be updated; `has_function_privilege` false for anon, authenticated,
   service_role on every new definer.
-- **Skills:** `frata-architecture` § Themes (ADR-0011, `manifestsFor`, blocks, entitlements); `frata-design-language`
+- **Skills:** `frata-architecture` § Themes (ADR-0012, `manifestsFor`, blocks, entitlements); `frata-design-language`
   (studio and pages patterns once approved); a planning heading "Theme Studio: new block or token? additive? stable ids?".
 - **Agents:** architecture, tenancy, security, speed reviewers on each phase's plan; `unit-economics-reviewer` at TS3 and
   TS4.
@@ -262,7 +262,7 @@ closed; the key Production only.
 | Partner suspension | security 9 | § 4 `suspended_at` |
 | Size and parse limits | security 8 | § 4 bytes before parse, caps |
 | Framing | security 10, architecture 11 | § 8 |
-| No ADR | architecture 14 | ADR-0011 in TS0a |
+| No ADR | architecture 14 | ADR-0012 in TS0a |
 | Phasing | architecture | Owner: reordered |
 | Studio JS | speed 10 | § 8 ≤ 220 kB + gate |
 | Lighthouse in CI with DB data | architecture 13 | § 5 export → seeded e2e |

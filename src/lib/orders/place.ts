@@ -1,4 +1,5 @@
 import 'server-only'
+import { enqueueOrderEmail } from '@/lib/email/enqueue'
 import { WA_OPT_IN_NOTICE } from '@/domains/checkout/opt-in'
 import { randomUUID } from 'node:crypto'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
@@ -126,7 +127,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
       subtotal: q.subtotal, discount: m.discount, shipping: q.shipping, codCharge: m.codCharge, gstTotal: m.gst, total: m.total, pricesIncludeGst: shop.pricesIncludeGst,
       merchandiseNet: m.merchandiseNet, cogs,
       waOptInAt: input.waOptIn ? now : null, waOptInNotice: input.waOptIn ? WA_OPT_IN_NOTICE : null,
-      customerName: input.address.name, phone: input.address.phone, addressLine: input.address.addressLine, area: input.address.area, landmark: input.address.landmark,
+      customerName: input.address.name, phone: input.address.phone, email: input.address.email ?? null, addressLine: input.address.addressLine, area: input.address.area, landmark: input.address.landmark,
       pincode: input.address.pincode, city: input.address.city, state: input.address.state, supplyState: input.address.state, shopState: gstinState(shop.gstin), sellerGstin: shop.gstin, sellerScheme: shop.scheme,
       buyerGstin: buyer?.gstin ?? null, buyerName: buyer?.name ?? '',
       arrivesFrom: q.arrives?.from ?? null, arrivesTo: q.arrives?.to ?? null, returnDays: shop.returnDays, returnKind: shop.returnKind,
@@ -139,6 +140,8 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     // A checked phone (EkCode, plan task 3): link the order to the shop's customer only when the session's phone is this
     // order's phone — the session found by its token's hash inside this tenant, never anything in the body.
     if (input.session) await linkCustomer(tx, tenantId, id, input.session, input.address.phone)
+    // Email E·2: COD is confirmed at once; an online order gets "Finish paying" only if still unpaid after its hold.
+    await enqueueOrderEmail(tx, tenantId, id, cod ? 'confirmed' : 'finish_paying', null, now)
     await tx.insert(orderLines).values(live.map((l, position) => ({
       ...m.shares[position]!,
       lineDiscount: m.lines[position]!.discount, productDiscount: m.lines[position]!.productDiscount, taxableValue: m.lines[position]!.taxable, gstBps: m.lines[position]!.gstBps, gst: m.lines[position]!.gst,

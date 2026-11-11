@@ -12,6 +12,10 @@
       "schedule": "43 4 * * *"
     },
     {
+      "path": "/api/cron/drain",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/infra",
       "schedule": "23 * * * *"
     }

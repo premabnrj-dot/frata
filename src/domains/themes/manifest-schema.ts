@@ -5,7 +5,7 @@ import { AnnouncementSchema } from './layer'
 
 // =============================================================================
 // FILE: src/domains/themes/manifest-schema.ts — what a theme manifest may hold (Theme Studio TS0a, spec
-// docs/specs/2026-11-11-theme-studio.md § 1, ADR-0011). Every code manifest parses to itself (parity test); a studio
+// docs/specs/2026-11-11-theme-studio.md § 1, ADR-0012). Every code manifest parses to itself (parity test); a studio
 // manifest (TS2) is stored only after it parses. Every value is a closed choice, a bounded string or a hex colour:
 // scheme colours reach a `style` attribute, so a colour is exactly `#RRGGBB` (security review H1, 2026-11-11).
 // =============================================================================

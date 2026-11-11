@@ -2,9 +2,9 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.36.0
+  version: 2.37.0
   verified: 2026-11-11
-  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0011]
+  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
 ---
 
@@ -299,7 +299,7 @@ after it. A class a shop page uses from outside the shop's folders must be added
   of manifest → style → the merchant's layer — `contrast`, section SAVE schemas, `readinessOf`, `carryOver`,
   `baselineRevision`) and `src/components/storefront/sections/` (server components). Rendering reads
   only `ResolvedTheme`; settings reach CSS as `--store-*` custom properties and `data-*` attributes on the shell.
-- **Manifests may be authored data (ADR-0011, Theme Studio TS0a).** A manifest from a file or a row is one object:
+- **Manifests may be authored data (ADR-0012, Theme Studio TS0a).** A manifest from a file or a row is one object:
   `ManifestSchema` (`manifest-schema.ts`: colours exactly `#RRGGBB`, every token a closed choice, photos only from
   Frrata's samples; every code manifest parses to itself) and `themeCheck` (`check.ts`, the one check: vitest for code,
   the studio for data). **Every reader takes a `ManifestSource`** (`source.ts`: `keys()`, `versions(key)`; pure
@@ -473,12 +473,17 @@ after it. A class a shop page uses from outside the shop's folders must be added
 - Logs carry an error's `name` or code, never the raw error. A drizzle error
   includes its parameters, so emails and phones end up in Vercel logs (S10).
 - **Background work is sized, not hoped.** Batch × runs per day covers 10× peak
-  with the number written in the spec. A daily cron is the safety net: a
-  sender drains right after `enqueue` (`after()`), loops `claimDue` until empty
+  with the number written in the spec. The 5-minute cron is the safety net: a
+  sender drains right after `enqueue` (`after()`; one drain per instance at a time,
+  a call during one asks for up to two more passes), loops `claimDue` until empty
   or out of time, and shops run with bounded concurrency (`src/lib/outbox/drain.ts`:
-  `drainSoon()` after the commit — not called yet: the first sender's change calls it —
-  `drainOutbox(deadline)`, `eachLimited`). The cron is still daily (Hobby);
-  a sender with a deadline (COD confirmation) needs a frequent schedule (Pro) before it ships.
+  `drainSoon()` after the commit, `drainOutbox(deadline)`, `eachLimited`). `/api/cron/drain`
+  drains every 5 minutes (Pro, 2026-11-11), so `enqueue({ notBefore })` rows and retries
+  go on time. The claim and every settle run through definers (`app_outbox_claim`,
+  `app_outbox_settle`, drizzle/0096): no outbox row is readable without its shop set.
+  A sender throws `GiveUp` (dead at once), `Later(code, minutes)` (wait, no attempt
+  spent: a 429, a tenant not ready) or a plain `Error` (counted; dead at 8). Payloads are
+  ids only; errors are our codes, never a provider's words (they can quote an address).
 
 ## Speed (review 2026-11-08; findings P1–P15 in `docs/research/2026-11-08-performance-security-motion-review.md`)
 

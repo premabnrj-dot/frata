@@ -1,4 +1,4 @@
-# ADR-0011: A theme manifest may be authored data
+# ADR-0012: A theme manifest may be authored data
 
 Status: accepted (owner approved the Theme Studio mockup v2, 2026-11-11) · spec `docs/specs/2026-11-11-theme-studio.md`
 · plan `docs/plans/2026-11-11-theme-studio-ts0a.md` · builds on the themes spec (2026-11-08) and ADR-0002

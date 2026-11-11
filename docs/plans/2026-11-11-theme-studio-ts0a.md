@@ -126,8 +126,8 @@ Each shop route keeps its exact render: `05-shop-look` 0 px and the resolved-loo
 - Measure: entry bytes before/after (`shopPublishes` for Kesar with 20 publishes), cold statements per shop page
   before/after (must not rise; target −1), `05-shop-look` 0 px.
 
-### 6. ADR-0011 and skills
-- `docs/decisions/0011-manifests-as-data.md`: a manifest may be authored data; the same guarantees (schema, immutable
+### 6. ADR-0012 and skills
+- `docs/decisions/0012-manifests-as-data.md`: a manifest may be authored data; the same guarantees (schema, immutable
   versions, one check, shops read only entitled versions — TS2); code stays the baseline; the domain stays pure through
   `ManifestSource`.
 - `frata-architecture` § Themes: `ManifestSource`/`manifestsFor` (read before a transaction, pass down), `ManifestSchema`
@@ -141,7 +141,7 @@ Each shop route keeps its exact render: `05-shop-look` 0 px and the resolved-loo
 | TS0a-2 | `themeCheck` extracted; check-theme uses it; rule tests | `npx vitest run src/domains/themes`; `npm test` |
 | TS0a-3 | `ManifestSource` + `manifestsFor`; domain functions take a source; callers migrated (table above) | `npm test`; typecheck; resolved-looks + released-manifests snapshots unchanged |
 | TS0a-4 | Publish cache split, `versionStates`, `themeOf` memo | entry bytes + statements measured; `npm run e2e -- --only shop-look,look,signal` (0 px) |
-| TS0a-5 | ADR-0011, architecture skill, plan as-built; full e2e; reviews (impact, speed) on the diff; ship | `npm test`, typecheck, build budgets, full e2e |
+| TS0a-5 | ADR-0012, architecture skill, plan as-built; full e2e; reviews (impact, speed) on the diff; ship | `npm test`, typecheck, build budgets, full e2e |
 
 ## Practices recorded in skills
 - frata-architecture § Themes: a manifest reaches code only through a `ManifestSource` read before any transaction;

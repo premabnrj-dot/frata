@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { LIMITS } from '@/lib/db/rate-limit'
 import { publicQuote, reply, shopRequest, Token } from '@/lib/http/shop-api'
 import { switchToCod } from '@/lib/orders/payment'
+import { drainSoon } from '@/lib/outbox/drain'
 
 // Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
 export const maxDuration = 30
@@ -15,5 +16,6 @@ export async function POST(request: Request) {
   const out = await switchToCod(r.tenantId, r.body.token, r.body.expectedTotal)
   if (out.kind === 'changed') return reply({ changed: true, quote: publicQuote(out.quote) }, 409)
   if (out.kind === 'refused') return reply({ error: out.error, ...(out.codTotal !== undefined ? { codTotal: out.codTotal } : {}) }, out.status)
+  drainSoon() // "Order confirmed" for the switch to COD (email E·2)
   return reply(out)
 }

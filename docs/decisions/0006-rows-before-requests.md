@@ -7,8 +7,8 @@ Status: accepted · 2026-11-06 · adopted from Ekatan's WhatsApp outbox
   row in the same transaction as the change that caused it, with a dedupe key.
   A sweep claims due rows with `FOR UPDATE SKIP LOCKED`, sends, and retries with
   backoff up to `MAX_ATTEMPTS` before marking the row dead.
-- **Inbound** (Razorpay, Shiprocket, Meta webhooks): verify the signature on the
-  RAW body, insert into `webhook_events` under OUR key (provider:event:object)
+- **Inbound** (Razorpay, Shiprocket, Meta webhooks): verify the provider's documented
+  signature (on the RAW body where it signs the body; field by field for SNS, ADR-0011), insert into `webhook_events` under OUR key (provider:event:object)
   with `on conflict do nothing`, answer 200 at once, process later.
 
 ## Amendment (owner, 2026-11-08): an inbound webhook with no signature

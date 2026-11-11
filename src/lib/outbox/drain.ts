@@ -4,11 +4,13 @@ import { outboxDecision } from '@/domains/modules/access'
 import { moduleForKind } from '@/domains/modules/registry'
 import { shopModules } from '@/lib/queries/modules'
 import { errName } from '@/lib/log'
-import { claimDue, deferRow, GiveUp, markDead, markFailed, markSent, type OutboxRow } from './index'
+import { claimDue, deferRow, GiveUp, Later, markDead, markFailed, markSent, type OutboxRow } from './index'
 import { sendBillAttempt } from '@/lib/billing/debit'
 import { sendDomainAdd, sendDomainRemove } from '@/lib/domains/senders'
 import { sendReviewAsk } from '@/lib/modules/reviews/sender'
 import { sendAssetDelete, sendRenditionCreate, sendUploadCancel } from '@/lib/video/senders'
+import { sendNoticeEmail } from '@/lib/email/notice-sender'
+import { sendOrderEmail, sendTenantSetup } from '@/lib/email/order-sender'
 import { E2E_FIXTURES, VERCEL_ENV } from '@/lib/env'
 
 // =============================================================================
@@ -33,6 +35,11 @@ export const SENDERS: Record<string, (row: OutboxRow) => Promise<void>> = {
   'mux.asset.delete': sendAssetDelete,
   'mux.upload.cancel': sendUploadCancel,
   'mux.rendition.create': sendRenditionCreate,
+  // Email E·1: a Frrata notice to the shop's people (recipients, preferences and reads resolved when it sends).
+  'email.notice': sendNoticeEmail,
+  // Email E·2: an order email to the shopper in the shop's brand; and a shop's SES tenant, set up once, paced.
+  'email.order': sendOrderEmail,
+  'email.tenant': sendTenantSetup,
 }
 const BATCH = 25
 
@@ -66,9 +73,10 @@ export async function drainOutbox(deadline: number): Promise<{ claimed: number; 
         sent++
       } catch (err) {
         if (err instanceof GiveUp) { await markDead(row.id, err.message); continue }
+        if (err instanceof Later) { await deferRow(row.id, err.minutes, err.code); continue }
         // Our own refusals keep their words; a database or sender error only its name and code (S10: a drizzle
         // error carries its parameters).
-        await markFailed(row.id, row.attempts, err instanceof Error && !('cause' in err) && err.name === 'Error' ? err.message : errName(err))
+        await markFailed(row.id, err instanceof Error && !('cause' in err) && err.name === 'Error' ? err.message : errName(err))
       }
     }
     if (rows.length < BATCH) break
@@ -77,11 +85,22 @@ export async function drainOutbox(deadline: number): Promise<{ claimed: number; 
 }
 
 /**
- * After a change that enqueued commits: send now, after the response, within 20 s; the cron catches the rest.
- * Not called yet: nothing enqueues before the first sender (WhatsApp COD confirmation). That change calls it.
+ * After a change that enqueued commits: send now, after the response, within 20 s; /api/cron/drain catches the rest
+ * every 5 minutes (order emails: placing, paying, switching to COD and every console order action call it).
  */
+let draining = false, again = false
 export function drainSoon() {
-  after(() => drainOutbox(Date.now() + 20_000).then(() => undefined, (e) => console.error('[outbox] drain', errName(e))))
+  // One drain per instance at a time (speed review L3): checkouts at festive volume would otherwise each hold one. A
+  // call during a drain asks for one more pass when it ends, so a row queued after its last claim is not left for the
+  // 5-minute cron (impact review E·2).
+  if (draining) { again = true; return }
+  draining = true
+  const run = async () => {
+    try { let passes = 0; do { again = false; await drainOutbox(Date.now() + 20_000) } while (again && ++passes < 3) } // bounded: the cron sweeps the rest
+    catch (e) { console.error('[outbox] drain', errName(e)) }
+    finally { draining = false }
+  }
+  try { after(run) } catch (e) { draining = false; throw e }
 }
 
 /** Runs `work` over `items`, `limit` at a time (the cron's per-shop sweeps). */

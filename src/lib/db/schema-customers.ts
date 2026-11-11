@@ -59,12 +59,17 @@ export const customerConsents = pgTable('customer_consents', {
   /** "Updates for this order" names its order; a standing consent has none. */
   orderId: uuid('order_id'),
   noticeVersion: text('notice_version').notNull(),
+  /** An email consent: the address that proved it (a link sent to it), as the shop's keyed hash (src/lib/email/hash.ts),
+   *  so a sender can tell which inbox agreed; never the address. */
+  addressHash: text('address_hash'),
   givenAt: at('given_at').notNull().defaultNow(),
   withdrawnAt: at('withdrawn_at'),
 }, (t) => [
   foreignKey({ name: 'customer_consents_customer_fk', columns: [t.tenantId, t.customerId], foreignColumns: [shopCustomers.tenantId, shopCustomers.id] }).onDelete('cascade'),
   foreignKey({ name: 'customer_consents_order_fk', columns: [t.tenantId, t.orderId], foreignColumns: [orders.tenantId, orders.id] }).onDelete('cascade'),
   index('customer_consents_customer').on(t.tenantId, t.customerId),
+  uniqueIndex('customer_consents_live_address').on(t.tenantId, t.purpose, t.addressHash).where(sql`${t.withdrawnAt} is null and ${t.addressHash} is not null`),
+  check('customer_consents_address', sql`${t.addressHash} is null or ${t.addressHash} ~ '^[a-z][a-z0-9]{0,7}:[0-9a-f]{64}$'`),
   check('customer_consents_purpose', sql`${t.purpose} in ('order_updates', 'marketing_whatsapp', 'marketing_email')`),
   check('customer_consents_channel', sql`${t.channel} in ('whatsapp', 'email')`),
   check('customer_consents_sender', sql`${t.sender} in ('shop', 'ekcode')`),

@@ -1,5 +1,5 @@
 # Email and notifications: Frrata → merchants and partners; merchant → shoppers
-Status: draft, resumed 2026-11-08 (owner: "while we're waiting for DNS, can we pick Email Plan"; shop addresses in `docs/specs/2026-11-08-shop-addresses.md`) · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/TwHtjtuFPzRDv4uLqLB9xQ (`docs/mockups/2026-11-08-messaging.html`) · Approved: —
+Status: active (owner approved v2 and calls 1–4, 2026-11-11), resumed 2026-11-11 (owner: "can we take up the email work"; campaigns, the wallet and automations held to be planned on their own) · v1 2026-11-08 · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/TwHtjtuFPzRDv4uLqLB9xQ (`docs/mockups/2026-11-08-messaging.html`, v2 2026-11-11) · Approved: owner, 2026-11-11 (v2)
 Research: `docs/research/2026-11-08-email-and-notifications.md` (four agents, facts checked 2026-11-08).
 Owner, 2026-11-08: **emails are branded — merchant to customer in the merchant's brand; Frrata to merchants and
 partners in Frrata's brand.** Checkout may ask for an email; **no consent checkbox.** **Amazon SES from the start**
@@ -21,6 +21,24 @@ billing notices read before the debit; support tickets that begin "I didn't know
 A brand's shoppers hear from the brand at every step of their order without the brand doing anything; the brand
 can change the words, send from its own address, and later email its followers. Frrata's team tells merchants and
 partners what they must know, and the things they cannot miss always arrive.
+
+## This round (owner, 2026-11-11)
+- **In:** E·0 Foundation, E·1 Notices, E·2 Order emails; E·3 (own domain) after. **Held:** E·4 Campaigns, the Messages
+  wallet and E·5 Automations, to be planned on their own. The "Email me new drops" tap is still collected from E·2
+  (a `customer_consents` row, purpose `marketing_email`), so a list exists when campaigns are planned.
+- **Decided:** marketing only to shoppers who tap (call 3 A); the invoice as a link (call 5); new-order email off by
+  default (call 6); wallet packs as written (call 7, for when campaigns come).
+- **Under ADR-0010:** consent is `customer_consents` and the shopper is `shop_customers` (built in EkCode P1), not new
+  subscriber tables. Order emails go to every shopper who gave an email **alongside** WhatsApp order updates when M·1
+  ships (the sender rule picks among WhatsApp senders; email is its own channel and carries the invoice link).
+- **Frrata's own domain** for notices is being bought (owner, 2026-11-11): the sender is configuration
+  (`EMAIL_NOTICES_FROM`), so E·0–E·2 are built and tested against a fake SES without it; only go-live needs it.
+- **Checkout budget:** checkout ships 120.8 of 121 kB; the Email field's typo hint loads only when the field is used.
+
+- **As built differs from the text below** where the reviewed plan says so (`docs/plans/2026-11-11-email.md`
+  § Deviations; ADR-0011): no AWS SDK (SigV4 over fetch), React rendered to static markup instead of React Email, the
+  sign-in email through Supabase's Send Email Hook, `shop_emails` for overrides, notices written per shop by definers,
+  outbox kinds `email.order` / `email.notice` / `email.tenant`, SNS events of four types, partner notices held.
 
 ## The boundaries (the owner's first question)
 
@@ -251,7 +269,7 @@ Not stated anywhere we could read: Mumbai (ap-south-1) support, SES tenants, a p
 - **Not for merchants' domains (E·3):** those are created by our code per shop (`CreateEmailIdentity` + tenant), never
   by a CLI.
 
-## Pricing: the Messages wallet (owner: higher than cost, a model Indian merchants know)
+## Pricing: the Messages wallet — HELD with campaigns (owner, 2026-11-11); order emails and notices are included on every plan
 Indian merchants already buy messaging as **prepaid packs**: WhatsApp tools (Interakt, WATI) and SMS gateways (MSG91)
 sell a wallet you recharge, with a rate in paise per message and GST shown. Frrata does the same:
 - **Order emails are included on every plan** (no meter): they are about the merchant's own orders, reduce refusals,

@@ -6,6 +6,7 @@
 // Money is integer paise (ADR-0004); state is derived from timestamps.
 // =============================================================================
 
+import { EMAIL_SQL } from '@/domains/email/shape'
 import { sql } from 'drizzle-orm'
 import { boolean, check, date, foreignKey, index, integer, jsonb, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { at, createdAt, id, money, tenants } from './schema'
@@ -48,6 +49,8 @@ export const orders = pgTable('orders', {
   // ── The shopper, for delivery only (DPDP notice at checkout). Erased from abandoned orders after 90 days.
   customerName: text('customer_name').notNull().default(''),
   phone: text('phone').notNull().default(''),
+  /** For order emails (email plan E·2): lower-cased, shape.ts's rule; editable until erased; erasure nulls it. */
+  email: text('email'),
   /** The shopper ticked "order updates and a review request on WhatsApp" (unticked by default: DPDP s.6; owner
    *  2026-11-09). Null = never asked or said no: such an order is never messaged. The notice's version and language. */
   waOptInAt: timestamp('wa_opt_in_at', { withTimezone: true }),
@@ -151,6 +154,7 @@ export const orders = pgTable('orders', {
   check('orders_seller_scheme', sql`${t.sellerScheme} is null or ${t.sellerScheme} in ('regular','composition')`),
   check('orders_buyer_gstin', sql`${t.buyerGstin} is null or ${t.buyerGstin} ~ '^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$'`),
   check('orders_buyer_name', sql`length(${t.buyerName}) <= 120`),
+  check('orders_email', sql`${t.email} is null or (length(${t.email}) <= 254 and ${t.email} ~ ${sql.raw(`'${EMAIL_SQL.replace(/'/g, "''")}'`)})`),
   check('orders_cancel_reason', sql`${t.cancelReason} is null or (${t.cancelledAt} is not null and ${t.cancelReason} in ('fake','customer_cancelled','unreachable','out_of_stock','cant_deliver','other'))`),
 ])
 

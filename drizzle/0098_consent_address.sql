@@ -1,0 +1,3 @@
+ALTER TABLE "customer_consents" ADD COLUMN "address_hash" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "customer_consents_live_address" ON "customer_consents" USING btree ("tenant_id","purpose","address_hash") WHERE "customer_consents"."withdrawn_at" is null and "customer_consents"."address_hash" is not null;--> statement-breakpoint
+ALTER TABLE "customer_consents" ADD CONSTRAINT "customer_consents_address" CHECK ("customer_consents"."address_hash" is null or "customer_consents"."address_hash" ~ '^[a-z][a-z0-9]{0,7}:[0-9a-f]{64}$');

@@ -673,6 +673,27 @@
       "when": 1794393402047,
       "tag": "0095_infra_video_usage",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1794398155072,
+      "tag": "0096_email",
+      "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1794398155073,
+      "tag": "0097_notices",
+      "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1794398155074,
+      "tag": "0098_consent_address",
+      "breakpoints": true
     }
   ]
 }

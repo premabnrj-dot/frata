@@ -33,7 +33,7 @@ Status: accepted · 2026-11-06 · amended 2026-11-06 (files: Vercel Blob) · ame
   `ap-south-1` (Mumbai), beside bom1 and Supabase; one IAM user per service with a least-privilege policy (that
   service's actions only), its key in Vercel only, read by one owner module through `src/lib/env.ts`; no customer
   or shopper data stored in AWS beyond what the service needs to do its job; calls through the outbox (ADR-0006).
-  None is in use as of 2026-11-08 (trials send by WhatsApp only).
+  In use: Amazon SES (ADR-0011, 2026-11-11), reached through Vercel OIDC with no stored key.
 
 ## Why
 The stack the founder already runs well (Ekatan). Storefronts are cached so a

@@ -116,6 +116,27 @@ export const MUX_ENVIRONMENT_ID = process.env.MUX_ENVIRONMENT_ID ?? ''
 export const MUX_API_BASE = VERCEL_ENV === 'production' ? 'https://api.mux.com' : process.env.MUX_API_BASE || 'https://api.mux.com'
 export const MUX_STREAM_BASE = VERCEL_ENV === 'production' ? 'https://stream.mux.com' : process.env.MUX_STREAM_BASE || 'https://stream.mux.com'
 export const MUX_IMAGE_BASE = VERCEL_ENV === 'production' ? 'https://image.mux.com' : process.env.MUX_IMAGE_BASE || 'https://image.mux.com'
+/** Email (ADR-0011, docs/setup.md § Email): Amazon SES in ap-south-1, reached through Vercel OIDC (no stored key).
+ *  SES_ROLE_ARN: the role the production deployment assumes. SES_ACCOUNT_ID: for the identity and set ARNs. The
+ *  configuration sets: one for shops' mail, one for Frrata's notices. SES_SNS_TOPIC_ARN: the only topic whose events
+ *  are accepted. EMAIL_SHOP_DOMAIN: shops send as <slug>@this (frratamail.app). EMAIL_NOTICES_FROM: Frrata's notices
+ *  sender ("Frrata <notices@notify.…>"); unset = notices stay in the console. SEND_EMAIL_HOOK_SECRET: Supabase's Send
+ *  Email Hook ("v1,whsec_…"). EMAIL_KEYS: the ring for suppression hashes and email link tokens ("e1:<secret>"). */
+export const SES_ROLE_ARN = process.env.SES_ROLE_ARN ?? ''
+export const SES_ACCOUNT_ID = process.env.SES_ACCOUNT_ID ?? ''
+export const SES_CONFIG_SHOPS = process.env.SES_CONFIG_SHOPS || 'shops'
+export const SES_CONFIG_NOTICES = process.env.SES_CONFIG_NOTICES || 'notices'
+export const SES_SNS_TOPIC_ARN = process.env.SES_SNS_TOPIC_ARN ?? ''
+export const EMAIL_SHOP_DOMAIN = process.env.EMAIL_SHOP_DOMAIN ?? ''
+export const EMAIL_NOTICES_FROM = process.env.EMAIL_NOTICES_FROM ?? ''
+export const SEND_EMAIL_HOOK_SECRET = process.env.SEND_EMAIL_HOOK_SECRET ?? ''
+export const EMAIL_KEYS = process.env.EMAIL_KEYS ?? ''
+/** e2e only (the fake SES/STS): honoured off Vercel and only on 127.0.0.1 (fakeBase); SES_TEST_KEY "id:secret" replaces
+ *  OIDC there. On Vercel neither is ever read: the endpoints are AWS's and the credentials come from the role. */
+export const SES_API_BASE = process.env.SES_API_BASE ?? ''
+export const SES_TEST_KEY = process.env.SES_TEST_KEY ?? ''
+export const SES_SNS_TEST_CERT = process.env.SES_SNS_TEST_CERT ?? ''
+export const isEmailConfigured = () => /^arn:aws:iam::\d{12}:role\/[\w+=,.@\/-]{1,128}$/.test(SES_ROLE_ARN) && /^\d{12}$/.test(SES_ACCOUNT_ID) && EMAIL_KEYS !== ''
 /** Admin › Infrastructure (plan 2026-11-11 I·1): an optional separate READ-ONLY Mux token (Video Read only) for delivery
  *  usage. Unset, the video token above is used for this GET (owner 2026-11-11: both live in the same Vercel env, so a
  *  second token would add no separation). Neither set: the Mux tab says what connects it. */

@@ -8,7 +8,7 @@ vi.mock('@/lib/env', () => ({ get VERCEL_ENV() { return env.VERCEL_ENV }, get E2
 vi.mock('@/lib/modules/reviews/sender', () => ({ sendReviewAsk: vi.fn() }))
 vi.mock('@/lib/domains/senders', () => ({ sendDomainAdd: vi.fn(), sendDomainRemove: vi.fn() }))
 vi.mock('@/lib/billing/debit', () => ({ sendBillAttempt: vi.fn() }))
-vi.mock('../index', () => ({ GiveUp: class GiveUp extends Error {}, claimDue: vi.fn(), deferRow: vi.fn(), markDead: vi.fn(), markFailed: vi.fn(), markSent: vi.fn() }))
+vi.mock('../index', () => ({ GiveUp: class GiveUp extends Error {}, Later: class Later extends Error { constructor(public code: string, public minutes = 5) { super(code) } }, claimDue: vi.fn(), deferRow: vi.fn(), markDead: vi.fn(), markFailed: vi.fn(), markSent: vi.fn() }))
 const { eachLimited, drainOutbox } = await import('../drain')
 const idx = await import('../index')
 
@@ -49,5 +49,14 @@ describe('drainOutbox (speed review P5)', () => {
     vi.mocked(idx.claimDue).mockReset().mockResolvedValue([] as never)
     expect((await drainOutbox(Date.now() - 1)).claimed).toBe(0)
     expect(idx.claimDue).not.toHaveBeenCalled()
+  })
+  it('a sender that says "later" waits without spending an attempt', async () => {
+    const drain = await import('../drain')
+    const { Later } = await import('../index')
+    drain.SENDERS['test:later'] = async () => { throw new (Later as unknown as new (c: string, m: number) => Error)('ses_429', 3) }
+    vi.mocked(idx.claimDue).mockReset().mockResolvedValueOnce([{ id: 'l', kind: 'test:later', tenantId: 't', attempts: 1 }] as never)
+    vi.mocked(idx.deferRow).mockReset(); vi.mocked(idx.markFailed).mockReset()
+    await drainOutbox(Date.now() + 10_000)
+    expect(idx.deferRow).toHaveBeenCalledWith('l', 3, 'ses_429'); expect(idx.markFailed).not.toHaveBeenCalled()
   })
 })
