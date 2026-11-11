@@ -9,6 +9,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import http from 'node:http'
+import { writeFileSync } from 'node:fs'
 import { CONSOLE, PORTS, signedIn, until } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
@@ -90,6 +91,10 @@ export default {
         for (const want of ['data-design="the-drop"', 'data-design="the-edits"', 'data-design="behind-the-bench"', 'data-design="size-help"', `/collections/${PREFIX}-edit-3`, 'Drops ']) assert.ok(text.includes(want), `Home holds ${want}`)
         assert.equal((text.match(new RegExp(`data-design="the-drop"[\\s\\S]*?</section>`))?.[0].match(/class="store-card/g) ?? []).length, 4, 'The drop shows 4 pieces')
         const kb = (n) => `${(n / 1024).toFixed(1)} kB`
+        // Where the bytes are, section by section (each section opens with its data-section marker).
+        const parts = text.split(/(?=<div data-section=")/).slice(1).map((x) => [x.match(/data-section="([^"]+)"/)[1], Buffer.byteLength(x)])
+        console.log(`     commerce › by section: ${parts.map(([k, n]) => `${k} ${kb(n)}`).join(', ')}`)
+        writeFileSync(t.out('commerce-home').replace(/\.png$/, '.html'), html.body)
         console.log(`     commerce › Home: HTML ${kb(html.body.length)}, RSC ${kb(rsc.body.length)}, eager ${eagerOf(text)}`)
         assert.ok(html.body.length <= BUDGET.html, `Home HTML is ${kb(html.body.length)}`)
         assert.ok(rsc.body.length <= BUDGET.rsc, `Home RSC is ${kb(rsc.body.length)}`)
