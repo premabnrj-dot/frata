@@ -15,8 +15,12 @@ import type { LinkTarget } from './controls'
 import { SectionForm, type FormCtx } from './section-form'
 import { SectionsPanel } from './sections-panel'
 import type { LibraryDesign } from './section-library'
+import type { ContactRow } from './pages-panel'
+import type { EditorPage } from '@/lib/queries/pages'
+import type { PageTemplate } from '@/domains/pages/templates'
+import type { Bound } from '@/domains/policies/answers'
 import { PageForm } from './page-form'
-import { ThemeForm, type StyleOption } from './theme-form'
+import type { StyleOption } from './theme-form'
 import { Icon } from '@/components/icons/icon'
 import { PublishConfirm } from './publish-confirm'
 import { Segmented } from './controls'
@@ -28,6 +32,12 @@ import dynamic from 'next/dynamic'
 // was already over its budget, speed review 2026-11-11 finding 4).
 const MenusForm = dynamic(() => import('./menus-form').then((m) => m.MenusForm))
 const SiteForm = dynamic(() => import('./site-form').then((m) => m.SiteForm))
+// The Style tab's form loads when the tab opens (TS1a: the pages group paid for itself this way).
+const ThemeForm = dynamic(() => import('./theme-form').then((m) => m.ThemeForm))
+// TS1a: Contact, the pages and Add a page load when opened too.
+const ContactPanel = dynamic(() => import('./pages-panel').then((m) => m.ContactPanel))
+const PagePanel = dynamic(() => import('./pages-panel').then((m) => m.PagePanel))
+const AddPage = dynamic(() => import('./pages-panel').then((m) => m.AddPage))
 
 // =============================================================================
 // The customizer (approved mockup "Customizer", "Customizer on a phone", "Publish"). One draft revision:
@@ -39,7 +49,7 @@ const SiteForm = dynamic(() => import('./site-form').then((m) => m.SiteForm))
 // =============================================================================
 
 /** site and menus only once the merchant sets them (absent = the theme's own and the shop's default menus). */
-type Layer = { settings: ThemeSettings; home: SectionInstance[]; site?: SiteSettings; menus?: Partial<Menus> }
+type Layer = { settings: ThemeSettings; home: SectionInstance[]; site?: SiteSettings; menus?: Partial<Menus>; contact?: { line: string } }
 /** The pages the preview can open (Look v4: page-aware editing). */
 export type EditPage = 'home' | 'product' | 'collection' | 'all' | 'bag' | 'checkout'
 const PAGE_NAMES: Record<EditPage, string> = { home: 'Home', product: 'Product page', collection: 'Collection page', all: 'Shop all', bag: 'Bag', checkout: 'Checkout' }
@@ -56,6 +66,8 @@ export type EditorProps = {
   choices: Choices
   /** Site settings (Look v4): the resolved site (defaults filled), the theme's styles as palettes, the shop's icons drawn on the server. */
   site: SiteSettings; presets: { name: string; palette: Palette }[]; icons: IconPreviews
+  /** TS1a: the shop's pages (drafts), their pictures, Contact's facts from Settings and the FAQ's bound answers. */
+  pages: EditorPage[]; pageThumbs: Record<PageTemplate, React.ReactNode>; contactRows: ContactRow[]; answers: Record<Bound, string | null>
   /** TS0b: the theme's designs for the library, each with its picture drawn on the server. */
   designs?: LibraryDesign[]
 }
@@ -85,7 +97,12 @@ export function Editor(p: EditorProps) {
   const [going, setGoing] = useState(false)
   const stage = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState({ w: 0, h: 0 })
-  const [page, setPage] = useState<EditPage>('home')
+  // TS1a: 'contact' and `page:<id>` too (the Pages group of the page picker).
+  const [page, setPage] = useState<EditPage | 'contact' | `page:${string}`>('home')
+  const [pages, setPages] = useState(p.pages)
+  const [adding, setAdding] = useState(false)
+  const shown = page.startsWith('page:') ? pages.find((x) => `page:${x.id}` === page) ?? null : null
+  const pageName = page === 'contact' ? 'Contact' : shown ? shown.draft.title : PAGE_NAMES[page as EditPage]
   const [status, setStatus] = useState<Status>('saved')
   const [pubError, setPubError] = useState<string | null>(null)
   const [pending, start] = useTransition()
@@ -172,7 +189,7 @@ export function Editor(p: EditorProps) {
   for (const i of [...blocking, ...issues]) if (!issueMap.has(i.sectionId)) issueMap.set(i.sectionId, i.text)
   const styleName = p.styles.find((s) => s.key === style)?.name ?? style
   const sel = layer.home.find((s) => s.id === selected) ?? null
-  const path = page === 'product' && p.firstProduct ? `/products/${p.firstProduct}` : page === 'collection' && p.firstCollection ? `/collections/${p.firstCollection}` : page === 'all' ? '/products' : page === 'bag' ? '/bag' : page === 'checkout' ? '/checkout' : ''
+  const path = page === 'contact' ? '/policies/contact' : shown ? `/pages/${shown.draft.handle}` : page === 'product' && p.firstProduct ? `/products/${p.firstProduct}` : page === 'collection' && p.firstCollection ? `/collections/${p.firstCollection}` : page === 'all' ? '/products' : page === 'bag' ? '/bag' : page === 'checkout' ? '/checkout' : ''
   const site = layer.site ?? p.site
   const menus = menusOf(layer.menus, p.formCtx.collections)
   const d = DEVICES[device]
@@ -191,7 +208,7 @@ export function Editor(p: EditorProps) {
   const go = () => start(async () => {
     try {
       if (timer.current) { clearTimeout(timer.current); timer.current = null; await save() }
-      const [r] = await Promise.all([publishLookAction({ revisionId: p.revisionId, version: version.current }), new Promise((ok) => setTimeout(ok, GOING_LIVE_MS))])
+      const [r] = await Promise.all([publishLookAction({ revisionId: p.revisionId, version: version.current, pages: Object.fromEntries(pages.map((x) => [x.id, x.version])) }), new Promise((ok) => setTimeout(ok, GOING_LIVE_MS))])
       if (!r.ok) { setGoing(false); setPubError(r.error); setAsk(true) }
     } catch { setGoing(false); setPubError('We couldn’t publish. Your draft is safe; try again.'); setAsk(true) }
   })
@@ -209,9 +226,14 @@ export function Editor(p: EditorProps) {
   ) : (
     <div className="space-y-4">
       <div role="tablist" aria-label="Edit" className="grid grid-flow-col auto-cols-fr rounded-lg bg-muted p-0.5 text-sm">
-        {(['sections', 'menus', 'theme'] as const).map((t) => <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`min-h-9 rounded-md font-medium transition-[background-color,color] duration-fast ${tab === t ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{t === 'theme' ? 'Style' : t === 'menus' ? 'Menus' : page === 'home' ? 'Sections' : PAGE_NAMES[page]}</button>)}
+        {(['sections', 'menus', 'theme'] as const).map((t) => <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`min-h-9 rounded-md font-medium transition-[background-color,color] duration-fast ${tab === t ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{t === 'theme' ? 'Style' : t === 'menus' ? 'Menus' : page === 'home' ? 'Sections' : pageName}</button>)}
       </div>
-      {tab === 'sections' && page !== 'home' && <PageForm page={page} settings={layer.settings} choices={p.choices} set={setSettings} openSite={() => setSiteOpen(true)} />}
+      {tab === 'sections' && page !== 'home' && page !== 'contact' && !shown && <PageForm page={page as Exclude<EditPage, 'home'>} settings={layer.settings} choices={p.choices} set={setSettings} openSite={() => setSiteOpen(true)} />}
+      {tab === 'sections' && page === 'contact' && <ContactPanel line={layer.contact?.line ?? ''} rows={p.contactRows} address={p.address}
+        setLine={(line) => { const { contact: _old, ...rest } = layer; change(line.trim() ? { ...rest, contact: { line } } : rest) }} />}
+      {tab === 'sections' && shown && <PagePanel key={shown.id} page={shown} c={p.formCtx} answers={p.answers} address={p.address}
+        onSaved={(x) => { setPages((ps) => ps.map((y) => (y.id === x.id ? x : y))); post({ type: 'refresh' }) }}
+        onRemoved={(id, v) => { setPages((ps) => (v === null ? ps.filter((y) => y.id !== id) : ps.map((y) => (y.id === id ? { ...y, version: v, draft: { ...y.draft, removed: true } } : y)))); setPage('home'); say('Page removed') }} />}
       {tab === 'menus' && <MenusForm menus={menus} own={layer.menus ?? {}} rowLimit={layer.settings.header === 'split' ? 5 : null} targets={p.targets} icons={icons} set={(m) => change({ ...layer, menus: m })} />}
       {tab === 'sections' && page === 'home' && (sel ? (
         <div className="space-y-4">
@@ -272,11 +294,15 @@ export function Editor(p: EditorProps) {
           <div className="flex flex-wrap items-center gap-2 px-4 pt-3">
             <Segmented label="Preview size" value={device} onChange={setDevice} options={(Object.keys(DEVICES) as Device[]).map((k) => ({ value: k, label: DEVICES[k].label }))} />
             <label className="sr-only" htmlFor="page-pick">Page</label>
-            <select id="page-pick" value={page} onChange={(e) => { setPage(e.target.value as EditPage); setSelected(null) }} className="h-9 rounded-md border border-input bg-card px-2 text-sm">
-              <option value="home">Home</option>{p.firstProduct && <option value="product">A product</option>}{p.firstCollection && <option value="collection">A collection</option>}
-              <option value="all">Shop all</option><option value="bag">Bag</option><option value="checkout">Checkout</option>
+            <select id="page-pick" value={page} onChange={(e) => { if (e.target.value === '+page') { setAdding(true); return } setPage(e.target.value as typeof page); setSelected(null); if (e.target.value === 'contact' || e.target.value.startsWith('page:')) setTab('sections') }} className="h-9 rounded-md border border-input bg-card px-2 text-sm">
+              <optgroup label="Shop"><option value="home">Home</option>{p.firstProduct && <option value="product">A product</option>}{p.firstCollection && <option value="collection">A collection</option>}
+              <option value="all">Shop all</option><option value="bag">Bag</option><option value="checkout">Checkout</option></optgroup>
+              <optgroup label="Pages"><option value="contact">Contact</option>{pages.filter((x) => !x.draft.removed).map((x) => <option key={x.id} value={`page:${x.id}`}>{x.draft.title}{x.draft.hidden ? ' (hidden)' : ''}</option>)}
+              <option value="+page">Add a page…</option></optgroup>
             </select>
-            <span className="text-sm text-muted-foreground">Editing: <b className="font-medium text-foreground">{PAGE_NAMES[page]}</b></span>
+            <span className="text-sm text-muted-foreground">Editing: <b className="font-medium text-foreground">{pageName}</b></span>
+            {adding && <AddPage open={adding} onClose={() => setAdding(false)} hasFaq={pages.some((x) => x.template === 'faq' && !x.draft.removed)} count={pages.length} thumbs={p.pageThumbs}
+              onAdded={(x) => { setPages((ps) => [...ps, x]); setAdding(false); setPage(`page:${x.id}`); setTab('sections') }} />}
             <span className="ml-auto hidden font-mono text-xs text-muted-foreground sm:inline">{d.w} px · {Math.round(scale * 100)}%</span>
           </div>
           <div ref={stage} className="relative min-h-0 flex-1 overflow-hidden p-3 md:p-4">

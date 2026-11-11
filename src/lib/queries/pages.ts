@@ -3,7 +3,8 @@ import { cache } from 'react'
 import { and, eq, isNotNull, isNull } from 'drizzle-orm'
 import { withTenant } from '@/lib/db/tenant'
 import { shopPages as pagesTable } from '@/lib/db/schema-themes'
-import { draftOf, type LivePage } from '@/lib/themes/pages'
+import { draftOf, targetOf, type LivePage } from '@/lib/themes/pages'
+import type { PageDraft } from '@/domains/pages/templates'
 import type { PageTemplate } from '@/domains/pages/templates'
 import { shopCached } from './storefront'
 
@@ -31,3 +32,16 @@ export const previewPages = cache((tenantId: string) => withTenant(tenantId, asy
   const rows = await tx.select().from(pagesTable).where(and(eq(pagesTable.tenantId, tenantId), isNull(pagesTable.removedAt))).orderBy(pagesTable.createdAt)
   return rows.flatMap((r) => { const d = draftOf(r); return d && !d.removed ? [{ id: r.id, template: r.template as PageTemplate, title: d.title, handle: d.handle, fill: d.fill, hidden: d.hidden }] : [] })
 }))
+
+/** A page as the customizer edits it: its draft and version, whether its address is fixed (it has been live), and
+ *  whether the draft differs from what shoppers see (Publish lists and checks it). */
+export type EditorPage = { id: string; template: PageTemplate; version: number; draft: PageDraft; fixed: boolean; dirty: boolean }
+export const pagesForEditor = (tenantId: string) => withTenant(tenantId, async (tx): Promise<EditorPage[]> => {
+  const rows = await tx.select().from(pagesTable).where(and(eq(pagesTable.tenantId, tenantId), isNull(pagesTable.removedAt))).orderBy(pagesTable.createdAt)
+  return rows.flatMap((r) => {
+    const d = draftOf(r)
+    if (!d) return []
+    const fixed = !!(r.live || r.previous || r.livePublishId)
+    return [{ id: r.id, template: r.template as PageTemplate, version: r.version, draft: d, fixed, dirty: JSON.stringify(targetOf(d)) !== JSON.stringify(r.live ?? null) || !!d.removed }]
+  })
+})
