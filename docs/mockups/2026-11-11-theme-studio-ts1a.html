@@ -252,8 +252,8 @@ kbd{font:12px var(--mono);border:1px solid var(--border);border-radius:4px;paddi
   <h1>Pages in Look</h1>
   <p class="k">Theme Studio TS1a · board for the owner · 2026-11-11</p>
   <ul class="note">
-    <li>About, Contact and FAQ pages, made in Look and published with your look. They keep their words when you change theme.</li>
-    <li>Contact shows Chat on WhatsApp and your business details from Settings, so they are never typed twice or out of date.</li>
+    <li>About and FAQ pages, made in Look and published with your look. They keep their words when you change theme. A page's address is set when it is first published.</li>
+    <li>Contact is always there, at the address payment providers already check. It shows Chat on WhatsApp and your business details from Settings, so they are never typed twice or out of date.</li>
     <li>FAQ answers about returns, delivery and pay on delivery come from Settings too. Your own questions start as examples until you write them.</li>
   </ul>
   <nav class="views" aria-label="Boards"><a href="#pages">Add a page</a><a href="#contact">Contact</a><a href="#faq">FAQ</a><a href="#about">About</a><a href="#shop">On the shop</a><a href="#states">States</a></nav>
@@ -270,17 +270,16 @@ kbd{font:12px var(--mono);border:1px solid var(--border);border-radius:4px;paddi
           <span class="grp">Shop</span>
           <button>Home</button><button>Product page</button><button>Collection page</button><button>Shop all</button><button>Bag</button><button>Checkout</button>
           <span class="grp">Pages</span>
+          <button>Contact <span class="addr k">/policies/contact</span></button>
           <button>Our story <span class="addr k">/pages/our-story</span></button>
-          <button aria-current="true">Contact <span class="addr k">/pages/contact</span></button>
-          <button class="add"><svg class="i"><use href="#i-plus"/></svg>Add a page <span class="addr k">2 of 20</span></button>
+          <button class="add" aria-current="true"><svg class="i"><use href="#i-plus"/></svg>Add a page <span class="addr k">1 of 20</span></button>
         </div>
       </div>
       <div class="preview" style="place-items:center">
         <div class="sheet" role="dialog" aria-label="Add a page">
           <header><h3>Add a page</h3><button class="btn icon" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></header>
-          <div class="tmpl">
+          <div class="tmpl" style="grid-template-columns:repeat(2,minmax(0,1fr))">
             <button class="dcard"><span class="th"><svg viewBox="0 0 160 100" aria-hidden="true"><rect x="10" y="10" width="50" height="7" rx="1" fill="currentColor" fill-opacity="0.85"/><rect x="10" y="22" width="64.0" height="3" rx="1" fill="currentColor" fill-opacity="0.35"/><rect x="10" y="28" width="64.0" height="3" rx="1" fill="currentColor" fill-opacity="0.35"/><rect x="10" y="34" width="44.8" height="3" rx="1" fill="currentColor" fill-opacity="0.35"/><rect x="84" y="10" width="66" height="44" rx="2" fill="currentColor" fill-opacity="0.22"/><rect x="10" y="62" width="44" height="26" rx="2" fill="currentColor" fill-opacity="0.22"/><rect x="58" y="62" width="44" height="26" rx="2" fill="currentColor" fill-opacity="0.22"/><rect x="106" y="62" width="44" height="26" rx="2" fill="currentColor" fill-opacity="0.22"/></svg></span><span class="tx"><span class="tt">About</span><span class="ln">Your story, makers and materials</span></span></button>
-            <button class="dcard" disabled><span class="th"><svg viewBox="0 0 160 100" aria-hidden="true"><rect x="10" y="12" width="44" height="7" rx="1" fill="currentColor" fill-opacity="0.85"/><rect x="10" y="24" width="70.0" height="3" rx="1" fill="currentColor" fill-opacity="0.35"/><rect x="10" y="30" width="49.0" height="3" rx="1" fill="currentColor" fill-opacity="0.35"/><rect x="10" y="38" width="46" height="10" rx="1" fill="currentColor" fill-opacity="0.85"/><rect x="10" y="56" width="120" height="4" rx="1" fill="currentColor" fill-opacity="0.35"/><rect x="10" y="65" width="106" height="4" rx="1" fill="currentColor" fill-opacity="0.35"/><rect x="10" y="74" width="92" height="4" rx="1" fill="currentColor" fill-opacity="0.35"/><rect x="10" y="83" width="78" height="4" rx="1" fill="currentColor" fill-opacity="0.35"/></svg></span><span class="tx"><span class="tt">Contact <span class="chip mute">Already added</span></span><span class="ln">WhatsApp and your business details</span></span></button>
             <button class="dcard"><span class="th"><svg viewBox="0 0 160 100" aria-hidden="true"><rect x="10" y="10" width="64" height="7" rx="1" fill="currentColor" fill-opacity="0.85"/><rect x="10" y="24" width="140" height="9" rx="1" fill="currentColor" fill-opacity="0.14"/><rect x="142" y="26" width="4" height="4" rx="1" fill="currentColor" fill-opacity="0.5"/><rect x="10" y="37" width="140" height="9" rx="1" fill="currentColor" fill-opacity="0.14"/><rect x="142" y="39" width="4" height="4" rx="1" fill="currentColor" fill-opacity="0.5"/><rect x="10" y="50" width="140" height="9" rx="1" fill="currentColor" fill-opacity="0.14"/><rect x="142" y="52" width="4" height="4" rx="1" fill="currentColor" fill-opacity="0.5"/><rect x="10" y="63" width="140" height="9" rx="1" fill="currentColor" fill-opacity="0.14"/><rect x="142" y="65" width="4" height="4" rx="1" fill="currentColor" fill-opacity="0.5"/><rect x="10" y="76" width="140" height="9" rx="1" fill="currentColor" fill-opacity="0.14"/><rect x="142" y="78" width="4" height="4" rx="1" fill="currentColor" fill-opacity="0.5"/></svg></span><span class="tx"><span class="tt">FAQ</span><span class="ln">Answers that follow your settings</span></span></button>
           </div>
         </div>
@@ -298,7 +297,7 @@ kbd{font:12px var(--mono);border:1px solid var(--border);border-radius:4px;paddi
       <div class="panel">
         <div class="ph"><button class="btn icon" aria-label="Back to pages"><svg class="i"><use href="#i-back"/></svg></button><b>Contact</b></div>
         <div class="fields">
-          <div class="f"><label for="ct">Title <span class="count">7/60</span></label><input id="ct" type="text" value="Contact"><span class="addr">kesar-studio.in/pages/contact</span></div>
+          <span class="addr">kesar-studio.in/policies/contact</span>
           <div class="f"><label for="cl">A line above (optional) <span class="count">38/160</span></label><input id="cl" type="text" value="We reply on WhatsApp within the day."></div>
           <div class="bound">
             <div class="bh"><svg class="i"><use href="#i-lock"/></svg>From your Settings<a href="#contact">Change in Settings</a></div>
@@ -310,8 +309,6 @@ kbd{font:12px var(--mono);border:1px solid var(--border);border-radius:4px;paddi
               <li><span>Grievance officer</span><span class="v">Riya Mehta, Partner · grievance@kesar-studio.in · +91 141 400 2212</span></li>
             </ul>
           </div>
-          <div class="switch">Hide from the shop<span class="tog" role="switch" aria-checked="false" aria-label="Hide from the shop"></span></div>
-          <button class="btn" style="justify-self:start;color:var(--danger-text)">Remove page</button>
         </div>
       </div>
       <div class="preview">
@@ -343,7 +340,7 @@ kbd{font:12px var(--mono);border:1px solid var(--border);border-radius:4px;paddi
       <div class="panel">
         <div class="ph"><button class="btn icon" aria-label="Back to pages"><svg class="i"><use href="#i-back"/></svg></button><b>FAQ</b></div>
         <div class="fields">
-          <div class="f"><label for="ft">Title <span class="count">25/60</span></label><input id="ft" type="text" value="Questions, answered"><span class="addr">kesar-studio.in/pages/faq</span></div>
+          <div class="f"><label for="ft">Title <span class="count">25/60</span></label><input id="ft" type="text" value="Questions, answered"><span class="addr">kesar-studio.in/pages/faq · set when first published</span></div>
           <div class="f"><span class="lab">Questions <span class="count">5/12</span></span>
             <ul class="qs">
               <li><div class="qh"><input type="text" aria-label="Question 1" value="Can I pay on delivery?"><span class="mv"><button class="btn icon" aria-label="Move up" disabled><svg class="i"><use href="#i-up"/></svg></button><button class="btn icon" aria-label="Move down"><svg class="i"><use href="#i-down"/></svg></button><button class="btn icon" aria-label="Remove"><svg class="i"><use href="#i-x"/></svg></button></span></div>
@@ -389,6 +386,7 @@ kbd{font:12px var(--mono);border:1px solid var(--border);border-radius:4px;paddi
         <div class="ph"><button class="btn icon" aria-label="Back to pages"><svg class="i"><use href="#i-back"/></svg></button><b>Our story</b></div>
         <div class="fields">
           <div class="f"><label for="at">Title <span class="count">9/60</span></label><input id="at" type="text" value="Our story"><span class="addr">kesar-studio.in/pages/our-story</span></div>
+          <div class="switch">Hide from the shop<span class="tog" role="switch" aria-checked="false" aria-label="Hide from the shop"></span></div>
           <div class="f"><label for="as">Your story <span class="count">168/2000</span></label><textarea id="as">Kesar began in 2019 with two looms in my grandmother's courtyard in Sanganer. Today eleven weavers make every piece we sell, in cotton and Chanderi, dyed with indigo and madder.</textarea></div>
           <div class="f"><span class="lab">Photo</span><div class="photo"><img src="data:image/webp;base64,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" alt=""><span class="pt"><b>courtyard.webp</b><span class="k">Uploaded</span></span><button class="btn" style="margin-left:auto">Replace</button></div></div>
           <div class="f"><label for="m1">Maker or material 1 <span class="count">7/40</span></label><input id="m1" type="text" value="Handloom"></div>
@@ -449,14 +447,14 @@ kbd{font:12px var(--mono);border:1px solid var(--border);border-radius:4px;paddi
     <div class="card"><header><h4>No WhatsApp number</h4></header>
       <div class="cb"><div class="bound"><ul><li class="miss" style="border-top:0"><span>WhatsApp</span><span class="v">Add a WhatsApp number in Settings to show Chat on WhatsApp</span></li></ul></div></div></div>
 
-    <div class="card"><header><h4>A page renamed</h4></header>
-      <div class="cb"><p class="k" style="margin:0">/pages/about-us now opens /pages/our-story</p></div></div>
+    <div class="card"><header><h4>A published page's address</h4></header>
+      <div class="cb"><div class="f"><label for="rt">Title <span class="count">13/60</span></label><input id="rt" type="text" value="How we weave"><span class="addr"><svg class="i" style="width:12px;height:12px;vertical-align:-1px"><use href="#i-lock"/></svg> kesar-studio.in/pages/our-story</span></div></div></div>
 
     <div class="card"><header><h4>At the limit</h4></header>
       <div class="cb"><div class="picker" style="border:0;padding:0"><button class="add" disabled style="opacity:.5"><svg class="i"><use href="#i-plus"/></svg>Add a page <span class="addr k">20 of 20</span></button></div></div></div>
 
     <div class="card"><header><h4>Hidden or removed</h4></header>
-      <div class="cb"><div class="picker" style="border:0;padding:0"><button>Lookbook <span class="chip mute k">Hidden</span></button></div>
+      <div class="cb"><div class="picker" style="border:0;padding:0"><button>Lookbook <span class="chip mute k">Hidden at your next publish</span></button><button>Our story <span class="chip mute k">Removed at your next publish</span></button></div>
         <div class="toast">Our story removed<button>Undo</button></div></div></div>
 
     <div class="card"><header><h4>Undo last publish</h4></header>

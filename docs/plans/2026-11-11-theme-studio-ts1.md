@@ -1,6 +1,6 @@
 # Plan: Theme Studio TS1 — pages and templates in Look
 Status: draft (TS1a board for the owner; reviews on this plan) · Date: 2026-11-11 · Spec: `docs/specs/2026-11-11-theme-studio.md`
-(active; § 3 Pages and templates) · Mockup: https://claude.ai/artifact/X2TEDZRd7FyYvbiM6h6Jno (TS1a v1) · Reviews: pending · Builds on TS0b (blocks, designs)
+(active; § 3 Pages and templates) · Mockup: https://claude.ai/artifact/X2TEDZRd7FyYvbiM6h6Jno (TS1a v2: Contact at /policies/contact; addresses fixed at first publish) · Reviews: architecture, tenancy, security, speed (2026-11-11, folded in below) · Legal: G.S.R. 789(E) read (frata-integrations § Consumer protection) · Builds on TS0b (blocks, designs)
 
 ## Goal
 North star (5) a premium-looking storefront, (2) size and fit returns (FAQ and size answers in one place), and the
@@ -16,6 +16,70 @@ performance and ≥ 90 accessibility; zero pages that state a fact the shop's Se
 | **TS1c Templates** | Product and collection pages laid out from blocks around Frrata's buy box (one tested block; required parts can't be removed) | The product page sits at its script ceiling: server-only blocks first, measured |
 
 This plan details **TS1a**; TS1b and TS1c get their own plans when TS1a ships.
+
+## Decisions taken from the reviews (2026-11-11) — these replace what they contradict below
+- **Contact stays at `/policies/contact`** (architecture blocker 1, security M2, speed): that address is live before a shop
+  opens (Razorpay's KYC reads it; `/pages` sits behind "Opening soon"), and all four footers already link it. Contact is
+  not a `/pages` page: it is always in the page picker, has no Title, Hide or Remove, and its template (the owner's line,
+  Chat on WhatsApp, `PolicyBody` with the owner's rewrite if any) renders at the policy route. No redirect, no new
+  footer link, **no read added to any shell**. Its live fill (one short line) rides the look entry (`look-v3`), which
+  Publish and Undo already purge (speed option C). Add a page offers **About** and **FAQ** (one FAQ).
+- **Every change reaches the shop only through Publish** (architecture blocker 2, security M1, speed LOW 8): a page's
+  `draft` and `live` are each `{ title, handle, fill, hidden }`; Hide and Remove are draft intents applied at Publish
+  (removed: `live := null`, `removed_at` stamped; a page never published is deleted outright). Page actions are
+  `CAN_BUILD` and edit drafts only; Publish stays `CAN_MANAGE`; every page action refuses a support session. CAN_MANAGE's
+  comment (`roles.ts`) names publishing the look and its pages.
+- **The handle is fixed at first publish** (architecture minor, KISS): the title can change any time; the address is
+  set while the page is a draft and locked once live. So no handle history, no redirects, no history table.
+- **Publish and Undo, written out** (architecture blocker 3, tenancy HIGH): `publishRevision` and `undoPublish` return
+  their new publish row's id (`returning`). Publish, under the `look:<t>` lock: for every page whose draft differs from
+  live (and whose `version` matches what the editor holds), `previous := live`, `live := draft` (or null),
+  `live_publish_id := <publish id>`. Undo (a new publish row): every page whose `live_publish_id` is the undone publish
+  swaps `live ↔ previous` and takes the Undo's row id, so a second Undo brings the pages back too. Discard sets
+  `draft := live` and deletes never-published pages. Page saves take the `look:<t>` lock and a per-page `version`.
+  Rows removed in an earlier publish are deleted at the next Publish (Undo reaches only the last one).
+- **One source for bound answers** (architecture 4, security PII): `boundAnswer(kind, facts, override)` in
+  `domains/policies`: with the owner's rewrite of that policy, the answer links to the policy; without one, it is that
+  paragraph of `renderPolicy`. `contact_details` is `PolicyBody` with the rewrite (today's behaviour, kept; the rewrite
+  is the owner's own choice). `missingFacts` blocks Publish only when the Contact page is in this publish and its policy
+  isn't rewritten. FAQ binds returns, delivery and pay on delivery; not sizes (a size chart belongs to a product type,
+  shown on each product page).
+- **Page blocks stay out of the theme catalogue** (architecture 8, security M3): a `PageLeaf` union in
+  `src/domains/pages/` = TS0b's leaves + `contact_details`, `whatsapp`, and bound FAQ items; the bound kinds hold no data,
+  carry no fill mark and never join `FillSchema`. A page's save: `cleanFill(fill, tenantId, host)` (lines 28-34 of
+  `clean-images.ts` pulled out, used by both saves, tested cross-shop and outside), then `pruneFill` against the template,
+  then the page limits.
+- **Templates only add** (architecture 7): a committed snapshot of the three templates and a test (as
+  `themeCheck(m, previous)`): no block removed or re-kinded, and no new `example` block in an existing template (that
+  would block every shop's next Publish at deploy).
+- **Tables (tenancy):** `shop_pages` with `unique (tenant_id, id)`; `(tenant_id, handle)` unique; `(tenant_id) where
+  template = 'faq' and removed_at is null` unique (one FAQ); `live_publish_id` FK `(tenant_id, live_publish_id) →
+  shop_theme_publishes(tenant_id, id)` (this migration adds `unique (tenant_id, id)` there); `version`; `draft` ≤ 32 kB by
+  CHECK; the 20-page trigger (caller's rights, `set search_path = ''`, `pg_advisory_xact_lock(hashtext('look:' ||
+  tenant_id))`, counts the tenant's rows, revoked from public/anon/authenticated/service_role); grants `select, insert,
+  delete` + `update` on the editable columns only (never tenant_id, id, template); `revoke all` from anon, authenticated,
+  service_role; frata_admin none; `tenant_rows` policy with `using` and `with check`. tenancy.sql gains the auditor's nine
+  checks.
+- **Reads (speed):** `shopPages(tenantId)` (scope `'pages'` in `shopCached` and `refreshShop`; key `['sf','pages-v1',t]`;
+  tags `shop:<t>`, `shop:<t>:pages`; revalidate 86,400): live, visible pages only, read by the page route and the
+  sitemap; Publish and Undo purge `shop:<t>:pages` with the look. Drafts come only from an uncached
+  `previewPages(tenantId)` used by `/console/preview` and the customizer's `theme-preview` (never a draft flag on the
+  shop route). Publish's readiness reads through `tx` (`lookFacts`), never a cached loader (P4). The 64 kB of live
+  content a shop is checked at Publish, in bytes, under the lock.
+- **The page route** (`src/app/s/[host]/(shop)/pages/[handle]/page.tsx`): ISR, unknown or hidden handle → 404 from the
+  cached list (`Object.hasOwn`/Map lookups; handles refuse `RESERVED_IDS`); shares the shop card (no new card kind);
+  `TIGHT` budget 113 kB; only About's first photo is `priority`; renderers in `src/components/storefront/shop-pages/`.
+- **Blast radius named:** `editPhoto` (products/actions.ts) checks `shop_pages` (draft, live, previous) before deleting
+  a product photo an About page uses; analytics `pathShape` learns `/pages/*`; the menus link picker lists live pages;
+  `check:tenant` 6d; the customizer's Pages group, Add a page and page forms load with `next/dynamic` (the customizer
+  stays ≤ 208 kB, thumbs drawn on the server).
+- **Titles:** the `word()` rule (no `<>{}\`), no control or bidi characters; the description is the first text the
+  owner wrote, never an example.
+- **Legal (G.S.R. 789(E), read 2026-11-11):** Contact shows what Settings holds today (legal name, address, customer care
+  and grievance officer with designation, email and phone). From 1 Jan 2027 r.4(2) also asks for branch addresses and
+  landlines and the website's details: a Settings task before that date, listed in `frata-integrations`, not TS1a.
+- **Fixed now, outside TS1a** (security H1, L1; live bugs): shop WhatsApp links carry 91 (`waLink`); `/policies/<x>`
+  uses own keys.
 
 ## TS1a — design (what the owner sees: board)
 - **Look › page picker** gains a **Pages** group: each page by its title, then **+ Add a page**.
