@@ -325,3 +325,34 @@ looks byte-identical (resolved-looks snapshot).
 | TS1b-3 | Design form fields (source, product, collections, video, date) | e2e `72-designs` extended |
 | TS1b-4 | Worst-page gate `74-commerce`; reviews on the diff; ship; Signal 1.5 for release in Admin | full e2e |
 
+
+## TS1b — as built (2026-11-11)
+- **Blocks** (`src/domains/themes/blocks.ts`, fills in `sections.ts`): product grid (4 pieces, a `SourceSchema` source),
+  featured product, collection tiles (≤ 4; `tilesOf` in `domains/storefront/sources.ts`, shared with the section), video
+  (its poster is the fill; the loop is the section's `video`) and a drop date (`dropLineIN`, "Drops" in English and
+  Hindi). One handle rule per kind (`productHandle`, `collectionHandle`). Readiness says what's missing; only fewer than
+  2 picked collections and an undescribed poster block Publish.
+- **The save** (`designsForSave(designs, home, { now, videoOk, loopsBefore })`): fills pruned to (id, kind); a design's
+  loop kept only with its one video block where the theme offers it (`keepDesignVideo`, also in `resolveTheme`); ≤ 2
+  designs with pieces or collections a page; ≤ 3 loops a Home unless the stored draft already had more; a drop date
+  ≤ 400 days away and readable. The library greys a third commerce design and a loop field says the limit at 3.
+- **Signal 1.5.0**: The drop, One piece, Behind the bench, The edits; `videoSections` gains `design`. To release in
+  Admin › Themes.
+- **Loops at 720p** (owner 2026-11-11): upload with no MP4; past the checks a sized one is asked for (`loopMp4`: 720p, or
+  the largest size a smaller source fills) on its own outbox kind `mux.loop.rendition` (never paused by the Product
+  video module) and recorded in `videos.mp4` (0102 column and check; 0103 grant and write-once). `mp4Of` says which file
+  plays; V1 loops keep `highest`. Loops load after 400 ms at half in view, one at a time.
+- **Bytes and eager images**: `ProductGrid` eager only where its caller opens the page (≤ 2 a page); card cover `alt=""`;
+  the hover photo one `src`; card srcset ≤ 1200w; swatch, photo-frame and hover utilities as `.store-sw`, `.store-ph`,
+  `.store-hover`. Home loads the catalogue beside the look; `shopCatalogue` expanded once a request.
+- **Gate** `e2e/flows/74-commerce.mjs`: the worst page a 1.5 owner can newly make (two drops, Behind the bench, Size
+  help; words at the page's limit; 140-character titles; photo-cut swatches; four widths on a real Blob host; the designs
+  first), from the cache: HTML ≤ 300 kB, RSC ≤ 150 kB, ≤ 2 eager images on Home, Shop all and a collection. Also a
+  design's loop uploaded through its form (720p, played in the preview).
+- **Tests**: `commerce-blocks.test.ts`, `best-seller-windows.test.ts`, `sources.test.ts` (tiles, a scheduled featured
+  piece), `mux.test.ts` (`loopMp4`), `design-video.int.test.ts` (kept, held, freed), stored-sections v5, the 1.5
+  released-manifest snapshot (designs now in it), tenancy proof (mp4 set once, sizes only).
+- **Debt named (not made worse):** a card draws every colour (up to 30; a "+N" needs the owner's word on the card);
+  Signal's default Products tabs and rail hold most of Home's card bytes; the Blob URL prefix (~118 B) repeats per photo
+  width; readiness doesn't know a featured piece was unlisted or a source is empty (the block is left out on the shop);
+  the 720p path is unverified on a real Mux account.
