@@ -70,10 +70,16 @@ export async function savePageAction(input: unknown): Promise<R<{ version: numbe
     if (!fill) return { error: 'A photo didn’t come from this shop. Upload it again.' }
     const draft = { ...wanted, fill }
     if (new TextEncoder().encode(JSON.stringify(draft)).length * 1.1 > MAX_DRAFT_BYTES) return { error: 'This page holds too many words. Shorten some.' }
+    // Another page's address, checked inside the lock (so the reply is words, not a database error: security L1).
+    const others = await tx.select({ id: shopPages.id, draft: shopPages.draft }).from(shopPages).where(eq(shopPages.tenantId, t))
+    if (others.some((o) => o.id !== row.id && (o.draft as { handle?: string }).handle === draft.handle)) return { error: 'Another page has that address. Pick another.' }
     try {
       await tx.update(shopPages).set({ draft, version: row.version + 1, updatedAt: new Date() }).where(and(eq(shopPages.tenantId, t), eq(shopPages.id, row.id)))
     } catch (e) {
-      if ((e as { code?: string }).code === '23505') return { error: 'Another page has that address. Pick another.' }
+      // Drizzle wraps the database error: its code is on `cause` (offers/actions.ts does the same).
+      const code = (e as { cause?: { code?: string } }).cause?.code
+      if (code === '23505') return { error: 'Another page has that address. Pick another.' }
+      if (code === '22P05') return { error: 'Some of these words can’t be saved. Retype them.' }
       throw e
     }
     return { version: row.version + 1 }

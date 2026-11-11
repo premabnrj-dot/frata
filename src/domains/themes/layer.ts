@@ -6,7 +6,7 @@ import { SECTION_NAMES, SectionSchema, MAX_PER_PAGE, MAX_SECTIONS, shopPath, typ
 import { MenusSchema, SiteSchema, menusProblem, siteProblem } from './site'
 
 /** The Contact page's line above Chat on WhatsApp and the business details (plain words, no markup characters). */
-export const ContactSchema = z.object({ line: z.string().max(160).regex(/^[^<>{}\\\u0000-\u001f]*$/) }).strict()
+export const ContactSchema = z.object({ line: z.string().max(160).regex(/^[^<>{}\\\u0000-\u001f\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]*$/) }).strict()
 export const readContact = (raw: unknown): { line: string } | undefined => { const r = ContactSchema.safeParse(raw); return r.success && r.data.line.trim() ? r.data : undefined }
 import { FOOTERS, HEADERS, HEADER_NAMES, PAGE_DEFAULTS, PAIRINGS, type Hex, type Scheme, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
 

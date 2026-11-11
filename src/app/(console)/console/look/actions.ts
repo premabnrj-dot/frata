@@ -115,7 +115,7 @@ export async function saveLookAction(input: unknown): Promise<R<{ version: numbe
 
 export async function publishLookAction(input: unknown): Promise<R> {
   // TS1a: `pages`: the version of each page the editor holds (a page changed elsewhere refuses the Publish).
-  const p = z.object({ revisionId: z.uuid(), version: z.number().int().positive(), pages: z.record(z.uuid(), z.number().int().positive()).refine((x) => Object.keys(x).length <= 20).optional() }).safeParse(input)
+  const p = z.object({ revisionId: z.uuid(), version: z.number().int().positive(), pages: z.record(z.uuid(), z.number().int().positive()).refine((x) => Object.keys(x).length <= 20) }).safeParse(input)
   if (!p.success) return { ok: false, error: 'Nothing to publish.' }
   const src = await sourceFor(CAN_MANAGE)
   const r = await asMember(CAN_MANAGE, { action: 'look.publish' }, async (tx, auth) => {

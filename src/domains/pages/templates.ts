@@ -41,9 +41,13 @@ const about: DesignInput = {
 
 /** The FAQ's own block: questions, some bound to Settings. */
 export const FAQ_ID = 'questions'
+/** Words shown as they are: no markup characters, no control or direction characters (security review L5, L3); an
+ *  answer may keep its line breaks. */
+export const PLAIN = /^[^<>{}\\\u0000-\u001f\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]*$/
+const PLAIN_LINES = /^[^<>{}\\\u0000-\u0009\u000b-\u001f\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]*$/
 export const FaqItemSchema = z.union([
-  z.object({ q: z.string().max(80), bound: z.enum(BOUND) }).strict(),
-  z.object({ q: z.string().max(80), a: z.string().max(600) }).strict(),
+  z.object({ q: z.string().max(80).regex(PLAIN), bound: z.enum(BOUND) }).strict(),
+  z.object({ q: z.string().max(80).regex(PLAIN), a: z.string().max(600).regex(PLAIN_LINES) }).strict(),
 ])
 export type FaqItem = z.infer<typeof FaqItemSchema>
 export const MAX_FAQ = 12
@@ -75,7 +79,7 @@ const RESERVED = new Set(['constructor', 'prototype', '__proto__', 'tostring', '
 export const HANDLE = /^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$/
 export const handleOf = (title: string) => title.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60).replace(/-+$/, '') || 'page'
 /** A title: plain words, no markup characters, no control or direction characters (security review L5). */
-const title = z.string().trim().min(1).max(60).regex(/^[^<>{}\\\u0000-\u001f\u007f‎‏‪-‮⁦-⁩]*$/)
+const title = z.string().trim().min(1).max(60).regex(PLAIN)
 
 export const PageDraftSchema = z.object({
   title,
