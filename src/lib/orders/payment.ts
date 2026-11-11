@@ -91,7 +91,7 @@ export async function confirmPayment(tenantId: string, hash: string, reply: { pa
     await markPaid(tx, { id: o.id, tenantId }, { paymentId: reply.paymentId }, soldOut)
     return { ok: true }
   })
-  if (soldOut.length) refreshSoldOut(tenantId)
+  if (soldOut.length) await refreshSoldOut(tenantId)
   return r
 }
 
@@ -124,7 +124,7 @@ export async function switchToCod(tenantId: string, hash: string, expectedTotal:
     if (captured) {
       const soldOut: string[] = []
       await withTenant(tenantId, (tx) => markPaid(tx, { id: pre.o!.id, tenantId }, { paymentId: captured.id, fee: captured.fee, tax: captured.tax }, soldOut))
-      if (soldOut.length) refreshSoldOut(tenantId)
+      if (soldOut.length) await refreshSoldOut(tenantId)
       return { kind: 'paid' }
     }
     // A payment authorized, or created and not yet failed (a UPI collect still open), may still be captured: never
@@ -165,7 +165,7 @@ export async function switchToCod(tenantId: string, hash: string, expectedTotal:
     await enqueueOrderEmail(tx, tenantId, o.id, 'confirmed', null, now)
     return { kind: 'switched', total: r.total }
   })
-  if (soldOut.length) refreshSoldOut(tenantId)
+  if (soldOut.length) await refreshSoldOut(tenantId)
   return r
 }
 
@@ -255,7 +255,7 @@ export async function processEvents(tenantId: string, limit = 20): Promise<numbe
     return rows.length
   })
   // A rolled-back savepoint may have listed a variant: one refresh too many is harmless.
-  if (soldOut.length) refreshSoldOut(tenantId)
+  if (soldOut.length) await refreshSoldOut(tenantId)
   return n
 }
 

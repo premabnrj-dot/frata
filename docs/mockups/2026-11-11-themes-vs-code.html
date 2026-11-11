@@ -1,0 +1,246 @@
+<title>Themes or Code</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a decision memo in one column; a scored comparison, a layer diagram, a quality matrix, two screens. */
+:root {
+  --bg: #FAFAF9; --fg: #1C1917; --card: #FFFFFF; --muted: #F2F1EF; --sub: #5F5A55; --line: #DEDBD7; --input: #8C857F;
+  --ink: #1C1917; --on-ink: #FFFFFF; --rani: #D61F69; --rani-text: #A8124F; --neel: #23307A; --haldi: #F2B233;
+  --ok: #E9F6EC; --ok-t: #1E7B52; --warn: #FFF5C2; --warn-t: #8A5000; --bad: #FFEFEF; --bad-t: #C02A2F; --info: #EDF2FE; --info-t: #3451B2;
+  --f-display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+  --f-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141211; --fg: #EDEAE6; --card: #1C1A18; --muted: #262320; --sub: #A9A29B; --line: #34302C; --input: #6E6760;
+  --ink: #EDEAE6; --on-ink: #141211; --rani: #FF4F93; --rani-text: #FF7DAE; --neel: #8E9BF0; --haldi: #F2B233;
+  --ok: #16301F; --ok-t: #7FD3A2; --warn: #352A0C; --warn-t: #F4C766; --bad: #3A1517; --bad-t: #FF8A8E; --info: #1A2238; --info-t: #9DB2FF; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #141211; --fg: #EDEAE6; --card: #1C1A18; --muted: #262320; --sub: #A9A29B; --line: #34302C; --input: #6E6760;
+  --ink: #EDEAE6; --on-ink: #141211; --rani: #FF4F93; --rani-text: #FF7DAE; --neel: #8E9BF0; --haldi: #F2B233;
+  --ok: #16301F; --ok-t: #7FD3A2; --warn: #352A0C; --warn-t: #F4C766; --bad: #3A1517; --bad-t: #FF8A8E; --info: #1A2238; --info-t: #9DB2FF; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 15px/1.6 var(--f-body) }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 80px }
+.col { max-width: 760px }
+h1, h2, h3 { text-wrap: balance; margin: 0 }
+h1 { font: 600 clamp(30px, 5vw, 46px)/1.06 var(--f-display); letter-spacing: -.01em }
+h2 { font: 600 25px/1.2 var(--f-display); margin: 56px 0 12px }
+h3 { font: 600 15px/1.3 var(--f-body); margin: 16px 0 6px }
+p { margin: 0 0 12px }
+.eyebrow { font: 500 12px/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--rani-text) }
+.lede { font-size: 18px; color: var(--sub); max-width: 700px; margin-top: 14px }
+.thread { height: 2px; width: 72px; background: var(--rani); margin: 18px 0 0 }
+.chip { display: inline-flex; align-items: center; border-radius: 999px; padding: 1px 9px; font: 500 12px/20px var(--f-body); white-space: nowrap }
+.c-ok { background: var(--ok); color: var(--ok-t) } .c-warn { background: var(--warn); color: var(--warn-t) } .c-bad { background: var(--bad); color: var(--bad-t) } .c-info { background: var(--info); color: var(--info-t) } .c-n { background: var(--muted); color: var(--sub) }
+.mono { font-family: var(--f-mono); font-size: 13px }
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--card) }
+table { width: 100%; border-collapse: collapse; font-size: 14px }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line) }
+th { font: 600 12px/1.3 var(--f-body); color: var(--sub); text-transform: uppercase; letter-spacing: .05em }
+tr:last-child td { border-bottom: 0 }
+td.s { text-align: center; font: 600 15px var(--f-mono); width: 120px }
+.s5 { color: var(--ok-t) } .s4 { color: var(--ok-t) } .s3 { color: var(--warn-t) } .s2 { color: var(--bad-t) } .s1 { color: var(--bad-t) }
+.bar { display: inline-block; height: 6px; border-radius: 99px; background: currentColor; vertical-align: middle; margin-left: 6px; opacity: .55 }
+tfoot td { font-weight: 600; background: var(--muted) }
+.verdict { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px }
+.v { border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 14px 16px; min-width: 0 }
+.v.win { box-shadow: 0 0 0 2px var(--rani) }
+.v h3 { margin-top: 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap }
+.v ul { margin: 0; padding-left: 18px; font-size: 14px } .v li { margin: 3px 0 }
+@media (max-width: 820px) { .verdict { grid-template-columns: minmax(0, 1fr) } }
+.diagram { border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 12px; overflow-x: auto }
+.diagram svg { display: block; min-width: 760px; width: 100%; height: auto }
+.diagram text { font-family: var(--f-body); fill: var(--fg) } .diagram .sub { fill: var(--sub) }
+.ask { border-left: 3px solid var(--rani); background: var(--card); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 10px 0 }
+.ask b { color: var(--rani-text) }
+.note { font-size: 13px; color: var(--sub) }
+/* screens */
+.frame { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); box-shadow: 0 12px 32px -20px rgba(0,0,0,.4); margin-top: 12px }
+.fbar { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-bottom: 1px solid var(--line); background: var(--card); font-size: 12px }
+.dots { display: flex; gap: 5px } .dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); display: block }
+.url { flex: 1; min-width: 0; background: var(--muted); border-radius: 6px; padding: 3px 10px; color: var(--sub); font: 12px var(--f-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.pad { padding: 16px }
+.ph { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px } .ph h4 { font: 600 20px var(--f-display); margin: 0 } .sp { flex: 1 }
+.btn { font: 500 13px var(--f-body); border-radius: 6px; padding: 6px 11px; border: 1px solid var(--input); background: var(--card); color: var(--fg); cursor: pointer; white-space: nowrap; position: relative }
+.btn.pri { background: var(--ink); color: var(--on-ink); border-color: var(--ink) }
+.btn.pri::after { content: ""; position: absolute; left: 6px; bottom: 0; width: 33%; height: 2px; background: var(--rani) }
+.g3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px } .g2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
+@media (max-width: 820px) { .g3, .g2 { grid-template-columns: minmax(0, 1fr) } }
+.card { border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 12px 14px; min-width: 0 }
+.card h5 { margin: 0 0 10px; font: 600 14px var(--f-body); display: flex; gap: 8px; align-items: center }
+.rows > div { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13px; align-items: center } .rows > div:last-child { border-bottom: 0 }
+.k { color: var(--sub) }
+.sw { display: flex; gap: 6px; flex-wrap: wrap } .sw span { display: flex; flex-direction: column; gap: 4px; font: 11px var(--f-mono); color: var(--sub); width: 60px } .sw i { height: 40px; border-radius: 6px; border: 1px solid var(--line); display: block }
+.type .d { font: 600 28px/1.1 Georgia, "Times New Roman", serif } .type .b { font: 15px/1.5 var(--f-body); color: var(--sub) }
+.motion { display: flex; gap: 8px; flex-wrap: wrap } .motion span { border: 1px solid var(--input); border-radius: 6px; padding: 5px 10px; font-size: 13px } .motion span.on { background: var(--ink); color: var(--on-ink); border-color: var(--ink) }
+.score { font: 600 30px var(--f-mono) }
+footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
+</style>
+
+<div class="wrap">
+  <div class="col">
+    <div class="eyebrow">Decision memo · 11 Nov 2026 · for the owner</div>
+    <h1>Themes or code: which storefront should Frrata bet on?</h1>
+    <div class="thread"></div>
+    <p class="lede">You're right to be skeptical. An agent writing free code scores worse than today's themes on almost everything that protects a shop: speed, security, consistency, upkeep. It wins only on how far a site can go and on giving partners something to sell. The version worth building is code written on a Frrata design system, where the brand, components, motion, speed, SEO and safety come built in and a check refuses anything that drifts.</p>
+  </div>
+
+
+  <div class="col">
+    <div class="eyebrow" style="margin-top:28px">Update · v2 · after the five reviews and your six decisions</div>
+    <h2 style="margin-top:8px">Hardened Studio against the customizer</h2>
+    <p>The first scoring below rated the plan as drafted. Five reviews then found its gaps and you accepted the controls. This is the hardened version against today's customizer, weighted by what matters most to a brand's profit and to Frrata.</p>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>What matters</th><th style="text-align:center">Weight</th><th style="text-align:center">Customizer (today)</th><th style="text-align:center">Hardened Studio</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>A complete, good site for a brand with no partner</td><td class="s">2×</td><td class="s s4">4</td><td class="s s3">3</td><td>A: forms. Studio: Starter 0 is complete on day one and content is edited in the console, but a new layout needs a partner or developer until brands get Studio.</td></tr>
+      <tr><td>Quality floor: speed, accessibility, SEO</td><td class="s">3×</td><td class="s s5">5</td><td class="s s4">4</td><td>A: one renderer, gated. Studio: the same bars as publish checks that block; real-world speed can still drift between publishes.</td></tr>
+      <tr><td>How far a site can go</td><td class="s">2×</td><td class="s s2">2</td><td class="s s5">5</td><td>A: 13 sections, 6 themes. Studio: any layout, kit parts first.</td></tr>
+      <tr><td>Brand consistency across site, checkout, emails, cards</td><td class="s">2×</td><td class="s s4">4</td><td class="s s5">5</td><td>The brand kit becomes the one source for every surface.</td></tr>
+      <tr><td>Security</td><td class="s">3×</td><td class="s s5">5</td><td class="s s4">4</td><td>A runs no shop code. Studio, hardened: Frrata's router and headers, runtime egress, two-factor, owner-granted scopes, versions approved by the owner. A larger surface remains.</td></tr>
+      <tr><td>Abuse, spam and fraud exposure</td><td class="s">2×</td><td class="s s5">5</td><td class="s s3">3</td><td>Partner accounts, credits and many sites are new targets; verification, caps and takedown reduce, not remove, them.</td></tr>
+      <tr><td>Festive peak</td><td class="s">2×</td><td class="s s4">4</td><td class="s s4">4</td><td>A: one app (now with today's checkout fix). Studio: CDN-served API, separate builds, a turn queue; more moving parts.</td></tr>
+      <tr><td>Updates and maintainability</td><td class="s">3×</td><td class="s s4">4</td><td class="s s4">4</td><td>A: one deploy. Studio: patch lane within 24 h, one kit, a version table; more versions to keep.</td></tr>
+      <tr><td>Partner economy and distribution</td><td class="s">2×</td><td class="s s2">2</td><td class="s s5">5</td><td>Partners sell builds, starters and skills.</td></tr>
+      <tr><td>Cost to run per shop</td><td class="s">2×</td><td class="s s5">5</td><td class="s s3">3</td><td>Hosting per shop; agent cost resold at 3×.</td></tr>
+      <tr><td>Revenue for Frrata</td><td class="s">2×</td><td class="s s3">3</td><td class="s s5">5</td><td>Seats, credits at 3×, gallery 15%, on top of plan and order fees.</td></tr>
+      <tr><td>Frrata's effort to build and run</td><td class="s">2×</td><td class="s s5">5</td><td class="s s1">1</td><td>A is built. Studio is V1–V5 across several quarters, plus a fleet, an abuse desk and a patch lane to run.</td></tr>
+      <tr><td>Different from Shopify in 2026</td><td class="s">2×</td><td class="s s2">2</td><td class="s s4">4</td><td>India-first kit (COD, sizes, Hindi, legal block) and a partner economy; Shopify already ships agent-ready themes.</td></tr>
+      <tr><td>What it costs the merchant</td><td class="s">1×</td><td class="s s5">5</td><td class="s s4">4</td><td>Studio adds credits or a partner's fee; API and hosting stay in the plan.</td></tr>
+    </tbody>
+    <tfoot>
+      <tr><td>Weighted (of 150)</td><td></td><td class="s">119</td><td class="s">116</td><td></td></tr>
+      <tr><td>Weighted, leaving out the one-time build effort (of 140)</td><td></td><td class="s">109</td><td class="s">114</td><td></td></tr>
+      <tr><td>Unweighted (of 70)</td><td></td><td class="s">55</td><td class="s">54</td><td></td></tr>
+    </tfoot>
+  </table></div>
+  <div class="col" style="margin-top:14px">
+    <p><b>The honest reading.</b> On today's measures the two are close: the customizer is safer, cheaper and already built; hardened Studio reaches further, earns more, gives partners a business, and stands apart from Shopify. Leave out the one-time cost of building it and Studio leads (114 to 109); count it and the customizer edges ahead (119 to 116). So Studio is a bet on partners and revenue, not a free upgrade.</p>
+    <p><b>What makes the bet safe:</b> the kill signals stay (fewer than 3 partner sites in 90 days, 5 starters in 120); live looks keep rendering until each shop's parity check passes, so no shop loses its site if the bet stalls; and every control above lands before the phase it protects, not after.</p>
+  </div>
+
+  <h2>Three ways, scored (v1, the plan as first drafted)</h2>
+  <p class="note">1 = poor, 5 = best. Scores are judgement, each with its reason; they are not measured yet.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>What matters</th><th style="text-align:center">A · Themes + customizer (today)</th><th style="text-align:center">B · Agent writes free code</th><th style="text-align:center">C · Code on Frrata's kit</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>A good site for a brand with no developer</td><td class="s s4">4</td><td class="s s3">3</td><td class="s s4">4</td><td>A: forms, fast. B: the agent stands in, but quality varies. C: the kit's starter is a complete site on day one, the agent edits it.</td></tr>
+      <tr><td>Quality floor (speed, accessibility, SEO)</td><td class="s s5">5</td><td class="s s2">2</td><td class="s s4">4</td><td>A: one renderer, gated budgets. B: whatever was generated. C: kit components carry the budgets; checks refuse what falls below.</td></tr>
+      <tr><td>How far a site can go</td><td class="s s2">2</td><td class="s s5">5</td><td class="s s4">4</td><td>A: 13 sections, 6 themes. B: anything. C: anything, built from kit parts first, custom parts within rules.</td></tr>
+      <tr><td>Brand consistency (site, checkout, emails, share cards)</td><td class="s s4">4</td><td class="s s2">2</td><td class="s s5">5</td><td>C: one brand kit feeds every surface, checkout included. B: each site invents its own.</td></tr>
+      <tr><td>Security</td><td class="s s5">5</td><td class="s s3">3</td><td class="s s4">4</td><td>A: no shop code at all. B and C: isolated sites with no data access; C also limits packages and patterns.</td></tr>
+      <tr><td>Upkeep over years (fixes, new features, law changes)</td><td class="s s4">4</td><td class="s s1">1</td><td class="s s4">4</td><td>B: every site is its own fork; a fix reaches nobody. C: fixes ship in the kit package; sites update with a version bump.</td></tr>
+      <tr><td>Partner economy and distribution</td><td class="s s2">2</td><td class="s s5">5</td><td class="s s5">5</td><td>Partners can sell starters, skills and builds in B and C.</td></tr>
+      <tr><td>Cost to run per shop</td><td class="s s5">5</td><td class="s s2">2</td><td class="s s3">3</td><td>A: one shared deployment. B, C: a deployment per shop, agent turns, builds. The kit cuts agent turns.</td></tr>
+      <tr><td>Frrata's build effort from here</td><td class="s s5">5</td><td class="s s2">2</td><td class="s s2">2</td><td>A is built. B and C need the API, hosting, the builder; C also the kit (much of it is today's storefront code).</td></tr>
+      <tr><td>Different from Shopify in 2026</td><td class="s s2">2</td><td class="s s3">3</td><td class="s s4">4</td><td>Shopify's new themes already ship agent guidance. C adds India-first parts (COD, sizes, Hindi, legal block) and a partner economy on top.</td></tr>
+    </tbody>
+    <tfoot><tr><td>Total (of 50)</td><td class="s">38</td><td class="s">28</td><td class="s">39</td><td></td></tr></tfoot>
+  </table></div>
+
+  <div class="verdict">
+    <div class="v"><h3>A · Themes <span class="chip c-n">38</span></h3><ul><li>Safest, cheapest, already built</li><li>Low ceiling; partners have little to sell</li><li>Right if Frrata stays "no developer"</li></ul></div>
+    <div class="v"><h3>B · Free code <span class="chip c-bad">28</span></h3><ul><li>Highest ceiling, weakest floor</li><li>Every site drifts and ages alone</li><li>Not worth building as such</li></ul></div>
+    <div class="v win"><h3>C · Code on Frrata's kit <span class="chip c-ok">39 · recommended</span></h3><ul><li>Today's floor kept, ceiling raised</li><li>Consistency and upkeep through one package</li><li>The direction you chose, done safely</li></ul></div>
+  </div>
+
+  <div class="col">
+    <p style="margin-top:16px">A and C are close on score. The difference is who they serve: A serves brands that will never touch code; C serves partners and developers and still gives a no-developer brand a complete site. C only wins if the kit exists before the builder. Without it, C becomes B.</p>
+  </div>
+
+  <h2>Quality by default: four layers every site stands on</h2>
+  <div class="diagram" role="img" aria-label="Four layers: the brand kit (one source of the brand), the Frrata kit (components, motion, SEO, speed primitives), the starter (a complete site), and the shop's own code; publish checks wrap all four.">
+    <svg viewBox="0 0 1060 340" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="10" width="1040" height="320" rx="12" fill="none" stroke="var(--rani)" stroke-dasharray="5 4"/>
+      <text x="26" y="34" font-size="13" font-weight="600" fill="var(--rani-text)">Publish checks wrap every layer: brand tokens only · budgets · accessibility · SEO · legal block · security</text>
+      <rect x="30" y="54" width="1000" height="56" rx="8" fill="none" stroke="var(--line)"/>
+      <text x="46" y="78" font-size="14" font-weight="600">4 · The shop's own code</text>
+      <text x="46" y="98" font-size="12" class="sub">pages and custom components the partner or agent writes · may only use brand tokens and kit motion · free in layout</text>
+      <rect x="30" y="120" width="1000" height="56" rx="8" fill="none" stroke="var(--line)"/>
+      <text x="46" y="144" font-size="14" font-weight="600">3 · The starter</text>
+      <text x="46" y="164" font-size="12" class="sub">a complete site from the gallery (Frrata's or a partner's) · composed from kit parts · its skill tells the agent how to extend it</text>
+      <rect x="30" y="186" width="1000" height="56" rx="8" fill="none" stroke="var(--ink)"/>
+      <text x="46" y="210" font-size="14" font-weight="600">2 · The Frrata kit (one versioned package)</text>
+      <text x="46" y="230" font-size="12" class="sub">Header, ProductCard, Grid, Gallery, BuyLink, SizeHelp, DropBanner, LegalBlock, Footer, SeoHead, Image, Motion presets, Analytics</text>
+      <rect x="30" y="252" width="1000" height="60" rx="8" fill="none" stroke="var(--rani)"/>
+      <text x="46" y="276" font-size="14" font-weight="600">1 · The brand kit (set once, in the console)</text>
+      <text x="46" y="296" font-size="12" class="sub">logo · colours (contrast-checked) · type pair · voice · photography · motion personality · icons · Hindi/English → tokens for site, checkout, emails, share cards</text>
+    </svg>
+  </div>
+
+  <div class="col">
+    <h2>Each concern: where it lives, how it's enforced</h2>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>Concern</th><th>One source</th><th>How the agent gets it</th><th>Enforced by</th><th>From today's code</th></tr></thead>
+    <tbody>
+      <tr><td><b>Branding</b></td><td>Brand kit in the console: logo, palette, type, voice, photo rules, motion personality</td><td>A generated <span class="mono">@shop/brand</span> tokens file + brand.md, read every session</td><td>Colour and font lint: only tokens; contrast on every pair</td><td>Look v4 palette and contrast checks, <span class="mono">check:hex</span>, <span class="mono">check:contrast</span></td></tr>
+      <tr><td><b>Design</b></td><td>Frrata's design skill: grid, spacing and type scale, card anatomy, COD badge, sizes as buttons, delivery in words</td><td>Skill stack: Frrata → starter → agency</td><td>Design lint: spacing and type scale only, no arbitrary sizes</td><td><span class="mono">frata-design-language</span>, <span class="mono">check:scale</span></td></tr>
+      <tr><td><b>Motion</b></td><td>Motion tokens (durations, easings) and presets: reveal, hover, page change, drop countdown</td><td>Kit <span class="mono">&lt;Motion&gt;</span> presets; brand's personality picks the set</td><td>Transform and opacity only; reduced motion honoured; no animation that shifts layout; JS budget</td><td>Theme motion choices, <span class="mono">check:motion</span></td></tr>
+      <tr><td><b>Reuse</b></td><td>The kit package, versioned; starters built on it</td><td>Kit parts first; a custom part only when none fits</td><td>A report of custom vs kit parts; a review before a custom part reaches a gallery starter</td><td>47 storefront components and the section library become kit parts</td></tr>
+      <tr><td><b>Consistency</b></td><td>The brand kit feeds site, checkout, order pages, emails, share cards</td><td>Tokens, never hex values in code</td><td>Visual snapshot per publish; drift check monthly (a routine)</td><td>Share cards and checkout already read the shop's palette</td></tr>
+      <tr><td><b>Speed</b></td><td>Server-first kit; Frrata image component; one font preloaded; no client JS unless a part needs it</td><td>Kit parts are already within budget</td><td>Budgets per publish: script, HTML, image bytes, LCP, CLS on a phone</td><td><span class="mono">check-storefront-build</span>, the 74-commerce gate, Lighthouse flow</td></tr>
+      <tr><td><b>SEO</b></td><td>API returns SEO fields, structured data and the sitemap; kit <span class="mono">&lt;SeoHead&gt;</span></td><td>One component per page type</td><td>Title and description present, canonical on the live domain, product data valid, no broken links; same paths as today (no redirects lost)</td><td>Search and sharing S1–S2: tags, JSON-LD, sitemaps, share cards</td></tr>
+      <tr><td><b>Accessibility</b></td><td>Kit parts accessible by construction</td><td>Alt text from the catalogue; heading order from the page type</td><td>Automated checks ≥ 95 a page; heading order; focus visible</td><td>e2e 90-ux checks, a11y 100 today</td></tr>
+      <tr><td><b>Security</b></td><td>Starter's headers (CSP), plain-text rendering, the API's allow-listed fields</td><td>Security skill and reviewer in every session</td><td>No raw HTML injection, no secrets, allowed packages and hosts only</td><td><span class="mono">check-client-bundle</span>, <span class="mono">check:payload</span></td></tr>
+      <tr><td><b>Legal and India</b></td><td>Legal block, prices beside discounts, origin, GSTIN, grievance officer from the API</td><td>Kit <span class="mono">&lt;LegalBlock&gt;</span>, <span class="mono">&lt;Price&gt;</span></td><td>Present on every page; removing them fails the publish</td><td>Policies, Contact page, prior-price rule</td></tr>
+      <tr><td><b>Photos and fonts</b></td><td>The shop's library and licensed fonts</td><td>Kit image component; font list</td><td>Licence and credit check</td><td><span class="mono">check:credits</span>, <span class="mono">check:fonts</span></td></tr>
+      <tr><td><b>Voice</b></td><td>brand.md voice; Frrata's voice rules</td><td>Copy reviewer in every session</td><td>Claims checked against the catalogue; banned words</td><td><span class="mono">check:voice</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="col">
+    <h2>Brand first: the console sets the brand before any page exists</h2>
+    <p>A brand kit is the first screen of a new site, not a setting found later. Everything the agent, a starter or a developer makes reads from it, and checkout, emails and share cards change with it.</p>
+  </div>
+  <div class="frame">
+    <div class="fbar"><div class="dots"><i></i><i></i><i></i></div><div class="url">frrata.shop/console/brand</div></div>
+    <div class="pad">
+      <div class="ph"><h4>Brand kit</h4><span class="chip c-n">Kesar Studio</span><span class="chip c-ok">Version 3</span><span class="sp"></span><button class="btn" type="button">History</button><button class="btn pri" type="button">Save</button></div>
+      <div class="g3">
+        <div class="card"><h5>Colours <span class="chip c-ok">All pairs readable</span></h5>
+          <div class="sw"><span><i style="background:#1C1917"></i>Ink</span><span><i style="background:#F2B233"></i>Haldi</span><span><i style="background:#FAF6EE"></i>Paper</span><span><i style="background:#8E2A1F"></i>Sindoor</span></div>
+        </div>
+        <div class="card type"><h5>Type</h5><div class="d">मानसून · Monsoon</div><div class="b">Body: Inter · Hindi: Noto Sans Devanagari</div></div>
+        <div class="card"><h5>Motion</h5><div class="motion"><span>Still</span><span class="on">Calm</span><span>Lively</span></div><div class="k" style="font-size:12px;margin-top:8px">Reduced motion always honoured</div></div>
+        <div class="card"><h5>Logo</h5><div style="font:700 26px Georgia,serif">Kesar</div><div class="rows" style="margin-top:6px"><div><span>Mark</span><span class="chip c-ok">SVG</span></div><div><span>On dark</span><span class="chip c-ok">Yes</span></div></div></div>
+        <div class="card"><h5>Voice</h5><div style="font-size:13px">Warm, plain, Hindi first on home. Never "cheap".</div></div>
+        <div class="card"><h5>Photos</h5><div class="rows"><div><span>Style</span><span>Natural light, no models</span></div><div><span>Ratio</span><span>4:5</span></div></div></div>
+      </div>
+      <div class="card" style="margin-top:12px"><h5>Used by</h5><div class="rows"><div><span>Website · kesarstudio.in</span><span class="chip c-ok">v3</span></div><div><span>Checkout</span><span class="chip c-ok">v3</span></div><div><span>Order emails · share cards</span><span class="chip c-ok">v3</span></div><div><span>Studio sessions</span><span class="chip c-n">Read every session</span></div></div></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <h2>Every publish gets a quality report</h2>
+  </div>
+  <div class="frame">
+    <div class="fbar"><div class="dots"><i></i><i></i><i></i></div><div class="url">frrata.shop/studio/kesar-studio/draft-14/quality</div></div>
+    <div class="pad">
+      <div class="ph"><h4>Draft 14 · quality</h4><span class="chip c-warn">1 to fix</span><span class="sp"></span><button class="btn" type="button">Ask the agent to fix</button><button class="btn pri" type="button" disabled style="opacity:.5">Publish</button></div>
+      <div class="g3">
+        <div class="card"><h5>Speed · phone</h5><div class="score">94</div><div class="rows"><div><span>Largest paint</span><span class="mono">1.9 s</span></div><div><span>Layout shift</span><span class="mono">0.01</span></div><div><span>Script</span><span class="mono">96 kB</span></div></div></div>
+        <div class="card"><h5>Accessibility</h5><div class="score">100</div><div class="rows"><div><span>Headings in order</span><span class="chip c-ok">Yes</span></div><div><span>Alt text</span><span class="chip c-ok">All</span></div></div></div>
+        <div class="card"><h5>SEO</h5><div class="score">100</div><div class="rows"><div><span>Product data</span><span class="chip c-ok">Valid</span></div><div><span>Paths kept</span><span class="chip c-ok">42 of 42</span></div></div></div>
+        <div class="card"><h5>Brand</h5><div class="rows"><div><span>Colours from the kit</span><span class="chip c-bad">1 hex in drop-hero.tsx</span></div><div><span>Type scale</span><span class="chip c-ok">Yes</span></div><div><span>Motion presets</span><span class="chip c-ok">Yes</span></div></div></div>
+        <div class="card"><h5>Kit</h5><div class="rows"><div><span>Kit parts</span><span class="mono">31</span></div><div><span>Custom parts</span><span class="mono">2</span></div><div><span>Kit version</span><span class="mono">2.4 · current</span></div></div></div>
+        <div class="card"><h5>Safety and law</h5><div class="rows"><div><span>Legal block</span><span class="chip c-ok">Every page</span></div><div><span>Secrets · packages · hosts</span><span class="chip c-ok">Clean</span></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <h2>What carries over from today</h2>
+    <p>Most of the theme work becomes the kit rather than being thrown away: the section renderers and product parts become kit components; theme settings and the site palette become the brand kit; the gates (colour, scale, motion, contrast, voice, fonts, credits, client bundle, payload, page budgets) become publish checks; the Signal and Classic looks become the first two starters. The customizer and the theme catalogue are what actually go.</p>
+
+    <h2>What changes in the plan</h2>
+    <div class="ask"><b>Kit before builder.</b> V1.5 inserted: the Frrata kit (package, brand kit in the console, publish checks) built from today's storefront code, before hosting (V2) and Studio (V3).</div>
+    <div class="ask"><b>Brand kit first.</b> A new site starts at the brand kit; the console's Look turns into the brand kit, not removed.</div>
+    <div class="ask"><b>Starter 0.</b> Today's renderer, exported as the default starter, so every shop has a complete site on its first day.</div>
+    <div class="ask"><b>Your call.</b> Go with C (code on Frrata's kit) and insert V1.5, or keep A (themes) for brands without partners and run C beside it?</div>
+  </div>
+
+  <footer>Frrata · decision memo · 11 Nov 2026 · scores are judgement, to be replaced by measures from the first 20 sites</footer>
+</div>

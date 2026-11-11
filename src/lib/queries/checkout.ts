@@ -87,8 +87,7 @@ export async function checkoutShop(tx: Tx, tenantId: string, host: string | null
  * function (ADR-0003). An offer whose limit or budget is already reached is left out, so the bag never shows what
  * placement would refuse; placement re-counts under a lock and stays the authority (plan review 12).
  */
-/** `fresh`: placement — collection members read now in `tx` (under its locks), never the 60 s cache. */
-export async function liveOffers(tx: Tx, tenantId: string, now: Date, o: { fresh?: boolean } = {}): Promise<DiscountTerms[]> {
+async function liveOfferRows(tx: Tx, tenantId: string, now: Date) {
   // The offer's ONE public code (label null) only: a creator code is never listed (O·2 plan review 2).
   const rows = await tx.select({
     id: discounts.id, title: discounts.title, style: discounts.style, percentBps: discounts.percentBps, amountOff: discounts.amountOff, cap: discounts.cap,
@@ -102,7 +101,7 @@ export async function liveOffers(tx: Tx, tenantId: string, now: Date, o: { fresh
   const uses = await discountUses(tx, tenantId, limited.map((r) => r.id), now)
   const full = new Set(limited.filter((r) => { const u = uses.get(r.id); return (r.limitTotal !== null && (u?.n ?? 0) >= r.limitTotal) || (r.budget !== null && (u?.given ?? 0) >= Number(r.budget)) }).map((r) => r.id))
   const live = rows.filter((r) => !full.has(r.id) && (DISCOUNT_STYLES as readonly string[]).includes(r.style))
-  if (!live.length) return []
+  if (!live.length) return { live, targets: [], tiers: [] }
   const ids = live.map((r) => r.id)
   // Targets (products, or collections resolved to their products now) and tiers, for the offers that have them.
   const [targets, tiers] = await Promise.all([
@@ -111,7 +110,16 @@ export async function liveOffers(tx: Tx, tenantId: string, now: Date, o: { fresh
     tx.select({ discountId: discountTiers.discountId, min: discountTiers.minSubtotal, percentBps: discountTiers.percentBps, amountOff: discountTiers.amountOff }).from(discountTiers)
       .where(and(eq(discountTiers.tenantId, tenantId), inArray(discountTiers.discountId, ids))),
   ])
-  const members = targets.some((t) => t.collectionId) ? (o.fresh ? await collectionMembersIn(tx, tenantId) : await collectionMembers(tenantId)) : {}
+  return { live, targets, tiers }
+}
+type OfferRows = Awaited<ReturnType<typeof liveOfferRows>>
+
+/** Whether an offer targets a collection (its members are needed to price it). */
+const needsMembers = (raw: OfferRows) => raw.targets.some((t) => t.collectionId)
+
+/** The offers' terms, collections resolved with `members`. */
+function offerTerms(raw: OfferRows, members: Record<string, string[]>): DiscountTerms[] {
+  const { live, targets, tiers } = raw
   const productsOf = (id: string) => [...new Set(targets.filter((t) => t.discountId === id).flatMap((t) => (t.productId ? [t.productId] : members[t.collectionId!] ?? [])))]
   return live.map((r) => ({
     id: r.id, title: r.title, style: r.style as DiscountStyle, percentBps: r.percentBps, amountOff: r.amountOff === null ? null : Number(r.amountOff), cap: r.cap === null ? null : Number(r.cap),
@@ -119,6 +127,12 @@ export async function liveOffers(tx: Tx, tenantId: string, now: Date, o: { fresh
     targets: r.targets === 'all' ? 'all' : productsOf(r.id), buyQty: r.buyQty, getQty: r.getQty, getBps: r.getBps, giftVariantId: r.giftVariantId, firstOrder: r.firstOrder,
     tiers: tiers.filter((x) => x.discountId === r.id).map((x) => ({ min: Number(x.min), percentBps: x.percentBps, amountOff: x.amountOff === null ? null : Number(x.amountOff) })),
   }))
+}
+
+/** Placement: the live offers with collection members read now in `tx`, under its locks (never the 60 s cache). */
+export async function liveOffers(tx: Tx, tenantId: string, now: Date): Promise<DiscountTerms[]> {
+  const raw = await liveOfferRows(tx, tenantId, now)
+  return offerTerms(raw, needsMembers(raw) ? await collectionMembersIn(tx, tenantId) : {})
 }
 
 /**
@@ -134,8 +148,17 @@ export async function codeFor(tx: Tx, tenantId: string, text: string | null | un
   return { text: t, discountId: r?.discountId ?? null, codeId: r?.codeId ?? null }
 }
 
-export const quoteData = (tenantId: string, ids: string[], now: Date, code: string | null, host: string) =>
-  withTenant(tenantId, async (tx) => ({ shop: await checkoutShop(tx, tenantId, host), rows: await variantRows(tx, tenantId, ids, now), offers: await liveOffers(tx, tenantId, now), typed: await codeFor(tx, tenantId, code, now) }))
+/** The quote's four reads, independent, issued together inside one transaction (speed review 2026-11-11, P8: the path
+ *  every bag and cart link lands on; they ran one after another). */
+export async function quoteData(tenantId: string, ids: string[], now: Date, code: string | null, host: string) {
+  const { shop, rows, raw, typed } = await withTenant(tenantId, async (tx) => {
+    const [shop, rows, raw, typed] = await Promise.all([checkoutShop(tx, tenantId, host), variantRows(tx, tenantId, ids, now), liveOfferRows(tx, tenantId, now), codeFor(tx, tenantId, code, now)])
+    return { shop, rows, raw, typed }
+  })
+  // Collections resolved from the shop's cached members AFTER the transaction has closed: a cached loader inside it would
+  // open a second connection while holding one (speed finding P4: the pool deadlocks at a drop).
+  return { shop, rows, offers: offerTerms(raw, needsMembers(raw) ? await collectionMembers(tenantId) : {}), typed }
+}
 
 /** What the shopper's order page shows — masked address and phone (owner call 4). Found by the link token's hash only. */
 export async function orderPage(tx: Tx, tenantId: string, tokenHash: string) {

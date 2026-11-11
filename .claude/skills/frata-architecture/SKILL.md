@@ -588,7 +588,15 @@ Rules:
 - `cache()`d functions take no array or object argument; `cache` keys on
   identity, so `requireMember(CAN_BUILD)` misses the layout's entry (P7).
 - A shopper's write invalidates the narrowest tag it can: the product, not
-  the shop. Catalogue refreshes are debounced (P11).
+  the shop. A sell-out's catalogue purge runs at most once per shop per 30 s across every instance (`refreshSoldOut`,
+  limiter `soldOutPurge`).
+- A flash drop (2026-11-11): placing an order waits at most 2 s for a lock (`set local lock_timeout`) and a shop places
+  at most `PLACE_SLOTS` (8) orders at once, as transaction advisory locks shared by every instance
+  (`src/lib/orders/place.ts`); past either, 503 "busy, try again", `Retry-After: 2`, nothing written, and the try is
+  given back to the phone and IP limits (`uncount`). A try whose order was already placed finds it before any slot.
+- A cached loader (`shopCached`) never runs inside a `withTenant`: it opens a second connection while the first is
+  held, and at a drop the pool deadlocks (P4). Read it before the transaction, or after it closes (`quoteData`
+  resolves offer collections after its transaction).
 - Fonts: a shop preloads only its own face; console faces never reach `/s/` (P6).
 - Pool: `POOL` in src/lib/db/index.ts (`idle_timeout: 20, connect_timeout: 5, max_lifetime: 600`), and
   `attachDatabasePool` on Vercel through a pg-shaped adapter: `withTenant` reports each release

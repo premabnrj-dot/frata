@@ -96,6 +96,9 @@ export const LIMITS = {
   ekApiIp: { action: 'ek_api:ip', max: 120, windowSeconds: 600 },
   ekPowNonce: { action: 'ek_pow:nonce', max: 1, windowSeconds: 900 },
   ekShopMeIp: { action: 'ek_me:ip', max: 120, windowSeconds: 600 },
+  // A sell-out's catalogue purge, once per shop in 30 s across every server instance (speed review 2026-11-11: the
+  // per-instance debounce let 10 instances purge 10 times at a drop). Fails open: a missed debounce only purges.
+  soldOutPurge: { action: 'sold_out_purge:shop', max: 1, windowSeconds: 30 },
 } as const satisfies Record<string, Limit>
 
 /** Whether `subject` is already past the limit, WITHOUT counting an attempt. `failClosed`: true when the counter cannot be read. */
@@ -109,6 +112,19 @@ export async function overLimit(limit: Limit, subject: string, now = new Date(),
   } catch (err) {
     console.error('[overLimit]', limit.action, errName(err))
     return failClosed
+  }
+}
+
+/** Gives back one attempt counted by `withinLimit` in the same window (a refusal that was not the subject's doing, such
+ *  as "busy, try again"). Never below zero; a failure only leaves the count as it was. */
+export async function uncount(limit: Limit, subject: string, now = new Date()): Promise<void> {
+  const key = createHash('sha256').update(`${limit.action}:${subject.trim().toLowerCase()}`).digest('hex')
+  const windowMs = limit.windowSeconds * 1000
+  const windowStart = new Date(Math.floor(now.getTime() / windowMs) * windowMs)
+  try {
+    await db().execute(sql`update rate_limits set n = n - 1 where key = ${key} and window_start = ${windowStart.toISOString()}::timestamptz and n > 0`)
+  } catch (err) {
+    console.error('[uncount]', limit.action, errName(err))
   }
 }
 

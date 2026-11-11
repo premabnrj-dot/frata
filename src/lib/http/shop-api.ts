@@ -11,7 +11,7 @@ import { LIMITS, overLimit, withinLimit, type Limit } from '@/lib/db/rate-limit'
 
 export const noStore = { 'cache-control': 'private, no-store' }
 const MAX_BODY = 32 * 1024
-export const reply = (data: unknown, status = 200) => NextResponse.json(data, { status, headers: noStore })
+export const reply = (data: unknown, status = 200, headers: Record<string, string> = {}) => NextResponse.json(data, { status, headers: { ...noStore, ...headers } })
 
 export async function shopRequest<T extends z.ZodTypeAny>(request: Request, schema: T, limit: Limit, failClosed = false):
   Promise<{ ok: true; tenantId: string; host: string; body: z.output<T>; ip: string } | { ok: false; response: NextResponse }> {

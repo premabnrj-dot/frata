@@ -33,7 +33,8 @@ import { linkCustomer } from '@/lib/queries/customers'
 // line's cost is read (for profit; never returned). Everything it returns is
 // named, shopper-safe fields.
 //
-// One transaction: idempotency key first (advisory lock), the shop open, the
+// One transaction: a placement slot (at most PLACE_SLOTS per shop at once), the
+// idempotency key (advisory lock), the shop open, the
 // bag's variants locked in id order, re-priced by quote(); a total that is not
 // what the shopper saw is refused with the new quote; then the order number,
 // the order and its lines. Pay on delivery takes the stock now; an online
@@ -69,22 +70,46 @@ export type Placed = { kind: 'placed'; token: string; number: number; method: 'c
 export type PlaceResult =
   | Placed
   | { kind: 'changed'; quote: Quote }
-  | { kind: 'refused'; status: 404 | 409 | 422; error: string; quote?: Quote }
+  | { kind: 'refused'; status: 404 | 409 | 422 | 503; error: string; quote?: Quote }
+
+/**
+ * A flash drop (speed review 2026-11-11): placing an order locks its products' stock rows for ~30 ms; waiters each held
+ * a pooled connection for up to 10 s (the role's lock timeout), so ~15 shoppers on one hot piece could starve every
+ * shop's checkout and console. Now a placement waits at most 2 s for a lock, and a shop places at most PLACE_SLOTS
+ * orders at once (advisory-lock slots, held to the transaction's end, across every instance); past either, the shopper
+ * reads "busy, try again" and nothing was taken or charged.
+ */
+export const PLACE_SLOTS = 8
+const BUSY = 'So many orders right now. Nothing was charged. Try again in a moment.'
+const lockTimedOut = (e: unknown) => { const c = (e as { code?: string; cause?: { code?: string } }); return (c.cause?.code ?? c.code) === '55P03' }
 
 const requestHashOf = (i: PlaceInput) => sha256(JSON.stringify([i.address.phone, i.method, [...i.bag].map((b) => [b.variantId, b.qty]).sort(), ...(i.code ? [normalCode(i.code)] : []), ...(i.b2b ? [cleanGstin(i.b2b.gstin)] : [])]))
 
+type Written = { kind: 'new'; id: string; number: number; method: 'cod' | 'prepaid'; total: number; code?: 'applied' | 'not_applied' | null }
+
+/** The order an earlier try with this key placed, if any; the same key with a different bag is not the same attempt. */
+async function priorOf(tx: Tx, tenantId: string, input: PlaceInput): Promise<PlaceResult | Written | null> {
+  const [prior] = await tx.select({ id: orders.id, number: orders.number, method: orders.paymentMethod, total: orders.total, requestHash: orders.requestHash })
+    .from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.idempotencyKey, input.idempotencyKey)))
+  if (!prior) return null
+  if (prior.requestHash !== requestHashOf(input)) return { kind: 'refused', status: 409, error: 'This checkout was already used for a different order. Reload the page.' }
+  return { kind: 'new', id: prior.id, number: prior.number, method: prior.method as 'cod' | 'prepaid', total: Number(prior.total) }
+}
+
 export async function placeOrder(tenantId: string, input: PlaceInput, now = new Date()): Promise<PlaceResult> {
   const soldOut: string[] = []
-  const placed = await withTenant(tenantId, async (tx): Promise<PlaceResult | { kind: 'new'; id: string; number: number; method: 'cod' | 'prepaid'; total: number; code?: 'applied' | 'not_applied' | null }> => {
-    // A retry of the same attempt finds its order; the same key with a different bag is not the same attempt.
+  let placed: PlaceResult | Written
+  try { placed = await withTenant(tenantId, async (tx): Promise<PlaceResult | Written> => {
+    await tx.execute(sql`set local lock_timeout = '2s'`)
+    // A retry whose order was placed (the response lost) finds it before any slot: never "busy, nothing was charged".
+    const earlier = await priorOf(tx, tenantId, input)
+    if (earlier) return earlier
+    const [slot] = await tx.execute<{ s: number }>(sql`select s from generate_series(0, ${PLACE_SLOTS - 1}) s where pg_try_advisory_xact_lock(hashtextextended(${tenantId + ':place'}, s)) limit 1`)
+    if (!slot) return { kind: 'refused', status: 503, error: BUSY }
+    // Under the key's lock, again: two tries of the same attempt at once place one order.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${tenantId + ':' + input.idempotencyKey}, 0))`)
-    const reqHash = requestHashOf(input)
-    const [prior] = await tx.select({ id: orders.id, number: orders.number, method: orders.paymentMethod, total: orders.total, requestHash: orders.requestHash })
-      .from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.idempotencyKey, input.idempotencyKey)))
-    if (prior) {
-      if (prior.requestHash !== reqHash) return { kind: 'refused', status: 409, error: 'This checkout was already used for a different order. Reload the page.' }
-      return { kind: 'new', id: prior.id, number: prior.number, method: prior.method as 'cod' | 'prepaid', total: Number(prior.total) }
-    }
+    const prior = await priorOf(tx, tenantId, input)
+    if (prior) return prior
     const shop = await checkoutShop(tx, tenantId, input.host)
     if (!shop || !shop.open) return { kind: 'refused', status: 404, error: 'This shop is not taking orders right now.' }
     // Abandoned online orders lose the shopper's details after 90 days: the daily cron (src/lib/orders/erase.ts).
@@ -103,7 +128,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
 
     const rows = await variantRows(tx, tenantId, input.bag.map((b) => b.variantId), now, { lock: true })
     const typed = await codeFor(tx, tenantId, input.code, now)
-    const offers = await fitOffers(tx, tenantId, await liveOffers(tx, tenantId, now, { fresh: true }), (o) => quote(input.bag, rows, shop, now, input.address.pincode, { offers: o, code: typed }), input, typed, now)
+    const offers = await fitOffers(tx, tenantId, await liveOffers(tx, tenantId, now), (o) => quote(input.bag, rows, shop, now, input.address.pincode, { offers: o, code: typed }), input, typed, now)
     const q = quote(input.bag, rows, shop, now, input.address.pincode, { offers, code: typed })
     if (q.empty) return { kind: 'refused', status: 422, error: 'Nothing in your bag can be bought right now.', quote: q }
     if (q.missing.length || q.lines.some((l) => l.problem) || totalFor(q, input.method) !== input.expectedTotal) return { kind: 'changed', quote: q }
@@ -132,7 +157,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
       pincode: input.address.pincode, city: input.address.city, state: input.address.state, supplyState: input.address.state, shopState: gstinState(shop.gstin), sellerGstin: shop.gstin, sellerScheme: shop.scheme,
       buyerGstin: buyer?.gstin ?? null, buyerName: buyer?.name ?? '',
       arrivesFrom: q.arrives?.from ?? null, arrivesTo: q.arrives?.to ?? null, returnDays: shop.returnDays, returnKind: shop.returnKind,
-      tokenHash: tokenHash(orderToken(id)), idempotencyKey: input.idempotencyKey, requestHash: reqHash,
+      tokenHash: tokenHash(orderToken(id)), idempotencyKey: input.idempotencyKey, requestHash: requestHashOf(input),
       payBy: cod ? null : new Date(now.getTime() + HOLD_MINUTES * 60_000),
       checkout: { shown: { prepaid: q.prepaid.total, cod: q.cod.offer.offered ? q.cod.total : null, codCharge: shop.codCharge }, firstMethod: input.facts.firstMethod ?? null,
         attribution: input.facts.attribution ?? {}, onlineTotal: q.prepaid.total, ...(input.facts.ekcode ? { ekcode: input.facts.ekcode } : {}) },
@@ -165,10 +190,13 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     })))
     if (cod) await takeStock(tx, tenantId, id, 'in_stock', soldOut)
     return { kind: 'new', id, number, method: input.method, total: m.total, code: q.offers.code }
-  })
+  }) } catch (e) {
+    if (lockTimedOut(e)) return { kind: 'refused', status: 503, error: BUSY }
+    throw e
+  }
   if (placed.kind !== 'new') return placed
   // The last piece went: the cached pages say sold out within the 60 s backstop at most (refreshSoldOut, once per 30 s; checkout reads live stock).
-  if (soldOut.length) refreshSoldOut(tenantId)
+  if (soldOut.length) await refreshSoldOut(tenantId)
   const out: Placed = { kind: 'placed', token: orderToken(placed.id), number: placed.number, method: placed.method, total: placed.total, pay: null, code: placed.code ?? null }
   if (placed.method === 'cod') return out
   const pay = await startPayment(tenantId, placed.id)

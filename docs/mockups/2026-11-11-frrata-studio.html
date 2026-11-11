@@ -1,0 +1,781 @@
+<title>Frrata Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a planning document in one reading column, with a full-width screen gallery (side list of 12 screens, one
+   shown at a time) in the middle. Console tokens from src/app/base.css. */
+:root {
+  --bg: #FAFAF9; --fg: #1C1917; --card: #FFFFFF; --muted: #F2F1EF; --sub: #5F5A55; --line: #DEDBD7; --input: #8C857F;
+  --ink: #1C1917; --on-ink: #FFFFFF; --rani: #D61F69; --rani-text: #A8124F; --neel: #23307A; --haldi: #F2B233;
+  --ok: #E9F6EC; --ok-t: #1E7B52; --warn: #FFF5C2; --warn-t: #8A5000; --bad: #FFEFEF; --bad-t: #C02A2F; --info: #EDF2FE; --info-t: #3451B2;
+  --code: #F5F3F0; --add: #E9F6EC; --del: #FFEFEF;
+  --f-display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+  --f-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141211; --fg: #EDEAE6; --card: #1C1A18; --muted: #262320; --sub: #A9A29B; --line: #34302C; --input: #6E6760;
+  --ink: #EDEAE6; --on-ink: #141211; --rani: #FF4F93; --rani-text: #FF7DAE; --neel: #8E9BF0; --haldi: #F2B233;
+  --ok: #16301F; --ok-t: #7FD3A2; --warn: #352A0C; --warn-t: #F4C766; --bad: #3A1517; --bad-t: #FF8A8E; --info: #1A2238; --info-t: #9DB2FF;
+  --code: #211F1D; --add: #16301F; --del: #3A1517; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #141211; --fg: #EDEAE6; --card: #1C1A18; --muted: #262320; --sub: #A9A29B; --line: #34302C; --input: #6E6760;
+  --ink: #EDEAE6; --on-ink: #141211; --rani: #FF4F93; --rani-text: #FF7DAE; --neel: #8E9BF0; --haldi: #F2B233;
+  --ok: #16301F; --ok-t: #7FD3A2; --warn: #352A0C; --warn-t: #F4C766; --bad: #3A1517; --bad-t: #FF8A8E; --info: #1A2238; --info-t: #9DB2FF;
+  --code: #211F1D; --add: #16301F; --del: #3A1517; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 15px/1.6 var(--f-body); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 80px; }
+.col { max-width: 780px }
+h1, h2, h3 { text-wrap: balance; margin: 0 }
+h1 { font: 600 clamp(32px, 5vw, 48px)/1.05 var(--f-display); letter-spacing: -0.01em }
+h2 { font: 600 26px/1.2 var(--f-display); margin-top: 60px; margin-bottom: 12px }
+h3 { font: 600 15px/1.3 var(--f-body); margin: 18px 0 6px }
+p { margin: 0 0 12px }
+.eyebrow { font: 500 12px/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--rani-text) }
+.lede { font-size: 18px; color: var(--sub); max-width: 720px; margin-top: 14px }
+.thread { height: 2px; width: 72px; background: var(--rani); margin: 18px 0 0 }
+.chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 1px 9px; font: 500 12px/20px var(--f-body); white-space: nowrap }
+.c-ok { background: var(--ok); color: var(--ok-t) } .c-warn { background: var(--warn); color: var(--warn-t) } .c-bad { background: var(--bad); color: var(--bad-t) }
+.c-info { background: var(--info); color: var(--info-t) } .c-n { background: var(--muted); color: var(--sub) } .c-ink { background: var(--ink); color: var(--on-ink) }
+.mono { font-family: var(--f-mono); font-size: 13px }
+.decided { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px }
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--card) }
+table { width: 100%; border-collapse: collapse; font-size: 14px }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line) }
+th { font: 600 12px/1.3 var(--f-body); color: var(--sub); text-transform: uppercase; letter-spacing: .05em }
+tr:last-child td { border-bottom: 0 }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px }
+@media (max-width: 820px) { .grid2, .grid3 { grid-template-columns: minmax(0, 1fr) } }
+.box { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 14px 16px; min-width: 0 }
+.box ul { margin: 0; padding-left: 18px } .box li { margin: 4px 0 }
+.ask { border-left: 3px solid var(--rani); background: var(--card); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 10px 0 }
+.ask b { color: var(--rani-text) }
+.note { font-size: 13px; color: var(--sub) }
+.diagram { border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 12px; overflow-x: auto }
+.diagram svg { display: block; min-width: 820px; width: 100%; height: auto }
+.diagram text { font-family: var(--f-body); fill: var(--fg) } .diagram .sub { fill: var(--sub) }
+
+/* Screen gallery */
+.gallery { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 14px; margin-top: 14px }
+.screens { display: flex; flex-direction: column; gap: 2px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); align-self: start }
+.screens button { text-align: left; font: 500 13px var(--f-body); border: 0; background: transparent; color: var(--fg); border-radius: 6px; padding: 7px 10px; cursor: pointer; display: flex; gap: 8px }
+.screens button span { font-family: var(--f-mono); color: var(--sub); width: 20px }
+.screens button[aria-selected="true"] { background: var(--card); box-shadow: inset 2px 0 0 var(--rani), 0 0 0 1px var(--line); font-weight: 600 }
+.screens button:focus-visible, .btn:focus-visible { outline: 2px solid var(--rani); outline-offset: 2px }
+@media (max-width: 900px) { .gallery { grid-template-columns: minmax(0, 1fr) } .screens { position: static; flex-direction: row; flex-wrap: wrap } }
+.cap { margin: 10px 2px 0; font-size: 13px; color: var(--sub) }
+.cap b { color: var(--fg) }
+
+.frame { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); box-shadow: 0 12px 32px -20px rgba(0,0,0,.4) }
+.bar { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-bottom: 1px solid var(--line); background: var(--card); font-size: 12px }
+.dots { display: flex; gap: 5px } .dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); display: block }
+.url { flex: 1; min-width: 0; background: var(--muted); border-radius: 6px; padding: 3px 10px; color: var(--sub); font: 12px var(--f-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.btn { font: 500 13px var(--f-body); border-radius: 6px; padding: 6px 11px; border: 1px solid var(--input); background: var(--card); color: var(--fg); cursor: pointer; white-space: nowrap; position: relative; display: inline-flex; align-items: center; gap: 6px }
+.btn.pri { background: var(--ink); color: var(--on-ink); border-color: var(--ink) }
+.btn.pri::after { content: ""; position: absolute; left: 6px; bottom: 0; width: 33%; height: 2px; background: var(--rani) }
+.btn.ghost { border-color: transparent; background: transparent }
+.btn.sm { padding: 3px 8px; font-size: 12px }
+.card { border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 12px 14px; min-width: 0 }
+.card h4 { margin: 0 0 8px; font: 600 14px var(--f-body); display: flex; align-items: center; gap: 8px }
+.rows > div { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13px; align-items: center }
+.rows > div:last-child { border-bottom: 0 }
+.k { color: var(--sub) }
+.ph { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px }
+.ph h3 { font: 600 20px var(--f-display); margin: 0 }
+.sp { flex: 1 }
+.pad { padding: 14px 16px }
+
+/* Studio shell: left rail of sessions like an agent inbox */
+.shell { display: grid; grid-template-columns: 250px minmax(0, 1fr); min-height: 600px }
+.rail { border-right: 1px solid var(--line); background: var(--card); padding: 10px; font-size: 13px; min-width: 0 }
+.rail .mark { font: 600 17px var(--f-display); display: flex; gap: 8px; align-items: center; padding: 2px 6px 10px }
+.rail .mark i { width: 20px; height: 20px; border-radius: 5px; background: var(--ink); display: inline-block }
+.grp { font: 600 11px var(--f-body); color: var(--sub); text-transform: uppercase; letter-spacing: .06em; padding: 12px 6px 4px; display: flex; justify-content: space-between }
+.sess { display: block; padding: 7px 8px; border-radius: 6px; color: var(--fg); text-decoration: none }
+.sess.on { background: var(--muted); box-shadow: inset 2px 0 0 var(--rani) }
+.sess b { font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.sess small { color: var(--sub); display: flex; gap: 6px; align-items: center; font-size: 12px }
+.dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block }
+.d-run { background: var(--info-t) } .d-need { background: var(--warn-t) } .d-ok { background: var(--ok-t) } .d-n { background: var(--input) }
+@media (max-width: 720px) { .shell { grid-template-columns: minmax(0, 1fr) } .rail { display: none } }
+
+/* Session layout */
+.sess3 { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr) 250px; min-height: 620px }
+.convo { border-right: 1px solid var(--line); background: var(--card); display: flex; flex-direction: column; min-width: 0 }
+.sh { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 13px; flex-wrap: wrap }
+.msgs { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 9px; font-size: 13px; overflow: hidden }
+.me { align-self: flex-end; background: var(--ink); color: var(--on-ink); padding: 8px 10px; border-radius: 10px 10px 2px 10px; max-width: 90% }
+.ai { padding: 2px 0; max-width: 100% }
+.tool { display: flex; gap: 8px; align-items: center; font: 12px/1.5 var(--f-mono); color: var(--sub); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; background: var(--bg) }
+.tool b { color: var(--ok-t); font-weight: 500 } .tool .run { color: var(--info-t) }
+.q { border: 1px solid var(--warn-t); border-radius: 8px; padding: 10px; background: var(--card) }
+.q .opts { display: flex; flex-direction: column; gap: 6px; margin-top: 8px }
+.q .opts span { border: 1px solid var(--input); border-radius: 6px; padding: 6px 9px }
+.compose { border-top: 1px solid var(--line); padding: 10px; display: flex; flex-direction: column; gap: 8px }
+.compose .box2 { border: 1px solid var(--input); border-radius: 8px; padding: 8px 10px; color: var(--sub); font-size: 13px; min-height: 44px }
+.compose .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap }
+.dial { display: inline-flex; border: 1px solid var(--input); border-radius: 6px; overflow: hidden; font-size: 12px }
+.dial span { padding: 4px 9px; background: var(--card) } .dial span.on { background: var(--ink); color: var(--on-ink) }
+.stage { background: var(--muted); padding: 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0 }
+.stbar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px }
+.site { background: #fff; color: #1d1b19; border-radius: 8px; border: 1px solid var(--line); overflow: hidden; position: relative; flex: 1 }
+.phone { width: 300px; max-width: 100%; margin: 0 auto; border-radius: 22px; border: 8px solid #1c1917; overflow: hidden; background: #fff; color: #1d1b19 }
+.site-h { display: flex; justify-content: space-between; align-items: center; padding: 9px 14px; font: 600 14px Georgia, serif; border-bottom: 1px solid #eee }
+.hero { height: 150px; background: linear-gradient(135deg, #e9c46a, #c9733f); color: #fff; display: flex; align-items: flex-end; padding: 14px; font: 600 24px Georgia, serif; position: relative }
+.hero.v2 { background: linear-gradient(135deg, #23307a, #8e9bf0) } .hero.v3 { background: linear-gradient(135deg, #2b2622, #8c857f) }
+.pick { outline: 2px solid var(--rani); outline-offset: -3px }
+.pin { position: absolute; width: 22px; height: 22px; border-radius: 50%; background: var(--rani); color: #fff; font: 600 11px/22px var(--f-body); text-align: center }
+.pgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 10px 14px 14px }
+.pgrid i { display: block; aspect-ratio: 4/5; border-radius: 4px; background: linear-gradient(160deg, #e7ddd1, #cdbba7) }
+.pgrid i:nth-child(2) { background: linear-gradient(160deg, #d9e2d0, #a9b89a) } .pgrid i:nth-child(3) { background: linear-gradient(160deg, #e3d3dd, #c19bb0) } .pgrid i:nth-child(4) { background: linear-gradient(160deg, #d6dbe8, #9aa6c4) }
+.side3 { border-left: 1px solid var(--line); background: var(--card); padding: 10px 12px; font-size: 13px; min-width: 0 }
+.side3 h4 { font: 600 12px var(--f-body); text-transform: uppercase; letter-spacing: .05em; color: var(--sub); margin: 10px 0 6px }
+.todo { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0 }
+.todo i { width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid var(--input); flex: none; margin-top: 3px }
+.todo.done i { background: var(--ok-t); border-color: var(--ok-t) } .todo.now i { border-color: var(--info-t); box-shadow: inset 0 0 0 3px var(--card); background: var(--info-t) }
+.todo.done span { color: var(--sub); text-decoration: line-through }
+.meter { height: 6px; background: var(--muted); border-radius: 99px; overflow: hidden } .meter i { display: block; height: 100%; background: var(--ink) }
+@media (max-width: 1060px) { .sess3 { grid-template-columns: minmax(0, 1fr) } .convo { border-right: 0; border-bottom: 1px solid var(--line) } .side3 { border-left: 0; border-top: 1px solid var(--line) } }
+/* Plan */
+.plan { max-width: 640px; margin: 20px auto; border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 16px 18px }
+.plan ol { margin: 8px 0; padding-left: 20px; font-size: 14px } .plan li { margin: 6px 0 }
+.plan .pages { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 }
+/* Diff */
+.diffwrap { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 540px }
+.flist { border-right: 1px solid var(--line); background: var(--card); padding: 10px; font: 12px/2 var(--f-mono) }
+.flist div { display: flex; justify-content: space-between; padding: 0 6px; border-radius: 4px } .flist .on { background: var(--muted) }
+.flist .a { color: var(--ok-t) } .flist .d { color: var(--bad-t) }
+.code { font: 12px/1.7 var(--f-mono); background: var(--card); overflow-x: auto; min-width: 0 }
+.code div { padding: 0 12px; white-space: pre } .code .add { background: var(--add) } .code .del { background: var(--del) }
+.code .cm { margin: 6px 12px 8px 40px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); font-family: var(--f-body); white-space: normal }
+.vs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px; background: var(--muted) }
+@media (max-width: 760px) { .diffwrap { grid-template-columns: minmax(0, 1fr) } .flist { display: none } .vs { grid-template-columns: minmax(0, 1fr) } }
+/* Variants */
+.var3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 14px; background: var(--muted) }
+.var3 .v { background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden }
+.var3 .v.win { box-shadow: 0 0 0 2px var(--rani) }
+.var3 .vb { padding: 10px 12px; font-size: 13px; display: flex; flex-direction: column; gap: 6px }
+@media (max-width: 860px) { .var3 { grid-template-columns: minmax(0, 1fr) } }
+/* Phone approval */
+.phonewrap { display: flex; gap: 24px; justify-content: center; padding: 18px; background: var(--muted); flex-wrap: wrap }
+.pscreen { width: 300px; max-width: 100%; border: 8px solid #1c1917; border-radius: 26px; overflow: hidden; background: var(--bg) }
+.pscreen .ptop { padding: 12px 14px; background: var(--card); border-bottom: 1px solid var(--line); font-size: 13px }
+.wa { background: #e7ddd3; padding: 12px; font-size: 13px; min-height: 420px; display: flex; flex-direction: column; gap: 8px }
+.wa .b { background: #fff; color: #1d1b19; border-radius: 8px; padding: 8px 10px; max-width: 92%; box-shadow: 0 1px 1px rgba(0,0,0,.08) }
+.wa .b a { color: #3451b2 }
+footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+
+<div class="wrap">
+  <div class="col">
+    <div class="eyebrow">Plan · v2 · 11 Nov 2026 · six decisions accepted, review controls drawn in</div>
+    <h1>Frrata Studio: an agent that builds a shop's website, the way Claude Code works in the cloud</h1>
+    <div class="thread"></div>
+    <p class="lede">Partners first. Every website is a repository; every piece of work is a session the agent runs in its own sandbox, on its own draft, with a live preview beside it. A partner can watch it, steer it, run three ideas at once, schedule it, take the code to their own laptop, and publish when the checks and the client say yes.</p>
+    <div class="decided">
+      <span class="chip c-ok">Decided · north star (ADR-0014)</span>
+      <span class="chip c-ok">Decided · partners get Studio first</span>
+      <span class="chip c-ok">Decided · themes and Look retire</span>
+      <span class="chip c-ok">Decided · credits as measured cost, 3×</span>
+      <span class="chip c-ok">Decided · Frrata's patch lane</span>
+      <span class="chip c-ok">Decided · content stays in the console</span>
+      <span class="chip c-ok">Decided · sites on separate hosting, Frrata's router in front</span>
+      <span class="chip c-ok">Decided · partners verified, two-factor</span>
+    </div>
+  </div>
+
+  <h2>The parts, in one picture</h2>
+  <div class="diagram" role="img" aria-label="A site is a repository with a live branch and drafts. A session runs the agent outside a sandbox that holds a draft of the repository, the shop's catalogue through a test key, and a preview. Checks run on every draft; a person publishes; routines start sessions on a schedule or an event.">
+    <svg viewBox="0 0 1100 330" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--sub)"/></marker></defs>
+      <rect x="10" y="20" width="250" height="290" rx="10" fill="none" stroke="var(--line)"/>
+      <text x="26" y="46" font-size="14" font-weight="600">Site · kesar-studio</text>
+      <text x="26" y="70" font-size="12" class="sub">repository (git)</text>
+      <rect x="26" y="84" width="218" height="40" rx="6" fill="none" stroke="var(--ok-t)"/><text x="40" y="109" font-size="13">live · version 13</text>
+      <rect x="26" y="134" width="218" height="40" rx="6" fill="none" stroke="var(--line)"/><text x="40" y="159" font-size="13">draft · monsoon-hero</text>
+      <rect x="26" y="184" width="218" height="40" rx="6" fill="none" stroke="var(--line)"/><text x="40" y="209" font-size="13">draft · hindi-prices</text>
+      <text x="26" y="250" font-size="12" class="sub">brand brain · skills · environment</text>
+      <text x="26" y="270" font-size="12" class="sub">deployments: live, previews, rollback</text>
+
+      <rect x="330" y="20" width="420" height="290" rx="10" fill="none" stroke="var(--rani)"/>
+      <text x="346" y="46" font-size="14" font-weight="600" fill="var(--rani-text)">Session · "Make home feel like the monsoon drop"</text>
+      <rect x="346" y="64" width="150" height="230" rx="8" fill="none" stroke="var(--line)"/>
+      <text x="360" y="88" font-size="13" font-weight="600">The agent</text>
+      <text x="360" y="110" font-size="12" class="sub">Claude, Frrata's tools</text>
+      <text x="360" y="130" font-size="12" class="sub">plan · todos · questions</text>
+      <text x="360" y="150" font-size="12" class="sub">reviewers (speed, a11y,</text>
+      <text x="360" y="166" font-size="12" class="sub">  security, copy)</text>
+      <text x="360" y="190" font-size="12" class="sub">no secrets, no network</text>
+      <path d="M496 180 H526" stroke="var(--sub)" stroke-width="1.5" marker-end="url(#ar)"/>
+      <rect x="526" y="64" width="210" height="230" rx="8" fill="none" stroke="var(--line)" stroke-dasharray="4 3"/>
+      <text x="540" y="88" font-size="13" font-weight="600">Sandbox (microVM)</text>
+      <text x="540" y="110" font-size="12" class="sub">the draft's files</text>
+      <text x="540" y="130" font-size="12" class="sub">install · build · run</text>
+      <text x="540" y="150" font-size="12" class="sub">preview server</text>
+      <text x="540" y="170" font-size="12" class="sub">checks: speed, a11y,</text>
+      <text x="540" y="186" font-size="12" class="sub">  legal, secrets, packages</text>
+      <text x="540" y="214" font-size="12" class="sub">egress: package mirror,</text>
+      <text x="540" y="230" font-size="12" class="sub">  Storefront API (test key)</text>
+      <text x="540" y="256" font-size="12" class="sub">keys added by a proxy</text>
+      <text x="540" y="272" font-size="12" class="sub">  outside the sandbox</text>
+      <path d="M260 154 H330" stroke="var(--sub)" stroke-width="1.5" marker-end="url(#ar)"/>
+      <path d="M330 220 H260" stroke="var(--sub)" stroke-width="1.5" marker-end="url(#ar)"/>
+      <text x="268" y="146" font-size="11" class="sub">checkout</text><text x="272" y="236" font-size="11" class="sub">commit</text>
+
+      <rect x="820" y="20" width="270" height="130" rx="10" fill="none" stroke="var(--line)"/>
+      <text x="836" y="46" font-size="14" font-weight="600">People</text>
+      <text x="836" y="70" font-size="12" class="sub">partner: steers, reviews, publishes</text>
+      <text x="836" y="90" font-size="12" class="sub">client: comments, approves on phone</text>
+      <text x="836" y="110" font-size="12" class="sub">developer: git clone, push, CLI</text>
+      <text x="836" y="130" font-size="12" class="sub">Frrata staff: kill switch, review</text>
+      <rect x="820" y="170" width="270" height="140" rx="10" fill="none" stroke="var(--line)"/>
+      <text x="836" y="196" font-size="14" font-weight="600">Routines</text>
+      <text x="836" y="220" font-size="12" class="sub">every Friday 6 pm · on a schedule</text>
+      <text x="836" y="240" font-size="12" class="sub">a collection is published · on an event</text>
+      <text x="836" y="260" font-size="12" class="sub">→ a session → a draft → checks</text>
+      <text x="836" y="280" font-size="12" class="sub">→ waits for a person (or publishes</text>
+      <text x="836" y="296" font-size="12" class="sub">   itself, if the partner allowed it)</text>
+      <path d="M820 240 H750" stroke="var(--sub)" stroke-width="1.5" marker-end="url(#ar)"/>
+      <path d="M820 84 H750" stroke="var(--sub)" stroke-width="1.5" marker-end="url(#ar)"/>
+    </svg>
+  </div>
+
+  <div class="col">
+    <h2>What we borrow from Claude Code in the cloud</h2>
+    <p>Claude Code's cloud sessions are the closest working model of what you described: an agent that keeps working when the laptop closes, in its own machine, on its own branch, that anyone can steer from any device. Each idea below is drawn on one of the screens.</p>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>In Claude Code</th><th>In Frrata Studio</th><th>Screen</th></tr></thead>
+    <tbody>
+      <tr><td>Sessions keep running in the cloud; an inbox groups them: needs input, working, completed</td><td>Studio's left rail across every client: <b>Needs you</b>, <b>Working</b>, <b>Ready to review</b>, <b>Done</b>; a phone push when one needs you</td><td>1</td></tr>
+      <tr><td>Start a session from a prompt, a repo and an environment</td><td>New session: client, start from (live site, a draft, a starter), the autonomy dial, attachments (brief, moodboard, screenshot)</td><td>2</td></tr>
+      <tr><td>Plan mode: a plan to approve before any edit</td><td>A plan with the pages it touches, the credits it should take and the questions it has; approve, edit, or keep planning</td><td>3</td></tr>
+      <tr><td>Permission modes: manual, accept edits, auto, plan</td><td>The dial: <b>Plan first</b> · <b>Ask before each page</b> · <b>Build freely</b>; publishing is never on the dial</td><td>2, 4</td></tr>
+      <tr><td>Tool calls and progress shown as they happen; questions with choices</td><td>The activity stream (read, edit, build, screenshot, check), todos on the right, a question card that waits for one tap</td><td>4</td></tr>
+      <tr><td>Diff view with inline comments sent with the next message</td><td>Code diff and a visual before/after; a comment on a line or a pin on the page goes to the agent</td><td>5</td></tr>
+      <tr><td>Parallel sessions, each on its own worktree</td><td>Variants: three ideas at once, each its own draft, compared side by side; keep one</td><td>6</td></tr>
+      <tr><td>Follow and steer from the phone</td><td>The client approves on the phone (WhatsApp link to a preview); the partner answers questions from the Frrata app</td><td>7</td></tr>
+      <tr><td>Scheduled tasks and event triggers</td><td>Routines: on a schedule (never more than hourly) or a Frrata event (a collection published, a drop date, stock out); each makes a draft</td><td>8</td></tr>
+      <tr><td>CLAUDE.md, skills, subagents</td><td>Brand brain (the brand's voice and rules), skills from Frrata, the starter and the partner's agency; reviewers as subagents</td><td>9</td></tr>
+      <tr><td>Environments: network level, setup script, secrets kept outside</td><td>The site's environment: preview data, allowed packages, outbound hosts, keys added by a proxy, domains</td><td>10</td></tr>
+      <tr><td>Teleport to a local terminal</td><td>Developer: clone, run with a test key, push; pushes go through the same checks</td><td>11</td></tr>
+      <tr><td>Usage against plan limits</td><td>Credits by client and session, caps, who pays (partner or the client's invoice)</td><td>12</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>The screens</h2>
+  <div class="gallery">
+    <div class="screens" role="tablist" aria-label="Screens" aria-orientation="vertical">
+      <button role="tab" aria-selected="true" aria-controls="s1" id="b1"><span>1</span>Studio inbox</button>
+      <button role="tab" aria-selected="false" aria-controls="s2" id="b2"><span>2</span>New session</button>
+      <button role="tab" aria-selected="false" aria-controls="s3" id="b3"><span>3</span>Plan to approve</button>
+      <button role="tab" aria-selected="false" aria-controls="s4" id="b4"><span>4</span>Session at work</button>
+      <button role="tab" aria-selected="false" aria-controls="s5" id="b5"><span>5</span>Review the draft</button>
+      <button role="tab" aria-selected="false" aria-controls="s6" id="b6"><span>6</span>Variants</button>
+      <button role="tab" aria-selected="false" aria-controls="s7" id="b7"><span>7</span>Client approves</button>
+      <button role="tab" aria-selected="false" aria-controls="s8" id="b8"><span>8</span>Routines</button>
+      <button role="tab" aria-selected="false" aria-controls="s9" id="b9"><span>9</span>Brand brain</button>
+      <button role="tab" aria-selected="false" aria-controls="s10" id="b10"><span>10</span>Environment</button>
+      <button role="tab" aria-selected="false" aria-controls="s11" id="b11"><span>11</span>Developer</button>
+      <button role="tab" aria-selected="false" aria-controls="s12" id="b12"><span>12</span>Credits</button>
+      <button role="tab" aria-selected="false" aria-controls="s13" id="b13"><span>13</span>Owner grants</button>
+      <button role="tab" aria-selected="false" aria-controls="s14" id="b14"><span>14</span>Admin · Sites</button>
+    </div>
+    <div>
+
+<!-- 1 Inbox -->
+<section id="s1" role="tabpanel" aria-labelledby="b1">
+  <div class="frame">
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">studio.frrata.shop</div><span class="chip c-info">Pixel &amp; Thread</span><span class="chip c-ok">Verified · GSTIN</span><span class="chip c-ok">Two-factor on</span></div>
+    <div class="shell">
+      <aside class="rail">
+        <div class="mark"><i></i>Studio</div>
+        <button class="btn pri" type="button" style="width:100%;justify-content:center">New session</button>
+        <div class="grp"><span>Needs you</span><span>2</span></div>
+        <a class="sess on" href="#s1"><b>Monsoon home</b><small><span class="dot d-need"></span>Kesar Studio · a question</small></a>
+        <a class="sess" href="#s1"><b>Size quiz</b><small><span class="dot d-need"></span>Nila · plan to approve</small></a>
+        <div class="grp"><span>Working</span><span>3</span></div>
+        <a class="sess" href="#s1"><b>Hindi prices</b><small><span class="dot d-run"></span>Kesar Studio · 6 of 9</small></a>
+        <a class="sess" href="#s1"><b>Hero · 3 variants</b><small><span class="dot d-run"></span>Roam Bags · building</small></a>
+        <a class="sess" href="#s1"><b>Weekend drop</b><small><span class="dot d-run"></span>Kesar Studio · routine</small></a>
+        <div class="grp"><span>Ready to review</span><span>1</span></div>
+        <a class="sess" href="#s1"><b>Lookbook page</b><small><span class="dot d-ok"></span>Glow Labs · checks 6/6</small></a>
+        <div class="grp"><span>From Frrata</span><span>1</span></div>
+        <a class="sess" href="#s1"><b>Kit 2.4.1 · security patch</b><small><span class="dot d-ok"></span>All clients · deployed</small></a>
+        <div class="grp"><span>Done</span><span>24</span></div>
+        <a class="sess" href="#s1"><b>Footer and legal block</b><small><span class="dot d-n"></span>Roam Bags · published</small></a>
+      </aside>
+      <div class="pad">
+        <div class="ph"><h3>Clients</h3><span class="sp"></span><input aria-label="Find a client" placeholder="Find a client" class="btn" style="width:200px"></div>
+        <div class="scroll"><table>
+          <thead><tr><th>Client</th><th>Live</th><th>Drafts</th><th>Checks</th><th>Credits this month</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><b>Kesar Studio</b><br><span class="mono k">kesarstudio.in</span></td><td>v13 · today</td><td>3</td><td><span class="chip c-ok">6 of 6</span></td><td class="mono">96 / 200</td><td><button class="btn sm" type="button">Open</button></td></tr>
+            <tr><td><b>Roam Bags</b><br><span class="mono k">roambags.in</span></td><td>v4 · 9 Nov</td><td>1</td><td><span class="chip c-ok">6 of 6</span></td><td class="mono">90 / 200</td><td><button class="btn sm" type="button">Open</button></td></tr>
+            <tr><td><b>Nila</b><br><span class="mono k">nila.frrata.shop</span></td><td><span class="chip c-n">Not open</span></td><td>2</td><td><span class="chip c-warn">5 of 6</span></td><td class="mono">160 / 200</td><td><button class="btn sm" type="button">Open</button></td></tr>
+            <tr><td><b>Glow Labs</b><br><span class="mono k">glowlabs.co.in</span></td><td>v21 · 2 Nov</td><td>1</td><td><span class="chip c-ok">6 of 6</span></td><td class="mono">0 / 100</td><td><button class="btn sm" type="button">Open</button></td></tr>
+          </tbody>
+        </table></div>
+        <div class="grid3" style="margin-top:12px">
+          <div class="card"><h4>Credits</h4><div class="mono" style="font-size:20px">212 <span class="k" style="font-size:13px">· 150 in the seat + 62 from a pack</span></div><div class="meter" style="margin-top:8px"><i style="width:60%"></i></div></div>
+          <div class="card"><h4>Published this month</h4><div class="mono" style="font-size:20px">14</div></div>
+          <div class="card"><h4>Routines</h4><div class="mono" style="font-size:20px">5 <span class="k" style="font-size:13px">running</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>Inbox across every client.</b> Grouped by what the partner must do. "Needs you" pings the phone. Phone width: the rail becomes the screen.</p>
+</section>
+
+<!-- 2 New session -->
+<section id="s2" role="tabpanel" aria-labelledby="b2" hidden>
+  <div class="frame">
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">studio.frrata.shop/new</div></div>
+    <div class="pad" style="max-width:760px;margin:0 auto;width:100%">
+      <div class="ph"><h3>New session</h3></div>
+      <div class="grid2">
+        <label class="card"><span class="k" style="font-size:12px">Client</span><br><b>Kesar Studio</b> <span class="chip c-ok">Build · Preview · Publish with approval</span></label>
+        <label class="card"><span class="k" style="font-size:12px">Start from</span><br><b>Live · v13</b> <span class="k">· or a draft · or a starter</span></label>
+      </div>
+      <div class="card" style="margin-top:10px;min-height:120px">
+        <div style="font-size:15px">Make the home page feel like the monsoon drop. Big photo, the four new kurtas under it, the drop date. Keep the Hindi.</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px"><span class="chip c-n">brief.pdf</span><span class="chip c-n">moodboard · 6 photos</span><span class="chip c-n">screenshot of competitor hero</span><button class="btn sm" type="button">Attach</button></div>
+      </div>
+      <div class="rows card" style="margin-top:10px">
+        <div><span>How the agent works</span><span class="dial"><span class="on">Plan first</span><span>Ask before each page</span><span>Build freely</span></span></div>
+        <div><span>Run</span><span class="dial"><span class="on">One</span><span>Three variants</span></span></div>
+        <div><span>Preview data</span><span>Live catalogue, read-only · a key for this session only</span></div>
+        <div><span>Pages, FAQ, policies, menus</span><span class="k">Edited in the console</span></div>
+        <div><span>Credit cap for this session</span><span class="mono">80 · ₹1,520</span></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><span class="k" style="align-self:center;font-size:13px">≈ 40–60 credits · ₹760–1,140 · charged on actual use</span><button class="btn pri" type="button">Start</button></div>
+    </div>
+  </div>
+  <p class="cap"><b>A prompt, a starting point, an autonomy level.</b> The estimate comes from the plan; the cap stops the session, never half-way through a page.</p>
+</section>
+
+<!-- 3 Plan -->
+<section id="s3" role="tabpanel" aria-labelledby="b3" hidden>
+  <div class="frame">
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">studio.frrata.shop/s/7f3c…/plan</div><span class="chip c-warn">Plan to approve</span></div>
+    <div style="background:var(--muted);padding:1px 12px">
+      <div class="plan">
+        <div style="display:flex;align-items:center;gap:8px"><h3 style="margin:0;font:600 18px var(--f-display)">Plan · Monsoon home</h3><span class="sp"></span><span class="chip c-n">≈ 45 credits · ₹855</span></div>
+        <div class="pages"><span class="chip c-info">app/page.tsx</span><span class="chip c-info">components/drop-hero.tsx</span><span class="chip c-n">new</span><span class="chip c-info">lib/frrata.ts</span></div>
+        <ol>
+          <li>Replace the hero with a full-width photo from your library ("Rain on the terrace"), heading in Hindi and English</li>
+          <li>Under it, the first 4 pieces of <span class="mono">collections/monsoon</span>, from the API, cached 60 s</li>
+          <li>The drop date from the collection's publish time; hidden once passed</li>
+          <li>Keep the header, footer and legal block as they are</li>
+          <li>Run the checks on phone and desktop; screenshot both</li>
+        </ol>
+        <div class="q" style="margin-top:8px"><b>Question</b><div class="opts"><span>Use "Rain on the terrace" (your library)</span><span>Use the moodboard's first photo (needs your rights)</span><span>Ask the client</span></div></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap"><button class="btn" type="button">Keep planning</button><button class="btn" type="button">Edit plan</button><button class="btn pri" type="button">Approve and build</button></div>
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>No edit before the plan is approved</b> (in "Plan first"). The plan names the files it will touch and its cost; questions are tap-to-answer.</p>
+</section>
+
+<!-- 4 Session -->
+<section id="s4" role="tabpanel" aria-labelledby="b4" hidden>
+  <div class="frame">
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">studio.frrata.shop/s/7f3c…</div><span class="chip c-info">Working</span><span class="chip c-n">Kesar Studio</span></div>
+    <div class="sess3">
+      <div class="convo">
+        <div class="sh"><b>Monsoon home</b><span class="chip c-n mono">draft/monsoon-home</span><span class="sp"></span><button class="btn sm" type="button">Stop</button></div>
+        <div class="msgs">
+          <div class="me">Make the home page feel like the monsoon drop…</div>
+          <div class="ai">Plan approved. Building.</div>
+          <div class="tool"><b>✓</b> read app/page.tsx</div>
+          <div class="tool"><b>✓</b> write components/drop-hero.tsx <span class="k">+64</span></div>
+          <div class="tool"><b>✓</b> edit app/page.tsx <span class="k">+12 −30</span></div>
+          <div class="tool"><b>✓</b> build · 41 s</div>
+          <div class="tool"><span class="run">●</span> screenshot · phone, desktop</div>
+          <div class="me">Make the date bigger, and put it on the photo.</div>
+          <div class="ai">Queued after the screenshot.</div>
+        </div>
+        <div class="compose">
+          <div class="box2">Ask for a change, or point at the page</div>
+          <div class="row"><span class="dial"><span>Plan first</span><span>Ask before each page</span><span class="on">Build freely</span></span><span class="sp"></span><span class="mono k" style="font-size:12px">31 / 80</span><button class="btn pri sm" type="button">Send</button></div>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="stbar"><span class="dial"><span class="on">Preview</span><span>Code</span><span>Diff</span></span><span class="dial"><span class="on">Phone</span><span>Desktop</span></span><button class="btn sm" type="button">Point at the page</button><span class="sp"></span><span class="mono k">7f3c.frrata-preview.app</span></div>
+        <div class="phone">
+          <div class="site-h"><span>Kesar Studio</span><span style="font:12px var(--f-body)">Bag (2)</span></div>
+          <div class="hero pick">मानसून ड्रॉप<span style="position:absolute;right:10px;top:10px;font:500 11px var(--f-body);background:rgba(0,0,0,.45);padding:3px 8px;border-radius:99px">Drops Sat 14 Nov, 7 pm</span><span class="pin" style="left:8px;top:8px">1</span></div>
+          <div class="pgrid" style="grid-template-columns:repeat(2,minmax(0,1fr))"><i></i><i></i><i></i><i></i></div>
+        </div>
+      </div>
+      <div class="side3">
+        <h4>Todos</h4>
+        <div class="todo done"><i></i><span>Hero from your photo</span></div>
+        <div class="todo done"><i></i><span>Monsoon pieces, 4</span></div>
+        <div class="todo done"><i></i><span>Drop date</span></div>
+        <div class="todo now"><i></i><span>Screenshots and checks</span></div>
+        <div class="todo"><i></i><span>Date on the photo, bigger</span></div>
+        <h4>Checks</h4>
+        <div class="rows">
+          <div><span>Build</span><span class="chip c-ok">Passed</span></div>
+          <div><span>Speed</span><span class="chip c-n">Running</span></div>
+          <div><span>Accessibility</span><span class="chip c-n">Waiting</span></div>
+          <div><span>Business details</span><span class="chip c-ok">Present</span></div>
+        </div>
+        <h4>Reviewers</h4>
+        <div class="rows"><div><span>Speed</span><span class="k">idle</span></div><div><span>Copy · Hindi</span><span class="chip c-info">reading</span></div></div>
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>Talk, watch, point.</b> A new message waits in a queue instead of interrupting; "Point at the page" pins a comment on the element; the dial can change mid-session.</p>
+</section>
+
+<!-- 5 Review -->
+<section id="s5" role="tabpanel" aria-labelledby="b5" hidden>
+  <div class="frame">
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">studio.frrata.shop/s/7f3c…/review</div><span class="chip c-ok">Ready to review</span></div>
+    <div class="sh" style="background:var(--card)"><b>Monsoon home · draft 14</b><span class="chip c-ok">Checks 6 of 6</span><span class="chip c-n">+88 −30 · 3 files</span><span class="chip c-n mono">3f2c1a</span><span class="sp"></span><span class="dial"><span>Code</span><span class="on">Before / after</span></span><button class="btn" type="button">Send version 3f2c1a to the owner</button><button class="btn pri" type="button" disabled style="opacity:.5">Publish · waits for the owner</button></div>
+    <div class="vs">
+      <div><div class="k" style="font-size:12px;margin-bottom:4px">Live · v13</div><div class="site"><div class="site-h"><span>Kesar Studio</span></div><div class="hero v3">Handwoven, made slow</div><div class="pgrid"><i></i><i></i><i></i><i></i></div></div></div>
+      <div><div class="k" style="font-size:12px;margin-bottom:4px">Draft 14</div><div class="site"><div class="site-h"><span>Kesar Studio</span></div><div class="hero">मानसून ड्रॉप<span class="pin" style="right:10px;top:10px">2</span></div><div class="pgrid"><i></i><i></i><i></i><i></i></div></div></div>
+    </div>
+    <div class="code">
+      <div class="k">components/drop-hero.tsx</div>
+      <div class="add">+ export async function DropHero({ handle }: { handle: string }) {</div>
+      <div class="add">+   const c = await frrata.collection(handle)              // 60 s cache</div>
+      <div class="add">+   const when = c.publishAt &amp;&amp; new Date(c.publishAt)</div>
+      <div class="cm"><b>Riya:</b> Use the drop line format, not the raw date. <span class="k">· sent with the next message</span></div>
+      <div class="add">+   return &lt;section className="hero"&gt;…</div>
+      <div class="del">- &lt;Hero title="Handwoven, made slow" /&gt;</div>
+    </div>
+  </div>
+  <p class="cap"><b>Two ways to read a draft:</b> the code, or the pages before and after. A comment on a line or a pin on a page goes to the agent with the next message.</p>
+</section>
+
+<!-- 6 Variants -->
+<section id="s6" role="tabpanel" aria-labelledby="b6" hidden>
+  <div class="frame">
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">frrata.shop/studio/s/hero-variants</div><span class="chip c-ok">3 ready</span></div>
+    <div class="sh" style="background:var(--card)"><b>Hero · 3 variants</b><span class="chip c-n">Roam Bags</span><span class="sp"></span><span class="mono k" style="font-size:12px">94 credits · ₹1,786</span></div>
+    <div class="var3">
+      <div class="v"><div class="hero" style="height:130px">Built to roam</div><div class="vb"><b>A · Photo, words below</b><span class="k">Speed 96 · a11y 100</span><div style="display:flex;gap:6px"><button class="btn sm" type="button">Open</button><button class="btn sm" type="button">Keep this</button></div></div></div>
+      <div class="v win"><div class="hero v2" style="height:130px">Carry less. See more.</div><div class="vb"><b>B · Split, rail of bags</b><span class="k">Speed 94 · a11y 100</span><div style="display:flex;gap:6px"><button class="btn sm" type="button">Open</button><button class="btn pri sm" type="button">Keep this</button></div></div></div>
+      <div class="v"><div class="hero v3" style="height:130px">The commute bag</div><div class="vb"><b>C · Video loop</b><span class="k">Speed 88 · a11y 100</span><div style="display:flex;gap:6px"><button class="btn sm" type="button">Open</button><button class="btn sm" type="button">Keep this</button></div></div></div>
+    </div>
+  </div>
+  <p class="cap"><b>Three ideas at once,</b> each its own draft and sandbox; "Keep this" closes the other two. A variant can also go live as an A/B split (a later phase).</p>
+</section>
+
+<!-- 7 Client approves -->
+<section id="s7" role="tabpanel" aria-labelledby="b7" hidden>
+  <div class="frame">
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">Message to the owner's number on file · then 7f3c.frrata-preview.app</div></div>
+    <div class="phonewrap">
+      <div class="pscreen"><div class="ptop"><b>Frrata</b> · business account</div>
+        <div class="wa">
+          <div class="b">A new home page for <b>Kesar Studio</b> is ready for you.<br><a href="#s7">See it</a></div>
+          <div class="b">Version 3f2c1a · checks passed · link ends in 72 h</div>
+        </div>
+      </div>
+      <div class="pscreen"><div class="ptop" style="display:flex;gap:6px;align-items:center"><b>Draft 14</b><span class="sp"></span><span class="chip c-n">Kesar Studio</span></div>
+        <div style="background:#fff;color:#1d1b19"><div class="hero">मानसून ड्रॉप<span class="pin" style="right:10px;top:10px">3</span></div><div class="pgrid" style="grid-template-columns:repeat(2,minmax(0,1fr))"><i></i><i></i><i></i><i></i></div></div>
+        <div style="padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--card)"><div class="box2" style="border:1px solid var(--input);border-radius:8px;padding:8px;color:var(--sub);font-size:13px">"Make the kurtas bigger"</div><div style="display:flex;gap:6px"><button class="btn" type="button" style="flex:1;justify-content:center">Ask for changes</button><button class="btn pri" type="button" style="flex:1;justify-content:center">Sign in and approve 3f2c1a</button></div></div>
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>The brand owner never opens Studio.</b> A WhatsApp message from Frrata's business number (a transactional update) leads to the preview; a pin or a sentence becomes the agent's next task; Approve lets the partner publish (or publishes, if the partner chose so).</p>
+</section>
+
+<!-- 8 Routines -->
+<section id="s8" role="tabpanel" aria-labelledby="b8" hidden>
+  <div class="frame">
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">frrata.shop/studio/routines</div></div>
+    <div class="pad">
+      <div class="ph"><h3>Routines</h3><span class="sp"></span><button class="btn pri" type="button">New routine</button></div>
+      <div class="scroll"><table>
+        <thead><tr><th>Routine</th><th>When</th><th>Then</th><th>Last run</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><b>Weekend drop</b><br><span class="k">Kesar Studio</span></td><td>Fridays 6:07 pm</td><td>Draft · publishes if checks pass and only <span class="mono">app/page.tsx</span> changed</td><td><span class="chip c-ok">Published · 8 Nov</span></td><td><button class="btn sm" type="button">Run now</button></td></tr>
+          <tr><td><b>New collection in the menu</b><br><span class="k">Kesar Studio</span></td><td>A collection is published</td><td>Draft · waits for you</td><td><span class="chip c-warn">Waiting · today</span></td><td><button class="btn sm" type="button">Run now</button></td></tr>
+          <tr><td><b>Sold-out tidy-up</b><br><span class="k">Roam Bags</span></td><td>A piece sells out · once a day</td><td>Draft · waits for you (reads shopper text)</td><td><span class="chip c-ok">Published · 10 Nov</span></td><td><button class="btn sm" type="button">Run now</button></td></tr>
+          <tr><td><b>Monthly health</b><br><span class="k">One run per client</span></td><td>1st of the month</td><td>Speed and accessibility fixes as drafts</td><td><span class="chip c-ok">4 drafts · 1 Nov</span></td><td><button class="btn sm" type="button">Run now</button></td></tr>
+          <tr><td><b>Diwali banner off</b><br><span class="k">Glow Labs</span></td><td>Once · 3 Nov, 11:59 pm</td><td>Paused · festival freeze</td><td><span class="chip c-n">Done</span></td><td></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+  <p class="cap"><b>A saved prompt with a trigger.</b> Schedules are hourly at most; events come from Frrata (collection published, sold out, a drop date). "Publish if checks pass" is the partner's choice per routine, off by default.</p>
+</section>
+
+<!-- 9 Brand brain -->
+<section id="s9" role="tabpanel" aria-labelledby="b9" hidden>
+  <div class="frame">
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">frrata.shop/studio/kesar-studio/brain</div></div>
+    <div class="pad">
+      <div class="ph"><h3>Brand brain</h3><span class="chip c-n">Kesar Studio</span><span class="sp"></span><button class="btn" type="button">History</button></div>
+      <div class="grid2">
+        <div class="card"><h4>brand.md <span class="chip c-n">read every session</span></h4>
+          <div class="code" style="border:1px solid var(--line);border-radius:6px;padding:6px 0">
+            <div># Kesar Studio</div><div>Voice: warm, plain, Hindi first on the home page.</div><div>Never: "cheap", "sale" in red, stock photos.</div><div>Colours: haldi on ink; photos full-bleed.</div><div>Sizes: say "true to Indian sizes".</div>
+          </div>
+        </div>
+        <div class="card"><h4>Skills</h4>
+          <div class="rows">
+            <div><span>Frrata · checkout, COD badge, legal block</span><span class="chip c-n">Always</span></div>
+            <div><span>Monsoon starter 2.1 · how to extend it</span><span class="chip c-n">From the starter</span></div>
+            <div><span>Pixel &amp; Thread · house style</span><span class="chip c-info">Agency · read-only here</span></div>
+            <div><span>Hindi copy check</span><span class="chip c-info">Agency</span></div>
+          </div>
+        </div>
+        <div class="card"><h4>Reviewers</h4>
+          <div class="rows"><div><span>Speed</span><span class="chip c-ok">On</span></div><div><span>Accessibility</span><span class="chip c-ok">On</span></div><div><span>Copy · claims and prices</span><span class="chip c-ok">On</span></div><div><span>Security</span><span class="chip c-ok">Always</span></div></div>
+        </div>
+        <div class="card"><h4>Learned · this brand only <span class="chip c-warn">2 to confirm</span></h4>
+          <div class="rows"><div><span>"Prefers photos without models"</span><span><button class="btn sm" type="button">Keep</button></span></div><div><span>"Client approves on Sundays"</span><span><button class="btn sm" type="button">Keep</button></span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>What the agent knows before it starts.</b> brand.md is the brand's CLAUDE.md; skills stack Frrata → starter → agency; what it learns waits for a person to keep it.</p>
+</section>
+
+<!-- 10 Environment -->
+<section id="s10" role="tabpanel" aria-labelledby="b10" hidden>
+  <div class="frame">
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">frrata.shop/studio/kesar-studio/environment</div></div>
+    <div class="pad">
+      <div class="ph"><h3>Environment</h3><span class="chip c-n">Kesar Studio</span></div>
+      <div class="grid2">
+        <div class="card"><h4>Preview data</h4><div class="rows"><div><span>Catalogue</span><span>Live, read-only</span></div><div><span>Prices and stock</span><span>Live</span></div><div><span>Orders, customers</span><span class="chip c-n">Never</span></div></div></div>
+        <div class="card"><h4>Outbound</h4><div class="rows"><div><span class="mono">api.frrata.shop</span><span class="chip c-ok">Allowed</span></div><div><span class="mono">media.frrata.shop</span><span class="chip c-ok">Allowed</span></div><div><span class="mono">fonts.gstatic.com</span><span class="chip c-ok">Allowed</span></div><div><span class="mono">Anything else</span><span class="chip c-bad">Blocked</span></div></div></div>
+        <div class="card"><h4>Packages <span class="chip c-n">142 allowed</span></h4><div class="rows"><div><span class="mono">framer-motion 11.18</span><span><button class="btn sm" type="button">Ask Frrata</button></span></div><div><span>New versions wait</span><span class="mono">1 day</span></div><div><span>Install scripts</span><span class="chip c-n">Off</span></div></div></div>
+        <div class="card"><h4>Keys</h4><div class="rows"><div><span>Public</span><span class="mono">frs_pub_7Hq2…</span></div><div><span>Session</span><span class="k">Added by the proxy, ends with the session</span></div><div><span>Secrets in code</span><span class="chip c-n">None allowed</span></div><div><span>Packages</span><span class="k">Closed mirror, by hash</span></div></div></div>
+        <div class="card"><h4>Domain and router</h4><div class="rows"><div><span class="mono">kesarstudio.in</span><span class="chip c-ok">Live</span></div><div><span class="mono">/checkout /orders /policies /og</span><span class="chip c-ok">Frrata</span></div><div><span>Everything else</span><span class="chip c-n">The site</span></div><div><span class="mono">*.frrata-preview.app</span><span class="chip c-n">Drafts, signed, 72 h</span></div><div><span>Headers and outbound</span><span class="chip c-ok">Set by Frrata</span></div></div></div>
+        <div class="card"><h4>Publishing</h4><div class="rows"><div><span>Who may publish</span><span>Partner with the owner's grant</span></div><div><span>Owner approves</span><span>The exact version</span></div><div><span>Routines may publish</span><span>Declared files, no shopper text</span></div><div><span>Frrata's patches</span><span class="chip c-ok">Deploy themselves</span></div></div></div>
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>What the agent can reach, set once per site.</b> Keys are added by a proxy outside the sandbox; no field here takes a secret.</p>
+</section>
+
+<!-- 11 Developer -->
+<section id="s11" role="tabpanel" aria-labelledby="b11" hidden>
+  <div class="frame">
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">frrata.shop/studio/kesar-studio/code</div></div>
+    <div class="pad">
+      <div class="ph"><h3>Code</h3><span class="chip c-n">Kesar Studio</span><span class="chip c-n mono">site 01J9…</span><span class="sp"></span><button class="btn" type="button">Connect GitHub</button></div>
+      <div class="grid2">
+        <div class="card"><h4>Clone</h4><div class="code" style="border:1px solid var(--line);border-radius:6px;padding:6px 0"><div>git clone https://git.frrata.shop/s/01J9KX4T</div><div>cd kesar-studio &amp;&amp; npx frrata dev</div></div><p class="k" style="font-size:12px;margin:8px 0 0">A push makes a preview; it never publishes.</p></div>
+        <div class="card"><h4>Continue a session locally</h4><div class="code" style="border:1px solid var(--line);border-radius:6px;padding:6px 0"><div>npx frrata pull monsoon-home</div><div>npx frrata push</div></div></div>
+        <div class="card"><h4>Branches</h4><div class="rows"><div><span class="mono">live</span><span class="chip c-ok">v13 · kit 2.4.1</span></div><div><span class="mono">draft/monsoon-home</span><span class="k">Agent · Riya</span></div><div><span class="mono">draft/hindi-prices</span><span class="k">Agent</span></div><div><span class="mono">aman/size-quiz</span><span class="k">Aman · pushed</span></div></div></div>
+        <div class="card"><h4>A push</h4><div class="rows"><div><span class="mono">aman/size-quiz · 3f2c1a</span><span class="chip c-ok">Checks 6 of 6</span></div><div><span>Preview</span><span class="mono">aman-size-quiz.kesar…</span></div><div><span>Open as a session</span><span><button class="btn sm" type="button">Hand to the agent</button></span></div></div></div>
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>Developers never need the chat.</b> Clone, run, push; every push gets a preview and the same checks; a branch can be handed to the agent, and a session pulled to a laptop.</p>
+</section>
+
+<!-- 12 Credits -->
+<section id="s12" role="tabpanel" aria-labelledby="b12" hidden>
+  <div class="frame">
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">studio.frrata.shop/credits</div></div>
+    <div class="pad">
+      <div class="ph"><h3>Credits</h3><span class="chip c-n">November</span><span class="sp"></span><button class="btn" type="button">Top up</button></div>
+      <div class="grid3">
+        <div class="card"><h4>Used</h4><div class="mono" style="font-size:22px">212</div><div class="meter" style="margin-top:8px"><i style="width:60%"></i></div><div class="k" style="font-size:12px;margin-top:6px">150 from the seat · 62 from a pack</div></div>
+        <div class="card"><h4>Billed to clients</h4><div class="mono" style="font-size:22px">160</div><div class="k" style="font-size:12px;margin-top:6px">Nila · on the shop's invoice, the owner agreed</div></div>
+        <div class="card"><h4>Hard cap</h4><div class="mono" style="font-size:22px">600</div><div class="k" style="font-size:12px;margin-top:6px">Sessions stop at a page's end</div></div>
+      </div>
+      <div class="scroll" style="margin-top:12px"><table>
+        <thead><tr><th>Session</th><th>Client</th><th>Model</th><th>Sandbox</th><th>Builds</th><th>Credits</th><th>Pays</th></tr></thead>
+        <tbody>
+          <tr><td>Monsoon home</td><td>Kesar Studio</td><td class="mono">₹212</td><td class="mono">₹48</td><td class="mono">₹7</td><td class="mono">43</td><td>Partner</td></tr>
+          <tr><td>Hero · 3 variants</td><td>Roam Bags</td><td class="mono">₹468</td><td class="mono">₹101</td><td class="mono">₹22</td><td class="mono">94</td><td>Partner</td></tr>
+          <tr><td>Size quiz</td><td>Nila</td><td class="mono">₹790</td><td class="mono">₹190</td><td class="mono">₹27</td><td class="mono">160</td><td>Client</td></tr>
+          <tr><td>Weekend drop (routine)</td><td>Kesar Studio</td><td class="mono">₹63</td><td class="mono">₹11</td><td class="mono">₹2</td><td class="mono">13</td><td>Partner</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+  <p class="cap"><b>A credit is ₹6.33 of measured cost, sold at ₹19.</b> Every session shows its model, sandbox and build cost; credits are reserved before a turn and the unused part returned; a client's invoice carries a session only with the owner's yes. Partner share never counts credits.</p>
+</section>
+
+<!-- 13 Owner grants -->
+<section id="s13" role="tabpanel" aria-labelledby="b13" hidden>
+  <div class="frame">
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">frrata.shop/console/settings/people</div><span class="chip c-n">Kesar Studio · owner</span></div>
+    <div class="pad">
+      <div class="ph"><h3>Pixel &amp; Thread</h3><span class="chip c-ok">Verified · GSTIN</span><span class="chip c-ok">Two-factor on</span><span class="sp"></span><button class="btn" type="button">Remove</button></div>
+      <div class="grid2">
+        <div class="card"><h4>May</h4><div class="rows">
+          <div><span>Build drafts</span><span class="chip c-ok">Yes</span></div>
+          <div><span>Preview on the shop's data</span><span class="chip c-ok">Yes</span></div>
+          <div><span>Publish</span><span class="chip c-warn">After my approval</span></div>
+          <div><span>Routines that publish</span><span class="chip c-n">No</span></div>
+          <div><span>Charge credits to my invoice</span><span class="chip c-n">Up to 200 a month</span></div>
+        </div></div>
+        <div class="card"><h4>People from Pixel &amp; Thread</h4><div class="rows">
+          <div><span>Aman · developer</span><span class="k">Build</span></div>
+          <div><span>Riya · designer</span><span class="k">Build</span></div>
+          <div><span>Sana · lead</span><span class="k">Build · publish</span></div>
+        </div></div>
+        <div class="card"><h4>Last published</h4><div class="rows">
+          <div><span class="mono">3f2c1a · today 4:12 pm</span><span><button class="btn sm" type="button">Roll back</button></span></div>
+          <div><span>Approved by</span><span>You · on your phone</span></div>
+        </div></div>
+        <div class="card"><h4>On removal</h4><div class="rows">
+          <div><span>Sessions and routines</span><span class="k">Stop</span></div>
+          <div><span>Keys and code access</span><span class="k">Revoked</span></div>
+          <div><span>Your site and its code</span><span class="k">Stay yours</span></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>The brand owner decides what a partner may do,</b> per shop; only the owner changes it. Removing a partner ends everything they could still do, in one step.</p>
+</section>
+
+<!-- 14 Admin Sites -->
+<section id="s14" role="tabpanel" aria-labelledby="b14" hidden>
+  <div class="frame">
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">frrata.shop/admin/sites</div><span class="chip c-n">Frrata staff</span></div>
+    <div class="pad">
+      <div class="ph"><h3>Sites</h3><span class="chip c-ok">1,042 live</span><span class="sp"></span><button class="btn" type="button">Freeze publishes</button><button class="btn" type="button">Freeze routines</button><button class="btn" type="button">Pause Studio</button></div>
+      <div class="grid3">
+        <div class="card"><h4>Kit</h4><div class="rows"><div><span>2.4.1 · current</span><span class="mono">1,031</span></div><div><span>2.3 · security fixes until Nov 2027</span><span class="mono">9</span></div><div><span>Below minimum</span><span class="chip c-bad">2 · can't publish</span></div></div></div>
+        <div class="card"><h4>Patch 2.4.1</h4><div class="rows"><div><span>Deployed</span><span class="mono">1,031</span></div><div><span>Checks failed · owner told</span><span class="mono">3</span></div><div><span>Time to every site</span><span class="mono">5 h 40 min</span></div></div></div>
+        <div class="card"><h4>Today</h4><div class="rows"><div><span>Orders vs usual</span><span class="chip c-warn">2 sites down 60%</span></div><div><span>API from cache</span><span class="mono">98.6%</span></div><div><span>Agent spend</span><span class="mono">₹41,200 of ₹80,000</span></div></div></div>
+      </div>
+      <div class="scroll" style="margin-top:12px"><table>
+        <thead><tr><th>Site</th><th>Partner</th><th>Kit</th><th>Checks</th><th>Orders vs usual</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>roambags.in</td><td>Pixel &amp; Thread</td><td class="mono">2.4.1</td><td><span class="chip c-ok">Passed</span></td><td><span class="chip c-bad">−62%</span></td><td><button class="btn sm" type="button">Last good version</button></td></tr>
+          <tr><td>glowlabs.co.in</td><td>Kaapi Labs</td><td class="mono">2.4.1</td><td><span class="chip c-ok">Passed</span></td><td><span class="chip c-bad">−58%</span></td><td><button class="btn sm" type="button">Last good version</button></td></tr>
+          <tr><td>kesarstudio.in</td><td>Pixel &amp; Thread</td><td class="mono">2.4.1</td><td><span class="chip c-ok">Passed</span></td><td><span class="chip c-ok">+4%</span></td><td></td></tr>
+          <tr><td>nila.frrata.site</td><td>Studio Nila</td><td class="mono">2.2.0</td><td><span class="chip c-bad">Below minimum</span></td><td>—</td><td><button class="btn sm" type="button">Take down</button></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+  <p class="cap"><b>Frrata sees the whole fleet:</b> kit versions, how far a patch has reached, sites whose orders fell, agent spend against its ceiling; freezes for a festival; any site back to its last good version, or down.</p>
+</section>
+
+    </div>
+  </div>
+
+  <div class="col">
+    <h2>What partners can make</h2>
+  </div>
+  <div class="grid3">
+    <div class="box"><h3 style="margin-top:0">Any page, any layout</h3><ul><li>Lookbooks, campaign microsites, drop countdown pages</li><li>Size quizzes and fit finders reading size charts from the API</li><li>Store locator, press, about, makers</li><li>Motion, scroll stories, video, 3D product spins</li></ul></div>
+    <div class="box"><h3 style="margin-top:0">Merchandising that runs itself</h3><ul><li>Routines on drops, sell-outs, festivals</li><li>Collection pages built from catalogue rules</li><li>Hindi and English versions from one brief</li><li>Variants compared before going live; A/B later</li></ul></div>
+    <div class="box"><h3 style="margin-top:0">Agency leverage</h3><ul><li>House style as a skill, reused across clients</li><li>Starters in the gallery that earn</li><li>Monthly health routines across every client</li><li>Developers and the agent on the same repo</li></ul></div>
+  </div>
+
+  <div class="col">
+    <h2>Limits, and why</h2>
+    <p>Every limit has a reason and a way it could lift later. "By design" limits keep a shop's money and shoppers safe and stay; the rest are costs or phases.</p>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>Limit</th><th>Why</th><th>Kind</th><th>What would lift it</th></tr></thead>
+    <tbody>
+      <tr><td>No database or server of the site's own; data only through the Storefront API</td><td>A site can't leak or corrupt shop data it never holds</td><td><span class="chip c-bad">By design</span></td><td>More API resources (reviews, wishlists, forms) as modules</td></tr>
+      <tr><td>Checkout, payment, sign-in and personal data stay on Frrata</td><td>Razorpay on the shop's own account, DPDP, India's e-commerce rules</td><td><span class="chip c-bad">By design</span></td><td>Never; checkout look follows the site's brand tokens</td></tr>
+      <tr><td>The agent can't change prices, stock, products or orders</td><td>Money and stock move only in the console, by people</td><td><span class="chip c-bad">By design</span></td><td>A later "catalogue helper" proposing edits for a person to apply</td></tr>
+      <tr><td>Outbound calls only to Frrata, its media, and allowed fonts</td><td>No tracking or code from elsewhere; injection can't send data out</td><td><span class="chip c-bad">By design</span></td><td>An allow-list request reviewed by Frrata (analytics, chat widgets)</td></tr>
+      <tr><td>Packages only from an allow-list; new versions wait a day</td><td>Supply-chain attacks hit npm monthly</td><td><span class="chip c-warn">Policy</span></td><td>"Ask Frrata" adds a package after review</td></tr>
+      <tr><td>Publishing needs a person (unless a routine is allowed and checks pass)</td><td>Injection is not solved; a person is the last gate</td><td><span class="chip c-warn">Policy</span></td><td>Per-routine choice, off by default</td></tr>
+      <tr><td>Checks block publish: speed, accessibility, legal block, secrets, packages</td><td>A quality floor every shop keeps; 2027 rules</td><td><span class="chip c-warn">Policy</span></td><td>Thresholds per plan, never below the floor</td></tr>
+      <tr><td>Session length and parallel sessions per partner (e.g. 3 at once, 60 min of sandbox a turn)</td><td>Sandbox minutes and model tokens cost money</td><td><span class="chip c-info">Cost</span></td><td>Higher partner tiers</td></tr>
+      <tr><td>Routines hourly at most</td><td>Cost and noise</td><td><span class="chip c-info">Cost</span></td><td>Events cover the urgent cases</td></tr>
+      <tr><td>No image or video generation; photos from the shop's library or the partner's licensed uploads</td><td>Rights, likeness, product truth</td><td><span class="chip c-info">Phase</span></td><td>Licensed generation for backgrounds only, later</td></tr>
+      <tr><td>The agent can be wrong: invented product claims, weak Hindi, a slow page</td><td>Models make mistakes</td><td><span class="chip c-info">Mitigated</span></td><td>Copy reviewer checks claims against the catalogue; checks; human review</td></tr>
+      <tr><td>Hosting data in India not yet confirmed for every option</td><td>DPDP from May 2027; sites hold no personal data, which lowers the stake</td><td><span class="chip c-info">Open</span></td><td>Confirm with the host before V2</td></tr>
+      <tr><td>Brands can't use Studio until partners have</td><td>Your decision: quality measured on partner work first</td><td><span class="chip c-info">Phase</span></td><td>V3b, if partner-built sites meet the checks and the kill signal</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="col" id="pricing">
+    <h2>How we charge</h2>
+    <p>Frrata already earns on every delivered order (2% Launch, 1% Growth, 0.5% Scale) plus the plan fee. A website built on the API sends its orders through Frrata's checkout, so more API traffic is more orders. The principle: <b>never charge for the traffic that brings orders; charge for what costs Frrata money to run on someone's behalf</b>: agent work, builds and heavy hosting.</p>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>What</th><th>Who pays</th><th>How</th><th>Included</th><th>Beyond that</th></tr></thead>
+    <tbody id="price-rows">
+      <tr><td><b>Storefront API</b> (read, cart link)</td><td>Nobody</td><td>Included in every plan; rate limits per key and per IP, cached reads unlimited</td><td>Every plan</td><td>Fair use; no per-call fee</td></tr>
+      <tr><td><b>Private keys, webhooks, search at volume</b></td><td>The brand</td><td>By plan</td><td>Growth and Scale</td><td>Upgrade</td></tr>
+      <tr><td><b>Hosting the site</b></td><td>The brand</td><td>Bundled in the plan, as Shopify bundles Oxygen; images on storage with no egress fee; bot traffic never billed</td><td>Sized on the chosen host so the allowance's cost × 3 fits the plan</td><td>The host's Mumbai rates × 3</td></tr>
+      <tr><td><b>Studio seat</b></td><td>The partner (verified: PAN or GSTIN, two-factor)</td><td>A monthly seat with credits and sessions at once</td><td>Starter: 60 credits once, with an opened client shop · Studio ₹2,999: 150 credits a month, 3 at once · Studio Plus ₹9,999: 500, 6 at once</td><td>Packs: ₹1,900 for 100 credits (12 months)</td></tr>
+      <tr><td><b>Credits for a client's work</b></td><td>Partner, or the client if the partner chooses</td><td>A session's credits on the client's Frrata invoice, with the client's yes</td><td>—</td><td>Same rate</td></tr>
+      <tr><td><b>Gallery starters</b></td><td>The brand (paid starters)</td><td>Free starters at V4; paid starters later, partner keeps 85%</td><td>—</td><td>Frrata 15%</td></tr>
+      <tr><td><b>Partner share</b> (exists)</td><td>Frrata</td><td>20% of Frrata's collected plan and order fees from client shops, 24 months; never seats or credits</td><td>—</td><td>Credits excluded</td></tr>
+    </tbody>
+  </table></div>
+  <div class="col">
+    <h3>What a credit is</h3>
+    <p>One credit is <b>₹6.33 of measured cost</b> (model tokens, sandbox seconds, build minutes) and sells at <b>₹19</b>: three times what it costs Frrata (owner, 2026-11-11). Every session shows its estimate in credits and rupees before it starts, is charged on actual use, and stops at its cap, never half-way through a page. A small change takes about 3–4 credits (₹57–76), a new page 50–100 (₹950–1,900), three variants about 90. Seat credits reset monthly; packs last 12 months.</p>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>What one ordinary turn costs Frrata</th><th>Figure</th><th>Source · date</th><th>Test</th></tr></thead>
+    <tbody>
+      <tr><td>Model: Sonnet 5.5, 50k cached + 5k fresh input, 3k output</td><td>$0.045 ≈ ₹4.0</td><td>Anthropic pricing (live 11 Nov 2026); ₹88 a dollar assumed</td><td>Token logs of the first 200 partner sessions</td></tr>
+      <tr><td>Sandbox: 2 vCPU, 4 GB, ~2 active minutes</td><td>≈ ₹1.0</td><td>Vercel Sandbox $0.128 / vCPU-h, $0.0212 / GB-h (10 Sep 2026)</td><td>Active minutes per turn</td></tr>
+      <tr><td>Build and checks: ~1 minute on 4 CPUs, a screenshot pass</td><td>≈ ₹1.2</td><td>Vercel build $0.0035 / CPU-min (Sep 2026)</td><td>Build minutes per turn</td></tr>
+      <tr><td><b>Cost per credit</b></td><td><b>≈ ₹6.2</b></td><td>sum</td><td>Monthly: cost ÷ credits used</td></tr>
+      <tr><td>Price per credit</td><td>₹19 (3.06× cost; ≈ 67% gross margin)</td><td>owner rule 2026-11-11: 3× API cost</td><td>Re-price when the vendor or the rupee moves; margin after failed turns</td></tr>
+      <tr><td>A new page, 15–30 turns</td><td>₹285–570 to the partner · ₹95–185 cost</td><td>matches 2026-11-11 research (₹80–170 a full build)</td><td>First 50 pages built</td></tr>
+      <tr><td>Hosting a cached small shop</td><td>cents a month</td><td>Vercel Pro overage $0.15 / GB; Cloudflare no egress (Oct 2026)</td><td>Bandwidth per shop, month 1</td></tr>
+    </tbody>
+  </table></div>
+  <div class="col">
+    <h3>Against the market</h3>
+    <p>No commerce platform charges per Storefront API call for shopper traffic: Shopify's is free with no fixed limit for buyers and throttles only bots; BigCommerce limits by plan; Swell meters at $5 per 100,000 calls on its own plans. Builders sell credits: Lovable at $0.25–0.50 a credit (a landing page ≈ 1.7 credits), Framer 3,000 credits in $30, Bolt and v0 by tokens. Shopify bundles Hydrogen hosting into every paid plan. Frrata's line: the API and hosting come with the plan (orders pay), the agent's work is credits at three times its cost, a stated rupee price, with an estimate before every run.</p>
+  </div>
+
+  <div class="col">
+    <h2>Decided (owner, 11 Nov 2026)</h2>
+    <div class="ask"><b>Credits</b> are ₹6.33 of measured cost, sold at ₹19, estimated first, charged on actuals.</div>
+    <div class="ask"><b>Frrata's patch lane:</b> security and legal fixes deploy to every site when checks pass with no visual change; the one exception to "a person publishes".</div>
+    <div class="ask"><b>Content stays data:</b> FAQ, policies, menus and announcements are edited in the console and served by the API; code owns layout.</div>
+    <div class="ask"><b>Hosting</b> off Frrata's own account, behind an adapter, with Frrata's router in front of every domain (checkout, orders, policies and share images stay Frrata's).</div>
+    <div class="ask"><b>Checkout fixes first</b> (shipped separately).</div>
+    <div class="ask"><b>Partners verified</b> by PAN or GSTIN with two-factor sign-in before free credits or publishing; the owner grants each partner's scope.</div>
+  </div>
+
+  <div class="col" id="research">
+    <h2>Research</h2>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>Source</th><th>Fact</th><th>Taken</th></tr></thead>
+    <tbody>
+      <tr><td>Claude Code docs (cloud sessions, environments, agent view, permission modes, routines; read 11 Nov 2026)</td><td>Sessions in managed VMs that keep running; environments with network levels, setup scripts and secrets a proxy adds; an inbox by needs input / working / completed; plan approval; schedules never more than hourly</td><td>The whole shape of Studio</td></tr>
+      <tr><td>Claude Agent SDK overview (read 11 Nov 2026)</td><td>API-key billing; third-party products may not offer Claude sign-in or Claude's rate limits without approval, nor use Claude Code's name</td><td>Frrata runs the agent on its own API account, meters it as credits, names it Frrata Studio</td></tr>
+      <tr><td>Shopify (Storefront API v2026-10; Oxygen; Plus, 9 Nov 2026)</td><td>Storefront API free, no fixed per-minute limit for buyers; Oxygen free on paid plans; Plus allows 25 headless storefronts</td><td>API and hosting with the plan</td></tr>
+      <tr><td>Lovable (plans and credits, Oct 2026)</td><td>Credits by task complexity; $0.25–0.50 a credit; hosting from the same balance</td><td>Credits by work done, a stated price</td></tr>
+      <tr><td>Framer (11 Nov 2026), Bolt, v0, Replit (live 11 Nov 2026)</td><td>Credit pools or tokens; hosting bundled or from credits; no-quote effort pricing draws complaints</td><td>An estimate and a cap before every session</td></tr>
+      <tr><td>Anthropic pricing (live 11 Nov 2026)</td><td>Sonnet 5.5 $2 / $10, Opus 5.5 $4 / $20 per M tokens; cache hits at 0.05×; batch 50% off</td><td>Prompt caching is the main lever on cost</td></tr>
+      <tr><td>Vercel (Sep 2026), Cloudflare Workers (2 Oct 2026)</td><td>Sandbox in Mumbai; Pro $0.15 / GB; Cloudflare no egress, static assets free</td><td>Hosting cost per small shop is cents</td></tr>
+      <tr><td>India (Shopify India, Shiprocket, GoKwik, 2026)</td><td>Entry band ₹0–2,000 a month; checkout tools a ~₹3,000 floor plus a %</td><td>Studio seat priced like a tool, not a platform</td></tr>
+    </tbody>
+  </table></div>
+
+  <footer>Frrata Studio · plan, not built · 11 Nov 2026 · spec <span class="mono">docs/specs/2026-11-11-frrata-studio.md</span></footer>
+</div>
+
+<script>
+(() => {
+  const tabs = [...document.querySelectorAll('.screens [role="tab"]')]
+  const show = (t) => { for (const x of tabs) { const on = x === t; x.setAttribute('aria-selected', String(on)); x.tabIndex = on ? 0 : -1; document.getElementById(x.getAttribute('aria-controls')).hidden = !on } }
+  tabs.forEach((t, i) => {
+    t.tabIndex = i === 0 ? 0 : -1
+    t.addEventListener('click', () => show(t))
+    t.addEventListener('keydown', (e) => {
+      const k = e.key, d = k === 'ArrowDown' || k === 'ArrowRight' ? 1 : k === 'ArrowUp' || k === 'ArrowLeft' ? -1 : 0
+      if (!d) return
+      e.preventDefault(); const n = tabs[(i + d + tabs.length) % tabs.length]; n.focus(); show(n)
+    })
+  })
+})()
+</script>

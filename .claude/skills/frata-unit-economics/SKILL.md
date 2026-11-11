@@ -83,6 +83,11 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
 8. **Pass-through costs stay pass-through**: WhatsApp messages are billed by
    Meta to the merchant (Tech Provider). Model Frata's own Vercel, Supabase and
    support costs per tenant per tier.
+9a. **Resold API costs sell at 3× what Frrata pays** (owner, 2026-11-11): anything Frrata buys from an outside API and
+   meters to a partner or a brand (model tokens, sandboxes, builds, bandwidth, video minutes when metered) is priced at
+   ≥ 3× its cost, rounded up to a clean rupee price, and re-checked whenever the vendor's price or the rupee moves.
+   Included allowances inside a seat or plan count at the same rate (the seat's price ≥ 3× the cost of what it
+   includes). Pass-through billed by the vendor to the merchant (WhatsApp by Meta) is not resold and stays outside it.
 9. **Revenue lines not yet modelled**: Razorpay Aggregator commission (rates
    unpublished — ask), shipping margin if Frata ever resells freight (decision needed).
 
