@@ -94,7 +94,8 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const withVisits = { ...a, sources: [...a.sources, ...visitOnly] }
   const visits = { by, total: traffic?.cur.visitors ?? 0, enough }
   const f = traffic ? funnel(traffic.cur, a.cur.orders, a.cur.delivered) : null
-  const slow = traffic && names ? slowestPage(traffic.productLcp) : null
+  // Only the shop's own product pages compete for slowest (a forged slow id must not hide the real one: tenancy audit).
+  const slow = traffic && names ? slowestPage(traffic.productLcp.filter((r) => names.products.has(r.productId))) : null
   const metaVisits = since && since > a.start ? `${meta} Visits counted since ${dayMonthIN(since)}.` : meta
   return (
     <>

@@ -43,17 +43,18 @@ export async function trafficRead(tenantId: string, start: Date, prevStart: Date
         from city_daily where tenant_id = ${tenantId} and day >= ${from}::date and day <= ${to}::date group by 1 order by 2 desc limit 60`),
       q<Record<string, unknown>>(sql`select product_id, sum(views) views, sum(adds) adds
         from product_daily where tenant_id = ${tenantId} and day >= ${from}::date and day <= ${to}::date and product_id <> ${OTHER_PRODUCTS}::uuid
-        group by 1 order by 2 desc limit 30`),
+        group by 1 order by 2 desc limit 100`),
       // All pages' histograms, summed per metric in SQL (64 buckets each).
       q<{ metric: 'lcp' | 'inp' | 'cls'; n: unknown; buckets: number[] }>(sql`
         select v.metric, sum(v.n) n, array(select sum(b.c)::int from vitals_daily w, unnest(w.buckets) with ordinality b(c, i)
                where w.tenant_id = ${tenantId} and w.metric = v.metric and w.product_id = ${NIL}::uuid and w.day >= ${from}::date and w.day <= ${to}::date
                group by b.i order by b.i) buckets
         from vitals_daily v where v.tenant_id = ${tenantId} and v.product_id = ${NIL}::uuid and v.day >= ${from}::date and v.day <= ${to}::date group by v.metric`),
-      // LCP per product page, for the 10 most measured (the slowest page among them).
+      // LCP per product page, for the 20 most measured (the slowest of the shop's own among them). Generous limits, as
+      // forged ids can take slots until trafficNames drops them (tenancy audit LOW).
       q<{ product_id: string; n: unknown; buckets: number[] }>(sql`
         with top as (select product_id, sum(n) n from vitals_daily where tenant_id = ${tenantId} and metric = 'lcp' and product_id <> ${NIL}::uuid
-                       and day >= ${from}::date and day <= ${to}::date group by 1 order by 2 desc limit 10)
+                       and day >= ${from}::date and day <= ${to}::date group by 1 order by 2 desc limit 20)
         select t.product_id, t.n, array(select sum(b.c)::int from vitals_daily w, unnest(w.buckets) with ordinality b(c, i)
                where w.tenant_id = ${tenantId} and w.metric = 'lcp' and w.product_id = t.product_id and w.day >= ${from}::date and w.day <= ${to}::date
                group by b.i order by b.i) buckets
@@ -80,7 +81,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 /** The shop's own words for the visits: creator labels by code, its products' names and orders in the window (only ids
  * it has: a forged one is never named), and returns by city. */
 export async function trafficNames(tenantId: string, productIds: readonly string[], start: Date) {
-  const ids = [...new Set(productIds.filter((id) => UUID.test(id)))].slice(0, 40)
+  const ids = [...new Set(productIds.filter((id) => UUID.test(id)))].slice(0, 120)
   return withTenant(tenantId, async (tx) => {
     const [labels, named, cities] = await Promise.all([
       tx.execute<{ code: string; label: string }>(sql`select upper(code) code, label from ${discountCodes} where tenant_id = ${tenantId} and label is not null`),

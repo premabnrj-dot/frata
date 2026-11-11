@@ -233,7 +233,8 @@ function SourcesWithVisits({ a, period, visits }: { a: Analytics; period: number
         </DataTableHead>
         <DataTableBody>
           {rows.map((s) => (
-            <DataTableRow key={s.slug}>{line(s.cur, visits.by.get(s.slug)?.visitors ?? 0, s.label, `/console/analytics/${encodeURIComponent(s.slug)}?period=${period}`,
+            // A source with visits but no orders has no page of its own (its orders list would be empty: a 404).
+            <DataTableRow key={s.slug}>{line(s.cur, visits.by.get(s.slug)?.visitors ?? 0, s.label, s.cur.orders ? `/console/analytics/${encodeURIComponent(s.slug)}?period=${period}` : null,
               s.campaigns.length ? `${s.campaigns[0]!.name}${s.campaigns.length > 1 ? ` and ${s.campaigns.length - 1} more` : ''}` : s.channel === 'direct' ? 'chats, typed address, apps that hide it' : '')}</DataTableRow>
           ))}
           {other || visits.total > shownVisits ? <DataTableRow key="other">{line(other ?? NONE, Math.max(0, visits.total - shownVisits), 'Other', null, 'sources with few orders or visits, and tags typed by hand')}</DataTableRow> : null}
