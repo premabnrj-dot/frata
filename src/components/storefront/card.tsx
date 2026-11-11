@@ -28,7 +28,7 @@ export function ProductCard({ p, href, now, priority = false, badge = null, lang
   return (
     <li className="store-card group min-w-0">
       <Link href={href(`/products/${p.handle}`)} className="block space-y-2">
-        <div className="relative aspect-[var(--store-ratio)] overflow-hidden rounded-[var(--store-radius)] bg-store-chip">
+        <div className="store-ph">
           {/* The title below is the link's name, so the cover is decoration to a screen reader (TS1b: card bytes). */}
           {cover ? <Photo p={cover} alt="" sizes="(min-width: 1024px) 25vw, 50vw" priority={priority} className="absolute inset-0 h-full w-full object-cover" />
             : <span className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-store-sub">{p.title}</span>}
@@ -39,7 +39,7 @@ export function ProductCard({ p, href, now, priority = false, badge = null, lang
         {price && <p className="text-sm"><span className="store-price font-medium">{price.min !== price.max ? fill(w.from, { price: money(price.min) }) : money(price.min)}</span>{price.compareAt && <s className="ml-1.5 text-store-sub">{money(price.compareAt)}</s>}</p>}
       </Link>
       {colours.length > 1 && (
-        <ul className="store-swatches mt-1.5 flex gap-1.5 overflow-x-auto pb-1" aria-label={fill(w.colours, { n: colours.length })}>
+        <ul className="store-swatches" aria-label={fill(w.colours, { n: colours.length })}>
           {colours.map((c) => <li key={c} title={c}><Swatch c={p.colours.find((x) => x.value === c) ?? { value: c, hex: null, cropImageId: null, crop: null }} images={p.images} d={16} /><span className="sr-only">{c}</span></li>)}
         </ul>
       )}

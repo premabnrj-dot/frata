@@ -66,7 +66,7 @@ export function BlockNode({ n, href, sid, cols, ctx, video }: { n: RNode; href: 
       const cover = p.images[0], price = priceOf(p), w = wordsFor(ctx.shop.shopLanguage)
       return (
         <Link href={href(`/products/${p.handle}`)} className="store-b-piece group" {...(n.handle ? {} : { 'data-example': '' })}>
-          <div className="relative aspect-[var(--store-ratio)] overflow-hidden rounded-[var(--store-radius)] bg-store-chip">
+          <div className="store-ph">
             {cover && <Photo p={cover} alt="" sizes={sizesFor(cols)} priority={!!n.eager} className="absolute inset-0 h-full w-full object-cover" />}
           </div>
           <p className="mt-3 text-lg leading-snug">{p.title}</p>
