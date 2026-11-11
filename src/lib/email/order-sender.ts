@@ -6,6 +6,7 @@ import { emailMessages, emailShops, emailSuppressions, shopEmails } from '@/lib/
 import { enqueue, GiveUp, Later, type OutboxRow } from '@/lib/outbox'
 import { shopLook, shopSettingsFor } from '@/lib/queries/storefront'
 import { themeOf } from '@/lib/themes/page-look'
+import { manifestsFor } from '@/lib/themes/manifests'
 import { EMAIL_SHOP_DOMAIN, SES_CONFIG_SHOPS } from '@/lib/env'
 import { paperAccent } from '@/domains/documents/paper'
 import { ORDER_MESSAGES, type OrderMessage } from '@/domains/messaging/events'
@@ -44,8 +45,8 @@ export async function sendOrderEmail(row: OutboxRow): Promise<void> {
   const tenantId = row.tenantId, messageId = row.id, now = new Date()
   const shop = await shopSettingsFor(tenantId)
   if (!shop) throw new GiveUp('no shop')
-  const look = await shopLook(tenantId).catch(() => null)
-  const accent = paperAccent(themeOf(shop, look).schemes.paper.accent)
+  const [look, src] = await Promise.all([shopLook(tenantId).catch(() => null), manifestsFor(tenantId)])
+  const accent = paperAccent(themeOf(shop, look, src).schemes.paper.accent)
 
   const job = await withTenant(tenantId, async (tx) => {
     const [prior] = await tx.select().from(emailMessages).where(and(eq(emailMessages.tenantId, tenantId), eq(emailMessages.id, messageId))).limit(1)

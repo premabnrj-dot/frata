@@ -2,10 +2,10 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.36.1
-  verified: 2026-11-09
-  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008]
-  covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
+  version: 2.38.0
+  verified: 2026-11-11
+  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
+  covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
 ---
 
 # Frata architecture
@@ -79,6 +79,28 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   that holds shopper data. A platform sweep uses a definer that returns ids only (S4).
 - Admin takes tenant ids from forms (it is cross-tenant by role); every Admin
   write still matches `tenant_id` **and** the row id together.
+
+### The analytics database (A·2, ADR-0013, 2026-11-11; plan docs/plans/2026-11-11-guardrails-infra-a2.md § A2·1 as built)
+
+- Visits live in a **second Postgres** (`frata-analytics`), migrated from `drizzle-analytics/`
+  (`drizzle.analytics.config.ts`, `npm run db:generate:analytics`), schema in `src/lib/db/analytics-schema.ts`.
+  The same locks: `frata_app` with RLS, `withAnalyticsTenant` (`src/lib/db/analytics.ts`), the
+  tenant from `requireMember` or the host. `check:tenant` § 8 and `scripts/verify/analytics-tenancy.sql` hold it.
+- Never open it inside a main-database transaction or await it from one; it may be down, and Traffic then says so.
+- Raw events are written only through `ingest_events()` and read only by the fold. Partitions live in `ev`, which
+  has no grant; a new grant there is a bug. Rollups keep raw source inputs, classified on read (§ Attribution).
+- Role settings there use `alter role … in database` (a throwaway server shares its roles with the main database).
+- **The visit beacon** is `src/beacon/fe.ts`, built into `public/fe.js` (`npm run build:beacon`; `check:beacon` fails a
+  stale file, the 1.7 kB ceiling, a cost field, `href`/`hash`/cookies or a DOM write). It is not a React island: no shop
+  page's script grows. Its rules shared with the server are in `src/domains/analytics/beacon-rules.ts`, never copied.
+  Its ingest `/api/shop/e` (`src/lib/analytics/ingest.ts`) is off until `ANALYTICS_INGEST_ON`. It runs the header
+  checks before the cached shop lookup, stores paths only as the shop's own shapes, and drops personal-looking tags. A
+  page tells the beacon what happened with a server-drawn `<i hidden data-fe=…>` marker, never with component code.
+- Its migrations never go to the main project. Both databases are named `postgres`, and 0000 refuses to run there.
+  They reach the analytics project only as the paste from `scripts/ops/analytics-paste.mjs` (docs/setup.md
+  § Analytics database), never through the main account's Supabase tools.
+- Grant each object by name, with the exact privilege. TRUNCATE ignores RLS. No default-privilege grants, no
+  `alter policy` (drop and create), and nothing ever disables RLS. `check:tenant` § 8 fails each.
 
 ## Auth
 
@@ -299,6 +321,31 @@ after it. A class a shop page uses from outside the shop's folders must be added
   of manifest → style → the merchant's layer — `contrast`, section SAVE schemas, `readinessOf`, `carryOver`,
   `baselineRevision`) and `src/components/storefront/sections/` (server components). Rendering reads
   only `ResolvedTheme`; settings reach CSS as `--store-*` custom properties and `data-*` attributes on the shell.
+- **Manifests may be authored data (ADR-0012, Theme Studio TS0a).** A manifest from a file or a row is one object:
+  `ManifestSchema` (`manifest-schema.ts`: colours exactly `#RRGGBB`, every token a closed choice, photos only from
+  Frrata's samples; every code manifest parses to itself) and `themeCheck` (`check.ts`, the one check: vitest for code,
+  the studio for data). **Every reader takes a `ManifestSource`** (`source.ts`: `keys()`, `versions(key)`; pure
+  `manifestOf(src,…)`/`manifestNear(src,…)`), from `manifestsFor(tenantId)` (`src/lib/themes/manifests.ts`, `cache()`d)
+  read **before any transaction** and passed down. Shop pages use `shopTheme(shop)` (`page-look.ts`, once per request).
+  Only `source.ts`, Admin's code-version pages and tests read `CATALOGUE` (`check:layers`). Classic 1.0.0 always comes
+  from code. **The shop's look cache** (`look-v2`, tag `shop:<t>:look`) holds the publish candidates (one DISTINCT ON
+  query, `publishCandidates`, also the console's rule) and the newest body; other bodies are cached by revision id;
+  withdrawn versions are a `string[]`. Publish and Undo purge `shop:<t>:look`, never the catalogue. `look.ts` runs inside
+  `asMember`: never a cached loader or a second `withTenant` there (`look-p4.test.ts`).
+- **Blocks and designs (Theme Studio TS0b; plan `docs/plans/2026-11-11-theme-studio-ts0b.md`).** A theme's `designs`
+  are trees of blocks (`blocks.ts`: explicit three levels, design › columns › group › leaf, never `z.lazy`); the owner's
+  section `{ key: 'design', design, fill }` fills the blocks the theme marks, **by stable block id, with kind-tagged
+  fills** (`FillSchema`, a discriminated union; the record keyed by the id regex, reserved ids refused, read with
+  `Object.hasOwn`). `SectionSchema` stays manifest-free; **`resolveDesign(design, fill, 'shop' | 'preview')`** merges,
+  and on the shop never yields a theme's sample photo or an `example` (a claim the owner must write: readiness blocks
+  Publish). `ResolvedTheme.home` keeps stored shapes; `ResolvedTheme.designs` holds only the designs in use. The save
+  (`saveLookAction`) runs `designProblems` after the manifest is read, prunes fills to (id, kind), and refuses a layer
+  over 60 kB of JSON bytes in words. `cleanImages` maps every fill by kind (`satisfies never`). A design carries over
+  only within its theme (`carryOver`), else a `lost` line names it. Blocks render in
+  `src/components/storefront/blocks/` (server only; `check:tenant` 6e: no loader or db import), styled by `.store-b-*`
+  rules (≤ 1.0 kB gz, `check-storefront-build`). The tree walk (`design-tree.ts`) has no Zod, for the customizer's
+  bundle (gated at 208 kB). Commerce, video and date blocks arrive in TS1 with the per-source loader; a fill never holds
+  a video (a design's video will be the section's own `video`).
 - **Manifests** are typed files `src/domains/themes/catalogue/<theme>/<semver>.ts`, listed in `catalogue/index.ts`.
   A released file never changes; a new version is a new file. Theme colours live there and nowhere else
   (`check:hex` QUOTED rule).
@@ -309,7 +356,7 @@ after it. A class a shop page uses from outside the shop's folders must be added
   Best sellers by **delivered units** (`shopBestSellers`: ids only, cached an hour). Never by cost or margin
   (ADR-0003).
 - **Looks: `src/lib/themes/look.ts` is the one module that reads or writes them.** Live = `liveOf` over
-  `liveCandidates` (the newest publish of each version, newest first) minus withdrawn versions: derived, never
+  `publishCandidates` (the newest publish of each version, newest first; one DISTINCT ON query) minus withdrawn versions: derived, never
   stored; the shop, Look, Undo and Admin all use it. Draft = the newest revision with no publish row, at most one (replaced under the per-shop advisory
   lock `look:<tenant>`). Publishes are append-only; a published revision is frozen by `app_theme_revision_frozen`.
   Saves and publishes lock the row and check its `version`; Undo names the live revision it saw. The first publish
@@ -332,7 +379,7 @@ after it. A class a shop page uses from outside the shop's folders must be added
   Classic 1.0.0 can never be pulled. THE answers live in `src/domains/themes/release.ts`: `availableTo` /
   `latestAvailable` (may a shop start on it) and `liveOf` (the newest publish not on a withdrawn version). Every
   caller asks them through `themeAccess(tx, tenant)` in look.ts: Try, the gallery, Customize, Restore, Publish,
-  Undo; Admin's counts use `liveOf` too. The shop's look is `liveOf(cached publishes, versionStates)`: the
+  Undo; Admin's counts use `liveOf` too. The shop's look is `liveFromEntry(look-v2 entry, withdrawn)`: the
   version rows are one global cache (tag `themes`), so a withdraw is one `refreshThemeVersions()`, not a bust per shop.
 - **Shop words** (T2): `shop_settings.shop_language` (en/hi); the words Frrata writes on a shop live in
   `src/components/storefront/words.ts`, **server-only**. An island takes the strings it shows as a prop (`buyWords`),

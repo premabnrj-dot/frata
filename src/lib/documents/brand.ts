@@ -1,7 +1,7 @@
 import 'server-only'
 import { paperAccent } from '@/domains/documents/paper'
-import { shopLook, shopSettingsFor } from '@/lib/queries/storefront'
-import { themeOf } from '@/lib/themes/page-look'
+import { shopSettingsFor } from '@/lib/queries/storefront'
+import { shopTheme } from '@/lib/themes/page-look'
 import type { Paper } from '@/lib/orders/documents'
 import { docImage } from './images'
 import type { Brand } from './pdf/blocks'
@@ -15,8 +15,7 @@ import type { Brand } from './pdf/blocks'
 export async function brandFor(tenantId: string, paper: Paper | null): Promise<{ brand: Brand; contact: string } | null> {
   const shop = await shopSettingsFor(tenantId)
   if (!shop) return null
-  const [look, logo] = await Promise.all([shopLook(tenantId), docImage(paper?.logo ?? null, tenantId)])
-  const theme = themeOf(shop, look)
+  const [theme, logo] = await Promise.all([shopTheme(shop), docImage(paper?.logo ?? null, tenantId)])
   const contact = [shop.supportEmail, shop.supportPhone].filter(Boolean).join(' · ') || shop.legalName || shop.shopName
   return { brand: { name: shop.shopName, accent: paperAccent(theme.schemes.paper.accent), logo, signatory: paper?.signatory || undefined, note: paper?.note || undefined }, contact }
 }

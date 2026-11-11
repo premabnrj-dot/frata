@@ -78,6 +78,16 @@ export default {
       await p.getByRole('button', { name: 'Checkout' }).click(); await p.waitForURL(/\/checkout$/); await fill()
     }
 
+    await t.step('the size guide opens, switches to inches, and Back closes it', async () => {
+      await p.goto(SHOP + '/products/chanderi-kurta-set', { waitUntil: 'domcontentloaded' })
+      await p.getByRole('button', { name: 'Size guide' }).click()
+      const g = p.getByRole('dialog', { name: 'Size guide' })
+      await g.getByRole('columnheader', { name: 'Bust' }).waitFor()
+      await g.getByRole('button', { name: 'in' }).click()
+      await p.goBack()
+      await g.waitFor({ state: 'hidden' })
+    })
+
     await t.step('COD order: placed, stock taken, cost snapshotted, address masked', async () => {
       const before = await stock('{M,Rust}')
       await toCheckout('Rust', 'M'); await p.getByText('Pay on delivery', { exact: true }).click()

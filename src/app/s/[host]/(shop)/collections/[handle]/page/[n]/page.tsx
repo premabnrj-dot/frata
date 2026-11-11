@@ -4,8 +4,8 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import { shareImage } from '@/lib/seo/share-image'
 import { CollectionView } from '@/components/storefront/pages'
 import { inCollection, pageOf, pageParam } from '@/domains/storefront/listing'
-import { shopCatalogue, shopLook } from '@/lib/queries/storefront'
-import { themeOf } from '@/lib/themes/page-look'
+import { shopCatalogue } from '@/lib/queries/storefront'
+import { shopTheme } from '@/lib/themes/page-look'
 import { shopFor, shopHref } from '../../../../../_shop'
 import { shopTags, toMetadata } from '../../../../../_meta'
 
@@ -38,6 +38,6 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function CollectionPage({ params }: { params: Params }) {
   const { shop, cat, c, page, now } = await load(params)
-  const theme = themeOf(shop, await shopLook(shop.id))
+  const theme = (await shopTheme(shop))
   return <CollectionView c={c} cat={cat} href={shopHref} now={now} top={theme.settings.collectionTop} lang={shop.shopLanguage} page={page} />
 }

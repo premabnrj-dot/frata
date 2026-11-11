@@ -25,6 +25,8 @@ const config: NextConfig = {
       { source: '/:path((?!console/theme-preview/).*)', headers: SECURITY_HEADERS },
       { source: '/console/theme-preview/:path*', has: [{ type: 'host', value: hostValue(CONSOLE_HOST) }], headers: FRAMEABLE_HEADERS },
       { source: '/console/theme-preview/:path*', missing: [{ type: 'host', value: hostValue(CONSOLE_HOST) }], headers: SECURITY_HEADERS },
+      // The visit beacon: its URL carries its content hash (?v=, scripts/build-beacon.mjs), so it is cached for good.
+      { source: '/fe.js', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] },
       // Last, so it replaces the own-domain HSTS above on our own hosts (D2·1).
       { source: '/:path*', has: [{ type: 'host', value: platformHostPattern(CONSOLE_HOST, SHOP_DOMAIN, EKCODE_HOST) }], headers: [HSTS_PLATFORM] },
     ]

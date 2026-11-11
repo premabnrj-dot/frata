@@ -5,6 +5,7 @@
 // only ResolvedTheme. No CSS, no HTML, no script ever comes from a layer.
 // =============================================================================
 
+import type { Design, DesignInput } from './blocks'
 import type { ProductLayout, SectionInput, SectionInstance, SectionKey, SectionScheme, VideoKey } from './sections'
 import type { Menus, SiteSettings } from './site'
 
@@ -140,6 +141,8 @@ export type ThemeManifest = {
   /** Signal 1.2 (S2): the bigger, tighter section headings (only where a version sets it: live 1.0/1.1 shops unchanged). */
   scale?: 'signal'
   home: SectionInput[]
+  /** Theme Studio TS0b: sections built from blocks, which the owner fills (blocks.ts). Absent = none. */
+  designs?: DesignInput[]
 }
 
 /** The merchant's layer. Content, never state (which revision is live is a publish row). */
@@ -161,4 +164,7 @@ export type ResolvedTheme = {
   site: SiteSettings
   /** The menus the merchant made (absent: the shop's default; menusOf). */
   menus: Partial<Menus>
+  /** TS0b: the designs this look's sections use (absent: none), by id; renderers and readiness merge the owner's
+   *  words with resolveDesign. Never the theme's whole list: only what the page draws. */
+  designs?: Record<string, Design>
 }

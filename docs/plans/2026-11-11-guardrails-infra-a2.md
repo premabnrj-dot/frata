@@ -423,3 +423,307 @@ Computed with `orderProfit`; the scratch model is in the session scratchpad.
   the tags of shops whose time boundary has passed, then `revalidate` rises to 3600.
 - **LOW:** a project default Max Duration in the dashboard (owner step); the ingest gets 5 s.
 - **Cost:** the beacon adds $1.9–4.6/M page views; after fixes 5 and 6 about ⅓ of that. Affordable.
+
+## Owner, 2026-11-11 (after the release of G and I)
+- **G:** Bot Protection set to Log and published; the project Default Max Duration set to 60 s. The firewall API still
+  answers 404 for the config, so the two bypass rules in `ops/firewall.json` go in by hand (custom rules) before
+  Bot Protection ever moves to Challenge.
+- **A·2:** the mockup is approved; calls as recommended:
+  1. a separate Supabase project for analytics (Free now, Pro at launch), with a disk alert in Infrastructure;
+  2. after the prerequisites;
+  3. separate, about $10 a month on Pro;
+  4. raw events 90 days, rollups 2 years. The DPDP Rule 8(3) one-year question stays with the lawyer;
+  5. visitor counts in every plan (unit-economics review).
+
+  Build order: A2·0 (the owner creates the project) and A2·1 (the database and its locks), then PV1-4a (the island
+  split frees room on the product page: the beacon adds 0.8–0.9 kB), then A2·2 → A2·5.
+
+## A2·1 as built (2026-11-11, branch only; nothing applied to any live database yet)
+- **The project:** the owner created `frata-analytics` (ref `frbyvvxxqheigcutlamj`) in a separate Supabase account, Data
+  API off. The session's Supabase connection belongs to the main account and is refused there, so its migrations go
+  in by the owner's hand through its SQL editor: one transaction holding 0000–0002 and their
+  `drizzle.__drizzle_migrations` rows (sha256 of each file, the journal's `when`), checked first on a fresh database.
+- **Migrations** (`drizzle-analytics/`, `drizzle.analytics.config.ts`, `npm run db:generate:analytics`):
+  - 0000 (custom): roles `frata_app` and `frata_admin`, with their limits set in this database only (`alter role … in
+    database`; `frata_app` 2 s statement, 1 s lock, 5 s idle, `synchronous_commit` off); `app_current_tenant()`, granted
+    by name, because functions belong to no one by default here; pgcrypto in `extensions`; the schema `ev` with no grant.
+  - 0001 (generated from `src/lib/db/analytics-schema.ts`): six narrow rollups (`traffic_daily`, `source_daily` with
+    the raw source inputs, `browser_daily`, `city_daily`, `product_daily`, `vitals_daily`), tenant first in every
+    key, plus an index on day each.
+  - 0002 (custom):
+    - `events`, partitioned by IST day, with partitions in `ev` (RLS on each);
+    - `frata_app` may INSERT only, under `tenant_insert`;
+    - `visitor_days`, `visitor_salts` and `fold_state` are definers' tables with a restrictive false policy;
+    - `ingest_events()` (invoker: one round trip, still under the events policy) and `analytics_visitor()` (definer:
+      a 16-byte HMAC with the IST day's salt, which never leaves the database);
+    - `analytics_fold()` runs every 15 minutes and is incremental: a watermark with a 1-minute lag, upserts into
+      `visitor_days` with a step bitmask, the day's first landing keeps the source, and the touched days are then
+      rebuilt;
+    - `analytics_rollup(day)` keeps the top 200 sources (rh `*` for the rest) and the top 50 cities ('' for the rest)
+      per shop;
+    - `analytics_maintain()` runs hourly: partitions 7 days ahead, raw events and visitor-days dropped after 90 days,
+      rollups after 730, yesterday's salt deleted;
+    - pg_cron schedules both where the server has it (Supabase).
+- **Code:**
+  - `src/lib/db/analytics.ts`: pool of 5 with a 2 s connect timeout; `withAnalyticsTenant` (read only);
+    `ingestBatch` (one statement, dropped past 20 in flight);
+  - `ANALYTICS_DATABASE_URL` in `src/lib/env.ts` and `.env.example`.
+- **Gates:** `check:tenant` § 8 holds the analytics folder to RLS and a tenant-bound policy on every table, no grant on
+  `ev`, and the connection only from `src/lib/queries/**` (or `ANALYTICS_IN_APP`). `check:config` lets
+  `src/lib/db/analytics.ts` own its `postgres()`.
+- **Proof:** `scripts/verify/analytics-tenancy.sql`, 12 checks, run by `verify:tenancy` on a second throwaway database
+  (`<name>_analytics`), and so in CI. It covers:
+  - roles and per-database limits;
+  - `ev` closed, and every partition under RLS;
+  - grants;
+  - definer privileges and search paths;
+  - reads of events, partitions, salts and visitor-days refused;
+  - ingest isolation, the 50-event cap and the hash;
+  - fold and rollups: two shops stay two rows, top-N is ranked within a shop, histograms add up;
+  - idempotent re-runs, and a later slice that adds;
+  - console reads limited to the shop;
+  - retention.
+
+  Three mutations (a grant on `ev`, a `using (true)` policy, the fold granted to `frata_app`) each fail it.
+- **e2e:** the stack makes `frata_e2e_analytics` beside `frata_e2e` and sets `ANALYTICS_DATABASE_URL`.
+- **Left for A2·2:** the route (it joins `ANALYTICS_IN_APP`, or reads through a query file), `src/domains/analytics/`
+  event, device and visitor modules, the beacon. The analytics admin connection waits for A2·5, its first reader.
+- **tenancy-auditor on A2·1 (2026-11-11), folded:**
+  - **HIGH:** `ingest_events` set the shop for the rest of the caller's transaction, so a later read would see the
+    other shop. It now refuses a shop other than one already set, and puts the caller's setting back; the proof tests
+    both, and the unset case.
+  - **MED:**
+    - the default-privilege revokes now include `service_role`;
+    - the proof's grant and function checks are driven by the catalog (RLS on every table in public, `ev` and
+      `extensions`; no privilege of any kind for the API roles or `frata_admin`; an exact allow-list for `frata_app`
+      and PUBLIC, TRUNCATE included; `pg_default_acl`; every definer's search path and EXECUTE). The auditor's four
+      escapes now fail it.
+  - **MED, gate § 8:**
+    - every policy that isn't restrictive false must name its role and bind the shop;
+    - tables in any schema are checked;
+    - TRUNCATE, ALL, REFERENCES and TRIGGER grants fail it, as do default-privilege grants and disabling RLS.
+  - **LOW, accepted:**
+    - `frata_app` can hash for any shop: it reads nothing that holds a hash;
+    - `pg_stat_user_tables` shows platform-wide daily event counts, not one shop's;
+    - the relative-import case was already caught, because the gate resolves relative paths first.
+- **impact-reviewer on A2·1 (2026-11-11), folded:**
+  - **HIGH:**
+    - the gate's type-only escape now passes only when every import of the module is `import type { … }`, so a
+      namespace import or `import()` fails it;
+    - 0000 refuses to run on the main database (both Supabase databases are named `postgres`). This is proved: run
+      there, it raises and changes nothing.
+  - **MED:**
+    - § 8 fails on any `alter policy`, and on a policy that names no app role;
+    - the proof gains a 205-source shop (top 200, then one bare `rh = '*'` row of 5, no other shop folded), ordered
+      visitors (traffic, source, city), a batch's first landing (events in a batch now get microsecond-apart `at`), and
+      a fold across IST midnight. 13 checks in all.
+  - **Docs:**
+    - ADR-0013 (the second database);
+    - `docs/setup.md` § Analytics database (paste, password, URL);
+    - `scripts/ops/analytics-paste.mjs` derives the paste from the files and is checked on a fresh database and on the
+      main one (refused, rolled back);
+    - frata-verify 1.8.0 and frata-architecture 2.36.0 (covers `drizzle-analytics/**`);
+    - pg_cron is guarded on `shared_preload_libraries`.
+  - **Deferred, with their phase:**
+    - A2·2: `IngestBatch` takes its event type from `src/domains/analytics/event.ts`, with one round-trip test (an
+      unknown key is silently null); `withAnalyticsTenant` and `ingestBatch` are tested through the route's e2e flow
+      (UUID refusal, read only, the in-flight cap).
+    - A2·4: creator visits are labelled by joining `cc` to the main database's creators (`sourceOfInputs` needs label
+      and code); `rh = '*'` reads as "Other", never as a site.
+    - On apply: `cron.job` lists both jobs (the paste ends with that query).
+    - `CLAUDE.md` § Before you commit and § Migrations name only `drizzle/`. A line for `drizzle-analytics/` (pasted by
+      the owner; 0000 refuses the main database) is proposed to the owner, not written by an agent.
+- **Applied (owner, 2026-11-11):** 0000–0002 pasted into frata-analytics; `cron.job` lists `analytics-fold` (`*/15 * * * *`) and `analytics-maintain` (`7 * * * *`), both active.
+
+## A2·2 amendment, proposed 2026-11-11 (for speed-reviewer and security-reviewer before building)
+**Why.** The plan put the beacon in the shop shell as a React island, next to `CaptureAttribution`. The shell also
+frames checkout, so the island lands on every shop page, measured today (`SHOW_BUDGETS=1`) as:
+- product 120.6 of 121 kB;
+- checkout 120.2 of 121 kB;
+- home 114.0.
+
+With 0.8–0.9 kB more, checkout fails too, and PV1-4a only frees room on the product page.
+
+**Proposal: the beacon is one static, async script, not an island.**
+- `public/fe.js`: plain JS, ≤ 1.2 kB gzip, no React and no hydration. It runs after parsing and blocks nothing.
+  - On shop hosts `/fe.js` is exempted, by that exact name, from the shop rewrite (`shopRewrites`, as image files
+    are).
+  - It is cached at the CDN, and versioned by `?v=` from a constant, so a change reaches every shopper on their next
+    page.
+  - `check:storefront-build` gives it its own ceiling (1.2 kB gzip). It isn't counted in a page's first-load figure,
+    and the gate's comment says why.
+- **Mounted by the server shell** for live shops only: no previews, the console address refused as `captureAttribution`
+  does, and only while counting is on (`isAnalyticsConfigured()`; the Admin switch from A2·5 later).
+  `<script async src="/fe.js?v=N">`.
+- **What it sends.** One `sendBeacon` to `/api/shop/e`, made on `visibilitychange` = hidden and on `pagehide`. Each
+  call carries the events queued since the last one, at most 50.
+  - `page_view` on load and on each soft navigation (`history.pushState` and `popstate`), with `location.pathname`
+    only, never a query or `#`;
+  - a landing (the tab's first page, `sessionStorage`) carries the raw source inputs from the URL and the referrer's
+    bare hostname, in the same shape `captureAttribution` stores (utm source, medium and campaign; `gclid`/`gbraid`/
+    `wbraid`/`gad_source`, `srsltid` and `fbclid` as flags; the creator `?code=`);
+  - `view_item`, `begin_checkout` and `purchase` come from a server-rendered marker in the page
+    (`<i hidden data-fe="view_item" data-pid="…">` on the product page, the checkout page and the order page's first
+    view). No component code is involved;
+  - `add_to_cart` comes from the bag store's existing `frata:open-bag` event (detail set means an item was added),
+    with the marker's product id;
+  - Web Vitals on phones only (`pointer: coarse`), 1 in 4 page views, with `PerformanceObserver`: LCP, CLS (the largest
+    session window) and INP (the worst event duration). No `web-vitals` package.
+- **What the server adds** (nothing extra from the browser):
+  - device, browser and in-app browser from the User-Agent, in a pure parser in `src/domains/analytics/device.ts`;
+  - the city from `x-vercel-ip-city`;
+  - the visitor input: length-prefixed /24 or /48 of the address, then the UA, in `visitor.ts`. The address is never
+    stored.
+- **The route** `src/app/api/shop/e/route.ts` follows A2·2 and the reviews:
+  - checks in this order: body ≤ 8 KB read with a running count, a bot User-Agent, a 60 s negative memo of unknown
+    hosts, the host to its shop (`tenantForHost`, never the body), and Origin equal to the host;
+  - a cap per shop per minute, in memory;
+  - strict Zod from `src/domains/analytics/event.ts`, which also gives `IngestBatch` its type;
+  - answers 204 at once, then `ingestBatch` runs in `after()`; errors log `errName` only;
+  - stays out of the middleware matcher;
+  - lives in `ANALYTICS_IN_APP` with its reason, and in `ENTRY_POINTS`.
+- **PV1-4a** is still needed for PV1-4's video tile, but no longer blocks A2·2.
+- **Owner step before the beacon goes live:** a Vercel Firewall rate rule on `/api/shop/e` (security HIGH-2).
+- **Tests:**
+  - unit tests for `event.ts`, `device.ts` and `visitor.ts`;
+  - one round trip of `ingestBatch` against the e2e analytics database;
+  - an e2e flow: a shop page sends its beacon, a soft navigation adds a page view, add to bag sends `add_to_cart`, a
+    bot or an unknown host or another Origin is refused or dropped, and after a fold Traffic's rows exist under the
+    shop and no other.
+
+### security-reviewer on the A2·2 amendment (2026-11-11): the static script is sound; fixes folded in
+- **HIGH-1, the route is public at deploy:** `/api/shop/e` answers 404 before reading anything unless
+  `ANALYTICS_INGEST_ON` is set (Production only). The owner sets it only after the Firewall rate rule is live and the
+  privacy sentence (MED-6) is approved.
+- **HIGH-2, the WhatsApp bypass could skip the rate rule:**
+  - `ops/firewall.json` puts the `/api/shop/e` rate rule first;
+  - each link-preview bypass condition is ANDed with a path that doesn't start with `/api/`;
+  - owner step: the same change in the dashboard.
+- **MED-3, order and lookup:**
+  - `requireShop`: Origin before the lookup, with hits cached for 60 s;
+  - the order is method and content type, Origin equal to Host, then User-Agent (`isBot`), then a per-IP cap with
+    `ipBucket` (/64), then the body count (8 KB), then a 60 s miss memo, then `requireShop`, then a per-shop cap,
+    then Zod;
+  - both Maps are bounded LRUs.
+- **MED-4, paths:** `pathShape()` maps every path to the shop's own shapes (home, product or collection by handle,
+  bag, checkout, orders, policy) or `other` before storing. Tested.
+- **MED-5, personal data in utm values:** a value that looks like an email or a phone number is dropped at the route,
+  and the event still counts (`looksPersonal`, tested). k ≥ 5 stays on read: folding single days would erase small
+  shops' sources.
+- **MED-6, the privacy policy:** the shop's policy says it collects name, phone, email and address "and nothing else
+  without asking you". A sentence about counting visits (network, browser, city, pages; no cookie, nothing that
+  names a person, raw data deleted after 90 days) goes to the owner and the lawyer before `ANALYTICS_INGEST_ON`.
+  Proposed: "We count visits to this shop to see which pages and links work: the pages you open, your browser and an
+  approximate city. We don't use cookies for this, don't store your IP address, and can't tell who you are from it.
+  Visit records are deleted after 90 days."
+- **MED-7, forged product ids:** migration 0003 caps `product_daily` and `vitals_daily` at the top 1,000 products per
+  shop-day in the fold (it can't go in 0002, which is applied).
+- **LOW:**
+  - Forged text in the Console: referrer hosts and utm values render as text, never as links (A2·4).
+  - `purchase` comes from a sessionStorage flag set just before checkout leaves for the order page, never from the
+    static order page, and no order id or token is in a marker.
+  - The `/fe.js` exemption is exact (anchored with `$`), with tests that `/fe.js/x`, `/fe.json`, `/FE.JS` and
+    `/fe%2ejs` still rewrite.
+  - Data-centre ranges stay cut (YAGNI in the plan): Bot Protection, the firewall rate rule and `isBot` cover them,
+    and nothing is billed on tier-0 counts.
+  - `fe.js` never reads `href`, `hash`, `document.URL` or cookies, never writes to the DOM, refuses to run in a frame,
+    and checks `data-pid` is a uuid. `check:storefront-build` greps for these.
+  - Origin on `sendBeacon` is confirmed in Chromium by e2e. Firefox and WebKit aren't installed here: a manual check
+    on a phone before go-live.
+
+### speed-reviewer on the A2·2 amendment (2026-11-11): within budget with conditions; folded in
+- **HIGH 1, the lookup:**
+  - `requireShop`, cached 60 s, never `tenantForHost`;
+  - checks that need only headers run first;
+  - the miss memo and both caps are bounded at 5,000 keys.
+- **MED 2, caching:**
+  - `/fe.js` and `/api/shop/e` are out of the middleware matcher;
+  - `/fe.js` is `public, max-age=31536000, immutable`;
+  - `v` is the file's content hash (`BEACON_VERSION`), and `check:beacon` fails a stale file or version.
+- **MED 3, soft navigation:**
+  - a view only when the pathname changes, so the size guide's same-URL entry and `replaceState` aren't counted;
+  - markers are read after `setTimeout(0)` and again at flush, de-duplicated by kind, product and path;
+  - a `window.__fe` guard.
+- **MED 4, the switch:** the tag is tied to the environment only (`ANALYTICS_INGEST_ON` and the URL), never an Admin
+  flag baked into cached pages. A2·5's Admin switch goes in the route (drop and 204, from a 60 s flag).
+- **MED 5, purchase:** a sessionStorage flag set by the checkout just before it leaves for the order page, read once.
+  No server write.
+- **MED 6, the build:** esbuild from `src/beacon/fe.ts`, sharing A·1's `landingParams`, with `ERASED_KEYS` made
+  pure-annotated so it drops out. 1,649 B gzip (ceiling 1.7 kB; the reviewer's 1.6 kB had no room for the security
+  checks). The budget gate prints each page with the beacon: product 122.2, checkout 121.8.
+- **LOW, done:**
+  - the beacon has its own landing key (`fe.l`);
+  - one queue is emptied by whichever of `visibilitychange` and `pagehide` comes first;
+  - bodies are cut under 7,000 characters;
+  - a back-forward restore counts a view;
+  - vitals carry the hard-load product, and INP is the slowest interaction.
+- **LOW, open:**
+  - a real Instagram in-app browser test before go-live (flush the landing after load if events go missing there);
+  - `pair-add` credits `add_to_cart` to the page's product;
+  - the analytics project's region (owner: check Settings › General; ADR-0013 records it once known).
+- **Test limit found while building:** headless Chromium here delivers nothing sent during unload (frata-gotchas). The
+  flow hides the tab before full navigations, and the phone check covers the unload send.
+
+## A2·2 as built (2026-11-11, branch only)
+- `src/beacon/fe.ts` → `public/fe.js` (`npm run build:beacon`; `check:beacon` in `npm test`), mounted by
+  `ShopShell` when `capture && isCountingVisits()`.
+- `/fe.js` is exempted from the shop rewrite by exact name (tested), skipped by the middleware, and cached immutable.
+- Markers: `view_item` on the product page, `begin_checkout` on the checkout page, and `purchase` from the
+  checkout's `fe.p` flag.
+- The route `src/app/api/shop/e/route.ts` → `src/lib/analytics/ingest.ts`, in `ANALYTICS_IN_APP` and `ENTRY_POINTS`.
+- Pure: `src/domains/analytics/event.ts`, `device.ts`, `visitor.ts` (tests in `__tests__/beacon.test.ts`).
+- `drizzle-analytics/0003_product_cap.sql`: the 1,000-products cap. The proof is now 14 checks.
+- `ops/firewall.json`: the rate rule first, and the preview bypass kept off `/api/`.
+- e2e `72-traffic` passes 4 steps: the tag and the file, a phone visit (landing source, soft view, product, bag,
+  checkout), the fold, and the refusals.
+- **Before counting goes live (owner):**
+  1. paste 0003 (`FROM=0003 node scripts/ops/analytics-paste.mjs`);
+  2. the Firewall changes in the dashboard (the rate rule first, the bypass conditions);
+  3. the privacy sentence, approved with the lawyer;
+  4. `ANALYTICS_INGEST_ON=1`, Production only;
+  5. a phone check: Chrome, Safari and Instagram's in-app browser each show events after the tab is left.
+
+### impact-reviewer and security-reviewer on A2·2 as built (2026-11-11), folded
+- **HIGH (impact), the product cap deleted counted views.**
+  - 0003 now replaces `analytics_fold()`, not the rollup. A shop-day names at most 1,000 products. A product already
+    named always adds; a new one is named only while there is room. The rest add to one row,
+    `ffffffff-ffff-ffff-ffff-ffffffffffff` ("other products"). Per-product vitals are kept only for named products.
+  - Proved over two folds: a named product's views carry across, a new product past the cap goes to "other products",
+    and all 1,010 views are counted.
+  - 0003 was never applied anywhere live, so it was changed in place.
+- **MED, fixed:**
+  - a paired piece's add to bag names its own product (`openBag(variant, product)`);
+  - an odd path is "other", never a lost beacon;
+  - only an Indian mobile shape counts as a phone (numeric campaign ids stay);
+  - a phone-shaped creator code is dropped;
+  - lone surrogates are refused, and the beacon cuts by code point;
+  - Pinterest, Telegram, LinkedIn and Cubot users are not bots (tested);
+  - `check:beacon` also fails a cost field;
+  - the shared rules live in `beacon-rules.ts`;
+  - a lookup failure is a 503 logged by its name only;
+  - `networkOf` handles brackets and zone ids.
+- **MED-A (security), the privacy policy:** while visits are counted (`countsVisits` from `isCountingVisits()`), the
+  shop's privacy policy drops "nothing else without asking you" and says what is counted. Tested. A merchant's own
+  rewritten policy is theirs; the owner's wording review covers ours.
+- **e2e `72-traffic`, now 5 steps:**
+  - the policy says visits are counted;
+  - Web Vitals arrive;
+  - one purchase per order, and a reopened order page is not another;
+  - a body with no length is cut as it streams (413).
+- **Left, with reasons:**
+  - the 429 caps, "counting off" and the in-flight cap have no automated test (the e2e stack runs with counting on,
+    and the caps need 120+ requests a minute; they are 10 lines each);
+  - the WAF's IPv6 keying (per address or per /64) is unconfirmed;
+  - shop domains must be DNS-only (a proxy would merge visitors under its edge IPs), so note it in the Connect
+    dialog's help (D·2) later;
+  - a forged Origin can crowd out a shop's beacons on one instance (tier 0, accepted; revisit with A2·5);
+  - `CLAUDE.md`'s `npm test` list doesn't name `check:beacon` (proposed to the owner).
+
+## Owner, 2026-11-11 (A2·2 go-live steps)
+- Region of frata-analytics: ap-south-1 (South Asia, Mumbai).
+- The privacy wording while visits are counted: **approved**.
+- `ANALYTICS_INGEST_ON=1` set in Vercel (Production); the `/api/shop/e` rate rule added. The link-preview bypass
+  conditions and migration 0003 are pending, and the code isn't on `main` yet, so nothing is counted in production.
+- The e2e failures in addresses and domains (Make main) also fail on `main` (964fdc0), so they predate A·2.
+- **Renumbered when merged with `main` (2026-11-11):** `main` took ADR-0011 (Amazon SES) and e2e 71 (email) meanwhile,
+  so the analytics database is **ADR-0013** and the traffic flow is **e2e 72**.

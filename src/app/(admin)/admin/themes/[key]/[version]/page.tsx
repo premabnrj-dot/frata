@@ -4,7 +4,8 @@ import { Section } from '@/components/layout/section'
 import { Button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
-import { CATALOGUE, cmpSemver } from '@/domains/themes/catalogue'
+import { CATALOGUE } from '@/domains/themes/catalogue'
+import { cmpSemver } from '@/domains/themes/semver'
 import { isBaseline } from '@/domains/themes/release'
 import { SECTION_NAMES } from '@/domains/themes/sections'
 import { shopsNamed, themeVersionsForAdmin } from '@/lib/admin/themes'
@@ -28,7 +29,9 @@ export default async function ThemeVersionPage({ params, searchParams }: { param
   const admin = adminRole.ok
   const prev = Object.values(CATALOGUE[key] ?? {}).filter((m) => cmpSemver(m.version, version) < 0).sort((a, b) => cmpSemver(b.version, a.version))[0] ?? null
   const now = CATALOGUE[key]?.[version] ?? null
-  const added = now && prev ? now.allowed.sections.filter((s) => !prev.allowed.sections.includes(s)) : []
+  // TS0b: a new design is named by its own name (Size help), never the bare "Design" key.
+  const newDesigns = now && prev ? (now.designs ?? []).filter((d) => !(prev.designs ?? []).some((p) => p.id === d.id)).map((d) => d.name) : []
+  const added = now && prev ? [...now.allowed.sections.filter((s) => s !== 'design' && !prev.allowed.sections.includes(s)).map((s) => SECTION_NAMES[s]), ...newDesigns] : []
   const newFeatures = now && prev ? now.features.filter((f) => !prev.features.includes(f)) : now?.features ?? []
   const older = all.filter((x) => x.key === key && cmpSemver(x.version, version) < 0).reduce((n, x) => n + x.live, 0)
   const results = admin && sp.q ? await shopsNamed(staff, sp.q) : []
@@ -42,7 +45,7 @@ export default async function ThemeVersionPage({ params, searchParams }: { param
       <Section title="What’s in it">
         {!v.inCode && <p className="text-sm text-danger-text">This version is no longer in the deployed code; shops on it render the nearest earlier version.</p>}
         <ul className="list-disc space-y-1 pl-5 text-sm">{newFeatures.map((f) => <li key={f}>{f}</li>)}</ul>
-        {prev && <p className="mt-2 text-sm text-muted-foreground">Since {prev.version}: {added.length ? `new section${added.length > 1 ? 's' : ''} ${added.map((s) => SECTION_NAMES[s]).join(', ')}` : 'no new sections'}. Shops on {prev.version} keep everything they made when they move to it.</p>}
+        {prev && <p className="mt-2 text-sm text-muted-foreground">Since {prev.version}: {added.length ? `new section${added.length > 1 ? 's' : ''} ${added.join(', ')}` : 'no new sections'}. Shops on {prev.version} keep everything they made when they move to it.</p>}
         <p className="mt-2 text-sm text-muted-foreground">
           {v.releasedAt && <>Released {dayIN(v.releasedAt)}. </>}
           {v.recalledAt && <>Recalled {dayIN(v.recalledAt)}: {v.recalledReason}. </>}

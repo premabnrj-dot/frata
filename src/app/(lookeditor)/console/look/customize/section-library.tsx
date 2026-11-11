@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Dialog } from '@/components/ui/dialog'
-import { MAX_PER_PAGE, SECTION_INFO, SECTION_KEYS, SECTION_KINDS, SECTION_NAMES, searchSections, type SectionKey } from '@/domains/themes/sections'
+import { MAX_PER_PAGE, SECTION_INFO, SECTION_KEYS, SECTION_KINDS, SECTION_NAMES, searchDesigns, searchSections, type SectionKey } from '@/domains/themes/sections'
+
+/** A design as the library shows it (Theme Studio TS0b); its picture is drawn on the server (speed review 4). */
+export type LibraryDesign = { id: string; name: string; line: string; tags: string[]; thumb: React.ReactNode }
 import { Icon } from '@/components/icons/icon'
 
 // =============================================================================
@@ -11,9 +14,10 @@ import { Icon } from '@/components/icons/icon'
 // the sections this theme doesn't take show greyed), a full section greyed with its limit, and where it will land.
 // =============================================================================
 
-export function SectionLibrary({ open, onClose, onAdd, allowed, made, themeName, count, after }: {
-  open: boolean; onClose: () => void; onAdd: (k: SectionKey) => void
+export function SectionLibrary({ open, onClose, onAdd, allowed, made, themeName, count, after, designs = [] }: {
+  open: boolean; onClose: () => void; onAdd: (k: SectionKey, design?: string) => void
   allowed: SectionKey[]; made: SectionKey[]; themeName: string; count: (k: SectionKey) => number; after: string | null
+  designs?: LibraryDesign[]
 }) {
   const [q, setQ] = useState('')
   const [kind, setKind] = useState('All')
@@ -28,9 +32,14 @@ export function SectionLibrary({ open, onClose, onAdd, allowed, made, themeName,
   const pool = useMemo(() => (fitOnly ? SECTION_KEYS.filter((k) => allowed.includes(k)) : [...SECTION_KEYS]), [fitOnly, allowed])
   // Made for this theme first, then the rest in library order.
   const ordered = useMemo(() => [...pool].sort((a, b) => Number(made.includes(b)) - Number(made.includes(a))), [pool, made])
-  const found = searchSections(q, ordered)
-  const kinds = SECTION_KINDS.map((k) => ({ name: k.name, n: found.filter((x) => k.keys.includes(x)).length })).filter((k) => pool.some((x) => SECTION_KINDS.find((y) => y.name === k.name)!.keys.includes(x)))
+  // TS0b: designs are listed one by one (by name), never as the bare `design` key.
+  const found = searchSections(q, ordered.filter((k) => k !== 'design'))
+  const dFound = allowed.includes('design') ? searchDesigns(q, designs) : []
+  const kinds = SECTION_KINDS.map((k) => ({ name: k.name, n: k.name === 'Designs' ? dFound.length : found.filter((x) => k.keys.includes(x)).length }))
+    .filter((k) => (k.name === 'Designs' ? allowed.includes('design') && designs.length > 0 : pool.some((x) => SECTION_KINDS.find((y) => y.name === k.name)!.keys.includes(x))))
   const shown = kind === 'All' ? found : found.filter((x) => SECTION_KINDS.find((k) => k.name === kind)?.keys.includes(x))
+  const dShown = kind === 'All' || kind === 'Designs' ? dFound : []
+  const dFull = count('design') >= MAX_PER_PAGE.design
   return (
     <Dialog open={open} onClose={onClose} title="Add a section" className="md:w-[min(60rem,calc(100vw-2rem))]"
       actions={<><span className="mr-auto self-center text-sm text-muted-foreground">{after ? <>Adds below <b className="font-medium text-foreground">{after}</b></> : 'Adds at the end'}</span><button type="button" data-autofocus onClick={onClose} className="min-h-10 rounded-md border border-input px-4 text-sm">Close</button></>}>
@@ -44,13 +53,26 @@ export function SectionLibrary({ open, onClose, onAdd, allowed, made, themeName,
       </div>
       <div className="grid min-h-[22rem] gap-3 md:grid-cols-[11rem_minmax(0,1fr)]">
         <nav aria-label="Kinds" className="flex gap-1 overflow-x-auto md:flex-col">
-          {[{ name: 'All', n: found.length }, ...kinds].map((k) => (
+          {[{ name: 'All', n: found.length + dFound.length }, ...kinds].map((k) => (
             <button key={k.name} type="button" aria-current={kind === k.name ? 'true' : undefined} onClick={() => setKind(k.name)}
               className={`flex min-h-9 shrink-0 items-center justify-between gap-3 rounded-md px-3 text-left text-sm ${kind === k.name ? 'bg-muted font-semibold' : 'text-muted-foreground hover:bg-muted'}`}>{k.name}<span className="font-mono text-xs">{k.n}</span></button>
           ))}
         </nav>
-        {shown.length ? (
+        {shown.length || dShown.length ? (
           <ul className="grid content-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {dShown.map((d) => (
+              <li key={`d-${d.id}`}>
+                <button type="button" disabled={dFull} onClick={() => onAdd('design', d.id)} title={dFull ? `At most ${MAX_PER_PAGE.design} designs on a page` : undefined}
+                  className="group w-full overflow-hidden rounded-xl border border-border bg-card text-left transition-[translate,border-color] duration-base ease-standard hover:border-input disabled:opacity-50 [@media(hover:hover)]:enabled:hover:-translate-y-0.5">
+                  <span className="block bg-muted text-foreground">{d.thumb}</span>
+                  <span className="block space-y-1 p-3">
+                    <span className="flex items-center gap-2 font-semibold"><Mark text={d.name} q={q} />
+                      <span className="ml-auto rounded-full bg-ok px-2 py-0.5 text-xs font-medium text-ok-text">Made for {themeName}</span></span>
+                    <span className="block text-sm text-muted-foreground">{dFull ? `At most ${MAX_PER_PAGE.design} designs on a page` : <Mark text={d.line} q={q} />}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
             {shown.map((k) => {
               const fits = allowed.includes(k), full = count(k) >= MAX_PER_PAGE[k]
               return (
@@ -98,6 +120,9 @@ export function SectionThumb({ k }: { k: SectionKey }) {
     logos: <>{r(56, 20, 48, 5, 0.5)}{[0, 1, 2, 3].map((i) => r(14 + i * 36, 44, 28, 14, 0.35, i))}</>,
     story_fan: <>{r(14, 28, 30, 40, 0.15)}{r(116, 28, 30, 40, 0.15)}{r(34, 22, 34, 48, 0.25)}{r(92, 22, 34, 48, 0.25)}{r(60, 14, 40, 60, 0.45)}</>,
     statement: <>{r(0, 0, 160, 90, 0.3)}{r(66, 34, 28, 4, 0.6)}{r(40, 44, 80, 12, 0.85)}</>,
+    // TS0b: a design is drawn from its own blocks (DesignThumb); this is the bare key's fallback.
+    design: <>{r(10, 14, 60, 8, 0.7)}{r(10, 28, 66, 50, 0.25)}{r(86, 28, 64, 50, 0.25)}</>,
   }
   return <svg viewBox="0 0 160 90" className="block h-24 w-full" aria-hidden="true">{body[k]}</svg>
 }
+

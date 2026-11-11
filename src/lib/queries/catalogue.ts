@@ -11,6 +11,7 @@ import type { Tx } from '@/lib/db'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { productPairs } from '@/lib/db/schema-catalogue'
 import { extrasOffered } from './look'
+import { manifestsFor } from '@/lib/themes/manifests'
 
 // The console's catalogue reads (1A). Every one inside withTenant with an
 // explicit tenant where. These include the merchant's own unit cost: they are
@@ -86,6 +87,8 @@ export async function productHandleById(tenantId: string, id: string): Promise<s
 /** The product editor's reads. `role`: the viewer's, for its cost of goods (`seesCosts`: owner 2026-11-08, hidden from
  * staff and from a partner after handover; not sent at all then). */
 export async function productForEdit(tenantId: string, productId: string, role: MemberRole) {
+  // The manifest source is read before the transaction (P4), for the stories/pairs offer check.
+  const src = await manifestsFor(tenantId)
   return withTenant(tenantId, async (tx) => {
     const [product] = await tx.select().from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId))).limit(1)
     if (!product) return null
@@ -108,7 +111,7 @@ export async function productForEdit(tenantId: string, productId: string, role: 
         .from(productPairs).innerJoin(products, and(eq(products.tenantId, productPairs.tenantId), eq(products.id, productPairs.pairedId)))
         .leftJoin(productImages, and(eq(productImages.tenantId, products.tenantId), eq(productImages.productId, products.id), eq(productImages.position, 0)))
         .where(mine(productPairs)).orderBy(asc(productPairs.position)),
-      extrasOffered(tx, tenantId),
+      extrasOffered(tx, tenantId, src),
     ])
     const vs = costs ? vs0 : vs0.map((v) => ({ ...v, unitCost: null }))
     const [shop] = await tx.select({ name: tenants.name, slug: tenants.slug, orderPrefix: shopSettings.orderPrefix, codOn: shopSettings.codOn, returnDays: shopSettings.returnDays, returnKind: shopSettings.returnKind, pickup: shopSettings.pickupPincode,

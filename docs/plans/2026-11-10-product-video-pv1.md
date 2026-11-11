@@ -356,3 +356,12 @@ The owner said "we're not letting people download". What Mux allows:
   - dead exports (`VIDEO_USES`, `NOT_READY_AFTER_MS`, `MAX_BYTES`, `UPLOAD_TIMEOUT_S`);
   - `minShortSide` in `USE_LIMITS`;
   - one `consoleOrigin`.
+
+## PV1-4a, first attempt (2026-11-11): moving SizeGuide out doesn't free room
+Measured with `SHOW_BUDGETS=1` on a full build, product page 120.6 kB before:
+- `next/dynamic`: 122.0 kB (the loader costs more than the guide; checkout found the same on 2026-11-09);
+- a bare `import()` on the tap: 121.1 kB.
+
+Reverted. The video tile's room has to come from somewhere else: the tile drawn on the server (as planned), and a look
+at the product page's chunks for what the first paint doesn't need. A2·2 no longer waits on this: its beacon is a
+static script (A2·2 amendment, plan 2026-11-11).

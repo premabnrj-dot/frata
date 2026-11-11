@@ -6,8 +6,8 @@ import { CollectionView } from '@/components/storefront/pages'
 import { JsonLd } from '@/components/storefront/json-ld'
 import { breadcrumbJsonLd, itemListJsonLd } from '@/domains/seo/defaults'
 import { inCollection } from '@/domains/storefront/listing'
-import { shopCatalogue, shopLook } from '@/lib/queries/storefront'
-import { themeOf } from '@/lib/themes/page-look'
+import { shopCatalogue } from '@/lib/queries/storefront'
+import { shopTheme } from '@/lib/themes/page-look'
 import { shopFor, shopHref } from '../../../_shop'
 import { shopTags, toMetadata } from '../../../_meta'
 
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function Collection({ params }: { params: Params }) {
   const { shop, cat, c } = await load(params)
-  const theme = themeOf(shop, await shopLook(shop.id))
+  const theme = (await shopTheme(shop))
   const now = new Date()
   const base = `https://${shop.host}`
   return (

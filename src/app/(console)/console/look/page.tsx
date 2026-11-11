@@ -3,7 +3,10 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
-import { cmpSemver, CATALOGUE, manifestOf, OFFERED } from '@/domains/themes/catalogue'
+import { OFFERED } from '@/domains/themes/catalogue'
+import { cmpSemver } from '@/domains/themes/semver'
+import { manifestOf } from '@/domains/themes/source'
+import { manifestsFor } from '@/lib/themes/manifests'
 import { latestAvailable } from '@/domains/themes/release'
 import { resolveStored, resolveTheme } from '@/domains/themes/resolve'
 import { ANY_MEMBER, CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
@@ -21,22 +24,22 @@ export default async function LookPage() {
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
   const t = auth.membership.tenantId
-  const [l, shop] = await Promise.all([lookPage(t), previewShop(t)])
+  const [l, shop, src] = await Promise.all([lookPage(t), previewShop(t), manifestsFor(t)])
   if (!shop) return <Panel title="We could not load your shop." />
   const role = auth.membership.role
   const support = !!auth.membership.supportSessionId
   const canEdit = (CAN_BUILD as readonly string[]).includes(role) && !support
   const canPublish = (CAN_MANAGE as readonly string[]).includes(role) && !support
   const liveRev = l.live?.revision ?? null
-  const liveTheme = resolveStored(liveRev, shop)
-  const liveM = manifestOf(liveTheme.key, liveTheme.version)!
+  const liveTheme = resolveStored(liveRev, shop, src)
+  const liveM = manifestOf(src, liveTheme.key, liveTheme.version)!
   const styleName = liveM.styles.find((s) => s.key === liveTheme.style)?.name ?? liveTheme.style
   const sells = new Set(l.facts.sells)
   // Only versions this shop may use (released, or staged to it; never recalled or withdrawn: themes T3).
-  const offered = OFFERED.flatMap((k) => { const m = latestAvailable(k, Object.values(CATALOGUE[k] ?? {}), l.access.rows, l.access.staged); return m ? [m] : [] })
+  const offered = OFFERED.flatMap((k) => { const m = latestAvailable(k, src.versions(k), l.access.rows, l.access.staged); return m ? [m] : [] })
   const liveOk = !l.live || l.may(l.live.revision.themeKey, l.live.revision.themeVersion)
   const newest = offered.find((m) => m.key === liveTheme.key && cmpSemver(m.version, liveTheme.version) > 0) ?? null
-  const withdrawn = l.history[0] && l.live && l.history[0].revision.id !== l.live.revision.id ? CATALOGUE[l.history[0].revision.themeKey]?.[l.history[0].revision.themeVersion] ?? null : null
+  const withdrawn = l.history[0] && l.live && l.history[0].revision.id !== l.live.revision.id ? manifestOf(src, l.history[0].revision.themeKey, l.history[0].revision.themeVersion) : null
   const draftOk = !l.draft || l.may(l.draft.themeKey, l.draft.themeVersion)
   const themes: GalleryTheme[] = offered.map((m) => ({
     key: m.key, name: m.name, job: m.job, version: m.version, features: m.features, inUse: m.key === liveTheme.key, newer: m.key === liveTheme.key && cmpSemver(m.version, liveTheme.version) > 0,
@@ -44,7 +47,7 @@ export default async function LookPage() {
     thumb: <ThemeThumb t={resolveTheme(m, { style: m.styles[0]!.key })} name={shop.shopName} size="sm" />,
     fits: m.goodFor.filter((g) => sells.has(g)).length,
   })).sort((a, b) => b.fits - a.fits)
-  const draftName = l.draft ? `${CATALOGUE[l.draft.themeKey]?.[l.draft.themeVersion]?.name ?? l.draft.themeKey}` : null
+  const draftName = l.draft ? `${manifestOf(src, l.draft.themeKey, l.draft.themeVersion)?.name ?? l.draft.themeKey}` : null
   return (
     <>
       <PageHeader title="Look" meta="How your shop looks. Shoppers see the published theme." />
@@ -62,7 +65,7 @@ export default async function LookPage() {
               {' · '}<Link href="/console/look/history" className="underline underline-offset-4">History</Link>
             </p>
             {l.draft && <p className="flex flex-wrap items-center gap-2 text-sm"><Badge tone="warn">Draft</Badge>{draftName !== liveM.name ? `${draftName}: ` : ''}You have unpublished changes · saved {dateTimeIN(l.draft.updatedAt)}</p>}
-            <LookActions canEdit={canEdit} canPublish={canPublish} hasDraft={!!l.draft} undoFrom={l.previous && canPublish ? l.live!.revision.id : null} restore={!liveOk && !!l.previous && canPublish} support={support} previousName={l.previous ? `${manifestOf(l.previous.themeKey, l.previous.themeVersion)?.name ?? l.previous.themeKey}` : null} />
+            <LookActions canEdit={canEdit} canPublish={canPublish} hasDraft={!!l.draft} undoFrom={l.previous && canPublish ? l.live!.revision.id : null} restore={!liveOk && !!l.previous && canPublish} support={support} previousName={l.previous ? `${manifestOf(src, l.previous.themeKey, l.previous.themeVersion)?.name ?? l.previous.themeKey}` : null} />
           </div>
         </div>
       </Section>

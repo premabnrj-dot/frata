@@ -31,7 +31,7 @@ try {
     browser.newContext = (o = {}) => newContext({ reducedMotion: 'reduce', ...o })
     const errors = []
     const t = {
-      db: stack.db, browser, out: (name) => `${OUT}${f.replace('.mjs', '')}-${name}.png`, errors,
+      db: stack.db, adb: stack.adb, browser, out: (name) => `${OUT}${f.replace('.mjs', '')}-${name}.png`, errors,
       async step(name, fn) {
         let r
         try { r = await fn() } catch (e) { e.step = name; throw e }
@@ -56,6 +56,6 @@ try {
     if (errors.length) { failed++; console.log(`FAIL ${flow.name} › page errors: ${errors.slice(0, 3).join(' | ')}`) }
     await browser.close()
   }
-} catch (e) { failed++; console.log('FAIL stack', e.message) } finally { await down(stack?.db) }
+} catch (e) { failed++; console.log('FAIL stack', e.message) } finally { await down(stack?.db, stack?.adb) }
 console.log(`\n${failed ? 'RED' : 'GREEN'} — ${passed} steps passed, ${failed} failed. Screenshots and logs: e2e/.out/`)
 process.exit(failed ? 1 : 0)

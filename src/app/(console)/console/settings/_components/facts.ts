@@ -1,3 +1,4 @@
+import { isCountingVisits } from '@/lib/env'
 import type { ShopFacts } from '@/components/shop-preview/previews'
 import type { shopWithSettings } from '@/lib/queries/settings'
 
@@ -7,6 +8,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof shopWithSettings>>>
 export function shopFacts(shop: Row, shopDomain: string): ShopFacts {
   const s = shop.settings
   return {
+    countsVisits: isCountingVisits(),
     shopName: shop.name, slug: shop.slug, shopDomain,
     legalName: s.legalName, address: s.address, originCountry: s.originCountry, orderPrefix: s.orderPrefix,
     supportEmail: s.supportEmail, supportPhone: s.supportPhone, whatsapp: s.whatsapp, instagram: s.instagram,

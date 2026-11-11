@@ -2,8 +2,8 @@
 name: frata-verify
 description: Use before saying a Frata change works - to run the gates, typecheck, tests and production build, run the end-to-end browser flows (npm run e2e), check a mockup, prove tenant isolation on a real Postgres, run the built app locally against that database with storefront and console Host headers, and exercise webhooks and cron with curl.
 metadata:
-  version: 1.7.0
-  verified: 2026-11-08
+  version: 1.8.0
+  verified: 2026-11-11
   covers: ["scripts/verify/**", "e2e/**", "scripts/check-mockup.mjs"]
 ---
 
@@ -40,7 +40,11 @@ ADMIN_URL=postgres://postgres@localhost:54330/frata_proof npm run verify:tenancy
 INT_DB_HOST=localhost:54330 INT_DB_NAME=frata_proof npx vitest run src/lib/admin   # Admin library, real roles
 ```
 
-`verify:tenancy` applies every `drizzle/*.sql` and runs `scripts/verify/tenancy.sql`:
+`verify:tenancy` applies every `drizzle/*.sql` and runs `scripts/verify/tenancy.sql`. It then recreates
+`<name>_analytics` on the same server (the URL's user must be able to create databases and reach `<server>/postgres`,
+or set `ANALYTICS_ADMIN_URL`), applies `drizzle-analytics/*.sql`, and runs `scripts/verify/analytics-tenancy.sql`. That
+proof has 13 catalog-driven checks: RLS everywhere; exact grants; definers; ingest isolation; top-N within a shop; a
+fold across midnight; retention. The main proof:
 no tenant → no rows; A sees only A; (13 checks, incl. support visits, invites, both roles' reach, no API-role EXECUTE on any app_* function; the setting ends with the transaction; A
 cannot write into B (orders, outbox); host and membership lookups; API roles
 denied; `frata_app` has no BYPASSRLS. Changed a policy? Also break it on purpose

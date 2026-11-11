@@ -1,6 +1,6 @@
 # A·2 · Traffic, counted by Frrata (replan)
-Status: draft, for the owner · Date: 2026-11-10 · Parent: `docs/specs/2026-11-07-analytics.md` (owner calls 1–6) and
-`docs/specs/2026-11-08-analytics-a1.md` (built and live) · Mockup: to draw after the calls below · Approved: —
+Status: approved (owner, 2026-11-11: "A.2 traffic mockup is approved, go with your recommendations") · Date: 2026-11-10 · Parent: `docs/specs/2026-11-07-analytics.md` (owner calls 1–6) and
+`docs/specs/2026-11-08-analytics-a1.md` (built and live) · Mockup: docs/mockups/2026-11-10-analytics-a2.html (https://claude.ai/artifact/5rTrvSAfDZMGoPwCJSRBVF) · Approved: owner 2026-11-11, calls 1–5 as recommended
 
 The owner asked whether to build our own traffic analytics instead of GA4, or use Vercel for now. This file rechecks the
 7 Nov answer against what changed today (Vercel paused for CPU; prices rechecked), then replans A·2.

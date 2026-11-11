@@ -184,12 +184,8 @@ export const sectionFor = (key: string): Section | undefined => SECTIONS.find((s
 export { gstinValid } from '../tax/gstin'
 import { gstinValid } from '../tax/gstin'
 
-const MOBILE = /^[6-9][0-9]{9}$/
-/** "+91 98270-41000" → "9827041000"; null when it is not an Indian mobile number. */
-export function normaliseMobile(raw: string): string | null {
-  const d = raw.replace(/\D/g, '').replace(/^(91|0)(?=\d{10}$)/, '')
-  return MOBILE.test(d) ? d : null
-}
+export { normaliseMobile } from './mobile'
+import { normaliseMobile } from './mobile'
 
 export type Values = Record<string, string | boolean | string[]>
 export type Patch = Record<string, string | number | boolean | string[] | null>

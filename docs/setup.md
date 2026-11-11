@@ -9,6 +9,7 @@ Checked 2026-11-06.
 | Vercel project `frata` | team `premabnrj-dots-projects`, production https://frata.vercel.app, functions `bom1` |
 | Supabase project `frata` | ref `szqwveysvbbxpjhjlnwl`, ap-south-1, org "doloslyf-creator's Org" (free plan) |
 | Migrations applied | `drizzle/0000`–`0003`, each recorded in `drizzle.__drizzle_migrations` |
+| Supabase project `frata-analytics` (A·2, ADR-0013) | ref `frbyvvxxqheigcutlamj`, ap-south-1 (Mumbai), a separate Supabase account, Data API off. Migrations `drizzle-analytics/0000`–`0002` applied by the owner 2026-11-11 (paste), pg_cron jobs `analytics-fold` (*/15) and `analytics-maintain` (:07) active. `frata_app` password: step B. URL in Vercel: step C, at A2·2 |
 | Isolation proved on the live database | 2026-11-06, rolled back (`frata-verify` § Live proof); security advisor clean |
 | Vercel variables set | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (publishable key), `NEXT_PUBLIC_CONSOLE_HOST=frata.vercel.app` |
 
@@ -108,6 +109,37 @@ Until these are set, Console › Apps › Messages says "WhatsApp isn't switched
    - `PAYMENT_KEYS_SECRET` must already be set (it seals each shop's WhatsApp token too).
 5. Redeploy, then connect Frrata's own test number first (dev mode). Other brands' numbers need **App Review**
    (two screencasts, recorded after C2·1) and access verification; until then Meta allows 10 new brands per 7 days.
+
+## Analytics database (A·2, ADR-0013)
+
+The project is in a separate Supabase account, which this session's Supabase connection can't reach, so you run these
+steps yourself. Alternatively, invite that account to the project's organisation, and an agent can apply and check
+them.
+
+**A. Migrations.** Run `node scripts/ops/analytics-paste.mjs`, or ask an agent for its output. Then, in Supabase →
+frata-analytics → SQL Editor, paste it and run it once. It is one transaction, and 0000 refuses to run on the main
+database. The two queries at the end should list the migrations and two cron jobs, `analytics-fold` and
+`analytics-maintain`. Later migrations: `FROM=0003 node scripts/ops/analytics-paste.mjs`.
+
+**B. The app role's password** (same SQL editor): `alter role frata_app with password '<openssl rand -hex 24>';`
+Don't give `frata_admin` a password until A2·5 needs it.
+
+**C. `ANALYTICS_DATABASE_URL` in Vercel** (from A2·2; nothing reads it before then):
+1. Copy frata-analytics → **Connect** → **Transaction pooler** (port 6543).
+2. Change the user to `frata_app.frbyvvxxqheigcutlamj` and use the password from B.
+3. Save it as **Sensitive**, **Production only**.
+
+**D. Before shops count visits (A2·2)**, in this order:
+1. Paste migration 0003: run `FROM=0003 node scripts/ops/analytics-paste.mjs` and paste the output into the SQL editor.
+2. In Vercel → frata → Firewall, mirror `ops/firewall.json`, then publish:
+   - a custom rule first, "Rate limit the visit beacon": path equals `/api/shop/e` → rate limit 120 per minute per IP,
+     deny;
+   - in "Bypass link previews", add the condition "Path does not start with `/api/`" to each user-agent condition.
+3. Approve, with the lawyer, the privacy policy's wording while visits are counted (`src/domains/policies/render.ts`,
+   `countsVisits`). Shops show it as soon as step 4 is on.
+4. Set `ANALYTICS_INGEST_ON` = `1` in Vercel, Production only, and redeploy.
+5. On a phone, open a shop in Chrome, in Safari and from Instagram, leave each tab, then ask an agent to check the
+   events arrived.
 
 ## Later
 

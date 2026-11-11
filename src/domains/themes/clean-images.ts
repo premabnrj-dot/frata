@@ -1,5 +1,5 @@
 import { acceptedBase } from '@/domains/media/sizes'
-import { SectionSchema } from './sections'
+import { SectionSchema, type Fill } from './sections'
 
 /**
  * Every photo a look's sections name, rebuilt by acceptedBase for THIS shop's theme folder — or its product photos
@@ -24,6 +24,14 @@ export function cleanImages<L extends { home?: unknown[] }>(layer: L, tenantId: 
         case 'hero': case 'image_text': case 'drop_teaser': case 'shop_the_look': case 'statement': return { ...s, image: fix(s.image) }
         case 'story_fan': return { ...s, cards: s.cards.map((c) => ({ ...c, image: fix(c.image) ?? null })) }
         case 'logos': return { ...s, images: s.images.map((i) => fix(i)!) }
+        // TS0b: every fill, by its kind (exhaustive: a new kind with a photo can't be missed; tenancy audit HIGH).
+        case 'design': return { ...s, fill: Object.fromEntries(Object.entries(s.fill).map(([k, f]): [string, Fill] => {
+          switch (f.kind) {
+            case 'image': return [k, { ...f, image: f.image ? { ...f.image, base: fix(f.image)!.base } : null }]
+            case 'heading': case 'text': case 'button': case 'accordion': return [k, f]
+            default: return f satisfies never
+          }
+        })) }
         case 'collection_tiles': case 'products': case 'price_tiles': case 'promises': case 'rich_text': return s
         default: return s satisfies never
       }

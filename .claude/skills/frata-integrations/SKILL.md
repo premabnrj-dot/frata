@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.23.1
+  version: 1.24.0
   verified: 2026-11-11
   decisions: [ADR-0006]
 ---
@@ -106,8 +106,8 @@ in razorpay.com/docs/sitemap.xml (most read 2026-10-08, a bulk rebuild).
   the post-discount pre-GST value per piece [S] (decision 1, plan 2026-11-08-offers).
 - s.15(3)(b) substituted from 1 Nov 2026 (N 03/2026-CT): a post-supply discount needs a credit note and ITC reversal [V by
   two sources, gazette unread]. BOGO = two supplies at one price, rate per s.8 (Circular 92/11/2019) [V].
-- E-Commerce (Amendment) Rules 2026, GSR 789(E), from 1 Jan 2027: a price cut shows the prior price = the lowest in 30
-  days; yearly dark-pattern self-audit and certificate [V TaxHeal 2026-09-16 / Bar & Bench 2026-09-28; gazette unread].
+- E-Commerce (Amendment) Rules 2026, G.S.R. 789(E) of 9 Sep 2026, from 1 Jan 2027: a price cut shows the prior price = the lowest
+  in 30 days (r.4(13)); yearly dark-pattern self-audit and certificate (r.4(15)) [V, gazette read 2026-11-11; § Consumer protection].
 - No sale above MRP including taxes (Legal Metrology r.18(2), r.2(m)) [V, consolidated to 2026-02-13].
 - A purchase-linked contest or game of chance is an unfair trade practice unless prescribed (CPA s.2(47)(iii)(b)) [S].
 - CCPA: recurring countdowns treated as false urgency; fees added at checkout as drip pricing; penalties ₹1–7 lakh so far
@@ -531,8 +531,8 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   36); grievances resolved in 7 days (was 15); unlawful content 36 h (was 72); intimate imagery 2 h (was 24); a user
   advisory every 3 months; all intermediaries. 24 h acknowledgement unchanged [S, Khaitan 2026-02-16, Cyril Shroff
   2026-02-11]. Draft Second Amendment (30 Mar 2026): 180-day retention a minimum; not notified as of 24 Aug 2026 [S].
-- E-Commerce (Amendment) Rules 2026 (G.S.R. 789(E), from 1 Jan 2027): yearly dark-pattern self-audit with a
-  certificate; a copy of the complaint to the complainant; grievance 48 h / one month unchanged [S, 2026-09-11].
+- E-Commerce (Amendment) Rules 2026 (G.S.R. 789(E), 9 Sep 2026, from 1 Jan 2027): yearly dark-pattern self-audit with a
+  certificate; a copy of the complaint to the complainant; grievance 48 h / one month unchanged [V, gazette read 2026-11-11].
 - Hindware v Google (Delhi HC, 22 May 2026): safe harbour lost by a tool that aids infringement [S, Medianama].
 - Shopify: product-level enforcement first, account last; trademark notices shown to the merchant in admin [V-undated].
 - Turnstile Free: 20 widgets, 10 hostnames each, no challenge cap; Siteverify mandatory, token 300 s, single use
@@ -789,6 +789,7 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   applebot, amazonbot and meta-externalagent are ai_crawler (denying them drops Apple's Spotlight and Siri search) [V].
 - **Custom rules**: free, 40 per project on Pro; match host, path, raw_path, route, user_agent, method, header; operators
   eq, pre, suf, sub, re, inc (+ negation); custom rules run before managed rulesets; live in ≤ 300 ms [V 2026-07-29/09-16].
+- **On frata (2026-11-11)**: GET/PUT/PATCH `/v1/security/firewall/config` answer 404 "Seawall Config not found" even after Bot Protection (Log) and a custom rule were published in the dashboard; the rules are entered by hand from `ops/firewall.json`. The dashboard's User Agent condition has no regex: use "contains", OR-ed.
 - **API**: PUT/PATCH `/v1/security/firewall/config?projectId=`; drafts promoted by `POST …/{configVersion}/activate` (whether
   PUT goes live directly: U, read back `config/active`). Attack Mode `POST /v1/security/attack-mode` (projectId,
   attackModeEnabled, attackModeActiveUntil), immediate, 1/6/24 h; own Functions and Crons pass; unverified callers
@@ -796,3 +797,40 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
 - **isbot** 5.2.3 (2026-11-09), Unlicense (not MIT), no dependencies, ≈ 2.6 kB gzip [V registry; S bundlephobia].
 - **useReportWebVitals** (Next 15): TTFB, FCP, LCP, FID, CLS, INP; a client component; bundles next/dist/compiled/web-vitals
   (upstream "~3K brotli'd"); a shopper-browser script, so a DPDP note like Mux Data [V 2025-06-16 + source].
+
+## Consumer protection (E-Commerce Rules, Legal Metrology) — checked 2026-11-11 (integration-researcher; gazette text read)
+
+- **E-Commerce (Amendment) Rules 2026 = G.S.R. 789(E)**, Gazette Extraordinary Part II s.3(i) No. 721, dated 9 Sep 2026
+  (eGazette CG-DL-E-10092026-276125; PIB 10 Sep), in force **1 Jan 2027** [V, gazette PDF via taxheal mirror; egazette.gov.in
+  503]. Substitutes r.3(1)(j), r.4(2),(5),(6),(7), r.5(3)(a),(c),(f), r.6(5)(d), r.7(1)(a); inserts r.4(11)(c), 4(12)–(15),
+  r.5(6)–(7), r.6(5)(j). r.4(4) untouched.
+- **r.4(2) from 1 Jan 2027**, every e-commerce entity, "in a clear and accessible manner on its platform, displayed prominently at
+  an appropriate place": legal name; principal geographic address of HQ **and all branches**; name and details of its website;
+  "e-mail address, landline and mobile numbers" of customer care AND the grievance officer [V]. No footer or every-page rule;
+  "appropriate place" undefined [V absence]. Until 31 Dec 2026 also "fax" [S, lexcomply 2026-09-22].
+- r.4(4): grievance officer's "name, contact details, and designation" on the platform [U, undated page]. CCPA v Agoda
+  (14 Oct 2026): details not prominent breached r.4(2), 4(4); a prominent link to name, designation, India email [S, TaxGuru
+  2026-10-15; order unread].
+- **Grievances r.4(5) from 1 Jan 2027**: acknowledge in 48 h, give the complainant "a copy of the complaint as recorded", redress
+  within one month of receipt [V]. A ticket number per complaint to track status, r.7(1)(f) [U, undated page]. r.4(7): every
+  e-commerce entity "shall become a partner" in the National Consumer Helpline convergence process (was best effort) [V].
+- r.4(6) imported goods: importer's name and details; "full and complete name of the country of origin" [V]. r.4(13) prior price =
+  lowest in 30 days; r.4(14) invoice: seller's name "in the same font size as that of the e-commerce entity's name"; r.4(15)
+  yearly dark-pattern self-audit, certificate "displayed prominently" (where: not stated) [V].
+- **Own-site D2C brand = inventory e-commerce entity** ("shall include single brand retailers") → r.4 + r.7, not r.6 (sellers on a
+  marketplace) [U, undated page; S AZB 2026-09-18]. r.7(1)(a) from 1 Jan 2027: return, refund, exchange, best before/use before,
+  warranty, delivery and shipment, cost of return shipping, mode of payments, grievance redressal [V]. Whether Frrata or the
+  merchant is "the e-commerce entity" on a hosted shop: counsel [U].
+- Marketplace only (r.5, r.6): seller GSTIN/MSME number r.6(5)(j); country of origin r.6(5)(d); no bundled fees, consumer-data
+  limits r.5(6)–(7) [V].
+- **Legal Metrology r.6(10)**: an e-commerce entity shows the r.6(1) declarations "except the month and year" of manufacture:
+  manufacturer/packer/importer name and address, country of origin (imported), generic name, net quantity, MRP incl. all taxes,
+  dimensions where relevant [V, Khaitan consolidation as amended to 2026-02-13]. LMPC "E-commerce entity" = a company or foreign
+  company/branch (r.2(be)); a proprietor or LLP brand may be outside it [V text / U reading]. r.6(10A) searchable, sortable
+  country-of-origin filter for imported products from **1 Jul 2027** (G.S.R. 312(E), 27 Apr 2026, replacing 1 Jul 2026 in G.S.R.
+  128(E)) [V gazettes].
+- **What this asks of Frrata before 1 Jan 2027** (owner to schedule; not built): Settings › Business details gains branch
+  addresses, a landline beside the mobile for customer care and the grievance officer, and the grievance officer's designation
+  required; the Contact policy shows the website's name and address; the contact form (with M·2) gives a copy of the complaint
+  and a ticket number; counsel answers who is "the e-commerce entity" on a hosted shop and who joins the National Consumer Helpline.
+

@@ -2,17 +2,29 @@ import 'server-only'
 import type { Circle, StripPiece } from '@/components/storefront/shell'
 import { inCollection } from '@/domains/storefront/listing'
 import { sourceProducts } from '@/domains/storefront/sources'
+import { cache } from 'react'
 import { resolveStored } from '@/domains/themes/resolve'
+import type { ManifestSource } from '@/domains/themes/source'
+import { manifestsFor } from './manifests'
 import { VIDEO_KEYS } from '@/domains/themes/sections'
 import type { ResolvedTheme } from '@/domains/themes/types'
-import type { StoreCatalogue, StoreShop, StoredLook } from '@/lib/queries/storefront'
+import { shopLook, type StoreCatalogue, type StoreShop, type StoredLook } from '@/lib/queries/storefront'
 
 // =============================================================================
 // FILE: src/lib/themes/page-look.ts — what a shop page needs from its look, shared by the shop and the console's
 // previews: the resolved theme, the header's category circles, and which Best sellers windows to read.
 // =============================================================================
 
-export const themeOf = (shop: StoreShop, look: StoredLook | null): ResolvedTheme => resolveStored(look, shop)
+/** A look resolved against a manifest source (the console's previews: uncached). */
+export const themeOf = (shop: StoreShop, look: StoredLook | null, src: ManifestSource): ResolvedTheme => resolveStored(look, shop, src)
+
+/** A shop's live look, resolved once per request (cached by primitives: cache() matches arguments by identity). The
+ *  look and the manifest source load together (speed review, TS0a). */
+const shopThemeOnce = cache(async (shopId: string, accent: string, displayFont: string): Promise<ResolvedTheme> => {
+  const [look, src] = await Promise.all([shopLook(shopId), manifestsFor(shopId)])
+  return resolveStored(look, { accent, displayFont }, src)
+})
+export const shopTheme = (shop: StoreShop): Promise<ResolvedTheme> => shopThemeOnce(shop.id, shop.accent, shop.displayFont)
 
 /** The circles row: collections with a listed product, each with its first product's first photo (≤ 8). */
 export function circlesOf(cat: StoreCatalogue, now: Date): Circle[] {

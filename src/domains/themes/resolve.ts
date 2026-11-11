@@ -1,6 +1,8 @@
-import { manifestNear, manifestOf } from './catalogue'
+import { classic_1_0_0 } from './catalogue/classic/1.0.0'
+import { manifestNear, type ManifestSource } from './source'
 import { choicesFor } from './choices'
 import { LayerSchema, SettingsSchema, onColour, brandColourProblem } from './layer'
+import { designsOf, pruneFill, type Design } from './blocks'
 import { PRODUCT_LAYOUTS, SECTION_SCHEMES, SectionSchema, type SectionInstance, VIDEO_KEYS } from './sections'
 import { paletteProblem, readMenus, readSite, textOf, TEXT_STYLES } from './site'
 import { FEEL_DEFAULTS, PAGE_DEFAULTS, PAIRINGS, type ChoiceKey, type Pairing, type ResolvedTheme, type Scheme, type SchemeKey, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
@@ -98,10 +100,15 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
   const layouts = m.allowed.productLayouts ?? PRODUCT_LAYOUTS, schemesOk = m.allowed.sectionSchemes ?? SECTION_SCHEMES, videoOk = m.allowed.videoSections ?? []
   const spotlightOk = (m.allowed.imageTextLayouts ?? []).includes('spotlight'), scriptOk = !!m.allowed.heroScript
   const raw = parsed.success && parsed.data.home ? parsed.data.home : m.home
+  // TS0b: the theme's designs, each parsed on its own (one that doesn't parse is left out, never the rest).
+  const designs = new Map(designsOf(m).map((d) => [d.id, d]))
+  const used = new Map<string, Design>()
   const home = raw.flatMap((s): SectionInstance[] => {
     const p = SectionSchema.safeParse(s)
     if (!p.success || !m.allowed.sections.includes(p.data.key)) return []
     let x = p.data
+    // A design this version doesn't have drops (carryOver says so); the owner's words keep only what fits its blocks.
+    if (x.key === 'design') { const d = designs.get(x.design); if (!d) return []; used.set(d.id, d); x = pruneFill(d, x) }
     if (x.key === 'hero' && !masks.includes(x.mask)) x = { ...x, mask: 'none' }
     // Signal plan T1: a layout or scheme this theme doesn't offer falls back to today's default (never renders).
     if (x.key === 'products' && !layouts.includes(x.layout)) x = { ...x, layout: 'grid' }
@@ -114,7 +121,7 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
     return [x]
   })
   return { key: m.key, version: m.version, style: style.key, schemes, settings, home, ...(m.rhythm ? { rhythm: m.rhythm } : {}), ...(m.scale ? { scale: m.scale } : {}),
-    ...(m.allowed.productStories || m.allowed.pairWith ? { product: { stories: !!m.allowed.productStories, pairs: !!m.allowed.pairWith } } : {}), site, menus: readMenus(layer.menus) }
+    ...(m.allowed.productStories || m.allowed.pairWith ? { product: { stories: !!m.allowed.productStories, pairs: !!m.allowed.pairWith } } : {}), site, menus: readMenus(layer.menus), ...(used.size ? { designs: Object.fromEntries(used) } : {}) }
 }
 
 /**
@@ -130,13 +137,14 @@ export function baselineRevision(accent: string, displayFont: string) {
 /** A shop that has never published a theme: its baseline, resolved. */
 export function classicFromSettings(accent: string, displayFont: string): ResolvedTheme {
   const b = baselineRevision(accent, displayFont)
-  return resolveTheme(manifestOf(b.themeKey, b.themeVersion)!, { style: b.styleKey, ...b.settings })
+  // Classic 1.0.0 is code forever (isBaseline): never looked up through a source.
+  return resolveTheme(classic_1_0_0, { style: b.styleKey, ...b.settings })
 }
 
 /** A published (or previewed) revision as stored, resolved; an unknown theme or version falls back to Classic. */
-export function resolveStored(row: { themeKey: string; themeVersion: string; styleKey: string; settings: unknown } | null, shop: { accent: string; displayFont: string }): ResolvedTheme {
+export function resolveStored(row: { themeKey: string; themeVersion: string; styleKey: string; settings: unknown } | null, shop: { accent: string; displayFont: string }, src: ManifestSource): ResolvedTheme {
   if (!row) return classicFromSettings(shop.accent, shop.displayFont)
-  const m = manifestNear(row.themeKey, row.themeVersion)
+  const m = manifestNear(src, row.themeKey, row.themeVersion)
   if (!m) return classicFromSettings(shop.accent, shop.displayFont)
   const s = (row.settings ?? {}) as { settings?: Partial<ThemeSettings>; home?: unknown[]; site?: unknown; menus?: unknown }
   return resolveTheme(m, { style: row.styleKey, settings: s.settings, home: s.home, site: s.site, menus: s.menus })

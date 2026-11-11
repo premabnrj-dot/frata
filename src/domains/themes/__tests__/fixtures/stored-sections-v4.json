@@ -1,0 +1,5 @@
+[
+  { "id": "design-size", "key": "design", "design": "size-help", "fill": { "intro": { "kind": "text", "body": [[{ "text": "True to Indian sizes. " }, { "text": "Go up one", "bold": true }, { "text": " if between.", "link": "/policies/returns" }]] }, "faq": { "kind": "accordion", "items": [{ "q": "How do I measure?", "a": "In cm, at the end of the day." }] }, "button": { "kind": "button", "label": "Exchanges", "link": "/policies/returns" } } },
+  { "id": "design-hand", "key": "design", "design": "made-by-hand", "scheme": "tint", "label": "Craft", "fill": { "heading": { "kind": "heading", "text": "Made in Agra" }, "photo-1": { "kind": "image", "image": null } } },
+  { "id": "design-empty", "key": "design", "design": "made-by-hand" }
+]

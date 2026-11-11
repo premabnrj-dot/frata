@@ -23,6 +23,12 @@ const BUDGET_KB = 120
 const TIGHT = { '/s/[host]/(shop)/products/[handle]/page': 121, '/s/[host]/(checkout)/checkout/page': 121 }
 // The shop's stylesheet (shared, render-blocking): every theme's rules land in it, so it has a ceiling too.
 const CSS_BUDGET_KB = 15.9 // 14.9 measured 2026-11-09 after Signal S2 (story sections, Caveat, scale; console rules moved to the app sheet) + 1 kB; was 22.5 before the shop's own sheet
+// Theme Studio TS0b: a design's block rules (.store-b-*, src/app/base.css) have their own ceiling inside the sheet.
+const BLOCK_CSS_KB = 1.0
+// The visit beacon (A·2, public/fe.js): a static async script the shell adds to every live shop page. It isn't a build
+// chunk, so it isn't in a page's first-load figure (it runs in its own task, after parsing: 0 TBT; speed review
+// 2026-11-11), but its bytes are shown beside each page's and held by scripts/build-beacon.mjs (≤ 1.7 kB gzip).
+const BEACON_KB = existsSync('public/fe.js') ? gzipSync(readFileSync('public/fe.js')).length / 1024 : 0
 const failures = []
 const read = (f) => JSON.parse(readFileSync(join('.next', f), 'utf8'))
 if (!existsSync('.next/prerender-manifest.json')) { console.error('check:storefront-build — no .next to read; run it after next build.'); process.exit(1) }
@@ -49,6 +55,9 @@ for (const [k, files] of Object.entries(build)) {
   // Icons are drawn on the server (src/components/storefront/icon.tsx): their path data never reaches a shop's
   // browser. Two markers, the line set's bag and the solid set's bag (src/domains/icons/data.ts).
   for (const f of files) if (f.endsWith('.js') && /M3\.103 6\.034h17\.794|M239\.89,198\.12l-14\.26-12/.test(readFileSync(join('.next', f), 'utf8'))) failures.push(`${k}  carries the shop's icon data through ${f} (draw icons on the server, pass the element)`)
+  // The console's icon set (src/components/icons/icon.tsx) never reaches a shop's browser: the shop draws its own
+  // marks (close-mark.tsx; the console set cost every shop page about 2 kB, 2026-11-11). Marker: its `home` path.
+  for (const f of files) if (f.endsWith('.js') && readFileSync(join('.next', f), 'utf8').includes('M4 10.5 12 4l8 6.5V20H4z')) failures.push(`${k}  carries the console's icon set through ${f} (draw the mark in src/components/storefront)`)
   if (!k.endsWith('/page')) continue
   // Everything this page loads: the root layout, each layout on the way down, and the page (each file once).
   const parts = k.split('/').slice(0, -1)
@@ -59,7 +68,7 @@ for (const [k, files] of Object.entries(build)) {
   for (const f of all) if (f.endsWith('.css') && readFileSync(join('.next', f), 'utf8').includes('--frrata-sheet-app')) failures.push(`${k}  loads the app's stylesheet (${f}); a shop page loads src/app/shop.css only`)
   if (css > CSS_BUDGET_KB) failures.push(`${k}  loads ${css.toFixed(1)} kB of CSS gzipped (budget ${CSS_BUDGET_KB} kB)`)
   const kb = all.filter((f) => f.endsWith('.js')).reduce((a, f) => a + gz(f), 0) / 1024
-  if (process.env.SHOW_BUDGETS) console.log(`  ${k}: ${kb.toFixed(1)} kB JS, ${css.toFixed(1)} kB CSS`)
+  if (process.env.SHOW_BUDGETS) console.log(`  ${k}: ${kb.toFixed(1)} kB JS (${(kb + BEACON_KB).toFixed(1)} with the beacon), ${css.toFixed(1)} kB CSS`)
   const limit = TIGHT[k] ?? BUDGET_KB
   if (kb > limit) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${limit} kB) — split what the first paint does not need`)
 }
@@ -77,6 +86,33 @@ for (const [k, files] of Object.entries(build)) {
   }
   if (!pages.length) failures.push('no app pages found to check for the app stylesheet')
 }
+
+// The Look customizer's first-load script (Theme Studio spec § Guardrails, the Console gate; TS0b): 207.4 kB measured
+// 2026-11-11 after Menus and Site settings moved behind next/dynamic, with the designs added. It only comes down: the
+// studio (TS2) has its own ceiling. A new form loads when opened (next/dynamic), as the story and design forms do.
+const CUSTOMIZER_KB = 208
+{
+  const k = Object.keys(build).find((x) => /\/console\/look\/customize\/page$/.test(x))
+  if (!k) failures.push('the Look customizer page is missing from the build manifest')
+  else {
+    const parts = k.split('/').slice(0, -1)
+    const above = ['/layout', ...parts.map((_, i) => `${parts.slice(0, i + 1).join('/')}/layout`).filter((l) => l !== '/layout' && build[l])]
+    const kb = [...new Set([...above.flatMap((l) => build[l] ?? []), ...build[k]])].filter((f) => f.endsWith('.js')).reduce((a, f) => a + gz(f), 0) / 1024
+    if (process.env.SHOW_BUDGETS) console.log(`  ${k}: ${kb.toFixed(1)} kB JS`)
+    if (kb > CUSTOMIZER_KB) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${CUSTOMIZER_KB} kB) — load a form when it opens (next/dynamic)`)
+  }
+}
+
+// TS0b: the block rules alone, gzipped (speed review 7): every .store-b- rule in the shop's sheets, @media included.
+{
+  // The shop's own sheet (src/app/shop.css) is the root layout's: every built sheet without the app's marker.
+  const sheets = [...new Set(Object.values(build).flat().filter((f) => f.endsWith('.css') && !readFileSync(join('.next', f), 'utf8').includes('--frrata-sheet-app')))]
+  const rules = sheets.flatMap((f) => readFileSync(join('.next', f), 'utf8').match(/[^{}]*\.store-b-[^{}]*\{[^{}]*\}/g) ?? [])
+  const kb = gzipSync(Buffer.from([...new Set(rules)].join(''))).length / 1024
+  if (process.env.SHOW_BUDGETS) console.log(`  block rules: ${kb.toFixed(2)} kB CSS`)
+  if (kb > BLOCK_CSS_KB) failures.push(`the design blocks' rules (.store-b-) are ${kb.toFixed(2)} kB gzipped (budget ${BLOCK_CSS_KB} kB)`)
+}
+
 if (failures.length) {
   console.error('check:storefront-build:')
   for (const f of failures) console.error('  ' + f)

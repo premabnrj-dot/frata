@@ -39,9 +39,19 @@ describe.skipIf(!host)('a shop’s look: drafts, saves, publishes, undo, discard
     expect(await run((tx) => L.saveDraft(tx, A, who, { revisionId: d2.id, version: 1, styleKey: 'neel', settings: { settings: { corners: 'round' } } }))).toEqual({ ok: true, version: 2 })
     expect(await run((tx) => L.saveDraft(tx, A, who, { revisionId: d2.id, version: 1, styleKey: 'neel', settings: {} }))).toEqual({ ok: false, why: 'stale' })
 
+    // TS0b (architecture review 5): a layer at the save's ceiling, in Hindi, fits the database's 64 kB check.
+    const { MAX_LAYER_BYTES, layerTooLong } = await import('@/domains/themes/layer')
+    const hindi = (n: number) => 'क'.repeat(n)
+    const base = { home: [{ id: 'd', key: 'design', design: 'size-help', fill: { intro: { kind: 'text', body: [[{ text: hindi(600) }]] } } }], pad: '' }
+    const big = { ...base, pad: hindi(Math.floor((MAX_LAYER_BYTES - new TextEncoder().encode(JSON.stringify(base)).length) / 3)) }
+    expect(layerTooLong(big)).toBe(false)
+    expect(new TextEncoder().encode(JSON.stringify(big)).length).toBeGreaterThan(MAX_LAYER_BYTES - 3)
+    expect(await run((tx) => L.saveDraft(tx, A, who, { revisionId: d2.id, version: 2, styleKey: 'neel', settings: big }))).toEqual({ ok: true, version: 3 })
+    expect(await run((tx) => L.saveDraft(tx, A, who, { revisionId: d2.id, version: 3, styleKey: 'neel', settings: { settings: { corners: 'round' } } }))).toEqual({ ok: true, version: 4 })
+
     // Publish only what the dialog listed; the first publish records the look before it (lazy baseline).
     expect(await run((tx) => L.publishRevision(tx, A, who, { revisionId: d2.id, version: 1, baseline }))).toBe('stale')
-    expect(await run((tx) => L.publishRevision(tx, A, who, { revisionId: d2.id, version: 2, baseline }))).toBe('ok')
+    expect(await run((tx) => L.publishRevision(tx, A, who, { revisionId: d2.id, version: 4, baseline }))).toBe('ok')
     const after = await run((tx) => L.lookFor(tx, A))
     expect(after.live?.revision.id).toBe(d2.id)
     expect(after.draft).toBeNull()
@@ -50,7 +60,7 @@ describe.skipIf(!host)('a shop’s look: drafts, saves, publishes, undo, discard
     expect(after.live?.publishedBy).toBe(who.userId)
 
     // A published look is frozen: a save says so.
-    expect(await run((tx) => L.saveDraft(tx, A, who, { revisionId: d2.id, version: 2, styleKey: 'neel', settings: {} }))).toEqual({ ok: false, why: 'published' })
+    expect(await run((tx) => L.saveDraft(tx, A, who, { revisionId: d2.id, version: 4, styleKey: 'neel', settings: {} }))).toEqual({ ok: false, why: 'published' })
 
     // Undo, only from the live look seen; it keeps the open draft.
     const d3 = await run((tx) => L.newDraft(tx, A, who, look('genda')))

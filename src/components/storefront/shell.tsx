@@ -8,6 +8,8 @@ import type { MenuItem } from '@/domains/themes/site'
 import { ShopIcon, type IconSet } from './icon'
 import { FooterMenu } from './nav'
 import { CaptureAttribution } from './capture'
+import { BEACON_VERSION } from '@/lib/analytics/beacon-version'
+import { isCountingVisits } from '@/lib/env'
 import { wordsFor, type Lang, type Words } from './words'
 import type { PhotoData } from './photo'
 import { CircleRow, ClassicHeader, FloatHeader, Logo, MenuHeader, SplitHeader } from './headers'
@@ -63,6 +65,8 @@ export function ShopShell({ shop, href, banner, children, gated = false, live = 
       {tabs && <BottomTabs href={href} live={live} w={w} set={set} own={t.menus.tabs ?? null} />}
       {/* How the shopper arrived: on every page of the real shop, never in a console preview (Analytics A·1). */}
       <CaptureAttribution capture={capture} />
+      {/* Visits (A·2): a static async script, not an island (src/beacon/fe.ts); only on the real shop, while counting is on. */}
+      {capture && isCountingVisits() && <script async src={`/fe.js?v=${BEACON_VERSION}`} />}
     </div>
   )
 }

@@ -8,7 +8,8 @@ import { ShopIcon } from '@/components/storefront/icon'
 import { POLICY_TITLE } from '@/components/storefront/policy'
 import { ICON_NAMES } from '@/domains/icons/names'
 import { ICON_LIBRARIES, paletteOf, paletteProblem } from '@/domains/themes/site'
-import { manifestOf } from '@/domains/themes/catalogue'
+import { manifestOf } from '@/domains/themes/source'
+import { manifestsFor } from '@/lib/themes/manifests'
 import { choicesOf } from '@/domains/themes/choices'
 import { needsSamples, sampleFirst, sampleSetFor } from '@/lib/themes/sample'
 import { truePromises } from '@/domains/themes/readiness'
@@ -22,6 +23,8 @@ import { editorData, justPublished } from '@/lib/queries/look'
 import { previewShop } from '@/lib/queries/storefront'
 import { Editor } from './editor'
 import { Published } from './published'
+import { DesignThumb } from './design-thumb'
+import { designsOf } from '@/domains/themes/blocks'
 
 // The customizer page: its own route group (no console chrome: the shop is the canvas). Only an editor of the look
 // (owner, admin, partner; not a support visit) gets here; the draft must exist (Look's Customize makes it).
@@ -34,7 +37,7 @@ export default async function Customize() {
   const role = auth.membership.role, support = !!auth.membership.supportSessionId
   if (!(CAN_BUILD as readonly string[]).includes(role) || support) redirect('/console/look')
   const t = auth.membership.tenantId
-  const [data, shop] = await Promise.all([editorData(t), previewShop(t)])
+  const [data, shop, src] = await Promise.all([editorData(t), previewShop(t), manifestsFor(t)])
   if (!shop) redirect('/console/look')
   // No open draft: if this person just published it (this page re-renders after Publish), say so and offer Undo;
   // otherwise (Discard, a bookmark, someone else published) back to Look.
@@ -43,7 +46,7 @@ export default async function Customize() {
     if (!j) redirect('/console/look')
     return <Published liveId={j.liveId} address={shop.host} shopOpen={!!shop.publishedAt} undoFrom={j.canUndo && (CAN_MANAGE as readonly string[]).includes(role) ? j.liveId : null} />
   }
-  const m = manifestOf(data.draft.themeKey, data.draft.themeVersion)
+  const m = manifestOf(src, data.draft.themeKey, data.draft.themeVersion)
   if (!m) redirect('/console/look')
   const stored = data.draft.settings as { settings?: object; home?: unknown[]; site?: unknown; menus?: unknown }
   const draft = resolveTheme(m, { style: data.draft.styleKey, ...stored })
@@ -63,6 +66,8 @@ export default async function Customize() {
   const sampled = !!m.samples && needsSamples(data.products.length)
   const first = sampleFirst(sampleSetFor(f.sells))
   const schemeNames = m.styles.find((s) => s.key === draft.style)?.schemeNames ?? {}
+  // TS0b: the theme's designs (parsed), and each one's picture drawn here (never the drawing code in the browser).
+  const designs = designsOf(m)
   return (
     <div className={STORE_FONT_VARS}>
       <Editor
@@ -77,13 +82,14 @@ export default async function Customize() {
         allowed={{ pairings: m.allowed.pairings, headers: m.allowed.headers, footers: m.allowed.footers, sections: m.allowed.sections }} made={m.made ?? {}}
         facts={{ collections: f.collections, codOn: f.codOn, freeShippingAbove: f.freeShippingAbove, returnDays: f.returnDays, dispatchDays: f.dispatchDays }}
         formCtx={{ tenantId: t, targets, collections: data.collections, products: data.products, photos: data.photos, shopName: shop.shopName, masks: m.allowed.heroMasks ?? ['none'], layouts: m.allowed.productLayouts ?? PRODUCT_LAYOUTS, labels: (choicesFor(m, 'labels') ?? ['none']).some((x) => x !== 'none'), promiseWords,
-          video: { sections: m.allowed.videoSections ?? [], on: isVideoConfigured() }, spotlight: (m.allowed.imageTextLayouts ?? []).includes('spotlight'), heroScript: !!m.allowed.heroScript,
+          video: { sections: m.allowed.videoSections ?? [], on: isVideoConfigured() }, spotlight: (m.allowed.imageTextLayouts ?? []).includes('spotlight'), heroScript: !!m.allowed.heroScript, designs: Object.fromEntries(designs.map((d) => [d.id, d])),
           schemes: ([{ key: 'paper', name: schemeNames.paper ?? 'Paper' }, { key: 'tint', name: schemeNames.tint ?? 'Tint' }, { key: 'ink', name: schemeNames.ink ?? 'Ink' }, { key: 'signal', name: 'Your colour' }] as const).filter((x) => (m.allowed.sectionSchemes ?? SECTION_SCHEMES).includes(x.key)) }}
         targets={targets} fonts={Object.fromEntries(PAIRINGS.map((p) => [p, displayFamily(p)])) as Record<Pairing, string>}
         address={shop.host} canPublish={(CAN_MANAGE as readonly string[]).includes(role)} shopOpen={!!shop.publishedAt} nowIso={new Date().toISOString()}
         // A theme with samples (2.0): with no piece or collection of its own yet, the page picker opens a sample one.
         firstProduct={data.products[0]?.handle ?? (sampled ? first.product : null)} firstCollection={data.collections[0]?.handle ?? (sampled ? first.collection : null)}
         choices={choicesOf(m)}
+        designs={designs.map((d) => ({ id: d.id, name: d.name, line: d.line, tags: d.tags, thumb: <DesignThumb design={d} /> }))}
       />
     </div>
   )

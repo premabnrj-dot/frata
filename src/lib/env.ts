@@ -15,6 +15,13 @@ export const DATABASE_URL = process.env.DATABASE_URL ?? ''
 export const TRIAL_CLAIM_SECRET = process.env.TRIAL_CLAIM_SECRET ?? ''
 /** frata_admin — cross-tenant (ADR-0007). Set for Production only; previews say "not connected". */
 export const ADMIN_DATABASE_URL = process.env.ADMIN_DATABASE_URL ?? ''
+/** The analytics database (A·2, its own Supabase project), as frata_app: the visit beacon's inserts and the console's
+ *  Traffic reads (both from A2·2). Production only. */
+export const ANALYTICS_DATABASE_URL = process.env.ANALYTICS_DATABASE_URL ?? ''
+/** Counting visits on (A·2): '1' mounts the beacon on shop pages and opens /api/shop/e; anything else, the route answers
+ *  404 before reading a byte (security review 2026-11-11 HIGH-1). Production only, set by the owner after the Firewall
+ *  rate rule on /api/shop/e and the privacy sentence. */
+export const ANALYTICS_INGEST_ON = process.env.ANALYTICS_INGEST_ON === '1'
 /** Encrypts each shop's Razorpay secrets and signs order links (src/lib/crypto/secret-box.ts). Production only.
  *  Changing it makes saved Razorpay secrets unreadable: those shops must reconnect. */
 export const PAYMENT_KEYS_SECRET = process.env.PAYMENT_KEYS_SECRET ?? ''
@@ -70,6 +77,8 @@ export const RAZORPAY_BILLING_WEBHOOK_SECRET_PREVIOUS = process.env.RAZORPAY_BIL
 /** False on a fresh Vercel project with no variables yet: pages say so instead of crashing. */
 export const isDatabaseConfigured = () => DATABASE_URL !== ''
 export const isAdminDatabaseConfigured = () => ADMIN_DATABASE_URL !== ''
+export const isAnalyticsConfigured = () => ANALYTICS_DATABASE_URL !== ''
+export const isCountingVisits = () => ANALYTICS_INGEST_ON && isAnalyticsConfigured()
 /** frata-blob's id (store_…): pins which Blob host a photo may come from. Set by connecting the store. */
 export const BLOB_STORE_ID = process.env.BLOB_STORE_ID ?? ''
 export const isBlobConfigured = () => BLOB_READ_WRITE_TOKEN !== '' && BLOB_STORE_ID !== ''

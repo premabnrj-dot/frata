@@ -5,7 +5,8 @@ import { ShopShell } from '@/components/storefront/shell'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { previewCatalogue, previewRevision, previewShop } from '@/lib/queries/storefront'
 import { shellNeedsCatalogue, shellPictures, themeOf } from '@/lib/themes/page-look'
-import { manifestOf } from '@/domains/themes/catalogue'
+import { manifestOf } from '@/domains/themes/source'
+import { manifestsFor } from '@/lib/themes/manifests'
 import { withSampleImages, sampleSetFor, withSamples } from '@/lib/themes/sample'
 import { PreviewBridge } from './bridge'
 
@@ -24,22 +25,23 @@ export default async function LookPreview({ params, searchParams }: { params: Pr
   if (!auth.ok) notFound()
   const { revision, path = [] } = await params
   const tenantId = auth.membership.tenantId
-  const [shop, rev] = await Promise.all([previewShop(tenantId), previewRevision(tenantId, revision)])
+  const [shop, rev, src] = await Promise.all([previewShop(tenantId), previewRevision(tenantId, revision), manifestsFor(tenantId)])
   if (!shop || !rev) notFound()
   const base = `/console/theme-preview/${revision}`
   const href = (p: string) => (p === '/' ? base : `${base}${p}`)
   const now = new Date()
   // A theme with samples (2.0) fills an empty shop with sample pieces and missing photos with sample scenes, here only.
-  const resolved = themeOf(shop, rev)
-  const look = manifestOf(resolved.key, resolved.version)?.samples
+  const resolved = themeOf(shop, rev, src)
+  const look = manifestOf(src, resolved.key, resolved.version)?.samples
   // `?as=shop`: the shop as shoppers see it (no samples): the popup after Publish shows it behind itself.
-  const samples = !!look && (await searchParams).as !== 'shop'
+  const asShop = (await searchParams).as === 'shop'
+  const samples = !!look && !asShop
   const theme = look && samples ? withSampleImages(resolved, look, sampleSetFor(shop.sells)) : resolved
   // The checkout as the shop draws it: focused when the theme's checkout is Focused (ShopFrame's rule).
   const focused = path[0] === 'checkout' && theme.settings.checkout === 'focused'
   const cat = shellNeedsCatalogue(theme) && !focused ? await previewCatalogue(tenantId) : null
   const { circles, strip } = shellPictures(theme, cat && samples ? withSamples(cat, now, sampleSetFor(shop.sells)) : cat, now)
-  const { body } = await previewPage({ tenantId, shop, path, href, now, theme, samples })
+  const { body } = await previewPage({ tenantId, shop, path, href, now, theme, samples, examples: !asShop })
   return (
     <>
       {/* The page entrance wrapper, as on the shop ((shop)/template.tsx), so "Pages arrive" shows here too. */}
