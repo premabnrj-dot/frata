@@ -743,3 +743,30 @@ With 0.8–0.9 kB more, checkout fails too, and PV1-4a only frees room on the pr
     unlike headless Chromium (frata-gotchas).
   - No landing row: the tab's landing came during the earlier failed visits.
   - Safari and Instagram are still to check.
+
+## A2·4 as built (2026-11-11, branch): Console › Analytics with visits, as the A·2 mockup
+- **Read:** `src/lib/queries/traffic.ts`.
+  - `trafficRead` reads the rollups through `withAnalyticsTenant`, read only, beside A·1's snapshot (`Promise.all`),
+    never inside it. It returns `'off'` without a URL, and a failure becomes "Visits unavailable".
+  - `trafficNames` (main database, after the visits) reads creator labels, the shop's own product names with their
+    orders in the window (a forged id is never named), and returns by city.
+- **Pure:** `src/domains/analytics/traffic.ts`, tested.
+  - Visits are classified by `sourceOfInputs` with the shop's creator labels, so orders and visits share a slug;
+    `rh '*'` is Other.
+  - Fewer than 5 visitors fold into Other (k ≥ 5); a row's orders per 100 visits needs 100 visits; the page needs
+    1,000 (`VISITS_MIN`).
+  - p75 is the geometric middle of a bucket (±10%); speed is judged on web.dev's thresholds; the slowest product page
+    needs 20 samples.
+- **Page:** the strip shows visits, orders per 100 visits, orders and returns. Then the funnel, from visit to
+  delivered (orders and deliveries come from A·1), with the biggest drop.
+  - Sources gain Visits, Orders per 100 visits and ₹ kept per visit (only for whoever `seesCosts`), and a source with
+    visits but no orders is a row.
+  - Then where they browse (in-app first), cities (with returns from orders, by name), products (views, bagged,
+    ordered, "Looked at often, rarely bagged") and speed on phones.
+  - States: counting off (A·1 unchanged), unavailable, no visits yet, the first days, ready.
+  - Text from a browser is never a link.
+  - `formatCount` gives Indian grouping.
+- **Log fix:** `urlProblem()` names which URL rule failed (never the value) in `[ingest]` and `[analytics] visits`
+  logs.
+- **e2e 72:** 8 steps, adding the first days, the ready state (with a second shop's identical rows never added in, and
+  a forged product id never named), and the phone with no sideways scroll. The A·1 flow passes with visits on.

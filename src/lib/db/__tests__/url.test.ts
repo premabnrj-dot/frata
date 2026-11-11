@@ -31,3 +31,15 @@ describe('parseDatabaseUrl roles', () => {
     expect(() => parseDatabaseUrl('postgresql://frata_app.abc123:x@host:6543/postgres', 'frata_admin')).toThrow(/frata_admin/)
   })
 })
+
+describe('urlProblem', () => {
+  it('says which rule a URL broke, and never the URL', async () => {
+    const { urlProblem } = await import('../url')
+    const secret = 'postgresql://postgres.abc:s3cretpass@host:6543/postgres'
+    let m = ''
+    try { parseDatabaseUrl(secret, 'frata_app', 'ANALYTICS_DATABASE_URL') } catch (e) { m = urlProblem(e) }
+    expect(m).toContain('must log in as frata_app')
+    expect(m).not.toContain('s3cretpass')
+    expect(urlProblem(new Error('connection refused'))).toBe('')
+  })
+})

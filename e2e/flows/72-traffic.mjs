@@ -8,7 +8,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import { request as httpRequest } from 'node:http'
-import { PORTS, SHOP, SHOP_DOMAIN, playwright, until } from '../lib.mjs'
+import { CONSOLE, PORTS, SHOP, SHOP_DOMAIN, playwright, signedIn, until } from '../lib.mjs'
 
 const { devices } = playwright
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
@@ -128,5 +128,76 @@ export default {
       const row = await until(async () => (await adb`select tenant_id, path from events where path = 'other' order by at desc limit 1`)[0] ?? null, 5000)
       assert.equal(row.tenant_id, KESAR, 'the host decides the shop')
     })
+
+    // Console › Analytics (A2·4): the visits beside the orders.
+    const OTHER = '99999999-0000-0000-0000-00000000aaaa'
+    const open = async (opts) => { const c = await signedIn(t.browser, 'owner', opts); const pg = await c.newPage(); pg.setDefaultTimeout(10_000); pg.on('pageerror', (e) => t.errors.push(e.message)); return { c, pg } }
+    await t.step('Console › Analytics, the first days: visits counted, too few to judge, sources with a Visits column', async () => {
+      const { c, pg } = await open()
+      await pg.goto(CONSOLE + '/console/analytics?period=30')
+      await pg.getByText('Orders per 100 visits').first().waitFor()
+      await pg.getByText(/Too few to judge: \d+ visits so far/).waitFor()
+      await pg.getByRole('columnheader', { name: 'Visits', exact: true }).first().waitFor()
+      await c.close()
+    })
+
+    const yday = new Date(Date.now() + 5.5 * 3_600_000 - 86_400_000).toISOString().slice(0, 10)
+    const [prod] = await t.db`select id, title from products where tenant_id = ${KESAR} and handle = 'chanderi-kurta-set'`
+    const lcp = Array(64).fill(0); lcp[Math.floor(Math.log(2101) / Math.log(1.2))] = 400
+    const inp = Array(64).fill(0); inp[Math.floor(Math.log(151) / Math.log(1.2))] = 400
+    const cls = Array(64).fill(0); cls[Math.floor(Math.log(41) / Math.log(1.2))] = 400
+    const slow = Array(64).fill(0); slow[Math.floor(Math.log(3401) / Math.log(1.2))] = 60
+    const seed = async (tenant) => {
+      await adb`insert into traffic_daily (tenant_id, day, visitors, views, product_visitors, bag_visitors, checkout_visitors, ordered_visitors, phone, computer, tablet)
+        values (${tenant}, ${yday}, 18400, 41000, 9900, 1420, 610, 200, 16700, 1500, 200) on conflict do nothing`
+      await adb`insert into source_daily (tenant_id, day, us, um, visitors, ordered_visitors) values (${tenant}, ${yday}, 'instagram', 'bio', 6200, 80) on conflict do nothing`
+      await adb`insert into source_daily (tenant_id, day, us, um, visitors, ordered_visitors) values (${tenant}, ${yday}, 'whatsapp', 'broadcast', 1100, 40) on conflict do nothing`
+      await adb`insert into browser_daily (tenant_id, day, device, browser, in_app, visitors, ordered_visitors) values
+        (${tenant}, ${yday}, 'phone', 'chrome', 'instagram', 8400, 60), (${tenant}, ${yday}, 'phone', 'chrome', '', 5700, 90), (${tenant}, ${yday}, 'phone', 'safari', '', 2200, 40) on conflict do nothing`
+      await adb`insert into city_daily (tenant_id, day, city, visitors, ordered_visitors) values (${tenant}, ${yday}, 'Mumbai', 3900, 50), (${tenant}, ${yday}, 'Pune', 2100, 30) on conflict do nothing`
+    }
+    try {
+      await seed(KESAR); await seed(OTHER)
+      // Another shop's product id under Kesar: it must never be named.
+      await adb`insert into product_daily (tenant_id, day, product_id, views, adds) values (${KESAR}, ${yday}, ${prod.id}, 2900, 406), (${KESAR}, ${yday}, '12345678-0000-4000-8000-000000000000', 9000, 10) on conflict do nothing`
+      await adb`insert into vitals_daily (tenant_id, day, metric, product_id, n, buckets) values
+        (${KESAR}, ${yday}, 'lcp', '00000000-0000-0000-0000-000000000000', 400, ${lcp}), (${KESAR}, ${yday}, 'inp', '00000000-0000-0000-0000-000000000000', 400, ${inp}),
+        (${KESAR}, ${yday}, 'cls', '00000000-0000-0000-0000-000000000000', 400, ${cls}), (${KESAR}, ${yday}, 'lcp', ${prod.id}, 60, ${slow}) on conflict do nothing`
+
+      await t.step('Console › Analytics, ready: the funnel, sources with visits, where they browse, cities, products, speed', async () => {
+        const { c, pg } = await open()
+        await pg.goto(CONSOLE + '/console/analytics?period=30')
+        await pg.getByRole('heading', { name: /From visit to delivered/ }).waitFor()
+        await pg.getByText('Saw a product').waitFor()
+        // This shop has no orders in the window, so the biggest drop is checkout → ordered; counts are grouped as India does.
+        await pg.getByText(/Biggest drop: started checkout → ordered/).waitFor()
+        await pg.getByText('9,901').waitFor()
+        await pg.getByText('Instagram’s in-app browser').waitFor()
+        await pg.getByRole('cell', { name: 'Mumbai' }).waitFor()
+        await pg.getByRole('link', { name: prod.title }).first().waitFor()
+        assert.equal(await pg.getByText('12345678-0000-4000-8000-000000000000').count(), 0, 'a forged product id is never named')
+        await pg.getByRole('heading', { name: /Speed on phones/ }).waitFor()
+        await pg.getByText('Good', { exact: true }).waitFor()
+        await pg.getByText(new RegExp(`Slowest page: ${prod.title}`)).waitFor()
+        // Kesar's own visits (18,400 + today's), never the other shop's seeded twin.
+        const tile = await pg.locator('dl').first().innerText()
+        assert.ok(/18,4\d\d/.test(tile) && !/36,8\d\d/.test(tile), 'Kesar\'s visits, and not another shop\'s added in')
+        await pg.screenshot({ path: t.out('console-analytics'), fullPage: true })
+        await c.close()
+      })
+
+      await t.step('Phone: the page has no sideways scroll', async () => {
+        const { c, pg } = await open({ viewport: { width: 390, height: 844 } })
+        await pg.goto(CONSOLE + '/console/analytics?period=30')
+        await pg.getByRole('heading', { name: /From visit to delivered/ }).waitFor()
+        assert.ok(await pg.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'no sideways scroll')
+        await pg.screenshot({ path: t.out('console-analytics-phone'), fullPage: true })
+        await c.close()
+      })
+    } finally {
+      for (const table of ['traffic_daily', 'source_daily', 'browser_daily', 'city_daily', 'product_daily', 'vitals_daily']) {
+        await adb.unsafe(`delete from ${table} where day = $1 and tenant_id in ($2, $3)`, [yday, KESAR, OTHER])
+      }
+    }
   },
 }

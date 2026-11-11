@@ -10,6 +10,10 @@
 
 export type DbRole = 'frata_app' | 'frata_admin'
 
+/** What parseDatabaseUrl refused, said safely: its messages name the setting and the rule, never the value (so a log
+ *  can carry them where a bare error name said only "Error"; owner, 2026-11-11). '' for any other error. */
+export const urlProblem = (e: unknown): string => (e instanceof Error && e.message.startsWith('[db] ') ? e.message : '')
+
 export function parseDatabaseUrl(raw: string, role: DbRole = 'frata_app', name = 'DATABASE_URL'): string {
   if (!raw) throw new Error(`[db] ${name} is not set`)
   let url: URL

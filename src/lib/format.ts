@@ -21,6 +21,9 @@ export function formatPhone(stored: string): string {
 }
 
 /** A share as a merchant reads it: "16.5%". */
+/** A count as India groups it: 18,400 · 1,84,300. */
+export const formatCount = (n: number): string => Math.round(n).toLocaleString('en-IN')
+
 export function formatPercent(fraction: number, digits = 1): string {
   return `${(fraction * 100).toFixed(digits)}%`
 }
