@@ -14,7 +14,19 @@ An owner moves her catalogue from a spreadsheet or another platform (Shopify, Wo
 it again, on a computer or a phone, and sees every problem before anything is written.
 
 ## Research
-<!-- filled from the research brief (dated sources only) -->
+Sources dated by the page (cutoff 2025-11-11). Shopify's help pages carry no date: their facts are **unverified** by
+the 12-month rule, though still the most complete reference. No current NN/g or Baymard study of spreadsheet import
+was found.
+| Product | Taken | Not taken |
+|---|---|---|
+| Shopify product CSV (help pages, undated) | One row per variant grouped by a handle, the first row carrying the product; photo URLs fetched by the server; a column missing from the file leaves values alone | A blank cell blanks the value; changing option values deletes variants; errors only by email, no error file, no history, no cancel |
+| Zoho Commerce (India; help, 2026-10-30) | Configure → map fields → preview; headers auto-matched and the mapping saved; duplicates "skip" by default; preview counts ready / skipped / unmapped | Matching on platform ids a merchant from Excel won't have |
+| Airtable CSV import (support, ~Oct 2026) | Merge on a chosen key; a preview counting updated / unchanged / new before writing; the mapping remembered | Invalid values silently imported blank and not listed |
+Taken for Frrata: a dry run always; every rejected cell by row, column and reason with the failed rows as a file; a
+mapping saved per source (Shopify, WooCommerce, an Excel layout); re-import updates by SKU, then address, and never
+duplicates; a blank cell means "no change" (the opposite of Shopify); no variant is ever deleted by an import; prices
+parsed forgivingly (₹, Rs, INR, "1,299", Indian grouping "1,00,000", "/-") and shown back for her to confirm, an
+unreadable price an error, never 0; photos fetched after the import, never holding it up.
 
 ## Design (mockup)
 1. **File.** Drop or choose Excel (.xlsx) or CSV, up to 2,000 products. Three starting points: our template, a
@@ -41,7 +53,8 @@ it again, on a computer or a phone, and sees every problem before anything is wr
 - SKU unique in the shop and the file; a duplicate is a row error naming the other row.
 - Cost (purchase price) imported for the owner only (`seesCosts`), never shown to staff (ADR-0003).
 - HSN and GST rate when given; a registered shop's product without a rate imports as a draft that can't go live yet.
-- A blank cell never clears a value on update unless asked (no such option in v1).
+- On update (PI·3) a blank cell never clears a value, and no variant is deleted; a product is matched by SKU, then by its address.
+- The column mapping is remembered per source (a Shopify export, a WooCommerce export, her own sheet's headers).
 - Photos by URL (a Shopify export carries them): fetched on the server through the outbox, resized once with sharp,
   stored like uploads; a dead link leaves the product with "Needs photos".
 
@@ -80,4 +93,9 @@ Exports, scheduled syncs, Instagram shop import (signal: owner asks), Meesho/Myn
 own module).
 
 ## Facts used
-<!-- dated, from research -->
+- Shopify: Title required for a new product, a handle once there are variants; 3 options; one image URL per row, up
+  to 250 a product; prices without a currency symbol; 15 MB per file; results by email (help.shopify.com, undated:
+  unverified).
+- Zoho Commerce: CSV, TSV or XLS up to 25 MB; skip or overwrite duplicates (zoho.com/commerce/help, 2026-10-30).
+- Airtable: 25,000 rows and 5 MB; the key match is case-sensitive; a repeated key uses its first row (support, ~Oct 2026).
+- No current source on how platforms parse "₹1,299.00" or "1,00,000", or on import from a phone.
