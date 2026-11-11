@@ -1,5 +1,6 @@
 'use client'
 
+import { waLink } from '@/domains/settings/whatsapp'
 import { useEffect, useRef, useState } from 'react'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { cashAtDoor, type ShopperState } from '@/domains/orders/order-state'
@@ -49,7 +50,7 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
   if (error) return <p role="alert" className="mx-auto max-w-lg px-4 py-16 text-center">{error}</p>
   if (!v) return <p className="mx-auto max-w-lg px-4 py-16 text-center text-store-sub">Loading your order…</p>
   const num = `${prefix}-${v.number}`
-  const wa = v.shop.whatsapp ? `https://wa.me/${v.shop.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Order ${num}`)}` : null
+  const wa = waLink(v.shop.whatsapp, `Order ${num}`)
   const placed = v.state !== 'not_paid' && v.state !== 'awaiting_payment'
   const copy = () => navigator.clipboard?.writeText(window.location.href).then(() => setCopied(true), () => setCopied(false))
   return (
