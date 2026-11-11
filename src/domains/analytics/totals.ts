@@ -15,6 +15,9 @@ export type Totals = {
   kept: Kept | null
 }
 
+/** Nothing yet: a source with visits but no orders, or an empty "Other". */
+export const EMPTY_TOTALS: Totals = { orders: 0, sales: 0, cod: 0, delivered: 0, rto: 0, lost: 0, onTheWay: 0, notSent: 0, kept: null }
+
 /** Sources beyond the first 12, and values a shopper typed, fold into one "Other" row (spec § Design 3). */
 export function foldSources<S extends { channel: Channel; cur: Totals }>(sources: S[], keep = 12): { rows: S[]; other: Totals | null } {
   const shown = sources.filter((s) => s.channel !== 'other').slice(0, keep)

@@ -132,6 +132,18 @@ export default {
     // Console › Analytics (A2·4): the visits beside the orders.
     const OTHER = '99999999-0000-0000-0000-00000000aaaa'
     const open = async (opts) => { const c = await signedIn(t.browser, 'owner', opts); const pg = await c.newPage(); pg.setDefaultTimeout(10_000); pg.on('pageerror', (e) => t.errors.push(e.message)); return { c, pg } }
+    await t.step('Console › Analytics, no visits yet: the orders stand, and visits count from today', async () => {
+      const today = new Date(Date.now() + 5.5 * 3_600_000).toISOString().slice(0, 10)
+      await adb`delete from traffic_daily where tenant_id = ${KESAR}`
+      try {
+        const { c, pg } = await open()
+        await pg.goto(CONSOLE + '/console/analytics?period=30')
+        await pg.getByText('Visits count from today').waitFor()
+        await pg.getByText('from today').first().waitFor()
+        await c.close()
+      } finally { await adb`select analytics_rollup(${today}::date)` }
+    })
+
     await t.step('Console › Analytics, the first days: visits counted, too few to judge, sources with a Visits column', async () => {
       const { c, pg } = await open()
       await pg.goto(CONSOLE + '/console/analytics?period=30')
@@ -142,6 +154,7 @@ export default {
     })
 
     const yday = new Date(Date.now() + 5.5 * 3_600_000 - 86_400_000).toISOString().slice(0, 10)
+    const old = new Date(Date.now() + 5.5 * 3_600_000 - 65 * 86_400_000).toISOString().slice(0, 10)
     const [prod] = await t.db`select id, title from products where tenant_id = ${KESAR} and handle = 'chanderi-kurta-set'`
     const lcp = Array(64).fill(0); lcp[Math.floor(Math.log(2101) / Math.log(1.2))] = 400
     const inp = Array(64).fill(0); inp[Math.floor(Math.log(151) / Math.log(1.2))] = 400
@@ -164,13 +177,29 @@ export default {
         (${KESAR}, ${yday}, 'lcp', '00000000-0000-0000-0000-000000000000', 400, ${lcp}), (${KESAR}, ${yday}, 'inp', '00000000-0000-0000-0000-000000000000', 400, ${inp}),
         (${KESAR}, ${yday}, 'cls', '00000000-0000-0000-0000-000000000000', 400, ${cls}), (${KESAR}, ${yday}, 'lcp', ${prod.id}, 60, ${slow}) on conflict do nothing`
 
+      await t.step('Console › Analytics, partly counted: visits and the funnel show, no rate divides a month of orders by a day of visits', async () => {
+        const { c, pg } = await open()
+        await pg.goto(CONSOLE + '/console/analytics?period=30')
+        await pg.getByRole('heading', { name: /From visit to delivered/ }).waitFor()
+        // Visits began yesterday: the 30 days aren't all counted, so orders per visit wait for their date.
+        await pg.getByText(/Biggest drop: saw a product → added to bag/).waitFor()
+        const strip = await pg.locator('dl').first().innerText()
+        assert.match(strip, /Orders per 100 visits\s*—/, 'no rate yet')
+        assert.match(strip, /from \d{1,2} [A-Z][a-z]{2}/, 'the date the rates start')
+        await c.close()
+      })
+
+      // Visits counted since 65 days ago: this window and the one before are both fully counted.
+      await adb`insert into traffic_daily (tenant_id, day, visitors) values (${KESAR}, ${old}, 1) on conflict do nothing`
+
       await t.step('Console › Analytics, ready: the funnel, sources with visits, where they browse, cities, products, speed', async () => {
         const { c, pg } = await open()
         await pg.goto(CONSOLE + '/console/analytics?period=30')
         await pg.getByRole('heading', { name: /From visit to delivered/ }).waitFor()
         await pg.getByText('Saw a product').waitFor()
-        // This shop has no orders in the window, so the biggest drop is checkout → ordered; counts are grouped as India does.
-        await pg.getByText(/Biggest drop: started checkout → ordered/).waitFor()
+        // Fully counted: orders per 100 visits is a number, and the funnel's order steps are counted (grouped as India does).
+        assert.match(await pg.locator('dl').first().innerText(), /Orders per 100 visits\s*\d+\.\d\d/)
+        await pg.getByText(/Biggest drop: /).waitFor()
         await pg.getByText('9,901').waitFor()
         await pg.getByText('Instagram’s in-app browser').waitFor()
         await pg.getByRole('cell', { name: 'Mumbai' }).waitFor()
@@ -196,7 +225,7 @@ export default {
       })
     } finally {
       for (const table of ['traffic_daily', 'source_daily', 'browser_daily', 'city_daily', 'product_daily', 'vitals_daily']) {
-        await adb.unsafe(`delete from ${table} where day = $1 and tenant_id in ($2, $3)`, [yday, KESAR, OTHER])
+        await adb.unsafe(`delete from ${table} where day in ($1, $4) and tenant_id in ($2, $3)`, [yday, KESAR, OTHER, old])
       }
     }
   },

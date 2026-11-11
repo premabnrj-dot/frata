@@ -20,8 +20,9 @@ import { dayMonthIN } from '@/lib/format-date'
 // =============================================================================
 
 export const HOW_VISITS = 'Counted without cookies or stored IP addresses: a visitor counts once a day on a device; bots are left out. Ad blockers and closed tabs mean a few percent go uncounted.'
-const HOW_FUNNEL = 'Visits come from Frrata’s counter; orders and deliveries from your orders. They join by day and source, never by person.'
-const HOW_CITY = 'From the visitor’s network: a hint, often the nearest big city. The exact pincode comes from checkout.'
+const HOW_FUNNEL = 'Visits come from Frrata’s counter; orders and deliveries from your orders, over the same days. They join by period and source, never by person.'
+const HOW_CITY = 'From the visitor’s network: a hint, often the nearest big city. The exact pincode comes from checkout. Orders here are counted in the browser, so a few may be missing.'
+const HOW_BROWSE = 'Orders here are counted in the browser, so a few may be missing against your orders.'
 const HOW_SPEED = 'What 3 in 4 shoppers’ phones measured on your pages, from the browser. Good: page shows by 2.5 s, taps answer by 0.2 s, nothing jumps.'
 
 const per = (v: number | null) => (v === null ? <span className="text-xs text-muted-foreground">too few</span> : v.toFixed(1))
@@ -55,7 +56,7 @@ export function VisitsUnavailable() {
 }
 
 /** From visit to delivered: each step as a share of the one above, and the biggest drop named. */
-export function Funnel({ steps, drop }: { steps: FunnelStep[]; drop: { from: string; to: string; leave: number } | null }) {
+export function Funnel({ steps, drop, fullFrom }: { steps: FunnelStep[]; drop: { from: string; to: string; leave: number } | null; fullFrom: Date | null }) {
   const max = steps[0]?.n || 1
   return (
     <Section title={<span className="inline-flex items-center gap-1">From visit to delivered<InfoTip about="how visits and orders are joined">{HOW_FUNNEL}</InfoTip></span>}>
@@ -65,7 +66,7 @@ export function Funnel({ steps, drop }: { steps: FunnelStep[]; drop: { from: str
         {steps.map((s) => (
           <li key={s.name} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_3rem] items-center gap-3 text-sm">
             <span className="min-w-0">{s.name}{s.fromOrders ? <span className="block text-xs text-muted-foreground">from your orders</span> : null}</span>
-            <span className="grid gap-1"><Numeric className="font-semibold">{formatCount(s.n)}</Numeric>{bar(s.n / max)}</span>
+            <span className="grid gap-1">{s.n === null ? <span className="text-xs text-muted-foreground">{fullFrom ? `from ${dayMonthIN(fullFrom)}` : '—'}</span> : <><Numeric className="font-semibold">{formatCount(s.n)}</Numeric>{bar(s.n / max)}</>}</span>
             <span className="text-right text-xs text-muted-foreground">{s.ofAbove === null ? '' : formatPercent(Math.min(1, s.ofAbove), 0)}</span>
           </li>
         ))}
@@ -79,7 +80,7 @@ export function Browse({ shares, devices }: { shares: Share[]; devices: { phone:
   if (!shares.length) return null
   const all = devices.phone + devices.computer + devices.tablet
   return (
-    <Section title="Where they browse" action={<span className="text-xs text-muted-foreground">Orders per 100 visits</span>}>
+    <Section title="Where they browse" action={<span className="inline-flex items-center gap-1 text-xs text-muted-foreground">Orders per 100 visits<InfoTip about="where these orders are counted">{HOW_BROWSE}</InfoTip></span>}>
       <ul className="grid gap-2.5">
         {shares.map((s) => (
           <li key={s.name} className="grid gap-1 text-sm">
@@ -160,10 +161,12 @@ export function SpeedOnPhones({ s, slowest }: { s: Speed; slowest: { title: stri
   )
 }
 
-/** The strip's visit tiles: visits and orders per 100 visits, against the window before (or since the first day). */
-export function visitChange(now: number, before: number, since: Date | null, start: Date) {
-  if (since && since > start) return <span className="text-xs text-muted-foreground">from {dayMonthIN(since)}</span>
-  if (!before) return null
+/** Under the Visits tile: the change against the window before, only when that window was counted in full; else since
+ * when visits are counted ("from today" before the first). */
+export function visitChange(now: number, before: number, since: Date | null, start: Date, prevCovered: boolean) {
+  if (!since) return <span className="text-xs text-muted-foreground">from today</span>
+  if (since > start) return <span className="text-xs text-muted-foreground">from {dayMonthIN(since)}</span>
+  if (!prevCovered || !before) return null
   return (
     <span className="inline-flex items-center gap-1 text-xs">
       <Icon name={now >= before ? 'up' : 'down'} className="size-3.5" />

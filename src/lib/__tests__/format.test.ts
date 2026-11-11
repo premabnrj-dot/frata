@@ -19,3 +19,12 @@ describe('format', () => {
     expect(formatPercent(0.165)).toBe('16.5%')
   })
 })
+
+describe('formatCount', () => {
+  it('groups as India does', async () => {
+    const { formatCount } = await import('../format')
+    expect(formatCount(18400)).toBe('18,400')
+    expect(formatCount(184300)).toBe('1,84,300')
+    expect(formatCount(7)).toBe('7')
+  })
+})

@@ -9,9 +9,11 @@ import { JUDGE_MIN, judgeable } from '@/domains/analytics/judge'
 import { paise } from '@/domains/money/paise'
 import { keptPerOrder, type Kept } from '@/domains/orders/kept'
 import { formatCount, formatPercent } from '@/lib/format'
+import { dayMonthIN } from '@/lib/format-date'
 import { foldSources } from '@/domains/analytics/totals'
 import type { Analytics, Totals } from '@/lib/queries/analytics'
-import { perHundred, ROW_VISITS_MIN, type SourceVisits, type TrafficTotals } from '@/domains/analytics/traffic'
+import { K_MIN, otherVisits, perHundred, type SourceVisits, type TrafficTotals } from '@/domains/analytics/traffic'
+import { EMPTY_TOTALS } from '@/domains/analytics/totals'
 import { HOW_VISITS, visitChange } from './traffic'
 
 // =============================================================================
@@ -89,8 +91,9 @@ export function Summary({ a }: { a: Analytics }) {
   )
 }
 
-/** What the strip knows of visits (A·2): this window, the one before, the first counted day, and whether enough. */
-export type StripVisits = { cur: TrafficTotals; prev: TrafficTotals; since: Date | null; enough: boolean }
+/** What the strip knows of visits (A·2): this window, the one before, the first counted day, and coverage: a rate of
+ * orders per visit shows only over a window visits fully cover, with enough visits (traffic.ts coverage). */
+export type StripVisits = { cur: TrafficTotals; prev: TrafficTotals; since: Date | null; rates: boolean; prevRates: boolean; fullFrom: Date | null }
 
 /** Four numbers against the period before; under 30 orders, the tally and a count to go instead (rule 20a). With
  * visits counted (A·2), the four are visits, orders per 100 visits, orders and returns, as the mockup draws them. */
@@ -99,15 +102,17 @@ export function Strip({ a, visits }: { a: Analytics; visits?: StripVisits }) {
   if (visits) {
     const out = outcomes(c)
     const v = visits.cur.visitors
-    const rate = visits.enough ? perHundred(c.orders, v, 1, 2) : null
-    const before = perHundred(p.orders, visits.prev.visitors, ROW_VISITS_MIN, 2)
+    const rate = visits.rates ? perHundred(c.orders, v, 1, 2) : null
+    const before = visits.prevRates ? perHundred(p.orders, visits.prev.visitors, 1, 2) : null
     const tile = (k: React.ReactNode, val: React.ReactNode, d: React.ReactNode) => (
       <div className="grid min-w-0 gap-0.5 bg-card p-3"><dt className="text-xs text-muted-foreground">{k}</dt><dd className="font-mono text-lg font-semibold tabular-nums">{val}</dd><dd>{d}</dd></div>
     )
     return (
       <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border lg:grid-cols-4">
-        {tile(<span className="inline-flex items-center gap-1">Visits<InfoTip about="how visits are counted">{HOW_VISITS}</InfoTip></span>, v ? <Numeric>{formatCount(v)}</Numeric> : '—', visitChange(v, visits.prev.visitors, visits.since, a.start))}
-        {tile('Orders per 100 visits', rate === null ? '—' : rate.toFixed(2), rate !== null && before !== null ? <span className="text-xs text-muted-foreground">from {before.toFixed(2)}</span> : null)}
+        {tile(<span className="inline-flex items-center gap-1">Visits<InfoTip about="how visits are counted">{HOW_VISITS}</InfoTip></span>, v ? <Numeric>{formatCount(v)}</Numeric> : '—', visitChange(v, visits.prev.visitors, visits.since, a.start, visits.prevRates))}
+        {tile('Orders per 100 visits', rate === null ? '—' : rate.toFixed(2),
+          rate !== null && before !== null ? <span className="text-xs text-muted-foreground">from {before.toFixed(2)}</span>
+            : rate === null && visits.fullFrom && visits.since && visits.since > a.start ? <span className="text-xs text-muted-foreground">from {dayMonthIN(visits.fullFrom)}</span> : null)}
         {tile('Orders', <Numeric>{c.orders}</Numeric>, <Change now={c.orders} before={p.orders} />)}
         {tile('Came back (RTO)', out ? shareOf(c.rto, out) : '—', <span className="text-xs text-muted-foreground">{out ? `of ${out} with an outcome` : 'none with an outcome yet'}</span>)}
       </dl>
@@ -141,10 +146,10 @@ export function Strip({ a, visits }: { a: Analytics; visits?: StripVisits }) {
 }
 
 
-const HOW = 'A source is the tagged link the shopper arrived on, else the site they came from, else "Direct or unknown" (WhatsApp chats and many apps hide where a tap came from: a link from Make a link fixes that). The last one before the order, in that browser tab. Anyone can type tags into an address, so a source is what the link said.'
+const HOW = 'A source is the tagged link the shopper arrived on, else the site they came from, else "Direct or unknown" (WhatsApp chats and many apps hide where a tap came from: a link from Make a link fixes that). The last one before the order, in that browser tab. Anyone can type tags into an address, so a source is what the link said. Visits and orders use the same rule.'
 
 /** Where orders came from: one row per source, most ₹ kept after returns first; on a phone, rows become cards. */
-export function Sources({ a, period, visits }: { a: Analytics; period: number; visits?: { by: ReadonlyMap<string, SourceVisits>; total: number; enough: boolean } }) {
+export function Sources({ a, period, visits }: { a: Analytics; period: number; visits?: { by: ReadonlyMap<string, SourceVisits>; rates: boolean } }) {
   if (visits) return <SourcesWithVisits a={a} period={period} visits={visits} />
   const { rows, other } = foldSources(a.sources)
   const line = (t: Totals, name: React.ReactNode, href: string | null, sub: React.ReactNode) => {
@@ -200,25 +205,26 @@ export function Pincodes({ a }: { a: Analytics }) {
   )
 }
 
-const NONE: Totals = { orders: 0, sales: 0, cod: 0, delivered: 0, rto: 0, lost: 0, onTheWay: 0, notSent: 0, kept: null }
-
 /** Where orders came from, with visits (A·2, as the mockup): each source's ₹ kept (or orders), visits, orders per 100
  * visits, returns and ₹ kept per visit. A source with visits but no orders yet is a row too (from 5 visitors). */
-function SourcesWithVisits({ a, period, visits }: { a: Analytics; period: number; visits: { by: ReadonlyMap<string, SourceVisits>; total: number; enough: boolean } }) {
+function SourcesWithVisits({ a, period, visits }: { a: Analytics; period: number; visits: { by: ReadonlyMap<string, SourceVisits>; rates: boolean } }) {
   const { rows, other } = foldSources(a.sources)
-  const shownVisits = rows.reduce((n, r) => n + (visits.by.get(r.slug)?.visitors ?? 0), 0)
+  const rest = otherVisits(visits.by, new Set(rows.map((r) => r.slug)))
   const line = (t: Totals, v: number, name: React.ReactNode, href: string | null, sub: React.ReactNode) => {
     const out = outcomes(t)
     const k = t.kept
-    const rate = visits.enough ? perHundred(t.orders, v) : null
-    const perVisit = a.costs && k && k.counted && visits.enough && v >= ROW_VISITS_MIN ? Math.round(k.kept / v) : null
+    // Rates only over a window visits fully cover (coverage); a row's own number needs its own 100 visits.
+    const rate = visits.rates ? perHundred(t.orders, v) : null
+    const perVisit = a.costs && k && k.counted && rate !== null ? Math.round(k.kept / v) : null
+    // Fewer than 5 visitors is never shown as a number (k ≥ 5), on any row.
+    const shown = v >= K_MIN
     return (
       <>
         <Td cell="a">{href ? <Link href={href} data-row-link prefetch={false} className="font-medium hover:underline">{name}</Link> : <span className="font-medium">{name}</span>}
           <span className="block text-xs text-muted-foreground">{sub}</span></Td>
         <Td cell="b" className="text-right">{a.costs && k && k.counted ? <Money paise={paise(k.kept)} /> : <><span className="text-xs text-muted-foreground md:hidden">Orders </span><Numeric>{t.orders}</Numeric></>}</Td>
-        <Td cell="c" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Visits </span>{v ? <Numeric>{formatCount(v)}</Numeric> : '—'}</Td>
-        <Td cell="d" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Per 100 </span>{rate === null ? (v ? <span className="text-xs text-muted-foreground">too few</span> : '—') : rate.toFixed(1)}</Td>
+        <Td cell="c" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Visits </span>{shown ? <Numeric>{formatCount(v)}</Numeric> : '—'}</Td>
+        <Td cell="d" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Per 100 </span>{rate === null ? (shown && visits.rates ? <span className="text-xs text-muted-foreground">too few</span> : '—') : rate.toFixed(1)}</Td>
         <Td cell="e" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Came back </span>{out ? shareOf(t.rto, out) : '—'}</Td>
         {a.costs ? <Td cell="f" className={`text-right ${perVisit !== null && perVisit < 0 ? 'text-danger-text' : ''}`}><span className="text-xs text-muted-foreground md:hidden">Per visit </span>{perVisit === null ? '—' : <Money paise={paise(perVisit)} />}</Td> : null}
       </>
@@ -237,7 +243,7 @@ function SourcesWithVisits({ a, period, visits }: { a: Analytics; period: number
             <DataTableRow key={s.slug}>{line(s.cur, visits.by.get(s.slug)?.visitors ?? 0, s.label, s.cur.orders ? `/console/analytics/${encodeURIComponent(s.slug)}?period=${period}` : null,
               s.campaigns.length ? `${s.campaigns[0]!.name}${s.campaigns.length > 1 ? ` and ${s.campaigns.length - 1} more` : ''}` : s.channel === 'direct' ? 'chats, typed address, apps that hide it' : '')}</DataTableRow>
           ))}
-          {other || visits.total > shownVisits ? <DataTableRow key="other">{line(other ?? NONE, Math.max(0, visits.total - shownVisits), 'Other', null, 'sources with few orders or visits, and tags typed by hand')}</DataTableRow> : null}
+          {other || rest ? <DataTableRow key="other">{line(other ?? EMPTY_TOTALS, rest, 'Other', null, 'sources with few orders or visits, and tags typed by hand')}</DataTableRow> : null}
         </DataTableBody>
       </DataTable>
     </Section>

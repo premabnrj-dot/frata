@@ -42,7 +42,8 @@ export async function withAnalyticsTenant<T>(tenantId: string, work: (tx: Analyt
     return await analyticsDb().transaction(async (tx) => {
       await tx.execute(sql`select set_config('app.tenant_id', ${tenantId}, true)`)
       return work(tx)
-    }, { accessMode: 'read only' })
+    // One snapshot: a fold between statements can't make the funnel disagree with the totals (speed review L3).
+    }, { isolationLevel: 'repeatable read', accessMode: 'read only' })
   } finally {
     poolReleased()
   }

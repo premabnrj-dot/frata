@@ -7,7 +7,8 @@ import { PRESETS, type Preset } from '@/domains/analytics/link'
 import { classifySource } from '@/domains/analytics/source'
 import { PERIODS, analyticsPage, isPeriod, windowOf, type Period, type SourceStat } from '@/lib/queries/analytics'
 import { trafficNames, trafficRead } from '@/lib/queries/traffic'
-import { browserShares, cityShares, enoughVisits, funnel, K_MIN, productLines, slowestPage, speedOf, visitsBySource } from '@/domains/analytics/traffic'
+import { browserShares, cityShares, coverage, emptyTotals, enoughVisits, funnel, productLines, slowestPage, speedOf, visitOnly, visitsBySource, type SourceVisits } from '@/domains/analytics/traffic'
+import { EMPTY_TOTALS } from '@/domains/analytics/totals'
 import { errName } from '@/lib/log'
 import { urlProblem } from '@/lib/db/url'
 import { Browse, Cities, Funnel, NoVisitsYet, Products, SpeedOnPhones, TooFewVisits, VisitsUnavailable } from './_components/traffic'
@@ -39,17 +40,24 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   // One snapshot transaction: the numbers, Make a link's targets and the shop's address (speed review A1·7). Visits
   // (A·2) come from the analytics database beside it, never inside it: if that read fails, the orders still show.
   const { start, prevStart } = windowOf(period, now)
-  const [page, read] = await Promise.all([
+  // The shop's own words for what visits carry (labels, product names, returns by city) follow the visits, as their
+  // product ids decide which names are asked for — chained to that read, so both run beside A·1's (speed review M1). A
+  // failure of either makes the visits unavailable (below); the orders still show.
+  const visitsAndNames = trafficRead(tenantId, start, prevStart, now)
+    .catch((err: unknown) => { console.error('[analytics] visits', errName(err), urlProblem(err)); return 'failed' as const })
+    .then(async (r) => {
+      if (typeof r !== 'object') return { read: r, names: null }
+      const names = await trafficNames(tenantId, [...r.products.map((p) => p.productId), ...r.productLcp.map((p) => p.productId)], start)
+        .catch((err: unknown) => { console.error('[analytics] visit names', errName(err)); return null })
+      return { read: r, names }
+    })
+  const [page, { read, names }] = await Promise.all([
     analyticsPage(tenantId, role, period, now).catch((err: unknown) => readFailed('[analytics]', err)),
-    trafficRead(tenantId, start, prevStart, now).catch((err: unknown) => { console.error('[analytics] visits', errName(err), urlProblem(err)); return 'failed' as const }),
+    visitsAndNames,
   ])
   if ('failed' in page) return page.failed
   const { a, targets, shop } = page
   const traffic = typeof read === 'object' ? read : null
-  // The shop's own words for what visits carry (labels, product names, returns by city): only after the visits, as
-  // their product ids decide which names are asked for. A failure here only hides the names.
-  const names = traffic ? await trafficNames(tenantId, [...traffic.products.map((p) => p.productId), ...traffic.productLcp.map((p) => p.productId)], start)
-    .catch((err: unknown) => { console.error('[analytics] visit names', errName(err)); return null }) : null
 
   // What each preset's orders show as, said by the server (the classifier stays out of the browser bundle).
   const showsAs = Object.fromEntries((Object.keys(PRESETS) as Preset[]).map((k) => [k, classifySource({ utm_source: PRESETS[k].source, utm_medium: PRESETS[k].medium }, null).label])) as Record<Preset, string>
@@ -67,56 +75,44 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
       </>
     )
   }
-  if (read === 'off') {
-    return (
-      <>
-        <PageHeader title="Analytics" actions={make} meta={meta} />
-        {tabs}
-        <Summary a={a} />
-        <Strip a={a} />
-        {a.cur.orders > 0 && a.known / a.cur.orders < 0.5 ? (
-          <p className="rounded-md bg-info px-3 py-2 text-sm text-info-text">Most orders came without a source. A link from Make a link tells an Instagram bio from a WhatsApp broadcast.</p>
-        ) : null}
-        <Sources a={a} period={period} />
-        <Pincodes a={a} />
-      </>
-    )
-  }
-
-  // Visits (A·2, as the mockup): none yet, the first days (under 1,000), or ready.
-  const since = traffic?.firstDay ? new Date(`${traffic.firstDay}T00:00:00+05:30`) : null
-  const enough = !!traffic && enoughVisits(traffic.cur.visitors)
-  const by = traffic ? visitsBySource(traffic.sources, names?.labels ?? new Map()) : new Map()
+  // Visits (A·2, as the mockup): off (A·1 as it was), unavailable (the analytics read or the names failed: creator
+  // labels would be lost otherwise), none yet, the first days (under 1,000), or ready. Rates of orders per visit only
+  // over a window visits fully cover (coverage).
+  const on = read !== 'off'
+  const failed = read === 'failed' || (!!traffic && !names)
+  const t = failed ? null : traffic
+  const cov = coverage(t?.firstDay ?? null, a.start, a.prevStart, period)
+  const enough = !!t && enoughVisits(t.cur.visitors)
+  const rates = enough && cov.cur
+  const prevRates = cov.prev && !!t && enoughVisits(t.prev.visitors)
+  const by = t && names ? visitsBySource(t.sources, names.labels) : new Map<string, SourceVisits>()
   // A source with visits but no orders in the window is a row too (from 5 visitors), after the ones with orders.
-  const zero = { orders: 0, sales: 0, cod: 0, delivered: 0, rto: 0, lost: 0, onTheWay: 0, notSent: 0, kept: null }
-  const visitOnly: SourceStat[] = [...by.values()].filter((v) => v.visitors >= K_MIN && v.slug !== 'other' && !a.sources.some((s) => s.slug === v.slug))
-    .sort((x, y) => y.visitors - x.visitors).map((v) => ({ slug: v.slug, label: v.label, channel: v.channel, cur: zero, prev: zero, campaigns: [] }))
-  const withVisits = { ...a, sources: [...a.sources, ...visitOnly] }
-  const visits = { by, total: traffic?.cur.visitors ?? 0, enough }
-  const f = traffic ? funnel(traffic.cur, a.cur.orders, a.cur.delivered) : null
+  const extra: SourceStat[] = visitOnly(by, new Set(a.sources.map((x) => x.slug)))
+    .map((v) => ({ slug: v.slug, label: v.label, channel: v.channel, cur: EMPTY_TOTALS, prev: EMPTY_TOTALS, campaigns: [] }))
+  const f = t ? funnel(t.cur, cov.cur ? a.cur.orders : null, cov.cur ? a.cur.delivered : null) : null
   // Only the shop's own product pages compete for slowest (a forged slow id must not hide the real one: tenancy audit).
-  const slow = traffic && names ? slowestPage(traffic.productLcp.filter((r) => names.products.has(r.productId))) : null
-  const metaVisits = since && since > a.start ? `${meta} Visits counted since ${dayMonthIN(since)}.` : meta
+  const slow = t && names ? slowestPage(t.productLcp.filter((r) => names.products.has(r.productId))) : null
+  const metaVisits = cov.since && cov.since > a.start ? `${meta} Visits counted since ${dayMonthIN(cov.since)}.` : meta
   return (
     <>
-      <PageHeader title="Analytics" actions={make} meta={metaVisits} />
+      <PageHeader title="Analytics" actions={make} meta={on ? metaVisits : meta} />
       {tabs}
       <Summary a={a} />
-      <Strip a={a} visits={traffic ? { cur: traffic.cur, prev: traffic.prev, since, enough } : undefined} />
-      {read === 'failed' ? <VisitsUnavailable /> : !traffic?.firstDay ? <NoVisitsYet /> : !enough ? <TooFewVisits visits={traffic.cur.visitors} /> : f ? <Funnel steps={f.steps} drop={f.drop} /> : null}
+      <Strip a={a} visits={on && !failed ? { cur: t?.cur ?? emptyTotals(), prev: t?.prev ?? emptyTotals(), since: cov.since, rates, prevRates, fullFrom: cov.fullFrom } : undefined} />
+      {!on ? null : failed ? <VisitsUnavailable /> : !t?.firstDay ? <NoVisitsYet /> : !enough ? <TooFewVisits visits={t.cur.visitors} /> : f ? <Funnel steps={f.steps} drop={f.drop} fullFrom={cov.fullFrom} /> : null}
       {a.cur.orders > 0 && a.known / a.cur.orders < 0.5 ? (
         <p className="rounded-md bg-info px-3 py-2 text-sm text-info-text">Most orders came without a source. A link from Make a link tells an Instagram bio from a WhatsApp broadcast.</p>
       ) : null}
-      <Sources a={withVisits} period={period} visits={traffic ? visits : undefined} />
-      {traffic && enough ? (
+      <Sources a={on && !failed ? { ...a, sources: [...a.sources, ...extra] } : a} period={period} visits={on && !failed ? { by, rates } : undefined} />
+      {t && names && enough ? (
         <>
           <div className="grid gap-4 lg:grid-cols-2">
-            <Browse shares={browserShares(traffic.browsers)} devices={traffic.cur} />
-            <Cities shares={cityShares(traffic.cities)} returns={names?.cityReturns ?? new Map()} />
+            <Browse shares={browserShares(t.browsers)} devices={t.cur} />
+            <Cities shares={cityShares(t.cities)} returns={names.cityReturns} />
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
-            <Products lines={names ? productLines(traffic.products, names.products) : []} />
-            <SpeedOnPhones s={speedOf(traffic.vitals)} slowest={slow && names?.products.get(slow.productId) ? { title: names.products.get(slow.productId)!.title, lcpMs: slow.lcpMs } : null} />
+            <Products lines={productLines(t.products, names.products)} />
+            <SpeedOnPhones s={speedOf(t.vitals)} slowest={slow && names.products.get(slow.productId) ? { title: names.products.get(slow.productId)!.title, lcpMs: slow.lcpMs } : null} />
           </div>
         </>
       ) : null}

@@ -147,7 +147,8 @@ The runbook and the A·2 replan are corrected in G·0.
   - Sources gain visits, orders per 100 visits and ₹ kept per visit;
   - browsers and in-app; cities; products; speed on phones;
   - the states: no visits yet; too few (under 1,000); phone.
-  - The join is by (IST day, channel) in TypeScript, never by person.
+  - The join is by period and source in TypeScript, only over days visits fully cover, never by person (as built:
+    `coverage`, impact review 2026-11-11).
 - **A2·5 Admin:** platform totals and ingest health through a definer of aggregates; I·5's per-shop human page views.
 - **Erasure:** tier 0 holds nothing linkable to a person; `erase.ts` is unchanged (spec).
 
@@ -735,7 +736,7 @@ With 0.8–0.9 kB more, checkout fails too, and PV1-4a only frees room on the pr
   - `/fe.js` is immutable and a cache HIT;
   - no runtime errors.
 - **Next:** the owner's phone check (Chrome, Safari, Instagram). This session can't reach the analytics project, so
-  the owner runs the events query, then A2·3/A2·4 (Console › Traffic).
+  the owner runs the events query, then A2·3/A2·4 (Console › Analytics, with visits).
 - **First live events, 2026-11-11 21:59 IST**, once the owner fixed `ANALYTICS_DATABASE_URL` and redeployed. Until then,
   ingest logged `[ingest] Error`: the URL check refused the value.
   - Chrome on Android sent the product page, the view, the add to bag, the checkout and three Web Vitals.
@@ -770,3 +771,32 @@ With 0.8–0.9 kB more, checkout fails too, and PV1-4a only frees room on the pr
   logs.
 - **e2e 72:** 8 steps, adding the first days, the ready state (with a second shop's identical rows never added in, and
   a forged product id never named), and the phone with no sideways scroll. The A·1 flow passes with visits on.
+- **Reviews of A2·4 (2026-11-11), folded:**
+  - **tenancy-auditor: SAFE.** LOWs fixed: the slowest page is chosen among the shop's own products, read limits are
+    wider, a source without orders has no dead link, and URL refusals are their own error class (`DbUrlError`).
+  - **impact-reviewer, BLOCKER:** visit rates divided a whole window's orders by a part window's visits. Now
+    `coverage()` decides: orders per 100 visits (strip and rows), ₹ kept per visit and the funnel's order steps show
+    only over a window visits fully cover, and say the date they start ("from 15 Dec"). The comparison with the window
+    before needs that window covered too.
+  - **impact-reviewer, other fixes:**
+    - the "Other" row sums the sources not shown (`otherVisits`);
+    - visit-only rows come from `visitOnly`, tested;
+    - fewer than 5 visits is "—" on every row;
+    - one `EMPTY_TOTALS`;
+    - a failed names read makes the visits "unavailable" rather than losing creator labels;
+    - one page body for every state;
+    - in-browser order counts are said so in a tip;
+    - `formatCount` is tested;
+    - the docs no longer claim a join by day.
+  - e2e 72 has 10 steps: no visits yet, the first days, partly counted, ready, phone.
+  - **Left:** the 'off' state has no e2e (the stack always connects the analytics database); city names match orders
+    by lower-case name only (Bengaluru vs Bangalore); shared predicates for returns by city are not extracted yet.
+  - **speed-reviewer on A2·4 (measured at 10×; a big shop's 90-day page was about 2.6 s against 1 s), folded:**
+    - **H1:** the products' orders are now one grouped join driven by the window, with `order_lines_product`
+      (drizzle/0099): 1.8 s → about 0.2 s.
+    - **H2:** the rollups' day indexes are BRIN (drizzle-analytics/0004), so the planner takes the tenant-first key for
+      the busiest shop: 920 → 290 ms at 90 days.
+    - **M1:** names are chained to the visits read, so both run beside A·1's.
+    - **M2:** `orders_outcome_place` covers city too (it replaces `orders_outcome_pincode`).
+    - **L3:** the visits read is one snapshot (repeatable read).
+    - **Left:** merging the two vitals queries (L1); the pool of 5 shared with ingest (M3, re-measure after H2).

@@ -44,6 +44,30 @@ export function perHundred(orders: number, visits: number, min = ROW_VISITS_MIN,
 }
 export const enoughVisits = (n: number) => n >= VISITS_MIN
 
+const DAY = 86_400_000
+/**
+ * Whether visits cover a window: a rate that divides orders by visits needs the same days on both sides (impact review
+ * 2026-11-11 BLOCKER: a month's orders over three days of visits read 21 orders per 100 visits, not 1.2). `cur` and
+ * `prev` say whether this window and the one before are fully counted; `fullFrom` is the day this window will be.
+ */
+export function coverage(firstDay: string | null, start: Date, prevStart: Date, period: number) {
+  if (!firstDay) return { since: null, cur: false, prev: false, fullFrom: null }
+  const since = new Date(`${firstDay}T00:00:00+05:30`)
+  return { since, cur: since <= start, prev: since <= prevStart, fullFrom: new Date(since.getTime() + (period - 1) * DAY) }
+}
+
+/** Sources with visits but no orders (from 5 visitors, never "other"), most visits first: rows after those with orders. */
+export function visitOnly(by: ReadonlyMap<string, SourceVisits>, withOrders: ReadonlySet<string>): SourceVisits[] {
+  return [...by.values()].filter((v) => v.visitors >= K_MIN && v.slug !== 'other' && !withOrders.has(v.slug)).sort((a, b) => b.visitors - a.visitors || a.slug.localeCompare(b.slug))
+}
+
+/** The "Other" row's visits: every source not shown as its own row, summed from the same map the rows read. */
+export function otherVisits(by: ReadonlyMap<string, SourceVisits>, shown: ReadonlySet<string>): number {
+  let n = 0
+  for (const v of by.values()) if (!shown.has(v.slug)) n += v.visitors
+  return n
+}
+
 export type SourceVisits = { slug: string; label: string; channel: Channel; visitors: number; ordered: number }
 
 /**
@@ -101,18 +125,22 @@ function fold(groups: { name: string; visitors: number; ordered: number }[], kee
   return out
 }
 
-export type FunnelStep = { name: string; fromOrders: boolean; n: number; ofAbove: number | null }
+export type FunnelStep = { name: string; fromOrders: boolean; n: number | null; ofAbove: number | null }
 
-/** From visit to delivered: four steps counted by visits, then orders and deliveries from the shop's orders. */
-export function funnel(t: TrafficTotals, orders: number, delivered: number): { steps: FunnelStep[]; drop: { from: string; to: string; leave: number } | null } {
-  const raw: [string, boolean, number][] = [['Visits', false, t.visitors], ['Saw a product', false, t.productVisitors], ['Added to bag', false, t.bagVisitors],
+/** From visit to delivered: four steps counted by visits, then orders and deliveries from the shop's orders — null while
+ * visits don't cover the window (coverage), so a step never divides one span's orders by another span's visits. */
+export function funnel(t: TrafficTotals, orders: number | null, delivered: number | null): { steps: FunnelStep[]; drop: { from: string; to: string; leave: number } | null } {
+  const raw: [string, boolean, number | null][] = [['Visits', false, t.visitors], ['Saw a product', false, t.productVisitors], ['Added to bag', false, t.bagVisitors],
     ['Started checkout', false, t.checkoutVisitors], ['Ordered', true, orders], ['Delivered', true, delivered]]
-  const steps = raw.map(([name, fromOrders, n], i) => ({ name, fromOrders, n, ofAbove: i && raw[i - 1]![2] ? n / raw[i - 1]![2] : null }))
+  const steps = raw.map(([name, fromOrders, n], i) => {
+    const above = i ? raw[i - 1]![2] : null
+    return { name, fromOrders, n, ofAbove: n !== null && above ? n / above : null }
+  })
   // The biggest drop between the visit steps and the order (deliveries come later, so they aren't judged here).
   let drop: { from: string; to: string; leave: number } | null = null
   for (let i = 1; i <= 4; i++) {
     const s = steps[i]!
-    if (s.ofAbove === null || steps[i - 1]!.n < K_MIN) continue
+    if (s.ofAbove === null || (steps[i - 1]!.n ?? 0) < K_MIN) continue
     const leave = 1 - Math.min(1, s.ofAbove)
     if (!drop || leave > drop.leave) drop = { from: steps[i - 1]!.name, to: s.name, leave }
   }

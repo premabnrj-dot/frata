@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { browserShares, cityShares, emptyTotals, funnel, OTHER_PRODUCTS, p75, perHundred, productLines, slowestPage, speedOf, visitsBySource, type SourceVisitRow } from '../traffic'
+import { browserShares, cityShares, coverage, emptyTotals, funnel, OTHER_PRODUCTS, otherVisits, p75, perHundred, productLines, slowestPage, speedOf, visitOnly, visitsBySource, type SourceVisitRow, type SourceVisits } from '../traffic'
 import { sourceOfInputs } from '../source'
 
 const row = (o: Partial<SourceVisitRow>): SourceVisitRow => ({ us: '', um: '', uc: '', rh: '', cc: '', gads: false, srs: false, fb: false, visitors: 10, ordered: 0, ...o })
@@ -57,5 +57,25 @@ describe('traffic.ts', () => {
     expect(lines.map((l) => l.title)).toEqual(['Chanderi kurta set', 'Banarasi silk saree'])
     expect(lines[1]!.hint).toBe('Looked at often, rarely bagged')
     expect(slowestPage([{ productId: 'a', n: 19, buckets: hist([9000]) }, { productId: OTHER_PRODUCTS, n: 50, buckets: hist([9000]) }, { productId: 'b', n: 25, buckets: hist([3400]) }])?.productId).toBe('b')
+  })
+  it('rates need visits over the whole window: a month of orders over three days of visits is never divided', () => {
+    const now = new Date('2026-11-20T10:00:00+05:30')
+    const start = new Date('2026-10-22T00:00:00+05:30'), prevStart = new Date('2026-09-22T00:00:00+05:30')
+    expect(coverage(null, start, prevStart, 30)).toMatchObject({ since: null, cur: false, prev: false })
+    const partial = coverage('2026-11-17', start, prevStart, 30)
+    expect([partial.cur, partial.prev]).toEqual([false, false])
+    expect(partial.fullFrom?.toISOString().slice(0, 10)).toBe('2026-12-15')
+    expect(coverage('2026-10-01', start, prevStart, 30)).toMatchObject({ cur: true, prev: false })
+    expect(coverage('2026-09-01', start, prevStart, 30)).toMatchObject({ cur: true, prev: true })
+    void now
+    const f = funnel({ ...emptyTotals(), visitors: 1000, productVisitors: 500, bagVisitors: 80, checkoutVisitors: 40 }, null, null)
+    expect(f.steps.slice(4).map((s) => [s.n, s.ofAbove])).toEqual([[null, null], [null, null]])
+    expect(f.drop?.to).toBe('Added to bag')
+  })
+  it('visit-only rows come after those with orders, from 5 visitors; Other sums the sources not shown', () => {
+    const v = (slug: string, visitors: number): SourceVisits => ({ slug, label: slug, channel: 'other', visitors, ordered: 0 })
+    const by = new Map([['a', v('a', 50)], ['b', v('b', 4)], ['c', v('c', 90)], ['other', v('other', 7)], ['d', v('d', 30)]])
+    expect(visitOnly(by, new Set(['a'])).map((x) => x.slug)).toEqual(['c', 'd'])
+    expect(otherVisits(by, new Set(['a', 'c', 'd']))).toBe(11)
   })
 })

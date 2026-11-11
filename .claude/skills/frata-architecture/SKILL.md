@@ -86,7 +86,8 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   (`drizzle.analytics.config.ts`, `npm run db:generate:analytics`), schema in `src/lib/db/analytics-schema.ts`.
   The same locks: `frata_app` with RLS, `withAnalyticsTenant` (`src/lib/db/analytics.ts`), the
   tenant from `requireMember` or the host. `check:tenant` § 8 and `scripts/verify/analytics-tenancy.sql` hold it.
-- Never open it inside a main-database transaction or await it from one; it may be down, and Traffic then says so.
+- Never open it inside a main-database transaction or await it from one; it may be down, and Console › Analytics then says "Visits unavailable". A rate of orders per visit divides
+  only over a window visits fully cover (`coverage` in `src/domains/analytics/traffic.ts`).
 - Raw events are written only through `ingest_events()` and read only by the fold. Partitions live in `ev`, which
   has no grant; a new grant there is a bug. Rollups keep raw source inputs, classified on read (§ Attribution).
 - Role settings there use `alter role … in database` (a throwaway server shares its roles with the main database).
