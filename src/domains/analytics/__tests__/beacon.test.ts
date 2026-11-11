@@ -26,7 +26,12 @@ describe('device.ts', () => {
       'WhatsApp/2.24.1 A', 'curl/8.5.0', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/130.0.0.0 Safari/537.36', '', null]) {
       expect(isBot(ua), String(ua)).toBe(true)
     }
-    for (const ua of [ANDROID_CHROME, IPHONE_SAFARI, INSTAGRAM, FB_IOS, IPAD, MAC_EDGE]) expect(isBot(ua), ua).toBe(false)
+    const PINTEREST = 'Mozilla/5.0 (Linux; Android 13; SM-M146B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36 [Pinterest/Android]'
+    const TELEGRAM = 'Mozilla/5.0 (Linux; Android 14; V2250) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36 Telegram-Android/11.2.0'
+    const LINKEDIN = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 [LinkedInApp]/9.30'
+    const CUBOT = 'Mozilla/5.0 (Linux; Android 12; CUBOT KINGKONG 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36'
+    for (const ua of [ANDROID_CHROME, IPHONE_SAFARI, INSTAGRAM, FB_IOS, IPAD, MAC_EDGE, PINTEREST, TELEGRAM, LINKEDIN, CUBOT]) expect(isBot(ua), ua).toBe(false)
+    for (const ua of ['Mozilla/5.0 (compatible; Pinterestbot/1.0; +http://www.pinterest.com/bot.html)', 'TelegramBot (like TwitterBot)', 'LinkedInBot/1.0 (compatible; Mozilla/5.0; Apache-HttpClient +http://www.linkedin.com)']) expect(isBot(ua), ua).toBe(true)
   })
 })
 
@@ -39,6 +44,8 @@ describe('visitor.ts', () => {
     expect(networkOf('999.1.1.1')).toBe('')
     expect(networkOf('not an ip')).toBe('')
     expect(networkOf('1::2::3')).toBe('')
+    expect(networkOf('[2405:201:3002::1]:443')).toBe('2405:201:3002')
+    expect(networkOf('fe80::1%eth0')).toBe('fe80:0:0')
   })
   it('one network is one input; parts are length-prefixed', () => {
     expect(visitorInput('49.36.112.7', 'UA')).toBe(visitorInput('49.36.112.200', 'UA'))
@@ -60,7 +67,6 @@ describe('event.ts', () => {
   })
   it('refuses a query or fragment in a path, a URL as the referrer, unknown keys or kinds, and too many events', () => {
     for (const e of [
-      { k: 'page_view', p: '/orders/view#t=abc' }, { k: 'page_view', p: '/x?y=1' }, { k: 'page_view', p: 'products' },
       { k: 'page_view', rh: 'https://instagram.com/x' }, { k: 'page_view', extra: 1 }, { k: 'login' },
       { k: 'view_item', pid: 'not-a-uuid' }, { k: 'web_vital', m: 'lcp' }, { k: 'page_view', m: 'lcp', v: 1 },
       { k: 'page_view', us: 'a‮b' }, { k: 'page_view', cc: 'RIYA-10' }, { k: 'web_vital', m: 'lcp', v: 700_000 },
@@ -74,6 +80,11 @@ describe('event.ts', () => {
     expect(cityOf(null)).toBe('')
     expect(cityOf('%E0%A4')).toBe('')
     expect(cityOf('x'.repeat(61))).toBe('')
+  })
+  it('an odd path is "other", never a lost beacon; a lone surrogate is refused', () => {
+    const b = BeaconZ.parse({ e: [{ k: 'page_view', p: '/products/kurta)' }, { k: 'page_view', p: '/orders#t=abc' }] })
+    expect(toBatch(b, agentOf(ANDROID_CHROME), '').e.map((e) => e.p)).toEqual(['other', 'other'])
+    expect(BeaconZ.safeParse({ e: [{ k: 'page_view', us: 'a\ud83d' }] }).success).toBe(false)
   })
   it('keeps the shop\'s own path shapes only', () => {
     expect(pathShape('/')).toBe('/')
@@ -89,6 +100,10 @@ describe('event.ts', () => {
     expect(looksPersonal('98450 12345')).toBe(true)
     expect(looksPersonal('+91-98450-12345')).toBe(true)
     expect(looksPersonal('diwali-2026')).toBe(false)
+    expect(looksPersonal('23851234567890')).toBe(false) // a Meta campaign id
+    expect(looksPersonal('1234567890')).toBe(false)
+    expect(BeaconZ.parse({ e: [{ k: 'page_view', cc: '9876543210' }] }).e[0]!.cc).toBeUndefined()
+    expect(BeaconZ.parse({ e: [{ k: 'page_view', cc: 'RIYA10' }] }).e[0]!.cc).toBe('RIYA10')
     const b = BeaconZ.parse({ e: [{ k: 'page_view', l: true, us: 'whatsapp', uc: 'priya@gmail.com' }] })
     expect(b.e[0]).toMatchObject({ us: 'whatsapp' })
     expect(b.e[0]!.uc).toBeUndefined()

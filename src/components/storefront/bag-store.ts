@@ -58,7 +58,9 @@ const EMPTY: BagItem[] = []
 export const useBag = () => useSyncExternalStore(subscribe, bag.get, () => EMPTY)
 
 /** Open the bag drawer from anywhere (Add to bag, the header); `added` names the line just put in, which the drawer marks. */
-export const openBag = (added?: string) => window.dispatchEvent(new CustomEvent('frata:open-bag', { detail: added ?? null }))
+/** Opens the bag, saying what was just added; `product` names the product when it isn't the page's own (a paired piece),
+ * for the visit beacon (src/beacon/fe.ts). */
+export const openBag = (added?: string, product?: string) => window.dispatchEvent(Object.assign(new CustomEvent('frata:open-bag', { detail: added ?? null }), product ? { product } : {}))
 
 // The offer code the shopper typed (one per order), for this tab: every quote and the order carry it. A shop link
 // with ?code=… fills it (a creator's or a WhatsApp broadcast's link). Never a price: the server decides what it does.

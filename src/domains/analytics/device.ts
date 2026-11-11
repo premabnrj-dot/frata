@@ -12,7 +12,9 @@ export type Agent = { device: Device; browser: Browser; inApp: InApp }
 
 /** Crawlers, link previews, monitors, headless browsers and HTTP libraries: none is a shopper. A UA we can't read is
  * treated as a bot too (a browser always sends one). */
-const BOT = /bot\b|bot\/|crawl|spider|slurp|preview|prerender|headless|lighthouse|pagespeed|inspectiontool|google-read-aloud|mediapartners|facebookexternalhit|facebookcatalog|meta-externalagent|whatsapp\/|telegram|discord|skype|linkedin|pinterest|embedly|quora|vkshare|monitor|uptime|pingdom|datadog|checkly|python|curl|wget|httpclient|okhttp|axios|node-fetch|undici|go-http|java\/|libwww|scrapy|phantom|selenium|playwright|puppeteer|electron/i
+// Not 'pinterest', 'telegram' or 'linkedin': their in-app browsers carry real shoppers (their crawlers say bot/ or don't
+// start with Mozilla/), and not a bare 'bot' (the Cubot phone).
+const BOT = /\bbot\b|bot\/|crawl|spider|slurp|preview|prerender|headless|lighthouse|pagespeed|inspectiontool|google-read-aloud|mediapartners|facebookexternalhit|facebookcatalog|meta-externalagent|whatsapp\/|telegrambot|discordbot|skypeuripreview|embedly|quora link|vkshare|monitor|uptime|pingdom|datadog|checkly|python|curl|wget|httpclient|okhttp|axios|node-fetch|undici|go-http|java\/|libwww|scrapy|phantom|selenium|playwright|puppeteer|electron/i
 
 export function isBot(ua: string | null | undefined): boolean {
   if (!ua || ua.length < 20 || !/^Mozilla\//.test(ua)) return true

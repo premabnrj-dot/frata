@@ -79,7 +79,9 @@ export async function ingest(request: Request): Promise<Response> {
   if (Number(h.get('content-length') ?? 0) > MAX_BODY_BYTES) return empty(413)
   const missed = misses.get(host)
   if (missed && missed > now) return empty(404)
-  const shop = await requireShop(request)
+  // A database hiccup in the lookup is a 503, logged by its name only (never the raw error, which carries the host).
+  let shop: Awaited<ReturnType<typeof requireShop>>
+  try { shop = await requireShop(request) } catch (e) { console.error('[ingest] shop', errName(e)); return empty(503) }
   if (!shop.ok) {
     if (shop.status === 404) { if (misses.size >= KEYS) misses.delete(misses.keys().next().value!); misses.set(host, now + 60_000) }
     return empty(shop.status)

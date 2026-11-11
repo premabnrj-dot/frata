@@ -40,6 +40,9 @@ export type PolicyFacts = {
   pricesIncludeGst: boolean
   /** What the shop sells (shop_settings.sells): beauty and wellness return only sealed (hygiene), jewellery with its packaging. */
   sells: readonly string[]
+  /** Frrata counts this shop's visits (A·2, while ANALYTICS_INGEST_ON): the privacy policy then says so, never "nothing
+   *  else" (security review 2026-11-11 MED-A). The wording awaits the owner and the lawyer before counting goes live. */
+  countsVisits?: boolean
 }
 
 /** A run of text, or a fact from settings — `value` null when the merchant has not filled it in. */
@@ -83,7 +86,10 @@ export function renderPolicy(page: PolicyPage, f: PolicyFacts, inr: (paise: numb
       ]
     case 'privacy':
       return [
-        [fact('legal business name', f.legalName), t(' collects your name, phone number, email and address to deliver your order and to tell you about it, and nothing else without asking you.')],
+        [fact('legal business name', f.legalName), t(f.countsVisits
+          ? ' collects your name, phone number, email and address to deliver your order and to tell you about it, and asks before using them for anything else.'
+          : ' collects your name, phone number, email and address to deliver your order and to tell you about it, and nothing else without asking you.')],
+        ...(f.countsVisits ? [[t('We count visits to this shop to see which pages and links work: the pages you open, your browser and an approximate city. We don\'t use cookies for this, don\'t store your IP address, and can\'t tell who you are from it. Visit records are deleted after 90 days.')]] : []),
         [t('Online payments are handled by Razorpay; we never see your card or UPI details. Your details are shared only with the courier that delivers your order.')],
         [t('To see, correct or delete what we hold about you, write to our grievance officer, '), fact('grievance officer', f.grievanceName), t(', at '), fact('grievance email', f.grievanceEmail), t('.')],
       ]

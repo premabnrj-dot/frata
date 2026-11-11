@@ -124,22 +124,22 @@ database. The two queries at the end should list the migrations and two cron job
 **B. The app role's password** (same SQL editor): `alter role frata_app with password '<openssl rand -hex 24>';`
 Don't give `frata_admin` a password until A2·5 needs it.
 
+**C. `ANALYTICS_DATABASE_URL` in Vercel** (from A2·2; nothing reads it before then):
+1. Copy frata-analytics → **Connect** → **Transaction pooler** (port 6543).
+2. Change the user to `frata_app.frbyvvxxqheigcutlamj` and use the password from B.
+3. Save it as **Sensitive**, **Production only**.
+
 **D. Before shops count visits (A2·2)**, in this order:
 1. Paste migration 0003: run `FROM=0003 node scripts/ops/analytics-paste.mjs` and paste the output into the SQL editor.
 2. In Vercel → frata → Firewall, mirror `ops/firewall.json`, then publish:
    - a custom rule first, "Rate limit the visit beacon": path equals `/api/shop/e` → rate limit 120 per minute per IP,
      deny;
    - in "Bypass link previews", add the condition "Path does not start with `/api/`" to each user-agent condition.
-3. Approve the shop privacy policy's sentence about counting visits (in the plan's A2·2 security notes), with the
-   lawyer.
+3. Approve, with the lawyer, the privacy policy's wording while visits are counted (`src/domains/policies/render.ts`,
+   `countsVisits`). Shops show it as soon as step 4 is on.
 4. Set `ANALYTICS_INGEST_ON` = `1` in Vercel, Production only, and redeploy.
 5. On a phone, open a shop in Chrome, in Safari and from Instagram, leave each tab, then ask an agent to check the
    events arrived.
-
-**C. `ANALYTICS_DATABASE_URL` in Vercel** (from A2·2; nothing reads it before then):
-1. Copy frata-analytics → **Connect** → **Transaction pooler** (port 6543).
-2. Change the user to `frata_app.frbyvvxxqheigcutlamj` and use the password from B.
-3. Save it as **Sensitive**, **Production only**.
 
 ## Later
 

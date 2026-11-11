@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { CODE_RE, HOST_RE, MAX_EVENTS, MAX_TAG } from './beacon-rules'
 import type { Agent } from './device'
 
 // =============================================================================
@@ -11,19 +12,22 @@ import type { Agent } from './device'
 // =============================================================================
 
 export const EVENT_KINDS = ['page_view', 'view_item', 'add_to_cart', 'begin_checkout', 'purchase', 'web_vital'] as const
-export type EventKind = (typeof EVENT_KINDS)[number]
-export const MAX_EVENTS = 50
+export { MAX_EVENTS }
 export const MAX_BODY_BYTES = 8 * 1024
 
-/** A shop path, as `location.pathname` gives it: no query, no fragment (a `#t=` can be a bearer token), ≤ 200. */
-const Path = z.string().max(200).regex(/^\/[A-Za-z0-9\-._~/%]*$/)
+/** A shop path, as `location.pathname` gives it (never a query or fragment). Any text: toBatch keeps only the shop's own
+ * shapes (pathShape), so an odd character makes the page "other", never a lost beacon (impact review 2026-11-11). */
+const Path = z.string().max(2000)
 /** A value that looks like an email address or a phone number: broadcast tools put them in utm_campaign, and a rollup
  * keeps it 2 years (security review 2026-11-11 MED-5). It is dropped, never stored; the event still counts. */
-export const looksPersonal = (v: string) => /[^\s@]+@[^\s@]+\.[^\s@]+/.test(v) || /(?:\d[\s().-]?){10,}/.test(v) || /%40/i.test(v)
+// A phone is an Indian mobile number's shape (with +91 or 0, spaced or not), never any 10 digits: Meta's and Google's
+// numeric campaign ids must stay, as orders keep them (impact review 2026-11-11).
+export const looksPersonal = (v: string) => /[^\s@]+@[^\s@]+\.[^\s@]+/.test(v) || /%40/i.test(v)
+  || /(?<!\d)(?:\+?91[\s-]?|0)?[6-9]\d{4}[\s-]?\d{5}(?!\d)/.test(v)
 /** A tag value as typed into a link (utm_*), cleaned the same way on read (cleanValue): printable, ≤ 100. */
-const Tag = z.string().min(1).max(100).regex(/^[^\p{Cc}\p{Cf}]+$/u).transform((v) => (looksPersonal(v) ? undefined : v))
+const Tag = z.string().min(1).max(MAX_TAG).regex(/^[^\p{Cc}\p{Cf}\p{Cs}]+$/u).transform((v) => (looksPersonal(v) ? undefined : v))
 /** The referring site: a bare hostname, never a URL. */
-const Host = z.string().min(1).max(100).regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/)
+const Host = z.string().min(1).max(100).regex(HOST_RE)
 
 const Event = z.strictObject({
   k: z.enum(EVENT_KINDS),
@@ -34,7 +38,7 @@ const Event = z.strictObject({
   us: Tag.optional(), um: Tag.optional(), uc: Tag.optional(),
   rh: Host.optional(),
   /** A creator's `?code=` (the same shape the bag store accepts). */
-  cc: z.string().regex(/^[A-Za-z0-9]{1,20}$/).optional(),
+  cc: z.string().regex(CODE_RE).transform((v) => (looksPersonal(v) ? undefined : v)).optional(),
   gads: z.boolean().optional(), srs: z.boolean().optional(), fb: z.boolean().optional(),
   m: z.enum(['lcp', 'inp', 'cls']).optional(),
   v: z.int().min(0).max(600_000).optional(),

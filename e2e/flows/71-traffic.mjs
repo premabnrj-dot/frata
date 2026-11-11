@@ -16,10 +16,10 @@ const HOST = new URL(SHOP).hostname
 const PHONE_UA = devices['Pixel 7'].userAgent
 
 /** A POST to the app as if from a browser on `host` (node:http lets us set Host; fetch doesn't). */
-function post(path, body, { host = HOST, origin = `http://${host}`, ua = PHONE_UA, type = 'text/plain;charset=UTF-8' } = {}) {
+function post(path, body, { host = HOST, origin = `http://${host}`, ua = PHONE_UA, type = 'text/plain;charset=UTF-8', chunked = false } = {}) {
   return new Promise((resolve, reject) => {
     const data = Buffer.from(typeof body === 'string' ? body : JSON.stringify(body))
-    const r = httpRequest({ host: '127.0.0.1', port: PORTS.app, path, method: 'POST', headers: { host, origin, 'user-agent': ua, 'content-type': type, 'content-length': data.length } },
+    const r = httpRequest({ host: '127.0.0.1', port: PORTS.app, path, method: 'POST', headers: { host, origin, 'user-agent': ua, 'content-type': type, ...(chunked ? { 'transfer-encoding': 'chunked' } : { 'content-length': data.length }) } },
       (res) => { res.resume(); res.on('end', () => resolve({ status: res.statusCode, headers: res.headers })) })
     r.on('error', reject); r.end(data)
   })
@@ -52,9 +52,15 @@ export default {
       assert.equal(js.status, 200)
       assert.match(String(js.headers['cache-control'] ?? ''), /immutable/)
       assert.match(js.text, /sendBeacon/)
+      // While visits are counted, the shop's privacy policy says so (security review MED-A).
+      const privacy = await get('/policies/privacy')
+      assert.match(privacy.text, /We count visits to this shop/)
+      assert.doesNotMatch(privacy.text, /nothing else without asking you/)
     })
 
     const ctx = await t.browser.newContext({ ...devices['Pixel 7'] })
+    // Every page load samples its Web Vitals (the beacon takes 1 in 4 by Math.random).
+    await ctx.addInitScript(() => { Math.random = () => 0 })
     const p = await ctx.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message))
     try {
       await t.step('A phone visit from an Instagram bio link: landing, product, bag and checkout, sent when the tab hides', async () => {
@@ -79,7 +85,19 @@ export default {
         assert.ok(item?.product_id, 'view_item carries the product')
         assert.ok(rows.some((e) => e.kind === 'add_to_cart' && e.product_id === item.product_id), 'add to bag carries the product')
         assert.equal(rows.filter((e) => e.landing).length, 1, 'one landing per tab')
-        assert.equal(new Set(rows.map((e) => e.kind)).has('page_view'), true)
+        assert.ok(rows.some((e) => e.kind === 'web_vital'), 'a phone sends its Web Vitals')
+      })
+
+      await t.step('A purchase is sent once, on the order page the checkout leaves for', async () => {
+        // The checkout sets this flag just before it goes to /orders (checkout.tsx done()); the order itself is not placed here.
+        await p.evaluate(() => sessionStorage.setItem('fe.p', '1'))
+        await p.goto(SHOP + '/orders', { waitUntil: 'load' })
+        await p.waitForFunction(() => window.__fe === 1)
+        await hide(p)
+        await until(async () => (await adb`select 1 from events where tenant_id = ${KESAR} and kind = 'purchase'`).length > 0 || null, 10_000)
+        await p.reload({ waitUntil: 'load' }); await p.waitForFunction(() => window.__fe === 1); await hide(p)
+        await new Promise((r) => setTimeout(r, 1500))
+        assert.equal((await adb`select count(*)::int n from events where tenant_id = ${KESAR} and kind = 'purchase'`)[0].n, 1, 'a reopened order page is not another purchase')
       })
     } finally { await ctx.close() }
 
@@ -99,6 +117,7 @@ export default {
       assert.equal((await post('/api/shop/e', ok, { ua: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' })).status, 204)
       assert.equal((await post('/api/shop/e', ok, { host: `nobody-here.${SHOP_DOMAIN}` })).status, 404)
       assert.equal((await post('/api/shop/e', 'x'.repeat(9000))).status, 413)
+      assert.equal((await post('/api/shop/e', 'x'.repeat(9000), { chunked: true })).status, 413, 'a body with no length is counted as it streams')
       assert.equal((await post('/api/shop/e', '{not json')).status, 400)
       assert.equal((await post('/api/shop/e', { e: [{ k: 'page_view' }], tenant: '00000000-0000-0000-0000-000000000000' })).status, 400)
       assert.equal((await post('/api/shop/e', ok, { type: 'multipart/form-data' })).status, 415)

@@ -682,3 +682,39 @@ With 0.8–0.9 kB more, checkout fails too, and PV1-4a only frees room on the pr
   3. the privacy sentence, approved with the lawyer;
   4. `ANALYTICS_INGEST_ON=1`, Production only;
   5. a phone check: Chrome, Safari and Instagram's in-app browser each show events after the tab is left.
+
+### impact-reviewer and security-reviewer on A2·2 as built (2026-11-11), folded
+- **HIGH (impact), the product cap deleted counted views.**
+  - 0003 now replaces `analytics_fold()`, not the rollup. A shop-day names at most 1,000 products. A product already
+    named always adds; a new one is named only while there is room. The rest add to one row,
+    `ffffffff-ffff-ffff-ffff-ffffffffffff` ("other products"). Per-product vitals are kept only for named products.
+  - Proved over two folds: a named product's views carry across, a new product past the cap goes to "other products",
+    and all 1,010 views are counted.
+  - 0003 was never applied anywhere live, so it was changed in place.
+- **MED, fixed:**
+  - a paired piece's add to bag names its own product (`openBag(variant, product)`);
+  - an odd path is "other", never a lost beacon;
+  - only an Indian mobile shape counts as a phone (numeric campaign ids stay);
+  - a phone-shaped creator code is dropped;
+  - lone surrogates are refused, and the beacon cuts by code point;
+  - Pinterest, Telegram, LinkedIn and Cubot users are not bots (tested);
+  - `check:beacon` also fails a cost field;
+  - the shared rules live in `beacon-rules.ts`;
+  - a lookup failure is a 503 logged by its name only;
+  - `networkOf` handles brackets and zone ids.
+- **MED-A (security), the privacy policy:** while visits are counted (`countsVisits` from `isCountingVisits()`), the
+  shop's privacy policy drops "nothing else without asking you" and says what is counted. Tested. A merchant's own
+  rewritten policy is theirs; the owner's wording review covers ours.
+- **e2e `71-traffic`, now 5 steps:**
+  - the policy says visits are counted;
+  - Web Vitals arrive;
+  - one purchase per order, and a reopened order page is not another;
+  - a body with no length is cut as it streams (413).
+- **Left, with reasons:**
+  - the 429 caps, "counting off" and the in-flight cap have no automated test (the e2e stack runs with counting on,
+    and the caps need 120+ requests a minute; they are 10 lines each);
+  - the WAF's IPv6 keying (per address or per /64) is unconfirmed;
+  - shop domains must be DNS-only (a proxy would merge visitors under its edge IPs), so note it in the Connect
+    dialog's help (D·2) later;
+  - a forged Origin can crowd out a shop's beacons on one instance (tier 0, accepted; revisit with A2·5);
+  - `CLAUDE.md`'s `npm test` list doesn't name `check:beacon` (proposed to the owner).

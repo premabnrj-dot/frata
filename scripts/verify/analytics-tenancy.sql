@@ -118,7 +118,11 @@ select ingest_events('11111111-1111-1111-1111-111111111111', '3|1.2.3|chrome-ua'
   '{"d":"phone","b":"chrome","a":"instagram","c":"Pune","e":[{"k":"page_view","l":true,"p":"/","us":"instagram","um":"bio"},{"k":"view_item","p":"/products/kurta","pid":"aaaaaaaa-0000-0000-0000-000000000001"},{"k":"add_to_cart","pid":"aaaaaaaa-0000-0000-0000-000000000001"},{"k":"web_vital","m":"lcp","v":2100,"pid":"aaaaaaaa-0000-0000-0000-000000000001"}]}');
 select ingest_events('22222222-2222-2222-2222-222222222222', '3|1.2.3|chrome-ua',
   '{"d":"phone","b":"chrome","a":"instagram","c":"Pune","e":[{"k":"page_view","l":true,"p":"/","us":"instagram","um":"bio"}]}');
--- The same visitor lands again later in the day from Google: the day's first landing keeps the source.
+commit;
+-- The same visitor lands again later in the day from Google (its own request, so its own time): the day's first
+-- landing keeps the source.
+select pg_sleep(0.01);
+begin; set local role frata_app;
 select ingest_events('11111111-1111-1111-1111-111111111111', '3|1.2.3|chrome-ua',
   '{"d":"phone","b":"chrome","a":"instagram","c":"Pune","e":[{"k":"page_view","l":true,"p":"/","us":"google","um":"cpc"},{"k":"web_vital","m":"lcp","v":3400}]}');
 do $$
@@ -276,22 +280,34 @@ begin
 end $$;
 commit;
 
--- 11b. Forged product ids: shop E sends 1,005 product views (one product each, each viewed once but the first, viewed
--- 3 times); its day keeps the top 1,000, the most viewed among them, and another shop's rows are untouched.
+-- 11b. Forged product ids, over two folds: shop E's first slice has 1,005 products (the first viewed 3 times); 1,000
+-- keep their names and 5 views add to "other products". Its second slice adds 2 views to a named product (kept, never
+-- reset) and views a new one (into "other products"). Another shop's rows are untouched; nothing counted is lost.
 do $$
 declare i integer; before integer := (select count(*) from product_daily where tenant_id <> '55555555-5555-5555-5555-555555555555');
+  e uuid := '55555555-5555-5555-5555-555555555555'; others uuid := 'ffffffff-ffff-ffff-ffff-ffffffffffff';
 begin
-  perform ingest_events('55555555-5555-5555-5555-555555555555', 'forger', '{"d":"phone","e":[{"k":"view_item","pid":"eeeeeeee-0000-0000-0000-000000000000"},{"k":"view_item","pid":"eeeeeeee-0000-0000-0000-000000000000"},{"k":"view_item","pid":"eeeeeeee-0000-0000-0000-000000000000"}]}');
+  perform ingest_events(e, 'forger', '{"d":"phone","e":[{"k":"view_item","pid":"eeeeeeee-0000-0000-0000-000000000000"},{"k":"view_item","pid":"eeeeeeee-0000-0000-0000-000000000000"},{"k":"view_item","pid":"eeeeeeee-0000-0000-0000-000000000000"}]}');
   for i in 1 .. 1004 loop
-    perform ingest_events('55555555-5555-5555-5555-555555555555', 'forger', jsonb_build_object('e', jsonb_build_array(jsonb_build_object('k', 'view_item', 'pid', 'eeeeeeee-0000-0000-0000-' || lpad(i::text, 12, '0')))));
+    perform ingest_events(e, 'forger', jsonb_build_object('e', jsonb_build_array(jsonb_build_object('k', 'view_item', 'pid', 'eeeeeeee-0000-0000-0000-' || lpad(i::text, 12, '0')))));
   end loop;
-  update events set at = now() - interval '2 minutes' where tenant_id = '55555555-5555-5555-5555-555555555555';
+  update events set at = now() - interval '2 minutes' where tenant_id = e;
   update fold_state set through = now() - interval '3 minutes';
   perform analytics_fold();
-  if (select count(*) from product_daily where tenant_id = '55555555-5555-5555-5555-555555555555') <> 1000 then
-    raise exception 'FAIL: shop E keeps % product rows, not 1,000', (select count(*) from product_daily where tenant_id = '55555555-5555-5555-5555-555555555555'); end if;
-  if not exists (select 1 from product_daily where product_id = 'eeeeeeee-0000-0000-0000-000000000000' and views = 3) then raise exception 'FAIL: the cap dropped the most viewed product'; end if;
-  if (select count(*) from product_daily where tenant_id <> '55555555-5555-5555-5555-555555555555') <> before then raise exception 'FAIL: shop E''s cap touched another shop''s products'; end if;
+  if (select count(*) from product_daily where tenant_id = e and product_id <> others) <> 1000 then
+    raise exception 'FAIL: shop E names % products, not 1,000', (select count(*) from product_daily where tenant_id = e and product_id <> others); end if;
+  if (select views from product_daily where tenant_id = e and product_id = others) <> 5 then raise exception 'FAIL: the 5 views past the cap are not in other products'; end if;
+  if (select views from product_daily where tenant_id = e and product_id = 'eeeeeeee-0000-0000-0000-000000000000') <> 3 then raise exception 'FAIL: the cap dropped the most viewed product'; end if;
+  -- The second slice: 2 more views of a named product, 1 of a new product.
+  perform ingest_events(e, 'shopper', '{"d":"phone","e":[{"k":"view_item","pid":"eeeeeeee-0000-0000-0000-000000000001"},{"k":"view_item","pid":"eeeeeeee-0000-0000-0000-000000000001"},{"k":"view_item","pid":"eeeeeeee-1111-0000-0000-000000000000"}]}');
+  update events set at = now() - interval '90 seconds' where tenant_id = e and visitor = (select visitor from analytics_visitor(e, 'shopper'));
+  update fold_state set through = now() - interval '100 seconds';
+  perform analytics_fold();
+  if (select views from product_daily where tenant_id = e and product_id = 'eeeeeeee-0000-0000-0000-000000000001') not in (3) then
+    raise exception 'FAIL: a named product''s views were reset by the cap (%, not 3)', (select views from product_daily where tenant_id = e and product_id = 'eeeeeeee-0000-0000-0000-000000000001'); end if;
+  if (select views from product_daily where tenant_id = e and product_id = others) <> 6 then raise exception 'FAIL: a new product past the cap did not add to other products'; end if;
+  if (select sum(views) from product_daily where tenant_id = e) <> 1010 then raise exception 'FAIL: % views counted, not 1,010 (1,007 then 3)', (select sum(views) from product_daily where tenant_id = e); end if;
+  if (select count(*) from product_daily where tenant_id <> e) <> before then raise exception 'FAIL: shop E''s cap touched another shop''s products'; end if;
 end $$;
 
 -- 12. A fold across IST midnight: one event at 23:58 yesterday, one today; both days are folded and rebuilt.

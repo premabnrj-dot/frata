@@ -8,7 +8,7 @@
 
 /** The /24 (IPv4) or /48 (IPv6) of an address, or '' when it isn't one. */
 export function networkOf(ip: string): string {
-  const a = ip.trim()
+  const a = ip.trim().replace(/^\[|\](:\d+)?$/g, '').split('%')[0]!
   const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(a.replace(/^::ffff:/i, ''))
   if (v4) return v4.slice(1, 5).every((o) => Number(o) <= 255) ? `${Number(v4[1])}.${Number(v4[2])}.${Number(v4[3])}` : ''
   if (!/^[0-9a-f:]+$/i.test(a) || !a.includes(':') || (a.match(/::/g)?.length ?? 0) > 1) return ''

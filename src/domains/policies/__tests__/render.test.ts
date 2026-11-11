@@ -36,3 +36,14 @@ describe('renderPolicy', () => {
     expect(m).toEqual(['legal business name', 'grievance officer'])
   })
 })
+
+describe('privacy while visits are counted (A·2)', () => {
+  it('never says "nothing else" while visits are counted, and says what is counted', () => {
+    const text = (f: PolicyFacts) => renderPolicy('privacy', f, (p) => `₹${p}`).map((para) => para.map((x) => ('text' in x ? x.text : x.value)).join('')).join('\n')
+    expect(text(full)).toContain('nothing else without asking you')
+    const counting = text({ ...full, countsVisits: true })
+    expect(counting).not.toContain('nothing else')
+    expect(counting).toContain('We count visits to this shop')
+    expect(counting).toContain('deleted after 90 days')
+  })
+})

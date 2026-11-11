@@ -90,6 +90,12 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - Raw events are written only through `ingest_events()` and read only by the fold. Partitions live in `ev`, which
   has no grant; a new grant there is a bug. Rollups keep raw source inputs, classified on read (§ Attribution).
 - Role settings there use `alter role … in database` (a throwaway server shares its roles with the main database).
+- **The visit beacon** is `src/beacon/fe.ts`, built into `public/fe.js` (`npm run build:beacon`; `check:beacon` fails a
+  stale file, the 1.7 kB ceiling, a cost field, `href`/`hash`/cookies or a DOM write). It is not a React island: no shop
+  page's script grows. Its rules shared with the server are in `src/domains/analytics/beacon-rules.ts`, never copied.
+  Its ingest `/api/shop/e` (`src/lib/analytics/ingest.ts`) is off until `ANALYTICS_INGEST_ON`. It runs the header
+  checks before the cached shop lookup, stores paths only as the shop's own shapes, and drops personal-looking tags. A
+  page tells the beacon what happened with a server-drawn `<i hidden data-fe=…>` marker, never with component code.
 - Its migrations never go to the main project. Both databases are named `postgres`, and 0000 refuses to run there.
   They reach the analytics project only as the paste from `scripts/ops/analytics-paste.mjs` (docs/setup.md
   § Analytics database), never through the main account's Supabase tools.

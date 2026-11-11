@@ -76,7 +76,7 @@ export function PairRows({ pairs, now, live, w, bw, href }: { pairs: StoreCard[]
             {q.images[0] ? <Photo p={q.images[0]} alt="" sizes="52px" low className="size-13 bg-store-paper object-cover" /> : <span className="size-13 bg-store-paper" />}
             <Link href={href(`/products/${q.handle}`)} className="min-w-0 truncate text-sm">{q.title} · {formatInr(paise(price))}</Link>
             {act === 'add'
-              ? <PairAdd variantId={variantId} label={w.pairAdd} done={w.pairAdded} sr={fill(w.pairAddSr, { title: q.title })} live={live} preview={bw.preview} />
+              ? <PairAdd variantId={variantId} productId={q.id} label={w.pairAdd} done={w.pairAdded} sr={fill(w.pairAddSr, { title: q.title })} live={live} preview={bw.preview} />
               : <Link href={href(`/products/${q.handle}`)} aria-label={fill(w.pairChooseSr, { title: q.title })} className="inline-flex min-h-11 shrink-0 items-center rounded-[var(--store-radius)] border border-store-ink px-3 text-xs font-bold uppercase tracking-wider">{w.pairChoose}</Link>}
           </li>
         ))}

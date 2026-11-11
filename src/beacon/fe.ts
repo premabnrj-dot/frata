@@ -1,4 +1,5 @@
 import { landingParams } from '@/domains/analytics/attribution'
+import { CODE_RE, cutCodePoints, HOST_RE, MAX_EVENTS, MAX_TAG } from '@/domains/analytics/beacon-rules'
 
 // =============================================================================
 // FILE: src/beacon/fe.ts — THE SHOP'S VISIT BEACON (A·2; plan docs/plans/2026-11-11-guardrails-infra-a2.md, A2·2 amendment and
@@ -27,8 +28,8 @@ if (W.top === W.self && !W.__fe && !location.pathname.startsWith('/console')) {
   let path = ''
   let pid: string | undefined
   const seen: Record<string, 1> = {}
-  const push = (e: Ev) => { if (q.length < 50) q.push(e) }
-  const cut = (v: string | undefined) => (v ? v.slice(0, 100) : NIL)
+  const push = (e: Ev) => { if (q.length < MAX_EVENTS) q.push(e) }
+  const cut = (v: string | undefined) => (v ? cutCodePoints(v, MAX_TAG) : NIL)
 
   /** The page's server-drawn markers: view_item (with its product) and begin_checkout, once per kind, product and path. */
   const marks = () => {
@@ -56,8 +57,8 @@ if (W.top === W.self && !W.__fe && !location.pathname.startsWith('/console')) {
       try { rh = D.referrer ? new URL(D.referrer).hostname : NIL } catch { rh = NIL }
       const src: Record<string, string | boolean | undefined> = {
         l: true, us: cut(a.utm_source), um: cut(a.utm_medium), uc: cut(a.utm_campaign),
-        rh: rh && rh !== location.hostname && rh.length <= 100 && /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(rh) ? rh : NIL,
-        cc: code && /^[A-Za-z0-9]{1,20}$/.test(code) ? code : NIL,
+        rh: rh && rh !== location.hostname && rh.length <= 100 && HOST_RE.test(rh) ? rh : NIL,
+        cc: code && CODE_RE.test(code) ? code : NIL,
         gads: !!(a.gclid || a.gbraid || a.wbraid || a.gad_source) || NIL, srs: !!a.srsltid || NIL, fb: !!a.fbclid || NIL,
       }
       for (const k in src) if (src[k] !== NIL) e[k] = src[k]!
@@ -105,7 +106,13 @@ if (W.top === W.self && !W.__fe && !location.pathname.startsWith('/console')) {
     }
   }
 
-  W.addEventListener('frata:open-bag', (e) => { if ((e as CustomEvent).detail) push(pid ? { k: 'add_to_cart', pid } : { k: 'add_to_cart' }) })
+  // The bag's own event; a paired piece says which product it added (bag-store openBag), else it is the page's.
+  W.addEventListener('frata:open-bag', (e) => {
+    if (!(e as CustomEvent).detail) return
+    const own = (e as CustomEvent & { product?: string }).product
+    const id = own && UUID.test(own) ? own : pid
+    push(id ? { k: 'add_to_cart', pid: id } : { k: 'add_to_cart' })
+  })
   const pushState = history.pushState
   history.pushState = function (...a: Parameters<History['pushState']>) { pushState.apply(this, a); setTimeout(view, 0) }
   W.addEventListener('popstate', () => setTimeout(view, 0))

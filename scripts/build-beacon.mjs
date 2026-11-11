@@ -9,6 +9,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { gzipSync } from 'node:zlib'
 import { build } from 'esbuild'
+import { SENTINELS } from './cost-sentinels.mjs'
 
 // gzip bytes. Speed review 2026-11-11 suggested 1.6 kB (its prototype 1.2 kB, without A·1's shared parser or the security
 // review's checks); built 1,649 B with both. It is async and runs in its own task: 0 ms of TBT at this size.
@@ -28,6 +29,8 @@ for (const [what, re] of [['location.href', /location\.href/], ['location.hash',
   ['innerHTML', /innerHTML|outerHTML|insertAdjacent/], ['a DOM write', /appendChild|\.append\(|\.prepend\(|document\.write/], ['eval', /\beval\(|new Function/]]) {
   if (re.test(js)) failures.push(`public/fe.js uses ${what}`)
 }
+// A merchant's cost never reaches a shopper's browser (ADR-0003): fe.js is outside check-client-bundle's .next/static.
+for (const s of SENTINELS) if (js.includes(s)) failures.push(`public/fe.js names a merchant cost (${s})`)
 if (process.argv.includes('--check')) {
   const read = (f) => { try { return readFileSync(f, 'utf8') } catch { return '' } }
   if (read(OUT) !== js) failures.push(`${OUT} is stale — run node scripts/build-beacon.mjs`)
