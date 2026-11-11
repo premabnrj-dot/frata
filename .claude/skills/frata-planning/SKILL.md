@@ -2,8 +2,8 @@
 name: frata-planning
 description: Use when planning any Frata feature, enhancement, redesign or connector - before writing a spec or plan, before executing one, and when closing one - to run the spec, research, design review, mockup, sign-off, plan, execute and document loop, with the review headings (UI/UX, tenancy, modularity, SSOT/DRY, YAGNI, KISS, performance, reliability, security, motion and visuals, unit economics, blast radius).
 metadata:
-  version: 2.5.0
-  verified: 2026-11-08
+  version: 2.6.0
+  verified: 2026-11-11
   decisions: [ADR-0001]
 ---
 
@@ -45,11 +45,13 @@ No feature is executed before its review and mockup are signed off (ADR-0001).
 
 ## North star
 
-Frata exists so a small Indian fashion brand **keeps more profit per delivered
-order** without a developer. The ranked problems: (1) COD/RTO losses, (2) size
-and fit returns, (3) catalogue operations, (4) mobile checkout conversion,
-(5) a premium-looking storefront, (6) true profit per order, (7) festive-peak
-reliability. The roadmap is `docs/plans/roadmap.md`.
+Frrata is **the commerce backend for Indian D2C brands** (owner, 2026-11-11; ADR-0014). A brand runs its business
+in the console; its website is code that a developer, a partner or Frrata's agent builds on the Storefront API.
+Frrata keeps what makes the brand money: catalogue, checkout, COD, payments, orders, shipping, GST — so a brand
+**keeps more profit per delivered order**. The ranked problems: (1) COD/RTO losses, (2) size and fit returns,
+(3) catalogue operations, (4) mobile checkout conversion, (5) a premium storefront, now built as code by developers,
+partners or the agent (partners get the builder first), (6) true profit per order, (7) festive-peak reliability.
+Themes are retiring: no new theme work. The roadmap is `docs/plans/roadmap.md`.
 
 ## When this applies
 

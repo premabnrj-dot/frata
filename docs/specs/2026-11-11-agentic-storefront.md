@@ -1,5 +1,5 @@
 # Frrata Sites — storefronts as code, built by developers and agents
-Status: draft (proposal for the owner; nothing is built) · Date: 2026-11-11 · Mockup: https://claude.ai/artifact/K8QusFghYyKYsYtU678huQ (docs/mockups/2026-11-11-agentic-storefront.html)
+Status: direction accepted (owner 2026-11-11: north-star wording, partners get the builder first, themes retire; ADR-0014) — each phase still gets its own spec, mockup and reviews · Date: 2026-11-11 · Mockup: https://claude.ai/artifact/K8QusFghYyKYsYtU678huQ (docs/mockups/2026-11-11-agentic-storefront.html)
 · Approved: —
 
 Owner (2026-11-11): "developers would be the core client who'll be developing, maintaining their sites; we could grow to
