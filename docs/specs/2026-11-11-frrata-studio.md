@@ -54,7 +54,7 @@ partners.
 | Storefront API for shopper traffic | Included, no per-call fee; rate limits per key and IP | Shopify, BigCommerce (2026) | API traffic → orders per shop |
 | Hosting | In the plan: Launch 50 GB + 100 build min, Growth 200 GB + 300, Scale 1 TB + 1,000; then ₹40/GB, ₹4/min (3×) | Vercel Pro overage, Cloudflare (2026) | Bandwidth and build minutes per shop, month 1 |
 | Cost per credit (one ordinary turn) | ≈ ₹6.2 (model ₹4.0, sandbox ₹1.0, build and checks ₹1.2) | Anthropic, Vercel Sandbox (2026); ₹88/$ | Cost ÷ credits used, monthly |
-| Price per credit | ₹19 (3.06× cost; owner rule 2026-11-11: resold API costs at 3×) | owner | Re-price when the vendor or the rupee moves |
+| Price per credit | ₹19 for ₹6.33 of **measured** cost (tokens, sandbox seconds, build minutes) — 3× by construction (owner rule 2026-11-11); review: a "turn" costs ₹5–150, so per-turn pricing fails 3× | owner, unit-economics review 2026-11-11 | The 20-task cost proof before V3 |
 | Studio seats | Partner free 10 credits (acquisition cost ₹62); Studio ₹2,999 / 150; Studio Plus ₹9,999 / 500; packs ₹1,900 / 100 — each seat ≥ 3× the cost it includes | owner rule; Indian tool band ₹0–3,000 | Seats bought by the first 20 partners |
 | A new page | 10–30 credits (₹190–570) | 2026-11-11 research ₹80–170 cost | First 50 pages |
 | Gallery | Free starters at V4; paid later, partner keeps 85% | Shopify 15% (2026) | Starters listed, 120 days |
@@ -78,3 +78,38 @@ developers; the model's host (Frrata's API account, proposed).
 ## Out of scope
 The agent editing catalogue or money; image generation; brands using Studio before partners; Studio inside the
 console runtime (it runs beside it, through the API and the sandbox host).
+
+## Review findings (2026-11-11) and where each went
+Five reviews on the plan (security, tenancy, architecture, speed, unit economics); full scenarios, controls and the
+reordered phases: https://claude.ai/artifact/CukynMkEPgQcqWg8m8ZATW (docs/mockups/2026-11-11-studio-hardening.html).
+Status: findings recorded, not yet folded into a revised design; the owner decides the six questions there first.
+- **Blockers:**
+  - Partner code beside checkout cookies: `__Host-` cookies, exact-Origin checks, sites and previews on domains
+    Frrata never uses.
+  - "No personal data" enforced only by the site's code: Frrata-owned headers and runtime egress at the hosting layer.
+  - One partner login publishes to every client: two-factor, re-auth on publish, owner-granted per-client scopes,
+    approval bound to the commit.
+  - Removing a partner leaves routines, keys and sessions alive: one definer transaction revokes all; run-time
+    membership re-check.
+  - A law change would need 1,000 publishes: legal block and content served at runtime; a "Frrata patch" lane
+    (ADR-0014 exception).
+  - Hosting undecided: a hosting ADR amending ADR-0005 (separate account, adapter, edge router, repos by site id).
+- **High:**
+  - Studio resolves the shop from the session, never the shop cookie.
+  - The proxy pins the session's key.
+  - Skills are read-only in sessions; learned facts per shop.
+  - Partner credits in a partner ledger, not tenant rows.
+  - A closed package mirror and no DNS in the sandbox.
+  - Routines' 2 am rules.
+  - Credit fraud and free-tier farming controls.
+  - WhatsApp approval links: owner-only, never act on open.
+  - The kit's release integrity, minimum version and 24 h patch target.
+  - API caches 900 s with tag purges.
+  - Builds on publish only; a global turn queue.
+  - Attribution and the brand kit kept single-source.
+- **Pricing (3×):** a credit is ₹6.33 of measured cost (tokens, sandbox seconds, build minutes), sold at ₹19, estimate
+  first, charged on actuals. Seats and credits are excluded from the partner share. Hosting allowances are re-sized
+  after the host is chosen, with images on storage with no egress fee.
+- **In today's code (separate from Studio):** a place-order lock can starve the shared pool in a flash drop; the
+  sold-out purge is debounced per instance; the quote reads in sequence; previews hold production data (S1); staff
+  sign in with an email code only.
