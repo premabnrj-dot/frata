@@ -9,7 +9,7 @@ Checked 2026-11-06.
 | Vercel project `frata` | team `premabnrj-dots-projects`, production https://frata.vercel.app, functions `bom1` |
 | Supabase project `frata` | ref `szqwveysvbbxpjhjlnwl`, ap-south-1, org "doloslyf-creator's Org" (free plan) |
 | Migrations applied | `drizzle/0000`–`0003`, each recorded in `drizzle.__drizzle_migrations` |
-| Supabase project `frata-analytics` (A·2, ADR-0011) | ref `frbyvvxxqheigcutlamj`, a separate Supabase account, Data API off. Migrations `drizzle-analytics/0000`–`0002` applied by the owner 2026-11-11 (paste), pg_cron jobs `analytics-fold` (*/15) and `analytics-maintain` (:07) active. `frata_app` password: step B. URL in Vercel: step C, at A2·2 |
+| Supabase project `frata-analytics` (A·2, ADR-0011) | ref `frbyvvxxqheigcutlamj`, ap-south-1 (Mumbai), a separate Supabase account, Data API off. Migrations `drizzle-analytics/0000`–`0002` applied by the owner 2026-11-11 (paste), pg_cron jobs `analytics-fold` (*/15) and `analytics-maintain` (:07) active. `frata_app` password: step B. URL in Vercel: step C, at A2·2 |
 | Isolation proved on the live database | 2026-11-06, rolled back (`frata-verify` § Live proof); security advisor clean |
 | Vercel variables set | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (publishable key), `NEXT_PUBLIC_CONSOLE_HOST=frata.vercel.app` |
 

@@ -11,7 +11,8 @@ payments. Bursts of events in it would compete with checkout for connections, I/
 
 ## Decision
 - **Events, the per-visitor-day fold and the rollups live in their own Postgres**: the Supabase project
-  `frata-analytics` (ref `frbyvvxxqheigcutlamj`), in a separate Supabase account, with the Data API off. It is
+  `frata-analytics` (ref `frbyvvxxqheigcutlamj`), in a separate Supabase account, in ap-south-1 (South Asia, Mumbai, beside
+  the functions in `bom1`), with the Data API off. It is
   migrated from `drizzle-analytics/`, and its schema is in `src/lib/db/analytics-schema.ts`.
 - **The same isolation as the main database (ADR-0002):**
   - `frata_app` has no BYPASSRLS; every table has RLS;

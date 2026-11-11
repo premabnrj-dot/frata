@@ -718,3 +718,10 @@ With 0.8–0.9 kB more, checkout fails too, and PV1-4a only frees room on the pr
     dialog's help (D·2) later;
   - a forged Origin can crowd out a shop's beacons on one instance (tier 0, accepted; revisit with A2·5);
   - `CLAUDE.md`'s `npm test` list doesn't name `check:beacon` (proposed to the owner).
+
+## Owner, 2026-11-11 (A2·2 go-live steps)
+- Region of frata-analytics: ap-south-1 (South Asia, Mumbai).
+- The privacy wording while visits are counted: **approved**.
+- `ANALYTICS_INGEST_ON=1` set in Vercel (Production); the `/api/shop/e` rate rule added. The link-preview bypass
+  conditions and migration 0003 are pending, and the code isn't on `main` yet, so nothing is counted in production.
+- The e2e failures in addresses and domains (Make main) also fail on `main` (964fdc0), so they predate A·2.
