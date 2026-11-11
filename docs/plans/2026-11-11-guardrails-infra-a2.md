@@ -267,3 +267,28 @@ visitor counts in every plan) run on this plan. Their findings are folded in her
   - partitions are dropped through a definer with `format('%I')`;
   - errors inside `after()` log `errName` only;
   - `npm audit` runs when `isbot` is added.
+
+### unit-economics-reviewer
+Computed with `orderProfit`; the scratch model is in the session scratchpad.
+- **Visitor counts and ₹ kept per visit go in every plan** (call 5 settled by the evidence).
+  - They cost Frrata ₹5–49 a shop a month; Shopify Basic shows sessions and sources.
+  - Gating them behind True Profit would add 28% to a Launch shop's bill.
+  - True Profit keeps the cuts by product, pincode and campaign.
+- **A·2's cost (30,000 page views a shop a month):**
+  - ingest $0.89–5.41 per million beacons (the 5 ms-CPU best case to the measured worst);
+  - 20 shops ≈ ₹930–990 a month; 500 shops ≈ ₹2,600–10,600; 1,000 ≈ ₹7,800–20,500.
+  - The "$1 per million" in the spec is the best case; the cheapest test is 100,000 synthetic beacons on a preview
+    (≈ $0.09–0.54), with CPU and GB-s read from Observability.
+- **Bound:** ≈ $215 is launch-only.
+  - A second paid Supabase project adds ≈ $10 (compute isn't under the spend cap).
+  - The beacon brings the $100 CDN tier forward (from about 67 shops to about 56).
+  - The runbook's bot-crawl row is understated: a crawler hitting each page once a day always meets a stale page, so
+    each hit re-renders. 30M re-renders ≈ $162 a month, not $100. The runbook is corrected, and the bound is restated
+    per shop count.
+- **The ingest shares the budget that pauses production** (≈ 9M forged beacons = $50). The Firewall rule ships first
+  (security HIGH-2), plus an **Admin switch that turns counting off**: the beacon reads a flag baked into the shell, so
+  turning it off stops new calls on the next page refresh.
+- **Free analytics project:** at 20 shops, 500 MB in about 83 days (about 28 at a 3× festive peak); full = read-only,
+  and `after()` inserts are lost silently. Option (a) only with **a disk alert on that project** in Infrastructure, and
+  90-day partitions dropped on time. The spec's A2·0 is reconciled with this plan.
+- **The Infrastructure dashboard itself costs ≈ $0.03–2 a month** (the hourly cron), plus $0.21–1.24 for the rollup cron.
