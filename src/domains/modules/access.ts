@@ -33,7 +33,7 @@ export type ModuleAccess = {
   paused: boolean
   usable: boolean
   why: Why
-  /** The dependency that is not usable, when why = 'needs'. */
+  /** The dependency that is not usable, when why = 'needs'; for an app that is off, the one to turn on first. */
   needs: ModuleKey | null
   /** Held back by a Frrata pause, its own or a dependency's: its messages wait, nothing is dropped. */
   held: boolean
@@ -96,6 +96,11 @@ export function moduleAccess(f: ModuleFacts, now: Date): Record<ModuleKey, Modul
       const missing = MODULES[k].dependsOn.find((d) => !out[d].usable)
       if (missing) out[k] = { ...a, usable: false, why: 'needs', needs: missing, held: out[missing].held }
     }
+  }
+  // Granted and off: the app to turn on first, so Apps offers a link to it instead of a switch that fails (A1 review).
+  for (const k of MODULE_KEYS) {
+    const a = out[k]
+    if (a.why === 'off') out[k] = { ...a, needs: MODULES[k].dependsOn.find((d) => !out[d].usable) ?? null }
   }
   return out
 }

@@ -6,7 +6,7 @@
 // =============================================================================
 
 import { sql } from 'drizzle-orm'
-import { check, index, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { check, index, integer, pgTable, primaryKey, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { ADD_ONS, MODULE_KEYS, PLAN_GRANTABLE } from '@/domains/modules/registry'
 import { sqlList } from '@/domains/tenancy/roles'
 import { at, createdAt, id, money, tenants } from './schema'
@@ -74,4 +74,16 @@ export const modulePauses = pgTable('module_pauses', {
 }, (t) => [
   uniqueIndex('module_pauses_one_open').on(t.module).where(sql`${t.resumedAt} is null`),
   check('module_pauses_module', sql`${t.module} in (${sql.raw(sqlList(MODULE_KEYS))})`),
+])
+
+/** "Tell me when it's ready" (Apps gallery A1): one row per member and coming-next app. The user id is the session's,
+ *  never a form's; a support visit writes nothing. Admin reads counts and shops through a definer (drizzle/0104). */
+export const appInterest = pgTable('app_interest', {
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  module: text('module').notNull(),
+  userId: uuid('user_id').notNull(),
+  createdAt: createdAt(),
+}, (t) => [
+  primaryKey({ name: 'app_interest_pk', columns: [t.tenantId, t.module, t.userId] }),
+  check('app_interest_module', sql`${t.module} in (${sql.raw(sqlList(MODULE_KEYS))})`),
 ])

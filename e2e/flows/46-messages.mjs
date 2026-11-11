@@ -28,18 +28,18 @@ export default {
     let sdkCode = 'code-app-0001'
     await riya.route('https://connect.facebook.net/**', (r) => r.fulfill({ contentType: 'application/javascript', headers: { 'access-control-allow-origin': '*' }, body: FAKE_SDK(sdkCode) }))
 
-    await t.step('Apps: turn Messages on; Set up appears', async () => {
+    await t.step('Apps: Messages\' page turns it on, and it becomes the setup', async () => {
       await riya.goto(CONSOLE + '/console/apps')
-      const sw = riya.getByRole('switch', { name: 'Messages' })
-      await sw.click()
-      await riya.getByRole('link', { name: 'Set up' }).waitFor()
+      await riya.locator('a[href="/console/apps/communication"]').first().click()
+      await riya.waitForURL(/\/console\/apps\/communication$/)
+      await riya.getByRole('button', { name: 'Turn on Messages' }).click()
+      await riya.getByRole('heading', { level: 1, name: 'Connect WhatsApp' }).waitFor()
       const [m] = await db`select module from tenant_modules where tenant_id = ${KESAR} and disabled_at is null`
       assert.equal(m.module, 'communication')
       await riya.screenshot({ path: t.out('apps-on') })
     })
 
     await t.step('Connect: two paths, a phone that does not scroll sideways', async () => {
-      await riya.getByRole('link', { name: 'Set up' }).click()
       await riya.getByRole('heading', { level: 1, name: 'Connect WhatsApp' }).waitFor()
       await riya.getByRole('button', { name: /I use the WhatsApp Business app/ }).waitFor()
       await riya.getByRole('button', { name: /A new number/ }).waitFor()
