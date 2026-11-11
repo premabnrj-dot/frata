@@ -29,7 +29,7 @@ partners what they must know, and the things they cannot miss always arrive.
 | | Frrata → merchants, staff, partners | A merchant → its shoppers |
 |---|---|---|
 | Brand | Frrata: wordmark, rani thread, Inter | The shop: its logo, accent, name. **No Frrata mark anywhere**, not in the footer |
-| From | `Frrata <notices@notify.frrata.com>` | `Kesar Studio <kesar-studio@frratamail.com>` until the shop verifies its domain, then `Kesar Studio <orders@kesarstudio.in>` |
+| From | `Frrata <notices@notify.frrata.com>` | `Kesar Studio <kesar-studio@frratamail.app>` until the shop verifies its domain, then `Kesar Studio <orders@kesarstudio.in>` |
 | Reply-To | Frrata support | The shop's support email (Settings › Store). A Gmail address is Reply-To only, never From (DMARC) |
 | Where it also shows | The console's Notices (bell): every notice lands there first | The order page (shopper's and the console's) shows each email's state |
 | Who decides | Frrata; required types can't be switched off | The merchant: on/off per email, wording, sender |
@@ -50,7 +50,7 @@ and events to Klaviyo, not SMTP.
   every subdomain of one primary domain together, so shops' mail must not live under frrata.com.
 
 **4. Domains** (owner call 2): frrata.com (bought) keeps people's mail and `notify.frrata.com` for notices;
-**frratamail.com** (to buy; $12.03/yr at Vercel, available 2026-11-08) carries shops' order emails; a third domain for
+**frratamail.app** (bought at Vercel by the owner, 2026-11-11; it replaced frratamail.com) carries shops' order emails; a third domain for
 shared marketing is chosen at E·4. **Not frrata.shop:** it holds the storefronts and goes on the Public Suffix List, and
 DMARC works out a sender's organisational domain from that list, so each `name.frrata.shop` would count as its own
 organisation for mail and frrata.shop itself as a public suffix [U: the DMARC revision in progress changes the
@@ -132,7 +132,7 @@ payout statement (when partner payouts exist).
 **E·3 Send from your own domain** (screen 7).
 - Settings › Emails › Your domain: type `kesarstudio.in` → the records (3 CNAME for DKIM, MX + TXT for the return
   path, one DMARC TXT) with Copy, "Check records", the state in words (Waiting for records · Checking · Sending from
-  orders@kesarstudio.in · Records missing — sending from kesar-studio@frratamail.com until fixed). Typical wait "up to
+  orders@kesarstudio.in · Records missing — sending from kesar-studio@frratamail.app until fixed). Typical wait "up to
   48 hours". The fallback is automatic; nothing is lost while records are wrong.
 
 **E·4 Campaigns** (module "Email campaigns", Grow group; screen 8).
@@ -166,7 +166,7 @@ and review ask (Reviews), Win-back at 90 days; each stops when the shopper order
 | A typo (`gmial.com`) | Checkout suggests the fix; if it still bounces, the address is suppressed for this shop | Emails card: Bounced · Fix the address · Send again |
 | The shopper marks an email as spam | Suppressed for this shop only; their other shops' mail is untouched | Emails card: Marked spam; the shop's complaint rate |
 | One shop's campaign draws complaints | That shop's marketing pauses alone (tenant), order emails go on; Frrata Admin sees it | Banner: "Campaigns paused: 0.4% marked as spam" |
-| A shop's domain records break after verifying | Sending falls back to `kesar-studio@frratamail.com` at once | Settings: "Records missing — sending from …"; a notice to the owner |
+| A shop's domain records break after verifying | Sending falls back to `kesar-studio@frratamail.app` at once | Settings: "Records missing — sending from …"; a notice to the owner |
 | Support email is a Gmail address | Used as Reply-To only | Sender card says so |
 | No support email set | Order emails can't be switched on; the list links to Settings › Store | Emails to shoppers: "Add a support email first" |
 | Marked shipped, then Undo within 5 minutes | Shipping emails wait 5 minutes and re-check the order; an undone step sends nothing | Undo toast: "The shopper has not been emailed" |
@@ -283,7 +283,7 @@ sell a wallet you recharge, with a rate in paise per message and GST shown. Frra
 ## Phases (each usable on its own)
 | Phase | A merchant can… | Depends on |
 |---|---|---|
-| **E·0 Foundation** | sign in without the hourly cap; nothing else visible | AWS account (SES Mumbai), frrata.com and frratamail.com bought |
+| **E·0 Foundation** | sign in without the hourly cap; nothing else visible | AWS account (SES Mumbai), frrata.com and frratamail.app bought |
 | **E·1 Notices** | see every Frrata notice in the console; get billing, security and Frrata-action emails | E·0; billing B3 uses it |
 | **E·2 Order emails** | have shoppers emailed at each step in the shop's brand; change the words; see bounces | E·0 |
 | **E·3 Own domain** | send from orders@theirbrand.in | E·2 |
@@ -295,7 +295,7 @@ sell a wallet you recharge, with a rate in paise per message and GST shown. Frra
 ## Owner calls (recommendations first)
 1. **Provider — decided (owner, 2026-11-08): Amazon SES from the start**, Mumbai, a tenant per shop; production
    access and a quota for festive volume requested in E·0.
-2. **Domains:** buy **frratamail.com** for shops' order emails ($12.03/yr; frrata.shop stays storefronts only); `notify.frrata.com`
+2. **Domains:** **frratamail.app** for shops' order emails (bought 2026-11-11; frrata.shop stays storefronts only); `notify.frrata.com`
    for Frrata. The shared marketing domain waits for E·4.
 3. **Marketing consent without a checkbox:** (A, recommended) marketing only to shoppers who tap "Email me new drops"
    (no box in checkout; DPDP-ready); (B) email every checkout address until 12 May 2027, then only tappers — two
@@ -310,7 +310,7 @@ sell a wallet you recharge, with a rate in paise per message and GST shown. Frra
 ## Out of scope (and what brings each back)
 Merchant SMTP/own ESP (Scale merchants asking for Klaviyo → an export) · HTML/code templates (a partner building
 themes asks) · open tracking (never: Apple hides opens) · A/B tests (campaigns with > 10k subscribers) · BIMI (DMARC
-at reject on frratamail.com, then a CMC) · SMS (DLT registration done for Frrata as telemarketer) · email attachments
+at reject on frratamail.app, then a CMC) · SMS (DLT registration done for Frrata as telemarketer) · email attachments
 (a CA asks for the PDF by email) · Hindi email words (a fluent review) · inbound email into the Inbox (C3 live).
 
 ## Facts used
