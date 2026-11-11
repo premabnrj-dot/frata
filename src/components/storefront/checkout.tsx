@@ -121,11 +121,13 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     return () => { gone = true }
   }, [f.pincode])
 
-  const total = q ? (method === 'cod' ? q.cod?.total ?? 0 : method === 'prepaid' ? q.prepaid : q.prepaid) : 0
+  // Before a choice, the total of the way the shopper can actually pay: when online payment isn't offered here, the
+  // Pay on delivery total, never the online price (full e2e 2026-11-11: ₹2,191 shown, ₹2,290 the only option).
+  const total = q ? (method === 'cod' ? q.cod?.total ?? 0 : method === 'prepaid' || online || !q.cod ? q.prepaid : q.cod.total) : 0
   const codOk = !!q?.cod
   // The pay-online saving, said on both cards (never a COD surcharge: drip-pricing rule, spec § Rules): what paying
   // online really saves, from the server (less than the saving when it replaces an order offer paying on delivery keeps).
-  const saving = q?.savesOnline ? { amount: q.savesOnline } : null
+  const saving = online && q?.savesOnline ? { amount: q.savesOnline } : null
   const [typing, setTyping] = useState(false)
   const [draftCode, setDraftCode] = useState('')
   const lines = q?.lines.filter((l) => l.qty > 0) ?? []

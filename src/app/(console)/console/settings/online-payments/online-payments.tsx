@@ -1,7 +1,8 @@
 'use client'
 
 import { InfoTip } from '@/components/ui/info-tip'
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
+import { settle } from '@/lib/settle'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,19 +26,23 @@ export function OnlinePayments({ status, support, available, now }: { status: St
   const [err, setErr] = useState<{ field?: string; text: string } | null>(null)
   const [done, setDone] = useState<string | null>(null)
   const [confirm, setConfirm] = useState(false)
-  const [pending, start] = useTransition()
+  // Plain pending state and a refresh after the action resolves, outside any transition (frata-gotchas, Next 15.5): a
+  // transition around connect once never settled, leaving "Checking with Razorpay…" with the old error AND the new
+  // "Connected" on screen (full e2e 2026-11-11).
+  const [pending, setPending] = useState(false)
+  const start = (work: () => Promise<void>) => { setPending(true); void work().finally(() => setPending(false)) }
   const badge = !status ? <Badge>Not connected</Badge> : status.problem ? <Badge tone="danger">Needs attention</Badge> : !status.webhookSeenAt ? <Badge tone="warn">Needs one step</Badge> : status.mode === 'test' ? <Badge tone="info">Test mode</Badge> : <Badge tone="ok">Live</Badge>
 
   const connect = () => start(async () => {
     setErr(null); setDone(null)
     const r = await connectRazorpay({ keyId, keySecret: secret })
-    if (!r.ok) { setErr({ field: r.field, text: r.error }); return }
-    setSecret(''); setDone('Connected. Razorpay accepted the keys.'); router.refresh()
+    if (!r.ok) { setDone(null); setErr({ field: r.field, text: r.error }); return }
+    setErr(null); setSecret(''); setDone('Connected. Razorpay accepted the keys.'); settle(router)
   })
   const disconnect = () => start(async () => {
     const r = await disconnectRazorpay()
     if (!r.ok) { setErr({ text: r.error }); return }
-    setConfirm(false); setKeyId(''); setDone('Disconnected. Shoppers can pay on delivery only.'); router.refresh()
+    setErr(null); setConfirm(false); setKeyId(''); setDone('Disconnected. Shoppers can pay on delivery only.'); settle(router)
   })
   const copy = (t: string) => navigator.clipboard?.writeText(t).catch(() => {})
 
