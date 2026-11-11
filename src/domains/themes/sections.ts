@@ -22,7 +22,7 @@ const label = text(24).default('')
 const hidden = z.boolean().default(false)
 
 /** A link inside the shop only: never an outside URL (spec § Sections rules). */
-export const SHOP_PATH = /^\/(?:|products|products\/[a-z0-9-]{1,80}|collections\/[a-z0-9-]{1,80}|policies\/(?:shipping|returns|privacy|terms|contact))$/
+export const SHOP_PATH = /^\/(?:|products|products\/[a-z0-9-]{1,80}|collections\/[a-z0-9-]{1,80}|policies\/(?:shipping|returns|privacy|terms|contact)|pages\/[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?)$/
 export const shopPath = z.string().regex(SHOP_PATH)
 
 /** One of the shop's own photos in Blob (the action stores only the URL acceptedBase rebuilt for this shop). */

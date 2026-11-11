@@ -91,6 +91,8 @@ describe('event.ts', () => {
     expect(pathShape('/products/chanderi-kurta-set')).toBe('/products/chanderi-kurta-set')
     expect(pathShape('/collections/festive/page/2')).toBe('/collections/festive')
     expect(pathShape('/products/page/3')).toBe('/products/page')
+    expect(pathShape('/pages/our-story')).toBe('/pages/our-story')
+    expect(pathShape('/pages/Our Story')).toBe('other')
     expect(pathShape('/policies/returns')).toBe('/policies/returns')
     expect(pathShape('/bag/')).toBe('/bag')
     for (const p of ['/9876543210', '/priya%40gmail.com', '/products/Kurta', '/products/a/b', '/x']) expect(pathShape(p), p).toBe('other')

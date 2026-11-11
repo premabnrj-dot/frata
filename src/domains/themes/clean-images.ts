@@ -25,13 +25,7 @@ export function cleanImages<L extends { home?: unknown[] }>(layer: L, tenantId: 
         case 'story_fan': return { ...s, cards: s.cards.map((c) => ({ ...c, image: fix(c.image) ?? null })) }
         case 'logos': return { ...s, images: s.images.map((i) => fix(i)!) }
         // TS0b: every fill, by its kind (exhaustive: a new kind with a photo can't be missed; tenancy audit HIGH).
-        case 'design': return { ...s, fill: Object.fromEntries(Object.entries(s.fill).map(([k, f]): [string, Fill] => {
-          switch (f.kind) {
-            case 'image': return [k, { ...f, image: f.image ? { ...f.image, base: fix(f.image)!.base } : null }]
-            case 'heading': case 'text': case 'button': case 'accordion': return [k, f]
-            default: return f satisfies never
-          }
-        })) }
+        case 'design': { const fill = cleanFill(s.fill, tenantId, host); if (!fill) throw new Error('image'); return { ...s, fill } }
         case 'collection_tiles': case 'products': case 'price_tiles': case 'promises': case 'rich_text': return s
         default: return s satisfies never
       }
@@ -39,3 +33,24 @@ export function cleanImages<L extends { home?: unknown[] }>(layer: L, tenantId: 
     return { ...layer, ...(home ? { home } : {}) }
   } catch { return null }
 }
+
+/** A design's or a page's fill with every photo rebuilt for this shop (null: one came from elsewhere). Exhaustive by
+ *  kind (security review M3: one rule for the look's designs and the shop's pages). A page's FAQ holds no photo. */
+export function cleanFill<F extends { kind: string }>(fill: Record<string, F>, tenantId: string, host: string | null): Record<string, F> | null {
+  try {
+    return Object.fromEntries(Object.entries(fill).map(([k, raw]): [string, F] => {
+      const f = raw as unknown as Fill | { kind: 'faq' }
+      switch (f.kind) {
+        case 'image': {
+          if (!f.image) return [k, raw]
+          const base = host ? acceptedBase(f.image.base, host, tenantId, 'theme') ?? acceptedBase(f.image.base, host, tenantId, 'products') : null
+          if (!base) throw new Error('image')
+          return [k, { ...f, image: { ...f.image, base } } as unknown as F]
+        }
+        case 'heading': case 'text': case 'button': case 'accordion': case 'faq': return [k, raw]
+        default: return f satisfies never
+      }
+    }))
+  } catch { return null }
+}
+

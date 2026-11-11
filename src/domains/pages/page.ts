@@ -55,7 +55,8 @@ export function prunePage(template: PageTemplate, d: PageDraft): PageDraft {
 
 export type PageIssue = { blocks: boolean; text: string }
 /** What a page needs before Publish (an example not replaced blocks; a photo not added leaves its block out). */
-export function pageIssues(template: PageTemplate, d: PageDraft, ctx: AnswerCtx): PageIssue[] {
+/** `ctx` absent (the publish, inside its transaction): the bound answers aren't checked (they never block). */
+export function pageIssues(template: PageTemplate, d: PageDraft, ctx?: AnswerCtx): PageIssue[] {
   if (d.hidden || d.removed) return []
   const name = d.title || TEMPLATE_NAMES[template]
   const out: PageIssue[] = []
@@ -72,7 +73,7 @@ export function pageIssues(template: PageTemplate, d: PageDraft, ctx: AnswerCtx)
   }
   if (template === 'faq') for (const i of faqItems(d.fill)) {
     if (!i.q.trim()) continue
-    if ('bound' in i) { if (!boundAnswer(i.bound as Bound, ctx.facts, ctx.overrides, ctx.inr)) out.push({ blocks: false, text: `${name}: “${i.q}” shows once Settings has what it answers` }) }
+    if ('bound' in i) { if (ctx && !boundAnswer(i.bound as Bound, ctx.facts, ctx.overrides, ctx.inr)) out.push({ blocks: false, text: `${name}: “${i.q}” shows once Settings has what it answers` }) }
     else if (!i.a.trim()) out.push({ blocks: true, text: `${name}: write your own answer for “${i.q}”` })
   }
   return out

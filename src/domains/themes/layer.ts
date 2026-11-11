@@ -4,6 +4,10 @@ import { choicesFor } from './choices'
 import { contrast } from './contrast'
 import { SECTION_NAMES, SectionSchema, MAX_PER_PAGE, MAX_SECTIONS, shopPath, type SectionInstance, VIDEO_KEYS, type VideoKey } from './sections'
 import { MenusSchema, SiteSchema, menusProblem, siteProblem } from './site'
+
+/** The Contact page's line above Chat on WhatsApp and the business details (plain words, no markup characters). */
+export const ContactSchema = z.object({ line: z.string().max(160).regex(/^[^<>{}\\\u0000-\u001f]*$/) }).strict()
+export const readContact = (raw: unknown): { line: string } | undefined => { const r = ContactSchema.safeParse(raw); return r.success && r.data.line.trim() ? r.data : undefined }
 import { FOOTERS, HEADERS, HEADER_NAMES, PAGE_DEFAULTS, PAIRINGS, type Hex, type Scheme, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
 
 // =============================================================================
@@ -59,6 +63,8 @@ export const LayerSchema = z.object({
   // Look v4: site settings and menus, in the same layer (draft → publish → undo).
   site: SiteSchema.optional(),
   menus: MenusSchema.optional(),
+  /** Theme Studio TS1a: the Contact page's own line (it renders at /policies/contact); content, like menus. */
+  contact: ContactSchema.optional(),
 })
 export type StoredLayer = z.infer<typeof LayerSchema>
 
@@ -126,7 +132,7 @@ export function carryOver(from: { manifest: ThemeManifest; layer: ThemeLayer }, 
     const home = from.layer.home?.filter((s) => { const r = SectionSchema.safeParse(s); return r.success && fits(r.data, from.manifest, to) })
     // Moving back a version (a recall) can drop a section the earlier version lacks: say so (T3 review).
     const lost = [...new Set(parsed.filter((s) => !fits(s, from.manifest, to)).map((s) => `${nameIn(s, from.manifest)} isn't in ${to.name} ${to.version}`))]
-    return { layer: { style, ...(from.layer.settings ? { settings: from.layer.settings } : {}), ...(home ? { home } : {}), ...(from.layer.site !== undefined ? { site: from.layer.site } : {}), ...(from.layer.menus !== undefined ? { menus: from.layer.menus } : {}) }, lost }
+    return { layer: { style, ...(from.layer.settings ? { settings: from.layer.settings } : {}), ...(home ? { home } : {}), ...(from.layer.site !== undefined ? { site: from.layer.site } : {}), ...(from.layer.menus !== undefined ? { menus: from.layer.menus } : {}), ...(from.layer.contact !== undefined ? { contact: from.layer.contact } : {}) }, lost }
   }
   const was = { ...PAGE_DEFAULTS, ...from.manifest.defaults, ...(from.layer.settings ?? {}) } as ThemeSettings
   const lost: string[] = []
@@ -164,5 +170,5 @@ export function carryOver(from: { manifest: ThemeManifest; layer: ThemeLayer }, 
   // Site settings are the theme's own (owner 2026-11-09: a new theme brings its palette, type and icons); menus are
   // content and come across.
   if (from.layer.site !== undefined) lost.push('Your site colours, text styles and icons')
-  return { layer: { style: to.styles[0]!.key, settings, ...(changed ? { home: kept } : {}), ...(from.layer.menus !== undefined ? { menus: from.layer.menus } : {}) }, lost }
+  return { layer: { style: to.styles[0]!.key, settings, ...(changed ? { home: kept } : {}), ...(from.layer.menus !== undefined ? { menus: from.layer.menus } : {}), ...(from.layer.contact !== undefined ? { contact: from.layer.contact } : {}) }, lost }
 }
