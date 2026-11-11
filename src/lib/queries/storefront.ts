@@ -11,10 +11,9 @@ import type { PolicyFacts } from '@/domains/policies/render'
 import type { DeliveryRules } from '@/domains/checkout/delivery'
 import { tenantForHost, themeVersionRows } from '@/lib/db/platform'
 import { collectionHandleHistory, collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, productPairs, products, productTypes, variants } from '@/lib/db/schema-catalogue'
-import { owedSql, stateSql } from '@/lib/db/order-predicates'
+import { owedSql } from '@/lib/db/order-predicates'
 import { priorPriceSql } from '@/lib/db/price-predicates'
-import { orderLines, orders } from '@/lib/db/schema-orders'
-import { liveCandidates, revisionOf, type Revision } from '@/lib/themes/look'
+import { publishCandidates, revisionBody, revisionOf, type Revision } from '@/lib/themes/look'
 import { liveOf, withdrawnKeys } from '@/domains/themes/release'
 import { withTenant } from '@/lib/db/tenant'
 import { discountCodes, discountTargets, discountTiers, discounts } from '@/lib/db/schema-discounts'
@@ -22,8 +21,6 @@ import { barText, bxgyText, offOf, offerTerms } from '@/domains/checkout/offer-t
 import type { ShowOffer } from '@/domains/checkout/offer-showcase'
 import type { Tx } from '@/lib/db'
 import { shopHost } from '@/lib/public-env'
-import { cleanRules, matches } from '@/domains/catalogue/collection-rules'
-import { productFactsIn } from './catalogue'
 import { playableVideosFor } from './videos'
 import { compactCard, expand, photoPrefixOf, type CatalogueEntry } from '@/lib/storefront/catalogue-entry'
 
@@ -48,9 +45,9 @@ type Loader<A extends unknown[], R> = (tenantId: string, ...a: A) => Promise<R>
 const productKey = (v: unknown) => { if (typeof v !== 'string' || !v) throw new Error('a product scope needs the product id or handle first'); return v }
 // 'catalogue:product' (PV·1, speed review): a product's own entry also carries its handle's tag, so its video turning
 // playable or going purges that one product, never the catalogue.
-function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop' | 'catalogue' | 'catalogue:product' | 'reviews' | 'reviews:product' | 'videos', fn: Loader<A, R>, revalidate = 60): Loader<A, R> {
+function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop' | 'look' | 'catalogue' | 'catalogue:product' | 'reviews' | 'reviews:product' | 'videos', fn: Loader<A, R>, revalidate = 60): Loader<A, R> {
   return cache((tenantId: string, ...a: A) => unstable_cache(() => fn(tenantId, ...a), ['sf', name, tenantId, ...a.map(String)], {
-    tags: [`shop:${tenantId}`, ...(scope === 'catalogue' || scope === 'videos' ? [`shop:${tenantId}:${scope}`] : scope === 'catalogue:product' ? [`shop:${tenantId}:catalogue`, `shop:${tenantId}:product:${productKey(a[0])}`] : scope === 'reviews' ? [`shop:${tenantId}:reviews`] : scope === 'reviews:product' ? [`shop:${tenantId}:reviews:${productKey(a[0])}`] : [])], revalidate,
+    tags: [`shop:${tenantId}`, ...(scope === 'catalogue' || scope === 'videos' || scope === 'look' ? [`shop:${tenantId}:${scope}`] : scope === 'catalogue:product' ? [`shop:${tenantId}:catalogue`, `shop:${tenantId}:product:${productKey(a[0])}`] : scope === 'reviews' ? [`shop:${tenantId}:reviews`] : scope === 'reviews:product' ? [`shop:${tenantId}:reviews:${productKey(a[0])}`] : [])], revalidate,
   })())
 }
 
@@ -307,36 +304,60 @@ const stored = (r: Revision | null): StoredLook | null => (r ? { revisionId: r.i
 // Which revision is live (liveOf), and which revision an id names, are src/lib/themes/look.ts's and release.ts's rules.
 // The shop caches its recent publishes; which versions are withdrawn is one platform read for every shop (tag
 // `themes`), so a withdraw is one revalidation, whatever the number of shops (T3 review).
-const corePublishes = (tenantId: string) => withTenant(tenantId, async (tx) => (await liveCandidates(tx, tenantId)).map((p) => stored(p.revision)!))
-// The cache hands back JSON (dates as strings): only whether a date is set matters to withdrawnKeys (read as they come).
-const versionStates = unstable_cache(() => themeVersionRows(), ['sf-theme-versions'], { tags: ['themes'], revalidate: 300 })
+// TS0a (speed review): the entry holds the candidates (ids) and the newest one's body, in one transaction.
+type LookEntry = { candidates: { revisionId: string; themeKey: string; themeVersion: string }[]; first: StoredLook | null }
+const coreLook = (tenantId: string): Promise<LookEntry> => withTenant(tenantId, async (tx) => {
+  const cands = await publishCandidates(tx, tenantId)
+  const first = cands[0] ? await revisionBody(tx, tenantId, cands[0].revisionId) : null
+  return { candidates: cands.map((c) => ({ revisionId: c.revisionId, themeKey: c.themeKey, themeVersion: c.themeVersion })), first }
+})
+// Withdrawn versions only (all withdrawnKeys used), as a string[]: the cache hands back JSON, and a Set comes back as {}.
+const withdrawnList = unstable_cache(async () => [...withdrawnKeys(await themeVersionRows())], ['sf-theme-withdrawn'], { tags: ['themes'], revalidate: 300 })
+const withdrawnNow = cache(async () => new Set(await withdrawnList()))
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+/** A published revision's body (frozen: app_theme_revision_frozen), cached by tenant and id; a miss is never cached. */
+const shopRevision = cache(async (tenantId: string, revisionId: string): Promise<StoredLook | null> => {
+  if (!UUID.test(revisionId)) return null
+  try {
+    return await unstable_cache(async () => {
+      const body = await withTenant(tenantId, (tx) => revisionBody(tx, tenantId, revisionId))
+      if (!body) throw new Miss()
+      return body
+    }, ['sf', 'revision', tenantId, revisionId], { tags: [`shop:${tenantId}`, `shop:${tenantId}:revision:${revisionId}`], revalidate: 86_400 })()
+  } catch (e) {
+    if (e instanceof Miss) return null
+    throw e
+  }
+})
 /** After Admin withdraws or recalls a version: every shop re-reads which versions it may render. */
 export const refreshThemeVersions = () => revalidateTag('themes')
 
 /** A revision of THIS shop for its own preview (a draft or an old look). Another shop's id and a missing id read the same: null. */
 export const previewRevision = (tenantId: string, revisionId: string) => withTenant(tenantId, async (tx) => stored(await revisionOf(tx, tenantId, revisionId)))
 
-/** Best sellers: product ids by delivered units in the window, most first. Ids only: a count never leaves the server (ADR-0003). */
-async function coreBestSellers(tenantId: string, days: number): Promise<string[]> {
-  const now = new Date()
-  const since = new Date(now.getTime() - days * 86_400_000)
-  return withTenant(tenantId, async (tx) => {
-    const rows = await tx.select({ productId: orderLines.productId }).from(orderLines)
-      .innerJoin(orders, and(eq(orders.tenantId, orderLines.tenantId), eq(orders.id, orderLines.orderId)))
-      .where(and(eq(orders.tenantId, tenantId), sql`${orders.deliveredAt} >= ${since.toISOString()}`, sql`${stateSql(now)} = 'delivered'`, sql`${orderLines.productId} is not null`))
-      .groupBy(orderLines.productId).orderBy(sql`sum(${orderLines.qty}) desc`, orderLines.productId).limit(60)
-    return rows.map((r) => r.productId!).filter(Boolean)
-  })
-}
+
+import { coreBestSellers } from './best-sellers'
+import { collectionMembersIn } from '@/lib/catalogue/collection-members'
 
 // ── Exports: cached for shoppers, uncached for the merchant's preview ──────────
 
-// A new key: the T1 entry 'look' held one look, this holds a list (a cache that survives a deploy must not meet the old shape).
-const shopPublishes = shopCached('publishes', 'shop', (t) => corePublishes(t))
-/** The shop's live look: its newest publish whose version isn't withdrawn (liveOf). */
-export const shopLook = async (tenantId: string): Promise<StoredLook | null> => liveOf(await shopPublishes(tenantId), withdrawnKeys(await versionStates()))
+// 'look-v2' (TS0a): a reshaped entry gets a new name (the cache outlives a deploy); Publish purges only shop:<t>:look (P11).
+const shopLookEntry = shopCached('look-v2', 'look', (t) => coreLook(t))
+/** The shop's live look: its newest publish not withdrawn (liveOf); a second body only when the newest is withdrawn. */
+export const shopLook = async (tenantId: string): Promise<StoredLook | null> => {
+  const [entry, bad] = await Promise.all([shopLookEntry(tenantId), withdrawnNow()])
+  const live = liveOf(entry.candidates, bad)
+  if (!live) return null
+  return entry.first && entry.first.revisionId === live.revisionId ? entry.first : shopRevision(tenantId, live.revisionId)
+}
 export const shopBestSellers = shopCached('best', 'catalogue', (t, days: number) => coreBestSellers(t, days), 3600)
-export const previewLook = async (tenantId: string): Promise<StoredLook | null> => liveOf(await corePublishes(tenantId), withdrawnKeys(await themeVersionRows()))
+export const previewLook = async (tenantId: string): Promise<StoredLook | null> => {
+  const bad = withdrawnKeys(await themeVersionRows())
+  return withTenant(tenantId, async (tx) => {
+    const live = liveOf(await publishCandidates(tx, tenantId), bad)
+    return live ? revisionBody(tx, tenantId, live.revisionId) : null
+  })
+}
 export const previewBestSellers = (tenantId: string, days: number) => coreBestSellers(tenantId, days)
 // V1: the live look's playable videos, keyed by its sorted ids (never a draft's); its own tag, so a video turning ready never rebuilds the shop.
 export const shopVideos = shopCached('videos', 'videos', (t, key: string) => playableVideosFor(t, key), 3600)
@@ -361,16 +382,7 @@ export const catalogueEntry = (tenantId: string) => coreCatalogue(tenantId, fals
  * the collections list uses) — for product offers' targets (offers O·2 plan review 9). Product ids only; cached with the
  * catalogue (60 s), so a product joining a rule collection reaches its offer within a minute.
  */
-/** collectionMembers, in the caller's tenant transaction: placement prices with members read now, under its locks. */
-export async function collectionMembersIn(tx: Tx, tenantId: string): Promise<Record<string, string[]>> {
-  const cols = await tx.select({ id: collections.id, kind: collections.kind, matchAll: collections.matchAll, rules: collections.rules }).from(collections).where(eq(collections.tenantId, tenantId))
-  const picked = await tx.select({ collectionId: collectionProducts.collectionId, productId: collectionProducts.productId }).from(collectionProducts).where(eq(collectionProducts.tenantId, tenantId))
-  const auto = cols.filter((c) => c.kind === 'auto')
-  const facts = auto.length ? await productFactsIn(tx, tenantId) : []
-  return Object.fromEntries(cols.map((c) => [c.id, c.kind === 'auto'
-    ? facts.filter((f) => matches(cleanRules(c.rules), c.matchAll === 1, f)).map((f) => f.id)
-    : picked.filter((p) => p.collectionId === c.id).map((p) => p.productId)]))
-}
+export { collectionMembersIn } from '@/lib/catalogue/collection-members'
 
 export const collectionMembers = shopCached('collection-members', 'catalogue', (tenantId): Promise<Record<string, string[]>> => withTenant(tenantId, (tx) => collectionMembersIn(tx, tenantId)))
 const shopHandles = shopCached('handles', 'catalogue', (t) => coreHandles(t, false))

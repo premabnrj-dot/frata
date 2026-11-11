@@ -131,7 +131,7 @@ export async function publishLookAction(input: unknown): Promise<R> {
   if (!r.ok) return r
   if ('error' in r.value) return { ok: false, error: r.value.error as string }
   if (r.value.freed) drainSoon()
-  refreshShop(r.tenantId, 'shop')
+  refreshShop(r.tenantId, 'look')
   revalidatePath('/console/look')
   return { ok: true }
 }
@@ -150,7 +150,7 @@ export async function undoPublishAction(input: unknown): Promise<R> {
   })
   if (!r.ok) return r
   if ('error' in r.value) return { ok: false, error: r.value.error as string }
-  refreshShop(r.tenantId, 'shop')
+  refreshShop(r.tenantId, 'look')
   revalidatePath('/console/look')
   return { ok: true }
 }

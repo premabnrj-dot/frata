@@ -34,18 +34,39 @@ async function published(tx: Tx, tenantId: string, limit: number) {
  * Bounded by the number of versions, not by publishes, so a shop that published one version many times still falls
  * back to the version before when it's withdrawn (T3 impact review). The shop, Look and Undo all read this.
  */
+/** A shop's publish candidates: the newest publish of each theme version, newest first, ids only (Theme Studio TS0a,
+ *  speed review). ONE query (DISTINCT ON), in the caller's transaction. THE "newest publish per version" rule: the
+ *  shop's cached look and the console's liveCandidates both read it, so they never disagree. */
+export type PublishCandidate = { publishId: string; revisionId: string; themeKey: string; themeVersion: string; publishedAt: Date }
+export async function publishCandidates(tx: Tx, tenantId: string): Promise<PublishCandidate[]> {
+  const rows = await tx.execute<{ publish_id: string; revision_id: string; theme_key: string; theme_version: string; published_at: Date | string }>(sql`
+    select * from (
+      select distinct on (r.theme_key, r.theme_version) p.id as publish_id, p.revision_id, r.theme_key, r.theme_version, p.published_at
+      from ${shopThemePublishes} p
+      join ${shopThemeRevisions} r on r.tenant_id = p.tenant_id and r.id = p.revision_id
+      where p.tenant_id = ${tenantId}
+      order by r.theme_key, r.theme_version, p.published_at desc, p.id desc
+    ) c order by c.published_at desc, c.publish_id desc`)
+  return [...rows].map((r) => ({ publishId: r.publish_id, revisionId: r.revision_id, themeKey: r.theme_key, themeVersion: r.theme_version, publishedAt: new Date(r.published_at) }))
+}
+
+/** The console's candidates with their full revisions and publish rows (Look, Undo, live): candidates + one fetch. */
 export async function liveCandidates(tx: Tx, tenantId: string) {
-  const all = await tx.select({ id: shopThemePublishes.id, revisionId: shopThemePublishes.revisionId, key: shopThemeRevisions.themeKey, version: shopThemeRevisions.themeVersion }).from(shopThemePublishes)
-    .innerJoin(shopThemeRevisions, and(eq(shopThemeRevisions.tenantId, shopThemePublishes.tenantId), eq(shopThemeRevisions.id, shopThemePublishes.revisionId)))
-    .where(eq(shopThemePublishes.tenantId, tenantId)).orderBy(desc(shopThemePublishes.publishedAt), desc(shopThemePublishes.id))
-  const seen = new Set<string>()
-  const pick = all.filter((p) => { const k = `${p.key}@${p.version}`; if (seen.has(k)) return false; seen.add(k); return true })
+  const pick = await publishCandidates(tx, tenantId)
   if (!pick.length) return []
   const rows = await tx.select({ p: shopThemePublishes, r: shopThemeRevisions }).from(shopThemePublishes)
     .innerJoin(shopThemeRevisions, and(eq(shopThemeRevisions.tenantId, shopThemePublishes.tenantId), eq(shopThemeRevisions.id, shopThemePublishes.revisionId)))
-    .where(and(eq(shopThemePublishes.tenantId, tenantId), inArray(shopThemePublishes.id, pick.map((p) => p.id))))
+    .where(and(eq(shopThemePublishes.tenantId, tenantId), inArray(shopThemePublishes.id, pick.map((p) => p.publishId))))
   const by = new Map(rows.map((x) => [x.p.id, x]))
-  return pick.flatMap((p) => { const x = by.get(p.id); return x ? [{ publishId: x.p.id, revision: x.r, publishedAt: x.p.publishedAt, publishedBy: x.p.publishedBy, publishedByEmail: x.p.publishedByEmail, themeKey: x.r.themeKey, themeVersion: x.r.themeVersion }] : [] })
+  return pick.flatMap((p) => { const x = by.get(p.publishId); return x ? [{ publishId: x.p.id, revision: x.r, publishedAt: x.p.publishedAt, publishedBy: x.p.publishedBy, publishedByEmail: x.p.publishedByEmail, themeKey: x.r.themeKey, themeVersion: x.r.themeVersion }] : [] })
+}
+
+/** One published revision's body, in the caller's transaction (the shop's cached look reads it through
+ *  shopRevision; the console never goes through a cache here: P4). Explicit tenant where. */
+export async function revisionBody(tx: Tx, tenantId: string, revisionId: string): Promise<{ revisionId: string; themeKey: string; themeVersion: string; styleKey: string; settings: unknown } | null> {
+  const [r] = await tx.select({ revisionId: shopThemeRevisions.id, themeKey: shopThemeRevisions.themeKey, themeVersion: shopThemeRevisions.themeVersion, styleKey: shopThemeRevisions.styleKey, settings: shopThemeRevisions.settings })
+    .from(shopThemeRevisions).where(and(eq(shopThemeRevisions.tenantId, tenantId), eq(shopThemeRevisions.id, revisionId))).limit(1)
+  return r ?? null
 }
 
 /**
