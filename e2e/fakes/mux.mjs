@@ -16,6 +16,9 @@ const BASE = `http://localhost:${PORT}`
 const MP4 = readFileSync(new URL('../fixtures/loop.mp4', import.meta.url))
 const uploads = new Map(), assets = new Map(), deleted = [], cancelled = [], renditions = []
 const hex = (n) => crypto.randomBytes(n).toString('hex')
+const readOk = (req) => req.headers.authorization === 'Basic ' + Buffer.from(`${MUX.readId}:${MUX.readSecret}`).toString('base64')
+// Delivery usage (Admin › Infrastructure): assets and seconds the flow sets, answered for any window, paged by 100.
+let delivery = []
 const authOk = (req) => req.headers.authorization === 'Basic ' + Buffer.from(`${MUX.tokenId}:${MUX.tokenSecret}`).toString('base64')
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'PUT, OPTIONS', 'access-control-allow-headers': 'content-type' }
 const send = (res, code, body, headers = {}) => { res.writeHead(code, { 'content-type': 'application/json', ...cors, ...headers }); res.end(body === undefined ? '' : JSON.stringify(body)) }
@@ -52,6 +55,13 @@ http.createServer((req, res) => {
     const body = Buffer.concat(chunks); const u = new URL(req.url, BASE); const p = u.pathname
     if (req.method === 'OPTIONS') return send(res, 204)
     if (p === '/_test/state') return send(res, 200, { uploads: [...uploads.values()], assets: [...assets.values()], deleted, cancelled, renditions })
+    if (p === '/_test/delivery') { delivery = JSON.parse(body.toString() || '[]'); return send(res, 200, { ok: true }) }
+    if (req.method === 'GET' && p === '/video/v1/delivery-usage') {
+      if (!readOk(req)) return send(res, 401, { error: { type: 'unauthorized' } })
+      const page = Number(u.searchParams.get('page') ?? 1), limit = Number(u.searchParams.get('limit') ?? 100)
+      const data = delivery.slice((page - 1) * limit, page * limit).map((d) => ({ asset_id: d.asset_id, delivered_seconds: d.seconds, delivered_seconds_by_resolution: { tier_720p: d.seconds } }))
+      return send(res, 200, { data, total_row_count: delivery.length, timeframe: u.searchParams.getAll('timeframe[]').map(Number) })
+    }
     // The browser's upload (no auth: the URL is the credential, as at Mux).
     if (req.method === 'PUT' && p.startsWith('/_upload/')) {
       const up = uploads.get(p.slice(9)); if (!up || up.status !== 'waiting') return send(res, 404, {})

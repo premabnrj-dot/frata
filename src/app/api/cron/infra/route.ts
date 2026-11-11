@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { pullVercel } from '@/lib/admin/infra'
+import { pullMux, pullVercel } from '@/lib/admin/infra'
 import { isCronRequest } from '@/lib/auth/cron'
 import { errName } from '@/lib/log'
 
@@ -13,7 +13,10 @@ export const maxDuration = 60
 export async function GET(request: Request) {
   if (!isCronRequest(request)) return new NextResponse(null, { status: 401 })
   const now = new Date(), deadline = Date.now() + 50_000
-  const [vercel] = await Promise.allSettled([pullVercel(now, deadline)])
-  if (vercel.status === 'rejected') console.error('[cron] infra vercel', errName(vercel.reason))
-  return NextResponse.json({ vercel: vercel.status === 'fulfilled' ? (vercel.value.ok ? 'ok' : vercel.value.why) : 'error' })
+  const [vercel, mux] = await Promise.allSettled([pullVercel(now, deadline), pullMux(now, deadline)])
+  const out = (name: string, r: PromiseSettledResult<{ ok: boolean; why: string | null }>) => {
+    if (r.status === 'rejected') { console.error(`[cron] infra ${name}`, errName(r.reason)); return 'error' }
+    return r.value.ok ? 'ok' : r.value.why
+  }
+  return NextResponse.json({ vercel: out('vercel', vercel), mux: out('mux', mux) })
 }

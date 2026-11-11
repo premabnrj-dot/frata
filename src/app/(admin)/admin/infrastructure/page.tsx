@@ -2,10 +2,12 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Panel } from '@/components/ui/panel'
 import { ViewTabs } from '@/components/ui/view-tabs'
 import { countFor, supabaseAlerts, type Tab } from '@/domains/infra/alerts'
+import { muxAlerts, muxFacts } from '@/domains/infra/mux'
 import { vercelAlerts, vercelFacts } from '@/domains/infra/vercel'
-import { dbHealth, lastPulls, usageRows } from '@/lib/admin/infra'
+import { dbHealth, lastPulls, usageRows, videoFacts } from '@/lib/admin/infra'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
-import { isVercelBillingConfigured } from '@/lib/env'
+import { isMuxUsageConfigured, isVercelBillingConfigured } from '@/lib/env'
+import { MuxTab } from './_components/mux-tab'
 import { SupabaseTab } from './_components/supabase-tab'
 import { VercelTab } from './_components/vercel-tab'
 
@@ -27,9 +29,15 @@ export default async function InfrastructurePage({ searchParams }: { searchParam
   const now = new Date()
   // From a week before the month: the spike rule compares a day with the 7 before it.
   const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1) - 8 * 86_400_000).toISOString().slice(0, 10)
-  const [health, rows, pulls] = await Promise.all([dbHealth(staff), usageRows('vercel', from).catch(() => []), lastPulls('vercel').catch(() => ({ last: null, lastOk: null }))])
+  const none = { last: null, lastOk: null }
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+  const [health, rows, pulls, muxRows, muxPulls, videos] = await Promise.all([
+    dbHealth(staff), usageRows('vercel', from).catch(() => []), lastPulls('vercel').catch(() => none),
+    usageRows('mux', monthStart.toISOString().slice(0, 10)).catch(() => []), lastPulls('mux').catch(() => none), videoFacts(staff, monthStart),
+  ])
   const vf = vercelFacts(rows, now)
-  const alerts = [...(pulls.lastOk ? vercelAlerts(vf) : []), ...(health ? supabaseAlerts(health) : [])]
+  const mf = muxFacts(muxRows.map((r) => ({ day: r.day, assetId: r.subject, minutes: r.quantity })), videos ?? [], now)
+  const alerts = [...(pulls.lastOk ? vercelAlerts(vf) : []), ...(videos ? muxAlerts(mf) : []), ...(health ? supabaseAlerts(health) : [])]
   const tab: Tab = TABS.some(([t]) => t === sp.tab) ? sp.tab as Tab : 'vercel'
   return (
     <>
@@ -37,7 +45,7 @@ export default async function InfrastructurePage({ searchParams }: { searchParam
       <ViewTabs label="Service" tabs={TABS.map(([t, label]) => ({ href: `/admin/infrastructure?tab=${t}`, label, count: countFor(alerts, t) || undefined, current: t === tab }))} />
       {tab === 'supabase' ? <SupabaseTab h={health} alerts={alerts.filter((a) => a.tab === 'supabase')} />
         : tab === 'vercel' ? <VercelTab f={vf} alerts={alerts.filter((a) => a.tab === 'vercel')} pulls={pulls} connected={isVercelBillingConfigured()} />
-        : <Panel title="Mux’s numbers arrive with its usage read">A read-only Mux token connects this tab. Mux’s own spending alerts by email hold until then.</Panel>}
+        : <MuxTab f={mf} alerts={alerts.filter((a) => a.tab === 'mux')} pulls={muxPulls} connected={isMuxUsageConfigured()} videosRead={videos !== null} />}
     </>
   )
 }

@@ -6,10 +6,12 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import { CONSOLE, PORTS, USERS, signedIn } from '../lib.mjs'
+import { MUX } from '../constants.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 const FAKE = `http://127.0.0.1:${PORTS.domains}`
 const cron = () => fetch(`${CONSOLE}/api/cron/infra`, { headers: { authorization: 'Bearer e2e-cron' } }).then((r) => r.json())
+const setDelivery = (rows) => fetch(`http://127.0.0.1:${PORTS.mux}/_test/delivery`, { method: 'POST', body: JSON.stringify(rows) })
 const setCharges = (charges, wide = false) => fetch(`${FAKE}/_test/charges`, { method: 'POST', body: JSON.stringify({ charges, wide }) })
 /** FOCUS rows for each day of this month so far: frata steady, ekatanv2 large; yesterday a 5× spike on frata. */
 function month(now = new Date()) {
@@ -54,13 +56,13 @@ export default {
         await ctx.close()
       })
 
-      await t.step('Vercel before the first read; Mux says what connects it', async () => {
+      await t.step('Vercel before the first read; Mux shows Frrata’s own videos before its first read', async () => {
         await db`delete from infra_usage_daily`; await db`delete from infra_pulls`
         const { ctx, p } = await open('frata')
         await p.goto(CONSOLE + '/admin/infrastructure?tab=vercel')
         await p.getByText('Vercel’s billing hasn’t been read yet').waitFor()
         await p.goto(CONSOLE + '/admin/infrastructure?tab=mux')
-        await p.getByText('A read-only Mux token connects this tab.', { exact: false }).waitFor()
+        await p.getByText('Live videos').waitFor()
         await ctx.close()
       })
 
@@ -93,6 +95,25 @@ export default {
         await setCharges(null)
       })
 
+      await t.step('Mux: delivery read hourly with the read-only token; the product video, its shop and plan cap; one video over a quarter', async () => {
+        const [prod] = await db`select id, title from products where tenant_id = ${KESAR} order by created_at limit 1`
+        await db.begin(async (x) => {
+          await x`set local session_replication_role = replica`
+          const [vid] = await x`insert into videos (tenant_id, mux_env, created_by, use, upload_id, asset_id, playback_id, duration_ms, ready_at, mp4_ready_at)
+            values (${KESAR}, ${MUX.env}, ${USERS.owner.id}, 'product', 'up_e2e_infra', 'assete2einfra', 'pbe2einfra', 24400, now(), now()) returning id`
+          await x`insert into product_videos (tenant_id, product_id, video_id) values (${KESAR}, ${prod.id}, ${vid.id})`
+        })
+        await setDelivery([{ asset_id: 'assete2einfra', seconds: 1200 * 60 }])
+        assert.equal((await cron()).mux, 'ok')
+        const { ctx, p } = await open('frata')
+        await p.goto(CONSOLE + '/admin/infrastructure?tab=mux')
+        await p.getByText('Delivered · to 12 h ago').waitFor()
+        await p.getByRole('cell', { name: prod.title }).first().waitFor()
+        await p.getByText(/One video is \d+% of delivery/).waitFor()
+        await p.getByRole('cell', { name: /\d+ \/ 1,000|\d+ \/ 300|\d+ \/ 50|\d+ \/ 3,000/ }).first().waitFor()
+        await ctx.close()
+      })
+
       await t.step('A merchant gets no Admin page', async () => {
         const { ctx, p } = await open('owner')
         await p.goto(CONSOLE + '/admin/infrastructure')
@@ -109,7 +130,12 @@ export default {
       })
     } finally {
       if (stuck) await db`delete from outbox where id = ${stuck.id}`
-      await setCharges(null).catch(() => {})
+      await setCharges(null).catch(() => {}); await setDelivery([]).catch(() => {})
+      await db.begin(async (x) => {
+        await x`set local session_replication_role = replica`
+        await x`delete from product_videos where video_id in (select id from videos where asset_id = 'assete2einfra')`
+        await x`delete from videos where asset_id = 'assete2einfra'`
+      }).catch(() => {})
     }
   },
 }

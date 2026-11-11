@@ -92,7 +92,7 @@ export async function up({ build = true } = {}) {
     EKCODE_WA_VERIFY_TOKEN: EKCODE.verifyToken, EKCODE_PHONE_PEPPERS: EKCODE.peppers, EKCODE_SEAL_KEYS: EKCODE.seals,
     // Own domains (D2·10): Vercel's API and DNS-over-HTTPS answered by e2e/fakes/domains.mjs (loopback only).
     VERCEL_API_TOKEN: 'e2e-vercel', VERCEL_BILLING_TOKEN: 'e2e-billing', VERCEL_TEAM_ID: 'team_e2e', VERCEL_PROJECT_ID: 'prj_e2e', VERCEL_API_BASE: `http://127.0.0.1:${PORTS.domains}`, DOH_BASE: `http://127.0.0.1:${PORTS.domains}`,
-    MUX_TOKEN_ID: MUX.tokenId, MUX_TOKEN_SECRET: MUX.tokenSecret, MUX_WEBHOOK_SECRET: MUX.webhook, MUX_ENVIRONMENT_ID: MUX.env,
+    MUX_TOKEN_ID: MUX.tokenId, MUX_TOKEN_SECRET: MUX.tokenSecret, MUX_READ_TOKEN_ID: MUX.readId, MUX_READ_TOKEN_SECRET: MUX.readSecret, MUX_WEBHOOK_SECRET: MUX.webhook, MUX_ENVIRONMENT_ID: MUX.env,
     MUX_API_BASE: `http://localhost:${PORTS.mux}`, MUX_STREAM_BASE: `http://localhost:${PORTS.mux}/stream`, MUX_IMAGE_BASE: `http://localhost:${PORTS.mux}/image`,
   })
   await until(async () => { try { return (await fetch(CONSOLE)).status > 0 } catch { return false } }, 60_000)

@@ -2440,4 +2440,19 @@ insert into infra_usage_daily (source, day, service, quantity, cost_micros) valu
 do $$ begin if (select cost_micros from infra_usage_daily where source = 'vercel' and day = '2026-11-01') <> 140000 then raise exception 'FAIL: Admin cannot read back vendor usage'; end if; end $$;
 rollback;
 
-\echo 'tenancy proof — all 66 checks passed'
+-- 67. Admin › Infrastructure's Mux tab (drizzle/0095): admin_video_usage() is staff-only; it returns no playback id,
+-- upload id or URL (only whether the file arrived).
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_app']) r where has_function_privilege(r, 'admin_video_usage(timestamptz)', 'execute'))
+  then raise exception 'FAIL: a non-staff role runs admin_video_usage'; end if;
+  if not has_function_privilege('frata_admin', 'admin_video_usage(timestamptz)', 'execute') then raise exception 'FAIL: Admin cannot read video usage'; end if;
+end $$;
+begin; set local role frata_admin;
+do $$ declare r jsonb; begin
+  for r in select jsonb_array_elements(admin_video_usage(now() - interval '1 year')) loop
+    if r ?| array['playback_id', 'upload_id', 'mux_env', 'created_by'] then raise exception 'FAIL: admin_video_usage returns a playback or upload id'; end if;
+  end loop;
+end $$;
+rollback;
+
+\echo 'tenancy proof — all 67 checks passed'

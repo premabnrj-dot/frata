@@ -1,7 +1,7 @@
 // Addresses, people and test keys shared by the flows (e2e/lib.mjs) and the fakes (e2e/fakes/*): no imports, so a fake starts without Playwright.
 export const PORTS = { app: 3077, razorpay: 4010, auth: 54399, pg: 54340, meta: 4020, mux: 4030, domains: 4040 }
 /** Frrata's Mux in the local test: a stand-in API, upload host, stream and image host (e2e/fakes/mux.mjs). */
-export const MUX = { tokenId: 'e2e-mux-token', tokenSecret: 'e2e-mux-secret', webhook: 'e2e-mux-webhook-secret', env: 'e2eenv' }
+export const MUX = { tokenId: 'e2e-mux-token', tokenSecret: 'e2e-mux-secret', webhook: 'e2e-mux-webhook-secret', env: 'e2eenv', readId: 'e2e-mux-read', readSecret: 'e2e-mux-read-secret' }
 /** A merchant's own domain in the local run (shop addresses D2·10): e2e/fakes/domains.mjs answers for it. */
 export const OWN_DOMAIN = 'kesarstudio-e2e.in'
 /** Frrata's Meta app in the local test: a stand-in Graph API (e2e/fakes/meta.mjs) knows these. */
