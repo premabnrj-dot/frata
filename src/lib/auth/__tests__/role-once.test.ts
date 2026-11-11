@@ -40,3 +40,15 @@ describe('requireStaff', () => {
     expect(await requireStaff(ANY_STAFF)).toMatchObject({ ok: false, reason: 'not_staff' })
   })
 })
+
+describe('Admin layout: requireStaff then requireMember', () => {
+  it('one Auth call and one access query between them (speed review 2026-11-11 MED 2)', async () => {
+    accessFor.mockResolvedValue({ memberships: [{ tenantId: 't1', role: 'owner', supportSessionId: null }], staffRole: 'admin' })
+    const { requireStaff, ANY_STAFF } = await import('../require-staff')
+    const { requireMember, ANY_MEMBER } = await import('../require-member')
+    expect((await requireStaff(ANY_STAFF)).ok).toBe(true)
+    expect((await requireMember(ANY_MEMBER)).ok).toBe(true)
+    expect(getUser).toHaveBeenCalledTimes(1)
+    expect(accessFor).toHaveBeenCalledTimes(1)
+  })
+})

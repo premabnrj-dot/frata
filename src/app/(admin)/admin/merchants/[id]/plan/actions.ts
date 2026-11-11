@@ -6,7 +6,7 @@ import { fromRupees } from '@/domains/money/paise'
 import { PLAN_CODES } from '@/domains/plans/entitlements'
 import { nextMonthStartIST } from '@/domains/time/month'
 import { changeTenantPlan } from '@/lib/admin/plans'
-import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
+import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import { endShopTrial, extendShopTrial, setShopTrial, trialError } from '@/lib/admin/trials'
 import { revalidatePath } from 'next/cache'
 import { errName } from '@/lib/log'
@@ -20,10 +20,14 @@ const Change = z.object({
 })
 
 export async function changePlanAction(form: FormData) {
-  const staff = await requireStaff(ANY_STAFF)
-  if (!staff.ok) redirect('/admin')
+  // Admin writes are admin-role only (frata-design-language § Apps and modules; UX audit 2026-11-11: support could move
+  // a shop's plan and set a custom price). Support reads the tab and sees no form.
+  const staff = await requireStaff(ADMIN_ONLY)
+  const tid = z.uuid().safeParse(form.get('tenantId'))
+  if (!tid.success) redirect(`/admin/merchants?error=${encodeURIComponent('That form was incomplete. Nothing was changed.')}`)
+  const id = tid.data
+  if (!staff.ok) redirect(`/admin/merchants/${id}/plan?error=${encodeURIComponent('Only an admin can change a plan.')}`)
   const p = Change.safeParse(Object.fromEntries(form))
-  const id = String(form.get('tenantId'))
   if (!p.success) redirect(`/admin/merchants/${id}/plan?error=${encodeURIComponent('Check the plan and the custom price')}`)
   if (p.data.customPrice !== null && !p.data.reason) redirect(`/admin/merchants/${id}/plan?error=${encodeURIComponent('A custom price needs a reason')}`)
   const now = new Date()

@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
-import { button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { ViewTabs } from '@/components/ui/view-tabs'
@@ -12,6 +11,7 @@ import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { formatPhone } from '@/lib/format'
 import { dateTimeIN, sinceIN } from '@/lib/format-date'
 import { decidePartnerAction } from './actions'
+import { Submit } from '@/components/ui/submit'
 
 export const metadata = { title: 'Partners' }
 
@@ -63,13 +63,13 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                 <div className="space-y-3 border-t border-border pt-4">
                   <form action={decidePartnerAction}>
                     <input type="hidden" name="id" value={open.id} /><input type="hidden" name="decision" value="approve" />
-                    <button type="submit" className={button({ size: 'wrap', className: 'w-full justify-center text-center' })}>Approve {open.businessName || open.name}</button>
+                    <Submit size="wrap" className="w-full justify-center text-center">Approve {open.businessName || open.name}</Submit>
                   </form>
                   <form action={decidePartnerAction} className="space-y-2">
                     <input type="hidden" name="id" value={open.id} /><input type="hidden" name="decision" value="decline" />
                     <label htmlFor="reason" className="block text-sm font-medium">Reason to decline</label>
                     <input id="reason" name="reason" maxLength={300} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9" />
-                    <button type="submit" className={button({ variant: 'secondary', className: 'w-full' })}>Decline</button>
+                    <Submit variant="secondary" className="w-full">Decline</Submit>
                   </form>
                 </div>
               ) : <Badge tone={open.approvedAt ? 'ok' : 'neutral'}>{open.approvedAt ? 'Approved' : 'Declined'}</Badge>}

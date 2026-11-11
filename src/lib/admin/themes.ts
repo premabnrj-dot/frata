@@ -35,19 +35,21 @@ export type AdminVersion = {
 export async function themeVersionsForAdmin(staff: StaffOk): Promise<AdminVersion[]> {
   void staff
   const db = adminDb()
-  const [rows, stages, pubs, revs, names] = await Promise.all([
+  const [rows, stages, pubs] = await Promise.all([
     db.select().from(themeVersions),
     db.select({ versionId: themeVersionStages.versionId, tenantId: themeVersionStages.tenantId, name: tenants.name }).from(themeVersionStages).innerJoin(tenants, eq(tenants.id, themeVersionStages.tenantId)).orderBy(asc(tenants.name)),
-    db.select({ tenantId: shopThemePublishes.tenantId, revisionId: shopThemePublishes.revisionId, publishedAt: shopThemePublishes.publishedAt, id: shopThemePublishes.id }).from(shopThemePublishes),
-    db.select({ id: shopThemeRevisions.id, tenantId: shopThemeRevisions.tenantId, themeKey: shopThemeRevisions.themeKey, themeVersion: shopThemeRevisions.themeVersion }).from(shopThemeRevisions),
-    db.select({ id: tenants.id, name: tenants.name }).from(tenants),
+    // Publishes only, each with its revision's version and its shop's name, joined in SQL: never every draft
+    // revision of every shop read into memory (speed review 2026-11-11 MED 3; autosave writes many revisions).
+    db.select({ tenantId: shopThemePublishes.tenantId, name: tenants.name, themeKey: shopThemeRevisions.themeKey, themeVersion: shopThemeRevisions.themeVersion, publishedAt: shopThemePublishes.publishedAt, id: shopThemePublishes.id })
+      .from(shopThemePublishes)
+      .innerJoin(shopThemeRevisions, eq(shopThemeRevisions.id, shopThemePublishes.revisionId))
+      .innerJoin(tenants, eq(tenants.id, shopThemePublishes.tenantId)),
   ])
-  const nameOf = new Map(names.map((n) => [n.id, n.name]))
+  const nameOf = new Map(pubs.map((p) => [p.tenantId, p.name]))
   // Each shop's live look by the shop's own rule (liveOf), so Admin's counts never disagree with what shoppers see.
   const bad = withdrawnKeys(rows)
-  const rev = new Map(revs.map((r) => [r.id, r]))
   const byShop = new Map<string, { themeKey: string; themeVersion: string; at: number; id: string }[]>()
-  for (const p of pubs) { const r = rev.get(p.revisionId); if (!r) continue; const list = byShop.get(p.tenantId) ?? []; list.push({ themeKey: r.themeKey, themeVersion: r.themeVersion, at: p.publishedAt.getTime(), id: p.id }); byShop.set(p.tenantId, list) }
+  for (const p of pubs) { const list = byShop.get(p.tenantId) ?? []; list.push({ themeKey: p.themeKey, themeVersion: p.themeVersion, at: p.publishedAt.getTime(), id: p.id }); byShop.set(p.tenantId, list) }
   const live = new Map<string, { tenantId: string; name: string }[]>()
   for (const [tenantId, list] of byShop) {
     const l = liveOf(list.sort((a, b) => b.at - a.at || b.id.localeCompare(a.id)), bad)

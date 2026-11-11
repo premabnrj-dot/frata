@@ -1,8 +1,8 @@
 import 'server-only'
 import { cache } from 'react'
 import { cookies } from 'next/headers'
-import { createServerSupabase } from '@/lib/supabase/server'
-import { accessFor, type Membership } from '@/lib/db/platform'
+import type { Membership } from '@/lib/db/platform'
+import { accessOf, signedInUser } from './session'
 import { isDatabaseConfigured } from '@/lib/env'
 import { isAuthConfigured } from '@/lib/public-env'
 import type { MemberRole, StaffRole } from '@/lib/db/schema'
@@ -43,11 +43,10 @@ const currentAccess = cache(async (): Promise<MemberResult> => {
   if (!isAuthConfigured() || !isDatabaseConfigured()) {
     return { ok: false, reason: 'not_configured', message: 'Frrata is not connected yet' }
   }
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await signedInUser()
   if (!user) return { ok: false, reason: 'signed_out', message: 'Not signed in' }
 
-  const access = await accessFor(user.id)
+  const access = await accessOf(user.id)
   const wanted = (await cookies()).get(TENANT_COOKIE)?.value
   const membership = access.memberships.find((m) => m.tenantId === wanted) ?? access.memberships[0]
   if (!membership) return { ok: false, reason: 'no_access', message: 'You do not have access to this store' }

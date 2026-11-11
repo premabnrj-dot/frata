@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation'
 import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { addOnAllowed, type ModuleAccess } from '@/domains/modules/access'
@@ -13,6 +12,7 @@ import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dayIN } from '@/lib/format-date'
 import { MerchantTabs } from '../tabs'
 import { endAddonAction, giveTrialAction } from './actions'
+import { Submit } from '@/components/ui/submit'
 
 export const metadata = { title: 'Modules' }
 
@@ -69,13 +69,13 @@ export default async function MerchantModulesPage({ params, searchParams }: { pa
                   {trialable && (
                     <form action={giveTrialAction}>
                       <input type="hidden" name="tenantId" value={id} /><input type="hidden" name="module" value={k} />
-                      <Button type="submit" variant="secondary">Give a {TRIAL_DAYS}-day trial of {MODULES[k].name}</Button>
+                      <Submit variant="secondary">Give a {TRIAL_DAYS}-day trial of {MODULES[k].name}</Submit>
                     </form>
                   )}
                   {canChange && addon && (a.how === 'trial' || a.how === 'add_on') && (
                     <form action={endAddonAction}>
                       <input type="hidden" name="tenantId" value={id} /><input type="hidden" name="module" value={k} /><input type="hidden" name="addonId" value={addon} />
-                      <Button type="submit" variant="secondary" className="after:hidden">End {a.how === 'trial' ? 'trial' : 'add-on'}</Button>
+                      <Submit variant="secondary" className="after:hidden">End {a.how === 'trial' ? 'trial' : 'add-on'}</Submit>
                     </form>
                   )}
                 </Td>

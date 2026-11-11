@@ -1,7 +1,6 @@
 import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { MODULE_KEYS, MODULES } from '@/domains/modules/registry'
@@ -9,6 +8,7 @@ import { openPauses } from '@/lib/admin/modules'
 import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { sinceIN } from '@/lib/format-date'
 import { pauseModuleAction, resumeModuleAction } from './actions'
+import { Submit } from '@/components/ui/submit'
 
 export const metadata = { title: 'Modules' }
 
@@ -39,14 +39,14 @@ export default async function ModulesPage({ searchParams }: { searchParams: Prom
                   {admin.ok && (p ? (
                     <form action={resumeModuleAction}>
                       <input type="hidden" name="module" value={k} />
-                      <Button type="submit">Resume {def.name}</Button>
+                      <Submit>Resume {def.name}</Submit>
                     </form>
                   ) : (
                     <form action={pauseModuleAction} className="flex justify-end gap-2">
                       <input type="hidden" name="module" value={k} />
                       <label className="sr-only" htmlFor={`reason-${k}`}>Why pause {def.name}</label>
                       <input id={`reason-${k}`} name="reason" required minLength={3} maxLength={200} placeholder="Why" className="h-10 w-40 rounded-md border border-input bg-card px-3 text-sm md:h-9" />
-                      <Button type="submit" variant="secondary">Pause {def.name} for everyone</Button>
+                      <Submit variant="secondary">Pause {def.name} for everyone</Submit>
                     </form>
                   ))}
                 </Td>

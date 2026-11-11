@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, desc, eq, isNull, sql } from 'drizzle-orm'
-import { adminDb } from '@/lib/db/admin'
+import { adminDb, type AdminDb, type AdminTx } from '@/lib/db/admin'
 import { modulePauses, tenantAddons, tenantModules } from '@/lib/db/schema-modules'
 import type { StaffOk } from '@/lib/auth/require-staff'
 import { currentPlan } from '@/domains/plans/entitlements'
@@ -29,12 +29,17 @@ export type MerchantModules = {
 
 export async function merchantModules(staff: StaffOk, tenantId: string, now: Date): Promise<MerchantModules> {
   void staff
-  const db = adminDb()
+  return modulesIn(adminDb(), tenantId, now)
+}
+
+/** On the caller's connection: giveTrial reads inside its own transaction (under its lock), never on a second
+ *  connection (speed review 2026-11-11 MED 4: outside a render every adminDb() call is its own connection). */
+async function modulesIn(db: AdminDb | AdminTx, tenantId: string, now: Date): Promise<MerchantModules> {
   const [history, addons, switches, pauses] = await Promise.all([
     tenantPlanHistory(db, [tenantId]),
     db.select().from(tenantAddons).where(eq(tenantAddons.tenantId, tenantId)).orderBy(desc(tenantAddons.startsAt)),
     db.select().from(tenantModules).where(and(eq(tenantModules.tenantId, tenantId), isNull(tenantModules.disabledAt))),
-    openPauses(),
+    pausesIn(db),
   ])
   const plan = currentPlan(history.map((h) => ({ ...h, startsAt: h.tp.startsAt })), now)
   const facts: ModuleFacts = {
@@ -60,7 +65,7 @@ export async function giveTrial(staff: StaffOk, tenantId: string, module: Module
   const ends = new Date(now.getTime() + TRIAL_DAYS * 86_400_000)
   return adminDb().transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`trial:${tenantId}:${module}`}))`)
-    const m = await merchantModules(staff, tenantId, now)
+    const m = await modulesIn(tx, tenantId, now)
     if (m.access[module].granted) return 'has_it' as const
     // Off-plan (Reviews on Launch): a trial row would grant nothing (addOnAllowed), so none is written.
     if (!addOnAllowed(module, m.planCode)) return 'off_plan' as const
@@ -82,8 +87,10 @@ export async function endAddon(staff: StaffOk, tenantId: string, addonId: string
   })
 }
 
-export async function openPauses(): Promise<{ module: ModuleKey; pausedAt: Date; reason: string }[]> {
-  const rows = await adminDb().select().from(modulePauses).where(isNull(modulePauses.resumedAt))
+export const openPauses = () => pausesIn(adminDb())
+
+async function pausesIn(db: AdminDb | AdminTx): Promise<{ module: ModuleKey; pausedAt: Date; reason: string }[]> {
+  const rows = await db.select().from(modulePauses).where(isNull(modulePauses.resumedAt))
   return rows.filter((r) => isModuleKey(r.module)).map((r) => ({ module: r.module as ModuleKey, pausedAt: r.pausedAt, reason: r.reason }))
 }
 
