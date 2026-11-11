@@ -5,7 +5,7 @@ import { Pager } from '@/components/data/pager'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { ViewTabs } from '@/components/ui/view-tabs'
-import { ANY_MEMBER, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
+import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { ekcodeConfigured } from '@/lib/ekcode/keys'
 import { formatPercent, formatPhone } from '@/lib/format'
 import { dayMonthIN } from '@/lib/format-date'
@@ -30,7 +30,7 @@ export default async function EkcodePage({ searchParams }: { searchParams: Promi
   // One read for the state, the price and the about page (A1 impact review: never the facts twice).
   const d = await appsPage(tenantId, auth.userId, now.toISOString()).catch((err) => { console.error('[ekcode apps]', err instanceof Error ? err.name : 'error'); return null })
   if (!d) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
-  const about = aboutProps('ekcode', d, now, (CAN_MANAGE as readonly string[]).includes(auth.membership.role), auth.membership.tenantName)
+  const about = aboutProps('ekcode', d, now, mayTurnOff(auth.membership), auth.membership.tenantName)
   if (!d.access.ekcode.usable) {
     return <AppAbout {...about}
       notice={d.access.ekcode.why === 'paused' ? <p role="status" className="mb-4 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">EkCode is paused by Frrata. We’re on it.</p> : undefined} />

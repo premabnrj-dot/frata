@@ -126,10 +126,11 @@ export const SHOWCASE: Record<ModuleKey, Showcase> = {
   },
 }
 
-/** What turning an app off does, in the confirm only (Rule 0: never on the page; Apps A2). 1–3 short lines each. */
+/** What turning an app off does, in the confirm only (Rule 0: never on the page; Apps A2). 1–3 short lines each, true
+ *  of the app as built: "cancelled" only for an app that queues work (`outboxKinds`; impact review A2). */
 export const OFF: Record<ModuleKey, readonly string[]> = {
-  communication: ['COD confirmations and order updates stop.', 'Messages waiting to send are cancelled.', 'Your number stays connected to Meta; chats wait here.'],
-  rto_shield: ['COD orders go to To pack without a confirm.', 'Confirms waiting are cancelled.'],
+  communication: ['Messages stops for your shop.', 'Your number stays connected to Meta; chats wait here.'],
+  rto_shield: ['COD orders go to To pack without a confirm.'],
   ship: ['Labels and tracking stop from the Pack button.', 'Labels already made stay with Shiprocket.'],
   true_profit: ['Profit per order leaves Orders and Analytics.', 'Nothing it read is deleted.'],
   reviews: ['Review asks stop.', 'Reviews already on your products stay.'],
@@ -138,5 +139,5 @@ export const OFF: Record<ModuleKey, readonly string[]> = {
   gst: ['GST returns leave the console.', 'Your invoices stay GST-correct.'],
   ekcode: ['The EkCode button leaves your checkout.', 'Shoppers’ rows stay.'],
   product_video: ['Videos leave your product pages.', 'Uploaded videos stay.'],
-  cart_flows: ['Bag reminders stop.', 'Reminders waiting to send are cancelled.'],
+  cart_flows: ['Bag reminders stop.'],
 }

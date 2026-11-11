@@ -45,3 +45,9 @@ export function seesCosts(role: MemberRole, hasOwner: boolean): boolean {
 export const ROLE_LABEL: Record<MemberRole, string> = { owner: 'Owner', admin: 'Admin', staff: 'Staff', partner: 'Partner', accountant: 'Accountant' }
 /** The members_role CHECK's list, built from MEMBER_ROLES (schema.ts), so the two cannot drift. */
 export const sqlList = (xs: readonly string[]) => xs.map((x) => `'${x.replace(/'/g, "''")}'`).join(',')
+
+/** An owner or admin acting in person — never a Frrata support visit: who sees the shop's bill on Apps and who may turn
+ *  an app off (Apps A2). The one rule; featuredBillWith, mayTurnOff and setModuleAction read it. */
+export function managesInPerson(m: { role: string; supportSessionId: string | null }): boolean {
+  return (CAN_MANAGE as readonly string[]).includes(m.role) && !m.supportSessionId
+}

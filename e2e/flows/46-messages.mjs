@@ -173,7 +173,7 @@ export default {
       await riya.screenshot({ path: t.out('home-billing'), fullPage: true })
       await riya.getByRole('button', { name: 'Turn off Messages' }).click()
       const dlg = riya.getByRole('dialog')
-      await dlg.getByText('COD confirmations and order updates stop.').waitFor()
+      await dlg.getByText('Messages stops for your shop.').waitFor()
       await dlg.getByRole('button', { name: 'Turn off Messages' }).click()
       await riya.getByRole('button', { name: 'Turn on Messages' }).first().waitFor() // the app's page again
       await riya.getByRole('button', { name: 'Turn on Messages' }).first().click()

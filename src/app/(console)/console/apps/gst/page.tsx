@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { button } from '@/components/ui/button'
 import { dueDate } from '@/domains/tax/gstr1'
-import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
+import { requireMember } from '@/lib/auth/require-member'
 import { CONSOLE_ROLES } from '@/domains/tenancy/roles'
 import { CAN_SEE_GST } from '@/domains/tenancy/roles'
 import { dayIN } from '@/lib/format-date'
@@ -42,7 +42,7 @@ export default async function GstPage({ searchParams }: { searchParams: Promise<
   const apps = await appsPage(auth.membership.tenantId, auth.userId, now.toISOString()).catch((err) => { console.error('[gst apps]', err instanceof Error ? err.name : 'error'); return null })
   if (!apps) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const gate = apps.access.gst
-  const about = aboutProps('gst', apps, now, (CAN_MANAGE as readonly string[]).includes(auth.membership.role), auth.membership.tenantName)
+  const about = aboutProps('gst', apps, now, mayTurnOff(auth.membership), auth.membership.tenantName)
   if (!gate.usable) {
     return <AppAbout {...about}
       notice={gate.why === 'paused' ? <p role="status" className="mb-4 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">GST is paused by Frrata. We’re on it.</p> : undefined} />

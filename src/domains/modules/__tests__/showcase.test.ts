@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MODULE_KEYS } from '../registry'
+import { MODULE_KEYS, MODULES } from '../registry'
 import { OFF, SHOWCASE } from '../showcase'
 
 describe('every app has a page worth showing', () => {
@@ -27,6 +27,12 @@ describe('OFF: what turning an app off does', () => {
       expect(OFF[k].length, k).toBeGreaterThanOrEqual(1)
       expect(OFF[k].length, k).toBeLessThanOrEqual(3)
       for (const l of OFF[k]) expect(l.length, `${k}: ${l}`).toBeLessThanOrEqual(70)
+    }
+  })
+  it('only an app that queues work says something is cancelled', () => {
+    for (const k of MODULE_KEYS) {
+      if (MODULES[k].outboxKinds.length) continue
+      for (const l of OFF[k]) expect(l, `${k} queues nothing`).not.toMatch(/cancel/i)
     }
   })
 })

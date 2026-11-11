@@ -144,3 +144,19 @@ None from third parties.
 | UE2: Scale never offered | cheapestPlan names Growth or Scale |
 | UE7: floor | ₹500 over two invoices, kept |
 | UE hypotheses / holdout | Hypotheses table; holdout left to the owner |
+
+## Diff reviews (2026-11-11, after the build)
+| Agent / finding | Outcome |
+|---|---|
+| Impact HIGH: Messages' confirm promised cancelled messages it never queues | OFF lines true of each app as built; a test: an app with no `outboxKinds` never says "cancel" |
+| Impact HIGH / Security LOW-2: Turn off on an about page during a support visit | AppAbout's button follows `mayTurnOff` everywhere |
+| Impact HIGH: support-visit refusal untested | e2e 90-ux: a support visit sees the home, no Turn off, no featured card |
+| Impact MED / Security LOW-3: the card's DB error aborts the page | The card runs after the page's reads, in its own savepoint |
+| Impact MED / Security LOW-1: gate admits all of modules.ts | modules.ts may import `featuredBillWith` only (proved by a planted import) |
+| Impact MED: four copies of "owner or admin, not support" | `managesInPerson` in src/domains/tenancy/roles.ts |
+| Impact MED: ladder beside bill.ts | A test fails when LINE_KINDS changes |
+| Impact MED: featuredBillWith's refusal branches lack an integration test | Accepted: it moves no money; the e2e covers the rupees, staff and support |
+| Impact LOW: Paise brand, 'Working' typed twice | Fixed |
+| Impact LOW: GST tabs drop ?p=; from=featured tags any change | Accepted (every option from Launch is an upgrade) |
+| Security LOW-4: from=featured is the client's word | Accepted: it skews the measure only |
+| Speed: within budget; history read twice, savepoint round trips, fee rows per order | Accepted; group fee rows by base before a shop passes ~10k billed orders a month |

@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { connectionState, needsFor } from '@/domains/communication/health'
-import { ANY_MEMBER, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
+import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { canManageWhatsApp } from '@/domains/communication/roles'
 import { isMessagesConfigured } from '@/lib/env'
 import { shopConnection } from '@/lib/modules/communication/connection'
@@ -29,7 +29,7 @@ export default async function MessagesSetupPage({ searchParams }: { searchParams
   ])
   if (!d) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const canManage = canManageWhatsApp(auth.membership)
-  const about = aboutProps('communication', d, now, (CAN_MANAGE as readonly string[]).includes(auth.membership.role), auth.membership.tenantName)
+  const about = aboutProps('communication', d, now, mayTurnOff(auth.membership), auth.membership.tenantName)
   if (!d.access.communication.usable) {
     // Off or paused, the app's page (Apps gallery A1); a connected number stays connected to Meta and can still be
     // disconnected here (impact review).

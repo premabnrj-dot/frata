@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { paise, type Paise } from '@/domains/money/paise'
 import { deliveredFee } from '@/domains/plans/entitlements'
+import { LINE_KINDS } from '../bill'
 import { cheapestPlan, NUDGE_FLOOR, type LadderInvoice, type LadderPlan } from '../ladder'
 
 // The three stores of the pricing ladder (frata-unit-economics) and its thresholds; plan figures as the plan versions hold them.
@@ -62,4 +63,10 @@ describe('cheapestPlan', () => {
   it('no fee rows: no card', () => {
     expect(cheapestPlan(two(0, 900), launch, others)).toBeNull()
   })
+})
+
+// The ladder treats every line kind but plan, change and fee as equal on both plans (add-ons, carry, over; credits are
+// restated). A new kind must be placed there on purpose (impact review A2).
+it('knows every bill line kind', () => {
+  expect([...LINE_KINDS].sort()).toEqual(['addon', 'carry', 'change', 'credit', 'fee', 'over', 'plan'])
 })

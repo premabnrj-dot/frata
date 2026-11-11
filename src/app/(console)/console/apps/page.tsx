@@ -4,7 +4,7 @@ import { FeaturedCard } from '@/components/modules/featured-card'
 import { Badge } from '@/components/ui/badge'
 import { button } from '@/components/ui/button'
 import { paise } from '@/domains/money/paise'
-import { CAN_MANAGE } from '@/domains/tenancy/roles'
+import { managesInPerson } from '@/domains/tenancy/roles'
 import { formatInr } from '@/lib/format'
 import { dayMonthIN } from '@/lib/format-date'
 import { Panel } from '@/components/ui/panel'
@@ -22,7 +22,7 @@ export default async function AppsPage() {
   if (!auth.ok) return <Panel title={auth.message} />
   const now = new Date()
   // The featured card reads the shop's bill: owners and admins only, never a support visit (A2; featuredBillWith refuses too).
-  const mayBill = (CAN_MANAGE as readonly string[]).includes(auth.membership.role) && !auth.membership.supportSessionId
+  const mayBill = managesInPerson(auth.membership)
   const d = await appsPage(auth.membership.tenantId, auth.userId, now.toISOString(), mayBill ? auth.membership : undefined)
     .catch((err) => { console.error('[apps]', err instanceof Error ? err.name : 'error'); return null })
   if (!d) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>

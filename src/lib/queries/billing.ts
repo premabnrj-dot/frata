@@ -5,10 +5,10 @@ import { daysUntil, lastDay, mayExtend, pausesAt, trialEndsAt, trialState, type 
 import { cache } from 'react'
 import { orders } from '@/lib/db/schema-orders'
 import { trialFactsIn } from './trial-pause'
-import { applyBps, paise } from '@/domains/money/paise'
+import { applyBps, paise, type Paise } from '@/domains/money/paise'
 import { currentPlan, monthlyPrice } from '@/domains/plans/entitlements'
 import { gstinState } from '@/domains/tax/gst'
-import { CAN_MANAGE } from '@/domains/tenancy/roles'
+import { CAN_MANAGE, managesInPerson } from '@/domains/tenancy/roles'
 import { monthStartIST, nextMonthStartIST } from '@/domains/time/month'
 import { draftInvoiceIn, planBilledIn } from '@/lib/billing/draft'
 import type { Membership } from '@/lib/db/platform'
@@ -203,11 +203,11 @@ export const shopTrial = cache(async (m: Pick<Membership, 'tenantId' | 'role'>, 
 
 // ── Apps A2: the featured card (plan docs/plans/2026-11-11-apps-a2-homes.md § 4). Read inside the Apps page's one
 // transaction (appsPage), only for owners and admins outside a support visit; null on anything it cannot vouch for. ──
-export type FeaturedNudge = { invoiceId: string; periodStart: Date; planCode: string; planName: string; saving: number; billed: number; would: number }
+export type FeaturedNudge = { invoiceId: string; periodStart: Date; planCode: string; planName: string; saving: Paise; billed: Paise; would: Paise }
 
 export async function featuredBillWith(tx: Tx, m: Pick<Membership, 'tenantId' | 'role' | 'supportSessionId'>, now: Date): Promise<FeaturedNudge | null> {
   mayReadMoney(m)
-  if (m.supportSessionId) return null
+  if (!managesInPerson(m)) return null
   const t = m.tenantId
   const [history, latest, invoices] = await Promise.all([
     tx.select({ startsAt: tenantPlans.startsAt, trialEndsAt: tenantPlans.trialEndsAt, custom: tenantPlans.customMonthlyPrice, code: plans.code })

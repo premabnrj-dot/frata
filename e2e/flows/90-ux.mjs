@@ -180,6 +180,17 @@ export default {
         for (const [page, path] of [['support-console-home', '/console'], ['support-console-orders', '/console/orders'], ['support-admin-merchant', `/admin/merchants/${M1}`]]) {
           for (const [w, h, label] of [[390, 844, '390'], [1280, 800, '1280']]) { const q = await measure(ctx, page, path, w, label, h); await q.close() }
         }
+        // Apps A2: a support visit sees an app's home but never Turn off (setModuleAction refuses it too).
+        await db`insert into tenant_modules (tenant_id, module, enabled_by) values (${M1}, 'communication', ${USERS.frata.id})`
+        try {
+          await p.goto(CONSOLE + '/console/apps/communication')
+          await p.getByRole('link', { name: 'Usage and billing' }).waitFor()
+          assert.equal(await p.getByRole('button', { name: 'Turn off Messages' }).count(), 0, 'no Turn off on a support visit')
+          await p.goto(CONSOLE + '/console/apps')
+          assert.equal(await p.getByText(/invoice would have been/).count(), 0, 'no featured card on a support visit')
+        } finally {
+          await db`delete from tenant_modules where tenant_id = ${M1} and module = 'communication'`
+        }
         await p.goto(CONSOLE + '/console')
         assert.equal((await p.locator('[data-tile="to_confirm"]').getAttribute('aria-label')).split(', ')[1], '7', "Home's To confirm tile counts merchant-1's, as the pill does")
         assert.ok((await p.locator('[data-next-order]').innerText()).includes('Other shop 1·'), "the next order is merchant-1's own")
