@@ -630,3 +630,55 @@ With 0.8–0.9 kB more, checkout fails too, and PV1-4a only frees room on the pr
     and checks `data-pid` is a uuid. `check:storefront-build` greps for these.
   - Origin on `sendBeacon` is confirmed in Chromium by e2e. Firefox and WebKit aren't installed here: a manual check
     on a phone before go-live.
+
+### speed-reviewer on the A2·2 amendment (2026-11-11): within budget with conditions; folded in
+- **HIGH 1, the lookup:**
+  - `requireShop`, cached 60 s, never `tenantForHost`;
+  - checks that need only headers run first;
+  - the miss memo and both caps are bounded at 5,000 keys.
+- **MED 2, caching:**
+  - `/fe.js` and `/api/shop/e` are out of the middleware matcher;
+  - `/fe.js` is `public, max-age=31536000, immutable`;
+  - `v` is the file's content hash (`BEACON_VERSION`), and `check:beacon` fails a stale file or version.
+- **MED 3, soft navigation:**
+  - a view only when the pathname changes, so the size guide's same-URL entry and `replaceState` aren't counted;
+  - markers are read after `setTimeout(0)` and again at flush, de-duplicated by kind, product and path;
+  - a `window.__fe` guard.
+- **MED 4, the switch:** the tag is tied to the environment only (`ANALYTICS_INGEST_ON` and the URL), never an Admin
+  flag baked into cached pages. A2·5's Admin switch goes in the route (drop and 204, from a 60 s flag).
+- **MED 5, purchase:** a sessionStorage flag set by the checkout just before it leaves for the order page, read once.
+  No server write.
+- **MED 6, the build:** esbuild from `src/beacon/fe.ts`, sharing A·1's `landingParams`, with `ERASED_KEYS` made
+  pure-annotated so it drops out. 1,649 B gzip (ceiling 1.7 kB; the reviewer's 1.6 kB had no room for the security
+  checks). The budget gate prints each page with the beacon: product 122.2, checkout 121.8.
+- **LOW, done:**
+  - the beacon has its own landing key (`fe.l`);
+  - one queue is emptied by whichever of `visibilitychange` and `pagehide` comes first;
+  - bodies are cut under 7,000 characters;
+  - a back-forward restore counts a view;
+  - vitals carry the hard-load product, and INP is the slowest interaction.
+- **LOW, open:**
+  - a real Instagram in-app browser test before go-live (flush the landing after load if events go missing there);
+  - `pair-add` credits `add_to_cart` to the page's product;
+  - the analytics project's region (owner: check Settings › General; ADR-0011 records it once known).
+- **Test limit found while building:** headless Chromium here delivers nothing sent during unload (frata-gotchas). The
+  flow hides the tab before full navigations, and the phone check covers the unload send.
+
+## A2·2 as built (2026-11-11, branch only)
+- `src/beacon/fe.ts` → `public/fe.js` (`npm run build:beacon`; `check:beacon` in `npm test`), mounted by
+  `ShopShell` when `capture && isCountingVisits()`.
+- `/fe.js` is exempted from the shop rewrite by exact name (tested), skipped by the middleware, and cached immutable.
+- Markers: `view_item` on the product page, `begin_checkout` on the checkout page, and `purchase` from the
+  checkout's `fe.p` flag.
+- The route `src/app/api/shop/e/route.ts` → `src/lib/analytics/ingest.ts`, in `ANALYTICS_IN_APP` and `ENTRY_POINTS`.
+- Pure: `src/domains/analytics/event.ts`, `device.ts`, `visitor.ts` (tests in `__tests__/beacon.test.ts`).
+- `drizzle-analytics/0003_product_cap.sql`: the 1,000-products cap. The proof is now 14 checks.
+- `ops/firewall.json`: the rate rule first, and the preview bypass kept off `/api/`.
+- e2e `71-traffic` passes 4 steps: the tag and the file, a phone visit (landing source, soft view, product, bag,
+  checkout), the fold, and the refusals.
+- **Before counting goes live (owner):**
+  1. paste 0003 (`FROM=0003 node scripts/ops/analytics-paste.mjs`);
+  2. the Firewall changes in the dashboard (the rate rule first, the bypass conditions);
+  3. the privacy sentence, approved with the lawyer;
+  4. `ANALYTICS_INGEST_ON=1`, Production only;
+  5. a phone check: Chrome, Safari and Instagram's in-app browser each show events after the tab is left.

@@ -61,6 +61,8 @@ function ekcodeResponse(request: NextRequest) {
 }
 
 // Image-looking paths are NOT skipped (tenancy audit 2026-11-07): /s/<other>/x.png must meet routeFor too.
+// Skipped by exact path (speed review 2026-11-11): the visit beacon /fe.js (a static file, the same on every host) and
+// its ingest /api/shop/e, whose route repeats routeFor's check itself (requireShop): a beacon is one invocation, not two.
 export const config = {
-  matcher: ['/((?!_next/static|_next/image).*)'],
+  matcher: ['/((?!_next/static|_next/image|fe\\.js$|api/shop/e$).*)'],
 }

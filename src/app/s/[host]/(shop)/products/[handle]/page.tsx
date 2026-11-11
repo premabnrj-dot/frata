@@ -62,6 +62,8 @@ export default async function ProductPage({ params }: { params: Params }) {
     <>
       <ProductTags tags={await tagsOf(shop, p, v.indexable, now)} />
       <ProductView shop={shop} p={p} now={now} live layout={theme.settings} extras={theme.product} below={extras.below} rating={extras.rating} />
+      {/* A product view, for the visit beacon (src/beacon/fe.ts reads it; the id is the shop's own product). */}
+      <i hidden data-fe="view_item" data-pid={p.id} />
       <JsonLd data={breadcrumbJsonLd([{ name: shop.shopName, url: `${base}/` }, { name: p.title, url: `${base}/products/${p.handle}` }])} />
     </>
   )

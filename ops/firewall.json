@@ -1,7 +1,37 @@
 {
-  "_why": "Cost guardrails G·2 (docs/plans/2026-11-11-guardrails-infra-a2.md). The source of truth for the frata project's Vercel Firewall; entered by hand in the dashboard (2026-11-11: the REST API answers 404 \"config not found\" for this project even after Bot Protection and a custom rule were published, so it cannot be applied or read back by API). Bypass rules run before the managed rulesets: Shiprocket, Mux and WhatsApp are not Vercel-verified bots (frata-integrations § Vercel platform, 2026-11-11). Bot Protection and AI Bots start in LOG; challenge only after a day of logs shows no real shopper, preview or webhook caught. Previous config before 2026-11-11: none (GET config/active answered 404).",
+  "_why": "Cost guardrails G·2 (docs/plans/2026-11-11-guardrails-infra-a2.md). The source of truth for the frata project's Vercel Firewall; entered by hand in the dashboard (2026-11-11: the REST API answers 404 \"config not found\" for this project even after Bot Protection and a custom rule were published, so it cannot be applied or read back by API). Bypass rules run before the managed rulesets: Shiprocket, Mux and WhatsApp are not Vercel-verified bots (frata-integrations § Vercel platform, 2026-11-11). Bot Protection and AI Bots start in LOG; challenge only after a day of logs shows no real shopper, preview or webhook caught. Previous config before 2026-11-11: none (GET config/active answered 404). 2026-11-11 (A2·2): the beacon's rate limit added first, and the link-preview bypass kept off /api/.",
   "firewallEnabled": true,
   "rules": [
+    {
+      "name": "Rate limit the visit beacon",
+      "description": "A2·2 (security review 2026-11-11 HIGH-2): /api/shop/e is public, so forged beacons are capped per IP before they become invocations. First, so no bypass rule can skip it. 120 a minute per IP, as the route's own cap; a real visit sends a few. Priced per allowed request: about $0.55 a million (speed review estimate, 2026-11-11; recheck on the WAF pricing page before go-live), so cents a month at 20 shops.",
+      "active": true,
+      "conditionGroup": [
+        {
+          "conditions": [
+            {
+              "type": "path",
+              "op": "eq",
+              "value": "/api/shop/e"
+            }
+          ]
+        }
+      ],
+      "action": {
+        "mitigate": {
+          "action": "rate_limit",
+          "rateLimit": {
+            "algo": "fixed_window",
+            "window": 60,
+            "limit": 120,
+            "keys": [
+              "ip"
+            ],
+            "action": "deny"
+          }
+        }
+      }
+    },
     {
       "name": "Bypass webhooks and crons",
       "description": "Providers that aren't verified bots (Shiprocket, Mux) must always reach /api/webhooks; Vercel Cron reaches /api/cron. Each route checks its own signature or cron secret.",
@@ -34,7 +64,7 @@
     },
     {
       "name": "Bypass link previews (WhatsApp, Telegram)",
-      "description": "Link previews of shops shared on WhatsApp and Telegram (unverified bots). The dashboard offers no regex for User Agent, so two 'contains' conditions joined by OR. A user agent can be faked; this skips bot rules only, not DDoS mitigation.",
+      "description": "Link previews of shops shared on WhatsApp and Telegram (unverified bots). The dashboard offers no regex for User Agent, so two 'contains' conditions joined by OR. A user agent can be faked; this skips bot rules only, not DDoS mitigation. Each condition also needs a path that doesn't start with /api/ (security review 2026-11-11 HIGH-2: a faked 'WhatsApp' user agent must never skip the beacon's rate limit).",
       "active": true,
       "conditionGroup": [
         {
@@ -43,6 +73,12 @@
               "type": "user_agent",
               "op": "sub",
               "value": "WhatsApp"
+            },
+            {
+              "type": "path",
+              "op": "pre",
+              "value": "/api/",
+              "neg": true
             }
           ]
         },
@@ -52,6 +88,12 @@
               "type": "user_agent",
               "op": "sub",
               "value": "TelegramBot"
+            },
+            {
+              "type": "path",
+              "op": "pre",
+              "value": "/api/",
+              "neg": true
             }
           ]
         }

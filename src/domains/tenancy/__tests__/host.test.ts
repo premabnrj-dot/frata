@@ -65,7 +65,10 @@ describe('routeFor and shopRewrites: /s/ is reachable only through the rewrite',
     // The rewritten root is not caught again by the rule before it (rules run in order).
     expect(matches(root!.source, '/s/kesar.frata.store')).toBe(false)
     for (const p of ['/products/kurta', '/s/b.frata.store/products/x.png', '/console/preview/a.png', '/policies/shipping', '/images/a.png']) expect(matches(rest!.source, p)).toBe(true)
-    for (const p of ['/favicon.ico', '/apple-touch-icon.png', '/api/x', '/_next/static/a.js']) expect(matches(rest!.source, p)).toBe(false)
+    for (const p of ['/favicon.ico', '/apple-touch-icon.png', '/api/x', '/_next/static/a.js', '/fe.js']) expect(matches(rest!.source, p)).toBe(false)
+    // The beacon's exemption is exact (security review 2026-11-11): nothing near its name escapes the shop. Rewrites
+    // match without case (as the image rule does), so /FE.JS is exempted too; the file lookup is exact, so it is a 404.
+    for (const p of ['/fe.js/x', '/fe.json', '/fe%2ejs', '/xfe.js', '/fe.jsx']) expect(matches(rest!.source, p), p).toBe(true)
     const notShop = new RegExp(`^${rest!.missing[0]!.value}$`)
     for (const h of [C, 'frata.vercel.app', 'frata-abc-team.vercel.app', 'localhost', '127.0.0.1']) expect(notShop.test(h)).toBe(true)
     for (const h of ['kesar.frata.store', 'shop.brand.in', 'app.frata.in.evil.com']) expect(notShop.test(h)).toBe(false)

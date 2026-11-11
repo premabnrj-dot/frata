@@ -17,5 +17,6 @@ export default async function CheckoutPage({ params }: { params: Promise<{ host:
   const wa = m?.access.communication.usable ?? false
   // A module above the form (EkCode's button; checkout.identity). Cached with the page; nothing per shopper here.
   const identity = m ? <Slot name="checkout.identity" ctx={{ tenantId: shop.id }} access={m.access} /> : null
-  return <Checkout shopName={shop.shopName} legalName={shop.legalName} privacyHref={shopHref('/policies/privacy')} returnLine={checkoutReturnLine(shop.returnKind, shop.returnDays)} gst={shop.gst} waOptIn={wa} identity={identity} />
+  // The marker tells the visit beacon a checkout began (src/beacon/fe.ts).
+  return <><i hidden data-fe="begin_checkout" /><Checkout shopName={shop.shopName} legalName={shop.legalName} privacyHref={shopHref('/policies/privacy')} returnLine={checkoutReturnLine(shop.returnKind, shop.returnDays)} gst={shop.gst} waOptIn={wa} identity={identity} /></>
 }

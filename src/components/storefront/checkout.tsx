@@ -189,6 +189,8 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   function done(token: string) {
     announcePlaced({ addressLine: f.addressLine, area: f.area, landmark: f.landmark, city: f.city, state: f.state, pincode: f.pincode })
     bag.clear(); ss.del(FORM_KEY); ss.del(PENDING_KEY)
+    // One purchase for the visit beacon (src/beacon/fe.ts), read once on the order page: never the order or its token.
+    ss.set('fe.p', '1')
     window.location.assign(`/orders#t=${token}`)
   }
 

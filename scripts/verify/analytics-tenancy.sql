@@ -276,6 +276,24 @@ begin
 end $$;
 commit;
 
+-- 11b. Forged product ids: shop E sends 1,005 product views (one product each, each viewed once but the first, viewed
+-- 3 times); its day keeps the top 1,000, the most viewed among them, and another shop's rows are untouched.
+do $$
+declare i integer; before integer := (select count(*) from product_daily where tenant_id <> '55555555-5555-5555-5555-555555555555');
+begin
+  perform ingest_events('55555555-5555-5555-5555-555555555555', 'forger', '{"d":"phone","e":[{"k":"view_item","pid":"eeeeeeee-0000-0000-0000-000000000000"},{"k":"view_item","pid":"eeeeeeee-0000-0000-0000-000000000000"},{"k":"view_item","pid":"eeeeeeee-0000-0000-0000-000000000000"}]}');
+  for i in 1 .. 1004 loop
+    perform ingest_events('55555555-5555-5555-5555-555555555555', 'forger', jsonb_build_object('e', jsonb_build_array(jsonb_build_object('k', 'view_item', 'pid', 'eeeeeeee-0000-0000-0000-' || lpad(i::text, 12, '0')))));
+  end loop;
+  update events set at = now() - interval '2 minutes' where tenant_id = '55555555-5555-5555-5555-555555555555';
+  update fold_state set through = now() - interval '3 minutes';
+  perform analytics_fold();
+  if (select count(*) from product_daily where tenant_id = '55555555-5555-5555-5555-555555555555') <> 1000 then
+    raise exception 'FAIL: shop E keeps % product rows, not 1,000', (select count(*) from product_daily where tenant_id = '55555555-5555-5555-5555-555555555555'); end if;
+  if not exists (select 1 from product_daily where product_id = 'eeeeeeee-0000-0000-0000-000000000000' and views = 3) then raise exception 'FAIL: the cap dropped the most viewed product'; end if;
+  if (select count(*) from product_daily where tenant_id <> '55555555-5555-5555-5555-555555555555') <> before then raise exception 'FAIL: shop E''s cap touched another shop''s products'; end if;
+end $$;
+
 -- 12. A fold across IST midnight: one event at 23:58 yesterday, one today; both days are folded and rebuilt.
 truncate events;
 do $$
@@ -305,4 +323,4 @@ begin
   if analytics_maintain() <> 0 then raise exception 'FAIL: maintenance is not idempotent'; end if;
 end $$;
 
-\echo 'analytics tenancy proof — all 13 checks passed'
+\echo 'analytics tenancy proof — all 14 checks passed'

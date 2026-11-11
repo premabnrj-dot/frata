@@ -33,6 +33,9 @@ const ENTRY_POINTS = {
   'src/app/api/webhooks/razorpay/[key]/route.ts': ['Razorpay webhook: HMAC of the raw body with the shop\'s own secret, found by our key', 'verifyRazorpaySignature('],
   'src/app/api/webhooks/mux/route.ts': ['Mux webhook: HMAC of `t.body` with Frrata\'s webhook secret (current or previous), 5-minute window; each event routed by our video id and its upload id through a definer', 'verifyMuxSignature('],
   'src/app/api/webhooks/billing/route.ts': ['Frrata\'s own billing webhook: HMAC of the raw body with Frrata\'s billing secret (current or previous)', 'webhookSigned('],
+  // A2·2: the visit beacon's ingest, public by design; the shop from the host (requireShop inside ingest), headers and
+  // caps before the lookup, off until ANALYTICS_INGEST_ON (src/lib/analytics/ingest.ts).
+  'src/app/api/shop/e/route.ts': ['the visit beacon: public, the shop from the host via requireShop', 'ingest('],
   // Public, read-only, cached per shop: the shop comes from the host the middleware wrote (shopFor checks its shape).
   'src/app/s/[host]/sitemap.xml/route.ts': ['a shop\'s sitemap: public, read-only', 'shopForRoute('],
   'src/app/s/[host]/robots.txt/route.ts': ['a shop\'s robots.txt: public, read-only', 'shopForRoute('],

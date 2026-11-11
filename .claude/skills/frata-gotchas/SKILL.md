@@ -70,3 +70,13 @@ The console home baseline (`e2e/baselines/console-home-desktop.png`, flow 05 sho
 not a regression: mask the date in that shot or freeze the clock for flow 05 when next touching it. The same full run
 saw flow 46 messages stop at "Connecting…" twice at different steps, then pass 10/10 alone: the same class as the
 open action-commit flake above.
+
+## e2e: a beacon sent while the page unloads never arrives (2026-11-11)
+**Symptom.** `public/fe.js` sends its queue on `pagehide`. In the e2e browser, the beacon of a page left by a full
+navigation never reaches `/api/shop/e`, though `pagehide` and `visibilitychange` both fire (checked with a
+sessionStorage flag). A keepalive `fetch` from the same handler is lost too. A hand-dispatched `pagehide` sends at once.
+**Why.** Headless Chromium in this sandbox, with host-resolver rules, doesn't deliver requests made while a document
+unloads. Real phones do: web-vitals and GA rely on it.
+**Do.** In a flow, hide the tab before a full navigation (`visibilityState` → hidden, then dispatch
+`visibilitychange`), as `e2e/flows/71-traffic.mjs` does. Check the unload send by hand on a phone, never by turning the
+beacon into per-event requests.

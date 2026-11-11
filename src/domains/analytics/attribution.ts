@@ -19,7 +19,9 @@ export type Attribution = Partial<Record<AttributionKey, string>>
 
 /** Erased with an abandoned order's other details (DPDP, `erase.ts`): every key but the merchant's own utm tags (so a
  * click id added to the list later is erased too), and `fbc`/`fbp`, stored before this list existed. */
-export const ERASED_KEYS: readonly string[] = [...ATTRIBUTION_KEYS.filter((k) => !k.startsWith('utm_')), 'fbc', 'fbp']
+// Pure-annotated so the shop's beacon (src/beacon/fe.ts), which shares landingParams, doesn't carry it.
+const erasedKeys = (): readonly string[] => [...ATTRIBUTION_KEYS.filter((k) => !k.startsWith('utm_')), 'fbc', 'fbp']
+export const ERASED_KEYS: readonly string[] = /* @__PURE__ */ erasedKeys()
 
 const MAX = 200
 const isKey = (k: string): k is AttributionKey => (ATTRIBUTION_KEYS as readonly string[]).includes(k)

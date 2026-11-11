@@ -51,7 +51,9 @@ const ADMIN_LIB = /from\s+['"]@\/lib\/admin(\/[^'"]*)?['"]/
 const TENANT_HELPER = /from\s+['"]@\/lib\/db\/tenant['"]/
 const ANALYTICS_DB = /(?:from\s+|import\(\s*)['"]@\/lib\/db\/analytics['"]/
 /** Files outside src/lib/queries that may use the analytics connection, with why. */
-const ANALYTICS_IN_APP = {}
+const ANALYTICS_IN_APP = {
+  'src/lib/analytics/ingest.ts': 'the visit beacon\'s ingest (A·2): one ingestBatch per beacon, the shop from requireShop (the host), never the body',
+}
 /** App files that may open withTenant themselves, with why. */
 const TENANT_IN_APP = {
   'src/app/api/shop/orders/view/route.ts': 'the shopper\'s order page: tenant from the host, order from a signed token',
