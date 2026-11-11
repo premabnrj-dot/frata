@@ -292,3 +292,83 @@ Computed with `orderProfit`; the scratch model is in the session scratchpad.
   and `after()` inserts are lost silently. Option (a) only with **a disk alert on that project** in Infrastructure, and
   90-day partitions dropped on time. The spec's A2·0 is reconciled with this plan.
 - **The Infrastructure dashboard itself costs ≈ $0.03–2 a month** (the hourly cron), plus $0.21–1.24 for the rollup cron.
+
+### architecture-reviewer: changes needed
+- **BLOCKER 1, process:** G and I execute now (the owner's "build … along with admin infrastructure"). **A2 waits for
+  the owner's explicit sign-off** of the A·2 mockup and calls 4 (retention) and 5 (visitor counts in every plan: the
+  unit-economics review recommends yes). Asked of the owner with this plan.
+- **BLOCKER 2, SSOT:** rollups are keyed by the raw inputs (referrer host, utm keys, click-key flags, with top-N) and
+  classified on read through `sourceOfInputs`, never a stored channel (frata-architecture § Attribution: raw in,
+  classified on read).
+- **MAJOR 3:** **`infra_alerts` is cut.** A pure `alertsFor(facts, now)` runs on the page; the nav count reads the
+  same facts. A table returns with notifications, which need send dedupe.
+- **MAJOR 4, the schema follows the mockups:**
+  - `infra_usage_daily` gains a `subject` column (a video, shop or project id), and `infra_pulls` records each pull's
+    outcome (source, at, ok, why);
+  - "Top shops by requests · Bots" is retitled "Top shops by visits" (from A·2's beacon), and Bots is cut;
+  - A·2's products, browsers and speed sections each get their own rollup (grant, RLS, `verify:tenancy` row), or are
+    cut at sign-off.
+- **MAJOR 5, states:**
+  - Infrastructure: a stale or failed pull ("Last read 3 h ago · Vercel didn't answer"); a support-role staffer sees
+    settings read-only.
+  - Analytics: the database paused or unreachable gives a "Visits unavailable" panel. The analytics pool has a 2 s
+    connect timeout and is read in parallel with A·1's snapshot, never inside it.
+  - Pool sum per instance: main 10 + analytics 5, against the pooler's 200.
+- **MAJOR 6, writers:**
+  - **`infra_*` are written by the hourly cron through `adminDb` (`frata_admin`)**, fenced in `src/lib/admin/infra.ts`.
+    `frata_admin` gets INSERT/UPDATE on `infra_usage_daily` and `infra_pulls` only. No new database role.
+  - **Analytics:** pg_cron inside the analytics project runs the rollup, creates partitions 7 days ahead, drops after
+    90 days and rotates the salt, if the recheck confirms pg_cron there. No Vercel cron, role or secret is then
+    needed.
+- **MAJOR 7, ADR-0006:** the pullers need no outbox (a read with no effect at the provider; precedent `checkDomainRow`,
+  `getAsset`), on four conditions:
+  - every call goes through `fetchWithTimeout`, with deadlines that add up to under 55 s;
+  - sources run under `allSettled`;
+  - no transaction is open during a call;
+  - writes are idempotent upserts.
+
+  This is recorded as an ADR-0006 amendment line for the owner, and in frata-architecture. The pullers reuse
+  `src/lib/connectors/vercel/` and `src/lib/video/mux.ts`.
+- **MAJOR 8:** the facts recheck (running) is required before G·1, G·2, I·1 and A2·0.
+- **MAJOR 9, bundle:** A2·2 comes **after PV1-4a and PV1-4** (the product page is at 120.x of 121 kB);
+  `useReportWebVitals` loads `web-vitals`, which has to fit.
+- **MAJOR 10, rules 5 and 6:**
+  - the firewall config is a checked-in file (`ops/firewall.json`) applied by a script (`scripts/ops/firewall.mjs`)
+    that saves the previous version;
+  - migrations to the analytics database are applied by a script, not by hand;
+  - § Practices recorded in skills and § Regression net are added before execution (below).
+- **MAJOR 11, money:** micro-dollars get an ADR-0004 amendment line, a `MicroUsd` type in `src/domains/money/`,
+  `formatUsd` in `src/lib/format.ts`, and one conversion point.
+- **MINOR:**
+  - **order:** Supabase tab first (the definer only), then Vercel, then Mux; I·3's pure rules and tests before the
+    pullers;
+  - Mux "Live / cap" reuses `videoState` and `PRODUCT_VIDEO_CAPS` (raw facts from a definer);
+  - G·1's verify reads `.vc-config.json` from the build, with the value from Observability's p99;
+  - G·2's verify adds in-app checkout (Instagram, WhatsApp), `/api/shop/*`, the Razorpay return and EkCode;
+  - "Send to" and the 30 s live poll are not built ("Check now" refreshes); "Cache hits" is added to the definer;
+  - Mux is pulled every 6 h, as the mockup;
+  - "₹ kept per visit" goes behind `seesCosts`, its maths in `totals.ts`, the 1,000 threshold in `judge.ts`, and an
+    IST-day parity test against `istDayKey`;
+  - the Vercel budget shows "as set in Vercel".
+- **YAGNI, cut:**
+  - the Supabase Management API puller and its token (the Data API is off, so counts are near zero, and there is no
+    egress endpoint). The plan is a dated constant;
+  - the I·2 spend webhook, until notifications (the hourly pull plus Vercel's own email and SMS);
+  - per-rule toggles;
+  - data-centre IP ranges.
+
+## Regression net (before G·1)
+- e2e flows run before and after each phase:
+  - storefront: 10 checkout, 20 baselines, 47 look, 66 video, 68 product-video;
+  - Admin: 45 modules and the admin flows;
+  - Analytics: the A·1 flow.
+- A new e2e flow `69-infrastructure` is written first, against fakes of the Vercel billing API and Mux delivery usage
+  (in `e2e/fakes/`): the three tabs, a failed pull, and a support-role staffer seeing settings read-only.
+
+## Practices recorded in skills
+- frata-architecture:
+  - outside reads with no effect need no outbox (the ADR-0006 conditions);
+  - `infra_*` platform tables;
+  - § Hosting is now Pro.
+- frata-integrations: the recheck's facts, the billing API, the firewall API.
+- frata-gotchas: shop pages are CDN-cached (check `x-vercel-cache` before blaming the storefront for CPU).
