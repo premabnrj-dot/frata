@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { Money, Numeric } from '@/components/data/numeric'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
-import { Button, button } from '@/components/ui/button'
+import { button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { paise } from '@/domains/money/paise'
@@ -18,6 +18,7 @@ import { formatPercent } from '@/lib/format'
 import { resendOwnerLinkAction } from './actions'
 import { Section } from '@/components/layout/section'
 import { MerchantTabs } from './tabs'
+import { Submit } from '@/components/ui/submit'
 
 /** The tab names the merchant ("Kesar Studio · Frrata Admin"). */
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -68,7 +69,7 @@ export default async function MerchantPage({ params, searchParams }: { params: P
               <form action={resendOwnerLinkAction} className="flex items-center justify-between border-t border-border pt-3 text-sm">
                 <span>Invited: <span className="font-mono">{openInvite.email}</span> <span className="text-muted-foreground">· until {dayIN(openInvite.expiresAt)}</span></span>
                 <input type="hidden" name="tenantId" value={id} />
-                <Button type="submit" variant="secondary">Resend sign-in link</Button>
+                <Submit variant="secondary">Resend sign-in link</Submit>
               </form>
             )}
           </Section>

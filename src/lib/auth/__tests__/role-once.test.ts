@@ -4,7 +4,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('server-only', () => ({}))
-vi.mock('react', async (orig) => ({ ...(await orig<typeof import('react')>()), cache: <F extends (...a: never[]) => unknown>(f: F) => { let hit: unknown; let done = false; return ((...a: never[]) => (done ? hit : (done = true, hit = f(...a)))) as F } }))
+vi.mock('react', async (orig) => ({ ...(await orig<typeof import('react')>()), cache: <F extends (...a: never[]) => unknown>(f: F) => { const hits = new Map<string, unknown>(); return ((...a: never[]) => { const k = JSON.stringify(a); if (!hits.has(k)) hits.set(k, f(...a)); return hits.get(k) }) as F } }))
 vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }))
 vi.mock('@/lib/public-env', () => ({ isAuthConfigured: () => true }))
 vi.mock('@/lib/env', () => ({ isDatabaseConfigured: () => true, isAdminDatabaseConfigured: () => true }))
@@ -38,5 +38,17 @@ describe('requireStaff', () => {
     accessFor.mockResolvedValue({ memberships: [], staffRole: null })
     const { requireStaff, ANY_STAFF } = await import('../require-staff')
     expect(await requireStaff(ANY_STAFF)).toMatchObject({ ok: false, reason: 'not_staff' })
+  })
+})
+
+describe('Admin layout: requireStaff then requireMember', () => {
+  it('one Auth call and one access query between them (speed review 2026-11-11 MED 2)', async () => {
+    accessFor.mockResolvedValue({ memberships: [{ tenantId: 't1', role: 'owner', supportSessionId: null }], staffRole: 'admin' })
+    const { requireStaff, ANY_STAFF } = await import('../require-staff')
+    const { requireMember, ANY_MEMBER } = await import('../require-member')
+    expect((await requireStaff(ANY_STAFF)).ok).toBe(true)
+    expect((await requireMember(ANY_MEMBER)).ok).toBe(true)
+    expect(getUser).toHaveBeenCalledTimes(1)
+    expect(accessFor).toHaveBeenCalledTimes(1)
   })
 })

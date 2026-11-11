@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { settle } from './settle'
+import { settle } from '@/lib/settle'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Button, button } from '@/components/ui/button'

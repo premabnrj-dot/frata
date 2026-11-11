@@ -20,23 +20,36 @@ export default {
     const open = async (who, opts) => { const ctx = await signedIn(t.browser, who, opts); const p = await ctx.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message)); return p }
 
     const riya = await open('owner')
-    await t.step('Apps: every module, grouped, with its badge', async () => {
+    await t.step('Apps: a gallery by job, your apps first, filters and search', async () => {
       await riya.goto(CONSOLE + '/console/apps')
       await riya.getByRole('heading', { level: 1, name: 'Apps' }).waitFor()
-      for (const name of ['Messages', 'Reviews', 'True Profit']) await riya.getByRole('button', { name, exact: true }).waitFor()
-      assert.ok(await riya.getByText('Next', { exact: true }).count() >= 1, 'modules not built yet say Next')
+      for (const g of ['Talk to shoppers', 'Get paid and ship', 'Sell more', 'Run the books']) await riya.getByRole('heading', { name: g }).waitFor()
+      for (const k of ['communication', 'reviews', 'true_profit']) await riya.locator(`a[href="/console/apps/${k}"]`).first().waitFor()
+      assert.ok(await riya.getByText('Coming next', { exact: true }).count() >= 1, 'apps not built yet say Coming next')
       await riya.screenshot({ path: t.out('apps'), fullPage: true })
+      await riya.getByRole('button', { name: /^Coming next/ }).click()
+      assert.equal(await riya.locator('a[href="/console/apps/communication"]').count(), 0, 'a built app is filtered out')
+      await riya.getByRole('button', { name: /^All/ }).click()
+      await riya.getByRole('searchbox', { name: 'Search apps' }).fill('zzz')
+      await riya.getByText('No app matches that search.').waitFor()
+      await riya.getByRole('button', { name: 'Clear search' }).click()
+      await riya.locator('a[href="/console/apps/reviews"]').first().waitFor()
     })
 
-    await t.step('the details dialog: what you get, the price, a way out', async () => {
-      await riya.getByRole('button', { name: 'Reviews', exact: true }).click()
-      const d = riya.getByRole('dialog', { name: 'Reviews' })
-      await d.getByRole('heading', { name: 'What you get' }).waitFor()
-      await riya.waitForTimeout(400) // let the dialog finish opening before the screenshot
-      await d.getByText('₹499').first().waitFor()
-      await riya.screenshot({ path: t.out('details') })
-      await d.getByRole('button', { name: 'Not now' }).click()
-      await d.waitFor({ state: 'hidden' })
+    await t.step('an app\'s page: features, questions, the price, and "Tell me when it\'s ready" that sticks', async () => {
+      await riya.locator('a[href="/console/apps/reviews"]').first().click()
+      await riya.waitForURL(/\/console\/apps\/reviews$/)
+      await riya.getByRole('heading', { level: 1, name: 'Reviews' }).waitFor()
+      await riya.getByRole('heading', { name: 'Questions' }).waitFor()
+      await riya.getByText('₹499').first().waitFor()
+      await riya.screenshot({ path: t.out('details'), fullPage: true })
+      await riya.getByRole('button', { name: 'Tell me when it’s ready' }).click()
+      await riya.getByRole('button', { name: 'We’ll tell you when it’s ready' }).waitFor()
+      const rows = await db`select module from app_interest where tenant_id = ${KESAR}`
+      assert.deepEqual(rows.map((r) => r.module), ['reviews'])
+      await riya.reload()
+      await riya.getByRole('button', { name: 'We’ll tell you when it’s ready' }).waitFor()
+      assert.equal((await riya.goto(CONSOLE + '/console/apps/not-an-app')).status(), 404, 'an unknown app is a 404')
     })
 
     await t.step('Apps on a phone: no sideways scroll', async () => {
@@ -55,6 +68,13 @@ export default {
       // (its days would run out unused) nor one off its plans (Reviews: Growth and Scale).
       assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial/ }).count(), 1)
       assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial of (Reviews|True Profit)/ }).count(), 0)
+      // AD·0: giving one writes one row on the action's own transaction (under its lock), then it can be ended.
+      await meera.getByRole('button', { name: 'Give a 30-day trial of GST' }).click()
+      await meera.getByText('GST: 30-day trial started.').waitFor()
+      assert.equal((await db`select count(*)::int n from tenant_addons where tenant_id = ${KESAR} and module = 'gst' and ends_at is null`)[0].n, 1)
+      assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial/ }).count(), 0)
+      await meera.getByRole('button', { name: 'End trial' }).click()
+      await meera.getByText('GST ended.').waitFor()
       // A trial granted before (the row Admin writes when a module ships) shows its end and can be ended.
       await db`insert into tenant_addons (tenant_id, module, trial_ends_at, reason, created_by) values (${KESAR}, 'true_profit', now() + interval '30 days', '30-day trial', ${F.id})`
       await meera.reload()
@@ -65,11 +85,13 @@ export default {
       const [b] = await db`select ends_at from tenant_addons where tenant_id = ${KESAR} and module = 'true_profit'`
       assert.ok(b.ends_at)
       const audit = await db`select action from audit_events where tenant_id = ${KESAR} and action like 'module.%' order by at`
-      assert.deepEqual(audit.map((r) => r.action), ['module.end'])
+      assert.deepEqual(audit.map((r) => r.action), ['module.trial', 'module.end', 'module.end'])
     })
 
     await t.step('Admin pauses a module for everyone, then resumes it', async () => {
       await meera.goto(CONSOLE + '/admin/modules')
+      await meera.getByRole('heading', { name: 'Asked to be told' }).waitFor() // the owner asked for Reviews above
+      await meera.getByText('1 shop asked').first().waitFor()
       await meera.getByLabel('Why pause Messages').fill('Meta outage')
       await meera.getByRole('button', { name: 'Pause Messages for everyone' }).click()
       await meera.getByText('Messages paused for every shop.').waitFor()

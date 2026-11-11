@@ -58,20 +58,18 @@ export default {
 
       await t.step('GST is a module: not in Launch; granted, it is switched on in Apps and opened from there', async () => {
         await p.goto(CONSOLE + `/console/apps/gst?p=${key}`)
-        await p.getByText('GST is in the Growth and Scale plans').waitFor()
+        await p.getByRole('heading', { level: 1, name: 'GST' }).waitFor() // the app's page: on a higher plan
+        await p.getByRole('link', { name: 'See Growth' }).first().waitFor()
         assert.equal(await p.getByRole('link', { name: 'GST', exact: true }).count(), 0, 'no GST in the nav before it is on')
         assert.equal((await p.request.get(CONSOLE + `/console/apps/gst/export?p=${key}&f=json`)).status(), 403)
         // Frrata grants it (as a Growth plan would), then the owner turns it on.
         const [u] = await db`select user_id from members where tenant_id = ${T} and role = 'owner' limit 1`
         await db`insert into tenant_addons (tenant_id, module, trial_ends_at, reason, created_by) values (${T}, 'gst', now() + interval '30 days', 'e2e: as in Growth', ${u.user_id})`
         await p.goto(CONSOLE + '/console/apps')
-        const sw = p.getByRole('switch', { name: 'GST' })
-        assert.equal(await sw.getAttribute('aria-checked'), 'false', 'GST starts off')
-        await sw.click()
-        await until(async () => (await db`select 1 from tenant_modules where tenant_id = ${T} and module = 'gst' and disabled_at is null`).length > 0, 10_000)
-        // Opened from Apps: its Set up link goes to the GST app.
         await p.locator('a[href="/console/apps/gst"]').first().click()
         await p.waitForURL(/\/console\/apps\/gst$/)
+        await p.getByRole('button', { name: 'Turn on GST' }).click()
+        await until(async () => (await db`select 1 from tenant_modules where tenant_id = ${T} and module = 'gst' and disabled_at is null`).length > 0, 10_000)
       })
 
       await t.step('Console › GST: last month, its invoices and taxes, the CA files', async () => {

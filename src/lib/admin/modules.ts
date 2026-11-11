@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, desc, eq, isNull, sql } from 'drizzle-orm'
-import { adminDb } from '@/lib/db/admin'
+import { adminDb, type AdminDb, type AdminTx } from '@/lib/db/admin'
 import { modulePauses, tenantAddons, tenantModules } from '@/lib/db/schema-modules'
 import type { StaffOk } from '@/lib/auth/require-staff'
 import { currentPlan } from '@/domains/plans/entitlements'
@@ -29,12 +29,17 @@ export type MerchantModules = {
 
 export async function merchantModules(staff: StaffOk, tenantId: string, now: Date): Promise<MerchantModules> {
   void staff
-  const db = adminDb()
+  return modulesIn(adminDb(), tenantId, now)
+}
+
+/** On the caller's connection: giveTrial reads inside its own transaction (under its lock), never on a second
+ *  connection (speed review 2026-11-11 MED 4: outside a render every adminDb() call is its own connection). */
+async function modulesIn(db: AdminDb | AdminTx, tenantId: string, now: Date): Promise<MerchantModules> {
   const [history, addons, switches, pauses] = await Promise.all([
     tenantPlanHistory(db, [tenantId]),
     db.select().from(tenantAddons).where(eq(tenantAddons.tenantId, tenantId)).orderBy(desc(tenantAddons.startsAt)),
     db.select().from(tenantModules).where(and(eq(tenantModules.tenantId, tenantId), isNull(tenantModules.disabledAt))),
-    openPauses(),
+    pausesIn(db),
   ])
   const plan = currentPlan(history.map((h) => ({ ...h, startsAt: h.tp.startsAt })), now)
   const facts: ModuleFacts = {
@@ -60,7 +65,7 @@ export async function giveTrial(staff: StaffOk, tenantId: string, module: Module
   const ends = new Date(now.getTime() + TRIAL_DAYS * 86_400_000)
   return adminDb().transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`trial:${tenantId}:${module}`}))`)
-    const m = await merchantModules(staff, tenantId, now)
+    const m = await modulesIn(tx, tenantId, now)
     if (m.access[module].granted) return 'has_it' as const
     // Off-plan (Reviews on Launch): a trial row would grant nothing (addOnAllowed), so none is written.
     if (!addOnAllowed(module, m.planCode)) return 'off_plan' as const
@@ -82,8 +87,10 @@ export async function endAddon(staff: StaffOk, tenantId: string, addonId: string
   })
 }
 
-export async function openPauses(): Promise<{ module: ModuleKey; pausedAt: Date; reason: string }[]> {
-  const rows = await adminDb().select().from(modulePauses).where(isNull(modulePauses.resumedAt))
+export const openPauses = () => pausesIn(adminDb())
+
+async function pausesIn(db: AdminDb | AdminTx): Promise<{ module: ModuleKey; pausedAt: Date; reason: string }[]> {
+  const rows = await db.select().from(modulePauses).where(isNull(modulePauses.resumedAt))
   return rows.filter((r) => isModuleKey(r.module)).map((r) => ({ module: r.module as ModuleKey, pausedAt: r.pausedAt, reason: r.reason }))
 }
 
@@ -108,3 +115,13 @@ export async function resumeModule(staff: StaffOk, module: ModuleKey, now: Date)
 }
 
 export const moduleName = (k: ModuleKey) => MODULES[k].name
+
+export type InterestRow = { module: ModuleKey; tenantId: string; shop: string; people: number; firstAt: Date }
+
+/** "Tell me when it's ready", per app: which shops asked and how many people (Apps gallery A1), through the staff-only
+ *  definer (drizzle/0104). Frrata sends those shops a Notice when the app ships. */
+export async function appInterest(staff: StaffOk): Promise<InterestRow[]> {
+  const rows = await adminDb().execute<{ module: string; tenant_id: string; shop: string; people: string; first_at: string | Date }>(
+    sql`select module, tenant_id, shop, people, first_at from app_admin_interest(${staff.userId}::uuid)`)
+  return [...rows].filter((r) => isModuleKey(r.module)).map((r) => ({ module: r.module as ModuleKey, tenantId: r.tenant_id, shop: r.shop, people: Number(r.people), firstAt: new Date(r.first_at) }))
+}

@@ -13,6 +13,7 @@ import { usage } from '@/domains/plans/entitlements'
 import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import { dayIN } from '@/lib/format-date'
 import { collectAction, issueAction, runDraftsAction } from './actions'
+import { Submit } from '@/components/ui/submit'
 
 export const metadata = { title: 'Billing' }
 
@@ -42,7 +43,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         {draftableMonths(new Date()).some((m) => m.getTime() === start.getTime()) && (
           <form action={runDraftsAction}>
             <input type="hidden" name="month" value={ym} />
-            <button className={button({})}>Run drafts for {label}</button>
+            <Submit>Run drafts for {label}</Submit>
           </form>
         )}
       </div>
@@ -53,12 +54,12 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
             <form action={issueAction} className="mt-2 flex flex-wrap items-end gap-2">
               <input type="hidden" name="month" value={ym} /><input type="hidden" name="count" value={ready.count} /><input type="hidden" name="total" value={ready.total} />
               <label className="flex flex-col gap-1.5 text-sm font-medium">Type ISSUE {ready.count} to confirm<input name="confirm" autoComplete="off" className={field} /></label>
-              <button className={button({ variant: 'destructive' })}>Issue {ready.count} invoice{ready.count === 1 ? '' : 's'}</button>
+              <Submit variant="destructive">Issue {ready.count} invoice{ready.count === 1 ? '' : 's'}</Submit>
             </form>
           )}
         </Panel>
       )}
-      <form action={collectAction}><input type="hidden" name="month" value={ym} /><button className={button({ variant: 'secondary' })}>Run collection now</button></form>
+      <form action={collectAction}><input type="hidden" name="month" value={ym} /><Submit variant="secondary">Run collection now</Submit></form>
       {rows.some((r) => r.number) && <p className="text-sm"><a href={`/admin/billing/export?month=${ym}`} className="underline">Download the GST export for {label} (CSV)</a></p>}
       {rows.length === 0 ? (
         <Panel title={`No invoices for ${label} yet`}>The daily run drafts this month and next for every shop on a plan. Run drafts to make them now.</Panel>

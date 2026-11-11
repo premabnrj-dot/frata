@@ -1,0 +1,488 @@
+<title>Admin Decisions</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: Frrata Admin's frame (dark ink sidebar, STAFF tag) around one page per view; a decision opens a dialog over its page (a sheet on a phone). Example shops and numbers. */
+:root {
+  --bg: #f7f6f3; --card: #ffffff; --fg: #1d1b19; --sub: #6a645d; --line: #e6e1da; --muted: #f1eee9; --scrim: rgb(29 27 25 / .45);
+  --nav: #1d1b19; --nav-fg: #e9e5df; --nav-sub: #9b948b; --primary: #1d1b19; --on-primary: #fbfaf8; --rani: #c41a5e;
+  --ok-bg: #e5f3ea; --ok: #1e6b3d; --warn-bg: #fdf1d8; --warn: #8a5a00; --bad-bg: #fbe6e6; --bad: #a12020; --bad-fill: #b42323; --info-bg: #e7eefb; --info: #234e9a;
+  --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121110; --card: #1b1a18; --fg: #f1eee9; --sub: #a59e95; --line: #2f2c29; --muted: #23211f; --scrim: rgb(0 0 0 / .6);
+  --nav: #0b0a09; --nav-fg: #e9e5df; --nav-sub: #8a837a; --primary: #f1eee9; --on-primary: #121110; --rani: #f06a9e;
+  --ok-bg: #12301f; --ok: #7fd3a0; --warn-bg: #3a2b0c; --warn: #f2c66b; --bad-bg: #3d1515; --bad: #ff9b9b; --bad-fill: #d44a4a; --info-bg: #172744; --info: #9fbdf5; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121110; --card: #1b1a18; --fg: #f1eee9; --sub: #a59e95; --line: #2f2c29; --muted: #23211f; --scrim: rgb(0 0 0 / .6);
+  --nav: #0b0a09; --nav-fg: #e9e5df; --nav-sub: #8a837a; --primary: #f1eee9; --on-primary: #121110; --rani: #f06a9e;
+  --ok-bg: #12301f; --ok: #7fd3a0; --warn-bg: #3a2b0c; --warn: #f2c66b; --bad-bg: #3d1515; --bad: #ff9b9b; --bad-fill: #d44a4a; --info-bg: #172744; --info: #9fbdf5; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 14px/1.5 var(--sans); margin: 0 }
+.mock { padding-block: 16px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 14px; max-width: 1240px; margin: 0 auto }
+nav.views { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px }
+nav.views b { color: var(--sub); font-weight: 500; margin-right: 4px }
+nav.views a { color: var(--fg); text-decoration: none; border: 1px solid var(--line); background: var(--card); padding: 4px 10px; border-radius: 6px }
+nav.views a[aria-current="page"] { background: var(--primary); color: var(--on-primary); border-color: var(--primary) }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--rani); outline-offset: 2px }
+
+.frame { display: grid; grid-template-columns: 220px minmax(0, 1fr); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-height: 720px; background: var(--bg); position: relative }
+@media (max-width: 820px) { .frame { grid-template-columns: minmax(0, 1fr) } .side { display: none } }
+.side { background: var(--nav); color: var(--nav-fg); padding: 16px 12px; display: grid; align-content: start; gap: 2px }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; padding: 4px 8px 14px }
+.staff { background: #fdf1d8; color: #8a5a00; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 3px; letter-spacing: .04em }
+.side span.l { color: var(--nav-fg); padding: 7px 8px; border-radius: 5px; font-size: 13px }
+.side span.l.on { background: rgb(255 255 255 / .1); font-weight: 600 }
+.side .grp { color: var(--nav-sub); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 12px 8px 4px }
+.phonebar { display: none; background: var(--nav); color: var(--nav-fg); padding: 10px 14px; align-items: center; justify-content: space-between; font-weight: 700 }
+@media (max-width: 820px) { .phonebar { display: flex } }
+
+main { padding: 20px; display: grid; gap: 16px; align-content: start; min-width: 0 }
+@media (max-width: 560px) { main { padding: 14px } }
+.back { font-size: 13px; color: var(--sub); text-decoration: none }
+.ph { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: flex-start }
+.ph h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin: 0; text-wrap: balance }
+.meta { color: var(--sub); font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center }
+.acts { display: flex; flex-wrap: wrap; gap: 8px }
+.btn { font: inherit; font-size: 13px; font-weight: 500; border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 6px; padding: 0 12px; height: 36px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; text-decoration: none }
+@media (max-width: 767px) { .btn { height: 40px } }
+.btn.primary { background: var(--primary); color: var(--on-primary); border-color: var(--primary); position: relative }
+.btn.primary::after { content: ""; position: absolute; left: 6px; right: 6px; bottom: 0; height: 2px; background: var(--rani); transform: scaleX(.34); transform-origin: left }
+.btn.danger { background: var(--bad-fill); color: #fff; border-color: var(--bad-fill) }
+.btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed }
+.btn.busy { opacity: .6 }
+.btn.wrap { white-space: normal; height: auto; min-height: 36px; padding-block: 7px; text-align: left }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: grid; gap: 12px; min-width: 0 }
+.card h2 { font-size: 15px; font-weight: 600; margin: 0 }
+.ch { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap }
+.badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 4px; white-space: nowrap }
+.b-ok { background: var(--ok-bg); color: var(--ok) } .b-warn { background: var(--warn-bg); color: var(--warn) } .b-bad { background: var(--bad-bg); color: var(--bad) } .b-info { background: var(--info-bg); color: var(--info) } .b-n { background: var(--muted); color: var(--sub) }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums }
+.sub { color: var(--sub) } .small { font-size: 12px }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto }
+.tabs span { padding: 8px 12px; font-size: 13px; color: var(--sub); border-bottom: 2px solid transparent; white-space: nowrap }
+.tabs span.on { color: var(--fg); font-weight: 600; border-color: var(--fg) }
+.toast { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; background: var(--ok-bg); color: var(--ok); border: 1px solid color-mix(in srgb, var(--ok) 30%, transparent); border-radius: 6px; padding: 8px 12px; font-size: 13px }
+.toast.err { background: var(--bad-bg); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 30%, transparent) }
+.toast a { color: inherit; font-weight: 600 }
+.link { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line) }
+
+/* Lists */
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px }
+.tbl th { text-align: left; font-weight: 500; color: var(--sub); font-size: 12px; padding: 8px 10px; border-bottom: 1px solid var(--line) }
+.tbl td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: middle }
+.tbl tr:last-child td { border-bottom: 0 }
+.tbl .r { text-align: right }
+.scroll { overflow-x: auto }
+@media (max-width: 640px) {
+  .tbl.stack thead { display: none }
+  .tbl.stack tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 10px 0; border-bottom: 1px solid var(--line) }
+  .tbl.stack td { border: 0; padding: 0 }
+  .tbl.stack td[data-l]::before { content: attr(data-l) " "; color: var(--sub); font-size: 12px }
+  .tbl.stack td.full { grid-column: 1 / -1 }
+}
+
+/* Themes: one row per theme, its versions as a strip */
+.theme { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 16px; padding: 14px 0; border-bottom: 1px solid var(--line); align-items: center }
+.theme:last-child { border-bottom: 0 }
+.theme h3 { font-size: 15px; font-weight: 600; margin: 0 }
+.vs { display: flex; flex-wrap: wrap; gap: 6px; grid-column: 1 / -1 }
+.v { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; font-size: 12px; text-decoration: none; color: var(--fg); background: var(--card) }
+.v.cur { border-color: var(--fg) }
+.v.gone { color: var(--sub); text-decoration: line-through }
+.spread { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--muted); min-width: 120px }
+.spread i { display: block; height: 100% }
+.needs { display: grid; gap: 0; border-top: 1px solid var(--line) }
+.need { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line) }
+@media (max-width: 560px) { .need { grid-template-columns: minmax(0, 1fr) } }
+
+/* Lifecycle: a version's road, the step it is on marked */
+.road { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; counter-reset: s }
+.road div { position: relative; padding-top: 18px; font-size: 12px; color: var(--sub) }
+.road div::before { content: ""; position: absolute; top: 6px; left: 0; right: 0; height: 2px; background: var(--line) }
+.road div::after { content: ""; position: absolute; top: 1px; left: 0; width: 12px; height: 12px; border-radius: 50%; background: var(--card); border: 2px solid var(--line) }
+.road div.done::before, .road div.done::after { background: var(--fg); border-color: var(--fg) }
+.road div.now::after { background: var(--rani); border-color: var(--rani) }
+.road div.now { color: var(--fg); font-weight: 600 }
+.road b { display: block; font-weight: inherit; color: inherit }
+.road span { display: block }
+.two { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px }
+@media (max-width: 980px) { .two { grid-template-columns: minmax(0, 1fr) } }
+.facts { display: grid; gap: 0; margin: 0 }
+.facts > div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px }
+.facts > div:last-child { border-bottom: 0 }
+.facts dt { color: var(--sub) } .facts dd { margin: 0; text-align: right }
+.timeline { display: grid; gap: 10px; font-size: 13px; margin: 0; padding: 0; list-style: none }
+.timeline li { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 10px }
+.ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px }
+
+/* Plans */
+.plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px }
+@media (max-width: 980px) { .plans { grid-template-columns: minmax(0, 1fr) } }
+.price { font-family: var(--mono); font-size: 22px; font-weight: 600 }
+.vrow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px; padding: 6px 0; border-top: 1px solid var(--line) }
+.diff { display: grid; gap: 0; font-size: 13px }
+.diff > div { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line) }
+.diff > div:last-child { border-bottom: 0 }
+.diff s { color: var(--sub) }
+.diff .up { color: var(--ok); font-weight: 600 } .diff .down { color: var(--bad); font-weight: 600 }
+.field { display: grid; gap: 6px; font-size: 13px; min-width: 0 }
+.field > span { font-weight: 500 }
+.input { font: inherit; font-size: 14px; height: 40px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); padding: 0 10px; width: 100%; min-width: 0 }
+.input.mono { font-family: var(--mono) }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px }
+@media (max-width: 640px) { .grid3 { grid-template-columns: minmax(0, 1fr) } }
+.chk { display: flex; gap: 8px; align-items: center; font-size: 13px; min-height: 28px }
+.choice { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; background: var(--card) }
+.choice.sel { border: 2px solid var(--fg); padding: 9px 11px }
+.choices { display: grid; gap: 8px }
+.chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chip { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 4px 2px 10px; background: var(--muted) }
+.chip button { border: 0; background: transparent; color: var(--sub); cursor: pointer; font: inherit; width: 22px; height: 22px; border-radius: 50% }
+.ban { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; border-radius: 6px; padding: 10px 12px; font-size: 13px; background: var(--warn-bg); color: var(--warn) }
+
+/* Dialog over its page; a bottom sheet on a phone */
+.over { position: absolute; inset: 0; background: var(--scrim); display: grid; place-items: center; padding: 16px; z-index: 5 }
+.dlg { background: var(--card); color: var(--fg); border-radius: 10px; border: 1px solid var(--line); width: min(520px, 100%); max-height: calc(100% - 16px); overflow: auto; display: grid; gap: 14px; padding: 20px; box-shadow: 0 12px 40px rgb(0 0 0 / .25) }
+.dlg h2 { font-size: 18px; font-weight: 600; margin: 0; text-wrap: balance }
+.dlg .foot { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; border-top: 1px solid var(--line); padding-top: 14px }
+@media (max-width: 640px) {
+  .over { place-items: end stretch; padding: 0 }
+  .dlg { width: 100%; border-radius: 12px 12px 0 0; max-height: 88% }
+  .dlg .foot { flex-direction: column-reverse } .dlg .foot .btn { justify-content: center }
+}
+.touch { background: var(--muted); border-radius: 6px; padding: 12px; display: grid; gap: 8px; font-size: 13px }
+.touch .big { font-family: var(--mono); font-size: 20px; font-weight: 600 }
+.names { display: flex; flex-wrap: wrap; gap: 4px 8px }
+.search { display: flex; gap: 8px }
+.pick { display: grid; gap: 0; border: 1px solid var(--line); border-radius: 6px; max-height: 220px; overflow: auto }
+.pick label { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 13px }
+.pick label:last-child { border-bottom: 0 }
+.menu { position: absolute; right: 0; top: 40px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgb(0 0 0 / .14); display: grid; min-width: 260px; padding: 4px; z-index: 3 }
+.menu span { padding: 8px 10px; font-size: 13px; border-radius: 5px }
+.menu span.d { color: var(--bad) }
+.menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0 }
+.rel { position: relative }
+.view[hidden] { display: none }
+@media (max-width: 820px) { .side { display: none } }
+@media (prefers-reduced-motion: no-preference) { .dlg { animation: up .32s cubic-bezier(.2, .8, .2, 1) } @keyframes up { from { transform: translateY(12px); opacity: .6 } } }
+</style>
+
+<div class="mock">
+  <nav class="views" aria-label="Mockup views">
+    <b>Themes</b><a href="#themes">List</a><a href="#theme">Signal 1.4.0</a><a href="#stage">Stage to shops</a><a href="#withdraw">Withdraw</a>
+    <b>Plans</b><a href="#plans">Plans</a><a href="#plan-new">New version</a><a href="#shop-plan">A shop's plan</a>
+    <b>Modules</b><a href="#modules">Modules</a><a href="#pause">Pause</a><a href="#shop-modules">A shop's modules</a>
+  </nav>
+
+  <div class="frame">
+    <aside class="side" aria-label="Admin navigation">
+      <div class="brand">frrata <span class="staff">STAFF</span></div>
+      <span class="l">Merchants</span><span class="l" data-nav="plans">Plans</span><span class="l">Billing</span>
+      <div class="grp">Product</div>
+      <span class="l" data-nav="modules">Modules</span><span class="l" data-nav="themes">Themes</span><span class="l">Offers</span><span class="l">EkCode</span>
+      <div class="grp">Platform</div>
+      <span class="l">Partners</span><span class="l">Infrastructure</span><span class="l">Activity</span><span class="l">Staff</span>
+    </aside>
+    <div style="min-width:0; display:grid; align-content:start">
+      <div class="phonebar">frrata <span class="staff">STAFF</span></div>
+
+      <!-- ── THEMES LIST ─────────────────────────────────────────── -->
+      <main class="view" id="v-themes" data-nav="themes">
+        <div class="ph"><h1>Themes</h1></div>
+        <section class="card" aria-labelledby="t-needs">
+          <div class="ch"><h2 id="t-needs">Needs you</h2><span class="badge b-warn">1</span></div>
+          <div class="needs">
+            <div class="need"><span class="badge b-info">New in this deploy</span><span><b>Signal 1.5.0</b> <span class="sub">· not offered to any shop</span></span><a class="btn primary" href="#stage">Stage to shops</a></div>
+          </div>
+        </section>
+        <section class="card" aria-label="Every theme">
+          <div class="theme">
+            <div><h3><a class="link" href="#theme">Signal</a></h3><div class="sub small">18 shops live · 4 on older versions</div></div>
+            <div class="spread" role="img" aria-label="14 on 1.4.0, 3 on 1.3.0, 1 on 1.2.0"><i style="width:78%;background:var(--fg)"></i><i style="width:16%;background:var(--sub)"></i><i style="width:6%;background:var(--line)"></i></div>
+            <div class="vs"><a class="v" href="#stage">1.5.0 <span class="badge b-info">In code</span></a><a class="v cur" href="#theme">1.4.0 <span class="badge b-ok">Released</span> <span class="num">14</span></a><a class="v" href="#theme">1.3.0 <span class="num">3</span></a><a class="v" href="#theme">1.2.0 <span class="num">1</span></a><span class="v gone">1.1.0 <span class="badge b-bad">Withdrawn</span></span></div>
+          </div>
+          <div class="theme">
+            <div><h3><span class="link">Editorial</span></h3><div class="sub small">21 shops live</div></div>
+            <div class="spread" role="img" aria-label="21 on 1.1.0"><i style="width:100%;background:var(--fg)"></i></div>
+            <div class="vs"><span class="v cur">1.1.0 <span class="badge b-ok">Released</span> <span class="num">21</span></span><span class="v">1.0.0 <span class="num">0</span></span></div>
+          </div>
+          <div class="theme">
+            <div><h3><span class="link">Minimal</span></h3><div class="sub small">9 shops live · 2 piloting 1.1.0</div></div>
+            <div class="spread" role="img" aria-label="7 on 1.0.0, 2 on 1.1.0"><i style="width:78%;background:var(--fg)"></i><i style="width:22%;background:var(--sub)"></i></div>
+            <div class="vs"><span class="v">1.1.0 <span class="badge b-warn">Pilot · 2 shops</span></span><span class="v cur">1.0.0 <span class="badge b-ok">Released</span> <span class="num">7</span></span></div>
+          </div>
+          <div class="theme">
+            <div><h3><span class="link">Classic</span></h3><div class="sub small">4 shops live · every shop's fallback</div></div>
+            <div class="spread" role="img" aria-label="4 on 1.0.0"><i style="width:100%;background:var(--fg)"></i></div>
+            <div class="vs"><span class="v cur">1.0.0 <span class="badge b-n">Baseline</span> <span class="num">4</span></span></div>
+          </div>
+        </section>
+      </main>
+
+      <!-- ── ONE VERSION ─────────────────────────────────────────── -->
+      <main class="view" id="v-theme" data-nav="themes">
+        <a class="back" href="#themes">← Themes</a>
+        <div class="toast" role="status"><span>Signal 1.4.0 released · 52 shops can try it</span></div>
+        <div class="ph">
+          <div><h1>Signal 1.4.0</h1><div class="meta"><span class="badge b-ok">Released</span><span>14 shops live</span><span>Released 11 Nov by Prema</span></div></div>
+          <div class="acts rel">
+            <button class="btn" aria-haspopup="menu" aria-expanded="true">More ▾</button>
+            <div class="menu" role="menu"><span role="menuitem">Copy link to this version</span><hr><span role="menuitem" class="d">Recall Signal 1.4.0…</span><span role="menuitem" class="d">Withdraw Signal 1.4.0…</span></div>
+          </div>
+        </div>
+        <div class="card"><div class="road" aria-label="Where this version is">
+          <div class="done"><b>In code</b><span>Deploy 9 Nov</span></div>
+          <div class="done"><b>Pilot</b><span>3 shops · 2 days</span></div>
+          <div class="now"><b>Released</b><span>11 Nov</span></div>
+          <div><b>Recalled or withdrawn</b><span>—</span></div>
+        </div></div>
+        <div class="two">
+          <section class="card">
+            <div class="ch"><h2>Shops</h2><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Live on it · 14</span><span role="tab">On older · 4</span><span role="tab">Pilot · 3</span></div></div>
+            <div class="scroll"><table class="tbl stack">
+              <thead><tr><th>Shop</th><th>Published</th><th class="r">Orders, 30 days</th></tr></thead>
+              <tbody>
+                <tr><td><a class="link" href="#shop-modules">Kesar Studio</a></td><td data-l="Published" class="sub">11 Nov</td><td class="r num" data-l="Orders">412</td></tr>
+                <tr><td><span class="link">Ruh Threads</span></td><td data-l="Published" class="sub">11 Nov</td><td class="r num" data-l="Orders">188</td></tr>
+                <tr><td><span class="link">Malmal Co.</span></td><td data-l="Published" class="sub">10 Nov · pilot</td><td class="r num" data-l="Orders">96</td></tr>
+                <tr><td><span class="link">Indigo Loom</span></td><td data-l="Published" class="sub">10 Nov · pilot</td><td class="r num" data-l="Orders">57</td></tr>
+                <tr><td colspan="3" class="sub full">and 10 more</td></tr>
+              </tbody>
+            </table></div>
+          </section>
+          <div style="display:grid;gap:16px;align-content:start;min-width:0">
+            <section class="card"><h2>Since 1.3.0</h2>
+              <ul class="ul"><li>New section: Size help</li><li>Sale price beside the old price on cards</li><li>Hindi labels</li></ul>
+              <p class="small sub" style="margin:0">Shops on 1.3.0 keep their look when they move.</p>
+            </section>
+            <section class="card"><h2>History</h2>
+              <ol class="timeline">
+                <li><span class="sub">11 Nov 19:14</span><span>Released · Prema</span></li>
+                <li><span class="sub">9 Nov 16:02</span><span>Staged to Malmal Co., Indigo Loom, Chikan House · Prema</span></li>
+                <li><span class="sub">9 Nov 15:40</span><span>In this deploy</span></li>
+              </ol>
+            </section>
+          </div>
+        </div>
+      </main>
+
+      <!-- ── STAGE (dialog over Signal 1.5.0) ────────────────────── -->
+      <main class="view" id="v-stage" data-nav="themes">
+        <a class="back" href="#themes">← Themes</a>
+        <div class="ph"><div><h1>Signal 1.5.0</h1><div class="meta"><span class="badge b-info">In code</span><span>Not offered to any shop</span></div></div>
+          <div class="acts"><button class="btn primary">Stage to shops</button><button class="btn" aria-disabled="true" title="Pilot it first">Release to everyone</button></div></div>
+        <div class="card"><div class="road"><div class="now"><b>In code</b><span>Deploy 11 Nov</span></div><div><b>Pilot</b><span>—</span></div><div><b>Released</b><span>—</span></div><div><b>Recalled or withdrawn</b><span>—</span></div></div></div>
+        <div class="over" role="presentation">
+          <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="stage-h">
+            <h2 id="stage-h">Stage Signal 1.5.0</h2>
+            <div class="search"><label for="find" class="sr" style="position:absolute;left:-9999px">Find a shop</label><input id="find" class="input" value="loom" aria-label="Find a shop"><button class="btn">Find</button></div>
+            <div class="pick" role="group" aria-label="Shops">
+              <label><input type="checkbox" checked> <span>Indigo Loom <span class="sub small">on Signal 1.4.0</span></span><span class="num sub small">57</span></label>
+              <label><input type="checkbox"> <span>Loom &amp; Lace <span class="sub small">on Editorial 1.1.0</span></span><span class="num sub small">23</span></label>
+              <label><input type="checkbox" disabled> <span class="sub">Golden Loom <span class="small">already piloting</span></span><span></span></label>
+            </div>
+            <div class="chips" aria-label="Chosen"><span class="chip">Indigo Loom <button aria-label="Remove Indigo Loom">×</button></span><span class="chip">Malmal Co. <button aria-label="Remove Malmal Co.">×</button></span><span class="chip">Kesar Studio <button aria-label="Remove Kesar Studio">×</button></span></div>
+            <div class="foot"><button class="btn">Keep it unstaged</button><button class="btn primary">Stage to 3 shops</button></div>
+          </div>
+        </div>
+      </main>
+
+      <!-- ── WITHDRAW (dialog over Signal 1.4.0) ─────────────────── -->
+      <main class="view" id="v-withdraw" data-nav="themes">
+        <a class="back" href="#themes">← Themes</a>
+        <div class="ph"><div><h1>Signal 1.4.0</h1><div class="meta"><span class="badge b-ok">Released</span><span>14 shops live</span></div></div></div>
+        <div class="card"><div class="road"><div class="done"><b>In code</b><span>9 Nov</span></div><div class="done"><b>Pilot</b><span>3 shops</span></div><div class="now"><b>Released</b><span>11 Nov</span></div><div><b>Recalled or withdrawn</b><span>—</span></div></div></div>
+        <div class="over" role="presentation">
+          <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="wd-h">
+            <h2 id="wd-h">Withdraw Signal 1.4.0?</h2>
+            <div class="touch">
+              <div><span class="big">14</span> shops show their previous look now</div>
+              <div class="names"><span class="link">Kesar Studio</span>· <span class="link">Ruh Threads</span>· <span class="link">Malmal Co.</span>· <span class="link">Indigo Loom</span>· <span class="sub">and 10 more</span></div>
+              <div class="small sub">Final · their drafts are kept</div>
+            </div>
+            <label class="field"><span>The problem</span><input class="input" value="Checkout button hidden on iOS 17" aria-label="The problem"></label>
+            <div class="foot"><button class="btn">Keep Signal 1.4.0</button><button class="btn danger">Withdraw from 14 shops</button></div>
+          </div>
+        </div>
+      </main>
+
+      <!-- ── PLANS ───────────────────────────────────────────────── -->
+      <main class="view" id="v-plans" data-nav="plans">
+        <div class="ph"><div><h1>Plans</h1><div class="meta">Prices before GST · not charged until billing</div></div></div>
+        <div class="plans">
+          <section class="card">
+            <div class="ch"><h2>Launch</h2><a class="btn" href="#plan-new">New version</a></div>
+            <div><span class="price">₹1,499</span><span class="sub">/mo</span></div>
+            <dl class="facts"><div><dt>Orders included</dt><dd class="num">150</dd></div><div><dt>Fee per delivered order</dt><dd class="num">2%</dd></div><div><dt>Includes</dt><dd>Messages, GST, EkCode</dd></div></dl>
+            <div>
+              <div class="vrow"><span class="badge b-ok">v1</span><span>Current · since 6 Nov</span><span class="num">31 shops</span></div>
+            </div>
+          </section>
+          <section class="card">
+            <div class="ch"><h2>Growth</h2><a class="btn" href="#plan-new">New version</a></div>
+            <div><span class="price">₹4,999</span><span class="sub">/mo</span></div>
+            <dl class="facts"><div><dt>Orders included</dt><dd class="num">2,000</dd></div><div><dt>Fee per delivered order</dt><dd class="num">1%</dd></div><div><dt>Includes</dt><dd>+ RTO Shield, Size and fit, Cart flows</dd></div></dl>
+            <div>
+              <div class="vrow"><span class="badge b-ok">v2</span><span>Current · since 10 Nov</span><span class="num">6 shops</span></div>
+              <div class="vrow"><span class="badge b-n">v1</span><span>1,500 orders included</span><span class="acts"><span class="num">12 shops</span><a class="btn" href="#plan-new">Move 12 to v2</a></span></div>
+            </div>
+          </section>
+          <section class="card">
+            <div class="ch"><h2>Scale</h2><a class="btn" href="#plan-new">New version</a></div>
+            <div><span class="price">₹14,999</span><span class="sub">/mo</span></div>
+            <dl class="facts"><div><dt>Orders included</dt><dd class="num">5,000</dd></div><div><dt>Fee per delivered order</dt><dd class="num">0.5%</dd></div><div><dt>Includes</dt><dd>+ Reviews</dd></div></dl>
+            <div>
+              <div class="vrow"><span class="badge b-ok">v1</span><span>Current · since 6 Nov</span><span class="num">3 shops</span></div>
+              <div class="vrow"><span class="badge b-info">Custom</span><span>Kesar Studio · ₹9,999</span><span class="num">1 shop</span></div>
+            </div>
+          </section>
+        </div>
+        <section class="card" style="max-width:680px">
+          <div class="ch"><h2>Sign-up trial</h2><button class="btn">Change</button></div>
+          <dl class="facts"><div><dt>Free for</dt><dd><span class="num">30</span> days from going live</dd></div><div><dt>To go live</dt><dd><span class="num">14</span> days</dd></div><div><dt>Last changed</dt><dd class="sub">8 Nov · Diwali push</dd></div></dl>
+        </section>
+      </main>
+
+      <!-- ── NEW PLAN VERSION ────────────────────────────────────── -->
+      <main class="view" id="v-plan-new" data-nav="plans">
+        <a class="back" href="#plans">← Plans</a>
+        <div class="ph"><div><h1>Growth version 3</h1><div class="meta">From version 2 · 6 shops on it</div></div></div>
+        <div class="two">
+          <section class="card">
+            <div class="grid3">
+              <label class="field"><span>Monthly price, ₹</span><input class="input mono" value="4,999" aria-label="Monthly price"></label>
+              <label class="field"><span>Orders included</span><input class="input mono" value="3,000" aria-label="Orders included"></label>
+              <label class="field"><span>Fee, % of delivered value</span><input class="input mono" value="1" aria-label="Fee"></label>
+            </div>
+            <fieldset style="border:0;padding:0;margin:0;display:grid;gap:2px"><legend style="font-weight:500;font-size:13px;margin-bottom:6px">Includes</legend>
+              <label class="chk"><input type="checkbox" checked>RTO Shield</label><label class="chk"><input type="checkbox" checked>Size and fit</label><label class="chk"><input type="checkbox" checked>Cart flows</label><label class="chk"><input type="checkbox" checked>Reviews</label><label class="chk"><input type="checkbox">True Profit</label>
+            </fieldset>
+            <label class="field"><span>Why</span><input class="input" value="Festive season: more orders before the fee" aria-label="Why"></label>
+          </section>
+          <section class="card" aria-labelledby="diff-h">
+            <h2 id="diff-h">What changes</h2>
+            <div class="diff">
+              <div><span>Orders included</span><s class="num">2,000</s><span>→</span><span class="num up">3,000</span></div>
+              <div><span>Reviews</span><s>Add-on</s><span>→</span><span class="up">Included</span></div>
+              <div><span>Monthly price</span><span class="num sub">₹4,999</span><span></span><span class="sub small">same</span></div>
+            </div>
+            <dl class="facts"><div><dt>New sign-ups</dt><dd>Get version 3</dd></div><div><dt>6 shops on version 2</dt><dd>Stay until moved</dd></div></dl>
+            <div class="foot" style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><a class="btn" href="#plans">Keep version 2</a><button class="btn primary">Save Growth version 3</button></div>
+          </section>
+        </div>
+      </main>
+
+      <!-- ── A SHOP'S PLAN ───────────────────────────────────────── -->
+      <main class="view" id="v-shop-plan" data-nav="merchants">
+        <a class="back" href="#themes">← Merchants</a>
+        <div class="ph"><div><h1>Kesar Studio</h1><div class="meta"><span class="badge b-ok">Live</span><span>kesar.frrata.shop</span></div></div></div>
+        <div class="tabs" role="tablist"><span role="tab">Overview</span><span role="tab">Modules</span><span role="tab" class="on" aria-selected="true">Plan</span><span role="tab">Addresses</span><span role="tab">Support</span></div>
+        <div class="two">
+          <section class="card">
+            <div class="ch"><h2>Move Kesar Studio</h2></div>
+            <div class="choices" role="radiogroup" aria-label="New plan">
+              <label class="choice"><input type="radio" name="p"><span><b>Launch</b> · v1 <span class="sub">· 150 orders · 2%</span></span><span class="num">₹1,499</span></label>
+              <label class="choice"><input type="radio" name="p" disabled><span><b>Growth</b> · v1 <span class="badge b-n">Now</span> <span class="sub">· 1,500 orders · 1%</span></span><span class="num">₹4,999</span></label>
+              <label class="choice"><input type="radio" name="p"><span><b>Growth</b> · v2 <span class="sub">· 2,000 orders · 1%</span></span><span class="num">₹4,999</span></label>
+              <label class="choice sel"><input type="radio" name="p" checked><span><b>Scale</b> · v1 <span class="sub">· 5,000 orders · 0.5%</span></span><span class="num">₹14,999</span></label>
+            </div>
+            <div class="grid3">
+              <label class="field"><span>Starts</span><select class="input" aria-label="Starts"><option>1 Dec</option><option>Today</option></select></label>
+              <label class="field"><span>Custom price, ₹</span><input class="input mono" placeholder="—" aria-label="Custom price"></label>
+              <label class="field"><span>Why</span><input class="input" value="Asked to grow for Diwali" aria-label="Why"></label>
+            </div>
+          </section>
+          <section class="card" aria-labelledby="sp-diff">
+            <h2 id="sp-diff">Growth v1 → Scale v1</h2>
+            <div class="diff">
+              <div><span>Monthly price</span><s class="num">₹4,999</s><span>→</span><span class="num down">₹14,999</span></div>
+              <div><span>Orders included</span><s class="num">1,500</s><span>→</span><span class="num up">5,000</span></div>
+              <div><span>Fee</span><s class="num">1%</s><span>→</span><span class="num up">0.5%</span></div>
+              <div><span>Reviews</span><s>Off</s><span>→</span><span class="up">Included</span></div>
+            </div>
+            <dl class="facts"><div><dt>Last 30 days</dt><dd><span class="num">1,212</span> delivered orders</dd></div><div><dt>Free trial</dt><dd>Ended 2 Nov</dd></div></dl>
+            <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn">Keep Growth</button><button class="btn primary wrap">Move Kesar Studio to Scale on 1 Dec</button></div>
+          </section>
+        </div>
+      </main>
+
+      <!-- ── MODULES ─────────────────────────────────────────────── -->
+      <main class="view" id="v-modules" data-nav="modules">
+        <div class="ph"><h1>Modules</h1></div>
+        <section class="card">
+          <div class="scroll"><table class="tbl stack">
+            <thead><tr><th>Module</th><th>Sold as</th><th class="r">Shops using it</th><th>State</th><th><span style="position:absolute;left:-9999px">Action</span></th></tr></thead>
+            <tbody>
+              <tr><td><b>Messages</b></td><td data-l="Sold as">Every plan</td><td class="r num" data-l="Using">142</td><td><span class="badge b-ok">Running</span></td><td class="r"><a class="btn" href="#pause">Pause…</a></td></tr>
+              <tr><td><b>EkCode</b></td><td data-l="Sold as">Every plan</td><td class="r num" data-l="Using">96</td><td class="full"><span class="badge b-warn">Paused 2h</span> <span class="sub small">OTP delays from Meta · Prema</span></td><td class="r"><button class="btn primary">Resume EkCode</button></td></tr>
+              <tr><td><b>GST</b></td><td data-l="Sold as">In plans</td><td class="r num" data-l="Using">58</td><td><span class="badge b-ok">Running</span></td><td class="r"><button class="btn">Pause…</button></td></tr>
+              <tr><td><b>Product video</b></td><td data-l="Sold as">Every plan</td><td class="r num" data-l="Using">17</td><td><span class="badge b-ok">Running</span></td><td class="r"><button class="btn">Pause…</button></td></tr>
+              <tr style="opacity:.55"><td><b>Reviews</b></td><td data-l="Sold as">Add-on</td><td class="r num" data-l="Using">—</td><td><span class="badge b-n">Next</span></td><td></td></tr>
+              <tr style="opacity:.55"><td><b>RTO Shield</b></td><td data-l="Sold as">In plans</td><td class="r num" data-l="Using">—</td><td><span class="badge b-n">Next</span></td><td></td></tr>
+            </tbody>
+          </table></div>
+        </section>
+      </main>
+
+      <!-- ── PAUSE (dialog over Modules) ─────────────────────────── -->
+      <main class="view" id="v-pause" data-nav="modules">
+        <div class="ph"><h1>Modules</h1></div>
+        <section class="card"><table class="tbl"><tbody><tr><td><b>Messages</b></td><td class="r num">142</td><td><span class="badge b-ok">Running</span></td></tr><tr><td><b>GST</b></td><td class="r num">58</td><td><span class="badge b-ok">Running</span></td></tr></tbody></table></section>
+        <div class="over" role="presentation">
+          <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="pz-h">
+            <h2 id="pz-h">Pause Messages for every shop?</h2>
+            <div class="touch">
+              <div><span class="big">142</span> shops stop sending</div>
+              <div><span class="num">38</span> messages waiting now · they wait, none are lost</div>
+              <div class="small sub">Shops see "Paused by Frrata"</div>
+            </div>
+            <label class="field"><span>Why</span><input class="input" value="WhatsApp template rejections" aria-label="Why"></label>
+            <div class="foot"><button class="btn">Keep Messages running</button><button class="btn danger">Pause for 142 shops</button></div>
+          </div>
+        </div>
+      </main>
+
+      <!-- ── A SHOP'S MODULES ────────────────────────────────────── -->
+      <main class="view" id="v-shop-modules" data-nav="merchants">
+        <a class="back" href="#themes">← Merchants</a>
+        <div class="ph"><div><h1>Kesar Studio</h1><div class="meta"><span class="badge b-ok">Live</span><span>Growth v1</span></div></div></div>
+        <div class="tabs" role="tablist"><span role="tab">Overview</span><span role="tab" class="on" aria-selected="true">Modules</span><span role="tab">Plan</span><span role="tab">Addresses</span><span role="tab">Support</span></div>
+        <div class="ban" role="status"><span class="badge b-warn">Paused by Frrata</span><span>EkCode, for every shop · 2h · OTP delays from Meta</span><a class="link" href="#modules">Modules</a></div>
+        <div class="toast" role="status"><span>Kesar Studio's Reviews trial ends 11 Dec</span></div>
+        <section class="card">
+          <div class="scroll"><table class="tbl stack">
+            <thead><tr><th>Module</th><th>Granted by</th><th>Kesar Studio</th><th>Usable</th><th><span style="position:absolute;left:-9999px">More</span></th></tr></thead>
+            <tbody>
+              <tr><td><b>Messages</b></td><td data-l="Granted by">Every plan</td><td data-l="Shop">On since 3 Oct</td><td><span class="badge b-ok">Yes</span></td><td class="r"></td></tr>
+              <tr><td><b>EkCode</b></td><td data-l="Granted by">Every plan</td><td data-l="Shop">On since 3 Oct</td><td class="full"><span class="badge b-warn">No · paused for everyone</span></td><td class="r"></td></tr>
+              <tr><td><b>GST</b></td><td data-l="Granted by">Growth plan</td><td data-l="Shop">Off</td><td class="full"><span class="badge b-n">No · shop turned it off</span></td><td class="r"></td></tr>
+              <tr><td><b>Reviews</b></td><td data-l="Granted by">Trial until 11 Dec</td><td data-l="Shop">On since today</td><td><span class="badge b-ok">Yes</span></td>
+                <td class="r rel"><button class="btn" aria-haspopup="menu" aria-expanded="true">More ▾</button>
+                  <div class="menu" role="menu"><span role="menuitem" class="d">End Kesar Studio's Reviews trial…</span></div></td></tr>
+              <tr><td><b>True Profit</b></td><td data-l="Granted by">—</td><td data-l="Shop">—</td><td class="full"><span class="badge b-n">No · add-on, not bought</span></td>
+                <td class="r"><button class="btn wrap">Give a 30-day trial…</button></td></tr>
+            </tbody>
+          </table></div>
+        </section>
+      </main>
+    </div>
+  </div>
+</div>
+
+<script>
+const views = [...document.querySelectorAll('main.view')]
+const links = [...document.querySelectorAll('nav.views a')]
+function show() {
+  const id = (location.hash || '#themes').slice(1)
+  const target = document.getElementById('v-' + id) ? id : 'themes'
+  views.forEach((v) => { v.hidden = v.id !== 'v-' + target })
+  links.forEach((a) => a.setAttribute('aria-current', a.getAttribute('href') === '#' + target ? 'page' : 'false'))
+  const nav = document.getElementById('v-' + target).dataset.nav
+  document.querySelectorAll('.side [data-nav]').forEach((s) => s.classList.toggle('on', s.dataset.nav === nav))
+}
+addEventListener('hashchange', show)
+show()
+</script>

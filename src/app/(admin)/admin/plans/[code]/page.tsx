@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Button, button } from '@/components/ui/button'
+import { button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { toRupees, paise } from '@/domains/money/paise'
@@ -11,6 +11,7 @@ import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import { FEATURE_NAMES } from '@/domains/plans/labels'
 import { newVersionAction } from './actions'
 import { Section } from '@/components/layout/section'
+import { Submit } from '@/components/ui/submit'
 
 export const metadata = { title: 'Edit plan' }
 
@@ -47,7 +48,7 @@ export default async function EditPlanPage({ params, searchParams }: { params: P
       </fieldset>
       <div className="flex justify-end gap-2 border-t border-border pt-4">
         <Link href="/admin/plans" className={button({ variant: 'secondary' })}>Keep version {v.version}</Link>
-        <Button type="submit">Save as version {v.version + 1}</Button>
+        <Submit>Save as version {v.version + 1}</Submit>
       </div>
     </form></Section>
   )

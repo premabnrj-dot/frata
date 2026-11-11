@@ -10,7 +10,7 @@ const back = (k: 'ok' | 'error', m: string) => `/admin/modules?${k}=${encodeURIC
 
 export async function pauseModuleAction(form: FormData) {
   const staff = await requireStaff(ADMIN_ONLY)
-  if (!staff.ok) redirect('/admin')
+  if (!staff.ok) redirect(back('error', staff.reason === 'signed_out' ? 'Sign in again.' : 'Only an admin can pause or resume a module.'))
   const p = z.object({ module: z.enum(MODULE_KEYS), reason: z.string().trim().min(3).max(200) }).safeParse(Object.fromEntries(form))
   if (!p.success) redirect(back('error', 'Say why, in a few words.'))
   const ok = await pauseModule(staff, p.data.module, p.data.reason)
@@ -19,9 +19,9 @@ export async function pauseModuleAction(form: FormData) {
 
 export async function resumeModuleAction(form: FormData) {
   const staff = await requireStaff(ADMIN_ONLY)
-  if (!staff.ok) redirect('/admin')
+  if (!staff.ok) redirect(back('error', staff.reason === 'signed_out' ? 'Sign in again.' : 'Only an admin can pause or resume a module.'))
   const p = z.object({ module: z.enum(MODULE_KEYS) }).safeParse(Object.fromEntries(form))
-  if (!p.success) redirect('/admin/modules')
+  if (!p.success) redirect(back('error', 'That form was incomplete. Nothing was changed.'))
   const ok = await resumeModule(staff, p.data.module, new Date())
   redirect(ok ? back('ok', `${moduleName(p.data.module)} running again. Held messages go out with the next send.`) : back('error', 'It was not paused.'))
 }

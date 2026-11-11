@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.15.0
+  version: 5.17.0
   verified: 2026-11-11
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -80,20 +80,10 @@ from it).
   numbers strip; steps are pictogram + 1–3 words + one short line; rules and
   details are pictogram + a title + an (i) tip.
 
-## Apps and modules (approved mockup v2, 2026-11-07)
+## Apps and modules (approved mockup v2, 2026-11-07; the gallery and app pages: § Apps gallery below)
 
-- **Console › Apps** (`/console/apps`, Store group; in More on a phone): modules
-  in three groups (Talk, Deliver, Grow), one `Section flush` list
-  each. A row: tile (`<Icon>` at 28 on a muted tile, `data-tinge` on the list; no haldi fill), name (a button that opens the details), the job in one
-  line, one badge from `offerFor()`, the action.
-- Badges: "Next", "In your plan", "Add-on · ₹499/mo", "In Growth and up",
-  "Trial · N days left", "Paused by Frrata". The action is a `role="switch"`
-  only when the module is usable to switch; otherwise "See details".
-- **Details dialog before getting an app**: title and job; "What you get" ✓
-  list; "Works with" with On/Off badges; a muted price panel (badge, price in
-  mono, "On your monthly Frrata bill · stop any time" for add-ons, the usage
-  line). Footer: "Not now" (focused) and the one action — the switch, "Add X ·
-  ₹499/mo" (a WhatsApp ask to Frrata, until billing), "See plans", or "Coming next".
+- **Console › Apps** (`/console/apps`, Store group; in More on a phone): the gallery in § Apps gallery. Every card and
+  app page reads `offerFor()` (`src/domains/modules/offer.ts`) — footer, state chip, filter and the one action.
 - Turning a module off asks once: "Turn off X?" · "Keep X" / "Turn off X".
 - **Messages setup** (`/console/apps/communication`, from the Apps row's "Set up"): not connected → two path cards
   (Business app, bordered 2 px, "Most brands"; a new number) with an icon tile, the app-changes and other-tool
@@ -107,6 +97,24 @@ from it).
   The Addresses tab lists the shop's names (Current · Old · redirects · Old · no redirect), then "Rename <shop>'s
   address" and "Freeze <shop>'s address", each with a reason. Admin › Names: block a name or domain, unblock or
   release with a reason in the row; Frrata's own words listed, read-only.
+
+## Apps gallery (owner-approved 2026-11-11, mockup https://claude.ai/artifact/6Th5A8X4YSXCcyozpzPLEg; plan `docs/plans/2026-11-11-apps-gallery.md`; supersedes the Apps list rows and the details dialog above)
+
+- **One card for every app**, whatever its state: icon tile, name, "By Frrata", the job in one line, a footer with the
+  price or "Included" and one state chip (On · Coming next · a lock with the plan). No ratings or install counts.
+- **Your apps first** (compact cards: state "Working" or a meter at 80%, Open), then the gallery grouped by the
+  merchant's job: Talk to shoppers · Get paid and ship · Sell more · Run the books. Search and filters with counts.
+- **At most one featured card**, chosen from the shop's own numbers (the pricing ladder's nudge), dismissible, staying
+  dismissed. Never a pop-up, timer or animated upgrade button; no promised outcome.
+- **An app's page, not a dialog**: a benefit headline, ≤ 3 features each with a drawn 16:10 picture of the app working
+  (console tokens, no real shopper), ≤ 3 questions; a side column with the price box (GST, trial, first charge date),
+  Works with, What it uses, Billed by others. On a phone the price and button sit in a bar at the bottom.
+- **One button that matches the state**: Turn on · Ask Frrata to add (until self-serve add-ons) · See Growth with the
+  shop's own rupees · Open · Tell me when it's ready. A higher-plan app is shown locked, never a button that fails.
+  An app that needs another one off offers "Turn on <that app> first" (a link to its page); one that is on while what
+  it needs is off says "Waiting for <that app>" in warn and stays in Your apps.
+- **Once on, one home for every app** (A2): state chip with the last activity, tabs, ≤ 4 numbers, a meter where there is
+  a limit, What it uses, Turn off at the foot with a confirm.
 
 ## Shop themes (approved mockups 2026-11-08, T0–T2 built)
 
@@ -300,6 +308,10 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
   screen · Nothing was changed · Try again" (`error.tsx` per surface, `check:states`).
 - No `loading.tsx` in the console (Ekatan: it made search-param navigation commit
   nothing in production); use a top progress bar.
+- **A server-action form's submit is `<Submit>`** (`src/components/ui/submit.tsx`, 2026-11-11): while the action runs
+  it refuses clicks (aria-disabled, keeping focus) and runs the top bar; the label stays, naming the outcome. A GET
+  form (search, a month picker) keeps `Button`. A refusal or a form that doesn't parse says so on the page, never a
+  silent redirect to a list.
 
 ## Settings choices and GST (built 2026-11-09; mockups https://claude.ai/artifact/M4VfNAgqFHYmhCxFwZmepE, https://claude.ai/artifact/NsxiFFFBorTsi9sct7zWgs)
 - **Which control:** one of 2–4 exclusive choices that change what else is asked → **radio cards** (`kind: 'radio'`,

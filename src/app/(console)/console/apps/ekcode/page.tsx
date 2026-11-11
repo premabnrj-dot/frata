@@ -1,18 +1,18 @@
-import Link from 'next/link'
 import { PageHeader } from '@/components/layout/page-header'
 import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { Name } from '@/components/data/name'
 import { Numeric } from '@/components/data/numeric'
 import { Pager } from '@/components/data/pager'
 import { Badge } from '@/components/ui/badge'
-import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { ViewTabs } from '@/components/ui/view-tabs'
-import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
+import { ANY_MEMBER, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { ekcodeConfigured } from '@/lib/ekcode/keys'
 import { formatPercent, formatPhone } from '@/lib/format'
 import { dayMonthIN } from '@/lib/format-date'
-import { shopModules } from '@/lib/queries/modules'
+import { appsPage, shopModules } from '@/lib/queries/modules'
+import { AppAbout } from '../_components/app-about'
+import { aboutProps } from '../_components/about-data'
 import { ekcodeOverview, ekcodeShoppers, type ShopperView } from '@/lib/queries/ekcode-shoppers'
 
 export const metadata = { title: 'EkCode' }
@@ -30,13 +30,9 @@ export default async function EkcodePage({ searchParams }: { searchParams: Promi
   const back = { href: '/console/apps', label: 'Apps' }
   const { access } = await shopModules(tenantId, now.toISOString())
   if (!access.ekcode.usable) {
-    return (
-      <>
-        <PageHeader title="EkCode" back={back} />
-        <Panel title={access.ekcode.why === 'paused' ? 'EkCode is paused by Frrata. We’re on it.' : 'Turn on EkCode first'}
-          action={<Link href="/console/apps" className={button({ variant: 'secondary' })}>Go to Apps</Link>} />
-      </>
-    )
+    const d = await appsPage(tenantId, auth.userId, now.toISOString())
+    return <AppAbout {...aboutProps('ekcode', d, now, (CAN_MANAGE as readonly string[]).includes(auth.membership.role), auth.membership.tenantName)}
+      notice={access.ekcode.why === 'paused' ? <p role="status" className="mb-4 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">EkCode is paused by Frrata. We’re on it.</p> : undefined} />
   }
   const live = ekcodeConfigured()
   const tab = sp.tab === 'shoppers' ? 'shoppers' : 'overview'

@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.41.0
+  version: 2.42.0
   verified: 2026-11-11
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -109,6 +109,10 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   supabase-js or PostgREST; `anon`/`authenticated` hold no table grants.
 - `getUser()` (or, in the middleware's redirect only, `getClaims()`, which verifies the JWT), never
   `getSession()` (`check:layers`). The member and staff checks always ask `getUser()`.
+- **One sign-in lookup per request** (2026-11-11): `getUser()` and `app_access_for` go through `src/lib/auth/session.ts`
+  (`signedInUser`, `accessOf`, React `cache`), shared by `requireMember`, `requireStaff` and `requireUser`; Admin's
+  layout used to ask each twice. `cache` does not memoize inside a server action or route handler: there each call is
+  its own lookup (and each `adminDb()` its own connection), so pass the transaction down instead of reading again.
 - Signing in grants nothing; a `members` row does. Roles: owner, admin, staff,
   partner (`MEMBER_ROLES`); tuples `ANY_MEMBER` (everyone, partner included:
   orders, and products and collections — staff edit the catalogue, owner
@@ -254,7 +258,14 @@ shop can have or not (Messages, RTO Shield, Reviews…).
 - **"Usable" is decided once**: `moduleAccess(facts, now)` in
   `src/domains/modules/access.ts` (granted by core, plan, add-on or trial;
   switched on; not paused; dependencies usable). Badges and buttons come from
-  `offerFor()`. Never test a plan feature or an add-on row anywhere else.
+  `offerFor()` (the gallery card's footer, state and filter, the price box and the ONE action: switch, needs, ask,
+  plans, interest). Never test a plan feature or an add-on row anywhere else.
+- **Every app has a page** (Apps gallery, 2026-11-11): `/console/apps/[app]` renders `AppAbout` (features drawn from
+  `src/domains/modules/showcase.ts`, no screenshots); an app with a home of its own is a static folder that renders the
+  same `AppAbout` while not usable (static folders win over `[app]`; `app-pages.test.ts` holds it). The gallery and an
+  app's page read `appsPage()`: facts, add-on prices and the member's "Tell me when it's ready" rows in ONE
+  transaction. `app_interest` is the member's own (session user id, never a support visit); Admin reads it only
+  through `app_admin_interest`.
 - **Facts**: `shopModules(tenantId, atIso)` (`src/lib/queries/modules.ts`),
   cached per request. Admin reads the same facts through `merchantModules()`
   (`src/lib/admin/modules.ts`) and still derives through `moduleAccess()`.

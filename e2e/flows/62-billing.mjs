@@ -199,6 +199,28 @@ export default {
         await meera.getByText('Trial ended.').waitFor()
         assert.equal((await db`select count(*)::int n from audit_events where tenant_id = ${KESAR} and action in ('trial.set', 'trial.end')`)[0].n, 2)
       })
+      await t.step('AD·0: Admin moves Kesar to Scale from the 1st, at a custom price with a reason; support sees the plan and no form', async () => {
+        const meera = await open('frata', { viewport: { width: 1280, height: 900 } })
+        await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/plan`)
+        await meera.getByRole('radio', { name: /^Scale/ }).check()
+        await meera.getByLabel('Starts').selectOption('next_month')
+        await meera.getByLabel(/^Custom monthly price/).fill('9999')
+        await meera.getByLabel(/^Reason/).fill('E2E move')
+        await meera.getByRole('button', { name: 'Move Kesar Studio' }).click()
+        await meera.getByText('Plan changed.').waitFor()
+        const [row] = await db`select custom_monthly_price::text p, starts_at > now() later from tenant_plans where tenant_id = ${KESAR} and reason = 'E2E move'`
+        assert.equal(row.p, '999900'); assert.equal(row.later, true)
+        await db`insert into platform_staff (user_id, email, role) values (${USERS.staff.id}, ${USERS.staff.email}, 'support') on conflict (user_id) do update set role = 'support'`
+        try {
+          const arjun = await open('staff', { viewport: { width: 1280, height: 900 } })
+          await arjun.goto(CONSOLE + `/admin/merchants/${KESAR}/plan`)
+          await arjun.getByText(/ · version \d+$/).first().waitFor()
+          assert.equal(await arjun.getByRole('button', { name: /^Move / }).count(), 0, 'support sees no plan form')
+          assert.equal(await arjun.getByRole('button', { name: /Give a trial|Change length/ }).count(), 0, 'nor a trial form')
+        } finally {
+          await db`delete from platform_staff where user_id = ${USERS.staff.id}`
+        }
+      })
     } finally {
       // Issued invoices, payments and credit notes are final (triggers): the test's own are removed with triggers off.
       await db.begin(async (x) => {
@@ -212,12 +234,12 @@ export default {
         await x`delete from frrata_invoice_lines where tenant_id = ${KESAR}`
         await x`delete from frrata_invoice_fees where tenant_id = ${KESAR}`
       })
-      await db`delete from tenant_plans where tenant_id = ${KESAR} and reason = 'Changed by the shop'`
+      await db`delete from tenant_plans where tenant_id = ${KESAR} and reason in ('Changed by the shop', 'E2E move')`
       await db`delete from shop_trials where tenant_id = ${KESAR}`
       await db`update tenant_plans set trial_ends_at = null where tenant_id = ${KESAR}`
       await db`update trial_settings set days = 30, open_window_days = 15 where id = 1`
       await db`delete from billing_accounts where tenant_id = ${KESAR}`
-      await db`delete from audit_events where tenant_id = ${KESAR} and action in ('billing.details', 'billing.plan.change', 'billing.plan.cancel', 'trial.set', 'trial.end')`
+      await db`delete from audit_events where tenant_id = ${KESAR} and action in ('billing.details', 'billing.plan.change', 'billing.plan.cancel', 'trial.set', 'trial.end', 'plan.change')`
       await db`delete from orders where tenant_id = ${KESAR} and number = ${N}`
       await db`delete from members where tenant_id = ${KESAR} and user_id = ${USERS.staff.id}`
     }

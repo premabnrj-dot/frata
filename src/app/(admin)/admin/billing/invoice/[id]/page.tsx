@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation'
 import { Money } from '@/components/data/numeric'
 import { PageHeader } from '@/components/layout/page-header'
-import { button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { STATE_LABEL } from '@/domains/billing/status'
@@ -10,6 +9,7 @@ import { invoiceDetail } from '@/lib/admin/billing'
 import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import { dateTimeIN, dayIN, monthYearIN } from '@/lib/format-date'
 import { creditAction, paymentAction } from '../../actions'
+import { Submit } from '@/components/ui/submit'
 
 export const metadata = { title: 'Invoice' }
 const METHOD: Record<string, string> = { bank_transfer: 'Bank transfer', upi: 'UPI', card: 'Card', emandate: 'Bank mandate', paylink: 'Pay link' }
@@ -48,7 +48,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
             <label className="flex flex-col gap-1.5 text-sm font-medium">Amount, ₹<input name="rupees" inputMode="decimal" defaultValue={(i.due / 100).toFixed(2)} className={`${field} w-32`} /></label>
             <label className="flex flex-col gap-1.5 text-sm font-medium">How<select name="method" className={field}><option value="bank_transfer">Bank transfer</option><option value="upi">UPI</option><option value="paylink">Pay link</option><option value="card">Card</option></select></label>
             <label className="flex flex-col gap-1.5 text-sm font-medium">Reference (UTR)<input name="utr" autoComplete="off" className={`${field} font-mono`} /></label>
-            <button className={button({})}>Record payment</button>
+            <Submit>Record payment</Submit>
           </form>
         )}
       </Panel>
@@ -60,7 +60,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
           <input type="hidden" name="invoice" value={i.id} />
           <label className="flex flex-col gap-1.5 text-sm font-medium">Taxable value to credit, ₹<input name="rupees" inputMode="decimal" className={`${field} w-32`} /></label>
           <label className="flex grow flex-col gap-1.5 text-sm font-medium">Reason (on the credit note)<input name="reason" maxLength={240} className={field} /></label>
-          <button className={button({ variant: 'secondary' })}>Issue credit note</button>
+          <Submit variant="secondary">Issue credit note</Submit>
         </form>
         <p className="mt-1 text-xs text-muted-foreground">GST is added at the invoice&apos;s rate. A credit note is final, and can never exceed what the invoice holds.</p>
       </Panel>
