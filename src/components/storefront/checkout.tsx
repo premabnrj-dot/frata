@@ -1,11 +1,11 @@
 'use client'
 
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { STATES } from '@/domains/checkout/states'
+import { STATES } from '@/domains/checkout/state-names'
 import { cleanMobile } from '@/domains/checkout/mobile'
 import { announcePlaced, moduleArm, usePrefill } from './module-events'
 import { waOptInText } from '@/domains/checkout/opt-in'
-import { cleanGstin } from '@/domains/tax/gstin'
+import { cleanGstin } from '@/domains/tax/gstin-clean'
 import type { Biz, BizCheck } from './checkout-biz'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { OfferProgress, OfferRows, useQuote } from './bag'
