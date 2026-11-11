@@ -18,6 +18,7 @@ import { fromHeader } from '@/domains/email/headers'
 import { shopSettingsFor } from '@/lib/queries/storefront'
 import { EMAIL_SHOP_DOMAIN, SES_CONFIG_SHOPS } from '@/lib/env'
 import { tenantName } from '@/lib/email/ses'
+import { ensureShopTenant } from '@/lib/email/order-sender'
 import { errName } from '@/lib/log'
 
 // Settings › Emails to shoppers (email plan E·2, task 13). Owners and admins change words and switches; a support
@@ -77,6 +78,13 @@ export async function sendTestAction(kind: string, words: EmailWords): Promise<R
     const shop = await shopSettingsFor(tenantId)
     const p = await previewOrderEmail(tenantId, k.data, w.data)
     if (!shop || !p) return { ok: false, error: 'Email is not set up yet.' }
+    // The shop's SES tenant first (an order email waits for it in the outbox; a test, clicked by a person, sets it up now).
+    const t = await ensureShopTenant(tenantId)
+    if (!t.ok) {
+      await asMember(CAN_MANAGE, { action: 'emails.test.result' }, (tx) => tx.update(emailMessages).set({ failedAt: new Date(), failedCode: t.code.replace(/[^a-z0-9_]/gi, '_').toLowerCase().slice(0, 48) })
+        .where(and(eq(emailMessages.tenantId, tenantId), eq(emailMessages.id, id))))
+      return { ok: false, error: 'It could not be sent. Try again in a minute.' }
+    }
     const sent = await sendEmail({ from: fromHeader(shop.shopName, `${shop.slug}@${EMAIL_SHOP_DOMAIN}`), to, replyTo: cleanEmail(shop.supportEmail), subject: `[Test] ${p.subject}`,
       html: p.mail.html, text: p.mail.text, configurationSet: SES_CONFIG_SHOPS, tenant: tenantName(tenantId), messageId: id, tenantTag: tenantId }, new Date())
     await asMember(CAN_MANAGE, { action: 'emails.test.result' }, (tx) => tx.update(emailMessages).set(sent.ok ? { sentAt: new Date(), providerId: sent.providerId } : { failedAt: new Date(), failedCode: sent.code.replace(/[^a-z0-9_]/gi, '_').toLowerCase().slice(0, 48) })
