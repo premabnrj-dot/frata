@@ -71,7 +71,7 @@ actions under More that name the shop ("End Kesar Studio's Reviews trial…", wi
 |---|---|---|
 | AD·0 | Root-cause fixes above. Bug fixes, no new screens | none (fixes) |
 | AD·1 | Answer in place (`useActionState` + `revalidatePath`), `ConfirmDecision` dialog with reach, Admin `not-found` in the frame | this mockup |
-| AD·2 | Themes list, version page, multi-shop staging, history | this mockup |
+| AD·2 | Themes: moved to the themes planning session (owner, 2026-11-11); the mockup's Themes views are input to it, not a plan here | — |
 | AD·3 | Plans versions, new-version diff, the shop Plan tab, trial words | this mockup |
 | AD·4 | Modules counts, pause dialog, shop Modules tab | this mockup |
 
