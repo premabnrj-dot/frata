@@ -246,14 +246,15 @@ table.t td.n,table.t th.n{text-align:right;font-family:var(--mono);font-variant-
 
 <div class="wrap">
   <h1>Theme Studio</h1>
-  <p class="k">Mockup v1 · 2026-11-11 · Spec <span class="mono">docs/specs/2026-11-11-theme-studio.md</span> · for the owner's approval</p>
+  <p class="k">Mockup v2 · 2026-11-11 · reviews folded in · Spec <span class="mono">docs/specs/2026-11-11-theme-studio.md</span> · for the owner's approval</p>
   <ul class="note">
     <li>Frrata's team builds gallery themes in Admin; partners build themes for their own clients in their portal. Same studio, same blocks, no code.</li>
     <li>A theme: design system, header and footer, home, product and collection pages, About, Contact and FAQ. Owners fill it in Look, as today.</li>
     <li>Every theme passes the same checks before it reaches a shop: contrast, headings, photos, limits, the legal block. Bag and checkout stay one tested layout.</li>
+    <li>Order: blocks inside a Frrata theme first, then pages in Look, then the staff studio, then partners, then Claude.</li>
   </ul>
   <nav class="views" aria-label="Boards">
-    <a href="#studio">Studio</a><a href="#system">Design system</a><a href="#release">Releasing</a><a href="#pages">Pages</a><a href="#look">Owners in Look</a><a href="#messages">Website messages</a><a href="#states">States</a>
+    <a href="#studio">Studio</a><a href="#system">Design system</a><a href="#release">Releasing</a><a href="#pages">Pages</a><a href="#look">Owners in Look</a><a href="#states">States</a>
   </nav>
 
   <!-- ===================== STUDIO ===================== -->
@@ -292,7 +293,7 @@ table.t td.n,table.t th.n{text-align:right;font-family:var(--mono);font-variant-
           <li role="treeitem" aria-selected="false" data-sec="faq" style="--d:1"><span>Accordion <span class="kind">3 items</span></span><span class="ma"><button aria-label="More"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg></button></span></li>
         </ul>
         <button class="addrow" id="add-block">+ Add a block <span class="mono k">/</span></button>
-        <span class="k">3 of 25 sections</span>
+        <span class="k">3 of 20 sections · 11 of 100 blocks</span>
       </div>
       <div class="st-mid">
         <div class="canvas" id="canvas">
@@ -327,7 +328,7 @@ table.t td.n,table.t th.n{text-align:right;font-family:var(--mono);font-variant-
       <div class="dh"><h3 id="pk-h">Add a block</h3><button class="btn sm ghost" data-close aria-label="Close"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <div class="db">
         <input class="input sans" id="pick-q" placeholder="Search blocks" aria-label="Search blocks">
-        <div class="cats"><button aria-pressed="true">All 15</button><button aria-pressed="false">Layout 3</button><button aria-pressed="false">Content 9</button><button aria-pressed="false">Commerce 3</button></div>
+        <div class="cats"><button aria-pressed="true">All 13</button><button aria-pressed="false">Layout 3</button><button aria-pressed="false">Content 7</button><button aria-pressed="false">Commerce 3</button></div>
         <div class="pickgrid">
           <button data-close><span class="pv"><svg width="40" viewBox="0 0 40 24" aria-hidden="true"><rect x="2" y="3" width="16" height="18" fill="var(--border)"/><rect x="22" y="3" width="16" height="18" fill="var(--border)"/></svg></span>Columns · 2</button>
           <button data-close><span class="pv"><svg width="40" viewBox="0 0 40 24" aria-hidden="true"><rect x="4" y="5" width="32" height="4" fill="var(--fg)"/><rect x="4" y="12" width="24" height="3" fill="var(--border)"/></svg></span>Heading and text</button>
@@ -381,18 +382,18 @@ table.t td.n,table.t th.n{text-align:right;font-family:var(--mono);font-variant-
           <div class="steps"><button class="btn sm">Open in the studio</button><button class="btn sm">Send back</button><button class="btn sm primary">Approve Monsoon 1.0.0</button></div></div></section></div>
     <div><span class="who">Partner</span>
       <div class="pipeline"><div><b>Draft</b></div><div><b>Checks pass</b></div><div class="now"><b>Release to my clients</b></div><div><b>Owners accept</b><span class="k">in Look</span></div></div>
-      <section class="card" style="margin-top:10px"><header><h4>Offer Kesar Edit 1.2.0</h4></header>
-        <ul class="rows"><li><span class="name">Kesar Studio</span><span class="k">On 1.1.0</span></li><li><span class="name">Roam Bags</span><span class="k">On 1.0.0</span></li></ul>
-        <div class="df"><button class="btn">Not now</button><button class="btn primary">Offer to 2 clients</button></div></section></div>
+      <section class="card" style="margin-top:10px"><header><h4>Who gets Kesar Edit 1.2.0</h4></header>
+        <ul class="rows"><li><label class="name" style="font-weight:600"><input type="checkbox" checked> Kesar Studio</label><span class="k">On 1.1.0 · gets an update</span></li><li><label class="name" style="font-weight:600"><input type="checkbox"> Roam Bags</label><span class="k">Not offered</span></li></ul>
+        <div class="df"><button class="btn">Not now</button><button class="btn primary">Release to Kesar Studio</button></div></section></div>
   </div>
 
   <!-- ===================== PAGES ===================== -->
   <h2 id="pages">Pages</h2>
   <div class="grid3">
     <div><span class="who">About</span><div class="phonef"><div class="addrbar"><b>kesarstudio.in</b>/pages/about</div><div class="sh"><div class="stile s"></div><b style="font-size:17px">Woven in Chanderi since 1998</b><div class="sline sub"><span>Three generations of weavers, one loom room.</span></div><div class="sline"><span>Makers</span><span>12</span></div><div class="sline"><span>Cotton from</span><span>Madhya Pradesh</span></div></div></div></div>
-    <div><span class="who">Contact</span><div class="phonef"><div class="addrbar"><b>kesarstudio.in</b>/pages/contact</div><div class="sh"><div class="sbtn" style="background:#1F7A4D;color:#fff">Chat on WhatsApp</div><div class="sfield">Name</div><div class="sfield">Phone or email</div><div class="sfield">Order number (optional)</div><div class="sfield">Message</div><div class="sbtn">Send</div>
-      <div style="border-top:1px solid var(--store-line);padding-top:8px;font-size:11.5px;color:var(--store-sub);display:grid;gap:2px"><span>Kesar Studio LLP · 12 MI Road, Jaipur 302001</span><span>Customer care: care@kesarstudio.in</span><span>Grievance officer: Riya Mehta</span></div></div></div><p class="cap">The business details come from Settings and can't be removed.</p></div>
-    <div><span class="who">FAQ</span><div class="phonef"><div class="addrbar"><b>kesarstudio.in</b>/pages/faq</div><div class="sh"><b style="font-size:17px">Questions</b><div class="cv-acc"><span>Can I pay on delivery?<b aria-hidden="true">+</b></span><span>How do sizes run?<b aria-hidden="true">+</b></span><span>How long do returns take?<b aria-hidden="true">+</b></span><span>When will it arrive?<b aria-hidden="true">+</b></span></div></div></div><p class="cap">Returns, sizes and delivery prefilled from the shop's settings.</p></div>
+    <div><span class="who">Contact</span><div class="phonef"><div class="addrbar"><b>kesarstudio.in</b>/pages/contact</div><div class="sh"><b style="font-size:17px">Talk to us</b><div class="sline sub"><span>Mon–Sat · 10 am to 7 pm</span></div><div class="sbtn" style="background:#1F7A4D;color:#fff">Chat on WhatsApp</div>
+      <div style="border-top:1px solid var(--store-line);padding-top:8px;font-size:11.5px;color:var(--store-sub);display:grid;gap:2px"><span>Kesar Studio LLP · 12 MI Road, Jaipur 302001</span><span>Customer care: care@kesarstudio.in</span><span>Grievance officer: Riya Mehta</span></div></div></div><p class="cap">WhatsApp and the business details come from Settings and can't be removed. A form arrives with the Messages inbox.</p></div>
+    <div><span class="who">FAQ</span><div class="phonef"><div class="addrbar"><b>kesarstudio.in</b>/pages/faq</div><div class="sh"><b style="font-size:17px">Questions</b><div class="cv-acc"><span>Can I pay on delivery?<b aria-hidden="true">+</b></span><span>How do sizes run?<b aria-hidden="true">+</b></span><span>How long do returns take?<b aria-hidden="true">+</b></span><span>When will it arrive?<b aria-hidden="true">+</b></span></div></div></div><p class="cap">Returns, sizes and delivery answers follow the shop's settings as they change.</p></div>
   </div>
 
   <!-- ===================== LOOK ===================== -->
@@ -412,25 +413,16 @@ table.t td.n,table.t th.n{text-align:right;font-family:var(--mono);font-variant-
   </div>
   <p class="cap">Owners fill words and photos, reorder, hide and add the theme's sections; the structure stays the theme's.</p>
 
-  <!-- ===================== MESSAGES ===================== -->
-  <h2 id="messages">Website messages (console)</h2>
-  <section class="card"><header><h4>Messages from your website</h4><span class="chip c-warn">2 to answer</span></header>
-    <ul class="rows">
-      <li><span class="name">Ananya · Order KS-1038</span><span class="acts"><span class="chip c-warn">Reply by 6 pm</span><button class="btn sm">Reply on WhatsApp</button></span><span class="line"><span>Size exchange · "The M is tight at the shoulders…"</span></span></li>
-      <li><span class="name">Karan</span><span class="acts"><span class="chip c-warn">Reply by tomorrow 10 am</span><button class="btn sm">Reply by email</button></span><span class="line"><span>Bulk order · "Do you take orders of 40 pieces…"</span></span></li>
-      <li class="gone"><span class="name">Meera</span><span class="acts"><span class="chip c-ok">Answered</span></span><span class="line"><span>Delivery · "Do you ship to Port Blair?"</span></span></li>
-    </ul></section>
-  <p class="cap">The 48-hour clock is the 2026 rules' acknowledgement window. Moves into Messages when that module ships.</p>
-
   <!-- ===================== STATES ===================== -->
   <h2 id="states">States</h2>
   <div class="grid3">
     <div><section class="card"><div class="empty"><span class="picto"><svg width="40" height="40" viewBox="0 0 48 48" fill="none" stroke="var(--fg)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="8" y="8" width="32" height="32" rx="3"/><path d="M8 18h32M18 18v22"/><circle cx="30" cy="29" r="4" fill="var(--haldi-soft)"/></svg></span><h3>No themes yet</h3><button class="btn primary">New theme</button></div></section><p class="cap">Starts from a Frrata theme or blank.</p></div>
-    <div><section class="card"><div class="cb" style="padding-top:14px"><button class="addrow" disabled>+ Add a block</button><span class="k">40 of 40 blocks in this section</span></div></section><p class="cap">A limit: the picker greys, the count says why.</p></div>
+    <div><section class="card"><div class="cb" style="padding-top:14px"><button class="addrow" disabled>+ Add a block</button><span class="k">100 of 100 blocks on this page</span></div></section><p class="cap">A limit: the picker greys, the count says why.</p></div>
     <div><div class="banner warn"><span>Monsoon 1.0.0 · waiting for review</span><button class="btn sm">Withdraw submission</button></div><p class="cap">Submitted: the draft keeps going; the version is frozen.</p></div>
     <div><div class="banner danger"><span>Frrata withdrew Kesar Edit 1.1.0 · "Contrast below 4.5:1 on Tint"</span><button class="btn sm">Reply</button></div><p class="cap">Partner side. Shops on it fall back to their previous look.</p></div>
     <div><section class="card"><ul class="rows"><li><span class="name">Kesar Edit <span class="chip c-n">From Arc Studio</span></span><span class="k">No more updates</span></li></ul></section><p class="cap">The partner was removed: the shop keeps its look.</p></div>
     <div><div class="banner info"><span>Open the studio on a computer</span></div><p class="cap">Studio on a phone.</p></div>
+    <div><div class="banner danger"><span>Frrata paused your studio · "Themes withdrawn twice for contrast"</span><button class="btn sm">Reply</button></div><p class="cap">A suspended partner: shops keep their looks; no new versions.</p></div>
   </div>
 </div>
 
