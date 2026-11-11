@@ -334,7 +334,8 @@ Nothing here passes through an agent: no AWS key exists anywhere (the app reache
 3. **Identities** (SES → Identities → Create identity → Domain): `frratamail.app` (shops' order emails) and the notices
    domain (`notify.<Frrata's domain>`), each with Easy DKIM 2048 and a custom MAIL FROM (`bounce.<domain>`). Paste the
    records SES shows to the agent: frratamail.app is on Vercel DNS, so the agent adds them (3 DKIM CNAMEs, MX + SPF for
-   bounce, and `_dmarc` TXT `v=DMARC1; p=none; rua=mailto:dmarc@frratamail.app`).
+   bounce, and `_dmarc` TXT `v=DMARC1; p=none;` — no `rua`: frratamail.app has no inbox to receive reports).
+   **Done for frratamail.app (2026-11-11, ap-south-1):** identity created by the owner, six records added and resolving.
 4. **SNS topic** (SNS → Topics → Standard, name `frrata-ses`): Edit → Message signing → **SignatureVersion 2**. Copy its
    ARN → Vercel `SES_SNS_TOPIC_ARN`.
 5. **Configuration sets** (SES → Configuration sets): `shops` and `notices`. In each: Suppression list → **account-level
