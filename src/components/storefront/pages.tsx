@@ -94,7 +94,7 @@ export function PolicyView({ shop, page }: { shop: StoreShop; page: PolicyPage }
   return (
     <article className={`${wrap} max-w-3xl space-y-4 py-10 leading-relaxed`}>
       <h1 className="text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{POLICY_TITLE[page]}</h1>
-      <PolicyBody page={page} facts={shop} override={shop.overrides[page]} shopper />
+      <PolicyBody page={page} facts={shop} override={Object.hasOwn(shop.overrides, page) ? shop.overrides[page] : null} shopper />
       {page === 'contact' && waLink(shop.whatsapp) && <p><a className="underline underline-offset-4" href={waLink(shop.whatsapp)!} rel="noopener">Message {shop.shopName} on WhatsApp</a></p>}
     </article>
   )
