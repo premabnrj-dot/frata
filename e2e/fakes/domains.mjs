@@ -4,6 +4,8 @@
 import http from 'node:http'
 
 const added = new Set()
+// Billing (Admin › Infrastructure): charges as JSONL, and whether the billing token may read env (it must not).
+let charges = null, billingWide = false
 const records = new Map() // "name|TYPE" → [data]
 const TYPES = { A: 1, NS: 2, CNAME: 5, TXT: 16, CAA: 257 }
 const send = (res, code, body) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)) }
@@ -15,6 +17,13 @@ http.createServer((req, res) => {
     if (p === '/_test/dns') { records.set(`${body.name}|${body.type}`, body.data); return send(res, 200, { ok: true }) }
     if (p === '/_test/added') return send(res, 200, [...added])
     if (p === '/_test/reset') { added.clear(); records.clear(); return send(res, 200, { ok: true }) }
+    if (p === '/_test/charges') { charges = body.charges ?? null; billingWide = !!body.wide; return send(res, 200, { ok: true }) }
+    if (req.method === 'GET' && /^\/v9\/projects\/[^/]+\/env$/.test(p)) return billingWide ? send(res, 200, { envs: [] }) : send(res, 403, { error: { code: 'forbidden' } })
+    if (req.method === 'GET' && p === '/v1/billing/charges') {
+      if (!charges) return send(res, 404, { error: { code: 'costs_not_found' } })
+      res.writeHead(200, { 'content-type': 'application/jsonl' })
+      return res.end(charges.map((c) => JSON.stringify(c)).join('\n') + '\n')
+    }
     if (p === '/cloudflare' || p === '/google') {
       const name = u.searchParams.get('name'), type = u.searchParams.get('type')
       const data = records.get(`${name}|${type}`) ?? (type === 'NS' ? ['ns51.domaincontrol.com.'] : null)

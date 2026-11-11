@@ -8,7 +8,7 @@ import { claimDue, deferRow, GiveUp, markDead, markFailed, markSent, type Outbox
 import { sendBillAttempt } from '@/lib/billing/debit'
 import { sendDomainAdd, sendDomainRemove } from '@/lib/domains/senders'
 import { sendReviewAsk } from '@/lib/modules/reviews/sender'
-import { sendAssetDelete, sendUploadCancel } from '@/lib/video/senders'
+import { sendAssetDelete, sendRenditionCreate, sendUploadCancel } from '@/lib/video/senders'
 import { E2E_FIXTURES, VERCEL_ENV } from '@/lib/env'
 
 // =============================================================================
@@ -32,6 +32,7 @@ export const SENDERS: Record<string, (row: OutboxRow) => Promise<void>> = {
   // V1 video: a removed video's Mux asset, and an upload URL nobody should use any more (ids from the row).
   'mux.asset.delete': sendAssetDelete,
   'mux.upload.cancel': sendUploadCancel,
+  'mux.rendition.create': sendRenditionCreate,
 }
 const BATCH = 25
 

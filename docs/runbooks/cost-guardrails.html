@@ -1,0 +1,166 @@
+<title>Frrata Cost Guardrails</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a runbook. The bound first (the most a month can cost), then three locks, the settings to make with exact values, the scenarios that cost money, and what we build. Frrata tokens. */
+:root {
+  --bg: #fbfaf8; --card: #ffffff; --fg: #1d1b19; --sub: #6a645d; --line: #e6e1da; --muted: #f3f0eb; --ink: #1d1b19; --on-ink: #fbfaf8; --rani: #c41a5e;
+  --ok-bg: #e5f3ea; --ok: #1e6b3d; --warn-bg: #fdf1d8; --warn: #8a5a00; --bad-bg: #fbe6e6; --bad: #a12020; --info-bg: #e7eefb; --info: #234e9a;
+  --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141312; --card: #1c1b19; --fg: #f1eee9; --sub: #a59e95; --line: #2f2c29; --muted: #23211f; --ink: #f1eee9; --on-ink: #141312; --rani: #f06a9e;
+  --ok-bg: #12301f; --ok: #7fd3a0; --warn-bg: #3a2b0c; --warn: #f2c66b; --bad-bg: #3d1515; --bad: #ff9b9b; --info-bg: #172744; --info: #9fbdf5; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #141312; --card: #1c1b19; --fg: #f1eee9; --sub: #a59e95; --line: #2f2c29; --muted: #23211f; --ink: #f1eee9; --on-ink: #141312; --rani: #f06a9e;
+  --ok-bg: #12301f; --ok: #7fd3a0; --warn-bg: #3a2b0c; --warn: #f2c66b; --bad-bg: #3d1515; --bad: #ff9b9b; --info-bg: #172744; --info: #9fbdf5; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--sans) }
+.wrap { max-width: 1000px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 40px }
+h1 { font-size: 30px; line-height: 1.15; letter-spacing: -0.02em; margin: 0; text-wrap: balance }
+h2 { font-size: 20px; letter-spacing: -0.01em; margin: 0; text-wrap: balance }
+h3 { font-size: 15px; margin: 0 }
+p { margin: 0; max-width: 70ch }
+.sub { color: var(--sub) } .note { font-size: 13px; color: var(--sub) }
+.mono, .n { font-family: var(--mono); font-variant-numeric: tabular-nums }
+section { display: grid; gap: 14px; min-width: 0 }
+.eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--sub); font-weight: 600 }
+.thread { width: 56px; height: 2px; background: var(--rani) }
+.bound { border: 2px solid var(--ink); border-radius: 8px; background: var(--card); padding: 18px; display: grid; gap: 14px }
+.bound .total { font-size: 34px; font-weight: 700; font-family: var(--mono); letter-spacing: -0.02em }
+.parts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px }
+.part { background: var(--muted); border-radius: 6px; padding: 10px 12px; display: grid; gap: 2px }
+.part span { font-size: 12px; color: var(--sub) } .part b { font-family: var(--mono); font-size: 17px }
+.locks { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px }
+.lock { border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 16px; display: grid; gap: 8px; align-content: start }
+.lock .k { font-size: 12px; font-weight: 700; color: var(--rani); letter-spacing: .04em; text-transform: uppercase }
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--card) }
+table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 14px }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top }
+th { font-size: 12px; font-weight: 600; color: var(--sub); text-transform: uppercase; letter-spacing: .05em; background: var(--muted) }
+tr:last-child td { border-bottom: 0 }
+td.n { text-align: right; white-space: nowrap }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 4px; white-space: nowrap }
+.p-bad { background: var(--bad-bg); color: var(--bad) } .p-warn { background: var(--warn-bg); color: var(--warn) } .p-ok { background: var(--ok-bg); color: var(--ok) } .p-info { background: var(--info-bg); color: var(--info) }
+.setup { display: grid; gap: 14px }
+.vendor { border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 16px; display: grid; gap: 10px }
+.vendor ol { margin: 0; padding-left: 20px; display: grid; gap: 8px }
+.vendor li b { font-weight: 600 }
+.path { font-family: var(--mono); font-size: 13px; background: var(--muted); padding: 1px 6px; border-radius: 4px }
+.chk { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none }
+.chk li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; align-items: start }
+.chk input { margin-top: 4px; accent-color: var(--ink) }
+.tag { font-size: 12px; color: var(--sub) }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <span class="eyebrow">Runbook · checked 10 Nov 2026 · corrected 11 Nov 2026</span>
+    <h1>No surprise bills</h1>
+    <div class="thread" aria-hidden="true"></div>
+    <p class="sub">The most a month can cost once these are set, the settings to make today with exact values, what makes a bill jump, and what stops each one.</p>
+  </header>
+
+  <section>
+    <h2>The most a month can cost</h2>
+    <div class="bound">
+      <div style="display:grid;gap:2px"><span class="eyebrow">With the settings below, at launch</span><span class="total">≈ $215 · ₹19,000</span><span class="sub">You get an email at about $45 and an SMS at about $70. A bill can only go higher if you raise a limit yourself.</span></div>
+      <div class="parts">
+        <div class="part"><span>Vercel Pro fee</span><b>$20</b></div>
+        <div class="part"><span>Vercel on-demand, then paused</span><b>$50</b></div>
+        <div class="part"><span>Vercel CDN tier (you choose)</span><b>$0–20</b></div>
+        <div class="part"><span>Supabase Pro, spend cap on</span><b>$25</b></div>
+        <div class="part"><span>Mux, our pause at $100</span><b>≤ $100</b></div>
+      </div>
+      <p class="note">₹ at ₹88 to the dollar, before GST. Mux has no hard cap of its own, so its line holds only once our Admin pause is built (lock 3). Until then, keep Mux’s email alerts on.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Three locks</h2>
+    <div class="locks">
+      <div class="lock"><span class="k">Lock 1 · Hard stop</span><h3>The vendor stops charging</h3><p class="sub">Vercel pauses production at your budget. Supabase’s spend cap blocks usage past the plan. Mux has no hard stop.</p></div>
+      <div class="lock"><span class="k">Lock 2 · Early warning</span><h3>You hear before it’s big</h3><p class="sub">Vercel emails at 50% and 75% of the budget and sends an SMS at 100%. Mux emails at up to 3 amounts. Supabase emails only after a limit is passed.</p></div>
+      <div class="lock"><span class="k">Lock 3 · Our own switch</span><h3>Frrata stops the cause</h3><p class="sub">Admin › Infrastructure alerts on a 3× day, a runaway shop or a viral video. Admin › Modules pauses video for everyone. Every shop has upload caps.</p></div>
+    </div>
+    <p class="note">A pause is an outage: every shop goes offline until you resume it. It is set at a level a real month shouldn’t reach, so it only fires on a flood or a bug. The alerts at 50% and 75% give you time to act before it does.</p>
+  </section>
+
+  <section>
+    <h2>Set these today</h2>
+    <div class="setup">
+      <div class="vendor">
+        <h3>Vercel (after upgrading to Pro)</h3>
+        <ol>
+          <li><span class="path">Settings › Billing › Spend Management</span>: turn it on, <b>On-Demand Budget $50</b>, <b>Pause Production Deployments on</b>. The budget covers usage beyond the $20 credit. Vercel checks every few minutes, so expect a few dollars past it.</li>
+          <li><span class="path">Settings › My Notifications › Spend Management</span>: email and web at 50%, 75% and 100%; <b>SMS at 100%</b> with your phone verified.</li>
+          <li><span class="path">Settings › Billing › Flat Rate CDN</span>: stay on the included tier (1M requests, 1 TB). Vercel moves you up a tier from the next month if a month goes over, so watch the requests meter.</li>
+          <li><span class="path">Settings › Members</span>: only you hold Owner or Billing. Anyone else is a free Viewer. Each extra member costs $20 a month.</li>
+          <li>Don’t add Observability Plus, Speed Insights Plus, Web Analytics Plus, Password Protection or other add-ons unless we decide to. They are monthly charges <b>outside</b> the budget.</li>
+          <li>Move the other 11 projects to a separate Hobby account. Otherwise they share Frrata’s budget, and a bug in one pauses every shop.</li>
+          <li><span class="path">Project frata › Firewall</span>: know where <b>Attack Mode</b> is. In a flood, switch it on: challenged and blocked traffic is free.</li>
+        </ol>
+      </div>
+      <div class="vendor">
+        <h3>Supabase</h3>
+        <ol>
+          <li>At launch, move to <b>Pro ($25 a month)</b>. Free pauses after a week with no activity, and past its limits can make the database read-only or take it offline.</li>
+          <li><span class="path">Organization › Billing › Cost Control</span>: keep the <b>Spend Cap on</b> (the default). Past the plan’s disk, egress, monthly active users or storage, that item stops until next month instead of being charged.</li>
+          <li>Compute size, point-in-time recovery, IPv4 and log drains are <b>not</b> under the cap. Change none of them without deciding first.</li>
+        </ol>
+      </div>
+      <div class="vendor">
+        <h3>Mux</h3>
+        <ol>
+          <li><span class="path">Settings › Billing › Spending alerts</span>: three alerts, <b>$10, $25 and $50</b>, by email. These need a paid Mux plan; on Free, uploads stop at 10 videos instead.</li>
+          <li>Mux never stops on its own. Our Admin pause of Product video (built with the shop side) is the stop.</li>
+          <li>Create a separate <b>read-only</b> token for the dashboard. The current token can write and must not be reused.</li>
+        </ol>
+      </div>
+      <div class="vendor">
+        <h3>Your card</h3>
+        <ol>
+          <li>Pay all three from <b>one card used for nothing else</b>, with a monthly limit set in your bank’s app (₹20,000 covers the bound above).</li>
+          <li>Send billing emails from all three to an inbox you read every day.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What makes a bill jump</h2>
+    <p class="sub">Estimates on Pro in Mumbai. Shop pages are served from Vercel’s cache (checked 11 Nov: <span class="mono">x-vercel-cache: HIT</span>), so most shop traffic costs CDN requests, not server time. “Unguarded” is what it would cost with no limits set.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>What happens</th><th class="n">Unguarded</th><th>What stops it</th><th>Likely</th></tr></thead>
+      <tbody>
+        <tr><td><b>Bots crawl every shop</b><br><span class="tag">*.frrata.shop means any name answers; 1M pages a day for a month</span></td><td class="n">≈ $100 a month</td><td>Pages come from cache already; the cost is the CDN tier moving up next month. A firewall rule that challenges bots (free); a 3× day alert</td><td><span class="pill p-warn">Medium</span></td></tr>
+        <tr><td><b>A flood in one day</b><br><span class="tag">50M requests on pages that run on the server: the console, sign-in, the shop’s API</span></td><td class="n">≈ $300 a day</td><td>Vercel’s DDoS protection (free, on); Attack Mode; budget pause at $50. On cached shop pages the flat-rate CDN absorbs it for that month</td><td><span class="pill p-warn">Medium</span></td></tr>
+        <tr><td><b>A reel goes viral</b><br><span class="tag">1M plays × 20 s</span></td><td class="n">≈ $190</td><td>A one-video-over-25% alert; Mux email alerts; Admin pause of video</td><td><span class="pill p-warn">Medium</span></td></tr>
+        <tr><td><b>A reel’s link is copied to another site</b><br><span class="tag">10M plays from outside the shop</span></td><td class="n">≈ $2,600</td><td>Signed links that expire (your download decision); the same alerts and pause</td><td><span class="pill p-warn">Medium</span></td></tr>
+        <tr><td><b>The database stalls</b><br><span class="tag">100,000 requests waiting on locks or a slow service</span></td><td class="n">up to ≈ $190</td><td>Already: queries stop at 20 s, lock waits at 10 s. To build: a page time limit (memory is billed while waiting)</td><td><span class="pill p-info">Low</span></td></tr>
+        <tr><td><b>A bug loops</b><br><span class="tag">a page refreshing itself, a retry storm</span></td><td class="n">open-ended</td><td>Backoff and caps in code (the outbox already has them); a 3× day alert; budget pause</td><td><span class="pill p-info">Low</span></td></tr>
+        <tr><td><b>Growth moves the CDN tier</b><br><span class="tag">a month over 1M, 10M or 50M requests</span></td><td class="n">$20 → $100 → $300 a month</td><td>The requests meter and an alert at 80% of the tier, before the month ends</td><td><span class="pill p-ok">Expected</span></td></tr>
+        <tr><td><b>An add-on or seat is switched on</b></td><td class="n">$10–300 a month</td><td>Only you hold Billing; the budget doesn’t cover add-ons, so check the invoice preview monthly</td><td><span class="pill p-info">Low</span></td></tr>
+        <tr><td><b>Another project on the team runs away</b></td><td class="n">shares the budget</td><td>Move the other 11 projects to their own account</td><td><span class="pill p-warn">Medium</span></td></tr>
+        <tr><td><b>Upload abuse</b><br><span class="tag">a trial shop uploading as fast as it can</span></td><td class="n">≈ $11 a shop a month at most</td><td>Already built: caps per plan, 5 an hour, 3 failed a day, Frrata’s hourly cap</td><td><span class="pill p-ok">Guarded</span></td></tr>
+        <tr><td><b>Photo resizing abuse</b></td><td class="n">≈ $8 per 10,000 photos</td><td>Already built: one quality only; only our own photos are resized</td><td><span class="pill p-ok">Guarded</span></td></tr>
+        <tr><td><b>Supabase past its limits</b></td><td class="n">$0 extra</td><td>Spend cap on (Pro); the risk on Free is an outage, not a bill</td><td><span class="pill p-ok">Guarded</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>What we build</h2>
+    <p class="sub">Each item goes through the usual plan and review, in this order.</p>
+    <ul class="chk">
+      <li><input type="checkbox" id="b1" aria-label="Done" checked><label for="b1"><b>Shop pages from Vercel’s cache.</b> Already true: every shop page is cached and refreshed at most once a minute (checked 11 Nov).</label></li>
+      <li><input type="checkbox" id="b2" aria-label="Done"><label for="b2"><b>A page time limit.</b> Queries already stop at 20 s and lock waits at 10 s (since migration 0002). The middleware stays on every path: on shop hosts it does no database work.</label></li>
+      <li><input type="checkbox" id="b3" aria-label="Done"><label for="b3"><b>Firewall rules:</b> challenge known bots on *.frrata.shop and answer shop names that don’t exist from the cache. Mitigated traffic is free.</label></li>
+      <li><input type="checkbox" id="b4" aria-label="Done"><label for="b4"><b>Admin › Infrastructure</b> with its alerts (the mockup): spend pace, a 3× day, one shop or video running away.</label></li>
+      <li><input type="checkbox" id="b5" aria-label="Done"><label for="b5"><b>Video’s stop:</b> pausing Product video in Admin also hides it on every shop, so delivery stops too; plus signed links once you decide.</label></li>
+      <li><input type="checkbox" id="b6" aria-label="Done"><label for="b6"><b>Vercel’s spend webhook</b> into Admin, so a 50% alert also shows there with the cause beside it.</label></li>
+    </ul>
+    <p class="note">Sources, read 10 Nov 2026: Vercel spend-management (updated 18 Sep 2026), WAF usage and pricing (16 Jun 2026), functions usage and pricing (16 Jun 2026, Mumbai rates), Flat Rate CDN (14 Sep 2026); Supabase pricing and cost control; Mux spending alerts and pricing (frata-integrations § Mux, § Infrastructure usage). Costs are estimates from the measured 64 ms and 0.0002 GB-hours a request, not quotes.</p>
+  </section>
+</div>

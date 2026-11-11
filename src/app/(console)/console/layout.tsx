@@ -16,6 +16,9 @@ import type { Place } from '@/components/shell/app-shell'
 import { BuildingBanner } from '@/components/nav/building-banner'
 import { myPartner, partnerClients } from '@/lib/db/partners'
 import { clientStage } from '@/domains/partners/stage'
+import { MODULE_KEYS, MODULES } from '@/domains/modules/registry'
+import { shopModules } from '@/lib/queries/modules'
+import { MODULE_ICON } from '@/components/modules/icons'
 import { CONSOLE_ROLES, ROLE_LABEL } from '@/domains/tenancy/roles'
 
 export const dynamic = 'force-dynamic'
@@ -85,7 +88,14 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const settings: NavItem = { href: '/console/settings', label: 'Settings', icon: 'settings' }
   const offers: NavItem = { href: '/console/offers', label: 'Offers', icon: 'offers' }
   const look: NavItem = { href: '/console/look', label: 'Look', icon: 'look' }
-  const apps: NavItem = { href: '/console/apps', label: 'Apps', icon: 'apps' }
+  // The shop's apps in use, under Apps (those with a page of their own); shopModules is per-request cached, and a
+  // failure only leaves Apps without its list.
+  const mods = await shopModules(tenantId, now.toISOString()).catch((err) => { console.error('[console layout] apps', err instanceof Error ? err.name : err); return null })
+  const inUse: NavItem[] = mods ? MODULE_KEYS.flatMap((k) => {
+    const page = MODULES[k].setup
+    return page && mods.access[k].on && mods.access[k].usable ? [{ href: page, label: MODULES[k].name, icon: MODULE_ICON[k] }] : []
+  }) : []
+  const apps: NavItem = { href: '/console/apps', label: 'Apps', icon: 'apps', children: inUse }
   const analytics: NavItem = { href: '/console/analytics', label: 'Analytics', icon: 'profit' }
   const activity: NavItem = { href: '/console/activity', label: 'Activity', icon: 'activity' }
   const search: NavItem = { href: '/console/search', label: 'Search and sharing', icon: 'search' }

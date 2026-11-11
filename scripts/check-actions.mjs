@@ -18,7 +18,8 @@ import { join } from 'node:path'
 /** Functions that establish who is calling, and refuse who may not. */
 // shopRequest (src/lib/http/shop-api.ts) is requireShop plus a Zod body and a per-shop limit, for /api/shop/*.
 // moduleGate (src/lib/auth/as-module.ts) is requireMember plus the module's on/off check, for reads and non-writing actions.
-const CHOKEPOINTS = ['requireMember', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest']
+// requireEk (src/lib/ekcode/require-ek.ts) is EkCode's host check: Host = EKCODE_HOST, same-origin JSON POSTs, a per-network limit.
+const CHOKEPOINTS = ['requireMember', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest', 'requireEk']
 
 /** Entry points that check their own credential: file → [what it is, a token that must appear in it]. */
 const ENTRY_POINTS = {
@@ -26,7 +27,9 @@ const ENTRY_POINTS = {
   'src/app/auth/callback/route.ts': ['sign-in: trades the one-time code for a session', 'exchangeCodeForSession('],
   'src/app/api/cron/outbox/route.ts': ['Vercel Cron', 'isCronRequest('],
   'src/app/api/cron/domains/route.ts': ['Vercel Cron', 'isCronRequest('],
+  'src/app/api/cron/infra/route.ts': ['Vercel Cron', 'isCronRequest('],
   'src/app/api/webhooks/whatsapp/route.ts': ['Meta webhook: HMAC of the raw body with Frrata\'s app secret; each item routed by its own id through a definer', 'verifyMetaSignature('],
+  'src/app/api/webhooks/ekcode/route.ts': ['Meta webhook for EkCode\'s number: HMAC of the raw body with EkCode\'s app secret; only its own number\'s statuses, through a definer', 'verifyMetaSignature('],
   'src/app/api/webhooks/razorpay/[key]/route.ts': ['Razorpay webhook: HMAC of the raw body with the shop\'s own secret, found by our key', 'verifyRazorpaySignature('],
   'src/app/api/webhooks/mux/route.ts': ['Mux webhook: HMAC of `t.body` with Frrata\'s webhook secret (current or previous), 5-minute window; each event routed by our video id and its upload id through a definer', 'verifyMuxSignature('],
   'src/app/api/webhooks/billing/route.ts': ['Frrata\'s own billing webhook: HMAC of the raw body with Frrata\'s billing secret (current or previous)', 'webhookSigned('],

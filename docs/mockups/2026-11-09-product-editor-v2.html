@@ -1,0 +1,716 @@
+<title>Frrata Product Editor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a short note for the owner, then six views (desktop, swatches, phone, new product, fix before saving, what changed). Frrata console tokens. */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--thread:#D61F69;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;
+  --scrim:rgb(28 25 23 / .45);--shopbg:#FFFFFF;--shopfg:#1C1917;--shopsub:#5F5A55;--shopdark:#151312;--shopdarkfg:#EDEAE6;--shopdarksub:#A9A29B;
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;
+  --fast:120ms;--base:200ms;--slow:320ms;
+  --standard:cubic-bezier(.2,0,0,1);--entrance:cubic-bezier(0,0,0,1);--exit:cubic-bezier(.3,0,1,1);
+  --spring:linear(0,.22 7%,.6 17%,.86 27%,1.01 38%,1.04 46%,1.02 60%,1 100%);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--scrim:rgb(0 0 0 / .6);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--scrim:rgb(0 0 0 / .6);color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--sans);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 96px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:26px;line-height:1.2;margin:0 0 6px;text-wrap:balance}
+h2.v{font-size:18px;margin:32px 0 12px;display:flex;gap:10px;align-items:center;text-wrap:balance}
+h2.v::before{content:"";width:18px;height:2px;background:var(--thread);flex:none}
+p{margin:0 0 10px;max-width:72ch}
+.k{font-size:12.5px;color:var(--sub)}.mono{font-family:var(--mono);font-variant-ligatures:none}.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.note{display:grid;gap:6px;margin:12px 0 0;padding:0;list-style:none;max-width:86ch}
+.note li{padding-left:16px;position:relative}.note li::before{content:"";position:absolute;left:0;top:.72em;width:8px;height:2px;background:var(--thread)}
+nav.views{display:flex;gap:6px;flex-wrap:wrap;margin:20px 0 0;position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);padding-block:8px;border-bottom:1px solid var(--border)}
+nav.views a{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--border);color:var(--fg);text-decoration:none;font-weight:500;font-size:13px}
+nav.views a[aria-current="page"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+section.view[hidden]{display:none}
+
+/* primitives */
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;min-width:0}
+.hd{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px 0;min-height:44px}
+.bd{padding:10px 16px 16px;display:grid;gap:12px}
+.card h3{font-size:15px;font-weight:600;margin:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--fg);padding:0 12px;font:500 13px var(--sans);min-height:36px;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:var(--muted)}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.sm,.btn.edit{min-height:30px;padding:0 10px;font-size:12.5px}
+button:focus-visible,.input:focus-visible,select:focus-visible,summary:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.link{background:none;border:0;padding:0;color:var(--fg);text-decoration:underline;text-underline-offset:2px;font:inherit;cursor:pointer;min-height:24px;display:inline-flex;align-items:center}
+.ico{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.ico.s{width:14px;height:14px}
+label.f,div.f{display:grid;gap:6px;font-size:13px;font-weight:500;min-width:0}
+.input{border:1px solid var(--input);border-radius:6px;padding:0 10px;background:var(--card);color:var(--fg);font:14px var(--sans);min-height:36px;width:100%;min-width:0}
+.opt{font-weight:400;color:var(--sub)}
+.err{color:var(--danger-text);font-size:12.5px}
+.input[aria-invalid="true"]{border-color:var(--danger-text)}
+.seg{display:flex;border:1px solid var(--input);border-radius:6px;overflow:hidden;width:100%}
+.seg button{flex:1;min-height:36px;border:0;background:var(--card);color:var(--fg);font:500 13px var(--sans);cursor:pointer;border-left:1px solid var(--border);padding:0 6px}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.pick{display:flex;flex-wrap:wrap;gap:6px;font-weight:400}
+.pick button{min-height:32px;border:1px solid var(--input);background:var(--card);color:var(--fg);border-radius:999px;padding:0 12px;font:500 13px var(--sans);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.pick button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.pick button.add{border-style:dashed;color:var(--sub)}
+
+/* read view and forms */
+.dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 16px;margin:0;font-size:13.5px}
+.dl dt{color:var(--sub)}.dl dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.vals{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center}
+.cval{display:inline-flex;align-items:center;gap:6px}
+.unset{color:var(--sub)}
+.ffoot{display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);padding-top:12px}
+.editing{border-color:var(--fg);box-shadow:0 0 0 1px var(--fg)}
+
+/* console frame */
+.stage{border:1px solid var(--border);border-radius:8px;background:var(--bg);overflow:hidden;position:relative}
+.ed{padding:18px 20px 28px;display:grid;gap:16px}
+.crumb{display:inline-flex;align-items:center;gap:4px;color:var(--sub);font-size:13px;text-decoration:none;min-height:24px}
+.head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ptitle{font-size:24px;font-weight:700;letter-spacing:-.01em;margin:0}
+.meta{font-size:12.5px;color:var(--sub);overflow-wrap:anywhere}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px;align-items:start}
+.main{display:grid;gap:14px;min-width:0}
+.side{display:grid;gap:14px;position:sticky;top:12px;min-width:0}
+@media (max-width:900px){.cols{grid-template-columns:minmax(0,1fr)}.side{position:static;order:-1}}
+
+/* photos */
+.photos{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
+.ph{position:relative;aspect-ratio:4/5;border-radius:5px;overflow:hidden;border:1px solid var(--border);background-size:cover;background-position:center;max-width:100%;padding:0}
+.ph.cover{outline:2px solid var(--fg);outline-offset:1px}
+.ph .lbl{position:absolute;left:5px;bottom:5px;background:rgb(0 0 0 / .62);color:#fff;font-size:11px;padding:1px 6px;border-radius:4px}
+.ph .dot{position:absolute;right:5px;top:5px;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgb(0 0 0 / .35)}
+.ph.add{display:grid;place-items:center;border:1.5px dashed var(--input);background:var(--card);color:var(--sub);cursor:pointer}
+@media (max-width:900px){.photos{grid-template-columns:repeat(6,minmax(0,1fr))}}
+@media (max-width:640px){.photos{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+/* swatches */
+.sw{display:inline-block;flex:none;border-radius:50%;width:18px;height:18px;border:1px solid rgb(0 0 0 / .18);background-repeat:no-repeat}
+.sw.lg{width:40px;height:40px}.sw.md{width:28px;height:28px}.sw.xs{width:14px;height:14px}
+.sw.light{box-shadow:inset 0 0 0 1px rgb(0 0 0 / .22)}
+
+/* price and stock */
+.grid{width:100%;border-collapse:collapse;font-size:13px}
+.grid th{font-size:11.5px;color:var(--sub);font-weight:500;text-align:left;padding:6px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.grid th.r,.grid td.r{text-align:right}
+.grid td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.grid tr.grp td{background:var(--muted);padding:7px 10px}
+.gwrap{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.gname{display:inline-flex;align-items:center;gap:8px;font:600 13px var(--sans);color:var(--fg)}
+.gsum{color:var(--sub);font-size:12.5px}
+.grid .input{min-height:32px;font-family:var(--mono);font-size:13px;text-align:right;padding:0 8px;width:96px}
+.grid select.input{font-family:var(--sans);text-align:left;width:auto}
+.stepper{display:inline-grid;grid-template-columns:28px 44px 28px;border:1px solid var(--input);border-radius:6px;overflow:hidden;height:32px}
+.stepper button{border:0;background:var(--card);color:var(--fg);cursor:pointer;display:grid;place-items:center}
+.stepper input{border:0;border-left:1px solid var(--border);border-right:1px solid var(--border);text-align:center;font:13px var(--mono);background:var(--card);color:var(--fg);width:44px;min-width:0}
+.tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px}
+.tablewrap .grid tr:last-child td{border-bottom:0}
+.sees-ok{color:var(--ok-text)}.sees-warn{color:var(--warn-text)}.sees-info{color:var(--info-text)}
+
+/* folded rows */
+.rows details{border-top:1px solid var(--border)}
+.rows details:first-child{border-top:0}
+.rows summary{list-style:none;display:grid;grid-template-columns:minmax(0,1fr) 16px;gap:10px;align-items:center;padding:12px 16px;cursor:pointer;min-height:54px}
+.rows summary::-webkit-details-marker{display:none}
+.rows summary b{font-weight:600}
+.rows summary .s{display:block;font-size:12.5px;color:var(--sub);overflow-wrap:anywhere}
+.rows .chev{transition:rotate var(--base) var(--standard)}
+.rows details[open] .chev{rotate:90deg}
+.rows .in{padding:0 16px 16px;display:grid;gap:12px}
+.rows .in .top{display:flex;justify-content:flex-end}
+
+/* swatch form */
+.swl{list-style:none;margin:0;padding:0;display:grid;font-weight:400}
+.swl li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--border)}
+.swl li:first-child{border-top:0}
+.swl .s{display:block;font-size:12.5px;color:var(--sub)}
+.dlg{border:1px solid var(--border);border-radius:10px;background:var(--card);overflow:hidden;display:grid;grid-template-rows:auto 1fr auto;max-width:860px;margin:0 auto;box-shadow:0 12px 32px rgb(0 0 0 / .14)}
+.dlg .dh{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
+.dlg .db{padding:14px 16px;display:grid;gap:14px;min-width:0}
+.dlg .df{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid var(--border);flex-wrap:wrap}
+.cropgrid{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:16px;align-items:start}
+@media (max-width:720px){.cropgrid{grid-template-columns:minmax(0,1fr)}}
+.srcphotos{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 4px}
+.srcphotos button{flex:0 0 52px;aspect-ratio:4/5;border-radius:4px;border:2px solid transparent;background-size:cover;background-position:center;cursor:pointer;padding:0;position:relative}
+.srcphotos button[aria-pressed="true"]{border-color:var(--fg)}
+.srcphotos .dot{position:absolute;right:3px;top:3px;width:9px;height:9px;border-radius:50%;border:1.5px solid #fff}
+.srcphotos .tagc{position:absolute;left:2px;bottom:2px;background:rgb(0 0 0 / .62);color:#fff;font-size:9px;padding:0 3px;border-radius:3px}
+.srcphotos .up{display:grid;place-items:center;background:var(--muted);border:1.5px dashed var(--input);color:var(--sub);font-size:11px;text-align:center;line-height:1.2}
+.cropstage{position:relative;border-radius:6px;overflow:hidden;touch-action:none;cursor:grab;user-select:none;background:var(--muted);aspect-ratio:4/5;width:100%;max-width:340px;margin-inline:auto}
+.cropstage img{width:100%;height:100%;display:block;pointer-events:none}
+.cropstage .ring{position:absolute;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2000px rgb(0 0 0 / .45),0 0 0 1px rgb(0 0 0 / .5);pointer-events:none}
+.zoom{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;font-size:12.5px;color:var(--sub);max-width:340px;width:100%;margin-inline:auto}
+.zoom input{width:100%;accent-color:var(--fg)}
+.prev{display:grid;gap:10px;align-content:start}
+.prevpanel{display:grid;gap:8px;padding:10px 12px;border-radius:6px;border:1px solid var(--border)}
+.prevpanel.light{background:var(--shopbg);color:var(--shopfg)}
+.prevpanel.light .lab{color:var(--shopsub)}
+.prevpanel.dark{background:var(--shopdark);color:var(--shopdarkfg)}
+.prevpanel.dark .lab{color:var(--shopdarksub)}
+.lab{font-size:12px}
+.pp-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px}
+.pp-buy{display:inline-flex;align-items:center;gap:8px;padding:3px 10px 3px 3px;border-radius:999px;border:1.5px solid currentColor}
+.pp-buy.off{opacity:.5}
+.pp-cross{position:relative;overflow:visible}.pp-cross::after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1.5px;background:currentColor;rotate:45deg}
+.fam{display:flex;flex-wrap:wrap;gap:6px}
+.fam button{display:inline-flex;align-items:center;gap:6px;min-height:30px;border:1px solid var(--input);border-radius:999px;background:var(--card);color:var(--fg);padding:0 10px 0 6px;font:500 12.5px var(--sans);cursor:pointer}
+.fam button[aria-pressed="true"]{border-color:var(--fg);box-shadow:0 0 0 1px var(--fg)}
+.fam i{width:14px;height:14px;border-radius:50%;border:1px solid rgb(0 0 0 / .2)}
+.pal{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pal button{width:32px;height:32px;border-radius:50%;border:1px solid rgb(0 0 0 / .2);cursor:pointer;padding:0}
+.pal button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--fg)}
+.two{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+.libgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,170px),1fr));gap:8px}
+.libgrid button{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--fg);padding:8px;font:500 13px var(--sans);cursor:pointer;text-align:left}
+.libgrid button[aria-pressed="true"]{border-color:var(--fg);box-shadow:0 0 0 1px var(--fg)}
+
+/* phone */
+.phonewrap{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
+.phone{width:100%;max-width:390px;border:1px solid var(--border);border-radius:18px;overflow:hidden;background:var(--bg);position:relative;height:780px;display:grid;grid-template-rows:auto 1fr auto}
+.phone .top{padding:10px 14px;border-bottom:1px solid var(--border);background:var(--card);display:grid;gap:6px}
+.phone .scroll{overflow-y:auto;padding:12px;display:grid;gap:12px;align-content:start}
+.pstrip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.pstrip .ph{flex:0 0 92px}
+.pnav{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border);background:var(--card)}
+.pnav span{display:grid;place-items:center;gap:2px;font-size:11px;color:var(--sub);min-height:52px;padding-top:4px}
+.pnav span.on{color:var(--fg);font-weight:600}
+.statusbtn{display:inline-flex;align-items:center;gap:6px;min-height:32px;border:1px solid var(--input);border-radius:999px;padding:0 10px;background:var(--card);color:var(--fg);font:500 13px var(--sans);cursor:pointer;justify-self:start}
+.statusbtn i{width:8px;height:8px;border-radius:50%;background:var(--ok-text)}
+.crow{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--border)}
+.crow:first-child{border-top:0}
+.crow .s{display:block;font-size:12.5px;color:var(--sub)}
+.crow.btnrow{background:none;border-left:0;border-right:0;border-bottom:0;width:100%;text-align:left;color:var(--fg);font:inherit;cursor:pointer;grid-template-columns:auto minmax(0,1fr) 16px;min-height:56px}
+.sheet{position:absolute;inset:auto 0 0;background:var(--card);border-top:1px solid var(--border);border-radius:14px 14px 0 0;z-index:6;max-height:86%;grid-template-rows:auto 1fr auto;
+  transform:translateY(100%);transition:transform var(--base) var(--exit),display var(--base) allow-discrete;display:none}
+.sheet.open{display:grid;transform:none;transition:transform var(--slow) var(--spring),display var(--slow) allow-discrete}
+@starting-style{.sheet.open{transform:translateY(100%)}}
+.scrim{position:absolute;inset:0;background:var(--scrim);z-index:5;opacity:0;display:none;transition:opacity var(--base) var(--exit),display var(--base) allow-discrete}
+.scrim.open{display:block;opacity:1;transition:opacity var(--base) var(--entrance),display var(--base) allow-discrete}
+@starting-style{.scrim.open{opacity:0}}
+.sheet .sh{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border)}
+.sheet .sb{overflow-y:auto;padding:10px 14px;display:grid;gap:2px}
+.sheet .sf{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.srow{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;min-height:52px;border-bottom:1px solid var(--border)}
+.srow:last-child{border-bottom:0}
+
+/* errors */
+.errsum{border:2px solid var(--danger-text);border-radius:6px;background:var(--card);padding:12px 16px;display:grid;gap:6px}
+.errsum h4{color:var(--danger-text);margin:0;font-size:14px}
+.errsum ul{margin:0;padding:0 0 0 18px;display:grid;gap:2px}
+.errsum a{color:var(--danger-text);text-underline-offset:2px}
+
+/* new product */
+.drop{display:grid;place-items:center;gap:6px;border:1.5px dashed var(--input);border-radius:8px;padding:28px 16px;text-align:center;background:var(--card)}
+
+/* tables for the owner */
+.cmp{width:100%;border-collapse:collapse;font-size:13.5px}
+.cmp th,.cmp td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+.cmp th{font-size:12px;color:var(--sub);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.cmp td:first-child{font-weight:600}
+.cmp .src{font-size:12px;color:var(--sub)}
+.phase{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));margin-top:14px}
+.phase .card{padding:14px 16px;display:grid;gap:6px;align-content:start}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+@media (max-width:520px){.ed{padding:14px 12px 20px}.dl{grid-template-columns:minmax(0,1fr)}.dl dt{margin-top:4px}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></symbol>
+  <symbol id="i-back" viewBox="0 0 16 16"><path d="M10 3.5 5.5 8 10 12.5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 16 16"><path d="M3 8h10"/></symbol>
+  <symbol id="i-cam" viewBox="0 0 16 16"><path d="M2.5 5.5h2l1.2-1.8h4.6l1.2 1.8h2v7h-11z"/><circle cx="8" cy="9" r="2.2"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 16 16"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></symbol>
+  <symbol id="i-more" viewBox="0 0 16 16"><circle cx="3.5" cy="8" r=".6"/><circle cx="8" cy="8" r=".6"/><circle cx="12.5" cy="8" r=".6"/></symbol>
+  <symbol id="i-close" viewBox="0 0 16 16"><path d="m4 4 8 8M12 4l-8 8"/></symbol>
+  <symbol id="i-share" viewBox="0 0 16 16"><path d="M8 2.5v7M5 5.5l3-3 3 3M3.5 9v4h9V9"/></symbol>
+  <symbol id="i-home" viewBox="0 0 16 16"><path d="m2.5 7.5 5.5-4.5 5.5 4.5V13h-11z"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 16 16"><path d="M3.5 5.5h9l-.8 8h-7.4zM6 5.5V4.5a2 2 0 0 1 4 0v1"/></symbol>
+  <symbol id="i-shirt" viewBox="0 0 16 16"><path d="M5.5 2.5 2.5 4.5l1.5 2.5 1.5-.8v7.3h5V6.2l1.5.8 1.5-2.5-3-2c-.5 1-1.5 1.5-2.5 1.5s-2-.5-2.5-1.5z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 16 16"><path d="M3 4.5h10M3 8h10M3 11.5h10"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 16 16"><path d="M10.5 3 13 5.5 6 12.5H3.5V10z"/></symbol>
+  <symbol id="i-drop" viewBox="0 0 16 16"><path d="M10 2.5 13.5 6 7 12.5H3.5V9z"/><path d="m9 4 3 3"/></symbol>
+</svg>
+
+<div class="wrap">
+  <h1>Product editor, calmer</h1>
+  <p class="k">Kesar Studio · Chanderi kurta set · mockup v2 for the owner, 9 Nov 2026. Edit opens a form; Save or Cancel closes it. In Swatches, drag the circle, scroll or slide to resize.</p>
+  <ul class="note">
+    <li>Every section reads as details first. Edit opens that section's form with its own Save and Cancel; on a phone the form is a sheet.</li>
+    <li>Only photos, sizes and colours, and price and stock stay open. Description, details, fit, tax, search and sharing, story and pairs fold to one line.</li>
+    <li>No checklist. Status is one switch. A missing price or HSN is said only when it stops a save or going live, in that form.</li>
+    <li>Swatches: cut from part of any product photo or of a close-up added only for swatches; a plain colour picked from the photo; two colours; or one of the shop's saved swatches. Previewed at the shop's sizes, light and dark.</li>
+  </ul>
+
+  <nav class="views" aria-label="Views">
+    <a href="#desktop">Desktop</a>
+    <a href="#swatches">Swatches</a>
+    <a href="#phone">Phone</a>
+    <a href="#new">New product</a>
+    <a href="#fix">Fix before saving</a>
+    <a href="#changes">What changed</a>
+  </nav>
+
+  <!-- ═════════════ DESKTOP ═════════════ -->
+  <section class="view" data-view="desktop" aria-labelledby="h-desktop">
+    <h2 class="v" id="h-desktop">Desktop · details first, Edit opens the form</h2>
+    <div class="stage">
+      <div class="ed">
+        <div style="display:grid;gap:4px">
+          <a class="crumb" href="#desktop"><svg class="ico s"><use href="#i-back"/></svg>Products</a>
+          <div class="head">
+            <div style="display:grid;gap:2px;min-width:0"><h3 class="ptitle">Chanderi kurta set</h3><span class="meta mono">kesar-studio.frrata.shop/products/chanderi-kurta-set</span></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <a class="btn" href="#desktop"><svg class="ico"><use href="#i-eye"/></svg>Preview</a>
+              <button class="btn" type="button"><svg class="ico"><use href="#i-share"/></svg>Share</button>
+              <button class="btn" type="button" aria-label="More: rename, duplicate, archive"><svg class="ico"><use href="#i-more"/></svg></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="cols">
+          <div class="main">
+            <div class="card">
+              <div class="hd"><h3>Photos</h3><button class="btn edit" type="button">Manage</button></div>
+              <div class="bd"><div class="photos" data-photos="gallery"></div></div>
+            </div>
+
+            <div class="card" data-sec="opts">
+              <div class="hd"><h3>Sizes and colours</h3><button class="btn edit" type="button" data-open="opts"><svg class="ico s"><use href="#i-pen"/></svg>Edit</button></div>
+              <div class="bd" data-read="opts">
+                <dl class="dl">
+                  <dt>Sizes</dt><dd class="mono">S · M · L</dd>
+                  <dt>Colours</dt><dd class="vals"><span class="cval"><span class="sw md" data-sw="indigo"></span>Indigo</span><span class="cval"><span class="sw md" data-sw="rust"></span>Rust</span><span class="cval"><span class="sw md light" data-sw="ivory"></span>Ivory</span></dd>
+                </dl>
+              </div>
+              <div class="bd" data-form="opts" hidden>
+                <div class="f">Sizes<span class="pick" role="group" aria-label="Sizes"><button type="button" aria-pressed="false">XS</button><button type="button" aria-pressed="true">S</button><button type="button" aria-pressed="true">M</button><button type="button" aria-pressed="true">L</button><button type="button" aria-pressed="false">XL</button><button type="button" aria-pressed="false">XXL</button><button type="button" class="add"><svg class="ico s"><use href="#i-plus"/></svg>Other</button></span></div>
+                <div class="f">Colours
+                  <ul class="swl">
+                    <li><span class="sw lg" data-sw="indigo"></span><span><b>Indigo</b><span class="s">Blue · from photo 1</span></span><a class="btn edit" href="#swatches">Swatch</a></li>
+                    <li><span class="sw lg" data-sw="rust"></span><span><b>Rust</b><span class="s">Orange · from a close-up</span></span><a class="btn edit" href="#swatches">Swatch</a></li>
+                    <li><span class="sw lg light" data-sw="ivory"></span><span><b>Ivory</b><span class="s">White · plain colour</span></span><a class="btn edit" href="#swatches">Swatch</a></li>
+                  </ul>
+                  <span style="display:flex;gap:14px;flex-wrap:wrap;font-weight:400"><button class="link" type="button">Add a colour</button><button class="link" type="button">Cut each swatch from its colour's first photo</button></span>
+                </div>
+                <div class="ffoot"><button class="btn" type="button" data-cancel="opts">Cancel</button><button class="btn primary" type="button" data-done="opts">Save</button></div>
+              </div>
+            </div>
+
+            <div class="card" data-sec="price">
+              <div class="hd"><h3>Price and stock</h3><button class="btn edit" type="button" data-open="price"><svg class="ico s"><use href="#i-pen"/></svg>Edit</button></div>
+              <div class="bd" data-read="price">
+                <div class="tablewrap"><table class="grid" aria-label="Price and stock">
+                  <thead><tr><th>Size</th><th class="r">Price</th><th class="r">Stock</th><th>Shoppers see</th></tr></thead>
+                  <tbody>
+                    <tr class="grp"><td colspan="4"><span class="gwrap"><span class="gname"><span class="sw" data-sw="indigo"></span>Indigo</span><span class="gsum num">₹2,490 · 9 in stock</span></span></td></tr>
+                    <tr><td class="mono">S</td><td class="r num">₹2,490</td><td class="r num">0</td><td class="sees-info">Pre-order · ships by 15 Dec</td></tr>
+                    <tr><td class="mono">M</td><td class="r num">₹2,490</td><td class="r num">5</td><td class="sees-ok">In stock</td></tr>
+                    <tr><td class="mono">L</td><td class="r num">₹2,490</td><td class="r num">4</td><td class="sees-ok">In stock</td></tr>
+                    <tr class="grp"><td colspan="4"><span class="gwrap"><span class="gname"><span class="sw" data-sw="rust"></span>Rust</span><span class="gsum num">₹2,490 · 12 in stock · L sold out</span></span></td></tr>
+                    <tr class="grp"><td colspan="4"><span class="gwrap"><span class="gname"><span class="sw light" data-sw="ivory"></span>Ivory</span><span class="gsum num">₹2,690 · 6 in stock</span></span></td></tr>
+                  </tbody>
+                </table></div>
+              </div>
+              <div class="bd" data-form="price" hidden>
+                <div class="tablewrap"><table class="grid" aria-label="Edit price and stock">
+                  <thead><tr><th>Size</th><th class="r">Price, ₹</th><th class="r">M.R.P., ₹</th><th>Stock</th><th>When sold out</th></tr></thead>
+                  <tbody>
+                    <tr class="grp"><td colspan="5"><span class="gwrap"><span class="gname"><span class="sw" data-sw="indigo"></span>Indigo</span><span style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="k">Every size, ₹</span><input class="input" value="2,490" aria-label="Price for every Indigo size"><span class="k">Your cost, ₹</span><input class="input" value="1,180" aria-label="Your cost, Indigo"></span></span></td></tr>
+                    <tr><td class="mono">S</td><td class="r"><input class="input" value="2,490" aria-label="Price Indigo S"></td><td class="r"><input class="input" value="2,990" aria-label="MRP Indigo S"></td><td><span class="stepper"><button type="button" aria-label="One less"><svg class="ico s"><use href="#i-minus"/></svg></button><input value="0" inputmode="numeric" aria-label="Stock Indigo S"><button type="button" aria-label="One more"><svg class="ico s"><use href="#i-plus"/></svg></button></span></td><td><select class="input" aria-label="When Indigo S is sold out"><option>Stop selling</option><option selected>Pre-order</option><option>Make to order</option></select></td></tr>
+                    <tr><td class="mono">M</td><td class="r"><input class="input" value="2,490" aria-label="Price Indigo M"></td><td class="r"><input class="input" value="2,990" aria-label="MRP Indigo M"></td><td><span class="stepper"><button type="button" aria-label="One less"><svg class="ico s"><use href="#i-minus"/></svg></button><input value="5" inputmode="numeric" aria-label="Stock Indigo M"><button type="button" aria-label="One more"><svg class="ico s"><use href="#i-plus"/></svg></button></span></td><td><select class="input" aria-label="When Indigo M is sold out"><option>Stop selling</option><option>Pre-order</option><option>Make to order</option></select></td></tr>
+                    <tr><td class="mono">L</td><td class="r"><input class="input" value="2,490" aria-label="Price Indigo L"></td><td class="r"><input class="input" value="2,990" aria-label="MRP Indigo L"></td><td><span class="stepper"><button type="button" aria-label="One less"><svg class="ico s"><use href="#i-minus"/></svg></button><input value="4" inputmode="numeric" aria-label="Stock Indigo L"><button type="button" aria-label="One more"><svg class="ico s"><use href="#i-plus"/></svg></button></span></td><td><select class="input" aria-label="When Indigo L is sold out"><option>Stop selling</option><option>Pre-order</option><option>Make to order</option></select></td></tr>
+                    <tr class="grp"><td colspan="5"><span class="gwrap"><span class="gname"><span class="sw" data-sw="rust"></span>Rust</span><span class="gsum num">₹2,490 · 12 in stock</span><button class="link" type="button" style="margin-left:auto">Open</button></span></td></tr>
+                    <tr class="grp"><td colspan="5"><span class="gwrap"><span class="gname"><span class="sw light" data-sw="ivory"></span>Ivory</span><span class="gsum num">₹2,690 · 6 in stock</span><button class="link" type="button" style="margin-left:auto">Open</button></span></td></tr>
+                  </tbody>
+                </table></div>
+                <button class="link" type="button" style="justify-self:start">SKU and barcode</button>
+                <div class="ffoot"><button class="btn" type="button" data-cancel="price">Cancel</button><button class="btn primary" type="button" data-done="price">Save</button></div>
+              </div>
+            </div>
+
+            <div class="card rows">
+              <details>
+                <summary><span><b>Description</b><span class="s">Handwoven chanderi in a straight kurta with palazzo and a sheer dupatta.</span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary>
+                <div class="in"><p style="margin:0">Handwoven chanderi in a straight kurta with palazzo and a sheer dupatta. Light enough for an afternoon pooja, sharp enough for a mehendi.</p><div class="top"><button class="btn edit" type="button"><svg class="ico s"><use href="#i-pen"/></svg>Edit</button></div></div>
+              </details>
+              <details data-sec="details">
+                <summary><span><b>Details</b><span class="s">Women · Adults · Chanderi · Festive · 4 more</span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary>
+                <div class="in" data-read="details">
+                  <dl class="dl"><dt>For</dt><dd>Women, adults</dd><dt>Fabric</dt><dd>Chanderi</dd><dt>Occasion</dt><dd>Festive</dd><dt>Set includes</dt><dd>Kurta, palazzo, dupatta</dd><dt>Neckline</dt><dd class="unset">Not set</dd></dl>
+                  <div class="top"><button class="btn edit" type="button" data-open="details"><svg class="ico s"><use href="#i-pen"/></svg>Edit</button></div>
+                </div>
+                <div class="in" data-form="details" hidden>
+                  <div class="f">For<span class="pick" role="group" aria-label="For"><button type="button" aria-pressed="true">Women</button><button type="button" aria-pressed="false">Men</button><button type="button" aria-pressed="false">Unisex</button></span></div>
+                  <div class="f">Fabric<span class="pick" role="group" aria-label="Fabric"><button type="button" aria-pressed="true">Chanderi</button><button type="button" aria-pressed="false">Cotton</button><button type="button" aria-pressed="false">Linen</button><button type="button" class="add">More</button></span></div>
+                  <div class="f">Neckline<span class="pick" role="group" aria-label="Neckline"><button type="button" aria-pressed="false">Round</button><button type="button" aria-pressed="false">V-neck</button><button type="button" aria-pressed="false">Mandarin</button><button type="button" aria-pressed="false">Boat</button></span></div>
+                  <div class="ffoot"><button class="btn" type="button" data-cancel="details">Cancel</button><button class="btn primary" type="button" data-done="details">Save</button></div>
+                </div>
+              </details>
+              <details>
+                <summary><span><b>Fit</b><span class="s">Kurta set · Women chart · model 5 ft 6 in wears S</span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary>
+                <div class="in"><dl class="dl"><dt>Size chart</dt><dd>Kurta set · Women · XS–XXL · bust, waist, hip <button class="link" type="button">View</button></dd><dt>Model</dt><dd>5 ft 6 in, wears S</dd></dl><div class="top"><button class="btn edit" type="button"><svg class="ico s"><use href="#i-pen"/></svg>Edit</button></div></div>
+              </details>
+              <details>
+                <summary><span><b>Tax</b><span class="s">HSN 6211 · 5% up to ₹2,625 · pieces · made in India</span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary>
+                <div class="in"><dl class="dl"><dt>HSN</dt><dd class="mono">6211 · Track suits and other garments</dd><dt>GST</dt><dd>5% at ₹2,490 a piece, including GST; 18% above ₹2,625</dd><dt>Sold by</dt><dd>Pieces</dd></dl><div class="top"><button class="btn edit" type="button"><svg class="ico s"><use href="#i-pen"/></svg>Edit</button></div></div>
+              </details>
+              <details>
+                <summary><span><b>Search and sharing</b><span class="s">Made for you from the title, colours and price</span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary>
+                <div class="in"><dl class="dl"><dt>Title</dt><dd>Chanderi kurta set in Indigo, Rust, Ivory · Kesar Studio</dd><dt>Address</dt><dd class="mono">/products/chanderi-kurta-set</dd></dl><div class="top"><button class="btn edit" type="button"><svg class="ico s"><use href="#i-pen"/></svg>Edit</button></div></div>
+              </details>
+              <details>
+                <summary><span><b>Story and pairs</b><span class="s">2 stories · pairs with Mulmul dupatta</span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary>
+                <div class="in"><div class="top"><button class="btn edit" type="button"><svg class="ico s"><use href="#i-pen"/></svg>Edit</button></div></div>
+              </details>
+            </div>
+          </div>
+
+          <aside class="side" aria-label="Status and organising">
+            <div class="card">
+              <div class="hd"><h3>Status</h3><button class="link" type="button" style="font-size:12.5px">Schedule</button></div>
+              <div class="bd"><div class="seg" role="group" aria-label="Status"><button type="button" aria-pressed="false">Draft</button><button type="button" aria-pressed="true">Active</button><button type="button" aria-pressed="false">Unlisted</button></div></div>
+            </div>
+            <div class="card">
+              <div class="hd"><h3>Organise</h3><button class="btn edit" type="button"><svg class="ico s"><use href="#i-pen"/></svg>Edit</button></div>
+              <div class="bd"><dl class="dl" style="grid-template-columns:minmax(0,1fr)"><dt>Category</dt><dd>Kurtas &amp; kurta sets</dd><dt>Collections</dt><dd>Festive edit · Kurtas</dd><dt>Tags</dt><dd class="unset">None</dd></dl></div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════ SWATCHES ═════════════ -->
+  <section class="view" data-view="swatches" aria-labelledby="h-sw" hidden>
+    <h2 class="v" id="h-sw">Swatches · Rust, cut from part of a photo</h2>
+    <div class="dlg" role="dialog" aria-labelledby="dlg-h">
+      <div class="dh"><b id="dlg-h" style="display:flex;align-items:center;gap:10px"><span class="sw md" id="dlg-sw"></span>Rust swatch</b><a class="btn ghost sm" href="#desktop" aria-label="Close"><svg class="ico"><use href="#i-close"/></svg></a></div>
+      <div class="db">
+        <div class="seg" role="group" aria-label="Swatch from" id="src">
+          <button type="button" aria-pressed="true" data-src="photo">Photo</button>
+          <button type="button" aria-pressed="false" data-src="colour">Colour</button>
+          <button type="button" aria-pressed="false" data-src="two">Two colours</button>
+          <button type="button" aria-pressed="false" data-src="saved">Saved</button>
+        </div>
+        <div class="cropgrid">
+          <div style="display:grid;gap:10px;min-width:0">
+            <div data-pane="photo" style="display:grid;gap:10px;min-width:0">
+              <div class="srcphotos" id="srcphotos" role="group" aria-label="Photos to cut from"></div>
+              <div class="cropstage" id="stage" tabindex="0" role="slider" aria-label="Swatch position: drag, or use the arrow keys" aria-valuetext="centre"><img id="stageimg" alt=""><span class="ring" id="ring"></span></div>
+              <div class="zoom"><span>Smaller</span><input type="range" id="zoom" min="0.04" max="0.5" step="0.005" value="0.11" aria-label="Swatch size: how much of the photo it takes"><span>Larger</span></div>
+            </div>
+            <div data-pane="colour" hidden style="display:grid;gap:12px">
+              <div class="f">From its photos<div class="pal" id="pal" role="group" aria-label="Colours from the photos"></div></div>
+              <div class="two"><button class="btn sm" type="button"><svg class="ico s"><use href="#i-drop"/></svg>Pick from a photo</button><label class="f" for="hex" style="width:140px">Hex<input class="input mono" value="#B9643A" id="hex"></label></div>
+            </div>
+            <div data-pane="two" hidden style="display:grid;gap:12px">
+              <div class="two"><label class="f" for="h1" style="width:140px">First<input class="input mono" value="#3F4F8A" id="h1"></label><label class="f" for="h2" style="width:140px">Second<input class="input mono" value="#B9643A" id="h2"></label></div>
+            </div>
+            <div data-pane="saved" hidden style="display:grid;gap:12px"><div class="libgrid" id="lib" role="group" aria-label="The shop's swatches"></div></div>
+          </div>
+          <div class="prev">
+            <div class="prevpanel light">
+              <span class="lab">On a light shop</span>
+              <span class="pp-row"><span class="pp-buy"><span class="sw lg" data-live></span>Rust</span><span class="pp-buy off"><span class="sw lg pp-cross" data-sw="indigo"></span>Indigo</span></span>
+              <span class="pp-row"><span class="sw xs" data-live></span><span class="sw xs" data-sw="indigo"></span><span class="sw xs light" data-sw="ivory"></span><span class="lab">on a card</span></span>
+            </div>
+            <div class="prevpanel dark">
+              <span class="lab">On a dark shop</span>
+              <span class="pp-row"><span class="pp-buy"><span class="sw lg" data-live></span>Rust</span></span>
+              <span class="pp-row"><span class="sw xs" data-live></span><span class="sw xs" data-sw="indigo"></span><span class="sw xs light" data-sw="ivory"></span><span class="lab">on a card</span></span>
+            </div>
+            <div class="f">Family <span class="k" style="font-weight:400" id="looks">Looks orange</span><div class="fam" id="fam" role="group" aria-label="Colour family"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="df"><label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" id="savelib" style="width:16px;height:16px;accent-color:var(--fg)">Save to the shop's swatches</label><span style="display:flex;gap:8px"><a class="btn" href="#desktop">Cancel</a><a class="btn primary" href="#desktop">Use this swatch</a></span></div>
+    </div>
+
+    <h2 class="v">Every kind of swatch</h2>
+    <div class="card" style="overflow-x:auto">
+      <table class="cmp">
+        <thead><tr><th>From</th><th>Best for</th><th>What it keeps</th><th>If its source goes</th></tr></thead>
+        <tbody>
+          <tr><td>Part of a product photo</td><td>Prints, weaves, zari: bandhani, ikat, chanderi buti</td><td>The photo, the circle's centre and size (today's crop)</td><td>Deleting the photo asks first; the swatch then falls back to its plain colour, then the family's colour</td></tr>
+          <tr><td>A close-up</td><td>When every photo is a model shot; a fabric piece shot flat in daylight</td><td>A photo marked swatch only: never in the gallery, the shop, the feed or Google</td><td>As above</td></tr>
+          <tr><td>Plain colour</td><td>Solids; picked from a photo, suggested from its main colours, or typed</td><td>One colour</td><td>Nothing to lose</td></tr>
+          <tr><td>Two colours</td><td>Kurta in one colour, dupatta in another; ombré</td><td>Two colours, split on the diagonal</td><td>Nothing to lose</td></tr>
+          <tr><td>The shop's saved swatches</td><td>One fabric across many products</td><td>A link to the saved swatch: edit it once, every product follows</td><td>Deleting a saved swatch asks first and copies it into each product that used it</td></tr>
+          <tr><td>Nothing chosen</td><td>A colour added in a hurry</td><td>Nothing: drawn in the family's colour</td><td>Never a letter in a dashed circle again</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═════════════ PHONE ═════════════ -->
+  <section class="view" data-view="phone" aria-labelledby="h-phone" hidden>
+    <h2 class="v" id="h-phone">Phone · details first, Edit opens a sheet</h2>
+    <div class="phonewrap">
+      <div class="phone">
+        <div class="top">
+          <a class="crumb" href="#phone"><svg class="ico s"><use href="#i-back"/></svg>Products</a>
+          <h3 class="ptitle" style="font-size:20px">Chanderi kurta set</h3>
+          <button class="statusbtn" type="button"><i></i>Active<svg class="ico s"><use href="#i-chev"/></svg></button>
+        </div>
+        <div class="scroll">
+          <div class="card"><div class="bd" style="padding:12px"><div class="pstrip" data-photos="strip"></div></div></div>
+          <div class="card">
+            <div class="hd" style="padding:10px 14px 0"><h3>Sizes and colours</h3><button class="btn edit" type="button" data-sheet>Edit</button></div>
+            <div class="bd" style="padding:6px 14px 10px;gap:0">
+              <div class="crow"><span class="mono">S·M·L</span><span class="s">Sizes</span></div>
+              <div class="crow"><span style="display:flex;gap:4px"><span class="sw md" data-sw="indigo"></span><span class="sw md" data-sw="rust"></span><span class="sw md light" data-sw="ivory"></span></span><span class="s">Indigo, Rust, Ivory</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="hd" style="padding:10px 14px 0"><h3>Price and stock</h3></div>
+            <div class="bd" style="padding:4px 14px 8px;gap:0">
+              <button class="crow btnrow" type="button" data-sheet><span class="sw md" data-sw="indigo"></span><span><b>Indigo</b><span class="s num">₹2,490 · 9 in stock · S on pre-order</span></span><svg class="ico"><use href="#i-chev"/></svg></button>
+              <button class="crow btnrow" type="button" data-sheet><span class="sw md" data-sw="rust"></span><span><b>Rust</b><span class="s num">₹2,490 · 12 in stock · <span class="sees-warn">L sold out</span></span></span><svg class="ico"><use href="#i-chev"/></svg></button>
+              <button class="crow btnrow" type="button" data-sheet><span class="sw md light" data-sw="ivory"></span><span><b>Ivory</b><span class="s num">₹2,690 · 6 in stock</span></span><svg class="ico"><use href="#i-chev"/></svg></button>
+            </div>
+          </div>
+          <div class="card rows">
+            <details><summary><span><b>Description</b><span class="s">Handwoven chanderi in a straight kurta…</span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary></details>
+            <details><summary><span><b>Details</b><span class="s">Women · Chanderi · Festive · 4 more</span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary></details>
+            <details><summary><span><b>Fit</b><span class="s">Kurta set · Women · model wears S</span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary></details>
+            <details><summary><span><b>Tax</b><span class="s">HSN 6211 · 5%</span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary></details>
+            <details><summary><span><b>Category and collections</b><span class="s">Kurtas &amp; kurta sets · Festive edit</span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary></details>
+            <details><summary><span><b>Search and sharing</b><span class="s">Made for you</span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary></details>
+          </div>
+        </div>
+        <div class="pnav"><span><svg class="ico"><use href="#i-home"/></svg>Home</span><span><svg class="ico"><use href="#i-bag"/></svg>Orders</span><span class="on"><svg class="ico"><use href="#i-shirt"/></svg>Products</span><span><svg class="ico"><use href="#i-menu"/></svg>More</span></div>
+        <div class="scrim" id="pscrim"></div>
+        <div class="sheet" id="psheet" role="dialog" aria-modal="true" aria-labelledby="psheet-h">
+          <div class="sh"><b id="psheet-h" style="display:flex;gap:8px;align-items:center"><span class="sw" data-sw="indigo"></span>Indigo · price and stock</b><button class="btn ghost sm" type="button" data-close aria-label="Close"><svg class="ico"><use href="#i-close"/></svg></button></div>
+          <div class="sb">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px 0 10px">
+              <label class="f">Price, ₹ <span class="opt">every size</span><input class="input num" inputmode="decimal" value="2,490"></label>
+              <label class="f">Your cost, ₹<input class="input num" inputmode="decimal" value="1,180"></label>
+            </div>
+            <div class="srow"><b class="mono">S</b><span class="sees-info" style="font-size:12.5px">Pre-order · by 15 Dec</span><span class="stepper"><button type="button" aria-label="One less"><svg class="ico s"><use href="#i-minus"/></svg></button><input value="0" inputmode="numeric" aria-label="Stock S"><button type="button" aria-label="One more"><svg class="ico s"><use href="#i-plus"/></svg></button></span></div>
+            <div class="srow"><b class="mono">M</b><span class="sees-ok" style="font-size:12.5px">In stock</span><span class="stepper"><button type="button" aria-label="One less"><svg class="ico s"><use href="#i-minus"/></svg></button><input value="5" inputmode="numeric" aria-label="Stock M"><button type="button" aria-label="One more"><svg class="ico s"><use href="#i-plus"/></svg></button></span></div>
+            <div class="srow"><b class="mono">L</b><span class="sees-ok" style="font-size:12.5px">Only 4 left</span><span class="stepper"><button type="button" aria-label="One less"><svg class="ico s"><use href="#i-minus"/></svg></button><input value="4" inputmode="numeric" aria-label="Stock L"><button type="button" aria-label="One more"><svg class="ico s"><use href="#i-plus"/></svg></button></span></div>
+            <button class="link" type="button" style="margin-top:8px">Price per size, M.R.P., SKU</button>
+          </div>
+          <div class="sf"><button class="btn" type="button" data-close>Cancel</button><button class="btn primary" type="button" data-close>Save</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════ NEW PRODUCT ═════════════ -->
+  <section class="view" data-view="new" aria-labelledby="h-new" hidden>
+    <h2 class="v" id="h-new">New product · the forms are open</h2>
+    <div class="stage">
+      <div class="ed" style="max-width:820px">
+        <div style="display:grid;gap:4px"><a class="crumb" href="#new"><svg class="ico s"><use href="#i-back"/></svg>Products</a><h3 class="ptitle">New product</h3></div>
+        <div class="card"><div class="bd" style="padding-top:16px">
+          <div class="drop"><svg class="ico" style="width:28px;height:28px"><use href="#i-cam"/></svg><b>Add photos</b><span class="k">The first is the cover</span><button class="btn primary" type="button">Choose photos</button></div>
+        </div></div>
+        <div class="card"><div class="bd" style="padding-top:16px">
+          <label class="f" for="nt">Title<input id="nt" class="input" placeholder="Chanderi kurta set"></label>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px">
+            <label class="f" for="np">Price, ₹<input id="np" class="input num" inputmode="decimal"></label>
+            <label class="f" for="nm">M.R.P., ₹ <span class="opt">optional</span><input id="nm" class="input num" inputmode="decimal"></label>
+            <label class="f" for="ns">Stock, each size<input id="ns" class="input num" inputmode="numeric"></label>
+          </div>
+          <div class="f">Sizes<span class="pick" role="group" aria-label="Sizes"><button type="button" aria-pressed="false">XS</button><button type="button" aria-pressed="true">S</button><button type="button" aria-pressed="true">M</button><button type="button" aria-pressed="true">L</button><button type="button" aria-pressed="false">XL</button><button type="button" aria-pressed="false">Free size</button></span></div>
+          <div class="f">Colours<span class="pick" role="group" aria-label="Colours"><button type="button" class="add"><svg class="ico s"><use href="#i-plus"/></svg>Colour</button></span></div>
+        </div></div>
+        <div class="card rows">
+          <details><summary><span><b>Description</b><span class="s">Add later</span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary></details>
+          <details><summary><span><b>Category and details</b><span class="s">Add later</span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary></details>
+          <details><summary><span><b>Fit</b><span class="s">Kurta set · Women, from your last product</span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary></details>
+          <details><summary><span><b>Tax</b><span class="s">HSN 6211 · 5%, from your last product</span></span><svg class="ico chev"><use href="#i-chev"/></svg></summary></details>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn" type="button">Save draft</button><button class="btn primary" type="button">Save and publish</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════ FIX BEFORE SAVING ═════════════ -->
+  <section class="view" data-view="fix" aria-labelledby="h-fix" hidden>
+    <h2 class="v" id="h-fix">Fix before saving · said in the form that stops</h2>
+    <div class="stage">
+      <div class="ed" style="max-width:760px">
+        <div class="card editing">
+          <div class="hd"><h3>Price and stock</h3></div>
+          <div class="bd">
+            <div class="errsum" id="errsum" tabindex="-1" role="alert" hidden><h4>2 things to fix</h4><ul><li><a href="#fix" data-fix="f-p1">Price for Rust L is missing</a></li><li><a href="#fix" data-fix="f-p2">M.R.P. for Rust M is less than its price</a></li></ul></div>
+            <div class="tablewrap"><table class="grid" aria-label="Rust"><thead><tr><th>Size</th><th class="r">Price, ₹</th><th class="r">M.R.P., ₹</th></tr></thead><tbody>
+              <tr class="grp"><td colspan="3"><span class="gname"><span class="sw" data-sw="rust"></span>Rust</span></td></tr>
+              <tr><td class="mono">M</td><td class="r"><input class="input" value="2,490" aria-label="Price Rust M"></td><td class="r"><input class="input" id="f-p2" value="1,990" aria-label="MRP Rust M" aria-describedby="f-p2-e"><div class="err" id="f-p2-e" hidden>Less than the price</div></td></tr>
+              <tr><td class="mono">L</td><td class="r"><input class="input" id="f-p1" value="" aria-label="Price Rust L" aria-describedby="f-p1-e"><div class="err" id="f-p1-e" hidden>Price is missing</div></td><td class="r"><input class="input" value="2,990" aria-label="MRP Rust L"></td></tr>
+            </tbody></table></div>
+            <div class="ffoot"><button class="btn" type="button">Cancel</button><button class="btn primary" type="button" id="fixsave">Save</button></div>
+          </div>
+        </div>
+        <div class="card"><div class="hd"><h3>Status</h3></div><div class="bd">
+          <div class="seg" role="group" aria-label="Status"><button type="button" aria-pressed="true">Draft</button><button type="button" aria-pressed="false" id="goactive">Active</button><button type="button" aria-pressed="false">Unlisted</button></div>
+          <p class="err" id="activeerr" hidden style="margin:0">Add a price for Rust L to go live.</p>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════ WHAT CHANGED ═════════════ -->
+  <section class="view" data-view="changes" aria-labelledby="h-changes" hidden>
+    <h2 class="v" id="h-changes">What changed, and why</h2>
+    <div class="card" style="overflow-x:auto">
+      <table class="cmp">
+        <thead><tr><th>Part</th><th>Today</th><th>Proposed</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Editing</td><td>Every field always an input; one Save bar for the page</td><td>Details to read; Edit opens that section's form with its own Save and Cancel; a sheet on a phone</td><td class="src">Owner, 9 Nov 2026</td></tr>
+          <tr><td>Length</td><td>11 open cards; 3,341 px on a computer, 6,599 px on a phone</td><td>Three open sections; six fold to one line each</td><td class="src">Owner, 9 Nov 2026; Shopify collapses heavy sections (Fall ’26, 28 Oct 2026)</td></tr>
+          <tr><td>Status</td><td>Three places, last on a phone; a readiness checklist; a Google and Meta card</td><td>One switch; no checklist; what stops going live is said only then</td><td class="src">Owner, 9 Nov 2026</td></tr>
+          <tr><td>Swatches</td><td>A circle from one photo or a colour; a letter in a dashed circle when none</td><td>Part of any photo or a close-up, moved and resized; a colour from the photo; two colours; the shop's saved swatches; the family's colour when none</td><td class="src">Owner, 9 Nov 2026; Shopify ties swatches to the Colour option (19 Oct 2026)</td></tr>
+          <tr><td>Colour family</td><td>A dropdown beside each colour</td><td>Suggested from the swatch, one tap to change</td><td class="src">Google needs a colour per variant (SEO research, 8 Sep 2026)</td></tr>
+          <tr><td>Price and stock</td><td>Seven inputs per size and colour, always</td><td>A table to read, grouped by colour; the form sets every size at once, stock by steppers</td><td class="src">Shopify variant redesign (28 Oct 2026)</td></tr>
+          <tr><td>Details</td><td>11 dropdowns</td><td>One line to read; the form uses tap buttons</td><td class="src">NN/g, dropdowns (17 Jul 2026)</td></tr>
+          <tr><td>Errors</td><td>Beside the fields only</td><td>A list at the top of the form that stopped, each a link to its field</td><td class="src">GOV.UK error summary (Jun 2026)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="phase">
+      <div class="card"><b>E·1 · Details first</b><span class="k">Read views, Edit forms with their own Save, folded rows, status once, grouped price and stock, errors in the form. No new data.</span></div>
+      <div class="card"><b>E·2 · Swatches</b><span class="k">The swatch form: part of any photo or a close-up, moved and resized, colour from the photo, two colours, family suggested, family colour when none, cut all at once.</span></div>
+      <div class="card"><b>E·3 · Saved swatches</b><span class="k">The shop's swatch library: made once, used on any product, edited in one place.</span></div>
+      <div class="card"><b>E·4 · Photos first</b><span class="k">The new-product page; then suggestions from photos, after the unit-economics review.</span></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  // Fabric "photos" on canvas: a weave, a buti print and a border, so a cut swatch shows real pattern.
+  const fabric = (base, line, motif, border, model) => {
+    const w = 320, h = 400, c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+    g.fillStyle = base; g.fillRect(0, 0, w, h);
+    g.strokeStyle = line; g.globalAlpha = .35; g.lineWidth = 1;
+    for (let i = -h; i < w; i += 5) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + h * .55, h); g.stroke() }
+    g.globalAlpha = 1; g.fillStyle = motif;
+    for (let y = 18; y < h; y += 34) for (let x = ((y / 34) % 2) * 17 + 12; x < w; x += 34) { g.beginPath(); g.ellipse(x, y, 4, 6, 0, 0, 7); g.fill(); g.beginPath(); g.arc(x, y - 9, 2, 0, 7); g.fill() }
+    g.fillStyle = border; g.fillRect(0, h - 46, w, 30);
+    g.fillStyle = motif; for (let x = 6; x < w; x += 14) { g.beginPath(); g.moveTo(x, h - 40); g.lineTo(x + 6, h - 31); g.lineTo(x, h - 22); g.lineTo(x - 6, h - 31); g.fill() }
+    if (model) { g.fillStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.ellipse(w / 2, h * .2, w * .1, h * .07, 0, 0, 7); g.fill(); g.fillRect(w * .3, h * .3, w * .4, h * .6) }
+    return c.toDataURL('image/jpeg', .82);
+  };
+  const P = {
+    indigo1: fabric('#2D3A6B', '#4A5A99', '#D8C27A', '#1F2A52', true), indigo2: fabric('#33427A', '#53639F', '#D8C27A', '#1F2A52', false),
+    rust1: fabric('#9A4A26', '#C0703F', '#E9CF8B', '#6E3016', true), rust2: fabric('#A3522C', '#C77A49', '#E9CF8B', '#6E3016', false),
+    rustclose: fabric('#A3522C', '#C77A49', '#EBD292', '#6E3016', false), ivory1: fabric('#E8E0CC', '#CFC4A8', '#B98E3A', '#C9B88E', true),
+  };
+  const PH = [['indigo1', '#3F4F8A'], ['indigo2', '#3F4F8A'], ['rust1', '#B9643A'], ['rust2', '#B9643A'], ['ivory1', '#F3EEDF']];
+  // The shop's formula (src/domains/media/swatch.ts): a w×h photo behind a d-px circle.
+  const bgFor = (src, crop, d) => { const bw = d / (2 * crop.r), bh = bw * 400 / 320; return `url(${src}) ${d / 2 - crop.x * bw}px ${d / 2 - crop.y * bh}px / ${bw}px ${bh}px no-repeat` };
+  const SW = { indigo: { src: P.indigo1, crop: { x: .5, y: .5, r: .12 } }, rust: { src: P.rustclose, crop: { x: .47, y: .4, r: .11 } }, ivory: { hex: '#F3EEDF' } };
+  const paint = (el, s) => { const d = el.getBoundingClientRect().width || 18; el.style.background = s.two ? `linear-gradient(135deg,${s.two[0]} 50%,${s.two[1]} 50%)` : s.hex ? s.hex : bgFor(s.src, s.crop, d) };
+  const paintAll = () => document.querySelectorAll('[data-sw]').forEach((el) => { if (el.offsetParent) paint(el, SW[el.dataset.sw]) });
+
+  document.querySelectorAll('[data-photos]').forEach((box) => {
+    const strip = box.dataset.photos === 'strip';
+    PH.forEach(([id, hex], i) => box.insertAdjacentHTML('beforeend', `<div class="ph${!strip && i === 0 ? ' cover' : ''}" style="background-image:url(${P[id]})">${i === 0 ? '<span class="lbl">Cover</span>' : ''}<span class="dot" style="background:${hex}"></span></div>`));
+    box.insertAdjacentHTML('beforeend', `<button class="ph add" type="button" aria-label="Add photos"><svg class="ico"><use href="#i-${strip ? 'cam' : 'plus'}"/></svg></button>`);
+  });
+
+  // Views
+  const views = ['desktop', 'swatches', 'phone', 'new', 'fix', 'changes'];
+  const show = () => {
+    const h = location.hash.slice(1), v = views.includes(h) ? h : 'desktop';
+    document.querySelectorAll('section.view').forEach((s) => { s.hidden = s.dataset.view !== v });
+    document.querySelectorAll('nav.views a').forEach((a) => { if (a.getAttribute('href') === '#' + v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current') });
+    requestAnimationFrame(() => { paintAll(); drawCrop() });
+  };
+  addEventListener('hashchange', show);
+
+  // Read ↔ form
+  const toggle = (k, open) => {
+    document.querySelectorAll(`[data-read="${k}"]`).forEach((x) => { x.hidden = open });
+    document.querySelectorAll(`[data-form="${k}"]`).forEach((x) => { x.hidden = !open });
+    const card = document.querySelector(`[data-sec="${k}"]`);
+    if (card) { if (card.tagName !== 'DETAILS') card.classList.toggle('editing', open); const b = card.querySelector(`.hd [data-open="${k}"]`); if (b) b.hidden = open }
+    requestAnimationFrame(paintAll);
+  };
+  document.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', () => { toggle(b.dataset.open, true); const f = document.querySelector(`[data-form="${b.dataset.open}"] input, [data-form="${b.dataset.open}"] button`); if (f) f.focus() }));
+  document.querySelectorAll('[data-cancel],[data-done]').forEach((b) => b.addEventListener('click', () => toggle(b.dataset.cancel || b.dataset.done, false)));
+  document.querySelectorAll('.seg:not(#src), .pick').forEach((g) => g.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b || b.classList.contains('add') || b.id === 'goactive') return;
+    if (g.classList.contains('seg')) g.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+    else b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+  }));
+  document.querySelectorAll('.stepper').forEach((s) => { const [l, i, m] = s.children; l.onclick = () => { i.value = Math.max(0, (+i.value || 0) - 1) }; m.onclick = () => { i.value = (+i.value || 0) + 1 } });
+
+  // Swatch form
+  let crop = { x: .47, y: .4, r: .11 }, src = 'rustclose', mode = 'photo';
+  const stage = document.getElementById('stage'), ring = document.getElementById('ring'), img = document.getElementById('stageimg'), zoom = document.getElementById('zoom');
+  const clamp = () => { crop.r = Math.min(Math.max(crop.r, .04), .5); const ry = crop.r * 320 / 400; crop.x = Math.min(Math.max(crop.x, crop.r), 1 - crop.r); crop.y = Math.min(Math.max(crop.y, ry), 1 - ry) };
+  const live = () => {
+    const s = mode === 'photo' ? { src: P[src], crop: { ...crop } } : mode === 'two' ? { two: [document.getElementById('h1').value, document.getElementById('h2').value] } : mode === 'colour' ? { hex: document.getElementById('hex').value } : SW.rust;
+    document.querySelectorAll('[data-live]').forEach((el) => { if (el.offsetParent) paint(el, s) });
+    const dsw = document.getElementById('dlg-sw'); if (dsw.offsetParent) paint(dsw, s);
+  };
+  function drawCrop() {
+    if (!stage.offsetParent) { live(); return }
+    clamp(); if (img.dataset.src !== src) { img.src = P[src]; img.dataset.src = src }
+    const W = stage.clientWidth, H = stage.clientHeight, R = crop.r * W;
+    Object.assign(ring.style, { left: `${crop.x * W - R}px`, top: `${crop.y * H - R}px`, width: `${2 * R}px`, height: `${2 * R}px` });
+    zoom.value = crop.r;
+    stage.setAttribute('aria-valuetext', `${Math.round(crop.x * 100)}% across, ${Math.round(crop.y * 100)}% down`);
+    live();
+  }
+  const at = (e) => { const r = stage.getBoundingClientRect(); crop.x = (e.clientX - r.left) / r.width; crop.y = (e.clientY - r.top) / r.height; drawCrop() };
+  stage.addEventListener('pointerdown', (e) => { stage.setPointerCapture(e.pointerId); at(e) });
+  stage.addEventListener('pointermove', (e) => { if (e.buttons) at(e) });
+  stage.addEventListener('wheel', (e) => { e.preventDefault(); crop.r += e.deltaY > 0 ? .01 : -.01; drawCrop() }, { passive: false });
+  stage.addEventListener('keydown', (e) => { const d = { ArrowLeft: [-.02, 0], ArrowRight: [.02, 0], ArrowUp: [0, -.02], ArrowDown: [0, .02] }[e.key]; if (d) { e.preventDefault(); crop.x += d[0]; crop.y += d[1]; drawCrop() } });
+  zoom.addEventListener('input', () => { crop.r = +zoom.value; drawCrop() });
+  const sp = document.getElementById('srcphotos');
+  [['rustclose', '#B9643A', 'Close-up, swatch only'], ['rust1', '#B9643A', 'Rust, on model'], ['rust2', '#B9643A', 'Rust, flat'], ['indigo1', '#3F4F8A', 'Indigo, on model'], ['ivory1', '#F3EEDF', 'Ivory, on model']]
+    .forEach(([id, c, label]) => sp.insertAdjacentHTML('beforeend', `<button type="button" aria-pressed="${id === src}" data-p="${id}" style="background-image:url(${P[id]})" aria-label="${label}"><span class="dot" style="background:${c}"></span>${id === 'rustclose' ? '<span class="tagc">Close-up</span>' : ''}</button>`));
+  sp.insertAdjacentHTML('beforeend', '<button type="button" class="up">Add a<br>close-up</button>');
+  sp.addEventListener('click', (e) => { const b = e.target.closest('[data-p]'); if (!b) return; src = b.dataset.p; sp.querySelectorAll('[data-p]').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); drawCrop() });
+  const fams = [['Orange', '#E07B39'], ['Brown', '#8B5A3C'], ['Red', '#C0392B'], ['Pink', '#E06A9A'], ['Yellow', '#E8C547'], ['Multicolour', 'conic-gradient(#E07B39,#3F4F8A,#E8C547,#E07B39)']];
+  const fam = document.getElementById('fam');
+  fam.innerHTML = fams.map(([n, c], i) => `<button type="button" aria-pressed="${i === 0}"><i style="background:${c}"></i>${n}</button>`).join('');
+  fam.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; fam.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')) });
+  const pal = document.getElementById('pal');
+  pal.innerHTML = ['#B9643A', '#9A4A26', '#C77A49', '#E9CF8B', '#6E3016'].map((c, i) => `<button type="button" aria-pressed="${i === 0}" style="background:${c}" aria-label="${c}" data-hex="${c}"></button>`).join('');
+  pal.addEventListener('click', (e) => { const b = e.target.closest('[data-hex]'); if (!b) return; pal.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); document.getElementById('hex').value = b.dataset.hex; live() });
+  ['hex', 'h1', 'h2'].forEach((id) => document.getElementById(id).addEventListener('input', live));
+  const lib = document.getElementById('lib');
+  lib.innerHTML = [['Indigo chanderi', 'indigo', 14], ['Rust chanderi', 'rust', 9], ['Ivory mulmul', 'ivory', 6]].map(([n, k, used]) => `<button type="button" aria-pressed="${k === 'rust'}"><span class="sw md${k === 'ivory' ? ' light' : ''}" data-sw="${k}"></span><span>${n}<span class="k" style="display:block;font-weight:400">${used} products</span></span></button>`).join('');
+  lib.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; lib.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')) });
+  document.getElementById('src').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-src]'); if (!b) return; mode = b.dataset.src;
+    document.querySelectorAll('#src [data-src]').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+    document.querySelectorAll('[data-pane]').forEach((p) => { p.hidden = p.dataset.pane !== mode });
+    requestAnimationFrame(() => { paintAll(); drawCrop() });
+  });
+  addEventListener('resize', () => { paintAll(); drawCrop() });
+
+  // Phone sheet
+  const scrim = document.getElementById('pscrim'), sheet = document.getElementById('psheet');
+  const close = () => { scrim.classList.remove('open'); sheet.classList.remove('open') };
+  document.querySelectorAll('[data-sheet]').forEach((b) => b.addEventListener('click', () => { scrim.classList.add('open'); sheet.classList.add('open'); requestAnimationFrame(paintAll); sheet.querySelector('[data-close]').focus() }));
+  scrim.onclick = close; sheet.querySelectorAll('[data-close]').forEach((b) => { b.onclick = close });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') close() });
+
+  // Fix before saving
+  document.getElementById('fixsave').onclick = () => {
+    const s = document.getElementById('errsum'); s.hidden = false; s.focus();
+    ['f-p1', 'f-p2'].forEach((id) => { document.getElementById(id).setAttribute('aria-invalid', 'true'); document.getElementById(id + '-e').hidden = false });
+  };
+  document.querySelectorAll('[data-fix]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); document.getElementById(a.dataset.fix).focus() }));
+  document.getElementById('goactive').onclick = () => { document.getElementById('activeerr').hidden = false };
+
+  show();
+})();
+</script>

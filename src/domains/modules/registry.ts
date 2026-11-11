@@ -9,7 +9,7 @@
 // Pure: no React, no db (check:layers).
 // =============================================================================
 
-export const MODULE_KEYS = ['communication', 'rto_shield', 'ship', 'true_profit', 'reviews', 'marketplace_export', 'size_fit', 'cart_flows', 'gst'] as const
+export const MODULE_KEYS = ['communication', 'rto_shield', 'ship', 'true_profit', 'reviews', 'marketplace_export', 'size_fit', 'cart_flows', 'gst', 'ekcode', 'product_video'] as const
 export type ModuleKey = (typeof MODULE_KEYS)[number]
 
 /**
@@ -79,6 +79,20 @@ export const MODULES: Record<ModuleKey, ModuleDef> = {
     dependsOn: [], outboxKinds: [], setup: '/console/apps/gst',
     // GST on every invoice and credit note is core, in every plan (plan 2026-11-09 § 1); this is the month's return.
     features: ['GSTR-1 tables, month or quarter', 'What to fix before you file', 'GSTR-1 JSON, sheets, sales register, Tally', 'A login for your accountant'],
+  },
+  ekcode: {
+    key: 'ekcode', name: 'EkCode', job: 'Shoppers filled in at checkout.', group: 'grow', billing: 'core', status: 'now', dependsOn: [], outboxKinds: [],
+    setup: '/console/apps/ekcode',
+    features: ['Name, phone and address in one tap', 'Every phone checked on WhatsApp', 'Shoppers from other shops that use EkCode'],
+  },
+  product_video: {
+    // PV·1 (docs/plans/2026-11-10-product-video-pv1.md): core, so every plan has it; a module, so Admin › Modules can
+    // pause it for everyone while each shop's delivered minutes have no budget yet (unit-economics review 2026-11-10).
+    key: 'product_video', name: 'Product video', job: 'A reel or a film on each product.', group: 'grow', billing: 'core', status: 'now', dependsOn: [],
+    // Off stops paid 720p prep still queued; never the deletes or cancels (security review LOW-2, 2026-11-10).
+    outboxKinds: ['mux.rendition.create'],
+    usage: 'Up to a minute each, one per product',
+    features: ['A reel or a landscape film on each product', 'Second in the photos, and beside the sizes', 'Plays only when a shopper taps it', 'Price, sizes and Add to bag under the video'],
   },
   cart_flows: {
     key: 'cart_flows', name: 'Cart flows', job: 'Bring back bags left behind.', group: 'grow', billing: 'plan', status: 'next', dependsOn: ['communication'], outboxKinds: [],

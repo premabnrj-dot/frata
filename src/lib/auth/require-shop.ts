@@ -1,6 +1,6 @@
 import 'server-only'
 import { routeFor, shopHostParam, surfaceFor } from '@/domains/tenancy/host'
-import { CONSOLE_HOST, SHOP_DOMAIN } from '@/lib/public-env'
+import { CONSOLE_HOST, SHOP_DOMAIN, EKCODE_HOST } from '@/lib/public-env'
 import { shopIdForHost } from '@/lib/queries/storefront'
 
 // =============================================================================
@@ -18,8 +18,9 @@ export type Shop = { ok: true; tenantId: string; host: string } | { ok: false; s
 
 export async function requireShop(request: Request): Promise<Shop> {
   const raw = request.headers.get('host')
-  const surface = surfaceFor(raw, CONSOLE_HOST)
-  if (surface.kind !== 'storefront' || routeFor(raw, '/api', CONSOLE_HOST, false, SHOP_DOMAIN).kind !== 'shop' || !shopHostParam(surface.host)) return { ok: false, status: 404, error: 'Not found' }
+  // EkCode's host is never a shop (security H1): surfaceFor knows it, so /api/shop/* there is refused here.
+  const surface = surfaceFor(raw, CONSOLE_HOST, EKCODE_HOST)
+  if (surface.kind !== 'storefront' || routeFor(raw, '/api', CONSOLE_HOST, false, SHOP_DOMAIN, EKCODE_HOST).kind !== 'shop' || !shopHostParam(surface.host)) return { ok: false, status: 404, error: 'Not found' }
   if (request.method !== 'GET') {
     const origin = request.headers.get('origin')
     let ok = false

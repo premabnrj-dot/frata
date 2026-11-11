@@ -21,6 +21,7 @@ import { discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import { keysFor } from '@/lib/payments/keys'
 import { createOrder } from '@/lib/payments/razorpay'
 import { refreshSoldOut } from '@/lib/queries/storefront'
+import { linkCustomer } from '@/lib/queries/customers'
 
 // =============================================================================
 // FILE: src/lib/orders/place.ts
@@ -51,7 +52,9 @@ export type PlaceInput = {
   /** The code the shopper typed, if any (one per order), and whether it came from a shop link (?code=). */
   code?: string | null; via?: 'typed' | 'link'
   /** What the shopper was shown and did, for the hypotheses (frata-unit-economics): first card tapped, attribution. */
-  facts: { firstMethod?: 'cod' | 'prepaid' | null; attribution?: Record<string, string> }
+  facts: { firstMethod?: 'cod' | 'prepaid' | null; attribution?: Record<string, string>; ekcode?: 'shown' | 'held' | null }
+  /** The shop's own signed-in session token (EkCode), if any: the order is linked to that customer only when its phone is theirs. */
+  session?: string | null
   /** A business buyer asking for a GST invoice: their GSTIN and registered name (checked here again: tax/gstin.ts). */
   b2b?: { gstin: string; name: string } | null
   /** The shopper ticked the WhatsApp opt-in (src/domains/checkout/opt-in.ts): stored with the notice they read. */
@@ -130,9 +133,12 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
       tokenHash: tokenHash(orderToken(id)), idempotencyKey: input.idempotencyKey, requestHash: reqHash,
       payBy: cod ? null : new Date(now.getTime() + HOLD_MINUTES * 60_000),
       checkout: { shown: { prepaid: q.prepaid.total, cod: q.cod.offer.offered ? q.cod.total : null, codCharge: shop.codCharge }, firstMethod: input.facts.firstMethod ?? null,
-        attribution: input.facts.attribution ?? {}, onlineTotal: q.prepaid.total },
+        attribution: input.facts.attribution ?? {}, onlineTotal: q.prepaid.total, ...(input.facts.ekcode ? { ekcode: input.facts.ekcode } : {}) },
       placedAt: now,
     })
+    // A checked phone (EkCode, plan task 3): link the order to the shop's customer only when the session's phone is this
+    // order's phone — the session found by its token's hash inside this tenant, never anything in the body.
+    if (input.session) await linkCustomer(tx, tenantId, id, input.session, input.address.phone)
     await tx.insert(orderLines).values(live.map((l, position) => ({
       ...m.shares[position]!,
       lineDiscount: m.lines[position]!.discount, productDiscount: m.lines[position]!.productDiscount, taxableValue: m.lines[position]!.taxable, gstBps: m.lines[position]!.gstBps, gst: m.lines[position]!.gst,

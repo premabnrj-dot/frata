@@ -45,10 +45,12 @@ type Loader<A extends unknown[], R> = (tenantId: string, ...a: A) => Promise<R>
 // React cache() on top (speed review P3): unstable_cache does not merge misses already in flight, and layout,
 // generateMetadata and page render in parallel — each ran the same queries on its own connection.
 // 'reviews' / 'reviews:product' (Reviews R1, speed review 4): a shopper's review purges its own product, never the shop.
-const productKey = (v: unknown) => { if (typeof v !== 'string' || !v) throw new Error('reviews:product needs the product id first'); return v }
-function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop' | 'catalogue' | 'reviews' | 'reviews:product' | 'videos', fn: Loader<A, R>, revalidate = 60): Loader<A, R> {
+const productKey = (v: unknown) => { if (typeof v !== 'string' || !v) throw new Error('a product scope needs the product id or handle first'); return v }
+// 'catalogue:product' (PV·1, speed review): a product's own entry also carries its handle's tag, so its video turning
+// playable or going purges that one product, never the catalogue.
+function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop' | 'catalogue' | 'catalogue:product' | 'reviews' | 'reviews:product' | 'videos', fn: Loader<A, R>, revalidate = 60): Loader<A, R> {
   return cache((tenantId: string, ...a: A) => unstable_cache(() => fn(tenantId, ...a), ['sf', name, tenantId, ...a.map(String)], {
-    tags: [`shop:${tenantId}`, ...(scope === 'catalogue' || scope === 'videos' ? [`shop:${tenantId}:${scope}`] : scope === 'reviews' ? [`shop:${tenantId}:reviews`] : scope === 'reviews:product' ? [`shop:${tenantId}:reviews:${productKey(a[0])}`] : [])], revalidate,
+    tags: [`shop:${tenantId}`, ...(scope === 'catalogue' || scope === 'videos' ? [`shop:${tenantId}:${scope}`] : scope === 'catalogue:product' ? [`shop:${tenantId}:catalogue`, `shop:${tenantId}:product:${productKey(a[0])}`] : scope === 'reviews' ? [`shop:${tenantId}:reviews`] : scope === 'reviews:product' ? [`shop:${tenantId}:reviews:${productKey(a[0])}`] : [])], revalidate,
   })())
 }
 
@@ -373,7 +375,7 @@ export async function collectionMembersIn(tx: Tx, tenantId: string): Promise<Rec
 export const collectionMembers = shopCached('collection-members', 'catalogue', (tenantId): Promise<Record<string, string[]>> => withTenant(tenantId, (tx) => collectionMembersIn(tx, tenantId)))
 const shopHandles = shopCached('handles', 'catalogue', (t) => coreHandles(t, false))
 // v2 (Signal S3): stories and pairs joined the entry. Tagged catalogue, so a paired piece's price or sell-out purges it too.
-const shopProductRow = shopCached('product-v2', 'catalogue', (t, handle: string) => coreProduct(t, handle, false))
+const shopProductRow = shopCached('product-v2', 'catalogue:product', (t, handle: string) => coreProduct(t, handle, false))
 export async function shopProduct(tenantId: string, handle: string): Promise<Lookup> {
   return lookup(await shopHandles(tenantId), () => shopProductRow(tenantId, handle), handle)
 }

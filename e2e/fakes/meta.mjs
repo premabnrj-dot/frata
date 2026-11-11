@@ -2,7 +2,7 @@
 // Two signup codes: "code-app-…" gives a Business app number (coexistence), "code-new-…" a new number.
 // Every call is recorded for the flow to read at /_test/calls.
 import http from 'node:http'
-import { META } from '../constants.mjs'
+import { EKCODE, META } from '../constants.mjs'
 
 const V = '/v26.0'
 const tokens = new Map() // token → { waba, number, app }
@@ -46,6 +46,16 @@ http.createServer((req, res) => {
       const t = tokens.get(u.searchParams.get('input_token') ?? '')
       if (!t) return send(res, 200, { data: { is_valid: false } })
       return send(res, 200, { data: { app_id: META.appId, is_valid: true, granular_scopes: [{ scope: 'whatsapp_business_management', target_ids: [t.waba] }, { scope: 'whatsapp_business_messaging', target_ids: [t.waba] }] } })
+    }
+    // EkCode's own number (P1): copy-code sends; a number not on WhatsApp answers 131026 at once.
+    if (bearer(req) === EKCODE.token) {
+      let n
+      if (req.method === 'POST' && (n = p.match(/^\/(\d+)\/messages$/)) && n[1] === EKCODE.number && body.type === 'template' && body.template?.name === EKCODE.template) {
+        if (body.to === `91${EKCODE.notOnWhatsApp}`) return send(res, 400, { error: { code: 131026, message: 'Message undeliverable' } })
+        sentCodes.set(body.to, body.template.components?.[0]?.parameters?.[0]?.text ?? null)
+        return send(res, 200, { messaging_product: 'whatsapp', contacts: [{ input: body.to, wa_id: body.to }], messages: [{ id: `wamid.ek${Date.now()}${Math.random().toString(36).slice(2, 6)}` }] })
+      }
+      return send(res, 400, { error: { code: 100 } })
     }
     if (bearer(req) === FRRATA_TOKEN) {
       let n

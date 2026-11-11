@@ -50,6 +50,10 @@ const TENANT_IN_APP = {
   'src/app/api/shop/orders/view/route.ts': 'the shopper\'s order page: tenant from the host, order from a signed token',
 }
 const DATA_MODULE = /(?:from\s+|import\(\s*)['"]@\/lib\/(?:queries|db|admin|auth)(?:\/[^'"]*)?['"]/
+/** App files outside Admin that may import src/lib/admin, with why (each checks its own credential). */
+const ADMIN_LIB_IN_APP = {
+  'src/app/api/cron/infra/route.ts': 'Admin › Infrastructure\'s hourly pull of vendor usage (CRON_SECRET via isCronRequest; writes platform rows only, plan 2026-11-11 I·1)',
+}
 /** Actions the shell may import from src/app (they are endpoints, not reads), with why. */
 const SHELL_ACTIONS = {
   '@/app/(admin)/admin/sign-out/actions': 'Sign out: ends a live support visit (needs src/lib/admin, so it lives under Admin)',
@@ -74,7 +78,7 @@ for (const file of walk('src')) {
   if (ADMIN_DB.test(text) && !file.startsWith('src/lib/admin/') && file !== 'src/lib/db/admin.ts') {
     failures.push(`${file}  imports the admin connection — only src/lib/admin/** may (ADR-0007)`)
   }
-  if (ADMIN_LIB.test(text) && !file.startsWith('src/app/(admin)/') && !file.startsWith('src/lib/admin/')) {
+  if (ADMIN_LIB.test(text) && !file.startsWith('src/app/(admin)/') && !file.startsWith('src/lib/admin/') && !ADMIN_LIB_IN_APP[file]) {
     failures.push(`${file}  imports src/lib/admin — only Admin pages and actions may (ADR-0007)`)
   }
   if (file.startsWith('src/lib/admin/')) {
@@ -171,6 +175,10 @@ for (const { name, table, body, forApp } of finalPolicies.values()) {
   else if (/app_current_tenant\(\)\s+is\s+null/.test(body)) failures.push(`policy ${name} on ${table}  opens every shop when no tenant is set (app_current_tenant() is null) — only OPEN_FOR_APP tables may`)
 }
 
+// EkCode's vault (ADR-0009, drizzle/0088): no app role is ever granted a table; definers are the only door.
+for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?"?(ekcode_[a-z_]+)/g)) {
+  failures.push(`grant on ${m[1]}  — the EkCode vault has no table grants; add a definer instead (ADR-0009)`)
+}
 if (failures.length) {
   for (const f of failures) console.error(f)
   console.error(`check:tenant — ${failures.length} problem(s). See .claude/skills/frata-architecture/SKILL.md § Tenancy.`)

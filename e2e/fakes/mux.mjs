@@ -2,6 +2,9 @@
 // The API (uploads, assets, delete, cancel) behind Basic auth; an upload URL on this host that takes the browser's PUT;
 // then signed webhooks back to the app, as Mux sends them: upload.asset_created, asset.ready, static_rendition.ready.
 // A file holding the bytes "LONG" becomes a 20-second asset (the too-long path). Serves the MP4 and the poster.
+// PV·1: a product upload asks for no MP4 and arrives as a 24.4 s reel at 1080 × 1920; its 720p is added later through
+// POST /video/v1/assets/{id}/static-renditions, with the rendition's own hooks (routed by asset_id, as at Mux).
+// "XLONG" is 70 s, "SHORT" 3 s, "SMALL" a 640 × 360 source (a 720p asked of it would be skipped).
 import http from 'node:http'
 import crypto from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -11,8 +14,11 @@ const APP = process.env.APP
 const PORT = Number(process.env.PORT)
 const BASE = `http://localhost:${PORT}`
 const MP4 = readFileSync(new URL('../fixtures/loop.mp4', import.meta.url))
-const uploads = new Map(), assets = new Map(), deleted = [], cancelled = []
+const uploads = new Map(), assets = new Map(), deleted = [], cancelled = [], renditions = []
 const hex = (n) => crypto.randomBytes(n).toString('hex')
+const readOk = (req) => req.headers.authorization === 'Basic ' + Buffer.from(`${MUX.readId}:${MUX.readSecret}`).toString('base64')
+// Delivery usage (Admin › Infrastructure): assets and seconds the flow sets, answered for any window, paged by 100.
+let delivery = []
 const authOk = (req) => req.headers.authorization === 'Basic ' + Buffer.from(`${MUX.tokenId}:${MUX.tokenSecret}`).toString('base64')
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'PUT, OPTIONS', 'access-control-allow-headers': 'content-type' }
 const send = (res, code, body, headers = {}) => { res.writeHead(code, { 'content-type': 'application/json', ...cors, ...headers }); res.end(body === undefined ? '' : JSON.stringify(body)) }
@@ -26,23 +32,36 @@ async function hook(type, data) {
 }
 
 async function arrive(up, body) {
-  const long = body.includes(Buffer.from('LONG'))
+  const has = (m) => body.includes(Buffer.from(m))
+  const asked = up.new_asset_settings.static_renditions ?? [], product = asked.length === 0
+  const res = asked[0]?.resolution ?? 'highest'
+  const duration = has('XLONG') ? 70.04 : has('LONG') ? 20.04 : has('SHORT') ? 3.0 : product ? 24.4 : 1.0
   const a = { id: 'as' + hex(8), status: 'preparing', passthrough: up.new_asset_settings.passthrough, upload_id: up.id, playback_ids: [], tracks: [], duration: undefined, static_renditions: { files: [] } }
   assets.set(a.id, a); up.status = 'asset_created'; up.asset_id = a.id
   await hook('video.upload.asset_created', { ...up })
   await sleep(300)
-  Object.assign(a, { status: 'ready', duration: long ? 20.04 : 1.0, playback_ids: [{ id: 'pb' + hex(8), policy: 'public' }], tracks: [{ type: 'video', max_width: 96, max_height: 54 }] })
+  const [w, h] = !product ? [96, 54] : has('SMALL') ? [640, 360] : [1080, 1920]
+  Object.assign(a, { status: 'ready', duration, small: has('SMALL'), playback_ids: [{ id: 'pb' + hex(8), policy: 'public' }], tracks: [{ type: 'video', max_width: w, max_height: h }] })
   await hook('video.asset.ready', { ...a })
+  if (product) return // no MP4 until one is asked for (the add-rendition endpoint below)
   await sleep(300)
-  a.static_renditions = { files: [{ id: 'r' + hex(4), name: 'highest.mp4', resolution: 'highest', status: 'ready', ext: 'mp4' }] }
-  await hook('video.asset.static_rendition.ready', { id: a.static_renditions.files[0].id, asset_id: a.id, status: 'ready' })
+  const status = 'ready'
+  a.static_renditions = { files: [{ id: 'r' + hex(4), name: `${res}.mp4`, resolution: res, status, ext: 'mp4' }] }
+  await hook(`video.asset.static_rendition.${status}`, { id: a.static_renditions.files[0].id, asset_id: a.id, status })
 }
 
 http.createServer((req, res) => {
   const chunks = []; req.on('data', (c) => chunks.push(c)); req.on('end', () => {
     const body = Buffer.concat(chunks); const u = new URL(req.url, BASE); const p = u.pathname
     if (req.method === 'OPTIONS') return send(res, 204)
-    if (p === '/_test/state') return send(res, 200, { uploads: [...uploads.values()], assets: [...assets.values()], deleted, cancelled })
+    if (p === '/_test/state') return send(res, 200, { uploads: [...uploads.values()], assets: [...assets.values()], deleted, cancelled, renditions })
+    if (p === '/_test/delivery') { delivery = JSON.parse(body.toString() || '[]'); return send(res, 200, { ok: true }) }
+    if (req.method === 'GET' && p === '/video/v1/delivery-usage') {
+      if (!readOk(req)) return send(res, 401, { error: { type: 'unauthorized' } })
+      const page = Number(u.searchParams.get('page') ?? 1), limit = Number(u.searchParams.get('limit') ?? 100)
+      const data = delivery.slice((page - 1) * limit, page * limit).map((d) => ({ asset_id: d.asset_id, delivered_seconds: d.seconds, delivered_seconds_by_resolution: { tier_720p: d.seconds } }))
+      return send(res, 200, { data, total_row_count: delivery.length, timeframe: u.searchParams.getAll('timeframe[]').map(Number) })
+    }
     // The browser's upload (no auth: the URL is the credential, as at Mux).
     if (req.method === 'PUT' && p.startsWith('/_upload/')) {
       const up = uploads.get(p.slice(9)); if (!up || up.status !== 'waiting') return send(res, 404, {})
@@ -67,6 +86,17 @@ http.createServer((req, res) => {
     }
     let m
     if ((m = p.match(/^\/video\/v1\/uploads\/([A-Za-z0-9]+)\/cancel$/)) && req.method === 'PUT') { cancelled.push(m[1]); const up = uploads.get(m[1]); if (up) up.status = 'cancelled'; return send(res, 200, { data: up ?? {} }) }
+    if ((m = p.match(/^\/video\/v1\/assets\/([A-Za-z0-9]+)\/static-renditions$/)) && req.method === 'POST') {
+      const a = assets.get(m[1]); if (!a) return send(res, 404, { error: { type: 'not_found' } })
+      const resolution = json.resolution
+      if (!['highest', 'audio-only', '2160p', '1440p', '1080p', '720p', '540p', '480p', '360p', '270p'].includes(resolution)) return send(res, 400, { error: { type: 'invalid_parameters', messages: ['resolution is invalid'] } })
+      const f = { id: 'r' + hex(4), type: 'advanced', ext: 'mp4', name: `${resolution}.mp4`, resolution, status: 'preparing' }
+      a.static_renditions = { files: [...(a.static_renditions?.files ?? []), f] }; renditions.push({ asset: a.id, resolution })
+      send(res, 201, { data: f })
+      void (async () => { await sleep(300); f.status = a.small && /^\d+p$/.test(resolution) && Number.parseInt(resolution) > 360 ? 'skipped' : 'ready'
+        await hook(`video.asset.static_rendition.${f.status}`, { id: f.id, asset_id: a.id, status: f.status, resolution, name: f.name }) })()
+      return
+    }
     if ((m = p.match(/^\/video\/v1\/assets\/([A-Za-z0-9]+)$/))) {
       const a = assets.get(m[1])
       if (req.method === 'GET') return a ? send(res, 200, { data: a }) : send(res, 404, { error: { type: 'not_found' } })

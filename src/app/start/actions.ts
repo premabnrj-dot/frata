@@ -13,7 +13,8 @@ import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { clientIp } from '@/lib/http/client-ip'
 import { PLAN_CODES } from '@/domains/plans/entitlements'
 import { claimKey } from '@/lib/trials/claims'
-import { checkCode, indianMobile, sendCode, signupCodeOn } from '@/lib/trials/signup-code'
+import { cleanMobile } from '@/domains/checkout/mobile'
+import { checkCode, sendCode, signupCodeOn } from '@/lib/trials/signup-code'
 
 // Creating a shop: the signed-in person (requireUser → getUser) becomes its
 // owner through app_create_shop, which re-checks everything in one transaction.
@@ -86,7 +87,7 @@ export async function sendSignupCode(phone: string): Promise<{ ok: true; codeId:
   const auth = await requireUser()
   if (!auth.ok) return { ok: false, error: auth.message }
   if (!signupCodeOn()) return { ok: false, error: 'Not available yet.' }
-  const mobile = typeof phone === 'string' && phone.length <= 20 ? indianMobile(phone) : null
+  const mobile = typeof phone === 'string' && phone.length <= 20 ? cleanMobile(phone) : null
   if (!mobile) return { ok: false, error: 'A 10-digit Indian mobile number.' }
   const phoneKey = claimKey('phone', mobile)!.hmac
   const ip = await clientIp()

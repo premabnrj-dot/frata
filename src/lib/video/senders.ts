@@ -3,7 +3,8 @@ import { withTenant } from '@/lib/db/tenant'
 import { MUX_ENVIRONMENT_ID } from '@/lib/env'
 import { GiveUp, type OutboxRow } from '@/lib/outbox'
 import { videoOf } from '@/lib/queries/videos'
-import { cancelUpload, deleteAsset, getAsset } from './mux'
+import { USE_LIMITS } from '@/domains/video/state'
+import { cancelUpload, createRendition, deleteAsset, getAsset } from './mux'
 
 // =============================================================================
 // FILE: src/lib/video/senders.ts — the outbox's Mux kinds (V1). Each reads the ids from the shop's own videos row,
@@ -33,6 +34,26 @@ export async function sendAssetDelete(o: OutboxRow) {
   if (!got.asset) return // already gone
   if (got.asset.passthrough !== v.id) throw new GiveUp('asset is not this video’s')
   const r = await deleteAsset(v.assetId)
+  if (!r.ok) fail(r)
+}
+
+/**
+ * PV·1: add a product video's 720p MP4, once it passed the checks (process.ts). The row is re-read: a video removed or
+ * failed since, not a product's, or already playable asks for nothing; Mux must still say the asset is this row's.
+ */
+export async function sendRenditionCreate(o: OutboxRow) {
+  const videoId = (o.payload as { videoId?: unknown })?.videoId
+  if (typeof videoId !== 'string') throw new GiveUp('no video id')
+  const v = await withTenant(o.tenantId, (tx) => videoOf(tx, o.tenantId, videoId))
+  if (!v) throw new GiveUp('no such video')
+  if (v.muxEnv !== MUX_ENVIRONMENT_ID) throw new Error('another Mux environment')
+  if (v.use !== 'product' || v.removedAt || v.erroredAt || v.mp4ReadyAt || !v.assetId) return
+  const got = await getAsset(v.assetId)
+  if (!got.ok) return fail(got)
+  if (!got.asset) return // gone: nothing to make
+  if (got.asset.passthrough !== v.id) throw new GiveUp('asset is not this video’s')
+  if (got.asset.renditions[USE_LIMITS.product.rendition]) return // already asked
+  const r = await createRendition(v.assetId, USE_LIMITS.product.rendition)
   if (!r.ok) fail(r)
 }
 

@@ -2221,7 +2221,6 @@ do $$ begin
   then raise exception 'FAIL: an API role runs the Mux definer'; end if;
 end $$;
 
-
 -- 62. Signal S3 (0087): a product's pairings are the shop's own rows, and a pair can never name another shop's product
 -- (composite FKs, not an id array); stories stay inside the products policy, with a size backstop.
 insert into products (id, tenant_id, handle, title) values ('eeeeeeee-0000-0000-0000-0000000000a2', '11111111-1111-1111-1111-111111111111', 'a-strap', 'A strap');
@@ -2257,4 +2256,203 @@ do $$ begin
   if exists (select 1 from product_pairs where paired_id = 'eeeeeeee-0000-0000-0000-0000000000b2') then raise exception 'FAIL: a pair outlived its product'; end if;
 end $$;
 
-\echo 'tenancy proof — all 62 checks passed'
+-- 63. EkCode (0088): no role reads the vault; every step needs a server-made flow handle and a fresh proof; a grant
+-- redeems once, only at its own shop and host with the right challenge; a save token works once at its own shop; an
+-- issue reply never says whether an account exists; the shop's customers, sessions and consents are its own; an order
+-- cannot point at another shop's customer; staff get counts, never a name, phone or address.
+begin; set local role frata_app;
+do $$ declare v record; g record; ph text := 'p1:' || repeat('a', 64); ph2 text := 'p1:' || repeat('b', 64);
+  ch text := 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM'; st text := repeat('s', 43);
+begin
+  begin perform 1 from ekcode_accounts; raise exception 'FAIL: the app reads EkCode accounts'; exception when insufficient_privilege then null; end;
+  begin perform 1 from ekcode_codes; raise exception 'FAIL: the app reads EkCode codes'; exception when insufficient_privilege then null; end;
+  begin insert into ekcode_flows (handle_digest, tenant_id, host, state, challenge, arm) values (repeat('9', 64), '11111111-1111-1111-1111-111111111111', 'x.test', st, ch, 'shown');
+    raise exception 'FAIL: the app writes a flow directly'; exception when insufficient_privilege then null; end;
+  if not app_ekcode_start_flow('11111111-1111-1111-1111-111111111111', 'proof-a.frata.test', repeat('a', 64), st, ch, 'shown') then raise exception 'FAIL: a flow did not start'; end if;
+  perform app_ekcode_start_flow('22222222-2222-2222-2222-222222222222', 'proof-b.frata.test', repeat('b', 64), st, ch, 'shown');
+  if (select shop_name from app_ekcode_flow_view(repeat('a', 64))) is distinct from 'Proof A' then raise exception 'FAIL: the flow showed another shop'; end if;
+  -- A first code: ok, no proof of work; the same reply for a number with or without an account (no account yet here).
+  select * into v from app_ekcode_issue_code(repeat('a', 64), array[ph], 'cdcdcdcd-0000-0000-0000-00000000000a', 'p1:' || repeat('c', 64), 'p1:' || repeat('1', 64), 'p1:' || repeat('2', 64), 0::smallint);
+  if v.verdict <> 'ok' then raise exception 'FAIL: a first code was refused (%)', v.verdict; end if;
+  -- Another flow's handle cannot try this code.
+  if (select ok from app_ekcode_verify(repeat('b', 64), 'cdcdcdcd-0000-0000-0000-00000000000a', array['p1:' || repeat('c', 64)], repeat('e', 64))) then raise exception 'FAIL: another flow verified a code'; end if;
+  select * into v from app_ekcode_verify(repeat('a', 64), 'cdcdcdcd-0000-0000-0000-00000000000a', array['p1:' || repeat('d', 64)], repeat('e', 64));
+  if v.ok or v.tries_left <> 4 then raise exception 'FAIL: a wrong code verified or did not count'; end if;
+  select * into v from app_ekcode_verify(repeat('a', 64), 'cdcdcdcd-0000-0000-0000-00000000000a', array['p1:' || repeat('c', 64)], repeat('e', 64));
+  if not v.ok or v.has_account then raise exception 'FAIL: the right code did not verify'; end if;
+  -- The proof works only with its own flow.
+  if app_ekcode_create_account(repeat('b', 64), repeat('e', 64), 'abababab-0000-0000-0000-00000000000a', 'sealed-phone', 'sealed-name', 'ekcode-network@1') then raise exception 'FAIL: a proof used from another flow'; end if;
+  if not app_ekcode_create_account(repeat('a', 64), repeat('e', 64), 'abababab-0000-0000-0000-00000000000a', 'sealed-phone', 'sealed-name', 'ekcode-network@1') then raise exception 'FAIL: the account was not made'; end if;
+  if exists (select 1 from app_ekcode_grant(repeat('b', 64), repeat('e', 64), null, repeat('f', 64))) then raise exception 'FAIL: a grant from another flow'; end if;
+  select * into g from app_ekcode_grant(repeat('a', 64), repeat('e', 64), null, repeat('f', 64));
+  if g.host is distinct from 'proof-a.frata.test' or g.state is distinct from st then raise exception 'FAIL: the grant did not return to its own shop'; end if;
+  if exists (select 1 from app_ekcode_grant(repeat('a', 64), repeat('e', 64), null, repeat('7', 64))) then raise exception 'FAIL: a proof made two grants'; end if;
+  -- Redeem: only shop A, its host, the right challenge; once.
+  if exists (select 1 from app_ekcode_redeem(repeat('f', 64), ch, '22222222-2222-2222-2222-222222222222', 'proof-a.frata.test', null)) then raise exception 'FAIL: another shop redeemed the grant'; end if;
+  if exists (select 1 from app_ekcode_redeem(repeat('f', 64), ch, '11111111-1111-1111-1111-111111111111', 'evil.test', null)) then raise exception 'FAIL: another host redeemed the grant'; end if;
+  if exists (select 1 from app_ekcode_redeem(repeat('f', 64), repeat('x', 43), '11111111-1111-1111-1111-111111111111', 'proof-a.frata.test', null)) then raise exception 'FAIL: a wrong verifier redeemed the grant'; end if;
+  select * into v from app_ekcode_redeem(repeat('f', 64), ch, '11111111-1111-1111-1111-111111111111', 'proof-a.frata.test', repeat('5', 64));
+  if v.pairwise is null or v.name_sealed <> 'sealed-name' or v.address_id is not null then raise exception 'FAIL: the right redeem failed'; end if;
+  if exists (select 1 from app_ekcode_redeem(repeat('f', 64), ch, '11111111-1111-1111-1111-111111111111', 'proof-a.frata.test', null)) then raise exception 'FAIL: a grant redeemed twice'; end if;
+  if app_ekcode_save_address(repeat('5', 64), '22222222-2222-2222-2222-222222222222', 'efefefef-0000-0000-0000-00000000000a', 'Home', 'sealed') then raise exception 'FAIL: another shop saved an address'; end if;
+  if not app_ekcode_save_address(repeat('5', 64), '11111111-1111-1111-1111-111111111111', 'efefefef-0000-0000-0000-00000000000a', 'Home', 'sealed') then raise exception 'FAIL: the save did not work'; end if;
+  if app_ekcode_save_address(repeat('5', 64), '11111111-1111-1111-1111-111111111111', 'efefefef-0000-0000-0000-00000000000b', 'Office', 'sealed') then raise exception 'FAIL: a save token worked twice'; end if;
+end $$;
+commit;
+-- A second shopper's address can never ride on the first one's grant.
+begin; set local role frata_app;
+do $$ declare v record; g record; ph2 text := 'p1:' || repeat('b', 64); ch text := 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM'; st text := repeat('s', 43); begin
+  perform app_ekcode_start_flow('11111111-1111-1111-1111-111111111111', 'proof-a.frata.test', repeat('c', 64), st, ch, 'shown');
+  select * into v from app_ekcode_issue_code(repeat('c', 64), array[ph2], 'cdcdcdcd-0000-0000-0000-00000000000b', 'p1:' || repeat('c', 64), 'p1:' || repeat('3', 64), 'p1:' || repeat('4', 64), 0::smallint);
+  select * into v from app_ekcode_verify(repeat('c', 64), 'cdcdcdcd-0000-0000-0000-00000000000b', array['p1:' || repeat('c', 64)], repeat('8', 64));
+  perform app_ekcode_create_account(repeat('c', 64), repeat('8', 64), 'abababab-0000-0000-0000-00000000000b', 'p2', 'n2', 'ekcode-network@1');
+  if exists (select 1 from app_ekcode_grant(repeat('c', 64), repeat('8', 64), 'efefefef-0000-0000-0000-00000000000a', repeat('6', 64))) then raise exception 'FAIL: a grant carried another shopper''s address'; end if;
+end $$;
+rollback;
+-- A shop's own domain whose DNS check is stale (or another shop's) never starts a flow (security M6).
+insert into shop_domains (tenant_id, host, apex, with_www, claimed_by, proved_at, added_at, dns_ok_at) values
+  ('11111111-1111-1111-1111-111111111111', 'lapsed.proof-a.test', 'proof-a.test', false, '99999999-9999-9999-9999-999999999999', now() - interval '30 days', now() - interval '30 days', now() - interval '2 days');
+begin; set local role frata_app;
+do $$ begin
+  if app_ekcode_start_flow('11111111-1111-1111-1111-111111111111', 'lapsed.proof-a.test', repeat('d', 64), repeat('s', 43), 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM', 'shown')
+  then raise exception 'FAIL: a stale own domain started an EkCode flow'; end if;
+end $$;
+rollback;
+delete from shop_domains where host = 'lapsed.proof-a.test';
+-- The shop's own shoppers; an order cannot point at another shop's customer; staff read nothing of it.
+insert into shop_customers (id, tenant_id, phone, name) values ('cececece-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', '9845012345', 'B shopper');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ begin
+  if exists (select 1 from shop_customers) or exists (select 1 from customer_sessions) or exists (select 1 from customer_consents) then raise exception 'FAIL: A sees B shoppers'; end if;
+  begin insert into customer_sessions (tenant_id, customer_id, token_digest, expires_at) values ('11111111-1111-1111-1111-111111111111', 'cececece-0000-0000-0000-00000000000b', repeat('t', 64), now() + interval '1 day');
+    raise exception 'FAIL: A opened a session for B''s shopper'; exception when foreign_key_violation then null; end;
+  begin update orders set customer_id = 'cececece-0000-0000-0000-00000000000b' where tenant_id = '11111111-1111-1111-1111-111111111111';
+    if found then raise exception 'FAIL: an order pointed at another shop''s customer'; end if; exception when foreign_key_violation then null; end;
+end $$;
+rollback;
+do $$ declare v record; begin
+  if exists (select 1 from unnest(array['frata_app', 'frata_admin', 'anon', 'authenticated', 'service_role']) r, pg_tables t
+             where t.schemaname = 'public' and t.tablename like 'ekcode\_%' and (has_table_privilege(r, t.tablename, 'select') or has_table_privilege(r, t.tablename, 'insert')
+               or has_table_privilege(r, t.tablename, 'update') or has_table_privilege(r, t.tablename, 'delete')))
+  then raise exception 'FAIL: a role holds a privilege on an EkCode table'; end if;
+  if exists (select 1 from unnest(array['frata_admin', 'anon', 'authenticated', 'service_role']) r, unnest(array['shop_customers', 'customer_sessions', 'customer_consents']) t where has_table_privilege(r, t, 'select'))
+  then raise exception 'FAIL: another role reads a shop''s shoppers'; end if;
+  -- Every EkCode definer: security definer, search_path pinned, never PUBLIC; app ones never to frata_admin, admin ones never to frata_app.
+  for v in select p.oid, p.proname, p.prosecdef, p.proconfig from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+           where n.nspname = 'public' and (p.proname like 'app\_ekcode\_%' or p.proname like 'app\_admin\_ekcode\_%') loop
+    if not v.prosecdef or not ('search_path=""' = any(v.proconfig)) then raise exception 'FAIL: % is not a pinned definer', v.proname; end if;
+    if has_function_privilege('public', v.oid, 'execute') or has_function_privilege('anon', v.oid, 'execute') or has_function_privilege('authenticated', v.oid, 'execute')
+       or has_function_privilege('service_role', v.oid, 'execute')
+    then raise exception 'FAIL: % runs for an API role', v.proname; end if;
+    if v.proname like 'app\_admin\_%' and has_function_privilege('frata_app', v.oid, 'execute') then raise exception 'FAIL: the app runs %', v.proname; end if;
+    if v.proname like 'app\_ekcode\_%' and has_function_privilege('frata_admin', v.oid, 'execute') then raise exception 'FAIL: staff run %', v.proname; end if;
+  end loop;
+  -- The internal helpers run for no role at all.
+  for v in select p.oid, p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname like 'ekcode\_%' loop
+    if exists (select 1 from unnest(array['public', 'anon', 'authenticated', 'service_role', 'frata_app', 'frata_admin']) r where has_function_privilege(r, v.oid, 'execute'))
+    then raise exception 'FAIL: the helper % runs for a role', v.proname; end if;
+  end loop;
+end $$;
+
+-- 64. Product video PV·1 (0089/0090): a link is the shop's own row both ways; it names only the shop's own product
+-- (composite FK) and its own video, a product's (trigger, before the FK and the policy: each case is caught by its own
+-- code); its keys never change; videos.use is set at insert only; no other role holds anything on it.
+insert into videos (id, tenant_id, mux_env, created_by, use) values
+  ('dededede-0000-0000-0000-0000000000a1', '11111111-1111-1111-1111-111111111111', 'prod1', '99999999-9999-9999-9999-999999999999', 'product'),
+  ('dededede-0000-0000-0000-0000000000a2', '11111111-1111-1111-1111-111111111111', 'prod1', '99999999-9999-9999-9999-999999999999', 'loop'),
+  ('dededede-0000-0000-0000-0000000000b1', '22222222-2222-2222-2222-222222222222', 'prod1', '99999999-9999-9999-9999-999999999999', 'product');
+insert into product_videos (tenant_id, product_id, video_id) values ('22222222-2222-2222-2222-222222222222', 'eeeeeeee-0000-0000-0000-00000000000b', 'dededede-0000-0000-0000-0000000000b1');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if exists (select 1 from product_videos) then raise exception 'FAIL: A reads B product videos'; end if;
+  update product_videos set button = 'none'; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A changed a B product video'; end if;
+  delete from product_videos; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A deleted a B product video'; end if;
+  begin insert into product_videos (tenant_id, product_id, video_id) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000b', 'dededede-0000-0000-0000-0000000000a1'); raise exception 'FAIL: A linked its video to a B product';
+  exception when foreign_key_violation then null; end;
+  begin insert into product_videos (tenant_id, product_id, video_id) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', 'dededede-0000-0000-0000-0000000000b1'); raise exception 'FAIL: A linked a B video';
+  exception when check_violation then null; end;
+  begin insert into product_videos (tenant_id, product_id, video_id) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', 'dededede-0000-0000-0000-0000000000a2'); raise exception 'FAIL: a loop became a product video';
+  exception when check_violation then null; end;
+  insert into product_videos (tenant_id, product_id, video_id) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-00000000000a', 'dededede-0000-0000-0000-0000000000a1');
+  update product_videos set button = 'wear', poster_ms = 6000; get diagnostics n = row_count; if n <> 1 then raise exception 'FAIL: own cover frame and words not saved'; end if;
+  begin update product_videos set video_id = 'dededede-0000-0000-0000-0000000000a2'; raise exception 'FAIL: a link changed its video'; exception when insufficient_privilege then null; end;
+  begin update product_videos set product_id = 'eeeeeeee-0000-0000-0000-0000000000a2'; raise exception 'FAIL: a link changed its product'; exception when insufficient_privilege then null; end;
+  begin update product_videos set tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: a link moved shop'; exception when insufficient_privilege then null; end;
+  begin update videos set use = 'loop' where id = 'dededede-0000-0000-0000-0000000000a1'; raise exception 'FAIL: a video changed its use'; exception when insufficient_privilege then null; end;
+  begin insert into videos (tenant_id, mux_env, created_by, use) values ('11111111-1111-1111-1111-111111111111', 'prod1', '99999999-9999-9999-9999-999999999999', 'reel'); raise exception 'FAIL: a video with an unknown use'; exception when check_violation then null; end;
+end $$;
+rollback;
+do $$ begin
+  if (select count(*) from pg_constraint where conrelid = 'product_videos'::regclass and contype = 'f' and conname in ('product_videos_product_fk', 'product_videos_video_fk')
+      and array_length(conkey, 1) = 2) <> 2 then raise exception 'FAIL: a product video key is not shop-scoped'; end if;
+  if not exists (select 1 from pg_policies where tablename = 'product_videos' and policyname = 'tenant_rows' and qual like '%app_current_tenant()%' and with_check like '%app_current_tenant()%')
+  then raise exception 'FAIL: product_videos has no shop policy both ways'; end if;
+  if not (select relrowsecurity from pg_class where oid = 'product_videos'::regclass) then raise exception 'FAIL: product_videos without RLS'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['select', 'insert', 'update']) p where has_any_column_privilege(r, 'product_videos', p))
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_table_privilege(r, 'product_videos', 'delete'))
+  then raise exception 'FAIL: another role reads or writes product videos'; end if;
+  if has_column_privilege('frata_app', 'videos', 'use', 'update') then raise exception 'FAIL: the app may change a video''s use'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r where has_function_privilege(r, 'product_video_is_product()', 'execute'))
+  then raise exception 'FAIL: an API role runs the product video trigger'; end if;
+end $$;
+
+-- 65. Admin › Infrastructure's Supabase tab (drizzle/0091): admin_db_health() is staff-only and aggregate-only. No API role
+-- and not frata_app may run it; it returns only the fixed keys (no session's query, address or app name); query shapes
+-- carry no literal (a planted one is absent).
+do $$ begin
+  if exists (select 1 from unnest(array['public', 'anon', 'authenticated', 'service_role', 'frata_app']) r
+             where r <> 'public' and has_function_privilege(r, 'admin_db_health()', 'execute'))
+  then raise exception 'FAIL: a non-staff role runs admin_db_health'; end if;
+  if not has_function_privilege('frata_admin', 'admin_db_health()', 'execute') then raise exception 'FAIL: Admin cannot read database health'; end if;
+end $$;
+begin; set local role frata_admin;
+do $$ declare h jsonb := admin_db_health(); k text; begin
+  for k in select jsonb_object_keys(h) loop
+    if k not in ('db_bytes', 'max_connections', 'cache_hit', 'connections', 'outbox_waiting', 'outbox_oldest_s', 'outbox_dead_today', 'webhooks_waiting', 'tables', 'queries')
+    then raise exception 'FAIL: admin_db_health returns an unexpected key %', k; end if;
+  end loop;
+  if exists (select 1 from jsonb_array_elements(h->'connections') c where c ?| array['query', 'client_addr', 'application_name'])
+  then raise exception 'FAIL: admin_db_health exposes a session''s query or address'; end if;
+  if h::text like '%9845012345%' then raise exception 'FAIL: a literal reached admin_db_health'; end if;
+end $$;
+rollback;
+
+-- 66. Admin › Infrastructure's platform tables (drizzle/0092–0093): what vendors billed Frrata. frata_app and the API
+-- roles hold nothing (a shop's code path can never read or forge Frrata's costs); frata_admin reads and writes them.
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_app']) r, unnest(array['infra_usage_daily', 'infra_pulls']) t, unnest(array['select', 'insert', 'update', 'delete']) p
+             where has_table_privilege(r, t, p)) then raise exception 'FAIL: a non-staff role reads or writes infra tables'; end if;
+  if not (has_table_privilege('frata_admin', 'infra_usage_daily', 'insert') and has_table_privilege('frata_admin', 'infra_pulls', 'select'))
+  then raise exception 'FAIL: Admin cannot keep vendor usage'; end if;
+  if not (select relrowsecurity from pg_class where oid = 'infra_usage_daily'::regclass) or not (select relrowsecurity from pg_class where oid = 'infra_pulls'::regclass)
+  then raise exception 'FAIL: infra tables without RLS'; end if;
+end $$;
+begin; set local role frata_app;
+do $$ begin
+  begin perform 1 from infra_usage_daily; raise exception 'FAIL: frata_app read vendor usage'; exception when insufficient_privilege then null; end;
+  begin insert into infra_pulls (source, ok) values ('vercel', true); raise exception 'FAIL: frata_app forged a pull'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+begin; set local role frata_admin;
+insert into infra_usage_daily (source, day, service, quantity, cost_micros) values ('vercel', '2026-11-01', 'Fluid Active CPU', 1, 140000);
+do $$ begin if (select cost_micros from infra_usage_daily where source = 'vercel' and day = '2026-11-01') <> 140000 then raise exception 'FAIL: Admin cannot read back vendor usage'; end if; end $$;
+rollback;
+
+-- 67. Admin › Infrastructure's Mux tab (drizzle/0095): admin_video_usage() is staff-only; it returns no playback id,
+-- upload id or URL (only whether the file arrived).
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_app']) r where has_function_privilege(r, 'admin_video_usage(timestamptz)', 'execute'))
+  then raise exception 'FAIL: a non-staff role runs admin_video_usage'; end if;
+  if not has_function_privilege('frata_admin', 'admin_video_usage(timestamptz)', 'execute') then raise exception 'FAIL: Admin cannot read video usage'; end if;
+end $$;
+begin; set local role frata_admin;
+do $$ declare r jsonb; begin
+  for r in select jsonb_array_elements(admin_video_usage(now() - interval '1 year')) loop
+    if r ?| array['playback_id', 'upload_id', 'mux_env', 'created_by'] then raise exception 'FAIL: admin_video_usage returns a playback or upload id'; end if;
+  end loop;
+end $$;
+rollback;
+
+\echo 'tenancy proof — all 67 checks passed'

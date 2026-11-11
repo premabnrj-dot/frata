@@ -16,7 +16,7 @@ import { requireMember, type MemberResult } from './require-member'
 type Ok = Extract<MemberResult, { ok: true }>
 
 /** The words for a module this shop cannot use now (one place, read by asModule and moduleGate). */
-function refusal(module: ModuleKey, a: ShopModules['access'][ModuleKey]): string {
+export function refusal(module: ModuleKey, a: ShopModules['access'][ModuleKey]): string {
   const name = MODULES[module].name
   return a.why === 'paused' ? `${name} is paused by Frrata. We're on it.`
     : a.why === 'needs' && a.needs ? (a.held ? `${MODULES[a.needs].name} is paused by Frrata. We're on it.` : `Turn on ${MODULES[a.needs].name} first.`)

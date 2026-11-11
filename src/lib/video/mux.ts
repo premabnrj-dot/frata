@@ -1,6 +1,7 @@
 import 'server-only'
 import { fetchWithTimeout } from '@/lib/http/timeout'
 import { MUX_API_BASE, MUX_TOKEN_ID, MUX_TOKEN_SECRET } from '@/lib/env'
+import { USE_LIMITS, type VideoUse } from '@/domains/video/state'
 
 // =============================================================================
 // FILE: src/lib/video/mux.ts — the four calls Frrata makes to Mux (V1, docs/plans/2026-11-09-video-v1.md;
@@ -13,13 +14,26 @@ import { MUX_API_BASE, MUX_TOKEN_ID, MUX_TOKEN_SECRET } from '@/lib/env'
  *  mixing `highest` with sized renditions (2026-11-09, both found as 400s in production). Delivering 720p instead
  *  would need a sized rendition (paid prep, none for a smaller source): a later cost lever, not V1. */
 export const UPLOAD_SETTINGS = { video_quality: 'basic', playback_policies: ['public'], static_renditions: [{ resolution: 'highest' }] } as const
-export const UPLOAD_TIMEOUT_S = 900
+export const UPLOAD_TIMEOUT_S = USE_LIMITS.loop.timeoutS
+
+/** PV·1: a product's video is uploaded with NO MP4 (an HLS-only asset is valid). Its paid 720p rendition is added only
+ *  once the asset has passed the length and size checks (createRendition, from the outbox): a too-long or tiny upload
+ *  never costs prep (unit-economics review 2026-11-10). */
+export const uploadSettings = (use: VideoUse) => use === 'loop' ? UPLOAD_SETTINGS
+  : { video_quality: 'basic', playback_policies: ['public'] } as const
 
 export type MuxFail = { ok: false; why: 'not_configured' | 'unauthorized' | 'refused' | 'rate_limited' | 'unavailable' | 'bad_reply' }
 export type MuxAsset = {
   id: string; status: 'preparing' | 'ready' | 'errored'; passthrough: string | null; uploadId: string | null
-  playbackId: string | null; durationMs: number | null; width: number | null; height: number | null; mp4Ready: boolean
+  playbackId: string | null; durationMs: number | null; width: number | null; height: number | null
+  /** V1: the `highest` MP4 is ready (a loop's). */
+  mp4Ready: boolean
+  /** Each static rendition's status by resolution (PV·1: a product's `720p`, ready or skipped). */
+  renditions: Record<string, 'ready' | 'skipped' | 'errored' | 'preparing'>
 }
+
+/** Whether the MP4 a video of this use plays is ready. */
+export const mp4ReadyFor = (a: MuxAsset, use: VideoUse) => a.renditions[USE_LIMITS[use].rendition] === 'ready'
 
 const ID = /^[A-Za-z0-9]{1,128}$/
 const auth = () => `Basic ${Buffer.from(`${MUX_TOKEN_ID}:${MUX_TOKEN_SECRET}`).toString('base64')}`
@@ -51,8 +65,8 @@ async function call(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, bod
 
 /** A direct upload for one video row: the browser PUTs the file to `url`; Mux carries `passthrough` (our row id) onto
  *  the asset and every event about it. The URL must be https (security review 4) or nothing is handed to the browser. */
-export async function createUpload(videoId: string, corsOrigin: string): Promise<{ ok: true; uploadId: string; url: string } | MuxFail> {
-  const r = await call('POST', '/video/v1/uploads', { cors_origin: corsOrigin, timeout: UPLOAD_TIMEOUT_S, new_asset_settings: { ...UPLOAD_SETTINGS, passthrough: videoId } })
+export async function createUpload(videoId: string, corsOrigin: string, use: VideoUse = 'loop'): Promise<{ ok: true; uploadId: string; url: string } | MuxFail> {
+  const r = await call('POST', '/video/v1/uploads', { cors_origin: corsOrigin, timeout: USE_LIMITS[use].timeoutS, new_asset_settings: { ...uploadSettings(use), passthrough: videoId } })
   if (!r.ok) return r
   const d = (r.json as { data?: { id?: unknown; url?: unknown } } | null)?.data
   if (typeof d?.id !== 'string' || !ID.test(d.id) || typeof d.url !== 'string' || !safeUploadUrl(d.url)) return { ok: false, why: 'bad_reply' }
@@ -74,6 +88,17 @@ export async function getAsset(assetId: string): Promise<{ ok: true; asset: MuxA
   if (r.status === 404) return { ok: true, asset: null }
   const asset = parseAsset((r.json as { data?: unknown } | null)?.data)
   return asset ? { ok: true, asset } : { ok: false, why: 'bad_reply' }
+}
+
+/**
+ * Add a static MP4 rendition to a ready asset (PV·1: a product's 720p). Mux answers 201 with the rendition preparing;
+ * its webhooks name the asset (`asset_id`), which the row already holds. 404: the asset is gone (done, nothing to make).
+ * [V-undated, Mux create-asset-static-rendition, read 2026-11-10]
+ */
+export async function createRendition(assetId: string, resolution: string): Promise<{ ok: true; gone: boolean } | MuxFail> {
+  if (!ID.test(assetId) || !/^\d{3,4}p$/.test(resolution)) return { ok: false, why: 'refused' }
+  const r = await call('POST', `/video/v1/assets/${assetId}/static-renditions`, { resolution })
+  return r.ok ? { ok: true, gone: r.status === 404 } : r
 }
 
 /** Delete an asset. Mux answering 404 is done too (it is already gone). */
@@ -103,13 +128,19 @@ export function parseAsset(d: unknown): MuxAsset | null {
   const video = tracks.find((t) => t?.type === 'video')
   const dim = (n: unknown) => (typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 8192 ? n : null)
   const files = (a.static_renditions as { files?: unknown } | undefined)?.files
-  const mp4Ready = Array.isArray(files) && (files as { name?: unknown; resolution?: unknown; status?: unknown }[])
-    .some((f) => f?.status === 'ready' && (f.resolution === 'highest' || f.name === 'highest.mp4'))
+  const list = Array.isArray(files) ? files as { name?: unknown; resolution?: unknown; status?: unknown }[] : []
+  const mp4Ready = list.some((f) => f?.status === 'ready' && (f.resolution === 'highest' || f.name === 'highest.mp4'))
+  const renditions: MuxAsset['renditions'] = {}
+  for (const f of list) {
+    const res = typeof f?.resolution === 'string' && /^(highest|audio-only|\d{3,4}p)$/.test(f.resolution) ? f.resolution
+      : typeof f?.name === 'string' && /^(highest|\d{3,4}p)\.mp4$/.test(f.name) ? f.name.slice(0, -4) : null
+    if (res) renditions[res] = f.status === 'ready' || f.status === 'skipped' || f.status === 'errored' ? f.status : 'preparing'
+  }
   return {
     id: a.id, status, passthrough: typeof a.passthrough === 'string' ? a.passthrough : null,
     uploadId: typeof a.upload_id === 'string' && ID.test(a.upload_id) ? a.upload_id : null,
     playbackId: pub ? pub.id as string : null,
     durationMs: typeof a.duration === 'number' && a.duration >= 0 && a.duration <= 43_200 ? Math.round(a.duration * 1000) : null,
-    width: dim(video?.max_width), height: dim(video?.max_height), mp4Ready,
+    width: dim(video?.max_width), height: dim(video?.max_height), mp4Ready, renditions,
   }
 }

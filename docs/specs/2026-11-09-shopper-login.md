@@ -1,5 +1,5 @@
 # EkCode — one tap, recognised at every Frrata shop (shopper identity network, as an app)
-Status: active · Date: 2026-11-09 · Mockup: https://claude.ai/artifact/A33Xi8HVfsAyZqQ2pn7uKu
+Status: active (P1 built and in production 2026-11-09; P2–P3 to come) · Date: 2026-11-09 · Mockup: https://claude.ai/artifact/A33Xi8HVfsAyZqQ2pn7uKu
 (`docs/mockups/2026-11-09-ekcode.html`, v4) · Approved: owner, 2026-11-09
 Decision: `docs/decisions/0009-shopper-network.md` · Research: `docs/research/2026-11-09-shopper-login.md`.
 
@@ -31,9 +31,9 @@ WhatsApp's display name is "EkCode" (Brand, above).
 ## Owner direction (2026-11-09)
 - A **Frrata account network** for authentication (ADR-0009): the shopper signs in to Frrata, recognised everywhere.
 - **Transactional WhatsApp from EkCode's number** until the merchant connects their own (the Messages module).
-- **No SMS** — not integrated or planned until the owner asks. **No email code in P1** (review 2026-11-09: an email code
-  proves an email, never a phone; it must not open an account keyed by the phone). P2 adds email as a second sign-in the
-  shopper verifies on their own EkCode page.
+- **No SMS** — not integrated or planned until the owner asks. **No email at all for now** (owner, 2026-11-09): planned later,
+  once Amazon SES is connected. (Review 2026-11-09: an email code proves an email, never a phone, so when it comes it must
+  never open an account keyed by the phone.)
 - Strictly identity and lead capture; marketing stays in its own modules.
 
 ## Goal
@@ -208,7 +208,7 @@ Admin › Activity). **Staff see counts, costs and health — never a shopper's 
 ## Phases (each its own plan; mockup first)
 - **P0** — EkCode's WhatsApp number (under Frrata's verified business) + auth template (owner's WhatsApp Business setup), the ekcode.in domain and site, email
   sender; policy answer (§ 9); unit-economics review.
-- **P1** — EkCode sign-in on shops: the vault, definers, WhatsApp codes (no email: § Owner direction), the confirm screen, shop
+- **P1** — EkCode sign-in on shops: the vault, definers, WhatsApp codes only (no email until SES is planned), the confirm screen, shop
   sessions, checkout prefill; the ekcode.in host and its public pages; Admin › EkCode Overview, Shops and Controls
   (the switches, limits, breaker and blocks must exist before the first real code); R0 net first (e2e: phone → code →
   confirm → filled; a second shop → one tap).

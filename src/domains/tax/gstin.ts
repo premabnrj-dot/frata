@@ -26,7 +26,8 @@ export function gstinStateName(gstin: string): State | null {
   return STATES.find((s) => STATE_CODE[s] === code) ?? null
 }
 
-export const cleanGstin = (raw: string) => raw.toUpperCase().replace(/\s/g, '')
+import { cleanGstin } from './gstin-clean'
+export { cleanGstin }
 
 /**
  * Why a business buyer's details can't be used (null: they can). The GSTIN's state must be the delivery state: the

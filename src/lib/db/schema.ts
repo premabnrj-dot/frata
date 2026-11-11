@@ -81,6 +81,8 @@ export const outbox = pgTable('outbox', {
   createdAt: createdAt(),
 }, (t) => [
   index('outbox_due').on(t.nextAttemptAt).where(sql`${t.sentAt} is null and ${t.deadAt} is null`),
+  // Admin › Infrastructure counts what gave up today (admin_db_health): the outbox is never pruned (speed review 2026-11-11).
+  index('outbox_dead').on(t.deadAt).where(sql`${t.deadAt} is not null`),
   uniqueIndex('outbox_tenant_dedupe').on(t.tenantId, t.dedupeKey),
 ])
 

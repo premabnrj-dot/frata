@@ -5,6 +5,9 @@ import { errName } from '@/lib/log'
 import { processMux } from '@/lib/video/process'
 import { MAX_BODY, muxEventFields, verifyMuxSignature } from '@/lib/video/webhook'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 60
+
 // ENTRY POINT credential: Mux's mux-signature, an HMAC of `t.body` with Frrata's webhook secret (current or previous),
 // within 5 minutes (scripts/check-actions.mjs). One URL for every shop: each event is routed by the definer
 // (drizzle/0081 app_store_mux_event) by OUR video id and its upload id, in our own Mux environment. Stored, answered

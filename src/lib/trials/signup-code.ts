@@ -14,11 +14,6 @@ import { claimKey } from './claims'
 
 export const signupCodeOn = () => !!(FRRATA_WA_PHONE_NUMBER_ID && FRRATA_WA_TOKEN && FRRATA_WA_SIGNUP_TEMPLATE && TRIAL_CLAIM_SECRET)
 
-/** A 10-digit Indian mobile number, or null. */
-export function indianMobile(input: string): string | null {
-  const d = String(input ?? '').replace(/\D/g, '').replace(/^(?:91|0)(?=\d{10}$)/, '')
-  return /^[6-9]\d{9}$/.test(d) ? d : null
-}
 
 const codeHmac = (uid: string, code: string) => createHmac('sha256', TRIAL_CLAIM_SECRET).update(`code:${uid}:${code}`).digest('hex')
 
@@ -29,7 +24,7 @@ export async function sendCode(uid: string, mobile: string): Promise<string | nu
   const code = String(randomInt(0, 1_000_000)).padStart(6, '0')
   const id = await signupCodeIssue(uid, phone.hmac, codeHmac(uid, code), phone.version)
   if (!id) return null
-  return (await sendAuthCode(FRRATA_WA_TOKEN, FRRATA_WA_PHONE_NUMBER_ID, `91${mobile}`, FRRATA_WA_SIGNUP_TEMPLATE, FRRATA_WA_TEMPLATE_LANG, code)) ? id : null
+  return (await sendAuthCode(FRRATA_WA_TOKEN, FRRATA_WA_PHONE_NUMBER_ID, `91${mobile}`, FRRATA_WA_SIGNUP_TEMPLATE, FRRATA_WA_TEMPLATE_LANG, code, 600)).ok ? id : null
 }
 
 export async function checkCode(uid: string, id: string, code: string): Promise<boolean> {

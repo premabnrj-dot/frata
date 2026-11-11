@@ -8,6 +8,7 @@
 import { sql } from 'drizzle-orm'
 import { check, date, foreignKey, index, integer, jsonb, pgTable, primaryKey, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { at, createdAt, id, money, tenants } from './schema'
+import { videos } from './schema-themes'
 
 // ── 1A Catalogue. Child rows carry (tenant_id, parent_id) → parent (tenant_id, id):
 // a foreign key ignores RLS, so a plain one would let one shop point at another's
@@ -267,6 +268,30 @@ export const collectionProducts = pgTable('collection_products', {
  * refuses another shop's product (composite FKs, like collection_products; tenancy review 2026-11-09). ≤ 2 per product
  * is the save's (products/actions via lib/catalogue/extras.ts); never itself (CHECK).
  */
+/**
+ * PV·1 (docs/plans/2026-11-10-product-video-pv1.md): a product's video, one per product. The video row (`videos`, use
+ * 'product') holds the Mux asset and its state; this row says which product shows it, its cover frame and the button's
+ * words beside the sizes. Same shop only (composite keys); a trigger refuses a video whose use isn't 'product'.
+ */
+export const productVideos = pgTable('product_videos', {
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id').notNull(),
+  videoId: uuid('video_id').notNull(),
+  /** The cover frame: Mux's still at this time (ms). */
+  posterMs: integer('poster_ms').notNull().default(1000),
+  /** The words beside the sizes: "See it on a model", "How to wear", or none. */
+  button: text('button').notNull().default('model'),
+  createdAt: createdAt(),
+}, (t) => [
+  primaryKey({ columns: [t.tenantId, t.productId] }),
+  unique('product_videos_video').on(t.tenantId, t.videoId),
+  // No cascade: a product can't silently drop its video (its Mux asset would stay); the action unlinks through removeVideo.
+  foreignKey({ name: 'product_videos_product_fk', columns: [t.tenantId, t.productId], foreignColumns: [products.tenantId, products.id] }),
+  foreignKey({ name: 'product_videos_video_fk', columns: [t.tenantId, t.videoId], foreignColumns: [videos.tenantId, videos.id] }),
+  check('product_videos_poster', sql`${t.posterMs} between 0 and 60000`),
+  check('product_videos_button', sql`${t.button} in ('model', 'wear', 'none')`),
+])
+
 export const productPairs = pgTable('product_pairs', {
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   productId: uuid('product_id').notNull(),

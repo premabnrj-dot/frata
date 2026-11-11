@@ -3,6 +3,7 @@
  * components in src/components/data/numeric.tsx only render what this returns.
  */
 import type { Paise } from '@/domains/money/paise'
+import type { MicroUsd } from '@/domains/money/usd'
 
 /** Indian digit grouping: lakhs and crores, not thousands all the way up. */
 export function formatInr(paise: Paise, opts?: { decimals?: boolean }): string {
@@ -22,4 +23,12 @@ export function formatPhone(stored: string): string {
 /** A share as a merchant reads it: "16.5%". */
 export function formatPercent(fraction: number, digits = 1): string {
   return `${(fraction * 100).toFixed(digits)}%`
+}
+
+/** A vendor's cost to Frrata (micro-dollars) as staff read it: "$18.60", "$1,204" from $100; a real minus. */
+export function formatUsd(micro: MicroUsd): string {
+  const d = micro / 1e6
+  const sign = d < 0 ? '−' : ''
+  const abs = Math.abs(d)
+  return sign + '$' + abs.toLocaleString('en-US', { minimumFractionDigits: abs >= 100 ? 0 : 2, maximumFractionDigits: abs >= 100 ? 0 : 2 })
 }

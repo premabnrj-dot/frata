@@ -13,6 +13,7 @@ import { execSync, spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, openSync } from 'node:fs'
 import { BILLING_KEYS, CONSOLE, META, MUX, OUT, PORTS, SHOP_DOMAIN, adminSql, until } from './lib.mjs'
+import { EKCODE } from './constants.mjs'
 
 const ROOT = new URL('..', import.meta.url).pathname
 const PG_DIR = '/var/tmp/frata-e2e', PG_BIN = '/usr/lib/postgresql/16/bin', DB = 'frata_e2e'
@@ -24,6 +25,7 @@ const PUBLIC_ENV = {
   NEXT_PUBLIC_SHOP_DOMAIN: SHOP_DOMAIN, NEXT_PUBLIC_CONSOLE_HOST: 'localhost',
   NEXT_PUBLIC_SUPABASE_URL: `http://localhost:${PORTS.auth}`, NEXT_PUBLIC_SUPABASE_ANON_KEY: 'local-anon',
   NEXT_PUBLIC_META_APP_ID: META.appId, NEXT_PUBLIC_WA_CONFIG_ID: META.configId,
+  NEXT_PUBLIC_EKCODE_HOST: EKCODE.host,
 }
 
 function startPostgres() {
@@ -85,9 +87,12 @@ export async function up({ build = true } = {}) {
     ...PUBLIC_ENV, DATABASE_URL: `postgres://frata_app:${pw}@${host}/${DB}`, ADMIN_DATABASE_URL: `postgres://frata_admin:${adminPw}@${host}/${DB}`, PAYMENT_KEYS_SECRET: 'e2e-only-secret', TRIAL_CLAIM_SECRET: 'e2e-trial-claim-secret', FRRATA_WA_PHONE_NUMBER_ID: '200000000099', FRRATA_WA_TOKEN: 'EAAe2efrratasignup', FRRATA_WA_SIGNUP_TEMPLATE: 'frrata_signup_code',
     RAZORPAY_API_BASE: `http://localhost:${PORTS.razorpay}`, BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_x_y', BLOB_STORE_ID: 'store_e2e', CRON_SECRET: 'e2e-cron', E2E_FIXTURES: '1', GSP_PROVIDER: 'fake', BILLING_TEST_ISSUE: '1', RAZORPAY_BILLING_KEY_ID: BILLING_KEYS.id, RAZORPAY_BILLING_KEY_SECRET: BILLING_KEYS.secret, RAZORPAY_BILLING_WEBHOOK_SECRET: BILLING_KEYS.webhook,
     META_APP_SECRET: META.appSecret, WA_VERIFY_TOKEN: META.verifyToken, META_GRAPH_BASE: `http://localhost:${PORTS.meta}`,
+    // EkCode (P1): its own number and app on the fake Meta; test-only key rings.
+    EKCODE_WA_PHONE_NUMBER_ID: EKCODE.number, EKCODE_WA_TOKEN: EKCODE.token, EKCODE_WA_AUTH_TEMPLATE: EKCODE.template, EKCODE_META_APP_SECRET: EKCODE.appSecret,
+    EKCODE_WA_VERIFY_TOKEN: EKCODE.verifyToken, EKCODE_PHONE_PEPPERS: EKCODE.peppers, EKCODE_SEAL_KEYS: EKCODE.seals,
     // Own domains (D2·10): Vercel's API and DNS-over-HTTPS answered by e2e/fakes/domains.mjs (loopback only).
-    VERCEL_API_TOKEN: 'e2e-vercel', VERCEL_PROJECT_ID: 'prj_e2e', VERCEL_API_BASE: `http://127.0.0.1:${PORTS.domains}`, DOH_BASE: `http://127.0.0.1:${PORTS.domains}`,
-    MUX_TOKEN_ID: MUX.tokenId, MUX_TOKEN_SECRET: MUX.tokenSecret, MUX_WEBHOOK_SECRET: MUX.webhook, MUX_ENVIRONMENT_ID: MUX.env,
+    VERCEL_API_TOKEN: 'e2e-vercel', VERCEL_BILLING_TOKEN: 'e2e-billing', VERCEL_TEAM_ID: 'team_e2e', VERCEL_PROJECT_ID: 'prj_e2e', VERCEL_API_BASE: `http://127.0.0.1:${PORTS.domains}`, DOH_BASE: `http://127.0.0.1:${PORTS.domains}`,
+    MUX_TOKEN_ID: MUX.tokenId, MUX_TOKEN_SECRET: MUX.tokenSecret, MUX_READ_TOKEN_ID: MUX.readId, MUX_READ_TOKEN_SECRET: MUX.readSecret, MUX_WEBHOOK_SECRET: MUX.webhook, MUX_ENVIRONMENT_ID: MUX.env,
     MUX_API_BASE: `http://localhost:${PORTS.mux}`, MUX_STREAM_BASE: `http://localhost:${PORTS.mux}/stream`, MUX_IMAGE_BASE: `http://localhost:${PORTS.mux}/image`,
   })
   await until(async () => { try { return (await fetch(CONSOLE)).status > 0 } catch { return false } }, 60_000)

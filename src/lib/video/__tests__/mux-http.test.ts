@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const fetchMock = vi.fn()
 vi.mock('@/lib/http/timeout', () => ({ fetchWithTimeout: (...a: unknown[]) => fetchMock(...a) }))
 vi.mock('@/lib/env', () => ({ MUX_API_BASE: 'https://api.mux.com', MUX_TOKEN_ID: 'tid', MUX_TOKEN_SECRET: 'tsecret' }))
-const { cancelUpload, createUpload, deleteAsset, getAsset } = await import('../mux')
+const { cancelUpload, createRendition, createUpload, deleteAsset, getAsset } = await import('../mux')
 
 const reply = (status: number, json?: unknown) => ({ status, json: async () => json })
 beforeEach(() => fetchMock.mockReset())
@@ -16,6 +16,22 @@ describe('createUpload', () => {
     expect(url).toBe('https://api.mux.com/video/v1/uploads')
     expect(init.headers.authorization).toBe(`Basic ${Buffer.from('tid:tsecret').toString('base64')}`)
     expect(JSON.parse(init.body)).toEqual({ cors_origin: 'https://frata.vercel.app', timeout: 900, new_asset_settings: { video_quality: 'basic', playback_policies: ['public'], static_renditions: [{ resolution: 'highest' }], passthrough: 'row-1' } })
+  })
+  it('a product video asks for no MP4 and an hour to upload (PV·1)', async () => {
+    fetchMock.mockResolvedValue(reply(201, { data: { id: 'up2', url: 'https://storage.googleapis.com/video-uploads/y?sig=1', status: 'waiting' } }))
+    await createUpload('row-2', 'https://frata.vercel.app', 'product')
+    const [, init] = fetchMock.mock.calls[0]!
+    expect(JSON.parse(init.body)).toEqual({ cors_origin: 'https://frata.vercel.app', timeout: 3600, new_asset_settings: { video_quality: 'basic', playback_policies: ['public'], passthrough: 'row-2' } })
+  })
+  it('adds the 720p rendition to a ready asset; a gone asset is done', async () => {
+    fetchMock.mockResolvedValueOnce(reply(201, { data: { id: 'r1', status: 'preparing', resolution: '720p', name: '720p.mp4' } }))
+    expect(await createRendition('as1', '720p')).toEqual({ ok: true, gone: false })
+    const [url, init] = fetchMock.mock.calls[0]!
+    expect(url).toBe('https://api.mux.com/video/v1/assets/as1/static-renditions'); expect(init.method).toBe('POST')
+    expect(JSON.parse(init.body)).toEqual({ resolution: '720p' })
+    fetchMock.mockResolvedValueOnce(reply(404, {}))
+    expect(await createRendition('as1', '720p')).toEqual({ ok: true, gone: true })
+    expect(await createRendition('../x', '720p')).toEqual({ ok: false, why: 'refused' })
   })
   it('never hands a non-https URL to the browser', async () => {
     fetchMock.mockResolvedValue(reply(201, { data: { id: 'up1', url: 'http://evil.example/x' } }))

@@ -20,6 +20,11 @@ import { ShareSheet } from '../../_components/share-sheet'
 import { shareFor } from '@/lib/seo/share'
 import { NowProvider } from '@/components/time/now'
 import { readStories } from '@/domains/catalogue/stories'
+import { refusal } from '@/lib/auth/as-module'
+import { shopModules } from '@/lib/queries/modules'
+import { productVideoOf } from '@/lib/queries/videos'
+import { ON_SHOP, productVideoView } from '@/lib/video/product-view'
+import { VideoPanel } from '../_components/video-panel'
 
 /** The tab names the product ("Linen kurta set · Kesar Studio"), never "Product" (stress test S14). */
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }) {
@@ -73,6 +78,12 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
     in: c.kind === 'manual' ? data.memberOf.includes(c.id) : matches(c.rules as Rule[], c.matchAll === 1, facts),
   }))
 
+  // PV·1: the product's video and whether the shop may add one now (the Product video module).
+  const [video, modules] = await Promise.all([
+    productVideoOf(tenantId, p.id).catch(() => undefined),
+    shopModules(tenantId, now.toISOString()),
+  ])
+  const va = modules.access.product_video
   const share = await shareFor(tenantId, { kind: 'product', id: p.id }, now).catch(() => null)
   // D2·9: the product's page on the main address.
   const address = await mainHostFor(tenantId, shop.slug).catch(() => shopHost(shop.slug))
@@ -104,6 +115,9 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
       families={COLOUR_FAMILIES}
       photos={data.images.map((i) => ({ id: i.id, base: i.base, widths: i.widths, optionValue: i.optionValue, width: i.width, height: i.height, alt: i.alt ?? '' }))}
       types={data.types}
+      video={<VideoPanel productId={p.id} title={p.title} onShop={ON_SHOP} initial={video ? productVideoView(video, now) : null}
+        // A failed read never offers "Add a video" (a start would only meet "One video per product").
+        blocked={video === undefined ? { words: 'We could not load the video. Reload the page.', apps: false } : va.usable ? null : { words: refusal('product_video', va), apps: va.why === 'off' }} />}
       share={share ? <ShareSheet share={share} target={{ kind: 'product', id: p.id }} /> : null}
     />
     </NowProvider>

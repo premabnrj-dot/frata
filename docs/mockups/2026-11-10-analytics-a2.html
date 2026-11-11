@@ -1,0 +1,234 @@
+<title>Analytics Traffic</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: the console shell (light sidebar) around Console › Analytics with A·2's traffic folded into A·1's page: ₹ kept first, then the path from visit to delivered, sources gaining visits, then devices and apps, cities, products, speed. A state switcher and a phone frame for the mockup. */
+:root {
+  --bg: #f7f6f3; --card: #ffffff; --fg: #1d1b19; --sub: #6a645d; --line: #e6e1da; --muted: #f1eee9; --accent: #efebe5;
+  --primary: #1d1b19; --on-primary: #fbfaf8; --rani: #c41a5e;
+  --ok-bg: #e5f3ea; --ok: #1e6b3d; --warn-bg: #fdf1d8; --warn: #8a5a00; --bad-bg: #fbe6e6; --bad: #a12020; --info-bg: #e7eefb; --info: #234e9a;
+  --f1: #1d1b19; --f2: #5d5852; --f3: #9a938a; --f4: #cfc8bf;
+  --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121110; --card: #1b1a18; --fg: #f1eee9; --sub: #a59e95; --line: #2f2c29; --muted: #23211f; --accent: #2a2826;
+  --primary: #f1eee9; --on-primary: #121110; --rani: #f06a9e;
+  --ok-bg: #12301f; --ok: #7fd3a0; --warn-bg: #3a2b0c; --warn: #f2c66b; --bad-bg: #3d1515; --bad: #ff9b9b; --info-bg: #172744; --info: #9fbdf5;
+  --f1: #f1eee9; --f2: #bdb6ad; --f3: #857e75; --f4: #4a4642; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121110; --card: #1b1a18; --fg: #f1eee9; --sub: #a59e95; --line: #2f2c29; --muted: #23211f; --accent: #2a2826;
+  --primary: #f1eee9; --on-primary: #121110; --rani: #f06a9e;
+  --ok-bg: #12301f; --ok: #7fd3a0; --warn-bg: #3a2b0c; --warn: #f2c66b; --bad-bg: #3d1515; --bad: #ff9b9b; --info-bg: #172744; --info: #9fbdf5;
+  --f1: #f1eee9; --f2: #bdb6ad; --f3: #857e75; --f4: #4a4642; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 14px/1.5 var(--sans) }
+.mock { padding-block: 16px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 14px; max-width: 1240px; margin: 0 auto }
+.switch { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 13px; color: var(--sub) }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 6px; padding: 2px; gap: 2px; background: var(--card) }
+.seg button { font: inherit; font-size: 13px; border: 0; background: transparent; color: var(--fg); padding: 5px 10px; border-radius: 4px; cursor: pointer }
+.seg button[aria-pressed="true"] { background: var(--primary); color: var(--on-primary) }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--rani); outline-offset: 2px }
+.num, .n { font-family: var(--mono); font-variant-numeric: tabular-nums }
+
+.frame { display: grid; grid-template-columns: 210px minmax(0, 1fr); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg) }
+.frame.phone { grid-template-columns: minmax(0, 1fr); max-width: 390px; margin: 0 auto; border-radius: 22px }
+.frame.phone .side { display: none }
+@media (max-width: 820px) { .frame { grid-template-columns: minmax(0, 1fr) } .side { display: none } }
+.side { background: var(--card); border-right: 1px solid var(--line); padding: 14px 10px; display: grid; align-content: start; gap: 2px }
+.brand { font-weight: 700; padding: 4px 8px 12px; display: grid; gap: 1px } .brand small { font-weight: 500; color: var(--sub); font-size: 12px }
+.side a { color: var(--fg); text-decoration: none; padding: 7px 8px; border-radius: 5px; font-size: 13px }
+.side a.on { background: var(--accent); font-weight: 600 }
+main { padding: 20px; display: grid; gap: 16px; align-content: start; min-width: 0 }
+.phone main { padding: 14px }
+.ph { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: flex-start }
+.ph h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin: 0 }
+.meta { color: var(--sub); font-size: 13px }
+.btn { font: inherit; font-size: 13px; font-weight: 500; border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 6px; padding: 6px 12px; cursor: pointer; white-space: nowrap }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto }
+.tabs a { text-decoration: none; color: var(--sub); padding: 7px 12px; border-bottom: 2px solid transparent; font-size: 14px; white-space: nowrap }
+.tabs a.on { color: var(--fg); border-bottom-color: var(--fg); font-weight: 600 }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: grid; gap: 12px; min-width: 0 }
+.card.flush { padding: 0; gap: 0; overflow: hidden }
+.card.flush .ch { padding: 12px 16px 6px }
+.card h2 { font-size: 15px; font-weight: 600; margin: 0; display: inline-flex; align-items: center; gap: 6px }
+.ch { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap }
+.tip { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--line); font-size: 11px; color: var(--sub); cursor: help; font-weight: 600 }
+.badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 7px; border-radius: 4px; white-space: nowrap }
+.b-ok { background: var(--ok-bg); color: var(--ok) } .b-warn { background: var(--warn-bg); color: var(--warn) } .b-bad { background: var(--bad-bg); color: var(--bad) } .b-info { background: var(--info-bg); color: var(--info) } .b-n { background: var(--muted); color: var(--sub) }
+.up { color: var(--ok); font-size: 12px } .down { color: var(--bad); font-size: 12px }
+
+.kept b { font-family: var(--mono); font-size: 26px; font-weight: 600 }
+.strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden }
+.phone .strip { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+@media (max-width: 900px) { .strip { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+.strip > div { background: var(--card); padding: 12px; display: grid; gap: 2px; min-width: 0 }
+.strip dt { font-size: 12px; color: var(--sub) } .strip dd { margin: 0 } .strip .v { font-family: var(--mono); font-size: 18px; font-weight: 600 }
+
+.funnel { display: grid; gap: 6px }
+.step { display: grid; grid-template-columns: minmax(110px, 160px) minmax(0, 1fr) 48px; gap: 10px; align-items: center; font-size: 13px }
+.phone .step { grid-template-columns: 96px minmax(0, 1fr) 40px }
+.step .bar { height: 22px; background: var(--muted); border-radius: 4px; overflow: hidden; position: relative }
+.step .bar i { position: absolute; inset: 0 auto 0 0; background: var(--f1); border-radius: 4px }
+.step .bar i.out { background: var(--rani) }
+.step .bar span { position: absolute; left: 8px; top: 2px; font-family: var(--mono); font-size: 12px; color: var(--on-primary); mix-blend-mode: normal }
+.step .r { text-align: right; font-family: var(--mono); font-size: 12px; color: var(--sub) }
+.step .lbl { display: grid } .step .lbl small { color: var(--sub); font-size: 12px }
+
+.tbl { overflow-x: auto }
+table { border-collapse: collapse; width: 100%; font-size: 13px }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top }
+th { font-size: 12px; color: var(--sub); font-weight: 600; white-space: nowrap }
+td.n, th.n { text-align: right; white-space: nowrap }
+tr:last-child td { border-bottom: 0 }
+td a { color: var(--fg); font-weight: 500; text-decoration: none } td a:hover { text-decoration: underline }
+td small { display: block; color: var(--sub); font-size: 12px }
+.phone table.cards thead { display: none }
+.phone table.cards tr { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; padding: 10px 14px; border-bottom: 1px solid var(--line) }
+.phone table.cards td { border: 0; padding: 0; text-align: left }
+.phone table.cards td:first-child { grid-column: 1 / -1 }
+.phone table.cards td[data-k]::before { content: attr(data-k) " "; color: var(--sub); font-family: var(--sans); font-size: 12px }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px }
+.phone .grid2 { grid-template-columns: minmax(0, 1fr) }
+@media (max-width: 1000px) { .grid2 { grid-template-columns: minmax(0, 1fr) } }
+.share { display: grid; gap: 8px }
+.sh { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; font-size: 13px }
+.sh .bar { grid-column: 1 / -1; height: 6px; background: var(--muted); border-radius: 3px; overflow: hidden } .sh .bar i { display: block; height: 100%; background: var(--f1) }
+.vit { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px }
+.vit > div { background: var(--muted); border-radius: 6px; padding: 10px 12px; display: grid; gap: 2px }
+.vit span { font-size: 12px; color: var(--sub) } .vit b { font-family: var(--mono); font-size: 18px }
+.panel { border: 1px solid var(--line); background: var(--card); border-radius: 6px; padding: 18px; display: grid; gap: 6px }
+.panel h3 { margin: 0; font-size: 15px }
+.prog { height: 6px; background: var(--muted); border-radius: 3px; overflow: hidden; max-width: 320px } .prog i { display: block; height: 100%; background: var(--f1) }
+.note { font-size: 12px; color: var(--sub) }
+</style>
+
+<div class="mock">
+  <div class="switch">
+    <span>State</span>
+    <div class="seg" role="group" aria-label="State">
+      <button type="button" data-s="ready" aria-pressed="true">Ready · 30 days</button>
+      <button type="button" data-s="few" aria-pressed="false">First days</button>
+      <button type="button" data-s="none" aria-pressed="false">No visits yet</button>
+    </div>
+    <div class="seg" role="group" aria-label="Width">
+      <button type="button" data-w="computer" aria-pressed="true">Computer</button>
+      <button type="button" data-w="phone" aria-pressed="false">Phone</button>
+    </div>
+    <span class="note">Example shop: Kesar Studio. Hover an (i) for its tip.</span>
+  </div>
+
+  <div class="frame" id="frame">
+    <nav class="side" aria-label="Console">
+      <div class="brand">Kesar Studio<small>kesar.frrata.shop</small></div>
+      <a href="#">Home</a><a href="#">Orders</a><a href="#">Products</a><a href="#">Customers</a>
+      <a href="#" class="on">Analytics</a><a href="#">Offers</a><a href="#">Look</a><a href="#">Apps</a><a href="#">Settings</a>
+    </nav>
+    <main id="main"></main>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id)
+  const tip = (t) => `<span class="tip" title="${t}" aria-label="${t}" tabindex="0">i</span>`
+  const inr = (n) => '₹' + n.toLocaleString('en-IN')
+  let state = 'ready', width = 'computer'
+
+  const HOW_VISITS = 'Counted without cookies or stored IP addresses: a visitor counts once a day on a device; bots are left out. Ad blockers and closed tabs mean a few percent go uncounted.'
+  const HOW_FUNNEL = 'Visits come from Frrata’s counter; orders and deliveries from your orders. They join by day and source, never by person.'
+
+  const head = (meta) => `
+    <div class="ph"><div style="display:grid;gap:4px"><h1>Analytics</h1><span class="meta">${meta}</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button">Make a link</button><button class="btn" type="button" aria-label="More">More</button></div></div>
+    <nav class="tabs" aria-label="Period"><a href="#">7 days</a><a href="#" class="on">30 days</a><a href="#">90 days</a></nav>`
+
+  const keptAndStrip = (visits, perHundred, vChange) => `
+    <section class="card"><div class="kept" style="display:grid;gap:2px"><span class="meta">₹ kept after returns</span><b>₹1,84,300</b>
+      <span class="meta"><span class="up">▲ 18%</span> · ₹2,02,600 on 141 delivered, less ₹18,300 on 23 returns</span></div></section>
+    <dl class="strip">
+      <div><dt>Visits ${tip(HOW_VISITS)}</dt><dd class="v">${visits}</dd><dd>${vChange}</dd></div>
+      <div><dt>Orders per 100 visits</dt><dd class="v">${perHundred}</dd><dd><span class="up">▲ 0.2</span></dd></div>
+      <div><dt>Orders</dt><dd class="v">212</dd><dd><span class="up">▲ 12%</span></dd></div>
+      <div><dt>Came back (RTO)</dt><dd class="v">14%</dd><dd class="note">of 164 with an outcome</dd></div>
+    </dl>`
+
+  const funnel = () => {
+    const steps = [['Visits', '', 18400], ['Saw a product', '', 9900], ['Added to bag', '', 1420], ['Started checkout', '', 610], ['Ordered', 'from your orders', 212], ['Delivered', 'from your orders', 141]]
+    const max = steps[0][2]
+    return `<section class="card"><div class="ch"><h2>From visit to delivered ${tip(HOW_FUNNEL)}</h2><span class="meta">% of the step above · biggest drop: bag → checkout, 57% leave</span></div>
+      <div class="funnel">${steps.map(([n, s, v], i) => {
+        const w = Math.max(2, v / max * 100), prev = i ? steps[i - 1][2] : null
+        return `<div class="step"><span class="lbl">${n}${s ? `<small>${s}</small>` : ''}</span><span class="bar"><i class="${i === 2 ? '' : ''}" style="width:${w}%"></i><span style="color:${w > 14 ? 'var(--on-primary)' : 'var(--fg)'};left:${w > 14 ? 8 : w + 1.5}%">${v.toLocaleString('en-IN')}</span></span><span class="r">${prev ? Math.round(v / prev * 100) + '%' : ''}</span></div>`
+      }).join('')}</div></section>`
+  }
+
+  const sources = () => {
+    const rows = [
+      ['Instagram bio', 'link in bio', 81000, 6200, '1.3', '11%', 13],
+      ['WhatsApp broadcast', 'Diwali drop · 2 Nov', 52000, 1100, '3.6', '6%', 47],
+      ['Direct or unknown', 'chats, typed address, apps that hide it', 42200, 1900, '1.0', '8%', 22],
+      ['Google search', '', 18900, 1900, '1.1', '9%', 10],
+      ['Instagram ads', 'Festive reels · Meta · mostly COD', -9800, 7300, '0.7', '24%', -1],
+    ]
+    return `<section class="card flush"><div class="ch"><h2>Where orders came from ${tip('A source is the tagged link the shopper arrived on, else the site they came from, else Direct or unknown. Visits and orders use the same rule.')}</h2></div>
+      <div class="tbl"><table class="cards"><thead><tr><th>Source</th><th class="n">₹ kept after returns</th><th class="n">Visits</th><th class="n">Orders per 100 visits</th><th class="n">Came back</th><th class="n">₹ kept per visit</th></tr></thead><tbody>
+      ${rows.map(([n, s, k, v, c, r, pv]) => `<tr><td><a href="#">${n}</a>${s ? `<small>${s}</small>` : ''}</td><td class="n" data-k="Kept">${k < 0 ? '−' + inr(-k) : inr(k)}</td><td class="n" data-k="Visits">${v.toLocaleString('en-IN')}</td><td class="n" data-k="Per 100">${c}</td><td class="n" data-k="Came back">${r}</td><td class="n" data-k="Per visit" style="${pv < 0 ? 'color:var(--bad)' : ''}">${pv < 0 ? '−₹' + -pv : '₹' + pv}</td></tr>`).join('')}
+      </tbody></table></div></section>`
+  }
+
+  const devices = () => `
+    <div class="grid2">
+      <section class="card"><div class="ch"><h2>Where they browse</h2><span class="meta">Orders per 100 visits</span></div>
+        <div class="share">
+          ${[['Instagram’s in-app browser', 46, '0.7'], ['Chrome', 31, '1.6'], ['Safari', 12, '1.9'], ['WhatsApp’s in-app browser', 6, '2.4'], ['Facebook’s in-app browser', 3, '0.6'], ['Other', 2, '1.0']]
+            .map(([n, p, c]) => `<div class="sh"><span>${n} <span class="meta">· ${p}%</span></span><span class="num">${c}</span><span class="bar"><i style="width:${p}%"></i></span></div>`).join('')}
+        </div>
+        <p class="note">Phone 91% · computer 8% · tablet 1%</p>
+      </section>
+      <section class="card flush"><div class="ch"><h2>Cities ${tip('From the visitor’s network: a hint, often the nearest big city. The exact pincode comes from checkout.')}</h2></div>
+        <div class="tbl"><table class="cards"><thead><tr><th>City</th><th class="n">Visits</th><th class="n">Orders per 100</th><th class="n">Came back</th></tr></thead><tbody>
+          ${[['Mumbai', 3900, '1.3', '9%'], ['Pune', 2100, '1.5', '8%'], ['Bengaluru', 1800, '1.2', '12%'], ['Delhi', 1700, '0.9', '22%'], ['Jaipur', 1100, '1.6', '7%'], ['Lucknow', 900, '0.8', '29%']]
+            .map(([c, v, o, r]) => `<tr><td>${c}</td><td class="n" data-k="Visits">${v.toLocaleString('en-IN')}</td><td class="n" data-k="Per 100">${o}</td><td class="n" data-k="Came back" style="${parseInt(r) > 20 ? 'color:var(--bad)' : ''}">${r}</td></tr>`).join('')}
+        </tbody></table></div>
+      </section>
+    </div>`
+
+  const products = () => `
+    <div class="grid2">
+      <section class="card flush"><div class="ch"><h2>Products</h2><span class="meta">Most viewed</span></div>
+        <div class="tbl"><table class="cards"><thead><tr><th>Product</th><th class="n">Views</th><th class="n">Added to bag</th><th class="n">Ordered</th></tr></thead><tbody>
+          ${[['Chanderi kurta set', 2900, '14%', 61, ''], ['Banarasi silk saree', 2100, '6%', 18, 'Looked at often, rarely bagged'], ['Block-print dupatta', 1500, '19%', 44, ''], ['Linen co-ord, rust', 1200, '11%', 23, '']]
+            .map(([n, v, b, o, s]) => `<tr><td><a href="#">${n}</a>${s ? `<small>${s}</small>` : ''}</td><td class="n" data-k="Views">${v.toLocaleString('en-IN')}</td><td class="n" data-k="Bagged">${b}</td><td class="n" data-k="Ordered">${o}</td></tr>`).join('')}
+        </tbody></table></div>
+      </section>
+      <section class="card"><div class="ch"><h2>Speed on phones ${tip('What 3 in 4 shoppers’ phones measured on your pages, from the browser. Good: page shows by 2.5 s, taps answer by 0.2 s, nothing jumps.')}</h2><span class="badge b-ok">Good</span></div>
+        <div class="vit"><div><span>Page shows</span><b>2.1 s</b></div><div><span>Tap answers</span><b>0.16 s</b></div><div><span>Layout jumps</span><b>0.04</b></div></div>
+        <p class="note">Slowest page: Banarasi silk saree, 3.4 s · 9 photos over 400 KB</p>
+      </section>
+    </div>`
+
+  function render() {
+    $('frame').classList.toggle('phone', width === 'phone')
+    let h = ''
+    if (state === 'ready') {
+      h = head('11 Oct – today (so far), against 11 Sep – 10 Oct.') + keptAndStrip('18,400', '1.15', '<span class="up">▲ 31%</span>') + funnel() + sources() + devices() + products()
+    } else if (state === 'few') {
+      h = head('Visits counted since 8 Nov.') + keptAndStrip('430', '—', '<span class="note">from 8 Nov</span>')
+        + `<section class="card"><div class="ch"><h2>From visit to delivered</h2></div>
+            <div style="display:grid;gap:8px"><p style="margin:0">Too few to judge: 430 visits so far. Shares mean something from 1,000.</p><div class="prog"><i style="width:43%"></i></div></div></section>`
+        + sources().replace(/<td class="n" data-k="Per 100">[^<]*<\/td>/g, '<td class="n" data-k="Per 100"><span class="note">too few</span></td>')
+    } else {
+      h = head('11 Oct – today (so far).') + keptAndStrip('—', '—', '<span class="note">from today</span>')
+        + `<section class="panel"><h3>Visits count from today</h3><p class="meta" style="margin:0">Your orders above are unchanged. Visits, devices and cities show here as shoppers arrive.</p></section>`
+        + sources().replace(/<td class="n" data-k="Visits">[^<]*<\/td>/g, '<td class="n" data-k="Visits">—</td>').replace(/<td class="n" data-k="Per 100">[^<]*<\/td>/g, '<td class="n" data-k="Per 100">—</td>').replace(/<td class="n" data-k="Per visit"[^>]*>[^<]*<\/td>/g, '<td class="n" data-k="Per visit">—</td>')
+    }
+    $('main').innerHTML = h
+    document.querySelectorAll('[data-s]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.s === state)))
+    document.querySelectorAll('[data-w]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.w === width)))
+  }
+  document.querySelectorAll('[data-s]').forEach((b) => b.onclick = () => { state = b.dataset.s; render() })
+  document.querySelectorAll('[data-w]').forEach((b) => b.onclick = () => { width = b.dataset.w; render() })
+  render()
+})()
+</script>

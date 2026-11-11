@@ -2,8 +2,8 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.19.0
-  verified: 2026-11-09
+  version: 1.23.0
+  verified: 2026-11-11
   decisions: [ADR-0006]
 ---
 
@@ -253,6 +253,11 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
   WhatsApp Business Platform" (→ per-message re-billing to merchants: counsel first [U]); no misrepresenting
   "affiliation". Precedent: Razorpay Magic Checkout sends from "Razorpay's WhatsApp handle", merchant name editable
   [V-undated]; Shiprocket auto-sends for 3 lakh+ brands, sender unstated [S, 2026-05-01]; GoKwik [U].
+- **EkCode's number, as built (P1, 2026-11-09):** its own Meta app in its own portfolio (ADR-0010); copy-code
+  authentication template `ekcode_signin_code`, sent with `message_send_ttl_seconds` 600 from `sendAuthCode`
+  (`src/lib/meta/graph.ts`, which now returns the wamid or Meta's error code); delivery reports at
+  `/api/webhooks/ekcode` (its own app secret), trimmed to wamid, status, error and time; 130429 retried once after 2 s;
+  131026 never shown to the shopper (Meta §4.1). No email (owner, until SES is planned).
 - **Display name / blue tick** (2026-11-09): "Frrata" fits the clear-relationship rule; never a shop's name in it [S,
   360dialog]. Official Business Account: policy compliance, ≥ 30 days on the platform, verified portfolio, two-step
   verification, approved display name; no notability test stated; reapply after 30 days [V-undated,
@@ -602,7 +607,7 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
 - Unverified (no current primary source): six IRPs, 24 h IRN cancellation, B2C dynamic QR, the 30-day IRP limit, HSN
   Table 12 digits, Tables 14/15 for own sites.
 
-## Mux (video) — checked 2026-11-09 (integration-researcher; Mux doc pages carry no date: [V-undated] = read that day)
+## Mux (video) — checked 2026-11-09, signed playback 2026-11-10 (integration-researcher; Mux doc pages carry no date: [V-undated] = read that day)
 
 - **Account**: one Frrata-owned Mux org; an environment per tier (development, production), each with its own assets,
   tokens, signing keys and webhooks; a token works only in its environment; only an org admin creates tokens; Mux keeps a
@@ -626,14 +631,35 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   renditions]. Values highest | audio-only | 2160p…270p (no capped-1080p / low); no upscaling; a silent video gets
   highest.mp4, audio-only skipped. MP4 `https://stream.mux.com/{PLAYBACK_ID}/highest.mp4`; HLS `…/{PLAYBACK_ID}.m3u8`
   (native only in Safari/Edge). Poster `https://image.mux.com/{PLAYBACK_ID}/thumbnail.webp?time=&width=&fit_mode=`;
-  animated ≤ 10 s, ≤ 640 px. Signed IDs need a JWT per URL and per audience (v, t, g, s) [V-undated].
+  animated ≤ 10 s, ≤ 640 px. Signed IDs: see Signed playback below.
+- **Signed playback (checked 2026-11-10)** [V-undated unless tagged; guides/secure-video-playback, api-reference
+  system/signing-keys, stream/streaming, image/thumbnails, prompts/video-paywall (Last updated 2026-11-06)]:
+  - Signing key: `POST /system/v1/signing-keys` (or the dashboard) → `data {id, private_key, created_at}`, a 2048-bit RSA
+    pair, `private_key` base64 of a PEM; the access token needs System write; one key set per environment; rotate by
+    adding a key and deleting the old one after its URLs expire.
+  - JWT RS256; claims `sub` playback id, `aud` v|t|g|s|d, `exp` epoch seconds, `kid` IN THE CLAIMS (Mux's Node SDK
+    v14 header is only {alg, typ}). No min or max expiry documented [U]; SDK default 7 d, no `iat`; exp ≥ now +
+    duration, and an expired URL stops mid-play.
+  - MP4 `stream.mux.com/{id}/{rendition name}?token=`, HLS `{id}.m3u8?token=`; the MP4's `aud` is not stated (`v` by
+    inference) [U]; one token for both [U]. The file name is the rendition's `name` (`720p.mp4` expected, not shown) [U].
+  - Thumbnail: options (time, width, height, fit_mode) are top-level CLAIMS (`aud` t); the URL carries ONLY
+    `?token=`, and any other query parameter breaks the signature.
+  - A `token=` on a public id fails. An asset can hold several playback ids; a public one plays anywhere, so a signed
+    asset keeps none (add the signed id first, then delete the public one). Direct uploads accept
+    `playback_policies: ["signed"]`.
+  - **A signed MP4 can still be saved while its token is valid.** Mux points to DRM against downloads, and DRM ids
+    can't serve static renditions. `controlsList` is not in Mux's docs [U].
+  - A new token is a new URL, so no browser-cache hit (the 24 h cache measured 2026-11-09): token life is a cost
+    decision (`frata-unit-economics`).
 - **Mux Player for Web is in maintenance mode** — Video.js for new work [V-undated, guides/mux-player-web]; ~900 KB
   minified [V, blog 2026-01-21]. Frrata's loops use a plain <video> with no player.
 - **Price** (pay as you go, first tier; pricing/video, read 2026-11-09): basic input free; storage basic/plus $0.002400
   (720p) / $0.003000 (1080p) per min per month, basic has a ONE-MONTH MINIMUM; delivery $0.000800 / $0.001000 per min
   after 100,000 free a month (per org), billed at the delivered resolution, buffered segments and MP4 minutes count; MP4
   storage $0.000600 / $0.000750 per rendition-min per month; advanced (sized) rendition prep $0.008000 / $0.010000 per
-  min; $20 monthly credit; Free plan up to 10 videos [S]. Price changes apply to the next bill after notice [V, Terms
+  min; $20 monthly credit (pay as you go); Launch $20/mo for $100, Scale $500/mo for $1,000, credits reset each cycle
+  [V-undated, pricing/video + pricing.md, 2026-11-10]; Free plan up to 10 assets, 100,000 delivery min/month [V,
+  changelog video-free-plan 2025-05-01]. Price changes apply to the next bill after notice [V, Terms
   2026-10-12]. Never hard-code a rate.
 - **Limits**: per environment + org cap — POST bucket 20, 1/s; others 100, 5/s; 429 + x-ratelimit-* [V, changelog
   2026-06-03 + make-api-requests]. Test assets (`test: true`) free, watermarked, 10 s, deleted after 24 h [V-undated].
@@ -648,6 +674,10 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   $0.005/GB CDN, Asia standard $0.03/GB, $1 minimum [V-undated].
 - **`max_resolution_tier` takes only `1080p` | `1440p` | `2160p`** (default 1080p) [V, api-reference create-direct-upload,
   2026-11-09]: a `720p` tier is a 400 on every upload (it reached production that day). 720p is a static rendition size.
+- **As built (PV·1, 2026-11-10)**: a product video uploads with no static rendition (basic, timeout 3600) and gets
+  its 720p from `POST /video/v1/assets/{id}/static-renditions {resolution: '720p'}` (outbox `mux.rendition.create`) only
+  after 6–60 s and a short side ≥ 720 pass; rendition webhooks route by `asset_id`. Unverified on a real Mux account
+  until the owner's first product upload.
 - **As built (V1, 2026-11-09)**: `src/lib/video/mux.ts` — upload {cors_origin, timeout 900, new_asset_settings {basic,
   public, static_renditions [highest], no tier, passthrough = our videos row id}}; the shop plays highest.mp4 (≤ 1080p).
   **`highest` can't be mixed with sized renditions** (720p, 480p…) [V, guides/enable-static-mp4-renditions, 2026-11-09]: a
@@ -659,3 +689,69 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   ~~whether a looped MP4's replays are billed again~~ — measured 2026-11-09 on a real 12 s, 1080p, 3.0 MB loop in
   Chromium: 4 replays in 50 s = ONE request (206, bytes=0-), no refetch; Mux serves the MP4 with `cache-control:
   max-age=86400`, so a return visit within a day may cost nothing. Safari/iOS (range requests) not measured [S].
+
+## Infrastructure usage (Admin › Infrastructure) — checked 2026-11-10 (integration-researcher; Mux and Supabase docs undated: V-undated = read that day)
+
+- **Mux Delivery Usage** `GET /video/v1/delivery-usage` (page, limit 100, asset_id, live_stream_id, timeframe[] epoch s):
+  per asset `delivered_seconds`, `delivered_seconds_by_resolution` (only non-zero tiers), asset_duration, asset_state;
+  only assets > 0 s, sorted by usage; hourly, last 90 days, ending ≥ 12 h ago [V-undated]. Token: Video Read [U].
+- **Mux storage** only through Usage Exports `GET /system/v1/usage/exports` (daily UTC CSVs, ready ≥ 08:00 UTC next day,
+  not on Free, enabled in the dashboard, system-scoped token); totals ≠ invoice [V-undated, changelog 2026-06-30].
+- **No Mux API for the bill, plan or credits** [V absence]. Cost pace = Frrata's estimate from dated rates, labelled.
+- **Mux Data**: free for Mux-hosted video; needs `mux-embed` + `env_key` on the page (the shop's plain <video> sends
+  none; adding it is a shopper-browser script and viewer data: a DPDP decision). Metrics `/data/v1/metrics/{id}/overall`,
+  errors `/data/v1/errors`, Mux Data Read [V-undated].
+- **Mux alerts**: email only, ≤ 3 per org, ~hourly, dashboard-set, not on Free, cap nothing; no usage webhook found [U].
+- **Supabase Free**: 500 MB DB, 5 GB egress + 5 GB cached, 50,000 MAU, 1 GB storage, 2 projects, paused after 1 week idle;
+  over limits → one grace period, then pause / read-only / 402 [V-undated, pricing + billing-faq]. **Pro** from $25, $10
+  compute credit (one default-size project), 8 GB disk, 250 GB egress, 100,000 MAU, 100 GB storage; spend cap on by
+  default (blocks the item to next cycle; not compute/IPv4/PITR). No threshold alerts; email after exceeding only.
+- **Management API**: `/v1/projects/{ref}/analytics/endpoints/usage.api-counts` and `usage.api-requests-count`
+  (analytics_usage_read, 30/min); `/v1/organizations/{slug}` → plan; no org usage/egress/MAU/invoice endpoint [V-undated].
+- **Scoped personal access tokens** GA 2026-10-06 (the default): per project, read or read-write per permission [V
+  changelog]. The dashboard's token: frata only, Usage Analytics Read, Logs Read, Organization Settings Read; never
+  Database or Project Settings write.
+- **Metrics**: `<ref>.supabase.co/customer/v1/privileged/metrics` needs a secret key (bypasses RLS) → NOT used
+  (CLAUDE.md: no service-role key). Use `GET /v1/projects/{ref}/analytics/endpoints/metrics` (analytics_logs_read,
+  Prometheus; same series as privileged: U). Beta [V-undated; blog 2025-12-16].
+- **Plain SQL**: pg_database_size needs CONNECT; pg_stat_activity nulls other roles' details; pg_stat_statements text
+  needs pg_read_all_stats (installed on frata, 2026-11-10) → a definer returning aggregates, not a pg_monitor grant to
+  frata_admin (ADR-0007). Max connections / pooler clients: Nano and Micro 60/200, Small 90/400, Medium 120/600, Large
+  160/800 [V-undated, compute-and-disk]. frata on 2026-11-10: Free plan, 19 MB, 15/60 connections.
+- **Supabase Cron** (pg_cron): every second to yearly; ≤ 8 concurrent, ≤ 10 min a job [V-undated 2026-11-11]. **Available
+  on frata on the Free plan** (`pg_available_extensions`, checked 2026-11-11; not installed yet). Free: 2 active projects
+  per org counted across all Owners and Admins (paused ones don't count); paused after "too little database activity over a
+  week" (app requests count; pg_cron-only writes: U) [V-undated, billing-faq + kb free-project-pausing].
+- **statement_timeout**: frata_app and frata_admin carry role-level `statement_timeout=20s, lock_timeout=10s,
+  idle_in_transaction_session_timeout=30s` (pg_roles, 2026-11-11). Session `SET` does not work on 6543; role-level via
+  Supavisor transaction mode [U, test with pg_sleep] [V-undated timeouts].
+- **Vercel billing** `GET /v1/billing/charges`: FOCUS v1.3 JSONL, daily, ≤ 1 year, per team; roles Owner, Member, Developer,
+  Security, Billing, Enterprise Viewer (not Pro Viewer); freshness undocumented [V 2026-11-11]. Tokens are Full, Team or
+  Project, all read-write (no read-only type); a project token is denied team-level resources, so charges need a team token
+  (U until tested) [V access-tokens 2026-09-08]. Least exposure on Pro: a token minted by the team's single Billing-role member.
+- **Vercel spend webhook** `budget.reached`: 50/75/100 %, then +100 % steps to 1,000 %; checked "every few minutes";
+  `x-vercel-signature` = HMAC-SHA1(raw body), the secret shown once on first save or printed once by `vercel billing budgets
+  set --webhook`; Owner or Billing only; no REST endpoint for budgets [V 2026-09-18 / CLI 2026-11-03].
+
+## Vercel platform (functions, firewall) — checked 2026-11-11 (integration-researcher; Vercel pages carry last_updated)
+
+- **Duration** (Fluid): Pro 300 s default, 800 s max, 1800 s beta per function only; the dashboard sets the project default
+  (Settings › Functions › Advanced); over the limit → terminated, 504 FUNCTION_INVOCATION_TIMEOUT, streaming time counts
+  [V 2026-08-24]. Next 15.5.29: a layout's `maxDuration` passes to the pages under it (nearest wins), **not to route.ts**;
+  Server Actions take the page's [V source + nextjs.org 2026-03-13]. vercel.json `functions` globs for App Router pages, and
+  precedence between the three settings [U].
+- **Bot Protection**: all plans, free, Off/Log/Challenge, **project-wide** (no host scope documented); verified bots skipped
+  (googlebot, bingbot, google-storebot, facebookexternalhit = Facebook/Instagram/Messenger previews, razorpay-webhook,
+  facebook-webhooks). **WhatsApp, Shiprocket and Mux are not verified** → Bypass custom rules before Challenge [V 2026-09-10;
+  WhatsApp failure S, community 2025-12-28].
+- **AI Bots**: all plans, free; AI Crawlers and AI Assistants set separately; log/deny (challenge: CLI and API yes, docs no);
+  applebot, amazonbot and meta-externalagent are ai_crawler (denying them drops Apple's Spotlight and Siri search) [V].
+- **Custom rules**: free, 40 per project on Pro; match host, path, raw_path, route, user_agent, method, header; operators
+  eq, pre, suf, sub, re, inc (+ negation); custom rules run before managed rulesets; live in ≤ 300 ms [V 2026-07-29/09-16].
+- **API**: PUT/PATCH `/v1/security/firewall/config?projectId=`; drafts promoted by `POST …/{configVersion}/activate` (whether
+  PUT goes live directly: U, read back `config/active`). Attack Mode `POST /v1/security/attack-mode` (projectId,
+  attackModeEnabled, attackModeActiveUntil), immediate, 1/6/24 h; own Functions and Crons pass; unverified callers
+  (WhatsApp, Shiprocket, Mux) may be blocked [V 2026-11-11 / 2026-08-11].
+- **isbot** 5.2.3 (2026-11-09), Unlicense (not MIT), no dependencies, ≈ 2.6 kB gzip [V registry; S bundlephobia].
+- **useReportWebVitals** (Next 15): TTFB, FCP, LCP, FID, CLS, INP; a client component; bundles next/dist/compiled/web-vitals
+  (upstream "~3K brotli'd"); a shopper-browser script, so a DPDP note like Mux Data [V 2025-06-16 + source].

@@ -5,6 +5,9 @@ import { frrataFile } from '@/lib/documents/frrata'
 import { errName } from '@/lib/log'
 import { shopFrrataDocument } from '@/lib/queries/billing'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // Frrata's invoice to this shop, or a credit note against it, as a PDF (billing B2): owners and admins only, the shop
 // from the membership, rendered from the frozen rows on every download (finding 16). Never cached.
 export const dynamic = 'force-dynamic'

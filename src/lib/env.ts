@@ -40,6 +40,18 @@ export const FRRATA_WA_TEMPLATE_LANG = process.env.FRRATA_WA_TEMPLATE_LANG || 'e
 
 /** Frrata as the supplier on its own invoices (billing B2). FRRATA_GSTIN unset = test mode: invoices go out in a TEST
  *  series, printed "not a tax invoice". All four are set together, with the CA, before real billing. */
+/** EkCode (ADR-0009, P1): its own WhatsApp number and Meta app (in EkCode's own portfolio, ADR-0010), and two key rings
+ *  ("id:secret,id:secret", newest first; rotate by putting a new entry in front — never by replacing one). All of
+ *  them set (and NEXT_PUBLIC_EKCODE_HOST) = EkCode can be switched on; any unset = the button never shows. */
+export const EKCODE_WA_PHONE_NUMBER_ID = process.env.EKCODE_WA_PHONE_NUMBER_ID ?? ''
+export const EKCODE_WA_TOKEN = process.env.EKCODE_WA_TOKEN ?? ''
+export const EKCODE_WA_AUTH_TEMPLATE = process.env.EKCODE_WA_AUTH_TEMPLATE ?? ''
+export const EKCODE_WA_TEMPLATE_LANG = process.env.EKCODE_WA_TEMPLATE_LANG || 'en'
+export const EKCODE_WA_VERIFY_TOKEN = process.env.EKCODE_WA_VERIFY_TOKEN ?? ''
+export const EKCODE_META_APP_SECRET = process.env.EKCODE_META_APP_SECRET ?? ''
+export const EKCODE_PHONE_PEPPERS = process.env.EKCODE_PHONE_PEPPERS ?? ''
+export const EKCODE_SEAL_KEYS = process.env.EKCODE_SEAL_KEYS ?? ''
+
 export const FRRATA_GSTIN = process.env.FRRATA_GSTIN ?? ''
 export const FRRATA_LEGAL_NAME = process.env.FRRATA_LEGAL_NAME ?? ''
 export const FRRATA_ADDRESS = process.env.FRRATA_ADDRESS ?? ''
@@ -81,6 +93,11 @@ export const VERCEL_PROJECT_ID = process.env.VERCEL_PROJECT_ID ?? ''
 export const VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID ?? ''
 /** A local fake for e2e only: honoured off Vercel and only on 127.0.0.1 (src/lib/connectors/vercel). */
 export const VERCEL_API_BASE = process.env.VERCEL_API_BASE ?? ''
+/** Admin › Infrastructure (plan 2026-11-11 I·1): a TEAM token minted by the team's Billing-role member (or a Developer),
+ *  Production only, Sensitive, 90-day expiry. It reads /v1/billing/charges; the puller refuses it if it can read the
+ *  project's env (security review HIGH-1). Never the domains token above. Unset: the Vercel tab says what connects it. */
+export const VERCEL_BILLING_TOKEN = process.env.VERCEL_BILLING_TOKEN ?? ''
+export const isVercelBillingConfigured = () => VERCEL_BILLING_TOKEN !== '' && VERCEL_TEAM_ID !== '' && VERCEL_PROJECT_ID !== ''
 /** DNS-over-HTTPS fakes for e2e (both resolvers, same rule): honoured off Vercel and only on 127.0.0.1. */
 export const DOH_BASE = process.env.DOH_BASE ?? ''
 /** How many hosts the Vercel project may hold (Hobby 50, Pro 100,000 soft): claims stop 4 below it. */
@@ -99,4 +116,11 @@ export const MUX_ENVIRONMENT_ID = process.env.MUX_ENVIRONMENT_ID ?? ''
 export const MUX_API_BASE = VERCEL_ENV === 'production' ? 'https://api.mux.com' : process.env.MUX_API_BASE || 'https://api.mux.com'
 export const MUX_STREAM_BASE = VERCEL_ENV === 'production' ? 'https://stream.mux.com' : process.env.MUX_STREAM_BASE || 'https://stream.mux.com'
 export const MUX_IMAGE_BASE = VERCEL_ENV === 'production' ? 'https://image.mux.com' : process.env.MUX_IMAGE_BASE || 'https://image.mux.com'
+/** Admin › Infrastructure (plan 2026-11-11 I·1): an optional separate READ-ONLY Mux token (Video Read only) for delivery
+ *  usage. Unset, the video token above is used for this GET (owner 2026-11-11: both live in the same Vercel env, so a
+ *  second token would add no separation). Neither set: the Mux tab says what connects it. */
+export const MUX_READ_TOKEN_ID = process.env.MUX_READ_TOKEN_ID ?? ''
+export const MUX_READ_TOKEN_SECRET = process.env.MUX_READ_TOKEN_SECRET ?? ''
+export const muxUsageToken = () => MUX_READ_TOKEN_ID && MUX_READ_TOKEN_SECRET ? { id: MUX_READ_TOKEN_ID, secret: MUX_READ_TOKEN_SECRET } : MUX_TOKEN_ID && MUX_TOKEN_SECRET ? { id: MUX_TOKEN_ID, secret: MUX_TOKEN_SECRET } : null
+export const isMuxUsageConfigured = () => muxUsageToken() !== null
 export const isVideoConfigured = () => MUX_TOKEN_ID !== '' && MUX_TOKEN_SECRET !== '' && MUX_WEBHOOK_SECRET !== '' && /^[A-Za-z0-9_-]{1,40}$/.test(MUX_ENVIRONMENT_ID)
