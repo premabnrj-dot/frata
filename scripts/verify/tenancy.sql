@@ -2398,4 +2398,70 @@ do $$ begin
   then raise exception 'FAIL: an API role runs the product video trigger'; end if;
 end $$;
 
-\echo 'tenancy proof — all 64 checks passed'
+-- 65. Email E·0 (0091): every email table is the shop's own both ways; notices and the roll-up are written by definers
+-- only; an SES event is routed only by our message id (an unknown id, or a mismatched shop tag, stores nothing); a
+-- member's address is readable only for a current member of the shop that is set; the outbox shows no row without a
+-- shop set (the drain claims through a definer); no other role holds anything.
+insert into email_messages (id, tenant_id, kind, order_id, attempted_at) values ('e1e1e1e1-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'confirmed', 'acacacac-0000-0000-0000-00000000000b', now());
+insert into email_suppressions (tenant_id, address_hash, reason) values ('22222222-2222-2222-2222-222222222222', 'e1:' || repeat('b', 64), 'bounce');
+insert into shop_emails (tenant_id, kind, subject) values ('22222222-2222-2222-2222-222222222222', 'confirmed', 'B words');
+insert into email_shops (tenant_id) values ('22222222-2222-2222-2222-222222222222');
+insert into email_daily (day, tenant_id, sent) values (current_date, '22222222-2222-2222-2222-222222222222', 5);
+insert into notices (id, tenant_id, type, source_kind, title, required) values ('e2e2e2e2-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'billing', 'admin', 'B notice', true);
+insert into notice_reads (tenant_id, notice_id, user_id) values ('22222222-2222-2222-2222-222222222222', 'e2e2e2e2-0000-0000-0000-00000000000b', 'aaaaaaaa-0000-0000-0000-000000000001');
+insert into notice_prefs (tenant_id, user_id, type, email) values ('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000001', 'product_update', false);
+insert into outbox (tenant_id, kind, dedupe_key, payload) values ('22222222-2222-2222-2222-222222222222', 'email.order', 'proof-65', '{}');
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if exists (select 1 from email_messages) or exists (select 1 from email_suppressions) or exists (select 1 from shop_emails) or exists (select 1 from email_shops)
+     or exists (select 1 from email_daily) or exists (select 1 from notices) or exists (select 1 from notice_reads) or exists (select 1 from notice_prefs)
+  then raise exception 'FAIL: A reads B email rows'; end if;
+  update email_messages set skipped_at = now(); get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A changed a B message'; end if;
+  update shop_emails set subject = 'x'; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A changed B words'; end if;
+  begin insert into email_messages (id, tenant_id, kind) values (gen_random_uuid(), '22222222-2222-2222-2222-222222222222', 'test'); raise exception 'FAIL: A wrote a B message'; exception when insufficient_privilege then null; end;
+  begin insert into email_suppressions (tenant_id, address_hash, reason) values ('22222222-2222-2222-2222-222222222222', 'e1:' || repeat('c', 64), 'bounce'); raise exception 'FAIL: A suppressed for B'; exception when insufficient_privilege then null; end;
+  begin insert into notices (tenant_id, type, source_kind, title, required) values ('11111111-1111-1111-1111-111111111111', 'billing', 'admin', 'Forged', true); raise exception 'FAIL: a shop wrote a notice'; exception when insufficient_privilege then null; end;
+  begin insert into email_daily (day, tenant_id) values (current_date, '11111111-1111-1111-1111-111111111111'); raise exception 'FAIL: a shop wrote the roll-up'; exception when insufficient_privilege then null; end;
+  begin insert into notice_reads (tenant_id, notice_id, user_id) values ('22222222-2222-2222-2222-222222222222', 'e2e2e2e2-0000-0000-0000-00000000000b', gen_random_uuid()); raise exception 'FAIL: A read-marked a B notice'; exception when insufficient_privilege then null; end;
+  if exists (select 1 from outbox where dedupe_key = 'proof-65') then raise exception 'FAIL: A reads B outbox'; end if;
+  -- An SES event for B's message, tagged as A's: stored nowhere. An unknown id: nothing. B's own tag: applied.
+  if public.app_store_ses_event('sns-1', 'e1e1e1e1-0000-0000-0000-00000000000b', '11111111-1111-1111-1111-111111111111', 'Delivery', 'p1', null, null, now()) then raise exception 'FAIL: a mismatched shop tag routed an event'; end if;
+  if public.app_store_ses_event('sns-2', gen_random_uuid(), '22222222-2222-2222-2222-222222222222', 'Delivery', 'p1', null, null, now()) then raise exception 'FAIL: an unknown message id stored an event'; end if;
+  if not public.app_store_ses_event('sns-3', 'e1e1e1e1-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'Bounce', 'p1', 'permanent', 'e1:' || repeat('d', 64), now()) then raise exception 'FAIL: a matching event was refused'; end if;
+  -- A member of another shop: no address.
+  if public.app_member_email('aaaaaaaa-0000-0000-0000-000000000001', false) is not null then raise exception 'FAIL: A read a B member''s address'; end if;
+  if exists (select 1 from public.app_notice_members() where user_id = 'aaaaaaaa-0000-0000-0000-000000000001') then raise exception 'FAIL: A lists a B member'; end if;
+end $$;
+rollback;
+-- No shop set: the outbox shows nothing; the claim definer still finds due rows (and settles them).
+begin; set local role frata_app;
+do $$ declare r record; begin
+  if exists (select 1 from outbox) then raise exception 'FAIL: the outbox is readable with no shop set'; end if;
+  select * into r from public.app_outbox_claim(100) where dedupe_key = 'proof-65';
+  if r.id is null then raise exception 'FAIL: the claim definer found nothing'; end if;
+  perform public.app_outbox_settle(r.id, 'later', 'test', 5, 8);
+end $$;
+rollback;
+do $$ begin
+  if exists (select 1 from unnest(array['email_messages','email_suppressions','shop_emails','email_shops','email_daily','notices','notice_reads','notice_prefs']) t
+              where not (select relrowsecurity from pg_class where oid = t::regclass)
+                 or not exists (select 1 from pg_policies p where p.tablename = t and p.qual like '%app_current_tenant()%'))
+  then raise exception 'FAIL: an email table without RLS or a shop policy'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r,
+                    unnest(array['email_messages','email_suppressions','shop_emails','email_shops','email_daily','notices','notice_reads','notice_prefs']) t,
+                    unnest(array['select', 'insert', 'update']) p where has_any_column_privilege(r, t, p))
+  then raise exception 'FAIL: another role reads or writes an email table'; end if;
+  if exists (select 1 from unnest(array['email_messages','email_suppressions','shop_emails','email_shops','email_daily','notices','notice_reads','notice_prefs']) t
+              where has_table_privilege('frata_app', t, 'delete'))
+  then raise exception 'FAIL: the app deletes email rows'; end if;
+  if has_table_privilege('frata_app', 'notices', 'insert') or has_table_privilege('frata_app', 'email_daily', 'insert') then raise exception 'FAIL: the app writes notices or the roll-up'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r,
+                    unnest(array['app_outbox_claim(int)', 'app_outbox_settle(uuid, text, text, int, int)', 'app_store_ses_event(text, uuid, uuid, text, text, text, text, timestamptz)',
+                                 'app_member_email(uuid, boolean)', 'app_notice_members()', 'app_email_daily()', 'app_admin_email_health(uuid, int)', 'app_admin_email_queue(uuid)']) f
+              where has_function_privilege(r, f, 'execute'))
+  then raise exception 'FAIL: an API role runs an email definer'; end if;
+  if has_function_privilege('frata_app', 'app_admin_email_health(uuid, int)', 'execute') then raise exception 'FAIL: the app reads every shop''s email health'; end if;
+end $$;
+
+\echo 'tenancy proof — all 65 checks passed'

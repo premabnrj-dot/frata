@@ -8,7 +8,7 @@ vi.mock('@/lib/env', () => ({ get VERCEL_ENV() { return env.VERCEL_ENV }, get E2
 vi.mock('@/lib/modules/reviews/sender', () => ({ sendReviewAsk: vi.fn() }))
 vi.mock('@/lib/domains/senders', () => ({ sendDomainAdd: vi.fn(), sendDomainRemove: vi.fn() }))
 vi.mock('@/lib/billing/debit', () => ({ sendBillAttempt: vi.fn() }))
-vi.mock('../index', () => ({ GiveUp: class GiveUp extends Error {}, claimDue: vi.fn(), deferRow: vi.fn(), markDead: vi.fn(), markFailed: vi.fn(), markSent: vi.fn() }))
+vi.mock('../index', () => ({ GiveUp: class GiveUp extends Error {}, Later: class Later extends Error {}, claimDue: vi.fn(), deferRow: vi.fn(), markDead: vi.fn(), markFailed: vi.fn(), markSent: vi.fn() }))
 const { eachLimited, drainOutbox } = await import('../drain')
 const idx = await import('../index')
 

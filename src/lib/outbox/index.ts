@@ -15,10 +15,14 @@ import { outbox } from '@/lib/db/schema'
 
 export async function enqueue(
   tx: Tx,
-  row: { tenantId: string; kind: string; dedupeKey: string; payload: object },
+  row: { tenantId: string; kind: string; dedupeKey: string; payload: object; notBefore?: Date },
 ) {
-  await tx.insert(outbox).values(row).onConflictDoNothing({ target: [outbox.tenantId, outbox.dedupeKey] })
+  const { notBefore, ...values } = row
+  await tx.insert(outbox).values({ ...values, ...(notBefore ? { nextAttemptAt: notBefore } : {}) }).onConflictDoNothing({ target: [outbox.tenantId, outbox.dedupeKey] })
 }
+
+/** A sender's "not now" (rate limited, not ready yet): the row waits `minutes` without spending an attempt. */
+export class Later extends Error { constructor(readonly code: string, readonly minutes = 5) { super(code); this.name = 'Later' } }
 
 export type OutboxRow = typeof outbox.$inferSelect
 
@@ -40,40 +44,25 @@ export const fromRaw = (r: RawRow): OutboxRow => ({
 })
 
 export async function claimDue(limit = 25): Promise<OutboxRow[]> {
-  return (await db().execute<RawRow>(sql`
-    update outbox set attempts = attempts + 1,
-      next_attempt_at = now() + make_interval(mins => (attempts + 1) * (attempts + 1))
-    where id in (
-      select id from outbox
-      where sent_at is null and dead_at is null and next_attempt_at <= now()
-      order by next_attempt_at limit ${limit}
-      for update skip locked)
-    returning *`) as unknown as RawRow[]).map(fromRaw)
+  // Through a definer: the outbox has no row readable without a shop set (email plan, tenancy and security reviews).
+  return (await db().execute<RawRow>(sql`select * from app_outbox_claim(${limit})`) as unknown as RawRow[]).map(fromRaw)
 }
 
 export const MAX_ATTEMPTS = 8
 
-export async function markSent(id: string) {
-  await db().execute(sql`update outbox set sent_at = now(), last_error = null where id = ${id}`)
-}
+const settle = (id: string, outcome: 'sent' | 'failed' | 'later' | 'dead', error: string | null, minutes = 0) =>
+  db().execute(sql`select app_outbox_settle(${id}::uuid, ${outcome}, ${error === null ? null : error.slice(0, 500)}, ${minutes}, ${MAX_ATTEMPTS})`)
 
-export async function markFailed(id: string, attempts: number, error: string) {
-  await db().execute(sql`
-    update outbox set last_error = ${error.slice(0, 500)},
-      dead_at = case when ${attempts} >= ${MAX_ATTEMPTS} then now() else null end
-    where id = ${id}`)
-}
+export async function markSent(id: string) { await settle(id, 'sent', null) }
 
-/** A module paused by Frrata: hold the row back without spending an attempt (the claim bumped one). */
-export async function deferRow(id: string, minutes = 15) {
-  await db().execute(sql`update outbox set attempts = greatest(attempts - 1, 0),
-    next_attempt_at = now() + make_interval(mins => ${minutes}), last_error = 'paused' where id = ${id}`)
-}
+/** A failed try: dead once the claim has spent MAX_ATTEMPTS. */
+export async function markFailed(id: string, _attempts: number, error: string) { await settle(id, 'failed', error) }
+
+/** Not now, and not a failure (a paused module, a 429, a shop's SES tenant not ready): no attempt spent. */
+export async function deferRow(id: string, minutes = 15, why = 'paused') { await settle(id, 'later', why, minutes) }
 
 /** A row that must never be sent (its module was turned off): dead at once, with the reason. */
-export async function markDead(id: string, reason: string) {
-  await db().execute(sql`update outbox set dead_at = now(), last_error = ${reason.slice(0, 500)} where id = ${id}`)
-}
+export async function markDead(id: string, reason: string) { await settle(id, 'dead', reason) }
 
 /** Turning a module off cancels its queued rows for that shop, in the switch's own transaction. */
 export async function cancelQueued(tx: Tx, tenantId: string, kinds: readonly string[], reason: string) {

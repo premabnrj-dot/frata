@@ -78,6 +78,6 @@ describe('the SQL CHECK says what shape.ts says', () => {
   it('0091 carries EMAIL_SQL', () => {
     let sql = ''
     try { sql = readFileSync('drizzle/0091_email.sql', 'utf8') } catch { return } // the migration lands in task 3
-    expect(sql).toContain(EMAIL_SQL.replace(/\\\\/g, '\\'))
+    expect(sql).toContain(EMAIL_SQL.replace(/'/g, "''"))
   })
 })
