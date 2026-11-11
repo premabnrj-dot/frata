@@ -2596,6 +2596,11 @@ do $$ declare n int; pa uuid; pb uuid; pubb uuid; rb uuid; i int; begin
   -- a page's live publish must be its own shop's
   begin update shop_pages set live_publish_id = pubb where id = pa; raise exception 'FAIL: A pointed a page at B''s publish';
   exception when foreign_key_violation then null; end;
+  -- a live page can't be deleted outside Publish (the delete policy); once removed at a publish, it can
+  update shop_pages set live = draft where id = pa;
+  delete from shop_pages where id = pa; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: a live page was deleted outside Publish'; end if;
+  update shop_pages set live = null where id = pa;
   -- at most 20 pages (A has 1; 19 more fit, the 21st is refused)
   for i in 1..19 loop
     insert into shop_pages (tenant_id, template, draft) values ('11111111-1111-1111-1111-111111111111', 'about', jsonb_build_object('handle', 'p' || i, 'title', 'P', 'fill', '{}'::jsonb));
@@ -2604,9 +2609,21 @@ do $$ declare n int; pa uuid; pb uuid; pubb uuid; rb uuid; i int; begin
   exception when check_violation then null; end;
 end $$;
 rollback;
+begin; set local role frata_app;
 do $$ begin
-  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['select', 'insert', 'update', 'delete']) p
-              where has_table_privilege(r, 'shop_pages', p)) then raise exception 'FAIL: another role reaches shop_pages'; end if;
+  if exists (select 1 from shop_pages) then raise exception 'FAIL: shop pages seen with no shop set'; end if;
+  begin insert into shop_pages (tenant_id, template, draft) values ('11111111-1111-1111-1111-111111111111', 'about', '{"handle":"x","title":"x","fill":{}}'); raise exception 'FAIL: a page with no shop set';
+  exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['select', 'insert', 'update']) p
+              where has_any_column_privilege(r, 'shop_pages', p))
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_table_privilege(r, 'shop_pages', 'delete'))
+  then raise exception 'FAIL: another role reaches shop_pages'; end if;
+  if not (select relrowsecurity from pg_class where oid = 'shop_pages'::regclass) then raise exception 'FAIL: shop_pages without RLS'; end if;
+  if exists (select 1 from pg_policies where tablename = 'shop_pages' and coalesce(qual, '') not like '%app_current_tenant()%' and coalesce(with_check, '') not like '%app_current_tenant()%')
+  then raise exception 'FAIL: a shop_pages policy that doesn''t name the shop'; end if;
   if has_column_privilege('frata_app', 'shop_pages', 'tenant_id', 'update') or has_column_privilege('frata_app', 'shop_pages', 'template', 'update')
      or has_column_privilege('frata_app', 'shop_pages', 'id', 'update') then raise exception 'FAIL: the app changes a page''s shop, id or template'; end if;
   if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r where has_function_privilege(r, 'app_shop_pages_cap()', 'execute'))

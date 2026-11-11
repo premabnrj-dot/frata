@@ -2,8 +2,9 @@
 -- THEME STUDIO TS1a — SHOP PAGES ACCESS (plan docs/plans/2026-11-11-theme-studio-ts1.md; tenancy-auditor 2026-11-11).
 -- Hand-written.
 --
--- shop_pages: the shop reads, inserts and deletes its OWN rows (delete: a page never published, or one removed at an
---   earlier publish) and updates only the content columns (never tenant_id, id or template). A page reaches the shop
+-- shop_pages: the shop reads, inserts and updates its OWN rows (updates: the content columns only, never tenant_id, id
+--   or template), and deletes only a row that isn't live (a page never published, or one removed at a publish): the
+--   delete policy says so, so a live page leaves the shop only through Publish (tenancy-auditor 2026-11-11). A page reaches the shop
 --   only through `live`, set by the look's Publish in the same transaction (src/lib/themes/look.ts).
 -- Addresses: unique per shop (an expression index on the draft's handle, which is the live one once published: the
 --   handle is fixed then). One FAQ per shop. At most 20 pages a shop (trigger, under the look's per-shop lock).
@@ -17,7 +18,13 @@ grant select, insert, delete on shop_pages to frata_app;
 --> statement-breakpoint
 grant update (draft, live, previous, live_publish_id, version, removed_at, updated_at) on shop_pages to frata_app;
 --> statement-breakpoint
-create policy tenant_rows on shop_pages for all to frata_app using (tenant_id = app_current_tenant()) with check (tenant_id = app_current_tenant());
+create policy tenant_rows on shop_pages for select to frata_app using (tenant_id = app_current_tenant());
+--> statement-breakpoint
+create policy tenant_insert on shop_pages for insert to frata_app with check (tenant_id = app_current_tenant());
+--> statement-breakpoint
+create policy tenant_update on shop_pages for update to frata_app using (tenant_id = app_current_tenant()) with check (tenant_id = app_current_tenant());
+--> statement-breakpoint
+create policy tenant_delete_not_live on shop_pages for delete to frata_app using (tenant_id = app_current_tenant() and (live is null or removed_at is not null));
 --> statement-breakpoint
 -- The handle is an address: a-z, 0-9 and dashes, 1–60 (the app refuses reserved words before this).
 alter table shop_pages add constraint shop_pages_handle_shape check ((draft->>'handle') ~ '^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$');
@@ -33,6 +40,10 @@ create index shop_pages_live_publish_idx on shop_pages (tenant_id, live_publish_
 create or replace function app_shop_pages_cap() returns trigger
   language plpgsql security invoker set search_path = '' as $$
 begin
+  -- Another shop's row is refused before its lock is taken (RLS's check comes after BEFORE triggers).
+  if new.tenant_id is distinct from public.app_current_tenant() then
+    raise exception 'not this shop' using errcode = 'insufficient_privilege';
+  end if;
   perform pg_advisory_xact_lock(hashtext('look:' || new.tenant_id::text));
   if (select count(*) from public.shop_pages p where p.tenant_id = new.tenant_id) >= 20 then
     raise exception 'a shop has at most 20 pages' using errcode = 'check_violation';
