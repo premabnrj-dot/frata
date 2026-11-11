@@ -1,6 +1,6 @@
 # Plan: Theme Studio TS0a — the seam (invisible)
-Status: draft v2 (architecture review folded in) · Date: 2026-11-11 · Spec: `docs/specs/2026-11-11-theme-studio.md` (active; mockup v2 approved by the owner
-2026-11-11) · Reviews: architecture-reviewer (2026-11-11, folded in below); speed-reviewer (running)
+Status: reviewed (architecture and speed reviews folded in) · Date: 2026-11-11 · Spec: `docs/specs/2026-11-11-theme-studio.md` (active; mockup v2 approved by the owner
+2026-11-11) · Reviews: architecture-reviewer (2026-11-11, folded in below); speed-reviewer (2026-11-11, within budget; folded in below)
 
 ## Goal
 Nothing a merchant sees changes. After TS0a, a theme manifest can come from somewhere other than a code file without
@@ -38,6 +38,21 @@ snapshots byte-identical, shop JS/CSS unchanged, `shopPublishes` entry ≤ 10 kB
   `resolveStored(row, shop, codeSource)`; `previewLook` one `withTenant` and the same withdrawn function, uncached.
   The goal no longer says "without touching any caller again": TS2 touches `THEME_KEYS`, the revisions CHECK and the
   Signal test. Spec aligned: `manifestsFor` / `manifests.ts`; revision cap stays the database's 64 kB.
+- **Speed review (2026-11-11), measured on the e2e seed with 16 versions:** today a cold home runs 44 statements
+  (24 work, 5 transactions; `theme_versions` read 4×) and the `publishes` entry is 24 kB at 16 versions (worst case 1.05 MB).
+  - **No cached read inside a transaction (P4):** in the console path only `revisionBody(tx, t, ids)` runs inside
+    `asMember`; a vitest greps `src/lib/themes/look.ts` for `shopRevision` and `withTenant(`.
+  - **Fewer transactions:** the candidates query also returns the newest candidate's body; `shopRevision` is read only
+    when that version is withdrawn; candidates and the withdrawn list load together (`Promise.all`). Measure: work
+    statements −4, transactions −1, against today's log.
+  - **A publish purges only the look:** the candidates entry carries `shop:<t>:look`; Publish, Undo and Restore purge that
+    tag, never `refreshShop(t, 'shop')` (P11: a festive publish would otherwise rebuild the 880 kB catalogue everywhere).
+  - `shopTheme(shopId: string)` and `manifestsFor(tenantId)` are `cache()`d by string; in TS2 the source loads alongside
+    the look.
+  - `shopRevision` is unexported, never caches a null (throws, like `hostFacts`), checks the id's UUID shape, names its
+    columns, key `['sf','revision',t,id]`, read in `withTenant(t)` with an explicit tenant where.
+  - Measure the entry at 10 and 16 distinct versions with merchant-sized layers.
+  - Never share `.next` between a build and an e2e run (the review's build broke the first regression run).
 - **Process note**: TS0a-1's schema was started before this review finished; it is held, reworked to the decisions above,
   and lands only after the speed review.
 
