@@ -6,24 +6,15 @@ import { emailMessages, emailShops, emailSuppressions, shopEmails } from '@/lib/
 import { enqueue, GiveUp, Later, type OutboxRow } from '@/lib/outbox'
 import { shopLook, shopSettingsFor } from '@/lib/queries/storefront'
 import { themeOf } from '@/lib/themes/page-look'
-import { orderToken } from '@/lib/crypto/secret-box'
-import { scheme } from '@/lib/ekcode/cookie-name'
 import { EMAIL_SHOP_DOMAIN, SES_CONFIG_SHOPS } from '@/lib/env'
-import { formatInr } from '@/lib/format'
-import { dayMonthIN } from '@/lib/format-date'
 import { paperAccent } from '@/domains/documents/paper'
 import { ORDER_MESSAGES, type OrderMessage } from '@/domains/messaging/events'
 import { stillTrue } from '@/domains/messaging/still'
-import { fill, firstName, type Values } from '@/domains/messaging/placeholders'
-import { currentMethod } from '@/domains/orders/order-state'
-import { DEFAULT_WORDS, WORD_FIELDS, type EmailWords } from '@/domains/email/words'
-import { shopEmail } from '@/domains/email/layouts'
 import { cleanEmail } from '@/domains/email/shape'
-import { cleanSubject, fromHeader } from '@/domains/email/headers'
+import { fromHeader } from '@/domains/email/headers'
+import { composeOrderEmail } from './compose'
 import type { SkipCode } from '@/domains/email/state'
-import type { Paise } from '@/domains/money/paise'
 import { suppressionHashes } from './hash'
-import { dropsToken } from './drops'
 import { sendEmail, setUpTenant, tenantName } from './ses'
 
 // =============================================================================
@@ -107,31 +98,9 @@ export async function sendOrderEmail(row: OutboxRow): Promise<void> {
   if ('wait' in job) throw new Later(job.wait === 'tenant' ? 'ses_tenant_not_ready' : 'awaiting_ses_event', job.wait === 'tenant' ? 1 : 15)
 
   const { o, to, replyTo, own, lines, ship } = job.send
-  const prefix = shop.orderPrefix || 'ORD'
-  const number = `${prefix}-${o.number}`
-  const cod = currentMethod(o) === 'cod'
-  const total = formatInr(Number(o.total) as Paise)
-  const values: Values = {
-    'First name': firstName(o.customerName), 'Order number': number, Total: total, 'Shop name': shop.shopName,
-    'Pay on delivery': cod ? total : undefined, Courier: ship?.courier ?? undefined, 'Tracking number': ship?.tracking ?? undefined,
-  }
-  const words = Object.fromEntries(WORD_FIELDS.map((f) => [f, fill((own?.[f] ?? DEFAULT_WORDS[kind][f]) || DEFAULT_WORDS[kind][f], values)])) as EmailWords
-  const origin = `${scheme()}://${shop.host}`
-  const orderLink = `${origin}/orders#t=${orderToken(o.id)}`
-  const drops = dropsToken(o.id, to)
-  const mail = shopEmail({
-    preview: words.preview,
-    shop: { name: shop.shopName, logoUrl: shop.logoUrl ?? null, accent },
-    heading: words.heading, message: words.message,
-    button: words.button ? { label: words.button, href: orderLink } : null,
-    order: { number, date: dayMonthIN(o.placedAt), items: lines.map((l) => ({ title: l.title, detail: [...(l.values ?? []), `Qty ${l.qty}`].join(' · ') })), total,
-      payLine: o.cancelledAt ? null : cod ? `Pay ${total} on delivery, in cash or UPI` : o.paidAt ? 'Paid online' : null },
-    footer: { legalName: shop.legalName || shop.shopName, address: shop.address || '', supportEmail: replyTo,
-      grievance: shop.grievanceName ? [shop.grievanceName, shop.grievanceEmail].filter(Boolean).join(', ') : null,
-      newDropsHref: drops ? `${origin}/email/drops?o=${o.id}&t=${encodeURIComponent(drops)}` : null },
-  })
+  const { mail, subject } = composeOrderEmail({ kind, shop, accent, order: { ...o, stockShort: false }, lines, ship, own, to, replyTo })
   const sent = await sendEmail({
-    from: fromHeader(shop.shopName, `${shop.slug}@${EMAIL_SHOP_DOMAIN}`), to, replyTo, subject: cleanSubject(words.subject), html: mail.html, text: mail.text,
+    from: fromHeader(shop.shopName, `${shop.slug}@${EMAIL_SHOP_DOMAIN}`), to, replyTo, subject, html: mail.html, text: mail.text,
     configurationSet: SES_CONFIG_SHOPS, tenant: tenantName(tenantId), messageId, tenantTag: tenantId,
   }, now)
   await withTenant(tenantId, (tx) => tx.update(emailMessages).set(sent.ok ? { sentAt: new Date(), providerId: sent.providerId }
