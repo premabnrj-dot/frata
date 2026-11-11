@@ -355,6 +355,11 @@ plan will use; the plan may rename one, and this list follows it.
 - Confirm the allowances (600 / 6,000 / 20,000) after the pricing review.
 
 ### Email — Amazon SES (ADR-0011, plan `docs/plans/2026-11-11-email.md`)
+**Status (2026-11-11): live.** ap-south-1; frratamail.app and notify.frrata.shop verified (SPF, DKIM, DMARC pass);
+SNS `frrata-ses` (SignatureVersion 2) confirmed to `/api/webhooks/ses`; sets `shops` and `notices`; tenant `frrata`;
+OIDC role `frrata-ses`; sign-in codes through the Supabase Send Email hook from `Frrata <notices@notify.frrata.shop>`.
+**Open:** SES production access (requested; sandbox until approved, so only verified addresses receive mail); the notices
+domain moves to Frrata's main domain when the shop domain moves (owner's plan: frrata.shop main site, frrata.store shops).
 Nothing here passes through an agent: no AWS key exists anywhere (the app reaches SES through Vercel OIDC). Region
 **Asia Pacific (Mumbai) ap-south-1** for every step.
 
