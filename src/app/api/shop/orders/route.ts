@@ -1,7 +1,7 @@
 import { sessionToken as customerSessionToken } from '@/lib/ekcode/handshake'
 import { z } from 'zod'
 import { Address, addressErrors } from '@/domains/checkout/address'
-import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
+import { LIMITS, uncount, withinLimit } from '@/lib/db/rate-limit'
 import { Bag, Code, codeToTry, codeTried, publicQuote, reply, shopRequest } from '@/lib/http/shop-api'
 import { placeOrder } from '@/lib/orders/place'
 import { cleanAttribution } from '@/domains/analytics/attribution'
@@ -35,7 +35,8 @@ export async function POST(request: Request) {
   const inbox = address.data.email ? inboxLimitKey(address.data.email) : null
   if (inbox && !(await withinLimit(LIMITS.orderEmailShop, `${r.tenantId}:${inbox}`, new Date(), true)
     && await withinLimit(LIMITS.orderEmailGlobal, inbox, new Date(), true))) address.data.email = null
-  if (!(await withinLimit(LIMITS.placeOrderPhone, `${r.tenantId}:${address.data.phone}`, new Date(), true))) return reply({ error: 'Too many orders from this phone in the last hour. Message the shop on WhatsApp if you need help.' }, 429)
+  const phoneKey = `${r.tenantId}:${address.data.phone}`
+  if (!(await withinLimit(LIMITS.placeOrderPhone, phoneKey, new Date(), true))) return reply({ error: 'Too many orders from this phone in the last hour. Message the shop on WhatsApp if you need help.' }, 429)
   // The one cleaner (domains/analytics): listed keys only, each cleaned; the referring site reduced to a hostname that is
   // not this shop (the request's own host), any shop on the shop domain, the console, a payment page or an IP.
   const host = (request.headers.get('host') ?? '').toLowerCase().replace(/:\d+$/, '')
@@ -46,6 +47,12 @@ export async function POST(request: Request) {
     // A code that did not apply counts against the guess limit here as on /quote (one rule: codeTried).
     await codeTried(r.tenantId, r.ip, r.body.code, !code ? 'not_applied' : out.kind === 'changed' ? out.quote.offers.code : out.kind === 'placed' ? out.code ?? 'applied' : 'applied')
     if (out.kind === 'changed') return reply({ changed: true, quote: publicQuote(out.quote) }, 409)
+    // Busy (a flash drop) is not the shopper's doing: the try is given back to the phone and IP limits, and the shop's
+    // checkout is told when to try again.
+    if (out.kind === 'refused' && out.status === 503) {
+      await Promise.all([uncount(LIMITS.placeOrderPhone, phoneKey), uncount(LIMITS.placeOrderIp, `${r.tenantId}:${r.ip}`)])
+      return reply({ error: out.error }, 503, { 'Retry-After': '2' })
+    }
     if (out.kind === 'refused') return reply({ error: out.error, ...(out.quote ? { quote: publicQuote(out.quote) } : {}) }, out.status)
     drainSoon() // the order email (email E·2), sent after the response
     return reply({ token: out.token, number: out.number, method: out.method, total: out.total, pay: out.pay, payError: out.payError ?? null })

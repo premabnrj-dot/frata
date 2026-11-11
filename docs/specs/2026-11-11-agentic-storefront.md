@@ -107,6 +107,9 @@ Status: findings recorded, not yet folded into a revised design; the owner decid
 - **Pricing (3×):** a credit is ₹6.33 of measured cost (tokens, sandbox seconds, build minutes), sold at ₹19, estimate
   first, charged on actuals. Seats and credits are excluded from the partner share. Hosting allowances are re-sized
   after the host is chosen, with images on storage with no egress fee.
-- **In today's code (separate from Studio):** a place-order lock can starve the shared pool in a flash drop; the
-  sold-out purge is debounced per instance; the quote reads in sequence; previews hold production data (S1); staff
-  sign in with an email code only.
+- **In today's code (separate from Studio):** fixed 2026-11-11: placement waits ≤ 2 s for a lock and a shop places ≤ 8
+  orders at once (busy → 503, the try given back to the limits); the sold-out purge debounced across instances; the
+  quote's reads together, its cached collection members read after its transaction. Open: confirming a payment and
+  switching to pay on delivery take stock with no slot and the 10 s wait (a timeout in `processEvents` must leave the
+  event unprocessed first, or the payment is lost); previews hold production data (S1); staff sign in with an email
+  code only.

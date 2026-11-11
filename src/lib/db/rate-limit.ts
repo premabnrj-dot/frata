@@ -112,6 +112,19 @@ export async function overLimit(limit: Limit, subject: string, now = new Date(),
   }
 }
 
+/** Gives back one attempt counted by `withinLimit` in the same window (a refusal that was not the subject's doing, such
+ *  as "busy, try again"). Never below zero; a failure only leaves the count as it was. */
+export async function uncount(limit: Limit, subject: string, now = new Date()): Promise<void> {
+  const key = createHash('sha256').update(`${limit.action}:${subject.trim().toLowerCase()}`).digest('hex')
+  const windowMs = limit.windowSeconds * 1000
+  const windowStart = new Date(Math.floor(now.getTime() / windowMs) * windowMs)
+  try {
+    await db().execute(sql`update rate_limits set n = n - 1 where key = ${key} and window_start = ${windowStart.toISOString()}::timestamptz and n > 0`)
+  } catch (err) {
+    console.error('[uncount]', limit.action, errName(err))
+  }
+}
+
 /** Counts one attempt; true when it is within the limit. `failClosed`: refuse when the counter cannot be read (placing orders). */
 export async function withinLimit(limit: Limit, subject: string, now = new Date(), failClosed = false): Promise<boolean> {
   const key = createHash('sha256').update(`${limit.action}:${subject.trim().toLowerCase()}`).digest('hex')

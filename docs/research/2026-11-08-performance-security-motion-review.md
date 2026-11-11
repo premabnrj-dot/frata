@@ -117,7 +117,7 @@ The proposed motion system, the illustration and icon opportunities, and the rul
 | P8 | Fixed: Orders, the order page and Home read in parallel |
 | P9 | Index `orders_tenant_placed_only`: index-only count, 58 → 39 ms at 150k |
 | P10 | Measured, kept: row security keeps Postgres off any index for ILIKE; 100 ms at 150k |
-| P11 | Fixed: `refreshSoldOut`, at most once per 30 s per shop and instance |
+| P11 | Fixed: `refreshSoldOut`, at most once per 30 s per shop and instance; across instances since 2026-11-11 (limiter `soldOutPurge`) |
 | P12 | Timeouts added; `attachDatabasePool` (@vercel/functions 3.10.2, owner 2026-11-08) through a pg-shaped adapter released after each tenant transaction, on Vercel only |
 | P13 | Index `order_lines_preorder_owed` |
 | P14 | Fixed for the order page (147.5 → 125 kB); the look editor keeps zod (it validates there) |
