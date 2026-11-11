@@ -1,0 +1,496 @@
+<title>Frrata Theme Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a short note for the owner, then the studio to click through (staff or partner), then the design system, releasing, pages, the owner in Look, messages and states. Frrata tokens. */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--brand:#D61F69;--brand-text:#A8124F;--thread:#D61F69;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;--ink:#1C1917;--on-ink:#FAFAF9;
+  --haldi-soft:#FCEFC7;--scrim:rgb(28 25 23 / .45);
+  --store-bg:#FFFFFF;--store-tile:#F1F1EF;--store-ink:#111111;--store-sub:#6B6B6B;--store-line:#E4E4E1;--store-accent:#2742E8;
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;
+  --fast:120ms;--base:200ms;--slow:320ms;
+  --standard:cubic-bezier(.2,0,0,1);--entrance:cubic-bezier(0,0,0,1);--exit:cubic-bezier(.3,0,1,1);
+  --spring:linear(0,.22 7%,.6 17%,.86 27%,1.01 38%,1.04 46%,1.02 60%,1 100%);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--ink:#0B0A09;--haldi-soft:#2F2812;--scrim:rgb(0 0 0 / .6);
+  --store-bg:#1A1A1A;--store-tile:#262626;--store-ink:#F2F2F2;--store-sub:#A3A3A3;--store-line:#3A3A3A;--store-accent:#8C9DFF;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--ink:#0B0A09;--haldi-soft:#2F2812;--scrim:rgb(0 0 0 / .6);
+  --store-bg:#1A1A1A;--store-tile:#262626;--store-ink:#F2F2F2;--store-sub:#A3A3A3;--store-line:#3A3A3A;--store-accent:#8C9DFF;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:14px/1.55 var(--sans);margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+nav.views{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 0}
+nav.views a{font:500 13px var(--sans);color:var(--fg);text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:3px 11px;background:var(--card)}
+nav.views a:hover{background:var(--muted)}
+h1{font-size:26px;line-height:1.2;margin:0 0 6px;text-wrap:balance}
+h2{font-size:18px;margin:44px 0 10px;display:flex;gap:10px;align-items:center;text-wrap:balance;scroll-margin-top:16px}
+h2::before{content:"";width:18px;height:2px;background:var(--thread);flex:none}
+h3{font-size:15px;margin:0}
+p{margin:0 0 10px;max-width:72ch}
+.k{font-size:12px;color:var(--sub)}.mono{font-family:var(--mono)}
+.note{display:grid;gap:6px;margin:14px 0 0;padding:0;list-style:none;max-width:84ch}
+.note li{padding-left:16px;position:relative}.note li::before{content:"";position:absolute;left:0;top:.7em;width:8px;height:2px;background:var(--thread)}
+.stage{position:relative;border:1px solid var(--border);border-radius:8px;background:var(--bg);overflow:hidden;min-height:620px}
+.stage.phone{max-width:390px;margin-inline:auto}
+.bar{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--card)}
+.crumb{font-size:13px;color:var(--sub)}.crumb b{color:var(--fg);font-weight:600}
+.ctl{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;background:var(--muted);border-radius:6px;padding:2px}
+.seg button{border:0;background:transparent;color:var(--sub);font:500 12.5px var(--sans);padding:4px 10px;border-radius:5px;cursor:pointer;min-height:28px}
+.seg button[aria-checked="true"]{background:var(--card);color:var(--fg);box-shadow:0 1px 2px rgb(0 0 0 / .08)}
+.page{padding:18px;display:grid;gap:14px;max-width:760px}
+.stage.phone .page{padding:12px}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.ph h3{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.banner{border-radius:6px;padding:9px 12px;font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.banner.info{background:var(--info);color:var(--info-text)}.banner.warn{background:var(--warn);color:var(--warn-text)}.banner.danger{background:var(--danger);color:var(--danger-text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;min-width:0}
+.card>header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px 8px;flex-wrap:wrap}
+.card>header h4{margin:0;font-size:15px;font-weight:600}
+.cb{padding:4px 16px 16px;display:grid;gap:10px}
+.rows{list-style:none;margin:0;padding:0 0 4px}
+.rows li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:10px 16px;border-top:1px solid var(--border)}
+.rows li:first-child{border-top:0}
+.rows li.gone{color:var(--sub)}
+.rows .acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.rows .line{grid-column:1/-1;font-size:12.5px;color:var(--sub);display:flex;gap:8px;flex-wrap:wrap}
+.rows .line.bad{color:var(--danger-text)}
+.name{font-weight:600;display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-width:0}
+.keyp{font:500 13px var(--mono);overflow-wrap:anywhere}
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--fg);padding:0 12px;font:500 13px var(--sans);min-height:36px;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:var(--muted)}
+.btn:focus-visible,.input:focus-visible,.radio:focus-within,.seg button:focus-visible,nav.views a:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.primary:hover{opacity:.9}
+.btn.danger{color:var(--danger-text);border-color:var(--danger-text);background:var(--card)}
+.btn.dangerfill{background:var(--danger-text);border-color:var(--danger-text);color:var(--card)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.sm{min-height:30px;padding:0 9px;font-size:12.5px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 9px;font:500 12px var(--sans);white-space:nowrap}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-warn{background:var(--warn);color:var(--warn-text)}.c-n{background:var(--muted);color:var(--sub)}.c-danger{background:var(--danger);color:var(--danger-text)}.c-info{background:var(--info);color:var(--info-text)}
+.c-ink{background:var(--fg);color:var(--bg)}
+.ico{width:15px;height:15px;flex:none}
+.radios{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.radio{border:1px solid var(--input);border-radius:6px;padding:10px 12px;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;cursor:pointer;background:var(--card)}
+.radio input{margin:3px 0 0;accent-color:var(--fg)}
+.radio b{font-weight:600}.radio small{grid-column:2;color:var(--sub);font-size:12.5px}
+.radio:has(input:checked){border:2px solid var(--fg);padding:9px 11px}
+label.f{display:grid;gap:4px;font-size:13px;font-weight:500}
+.input{border:1px solid var(--input);border-radius:6px;padding:0 10px;background:var(--card);color:var(--fg);font:14px var(--mono);min-height:40px;width:100%}
+.input.sans{font-family:var(--sans)}
+.fix{display:flex;align-items:stretch;border:1px solid var(--input);border-radius:6px;overflow:hidden;background:var(--card)}
+.fix span{display:flex;align-items:center;padding:0 10px;background:var(--muted);color:var(--sub);font:13px var(--mono);border-right:1px solid var(--input)}
+.fix input{border:0;min-height:40px;padding:0 10px;font:14px var(--mono);background:transparent;color:var(--fg);flex:1;min-width:0}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--border);border-top:1px solid var(--border)}
+.tiles div{background:var(--card);padding:10px 14px}
+.tiles dt{font-size:12px;color:var(--sub)}.tiles dd{margin:0;font:500 18px var(--mono);font-variant-numeric:tabular-nums}
+.stage.phone .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+.kit{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.stage.phone .kit{grid-template-columns:1fr}
+.kit a,.kit div{border:1px solid var(--border);border-radius:6px;padding:10px 12px;display:grid;grid-template-columns:auto 1fr auto;gap:0 10px;align-items:center;color:var(--fg);text-decoration:none;background:var(--card)}
+.kit a:hover{background:var(--muted)}
+.kit small{grid-column:2;color:var(--sub);font-size:12px}
+.tile{width:32px;height:32px;border-radius:6px;background:var(--muted);display:grid;place-items:center;grid-row:span 2}
+.codebox{font:12.5px/1.6 var(--mono);background:var(--muted);border-radius:6px;padding:10px 12px;overflow-x:auto;white-space:pre;color:var(--fg)}
+/* dialog */
+.scrim{position:absolute;inset:0;background:var(--scrim);opacity:0;transition:opacity var(--base) var(--exit),display var(--base) allow-discrete;display:none;z-index:5}
+.scrim.open{display:block;opacity:1;transition:opacity var(--base) var(--entrance),display var(--base) allow-discrete}
+@starting-style{.scrim.open{opacity:0}}
+.dlg{position:absolute;z-index:6;left:50%;top:40px;width:min(520px,calc(100% - 32px));translate:-50% 0;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgb(0 0 0 / .18);
+  opacity:0;scale:.98;display:none;transition:opacity var(--base) var(--exit),scale var(--base) var(--exit),display var(--base) allow-discrete;overflow:hidden}
+.dlg.open{display:block;opacity:1;scale:1;transition:opacity var(--base) var(--entrance),scale var(--base) var(--entrance),display var(--base) allow-discrete}
+@starting-style{.dlg.open{opacity:0;scale:.98}}
+.stage.phone .dlg{left:0;right:0;top:auto;bottom:0;width:100%;translate:0 0;border-radius:12px 12px 0 0;max-height:88%;overflow:auto;scale:1;transform:translateY(100%);opacity:1;
+  transition:transform var(--base) var(--exit),display var(--base) allow-discrete}
+.stage.phone .dlg.open{transform:translateY(0);transition:transform var(--slow) var(--spring),display var(--slow) allow-discrete}
+@starting-style{.stage.phone .dlg.open{transform:translateY(100%)}}
+.dh{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)}
+.db{padding:16px;display:grid;gap:12px}
+.df{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--border);flex-wrap:wrap}
+.reveal{border:1px dashed var(--input);border-radius:6px;padding:12px;display:grid;gap:8px;background:var(--haldi-soft)}
+.reveal .keyp{font-size:14px;animation:flash 900ms var(--standard) 1}
+@keyframes flash{0%{opacity:.35}100%{opacity:1}}
+.toast{position:absolute;left:50%;bottom:16px;translate:-50% 0;background:var(--fg);color:var(--bg);border-radius:6px;padding:8px 12px;font-size:13px;z-index:7;opacity:0;transition:opacity var(--base) var(--exit);pointer-events:none}
+.toast.on{opacity:1;transition:opacity var(--base) var(--entrance)}
+.ro .writeonly{display:none!important}
+/* boards */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;align-items:start}
+.cap{font-size:12.5px;color:var(--sub);margin:6px 2px 0}
+.empty{display:grid;justify-items:start;gap:8px;padding:18px 16px}
+.picto{width:64px;height:64px;border-radius:12px;background:var(--haldi-soft);display:grid;place-items:center}
+/* shopper phones */
+.phonef{border:1px solid var(--border);border-radius:22px;background:var(--store-bg);color:var(--store-ink);overflow:hidden;min-height:430px;display:flex;flex-direction:column}
+.addrbar{font:500 11.5px var(--mono);color:var(--sub);background:var(--muted);padding:7px 12px;display:flex;gap:6px;align-items:center;overflow-wrap:anywhere}
+.addrbar b{color:var(--fg);font-weight:500}
+.sh{padding:12px;display:grid;gap:10px;flex:1;align-content:start}
+.stile{background:var(--store-tile);aspect-ratio:4/5;display:grid;place-items:center;max-width:100%}
+.stile.s{aspect-ratio:1}
+.sbtn{background:var(--store-ink);color:var(--store-bg);text-align:center;font:700 12px var(--sans);letter-spacing:.08em;text-transform:uppercase;padding:12px;border-radius:2px}
+.sline{display:flex;justify-content:space-between;gap:10px;font-size:13px}
+.sline.sub{color:var(--store-sub);font-size:12px}
+.sfield{border:0;background:var(--store-tile);padding:10px;font-size:12.5px;color:var(--store-sub);border-radius:2px}
+.back{font-size:12.5px;color:var(--store-sub);display:flex;gap:6px;align-items:center}
+.who{display:inline-flex;gap:6px;align-items:center;font:600 11px var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--sub);margin-bottom:6px}
+.arrow{display:grid;place-items:center;color:var(--sub)}
+/* admin */
+.admin{border:1px solid var(--border);border-radius:8px;overflow:hidden;display:grid;grid-template-columns:180px minmax(0,1fr);background:var(--bg)}
+.admin aside{background:var(--ink);color:var(--on-ink);padding:14px;display:grid;align-content:start;gap:6px;font-size:13px}
+.admin aside .tag{background:var(--warn);color:var(--warn-text);font:700 10.5px var(--sans);letter-spacing:.06em;padding:1px 6px;border-radius:4px;justify-self:start}
+.admin aside span{opacity:.75}.admin aside span.on{opacity:1;font-weight:600;border-left:3px solid #F5C518;padding-left:8px;margin-left:-11px}
+@media (max-width:640px){.admin{grid-template-columns:1fr}.admin aside{display:none}}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+table.t th{text-align:left;font-weight:500;color:var(--sub);font-size:12px;padding:8px 12px;border-bottom:1px solid var(--border)}
+table.t td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+table.t td.n,table.t th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.tw{overflow-x:auto}
+/* docs */
+.docs{border:1px solid var(--border);border-radius:8px;overflow:hidden;display:grid;grid-template-columns:200px minmax(0,1fr);background:var(--card)}
+.docs aside{border-right:1px solid var(--border);padding:14px;display:grid;align-content:start;gap:4px;font-size:13px}
+.docs aside b{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);margin-top:8px}
+.docs aside a{color:var(--fg);text-decoration:none;padding:2px 0}
+.docs aside a.on{font-weight:600;border-left:2px solid var(--thread);padding-left:8px;margin-left:-10px}
+.docs main{padding:16px 18px;display:grid;gap:12px;min-width:0}
+.verb{font:600 11.5px var(--mono);background:var(--ok);color:var(--ok-text);padding:2px 6px;border-radius:4px}
+@media (max-width:640px){.docs{grid-template-columns:1fr}.docs aside{display:none}}
+/* guardrails */
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;counter-reset:s}
+.flow div{border:1px solid var(--border);border-radius:6px;background:var(--card);padding:10px 12px;font-size:13px;display:grid;gap:3px;position:relative}
+.flow div b{font-size:13px}
+.flow div small{color:var(--sub);font-size:12px}
+.flow div::before{counter-increment:s;content:counter(s);font:600 11px var(--mono);color:var(--brand-text)}
+.ledger{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.ledger div{border:1px solid var(--border);border-radius:6px;background:var(--card);padding:12px;display:grid;gap:6px;align-content:start}
+.ledger ul{margin:0;padding-left:18px;font-size:13px;display:grid;gap:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:1ms!important}}
+</style>
+<style>
+/* studio */
+.studio{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg);display:grid;grid-template-rows:auto 1fr;position:relative;min-height:640px}
+.st-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--card);border-bottom:1px solid var(--border)}
+.studio.staff .st-top{background:var(--ink);color:var(--on-ink);border-bottom-color:var(--ink)}
+.studio.staff .st-top .btn:not(.primary){background:transparent;color:var(--on-ink);border-color:#6b6560}
+.studio.staff .st-top .btn.primary{background:var(--on-ink);color:var(--ink);border-color:var(--on-ink)}
+.studio.staff .st-top .seg{background:#2c2825}.studio.staff .st-top .seg button{color:#cfc9c3}.studio.staff .st-top .seg button[aria-checked="true"]{background:#45403b;color:var(--on-ink)}
+.st-tag{font:700 10.5px var(--sans);letter-spacing:.06em;padding:1px 6px;border-radius:4px;background:var(--info);color:var(--info-text)}
+.studio.staff .st-tag{background:var(--warn);color:var(--warn-text)}
+.st-name{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-weight:600}
+.st-body{display:grid;grid-template-columns:230px minmax(0,1fr) 260px;min-height:0}
+.st-left,.st-right{background:var(--card);border-right:1px solid var(--border);padding:10px;display:grid;align-content:start;gap:8px;min-width:0}
+.st-right{border-right:0;border-left:1px solid var(--border)}
+.pick{width:100%}
+.tree{list-style:none;margin:0;padding:0;display:grid;gap:1px;font-size:13px}
+.tree li{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px;border-radius:5px;padding:3px 4px 3px calc(6px + var(--d,0) * 14px);cursor:pointer}
+.tree li:hover{background:var(--muted)}
+.tree li[aria-selected="true"]{background:var(--info);color:var(--info-text);font-weight:600}
+.tree li .ma{display:flex;gap:1px;opacity:0}
+.tree li:hover .ma,.tree li[aria-selected="true"] .ma{opacity:1}
+.tree li .ma button{border:0;background:transparent;color:inherit;width:22px;height:22px;border-radius:4px;cursor:pointer;font:13px var(--sans);display:grid;place-items:center}
+.tree li .ma button:hover{background:var(--card)}
+.tree .kind{font-size:11px;color:var(--sub);font-weight:400}
+.addrow{border:1px dashed var(--input);border-radius:6px;background:transparent;color:var(--fg);font:500 12.5px var(--sans);padding:6px;cursor:pointer;width:100%}
+.addrow:hover{background:var(--muted)}
+.st-mid{padding:14px;display:grid;place-items:start center;overflow:auto;background:var(--muted)}
+.canvas{width:100%;max-width:640px;background:var(--store-bg);color:var(--store-ink);border:1px solid var(--border);display:grid;transition:max-width var(--base) var(--standard)}
+.canvas.phone{max-width:360px}
+.cv-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;font-weight:700;font-size:14px;border-bottom:1px solid var(--store-line)}
+.cv-sec{padding:18px 14px;display:grid;gap:10px;position:relative;outline-offset:-2px;cursor:pointer}
+.cv-sec[data-on="true"]{outline:2px solid var(--store-accent)}
+.cv-sec .lbl{position:absolute;top:0;left:0;background:var(--store-accent);color:#fff;font:600 10.5px var(--sans);padding:1px 6px;display:none}
+.cv-sec[data-on="true"] .lbl{display:block}
+.cv-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center}
+.canvas.phone .cv-cols{grid-template-columns:1fr}
+.cv-h{font:700 22px/1.1 var(--sans);letter-spacing:-.02em;margin:0;text-wrap:balance}
+.cv-t{font-size:13px;color:var(--store-sub);margin:0}
+.cv-img{background:var(--store-tile);aspect-ratio:4/5;display:grid;place-items:center;max-width:100%}
+.cv-btn{justify-self:start;background:var(--store-ink);color:var(--store-bg);font:700 11px var(--sans);letter-spacing:.08em;text-transform:uppercase;padding:9px 12px}
+.cv-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.canvas.phone .cv-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.cv-grid div{background:var(--store-tile);aspect-ratio:4/5}
+.cv-acc{border-top:1px solid var(--store-line);display:grid}
+.cv-acc span{border-bottom:1px solid var(--store-line);padding:9px 0;font-size:13px;display:flex;justify-content:space-between}
+.field{display:grid;gap:4px;font-size:12.5px;font-weight:500}
+.field select,.field input{border:1px solid var(--input);border-radius:6px;min-height:34px;padding:0 8px;background:var(--card);color:var(--fg);font:13px var(--sans);width:100%}
+.owner{border-top:1px solid var(--border);padding-top:8px;display:grid;gap:6px;font-size:12.5px}
+.owner label{display:flex;gap:6px;align-items:center}
+.swatches{display:flex;gap:4px;flex-wrap:wrap}
+.swatches button{width:26px;height:26px;border-radius:5px;border:1px solid var(--border);cursor:pointer}
+.swatches button[aria-pressed="true"]{outline:2px solid var(--fg);outline-offset:1px}
+.checks{position:absolute;right:12px;top:52px;z-index:6;width:min(340px,calc(100% - 24px));background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgb(0 0 0 / .18);display:none}
+.checks.open{display:block}
+.pickgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.pickgrid button{border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--fg);padding:8px;text-align:left;cursor:pointer;display:grid;gap:6px;font:500 12.5px var(--sans)}
+.pickgrid button:hover{background:var(--muted)}
+.pickgrid button[disabled]{color:var(--sub);cursor:not-allowed;background:var(--muted)}
+.pv{height:54px;border-radius:4px;background:var(--muted);display:grid;place-items:center}
+.cats{display:flex;gap:6px;flex-wrap:wrap}
+.cats button{border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--fg);font:500 12px var(--sans);padding:2px 10px;cursor:pointer}
+.cats button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.desk-only-note{display:none}
+@media (max-width:860px){.st-body{grid-template-columns:1fr}.st-left,.st-right{border:0;border-bottom:1px solid var(--border)}.desk-only-note{display:block}}
+/* design system board */
+.roles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.role{border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--card)}
+.role .sw{height:46px;display:flex;align-items:flex-end;padding:6px 8px;font:600 12px var(--sans)}
+.role .meta{padding:6px 8px;display:flex;justify-content:space-between;gap:6px;align-items:center;font-size:12px}
+.steps{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pipeline{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.pipeline div{border:1px solid var(--border);border-radius:6px;background:var(--card);padding:10px;display:grid;gap:4px;font-size:13px}
+.pipeline div.now{border:2px solid var(--fg);padding:9px}
+</style>
+
+<div class="wrap">
+  <h1>Theme Studio</h1>
+  <p class="k">Mockup v1 · 2026-11-11 · Spec <span class="mono">docs/specs/2026-11-11-theme-studio.md</span> · for the owner's approval</p>
+  <ul class="note">
+    <li>Frrata's team builds gallery themes in Admin; partners build themes for their own clients in their portal. Same studio, same blocks, no code.</li>
+    <li>A theme: design system, header and footer, home, product and collection pages, About, Contact and FAQ. Owners fill it in Look, as today.</li>
+    <li>Every theme passes the same checks before it reaches a shop: contrast, headings, photos, limits, the legal block. Bag and checkout stay one tested layout.</li>
+  </ul>
+  <nav class="views" aria-label="Boards">
+    <a href="#studio">Studio</a><a href="#system">Design system</a><a href="#release">Releasing</a><a href="#pages">Pages</a><a href="#look">Owners in Look</a><a href="#messages">Website messages</a><a href="#states">States</a>
+  </nav>
+
+  <!-- ===================== STUDIO ===================== -->
+  <h2 id="studio">The studio</h2>
+  <div class="ctl" style="margin-bottom:8px">
+    <div class="seg" role="radiogroup" aria-label="Who is building">
+      <button role="radio" aria-checked="true" data-who="staff">Frrata staff (Admin)</button><button role="radio" aria-checked="false" data-who="partner">Partner (portal)</button>
+    </div>
+  </div>
+  <div class="studio staff" id="studio-frame">
+    <div class="st-top">
+      <span class="st-name"><span class="st-tag" id="st-tag">STAFF</span><span id="st-theme">Monsoon</span><span class="chip c-n mono" id="st-ver">Draft · next 1.0.0</span></span>
+      <div class="ctl">
+        <select class="btn sm" id="page-pick" aria-label="Page"><option>Home</option><option>Product</option><option>Collection</option><option>About</option><option>Contact</option><option>FAQ</option><option>Header and footer</option></select>
+        <button class="btn sm" id="open-system">Design system</button>
+        <div class="seg" role="radiogroup" aria-label="Preview width"><button role="radio" aria-checked="true" data-pv="desk">Computer</button><button role="radio" aria-checked="false" data-pv="phone">Phone</button></div>
+        <button class="btn sm" id="open-checks"><span class="chip c-warn" id="check-count">2 to fix</span></button>
+        <button class="btn sm ghost" aria-label="Undo"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button><button class="btn sm ghost" aria-label="Redo"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 14l5-5-5-5M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+        <button class="btn sm primary" id="st-go">Submit for review</button>
+      </div>
+    </div>
+    <div class="st-body">
+      <div class="st-left">
+        <span class="k">Home · layers</span>
+        <ul class="tree" id="tree" role="tree" aria-label="Layers">
+          <li role="treeitem" aria-selected="false" data-sec="hero" style="--d:0"><span>Section <span class="kind">Hero split</span></span><span class="ma"><button aria-label="Move up"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button><button aria-label="Move down"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button><button aria-label="More"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg></button></span></li>
+          <li role="treeitem" aria-selected="false" data-sec="hero" style="--d:1"><span>Columns <span class="kind">2</span></span><span class="ma"><button aria-label="More"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg></button></span></li>
+          <li role="treeitem" aria-selected="true" data-sec="hero" data-block="photo" style="--d:2"><span>Image <span class="kind">owner fills</span></span><span class="ma"><button aria-label="More"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg></button></span></li>
+          <li role="treeitem" aria-selected="false" data-sec="hero" data-block="group" style="--d:2"><span>Group</span><span class="ma"><button aria-label="More"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg></button></span></li>
+          <li role="treeitem" aria-selected="false" data-sec="hero" style="--d:3"><span>Heading <span class="kind">owner fills</span></span><span class="ma"><button aria-label="More"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg></button></span></li>
+          <li role="treeitem" aria-selected="false" data-sec="hero" style="--d:3"><span>Text</span><span class="ma"><button aria-label="More"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg></button></span></li>
+          <li role="treeitem" aria-selected="false" data-sec="hero" style="--d:3"><span>Button</span><span class="ma"><button aria-label="More"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg></button></span></li>
+          <li role="treeitem" aria-selected="false" data-sec="grid" style="--d:0"><span>Section <span class="kind">New in</span></span><span class="ma"><button aria-label="Move up"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button><button aria-label="Move down"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button><button aria-label="More"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg></button></span></li>
+          <li role="treeitem" aria-selected="false" data-sec="grid" style="--d:1"><span>Product grid <span class="kind">Newest · 8</span></span><span class="ma"><button aria-label="More"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg></button></span></li>
+          <li role="treeitem" aria-selected="false" data-sec="faq" style="--d:0"><span>Section <span class="kind">Questions</span></span><span class="ma"><button aria-label="Move up"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button><button aria-label="Move down"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button><button aria-label="More"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg></button></span></li>
+          <li role="treeitem" aria-selected="false" data-sec="faq" style="--d:1"><span>Accordion <span class="kind">3 items</span></span><span class="ma"><button aria-label="More"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg></button></span></li>
+        </ul>
+        <button class="addrow" id="add-block">+ Add a block <span class="mono k">/</span></button>
+        <span class="k">3 of 25 sections</span>
+      </div>
+      <div class="st-mid">
+        <div class="canvas" id="canvas">
+          <div class="cv-head"><span>Kesar Studio</span><span class="k" style="color:var(--store-sub)">Shop · Bag</span></div>
+          <div class="cv-sec" data-sec="hero" data-on="true"><span class="lbl">Hero split</span>
+            <div class="cv-cols"><div class="cv-img"><svg width="60" viewBox="0 0 100 120" aria-hidden="true"><rect x="22" y="18" width="56" height="90" rx="10" fill="#7a3b2e"/></svg></div>
+              <div style="display:grid;gap:8px"><p class="cv-h">The monsoon edit.</p><p class="cv-t">Handwoven cotton for wet weeks.</p><span class="cv-btn">Shop now</span></div></div></div>
+          <div class="cv-sec" data-sec="grid"><span class="lbl">New in</span><p class="cv-h" style="font-size:17px">New in</p><div class="cv-grid"><div></div><div></div><div></div><div></div></div></div>
+          <div class="cv-sec" data-sec="faq"><span class="lbl">Questions</span><p class="cv-h" style="font-size:17px">Questions</p><div class="cv-acc"><span>Can I pay on delivery?<b aria-hidden="true">+</b></span><span>How do sizes run?<b aria-hidden="true">+</b></span><span>How do returns work?<b aria-hidden="true">+</b></span></div></div>
+        </div>
+      </div>
+      <div class="st-right">
+        <span class="k">Image · in Hero split</span>
+        <label class="field" for="ar">Shape<select id="ar"><option>4:5 portrait</option><option>1:1 square</option><option>16:9 wide</option></select></label>
+        <label class="field" for="ph">On a phone<select id="ph"><option>Above the words</option><option>Below the words</option><option>Hidden</option></select></label>
+        <div class="field"><span>Background</span><div class="swatches" role="group" aria-label="Background role"><button aria-label="Paper" aria-pressed="true" style="background:#fff"></button><button aria-label="Tint" aria-pressed="false" style="background:#F1F1EF"></button><button aria-label="Ink" aria-pressed="false" style="background:#111"></button></div></div>
+        <div class="owner"><b>Owner fills</b><label><input type="checkbox" checked> Photo</label><label><input type="checkbox" checked> Description</label><label><input type="checkbox"> Focus point</label></div>
+        <div class="owner"><b>Sample</b><span class="k">Monsoon sample photo · 140 kB</span></div>
+      </div>
+    </div>
+
+    <div class="checks" id="checks" role="dialog" aria-label="Checks">
+      <div class="dh"><h3>Checks</h3><button class="btn sm ghost" data-xchecks aria-label="Close"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <ul class="rows">
+        <li><span>Text on Tint reads 3.9:1 · needs 4.5:1</span><span class="acts"><button class="btn sm" data-fix>Use #5A5A55</button></span></li>
+        <li><span>Questions › Accordion has no heading above it</span><span class="acts"><button class="btn sm" data-fix>Add heading</button></span></li>
+        <li><span class="k">✓ Limits · photos · legal block · footer links</span><span></span></li>
+      </ul>
+    </div>
+    <div class="scrim" id="scrim"></div>
+    <div class="dlg" id="dlg-pick" role="dialog" aria-modal="true" aria-labelledby="pk-h" style="width:min(640px,calc(100% - 32px))">
+      <div class="dh"><h3 id="pk-h">Add a block</h3><button class="btn sm ghost" data-close aria-label="Close"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="db">
+        <input class="input sans" id="pick-q" placeholder="Search blocks" aria-label="Search blocks">
+        <div class="cats"><button aria-pressed="true">All 15</button><button aria-pressed="false">Layout 3</button><button aria-pressed="false">Content 9</button><button aria-pressed="false">Commerce 3</button></div>
+        <div class="pickgrid">
+          <button data-close><span class="pv"><svg width="40" viewBox="0 0 40 24" aria-hidden="true"><rect x="2" y="3" width="16" height="18" fill="var(--border)"/><rect x="22" y="3" width="16" height="18" fill="var(--border)"/></svg></span>Columns · 2</button>
+          <button data-close><span class="pv"><svg width="40" viewBox="0 0 40 24" aria-hidden="true"><rect x="4" y="5" width="32" height="4" fill="var(--fg)"/><rect x="4" y="12" width="24" height="3" fill="var(--border)"/></svg></span>Heading and text</button>
+          <button data-close><span class="pv"><svg width="40" viewBox="0 0 40 24" aria-hidden="true"><rect x="2" y="2" width="36" height="20" fill="var(--border)"/></svg></span>Image</button>
+          <button data-close><span class="pv"><svg width="40" viewBox="0 0 40 24" aria-hidden="true"><rect x="2" y="2" width="36" height="20" fill="var(--border)"/><path d="M17 8l7 4-7 4z" fill="var(--fg)"/></svg></span>Video loop</button>
+          <button data-close><span class="pv"><svg width="40" viewBox="0 0 40 24" aria-hidden="true"><rect x="2" y="3" width="8" height="10" fill="var(--border)"/><rect x="12" y="3" width="8" height="10" fill="var(--border)"/><rect x="22" y="3" width="8" height="10" fill="var(--border)"/><rect x="32" y="3" width="6" height="10" fill="var(--border)"/></svg></span>Product grid</button>
+          <button data-close><span class="pv"><svg width="40" viewBox="0 0 40 24" aria-hidden="true"><path d="M4 6h32M4 12h32M4 18h32" stroke="var(--fg)"/></svg></span>Questions (accordion)</button>
+          <button data-close><span class="pv"><svg width="40" viewBox="0 0 40 24" aria-hidden="true"><text x="20" y="16" text-anchor="middle" font-size="10" fill="var(--fg)">02:14:09</text></svg></span>Countdown</button>
+          <button disabled><span class="pv"><svg width="40" viewBox="0 0 40 24" aria-hidden="true"><rect x="2" y="2" width="36" height="20" fill="var(--border)"/></svg></span>Featured product · 1 per section</button>
+        </div>
+      </div>
+    </div>
+    <div class="dlg" id="dlg-submit" role="dialog" aria-modal="true" aria-labelledby="sb-h">
+      <div class="dh"><h3 id="sb-h">Submit Monsoon 1.0.0 for review?</h3></div>
+      <div class="db"><label class="f" for="notes">What changed<textarea class="input sans" id="notes" rows="3" style="padding:8px">First version: split hero, new in, questions, three pages.</textarea></label><span class="k" id="sb-who">Another staff member approves it.</span></div>
+      <div class="df"><button class="btn" data-close>Keep editing</button><button class="btn primary" data-close data-toast="Submitted · Riya will review">Submit</button></div>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+  <p class="cap desk-only-note">On a phone the studio says "Open the studio on a computer". Look stays phone-first.</p>
+
+  <!-- ===================== DESIGN SYSTEM ===================== -->
+  <h2 id="system">Design system</h2>
+  <div class="grid2">
+    <section class="card"><header><h4>Colours, by role</h4><span class="chip c-warn">1 to fix</span></header>
+      <div class="cb"><div class="roles">
+        <div class="role"><div class="sw" style="background:#FFFFFF;color:#111">Paper</div><div class="meta"><span class="mono">#FFFFFF</span><span class="chip c-ok">Reads well</span></div></div>
+        <div class="role"><div class="sw" style="background:#F1F1EF;color:#7a7a72">Tint</div><div class="meta"><span class="mono">#F1F1EF</span><span class="chip c-warn">3.9:1</span></div></div>
+        <div class="role"><div class="sw" style="background:#111111;color:#fff">Ink</div><div class="meta"><span class="mono">#111111</span><span class="chip c-ok">Reads well</span></div></div>
+        <div class="role"><div class="sw" style="background:#2742E8;color:#fff">Accent</div><div class="meta"><span class="mono">#2742E8</span><span class="chip c-ok">Reads well</span></div></div>
+        <div class="role"><div class="sw" style="background:#B42318;color:#fff">Sale</div><div class="meta"><span class="mono">#B42318</span><span class="chip c-ok">Reads well</span></div></div>
+      </div></div></section>
+    <section class="card"><header><h4>Type, shape, motion</h4></header>
+      <div class="cb">
+        <label class="field">Headings<select><option>Schibsted Grotesk</option><option>Fraunces</option><option>Cormorant</option><option>Playfair Display</option></select></label>
+        <div class="field"><span>Size</span><div class="seg" role="radiogroup" aria-label="Size"><button role="radio" aria-checked="false">Compact</button><button role="radio" aria-checked="true">Regular</button><button role="radio" aria-checked="false">Large</button></div></div>
+        <div class="field"><span>Corners</span><div class="seg" role="radiogroup" aria-label="Corners"><button role="radio" aria-checked="true">Square</button><button role="radio" aria-checked="false">Soft</button><button role="radio" aria-checked="false">Round</button></div></div>
+        <div class="field"><span>Buttons</span><div class="seg" role="radiogroup" aria-label="Buttons"><button role="radio" aria-checked="true">Solid</button><button role="radio" aria-checked="false">Outline</button><button role="radio" aria-checked="false">Underlined</button></div></div>
+        <div class="field"><span>Motion</span><div class="seg" role="radiogroup" aria-label="Motion"><button role="radio" aria-checked="true">Subtle</button><button role="radio" aria-checked="false">None</button></div></div>
+      </div></section>
+  </div>
+  <p class="cap">Every choice is one of Frrata's values. Colours are checked as they're picked; no free CSS, no per-screen styles.</p>
+
+  <!-- ===================== RELEASE ===================== -->
+  <h2 id="release">Releasing</h2>
+  <div class="grid2">
+    <div><span class="who">Frrata staff</span>
+      <div class="pipeline"><div><b>Draft</b><span class="k">autosaved</span></div><div><b>Checks pass</b><span class="k">+ Lighthouse 60 / 90</span></div><div class="now"><b>Approve</b><span class="k">a second staff member</span></div><div><b>Stage → Release</b><span class="k">Admin › Themes, as today</span></div></div>
+      <section class="card" style="margin-top:10px"><header><h4>Monsoon 1.0.0 · waiting for you</h4><span class="chip c-info">Submitted by Arjun</span></header>
+        <div class="cb"><span class="k">First version: split hero, new in, questions, three pages.</span>
+          <div class="steps"><button class="btn sm">Open in the studio</button><button class="btn sm">Send back</button><button class="btn sm primary">Approve Monsoon 1.0.0</button></div></div></section></div>
+    <div><span class="who">Partner</span>
+      <div class="pipeline"><div><b>Draft</b></div><div><b>Checks pass</b></div><div class="now"><b>Release to my clients</b></div><div><b>Owners accept</b><span class="k">in Look</span></div></div>
+      <section class="card" style="margin-top:10px"><header><h4>Offer Kesar Edit 1.2.0</h4></header>
+        <ul class="rows"><li><span class="name">Kesar Studio</span><span class="k">On 1.1.0</span></li><li><span class="name">Roam Bags</span><span class="k">On 1.0.0</span></li></ul>
+        <div class="df"><button class="btn">Not now</button><button class="btn primary">Offer to 2 clients</button></div></section></div>
+  </div>
+
+  <!-- ===================== PAGES ===================== -->
+  <h2 id="pages">Pages</h2>
+  <div class="grid3">
+    <div><span class="who">About</span><div class="phonef"><div class="addrbar"><b>kesarstudio.in</b>/pages/about</div><div class="sh"><div class="stile s"></div><b style="font-size:17px">Woven in Chanderi since 1998</b><div class="sline sub"><span>Three generations of weavers, one loom room.</span></div><div class="sline"><span>Makers</span><span>12</span></div><div class="sline"><span>Cotton from</span><span>Madhya Pradesh</span></div></div></div></div>
+    <div><span class="who">Contact</span><div class="phonef"><div class="addrbar"><b>kesarstudio.in</b>/pages/contact</div><div class="sh"><div class="sbtn" style="background:#1F7A4D;color:#fff">Chat on WhatsApp</div><div class="sfield">Name</div><div class="sfield">Phone or email</div><div class="sfield">Order number (optional)</div><div class="sfield">Message</div><div class="sbtn">Send</div>
+      <div style="border-top:1px solid var(--store-line);padding-top:8px;font-size:11.5px;color:var(--store-sub);display:grid;gap:2px"><span>Kesar Studio LLP · 12 MI Road, Jaipur 302001</span><span>Customer care: care@kesarstudio.in</span><span>Grievance officer: Riya Mehta</span></div></div></div><p class="cap">The business details come from Settings and can't be removed.</p></div>
+    <div><span class="who">FAQ</span><div class="phonef"><div class="addrbar"><b>kesarstudio.in</b>/pages/faq</div><div class="sh"><b style="font-size:17px">Questions</b><div class="cv-acc"><span>Can I pay on delivery?<b aria-hidden="true">+</b></span><span>How do sizes run?<b aria-hidden="true">+</b></span><span>How long do returns take?<b aria-hidden="true">+</b></span><span>When will it arrive?<b aria-hidden="true">+</b></span></div></div></div><p class="cap">Returns, sizes and delivery prefilled from the shop's settings.</p></div>
+  </div>
+
+  <!-- ===================== LOOK ===================== -->
+  <h2 id="look">Owners in Look</h2>
+  <div class="grid2">
+    <section class="card"><header><h4>Themes</h4></header>
+      <ul class="rows">
+        <li><span class="name">Kesar Edit <span class="chip c-info">Made for you · Arc Studio</span></span><span class="acts"><button class="btn sm primary">Try</button></span><span class="line"><span>Home, product, About, Contact, FAQ</span></span></li>
+        <li><span class="name">Monsoon <span class="chip c-n">Frrata</span></span><span class="acts"><button class="btn sm">Try</button></span></li>
+        <li><span class="name">Signal <span class="chip c-n">Frrata</span></span><span class="acts"><button class="btn sm">Try</button></span></li>
+      </ul></section>
+    <div style="display:grid;gap:12px;align-content:start">
+      <div class="banner info"><span>Kesar Edit 1.2.0 is ready · new lookbook section</span><button class="btn sm">Try it in a draft</button></div>
+      <section class="card"><header><h4>Editing</h4></header><div class="cb"><select class="input sans" aria-label="Page"><option>Home</option><option>Product page</option><option>Collection page</option><option>About</option><option>Contact</option><option>FAQ</option><option>+ Add a page</option></select>
+</div></section>
+    </div>
+  </div>
+  <p class="cap">Owners fill words and photos, reorder, hide and add the theme's sections; the structure stays the theme's.</p>
+
+  <!-- ===================== MESSAGES ===================== -->
+  <h2 id="messages">Website messages (console)</h2>
+  <section class="card"><header><h4>Messages from your website</h4><span class="chip c-warn">2 to answer</span></header>
+    <ul class="rows">
+      <li><span class="name">Ananya · Order KS-1038</span><span class="acts"><span class="chip c-warn">Reply by 6 pm</span><button class="btn sm">Reply on WhatsApp</button></span><span class="line"><span>Size exchange · "The M is tight at the shoulders…"</span></span></li>
+      <li><span class="name">Karan</span><span class="acts"><span class="chip c-warn">Reply by tomorrow 10 am</span><button class="btn sm">Reply by email</button></span><span class="line"><span>Bulk order · "Do you take orders of 40 pieces…"</span></span></li>
+      <li class="gone"><span class="name">Meera</span><span class="acts"><span class="chip c-ok">Answered</span></span><span class="line"><span>Delivery · "Do you ship to Port Blair?"</span></span></li>
+    </ul></section>
+  <p class="cap">The 48-hour clock is the 2026 rules' acknowledgement window. Moves into Messages when that module ships.</p>
+
+  <!-- ===================== STATES ===================== -->
+  <h2 id="states">States</h2>
+  <div class="grid3">
+    <div><section class="card"><div class="empty"><span class="picto"><svg width="40" height="40" viewBox="0 0 48 48" fill="none" stroke="var(--fg)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="8" y="8" width="32" height="32" rx="3"/><path d="M8 18h32M18 18v22"/><circle cx="30" cy="29" r="4" fill="var(--haldi-soft)"/></svg></span><h3>No themes yet</h3><button class="btn primary">New theme</button></div></section><p class="cap">Starts from a Frrata theme or blank.</p></div>
+    <div><section class="card"><div class="cb" style="padding-top:14px"><button class="addrow" disabled>+ Add a block</button><span class="k">40 of 40 blocks in this section</span></div></section><p class="cap">A limit: the picker greys, the count says why.</p></div>
+    <div><div class="banner warn"><span>Monsoon 1.0.0 · waiting for review</span><button class="btn sm">Withdraw submission</button></div><p class="cap">Submitted: the draft keeps going; the version is frozen.</p></div>
+    <div><div class="banner danger"><span>Frrata withdrew Kesar Edit 1.1.0 · "Contrast below 4.5:1 on Tint"</span><button class="btn sm">Reply</button></div><p class="cap">Partner side. Shops on it fall back to their previous look.</p></div>
+    <div><section class="card"><ul class="rows"><li><span class="name">Kesar Edit <span class="chip c-n">From Arc Studio</span></span><span class="k">No more updates</span></li></ul></section><p class="cap">The partner was removed: the shop keeps its look.</p></div>
+    <div><div class="banner info"><span>Open the studio on a computer</span></div><p class="cap">Studio on a phone.</p></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const frame = document.getElementById('studio-frame')
+  const scrim = document.getElementById('scrim')
+  const toast = document.getElementById('toast')
+  let open = null, tt = null
+  const say = (t) => { toast.textContent = t; toast.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => toast.classList.remove('on'), 2200) }
+  const show = (id) => { open = document.getElementById(id); scrim.classList.add('open'); open.classList.add('open'); const f = open.querySelector('input,textarea,button'); if (f) f.focus() }
+  const hide = () => { if (!open) return; open.classList.remove('open'); scrim.classList.remove('open'); open = null }
+  scrim.addEventListener('click', hide)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { hide(); document.getElementById('checks').classList.remove('open') }
+    if (e.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { e.preventDefault(); show('dlg-pick') }
+  })
+  document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => { if (b.dataset.toast) say(b.dataset.toast); else if (b.closest('#dlg-pick')) say('Block added'); hide() }))
+  document.querySelectorAll('.seg').forEach((seg) => seg.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return
+    seg.querySelectorAll('button').forEach((x) => x.setAttribute('aria-checked', String(x === b)))
+    if (b.dataset.pv) document.getElementById('canvas').classList.toggle('phone', b.dataset.pv === 'phone')
+    if (b.dataset.who) {
+      const staff = b.dataset.who === 'staff'
+      frame.classList.toggle('staff', staff)
+      document.getElementById('st-tag').textContent = staff ? 'STAFF' : 'ARC STUDIO'
+      document.getElementById('st-theme').textContent = staff ? 'Monsoon' : 'Kesar Edit'
+      document.getElementById('st-ver').textContent = staff ? 'Draft · next 1.0.0' : 'Draft · next 1.2.0'
+      document.getElementById('st-go').textContent = staff ? 'Submit for review' : 'Release to my clients'
+      document.getElementById('sb-h').textContent = staff ? 'Submit Monsoon 1.0.0 for review?' : 'Release Kesar Edit 1.2.0 to your clients?'
+      document.getElementById('sb-who').textContent = staff ? 'Another staff member approves it.' : 'Your clients see it as an update in Look.'
+    }
+  }))
+  const tree = document.getElementById('tree')
+  const select = (sec) => {
+    document.querySelectorAll('.cv-sec').forEach((s) => s.dataset.on = String(s.dataset.sec === sec))
+  }
+  tree.addEventListener('click', (e) => {
+    const li = e.target.closest('li'); if (!li || e.target.closest('button')) return
+    tree.querySelectorAll('li').forEach((x) => x.setAttribute('aria-selected', String(x === li)))
+    select(li.dataset.sec)
+  })
+  document.querySelectorAll('.cv-sec').forEach((s) => s.addEventListener('click', () => {
+    select(s.dataset.sec)
+    const first = tree.querySelector(`li[data-sec="${s.dataset.sec}"]`)
+    tree.querySelectorAll('li').forEach((x) => x.setAttribute('aria-selected', String(x === first)))
+  }))
+  document.getElementById('add-block').addEventListener('click', () => show('dlg-pick'))
+  document.getElementById('st-go').addEventListener('click', () => show('dlg-submit'))
+  const checks = document.getElementById('checks')
+  document.getElementById('open-checks').addEventListener('click', () => checks.classList.toggle('open'))
+  document.querySelector('[data-xchecks]').addEventListener('click', () => checks.classList.remove('open'))
+  let left = 2
+  checks.querySelectorAll('[data-fix]').forEach((b) => b.addEventListener('click', () => {
+    b.closest('li').remove(); left -= 1
+    const c = document.getElementById('check-count')
+    c.textContent = left ? `${left} to fix` : 'Checks pass'; c.className = 'chip ' + (left ? 'c-warn' : 'c-ok')
+    say('Fixed')
+  }))
+  document.getElementById('open-system').addEventListener('click', () => { location.hash = 'system' })
+  document.querySelectorAll('.cats button').forEach((b) => b.addEventListener('click', () => { b.parentElement.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))) }))
+})()
+</script>
