@@ -19,8 +19,9 @@ export const UPLOAD_TIMEOUT_S = USE_LIMITS.loop.timeoutS
 /** PV·1: a product's video is uploaded with NO MP4 (an HLS-only asset is valid). Its paid 720p rendition is added only
  *  once the asset has passed the length and size checks (createRendition, from the outbox): a too-long or tiny upload
  *  never costs prep (unit-economics review 2026-11-10). */
-export const uploadSettings = (use: VideoUse) => use === 'loop' ? UPLOAD_SETTINGS
-  : { video_quality: 'basic', playback_policies: ['public'] } as const
+/** TS1b: a loop too uploads with no MP4; its sized one (loopMp4) is asked for after the checks, as a product's 720p
+ *  is. UPLOAD_SETTINGS is V1's, kept for its rows' record (they play the `highest` it made). */
+export const uploadSettings = (_use: VideoUse) => ({ video_quality: 'basic', playback_policies: ['public'] } as const)
 
 export type MuxFail = { ok: false; why: 'not_configured' | 'unauthorized' | 'refused' | 'rate_limited' | 'unavailable' | 'bad_reply' }
 export type MuxAsset = {
@@ -32,8 +33,8 @@ export type MuxAsset = {
   renditions: Record<string, 'ready' | 'skipped' | 'errored' | 'preparing'>
 }
 
-/** Whether the MP4 a video of this use plays is ready. */
-export const mp4ReadyFor = (a: MuxAsset, use: VideoUse) => a.renditions[USE_LIMITS[use].rendition] === 'ready'
+/** Whether the MP4 a video plays (mp4Of: its name) is ready. */
+export const mp4ReadyFor = (a: MuxAsset, mp4: string) => a.renditions[mp4] === 'ready'
 
 const ID = /^[A-Za-z0-9]{1,128}$/
 const auth = () => `Basic ${Buffer.from(`${MUX_TOKEN_ID}:${MUX_TOKEN_SECRET}`).toString('base64')}`

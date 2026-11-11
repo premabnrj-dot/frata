@@ -1,9 +1,9 @@
 'use client'
 
-import { MAX_TABS, type ProductLayout, type SectionScheme } from '@/domains/themes/sections'
+import { MAX_LOOPS, MAX_TABS, type ProductLayout, type SectionScheme } from '@/domains/themes/sections'
 import { useState } from 'react'
 import { PROMISES, sectionName, type SectionInstance, type SectionOf, type VideoKey } from '@/domains/themes/sections'
-import { Choice, Field, ImageField, LinkPicker, Switch, Text, paiseToRupees, rupeesToPaise, type LibraryPhoto, type LinkTarget } from './controls'
+import { Choice, Field, ImageField, LinkPicker, SourcePicker, Switch, Text, WhenIST, paiseToRupees, rupeesToPaise, type LibraryPhoto, type LinkTarget } from './controls'
 import { Icon } from '@/components/icons/icon'
 import { VideoField } from './video-field'
 import dynamic from 'next/dynamic'
@@ -35,6 +35,8 @@ export type FormCtx = {
   products: { handle: string; title: string }[]
   /** V1: the sections this theme lets carry a loop, and whether video is switched on for shops (Mux is set up). */
   video?: { sections: readonly VideoKey[]; on: boolean }
+  /** TS1b: the Home already plays MAX_LOOPS (a section without a loop offers none). */
+  loopsFull?: boolean
   /** Signal 1.2 (S2): Image with text's Spotlight layout and the Hero's script line, where the theme offers them. */
   spotlight?: boolean; heroScript?: boolean
   /** TS0b: this theme version's designs, by id (a design's form and readiness read them). */
@@ -42,6 +44,12 @@ export type FormCtx = {
 }
 
 type Set<S> = (s: S) => void
+
+/** A section's loop field, or the limit in words when the Home already plays MAX_LOOPS (owner 2026-11-11). */
+export function LoopField({ value, c, onChange }: { value: { id: string } | undefined; c: FormCtx; onChange: (v: { id: string } | undefined) => void }) {
+  if (!value && c.loopsFull) return <p className="text-sm text-muted-foreground">A Home plays at most {MAX_LOOPS} videos.</p>
+  return <VideoField value={value} on={!!c.video?.on} onChange={onChange} />
+}
 
 /** A section with its loop set, or with no `video` key at all once removed (stored layers stay as before). */
 function withVideo<S extends { video?: { id: string } }>(s: S, video: { id: string } | undefined): S {
@@ -77,7 +85,7 @@ function Hero({ s, set, c }: { s: SectionOf<'hero'>; set: Set<SectionOf<'hero'>>
     <Choice label="Layout" value={s.layout} onChange={(layout) => set({ ...s, layout })} options={[{ value: 'text', label: 'Words only' }, { value: 'image_text', label: 'Words on a photo' }, { value: 'split', label: 'Photo beside words' }, { value: 'image', label: 'Photo only' }]} />
     {c.heroScript && s.layout !== 'image' && <Text label="Handwritten line above (optional)" value={s.script ?? ''} max={32} onChange={(script) => { const { script: _old, ...rest } = s; set(script ? { ...rest, script } : rest) }} />}
     {s.layout !== 'text' && <ImageField label={s.video ? 'Photo (optional with a video)' : 'Photo'} value={s.image} tenantId={c.tenantId} library={c.photos} suggest={['text' in s.heading ? s.heading.text : '', c.shopName]} onChange={(image) => set({ ...s, image })} />}
-    {s.layout !== 'text' && c.video?.sections.includes('hero') && <VideoField value={s.video} on={c.video.on} onChange={(video) => set(withVideo(s, video))} />}
+    {s.layout !== 'text' && c.video?.sections.includes('hero') && <LoopField value={s.video} c={c} onChange={(video) => set(withVideo(s, video))} />}
     <Bound label="Heading" value={s.heading} max={60} shopField="shopName" onChange={(heading) => set({ ...s, heading: heading ?? { from: 'shopName' } })} />
     {s.layout !== 'image' && <Bound label="Line under it" value={s.text} max={160} shopField="tagline" onChange={(text) => set({ ...s, text })} />}
     {s.layout !== 'image' && <ButtonFields value={s.button} targets={c.targets} onChange={(button) => set({ ...s, button })} />}
@@ -106,18 +114,7 @@ function Products({ s, set, c }: { s: SectionOf<'products'>; set: Set<SectionOf<
   const src = s.source
   return (<>
     <Text label="Heading" value={s.heading} max={40} onChange={(heading) => set({ ...s, heading })} />
-    <Choice label="Show" value={src.kind} onChange={(kind) => set({ ...s, source: kind === 'best_sellers' ? { kind, days: 90 } : kind === 'collection' ? { kind, handle: c.collections[0]?.handle ?? 'none' } : kind === 'under_price' ? { kind, maxPaise: 99900 } : { kind } })}
-      options={[{ value: 'newest', label: 'New in' }, { value: 'best_sellers', label: 'Best sellers' }, { value: 'collection', label: 'A collection' }, { value: 'under_price', label: 'Under a price' }, { value: 'on_sale', label: 'On sale' }, { value: 'back_in_stock', label: 'Back in stock' }]} />
-    {src.kind === 'best_sellers' && <>
-      <Choice label="Over" value={src.days} onChange={(days) => set({ ...s, source: { kind: 'best_sellers', days } })} options={[{ value: 30, label: '30 days' }, { value: 90, label: '90 days' }]} />
-      <p className="text-xs text-muted-foreground">Ranked by delivered orders. Shoppers see the order, never the numbers.</p>
-    </>}
-    {src.kind === 'back_in_stock' && <p className="text-xs text-muted-foreground">Pieces that sold out for a day or more and came back in the last 30 days, latest first. Hides itself when there are none.</p>}
-    {src.kind === 'collection' && <Field label="Collection">{(id) => (
-      <select id={id} value={src.handle} onChange={(e) => set({ ...s, source: { kind: 'collection', handle: e.target.value } })} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm">
-        {c.collections.map((x) => <option key={x.handle} value={x.handle}>{x.title}</option>)}
-      </select>)}</Field>}
-    {src.kind === 'under_price' && <Field label="Under, in ₹">{(id) => <input id={id} inputMode="numeric" defaultValue={paiseToRupees(src.maxPaise)} onBlur={(e) => { const p = rupeesToPaise(e.target.value); if (p) set({ ...s, source: { kind: 'under_price', maxPaise: p } }) }} className="h-10 w-full rounded-md border border-input bg-card px-3 font-mono text-sm" />}</Field>}
+    <SourcePicker value={src} collections={c.collections} onChange={(source) => set({ ...s, source })} />
     <Choice label="How many" value={s.count} onChange={(count) => set({ ...s, count })} options={[4, 8, 12, 24].map((n) => ({ value: n as 4 | 8 | 12 | 24, label: String(n) }))} />
     <Choice label="Layout" value={s.layout} onChange={(layout) => set({ ...s, layout })} options={([{ value: 'grid', label: 'Grid' }, { value: 'rail', label: 'Swipe row' }, { value: 'tabs', label: 'Tabs by collection' }] as const).filter((o) => c.layouts.includes(o.value))} />
     {s.layout === 'tabs' && <fieldset className="space-y-1"><legend className="text-sm font-medium">Tabs (up to {MAX_TABS})</legend>
@@ -158,7 +155,7 @@ function ImageText({ s, set, c }: { s: SectionOf<'image_text'>; set: Set<Section
   return (<>
     {c.spotlight && <Choice label="Layout" value={s.layout ?? 'beside'} onChange={(v) => { const { layout: _old, ...rest } = s; set(v === 'spotlight' ? { ...rest, layout: 'spotlight' } : rest) }} options={[{ value: 'beside', label: 'Beside the photo' }, { value: 'spotlight', label: 'Spotlight' }]} />}
     <ImageField label={s.video ? 'Photo (optional with a video)' : 'Photo'} value={s.image} tenantId={c.tenantId} library={c.photos} suggest={[s.heading, c.shopName]} onChange={(image) => set({ ...s, image })} />
-    {c.video?.sections.includes('image_text') && <VideoField value={s.video} on={c.video.on} onChange={(video) => set(withVideo(s, video))} />}
+    {c.video?.sections.includes('image_text') && <LoopField value={s.video} c={c} onChange={(video) => set(withVideo(s, video))} />}
     {c.labels && <Text label="Label above the heading" value={s.label} max={24} onChange={(label) => set({ ...s, label })} />}
     <Text label="Heading" value={s.heading} max={60} onChange={(heading) => set({ ...s, heading })} />
     <Text label="Text (a blank line starts a new paragraph)" value={s.text} max={600} multiline onChange={(text) => set({ ...s, text })} />
@@ -168,10 +165,9 @@ function ImageText({ s, set, c }: { s: SectionOf<'image_text'>; set: Set<Section
 }
 
 function Drop({ s, set, c }: { s: SectionOf<'drop_teaser'>; set: Set<SectionOf<'drop_teaser'>>; c: FormCtx }) {
-  const local = s.at.slice(0, 16)
   return (<>
     <Text label="Heading" value={s.heading} max={60} onChange={(heading) => set({ ...s, heading })} />
-    <Field label="When (India time)" hint="It hides itself once this has passed.">{(id) => <input id={id} type="datetime-local" value={local} onChange={(e) => e.target.value && set({ ...s, at: `${e.target.value}:00+05:30` })} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" />}</Field>
+    <WhenIST label="When (India time)" hint="It hides itself once this has passed." value={s.at} onChange={(at) => at && set({ ...s, at })} />
     <ImageField label="Photo (optional)" value={s.image} tenantId={c.tenantId} library={c.photos} suggest={[s.heading, c.shopName]} onChange={(image) => set({ ...s, image })} />
   </>)
 }

@@ -112,7 +112,7 @@ export const moduleName = (k: ModuleKey) => MODULES[k].name
 export type InterestRow = { module: ModuleKey; tenantId: string; shop: string; people: number; firstAt: Date }
 
 /** "Tell me when it's ready", per app: which shops asked and how many people (Apps gallery A1), through the staff-only
- *  definer (drizzle/0102). Frrata sends those shops a Notice when the app ships. */
+ *  definer (drizzle/0104). Frrata sends those shops a Notice when the app ships. */
 export async function appInterest(staff: StaffOk): Promise<InterestRow[]> {
   const rows = await adminDb().execute<{ module: string; tenant_id: string; shop: string; people: string; first_at: string | Date }>(
     sql`select module, tenant_id, shop, people, first_at from app_admin_interest(${staff.userId}::uuid)`)

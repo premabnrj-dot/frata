@@ -23,6 +23,8 @@ export default {
     const frame = () => p.frameLocator(FRAME)
     try {
       await t.step('Signal 1.4 in a draft: Size help from the library, the preview shows its sample and examples, marked', async () => {
+        // A release decision is final (the trigger): an earlier flow's Signal rows go first, as 65-signal does.
+        await db.begin(async (x) => { await x`set local session_replication_role = replica`; await x`delete from theme_versions where theme_key = 'signal'` })
         await db`insert into theme_versions (theme_key, version, released_at) values ('signal', '1.0.0', now()), ('signal', '1.1.0', now()), ('signal', '1.2.0', now()), ('signal', '1.3.0', now()), ('signal', '1.4.0', now()) on conflict (theme_key, version) do update set released_at = now(), recalled_at = null, withdrawn_at = null`
         await db`update shop_settings set sells = '{accessories}' where tenant_id = ${KESAR}`
         await p.goto(CONSOLE + '/console/look')

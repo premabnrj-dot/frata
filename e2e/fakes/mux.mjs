@@ -33,17 +33,18 @@ async function hook(type, data) {
 
 async function arrive(up, body) {
   const has = (m) => body.includes(Buffer.from(m))
-  const asked = up.new_asset_settings.static_renditions ?? [], product = asked.length === 0
+  // A product's upload window is an hour, a loop's 15 minutes (USE_LIMITS); neither asks for an MP4 at upload (TS1b).
+  const asked = up.new_asset_settings.static_renditions ?? [], product = up.timeout > 900
   const res = asked[0]?.resolution ?? 'highest'
   const duration = has('XLONG') ? 70.04 : has('LONG') ? 20.04 : has('SHORT') ? 3.0 : product ? 24.4 : 1.0
   const a = { id: 'as' + hex(8), status: 'preparing', passthrough: up.new_asset_settings.passthrough, upload_id: up.id, playback_ids: [], tracks: [], duration: undefined, static_renditions: { files: [] } }
   assets.set(a.id, a); up.status = 'asset_created'; up.asset_id = a.id
   await hook('video.upload.asset_created', { ...up })
   await sleep(300)
-  const [w, h] = !product ? [96, 54] : has('SMALL') ? [640, 360] : [1080, 1920]
+  const [w, h] = !product ? [1280, 720] : has('SMALL') ? [640, 360] : [1080, 1920]
   Object.assign(a, { status: 'ready', duration, small: has('SMALL'), playback_ids: [{ id: 'pb' + hex(8), policy: 'public' }], tracks: [{ type: 'video', max_width: w, max_height: h }] })
   await hook('video.asset.ready', { ...a })
-  if (product) return // no MP4 until one is asked for (the add-rendition endpoint below)
+  if (!asked.length) return // no MP4 until one is asked for (the add-rendition endpoint below)
   await sleep(300)
   const status = 'ready'
   a.static_renditions = { files: [{ id: 'r' + hex(4), name: `${res}.mp4`, resolution: res, status, ext: 'mp4' }] }

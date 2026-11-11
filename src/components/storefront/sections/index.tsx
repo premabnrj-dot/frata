@@ -2,8 +2,8 @@ import { ShopIcon } from '../icon'
 import Link from 'next/link'
 import { unstable_rethrow } from 'next/navigation'
 import { errName } from '@/lib/log'
-import { inCollection, isListed, priceOf } from '@/domains/storefront/listing'
-import { lookPieces } from '@/domains/storefront/sources'
+import { isListed, priceOf } from '@/domains/storefront/listing'
+import { lookPieces, tilesOf } from '@/domains/storefront/sources'
 import { truePromises } from '@/domains/themes/readiness'
 import type { SectionInstance, SectionOf } from '@/domains/themes/sections'
 import type { ResolvedTheme } from '@/domains/themes/types'
@@ -37,6 +37,7 @@ import { DesignSection } from '../blocks'
 import { Products } from './products'
 import { Loop, LoopPoster } from './loop'
 import { Spotlight, Statement, StoryFan } from './story'
+import { TileList } from './tiles'
 import type { LookVideos } from '@/lib/themes/page-look'
 
 function Hero({ s, ctx }: { s: SectionOf<'hero'>; ctx: SectionCtx }) {
@@ -86,28 +87,13 @@ function Hero({ s, ctx }: { s: SectionOf<'hero'>; ctx: SectionCtx }) {
 }
 
 function CollectionTiles({ s, ctx }: { s: SectionOf<'collection_tiles'>; ctx: SectionCtx }) {
-  const { cat, href, now } = ctx
-  const pool = s.mode === 'picked' ? s.handles.flatMap((h) => cat.collections.filter((c) => c.handle === h)) : cat.collections
-  const tiles = pool.map((c) => ({ c, first: inCollection(c, cat.products, now)[0] })).filter((t) => t.first).slice(0, s.mode === 'picked' ? 8 : s.count)
+  const tiles = tilesOf(ctx.cat, ctx.now, s.mode === 'picked' ? s.handles : null, s.mode === 'picked' ? 8 : s.count)
   if (!tiles.length) return null
   const h = `${s.id}-h`
-  const circle = s.shape === 'circle'
-  const shape = circle ? 'aspect-square rounded-full' : s.shape === 'square' ? 'aspect-square rounded-[var(--store-radius)]' : 'aspect-[4/5] rounded-[var(--store-radius)]'
   return (
     <section aria-labelledby={h} className={`${wrap} pb-[calc(var(--store-space)*3rem)]`}>
       {s.heading ? <div className="mb-4"><Label text={s.label} /><H2 id={h}>{s.heading}</H2></div> : <h2 id={h} className="sr-only">{wordsFor(ctx.shop.shopLanguage).collectionsNav}</h2>}
-      <ul className={circle ? '-mx-4 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 sm:mx-0 sm:scroll-px-0 sm:flex-wrap sm:px-0' : '-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 sm:mx-0 sm:scroll-px-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0'}>
-        {tiles.map(({ c, first }) => (
-          <li key={c.id} className={circle ? 'w-24 shrink-0 snap-start text-center sm:w-28' : 'w-[70%] shrink-0 snap-start sm:w-auto'}>
-            <Link href={href(`/collections/${c.handle}`)} className="group block">
-              <div className={`relative ${shape} overflow-hidden bg-store-chip`}>
-                {first!.images[0] && <Photo p={first!.images[0]} alt="" sizes={circle ? '112px' : '(min-width: 640px) 33vw, 70vw'} className="absolute inset-0 h-full w-full object-cover transition-transform duration-slow group-hover:scale-[1.02]" />}
-              </div>
-              <p className={circle ? 'mt-2 text-sm' : 'mt-2 text-base'}>{c.title}</p>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <TileList tiles={tiles} shape={s.shape} href={ctx.href} />
     </section>
   )
 }
@@ -128,10 +114,11 @@ function PriceTiles({ s, ctx }: { s: SectionOf<'price_tiles'>; ctx: SectionCtx }
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {bands.map((b) => <li key={b.i}><a href={`#${s.id}-${b.i}`} className="flex min-h-14 items-center justify-center rounded-[var(--store-radius)] bg-store-chip px-3 text-center text-sm font-medium">{b.label}</a></li>)}
       </ul>
-      {bands.map((b) => (
+      {bands.map((b, n) => (
         <div key={b.i} id={`${s.id}-${b.i}`} className="scroll-mt-24 space-y-3">
           <h3 className="text-base font-medium">{b.label}</h3>
-          <ProductGrid products={b.items.slice(0, 4)} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} empty="" />
+          {/* Only the first band of a section that opens the page loads ahead (TS1b: ≤ 2 eager images a page). */}
+          <ProductGrid products={b.items.slice(0, 4)} href={ctx.href} now={ctx.now} lang={ctx.shop.shopLanguage} empty="" lead={!!ctx.lead && n === 0} />
         </div>
       ))}
     </section>

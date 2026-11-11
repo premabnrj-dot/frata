@@ -23,6 +23,7 @@ const photo = (t = T) => ({ base: `https://${HOST}/tenants/${t}/theme/a1b2c3d4-0
 const sec = (design: string, fill: object = {}): SectionOf<'design'> => SectionSchema.parse({ id: `d-${design}`, key: 'design', design, fill }) as SectionOf<'design'>
 const flat = (ns: RNode[]): RNode[] => ns.flatMap((n) => (n.kind === 'group' || n.kind === 'columns' ? [n, ...flat(n.children)] : [n]))
 const facts = { collections: [], codOn: true, freeShippingAbove: null, returnDays: 7, dispatchDays: 2 }
+const SAVE = { now: new Date('2026-11-11T10:00:00Z'), videoOk: ['hero', 'image_text', 'design'], loopsBefore: 0 }
 
 describe('the catalogue', () => {
   it('Signal 1.4 passes the one check, against 1.3 too', () => {
@@ -147,10 +148,10 @@ describe('readiness', () => {
 
 describe('impact review (2026-11-11): the save step, version rules, names', () => {
   it('the save prunes a stale fill id and a wrong-kind fill, keeps the rest, and refuses an unknown design', () => {
-    const r = designsForSave(designs, [{ id: 'x', key: 'hero', heading: { from: 'shopName' } }, sec('size-help', { gone: { kind: 'heading', text: 'x' }, intro: { kind: 'heading', text: 'y' }, heading: { kind: 'heading', text: 'Fit' } })])
+    const r = designsForSave(designs, [{ id: 'x', key: 'hero', heading: { from: 'shopName' } }, sec('size-help', { gone: { kind: 'heading', text: 'x' }, intro: { kind: 'heading', text: 'y' }, heading: { kind: 'heading', text: 'Fit' } })], SAVE)
     expect('home' in r && (r.home[1] as SectionOf<'design'>).fill).toEqual({ heading: { kind: 'heading', text: 'Fit' } })
     expect('home' in r && r.home[0]).toEqual({ id: 'x', key: 'hero', heading: { from: 'shopName' } })
-    expect(designsForSave(designs, [sec('nope')])).toEqual({ error: 'That design isn’t in this theme. Remove it, or undo the last change.' })
+    expect(designsForSave(designs, [sec('nope')], SAVE)).toEqual({ error: 'That design isn’t in this theme. Remove it, or undo the last change.' })
   })
   it('four designs of any mix stay within the page: a design too big to share a page is refused by themeCheck', () => {
     const big = { ...hand, children: [...hand.children, { id: 'more', kind: 'image', ratio: '1:1', image: null }] } as Design

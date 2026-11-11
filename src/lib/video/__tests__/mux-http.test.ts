@@ -15,7 +15,7 @@ describe('createUpload', () => {
     const [url, init] = fetchMock.mock.calls[0]!
     expect(url).toBe('https://api.mux.com/video/v1/uploads')
     expect(init.headers.authorization).toBe(`Basic ${Buffer.from('tid:tsecret').toString('base64')}`)
-    expect(JSON.parse(init.body)).toEqual({ cors_origin: 'https://frata.vercel.app', timeout: 900, new_asset_settings: { video_quality: 'basic', playback_policies: ['public'], static_renditions: [{ resolution: 'highest' }], passthrough: 'row-1' } })
+    expect(JSON.parse(init.body)).toEqual({ cors_origin: 'https://frata.vercel.app', timeout: 900, new_asset_settings: { video_quality: 'basic', playback_policies: ['public'], passthrough: 'row-1' } })
   })
   it('a product video asks for no MP4 and an hour to upload (PV·1)', async () => {
     fetchMock.mockResolvedValue(reply(201, { data: { id: 'up2', url: 'https://storage.googleapis.com/video-uploads/y?sig=1', status: 'waiting' } }))

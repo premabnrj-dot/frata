@@ -14,6 +14,14 @@ export const IST = 'Asia/Kolkata'
 export const dayIN = (d: Date) =>
   d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: IST })
 
+/** "Sat 14 Nov, 7 pm" (minutes only when not on the hour) — a drop's moment (Theme Studio TS1b's date block; Drop
+ *  teaser keeps dayIN, its own pixels). The word before it ("Drops") is the shop's language (words.ts). */
+export function dropLineIN(d: Date): string {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: IST })
+    .formatToParts(d).map((x) => [x.type, x.value]))
+  return `${p.weekday} ${p.day} ${p.month}, ${p.hour}${p.minute === '00' ? '' : `:${p.minute}`} ${String(p.dayPeriod).toLowerCase()}`
+}
+
 /** "12 Oct" — a date this year's reader needs no year on. */
 export const dayMonthIN = (d: Date) =>
   d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: IST })

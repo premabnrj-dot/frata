@@ -6,8 +6,9 @@ import storedV1 from './fixtures/stored-sections-v1.json'
 import storedV2 from './fixtures/stored-sections-v2.json'
 import storedV3 from './fixtures/stored-sections-v3.json'
 import storedV4 from './fixtures/stored-sections-v4.json'
+import storedV5 from './fixtures/stored-sections-v5.json'
 
-const stored = [...storedV1, ...storedV2, ...storedV3, ...storedV4]
+const stored = [...storedV1, ...storedV2, ...storedV3, ...storedV4, ...storedV5]
 
 // Section schemas change ADDITIVELY only (themes plan, architecture review): a stored layer must stay valid
 // forever. A new optional field with a default updates this snapshot on purpose; anything else is a new section key.

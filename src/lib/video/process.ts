@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, eq, isNull, sql } from 'drizzle-orm'
-import { USE_LIMITS, videoState } from '@/domains/video/state'
+import { USE_LIMITS, loopMp4, mp4Of, videoState } from '@/domains/video/state'
 import { webhookEvents } from '@/lib/db/schema'
 import { videos } from '@/lib/db/schema-themes'
 import { productVideos, products } from '@/lib/db/schema-catalogue'
@@ -95,22 +95,31 @@ async function one(tenantId: string, videoId: string, ev: Pending['payload']): P
     // source: it would never play): no playback id, and the asset goes.
     const short = a.width !== null && a.height !== null ? Math.min(a.width, a.height) : null
     const why = a.durationMs > lim.maxMs ? 'too_long' : a.durationMs < lim.minMs ? 'too_short'
-      : product && ((short !== null && short < 720) || a.renditions[lim.rendition] === 'skipped') ? 'too_small' : null
+      : product && ((short !== null && short < 720) || a.renditions[lim.rendition] === 'skipped') ? 'too_small'
+        // TS1b: a loop's sized MP4 skipped by Mux (a source under 270p): it would never play.
+        : !product && v.mp4 && a.renditions[v.mp4] === 'skipped' ? 'too_small' : null
     if (why) {
       await tx.update(videos).set({ durationMs: a.durationMs }).where(mine)
       await failVideo(tx, tenantId, v.id, why, now)
       return { queued: await queue() }
     }
+    // TS1b: a loop with no MP4 yet (uploaded without one; a V1 loop has its `highest`) asks for its sized one now, past
+    // the checks: the name is recorded in this transaction with the outbox row that asks (ADR-0006), set once.
+    const ask = !product && !v.mp4 && !v.mp4ReadyAt && !a.renditions[USE_LIMITS.loop.rendition] ? loopMp4(a.width, a.height) : null
+    const mp4 = ask ?? mp4Of(v)
     await tx.update(videos).set({
       ...(v.playbackId ? {} : a.playbackId ? { playbackId: a.playbackId } : {}),
       durationMs: a.durationMs, width: a.width, height: a.height,
       ...(v.readyAt ? {} : { readyAt: now }),
-      ...(mp4ReadyFor(a, use) && !v.mp4ReadyAt && (v.playbackId || a.playbackId) ? { mp4ReadyAt: now } : {}),
+      ...(ask ? { mp4: ask } : {}),
+      ...(mp4ReadyFor(a, mp4) && !v.mp4ReadyAt && (v.playbackId || a.playbackId) ? { mp4ReadyAt: now } : {}),
     }).where(mine)
     // PV·1: a product's 720p MP4 is asked for only now, past the checks (unit-economics review 2026-11-10): a row in
     // the outbox in this transaction (ADR-0006); the sender re-reads the row. Once per video (its dedupe key).
-    if (product && !a.renditions[lim.rendition] && !v.mp4ReadyAt) {
-      await enqueue(tx, { tenantId, kind: 'mux.rendition.create', dedupeKey: `mux.rendition.create:${v.id}`, payload: { videoId: v.id } })
+    if ((product ? !a.renditions[lim.rendition] && !v.mp4ReadyAt : !!ask && !a.renditions[ask])) {
+      // A loop's MP4 is the Look's (never paused by the Product video module: its own kind, the same sender).
+      const kind = product ? 'mux.rendition.create' : 'mux.loop.rendition'
+      await enqueue(tx, { tenantId, kind, dedupeKey: `${kind}:${v.id}`, payload: { videoId: v.id } })
       return { queued: true }
     }
     return { queued: false }

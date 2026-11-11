@@ -6,7 +6,7 @@ import { planVersions, plans, tenantPlans } from '@/lib/db/schema'
 import { shopThemePublishes, shopThemeRevisions, videos } from '@/lib/db/schema-themes'
 import { products, productVideos } from '@/lib/db/schema-catalogue'
 import { enqueue } from '@/lib/outbox'
-import { capPlan, isLive, MAX_LIVE, notReadyAfterMs, PRODUCT_VIDEO_CAPS, PRODUCT_VIDEO_FAILS_PER_DAY, PRODUCT_VIDEO_PER_HOUR, videoState, type VideoRow, type VideoState, type VideoUse } from '@/domains/video/state'
+import { capPlan, isLive, MAX_LIVE, mp4Of, notReadyAfterMs, PRODUCT_VIDEO_CAPS, PRODUCT_VIDEO_FAILS_PER_DAY, PRODUCT_VIDEO_PER_HOUR, videoState, type VideoRow, type VideoState, type VideoUse } from '@/domains/video/state'
 
 // =============================================================================
 // FILE: src/lib/queries/videos.ts — a shop's videos (V1, docs/plans/2026-11-09-video-v1.md; access drizzle/0081).
@@ -23,7 +23,7 @@ export const PER_DAY = 10, PER_DAY_TRIAL = 3, PER_MONTH = 30
 const ROW = {
   id: videos.id, uploadId: videos.uploadId, assetId: videos.assetId, playbackId: videos.playbackId, muxEnv: videos.muxEnv,
   durationMs: videos.durationMs, width: videos.width, height: videos.height, createdAt: videos.createdAt, readyAt: videos.readyAt,
-  mp4ReadyAt: videos.mp4ReadyAt, erroredAt: videos.erroredAt, error: videos.error, removedAt: videos.removedAt, use: videos.use,
+  mp4ReadyAt: videos.mp4ReadyAt, erroredAt: videos.erroredAt, error: videos.error, removedAt: videos.removedAt, use: videos.use, mp4: videos.mp4,
 }
 export type Video = Omit<VideoRow, 'use'> & { id: string; assetId: string | null; muxEnv: string; durationMs: number | null; width: number | null; height: number | null; use: VideoUse }
 const asVideo = <T extends { use: string }>(r: T) => ({ ...r, use: (r.use === 'product' ? 'product' : 'loop') as VideoUse })
@@ -228,13 +228,14 @@ export async function videoStatus(tx: Tx, tenantId: string, id: string, now: Dat
 /** The status read the console polls while a video is getting ready (its own short transaction). */
 export const videoStatusFor = (tenantId: string, id: string, now: Date, use: VideoUse = 'loop') => withTenant(tenantId, (tx) => videoStatus(tx, tenantId, id, now, use))
 
-/** For the shop: the playable videos among these ids (the live look's), id → playback id and size. */
-export async function playableVideos(tx: Tx, tenantId: string, ids: string[], now: Date): Promise<Record<string, { playbackId: string; width: number | null; height: number | null }>> {
+/** For the shop: the playable videos among these ids (the live look's), id → playback id, size and MP4. */
+export async function playableVideos(tx: Tx, tenantId: string, ids: string[], now: Date): Promise<Record<string, { playbackId: string; width: number | null; height: number | null; mp4: string }>> {
   const valid = ids.filter((i) => UUID.test(i)).slice(0, 40)
   if (!valid.length) return {}
   const rows = (await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), inArray(videos.id, valid), isNull(videos.removedAt), eq(videos.use, 'loop')))).map(asVideo)
-  const out: Record<string, { playbackId: string; width: number | null; height: number | null }> = {}
-  for (const v of rows) { const s = videoState(v, now); if (s.kind === 'playable') out[v.id] = { playbackId: s.playbackId, width: v.width, height: v.height } }
+  const out: Record<string, { playbackId: string; width: number | null; height: number | null; mp4: string }> = {}
+  // TS1b: which MP4 it plays (a V1 loop's `highest`, a newer loop's sized one).
+  for (const v of rows) { const s = videoState(v, now); if (s.kind === 'playable') out[v.id] = { playbackId: s.playbackId, width: v.width, height: v.height, mp4: mp4Of(v) } }
   return out
 }
 

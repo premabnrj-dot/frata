@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ListProduct, ListVariant } from '../listing'
-import { lookPieces, sourceProducts } from '../sources'
+import { lookPieces, sourceProducts, tilesOf } from '../sources'
 
 const now = new Date('2026-11-07T10:00:00+05:30')
 const v = (over: Partial<ListVariant> = {}): ListVariant => ({ values: ['S'], price: 249000, compareAt: null, stock: 5, whenOut: 'stop', shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderFull: false, ...over })
@@ -49,5 +49,25 @@ describe('shop the look pieces', () => {
     const ps = [{ ...p('a', '2026-10-01T00:00:00Z'), handle: 'a' }, { ...p('b', '2026-10-01T00:00:00Z', { status: 'unlisted' }), handle: 'b' }, { ...p('c', '2026-10-01T00:00:00Z'), handle: 'c' }]
     expect(lookPieces([{ handle: 'c', x: 1, y: 2 }, { handle: 'b', x: 0, y: 0 }, { handle: 'gone', x: 0, y: 0 }, { handle: 'a', x: 3, y: 4 }], ps, now).map((x) => [x.handle, x.x])).toEqual([['c', 1], ['a', 3]])
     expect(lookPieces([{ handle: 'b', x: 0, y: 0 }], ps, now)).toEqual([])
+  })
+})
+
+describe('a design\'s featured piece (TS1b): lookPieces, so a scheduled piece never shows early', () => {
+  it('a piece published later is left out until then', () => {
+    const ps = [{ ...p('later', '2026-11-09T00:00:00Z', { publishAt: '2026-11-09T00:00:00Z' }), handle: 'later' }]
+    expect(lookPieces([{ handle: 'later' }], ps, now)).toEqual([])
+    expect(lookPieces([{ handle: 'later' }], ps, new Date('2026-11-10T00:00:00Z')).map((x) => x.handle)).toEqual(['later'])
+  })
+})
+
+describe('collection tiles (TS1b: one rule for the section and a design)', () => {
+  const ps = ['a', 'b', 'c'].map((id) => ({ ...p(id, '2026-10-01T00:00:00Z'), handle: id }))
+  const col = (handle: string, ids: string[]) => ({ id: handle, handle, kind: 'manual' as const, matchAll: true, rules: [], sort: 'manual', productIds: ids })
+  const c = { products: ps, collections: [col('one', ['a']), col('empty', []), col('two', ['b']), col('three', ['c'])] }
+  it('auto: the shop\'s collections in order, only those with a listed piece, each with its first, up to count', () => {
+    expect(tilesOf(c, now, null, 2).map((t) => [t.c.handle, t.first.id])).toEqual([['one', 'a'], ['two', 'b']])
+  })
+  it('picked: in the order picked; an unknown or empty collection is skipped', () => {
+    expect(tilesOf(c, now, ['three', 'gone', 'empty', 'one'], 4).map((t) => t.c.handle)).toEqual(['three', 'one'])
   })
 })

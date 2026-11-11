@@ -60,7 +60,9 @@ export function muxFacts(delivery: readonly Delivery[], videos: readonly VideoFa
     shops.set(v.tenantId, s)
   }
   const stored = minutes(live), mp4 = minutes(live.filter((v) => v.mp4ReadyAt))
-  const prepared = minutes(videos.filter((v) => v.use === 'product' && v.mp4ReadyAt && v.createdAt >= start))
+  // Sized MP4s made this month: a product's 720p and (TS1b) a loop's; a V1 loop's `highest` cost no prep, so a loop
+  // uploaded this month before TS1b reached production counts a few cents too many (≤ 15 s each).
+  const prepared = minutes(videos.filter((v) => v.mp4ReadyAt && v.createdAt >= start))
   const estimate = stored * MUX.storagePerMinuteMonthUsd + mp4 * MUX.mp4StoragePerMinuteMonthUsd + prepared * MUX.renditionPrepPerMinuteUsd
     + Math.max(0, delivered / covered * daysInMonth - MUX.freeDeliveryMinutes) * MUX.deliveryPerMinuteUsd
   return {

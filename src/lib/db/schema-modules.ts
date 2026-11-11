@@ -77,7 +77,7 @@ export const modulePauses = pgTable('module_pauses', {
 ])
 
 /** "Tell me when it's ready" (Apps gallery A1): one row per member and coming-next app. The user id is the session's,
- *  never a form's; a support visit writes nothing. Admin reads counts and shops through a definer (drizzle/0102). */
+ *  never a form's; a support visit writes nothing. Admin reads counts and shops through a definer (drizzle/0104). */
 export const appInterest = pgTable('app_interest', {
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   module: text('module').notNull(),

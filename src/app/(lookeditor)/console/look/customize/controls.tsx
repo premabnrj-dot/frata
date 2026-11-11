@@ -2,7 +2,8 @@
 
 import { useId, useLayoutEffect, useRef, useState } from 'react'
 import { uploadPhoto } from '@/app/(console)/console/products/_components/upload-photos'
-import type { ThemeImage } from '@/domains/themes/sections'
+import type { SourceSchema, ThemeImage } from '@/domains/themes/sections'
+import type { z } from 'zod'
 import { Switch as Toggle } from '@/components/ui/switch'
 import { Icon } from '@/components/icons/icon'
 
@@ -241,4 +242,31 @@ export function Tiles<T extends string>({ label, value, options, onChange, cols 
       </div>
     </fieldset>
   )
+}
+
+type Source = z.infer<typeof SourceSchema>
+/** Which pieces a list shows (Products' own control; TS1b: a design's product grid reuses it). */
+export function SourcePicker({ value: src, collections, onChange, label = 'Show' }: { value: Source; collections: { handle: string; title: string }[]; onChange: (s: Source) => void; label?: string }) {
+  return (<>
+    <Choice label={label} value={src.kind} onChange={(kind) => onChange(kind === 'best_sellers' ? { kind, days: 90 } : kind === 'collection' ? { kind, handle: collections[0]?.handle ?? 'none' } : kind === 'under_price' ? { kind, maxPaise: 99900 } : { kind })}
+      options={[{ value: 'newest', label: 'New in' }, { value: 'best_sellers', label: 'Best sellers' }, { value: 'collection', label: 'A collection' }, { value: 'under_price', label: 'Under a price' }, { value: 'on_sale', label: 'On sale' }, { value: 'back_in_stock', label: 'Back in stock' }]} />
+    {src.kind === 'best_sellers' && <>
+      <Choice label="Over" value={src.days} onChange={(days) => onChange({ kind: 'best_sellers', days })} options={[{ value: 30, label: '30 days' }, { value: 90, label: '90 days' }]} />
+      <p className="text-xs text-muted-foreground">Ranked by delivered orders. Shoppers see the order, never the numbers.</p>
+    </>}
+    {src.kind === 'back_in_stock' && <p className="text-xs text-muted-foreground">Pieces that sold out for a day or more and came back in the last 30 days, latest first. Hides itself when there are none.</p>}
+    {src.kind === 'collection' && <Field label="Collection">{(id) => (
+      <select id={id} value={src.handle} onChange={(e) => onChange({ kind: 'collection', handle: e.target.value })} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm">
+        {collections.map((x) => <option key={x.handle} value={x.handle}>{x.title}</option>)}
+      </select>)}</Field>}
+    {src.kind === 'under_price' && <Field label="Under, in ₹">{(id) => <input id={id} inputMode="numeric" defaultValue={paiseToRupees(src.maxPaise)} onBlur={(e) => { const p = rupeesToPaise(e.target.value); if (p) onChange({ kind: 'under_price', maxPaise: p }) }} className="h-10 w-full rounded-md border border-input bg-card px-3 font-mono text-sm" />}</Field>}
+  </>)
+}
+
+/** A moment in India time, typed as a date and a time; stored as ISO with +05:30 (Drop teaser's input; TS1b: a design's
+ *  date reuses it). Cleared: null. */
+export function WhenIST({ label, value, onChange, hint }: { label: string; value: string | null; onChange: (at: string | null) => void; hint?: string }) {
+  // Shown in India time whatever offset it was stored with (the schema takes any; this field writes +05:30).
+  const local = value && !Number.isNaN(Date.parse(value)) ? new Date(Date.parse(value) + 330 * 60_000).toISOString().slice(0, 16) : ''
+  return <Field label={label} hint={hint}>{(id) => <input id={id} type="datetime-local" value={local} onChange={(e) => onChange(e.target.value ? `${e.target.value}:00+05:30` : null)} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" />}</Field>
 }

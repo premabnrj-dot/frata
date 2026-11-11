@@ -9,6 +9,6 @@ describe('released theme manifests', () => {
   const all = Object.values(CATALOGUE).flatMap((vs) => Object.values(vs))
   it('the versions in this build', () => expect(all.map((m) => `${m.key}@${m.version}`).sort()).toMatchSnapshot())
   it.each(all.map((m) => [`${m.key}@${m.version}`, m] as const))('%s is as released', (_k, m) => {
-    expect(JSON.parse(JSON.stringify({ name: m.name, job: m.job, features: m.features, styles: m.styles, defaults: m.defaults, allowed: m.allowed, home: m.home }))).toMatchSnapshot()
+    expect(JSON.parse(JSON.stringify({ name: m.name, job: m.job, features: m.features, styles: m.styles, defaults: m.defaults, allowed: m.allowed, home: m.home, ...(m.designs ? { designs: m.designs } : {}) }))).toMatchSnapshot()
   })
 })

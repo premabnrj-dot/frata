@@ -37,9 +37,18 @@ export type ThumbMark = { x: number; y: number; w: number; h: number; kind: 'hea
 /** Marks on a 160 × 100 card: the design's blocks laid out as the shop lays them (columns side by side). Pure. */
 export function thumbOf(d: Pick<Design, 'children'>): ThumbMark[] {
   const out: ThumbMark[] = []
-  const leafH = (b: LeafBlock) => (b.kind === 'image' ? 0 : b.kind === 'heading' ? 10 : b.kind === 'text' ? 14 : b.kind === 'button' ? 13 : 8 + 7 * Math.min(b.items.length, 4))
+  // A photo, a featured piece and a video take the height left over; a row of cards or tiles is a fixed strip.
+  const tall = (b: LeafBlock) => b.kind === 'image' || b.kind === 'featured_product' || b.kind === 'video'
+  const leafH = (b: LeafBlock) => (tall(b) ? 0 : b.kind === 'heading' ? 10 : b.kind === 'text' ? 14 : b.kind === 'button' ? 13 : b.kind === 'date' ? 8
+    : b.kind === 'product_grid' || b.kind === 'collection_tiles' ? 26 : 8 + 7 * Math.min(b.items.length, 4))
   const draw = (b: LeafBlock, x: number, y: number, w: number, h: number): number => {
-    if (b.kind === 'image') { out.push({ x, y, w, h, kind: 'photo' }); return h }
+    if (tall(b)) { out.push({ x, y, w, h, kind: 'photo' }); return h }
+    if (b.kind === 'date') { out.push({ x, y, w: w * 0.45, h: 4, kind: 'text' }); return 8 }
+    if (b.kind === 'product_grid' || b.kind === 'collection_tiles') {
+      const n = 4, gap = 3, cw = (w - gap * (n - 1)) / n
+      for (let i = 0; i < n; i++) out.push({ x: x + i * (cw + gap), y, w: cw, h: 22, kind: 'photo' })
+      return 26
+    }
     if (b.kind === 'heading') { out.push({ x, y, w: w * 0.7, h: 6, kind: 'heading' }); return 10 }
     if (b.kind === 'text') { out.push({ x, y, w, h: 3, kind: 'text' }, { x, y: y + 6, w: w * 0.7, h: 3, kind: 'text' }); return 14 }
     if (b.kind === 'button') { out.push({ x, y, w: Math.min(34, w), h: 8, kind: 'button' }); return 13 }
@@ -47,7 +56,7 @@ export function thumbOf(d: Pick<Design, 'children'>): ThumbMark[] {
     return 8 + 7 * Math.min(b.items.length, 4)
   }
   const stack = (bs: LeafBlock[], x: number, y: number, w: number, bottom: number) => {
-    const fixed = bs.reduce((n, b) => n + leafH(b), 0), photos = bs.filter((b) => b.kind === 'image').length
+    const fixed = bs.reduce((n, b) => n + leafH(b), 0), photos = bs.filter(tall).length
     const ph = photos ? Math.max(14, (bottom - y - fixed) / photos) : 0
     let cy = y
     for (const b of bs) cy += draw(b, x, cy, w, ph)

@@ -14,3 +14,11 @@ describe('format-date (U·4 words)', () => {
     expect(todayLongIN(new Date('2026-11-06T19:00:00Z'))).toMatch(/^Saturday,? 7 November$/)
   })
 })
+
+describe('dropLineIN (Theme Studio TS1b)', () => {
+  it('says a drop in India time, minutes only when not on the hour', async () => {
+    const { dropLineIN } = await import('../format-date')
+    expect(dropLineIN(new Date('2026-11-14T13:30:00Z'))).toBe('Sat 14 Nov, 7 pm')
+    expect(dropLineIN(new Date('2026-11-14T07:00:00Z'))).toBe('Sat 14 Nov, 12:30 pm')
+  })
+})

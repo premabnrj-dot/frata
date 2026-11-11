@@ -1,5 +1,5 @@
 {
-  "id": "849136d0-a126-4174-89a2-43726bd007ab",
+  "id": "4cdf009d-cf2c-4cad-b7f6-53ee99a759ed",
   "prevId": "1eb14cd8-8283-4937-bdde-62fb57b8b240",
   "version": "7",
   "dialect": "postgresql",
@@ -6167,72 +6167,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.app_interest": {
-      "name": "app_interest",
-      "schema": "",
-      "columns": {
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "module": {
-          "name": "module",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "app_interest_tenant_id_tenants_id_fk": {
-          "name": "app_interest_tenant_id_tenants_id_fk",
-          "tableFrom": "app_interest",
-          "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "app_interest_pk": {
-          "name": "app_interest_pk",
-          "columns": [
-            "tenant_id",
-            "module",
-            "user_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "app_interest_module": {
-          "name": "app_interest_module",
-          "value": "\"app_interest\".\"module\" in ('communication','rto_shield','ship','true_profit','reviews','marketplace_export','size_fit','cart_flows','gst','ekcode','product_video')"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.module_pauses": {
       "name": "module_pauses",
       "schema": "",
@@ -8586,6 +8520,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'loop'"
+        },
+        "mp4": {
+          "name": "mp4",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -8656,6 +8596,10 @@
         "videos_use": {
           "name": "videos_use",
           "value": "\"videos\".\"use\" in ('loop', 'product')"
+        },
+        "videos_mp4": {
+          "name": "videos_mp4",
+          "value": "\"videos\".\"mp4\" is null or \"videos\".\"mp4\" ~ '^(720|540|480|360|270)p$'"
         },
         "videos_env": {
           "name": "videos_env",

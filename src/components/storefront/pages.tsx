@@ -53,7 +53,7 @@ export function AllView({ cat, href, now, lang, page = 1 }: { cat: StoreCatalogu
   return (
     <section className={`${wrap} py-8`}>
       <h1 className="mb-6 text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{w.shopAll}</h1>
-      <ProductGrid products={one.items} href={href} now={now} empty={w.emptyShop} lang={lang} />
+      <ProductGrid products={one.items} href={href} now={now} empty={w.emptyShop} lang={lang} lead />
       <Pager page={one.page} pages={one.pages} base="/products" href={href} lang={lang} />
     </section>
   )
@@ -78,14 +78,15 @@ export function CollectionView({ c, cat, href, now, top = 'title', lang, page = 
           </div>
         </div>
       </div>
-      <section className={`${wrap} py-8`}><ProductGrid products={items} href={href} now={now} empty={w.emptyCollection} lang={lang} />{pager}</section>
+      {/* The banner is this page's priority photo: the cards below wait (TS1b: ≤ 2 eager images a page). */}
+      <section className={`${wrap} py-8`}><ProductGrid products={items} href={href} now={now} empty={w.emptyCollection} lang={lang} lead={false} />{pager}</section>
     </>
   )
   return (
     <section className={`${wrap} py-8`}>
       <h1 className="text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{c.title}</h1>
       {c.description && <p className="mt-2 max-w-prose text-store-sub">{c.description}</p>}
-      <div className="mt-6"><ProductGrid products={items} href={href} now={now} empty={w.emptyCollection} lang={lang} />{pager}</div>
+      <div className="mt-6"><ProductGrid products={items} href={href} now={now} empty={w.emptyCollection} lang={lang} lead />{pager}</div>
     </section>
   )
 }
@@ -127,7 +128,7 @@ export function GoneView({ title, cat, href, now, lang }: { title: string; cat: 
     <section className={`${wrap} py-10`}>
       <h1 className="text-2xl" style={{ fontFamily: 'var(--store-display)' }}>{fill(w.gone, { title })}</h1>
       <p className="mt-2 text-store-sub">{w.goneSub}</p>
-      <div className="mt-6"><ProductGrid products={cat.products.filter((p) => isListed(p, now)).slice(0, 8)} href={href} now={now} empty={w.emptyShop} lang={lang} /></div>
+      <div className="mt-6"><ProductGrid products={cat.products.filter((p) => isListed(p, now)).slice(0, 8)} href={href} now={now} empty={w.emptyShop} lang={lang} lead /></div>
     </section>
   )
 }
