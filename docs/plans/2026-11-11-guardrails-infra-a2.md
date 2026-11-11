@@ -534,3 +534,59 @@ Computed with `orderProfit`; the scratch model is in the session scratchpad.
     - `CLAUDE.md` § Before you commit and § Migrations name only `drizzle/`. A line for `drizzle-analytics/` (pasted by
       the owner; 0000 refuses the main database) is proposed to the owner, not written by an agent.
 - **Applied (owner, 2026-11-11):** 0000–0002 pasted into frata-analytics; `cron.job` lists `analytics-fold` (`*/15 * * * *`) and `analytics-maintain` (`7 * * * *`), both active.
+
+## A2·2 amendment, proposed 2026-11-11 (for speed-reviewer and security-reviewer before building)
+**Why.** The plan put the beacon in the shop shell as a React island, next to `CaptureAttribution`. The shell also
+frames checkout, so the island lands on every shop page, measured today (`SHOW_BUDGETS=1`) as:
+- product 120.6 of 121 kB;
+- checkout 120.2 of 121 kB;
+- home 114.0.
+
+With 0.8–0.9 kB more, checkout fails too, and PV1-4a only frees room on the product page.
+
+**Proposal: the beacon is one static, async script, not an island.**
+- `public/fe.js`: plain JS, ≤ 1.2 kB gzip, no React and no hydration. It runs after parsing and blocks nothing.
+  - On shop hosts `/fe.js` is exempted, by that exact name, from the shop rewrite (`shopRewrites`, as image files
+    are).
+  - It is cached at the CDN, and versioned by `?v=` from a constant, so a change reaches every shopper on their next
+    page.
+  - `check:storefront-build` gives it its own ceiling (1.2 kB gzip). It isn't counted in a page's first-load figure,
+    and the gate's comment says why.
+- **Mounted by the server shell** for live shops only: no previews, the console address refused as `captureAttribution`
+  does, and only while counting is on (`isAnalyticsConfigured()`; the Admin switch from A2·5 later).
+  `<script async src="/fe.js?v=N">`.
+- **What it sends.** One `sendBeacon` to `/api/shop/e`, made on `visibilitychange` = hidden and on `pagehide`. Each
+  call carries the events queued since the last one, at most 50.
+  - `page_view` on load and on each soft navigation (`history.pushState` and `popstate`), with `location.pathname`
+    only, never a query or `#`;
+  - a landing (the tab's first page, `sessionStorage`) carries the raw source inputs from the URL and the referrer's
+    bare hostname, in the same shape `captureAttribution` stores (utm source, medium and campaign; `gclid`/`gbraid`/
+    `wbraid`/`gad_source`, `srsltid` and `fbclid` as flags; the creator `?code=`);
+  - `view_item`, `begin_checkout` and `purchase` come from a server-rendered marker in the page
+    (`<i hidden data-fe="view_item" data-pid="…">` on the product page, the checkout page and the order page's first
+    view). No component code is involved;
+  - `add_to_cart` comes from the bag store's existing `frata:open-bag` event (detail set means an item was added),
+    with the marker's product id;
+  - Web Vitals on phones only (`pointer: coarse`), 1 in 4 page views, with `PerformanceObserver`: LCP, CLS (the largest
+    session window) and INP (the worst event duration). No `web-vitals` package.
+- **What the server adds** (nothing extra from the browser):
+  - device, browser and in-app browser from the User-Agent, in a pure parser in `src/domains/analytics/device.ts`;
+  - the city from `x-vercel-ip-city`;
+  - the visitor input: length-prefixed /24 or /48 of the address, then the UA, in `visitor.ts`. The address is never
+    stored.
+- **The route** `src/app/api/shop/e/route.ts` follows A2·2 and the reviews:
+  - checks in this order: body ≤ 8 KB read with a running count, a bot User-Agent, a 60 s negative memo of unknown
+    hosts, the host to its shop (`tenantForHost`, never the body), and Origin equal to the host;
+  - a cap per shop per minute, in memory;
+  - strict Zod from `src/domains/analytics/event.ts`, which also gives `IngestBatch` its type;
+  - answers 204 at once, then `ingestBatch` runs in `after()`; errors log `errName` only;
+  - stays out of the middleware matcher;
+  - lives in `ANALYTICS_IN_APP` with its reason, and in `ENTRY_POINTS`.
+- **PV1-4a** is still needed for PV1-4's video tile, but no longer blocks A2·2.
+- **Owner step before the beacon goes live:** a Vercel Firewall rate rule on `/api/shop/e` (security HIGH-2).
+- **Tests:**
+  - unit tests for `event.ts`, `device.ts` and `visitor.ts`;
+  - one round trip of `ingestBatch` against the e2e analytics database;
+  - an e2e flow: a shop page sends its beacon, a soft navigation adds a page view, add to bag sends `add_to_cart`, a
+    bot or an unknown host or another Origin is refused or dropped, and after a fold Traffic's rows exist under the
+    shop and no other.
