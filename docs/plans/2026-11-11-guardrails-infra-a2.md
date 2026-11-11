@@ -488,3 +488,21 @@ Computed with `orderProfit`; the scratch model is in the session scratchpad.
 - **e2e:** the stack makes `frata_e2e_analytics` beside `frata_e2e` and sets `ANALYTICS_DATABASE_URL`.
 - **Left for A2·2:** the route (it joins `ANALYTICS_IN_APP`, or reads through a query file), `src/domains/analytics/`
   event, device and visitor modules, the beacon. The analytics admin connection waits for A2·5, its first reader.
+- **tenancy-auditor on A2·1 (2026-11-11), folded:**
+  - **HIGH:** `ingest_events` set the shop for the rest of the caller's transaction, so a later read would see the
+    other shop. It now refuses a shop other than one already set, and puts the caller's setting back; the proof tests
+    both, and the unset case.
+  - **MED:**
+    - the default-privilege revokes now include `service_role`;
+    - the proof's grant and function checks are driven by the catalog (RLS on every table in public, `ev` and
+      `extensions`; no privilege of any kind for the API roles or `frata_admin`; an exact allow-list for `frata_app`
+      and PUBLIC, TRUNCATE included; `pg_default_acl`; every definer's search path and EXECUTE). The auditor's four
+      escapes now fail it.
+  - **MED, gate § 8:**
+    - every policy that isn't restrictive false must name its role and bind the shop;
+    - tables in any schema are checked;
+    - TRUNCATE, ALL, REFERENCES and TRIGGER grants fail it, as do default-privilege grants and disabling RLS.
+  - **LOW, accepted:**
+    - `frata_app` can hash for any shop: it reads nothing that holds a hash;
+    - `pg_stat_user_tables` shows platform-wide daily event counts, not one shop's;
+    - the relative-import case was already caught, because the gate resolves relative paths first.

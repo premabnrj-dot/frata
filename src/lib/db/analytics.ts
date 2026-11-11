@@ -58,9 +58,10 @@ const MAX_IN_FLIGHT = 20
 let inFlight = 0
 
 /**
- * One beacon in one round trip: ingest_events() sets the shop for its own statement and inserts under the events
- * policy (it is not a definer). The tenant is the host's (requireShop), never the body's. 'dropped' when the database
- * is already behind; a failure throws, and the caller (in after()) logs its name only.
+ * One beacon in one round trip: ingest_events() sets the shop around its insert (then restores the caller's, and
+ * refuses a different shop than one already set) and inserts under the events policy (it is not a definer). The
+ * tenant is the host's (requireShop), never the body's. 'dropped' when the database is already behind; a failure
+ * throws, and the caller (in after()) logs its name only.
  */
 export async function ingestBatch(tenantId: string, visitorInput: string, batch: IngestBatch): Promise<number | 'dropped'> {
   if (typeof tenantId !== 'string' || !UUID.test(tenantId)) throw new Error('ingestBatch: not a shop id')

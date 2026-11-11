@@ -27,10 +27,11 @@ end $$;
 --> statement-breakpoint
 grant usage on schema public to frata_app, frata_admin;
 --> statement-breakpoint
--- As on Supabase: nothing new in public reaches the API roles, and no new function is callable by everyone.
-alter default privileges in schema public revoke all on tables from anon, authenticated;
+-- Unlike Supabase's defaults: nothing new in public reaches the API roles (service_role included: it bypasses RLS, and
+-- this database has no use for it), and no new function is callable by everyone.
+alter default privileges in schema public revoke all on tables from anon, authenticated, service_role;
 --> statement-breakpoint
-alter default privileges in schema public revoke all on functions from anon, authenticated;
+alter default privileges in schema public revoke all on functions from anon, authenticated, service_role;
 --> statement-breakpoint
 alter default privileges revoke execute on functions from public;
 --> statement-breakpoint

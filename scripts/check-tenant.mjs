@@ -196,18 +196,23 @@ const aSql = readdirSync('drizzle-analytics').filter(f => f.endsWith('.sql'))
   .join('\n').toLowerCase()
 const aTables = [...new Set([
   ...[...code('src/lib/db/analytics-schema.ts').matchAll(/pgTable\(\s*'([a-z_]+)'/g)].map(m => m[1]),
-  ...[...aSql.matchAll(/create table\s+(?:if not exists\s+)?(?:public\.)?"?([a-z_]+)"?\s*\(/g)].map(m => m[1]),
+  ...[...aSql.matchAll(/create table\s+(?:if not exists\s+)?(?:"?[a-z_0-9]+"?\.)?"?([a-z_0-9]+)"?\s*\(/g)].map(m => m[1]),
 ])]
 for (const t of aTables) {
-  if (!new RegExp(`alter table\\s+"?${t}"?\\s+enable row level security`).test(aSql)) failures.push(`analytics table ${t}  has no "enable row level security" in drizzle-analytics/*.sql`)
+  if (!new RegExp(`alter table\\s+(?:"?[a-z_0-9]+"?\\.)?"?${t}"?\\s+enable row level security`).test(aSql)) failures.push(`analytics table ${t}  has no "enable row level security" in drizzle-analytics/*.sql`)
   if (!new RegExp(`create policy\\s+\\w+\\s+on\\s+"?${t}"?\\b`).test(aSql)) failures.push(`analytics table ${t}  has no policy in drizzle-analytics/*.sql`)
 }
-for (const m of aSql.matchAll(/create policy\s+(\w+)\s+on\s+"?([a-z_]+)"?([\s\S]*?);/g)) {
+// Every policy but a restrictive false one names its role and binds the shop (a policy with no TO is everyone's).
+for (const m of aSql.matchAll(/create policy\s+(\w+)\s+on\s+"?([a-z_.]+)"?([\s\S]*?);/g)) {
   const [, name, table, body] = m
-  if (/\bto\s+[^;]*\bfrata_app\b/.test(body) && (!/app_current_tenant\(\)/.test(body) || /app_current_tenant\(\)\s+is\s+null/.test(body))) {
-    failures.push(`analytics policy ${name} on ${table}  lets frata_app past without binding it to app_current_tenant()`)
+  if (/\bas restrictive\b/.test(body) && /using\s*\(\s*false\s*\)/.test(body)) continue
+  if (!/\bto\s+(frata_app|frata_admin)\b/.test(body) || !/app_current_tenant\(\)/.test(body) || /app_current_tenant\(\)\s+is\s+null/.test(body)) {
+    failures.push(`analytics policy ${name} on ${table}  must name frata_app (or frata_admin) and bind app_current_tenant(), or be restrictive false`)
   }
 }
+if (/disable row level security|no force row level security/.test(aSql)) failures.push('drizzle-analytics turns row level security off somewhere (A·2)')
+if (/grant\s+[^;]*\b(truncate|all|references|trigger)\b[^;]*\bon\b/.test(aSql)) failures.push('drizzle-analytics grants TRUNCATE, ALL, REFERENCES or TRIGGER (TRUNCATE ignores RLS) — grant the exact privilege')
+if (/default privileges[^;]*\bgrant\b/.test(aSql)) failures.push('drizzle-analytics grants by default privileges — grant each object by name')
 if (/grant\s[^;]*\bon\s+schema\s+ev\b|grant\s[^;]*\bon\s+(?:table\s+|all tables in schema\s+)?ev\b/.test(aSql)) {
   failures.push('drizzle-analytics grants on the schema ev — raw partitions are read only through the parent\'s policy (A·2)')
 }

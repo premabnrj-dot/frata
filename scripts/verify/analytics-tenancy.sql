@@ -31,43 +31,63 @@ begin
     raise exception 'FAIL: a partition without row security'; end if;
 end $$;
 
--- 3. Nothing but the rollups is readable by the app; no table at all by the API roles.
+-- 3. From the catalog, not a list (tenancy audit 2026-11-11): every table in our schemas has RLS; the API roles and
+-- frata_admin hold no privilege of any kind on any of them; frata_app holds exactly INSERT on events and SELECT on the
+-- six rollups; no app or API role may create in our schemas; nothing new in public is granted by default.
 do $$
-declare r text; t text;
+declare r text; bad text;
 begin
-  foreach t in array array['events', 'visitor_days', 'visitor_salts', 'fold_state'] loop
-    if has_table_privilege('frata_app', t, 'SELECT') then raise exception 'FAIL: frata_app can read %', t; end if;
-  end loop;
-  foreach t in array array['visitor_days', 'visitor_salts', 'fold_state', 'traffic_daily', 'source_daily', 'browser_daily', 'city_daily', 'product_daily', 'vitals_daily'] loop
-    if has_table_privilege('frata_app', t, 'INSERT') or has_table_privilege('frata_app', t, 'UPDATE') or has_table_privilege('frata_app', t, 'DELETE') then
-      raise exception 'FAIL: frata_app can write %', t; end if;
-  end loop;
+  select string_agg(n.nspname || '.' || c.relname, ', ') into bad from pg_class c join pg_namespace n on n.oid = c.relnamespace
+  where n.nspname in ('public', 'ev', 'extensions') and c.relkind in ('r', 'p') and not c.relrowsecurity;
+  if bad is not null then raise exception 'FAIL: tables without row security: %', bad; end if;
   foreach r in array array['anon', 'authenticated', 'service_role', 'frata_admin'] loop
-    foreach t in array array['events', 'visitor_days', 'visitor_salts', 'fold_state', 'traffic_daily', 'source_daily', 'browser_daily', 'city_daily', 'product_daily', 'vitals_daily'] loop
-      if has_table_privilege(r, t, 'SELECT') or has_table_privilege(r, t, 'INSERT') then raise exception 'FAIL: % holds a grant on %', r, t; end if;
-    end loop;
+    select string_agg(n.nspname || '.' || c.relname, ', ') into bad from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname in ('public', 'ev', 'extensions') and c.relkind in ('r', 'p', 'v', 'm', 'S')
+      and has_table_privilege(r, c.oid, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER');
+    if bad is not null then raise exception 'FAIL: % holds a privilege on %', r, bad; end if;
   end loop;
+  select string_agg(x, ', ') into bad from (
+    (select n.nspname || '.' || c.relname || ':' || a.privilege_type x
+     from pg_class c join pg_namespace n on n.oid = c.relnamespace, aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) a
+     where n.nspname in ('public', 'ev', 'extensions') and a.grantee = 'frata_app'::regrole
+     union
+     select n.nspname || '.' || c.relname || ':' || a.privilege_type
+     from pg_class c join pg_namespace n on n.oid = c.relnamespace, aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) a
+     where n.nspname in ('public', 'ev', 'extensions') and a.grantee = 0)
+    except
+    select unnest(array['public.events:INSERT', 'public.traffic_daily:SELECT', 'public.source_daily:SELECT', 'public.browser_daily:SELECT',
+                        'public.city_daily:SELECT', 'public.product_daily:SELECT', 'public.vitals_daily:SELECT'])) d;
+  if bad is not null then raise exception 'FAIL: frata_app (or PUBLIC) holds more than its allow-list: %', bad; end if;
+  foreach r in array array['frata_app', 'frata_admin', 'anon', 'authenticated', 'service_role'] loop
+    if has_schema_privilege(r, 'public', 'CREATE') or has_schema_privilege(r, 'ev', 'CREATE') or has_schema_privilege(r, 'extensions', 'CREATE') then
+      raise exception 'FAIL: % can create in our schemas', r; end if;
+  end loop;
+  if exists (select 1 from pg_default_acl d, aclexplode(d.defaclacl) a
+             where d.defaclrole = current_user::regrole and (d.defaclnamespace = 0 or d.defaclnamespace = 'public'::regnamespace)
+               and (a.grantee = 0 or a.grantee in (select oid from pg_roles where rolname in ('anon', 'authenticated', 'service_role', 'frata_app', 'frata_admin')))) then
+    raise exception 'FAIL: new tables or functions are granted by default (pg_default_acl)'; end if;
 end $$;
 
--- 4. The definers: the fold, the rollup and maintenance are no app role's; the ingest pair is frata_app's alone.
+-- 4. Functions, from the catalog: every definer has an empty search_path and no EXECUTE for PUBLIC, the API roles or
+-- frata_admin; frata_app may run exactly app_current_tenant, ingest_events and analytics_visitor in public.
 do $$
-declare r text; f text;
+declare r text; bad text;
 begin
-  foreach r in array array['public', 'anon', 'authenticated', 'service_role', 'frata_app', 'frata_admin'] loop
-    foreach f in array array['analytics_fold()', 'analytics_rollup(date)', 'analytics_maintain()', 'analytics_add_buckets(integer[], integer[])'] loop
-      if has_function_privilege(r, f, 'EXECUTE') then raise exception 'FAIL: % can run %', r, f; end if;
-    end loop;
-  end loop;
+  select string_agg(p.oid::regprocedure::text, ', ') into bad from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname in ('public', 'ev') and p.prosecdef and not coalesce(p.proconfig, '{}') @> array['search_path=""'];
+  if bad is not null then raise exception 'FAIL: definers without an empty search_path: %', bad; end if;
   foreach r in array array['public', 'anon', 'authenticated', 'service_role', 'frata_admin'] loop
-    foreach f in array array['analytics_visitor(uuid, text)', 'ingest_events(uuid, text, jsonb)'] loop
-      if has_function_privilege(r, f, 'EXECUTE') then raise exception 'FAIL: % can run %', r, f; end if;
-    end loop;
+    select string_agg(p.oid::regprocedure::text, ', ') into bad from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname in ('public', 'ev') and (p.prosecdef or r <> 'frata_admin') and has_function_privilege(r, p.oid, 'EXECUTE')
+      and not (r = 'frata_admin' and p.proname = 'app_current_tenant');
+    if bad is not null then raise exception 'FAIL: % can run %', r, bad; end if;
   end loop;
+  select string_agg(p.proname, ', ') into bad from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname in ('public', 'ev') and has_function_privilege('frata_app', p.oid, 'EXECUTE')
+    and p.proname not in ('app_current_tenant', 'ingest_events', 'analytics_visitor');
+  if bad is not null then raise exception 'FAIL: frata_app can run %', bad; end if;
   if not has_function_privilege('frata_app', 'ingest_events(uuid, text, jsonb)', 'EXECUTE') then raise exception 'FAIL: frata_app cannot ingest'; end if;
   if (select prosecdef from pg_proc where proname = 'ingest_events') then raise exception 'FAIL: ingest_events is a definer (it must run under the events policy)'; end if;
-  if exists (select 1 from pg_proc where proname in ('analytics_visitor', 'analytics_fold', 'analytics_rollup', 'analytics_maintain', 'ingest_events')
-             and not coalesce(proconfig, '{}') @> array['search_path=""']) then
-    raise exception 'FAIL: a definer without search_path '''''; end if;
 end $$;
 
 -- 5. As the app: events, a partition, the salts and visitor-days can't be read; the fold can't be run.
@@ -110,6 +130,19 @@ begin
   exception when raise_exception then
     if sqlerrm like 'FAIL:%' then raise; end if;
   end;
+  -- Ingest never swaps the transaction's shop: another shop is refused, the same one is put back, none stays none.
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  begin
+    perform ingest_events('22222222-2222-2222-2222-222222222222', 'x', '{"e":[]}');
+    raise exception 'FAIL: ingest_events ran for shop B inside shop A''s transaction';
+  exception when raise_exception then
+    if sqlerrm like 'FAIL:%' then raise; end if;
+  end;
+  perform ingest_events('11111111-1111-1111-1111-111111111111', 'x', '{"e":[]}');
+  if current_setting('app.tenant_id', true) <> '11111111-1111-1111-1111-111111111111' then raise exception 'FAIL: ingest_events changed the transaction''s shop'; end if;
+  perform set_config('app.tenant_id', '', true);
+  perform ingest_events('22222222-2222-2222-2222-222222222222', 'x', '{"e":[]}');
+  if coalesce(current_setting('app.tenant_id', true), '') <> '' then raise exception 'FAIL: ingest_events left its shop set for the rest of the transaction'; end if;
   perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
   begin
     insert into events (tenant_id, day, visitor, kind) values ('22222222-2222-2222-2222-222222222222', (now() at time zone 'Asia/Kolkata')::date, '\x00', 'page_view');

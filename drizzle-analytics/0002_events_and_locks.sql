@@ -2,7 +2,8 @@
 -- RAW EVENTS, THE FOLD, THE ROLLUPS AND THEIR LOCKS (A·2; plan docs/plans/2026-11-11-guardrails-infra-a2.md A2·1, with
 -- the tenancy, security and speed reviews of 2026-11-11 folded in). Proved by scripts/verify/analytics-tenancy.sql.
 --
---   ingest_events()      frata_app, invoker: sets the shop for its own statement and inserts one beacon's batch, so the
+--   ingest_events()      frata_app, invoker: sets the shop around its own insert, then puts the caller's back (and
+--                        refuses a shop other than one already set), and inserts one beacon's batch, so the
 --                        events policy still applies (one round trip; speed review MED 7).
 --   analytics_visitor()  frata_app, definer: the visitor is an HMAC of today's salt with the shop and the visitor's
 --                        input (a /24 or /48 network and the user agent, built by the app). The salt never leaves here.
@@ -116,6 +117,8 @@ create policy tenant_rows on vitals_daily for select to frata_app using (tenant_
 -- 16 bytes of HMAC-SHA256(today's salt, shop id ‖ input). The shop id is fixed-length, so the concatenation is
 -- unambiguous; the app length-prefixes the rest (src/domains/analytics/visitor.ts). A new salt each IST day: a visitor
 -- can't be followed from one day to the next, and nothing stored is linkable to a person once it is deleted.
+-- frata_app may call it for any shop (the ingest needs it): a hash reveals nothing, since frata_app reads no table
+-- that holds one (tenancy audit LOW, accepted).
 create function analytics_visitor(p_tenant uuid, p_input text) returns table (salt_day date, visitor bytea)
   language plpgsql security definer set search_path = '' as $$
 declare
@@ -135,14 +138,18 @@ end $$;
 -- ── The ingest ─────────────────────────────────────────────────────────────────────────────────────────────────────
 -- One beacon: {d: device, b: browser, a: in-app, c: city, e: [{k, l, p, pid, us, um, uc, rh, cc, gads, srs, fb, m, v}]}.
 -- The route has checked it already (Zod, src/domains/analytics/event.ts); the table's checks and the caps here are the
--- backstop. Invoker, so the events policy holds: the shop is set for this transaction only, from the host the route
--- resolved (never the body), exactly as withTenant does.
+-- backstop. Invoker, so the events policy holds. The shop comes from the host the route resolved (never the body), as
+-- withTenant's does; it is set around the insert and the caller's setting is put back, and a call naming a shop other
+-- than the one the transaction already has is refused (tenancy audit 2026-11-11 HIGH: otherwise a later read in the same
+-- transaction would see the other shop's rollups).
 create function ingest_events(p_tenant uuid, p_input text, p_batch jsonb) returns integer
   language plpgsql set search_path = '' as $$
 declare
   v record;
   n integer;
+  was text := coalesce(current_setting('app.tenant_id', true), '');
 begin
+  if was <> '' and was <> p_tenant::text then raise exception 'ingest_events: another shop is set in this transaction'; end if;
   if p_tenant is null or p_batch is null or jsonb_typeof(p_batch -> 'e') is distinct from 'array' then raise exception 'ingest_events: bad batch'; end if;
   if jsonb_array_length(p_batch -> 'e') > 50 then raise exception 'ingest_events: more than 50 events'; end if;
   perform set_config('app.tenant_id', p_tenant::text, true);
@@ -153,6 +160,7 @@ begin
          coalesce(p_batch ->> 'd', ''), coalesce(p_batch ->> 'b', ''), coalesce(p_batch ->> 'a', ''), coalesce(p_batch ->> 'c', ''), e.m, e.v
   from jsonb_to_recordset(p_batch -> 'e') as e(k text, l boolean, p text, pid uuid, us text, um text, uc text, rh text, cc text, gads boolean, srs boolean, fb boolean, m text, v integer);
   get diagnostics n = row_count;
+  perform set_config('app.tenant_id', was, true);
   return n;
 end $$;
 --> statement-breakpoint
