@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { CATALOGUE } from '../catalogue'
 import { contrast } from '../contrast'
-import { SECTION_KEYS, SectionSchema, SOURCE_KEYS } from '../sections'
+import { themeCheck } from '../check'
+import { SectionSchema } from '../sections'
 import type { ThemeManifest } from '../types'
 
 // =============================================================================
@@ -15,39 +16,28 @@ const all: ThemeManifest[] = Object.values(CATALOGUE).flatMap((vs) => Object.val
 const name = (m: ThemeManifest) => `${m.key}@${m.version}`
 
 describe.each(all.map((m) => [name(m), m] as const))('%s', (_n, m) => {
-  it('is well formed: semver, 1–5 styles with unique keys, defaults allowed', () => {
-    expect(m.version).toMatch(/^\d+\.\d+\.\d+$/)
-    expect(m.styles.length).toBeGreaterThanOrEqual(1); expect(m.styles.length).toBeLessThanOrEqual(5)
-    expect(new Set(m.styles.map((s) => s.key)).size).toBe(m.styles.length)
-    expect(m.allowed.pairings).toContain(m.defaults.pairing)
-    expect(m.allowed.headers).toContain(m.defaults.header)
-    expect(m.allowed.footers).toContain(m.defaults.footer)
-    // What a theme says was made for it is something it offers (Look v3: "Made for <theme>").
-    for (const h of m.made?.headers ?? []) expect(m.allowed.headers).toContain(h)
-    for (const f of m.made?.footers ?? []) expect(m.allowed.footers).toContain(f)
-    for (const k of m.made?.sections ?? []) expect(m.allowed.sections).toContain(k)
+  it('passes themeCheck (the one check: styles, defaults, made, home, sources, contrast)', () => {
+    expect(themeCheck(m)).toEqual([])
   })
-  it('Home: valid sections from the library, allowed by the theme, unique ids, ≤ 20', () => {
-    expect(m.home.length).toBeLessThanOrEqual(20)
-    expect(new Set(m.home.map((s) => s.id)).size).toBe(m.home.length)
-    for (const s of m.home) {
-      expect(SECTION_KEYS).toContain(s.key); expect(m.allowed.sections).toContain(s.key)
-      expect(() => SectionSchema.parse(s)).not.toThrow()
-      if (s.key === 'products') expect(SOURCE_KEYS).toContain(s.source.kind)
-    }
+  it('its key and version match where the catalogue lists it', () => {
+    expect(CATALOGUE[m.key]?.[m.version]).toBe(m)
   })
-  it('every scheme of every style is readable', () => {
-    for (const st of m.styles) for (const [k, s] of Object.entries(st.schemes)) {
-      const at = `${st.key}.${k}`
-      expect(contrast(s.text, s.bg), `${at} text`).toBeGreaterThanOrEqual(4.5)
-      expect(contrast(s.sub, s.bg), `${at} sub`).toBeGreaterThanOrEqual(4.5)
-      expect(contrast(s.accent, s.bg), `${at} accent`).toBeGreaterThanOrEqual(3)
-      expect(contrast(s.onAccent, s.accent), `${at} on accent`).toBeGreaterThanOrEqual(4.5)
-      expect(contrast(s.onButton, s.button), `${at} button`).toBeGreaterThanOrEqual(4.5)
-      expect(contrast(s.good, s.bg), `${at} good`).toBeGreaterThanOrEqual(4.5)
-      expect(contrast(s.bad, s.bg), `${at} bad`).toBeGreaterThanOrEqual(4.5)
-      expect(contrast(s.sale, s.bg), `${at} sale`).toBeGreaterThanOrEqual(4.5)
-    }
+})
+
+describe('themeCheck: each rule fires', () => {
+  const good = CATALOGUE.signal!['1.2.0']!
+  const paper = good.styles[0]!.schemes.paper
+  it.each([
+    ['a bad version', { ...good, version: '1.2' }, /major\.minor\.patch/],
+    ['six styles', { ...good, styles: [...good.styles, ...good.styles, ...good.styles, ...good.styles, ...good.styles, ...good.styles].slice(0, 6) }, /6 styles/],
+    ['a default header not allowed', { ...good, defaults: { ...good.defaults, header: 'circles' as const }, allowed: { ...good.allowed, headers: ['float' as const] } }, /default header/],
+    ['made-for outside allowed', { ...good, made: { sections: ['logos' as const] }, allowed: { ...good.allowed, sections: ['hero' as const, 'products' as const] } }, /Made-for section logos/],
+    ['21 home sections', { ...good, home: Array.from({ length: 21 }, (_, i) => ({ id: `s${i}`, key: 'rich_text' as const, text: 'x' })) }, /at most 20/],
+    ['a cost source', { ...good, home: [{ id: 'x', key: 'products' as const, heading: 'Top', source: { kind: 'by_margin' }, count: 4 }] }, /Home section x/],
+    ['an unknown section', { ...good, home: [{ id: 'x', key: 'lookbook' }] }, /isn't in the library/],
+    ['unreadable sub text', { ...good, styles: [{ ...good.styles[0]!, schemes: { ...good.styles[0]!.schemes, paper: { ...paper, sub: '#D9D3CC' as const } } }] }, /sub reads/],
+  ])('%s', (_n, m, want) => {
+    expect(themeCheck(m as unknown as ThemeManifest).join('\n')).toMatch(want)
   })
 })
 
