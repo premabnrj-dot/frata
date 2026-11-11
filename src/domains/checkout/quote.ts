@@ -199,7 +199,9 @@ export function keptOffers(q: Quote, method: 'cod' | 'prepaid'): KeptOffer[] {
   const onCod = q.cod.applied.find((a) => a.class === 'order') ?? null
   const online = q.prepaid.applied.find((a) => a.class === 'order') ?? null
   if (onCod?.discountId === online?.discountId) return q.prepaid.applied.map(both)
-  return [...q.prepaid.applied.map((a): KeptOffer => ({ ...a, method: a.class === 'order' ? 'prepaid' : null })), ...(onCod ? [{ ...onCod, method: 'cod' as const }] : [])]
+  // The COD-only order offer is kept for a switch to Pay on delivery, so only when Pay on delivery is offered: otherwise
+  // its row would hold the offer's limit and budget for nothing (impact review 2026-11-11).
+  return [...q.prepaid.applied.map((a): KeptOffer => ({ ...a, method: a.class === 'order' ? 'prepaid' : null })), ...(onCod && q.cod.offer.offered ? [{ ...onCod, method: 'cod' as const }] : [])]
 }
 
 /** The total the shopper is asked to pay for a method (0 when that method is not offered). */

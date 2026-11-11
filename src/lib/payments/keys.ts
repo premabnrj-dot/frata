@@ -41,7 +41,7 @@ export async function saveKeys(tx: Tx, tenantId: string, k: Keys): Promise<void>
   const webhookKey = fresh ? `k_${randomBytes(16).toString('hex')}` : cur.webhookKey
   const webhookSecretEnc = fresh ? seal(`whsec_${randomBytes(24).toString('hex')}`, tenantId, 'webhook_secret') : cur.webhookSecretEnc
   const newMode = cur && cur.mode !== mode ? { webhookSeenAt: null, lastEventAt: null } : {}
-  const row = { keyId: k.keyId, keySecretEnc: seal(k.keySecret, tenantId, 'key_secret'), webhookSecretEnc, webhookKey, mode, connectedAt: new Date(), problem: null, ...newMode }
+  const row = { keyId: k.keyId, keySecretEnc: seal(k.keySecret, tenantId, 'key_secret'), webhookSecretEnc, webhookKey, mode, connectedAt: sql`now()`, problem: null, ...newMode }
   await tx.insert(paymentKeys).values({ tenantId, ...row }).onConflictDoUpdate({ target: paymentKeys.tenantId, set: row })
 }
 
@@ -73,7 +73,8 @@ export async function markProblem(tx: Tx, tenantId: string, problem: string | nu
   await tx.update(paymentKeys).set({ problem }).where(eq(paymentKeys.tenantId, tenantId))
 }
 
-/** An event arrived. Only one received after these keys were connected says their webhook works: an event stored
+/** An event arrived. Only one received after these keys were connected (both times the database's clock: security
+ * review LOW-4) says their webhook works: an event stored
  * before a switch to live keys (a test one, processed later) must not (impact review 2026-11-11). */
 export async function markEvent(tx: Tx, tenantId: string, receivedAt: Date = new Date()) {
   await tx.update(paymentKeys).set({ lastEventAt: new Date(), webhookSeenAt: sql`coalesce(${paymentKeys.webhookSeenAt}, now())` })

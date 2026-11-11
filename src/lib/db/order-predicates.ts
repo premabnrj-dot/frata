@@ -125,7 +125,7 @@ export const onlineTotalCol = sql<number | null>`(${orders.checkout}->>'onlineTo
 
 /**
  * usesDiscount() in SQL: whether the order at `a` is using an offer row of `way` (limits, budgets, ₹ given).
- * KNOWN COPY: app_admin_offer_totals (drizzle/0105) restates it; its int test holds it to discountUses.
+ * KNOWN COPY: app_admin_offer_totals (drizzle/0107) restates it; its int test holds it to discountUses.
  */
 export const discountUseSql = (now: Date, way: OfferWay, a = '"orders"'): SQL =>
   way === 'prepaid'

@@ -96,7 +96,7 @@ export default {
         await p.getByText('Pay on delivery', { exact: true }).click()
         await p.screenshot({ path: t.out('checkout'), fullPage: true })
         await p.getByRole('button', { name: new RegExp(`Place order · ${inr(cod).replace(/[₹,]/g, (m) => '\\' + m)}`) }).click()
-        await p.waitForURL(/\/orders#t=/); await p.getByText(`Keep ${inr(cod)} ready`).waitFor()
+        await p.waitForURL(/\/orders(#t=|$)/); await p.getByText(`Keep ${inr(cod)} ready`).waitFor()
         await p.locator('article dl').getByText('Festive', { exact: true }).waitFor() // the saving, named on the order page
         const o = await lastOrder()
         assert.equal(Number(o.discount), order); assert.equal(Number(o.total), cod)
@@ -108,7 +108,7 @@ export default {
       await t.step('paid online: both offers recorded, the total Razorpay was asked for', async () => {
         await toBag(); await p.getByRole('button', { name: 'Checkout' }).click(); await p.waitForURL(/\/checkout$/); await fill()
         await p.getByText('Pay online', { exact: true }).click()
-        await p.getByRole('button', { name: /^Pay · / }).click(); await p.waitForURL(/\/orders#t=/); await p.getByText(/Paid · being packed/).waitFor()
+        await p.getByRole('button', { name: /^Pay · / }).click(); await p.waitForURL(/\/orders(#t=|$)/); await p.getByText(/Paid · being packed/).waitFor()
         const o = await until(async () => { const x = await lastOrder(); return x.paid_at && x })
         assert.equal(Number(o.total), online); assert.equal(Number(o.discount), order + saving)
         assert.equal(Number(o.checkout.onlineTotal), online, 'Razorpay was asked for the discounted total')
@@ -117,13 +117,13 @@ export default {
       await t.step('online dismissed → switch to COD: told the saving goes, then it is gone from the order', async () => {
         await toBag(); await p.getByRole('button', { name: 'Checkout' }).click(); await p.waitForURL(/\/checkout$/); await fill()
         await p.evaluate(() => { window.__rzpMode = 'dismiss' })
-        await p.getByText('Pay online', { exact: true }).click(); await p.getByText(`Saves ₹50`).waitFor()
+        await p.getByText('Pay online', { exact: true }).click(); await p.getByText(`Saves ₹50`, { exact: true }).waitFor()
         await p.getByRole('button', { name: /^Pay · / }).click(); await p.getByText(/Payment did not go through/).waitFor()
         let o = await lastOrder()
         assert.equal(Number(o.total), online); assert.equal(Number(o.discount), order + saving)
         await p.getByText('Pay on delivery', { exact: true }).click()
         await p.getByRole('button', { name: /Pay on delivery · / }).click()
-        await p.waitForURL(/\/orders#t=/); await p.getByText(`Keep ${inr(cod)} ready`).waitFor()
+        await p.waitForURL(/\/orders(#t=|$)/); await p.getByText(`Keep ${inr(cod)} ready`).waitFor()
         o = await until(async () => { const x = await lastOrder(); return x.switched_to_cod_at && x })
         assert.equal(Number(o.total), cod, 'the COD total: the order offer stays, the saving goes')
         assert.equal(Number(o.discount), order)
@@ -145,12 +145,14 @@ export default {
       })
       await t.step('O·3: the list shows the last 30 days; an offer page its own numbers, "too few to judge"', async () => {
         // What offerStats counts: Kesar's orders of the last 30 days using an offer now (discountUseSql's rule: a payment
-        // saving on a paid, uncancelled order; any other on a standing order; either on one still holding its stock).
+        // saving or an online-only order offer on a paid, uncancelled order; a COD-only one on a standing order not paid
+        // online; any other on a standing order; each on one still holding its stock: offers per method, 0106/0107).
         const holding = `(o.payment_method = 'prepaid' and o.paid_at is null and o.switched_to_cod_at is null and o.cancelled_at is null and o.pay_by > now())`
         const [{ n, given }] = await db.unsafe(`select count(distinct od.order_id)::int n, coalesce(sum(od.amount), 0)::bigint given
           from order_discounts od join orders o on o.tenant_id = od.tenant_id and o.id = od.order_id
           where o.tenant_id = '${KESAR}' and o.placed_at >= now() - interval '30 days'
-            and case when od.class = 'payment' then (o.paid_at is not null and o.cancelled_at is null) or ${holding}
+            and case when od.class = 'payment' or od.method = 'prepaid' then (o.paid_at is not null and o.cancelled_at is null) or ${holding}
+                     when od.method = 'cod' then (o.cancelled_at is null and o.paid_at is null and not (o.payment_method = 'prepaid' and o.switched_to_cod_at is null)) or ${holding}
                      else (o.cancelled_at is null and not (o.payment_method = 'prepaid' and o.paid_at is null and o.switched_to_cod_at is null)) or ${holding} end`)
         await c.goto(CONSOLE + '/console/offers')
         const strip = c.getByRole('region', { name: 'Last 30 days' })

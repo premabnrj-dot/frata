@@ -84,8 +84,9 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     if (pending && typeof pending.t === 'string' && /^[A-Za-z0-9_-]{22}$/.test(pending.t)) {
       ss.del(PENDING_KEY)
       if (pending.b === JSON.stringify(bag.get())) {
-        // The order holds this bag now: the bag is emptied so it can't be placed twice.
-        bag.clear()
+        // The order holds this bag now: the bag is emptied so it can't be placed twice, and the typed form goes with it
+        // (as after any placed order: security review Info).
+        bag.clear(); ss.del(FORM_KEY)
         window.location.replace(`/orders#t=${pending.t}`)
         return
       }

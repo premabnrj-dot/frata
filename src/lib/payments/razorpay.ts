@@ -16,7 +16,7 @@ import { RAZORPAY_API_BASE } from '@/lib/env'
 
 export const RAZORPAY_TIMEOUT_MS = 8_000
 export type Keys = { keyId: string; keySecret: string }
-export type RzpPayment = { id: string; status: 'created' | 'authorized' | 'captured' | 'refunded' | 'failed'; amount: number; fee: number | null; tax: number | null; method: string | null }
+export type RzpPayment = { id: string; status: 'created' | 'authorized' | 'captured' | 'refunded' | 'failed'; amount: number; currency: string | null; fee: number | null; tax: number | null; method: string | null }
 
 type Call = { ok: true; json: Record<string, unknown> } | { ok: false; status: number }
 
@@ -64,7 +64,7 @@ export async function orderPayments(k: Keys, rzpOrderId: string): Promise<RzpPay
 
 export function toPayment(p: Record<string, unknown>): RzpPayment {
   const n = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : null)
-  return { id: String(p.id ?? ''), status: String(p.status ?? 'failed') as RzpPayment['status'], amount: n(p.amount) ?? 0, fee: n(p.fee), tax: n(p.tax), method: typeof p.method === 'string' ? p.method : null }
+  return { id: String(p.id ?? ''), status: String(p.status ?? 'failed') as RzpPayment['status'], amount: n(p.amount) ?? 0, currency: typeof p.currency === 'string' ? p.currency : null, fee: n(p.fee), tax: n(p.tax), method: typeof p.method === 'string' ? p.method : null }
 }
 
 /** Checkout's reply is genuine: hmac_sha256(OUR order id + "|" + payment id, key secret), compared in constant time. */

@@ -17,6 +17,7 @@ import { trimRazorpayEvent } from '@/lib/webhooks/razorpay'
 import { refreshSoldOut } from '@/lib/queries/storefront'
 import { HOLD_MINUTES, startPayment, takeStock, type Pay } from './place'
 import { storedPricing, writeReprice } from './reprice'
+import { enqueuePaymentCheck } from './payment-check'
 
 // =============================================================================
 // FILE: src/lib/orders/payment.ts
@@ -29,6 +30,13 @@ import { storedPricing, writeReprice } from './reprice'
 // =============================================================================
 
 type OrderKey = { id: string; tenantId: string }
+
+/** A capture is ours only for exactly the online total we asked Razorpay for, in INR (the webhook, a switch to COD that
+ * finds one, and the payment check all ask this: security review 2026-11-11 LOW-3). */
+export function capturedAsAsked(p: { amount: number }, checkout: unknown, currency: unknown = 'INR'): boolean {
+  const asked = Number((checkout as { onlineTotal?: number } | null)?.onlineTotal ?? -1)
+  return p.amount === asked && currency === 'INR'
+}
 
 /**
  * Record the payment once and take the stock of any line not taken yet (none, after a switch to COD: takeStock
@@ -67,7 +75,7 @@ export async function markPaid(tx: Tx, o: OrderKey, p: { paymentId: string; fee?
 const byHash = async (tx: Tx, tenantId: string, hash: string) => {
   if (!/^[0-9a-f]{64}$/.test(hash)) return null
   const [o] = await tx.select({ id: orders.id, method: orders.paymentMethod, rzp: orders.razorpayOrderId, paidAt: orders.paidAt, cancelledAt: orders.cancelledAt, switchedAt: orders.switchedToCodAt,
-    payBy: orders.payBy, subtotal: orders.subtotal, total: orders.total, pincode: orders.pincode, phone: orders.phone, shipping: orders.shipping, sellerGstin: orders.sellerGstin, pricesIncludeGst: orders.pricesIncludeGst })
+    payBy: orders.payBy, checkout: orders.checkout, subtotal: orders.subtotal, total: orders.total, pincode: orders.pincode, phone: orders.phone, shipping: orders.shipping, sellerGstin: orders.sellerGstin, pricesIncludeGst: orders.pricesIncludeGst })
     .from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.tokenHash, hash)))
   return o ?? null
 }
@@ -112,14 +120,16 @@ export async function switchToCod(tenantId: string, hash: string, expectedTotal:
   if (pre.o.rzp && pre.keys) {
     const pays = await orderPayments(pre.keys, pre.o.rzp)
     if (pays === null) return { kind: 'refused', status: 409, error: 'We could not check with Razorpay whether your payment went through. Try again in a minute.' }
-    const captured = pays.find((p) => p.status === 'captured')
+    const captured = pays.find((p) => p.status === 'captured' && capturedAsAsked(p, pre.o!.checkout, p.currency))
     if (captured) {
       const soldOut: string[] = []
       await withTenant(tenantId, (tx) => markPaid(tx, { id: pre.o!.id, tenantId }, { paymentId: captured.id, fee: captured.fee, tax: captured.tax }, soldOut))
       if (soldOut.length) refreshSoldOut(tenantId)
       return { kind: 'paid' }
     }
-    if (pays.some((p) => p.status === 'authorized')) return { kind: 'refused', status: 409, error: 'Your payment is still going through. Wait a moment, then check your order.' }
+    // A payment authorized, or created and not yet failed (a UPI collect still open), may still be captured: never
+    // switch under it, or the courier collects cash for a paid order (impact review 2026-11-11).
+    if (pays.some((p) => p.status === 'authorized' || p.status === 'created')) return { kind: 'refused', status: 409, error: 'Your payment is still going through. Wait a moment, then check your order.' }
   }
   const soldOut: string[] = []
   const r = await withTenant(tenantId, async (tx): Promise<SwitchResult> => {
@@ -127,6 +137,11 @@ export async function switchToCod(tenantId: string, hash: string, expectedTotal:
     if (!o || o.paidAt || o.switchedAt || o.cancelledAt) return { kind: 'refused', status: 409, error: 'This order changed. Reload the page.' }
     const shop = await checkoutShop(tx, tenantId, null)
     if (!shop?.published) return { kind: 'refused', status: 404, error: 'This shop is not taking orders right now.' }
+    // A lapsed hold gave its offers' uses back: they must still fit, exactly as a retry online checks (security review
+    // 2026-11-11 MED-1: "Pay on delivery instead" on a lapsed order re-applied a stopped, used-up or first-order offer).
+    if ((!o.payBy || o.payBy <= now) && !(await offersStillFit(tx, tenantId, o.id, o.phone, now, 'cod'))) {
+      return { kind: 'refused', status: 409, error: 'An offer on this order changed or ran out while you were away. Go back to your bag.' }
+    }
     // In position order, and kept with their ids: the quote's shares come back in bag order and are written by id.
     const lines = (await tx.select({ id: orderLines.id, variantId: orderLines.variantId, qty: orderLines.qty }).from(orderLines)
       .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id))).orderBy(orderLines.position)).filter((l) => l.variantId)
@@ -171,7 +186,9 @@ export async function retryPayment(tenantId: string, hash: string, now = new Dat
       const q = quote(lines.filter((l) => l.variantId).map((l) => ({ variantId: l.variantId!, qty: l.qty })), rows, shop, now)
       if (q.lines.some((l) => l.problem) || q.subtotal !== Number(o.subtotal)) return 'gone' as const
       if (!(await offersStillFit(tx, tenantId, o.id, o.phone, now))) return 'offer' as const
-      await tx.update(orders).set({ payBy: new Date(now.getTime() + HOLD_MINUTES * 60_000) }).where(and(eq(orders.tenantId, tenantId), eq(orders.id, o.id)))
+      const payBy = new Date(now.getTime() + HOLD_MINUTES * 60_000)
+      await tx.update(orders).set({ payBy }).where(and(eq(orders.tenantId, tenantId), eq(orders.id, o.id)))
+      await enqueuePaymentCheck(tx, tenantId, o.id, payBy)
     }
     return o.id
   })
@@ -188,10 +205,13 @@ export async function retryPayment(tenantId: string, hash: string, now = new Dat
  * stopped by Frrata: "before paying, never after"), a first-order one is still the phone's first, and each limited
  * one still has room for it (the order's own use excluded), under a lock. Exported for its int test.
  */
-export async function offersStillFit(tx: Tx, tenantId: string, orderId: string, phone: string, now: Date): Promise<boolean> {
-  const mine = await tx.select({ discountId: orderDiscounts.discountId, amount: orderDiscounts.amount, firstOrder: discounts.firstOrder, live: sql<boolean>`${liveDiscountSql(now)}` }).from(orderDiscounts)
+export async function offersStillFit(tx: Tx, tenantId: string, orderId: string, phone: string, now: Date, way: 'prepaid' | 'cod' = 'prepaid'): Promise<boolean> {
+  const all = await tx.select({ discountId: orderDiscounts.discountId, amount: orderDiscounts.amount, cls: orderDiscounts.class, method: orderDiscounts.method, firstOrder: discounts.firstOrder, live: sql<boolean>`${liveDiscountSql(now)}` }).from(orderDiscounts)
     .innerJoin(discounts, and(eq(discounts.tenantId, orderDiscounts.tenantId), eq(discounts.id, orderDiscounts.discountId)))
     .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, orderId)))
+  // Only the offers the order would be paid at this way: paying online never needs the COD-only order offer, and paying
+  // on delivery never the pay-online saving or an online-only order offer (offers per method, 0106).
+  const mine = all.filter((m) => (way === 'cod' ? m.cls !== 'payment' && m.method !== 'prepaid' : m.method !== 'cod'))
   if (!mine.length) return true
   if (mine.some((m) => !m.live)) return false
   // A first-order offer: the phone may have ordered since this hold ran out (impact review) — same lock, same rule.
@@ -249,8 +269,7 @@ async function applyEvent(tx: Tx, tenantId: string, ev: Record<string, unknown>,
   if (!o) return 'no such order'
   if (kind === 'payment.failed') { await tx.update(orders).set({ paymentFailedAt: sql`now()` }).where(and(eq(orders.tenantId, tenantId), eq(orders.id, o.id), isNull(orders.paidAt))); return null }
   if (kind !== 'payment.captured' && kind !== 'order.paid') return null
-  const asked = Number((o.checkout as { onlineTotal?: number } | null)?.onlineTotal ?? -1)
-  if (p.status !== 'captured' || p.amount !== asked || entity.currency !== 'INR') return `amount or state does not match (${p.status})`
+  if (p.status !== 'captured' || !capturedAsAsked(p, o.checkout, entity.currency)) return `amount or state does not match (${p.status})`
   await markPaid(tx, { id: o.id, tenantId }, { paymentId: p.id, fee: p.fee, tax: p.tax }, soldOut)
   return null
 }

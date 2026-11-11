@@ -92,7 +92,7 @@ export default {
       const before = await stock('{M,Rust}')
       await toCheckout('Rust', 'M'); await p.getByText('Pay on delivery', { exact: true }).click()
       await p.screenshot({ path: t.out('checkout'), fullPage: true })
-      await p.getByRole('button', { name: /Place order · ₹2,539/ }).click(); await p.waitForURL(/\/orders#t=/); await p.getByText('Keep ₹2,539 ready').waitFor()
+      await p.getByRole('button', { name: /Place order · ₹2,539/ }).click(); await p.waitForURL(/\/orders(#t=|$)/); await p.getByText('Keep ₹2,539 ready').waitFor()
       await p.screenshot({ path: t.out('order-cod'), fullPage: true })
       assert.equal(await stock('{M,Rust}'), before - 1)
       const o = await lastOrder()
@@ -126,7 +126,7 @@ export default {
         await box().check()
         await p.getByText('Pay on delivery', { exact: true }).click()
         await p.screenshot({ path: t.out('checkout-opt-in'), fullPage: true })
-        await p.getByRole('button', { name: /Place order/ }).click(); await p.waitForURL(/\/orders#t=/)
+        await p.getByRole('button', { name: /Place order/ }).click(); await p.waitForURL(/\/orders(#t=|$)/)
         const o = await lastOrder()
         assert.ok(o.wa_opt_in_at, 'the tick is stored with its time'); assert.equal(o.wa_opt_in_notice, 'v1-en')
       } finally {
@@ -150,7 +150,7 @@ export default {
     await t.step('online order: paid, stock taken once, the webhook after the browser changes nothing but the fee', async () => {
       const before = await stock('{S,Rust}')
       await toCheckout('Rust', 'S'); await p.getByText('Pay online', { exact: true }).click()
-      await p.getByRole('button', { name: /^Pay · ₹2,490/ }).click(); await p.waitForURL(/\/orders#t=/); await p.getByText(/Paid · being packed/).waitFor()
+      await p.getByRole('button', { name: /^Pay · ₹2,490/ }).click(); await p.waitForURL(/\/orders(#t=|$)/); await p.getByText(/Paid · being packed/).waitFor()
       // The page can say Paid a moment before the capture's transaction is visible here: wait for it, never re-read once (UX session, 2026-11-07).
       await until(async () => (await stock('{S,Rust}')) === before - 1).catch(() => {})
       assert.equal(await stock('{S,Rust}'), before - 1)
@@ -173,7 +173,7 @@ export default {
       await p.getByText('Pay online', { exact: true }).click(); await p.getByRole('button', { name: /^Pay · / }).click()
       await p.getByText(/Payment did not go through/).waitFor()
       await p.getByText('Pay on delivery', { exact: true }).click(); await p.getByRole('button', { name: /Pay on delivery · ₹2,539/ }).click()
-      await p.waitForURL(/\/orders#t=/); await p.getByText('Keep ₹2,539 ready').waitFor()
+      await p.waitForURL(/\/orders(#t=|$)/); await p.getByText('Keep ₹2,539 ready').waitFor()
       // The page can show the order a moment before the switch's transaction is visible to this connection (seen
       // under the full suite's load): wait for both, then assert.
       let o = await until(async () => { const x = await lastOrder(); return x.switched_to_cod_at && x }, 10_000)
@@ -202,7 +202,8 @@ export default {
       const o = await lastOrder()
       // The hold lapses and the last piece goes to someone else; then the payment lands.
       await db`update orders set pay_by = now() - interval '1 minute' where id = ${o.id}`
-      const token = await p.evaluate(() => Object.entries(sessionStorage).find(([k]) => /pending/i.test(k))?.[1])
+      // The pending order is kept with the bag it was placed with ({ t, b }: checkout.tsx, shop stress test 2026-11-11).
+      const token = await p.evaluate(() => { const v = Object.entries(sessionStorage).find(([k]) => /pending/i.test(k))?.[1]; try { return JSON.parse(v ?? 'null')?.t } catch { return v } })
       assert.ok(token, 'the checkout keeps the unpaid order\'s link token')
       const was = await stock('{M,Indigo}'); await db`update variants set stock = 0 where option_values = '{M,Indigo}'`
       try {

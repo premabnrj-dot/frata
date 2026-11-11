@@ -18,6 +18,8 @@ type View = {
   invoice?: boolean
 }
 
+const REF_KEY = 'frrata.order.ref.v1'
+
 const STATE: Record<ShopperState, string> = {
   confirming: 'Placed · the shop confirms it soon', confirmed: 'Confirmed · being packed', paid: 'Paid · being packed', packed: 'Packed · ready to ship',
   awaiting_payment: 'Waiting for your payment', not_paid: 'Not paid yet', cancelled: 'Cancelled', shipped: 'On its way',
@@ -72,16 +74,24 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
     // The order's own token (#t=), or an email's link (#o=&e=: bound to the address it was sent to).
     const h = new URLSearchParams(window.location.hash.slice(1)), token = h.get('t') ?? '', o = h.get('o') ?? '', e = h.get('e') ?? ''
     const ref: OrderRef | null = /^[A-Za-z0-9_-]{22}$/.test(token) ? { token } : /^[0-9a-f-]{36}$/.test(o) && /^[a-z0-9]{1,8}:[0-9a-f]{64}$/.test(e) ? { o, e } : null
-    if (!ref) { setError('This order link is not complete. Open the link you saved, or message the shop.'); return }
-    tokenRef.current = ref
-    void api<View>('/api/shop/orders/view', ref).then((r) => (r.ok ? setV(r.data) : setError(r.status === 404 ? 'We could not find this order. Check the link, or message the shop.' : r.data.error ?? 'Could not load your order.')))
+    // The link's ref leaves the address bar once read (kept in this tab): the page loads Razorpay's script to pay, and a
+    // third-party script can read location.href (security review 2026-11-11 LOW-1). A reload reads it back.
+    const kept = (() => { try { return JSON.parse(sessionStorage.getItem(REF_KEY) ?? 'null') as OrderRef | null } catch { return null } })()
+    const use = ref ?? kept
+    if (!use) { setError('This order link is not complete. Open the link you saved, or message the shop.'); return }
+    if (ref) { try { sessionStorage.setItem(REF_KEY, JSON.stringify(ref)) } catch { /* this page only */ } history.replaceState(null, '', location.pathname) }
+    tokenRef.current = use
+    const ref2 = use
+    void api<View>('/api/shop/orders/view', ref2).then((r) => (r.ok ? setV(r.data) : setError(r.status === 404 ? 'We could not find this order. Check the link, or message the shop.' : r.data.error ?? 'Could not load your order.')))
   }, [])
   if (error) return <p role="alert" className="mx-auto max-w-lg px-4 py-16 text-center">{error}</p>
   if (!v) return <p className="mx-auto max-w-lg px-4 py-16 text-center text-store-sub">Loading your order…</p>
   const num = `${prefix}-${v.number}`
   const wa = waLink(v.shop.whatsapp, `Order ${num}`)
   const placed = v.state !== 'not_paid' && v.state !== 'awaiting_payment'
-  const copy = () => navigator.clipboard?.writeText(window.location.href).then(() => setCopied(true), () => setCopied(false))
+  // The receipt's link, rebuilt from its ref (the address bar no longer carries it).
+  const link = () => { const r = tokenRef.current!; return `${location.origin}${location.pathname}#${'token' in r ? `t=${r.token}` : `o=${r.o}&e=${r.e}`}` }
+  const copy = () => navigator.clipboard?.writeText(link()).then(() => setCopied(true), () => setCopied(false))
   return (
     <article className="mx-auto max-w-lg space-y-4 px-4 py-8">
       {placed && v.state !== 'cancelled' && <p className="font-medium text-store-good">✓ Order placed</p>}

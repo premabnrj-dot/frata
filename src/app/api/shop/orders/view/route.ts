@@ -17,7 +17,7 @@ export const maxDuration = 30
 const Body = OrderRef
 
 export async function POST(request: Request) {
-  const r = await shopRequest(request, Body, LIMITS.payIp)
+  const r = await shopRequest(request, Body, LIMITS.viewIp)
   if (!r.ok) return r.response
   const hash = await orderRefHash(r.tenantId, r.body)
   if (!hash) return reply({ error: 'Not found' }, 404)

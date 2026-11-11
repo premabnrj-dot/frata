@@ -27,6 +27,9 @@ export const LIMITS = {
   placeOrderIp: { action: 'shop_place:ip', max: 30, windowSeconds: 3600 },
   placeOrderPhone: { action: 'shop_place:phone', max: 5, windowSeconds: 3600 },
   payIp: { action: 'shop_pay:ip', max: 60, windowSeconds: 600 },
+  // The order page reads (and re-reads every 8 s while a payment is confirming) in its own bucket, so its polling never
+  // spends what /pay, /retry and /cod need (security review 2026-11-11 LOW-5).
+  viewIp: { action: 'shop_view:ip', max: 120, windowSeconds: 600 },
   /** The shopper's invoice PDF (Documents D2): per shop and IP, failing closed. */
   invoiceIp: { action: 'shop_invoice:ip', max: 20, windowSeconds: 600 },
   // Offer codes that did not apply, per shop and IP ("<tenant>:<ip>"): guessing stops; fail closed. No per-shop block,

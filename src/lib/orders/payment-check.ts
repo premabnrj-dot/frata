@@ -7,7 +7,7 @@ import { enqueue, GiveUp, Later, type OutboxRow } from '@/lib/outbox'
 import { keysFor } from '@/lib/payments/keys'
 import { orderPayments } from '@/lib/payments/razorpay'
 import { refreshSoldOut } from '@/lib/queries/storefront'
-import { markPaid } from './payment'
+import { capturedAsAsked, markPaid } from './payment'
 
 // =============================================================================
 // FILE: src/lib/orders/payment-check.ts — ASK RAZORPAY, DON'T WAIT TO BE TOLD (shop stress test 2026-11-11). An online
@@ -19,25 +19,27 @@ import { markPaid } from './payment'
 // =============================================================================
 
 /** How long after the hold a payment still in flight is asked about again. */
-const KEEP_ASKING_MS = 72 * 3_600_000
+export const KEEP_ASKING_MS = 72 * 3_600_000
 
 export type Settled = 'paid' | 'pending' | 'unpaid' | 'unknown'
 
 /** Razorpay's word on one order: captured → recorded as paid; authorized → 'pending'; Razorpay unreachable → 'unknown'. */
 export async function settleWithRazorpay(tenantId: string, orderId: string): Promise<Settled> {
   const pre = await withTenant(tenantId, async (tx) => {
-    const [o] = await tx.select({ rzp: orders.razorpayOrderId, paidAt: orders.paidAt, cancelledAt: orders.cancelledAt, switchedAt: orders.switchedToCodAt, method: orders.paymentMethod })
+    const [o] = await tx.select({ rzp: orders.razorpayOrderId, checkout: orders.checkout, paidAt: orders.paidAt, cancelledAt: orders.cancelledAt, switchedAt: orders.switchedToCodAt, method: orders.paymentMethod })
       .from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId))).limit(1)
     return o ? { o, keys: await keysFor(tx, tenantId) } : null
   })
   if (!pre) return 'unpaid'
   const { o, keys } = pre
   if (o.paidAt) return 'paid'
-  // A switch to COD asked Razorpay itself before switching; a cancelled order is the shop's to refund by hand.
-  if (o.method !== 'prepaid' || !o.rzp || o.switchedAt || o.cancelledAt || !keys) return 'unpaid'
+  // As the webhook would (applyEvent → markPaid): a capture after a switch to COD is still the shopper's money and is
+  // recorded (markPaid reprices the order back to prepaid before packing, so the courier collects nothing), and one on a
+  // cancelled order shows as a refund due (impact review 2026-11-11: the check skipped both).
+  if (o.method !== 'prepaid' || !o.rzp || !keys) return 'unpaid'
   const pays = await orderPayments(keys, o.rzp)
   if (pays === null) return 'unknown'
-  const captured = pays.find((p) => p.status === 'captured')
+  const captured = pays.find((p) => p.status === 'captured' && capturedAsAsked(p, o.checkout, p.currency))
   if (captured) {
     const soldOut: string[] = []
     await withTenant(tenantId, (tx) => markPaid(tx, { id: orderId, tenantId }, { paymentId: captured.id, fee: captured.fee, tax: captured.tax }, soldOut))
@@ -47,9 +49,10 @@ export async function settleWithRazorpay(tenantId: string, orderId: string): Pro
   return pays.some((p) => p.status === 'authorized' || p.status === 'created') ? 'pending' : 'unpaid'
 }
 
-/** Queued with the order (its own transaction): asks when the hold ends. */
+/** Queued with the order, and again with each renewed hold (a retry), in that write's own transaction: asks when the
+ * hold ends. One row per hold (its end in the key), so a retry's payment is asked about too (impact review). */
 export async function enqueuePaymentCheck(tx: Tx, tenantId: string, orderId: string, payBy: Date): Promise<void> {
-  await enqueue(tx, { tenantId, kind: 'payment.check', dedupeKey: `payment.check:${orderId}`, payload: { orderId }, notBefore: payBy })
+  await enqueue(tx, { tenantId, kind: 'payment.check', dedupeKey: `payment.check:${orderId}:${payBy.getTime()}`, payload: { orderId }, notBefore: payBy })
 }
 
 /** The `payment.check` sender. A payment in flight, or Razorpay not answering, asks again later, up to 72 hours. */

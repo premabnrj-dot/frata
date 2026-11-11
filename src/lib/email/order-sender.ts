@@ -14,7 +14,7 @@ import { stillTrue } from '@/domains/messaging/still'
 import { cleanEmail } from '@/domains/email/shape'
 import { fromHeader } from '@/domains/email/headers'
 import { composeOrderEmail } from './compose'
-import { settleWithRazorpay } from '@/lib/orders/payment-check'
+import { KEEP_ASKING_MS, settleWithRazorpay } from '@/lib/orders/payment-check'
 import type { SkipCode } from '@/domains/email/state'
 import { suppressionHashes } from './hash'
 import { sendEmail, setUpTenant, tenantName } from './ses'
@@ -58,7 +58,8 @@ export async function sendOrderEmail(row: OutboxRow): Promise<void> {
   // "Finish paying… nothing was charged" only once Razorpay says so: a webhook lost or late meant a shopper who had paid
   // was told they hadn't (shop stress test 2026-11-11). A capture is recorded here (then stillTrue skips the email);
   // a payment in flight or Razorpay not answering waits.
-  if (kind === 'finish_paying') {
+  // Asked for up to 72 hours like the payment check; after that the email decides on what is stored.
+  if (kind === 'finish_paying' && Date.now() - new Date(row.createdAt).getTime() < KEEP_ASKING_MS) {
     const settled = await settleWithRazorpay(tenantId, orderId)
     if (settled === 'pending') throw new Later('payment in flight', 10)
     if (settled === 'unknown') throw new Later('razorpay unreachable', 5)

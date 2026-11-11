@@ -8,7 +8,7 @@ import { drainSoon } from '@/lib/outbox/drain'
 // Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
 export const maxDuration = 30
 
-// Razorpay Checkout's reply in the browser: paid (signed) or failed. The order is found by its link token only.
+// Razorpay Checkout's reply in the browser: paid (signed) or failed.
 // The order by the checkout's token or the "Finish paying" email's link (OrderRef), so its page can pay too.
 const Body = z.intersection(OrderRef, z.union([
   z.object({ paymentId: z.string().regex(/^pay_[A-Za-z0-9]{6,40}$/), signature: z.string().regex(/^[a-f0-9]{64}$/) }),
