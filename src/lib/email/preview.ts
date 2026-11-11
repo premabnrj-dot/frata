@@ -1,6 +1,7 @@
 import 'server-only'
 import { shopLook, shopSettingsFor } from '@/lib/queries/storefront'
 import { themeOf } from '@/lib/themes/page-look'
+import { manifestsFor } from '@/lib/themes/manifests'
 import { paperAccent } from '@/domains/documents/paper'
 import type { OrderMessage } from '@/domains/messaging/events'
 import type { EmailWords } from '@/domains/email/words'
@@ -15,11 +16,11 @@ import { composeOrderEmail } from './compose'
 export async function previewOrderEmail(tenantId: string, kind: OrderMessage, words: Partial<EmailWords> | null) {
   const shop = await shopSettingsFor(tenantId)
   if (!shop) return null
-  const look = await shopLook(tenantId).catch(() => null)
+  const [look, src] = await Promise.all([shopLook(tenantId).catch(() => null), manifestsFor(tenantId)])
   const now = new Date()
   const cod = kind !== 'finish_paying'
   return composeOrderEmail({
-    kind, shop, accent: paperAccent(themeOf(shop, look).schemes.paper.accent),
+    kind, shop, accent: paperAccent(themeOf(shop, look, src).schemes.paper.accent),
     order: { id: '00000000-0000-0000-0000-000000000000', number: 1043, total: 249000, customerName: 'Asha Rao', placedAt: now, paymentMethod: cod ? 'cod' : 'prepaid',
       payBy: null, paidAt: null, switchedToCodAt: null, confirmedAt: null, heldAt: null, packedAt: null, cancelledAt: kind === 'cancelled' ? now : null,
       shippedAt: kind === 'shipped' || kind === 'delivered' ? now : null, ndrAt: null, deliveredAt: kind === 'delivered' ? now : null, lostAt: null,
