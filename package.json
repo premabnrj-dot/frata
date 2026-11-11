@@ -28,6 +28,7 @@
     "check:modules": "node scripts/check-modules.mjs",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
+    "db:generate:analytics": "drizzle-kit generate --config drizzle.analytics.config.ts",
     "verify:tenancy": "bash scripts/verify/tenancy.sh",
     "e2e": "node e2e/run.mjs",
     "verify:backfill": "bash scripts/verify/backfill-0019.sh && bash scripts/verify/backfill-0046.sh",

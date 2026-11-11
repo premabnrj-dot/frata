@@ -437,3 +437,54 @@ Computed with `orderProfit`; the scratch model is in the session scratchpad.
 
   Build order: A2·0 (the owner creates the project) and A2·1 (the database and its locks), then PV1-4a (the island
   split frees room on the product page: the beacon adds 0.8–0.9 kB), then A2·2 → A2·5.
+
+## A2·1 as built (2026-11-11, branch only; nothing applied to any live database yet)
+- **The project:** the owner created `frata-analytics` (ref `frbyvvxxqheigcutlamj`) in a separate Supabase account, Data
+  API off. The session's Supabase connection belongs to the main account and is refused there, so its migrations go
+  in by the owner's hand through its SQL editor: one transaction holding 0000–0002 and their
+  `drizzle.__drizzle_migrations` rows (sha256 of each file, the journal's `when`), checked first on a fresh database.
+- **Migrations** (`drizzle-analytics/`, `drizzle.analytics.config.ts`, `npm run db:generate:analytics`):
+  - 0000 (custom): roles `frata_app` and `frata_admin`, with their limits set in this database only (`alter role … in
+    database`; `frata_app` 2 s statement, 1 s lock, 5 s idle, `synchronous_commit` off); `app_current_tenant()`, granted
+    by name, because functions belong to no one by default here; pgcrypto in `extensions`; the schema `ev` with no grant.
+  - 0001 (generated from `src/lib/db/analytics-schema.ts`): six narrow rollups (`traffic_daily`, `source_daily` with
+    the raw source inputs, `browser_daily`, `city_daily`, `product_daily`, `vitals_daily`), tenant first in every
+    key, plus an index on day each.
+  - 0002 (custom):
+    - `events`, partitioned by IST day, with partitions in `ev` (RLS on each);
+    - `frata_app` may INSERT only, under `tenant_insert`;
+    - `visitor_days`, `visitor_salts` and `fold_state` are definers' tables with a restrictive false policy;
+    - `ingest_events()` (invoker: one round trip, still under the events policy) and `analytics_visitor()` (definer:
+      a 16-byte HMAC with the IST day's salt, which never leaves the database);
+    - `analytics_fold()` runs every 15 minutes and is incremental: a watermark with a 1-minute lag, upserts into
+      `visitor_days` with a step bitmask, the day's first landing keeps the source, and the touched days are then
+      rebuilt;
+    - `analytics_rollup(day)` keeps the top 200 sources (rh `*` for the rest) and the top 50 cities ('' for the rest)
+      per shop;
+    - `analytics_maintain()` runs hourly: partitions 7 days ahead, raw events and visitor-days dropped after 90 days,
+      rollups after 730, yesterday's salt deleted;
+    - pg_cron schedules both where the server has it (Supabase).
+- **Code:**
+  - `src/lib/db/analytics.ts`: pool of 5 with a 2 s connect timeout; `withAnalyticsTenant` (read only);
+    `ingestBatch` (one statement, dropped past 20 in flight);
+  - `ANALYTICS_DATABASE_URL` in `src/lib/env.ts` and `.env.example`.
+- **Gates:** `check:tenant` § 8 holds the analytics folder to RLS and a tenant-bound policy on every table, no grant on
+  `ev`, and the connection only from `src/lib/queries/**` (or `ANALYTICS_IN_APP`). `check:config` lets
+  `src/lib/db/analytics.ts` own its `postgres()`.
+- **Proof:** `scripts/verify/analytics-tenancy.sql`, 12 checks, run by `verify:tenancy` on a second throwaway database
+  (`<name>_analytics`), and so in CI. It covers:
+  - roles and per-database limits;
+  - `ev` closed, and every partition under RLS;
+  - grants;
+  - definer privileges and search paths;
+  - reads of events, partitions, salts and visitor-days refused;
+  - ingest isolation, the 50-event cap and the hash;
+  - fold and rollups: two shops stay two rows, top-N is ranked within a shop, histograms add up;
+  - idempotent re-runs, and a later slice that adds;
+  - console reads limited to the shop;
+  - retention.
+
+  Three mutations (a grant on `ev`, a `using (true)` policy, the fold granted to `frata_app`) each fail it.
+- **e2e:** the stack makes `frata_e2e_analytics` beside `frata_e2e` and sets `ANALYTICS_DATABASE_URL`.
+- **Left for A2·2:** the route (it joins `ANALYTICS_IN_APP`, or reads through a query file), `src/domains/analytics/`
+  event, device and visitor modules, the beacon. The analytics admin connection waits for A2·5, its first reader.

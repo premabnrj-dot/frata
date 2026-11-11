@@ -59,6 +59,10 @@ export async function up({ build = true } = {}) {
   await boot.unsafe(`drop database if exists ${DB} with (force)`); await boot.unsafe(`create database ${DB}`); await boot.end()
   const adminUrl = `${server}/${DB}`
   sh('bash scripts/verify/apply-migrations.sh', { ADMIN_URL: adminUrl })
+  // A·2's analytics database: a second database on the same server (the roles are shared; their limits are per database).
+  const boot2 = adminSql(`${server}/postgres`)
+  await boot2.unsafe(`drop database if exists ${DB}_analytics with (force)`); await boot2.unsafe(`create database ${DB}_analytics`); await boot2.end()
+  sh('bash scripts/verify/apply-analytics-migrations.sh', { ANALYTICS_ADMIN_URL: `${server}/${DB}_analytics` })
   sh(`psql "${adminUrl}" -q -v ON_ERROR_STOP=1 -f e2e/seed.sql`)
   const pw = randomBytes(18).toString('hex')
   const db = adminSql(adminUrl)
@@ -84,7 +88,7 @@ export async function up({ build = true } = {}) {
   sh('rm -rf .next/cache')
   const host = new URL(server).host
   run('next', 'npx', ['next', 'start', '-p', String(PORTS.app)], {
-    ...PUBLIC_ENV, DATABASE_URL: `postgres://frata_app:${pw}@${host}/${DB}`, ADMIN_DATABASE_URL: `postgres://frata_admin:${adminPw}@${host}/${DB}`, PAYMENT_KEYS_SECRET: 'e2e-only-secret', TRIAL_CLAIM_SECRET: 'e2e-trial-claim-secret', FRRATA_WA_PHONE_NUMBER_ID: '200000000099', FRRATA_WA_TOKEN: 'EAAe2efrratasignup', FRRATA_WA_SIGNUP_TEMPLATE: 'frrata_signup_code',
+    ...PUBLIC_ENV, DATABASE_URL: `postgres://frata_app:${pw}@${host}/${DB}`, ADMIN_DATABASE_URL: `postgres://frata_admin:${adminPw}@${host}/${DB}`, ANALYTICS_DATABASE_URL: `postgres://frata_app:${pw}@${host}/${DB}_analytics`, PAYMENT_KEYS_SECRET: 'e2e-only-secret', TRIAL_CLAIM_SECRET: 'e2e-trial-claim-secret', FRRATA_WA_PHONE_NUMBER_ID: '200000000099', FRRATA_WA_TOKEN: 'EAAe2efrratasignup', FRRATA_WA_SIGNUP_TEMPLATE: 'frrata_signup_code',
     RAZORPAY_API_BASE: `http://localhost:${PORTS.razorpay}`, BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_x_y', BLOB_STORE_ID: 'store_e2e', CRON_SECRET: 'e2e-cron', E2E_FIXTURES: '1', GSP_PROVIDER: 'fake', BILLING_TEST_ISSUE: '1', RAZORPAY_BILLING_KEY_ID: BILLING_KEYS.id, RAZORPAY_BILLING_KEY_SECRET: BILLING_KEYS.secret, RAZORPAY_BILLING_WEBHOOK_SECRET: BILLING_KEYS.webhook,
     META_APP_SECRET: META.appSecret, WA_VERIFY_TOKEN: META.verifyToken, META_GRAPH_BASE: `http://localhost:${PORTS.meta}`,
     // EkCode (P1): its own number and app on the fake Meta; test-only key rings.

@@ -80,6 +80,17 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - Admin takes tenant ids from forms (it is cross-tenant by role); every Admin
   write still matches `tenant_id` **and** the row id together.
 
+### The analytics database (A·2, 2026-11-11; plan docs/plans/2026-11-11-guardrails-infra-a2.md § A2·1 as built)
+
+- Visits live in a **second Postgres** (`frata-analytics`), migrated from `drizzle-analytics/`
+  (`drizzle.analytics.config.ts`, `npm run db:generate:analytics`), schema in `src/lib/db/analytics-schema.ts`.
+  The same locks: `frata_app` with RLS, `withAnalyticsTenant` (`src/lib/db/analytics.ts`), the
+  tenant from `requireMember` or the host. `check:tenant` § 8 and `scripts/verify/analytics-tenancy.sql` hold it.
+- Never open it inside a main-database transaction or await it from one; it may be down, and Traffic then says so.
+- Raw events are written only through `ingest_events()` and read only by the fold. Partitions live in `ev`, which
+  has no grant; a new grant there is a bug. Rollups keep raw source inputs, classified on read (§ Attribution).
+- Role settings there use `alter role … in database` (a throwaway server shares its roles with the main database).
+
 ## Auth
 
 - Supabase auth only (magic link, `src/app/login/`). Data never goes through
