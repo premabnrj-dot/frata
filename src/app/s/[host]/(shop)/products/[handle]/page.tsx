@@ -9,8 +9,8 @@ import { JsonLd } from '@/components/storefront/json-ld'
 import { breadcrumbJsonLd } from '@/domains/seo/defaults'
 import type { StoreProduct, StoreShop } from '@/lib/queries/storefront'
 import { visibility, type Status } from '@/domains/catalogue/availability'
-import { shopCatalogue, shopLook, shopProduct } from '@/lib/queries/storefront'
-import { themeOf } from '@/lib/themes/page-look'
+import { shopCatalogue, shopProduct } from '@/lib/queries/storefront'
+import { shopTheme } from '@/lib/themes/page-look'
 import { shopFor, shopHref } from '../../../_shop'
 import { shopTags, toMetadata } from '../../../_meta'
 
@@ -55,7 +55,7 @@ export default async function ProductPage({ params }: { params: Params }) {
   const now = new Date()
   // Archived: the shopper reads that it has gone, with new pieces below; noindex drops it from search (spec § Review findings).
   if (v.gone) return <GoneView title={p.title} cat={await shopCatalogue(shop.id)} href={shopHref} now={now} lang={shop.shopLanguage} />
-  const theme = themeOf(shop, await shopLook(shop.id))
+  const theme = (await shopTheme(shop))
   const base = `https://${shop.host}`
   const extras = await productExtras({ tenantId: shop.id, productId: p.id, at: now.toISOString() })
   return (

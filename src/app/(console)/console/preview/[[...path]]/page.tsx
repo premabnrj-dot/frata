@@ -8,6 +8,7 @@ import { Panel } from '@/components/ui/panel'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { previewCatalogue, previewLook, previewShop } from '@/lib/queries/storefront'
 import { shellNeedsCatalogue, shellPictures, themeOf } from '@/lib/themes/page-look'
+import { manifestsFor } from '@/lib/themes/manifests'
 
 // The merchant's own shop, as shoppers will see it — drafts and unlisted
 // pieces included, never cached, never indexed (storefront spec § Preview).
@@ -26,7 +27,8 @@ export default async function Preview({ params }: { params: Promise<{ path?: str
   const shop = await previewShop(tenantId)
   if (!shop) notFound()
   const now = new Date()
-  const theme = themeOf(shop, await previewLook(tenantId))
+  const [look, src] = await Promise.all([previewLook(tenantId), manifestsFor(tenantId)])
+  const theme = themeOf(shop, look, src)
   const { circles, strip } = shellPictures(theme, shellNeedsCatalogue(theme) ? await previewCatalogue(tenantId) : null, now)
   const { body, note } = await previewPage({ tenantId, shop, path, href, now, theme })
 

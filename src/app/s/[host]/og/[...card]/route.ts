@@ -4,10 +4,10 @@ import { BLOB_STORE_ID } from '@/lib/env'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { clientIp } from '@/lib/http/client-ip'
 import { fetchWithTimeout } from '@/lib/http/timeout'
-import { shopCatalogue, shopLook } from '@/lib/queries/storefront'
+import { shopCatalogue } from '@/lib/queries/storefront'
 import { cardHash, cardOf, parseCardPath, type CardSource } from '@/lib/seo/card'
 import { photoUri, renderCard } from '@/lib/seo/render-card'
-import { themeOf } from '@/lib/themes/page-look'
+import { shopTheme } from '@/lib/themes/page-look'
 import { shopForRoute } from '../../_shop'
 
 // Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
@@ -65,7 +65,7 @@ export async function GET(req: Request, { params }: { params: Params }) {
   else { const collection = cat.collections.find((c) => c.id === p.id); if (collection) src = { kind: 'collection', collection, cat } }
   if (!src) return NOT_FOUND()
 
-  const content = cardOf(shop, src, themeOf(shop, await shopLook(shop.id)), now)
+  const content = cardOf(shop, src, (await shopTheme(shop)), now)
   const hash = cardHash(content)
   const currentPath = p.kind === 'shop' ? `/og/shop/${hash}.jpg` : `/og/${p.kind}/${p.id}/${hash}.jpg`
 

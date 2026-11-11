@@ -3,8 +3,8 @@ import { shareImage } from '@/lib/seo/share-image'
 import { homeSeo } from '@/domains/seo/defaults'
 import { HomeView } from '@/components/storefront/pages'
 import { LoopPlayer } from '@/components/storefront/sections/loop-player'
-import { shopBestSellers, shopCatalogue, shopLook, shopVideos } from '@/lib/queries/storefront'
-import { bestSellersFor, themeOf, videosFor } from '@/lib/themes/page-look'
+import { shopBestSellers, shopCatalogue, shopVideos } from '@/lib/queries/storefront'
+import { bestSellersFor, shopTheme, videosFor } from '@/lib/themes/page-look'
 import { shopFor, shopHref } from '../_shop'
 import { shopTags, toMetadata } from '../_meta'
 
@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ host: str
 
 export default async function Home({ params }: { params: Promise<{ host: string }> }) {
   const shop = await shopFor(params)
-  const theme = themeOf(shop, await shopLook(shop.id))
+  const theme = (await shopTheme(shop))
   const [best, videos] = await Promise.all([bestSellersFor(theme, (d) => shopBestSellers(shop.id, d)), videosFor(theme, (k) => shopVideos(shop.id, k))])
   return <><HomeView shop={shop} cat={await shopCatalogue(shop.id)} href={shopHref} now={new Date()} theme={theme} bestSellers={best} videos={videos} />{Object.keys(videos).length > 0 && <LoopPlayer />}</>
 }

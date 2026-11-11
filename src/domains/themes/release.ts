@@ -1,4 +1,4 @@
-import { cmpSemver } from './catalogue'
+import { cmpSemver } from './semver'
 import type { ThemeManifest } from './types'
 
 // =============================================================================

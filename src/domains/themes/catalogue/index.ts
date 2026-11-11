@@ -27,23 +27,8 @@ export const CATALOGUE: Record<string, Record<string, ThemeManifest>> = {
   signal: { '1.0.0': signal_1_0_0, '1.1.0': signal_1_1_0, '1.2.0': signal_1_2_0, '1.3.0': signal_1_3_0 },
 }
 
-export function manifestOf(key: string, version: string): ThemeManifest | null {
-  return CATALOGUE[key]?.[version] ?? null
-}
+// Reading a manifest: through a ManifestSource (../source.ts), never from CATALOGUE directly (Theme Studio TS0a).
 
-/**
- * The version a stored revision renders with: its own, else the newest of the same theme at or below it (a build
- * without that version, e.g. after a revert), else the theme's oldest. Never another theme (T2 review).
- */
-export function manifestNear(key: string, version: string): ThemeManifest | null {
-  const vs = CATALOGUE[key]; if (!vs) return null
-  if (vs[version]) return vs[version]!
-  const sorted = Object.keys(vs).sort((a, b) => cmpSemver(b, a))
-  const v = sorted.find((x) => cmpSemver(x, version) <= 0) ?? sorted.at(-1)
-  return v ? vs[v]! : null
-}
-
-export const cmpSemver = (a: string, b: string) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 3; i++) if (x[i]! !== y[i]!) return x[i]! - y[i]!; return 0 }
 /**
  * The themes a shop is offered to try (plan 2026-11-09-themes-three): three, each with its own job. Classic stays the
  * look of a shop that never published and the fallback; Atelier lives on inside Editorial 2. A shop already on

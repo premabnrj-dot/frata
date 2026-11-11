@@ -8,7 +8,8 @@ import { ShopIcon } from '@/components/storefront/icon'
 import { POLICY_TITLE } from '@/components/storefront/policy'
 import { ICON_NAMES } from '@/domains/icons/names'
 import { ICON_LIBRARIES, paletteOf, paletteProblem } from '@/domains/themes/site'
-import { manifestOf } from '@/domains/themes/catalogue'
+import { manifestOf } from '@/domains/themes/source'
+import { manifestsFor } from '@/lib/themes/manifests'
 import { choicesOf } from '@/domains/themes/choices'
 import { needsSamples, sampleFirst, sampleSetFor } from '@/lib/themes/sample'
 import { truePromises } from '@/domains/themes/readiness'
@@ -34,7 +35,7 @@ export default async function Customize() {
   const role = auth.membership.role, support = !!auth.membership.supportSessionId
   if (!(CAN_BUILD as readonly string[]).includes(role) || support) redirect('/console/look')
   const t = auth.membership.tenantId
-  const [data, shop] = await Promise.all([editorData(t), previewShop(t)])
+  const [data, shop, src] = await Promise.all([editorData(t), previewShop(t), manifestsFor(t)])
   if (!shop) redirect('/console/look')
   // No open draft: if this person just published it (this page re-renders after Publish), say so and offer Undo;
   // otherwise (Discard, a bookmark, someone else published) back to Look.
@@ -43,7 +44,7 @@ export default async function Customize() {
     if (!j) redirect('/console/look')
     return <Published liveId={j.liveId} address={shop.host} shopOpen={!!shop.publishedAt} undoFrom={j.canUndo && (CAN_MANAGE as readonly string[]).includes(role) ? j.liveId : null} />
   }
-  const m = manifestOf(data.draft.themeKey, data.draft.themeVersion)
+  const m = manifestOf(src, data.draft.themeKey, data.draft.themeVersion)
   if (!m) redirect('/console/look')
   const stored = data.draft.settings as { settings?: object; home?: unknown[]; site?: unknown; menus?: unknown }
   const draft = resolveTheme(m, { style: data.draft.styleKey, ...stored })

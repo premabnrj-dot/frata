@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { storeHost } from '@/domains/media/sizes'
 import { cleanImages } from '@/domains/themes/clean-images'
-import { CATALOGUE, manifestNear, manifestOf } from '@/domains/themes/catalogue'
+import { manifestNear, manifestOf, type ManifestSource } from '@/domains/themes/source'
 import { latestAvailable } from '@/domains/themes/release'
 import { brandColourProblem, carryOver, LayerSchema, layerProblems } from '@/domains/themes/layer'
 import { readinessOf } from '@/domains/themes/readiness'
@@ -12,7 +12,8 @@ import { paletteProblem, type Palette } from '@/domains/themes/site'
 import { baselineRevision, resolveTheme } from '@/domains/themes/resolve'
 import { THEME_KEYS } from '@/lib/db/schema-themes'
 import { asMember } from '@/lib/auth/as-member'
-import { CAN_BUILD, CAN_MANAGE } from '@/lib/auth/require-member'
+import { CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
+import { manifestsFor } from '@/lib/themes/manifests'
 import { auditEvents } from '@/lib/db/schema'
 import { BLOB_STORE_ID } from '@/lib/env'
 import { refreshShop } from '@/lib/queries/storefront'
@@ -35,18 +36,25 @@ const audit = (tx: Parameters<Parameters<typeof asMember>[2]>[0], a: { membershi
   tx.insert(auditEvents).values({ tenantId: a.membership.tenantId, actorUserId: a.userId, actorEmail: a.email, actorKind: 'member', action, target: target ?? null })
 
 
+/** The member's shop's manifests, read BEFORE the transaction (P4); requireMember is cached, so this costs no query. */
+async function sourceFor(roles: Parameters<typeof requireMember>[0]): Promise<ManifestSource> {
+  const a = await requireMember(roles)
+  return manifestsFor(a.ok ? a.membership.tenantId : null)
+}
+
 export async function tryThemeAction(input: unknown): Promise<R<{ revisionId: string; lost: string[] }>> {
   const p = z.object({ theme: z.enum(THEME_KEYS) }).safeParse(input)
   if (!p.success) { console.error('[look.try] refused', typeof input === 'object' && input ? String((input as { theme?: unknown }).theme).slice(0, 40) : typeof input); return { ok: false, error: 'Unknown theme.' } }
+  const src = await sourceFor(CAN_BUILD)
   const r = await asMember(CAN_BUILD, { action: 'look.try', target: p.data.theme }, async (tx, auth) => {
     if (auth.membership.supportSessionId) return { error: SUPPORT }
     const t = auth.membership.tenantId
     const l = await lookFor(tx, t)
     // The newest version this shop may use (released, or staged to it; never recalled or withdrawn: T3).
-    const to = latestAvailable(p.data.theme, Object.values(CATALOGUE[p.data.theme] ?? {}), l.access.rows, l.access.staged)
+    const to = latestAvailable(p.data.theme, src.versions(p.data.theme), l.access.rows, l.access.staged)
     if (!to) return { error: 'This theme isn’t available right now.' }
     const from = l.draft ?? l.live?.revision ?? null
-    const fromM = from ? manifestNear(from.themeKey, from.themeVersion) : null
+    const fromM = from ? manifestNear(src, from.themeKey, from.themeVersion) : null
     const fromLayer = from ? (from.settings as { settings?: object; home?: unknown[] }) : {}
     const c = fromM && from ? carryOver({ manifest: fromM, layer: { style: from.styleKey, ...fromLayer } }, to) : { layer: { style: to.styles[0]!.key }, lost: [] }
     const { style, ...rest } = c.layer
@@ -66,12 +74,13 @@ export async function saveLookAction(input: unknown): Promise<R<{ version: numbe
   if (!p.success) return { ok: false, error: 'That change could not be saved.' }
   const problems = layerProblems(p.data.layer)
   if (problems.length) return { ok: false, error: problems[0]! }
+  const src = await sourceFor(CAN_BUILD)
   const r = await asMember(CAN_BUILD, { action: 'look.save' }, async (tx, auth) => {
     if (auth.membership.supportSessionId) return { error: SUPPORT }
     const t = auth.membership.tenantId
     const rev = await revisionOf(tx, t, p.data.revisionId)
     if (!rev) return { error: 'This draft is gone. Reload.' }
-    const m = manifestOf(rev.themeKey, rev.themeVersion)
+    const m = manifestOf(src, rev.themeKey, rev.themeVersion)
     if (!m || !m.styles.some((s) => s.key === p.data.style)) return { error: 'Unknown style.' }
     const layer = p.data.layer as { settings?: { brandColour?: string | null }; home?: unknown[] }
     const colour = layer.settings?.brandColour
@@ -97,12 +106,13 @@ export async function saveLookAction(input: unknown): Promise<R<{ version: numbe
 export async function publishLookAction(input: unknown): Promise<R> {
   const p = z.object({ revisionId: z.uuid(), version: z.number().int().positive() }).safeParse(input)
   if (!p.success) return { ok: false, error: 'Nothing to publish.' }
+  const src = await sourceFor(CAN_MANAGE)
   const r = await asMember(CAN_MANAGE, { action: 'look.publish' }, async (tx, auth) => {
     if (auth.membership.supportSessionId) return { error: SUPPORT }
     const t = auth.membership.tenantId
     const rev = await revisionOf(tx, t, p.data.revisionId)
     if (!rev) return { error: 'This draft is gone. Reload.' }
-    const m = manifestOf(rev.themeKey, rev.themeVersion)
+    const m = manifestOf(src, rev.themeKey, rev.themeVersion)
     if (!m) return { error: 'This theme isn’t available.' }
     const layer = rev.settings as { settings?: object; home?: unknown[] }
     const theme = resolveTheme(m, { style: rev.styleKey, ...layer })
@@ -149,11 +159,12 @@ export async function undoPublishAction(input: unknown): Promise<R> {
 export async function restoreLookAction(input: unknown): Promise<R<{ revisionId: string }>> {
   const p = z.object({ revisionId: z.uuid() }).safeParse(input)
   if (!p.success) return { ok: false, error: 'Unknown look.' }
+  const src = await sourceFor(CAN_BUILD)
   const r = await asMember(CAN_BUILD, { action: 'look.restore' }, async (tx, auth) => {
     if (auth.membership.supportSessionId) return { error: SUPPORT }
     const t = auth.membership.tenantId
     const from = await revisionOf(tx, t, p.data.revisionId)
-    if (!from || !manifestOf(from.themeKey, from.themeVersion)) return { error: 'That look can’t be restored.' }
+    if (!from || !manifestOf(src, from.themeKey, from.themeVersion)) return { error: 'That look can’t be restored.' }
     if (!(await themeAccess(tx, t)).may(from.themeKey, from.themeVersion)) return { error: 'That look’s theme version isn’t offered by Frrata any more, so it can’t be restored. Try the theme for its current version.' }
     const d = await newDraft(tx, t, { userId: auth.userId, email: auth.email }, { themeKey: from.themeKey, themeVersion: from.themeVersion, styleKey: from.styleKey, settings: from.settings as object })
     return { revisionId: d.id }
@@ -166,6 +177,7 @@ export async function restoreLookAction(input: unknown): Promise<R<{ revisionId:
 
 /** The draft to edit: the open one, else a new one copied from the live look. */
 export async function editLookAction(): Promise<R<{ revisionId: string; lost: string[] }>> {
+  const src = await sourceFor(CAN_BUILD)
   const r = await asMember(CAN_BUILD, { action: 'look.edit' }, async (tx, auth) => {
     if (auth.membership.supportSessionId) return { error: SUPPORT }
     const t = auth.membership.tenantId
@@ -179,8 +191,8 @@ export async function editLookAction(): Promise<R<{ revisionId: string; lost: st
     const start = !base ? baselineRevision(facts.accent, facts.displayFont)
       : l.may(base.themeKey, base.themeVersion) ? { themeKey: base.themeKey, themeVersion: base.themeVersion, styleKey: base.styleKey, settings: base.settings as object }
         : (() => {
-          const to = latestAvailable(base.themeKey, Object.values(CATALOGUE[base.themeKey] ?? {}), l.access.rows, l.access.staged)
-          const fromM = manifestNear(base.themeKey, base.themeVersion)
+          const to = latestAvailable(base.themeKey, src.versions(base.themeKey), l.access.rows, l.access.staged)
+          const fromM = manifestNear(src, base.themeKey, base.themeVersion)
           if (!to || !fromM) return baselineRevision(facts.accent, facts.displayFont)
           const c = carryOver({ manifest: fromM, layer: { style: base.styleKey, ...(base.settings as object) } }, to)
           lost = c.lost

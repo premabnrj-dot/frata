@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { CATALOGUE, manifestOf } from '../catalogue'
+import { CATALOGUE } from '../catalogue'
+import { codeSource, manifestOf as manifestIn } from '../source'
+const manifestOf = (k: string, v: string) => manifestIn(codeSource, k, v)
 import { onColour } from '../layer'
 import { resolveTheme, schemeVars } from '../resolve'
 

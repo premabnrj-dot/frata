@@ -2,9 +2,9 @@ import type { Metadata, Viewport } from 'next'
 import { MovedTo } from '@/components/storefront/moved-to'
 import { shopHostParam } from '@/domains/tenancy/host'
 import { isDatabaseConfigured } from '@/lib/env'
-import { shopLook, shopMovedTo } from '@/lib/queries/storefront'
+import { shopMovedTo } from '@/lib/queries/storefront'
 import { iconContent, iconPath } from '@/lib/seo/icon'
-import { themeOf } from '@/lib/themes/page-look'
+import { shopTheme } from '@/lib/themes/page-look'
 import { shopForRoute } from './_shop'
 
 // A shop is cached: festive traffic must hit the CDN, not Postgres. Every
@@ -24,12 +24,12 @@ export async function generateMetadata({ params }: { params: Promise<{ host: str
   const base: Metadata = { title: { template: '%s', default: 'Shop' }, description: null, icons: { icon: 'data:,' } }
   const shop = await shopForRoute(params).catch(() => null)
   if (!shop) return base
-  const c = iconContent(shop, themeOf(shop, await shopLook(shop.id)))
+  const c = iconContent(shop, (await shopTheme(shop)))
   return { ...base, icons: { icon: [{ url: iconPath(c, 32), sizes: '32x32', type: 'image/png' }, { url: iconPath(c, 192), sizes: '192x192', type: 'image/png' }], apple: [{ url: iconPath(c, 180), sizes: '180x180' }] } }
 }
 export async function generateViewport({ params }: { params: Promise<{ host: string }> }): Promise<Viewport> {
   const shop = await shopForRoute(params).catch(() => null)
-  return shop ? { themeColor: themeOf(shop, await shopLook(shop.id)).schemes.paper.bg } : {}
+  return shop ? { themeColor: (await shopTheme(shop)).schemes.paper.bg } : {}
 }
 
 /** A shop's old name leads to its current one (shop addresses D·1): see MovedTo. */

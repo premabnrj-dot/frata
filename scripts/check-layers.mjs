@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Fails: a `src/domains/**` file importing React, Next, Drizzle, postgres or the db; a page, layout or browser file importing the db; a bare `getSession(`.
+// Fails: a `src/domains/**` file importing React, Next, Drizzle, postgres or the db; a page, layout or browser file importing the db; a bare `getSession(`; CATALOGUE read outside its allowed files.
 //
 // Two rules that were paragraphs in a skill until they became checks here.
 //
@@ -45,6 +45,11 @@ const FORBIDDEN_IN_DOMAINS = [
 const DOMAIN_EXEMPT = []
 
 const SESSION = /\.?\bgetSession\s*\(/
+// 4. THEME MANIFESTS COME THROUGH A SOURCE (Theme Studio TS0a, ADR-0011). Reading CATALOGUE directly would ignore every
+//    theme that isn't code (studio themes, TS2). Allowed: the source itself, the catalogue, Admin (code versions only),
+//    tests.
+const CATALOGUE_READ = /\bCATALOGUE\b/
+const CATALOGUE_OK = ['src/domains/themes/source.ts', 'src/domains/themes/catalogue/', 'src/lib/admin/themes.ts', 'src/app/(admin)/admin/themes/', '__tests__/']
 
 function isComment(line) {
   const t = line.trim()
@@ -85,6 +90,7 @@ for (const file of walk('src')) {
       }
     }
     if (SESSION.test(line)) fail(rel, i, 'getSession() — use getUser(), it verifies')
+    if (CATALOGUE_READ.test(line) && !CATALOGUE_OK.some((p) => rel.includes(p))) fail(rel, i, 'reads CATALOGUE — read manifests through a ManifestSource (manifestsFor)')
   }
 }
 

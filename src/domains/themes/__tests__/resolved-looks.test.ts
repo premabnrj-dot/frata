@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CATALOGUE } from '../catalogue'
-import { resolveTheme, settingAttrs, settingVars } from '../resolve'
+import { resolveStored, resolveTheme, settingAttrs, settingVars } from '../resolve'
+import { codeSource } from '../source'
 import stored from './fixtures/stored-sections-v1.json'
 
 // What every released theme RESOLVES to, for an empty layer and a full one (theme Signal plan T0, architecture review
@@ -19,5 +20,17 @@ describe('resolved looks of every released theme', () => {
   it.each(all.flatMap((m) => [[`${m.key}@${m.version} · empty`, m, {}], [`${m.key}@${m.version} · full`, m, full]] as const))('%s', (_k, m, extra) => {
     const t = resolveTheme(m, { style: m.styles[0]!.key, ...(extra as object) })
     expect(JSON.parse(JSON.stringify({ settings: t.settings, schemes: t.schemes, home: t.home, attrs: settingAttrs(t), vars: settingVars(t) }))).toMatchSnapshot()
+  })
+})
+
+describe('a stored look through the manifest source (Theme Studio TS0a) resolves exactly as the snapshot above', () => {
+  const all = Object.values(CATALOGUE).flatMap((vs) => Object.values(vs))
+  it.each(all.map((m) => [`${m.key}@${m.version}`, m] as const))('%s', (_k, m) => {
+    for (const extra of [{}, full]) {
+      const row = { themeKey: m.key, themeVersion: m.version, styleKey: m.styles[0]!.key, settings: extra }
+      const viaSource = resolveStored(row, { accent: 'oxide', displayFont: 'fraunces' }, codeSource)
+      const direct = resolveTheme(m, { style: m.styles[0]!.key, ...(extra as object) })
+      expect(JSON.parse(JSON.stringify(viaSource))).toEqual(JSON.parse(JSON.stringify(direct)))
+    }
   })
 })

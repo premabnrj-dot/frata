@@ -4,7 +4,12 @@ import { adminDb } from '@/lib/db/admin'
 import { tenants } from '@/lib/db/schema'
 import { shopThemePublishes, shopThemeRevisions, themeVersionStages, themeVersions } from '@/lib/db/schema-themes'
 import type { StaffOk } from '@/lib/auth/require-staff'
-import { CATALOGUE, cmpSemver, manifestOf } from '@/domains/themes/catalogue'
+import { CATALOGUE } from '@/domains/themes/catalogue'
+import { cmpSemver } from '@/domains/themes/semver'
+import { codeSource, manifestOf as manifestIn } from '@/domains/themes/source'
+
+// Admin decides about CODE versions (T3); studio versions arrive in TS2 with their own reads.
+const manifestOf = (key: string, version: string) => manifestIn(codeSource, key, version)
 import { isBaseline, liveOf, releaseProblems, versionState, withdrawnKeys, type VersionState } from '@/domains/themes/release'
 import { auditStaff } from './audit'
 

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { classic_1_0_0 } from '../catalogue/classic/1.0.0'
 import { classicFromSettings, resolveStored, resolveTheme, schemeVars, settingAttrs, settingVars } from '../resolve'
-import { CATALOGUE, manifestNear } from '../catalogue'
+import { CATALOGUE } from '../catalogue'
+import { codeSource, manifestNear as nearIn } from '../source'
+const manifestNear = (k: string, v: string) => nearIn(codeSource, k, v)
 import { carryOver } from '../layer'
 import { FEEL_DEFAULTS, PAGE_DEFAULTS } from '../types'
 
@@ -46,6 +48,6 @@ describe('pages beyond Home (T2)', () => {
     expect(manifestNear('editorial', '1.9.0')?.key).toBe('editorial')
     expect(manifestNear('editorial', '0.1.0')?.key).toBe('editorial')
     expect(manifestNear('nope', '1.0.0')).toBeNull()
-    expect(resolveStored({ themeKey: 'editorial', themeVersion: '9.0.0', styleKey: 'x', settings: {} }, { accent: 'oxide', displayFont: 'fraunces' }).key).toBe('editorial')
+    expect(resolveStored({ themeKey: 'editorial', themeVersion: '9.0.0', styleKey: 'x', settings: {} }, { accent: 'oxide', displayFont: 'fraunces' }, codeSource).key).toBe('editorial')
   })
 })
