@@ -80,6 +80,7 @@ export default {
       })
 
       await t.step('A design\'s loop: Behind the bench takes a video in its form, asks Mux for 720p, and the preview plays it', async () => {
+        await p.getByRole('button', { name: '‹ Sections' }).click()
         await p.getByRole('button', { name: 'Add a section', exact: true }).click()
         const lib = p.getByRole('dialog', { name: 'Add a section' })
         await lib.getByRole('button', { name: /^Designs/ }).click()

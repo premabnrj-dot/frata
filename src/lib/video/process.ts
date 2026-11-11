@@ -117,7 +117,9 @@ async function one(tenantId: string, videoId: string, ev: Pending['payload']): P
     // PV·1: a product's 720p MP4 is asked for only now, past the checks (unit-economics review 2026-11-10): a row in
     // the outbox in this transaction (ADR-0006); the sender re-reads the row. Once per video (its dedupe key).
     if ((product ? !a.renditions[lim.rendition] && !v.mp4ReadyAt : !!ask && !a.renditions[ask])) {
-      await enqueue(tx, { tenantId, kind: 'mux.rendition.create', dedupeKey: `mux.rendition.create:${v.id}`, payload: { videoId: v.id } })
+      // A loop's MP4 is the Look's (never paused by the Product video module: its own kind, the same sender).
+      const kind = product ? 'mux.rendition.create' : 'mux.loop.rendition'
+      await enqueue(tx, { tenantId, kind, dedupeKey: `${kind}:${v.id}`, payload: { videoId: v.id } })
       return { queued: true }
     }
     return { queued: false }

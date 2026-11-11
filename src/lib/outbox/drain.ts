@@ -35,6 +35,8 @@ export const SENDERS: Record<string, (row: OutboxRow) => Promise<void>> = {
   'mux.asset.delete': sendAssetDelete,
   'mux.upload.cancel': sendUploadCancel,
   'mux.rendition.create': sendRenditionCreate,
+  // TS1b: a loop's sized MP4 (the Look's; not the Product video module's, so its switch never strands a loop).
+  'mux.loop.rendition': sendRenditionCreate,
   // Email E·1: a Frrata notice to the shop's people (recipients, preferences and reads resolved when it sends).
   'email.notice': sendNoticeEmail,
   // Email E·2: an order email to the shopper in the shop's brand; and a shop's SES tenant, set up once, paced.
