@@ -1,6 +1,6 @@
 import type { Design } from './blocks'
-import { fillableOf } from './design-tree'
-import { PROMISES, SECTION_NAMES, type SectionInstance } from './sections'
+import { accordionItems, fillFor, fillableOf } from './design-tree'
+import { PROMISES, sectionName, type SectionInstance } from './sections'
 
 // =============================================================================
 // FILE: src/domains/themes/readiness.ts — what blocks Publish, and what a section shows nothing for (the second
@@ -26,7 +26,7 @@ export function readinessOf(home: SectionInstance[], f: ShopFacts, now: Date, de
   const has = new Map(f.collections.map((c) => [c.handle, c.hasProducts]))
   for (const s of home) {
     if (s.hidden) continue
-    const name = s.key === 'design' && Object.hasOwn(designs, s.design) ? designs[s.design]!.name : SECTION_NAMES[s.key]
+    const name = sectionName(s, designs)
     const add = (blocks: boolean, text: string) => out.push({ sectionId: s.id, blocks, text: `${name}: ${text}` })
     switch (s.key) {
       case 'hero':
@@ -90,13 +90,12 @@ export function readinessOf(home: SectionInstance[], f: ShopFacts, now: Date, de
         const d = Object.hasOwn(designs, s.design) ? designs[s.design]! : null
         if (!d) break
         for (const b of fillableOf(d)) {
-          const f = Object.hasOwn(s.fill, b.id) && s.fill[b.id]!.kind === b.kind ? s.fill[b.id]! : null
+          const f = fillFor(s.fill, b)
           const example = b.fill?.example === true, label = b.fill!.label
           if (b.kind === 'text' && example && !(f?.kind === 'text' && f.body.length)) add(true, `write your own words for “${label}”`)
           if (b.kind === 'heading' && example && !(f?.kind === 'heading' && f.text.trim())) add(true, `write your own “${label}”`)
           if (b.kind === 'accordion' && example) {
-            const items = f?.kind === 'accordion' ? f.items : b.items.map((i) => ({ q: i.q, a: '' }))
-            for (const i of items) if (i.q.trim() && !i.a.trim()) add(true, `write your own answer for “${i.q}”`)
+            for (const i of accordionItems(b, f)) if (i.q.trim() && !i.a.trim()) add(true, `write your own answer for “${i.q}”`)
           }
           if (b.kind === 'image') {
             const img = f?.kind === 'image' ? f.image : null

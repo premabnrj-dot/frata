@@ -29,9 +29,9 @@ export type SectionCtx = { shop: StoreShop; cat: StoreCatalogue; theme: Resolved
   lead?: boolean
   /** The customizer's preview: a section that fails says so there (on the shop it is left out). */
   preview?: boolean
-  /** The customizer's look preview (with samples): a design shows the theme's sample photos and example words, marked
-   *  (TS0b). Never on the shop or /console/preview, which show the shop as shoppers see it. */
-  samples?: boolean }
+  /** The customizer's look preview: a design shows the theme's sample photos and example words, marked (TS0b).
+   *  Never on the shop, `?as=shop` or /console/preview, which show the shop as shoppers see it. */
+  examples?: boolean }
 import { Button, H2, Label, Paint, Runs, Sized, pad, rupees, said, wrap } from './parts'
 import { DesignSection } from '../blocks'
 import { Products } from './products'

@@ -1,9 +1,9 @@
 'use client'
 
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { Icon } from '@/components/icons/icon'
 import type { Design, LeafBlock } from '@/domains/themes/blocks'
-import { fillableOf } from '@/domains/themes/design-tree'
+import { accordionItems, fillFor, fillableOf } from '@/domains/themes/design-tree'
 import type { Fill, SectionOf } from '@/domains/themes/sections'
 import { ImageField, LinkPicker, Text } from './controls'
 import type { FormCtx } from './section-form'
@@ -17,21 +17,38 @@ type Set = (s: SectionOf<'design'>) => void
 const MAX_ITEMS = 12
 const move = <T,>(xs: T[], i: number, by: -1 | 1) => { const j = i + by; if (j < 0 || j >= xs.length) return xs; const out = [...xs]; [out[i], out[j]] = [out[j]!, out[i]!]; return out }
 const bodyText = (body: { text: string }[][]) => body.map((p) => p.map((r) => r.text).join('')).join('\n\n')
+/** Paragraphs from what the owner typed (a blank line starts one; each holds up to 600 characters, the run's cap). */
 const toBody = (t: string) => t.split(/\n{2,}/).filter((p) => p.trim()).slice(0, 12).map((p) => [{ text: p.slice(0, 600) }])
-const field = 'w-full rounded-md border border-input bg-card px-3 text-sm placeholder:italic placeholder:text-muted-foreground'
 
-function Example({ label, value, example, max, multiline, onChange }: { label: string; value: string; example: string; max: number; multiline?: boolean; onChange: (v: string) => void }) {
+/** Words typed as they are, kept while the field is edited (a blank line being typed isn't eaten: impact review); the
+ *  saved paragraphs follow. When the stored words change from elsewhere (Undo), the field takes them. */
+const asSaved = (t: string) => bodyText(toBody(t))
+const field = 'w-full rounded-md border border-input bg-card px-3 text-sm placeholder:italic placeholder:text-muted-foreground'
+function useRaw(stored: string, save: (t: string) => void, norm: (t: string) => string = (t) => t): [string, (t: string) => void] {
+  const [raw, setRaw] = useState(stored)
+  if (norm(raw) !== stored && raw !== stored) { setRaw(stored); return [stored, (t) => { setRaw(t); save(t) }] }
+  return [raw, (t) => { setRaw(t); save(t) }]
+}
+
+function Example({ label, value: stored, example, max, multiline, onChange }: { label: string; value: string; example: string; max: number; multiline?: boolean; onChange: (v: string) => void }) {
   const id = useId()
+  const [value, set] = useRaw(stored, onChange, multiline ? asSaved : undefined)
   return (
     <div className="space-y-1.5">
       <label htmlFor={id} className="flex items-center gap-2 text-sm font-medium">{label}{!value.trim() && <span className="rounded-full bg-warn px-2 py-0.5 text-xs font-medium text-warn-text">Example</span>}
         <span className="ml-auto font-mono text-xs font-normal text-muted-foreground">{value.length}/{max}</span></label>
       {multiline
-        ? <textarea id={id} value={value} maxLength={max} rows={4} placeholder={example} onChange={(e) => onChange(e.target.value)} className={`${field} py-2`} />
-        : <input id={id} value={value} maxLength={max} placeholder={example} onChange={(e) => onChange(e.target.value)} className={`${field} h-10`} />}
+        ? <textarea id={id} value={value} maxLength={max} rows={4} placeholder={example} onChange={(e) => set(e.target.value)} className={`${field} py-2`} />
+        : <input id={id} value={value} maxLength={max} placeholder={example} onChange={(e) => set(e.target.value)} className={`${field} h-10`} />}
       {!value.trim() && <p className="text-xs text-warn-text">Write your own</p>}
     </div>
   )
+}
+
+/** Plain (not example) words of a text block: typed as they are, saved as paragraphs. */
+function Words({ label, value: stored, onChange }: { label: string; value: string; onChange: (t: string) => void }) {
+  const [value, set] = useRaw(stored, onChange, asSaved)
+  return <Text label={`${label} (a blank line starts a new paragraph)`} value={value} max={2000} multiline onChange={set} />
 }
 
 function Questions({ b, items, set }: { b: Extract<LeafBlock, { kind: 'accordion' }>; items: { q: string; a: string }[]; set: (items: { q: string; a: string }[]) => void }) {
@@ -60,7 +77,7 @@ function Questions({ b, items, set }: { b: Extract<LeafBlock, { kind: 'accordion
 }
 
 export function DesignForm({ s, set, c, d }: { s: SectionOf<'design'>; set: Set; c: FormCtx; d: Design }) {
-  const own = (b: LeafBlock): Fill | null => (Object.hasOwn(s.fill, b.id) && s.fill[b.id]!.kind === b.kind ? s.fill[b.id]! : null)
+  const own = (b: LeafBlock): Fill | null => fillFor(s.fill, b)
   const put = (id: string, f: Fill) => set({ ...s, fill: { ...s.fill, [id]: f } })
   return (<>
     {c.labels && <Text label="Label above the heading" value={s.label} max={24} onChange={(label) => set({ ...s, label })} />}
@@ -77,7 +94,7 @@ export function DesignForm({ s, set, c, d }: { s: SectionOf<'design'>; set: Set;
           const v = f?.kind === 'text' ? bodyText(f.body) : example ? '' : bodyText(b.body)
           return example
             ? <Example key={b.id} label={label} value={v} example={bodyText(b.body)} max={2000} multiline onChange={(t) => put(b.id, { kind: 'text', body: toBody(t) })} />
-            : <Text key={b.id} label={label} value={v} max={2000} multiline onChange={(t) => put(b.id, { kind: 'text', body: toBody(t) })} />
+            : <Words key={b.id} label={label} value={v} onChange={(t) => put(b.id, { kind: 'text', body: toBody(t) })} />
         }
         case 'image':
           return <ImageField key={b.id} label={label} value={f?.kind === 'image' ? f.image : null} tenantId={c.tenantId} library={c.photos} suggest={[d.name, c.shopName]} onChange={(image) => put(b.id, { kind: 'image', image })} />
@@ -91,8 +108,7 @@ export function DesignForm({ s, set, c, d }: { s: SectionOf<'design'>; set: Set;
           )
         }
         case 'accordion': {
-          const items = f?.kind === 'accordion' ? f.items : b.items.map((i) => ({ q: i.q, a: example ? '' : i.a }))
-          return <Questions key={b.id} b={b} items={items} set={(next) => put(b.id, { kind: 'accordion', items: next })} />
+          return <Questions key={b.id} b={b} items={accordionItems(b, f)} set={(next) => put(b.id, { kind: 'accordion', items: next })} />
         }
         default: return b satisfies never
       }

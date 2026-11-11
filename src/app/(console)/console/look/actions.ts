@@ -8,8 +8,7 @@ import { manifestNear, manifestOf, type ManifestSource } from '@/domains/themes/
 import { latestAvailable } from '@/domains/themes/release'
 import { brandColourProblem, carryOver, LayerSchema, layerProblems, layerTooLong } from '@/domains/themes/layer'
 import { readinessOf } from '@/domains/themes/readiness'
-import { DesignSchema, designProblems, pruneFill, type Design } from '@/domains/themes/blocks'
-import { SectionSchema, type SectionInstance } from '@/domains/themes/sections'
+import { designsForSave, designsOf } from '@/domains/themes/blocks'
 import { paletteProblem, type Palette } from '@/domains/themes/site'
 import { baselineRevision, resolveTheme } from '@/domains/themes/resolve'
 import { THEME_KEYS } from '@/lib/db/schema-themes'
@@ -90,19 +89,16 @@ export async function saveLookAction(input: unknown): Promise<R<{ version: numbe
     // A palette must read with what it keeps from this style (sale and saving words, the tint).
     const pal = (p.data.layer.site as { palette?: Palette | null } | undefined)?.palette
     if (pal) { const sch = resolveTheme(m, { style: p.data.style }).schemes; const why = paletteProblem({ ...pal }, [sch.paper, sch.tint]); if (why) return { error: why } }
-    // TS0b: designs exist in this version and fit the page (architecture review 8: after the manifest is read).
-    const designs = new Map((m.designs ?? []).flatMap((d): [string, Design][] => { const r = DesignSchema.safeParse(d); return r.success ? [[r.data.id, r.data]] : [] }))
-    const sections = (layer.home ?? []).flatMap((x): SectionInstance[] => { const r = SectionSchema.safeParse(x); return r.success ? [r.data] : [] })
-    const dp = designProblems([...designs.values()], sections)
-    if (dp.length) return { error: dp[0]! }
+    // TS0b: each design's words pruned to its blocks, then the page's limits (after the manifest is read: architecture 8).
+    const designed = designsForSave(designsOf(m), layer.home ?? [])
+    if ('error' in designed) return { error: designed.error }
+    if (layer.home) layer.home = designed.home
     // Stored as parsed: unknown settings keys are dropped (tenancy audit 2026-11-08).
     const parsed = LayerSchema.parse(layer)
     const clean = cleanImages({ ...layer, settings: parsed.settings, ...(parsed.site ? { site: parsed.site } : {}), ...(parsed.menus ? { menus: parsed.menus } : {}) }, t, storeHost(BLOB_STORE_ID))
     if (!clean) return { error: 'A photo didn’t come from this shop. Upload it again.' }
     // V1: a video id must be one of this shop's own, not removed; anything else is dropped (the photo shows).
-    const videosKept = await cleanVideos(tx, t, clean)
-    // TS0b: a design keeps only the words that fit its blocks (by id and kind: security M2).
-    const kept = videosKept.home ? { ...videosKept, home: videosKept.home.map((x) => { const r = SectionSchema.safeParse(x); return r.success && r.data.key === 'design' && designs.has(r.data.design) ? pruneFill(designs.get(r.data.design)!, r.data) : x }) } : videosKept
+    const kept = await cleanVideos(tx, t, clean)
     // The revision holds at most 64 kB (the database check, in bytes): say so in words before the insert would fail.
     if (layerTooLong(kept)) return { error: 'This look is too long to save. Shorten some words, or remove a section.' }
     const s = await saveDraft(tx, t, { userId: auth.userId, email: auth.email }, { revisionId: rev.id, version: p.data.version, styleKey: p.data.style, settings: kept })

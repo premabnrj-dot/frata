@@ -62,7 +62,7 @@ validated, immutable once a version exists, versioned.
   one CSS rule each** (block CSS ≤ 1.0 kB gz).
 - **Depth 3 below a Section**, counting Accordion › Item as one level (Section › Columns › Group › leaf).
 - **Limits** (pure validator, speed 1): ≤ 20 sections a page (today's `MAX_SECTIONS`), **≤ 100 blocks a page**,
-  **≤ 24 product cards a page** (speed review 2026-11-11), **≤ 6 commerce blocks a page**, ≤ 30 designs a theme. Worst case measured by the speed review (2026-11-11) at ≈ 370–480 kB with 36 cards, so the card cap is **≤ 24 a page** with ≤ 24 kB of owner text and ≤ 16 photos outside cards; a
+  **≤ 24 product cards a page** (speed review 2026-11-11), **≤ 6 commerce blocks a page**, ≤ 30 designs a theme. Worst case measured by the speed review (2026-11-11) at ≈ 370–480 kB with 36 cards, so the card cap is **≤ 24 a page** with ≤ 24 kB of owner text and ≤ 12 photos outside cards; a
   "largest allowed page" render test on the 600-product seed holds HTML ≤ 300 kB, RSC ≤ 150 kB.
 - **Derived:** heading levels by position — the page's h1 is the first Hero's or the page title; every other heading
   steps down, never skips; **≤ 2 eager images a page** in document order (on product pages the buy box photos);

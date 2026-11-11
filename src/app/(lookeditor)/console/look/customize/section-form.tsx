@@ -2,7 +2,7 @@
 
 import { MAX_TABS, type ProductLayout, type SectionScheme } from '@/domains/themes/sections'
 import { useState } from 'react'
-import { PROMISES, SECTION_NAMES, type SectionInstance, type SectionOf, type VideoKey } from '@/domains/themes/sections'
+import { PROMISES, sectionName, type SectionInstance, type SectionOf, type VideoKey } from '@/domains/themes/sections'
 import { Choice, Field, ImageField, LinkPicker, Switch, Text, paiseToRupees, rupeesToPaise, type LibraryPhoto, type LinkTarget } from './controls'
 import { Icon } from '@/components/icons/icon'
 import { VideoField } from './video-field'
@@ -261,7 +261,7 @@ export function SectionForm({ s, set, c }: { s: SectionInstance; set: (s: Sectio
   })()
   return (
     <div className="space-y-4">
-      <h2 className="text-base font-semibold">{s.key === 'design' ? designOf(c, s.design)?.name ?? SECTION_NAMES.design : SECTION_NAMES[s.key]}</h2>
+      <h2 className="text-base font-semibold">{sectionName(s, c.designs)}</h2>
       {body}
       {/* The Statement is always white words on its darkened photo: no colours to choose. */}
       {s.key !== 'statement' && <Choice label="Colours" value={s.scheme} onChange={(scheme) => set({ ...s, scheme })} options={c.schemes.map((x) => ({ value: x.key, label: x.name }))} />}

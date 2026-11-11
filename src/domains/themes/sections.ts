@@ -210,22 +210,22 @@ export const FillSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('button'), label: text(24), link: shopPath }),
   z.object({ kind: z.literal('accordion'), items: z.array(AccordionItemSchema).max(12) }),
 ])
-/** Each fill's caps equal its block's (blocks.ts uses the same text(), DesignBodySchema and AccordionItemSchema): a
- *  block with tighter limits re-parses its fill in resolveDesign (security review LOW-3). */
+/** Each fill's caps equal its block's (blocks.ts uses the same text(), DesignBodySchema and AccordionItemSchema):
+ *  keep them equal; a block with tighter limits must re-parse its fill in resolveDesign (security review LOW-3). */
 export type Fill = z.infer<typeof FillSchema>
-export type FillKind = Fill['kind']
-export const MAX_FILLS = 40, MAX_FILL_CHARS = 10_000
-/** The characters a fill holds (words and link paths): the section's total is capped. */
-export function fillChars(f: Fill): number {
+const MAX_FILLS = 40, MAX_FILL_CHARS = 10_000
+/** The words (and link paths) a fill holds, piece by piece: counted as characters here, as bytes at the save. */
+export function fillText(f: Fill): string[] {
   switch (f.kind) {
-    case 'heading': return f.text.length
-    case 'text': return runChars(f.body)
-    case 'image': return f.image ? f.image.alt.length : 0
-    case 'button': return f.label.length + f.link.length
-    case 'accordion': return f.items.reduce((n, i) => n + i.q.length + i.a.length, 0)
+    case 'heading': return [f.text]
+    case 'text': return f.body.flat().flatMap((r) => [r.text, r.link ?? ''])
+    case 'image': return f.image ? [f.image.alt] : []
+    case 'button': return [f.label, f.link]
+    case 'accordion': return f.items.flatMap((i) => [i.q, i.a])
     default: return f satisfies never
   }
 }
+const fillChars = (f: Fill) => fillText(f).reduce((n, t) => n + t.length, 0)
 
 /** Theme Studio TS0b: a section whose shape the theme fixes (a design, by id); the owner fills the blocks the theme
  *  marks, by block id. Shape and caps only: whether the design and its blocks exist is the manifest's (resolveDesign). */
@@ -288,6 +288,10 @@ export const SECTION_INFO: Record<SectionKey, { blurb: string; tags: string[] }>
   logos: { blurb: 'Press or partner logos', tags: ['press', 'as seen in', 'featured', 'partners', 'trust'] },
   design: { blurb: 'Made for your theme: fill its words and photos', tags: ['design', 'made for', 'block'] },
 }
+
+/** A section's name in the console: a design by its own name (Size help), never "Design" (impact review: one rule). */
+export const sectionName = (s: { key: SectionKey; design?: string }, designs?: Record<string, { name: string }>) =>
+  s.key === 'design' && s.design && designs && Object.hasOwn(designs, s.design) ? designs[s.design]!.name : SECTION_NAMES[s.key]
 
 /** TS0b: the library's search over a theme's designs, by the same rule (every word; name, then line, then tags). */
 export function searchDesigns<D extends { id: string; name: string; line: string; tags: string[] }>(query: string, ds: readonly D[]): D[] {

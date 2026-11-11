@@ -24,7 +24,7 @@ import { previewShop } from '@/lib/queries/storefront'
 import { Editor } from './editor'
 import { Published } from './published'
 import { DesignThumb } from './design-thumb'
-import { DesignSchema, type Design } from '@/domains/themes/blocks'
+import { designsOf } from '@/domains/themes/blocks'
 
 // The customizer page: its own route group (no console chrome: the shop is the canvas). Only an editor of the look
 // (owner, admin, partner; not a support visit) gets here; the draft must exist (Look's Customize makes it).
@@ -67,7 +67,7 @@ export default async function Customize() {
   const first = sampleFirst(sampleSetFor(f.sells))
   const schemeNames = m.styles.find((s) => s.key === draft.style)?.schemeNames ?? {}
   // TS0b: the theme's designs (parsed), and each one's picture drawn here (never the drawing code in the browser).
-  const designs = (m.designs ?? []).flatMap((d): Design[] => { const r = DesignSchema.safeParse(d); return r.success ? [r.data] : [] })
+  const designs = designsOf(m)
   return (
     <div className={STORE_FONT_VARS}>
       <Editor

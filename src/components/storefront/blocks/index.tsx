@@ -54,7 +54,7 @@ export function DesignSection({ s, ctx }: { s: SectionOf<'design'>; ctx: Section
   const ds = ctx.theme.designs
   const d = ds && Object.hasOwn(ds, s.design) ? ds[s.design]! : null
   if (!d) return null
-  const nodes = resolveDesign(d, s.fill, ctx.preview && ctx.samples ? 'preview' : 'shop', !!ctx.lead)
+  const nodes = resolveDesign(d, s.fill, ctx.preview && ctx.examples ? 'preview' : 'shop', !!ctx.lead)
   if (!nodes.length) return null
   const first = (ns: RNode[]): RNode | undefined => { for (const n of ns) { if (n.kind === 'heading') return n; if (n.kind === 'group' || n.kind === 'columns') { const f = first(n.children); if (f) return f } } }
   const h = first(nodes)

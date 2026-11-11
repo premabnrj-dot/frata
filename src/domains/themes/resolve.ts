@@ -2,7 +2,7 @@ import { classic_1_0_0 } from './catalogue/classic/1.0.0'
 import { manifestNear, type ManifestSource } from './source'
 import { choicesFor } from './choices'
 import { LayerSchema, SettingsSchema, onColour, brandColourProblem } from './layer'
-import { DesignSchema, pruneFill, type Design } from './blocks'
+import { designsOf, pruneFill, type Design } from './blocks'
 import { PRODUCT_LAYOUTS, SECTION_SCHEMES, SectionSchema, type SectionInstance, VIDEO_KEYS } from './sections'
 import { paletteProblem, readMenus, readSite, textOf, TEXT_STYLES } from './site'
 import { FEEL_DEFAULTS, PAGE_DEFAULTS, PAIRINGS, type ChoiceKey, type Pairing, type ResolvedTheme, type Scheme, type SchemeKey, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
@@ -101,7 +101,7 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
   const spotlightOk = (m.allowed.imageTextLayouts ?? []).includes('spotlight'), scriptOk = !!m.allowed.heroScript
   const raw = parsed.success && parsed.data.home ? parsed.data.home : m.home
   // TS0b: the theme's designs, each parsed on its own (one that doesn't parse is left out, never the rest).
-  const designs = new Map((m.designs ?? []).flatMap((d): [string, Design][] => { const r = DesignSchema.safeParse(d); return r.success ? [[r.data.id, r.data]] : [] }))
+  const designs = new Map(designsOf(m).map((d) => [d.id, d]))
   const used = new Map<string, Design>()
   const home = raw.flatMap((s): SectionInstance[] => {
     const p = SectionSchema.safeParse(s)

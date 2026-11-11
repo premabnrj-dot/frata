@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { CATALOGUE } from '../catalogue'
+import { cmpSemver } from '../semver'
 import { contrast } from '../contrast'
 import { themeCheck } from '../check'
 import { SectionSchema } from '../sections'
@@ -16,8 +17,11 @@ const all: ThemeManifest[] = Object.values(CATALOGUE).flatMap((vs) => Object.val
 const name = (m: ThemeManifest) => `${m.key}@${m.version}`
 
 describe.each(all.map((m) => [name(m), m] as const))('%s', (_n, m) => {
-  it('passes themeCheck (the one check: styles, defaults, made, home, sources, contrast)', () => {
-    expect(themeCheck(m)).toEqual([])
+  it('passes themeCheck (the one check: styles, defaults, made, home, sources, contrast), against the version before it', () => {
+    // TS0b (impact review): each version is checked against the one before it, so a minor that drops or re-kinds a
+    // design's block (and so an owner's words) fails here.
+    const prev = Object.values(CATALOGUE[m.key] ?? {}).filter((x) => cmpSemver(x.version, m.version) < 0).sort((a, b) => cmpSemver(b.version, a.version))[0]
+    expect(themeCheck(m, prev)).toEqual([])
   })
   it('its key and version match where the catalogue lists it', () => {
     expect(CATALOGUE[m.key]?.[m.version]).toBe(m)

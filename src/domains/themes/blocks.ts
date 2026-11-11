@@ -1,6 +1,6 @@
 import { z } from 'zod'
-import { blocksOf, fillableOf } from './design-tree'
-import { AccordionItemSchema, BLOCK_ID, DesignBodySchema, ImageSchema, blockId, shopPath, type Fill, type SectionOf, type ThemeImage } from './sections'
+import { accordionItems, blocksOf, fillFor, fillableOf } from './design-tree'
+import { AccordionItemSchema, BLOCK_ID, DesignBodySchema, ImageSchema, MAX_PER_PAGE, SectionSchema, blockId, fillText, shopPath, type Fill, type SectionOf, type ThemeImage } from './sections'
 
 // =============================================================================
 // FILE: src/domains/themes/blocks.ts — THE BLOCK CATALOGUE (Theme Studio spec § 2; plan docs/plans/2026-11-11-theme-studio-ts0b.md).
@@ -50,8 +50,9 @@ export const MAX_DESIGNS = 30, MAX_DESIGN_BLOCKS = 40
 /** Per page, across every design on it (speed review 2026-11-11): blocks, owner words in UTF-8 bytes, photos. */
 export const PAGE_LIMITS = { blocks: 100, textBytes: 24_000, photos: 12 } as const
 
-const own = (fill: Record<string, Fill>, b: LeafBlock): Fill | null =>
-  b.fill && Object.hasOwn(fill, b.id) && fill[b.id]!.kind === b.kind ? fill[b.id]! : null
+/** A manifest's designs, each parsed on its own (one that doesn't parse is left out, never the rest). The one reader:
+ *  resolve, the save, themeCheck and the customizer (impact review). */
+export const designsOf = (m: { designs?: unknown[] }): Design[] => (m.designs ?? []).flatMap((d) => { const r = DesignSchema.safeParse(d); return r.success ? [r.data] : [] })
 
 // --- Resolving: the theme's design and the owner's words, merged ---------------------------------------------------
 
@@ -74,10 +75,12 @@ export type RNode =
 export function resolveDesign(d: Design, fill: Record<string, Fill>, mode: 'shop' | 'preview', lead = false): RNode[] {
   const preview = mode === 'preview'
   const leaf = (b: LeafBlock): RNode | null => {
-    const f = own(fill, b)
+    const f = fillFor(fill, b)
     const example = b.fill?.example === true
     switch (b.kind) {
       case 'heading': {
+        // The owner's own heading, or none if they cleared a plain one (an example cleared is still an example).
+        if (f?.kind === 'heading' && !f.text.trim() && !example) return null
         const mine = f?.kind === 'heading' && f.text.trim() ? f.text : null
         if (mine) return { kind: 'heading', id: b.id, size: b.size, text: mine, level: 3 }
         if (!b.text.trim() || (example && !preview)) return null
@@ -95,12 +98,12 @@ export function resolveDesign(d: Design, fill: Record<string, Fill>, mode: 'shop
         return preview && b.image ? { kind: 'image', id: b.id, ratio: b.ratio, image: b.image, sample: true } : null
       }
       case 'button': {
-        const mine = f?.kind === 'button' && f.label.trim() ? f : null
+        if (f?.kind === 'button' && !f.label.trim()) return null
+        const mine = f?.kind === 'button' ? f : null
         return { kind: 'button', id: b.id, label: mine ? mine.label : b.label, link: mine ? mine.link : b.link }
       }
       case 'accordion': {
-        const src = f?.kind === 'accordion' ? f.items : b.items.map((i) => ({ q: i.q, a: example ? '' : i.a }))
-        const items = src.flatMap((i, n): { q: string; a: string; example?: true }[] => {
+        const items = accordionItems(b, f).flatMap((i, n): { q: string; a: string; example?: true }[] => {
           if (!i.q.trim()) return []
           if (i.a.trim()) return [{ q: i.q, a: i.a }]
           const ex = b.items[n]?.a
@@ -139,16 +142,7 @@ export function pruneFill(d: Design, s: SectionOf<'design'>): SectionOf<'design'
 
 const bytes = (t: string) => new TextEncoder().encode(t).length
 /** The owner's words in a fill, as bytes (Devanagari is 3 a character: the 64 kB revision check counts bytes). */
-function fillBytes(f: Fill): number {
-  switch (f.kind) {
-    case 'heading': return bytes(f.text)
-    case 'text': return f.body.flat().reduce((n, r) => n + bytes(r.text) + (r.link?.length ?? 0), 0)
-    case 'image': return f.image ? bytes(f.image.alt) : 0
-    case 'button': return bytes(f.label) + f.link.length
-    case 'accordion': return f.items.reduce((n, i) => n + bytes(i.q) + bytes(i.a), 0)
-    default: return f satisfies never
-  }
-}
+const fillBytes = (f: Fill) => fillText(f).reduce((n, t) => n + bytes(t), 0)
 
 /** Why the designs on a page can't be saved (empty: they can). `designs` are the look's theme version's. */
 export function designProblems(designs: readonly Design[], home: readonly { key: string }[]): string[] {
@@ -171,6 +165,16 @@ export function designProblems(designs: readonly Design[], home: readonly { key:
   return out
 }
 
+/** The save's design step (pure, tested): every fill pruned to its block's id and kind first, then the page's limits.
+ *  `home` is the layer's sections as sent; design sections come back parsed and pruned, the rest as they were. */
+export function designsForSave(designs: readonly Design[], home: readonly unknown[]): { error: string } | { home: unknown[] } {
+  const byId = new Map(designs.map((d) => [d.id, d]))
+  const out = home.map((x) => { const r = SectionSchema.safeParse(x); return r.success && r.data.key === 'design' && byId.has(r.data.design) ? pruneFill(byId.get(r.data.design)!, r.data) : x })
+  const parsed = out.flatMap((x) => { const r = SectionSchema.safeParse(x); return r.success ? [r.data] : [] })
+  const problems = designProblems(designs, parsed)
+  return problems.length ? { error: problems[0]! } : { home: out }
+}
+
 // --- Checking a theme's designs (themeCheck) -----------------------------------------------------------------------
 
 /** What is wrong with a theme's designs, in words (empty: nothing). `previous`: the version before, for "a minor
@@ -181,6 +185,11 @@ export function designsCheck(designs: readonly Design[], previous?: readonly Des
   if (new Set(designs.map((d) => d.id)).size !== designs.length) out.push('Two designs share an id')
   for (const d of designs) {
     const all = blocksOf(d)
+    // Any mix of designs on a page stays within the page's limits (impact review: a minor that grew a design could
+    // otherwise refuse every save of a look already at the limit): each design × the most a page holds.
+    const n = MAX_PER_PAGE.design, photos = all.filter((b) => b.kind === 'image').length
+    if (all.length * n > PAGE_LIMITS.blocks) out.push(`Design ${d.id}: ${all.length} blocks; at most ${Math.floor(PAGE_LIMITS.blocks / n)} (${n} can share a page)`)
+    if (photos * n > PAGE_LIMITS.photos) out.push(`Design ${d.id}: ${photos} photos; at most ${Math.floor(PAGE_LIMITS.photos / n)} (${n} can share a page)`)
     if (all.length > MAX_DESIGN_BLOCKS) out.push(`Design ${d.id}: ${all.length} blocks; at most ${MAX_DESIGN_BLOCKS}`)
     if (new Set(all.map((b) => b.id)).size !== all.length) out.push(`Design ${d.id}: two blocks share an id`)
     if (!BLOCK_ID.test(d.id)) out.push(`Design ${d.id}: its id isn't a-z, 0-9 and -`)
@@ -191,6 +200,7 @@ export function designsCheck(designs: readonly Design[], previous?: readonly Des
   }
   if (previous) {
     const now = new Map(designs.map((d) => [d.id, new Map(blocksOf(d).map((b) => [b.id, b.kind]))]))
+    const fillMarked = new Set(designs.flatMap((d) => fillableOf(d).map((b) => `${d.id}/${b.id}`)))
     for (const p of previous) {
       const n = now.get(p.id)
       if (!n) { out.push(`Design ${p.id} was removed; a minor version only adds`); continue }
@@ -198,10 +208,11 @@ export function designsCheck(designs: readonly Design[], previous?: readonly Des
         const k = n.get(b.id)
         if (!k) out.push(`Design ${p.id}: block ${b.id} was removed; a minor version only adds`)
         else if (k !== b.kind) out.push(`Design ${p.id}: block ${b.id} changed from ${b.kind} to ${k}`)
+        else if ('fill' in b && b.fill && !fillMarked.has(`${p.id}/${b.id}`)) out.push(`Design ${p.id}: block ${b.id} is no longer filled by the owner; a minor version only adds`)
       }
     }
   }
   return out
 }
 
-export { blocksOf, fillableOf, thumbOf, type ThumbMark } from './design-tree'
+export { blocksOf, fillableOf, thumbOf } from './design-tree'

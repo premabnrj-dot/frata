@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { DesignSchema, designProblems, designsCheck, pruneFill, resolveDesign, thumbOf, type Design, type RNode } from '../blocks'
+import { DesignSchema, designProblems, designsCheck, designsForSave, pruneFill, resolveDesign, thumbOf, type Design, type RNode } from '../blocks'
+import { parseManifest } from '../manifest-schema'
+import { searchDesigns } from '../sections'
 import { signal_1_3_0 } from '../catalogue/signal/1.3.0'
 import { signal_1_4_0 } from '../catalogue/signal/1.4.0'
 import { atelier_1_0_0 } from '../catalogue/atelier/1.0.0'
 import { cleanImages } from '../clean-images'
-import { MAX_LAYER_BYTES, carryOver, layerProblems, layerTooLong } from '../layer'
+import { MAX_LAYER_BYTES, carryOver, layerBytes, layerProblems, layerTooLong } from '../layer'
 import { readinessOf } from '../readiness'
 import { resolveTheme } from '../resolve'
 import { SectionSchema, type SectionOf } from '../sections'
@@ -142,3 +144,48 @@ describe('readiness', () => {
     expect(readinessOf([sec('size-help', fill)], facts, new Date(), { 'size-help': size }).map((i) => i.text)).toEqual(['Size help: describe “Photo” for people who can’t see it'])
   })
 })
+
+describe('impact review (2026-11-11): the save step, version rules, names', () => {
+  it('the save prunes a stale fill id and a wrong-kind fill, keeps the rest, and refuses an unknown design', () => {
+    const r = designsForSave(designs, [{ id: 'x', key: 'hero', heading: { from: 'shopName' } }, sec('size-help', { gone: { kind: 'heading', text: 'x' }, intro: { kind: 'heading', text: 'y' }, heading: { kind: 'heading', text: 'Fit' } })])
+    expect('home' in r && (r.home[1] as SectionOf<'design'>).fill).toEqual({ heading: { kind: 'heading', text: 'Fit' } })
+    expect('home' in r && r.home[0]).toEqual({ id: 'x', key: 'hero', heading: { from: 'shopName' } })
+    expect(designsForSave(designs, [sec('nope')])).toEqual({ error: 'That design isn’t in this theme. Remove it, or undo the last change.' })
+  })
+  it('four designs of any mix stay within the page: a design too big to share a page is refused by themeCheck', () => {
+    const big = { ...hand, children: [...hand.children, { id: 'more', kind: 'image', ratio: '1:1', image: null }] } as Design
+    expect(designsCheck([size, big]).some((p) => p.includes('photos; at most 3'))).toBe(true)
+    expect(designProblems(designs, Array.from({ length: 4 }, (_, i) => ({ ...sec('made-by-hand'), id: `m${i}` })))).toEqual([])
+  })
+  it('a block that stops being the owner\'s to fill is refused in a minor', () => {
+    const unfilled = JSON.parse(JSON.stringify(size)) as Design
+    ;(unfilled.children[0] as { children: { children?: { fill?: unknown }[] }[] }).children[0]!.children![0]!.fill = undefined
+    expect(designsCheck([unfilled, hand], designs).some((p) => p.includes('no longer filled by the owner'))).toBe(true)
+  })
+  it('themeCheck: a home naming a missing design, and designs the theme doesn\'t allow', () => {
+    expect(themeCheck({ ...signal_1_4_0, home: [{ id: 'd', key: 'design', design: 'nope' }] })).toContain('Home section d: design nope isn\'t in the theme')
+    expect(themeCheck({ ...signal_1_4_0, allowed: signal_1_3_0.allowed })).toContain('The theme has designs but doesn\'t allow the design section')
+  })
+  it('a manifest\'s design photo comes only from Frrata\'s samples', () => {
+    const bad = JSON.parse(JSON.stringify(signal_1_4_0).replace('/themes/samples/tan-loafer-b', 'https://x.public.blob.vercel-storage.com/tenants/a/theme/p'))
+    expect(parseManifest(bad).ok).toBe(false)
+  })
+  it('Made by hand: its step headings and words are examples; Publish names them', () => {
+    const t = readinessOf([sec('made-by-hand')], facts, new Date(), { 'made-by-hand': hand }).filter((i) => i.blocks).map((i) => i.text)
+    expect(t).toContain('Made by hand: write your own “Step 1”')
+    expect(t).toContain('Made by hand: write your own words for “Step 3 words”')
+  })
+  it('a plain heading or button the owner clears is left out on the shop (never the theme\'s words under an empty field)', () => {
+    const ns = flat(resolveDesign(size, sec('size-help', { heading: { kind: 'heading', text: '' }, button: { kind: 'button', label: '', link: '/' } }).fill, 'shop'))
+    expect(ns.some((n) => n.kind === 'heading' || n.kind === 'button')).toBe(false)
+  })
+  it('the library finds designs by name, line and tags', () => {
+    expect(searchDesigns('size', designs).map((d) => d.id)).toEqual(['size-help'])
+    expect(searchDesigns('craft', designs).map((d) => d.id)).toEqual(['made-by-hand'])
+    expect(searchDesigns('hologram', designs)).toEqual([])
+  })
+  it('layer bytes count the space jsonb adds after each comma and colon', () => {
+    expect(layerBytes({ a: [1, 2] })).toBe(JSON.stringify({ a: [1, 2] }).length + 2)
+  })
+})
+

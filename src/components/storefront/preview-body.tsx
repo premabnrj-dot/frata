@@ -18,8 +18,11 @@ import type { Href } from './shell'
  *  shoppers see instead. Shared by /console/preview and the customizer's look preview. */
 export async function previewPage(o: { tenantId: string; shop: StoreShop; path: string[]; href: Href; now: Date; theme: ResolvedTheme
   /** The customizer's look preview of a theme with samples (never /console/preview, which shows the shop as shoppers see it). */
-  samples?: boolean }): Promise<{ body: React.ReactNode; note: string | null }> {
-  const { tenantId, shop, path, href, now, theme, samples = false } = o
+  samples?: boolean
+  /** TS0b: the customizer's look preview (never `?as=shop` or /console/preview): a design shows the theme's sample
+   *  photos and example words, marked, whether or not the theme has sample pieces (impact review). */
+  examples?: boolean }): Promise<{ body: React.ReactNode; note: string | null }> {
+  const { tenantId, shop, path, href, now, theme, samples = false, examples = false } = o
   // Which sample set: by what the shop sells (theme Signal plan S0-1).
   const set = sampleSetFor(shop.sells)
   const [a, b, ...rest] = path
@@ -27,7 +30,7 @@ export async function previewPage(o: { tenantId: string; shop: StoreShop; path: 
   if (rest.length) return { body: <ShopNotFound href={href} lang={shop.shopLanguage} />, note: null }
   if (!a) {
     const [best, videos] = await Promise.all([bestSellersFor(theme, (d) => previewBestSellers(tenantId, d)), videosFor(theme, (k) => previewVideos(tenantId, k))])
-    return { body: <><HomeView shop={shop} cat={await previewCatalogue(tenantId)} href={href} now={now} theme={theme} bestSellers={best} videos={videos} preview samples={samples} />{Object.keys(videos).length > 0 && <LoopPlayer />}</>, note: null }
+    return { body: <><HomeView shop={shop} cat={await previewCatalogue(tenantId)} href={href} now={now} theme={theme} bestSellers={best} videos={videos} preview examples={examples} />{Object.keys(videos).length > 0 && <LoopPlayer />}</>, note: null }
   }
   if (a === 'products' && !b) return { body: <AllView cat={await previewCatalogue(tenantId)} href={href} now={now} lang={shop.shopLanguage} />, note: null }
   if (a === 'products' && b && /^[a-z0-9-]{1,100}$/.test(b)) {

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { SectionLibrary, type LibraryDesign } from './section-library'
-import { SECTION_NAMES, type SectionInstance, type SectionKey, MAX_CARDS } from '@/domains/themes/sections'
+import { sectionName, type SectionInstance, type SectionKey, MAX_CARDS } from '@/domains/themes/sections'
 import { Icon } from '@/components/icons/icon'
 
 // The Sections tab (mockup "Customizer"): the Home's sections in order. Each row moves up or down (buttons: drag is
@@ -29,9 +29,9 @@ const summary = (s: SectionInstance): string => {
 
 /** A new section with good defaults (written for the shop, never lorem ipsum). */
 /** A new section with good defaults (a design opens empty: the theme's words show as examples until the owner's). */
-export function blank(key: SectionKey, id: string, now: Date, design = ''): SectionInstance {
+export function blank(key: SectionKey, id: string, now: Date, design?: string): SectionInstance {
   switch (key) {
-    case 'design': return { id, key, hidden: false, scheme: 'paper', label: '', design, fill: {} }
+    case 'design': if (!design) throw new Error('A design section needs its design'); return { id, key, hidden: false, scheme: 'paper', label: '', design, fill: {} }
     case 'hero': return { id, key, hidden: false, scheme: 'paper', layout: 'text', heading: { from: 'shopName' }, text: { from: 'tagline' }, image: null, button: null, position: 'bottom_left', height: 'tall', mask: 'none' }
     case 'collection_tiles': return { id, key, hidden: false, scheme: 'paper', label: '', heading: '', mode: 'auto', handles: [], count: 6, shape: 'portrait' }
     case 'products': return { id, key, hidden: false, scheme: 'paper', heading: 'Best sellers', source: { kind: 'best_sellers', days: 90 }, count: 8, viewAll: true, layout: 'grid', label: '', tabs: [] }
@@ -66,7 +66,8 @@ export function SectionsPanel({ home, selected, allowed, made = [], themeName, o
     const h = [...home]; h.splice(at, 0, blank(k, id, now, design)); onChange(h, id); setAdding(false)
   }
   // A design is named by its own name (Size help), never "Design".
-  const nameOf = (s: SectionInstance) => (s.key === 'design' ? designs.find((d) => d.id === s.design)?.name ?? SECTION_NAMES.design : SECTION_NAMES[s.key])
+  const byId = Object.fromEntries(designs.map((d) => [d.id, d]))
+  const nameOf = (s: SectionInstance) => sectionName(s, byId)
   const afterName = selected ? home.find((s) => s.id === selected) : null
   return (
     <div className="space-y-3">

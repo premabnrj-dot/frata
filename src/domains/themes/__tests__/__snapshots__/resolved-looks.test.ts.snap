@@ -7165,6 +7165,297 @@ exports[`resolved looks of every released theme > signal@1.4.0 · full 1`] = `
     "data-scale": "signal",
     "data-voice": "grotesk",
   },
+  "designs": {
+    "made-by-hand": {
+      "children": [
+        {
+          "fill": {
+            "label": "Heading",
+          },
+          "id": "heading",
+          "kind": "heading",
+          "size": "l",
+          "text": "How it’s made",
+        },
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "fill": {
+                    "label": "Photo 1",
+                  },
+                  "id": "photo-1",
+                  "image": {
+                    "alt": "An oxblood loafer",
+                    "base": "/themes/samples/oxblood-loafer",
+                    "decorative": false,
+                    "focus": null,
+                    "height": 1000,
+                    "width": 800,
+                    "widths": [
+                      400,
+                      800,
+                    ],
+                  },
+                  "kind": "image",
+                  "ratio": "4:5",
+                },
+                {
+                  "fill": {
+                    "example": true,
+                    "label": "Step 1",
+                  },
+                  "id": "heading-1",
+                  "kind": "heading",
+                  "size": "s",
+                  "text": "Cut",
+                },
+                {
+                  "body": [
+                    [
+                      {
+                        "text": "Full-grain leather, cut by hand to the last.",
+                      },
+                    ],
+                  ],
+                  "fill": {
+                    "example": true,
+                    "label": "Step 1 words",
+                  },
+                  "id": "words-1",
+                  "kind": "text",
+                },
+              ],
+              "id": "step-1",
+              "kind": "group",
+            },
+            {
+              "children": [
+                {
+                  "fill": {
+                    "label": "Photo 2",
+                  },
+                  "id": "photo-2",
+                  "image": {
+                    "alt": "A sand boot with its stitched welt",
+                    "base": "/themes/samples/sand-boot",
+                    "decorative": false,
+                    "focus": null,
+                    "height": 1000,
+                    "width": 800,
+                    "widths": [
+                      400,
+                      800,
+                    ],
+                  },
+                  "kind": "image",
+                  "ratio": "4:5",
+                },
+                {
+                  "fill": {
+                    "example": true,
+                    "label": "Step 2",
+                  },
+                  "id": "heading-2",
+                  "kind": "heading",
+                  "size": "s",
+                  "text": "Stitched",
+                },
+                {
+                  "body": [
+                    [
+                      {
+                        "text": "Welted, so it can be resoled for years.",
+                      },
+                    ],
+                  ],
+                  "fill": {
+                    "example": true,
+                    "label": "Step 2 words",
+                  },
+                  "id": "words-2",
+                  "kind": "text",
+                },
+              ],
+              "id": "step-2",
+              "kind": "group",
+            },
+            {
+              "children": [
+                {
+                  "fill": {
+                    "label": "Photo 3",
+                  },
+                  "id": "photo-3",
+                  "image": {
+                    "alt": "A finished tan loafer",
+                    "base": "/themes/samples/tan-loafer",
+                    "decorative": false,
+                    "focus": null,
+                    "height": 1000,
+                    "width": 800,
+                    "widths": [
+                      400,
+                      800,
+                    ],
+                  },
+                  "kind": "image",
+                  "ratio": "4:5",
+                },
+                {
+                  "fill": {
+                    "example": true,
+                    "label": "Step 3",
+                  },
+                  "id": "heading-3",
+                  "kind": "heading",
+                  "size": "s",
+                  "text": "Finished",
+                },
+                {
+                  "body": [
+                    [
+                      {
+                        "text": "Burnished by hand, then boxed.",
+                      },
+                    ],
+                  ],
+                  "fill": {
+                    "example": true,
+                    "label": "Step 3 words",
+                  },
+                  "id": "words-3",
+                  "kind": "text",
+                },
+              ],
+              "id": "step-3",
+              "kind": "group",
+            },
+          ],
+          "id": "steps",
+          "kind": "columns",
+          "phone": "swipe",
+        },
+      ],
+      "id": "made-by-hand",
+      "line": "Three steps of how it’s made",
+      "name": "Made by hand",
+      "tags": [
+        "craft",
+        "process",
+        "handmade",
+        "how it’s made",
+        "story",
+        "maker",
+        "materials",
+      ],
+    },
+    "size-help": {
+      "children": [
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "fill": {
+                    "label": "Heading",
+                  },
+                  "id": "heading",
+                  "kind": "heading",
+                  "size": "l",
+                  "text": "Find your size",
+                },
+                {
+                  "body": [
+                    [
+                      {
+                        "text": "Our sizes run true to Indian sizes. Between two? Go up one: leather gives a little in the first week.",
+                      },
+                    ],
+                  ],
+                  "fill": {
+                    "example": true,
+                    "label": "How your sizes run",
+                  },
+                  "id": "intro",
+                  "kind": "text",
+                },
+                {
+                  "fill": {
+                    "example": true,
+                    "label": "Questions",
+                  },
+                  "id": "faq",
+                  "items": [
+                    {
+                      "a": "Stand on paper at the end of the day, mark your heel and longest toe, and measure in cm. Match it to the chart on each product.",
+                      "q": "How do I measure my foot?",
+                    },
+                    {
+                      "a": "Go up one. The leather moulds to you in a week of wear.",
+                      "q": "I’m between two sizes",
+                    },
+                    {
+                      "a": "Yes, within 7 days of delivery, unworn.",
+                      "q": "Can I exchange the size?",
+                    },
+                  ],
+                  "kind": "accordion",
+                },
+                {
+                  "fill": {
+                    "label": "Button",
+                  },
+                  "id": "button",
+                  "kind": "button",
+                  "label": "Returns and exchanges",
+                  "link": "/policies/returns",
+                },
+              ],
+              "id": "words",
+              "kind": "group",
+            },
+            {
+              "fill": {
+                "label": "Photo",
+              },
+              "id": "photo",
+              "image": {
+                "alt": "A tan loafer from the side",
+                "base": "/themes/samples/tan-loafer-b",
+                "decorative": false,
+                "focus": null,
+                "height": 1000,
+                "width": 800,
+                "widths": [
+                  400,
+                  800,
+                ],
+              },
+              "kind": "image",
+              "ratio": "4:5",
+            },
+          ],
+          "id": "cols",
+          "kind": "columns",
+          "phone": "stack",
+        },
+      ],
+      "id": "size-help",
+      "line": "How to pick a size, your answers, a photo",
+      "name": "Size help",
+      "tags": [
+        "size",
+        "fit",
+        "measure",
+        "size chart",
+        "returns",
+        "exchange",
+        "faq",
+      ],
+    },
+  },
   "home": [
     {
       "button": null,
@@ -7287,6 +7578,75 @@ exports[`resolved looks of every released theme > signal@1.4.0 · full 1`] = `
       },
       "tabs": [],
       "viewAll": false,
+    },
+    {
+      "design": "size-help",
+      "fill": {
+        "button": {
+          "kind": "button",
+          "label": "Exchanges",
+          "link": "/policies/returns",
+        },
+        "faq": {
+          "items": [
+            {
+              "a": "In cm, at the end of the day.",
+              "q": "How do I measure?",
+            },
+          ],
+          "kind": "accordion",
+        },
+        "intro": {
+          "body": [
+            [
+              {
+                "text": "True to Indian sizes. ",
+              },
+              {
+                "bold": true,
+                "text": "Go up one",
+              },
+              {
+                "link": "/policies/returns",
+                "text": " if between.",
+              },
+            ],
+          ],
+          "kind": "text",
+        },
+      },
+      "hidden": false,
+      "id": "design-size",
+      "key": "design",
+      "label": "",
+      "scheme": "paper",
+    },
+    {
+      "design": "made-by-hand",
+      "fill": {
+        "heading": {
+          "kind": "heading",
+          "text": "Made in Agra",
+        },
+        "photo-1": {
+          "image": null,
+          "kind": "image",
+        },
+      },
+      "hidden": false,
+      "id": "design-hand",
+      "key": "design",
+      "label": "Craft",
+      "scheme": "tint",
+    },
+    {
+      "design": "made-by-hand",
+      "fill": {},
+      "hidden": false,
+      "id": "design-empty",
+      "key": "design",
+      "label": "",
+      "scheme": "paper",
     },
   ],
   "schemes": {

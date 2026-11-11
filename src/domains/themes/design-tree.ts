@@ -1,4 +1,5 @@
 import type { Block, Design, LeafBlock } from './blocks'
+import type { Fill } from './sections'
 
 // =============================================================================
 // FILE: src/domains/themes/design-tree.ts — walking a design's blocks (Theme Studio TS0b). No schemas here, so the
@@ -15,6 +16,19 @@ export function blocksOf(d: Pick<Design, 'children'>): Block[] {
 /** The leaves an owner fills, in page order (the form's fields). */
 export const fillableOf = (d: Pick<Design, 'children'>): LeafBlock[] =>
   blocksOf(d).filter((b): b is LeafBlock => b.kind !== 'group' && b.kind !== 'columns' && !!b.fill)
+
+/** The owner's fill for a block: only a block the theme marks, by its own id (never a built-in) and its own kind. The
+ *  one rule: resolveDesign, readiness and the form read it here (impact review). */
+export const fillFor = (fill: Record<string, Fill>, b: LeafBlock): Fill | null =>
+  b.fill && Object.hasOwn(fill, b.id) && fill[b.id]!.kind === b.kind ? fill[b.id]! : null
+
+/** An accordion's questions as the owner has them: their own, or the theme's questions with answers left to write
+ *  where the theme's answers are only examples. */
+export function accordionItems(b: Extract<LeafBlock, { kind: 'accordion' }>, f: Fill | null): { q: string; a: string }[] {
+  if (f?.kind === 'accordion') return f.items
+  const example = b.fill?.example === true
+  return b.items.map((i) => ({ q: i.q, a: example ? '' : i.a }))
+}
 
 
 // --- The library's picture of a design (drawn from its tree; no image files to keep in step) -----------------------

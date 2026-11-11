@@ -65,7 +65,15 @@ export type StoredLayer = z.infer<typeof LayerSchema>
 /** A saved layer's ceiling in JSON bytes: below the revision's 64 kB database check (drizzle/0033, octet_length of the
  *  jsonb), leaving room for jsonb's own spacing (architecture review 5; look.int.test saves Hindi at it). */
 export const MAX_LAYER_BYTES = 60_000
-export const layerTooLong = (layer: unknown) => new TextEncoder().encode(JSON.stringify(layer)).length > MAX_LAYER_BYTES
+/** jsonb's text adds a space after every `:` and `,` (the database measures that text): counted here, at most once
+ *  per comma or colon in the JSON (those inside strings too, so never under: impact review). */
+export function layerBytes(layer: unknown): number {
+  const json = JSON.stringify(layer)
+  let seps = 0
+  for (let i = 0; i < json.length; i++) { const c = json.charCodeAt(i); if (c === 44 || c === 58) seps++ }
+  return new TextEncoder().encode(json).length + seps
+}
+export const layerTooLong = (layer: unknown) => layerBytes(layer) > MAX_LAYER_BYTES
 
 /** Why a layer can't be saved as it is (shape and limits only). Empty: it can be saved. */
 export function layerProblems(layer: unknown): string[] {

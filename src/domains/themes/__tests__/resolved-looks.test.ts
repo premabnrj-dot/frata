@@ -3,6 +3,7 @@ import { CATALOGUE } from '../catalogue'
 import { resolveStored, resolveTheme, settingAttrs, settingVars } from '../resolve'
 import { codeSource } from '../source'
 import stored from './fixtures/stored-sections-v1.json'
+import storedV4 from './fixtures/stored-sections-v4.json'
 
 // What every released theme RESOLVES to, for an empty layer and a full one (theme Signal plan T0, architecture review
 // finding 12): a new setting value, scheme or section option added for one theme must not move another theme's
@@ -12,14 +13,15 @@ const full = {
     phoneColumns: 3, header: 'centred', sticky: false, bottomTabs: true, footer: 'compact', social: false, motion: 'none', brandColour: '#1F4E79',
     gallery: 'thumbs', details: 'folded', card: 'centred', desktopColumns: 3, collectionTop: 'banner', buttonShape: 'pill', buttonMotion: 'lift',
     cardHover: 'zoom', entrance: 'fade', reveal: true, buyBoxSticky: true, buyBar: true, footerScheme: 'ink', checkout: 'focused' },
-  home: stored,
+  // TS0b: design sections too (a theme without designs drops them, so its snapshot doesn't move).
+  home: [...stored, ...storedV4],
 }
 
 describe('resolved looks of every released theme', () => {
   const all = Object.values(CATALOGUE).flatMap((vs) => Object.values(vs))
   it.each(all.flatMap((m) => [[`${m.key}@${m.version} · empty`, m, {}], [`${m.key}@${m.version} · full`, m, full]] as const))('%s', (_k, m, extra) => {
     const t = resolveTheme(m, { style: m.styles[0]!.key, ...(extra as object) })
-    expect(JSON.parse(JSON.stringify({ settings: t.settings, schemes: t.schemes, home: t.home, attrs: settingAttrs(t), vars: settingVars(t) }))).toMatchSnapshot()
+    expect(JSON.parse(JSON.stringify({ settings: t.settings, schemes: t.schemes, home: t.home, designs: t.designs, attrs: settingAttrs(t), vars: settingVars(t) }))).toMatchSnapshot()
   })
 })
 

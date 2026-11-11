@@ -1,5 +1,5 @@
 # Plan: Theme Studio TS0b — blocks, as designs in Signal 1.4
-Status: active (board v2 approved by the owner 2026-11-11; scope: two designs) · Date: 2026-11-11 · Spec: `docs/specs/2026-11-11-theme-studio.md`
+Status: built 2026-11-11 (as-built below; impact and security reviews on the diff folded in) · board v2 approved by the owner 2026-11-11; scope: two designs · Date: 2026-11-11 · Spec: `docs/specs/2026-11-11-theme-studio.md`
 (active; v2 approved by the owner 2026-11-11; § 2 Blocks) · Mockup: https://claude.ai/artifact/DzD84DZsW6eGYQ6QkfJbM4 (v2: date line, not a countdown) · Reviews: architecture, security, tenancy, speed (2026-11-11, folded in below)
 
 ## Goal
@@ -27,7 +27,8 @@ it are TS1's).
   variant `.strict()`; the record is keyed by the block-id regex, ≤ 40 entries by refine, read with `Object.hasOwn`,
   built with `Object.fromEntries`; `themeCheck` refuses block ids `constructor`, `prototype`, `__proto__`.
   `cleanImages` maps every fill through `switch (f.kind) … satisfies never`. The save prunes the fill to (design id,
-  block id, kind) of the manifest it has; `resolveDesign` re-parses each fill with its block's own schema.
+  block id, kind) of the manifest it has; `resolveDesign` reads a fill only on a block of its own kind; a fill's caps equal its block's (keep them equal; a
+  block with tighter limits re-parses its fill).
 - **No video fill** (tenancy MEDIUM): a design's one video is the section's top-level `video`; `Fill` has no video
   variant. resolve.ts:111's hard-coded `hero || image_text` becomes `VIDEO_KEYS` plus the theme's `videoSections`, and
   `resolveDesign` drops `video` unless the design has exactly one video block (security M1, tenancy LOW). The video
@@ -42,8 +43,8 @@ it are TS1's).
 - **Bytes, not characters** (architecture 5, security L4): the save measures the layer's JSON bytes before
   `saveDraft` and refuses over 60 kB in words ("This look is too long to save; shorten or remove a section");
   `look.int.test` saves Hindi at every cap. Caps agree: accordion 12 × (80 + 600) fits by making the fill total
-  ≤ 10,000 characters and `MAX_PER_PAGE.design` 4 (4 × 10,000 × 1 B ASCII; Devanagari is refused by bytes, in words).
-- **Runs as RichText's** (security L2, architecture 14): the `run` schema is exported and reused (≤ 12 paragraphs × ≤ 40
+  ≤ 10,000 characters and `MAX_PER_PAGE.design` 4; the page's owner words are ≤ 24 kB in bytes (`PAGE_LIMITS.textBytes`),
+  so Devanagari is refused by bytes, in words.
   runs, run text `min(1)`, link length counted); the runs renderer is pulled out of RichText and shared.
 - **The date block, not a countdown** (architecture 11; design language rule 48: real ends, never a ticking count):
   `date` shows "Drops Fri 14 Nov, 7 pm" as Drop teaser does and hides once passed; the schema keeps only the ISO shape
@@ -74,7 +75,7 @@ it are TS1's).
 - **The spec's ≈ 298 kB was wrong** (speed 1): measured 5.7–10.8 kB of HTML a card, 2.1 kB a photo; 36 cards alone
   ≈ 210 kB HTML / 104 kB RSC, ≈ 328 / 165 with cut swatches; the worst allowed page ≈ 370–480 kB. Limits become: **≤ 24
   cards a page counted across everything that draws one** (Products incl. hidden tabs, price tiles, featured product,
-  tiles) for looks on a version that offers designs, **≤ 24 kB of owner text a page in UTF-8 bytes**, **≤ 16 photos
+  tiles) for looks on a version that offers designs, **≤ 24 kB of owner text a page in UTF-8 bytes**, **≤ 12 photos
   outside cards**; the hover photo gets one `src`, not a srcset (≈ 1 kB a card). Looks on 1.0–1.3 are untouched.
 - **The worst-page test is a gate on a real `next start`** (curl the HTML, `RSC: 1` as `check:payload` does), with
   5-colour cut swatches, the longest titles and Devanagari at the cap — not `renderToString`.
@@ -84,7 +85,7 @@ it are TS1's).
 - **Customize is already at 208.2 kB against 190** (speed 4, existing debt): design thumbs are drawn on the server and
   passed as elements (like the icons at page.tsx:76); `pageLimits` lives in a module without Zod; the design form is a
   `dynamic()` chunk; the Console gate the spec names lands at 208.2 + 0 so nothing grows while the debt is paid.
-- **CSS** (speed 7): block rules in `@layer frata-blocks`, gzipped alone by `check-storefront-build` (≤ 1.0 kB);
+- **CSS** (speed 7): block rules are the `.store-b-*` rules (unlayered, like base.css), gzipped alone by `check-storefront-build` (≤ 1.0 kB);
   `CSS_BUDGET_KB` stays 15.9 so utilities are caught too (supersedes architecture 16).
 - **Statements**: +0 on home (one cached Best-sellers window at most when a design is its only reader; never beyond
   today's two). `shopVideos`' key changes once per Publish. No tree crosses into a shop island.
@@ -100,7 +101,7 @@ it are TS1's).
   `layer.test.ts` design carry and lost lines, `readiness.test.ts` design issues.
 
 ## Design (what the owner sees: mockup board)
-- **Look › Add a section:** the library's first group is **Made for Signal**: six designs as pictures **drawn from their
+- **Look › Add a section:** the library's first group is **Designs** ("Made for Signal"): its designs as pictures **drawn from their
   block tree** (one pure `designThumb(tree)` → the same wireframe SVG the library draws for sections; no image files
   to keep in step). Search covers each design's name, line and tags. A full page greys the card with its limit.
 - **A design's form:** the fields the theme marks for the owner, in page order, each with the theme's label
@@ -115,7 +116,7 @@ it are TS1's).
 - **Changing theme:** a design comes across only to a theme (or version) that has the same design id; otherwise Try
   lists "Size help isn't in Atelier" (today's `lost` list). A recall from 1.4 to 1.3 says the same.
 
-### The six designs (Signal 1.4) and the blocks each exercises
+### The six designs drawn on the board (Signal 1.4 ships the first two; the rest are TS1's)
 | Design | Tree | Blocks |
 |---|---|---|
 | Size help | Columns 2 [Group: Heading, Text·example, Accordion(3 Items·example), Button → /policies/returns] [Image] | Columns, Group, Heading, Text, Accordion, Item, Button, Image |
@@ -169,7 +170,7 @@ it are TS1's).
 | Best sellers windows, videos, shell | `src/lib/themes/page-look.ts` (`bestSellerWindows` walks design trees) |
 | Renderers | `src/components/storefront/blocks/` (server only; `sections/index.tsx` gains `case 'design'`) |
 | Block CSS | the storefront stylesheet, one rule per data attribute; `check-storefront-build` gains the ≤ 1.0 kB gz budget |
-| Signal 1.4 | `src/domains/themes/catalogue/signal/1.4.0.ts` (1.3 + `designs`, `allowed.sections` + `design`, `videoSections` + `design`) |
+| Signal 1.4 | `src/domains/themes/catalogue/signal/1.4.0.ts` (1.3 + `designs`, `allowed.sections` + `design`) |
 | Look | `section-library.tsx` (designs group), `design-form.tsx` (new, `dynamic()` like the story forms), editor wiring |
 
 ## Design review (frata-planning § 3)
@@ -215,7 +216,7 @@ it are TS1's).
 | TS0b-1 | `blocks.ts`: schemas, `resolveDesign`, `pageLimits`, `headingLevels`, thumbs; manifest `designs`; `themeCheck` rules | `npx vitest run src/domains/themes` |
 | TS0b-2 | `design` section: sections, resolve, layer carry/lost, cleanImages, readiness, page-look walkers | `npm test`, typecheck |
 | TS0b-3 | Renderers + block CSS + budget gate; largest-allowed-page test | `npm test`, `npm run build` budgets |
-| TS0b-4 | Signal 1.4.0 with six designs (samples credited) | `check:credits`, parity, `check:theme` |
+| TS0b-4 | Signal 1.4.0 with two designs (samples credited) | `check:credits`, parity, `check:theme` |
 | TS0b-5 | Look: designs in the library, `design-form.tsx`, example words gate; e2e `72-designs` (add, fill, blocked publish, publish, shop shows it, Try Atelier lists it lost) | `npm run e2e -- --only designs,look,signal,shop-look` |
 | TS0b-6 | Release: Admin stages 1.4 to the e2e shop, then released; measure the live Signal shop after its owner opts in; skills, spec, close | full e2e, impact-reviewer |
 
@@ -232,3 +233,28 @@ it are TS1's).
 
 ## Out of scope
 Designs on product, collection and page templates (TS1); the studio (TS2); partner themes (TS3); Claude (TS4).
+
+## As built (2026-11-11)
+- **Engine:** `src/domains/themes/blocks.ts` (schemas, `designsOf`, `resolveDesign`, `pruneFill`, `designsForSave`,
+  `designProblems`, `designsCheck`), `design-tree.ts` (no Zod: `blocksOf`, `fillableOf`, `fillFor`, `accordionItems`,
+  `thumbOf`), `sections.ts` (`FillSchema`, `DesignSectionSchema`, `fillText`, `sectionName`, `searchDesigns`),
+  `layer.ts` (`carryOver` within the theme; `layerBytes` counts jsonb's added spaces; `MAX_LAYER_BYTES` 60,000),
+  `readiness.ts`, `clean-images.ts`, `check.ts` (`themeCheck(m, previous)`), `resolve.ts` (`ResolvedTheme.designs`).
+- **Limits as built:** a design ≤ 25 blocks and ≤ 3 photos (× 4 a page = the page's 100 and 12, so no mix of designs
+  can exceed a page and a later minor can't block a save); ≤ 24 kB of owner words a page in bytes; ≤ 40 fills and
+  10,000 characters a section; a layer ≤ 60 kB as jsonb text.
+- **Shop:** `src/components/storefront/blocks/index.tsx` (server only); `.store-b-*` rules 0.85 kB gz (gate 1.0);
+  shop JS unchanged (home 114.1 kB); the samples and examples show only in the customizer's look preview (`examples`,
+  never `?as=shop`, /console/preview or the shop: e2e asserts the shop HTML has no `/themes/samples/` or `data-example`).
+- **Look:** designs first in Add a section (pictures drawn on the server), `design-form.tsx` (dynamic), the editor's
+  issue line prefers what blocks Publish. Menus and Site settings now load when opened: the customizer is 207.4 kB
+  (was 208.2 before TS0b), gated at 208 kB in `check-storefront-build`.
+- **Gates and tests:** `check:tenant` 6e (no loader, db, themes or outbox import, no `server-only`, in a block);
+  `check-theme` checks each version against the one before; `blocks.test.ts` (30), v4 stored fixture, design and block
+  schema snapshots, resolved-looks with designs; `look.int.test` saves Hindi at the byte ceiling on Postgres;
+  e2e `72-designs` (add, examples marked, Publish blocked by name, publish, shop shows only the owner's words, Undo).
+- **Not done here (named):** the worst-page gate on `next start` arrives with TS1's cards (TS0b adds no card; its page
+  bound is the limits above); a test of the Admin version page's design names; the Rich text section's own
+  paragraph-typing bug (`section-form.tsx`, same as the design form had) is left for its own fix.
+- **Release:** Signal 1.4.0 is in code; releasing it is Admin › Themes › Signal 1.4.0 (stage to a shop, then Release).
+
