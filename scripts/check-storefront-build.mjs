@@ -80,6 +80,22 @@ for (const [k, files] of Object.entries(build)) {
   if (!pages.length) failures.push('no app pages found to check for the app stylesheet')
 }
 
+// The Look customizer's first-load script (Theme Studio spec § Guardrails, the Console gate; TS0b): 207.4 kB measured
+// 2026-11-11 after Menus and Site settings moved behind next/dynamic, with the designs added. It only comes down: the
+// studio (TS2) has its own ceiling. A new form loads when opened (next/dynamic), as the story and design forms do.
+const CUSTOMIZER_KB = 208
+{
+  const k = Object.keys(build).find((x) => /\/console\/look\/customize\/page$/.test(x))
+  if (!k) failures.push('the Look customizer page is missing from the build manifest')
+  else {
+    const parts = k.split('/').slice(0, -1)
+    const above = ['/layout', ...parts.map((_, i) => `${parts.slice(0, i + 1).join('/')}/layout`).filter((l) => l !== '/layout' && build[l])]
+    const kb = [...new Set([...above.flatMap((l) => build[l] ?? []), ...build[k]])].filter((f) => f.endsWith('.js')).reduce((a, f) => a + gz(f), 0) / 1024
+    if (process.env.SHOW_BUDGETS) console.log(`  ${k}: ${kb.toFixed(1)} kB JS`)
+    if (kb > CUSTOMIZER_KB) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${CUSTOMIZER_KB} kB) — load a form when it opens (next/dynamic)`)
+  }
+}
+
 // TS0b: the block rules alone, gzipped (speed review 7): every .store-b- rule in the shop's sheets, @media included.
 {
   // The shop's own sheet (src/app/shop.css) is the root layout's: every built sheet without the app's marker.

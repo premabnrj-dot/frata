@@ -21,8 +21,13 @@ import { Icon } from '@/components/icons/icon'
 import { PublishConfirm } from './publish-confirm'
 import { Segmented } from './controls'
 import { menusOf, siteIsDefault, type Menus, type Palette, type SiteSettings } from '@/domains/themes/site'
-import { MenusForm } from './menus-form'
-import { SiteForm, type IconPreviews } from './site-form'
+import type { IconPreviews } from './site-form'
+import dynamic from 'next/dynamic'
+
+// Menus and Site settings load when opened (TS0b paid for its designs in the customizer's script this way: the page
+// was already over its budget, speed review 2026-11-11 finding 4).
+const MenusForm = dynamic(() => import('./menus-form').then((m) => m.MenusForm))
+const SiteForm = dynamic(() => import('./site-form').then((m) => m.SiteForm))
 
 // =============================================================================
 // The customizer (approved mockup "Customizer", "Customizer on a phone", "Publish"). One draft revision:
