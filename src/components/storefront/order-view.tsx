@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { cashAtDoor, type ShopperState } from '@/domains/orders/order-state'
-import { api, dayRange, downloadInvoice, inr } from './shop-client'
+import { api, dayRange, downloadInvoice, inr, type OrderRef } from './shop-client'
 
 type View = {
   number: number; state: ShopperState; collect: number; method: 'cod' | 'prepaid'; paidAfterSwitch: boolean; canSwitchToCod: boolean
-  subtotal: number; shipping: number; codCharge: number; total: number; firstName: string; to: string; phone: string; email?: string | null
+  subtotal: number; shipping: number; codCharge: number; total: number; firstName: string; to: string; phone: string; email: string | null
   /** Offers that saved on the items (title and ₹ only). */
   savings?: { title: string; amount: number }[]
   arrives: { from: string; to: string } | null; returnDays: number | null; returnKind: string | null
@@ -32,17 +32,19 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
   const [v, setV] = useState<View | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const tokenRef = useRef('')
+  const tokenRef = useRef<OrderRef | null>(null)
   const [invoiceState, setInvoiceState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null })
   const getInvoice = () => {
     setInvoiceState({ busy: true, error: null })
-    void downloadInvoice(tokenRef.current).then((r) => setInvoiceState({ busy: false, error: r.ok ? null : r.error }))
+    void downloadInvoice(tokenRef.current!).then((r) => setInvoiceState({ busy: false, error: r.ok ? null : r.error }))
   }
   useEffect(() => {
-    const token = new URLSearchParams(window.location.hash.slice(1)).get('t') ?? ''
-    if (!/^[A-Za-z0-9_-]{22}$/.test(token)) { setError('This order link is not complete. Open the link you saved, or message the shop.'); return }
-    tokenRef.current = token
-    void api<View>('/api/shop/orders/view', { token }).then((r) => (r.ok ? setV(r.data) : setError(r.status === 404 ? 'We could not find this order. Check the link, or message the shop.' : r.data.error ?? 'Could not load your order.')))
+    // The order's own token (#t=), or an email's link (#o=&e=: bound to the address it was sent to).
+    const h = new URLSearchParams(window.location.hash.slice(1)), token = h.get('t') ?? '', o = h.get('o') ?? '', e = h.get('e') ?? ''
+    const ref: OrderRef | null = /^[A-Za-z0-9_-]{22}$/.test(token) ? { token } : /^[0-9a-f-]{36}$/.test(o) && /^[a-z0-9]{1,8}:[0-9a-f]{64}$/.test(e) ? { o, e } : null
+    if (!ref) { setError('This order link is not complete. Open the link you saved, or message the shop.'); return }
+    tokenRef.current = ref
+    void api<View>('/api/shop/orders/view', ref).then((r) => (r.ok ? setV(r.data) : setError(r.status === 404 ? 'We could not find this order. Check the link, or message the shop.' : r.data.error ?? 'Could not load your order.')))
   }, [])
   if (error) return <p role="alert" className="mx-auto max-w-lg px-4 py-16 text-center">{error}</p>
   if (!v) return <p className="mx-auto max-w-lg px-4 py-16 text-center text-store-sub">Loading your order…</p>

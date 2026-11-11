@@ -14,24 +14,26 @@ import { cleanEmail } from '@/domains/email/shape'
 import { errName } from '@/lib/log'
 
 // The order page's Emails card (email plan E·2, task 14). Owners and admins fix the address (until the order is
-// erased: a bounced Shipped email can be fixed after packing) and send an email again (once in 10 minutes, three a
-// day per kind, failing closed). The audit row names the field, never the address. A support visit can't send.
+// erased: a bounced Shipped email can be fixed after packing; the links already sent to the old address die) and
+// send an email again (once in 10 minutes, three a
+// day per kind, failing closed). The audit row names the field, never the address. A support visit can neither send nor change the address.
 
 type Result = { ok: true } | { ok: false; error: string }
 const ROLES = ['owner', 'admin'] as const
 
 export async function setOrderEmailAction(orderId: string, email: string): Promise<Result> {
-  if (!z.uuid().safeParse(orderId).success) return { ok: false, error: 'Order not found.' }
+  if (!z.uuid().safeParse(orderId).success || typeof email !== 'string' || email.length > 254) return { ok: false, error: 'Order not found.' }
   const clean = email.trim() ? cleanEmail(email) : null
   if (email.trim() && !clean) return { ok: false, error: 'An email like name@example.com, or leave it empty.' }
   try {
     const r = await asMember(ROLES, { action: 'order.email', target: orderId, detail: { fields: ['email'] } }, async (tx, auth) => {
+      if (auth.membership.supportSessionId) return false // later emails would go to an address a visit chose
       const set = await tx.update(orders).set({ email: clean })
         .where(and(eq(orders.tenantId, auth.membership.tenantId), eq(orders.id, orderId), isNull(orders.erasedAt))).returning({ id: orders.id })
       return set.length > 0
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (!r.value) return { ok: false, error: 'Order not found.' }
+    if (!r.value) return { ok: false, error: 'Order not found, or a support visit (which can’t change it).' }
     revalidatePath('/console/orders', 'layout')
     return { ok: true }
   } catch (err) { console.error('[order.email]', errName(err)); return { ok: false, error: 'We could not save that. Nothing was changed.' } }

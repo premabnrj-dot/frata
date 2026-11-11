@@ -16,6 +16,16 @@ export function cleanEmail(raw: unknown): string | null {
   return v
 }
 
+/** One inbox, however it is spelt: no "+tag", and for Gmail no dots and one domain. For limits only (security review
+ *  E·2 M2), never for sending: the shopper's address is sent as typed. */
+export function inboxOf(clean: string): string {
+  const at = clean.lastIndexOf('@')
+  let local = clean.slice(0, at).split('+')[0]!, domain = clean.slice(at + 1)
+  if (domain === 'googlemail.com') domain = 'gmail.com'
+  if (domain === 'gmail.com') local = local.replace(/\./g, '')
+  return `${local}@${domain}`
+}
+
 /** "asha.rao@gmail.com" → "as•••@gmail.com", as the order page masks a phone. */
 export function maskEmail(v: string): string {
   const at = v.indexOf('@')

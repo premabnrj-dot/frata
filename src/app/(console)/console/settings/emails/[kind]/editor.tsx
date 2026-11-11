@@ -4,12 +4,12 @@ import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { PLACEHOLDERS } from '@/domains/messaging/placeholders'
-import type { EmailWords } from '@/domains/email/words'
+import { WORD_LIMITS, type EmailWords } from '@/domains/email/words'
 import { saveEmailAction, sendTestAction } from '../actions'
 
 const FIELDS: { key: keyof EmailWords; label: string; area?: boolean; max: number }[] = [
-  { key: 'subject', label: 'Subject', max: 120 }, { key: 'preview', label: 'Preview line', max: 140 }, { key: 'heading', label: 'Heading', max: 80 },
-  { key: 'message', label: 'Message', area: true, max: 600 }, { key: 'button', label: 'Button', max: 30 },
+  { key: 'subject', label: 'Subject', max: WORD_LIMITS.subject }, { key: 'preview', label: 'Preview line', max: WORD_LIMITS.preview }, { key: 'heading', label: 'Heading', max: WORD_LIMITS.heading },
+  { key: 'message', label: 'Message', area: true, max: WORD_LIMITS.message }, { key: 'button', label: 'Button', max: WORD_LIMITS.button },
 ]
 
 /** Words in fields; placeholders chosen from the menu, never typed; Save, Revert to Frrata's words, Send test to me. */

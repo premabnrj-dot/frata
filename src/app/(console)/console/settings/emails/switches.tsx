@@ -14,7 +14,7 @@ export function EmailSwitch({ kind, name, on, disabled }: { kind: string; name: 
       {error ? <span role="alert" className="text-xs text-danger-text">{error}</span> : null}
       <Switch on={v} label={name} disabled={disabled || pending} onChange={(next) => start(async () => {
         setError(null)
-        const r = await saveEmailAction(kind, null, next)
+        const r = await saveEmailAction(kind, undefined, next)
         if (r.ok) setV(next); else setError(r.error)
       })} />
     </span>

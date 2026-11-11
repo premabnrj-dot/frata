@@ -88,12 +88,19 @@ export async function drainOutbox(deadline: number): Promise<{ claimed: number; 
  * After a change that enqueued commits: send now, after the response, within 20 s; /api/cron/drain catches the rest
  * every 5 minutes (order emails: placing, paying, switching to COD and every console order action call it).
  */
-let draining = false
+let draining = false, again = false
 export function drainSoon() {
-  // One drain per instance at a time (speed review L3): checkouts at festive volume would otherwise each hold one.
-  if (draining) return
+  // One drain per instance at a time (speed review L3): checkouts at festive volume would otherwise each hold one. A
+  // call during a drain asks for one more pass when it ends, so a row queued after its last claim is not left for the
+  // 5-minute cron (impact review E·2).
+  if (draining) { again = true; return }
   draining = true
-  after(() => drainOutbox(Date.now() + 20_000).then(() => undefined, (e) => console.error('[outbox] drain', errName(e))).finally(() => { draining = false }))
+  const run = async () => {
+    try { let passes = 0; do { again = false; await drainOutbox(Date.now() + 20_000) } while (again && ++passes < 3) } // bounded: the cron sweeps the rest
+    catch (e) { console.error('[outbox] drain', errName(e)) }
+    finally { draining = false }
+  }
+  try { after(run) } catch (e) { draining = false; throw e }
 }
 
 /** Runs `work` over `items`, `limit` at a time (the cron's per-shop sweeps). */

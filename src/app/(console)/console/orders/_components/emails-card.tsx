@@ -16,7 +16,7 @@ export function EmailsCard({ orderId, email, emails, canAct }: { orderId: string
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [pending, start] = useTransition()
   const router = useRouter()
-  const last = emails.find((e) => e.kind !== 'test')
+  const last = emails[0]
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>, done: string) => start(async () => {
     setMsg(null); const r = await fn()
     setMsg(r.ok ? { ok: true, text: done } : { ok: false, text: r.error ?? 'Something went wrong.' })

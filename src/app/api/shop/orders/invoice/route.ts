@@ -1,7 +1,6 @@
-import { z } from 'zod'
 import { LIMITS } from '@/lib/db/rate-limit'
-import { tokenHash } from '@/lib/crypto/secret-box'
-import { reply, shopRequest, Token } from '@/lib/http/shop-api'
+import { OrderRef, orderRefHash } from '@/lib/http/order-ref'
+import { reply, shopRequest } from '@/lib/http/shop-api'
 import { shopperInvoice } from '@/lib/queries/checkout'
 import { brandFor, frozenPaper } from '@/lib/documents/brand'
 import { documentFile, pdfResponse, requestFor } from '@/lib/documents/file'
@@ -9,19 +8,20 @@ import { errName } from '@/lib/log'
 
 // =============================================================================
 // FILE: src/app/api/shop/orders/invoice/route.ts — THE SHOPPER'S COPY of their invoice (Documents D2; plan finding 7).
-// POST { token }: the order token from the order page's #fragment (never in a URL). The shop comes from the Host
+// POST { token } or an email's { o, e } (src/lib/http/order-ref.ts): the order token from the order page's #fragment (never in a URL). The shop comes from the Host
 // (shopRequest checks Origin), limited per shop and IP and failing closed. The same PDF the shop downloads, from the
 // same frozen rows and logo. Not packed yet, a wrong shop and a wrong token all answer the same 404.
 // =============================================================================
 
 export const dynamic = 'force-dynamic'
-const Body = z.object({ token: Token })
+const Body = OrderRef
 
 export async function POST(request: Request) {
   const r = await shopRequest(request, Body, LIMITS.invoiceIp, true)
   if (!r.ok) return r.response
   try {
-    const found = await shopperInvoice(r.tenantId, tokenHash(r.body.token))
+    const hash = await orderRefHash(r.tenantId, r.body)
+    const found = hash ? await shopperInvoice(r.tenantId, hash) : null
     if (!found?.orders.length) return reply({ error: 'Not found' }, 404)
     const [brand, frozen] = await Promise.all([brandFor(r.tenantId, null), frozenPaper(r.tenantId, found.orders.map((o) => o.frozen))])
     if (!brand) return reply({ error: 'Not found' }, 404)

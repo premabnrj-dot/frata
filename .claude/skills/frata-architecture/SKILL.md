@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.36.0
+  version: 2.36.1
   verified: 2026-11-09
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -462,8 +462,9 @@ after it. A class a shop page uses from outside the shop's folders must be added
 - Logs carry an error's `name` or code, never the raw error. A drizzle error
   includes its parameters, so emails and phones end up in Vercel logs (S10).
 - **Background work is sized, not hoped.** Batch × runs per day covers 10× peak
-  with the number written in the spec. A daily cron is the safety net: a
-  sender drains right after `enqueue` (`after()`), loops `claimDue` until empty
+  with the number written in the spec. The 5-minute cron is the safety net: a
+  sender drains right after `enqueue` (`after()`; one drain per instance at a time,
+  a call during one asks for up to two more passes), loops `claimDue` until empty
   or out of time, and shops run with bounded concurrency (`src/lib/outbox/drain.ts`:
   `drainSoon()` after the commit, `drainOutbox(deadline)`, `eachLimited`). `/api/cron/drain`
   drains every 5 minutes (Pro, 2026-11-11), so `enqueue({ notBefore })` rows and retries

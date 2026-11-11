@@ -124,6 +124,10 @@ export default {
         assert.equal(mail.tenant, `t-${shop.id}`)
         const drops = mail.text.match(/Email me new drops: (\S+)/)?.[1]
         assert.ok(drops, 'the footer offers new drops')
+        assert.match(drops, /\/email\/drops#o=/, 'its token is in the #fragment, never a log')
+        const orderLink = mail.text.match(/(http\S+\/orders#o=\S+)/)?.[1]
+        assert.ok(orderLink, 'the button opens the order through a link bound to this address')
+        await p.goto(orderLink); await p.getByText('me•••@example.in').waitFor()
 
         // "Email me new drops": opening the link saves nothing; the tap does.
         await p.goto(drops)
@@ -142,10 +146,14 @@ export default {
           const card = c.locator('#emails')
           await card.getByText('Bounced: no such address').waitFor()
           await c.screenshot({ path: t.out('order-emails'), fullPage: true })
-          // Switch Order confirmed off in Settings › Emails: the next order's email is skipped, with its reason.
+          // Switch Order confirmed off in Settings › Emails: the next order's email is skipped, with its reason, and the
+          // shop's own words stay (the switch changes the switch only; impact review E·2).
+          await db`insert into shop_emails (tenant_id, kind, subject) values (${shop.id}, 'confirmed', 'Your Kesar order [Order number]')
+            on conflict (tenant_id, kind) do update set subject = excluded.subject`
           await c.goto(CONSOLE + '/console/settings/emails')
           await c.getByRole('switch', { name: /Order confirmed/ }).click()
           await until(async () => (await db`select off_at from shop_emails where tenant_id = ${shop.id} and kind = 'confirmed'`)[0]?.off_at, 10_000)
+          assert.equal((await db`select subject from shop_emails where tenant_id = ${shop.id} and kind = 'confirmed'`)[0].subject, 'Your Kesar order [Order number]', 'the words survive the switch')
           const o2 = await order('meera.j@example.in')
           await drain()
           await until(async () => (await db`select skip_code from email_messages where tenant_id = ${shop.id} and order_id = ${o2.id} and kind = 'confirmed'`)[0]?.skip_code === 'off', 10_000)

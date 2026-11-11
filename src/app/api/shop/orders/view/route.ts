@@ -1,24 +1,25 @@
-import { z } from 'zod'
 import { collect, savingsAsPaid } from '@/domains/orders/amounts'
 import { currentMethod, orderState, paidAfterSwitch, shopperState } from '@/domains/orders/order-state'
 import { maskPhone } from '@/domains/checkout/address'
 import { maskEmail } from '@/domains/email/shape'
 import { LIMITS } from '@/lib/db/rate-limit'
 import { withTenant } from '@/lib/db/tenant'
-import { tokenHash } from '@/lib/crypto/secret-box'
-import { reply, shopRequest, Token } from '@/lib/http/shop-api'
+import { reply, shopRequest } from '@/lib/http/shop-api'
+import { OrderRef, orderRefHash } from '@/lib/http/order-ref'
 import { checkoutShop, orderPage } from '@/lib/queries/checkout'
 import { processEvents } from '@/lib/orders/payment'
 
 // The shopper's order page data. The token comes in the body (it lives in the URL's #fragment, so no log or cache
 // ever holds it); a wrong shop and a missing order answer the same 404. Address and phone are masked (owner call 4).
-const Body = z.object({ token: Token })
+const Body = OrderRef
 
 export async function POST(request: Request) {
   const r = await shopRequest(request, Body, LIMITS.payIp)
   if (!r.ok) return r.response
+  const hash = await orderRefHash(r.tenantId, r.body)
+  if (!hash) return reply({ error: 'Not found' }, 404)
   await processEvents(r.tenantId).catch(() => 0)
-  const data = await withTenant(r.tenantId, async (tx) => ({ o: await orderPage(tx, r.tenantId, tokenHash(r.body.token)), shop: await checkoutShop(tx, r.tenantId, null) }))
+  const data = await withTenant(r.tenantId, async (tx) => ({ o: await orderPage(tx, r.tenantId, hash), shop: await checkoutShop(tx, r.tenantId, null) }))
   if (!data.o || !data.shop) return reply({ error: 'Not found' }, 404)
   const o = data.o
   return reply({

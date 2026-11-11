@@ -40,7 +40,6 @@ export async function sendOrderEmail(row: OutboxRow): Promise<void> {
   const p = row.payload as Payload
   if (typeof p?.orderId !== 'string' || !UUID.test(p.orderId) || !(ORDER_MESSAGES as readonly string[]).includes(String(p.kind))
     || (p.eventId !== null && p.eventId !== undefined && (typeof p.eventId !== 'string' || !UUID.test(p.eventId)))) throw new GiveUp('bad payload')
-  if (!EMAIL_SHOP_DOMAIN) return
   const kind = p.kind as OrderMessage, orderId = p.orderId, eventId = (p.eventId as string | null) ?? null
   const tenantId = row.tenantId, messageId = row.id, now = new Date()
   const shop = await shopSettingsFor(tenantId)
@@ -63,6 +62,7 @@ export async function sendOrderEmail(row: OutboxRow): Promise<void> {
     }
     const to = cleanEmail(o.email)
     if (!to) return skip('no_email')
+    if (!EMAIL_SHOP_DOMAIN) return skip('not_set_up') // a reason on the card, never a silent drop
     const [undone] = eventId ? await tx.select({ id: orderEvents.id }).from(orderEvents).where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.undoes, eventId))).limit(1) : []
     const still = stillTrue(kind, { ...o, stockShort: false }, now, !!undone)
     if (still !== 'ok') return skip(still)
@@ -84,7 +84,8 @@ export async function sendOrderEmail(row: OutboxRow): Promise<void> {
       return { wait: 'tenant' as const }
     }
     const since = new Date(now.getTime() - 86_400_000)
-    const [cnt] = await tx.select({ n: count() }).from(emailMessages).where(and(eq(emailMessages.tenantId, tenantId), gte(emailMessages.createdAt, since), sql`${emailMessages.sentAt} is not null`))
+    // The cap counts emails to shoppers only: staff notices and tests never use it up.
+    const [cnt] = await tx.select({ n: count() }).from(emailMessages).where(and(eq(emailMessages.tenantId, tenantId), gte(emailMessages.createdAt, since), inArray(emailMessages.kind, [...ORDER_MESSAGES]), sql`${emailMessages.sentAt} is not null`))
     if ((cnt?.n ?? 0) >= es.dailyCap) return skip('capped')
     const [lines, [ship]] = await Promise.all([
       tx.select({ title: orderLines.title, values: orderLines.optionValues, qty: orderLines.qty }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id))).orderBy(asc(orderLines.position)),

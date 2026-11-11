@@ -1,5 +1,4 @@
 import 'server-only'
-import { orderToken } from '@/lib/crypto/secret-box'
 import { scheme } from '@/lib/ekcode/cookie-name'
 import { formatInr } from '@/lib/format'
 import { dayMonthIN } from '@/lib/format-date'
@@ -10,7 +9,8 @@ import { DEFAULT_WORDS, WORD_FIELDS, type EmailWords } from '@/domains/email/wor
 import { shopEmail, type Rendered } from '@/domains/email/layouts'
 import { cleanSubject } from '@/domains/email/headers'
 import type { Paise } from '@/domains/money/paise'
-import { dropsToken } from './drops'
+import { emailLinkToken } from './drops'
+import { orderPrefix } from '@/domains/signup/slug'
 
 // =============================================================================
 // FILE: src/lib/email/compose.ts — ONE ORDER EMAIL, BUILT ONE WAY: the sender and the Settings preview both call this,
@@ -32,7 +32,7 @@ export type ComposeInput = {
 
 export function composeOrderEmail(c: ComposeInput): { mail: Rendered; subject: string; words: EmailWords } {
   const { kind, shop, order: o } = c
-  const number = `${shop.orderPrefix || 'ORD'}-${o.number}`
+  const number = `${orderPrefix(shop.orderPrefix ?? '', shop.shopName)}-${o.number}`
   const cod = currentMethod(o) === 'cod'
   const total = formatInr(Number(o.total) as Paise)
   const values: Values = {
@@ -41,8 +41,10 @@ export function composeOrderEmail(c: ComposeInput): { mail: Rendered; subject: s
   }
   const words = Object.fromEntries(WORD_FIELDS.map((f) => [f, fill(c.own?.[f] || DEFAULT_WORDS[kind][f], values)])) as EmailWords
   const origin = `${scheme()}://${shop.host}`
-  const orderLink = `${origin}/orders#t=${orderToken(o.id)}`
-  const drops = dropsToken(o.id, c.to)
+  // Links bound to this address (src/lib/email/drops.ts): they die when the shop fixes a mistyped one.
+  const link = emailLinkToken('order', o.id, c.to)
+  const orderLink = link ? `${origin}/orders#o=${o.id}&e=${encodeURIComponent(link)}` : `${origin}/orders`
+  const drops = emailLinkToken('drops', o.id, c.to)
   const mail = shopEmail({
     preview: words.preview,
     shop: { name: shop.shopName, logoUrl: shop.logoUrl ?? null, accent: c.accent },
@@ -52,7 +54,7 @@ export function composeOrderEmail(c: ComposeInput): { mail: Rendered; subject: s
       payLine: o.cancelledAt ? null : cod ? `Pay ${total} on delivery, in cash or UPI` : o.paidAt ? 'Paid online' : null },
     footer: { legalName: shop.legalName || shop.shopName, address: shop.address || '', supportEmail: c.replyTo,
       grievance: shop.grievanceName ? [shop.grievanceName, shop.grievanceEmail].filter(Boolean).join(', ') : null,
-      newDropsHref: drops ? `${origin}/email/drops?o=${o.id}&t=${encodeURIComponent(drops)}` : null },
+      newDropsHref: drops ? `${origin}/email/drops#o=${o.id}&t=${encodeURIComponent(drops)}` : null },
   })
   return { mail, subject: cleanSubject(words.subject), words }
 }

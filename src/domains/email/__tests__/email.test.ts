@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { cleanEmail, maskEmail, EMAIL_SQL } from '../shape'
+import { cleanEmail, inboxOf, maskEmail, EMAIL_SQL } from '../shape'
 import { suggestEmail } from '../typo'
 import { messageState, stateWords } from '../state'
 import { html, escapeHtml } from '../html'
@@ -89,4 +89,10 @@ describe('headers', () => {
     expect(fromHeader('केसर', 'k@frratamail.app')).toMatch(/^=\?UTF-8\?B\?.+\?= <k@frratamail\.app>$/)
     expect(cleanSubject('Hi\r\nBcc: x@y')).toBe('Hi Bcc: x@y')
   })
+})
+
+describe('inboxOf (mail limits count one inbox)', () => {
+  it('drops a +tag', () => expect(inboxOf('asha+1@example.in')).toBe('asha@example.in'))
+  it('drops Gmail dots and folds googlemail', () => expect(inboxOf('a.s.ha+x@googlemail.com')).toBe('asha@gmail.com'))
+  it('keeps dots elsewhere', () => expect(inboxOf('a.sha@example.in')).toBe('a.sha@example.in'))
 })

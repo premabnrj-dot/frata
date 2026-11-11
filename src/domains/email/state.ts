@@ -20,7 +20,7 @@ export function messageState(m: MessageMoments): MessageState {
   return 'queued'
 }
 
-export const SKIP_CODES = ['suppressed', 'off', 'undone', 'cancelled', 'superseded', 'not_due', 'paid', 'no_support_email', 'shop_closed', 'capped', 'no_email'] as const
+export const SKIP_CODES = ['suppressed', 'off', 'undone', 'cancelled', 'superseded', 'not_due', 'paid', 'no_support_email', 'shop_closed', 'capped', 'no_email', 'not_set_up'] as const
 export type SkipCode = (typeof SKIP_CODES)[number]
 
 const SKIP_WORDS: Record<SkipCode, string> = {
@@ -35,6 +35,7 @@ const SKIP_WORDS: Record<SkipCode, string> = {
   shop_closed: 'Not sent: the shop is not open yet',
   capped: 'Not sent: daily limit reached',
   no_email: 'No email',
+  not_set_up: 'Not sent: Frrata’s email was not set up yet',
 }
 
 export function stateWords(m: MessageMoments): string {

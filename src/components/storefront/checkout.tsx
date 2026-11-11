@@ -3,6 +3,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { STATES } from '@/domains/checkout/states'
 import { cleanMobile } from '@/domains/checkout/mobile'
+import { cleanEmail } from '@/domains/email/shape'
 import { announcePlaced, moduleArm, usePrefill } from './module-events'
 import { waOptInText } from '@/domains/checkout/opt-in'
 import { cleanGstin } from '@/domains/tax/gstin'
@@ -101,7 +102,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   function check(): boolean {
     const e: Record<string, string> = {}
     if (!cleanMobile(f.phone)) e.phone = 'A 10-digit mobile number.'
-    if (f.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) e.email = 'An email like name@example.com, or leave it empty.'
+    if (f.email.trim() && !cleanEmail(f.email)) e.email = 'An email like name@example.com, or leave it empty.'
     if (f.name.trim().length < 2) e.name = 'Your full name, as on the door.'
     if (!/^[1-9][0-9]{5}$/.test(f.pincode)) e.pincode = 'A 6-digit pincode.'
     if (f.addressLine.trim().length < 5) e.addressLine = 'House number and street.'
@@ -113,17 +114,6 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     setErrors(e)
     if (Object.keys(e).length) { document.getElementById(Object.keys(e)[0]!)?.focus(); return false }
     return true
-  }
-
-  function changedText(prev: PublicQuote | null, next: PublicQuote): string {
-    const out: string[] = []
-    for (const l of next.lines) {
-      const p = prev?.lines.find((x) => x.variantId === l.variantId)
-      if (p && p.unitPrice !== l.unitPrice) out.push(`${l.title}: ${inr(p.unitPrice)} → ${inr(l.unitPrice)}`)
-      if (l.problem === 'reduced') out.push(`Only ${l.qty} of ${l.title} left — quantity set to ${l.qty}`)
-      if (l.problem === 'sold_out' || l.problem === 'gone') out.push(`${l.title} sold out`)
-    }
-    return out.length ? `Something changed since you looked: ${out.join('; ')}. Check the total and place the order again.` : 'The total changed. Check it and place the order again.'
   }
 
   async function place() {
@@ -146,6 +136,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     if (!r.ok) {
       setBusy(false)
       if (r.data.quote) {
+        const { changedText } = await import('./checkout-changed')
         setMsg({ tone: 'changed', text: changedText(seen.current, r.data.quote) })
         bag.reconcile(r.data.quote.lines.filter((l) => l.problem === 'reduced'), r.data.quote.missing)
         seen.current = r.data.quote; await refresh()
@@ -183,7 +174,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     setBusy(false)
     if (r.ok) return done(failed.token)
     if (typeof r.data.codTotal === 'number') { setCodTotal(r.data.codTotal); setMsg({ tone: 'changed', text: `Pay on delivery for this order is ${inr(r.data.codTotal)}. Tap again to confirm.` }); return }
-    if (r.data.quote) { setMsg({ tone: 'changed', text: changedText(seen.current, r.data.quote) }); await refresh(); return }
+    if (r.data.quote) { const { changedText } = await import('./checkout-changed'); setMsg({ tone: 'changed', text: changedText(seen.current, r.data.quote) }); await refresh(); return }
     setMsg({ tone: 'error', text: r.data.error ?? 'We could not switch to Pay on delivery. Try again.' })
   }
 

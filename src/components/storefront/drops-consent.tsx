@@ -2,13 +2,13 @@
 
 import { useState } from 'react'
 
-/** The "Email me new drops" tap. The link's order and token are read in the browser and sent in a POST body. */
+/** The "Email me new drops" tap. The link's order and token live in the #fragment (never in a log) and go in a POST body. */
 export function DropsConsent({ shopName }: { shopName: string }) {
   const [state, setState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle')
   const [error, setError] = useState('')
   const send = async () => {
     setState('busy')
-    const q = new URLSearchParams(window.location.search)
+    const q = new URLSearchParams(window.location.hash.slice(1))
     try {
       const r = await fetch('/api/shop/email-drops', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ o: q.get('o'), t: q.get('t') }) })
       if (r.ok) { setState('done'); return }

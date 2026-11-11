@@ -45,11 +45,12 @@ export function checkWords(w: EmailWords): string | null {
   return w.subject.trim() && w.heading.trim() ? null : 'A subject and a heading are needed.'
 }
 
-/** Saves the words (Frrata's words stored as null, so a later change to them reaches this shop) and the switch. */
-export async function saveShopEmail(tx: Tx, tenantId: string, userId: string, kind: OrderMessage, words: EmailWords | null, on: boolean) {
+/** Saves the switch and, unless `words` is undefined (the switch alone), the words: null reverts to Frrata's; a field
+ *  equal to Frrata's is stored as null, so a later change to Frrata's words reaches this shop. */
+export async function saveShopEmail(tx: Tx, tenantId: string, userId: string, kind: OrderMessage, words: EmailWords | null | undefined, on: boolean) {
   const set = {
     offAt: on ? null : new Date(), updatedBy: userId, updatedAt: new Date(),
-    ...Object.fromEntries(WORD_FIELDS.map((f) => [f, words && words[f] !== DEFAULT_WORDS[kind][f] ? words[f] : null])),
+    ...(words === undefined ? {} : Object.fromEntries(WORD_FIELDS.map((f) => [f, words && words[f] !== DEFAULT_WORDS[kind][f] ? words[f] : null]))),
   }
   await tx.insert(shopEmails).values({ tenantId, kind, ...set }).onConflictDoUpdate({ target: [shopEmails.tenantId, shopEmails.kind], set })
 }

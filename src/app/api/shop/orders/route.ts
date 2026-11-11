@@ -7,6 +7,7 @@ import { placeOrder } from '@/lib/orders/place'
 import { cleanAttribution } from '@/domains/analytics/attribution'
 import { CONSOLE_HOST, SHOP_DOMAIN } from '@/lib/public-env'
 import { drainSoon } from '@/lib/outbox/drain'
+import { inboxLimitKey } from '@/lib/email/hash'
 
 // Place an order. Limits fail closed here (a fake-COD script must not slip through a database hiccup).
 const Body = z.object({
@@ -27,8 +28,10 @@ export async function POST(request: Request) {
   if (!address.success) return reply({ error: 'Some details need a look.', fields: addressErrors(address.error) }, 400)
   // An email given at checkout: per shop and across shops, failing closed (email plan, security review H4). Over the
   // limit the order still goes through, without the email: an order never waits on a mail rule.
-  if (address.data.email && !(await withinLimit(LIMITS.orderEmailShop, `${r.tenantId}:${address.data.email}`, new Date(), true)
-    && await withinLimit(LIMITS.orderEmailGlobal, address.data.email, new Date(), true))) address.data.email = null
+  // Counted per inbox (no +tag, Gmail's dots), keyed (src/lib/email/hash.ts).
+  const inbox = address.data.email ? inboxLimitKey(address.data.email) : null
+  if (inbox && !(await withinLimit(LIMITS.orderEmailShop, `${r.tenantId}:${inbox}`, new Date(), true)
+    && await withinLimit(LIMITS.orderEmailGlobal, inbox, new Date(), true))) address.data.email = null
   if (!(await withinLimit(LIMITS.placeOrderPhone, `${r.tenantId}:${address.data.phone}`, new Date(), true))) return reply({ error: 'Too many orders from this phone in the last hour. Message the shop on WhatsApp if you need help.' }, 429)
   // The one cleaner (domains/analytics): listed keys only, each cleaned; the referring site reduced to a hostname that is
   // not this shop (the request's own host), any shop on the shop domain, the console, a payment page or an IP.

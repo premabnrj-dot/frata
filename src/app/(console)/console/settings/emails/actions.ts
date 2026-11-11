@@ -28,10 +28,11 @@ const Kind = z.enum(ORDER_MESSAGES)
 const Words = z.object(Object.fromEntries(WORD_FIELDS.map((f) => [f, z.string().max(1000)])) as Record<(typeof WORD_FIELDS)[number], z.ZodString>)
 const SUPPORT = 'A support visit can read and preview, not change or send.'
 
-export async function saveEmailAction(kind: string, words: EmailWords | null, on: boolean): Promise<Result> {
+/** Words (null: back to Frrata's; undefined: the switch alone, words untouched) and the switch. */
+export async function saveEmailAction(kind: string, words: EmailWords | null | undefined, on: boolean): Promise<Result> {
   const k = Kind.safeParse(kind)
-  if (!k.success) return { ok: false, error: 'Unknown email.' }
-  let clean: EmailWords | null = null
+  if (!k.success || typeof on !== 'boolean') return { ok: false, error: 'Unknown email.' }
+  let clean: EmailWords | null | undefined = words === undefined ? undefined : null
   if (words) {
     const w = Words.safeParse(words)
     if (!w.success) return { ok: false, error: 'Check the fields.' }
@@ -40,9 +41,9 @@ export async function saveEmailAction(kind: string, words: EmailWords | null, on
     if (bad) return { ok: false, error: bad }
   }
   try {
-    const r = await asMember(CAN_MANAGE, { action: 'emails.save', target: k.data, detail: { on, words: !!clean } }, async (tx, auth) => {
+    const r = await asMember(CAN_MANAGE, { action: 'emails.save', target: k.data, detail: { on, words: clean === undefined ? 'kept' : clean ? 'own' : 'frrata' } }, async (tx, auth) => {
       if (auth.membership.supportSessionId) return SUPPORT
-      if (on) { const shop = await shopSettingsFor(auth.membership.tenantId); if (!cleanEmail(shop?.supportEmail)) return 'Add a support email in Settings › Store first.' }
+      if (on) { const shop = await shopSettingsFor(auth.membership.tenantId); if (!cleanEmail(shop?.supportEmail)) return 'Add a support email in Settings › Contact first.' }
       await saveShopEmail(tx, auth.membership.tenantId, auth.userId, k.data, clean, on)
       return null
     })
@@ -57,6 +58,9 @@ export async function sendTestAction(kind: string, words: EmailWords): Promise<R
   const k = Kind.safeParse(kind)
   const w = Words.safeParse(words)
   if (!k.success || !w.success) return { ok: false, error: 'Check the fields.' }
+  const bad = checkWords(w.data)
+  if (bad) return { ok: false, error: bad }
+  if (!EMAIL_SHOP_DOMAIN) return { ok: false, error: 'Email is not set up yet.' }
   try {
     const r = await asMember(CAN_MANAGE, { action: 'emails.test', target: k.data }, async (tx, auth) => {
       if (auth.membership.supportSessionId) return { error: SUPPORT }
@@ -72,7 +76,7 @@ export async function sendTestAction(kind: string, words: EmailWords): Promise<R
     const { id, to, tenantId } = r.value
     const shop = await shopSettingsFor(tenantId)
     const p = await previewOrderEmail(tenantId, k.data, w.data)
-    if (!shop || !p || !EMAIL_SHOP_DOMAIN) return { ok: false, error: 'Email is not set up yet.' }
+    if (!shop || !p) return { ok: false, error: 'Email is not set up yet.' }
     const sent = await sendEmail({ from: fromHeader(shop.shopName, `${shop.slug}@${EMAIL_SHOP_DOMAIN}`), to, replyTo: cleanEmail(shop.supportEmail), subject: `[Test] ${p.subject}`,
       html: p.mail.html, text: p.mail.text, configurationSet: SES_CONFIG_SHOPS, tenant: tenantName(tenantId), messageId: id, tenantTag: tenantId }, new Date())
     await asMember(CAN_MANAGE, { action: 'emails.test.result' }, (tx) => tx.update(emailMessages).set(sent.ok ? { sentAt: new Date(), providerId: sent.providerId } : { failedAt: new Date(), failedCode: sent.code.replace(/[^a-z0-9_]/gi, '_').toLowerCase().slice(0, 48) })
