@@ -29,7 +29,7 @@ export type DomainFacts = {
 const LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/
 const LOCAL = /(^|\.)(local|localhost|internal|test|example|invalid|onion|home|lan|corp)$/
 /** Hosts and platforms no shop may claim (their own subdomains included). */
-const OURS = ['frrata.shop', 'frrata.com', 'frrata.in', 'frata.in', 'frata.store', 'frata.test', 'frratamail.com', 'ekcode.in', 'ekcode.com', 'vercel.app', 'vercel.com', 'vercel-dns.com', 'now.sh']
+const OURS = ['frrata.shop', 'frrata.com', 'frrata.in', 'frata.in', 'frata.store', 'frata.test', 'frratamail.app', 'frratamail.com', 'ekcode.in', 'ekcode.com', 'vercel.app', 'vercel.com', 'vercel-dns.com', 'now.sh']
 
 const under = (host: string, d: string) => host === d || host.endsWith(`.${d}`)
 
