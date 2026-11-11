@@ -6,7 +6,7 @@ The owner asked whether to build our own traffic analytics instead of GA4, or us
 7 Nov answer against what changed today (Vercel paused for CPU; prices rechecked), then replans A·2.
 
 ## The answer
-**Build our own (A·2), after Vercel Pro, Supabase Pro and cached shop pages. Don't put Vercel Web Analytics or GA4 on
+**Build our own (A·2), after Vercel Pro (done 2026-11-11) and a home for the analytics database (cached shop pages: already true). Don't put Vercel Web Analytics or GA4 on
 the shops.** These are two separate questions with two separate tools:
 
 | Question | Who asks | Tool |
@@ -41,7 +41,8 @@ A·3 (Measurement Protocol), with consent. No GA4 script runs in shoppers' brows
    guardrails runbook, `docs/runbooks/cost-guardrails.html`). A·2 adds one server request per page view, so it comes
    **after**:
    - Vercel Pro and its spend limit;
-   - shop pages served from cache (otherwise the page and its beacon both run on the server);
+   - shop pages served from cache (otherwise the page and its beacon both run on the server). **Already true**, checked
+     2026-11-11: every shop page is `force-static` with `revalidate = 60` and answers `x-vercel-cache: HIT`;
    - the time limits (15 s per page, a 10 s query timeout).
 2. **The ingest must be the cheapest request we have:**
    - one `sendBeacon` per page, on `pagehide`, with the page's events batched;

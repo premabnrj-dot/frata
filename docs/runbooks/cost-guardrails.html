@@ -56,7 +56,7 @@ td.n { text-align: right; white-space: nowrap }
 
 <div class="wrap">
   <header style="display:grid;gap:10px">
-    <span class="eyebrow">Runbook · checked 10 Nov 2026</span>
+    <span class="eyebrow">Runbook · checked 10 Nov 2026 · corrected 11 Nov 2026</span>
     <h1>No surprise bills</h1>
     <div class="thread" aria-hidden="true"></div>
     <p class="sub">The most a month can cost once these are set, the settings to make today with exact values, what makes a bill jump, and what stops each one.</p>
@@ -130,15 +130,15 @@ td.n { text-align: right; white-space: nowrap }
 
   <section>
     <h2>What makes a bill jump</h2>
-    <p class="sub">Estimates on Pro in Mumbai with today’s code (64 ms of CPU per page). “Unguarded” is what it would cost with no limits set.</p>
+    <p class="sub">Estimates on Pro in Mumbai. Shop pages are served from Vercel’s cache (checked 11 Nov: <span class="mono">x-vercel-cache: HIT</span>), so most shop traffic costs CDN requests, not server time. “Unguarded” is what it would cost with no limits set.</p>
     <div class="tbl"><table>
       <thead><tr><th>What happens</th><th class="n">Unguarded</th><th>What stops it</th><th>Likely</th></tr></thead>
       <tbody>
-        <tr><td><b>Bots crawl every shop</b><br><span class="tag">*.frrata.shop means any name answers; 1M pages a day for a month</span></td><td class="n">≈ $180 a month</td><td>Cached shop pages (10× less work); a firewall rule that challenges bots (free); a 3× day alert</td><td><span class="pill p-bad">High</span></td></tr>
-        <tr><td><b>A flood in one day</b><br><span class="tag">50M requests</span></td><td class="n">≈ $300 a day</td><td>Vercel’s DDoS protection (free, on); Attack Mode; budget pause at $50</td><td><span class="pill p-warn">Medium</span></td></tr>
+        <tr><td><b>Bots crawl every shop</b><br><span class="tag">*.frrata.shop means any name answers; 1M pages a day for a month</span></td><td class="n">≈ $100 a month</td><td>Pages come from cache already; the cost is the CDN tier moving up next month. A firewall rule that challenges bots (free); a 3× day alert</td><td><span class="pill p-warn">Medium</span></td></tr>
+        <tr><td><b>A flood in one day</b><br><span class="tag">50M requests on pages that run on the server: the console, sign-in, the shop’s API</span></td><td class="n">≈ $300 a day</td><td>Vercel’s DDoS protection (free, on); Attack Mode; budget pause at $50. On cached shop pages the flat-rate CDN absorbs it for that month</td><td><span class="pill p-warn">Medium</span></td></tr>
         <tr><td><b>A reel goes viral</b><br><span class="tag">1M plays × 20 s</span></td><td class="n">≈ $190</td><td>A one-video-over-25% alert; Mux email alerts; Admin pause of video</td><td><span class="pill p-warn">Medium</span></td></tr>
         <tr><td><b>A reel’s link is copied to another site</b><br><span class="tag">10M plays from outside the shop</span></td><td class="n">≈ $2,600</td><td>Signed links that expire (your download decision); the same alerts and pause</td><td><span class="pill p-warn">Medium</span></td></tr>
-        <tr><td><b>The database stalls</b><br><span class="tag">100,000 requests each waiting up to 300 s</span></td><td class="n">up to ≈ $190</td><td>A 10 s query timeout and a 15 s page limit (memory is billed while waiting)</td><td><span class="pill p-info">Low</span></td></tr>
+        <tr><td><b>The database stalls</b><br><span class="tag">100,000 requests waiting on locks or a slow service</span></td><td class="n">up to ≈ $190</td><td>Already: queries stop at 20 s, lock waits at 10 s. To build: a page time limit (memory is billed while waiting)</td><td><span class="pill p-info">Low</span></td></tr>
         <tr><td><b>A bug loops</b><br><span class="tag">a page refreshing itself, a retry storm</span></td><td class="n">open-ended</td><td>Backoff and caps in code (the outbox already has them); a 3× day alert; budget pause</td><td><span class="pill p-info">Low</span></td></tr>
         <tr><td><b>Growth moves the CDN tier</b><br><span class="tag">a month over 1M, 10M or 50M requests</span></td><td class="n">$20 → $100 → $300 a month</td><td>The requests meter and an alert at 80% of the tier, before the month ends</td><td><span class="pill p-ok">Expected</span></td></tr>
         <tr><td><b>An add-on or seat is switched on</b></td><td class="n">$10–300 a month</td><td>Only you hold Billing; the budget doesn’t cover add-ons, so check the invoice preview monthly</td><td><span class="pill p-info">Low</span></td></tr>
@@ -154,8 +154,8 @@ td.n { text-align: right; white-space: nowrap }
     <h2>What we build</h2>
     <p class="sub">Each item goes through the usual plan and review, in this order.</p>
     <ul class="chk">
-      <li><input type="checkbox" id="b1" aria-label="Done"><label for="b1"><b>Shop pages from Vercel’s cache.</b> The biggest saving: about 10× less server work, and every flood costs less.</label></li>
-      <li><input type="checkbox" id="b2" aria-label="Done"><label for="b2"><b>Time limits:</b> 15 s per page, a 10 s database query timeout, and the middleware skipping files that don’t need it.</label></li>
+      <li><input type="checkbox" id="b1" aria-label="Done" checked><label for="b1"><b>Shop pages from Vercel’s cache.</b> Already true: every shop page is cached and refreshed at most once a minute (checked 11 Nov).</label></li>
+      <li><input type="checkbox" id="b2" aria-label="Done"><label for="b2"><b>A page time limit.</b> Queries already stop at 20 s and lock waits at 10 s (since migration 0002). The middleware stays on every path: on shop hosts it does no database work.</label></li>
       <li><input type="checkbox" id="b3" aria-label="Done"><label for="b3"><b>Firewall rules:</b> challenge known bots on *.frrata.shop and answer shop names that don’t exist from the cache. Mitigated traffic is free.</label></li>
       <li><input type="checkbox" id="b4" aria-label="Done"><label for="b4"><b>Admin › Infrastructure</b> with its alerts (the mockup): spend pace, a 3× day, one shop or video running away.</label></li>
       <li><input type="checkbox" id="b5" aria-label="Done"><label for="b5"><b>Video’s stop:</b> pausing Product video in Admin also hides it on every shop, so delivery stops too; plus signed links once you decide.</label></li>
