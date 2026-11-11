@@ -1,4 +1,5 @@
 import 'server-only'
+import { orderEmailsIn } from './emails'
 import { orderDiscounts } from '@/lib/db/schema-discounts'
 import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm'
 import { sourceOfInputs, type Source, type SourceInputs } from '@/domains/analytics/source'
@@ -40,13 +41,13 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
     const [o] = await tx.select({
       ...momentColumns, id: orders.id, number: orders.number,
       onlineTotal: onlineTotalCol, subtotal: orders.subtotal, discount: orders.discount, shipping: orders.shipping, codCharge: orders.codCharge, gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst,
-      customerName: orders.customerName, phone: orders.phone, addressLine: orders.addressLine, area: orders.area, landmark: orders.landmark,
+      customerName: orders.customerName, phone: orders.phone, email: orders.email, addressLine: orders.addressLine, area: orders.area, landmark: orders.landmark,
       pincode: orders.pincode, city: orders.city, state: orders.state,
       invoiceNumber: orders.invoiceNumber, cancelReason: orders.cancelReason, cancelNote: orders.cancelNote, erasedAt: orders.erasedAt,
     }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.number, number))).limit(1)
     if (!o) return null
     // Seven reads at once in the one transaction (speed review P8: postgres-js pipelines them; they ran in turn).
-    const [lines, events, notes, offerRows, [shipment], creditRows, source] = await Promise.all([tx.select({
+    const [lines, events, notes, offerRows, [shipment], creditRows, source, emails] = await Promise.all([tx.select({
       id: orderLines.id, title: orderLines.title, optionValues: orderLines.optionValues, sku: orderLines.sku, qty: orderLines.qty, unitPrice: orderLines.unitPrice,
       imageBase: orderLines.imageBase, imageWidths: orderLines.imageWidths, kind: orderLines.kind, shipsBy: orderLines.shipsBy,
       leadMinDays: orderLines.leadMinDays, leadMaxDays: orderLines.leadMaxDays, stockTakenAt: orderLines.stockTakenAt,
@@ -68,12 +69,14 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
       .from(creditNotes).where(and(eq(creditNotes.tenantId, tenantId), eq(creditNotes.orderId, o.id))).orderBy(creditNotes.issuedAt).limit(50),
     // Where it came from (the same route Analytics classifies by).
     orderSourceIn(tx, tenantId, o.id, now),
+    // Its emails to the shopper (email E·2), states in words.
+    orderEmailsIn(tx, tenantId, o.id),
     ])
     const offers = offerRows.map((d) => ({ ...d, amount: Number(d.amount) }))
     const credits = creditRows.map((c) => ({ number: c.number, issuedAt: c.issuedAt, kind: c.kind, total: Number(c.total), lines: c.lines }))
     // The whole invoice credited: a reversal with no lines (before 0071), or nothing left on any line (GST phase 2).
     const credit = credits.find((c) => c.kind === 'reversal') ?? null
-    return { o, lines, events, notes, offers, shipment: shipment ?? null, credit, credits, source }
+    return { o, lines, events, notes, offers, shipment: shipment ?? null, credit, credits, source, emails }
   })
   if (!data) return null
   // Risk: null when its facts cannot be read (the page then says "Risk unavailable" and fails closed).

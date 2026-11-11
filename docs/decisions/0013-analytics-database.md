@@ -1,4 +1,4 @@
-# ADR-0011: Visits live in a second Postgres
+# ADR-0013: Visits live in a second Postgres
 
 Status: accepted (owner, 2026-11-11: "We'll go for separate database … cleaner/better/scalable"; A·2 calls 1–5 as
 recommended) · spec `docs/specs/2026-11-10-analytics-a2.md` · plan `docs/plans/2026-11-11-guardrails-infra-a2.md`

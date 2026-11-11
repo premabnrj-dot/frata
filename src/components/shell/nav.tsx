@@ -163,7 +163,7 @@ export function BottomBar({ label, tabs, more, moreFoot, ink = false }: { label:
  * A count in the nav: a warn pill with the number in mono (rule 9). Renders nothing at 0. A screen reader hears
  * the link as "Orders, 6 to confirm" (`label` is what the number counts, lower case).
  */
-export function NavPill({ n, label }: { n: number; label: string }) {
+export function NavPill({ n, label, max = 999 }: { n: number; label: string; max?: number }) {
   if (!n) return null
-  return <span className="ml-auto rounded-full bg-warn px-1.5 font-mono text-xs font-semibold leading-[18px] text-warn-text tabular-nums"><span className="sr-only">, </span>{n > 999 ? '999+' : n}<span className="sr-only"> {label}</span></span>
+  return <span className="ml-auto rounded-full bg-warn px-1.5 font-mono text-xs font-semibold leading-[18px] text-warn-text tabular-nums"><span className="sr-only">, </span>{n > max ? `${max}+` : n}<span className="sr-only"> {label}</span></span>
 }

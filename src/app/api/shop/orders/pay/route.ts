@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { LIMITS } from '@/lib/db/rate-limit'
 import { reply, shopRequest, Token } from '@/lib/http/shop-api'
 import { confirmPayment, paymentFailed, processEvents } from '@/lib/orders/payment'
+import { drainSoon } from '@/lib/outbox/drain'
 
 // Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
 export const maxDuration = 30
@@ -18,5 +19,6 @@ export async function POST(request: Request) {
   if ('failed' in r.body) { await paymentFailed(r.tenantId, r.body.token); return reply({ ok: true }) }
   const out = await confirmPayment(r.tenantId, r.body.token, { paymentId: r.body.paymentId, signature: r.body.signature })
   await processEvents(r.tenantId).catch(() => 0)
+  if (out.ok) drainSoon() // "Order confirmed" (email E·2)
   return out.ok ? reply({ ok: true }) : reply({ error: out.error }, out.status)
 }

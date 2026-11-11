@@ -1,4 +1,5 @@
-import { manifestNear, manifestOf } from './catalogue'
+import { classic_1_0_0 } from './catalogue/classic/1.0.0'
+import { manifestNear, type ManifestSource } from './source'
 import { choicesFor } from './choices'
 import { LayerSchema, SettingsSchema, onColour, brandColourProblem } from './layer'
 import { PRODUCT_LAYOUTS, SECTION_SCHEMES, SectionSchema, type SectionInstance, VIDEO_KEYS } from './sections'
@@ -130,13 +131,14 @@ export function baselineRevision(accent: string, displayFont: string) {
 /** A shop that has never published a theme: its baseline, resolved. */
 export function classicFromSettings(accent: string, displayFont: string): ResolvedTheme {
   const b = baselineRevision(accent, displayFont)
-  return resolveTheme(manifestOf(b.themeKey, b.themeVersion)!, { style: b.styleKey, ...b.settings })
+  // Classic 1.0.0 is code forever (isBaseline): never looked up through a source.
+  return resolveTheme(classic_1_0_0, { style: b.styleKey, ...b.settings })
 }
 
 /** A published (or previewed) revision as stored, resolved; an unknown theme or version falls back to Classic. */
-export function resolveStored(row: { themeKey: string; themeVersion: string; styleKey: string; settings: unknown } | null, shop: { accent: string; displayFont: string }): ResolvedTheme {
+export function resolveStored(row: { themeKey: string; themeVersion: string; styleKey: string; settings: unknown } | null, shop: { accent: string; displayFont: string }, src: ManifestSource): ResolvedTheme {
   if (!row) return classicFromSettings(shop.accent, shop.displayFont)
-  const m = manifestNear(row.themeKey, row.themeVersion)
+  const m = manifestNear(src, row.themeKey, row.themeVersion)
   if (!m) return classicFromSettings(shop.accent, shop.displayFont)
   const s = (row.settings ?? {}) as { settings?: Partial<ThemeSettings>; home?: unknown[]; site?: unknown; menus?: unknown }
   return resolveTheme(m, { style: row.styleKey, settings: s.settings, home: s.home, site: s.site, menus: s.menus })

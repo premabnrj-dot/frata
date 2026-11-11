@@ -16,6 +16,8 @@ import { ModuleSlot } from '@/components/modules/slots'
 import { dateTimeIN, dayMonthIN } from '@/lib/format-date'
 import { orderDetail } from '@/lib/queries/order-detail'
 import { orderPrefixFor } from '@/lib/queries/orders'
+import { EmailsCard } from '../_components/emails-card'
+import { EMAIL_NAMES } from '@/domains/email/words'
 import { AddNote, EditContact } from '../_components/contact-and-notes'
 import { eventLabel, PAYMENT, pdfHref, printHref, STATE } from '../_components/labels'
 import { OrderActions } from '../_components/order-actions'
@@ -52,7 +54,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   // Another shop's order is the same "not found" as one that does not exist.
   if (d === null) return <Panel title="No such order in your shop">Check the number, or find it from <a href="/console/orders?tab=all" className="underline">all orders</a>.</Panel>
 
-  const { o, lines, events, notes, facts, offers, shipment, source } = d
+  const { o, lines, events, notes, facts, offers, shipment, source, emails } = d
   const label = `${prefix}-${o.number}`
   const state = orderState(o, now)
   const method = currentMethod(o)
@@ -170,6 +172,13 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
             )}
             {source ? <p className="text-sm text-muted-foreground">Came from: <span className="text-foreground">{source.label}{source.campaign ? ` · ${source.campaign}` : ''}</span></p> : null}
           </Section>
+
+          {o.erasedAt ? null : (
+            <Section id="emails" title="Emails">
+              <EmailsCard orderId={o.id} email={o.email} canAct={can.edit && !auth.membership.supportSessionId}
+                emails={emails.map((e) => ({ id: e.id, kind: e.kind, name: (EMAIL_NAMES as Record<string, string>)[e.kind] ?? (e.kind === 'test' ? 'Test' : e.kind), at: dateTimeIN(e.at), state: e.state, words: e.words }))} />
+            </Section>
+          )}
 
           <Section id="notes" title="Notes">
             {notes.length ? <ul className="space-y-2 text-sm">{notes.map((x) => <li key={x.id}><p className="whitespace-pre-wrap">{x.body}</p><p className="text-xs text-muted-foreground">{x.authorEmail} · {dateTimeIN(x.at)}</p></li>)}</ul> : null}

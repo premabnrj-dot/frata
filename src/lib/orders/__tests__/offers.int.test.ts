@@ -14,7 +14,7 @@ const dbName = process.env.INT_DB_NAME ?? 'frata_proof'
 const pass = process.env.INT_DB_PASSWORD ?? 'x'
 const A = '11111111-1111-1111-1111-111111111111'
 const ME = '99999999-9999-9999-9999-999999999999'
-const address = (phone: string) => ({ name: 'Int Shopper', phone, addressLine: '12 MG Road', area: 'Vaishali Nagar', landmark: '', pincode: '302021', city: 'Jaipur', state: 'Rajasthan' as const })
+const address = (phone: string) => ({ name: 'Int Shopper', phone, addressLine: '12 MG Road', area: 'Vaishali Nagar', landmark: '', pincode: '302021', city: 'Jaipur', state: 'Rajasthan' as const, email: null })
 
 describe.skipIf(!host)('offers at placement and after', () => {
   it('a limited offer goes to exactly one of two racing checkouts; what it wrote adds up', async () => {

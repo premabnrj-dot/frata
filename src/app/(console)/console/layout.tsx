@@ -9,7 +9,7 @@ import { Panel } from '@/components/ui/panel'
 import { requireMember } from '@/lib/auth/require-member'
 import { BillingBanner } from './_components/billing-banner'
 import { DomainBanner } from './_components/domain-banner'
-import { toConfirmCount } from '@/lib/queries/orders'
+import { navCounts } from '@/lib/queries/orders'
 import { supportVisit } from '@/lib/queries/support'
 import { TenantCheck } from '@/components/shell/tenant-check'
 import type { Place } from '@/components/shell/app-shell'
@@ -30,10 +30,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: { template: `%s · ${shop}`, default: shop } }
 }
 
-/** The To confirm pill (U·2a): its own light count, streamed, so the shell never waits for it; no pill on failure. */
-async function ToConfirmPill({ tenantId }: { tenantId: string }) {
-  const n = await toConfirmCount(tenantId).catch((err) => { console.error('[nav count]', err instanceof Error ? err.name : err); return 0 })
-  return <NavPill n={n} label="to confirm" />
+/** The nav's counts (U·2a; email E·1): orders to confirm and unread notices, from ONE cached read (navCounts),
+ *  streamed so the shell never waits; no pill on failure. */
+async function NavCount({ tenantId, userId, which }: { tenantId: string; userId: string; which: 'toConfirm' | 'unread' }) {
+  const c = await navCounts(tenantId, userId).catch((err) => { console.error('[nav count]', err instanceof Error ? err.name : err); return null })
+  const n = c?.[which] ?? 0
+  return which === 'toConfirm' ? <NavPill n={n} label="to confirm" /> : <NavPill n={n} label="unread notices" max={9} />
 }
 
 /**
@@ -80,7 +82,8 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     ...(partner?.approvedAt ? [{ href: '/partner', name: 'Partner workspace', role: '', current: false }] : []),
     ...auth.all.filter((m) => !m.supportSessionId).map((m) => ({ href: '/console', name: m.tenantName, role: ROLE_LABEL[m.role], current: m.tenantId === tenantId, tenantId: m.tenantId })),
   ]
-  const pill = <Suspense fallback={null}><ToConfirmPill tenantId={tenantId} /></Suspense>
+  const pill = <Suspense fallback={null}><NavCount tenantId={tenantId} userId={auth.userId} which="toConfirm" /></Suspense>
+  const bell = <Suspense fallback={null}><NavCount tenantId={tenantId} userId={auth.userId} which="unread" /></Suspense>
   const home: NavItem = { href: '/console', label: 'Home', icon: 'home', exact: true }
   const orders: NavItem = { href: '/console/orders', label: 'Orders', icon: 'orders', badge: pill }
   const products: NavItem = { href: '/console/products', label: 'Products', icon: 'products' }
@@ -98,17 +101,18 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const apps: NavItem = { href: '/console/apps', label: 'Apps', icon: 'apps', children: inUse }
   const analytics: NavItem = { href: '/console/analytics', label: 'Analytics', icon: 'profit' }
   const activity: NavItem = { href: '/console/activity', label: 'Activity', icon: 'activity' }
+  const noticesItem: NavItem = { href: '/console/notices', label: 'Notices', icon: 'bell', badge: bell }
   const search: NavItem = { href: '/console/search', label: 'Search and sharing', icon: 'search' }
   const gst: NavItem = { href: '/console/apps/gst', label: 'GST', icon: 'tax' }
   // GST is a module (Growth and Scale, switched on in Apps): owners and admins open it from Apps (its Set up link shows
   // once it is on), so the layout reads nothing more per page. The accountant's console is GST alone.
   const accountant = role === 'accountant'
   const groups: NavGroup[] = accountant ? [{ label: 'Taxes', items: [gst] }]
-    : [{ label: 'Today', items: [home, orders, analytics] }, { label: 'Catalogue', items: [products, collections] }, { label: 'Store', items: [offers, look, search, apps, settings, activity] }]
+    : [{ label: 'Today', items: [home, orders, noticesItem, analytics] }, { label: 'Catalogue', items: [products, collections] }, { label: 'Store', items: [offers, look, search, apps, settings, activity] }]
   const foot: NavItem[] = [{ href: '/console/preview', label: 'Preview shop', icon: 'external' }]
   if (auth.staffRole !== null && !supportSessionId) foot.push({ href: '/admin', label: 'Frrata Admin', icon: 'admin' })
   return (
-    <AppShell title={tenantName} navLabel="Console" groups={groups} tabs={accountant ? [gst] : [home, orders, products]} more={accountant ? [] : [analytics, collections, offers, look, search, apps, settings, activity]} foot={accountant ? [] : foot}
+    <AppShell title={tenantName} navLabel="Console" groups={groups} tabs={accountant ? [gst] : [home, orders, products]} more={accountant ? [] : [noticesItem, analytics, collections, offers, look, search, apps, settings, activity]} foot={accountant ? [] : foot}
       email={auth.email} tenantId={tenantId} places={places}
       banner={visit ? <SupportBanner storeName={tenantName} visit={visit} now={now} />
         : building ? <BuildingBanner shop={tenantName} inviteEmail={building.inviteEmail} /> : undefined}>

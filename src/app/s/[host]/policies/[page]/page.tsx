@@ -5,8 +5,8 @@ import { shareImage } from '@/lib/seo/share-image'
 import { PolicyView } from '@/components/storefront/pages'
 import { POLICY_TITLE } from '@/components/storefront/policy'
 import { ShopShell } from '@/components/storefront/shell'
-import { shopCatalogue, shopLook } from '@/lib/queries/storefront'
-import { themeOf } from '@/lib/themes/page-look'
+import { shopCatalogue } from '@/lib/queries/storefront'
+import { shopTheme } from '@/lib/themes/page-look'
 import type { PolicyPage } from '@/domains/policies/render'
 import { shopFor, shopHref } from '../../_shop'
 import { shopTags, toMetadata } from '../../_meta'
@@ -29,5 +29,5 @@ export default async function Policy({ params }: { params: Params }) {
   const shop = await shopFor(params)
   const { page } = await params
   if (!isPage(page)) notFound()
-  return <ShopShell shop={shop} href={shopHref} theme={themeOf(shop, await shopLook(shop.id))} gated={!shop.publishedAt} capture={!!shop.publishedAt}><PolicyView shop={shop} page={page} /></ShopShell>
+  return <ShopShell shop={shop} href={shopHref} theme={(await shopTheme(shop))} gated={!shop.publishedAt} capture={!!shop.publishedAt}><PolicyView shop={shop} page={page} /></ShopShell>
 }

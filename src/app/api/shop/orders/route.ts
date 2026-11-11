@@ -6,6 +6,8 @@ import { Bag, Code, codeToTry, codeTried, publicQuote, reply, shopRequest } from
 import { placeOrder } from '@/lib/orders/place'
 import { cleanAttribution } from '@/domains/analytics/attribution'
 import { CONSOLE_HOST, SHOP_DOMAIN } from '@/lib/public-env'
+import { drainSoon } from '@/lib/outbox/drain'
+import { inboxLimitKey } from '@/lib/email/hash'
 
 // Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
 export const maxDuration = 30
@@ -27,6 +29,12 @@ export async function POST(request: Request) {
   if (!r.ok) return r.response
   const address = Address.safeParse(r.body.address)
   if (!address.success) return reply({ error: 'Some details need a look.', fields: addressErrors(address.error) }, 400)
+  // An email given at checkout: per shop and across shops, failing closed (email plan, security review H4). Over the
+  // limit the order still goes through, without the email: an order never waits on a mail rule.
+  // Counted per inbox (no +tag, Gmail's dots), keyed (src/lib/email/hash.ts).
+  const inbox = address.data.email ? inboxLimitKey(address.data.email) : null
+  if (inbox && !(await withinLimit(LIMITS.orderEmailShop, `${r.tenantId}:${inbox}`, new Date(), true)
+    && await withinLimit(LIMITS.orderEmailGlobal, inbox, new Date(), true))) address.data.email = null
   if (!(await withinLimit(LIMITS.placeOrderPhone, `${r.tenantId}:${address.data.phone}`, new Date(), true))) return reply({ error: 'Too many orders from this phone in the last hour. Message the shop on WhatsApp if you need help.' }, 429)
   // The one cleaner (domains/analytics): listed keys only, each cleaned; the referring site reduced to a hostname that is
   // not this shop (the request's own host), any shop on the shop domain, the console, a payment page or an IP.
@@ -39,6 +47,7 @@ export async function POST(request: Request) {
     await codeTried(r.tenantId, r.ip, r.body.code, !code ? 'not_applied' : out.kind === 'changed' ? out.quote.offers.code : out.kind === 'placed' ? out.code ?? 'applied' : 'applied')
     if (out.kind === 'changed') return reply({ changed: true, quote: publicQuote(out.quote) }, 409)
     if (out.kind === 'refused') return reply({ error: out.error, ...(out.quote ? { quote: publicQuote(out.quote) } : {}) }, out.status)
+    drainSoon() // the order email (email E·2), sent after the response
     return reply({ token: out.token, number: out.number, method: out.method, total: out.total, pay: out.pay, payError: out.payError ?? null })
   } catch (err) {
     console.error('[shop/orders] place', r.tenantId, err instanceof Error ? err.name : 'error')

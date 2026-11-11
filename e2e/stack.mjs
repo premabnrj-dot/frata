@@ -13,7 +13,7 @@ import { execSync, spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, openSync } from 'node:fs'
 import { BILLING_KEYS, CONSOLE, META, MUX, OUT, PORTS, SHOP_DOMAIN, adminSql, until } from './lib.mjs'
-import { EKCODE } from './constants.mjs'
+import { EKCODE, SES } from './constants.mjs'
 
 const ROOT = new URL('..', import.meta.url).pathname
 const PG_DIR = '/var/tmp/frata-e2e', PG_BIN = '/usr/lib/postgresql/16/bin', DB = 'frata_e2e'
@@ -75,6 +75,7 @@ export async function up({ build = true } = {}) {
   run('fake-meta', 'node', ['e2e/fakes/meta.mjs'], { PORT: String(PORTS.meta) })
   run('fake-domains', 'node', ['e2e/fakes/domains.mjs'], { PORT: String(PORTS.domains) })
   run('fake-mux', 'node', ['e2e/fakes/mux.mjs'], { PORT: String(PORTS.mux), APP: `http://localhost:${PORTS.app}` })
+  run('fake-ses', 'node', ['e2e/fakes/ses.mjs'], { PORT: String(PORTS.ses), APP: `http://localhost:${PORTS.app}` })
   if (build) {
     // The database is migrated and seeded already: the build reads the plans, so the public pages' prices, the hero's
     // example order and the partner calculator render in e2e (impact review W·1).
@@ -98,6 +99,9 @@ export async function up({ build = true } = {}) {
     VERCEL_API_TOKEN: 'e2e-vercel', VERCEL_BILLING_TOKEN: 'e2e-billing', VERCEL_TEAM_ID: 'team_e2e', VERCEL_PROJECT_ID: 'prj_e2e', VERCEL_API_BASE: `http://127.0.0.1:${PORTS.domains}`, DOH_BASE: `http://127.0.0.1:${PORTS.domains}`,
     MUX_TOKEN_ID: MUX.tokenId, MUX_TOKEN_SECRET: MUX.tokenSecret, MUX_READ_TOKEN_ID: MUX.readId, MUX_READ_TOKEN_SECRET: MUX.readSecret, MUX_WEBHOOK_SECRET: MUX.webhook, MUX_ENVIRONMENT_ID: MUX.env,
     MUX_API_BASE: `http://localhost:${PORTS.mux}`, MUX_STREAM_BASE: `http://localhost:${PORTS.mux}/stream`, MUX_IMAGE_BASE: `http://localhost:${PORTS.mux}/image`,
+    // Email (ADR-0011): the fake SES on loopback, a static test key (never read on Vercel), the fake SNS topic.
+    SES_API_BASE: `http://127.0.0.1:${PORTS.ses}`, SES_TEST_KEY: SES.key, SES_SNS_TOPIC_ARN: SES.topic, SES_ROLE_ARN: 'arn:aws:iam::000000000000:role/frrata-e2e', SES_ACCOUNT_ID: '000000000000',
+    EMAIL_SHOP_DOMAIN: SES.shopDomain, EMAIL_NOTICES_FROM: SES.noticesFrom, EMAIL_KEYS: SES.keys, SEND_EMAIL_HOOK_SECRET: SES.hookSecret,
   })
   await until(async () => { try { return (await fetch(CONSOLE)).status > 0 } catch { return false } }, 60_000)
   // The analytics database as its owner (the fold runs as pg_cron would): flows read events and run analytics_fold().

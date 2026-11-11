@@ -51,13 +51,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const partnersItem: NavItem = { href: '/admin/partners', label: 'Partners', icon: 'partners' }
   const namesItem: NavItem = { href: '/admin/names', label: 'Names', icon: 'address' }
   const trialsItem: NavItem = { href: '/admin/trials', label: 'Trials', icon: 'activity' }
+  const noticesItem: NavItem = { href: '/admin/notices', label: 'Notices', icon: 'bell' }
+  const emailItem: NavItem = { href: '/admin/email', label: 'Email health', icon: 'messages' }
   const staffItem: NavItem = { href: '/admin/staff', label: 'Staff', icon: 'staff' }
   const activity: NavItem = { href: '/admin/activity', label: 'Activity', icon: 'activity' }
   const infraItem: NavItem = { href: '/admin/infrastructure', label: 'Infrastructure', icon: 'risk' }
   const foot: NavItem[] = ownStore ? [{ href: '/console', label: `${ownStore} console`, icon: 'external' }] : []
   return (
-    <AppShell ink title="Frrata Admin" tag="STAFF" navLabel="Admin" groups={[{ label: 'Merchants', items: [merchants, trialsItem, partnersItem, plans, billingItem, modulesItem, ekcodeItem, themesItem, offersItem, namesItem] }, { label: 'Frrata', items: [infraItem, staffItem, activity] }]}
-      tabs={[merchants, plans, staffItem]} more={[trialsItem, partnersItem, billingItem, modulesItem, ekcodeItem, themesItem, offersItem, namesItem, activity]} foot={foot} email={staff.email}>
+    <AppShell ink title="Frrata Admin" tag="STAFF" navLabel="Admin" groups={[{ label: 'Merchants', items: [merchants, trialsItem, partnersItem, plans, billingItem, modulesItem, ekcodeItem, themesItem, offersItem, namesItem] }, { label: 'Frrata', items: [noticesItem, emailItem, infraItem, staffItem, activity] }]}
+      tabs={[merchants, plans, staffItem]} more={[trialsItem, partnersItem, billingItem, modulesItem, ekcodeItem, themesItem, offersItem, namesItem, noticesItem, emailItem, infraItem, activity]} foot={foot} email={staff.email}>
       {children}
     </AppShell>
   )

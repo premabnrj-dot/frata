@@ -7,6 +7,8 @@ import { SHOP_DOMAIN } from '@/lib/public-env'
 import { policyOverrides, shopWithSettings } from '@/lib/queries/settings'
 import { previewLook } from '@/lib/queries/storefront'
 import { resolveStored, schemeVars } from '@/domains/themes/resolve'
+import { codeSource } from '@/domains/themes/source'
+import { manifestsFor } from '@/lib/themes/manifests'
 import { displayFamily } from '@/components/shop-preview/fonts'
 import { shopFacts, storedValues } from '../_components/facts'
 import { SettingsForm } from '../_components/settings-form'
@@ -24,14 +26,15 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
   if (!section) notFound()
   if (!section.editors.includes(auth.membership.role)) return <Panel title="Only the owner or an admin can change this" />
   const tenantId = auth.membership.tenantId
-  const [shop, overrides, live] = await Promise.all([
+  const [shop, overrides, live, src] = await Promise.all([
     shopWithSettings(tenantId),
     section.key === 'policies' ? policyOverrides(tenantId) : Promise.resolve({}),
     section.preview === 'brand' || section.preview === 'footer' ? previewLook(tenantId) : Promise.resolve(null),
-  ]).catch((err) => { console.error('[settings section]', key, errName(err)); return [null, {}, null] as const })
+    manifestsFor(tenantId),
+  ]).catch((err) => { console.error('[settings section]', key, errName(err)); return [null, {}, null, codeSource] as const })
   if (!shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   // The brand and footer previews wear the shop's published look (Look owns colours and type now).
-  const theme = resolveStored(live, shop.settings)
+  const theme = resolveStored(live, shop.settings, src)
   const facts = { ...shopFacts(shop, SHOP_DOMAIN), look: { vars: schemeVars(theme, 'paper'), display: displayFamily(theme.settings.pairing) } }
   return (
     <SettingsForm

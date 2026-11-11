@@ -6,7 +6,7 @@ import { clientIp } from '@/lib/http/client-ip'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { ekcodeConfigured } from './keys'
 import { scheme } from './cookie-name'
-import { readCapped } from './webhook'
+import { readCapped } from '@/lib/http/capped'
 
 // =============================================================================
 // FILE: src/lib/ekcode/require-ek.ts — THE CHECK EVERY EKCODE.IN API CALL PASSES (security review H1, M1): the request

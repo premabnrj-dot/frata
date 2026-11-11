@@ -51,6 +51,16 @@ export const LIMITS = {
   pdfShop: { action: 'pdf:shop', max: 120, windowSeconds: 600 },
   // GST exports (GST app G1): a period's documents rendered whole; per member, fail closed.
   gstExportMember: { action: 'gst_export:member', max: 30, windowSeconds: 600 },
+  // Email (E·2; security review H4/M5), all failing closed. An address given at checkout: per shop and across shops,
+  // so nobody can use shops to bomb an inbox (over the limit, the order is placed without the email). Test sends per
+  // member; Send again and Email the invoice per order and kind (once in 10 minutes, three a day).
+  orderEmailShop: { action: 'order_email:shop', max: 3, windowSeconds: 3600 },
+  orderEmailGlobal: { action: 'order_email:global', max: 15, windowSeconds: 3600 },
+  emailTestMember: { action: 'email_test:member', max: 5, windowSeconds: 3600 },
+  emailResendShort: { action: 'email_resend:short', max: 1, windowSeconds: 600 },
+  emailResendDay: { action: 'email_resend:day', max: 3, windowSeconds: 86400 },
+  /** "Email me new drops" (E·2): per shop and IP, failing closed. */
+  emailDropsIp: { action: 'email_drops:ip', max: 20, windowSeconds: 3600 },
   // GST filing OTPs (G2): each asks the portal to text the shop's mobile; per shop, fail closed.
   gstOtpShop: { action: 'gst_otp:shop', max: 10, windowSeconds: 3600 },
   // OTPs typed (verify, file): a guess loop stops at the server, before the portal (security review M2).

@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { settle } from './settle'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Button, button } from '@/components/ui/button'
@@ -61,7 +62,7 @@ function DomainsInner({ nameHost, names, rows, livePayments, available, canManag
     setBusy(null)
     if (!r.ok) { toast({ text: r.error ?? 'We could not change it. Nothing was changed.' }); return }
     if (ok) toast({ text: ok })
-    router.refresh()
+    settle(router)
   }
 
   // Stable, so the popup's 8 s window is not restarted by this list's re-renders.
@@ -79,7 +80,7 @@ function DomainsInner({ nameHost, names, rows, livePayments, available, canManag
       await new Promise((res) => setTimeout(res, Math.max(0, 1300 - (Date.now() - began)))) // clock-ok: in a handler or timer, never at render
       setGoing(false)
       if (!r.ok) { toast({ text: r.error }); return }
-      router.refresh()
+      settle(router)
       // A name made main while a domain is main is the shop's frrata name, not its main address: a toast says so.
       if (m.kind === 'name' && main) toast({ text: `${m.host} is your frrata address` })
       // A rename used a change: no Undo (going back is another change). A domain's Undo puts the name back.

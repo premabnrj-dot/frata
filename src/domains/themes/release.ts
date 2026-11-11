@@ -1,4 +1,4 @@
-import { cmpSemver } from './catalogue'
+import { cmpSemver } from './semver'
 import type { ThemeManifest } from './types'
 
 // =============================================================================
@@ -42,6 +42,16 @@ export const withdrawnKeys = (rows: VersionRow[]): Set<string> => new Set(rows.f
  */
 export function liveOf<P extends { themeKey: string; themeVersion: string }>(publishes: P[], bad: Set<string>): P | null {
   return publishes.find((p) => !bad.has(`${p.themeKey}@${p.themeVersion}`)) ?? null
+}
+
+/**
+ * The shop's live look from its cached entry (TS0a): the newest candidate not withdrawn (liveOf). Its body comes from the
+ * entry when it is the newest candidate; otherwise the caller reads that revision by id.
+ */
+export function liveFromEntry<B extends { revisionId: string }>(entry: { candidates: { revisionId: string; themeKey: string; themeVersion: string }[]; first: B | null }, bad: Set<string>): { body: B } | { fetch: string } | null {
+  const live = liveOf(entry.candidates, bad)
+  if (!live) return null
+  return entry.first && entry.first.revisionId === live.revisionId ? { body: entry.first } : { fetch: live.revisionId }
 }
 
 /** The look every shop can fall back to (baselineRevision): it can never be recalled or withdrawn. */

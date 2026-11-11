@@ -536,3 +536,6 @@ img[data-photo]::before { content: ""; position: absolute; inset: 0; background:
   --color-store-on-accent: var(--store-on-accent); --color-store-button: var(--store-button); --color-store-on-button: var(--store-on-button);
   --color-store-sale: var(--store-sale);
 }
+
+/* Inter, self-hosted in two faces (src/app/layout.tsx): latin, then latin-ext for ₹. Every sheet reads --font-inter. */
+:root { --font-inter: var(--font-inter-latin), var(--font-inter-ext); }

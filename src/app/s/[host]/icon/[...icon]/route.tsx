@@ -4,10 +4,10 @@ import { BLOB_STORE_ID } from '@/lib/env'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { clientIp } from '@/lib/http/client-ip'
 import { fetchWithTimeout } from '@/lib/http/timeout'
-import { shopLook } from '@/lib/queries/storefront'
+
 import { ICON_SIZES, iconContent, iconHash, type IconSize } from '@/lib/seo/icon'
 import { photoUri } from '@/lib/seo/render-card'
-import { themeOf } from '@/lib/themes/page-look'
+import { shopTheme } from '@/lib/themes/page-look'
 import { shopForRoute } from '../../_shop'
 
 // Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
@@ -36,7 +36,7 @@ export async function GET(req: Request, { params }: { params: Params }) {
   const shop = await shopForRoute(params)
   if (!shop) return new Response('Not found', { status: 404, headers: NO_STORE })
   const now = new Date() // clock-ok: a route handler, run per request on the server
-  const c = iconContent(shop, themeOf(shop, await shopLook(shop.id)))
+  const c = iconContent(shop, (await shopTheme(shop)))
   const current = iconHash(c) === m[1]
   // A stale or made-up hash goes to the current icon before it can spend the shop's drawing budget (security review).
   if (!current) return new Response(null, { status: 302, headers: { location: `/icon/${size}/${iconHash(c)}.png`, 'cache-control': 'public, max-age=300' } })

@@ -11,6 +11,7 @@ import { z } from 'zod'
 export { STATES } from './states'
 import { STATES } from './states'
 import { cleanMobile } from './mobile'
+import { cleanEmail } from '@/domains/email/shape'
 export { cleanMobile, maskPhone } from './mobile'
 
 
@@ -25,6 +26,9 @@ export const Address = z.object({
   landmark: z.string().max(80, 'Up to 80 characters.').optional().default('').transform((s) => s.trim()),
   city: text(2, 60, 'Your town or city.'),
   state: z.enum(STATES, { message: 'Pick your state.' }),
+  /** Optional (email plan E·2): for order updates and the invoice. Empty → null; one shape rule (shape.ts). */
+  email: z.string().max(254, 'Up to 254 characters.').optional().default('')
+    .transform((s, ctx) => { const t = s.trim(); if (!t) return null; return cleanEmail(t) ?? (ctx.addIssue({ code: 'custom', message: 'An email like name@example.com, or leave it empty.' }), z.NEVER) }),
 })
 export type AddressInput = z.input<typeof Address>
 export type CleanAddress = z.output<typeof Address>

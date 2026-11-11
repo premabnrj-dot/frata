@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { CATALOGUE, manifestOf } from '../catalogue'
+import { CATALOGUE } from '../catalogue'
+import { codeSource, manifestOf as manifestIn } from '../source'
+const manifestOf = (k: string, v: string) => manifestIn(codeSource, k, v)
 import { readinessOf } from '../readiness'
 import { resolveTheme, settingAttrs } from '../resolve'
 import { SectionSchema } from '../sections'

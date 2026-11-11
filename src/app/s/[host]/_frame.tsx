@@ -2,9 +2,9 @@ import 'server-only'
 import { OpeningSoon } from '@/components/storefront/pages'
 import { ShopShell } from '@/components/storefront/shell'
 import { AnnounceBar } from '@/components/storefront/announce-bar'
-import { shopAnnouncement, shopCatalogue, shopLook } from '@/lib/queries/storefront'
+import { shopAnnouncement, shopCatalogue } from '@/lib/queries/storefront'
 import { pausedAt } from '@/lib/queries/trial-pause'
-import { shellNeedsCatalogue, shellPictures, themeOf } from '@/lib/themes/page-look'
+import { shellNeedsCatalogue, shellPictures, shopTheme } from '@/lib/themes/page-look'
 import { shopFor, shopHref } from './_shop'
 
 /**
@@ -14,7 +14,7 @@ import { shopFor, shopHref } from './_shop'
  */
 export async function ShopFrame({ children, params, checkout = false }: { children: React.ReactNode; params: Promise<{ host: string }>; checkout?: boolean }) {
   const shop = await shopFor(params)
-  const theme = themeOf(shop, await shopLook(shop.id))
+  const theme = (await shopTheme(shop))
   if (!shop.publishedAt) return <ShopShell shop={shop} href={shopHref} theme={theme} gated><OpeningSoon shop={shop} href={shopHref} /></ShopShell>
   // Trials TR1·9: paused for no autopay after the trial — no new orders (orders already placed carry on).
   if (pausedAt(shop.pause, new Date())) return <ShopShell shop={shop} href={shopHref} theme={theme} gated><OpeningSoon shop={shop} href={shopHref} paused /></ShopShell>

@@ -518,7 +518,7 @@ Computed with `orderProfit`; the scratch model is in the session scratchpad.
       visitors (traffic, source, city), a batch's first landing (events in a batch now get microsecond-apart `at`), and
       a fold across IST midnight. 13 checks in all.
   - **Docs:**
-    - ADR-0011 (the second database);
+    - ADR-0013 (the second database);
     - `docs/setup.md` § Analytics database (paste, password, URL);
     - `scripts/ops/analytics-paste.mjs` derives the paste from the files and is checked on a fresh database and on the
       main one (refused, rolled back);
@@ -660,7 +660,7 @@ With 0.8–0.9 kB more, checkout fails too, and PV1-4a only frees room on the pr
 - **LOW, open:**
   - a real Instagram in-app browser test before go-live (flush the landing after load if events go missing there);
   - `pair-add` credits `add_to_cart` to the page's product;
-  - the analytics project's region (owner: check Settings › General; ADR-0011 records it once known).
+  - the analytics project's region (owner: check Settings › General; ADR-0013 records it once known).
 - **Test limit found while building:** headless Chromium here delivers nothing sent during unload (frata-gotchas). The
   flow hides the tab before full navigations, and the phone check covers the unload send.
 
@@ -674,7 +674,7 @@ With 0.8–0.9 kB more, checkout fails too, and PV1-4a only frees room on the pr
 - Pure: `src/domains/analytics/event.ts`, `device.ts`, `visitor.ts` (tests in `__tests__/beacon.test.ts`).
 - `drizzle-analytics/0003_product_cap.sql`: the 1,000-products cap. The proof is now 14 checks.
 - `ops/firewall.json`: the rate rule first, and the preview bypass kept off `/api/`.
-- e2e `71-traffic` passes 4 steps: the tag and the file, a phone visit (landing source, soft view, product, bag,
+- e2e `72-traffic` passes 4 steps: the tag and the file, a phone visit (landing source, soft view, product, bag,
   checkout), the fold, and the refusals.
 - **Before counting goes live (owner):**
   1. paste 0003 (`FROM=0003 node scripts/ops/analytics-paste.mjs`);
@@ -705,7 +705,7 @@ With 0.8–0.9 kB more, checkout fails too, and PV1-4a only frees room on the pr
 - **MED-A (security), the privacy policy:** while visits are counted (`countsVisits` from `isCountingVisits()`), the
   shop's privacy policy drops "nothing else without asking you" and says what is counted. Tested. A merchant's own
   rewritten policy is theirs; the owner's wording review covers ours.
-- **e2e `71-traffic`, now 5 steps:**
+- **e2e `72-traffic`, now 5 steps:**
   - the policy says visits are counted;
   - Web Vitals arrive;
   - one purchase per order, and a reopened order page is not another;
@@ -725,3 +725,5 @@ With 0.8–0.9 kB more, checkout fails too, and PV1-4a only frees room on the pr
 - `ANALYTICS_INGEST_ON=1` set in Vercel (Production); the `/api/shop/e` rate rule added. The link-preview bypass
   conditions and migration 0003 are pending, and the code isn't on `main` yet, so nothing is counted in production.
 - The e2e failures in addresses and domains (Make main) also fail on `main` (964fdc0), so they predate A·2.
+- **Renumbered when merged with `main` (2026-11-11):** `main` took ADR-0011 (Amazon SES) and e2e 71 (email) meanwhile,
+  so the analytics database is **ADR-0013** and the traffic flow is **e2e 72**.

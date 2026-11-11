@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { settle } from './settle'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
@@ -42,7 +43,7 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
     setPending(true)
     let ok = false
     try { ok = await fn() } catch { setMsg({ ok: false, text: 'We could not change it. Nothing was changed.' }) } finally { setPending(false) }
-    if (ok) router.refresh()
+    if (ok) settle(router)
   }
   const changed = slug !== current
   const locked = support || frozen || left === 0 || (twoStep && !!adding)

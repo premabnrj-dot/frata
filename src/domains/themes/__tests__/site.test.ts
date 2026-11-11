@@ -1,3 +1,4 @@
+import { codeSource } from '../source'
 import { describe, expect, it } from 'vitest'
 import { CATALOGUE } from '../catalogue'
 import { carryOver, layerProblems } from '../layer'
@@ -56,7 +57,7 @@ describe('site settings', () => {
     expect(textOf({ ...SITE_DEFAULTS, text: { body: { desk: 40, phone: 11 } } }, 'body')).toMatchObject({ desk: 20, phone: 14 })
   })
   it('stored through resolveStored', () => {
-    const r = resolveStored({ themeKey: 'editorial', themeVersion: '2.1.0', styleKey: ed.styles[0]!.key, settings: { site: { icons: { library: 'solid', stroke: 'thin' } }, menus: { tabs: [it_('a', [], 'home')] } } }, { accent: 'x', displayFont: 'fraunces' })
+    const r = resolveStored({ themeKey: 'editorial', themeVersion: '2.1.0', styleKey: ed.styles[0]!.key, settings: { site: { icons: { library: 'solid', stroke: 'thin' } }, menus: { tabs: [it_('a', [], 'home')] } } }, { accent: 'x', displayFont: 'fraunces' }, codeSource)
     expect(r.site.icons.library).toBe('solid'); expect(r.menus.tabs?.[0]?.icon).toBe('home')
   })
 })

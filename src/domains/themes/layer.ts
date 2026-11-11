@@ -12,6 +12,8 @@ import { FOOTERS, HEADERS, HEADER_NAMES, PAGE_DEFAULTS, PAIRINGS, type Hex, type
 // =============================================================================
 
 const hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/).transform((h) => h.toUpperCase() as Hex)
+/** The announcement bar: one line, a link only to the shop's own pages (the manifest schema reuses it). */
+export const AnnouncementSchema = z.object({ text: z.string().trim().min(1).max(80), link: shopPath.nullable(), scheme: z.enum(['paper', 'tint', 'ink']) })
 export const SettingsSchema = z.object({
   pairing: z.enum(PAIRINGS),
   headings: z.enum(['as_typed', 'upper']),
@@ -25,7 +27,7 @@ export const SettingsSchema = z.object({
   header: z.enum(HEADERS),
   sticky: z.boolean(),
   bottomTabs: z.boolean(),
-  announcement: z.object({ text: z.string().trim().min(1).max(80), link: shopPath.nullable(), scheme: z.enum(['paper', 'tint', 'ink']) }).nullable(),
+  announcement: AnnouncementSchema.nullable(),
   footer: z.enum(FOOTERS),
   social: z.boolean(),
   motion: z.enum(['subtle', 'none']),

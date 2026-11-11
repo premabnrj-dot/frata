@@ -2,7 +2,6 @@
 
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { STATES } from '@/domains/checkout/state-names'
-import { cleanMobile } from '@/domains/checkout/mobile'
 import { announcePlaced, moduleArm, usePrefill } from './module-events'
 import { waOptInText } from '@/domains/checkout/opt-in'
 import { cleanGstin } from '@/domains/tax/gstin-clean'
@@ -20,8 +19,8 @@ import { api, codWhyNotText, dayRange, inr, type Pay, type PublicListed, type Pu
 // everything; a changed total is shown and needs a fresh tap.
 // =============================================================================
 
-type Form = { phone: string; name: string; pincode: string; city: string; addressLine: string; area: string; landmark: string; state: string }
-const EMPTY: Form = { phone: '', name: '', pincode: '', city: '', addressLine: '', area: '', landmark: '', state: '' }
+type Form = { phone: string; email: string; name: string; pincode: string; city: string; addressLine: string; area: string; landmark: string; state: string }
+const EMPTY: Form = { phone: '', email: '', name: '', pincode: '', city: '', addressLine: '', area: '', landmark: '', state: '' }
 const FORM_KEY = 'frata.checkout.v1', PENDING_KEY = 'frata.pending.v1'
 const ss = { get: (k: string) => { try { return sessionStorage.getItem(k) } catch { return null } }, set: (k: string, v: string) => { try { sessionStorage.setItem(k, v) } catch { /* page only */ } }, del: (k: string) => { try { sessionStorage.removeItem(k) } catch { /* */ } } }
 const randomKey = () => { const b = new Uint8Array(16); crypto.getRandomValues(b); return btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') }
@@ -98,36 +97,17 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   useEffect(() => { if (!online && method === 'prepaid') setMethod(null) }, [online, method])
   const choose = (m: 'cod' | 'prepaid') => { if (!firstMethod.current) firstMethod.current = m; setMethod(m); setMsg(null) }
 
-  function check(): boolean {
-    const e: Record<string, string> = {}
-    if (!cleanMobile(f.phone)) e.phone = 'A 10-digit mobile number.'
-    if (f.name.trim().length < 2) e.name = 'Your full name, as on the door.'
-    if (!/^[1-9][0-9]{5}$/.test(f.pincode)) e.pincode = 'A 6-digit pincode.'
-    if (f.addressLine.trim().length < 5) e.addressLine = 'House number and street.'
-    if (f.area.trim().length < 2) e.area = 'Area or locality.'
-    if (f.city.trim().length < 2) e.city = 'Your town or city.'
-    if (!f.state) e.state = 'Pick your state.'
-    else if (gst.deliversWithin && f.state !== gst.deliversWithin) e.state = `This shop delivers within ${gst.deliversWithin} only.`
-    if (biz.on) { const why = bizCheck.current?.(biz, f.state) ?? null; if (why) e[why.field === 'gstin' ? 'bizGstin' : 'bizName'] = why.error }
+  async function check(): Promise<boolean> {
+    const { formErrors } = await import('./checkout-place')
+    const e = formErrors(f, gst.deliversWithin, biz.on ? bizCheck.current?.(biz, f.state) ?? null : null)
     setErrors(e)
     if (Object.keys(e).length) { document.getElementById(Object.keys(e)[0]!)?.focus(); return false }
     return true
   }
 
-  function changedText(prev: PublicQuote | null, next: PublicQuote): string {
-    const out: string[] = []
-    for (const l of next.lines) {
-      const p = prev?.lines.find((x) => x.variantId === l.variantId)
-      if (p && p.unitPrice !== l.unitPrice) out.push(`${l.title}: ${inr(p.unitPrice)} → ${inr(l.unitPrice)}`)
-      if (l.problem === 'reduced') out.push(`Only ${l.qty} of ${l.title} left — quantity set to ${l.qty}`)
-      if (l.problem === 'sold_out' || l.problem === 'gone') out.push(`${l.title} sold out`)
-    }
-    return out.length ? `Something changed since you looked: ${out.join('; ')}. Check the total and place the order again.` : 'The total changed. Check it and place the order again.'
-  }
-
   async function place() {
     if (!q || !method || busy) return
-    if (!check()) return
+    if (!(await check())) return
     setBusy(true); setMsg(null)
     const items = bag.get()
     const sig = JSON.stringify([items, method, f.phone, code, biz.on ? cleanGstin(biz.gstin) : null])
@@ -137,7 +117,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     const ek = moduleArm('ekcode')
     const r = await api<{ token: string; method: 'cod' | 'prepaid'; total: number; pay: Pay | null; payError: string | null }>('/api/shop/orders', {
       idempotencyKey: attempt.current.key, bag: items, method, expectedTotal: total, ...(code ? { code, via: offerCode.via() } : {}),
-      address: { phone: f.phone, name: f.name, pincode: f.pincode, addressLine: f.addressLine, area: f.area, landmark: f.landmark, city: f.city, state: f.state },
+      address: { phone: f.phone, email: f.email, name: f.name, pincode: f.pincode, addressLine: f.addressLine, area: f.area, landmark: f.landmark, city: f.city, state: f.state },
       facts: { firstMethod: firstMethod.current, attribution, ...(ek ? { ekcode: ek } : {}) },
       ...(gst.b2b && biz.on ? { b2b: { gstin: cleanGstin(biz.gstin), name: biz.name.trim() } } : {}),
       ...(waOptIn && optIn ? { waOptIn: true } : {}),
@@ -145,6 +125,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     if (!r.ok) {
       setBusy(false)
       if (r.data.quote) {
+        const { changedText } = await import('./checkout-place')
         setMsg({ tone: 'changed', text: changedText(seen.current, r.data.quote) })
         bag.reconcile(r.data.quote.lines.filter((l) => l.problem === 'reduced'), r.data.quote.missing)
         seen.current = r.data.quote; await refresh()
@@ -182,7 +163,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     setBusy(false)
     if (r.ok) return done(failed.token)
     if (typeof r.data.codTotal === 'number') { setCodTotal(r.data.codTotal); setMsg({ tone: 'changed', text: `Pay on delivery for this order is ${inr(r.data.codTotal)}. Tap again to confirm.` }); return }
-    if (r.data.quote) { setMsg({ tone: 'changed', text: changedText(seen.current, r.data.quote) }); await refresh(); return }
+    if (r.data.quote) { const { changedText } = await import('./checkout-place'); setMsg({ tone: 'changed', text: changedText(seen.current, r.data.quote) }); await refresh(); return }
     setMsg({ tone: 'error', text: r.data.error ?? 'We could not switch to Pay on delivery. Try again.' })
   }
 
@@ -220,6 +201,9 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
         <div className="flex"><span className="store-field grid h-11 place-items-center rounded-l-[var(--store-radius)] border border-r-0 border-store-sub/45 bg-store-chip px-3 text-store-sub">+91</span>
           <input id="phone" inputMode="tel" autoComplete="tel-national" value={f.phone} onChange={(e) => set('phone', e.target.value)} aria-invalid={!!errors.phone || undefined} aria-describedby="phone-help phone-err" className={`${field} rounded-l-none`} /></div>
         <p id="phone-help" className="mt-1 text-xs text-store-sub">The courier calls this number to deliver.</p><Err k="phone" />
+        <label htmlFor="email" className={`${label} mt-3`}>Email <span className="font-normal text-store-sub">(optional)</span></label>
+        <input id="email" type="email" inputMode="email" autoComplete="email" maxLength={254} value={f.email} onChange={(e) => set('email', e.target.value)} aria-invalid={!!errors.email || undefined} aria-describedby="email-help email-err" className={field} />
+        <p id="email-help" className="mt-1 text-xs text-store-sub">For your order updates and invoice.</p><Err k="email" />
 
         <h2 className={sect}>Delivery address</h2>
         <div className="space-y-3">

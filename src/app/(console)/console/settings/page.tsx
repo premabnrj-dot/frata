@@ -87,6 +87,8 @@ export default async function SettingsPage() {
           {owner && <Row href="/console/settings/online-payments" icon="payments" title="Online payments" summary={online} needs={onlineNeeds} />}
           {manages && <Row href="/console/settings/billing" icon="plans" title="Plan and billing" summary="Your plan, this month so far, invoices and billing details" />}
           {manages && <Row href="/console/settings/people" icon="people" title="People" summary="Who works on this shop" />}
+          <Row href="/console/settings/emails" icon="messages" title="Emails to shoppers" summary="Order emails in your shop’s name" />
+          <Row href="/console/settings/notifications" icon="bell" title="Your notifications" summary="What Frrata emails you" />
           {manages && <Row href="/console/settings/address" icon="address" title="Shop address" summary={mainHost} mono />}
           {seen !== null && (seen === undefined || seen.visible) && <Row href="/console/settings/shipping-costs" icon="shipped" title="Shipping costs" summary={shipSummary} needs={shipNeeds} />}
         </Section>
@@ -100,7 +102,7 @@ export default async function SettingsPage() {
               </>
             ) : <p className="text-sm text-ok-text">Your business details, contacts and grievance officer are all set.</p>}
           </Section>
-          <p className="px-1 text-xs text-muted-foreground">Coming later: your own domain and email templates.</p>
+          <p className="px-1 text-xs text-muted-foreground">Coming later: sending from your own domain.</p>
         </aside>
       </div>
     </>

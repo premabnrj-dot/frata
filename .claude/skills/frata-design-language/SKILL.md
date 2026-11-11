@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.11.1
+  version: 5.12.0
   verified: 2026-11-09
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -186,6 +186,32 @@ from it).
   first); every level that opens starts with "View all"; soft warnings past 7 top items or 10 under one.
 - **Even rhythm** (2.0 themes): the same space above and below every section but a full-bleed one. Horizontal rails
   snap to their padding (`scroll-px-4`), never past it.
+
+## Theme Studio (owner-approved 2026-11-11; spec `docs/specs/2026-11-11-theme-studio.md`, mockup https://claude.ai/artifact/3Mpvh9zHQF6P4kJBihkmTd)
+
+- **Who builds:** Frrata staff in Admin (ink frame, STAFF tag, "Submit for review"); partners in their portal (their
+  name as the tag, "Release to my clients"). Owners never build structure: in Look they fill fields, reorder, hide and
+  add the theme's designs and pages.
+- **The studio is desktop-only** ("Open the studio on a computer" on a phone); Look stays phone-first.
+- **Layout:** top bar (theme · version chip, page picker, Design system, Computer / Phone, Checks count, Undo / Redo,
+  the one primary action); left the layers tree (indent per level, ↑ ↓ and ⋯ on hover or selection, "+ Add a block" with
+  `/`, the limit as a count); centre the preview on sample pieces (the selected section outlined in the shop's accent
+  with its name); right the block's settings and **Owner fills** (which fields the owner edits).
+- **Block picker** is the section library's pattern: search, kinds with counts, presets as picture cards; a block at
+  its limit is greyed with the count ("100 of 100 blocks on this page").
+- **Checks** are a count chip in the top bar (amber "2 to fix" → green "Checks pass"); each failing check is one line
+  with a one-tap Fix that names the result ("Use #5A5A55").
+- **Design system:** colours by role (Paper, Tint, Ink, Accent, Sale), each with its hex in mono and a chip ("Reads
+  well" or the ratio); every other choice a segmented control of Frrata's values. Never a free CSS value.
+- **Releasing:** staff Submit (frozen version, notes) → another staff member approves ("Approve Monsoon 1.0.0") →
+  Admin › Themes as today. A partner chooses **which clients** get a version (checkbox per client, "Release to Kesar
+  Studio"); a theme is never offered to a client the partner didn't pick.
+- **Owners:** "Made for you · <partner>" first in Look's themes; "Update ready" as a banner with Try it in a draft;
+  pages in the page picker with "+ Add a page".
+- **Pages:** About (origin, makers, materials); Contact = "Chat on WhatsApp" to the shop's number + the business
+  details from Settings (can't be removed; a form comes with the Messages inbox); FAQ answers follow Settings.
+- **States:** no themes yet (pictogram + New theme); limit reached; waiting for review (Withdraw submission); withdrawn
+  by Frrata (reason + Reply); partner removed ("No more updates", the look stays); partner paused by Frrata.
 
 ## Partner workspace (approved mockup 2026-11-07)
 

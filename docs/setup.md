@@ -9,7 +9,7 @@ Checked 2026-11-06.
 | Vercel project `frata` | team `premabnrj-dots-projects`, production https://frata.vercel.app, functions `bom1` |
 | Supabase project `frata` | ref `szqwveysvbbxpjhjlnwl`, ap-south-1, org "doloslyf-creator's Org" (free plan) |
 | Migrations applied | `drizzle/0000`–`0003`, each recorded in `drizzle.__drizzle_migrations` |
-| Supabase project `frata-analytics` (A·2, ADR-0011) | ref `frbyvvxxqheigcutlamj`, ap-south-1 (Mumbai), a separate Supabase account, Data API off. Migrations `drizzle-analytics/0000`–`0002` applied by the owner 2026-11-11 (paste), pg_cron jobs `analytics-fold` (*/15) and `analytics-maintain` (:07) active. `frata_app` password: step B. URL in Vercel: step C, at A2·2 |
+| Supabase project `frata-analytics` (A·2, ADR-0013) | ref `frbyvvxxqheigcutlamj`, ap-south-1 (Mumbai), a separate Supabase account, Data API off. Migrations `drizzle-analytics/0000`–`0002` applied by the owner 2026-11-11 (paste), pg_cron jobs `analytics-fold` (*/15) and `analytics-maintain` (:07) active. `frata_app` password: step B. URL in Vercel: step C, at A2·2 |
 | Isolation proved on the live database | 2026-11-06, rolled back (`frata-verify` § Live proof); security advisor clean |
 | Vercel variables set | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (publishable key), `NEXT_PUBLIC_CONSOLE_HOST=frata.vercel.app` |
 
@@ -110,7 +110,7 @@ Until these are set, Console › Apps › Messages says "WhatsApp isn't switched
 5. Redeploy, then connect Frrata's own test number first (dev mode). Other brands' numbers need **App Review**
    (two screencasts, recorded after C2·1) and access verification; until then Meta allows 10 new brands per 7 days.
 
-## Analytics database (A·2, ADR-0011)
+## Analytics database (A·2, ADR-0013)
 
 The project is in a separate Supabase account, which this session's Supabase connection can't reach, so you run these
 steps yourself. Alternatively, invite that account to the project's organisation, and an agent can apply and check
@@ -189,11 +189,10 @@ business once the company exists to lift that.
   (vercel.com/docs, 2026-07-15 to 09-16).
 - **Before WhatsApp COD confirmations (or any outbox sender) ship** (owner, 2026-11-08: "will upgrade to Pro
   later"; review P5):
-  1. **Vercel Pro**, then a frequent outbox schedule in `vercel.json` (every 5 minutes, not the daily `17 3 * * *`).
-     A sender also drains straight after its commit (`drainSoon`, `src/lib/outbox/drain.ts`); the cron is the net.
-  2. **The outbox claim moves to a definer** that returns the due rows for the sweep, and the `outbox` policies lose
-     their no-shop branch (drizzle/0017, 0018), so a table that will hold shoppers' phones has none
-     (tenancy audit 2026-11-08; `check:tenant` lists `outbox` in OPEN_FOR_APP until then).
+  1. ~~Vercel Pro and a frequent outbox schedule~~ — done 2026-11-11 (owner upgraded to Pro): `/api/cron/drain` every
+     5 minutes (`vercel.json`); a sender also drains straight after its commit (`drainSoon`).
+  2. ~~The outbox claim moves to a definer~~ — done 2026-11-11 (drizzle/0096): `app_outbox_claim` / `app_outbox_settle`,
+     and the `outbox` policies lost their no-shop branch; `outbox` is off check:tenant's OPEN_FOR_APP.
 - **Preview deployments must not hold the production database** (review S1): in Vercel, take `DATABASE_URL` off
   Preview (or point Preview at a Supabase branch) and turn on Deployment Protection for previews.
 
@@ -351,6 +350,46 @@ plan will use; the plan may rename one, and this list follows it.
 5. Your approval of the P1 build on a demo shop.
 
 **D. Later**
-- **Vercel Pro and the 5-minute outbox schedule** before order updates from EkCode's number (P3).
+- ~~Vercel Pro and the 5-minute outbox schedule~~ — done 2026-11-11 (`/api/cron/drain`).
 - **Blue tick**: 30 days after the number goes live → WhatsApp Manager → the number → Request Official Business Account.
 - Confirm the allowances (600 / 6,000 / 20,000) after the pricing review.
+
+### Email — Amazon SES (ADR-0011, plan `docs/plans/2026-11-11-email.md`)
+Nothing here passes through an agent: no AWS key exists anywhere (the app reaches SES through Vercel OIDC). Region
+**Asia Pacific (Mumbai) ap-south-1** for every step.
+
+**A. Today**
+1. **AWS account:** root user with MFA; a $20 billing alarm (Billing → Budgets).
+2. **Production access, early** (SES → Account dashboard → Request production access): Mail type **Transactional**,
+   website `https://frrata.shop`, tick the acknowledgement. First reply within 96 hours. When asked for volume: up to
+   1,000,000 a day, 50 a second at festive peaks.
+3. **Identities** (SES → Identities → Create identity → Domain): `frratamail.app` (shops' order emails) and the notices
+   domain (`notify.<Frrata's domain>`), each with Easy DKIM 2048 and a custom MAIL FROM (`bounce.<domain>`). Paste the
+   records SES shows to the agent: frratamail.app is on Vercel DNS, so the agent adds them (3 DKIM CNAMEs, MX + SPF for
+   bounce, and `_dmarc` TXT `v=DMARC1; p=none; rua=mailto:dmarc@frratamail.app`).
+4. **SNS topic** (SNS → Topics → Standard, name `frrata-ses`): Edit → Message signing → **SignatureVersion 2**. Copy its
+   ARN → Vercel `SES_SNS_TOPIC_ARN`.
+5. **Configuration sets** (SES → Configuration sets): `shops` and `notices`. In each: Suppression list → **account-level
+   suppression off** (ours, per shop, is the only list); Event destination → SNS `frrata-ses`, events **Delivery,
+   Hard bounces/Bounces, Complaints, Rejects** only; "Include original headers" off.
+6. **Frrata's tenant** (SES → Tenants → Create): name `frrata`; associate the notices identity and the `notices` set.
+   Shops' tenants are created by the app.
+7. **OIDC** (IAM → Identity providers → Add → OpenID Connect): URL `https://oidc.vercel.com/premabnrj-dots-projects`,
+   audience `https://vercel.com/premabnrj-dots-projects`.
+8. **Role** (IAM → Roles → Web identity → that provider), name `frrata-ses`. Trust condition:
+   `oidc.vercel.com/premabnrj-dots-projects:sub` = `owner:premabnrj-dots-projects:project:frata:environment:production`
+   (previews are refused). Inline policy: `ses:SendEmail` on both identities and both configuration sets and
+   `arn:aws:ses:ap-south-1:<account>:tenant/*`; `ses:CreateTenant` and `ses:CreateTenantResourceAssociation` on
+   `*`. Copy the role ARN → Vercel `SES_ROLE_ARN`; your 12-digit account id → `SES_ACCOUNT_ID`.
+9. **Vercel env (Production only):** `SES_ROLE_ARN`, `SES_ACCOUNT_ID`, `SES_SNS_TOPIC_ARN`,
+   `EMAIL_SHOP_DOMAIN=frratamail.app`, `EMAIL_NOTICES_FROM=Frrata <notices@notify.<Frrata's domain>>`, `EMAIL_KEYS`
+   (`e1:` + 40 random characters; generate with `openssl rand -base64 30`).
+
+**B. When the agent says the email routes are deployed**
+1. **SNS subscription:** topic `frrata-ses` → Create subscription → HTTPS →
+   `https://frata.vercel.app/api/webhooks/ses`; "Raw message delivery" off. It confirms itself within a minute.
+   Delivery policy: 100 retries, max delay 60 s.
+2. **Sign-in email:** Supabase → Authentication → Hooks → Send Email hook → HTTP →
+   `https://frata.vercel.app/api/auth/send-email`; generate the secret → Vercel `SEND_EMAIL_HOOK_SECRET`; redeploy.
+   Then Authentication → Rate limits → emails per hour: 300.
+3. Sign in once to check; tell the agent.
