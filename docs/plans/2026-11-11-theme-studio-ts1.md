@@ -223,6 +223,51 @@ looks byte-identical (resolved-looks snapshot).
   (photo | featured product, words), Behind the bench (video | heading, words, button), The edits (heading, words,
   button | collection tiles). Designs stay on Home only (product and collection templates are TS1c).
 
+## Decisions taken from the TS1b reviews (2026-11-11: architecture, security, speed, unit economics) — these replace what they contradict below
+- **Designs draw what the board draws, no more** (architecture 2, 4; speed HIGH 2; security LOW-2): a product grid shows
+  **4 pieces** (no 8 or 12), collection tiles **≤ 4**, a featured product 1; **≤ 2 commerce designs a page** (a design
+  holding a product grid, featured product or collection tiles). So designs add at most 8 cards to any Home, the
+  limit is absolute (no "refuse only what grows", no baseline from the client), and old sections are never cut or
+  counted: today's over-cap pages (Products 8 × 24, tabs) are named as debt, not made worse by more than 8 cards.
+  The "≤ 24 cards" and "≤ 6 commerce blocks" rules are dropped.
+- **Video, written out** (architecture blocker 1; security MED-1, MED-2): a `{ kind: 'video', poster }` fill (the poster
+  photo; never a video id) and an optional `video` on `DesignSectionSchema`. `designsForSave` (it has the manifest) and
+  `resolveTheme` (right after `pruneFill`) drop `video` unless the design has exactly one video block and the theme's
+  `videoSections` includes `design`; resolve's video rule reads `VIDEO_KEYS`, not two hard-coded keys. So a design
+  without a video block can neither play one nor keep one alive (`releaseUnusedVideos` frees it: test).
+  `cleanFill` and `fillText` list the poster; the poster counts as a photo in `designsCheck` and `designProblems`.
+- **Loops cost Frrata Mux minutes** (unit economics, 2026-11-11): see the owner question below; the plan assumes the
+  recommendation: **≤ 3 loops on a Home** across Hero, Image with text and design videos (the save refuses a 4th; old
+  looks keep theirs), a loop loads after **400 ms at 50 % in view** (dwell), and loops play the 720p rendition.
+- **Eager photos** (architecture 3; speed HIGH 1): `ProductGrid` defaults `lead = false` and every caller says what it
+  wants: Shop all and a title-top collection pass `lead`, a banner collection `false` (its banner is the priority),
+  Price tiles only on its first band; the derived ≤ 2 eager list counts a lead design's photos, featured cover and
+  video poster together. A test counts `fetchpriority=high` on `/`, `/products` and a collection: ≤ 2 each.
+- **Card bytes** (speed HIGH 2): the hover photo gets one `src` (no srcset); the cover's `alt` is empty (the title is
+  the link's text). Pixels unchanged (0 px).
+- **The date line** (architecture 5): `dropLineIN` in `format-date.ts` ("Drops Fri 14 Nov, 7 pm"), "Drops" in
+  `words.ts` with Hindi; Drop teaser keeps `dayIN` (its pixels: the two exist on purpose). The manifest holds no `at`:
+  only the owner sets a date (readiness: "set a date", "its date has passed"). The form reuses Drop teaser's
+  datetime-local + `+05:30` input. `designsForSave(designs, home, now)` refuses a date beyond 400 days in words.
+- **Best sellers walk** (architecture 7; speed LOW 7): `bestSellerWindows` walks `resolveDesign`'s output (a default
+  best-sellers source counts), skipping hidden designs; "+0 statements" becomes "≤ 2 cached best-sellers windows, as
+  today".
+- **Reuse** (architecture 8, 9, 12): Products isn't split (a product grid block is `sourceProducts` + `ProductGrid`);
+  Collection tiles shares one `tilesOf` rule (render, readiness) and takes `cols` for `sizes`; the source picker moves
+  into `controls` before reuse; one handle rule per kind (products 1–100, collections 1–80, picks unique).
+- **themeCheck** (architecture 10): featured product and picked tiles must be owner-filled; a grid's default source
+  can't be a collection; a minor can't add a commerce or video block to an existing design (it would grow every page).
+- **The gate** (architecture 4; speed MED 3): e2e `74-commerce` publishes the worst page a 1.5 owner can newly make (2
+  commerce designs + 2 other designs at their caps, Devanagari words, pieces it seeds with 5-colour swatches and long
+  titles), reads the second visit (`x-nextjs-cache: HIT`) as bytes (`Buffer.concat`), checks the page holds what it
+  should before measuring, asserts ≤ 300 kB HTML / ≤ 150 kB RSC and ≤ 2 eager images, and removes what it seeded.
+- **Cheap speed wins** (speed LOW 4–6): Home reads the catalogue inside its `Promise.all`; `shopCatalogue`'s `expand()`
+  under `cache()`; Collection tiles stops once it has `count` tiles.
+- **Pages** (security LOW-4): `PageFillSchema` accepts commerce fills when parsing; `prunePage` drops them (About and FAQ
+  have no such block): a test, settled again in TS1c.
+- **Regression net** (architecture 14): stored-sections v5 fixture, the 1.5 released-manifest snapshot, `66-video` with a
+  design's loop.
+
 ## Decisions carried from the TS0b reviews (kept for TS1 then; they apply now)
 - **Reads:** commerce blocks read the Home page's own catalogue (`ctx.cat`, already read) and its best-sellers ids:
   **no new statement**. `bestSellerWindows` walks design product grids with a best-sellers source. No loader in a
@@ -266,7 +311,7 @@ looks byte-identical (resolved-looks snapshot).
 - **Scalability / performance:** +0 statements; HTML/RSC by the gate; card cap; no new client script (server blocks).
 - **Reliability:** no outbound call (a video is already uploaded through V1's flow).
 - **Security:** fills tagged and capped; handle and source shapes as the sections'; video ownership by `cleanVideos`.
-- **Unit economics:** none (Mux minutes already budgeted per shop by V1's caps).
+- **Unit economics:** Mux delivery is per minute played and Frrata pays it (no per-shop minutes budget exists): the loop cap, dwell and 720p above; the owner decides (below).
 - **Blast radius:** `Products` and `CollectionTiles` split (Home's sections must render byte-identically: e2e
   `05-shop-look` 0 px), `ProductGrid`'s `lead` default (Price tiles and every grid: priority only on the lead section),
   `VIDEO_KEYS`, resolve's video rule, `bestSellerWindows`, `designProblems`, the design form.
