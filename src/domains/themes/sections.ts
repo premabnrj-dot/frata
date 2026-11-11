@@ -199,7 +199,8 @@ const runChars = (ps: { text: string; link?: string }[][]) => ps.flat().reduce((
 export const DesignBodySchema = z.array(z.array(designRun).min(1).max(40)).max(12).refine((ps) => runChars(ps) <= 2000, 'At most 2,000 characters')
 export const AccordionItemSchema = z.object({ q: text(80), a: text(600) })
 
-/** What an owner wrote into one block of a design, tagged with the block's kind (security M2, tenancy HIGH): a fill
+/** What an owner wrote into one block of a design (unknown keys are stripped: what is stored is this parse's output),
+ *  tagged with the block's kind (security M2, tenancy HIGH): a fill
  *  only ever lands on a block of its own kind, and every photo is found by its kind (cleanImages). Never a video:
  *  a design's one video is the section's own `video` (TS1). */
 export const FillSchema = z.discriminatedUnion('kind', [
@@ -209,6 +210,8 @@ export const FillSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('button'), label: text(24), link: shopPath }),
   z.object({ kind: z.literal('accordion'), items: z.array(AccordionItemSchema).max(12) }),
 ])
+/** Each fill's caps equal its block's (blocks.ts uses the same text(), DesignBodySchema and AccordionItemSchema): a
+ *  block with tighter limits re-parses its fill in resolveDesign (security review LOW-3). */
 export type Fill = z.infer<typeof FillSchema>
 export type FillKind = Fill['kind']
 export const MAX_FILLS = 40, MAX_FILL_CHARS = 10_000
@@ -228,7 +231,7 @@ export function fillChars(f: Fill): number {
  *  marks, by block id. Shape and caps only: whether the design and its blocks exist is the manifest's (resolveDesign). */
 export const DesignSectionSchema = z.object({
   id, key: z.literal('design'), hidden, scheme, label,
-  design: z.string().regex(BLOCK_ID),
+  design: blockId,
   fill: z.record(blockId, FillSchema)
     .refine((f) => Object.keys(f).length <= MAX_FILLS, `At most ${MAX_FILLS} fields`)
     .refine((f) => Object.values(f).reduce((n, x) => n + fillChars(x), 0) <= MAX_FILL_CHARS, 'At most 10,000 characters in one section')

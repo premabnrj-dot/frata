@@ -238,6 +238,9 @@ function Look({ s, set, c }: { s: SectionOf<'shop_the_look'>; set: Set<SectionOf
   </>)
 }
 
+/** A design by id: own keys only (a stored id such as `constructor` must not reach a built-in). */
+export const designOf = (c: Pick<FormCtx, 'designs'>, id: string) => (c.designs && Object.hasOwn(c.designs, id) ? c.designs[id]! : null)
+
 export function SectionForm({ s, set, c }: { s: SectionInstance; set: (s: SectionInstance) => void; c: FormCtx }) {
   const body = (() => {
     switch (s.key) {
@@ -253,12 +256,12 @@ export function SectionForm({ s, set, c }: { s: SectionInstance; set: (s: Sectio
       case 'shop_the_look': return <Look s={s} set={set} c={c} />
       case 'story_fan': return <StoryFanForm s={s} set={set} c={c} />
       case 'statement': return <StatementForm s={s} set={set} c={c} />
-      case 'design': { const d = c.designs?.[s.design]; return d ? <DesignForm s={s} set={set as (x: SectionOf<'design'>) => void} c={c} d={d} /> : null }
+      case 'design': { const d = designOf(c, s.design); return d ? <DesignForm s={s} set={set as (x: SectionOf<'design'>) => void} c={c} d={d} /> : null }
     }
   })()
   return (
     <div className="space-y-4">
-      <h2 className="text-base font-semibold">{s.key === 'design' ? c.designs?.[s.design]?.name ?? SECTION_NAMES.design : SECTION_NAMES[s.key]}</h2>
+      <h2 className="text-base font-semibold">{s.key === 'design' ? designOf(c, s.design)?.name ?? SECTION_NAMES.design : SECTION_NAMES[s.key]}</h2>
       {body}
       {/* The Statement is always white words on its darkened photo: no colours to choose. */}
       {s.key !== 'statement' && <Choice label="Colours" value={s.scheme} onChange={(scheme) => set({ ...s, scheme })} options={c.schemes.map((x) => ({ value: x.key, label: x.name }))} />}

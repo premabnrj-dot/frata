@@ -4,7 +4,7 @@ import { signal_1_3_0 } from '../catalogue/signal/1.3.0'
 import { signal_1_4_0 } from '../catalogue/signal/1.4.0'
 import { atelier_1_0_0 } from '../catalogue/atelier/1.0.0'
 import { cleanImages } from '../clean-images'
-import { carryOver, layerProblems } from '../layer'
+import { MAX_LAYER_BYTES, carryOver, layerProblems, layerTooLong } from '../layer'
 import { readinessOf } from '../readiness'
 import { resolveTheme } from '../resolve'
 import { SectionSchema, type SectionOf } from '../sections'
@@ -98,6 +98,11 @@ describe('the save', () => {
     const fill = { faq: { kind: 'accordion', items: Array.from({ length: 12 }, () => ({ q: 'q', a: long })) } }
     const four = Array.from({ length: 4 }, (_, i) => ({ ...sec('size-help', fill), id: `d${i}` }))
     expect(designProblems(designs, four).some((p) => p.includes('too long'))).toBe(true)
+  })
+  it('a layer is measured in bytes: 20,000 Devanagari characters is too long, 20,000 Latin ones is not', () => {
+    expect(layerTooLong({ home: [{ t: 'क'.repeat(20_000) }] })).toBe(true)
+    expect(layerTooLong({ home: [{ t: 'k'.repeat(20_000) }] })).toBe(false)
+    expect(layerTooLong({ t: 'k'.repeat(MAX_LAYER_BYTES) })).toBe(true)
   })
   it('every photo in a fill is this shop\'s own (cleanImages, by kind)', () => {
     const ok = { home: [sec('size-help', { photo: { kind: 'image', image: photo() } })] }

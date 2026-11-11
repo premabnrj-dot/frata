@@ -6,7 +6,7 @@ import { storeHost } from '@/domains/media/sizes'
 import { cleanImages } from '@/domains/themes/clean-images'
 import { manifestNear, manifestOf, type ManifestSource } from '@/domains/themes/source'
 import { latestAvailable } from '@/domains/themes/release'
-import { brandColourProblem, carryOver, LayerSchema, layerProblems } from '@/domains/themes/layer'
+import { brandColourProblem, carryOver, LayerSchema, layerProblems, layerTooLong } from '@/domains/themes/layer'
 import { readinessOf } from '@/domains/themes/readiness'
 import { DesignSchema, designProblems, pruneFill, type Design } from '@/domains/themes/blocks'
 import { SectionSchema, type SectionInstance } from '@/domains/themes/sections'
@@ -71,9 +71,6 @@ export async function tryThemeAction(input: unknown): Promise<R<{ revisionId: st
 
 const Save = z.object({ revisionId: z.uuid(), version: z.number().int().positive(), style: z.string().regex(/^[a-z0-9-]{1,40}$/), layer: z.object({ settings: z.unknown(), home: z.array(z.unknown()).optional(), site: z.unknown().optional(), menus: z.unknown().optional() }) })
 
-/** Below the revision's 64 kB check (drizzle/0033), leaving room for jsonb's own spacing (architecture review 5). */
-const MAX_LAYER_BYTES = 60_000
-
 export async function saveLookAction(input: unknown): Promise<R<{ version: number }>> {
   const p = Save.safeParse(input)
   if (!p.success) return { ok: false, error: 'That change could not be saved.' }
@@ -107,7 +104,7 @@ export async function saveLookAction(input: unknown): Promise<R<{ version: numbe
     // TS0b: a design keeps only the words that fit its blocks (by id and kind: security M2).
     const kept = videosKept.home ? { ...videosKept, home: videosKept.home.map((x) => { const r = SectionSchema.safeParse(x); return r.success && r.data.key === 'design' && designs.has(r.data.design) ? pruneFill(designs.get(r.data.design)!, r.data) : x }) } : videosKept
     // The revision holds at most 64 kB (the database check, in bytes): say so in words before the insert would fail.
-    if (new TextEncoder().encode(JSON.stringify(kept)).length > MAX_LAYER_BYTES) return { error: 'This look is too long to save. Shorten some words, or remove a section.' }
+    if (layerTooLong(kept)) return { error: 'This look is too long to save. Shorten some words, or remove a section.' }
     const s = await saveDraft(tx, t, { userId: auth.userId, email: auth.email }, { revisionId: rev.id, version: p.data.version, styleKey: p.data.style, settings: kept })
     if (!s.ok) return { error: s.why === 'stale' ? `${rev.updatedByEmail ?? 'Someone'} changed this draft a moment ago. Reload to see their changes.` : s.why === 'published' ? 'This look was published. Reload to keep editing.' : 'This draft is gone. Reload.' }
     return { version: s.version }

@@ -12,7 +12,7 @@ import { SECTION_NAMES, type SectionInstance, type SectionKey } from '@/domains/
 import type { FooterVariant, HeaderVariant, Pairing, ThemeSettings } from '@/domains/themes/types'
 import { publishLookAction, saveLookAction } from '@/app/(console)/console/look/actions'
 import type { LinkTarget } from './controls'
-import { SectionForm, type FormCtx } from './section-form'
+import { SectionForm, designOf, type FormCtx } from './section-form'
 import { SectionsPanel } from './sections-panel'
 import type { LibraryDesign } from './section-library'
 import { PageForm } from './page-form'
@@ -216,7 +216,7 @@ export function Editor(p: EditorProps) {
           <button type="button" onClick={() => setSelected(null)} className="text-sm text-muted-foreground">‹ Sections</button>
           <SectionForm s={sel} c={p.formCtx} set={(s) => change({ ...layer, home: layer.home.map((x) => (x.id === s.id ? s : x)) })} />
           {issueMap.has(sel.id) && <p role="status" className="rounded-md bg-warn px-3 py-2 text-sm text-warn-text">{issueMap.get(sel.id)}</p>}
-          <button type="button" onClick={() => { change({ ...layer, home: layer.home.filter((x) => x.id !== sel.id) }); setSelected(null); say(`${sel.key === 'design' ? p.formCtx.designs?.[sel.design]?.name ?? SECTION_NAMES.design : SECTION_NAMES[sel.key]} removed`) }} className="min-h-9 text-sm text-danger-text underline underline-offset-4">Remove this section</button>
+          <button type="button" onClick={() => { change({ ...layer, home: layer.home.filter((x) => x.id !== sel.id) }); setSelected(null); say(`${sel.key === 'design' ? designOf(p.formCtx, sel.design)?.name ?? SECTION_NAMES.design : SECTION_NAMES[sel.key]} removed`) }} className="min-h-9 text-sm text-danger-text underline underline-offset-4">Remove this section</button>
         </div>
       ) : (
         <SectionsPanel home={layer.home} selected={selected} allowed={p.allowed.sections} made={p.made.sections ?? []} themeName={p.themeName} issues={issueMap} now={now} designs={p.designs}

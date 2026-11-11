@@ -51,7 +51,8 @@ function Node({ n, ctx, sid, cols }: { n: RNode; ctx: SectionCtx; sid: string; c
 
 /** A design section: nothing at all when nothing in it may show (every block empty on the shop). */
 export function DesignSection({ s, ctx }: { s: SectionOf<'design'>; ctx: SectionCtx }) {
-  const d = ctx.theme.designs?.[s.design]
+  const ds = ctx.theme.designs
+  const d = ds && Object.hasOwn(ds, s.design) ? ds[s.design]! : null
   if (!d) return null
   const nodes = resolveDesign(d, s.fill, ctx.preview && ctx.samples ? 'preview' : 'shop', !!ctx.lead)
   if (!nodes.length) return null

@@ -117,7 +117,7 @@ for (const file of walk('src')) {
   }
   // 6e. A design's blocks never read data (Theme Studio spec § 2): the section passes what the page already read, so a
   // block can't add a statement or reach another shop's rows (TS0b; the per-source loaders arrive in TS1).
-  if (file.startsWith('src/components/storefront/blocks/') && /from\s+['"]@\/lib\/(queries|db)\//.test(text)) {
+  if (file.startsWith('src/components/storefront/blocks/') && (/from\s+['"](@\/lib\/(queries|db|themes|outbox)\b|\.\.?\/[^'"]*\b(queries|db)\b)/.test(text) || /import\s+['"]server-only['"]/.test(text))) {
     failures.push(`${file}  a design block imports a loader or the db — blocks render what their section passes them`)
   }
   // 6d. One cache helper: shopCached in src/lib/queries/storefront.ts puts the tenant in every key and tag.
