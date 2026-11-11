@@ -15,6 +15,10 @@
 //      only from src/lib/admin/**; src/lib/admin only from src/app/(admin)/**;
 //      no 'use server' inside src/lib/admin (it would be a public endpoint);
 //      Admin never calls withTenant (a route param must never become a tenant).
+//   8. THE ANALYTICS DATABASE (A·2) holds to the same: every table in src/lib/db/analytics-schema.ts or created in
+//      drizzle-analytics/*.sql has RLS and a policy there, every frata_app policy is bound to app_current_tenant(),
+//      nothing is granted on the partitions' schema `ev`, and its connection (@/lib/db/analytics) is imported only by
+//      src/lib/queries/** (which then call withAnalyticsTenant) and the files in ANALYTICS_IN_APP.
 //   7. READS STAY IN src/lib/queries (plan U · T1, T2, 2026-11-07): src/app/**
 //      imports @/lib/db/tenant only from TENANT_IN_APP; the shell
 //      (src/components/shell/**) imports no data module — it is handed values,
@@ -45,6 +49,11 @@ const RAW_DB = /from\s+['"]@\/lib\/db['"]/
 const ADMIN_DB = /from\s+['"]@\/lib\/db\/admin['"]/
 const ADMIN_LIB = /from\s+['"]@\/lib\/admin(\/[^'"]*)?['"]/
 const TENANT_HELPER = /from\s+['"]@\/lib\/db\/tenant['"]/
+const ANALYTICS_DB = /(?:from\s+|import\(\s*)['"]@\/lib\/db\/analytics['"]/
+/** Files outside src/lib/queries that may use the analytics connection, with why. */
+const ANALYTICS_IN_APP = {
+  'src/lib/analytics/ingest.ts': 'the visit beacon\'s ingest (A·2): one ingestBatch per beacon, the shop from requireShop (the host), never the body',
+}
 /** App files that may open withTenant themselves, with why. */
 const TENANT_IN_APP = {
   'src/app/api/shop/orders/view/route.ts': 'the shopper\'s order page: tenant from the host, order from a signed token',
@@ -84,6 +93,13 @@ for (const file of walk('src')) {
   if (file.startsWith('src/lib/admin/')) {
     if (!/import\s+['"]server-only['"]/.test(text)) failures.push(`${file}  admin module without import 'server-only'`)
     if (/^\s*['"]use server['"]/m.test(text)) failures.push(`${file}  'use server' in src/lib/admin turns it into a public endpoint — put actions under src/app/(admin)`)
+  }
+  if (ANALYTICS_DB.test(text) && !file.startsWith('src/lib/db/') && !file.startsWith('src/lib/queries/') && !(file in ANALYTICS_IN_APP)) {
+    // Type-only passes only when every import of the module is `import type { … }` (a namespace import or import()
+    // matches no brace form, so it counts as a value import: impact review 2026-11-11).
+    const all = [...text.matchAll(/(?:from\s+|import\(\s*)['"]@\/lib\/db\/analytics['"]/g)].length
+    const typeOnly = [...text.matchAll(/import\s+type\s+\{[^}]*\}\s+from\s+['"]@\/lib\/db\/analytics['"]/g)].length
+    if (!(all > 0 && typeOnly === all)) failures.push(`${file}  imports the analytics connection — read through src/lib/queries (withAnalyticsTenant), or list it in ANALYTICS_IN_APP with why`)
   }
   if (file.startsWith('src/app/') && TENANT_HELPER.test(text) && !(file in TENANT_IN_APP)) {
     failures.push(`${file}  imports withTenant in app code — read through src/lib/queries (or list it in TENANT_IN_APP with why)`)
@@ -126,7 +142,7 @@ for (const file of walk('src')) {
   }
   if (file.startsWith('src/lib/queries/')) {
     if (!/import\s+['"]server-only['"]/.test(text)) failures.push(`${file}  query file without import 'server-only'`)
-    if (!/\bwithTenant\(/.test(text)) failures.push(`${file}  query file that never calls withTenant(`)
+    if (!/\bwith(Analytics)?Tenant\(/.test(text)) failures.push(`${file}  query file that never calls withTenant( or withAnalyticsTenant(`)
   }
 }
 
@@ -183,9 +199,37 @@ for (const { name, table, body, forApp } of finalPolicies.values()) {
 for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?"?(ekcode_[a-z_]+)/g)) {
   failures.push(`grant on ${m[1]}  — the EkCode vault has no table grants; add a definer instead (ADR-0009)`)
 }
+// 8. The analytics database (A·2): its own folder, the same rules, and no open tables at all.
+const aSql = readdirSync('drizzle-analytics').filter(f => f.endsWith('.sql'))
+  .map(f => readFileSync(join('drizzle-analytics', f), 'utf8').split(/\r?\n/).filter(l => !l.trim().startsWith('--')).join('\n'))
+  .join('\n').toLowerCase()
+const aTables = [...new Set([
+  ...[...code('src/lib/db/analytics-schema.ts').matchAll(/pgTable\(\s*'([a-z_]+)'/g)].map(m => m[1]),
+  ...[...aSql.matchAll(/create table\s+(?:if not exists\s+)?(?:"?[a-z_0-9]+"?\.)?"?([a-z_0-9]+)"?\s*\(/g)].map(m => m[1]),
+])]
+for (const t of aTables) {
+  if (!new RegExp(`alter table\\s+(?:"?[a-z_0-9]+"?\\.)?"?${t}"?\\s+enable row level security`).test(aSql)) failures.push(`analytics table ${t}  has no "enable row level security" in drizzle-analytics/*.sql`)
+  if (!new RegExp(`create policy\\s+\\w+\\s+on\\s+"?${t}"?\\b`).test(aSql)) failures.push(`analytics table ${t}  has no policy in drizzle-analytics/*.sql`)
+}
+// Every policy but a restrictive false one names its role and binds the shop (a policy with no TO is everyone's).
+for (const m of aSql.matchAll(/create policy\s+(\w+)\s+on\s+"?([a-z_.]+)"?([\s\S]*?);/g)) {
+  const [, name, table, body] = m
+  if (/\bas restrictive\b/.test(body) && /using\s*\(\s*false\s*\)/.test(body)) continue
+  if (!/\bto\s+(frata_app|frata_admin)\b/.test(body) || !/app_current_tenant\(\)/.test(body) || /app_current_tenant\(\)\s+is\s+null/.test(body)) {
+    failures.push(`analytics policy ${name} on ${table}  must name frata_app (or frata_admin) and bind app_current_tenant(), or be restrictive false`)
+  }
+}
+if (/\balter policy\b/.test(aSql)) failures.push('drizzle-analytics alters a policy — drop and create it, so this gate can read its whole body')
+if (/disable row level security|no force row level security/.test(aSql)) failures.push('drizzle-analytics turns row level security off somewhere (A·2)')
+if (/grant\s+[^;]*\b(truncate|all|references|trigger)\b[^;]*\bon\b/.test(aSql)) failures.push('drizzle-analytics grants TRUNCATE, ALL, REFERENCES or TRIGGER (TRUNCATE ignores RLS) — grant the exact privilege')
+if (/default privileges[^;]*\bgrant\b/.test(aSql)) failures.push('drizzle-analytics grants by default privileges — grant each object by name')
+if (/grant\s[^;]*\bon\s+schema\s+ev\b|grant\s[^;]*\bon\s+(?:table\s+|all tables in schema\s+)?ev\b/.test(aSql)) {
+  failures.push('drizzle-analytics grants on the schema ev — raw partitions are read only through the parent\'s policy (A·2)')
+}
+
 if (failures.length) {
   for (const f of failures) console.error(f)
   console.error(`check:tenant — ${failures.length} problem(s). See .claude/skills/frata-architecture/SKILL.md § Tenancy.`)
   process.exit(1)
 }
-console.log(`check:tenant — clean (${tables.length} tables guarded)`)
+console.log(`check:tenant — clean (${tables.length} tables guarded, ${aTables.length} in analytics)`)

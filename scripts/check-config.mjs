@@ -10,7 +10,7 @@
 //   - CRON_SECRET → src/lib/auth/cron.ts (isCronRequest)
 //
 // The database connections are made in src/lib/db/index.ts (frata_app) and
-// src/lib/db/admin.ts (frata_admin) only; a Supabase
+// src/lib/db/admin.ts (frata_admin) and src/lib/db/analytics.ts (A·2's database) only; a Supabase
 // client in src/lib/supabase/ only. Platform flags any file may read are in
 // PLATFORM. It reads code, not prose: a comment is skipped.
 
@@ -22,7 +22,7 @@ const PLATFORM = new Set(['NODE_ENV', 'VERCEL', 'VERCEL_ENV', 'NEXT_RUNTIME'])
 
 /** A constructor and the only place it may be called. */
 const OWNED_CALLS = [
-  ['postgres()', /(^|[^.\w])postgres\(/, f => f === 'src/lib/db/index.ts' || f === 'src/lib/db/admin.ts', 'src/lib/db/index.ts (frata_app) or src/lib/db/admin.ts (frata_admin)'],
+  ['postgres()', /(^|[^.\w])postgres\(/, f => f === 'src/lib/db/index.ts' || f === 'src/lib/db/admin.ts' || f === 'src/lib/db/analytics.ts', 'src/lib/db/index.ts (frata_app), src/lib/db/admin.ts (frata_admin) or src/lib/db/analytics.ts (the analytics database)'],
   ['a Supabase client', /\bcreate(Server|Browser)Client\(/, f => f.startsWith('src/lib/supabase/'), 'src/lib/supabase/'],
 ]
 

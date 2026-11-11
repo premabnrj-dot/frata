@@ -2,7 +2,7 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a PDF download that saves as pdf.txt, MODULE_NOT_FOUND in production only, a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.16.1
+  version: 1.17.0
   verified: 2026-11-08
 ---
 
@@ -43,7 +43,7 @@ metadata:
 | Local run tests an old build after a rebuild | `pkill -f "next start"` misses the `next-server` child; the new server hits EADDRINUSE | `pkill -f "next-server|next start"`, then check the log says Ready |
 | A shop page renders on every request though it has `revalidate` | A `[param]` segment with no `generateStaticParams` is a dynamic route in Next 15 | `export const generateStaticParams = () => []` on every segment (`check:storefront-build`) |
 | A scheduled drop never appears / a pre-order never ends | `unstable_cache` kept a value computed with the clock | Cache raw rows (ISO dates); run `visibility()`/`availability()` at render |
-| `/s/<other shop>/x.png` reaches a shop page | The middleware matcher skipped image-looking paths | Matcher `/((?!_next/static|_next/image).*)`; `routeFor` 404s `/s/` on non-shop hosts (`src/domains/tenancy/host.ts`). Next 15.5 is patched for the `x-middleware-subrequest` bypass (CVE-2025-29927) |
+| `/s/<other shop>/x.png` reaches a shop page | The middleware matcher skipped image-looking paths | Matcher `/((?!_next/static|_next/image|fe\.js$|api/shop/e$).*)` (only the beacon and its ingest skip it, by exact path: A·2); `routeFor` 404s `/s/` on non-shop hosts (`src/domains/tenancy/host.ts`). Next 15.5 is patched for the `x-middleware-subrequest` bypass (CVE-2025-29927) |
 | Shop pages `private, no-store` though ISR and force-static | A MIDDLEWARE rewrite: Next matches the original path against the ISR routes | Rewrite the host in `next.config` (`shopRewrites`); root rule LAST, rules chain in order |
 | A check that sends `Host:` with `fetch()` passes on the wrong page | undici drops a Host header silently | `node:http` request (`scripts/check-payload.mjs`), and assert the page names the host |
 | `showModal` throws "already open" | The effect that opens a `<dialog>` depended on an `onClose` re-created each render | Open once (`[]` deps), keep the callback in a ref |
@@ -77,3 +77,13 @@ build at random (the same commit `964fdc0` built READY once and ERROR once on Ve
 Every face is now self-hosted in `src/components/fonts/<face>/` (OFL 1.1, from Fontsource 5.3.0) and loaded with
 `next/font/local`; `check:fonts` refuses the Google loader. A face outside latin (₹ is U+20B9, latin-ext) needs its own
 latin-ext file with a `unicode-range` declaration: Inter's two faces meet in `--font-inter` (`src/app/base.css`).
+
+## e2e: a beacon sent while the page unloads never arrives (2026-11-11)
+**Symptom.** `public/fe.js` sends its queue on `pagehide`. In the e2e browser, the beacon of a page left by a full
+navigation never reaches `/api/shop/e`, though `pagehide` and `visibilitychange` both fire (checked with a
+sessionStorage flag). A keepalive `fetch` from the same handler is lost too. A hand-dispatched `pagehide` sends at once.
+**Why.** Headless Chromium in this sandbox, with host-resolver rules, doesn't deliver requests made while a document
+unloads. Real phones do: web-vitals and GA rely on it.
+**Do.** In a flow, hide the tab before a full navigation (`visibilityState` → hidden, then dispatch
+`visibilitychange`), as `e2e/flows/72-traffic.mjs` does. Check the unload send by hand on a phone, never by turning the
+beacon into per-event requests.

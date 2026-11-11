@@ -25,6 +25,10 @@ const TIGHT = { '/s/[host]/(shop)/products/[handle]/page': 121, '/s/[host]/(chec
 const CSS_BUDGET_KB = 15.9 // 14.9 measured 2026-11-09 after Signal S2 (story sections, Caveat, scale; console rules moved to the app sheet) + 1 kB; was 22.5 before the shop's own sheet
 // Theme Studio TS0b: a design's block rules (.store-b-*, src/app/base.css) have their own ceiling inside the sheet.
 const BLOCK_CSS_KB = 1.0
+// The visit beacon (A·2, public/fe.js): a static async script the shell adds to every live shop page. It isn't a build
+// chunk, so it isn't in a page's first-load figure (it runs in its own task, after parsing: 0 TBT; speed review
+// 2026-11-11), but its bytes are shown beside each page's and held by scripts/build-beacon.mjs (≤ 1.7 kB gzip).
+const BEACON_KB = existsSync('public/fe.js') ? gzipSync(readFileSync('public/fe.js')).length / 1024 : 0
 const failures = []
 const read = (f) => JSON.parse(readFileSync(join('.next', f), 'utf8'))
 if (!existsSync('.next/prerender-manifest.json')) { console.error('check:storefront-build — no .next to read; run it after next build.'); process.exit(1) }
@@ -61,7 +65,7 @@ for (const [k, files] of Object.entries(build)) {
   for (const f of all) if (f.endsWith('.css') && readFileSync(join('.next', f), 'utf8').includes('--frrata-sheet-app')) failures.push(`${k}  loads the app's stylesheet (${f}); a shop page loads src/app/shop.css only`)
   if (css > CSS_BUDGET_KB) failures.push(`${k}  loads ${css.toFixed(1)} kB of CSS gzipped (budget ${CSS_BUDGET_KB} kB)`)
   const kb = all.filter((f) => f.endsWith('.js')).reduce((a, f) => a + gz(f), 0) / 1024
-  if (process.env.SHOW_BUDGETS) console.log(`  ${k}: ${kb.toFixed(1)} kB JS, ${css.toFixed(1)} kB CSS`)
+  if (process.env.SHOW_BUDGETS) console.log(`  ${k}: ${kb.toFixed(1)} kB JS (${(kb + BEACON_KB).toFixed(1)} with the beacon), ${css.toFixed(1)} kB CSS`)
   const limit = TIGHT[k] ?? BUDGET_KB
   if (kb > limit) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${limit} kB) — split what the first paint does not need`)
 }

@@ -2,6 +2,7 @@ import 'server-only'
 import { asc, eq } from 'drizzle-orm'
 import { checkoutGst } from '@/domains/tax/gstin'
 import type { PolicyFacts } from '@/domains/policies/render'
+import { isCountingVisits } from '@/lib/env'
 import { mainAddress } from '@/domains/addresses/names'
 import { shopPolicies, shopSettings, tenants } from '@/lib/db/schema'
 import { collections } from '@/lib/db/schema-catalogue'
@@ -47,6 +48,8 @@ export async function coreShop(tenantId: string): Promise<StoreShop | null> {
       returnKind: r.returnKind as PolicyFacts['returnKind'], shopLanguage: r.shopLanguage === 'hi' ? 'hi' : 'en',
       codMin: Number(r.codMin), codMax: Number(r.codMax), codCharge: Number(r.codCharge), shippingFlat: Number(r.shippingFlat), freeShippingAbove: Number(r.freeShippingAbove),
       overrides: Object.fromEntries(pol.map((p) => [p.kind, p.body])), nav,
+      // Visits are counted (A·2): the privacy policy says so (src/domains/policies/render.ts).
+      countsVisits: isCountingVisits(),
     }
   })
 }

@@ -103,5 +103,10 @@
     "file": "src/domains/infra/vercel.ts",
     "text": "frata",
     "why": "the Vercel project's name (internal, CLAUDE.md): Admin › Infrastructure tells Frrata's own usage from the team's other projects"
+  },
+  {
+    "file": "src/beacon/fe.ts",
+    "text": "frata:open-bag",
+    "why": "the bag store's DOM event the visit beacon listens to (never shown); its name is the bag store's"
   }
 ]

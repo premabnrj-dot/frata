@@ -88,7 +88,7 @@ type Rewrite = { source: string; destination: string; has: { type: 'host'; value
  * by the router, not the middleware, because Next only caches a page per path
  * when the URL it matches is the rewritten one (a middleware rewrite left every
  * shop page rendering per request under next start; 2026-11-07). Root-level
- * files (favicon.ico) and /api, /_next are left alone.
+ * files (favicon.ico), the visit beacon /fe.js (by that exact name: A·2) and /api, /_next are left alone.
  */
 export function shopRewrites(consoleHost: string, ekcodeHost = ''): Rewrite[] {
   const has = [{ type: 'host' as const, value: '(?<shop>[a-z0-9][a-z0-9.-]*)' }]
@@ -102,7 +102,7 @@ export function shopRewrites(consoleHost: string, ekcodeHost = ''): Rewrite[] {
     { source: '/', destination: '/ek', has: ekHas, missing: [] },
   ] : []
   return [...ekRules,
-    { source: '/:first((?!(?:api|_next)(?:/|$))(?![^/]+\\.(?:ico|png|svg|webp|jpe?g|gif)$)[^/]+)/:rest*', destination: '/s/:shop/:first/:rest*', has, missing },
+    { source: '/:first((?!(?:api|_next)(?:/|$))(?![^/]+\\.(?:ico|png|svg|webp|jpe?g|gif)$)(?!fe\\.js$)[^/]+)/:rest*', destination: '/s/:shop/:first/:rest*', has, missing },
     // Last: rules run in order on the rewritten path, so a root rule first would see its own /s/<host> again.
     { source: '/', destination: '/s/:shop', has, missing },
   ]

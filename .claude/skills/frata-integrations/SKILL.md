@@ -789,6 +789,7 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   applebot, amazonbot and meta-externalagent are ai_crawler (denying them drops Apple's Spotlight and Siri search) [V].
 - **Custom rules**: free, 40 per project on Pro; match host, path, raw_path, route, user_agent, method, header; operators
   eq, pre, suf, sub, re, inc (+ negation); custom rules run before managed rulesets; live in ≤ 300 ms [V 2026-07-29/09-16].
+- **On frata (2026-11-11)**: GET/PUT/PATCH `/v1/security/firewall/config` answer 404 "Seawall Config not found" even after Bot Protection (Log) and a custom rule were published in the dashboard; the rules are entered by hand from `ops/firewall.json`. The dashboard's User Agent condition has no regex: use "contains", OR-ed.
 - **API**: PUT/PATCH `/v1/security/firewall/config?projectId=`; drafts promoted by `POST …/{configVersion}/activate` (whether
   PUT goes live directly: U, read back `config/active`). Attack Mode `POST /v1/security/attack-mode` (projectId,
   attackModeEnabled, attackModeActiveUntil), immediate, 1/6/24 h; own Functions and Crons pass; unverified callers
