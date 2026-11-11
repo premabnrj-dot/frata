@@ -1,0 +1,435 @@
+<title>Frrata Sites</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a long decision memo (one reading column) with full-width mockup frames that switch by tab. */
+:root {
+  --bg: #FAFAF9; --fg: #1C1917; --card: #FFFFFF; --muted: #F2F1EF; --sub: #5F5A55; --line: #DEDBD7; --input: #8C857F;
+  --ink: #1C1917; --on-ink: #FFFFFF; --rani: #D61F69; --rani-text: #A8124F; --neel: #23307A; --haldi: #F2B233;
+  --ok: #E9F6EC; --ok-t: #1E7B52; --warn: #FFF5C2; --warn-t: #8A5000; --bad: #FFEFEF; --bad-t: #C02A2F; --info: #EDF2FE; --info-t: #3451B2;
+  --code: #F5F3F0;
+  --f-display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+  --f-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141211; --fg: #EDEAE6; --card: #1C1A18; --muted: #262320; --sub: #A9A29B; --line: #34302C; --input: #6E6760;
+  --ink: #EDEAE6; --on-ink: #141211; --rani: #FF4F93; --rani-text: #FF7DAE; --neel: #8E9BF0; --haldi: #F2B233;
+  --ok: #16301F; --ok-t: #7FD3A2; --warn: #352A0C; --warn-t: #F4C766; --bad: #3A1517; --bad-t: #FF8A8E; --info: #1A2238; --info-t: #9DB2FF;
+  --code: #211F1D; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #141211; --fg: #EDEAE6; --card: #1C1A18; --muted: #262320; --sub: #A9A29B; --line: #34302C; --input: #6E6760;
+  --ink: #EDEAE6; --on-ink: #141211; --rani: #FF4F93; --rani-text: #FF7DAE; --neel: #8E9BF0; --haldi: #F2B233;
+  --ok: #16301F; --ok-t: #7FD3A2; --warn: #352A0C; --warn-t: #F4C766; --bad: #3A1517; --bad-t: #FF8A8E; --info: #1A2238; --info-t: #9DB2FF;
+  --code: #211F1D; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 15px/1.6 var(--f-body); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 80px; }
+.col { max-width: 760px; }
+h1, h2, h3 { text-wrap: balance; margin: 0 }
+h1 { font: 600 clamp(30px, 5vw, 44px)/1.08 var(--f-display); letter-spacing: -0.01em }
+h2 { font: 600 24px/1.2 var(--f-display); margin-top: 56px; margin-bottom: 12px }
+h3 { font: 600 15px/1.3 var(--f-body); margin-bottom: 6px }
+p { margin: 0 0 12px }
+.eyebrow { font: 500 12px/1 var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--rani-text) }
+.lede { font-size: 18px; color: var(--sub); max-width: 680px; margin-top: 14px }
+.thread { height: 2px; width: 72px; background: var(--rani); margin: 18px 0 0 }
+.chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 2px 10px; font: 500 12px/20px var(--f-body); white-space: nowrap }
+.c-ok { background: var(--ok); color: var(--ok-t) } .c-warn { background: var(--warn); color: var(--warn-t) } .c-bad { background: var(--bad); color: var(--bad-t) }
+.c-info { background: var(--info); color: var(--info-t) } .c-n { background: var(--muted); color: var(--sub) }
+.mono { font-family: var(--f-mono); font-size: 13px }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
+@media (max-width: 760px) { .grid3, .grid2 { grid-template-columns: minmax(0, 1fr) } }
+.box { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 16px; min-width: 0 }
+.box ul { margin: 0; padding-left: 18px } .box li { margin: 4px 0 }
+.box.go { border-top: 3px solid var(--bad-t) } .box.keep { border-top: 3px solid var(--ok-t) } .box.add { border-top: 3px solid var(--info-t) }
+table { width: 100%; border-collapse: collapse; font-size: 14px }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line) }
+th { font: 600 12px/1.3 var(--f-body); color: var(--sub); text-transform: uppercase; letter-spacing: 0.05em }
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--card) }
+.ask { border-left: 3px solid var(--rani); background: var(--card); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 10px 0 }
+.ask b { color: var(--rani-text) }
+.diagram { border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 12px; overflow-x: auto }
+.diagram svg { display: block; min-width: 760px; width: 100%; height: auto }
+.diagram text { font-family: var(--f-body); fill: var(--fg) }
+.diagram .sub { fill: var(--sub) }
+/* Mockups */
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; margin: 16px 0 10px }
+.tabs button { font: 500 14px var(--f-body); border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 6px; padding: 7px 12px; cursor: pointer }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--on-ink); border-color: var(--ink) }
+.tabs button:focus-visible, .btn:focus-visible { outline: 2px solid var(--rani); outline-offset: 2px }
+.frame { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); box-shadow: 0 10px 30px -18px rgba(0,0,0,.35) }
+.frame-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--card); font-size: 13px }
+.dots { display: flex; gap: 5px } .dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); display: block }
+.url { flex: 1; min-width: 0; background: var(--muted); border-radius: 6px; padding: 3px 10px; color: var(--sub); font: 12px var(--f-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.app { display: grid; grid-template-columns: 200px minmax(0, 1fr); min-height: 560px }
+.side { border-right: 1px solid var(--line); background: var(--card); padding: 12px 10px; font-size: 13px }
+.side .mark { font: 600 18px var(--f-display); padding: 2px 8px 12px; display: flex; align-items: center; gap: 8px }
+.side .mark span { width: 22px; height: 22px; border-radius: 5px; background: var(--ink); display: inline-block }
+.side a { display: block; padding: 6px 8px; border-radius: 6px; color: var(--fg); text-decoration: none }
+.side a.on { background: var(--muted); font-weight: 600; box-shadow: inset 2px 0 0 var(--rani) }
+.side .grp { font: 500 11px var(--f-body); color: var(--sub); text-transform: uppercase; letter-spacing: .06em; padding: 12px 8px 4px }
+.main { padding: 18px 20px; min-width: 0 }
+.ph { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px }
+.ph h3 { font: 600 22px var(--f-display); margin: 0 }
+.ph .sp { flex: 1 }
+.btn { font: 500 13px var(--f-body); border-radius: 6px; padding: 7px 12px; border: 1px solid var(--input); background: var(--card); color: var(--fg); cursor: pointer; white-space: nowrap; position: relative }
+.btn.pri { background: var(--ink); color: var(--on-ink); border-color: var(--ink) }
+.btn.pri::after { content: ""; position: absolute; left: 6px; bottom: 0; width: 33%; height: 2px; background: var(--rani) }
+.card { border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 14px; min-width: 0 }
+.card h4 { margin: 0 0 10px; font: 600 15px var(--f-body) }
+.rows div { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13px; align-items: center }
+.rows div:last-child { border-bottom: 0 }
+.k { color: var(--sub) }
+/* Builder */
+.builder { display: grid; grid-template-columns: 300px minmax(0, 1fr) 230px; min-height: 600px }
+.chat { border-right: 1px solid var(--line); background: var(--card); display: flex; flex-direction: column; min-width: 0 }
+.chat .msgs { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 10px; font-size: 13px }
+.m-me { align-self: flex-end; background: var(--ink); color: var(--on-ink); padding: 8px 10px; border-radius: 10px 10px 2px 10px; max-width: 88% }
+.m-ai { background: var(--muted); padding: 8px 10px; border-radius: 10px 10px 10px 2px; max-width: 95% }
+.step { display: flex; gap: 8px; align-items: center; font: 12px var(--f-mono); color: var(--sub) }
+.step b { color: var(--ok-t); font-weight: 500 }
+.compose { border-top: 1px solid var(--line); padding: 10px; display: flex; gap: 6px }
+.compose div { flex: 1; border: 1px solid var(--input); border-radius: 6px; padding: 7px 10px; color: var(--sub); font-size: 13px }
+.stage { padding: 12px; background: var(--muted); min-width: 0; display: flex; flex-direction: column; gap: 8px }
+.stage-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap }
+.seg { display: inline-flex; border: 1px solid var(--input); border-radius: 6px; overflow: hidden }
+.seg span { padding: 5px 10px; font-size: 12px; background: var(--card) } .seg span.on { background: var(--ink); color: var(--on-ink) }
+.site { background: #fff; color: #1d1b19; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); flex: 1 }
+.site-h { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; font: 600 14px Georgia, serif; border-bottom: 1px solid #eee }
+.site-hero { background: linear-gradient(135deg, #e9c46a, #c9733f); height: 170px; display: flex; align-items: flex-end; padding: 16px; color: #fff; font: 600 26px Georgia, serif; position: relative }
+.site-hero.chg { outline: 2px dashed var(--rani); outline-offset: -4px }
+.site-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 12px 16px 16px }
+.site-grid i { display: block; aspect-ratio: 4/5; border-radius: 4px; background: linear-gradient(160deg, #e7ddd1, #cdbba7) }
+.site-grid i:nth-child(2) { background: linear-gradient(160deg, #d9e2d0, #a9b89a) } .site-grid i:nth-child(3) { background: linear-gradient(160deg, #e3d3dd, #c19bb0) } .site-grid i:nth-child(4) { background: linear-gradient(160deg, #d6dbe8, #9aa6c4) }
+.checks { border-left: 1px solid var(--line); background: var(--card); padding: 12px; font-size: 13px; min-width: 0 }
+.checks h4 { margin: 0 0 8px; font: 600 13px var(--f-body) }
+.ck { display: flex; justify-content: space-between; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--line); align-items: center }
+.files { font: 12px/1.9 var(--f-mono); color: var(--sub); margin-top: 12px }
+.files b { color: var(--fg); font-weight: 500 }
+/* Gallery */
+.gal { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px }
+.tile { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card) }
+.thumb { height: 120px; display: grid; grid-template-columns: 1.4fr 1fr; gap: 4px; padding: 8px; background: var(--muted) }
+.thumb i { border-radius: 4px; display: block }
+.tile .b { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 13px }
+.tile .t { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-weight: 600; font-size: 14px }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px }
+@media (max-width: 900px) { .builder { grid-template-columns: minmax(0, 1fr) } .chat { border-right: 0; border-bottom: 1px solid var(--line) } .checks { border-left: 0; border-top: 1px solid var(--line) } .gal { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+@media (max-width: 640px) { .app { grid-template-columns: minmax(0, 1fr) } .side { display: none } .gal { grid-template-columns: minmax(0, 1fr) } .site-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+.dlg { max-width: 520px; margin: 30px auto; border: 1px solid var(--line); border-radius: 10px; background: var(--card); padding: 18px; box-shadow: 0 20px 40px -20px rgba(0,0,0,.4) }
+.dlg h4 { margin: 0 0 12px; font: 600 18px var(--f-display) }
+.dlg .act { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px }
+.note { font-size: 13px; color: var(--sub) }
+footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+
+<div class="wrap">
+  <div class="col">
+    <div class="eyebrow">Proposal · 11 Nov 2026 · for the owner</div>
+    <h1>Frrata Sites: storefronts as code, built by developers and agents</h1>
+    <div class="thread"></div>
+    <p class="lede">Frrata becomes the commerce backend: console, integrations, catalogue, checkout and the Storefront API. Each shop's website is its own code, in its own repository, deployed on its own. Developers write it by hand or with Frrata's agent; partners publish agentic starters that anyone can build from. Themes and the customizer retire.</p>
+  </div>
+
+  <h2>The shift in one picture</h2>
+  <div class="diagram" role="img" aria-label="Today one shared storefront renders every shop's theme from data; proposed, each shop's site is its own deployment that reads the Storefront API and hands the bag to Frrata's checkout.">
+    <svg viewBox="0 0 1060 300" xmlns="http://www.w3.org/2000/svg">
+      <text x="10" y="22" font-size="13" font-weight="600">Today</text>
+      <rect x="10" y="36" width="230" height="64" rx="8" fill="none" stroke="var(--line)"/>
+      <text x="24" y="62" font-size="13">Merchant in the customizer</text>
+      <text x="24" y="82" font-size="12" class="sub">theme · sections · settings (JSON)</text>
+      <path d="M240 68 H300" stroke="var(--sub)" stroke-width="1.5" marker-end="url(#a)"/>
+      <rect x="300" y="36" width="250" height="64" rx="8" fill="none" stroke="var(--line)"/>
+      <text x="314" y="62" font-size="13">One shared Next.js storefront</text>
+      <text x="314" y="82" font-size="12" class="sub">renders every shop · same runtime as console</text>
+      <path d="M550 68 H610" stroke="var(--sub)" stroke-width="1.5" marker-end="url(#a)"/>
+      <rect x="610" y="36" width="200" height="64" rx="8" fill="none" stroke="var(--line)"/>
+      <text x="624" y="62" font-size="13">Checkout · orders · DB</text>
+      <text x="624" y="82" font-size="12" class="sub">Frrata</text>
+
+      <text x="10" y="150" font-size="13" font-weight="600" fill="var(--rani-text)">Proposed</text>
+      <rect x="10" y="164" width="200" height="76" rx="8" fill="none" stroke="var(--rani)"/>
+      <text x="24" y="190" font-size="13">Developer · partner · agent</text>
+      <text x="24" y="210" font-size="12" class="sub">builder (sandbox) or git</text>
+      <text x="24" y="228" font-size="12" class="sub">starts from a gallery starter</text>
+      <path d="M210 202 H262" stroke="var(--sub)" stroke-width="1.5" marker-end="url(#a)"/>
+      <rect x="262" y="164" width="170" height="76" rx="8" fill="none" stroke="var(--line)"/>
+      <text x="276" y="190" font-size="13">The shop's repo</text>
+      <text x="276" y="210" font-size="12" class="sub">git, history, review</text>
+      <text x="276" y="228" font-size="12" class="sub">checks before publish</text>
+      <path d="M432 202 H484" stroke="var(--sub)" stroke-width="1.5" marker-end="url(#a)"/>
+      <rect x="484" y="164" width="200" height="76" rx="8" fill="none" stroke="var(--line)"/>
+      <text x="498" y="190" font-size="13">The shop's own deployment</text>
+      <text x="498" y="210" font-size="12" class="sub">isolated · own domain</text>
+      <text x="498" y="228" font-size="12" class="sub">no DB, one public key</text>
+      <path d="M684 190 H736" stroke="var(--sub)" stroke-width="1.5" marker-end="url(#a)"/>
+      <text x="690" y="182" font-size="11" class="sub">reads</text>
+      <path d="M684 222 H736" stroke="var(--sub)" stroke-width="1.5" marker-end="url(#a)"/>
+      <text x="690" y="238" font-size="11" class="sub">bag →</text>
+      <rect x="736" y="164" width="314" height="76" rx="8" fill="none" stroke="var(--ok-t)"/>
+      <text x="750" y="190" font-size="13">Frrata: Storefront API · checkout · console</text>
+      <text x="750" y="210" font-size="12" class="sub">catalogue, offers, COD, Razorpay, orders, GST</text>
+      <text x="750" y="228" font-size="12" class="sub">tenancy, money, costs stay here</text>
+      <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--sub)"/></marker></defs>
+    </svg>
+  </div>
+
+  <div class="col">
+    <h2>The decision this needs first</h2>
+    <p>Frrata's goal today is that a small fashion brand keeps more profit per delivered order <em>without a developer</em>. This proposal makes developers the core client of the storefront. The two can sit together: the console stays for the brand, and the agent stands in for the developer a brand doesn't have. That is still a change to the north star, so it is yours to write.</p>
+    <div class="ask"><b>Proposed wording:</b> "Frrata is the commerce backend for Indian D2C brands. A brand runs its business in the console; its website is code that a developer, a partner or Frrata's agent builds on the Storefront API. Frrata keeps what makes the brand money: catalogue, checkout, COD, payments, orders, shipping, GST."</div>
+    <p>Two earlier decisions reverse with it, and both are recorded as yours (2026-11-11): the Storefront API was parked ("everything runs on Frrata for now"), and the in-console Claude builder was skipped ("Claude never runs on Frrata's servers"). This proposal un-parks the first and brings the second back, inside a sandbox.</p>
+  </div>
+
+  <h2>What stays, what goes, what comes</h2>
+  <div class="grid3">
+    <div class="box keep">
+      <h3>Stays</h3>
+      <ul>
+        <li>Console: orders, COD risk, NDR, inbox, campaigns, analytics, GST</li>
+        <li>Integrations: Razorpay (shop's own account), Shiprocket, Meta, WhatsApp, Google</li>
+        <li>Catalogue, offers, media, collections</li>
+        <li>Checkout, bag, order pages, policy pages on Frrata's host</li>
+        <li>EkCode sign-in</li>
+        <li>Tenancy (ADR-0002), integer paise (ADR-0004), outbox (ADR-0006), costs never in a browser (ADR-0003)</li>
+      </ul>
+    </div>
+    <div class="box go">
+      <h3>Goes (frozen, then removed)</h3>
+      <ul>
+        <li>Theme catalogue and manifests: 6 themes, 21 versions <span class="mono">src/domains/themes</span> (56 files, 4,014 lines)</li>
+        <li>The customizer and Look <span class="mono">(lookeditor)</span>, <span class="mono">console/look</span> (27 files, 3,097 lines)</li>
+        <li>Theme Studio TS1c–TS4, designs and blocks, ADR-0012 (manifests as data)</li>
+        <li>Section library renderers <span class="mono">components/storefront</span> (47 files, 3,342 lines), after migration</li>
+        <li>Theme release flow in Admin; shop pages as data (TS1a)</li>
+      </ul>
+    </div>
+    <div class="box add">
+      <h3>Comes</h3>
+      <ul>
+        <li>Storefront API, un-parked, then grown: read, cart, customer, webhooks</li>
+        <li>One repo and one isolated deployment per shop, on Frrata's hosting account</li>
+        <li>The builder: chat, live preview, files, checks; the agent works in a sandbox</li>
+        <li>The gallery: agentic starters (code + design rules + agent skill) by Frrata and partners</li>
+        <li>Developer access: keys, git, CLI, docs, OpenAPI, an MCP server</li>
+        <li>Publish checks: build, speed, accessibility, legal block, secrets, dependencies</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="col">
+    <h2>What a "theme" becomes</h2>
+    <p>An <b>agentic starter</b> in the gallery: a working storefront repository, its design rules (tokens, type, components) and a skill that tells the agent how to extend it without breaking it. A brand picks one; the agent builds the brand's site from it in the brand's own repo. Nothing is customised through forms any more; the brand asks, the agent changes code, and the checks decide whether it can publish.</p>
+    <p>One lesson from the market shapes this. A copied theme stops getting its author's updates (Shopify's AI theme editing works on a duplicate theme for this reason). So a starter ships its updates as <b>skills and migrations the agent applies on request</b>, not as files that overwrite the brand's code.</p>
+  </div>
+
+  <h2>Safety: where each risk is stopped</h2>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Risk</th><th>Stopped by</th><th>Where it is enforced</th></tr></thead>
+      <tbody>
+        <tr><td>Generated code reads another shop's data</td><td>The site holds no database access and no secret: one public key, read-only, whose shop is fixed when the key is made</td><td>Storefront API (key → tenant through a definer), RLS, <span class="mono">check:tenant</span></td></tr>
+        <tr><td>A merchant's costs reach a shopper</td><td>Responses built from field allow-lists; no cost field exists in any API schema</td><td>API output schemas, a gate like <span class="mono">check-client-bundle</span> on every response</td></tr>
+        <tr><td>Generated code breaks Frrata or another shop</td><td>Each site is its own deployment; nothing generated runs in the console's or checkout's runtime</td><td>Hosting: one project per shop; the app never imports shop code</td></tr>
+        <tr><td>A site fakes the payment page</td><td>Payment happens only on Frrata's checkout host; the site hands over the bag by link</td><td>Cart link; Razorpay checkout only on Frrata's origin</td></tr>
+        <tr><td>Shopper data collected by generated code</td><td>Sign-in, addresses and phone numbers stay in Frrata's checkout and EkCode; forms post to Frrata's API</td><td>DPDP: Frrata is the processor; sites hold no personal data</td></tr>
+        <tr><td>Prompt injection through product text, reviews or a pasted brief</td><td>The agent treats catalogue text as data; its tools can write only this shop's repo in a sandbox; publish is a human click</td><td>Sandbox network allow-list; no console data tools beyond the catalogue; publish button</td></tr>
+        <tr><td>Malicious or vulnerable packages</td><td>An allow-list of packages and versions, a lockfile, no install scripts, audit on every build</td><td>Build step before publish</td></tr>
+        <tr><td>Secrets in code</td><td>A secret scan on every build; only the public key is allowed in the bundle</td><td>Publish checks</td></tr>
+        <tr><td>XSS and third-party scripts</td><td>The starter's CSP; API text is plain text; pixels go server-side through Frrata's Conversions API</td><td>Starter template, publish checks</td></tr>
+        <tr><td>Phishing or illegal content on a shop's domain</td><td>Proved domains only, content review on first publish, a per-site kill switch in Admin</td><td>Admin, hosting</td></tr>
+        <tr><td>A broken publish loses sales</td><td>Every publish is a deployment with one-click rollback; checkout keeps working whatever the site does</td><td>Hosting, console › Website</td></tr>
+        <tr><td>Agent and hosting costs run away</td><td>Credits per plan, reserved before each agent turn; caps per hour and month; build minutes counted</td><td>Usage rows before calls (ADR-0006/0008)</td></tr>
+        <tr><td>A starter from a partner is malicious</td><td>Review before listing, the same checks as a shop's publish, signed releases, delisting</td><td>Gallery review, Admin</td></tr>
+        <tr><td>India's e-commerce rules (business details on the site, in force 1 Jan 2027)</td><td>A legal block from the API that the checks require on every published site</td><td>Publish checks</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col">
+    <h2>Phases</h2>
+    <p>Each phase is usable alone and gets its own spec, mockup and reviews before code. The kill signal stops the next phase.</p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Phase</th><th>What people get</th><th>Kill signal</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">V0</td><td>Your decision recorded (ADR-0013, north star); Theme Studio frozen; no new theme work</td><td>—</td></tr>
+        <tr><td class="mono">V1</td><td>Storefront API (read, cart link), keys, docs, a starter repo: developers build sites anywhere</td><td>&lt; 3 external sites live in 90 days</td></tr>
+        <tr><td class="mono">V2</td><td>Frrata hosts each shop's repo and deployment: domains, previews, rollback, publish checks</td><td>Hosting cost per shop above what plans recover</td></tr>
+        <tr><td class="mono">V3</td><td>The builder: chat, preview, files, checks, credits</td><td>Agent-built sites slower or less accessible than the starter</td></tr>
+        <tr><td class="mono">V4</td><td>The gallery: partner starters, review, revenue share</td><td>&lt; 5 partner starters listed in 120 days</td></tr>
+        <tr><td class="mono">V5</td><td>Theme shops moved to code (each look turned into a starter); themes removed</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Mockups</h2>
+  <div class="tabs" role="tablist" aria-label="Mockups">
+    <button role="tab" id="t-builder" aria-selected="true" aria-controls="p-builder">Builder</button>
+    <button role="tab" id="t-gallery" aria-selected="false" aria-controls="p-gallery">Gallery</button>
+    <button role="tab" id="t-website" aria-selected="false" aria-controls="p-website">Console › Website</button>
+    <button role="tab" id="t-publish" aria-selected="false" aria-controls="p-publish">Publish</button>
+    <button role="tab" id="t-partner" aria-selected="false" aria-controls="p-partner">Partner › Starters</button>
+  </div>
+
+  <section id="p-builder" role="tabpanel" aria-labelledby="t-builder" class="frame">
+    <div class="frame-bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">frrata.shop/console/site/build</div><span class="chip c-n">Kesar Studio</span></div>
+    <div class="builder">
+      <div class="chat">
+        <div class="msgs">
+          <div class="m-me">Make the home page feel like the monsoon drop. Put the four new kurtas under a big photo, and add the drop date.</div>
+          <div class="m-ai">Done in a preview. The hero uses your photo "Rain on the terrace"; the grid reads <span class="mono">collections/monsoon</span>; the date comes from the collection's publish time.</div>
+          <div class="step"><b>✓</b> app/page.tsx</div>
+          <div class="step"><b>✓</b> components/drop-hero.tsx</div>
+          <div class="step"><b>✓</b> checks: 6 of 6</div>
+          <div class="m-me">Show prices in Hindi too.</div>
+          <div class="m-ai">Working…</div>
+        </div>
+        <div class="compose"><div>Ask for a change</div><button class="btn pri" type="button">Send</button></div>
+      </div>
+      <div class="stage">
+        <div class="stage-bar"><span class="seg"><span class="on">Preview</span><span>Code</span><span>Diff</span></span><span class="seg"><span class="on">Phone</span><span>Desktop</span></span><span style="flex:1"></span><span class="chip c-info">Draft 14</span><button class="btn" type="button">Undo</button><button class="btn pri" type="button">Publish</button></div>
+        <div class="site">
+          <div class="site-h"><span>Kesar Studio</span><span style="font:12px var(--f-body)">Bag (2)</span></div>
+          <div class="site-hero chg">The monsoon drop<span style="position:absolute;right:12px;top:10px;font:500 11px var(--f-body);background:rgba(0,0,0,.45);padding:3px 8px;border-radius:99px">Drops Sat 14 Nov, 7 pm</span></div>
+          <div class="site-grid"><i></i><i></i><i></i><i></i></div>
+        </div>
+      </div>
+      <div class="checks">
+        <h4>Checks</h4>
+        <div class="ck"><span>Build</span><span class="chip c-ok">Passed</span></div>
+        <div class="ck"><span>Speed</span><span class="chip c-ok">94</span></div>
+        <div class="ck"><span>Accessibility</span><span class="chip c-ok">100</span></div>
+        <div class="ck"><span>Business details</span><span class="chip c-ok">Present</span></div>
+        <div class="ck"><span>Secrets</span><span class="chip c-ok">None</span></div>
+        <div class="ck"><span>Packages</span><span class="chip c-ok">Allowed</span></div>
+        <h4 style="margin-top:14px">Files</h4>
+        <div class="files"><b>app/page.tsx</b><br>components/drop-hero.tsx<br>components/product-grid.tsx<br>lib/frrata.ts<br>frrata.skill.md</div>
+        <h4 style="margin-top:14px">Credits</h4>
+        <div class="rows"><div><span class="k">This month</span><span class="mono">212 / 500</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="p-gallery" role="tabpanel" aria-labelledby="t-gallery" class="frame" hidden>
+    <div class="frame-bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">frrata.shop/console/site/gallery</div></div>
+    <div class="main">
+      <div class="ph"><h3>Starters</h3><span class="sp"></span><button class="btn" type="button">Start from my repo</button></div>
+      <div class="filters"><span class="chip c-n">All 18</span><span class="chip c-n">Fashion</span><span class="chip c-n">Beauty</span><span class="chip c-n">Footwear</span><span class="chip c-n">By Frrata</span><span class="chip c-n">By partners</span></div>
+      <div class="gal">
+        <div class="tile"><div class="thumb"><i style="background:linear-gradient(135deg,#e9c46a,#c9733f)"></i><i style="background:#2b2622"></i></div><div class="b"><div class="t">Monsoon <span class="chip c-n">By Frrata</span></div><div class="k">Editorial · 7 pages · Hindi</div><div style="display:flex;gap:6px"><button class="btn pri" type="button">Build from this</button><button class="btn" type="button">Preview</button></div></div></div>
+        <div class="tile"><div class="thumb"><i style="background:linear-gradient(135deg,#d6dbe8,#23307a)"></i><i style="background:#f2b233"></i></div><div class="b"><div class="t">Bazaar Bold <span class="chip c-info">Pixel &amp; Thread</span></div><div class="k">Grid · drops · COD badges</div><div style="display:flex;gap:6px"><button class="btn pri" type="button">Build from this</button><button class="btn" type="button">Preview</button></div></div></div>
+        <div class="tile"><div class="thumb"><i style="background:linear-gradient(135deg,#f3ece4,#cdbba7)"></i><i style="background:#d61f69"></i></div><div class="b"><div class="t">Atelier <span class="chip c-info">Studio Nila</span></div><div class="k">Made to order · size help</div><div style="display:flex;gap:6px"><button class="btn pri" type="button">Build from this</button><button class="btn" type="button">Preview</button></div></div></div>
+        <div class="tile"><div class="thumb"><i style="background:linear-gradient(135deg,#d9e2d0,#5d7a4e)"></i><i style="background:#1c1917"></i></div><div class="b"><div class="t">Ghar <span class="chip c-n">By Frrata</span></div><div class="k">Home and decor · lookbook</div><div style="display:flex;gap:6px"><button class="btn pri" type="button">Build from this</button><button class="btn" type="button">Preview</button></div></div></div>
+        <div class="tile"><div class="thumb"><i style="background:linear-gradient(135deg,#e3d3dd,#8e3b62)"></i><i style="background:#faf9f7"></i></div><div class="b"><div class="t">Glow <span class="chip c-info">Kaapi Labs</span></div><div class="k">Beauty · ingredients · reels</div><div style="display:flex;gap:6px"><button class="btn pri" type="button">Build from this</button><button class="btn" type="button">Preview</button></div></div></div>
+        <div class="tile"><div class="thumb"><i style="background:linear-gradient(135deg,#ece9e4,#8c857f)"></i><i style="background:#23307a"></i></div><div class="b"><div class="t">Plain <span class="chip c-n">By Frrata</span></div><div class="k">Minimal · fastest</div><div style="display:flex;gap:6px"><button class="btn pri" type="button">Build from this</button><button class="btn" type="button">Preview</button></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="p-website" role="tabpanel" aria-labelledby="t-website" class="frame" hidden>
+    <div class="frame-bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">frrata.shop/console/site</div></div>
+    <div class="app">
+      <nav class="side"><div class="mark"><span></span>frrata</div>
+        <a href="#p-website">Home</a><a href="#p-website">Orders</a><div class="grp">Catalogue</div><a href="#p-website">Products</a><a href="#p-website">Collections</a>
+        <div class="grp">Store</div><a href="#p-website">Offers</a><a class="on" href="#p-website">Website</a><a href="#p-website">Domains</a><a href="#p-website">Apps</a><a href="#p-website">Settings</a></nav>
+      <div class="main">
+        <div class="ph"><h3>Website</h3><span class="chip c-ok">Live</span><span class="sp"></span><button class="btn" type="button">Open builder</button><button class="btn pri" type="button">Publish draft 14</button></div>
+        <div class="grid2">
+          <div class="card"><h4>Live</h4><div class="rows">
+            <div><span class="k">Address</span><span class="mono">kesarstudio.in</span></div>
+            <div><span class="k">Checkout</span><span class="mono">checkout.kesarstudio.in</span></div>
+            <div><span class="k">Started from</span><span>Monsoon 2.1</span></div>
+            <div><span class="k">Speed · accessibility</span><span class="mono">94 · 100</span></div>
+          </div></div>
+          <div class="card"><h4>Developers</h4><div class="rows">
+            <div><span class="k">Repository</span><span class="mono">git.frrata.shop/kesar-studio</span></div>
+            <div><span class="k">Public key</span><span class="mono">frs_pub_7Hq2kX…</span></div>
+            <div><span class="k">Test key</span><span class="chip c-n">Until open</span></div>
+            <div><span class="k">People</span><span>Riya · Pixel &amp; Thread</span></div>
+          </div></div>
+        </div>
+        <div class="card" style="margin-top:12px"><h4>Published</h4>
+          <div class="scroll" style="border:0"><table>
+            <thead><tr><th>Version</th><th>By</th><th>When</th><th>Checks</th><th></th></tr></thead>
+            <tbody>
+              <tr><td class="mono">13</td><td>Agent · Riya</td><td>Today 4:12 pm</td><td><span class="chip c-ok">6 of 6</span></td><td><span class="chip c-ok">Live</span></td></tr>
+              <tr><td class="mono">12</td><td>Pixel &amp; Thread</td><td>9 Nov</td><td><span class="chip c-ok">6 of 6</span></td><td><button class="btn" type="button">Roll back</button></td></tr>
+              <tr><td class="mono">11</td><td>Agent · Riya</td><td>2 Nov</td><td><span class="chip c-ok">6 of 6</span></td><td><button class="btn" type="button">Roll back</button></td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="p-publish" role="tabpanel" aria-labelledby="t-publish" class="frame" hidden>
+    <div class="frame-bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">frrata.shop/console/site/build</div></div>
+    <div class="dlg" role="dialog" aria-label="Publish draft 14?">
+      <h4>Publish draft 14?</h4>
+      <div class="rows">
+        <div><span>Build</span><span class="chip c-ok">Passed</span></div>
+        <div><span>Speed (phone)</span><span class="chip c-ok">94</span></div>
+        <div><span>Accessibility</span><span class="chip c-ok">100</span></div>
+        <div><span>Business details on every page</span><span class="chip c-ok">Present</span></div>
+        <div><span>Secrets in code</span><span class="chip c-ok">None</span></div>
+        <div><span>Packages</span><span class="chip c-warn">1 to approve</span></div>
+      </div>
+      <p class="note" style="margin-top:10px">framer-motion 11.18 isn't on the allowed list.</p>
+      <div class="act"><button class="btn" type="button">Keep the draft</button><button class="btn" type="button">Ask the agent to remove it</button><button class="btn pri" type="button" disabled style="opacity:.5">Publish</button></div>
+    </div>
+  </section>
+
+  <section id="p-partner" role="tabpanel" aria-labelledby="t-partner" class="frame" hidden>
+    <div class="frame-bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">frrata.shop/partner/starters</div></div>
+    <div class="main">
+      <div class="ph"><h3>Starters</h3><span class="chip c-info">Pixel &amp; Thread</span><span class="sp"></span><button class="btn pri" type="button">New starter</button></div>
+      <div class="scroll"><table>
+        <thead><tr><th>Starter</th><th>Version</th><th>Review</th><th>Shops</th><th>Earned</th></tr></thead>
+        <tbody>
+          <tr><td>Bazaar Bold</td><td class="mono">1.4.0</td><td><span class="chip c-ok">Listed</span></td><td class="mono">38</td><td class="mono">₹46,200</td></tr>
+          <tr><td>Bazaar Bold</td><td class="mono">1.5.0</td><td><span class="chip c-warn">In review</span></td><td class="mono">—</td><td class="mono">—</td></tr>
+          <tr><td>Saree House</td><td class="mono">0.9.0</td><td><span class="chip c-bad">Changes asked</span></td><td class="mono">—</td><td class="mono">—</td></tr>
+        </tbody>
+      </table></div>
+      <div class="card" style="margin-top:12px"><h4>Saree House 0.9.0 · review</h4><div class="rows">
+        <div><span>Builds from a clean clone</span><span class="chip c-ok">Yes</span></div>
+        <div><span>Checks on the sample shop</span><span class="chip c-ok">6 of 6</span></div>
+        <div><span>Agent skill present</span><span class="chip c-ok">Yes</span></div>
+        <div><span>Calls outside the Storefront API</span><span class="chip c-bad">fonts.example.net</span></div>
+        <div><span>Licences of photos and fonts</span><span class="chip c-warn">2 missing</span></div>
+      </div></div>
+    </div>
+  </section>
+
+  <div class="col">
+    <h2>Open questions for you</h2>
+    <div class="ask"><b>1. The goal.</b> Do you accept the north-star wording above? <code>CLAUDE.md</code> and the planning skill change with it.</div>
+    <div class="ask"><b>2. Brands with no developer.</b> Do they get the builder from day one, or does V3 open to partners first, as Theme Studio did?</div>
+    <div class="ask"><b>3. Hosting.</b> One project per shop on Frrata's Vercel team, or Cloudflare Workers for Platforms. Research below compares cost and isolation.</div>
+    <div class="ask"><b>4. Existing looks.</b> Turn each live look into code automatically at V5, or keep themes running for shops that never move?</div>
+    <div class="ask"><b>5. Partners' money.</b> Revenue share on starters, a listing fee, or free starters that lead to paid client work?</div>
+  </div>
+
+  <div class="col" id="research">
+    <h2>Research</h2>
+    <p class="note">Filled from dated sources; see the spec <span class="mono">docs/specs/2026-11-11-agentic-storefront.md</span>.</p>
+  </div>
+
+  <footer>Frrata · proposal, not built · 11 Nov 2026</footer>
+</div>
+
+<script>
+(() => {
+  const tabs = [...document.querySelectorAll('[role="tab"]')]
+  const show = (t) => { for (const x of tabs) { const on = x === t; x.setAttribute('aria-selected', String(on)); document.getElementById(x.getAttribute('aria-controls')).hidden = !on } }
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => show(t))
+    t.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; n.focus(); show(n) } })
+  })
+})()
+</script>
