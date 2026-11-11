@@ -1,5 +1,5 @@
 # Plan: Theme Studio TS0b — blocks, as designs in Signal 1.4
-Status: draft (mockup board for the owner; reviews on this plan) · Date: 2026-11-11 · Spec: `docs/specs/2026-11-11-theme-studio.md`
+Status: active (board v2 approved by the owner 2026-11-11; scope: two designs) · Date: 2026-11-11 · Spec: `docs/specs/2026-11-11-theme-studio.md`
 (active; v2 approved by the owner 2026-11-11; § 2 Blocks) · Mockup: https://claude.ai/artifact/DzD84DZsW6eGYQ6QkfJbM4 (v2: date line, not a countdown) · Reviews: architecture, security, tenancy, speed (2026-11-11, folded in below)
 
 ## Goal
@@ -10,6 +10,14 @@ owner moves to 1.4 and publishes.
 Measures: on the one live Signal shop and the e2e seed, home HTML ≤ 300 kB and RSC ≤ 150 kB with every design added;
 first-load JS on shop routes unchanged; block CSS ≤ 1.0 kB gz; the largest-allowed-page test holds; e2e `05-shop-look`
 0 px and the resolved-looks snapshot byte-identical for every 1.0–1.3 look; no shop changes without its Publish.
+
+## Owner decision (2026-11-11, after the reviews)
+**Two designs now: Size help and Made by hand** (8 of the 13 kinds: section, columns, group, heading, text, image,
+button, accordion). Product grid, featured product, collection tiles, video and the date block move to **TS1**, with
+the small per-source loader, where product and collection templates need them. So TS0b adds no product card, no
+video, no date and no commerce read to any page; the decisions below about cards, the loader, video and the date
+apply when those blocks arrive in TS1 and are kept here for it. Board v2 approved as drawn (the four other designs on
+it are TS1's).
 
 ## Decisions taken from the reviews (2026-11-11)
 - **Old sections are never cut** (architecture blocker 1): resolve cuts only design blocks; today's Products,
