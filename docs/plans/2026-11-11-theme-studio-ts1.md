@@ -203,3 +203,80 @@ The contact form; commerce blocks (TS1b); product and collection templates (TS1c
   (covered by e2e add/save and by the int test's direct rows); the Discard dialog doesn't say a never-published page goes;
   Contact facts read twice (page-readiness and the customizer page) — one reader when Settings gains the 2027 fields.
 
+---
+
+# TS1b — commerce blocks (plan; board: TS0b board v2, approved 2026-11-11 "as drawn", its four TS1 designs)
+Status: draft (reviews on this plan; no new board: The drop, One piece, Behind the bench and The edits are drawn on
+https://claude.ai/artifact/DzD84DZsW6eGYQ6QkfJbM4 v2) · Date: 2026-11-11
+
+## Goal
+North star (5) a premium storefront that sells: the four designs owners asked for on the board put pieces, a drop
+date, a workshop video and collections into a design. Measures: on the e2e seed with every design at its caps, home
+HTML ≤ 300 kB and RSC ≤ 150 kB on a real `next start` (a gate); shop JS unchanged; block CSS ≤ 1.0 kB gz; 1.0–1.4
+looks byte-identical (resolved-looks snapshot).
+
+## Scope
+- **Five blocks** (TS0b's catalogue, additive): `product_grid` (`SourceSchema` + count 4 | 8 | 12), `featured_product`
+  (a handle), `collection_tiles` (mode, handles ≤ 8, count, shape — Collection tiles' own fields), `video` (≤ 1 a
+  design), `date` (a drop date: "Drops Fri 14 Nov, 7 pm", never a ticking count; hidden once passed).
+- **Signal 1.5.0** adds the four designs from board v2: The drop (heading, date, product grid, button), One piece
+  (photo | featured product, words), Behind the bench (video | heading, words, button), The edits (heading, words,
+  button | collection tiles). Designs stay on Home only (product and collection templates are TS1c).
+
+## Decisions carried from the TS0b reviews (kept for TS1 then; they apply now)
+- **Reads:** commerce blocks read the Home page's own catalogue (`ctx.cat`, already read) and its best-sellers ids:
+  **no new statement**. `bestSellerWindows` walks design product grids with a best-sellers source. No loader in a
+  block (`check:tenant` 6e). The small per-source loader waits for TS1c, where a template page has no catalogue read.
+- **Listed pieces only:** product grid via `sourceProducts`, featured product via `lookPieces` (`isListed`): a
+  scheduled piece never shows early (test).
+- **Reuse with an inner list:** `Products` and `CollectionTiles` split into an inner list taking a heading level and
+  an id prefix (no `<section>`/H2 of their own inside a design); Collection tiles' "at least 2 picked collections with
+  products" rule shared.
+- **Cards cap ≤ 24 a page** (speed 1), counted across everything that draws a card (Products incl. hidden tabs, price
+  tiles, featured product, design product grids, collection tiles) — **only for looks on a version that offers
+  designs**, and the save refuses only a change that adds or grows a design (old sections never cut). Commerce blocks
+  ≤ 6 a page (design ones + Products, Collection tiles and Shop the look sections).
+- **Video:** a design's one video is the section's top-level `video` (no video fill): `cleanVideos`, `referenced()`,
+  `videosFor` work as they are; `VIDEO_KEYS` gains `design`; resolve's video rule reads `VIDEO_KEYS` and the theme's
+  `videoSections`, and `resolveDesign`'s caller drops `video` unless the design has exactly one video block. The block's
+  poster is its image fill; readiness says "add a photo or a video".
+- **Date:** the schema keeps the ISO shape only (no clock in `domains`); "≤ 400 days ahead" is checked in the save
+  with `now`; the renderer hides it once `ctx.now` passes.
+- **Eager photos:** `ProductGrid` defaults `lead = false`; only the derived ≤ 2 eager list (the lead section's) asks
+  for `priority`. The hover photo gets one `src`, not a srcset (≈ 1 kB a card).
+- **Worst-page gate:** e2e `74-commerce` publishes a Home with every design at its caps (24 cards, 5-colour swatches,
+  the longest titles, Devanagari words) and measures the HTML and `RSC: 1` payload on the real server (as
+  `check:payload` does): ≤ 300 kB / ≤ 150 kB, or it fails.
+- **Look:** the design form gains a source picker (Products' own control), a product picker, collection picks, the
+  video field (`VideoField`) and a date input; all in the design form's dynamic chunk (customizer ≤ 208 kB gate).
+- **themeCheck:** a design ≤ 1 video block; a commerce block's fill mark isn't `example`; Signal 1.5 against 1.4 only
+  adds.
+
+## Design review (frata-planning § 3)
+- **UI/UX:** board v2 (approved). States: a source with nothing listed (the block is left out; readiness says so,
+  never blocking), an unlisted featured piece (left out), a passed date (left out), no video yet (the poster photo
+  shows), the card cap reached (the library greys the design with "24 product cards on this page already").
+- **Tenancy:** no new table, no new read. Handles and collection picks resolve only against this shop's own cached
+  catalogue; a video id only through `cleanVideos` (this shop's rows).
+- **Modularity:** blocks in `blocks.ts` (+ `FillSchema` variants for source, handle, tiles, date), renderers in
+  `components/storefront/blocks/` using the inner lists; no I/O in a block.
+- **SSOT / DRY:** `SourceSchema`, `sourceProducts`, `lookPieces`, `ProductGrid`, the tiles list, Drop teaser's date
+  rule (`dayIN`) — one each.
+- **YAGNI:** no per-source loader (TS1c), no designs on product or collection pages (TS1c), no countdown.
+- **Scalability / performance:** +0 statements; HTML/RSC by the gate; card cap; no new client script (server blocks).
+- **Reliability:** no outbound call (a video is already uploaded through V1's flow).
+- **Security:** fills tagged and capped; handle and source shapes as the sections'; video ownership by `cleanVideos`.
+- **Unit economics:** none (Mux minutes already budgeted per shop by V1's caps).
+- **Blast radius:** `Products` and `CollectionTiles` split (Home's sections must render byte-identically: e2e
+  `05-shop-look` 0 px), `ProductGrid`'s `lead` default (Price tiles and every grid: priority only on the lead section),
+  `VIDEO_KEYS`, resolve's video rule, `bestSellerWindows`, `designProblems`, the design form.
+
+## Tasks (TS1b)
+| # | Task | Verify |
+|---|---|---|
+| TS1b-0 | Regression net: shop-look 0 px and resolved-looks before; a "lead only" eager test | `npm run e2e -- --only shop-look` |
+| TS1b-1 | Blocks + fills + resolve (video rule, card count), themeCheck rules, Signal 1.5.0 | `npx vitest run src/domains/themes` |
+| TS1b-2 | Inner lists, block renderers, eager rule, best-sellers walk | `npm test`, 0 px |
+| TS1b-3 | Design form fields (source, product, collections, video, date) | e2e `72-designs` extended |
+| TS1b-4 | Worst-page gate `74-commerce`; reviews on the diff; ship; Signal 1.5 for release in Admin | full e2e |
+
