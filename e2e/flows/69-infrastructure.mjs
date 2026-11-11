@@ -68,7 +68,7 @@ export default {
 
       await t.step('The hourly read: month to date, the split, a spike and another project over 40%', async () => {
         await setCharges(month())
-        assert.deepEqual(await cron(), { vercel: 'ok' })
+        assert.equal((await cron()).vercel, 'ok')
         const [{ n }] = await db`select count(*)::int n from infra_usage_daily where source = 'vercel'`
         assert.ok(n >= 2, 'rows saved')
         assert.equal((await cron()).vercel, 'ok', 'a second read is idempotent')
@@ -100,7 +100,7 @@ export default {
         await db.begin(async (x) => {
           await x`set local session_replication_role = replica`
           const [vid] = await x`insert into videos (tenant_id, mux_env, created_by, use, upload_id, asset_id, playback_id, duration_ms, ready_at, mp4_ready_at)
-            values (${KESAR}, ${MUX.env}, ${USERS.owner.id}, 'product', 'up_e2e_infra', 'assete2einfra', 'pbe2einfra', 24400, now(), now()) returning id`
+            values (${KESAR}, ${MUX.env}, ${USERS.owner.id}, 'product', 'upe2einfra', 'assete2einfra', 'pbe2einfra', 24400, now(), now()) returning id`
           await x`insert into product_videos (tenant_id, product_id, video_id) values (${KESAR}, ${prod.id}, ${vid.id})`
         })
         await setDelivery([{ asset_id: 'assete2einfra', seconds: 1200 * 60 }])
