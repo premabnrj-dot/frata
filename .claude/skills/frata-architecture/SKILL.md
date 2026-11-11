@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.35.0
+  version: 2.36.0
   verified: 2026-11-09
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -299,6 +299,17 @@ after it. A class a shop page uses from outside the shop's folders must be added
   of manifest → style → the merchant's layer — `contrast`, section SAVE schemas, `readinessOf`, `carryOver`,
   `baselineRevision`) and `src/components/storefront/sections/` (server components). Rendering reads
   only `ResolvedTheme`; settings reach CSS as `--store-*` custom properties and `data-*` attributes on the shell.
+- **Manifests may be authored data (ADR-0011, Theme Studio TS0a).** A manifest from a file or a row is one object:
+  `ManifestSchema` (`manifest-schema.ts`: colours exactly `#RRGGBB`, every token a closed choice, photos only from
+  Frrata's samples; every code manifest parses to itself) and `themeCheck` (`check.ts`, the one check: vitest for code,
+  the studio for data). **Every reader takes a `ManifestSource`** (`source.ts`: `keys()`, `versions(key)`; pure
+  `manifestOf(src,…)`/`manifestNear(src,…)`), from `manifestsFor(tenantId)` (`src/lib/themes/manifests.ts`, `cache()`d)
+  read **before any transaction** and passed down. Shop pages use `shopTheme(shop)` (`page-look.ts`, once per request).
+  Only `source.ts`, Admin's code-version pages and tests read `CATALOGUE` (`check:layers`). Classic 1.0.0 always comes
+  from code. **The shop's look cache** (`look-v2`, tag `shop:<t>:look`) holds the publish candidates (one DISTINCT ON
+  query, `publishCandidates`, also the console's rule) and the newest body; other bodies are cached by revision id;
+  withdrawn versions are a `string[]`. Publish and Undo purge `shop:<t>:look`, never the catalogue. `look.ts` runs inside
+  `asMember`: never a cached loader or a second `withTenant` there (`look-p4.test.ts`).
 - **Manifests** are typed files `src/domains/themes/catalogue/<theme>/<semver>.ts`, listed in `catalogue/index.ts`.
   A released file never changes; a new version is a new file. Theme colours live there and nowhere else
   (`check:hex` QUOTED rule).
