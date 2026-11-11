@@ -19,6 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ host: str
 export default async function Home({ params }: { params: Promise<{ host: string }> }) {
   const shop = await shopFor(params)
   const theme = (await shopTheme(shop))
-  const [best, videos] = await Promise.all([bestSellersFor(theme, (d) => shopBestSellers(shop.id, d)), videosFor(theme, (k) => shopVideos(shop.id, k))])
-  return <><HomeView shop={shop} cat={await shopCatalogue(shop.id)} href={shopHref} now={new Date()} theme={theme} bestSellers={best} videos={videos} />{Object.keys(videos).length > 0 && <LoopPlayer />}</>
+  // The catalogue loads beside the best sellers and the videos (speed LOW 4: one wait, not two).
+  const [best, videos, cat] = await Promise.all([bestSellersFor(theme, (d) => shopBestSellers(shop.id, d)), videosFor(theme, (k) => shopVideos(shop.id, k)), shopCatalogue(shop.id)])
+  return <><HomeView shop={shop} cat={cat} href={shopHref} now={new Date()} theme={theme} bestSellers={best} videos={videos} />{Object.keys(videos).length > 0 && <LoopPlayer />}</>
 }

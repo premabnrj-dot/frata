@@ -10,13 +10,15 @@ export type PhotoData = { base: string; widths: number[]; width: number; height:
  * drawn on it, never the browser's broken-image glyph or the alt text (globals.css `img[data-photo]`; no fade-in:
  * hiding the photo until a script saw it load would delay the page's largest paint).
  */
-export function Photo({ p, sizes, alt, priority = false, low = false, className = '', focus = null }: { p: PhotoData; sizes: string; alt: string; priority?: boolean
+export function Photo({ p, sizes, alt, priority = false, low = false, className = '', focus = null, single = false }: { p: PhotoData; sizes: string; alt: string; priority?: boolean
   /** Where a cropped photo keeps its subject (a look's photo focus, Look v3); none: the centre. */
   focus?: { x: number; y: number } | null
   /** A thumbnail beside the page's largest paint: asked for after it. */
-  low?: boolean; className?: string }) {
+  low?: boolean; className?: string
+  /** One `src`, no srcset (a card's hover photo: shown only to a pointer, so ~1 kB of HTML a card saved; TS1b). */
+  single?: boolean }) {
   return (
-    <img src={urlFor(p.base, pick(p.widths, 800))} srcSet={srcSet(p.base, p.widths)} sizes={sizes} alt={alt} width={p.width} height={p.height}
+    <img src={urlFor(p.base, pick(p.widths, 800))} {...(single ? {} : { srcSet: srcSet(p.base, p.widths), sizes })} alt={alt} width={p.width} height={p.height}
       loading={priority ? 'eager' : 'lazy'} fetchPriority={priority ? 'high' : low ? 'low' : undefined} decoding="async" data-photo className={className} style={focus ? { objectPosition: `${focus.x}% ${focus.y}%` } : undefined} />
   )
 }

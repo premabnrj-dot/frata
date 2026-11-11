@@ -4,6 +4,7 @@ import { inCollection } from '@/domains/storefront/listing'
 import { sourceProducts } from '@/domains/storefront/sources'
 import { cache } from 'react'
 import { resolveStored } from '@/domains/themes/resolve'
+import { resolveDesign, type RNode } from '@/domains/themes/blocks'
 import type { ManifestSource } from '@/domains/themes/source'
 import { manifestsFor } from './manifests'
 import { VIDEO_KEYS } from '@/domains/themes/sections'
@@ -48,9 +49,19 @@ export function stripOf(cat: StoreCatalogue, now: Date): StripPiece[] {
   return sourceProducts({ kind: 'newest' }, cat, now, []).filter((p) => p.images[0]).slice(0, 6).map((p) => ({ handle: p.handle, title: p.title, image: p.images[0]! }))
 }
 
-/** The Best sellers windows this Home uses (read only those; each read is cached an hour). */
-export const bestSellerWindows = (t: ResolvedTheme): (30 | 90)[] =>
-  [...new Set(t.home.flatMap((s) => (s.key === 'products' && s.source.kind === 'best_sellers' && !s.hidden ? [s.source.days] : [])))]
+/** The Best sellers windows this Home uses (read only those; each read is cached an hour): Products sections and, TS1b,
+ *  a shown design's product grids as it resolves (the theme's default source counts; architecture 7). ≤ 2 windows. */
+export function bestSellerWindows(t: ResolvedTheme): (30 | 90)[] {
+  const grids = (ns: RNode[]): (30 | 90)[] => ns.flatMap((n) => n.kind === 'product_grid' ? (n.source.kind === 'best_sellers' ? [n.source.days] : [])
+    : n.kind === 'group' || n.kind === 'columns' ? grids(n.children) : [])
+  return [...new Set(t.home.flatMap((s): (30 | 90)[] => {
+    if (s.hidden) return []
+    if (s.key === 'products') return s.source.kind === 'best_sellers' ? [s.source.days] : []
+    if (s.key !== 'design') return []
+    const d = t.designs && Object.hasOwn(t.designs, s.design) ? t.designs[s.design]! : null
+    return d ? grids(resolveDesign(d, s.fill, 'shop')) : []
+  }))]
+}
 
 export async function bestSellersFor(t: ResolvedTheme, read: (days: number) => Promise<string[]>): Promise<Partial<Record<30 | 90, string[]>>> {
   const ws = bestSellerWindows(t)

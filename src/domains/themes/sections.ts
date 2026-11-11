@@ -24,6 +24,9 @@ const hidden = z.boolean().default(false)
 /** A link inside the shop only: never an outside URL (spec § Sections rules). */
 export const SHOP_PATH = /^\/(?:|products|products\/[a-z0-9-]{1,80}|collections\/[a-z0-9-]{1,80}|policies\/(?:shipping|returns|privacy|terms|contact)|pages\/[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?)$/
 export const shopPath = z.string().regex(SHOP_PATH)
+/** One handle rule per kind (TS1b: architecture 12): a product's address is 1–100 characters, a collection's 1–80. */
+export const productHandle = z.string().regex(/^[a-z0-9-]{1,100}$/)
+export const collectionHandle = z.string().regex(/^[a-z0-9-]{1,80}$/)
 
 /** One of the shop's own photos in Blob (the action stores only the URL acceptedBase rebuilt for this shop). */
 export const ImageSchema = z.object({
@@ -70,7 +73,7 @@ export const CollectionTilesSchema = z.object({
   heading: text(40).default(''),
   /** auto: the shop's collections that have products, in title order, first `count` · picked: these, in this order. */
   mode: z.enum(['auto', 'picked']).default('auto'),
-  handles: z.array(z.string().regex(/^[a-z0-9-]{1,80}$/)).max(8).default([]),
+  handles: z.array(collectionHandle).max(8).default([]),
   count: z.number().int().min(2).max(8).default(6),
   shape: z.enum(['portrait', 'square', 'circle']).default('portrait'),
 })
@@ -80,7 +83,7 @@ export const SourceSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('newest') }),
   /** Ranked by delivered units over the window (server-side, ids only: ADR-0003). */
   z.object({ kind: z.literal('best_sellers'), days: z.union([z.literal(30), z.literal(90)]).default(90) }),
-  z.object({ kind: z.literal('collection'), handle: z.string().regex(/^[a-z0-9-]{1,80}$/) }),
+  z.object({ kind: z.literal('collection'), handle: collectionHandle }),
   z.object({ kind: z.literal('under_price'), maxPaise: z.number().int().positive().max(10_00_000_00) }),
   z.object({ kind: z.literal('on_sale') }),
   /** Sold out a day or more, back in the last 30 days (variants.restocked_at, kept by the database). T2. */
@@ -103,7 +106,7 @@ export const ProductsSchema = z.object({
   layout: z.enum(ALL_PRODUCT_LAYOUTS).default('grid'),
   label,
   /** layout tabs: the collections, one tab each, by handle (the source is then ignored). */
-  tabs: z.array(z.string().regex(/^[a-z0-9-]{1,80}$/)).max(MAX_TABS).refine((t) => new Set(t).size === t.length, 'Each collection once.').default([]),
+  tabs: z.array(collectionHandle).max(MAX_TABS).refine((t) => new Set(t).size === t.length, 'Each collection once.').default([]),
 })
 
 const band = z.object({ minPaise: z.number().int().min(0).nullable(), maxPaise: z.number().int().positive().nullable() })
@@ -163,7 +166,7 @@ export const ShopTheLookSchema = z.object({
   id, key: z.literal('shop_the_look'), hidden, scheme,
   image: ImageSchema.nullable().default(null),
   heading: text(60).default('Shop the look'),
-  pieces: z.array(z.object({ handle: z.string().regex(/^[a-z0-9-]{1,100}$/), x: pin, y: pin })).max(4).default([]),
+  pieces: z.array(z.object({ handle: productHandle, x: pin, y: pin })).max(4).default([]),
 })
 
 /** Signal 1.2 (S2): story cards fanned out, the middle one forward. Lenient (a blank one parses: autosave); fewer than
@@ -199,16 +202,28 @@ const runChars = (ps: { text: string; link?: string }[][]) => ps.flat().reduce((
 export const DesignBodySchema = z.array(z.array(designRun).min(1).max(40)).max(12).refine((ps) => runChars(ps) <= 2000, 'At most 2,000 characters')
 export const AccordionItemSchema = z.object({ q: text(80), a: text(600) })
 
+/** TS1b: a design shows what the board draws, no more (architecture 2, 4; speed HIGH 2): a product grid 4 pieces,
+ *  collection tiles up to 4, a featured product 1. */
+export const GRID_PIECES = 4, MAX_TILES = 4
+const unique = <T,>(xs: T[]) => new Set(xs).size === xs.length
+
 /** What an owner wrote into one block of a design (unknown keys are stripped: what is stored is this parse's output),
  *  tagged with the block's kind (security M2, tenancy HIGH): a fill
- *  only ever lands on a block of its own kind, and every photo is found by its kind (cleanImages). Never a video:
- *  a design's one video is the section's own `video` (TS1). */
+ *  only ever lands on a block of its own kind, and every photo is found by its kind (cleanImages). Never a video id:
+ *  a design's one video is the section's own `video`; the video block's fill is its poster photo (TS1b). */
 export const FillSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('heading'), text: text(60) }),
   z.object({ kind: z.literal('text'), body: DesignBodySchema }),
   z.object({ kind: z.literal('image'), image: ImageSchema.nullable() }),
   z.object({ kind: z.literal('button'), label: text(24), link: shopPath }),
   z.object({ kind: z.literal('accordion'), items: z.array(AccordionItemSchema).max(12) }),
+  // TS1b: commerce, video and date. Handles resolve only against this shop's own catalogue (the renderer).
+  z.object({ kind: z.literal('product_grid'), source: SourceSchema }),
+  z.object({ kind: z.literal('featured_product'), handle: productHandle }),
+  z.object({ kind: z.literal('collection_tiles'), mode: z.enum(['auto', 'picked']), handles: z.array(collectionHandle).max(MAX_TILES).refine(unique, 'Each collection once.') }),
+  z.object({ kind: z.literal('video'), poster: ImageSchema.nullable() }),
+  /** ISO only (no clock in domains): "≤ 400 days ahead" is the save's (designsForSave, with `now`). Null: cleared. */
+  z.object({ kind: z.literal('date'), at: z.string().datetime({ offset: true }).nullable() }),
 ])
 /** Each fill's caps equal its block's (blocks.ts uses the same text(), DesignBodySchema and AccordionItemSchema):
  *  keep them equal; a block with tighter limits must re-parse its fill in resolveDesign (security review LOW-3). */
@@ -222,6 +237,11 @@ export function fillText(f: Fill): string[] {
     case 'image': return f.image ? [f.image.alt] : []
     case 'button': return [f.label, f.link]
     case 'accordion': return f.items.flatMap((i) => [i.q, i.a])
+    case 'product_grid': return f.source.kind === 'collection' ? [f.source.handle] : []
+    case 'featured_product': return [f.handle]
+    case 'collection_tiles': return f.handles
+    case 'video': return f.poster ? [f.poster.alt] : []
+    case 'date': return f.at ? [f.at] : []
     default: return f satisfies never
   }
 }
@@ -232,6 +252,9 @@ const fillChars = (f: Fill) => fillText(f).reduce((n, t) => n + t.length, 0)
 export const DesignSectionSchema = z.object({
   id, key: z.literal('design'), hidden, scheme, label,
   design: blockId,
+  /** TS1b: the design's one loop (its video block's), a `videos` row of this shop's (cleanVideos); kept only where the
+   *  design has exactly one video block and the theme lists `design` in videoSections (designsForSave, resolveTheme). */
+  video,
   fill: z.record(blockId, FillSchema)
     .refine((f) => Object.keys(f).length <= MAX_FILLS, `At most ${MAX_FILLS} fields`)
     .refine((f) => Object.values(f).reduce((n, x) => n + fillChars(x), 0) <= MAX_FILL_CHARS, 'At most 10,000 characters in one section')
@@ -243,7 +266,7 @@ export const SectionSchema = z.discriminatedUnion('key', [
   ShopTheLookSchema, StoryFanSchema, StatementSchema, DesignSectionSchema,
 ])
 /** The sections that may carry a V1 loop (where a theme lists them in allowed.videoSections): one list, read everywhere. */
-export const VIDEO_KEYS = ['hero', 'image_text'] as const
+export const VIDEO_KEYS = ['hero', 'image_text', 'design'] as const
 export type VideoKey = (typeof VIDEO_KEYS)[number]
 export type SectionInstance = z.infer<typeof SectionSchema>
 /** A section as written in a manifest or a stored layer: defaults may be left out. */

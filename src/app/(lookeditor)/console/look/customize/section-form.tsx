@@ -3,7 +3,7 @@
 import { MAX_TABS, type ProductLayout, type SectionScheme } from '@/domains/themes/sections'
 import { useState } from 'react'
 import { PROMISES, sectionName, type SectionInstance, type SectionOf, type VideoKey } from '@/domains/themes/sections'
-import { Choice, Field, ImageField, LinkPicker, Switch, Text, paiseToRupees, rupeesToPaise, type LibraryPhoto, type LinkTarget } from './controls'
+import { Choice, Field, ImageField, LinkPicker, SourcePicker, Switch, Text, WhenIST, paiseToRupees, rupeesToPaise, type LibraryPhoto, type LinkTarget } from './controls'
 import { Icon } from '@/components/icons/icon'
 import { VideoField } from './video-field'
 import dynamic from 'next/dynamic'
@@ -106,18 +106,7 @@ function Products({ s, set, c }: { s: SectionOf<'products'>; set: Set<SectionOf<
   const src = s.source
   return (<>
     <Text label="Heading" value={s.heading} max={40} onChange={(heading) => set({ ...s, heading })} />
-    <Choice label="Show" value={src.kind} onChange={(kind) => set({ ...s, source: kind === 'best_sellers' ? { kind, days: 90 } : kind === 'collection' ? { kind, handle: c.collections[0]?.handle ?? 'none' } : kind === 'under_price' ? { kind, maxPaise: 99900 } : { kind } })}
-      options={[{ value: 'newest', label: 'New in' }, { value: 'best_sellers', label: 'Best sellers' }, { value: 'collection', label: 'A collection' }, { value: 'under_price', label: 'Under a price' }, { value: 'on_sale', label: 'On sale' }, { value: 'back_in_stock', label: 'Back in stock' }]} />
-    {src.kind === 'best_sellers' && <>
-      <Choice label="Over" value={src.days} onChange={(days) => set({ ...s, source: { kind: 'best_sellers', days } })} options={[{ value: 30, label: '30 days' }, { value: 90, label: '90 days' }]} />
-      <p className="text-xs text-muted-foreground">Ranked by delivered orders. Shoppers see the order, never the numbers.</p>
-    </>}
-    {src.kind === 'back_in_stock' && <p className="text-xs text-muted-foreground">Pieces that sold out for a day or more and came back in the last 30 days, latest first. Hides itself when there are none.</p>}
-    {src.kind === 'collection' && <Field label="Collection">{(id) => (
-      <select id={id} value={src.handle} onChange={(e) => set({ ...s, source: { kind: 'collection', handle: e.target.value } })} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm">
-        {c.collections.map((x) => <option key={x.handle} value={x.handle}>{x.title}</option>)}
-      </select>)}</Field>}
-    {src.kind === 'under_price' && <Field label="Under, in ₹">{(id) => <input id={id} inputMode="numeric" defaultValue={paiseToRupees(src.maxPaise)} onBlur={(e) => { const p = rupeesToPaise(e.target.value); if (p) set({ ...s, source: { kind: 'under_price', maxPaise: p } }) }} className="h-10 w-full rounded-md border border-input bg-card px-3 font-mono text-sm" />}</Field>}
+    <SourcePicker value={src} collections={c.collections} onChange={(source) => set({ ...s, source })} />
     <Choice label="How many" value={s.count} onChange={(count) => set({ ...s, count })} options={[4, 8, 12, 24].map((n) => ({ value: n as 4 | 8 | 12 | 24, label: String(n) }))} />
     <Choice label="Layout" value={s.layout} onChange={(layout) => set({ ...s, layout })} options={([{ value: 'grid', label: 'Grid' }, { value: 'rail', label: 'Swipe row' }, { value: 'tabs', label: 'Tabs by collection' }] as const).filter((o) => c.layouts.includes(o.value))} />
     {s.layout === 'tabs' && <fieldset className="space-y-1"><legend className="text-sm font-medium">Tabs (up to {MAX_TABS})</legend>
@@ -168,10 +157,9 @@ function ImageText({ s, set, c }: { s: SectionOf<'image_text'>; set: Set<Section
 }
 
 function Drop({ s, set, c }: { s: SectionOf<'drop_teaser'>; set: Set<SectionOf<'drop_teaser'>>; c: FormCtx }) {
-  const local = s.at.slice(0, 16)
   return (<>
     <Text label="Heading" value={s.heading} max={60} onChange={(heading) => set({ ...s, heading })} />
-    <Field label="When (India time)" hint="It hides itself once this has passed.">{(id) => <input id={id} type="datetime-local" value={local} onChange={(e) => e.target.value && set({ ...s, at: `${e.target.value}:00+05:30` })} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm" />}</Field>
+    <WhenIST label="When (India time)" hint="It hides itself once this has passed." value={s.at} onChange={(at) => at && set({ ...s, at })} />
     <ImageField label="Photo (optional)" value={s.image} tenantId={c.tenantId} library={c.photos} suggest={[s.heading, c.shopName]} onChange={(image) => set({ ...s, image })} />
   </>)
 }

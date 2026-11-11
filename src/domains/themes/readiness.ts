@@ -15,6 +15,15 @@ export type Issue = { sectionId: string; blocks: boolean; text: string }
 
 const altMissing = (img: { alt: string; decorative: boolean } | null) => !!img && !img.decorative && !img.alt.trim()
 
+/** Picked collection tiles, as a Collection tiles section and a design's tiles both judge them (one rule): a deleted
+ *  collection is said, and fewer than 2 picks with products blocks Publish. */
+function pickedIssues(handles: readonly string[], has: Map<string, boolean>): [boolean, string][] {
+  const out: [boolean, string][] = []
+  if (handles.some((h) => !has.has(h))) out.push([false, 'a collection it shows was deleted'])
+  if (handles.filter((h) => has.get(h)).length < 2) out.push([true, 'pick at least 2 collections with products'])
+  return out
+}
+
 /** Which promises are true today, so Shop by promise never states one that isn't. */
 export function truePromises(f: ShopFacts): (typeof PROMISES)[number][] {
   return PROMISES.filter((k) => (k === 'cod' ? f.codOn : k === 'free_shipping' ? f.freeShippingAbove !== null : k === 'returns' ? f.returnDays > 0 : f.dispatchDays > 0))
@@ -52,11 +61,7 @@ export function readinessOf(home: SectionInstance[], f: ShopFacts, now: Date, de
         if (altMissing(s.image)) add(true, 'describe the photo for people who can’t see it')
         break
       case 'collection_tiles':
-        if (s.mode === 'picked') {
-          const live = s.handles.filter((h) => has.get(h))
-          if (s.handles.some((h) => !has.has(h))) add(false, 'a collection it shows was deleted')
-          if (live.length < 2) add(true, 'pick at least 2 collections with products')
-        }
+        if (s.mode === 'picked') for (const [b, t] of pickedIssues(s.handles, has)) add(b, t)
         break
       case 'products':
         if (s.layout === 'tabs') {
@@ -101,6 +106,26 @@ export function readinessOf(home: SectionInstance[], f: ShopFacts, now: Date, de
             const img = f?.kind === 'image' ? f.image : null
             if (!img) add(false, `add a photo for “${label}”, or it’s left out`)
             else if (altMissing(img)) add(true, `describe “${label}” for people who can’t see it`)
+          }
+          // TS1b. Nothing here blocks but a picked set without 2 collections and a poster without its description: a
+          // block with nothing to show is left out on the shop (the plan's states).
+          if (b.kind === 'video') {
+            const poster = f?.kind === 'video' ? f.poster : null
+            if (!poster && !s.video) add(false, `add a photo or a video for “${label}”, or it’s left out`)
+            if (altMissing(poster)) add(true, `describe “${label}” for people who can’t see it`)
+          }
+          if (b.kind === 'featured_product' && !(f?.kind === 'featured_product')) add(false, `pick a piece for “${label}”, or it’s left out`)
+          if (b.kind === 'date') {
+            const at = f?.kind === 'date' ? f.at : null
+            if (!at) add(false, `set a date for “${label}”, or it’s left out`)
+            else if (Date.parse(at) <= now.getTime()) add(false, `its date has passed, so “${label}” is left out`)
+          }
+          if (b.kind === 'collection_tiles' && (f?.kind === 'collection_tiles' ? f.mode : b.mode) === 'picked') {
+            for (const [bl, t] of pickedIssues(f?.kind === 'collection_tiles' ? f.handles : [], has)) add(bl, `${t} for “${label}”`)
+          }
+          if (b.kind === 'product_grid') {
+            const src = f?.kind === 'product_grid' ? f.source : b.source
+            if (src.kind === 'collection' && !has.has(src.handle)) add(false, `the collection for “${label}” was deleted, so it’s left out`)
           }
         }
         break

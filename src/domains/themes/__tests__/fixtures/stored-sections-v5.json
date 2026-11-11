@@ -1,0 +1,6 @@
+[
+  { "id": "design-drop", "key": "design", "design": "the-drop", "fill": { "heading": { "kind": "heading", "text": "मानसून ड्रॉप" }, "date": { "kind": "date", "at": "2026-11-14T19:00:00+05:30" }, "pieces": { "kind": "product_grid", "source": { "kind": "collection", "handle": "monsoon" } } } },
+  { "id": "design-piece", "key": "design", "design": "one-piece", "scheme": "tint", "fill": { "piece": { "kind": "featured_product", "handle": "haldi-kurta" }, "words": { "kind": "text", "body": [[{ "text": "Block printed in Bagru." }]] } } },
+  { "id": "design-bench", "key": "design", "design": "behind-the-bench", "video": { "id": "6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b" }, "fill": { "video": { "kind": "video", "poster": null } } },
+  { "id": "design-edits", "key": "design", "design": "the-edits", "label": "Edits", "fill": { "tiles": { "kind": "collection_tiles", "mode": "picked", "handles": ["sarees", "kurtas"] } } }
+]

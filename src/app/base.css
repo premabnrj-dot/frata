@@ -567,4 +567,6 @@ img[data-photo]::before { content: ""; position: absolute; inset: 0; background:
 .store-b-acc details[open] summary::after { rotate: 180deg; }
 .store-b-acc details p { margin: 0 0 1rem; color: var(--store-sub); line-height: 1.6; }
 .store-b-design [data-example] { opacity: 0.55; }
+.store-b-wide, .store-b-piece { display: block; width: 100%; }
+.store-b-date { font-weight: 600; letter-spacing: 0.01em; }
 @media (prefers-reduced-motion: reduce) { .store-b-acc summary::after { transition: none; } }

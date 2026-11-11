@@ -7750,3 +7750,1186 @@ exports[`resolved looks of every released theme > signal@1.4.0 · full 1`] = `
   },
 }
 `;
+
+exports[`resolved looks of every released theme > signal@1.5.0 · empty 1`] = `
+{
+  "attrs": {
+    "data-button-motion": "fill",
+    "data-buttons": "solid",
+    "data-card": "tile",
+    "data-card-hover": "zoom",
+    "data-entrance": "fade",
+    "data-header": "float",
+    "data-headings": "as_typed",
+    "data-hover": "on",
+    "data-labels": "pill",
+    "data-motion": "subtle",
+    "data-reveal": "on",
+    "data-rhythm": "even",
+    "data-scale": "signal",
+    "data-voice": "grotesk",
+  },
+  "home": [
+    {
+      "button": {
+        "label": "Shop now",
+        "link": "/products",
+      },
+      "heading": {
+        "from": "shopName",
+      },
+      "height": "tall",
+      "hidden": false,
+      "id": "hero",
+      "image": null,
+      "key": "hero",
+      "layout": "image_text",
+      "mask": "none",
+      "position": "centre",
+      "scheme": "paper",
+      "script": "New season",
+      "text": {
+        "from": "tagline",
+      },
+    },
+    {
+      "button": {
+        "label": "Explore",
+        "link": "/products",
+      },
+      "heading": "Built for every day.",
+      "hidden": false,
+      "id": "spotlight",
+      "image": null,
+      "key": "image_text",
+      "label": "In spotlight",
+      "layout": "spotlight",
+      "scheme": "paper",
+      "side": "left",
+      "text": "Tell shoppers what makes one piece special: the material, the detail, where it goes.",
+    },
+    {
+      "count": 8,
+      "heading": "Crowd favourites.",
+      "hidden": false,
+      "id": "best",
+      "key": "products",
+      "label": "Bestsellers",
+      "layout": "tabs",
+      "scheme": "paper",
+      "source": {
+        "days": 90,
+        "kind": "best_sellers",
+      },
+      "tabs": [],
+      "viewAll": true,
+    },
+    {
+      "count": 12,
+      "heading": "Meet the latest.",
+      "hidden": false,
+      "id": "new-in",
+      "key": "products",
+      "label": "New arrivals",
+      "layout": "rail",
+      "scheme": "tint",
+      "source": {
+        "kind": "newest",
+      },
+      "tabs": [],
+      "viewAll": true,
+    },
+    {
+      "button": null,
+      "heading": "Made to be used, every day.",
+      "hidden": false,
+      "id": "band",
+      "image": null,
+      "key": "image_text",
+      "label": "",
+      "scheme": "signal",
+      "side": "right",
+      "text": "Tell shoppers what goes into every piece: the materials, the testing, the details.",
+    },
+    {
+      "cards": [],
+      "heading": "Out in the city.",
+      "hidden": false,
+      "id": "stories",
+      "key": "story_fan",
+      "label": "",
+      "scheme": "paper",
+      "text": "Your pieces where they live: the commute, the weekend, the late shift.",
+    },
+    {
+      "eyebrow": "Made for",
+      "hidden": false,
+      "id": "statement",
+      "image": null,
+      "key": "statement",
+      "scheme": "paper",
+      "wordmark": "the long way",
+    },
+  ],
+  "schemes": {
+    "ink": {
+      "accent": "#9DB0FF",
+      "bad": "#F59A86",
+      "bg": "#121212",
+      "button": "#F4F4F1",
+      "chip": "#1C1C1C",
+      "good": "#7FCBA4",
+      "line": "#2A2A2A",
+      "onAccent": "#121212",
+      "onButton": "#121212",
+      "sale": "#F59A86",
+      "sub": "#BDBDB8",
+      "text": "#F4F4F1",
+    },
+    "paper": {
+      "accent": "#2742E8",
+      "bad": "#A8321F",
+      "bg": "#FFFFFF",
+      "button": "#151515",
+      "chip": "#EFEFEC",
+      "good": "#1E6B47",
+      "line": "#E2E2DE",
+      "onAccent": "#FFFFFF",
+      "onButton": "#FFFFFF",
+      "sale": "#A8321F",
+      "sub": "#5E5E5B",
+      "text": "#151515",
+    },
+    "tint": {
+      "accent": "#2742E8",
+      "bad": "#A8321F",
+      "bg": "#EFEFEC",
+      "button": "#151515",
+      "chip": "#FFFFFF",
+      "good": "#1E6B47",
+      "line": "#DCDCD6",
+      "onAccent": "#FFFFFF",
+      "onButton": "#EFEFEC",
+      "sale": "#A8321F",
+      "sub": "#55554F",
+      "text": "#151515",
+    },
+  },
+  "settings": {
+    "announcement": null,
+    "bottomTabs": false,
+    "brandColour": null,
+    "buttonMotion": "fill",
+    "buttonShape": "theme",
+    "buttons": "solid",
+    "buyBar": true,
+    "buyBoxSticky": true,
+    "card": "tile",
+    "cardHover": "zoom",
+    "checkout": "focused",
+    "collectionTop": "title",
+    "corners": "square",
+    "desktopColumns": 4,
+    "details": "folded",
+    "entrance": "fade",
+    "footer": "photo",
+    "footerScheme": "paper",
+    "gallery": "stack",
+    "header": "float",
+    "headings": "as_typed",
+    "hoverPhoto": true,
+    "labels": "pill",
+    "motion": "subtle",
+    "pairing": "schibsted",
+    "phoneColumns": 2,
+    "photo": "4:5",
+    "railCounter": true,
+    "reveal": true,
+    "size": "large",
+    "social": true,
+    "spacing": "regular",
+    "sticky": false,
+  },
+  "vars": {
+    "--store-accent": "#2742E8",
+    "--store-bad": "#A8321F",
+    "--store-button": "#151515",
+    "--store-chip": "#EFEFEC",
+    "--store-cols": "2",
+    "--store-dcols": "4",
+    "--store-good": "#1E6B47",
+    "--store-h-scale": "1.12",
+    "--store-ink": "#151515",
+    "--store-line": "#E2E2DE",
+    "--store-on-accent": "#FFFFFF",
+    "--store-on-button": "#FFFFFF",
+    "--store-paper": "#FFFFFF",
+    "--store-radius": "0px",
+    "--store-ratio": "4 / 5",
+    "--store-sale": "#A8321F",
+    "--store-space": "1",
+    "--store-sub": "#5E5E5B",
+  },
+}
+`;
+
+exports[`resolved looks of every released theme > signal@1.5.0 · full 1`] = `
+{
+  "attrs": {
+    "data-button-motion": "lift",
+    "data-button-shape": "pill",
+    "data-buttons": "solid",
+    "data-card": "tile",
+    "data-card-hover": "zoom",
+    "data-entrance": "fade",
+    "data-header": "float",
+    "data-headings": "upper",
+    "data-hover": "on",
+    "data-labels": "pill",
+    "data-motion": "none",
+    "data-reveal": "on",
+    "data-rhythm": "even",
+    "data-scale": "signal",
+    "data-voice": "grotesk",
+  },
+  "designs": {
+    "behind-the-bench": {
+      "children": [
+        {
+          "children": [
+            {
+              "fill": {
+                "label": "Video",
+              },
+              "id": "video",
+              "kind": "video",
+              "poster": {
+                "alt": "A loafer on the workbench",
+                "base": "/themes/samples/tan-loafer-d",
+                "decorative": false,
+                "focus": null,
+                "height": 1000,
+                "width": 800,
+                "widths": [
+                  400,
+                  800,
+                ],
+              },
+              "ratio": "4:5",
+            },
+            {
+              "children": [
+                {
+                  "fill": {
+                    "label": "Heading",
+                  },
+                  "id": "heading",
+                  "kind": "heading",
+                  "size": "m",
+                  "text": "Behind the bench",
+                },
+                {
+                  "body": [
+                    [
+                      {
+                        "text": "Every pair is lasted, stitched and burnished by hand in our Agra workshop: about two days a pair.",
+                      },
+                    ],
+                  ],
+                  "fill": {
+                    "example": true,
+                    "label": "How you make it",
+                  },
+                  "id": "story",
+                  "kind": "text",
+                },
+                {
+                  "fill": {
+                    "label": "Button",
+                  },
+                  "id": "button",
+                  "kind": "button",
+                  "label": "See the pieces",
+                  "link": "/products",
+                },
+              ],
+              "id": "words",
+              "kind": "group",
+            },
+          ],
+          "id": "cols",
+          "kind": "columns",
+          "phone": "stack",
+        },
+      ],
+      "id": "behind-the-bench",
+      "line": "A short video of the making, beside your words",
+      "name": "Behind the bench",
+      "tags": [
+        "video",
+        "workshop",
+        "process",
+        "craft",
+        "maker",
+        "story",
+        "how it’s made",
+      ],
+    },
+    "made-by-hand": {
+      "children": [
+        {
+          "fill": {
+            "label": "Heading",
+          },
+          "id": "heading",
+          "kind": "heading",
+          "size": "l",
+          "text": "How it’s made",
+        },
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "fill": {
+                    "label": "Photo 1",
+                  },
+                  "id": "photo-1",
+                  "image": {
+                    "alt": "An oxblood loafer",
+                    "base": "/themes/samples/oxblood-loafer",
+                    "decorative": false,
+                    "focus": null,
+                    "height": 1000,
+                    "width": 800,
+                    "widths": [
+                      400,
+                      800,
+                    ],
+                  },
+                  "kind": "image",
+                  "ratio": "4:5",
+                },
+                {
+                  "fill": {
+                    "example": true,
+                    "label": "Step 1",
+                  },
+                  "id": "heading-1",
+                  "kind": "heading",
+                  "size": "s",
+                  "text": "Cut",
+                },
+                {
+                  "body": [
+                    [
+                      {
+                        "text": "Full-grain leather, cut by hand to the last.",
+                      },
+                    ],
+                  ],
+                  "fill": {
+                    "example": true,
+                    "label": "Step 1 words",
+                  },
+                  "id": "words-1",
+                  "kind": "text",
+                },
+              ],
+              "id": "step-1",
+              "kind": "group",
+            },
+            {
+              "children": [
+                {
+                  "fill": {
+                    "label": "Photo 2",
+                  },
+                  "id": "photo-2",
+                  "image": {
+                    "alt": "A sand boot with its stitched welt",
+                    "base": "/themes/samples/sand-boot",
+                    "decorative": false,
+                    "focus": null,
+                    "height": 1000,
+                    "width": 800,
+                    "widths": [
+                      400,
+                      800,
+                    ],
+                  },
+                  "kind": "image",
+                  "ratio": "4:5",
+                },
+                {
+                  "fill": {
+                    "example": true,
+                    "label": "Step 2",
+                  },
+                  "id": "heading-2",
+                  "kind": "heading",
+                  "size": "s",
+                  "text": "Stitched",
+                },
+                {
+                  "body": [
+                    [
+                      {
+                        "text": "Welted, so it can be resoled for years.",
+                      },
+                    ],
+                  ],
+                  "fill": {
+                    "example": true,
+                    "label": "Step 2 words",
+                  },
+                  "id": "words-2",
+                  "kind": "text",
+                },
+              ],
+              "id": "step-2",
+              "kind": "group",
+            },
+            {
+              "children": [
+                {
+                  "fill": {
+                    "label": "Photo 3",
+                  },
+                  "id": "photo-3",
+                  "image": {
+                    "alt": "A finished tan loafer",
+                    "base": "/themes/samples/tan-loafer",
+                    "decorative": false,
+                    "focus": null,
+                    "height": 1000,
+                    "width": 800,
+                    "widths": [
+                      400,
+                      800,
+                    ],
+                  },
+                  "kind": "image",
+                  "ratio": "4:5",
+                },
+                {
+                  "fill": {
+                    "example": true,
+                    "label": "Step 3",
+                  },
+                  "id": "heading-3",
+                  "kind": "heading",
+                  "size": "s",
+                  "text": "Finished",
+                },
+                {
+                  "body": [
+                    [
+                      {
+                        "text": "Burnished by hand, then boxed.",
+                      },
+                    ],
+                  ],
+                  "fill": {
+                    "example": true,
+                    "label": "Step 3 words",
+                  },
+                  "id": "words-3",
+                  "kind": "text",
+                },
+              ],
+              "id": "step-3",
+              "kind": "group",
+            },
+          ],
+          "id": "steps",
+          "kind": "columns",
+          "phone": "swipe",
+        },
+      ],
+      "id": "made-by-hand",
+      "line": "Three steps of how it’s made",
+      "name": "Made by hand",
+      "tags": [
+        "craft",
+        "process",
+        "handmade",
+        "how it’s made",
+        "story",
+        "maker",
+        "materials",
+      ],
+    },
+    "one-piece": {
+      "children": [
+        {
+          "children": [
+            {
+              "fill": {
+                "label": "Photo",
+              },
+              "id": "photo",
+              "image": {
+                "alt": "A haldi kurta worn in the sun",
+                "base": "/themes/samples/haldi-kurta-b",
+                "decorative": false,
+                "focus": null,
+                "height": 1000,
+                "width": 800,
+                "widths": [
+                  400,
+                  800,
+                ],
+              },
+              "kind": "image",
+              "ratio": "4:5",
+            },
+            {
+              "children": [
+                {
+                  "fill": {
+                    "label": "Piece",
+                  },
+                  "id": "piece",
+                  "kind": "featured_product",
+                },
+                {
+                  "body": [
+                    [
+                      {
+                        "text": "Hand-block printed in Bagru with natural dyes. Soft from the first wear, softer every wash.",
+                      },
+                    ],
+                  ],
+                  "fill": {
+                    "example": true,
+                    "label": "Why this piece",
+                  },
+                  "id": "words",
+                  "kind": "text",
+                },
+              ],
+              "id": "about",
+              "kind": "group",
+            },
+          ],
+          "id": "cols",
+          "kind": "columns",
+          "phone": "stack",
+        },
+      ],
+      "id": "one-piece",
+      "line": "One piece beside a photo, in your words",
+      "name": "One piece",
+      "tags": [
+        "featured",
+        "hero product",
+        "spotlight",
+        "product",
+        "bestseller",
+        "story",
+      ],
+    },
+    "size-help": {
+      "children": [
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "fill": {
+                    "label": "Heading",
+                  },
+                  "id": "heading",
+                  "kind": "heading",
+                  "size": "l",
+                  "text": "Find your size",
+                },
+                {
+                  "body": [
+                    [
+                      {
+                        "text": "Our sizes run true to Indian sizes. Between two? Go up one: leather gives a little in the first week.",
+                      },
+                    ],
+                  ],
+                  "fill": {
+                    "example": true,
+                    "label": "How your sizes run",
+                  },
+                  "id": "intro",
+                  "kind": "text",
+                },
+                {
+                  "fill": {
+                    "example": true,
+                    "label": "Questions",
+                  },
+                  "id": "faq",
+                  "items": [
+                    {
+                      "a": "Stand on paper at the end of the day, mark your heel and longest toe, and measure in cm. Match it to the chart on each product.",
+                      "q": "How do I measure my foot?",
+                    },
+                    {
+                      "a": "Go up one. The leather moulds to you in a week of wear.",
+                      "q": "I’m between two sizes",
+                    },
+                    {
+                      "a": "Yes, within 7 days of delivery, unworn.",
+                      "q": "Can I exchange the size?",
+                    },
+                  ],
+                  "kind": "accordion",
+                },
+                {
+                  "fill": {
+                    "label": "Button",
+                  },
+                  "id": "button",
+                  "kind": "button",
+                  "label": "Returns and exchanges",
+                  "link": "/policies/returns",
+                },
+              ],
+              "id": "words",
+              "kind": "group",
+            },
+            {
+              "fill": {
+                "label": "Photo",
+              },
+              "id": "photo",
+              "image": {
+                "alt": "A tan loafer from the side",
+                "base": "/themes/samples/tan-loafer-b",
+                "decorative": false,
+                "focus": null,
+                "height": 1000,
+                "width": 800,
+                "widths": [
+                  400,
+                  800,
+                ],
+              },
+              "kind": "image",
+              "ratio": "4:5",
+            },
+          ],
+          "id": "cols",
+          "kind": "columns",
+          "phone": "stack",
+        },
+      ],
+      "id": "size-help",
+      "line": "How to pick a size, your answers, a photo",
+      "name": "Size help",
+      "tags": [
+        "size",
+        "fit",
+        "measure",
+        "size chart",
+        "returns",
+        "exchange",
+        "faq",
+      ],
+    },
+    "the-drop": {
+      "children": [
+        {
+          "fill": {
+            "label": "Heading",
+          },
+          "id": "heading",
+          "kind": "heading",
+          "size": "l",
+          "text": "The monsoon drop",
+        },
+        {
+          "fill": {
+            "label": "Drop date",
+          },
+          "id": "date",
+          "kind": "date",
+        },
+        {
+          "fill": {
+            "label": "Pieces",
+          },
+          "id": "pieces",
+          "kind": "product_grid",
+          "source": {
+            "kind": "newest",
+          },
+        },
+        {
+          "fill": {
+            "label": "Button",
+          },
+          "id": "button",
+          "kind": "button",
+          "label": "Shop the drop",
+          "link": "/products",
+        },
+      ],
+      "id": "the-drop",
+      "line": "A date, four pieces from it, one button",
+      "name": "The drop",
+      "tags": [
+        "drop",
+        "launch",
+        "new",
+        "coming soon",
+        "collection",
+        "date",
+        "products",
+      ],
+    },
+    "the-edits": {
+      "children": [
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "fill": {
+                    "label": "Heading",
+                  },
+                  "id": "heading",
+                  "kind": "heading",
+                  "size": "m",
+                  "text": "The edits",
+                },
+                {
+                  "body": [
+                    [
+                      {
+                        "text": "Four ways into the shop.",
+                      },
+                    ],
+                  ],
+                  "fill": {
+                    "label": "Words",
+                  },
+                  "id": "line",
+                  "kind": "text",
+                },
+                {
+                  "fill": {
+                    "label": "Button",
+                  },
+                  "id": "button",
+                  "kind": "button",
+                  "label": "Shop all",
+                  "link": "/products",
+                },
+              ],
+              "id": "words",
+              "kind": "group",
+            },
+            {
+              "fill": {
+                "label": "Collections",
+              },
+              "id": "tiles",
+              "kind": "collection_tiles",
+              "mode": "auto",
+              "shape": "circle",
+            },
+          ],
+          "id": "cols",
+          "kind": "columns",
+          "phone": "stack",
+        },
+      ],
+      "id": "the-edits",
+      "line": "Your words beside four collections",
+      "name": "The edits",
+      "tags": [
+        "collections",
+        "categories",
+        "edits",
+        "shop by",
+        "circles",
+        "browse",
+      ],
+    },
+  },
+  "home": [
+    {
+      "button": null,
+      "heading": {
+        "from": "shopName",
+      },
+      "height": "tall",
+      "hidden": false,
+      "id": "hero",
+      "image": null,
+      "key": "hero",
+      "layout": "text",
+      "mask": "none",
+      "position": "bottom_left",
+      "scheme": "paper",
+      "text": {
+        "from": "tagline",
+      },
+    },
+    {
+      "button": null,
+      "heading": {
+        "text": "The Chanderi edit",
+      },
+      "height": "tall",
+      "hidden": false,
+      "id": "hero-2",
+      "image": null,
+      "key": "hero",
+      "layout": "text",
+      "mask": "none",
+      "position": "bottom_left",
+      "scheme": "paper",
+    },
+    {
+      "count": 6,
+      "handles": [],
+      "heading": "",
+      "hidden": false,
+      "id": "tiles",
+      "key": "collection_tiles",
+      "label": "",
+      "mode": "auto",
+      "scheme": "paper",
+      "shape": "portrait",
+    },
+    {
+      "count": 24,
+      "heading": "New in",
+      "hidden": false,
+      "id": "new-in",
+      "key": "products",
+      "label": "",
+      "layout": "grid",
+      "scheme": "paper",
+      "source": {
+        "kind": "newest",
+      },
+      "tabs": [],
+      "viewAll": true,
+    },
+    {
+      "count": 8,
+      "heading": "Festive",
+      "hidden": false,
+      "id": "festive",
+      "key": "products",
+      "label": "",
+      "layout": "grid",
+      "scheme": "paper",
+      "source": {
+        "handle": "festive-edit",
+        "kind": "collection",
+      },
+      "tabs": [],
+      "viewAll": true,
+    },
+    {
+      "count": 4,
+      "heading": "Under ₹999",
+      "hidden": false,
+      "id": "budget",
+      "key": "products",
+      "label": "",
+      "layout": "grid",
+      "scheme": "paper",
+      "source": {
+        "kind": "under_price",
+        "maxPaise": 99900,
+      },
+      "tabs": [],
+      "viewAll": true,
+    },
+    {
+      "count": 12,
+      "heading": "On sale",
+      "hidden": false,
+      "id": "sale",
+      "key": "products",
+      "label": "",
+      "layout": "grid",
+      "scheme": "paper",
+      "source": {
+        "kind": "on_sale",
+      },
+      "tabs": [],
+      "viewAll": false,
+    },
+    {
+      "count": 8,
+      "heading": "Back in stock",
+      "hidden": false,
+      "id": "t2-back",
+      "key": "products",
+      "label": "",
+      "layout": "rail",
+      "scheme": "paper",
+      "source": {
+        "kind": "back_in_stock",
+      },
+      "tabs": [],
+      "viewAll": false,
+    },
+    {
+      "design": "size-help",
+      "fill": {
+        "button": {
+          "kind": "button",
+          "label": "Exchanges",
+          "link": "/policies/returns",
+        },
+        "faq": {
+          "items": [
+            {
+              "a": "In cm, at the end of the day.",
+              "q": "How do I measure?",
+            },
+          ],
+          "kind": "accordion",
+        },
+        "intro": {
+          "body": [
+            [
+              {
+                "text": "True to Indian sizes. ",
+              },
+              {
+                "bold": true,
+                "text": "Go up one",
+              },
+              {
+                "link": "/policies/returns",
+                "text": " if between.",
+              },
+            ],
+          ],
+          "kind": "text",
+        },
+      },
+      "hidden": false,
+      "id": "design-size",
+      "key": "design",
+      "label": "",
+      "scheme": "paper",
+    },
+    {
+      "design": "made-by-hand",
+      "fill": {
+        "heading": {
+          "kind": "heading",
+          "text": "Made in Agra",
+        },
+        "photo-1": {
+          "image": null,
+          "kind": "image",
+        },
+      },
+      "hidden": false,
+      "id": "design-hand",
+      "key": "design",
+      "label": "Craft",
+      "scheme": "tint",
+    },
+    {
+      "design": "made-by-hand",
+      "fill": {},
+      "hidden": false,
+      "id": "design-empty",
+      "key": "design",
+      "label": "",
+      "scheme": "paper",
+    },
+    {
+      "design": "the-drop",
+      "fill": {
+        "date": {
+          "at": "2026-11-14T19:00:00+05:30",
+          "kind": "date",
+        },
+        "heading": {
+          "kind": "heading",
+          "text": "मानसून ड्रॉप",
+        },
+        "pieces": {
+          "kind": "product_grid",
+          "source": {
+            "handle": "monsoon",
+            "kind": "collection",
+          },
+        },
+      },
+      "hidden": false,
+      "id": "design-drop",
+      "key": "design",
+      "label": "",
+      "scheme": "paper",
+    },
+    {
+      "design": "one-piece",
+      "fill": {
+        "piece": {
+          "handle": "haldi-kurta",
+          "kind": "featured_product",
+        },
+        "words": {
+          "body": [
+            [
+              {
+                "text": "Block printed in Bagru.",
+              },
+            ],
+          ],
+          "kind": "text",
+        },
+      },
+      "hidden": false,
+      "id": "design-piece",
+      "key": "design",
+      "label": "",
+      "scheme": "tint",
+    },
+    {
+      "design": "behind-the-bench",
+      "fill": {
+        "video": {
+          "kind": "video",
+          "poster": null,
+        },
+      },
+      "hidden": false,
+      "id": "design-bench",
+      "key": "design",
+      "label": "",
+      "scheme": "paper",
+      "video": {
+        "id": "6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b",
+      },
+    },
+    {
+      "design": "the-edits",
+      "fill": {
+        "tiles": {
+          "handles": [
+            "sarees",
+            "kurtas",
+          ],
+          "kind": "collection_tiles",
+          "mode": "picked",
+        },
+      },
+      "hidden": false,
+      "id": "design-edits",
+      "key": "design",
+      "label": "Edits",
+      "scheme": "paper",
+    },
+  ],
+  "schemes": {
+    "ink": {
+      "accent": "#9DB0FF",
+      "bad": "#F59A86",
+      "bg": "#121212",
+      "button": "#F4F4F1",
+      "chip": "#1C1C1C",
+      "good": "#7FCBA4",
+      "line": "#2A2A2A",
+      "onAccent": "#121212",
+      "onButton": "#121212",
+      "sale": "#F59A86",
+      "sub": "#BDBDB8",
+      "text": "#F4F4F1",
+    },
+    "paper": {
+      "accent": "#1F4E79",
+      "bad": "#A8321F",
+      "bg": "#FFFFFF",
+      "button": "#151515",
+      "chip": "#EFEFEC",
+      "good": "#1E6B47",
+      "line": "#E2E2DE",
+      "onAccent": "#FFFFFF",
+      "onButton": "#FFFFFF",
+      "sale": "#A8321F",
+      "sub": "#5E5E5B",
+      "text": "#151515",
+    },
+    "tint": {
+      "accent": "#1F4E79",
+      "bad": "#A8321F",
+      "bg": "#EFEFEC",
+      "button": "#151515",
+      "chip": "#FFFFFF",
+      "good": "#1E6B47",
+      "line": "#DCDCD6",
+      "onAccent": "#FFFFFF",
+      "onButton": "#EFEFEC",
+      "sale": "#A8321F",
+      "sub": "#55554F",
+      "text": "#151515",
+    },
+  },
+  "settings": {
+    "announcement": null,
+    "bottomTabs": true,
+    "brandColour": "#1F4E79",
+    "buttonMotion": "lift",
+    "buttonShape": "pill",
+    "buttons": "solid",
+    "buyBar": true,
+    "buyBoxSticky": true,
+    "card": "tile",
+    "cardHover": "zoom",
+    "checkout": "focused",
+    "collectionTop": "banner",
+    "corners": "square",
+    "desktopColumns": 3,
+    "details": "folded",
+    "entrance": "fade",
+    "footer": "compact",
+    "footerScheme": "ink",
+    "gallery": "thumbs",
+    "header": "float",
+    "headings": "upper",
+    "hoverPhoto": true,
+    "labels": "pill",
+    "motion": "none",
+    "pairing": "schibsted",
+    "phoneColumns": 3,
+    "photo": "1:1",
+    "railCounter": true,
+    "reveal": true,
+    "size": "large",
+    "social": false,
+    "spacing": "compact",
+    "sticky": false,
+  },
+  "vars": {
+    "--store-accent": "#1F4E79",
+    "--store-bad": "#A8321F",
+    "--store-button": "#151515",
+    "--store-chip": "#EFEFEC",
+    "--store-cols": "3",
+    "--store-dcols": "3",
+    "--store-good": "#1E6B47",
+    "--store-h-scale": "1.12",
+    "--store-ink": "#151515",
+    "--store-line": "#E2E2DE",
+    "--store-on-accent": "#FFFFFF",
+    "--store-on-button": "#FFFFFF",
+    "--store-paper": "#FFFFFF",
+    "--store-radius": "0px",
+    "--store-ratio": "1 / 1",
+    "--store-sale": "#A8321F",
+    "--store-space": "0.7",
+    "--store-sub": "#5E5E5B",
+  },
+}
+`;

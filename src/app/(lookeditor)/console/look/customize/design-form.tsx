@@ -4,14 +4,17 @@ import { useId, useState } from 'react'
 import { Icon } from '@/components/icons/icon'
 import type { Design, LeafBlock } from '@/domains/themes/blocks'
 import { accordionItems, fillFor, fillableOf } from '@/domains/themes/design-tree'
-import type { Fill, SectionOf } from '@/domains/themes/sections'
-import { ImageField, LinkPicker, Text } from './controls'
+import { MAX_TILES, type Fill, type SectionOf } from '@/domains/themes/sections'
+import { Choice, Field, ImageField, LinkPicker, SourcePicker, Text, WhenIST } from './controls'
 import type { FormCtx } from './section-form'
+import { VideoField } from './video-field'
 
 // Theme Studio TS0b: a design's form (board v2 "Fill one"). The fields the theme marks for the owner, in page order,
 // each with the theme's label. A field whose theme words are an example shows them greyed as a placeholder, marked
 // "Example", and says what to write: Publish waits for the owner's own words (readiness). Loaded only when a design is
 // opened (next/dynamic: the customizer is over its script budget). Every change goes through `set` (an undo step).
+// TS1b: a product grid's source, a featured piece, collections, a video (the section's one loop, over its poster
+// photo) and a drop date: each the section's own controls, reused.
 
 type Set = (s: SectionOf<'design'>) => void
 const MAX_ITEMS = 12
@@ -109,6 +112,42 @@ export function DesignForm({ s, set, c, d }: { s: SectionOf<'design'>; set: Set;
         }
         case 'accordion': {
           return <Questions key={b.id} b={b} items={accordionItems(b, f)} set={(next) => put(b.id, { kind: 'accordion', items: next })} />
+        }
+        case 'product_grid':
+          return <SourcePicker key={b.id} label={label} value={f?.kind === 'product_grid' ? f.source : b.source} collections={c.collections} onChange={(source) => put(b.id, { kind: 'product_grid', source })} />
+        case 'featured_product': {
+          const v = f?.kind === 'featured_product' ? f.handle : ''
+          return <Field key={b.id} label={label}>{(id) => (
+            <select id={id} value={v} onChange={(e) => { if (e.target.value) put(b.id, { kind: 'featured_product', handle: e.target.value }) }} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm">
+              {!v && <option value="">Pick a piece</option>}
+              {c.products.map((p) => <option key={p.handle} value={p.handle}>{p.title}</option>)}
+            </select>)}</Field>
+        }
+        case 'collection_tiles': {
+          const v = f?.kind === 'collection_tiles' ? f : { kind: 'collection_tiles' as const, mode: b.mode, handles: [] as string[] }
+          const toggle = (h: string) => put(b.id, { ...v, handles: v.handles.includes(h) ? v.handles.filter((x) => x !== h) : [...v.handles, h].slice(0, MAX_TILES) })
+          return (
+            <div key={b.id} className="space-y-2">
+              <Choice label={label} value={v.mode} onChange={(mode) => put(b.id, { ...v, mode })} options={[{ value: 'auto', label: 'Automatic' }, { value: 'picked', label: 'I’ll pick' }]} />
+              {v.mode === 'picked' && <fieldset className="space-y-1"><legend className="mb-1 text-sm font-medium">In this order ({v.handles.length} / {MAX_TILES})</legend>
+                {c.collections.map((x) => { const on = v.handles.includes(x.handle); return <label key={x.handle} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={on} disabled={!on && v.handles.length >= MAX_TILES} onChange={() => toggle(x.handle)} />{x.title}</label> })}
+                {!c.collections.length && <p className="text-sm text-muted-foreground">No collections yet.</p>}</fieldset>}
+            </div>
+          )
+        }
+        case 'video': {
+          const poster = f?.kind === 'video' ? f.poster : null
+          const canLoop = !!c.video?.sections.includes('design')
+          return (
+            <div key={b.id} className="space-y-3">
+              {canLoop && <VideoField value={s.video} on={c.video!.on} onChange={(video) => { if (video) set({ ...s, video }); else { const { video: _drop, ...rest } = s; set(rest as SectionOf<'design'>) } }} />}
+              <ImageField label={canLoop ? `${label}: photo before it plays` : label} value={poster} tenantId={c.tenantId} library={c.photos} suggest={[d.name, c.shopName]} onChange={(p) => put(b.id, { kind: 'video', poster: p })} />
+            </div>
+          )
+        }
+        case 'date': {
+          const v = f?.kind === 'date' ? f.at : null
+          return <WhenIST key={b.id} label={`${label} (India time)`} value={v} onChange={(at) => put(b.id, { kind: 'date', at })} />
         }
         default: return b satisfies never
       }

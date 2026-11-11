@@ -52,3 +52,17 @@ export function sourceProducts<P extends ListProduct>(src: Source, cat: Cat<P>, 
 export function lookPieces<P extends ListProduct & { handle: string }, X extends { handle: string }>(pins: X[], products: P[], now: Date): (X & { p: P })[] {
   return pins.flatMap((x) => { const p = products.find((q) => q.handle === x.handle && isListed(q, now)); return p ? [{ ...x, p }] : [] })
 }
+
+/** Collection tiles (the section and a design's block: one rule; TS1b architecture 8): the picked collections in the
+ *  order picked, or (handles null) the shop's own in their order; only those with a listed piece, each with its first;
+ *  stops at `count` (speed LOW 6). */
+export function tilesOf<P extends ListProduct, C extends ListCollection & { handle: string }>(cat: { products: P[]; collections: C[] }, now: Date, handles: readonly string[] | null, count: number): { c: C; first: P }[] {
+  const pool = handles ? handles.flatMap((h) => cat.collections.filter((c) => c.handle === h)) : cat.collections
+  const out: { c: C; first: P }[] = []
+  for (const c of pool) {
+    if (out.length >= count) break
+    const first = inCollection(c, cat.products, now)[0]
+    if (first) out.push({ c, first })
+  }
+  return out
+}

@@ -8,7 +8,7 @@ import { manifestNear, manifestOf, type ManifestSource } from '@/domains/themes/
 import { latestAvailable } from '@/domains/themes/release'
 import { brandColourProblem, carryOver, LayerSchema, layerProblems, layerTooLong } from '@/domains/themes/layer'
 import { readinessOf } from '@/domains/themes/readiness'
-import { designsForSave, designsOf } from '@/domains/themes/blocks'
+import { designsForSave, designsOf, loopsOf } from '@/domains/themes/blocks'
 import { paletteProblem, type Palette } from '@/domains/themes/site'
 import { baselineRevision, resolveTheme } from '@/domains/themes/resolve'
 import { THEME_KEYS } from '@/lib/db/schema-themes'
@@ -91,7 +91,10 @@ export async function saveLookAction(input: unknown): Promise<R<{ version: numbe
     const pal = (p.data.layer.site as { palette?: Palette | null } | undefined)?.palette
     if (pal) { const sch = resolveTheme(m, { style: p.data.style }).schemes; const why = paletteProblem({ ...pal }, [sch.paper, sch.tint]); if (why) return { error: why } }
     // TS0b: each design's words pruned to its blocks, then the page's limits (after the manifest is read: architecture 8).
-    const designed = designsForSave(designsOf(m), layer.home ?? [])
+    // TS1b: a design's loop only where it may play; ≤ 3 loops a Home unless the stored draft already had more.
+    const videoOk = m.allowed.videoSections ?? []
+    const before = ((rev.settings as { home?: unknown[] } | null)?.home ?? [])
+    const designed = designsForSave(designsOf(m), layer.home ?? [], { now: new Date(), videoOk, loopsBefore: loopsOf(before, videoOk) })
     if ('error' in designed) return { error: designed.error }
     if (layer.home) layer.home = designed.home
     // Stored as parsed: unknown settings keys are dropped (tenancy audit 2026-11-08).

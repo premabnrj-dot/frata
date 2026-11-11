@@ -40,14 +40,17 @@ export function cleanFill<F extends { kind: string }>(fill: Record<string, F>, t
   try {
     return Object.fromEntries(Object.entries(fill).map(([k, raw]): [string, F] => {
       const f = raw as unknown as Fill | { kind: 'faq' }
+      const own = <I extends { base: string }>(img: I): I => {
+        const base = host ? acceptedBase(img.base, host, tenantId, 'theme') ?? acceptedBase(img.base, host, tenantId, 'products') : null
+        if (!base) throw new Error('image')
+        return { ...img, base }
+      }
       switch (f.kind) {
-        case 'image': {
-          if (!f.image) return [k, raw]
-          const base = host ? acceptedBase(f.image.base, host, tenantId, 'theme') ?? acceptedBase(f.image.base, host, tenantId, 'products') : null
-          if (!base) throw new Error('image')
-          return [k, { ...f, image: { ...f.image, base } } as unknown as F]
-        }
-        case 'heading': case 'text': case 'button': case 'accordion': case 'faq': return [k, raw]
+        case 'image': return f.image ? [k, { ...f, image: own(f.image) } as unknown as F] : [k, raw]
+        // TS1b: a video block's poster is a photo like any other (security MED-2).
+        case 'video': return f.poster ? [k, { ...f, poster: own(f.poster) } as unknown as F] : [k, raw]
+        case 'heading': case 'text': case 'button': case 'accordion': case 'faq':
+        case 'product_grid': case 'featured_product': case 'collection_tiles': case 'date': return [k, raw]
         default: return f satisfies never
       }
     }))
