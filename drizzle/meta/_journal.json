@@ -694,6 +694,20 @@
       "when": 1794398155074,
       "tag": "0098_consent_address",
       "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1794417175500,
+      "tag": "0099_shop_pages",
+      "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1794417189970,
+      "tag": "0100_shop_pages_access",
+      "breakpoints": true
     }
   ]
 }

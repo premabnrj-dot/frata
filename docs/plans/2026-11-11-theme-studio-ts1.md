@@ -1,5 +1,5 @@
 # Plan: Theme Studio TS1 — pages and templates in Look
-Status: draft (TS1a board for the owner; reviews on this plan) · Date: 2026-11-11 · Spec: `docs/specs/2026-11-11-theme-studio.md`
+Status: TS1a built 2026-11-11 (as-built below; impact, security and tenancy reviews on the diff folded in) · board v2 approved by the owner 2026-11-11; addresses fixed once published, owner 2026-11-11 · TS1b, TS1c next · Date: 2026-11-11 · Spec: `docs/specs/2026-11-11-theme-studio.md`
 (active; § 3 Pages and templates) · Mockup: https://claude.ai/artifact/X2TEDZRd7FyYvbiM6h6Jno (TS1a v2: Contact at /policies/contact; addresses fixed at first publish) · Reviews: architecture, tenancy, security, speed (2026-11-11, folded in below) · Legal: G.S.R. 789(E) read (frata-integrations § Consumer protection) · Builds on TS0b (blocks, designs)
 
 ## Goal
@@ -176,3 +176,30 @@ verified by `integration-researcher` (2026-11-11) before the Contact template is
 
 ## Out of scope (TS1a)
 The contact form; commerce blocks (TS1b); product and collection templates (TS1c); per-theme page templates (TS2).
+
+## TS1a — as built (2026-11-11)
+- **Data:** `shop_pages` (0099 table; 0100 access: RLS with separate select/insert/update policies and a delete policy
+  that refuses a live page, content-column grants, the 20-page cap trigger that refuses another shop's row before
+  taking the `look:<t>` lock, addresses unique per shop, one FAQ). Tenancy proof § 70 (cross-shop, no-shop, column
+  privileges, policies, cap, FK to the shop's own publish). `shop_theme_publishes` gained `unique (tenant_id, id)`.
+- **Domain:** `src/domains/pages/` (templates About and FAQ from TS0b blocks, the page-only FAQ block with items bound to
+  Settings; `resolvePage`, `prunePage`, `pageIssues`, `pageDescription`); `src/domains/policies/answers.ts`
+  (`boundAnswer`: the policy's own paragraph, or a link when rewritten). Templates only add (snapshot test).
+- **Publish with the look:** `src/lib/themes/pages.ts` (`preparePages` inside `publishRevision` after the shop's lock;
+  `undoPages` swaps live and previous and puts the draft back to what is live; `discardPages`; drafts compared with
+  sorted keys: jsonb reorders them). `src/lib/themes/page-readiness.ts` (an example not written, Contact's missing
+  details when its line changes). Publish requires each page's version.
+- **Shop:** `/pages/<handle>` (ISR, 404 from the cached list), `PageView`; Contact's line and Chat on WhatsApp at
+  `/policies/contact` (the line in the look's layer, carried across themes); sitemap; `SHOP_PATH`; analytics path;
+  the Settings preview matches. Pages route 111.2 kB (gate 113).
+- **Look:** the page picker's Pages group; `pages-panel.tsx` (dynamic): Contact, About and FAQ forms, Add a page;
+  page edits save as drafts (flushed on close and before Publish). The Style tab's form now loads on demand: the
+  customizer is 204.2 kB (gate 208).
+- **Tests:** `pages.test.ts`, `pages.int.test.ts` (publish, untouched page not republished, Undo twice, Undo restores
+  the draft, unparseable draft keeps live, hidden, Discard, remove), `blocks.test.ts` (cleanFill, Contact's line),
+  e2e `73-pages`.
+- **Fixed now, outside TS1a:** shop WhatsApp links carry 91; `/policies/<x>` own keys only.
+- **Not done here (named):** a test of `addPageAction`/`savePageAction`/`removePageAction` through a signed-in member
+  (covered by e2e add/save and by the int test's direct rows); the Discard dialog doesn't say a never-published page goes;
+  Contact facts read twice (page-readiness and the customizer page) — one reader when Settings gains the 2027 fields.
+

@@ -85,7 +85,7 @@ exports[`section schemas > block catalogue (TS0b) keeps its shape 1`] = `
                                             "type": "boolean",
                                           },
                                           "link": {
-                                            "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                                            "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact)|pages\\/[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?)$",
                                             "type": "string",
                                           },
                                           "text": {
@@ -303,7 +303,7 @@ exports[`section schemas > block catalogue (TS0b) keeps its shape 1`] = `
                                     "type": "string",
                                   },
                                   "link": {
-                                    "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                                    "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact)|pages\\/[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?)$",
                                     "type": "string",
                                   },
                                 },
@@ -462,7 +462,7 @@ exports[`section schemas > block catalogue (TS0b) keeps its shape 1`] = `
                                   "type": "boolean",
                                 },
                                 "link": {
-                                  "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                                  "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact)|pages\\/[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?)$",
                                   "type": "string",
                                 },
                                 "text": {
@@ -680,7 +680,7 @@ exports[`section schemas > block catalogue (TS0b) keeps its shape 1`] = `
                           "type": "string",
                         },
                         "link": {
-                          "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                          "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact)|pages\\/[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?)$",
                           "type": "string",
                         },
                       },
@@ -853,7 +853,7 @@ exports[`section schemas > block catalogue (TS0b) keeps its shape 1`] = `
                                   "type": "boolean",
                                 },
                                 "link": {
-                                  "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                                  "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact)|pages\\/[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?)$",
                                   "type": "string",
                                 },
                                 "text": {
@@ -1071,7 +1071,7 @@ exports[`section schemas > block catalogue (TS0b) keeps its shape 1`] = `
                           "type": "string",
                         },
                         "link": {
-                          "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                          "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact)|pages\\/[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?)$",
                           "type": "string",
                         },
                       },
@@ -1230,7 +1230,7 @@ exports[`section schemas > block catalogue (TS0b) keeps its shape 1`] = `
                         "type": "boolean",
                       },
                       "link": {
-                        "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                        "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact)|pages\\/[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?)$",
                         "type": "string",
                       },
                       "text": {
@@ -1448,7 +1448,7 @@ exports[`section schemas > block catalogue (TS0b) keeps its shape 1`] = `
                 "type": "string",
               },
               "link": {
-                "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact)|pages\\/[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?)$",
                 "type": "string",
               },
             },
@@ -1682,7 +1682,7 @@ exports[`section schemas > design keeps its shape 1`] = `
                         "type": "boolean",
                       },
                       "link": {
-                        "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                        "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact)|pages\\/[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?)$",
                         "type": "string",
                       },
                       "text": {
@@ -1816,7 +1816,7 @@ exports[`section schemas > design keeps its shape 1`] = `
                 "type": "string",
               },
               "link": {
-                "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact)|pages\\/[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?)$",
                 "type": "string",
               },
             },
@@ -1920,7 +1920,7 @@ exports[`section schemas > hero keeps its shape 1`] = `
               "type": "string",
             },
             "link": {
-              "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+              "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact)|pages\\/[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?)$",
               "type": "string",
             },
           },
@@ -2173,7 +2173,7 @@ exports[`section schemas > image_text keeps its shape 1`] = `
               "type": "string",
             },
             "link": {
-              "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+              "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact)|pages\\/[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?)$",
               "type": "string",
             },
           },
@@ -2744,7 +2744,7 @@ exports[`section schemas > story_fan keeps its shape 1`] = `
           "link": {
             "anyOf": [
               {
-                "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact)|pages\\/[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?)$",
                 "type": "string",
               },
               {

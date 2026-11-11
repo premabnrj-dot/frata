@@ -40,12 +40,12 @@ describe.skipIf(!host)('a shop’s look: drafts, saves, publishes, undo, discard
     expect(await run((tx) => L.saveDraft(tx, A, who, { revisionId: d2.id, version: 1, styleKey: 'neel', settings: {} }))).toEqual({ ok: false, why: 'stale' })
 
     // TS0b (architecture review 5): a layer at the save's ceiling, in Hindi, fits the database's 64 kB check.
-    const { MAX_LAYER_BYTES, layerTooLong } = await import('@/domains/themes/layer')
+    const { MAX_LAYER_BYTES, layerBytes, layerTooLong } = await import('@/domains/themes/layer')
     const hindi = (n: number) => 'क'.repeat(n)
     const base = { home: [{ id: 'd', key: 'design', design: 'size-help', fill: { intro: { kind: 'text', body: [[{ text: hindi(600) }]] } } }], pad: '' }
-    const big = { ...base, pad: hindi(Math.floor((MAX_LAYER_BYTES - new TextEncoder().encode(JSON.stringify(base)).length) / 3)) }
+    const big = { ...base, pad: hindi(Math.floor((MAX_LAYER_BYTES - layerBytes(base)) / 3)) }
     expect(layerTooLong(big)).toBe(false)
-    expect(new TextEncoder().encode(JSON.stringify(big)).length).toBeGreaterThan(MAX_LAYER_BYTES - 3)
+    expect(layerBytes(big)).toBeGreaterThan(MAX_LAYER_BYTES - 3)
     expect(await run((tx) => L.saveDraft(tx, A, who, { revisionId: d2.id, version: 2, styleKey: 'neel', settings: big }))).toEqual({ ok: true, version: 3 })
     expect(await run((tx) => L.saveDraft(tx, A, who, { revisionId: d2.id, version: 3, styleKey: 'neel', settings: { settings: { corners: 'round' } } }))).toEqual({ ok: true, version: 4 })
 

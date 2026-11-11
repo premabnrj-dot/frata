@@ -30,5 +30,6 @@ export default async function Policy({ params }: { params: Params }) {
   const shop = await shopFor(params)
   const { page } = await params
   if (!isPage(page)) notFound()
-  return <ShopShell shop={shop} href={shopHref} theme={(await shopTheme(shop))} gated={!shop.publishedAt} capture={!!shop.publishedAt}><PolicyView shop={shop} page={page} /></ShopShell>
+  const theme = await shopTheme(shop)
+  return <ShopShell shop={shop} href={shopHref} theme={theme} gated={!shop.publishedAt} capture={!!shop.publishedAt}><PolicyView shop={shop} page={page} contact={theme.contact} /></ShopShell>
 }

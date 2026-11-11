@@ -1,7 +1,7 @@
 import { classic_1_0_0 } from './catalogue/classic/1.0.0'
 import { manifestNear, type ManifestSource } from './source'
 import { choicesFor } from './choices'
-import { LayerSchema, SettingsSchema, onColour, brandColourProblem } from './layer'
+import { LayerSchema, SettingsSchema, onColour, brandColourProblem, readContact } from './layer'
 import { designsOf, pruneFill, type Design } from './blocks'
 import { PRODUCT_LAYOUTS, SECTION_SCHEMES, SectionSchema, type SectionInstance, VIDEO_KEYS } from './sections'
 import { paletteProblem, readMenus, readSite, textOf, TEXT_STYLES } from './site'
@@ -121,7 +121,7 @@ export function resolveTheme(m: ThemeManifest, layer: ThemeLayer): ResolvedTheme
     return [x]
   })
   return { key: m.key, version: m.version, style: style.key, schemes, settings, home, ...(m.rhythm ? { rhythm: m.rhythm } : {}), ...(m.scale ? { scale: m.scale } : {}),
-    ...(m.allowed.productStories || m.allowed.pairWith ? { product: { stories: !!m.allowed.productStories, pairs: !!m.allowed.pairWith } } : {}), site, menus: readMenus(layer.menus), ...(used.size ? { designs: Object.fromEntries(used) } : {}) }
+    ...(m.allowed.productStories || m.allowed.pairWith ? { product: { stories: !!m.allowed.productStories, pairs: !!m.allowed.pairWith } } : {}), site, menus: readMenus(layer.menus), ...(readContact(layer.contact) ? { contact: readContact(layer.contact) } : {}), ...(used.size ? { designs: Object.fromEntries(used) } : {}) }
 }
 
 /**
@@ -146,8 +146,8 @@ export function resolveStored(row: { themeKey: string; themeVersion: string; sty
   if (!row) return classicFromSettings(shop.accent, shop.displayFont)
   const m = manifestNear(src, row.themeKey, row.themeVersion)
   if (!m) return classicFromSettings(shop.accent, shop.displayFont)
-  const s = (row.settings ?? {}) as { settings?: Partial<ThemeSettings>; home?: unknown[]; site?: unknown; menus?: unknown }
-  return resolveTheme(m, { style: row.styleKey, settings: s.settings, home: s.home, site: s.site, menus: s.menus })
+  const s = (row.settings ?? {}) as { settings?: Partial<ThemeSettings>; home?: unknown[]; site?: unknown; menus?: unknown; contact?: unknown }
+  return resolveTheme(m, { style: row.styleKey, settings: s.settings, home: s.home, site: s.site, menus: s.menus, contact: s.contact })
 }
 
 /** The CSS custom properties a section painted in `scheme` sets (the --store-* tokens the shop already uses). */

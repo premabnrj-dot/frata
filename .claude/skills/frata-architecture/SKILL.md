@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.38.0
+  version: 2.39.0
   verified: 2026-11-11
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -346,6 +346,16 @@ after it. A class a shop page uses from outside the shop's folders must be added
   rules (≤ 1.0 kB gz, `check-storefront-build`). The tree walk (`design-tree.ts`) has no Zod, for the customizer's
   bundle (gated at 208 kB). Commerce, video and date blocks arrive in TS1 with the per-source loader; a fill never holds
   a video (a design's video will be the section's own `video`).
+- **Pages (Theme Studio TS1a; plan `docs/plans/2026-11-11-theme-studio-ts1.md`).** About and FAQ live in `shop_pages`
+  (0099–0100: RLS, column grants, ≤ 20 a shop and one FAQ, addresses unique per shop, the cap under the `look:<t>` lock);
+  their templates are Frrata's (`src/domains/pages/templates.ts`, TS0b blocks + the page-only FAQ block whose items may be
+  **bound** to Settings: `boundAnswer` in `domains/policies/answers.ts` gives the policy's own paragraph, or a link when the
+  owner rewrote it). A page's `draft`/`live` are `{ title, handle, fill, hidden }`; **a change reaches the shop only by
+  the look's Publish** (`preparePages` in `src/lib/themes/pages.ts`, inside `publishRevision`: live := draft, previous :=
+  live, live_publish_id := that publish); Undo swaps them under its own publish row; Discard puts drafts back. The
+  handle is fixed once live. **Contact is not a page row**: it is `/policies/contact` (live before a shop opens, for KYC),
+  its line in the look's layer (`contact`). The shop reads `shopPages` (cached, tag `shop:<t>:pages`, purged with the look
+  at Publish and Undo); drafts only through the uncached `previewPages`. Page photos go through `cleanFill`.
 - **Manifests** are typed files `src/domains/themes/catalogue/<theme>/<semver>.ts`, listed in `catalogue/index.ts`.
   A released file never changes; a new version is a new file. Theme colours live there and nowhere else
   (`check:hex` QUOTED rule).
