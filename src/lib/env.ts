@@ -93,6 +93,11 @@ export const VERCEL_PROJECT_ID = process.env.VERCEL_PROJECT_ID ?? ''
 export const VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID ?? ''
 /** A local fake for e2e only: honoured off Vercel and only on 127.0.0.1 (src/lib/connectors/vercel). */
 export const VERCEL_API_BASE = process.env.VERCEL_API_BASE ?? ''
+/** Admin › Infrastructure (plan 2026-11-11 I·1): a TEAM token minted by the team's Billing-role member (or a Developer),
+ *  Production only, Sensitive, 90-day expiry. It reads /v1/billing/charges; the puller refuses it if it can read the
+ *  project's env (security review HIGH-1). Never the domains token above. Unset: the Vercel tab says what connects it. */
+export const VERCEL_BILLING_TOKEN = process.env.VERCEL_BILLING_TOKEN ?? ''
+export const isVercelBillingConfigured = () => VERCEL_BILLING_TOKEN !== '' && VERCEL_TEAM_ID !== '' && VERCEL_PROJECT_ID !== ''
 /** DNS-over-HTTPS fakes for e2e (both resolvers, same rule): honoured off Vercel and only on 127.0.0.1. */
 export const DOH_BASE = process.env.DOH_BASE ?? ''
 /** How many hosts the Vercel project may hold (Hobby 50, Pro 100,000 soft): claims stop 4 below it. */

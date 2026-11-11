@@ -17,6 +17,9 @@ export const SUPABASE = {
 
 /** Vercel Pro in Mumbai (bom1). */
 export const VERCEL = {
+  /** The On-Demand Budget as set in Vercel (Settings › Billing › Spend Management; runbook: $50, pause on). Vercel has
+   *  no API for it, so it is restated here and labelled "as set in Vercel" on the page. */
+  budgetUsd: 50,
   platformUsd: 20, creditUsd: 20, cpuHourUsd: 0.14, gbHourUsd: 0.0116, perMillionInvocationsUsd: 0.6,
   /** Flat Rate CDN tiers: monthly price, CDN requests included. */
   cdnTiers: [[0, 1e6], [20, 10e6], [100, 50e6], [300, 150e6]] as readonly (readonly [number, number])[],

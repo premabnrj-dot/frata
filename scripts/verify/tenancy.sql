@@ -2419,4 +2419,25 @@ do $$ declare h jsonb := admin_db_health(); k text; begin
 end $$;
 rollback;
 
-\echo 'tenancy proof — all 65 checks passed'
+-- 66. Admin › Infrastructure's platform tables (drizzle/0092–0093): what vendors billed Frrata. frata_app and the API
+-- roles hold nothing (a shop's code path can never read or forge Frrata's costs); frata_admin reads and writes them.
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_app']) r, unnest(array['infra_usage_daily', 'infra_pulls']) t, unnest(array['select', 'insert', 'update', 'delete']) p
+             where has_table_privilege(r, t, p)) then raise exception 'FAIL: a non-staff role reads or writes infra tables'; end if;
+  if not (has_table_privilege('frata_admin', 'infra_usage_daily', 'insert') and has_table_privilege('frata_admin', 'infra_pulls', 'select'))
+  then raise exception 'FAIL: Admin cannot keep vendor usage'; end if;
+  if not (select relrowsecurity from pg_class where oid = 'infra_usage_daily'::regclass) or not (select relrowsecurity from pg_class where oid = 'infra_pulls'::regclass)
+  then raise exception 'FAIL: infra tables without RLS'; end if;
+end $$;
+begin; set local role frata_app;
+do $$ begin
+  begin perform 1 from infra_usage_daily; raise exception 'FAIL: frata_app read vendor usage'; exception when insufficient_privilege then null; end;
+  begin insert into infra_pulls (source, ok) values ('vercel', true); raise exception 'FAIL: frata_app forged a pull'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+begin; set local role frata_admin;
+insert into infra_usage_daily (source, day, service, quantity, cost_micros) values ('vercel', '2026-11-01', 'Fluid Active CPU', 1, 140000);
+do $$ begin if (select cost_micros from infra_usage_daily where source = 'vercel' and day = '2026-11-01') <> 140000 then raise exception 'FAIL: Admin cannot read back vendor usage'; end if; end $$;
+rollback;
+
+\echo 'tenancy proof — all 66 checks passed'

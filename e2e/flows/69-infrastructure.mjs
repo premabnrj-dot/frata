@@ -5,9 +5,23 @@
 // than 10 minutes becomes a "Now". Vercel and Mux say what connects them. A merchant gets no Admin. Phone: no sideways scroll.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, USERS, signedIn } from '../lib.mjs'
+import { CONSOLE, PORTS, USERS, signedIn } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
+const FAKE = `http://127.0.0.1:${PORTS.domains}`
+const cron = () => fetch(`${CONSOLE}/api/cron/infra`, { headers: { authorization: 'Bearer e2e-cron' } }).then((r) => r.json())
+const setCharges = (charges, wide = false) => fetch(`${FAKE}/_test/charges`, { method: 'POST', body: JSON.stringify({ charges, wide }) })
+/** FOCUS rows for each day of this month so far: frata steady, ekatanv2 large; yesterday a 5× spike on frata. */
+function month(now = new Date()) {
+  const rows = [], y = now.getUTCFullYear(), m = now.getUTCMonth(), today = now.getUTCDate()
+  for (let d = 1; d <= today; d++) {
+    const day = new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10)
+    const frata = d === today - 1 ? 6 : 0.5
+    rows.push({ ChargePeriodStart: `${day}T08:00:00.000Z`, ServiceName: 'Fluid Active CPU', ChargeCategory: 'Usage', EffectiveCost: frata, ConsumedQuantity: frata / 0.14, ConsumedUnit: 'Hours', Tags: { ProjectName: 'frata' } })
+    rows.push({ ChargePeriodStart: `${day}T08:00:00.000Z`, ServiceName: 'Fluid Provisioned Memory', ChargeCategory: 'Usage', EffectiveCost: 1.2, ConsumedQuantity: 100, ConsumedUnit: 'GB-Hours', Tags: { ProjectName: 'ekatanv2' } })
+  }
+  return rows
+}
 
 export default {
   name: 'infrastructure',
@@ -23,6 +37,7 @@ export default {
         await p.goto(CONSOLE + '/admin')
         await p.getByRole('link', { name: 'Infrastructure' }).first().click()
         await p.getByRole('heading', { name: 'Infrastructure' }).waitFor()
+        await p.getByRole('link', { name: /^Supabase/ }).click()
         await p.getByText('Database', { exact: true }).waitFor()
         await p.getByText('The database is on Supabase’s Free plan').waitFor()
         await p.getByText('Biggest tables').waitFor()
@@ -39,13 +54,43 @@ export default {
         await ctx.close()
       })
 
-      await t.step('Vercel and Mux say what connects them', async () => {
+      await t.step('Vercel before the first read; Mux says what connects it', async () => {
+        await db`delete from infra_usage_daily`; await db`delete from infra_pulls`
         const { ctx, p } = await open('frata')
         await p.goto(CONSOLE + '/admin/infrastructure?tab=vercel')
-        await p.getByText('A billing-only Vercel token connects this tab.', { exact: false }).waitFor()
+        await p.getByText('Vercel’s billing hasn’t been read yet').waitFor()
         await p.goto(CONSOLE + '/admin/infrastructure?tab=mux')
         await p.getByText('A read-only Mux token connects this tab.', { exact: false }).waitFor()
         await ctx.close()
+      })
+
+      await t.step('The hourly read: month to date, the split, a spike and another project over 40%', async () => {
+        await setCharges(month())
+        assert.deepEqual(await cron(), { vercel: 'ok' })
+        const [{ n }] = await db`select count(*)::int n from infra_usage_daily where source = 'vercel'`
+        assert.ok(n >= 2, 'rows saved')
+        assert.equal((await cron()).vercel, 'ok', 'a second read is idempotent')
+        assert.equal((await db`select count(*)::int n from infra_usage_daily where source = 'vercel'`)[0].n, n)
+        const { ctx, p } = await open('frata')
+        await p.goto(CONSOLE + '/admin/infrastructure?tab=vercel')
+        await p.getByText('Month to date').waitFor()
+        if (new Date().getUTCDate() >= 5) {
+          await p.getByText(/ekatanv2 is \d+% of this month’s usage/).waitFor()
+          await p.getByText(/× a normal day/).waitFor()
+        }
+        await p.getByRole('cell', { name: 'Fluid Provisioned Memory' }).waitFor()
+        await ctx.close()
+      })
+
+      await t.step('A token that can read env is refused; the tab keeps the last good numbers and says so', async () => {
+        await setCharges(month(), true)
+        assert.equal((await cron()).vercel, 'token_too_wide')
+        const { ctx, p } = await open('frata')
+        await p.goto(CONSOLE + '/admin/infrastructure?tab=vercel')
+        await p.getByText('The token can do more than read billing, so it was refused', { exact: false }).waitFor()
+        await p.getByText('Month to date').waitFor()
+        await ctx.close()
+        await setCharges(null)
       })
 
       await t.step('A merchant gets no Admin page', async () => {
@@ -64,6 +109,7 @@ export default {
       })
     } finally {
       if (stuck) await db`delete from outbox where id = ${stuck.id}`
+      await setCharges(null).catch(() => {})
     }
   },
 }

@@ -1,22 +1,107 @@
 [
-  {"file": "src/components/shell/nav-progress.tsx", "text": "frata:navigation-start", "why": "a DOM event name inside the app, never shown; renaming it is churn with no reader"},
-  {"file": "src/components/storefront/bag-store.ts", "text": "frata.bag.v1", "why": "a shopper's saved bag in localStorage: renaming empties every bag"},
-  {"file": "src/components/storefront/bag-store.ts", "text": "frata:open-bag", "why": "a DOM event name, never shown"},
-  {"file": "src/components/storefront/bag-store.ts", "text": "frata.attr.v1", "why": "a shopper's stored ad attribution: renaming loses it"},
-  {"file": "src/components/storefront/bag.tsx", "text": "frata:open-bag", "why": "a DOM event name, never shown"},
-  {"file": "src/components/storefront/checkout.tsx", "text": "frata.checkout.v1", "why": "a shopper's saved checkout form: renaming loses it"},
-  {"file": "src/components/storefront/checkout.tsx", "text": "frata.pending.v1", "why": "a pending online payment the shopper returns to: renaming loses it"},
-  {"file": "src/components/ui/use-shortcuts.ts", "text": "frata.shortcuts.off", "why": "a merchant's saved shortcut setting on the device"},
-  {"file": "src/domains/catalogue/taxonomy.ts", "text": "frata:", "why": "attribute value ids stored in product rows; renaming orphans them"},
-  {"file": "src/domains/catalogue/taxonomy.ts", "text": "frata-occasion", "why": "an attribute handle stored in product rows"},
-  {"file": "src/domains/catalogue/taxonomy.ts", "text": "frata-fit", "why": "an attribute handle stored in product rows"},
-  {"file": "src/domains/catalogue/taxonomy.ts", "text": "frata-set-includes", "why": "an attribute handle stored in product rows"},
-  {"file": "src/domains/signup/slug.ts", "text": "frata", "why": "a reserved shop address (the old name stays reserved beside frrata)"},
-  {"file": "src/lib/crypto/secret-box.ts", "text": "frata", "why": "the key-derivation salt: renaming it makes every stored Razorpay key unreadable (known-token test)"},
-  {"file": "src/lib/public-env.ts", "text": "app.frata.in", "why": "the platform host until the domain move (brand plan B·4)"},
-  {"file": "src/lib/public-env.ts", "text": "frata.store", "why": "the shops' domain until the domain move (brand plan B·4); merchants have shared these links"},
-  {"file": "src/domains/addresses/domains.ts", "text": "frata.in", "why": "a refused host: no shop may connect a domain under Frrata's old platform names (shop addresses D2·3), never shown"},
-  {"file": "src/domains/addresses/domains.ts", "text": "frata.store", "why": "a refused host: no shop may connect a domain under Frrata's old platform names (shop addresses D2·3), never shown"},
-  {"file": "src/domains/addresses/domains.ts", "text": "frata.test", "why": "a refused host: no shop may connect a domain under Frrata's old platform names (shop addresses D2·3), never shown"},
-  {"file": "src/lib/db/schema-addresses.ts", "text": "!~ '(^|\\.)(frrata|frata)\\.' and", "why": "the database CHECK refusing a host under Frrata's old and new names (D2·2), never shown"}
+  {
+    "file": "src/components/shell/nav-progress.tsx",
+    "text": "frata:navigation-start",
+    "why": "a DOM event name inside the app, never shown; renaming it is churn with no reader"
+  },
+  {
+    "file": "src/components/storefront/bag-store.ts",
+    "text": "frata.bag.v1",
+    "why": "a shopper's saved bag in localStorage: renaming empties every bag"
+  },
+  {
+    "file": "src/components/storefront/bag-store.ts",
+    "text": "frata:open-bag",
+    "why": "a DOM event name, never shown"
+  },
+  {
+    "file": "src/components/storefront/bag-store.ts",
+    "text": "frata.attr.v1",
+    "why": "a shopper's stored ad attribution: renaming loses it"
+  },
+  {
+    "file": "src/components/storefront/bag.tsx",
+    "text": "frata:open-bag",
+    "why": "a DOM event name, never shown"
+  },
+  {
+    "file": "src/components/storefront/checkout.tsx",
+    "text": "frata.checkout.v1",
+    "why": "a shopper's saved checkout form: renaming loses it"
+  },
+  {
+    "file": "src/components/storefront/checkout.tsx",
+    "text": "frata.pending.v1",
+    "why": "a pending online payment the shopper returns to: renaming loses it"
+  },
+  {
+    "file": "src/components/ui/use-shortcuts.ts",
+    "text": "frata.shortcuts.off",
+    "why": "a merchant's saved shortcut setting on the device"
+  },
+  {
+    "file": "src/domains/catalogue/taxonomy.ts",
+    "text": "frata:",
+    "why": "attribute value ids stored in product rows; renaming orphans them"
+  },
+  {
+    "file": "src/domains/catalogue/taxonomy.ts",
+    "text": "frata-occasion",
+    "why": "an attribute handle stored in product rows"
+  },
+  {
+    "file": "src/domains/catalogue/taxonomy.ts",
+    "text": "frata-fit",
+    "why": "an attribute handle stored in product rows"
+  },
+  {
+    "file": "src/domains/catalogue/taxonomy.ts",
+    "text": "frata-set-includes",
+    "why": "an attribute handle stored in product rows"
+  },
+  {
+    "file": "src/domains/signup/slug.ts",
+    "text": "frata",
+    "why": "a reserved shop address (the old name stays reserved beside frrata)"
+  },
+  {
+    "file": "src/lib/crypto/secret-box.ts",
+    "text": "frata",
+    "why": "the key-derivation salt: renaming it makes every stored Razorpay key unreadable (known-token test)"
+  },
+  {
+    "file": "src/lib/public-env.ts",
+    "text": "app.frata.in",
+    "why": "the platform host until the domain move (brand plan B·4)"
+  },
+  {
+    "file": "src/lib/public-env.ts",
+    "text": "frata.store",
+    "why": "the shops' domain until the domain move (brand plan B·4); merchants have shared these links"
+  },
+  {
+    "file": "src/domains/addresses/domains.ts",
+    "text": "frata.in",
+    "why": "a refused host: no shop may connect a domain under Frrata's old platform names (shop addresses D2·3), never shown"
+  },
+  {
+    "file": "src/domains/addresses/domains.ts",
+    "text": "frata.store",
+    "why": "a refused host: no shop may connect a domain under Frrata's old platform names (shop addresses D2·3), never shown"
+  },
+  {
+    "file": "src/domains/addresses/domains.ts",
+    "text": "frata.test",
+    "why": "a refused host: no shop may connect a domain under Frrata's old platform names (shop addresses D2·3), never shown"
+  },
+  {
+    "file": "src/lib/db/schema-addresses.ts",
+    "text": "!~ '(^|\\.)(frrata|frata)\\.' and",
+    "why": "the database CHECK refusing a host under Frrata's old and new names (D2·2), never shown"
+  },
+  {
+    "file": "src/domains/infra/vercel.ts",
+    "text": "frata",
+    "why": "the Vercel project's name (internal, CLAUDE.md): Admin › Infrastructure tells Frrata's own usage from the team's other projects"
+  }
 ]

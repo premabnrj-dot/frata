@@ -392,3 +392,34 @@ Computed with `orderProfit`; the scratch model is in the session scratchpad.
 - **pg_cron is available on frata (Free)** (`pg_available_extensions`), so A·2's rollups, partitions and salt run there.
 - **Role timeouts are set on production:** `frata_app` and `frata_admin` have statement 20 s, lock 10 s,
   idle-in-transaction 30 s.
+
+### speed-reviewer (measured on throwaway copies, 2026-11-11)
+- **HIGH 1, the beacon breaks the shop JS budget:**
+  - product 120.6 → 124.2 kB with `useReportWebVitals` (it observes for every shopper whatever the sample), 121.5 kB
+    without it;
+  - fix: web-vitals by `import()` only after the phone and sample check; PV1-4a's split (≥ 1.5 kB) is a hard
+    prerequisite of A2·2.
+- **HIGH 2, a 15-minute full recompute fails on Diwali** (a 10× day takes 133 s, past 20 s and 60 s).
+  - Fold each 15-minute slice into a per-day visitor table (upsert with a bitmask of funnel steps): 5.3 s at 10×.
+  - A closed IST day is recomputed once, by ranges of tenants.
+- **MED 3:** one narrow rollup per dimension, plus a per-tenant daily total. The five-dimension grain made 353k rows a
+  day, and distinct visitors don't add across cells.
+- **MED 4:**
+  - **Built:** `outbox_dead` partial index (drizzle/0094); "gave up today" took 350 ms at 10×.
+  - `admin_db_health` is cached 60 s per instance (pg_stat_statements costs 26–38 ms at 4,553 shapes).
+- **MED 5, each beacon is two Fluid invocations:**
+  - `/api/shop/e` is taken out of the middleware matcher exactly, because `requireShop` re-runs `routeFor`;
+  - no Firewall rate rule on that path unless under attack ($0.55/M);
+  - flush on `visibilitychange` = hidden, batched per visit (soft navigations fire no `pagehide`), so about ⅓ of the
+    requests.
+- **MED 6, ingest order:** size cap → isbot → a 60 s negative host memo → `requireShop`.
+- **MED 7, a stalled analytics database:**
+  - the ingest role gets a 2 s statement and connect timeout, and a queue cap past which events are dropped;
+  - one definer call sets the tenant and inserts (instead of four round trips);
+  - `synchronous_commit` off for events;
+  - the analytics pool reports to `attachDatabasePool`.
+- **MED 8, ISR:** the 60 s backstop costs more than the beacon (at 10×, about 73% of views start a background render).
+  It stays for now: render-time `now` drives scheduled drops, pauses and offer windows. Later: a 5-minute cron purges
+  the tags of shops whose time boundary has passed, then `revalidate` rises to 3600.
+- **LOW:** a project default Max Duration in the dashboard (owner step); the ingest gets 5 s.
+- **Cost:** the beacon adds $1.9–4.6/M page views; after fixes 5 and 6 about ⅓ of that. Affordable.

@@ -27,6 +27,7 @@ const ENTRY_POINTS = {
   'src/app/auth/callback/route.ts': ['sign-in: trades the one-time code for a session', 'exchangeCodeForSession('],
   'src/app/api/cron/outbox/route.ts': ['Vercel Cron', 'isCronRequest('],
   'src/app/api/cron/domains/route.ts': ['Vercel Cron', 'isCronRequest('],
+  'src/app/api/cron/infra/route.ts': ['Vercel Cron', 'isCronRequest('],
   'src/app/api/webhooks/whatsapp/route.ts': ['Meta webhook: HMAC of the raw body with Frrata\'s app secret; each item routed by its own id through a definer', 'verifyMetaSignature('],
   'src/app/api/webhooks/ekcode/route.ts': ['Meta webhook for EkCode\'s number: HMAC of the raw body with EkCode\'s app secret; only its own number\'s statuses, through a definer', 'verifyMetaSignature('],
   'src/app/api/webhooks/razorpay/[key]/route.ts': ['Razorpay webhook: HMAC of the raw body with the shop\'s own secret, found by our key', 'verifyRazorpaySignature('],
