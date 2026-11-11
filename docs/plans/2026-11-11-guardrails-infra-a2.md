@@ -727,3 +727,12 @@ With 0.8–0.9 kB more, checkout fails too, and PV1-4a only frees room on the pr
 - The e2e failures in addresses and domains (Make main) also fail on `main` (964fdc0), so they predate A·2.
 - **Renumbered when merged with `main` (2026-11-11):** `main` took ADR-0011 (Amazon SES) and e2e 71 (email) meanwhile,
   so the analytics database is **ADR-0013** and the traffic flow is **e2e 72**.
+- **Released 2026-11-11 (owner: "go ahead and push to main")**, as `b2dc47a` (with `main`'s email and Theme Studio work
+  merged in). 0003 was pasted by the owner. Checked live on `demo.frrata.shop`:
+  - the beacon tag is on the page;
+  - the privacy page says visits are counted;
+  - `/api/shop/e` answers 403 to a forged Origin, so counting is on;
+  - `/fe.js` is immutable and a cache HIT;
+  - no runtime errors.
+- **Next:** the owner's phone check (Chrome, Safari, Instagram). This session can't reach the analytics project, so
+  the owner runs the events query, then A2·3/A2·4 (Console › Traffic).
