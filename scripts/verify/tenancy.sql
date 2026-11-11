@@ -2630,4 +2630,33 @@ do $$ begin
   then raise exception 'FAIL: an API role runs the pages cap'; end if;
 end $$;
 
-\echo 'tenancy proof — all 70 checks passed'
+-- 71. "Tell me when it's ready" (Apps gallery A1, 0102; tenancy-auditor 2026-11-11): own shop both ways, no update, no
+-- other role holds anything; Admin's count is a staff-only definer that frata_app can't run.
+insert into app_interest (tenant_id, module, user_id) values ('22222222-2222-2222-2222-222222222222', 'reviews', 'aaaaaaaa-0000-0000-0000-000000000001');
+do $$ begin
+  if exists (select 1 from pg_tables where tablename = 'app_interest' and not rowsecurity) then raise exception 'FAIL: app_interest without RLS'; end if;
+  if not exists (select 1 from pg_policies where tablename = 'app_interest' and policyname = 'tenant_rows') then raise exception 'FAIL: app_interest without its policy'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r(role)
+             where has_table_privilege(r.role, 'app_interest', 'select') or has_table_privilege(r.role, 'app_interest', 'insert') or has_table_privilege(r.role, 'app_interest', 'update'))
+  then raise exception 'FAIL: another role holds app_interest'; end if;
+  if has_table_privilege('frata_app', 'app_interest', 'update') then raise exception 'FAIL: frata_app may update app_interest'; end if;
+  if has_function_privilege('frata_app', 'app_admin_interest(uuid)', 'execute') or has_function_privilege('anon', 'app_admin_interest(uuid)', 'execute')
+     or has_function_privilege('authenticated', 'app_admin_interest(uuid)', 'execute') or has_function_privilege('service_role', 'app_admin_interest(uuid)', 'execute')
+  then raise exception 'FAIL: app_admin_interest is callable outside Admin'; end if;
+  if not has_function_privilege('frata_admin', 'app_admin_interest(uuid)', 'execute') then raise exception 'FAIL: Admin cannot count interest'; end if;
+end $$;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if exists (select 1 from app_interest) then raise exception 'FAIL: A reads B interest'; end if;
+  delete from app_interest; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A deleted B interest'; end if;
+  begin insert into app_interest (tenant_id, module, user_id) values ('22222222-2222-2222-2222-222222222222', 'ship', gen_random_uuid()); raise exception 'FAIL: A wrote B interest'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+begin; set local role frata_admin;
+do $$ begin
+  begin perform * from public.app_admin_interest(gen_random_uuid()); raise exception 'FAIL: a non-staff uid read interest'; exception when sqlstate 'P0001' then null; end;
+end $$;
+rollback;
+
+\echo 'tenancy proof — all 71 checks passed'

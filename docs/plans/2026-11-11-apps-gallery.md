@@ -51,6 +51,24 @@ real shoppers, hidden prices.
    app's interest toggle persists); `verify:tenancy` for `app_interest`; 90-ux widths; visual baselines regenerated for
    the console pages that change.
 
+## Review findings folded in (architecture-reviewer, tenancy-auditor, 2026-11-11)
+| # | Finding | Change |
+|---|---|---|
+| A1 / T-HIGH | The featured "₹X less on Growth" reads the shop's sales and Frrata's fee on an ANY_MEMBER page; recomputes the bill | **Featured card moves to A2**: computed from the stored bill (`frrata_invoice_lines`) in `bill.ts`, shown to CAN_MANAGE only, unit-economics review first. A1: See Growth without a ₹ line. |
+| A2 | e2e 46 and 64 click the gallery's switches | Both rewritten: turn on from the app's page |
+| A3 | `offerFor` can't say Turn on / Open / See Growth / needs / interest | `Offer.action` extended: `switch`, `needs` (the app it needs, a link), `ask`, `plans` ("See Growth"), `interest` (asked or not); `filterOf(offer)` in the domain; tested |
+| A4 | `[app]` beside static folders; their off states | `[app]` → `notFound()` for unknown keys; the three pages render `AppAbout` when not usable, keeping DisconnectOnly (Messages off with a number) and Paused; GST's about view before its role refusal; rule in frata-architecture § Modules |
+| A5 | Extra transactions | facts, prices and interest in one `withTenant` (`appsPage()`), the layout's `at` passed |
+| A6 | Third-party numbers in questions | None in showcase copy without a dated source; Meta's price not stated |
+| A7 | Nobody is told | Admin › Modules lists the shops that asked per app (definer), and Admin sends a Notice when it ships; the button says "Tell me when it's ready" |
+| A8 | Missing states | Load error, each action's error, paused, trial, needs, accountant, no permission; the 80% meter deferred to A2 |
+| A9 | Phone bar under the bottom nav | The price bar sits above it, with the safe-area inset |
+| A10 | "Billed by others" vs "What it uses" | `registry.usage` feeds Billed by others; `showcase.uses` feeds What it uses |
+| A12 | Where `AppAbout` lives | `apps/_components/` |
+| T-MED | `setInterestAction` | `asMember(ANY_MEMBER)`, `z.enum(MODULE_KEYS)`, status `next` on the server, user id from the session, delete scoped to the user, refused during a support visit |
+| T-MED | Admin definer, migration, proof | As the auditor wrote: `app_admin_interest(p_uid)`, staff only, frata_admin only; grant/revoke/RLS/policy; a proof section |
+| T-LOW | Removed member's rows | Kept (Admin sees shops, not people) |
+
 ## Design review (frata-planning § 3)
 - **UI/UX:** one job per screen (find an app; decide on one app); states: none on, some on, all coming next, search
   empty, no permission (staff see, can't switch: "Ask an owner"), phone; one primary action per app page; no pop-ups.

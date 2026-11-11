@@ -3,7 +3,7 @@ import { cache } from 'react'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
 import { currentPlan } from '@/domains/plans/entitlements'
-import { addonPrices, modulePauses, tenantAddons, tenantModules } from '@/lib/db/schema-modules'
+import { addonPrices, appInterest, modulePauses, tenantAddons, tenantModules } from '@/lib/db/schema-modules'
 import { plans as planRows, planVersions, tenantPlans } from '@/lib/db/schema'
 import { withTenant } from '@/lib/db/tenant'
 import { moduleAccess, type ModuleAccess, type ModuleFacts } from '@/domains/modules/access'
@@ -61,4 +61,28 @@ export async function addonPriceList(tenantId: string): Promise<Partial<Record<M
   const out: Partial<Record<ModuleKey, { id: string; monthlyPrice: number; version: number }>> = {}
   for (const r of rows) if (isModuleKey(r.module) && ADD_ONS.includes(r.module)) out[r.module] = { id: r.id, monthlyPrice: Number(r.monthly_price), version: r.version }
   return out
+}
+
+type PriceList = Partial<Record<ModuleKey, { id: string; monthlyPrice: number; version: number }>>
+
+async function pricesIn(tx: Tx): Promise<PriceList> {
+  const rows = await tx.execute<{ id: string; module: string; monthly_price: string; version: number }>(sql`
+    select distinct on (module) id, module, monthly_price, version from ${addonPrices} order by module, version desc`)
+  const out: PriceList = {}
+  for (const r of rows) if (isModuleKey(r.module) && ADD_ONS.includes(r.module)) out[r.module] = { id: r.id, monthlyPrice: Number(r.monthly_price), version: r.version }
+  return out
+}
+
+/** Everything the Apps gallery and an app's page read, in ONE transaction (architecture review A5): the facts, the
+ *  add-on prices and which coming-next apps this member asked about. `userId` is the session's. */
+export async function appsPage(tenantId: string, userId: string, at: string) {
+  const now = new Date(at)
+  return withTenant(tenantId, async (tx) => {
+    const facts = await readFactsIn(tx, tenantId, now)
+    const [prices, asked] = await Promise.all([
+      pricesIn(tx),
+      tx.select({ module: appInterest.module }).from(appInterest).where(and(eq(appInterest.tenantId, tenantId), eq(appInterest.userId, userId))),
+    ])
+    return { facts, access: moduleAccess(facts, now), prices, asked: new Set(asked.map((r) => r.module).filter(isModuleKey)) }
+  })
 }

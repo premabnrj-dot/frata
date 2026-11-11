@@ -34,7 +34,7 @@ export type ModuleDef = {
   addOnFor?: readonly ('launch' | 'growth' | 'scale')[]
   /** Charged by someone else, named so the merchant is never surprised. */
   usage?: string
-  /** What the merchant gets, 4–6 short lines (the details dialog). */
+  /** What the merchant gets, 3–6 short lines (Admin and the plan pages; the app page reads showcase.ts). */
   features: readonly string[]
   dependsOn: readonly ModuleKey[]
   /** Where setting it up starts, once it is on. */
@@ -58,7 +58,7 @@ export const MODULES: Record<ModuleKey, ModuleDef> = {
     features: ['Labels from the Pack button', 'A tracking page for shoppers', 'A queue of failed deliveries', 'Courier picked by rate and pincode'],
   },
   true_profit: {
-    key: 'true_profit', name: 'True Profit', job: 'Profit by product, pincode and campaign.', group: 'grow', billing: 'add_on', status: 'next', dependsOn: [], outboxKinds: [],
+    key: 'true_profit', name: 'True Profit', job: 'Profit by product, pincode and campaign.', group: 'run', billing: 'add_on', status: 'next', dependsOn: [], outboxKinds: [],
     features: ['Profit per delivered order', 'By product, size and colour', 'RTO cost by pincode', 'By campaign, on delivered orders'],
   },
   reviews: {
@@ -95,12 +95,13 @@ export const MODULES: Record<ModuleKey, ModuleDef> = {
     features: ['A reel or a landscape film on each product', 'Second in the photos, and beside the sizes', 'Plays only when a shopper taps it', 'Price, sizes and Add to bag under the video'],
   },
   cart_flows: {
-    key: 'cart_flows', name: 'Cart flows', job: 'Bring back bags left behind.', group: 'grow', billing: 'plan', status: 'next', dependsOn: ['communication'], outboxKinds: [],
+    key: 'cart_flows', name: 'Cart flows', job: 'Bring back bags left behind.', group: 'talk', billing: 'plan', status: 'next', dependsOn: ['communication'], outboxKinds: [],
     usage: 'Meta bills messages', features: ['WhatsApp reminder for a left bag', 'Back-in-stock alerts', 'Only shoppers who agreed'],
   },
 }
 
-export const GROUPS: readonly [Group, string][] = [['talk', 'Talk'], ['deliver', 'Deliver'], ['grow', 'Grow'], ['run', 'Run']]
+/** The gallery's groups, by the merchant's job (Apps gallery, owner 2026-11-11). Keys are code only; no table holds them. */
+export const GROUPS: readonly [Group, string][] = [['talk', 'Talk to shoppers'], ['deliver', 'Get paid and ship'], ['grow', 'Sell more'], ['run', 'Run the books']]
 
 /** Modules a plan version may list in `features` (core ones are in every plan already). */
 export const PLAN_GRANTABLE: readonly ModuleKey[] = MODULE_KEYS.filter((k) => MODULES[k].billing !== 'core')

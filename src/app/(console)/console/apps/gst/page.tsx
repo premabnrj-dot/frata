@@ -5,11 +5,13 @@ import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { button } from '@/components/ui/button'
 import { dueDate } from '@/domains/tax/gstr1'
-import { requireMember } from '@/lib/auth/require-member'
+import { ANY_MEMBER, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { CAN_SEE_GST } from '@/domains/tenancy/roles'
 import { dayIN } from '@/lib/format-date'
 import { gstPeriod, type Fix } from '@/lib/queries/gst'
-import { shopModules } from '@/lib/queries/modules'
+import { appsPage, shopModules } from '@/lib/queries/modules'
+import { AppAbout } from '../_components/app-about'
+import { aboutProps } from '../_components/about-data'
 import { ReviewTabs } from './review-tabs'
 import { FilePanel } from './file-panel'
 import { gsp } from '@/lib/gst/gsp'
@@ -30,17 +32,18 @@ const FIX_WORDS: Record<Fix['kind'], { title: string; href: string; action: stri
 
 /** Console › GST (GST app G1; approved mockup "The month", "Review", "For your CA"). */
 export default async function GstPage({ searchParams }: { searchParams: Promise<{ p?: string }> }) {
-  const auth = await requireMember(CAN_SEE_GST)
-  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner, an admin or the accountant sees GST' : auth.message} />
+  const auth = await requireMember(ANY_MEMBER)
+  if (!auth.ok) return <Panel title={auth.message} />
   const now = new Date()
   // GST (the app) is a module: in Growth and Scale, on once the shop switches it on in Apps. Invoices are GST-correct either way.
+  // Not in use: the app's page, for any member (Apps gallery A1; review A4). In use: the owner, an admin or the accountant.
   const gate = (await shopModules(auth.membership.tenantId, now.toISOString())).access.gst
   if (!gate.usable) {
-    const manager = auth.membership.role === 'owner' || auth.membership.role === 'admin'
-    return <Panel title={gate.why === 'not_granted' ? 'GST is in the Growth and Scale plans' : gate.why === 'paused' ? 'GST is paused by Frrata. We’re on it.' : 'GST is off for this shop'}
-      action={manager ? <Link href={gate.why === 'not_granted' ? '/console/settings/billing' : '/console/apps'} className={button({ variant: 'secondary' })}>{gate.why === 'not_granted' ? 'See plans' : 'Turn it on in Apps'}</Link> : undefined}>
-      {manager ? null : 'Ask the shop’s owner to turn on GST in Apps.'}</Panel>
+    const d = await appsPage(auth.membership.tenantId, auth.userId, now.toISOString())
+    return <AppAbout {...aboutProps('gst', d, now, (CAN_MANAGE as readonly string[]).includes(auth.membership.role), auth.membership.tenantName)}
+      notice={gate.why === 'paused' ? <p role="status" className="mb-4 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">GST is paused by Frrata. We’re on it.</p> : undefined} />
   }
+  if (!(CAN_SEE_GST as readonly string[]).includes(auth.membership.role)) return <Panel title="Only the owner, an admin or the accountant sees GST" />
   const { p } = await searchParams
   const d = await gstPeriod(auth.membership.tenantId, p ?? null, now).catch((err) => { console.error('[gst]', err instanceof Error ? err.name : 'error'); return undefined })
   if (d === undefined) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
