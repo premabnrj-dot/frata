@@ -533,3 +533,4 @@ Computed with `orderProfit`; the scratch model is in the session scratchpad.
     - On apply: `cron.job` lists both jobs (the paste ends with that query).
     - `CLAUDE.md` § Before you commit and § Migrations name only `drizzle/`. A line for `drizzle-analytics/` (pasted by
       the owner; 0000 refuses the main database) is proposed to the owner, not written by an agent.
+- **Applied (owner, 2026-11-11):** 0000–0002 pasted into frata-analytics; `cron.job` lists `analytics-fold` (`*/15 * * * *`) and `analytics-maintain` (`7 * * * *`), both active.
