@@ -116,9 +116,11 @@ export const MUX_ENVIRONMENT_ID = process.env.MUX_ENVIRONMENT_ID ?? ''
 export const MUX_API_BASE = VERCEL_ENV === 'production' ? 'https://api.mux.com' : process.env.MUX_API_BASE || 'https://api.mux.com'
 export const MUX_STREAM_BASE = VERCEL_ENV === 'production' ? 'https://stream.mux.com' : process.env.MUX_STREAM_BASE || 'https://stream.mux.com'
 export const MUX_IMAGE_BASE = VERCEL_ENV === 'production' ? 'https://image.mux.com' : process.env.MUX_IMAGE_BASE || 'https://image.mux.com'
-/** Admin › Infrastructure (plan 2026-11-11 I·1): a separate READ-ONLY Mux token (Video Read only: no Data, no System),
- *  Production only, Sensitive. Reads delivery usage; never the write token above. Unset: the Mux tab says what connects it. */
+/** Admin › Infrastructure (plan 2026-11-11 I·1): an optional separate READ-ONLY Mux token (Video Read only) for delivery
+ *  usage. Unset, the video token above is used for this GET (owner 2026-11-11: both live in the same Vercel env, so a
+ *  second token would add no separation). Neither set: the Mux tab says what connects it. */
 export const MUX_READ_TOKEN_ID = process.env.MUX_READ_TOKEN_ID ?? ''
 export const MUX_READ_TOKEN_SECRET = process.env.MUX_READ_TOKEN_SECRET ?? ''
-export const isMuxUsageConfigured = () => MUX_READ_TOKEN_ID !== '' && MUX_READ_TOKEN_SECRET !== ''
+export const muxUsageToken = () => MUX_READ_TOKEN_ID && MUX_READ_TOKEN_SECRET ? { id: MUX_READ_TOKEN_ID, secret: MUX_READ_TOKEN_SECRET } : MUX_TOKEN_ID && MUX_TOKEN_SECRET ? { id: MUX_TOKEN_ID, secret: MUX_TOKEN_SECRET } : null
+export const isMuxUsageConfigured = () => muxUsageToken() !== null
 export const isVideoConfigured = () => MUX_TOKEN_ID !== '' && MUX_TOKEN_SECRET !== '' && MUX_WEBHOOK_SECRET !== '' && /^[A-Za-z0-9_-]{1,40}$/.test(MUX_ENVIRONMENT_ID)
