@@ -736,3 +736,10 @@ With 0.8–0.9 kB more, checkout fails too, and PV1-4a only frees room on the pr
   - no runtime errors.
 - **Next:** the owner's phone check (Chrome, Safari, Instagram). This session can't reach the analytics project, so
   the owner runs the events query, then A2·3/A2·4 (Console › Traffic).
+- **First live events, 2026-11-11 21:59 IST**, once the owner fixed `ANALYTICS_DATABASE_URL` and redeployed. Until then,
+  ingest logged `[ingest] Error`: the URL check refused the value.
+  - Chrome on Android sent the product page, the view, the add to bag, the checkout and three Web Vitals.
+  - The product page's batch arrived when the page left for checkout, so the `pagehide` send works on a real phone,
+    unlike headless Chromium (frata-gotchas).
+  - No landing row: the tab's landing came during the earlier failed visits.
+  - Safari and Instagram are still to check.
