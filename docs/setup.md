@@ -322,3 +322,43 @@ plan will use; the plan may rename one, and this list follows it.
 - **Vercel Pro and the 5-minute outbox schedule** before order updates from EkCode's number (P3).
 - **Blue tick**: 30 days after the number goes live → WhatsApp Manager → the number → Request Official Business Account.
 - Confirm the allowances (600 / 6,000 / 20,000) after the pricing review.
+
+### Email — Amazon SES (ADR-0011, plan `docs/plans/2026-11-11-email.md`)
+Nothing here passes through an agent: no AWS key exists anywhere (the app reaches SES through Vercel OIDC). Region
+**Asia Pacific (Mumbai) ap-south-1** for every step.
+
+**A. Today**
+1. **AWS account:** root user with MFA; a $20 billing alarm (Billing → Budgets).
+2. **Production access, early** (SES → Account dashboard → Request production access): Mail type **Transactional**,
+   website `https://frrata.shop`, tick the acknowledgement. First reply within 96 hours. When asked for volume: up to
+   1,000,000 a day, 50 a second at festive peaks.
+3. **Identities** (SES → Identities → Create identity → Domain): `frratamail.app` (shops' order emails) and the notices
+   domain (`notify.<Frrata's domain>`), each with Easy DKIM 2048 and a custom MAIL FROM (`bounce.<domain>`). Paste the
+   records SES shows to the agent: frratamail.app is on Vercel DNS, so the agent adds them (3 DKIM CNAMEs, MX + SPF for
+   bounce, and `_dmarc` TXT `v=DMARC1; p=none; rua=mailto:dmarc@frratamail.app`).
+4. **SNS topic** (SNS → Topics → Standard, name `frrata-ses`): Edit → Message signing → **SignatureVersion 2**. Copy its
+   ARN → Vercel `SES_SNS_TOPIC_ARN`.
+5. **Configuration sets** (SES → Configuration sets): `shops` and `notices`. In each: Suppression list → **account-level
+   suppression off** (ours, per shop, is the only list); Event destination → SNS `frrata-ses`, events **Delivery,
+   Hard bounces/Bounces, Complaints, Rejects** only; "Include original headers" off.
+6. **Frrata's tenant** (SES → Tenants → Create): name `frrata`; associate the notices identity and the `notices` set.
+   Shops' tenants are created by the app.
+7. **OIDC** (IAM → Identity providers → Add → OpenID Connect): URL `https://oidc.vercel.com/premabnrj-dots-projects`,
+   audience `https://vercel.com/premabnrj-dots-projects`.
+8. **Role** (IAM → Roles → Web identity → that provider), name `frrata-ses`. Trust condition:
+   `oidc.vercel.com/premabnrj-dots-projects:sub` = `owner:premabnrj-dots-projects:project:frata:environment:production`
+   (previews are refused). Inline policy: `ses:SendEmail` on both identities and both configuration sets and
+   `arn:aws:ses:ap-south-1:<account>:tenant/*`; `ses:CreateTenant` and `ses:CreateTenantResourceAssociation` on
+   `*`. Copy the role ARN → Vercel `SES_ROLE_ARN`; your 12-digit account id → `SES_ACCOUNT_ID`.
+9. **Vercel env (Production only):** `SES_ROLE_ARN`, `SES_ACCOUNT_ID`, `SES_SNS_TOPIC_ARN`,
+   `EMAIL_SHOP_DOMAIN=frratamail.app`, `EMAIL_NOTICES_FROM=Frrata <notices@notify.<Frrata's domain>>`, `EMAIL_KEYS`
+   (`e1:` + 40 random characters; generate with `openssl rand -base64 30`).
+
+**B. When the agent says the email routes are deployed**
+1. **SNS subscription:** topic `frrata-ses` → Create subscription → HTTPS →
+   `https://frata.vercel.app/api/webhooks/ses`; "Raw message delivery" off. It confirms itself within a minute.
+   Delivery policy: 100 retries, max delay 60 s.
+2. **Sign-in email:** Supabase → Authentication → Hooks → Send Email hook → HTTP →
+   `https://frata.vercel.app/api/auth/send-email`; generate the secret → Vercel `SEND_EMAIL_HOOK_SECRET`; redeploy.
+   Then Authentication → Rate limits → emails per hour: 300.
+3. Sign in once to check; tell the agent.
