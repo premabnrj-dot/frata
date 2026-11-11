@@ -1,4 +1,5 @@
 import { applyEvents as applyEkcodeEvents, dailyEkcode } from '@/lib/db/ekcode'
+import { emailDaily } from '@/lib/db/email'
 import { processWhatsApp } from '@/lib/modules/communication/webhook'
 import { processMux } from '@/lib/video/process'
 import { NextResponse } from 'next/server'
@@ -58,5 +59,7 @@ export async function GET(request: Request) {
   // EkCode (P1): delivery reports not yet applied, then the daily roll-up and retention (ekcode_daily, 0088).
   let ekcode = 0
   try { ekcode = await applyEkcodeEvents(1000); await dailyEkcode() } catch (e) { console.error('[cron] ekcode', errName(e)) }
+  // Email (E·0): the day's counts into email_daily; messages after 180 days, sent outbox rows and SES events after 30.
+  try { await emailDaily() } catch (e) { console.error('[cron] email', errName(e)) }
   return NextResponse.json({ claimed, sent, events, erased, billing, collection, ekcode })
 }
