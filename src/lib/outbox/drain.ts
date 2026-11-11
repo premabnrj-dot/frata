@@ -9,6 +9,7 @@ import { sendBillAttempt } from '@/lib/billing/debit'
 import { sendDomainAdd, sendDomainRemove } from '@/lib/domains/senders'
 import { sendReviewAsk } from '@/lib/modules/reviews/sender'
 import { sendAssetDelete, sendRenditionCreate, sendUploadCancel } from '@/lib/video/senders'
+import { sendNoticeEmail } from '@/lib/email/notice-sender'
 import { E2E_FIXTURES, VERCEL_ENV } from '@/lib/env'
 
 // =============================================================================
@@ -33,6 +34,8 @@ export const SENDERS: Record<string, (row: OutboxRow) => Promise<void>> = {
   'mux.asset.delete': sendAssetDelete,
   'mux.upload.cancel': sendUploadCancel,
   'mux.rendition.create': sendRenditionCreate,
+  // Email E·1: a Frrata notice to the shop's people (recipients, preferences and reads resolved when it sends).
+  'email.notice': sendNoticeEmail,
 }
 const BATCH = 25
 
@@ -69,7 +72,7 @@ export async function drainOutbox(deadline: number): Promise<{ claimed: number; 
         if (err instanceof Later) { await deferRow(row.id, err.minutes, err.code); continue }
         // Our own refusals keep their words; a database or sender error only its name and code (S10: a drizzle
         // error carries its parameters).
-        await markFailed(row.id, row.attempts, err instanceof Error && !('cause' in err) && err.name === 'Error' ? err.message : errName(err))
+        await markFailed(row.id, err instanceof Error && !('cause' in err) && err.name === 'Error' ? err.message : errName(err))
       }
     }
     if (rows.length < BATCH) break

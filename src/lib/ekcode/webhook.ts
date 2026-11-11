@@ -42,4 +42,3 @@ export async function storeEkcodeWebhook(body: unknown): Promise<number> {
   return n
 }
 
-export { readCapped } from '@/lib/http/capped'

@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.35.0
+  version: 2.36.0
   verified: 2026-11-09
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -465,9 +465,13 @@ after it. A class a shop page uses from outside the shop's folders must be added
   with the number written in the spec. A daily cron is the safety net: a
   sender drains right after `enqueue` (`after()`), loops `claimDue` until empty
   or out of time, and shops run with bounded concurrency (`src/lib/outbox/drain.ts`:
-  `drainSoon()` after the commit — not called yet: the first sender's change calls it —
-  `drainOutbox(deadline)`, `eachLimited`). The cron is still daily (Hobby);
-  a sender with a deadline (COD confirmation) needs a frequent schedule (Pro) before it ships.
+  `drainSoon()` after the commit, `drainOutbox(deadline)`, `eachLimited`). `/api/cron/drain`
+  drains every 5 minutes (Pro, 2026-11-11), so `enqueue({ notBefore })` rows and retries
+  go on time. The claim and every settle run through definers (`app_outbox_claim`,
+  `app_outbox_settle`, drizzle/0091): no outbox row is readable without its shop set.
+  A sender throws `GiveUp` (dead at once), `Later(code, minutes)` (wait, no attempt
+  spent: a 429, a tenant not ready) or a plain `Error` (counted; dead at 8). Payloads are
+  ids only; errors are our codes, never a provider's words (they can quote an address).
 
 ## Speed (review 2026-11-08; findings P1–P15 in `docs/research/2026-11-08-performance-security-motion-review.md`)
 

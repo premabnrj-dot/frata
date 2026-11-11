@@ -2,7 +2,8 @@ import { after, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'node:crypto'
 import { EKCODE_META_APP_SECRET, EKCODE_WA_VERIFY_TOKEN } from '@/lib/env'
 import { verifyMetaSignature } from '@/lib/meta/signature'
-import { readCapped, storeEkcodeWebhook } from '@/lib/ekcode/webhook'
+import { storeEkcodeWebhook } from '@/lib/ekcode/webhook'
+import { readCapped } from '@/lib/http/capped'
 import { applyEvents } from '@/lib/db/ekcode'
 
 // ENTRY POINT credential: Meta's X-Hub-Signature-256 over the raw body with EkCode's own app secret (scripts/check-actions.mjs).

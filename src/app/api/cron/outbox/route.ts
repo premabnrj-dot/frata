@@ -15,7 +15,7 @@ import { collectDue } from '@/lib/billing/collect'
 // ENTRY POINT credential: CRON_SECRET via isCronRequest (scripts/check-actions.mjs).
 // The safety-net sweep; the outbox itself drains right after each enqueue (src/lib/outbox/drain.ts).
 
-/** One daily run (Vercel Hobby allows 60 s); shops four at a time: billing drafts until 15 s in, the outbox until 45 s. */
+/** One daily run (60 s; the outbox itself also drains every 5 minutes, /api/cron/drain); shops four at a time: billing drafts until 15 s in, the outbox until 45 s. */
 export const maxDuration = 60
 const SHOPS_AT_ONCE = 4
 

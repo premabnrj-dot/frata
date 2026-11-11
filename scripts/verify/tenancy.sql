@@ -2441,8 +2441,26 @@ do $$ declare r record; begin
   select * into r from public.app_outbox_claim(100) where dedupe_key = 'proof-65';
   if r.id is null then raise exception 'FAIL: the claim definer found nothing'; end if;
   perform public.app_outbox_settle(r.id, 'later', 'test', 5, 8);
+  if (select attempts from outbox where id = r.id) <> 0 then raise exception 'FAIL: later spent an attempt'; end if;
 end $$;
 rollback;
+-- Every settle outcome (billing debits go through these): sent; failed (dead only at the last attempt); dead.
+do $$ declare a uuid; b uuid; c uuid; d uuid; begin
+  insert into outbox (tenant_id, kind, dedupe_key, payload, attempts) values ('22222222-2222-2222-2222-222222222222', 'x', 'settle-a', '{}', 1) returning id into a;
+  insert into outbox (tenant_id, kind, dedupe_key, payload, attempts) values ('22222222-2222-2222-2222-222222222222', 'x', 'settle-b', '{}', 7) returning id into b;
+  insert into outbox (tenant_id, kind, dedupe_key, payload, attempts) values ('22222222-2222-2222-2222-222222222222', 'x', 'settle-c', '{}', 8) returning id into c;
+  insert into outbox (tenant_id, kind, dedupe_key, payload, attempts) values ('22222222-2222-2222-2222-222222222222', 'x', 'settle-d', '{}', 1) returning id into d;
+  perform public.app_outbox_settle(a, 'sent', null, 0, 8);
+  perform public.app_outbox_settle(b, 'failed', 'e', 0, 8);
+  perform public.app_outbox_settle(c, 'failed', 'e', 0, 8);
+  perform public.app_outbox_settle(d, 'dead', 'off', 0, 8);
+  if (select sent_at is null from outbox where id = a) then raise exception 'FAIL: sent not marked'; end if;
+  if (select dead_at is not null from outbox where id = b) then raise exception 'FAIL: dead before the last attempt'; end if;
+  if (select dead_at is null from outbox where id = c) then raise exception 'FAIL: not dead at the last attempt'; end if;
+  if (select dead_at is null or last_error <> 'off' from outbox where id = d) then raise exception 'FAIL: dead not marked'; end if;
+  begin perform public.app_outbox_settle(a, 'nonsense', null, 0, 8); raise exception 'FAIL: an unknown outcome'; exception when invalid_parameter_value then null; end;
+  delete from outbox where dedupe_key like 'settle-%';
+end $$;
 do $$ begin
   if exists (select 1 from unnest(array['email_messages','email_suppressions','shop_emails','email_shops','email_daily','notices','notice_reads','notice_prefs']) t
               where not (select relrowsecurity from pg_class where oid = t::regclass)
@@ -2464,4 +2482,24 @@ do $$ begin
   if has_function_privilege('frata_app', 'app_admin_email_health(uuid, int)', 'execute') then raise exception 'FAIL: the app reads every shop''s email health'; end if;
 end $$;
 
-\echo 'tenancy proof — all 65 checks passed'
+-- 66. Email E·1 notices (0092): only definers write a notice and its outbox row; a shop can't run them; Admin's fan-out
+-- needs an admin (a support staffer is refused); a support notice comes only from the caller's own open visit.
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_app', 'frata_admin']) r
+              where has_function_privilege(r, 'notice_write(uuid, text, text, uuid, text, text, text, boolean, boolean, uuid, uuid)', 'execute'))
+  then raise exception 'FAIL: a role writes notices directly'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_app']) r,
+                    unnest(array['app_support_notice(uuid, uuid)', 'app_admin_notice_fanout(uuid, text, text, uuid, text, text, text, text, boolean, boolean)', 'app_admin_notice_batches(uuid)']) f
+              where has_function_privilege(r, f, 'execute'))
+  then raise exception 'FAIL: a shop runs an Admin notice definer'; end if;
+end $$;
+begin; set local role frata_admin;
+do $$ begin
+  begin perform public.app_admin_notice_fanout('aaaaaaaa-0000-0000-0000-000000000001', 'all', null, null, 'product_update', 'Hello shops', null, null, false, false);
+    raise exception 'FAIL: a support staffer sent to every shop'; exception when sqlstate 'P0001' then null; end;
+  begin perform public.app_support_notice(gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001');
+    raise exception 'FAIL: a support notice without its visit'; exception when sqlstate 'P0001' then null; end;
+end $$;
+rollback;
+
+\echo 'tenancy proof — all 66 checks passed'

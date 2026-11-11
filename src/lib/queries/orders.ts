@@ -1,4 +1,5 @@
 import 'server-only'
+import { unreadNotices } from './notices'
 import { cache } from 'react'
 import { and, desc, eq, ilike, like as like_, or, sql } from 'drizzle-orm'
 import { orderLines, orders } from '@/lib/db/schema-orders'
@@ -92,6 +93,19 @@ export async function queueShopFor(tenantId: string): Promise<{ prefix: string; 
  * predicate, so pill and tab agree. React cache() keys it on the tenant alone for one request (the layout and a
  * page may both ask); `now` is taken inside, so the pill and the page's tabs differ by microseconds at most.
  */
+/** The console nav's two counts in ONE transaction (speed review P8): orders to confirm, and this member's unread
+ *  Frrata notices (capped at 10: the pill shows 9+). Per request, shared by both pills. */
+export const navCounts = cache(async (tenantId: string, userId: string): Promise<{ toConfirm: number; unread: number }> => {
+  const now = new Date()
+  return withTenant(tenantId, async (tx) => {
+    const [[r], unread] = await Promise.all([
+      tx.select({ n: sql<number>`count(*)::int` }).from(orders).where(and(eq(orders.tenantId, tenantId), inTabSql('to_confirm', now))),
+      unreadNotices(tx, tenantId, userId),
+    ])
+    return { toConfirm: Number(r?.n ?? 0), unread }
+  })
+})
+
 export const toConfirmCount = cache(async (tenantId: string): Promise<number> => {
   const now = new Date()
   const [r] = await withTenant(tenantId, (tx) =>

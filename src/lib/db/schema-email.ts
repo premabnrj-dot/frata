@@ -97,10 +97,6 @@ export const emailDaily = pgTable('email_daily', {
   skipped: integer('skipped').notNull().default(0),
 }, (t) => [primaryKey({ name: 'email_daily_pk', columns: [t.tenantId, t.day] })])
 
-export const NOTICE_TYPES = ['billing', 'security', 'frrata_action', 'needs_you', 'product_update'] as const
-/** Always emailed to owners and admins; can't be switched off (spec § E·1). */
-export const REQUIRED_NOTICE_TYPES = ['billing', 'security', 'frrata_action'] as const
-
 export const notices = pgTable('notices', {
   id: id(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),

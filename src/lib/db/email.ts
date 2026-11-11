@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 
 // =============================================================================
 // FILE: src/lib/db/email.ts — THE EMAIL DEFINERS frata_app may call (drizzle/0091). Every other email read or write is
-// a tenant query through withTenant (src/lib/queries/emails.ts, src/lib/email/sender.ts).
+// a tenant query through withTenant (src/lib/queries/notices.ts, src/lib/email/notice-sender.ts).
 // =============================================================================
 
 /** Yesterday's and today's counts into email_daily; retention (cron, daily). */

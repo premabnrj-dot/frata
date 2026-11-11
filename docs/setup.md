@@ -157,11 +157,10 @@ business once the company exists to lift that.
   (vercel.com/docs, 2026-07-15 to 09-16).
 - **Before WhatsApp COD confirmations (or any outbox sender) ship** (owner, 2026-11-08: "will upgrade to Pro
   later"; review P5):
-  1. **Vercel Pro**, then a frequent outbox schedule in `vercel.json` (every 5 minutes, not the daily `17 3 * * *`).
-     A sender also drains straight after its commit (`drainSoon`, `src/lib/outbox/drain.ts`); the cron is the net.
-  2. **The outbox claim moves to a definer** that returns the due rows for the sweep, and the `outbox` policies lose
-     their no-shop branch (drizzle/0017, 0018), so a table that will hold shoppers' phones has none
-     (tenancy audit 2026-11-08; `check:tenant` lists `outbox` in OPEN_FOR_APP until then).
+  1. ~~Vercel Pro and a frequent outbox schedule~~ — done 2026-11-11 (owner upgraded to Pro): `/api/cron/drain` every
+     5 minutes (`vercel.json`); a sender also drains straight after its commit (`drainSoon`).
+  2. ~~The outbox claim moves to a definer~~ — done 2026-11-11 (drizzle/0091): `app_outbox_claim` / `app_outbox_settle`,
+     and the `outbox` policies lost their no-shop branch; `outbox` is off check:tenant's OPEN_FOR_APP.
 - **Preview deployments must not hold the production database** (review S1): in Vercel, take `DATABASE_URL` off
   Preview (or point Preview at a Supabase branch) and turn on Deployment Protection for previews.
 
@@ -319,7 +318,7 @@ plan will use; the plan may rename one, and this list follows it.
 5. Your approval of the P1 build on a demo shop.
 
 **D. Later**
-- **Vercel Pro and the 5-minute outbox schedule** before order updates from EkCode's number (P3).
+- ~~Vercel Pro and the 5-minute outbox schedule~~ — done 2026-11-11 (`/api/cron/drain`).
 - **Blue tick**: 30 days after the number goes live → WhatsApp Manager → the number → Request Official Business Account.
 - Confirm the allowances (600 / 6,000 / 20,000) after the pricing review.
 

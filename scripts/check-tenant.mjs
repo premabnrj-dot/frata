@@ -140,7 +140,6 @@ for (const t of tables) {
 // no merchant rows may have one, each with its reason. Admin policies
 // (to frata_admin) are fenced by ADR-0007 instead.
 const OPEN_FOR_APP = {
-  outbox: 'the cross-tenant sweep reads and marks due rows; inserts are tenant-checked',
   pincodes: 'India Post reference data, the same for every shop, read-only',
   rate_limits: 'hashed abuse counters, no tenant data',
   plans: 'the public price list',

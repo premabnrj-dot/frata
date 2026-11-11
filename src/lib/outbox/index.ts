@@ -56,7 +56,7 @@ const settle = (id: string, outcome: 'sent' | 'failed' | 'later' | 'dead', error
 export async function markSent(id: string) { await settle(id, 'sent', null) }
 
 /** A failed try: dead once the claim has spent MAX_ATTEMPTS. */
-export async function markFailed(id: string, _attempts: number, error: string) { await settle(id, 'failed', error) }
+export async function markFailed(id: string, error: string) { await settle(id, 'failed', error) }
 
 /** Not now, and not a failure (a paused module, a 429, a shop's SES tenant not ready): no attempt spent. */
 export async function deferRow(id: string, minutes = 15, why = 'paused') { await settle(id, 'later', why, minutes) }
