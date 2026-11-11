@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { button } from '@/components/ui/button'
 import { dueDate } from '@/domains/tax/gstr1'
-import { ANY_MEMBER, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
+import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
+import { CONSOLE_ROLES } from '@/domains/tenancy/roles'
 import { CAN_SEE_GST } from '@/domains/tenancy/roles'
 import { dayIN } from '@/lib/format-date'
 import { gstPeriod, type Fix } from '@/lib/queries/gst'
@@ -32,7 +33,7 @@ const FIX_WORDS: Record<Fix['kind'], { title: string; href: string; action: stri
 
 /** Console › GST (GST app G1; approved mockup "The month", "Review", "For your CA"). */
 export default async function GstPage({ searchParams }: { searchParams: Promise<{ p?: string }> }) {
-  const auth = await requireMember(ANY_MEMBER)
+  const auth = await requireMember(CONSOLE_ROLES)
   if (!auth.ok) return <Panel title={auth.message} />
   const now = new Date()
   // GST (the app) is a module: in Growth and Scale, on once the shop switches it on in Apps. Invoices are GST-correct either way.

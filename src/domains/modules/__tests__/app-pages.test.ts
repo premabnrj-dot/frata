@@ -14,3 +14,9 @@ describe('every app page describes the app while it is off', () => {
     })
   }
 })
+
+// GST's page is the accountant's screen: its first gate admits every console role, and CAN_SEE_GST decides after the
+// about page (security review M1, 2026-11-11: ANY_MEMBER left the accountant out).
+it('GST admits the accountant at its first gate', () => {
+  expect(readFileSync('src/app/(console)/console/apps/gst/page.tsx', 'utf8')).toMatch(/requireMember\(CONSOLE_ROLES\)/)
+})

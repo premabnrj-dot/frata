@@ -23,6 +23,7 @@ begin
   if not exists (select 1 from public.platform_staff s where s.user_id = p_uid) then raise exception 'not_staff' using errcode = 'P0001'; end if;
   return query select i.module, t.id, t.name, count(*)::bigint, min(i.created_at)
     from public.app_interest i join public.tenants t on t.id = i.tenant_id
+    join public.members m on m.tenant_id = i.tenant_id and m.user_id = i.user_id
    group by i.module, t.id, t.name order by i.module, min(i.created_at) limit 2000;
 end $$;--> statement-breakpoint
 revoke all on function app_admin_interest(uuid) from public, anon, authenticated, service_role, frata_app;--> statement-breakpoint
