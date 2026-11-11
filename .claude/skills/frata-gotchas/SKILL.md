@@ -2,7 +2,7 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a PDF download that saves as pdf.txt, MODULE_NOT_FOUND in production only, a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.15.0
+  version: 1.16.0
   verified: 2026-11-08
 ---
 
@@ -70,3 +70,10 @@ The console home baseline (`e2e/baselines/console-home-desktop.png`, flow 05 sho
 not a regression: mask the date in that shot or freeze the clock for flow 05 when next touching it. The same full run
 saw flow 46 messages stop at "Connecting…" twice at different steps, then pass 10/10 alone: the same class as the
 open action-commit flake above.
+
+## Build: "An error occurred in `next/font`. TypeError: Cannot read properties of null (reading '1')" (2026-11-11)
+`next/font/google` fetched Google's stylesheet and files during every build; an answer it could not parse failed the
+build at random (the same commit `964fdc0` built READY once and ERROR once on Vercel; local builds failed the same way).
+Every face is now self-hosted in `src/components/fonts/<face>/` (OFL 1.1, from Fontsource 5.3.0) and loaded with
+`next/font/local`; `check:fonts` refuses the Google loader. A face outside latin (₹ is U+20B9, latin-ext) needs its own
+latin-ext file with a `unicode-range` declaration: Inter's two faces meet in `--font-inter` (`src/app/base.css`).
