@@ -81,3 +81,12 @@ describe('the SQL CHECK says what shape.ts says', () => {
     expect(sql).toContain(EMAIL_SQL.replace(/'/g, "''"))
   })
 })
+
+import { cleanSubject, fromHeader } from '../headers'
+describe('headers', () => {
+  it('strips what could break a header', () => {
+    expect(fromHeader('Kesar "Studio" <x>,;', 'k@frratamail.app')).toBe('"Kesar Studio x" <k@frratamail.app>')
+    expect(fromHeader('केसर', 'k@frratamail.app')).toMatch(/^=\?UTF-8\?B\?.+\?= <k@frratamail\.app>$/)
+    expect(cleanSubject('Hi\r\nBcc: x@y')).toBe('Hi Bcc: x@y')
+  })
+})

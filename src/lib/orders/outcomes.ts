@@ -1,4 +1,5 @@
 import 'server-only'
+import { enqueueOrderEmail } from '@/lib/email/enqueue'
 import { and, desc, eq, gt, isNotNull, isNull, notInArray } from 'drizzle-orm'
 import { outcomeUndoOpen, shippedUndoOpen } from '@/domains/orders/outcomes'
 import { applies, ROLES, type OrderAction } from '@/domains/orders/work'
@@ -41,7 +42,9 @@ export async function markShipped(tx: Tx, o: Outcome & { courierName?: string; t
     .where(and(eq(orders.tenantId, o.tenantId), eq(orders.id, o.orderId), isNotNull(orders.packedAt), isNull(orders.shippedAt), isNull(orders.cancelledAt))).returning({ id: orders.id })
   if (!r.length) return { ok: false, error: 'This order changed meanwhile. Reload the page.' }
   await tx.insert(shipments).values({ tenantId: o.tenantId, orderId: o.orderId, provider: 'self', courierName, trackingNumber, openedAt: at })
-  return { ok: true, eventId: await record(tx, o.tenantId, o.orderId, o.actor, 'shipped', at) }
+  const eventId = await record(tx, o.tenantId, o.orderId, o.actor, 'shipped', at)
+  await enqueueOrderEmail(tx, o.tenantId, o.orderId, 'shipped', eventId, now)
+  return { ok: true, eventId }
 }
 
 /** An outcome on a shipped order, in its own WHERE: no outcome yet. */
@@ -62,7 +65,9 @@ async function outcome(tx: Tx, o: Outcome, action: 'deliver' | 'came_back' | 'lo
   if (!r.length) return { ok: false, error: 'This order changed meanwhile. Reload the page.' }
   const backInStock = action === 'came_back' && restock ? await putStockBack(tx, o.tenantId, o.orderId) : []
   const kind = action === 'deliver' ? 'delivered' as const : action === 'lost' ? 'lost' as const : 'rto' as const
-  return { ok: true, eventId: await record(tx, o.tenantId, o.orderId, o.actor, kind, at, action === 'came_back' && restock ? { reason: 'restocked' } : {}), backInStock }
+  const eventId = await record(tx, o.tenantId, o.orderId, o.actor, kind, at, action === 'came_back' && restock ? { reason: 'restocked' } : {})
+  if (kind === 'delivered') await enqueueOrderEmail(tx, o.tenantId, o.orderId, 'delivered', eventId, now)
+  return { ok: true, eventId, backInStock }
 }
 
 export const markDelivered = (tx: Tx, o: Outcome) => outcome(tx, o, 'deliver')

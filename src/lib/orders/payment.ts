@@ -1,4 +1,5 @@
 import 'server-only'
+import { enqueueOrderEmail } from '@/lib/email/enqueue'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { quote, type Quote } from '@/domains/checkout/quote'
 import { reprice } from '@/domains/orders/amounts'
@@ -57,6 +58,8 @@ export async function markPaid(tx: Tx, o: OrderKey, p: { paymentId: string; fee?
     await writeReprice(tx, o.tenantId, o.id, sp.lineIds, r)
   }
   await takeStock(tx, o.tenantId, o.id, 'in_stock', soldOut)
+  // Email E·2: once per order (a switch to COD then a capture sends one "confirmed").
+  await enqueueOrderEmail(tx, o.tenantId, o.id, 'confirmed', null, new Date())
   return 'paid'
 }
 
@@ -143,6 +146,7 @@ export async function switchToCod(tenantId: string, token: string, expectedTotal
     if (!switched.length) return { kind: 'refused', status: 409, error: 'This order was already paid or moved to Pay on delivery. Reload the page.' }
     await writeReprice(tx, tenantId, o.id, sp.lineIds, r)
     await takeStock(tx, tenantId, o.id, 'in_stock', soldOut)
+    await enqueueOrderEmail(tx, tenantId, o.id, 'confirmed', null, now)
     return { kind: 'switched', total: r.total }
   })
   if (soldOut.length) refreshSoldOut(tenantId)

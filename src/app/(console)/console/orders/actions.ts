@@ -13,6 +13,7 @@ import type { Tx } from '@/lib/db'
 import * as work from '@/lib/orders/work'
 import * as out from '@/lib/orders/outcomes'
 import { refreshShop } from '@/lib/queries/storefront'
+import { drainSoon } from '@/lib/outbox/drain'
 
 // =============================================================================
 // FILE: src/app/(console)/console/orders/actions.ts
@@ -44,6 +45,7 @@ async function run<T extends object>(action: OrderAction, target: string, detail
     const v = r.value
     if (!v.ok) return { ok: false, error: v.error, ...(v.by ? { by: { email: v.by.email, at: v.by.at.toISOString() } } : {}) }
     after?.(r.tenantId, v)
+    drainSoon() // an order email the action queued (shipped, delivered, cancelled), after the response
     // The whole console layout: the nav's To confirm count lives there, and layouts do not re-render on soft navigation.
     revalidatePath('/console', 'layout')
     return v

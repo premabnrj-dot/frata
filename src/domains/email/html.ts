@@ -18,8 +18,9 @@ export function html(strings: TemplateStringsArray, ...values: Part[]): Html {
 /** Text with line breaks, escaped. */
 export const lines = (text: string) => new Html(text.split('\n').map(escapeHtml).join('<br>'))
 
-/** Only https links (the shop's own; the caller builds them), else nothing. */
-export const safeHref = (href: string) => /^https:\/\/[a-z0-9.-]+(\/[^\s"'<>]*)?$/i.test(href) ? href : ''
+/** Only https links (the shop's own; the caller builds them), else nothing. Plain http only for a `.test` or
+ *  `localhost` host, which exist only in the local end-to-end run. */
+export const safeHref = (href: string) => /^https:\/\/[a-z0-9.-]+(:\d+)?(\/[^\s"'<>]*)?$/i.test(href) || /^http:\/\/[a-z0-9.-]+\.(test|localhost)(:\d+)?(\/[^\s"'<>]*)?$/i.test(href) ? href : ''
 
 /** A shop's colour, or the default when it isn't a 6-digit hex. */
 export const safeColour = (c: string | null | undefined, fallback = '#1C1917') => c && /^#[0-9a-f]{6}$/i.test(c) ? c : fallback

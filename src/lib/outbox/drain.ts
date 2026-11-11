@@ -10,6 +10,7 @@ import { sendDomainAdd, sendDomainRemove } from '@/lib/domains/senders'
 import { sendReviewAsk } from '@/lib/modules/reviews/sender'
 import { sendAssetDelete, sendRenditionCreate, sendUploadCancel } from '@/lib/video/senders'
 import { sendNoticeEmail } from '@/lib/email/notice-sender'
+import { sendOrderEmail, sendTenantSetup } from '@/lib/email/order-sender'
 import { E2E_FIXTURES, VERCEL_ENV } from '@/lib/env'
 
 // =============================================================================
@@ -36,6 +37,9 @@ export const SENDERS: Record<string, (row: OutboxRow) => Promise<void>> = {
   'mux.rendition.create': sendRenditionCreate,
   // Email E·1: a Frrata notice to the shop's people (recipients, preferences and reads resolved when it sends).
   'email.notice': sendNoticeEmail,
+  // Email E·2: an order email to the shopper in the shop's brand; and a shop's SES tenant, set up once, paced.
+  'email.order': sendOrderEmail,
+  'email.tenant': sendTenantSetup,
 }
 const BATCH = 25
 
@@ -81,11 +85,15 @@ export async function drainOutbox(deadline: number): Promise<{ claimed: number; 
 }
 
 /**
- * After a change that enqueued commits: send now, after the response, within 20 s; the cron catches the rest.
- * Not called yet: nothing enqueues before the first sender (WhatsApp COD confirmation). That change calls it.
+ * After a change that enqueued commits: send now, after the response, within 20 s; /api/cron/drain catches the rest
+ * every 5 minutes (order emails: placing, paying, switching to COD and every console order action call it).
  */
+let draining = false
 export function drainSoon() {
-  after(() => drainOutbox(Date.now() + 20_000).then(() => undefined, (e) => console.error('[outbox] drain', errName(e))))
+  // One drain per instance at a time (speed review L3): checkouts at festive volume would otherwise each hold one.
+  if (draining) return
+  draining = true
+  after(() => drainOutbox(Date.now() + 20_000).then(() => undefined, (e) => console.error('[outbox] drain', errName(e))).finally(() => { draining = false }))
 }
 
 /** Runs `work` over `items`, `limit` at a time (the cron's per-shop sweeps). */

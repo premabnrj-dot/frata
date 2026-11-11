@@ -1,4 +1,5 @@
 import 'server-only'
+import { enqueueOrderEmail } from '@/lib/email/enqueue'
 import { and, desc, eq, gt, inArray, isNotNull, isNull, notInArray, sql } from 'drizzle-orm'
 import { fiscalYear } from '@/domains/counters/fiscal-year'
 import { refundDue, type StoredOrder } from '@/domains/orders/amounts'
@@ -209,7 +210,9 @@ export async function cancel(tx: Tx, tenantId: string, actor: Actor, orderId: st
   if (!r.length) return refuse(tx, tenantId, orderId, 'cancel', (await current(tx, tenantId, orderId, now))!.state)
   const backInStock = c0.restock ? await putStockBack(tx, tenantId, orderId) : []
   const after: StoredOrder = { ...c.o, cancelledAt: at }
-  return { ok: true, eventId: await record(tx, tenantId, orderId, actor, 'cancelled', at, { reason: c0.reason }), refund: refundDue(after), backInStock }
+  const eventId = await record(tx, tenantId, orderId, actor, 'cancelled', at, { reason: c0.reason })
+  await enqueueOrderEmail(tx, tenantId, orderId, 'cancelled', null, now)
+  return { ok: true, eventId, refund: refundDue(after), backInStock }
 }
 
 /**
