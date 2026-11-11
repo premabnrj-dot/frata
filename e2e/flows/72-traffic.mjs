@@ -40,7 +40,9 @@ const hide = (p) => p.evaluate(() => {
 export default {
   name: 'traffic',
   async run(t) {
-    const { adb } = t
+    const { adb, db } = t
+    // The visit adds a Rust M to the bag: in stock whatever earlier flows bought (as 71-email does).
+    await db`update variants set stock = 50 where tenant_id = ${KESAR} and archived_at is null`
     await adb`delete from events where tenant_id = ${KESAR}`
     const kinds = async () => (await adb`select kind, path, landing, us, um, rh, product_id, device from events where tenant_id = ${KESAR} order by at`)
 
