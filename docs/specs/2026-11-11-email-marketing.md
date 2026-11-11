@@ -1,5 +1,5 @@
 # Email marketing (campaigns and flows)
-Status: draft · Date: 2026-11-11 · Mockup: https://claude.ai/artifact/FEYLwWhyFNbtDDgbdC2PNX
+Status: parked (owner, 2026-11-11: "park email campaign addon for later") · Date: 2026-11-11 · Mockup: https://claude.ai/artifact/FEYLwWhyFNbtDDgbdC2PNX
 (`docs/mockups/2026-11-11-email-marketing.html`) · Approved: — · Research: `docs/research/2026-11-11-email-marketing.md`
 · Builds on: `docs/specs/2026-11-08-messaging.md` (E·3 own domain; E·4/E·5 held there, planned here)
 

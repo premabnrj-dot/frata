@@ -2,7 +2,7 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.9.0
+  version: 2.10.0
   verified: 2026-11-08
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
@@ -111,6 +111,34 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
   - The first debit after a trial fails more above ₹15,000 — debit success by amount band.
 - **No credit for plan days already billed in advance** when Admin gives a live, paid shop a trial mid-month or extends
   after a 1st was invoiced: the trial's effect starts with the next invoice (impact review TR0; revisit if a shop asks).
+
+## The pricing ladder (owner-approved 2026-11-11; `docs/specs/2026-11-11-pricing-ladder.md`)
+
+Every feature or add-on is placed and priced by these five steps before it is planned:
+1. **Place it:** Core (every plan; needed to run a shop, or the Shopify + India app baseline gives it free) · Metered
+   (every plan, a monthly allowance rising by plan, then a prepaid wallet; never a hard stop on selling) · Earns its plan
+   (Growth or Scale: pays only past that plan's break-even) · Add-on (a specialist job, monthly price, any plan unless it
+   empties a plan).
+2. **Check the three stores** — low AOV (₹599 × 300), high AOV (₹4,500 × 80), volume (₹900 × 3,000): what each pays and
+   saves from its own orders; an add-on above 2% of a low-AOV shop's GMV is priced again.
+3. **Check the baseline** (rule 2): never dearer for the shop the job is for.
+4. **Write the nudge:** after a win, never mid-task, in the shop's own rupees, one action, GST shown.
+5. **Write the hypotheses** (rule 1).
+
+**The cheapest plan follows delivered GMV, not orders:** Launch → Growth at ₹3.5 L a month, Growth → Scale at ₹20 L.
+A ₹4,500-AOV shop at 80 orders is already better on Growth; a ₹599-AOV shop at 300 orders is right on Launch. Low-AOV
+shops move up for tools that save ₹ per order (RTO Shield, COD confirm, cart flows); high-AOV shops for the fee and for
+keeping big buyers; volume shops for operations (seats, bulk, caps, support).
+
+**Indian merchant psychology (hypotheses, each tested before called right):** value in rupees from their own orders;
+usage as prepaid recharges with visibly better big packs; ₹299 / ₹499 / ₹999 and "₹N a day"; no surprise at the bill
+(+ 18% GST, only on delivered orders, UPI Autopay notice); trials for add-ons; allowances that turn amber at 80% and
+offer wait / recharge / move up, never a wall; yearly ("2 months free") on Growth and Scale only; one recommended plan
+labelled by who it is for; no dark patterns (CCPA 2023). Never a one-time activation fee.
+
+**Email marketing as placed (parked by the owner 2026-11-11):** Launch included at ₹0 with 5,000 emails; Growth adds
+Pay online next time, Win-back, cart flows, resend, best time, calendar; Scale adds VIP segments, several senders,
+higher caps, review of big sends, export/API.
 
 ## Current model (founder's, unvalidated, 2026-11)
 

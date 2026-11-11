@@ -1,5 +1,5 @@
 # The pricing ladder — how every feature and add-on is placed and priced
-Status: draft for the owner · Date: 2026-11-11 · Approved: — · Goes into `frata-unit-economics` once approved
+Status: active · Date: 2026-11-11 · Approved: owner, 2026-11-11 (method; Launch email at ₹0) · Recorded in `frata-unit-economics` 2.10.0
 
 ## Goal
 One method, used every time we plan a feature or an add-on, so that (a) every plan is worth its price to the shop it is
