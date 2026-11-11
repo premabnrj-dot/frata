@@ -9,6 +9,7 @@ import type { Biz, BizCheck } from './checkout-biz'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { OfferProgress, OfferRows, useQuote } from './bag'
 import { ATTR_KEY, bag, offerCode, useBag, useOfferCode } from './bag-store'
+import { fitKey, shownQuote } from '@/domains/checkout/fitted'
 import { api, codWhyNotText, dayRange, inr, type Pay, type PublicListed, type PublicQuote } from './shop-client'
 
 // =============================================================================
@@ -21,7 +22,7 @@ import { api, codWhyNotText, dayRange, inr, type Pay, type PublicListed, type Pu
 
 type Form = { phone: string; email: string; name: string; pincode: string; city: string; addressLine: string; area: string; landmark: string; state: string }
 const EMPTY: Form = { phone: '', email: '', name: '', pincode: '', city: '', addressLine: '', area: '', landmark: '', state: '' }
-const FORM_KEY = 'frata.checkout.v1', PENDING_KEY = 'frata.pending.v1'
+const FORM_KEY = 'frata.checkout.v1', PENDING_KEY = 'frata.pending.v1', FILLED_KEY = 'frrata.checkout.filled.v1'
 const ss = { get: (k: string) => { try { return sessionStorage.getItem(k) } catch { return null } }, set: (k: string, v: string) => { try { sessionStorage.setItem(k, v) } catch { /* page only */ } }, del: (k: string) => { try { sessionStorage.removeItem(k) } catch { /* */ } } }
 const randomKey = () => { const b = new Uint8Array(16); crypto.getRandomValues(b); return btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') }
 
@@ -61,20 +62,33 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   // out or ended during the hold): shown first, then sent as the total the shopper agreed to.
   const [codTotal, setCodTotal] = useState<number | null>(null)
   const { q: live, online, error: quoteError, refresh } = useQuote(f.pincode)
-  // The price the server gave THIS phone (a 409 "changed" from placement). /api/shop/quote has no phone, so it can't
-  // know a first-order offer or a per-phone limit doesn't fit a returning shopper; re-asking it priced the next tap
-  // wrong again, and the shopper looped on "The total changed" for good (shop stress test 2026-11-11). Until the bag,
-  // phone, pincode or code changes, the placement's own quote is the one shown and sent.
+  // The price the server gave THIS phone (a 409 "changed" from placement), shown and sent until the bag, phone, pincode
+  // or code changes (src/domains/checkout/fitted.ts; shop stress test 2026-11-11).
   const items = useBag()
-  const typedCode = useOfferCode()
-  const [fitted, setFitted] = useState<{ sig: string; quote: PublicQuote } | null>(null)
-  const fitSig = JSON.stringify([items, f.phone, f.pincode, typedCode])
-  const q = fitted && fitted.sig === fitSig ? fitted.quote : live
+  const code = useOfferCode()
+  const [fitted, setFitted] = useState<{ key: string; quote: PublicQuote } | null>(null)
+  const q = shownQuote(fitted, fitKey(items, f.phone, f.pincode, code), live)
   const seen = useRef<PublicQuote | null>(null)
   const attempt = useRef<{ sig: string; key: string } | null>(null)
 
-  // Restore what was typed (this tab only); a pending online order goes to its own page.
+  // Restore what was typed (this tab only); a pending online order goes to its own page. It never did (the key was
+  // written and never read): a reload in Instagram's browser after the switch to the UPI app, or Back then Forward,
+  // placed the bag again as a NEW order, a second Razorpay order and a possible second charge (shop stress test
+  // 2026-11-11). Its page pays it (online again, or on delivery) and checks while a payment is on its way.
   useEffect(() => {
+    // Only for the bag it was placed with: a shopper who left the payment, changed the bag and came back is placing a
+    // new order, and keeps that bag.
+    let pending: { t?: unknown; b?: unknown } | null = null
+    try { pending = JSON.parse(ss.get(PENDING_KEY) ?? 'null') } catch { /* an older value: ignored */ }
+    if (pending && typeof pending.t === 'string' && /^[A-Za-z0-9_-]{22}$/.test(pending.t)) {
+      ss.del(PENDING_KEY)
+      if (pending.b === JSON.stringify(bag.get())) {
+        // The order holds this bag now: the bag is emptied so it can't be placed twice.
+        bag.clear()
+        window.location.replace(`/orders#t=${pending.t}`)
+        return
+      }
+    }
     try { const saved = JSON.parse(ss.get(FORM_KEY) ?? 'null'); if (saved) setF({ ...EMPTY, ...saved }) } catch { /* */ }
   }, [])
   useEffect(() => { ss.set(FORM_KEY, JSON.stringify(f)) }, [f])
@@ -82,19 +96,26 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   useEffect(() => { if (q && !seen.current) seen.current = q }, [q])
   const set = (k: keyof Form, v: string) => { setF((x) => ({ ...x, [k]: v })); setErrors((e) => { const n = { ...e }; delete n[k]; return n }) }
 
-  // City and state from the pincode, when the directory knows it (no delivery promise). A new pincode replaces the state
-  // (it decides the place of supply, so GST, and where a shop that delivers within its state can deliver) and a city
-  // that was filled from the old pincode; a city the shopper typed stays. Before, both were filled only when empty, so
-  // a changed pincode kept the old state (shop stress test 2026-11-11).
-  const filledCity = useRef('')
+  // City and state from the pincode, when the directory knows it (no delivery promise). A new pincode replaces what the
+  // OLD pincode filled in (the state decides the place of supply, so GST, and where a shop that delivers within its
+  // state can deliver); what the shopper chose stays. A pincode the directory doesn't know clears an autofilled state,
+  // so the shopper picks it. Before, both were filled only when empty, so a changed pincode kept the old state (shop
+  // stress test 2026-11-11). What was autofilled is remembered with the restored form (this tab only).
+  const filled = useRef<{ city: string; state: string }>({ city: '', state: '' })
+  useEffect(() => { try { filled.current = { city: '', state: '', ...JSON.parse(ss.get(FILLED_KEY) ?? '{}') } } catch { /* */ } }, [])
   useEffect(() => {
     if (!/^[1-9][0-9]{5}$/.test(f.pincode)) return
     let gone = false
     void api<{ city: string | null; state: string | null }>('/api/shop/pincode', { pincode: f.pincode }).then((r) => {
       if (gone || !r.ok) return
-      const city = r.data.city, state = r.data.state
-      setF((x) => ({ ...x, city: city && (!x.city || x.city === filledCity.current) ? city : x.city, state: state || x.state }))
-      if (city) filledCity.current = city
+      const city = r.data.city ?? '', state = r.data.state ?? ''
+      setF((x) => ({
+        ...x,
+        city: !x.city || x.city === filled.current.city ? city || (x.city === filled.current.city ? '' : x.city) : x.city,
+        state: !x.state || x.state === filled.current.state ? state || (x.state === filled.current.state ? '' : x.state) : x.state,
+      }))
+      filled.current = { city, state }
+      ss.set(FILLED_KEY, JSON.stringify(filled.current))
     })
     return () => { gone = true }
   }, [f.pincode])
@@ -103,13 +124,15 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   const codOk = !!q?.cod
   // The pay-online saving, said on both cards (never a COD surcharge: drip-pricing rule, spec § Rules).
   const saving = q?.appliedPrepaid.find((a) => a.class === 'payment') ?? null
-  const code = useOfferCode()
   const [typing, setTyping] = useState(false)
   const [draftCode, setDraftCode] = useState('')
   const lines = q?.lines.filter((l) => l.qty > 0) ?? []
 
   // Online payment is not offered on this address (D1·8): a choice made before the quote said so is undone.
   useEffect(() => { if (!online && method === 'prepaid') setMethod(null) }, [online, method])
+  // Pay on delivery no longer offered on this price (say a lost first-order offer took it over the COD limit): undo the
+  // choice, never "Place order · ₹0" (impact review 2026-11-11).
+  useEffect(() => { if (q && !q.cod && method === 'cod') setMethod(null) }, [q, method])
   const choose = (m: 'cod' | 'prepaid') => { if (!firstMethod.current) firstMethod.current = m; setMethod(m); setMsg(null) }
 
   async function check(): Promise<boolean> {
@@ -139,13 +162,16 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     })
     if (!r.ok) {
       setBusy(false)
-      if (r.data.quote) {
+      // Only a "changed" is a new price to show; a refusal that carries a quote says its own words (impact review).
+      if (r.data.changed && r.data.quote) {
         const { changedText } = await import('./checkout-place')
         setMsg({ tone: 'changed', text: changedText(seen.current, r.data.quote) })
-        setFitted({ sig: JSON.stringify([items, f.phone, f.pincode, code]), quote: r.data.quote })
         // Sold-out and gone lines leave the bag too: checkout hides a line it can't sell, so one left in the bag was
         // refused on every tap with no way to remove it here (shop stress test 2026-11-11).
         bag.reconcile(r.data.quote.lines.filter((l) => l.problem), r.data.quote.missing)
+        // Keyed by the bag as it is now: when reconcile took lines out, the placement quote (priced with them) is not this
+        // bag's, and the next tap re-prices.
+        setFitted({ key: fitKey(bag.get(), f.phone, f.pincode, code), quote: r.data.quote })
         seen.current = r.data.quote; await refresh()
         return
       }
@@ -155,14 +181,14 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     }
     seen.current = q
     if (r.data.method === 'cod') return done(r.data.token)
-    ss.set(PENDING_KEY, r.data.token)
+    ss.set(PENDING_KEY, JSON.stringify({ t: r.data.token, b: JSON.stringify(items) }))
     if (!r.data.pay) { setBusy(false); setFailed({ token: r.data.token, total: r.data.total }); setMsg({ tone: 'error', text: `${r.data.payError ?? 'Online payment is not working right now.'} Your order is kept: pay on delivery instead, or try again in a minute.` }); return }
     await openPay(r.data.token, r.data.pay)
   }
 
   async function openPay(token: string, pay: Pay) {
     const fail = (text: string) => { setBusy(false); setFailed({ token, total: pay.amount }); setMsg({ tone: 'error', text }) }
-    try { const { openRazorpay } = await import('./checkout-pay'); await openRazorpay(token, pay, { done: () => done(token), failed: fail }) }
+    try { const { openRazorpay } = await import('./checkout-pay'); await openRazorpay({ token }, pay, { done: () => done(token), failed: fail }) }
     catch { fail('Online payment could not open. Check your connection, or pay on delivery instead.') }
   }
 

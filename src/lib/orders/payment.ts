@@ -10,7 +10,6 @@ import type { Tx } from '@/lib/db'
 import { webhookEvents } from '@/lib/db/schema'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
-import { tokenHash } from '@/lib/crypto/secret-box'
 import { checkoutShop, variantRows } from '@/lib/queries/checkout'
 import { keysFor, markEvent } from '@/lib/payments/keys'
 import { checkoutSignatureOk, orderPayments, toPayment } from '@/lib/payments/razorpay'
@@ -63,19 +62,21 @@ export async function markPaid(tx: Tx, o: OrderKey, p: { paymentId: string; fee?
   return 'paid'
 }
 
-const byToken = async (tx: Tx, tenantId: string, token: string) => {
-  if (!/^[A-Za-z0-9_-]{22}$/.test(token)) return null
+/** The order by its link's hash (orderRefHash: the checkout's token, or an email's link bound to its address, so the
+ * "Finish paying" email's page can pay too: shop stress test 2026-11-11). */
+const byHash = async (tx: Tx, tenantId: string, hash: string) => {
+  if (!/^[0-9a-f]{64}$/.test(hash)) return null
   const [o] = await tx.select({ id: orders.id, method: orders.paymentMethod, rzp: orders.razorpayOrderId, paidAt: orders.paidAt, cancelledAt: orders.cancelledAt, switchedAt: orders.switchedToCodAt,
     payBy: orders.payBy, subtotal: orders.subtotal, total: orders.total, pincode: orders.pincode, phone: orders.phone, shipping: orders.shipping, sellerGstin: orders.sellerGstin, pricesIncludeGst: orders.pricesIncludeGst })
-    .from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.tokenHash, tokenHash(token))))
+    .from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.tokenHash, hash)))
   return o ?? null
 }
 
 /** The browser's Checkout reply. The signature is checked with OUR stored Razorpay order id. */
-export async function confirmPayment(tenantId: string, token: string, reply: { paymentId: string; signature: string }): Promise<{ ok: true } | { ok: false; status: 400 | 404; error: string }> {
+export async function confirmPayment(tenantId: string, hash: string, reply: { paymentId: string; signature: string }): Promise<{ ok: true } | { ok: false; status: 400 | 404; error: string }> {
   const soldOut: string[] = []
   const r = await withTenant(tenantId, async (tx): Promise<{ ok: true } | { ok: false; status: 400 | 404; error: string }> => {
-    const o = await byToken(tx, tenantId, token)
+    const o = await byHash(tx, tenantId, hash)
     if (!o || !o.rzp) return { ok: false, status: 404, error: 'Not found' }
     const keys = await keysFor(tx, tenantId)
     if (!keys || !checkoutSignatureOk(o.rzp, reply.paymentId, reply.signature, keys.keySecret)) return { ok: false, status: 400, error: 'We could not confirm this payment. If money left your account, the shop will see it within minutes.' }
@@ -87,9 +88,9 @@ export async function confirmPayment(tenantId: string, token: string, reply: { p
 }
 
 /** Record a failed attempt (the shopper sees the filled checkout again). */
-export async function paymentFailed(tenantId: string, token: string): Promise<void> {
+export async function paymentFailed(tenantId: string, hash: string): Promise<void> {
   await withTenant(tenantId, async (tx) => {
-    const o = await byToken(tx, tenantId, token)
+    const o = await byHash(tx, tenantId, hash)
     if (o && !o.paidAt) await tx.update(orders).set({ paymentFailedAt: sql`now()` }).where(and(eq(orders.tenantId, tenantId), eq(orders.id, o.id)))
   })
 }
@@ -103,8 +104,8 @@ export type SwitchResult = { kind: 'switched'; total: number } | { kind: 'paid' 
  * offers (the pay-online saving comes off; the COD fee and its limits from today's settings, on the bag after the
  * order offer) and must be the one the shopper saw; if not, the reply carries it so the shopper can see it first.
  */
-export async function switchToCod(tenantId: string, token: string, expectedTotal: number, now = new Date()): Promise<SwitchResult> {
-  const pre = await withTenant(tenantId, async (tx) => ({ o: await byToken(tx, tenantId, token), keys: await keysFor(tx, tenantId) }))
+export async function switchToCod(tenantId: string, hash: string, expectedTotal: number, now = new Date()): Promise<SwitchResult> {
+  const pre = await withTenant(tenantId, async (tx) => ({ o: await byHash(tx, tenantId, hash), keys: await keysFor(tx, tenantId) }))
   if (!pre.o || pre.o.method !== 'prepaid' || pre.o.cancelledAt) return { kind: 'refused', status: 404, error: 'Not found' }
   if (pre.o.paidAt) return { kind: 'paid' }
   if (pre.o.switchedAt) return { kind: 'switched', total: Number(pre.o.total) }
@@ -122,7 +123,7 @@ export async function switchToCod(tenantId: string, token: string, expectedTotal
   }
   const soldOut: string[] = []
   const r = await withTenant(tenantId, async (tx): Promise<SwitchResult> => {
-    const o = await byToken(tx, tenantId, token)
+    const o = await byHash(tx, tenantId, hash)
     if (!o || o.paidAt || o.switchedAt || o.cancelledAt) return { kind: 'refused', status: 409, error: 'This order changed. Reload the page.' }
     const shop = await checkoutShop(tx, tenantId, null)
     if (!shop?.published) return { kind: 'refused', status: 404, error: 'This shop is not taking orders right now.' }
@@ -158,9 +159,9 @@ export async function switchToCod(tenantId: string, token: string, expectedTotal
  * limited offer the order got still fits (its use was given back when the hold ran out). Never repriced: the amount
  * Razorpay asks for stays the online total the shopper was shown (offers plan review 3).
  */
-export async function retryPayment(tenantId: string, token: string, now = new Date()): Promise<{ ok: true; pay: Pay } | { ok: false; status: 404 | 409 | 422; error: string }> {
+export async function retryPayment(tenantId: string, hash: string, now = new Date()): Promise<{ ok: true; pay: Pay } | { ok: false; status: 404 | 409 | 422; error: string }> {
   const id = await withTenant(tenantId, async (tx) => {
-    const o = await byToken(tx, tenantId, token)
+    const o = await byHash(tx, tenantId, hash)
     if (!o || o.method !== 'prepaid' || o.paidAt || o.switchedAt || o.cancelledAt) return null
     if (!o.payBy || o.payBy <= now) {
       const lines = await tx.select({ variantId: orderLines.variantId, qty: orderLines.qty, kind: orderLines.kind }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id)))
@@ -221,7 +222,7 @@ export async function storeRazorpayEvent(tenantId: string, key: string, payload:
 export async function processEvents(tenantId: string, limit = 20): Promise<number> {
   const soldOut: string[] = []
   const n = await withTenant(tenantId, async (tx) => {
-    const rows = await tx.select({ id: webhookEvents.id, payload: webhookEvents.payload }).from(webhookEvents)
+    const rows = await tx.select({ id: webhookEvents.id, payload: webhookEvents.payload, receivedAt: webhookEvents.receivedAt }).from(webhookEvents)
       .where(and(eq(webhookEvents.tenantId, tenantId), isNull(webhookEvents.processedAt), eq(webhookEvents.provider, 'razorpay'))).orderBy(webhookEvents.receivedAt).limit(limit)
       .for('update', { skipLocked: true })
     for (const row of rows) {
@@ -230,7 +231,7 @@ export async function processEvents(tenantId: string, limit = 20): Promise<numbe
       try { error = await tx.transaction((sp) => applyEvent(sp, tenantId, row.payload as Record<string, unknown>, soldOut)) } catch (e) { error = e instanceof Error ? e.name : 'error' }
       await tx.update(webhookEvents).set({ processedAt: sql`now()`, lastError: error, payload: trimRazorpayEvent(row.payload as Record<string, unknown>) }).where(and(eq(webhookEvents.tenantId, tenantId), eq(webhookEvents.id, row.id)))
     }
-    if (rows.length) await markEvent(tx, tenantId)
+    if (rows.length) await markEvent(tx, tenantId, new Date(Math.max(...rows.map((r) => r.receivedAt.getTime()))))
     return rows.length
   })
   // A rolled-back savepoint may have listed a variant: one refresh too many is harmless.

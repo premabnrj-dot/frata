@@ -1,5 +1,6 @@
 import 'server-only'
 import { enqueueOrderEmail } from '@/lib/email/enqueue'
+import { enqueuePaymentCheck } from './payment-check'
 import { WA_OPT_IN_NOTICE } from '@/domains/checkout/opt-in'
 import { randomUUID } from 'node:crypto'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
@@ -142,6 +143,8 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     if (input.session) await linkCustomer(tx, tenantId, id, input.session, input.address.phone)
     // Email E·2: COD is confirmed at once; an online order gets "Finish paying" only if still unpaid after its hold.
     await enqueueOrderEmail(tx, tenantId, id, cod ? 'confirmed' : 'finish_paying', null, now)
+    // An online order asks Razorpay itself when its hold ends: a lost webhook never leaves a paid order unpaid.
+    if (!cod) await enqueuePaymentCheck(tx, tenantId, id, new Date(now.getTime() + HOLD_MINUTES * 60_000))
     await tx.insert(orderLines).values(live.map((l, position) => ({
       ...m.shares[position]!,
       lineDiscount: m.lines[position]!.discount, productDiscount: m.lines[position]!.productDiscount, taxableValue: m.lines[position]!.taxable, gstBps: m.lines[position]!.gstBps, gst: m.lines[position]!.gst,

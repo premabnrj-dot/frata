@@ -23,11 +23,18 @@ describe.skipIf(!host)('saving Razorpay keys', () => {
       // Same mode again: the webhook stays known to work.
       await saveKeys(tx, A, { keyId: 'rzp_test_BBBBBBBBBBBBBB', keySecret: 'test-secret-2' })
       expect((await paymentStatus(tx, A) as { webhookSeenAt: Date | null }).webhookSeenAt).not.toBeNull()
+      const testKey = (t as { webhookKey: string }).webhookKey
       // Live keys: not "working" until a live event arrives, and the secret shows again.
+      const switchedAt = new Date()
       await saveKeys(tx, A, { keyId: 'rzp_live_CCCCCCCCCCCCCC', keySecret: 'live-secret' })
       const l = await paymentStatus(tx, A)
       expect(l).toMatchObject({ connected: true, mode: 'live', webhookSeenAt: null, lastEventAt: null })
       expect((l as { webhookSecret: string | null }).webhookSecret).toMatch(/^whsec_/)
+      // A new URL: the test webhook, still calling its old one, can't reach the live keys (impact review 2026-11-11).
+      expect((l as { webhookKey: string }).webhookKey).not.toBe(testKey)
+      expect(canTakeOnline(await keysFor(tx, A))).toBe(false)
+      // An event stored before the switch (a test one, processed later) proves nothing about live.
+      await markEvent(tx, A, new Date(switchedAt.getTime() - 60_000))
       expect(canTakeOnline(await keysFor(tx, A))).toBe(false)
       await markEvent(tx, A)
       expect(canTakeOnline(await keysFor(tx, A))).toBe(true)

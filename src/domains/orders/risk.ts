@@ -39,11 +39,11 @@ export const MIN_FOR_MEDIAN = 10
 const TEST_NAME = /^(test|testing|abc|xyz|asdf|qwerty|na|n\/a|.)$/i
 
 const normal = (s: string) => s.toLowerCase().replace(/[^a-z]/g, '')
-/** Latin letters only: the pincode directory's city is in English, so a city typed in another script can't be compared
- * (shop stress test 2026-11-11: a genuine Hindi address read "the city typed is not the pincode's city"). */
-const latin = (s: string) => /^[\p{Script=Latin}\s.'()-]+$/u.test(s.trim())
-/** A house or building number in any digits: ASCII or Devanagari (०–९). */
-const HAS_NUMBER = /[0-9\u0966-\u096F]/
+/** A city with no Latin letter can't be compared with the directory's English one (shop stress test 2026-11-11: a
+ * genuine Hindi address read "the city typed is not the pincode's city"); one with any Latin letter still is. */
+const comparable = (s: string) => /\p{Script=Latin}/u.test(s)
+/** A house or building number in any script's digits (Devanagari ०–९, Bengali, Gurmukhi, Gujarati, Tamil…). */
+const HAS_NUMBER = /\p{Nd}/u
 
 export function risk(f: RiskFacts): Risk {
   if (!f.cod) return { level: 'low', reasons: [], next: null }
@@ -60,7 +60,7 @@ export function risk(f: RiskFacts): Risk {
   if (f.earlierOrders === 0) medium.push('First order from this phone')
   const line = f.addressLine.trim()
   if (!HAS_NUMBER.test(line) || line.length < 15) medium.push('The address has no house or building number, or is very short')
-  if (f.pincodeCity && f.city && latin(f.city) && normal(f.pincodeCity) !== normal(f.city)) medium.push(`The city typed is not the pincode's city (${f.pincodeCity})`)
+  if (f.pincodeCity && f.city && comparable(f.city) && normal(f.pincodeCity) !== normal(f.city)) medium.push(`The city typed is not the pincode's city (${f.pincodeCity})`)
   if (f.medianCod !== null && f.total > 2 * f.medianCod) medium.push('Over twice your usual pay-on-delivery order')
   if (TEST_NAME.test(f.customerName.trim())) medium.push('The name looks like a test')
   if (medium.length >= 2) return { level: 'medium', reasons: medium.slice(0, 3), next: 'Call or WhatsApp to confirm.' }

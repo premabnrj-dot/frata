@@ -7,6 +7,8 @@
 // tested; src/lib/queries/orders.ts turns it into SQL.
 // =============================================================================
 
+import { cleanMobile } from '@/domains/checkout/mobile'
+
 export const MAX_SEARCH = 60
 
 export type OrderSearch = { like: string; number: number | null; phoneDigits: string | null }
@@ -17,11 +19,7 @@ export const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`)
 /** Phones are stored as 10 digits (cleanMobile): "+91 98765 43210" or "098765 43210" pasted from WhatsApp must match
  * them, so a country code or a trunk 0 in front of a full number is dropped, as cleanMobile does (shop stress test
  * 2026-11-11: those searches found nothing). A part of a number is searched as typed. */
-function storedDigits(d: string) {
-  if (d.length === 12 && d.startsWith('91')) return d.slice(2)
-  if (d.length === 11 && d.startsWith('0')) return d.slice(1)
-  return d
-}
+const storedDigits = (d: string) => cleanMobile(d) ?? d
 
 export function parseOrderSearch(raw: string): OrderSearch | null {
   const q = raw.trim().slice(0, MAX_SEARCH)

@@ -1,6 +1,6 @@
 import 'server-only'
 import { randomBytes } from 'node:crypto'
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, lte, sql } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
 import { paymentWebhookFor } from '@/lib/db/platform'
 import { paymentKeys } from '@/lib/db/schema-orders'
@@ -35,8 +35,11 @@ export async function saveKeys(tx: Tx, tenantId: string, k: Keys): Promise<void>
   const mode = modeOf(k.keyId)
   if (!mode) throw new Error('bad key id')
   const [cur] = await tx.select({ webhookKey: paymentKeys.webhookKey, webhookSecretEnc: paymentKeys.webhookSecretEnc, mode: paymentKeys.mode }).from(paymentKeys).where(eq(paymentKeys.tenantId, tenantId))
-  const webhookKey = cur?.webhookKey ?? `k_${randomBytes(16).toString('hex')}`
-  const webhookSecretEnc = cur?.webhookSecretEnc ?? seal(`whsec_${randomBytes(24).toString('hex')}`, tenantId, 'webhook_secret')
+  // A new mode gets a new webhook URL and secret too: the test webhook keeps calling its old URL (Razorpay retries for
+  // 24 h), and an event there must never mark the live webhook as working (impact review 2026-11-11).
+  const fresh = !cur || cur.mode !== mode
+  const webhookKey = fresh ? `k_${randomBytes(16).toString('hex')}` : cur.webhookKey
+  const webhookSecretEnc = fresh ? seal(`whsec_${randomBytes(24).toString('hex')}`, tenantId, 'webhook_secret') : cur.webhookSecretEnc
   const newMode = cur && cur.mode !== mode ? { webhookSeenAt: null, lastEventAt: null } : {}
   const row = { keyId: k.keyId, keySecretEnc: seal(k.keySecret, tenantId, 'key_secret'), webhookSecretEnc, webhookKey, mode, connectedAt: new Date(), problem: null, ...newMode }
   await tx.insert(paymentKeys).values({ tenantId, ...row }).onConflictDoUpdate({ target: paymentKeys.tenantId, set: row })
@@ -70,8 +73,11 @@ export async function markProblem(tx: Tx, tenantId: string, problem: string | nu
   await tx.update(paymentKeys).set({ problem }).where(eq(paymentKeys.tenantId, tenantId))
 }
 
-export async function markEvent(tx: Tx, tenantId: string) {
-  await tx.update(paymentKeys).set({ lastEventAt: new Date(), webhookSeenAt: sql`coalesce(${paymentKeys.webhookSeenAt}, now())` }).where(eq(paymentKeys.tenantId, tenantId))
+/** An event arrived. Only one received after these keys were connected says their webhook works: an event stored
+ * before a switch to live keys (a test one, processed later) must not (impact review 2026-11-11). */
+export async function markEvent(tx: Tx, tenantId: string, receivedAt: Date = new Date()) {
+  await tx.update(paymentKeys).set({ lastEventAt: new Date(), webhookSeenAt: sql`coalesce(${paymentKeys.webhookSeenAt}, now())` })
+    .where(and(eq(paymentKeys.tenantId, tenantId), lte(paymentKeys.connectedAt, receivedAt)))
 }
 
 /** A webhook's shop and its secret, from the key in its URL (before any tenant is known: app_payment_webhook_for). */

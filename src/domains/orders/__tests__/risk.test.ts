@@ -49,5 +49,9 @@ describe('COD risk', () => {
     expect(risk({ ...hindi, addressLine: 'गांधी नगर रोड के पास वाली गली' }).reasons).toContain('The address has no house or building number, or is very short')
     // A Latin city that differs from the pincode's still counts.
     expect(risk({ ...hindi, city: 'Jodhpur', addressLine: 'गांधी नगर रोड के पास वाली गली' }).reasons).toContain("The city typed is not the pincode's city (Jaipur)")
+    // Any script's digits are a number (Bengali ১২, Gujarati ૧૨); a Latin city with a comma or a digit is still compared.
+    expect(risk({ ...hindi, addressLine: 'বাড়ি ১২, গান্ধী রোড, পার্ক স্ট্রিট' }).reasons).not.toContain('The address has no house or building number, or is very short')
+    expect(risk({ ...hindi, addressLine: 'ઘર ૧૨, ગાંધી રોડ પાસે, નવરંગપુરા' }).reasons).not.toContain('The address has no house or building number, or is very short')
+    expect(risk({ ...hindi, city: 'Jodhpur, Raj', addressLine: 'गांधी नगर रोड के पास वाली गली' }).reasons).toContain("The city typed is not the pincode's city (Jaipur)")
   })
 })
