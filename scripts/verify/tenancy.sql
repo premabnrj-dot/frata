@@ -2398,4 +2398,25 @@ do $$ begin
   then raise exception 'FAIL: an API role runs the product video trigger'; end if;
 end $$;
 
-\echo 'tenancy proof — all 64 checks passed'
+-- 65. Admin › Infrastructure's Supabase tab (drizzle/0091): admin_db_health() is staff-only and aggregate-only. No API role
+-- and not frata_app may run it; it returns only the fixed keys (no session's query, address or app name); query shapes
+-- carry no literal (a planted one is absent).
+do $$ begin
+  if exists (select 1 from unnest(array['public', 'anon', 'authenticated', 'service_role', 'frata_app']) r
+             where r <> 'public' and has_function_privilege(r, 'admin_db_health()', 'execute'))
+  then raise exception 'FAIL: a non-staff role runs admin_db_health'; end if;
+  if not has_function_privilege('frata_admin', 'admin_db_health()', 'execute') then raise exception 'FAIL: Admin cannot read database health'; end if;
+end $$;
+begin; set local role frata_admin;
+do $$ declare h jsonb := admin_db_health(); k text; begin
+  for k in select jsonb_object_keys(h) loop
+    if k not in ('db_bytes', 'max_connections', 'cache_hit', 'connections', 'outbox_waiting', 'outbox_oldest_s', 'outbox_dead_today', 'webhooks_waiting', 'tables', 'queries')
+    then raise exception 'FAIL: admin_db_health returns an unexpected key %', k; end if;
+  end loop;
+  if exists (select 1 from jsonb_array_elements(h->'connections') c where c ?| array['query', 'client_addr', 'application_name'])
+  then raise exception 'FAIL: admin_db_health exposes a session''s query or address'; end if;
+  if h::text like '%9845012345%' then raise exception 'FAIL: a literal reached admin_db_health'; end if;
+end $$;
+rollback;
+
+\echo 'tenancy proof — all 65 checks passed'
