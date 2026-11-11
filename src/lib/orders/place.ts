@@ -68,13 +68,28 @@ export type Placed = { kind: 'placed'; token: string; number: number; method: 'c
 export type PlaceResult =
   | Placed
   | { kind: 'changed'; quote: Quote }
-  | { kind: 'refused'; status: 404 | 409 | 422; error: string; quote?: Quote }
+  | { kind: 'refused'; status: 404 | 409 | 422 | 503; error: string; quote?: Quote }
+
+/**
+ * A flash drop (speed review 2026-11-11): placing an order locks its products' stock rows for ~30 ms; waiters each held
+ * a pooled connection for up to 10 s (the role's lock timeout), so ~15 shoppers on one hot piece could starve every
+ * shop's checkout and console. Now a placement waits at most 2 s for a lock, and a shop places at most PLACE_SLOTS
+ * orders at once (advisory-lock slots, held to the transaction's end, across every instance); past either, the shopper
+ * reads "busy, try again" and nothing was taken or charged.
+ */
+export const PLACE_SLOTS = 8
+const BUSY = 'So many orders right now. Nothing was charged. Try again in a moment.'
+const lockTimedOut = (e: unknown) => { const c = (e as { code?: string; cause?: { code?: string } }); return (c.cause?.code ?? c.code) === '55P03' }
 
 const requestHashOf = (i: PlaceInput) => sha256(JSON.stringify([i.address.phone, i.method, [...i.bag].map((b) => [b.variantId, b.qty]).sort(), ...(i.code ? [normalCode(i.code)] : []), ...(i.b2b ? [cleanGstin(i.b2b.gstin)] : [])]))
 
 export async function placeOrder(tenantId: string, input: PlaceInput, now = new Date()): Promise<PlaceResult> {
   const soldOut: string[] = []
-  const placed = await withTenant(tenantId, async (tx): Promise<PlaceResult | { kind: 'new'; id: string; number: number; method: 'cod' | 'prepaid'; total: number; code?: 'applied' | 'not_applied' | null }> => {
+  let placed: PlaceResult | { kind: 'new'; id: string; number: number; method: 'cod' | 'prepaid'; total: number; code?: 'applied' | 'not_applied' | null }
+  try { placed = await withTenant(tenantId, async (tx): Promise<PlaceResult | { kind: 'new'; id: string; number: number; method: 'cod' | 'prepaid'; total: number; code?: 'applied' | 'not_applied' | null }> => {
+    await tx.execute(sql`set local lock_timeout = '2s'`)
+    const [slot] = await tx.execute<{ s: number }>(sql`select s from generate_series(0, ${PLACE_SLOTS - 1}) s where pg_try_advisory_xact_lock(hashtextextended(${tenantId + ':place'}, s)) limit 1`)
+    if (!slot) return { kind: 'refused', status: 503, error: BUSY }
     // A retry of the same attempt finds its order; the same key with a different bag is not the same attempt.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${tenantId + ':' + input.idempotencyKey}, 0))`)
     const reqHash = requestHashOf(input)
@@ -159,10 +174,13 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     })))
     if (cod) await takeStock(tx, tenantId, id, 'in_stock', soldOut)
     return { kind: 'new', id, number, method: input.method, total: m.total, code: q.offers.code }
-  })
+  }) } catch (e) {
+    if (lockTimedOut(e)) return { kind: 'refused', status: 503, error: BUSY }
+    throw e
+  }
   if (placed.kind !== 'new') return placed
   // The last piece went: the cached pages say sold out within the 60 s backstop at most (refreshSoldOut, once per 30 s; checkout reads live stock).
-  if (soldOut.length) refreshSoldOut(tenantId)
+  if (soldOut.length) await refreshSoldOut(tenantId)
   const out: Placed = { kind: 'placed', token: orderToken(placed.id), number: placed.number, method: placed.method, total: placed.total, pay: null, code: placed.code ?? null }
   if (placed.method === 'cod') return out
   const pay = await startPayment(tenantId, placed.id)

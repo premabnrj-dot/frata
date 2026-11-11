@@ -93,6 +93,9 @@ export const LIMITS = {
   ekApiIp: { action: 'ek_api:ip', max: 120, windowSeconds: 600 },
   ekPowNonce: { action: 'ek_pow:nonce', max: 1, windowSeconds: 900 },
   ekShopMeIp: { action: 'ek_me:ip', max: 120, windowSeconds: 600 },
+  // A sell-out's catalogue purge, once per shop in 30 s across every server instance (speed review 2026-11-11: the
+  // per-instance debounce let 10 instances purge 10 times at a drop). Fails open: a missed debounce only purges.
+  soldOutPurge: { action: 'sold_out_purge:shop', max: 1, windowSeconds: 30 },
 } as const satisfies Record<string, Limit>
 
 /** Whether `subject` is already past the limit, WITHOUT counting an attempt. `failClosed`: true when the counter cannot be read. */

@@ -134,8 +134,13 @@ export async function codeFor(tx: Tx, tenantId: string, text: string | null | un
   return { text: t, discountId: r?.discountId ?? null, codeId: r?.codeId ?? null }
 }
 
+/** The quote's four reads, independent, issued together inside one transaction (speed review 2026-11-11, P8: the path
+ *  every bag and cart link lands on; they ran one after another). */
 export const quoteData = (tenantId: string, ids: string[], now: Date, code: string | null, host: string) =>
-  withTenant(tenantId, async (tx) => ({ shop: await checkoutShop(tx, tenantId, host), rows: await variantRows(tx, tenantId, ids, now), offers: await liveOffers(tx, tenantId, now), typed: await codeFor(tx, tenantId, code, now) }))
+  withTenant(tenantId, async (tx) => {
+    const [shop, rows, offers, typed] = await Promise.all([checkoutShop(tx, tenantId, host), variantRows(tx, tenantId, ids, now), liveOffers(tx, tenantId, now), codeFor(tx, tenantId, code, now)])
+    return { shop, rows, offers, typed }
+  })
 
 /** What the shopper's order page shows — masked address and phone (owner call 4). Found by the link token's hash only. */
 export async function orderPage(tx: Tx, tenantId: string, tokenHash: string) {
