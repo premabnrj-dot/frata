@@ -35,6 +35,11 @@ partners what they must know, and the things they cannot miss always arrive.
   (`EMAIL_NOTICES_FROM`), so E·0–E·2 are built and tested against a fake SES without it; only go-live needs it.
 - **Checkout budget:** checkout ships 120.8 of 121 kB; the Email field's typo hint loads only when the field is used.
 
+- **As built differs from the text below** where the reviewed plan says so (`docs/plans/2026-11-11-email.md`
+  § Deviations; ADR-0011): no AWS SDK (SigV4 over fetch), React rendered to static markup instead of React Email, the
+  sign-in email through Supabase's Send Email Hook, `shop_emails` for overrides, notices written per shop by definers,
+  outbox kinds `email.order` / `email.notice` / `email.tenant`, SNS events of four types, partner notices held.
+
 ## The boundaries (the owner's first question)
 
 **1. Two directions, two brands, never mixed.**
