@@ -1,5 +1,5 @@
 # Email and notifications: Frrata → merchants and partners; merchant → shoppers
-Status: draft v2, resumed 2026-11-11 (owner: "can we take up the email work"; campaigns, the wallet and automations held to be planned on their own) · v1 2026-11-08 · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/TwHtjtuFPzRDv4uLqLB9xQ (`docs/mockups/2026-11-08-messaging.html`, v2 2026-11-11) · Approved: —
+Status: active (owner approved v2 and calls 1–4, 2026-11-11), resumed 2026-11-11 (owner: "can we take up the email work"; campaigns, the wallet and automations held to be planned on their own) · v1 2026-11-08 · Date: 2026-11-08 · Mockup: https://claude.ai/artifact/TwHtjtuFPzRDv4uLqLB9xQ (`docs/mockups/2026-11-08-messaging.html`, v2 2026-11-11) · Approved: owner, 2026-11-11 (v2)
 Research: `docs/research/2026-11-08-email-and-notifications.md` (four agents, facts checked 2026-11-08).
 Owner, 2026-11-08: **emails are branded — merchant to customer in the merchant's brand; Frrata to merchants and
 partners in Frrata's brand.** Checkout may ask for an email; **no consent checkbox.** **Amazon SES from the start**
