@@ -68,13 +68,12 @@ export async function unreadNotices(tx: Tx, tenantId: string, userId: string): P
   return rows.length
 }
 
-/** Marks these notices read for this member (an action; never during a support visit — the caller refuses). */
-export async function markNoticesRead(tenantId: string, userId: string, ids: string[]): Promise<void> {
+/** Marks these notices read for this member, in the action's transaction (never during a support visit: the caller
+ *  refuses). Only this shop's notices can be marked. */
+export async function markNoticesRead(tx: Tx, tenantId: string, userId: string, ids: string[]): Promise<void> {
   if (!ids.length) return
-  await withTenant(tenantId, async (tx) => {
-    const own = await tx.select({ id: notices.id }).from(notices).where(and(eq(notices.tenantId, tenantId), inArray(notices.id, ids.slice(0, 100))))
-    if (own.length) await tx.insert(noticeReads).values(own.map((n) => ({ tenantId, noticeId: n.id, userId }))).onConflictDoNothing()
-  })
+  const own = await tx.select({ id: notices.id }).from(notices).where(and(eq(notices.tenantId, tenantId), inArray(notices.id, ids.slice(0, 100))))
+  if (own.length) await tx.insert(noticeReads).values(own.map((n) => ({ tenantId, noticeId: n.id, userId }))).onConflictDoNothing()
 }
 
 /** This member's email choices for the optional types (absent → the default). */
@@ -86,8 +85,9 @@ export async function noticePrefsFor(tenantId: string, userId: string): Promise<
   })
 }
 
-/** Sets one optional type's email switch for this member. Required types are refused before this is called. */
-export async function setNoticePref(tenantId: string, userId: string, type: OptionalType, email: boolean): Promise<void> {
-  await withTenant(tenantId, (tx) => tx.insert(noticePrefs).values({ tenantId, userId, type, email })
-    .onConflictDoUpdate({ target: [noticePrefs.tenantId, noticePrefs.userId, noticePrefs.type], set: { email } }))
+/** Sets one optional type's email switch for this member, in the action's transaction. Required types are refused
+ *  before this is called (they are not in OPTIONAL_TYPES). */
+export async function setNoticePref(tx: Tx, tenantId: string, userId: string, type: OptionalType, email: boolean): Promise<void> {
+  await tx.insert(noticePrefs).values({ tenantId, userId, type, email })
+    .onConflictDoUpdate({ target: [noticePrefs.tenantId, noticePrefs.userId, noticePrefs.type], set: { email } })
 }
