@@ -13,7 +13,10 @@ import type { StaffOk } from '@/lib/auth/require-staff'
 export const adminHealth = cache(async (staff: StaffOk): Promise<{ ok: true } | { ok: false; why: 'login_refused' | 'unreachable' }> => {
   void staff
   try {
-    await adminDb().execute(sql`select 1`)
+    // A deadline, so a connection that can't answer says so in 4 s instead of holding the page to Vercel's 60 s.
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const late = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('admin database did not answer in 4 s')), 4000) })
+    try { await Promise.race([adminDb().execute(sql`select 1`), late]) } finally { clearTimeout(timer) }
     return { ok: true }
   } catch (err) {
     const text = err instanceof Error ? `${err.message} ${String((err as { cause?: unknown }).cause ?? '')}` : String(err)

@@ -1,6 +1,6 @@
 import 'server-only'
 import { sql } from 'drizzle-orm'
-import { db } from './index'
+import { db, withFreshPool } from './index'
 import type { ClaimKey } from '@/lib/trials/claims'
 import { shopSlugFromHost } from '@/domains/tenancy/host'
 import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
@@ -50,7 +50,9 @@ export type Membership = {
 export type Access = { staffRole: StaffRole | null; memberships: Membership[] }
 
 export async function accessFor(userId: string): Promise<Access> {
-  const rows = await db().execute<{ a: Access }>(sql`select app_access_for(${userId}::uuid) as a`)
+  // The first query of every signed-in request: if its pooled connection is lost, a fresh pool answers instead of the
+  // request waiting to Vercel's 60 s (src/lib/db/index.ts withFreshPool; 2026-11-11).
+  const rows = await withFreshPool(() => db().execute<{ a: Access }>(sql`select app_access_for(${userId}::uuid) as a`))
   const a = rows[0]?.a
   return { staffRole: a?.staffRole ?? null, memberships: a?.memberships ?? [] }
 }
