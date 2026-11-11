@@ -16,7 +16,8 @@ export const revalidate = 60
 export const generateStaticParams = () => []
 
 type Params = Promise<{ host: string; page: string }>
-const isPage = (p: string): p is PolicyPage => p in POLICY_TITLE
+/** Own keys only: `/policies/constructor` must 404, not reach a built-in (security review 2026-11-11 L1). */
+const isPage = (p: string): p is PolicyPage => Object.hasOwn(POLICY_TITLE, p)
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const shop = await shopFor(params)

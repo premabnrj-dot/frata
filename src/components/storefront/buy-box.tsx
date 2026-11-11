@@ -14,7 +14,7 @@ import { Swatch, type SwatchColour, type SwatchImage } from './swatch'
 import { bag, openBag } from './bag-store'
 import { fill } from './fill'
 import type { BuyWords } from './words'
-import { Icon } from '@/components/icons/icon'
+import { CloseMark } from './close-mark'
 
 type Gallery = 'swipe' | 'thumbs' | 'rail' | 'stack'
 type Img = PhotoData & SwatchImage & { optionValue: string | null; alt: string }
@@ -264,7 +264,7 @@ function SizeGuide({ chart, model, onClose, w }: { chart: Chart; model: string |
       <div className="space-y-4 p-5">
         <div className="flex items-center justify-between">
           <h2 id="sg-h" className="text-lg font-medium">{w.sizeGuide}</h2>
-          <button type="button" onClick={close} className="grid size-11 place-items-center text-xl" aria-label={w.closeGuide}><Icon name="close" className="size-3.5" /></button>
+          <button type="button" onClick={close} className="grid size-11 place-items-center text-xl" aria-label={w.closeGuide}><CloseMark className="size-3.5" /></button>
         </div>
         <div className="flex gap-1 text-sm" role="group" aria-label={w.units}>
           {(['cm', 'in'] as const).map((u) => <button key={u} type="button" aria-pressed={unit === u} onClick={() => setUnit(u)} className={`rounded-sm border px-3 py-1.5 ${unit === u ? 'border-store-ink bg-store-ink text-store-paper' : 'border-store-line'}`}>{u === 'cm' ? w.cm : w.inches}</button>)}

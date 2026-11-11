@@ -1,4 +1,6 @@
-import { PROMISES, SECTION_NAMES, type SectionInstance } from './sections'
+import type { Design } from './blocks'
+import { accordionItems, fillFor, fillableOf } from './design-tree'
+import { PROMISES, sectionName, type SectionInstance } from './sections'
 
 // =============================================================================
 // FILE: src/domains/themes/readiness.ts — what blocks Publish, and what a section shows nothing for (the second
@@ -18,12 +20,13 @@ export function truePromises(f: ShopFacts): (typeof PROMISES)[number][] {
   return PROMISES.filter((k) => (k === 'cod' ? f.codOn : k === 'free_shipping' ? f.freeShippingAbove !== null : k === 'returns' ? f.returnDays > 0 : f.dispatchDays > 0))
 }
 
-export function readinessOf(home: SectionInstance[], f: ShopFacts, now: Date): Issue[] {
+/** `designs`: the look's designs by id (ResolvedTheme.designs, or the editor's); a design not given says nothing. */
+export function readinessOf(home: SectionInstance[], f: ShopFacts, now: Date, designs: Record<string, Design> = {}): Issue[] {
   const out: Issue[] = []
   const has = new Map(f.collections.map((c) => [c.handle, c.hasProducts]))
   for (const s of home) {
     if (s.hidden) continue
-    const name = SECTION_NAMES[s.key]
+    const name = sectionName(s, designs)
     const add = (blocks: boolean, text: string) => out.push({ sectionId: s.id, blocks, text: `${name}: ${text}` })
     switch (s.key) {
       case 'hero':
@@ -81,6 +84,27 @@ export function readinessOf(home: SectionInstance[], f: ShopFacts, now: Date): I
         if (!s.image || !s.wordmark.trim()) add(false, 'add a photo and a wordmark, or it shows nothing')
         if (altMissing(s.image)) add(true, 'describe the photo for people who can’t see it')
         break
+      // TS0b: an example the owner hasn't replaced blocks Publish (the shop never shows it); a photo not added only
+      // leaves its block out; an added photo needs its description, as every photo does.
+      case 'design': {
+        const d = Object.hasOwn(designs, s.design) ? designs[s.design]! : null
+        if (!d) break
+        for (const b of fillableOf(d)) {
+          const f = fillFor(s.fill, b)
+          const example = b.fill?.example === true, label = b.fill!.label
+          if (b.kind === 'text' && example && !(f?.kind === 'text' && f.body.length)) add(true, `write your own words for “${label}”`)
+          if (b.kind === 'heading' && example && !(f?.kind === 'heading' && f.text.trim())) add(true, `write your own “${label}”`)
+          if (b.kind === 'accordion' && example) {
+            for (const i of accordionItems(b, f)) if (i.q.trim() && !i.a.trim()) add(true, `write your own answer for “${i.q}”`)
+          }
+          if (b.kind === 'image') {
+            const img = f?.kind === 'image' ? f.image : null
+            if (!img) add(false, `add a photo for “${label}”, or it’s left out`)
+            else if (altMissing(img)) add(true, `describe “${label}” for people who can’t see it`)
+          }
+        }
+        break
+      }
       case 'rich_text': case 'price_tiles': break
       default: s satisfies never
     }

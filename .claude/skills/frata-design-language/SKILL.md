@@ -2,8 +2,8 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.12.0
-  verified: 2026-11-09
+  version: 5.13.0
+  verified: 2026-11-11
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
 
@@ -212,6 +212,14 @@ from it).
   details from Settings (can't be removed; a form comes with the Messages inbox); FAQ answers follow Settings.
 - **States:** no themes yet (pictogram + New theme); limit reached; waiting for review (Withdraw submission); withdrawn
   by Frrata (reason + Reply); partner removed ("No more updates", the look stays); partner paused by Frrata.
+- **Designs in Look (TS0b, board https://claude.ai/artifact/DzD84DZsW6eGYQ6QkfJbM4 v2, approved 2026-11-11):** first in
+  Add a section as **Designs**, each a picture drawn from its own blocks with "Made for <theme>"; at the page's limit the
+  card greys with the count. A design's form lists only the fields the theme marks, in page order, with the theme's
+  labels; questions have ↑ ↓ and Remove beside each item and "Add a question" up to 12.
+- **Example words never reach a shop:** words that make a claim (how a piece is made, size answers) start as greyed
+  placeholders marked **Example** with "Write your own"; Publish names each one still to write. A theme's photo is a
+  sample: shown greyed in the customizer's preview only; on the shop an unfilled photo leaves its block out.
+- **A drop is a date, never a ticking count** (rule 48): "Drops Fri 14 Nov, 7 pm", hidden once passed.
 
 ## Partner workspace (approved mockup 2026-11-07)
 

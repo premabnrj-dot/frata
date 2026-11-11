@@ -1,3 +1,4 @@
+import { waLink } from '@/domains/settings/whatsapp'
 import Link from 'next/link'
 import type { PolicyPage } from '@/domains/policies/render'
 import { shopJsonLd, websiteJsonLd } from '@/domains/seo/defaults'
@@ -17,11 +18,11 @@ import type { Href } from './shell'
 const wrap = 'mx-auto max-w-6xl px-4 sm:px-6'
 
 /** Home: the shop's theme's sections, then the shop's structured data. T0: Classic from the shop's settings. */
-export function HomeView({ shop, cat, href, now, theme, bestSellers, videos, preview = false }: { shop: StoreShop; cat: StoreCatalogue; href: Href; now: Date; theme?: ResolvedTheme; bestSellers?: Partial<Record<30 | 90, string[]>>; videos?: LookVideos; preview?: boolean }) {
+export function HomeView({ shop, cat, href, now, theme, bestSellers, videos, preview = false, examples = false }: { shop: StoreShop; cat: StoreCatalogue; href: Href; now: Date; theme?: ResolvedTheme; bestSellers?: Partial<Record<30 | 90, string[]>>; videos?: LookVideos; preview?: boolean; examples?: boolean }) {
   const t = theme ?? classicFromSettings(shop.accent, shop.displayFont)
   return (
     <>
-      <Sections list={t.home} ctx={{ shop, cat, theme: t, href, now, bestSellers, videos, preview }} />
+      <Sections list={t.home} ctx={{ shop, cat, theme: t, href, now, bestSellers, videos, preview, examples }} />
       <JsonLd data={shopJsonLd({ name: shop.shopName, url: `https://${shop.host}`, logo: shop.logoUrl, sameAs: shop.instagram ? [`https://instagram.com/${shop.instagram.replace(/^@/, '')}`] : [],
         returnDays: shop.returnDays, returnKind: shop.returnKind, shippingFlat: shop.shippingFlat, freeShippingAbove: shop.freeShippingAbove, metroDays: shop.metroDays, restDays: shop.restDays, dispatchDays: shop.dispatchDays })} />
       {!preview && <JsonLd data={websiteJsonLd(shop.shopName, `https://${shop.host}/`)} />}
@@ -93,8 +94,8 @@ export function PolicyView({ shop, page }: { shop: StoreShop; page: PolicyPage }
   return (
     <article className={`${wrap} max-w-3xl space-y-4 py-10 leading-relaxed`}>
       <h1 className="text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{POLICY_TITLE[page]}</h1>
-      <PolicyBody page={page} facts={shop} override={shop.overrides[page]} shopper />
-      {page === 'contact' && shop.whatsapp && <p><a className="underline underline-offset-4" href={`https://wa.me/${shop.whatsapp.replace(/\D/g, '')}`} rel="noopener">Message {shop.shopName} on WhatsApp</a></p>}
+      <PolicyBody page={page} facts={shop} override={Object.hasOwn(shop.overrides, page) ? shop.overrides[page] : null} shopper />
+      {page === 'contact' && waLink(shop.whatsapp) && <p><a className="underline underline-offset-4" href={waLink(shop.whatsapp)!} rel="noopener">Message {shop.shopName} on WhatsApp</a></p>}
     </article>
   )
 }

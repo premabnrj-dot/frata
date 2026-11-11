@@ -1,5 +1,1569 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`section schemas > block catalogue (TS0b) keeps its shape 1`] = `
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "children": {
+      "items": {
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "children": {
+                "items": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "children": {
+                          "items": {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "fill": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "example": {
+                                        "const": true,
+                                        "type": "boolean",
+                                      },
+                                      "label": {
+                                        "maxLength": 40,
+                                        "minLength": 1,
+                                        "pattern": "^[^<>{}\\\\]*$",
+                                        "type": "string",
+                                      },
+                                    },
+                                    "required": [
+                                      "label",
+                                    ],
+                                    "type": "object",
+                                  },
+                                  "id": {
+                                    "pattern": "^[a-z0-9-]{1,40}$",
+                                    "type": "string",
+                                  },
+                                  "kind": {
+                                    "const": "heading",
+                                    "type": "string",
+                                  },
+                                  "size": {
+                                    "enum": [
+                                      "s",
+                                      "m",
+                                      "l",
+                                    ],
+                                    "type": "string",
+                                  },
+                                  "text": {
+                                    "maxLength": 60,
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "size",
+                                  "text",
+                                ],
+                                "type": "object",
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "body": {
+                                    "items": {
+                                      "items": {
+                                        "properties": {
+                                          "bold": {
+                                            "type": "boolean",
+                                          },
+                                          "italic": {
+                                            "type": "boolean",
+                                          },
+                                          "link": {
+                                            "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                                            "type": "string",
+                                          },
+                                          "text": {
+                                            "maxLength": 600,
+                                            "minLength": 1,
+                                            "type": "string",
+                                          },
+                                        },
+                                        "required": [
+                                          "text",
+                                        ],
+                                        "type": "object",
+                                      },
+                                      "maxItems": 40,
+                                      "minItems": 1,
+                                      "type": "array",
+                                    },
+                                    "maxItems": 12,
+                                    "type": "array",
+                                  },
+                                  "fill": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "example": {
+                                        "const": true,
+                                        "type": "boolean",
+                                      },
+                                      "label": {
+                                        "maxLength": 40,
+                                        "minLength": 1,
+                                        "pattern": "^[^<>{}\\\\]*$",
+                                        "type": "string",
+                                      },
+                                    },
+                                    "required": [
+                                      "label",
+                                    ],
+                                    "type": "object",
+                                  },
+                                  "id": {
+                                    "pattern": "^[a-z0-9-]{1,40}$",
+                                    "type": "string",
+                                  },
+                                  "kind": {
+                                    "const": "text",
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "body",
+                                ],
+                                "type": "object",
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "fill": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "example": {
+                                        "const": true,
+                                        "type": "boolean",
+                                      },
+                                      "label": {
+                                        "maxLength": 40,
+                                        "minLength": 1,
+                                        "pattern": "^[^<>{}\\\\]*$",
+                                        "type": "string",
+                                      },
+                                    },
+                                    "required": [
+                                      "label",
+                                    ],
+                                    "type": "object",
+                                  },
+                                  "id": {
+                                    "pattern": "^[a-z0-9-]{1,40}$",
+                                    "type": "string",
+                                  },
+                                  "image": {
+                                    "anyOf": [
+                                      {
+                                        "properties": {
+                                          "alt": {
+                                            "default": "",
+                                            "maxLength": 160,
+                                            "type": "string",
+                                          },
+                                          "base": {
+                                            "maxLength": 300,
+                                            "type": "string",
+                                          },
+                                          "decorative": {
+                                            "default": false,
+                                            "type": "boolean",
+                                          },
+                                          "focus": {
+                                            "anyOf": [
+                                              {
+                                                "properties": {
+                                                  "x": {
+                                                    "maximum": 100,
+                                                    "minimum": 0,
+                                                    "type": "number",
+                                                  },
+                                                  "y": {
+                                                    "maximum": 100,
+                                                    "minimum": 0,
+                                                    "type": "number",
+                                                  },
+                                                },
+                                                "required": [
+                                                  "x",
+                                                  "y",
+                                                ],
+                                                "type": "object",
+                                              },
+                                              {
+                                                "type": "null",
+                                              },
+                                            ],
+                                            "default": null,
+                                          },
+                                          "height": {
+                                            "exclusiveMinimum": 0,
+                                            "maximum": 9007199254740991,
+                                            "type": "integer",
+                                          },
+                                          "width": {
+                                            "exclusiveMinimum": 0,
+                                            "maximum": 9007199254740991,
+                                            "type": "integer",
+                                          },
+                                          "widths": {
+                                            "items": {
+                                              "exclusiveMinimum": 0,
+                                              "maximum": 9007199254740991,
+                                              "type": "integer",
+                                            },
+                                            "maxItems": 4,
+                                            "minItems": 1,
+                                            "type": "array",
+                                          },
+                                        },
+                                        "required": [
+                                          "base",
+                                          "widths",
+                                          "width",
+                                          "height",
+                                        ],
+                                        "type": "object",
+                                      },
+                                      {
+                                        "type": "null",
+                                      },
+                                    ],
+                                  },
+                                  "kind": {
+                                    "const": "image",
+                                    "type": "string",
+                                  },
+                                  "ratio": {
+                                    "enum": [
+                                      "4:5",
+                                      "3:4",
+                                      "1:1",
+                                      "16:9",
+                                    ],
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "ratio",
+                                  "image",
+                                ],
+                                "type": "object",
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "fill": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "example": {
+                                        "const": true,
+                                        "type": "boolean",
+                                      },
+                                      "label": {
+                                        "maxLength": 40,
+                                        "minLength": 1,
+                                        "pattern": "^[^<>{}\\\\]*$",
+                                        "type": "string",
+                                      },
+                                    },
+                                    "required": [
+                                      "label",
+                                    ],
+                                    "type": "object",
+                                  },
+                                  "id": {
+                                    "pattern": "^[a-z0-9-]{1,40}$",
+                                    "type": "string",
+                                  },
+                                  "kind": {
+                                    "const": "button",
+                                    "type": "string",
+                                  },
+                                  "label": {
+                                    "maxLength": 24,
+                                    "minLength": 1,
+                                    "type": "string",
+                                  },
+                                  "link": {
+                                    "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "label",
+                                  "link",
+                                ],
+                                "type": "object",
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "fill": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "example": {
+                                        "const": true,
+                                        "type": "boolean",
+                                      },
+                                      "label": {
+                                        "maxLength": 40,
+                                        "minLength": 1,
+                                        "pattern": "^[^<>{}\\\\]*$",
+                                        "type": "string",
+                                      },
+                                    },
+                                    "required": [
+                                      "label",
+                                    ],
+                                    "type": "object",
+                                  },
+                                  "id": {
+                                    "pattern": "^[a-z0-9-]{1,40}$",
+                                    "type": "string",
+                                  },
+                                  "items": {
+                                    "items": {
+                                      "properties": {
+                                        "a": {
+                                          "maxLength": 600,
+                                          "type": "string",
+                                        },
+                                        "q": {
+                                          "maxLength": 80,
+                                          "type": "string",
+                                        },
+                                      },
+                                      "required": [
+                                        "q",
+                                        "a",
+                                      ],
+                                      "type": "object",
+                                    },
+                                    "maxItems": 12,
+                                    "minItems": 1,
+                                    "type": "array",
+                                  },
+                                  "kind": {
+                                    "const": "accordion",
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "items",
+                                ],
+                                "type": "object",
+                              },
+                            ],
+                          },
+                          "maxItems": 12,
+                          "minItems": 1,
+                          "type": "array",
+                        },
+                        "id": {
+                          "pattern": "^[a-z0-9-]{1,40}$",
+                          "type": "string",
+                        },
+                        "kind": {
+                          "const": "group",
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "children",
+                      ],
+                      "type": "object",
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "fill": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "example": {
+                              "const": true,
+                              "type": "boolean",
+                            },
+                            "label": {
+                              "maxLength": 40,
+                              "minLength": 1,
+                              "pattern": "^[^<>{}\\\\]*$",
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "label",
+                          ],
+                          "type": "object",
+                        },
+                        "id": {
+                          "pattern": "^[a-z0-9-]{1,40}$",
+                          "type": "string",
+                        },
+                        "kind": {
+                          "const": "heading",
+                          "type": "string",
+                        },
+                        "size": {
+                          "enum": [
+                            "s",
+                            "m",
+                            "l",
+                          ],
+                          "type": "string",
+                        },
+                        "text": {
+                          "maxLength": 60,
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "size",
+                        "text",
+                      ],
+                      "type": "object",
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "body": {
+                          "items": {
+                            "items": {
+                              "properties": {
+                                "bold": {
+                                  "type": "boolean",
+                                },
+                                "italic": {
+                                  "type": "boolean",
+                                },
+                                "link": {
+                                  "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                                  "type": "string",
+                                },
+                                "text": {
+                                  "maxLength": 600,
+                                  "minLength": 1,
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "text",
+                              ],
+                              "type": "object",
+                            },
+                            "maxItems": 40,
+                            "minItems": 1,
+                            "type": "array",
+                          },
+                          "maxItems": 12,
+                          "type": "array",
+                        },
+                        "fill": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "example": {
+                              "const": true,
+                              "type": "boolean",
+                            },
+                            "label": {
+                              "maxLength": 40,
+                              "minLength": 1,
+                              "pattern": "^[^<>{}\\\\]*$",
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "label",
+                          ],
+                          "type": "object",
+                        },
+                        "id": {
+                          "pattern": "^[a-z0-9-]{1,40}$",
+                          "type": "string",
+                        },
+                        "kind": {
+                          "const": "text",
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "body",
+                      ],
+                      "type": "object",
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "fill": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "example": {
+                              "const": true,
+                              "type": "boolean",
+                            },
+                            "label": {
+                              "maxLength": 40,
+                              "minLength": 1,
+                              "pattern": "^[^<>{}\\\\]*$",
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "label",
+                          ],
+                          "type": "object",
+                        },
+                        "id": {
+                          "pattern": "^[a-z0-9-]{1,40}$",
+                          "type": "string",
+                        },
+                        "image": {
+                          "anyOf": [
+                            {
+                              "properties": {
+                                "alt": {
+                                  "default": "",
+                                  "maxLength": 160,
+                                  "type": "string",
+                                },
+                                "base": {
+                                  "maxLength": 300,
+                                  "type": "string",
+                                },
+                                "decorative": {
+                                  "default": false,
+                                  "type": "boolean",
+                                },
+                                "focus": {
+                                  "anyOf": [
+                                    {
+                                      "properties": {
+                                        "x": {
+                                          "maximum": 100,
+                                          "minimum": 0,
+                                          "type": "number",
+                                        },
+                                        "y": {
+                                          "maximum": 100,
+                                          "minimum": 0,
+                                          "type": "number",
+                                        },
+                                      },
+                                      "required": [
+                                        "x",
+                                        "y",
+                                      ],
+                                      "type": "object",
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                  "default": null,
+                                },
+                                "height": {
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991,
+                                  "type": "integer",
+                                },
+                                "width": {
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991,
+                                  "type": "integer",
+                                },
+                                "widths": {
+                                  "items": {
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 9007199254740991,
+                                    "type": "integer",
+                                  },
+                                  "maxItems": 4,
+                                  "minItems": 1,
+                                  "type": "array",
+                                },
+                              },
+                              "required": [
+                                "base",
+                                "widths",
+                                "width",
+                                "height",
+                              ],
+                              "type": "object",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "kind": {
+                          "const": "image",
+                          "type": "string",
+                        },
+                        "ratio": {
+                          "enum": [
+                            "4:5",
+                            "3:4",
+                            "1:1",
+                            "16:9",
+                          ],
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "ratio",
+                        "image",
+                      ],
+                      "type": "object",
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "fill": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "example": {
+                              "const": true,
+                              "type": "boolean",
+                            },
+                            "label": {
+                              "maxLength": 40,
+                              "minLength": 1,
+                              "pattern": "^[^<>{}\\\\]*$",
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "label",
+                          ],
+                          "type": "object",
+                        },
+                        "id": {
+                          "pattern": "^[a-z0-9-]{1,40}$",
+                          "type": "string",
+                        },
+                        "kind": {
+                          "const": "button",
+                          "type": "string",
+                        },
+                        "label": {
+                          "maxLength": 24,
+                          "minLength": 1,
+                          "type": "string",
+                        },
+                        "link": {
+                          "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "label",
+                        "link",
+                      ],
+                      "type": "object",
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "fill": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "example": {
+                              "const": true,
+                              "type": "boolean",
+                            },
+                            "label": {
+                              "maxLength": 40,
+                              "minLength": 1,
+                              "pattern": "^[^<>{}\\\\]*$",
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "label",
+                          ],
+                          "type": "object",
+                        },
+                        "id": {
+                          "pattern": "^[a-z0-9-]{1,40}$",
+                          "type": "string",
+                        },
+                        "items": {
+                          "items": {
+                            "properties": {
+                              "a": {
+                                "maxLength": 600,
+                                "type": "string",
+                              },
+                              "q": {
+                                "maxLength": 80,
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "q",
+                              "a",
+                            ],
+                            "type": "object",
+                          },
+                          "maxItems": 12,
+                          "minItems": 1,
+                          "type": "array",
+                        },
+                        "kind": {
+                          "const": "accordion",
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "items",
+                      ],
+                      "type": "object",
+                    },
+                  ],
+                },
+                "maxItems": 4,
+                "minItems": 2,
+                "type": "array",
+              },
+              "id": {
+                "pattern": "^[a-z0-9-]{1,40}$",
+                "type": "string",
+              },
+              "kind": {
+                "const": "columns",
+                "type": "string",
+              },
+              "phone": {
+                "enum": [
+                  "stack",
+                  "swipe",
+                ],
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "kind",
+              "phone",
+              "children",
+            ],
+            "type": "object",
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "children": {
+                "items": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "fill": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "example": {
+                              "const": true,
+                              "type": "boolean",
+                            },
+                            "label": {
+                              "maxLength": 40,
+                              "minLength": 1,
+                              "pattern": "^[^<>{}\\\\]*$",
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "label",
+                          ],
+                          "type": "object",
+                        },
+                        "id": {
+                          "pattern": "^[a-z0-9-]{1,40}$",
+                          "type": "string",
+                        },
+                        "kind": {
+                          "const": "heading",
+                          "type": "string",
+                        },
+                        "size": {
+                          "enum": [
+                            "s",
+                            "m",
+                            "l",
+                          ],
+                          "type": "string",
+                        },
+                        "text": {
+                          "maxLength": 60,
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "size",
+                        "text",
+                      ],
+                      "type": "object",
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "body": {
+                          "items": {
+                            "items": {
+                              "properties": {
+                                "bold": {
+                                  "type": "boolean",
+                                },
+                                "italic": {
+                                  "type": "boolean",
+                                },
+                                "link": {
+                                  "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                                  "type": "string",
+                                },
+                                "text": {
+                                  "maxLength": 600,
+                                  "minLength": 1,
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "text",
+                              ],
+                              "type": "object",
+                            },
+                            "maxItems": 40,
+                            "minItems": 1,
+                            "type": "array",
+                          },
+                          "maxItems": 12,
+                          "type": "array",
+                        },
+                        "fill": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "example": {
+                              "const": true,
+                              "type": "boolean",
+                            },
+                            "label": {
+                              "maxLength": 40,
+                              "minLength": 1,
+                              "pattern": "^[^<>{}\\\\]*$",
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "label",
+                          ],
+                          "type": "object",
+                        },
+                        "id": {
+                          "pattern": "^[a-z0-9-]{1,40}$",
+                          "type": "string",
+                        },
+                        "kind": {
+                          "const": "text",
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "body",
+                      ],
+                      "type": "object",
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "fill": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "example": {
+                              "const": true,
+                              "type": "boolean",
+                            },
+                            "label": {
+                              "maxLength": 40,
+                              "minLength": 1,
+                              "pattern": "^[^<>{}\\\\]*$",
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "label",
+                          ],
+                          "type": "object",
+                        },
+                        "id": {
+                          "pattern": "^[a-z0-9-]{1,40}$",
+                          "type": "string",
+                        },
+                        "image": {
+                          "anyOf": [
+                            {
+                              "properties": {
+                                "alt": {
+                                  "default": "",
+                                  "maxLength": 160,
+                                  "type": "string",
+                                },
+                                "base": {
+                                  "maxLength": 300,
+                                  "type": "string",
+                                },
+                                "decorative": {
+                                  "default": false,
+                                  "type": "boolean",
+                                },
+                                "focus": {
+                                  "anyOf": [
+                                    {
+                                      "properties": {
+                                        "x": {
+                                          "maximum": 100,
+                                          "minimum": 0,
+                                          "type": "number",
+                                        },
+                                        "y": {
+                                          "maximum": 100,
+                                          "minimum": 0,
+                                          "type": "number",
+                                        },
+                                      },
+                                      "required": [
+                                        "x",
+                                        "y",
+                                      ],
+                                      "type": "object",
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                  "default": null,
+                                },
+                                "height": {
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991,
+                                  "type": "integer",
+                                },
+                                "width": {
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991,
+                                  "type": "integer",
+                                },
+                                "widths": {
+                                  "items": {
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 9007199254740991,
+                                    "type": "integer",
+                                  },
+                                  "maxItems": 4,
+                                  "minItems": 1,
+                                  "type": "array",
+                                },
+                              },
+                              "required": [
+                                "base",
+                                "widths",
+                                "width",
+                                "height",
+                              ],
+                              "type": "object",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "kind": {
+                          "const": "image",
+                          "type": "string",
+                        },
+                        "ratio": {
+                          "enum": [
+                            "4:5",
+                            "3:4",
+                            "1:1",
+                            "16:9",
+                          ],
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "ratio",
+                        "image",
+                      ],
+                      "type": "object",
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "fill": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "example": {
+                              "const": true,
+                              "type": "boolean",
+                            },
+                            "label": {
+                              "maxLength": 40,
+                              "minLength": 1,
+                              "pattern": "^[^<>{}\\\\]*$",
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "label",
+                          ],
+                          "type": "object",
+                        },
+                        "id": {
+                          "pattern": "^[a-z0-9-]{1,40}$",
+                          "type": "string",
+                        },
+                        "kind": {
+                          "const": "button",
+                          "type": "string",
+                        },
+                        "label": {
+                          "maxLength": 24,
+                          "minLength": 1,
+                          "type": "string",
+                        },
+                        "link": {
+                          "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "label",
+                        "link",
+                      ],
+                      "type": "object",
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "fill": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "example": {
+                              "const": true,
+                              "type": "boolean",
+                            },
+                            "label": {
+                              "maxLength": 40,
+                              "minLength": 1,
+                              "pattern": "^[^<>{}\\\\]*$",
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "label",
+                          ],
+                          "type": "object",
+                        },
+                        "id": {
+                          "pattern": "^[a-z0-9-]{1,40}$",
+                          "type": "string",
+                        },
+                        "items": {
+                          "items": {
+                            "properties": {
+                              "a": {
+                                "maxLength": 600,
+                                "type": "string",
+                              },
+                              "q": {
+                                "maxLength": 80,
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "q",
+                              "a",
+                            ],
+                            "type": "object",
+                          },
+                          "maxItems": 12,
+                          "minItems": 1,
+                          "type": "array",
+                        },
+                        "kind": {
+                          "const": "accordion",
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "items",
+                      ],
+                      "type": "object",
+                    },
+                  ],
+                },
+                "maxItems": 12,
+                "minItems": 1,
+                "type": "array",
+              },
+              "id": {
+                "pattern": "^[a-z0-9-]{1,40}$",
+                "type": "string",
+              },
+              "kind": {
+                "const": "group",
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "kind",
+              "children",
+            ],
+            "type": "object",
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "fill": {
+                "additionalProperties": false,
+                "properties": {
+                  "example": {
+                    "const": true,
+                    "type": "boolean",
+                  },
+                  "label": {
+                    "maxLength": 40,
+                    "minLength": 1,
+                    "pattern": "^[^<>{}\\\\]*$",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "label",
+                ],
+                "type": "object",
+              },
+              "id": {
+                "pattern": "^[a-z0-9-]{1,40}$",
+                "type": "string",
+              },
+              "kind": {
+                "const": "heading",
+                "type": "string",
+              },
+              "size": {
+                "enum": [
+                  "s",
+                  "m",
+                  "l",
+                ],
+                "type": "string",
+              },
+              "text": {
+                "maxLength": 60,
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "kind",
+              "size",
+              "text",
+            ],
+            "type": "object",
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "body": {
+                "items": {
+                  "items": {
+                    "properties": {
+                      "bold": {
+                        "type": "boolean",
+                      },
+                      "italic": {
+                        "type": "boolean",
+                      },
+                      "link": {
+                        "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                        "type": "string",
+                      },
+                      "text": {
+                        "maxLength": 600,
+                        "minLength": 1,
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "text",
+                    ],
+                    "type": "object",
+                  },
+                  "maxItems": 40,
+                  "minItems": 1,
+                  "type": "array",
+                },
+                "maxItems": 12,
+                "type": "array",
+              },
+              "fill": {
+                "additionalProperties": false,
+                "properties": {
+                  "example": {
+                    "const": true,
+                    "type": "boolean",
+                  },
+                  "label": {
+                    "maxLength": 40,
+                    "minLength": 1,
+                    "pattern": "^[^<>{}\\\\]*$",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "label",
+                ],
+                "type": "object",
+              },
+              "id": {
+                "pattern": "^[a-z0-9-]{1,40}$",
+                "type": "string",
+              },
+              "kind": {
+                "const": "text",
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "kind",
+              "body",
+            ],
+            "type": "object",
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "fill": {
+                "additionalProperties": false,
+                "properties": {
+                  "example": {
+                    "const": true,
+                    "type": "boolean",
+                  },
+                  "label": {
+                    "maxLength": 40,
+                    "minLength": 1,
+                    "pattern": "^[^<>{}\\\\]*$",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "label",
+                ],
+                "type": "object",
+              },
+              "id": {
+                "pattern": "^[a-z0-9-]{1,40}$",
+                "type": "string",
+              },
+              "image": {
+                "anyOf": [
+                  {
+                    "properties": {
+                      "alt": {
+                        "default": "",
+                        "maxLength": 160,
+                        "type": "string",
+                      },
+                      "base": {
+                        "maxLength": 300,
+                        "type": "string",
+                      },
+                      "decorative": {
+                        "default": false,
+                        "type": "boolean",
+                      },
+                      "focus": {
+                        "anyOf": [
+                          {
+                            "properties": {
+                              "x": {
+                                "maximum": 100,
+                                "minimum": 0,
+                                "type": "number",
+                              },
+                              "y": {
+                                "maximum": 100,
+                                "minimum": 0,
+                                "type": "number",
+                              },
+                            },
+                            "required": [
+                              "x",
+                              "y",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "type": "null",
+                          },
+                        ],
+                        "default": null,
+                      },
+                      "height": {
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991,
+                        "type": "integer",
+                      },
+                      "width": {
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991,
+                        "type": "integer",
+                      },
+                      "widths": {
+                        "items": {
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991,
+                          "type": "integer",
+                        },
+                        "maxItems": 4,
+                        "minItems": 1,
+                        "type": "array",
+                      },
+                    },
+                    "required": [
+                      "base",
+                      "widths",
+                      "width",
+                      "height",
+                    ],
+                    "type": "object",
+                  },
+                  {
+                    "type": "null",
+                  },
+                ],
+              },
+              "kind": {
+                "const": "image",
+                "type": "string",
+              },
+              "ratio": {
+                "enum": [
+                  "4:5",
+                  "3:4",
+                  "1:1",
+                  "16:9",
+                ],
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "kind",
+              "ratio",
+              "image",
+            ],
+            "type": "object",
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "fill": {
+                "additionalProperties": false,
+                "properties": {
+                  "example": {
+                    "const": true,
+                    "type": "boolean",
+                  },
+                  "label": {
+                    "maxLength": 40,
+                    "minLength": 1,
+                    "pattern": "^[^<>{}\\\\]*$",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "label",
+                ],
+                "type": "object",
+              },
+              "id": {
+                "pattern": "^[a-z0-9-]{1,40}$",
+                "type": "string",
+              },
+              "kind": {
+                "const": "button",
+                "type": "string",
+              },
+              "label": {
+                "maxLength": 24,
+                "minLength": 1,
+                "type": "string",
+              },
+              "link": {
+                "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "kind",
+              "label",
+              "link",
+            ],
+            "type": "object",
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "fill": {
+                "additionalProperties": false,
+                "properties": {
+                  "example": {
+                    "const": true,
+                    "type": "boolean",
+                  },
+                  "label": {
+                    "maxLength": 40,
+                    "minLength": 1,
+                    "pattern": "^[^<>{}\\\\]*$",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "label",
+                ],
+                "type": "object",
+              },
+              "id": {
+                "pattern": "^[a-z0-9-]{1,40}$",
+                "type": "string",
+              },
+              "items": {
+                "items": {
+                  "properties": {
+                    "a": {
+                      "maxLength": 600,
+                      "type": "string",
+                    },
+                    "q": {
+                      "maxLength": 80,
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "q",
+                    "a",
+                  ],
+                  "type": "object",
+                },
+                "maxItems": 12,
+                "minItems": 1,
+                "type": "array",
+              },
+              "kind": {
+                "const": "accordion",
+                "type": "string",
+              },
+            },
+            "required": [
+              "id",
+              "kind",
+              "items",
+            ],
+            "type": "object",
+          },
+        ],
+      },
+      "maxItems": 12,
+      "minItems": 1,
+      "type": "array",
+    },
+    "id": {
+      "pattern": "^[a-z0-9-]{1,40}$",
+      "type": "string",
+    },
+    "line": {
+      "maxLength": 80,
+      "minLength": 1,
+      "pattern": "^[^<>{}\\\\]*$",
+      "type": "string",
+    },
+    "name": {
+      "maxLength": 40,
+      "minLength": 1,
+      "pattern": "^[^<>{}\\\\]*$",
+      "type": "string",
+    },
+    "tags": {
+      "items": {
+        "maxLength": 24,
+        "minLength": 1,
+        "pattern": "^[^<>{}\\\\]*$",
+        "type": "string",
+      },
+      "maxItems": 8,
+      "type": "array",
+    },
+  },
+  "required": [
+    "id",
+    "name",
+    "line",
+    "tags",
+    "children",
+  ],
+  "type": "object",
+}
+`;
+
 exports[`section schemas > collection_tiles keeps its shape 1`] = `
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -72,6 +1636,272 @@ exports[`section schemas > collection_tiles keeps its shape 1`] = `
   "required": [
     "id",
     "key",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`section schemas > design keeps its shape 1`] = `
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "design": {
+      "pattern": "^[a-z0-9-]{1,40}$",
+      "type": "string",
+    },
+    "fill": {
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "properties": {
+              "kind": {
+                "const": "heading",
+                "type": "string",
+              },
+              "text": {
+                "maxLength": 60,
+                "type": "string",
+              },
+            },
+            "required": [
+              "kind",
+              "text",
+            ],
+            "type": "object",
+          },
+          {
+            "properties": {
+              "body": {
+                "items": {
+                  "items": {
+                    "properties": {
+                      "bold": {
+                        "type": "boolean",
+                      },
+                      "italic": {
+                        "type": "boolean",
+                      },
+                      "link": {
+                        "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                        "type": "string",
+                      },
+                      "text": {
+                        "maxLength": 600,
+                        "minLength": 1,
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "text",
+                    ],
+                    "type": "object",
+                  },
+                  "maxItems": 40,
+                  "minItems": 1,
+                  "type": "array",
+                },
+                "maxItems": 12,
+                "type": "array",
+              },
+              "kind": {
+                "const": "text",
+                "type": "string",
+              },
+            },
+            "required": [
+              "kind",
+              "body",
+            ],
+            "type": "object",
+          },
+          {
+            "properties": {
+              "image": {
+                "anyOf": [
+                  {
+                    "properties": {
+                      "alt": {
+                        "default": "",
+                        "maxLength": 160,
+                        "type": "string",
+                      },
+                      "base": {
+                        "maxLength": 300,
+                        "type": "string",
+                      },
+                      "decorative": {
+                        "default": false,
+                        "type": "boolean",
+                      },
+                      "focus": {
+                        "anyOf": [
+                          {
+                            "properties": {
+                              "x": {
+                                "maximum": 100,
+                                "minimum": 0,
+                                "type": "number",
+                              },
+                              "y": {
+                                "maximum": 100,
+                                "minimum": 0,
+                                "type": "number",
+                              },
+                            },
+                            "required": [
+                              "x",
+                              "y",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "type": "null",
+                          },
+                        ],
+                        "default": null,
+                      },
+                      "height": {
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991,
+                        "type": "integer",
+                      },
+                      "width": {
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991,
+                        "type": "integer",
+                      },
+                      "widths": {
+                        "items": {
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991,
+                          "type": "integer",
+                        },
+                        "maxItems": 4,
+                        "minItems": 1,
+                        "type": "array",
+                      },
+                    },
+                    "required": [
+                      "base",
+                      "widths",
+                      "width",
+                      "height",
+                    ],
+                    "type": "object",
+                  },
+                  {
+                    "type": "null",
+                  },
+                ],
+              },
+              "kind": {
+                "const": "image",
+                "type": "string",
+              },
+            },
+            "required": [
+              "kind",
+              "image",
+            ],
+            "type": "object",
+          },
+          {
+            "properties": {
+              "kind": {
+                "const": "button",
+                "type": "string",
+              },
+              "label": {
+                "maxLength": 24,
+                "type": "string",
+              },
+              "link": {
+                "pattern": "^\\/(?:|products|products\\/[a-z0-9-]{1,80}|collections\\/[a-z0-9-]{1,80}|policies\\/(?:shipping|returns|privacy|terms|contact))$",
+                "type": "string",
+              },
+            },
+            "required": [
+              "kind",
+              "label",
+              "link",
+            ],
+            "type": "object",
+          },
+          {
+            "properties": {
+              "items": {
+                "items": {
+                  "properties": {
+                    "a": {
+                      "maxLength": 600,
+                      "type": "string",
+                    },
+                    "q": {
+                      "maxLength": 80,
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "q",
+                    "a",
+                  ],
+                  "type": "object",
+                },
+                "maxItems": 12,
+                "type": "array",
+              },
+              "kind": {
+                "const": "accordion",
+                "type": "string",
+              },
+            },
+            "required": [
+              "kind",
+              "items",
+            ],
+            "type": "object",
+          },
+        ],
+      },
+      "default": {},
+      "propertyNames": {
+        "pattern": "^[a-z0-9-]{1,40}$",
+        "type": "string",
+      },
+      "type": "object",
+    },
+    "hidden": {
+      "default": false,
+      "type": "boolean",
+    },
+    "id": {
+      "pattern": "^[a-z0-9-]{1,40}$",
+      "type": "string",
+    },
+    "key": {
+      "const": "design",
+      "type": "string",
+    },
+    "label": {
+      "default": "",
+      "maxLength": 24,
+      "type": "string",
+    },
+    "scheme": {
+      "default": "paper",
+      "enum": [
+        "paper",
+        "tint",
+        "ink",
+        "signal",
+      ],
+      "type": "string",
+    },
+  },
+  "required": [
+    "id",
+    "key",
+    "design",
   ],
   "type": "object",
 }

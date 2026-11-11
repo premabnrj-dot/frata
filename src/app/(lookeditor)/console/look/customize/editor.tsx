@@ -8,20 +8,26 @@ import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import type { Choices } from '@/domains/themes/choices'
 import { readinessOf, type ShopFacts } from '@/domains/themes/readiness'
-import { SECTION_NAMES, type SectionInstance, type SectionKey } from '@/domains/themes/sections'
+import { sectionName, type SectionInstance, type SectionKey } from '@/domains/themes/sections'
 import type { FooterVariant, HeaderVariant, Pairing, ThemeSettings } from '@/domains/themes/types'
 import { publishLookAction, saveLookAction } from '@/app/(console)/console/look/actions'
 import type { LinkTarget } from './controls'
 import { SectionForm, type FormCtx } from './section-form'
 import { SectionsPanel } from './sections-panel'
+import type { LibraryDesign } from './section-library'
 import { PageForm } from './page-form'
 import { ThemeForm, type StyleOption } from './theme-form'
 import { Icon } from '@/components/icons/icon'
 import { PublishConfirm } from './publish-confirm'
 import { Segmented } from './controls'
 import { menusOf, siteIsDefault, type Menus, type Palette, type SiteSettings } from '@/domains/themes/site'
-import { MenusForm } from './menus-form'
-import { SiteForm, type IconPreviews } from './site-form'
+import type { IconPreviews } from './site-form'
+import dynamic from 'next/dynamic'
+
+// Menus and Site settings load when opened (TS0b paid for its designs in the customizer's script this way: the page
+// was already over its budget, speed review 2026-11-11 finding 4).
+const MenusForm = dynamic(() => import('./menus-form').then((m) => m.MenusForm))
+const SiteForm = dynamic(() => import('./site-form').then((m) => m.SiteForm))
 
 // =============================================================================
 // The customizer (approved mockup "Customizer", "Customizer on a phone", "Publish"). One draft revision:
@@ -50,6 +56,8 @@ export type EditorProps = {
   choices: Choices
   /** Site settings (Look v4): the resolved site (defaults filled), the theme's styles as palettes, the shop's icons drawn on the server. */
   site: SiteSettings; presets: { name: string; palette: Palette }[]; icons: IconPreviews
+  /** TS0b: the theme's designs for the library, each with its picture drawn on the server. */
+  designs?: LibraryDesign[]
 }
 
 
@@ -157,9 +165,11 @@ export function Editor(p: EditorProps) {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const say = (t: string) => { setToast(t); if (toastTimer.current) clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), 8000) }
 
-  const issues = useMemo(() => readinessOf(layer.home, p.facts, now), [layer.home, p.facts, now])
+  const issues = useMemo(() => readinessOf(layer.home, p.facts, now, p.formCtx.designs), [layer.home, p.facts, now, p.formCtx.designs])
   const blocking = issues.filter((i) => i.blocks)
-  const issueMap = new Map(issues.map((i) => [i.sectionId, i.text]))
+  // One line a section: its first blocking issue, else its first (a soft line never hides what blocks Publish).
+  const issueMap = new Map<string, string>()
+  for (const i of [...blocking, ...issues]) if (!issueMap.has(i.sectionId)) issueMap.set(i.sectionId, i.text)
   const styleName = p.styles.find((s) => s.key === style)?.name ?? style
   const sel = layer.home.find((s) => s.id === selected) ?? null
   const path = page === 'product' && p.firstProduct ? `/products/${p.firstProduct}` : page === 'collection' && p.firstCollection ? `/collections/${p.firstCollection}` : page === 'all' ? '/products' : page === 'bag' ? '/bag' : page === 'checkout' ? '/checkout' : ''
@@ -208,10 +218,10 @@ export function Editor(p: EditorProps) {
           <button type="button" onClick={() => setSelected(null)} className="text-sm text-muted-foreground">‹ Sections</button>
           <SectionForm s={sel} c={p.formCtx} set={(s) => change({ ...layer, home: layer.home.map((x) => (x.id === s.id ? s : x)) })} />
           {issueMap.has(sel.id) && <p role="status" className="rounded-md bg-warn px-3 py-2 text-sm text-warn-text">{issueMap.get(sel.id)}</p>}
-          <button type="button" onClick={() => { change({ ...layer, home: layer.home.filter((x) => x.id !== sel.id) }); setSelected(null); say(`${SECTION_NAMES[sel.key]} removed`) }} className="min-h-9 text-sm text-danger-text underline underline-offset-4">Remove this section</button>
+          <button type="button" onClick={() => { change({ ...layer, home: layer.home.filter((x) => x.id !== sel.id) }); setSelected(null); say(`${sectionName(sel, p.formCtx.designs)} removed`) }} className="min-h-9 text-sm text-danger-text underline underline-offset-4">Remove this section</button>
         </div>
       ) : (
-        <SectionsPanel home={layer.home} selected={selected} allowed={p.allowed.sections} made={p.made.sections ?? []} themeName={p.themeName} issues={issueMap} now={now}
+        <SectionsPanel home={layer.home} selected={selected} allowed={p.allowed.sections} made={p.made.sections ?? []} themeName={p.themeName} issues={issueMap} now={now} designs={p.designs}
           onSelect={setSelected} onChange={(home, id) => { change({ ...layer, home }); if (id) setSelected(id) }} />
       ))}
       {tab === 'theme' && <ThemeForm settings={layer.settings} style={style} styles={p.styles} allowed={p.allowed} made={p.made} themeName={p.themeName} choices={p.choices} schemes={p.formCtx.schemes.flatMap((x) => (x.key === 'signal' ? [] : [{ key: x.key, name: x.name }]))} targets={p.targets} fonts={p.fonts}

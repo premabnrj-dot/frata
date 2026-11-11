@@ -20,8 +20,8 @@ accessibility (home, product, collection); **zero** shops changed without their 
 | Phase | Who gets what |
 |---|---|
 | **TS0a Seam** (invisible) | `ManifestSchema` (every code manifest parses it); `manifestsFor(tenant)` in `src/lib/themes/manifests.ts` read before any transaction and passed into the pure functions; every caller of `resolveStored`/`manifestNear`/`latestAvailable` migrated (~20 files) with 0 px proof; the publish-cache fixes below; ADR-0012 |
-| **TS0b Blocks** | The block catalogue and the `design` section, shipped first inside a **minor version of a code theme** (e.g. Signal 1.4) and measured on real shops |
-| **TS1 Pages and templates (Look)** | About, Contact (WhatsApp + business details), FAQ; product and collection page layouts from blocks; as code themes' features, for owners |
+| **TS0b Blocks** | The `design` section and the layout and content blocks (section, columns, group, heading, text, image, button, accordion), shipped inside **Signal 1.4** as two designs, Size help and Made by hand (owner 2026-11-11; plan `docs/plans/2026-11-11-theme-studio-ts0b.md`) |
+| **TS1 Pages and templates (Look)** | About, Contact (WhatsApp + business details), FAQ; product and collection page layouts from blocks; the commerce blocks (product grid, featured product, collection tiles), video and the date block, with the per-source loader; as code themes' features, for owners |
 | **TS2 Staff studio (Admin)** | Frrata's team builds and releases gallery themes; second-person approval |
 | **TS3 Partner studio** | Partners build themes for chosen clients; Made for you; update offers |
 | **TS4 Claude assistant** | Describe → blocks; its own spec |
@@ -62,7 +62,7 @@ validated, immutable once a version exists, versioned.
   one CSS rule each** (block CSS ≤ 1.0 kB gz).
 - **Depth 3 below a Section**, counting Accordion › Item as one level (Section › Columns › Group › leaf).
 - **Limits** (pure validator, speed 1): ≤ 20 sections a page (today's `MAX_SECTIONS`), **≤ 100 blocks a page**,
-  **≤ 36 product cards a page**, **≤ 6 commerce blocks a page**, ≤ 30 designs a theme. Worst case ≈ 298 kB HTML; a
+  **≤ 24 product cards a page** (speed review 2026-11-11), **≤ 6 commerce blocks a page**, ≤ 30 designs a theme. Worst case measured by the speed review (2026-11-11) at ≈ 370–480 kB with 36 cards, so the card cap is **≤ 24 a page** with ≤ 24 kB of owner text and ≤ 12 photos outside cards; a
   "largest allowed page" render test on the 600-product seed holds HTML ≤ 300 kB, RSC ≤ 150 kB.
 - **Derived:** heading levels by position — the page's h1 is the first Hero's or the page title; every other heading
   steps down, never skips; **≤ 2 eager images a page** in document order (on product pages the buy box photos);

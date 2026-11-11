@@ -6,8 +6,9 @@ import { storeHost } from '@/domains/media/sizes'
 import { cleanImages } from '@/domains/themes/clean-images'
 import { manifestNear, manifestOf, type ManifestSource } from '@/domains/themes/source'
 import { latestAvailable } from '@/domains/themes/release'
-import { brandColourProblem, carryOver, LayerSchema, layerProblems } from '@/domains/themes/layer'
+import { brandColourProblem, carryOver, LayerSchema, layerProblems, layerTooLong } from '@/domains/themes/layer'
 import { readinessOf } from '@/domains/themes/readiness'
+import { designsForSave, designsOf } from '@/domains/themes/blocks'
 import { paletteProblem, type Palette } from '@/domains/themes/site'
 import { baselineRevision, resolveTheme } from '@/domains/themes/resolve'
 import { THEME_KEYS } from '@/lib/db/schema-themes'
@@ -88,12 +89,18 @@ export async function saveLookAction(input: unknown): Promise<R<{ version: numbe
     // A palette must read with what it keeps from this style (sale and saving words, the tint).
     const pal = (p.data.layer.site as { palette?: Palette | null } | undefined)?.palette
     if (pal) { const sch = resolveTheme(m, { style: p.data.style }).schemes; const why = paletteProblem({ ...pal }, [sch.paper, sch.tint]); if (why) return { error: why } }
+    // TS0b: each design's words pruned to its blocks, then the page's limits (after the manifest is read: architecture 8).
+    const designed = designsForSave(designsOf(m), layer.home ?? [])
+    if ('error' in designed) return { error: designed.error }
+    if (layer.home) layer.home = designed.home
     // Stored as parsed: unknown settings keys are dropped (tenancy audit 2026-11-08).
     const parsed = LayerSchema.parse(layer)
     const clean = cleanImages({ ...layer, settings: parsed.settings, ...(parsed.site ? { site: parsed.site } : {}), ...(parsed.menus ? { menus: parsed.menus } : {}) }, t, storeHost(BLOB_STORE_ID))
     if (!clean) return { error: 'A photo didn’t come from this shop. Upload it again.' }
     // V1: a video id must be one of this shop's own, not removed; anything else is dropped (the photo shows).
     const kept = await cleanVideos(tx, t, clean)
+    // The revision holds at most 64 kB (the database check, in bytes): say so in words before the insert would fail.
+    if (layerTooLong(kept)) return { error: 'This look is too long to save. Shorten some words, or remove a section.' }
     const s = await saveDraft(tx, t, { userId: auth.userId, email: auth.email }, { revisionId: rev.id, version: p.data.version, styleKey: p.data.style, settings: kept })
     if (!s.ok) return { error: s.why === 'stale' ? `${rev.updatedByEmail ?? 'Someone'} changed this draft a moment ago. Reload to see their changes.` : s.why === 'published' ? 'This look was published. Reload to keep editing.' : 'This draft is gone. Reload.' }
     return { version: s.version }
@@ -117,7 +124,7 @@ export async function publishLookAction(input: unknown): Promise<R> {
     const layer = rev.settings as { settings?: object; home?: unknown[] }
     const theme = resolveTheme(m, { style: rev.styleKey, ...layer })
     const facts = await lookFacts(tx, t)
-    const blocking = readinessOf(theme.home, facts, new Date()).filter((i) => i.blocks)
+    const blocking = readinessOf(theme.home, facts, new Date(), theme.designs).filter((i) => i.blocks)
     if (blocking.length) return { error: `Before publishing: ${blocking[0]!.text}.` }
     const out = await publishRevision(tx, t, { userId: auth.userId, email: auth.email }, {
       revisionId: rev.id, version: p.data.version,
