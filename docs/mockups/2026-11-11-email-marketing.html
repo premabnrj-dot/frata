@@ -1,0 +1,472 @@
+<title>Frrata Email Marketing</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Fraunces:opsz,wght@9..144,600&display=swap">
+<style>
+/* Layout: a proposal column (decisions, then screens). Console in Frrata tokens; shopper emails in the shop's brand (Kesar Studio). */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--brand:#D61F69;--brand-text:#A8124F;--thread:#D61F69;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;
+  --shop:#A2462A;--shop-bg:#F7F2EC;--shop-ink:#2A211C;--shop-sub:#6B5E55;--shop-line:#E6DDD3;--shop-plate:#FFFFFF;--tile:#E9E1D6;
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--display:"Bricolage Grotesque","Inter",sans-serif;--serif:"Fraunces",Georgia,serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.55 var(--sans);margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font:700 30px/1.15 var(--display);margin:0 0 6px;text-wrap:balance;letter-spacing:-.01em}
+h2{font-size:19px;margin:52px 0 10px;display:flex;gap:10px;align-items:center;text-wrap:balance;scroll-margin-top:16px}
+h2::before{content:"";width:18px;height:2px;background:var(--thread);flex:none}
+h3{font-size:15px;margin:0 0 8px}
+p{margin:0 0 10px;max-width:74ch}
+.sub{color:var(--sub)}.mono{font-family:var(--mono)}.num{font-variant-numeric:tabular-nums}.k{font-size:12px;color:var(--sub)}
+nav.toc{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 4px}
+nav.toc a{font-size:12.5px;color:var(--fg);text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:3px 10px;background:var(--card)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:16px;min-width:0}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}
+.grid2{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(310px,1fr))}.grid2>*{min-width:0}
+.grid3{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}.grid3>*{min-width:0}
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--fg);padding:6px 12px;font:500 13px var(--sans);min-height:34px;white-space:nowrap;cursor:pointer}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.ghost{border-color:transparent;background:transparent;text-decoration:underline;text-underline-offset:3px}
+.btn:focus-visible,.tab:focus-visible,.seg button:focus-visible,.tpl:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:500;white-space:nowrap}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-warn{background:var(--warn);color:var(--warn-text)}.c-n{background:var(--muted);color:var(--sub)}.c-danger{background:var(--danger);color:var(--danger-text)}.c-info{background:var(--info);color:var(--info-text)}
+.ask{display:flex;gap:8px;background:var(--warn);color:var(--warn-text);border-radius:6px;padding:10px 12px;margin-top:10px;font-size:13px}
+.note{background:var(--info);color:var(--info-text);border-radius:6px;padding:10px 12px;font-size:13px}
+.tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:12px;color:var(--sub);font-weight:500}tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-family:var(--mono);font-size:12.5px}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.list li:last-child{border-bottom:0}
+.sw{width:34px;height:20px;border-radius:999px;background:var(--fg);position:relative;flex:none;border:0;cursor:pointer;padding:0}
+.sw::after{content:"";position:absolute;top:3px;left:17px;width:14px;height:14px;border-radius:50%;background:var(--bg);transition:left .12s}
+.sw[aria-checked="false"]{background:var(--input)}.sw[aria-checked="false"]::after{left:3px}
+.field{display:grid;gap:4px;margin-bottom:12px}
+.field label{font-size:13px;font-weight:500}
+.input{border:1px solid var(--input);border-radius:6px;padding:8px 10px;background:var(--card);color:var(--fg);font:14px var(--sans);min-height:38px;width:100%}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}.kv dt{color:var(--sub)}.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);font-weight:600}
+/* Console frame */
+.console{border:1px solid var(--border);border-radius:8px;background:var(--bg);overflow:hidden}
+.console .top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px 10px;flex-wrap:wrap}
+.console .top h3{font:700 20px var(--display);margin:0}
+.console .body{padding:0 16px 16px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin:0 16px;overflow-x:auto}
+.tab{border:0;background:none;padding:8px 12px;font:500 13px var(--sans);color:var(--sub);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--thread);font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:14px 0}
+.tile{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px 12px;min-width:0}
+.tile b{display:block;font:500 20px var(--mono);font-variant-numeric:tabular-nums}
+.meter{height:6px;background:var(--muted);border-radius:999px;overflow:hidden;margin-top:6px}
+.meter i{display:block;height:100%;background:var(--fg);transform-origin:left}
+/* Steps */
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.steps span{font-size:12.5px;border-radius:999px;padding:3px 10px;border:1px solid var(--border);background:var(--card);color:var(--sub)}
+.steps span.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.steps span.done{color:var(--ok-text);border-color:var(--ok-text)}
+.radio{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border);border-radius:6px;padding:10px 12px;background:var(--card);margin-bottom:8px}
+.radio.on{border:2px solid var(--fg);padding:9px 11px}
+.dot{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--input);flex:none;margin-top:2px}
+.radio.on .dot{border:5px solid var(--fg)}
+.radio .grow{flex:1;min-width:0}
+.radio .cnt{font:500 13px var(--mono)}
+.seg{display:inline-flex;background:var(--muted);border-radius:6px;padding:2px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:none;border-radius:5px;padding:5px 12px;font:500 13px var(--sans);color:var(--sub);cursor:pointer}
+.seg button[aria-checked="true"]{background:var(--card);color:var(--fg);box-shadow:0 1px 2px rgb(0 0 0 / .08)}
+/* Template gallery */
+.tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tpl{border:1px solid var(--border);border-radius:6px;background:var(--card);padding:0;text-align:left;cursor:pointer;color:var(--fg);font:inherit;overflow:hidden}
+.tpl[aria-pressed="true"]{border:2px solid var(--fg)}
+.tpl .pic{height:92px;background:var(--shop-bg);display:grid;place-items:center;border-bottom:1px solid var(--border);padding:8px}
+.tpl .txt{padding:8px 10px}
+.tpl .txt b{display:block;font-size:13px}
+.tpl .txt span{font-size:12px;color:var(--sub)}
+.mini{width:100%;max-width:110px;background:#fff;border-radius:3px;padding:6px;display:grid;gap:4px}
+.mini i{display:block;height:5px;border-radius:2px;background:var(--shop-line)}
+.mini i.h{height:8px;background:var(--shop-ink);width:70%;margin:0 auto}
+.mini .g{display:grid;grid-template-columns:1fr 1fr;gap:3px}.mini .g i{height:22px;background:var(--tile)}
+.mini i.b{height:8px;width:45%;background:var(--shop);margin:2px auto 0}
+.mini i.o{height:14px;background:var(--shop-line);border:1px dashed var(--shop)}
+/* Email (shop brand) */
+.mailframe{background:var(--muted);border-radius:8px;padding:14px;display:flex;justify-content:center}
+.mail{background:var(--shop-bg);color:var(--shop-ink);width:100%;max-width:380px;border-radius:6px;overflow:hidden;font:14px/1.5 var(--sans);box-shadow:0 1px 2px rgb(0 0 0 / .12)}
+.mail .inbox{background:#fff;color:#202124;padding:10px 14px;border-bottom:1px solid #e5e5e5;font-size:12.5px}
+.mail .inbox b{display:block;font-size:13.5px}
+.mail .hd{padding:18px 20px 6px;text-align:center}
+.logo{font:600 20px var(--serif);color:var(--shop-ink);letter-spacing:.06em}
+.mail .bd{padding:6px 20px 18px}
+.mail h4{font:600 22px/1.2 var(--serif);margin:10px 0 6px;color:var(--shop-ink);text-align:center}
+.mail p{color:var(--shop-ink);margin:0 0 10px;text-align:center}
+.mbtn{display:inline-block;background:var(--shop);color:#fff;border-radius:4px;padding:9px 16px;font-weight:600;font-size:13.5px}
+.hero{height:150px;border-radius:4px;background:linear-gradient(135deg,#C9A27E,#8C4A2F);margin:8px 0 12px;display:grid;place-items:end start;padding:10px;color:#fff;font:600 13px var(--sans)}
+.prods{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.prod .ph{aspect-ratio:4/5;border-radius:3px;background:var(--tile)}
+.prod .ph.a{background:linear-gradient(160deg,#D9B99B,#B07A52)}.prod .ph.b{background:linear-gradient(160deg,#B9C4B0,#6E7F63)}
+.prod b{display:block;font-size:12.5px;margin-top:4px}.prod span{font:500 12px var(--mono)}
+.offer{border:1px dashed var(--shop);border-radius:4px;padding:8px;text-align:center;font-size:13px;margin:10px 0}
+.foot{font-size:11.5px;color:var(--shop-sub);text-align:center;border-top:1px solid var(--shop-line);padding:12px 20px}
+.foot u{color:var(--shop-ink)}
+/* Phone */
+.phone{width:100%;max-width:360px;border:1px solid var(--border);border-radius:22px;padding:10px;background:var(--card)}
+.phone .scr{border-radius:14px;overflow:hidden;border:1px solid var(--border);background:var(--bg)}
+.phone .bar{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--card)}
+.phone .pb{padding:12px}
+.stick{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--border);padding:10px 12px;display:flex;gap:8px;justify-content:space-between;align-items:center}
+/* Flow timeline */
+.flow{display:grid;gap:0;margin-top:6px}
+.fstep{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start}
+.fstep .ln{display:grid;justify-items:center;height:100%}
+.fstep .ln i{width:12px;height:12px;border-radius:50%;background:var(--fg);margin-top:4px}
+.fstep .ln s{width:2px;flex:1;background:var(--border);min-height:24px;text-decoration:none}
+.fstep .ln.wait i{background:var(--card);border:2px solid var(--input)}
+.fstep .tx{padding-bottom:14px}
+/* Shop capture */
+.shopbox{background:var(--shop-bg);color:var(--shop-ink);border-radius:6px;padding:16px;border:1px solid var(--shop-line)}
+.shopbox h4{font:600 18px var(--serif);margin:0 0 4px}
+.shopbtn{background:var(--shop-ink);color:#fff;border:0;border-radius:4px;padding:9px 14px;font:600 13px var(--sans)}
+.sizes{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.sizes span{border:1px solid var(--shop-line);border-radius:4px;padding:5px 10px;font-size:13px;background:#fff;color:var(--shop-ink)}
+.sizes span.x{text-decoration:line-through;color:var(--shop-sub)}
+.sizes span.sel{border:2px solid var(--shop-ink)}
+/* Diagram */
+.lanes{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.lane{border:1px solid var(--border);border-radius:8px;padding:14px;background:var(--card)}
+.chain{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.pill{border:1px solid var(--border);border-radius:6px;padding:5px 9px;background:var(--muted);font-size:12.5px}
+.arrow{color:var(--sub);font:600 13px var(--mono)}
+.callout{border-left:2px solid var(--thread);padding:2px 0 2px 12px;margin:10px 0}
+.cal{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.cal .when{font:500 12px var(--mono);color:var(--sub)}
+@media (prefers-reduced-motion:reduce){.sw::after{transition:none}}
+</style>
+
+<div class="wrap">
+<p class="label">Proposal · email plan E·3–E·5 · draft for the owner · 11 Nov 2026</p>
+<h1>Email marketing for Frrata shops</h1>
+<p class="sub">Campaigns and automated flows, sent from the merchant's own domain, paid from the plan's monthly emails and the Messages wallet, judged on delivered orders.</p>
+<nav class="toc" aria-label="Sections">
+<a href="#how">How it works</a><a href="#domain">Own domain</a><a href="#price">Pricing and caps</a><a href="#home">Email home</a><a href="#new">New campaign</a><a href="#flows">Flows</a><a href="#report">Report</a><a href="#calendar">Calendar</a><a href="#subs">Subscribers</a><a href="#shop">On the shop</a><a href="#safety">Safety</a><a href="#phases">Phases</a><a href="#calls">Your calls</a>
+</nav>
+
+<h2 id="how">How it works</h2>
+<div class="lanes">
+  <div class="lane">
+    <h3>Order emails <span class="chip c-ok">Live</span></h3>
+    <div class="chain"><span class="pill">Order event</span><span class="arrow">→</span><span class="pill">Outbox</span><span class="arrow">→</span><span class="pill">SES · set <b class="mono">shops</b></span></div>
+    <dl class="kv"><dt>From</dt><dd class="mono">kesar-studio@frratamail.app</dd><dt>Then</dt><dd class="mono">orders@kesarstudio.in once the domain is set</dd><dt>To</dt><dd>Anyone who gave an email at checkout</dd><dt>Price</dt><dd>Included, every plan</dd></dl>
+  </div>
+  <div class="lane">
+    <h3>Marketing <span class="chip c-info">This proposal</span></h3>
+    <div class="chain"><span class="pill">Campaign or flow</span><span class="arrow">→</span><span class="pill">Outbox, behind order emails</span><span class="arrow">→</span><span class="pill">SES · set <b class="mono">marketing</b></span></div>
+    <dl class="kv"><dt>From</dt><dd class="mono">news@kesarstudio.in · the merchant's own domain only</dd><dt>To</dt><dd>Subscribers only: shoppers who tapped "Email me new drops" or "Email me when it's back"</dd><dt>Price</dt><dd>Plan's monthly emails, then the Messages wallet</dd></dl>
+  </div>
+</div>
+<div class="grid3" style="margin-top:12px">
+  <div class="card"><h3>Same SES account</h3><p class="sub">MARKETING is an allowed mail type. A separate configuration set and outbox kind, so campaigns queue behind order emails and never slow them.</p></div>
+  <div class="card"><h3>Our own lists</h3><p class="sub">SES allows one contact list per account. Subscribers, consent and one-click unsubscribe (RFC 8058) stay in Frrata, per shop.</p></div>
+  <div class="card"><h3>No open tracking</h3><p class="sub">Apple hides opens. Clicks go through our link, orders through the link's tags; results count delivered orders minus returns.</p></div>
+</div>
+
+<h2 id="domain">Sending from the merchant's domain</h2>
+<p>Gmail judges mail by the domain in From. Every shop on <span class="mono">frratamail.app</span> shares one reputation, so one shop's spam complaints would push every shop's order emails toward spam. Campaigns and flows therefore start only once the shop sends from its own domain. Order emails move to it at the same time.</p>
+<div class="grid2">
+  <div class="console">
+    <div class="top"><h3>Settings › Emails · Your domain</h3></div>
+    <div class="body">
+      <div class="card">
+        <div class="row between"><b class="mono">kesarstudio.in</b><span class="chip c-warn">Waiting for records · 2 of 5</span></div>
+        <div class="tablewrap" style="margin-top:10px"><table style="min-width:560px"><thead><tr><th>Type</th><th>Name</th><th>Value</th><th>State</th></tr></thead><tbody>
+          <tr><td>CNAME</td><td class="mono">fal6…._domainkey</td><td class="mono">fal6….dkim.amazonses.com</td><td><span class="chip c-ok">Found</span></td></tr>
+          <tr><td>CNAME</td><td class="mono">5ho6…._domainkey</td><td class="mono">5ho6….dkim.amazonses.com</td><td><span class="chip c-ok">Found</span></td></tr>
+          <tr><td>CNAME</td><td class="mono">kekf…._domainkey</td><td class="mono">kekf….dkim.amazonses.com</td><td><span class="chip c-n">Not yet</span></td></tr>
+          <tr><td>MX</td><td class="mono">bounce</td><td class="mono">10 feedback-smtp.ap-south-1.amazonses.com</td><td><span class="chip c-n">Not yet</span></td></tr>
+          <tr><td>TXT</td><td class="mono">_dmarc</td><td class="mono">v=DMARC1; p=none;</td><td><span class="chip c-n">Not yet</span></td></tr>
+        </tbody></table></div>
+        <div class="row" style="margin-top:10px"><button class="btn primary">Check records</button><button class="btn">Copy all</button><button class="btn">Send on WhatsApp</button><span class="k">Checked 2 min ago</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Two short cuts</h3>
+    <ul class="list">
+      <li><span>Shop already on its own domain at Frrata (Vercel DNS)</span><span class="chip c-ok">Frrata adds the records</span></li>
+      <li><span>Domain at GoDaddy, Cloudflare, Hostinger</span><span class="chip c-info">"Open GoDaddy DNS" + the table</span></li>
+      <li><span>Address the merchant picks</span><span class="mono">news@ · hello@ · orders@</span></li>
+      <li><span>Replies</span><span>To the shop's support email</span></li>
+      <li><span>Gmail address as sender</span><span class="chip c-danger">Not allowed</span></li>
+    </ul>
+    <p class="k" style="margin-top:8px">Mail keeps flowing from frratamail.app while records are missing; nothing is lost.</p>
+  </div>
+</div>
+
+<h2 id="price">Pricing and caps</h2>
+<p>Per email, never per contact: an Instagram brand growing its list shouldn't be punished for it. Every plan gets every feature; plans differ in the emails included each month. These are the allowances and wallet packs you approved on 11 Nov; the caps are new.</p>
+<div class="tablewrap"><table><thead><tr><th></th><th class="n">Launch</th><th class="n">Growth</th><th class="n">Scale</th></tr></thead><tbody>
+<tr><td>Marketing emails included each month (campaigns + flows)</td><td class="n">5,000</td><td class="n">10,000</td><td class="n">25,000</td></tr>
+<tr><td>Order emails, "Finish paying", Frrata notices</td><td class="n">Included</td><td class="n">Included</td><td class="n">Included</td></tr>
+<tr><td>Campaigns and all flows</td><td class="n">✓</td><td class="n">✓</td><td class="n">✓</td></tr>
+<tr><td>Most emails in one day (cap; raised on request)</td><td class="n">5,000</td><td class="n">20,000</td><td class="n">50,000</td></tr>
+<tr><td>First campaign at most (then 5× your largest so far)</td><td class="n">1,000</td><td class="n">2,000</td><td class="n">5,000</td></tr>
+<tr><td>Subscribers on the list</td><td class="n">No limit</td><td class="n">No limit</td><td class="n">No limit</td></tr>
+</tbody></table></div>
+<div class="grid3" style="margin-top:12px">
+  <div class="card"><div class="label">Wallet · ₹500</div><b class="mono" style="font-size:20px">5,000 emails</b><div class="k">10 paise each · + 18% GST</div></div>
+  <div class="card"><div class="label">Wallet · ₹1,600</div><b class="mono" style="font-size:20px">20,000 emails</b><div class="k">8 paise each · + 18% GST</div></div>
+  <div class="card"><div class="label">Wallet · ₹5,000</div><b class="mono" style="font-size:20px">1,00,000 emails</b><div class="k">5 paise each · + 18% GST</div></div>
+</div>
+<div class="grid2" style="margin-top:12px">
+  <div class="card"><h3>What it costs Frrata</h3><dl class="kv"><dt>SES</dt><dd>$0.10 per 1,000 + $0.005 per 1,000 for tenants ≈ ₹9 per 1,000 at ₹85/$</dd><dt>Margin</dt><dd>₹91 / ₹71 / ₹41 per 1,000 on the three packs</dd><dt>Included 25,000</dt><dd>≈ ₹225 a month for Frrata at the most</dd></dl></div>
+  <div class="card"><h3>Against the market</h3><dl class="kv"><dt>Shopify</dt><dd>10,000 a month free, then $1 per 1,000 (≈ ₹85)</dd><dt>Klaviyo</dt><dd>$20 a month for 500 contacts</dd><dt>Zoho (India)</dt><dd>₹1,860 a month for 5,000 contacts</dd><dt>WhatsApp marketing</dt><dd>₹0.86 + GST each: 9–17× an email</dd></dl></div>
+</div>
+<div class="ask">Your account may be on SES's Essentials plan ($0.16 per 1,000) since July 2026. Switch it to à la carte ($0.10) in SES → Account dashboard before campaigns start.</div>
+
+<h2 id="home">Email home · Marketing › Email</h2>
+<div class="console">
+  <div class="top"><h3>Email</h3><button class="btn primary">New campaign</button></div>
+  <div class="body" style="padding-bottom:0">
+    <div class="tiles">
+      <div class="tile"><span class="k">Subscribers</span><b>1,284</b><span class="k">+86 this month</span></div>
+      <div class="tile"><span class="k">Included this month</span><b>3,180 <span class="k">of 10,000</span></b><div class="meter"><i style="transform:scaleX(.32)"></i></div></div>
+      <div class="tile"><span class="k">Wallet</span><b>₹1,369</b><span class="k">≈ 17,100 emails</span></div>
+      <div class="tile"><span class="k">₹ kept · 30 days</span><b>₹38,420</b><span class="k">from 41 delivered orders</span></div>
+    </div>
+    <div class="row" style="margin-bottom:10px"><span class="k">Sending from</span><span class="mono">news@kesarstudio.in</span><span class="chip c-ok">Ready</span><span class="chip c-n">Spam 0.02%</span></div>
+  </div>
+  <div class="tabs" role="tablist" aria-label="Email">
+    <button class="tab" role="tab" aria-selected="true" data-t="t-camp">Campaigns</button>
+    <button class="tab" role="tab" aria-selected="false" data-t="t-flows">Flows</button>
+    <button class="tab" role="tab" aria-selected="false" data-t="t-subs">Subscribers</button>
+    <button class="tab" role="tab" aria-selected="false" data-t="t-cal">Calendar</button>
+  </div>
+  <div class="body" style="padding-top:12px">
+    <div id="t-camp">
+      <div class="tablewrap"><table><thead><tr><th>Campaign</th><th>State</th><th class="n">To</th><th class="n">Clicked</th><th class="n">Delivered orders</th><th class="n">₹ kept</th></tr></thead><tbody>
+        <tr><td><b>Winter weddings · new drop</b><div class="k">New drop · Engaged 90 days</div></td><td><span class="chip c-info">Fri 14 Nov, 7 pm</span></td><td class="n">1,102</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+        <tr><td><b>Diwali edit · 15% off</b><div class="k">Sale · Everyone subscribed</div></td><td><span class="chip c-ok">Sent 31 Oct</span></td><td class="n">1,196</td><td class="n">7.4%</td><td class="n">23 <span class="k">of 29</span></td><td class="n">₹21,640</td></tr>
+        <tr><td><b>Chanderi restock</b><div class="k">Back in stock · Bought Chanderi</div></td><td><span class="chip c-ok">Sent 18 Oct</span></td><td class="n">214</td><td class="n">12.1%</td><td class="n">9 <span class="k">of 11</span></td><td class="n">₹9,830</td></tr>
+        <tr><td><b>Festive early access</b><div class="k">Early access · Repeat buyers</div></td><td><span class="chip c-n">Draft</span></td><td class="n">168</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+      </tbody></table></div>
+    </div>
+    <div id="t-flows" hidden>
+      <ul class="list" id="flowlist"></ul>
+    </div>
+    <div id="t-subs" hidden>
+      <div class="tablewrap"><table><thead><tr><th>Segment</th><th class="n">People</th><th>Built from</th></tr></thead><tbody>
+        <tr><td>Everyone subscribed</td><td class="n">1,284</td><td class="sub">Every tap, minus unsubscribed and bounced</td></tr>
+        <tr><td>Engaged · 90 days</td><td class="n">1,102</td><td class="sub">Clicked, ordered or subscribed in 90 days</td></tr>
+        <tr><td>Never bought</td><td class="n">402</td><td class="sub">Subscribed, no delivered order</td></tr>
+        <tr><td>First order delivered</td><td class="n">611</td><td class="sub">Exactly one</td></tr>
+        <tr><td>Repeat buyers</td><td class="n">168</td><td class="sub">Two or more delivered</td></tr>
+        <tr><td>Paid on delivery, delivered</td><td class="n">539</td><td class="sub">For "Pay online next time"</td></tr>
+        <tr><td>Bought from a collection</td><td class="n">—</td><td class="sub">Pick a collection</td></tr>
+        <tr><td>Left out of every send</td><td class="n">53</td><td class="sub">Unsubscribed 31 · Bounced 8 · Came back twice 14</td></tr>
+      </tbody></table></div>
+      <div class="row" style="margin-top:10px"><button class="btn">Import a list</button><span class="k">Each imported address gets one "Confirm you want our emails" mail; only those who tap join.</span></div>
+    </div>
+    <div id="t-cal" hidden>
+      <div class="cal" id="calgrid"></div>
+    </div>
+  </div>
+</div>
+
+<h2 id="new">New campaign · Who · What · When</h2>
+<div class="grid2">
+  <div class="phone">
+    <div class="scr">
+      <div class="bar"><span class="btn ghost" style="padding:0">Close</span><b>New campaign</b><span class="k">Saved</span></div>
+      <div class="pb">
+        <div class="steps"><span class="done">Who ✓</span><span class="on">What</span><span>When</span></div>
+        <div class="field"><label for="cn">Name</label><input id="cn" class="input" value="Winter weddings · new drop"></div>
+        <div class="label" style="margin:6px 0">Start from</div>
+        <div class="tpls" id="tpls"></div>
+      </div>
+      <div class="stick"><span class="k">To 1,102 · included</span><button class="btn primary">Next: When</button></div>
+    </div>
+  </div>
+  <div>
+    <div class="card" style="margin-bottom:12px">
+      <h3>Step 1 · Who</h3>
+      <div class="radio"><span class="dot"></span><div class="grow"><b>Everyone subscribed</b></div><span class="cnt">1,284</span></div>
+      <div class="radio on"><span class="dot"></span><div class="grow"><b>Engaged · 90 days</b><div class="k">Recommended for most sends</div></div><span class="cnt">1,102</span></div>
+      <div class="radio"><span class="dot"></span><div class="grow"><b>Repeat buyers</b></div><span class="cnt">168</span></div>
+      <div class="radio"><span class="dot"></span><div class="grow"><b>Bought from a collection</b></div><span class="cnt">—</span></div>
+      <p class="k" style="margin:6px 0 0">Left out: 31 unsubscribed · 8 bounced · 14 came back twice · 2 emailed today</p>
+    </div>
+    <div class="card">
+      <h3>Step 3 · When</h3>
+      <div class="seg" role="radiogroup" aria-label="When"><button role="radio" aria-checked="false">Now</button><button role="radio" aria-checked="true">Schedule</button><button role="radio" aria-checked="false">Best time</button></div>
+      <div class="row" style="margin:10px 0"><input class="input" style="max-width:150px" value="Fri 14 Nov" aria-label="Day"><input class="input" style="max-width:110px" value="7:00 pm" aria-label="Time"></div>
+      <div class="label" style="margin:10px 0 6px">Checks</div>
+      <ul class="list" style="font-size:13px">
+        <li><span>Subject and preview line</span><span class="chip c-ok">Ready</span></li>
+        <li><span>Every link goes to your shop</span><span class="chip c-ok">6 links</span></li>
+        <li><span>Unsubscribe in one tap</span><span class="chip c-ok">Added</span></li>
+        <li><span>Size 48 kB</span><span class="chip c-ok">Under 80 kB</span></li>
+        <li><span>Offer "WED15" ends 20 Nov</span><span class="chip c-ok">Real end</span></li>
+      </ul>
+      <p style="margin:10px 0 4px"><b>Uses 1,102 emails · all included · 5,718 left this month</b></p>
+      <div class="row"><button class="btn">Send me a test</button><button class="btn primary">Schedule for Fri 7 pm</button></div>
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top:20px">Step 2 · What: the editor</h3>
+<div class="grid2">
+  <div class="card">
+    <div class="field"><label for="sj">Subject</label><input id="sj" class="input" value="The winter wedding edit is here"></div>
+    <div class="row" style="margin:-6px 0 10px"><span class="k">Try:</span><button class="btn ghost" style="padding:0;min-height:24px">Chanderi, tissue and zari: winter weddings</button></div>
+    <div class="field"><label for="pv">Preview line</label><input id="pv" class="input" value="12 new pieces, ready to ship in 2 days"></div>
+    <div class="label" style="margin:8px 0 6px">Blocks</div>
+    <ul class="list" style="font-size:13px">
+      <li><span>Logo and colours</span><span class="chip c-n">From Look</span></li>
+      <li><span>Photo · "Winter weddings"</span><span class="row" style="gap:4px"><button class="btn ghost" style="padding:0 4px;min-height:24px" aria-label="Move up">↑</button><button class="btn ghost" style="padding:0 4px;min-height:24px" aria-label="Move down">↓</button></span></li>
+      <li><span>Heading and text</span><span class="row" style="gap:4px"><button class="btn ghost" style="padding:0 4px;min-height:24px" aria-label="Move up">↑</button><button class="btn ghost" style="padding:0 4px;min-height:24px" aria-label="Move down">↓</button></span></li>
+      <li><span>Products · collection "Winter weddings" · 4</span><span class="chip c-n">Live prices</span></li>
+      <li><span>Offer · WED15 · 15% off till 20 Nov</span><span class="chip c-n">From Offers</span></li>
+      <li><span>Button · Shop the edit</span><span class="chip c-n">Links to your shop</span></li>
+    </ul>
+    <div class="row" style="margin-top:10px"><button class="btn">Add a block</button><span class="k">Photo · Text · Products · Collection · Offer · Button · Divider</span></div>
+  </div>
+  <div class="mailframe">
+    <div class="mail">
+      <div class="inbox"><b>Kesar Studio</b>The winter wedding edit is here · <span style="color:#5f6368">12 new pieces, ready to ship in 2 days</span></div>
+      <div class="hd"><div class="logo">KESAR</div></div>
+      <div class="bd">
+        <div class="hero">Winter weddings</div>
+        <h4>The winter wedding edit</h4>
+        <p>Chanderi, tissue and zari, cut in Jaipur and ready to ship.</p>
+        <div class="prods">
+          <div class="prod"><div class="ph a"></div><b>Gulnar tissue set</b><span>₹4,890</span></div>
+          <div class="prod"><div class="ph b"></div><b>Sabz chanderi kurta</b><span>₹2,490</span></div>
+        </div>
+        <div class="offer"><b>15% off</b> with <span class="mono">WED15</span> · till 20 Nov</div>
+        <p><span class="mbtn">Shop the edit</span></p>
+      </div>
+      <div class="foot">Kesar Studio LLP · 12 MI Road, Jaipur 302001<br>You asked for new drops from Kesar Studio. <u>Unsubscribe</u></div>
+    </div>
+  </div>
+</div>
+
+<h2 id="flows">Flows</h2>
+<p>Ready-made, each one switch, in the order they earn. Each stops the moment the shopper orders. At other stores, automated emails are 2% of sends and 30% of email revenue (Omnisend 2026 report).</p>
+<div class="grid2">
+  <div class="card">
+    <div class="row between"><h3 style="margin:0">Welcome</h3><button class="sw" role="switch" aria-checked="true" aria-label="Welcome"></button></div>
+    <div class="flow" style="margin-top:10px">
+      <div class="fstep"><div class="ln"><i></i><s></s></div><div class="tx"><b>Taps "Email me new drops"</b><div class="k">Trigger</div></div></div>
+      <div class="fstep"><div class="ln"><i></i><s></s></div><div class="tx"><b>At once · "Welcome to Kesar Studio"</b><div class="k">Best sellers · new in</div></div></div>
+      <div class="fstep"><div class="ln wait"><i></i><s></s></div><div class="tx"><b>Wait 3 days</b><div class="k">Stops if they order</div></div></div>
+      <div class="fstep"><div class="ln"><i></i></div><div class="tx"><b>"How our pieces are made"</b><div class="k">About page · one offer, if you pick one</div></div></div>
+    </div>
+    <div class="row" style="margin-top:6px"><span class="chip c-n">30 days · 86 sent · 7 delivered orders · ₹6,120 kept</span></div>
+  </div>
+  <div class="card">
+    <h3>All flows</h3>
+    <ul class="list" id="flowlist2"></ul>
+  </div>
+</div>
+
+<h2 id="report">A campaign's report</h2>
+<div class="console">
+  <div class="top"><h3>Diwali edit · 15% off</h3><span class="chip c-ok">Sent 31 Oct, 7 pm</span></div>
+  <div class="body">
+    <div class="tiles">
+      <div class="tile"><span class="k">Delivered</span><b>1,188</b><span class="k">of 1,196 sent</span></div>
+      <div class="tile"><span class="k">Clicked</span><b>88</b><span class="k">7.4%</span></div>
+      <div class="tile"><span class="k">Orders</span><b>29</b><span class="k">23 delivered · 2 came back · 4 on the way</span></div>
+      <div class="tile"><span class="k">₹ kept after returns</span><b>₹21,640</b><span class="k">₹941 per delivered order</span></div>
+      <div class="tile"><span class="k">Unsubscribed</span><b>6</b><span class="k">0.5%</span></div>
+      <div class="tile"><span class="k">Marked spam</span><b>0</b><span class="k">0.00%</span></div>
+    </div>
+    <div class="row"><span class="k">Orders within 5 days of a click. Opens aren't counted.</span><button class="btn">Send again to who didn't click</button></div>
+  </div>
+</div>
+
+<h2 id="calendar">Calendar</h2>
+<p class="sub">Indian fashion's year, with a campaign ready to start for each moment. Shown on the Calendar tab, the next three first.</p>
+<div class="cal" id="calgrid2"></div>
+
+<h2 id="subs">Who is on the list</h2>
+<div class="grid3">
+  <div class="card"><h3>Taps on the shop</h3><p class="sub">"Email me new drops" in the footer, on the order page and in every order email. One tap: no checkbox at checkout.</p></div>
+  <div class="card"><h3>Back in stock</h3><p class="sub">A sold-out size offers "Email me when it's back". That one email only, unless they also tap new drops.</p></div>
+  <div class="card"><h3>Imported lists</h3><p class="sub">One "Confirm you want our emails" mail per address; only taps join. Protects the merchant's domain from old, cold lists.</p></div>
+</div>
+<p class="k" style="margin-top:8px">Each consent is a row: who, when, where, which notice. Unsubscribe is one tap from any email and takes effect at once (Yahoo asks within 2 days; DPDP asks it to be as easy as subscribing).</p>
+
+<h2 id="shop">On the shop</h2>
+<div class="grid3">
+  <div class="shopbox"><h4>New drops, first</h4><p style="margin:0 0 10px;font-size:13px">Every Friday, at most.</p><div class="row"><input class="input" style="max-width:190px;background:#fff;color:#2A211C" value="asha@gmail.com" aria-label="Email"><button class="shopbtn">Email me new drops</button></div></div>
+  <div class="shopbox"><b style="font-size:14px">Sabz chanderi kurta</b><div class="sizes"><span>S</span><span class="x sel">M</span><span>L</span><span class="x">XL</span></div><p style="margin:0 0 8px;font-size:13px">M is sold out.</p><button class="shopbtn">Email me when M is back</button></div>
+  <div class="shopbox"><h4>You're unsubscribed</h4><p style="margin:0 0 10px;font-size:13px">No more new drops from Kesar Studio. Order updates still come.</p><button class="shopbtn" style="background:transparent;color:#2A211C;border:1px solid #2A211C">Undo</button></div>
+</div>
+
+<h2 id="safety">Safety, automatic</h2>
+<div class="grid2">
+  <div class="console"><div class="body" style="padding-top:14px">
+    <div style="background:var(--danger);color:var(--danger-text);border-radius:6px;padding:10px 12px;font-size:13px"><b>Campaigns paused · 0.31% marked as spam on "Winter sale"</b><br>Order emails still go out. Send to Engaged · 90 days only, then resume.<div class="row" style="margin-top:8px"><button class="btn">See the campaign</button><button class="btn">Resume with Engaged · 90 days</button></div></div>
+  </div></div>
+  <div class="card"><ul class="list" style="font-size:13px">
+    <li><span>Spam above 0.10% on a send</span><span class="chip c-warn">Warn, next send to Engaged only</span></li>
+    <li><span>Spam above 0.30%, or bounces above 4%</span><span class="chip c-danger">Pause this shop's marketing</span></li>
+    <li><span>One marketing email per shopper a day, 4 a week</span><span class="chip c-n">Campaigns + flows</span></li>
+    <li><span>Not clicked or ordered in 180 days</span><span class="chip c-n">One "Still want our emails?", then left out</span></li>
+    <li><span>Links to other sites</span><span class="chip c-n">Refused at review</span></li>
+    <li><span>Shoppers under 18 (declared)</span><span class="chip c-n">Never on a list</span></li>
+  </ul></div>
+</div>
+
+<h2 id="phases">Phases, each usable on its own</h2>
+<div class="tablewrap"><table><thead><tr><th>Phase</th><th>A merchant can…</th><th>Needs</th></tr></thead><tbody>
+<tr><td><b>E·3 Own domain</b></td><td>send order emails from orders@theirbrand.in</td><td>Live email (done)</td></tr>
+<tr><td><b>M·1 Lists</b></td><td>collect subscribers on the shop (new drops, back in stock), import with confirmation, see segments</td><td>E·3</td></tr>
+<tr><td><b>M·2 Campaigns + wallet</b></td><td>send a campaign from a template to a segment; recharge; see ₹ kept</td><td>M·1, billing autopay</td></tr>
+<tr><td><b>M·3 Flows</b></td><td>switch on Welcome, Back in stock, Thank you + review, Pay online next time, Win-back</td><td>M·2</td></tr>
+<tr><td><b>M·4 Calendar and extras</b></td><td>festive calendar, send again to non-clickers, subject suggestions, best time</td><td>M·3</td></tr>
+<tr><td>Later</td><td>WhatsApp in the same campaign; abandoned bag for signed-in shoppers</td><td>Messages (WhatsApp) live</td></tr>
+</tbody></table></div>
+
+<h2 id="calls">Your calls</h2>
+<ol style="padding-left:20px;max-width:80ch">
+<li><b>Own domain required for marketing.</b> Recommended. The alternative (marketing from frratamail.app with low caps) puts every shop's order emails at risk from one bad list.</li>
+<li><b>Caps above</b> (daily, first campaign, frequency) as the starting values. Recommended; raised per shop by Frrata Admin.</li>
+<li><b>Flows count against the monthly emails</b>, except Back in stock and "Finish paying" (free, as Shopify keeps recovery free). Recommended.</li>
+<li><b>Imported lists only through a confirmation email.</b> Recommended: a cold list is the fastest way to a spam rate above 0.3%.</li>
+<li><b>Email marketing is an app in Apps (Grow group), on for every plan</b>, so a merchant sees it once their domain is set. Recommended.</li>
+<li><b>Switch SES to à la carte pricing.</b> Your step in the AWS console.</li>
+</ol>
+<p class="k">Sources: Klaviyo 2026 benchmarks (2 Oct 2026), Omnisend 2026 report, Shopify Messaging pricing, Zoho Campaigns pricing, AWS SES pricing and tenant docs, Gmail and Yahoo sender rules, DPDP Rules G.S.R. 846(E). All read 11 Nov 2026; saved in docs/research/2026-11-11-email-marketing.md.</p>
+</div>
+
+<script>
+(function(){
+  var tabs=document.querySelectorAll('.tab');
+  tabs.forEach(function(t){t.addEventListener('click',function(){tabs.forEach(function(x){x.setAttribute('aria-selected',x===t?'true':'false');document.getElementById(x.dataset.t).hidden=x!==t;});});});
+  var flows=[
+    ['Welcome','Subscribes · 2 emails over 3 days',true,'₹6,120'],
+    ['Back in stock','Their size returns · free',true,'₹9,830'],
+    ['Finish paying','Online order left unpaid · free',true,'₹4,210'],
+    ['Thank you and review','4 days after delivery',true,'₹2,980'],
+    ['Pay online next time','A COD order delivered · offers the online saving',false,'—'],
+    ['Win-back','No order in 90 days',false,'—'],
+    ['Still want our emails?','Nothing in 180 days · then left out',true,'—']
+  ];
+  function row(f){return '<li><span><b>'+f[0]+'</b><br><span class="k">'+f[1]+'</span></span><span class="row"><span class="mono k">'+f[3]+'</span><button class="sw" role="switch" aria-checked="'+f[2]+'" aria-label="'+f[0]+'"></button></span></li>';}
+  ['flowlist','flowlist2'].forEach(function(id){document.getElementById(id).innerHTML=flows.map(row).join('');});
+  document.addEventListener('click',function(e){var s=e.target.closest('.sw');if(s){s.setAttribute('aria-checked',s.getAttribute('aria-checked')==='true'?'false':'true');}
+    var b=e.target.closest('.seg button');if(b){b.parentNode.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-checked',x===b?'true':'false');});}
+    var p=e.target.closest('.tpl');if(p){document.querySelectorAll('.tpl').forEach(function(x){x.setAttribute('aria-pressed',x===p?'true':'false');});}});
+  var tpl=[['New drop','Photo · products','g'],['Sale','Offer · products','o'],['Festive','Photo · offer','h'],['Back in stock','One product','g'],['Early access','Repeat buyers first','o'],['Last chance','Offer ends · real date','o'],['Lookbook','Photos, shop the look','h'],['Plain letter','Words from the owner','t']];
+  function mini(k){var g='<i class="h"></i>';if(k==='g')g+='<span class="g"><i></i><i></i></span>';if(k==='o')g+='<i class="o"></i><span class="g"><i></i><i></i></span>';if(k==='h')g+='<i style="height:30px;background:var(--tile)"></i><i></i>';if(k==='t')g+='<i></i><i></i><i></i>';return '<div class="mini">'+g+'<i class="b"></i></div>';}
+  document.getElementById('tpls').innerHTML=tpl.map(function(t,i){return '<button class="tpl" aria-pressed="'+(i===0)+'"><div class="pic">'+mini(t[2])+'</div><div class="txt"><b>'+t[0]+'</b><span>'+t[1]+'</span></div></button>';}).join('');
+  var cal=[['Nov – Feb','Wedding season','Festive · bridal and guest edits'],['Dec','Year-end sale','Sale · last chance with a real end'],['Jan','End of season sale','Sale · winter pieces'],['26 Jan','Republic Day','Sale · a weekend'],['Feb','New season drop','New drop · spring cottons'],['Mar','Holi and Eid','Festive · whites and pastels'],['Jun – Jul','End of season sale','Sale · summer pieces'],['Aug','Raksha Bandhan','Festive · gifting'],['Sep – Oct','Navratri','Festive · chaniya choli, colours by day'],['Oct – Nov','Diwali','Early access, then the sale']];
+  var html=cal.map(function(c,i){return '<div class="card"><div class="when">'+c[0]+'</div><b>'+c[1]+'</b><div class="k">'+c[2]+'</div>'+(i<3?'<div style="margin-top:8px"><button class="btn">Start this campaign</button></div>':'')+'</div>';}).join('');
+  document.getElementById('calgrid').innerHTML=html;document.getElementById('calgrid2').innerHTML=html;
+})();
+</script>
