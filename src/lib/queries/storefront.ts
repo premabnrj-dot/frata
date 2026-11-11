@@ -13,8 +13,10 @@ import { tenantForHost, themeVersionRows } from '@/lib/db/platform'
 import { collectionHandleHistory, collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, productPairs, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { owedSql } from '@/lib/db/order-predicates'
 import { priorPriceSql } from '@/lib/db/price-predicates'
-import { publishCandidates, revisionBody, revisionOf, type Revision } from '@/lib/themes/look'
-import { liveOf, withdrawnKeys } from '@/domains/themes/release'
+import { publishCandidates, revisionBody, UUID } from '@/lib/themes/look'
+import { coreBestSellers } from './best-sellers'
+import { collectionMembersIn } from '@/lib/catalogue/collection-members'
+import { liveFromEntry, withdrawnKeys } from '@/domains/themes/release'
 import { withTenant } from '@/lib/db/tenant'
 import { discountCodes, discountTargets, discountTiers, discounts } from '@/lib/db/schema-discounts'
 import { barText, bxgyText, offOf, offerTerms } from '@/domains/checkout/offer-text'
@@ -298,8 +300,8 @@ async function lookup(handles: { current: string[]; old: Record<string, string> 
 
 // ── The shop's look (themes T1): the latest publish row, never a draft ──────────
 
-export type StoredLook = { revisionId: string; themeKey: string; themeVersion: string; styleKey: string; settings: unknown }
-const stored = (r: Revision | null): StoredLook | null => (r ? { revisionId: r.id, themeKey: r.themeKey, themeVersion: r.themeVersion, styleKey: r.styleKey, settings: r.settings } : null)
+export type { StoredLook } from './shop-look'
+import type { StoredLook } from './shop-look'
 
 // Which revision is live (liveOf), and which revision an id names, are src/lib/themes/look.ts's and release.ts's rules.
 // The shop caches its recent publishes; which versions are withdrawn is one platform read for every shop (tag
@@ -314,7 +316,6 @@ const coreLook = (tenantId: string): Promise<LookEntry> => withTenant(tenantId, 
 // Withdrawn versions only (all withdrawnKeys used), as a string[]: the cache hands back JSON, and a Set comes back as {}.
 const withdrawnList = unstable_cache(async () => [...withdrawnKeys(await themeVersionRows())], ['sf-theme-withdrawn'], { tags: ['themes'], revalidate: 300 })
 const withdrawnNow = cache(async () => new Set(await withdrawnList()))
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 /** A published revision's body (frozen: app_theme_revision_frozen), cached by tenant and id; a miss is never cached. */
 const shopRevision = cache(async (tenantId: string, revisionId: string): Promise<StoredLook | null> => {
   if (!UUID.test(revisionId)) return null
@@ -332,12 +333,8 @@ const shopRevision = cache(async (tenantId: string, revisionId: string): Promise
 /** After Admin withdraws or recalls a version: every shop re-reads which versions it may render. */
 export const refreshThemeVersions = () => revalidateTag('themes')
 
-/** A revision of THIS shop for its own preview (a draft or an old look). Another shop's id and a missing id read the same: null. */
-export const previewRevision = (tenantId: string, revisionId: string) => withTenant(tenantId, async (tx) => stored(await revisionOf(tx, tenantId, revisionId)))
 
 
-import { coreBestSellers } from './best-sellers'
-import { collectionMembersIn } from '@/lib/catalogue/collection-members'
 
 // ── Exports: cached for shoppers, uncached for the merchant's preview ──────────
 
@@ -346,18 +343,11 @@ const shopLookEntry = shopCached('look-v2', 'look', (t) => coreLook(t))
 /** The shop's live look: its newest publish not withdrawn (liveOf); a second body only when the newest is withdrawn. */
 export const shopLook = async (tenantId: string): Promise<StoredLook | null> => {
   const [entry, bad] = await Promise.all([shopLookEntry(tenantId), withdrawnNow()])
-  const live = liveOf(entry.candidates, bad)
-  if (!live) return null
-  return entry.first && entry.first.revisionId === live.revisionId ? entry.first : shopRevision(tenantId, live.revisionId)
+  const live = liveFromEntry(entry, bad)
+  return !live ? null : 'body' in live ? live.body : shopRevision(tenantId, live.fetch)
 }
 export const shopBestSellers = shopCached('best', 'catalogue', (t, days: number) => coreBestSellers(t, days), 3600)
-export const previewLook = async (tenantId: string): Promise<StoredLook | null> => {
-  const bad = withdrawnKeys(await themeVersionRows())
-  return withTenant(tenantId, async (tx) => {
-    const live = liveOf(await publishCandidates(tx, tenantId), bad)
-    return live ? revisionBody(tx, tenantId, live.revisionId) : null
-  })
-}
+export { previewLook, previewRevision } from './shop-look'
 export const previewBestSellers = (tenantId: string, days: number) => coreBestSellers(tenantId, days)
 // V1: the live look's playable videos, keyed by its sorted ids (never a draft's); its own tag, so a video turning ready never rebuilds the shop.
 export const shopVideos = shopCached('videos', 'videos', (t, key: string) => playableVideosFor(t, key), 3600)

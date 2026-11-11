@@ -1,5 +1,5 @@
 # Plan: Theme Studio TS0a — the seam (invisible)
-Status: reviewed (architecture and speed reviews folded in) · Date: 2026-11-11 · Spec: `docs/specs/2026-11-11-theme-studio.md` (active; mockup v2 approved by the owner
+Status: built 2026-11-11 (TS0a-R…TS0a-5; impact review on the diff folded in) · Date: 2026-11-11 · Spec: `docs/specs/2026-11-11-theme-studio.md` (active; mockup v2 approved by the owner
 2026-11-11) · Reviews: architecture-reviewer (2026-11-11, folded in below); speed-reviewer (2026-11-11, within budget; folded in below)
 
 ## Goal
@@ -150,8 +150,28 @@ Each shop route keeps its exact render: `05-shop-look` 0 px and the resolved-loo
 ## Repetitive work → agents and scripts
 | Chore | Becomes |
 |---|---|
-| A domain function reaching `CATALOGUE` directly | the vitest grep in `source.test.ts` |
+| A reader reaching `CATALOGUE` directly | the `check:layers` rule (CATALOGUE only in source.ts, Admin, tests) |
 | A schema missing a manifest field | the parity test |
 
 ## Out of scope (TS0b and later)
 Blocks, the `design` section, studio tables, entitlements, pages, any UI.
+
+## As built (2026-11-11)
+- **Regression net:** 66/67 before and after on shop-look, look, signal, themes-three, themes-v4, themes-admin, video,
+  seo, documents, paging; the one failure both times is the console home baseline's date line (frata-gotchas), not a
+  change. Every shop page 0 px. The first net run broke because a review's build shared `.next` with it.
+- **Schema:** `ManifestSchema` + parity for all 17 code manifests (home sections validated by `SectionSchema` and kept as
+  written, so parse = manifest); 12 injection cases; free text shown escaped by rendering; the announcement reuses the
+  layer's own schema (link: shop paths only); `SETTING_VALUES` held equal to the `ThemeSettings` unions by a type test
+  that fails typecheck on any drift (proved by removing one value). The `as ThemeManifest` cast stays: the per-setting
+  schema is generated, so its inferred type is wider than the hand-written type; parity + strictness + the type test cover it.
+- **themeCheck:** one function, 15 rule tests; the unreachable source branch removed (the section schema refuses it).
+- **Seam:** `source.ts` (`keys`, `versions`; pure `manifestOf`/`manifestNear` copy before sorting), `semver.ts`,
+  `manifestsFor` (`cache()`), `shopTheme` (cached on primitives, look and source loaded together); every caller migrated,
+  typecheck proved none left; `check:layers` rule proved by a planted file. Classic always from code.
+- **Caches:** `look-v2` (candidates + newest body, tag `shop:<t>:look`), `shopRevision` per id (miss never cached),
+  `sf-theme-withdrawn` (`string[]`); the choice is pure `liveFromEntry` with unit tests; `previewLook`/`previewRevision`
+  moved to `src/lib/queries/shop-look.ts`; best sellers and collection members to their own files (storefront.ts 390
+  lines). Publish and Undo purge only the look. `look-p4.test.ts` keeps caches out of the console's transaction.
+- **Not measured here:** statement counts and entry bytes (the speed review measured today's: 44 statements / 24 kB at
+  16 versions); confirm on the next speed review.

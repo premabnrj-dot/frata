@@ -29,11 +29,6 @@ async function published(tx: Tx, tenantId: string, limit: number) {
   return rows.map((x) => ({ publishId: x.p.id, revision: x.r, publishedAt: x.p.publishedAt, publishedBy: x.p.publishedBy, publishedByEmail: x.p.publishedByEmail }))
 }
 
-/**
- * What liveOf chooses from (themes T3): the newest publish of each version this shop ever published, newest first.
- * Bounded by the number of versions, not by publishes, so a shop that published one version many times still falls
- * back to the version before when it's withdrawn (T3 impact review). The shop, Look and Undo all read this.
- */
 /** A shop's publish candidates: the newest publish of each theme version, newest first, ids only (Theme Studio TS0a,
  *  speed review). ONE query (DISTINCT ON), in the caller's transaction. THE "newest publish per version" rule: the
  *  shop's cached look and the console's liveCandidates both read it, so they never disagree. */
@@ -50,7 +45,11 @@ export async function publishCandidates(tx: Tx, tenantId: string): Promise<Publi
   return [...rows].map((r) => ({ publishId: r.publish_id, revisionId: r.revision_id, themeKey: r.theme_key, themeVersion: r.theme_version, publishedAt: new Date(r.published_at) }))
 }
 
-/** The console's candidates with their full revisions and publish rows (Look, Undo, live): candidates + one fetch. */
+/**
+ * What liveOf chooses from (themes T3): the newest publish of each version this shop ever published, newest first, with
+ * full revisions (Look, Undo, live): candidates + one fetch. Bounded by the number of versions, not by publishes, so a
+ * shop that published one version many times still falls back to the version before when it's withdrawn.
+ */
 export async function liveCandidates(tx: Tx, tenantId: string) {
   const pick = await publishCandidates(tx, tenantId)
   if (!pick.length) return []
@@ -115,7 +114,7 @@ export async function lookFor(tx: Tx, tenantId: string): Promise<Look> {
   return { live: live ? { publishId: live.publishId, revision: live.revision, publishedAt: live.publishedAt, publishedBy: live.publishedBy, publishedByEmail: live.publishedByEmail } : null, draft: await openDraft(tx, tenantId), history, previous, may: access.may, access }
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /** A revision of this shop, or null (another shop's id reads the same as a missing one). */
 export async function revisionOf(tx: Tx, tenantId: string, id: string): Promise<Revision | null> {

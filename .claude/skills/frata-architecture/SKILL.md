@@ -3,8 +3,8 @@ name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
   version: 2.36.0
-  verified: 2026-11-09
-  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008]
+  verified: 2026-11-11
+  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0011]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
 ---
 
@@ -320,7 +320,7 @@ after it. A class a shop page uses from outside the shop's folders must be added
   Best sellers by **delivered units** (`shopBestSellers`: ids only, cached an hour). Never by cost or margin
   (ADR-0003).
 - **Looks: `src/lib/themes/look.ts` is the one module that reads or writes them.** Live = `liveOf` over
-  `liveCandidates` (the newest publish of each version, newest first) minus withdrawn versions: derived, never
+  `publishCandidates` (the newest publish of each version, newest first; one DISTINCT ON query) minus withdrawn versions: derived, never
   stored; the shop, Look, Undo and Admin all use it. Draft = the newest revision with no publish row, at most one (replaced under the per-shop advisory
   lock `look:<tenant>`). Publishes are append-only; a published revision is frozen by `app_theme_revision_frozen`.
   Saves and publishes lock the row and check its `version`; Undo names the live revision it saw. The first publish
@@ -343,7 +343,7 @@ after it. A class a shop page uses from outside the shop's folders must be added
   Classic 1.0.0 can never be pulled. THE answers live in `src/domains/themes/release.ts`: `availableTo` /
   `latestAvailable` (may a shop start on it) and `liveOf` (the newest publish not on a withdrawn version). Every
   caller asks them through `themeAccess(tx, tenant)` in look.ts: Try, the gallery, Customize, Restore, Publish,
-  Undo; Admin's counts use `liveOf` too. The shop's look is `liveOf(cached publishes, versionStates)`: the
+  Undo; Admin's counts use `liveOf` too. The shop's look is `liveFromEntry(look-v2 entry, withdrawn)`: the
   version rows are one global cache (tag `themes`), so a withdraw is one `refreshThemeVersions()`, not a bust per shop.
 - **Shop words** (T2): `shop_settings.shop_language` (en/hi); the words Frrata writes on a shop live in
   `src/components/storefront/words.ts`, **server-only**. An island takes the strings it shows as a prop (`buyWords`),

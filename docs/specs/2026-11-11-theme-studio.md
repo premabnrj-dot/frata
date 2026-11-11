@@ -150,9 +150,9 @@ seeded e2e stack in CI (no production credentials in CI).
   new version offered like any other.
 
 ### 7. Speed fixes that come first (TS0a; existing debt the studio would make worse)
-- `shopPublishes` caches `{revisionId, key, version}` only; each revision body cached by id (immutable); revision ≤ 64 kB (the database check).
-- `versionStates` returns withdrawn `key@version` pairs only, under `cache()`.
-- `themeOf` memoizes per `key@version` per request.
+- The shop's look entry (`look-v2`, tag `shop:<t>:look`) caches the candidates and the newest body; other bodies cached by id (immutable); revision ≤ 64 kB (the database check).
+- The withdrawn list (`sf-theme-withdrawn`) is withdrawn `key@version` pairs only, under `cache()`.
+- `shopTheme(shop)` resolves once per request (as built in TS0a).
 
 ### 8. The studio (TS2/TS3 screens; mockup boards)
 One studio, two frames (Admin's ink frame; the partner portal), **desktop only** ("Open the studio on a computer" on a
@@ -233,7 +233,7 @@ closed; the key Production only.
   animate; the picker is the section library's sheet).
 - **Unit economics:** staff time per theme; partners' share unchanged; `unit-economics-reviewer` at TS3/TS4.
 - **Blast radius:** ~20 callers of resolve/manifest functions (TS0a), `shop_theme_revisions` (CHECK + trigger),
-  storefront caches (`shopPublishes`, `versionStates`, `themeOf`), the shop router (pages), sitemap, tags, share cards,
+  storefront caches (the look entry, the withdrawn list, `shopTheme`), the shop router (pages), sitemap, tags, share cards,
   `PolicyBody`, `next.config.ts` framing, middleware, Admin › Themes, the partner portal, `requirePartner`.
 
 ## Review findings (2026-11-11) and where each went
@@ -250,7 +250,7 @@ closed; the key Production only.
 | Silent fixes bypass Publish | security H3, architecture 12 | § 6 none |
 | Page limits break 300 kB | speed 1, architecture 8 | § 2 limits + largest-page test |
 | Product route JS headroom | speed 2 | § 2 server-only blocks until the split |
-| `shopPublishes` / `versionStates` growth | speed 3–4 | § 7 |
+| Publish cache and withdrawn-list growth | speed 3–4 | § 7 (built in TS0a) |
 | Commerce blocks pull the catalogue | speed 5 | § 2 small loaders |
 | Purges reach every shop | speed 7 | § 4 per-theme tags |
 | Eager images | speed 8 | § 2 ≤ 2 |

@@ -10,7 +10,7 @@ import type { ThemeManifest } from './types'
 // =============================================================================
 
 export type ManifestSource = {
-  /** Every theme key this source knows. */
+  /** Every theme key this source knows (the gallery and Admin read it in TS2). */
   keys(): string[]
   /** Every version of a theme this source knows, any order. */
   versions(key: string): ThemeManifest[]
@@ -31,7 +31,7 @@ export function manifestOf(src: ManifestSource, key: string, version: string): T
  * without that version, e.g. after a revert), else the theme's oldest. Never another theme (T2 review).
  */
 export function manifestNear(src: ManifestSource, key: string, version: string): ThemeManifest | null {
-  const vs = src.versions(key).sort((a, b) => cmpSemver(b.version, a.version))
+  const vs = [...src.versions(key)].sort((a, b) => cmpSemver(b.version, a.version))
   if (!vs.length) return null
   return vs.find((m) => m.version === version) ?? vs.find((m) => cmpSemver(m.version, version) <= 0) ?? vs.at(-1) ?? null
 }

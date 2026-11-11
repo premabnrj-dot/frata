@@ -1,5 +1,5 @@
 import { contrast } from './contrast'
-import { SECTION_KEYS, SectionSchema, SOURCE_KEYS } from './sections'
+import { SECTION_KEYS, SectionSchema } from './sections'
 import type { ThemeManifest } from './types'
 
 // =============================================================================
@@ -39,9 +39,9 @@ export function themeCheck(m: ThemeManifest): string[] {
   for (const s of m.home) {
     if (!(SECTION_KEYS as string[]).includes(s.key)) { out.push(`Home section ${s.id}: ${s.key} isn't in the library`); continue }
     if (!m.allowed.sections.includes(s.key)) out.push(`Home section ${s.id}: ${s.key} isn't allowed by the theme`)
+    // The section's own schema refuses a source outside the list (never by cost: ADR-0003).
     const r = SectionSchema.safeParse(s)
-    if (!r.success) { out.push(`Home section ${s.id}: ${r.error.issues[0]?.message ?? 'invalid'}`); continue }
-    if (r.data.key === 'products' && !(SOURCE_KEYS as readonly string[]).includes(r.data.source.kind)) out.push(`Home section ${s.id}: source ${r.data.source.kind} isn't allowed`)
+    if (!r.success) out.push(`Home section ${s.id}: ${r.error.issues[0]?.message ?? 'invalid'}`)
   }
 
   for (const st of m.styles) for (const [k, s] of Object.entries(st.schemes)) {

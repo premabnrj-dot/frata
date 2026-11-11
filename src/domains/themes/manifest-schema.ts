@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { FOOTERS, HEADERS, PAIRINGS, type ThemeManifest } from './types'
 import { ALL_PRODUCT_LAYOUTS, ALL_SECTION_SCHEMES, SECTION_KEYS, SectionSchema, VIDEO_KEYS } from './sections'
+import { AnnouncementSchema } from './layer'
 
 // =============================================================================
 // FILE: src/domains/themes/manifest-schema.ts — what a theme manifest may hold (Theme Studio TS0a, spec
@@ -63,11 +64,6 @@ type SettingKey = keyof typeof SETTING_VALUES
 const PAGE_AND_FEEL = ['gallery', 'details', 'card', 'desktopColumns', 'collectionTop', 'buttonShape', 'buttonMotion', 'cardHover', 'entrance', 'reveal', 'buyBoxSticky', 'buyBar', 'footerScheme', 'checkout', 'labels', 'railCounter'] as const satisfies readonly SettingKey[]
 const oneOf = (k: SettingKey) => z.union(SETTING_VALUES[k].map((v) => z.literal(v)) as unknown as [z.ZodLiteral<string>, z.ZodLiteral<string>])
 
-const AnnouncementSchema = z.object({
-  text: word(120),
-  link: z.string().max(200).nullable(),
-  scheme: z.enum(SCHEME_KEYS),
-}).strict()
 
 const base = Object.fromEntries((Object.keys(SETTING_VALUES) as SettingKey[]).filter((k) => !(PAGE_AND_FEEL as readonly string[]).includes(k)).map((k) => [k, oneOf(k)]))
 const optional = Object.fromEntries(PAGE_AND_FEEL.map((k) => [k, oneOf(k).optional()]))

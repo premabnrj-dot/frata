@@ -35,6 +35,13 @@ describe('themeCheck: each rule fires', () => {
     ['21 home sections', { ...good, home: Array.from({ length: 21 }, (_, i) => ({ id: `s${i}`, key: 'rich_text' as const, text: 'x' })) }, /at most 20/],
     ['a cost source', { ...good, home: [{ id: 'x', key: 'products' as const, heading: 'Top', source: { kind: 'by_margin' }, count: 4 }] }, /Home section x/],
     ['an unknown section', { ...good, home: [{ id: 'x', key: 'lookbook' }] }, /isn't in the library/],
+    ['two styles with one key', { ...good, styles: [good.styles[0]!, good.styles[0]!] }, /share a key/],
+    ['a default pairing not allowed', { ...good, defaults: { ...good.defaults, pairing: 'cormorant' as const }, allowed: { ...good.allowed, pairings: ['schibsted' as const] } }, /default type pairing/],
+    ['a default footer not allowed', { ...good, defaults: { ...good.defaults, footer: 'gram' as const }, allowed: { ...good.allowed, footers: ['photo' as const] } }, /default footer/],
+    ['a made-for header not allowed', { ...good, made: { headers: ['circles' as const] } }, /Made-for header circles/],
+    ['a made-for footer not allowed', { ...good, made: { footers: ['three' as const] } }, /Made-for footer three/],
+    ['two home sections with one id', { ...good, home: [{ id: 'x', key: 'rich_text' as const, text: 'a' }, { id: 'x', key: 'rich_text' as const, text: 'b' }] }, /share an id/],
+    ['a library section the theme does not allow', { ...good, home: [{ id: 'x', key: 'logos' as const }], allowed: { ...good.allowed, sections: ['hero' as const] } }, /isn't allowed by the theme/],
     ['unreadable sub text', { ...good, styles: [{ ...good.styles[0]!, schemes: { ...good.styles[0]!.schemes, paper: { ...paper, sub: '#D9D3CC' as const } } }] }, /sub reads/],
   ])('%s', (_n, m, want) => {
     expect(themeCheck(m as unknown as ThemeManifest).join('\n')).toMatch(want)
