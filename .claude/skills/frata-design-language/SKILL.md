@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.14.0
+  version: 5.15.0
   verified: 2026-11-11
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -107,6 +107,22 @@ from it).
   The Addresses tab lists the shop's names (Current · Old · redirects · Old · no redirect), then "Rename <shop>'s
   address" and "Freeze <shop>'s address", each with a reason. Admin › Names: block a name or domain, unblock or
   release with a reason in the row; Frrata's own words listed, read-only.
+
+## Apps gallery (owner-approved 2026-11-11, mockup https://claude.ai/artifact/6Th5A8X4YSXCcyozpzPLEg; plan `docs/plans/2026-11-11-apps-gallery.md`; supersedes the Apps list rows and the details dialog above)
+
+- **One card for every app**, whatever its state: icon tile, name, "By Frrata", the job in one line, a footer with the
+  price or "Included" and one state chip (On · Coming next · a lock with the plan). No ratings or install counts.
+- **Your apps first** (compact cards: state "Working" or a meter at 80%, Open), then the gallery grouped by the
+  merchant's job: Talk to shoppers · Get paid and ship · Sell more · Run the books. Search and filters with counts.
+- **At most one featured card**, chosen from the shop's own numbers (the pricing ladder's nudge), dismissible, staying
+  dismissed. Never a pop-up, timer or animated upgrade button; no promised outcome.
+- **An app's page, not a dialog**: a benefit headline, ≤ 3 features each with a drawn 16:10 picture of the app working
+  (console tokens, no real shopper), ≤ 3 questions; a side column with the price box (GST, trial, first charge date),
+  Works with, What it uses, Billed by others. On a phone the price and button sit in a bar at the bottom.
+- **One button that matches the state**: Turn on · Ask Frrata to add (until self-serve add-ons) · See Growth with the
+  shop's own rupees · Open · Tell me when it's ready. A higher-plan app is shown locked, never a button that fails.
+- **Once on, one home for every app** (A2): state chip with the last activity, tabs, ≤ 4 numbers, a meter where there is
+  a limit, What it uses, Turn off at the foot with a confirm.
 
 ## Shop themes (approved mockups 2026-11-08, T0–T2 built)
 
