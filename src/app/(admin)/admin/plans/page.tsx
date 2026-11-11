@@ -12,9 +12,9 @@ import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dayIN } from '@/lib/format-date'
 import { formatPercent } from '@/lib/format'
 import { Section } from '@/components/layout/section'
-import { Button } from '@/components/ui/button'
 import { trialTerms } from '@/lib/admin/trials'
 import { setTrialTermsAction } from './trial-actions'
+import { Submit } from '@/components/ui/submit'
 
 export const metadata = { title: 'Plans' }
 
@@ -90,7 +90,7 @@ export default async function PlansPage({ searchParams }: { searchParams: Promis
               <input name="openWindowDays" type="number" min={0} max={30} required defaultValue={terms.openWindowDays} className="h-10 rounded-md border border-input bg-card px-3 font-mono" /></label>
             <label className="flex flex-col gap-1.5 sm:col-span-2"><span className="font-medium">Why</span>
               <input name="reason" required minLength={3} maxLength={240} className="h-10 rounded-md border border-input bg-card px-3" /></label>
-            <div className="sm:col-span-2"><Button type="submit">Save trial terms</Button></div>
+            <div className="sm:col-span-2"><Submit>Save trial terms</Submit></div>
           </form>
         )}
       </Section>

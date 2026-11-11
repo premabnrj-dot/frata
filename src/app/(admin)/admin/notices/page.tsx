@@ -2,7 +2,6 @@ import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/com
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { NOTICE_TYPES, TYPE_LABEL } from '@/domains/email/notices'
@@ -10,6 +9,7 @@ import { noticeBatches } from '@/lib/admin/notices'
 import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dateTimeIN } from '@/lib/format-date'
 import { sendNoticeAction } from './actions'
+import { Submit } from '@/components/ui/submit'
 
 export const metadata = { title: 'Notices' }
 
@@ -39,7 +39,7 @@ export default async function AdminNoticesPage({ searchParams }: { searchParams:
             <label className="grid gap-1"><span className="font-medium">Link</span><input name="href" className={`${field} font-mono`} placeholder="/console/settings/billing" /></label>
             <label className="flex items-center gap-2"><input type="checkbox" name="email" defaultChecked className="size-4 accent-foreground" />Also email</label>
             <label className="flex items-center gap-2"><input type="checkbox" name="required" className="size-4 accent-foreground" />Required (billing, security, Frrata acted)</label>
-            <div><Button type="submit">Send</Button></div>
+            <div><Submit>Send</Submit></div>
           </form>
         </Section>
       ) : null}

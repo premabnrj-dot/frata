@@ -3,7 +3,6 @@ import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/com
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { RENAMES_AFTER_OPENING } from '@/domains/addresses/names'
@@ -15,6 +14,7 @@ import { dayIN } from '@/lib/format-date'
 import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
 import { MerchantTabs } from '../tabs'
 import { adminRenameAction, disconnectDomainAction, freezeAddressAction } from './actions'
+import { Submit } from '@/components/ui/submit'
 
 export const metadata = { title: 'Addresses' }
 
@@ -75,7 +75,7 @@ export default async function MerchantAddressesPage({ params, searchParams }: { 
                         <form action={disconnectDomainAction} className="flex flex-wrap items-center gap-2">
                           <input type="hidden" name="tenantId" value={id} /><input type="hidden" name="id" value={d.id} />
                           <input name="reason" required minLength={3} maxLength={500} aria-label={`Why disconnect ${d.host}`} placeholder="Reason" className={`${field} min-w-0 flex-1`} />
-                          <Button type="submit" variant="secondary" size="wrap">Disconnect {d.host}</Button>
+                          <Submit variant="secondary" size="wrap">Disconnect {d.host}</Submit>
                         </form>
                       )}
                     </Td>
@@ -102,7 +102,7 @@ export default async function MerchantAddressesPage({ params, searchParams }: { 
                 <span className="font-medium">Reason</span>
                 <input name="reason" required minLength={3} maxLength={500} className={field} />
               </label>
-              <Button type="submit" variant="secondary" size="wrap">Rename {name}&apos;s address</Button>
+              <Submit variant="secondary" size="wrap">Rename {name}&apos;s address</Submit>
             </form>
           </Section>
           <Section title={frozen ? `Frozen since ${dayIN(a.frozenAt!)}` : 'Freeze address changes'} className="text-sm">
@@ -113,7 +113,7 @@ export default async function MerchantAddressesPage({ params, searchParams }: { 
                 <span className="font-medium">Reason</span>
                 <input name="reason" required minLength={3} maxLength={500} className={field} />
               </label>
-              <Button type="submit" variant="secondary" size="wrap">{frozen ? `Allow ${name}'s address changes` : `Freeze ${name}'s address`}</Button>
+              <Submit variant="secondary" size="wrap">{frozen ? `Allow ${name}'s address changes` : `Freeze ${name}'s address`}</Submit>
             </form>
           </Section>
         </div>

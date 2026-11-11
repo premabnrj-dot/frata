@@ -3,7 +3,6 @@ import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/com
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
@@ -11,6 +10,7 @@ import { ekBlocks, ekSettings, ekShops, ekStats } from '@/lib/admin/ekcode'
 import { DEFAULT_LIMITS, type Limits } from '@/domains/ekcode-core/limits'
 import { dateTimeIN } from '@/lib/format-date'
 import { blockAction, limitsAction, shopControlAction } from './actions'
+import { Submit } from '@/components/ui/submit'
 
 export const metadata = { title: 'EkCode' }
 
@@ -88,7 +88,7 @@ async function Shops({ staff, days }: { staff: Parameters<typeof ekShops>[0]; da
                 <input type="hidden" name="action" value={r.paused_at ? 'resume' : r.breaker_at ? 'reset' : 'pause'} />
                 <label className="sr-only" htmlFor={`why-${r.tenant_id}`}>Why</label>
                 <input id={`why-${r.tenant_id}`} name="reason" required minLength={3} maxLength={500} placeholder="Why" className="h-10 w-40 rounded-md border border-input bg-card px-3 text-sm md:h-9" />
-                <Button type="submit" variant="secondary">{r.paused_at ? `Resume ${r.shop}` : r.breaker_at ? `Reset ${r.shop}'s breaker` : `Pause EkCode for ${r.shop}`}</Button>
+                <Submit variant="secondary">{r.paused_at ? `Resume ${r.shop}` : r.breaker_at ? `Reset ${r.shop}'s breaker` : `Pause EkCode for ${r.shop}`}</Submit>
               </form>
             </Td>
           </DataTableRow>
@@ -120,7 +120,7 @@ async function Controls({ staff }: { staff: Parameters<typeof ekSettings>[0] }) 
         <label className="grid gap-1 text-sm font-medium">Why<input name="reason" required minLength={3} maxLength={500} className="h-10 rounded-md border border-input bg-card px-3 text-sm font-normal md:h-9" /></label>
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs text-muted-foreground">{s ? `v${s.version} · ${dateTimeIN(new Date(s.at))}` : ''}</span>
-          <Button type="submit">Save limits for every shop</Button>
+          <Submit>Save limits for every shop</Submit>
         </div>
       </form>
       </Section>
@@ -129,7 +129,7 @@ async function Controls({ staff }: { staff: Parameters<typeof ekSettings>[0] }) 
         <label className="grid gap-1 text-sm font-medium">Number<input name="phone" inputMode="numeric" maxLength={14} className="h-10 w-40 rounded-md border border-input bg-card px-3 font-mono text-sm md:h-9" /></label>
         <label className="grid gap-1 text-sm font-medium">Why<input name="reason" required minLength={3} maxLength={500} className="h-10 w-56 rounded-md border border-input bg-card px-3 text-sm font-normal md:h-9" /></label>
         <select name="lift" className="h-10 rounded-md border border-input bg-card px-2 text-sm md:h-9" aria-label="Block or unblock"><option value="0">Block</option><option value="1">Unblock</option></select>
-        <Button type="submit" variant="secondary">Apply to this number</Button>
+        <Submit variant="secondary">Apply to this number</Submit>
       </form>
       </Section>
       <DataTable label="Blocked">

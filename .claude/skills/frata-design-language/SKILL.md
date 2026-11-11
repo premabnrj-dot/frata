@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.16.0
+  version: 5.17.0
   verified: 2026-11-11
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -308,6 +308,10 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
   screen · Nothing was changed · Try again" (`error.tsx` per surface, `check:states`).
 - No `loading.tsx` in the console (Ekatan: it made search-param navigation commit
   nothing in production); use a top progress bar.
+- **A server-action form's submit is `<Submit>`** (`src/components/ui/submit.tsx`, 2026-11-11): while the action runs
+  it refuses clicks (aria-disabled, keeping focus) and runs the top bar; the label stays, naming the outcome. A GET
+  form (search, a month picker) keeps `Button`. A refusal or a form that doesn't parse says so on the page, never a
+  silent redirect to a list.
 
 ## Settings choices and GST (built 2026-11-09; mockups https://claude.ai/artifact/M4VfNAgqFHYmhCxFwZmepE, https://claude.ai/artifact/NsxiFFFBorTsi9sct7zWgs)
 - **Which control:** one of 2–4 exclusive choices that change what else is asked → **radio cards** (`kind: 'radio'`,

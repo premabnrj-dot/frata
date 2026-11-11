@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
-import { Button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { CATALOGUE } from '@/domains/themes/catalogue'
@@ -13,6 +12,8 @@ import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dayIN } from '@/lib/format-date'
 import { pullAction, releaseAction, stageAction, unstageAction } from '../../actions'
 import { StateBadge } from '../../state-badge'
+import { Submit } from '@/components/ui/submit'
+import { Button } from '@/components/ui/button'
 
 export const metadata = { title: 'Theme version' }
 
@@ -56,7 +57,7 @@ export default async function ThemeVersionPage({ params, searchParams }: { param
       <Section title="Pilot shops">
         {v.staged.length ? <ul className="space-y-2 text-sm">{v.staged.map((s) => (
           <li key={s.tenantId} className="flex items-center gap-3"><span className="flex-1">{s.name}</span>
-            {admin && <form action={unstageAction}>{hidden}<input type="hidden" name="tenantId" value={s.tenantId} /><Button type="submit" variant="secondary">Unstage</Button></form>}
+            {admin && <form action={unstageAction}>{hidden}<input type="hidden" name="tenantId" value={s.tenantId} /><Submit variant="secondary">Unstage</Submit></form>}
           </li>))}</ul> : <p className="text-sm text-muted-foreground">Not staged to any shop.</p>}
         {admin && !final && v.state !== 'released' && v.inCode && <>
           <form method="get" className="mt-3 flex flex-wrap gap-2">
@@ -66,7 +67,7 @@ export default async function ThemeVersionPage({ params, searchParams }: { param
           </form>
           {results.length > 0 && <ul className="mt-2 space-y-2 text-sm">{results.map((s) => (
             <li key={s.id} className="flex items-center gap-3"><span className="flex-1">{s.name} <span className="text-muted-foreground">{s.slug}</span></span>
-              <form action={stageAction}>{hidden}<input type="hidden" name="tenantId" value={s.id} /><Button type="submit">Stage to {s.name}</Button></form>
+              <form action={stageAction}>{hidden}<input type="hidden" name="tenantId" value={s.id} /><Submit>Stage to {s.name}</Submit></form>
             </li>))}</ul>}
         </>}
       </Section>
@@ -76,7 +77,7 @@ export default async function ThemeVersionPage({ params, searchParams }: { param
           {!final && v.state !== 'released' && (
             <form action={releaseAction} className="space-y-2">{hidden}
               <p className="text-sm">Every shop can try it. {older > 0 ? `${older} shop${older === 1 ? ' is' : 's are'} live on an older ${v.name}: they’ll see that it’s ready, and nothing changes until they publish.` : ''}</p>
-              <Button type="submit">Release to everyone</Button>
+              <Submit>Release to everyone</Submit>
             </form>
           )}
           {!final && !isBaseline(key, version) && (
@@ -84,7 +85,7 @@ export default async function ThemeVersionPage({ params, searchParams }: { param
               <p className="text-sm">Recall: no new looks on it. {v.live} shop{v.live === 1 ? '' : 's'} live on it keep showing it and are offered their previous look. Final.</p>
               <label className="sr-only" htmlFor="recall-why">Why recall it</label>
               <input id="recall-why" name="reason" required minLength={3} maxLength={300} placeholder="Why, in a few words" className={`${input} w-full max-w-md`} />
-              <Button type="submit" variant="secondary">Recall {v.name} {v.version}</Button>
+              <Submit variant="secondary">Recall {v.name} {v.version}</Submit>
             </form>
           )}
           {v.state !== 'withdrawn' && !isBaseline(key, version) && (
@@ -93,7 +94,7 @@ export default async function ThemeVersionPage({ params, searchParams }: { param
               {v.liveShops.length > 0 && <p className="text-sm">Moves back: {v.liveShops.slice(0, 20).map((s) => s.name).join(', ')}{v.liveShops.length > 20 ? `, and ${v.liveShops.length - 20} more` : ''}.</p>}
               <label className="sr-only" htmlFor="withdraw-why">Why withdraw it</label>
               <input id="withdraw-why" name="reason" required minLength={3} maxLength={300} placeholder="The problem, in a few words" className={`${input} w-full max-w-md`} />
-              <Button type="submit" variant="destructive">Withdraw {v.name} {v.version}</Button>
+              <Submit variant="destructive">Withdraw {v.name} {v.version}</Submit>
             </form>
           )}
           {isBaseline(key, version) && <p className="text-sm text-muted-foreground">Classic 1.0.0 is every shop’s fallback look: it can’t be recalled or withdrawn.</p>}

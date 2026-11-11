@@ -1,7 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { isAuthConfigured } from '@/lib/public-env'
-import { createServerSupabase } from '@/lib/supabase/server'
+import { signedInUser } from './session'
 import { errName } from '@/lib/log'
 
 // =============================================================================
@@ -19,10 +19,9 @@ export type UserRefusal = { ok: false; reason: 'not_configured' | 'signed_out'; 
 export const requireUser = cache(async (): Promise<UserOk | UserRefusal> => {
   if (!isAuthConfigured()) return { ok: false, reason: 'not_configured', message: 'Sign-in is not set up on this deployment.' }
   try {
-    const supabase = await createServerSupabase()
-    const { data } = await supabase.auth.getUser()
-    if (!data.user?.email) return { ok: false, reason: 'signed_out', message: 'Sign in to continue.' }
-    return { ok: true, userId: data.user.id, email: data.user.email }
+    const user = await signedInUser()
+    if (!user?.email) return { ok: false, reason: 'signed_out', message: 'Sign in to continue.' }
+    return { ok: true, userId: user.id, email: user.email }
   } catch (err) {
     console.error('[requireUser]', errName(err))
     return { ok: false, reason: 'signed_out', message: 'Sign in to continue.' }

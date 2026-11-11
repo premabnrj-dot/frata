@@ -1,12 +1,13 @@
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout/page-header'
-import { Button, button } from '@/components/ui/button'
+import { button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 import { createMerchantAction } from './actions'
 import { Section } from '@/components/layout/section'
+import { Submit } from '@/components/ui/submit'
 
 export const metadata = { title: 'Add merchant' }
 
@@ -57,7 +58,7 @@ export default async function NewMerchantPage({ searchParams }: { searchParams: 
           </div>
           <div className="flex justify-end gap-2 border-t border-border pt-4">
             <Link href="/admin/merchants" className={button({ variant: 'secondary' })}>Cancel</Link>
-            <Button type="submit">Add merchant and email the owner</Button>
+            <Submit>Add merchant and email the owner</Submit>
           </div>
         </form></Section>
         <aside className="max-w-sm space-y-3 text-sm leading-relaxed text-muted-foreground">

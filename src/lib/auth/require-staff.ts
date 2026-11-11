@@ -1,7 +1,6 @@
 import 'server-only'
 import { cache } from 'react'
-import { createServerSupabase } from '@/lib/supabase/server'
-import { accessFor } from '@/lib/db/platform'
+import { accessOf, signedInUser } from './session'
 import { isAdminDatabaseConfigured, isDatabaseConfigured } from '@/lib/env'
 import { isAuthConfigured } from '@/lib/public-env'
 import type { StaffRole } from '@/lib/db/schema'
@@ -29,10 +28,9 @@ const currentStaff = cache(async (): Promise<StaffOk | Exclude<StaffResult, Staf
   if (!isAuthConfigured() || !isDatabaseConfigured() || !isAdminDatabaseConfigured()) {
     return { ok: false, reason: 'not_configured', message: 'Frrata Admin is not connected yet' }
   }
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await signedInUser()
   if (!user) return { ok: false, reason: 'signed_out', message: 'Not signed in' }
-  const { staffRole } = await accessFor(user.id)
+  const { staffRole } = await accessOf(user.id)
   if (!staffRole) return { ok: 'none', userId: user.id }
   return { ok: true, userId: user.id, email: user.email ?? '', role: staffRole }
 })

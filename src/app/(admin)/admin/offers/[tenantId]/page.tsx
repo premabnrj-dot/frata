@@ -3,7 +3,6 @@ import { z } from 'zod'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { shopOffersForAdmin } from '@/lib/admin/offers'
@@ -13,6 +12,7 @@ import { STYLE_LABEL } from '@/domains/checkout/offer-form'
 import type { DiscountStyle } from '@/domains/checkout/discounts'
 import { STATUS_WORDS } from '@/domains/checkout/offer-status'
 import { resumeAction, stopAction } from '../actions'
+import { Submit } from '@/components/ui/submit'
 
 export const metadata = { title: 'Shop offers' }
 
@@ -44,12 +44,12 @@ export default async function ShopOffersPage({ params, searchParams }: { params:
               <Section key={o.id} title={o.title} id={`o-${o.id}`} action={<Badge tone={STATUS_WORDS[o.status].tone}>{STATUS_WORDS[o.status].label}</Badge>}>
                 <p className="text-sm text-muted-foreground">{STYLE_LABEL[o.style as DiscountStyle]?.name ?? o.style} · from {dayMonthIN(o.startsAt)}{o.endsAt ? ` till ${dayMonthIN(o.endsAt)}` : ''}</p>
                 {o.status === 'stopped' ? <p className="text-sm">Stopped{o.stoppedAt ? ` ${dayMonthIN(o.stoppedAt)}` : ''}: {o.stopReason}</p> : null}
-                {admin && o.status === 'stopped' ? <form action={resumeAction}>{hidden}<Button type="submit" variant="secondary">Resume {o.title}</Button></form> : null}
+                {admin && o.status === 'stopped' ? <form action={resumeAction}>{hidden}<Submit variant="secondary">Resume {o.title}</Submit></form> : null}
                 {admin && o.status !== 'stopped' ? (
                   <form action={stopAction} className="space-y-2">{hidden}
                     <label className="block text-sm font-medium" htmlFor={`why-${o.id}`}>Why stop it <span className="font-normal text-muted-foreground">(the shop reads this)</span></label>
                     <input id={`why-${o.id}`} name="reason" required minLength={3} maxLength={300} placeholder="e.g. The struck price was never charged" className={`${input} w-full max-w-md`} />
-                    <div><Button type="submit" variant="destructive">Stop {o.title}</Button></div>
+                    <div><Submit variant="destructive">Stop {o.title}</Submit></div>
                   </form>
                 ) : null}
               </Section>

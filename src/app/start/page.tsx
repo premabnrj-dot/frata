@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
-import { accessFor, publicPlans, signupTrialDays } from '@/lib/db/platform'
+import { publicPlans, signupTrialDays } from '@/lib/db/platform'
+import { accessOf } from '@/lib/auth/session'
 import { formatInr, formatPercent } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
 import { SHOP_DOMAIN } from '@/lib/public-env'
@@ -20,7 +21,7 @@ export const dynamic = 'force-dynamic'
 export default async function StartPage() {
   const auth = await requireUser()
   if (auth.ok) {
-    const access = await accessFor(auth.userId).catch(() => null)
+    const access = await accessOf(auth.userId).catch(() => null)
     if (access?.memberships.some((m) => m.role === 'owner' && !m.supportSessionId)) redirect('/console')
   }
   // Trials TR1: the plans and the trial length, read from the price list and Admin's setting (never a copy).

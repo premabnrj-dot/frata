@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, eq, isNull, sql } from 'drizzle-orm'
-import { adminDb } from '@/lib/db/admin'
+import { adminDb, type AdminTx } from '@/lib/db/admin'
 import { tenants } from '@/lib/db/schema'
 import { shopThemePublishes, shopThemeRevisions, themeVersionStages, themeVersions } from '@/lib/db/schema-themes'
 import type { StaffOk } from '@/lib/auth/require-staff'
@@ -35,23 +35,24 @@ export type AdminVersion = {
 export async function themeVersionsForAdmin(staff: StaffOk): Promise<AdminVersion[]> {
   void staff
   const db = adminDb()
-  const [rows, stages, pubs, revs, names] = await Promise.all([
+  const [rows, stages, pubs] = await Promise.all([
     db.select().from(themeVersions),
     db.select({ versionId: themeVersionStages.versionId, tenantId: themeVersionStages.tenantId, name: tenants.name }).from(themeVersionStages).innerJoin(tenants, eq(tenants.id, themeVersionStages.tenantId)).orderBy(asc(tenants.name)),
-    db.select({ tenantId: shopThemePublishes.tenantId, revisionId: shopThemePublishes.revisionId, publishedAt: shopThemePublishes.publishedAt, id: shopThemePublishes.id }).from(shopThemePublishes),
-    db.select({ id: shopThemeRevisions.id, tenantId: shopThemeRevisions.tenantId, themeKey: shopThemeRevisions.themeKey, themeVersion: shopThemeRevisions.themeVersion }).from(shopThemeRevisions),
-    db.select({ id: tenants.id, name: tenants.name }).from(tenants),
+    // Publishes only, each with its revision's version and its shop's name, joined in SQL: never every draft
+    // revision of every shop read into memory (speed review 2026-11-11 MED 3; autosave writes many revisions).
+    db.select({ tenantId: shopThemePublishes.tenantId, name: tenants.name, themeKey: shopThemeRevisions.themeKey, themeVersion: shopThemeRevisions.themeVersion, publishedAt: shopThemePublishes.publishedAt, id: shopThemePublishes.id })
+      .from(shopThemePublishes)
+      .innerJoin(shopThemeRevisions, eq(shopThemeRevisions.id, shopThemePublishes.revisionId))
+      .innerJoin(tenants, eq(tenants.id, shopThemePublishes.tenantId)),
   ])
-  const nameOf = new Map(names.map((n) => [n.id, n.name]))
   // Each shop's live look by the shop's own rule (liveOf), so Admin's counts never disagree with what shoppers see.
   const bad = withdrawnKeys(rows)
-  const rev = new Map(revs.map((r) => [r.id, r]))
-  const byShop = new Map<string, { themeKey: string; themeVersion: string; at: number; id: string }[]>()
-  for (const p of pubs) { const r = rev.get(p.revisionId); if (!r) continue; const list = byShop.get(p.tenantId) ?? []; list.push({ themeKey: r.themeKey, themeVersion: r.themeVersion, at: p.publishedAt.getTime(), id: p.id }); byShop.set(p.tenantId, list) }
+  const byShop = new Map<string, { name: string; list: { themeKey: string; themeVersion: string; at: number; id: string }[] }>()
+  for (const p of pubs) { const shop = byShop.get(p.tenantId) ?? { name: p.name, list: [] }; shop.list.push({ themeKey: p.themeKey, themeVersion: p.themeVersion, at: p.publishedAt.getTime(), id: p.id }); byShop.set(p.tenantId, shop) }
   const live = new Map<string, { tenantId: string; name: string }[]>()
-  for (const [tenantId, list] of byShop) {
+  for (const [tenantId, { name, list }] of byShop) {
     const l = liveOf(list.sort((a, b) => b.at - a.at || b.id.localeCompare(a.id)), bad)
-    if (l) { const k = `${l.themeKey}@${l.themeVersion}`; live.set(k, [...(live.get(k) ?? []), { tenantId, name: nameOf.get(tenantId) ?? tenantId }]) }
+    if (l) { const k = `${l.themeKey}@${l.themeVersion}`; const at = live.get(k) ?? []; at.push({ tenantId, name }); live.set(k, at) }
   }
   const keys = new Set([...Object.values(CATALOGUE).flatMap((vs) => Object.values(vs).map((m) => `${m.key}@${m.version}`)), ...rows.map((r) => `${r.themeKey}@${r.version}`)])
   return [...keys].map((kv) => {
@@ -67,7 +68,7 @@ export async function themeVersionsForAdmin(staff: StaffOk): Promise<AdminVersio
   }).sort((a, b) => a.key.localeCompare(b.key) || cmpSemver(b.version, a.version))
 }
 
-type Tx = Parameters<Parameters<ReturnType<typeof adminDb>['transaction']>[0]>[0]
+type Tx = AdminTx
 /** The version's row, made on the first decision about it (there is no separate "Add": T3 review). */
 async function rowFor(tx: Tx, key: string, version: string): Promise<{ id: string } | null> {
   if (!manifestOf(key, version)) return null

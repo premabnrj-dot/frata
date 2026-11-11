@@ -3,7 +3,6 @@ import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/com
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { RESERVED } from '@/domains/signup/slug'
@@ -11,6 +10,7 @@ import { domainsNeedingFrrata, HELD_LIMIT, heldNames, listBlocked, type BlockedK
 import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dayIN } from '@/lib/format-date'
 import { blockNameAction, releaseNameAction, settleDomainAction, unblockNameAction } from './actions'
+import { Submit } from '@/components/ui/submit'
 
 export const metadata = { title: 'Names' }
 
@@ -45,8 +45,8 @@ export default async function NamesPage({ searchParams }: { searchParams: Promis
                         <form action={settleDomainAction} className="flex flex-wrap items-center gap-2">
                           <input type="hidden" name="id" value={d.id} />
                           <input name="reason" required minLength={3} maxLength={500} aria-label={`Why settle ${d.host}`} placeholder="Reason" className={`${field} min-w-0 flex-1`} />
-                          <Button type="submit" name="move" value="yes" variant="secondary" size="wrap">Move to {d.shop}</Button>
-                          <Button type="submit" name="move" value="no" variant="secondary" size="wrap">Refuse</Button>
+                          <Submit name="move" value="yes" variant="secondary" size="wrap">Move to {d.shop}</Submit>
+                          <Submit name="move" value="no" variant="secondary" size="wrap">Refuse</Submit>
                         </form>
                       )}
                     </Td>
@@ -66,7 +66,7 @@ export default async function NamesPage({ searchParams }: { searchParams: Promis
               <select name="kind" required className={field}>{(Object.keys(KIND) as BlockedKind[]).map((k) => <option key={k} value={k}>{KIND[k]}</option>)}</select></label>
             <label className="flex flex-col gap-1"><span className="font-medium">Reason</span>
               <input name="reason" required minLength={3} maxLength={500} className={field} /></label>
-            <Button type="submit" variant="secondary">Block name</Button>
+            <Submit variant="secondary">Block name</Submit>
           </form>
         </Section>
       )}
@@ -86,7 +86,7 @@ export default async function NamesPage({ searchParams }: { searchParams: Promis
                       <form action={unblockNameAction} className="flex flex-wrap items-center justify-end gap-2">
                         <input type="hidden" name="name" value={b.name} />
                         <input name="reason" required minLength={3} maxLength={500} aria-label={`Why unblock ${b.name}`} placeholder="Reason" className={`${field} min-w-0 flex-1`} />
-                        <Button type="submit" variant="secondary" size="wrap">Unblock {b.name}</Button>
+                        <Submit variant="secondary" size="wrap">Unblock {b.name}</Submit>
                       </form>
                     </Td>
                   )}
@@ -114,7 +114,7 @@ export default async function NamesPage({ searchParams }: { searchParams: Promis
                       <form action={releaseNameAction} className="flex flex-wrap items-center gap-2">
                         <input type="hidden" name="name" value={h.name} />
                         <input name="reason" required minLength={3} maxLength={500} aria-label={`Why release ${h.name}`} placeholder="Reason" className={`${field} min-w-0 flex-1`} />
-                        <Button type="submit" variant="secondary">Release {h.name}</Button>
+                        <Submit variant="secondary">Release {h.name}</Submit>
                       </form>
                     </Td>
                   )}

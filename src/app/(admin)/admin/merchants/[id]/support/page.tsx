@@ -1,12 +1,13 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Button, button } from '@/components/ui/button'
+import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { DEFAULT_SUPPORT_MIN, SUPPORT_LENGTHS_MIN, SUPPORT_REASON_LABEL, SUPPORT_REASONS } from '@/domains/support/session'
 import { getMerchant } from '@/lib/admin/merchants'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { startSupportAction } from './actions'
 import { Section } from '@/components/layout/section'
+import { Submit } from '@/components/ui/submit'
 
 export const metadata = { title: 'Open a console as support' }
 
@@ -50,7 +51,7 @@ export default async function SupportStartPage({ params }: { params: Promise<{ i
       </fieldset>
       <div className="flex justify-end gap-2 border-t border-border pt-4">
         <Link href={`/admin/merchants/${id}`} className={button({ variant: 'secondary' })}>Stay in Admin</Link>
-        <Button type="submit">Open {m.tenant.name}&apos;s console</Button>
+        <Submit>Open {m.tenant.name}&apos;s console</Submit>
       </div>
     </form></Section>
   )

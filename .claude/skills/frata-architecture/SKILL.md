@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.40.0
+  version: 2.41.0
   verified: 2026-11-11
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -109,6 +109,10 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   supabase-js or PostgREST; `anon`/`authenticated` hold no table grants.
 - `getUser()` (or, in the middleware's redirect only, `getClaims()`, which verifies the JWT), never
   `getSession()` (`check:layers`). The member and staff checks always ask `getUser()`.
+- **One sign-in lookup per request** (2026-11-11): `getUser()` and `app_access_for` go through `src/lib/auth/session.ts`
+  (`signedInUser`, `accessOf`, React `cache`), shared by `requireMember`, `requireStaff` and `requireUser`; Admin's
+  layout used to ask each twice. `cache` does not memoize inside a server action or route handler: there each call is
+  its own lookup (and each `adminDb()` its own connection), so pass the transaction down instead of reading again.
 - Signing in grants nothing; a `members` row does. Roles: owner, admin, staff,
   partner (`MEMBER_ROLES`); tuples `ANY_MEMBER` (everyone, partner included:
   orders, and products and collections — staff edit the catalogue, owner

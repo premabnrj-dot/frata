@@ -68,6 +68,13 @@ export default {
       // (its days would run out unused) nor one off its plans (Reviews: Growth and Scale).
       assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial/ }).count(), 1)
       assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial of (Reviews|True Profit)/ }).count(), 0)
+      // AD·0: giving one writes one row on the action's own transaction (under its lock), then it can be ended.
+      await meera.getByRole('button', { name: 'Give a 30-day trial of GST' }).click()
+      await meera.getByText('GST: 30-day trial started.').waitFor()
+      assert.equal((await db`select count(*)::int n from tenant_addons where tenant_id = ${KESAR} and module = 'gst' and ends_at is null`)[0].n, 1)
+      assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial/ }).count(), 0)
+      await meera.getByRole('button', { name: 'End trial' }).click()
+      await meera.getByText('GST ended.').waitFor()
       // A trial granted before (the row Admin writes when a module ships) shows its end and can be ended.
       await db`insert into tenant_addons (tenant_id, module, trial_ends_at, reason, created_by) values (${KESAR}, 'true_profit', now() + interval '30 days', '30-day trial', ${F.id})`
       await meera.reload()
@@ -78,7 +85,7 @@ export default {
       const [b] = await db`select ends_at from tenant_addons where tenant_id = ${KESAR} and module = 'true_profit'`
       assert.ok(b.ends_at)
       const audit = await db`select action from audit_events where tenant_id = ${KESAR} and action like 'module.%' order by at`
-      assert.deepEqual(audit.map((r) => r.action), ['module.end'])
+      assert.deepEqual(audit.map((r) => r.action), ['module.trial', 'module.end', 'module.end'])
     })
 
     await t.step('Admin pauses a module for everyone, then resumes it', async () => {
