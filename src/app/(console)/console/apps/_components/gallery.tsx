@@ -15,7 +15,7 @@ export type AppCard = {
 }
 
 /** The gallery (approved mockup 2026-11-11): your apps, search, filters with counts, and a card per app by job group. */
-export function AppsGallery({ cards, groups }: { cards: AppCard[]; groups: { key: Group; label: string }[] }) {
+export function AppsGallery({ cards, groups, featured }: { cards: AppCard[]; groups: { key: Group; label: string }[]; featured?: React.ReactNode }) {
   const [filter, setFilter] = useState<OfferFilter | 'all'>('all')
   const [q, setQ] = useState('')
   const mine = cards.filter((c) => c.mine)
@@ -40,6 +40,8 @@ export function AppsGallery({ cards, groups }: { cards: AppCard[]; groups: { key
           </ul>
         </section>
       ) : null}
+
+      {featured}
 
       <div className="flex flex-wrap items-center gap-2">
         <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md border border-input bg-card px-3 sm:max-w-xs md:h-9">

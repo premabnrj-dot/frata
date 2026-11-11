@@ -2,6 +2,8 @@ import 'server-only'
 import { cache } from 'react'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
+import type { Membership } from '@/lib/db/platform'
+import { featuredBillWith } from '@/lib/queries/billing'
 import { currentPlan } from '@/domains/plans/entitlements'
 import { addonPrices, appInterest, modulePauses, tenantAddons, tenantModules } from '@/lib/db/schema-modules'
 import { plans as planRows, planVersions, tenantPlans } from '@/lib/db/schema'
@@ -66,15 +68,18 @@ async function pricesIn(tx: Tx): Promise<PriceList> {
 }
 
 /** Everything the Apps gallery and an app's page read, in ONE transaction (architecture review A5): the facts, the
- *  add-on prices and which coming-next apps this member asked about. `userId` is the session's. */
-export async function appsPage(tenantId: string, userId: string, at: string) {
+ *  add-on prices and which coming-next apps this member asked about. `userId` is the session's. `bill`: the member,
+ *  passed only by the gallery for owners and admins, for the featured card (A2; featuredBillWith refuses anyone else). */
+export async function appsPage(tenantId: string, userId: string, at: string, bill?: Pick<Membership, 'tenantId' | 'role' | 'supportSessionId'>) {
   const now = new Date(at)
   return withTenant(tenantId, async (tx) => {
     const facts = await readFactsIn(tx, tenantId, now)
-    const [prices, asked] = await Promise.all([
+    const [prices, asked, featured] = await Promise.all([
       pricesIn(tx),
       tx.select({ module: appInterest.module }).from(appInterest).where(and(eq(appInterest.tenantId, tenantId), eq(appInterest.userId, userId))),
+      // The card fails closed: an error here never fails the page (logged by name).
+      bill ? featuredBillWith(tx, bill, now).catch((err) => { console.error('[apps featured]', err instanceof Error ? err.name : 'error'); return null }) : Promise.resolve(null),
     ])
-    return { facts, access: moduleAccess(facts, now), prices, asked: new Set(asked.map((r) => r.module).filter(isModuleKey)) }
+    return { facts, access: moduleAccess(facts, now), prices, asked: new Set(asked.map((r) => r.module).filter(isModuleKey)), featured }
   })
 }

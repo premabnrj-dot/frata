@@ -13,15 +13,19 @@ import { monthStartIST, nextMonthStartIST } from '@/domains/time/month'
 import { draftInvoiceIn, planBilledIn } from '@/lib/billing/draft'
 import type { Membership } from '@/lib/db/platform'
 import { planVersions, plans, shopSettings, tenantPlans } from '@/lib/db/schema'
-import { billingAccounts, billingNotices, frrataCreditNotes, frrataInvoiceLines, frrataInvoices, frrataPayments } from '@/lib/db/schema-billing'
+import { billingAccounts, billingNotices, frrataCreditNotes, frrataFeeCredits, frrataInvoiceFees, frrataInvoiceLines, frrataInvoices, frrataPayments } from '@/lib/db/schema-billing'
+import { cheapestPlan, type LadderInvoice, type LadderPlan } from '@/domains/billing/ladder'
+import type { PlanCode } from '@/domains/plans/entitlements'
 import { invoiceState, type InvoiceState } from '@/domains/billing/status'
 import { frrataCreditNoteDoc, frrataInvoiceDoc, type FrrataDoc } from '@/domains/billing/document'
 import { withTenant } from '@/lib/db/tenant'
+import type { Tx } from '@/lib/db'
 
 // =============================================================================
 // FILE: src/lib/queries/billing.ts — WHAT A SHOP READS ABOUT ITS OWN BILL (billing B1; plan finding 9). Money: owners
 // and admins only. Every export takes the member and refuses outside CAN_MANAGE, and the gate check:billing-read lets
-// only console/settings/billing/** import this module, so staff and partners never reach it.
+// only console/settings/billing/**, the billing banner and the Apps page's one read (src/lib/queries/modules.ts, for
+// featuredBillWith) import this module, so staff and partners never reach it.
 //
 // "This month so far" is the billing run itself (draftInvoiceIn), run inside a transaction that is always rolled
 // back: the page shows exactly what the next invoice would bill now, from the one rule, and writes nothing.
@@ -196,3 +200,55 @@ export const shopTrial = cache(async (m: Pick<Membership, 'tenantId' | 'role'>, 
     }
   })
 })
+
+// ── Apps A2: the featured card (plan docs/plans/2026-11-11-apps-a2-homes.md § 4). Read inside the Apps page's one
+// transaction (appsPage), only for owners and admins outside a support visit; null on anything it cannot vouch for. ──
+export type FeaturedNudge = { invoiceId: string; periodStart: Date; planCode: string; planName: string; saving: number; billed: number; would: number }
+
+export async function featuredBillWith(tx: Tx, m: Pick<Membership, 'tenantId' | 'role' | 'supportSessionId'>, now: Date): Promise<FeaturedNudge | null> {
+  mayReadMoney(m)
+  if (m.supportSessionId) return null
+  const t = m.tenantId
+  const [history, latest, invoices] = await Promise.all([
+    tx.select({ startsAt: tenantPlans.startsAt, trialEndsAt: tenantPlans.trialEndsAt, custom: tenantPlans.customMonthlyPrice, code: plans.code })
+      .from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(plans, eq(plans.id, planVersions.planId))
+      .where(eq(tenantPlans.tenantId, t)),
+    tx.execute<{ code: string; name: string; monthly_price: string; fee_bps: number }>(sql`
+      select distinct on (p.code) p.code, p.name, v.monthly_price, v.fee_bps from ${planVersions} v join ${plans} p on p.id = v.plan_id
+       order by p.code, v.version desc`),
+    tx.select({ id: frrataInvoices.id, periodStart: frrataInvoices.periodStart, taxable: frrataInvoices.taxable }).from(frrataInvoices)
+      .where(and(eq(frrataInvoices.tenantId, t), isNotNull(frrataInvoices.issuedAt), eq(frrataInvoices.testMode, false)))
+      .orderBy(desc(frrataInvoices.periodStart)).limit(2),
+  ])
+  // On Launch now, at its list price, out of any trial, with no change waiting.
+  const cur = currentPlan(history, now)
+  if (!cur || cur.code !== 'launch' || cur.custom !== null || (cur.trialEndsAt && cur.trialEndsAt > now)) return null
+  if (history.some((h) => h.startsAt > now)) return null
+  if (invoices.length < 2) return null
+  const plan = (code: PlanCode): LadderPlan | null => {
+    const r = latest.find((x) => x.code === code)
+    return r ? { code, name: r.name, monthlyPrice: paise(Number(r.monthly_price)), feeBps: r.fee_bps } : null
+  }
+  const launch = plan('launch')
+  const others = (['growth', 'scale'] as const).map(plan).filter((p): p is LadderPlan => p !== null)
+  if (!launch || !others.length) return null
+  const ids = invoices.map((i) => i.id)
+  const [lines, fees, credits] = await Promise.all([
+    tx.select({ invoiceId: frrataInvoiceLines.invoiceId, kind: frrataInvoiceLines.kind, periodStart: frrataInvoiceLines.periodStart, taxable: frrataInvoiceLines.taxable })
+      .from(frrataInvoiceLines).where(and(eq(frrataInvoiceLines.tenantId, t), inArray(frrataInvoiceLines.invoiceId, ids))),
+    tx.select({ invoiceId: frrataInvoiceFees.invoiceId, base: frrataInvoiceFees.base, fee: frrataInvoiceFees.fee })
+      .from(frrataInvoiceFees).where(and(eq(frrataInvoiceFees.tenantId, t), inArray(frrataInvoiceFees.invoiceId, ids))),
+    tx.select({ invoiceId: frrataFeeCredits.invoiceId, base: frrataInvoiceFees.base, fee: frrataFeeCredits.fee })
+      .from(frrataFeeCredits).innerJoin(frrataInvoiceFees, and(eq(frrataInvoiceFees.tenantId, frrataFeeCredits.tenantId), eq(frrataInvoiceFees.orderId, frrataFeeCredits.orderId)))
+      .where(and(eq(frrataFeeCredits.tenantId, t), inArray(frrataFeeCredits.invoiceId, ids))),
+  ])
+  const of = <R extends { invoiceId: string }>(rows: R[], id: string) => rows.filter((r) => r.invoiceId === id)
+  const ladder: LadderInvoice[] = invoices.map((i) => ({
+    id: i.id, periodStart: i.periodStart, taxable: paise(i.taxable),
+    lines: of(lines, i.id).map((l) => ({ kind: l.kind, periodStart: l.periodStart, taxable: paise(l.taxable) })),
+    fees: of(fees, i.id).map((f) => ({ base: paise(f.base), fee: paise(f.fee) })),
+    credits: of(credits, i.id).map((c) => ({ base: paise(c.base), fee: paise(c.fee) })),
+  }))
+  const n = cheapestPlan(ladder, launch, others)
+  return n ? { invoiceId: n.invoiceId, periodStart: n.periodStart, planCode: n.plan.code, planName: n.plan.name, saving: n.saving, billed: n.billed, would: n.would } : null
+}
