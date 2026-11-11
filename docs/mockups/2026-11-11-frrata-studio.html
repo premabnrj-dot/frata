@@ -638,8 +638,8 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
     <tbody id="price-rows">
       <tr><td><b>Storefront API</b> (read, cart link)</td><td>Nobody</td><td>Included in every plan; rate limits per key and per IP, cached reads unlimited</td><td>Every plan</td><td>Fair use; no per-call fee</td></tr>
       <tr><td><b>Private keys, webhooks, search at volume</b></td><td>The brand</td><td>By plan</td><td>Growth and Scale</td><td>Upgrade</td></tr>
-      <tr><td><b>Hosting the site</b></td><td>The brand</td><td>Bundled in the plan, as Shopify bundles Oxygen; bandwidth and build minutes a month</td><td>Launch 50 GB, 100 build min · Growth 200 GB, 300 min · Scale 1 TB, 1,000 min</td><td>₹17 a GB, ₹2 a build minute (cost + 30%)</td></tr>
-      <tr><td><b>Studio seat</b></td><td>The partner</td><td>A monthly seat with credits and sessions at once</td><td>Partner (free): 40 credits, 1 at once · Studio ₹2,999: 400 credits, 3 at once · Studio Plus ₹9,999: 1,500 credits, 6 at once, routines across clients</td><td>Packs: ₹1,000 for 100 credits (12 months)</td></tr>
+      <tr><td><b>Hosting the site</b></td><td>The brand</td><td>Bundled in the plan, as Shopify bundles Oxygen; bandwidth and build minutes a month</td><td>Launch 50 GB, 100 build min · Growth 200 GB, 300 min · Scale 1 TB, 1,000 min</td><td>₹40 a GB, ₹4 a build minute (3× cost)</td></tr>
+      <tr><td><b>Studio seat</b></td><td>The partner</td><td>A monthly seat with credits and sessions at once</td><td>Partner (free): 10 credits, 1 at once · Studio ₹2,999: 150 credits, 3 at once · Studio Plus ₹9,999: 500 credits, 6 at once, routines across clients</td><td>Packs: ₹1,900 for 100 credits (12 months)</td></tr>
       <tr><td><b>Credits for a client's work</b></td><td>Partner, or the client if the partner chooses</td><td>A session's credits on the client's Frrata invoice, with the client's yes</td><td>—</td><td>Same rate</td></tr>
       <tr><td><b>Gallery starters</b></td><td>The brand (paid starters)</td><td>Free starters at V4; paid starters later, partner keeps 85%</td><td>—</td><td>Frrata 15%</td></tr>
       <tr><td><b>Partner share</b> (exists)</td><td>Frrata</td><td>20% of Frrata's collected revenue from client shops, 24 months</td><td>—</td><td>Unchanged</td></tr>
@@ -647,7 +647,7 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
   </table></div>
   <div class="col">
     <h3>What a credit is</h3>
-    <p>One credit is <b>one ordinary turn</b> of the agent (a request and the work it does) and sells at <b>₹10</b>. A turn that builds and runs the checks counts a little more; a turn on the larger model counts double. Every session shows its estimate before it starts and stops at its cap, never half-way through a page. A small change takes 1–2 credits, a new page 10–30, three variants about 20. Credits on a seat reset monthly; packs last 12 months (the market's norm).</p>
+    <p>One credit is <b>one ordinary turn</b> of the agent (a request and the work it does) and sells at <b>₹19</b>: three times what it costs Frrata (owner, 2026-11-11: resold API costs sell at 3×). A turn that builds and runs the checks counts a little more; a turn on the larger model counts double. Every session shows its estimate before it starts and stops at its cap, never half-way through a page. A small change takes 1–2 credits (₹19–38), a new page 10–30 (₹190–570), three variants about 20 (₹380). Credits on a seat reset monthly; packs last 12 months (the market's norm).</p>
   </div>
   <div class="scroll"><table>
     <thead><tr><th>What one ordinary turn costs Frrata</th><th>Figure</th><th>Source · date</th><th>Test</th></tr></thead>
@@ -656,19 +656,19 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
       <tr><td>Sandbox: 2 vCPU, 4 GB, ~2 active minutes</td><td>≈ ₹1.0</td><td>Vercel Sandbox $0.128 / vCPU-h, $0.0212 / GB-h (10 Sep 2026)</td><td>Active minutes per turn</td></tr>
       <tr><td>Build and checks: ~1 minute on 4 CPUs, a screenshot pass</td><td>≈ ₹1.2</td><td>Vercel build $0.0035 / CPU-min (Sep 2026)</td><td>Build minutes per turn</td></tr>
       <tr><td><b>Cost per credit</b></td><td><b>≈ ₹6.2</b></td><td>sum</td><td>Monthly: cost ÷ credits used</td></tr>
-      <tr><td>Price per credit</td><td>₹10 (≈ 38% gross margin)</td><td>proposal</td><td>Margin after failed turns and free credits</td></tr>
-      <tr><td>A new page, 15–30 turns</td><td>₹150–300 to the partner · ₹95–185 cost</td><td>matches 2026-11-11 research (₹80–170 a full build)</td><td>First 50 pages built</td></tr>
+      <tr><td>Price per credit</td><td>₹19 (3.06× cost; ≈ 67% gross margin)</td><td>owner rule 2026-11-11: 3× API cost</td><td>Re-price when the vendor or the rupee moves; margin after failed turns</td></tr>
+      <tr><td>A new page, 15–30 turns</td><td>₹285–570 to the partner · ₹95–185 cost</td><td>matches 2026-11-11 research (₹80–170 a full build)</td><td>First 50 pages built</td></tr>
       <tr><td>Hosting a cached small shop</td><td>cents a month</td><td>Vercel Pro overage $0.15 / GB; Cloudflare no egress (Oct 2026)</td><td>Bandwidth per shop, month 1</td></tr>
     </tbody>
   </table></div>
   <div class="col">
     <h3>Against the market</h3>
-    <p>No commerce platform charges per Storefront API call for shopper traffic: Shopify's is free with no fixed limit for buyers and throttles only bots; BigCommerce limits by plan; Swell meters at $5 per 100,000 calls on its own plans. Builders sell credits: Lovable at $0.25–0.50 a credit (a landing page ≈ 1.7 credits), Framer 3,000 credits in $30, Bolt and v0 by tokens. Shopify bundles Hydrogen hosting into every paid plan. Frrata's line: the API and hosting come with the plan (orders pay), the agent's work is credits at a stated rupee price with an estimate before every run.</p>
+    <p>No commerce platform charges per Storefront API call for shopper traffic: Shopify's is free with no fixed limit for buyers and throttles only bots; BigCommerce limits by plan; Swell meters at $5 per 100,000 calls on its own plans. Builders sell credits: Lovable at $0.25–0.50 a credit (a landing page ≈ 1.7 credits), Framer 3,000 credits in $30, Bolt and v0 by tokens. Shopify bundles Hydrogen hosting into every paid plan. Frrata's line: the API and hosting come with the plan (orders pay), the agent's work is credits at three times its cost, a stated rupee price, with an estimate before every run.</p>
   </div>
 
   <div class="col">
     <h2>Questions for you</h2>
-    <div class="ask"><b>1. Seat prices.</b> Studio ₹2,999 with 2,000 credits and Studio Plus ₹9,999 with 8,000: right shape for Indian agencies?</div>
+    <div class="ask"><b>1. Seat prices.</b> At 3×: Studio ₹2,999 with 150 credits, Studio Plus ₹9,999 with 500. Lovable sells at ₹22–44 a credit, so ₹19 is still below it. Right shape for Indian agencies?</div>
     <div class="ask"><b>2. Who carries a client's credits.</b> Partner by default with an opt-in to the client's invoice (proposed), or always the client?</div>
     <div class="ask"><b>3. Routines that publish.</b> Allowed per routine when checks pass (proposed), or always a person?</div>
     <div class="ask"><b>4. Client approval.</b> Required before every publish (proposed), or the partner's choice per client?</div>

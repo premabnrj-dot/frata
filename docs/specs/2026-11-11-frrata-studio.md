@@ -52,11 +52,11 @@ partners.
 | Figure | Value | Source · date | Test |
 |---|---|---|---|
 | Storefront API for shopper traffic | Included, no per-call fee; rate limits per key and IP | Shopify, BigCommerce (2026) | API traffic → orders per shop |
-| Hosting | In the plan: Launch 50 GB + 100 build min, Growth 200 GB + 300, Scale 1 TB + 1,000; then ₹17/GB, ₹2/min | Vercel Pro overage, Cloudflare (2026) | Bandwidth and build minutes per shop, month 1 |
+| Hosting | In the plan: Launch 50 GB + 100 build min, Growth 200 GB + 300, Scale 1 TB + 1,000; then ₹40/GB, ₹4/min (3×) | Vercel Pro overage, Cloudflare (2026) | Bandwidth and build minutes per shop, month 1 |
 | Cost per credit (one ordinary turn) | ≈ ₹6.2 (model ₹4.0, sandbox ₹1.0, build and checks ₹1.2) | Anthropic, Vercel Sandbox (2026); ₹88/$ | Cost ÷ credits used, monthly |
-| Price per credit | ₹10 (≈ 38% gross margin) | proposal | Margin after failed turns and free credits |
-| Studio seats | Partner free 40 credits; Studio ₹2,999 / 400; Studio Plus ₹9,999 / 1,500; packs ₹1,000 / 100 | proposal; Indian tool band ₹0–3,000 | Seats bought by the first 20 partners |
-| A new page | 10–30 credits (₹100–300) | proposal; 2026-11-11 research ₹80–170 cost | First 50 pages |
+| Price per credit | ₹19 (3.06× cost; owner rule 2026-11-11: resold API costs at 3×) | owner | Re-price when the vendor or the rupee moves |
+| Studio seats | Partner free 10 credits (acquisition cost ₹62); Studio ₹2,999 / 150; Studio Plus ₹9,999 / 500; packs ₹1,900 / 100 — each seat ≥ 3× the cost it includes | owner rule; Indian tool band ₹0–3,000 | Seats bought by the first 20 partners |
+| A new page | 10–30 credits (₹190–570) | 2026-11-11 research ₹80–170 cost | First 50 pages |
 | Gallery | Free starters at V4; paid later, partner keeps 85% | Shopify 15% (2026) | Starters listed, 120 days |
 
 ## Design review (headline; each build phase gets the full review)
