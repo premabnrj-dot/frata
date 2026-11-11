@@ -1,0 +1,493 @@
+<title>Frrata Storefront API</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a short note for the owner, then Settings › Website and API to click through, then states, the shopper's journey, partner, Admin, docs and the guardrails. Frrata tokens. */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--brand:#D61F69;--brand-text:#A8124F;--thread:#D61F69;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;--ink:#1C1917;--on-ink:#FAFAF9;
+  --haldi-soft:#FCEFC7;--scrim:rgb(28 25 23 / .45);
+  --store-bg:#FFFFFF;--store-tile:#F1F1EF;--store-ink:#111111;--store-sub:#6B6B6B;--store-line:#E4E4E1;--store-accent:#2742E8;
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;
+  --fast:120ms;--base:200ms;--slow:320ms;
+  --standard:cubic-bezier(.2,0,0,1);--entrance:cubic-bezier(0,0,0,1);--exit:cubic-bezier(.3,0,1,1);
+  --spring:linear(0,.22 7%,.6 17%,.86 27%,1.01 38%,1.04 46%,1.02 60%,1 100%);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--ink:#0B0A09;--haldi-soft:#2F2812;--scrim:rgb(0 0 0 / .6);
+  --store-bg:#1A1A1A;--store-tile:#262626;--store-ink:#F2F2F2;--store-sub:#A3A3A3;--store-line:#3A3A3A;--store-accent:#8C9DFF;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;--brand-text:#FF7AAE;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;--ink:#0B0A09;--haldi-soft:#2F2812;--scrim:rgb(0 0 0 / .6);
+  --store-bg:#1A1A1A;--store-tile:#262626;--store-ink:#F2F2F2;--store-sub:#A3A3A3;--store-line:#3A3A3A;--store-accent:#8C9DFF;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:14px/1.55 var(--sans);margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+nav.views{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 0}
+nav.views a{font:500 13px var(--sans);color:var(--fg);text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:3px 11px;background:var(--card)}
+nav.views a:hover{background:var(--muted)}
+h1{font-size:26px;line-height:1.2;margin:0 0 6px;text-wrap:balance}
+h2{font-size:18px;margin:44px 0 10px;display:flex;gap:10px;align-items:center;text-wrap:balance;scroll-margin-top:16px}
+h2::before{content:"";width:18px;height:2px;background:var(--thread);flex:none}
+h3{font-size:15px;margin:0}
+p{margin:0 0 10px;max-width:72ch}
+.k{font-size:12px;color:var(--sub)}.mono{font-family:var(--mono)}
+.note{display:grid;gap:6px;margin:14px 0 0;padding:0;list-style:none;max-width:84ch}
+.note li{padding-left:16px;position:relative}.note li::before{content:"";position:absolute;left:0;top:.7em;width:8px;height:2px;background:var(--thread)}
+.stage{position:relative;border:1px solid var(--border);border-radius:8px;background:var(--bg);overflow:hidden;min-height:620px}
+.stage.phone{max-width:390px;margin-inline:auto}
+.bar{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--card)}
+.crumb{font-size:13px;color:var(--sub)}.crumb b{color:var(--fg);font-weight:600}
+.ctl{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;background:var(--muted);border-radius:6px;padding:2px}
+.seg button{border:0;background:transparent;color:var(--sub);font:500 12.5px var(--sans);padding:4px 10px;border-radius:5px;cursor:pointer;min-height:28px}
+.seg button[aria-checked="true"]{background:var(--card);color:var(--fg);box-shadow:0 1px 2px rgb(0 0 0 / .08)}
+.page{padding:18px;display:grid;gap:14px;max-width:760px}
+.stage.phone .page{padding:12px}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.ph h3{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.banner{border-radius:6px;padding:9px 12px;font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.banner.info{background:var(--info);color:var(--info-text)}.banner.warn{background:var(--warn);color:var(--warn-text)}.banner.danger{background:var(--danger);color:var(--danger-text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;min-width:0}
+.card>header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px 8px;flex-wrap:wrap}
+.card>header h4{margin:0;font-size:15px;font-weight:600}
+.cb{padding:4px 16px 16px;display:grid;gap:10px}
+.rows{list-style:none;margin:0;padding:0 0 4px}
+.rows li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:10px 16px;border-top:1px solid var(--border)}
+.rows li:first-child{border-top:0}
+.rows li.gone{color:var(--sub)}
+.rows .acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.rows .line{grid-column:1/-1;font-size:12.5px;color:var(--sub);display:flex;gap:8px;flex-wrap:wrap}
+.rows .line.bad{color:var(--danger-text)}
+.name{font-weight:600;display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-width:0}
+.keyp{font:500 13px var(--mono);overflow-wrap:anywhere}
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--fg);padding:0 12px;font:500 13px var(--sans);min-height:36px;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:var(--muted)}
+.btn:focus-visible,.input:focus-visible,.radio:focus-within,.seg button:focus-visible,nav.views a:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.primary:hover{opacity:.9}
+.btn.danger{color:var(--danger-text);border-color:var(--danger-text);background:var(--card)}
+.btn.dangerfill{background:var(--danger-text);border-color:var(--danger-text);color:var(--card)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.sm{min-height:30px;padding:0 9px;font-size:12.5px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 9px;font:500 12px var(--sans);white-space:nowrap}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-warn{background:var(--warn);color:var(--warn-text)}.c-n{background:var(--muted);color:var(--sub)}.c-danger{background:var(--danger);color:var(--danger-text)}.c-info{background:var(--info);color:var(--info-text)}
+.c-ink{background:var(--fg);color:var(--bg)}
+.ico{width:15px;height:15px;flex:none}
+.radios{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.radio{border:1px solid var(--input);border-radius:6px;padding:10px 12px;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;cursor:pointer;background:var(--card)}
+.radio input{margin:3px 0 0;accent-color:var(--fg)}
+.radio b{font-weight:600}.radio small{grid-column:2;color:var(--sub);font-size:12.5px}
+.radio:has(input:checked){border:2px solid var(--fg);padding:9px 11px}
+label.f{display:grid;gap:4px;font-size:13px;font-weight:500}
+.input{border:1px solid var(--input);border-radius:6px;padding:0 10px;background:var(--card);color:var(--fg);font:14px var(--mono);min-height:40px;width:100%}
+.input.sans{font-family:var(--sans)}
+.fix{display:flex;align-items:stretch;border:1px solid var(--input);border-radius:6px;overflow:hidden;background:var(--card)}
+.fix span{display:flex;align-items:center;padding:0 10px;background:var(--muted);color:var(--sub);font:13px var(--mono);border-right:1px solid var(--input)}
+.fix input{border:0;min-height:40px;padding:0 10px;font:14px var(--mono);background:transparent;color:var(--fg);flex:1;min-width:0}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--border);border-top:1px solid var(--border)}
+.tiles div{background:var(--card);padding:10px 14px}
+.tiles dt{font-size:12px;color:var(--sub)}.tiles dd{margin:0;font:500 18px var(--mono);font-variant-numeric:tabular-nums}
+.stage.phone .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+.kit{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.stage.phone .kit{grid-template-columns:1fr}
+.kit a,.kit div{border:1px solid var(--border);border-radius:6px;padding:10px 12px;display:grid;grid-template-columns:auto 1fr auto;gap:0 10px;align-items:center;color:var(--fg);text-decoration:none;background:var(--card)}
+.kit a:hover{background:var(--muted)}
+.kit small{grid-column:2;color:var(--sub);font-size:12px}
+.tile{width:32px;height:32px;border-radius:6px;background:var(--muted);display:grid;place-items:center;grid-row:span 2}
+.codebox{font:12.5px/1.6 var(--mono);background:var(--muted);border-radius:6px;padding:10px 12px;overflow-x:auto;white-space:pre;color:var(--fg)}
+/* dialog */
+.scrim{position:absolute;inset:0;background:var(--scrim);opacity:0;transition:opacity var(--base) var(--exit),display var(--base) allow-discrete;display:none;z-index:5}
+.scrim.open{display:block;opacity:1;transition:opacity var(--base) var(--entrance),display var(--base) allow-discrete}
+@starting-style{.scrim.open{opacity:0}}
+.dlg{position:absolute;z-index:6;left:50%;top:40px;width:min(520px,calc(100% - 32px));translate:-50% 0;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgb(0 0 0 / .18);
+  opacity:0;scale:.98;display:none;transition:opacity var(--base) var(--exit),scale var(--base) var(--exit),display var(--base) allow-discrete;overflow:hidden}
+.dlg.open{display:block;opacity:1;scale:1;transition:opacity var(--base) var(--entrance),scale var(--base) var(--entrance),display var(--base) allow-discrete}
+@starting-style{.dlg.open{opacity:0;scale:.98}}
+.stage.phone .dlg{left:0;right:0;top:auto;bottom:0;width:100%;translate:0 0;border-radius:12px 12px 0 0;max-height:88%;overflow:auto;scale:1;transform:translateY(100%);opacity:1;
+  transition:transform var(--base) var(--exit),display var(--base) allow-discrete}
+.stage.phone .dlg.open{transform:translateY(0);transition:transform var(--slow) var(--spring),display var(--slow) allow-discrete}
+@starting-style{.stage.phone .dlg.open{transform:translateY(100%)}}
+.dh{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)}
+.db{padding:16px;display:grid;gap:12px}
+.df{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--border);flex-wrap:wrap}
+.reveal{border:1px dashed var(--input);border-radius:6px;padding:12px;display:grid;gap:8px;background:var(--haldi-soft)}
+.reveal .keyp{font-size:14px;animation:flash 900ms var(--standard) 1}
+@keyframes flash{0%{opacity:.35}100%{opacity:1}}
+.toast{position:absolute;left:50%;bottom:16px;translate:-50% 0;background:var(--fg);color:var(--bg);border-radius:6px;padding:8px 12px;font-size:13px;z-index:7;opacity:0;transition:opacity var(--base) var(--exit);pointer-events:none}
+.toast.on{opacity:1;transition:opacity var(--base) var(--entrance)}
+.ro .writeonly{display:none!important}
+/* boards */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;align-items:start}
+.cap{font-size:12.5px;color:var(--sub);margin:6px 2px 0}
+.empty{display:grid;justify-items:start;gap:8px;padding:18px 16px}
+.picto{width:64px;height:64px;border-radius:12px;background:var(--haldi-soft);display:grid;place-items:center}
+/* shopper phones */
+.phonef{border:1px solid var(--border);border-radius:22px;background:var(--store-bg);color:var(--store-ink);overflow:hidden;min-height:430px;display:flex;flex-direction:column}
+.addrbar{font:500 11.5px var(--mono);color:var(--sub);background:var(--muted);padding:7px 12px;display:flex;gap:6px;align-items:center;overflow-wrap:anywhere}
+.addrbar b{color:var(--fg);font-weight:500}
+.sh{padding:12px;display:grid;gap:10px;flex:1;align-content:start}
+.stile{background:var(--store-tile);aspect-ratio:4/5;display:grid;place-items:center;max-width:100%}
+.stile.s{aspect-ratio:1}
+.sbtn{background:var(--store-ink);color:var(--store-bg);text-align:center;font:700 12px var(--sans);letter-spacing:.08em;text-transform:uppercase;padding:12px;border-radius:2px}
+.sline{display:flex;justify-content:space-between;gap:10px;font-size:13px}
+.sline.sub{color:var(--store-sub);font-size:12px}
+.sfield{border:0;background:var(--store-tile);padding:10px;font-size:12.5px;color:var(--store-sub);border-radius:2px}
+.back{font-size:12.5px;color:var(--store-sub);display:flex;gap:6px;align-items:center}
+.who{display:inline-flex;gap:6px;align-items:center;font:600 11px var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--sub);margin-bottom:6px}
+.arrow{display:grid;place-items:center;color:var(--sub)}
+/* admin */
+.admin{border:1px solid var(--border);border-radius:8px;overflow:hidden;display:grid;grid-template-columns:180px minmax(0,1fr);background:var(--bg)}
+.admin aside{background:var(--ink);color:var(--on-ink);padding:14px;display:grid;align-content:start;gap:6px;font-size:13px}
+.admin aside .tag{background:var(--warn);color:var(--warn-text);font:700 10.5px var(--sans);letter-spacing:.06em;padding:1px 6px;border-radius:4px;justify-self:start}
+.admin aside span{opacity:.75}.admin aside span.on{opacity:1;font-weight:600;border-left:3px solid #F5C518;padding-left:8px;margin-left:-11px}
+@media (max-width:640px){.admin{grid-template-columns:1fr}.admin aside{display:none}}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+table.t th{text-align:left;font-weight:500;color:var(--sub);font-size:12px;padding:8px 12px;border-bottom:1px solid var(--border)}
+table.t td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+table.t td.n,table.t th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.tw{overflow-x:auto}
+/* docs */
+.docs{border:1px solid var(--border);border-radius:8px;overflow:hidden;display:grid;grid-template-columns:200px minmax(0,1fr);background:var(--card)}
+.docs aside{border-right:1px solid var(--border);padding:14px;display:grid;align-content:start;gap:4px;font-size:13px}
+.docs aside b{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);margin-top:8px}
+.docs aside a{color:var(--fg);text-decoration:none;padding:2px 0}
+.docs aside a.on{font-weight:600;border-left:2px solid var(--thread);padding-left:8px;margin-left:-10px}
+.docs main{padding:16px 18px;display:grid;gap:12px;min-width:0}
+.verb{font:600 11.5px var(--mono);background:var(--ok);color:var(--ok-text);padding:2px 6px;border-radius:4px}
+@media (max-width:640px){.docs{grid-template-columns:1fr}.docs aside{display:none}}
+/* guardrails */
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;counter-reset:s}
+.flow div{border:1px solid var(--border);border-radius:6px;background:var(--card);padding:10px 12px;font-size:13px;display:grid;gap:3px;position:relative}
+.flow div b{font-size:13px}
+.flow div small{color:var(--sub);font-size:12px}
+.flow div::before{counter-increment:s;content:counter(s);font:600 11px var(--mono);color:var(--brand-text)}
+.ledger{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.ledger div{border:1px solid var(--border);border-radius:6px;background:var(--card);padding:12px;display:grid;gap:6px;align-content:start}
+.ledger ul{margin:0;padding-left:18px;font-size:13px;display:grid;gap:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:1ms!important}}
+</style>
+
+<div class="wrap">
+  <h1>Storefront API</h1>
+  <p class="k">Mockup v1 · 2026-11-11 · Spec <span class="mono">docs/specs/2026-11-11-storefront-api.md</span> · for the owner's approval</p>
+  <ul class="note">
+    <li>A partner's own website reads the shop from Frrata and sends shoppers to Frrata's checkout. Checkout, offers, COD risk, EkCode and the shop's own Razorpay stay ours.</li>
+    <li>One console page: Settings › Website and API. Keys, webhooks, usage, the developer kit. Try it as the owner, the partner while building, or staff.</li>
+    <li>Claude lives on the partner's side: the developer kit gives their Claude the API, a starter and a skill.</li>
+  </ul>
+  <nav class="views" aria-label="Boards">
+    <a href="#console">Website and API</a><a href="#states">States</a><a href="#journey">Shopper's journey</a><a href="#partner">Partner</a><a href="#admin">Admin</a><a href="#docs">Docs</a><a href="#guardrails">Guardrails</a>
+  </nav>
+
+  <!-- ===================== CONSOLE ===================== -->
+  <h2 id="console">Settings › Website and API</h2>
+  <div class="stage" id="stage">
+    <div class="bar">
+      <span class="crumb">Kesar Studio · Settings › <b>Website and API</b></span>
+      <div class="ctl">
+        <div class="seg" role="radiogroup" aria-label="Width">
+          <button role="radio" aria-checked="true" data-w="desk">Computer</button><button role="radio" aria-checked="false" data-w="phone">Phone</button>
+        </div>
+        <div class="seg" role="radiogroup" aria-label="Signed in as">
+          <button role="radio" aria-checked="true" data-r="owner">Owner</button><button role="radio" aria-checked="false" data-r="partner">Partner</button><button role="radio" aria-checked="false" data-r="staff">Staff</button>
+        </div>
+      </div>
+    </div>
+    <div class="page" id="page">
+      <div class="banner info" id="buildbanner" hidden><span>Building for Kesar Studio · No owner yet</span><a class="btn sm" href="#partner">Hand over</a></div>
+      <div class="ph"><h3>Website and API</h3><span class="chip c-n" id="rochip" hidden>View only</span></div>
+
+      <section class="card" aria-labelledby="w-h">
+        <header><h4 id="w-h">Website</h4></header>
+        <div class="cb">
+          <div class="radios" role="radiogroup" aria-label="Where your website runs">
+            <label class="radio"><input type="radio" name="site" value="frrata" id="site-frrata"><b>Runs on Frrata</b><small>Your theme from Look</small></label>
+            <label class="radio"><input type="radio" name="site" value="else" id="site-else" checked><b>Runs elsewhere</b><small>Built on the Storefront API</small></label>
+          </div>
+          <div id="elsewhere" class="cb" style="padding:0">
+            <label class="f" for="origin">Website address<span class="fix"><span>https://</span><input id="origin" value="kesarstudio.in"></span></label>
+            <div class="banner warn"><span>Your site must show your legal name, address, customer care and grievance officer.</span><span class="chip c-warn">From 1 Jan 2027</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="c-h">
+        <header><h4 id="c-h">Checkout address</h4><span class="chip c-ok">Connected</span></header>
+        <ul class="rows">
+          <li><span class="keyp">checkout.kesarstudio.in</span><span class="acts"><button class="btn sm ghost" data-copy="checkout.kesarstudio.in">Copy</button><a class="btn sm writeonly" href="#console">Change</a></span>
+            <span class="line">Payments: your Razorpay account</span></li>
+        </ul>
+      </section>
+
+      <section class="card" aria-labelledby="k-h">
+        <header><h4 id="k-h">Keys</h4><button class="btn sm primary writeonly" id="newkey"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Create key</button></header>
+        <ul class="rows" id="keys">
+          <li data-key="web"><span class="name">Website <span class="chip c-info">Public</span></span><span class="acts writeonly"><button class="btn sm danger" data-revoke="Website">Revoke</button></span>
+            <span class="line"><span class="mono">frs_pub_7Hk2…</span><span>kesarstudio.in</span><span>Used 2 min ago</span></span></li>
+          <li data-key="srv"><span class="name">Build server <span class="chip c-ink">Private</span></span><span class="acts writeonly"><button class="btn sm danger" data-revoke="Build server">Revoke</button></span>
+            <span class="line"><span class="mono">frs_sec_Qa91…</span><span>Made by Arc Studio</span><span>Used 1 h ago</span></span></li>
+          <li class="gone"><span class="name">Old website <span class="chip c-n">Revoked</span></span><span></span>
+            <span class="line"><span class="mono">frs_pub_k2Ld…</span><span>Revoked 4 Nov</span></span></li>
+        </ul>
+      </section>
+
+      <section class="card" aria-labelledby="h-h">
+        <header><h4 id="h-h">Webhooks</h4><button class="btn sm writeonly" id="newhook">Add endpoint</button></header>
+        <ul class="rows">
+          <li><span class="keyp">kesarstudio.in/api/frrata</span><span class="acts"><span class="chip c-ok">Working</span><button class="btn sm ghost writeonly" data-toast="Test sent · 200 in 180 ms">Send test</button></span>
+            <span class="line"><span>Products · Availability · Offers · Shop</span></span></li>
+          <li><span class="keyp">staging.kesarstudio.in/api/frrata</span><span class="acts"><span class="chip c-danger">Failing</span><button class="btn sm ghost writeonly" data-toast="Test sent · 502 Bad Gateway">Send test</button></span>
+            <span class="line bad"><span>502 since 2 h · turns off after 72 h</span></span></li>
+        </ul>
+      </section>
+
+      <section class="card" aria-labelledby="u-h">
+        <header><h4 id="u-h">Last 24 hours</h4><span class="chip c-n mono">2026-12</span></header>
+        <dl class="tiles" style="margin:0">
+          <div><dt>Requests</dt><dd>1,82,410</dd></div>
+          <div><dt>Errors</dt><dd>0.2%</dd></div>
+          <div><dt>Limited</dt><dd>41</dd></div>
+          <div><dt>Checkouts</dt><dd>3,118</dd></div>
+        </dl>
+      </section>
+
+      <section class="card" aria-labelledby="d-h">
+        <header><h4 id="d-h">Developer kit</h4></header>
+        <div class="cb">
+          <div class="kit">
+            <a href="#docs"><span class="tile"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 4h10l4 4v12H5z"/><path d="M15 4v4h4"/></svg></span><b>Docs</b><span>›</span><small>Reference and guides</small></a>
+            <a href="#docs"><span class="tile"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4z"/><path d="M4 12l8 4 8-4M4 17l8 4 8-4"/></svg></span><b>Starter site</b><span>›</span><small>Next.js · GitHub</small></a>
+            <div><span class="tile"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l2.6 5.6L20 9.5l-4 4 1 5.5-5-2.7-5 2.7 1-5.5-4-4 5.4-.9z"/></svg></span><b>Claude skill</b><button class="btn sm ghost" data-copy="npx frrata-storefront skill add" aria-label="Copy the Claude skill command">Copy</button><small class="mono">npx frrata-storefront skill add</small></div>
+            <div><span class="tile"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 6l-5 6 5 6M16 6l5 6-5 6"/></svg></span><b>OpenAPI</b><button class="btn sm ghost" data-copy="https://api.frrata.shop/2026-12/openapi.json" aria-label="Copy the OpenAPI address">Copy</button><small class="mono">api.frrata.shop/2026-12</small></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="scrim" id="scrim"></div>
+    <div class="dlg" id="dlg-key" role="dialog" aria-modal="true" aria-labelledby="dk-h">
+      <div class="dh"><h3 id="dk-h">Create key</h3><button class="btn sm ghost" data-close aria-label="Close">✕</button></div>
+      <div class="db" id="dk-form">
+        <label class="f" for="kname">Name<input class="input sans" id="kname" value="Website" maxlength="40"></label>
+        <div class="radios" role="radiogroup" aria-label="Kind">
+          <label class="radio"><input type="radio" name="kind" value="public" id="k-pub" checked><b>Public</b><small>In the browser · your website's address only</small></label>
+          <label class="radio"><input type="radio" name="kind" value="private" id="k-sec"><b>Private</b><small>On a server · never in the browser</small></label>
+        </div>
+        <label class="f" for="korigin" id="korigin-f">Allowed website<span class="fix"><span>https://</span><input id="korigin" value="kesarstudio.in"></span></label>
+      </div>
+      <div class="db" id="dk-done" hidden>
+        <div class="reveal">
+          <span class="k">Shown once.</span>
+          <span class="keyp" id="newkeyval">frs_pub_9Tz4mW2qL8xVn3cR7bYk1JdE5hPa</span>
+          <span><button class="btn sm primary" id="copykey">Copy key</button></span>
+        </div>
+      </div>
+      <div class="df"><button class="btn" data-close id="dk-cancel">Not now</button><button class="btn primary" id="dk-go">Create key</button></div>
+    </div>
+    <div class="dlg" id="dlg-revoke" role="dialog" aria-modal="true" aria-labelledby="dr-h">
+      <div class="dh"><h3 id="dr-h">Revoke Build server?</h3></div>
+      <div class="db"><p style="margin:0">Anything using it stops at once. This can't be undone.</p></div>
+      <div class="df"><button class="btn" data-close>Keep key</button><button class="btn dangerfill" id="dr-go">Revoke key</button></div>
+    </div>
+    <div class="dlg" id="dlg-hook" role="dialog" aria-modal="true" aria-labelledby="dh-h">
+      <div class="dh"><h3 id="dh-h">Add endpoint</h3><button class="btn sm ghost" data-close aria-label="Close">✕</button></div>
+      <div class="db">
+        <label class="f" for="hurl">Address<span class="fix"><span>https://</span><input id="hurl" placeholder="kesarstudio.in/api/frrata"></span></label>
+        <fieldset style="border:0;padding:0;margin:0;display:grid;gap:6px"><legend class="k" style="padding:0;margin-bottom:4px">Events</legend>
+          <label><input type="checkbox" checked> Products</label><label><input type="checkbox" checked> Availability</label><label><input type="checkbox" checked> Collections</label><label><input type="checkbox"> Offers</label><label><input type="checkbox"> Shop</label>
+        </fieldset>
+      </div>
+      <div class="df"><button class="btn" data-close>Not now</button><button class="btn primary" data-close data-toast="Endpoint added · signing secret copied">Add endpoint</button></div>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <!-- ===================== STATES ===================== -->
+  <h2 id="states">States</h2>
+  <div class="grid3">
+    <div><section class="card"><div class="empty"><span class="picto"><svg width="40" height="40" viewBox="0 0 48 48" fill="none" stroke="var(--fg)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="6" y="10" width="36" height="26" rx="3"/><path d="M6 16h36"/><circle cx="34" cy="28" r="5" fill="var(--haldi-soft)"/><path d="M18 42h12"/></svg></span><h3>Your website runs on Frrata</h3><button class="btn primary">Use your own website</button></div></section><p class="cap">Off: the default for every shop.</p></div>
+    <div><section class="card"><header><h4>Keys</h4><button class="btn sm primary">Create key</button></header><div class="empty" style="padding-top:4px"><span class="k">No keys yet</span></div></section><p class="cap">On, before the first key.</p></div>
+    <div><section class="card"><div class="cb" style="padding-top:14px"><div class="reveal"><span class="k">Shown once.</span><span class="keyp">frs_sec_Qa91Lm7…</span><span><button class="btn sm primary">Copy key</button></span></div></div></section><p class="cap">A private key, just made. Leaving the dialog hides it for good.</p></div>
+    <div><div class="banner danger"><span>Webhook to staging.kesarstudio.in turned off after 72 h of errors</span><button class="btn sm">Turn on</button></div><p class="cap">On every console page until fixed.</p></div>
+    <div><div class="banner warn"><span>Build server still calls 2026-12 · ends 1 Feb 2028</span><a class="btn sm" href="#docs">What changed</a></div><p class="cap">An older version still in use.</p></div>
+    <div><div class="banner info"><span>Support · Kesar Studio · 22 min · View only</span></div><p class="cap">A support visit sees everything, changes nothing.</p></div>
+    <div><section class="card"><ul class="rows"><li class="gone"><span class="name">Build server <span class="chip c-n">Revoked</span></span><span></span><span class="line"><span>Revoked by you at handover</span></span></li></ul></section><p class="cap">Revoked: dimmed, no actions.</p></div>
+    <div><section class="card"><header><h4>Keys</h4><span class="chip c-n">View only</span></header><ul class="rows"><li><span class="name">Website <span class="chip c-info">Public</span></span><span></span></li></ul></section><p class="cap">Staff: read only, no Create or Revoke.</p></div>
+    <div><div class="banner warn"><span>Test key · Kesar Studio isn't open yet · orders can't be placed</span></div><p class="cap">A test key's checkout, before the shop opens.</p></div>
+  </div>
+
+  <!-- ===================== JOURNEY ===================== -->
+  <h2 id="journey">The shopper's journey</h2>
+  <div class="grid3">
+    <div><span class="who">Partner's site</span>
+      <div class="phonef"><div class="addrbar"><b>kesarstudio.in</b>/products/chanderi-kurta</div>
+        <div class="sh"><div class="stile"><svg width="70" viewBox="0 0 100 120" aria-hidden="true"><rect x="22" y="18" width="56" height="90" rx="10" fill="#7a3b2e"/></svg></div>
+          <div class="sline"><b>Chanderi kurta set</b><b>₹2,490</b></div><div class="sline sub"><span>Pay on delivery · ships in 2 days</span></div>
+          <div style="display:flex;gap:6px"><span class="chip c-n">S</span><span class="chip c-n">M</span><span class="chip c-n">L</span></div>
+          <div class="sbtn">Add to bag</div></div></div>
+      <p class="cap">Data from the API. The partner's design.</p></div>
+    <div><span class="who">Partner's bag → handoff</span>
+      <div class="phonef"><div class="addrbar"><b>kesarstudio.in</b>/bag</div>
+        <div class="sh"><div class="sline"><span>Chanderi kurta set · M</span><span>₹2,490</span></div><div class="sline"><span>Strap tag</span><span>₹490</span></div>
+          <div class="sline sub"><span>Delivery and offers at checkout</span><span></span></div>
+          <div class="sbtn">Checkout</div>
+          <div class="codebox" style="font-size:11px;white-space:pre-wrap">POST /2026-12/checkouts
+→ { checkoutUrl }</div></div></div>
+      <p class="cap">Their server or browser asks for a checkout; the shopper goes there.</p></div>
+    <div><span class="who">Frrata checkout</span>
+      <div class="phonef"><div class="addrbar"><b>checkout.kesarstudio.in</b>/h/…</div>
+        <div class="sh"><div class="back">‹ kesarstudio.in</div>
+          <div class="sfield">Phone</div><div class="sfield">Pincode · 400050 · Mumbai</div>
+          <div class="sline"><span>Pay online, save ₹50</span><span>₹2,930</span></div><div class="sline sub"><span>Pay on delivery</span><span>₹2,980</span></div>
+          <div class="sbtn">Place order</div></div></div>
+      <p class="cap">The shop's checkout: offers, COD rules, EkCode, its own Razorpay.</p></div>
+    <div><span class="who">Order page</span>
+      <div class="phonef"><div class="addrbar"><b>checkout.kesarstudio.in</b>/orders/KS-1042</div>
+        <div class="sh"><b style="font-size:18px">Order placed</b><div class="sline sub"><span>KS-1042 · arrives Thu 14 Nov</span></div>
+          <div class="sline"><span>Packed · Shipped · Delivered</span><span></span></div>
+          <div class="sbtn" style="background:var(--store-tile);color:var(--store-ink)">Back to kesarstudio.in</div></div></div>
+      <p class="cap">Orders land in the console as usual, marked "Came from: your website".</p></div>
+  </div>
+
+  <!-- ===================== PARTNER ===================== -->
+  <h2 id="partner">Partner workspace</h2>
+  <div class="grid2">
+    <section class="card"><header><h4>Clients</h4></header>
+      <ul class="rows">
+        <li><span class="name">Kesar Studio <span class="chip c-info">Building</span><span class="chip c-n">Own website</span></span><span class="acts"><button class="btn sm">Open</button></span><span class="line"><span>2 keys · 1 webhook</span></span></li>
+        <li><span class="name">Roam Bags <span class="chip c-ok">Open</span></span><span class="acts"><button class="btn sm">Open</button></span><span class="line"><span>Frrata theme · Signal</span></span></li>
+      </ul></section>
+    <section class="card" style="position:relative"><div class="dh"><h3>Hand Kesar Studio to its owner</h3></div>
+      <div class="db">
+        <label class="f" for="howner">Owner's email<input class="input sans" id="howner" value="riya@kesarstudio.in"></label>
+        <ul class="rows" style="border:1px solid var(--border);border-radius:6px">
+          <li><span class="name">Website <span class="chip c-info">Public</span></span><span class="k">Stays</span></li>
+          <li><span class="name">Build server <span class="chip c-ink">Private</span></span><span class="k">Revoked</span></li>
+        </ul>
+        <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked id="hrev"> Revoke my private keys at handover</label>
+      </div>
+      <div class="df"><button class="btn">Not now</button><button class="btn primary">Send invite</button></div></section>
+  </div>
+
+  <!-- ===================== ADMIN ===================== -->
+  <h2 id="admin">Admin › Storefront API</h2>
+  <div class="admin">
+    <aside><span class="tag">STAFF</span><span>Merchants</span><span>Themes</span><span class="on">Storefront API</span><span>Partners</span></aside>
+    <div style="padding:16px;display:grid;gap:14px;min-width:0">
+      <section class="card"><header><h4>Versions</h4></header>
+        <div class="tw"><table class="t"><thead><tr><th>Version</th><th>State</th><th class="n">Shops</th><th class="n">Requests 24 h</th><th></th></tr></thead>
+          <tbody><tr><td class="mono">2027-06</td><td><span class="chip c-ok">Current</span></td><td class="n">31</td><td class="n">12,40,118</td><td><button class="btn sm danger">Pause for everyone</button></td></tr>
+          <tr><td class="mono">2026-12</td><td><span class="chip c-warn">Ends 1 Feb 2028</span></td><td class="n">9</td><td class="n">2,04,377</td><td><button class="btn sm danger">Pause for everyone</button></td></tr></tbody></table></div></section>
+      <section class="card"><header><h4>Shops</h4></header>
+        <div class="tw"><table class="t"><thead><tr><th>Shop</th><th>Website</th><th class="n">Keys</th><th class="n">Requests 24 h</th><th class="n">Errors</th><th class="n">Checkouts</th></tr></thead>
+          <tbody><tr><td>Kesar Studio</td><td class="mono">kesarstudio.in</td><td class="n">2</td><td class="n">1,82,410</td><td class="n">0.2%</td><td class="n">3,118</td></tr>
+          <tr><td>Arc Denim</td><td class="mono">arcdenim.co</td><td class="n">3</td><td class="n">96,002</td><td class="n" style="color:var(--danger-text)">4.1%</td><td class="n">1,207</td></tr></tbody></table></div></section>
+    </div>
+  </div>
+  <p class="cap">Counts only. No shopper, no key, no response body.</p>
+
+  <!-- ===================== DOCS ===================== -->
+  <h2 id="docs">Developer docs</h2>
+  <div class="docs">
+    <aside><b>Start</b><a href="#docs">Keys</a><a href="#docs">Build with Claude</a><a href="#docs">Starter site</a><b>Reference</b><a href="#docs">Shop</a><a href="#docs">Products</a><a href="#docs" class="on">Product</a><a href="#docs">Collections</a><a href="#docs">Offers</a><a href="#docs">Pincodes</a><a href="#docs">Checkouts</a><b>Guides</b><a href="#docs">Webhooks</a><a href="#docs">Caching</a><a href="#docs">Legal block</a><a href="#docs">Versions</a></aside>
+    <main>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="verb">GET</span><span class="mono" style="overflow-wrap:anywhere">/2026-12/products/{handle}</span><span class="chip c-n">Public · Private</span></div>
+      <div class="codebox">{
+  "handle": "chanderi-kurta-set",
+  "title": "Chanderi kurta set",
+  "options": ["Size", "Colour"],
+  "variants": [
+    { "id": "v_3kq…", "values": ["M", "Indigo"],
+      "price": 249000, "priorPrice": null, "mrp": 299000,
+      "availability": { "kind": "low_stock", "left": 2 } }
+  ],
+  "images": [{ "base": "https://…/products/9f2…", "widths": [400, 800, 1200], "alt": "…" }],
+  "stories": [], "pairs": [], "sizeChart": { … }, "offers": ["10% off with UPI"]
+}</div>
+      <p class="k" style="margin:0">Prices in paise. Availability is a kind, never a stock count above 3.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm">Try with a test key</button><button class="btn sm ghost" data-copy="npx frrata-storefront skill add">Copy Claude skill</button></div>
+    </main>
+  </div>
+
+  <!-- ===================== GUARDRAILS ===================== -->
+  <h2 id="guardrails">Guardrails</h2>
+  <p class="k">Every request takes the same path. A new module or field joins it; it never goes around it.</p>
+  <div class="flow">
+    <div><b>Key</b><small>hash looked up by a definer; revoked or expired: 401</small></div>
+    <div><b>Limit</b><small>WAF per key and IP; handoffs also in Postgres, fail closed</small></div>
+    <div><b>Shop</b><small>from the key only; withTenant</small></div>
+    <div><b>Cached read</b><small>the same loaders as the shop's pages</small></div>
+    <div><b>Mapper</b><small>field by field; nothing serialises a row</small></div>
+    <div><b>Schema</b><small>Zod output per version; OpenAPI from it</small></div>
+  </div>
+  <div class="ledger" style="margin-top:12px">
+    <div><h3>Gates</h3><ul><li><span class="mono">check:api</span>: every route through apiRequest; no cost field in any schema</li><li><span class="mono">released-api</span> snapshot per version</li><li><span class="mono">check:modules</span>: API_RESOURCES only</li><li>tenancy.sql: keys, webhooks, handoffs</li></ul></div>
+    <div><h3>Tests</h3><ul><li>Mapper per resource: every column filled, keys equal the schema</li><li>Int: key A never reads B</li><li>e2e 70: key → read → handoff → order</li><li>Starter built against the e2e stack</li></ul></div>
+    <div><h3>Skills and agents</h3><ul><li><span class="mono">frata-storefront-api</span> skill</li><li>Planning review heading: Storefront API</li><li><span class="mono">api-contract-reviewer</span> agent</li><li>Partner skill in the starter</li></ul></div>
+    <div><h3>Kill switches</h3><ul><li>Revoke a key</li><li>Website back to Frrata</li><li>Pause a version for everyone (Admin)</li><li>Module off: its resource answers not_available</li></ul></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const stage = document.getElementById('stage')
+  const scrim = document.getElementById('scrim')
+  const toast = document.getElementById('toast')
+  let open = null, tt = null
+  const say = (t) => { toast.textContent = t; toast.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => toast.classList.remove('on'), 2200) }
+  const show = (id) => { open = document.getElementById(id); scrim.classList.add('open'); open.classList.add('open'); const f = open.querySelector('input,button'); if (f) f.focus() }
+  const hide = () => { if (!open) return; open.classList.remove('open'); scrim.classList.remove('open'); open = null }
+  scrim.addEventListener('click', hide)
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide() })
+  document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => { if (b.dataset.toast) say(b.dataset.toast); hide() }))
+  document.querySelectorAll('[data-toast]:not([data-close])').forEach((b) => b.addEventListener('click', () => say(b.dataset.toast)))
+  const copy = async (text) => { try { await navigator.clipboard.writeText(text); say('Copied') } catch { say(text) } }
+  document.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', () => copy(b.dataset.copy)))
+  // segmented controls
+  document.querySelectorAll('.seg').forEach((seg) => seg.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return
+    seg.querySelectorAll('button').forEach((x) => x.setAttribute('aria-checked', String(x === b)))
+    if (b.dataset.w) stage.classList.toggle('phone', b.dataset.w === 'phone')
+    if (b.dataset.r) {
+      stage.classList.toggle('ro', b.dataset.r === 'staff')
+      document.getElementById('rochip').hidden = b.dataset.r !== 'staff'
+      document.getElementById('buildbanner').hidden = b.dataset.r !== 'partner'
+    }
+  }))
+  // website
+  const sync = () => { document.getElementById('elsewhere').hidden = !document.getElementById('site-else').checked }
+  document.querySelectorAll('input[name="site"]').forEach((r) => r.addEventListener('change', sync)); sync()
+  // create key
+  const form = document.getElementById('dk-form'), done = document.getElementById('dk-done'), go = document.getElementById('dk-go'), cancel = document.getElementById('dk-cancel')
+  const kindSync = () => { document.getElementById('korigin-f').hidden = !document.getElementById('k-pub').checked }
+  document.querySelectorAll('input[name="kind"]').forEach((r) => r.addEventListener('change', kindSync))
+  document.getElementById('newkey').addEventListener('click', () => { form.hidden = false; done.hidden = true; go.hidden = false; cancel.textContent = 'Not now'; kindSync(); show('dlg-key') })
+  go.addEventListener('click', () => {
+    const pub = document.getElementById('k-pub').checked
+    const name = document.getElementById('kname').value.trim() || 'Key'
+    const v = (pub ? 'frs_pub_' : 'frs_sec_') + '9Tz4mW2qL8xVn3cR7bYk1JdE5hPa'
+    document.getElementById('newkeyval').textContent = v
+    form.hidden = true; done.hidden = false; go.hidden = true; cancel.textContent = 'Done'
+    const li = document.createElement('li')
+    li.innerHTML = '<span class="name"></span><span class="acts writeonly"><button class="btn sm danger">Revoke</button></span><span class="line"><span class="mono"></span><span>Just now</span></span>'
+    li.querySelector('.name').textContent = name + ' '
+    const chip = document.createElement('span'); chip.className = 'chip ' + (pub ? 'c-info' : 'c-ink'); chip.textContent = pub ? 'Public' : 'Private'; li.querySelector('.name').append(chip)
+    li.querySelector('.mono').textContent = v.slice(0, 12) + '…'
+    li.querySelector('.danger').addEventListener('click', () => askRevoke(name, li))
+    document.getElementById('keys').prepend(li)
+  })
+  document.getElementById('copykey').addEventListener('click', () => copy(document.getElementById('newkeyval').textContent))
+  // revoke
+  let target = null
+  const askRevoke = (name, li) => { target = li; document.getElementById('dr-h').textContent = 'Revoke ' + name + '?'; show('dlg-revoke') }
+  document.querySelectorAll('[data-revoke]').forEach((b) => b.addEventListener('click', () => askRevoke(b.dataset.revoke, b.closest('li'))))
+  document.getElementById('dr-go').addEventListener('click', () => {
+    if (target) { target.classList.add('gone'); const a = target.querySelector('.acts'); if (a) a.remove(); const n = target.querySelector('.name .chip'); if (n) { n.className = 'chip c-n'; n.textContent = 'Revoked' } }
+    hide(); say('Key revoked')
+  })
+  document.getElementById('newhook').addEventListener('click', () => show('dlg-hook'))
+})()
+</script>
