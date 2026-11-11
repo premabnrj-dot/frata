@@ -40,6 +40,8 @@ export default {
     const draft = async () => (await db`select id, settings from shop_theme_revisions where tenant_id = ${KESAR} and theme_key = 'signal' and id not in (select revision_id from shop_theme_publishes) order by updated_at desc limit 1`)[0]
     try {
       await t.step('The design form: The drop from the library; its date and its pieces are set and saved', async () => {
+        // A release decision is final (the trigger): an earlier flow's Signal rows go first, as 65-signal does.
+        await db.begin(async (x) => { await x`set local session_replication_role = replica`; await x`delete from theme_versions where theme_key = 'signal'` })
         await db`insert into theme_versions (theme_key, version, released_at) values ('signal', '1.0.0', now()), ('signal', '1.1.0', now()), ('signal', '1.2.0', now()), ('signal', '1.3.0', now()), ('signal', '1.4.0', now()), ('signal', '1.5.0', now()) on conflict (theme_key, version) do update set released_at = now(), recalled_at = null, withdrawn_at = null`
         await p.goto(CONSOLE + '/console/look')
         await p.getByRole('button', { name: 'Signal', exact: true }).click()
