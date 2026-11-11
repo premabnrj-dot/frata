@@ -24,7 +24,7 @@ import { previewShop } from '@/lib/queries/storefront'
 import { Editor } from './editor'
 import { Published } from './published'
 import { DesignThumb } from './design-thumb'
-import { designsOf } from '@/domains/themes/blocks'
+import { designsOf, isCommerce } from '@/domains/themes/blocks'
 import { pagesForEditor } from '@/lib/queries/pages'
 import { TEMPLATES } from '@/domains/pages/templates'
 import type { Design } from '@/domains/themes/blocks'
@@ -110,7 +110,7 @@ export default async function Customize() {
         // A theme with samples (2.0): with no piece or collection of its own yet, the page picker opens a sample one.
         firstProduct={data.products[0]?.handle ?? (sampled ? first.product : null)} firstCollection={data.collections[0]?.handle ?? (sampled ? first.collection : null)}
         choices={choicesOf(m)}
-        designs={designs.map((d) => ({ id: d.id, name: d.name, line: d.line, tags: d.tags, thumb: <DesignThumb design={d} /> }))}
+        designs={designs.map((d) => ({ id: d.id, name: d.name, line: d.line, tags: d.tags, commerce: isCommerce(d), thumb: <DesignThumb design={d} /> }))}
         pages={pages} pageThumbs={{ about: <DesignThumb design={TEMPLATES.about} />, faq: <DesignThumb design={FAQ_THUMB} /> }} contactRows={contactRows} answers={answers}
       />
     </div>

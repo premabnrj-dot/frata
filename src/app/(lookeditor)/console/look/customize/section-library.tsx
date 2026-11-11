@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Dialog } from '@/components/ui/dialog'
-import { MAX_PER_PAGE, SECTION_INFO, SECTION_KEYS, SECTION_KINDS, SECTION_NAMES, searchDesigns, searchSections, type SectionKey } from '@/domains/themes/sections'
+import { MAX_COMMERCE_DESIGNS, MAX_PER_PAGE, SECTION_INFO, SECTION_KEYS, SECTION_KINDS, SECTION_NAMES, searchDesigns, searchSections, type SectionKey } from '@/domains/themes/sections'
 
 /** A design as the library shows it (Theme Studio TS0b); its picture is drawn on the server (speed review 4). */
-export type LibraryDesign = { id: string; name: string; line: string; tags: string[]; thumb: React.ReactNode }
+export type LibraryDesign = { id: string; name: string; line: string; tags: string[]; thumb: React.ReactNode
+  /** TS1b: it draws pieces or collections (≤ MAX_COMMERCE_DESIGNS shown on a page). */
+  commerce?: boolean }
 import { Icon } from '@/components/icons/icon'
 
 // =============================================================================
@@ -14,10 +16,12 @@ import { Icon } from '@/components/icons/icon'
 // the sections this theme doesn't take show greyed), a full section greyed with its limit, and where it will land.
 // =============================================================================
 
-export function SectionLibrary({ open, onClose, onAdd, allowed, made, themeName, count, after, designs = [] }: {
+export function SectionLibrary({ open, onClose, onAdd, allowed, made, themeName, count, after, designs = [], commerce = 0 }: {
   open: boolean; onClose: () => void; onAdd: (k: SectionKey, design?: string) => void
   allowed: SectionKey[]; made: SectionKey[]; themeName: string; count: (k: SectionKey) => number; after: string | null
   designs?: LibraryDesign[]
+  /** Shown designs on the page that draw pieces or collections. */
+  commerce?: number
 }) {
   const [q, setQ] = useState('')
   const [kind, setKind] = useState('All')
@@ -60,19 +64,19 @@ export function SectionLibrary({ open, onClose, onAdd, allowed, made, themeName,
         </nav>
         {shown.length || dShown.length ? (
           <ul className="grid content-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {dShown.map((d) => (
+            {dShown.map((d) => { const why = dFull ? `At most ${MAX_PER_PAGE.design} designs on a page` : d.commerce && commerce >= MAX_COMMERCE_DESIGNS ? `At most ${MAX_COMMERCE_DESIGNS} designs with pieces or collections on a page` : null; return (
               <li key={`d-${d.id}`}>
-                <button type="button" disabled={dFull} onClick={() => onAdd('design', d.id)} title={dFull ? `At most ${MAX_PER_PAGE.design} designs on a page` : undefined}
+                <button type="button" disabled={!!why} onClick={() => onAdd('design', d.id)} title={why ?? undefined}
                   className="group w-full overflow-hidden rounded-xl border border-border bg-card text-left transition-[translate,border-color] duration-base ease-standard hover:border-input disabled:opacity-50 [@media(hover:hover)]:enabled:hover:-translate-y-0.5">
                   <span className="block bg-muted text-foreground">{d.thumb}</span>
                   <span className="block space-y-1 p-3">
                     <span className="flex items-center gap-2 font-semibold"><Mark text={d.name} q={q} />
                       <span className="ml-auto rounded-full bg-ok px-2 py-0.5 text-xs font-medium text-ok-text">Made for {themeName}</span></span>
-                    <span className="block text-sm text-muted-foreground">{dFull ? `At most ${MAX_PER_PAGE.design} designs on a page` : <Mark text={d.line} q={q} />}</span>
+                    <span className="block text-sm text-muted-foreground">{why ?? <Mark text={d.line} q={q} />}</span>
                   </span>
                 </button>
               </li>
-            ))}
+            ) })}
             {shown.map((k) => {
               const fits = allowed.includes(k), full = count(k) >= MAX_PER_PAGE[k]
               return (

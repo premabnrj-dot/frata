@@ -46,7 +46,7 @@ async function warm(url) {
   throw new Error(`${url} never settled: its HTML kept changing for 12 s`)
 }
 
-async function shoot(page, url, moving = DATES) {
+async function shoot(page, url, moving = DATES, hide = false) {
   // Cached pages (shops, and the public site's plans) may answer from the build first: wait until they settle.
   if (url.startsWith(SHOP) || new URL(url).pathname === '/') await warm(url)
   await page.goto(url, { waitUntil: 'networkidle' })
@@ -54,6 +54,9 @@ async function shoot(page, url, moving = DATES) {
   // Lazy images below the fold: scroll through once so every image has loaded (or failed) before the capture.
   await page.evaluate(async () => { for (let y = 0; y < document.body.scrollHeight; y += 600) { window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 50)) } window.scrollTo(0, 0) })
   await page.waitForLoadState('networkidle')
+  // The console's and public pages' moving words (today's date in the header) are hidden, not masked: a mask is as wide
+  // as the words under it, so a longer weekday moved pixels (2026-11-11). The shop pages keep their masks (their baselines).
+  if (hide) { await page.getByText(moving).evaluateAll((es) => { for (const e of es) e.style.visibility = 'hidden' }); return page.screenshot({ fullPage: true, animations: 'disabled', caret: 'hide' }) }
   return page.screenshot({ fullPage: true, animations: 'disabled', caret: 'hide', mask: [page.getByText(moving)], maskColor: '#FF00FF' })
 }
 
@@ -96,11 +99,11 @@ export default {
     await t.step('the console and the public pages match their baselines', async () => {
       const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 })
       const p = await ctx.newPage(); p.on('pageerror', (e) => t.errors.push(e.message))
-      for (const [name, path] of CONSOLE_PAGES) written += compare(`console-${name}-desktop`, await shoot(p, CONSOLE + path, MOVING), t).written ? 1 : 0
+      for (const [name, path] of CONSOLE_PAGES) written += compare(`console-${name}-desktop`, await shoot(p, CONSOLE + path, MOVING, true), t).written ? 1 : 0
       await ctx.close()
       const anon = await t.browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 })
       const q = await anon.newPage(); q.on('pageerror', (e) => t.errors.push(e.message))
-      for (const [name, path] of PUBLIC_PAGES) written += compare(`public-${name}-desktop`, await shoot(q, CONSOLE + path, MOVING), t).written ? 1 : 0
+      for (const [name, path] of PUBLIC_PAGES) written += compare(`public-${name}-desktop`, await shoot(q, CONSOLE + path, MOVING, true), t).written ? 1 : 0
       await anon.close()
     })
     if (written) console.log(`     shop-look: ${written} baseline(s) written to e2e/baselines/`)

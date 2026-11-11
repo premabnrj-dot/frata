@@ -13,11 +13,18 @@ export type CardProduct = Omit<ListProduct, 'colours'> & { sample?: true; handle
 
 export const money = (p: number) => formatInr(paise(p))
 
+/** A piece's price as a card says it: "From" when sizes differ, the struck compare-at price beside (one rule: the card
+ *  and a design's featured piece). */
+export function PriceLine({ p, lang, className = 'text-sm' }: { p: Pick<ListProduct, 'variants'>; lang?: Lang; className?: string }) {
+  const price = priceOf(p as ListProduct), w = wordsFor(lang)
+  if (!price) return null
+  return <p className={className}><span className="store-price font-medium">{price.min !== price.max ? fill(w.from, { price: money(price.min) }) : money(price.min)}</span>{price.compareAt && <s className="ml-1.5 text-store-sub">{money(price.compareAt)}</s>}</p>
+}
+
 /** One product in a grid: cover (second photo on hover), name, price, every colour, one tag at most. */
 export function ProductCard({ p, href, now, priority = false, badge = null, lang }: { p: CardProduct; href: Href; now: Date; priority?: boolean; lang?: Lang
   /** An offer's badge (Offers O·2), shown only where no availability tag is: one tag per card. */
   badge?: { label: string } | null }) {
-  const price = priceOf(p)
   const w = wordsFor(lang)
   const t = cardTag(p, now)
   // A sample piece (the customizer's preview only) says so before anything else.
@@ -28,17 +35,18 @@ export function ProductCard({ p, href, now, priority = false, badge = null, lang
   return (
     <li className="store-card group min-w-0">
       <Link href={href(`/products/${p.handle}`)} className="block space-y-2">
-        <div className="relative aspect-[var(--store-ratio)] overflow-hidden rounded-[var(--store-radius)] bg-store-chip">
-          {cover ? <Photo p={cover} alt={cover.alt || p.title} sizes="(min-width: 1024px) 25vw, 50vw" priority={priority} className="absolute inset-0 h-full w-full object-cover" />
+        <div className="store-ph">
+          {/* The title below is the link's name, so the cover is decoration to a screen reader (TS1b: card bytes). */}
+          {cover ? <Photo p={cover} alt="" sizes="(min-width: 1024px) 25vw, 50vw" priority={priority} max={1200} />
             : <span className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-store-sub">{p.title}</span>}
-          {second && <Photo p={second} alt="" sizes="(min-width: 1024px) 25vw, 50vw" className="store-hover absolute inset-0 hidden h-full w-full object-cover opacity-0 transition-opacity duration-base [@media(hover:hover)]:block [@media(hover:hover)]:group-hover:opacity-100" />}
+          {second && <Photo p={second} alt="" sizes="" single className="store-hover" />}
           {tag && <span className="absolute left-2 top-2 rounded-[var(--store-radius)] bg-store-paper/90 px-1.5 py-0.5 text-xs">{tag}</span>}
         </div>
         <p className="line-clamp-2 text-sm leading-snug">{p.title}</p>
-        {price && <p className="text-sm"><span className="store-price font-medium">{price.min !== price.max ? fill(w.from, { price: money(price.min) }) : money(price.min)}</span>{price.compareAt && <s className="ml-1.5 text-store-sub">{money(price.compareAt)}</s>}</p>}
+        <PriceLine p={p} lang={lang} />
       </Link>
       {colours.length > 1 && (
-        <ul className="store-swatches mt-1.5 flex gap-1.5 overflow-x-auto pb-1" aria-label={fill(w.colours, { n: colours.length })}>
+        <ul className="store-swatches" aria-label={fill(w.colours, { n: colours.length })}>
           {colours.map((c) => <li key={c} title={c}><Swatch c={p.colours.find((x) => x.value === c) ?? { value: c, hex: null, cropImageId: null, crop: null }} images={p.images} d={16} /><span className="sr-only">{c}</span></li>)}
         </ul>
       )}
@@ -46,7 +54,10 @@ export function ProductCard({ p, href, now, priority = false, badge = null, lang
   )
 }
 
-export function ProductGrid({ products, href, now, empty, lang, lead = true }: { products: CardProduct[]; href: Href; now: Date; empty: React.ReactNode; lang?: Lang; lead?: boolean }) {
+/** `lead`: the grid opens its page, so its first cards load ahead (true: 2; a number: that many). Off unless the caller
+ *  says so (TS1b, architecture 3: every caller decides; a page keeps ≤ 2 eager images). */
+export function ProductGrid({ products, href, now, empty, lang, lead = false }: { products: CardProduct[]; href: Href; now: Date; empty: React.ReactNode; lang?: Lang; lead?: boolean | number }) {
   if (!products.length) return <div className="py-16 text-center text-store-sub">{empty}</div>
-  return <ul className="grid grid-cols-[repeat(var(--store-cols),minmax(0,1fr))] gap-x-3 gap-y-8 sm:grid-cols-2 sm:gap-x-5 lg:grid-cols-[repeat(var(--store-dcols,4),minmax(0,1fr))]">{products.map((p, i) => <ProductCard key={p.id} p={p} href={href} now={now} priority={lead && i < 2} lang={lang} />)}</ul>
+  const eager = lead === true ? 2 : lead || 0
+  return <ul className="grid grid-cols-[repeat(var(--store-cols),minmax(0,1fr))] gap-x-3 gap-y-8 sm:grid-cols-2 sm:gap-x-5 lg:grid-cols-[repeat(var(--store-dcols,4),minmax(0,1fr))]">{products.map((p, i) => <ProductCard key={p.id} p={p} href={href} now={now} priority={i < eager} lang={lang} />)}</ul>
 }

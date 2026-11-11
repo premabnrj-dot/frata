@@ -89,7 +89,8 @@ export function SectionsPanel({ home, selected, allowed, made = [], themeName, o
       <button type="button" onClick={() => setAdding(true)} disabled={home.length >= 20} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-input text-sm font-medium transition-colors duration-fast hover:border-foreground hover:bg-muted"><Icon name="search" className="size-4" />Add a section</button>
       <p className="text-xs text-muted-foreground">Policies and contact always show in the footer.</p>
 
-      <SectionLibrary open={adding} onClose={() => setAdding(false)} onAdd={add} allowed={allowed} made={made} themeName={themeName} count={count} after={afterName ? nameOf(afterName) : null} designs={designs} />
+      <SectionLibrary open={adding} onClose={() => setAdding(false)} onAdd={add} allowed={allowed} made={made} themeName={themeName} count={count} after={afterName ? nameOf(afterName) : null} designs={designs}
+        commerce={home.filter((s) => s.key === 'design' && !s.hidden && byId[s.design]?.commerce).length} />
     </div>
   )
 }

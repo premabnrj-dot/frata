@@ -27,6 +27,8 @@ const EN = {
   returns: { exchange_or_refund: '{d}-day returns and exchanges', exchange_only: '{d}-day exchanges', refund_only: '{d}-day returns', none: 'No returns on this shop' },
   taxIncluded: 'Price includes GST.', taxAdded: 'GST is added at checkout.',
   seeAll: 'See all',
+  // Theme Studio TS1b: a design's drop date and its featured piece.
+  drops: 'Drops {when}', viewPiece: 'View the piece',
   model: { both: 'Model is {h} and wears {s}.', height: 'Model is {h}.', size: 'Model wears {s}.' },
   opening: { soon: 'Opening soon', follow: 'Follow on Instagram for the launch', paused: 'Back soon' },
   pageOf: 'Page {n} of {m}', prevPage: 'Previous', nextPage: 'Next', pages: 'Pages',
@@ -49,6 +51,7 @@ const HI: Words = {
   returns: { exchange_or_refund: '{d} दिन में वापसी और एक्सचेंज', exchange_only: '{d} दिन में एक्सचेंज', refund_only: '{d} दिन में वापसी', none: 'इस शॉप पर वापसी नहीं होती' },
   taxIncluded: 'कीमत में GST शामिल है।', taxAdded: 'GST चेकआउट पर जुड़ेगा।',
   seeAll: 'सब देखें',
+  drops: '{when} को आ रहा है', viewPiece: 'पीस देखें',
   model: { both: 'मॉडल की लंबाई {h} है और उन्होंने {s} साइज़ पहना है।', height: 'मॉडल की लंबाई {h} है।', size: 'मॉडल ने {s} साइज़ पहना है।' },
   opening: { soon: 'जल्द खुल रहा है', follow: 'लॉन्च के लिए Instagram पर फ़ॉलो करें', paused: 'जल्द वापस' },
   pageOf: 'पेज {n} / {m}', prevPage: 'पिछला', nextPage: 'अगला', pages: 'पेज',

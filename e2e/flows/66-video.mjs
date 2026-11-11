@@ -69,17 +69,20 @@ export default {
       await t.step('Add a video: uploading, getting it ready, ready; the preview plays the loop over the photo', async () => {
         await p.locator(VIDEO_INPUT).setInputFiles({ name: 'loop.mp4', mimeType: 'video/mp4', buffer: MP4 })
         await p.getByText('Replace video').waitFor({ state: 'attached', timeout: 30_000 })
-        ;[first] = await db`select id, upload_id, asset_id, playback_id, mp4_ready_at, duration_ms, mux_env from videos where tenant_id = ${KESAR} order by created_at desc limit 1`
+        ;[first] = await db`select id, upload_id, asset_id, playback_id, mp4_ready_at, duration_ms, mux_env, mp4 from videos where tenant_id = ${KESAR} order by created_at desc limit 1`
         assert.ok(first.upload_id && first.asset_id && first.playback_id && first.mp4_ready_at, 'the row is playable')
         assert.equal(first.mux_env, MUX.env); assert.equal(first.duration_ms, 1000)
         const st = await fake()
         const up = st.uploads.find((u) => u.id === first.upload_id)
         assert.equal(up.new_asset_settings.passthrough, first.id, 'Mux carries our row id')
-        assert.deepEqual(up.new_asset_settings.static_renditions, [{ resolution: 'highest' }]); assert.equal(up.timeout, 900); assert.equal(up.cors_origin, CONSOLE)
+        // TS1b (owner 2026-11-11): no MP4 at upload; its 720p is asked for once the checks pass, and the row says so.
+        assert.equal(up.new_asset_settings.static_renditions, undefined); assert.equal(up.timeout, 900); assert.equal(up.cors_origin, CONSOLE)
+        assert.equal(first.mp4, '720p'); assert.ok(st.renditions.some((r) => r.asset === first.asset_id && r.resolution === '720p'), 'the 720p MP4 was asked for')
         // Saved into the draft, and the preview draws it over the section's photo, then plays it once in view.
         await until(async () => { const [r] = await db`select settings from shop_theme_revisions where tenant_id = ${KESAR} and theme_key = 'signal' order by updated_at desc limit 1`; return JSON.stringify(r.settings).includes(first.id) }, 10_000)
         const loop = p.frameLocator(FRAME).locator(`video[data-loop*="${first.playback_id}"]`)
         await loop.waitFor({ state: 'attached' })
+        assert.match(await loop.getAttribute('data-loop') ?? '', /\/720p\.mp4$/, 'the loop plays its 720p MP4')
         await loop.scrollIntoViewIfNeeded()
         await until(async () => !(await loop.getAttribute('class')).includes('opacity-0'), 15_000)
         assert.equal(await loop.evaluate((v) => v.muted && v.loop && !v.paused), true, 'muted, looping, playing')

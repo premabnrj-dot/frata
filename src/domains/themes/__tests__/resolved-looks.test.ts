@@ -4,6 +4,7 @@ import { resolveStored, resolveTheme, settingAttrs, settingVars } from '../resol
 import { codeSource } from '../source'
 import stored from './fixtures/stored-sections-v1.json'
 import storedV4 from './fixtures/stored-sections-v4.json'
+import storedV5 from './fixtures/stored-sections-v5.json'
 
 // What every released theme RESOLVES to, for an empty layer and a full one (theme Signal plan T0, architecture review
 // finding 12): a new setting value, scheme or section option added for one theme must not move another theme's
@@ -14,7 +15,8 @@ const full = {
     gallery: 'thumbs', details: 'folded', card: 'centred', desktopColumns: 3, collectionTop: 'banner', buttonShape: 'pill', buttonMotion: 'lift',
     cardHover: 'zoom', entrance: 'fade', reveal: true, buyBoxSticky: true, buyBar: true, footerScheme: 'ink', checkout: 'focused' },
   // TS0b: design sections too (a theme without designs drops them, so its snapshot doesn't move).
-  home: [...stored, ...storedV4],
+  // TS1b: commerce, video and date designs (a version without them drops them, so its snapshot doesn't move).
+  home: [...stored, ...storedV4, ...storedV5],
 }
 
 describe('resolved looks of every released theme', () => {

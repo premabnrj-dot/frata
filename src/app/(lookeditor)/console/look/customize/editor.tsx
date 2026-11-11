@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import type { Choices } from '@/domains/themes/choices'
 import { readinessOf, type ShopFacts } from '@/domains/themes/readiness'
-import { sectionName, type SectionInstance, type SectionKey } from '@/domains/themes/sections'
+import { MAX_LOOPS, sectionName, type SectionInstance, type SectionKey } from '@/domains/themes/sections'
 import type { FooterVariant, HeaderVariant, Pairing, ThemeSettings } from '@/domains/themes/types'
 import { publishLookAction, saveLookAction } from '@/app/(console)/console/look/actions'
 import type { LinkTarget } from './controls'
@@ -187,6 +187,8 @@ export function Editor(p: EditorProps) {
   const say = (t: string) => { setToast(t); if (toastTimer.current) clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), 8000) }
 
   const issues = useMemo(() => readinessOf(layer.home, p.facts, now, p.formCtx.designs), [layer.home, p.facts, now, p.formCtx.designs])
+  // TS1b: the loops this Home plays (shown sections where the theme offers video); at MAX_LOOPS no field offers another.
+  const loopsFull = layer.home.filter((s) => (p.formCtx.video?.sections as readonly string[] | undefined)?.includes(s.key) && 'video' in s && !!s.video && !s.hidden).length >= MAX_LOOPS
   const blocking = issues.filter((i) => i.blocks)
   // One line a section: its first blocking issue, else its first (a soft line never hides what blocks Publish).
   const issueMap = new Map<string, string>()
@@ -244,7 +246,7 @@ export function Editor(p: EditorProps) {
       {tab === 'sections' && page === 'home' && (sel ? (
         <div className="space-y-4">
           <button type="button" onClick={() => setSelected(null)} className="text-sm text-muted-foreground">‹ Sections</button>
-          <SectionForm s={sel} c={p.formCtx} set={(s) => change({ ...layer, home: layer.home.map((x) => (x.id === s.id ? s : x)) })} />
+          <SectionForm s={sel} c={{ ...p.formCtx, loopsFull }} set={(s) => change({ ...layer, home: layer.home.map((x) => (x.id === s.id ? s : x)) })} />
           {issueMap.has(sel.id) && <p role="status" className="rounded-md bg-warn px-3 py-2 text-sm text-warn-text">{issueMap.get(sel.id)}</p>}
           <button type="button" onClick={() => { change({ ...layer, home: layer.home.filter((x) => x.id !== sel.id) }); setSelected(null); say(`${sectionName(sel, p.formCtx.designs)} removed`) }} className="min-h-9 text-sm text-danger-text underline underline-offset-4">Remove this section</button>
         </div>

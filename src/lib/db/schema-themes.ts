@@ -141,11 +141,15 @@ export const videos = pgTable('videos', {
   removedAt: at('removed_at'),
   /** PV·1: a Look section's loop or a product's video (src/domains/video/state.ts USE_LIMITS); set once, at insert. */
   use: text('use').notNull().default('loop'),
+  /** TS1b (owner 2026-11-11): the MP4 Frrata asked Mux for after the checks (a loop's 720p, or a smaller size from a
+   *  smaller source). Null: the use's own (a V1 loop's `highest`, uploaded with it; a product's 720p). Set once. */
+  mp4: text('mp4'),
 }, (t) => [
   index('videos_shop').on(t.tenantId, t.createdAt),
   // For composite foreign keys from other tables (product_videos): a link can only name its own shop's video.
   unique('videos_tenant_id_key').on(t.tenantId, t.id),
   check('videos_use', sql`${t.use} in ('loop', 'product')`),
+  check('videos_mp4', sql`${t.mp4} is null or ${t.mp4} ~ '^(720|540|480|360|270)p$'`),
   check('videos_env', sql`${t.muxEnv} ~ '^[A-Za-z0-9_-]{1,40}$'`),
   check('videos_ids', sql`(${t.uploadId} is null or ${t.uploadId} ~ '^[A-Za-z0-9]{1,128}$') and (${t.assetId} is null or ${t.assetId} ~ '^[A-Za-z0-9]{1,128}$') and (${t.playbackId} is null or ${t.playbackId} ~ '^[A-Za-z0-9]{1,64}$')`),
   check('videos_error', sql`(${t.erroredAt} is null) = (${t.error} is null) and (${t.error} is null or length(${t.error}) <= 40)`),

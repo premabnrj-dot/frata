@@ -364,7 +364,8 @@ export const shopAnnouncement = shopCached('announce', 'shop', coreAnnouncement)
 // A new key: the entry's shape changed (offers by index), and a cache that survives a deploy must not meet the old one.
 // v3: collections gained seoTitle/seoDescription and the entry movedCollections (S2·2).
 const shopCatalogueEntry = shopCached('catalogue-v3', 'catalogue', (t) => coreCatalogue(t, false))
-export const shopCatalogue = async (tenantId: string): Promise<StoreCatalogue> => expand(await shopCatalogueEntry(tenantId))
+/** Expanded once per request (speed LOW 5: Home, its metadata and the shell each asked; cache() keys by the tenant id). */
+export const shopCatalogue = cache(async (tenantId: string): Promise<StoreCatalogue> => expand(await shopCatalogueEntry(tenantId)))
 /** The entry exactly as the cache stores it (its size is what Next's 2 MB limit reads; catalogue-size.int.test.ts). */
 export const catalogueEntry = (tenantId: string) => coreCatalogue(tenantId, false)
 

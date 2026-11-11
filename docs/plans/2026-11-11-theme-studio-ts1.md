@@ -203,3 +203,162 @@ The contact form; commerce blocks (TS1b); product and collection templates (TS1c
   (covered by e2e add/save and by the int test's direct rows); the Discard dialog doesn't say a never-published page goes;
   Contact facts read twice (page-readiness and the customizer page) — one reader when Settings gains the 2027 fields.
 
+---
+
+# TS1b — commerce blocks (plan; board: TS0b board v2, approved 2026-11-11 "as drawn", its four TS1 designs)
+Status: active (owner 2026-11-11: loops capped at 3 a Home with dwell and 720p; designs draw what the board draws) · reviews folded in; no new board: The drop, One piece, Behind the bench and The edits are drawn on
+https://claude.ai/artifact/DzD84DZsW6eGYQ6QkfJbM4 v2) · Date: 2026-11-11
+
+## Goal
+North star (5) a premium storefront that sells: the four designs owners asked for on the board put pieces, a drop
+date, a workshop video and collections into a design. Measures: on the e2e seed with every design at its caps, home
+HTML ≤ 300 kB and RSC ≤ 150 kB on a real `next start` (a gate); shop JS unchanged; block CSS ≤ 1.0 kB gz; 1.0–1.4
+looks byte-identical (resolved-looks snapshot).
+
+## Scope
+- **Five blocks** (TS0b's catalogue, additive): `product_grid` (`SourceSchema` + count 4 | 8 | 12), `featured_product`
+  (a handle), `collection_tiles` (mode, handles ≤ 8, count, shape — Collection tiles' own fields), `video` (≤ 1 a
+  design), `date` (a drop date: "Drops Fri 14 Nov, 7 pm", never a ticking count; hidden once passed).
+- **Signal 1.5.0** adds the four designs from board v2: The drop (heading, date, product grid, button), One piece
+  (photo | featured product, words), Behind the bench (video | heading, words, button), The edits (heading, words,
+  button | collection tiles). Designs stay on Home only (product and collection templates are TS1c).
+
+## Decisions taken from the TS1b reviews (2026-11-11: architecture, security, speed, unit economics) — these replace what they contradict below
+- **Designs draw what the board draws, no more** (architecture 2, 4; speed HIGH 2; security LOW-2): a product grid shows
+  **4 pieces** (no 8 or 12), collection tiles **≤ 4**, a featured product 1; **≤ 2 commerce designs a page** (a design
+  holding a product grid, featured product or collection tiles). So designs add at most 8 cards to any Home, the
+  limit is absolute (no "refuse only what grows", no baseline from the client), and old sections are never cut or
+  counted: today's over-cap pages (Products 8 × 24, tabs) are named as debt, not made worse by more than 8 cards.
+  The "≤ 24 cards" and "≤ 6 commerce blocks" rules are dropped.
+- **Video, written out** (architecture blocker 1; security MED-1, MED-2): a `{ kind: 'video', poster }` fill (the poster
+  photo; never a video id) and an optional `video` on `DesignSectionSchema`. `designsForSave` (it has the manifest) and
+  `resolveTheme` (right after `pruneFill`) drop `video` unless the design has exactly one video block and the theme's
+  `videoSections` includes `design`; resolve's video rule reads `VIDEO_KEYS`, not two hard-coded keys. So a design
+  without a video block can neither play one nor keep one alive (`releaseUnusedVideos` frees it: test).
+  `cleanFill` and `fillText` list the poster; the poster counts as a photo in `designsCheck` and `designProblems`.
+- **Loops cost Frrata Mux minutes** (unit economics, 2026-11-11; owner decided 2026-11-11, "Cap 3 + dwell + 720p"):
+  **≤ 3 loops on a Home** across Hero, Image with text and design videos (the save refuses a 4th; old
+  looks keep theirs), a loop loads after **400 ms at 50 % in view** (dwell), and loops play the 720p rendition.
+- **Eager photos** (architecture 3; speed HIGH 1): `ProductGrid` defaults `lead = false` and every caller says what it
+  wants: Shop all and a title-top collection pass `lead`, a banner collection `false` (its banner is the priority),
+  Price tiles only on its first band; the derived ≤ 2 eager list counts a lead design's photos, featured cover and
+  video poster together. A test counts `fetchpriority=high` on `/`, `/products` and a collection: ≤ 2 each.
+- **Card bytes** (speed HIGH 2): the hover photo gets one `src` (no srcset); the cover's `alt` is empty (the title is
+  the link's text). Pixels unchanged (0 px).
+- **The date line** (architecture 5): `dropLineIN` in `format-date.ts` ("Drops Fri 14 Nov, 7 pm"), "Drops" in
+  `words.ts` with Hindi; Drop teaser keeps `dayIN` (its pixels: the two exist on purpose). The manifest holds no `at`:
+  only the owner sets a date (readiness: "set a date", "its date has passed"). The form reuses Drop teaser's
+  datetime-local + `+05:30` input. `designsForSave(designs, home, now)` refuses a date beyond 400 days in words.
+- **Best sellers walk** (architecture 7; speed LOW 7): `bestSellerWindows` walks `resolveDesign`'s output (a default
+  best-sellers source counts), skipping hidden designs; "+0 statements" becomes "≤ 2 cached best-sellers windows, as
+  today".
+- **Reuse** (architecture 8, 9, 12): Products isn't split (a product grid block is `sourceProducts` + `ProductGrid`);
+  Collection tiles shares one `tilesOf` rule (render, readiness) and takes `cols` for `sizes`; the source picker moves
+  into `controls` before reuse; one handle rule per kind (products 1–100, collections 1–80, picks unique).
+- **themeCheck** (architecture 10): featured product and picked tiles must be owner-filled; a grid's default source
+  can't be a collection; a minor can't add a commerce or video block to an existing design (it would grow every page).
+- **The gate** (architecture 4; speed MED 3): e2e `74-commerce` publishes the worst page a 1.5 owner can newly make (2
+  commerce designs + 2 other designs at their caps, Devanagari words, pieces it seeds with 5-colour swatches and long
+  titles), reads the second visit (`x-nextjs-cache: HIT`) as bytes (`Buffer.concat`), checks the page holds what it
+  should before measuring, asserts ≤ 300 kB HTML / ≤ 150 kB RSC and ≤ 2 eager images, and removes what it seeded.
+- **Cheap speed wins** (speed LOW 4–6): Home reads the catalogue inside its `Promise.all`; `shopCatalogue`'s `expand()`
+  under `cache()`; Collection tiles stops once it has `count` tiles.
+- **Pages** (security LOW-4): `PageFillSchema` accepts commerce fills when parsing; `prunePage` drops them (About and FAQ
+  have no such block): a test, settled again in TS1c.
+- **Regression net** (architecture 14): stored-sections v5 fixture, the 1.5 released-manifest snapshot, `66-video` with a
+  design's loop.
+
+## Decisions carried from the TS0b reviews (kept for TS1 then; they apply now)
+- **Reads:** commerce blocks read the Home page's own catalogue (`ctx.cat`, already read) and its best-sellers ids:
+  **no new statement**. `bestSellerWindows` walks design product grids with a best-sellers source. No loader in a
+  block (`check:tenant` 6e). The small per-source loader waits for TS1c, where a template page has no catalogue read.
+- **Listed pieces only:** product grid via `sourceProducts`, featured product via `lookPieces` (`isListed`): a
+  scheduled piece never shows early (test).
+- **Reuse with an inner list:** `Products` and `CollectionTiles` split into an inner list taking a heading level and
+  an id prefix (no `<section>`/H2 of their own inside a design); Collection tiles' "at least 2 picked collections with
+  products" rule shared.
+- **Cards cap ≤ 24 a page** (speed 1), counted across everything that draws a card (Products incl. hidden tabs, price
+  tiles, featured product, design product grids, collection tiles) — **only for looks on a version that offers
+  designs**, and the save refuses only a change that adds or grows a design (old sections never cut). Commerce blocks
+  ≤ 6 a page (design ones + Products, Collection tiles and Shop the look sections).
+- **Video:** a design's one video is the section's top-level `video` (no video fill): `cleanVideos`, `referenced()`,
+  `videosFor` work as they are; `VIDEO_KEYS` gains `design`; resolve's video rule reads `VIDEO_KEYS` and the theme's
+  `videoSections`, and `resolveDesign`'s caller drops `video` unless the design has exactly one video block. The block's
+  poster is its image fill; readiness says "add a photo or a video".
+- **Date:** the schema keeps the ISO shape only (no clock in `domains`); "≤ 400 days ahead" is checked in the save
+  with `now`; the renderer hides it once `ctx.now` passes.
+- **Eager photos:** `ProductGrid` defaults `lead = false`; only the derived ≤ 2 eager list (the lead section's) asks
+  for `priority`. The hover photo gets one `src`, not a srcset (≈ 1 kB a card).
+- **Worst-page gate:** e2e `74-commerce` publishes a Home with every design at its caps (24 cards, 5-colour swatches,
+  the longest titles, Devanagari words) and measures the HTML and `RSC: 1` payload on the real server (as
+  `check:payload` does): ≤ 300 kB / ≤ 150 kB, or it fails.
+- **Look:** the design form gains a source picker (Products' own control), a product picker, collection picks, the
+  video field (`VideoField`) and a date input; all in the design form's dynamic chunk (customizer ≤ 208 kB gate).
+- **themeCheck:** a design ≤ 1 video block; a commerce block's fill mark isn't `example`; Signal 1.5 against 1.4 only
+  adds.
+
+## Design review (frata-planning § 3)
+- **UI/UX:** board v2 (approved). States: a source with nothing listed (the block is left out; readiness says so,
+  never blocking), an unlisted featured piece (left out), a passed date (left out), no video yet (the poster photo
+  shows), 2 designs with pieces on the page (the library greys the third, saying why), 3 loops (a loop field says so).
+- **Tenancy:** no new table, no new read. Handles and collection picks resolve only against this shop's own cached
+  catalogue; a video id only through `cleanVideos` (this shop's rows).
+- **Modularity:** blocks in `blocks.ts` (+ `FillSchema` variants for source, handle, tiles, date), renderers in
+  `components/storefront/blocks/` using the inner lists; no I/O in a block.
+- **SSOT / DRY:** `SourceSchema`, `sourceProducts`, `lookPieces`, `ProductGrid`, the tiles list, Drop teaser's date
+  rule (`dayIN`) — one each.
+- **YAGNI:** no per-source loader (TS1c), no designs on product or collection pages (TS1c), no countdown.
+- **Scalability / performance:** +0 statements; HTML/RSC by the gate; card cap; no new client script (server blocks).
+- **Reliability:** no outbound call (a video is already uploaded through V1's flow).
+- **Security:** fills tagged and capped; handle and source shapes as the sections'; video ownership by `cleanVideos`.
+- **Unit economics:** Mux delivery is per minute played and Frrata pays it (no per-shop minutes budget exists): the loop cap, dwell and 720p above (owner 2026-11-11).
+- **Blast radius:** `Products` and `CollectionTiles` split (Home's sections must render byte-identically: e2e
+  `05-shop-look` 0 px), `ProductGrid`'s `lead` default (Price tiles and every grid: priority only on the lead section),
+  `VIDEO_KEYS`, resolve's video rule, `bestSellerWindows`, `designProblems`, the design form.
+
+## Tasks (TS1b)
+| # | Task | Verify |
+|---|---|---|
+| TS1b-0 | Regression net: shop-look 0 px and resolved-looks before; a "lead only" eager test | `npm run e2e -- --only shop-look` |
+| TS1b-1 | Blocks + fills + resolve (video rule, card count), themeCheck rules, Signal 1.5.0 | `npx vitest run src/domains/themes` |
+| TS1b-2 | Inner lists, block renderers, eager rule, best-sellers walk | `npm test`, 0 px |
+| TS1b-3 | Design form fields (source, product, collections, video, date) | e2e `72-designs` extended |
+| TS1b-4 | Worst-page gate `74-commerce`; reviews on the diff; ship; Signal 1.5 for release in Admin | full e2e |
+
+
+## TS1b — as built (2026-11-11)
+- **Blocks** (`src/domains/themes/blocks.ts`, fills in `sections.ts`): product grid (4 pieces, a `SourceSchema` source),
+  featured product, collection tiles (≤ 4; `tilesOf` in `domains/storefront/sources.ts`, shared with the section), video
+  (its poster is the fill; the loop is the section's `video`) and a drop date (`dropLineIN`, "Drops" in English and
+  Hindi). One handle rule per kind (`productHandle`, `collectionHandle`). Readiness says what's missing; only fewer than
+  2 picked collections and an undescribed poster block Publish.
+- **The save** (`designsForSave(designs, home, { now, videoOk, loopsBefore })`): fills pruned to (id, kind); a design's
+  loop kept only with its one video block where the theme offers it (`keepDesignVideo`, also in `resolveTheme`); ≤ 2
+  designs with pieces or collections a page; ≤ 3 loops a Home unless the stored draft already had more; a drop date
+  ≤ 400 days away and readable. The library greys a third commerce design and a loop field says the limit at 3.
+- **Signal 1.5.0**: The drop, One piece, Behind the bench, The edits; `videoSections` gains `design`. To release in
+  Admin › Themes.
+- **Loops at 720p** (owner 2026-11-11): upload with no MP4; past the checks a sized one is asked for (`loopMp4`: 720p, or
+  the largest size a smaller source fills) on its own outbox kind `mux.loop.rendition` (never paused by the Product
+  video module) and recorded in `videos.mp4` (0102 column and check; 0103 grant and write-once). `mp4Of` says which file
+  plays; V1 loops keep `highest`. Loops load after 400 ms at half in view, one at a time.
+- **Bytes and eager images**: `ProductGrid` eager only where its caller opens the page (≤ 2 a page); card cover `alt=""`;
+  the hover photo one `src`; card srcset ≤ 1200w; swatch, photo-frame and hover utilities as `.store-sw`, `.store-ph`,
+  `.store-hover`. Home loads the catalogue beside the look; `shopCatalogue` expanded once a request.
+- **Gate** `e2e/flows/74-commerce.mjs`: the worst page a 1.5 owner can newly make (two drops, Behind the bench, Size
+  help; words at the page's limit; 140-character titles; photo-cut swatches; four widths on a real Blob host; the designs
+  first), from the cache. Measured 2026-11-11: the whole Home 370.5 kB HTML / 193.4 kB RSC, over the 300 / 150 kB page
+  budget; the designs' own markup ~57 kB of it, the rest Signal's default Products tabs and rail with real photos and the
+  inline payload that repeats them (debt below). The gate holds what TS1b answers for: the designs ≤ 64 kB of markup,
+  ≤ 2 eager images on Home, Shop all and a collection, and a ceiling of 400 kB HTML / 210 kB RSC on the whole Home so it
+  can't grow unseen. Also a design's loop uploaded through its form (720p, played in the preview).
+- **Tests**: `commerce-blocks.test.ts`, `best-seller-windows.test.ts`, `sources.test.ts` (tiles, a scheduled featured
+  piece), `mux.test.ts` (`loopMp4`), `design-video.int.test.ts` (kept, held, freed), stored-sections v5, the 1.5
+  released-manifest snapshot (designs now in it), tenancy proof (mp4 set once, sizes only).
+- **Debt named (not made worse):** a full Signal Home with real photos is 370.5 kB HTML / 193.4 kB RSC, over the page
+  budget (the default Products tabs keep every hidden tab's cards; the rail is 12 cards; each photo width repeats the
+  ~118 B Blob prefix; the RSC payload repeats the markup) — the owner moved storefronts to code on 2026-11-11
+  (`docs/specs/2026-11-11-agentic-storefront.md`), so this is left with the theme system; a card draws every colour (up to 30; a "+N" needs the owner's word on the card);
+  Signal's default Products tabs and rail hold most of Home's card bytes; the Blob URL prefix (~118 B) repeats per photo
+  width; readiness doesn't know a featured piece was unlisted or a source is empty (the block is left out on the shop);
+  the 720p path is unverified on a real Mux account.

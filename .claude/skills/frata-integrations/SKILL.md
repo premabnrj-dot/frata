@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.24.0
+  version: 1.25.0
   verified: 2026-11-11
   decisions: [ADR-0006]
 ---
@@ -721,6 +721,10 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   until the owner's first product upload.
 - **As built (V1, 2026-11-09)**: `src/lib/video/mux.ts` — upload {cors_origin, timeout 900, new_asset_settings {basic,
   public, static_renditions [highest], no tier, passthrough = our videos row id}}; the shop plays highest.mp4 (≤ 1080p).
+  **Since TS1b (owner 2026-11-11):** a loop uploads with no MP4 like a product; past the checks it gets a sized rendition
+  (`loopMp4`: 720p, or 540p/480p/360p/270p from a smaller source, never larger than it: Mux skips a sized rendition larger
+  than its source) by `POST …/static-renditions`, recorded in `videos.mp4`; V1 rows keep `highest`. Prep ≈ $0.008/min
+  (≤ 15 s a loop); delivery is billed at the delivered resolution. Unverified on a real Mux account [U].
   **`highest` can't be mixed with sized renditions** (720p, 480p…) [V, guides/enable-static-mp4-renditions, 2026-11-09]: a
   400 in production that day. 720p delivery = a sized rendition alone (paid prep; none from a smaller source); the asset's
   passthrough and upload_id are checked before anything is written; the envelope's `environment.id` must equal
