@@ -64,6 +64,9 @@ export default {
         await admin.p.getByText('Sent to 1 shop.').waitFor()
         await admin.p.getByRole('cell', { name: 'We changed how support visits work' }).waitFor()
       } finally { await admin.ctx.close() }
+      // Earlier flows leave their own notices (support visits, billing): the owner has read those, so the pill counts this one.
+      await db`insert into notice_reads (tenant_id, notice_id, user_id) select tenant_id, id, ${USERS.owner.id} from notices
+        where tenant_id = ${shop.id} and title is distinct from 'We changed how support visits work' on conflict do nothing`
       const owner = await open('owner')
       try {
         await owner.p.goto(CONSOLE + '/console')
