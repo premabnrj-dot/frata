@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { collect, savingsAsPaid } from '@/domains/orders/amounts'
 import { currentMethod, orderState, paidAfterSwitch, shopperState } from '@/domains/orders/order-state'
 import { maskPhone } from '@/domains/checkout/address'
+import { maskEmail } from '@/domains/email/shape'
 import { LIMITS } from '@/lib/db/rate-limit'
 import { withTenant } from '@/lib/db/tenant'
 import { tokenHash } from '@/lib/crypto/secret-box'
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
     // Never the internal state (held, refund due) or why an order was cancelled: shopperState() only.
     number: o.number, state: shopperState(orderState(o, new Date())), collect: collect(o), method: currentMethod(o), paidAfterSwitch: paidAfterSwitch(o), canSwitchToCod: o.paymentMethod === 'prepaid' && !o.paidAt && !o.switchedToCodAt && !o.cancelledAt,
     subtotal: o.subtotal, shipping: o.shipping, codCharge: o.codCharge, gstTotal: o.gstTotal, total: o.total, pricesIncludeGst: o.pricesIncludeGst,
-    firstName: o.customerName.split(' ')[0] ?? '', to: `${o.city} ${o.pincode}`.trim(), phone: maskPhone(o.phone),
+    firstName: o.customerName.split(' ')[0] ?? '', to: `${o.city} ${o.pincode}`.trim(), phone: maskPhone(o.phone), email: o.email ? maskEmail(o.email) : null,
     arrives: o.arrivesFrom && o.arrivesTo ? { from: o.arrivesFrom, to: o.arrivesTo } : null, returnDays: o.returnDays, returnKind: o.returnKind,
     lines: o.lines, shop: { name: data.shop.name, whatsapp: data.shop.whatsapp }, invoice: !!o.packedAt,
     // What the offers saved on the items, as the order is paid now (the pay-online saving only while paid online).

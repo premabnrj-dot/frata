@@ -59,6 +59,8 @@ export const LIMITS = {
   emailTestMember: { action: 'email_test:member', max: 5, windowSeconds: 3600 },
   emailResendShort: { action: 'email_resend:short', max: 1, windowSeconds: 600 },
   emailResendDay: { action: 'email_resend:day', max: 3, windowSeconds: 86400 },
+  /** "Email me new drops" (E·2): per shop and IP, failing closed. */
+  emailDropsIp: { action: 'email_drops:ip', max: 20, windowSeconds: 3600 },
   // GST filing OTPs (G2): each asks the portal to text the shop's mobile; per shop, fail closed.
   gstOtpShop: { action: 'gst_otp:shop', max: 10, windowSeconds: 3600 },
   // OTPs typed (verify, file): a guess loop stops at the server, before the portal (security review M2).

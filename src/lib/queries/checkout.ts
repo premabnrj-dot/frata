@@ -141,7 +141,7 @@ export const quoteData = (tenantId: string, ids: string[], now: Date, code: stri
 export async function orderPage(tx: Tx, tenantId: string, tokenHash: string) {
   const [o] = await tx.select({
     ...momentColumns, id: orders.id, number: orders.number, subtotal: orders.subtotal, shipping: orders.shipping, codCharge: orders.codCharge,
-    gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst, customerName: orders.customerName, phone: orders.phone, city: orders.city, pincode: orders.pincode,
+    gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst, customerName: orders.customerName, phone: orders.phone, email: orders.email, city: orders.city, pincode: orders.pincode,
     arrivesFrom: orders.arrivesFrom, arrivesTo: orders.arrivesTo, returnDays: orders.returnDays, returnKind: orders.returnKind, razorpayOrderId: orders.razorpayOrderId,
   }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.tokenHash, tokenHash))).limit(1)
   if (!o) return null

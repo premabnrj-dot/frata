@@ -7,7 +7,7 @@ import { api, dayRange, downloadInvoice, inr } from './shop-client'
 
 type View = {
   number: number; state: ShopperState; collect: number; method: 'cod' | 'prepaid'; paidAfterSwitch: boolean; canSwitchToCod: boolean
-  subtotal: number; shipping: number; codCharge: number; total: number; firstName: string; to: string; phone: string
+  subtotal: number; shipping: number; codCharge: number; total: number; firstName: string; to: string; phone: string; email?: string | null
   /** Offers that saved on the items (title and ₹ only). */
   savings?: { title: string; amount: number }[]
   arrives: { from: string; to: string } | null; returnDays: number | null; returnKind: string | null
@@ -76,6 +76,7 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
           <dd className="tabular-nums">{v.method === 'cod' ? 'cash or UPI' : inr(v.total)}</dd></div>
         {v.paidAfterSwitch && <p className="text-store-good">Your online payment went through: nothing to pay on delivery.</p>}
         <div className="flex justify-between text-store-sub"><dt>To</dt><dd>{v.to}{v.phone ? ` · phone ${v.phone}` : ''}</dd></div>
+        {v.email ? <div className="flex justify-between gap-4 text-store-sub"><dt>Updates to</dt><dd className="break-all text-right">{v.email}</dd></div> : null}
       </dl>
       {wa && <a href={wa} rel="noopener" className="grid h-12 place-items-center rounded-sm bg-store-ink text-store-paper">Message {v.shop.name} on WhatsApp</a>}
       {v.invoice && (
