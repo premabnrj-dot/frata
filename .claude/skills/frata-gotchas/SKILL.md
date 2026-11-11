@@ -2,7 +2,7 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a PDF download that saves as pdf.txt, MODULE_NOT_FOUND in production only, a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.17.0
+  version: 1.18.0
   verified: 2026-11-08
 ---
 
@@ -87,3 +87,22 @@ unloads. Real phones do: web-vitals and GA rely on it.
 **Do.** In a flow, hide the tab before a full navigation (`visibilityState` → hidden, then dispatch
 `visibilitychange`), as `e2e/flows/72-traffic.mjs` does. Check the unload send by hand on a phone, never by turning the
 beacon into per-event requests.
+
+## Admin pages hang until Vercel's 60 s limit, "sometimes it works" (root cause 2026-11-11)
+**Symptom.** Admin pages (Merchants, Themes, Plans, Partners, Infrastructure) time out with "Task timed out after 60
+seconds" and log nothing else. They come in bursts, across many deployments, and one fresh try may work.
+**Evidence.**
+- Each timeout matches, to the millisecond, a Supavisor line "Client socket closed while state was idle": the
+  connection was healthy and idle the whole minute, and the request never sent a query.
+- Auth answered (`/auth/v1/user` 200 at the request's start).
+- Supavisor logs "Terminate received from client" 5 s after each Admin connect: the Admin pool's `idle_timeout: 5`.
+**Why.** A postgres-js pool kept across requests, on Admin's traffic (a few clicks seconds apart, then a pause): a new
+query lands on a connection as its idle close fires, or on one left open across an instance pause, and is never sent
+(Supabase KB "hanging queries in Serverless Functions").
+**Fix.**
+- `src/lib/db/admin.ts` opens one connection per request (React `cache`) and `after()` ends it.
+- `adminHealth` has a 4 s deadline.
+- The main pool's first query of each request (`accessFor`) runs under `withFreshPool`: past 3 s the pool is recycled
+  and the query retried once.
+**Don't.** Don't lengthen `maxDuration` or add retries around whole pages: the query never left, so waiting longer
+doesn't help.

@@ -54,12 +54,40 @@ export function attachPool() {
 }
 export const releaseOnQuery = { logQuery: () => poolReleased() }
 
+let raw: ReturnType<typeof postgres> | null = null
+
 export function db() {
   if (!client) {
     attachPool()
-    client = drizzle(postgres(parseDatabaseUrl(DATABASE_URL, 'frata_app'), POOL), { schema, logger: releaseOnQuery })
+    raw = postgres(parseDatabaseUrl(DATABASE_URL, 'frata_app'), POOL)
+    client = drizzle(raw, { schema, logger: releaseOnQuery })
   }
   return client
+}
+
+/**
+ * Drops this instance's pool (ending its connections in the background): the next db() opens a fresh one. For a
+ * query that never answered — a pooled connection lost to a paused instance or to its own idle close racing a new
+ * query (Supabase KB: "hanging queries in Serverless Functions"; 2026-11-11: Admin requests waited to Vercel's 60 s).
+ */
+export function recyclePool() {
+  const old = raw
+  client = null; raw = null
+  if (old) void old.end({ timeout: 1 }).catch(() => undefined)
+}
+
+/** `work` with a deadline; past it, the pool is recycled and `work` runs once more on fresh connections. For the
+ * first, cheap query of a request (who is signing in), so a lost connection costs seconds, not the request. */
+export async function withFreshPool<T>(work: () => Promise<T>, ms = 3000): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const late = new Promise<'late'>((r) => { timer = setTimeout(() => r('late'), ms) })
+  try {
+    const first = await Promise.race([work(), late])
+    if (first !== 'late') return first
+  } finally { clearTimeout(timer) }
+  console.error('[db] a pooled connection did not answer; opening a fresh pool')
+  recyclePool()
+  return work()
 }
 
 export type Db = ReturnType<typeof db>
