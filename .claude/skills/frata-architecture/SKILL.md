@@ -469,7 +469,7 @@ after it. A class a shop page uses from outside the shop's folders must be added
   `drainSoon()` after the commit, `drainOutbox(deadline)`, `eachLimited`). `/api/cron/drain`
   drains every 5 minutes (Pro, 2026-11-11), so `enqueue({ notBefore })` rows and retries
   go on time. The claim and every settle run through definers (`app_outbox_claim`,
-  `app_outbox_settle`, drizzle/0091): no outbox row is readable without its shop set.
+  `app_outbox_settle`, drizzle/0096): no outbox row is readable without its shop set.
   A sender throws `GiveUp` (dead at once), `Later(code, minutes)` (wait, no attempt
   spent: a 429, a tenant not ready) or a plain `Error` (counted; dead at 8). Payloads are
   ids only; errors are our codes, never a provider's words (they can quote an address).

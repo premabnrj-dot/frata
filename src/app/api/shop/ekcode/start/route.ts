@@ -7,6 +7,9 @@ import { beginAtShop } from '@/lib/ekcode/handshake'
 import { scheme } from '@/lib/ekcode/cookie-name'
 import { ekcodeOnAt } from '@/lib/modules/ekcode/gate'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // "Continue with EkCode" (a plain link: no script on checkout). The flow is made here, from this request's own Host
 // (tenancy B1), never from a URL; a moved address or a shop without EkCode goes back to its checkout.
 export const dynamic = 'force-dynamic'

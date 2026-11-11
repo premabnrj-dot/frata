@@ -75,9 +75,9 @@ describe('default words', () => {
 })
 
 describe('the SQL CHECK says what shape.ts says', () => {
-  it('0091 carries EMAIL_SQL', () => {
+  it('0096 carries EMAIL_SQL', () => {
     let sql = ''
-    try { sql = readFileSync('drizzle/0091_email.sql', 'utf8') } catch { return } // the migration lands in task 3
+    try { sql = readFileSync('drizzle/0096_email.sql', 'utf8') } catch { throw new Error('drizzle/0096_email.sql is missing') }
     expect(sql).toContain(EMAIL_SQL.replace(/'/g, "''"))
   })
 })

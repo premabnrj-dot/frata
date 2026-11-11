@@ -1,6 +1,6 @@
 // =============================================================================
 // FILE: src/lib/db/schema-email.ts — EMAIL AND NOTICES (plan docs/plans/2026-11-11-email.md; ADR-0011). Tenant tables:
-// grants, RLS and policies in drizzle/0091. A message row holds no address and no body (the address lives on the order
+// grants, RLS and policies in drizzle/0096. A message row holds no address and no body (the address lives on the order
 // or in auth); its state is derived from its timestamps (src/domains/email/state.ts). Suppressions are keyed per shop
 // (an HMAC over tenant and address), never comparable across shops. Notices are written only by definers, so a shop can
 // never forge a "Frrata, required" notice; reads and preferences are per member.

@@ -4,6 +4,9 @@ import { pdfResponse } from '@/lib/documents/file'
 import { frrataFile } from '@/lib/documents/frrata'
 import { errName } from '@/lib/log'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // Admin's copy of a Frrata invoice or credit note (billing B2): ADMIN_ONLY, rendered from the frozen rows. Never cached.
 export const dynamic = 'force-dynamic'
 const text = (status: number, body: string) => new Response(body, { status, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' } })

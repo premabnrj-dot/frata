@@ -1,7 +1,7 @@
 // Addresses, people and test keys shared by the flows (e2e/lib.mjs) and the fakes (e2e/fakes/*): no imports, so a fake starts without Playwright.
 export const PORTS = { app: 3077, razorpay: 4010, auth: 54399, pg: 54340, meta: 4020, mux: 4030, domains: 4040, ses: 4050 }
 /** Frrata's Mux in the local test: a stand-in API, upload host, stream and image host (e2e/fakes/mux.mjs). */
-export const MUX = { tokenId: 'e2e-mux-token', tokenSecret: 'e2e-mux-secret', webhook: 'e2e-mux-webhook-secret', env: 'e2eenv' }
+export const MUX = { tokenId: 'e2e-mux-token', tokenSecret: 'e2e-mux-secret', webhook: 'e2e-mux-webhook-secret', env: 'e2eenv', readId: 'e2e-mux-read', readSecret: 'e2e-mux-read-secret' }
 /** Email in the local test (ADR-0011): the fake SES and its SNS topic (e2e/fakes/ses.mjs), test-only keys. */
 export const SES = { topic: 'arn:aws:sns:ap-south-1:000000000000:frrata-e2e', key: 'AKIAE2E:e2e-ses-secret', shopDomain: 'frratamail.test', noticesFrom: 'Frrata <notices@notify.frrata.test>',
   keys: 'e1:e2e-email-key-0123456789abcdefghijklmnop', hookSecret: 'v1,whsec_' + Buffer.from('e2e-send-email-hook-secret-0123456789').toString('base64') }

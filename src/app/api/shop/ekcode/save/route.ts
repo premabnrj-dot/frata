@@ -4,6 +4,9 @@ import { LIMITS } from '@/lib/db/rate-limit'
 import { sessionToken } from '@/lib/ekcode/handshake'
 import { saveToEkcode } from '@/lib/queries/customers'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // "Save this address to EkCode" (ticked by default for EkCode shoppers with a new address; owner, 2026-11-09): posted by
 // the checkout after the order is placed, with the session's one-time save token. Never part of placing the order.
 export const dynamic = 'force-dynamic'

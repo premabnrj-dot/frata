@@ -63,3 +63,10 @@ metadata:
 | A sender's `row.tenantId` (or any camelCase field) is `undefined`; `withTenant` fails with Postgres 42601 | `db().execute(sql…)` returns rows as Postgres names the columns (`tenant_id`), whatever type it is cast to | Map raw rows explicitly: `claimDue` returns `fromRaw(r)` (`src/lib/outbox/index.ts`; found by e2e 66-video, 2026-11-09 — every outbox sender had it) |
 | `permission denied for table` on an insert the role should be allowed | A column-level grant (`grant insert (a, b, c)`), and drizzle's insert names EVERY column, as `DEFAULT` — Postgres checks those too | Insert with `sql` naming only the granted columns (`startVideo`, `src/lib/queries/videos.ts`) |
 | A muted loop never plays in e2e | The suite's contexts use `reducedMotion: 'reduce'`, and the loop player rightly stays still then | Open that flow's context with `reducedMotion: 'no-preference'` (`e2e/flows/66-video.mjs`) |
+
+## e2e: a console baseline fails the day after it was taken (2026-11-11)
+The console home baseline (`e2e/baselines/console-home-desktop.png`, flow 05 shop-look) includes the date line
+("Tuesday 10 November"), so it differs by ~650 pixels on any other day. The diff image shows only the date in red. It is
+not a regression: mask the date in that shot or freeze the clock for flow 05 when next touching it. The same full run
+saw flow 46 messages stop at "Connecting…" twice at different steps, then pass 10/10 alone: the same class as the
+open action-commit flake above.

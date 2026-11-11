@@ -6,6 +6,7 @@ import { errName } from '@/lib/log'
 
 // "Email me new drops": the tap on the page the email links to (a POST: a mail scanner's GET never consents).
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30
 const Body = z.object({ o: z.uuid(), t: z.string().regex(/^[a-z][a-z0-9]{0,7}:[0-9a-f]{64}$/) })
 
 export async function POST(request: Request) {

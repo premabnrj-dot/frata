@@ -23,7 +23,7 @@ export async function startSupport(
       startedAt: s.now, expiresAt: expiresAt(s.now, s.minutes),
     }).returning({ id: supportSessions.id })
     await auditStaff(tx, staff, { tenantId: t.id, action: 'support.start', target: t.name, supportSessionId: row!.id, detail: { reason: s.reason, minutes: s.minutes } })
-    // A required security notice to the shop, in the same transaction (email plan E·1; drizzle/0092).
+    // A required security notice to the shop, in the same transaction (email plan E·1; drizzle/0097).
     await tx.execute(sql`select app_support_notice(${row!.id}::uuid, ${staff.userId}::uuid)`)
     return { id: row!.id }
   })

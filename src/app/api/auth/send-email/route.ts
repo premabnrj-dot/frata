@@ -12,6 +12,7 @@ import { EMAIL_NOTICES_FROM, SES_CONFIG_NOTICES } from '@/lib/env'
 // Frrata's layout (ADR-0011: no SMTP key anywhere). The link goes to Supabase's verify endpoint, which returns to our
 // /auth/callback; the 6-digit code works in any browser.
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 const NO_TENANT = '00000000-0000-0000-0000-000000000000'
 
 const fail = (status: number, message: string) => NextResponse.json({ error: { http_code: status, message } }, { status })

@@ -7,6 +7,9 @@ import { gstPeriodIn } from '@/lib/queries/gst'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { errName } from '@/lib/log'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // =============================================================================
 // FILE: src/app/(console)/console/apps/gst/export/route.ts — A PERIOD'S FILES FOR THE CA (GST app G1).
 // GET ?p=2026-10|2026-Q3&f=json|sheets|register|tally. Owner, admin or accountant (CAN_SEE_GST), inside the member's

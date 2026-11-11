@@ -4,6 +4,9 @@ import { finishAtShop, setSession } from '@/lib/ekcode/handshake'
 import { scheme } from '@/lib/ekcode/cookie-name'
 import { signInFromEkcode } from '@/lib/queries/customers'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // Back from ekcode.in with a one-time code: state checked against this shop's own cookie, the grant redeemed for THIS
 // shop and host with the PKCE challenge, in one transaction; the shop's own session opens. No cache tag changes.
 export const dynamic = 'force-dynamic'

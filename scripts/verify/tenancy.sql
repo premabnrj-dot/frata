@@ -2398,7 +2398,64 @@ do $$ begin
   then raise exception 'FAIL: an API role runs the product video trigger'; end if;
 end $$;
 
--- 65. Email E·0 (0091): every email table is the shop's own both ways; notices and the roll-up are written by definers
+-- 65. Admin › Infrastructure's Supabase tab (drizzle/0091): admin_db_health() is staff-only and aggregate-only. No API role
+-- and not frata_app may run it; it returns only the fixed keys (no session's query, address or app name); query shapes
+-- carry no literal (a planted one is absent).
+do $$ begin
+  if exists (select 1 from unnest(array['public', 'anon', 'authenticated', 'service_role', 'frata_app']) r
+             where r <> 'public' and has_function_privilege(r, 'admin_db_health()', 'execute'))
+  then raise exception 'FAIL: a non-staff role runs admin_db_health'; end if;
+  if not has_function_privilege('frata_admin', 'admin_db_health()', 'execute') then raise exception 'FAIL: Admin cannot read database health'; end if;
+end $$;
+begin; set local role frata_admin;
+do $$ declare h jsonb := admin_db_health(); k text; begin
+  for k in select jsonb_object_keys(h) loop
+    if k not in ('db_bytes', 'max_connections', 'cache_hit', 'connections', 'outbox_waiting', 'outbox_oldest_s', 'outbox_dead_today', 'webhooks_waiting', 'tables', 'queries')
+    then raise exception 'FAIL: admin_db_health returns an unexpected key %', k; end if;
+  end loop;
+  if exists (select 1 from jsonb_array_elements(h->'connections') c where c ?| array['query', 'client_addr', 'application_name'])
+  then raise exception 'FAIL: admin_db_health exposes a session''s query or address'; end if;
+  if h::text like '%9845012345%' then raise exception 'FAIL: a literal reached admin_db_health'; end if;
+end $$;
+rollback;
+
+-- 66. Admin › Infrastructure's platform tables (drizzle/0092–0093): what vendors billed Frrata. frata_app and the API
+-- roles hold nothing (a shop's code path can never read or forge Frrata's costs); frata_admin reads and writes them.
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_app']) r, unnest(array['infra_usage_daily', 'infra_pulls']) t, unnest(array['select', 'insert', 'update', 'delete']) p
+             where has_table_privilege(r, t, p)) then raise exception 'FAIL: a non-staff role reads or writes infra tables'; end if;
+  if not (has_table_privilege('frata_admin', 'infra_usage_daily', 'insert') and has_table_privilege('frata_admin', 'infra_pulls', 'select'))
+  then raise exception 'FAIL: Admin cannot keep vendor usage'; end if;
+  if not (select relrowsecurity from pg_class where oid = 'infra_usage_daily'::regclass) or not (select relrowsecurity from pg_class where oid = 'infra_pulls'::regclass)
+  then raise exception 'FAIL: infra tables without RLS'; end if;
+end $$;
+begin; set local role frata_app;
+do $$ begin
+  begin perform 1 from infra_usage_daily; raise exception 'FAIL: frata_app read vendor usage'; exception when insufficient_privilege then null; end;
+  begin insert into infra_pulls (source, ok) values ('vercel', true); raise exception 'FAIL: frata_app forged a pull'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+begin; set local role frata_admin;
+insert into infra_usage_daily (source, day, service, quantity, cost_micros) values ('vercel', '2026-11-01', 'Fluid Active CPU', 1, 140000);
+do $$ begin if (select cost_micros from infra_usage_daily where source = 'vercel' and day = '2026-11-01') <> 140000 then raise exception 'FAIL: Admin cannot read back vendor usage'; end if; end $$;
+rollback;
+
+-- 67. Admin › Infrastructure's Mux tab (drizzle/0095): admin_video_usage() is staff-only; it returns no playback id,
+-- upload id or URL (only whether the file arrived).
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_app']) r where has_function_privilege(r, 'admin_video_usage(timestamptz)', 'execute'))
+  then raise exception 'FAIL: a non-staff role runs admin_video_usage'; end if;
+  if not has_function_privilege('frata_admin', 'admin_video_usage(timestamptz)', 'execute') then raise exception 'FAIL: Admin cannot read video usage'; end if;
+end $$;
+begin; set local role frata_admin;
+do $$ declare r jsonb; begin
+  for r in select jsonb_array_elements(admin_video_usage(now() - interval '1 year')) loop
+    if r ?| array['playback_id', 'upload_id', 'mux_env', 'created_by'] then raise exception 'FAIL: admin_video_usage returns a playback or upload id'; end if;
+  end loop;
+end $$;
+rollback;
+
+-- 68. Email E·0 (0096): every email table is the shop's own both ways; notices and the roll-up are written by definers
 -- only; an SES event is routed only by our message id (an unknown id, or a mismatched shop tag, stores nothing); a
 -- member's address is readable only for a current member of the shop that is set; the outbox shows no row without a
 -- shop set (the drain claims through a definer); no other role holds anything.
@@ -2410,7 +2467,7 @@ insert into email_daily (day, tenant_id, sent) values (current_date, '22222222-2
 insert into notices (id, tenant_id, type, source_kind, title, required) values ('e2e2e2e2-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'billing', 'admin', 'B notice', true);
 insert into notice_reads (tenant_id, notice_id, user_id) values ('22222222-2222-2222-2222-222222222222', 'e2e2e2e2-0000-0000-0000-00000000000b', 'aaaaaaaa-0000-0000-0000-000000000001');
 insert into notice_prefs (tenant_id, user_id, type, email) values ('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000001', 'product_update', false);
-insert into outbox (tenant_id, kind, dedupe_key, payload) values ('22222222-2222-2222-2222-222222222222', 'email.order', 'proof-65', '{}');
+insert into outbox (tenant_id, kind, dedupe_key, payload) values ('22222222-2222-2222-2222-222222222222', 'email.order', 'proof-68', '{}');
 begin; set local role frata_app;
 select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
 do $$ declare n int; begin
@@ -2424,7 +2481,7 @@ do $$ declare n int; begin
   begin insert into notices (tenant_id, type, source_kind, title, required) values ('11111111-1111-1111-1111-111111111111', 'billing', 'admin', 'Forged', true); raise exception 'FAIL: a shop wrote a notice'; exception when insufficient_privilege then null; end;
   begin insert into email_daily (day, tenant_id) values (current_date, '11111111-1111-1111-1111-111111111111'); raise exception 'FAIL: a shop wrote the roll-up'; exception when insufficient_privilege then null; end;
   begin insert into notice_reads (tenant_id, notice_id, user_id) values ('22222222-2222-2222-2222-222222222222', 'e2e2e2e2-0000-0000-0000-00000000000b', gen_random_uuid()); raise exception 'FAIL: A read-marked a B notice'; exception when insufficient_privilege then null; end;
-  if exists (select 1 from outbox where dedupe_key = 'proof-65') then raise exception 'FAIL: A reads B outbox'; end if;
+  if exists (select 1 from outbox where dedupe_key = 'proof-68') then raise exception 'FAIL: A reads B outbox'; end if;
   -- An SES event for B's message, tagged as A's: stored nowhere. An unknown id: nothing. B's own tag: applied.
   if public.app_store_ses_event('sns-1', 'e1e1e1e1-0000-0000-0000-00000000000b', '11111111-1111-1111-1111-111111111111', 'Delivery', 'p1', null, null, now()) then raise exception 'FAIL: a mismatched shop tag routed an event'; end if;
   if public.app_store_ses_event('sns-2', gen_random_uuid(), '22222222-2222-2222-2222-222222222222', 'Delivery', 'p1', null, null, now()) then raise exception 'FAIL: an unknown message id stored an event'; end if;
@@ -2438,7 +2495,7 @@ rollback;
 begin; set local role frata_app;
 do $$ declare r record; begin
   if exists (select 1 from outbox) then raise exception 'FAIL: the outbox is readable with no shop set'; end if;
-  select * into r from public.app_outbox_claim(100) where dedupe_key = 'proof-65';
+  select * into r from public.app_outbox_claim(100) where dedupe_key = 'proof-68';
   if r.id is null then raise exception 'FAIL: the claim definer found nothing'; end if;
   perform public.app_outbox_settle(r.id, 'later', 'test', 5, 8);
   if (select attempts from outbox where id = r.id) <> 0 then raise exception 'FAIL: later spent an attempt'; end if;
@@ -2482,7 +2539,7 @@ do $$ begin
   if has_function_privilege('frata_app', 'app_admin_email_health(uuid, int)', 'execute') then raise exception 'FAIL: the app reads every shop''s email health'; end if;
 end $$;
 
--- 66. Email E·1 notices (0092): only definers write a notice and its outbox row; a shop can't run them; Admin's fan-out
+-- 69. Email E·1 notices (0097): only definers write a notice and its outbox row; a shop can't run them; Admin's fan-out
 -- needs an admin (a support staffer is refused); a support notice comes only from the caller's own open visit.
 do $$ begin
   if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_app', 'frata_admin']) r
@@ -2502,4 +2559,4 @@ do $$ begin
 end $$;
 rollback;
 
-\echo 'tenancy proof — all 66 checks passed'
+\echo 'tenancy proof — all 69 checks passed'

@@ -4,6 +4,9 @@ import { publicQuote, reply, shopRequest, Token } from '@/lib/http/shop-api'
 import { switchToCod } from '@/lib/orders/payment'
 import { drainSoon } from '@/lib/outbox/drain'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // Pay on delivery instead, on the same unpaid online order (asks Razorpay first: no double charge).
 const Body = z.object({ token: Token, expectedTotal: z.number().int().min(0) })
 

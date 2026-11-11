@@ -4,6 +4,9 @@ import { LIMITS } from '@/lib/db/rate-limit'
 import { Bag, Code, codeToTry, codeTried, publicQuote, reply, shopRequest } from '@/lib/http/shop-api'
 import { quoteData } from '@/lib/queries/checkout'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // The bag's price right now, from the server's rows (the bag drawer, /bag and checkout all ask here). Writes nothing.
 const Body = z.object({ bag: Bag, pincode: z.string().regex(/^[1-9][0-9]{5}$/).optional(), code: Code.optional() })
 

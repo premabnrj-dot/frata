@@ -1,5 +1,9 @@
 import type { Metadata } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
+
+// Every page and its Server Actions stop at 60 s (Vercel's Pro default is 300 s, memory billed while waiting):
+// cost guardrails G·1, scripts/check-duration.mjs. A page that needs longer exports its own.
+export const maxDuration = 60
 // The shop's own sheet (Signal S2-0); every non-shop entry adds globals.css (the app sheet) after it.
 import './shop.css'
 

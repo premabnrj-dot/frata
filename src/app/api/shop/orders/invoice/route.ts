@@ -6,6 +6,9 @@ import { brandFor, frozenPaper } from '@/lib/documents/brand'
 import { documentFile, pdfResponse, requestFor } from '@/lib/documents/file'
 import { errName } from '@/lib/log'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // =============================================================================
 // FILE: src/app/api/shop/orders/invoice/route.ts — THE SHOPPER'S COPY of their invoice (Documents D2; plan finding 7).
 // POST { token } or an email's { o, e } (src/lib/http/order-ref.ts): the order token from the order page's #fragment (never in a URL). The shop comes from the Host

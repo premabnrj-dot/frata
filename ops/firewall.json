@@ -1,0 +1,32 @@
+{
+  "_why": "Cost guardrails G·2 (docs/plans/2026-11-11-guardrails-infra-a2.md). The source of truth for the frata project's Vercel Firewall; applied as the owner (Vercel session), read back from config/active. Bypass rules run before the managed rulesets: Shiprocket, Mux and WhatsApp are not Vercel-verified bots (frata-integrations § Vercel platform, 2026-11-11). Bot Protection and AI Bots start in LOG; challenge only after a day of logs shows no real shopper, preview or webhook caught. Previous config before 2026-11-11: none (GET config/active answered 404).",
+  "firewallEnabled": true,
+  "rules": [
+    {
+      "name": "Bypass webhooks and crons",
+      "description": "Providers that aren't verified bots (Shiprocket, Mux) must always reach /api/webhooks; Vercel Cron reaches /api/cron. Each route checks its own signature or cron secret.",
+      "active": true,
+      "conditionGroup": [
+        { "conditions": [{ "type": "path", "op": "pre", "value": "/api/webhooks/" }] },
+        { "conditions": [{ "type": "path", "op": "pre", "value": "/api/cron/" }] }
+      ],
+      "action": { "mitigate": { "action": "bypass" } }
+    },
+    {
+      "name": "Bypass link previews (WhatsApp, Telegram)",
+      "description": "Link previews of shops shared on WhatsApp and Telegram (unverified bots). GET and HEAD only. A user agent can be faked; this skips bot rules only, not DDoS mitigation.",
+      "active": true,
+      "conditionGroup": [
+        { "conditions": [
+          { "type": "user_agent", "op": "re", "value": "(WhatsApp|TelegramBot)" },
+          { "type": "method", "op": "inc", "value": ["GET", "HEAD"] }
+        ] }
+      ],
+      "action": { "mitigate": { "action": "bypass" } }
+    }
+  ],
+  "managedRules": {
+    "bot_protection": { "active": true, "action": "log" },
+    "ai_bots": { "active": true, "action": "log" }
+  }
+}

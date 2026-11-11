@@ -7,6 +7,9 @@ import { BLOB_READ_WRITE_TOKEN, isBlobConfigured } from '@/lib/env'
 import { errName } from '@/lib/log'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // Photo uploads (ADR-0005). The browser asks for a one-time token for ONE
 // path; we give it only to a signed-in member, only for a path inside that
 // member's own shop folder (tenants/<tenantId>/…), only WebP, only up to 3 MB,

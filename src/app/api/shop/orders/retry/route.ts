@@ -3,6 +3,9 @@ import { LIMITS } from '@/lib/db/rate-limit'
 import { reply, shopRequest, Token } from '@/lib/http/shop-api'
 import { retryPayment } from '@/lib/orders/payment'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // Try paying online again on the same order.
 const Body = z.object({ token: Token })
 

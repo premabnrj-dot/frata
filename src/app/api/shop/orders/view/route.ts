@@ -9,6 +9,9 @@ import { OrderRef, orderRefHash } from '@/lib/http/order-ref'
 import { checkoutShop, orderPage } from '@/lib/queries/checkout'
 import { processEvents } from '@/lib/orders/payment'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // The shopper's order page data. The token comes in the body (it lives in the URL's #fragment, so no log or cache
 // ever holds it); a wrong shop and a missing order answer the same 404. Address and phone are masked (owner call 4).
 const Body = OrderRef

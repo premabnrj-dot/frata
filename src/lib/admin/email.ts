@@ -5,7 +5,7 @@ import type { StaffOk } from '@/lib/auth/require-staff'
 
 // =============================================================================
 // FILE: src/lib/admin/email.ts — ADMIN › EMAIL HEALTH (email plan E·2): per-shop counts from the daily roll-up and the
-// outbox's email queue, through the admin definers only (drizzle/0091). Staff never read an address or a message.
+// outbox's email queue, through the admin definers only (drizzle/0096). Staff never read an address or a message.
 // =============================================================================
 
 export type EmailHealthRow = { tenant_id: string; shop: string; sent: number; delivered: number; bounced: number; complained: number; skipped: number }

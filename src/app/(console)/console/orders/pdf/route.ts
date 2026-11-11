@@ -6,6 +6,9 @@ import { brandFor, frozenPaper } from '@/lib/documents/brand'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { errName } from '@/lib/log'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // =============================================================================
 // FILE: src/app/(console)/console/orders/pdf/route.ts — a packing slip or an invoice as a PDF (Documents D1).
 // GET ?kind=slip|invoice|credit&size=a4|label&n=1043,1044 — up to 50, resolved inside the member's own shop (another shop's

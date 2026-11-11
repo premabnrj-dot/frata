@@ -92,8 +92,8 @@ export async function up({ build = true } = {}) {
     EKCODE_WA_PHONE_NUMBER_ID: EKCODE.number, EKCODE_WA_TOKEN: EKCODE.token, EKCODE_WA_AUTH_TEMPLATE: EKCODE.template, EKCODE_META_APP_SECRET: EKCODE.appSecret,
     EKCODE_WA_VERIFY_TOKEN: EKCODE.verifyToken, EKCODE_PHONE_PEPPERS: EKCODE.peppers, EKCODE_SEAL_KEYS: EKCODE.seals,
     // Own domains (D2·10): Vercel's API and DNS-over-HTTPS answered by e2e/fakes/domains.mjs (loopback only).
-    VERCEL_API_TOKEN: 'e2e-vercel', VERCEL_PROJECT_ID: 'prj_e2e', VERCEL_API_BASE: `http://127.0.0.1:${PORTS.domains}`, DOH_BASE: `http://127.0.0.1:${PORTS.domains}`,
-    MUX_TOKEN_ID: MUX.tokenId, MUX_TOKEN_SECRET: MUX.tokenSecret, MUX_WEBHOOK_SECRET: MUX.webhook, MUX_ENVIRONMENT_ID: MUX.env,
+    VERCEL_API_TOKEN: 'e2e-vercel', VERCEL_BILLING_TOKEN: 'e2e-billing', VERCEL_TEAM_ID: 'team_e2e', VERCEL_PROJECT_ID: 'prj_e2e', VERCEL_API_BASE: `http://127.0.0.1:${PORTS.domains}`, DOH_BASE: `http://127.0.0.1:${PORTS.domains}`,
+    MUX_TOKEN_ID: MUX.tokenId, MUX_TOKEN_SECRET: MUX.tokenSecret, MUX_READ_TOKEN_ID: MUX.readId, MUX_READ_TOKEN_SECRET: MUX.readSecret, MUX_WEBHOOK_SECRET: MUX.webhook, MUX_ENVIRONMENT_ID: MUX.env,
     MUX_API_BASE: `http://localhost:${PORTS.mux}`, MUX_STREAM_BASE: `http://localhost:${PORTS.mux}/stream`, MUX_IMAGE_BASE: `http://localhost:${PORTS.mux}/image`,
     // Email (ADR-0011): the fake SES on loopback, a static test key (never read on Vercel), the fake SNS topic.
     SES_API_BASE: `http://127.0.0.1:${PORTS.ses}`, SES_TEST_KEY: SES.key, SES_SNS_TOPIC_ARN: SES.topic, SES_ROLE_ARN: 'arn:aws:iam::000000000000:role/frrata-e2e', SES_ACCOUNT_ID: '000000000000',

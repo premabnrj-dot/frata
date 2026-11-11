@@ -12,6 +12,7 @@ import { errName } from '@/lib/log'
 // time, and for a permanent bounce or a complaint the per-shop address hash — never the address, headers or the
 // diagnostic text. A failure after a good signature answers 500 (SNS retries only 5xx/429).
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 const LIMIT = 256 * 1024
 export async function POST(request: Request) {
   const body = await readCapped(request, LIMIT)

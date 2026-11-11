@@ -159,7 +159,7 @@ business once the company exists to lift that.
   later"; review P5):
   1. ~~Vercel Pro and a frequent outbox schedule~~ — done 2026-11-11 (owner upgraded to Pro): `/api/cron/drain` every
      5 minutes (`vercel.json`); a sender also drains straight after its commit (`drainSoon`).
-  2. ~~The outbox claim moves to a definer~~ — done 2026-11-11 (drizzle/0091): `app_outbox_claim` / `app_outbox_settle`,
+  2. ~~The outbox claim moves to a definer~~ — done 2026-11-11 (drizzle/0096): `app_outbox_claim` / `app_outbox_settle`,
      and the `outbox` policies lost their no-shop branch; `outbox` is off check:tenant's OPEN_FOR_APP.
 - **Preview deployments must not hold the production database** (review S1): in Vercel, take `DATABASE_URL` off
   Preview (or point Preview at a Supabase branch) and turn on Deployment Protection for previews.

@@ -5,6 +5,9 @@ import { LIMITS } from '@/lib/db/rate-limit'
 import { recordExposure } from '@/lib/db/ekcode'
 import { tokenDigest } from '@/lib/ekcode/keys'
 
+// Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
+export const maxDuration = 30
+
 // The holdout's denominator (spec § Goal): one beacon per visitor a day says which arm saw this shop's checkout. Only
 // the id's hash is kept, rolled up nightly and deleted (0088 app_ekcode_exposure, app_ekcode_daily).
 export const dynamic = 'force-dynamic'

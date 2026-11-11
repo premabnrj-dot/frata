@@ -50,6 +50,10 @@ const TENANT_IN_APP = {
   'src/app/api/shop/orders/view/route.ts': 'the shopper\'s order page: tenant from the host, order from a signed token',
 }
 const DATA_MODULE = /(?:from\s+|import\(\s*)['"]@\/lib\/(?:queries|db|admin|auth)(?:\/[^'"]*)?['"]/
+/** App files outside Admin that may import src/lib/admin, with why (each checks its own credential). */
+const ADMIN_LIB_IN_APP = {
+  'src/app/api/cron/infra/route.ts': 'Admin › Infrastructure\'s hourly pull of vendor usage (CRON_SECRET via isCronRequest; writes platform rows only, plan 2026-11-11 I·1)',
+}
 /** Actions the shell may import from src/app (they are endpoints, not reads), with why. */
 const SHELL_ACTIONS = {
   '@/app/(admin)/admin/sign-out/actions': 'Sign out: ends a live support visit (needs src/lib/admin, so it lives under Admin)',
@@ -74,7 +78,7 @@ for (const file of walk('src')) {
   if (ADMIN_DB.test(text) && !file.startsWith('src/lib/admin/') && file !== 'src/lib/db/admin.ts') {
     failures.push(`${file}  imports the admin connection — only src/lib/admin/** may (ADR-0007)`)
   }
-  if (ADMIN_LIB.test(text) && !file.startsWith('src/app/(admin)/') && !file.startsWith('src/lib/admin/')) {
+  if (ADMIN_LIB.test(text) && !file.startsWith('src/app/(admin)/') && !file.startsWith('src/lib/admin/') && !ADMIN_LIB_IN_APP[file]) {
     failures.push(`${file}  imports src/lib/admin — only Admin pages and actions may (ADR-0007)`)
   }
   if (file.startsWith('src/lib/admin/')) {
