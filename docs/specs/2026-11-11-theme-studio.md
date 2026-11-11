@@ -19,7 +19,7 @@ accessibility (home, product, collection); **zero** shops changed without their 
 ## Phases (owner-approved order; each its own plan and mockup board)
 | Phase | Who gets what |
 |---|---|
-| **TS0a Seam** (invisible) | `ManifestSchema` (every code manifest parses it); `manifestFor` in `src/lib/themes/` read before any transaction and passed into the pure functions; every caller of `resolveStored`/`manifestNear`/`latestAvailable` migrated (~20 files) with 0 px proof; the publish-cache fixes below; ADR-0011 |
+| **TS0a Seam** (invisible) | `ManifestSchema` (every code manifest parses it); `manifestsFor(tenant)` in `src/lib/themes/manifests.ts` read before any transaction and passed into the pure functions; every caller of `resolveStored`/`manifestNear`/`latestAvailable` migrated (~20 files) with 0 px proof; the publish-cache fixes below; ADR-0011 |
 | **TS0b Blocks** | The block catalogue and the `design` section, shipped first inside a **minor version of a code theme** (e.g. Signal 1.4) and measured on real shops |
 | **TS1 Pages and templates (Look)** | About, Contact (WhatsApp + business details), FAQ; product and collection page layouts from blocks; as code themes' features, for owners |
 | **TS2 Staff studio (Admin)** | Frrata's team builds and releases gallery themes; second-person approval |
@@ -127,7 +127,7 @@ validated, immutable once a version exists, versioned.
   pages, designs and templates exhaustively; the save definer refuses any value containing `tenants/`.
 - **Apply to a client** happens in that client's console (`requireMember(CAN_BUILD)` through the store switcher):
   Try creates a draft; Publish stays the owner's. The portal studio previews on **sample pieces only**; Admin likewise.
-- **Caps:** ≤ 10 themes a partner, ≤ 20 versions a theme a day, saves per user rate-limited; an owner's layer ≤ 256 kB.
+- **Caps:** ≤ 10 themes a partner, ≤ 20 versions a theme a day, saves per user rate-limited; an owner’s layer ≤ 64 kB (the database check).
 
 ### 5. Checks — one function
 `themeCheck(manifest, previous?)` (pure) is the one check: the vitest `check:theme` calls it for code manifests, the
@@ -150,7 +150,7 @@ seeded e2e stack in CI (no production credentials in CI).
   new version offered like any other.
 
 ### 7. Speed fixes that come first (TS0a; existing debt the studio would make worse)
-- `shopPublishes` caches `{revisionId, key, version}` only; each revision body cached by id (immutable); revision ≤ 256 kB.
+- `shopPublishes` caches `{revisionId, key, version}` only; each revision body cached by id (immutable); revision ≤ 64 kB (the database check).
 - `versionStates` returns withdrawn `key@version` pairs only, under `cache()`.
 - `themeOf` memoizes per `key@version` per request.
 
@@ -204,7 +204,7 @@ closed; the key Production only.
   `set_audience`/`offer_update` with B's tenant write nothing; `shop_pages` cross-tenant checks; approval by the
   submitter refused; a version's manifest can't be updated; `has_function_privilege` false for anon, authenticated,
   service_role on every new definer.
-- **Skills:** `frata-architecture` § Themes (ADR-0011, `manifestFor`, blocks, entitlements); `frata-design-language`
+- **Skills:** `frata-architecture` § Themes (ADR-0011, `manifestsFor`, blocks, entitlements); `frata-design-language`
   (studio and pages patterns once approved); a planning heading "Theme Studio: new block or token? additive? stable ids?".
 - **Agents:** architecture, tenancy, security, speed reviewers on each phase's plan; `unit-economics-reviewer` at TS3 and
   TS4.
@@ -212,7 +212,7 @@ closed; the key Production only.
 ## Design review
 - **UI/UX:** studio desktop-only, Look phone-first, Rule 0; states as the mockup's States board.
 - **Tenancy:** § 4; contact data none in TS1 (WhatsApp only).
-- **Modularity:** pure `blocks.ts`, `manifest-schema.ts`, `check.ts`; `src/lib/themes/manifest.ts` (`manifestFor`);
+- **Modularity:** pure `blocks.ts`, `manifest-schema.ts`, `check.ts`; `src/lib/themes/manifests.ts` (`manifestsFor`);
   `src/lib/themes/studio.ts`; `src/components/storefront/blocks/`; Admin and partner routes.
 - **SSOT:** a theme's facts in its manifest; owners' content in their layer and `shop_pages`; legal details and FAQ
   answers bound to Settings; one check function.
@@ -223,7 +223,7 @@ closed; the key Production only.
   caches per version, immutable.
 - **Performance:** (a) a shop page adds no statement (manifest content cached; entitlement checked at write); (b) new
   queries: entitlement insert, audience lookups — indexed by (tenant_id, version_id), (theme_id, tenant_id); (c) entries:
-  manifest ≤ 512 kB, revision ≤ 256 kB, publishes list ids only; (d) largest page ≤ 300 kB HTML / 150 kB RSC (test);
+  manifest ≤ 512 kB, revision ≤ 64 kB (the database check), publishes list ids only; (d) largest page ≤ 300 kB HTML / 150 kB RSC (test);
   (e) studio writes purge `theme:<id>`, a page edit the shop's page tag, never platform-wide; (f) shop JS unchanged
   (product template server-only blocks), studio ≤ 220 kB; (g) ≤ 2 eager images, no new font.
 - **Reliability:** no new outbound call in TS0–TS3 (no email until the inbox).

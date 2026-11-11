@@ -1,6 +1,6 @@
 # Plan: Theme Studio TS0a — the seam (invisible)
-Status: draft · Date: 2026-11-11 · Spec: `docs/specs/2026-11-11-theme-studio.md` (active; mockup v2 approved by the owner
-2026-11-11) · Reviews: — (architecture, speed, tenancy on this plan before any code)
+Status: draft v2 (architecture review folded in) · Date: 2026-11-11 · Spec: `docs/specs/2026-11-11-theme-studio.md` (active; mockup v2 approved by the owner
+2026-11-11) · Reviews: architecture-reviewer (2026-11-11, folded in below); speed-reviewer (running)
 
 ## Goal
 Nothing a merchant sees changes. After TS0a, a theme manifest can come from somewhere other than a code file without
@@ -8,8 +8,41 @@ touching any caller again, every manifest passes one schema and one check functi
 would overload are fixed. Measure: every e2e flow green, `05-shop-look` 0 px, resolved-looks and released-manifests
 snapshots byte-identical, shop JS/CSS unchanged, `shopPublishes` entry ≤ 10 kB for a shop with 20 publishes.
 
+## Decisions taken from the architecture review (2026-11-11)
+- **Cache keys change with their shape** (blocker): `publishes` → `publishes-v2` (candidates only), `sf-theme-versions` →
+  `sf-theme-withdrawn` holding a `string[]` (a cached `Set` comes back as `{}`); the Set is built after the read.
+- **Parity compares like with like** (blocker): `parse(m)` is compared with `{ ...m, home: m.home.map(SectionSchema.parse) }`;
+  the schema is strict (unknown keys refused, never stripped); a type test holds `z.input<typeof ManifestSchema>` and
+  `ThemeManifest` assignable both ways.
+- **Injection is refused where it reaches CSS**: the 12 colour roles (`#RRGGBB`), style keys (`^[a-z0-9-]{1,40}$`, the
+  database check), enums and numbers; free text (features, job, names) is shown escaped by rendering it in a test.
+  Manifest images: `ImageSchema.base` limited to `/themes/samples/` for manifests now (`studio/<id>/` in TS2).
+- **Callers missed**: `productForEdit` (`queries/catalogue.ts:111`) reads the source at its top (it calls `extrasOffered`
+  inside its own `withTenant`); Classic always comes from code (`isBaseline`): `classicFromSettings` imports
+  `classic_1_0_0` directly, so `shell.tsx` and `pages.tsx` stay as they are; `resolve.test.ts`, `site.test.ts` updated;
+  `seo` (share cards, icons), `documents` (`brand.ts`) and `paging` join the regression list.
+- **Enforcement on the right half**: `manifestOf` / `manifestNear` stop being exports of the catalogue, so typecheck proves
+  every caller moved; a `check:layers` rule allows `CATALOGUE` only in `source.ts`, `lib/admin/themes.ts`, the Admin
+  version page and `__tests__`; `cmpSemver` moves to `semver.ts` (release.ts stops importing the catalogue).
+- **Source shape**: `{ keys(), versions(key) }`; pure `manifestOf(src, k, v)` and `manifestNear(src, k, v)` built from
+  `versions()` (one nearest-version rule). `OFFERED` stays code until TS2.
+- **Actions**: `requireMember` first (cached), then `manifestsFor(tenant)` (under `cache()`), then `asMember`.
+- **Speed**: candidates in one query (`DISTINCT ON (key, version)`, today's first query only); revision bodies under their
+  own tag `shop:<t>:revision:<id>` and a long revalidate (frozen), never the `'shop'` scope's 60 s or `refreshShop`'s
+  purge; statements counted with the speed proof's statement log before and after.
+- **Console path**: `liveCandidates` = `publishCandidates` + one fetch of the bodies it needs (one "newest publish per
+  version" rule); `lookFor`, `liveRevision`, `undoPublish`, `extrasOffered` keep full revisions. Admin's `liveOf` unchanged.
+- **Minor**: candidate fields `themeKey`/`themeVersion`; measure with 10 distinct versions; `shopTheme(shop)` cached by
+  `shop.id` replaces eleven `themeOf(shop, await shopLook(shop.id))` (previews unmemoised); per-manifest "key and version
+  match its catalogue slot" instead of a catalogue-wide unique check; resolved-looks gains fixture rows through
+  `resolveStored(row, shop, codeSource)`; `previewLook` one `withTenant` and the same withdrawn function, uncached.
+  The goal no longer says "without touching any caller again": TS2 touches `THEME_KEYS`, the revisions CHECK and the
+  Signal test. Spec aligned: `manifestsFor` / `manifests.ts`; revision cap stays the database's 64 kB.
+- **Process note**: TS0a-1's schema was started before this review finished; it is held, reworked to the decisions above,
+  and lands only after the speed review.
+
 ## Regression net first (TS0a-R)
-`npm run e2e -- --only shop-look,look,signal,themes-three,themes-v4,themes-admin,video` green on the current code
+`npm run e2e -- --only shop-look,look,signal,themes-three,themes-v4,themes-admin,video,seo,documents,paging` green on the current code
 (numbers recorded); `npx vitest run src/domains/themes src/lib/themes` green; snapshot files committed as they are.
 
 ## Design
