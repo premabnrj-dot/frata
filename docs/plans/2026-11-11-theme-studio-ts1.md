@@ -1,4 +1,6 @@
 # Plan: Theme Studio TS1 — pages and templates in Look
+
+> **Closed 2026-11-11 (owner, ADR-0014):** themes retire; TS1a and TS1b are built and live; TS1c, TS2, TS3 and TS4 are cancelled.
 Status: TS1a built 2026-11-11 (as-built below; impact, security and tenancy reviews on the diff folded in) · board v2 approved by the owner 2026-11-11; addresses fixed once published, owner 2026-11-11 · TS1b, TS1c next · Date: 2026-11-11 · Spec: `docs/specs/2026-11-11-theme-studio.md`
 (active; § 3 Pages and templates) · Mockup: https://claude.ai/artifact/X2TEDZRd7FyYvbiM6h6Jno (TS1a v2: Contact at /policies/contact; addresses fixed at first publish) · Reviews: architecture, tenancy, security, speed (2026-11-11, folded in below) · Legal: G.S.R. 789(E) read (frata-integrations § Consumer protection) · Builds on TS0b (blocks, designs)
 

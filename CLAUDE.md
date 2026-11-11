@@ -8,21 +8,24 @@
 ## What this product is
 
 **Frrata** (formerly Frata; internal names such as the repo, `frata_app` and the Vercel and Supabase projects keep the
-old spelling) is a fashion-first commerce platform for small and mid-size Indian D2C brands:
-COD-heavy, Instagram-driven, no developer. One deployment, three surfaces that
-share neither a look nor a gate:
+old spelling) is the commerce backend for Indian D2C brands (fashion first; COD-heavy, Instagram-driven).
+A brand runs its business in the console; its website is code that a developer, a partner or Frrata's
+agent builds on the Storefront API (ADR-0014, owner 2026-11-11; partners get the builder first). Today one
+deployment, three surfaces that share neither a look nor a gate:
 
 - **Console** — `src/app/(console)/console/`, the merchant's back office, behind
   `requireMember`. Orders with profit per order, COD risk, NDR, inbox,
   campaigns judged on delivered orders, channel connections.
 - **Storefront** — `src/app/s/[host]/`, a merchant's shop, public, reached by
-  host (`src/middleware.ts`, `src/domains/tenancy/host.ts`). Cached.
+  host (`src/middleware.ts`, `src/domains/tenancy/host.ts`). Cached. Themes are retiring (ADR-0014): no new
+  theme work; live looks keep rendering until each shop's website moves to code.
 - **Admin** — `src/app/(admin)/admin/`, Frata staff only, behind `requireStaff`.
   The only surface that reads across merchants (ADR-0007).
 
-**The goal:** a small Indian fashion brand keeps more profit per delivered
-order, without a developer. Work that moves none of the ranked problems in
-`frata-planning` § North star waits.
+**The goal:** Frrata is the commerce backend for Indian D2C brands. A brand runs its business in the console;
+its website is code that a developer, a partner or Frrata's agent builds on the Storefront API. Frrata keeps
+what makes the brand money: catalogue, checkout, COD, payments, orders, shipping, GST (owner, 2026-11-11). Work
+that moves none of the ranked problems in `frata-planning` § North star waits.
 
 ## Which skill to load
 

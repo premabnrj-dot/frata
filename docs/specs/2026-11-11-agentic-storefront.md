@@ -1,5 +1,5 @@
 # Frrata Sites — storefronts as code, built by developers and agents
-Status: draft (proposal for the owner; nothing is built) · Date: 2026-11-11 · Mockup: https://claude.ai/artifact/K8QusFghYyKYsYtU678huQ (docs/mockups/2026-11-11-agentic-storefront.html)
+Status: direction accepted (owner 2026-11-11: north-star wording, partners get the builder first, themes retire; ADR-0014) — each phase still gets its own spec, mockup and reviews · Date: 2026-11-11 · Mockup: https://claude.ai/artifact/K8QusFghYyKYsYtU678huQ (docs/mockups/2026-11-11-agentic-storefront.html)
 · Approved: —
 
 Owner (2026-11-11): "developers would be the core client who'll be developing, maintaining their sites; we could grow to
@@ -75,3 +75,41 @@ personal data held by sites; image generation.
 
 ## Facts used
 See the research section of the mockup (dated sources) and `docs/research/2026-11-11-claude-builder.md`.
+
+## Review findings (2026-11-11) and where each went
+Five reviews on the plan (security, tenancy, architecture, speed, unit economics); full scenarios, controls and the
+reordered phases: https://claude.ai/artifact/CukynMkEPgQcqWg8m8ZATW (docs/mockups/2026-11-11-studio-hardening.html).
+Status: findings recorded, not yet folded into a revised design; the owner decides the six questions there first.
+- **Blockers:**
+  - Partner code beside checkout cookies: `__Host-` cookies, exact-Origin checks, sites and previews on domains
+    Frrata never uses.
+  - "No personal data" enforced only by the site's code: Frrata-owned headers and runtime egress at the hosting layer.
+  - One partner login publishes to every client: two-factor, re-auth on publish, owner-granted per-client scopes,
+    approval bound to the commit.
+  - Removing a partner leaves routines, keys and sessions alive: one definer transaction revokes all; run-time
+    membership re-check.
+  - A law change would need 1,000 publishes: legal block and content served at runtime; a "Frrata patch" lane
+    (ADR-0014 exception).
+  - Hosting undecided: a hosting ADR amending ADR-0005 (separate account, adapter, edge router, repos by site id).
+- **High:**
+  - Studio resolves the shop from the session, never the shop cookie.
+  - The proxy pins the session's key.
+  - Skills are read-only in sessions; learned facts per shop.
+  - Partner credits in a partner ledger, not tenant rows.
+  - A closed package mirror and no DNS in the sandbox.
+  - Routines' 2 am rules.
+  - Credit fraud and free-tier farming controls.
+  - WhatsApp approval links: owner-only, never act on open.
+  - The kit's release integrity, minimum version and 24 h patch target.
+  - API caches 900 s with tag purges.
+  - Builds on publish only; a global turn queue.
+  - Attribution and the brand kit kept single-source.
+- **Pricing (3×):** a credit is ₹6.33 of measured cost (tokens, sandbox seconds, build minutes), sold at ₹19, estimate
+  first, charged on actuals. Seats and credits are excluded from the partner share. Hosting allowances are re-sized
+  after the host is chosen, with images on storage with no egress fee.
+- **In today's code (separate from Studio):** fixed 2026-11-11: placement waits ≤ 2 s for a lock and a shop places ≤ 8
+  orders at once (busy → 503, the try given back to the limits); the sold-out purge debounced across instances; the
+  quote's reads together, its cached collection members read after its transaction. Open: confirming a payment and
+  switching to pay on delivery take stock with no slot and the 10 s wait (a timeout in `processEvents` must leave the
+  event unprocessed first, or the payment is lost); previews hold production data (S1); staff sign in with an email
+  code only.

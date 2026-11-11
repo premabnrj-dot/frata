@@ -1,5 +1,6 @@
 import 'server-only'
 import { revalidateTag } from 'next/cache'
+import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 
 // What a shop's caches are told after a write (tags: shopCached in src/lib/queries/storefront.ts).
 
@@ -9,13 +10,16 @@ export function refreshShop(tenantId: string, scope: 'shop' | 'look' | 'catalogu
 }
 /**
  * A shopper's order sold something out (speed review P11). Each refresh rebuilds the whole catalogue and every product
- * page, so at a festive drop one per sell-out kept the shop uncached: at most one per shop every 30 s from this
- * instance. Checkout always reads live stock, so a card that still shows the last piece (up to the 60 s backstop) sells nothing twice.
+ * page, so at a festive drop one per sell-out kept the shop uncached: at most one per shop every 30 s — from this
+ * instance (no database read), and across every instance (one limiter row; speed review 2026-11-11: 10 instances
+ * purged 10 times). Checkout always reads live stock, so a card that still shows the last piece (up to the 60 s
+ * backstop) sells nothing twice.
  */
 const lastSoldOut = new Map<string, number>()
-export function refreshSoldOut(tenantId: string, now = Date.now()) {
+export async function refreshSoldOut(tenantId: string, now = Date.now()): Promise<boolean> {
   if (now - (lastSoldOut.get(tenantId) ?? 0) < 30_000) return false
   lastSoldOut.set(tenantId, now)
+  if (!(await withinLimit(LIMITS.soldOutPurge, tenantId, new Date(now)))) return false
   refreshShop(tenantId, 'catalogue')
   return true
 }

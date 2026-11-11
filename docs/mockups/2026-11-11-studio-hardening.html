@@ -1,0 +1,216 @@
+<title>Studio Stress Test</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a review report in one reading column; wide tables scroll inside their own frames. Console tokens. */
+:root {
+  --bg: #FAFAF9; --fg: #1C1917; --card: #FFFFFF; --muted: #F2F1EF; --sub: #5F5A55; --line: #DEDBD7; --input: #8C857F;
+  --ink: #1C1917; --on-ink: #FFFFFF; --rani: #D61F69; --rani-text: #A8124F;
+  --ok: #E9F6EC; --ok-t: #1E7B52; --warn: #FFF5C2; --warn-t: #8A5000; --bad: #FFEFEF; --bad-t: #C02A2F; --info: #EDF2FE; --info-t: #3451B2;
+  --f-display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+  --f-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141211; --fg: #EDEAE6; --card: #1C1A18; --muted: #262320; --sub: #A9A29B; --line: #34302C; --input: #6E6760;
+  --ink: #EDEAE6; --on-ink: #141211; --rani: #FF4F93; --rani-text: #FF7DAE;
+  --ok: #16301F; --ok-t: #7FD3A2; --warn: #352A0C; --warn-t: #F4C766; --bad: #3A1517; --bad-t: #FF8A8E; --info: #1A2238; --info-t: #9DB2FF; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #141211; --fg: #EDEAE6; --card: #1C1A18; --muted: #262320; --sub: #A9A29B; --line: #34302C; --input: #6E6760;
+  --ink: #EDEAE6; --on-ink: #141211; --rani: #FF4F93; --rani-text: #FF7DAE;
+  --ok: #16301F; --ok-t: #7FD3A2; --warn: #352A0C; --warn-t: #F4C766; --bad: #3A1517; --bad-t: #FF8A8E; --info: #1A2238; --info-t: #9DB2FF; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 15px/1.6 var(--f-body) }
+.wrap { max-width: 1140px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 80px }
+.col { max-width: 780px }
+h1, h2, h3 { text-wrap: balance; margin: 0 }
+h1 { font: 600 clamp(30px, 5vw, 46px)/1.06 var(--f-display); letter-spacing: -.01em }
+h2 { font: 600 25px/1.2 var(--f-display); margin: 56px 0 12px }
+h3 { font: 600 16px/1.3 var(--f-body); margin: 22px 0 8px }
+p { margin: 0 0 12px }
+.eyebrow { font: 500 12px/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--rani-text) }
+.lede { font-size: 18px; color: var(--sub); max-width: 720px; margin-top: 14px }
+.thread { height: 2px; width: 72px; background: var(--rani); margin: 18px 0 0 }
+.chip { display: inline-flex; align-items: center; border-radius: 999px; padding: 1px 9px; font: 500 12px/20px var(--f-body); white-space: nowrap }
+.c-ok { background: var(--ok); color: var(--ok-t) } .c-warn { background: var(--warn); color: var(--warn-t) } .c-bad { background: var(--bad); color: var(--bad-t) } .c-info { background: var(--info); color: var(--info-t) } .c-n { background: var(--muted); color: var(--sub) }
+.mono { font-family: var(--f-mono); font-size: 13px }
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--card) }
+table { width: 100%; border-collapse: collapse; font-size: 14px }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line) }
+th { font: 600 12px/1.3 var(--f-body); color: var(--sub); text-transform: uppercase; letter-spacing: .05em; white-space: nowrap }
+tr:last-child td { border-bottom: 0 }
+td.n { font-family: var(--f-mono); font-size: 12px; color: var(--sub); white-space: nowrap }
+.verdicts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-top: 14px }
+.vd { border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 12px; min-width: 0 }
+.vd h3 { margin: 0 0 6px; font-size: 14px } .vd p { font-size: 13px; color: var(--sub); margin: 6px 0 0 }
+@media (max-width: 980px) { .verdicts { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+@media (max-width: 560px) { .verdicts { grid-template-columns: minmax(0, 1fr) } }
+.ask { border-left: 3px solid var(--rani); background: var(--card); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 10px 0 }
+.ask b { color: var(--rani-text) }
+.note { font-size: 13px; color: var(--sub) }
+.now { border: 1px solid var(--bad-t); border-radius: 8px; padding: 12px 16px; background: var(--card); margin-top: 12px }
+.now h3 { margin-top: 0; color: var(--bad-t) }
+.now ul { margin: 0; padding-left: 18px } .now li { margin: 4px 0 }
+footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
+</style>
+
+<div class="wrap">
+  <div class="col">
+    <div class="eyebrow">Cross-verification · 11 Nov 2026 · for the owner</div>
+    <h1>Frrata Studio, stress-tested: what breaks, and the controls that hold it</h1>
+    <div class="thread"></div>
+    <p class="lede">Five independent reviews ran on the plan: security and abuse, tenancy, architecture and upkeep, speed at festive scale, and the 3× pricing. The direction holds. As drafted, the plan does not: 6 blockers, about 30 high findings. Below are the scenarios, the control for each, where it's enforced, the corrected prices, and a reordered plan. Nothing is built.</p>
+  </div>
+
+  <h2>The five verdicts</h2>
+  <div class="verdicts">
+    <div class="vd"><h3>Security</h3><span class="chip c-bad">Fix before V2</span><p>V1 (read API) sound. 3 blockers: partner code beside checkout's cookies; "no personal data" enforced only by the site's own code; one partner login can publish to every client.</p></div>
+    <div class="vd"><h3>Tenancy</h3><span class="chip c-bad">Fix before approval</span><p>Removing a partner leaves their routines, keys and sessions alive. Studio must never use the "current shop" cookie. Repos keyed by an id, not the shop's name.</p></div>
+    <div class="vd"><h3>Architecture</h3><span class="chip c-bad">Hosting: rethink</span><p>A law change would need 1,000 human publishes. Hosting and repos undecided. Partner credits can't live in shop rows. Brand and attribution would split into copies.</p></div>
+    <div class="vd"><h3>Speed and scale</h3><span class="chip c-warn">Over budget as written</span><p>No budgets for the API, sites, builds or agent turns. A flash drop's hot product can hold every shop's database connections. Routines on the hour cause a storm.</p></div>
+    <div class="vd"><h3>Pricing (3×)</h3><span class="chip c-warn">Hurts Frrata as drafted</span><p>A "turn" costs ₹5–150, not ₹6.2; ₹19 a turn breaks 3×. Hosting allowances fail 3× on every plan. Partner share leaks into credits.</p></div>
+  </div>
+
+  <div class="now">
+    <h3>Found in today's code, worth fixing regardless of Studio</h3>
+    <ul>
+      <li><b>A flash drop can block every shop's checkout.</b> Placing an order locks the product row for ~25–40 ms across ~15 steps; waiters queue up to 10 s each holding a connection; ~15 waiters can exhaust the shared pool. Fix: a 2 s lock wait on place-order, at most ~8 concurrent places per shop, "busy, try again" instead of a queue.</li>
+      <li><b>The sold-out purge is debounced per server instance</b>, so a drop with 10 instances purges the catalogue up to 10 times every 30 s. Fix: purge the product, debounce across instances.</li>
+      <li><b>The checkout quote reads four things one after another.</b> Fix: in parallel inside one transaction.</li>
+      <li><b>Previews still hold the production database URL</b> (open since an earlier review). Must close before any per-shop preview exists.</li>
+      <li><b>Staff sign in with an emailed code only.</b> Before any kill switch over sites: two-factor sign-in for staff and partners.</li>
+    </ul>
+  </div>
+
+  <h2>Stress test: scenarios, what stops them, where</h2>
+  <p class="note">B = blocker, H = high, M = medium. "Where" names the layer that enforces it, so no control depends on a partner's own code.</p>
+
+  <h3>Hacking and account takeover</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>#</th><th>Scenario</th><th>Control</th><th>Where</th><th>Sev</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td>A partner's login is phished; the attacker defaces or skims all 40 client sites in minutes</td><td>Two-factor (TOTP or passkey) for partners and staff; re-auth on every publish (≤ 5 min); per-client scopes only the brand owner grants; approval bound to the exact commit; publishes across shops capped per hour; the owner gets a notice with one-tap rollback</td><td><span class="mono">mayPublish</span> in the transaction, audit rows</td><td><span class="chip c-bad">B</span></td></tr>
+      <tr><td class="n">2</td><td>Partner script on <span class="mono">brand.in</span> sets cookies that reach <span class="mono">checkout.brand.in</span></td><td>Every checkout and console cookie <span class="mono">__Host-</span>; exact-Origin check on every cookie-authenticated POST; checkout can't be framed; previews and default site addresses on domains Frrata never uses for console, API, checkout or EkCode (registered on the Public Suffix List)</td><td>Security headers, host tests</td><td><span class="chip c-bad">B</span></td></tr>
+      <tr><td class="n">3</td><td>A partner pushes a fake UPI page, an address form, a miner, or a redirect to a look-alike checkout</td><td>Frrata writes the final headers over every response (scripts, connections and form posts only to self and Frrata); outbound calls blocked at runtime; forms only inside kit parts that post to Frrata; every publish scanned for payment, UPI, OTP, address patterns and outside links</td><td>Hosting layer Frrata owns, publish checks</td><td><span class="chip c-bad">B</span></td></tr>
+      <tr><td class="n">4</td><td>Shop-creation token in Frrata's Vercel team changes Frrata's own production variables</td><td>Sites in a separate hosting account with its own token, owned by one module; previews never hold production credentials</td><td>Hosting adapter</td><td><span class="chip c-bad">H</span></td></tr>
+      <tr><td class="n">5</td><td>A removed partner's routine still publishes; their test key still reads the unreleased catalogue</td><td>Removing a partner, in one transaction: stops sessions, disables routines, revokes their keys and git tokens, withdraws billing consent, kills sandboxes; every routine run and turn re-checks a live membership first</td><td>Partner-removal definer, tenancy proof</td><td><span class="chip c-bad">B</span></td></tr>
+      <tr><td class="n">6</td><td>A secret or key lands in a repo</td><td>Secret scan on every push and its history; rotation with overlap; Frrata can force a revoke; key prefixes registered with GitHub's secret scanning</td><td>Push hook, Admin</td><td><span class="chip c-warn">M</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>The agent: injection, exfiltration, sandbox</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>#</th><th>Scenario</th><th>Control</th><th>Where</th><th>Sev</th></tr></thead>
+    <tbody>
+      <tr><td class="n">7</td><td>A product title, review, brief or pasted screenshot tells the agent to add a tracker</td><td>Catalogue text reaches the agent as data; tools write only this shop's draft; outbound blocked; the security reviewer reads every diff; a person publishes</td><td>Agent tools, sandbox, checks</td><td><span class="chip c-bad">H</span></td></tr>
+      <tr><td class="n">8</td><td>Injected code sends data out through an allowed host (another shop's API key in the path, the package mirror, DNS, a font URL)</td><td>The proxy puts the session's own key into every API call and refuses any request that carries a key; a closed package mirror (pre-approved files only); no DNS in the sandbox; fonts only from Frrata's media host</td><td>Egress proxy</td><td><span class="chip c-bad">H</span></td></tr>
+      <tr><td class="n">9</td><td>An injection in client A's session writes "learned facts" that client B's sessions read</td><td>Agency and Frrata skills read-only inside a session; learned facts belong to one shop; a person keeps them only from that shop's console</td><td>Session tools, tenant rows</td><td><span class="chip c-bad">H</span></td></tr>
+      <tr><td class="n">10</td><td>Studio's open tab for client A acts on client B after a second tab switched the shop</td><td>Every Studio page, action and CLI call resolves the session id to its shop through a check of live membership; no fallback to "current shop"</td><td>Session definer</td><td><span class="chip c-bad">H</span></td></tr>
+      <tr><td class="n">11</td><td>A sandbox escape</td><td>Assume it: one microVM per session, no shared disk; proxy tokens scoped to the session and expiring with it; the preview reachable only through Frrata's signed proxy</td><td>Sandbox host</td><td><span class="chip c-bad">H</span></td></tr>
+      <tr><td class="n">12</td><td>A routine fired by a shopper's review or a sell-out publishes something bad at 2 am</td><td>Auto-publish only if the diff stays in the routine's declared files and no third-party text was in its context; visual-diff limit; quiet hours; N publishes a day; auto-rollback if checkout hand-offs drop; event triggers debounced (sell-out routines once a day)</td><td>Routine runner</td><td><span class="chip c-bad">H</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Abuse, spam and fraud</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>#</th><th>Scenario</th><th>Control</th><th>Where</th><th>Sev</th></tr></thead>
+    <tbody>
+      <tr><td class="n">13</td><td>Mass fake partners farm free credits (1,000 accounts ≈ ₹62k–2.7 lakh a month)</td><td>Free credits only for a verified partner (phone, PAN or GSTIN, one per device) with a linked, opened client shop; once, not monthly</td><td>Sign-up, credits ledger</td><td><span class="chip c-bad">H</span></td></tr>
+      <tr><td class="n">14</td><td>Stolen cards buy credit packs; chargebacks</td><td>Domestic cards and UPI first; credits released on capture; velocity caps on new accounts; used credits never refunded</td><td>Billing</td><td><span class="chip c-bad">H</span></td></tr>
+      <tr><td class="n">15</td><td>Studio used as a free code generator, or for prohibited content, risking Frrata's Anthropic account</td><td>Tools scoped to the repo; an off-topic check; per-partner ids on API calls; daily caps per partner; an org-wide spend limit with a breaker; turn size capped so a reserved credit covers the worst case</td><td>Turn runner</td><td><span class="chip c-bad">H</span></td></tr>
+      <tr><td class="n">16</td><td>The WhatsApp approval link is forwarded, unfurled by a bot, or used as a spam channel</td><td>Sent only to the owner's verified number; no partner text beyond a capped name; opening never acts; Approve needs the owner's sign-in and binds to the commit; links expire in 72 h; caps per shop and partner; never from EkCode's number (or use email until a sender exists)</td><td>Messaging route, preview proxy</td><td><span class="chip c-bad">H</span></td></tr>
+      <tr><td class="n">17</td><td>Sites used as SEO spam farms; a typo domain impersonating a known brand</td><td>Hosting only for paid or KYC'd shops (Razorpay connected); checks for hidden text, link farms, cloaking; the legal block must match GSTIN and KYC before opening; an abuse-report path and takedown; domain-add limits</td><td>Opening gate, publish checks, Admin</td><td><span class="chip c-warn">M</span></td></tr>
+      <tr><td class="n">18</td><td>A competitor floods a shop's site to run up its ₹40/GB overage</td><td>Bot traffic isn't billed; a per-site ceiling falls back to cached pages; bot protection on the host; limits on search by IP at the edge, never in the database</td><td>Hosting, WAF</td><td><span class="chip c-warn">M</span></td></tr>
+      <tr><td class="n">19</td><td>A malicious or typosquatted starter or package</td><td>Every starter release re-reviewed and signed; packages allowed by exact name and hash; new names checked for typosquats; a starter published as a fresh tree with no history, no brand file, no keys, no client names</td><td>Gallery review, mirror</td><td><span class="chip c-bad">H</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Updates and maintainability</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>#</th><th>Scenario</th><th>Control</th><th>Where</th><th>Sev</th></tr></thead>
+    <tbody>
+      <tr><td class="n">20</td><td>A law changes on 1 Jan 2027; 1,000 sites need a new line</td><td>What the law or Frrata must control is served at runtime: the legal block as data from the API, drawn by one kit part; policies and Contact stay Frrata pages. Target: every hosted site within 24 h</td><td>API, kit</td><td><span class="chip c-bad">B</span></td></tr>
+      <tr><td class="n">21</td><td>A security hole in the kit package itself</td><td>Published only from CI with provenance and two people; sites pin exact versions; Admin knows every site's kit version; a minimum version below which a site can't publish; a "Frrata patch" lane auto-deploys a patch when checks pass with no visual change; criticals within 24 h; headers fixed within 1 h through the hosting layer</td><td>Kit release, hosting, ADR-0014 exception</td><td><span class="chip c-bad">H</span></td></tr>
+      <tr><td class="n">22</td><td>A kit major breaks old sites</td><td>One compatibility table (API date × kit major × starter × checks version); current and previous major supported, previous gets security and legal fixes for 12 months; codemods ship with the kit; Frrata pays the credits for migrations it causes</td><td>Kit, Admin › Sites</td><td><span class="chip c-warn">M</span></td></tr>
+      <tr><td class="n">23</td><td>A partner leaves with 40 sites; a starter author walks away; a brand leaves Frrata</td><td>Repos belong to the shop in a Frrata org, access derived from membership; starters licensed for perpetual, transferable use; abandoned starters delisted, sites unaffected; export = git bundle + media; routines pause on hand-over until the owner confirms</td><td>Terms (owner and counsel), repo host</td><td><span class="chip c-warn">M</span></td></tr>
+      <tr><td class="n">24</td><td>An FAQ typo costs an agent turn</td><td>Content stays data in the console (pages, menus, announcements, policies) and is served by the API; code owns layout only</td><td>API, console</td><td><span class="chip c-warn">M</span></td></tr>
+      <tr><td class="n">25</td><td>Moving a theme shop to code loses SEO, breaks order emails, or needs new Razorpay approval</td><td>A Frrata-owned edge router per domain: checkout, orders, emails' links, policies and share images go to Frrata, the rest to the site (one origin, no re-approval); per-shop parity check of every URL, structured data and canonical before switching</td><td>Hosting ADR, migration tool</td><td><span class="chip c-bad">H</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Scale at festive peak</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>#</th><th>Scenario</th><th>Control</th><th>Where</th><th>Sev</th></tr></thead>
+    <tbody>
+      <tr><td class="n">26</td><td>50,000 shoppers in 5 minutes on one shop's drop (~400 quotes a second)</td><td>The today-fixes above; quote p95 &lt; 150 ms, ≤ 8 statements; API reads from the CDN (≥ 97% hits)</td><td>Checkout, API</td><td><span class="chip c-bad">H</span></td></tr>
+      <tr><td class="n">27</td><td>1,000 sites revalidating every 60 s turn crawls into database load (~1,500 API regenerations a second)</td><td>Catalogue and product caches 900 s with explicit purges by tag; site and API never on the same timer; ≤ 300 regenerations a minute per shop with an alert; hosted sites purged by Frrata through the outbox, one call per change</td><td>API, outbox</td><td><span class="chip c-bad">H</span></td></tr>
+      <tr><td class="n">28</td><td>200 partners publish before Diwali; Frrata's own hotfix queues behind them</td><td>Sites on a separate account; previews from the sandbox's dev server (no build per turn); builds on publish only; publish slots reserved; builds ≤ 5 min</td><td>Hosting</td><td><span class="chip c-bad">H</span></td></tr>
+      <tr><td class="n">29</td><td>500 routines at the top of the hour → a wall of model rate-limit errors</td><td>Each shop's routines on a fixed minute; one global turn queue sized to the model limit; interactive first, routines shed first; on a limit, wait and show "queued" (credit stays reserved); an Admin festival freeze</td><td>Turn queue, Admin</td><td><span class="chip c-bad">H</span></td></tr>
+      <tr><td class="n">30</td><td>A bot hits uncached routes on a site; Frrata pays the function time</td><td>A publish check: every route static or ISR (exceptions listed); function time in the plan's allowance with overage at 3×; spend alerts per site; never auto-pause in a festival week</td><td>Publish checks, hosting</td><td><span class="chip c-warn">M</span></td></tr>
+      <tr><td class="n">31</td><td>Nobody knows which site broke</td><td>Per key: CDN hits, regenerations, 4xx; per site: field speed, error rate, cart-link landings and orders against its 7-day baseline (a drop means it broke); nightly crawl of every live site for the legal block, buy link and speed; Admin › Sites</td><td>Analytics database, Admin</td><td><span class="chip c-warn">M</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Quality and safety by default: the publish checks</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Check</th><th>Bar</th><th>Blocks publish</th></tr></thead>
+    <tbody>
+      <tr><td>Speed on a 4G phone</td><td>Script ≤ 120 kB gz · HTML ≤ 300 kB · LCP ≤ 2.5 s · CLS ≤ 0.1 · one font preloaded · one priority image · no LCP regression &gt; 20% on the last publish</td><td>Yes</td></tr>
+      <tr><td>Rendering</td><td>Every route static or ISR (listed exceptions); no uncached API fetch; no polling under 60 s; region Mumbai</td><td>Yes</td></tr>
+      <tr><td>Accessibility</td><td>Automated score ≥ 95 a page; headings in order; alt text; focus visible</td><td>Yes</td></tr>
+      <tr><td>SEO</td><td>Title, description, canonical on the live domain; valid product data; every existing URL still answers</td><td>Yes</td></tr>
+      <tr><td>Brand</td><td>Colours, fonts, spacing and motion from the brand kit and kit tokens only; contrast</td><td>Yes</td></tr>
+      <tr><td>Law</td><td>Legal block and prior-price display on every page; policies linked</td><td>Yes</td></tr>
+      <tr><td>Safety</td><td>No secrets; only this shop's public key; packages by name and hash; no outside scripts, forms or links to payment look-alikes; no hidden text or cloaking</td><td>Yes</td></tr>
+      <tr><td>Kit</td><td>Kit inside the support window; no copied kit files</td><td>Yes (rollback always allowed)</td></tr>
+      <tr><td>Copy</td><td>Product claims match the catalogue; banned words</td><td>Warns, blocks on prices</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">The checks are one versioned package, run by CI and by Studio alike, against the deployed preview; each deployment records the version that passed it; a new rule warns for 30 days, then blocks.</p>
+
+  <h2>Pricing at 3×, corrected</h2>
+  <div class="col">
+    <p>A "turn" is several model calls, each reading and writing the prompt cache, plus sandbox time while the preview stays up. Measured that way a turn costs Frrata ₹5–150, central ₹16–27. ₹19 a turn would sell most work below cost. The fix keeps 3× by construction: <b>a credit is ₹6.33 of measured cost (tokens, sandbox seconds, build minutes), sold at ₹19</b>. Each session shows an estimate before it starts and is charged on actual use, rounded up.</p>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>Line</th><th>Was</th><th>Now</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Credit</td><td>1 turn = ₹19</td><td>₹6.33 of measured cost = 1 credit = ₹19</td><td>3× holds on every turn, cold cache or not</td></tr>
+      <tr><td>Typical work</td><td>Small change 1–2 credits; page 10–30</td><td>Small change ≈ 3–4 credits (₹57–76); a page ≈ 50–100 (₹950–1,900); shown before it runs</td><td>Measured cost ×3. Dearer than Lovable per page; still a fraction of a freelancer's ₹10k–60k a site</td></tr>
+      <tr><td>Seats</td><td>Studio ₹2,999 / 150 credits</td><td>Same credits; at measured credits the seat holds 3.25× by construction</td><td>Included cost ≤ ⅓ of the seat</td></tr>
+      <tr><td>Free tier</td><td>10 credits a month</td><td>60 credits once, for a verified partner with an opened client shop</td><td>10 can't build a page; monthly free credits invite farming</td></tr>
+      <tr><td>Partner share</td><td>20% of collected revenue</td><td>Excludes seats and credits</td><td>Otherwise a client-billed credit is 2.47×, below 3×</td></tr>
+      <tr><td>Hosting allowance</td><td>Launch 50 GB · Growth 200 GB · Scale 1 TB</td><td>Re-sized after the hosting choice so the allowance's cost × 3 fits the plan; images on storage with no egress fee (R2 or equivalent); edge requests and function time counted</td><td>At full use the old allowances cost ₹1,135 / ₹4,418 / ₹21,472 against plans of ₹1,499 / ₹4,999 / ₹14,999</td></tr>
+      <tr><td>Overage</td><td>₹40/GB, ₹4/build min</td><td>Set from the chosen host's real Mumbai rates × 3</td><td>Mumbai bandwidth may cost double the US rate</td></tr>
+      <tr><td>Storefront API</td><td>Free</td><td>Free, with edge limits and bot protection</td><td>A Launch shop at 10× traffic and low conversion costs more than it pays; the limits and cheaper image delivery fix that, not a per-call fee</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Cheapest proof before V3 (2 days, nothing built): run 20 real Studio tasks through the Agent SDK in a sandbox on Frrata's key and log tokens, cache writes, sandbox minutes and failures; read the current storefront's per-project hosting charges for 30 days.</p>
+
+  <h2>The plan, reordered</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Phase</th><th>What changes</th><th>Gate to start the next</th></tr></thead>
+    <tbody>
+      <tr><td class="n">Now</td><td>The today-fixes: place-order lock wait and per-shop cap, cross-instance sold-out purge, parallel quote, previews off production data, two-factor sign-in for staff</td><td>Load test of a 50k-shopper drop on the e2e stack</td></tr>
+      <tr><td class="n">V0</td><td>Decision records: ADR-0014 amended (the "Frrata patch" lane, content stays data, the brand kit), ADR-0002 (key + session as tenant sources), a hosting ADR amending ADR-0005 (separate account, adapter, edge router, repo host)</td><td>Your sign-off</td></tr>
+      <tr><td class="n">V1</td><td>Storefront API + the kit's core (legal block, price, buy link with attribution, SEO tags, image, analytics) + Starter 0 built by Frrata; API budgets and caching as above</td><td>Starter 0 passes every check on the e2e stack; kill only external self-hosting if &lt; 3 sites</td></tr>
+      <tr><td class="n">V1.5</td><td>Brand kit (one source for site, checkout, emails, cards); the checks package; partner and staff two-factor</td><td>Checkout, emails and cards read the brand kit</td></tr>
+      <tr><td class="n">V2</td><td>Hosting on a separate account behind the adapter; Frrata-owned headers and egress; edge router; repos by site id; scopes, approvals, kill switches, Admin › Sites; one theme shop piloted end to end</td><td>The pilot shop's parity check green; cost per shop measured</td></tr>
+      <tr><td class="n">V3</td><td>Studio: sandbox and proxy rules, partner credits ledger (measured credits), global turn queue, routines with the 2 am rules</td><td>The 20-task cost proof; security review of the built proxy</td></tr>
+      <tr><td class="n">V4</td><td>Gallery: signed releases, re-review each release, clean trees, licences</td><td>5 partner starters</td></tr>
+      <tr><td class="n">V5</td><td>Theme shops moved through the edge router with parity checks; themes removed</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="col">
+    <h2>Decisions for you</h2>
+    <div class="ask"><b>1. Credits as measured cost.</b> One credit = ₹6.33 of measured cost, sold at ₹19, estimate first, charged on actuals. Accept?</div>
+    <div class="ask"><b>2. The one exception to "a person publishes".</b> Frrata's own patch lane (security and legal fixes, checks pass, no visual change) deploys to every site without a click. Accept?</div>
+    <div class="ask"><b>3. Content stays data.</b> FAQ, policies, menus, announcements stay console data served by the API; code owns layout. Accept?</div>
+    <div class="ask"><b>4. Hosting off Frrata's Vercel team, with an edge router Frrata owns in front of each site.</b> Cloudflare Workers for Platforms is favoured on security (runtime egress control) and cost; data residency in India to confirm. Proceed to the hosting decision record?</div>
+    <div class="ask"><b>5. The today-fixes.</b> Plan and ship them now (they protect this Diwali's drops), separately from Studio?</div>
+    <div class="ask"><b>6. Partner verification.</b> PAN or GSTIN, two-factor, and a linked opened shop before any free credits or publishing?</div>
+  </div>
+
+  <footer>Frrata · cross-verification of ADR-0014, Frrata Sites, Frrata Studio and the Storefront API · reviews: security, tenancy, architecture, speed, unit economics · 11 Nov 2026</footer>
+</div>
