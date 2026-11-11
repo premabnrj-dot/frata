@@ -715,6 +715,20 @@
       "when": 1794421219823,
       "tag": "0101_traffic_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1794428734372,
+      "tag": "0102_video_mp4",
+      "breakpoints": true
+    },
+    {
+      "idx": 103,
+      "version": "7",
+      "when": 1794428736074,
+      "tag": "0103_video_mp4_access",
+      "breakpoints": true
     }
   ]
 }

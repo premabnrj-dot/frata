@@ -357,7 +357,7 @@ after it. A class a shop page uses from outside the shop's folders must be added
   the stored draft), and a drop date over 400 days away or unreadable. themeCheck: what only the owner chooses is
   fill-marked; one video a design; a minor can't add pieces, collections or a video to a design already on shops.
 - **A loop's MP4 (TS1b, owner 2026-11-11).** A loop uploads with no MP4; past the checks the processor asks for a sized
-  one (`loopMp4`: 720p, or the largest size a smaller source fills) and records it in `videos.mp4` (0101–0102: set once)
+  one (`loopMp4`: 720p, or the largest size a smaller source fills) and records it in `videos.mp4` (0102–0103: set once)
   in the transaction that enqueues `mux.rendition.create`. `mp4Of(row)` is the one rule for which file plays (a V1
   loop's `highest`, a product's 720p).
 - **Eager images.** `ProductGrid`'s `lead` is off unless the caller asks; a page asks for ≤ 2 (`74-commerce` counts
