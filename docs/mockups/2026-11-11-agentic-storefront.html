@@ -236,15 +236,17 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
         <tr><td>Generated code breaks Frrata or another shop</td><td>Each site is its own deployment; nothing generated runs in the console's or checkout's runtime</td><td>Hosting: one project per shop; the app never imports shop code</td></tr>
         <tr><td>A site fakes the payment page</td><td>Payment happens only on Frrata's checkout host; the site hands over the bag by link</td><td>Cart link; Razorpay checkout only on Frrata's origin</td></tr>
         <tr><td>Shopper data collected by generated code</td><td>Sign-in, addresses and phone numbers stay in Frrata's checkout and EkCode; forms post to Frrata's API</td><td>DPDP: Frrata is the processor; sites hold no personal data</td></tr>
-        <tr><td>Prompt injection through product text, reviews or a pasted brief</td><td>The agent treats catalogue text as data; its tools can write only this shop's repo in a sandbox; publish is a human click</td><td>Sandbox network allow-list; no console data tools beyond the catalogue; publish button</td></tr>
-        <tr><td>Malicious or vulnerable packages</td><td>An allow-list of packages and versions, a lockfile, no install scripts, audit on every build</td><td>Build step before publish</td></tr>
+        <tr><td>Prompt injection through product text, reviews or a pasted brief (no agent is immune: Anthropic's best reported attack success is still 1.4%)</td><td>The agent runs outside the sandbox and drives it; credentials are added by a proxy outside it, never seen by the agent; catalogue text is data; tools write only this shop's draft branch; publish is a human click</td><td>Sandbox egress allow-list; credential proxy; draft branch only (never the live branch, as v0 does); publish button</td></tr>
+        <tr><td>Malicious or vulnerable packages</td><td>An allow-list of packages and versions, a pinned lockfile, no install scripts, a minimum release age (a new version waits a day), audit on every build</td><td>Build step before publish</td></tr>
+        <tr><td>Drafts or code seen by the wrong people (Lovable's April 2026 incident: public projects' chats and code readable for 11 weeks)</td><td>Every repo, draft and preview private by default; preview links signed and short-lived; previews on their own origin, never the console's</td><td>Hosting, builder</td></tr>
         <tr><td>Secrets in code</td><td>A secret scan on every build; only the public key is allowed in the bundle</td><td>Publish checks</td></tr>
         <tr><td>XSS and third-party scripts</td><td>The starter's CSP; API text is plain text; pixels go server-side through Frrata's Conversions API</td><td>Starter template, publish checks</td></tr>
         <tr><td>Phishing or illegal content on a shop's domain</td><td>Proved domains only, content review on first publish, a per-site kill switch in Admin</td><td>Admin, hosting</td></tr>
         <tr><td>A broken publish loses sales</td><td>Every publish is a deployment with one-click rollback; checkout keeps working whatever the site does</td><td>Hosting, console › Website</td></tr>
         <tr><td>Agent and hosting costs run away</td><td>Credits per plan, reserved before each agent turn; caps per hour and month; build minutes counted</td><td>Usage rows before calls (ADR-0006/0008)</td></tr>
         <tr><td>A starter from a partner is malicious</td><td>Review before listing, the same checks as a shop's publish, signed releases, delisting</td><td>Gallery review, Admin</td></tr>
-        <tr><td>India's e-commerce rules (business details on the site, in force 1 Jan 2027)</td><td>A legal block from the API that the checks require on every published site</td><td>Publish checks</td></tr>
+        <tr><td>India's E-Commerce Amendment Rules 2026 (in force 1 Jan 2027): grievance officer, country of origin, seller GSTIN, prior price beside a discount, a yearly dark-pattern self-audit</td><td>A legal block and price display from the API that no site can remove; a dark-pattern check on generated screens</td><td>Publish checks</td></tr>
+        <tr><td>DPDP Rules 2025 (security and breach duties apply from about May 2027, processors included)</td><td>Sites hold no personal data; Frrata as processor keeps contracts, logs and breach handling for what checkout holds</td><td>Checkout, EkCode, Admin</td></tr>
       </tbody>
     </table>
   </div>
@@ -410,15 +412,29 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
     <h2>Open questions for you</h2>
     <div class="ask"><b>1. The goal.</b> Do you accept the north-star wording above? <code>CLAUDE.md</code> and the planning skill change with it.</div>
     <div class="ask"><b>2. Brands with no developer.</b> Do they get the builder from day one, or does V3 open to partners first, as Theme Studio did?</div>
-    <div class="ask"><b>3. Hosting.</b> One project per shop on Frrata's Vercel team, or Cloudflare Workers for Platforms. Research below compares cost and isolation.</div>
+    <div class="ask"><b>3. Hosting.</b> One project per shop on Frrata's Vercel team (closest to today's Next.js in Mumbai; per-site cost not published), or Cloudflare Workers for Platforms (about ₹2–3 per shop a month before traffic, egress control built in; India-only processing unconfirmed). Agent runs and previews in Vercel Sandbox, which runs in Mumbai.</div>
     <div class="ask"><b>4. Existing looks.</b> Turn each live look into code automatically at V5, or keep themes running for shops that never move?</div>
     <div class="ask"><b>5. Partners' money.</b> Revenue share on starters, a listing fee, or free starters that lead to paid client work?</div>
   </div>
 
-  <div class="col" id="research">
-    <h2>Research</h2>
-    <p class="note">Filled from dated sources; see the spec <span class="mono">docs/specs/2026-11-11-agentic-storefront.md</span>.</p>
+  <div class="col" id="research"><h2>Research</h2><p>Checked 11 Nov 2026; each source carries its own date. "Taken" is what Frrata would copy.</p></div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Who</th><th>What they do</th><th>Taken</th></tr></thead>
+      <tbody>
+        <tr><td>Replit (28 Oct 2026)</td><td>The agent runs outside the sandbox; a credential broker adds secrets per request; every checkpoint is a git commit; the agent reads production data only through a read-only copy</td><td>Agent outside, secrets in a broker, commits as checkpoints, no production writes</td></tr>
+        <tr><td>v0 (10 Nov 2026)</td><td>Previews in Vercel Sandbox microVMs; works on a <span class="mono">v0/…</span> branch, never pushes to main; publish through a pull request that obeys branch protection</td><td>Draft branch per session; publish is a reviewed merge and a deployment</td></tr>
+        <tr><td>Lovable (22 Apr 2026)</td><td>A visibility bug exposed public projects' chats and code; fixed by making projects private, remixing opt-in, and a pre-publish scan (data rules, packages) that can block</td><td>Private by default; scans that block publish</td></tr>
+        <tr><td>Shopify (28 Oct 2026)</td><td>Hydrogen on any framework; new themes ship agent-guiding markdown and typed contracts; Sidekick edits themes on a copy; an AI toolkit flags unauthenticated routes and cross-shop data access; Theme Store asks Lighthouse ≥ 60 performance, ≥ 90 accessibility; 15% revenue share</td><td>Starters with agent rules; a security toolkit in checks; a quality bar and a 0–15% take rate</td></tr>
+        <tr><td>Framer (15 Sep 2026)</td><td>Creators keep 100% of paid template revenue</td><td>A free-to-list option for partners</td></tr>
+        <tr><td>Vercel (Sep 2026)</td><td>Multi-project platforms: separate build, runtime and variables per project, unlimited projects on Pro, domains by API (100 adds an hour); Sandbox $0.128 per vCPU-hour, in Mumbai</td><td>A project per shop; Sandbox for the agent and previews</td></tr>
+        <tr><td>Cloudflare (Apr–Sep 2026)</td><td>Workers for Platforms: a Worker per app in untrusted mode, an outbound Worker filters egress; $25 a month for 1,000 scripts, then $0.02 each; custom hostnames $0.10 each after 100</td><td>The cheaper isolation per shop, if India processing is confirmed</td></tr>
+        <tr><td>Anthropic, OWASP (Nov 2025 – 2026)</td><td>Injection is not solved; sandbox the agent, inject credentials outside it, allow-list egress; OWASP's agentic top 10 leads with goal hijack and tool misuse</td><td>Least agency; constrain what the agent can do rather than ask about each step</td></tr>
+        <tr><td>India (Sep 2026; Nov 2025)</td><td>E-Commerce Amendment Rules 2026 from 1 Jan 2027; DPDP Rules 2025 duties from about May 2027</td><td>Legal blocks sites cannot remove; no personal data on sites</td></tr>
+      </tbody>
+    </table>
   </div>
+  <p class="note" style="margin-top:8px">Still to check: per-site cost on Vercel; whether Cloudflare can keep processing in India; the Gazette text of both Indian rules.</p>
 
   <footer>Frrata · proposal, not built · 11 Nov 2026</footer>
 </div>

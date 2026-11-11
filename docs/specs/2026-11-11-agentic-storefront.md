@@ -1,6 +1,6 @@
 # Frrata Sites — storefronts as code, built by developers and agents
-Status: draft (proposal for the owner; nothing is built) · Date: 2026-11-11 · Mockup: docs/mockups/2026-11-11-agentic-storefront.html
-(artifact link in the conversation) · Approved: —
+Status: draft (proposal for the owner; nothing is built) · Date: 2026-11-11 · Mockup: https://claude.ai/artifact/K8QusFghYyKYsYtU678huQ (docs/mockups/2026-11-11-agentic-storefront.html)
+· Approved: —
 
 Owner (2026-11-11): "developers would be the core client who'll be developing, maintaining their sites; we could grow to
 agentic frontend on top of our storefront APIs, like Replit or Lovable; clients have our console system and
