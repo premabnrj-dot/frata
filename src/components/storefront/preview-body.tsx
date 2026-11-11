@@ -27,7 +27,7 @@ export async function previewPage(o: { tenantId: string; shop: StoreShop; path: 
   if (rest.length) return { body: <ShopNotFound href={href} lang={shop.shopLanguage} />, note: null }
   if (!a) {
     const [best, videos] = await Promise.all([bestSellersFor(theme, (d) => previewBestSellers(tenantId, d)), videosFor(theme, (k) => previewVideos(tenantId, k))])
-    return { body: <><HomeView shop={shop} cat={await previewCatalogue(tenantId)} href={href} now={now} theme={theme} bestSellers={best} videos={videos} preview />{Object.keys(videos).length > 0 && <LoopPlayer />}</>, note: null }
+    return { body: <><HomeView shop={shop} cat={await previewCatalogue(tenantId)} href={href} now={now} theme={theme} bestSellers={best} videos={videos} preview samples={samples} />{Object.keys(videos).length > 0 && <LoopPlayer />}</>, note: null }
   }
   if (a === 'products' && !b) return { body: <AllView cat={await previewCatalogue(tenantId)} href={href} now={now} lang={shop.shopLanguage} />, note: null }
   if (a === 'products' && b && /^[a-z0-9-]{1,100}$/.test(b)) {

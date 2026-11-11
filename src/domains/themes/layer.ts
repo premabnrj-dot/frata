@@ -95,6 +95,13 @@ export const onColour = (c: string): Hex => (contrast(c, ON_COLOUR.light) >= 4.5
  * Trying another theme: what the merchant set that the new theme allows comes across, the rest takes its defaults
  * (spec § Switching themes). Returns the new layer and, in words, what did not come across.
  */
+/** TS0b: a section comes across to `to` only if `to` allows its key and, for a design, has that design in the same
+ *  theme (a design id is unique only within its theme: architecture review 9). */
+const fits = (s: SectionInstance, from: ThemeManifest, to: ThemeManifest) =>
+  to.allowed.sections.includes(s.key) && (s.key !== 'design' || (from.key === to.key && (to.designs ?? []).some((d) => d.id === s.design)))
+/** A section's name in a lost line: a design by its own name. */
+const nameIn = (s: SectionInstance, m: ThemeManifest) => (s.key === 'design' ? (m.designs ?? []).find((d) => d.id === s.design)?.name ?? 'A design' : SECTION_NAMES[s.key])
+
 export function carryOver(from: { manifest: ThemeManifest; layer: ThemeLayer }, to: ThemeManifest): { layer: ThemeLayer; lost: string[] } {
   // Another version of the same theme (Editorial 1.0 → 1.1): everything the merchant made comes across (T2 review).
   // A new major version (Minimal 1 → Studio 2, Editorial 1 → 2) is a new character: it is tried like another theme,
@@ -103,9 +110,9 @@ export function carryOver(from: { manifest: ThemeManifest; layer: ThemeLayer }, 
   if (from.manifest.key === to.key && major(from.manifest.version) === major(to.version)) {
     const style = to.styles.some((s) => s.key === from.layer.style) ? from.layer.style : to.styles[0]!.key
     const parsed = (from.layer.home ?? []).map((s) => SectionSchema.safeParse(s)).flatMap((r) => (r.success ? [r.data] : []))
-    const home = from.layer.home?.filter((s) => { const r = SectionSchema.safeParse(s); return r.success && to.allowed.sections.includes(r.data.key) })
+    const home = from.layer.home?.filter((s) => { const r = SectionSchema.safeParse(s); return r.success && fits(r.data, from.manifest, to) })
     // Moving back a version (a recall) can drop a section the earlier version lacks: say so (T3 review).
-    const lost = [...new Set(parsed.filter((s) => !to.allowed.sections.includes(s.key)).map((s) => `${SECTION_NAMES[s.key]} isn't in ${to.name} ${to.version}`))]
+    const lost = [...new Set(parsed.filter((s) => !fits(s, from.manifest, to)).map((s) => `${nameIn(s, from.manifest)} isn't in ${to.name} ${to.version}`))]
     return { layer: { style, ...(from.layer.settings ? { settings: from.layer.settings } : {}), ...(home ? { home } : {}), ...(from.layer.site !== undefined ? { site: from.layer.site } : {}), ...(from.layer.menus !== undefined ? { menus: from.layer.menus } : {}) }, lost }
   }
   const was = { ...PAGE_DEFAULTS, ...from.manifest.defaults, ...(from.layer.settings ?? {}) } as ThemeSettings
@@ -132,8 +139,8 @@ export function carryOver(from: { manifest: ThemeManifest; layer: ThemeLayer }, 
     else lost.push(`The ${HEADER_NAMES[was.header]} header isn't in ${to.name}`)
   }
   const sections = (from.layer.home ?? from.manifest.home).flatMap((s) => { const r = SectionSchema.safeParse(s); return r.success ? [r.data] : [] })
-  const kept = sections.filter((s) => to.allowed.sections.includes(s.key))
-  for (const s of sections) if (!to.allowed.sections.includes(s.key)) lost.push(`${SECTION_NAMES[s.key]} isn't in ${to.name}`)
+  const kept = sections.filter((s) => fits(s, from.manifest, to))
+  for (const s of sections) if (!fits(s, from.manifest, to)) lost.push(`${nameIn(s, from.manifest)} isn't in ${to.name}`)
   // V1: the section comes across; its video stays only where the new theme offers video there (resolve drops it).
   if (kept.some((s) => (VIDEO_KEYS as readonly string[]).includes(s.key) && 'video' in s && s.video && !(to.allowed.videoSections ?? []).includes(s.key as VideoKey))) lost.push(`Videos aren't in ${to.name}; the photos show`)
   // Signal 1.2 (S2): resolve drops these where the new theme doesn't offer them: say so.

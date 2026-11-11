@@ -539,3 +539,32 @@ img[data-photo]::before { content: ""; position: absolute; inset: 0; background:
 
 /* Inter, self-hosted in two faces (src/app/layout.tsx): latin, then latin-ext for ₹. Every sheet reads --font-inter. */
 :root { --font-inter: var(--font-inter-latin), var(--font-inter-ext); }
+
+/* Theme Studio TS0b: a design's blocks (src/components/storefront/blocks). A closed set of classes and data
+   attributes, one rule each; check-storefront-build gzips the .store-b- rules alone (≤ 1.0 kB). */
+.store-b-design { display: flex; flex-direction: column; gap: calc(var(--store-space) * 1.5rem); }
+.store-b-cols { display: grid; gap: calc(var(--store-space) * 1.5rem); }
+.store-b-cols[data-phone="swipe"] { grid-auto-flow: column; grid-auto-columns: 78%; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 0.25rem; }
+.store-b-cols[data-phone="swipe"] > * { scroll-snap-align: start; }
+@media (min-width: 640px) {
+  .store-b-cols, .store-b-cols[data-phone="swipe"] { grid-auto-flow: row; grid-auto-columns: auto; overflow: visible; align-items: center; }
+  .store-b-cols[data-cols="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .store-b-cols[data-cols="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
+  .store-b-cols[data-cols="4"] { grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: start; }
+}
+.store-b-col, .store-b-group { min-width: 0; }
+.store-b-group { display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; }
+.store-b-photo { position: relative; width: 100%; overflow: hidden; border-radius: var(--store-radius); background: var(--store-chip); }
+.store-b-photo[data-ratio="4:5"] { aspect-ratio: 4 / 5; }
+.store-b-photo[data-ratio="3:4"] { aspect-ratio: 3 / 4; }
+.store-b-photo[data-ratio="1:1"] { aspect-ratio: 1; }
+.store-b-photo[data-ratio="16:9"] { aspect-ratio: 16 / 9; }
+.store-b-acc { width: 100%; border-top: 1px solid var(--store-line); }
+.store-b-acc details { border-bottom: 1px solid var(--store-line); }
+.store-b-acc summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 3rem; font-weight: 600; cursor: pointer; list-style: none; }
+.store-b-acc summary::-webkit-details-marker { display: none; }
+.store-b-acc summary::after { content: ""; flex: none; width: 1rem; height: 1rem; background: currentColor; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat; transition: rotate 200ms cubic-bezier(.2, 0, 0, 1); }
+.store-b-acc details[open] summary::after { rotate: 180deg; }
+.store-b-acc details p { margin: 0 0 1rem; color: var(--store-sub); line-height: 1.6; }
+.store-b-design [data-example] { opacity: 0.55; }
+@media (prefers-reduced-motion: reduce) { .store-b-acc summary::after { transition: none; } }

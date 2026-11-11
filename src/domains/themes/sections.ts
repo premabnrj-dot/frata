@@ -188,9 +188,56 @@ export const StatementSchema = z.object({
   image: ImageSchema.nullable().default(null),
 })
 
+/** Theme Studio TS0b: ids of designs and of their blocks; stable across a theme's versions (carry-over by id). Never a
+ *  name an object already has (a fill is a record keyed by block id: security review L1). */
+export const BLOCK_ID = /^[a-z0-9-]{1,40}$/
+const RESERVED_IDS = new Set(['constructor', 'prototype', '__proto__', 'tostring', 'valueof', 'hasownproperty'])
+export const blockId = z.string().regex(BLOCK_ID).refine((v) => !RESERVED_IDS.has(v), 'That id is reserved')
+/** A design's rich text: Rich text's paragraphs of runs, each run with words (an empty run can't hold a bare link). */
+const designRun = run.extend({ text: z.string().min(1).max(600) })
+const runChars = (ps: { text: string; link?: string }[][]) => ps.flat().reduce((n, r) => n + r.text.length + (r.link?.length ?? 0), 0)
+export const DesignBodySchema = z.array(z.array(designRun).min(1).max(40)).max(12).refine((ps) => runChars(ps) <= 2000, 'At most 2,000 characters')
+export const AccordionItemSchema = z.object({ q: text(80), a: text(600) })
+
+/** What an owner wrote into one block of a design, tagged with the block's kind (security M2, tenancy HIGH): a fill
+ *  only ever lands on a block of its own kind, and every photo is found by its kind (cleanImages). Never a video:
+ *  a design's one video is the section's own `video` (TS1). */
+export const FillSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('heading'), text: text(60) }),
+  z.object({ kind: z.literal('text'), body: DesignBodySchema }),
+  z.object({ kind: z.literal('image'), image: ImageSchema.nullable() }),
+  z.object({ kind: z.literal('button'), label: text(24), link: shopPath }),
+  z.object({ kind: z.literal('accordion'), items: z.array(AccordionItemSchema).max(12) }),
+])
+export type Fill = z.infer<typeof FillSchema>
+export type FillKind = Fill['kind']
+export const MAX_FILLS = 40, MAX_FILL_CHARS = 10_000
+/** The characters a fill holds (words and link paths): the section's total is capped. */
+export function fillChars(f: Fill): number {
+  switch (f.kind) {
+    case 'heading': return f.text.length
+    case 'text': return runChars(f.body)
+    case 'image': return f.image ? f.image.alt.length : 0
+    case 'button': return f.label.length + f.link.length
+    case 'accordion': return f.items.reduce((n, i) => n + i.q.length + i.a.length, 0)
+    default: return f satisfies never
+  }
+}
+
+/** Theme Studio TS0b: a section whose shape the theme fixes (a design, by id); the owner fills the blocks the theme
+ *  marks, by block id. Shape and caps only: whether the design and its blocks exist is the manifest's (resolveDesign). */
+export const DesignSectionSchema = z.object({
+  id, key: z.literal('design'), hidden, scheme, label,
+  design: z.string().regex(BLOCK_ID),
+  fill: z.record(blockId, FillSchema)
+    .refine((f) => Object.keys(f).length <= MAX_FILLS, `At most ${MAX_FILLS} fields`)
+    .refine((f) => Object.values(f).reduce((n, x) => n + fillChars(x), 0) <= MAX_FILL_CHARS, 'At most 10,000 characters in one section')
+    .default({}),
+})
+
 export const SectionSchema = z.discriminatedUnion('key', [
   HeroSchema, CollectionTilesSchema, ProductsSchema, PriceTilesSchema, PromisesSchema, ImageTextSchema, DropTeaserSchema, RichTextSchema, LogosSchema,
-  ShopTheLookSchema, StoryFanSchema, StatementSchema,
+  ShopTheLookSchema, StoryFanSchema, StatementSchema, DesignSectionSchema,
 ])
 /** The sections that may carry a V1 loop (where a theme lists them in allowed.videoSections): one list, read everywhere. */
 export const VIDEO_KEYS = ['hero', 'image_text'] as const
@@ -200,19 +247,21 @@ export type SectionInstance = z.infer<typeof SectionSchema>
 export type SectionInput = z.input<typeof SectionSchema>
 export type SectionKey = SectionInstance['key']
 export type SectionOf<K extends SectionKey> = Extract<SectionInstance, { key: K }>
-export const SECTION_KEYS: SectionKey[] = ['hero', 'collection_tiles', 'products', 'price_tiles', 'promises', 'image_text', 'drop_teaser', 'rich_text', 'logos', 'shop_the_look', 'story_fan', 'statement']
+export const SECTION_KEYS: SectionKey[] = ['hero', 'collection_tiles', 'products', 'price_tiles', 'promises', 'image_text', 'drop_teaser', 'rich_text', 'logos', 'shop_the_look', 'story_fan', 'statement', 'design']
 
 /** How many of each a page may hold (spec § Sections). */
-export const MAX_PER_PAGE: Record<SectionKey, number> = { hero: 3, collection_tiles: 3, products: 8, price_tiles: 1, promises: 1, image_text: 4, drop_teaser: 1, rich_text: 4, logos: 1, shop_the_look: 2, story_fan: 2, statement: 2 }
+export const MAX_PER_PAGE: Record<SectionKey, number> = { hero: 3, collection_tiles: 3, products: 8, price_tiles: 1, promises: 1, image_text: 4, drop_teaser: 1, rich_text: 4, logos: 1, shop_the_look: 2, story_fan: 2, statement: 2, design: 4 }
 export const MAX_SECTIONS = 20
 
 export const SECTION_NAMES: Record<SectionKey, string> = {
   hero: 'Hero', collection_tiles: 'Collection tiles', products: 'Products', price_tiles: 'Price tiles', promises: 'Shop by promise',
   image_text: 'Image with text', drop_teaser: 'Drop teaser', rich_text: 'Rich text', logos: 'Logos', shop_the_look: 'Shop the look',
-  story_fan: 'Story fan', statement: 'Statement',
+  story_fan: 'Story fan', statement: 'Statement', design: 'Design',
 }
 /** The section library's kinds, in order (Look v3 § Sections); a kind with nothing the theme offers is not shown. */
 export const SECTION_KINDS: { name: string; keys: SectionKey[] }[] = [
+  /** TS0b: the theme's designs, first (the board); the library lists each design by name, never the bare key. */
+  { name: 'Designs', keys: ['design'] },
   { name: 'Banners', keys: ['hero', 'drop_teaser'] },
   { name: 'Products', keys: ['products', 'price_tiles'] },
   { name: 'Collections', keys: ['collection_tiles'] },
@@ -234,6 +283,15 @@ export const SECTION_INFO: Record<SectionKey, { blurb: string; tags: string[] }>
   rich_text: { blurb: 'A few paragraphs in your words', tags: ['text', 'words', 'paragraph', 'note', 'size promise', 'made to order'] },
   promises: { blurb: 'Pay on delivery, exchanges, dispatch: from your settings', tags: ['trust', 'cod', 'cash on delivery', 'returns', 'exchange', 'shipping', 'free shipping'] },
   logos: { blurb: 'Press or partner logos', tags: ['press', 'as seen in', 'featured', 'partners', 'trust'] },
+  design: { blurb: 'Made for your theme: fill its words and photos', tags: ['design', 'made for', 'block'] },
+}
+
+/** TS0b: the library's search over a theme's designs, by the same rule (every word; name, then line, then tags). */
+export function searchDesigns<D extends { id: string; name: string; line: string; tags: string[] }>(query: string, ds: readonly D[]): D[] {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+  if (!words.length) return [...ds]
+  const score = (d: D) => { let t = 0; for (const w of words) { const s = d.name.toLowerCase().includes(w) ? 3 : d.line.toLowerCase().includes(w) ? 2 : d.tags.join(' ').toLowerCase().includes(w) ? 1 : 0; if (!s) return 0; t += s } return t }
+  return ds.map((d, i) => ({ d, i, s: score(d) })).filter((x) => x.s > 0).sort((a, b) => b.s - a.s || a.i - b.i).map((x) => x.d)
 }
 
 /**

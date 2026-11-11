@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { FOOTERS, HEADERS, PAIRINGS, type ThemeManifest } from './types'
 import { ALL_PRODUCT_LAYOUTS, ALL_SECTION_SCHEMES, SECTION_KEYS, SectionSchema, VIDEO_KEYS } from './sections'
 import { AnnouncementSchema } from './layer'
+import { DesignSchema, MAX_DESIGNS } from './blocks'
 
 // =============================================================================
 // FILE: src/domains/themes/manifest-schema.ts — what a theme manifest may hold (Theme Studio TS0a, spec
@@ -131,6 +132,10 @@ export const ManifestSchema = z.object({
   rhythm: z.literal('even').optional(),
   scale: z.literal('signal').optional(),
   home: z.array(HomeSectionSchema).max(20),
+  /** TS0b: designs (blocks.ts); their default photos come only from Frrata's samples, as home's (security L3). */
+  designs: z.array(DesignSchema).max(MAX_DESIGNS).superRefine((ds, ctx) => {
+    for (const b of imageBases(ds)) if (!MANIFEST_IMAGE.test(b)) ctx.addIssue({ code: 'custom', message: 'a design photo outside Frrata\'s samples' })
+  }).optional(),
 }).strict()
 
 /** A manifest from data, or a refusal in words (the first problems; never more than 5). */

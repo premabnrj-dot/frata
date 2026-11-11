@@ -8,6 +8,8 @@ import { manifestNear, manifestOf, type ManifestSource } from '@/domains/themes/
 import { latestAvailable } from '@/domains/themes/release'
 import { brandColourProblem, carryOver, LayerSchema, layerProblems } from '@/domains/themes/layer'
 import { readinessOf } from '@/domains/themes/readiness'
+import { DesignSchema, designProblems, pruneFill, type Design } from '@/domains/themes/blocks'
+import { SectionSchema, type SectionInstance } from '@/domains/themes/sections'
 import { paletteProblem, type Palette } from '@/domains/themes/site'
 import { baselineRevision, resolveTheme } from '@/domains/themes/resolve'
 import { THEME_KEYS } from '@/lib/db/schema-themes'
@@ -69,6 +71,9 @@ export async function tryThemeAction(input: unknown): Promise<R<{ revisionId: st
 
 const Save = z.object({ revisionId: z.uuid(), version: z.number().int().positive(), style: z.string().regex(/^[a-z0-9-]{1,40}$/), layer: z.object({ settings: z.unknown(), home: z.array(z.unknown()).optional(), site: z.unknown().optional(), menus: z.unknown().optional() }) })
 
+/** Below the revision's 64 kB check (drizzle/0033), leaving room for jsonb's own spacing (architecture review 5). */
+const MAX_LAYER_BYTES = 60_000
+
 export async function saveLookAction(input: unknown): Promise<R<{ version: number }>> {
   const p = Save.safeParse(input)
   if (!p.success) return { ok: false, error: 'That change could not be saved.' }
@@ -88,12 +93,21 @@ export async function saveLookAction(input: unknown): Promise<R<{ version: numbe
     // A palette must read with what it keeps from this style (sale and saving words, the tint).
     const pal = (p.data.layer.site as { palette?: Palette | null } | undefined)?.palette
     if (pal) { const sch = resolveTheme(m, { style: p.data.style }).schemes; const why = paletteProblem({ ...pal }, [sch.paper, sch.tint]); if (why) return { error: why } }
+    // TS0b: designs exist in this version and fit the page (architecture review 8: after the manifest is read).
+    const designs = new Map((m.designs ?? []).flatMap((d): [string, Design][] => { const r = DesignSchema.safeParse(d); return r.success ? [[r.data.id, r.data]] : [] }))
+    const sections = (layer.home ?? []).flatMap((x): SectionInstance[] => { const r = SectionSchema.safeParse(x); return r.success ? [r.data] : [] })
+    const dp = designProblems([...designs.values()], sections)
+    if (dp.length) return { error: dp[0]! }
     // Stored as parsed: unknown settings keys are dropped (tenancy audit 2026-11-08).
     const parsed = LayerSchema.parse(layer)
     const clean = cleanImages({ ...layer, settings: parsed.settings, ...(parsed.site ? { site: parsed.site } : {}), ...(parsed.menus ? { menus: parsed.menus } : {}) }, t, storeHost(BLOB_STORE_ID))
     if (!clean) return { error: 'A photo didn’t come from this shop. Upload it again.' }
     // V1: a video id must be one of this shop's own, not removed; anything else is dropped (the photo shows).
-    const kept = await cleanVideos(tx, t, clean)
+    const videosKept = await cleanVideos(tx, t, clean)
+    // TS0b: a design keeps only the words that fit its blocks (by id and kind: security M2).
+    const kept = videosKept.home ? { ...videosKept, home: videosKept.home.map((x) => { const r = SectionSchema.safeParse(x); return r.success && r.data.key === 'design' && designs.has(r.data.design) ? pruneFill(designs.get(r.data.design)!, r.data) : x }) } : videosKept
+    // The revision holds at most 64 kB (the database check, in bytes): say so in words before the insert would fail.
+    if (new TextEncoder().encode(JSON.stringify(kept)).length > MAX_LAYER_BYTES) return { error: 'This look is too long to save. Shorten some words, or remove a section.' }
     const s = await saveDraft(tx, t, { userId: auth.userId, email: auth.email }, { revisionId: rev.id, version: p.data.version, styleKey: p.data.style, settings: kept })
     if (!s.ok) return { error: s.why === 'stale' ? `${rev.updatedByEmail ?? 'Someone'} changed this draft a moment ago. Reload to see their changes.` : s.why === 'published' ? 'This look was published. Reload to keep editing.' : 'This draft is gone. Reload.' }
     return { version: s.version }
@@ -117,7 +131,7 @@ export async function publishLookAction(input: unknown): Promise<R> {
     const layer = rev.settings as { settings?: object; home?: unknown[] }
     const theme = resolveTheme(m, { style: rev.styleKey, ...layer })
     const facts = await lookFacts(tx, t)
-    const blocking = readinessOf(theme.home, facts, new Date()).filter((i) => i.blocks)
+    const blocking = readinessOf(theme.home, facts, new Date(), theme.designs).filter((i) => i.blocks)
     if (blocking.length) return { error: `Before publishing: ${blocking[0]!.text}.` }
     const out = await publishRevision(tx, t, { userId: auth.userId, email: auth.email }, {
       revisionId: rev.id, version: p.data.version,

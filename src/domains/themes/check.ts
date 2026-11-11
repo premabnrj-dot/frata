@@ -1,3 +1,4 @@
+import { DesignSchema, designsCheck, type Design } from './blocks'
 import { contrast } from './contrast'
 import { SECTION_KEYS, SectionSchema } from './sections'
 import type { ThemeManifest } from './types'
@@ -22,7 +23,10 @@ const PAIRS: [string, (s: ThemeManifest['styles'][number]['schemes']['paper']) =
 
 export const MAX_HOME_SECTIONS = 20
 
-export function themeCheck(m: ThemeManifest): string[] {
+const parsedDesigns = (m: ThemeManifest | undefined): Design[] => (m?.designs ?? []).flatMap((d) => { const r = DesignSchema.safeParse(d); return r.success ? [r.data] : [] })
+
+/** `previous`: the version this one follows, for "a minor only adds" (TS0b: designs and their block ids). */
+export function themeCheck(m: ThemeManifest, previous?: ThemeManifest): string[] {
   const out: string[] = []
   if (!/^\d+\.\d+\.\d+$/.test(m.version)) out.push(`The version ${m.version} isn't major.minor.patch`)
   if (m.styles.length < 1 || m.styles.length > 5) out.push(`${m.styles.length} styles; a theme has 1 to 5`)
@@ -42,7 +46,13 @@ export function themeCheck(m: ThemeManifest): string[] {
     // The section's own schema refuses a source outside the list (never by cost: ADR-0003).
     const r = SectionSchema.safeParse(s)
     if (!r.success) out.push(`Home section ${s.id}: ${r.error.issues[0]?.message ?? 'invalid'}`)
+    else if (r.data.key === 'design' && !(m.designs ?? []).some((d) => d.id === (r.data as { design: string }).design)) out.push(`Home section ${s.id}: design ${(r.data as { design: string }).design} isn't in the theme`)
   }
+
+  for (const d of m.designs ?? []) { const r = DesignSchema.safeParse(d); if (!r.success) out.push(`Design ${String((d as { id?: unknown }).id ?? '?')}: ${r.error.issues[0]?.message ?? 'invalid'}`) }
+  if ((m.designs ?? []).length && !m.allowed.sections.includes('design')) out.push('The theme has designs but doesn\'t allow the design section')
+  const minor = previous && previous.key === m.key && previous.version.split('.')[0] === m.version.split('.')[0]
+  out.push(...designsCheck(parsedDesigns(m), minor ? parsedDesigns(previous) : undefined))
 
   for (const st of m.styles) for (const [k, s] of Object.entries(st.schemes)) {
     if (!s) continue

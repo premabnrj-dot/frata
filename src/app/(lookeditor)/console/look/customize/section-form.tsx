@@ -7,10 +7,13 @@ import { Choice, Field, ImageField, LinkPicker, Switch, Text, paiseToRupees, rup
 import { Icon } from '@/components/icons/icon'
 import { VideoField } from './video-field'
 import dynamic from 'next/dynamic'
+import type { Design } from '@/domains/themes/blocks'
 
 // Signal 1.2's story forms load only when one is opened (speed review: the customizer is over its script budget).
 const StoryFanForm = dynamic(() => import('./story-forms').then((m) => m.StoryFanForm))
 const StatementForm = dynamic(() => import('./story-forms').then((m) => m.StatementForm))
+// Theme Studio TS0b: a design's form, likewise loaded only when a design is opened.
+const DesignForm = dynamic(() => import('./design-form').then((m) => m.DesignForm))
 
 // One section's settings (themes spec § Sections: every field, type and limit). The form edits a copy; every
 // change goes through `set`, which the editor turns into an undo step and an autosave.
@@ -34,6 +37,8 @@ export type FormCtx = {
   video?: { sections: readonly VideoKey[]; on: boolean }
   /** Signal 1.2 (S2): Image with text's Spotlight layout and the Hero's script line, where the theme offers them. */
   spotlight?: boolean; heroScript?: boolean
+  /** TS0b: this theme version's designs, by id (a design's form and readiness read them). */
+  designs?: Record<string, Design>
 }
 
 type Set<S> = (s: S) => void
@@ -248,11 +253,12 @@ export function SectionForm({ s, set, c }: { s: SectionInstance; set: (s: Sectio
       case 'shop_the_look': return <Look s={s} set={set} c={c} />
       case 'story_fan': return <StoryFanForm s={s} set={set} c={c} />
       case 'statement': return <StatementForm s={s} set={set} c={c} />
+      case 'design': { const d = c.designs?.[s.design]; return d ? <DesignForm s={s} set={set as (x: SectionOf<'design'>) => void} c={c} d={d} /> : null }
     }
   })()
   return (
     <div className="space-y-4">
-      <h2 className="text-base font-semibold">{SECTION_NAMES[s.key]}</h2>
+      <h2 className="text-base font-semibold">{s.key === 'design' ? c.designs?.[s.design]?.name ?? SECTION_NAMES.design : SECTION_NAMES[s.key]}</h2>
       {body}
       {/* The Statement is always white words on its darkened photo: no colours to choose. */}
       {s.key !== 'statement' && <Choice label="Colours" value={s.scheme} onChange={(scheme) => set({ ...s, scheme })} options={c.schemes.map((x) => ({ value: x.key, label: x.name }))} />}

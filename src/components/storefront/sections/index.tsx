@@ -28,8 +28,12 @@ export type SectionCtx = { shop: StoreShop; cat: StoreCatalogue; theme: Resolved
   /** The page's first section: only its photos load ahead of the rest (speed review P15: four `priority` images competed). */
   lead?: boolean
   /** The customizer's preview: a section that fails says so there (on the shop it is left out). */
-  preview?: boolean }
-import { Button, H2, Label, Paint, Sized, pad, rupees, said, wrap } from './parts'
+  preview?: boolean
+  /** The customizer's look preview (with samples): a design shows the theme's sample photos and example words, marked
+   *  (TS0b). Never on the shop or /console/preview, which show the shop as shoppers see it. */
+  samples?: boolean }
+import { Button, H2, Label, Paint, Runs, Sized, pad, rupees, said, wrap } from './parts'
+import { DesignSection } from '../blocks'
 import { Products } from './products'
 import { Loop, LoopPoster } from './loop'
 import { Spotlight, Statement, StoryFan } from './story'
@@ -195,14 +199,7 @@ function RichText({ s, ctx }: { s: SectionOf<'rich_text'>; ctx: SectionCtx }) {
     <section aria-labelledby={s.heading ? h : undefined} className={`${wrap} ${pad} ${s.align === 'centre' ? 'text-center' : ''}`}>
       <div className={`max-w-prose space-y-3 leading-relaxed ${s.align === 'centre' ? 'mx-auto' : ''}`}>
         {s.heading && <H2 id={h}>{s.heading}</H2>}
-        {s.body.map((para, i) => (
-          <p key={i}>{para.map((r, j) => {
-            let n: React.ReactNode = r.text
-            if (r.bold) n = <strong>{n}</strong>
-            if (r.italic) n = <em>{n}</em>
-            return r.link ? <Link key={j} href={ctx.href(r.link)} className="underline underline-offset-4">{n}</Link> : <span key={j}>{n}</span>
-          })}</p>
-        ))}
+        <Runs body={s.body} href={ctx.href} />
       </div>
     </section>
   )
@@ -268,6 +265,7 @@ function One({ s, ctx }: { s: SectionInstance; ctx: SectionCtx }): React.ReactNo
     case 'shop_the_look': return ShopTheLook({ s, ctx })
     case 'story_fan': return StoryFan({ s, ctx })
     case 'statement': return Statement({ s })
+    case 'design': return DesignSection({ s, ctx })
   }
 }
 

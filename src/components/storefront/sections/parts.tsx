@@ -32,3 +32,15 @@ export function Button({ b, href }: { b: { label: string; link: string } | null;
   if (!b || !b.label) return null
   return <Link href={href(b.link)} className="store-btn inline-flex min-h-11 items-center rounded-[var(--store-radius)] bg-store-button px-5 text-sm font-medium text-store-on-button">{b.label}</Link>
 }
+
+/** Rich text's words, run by run: never HTML; a link is a shop path (Rich text and the design's text block, TS0b). */
+export function Runs({ body, href }: { body: { text: string; bold?: boolean; italic?: boolean; link?: string }[][]; href: Href }) {
+  return <>{body.map((para, i) => (
+    <p key={i}>{para.map((r, j) => {
+      let n: React.ReactNode = r.text
+      if (r.bold) n = <strong>{n}</strong>
+      if (r.italic) n = <em>{n}</em>
+      return r.link ? <Link key={j} href={href(r.link)} className="underline underline-offset-4">{n}</Link> : <span key={j}>{n}</span>
+    })}</p>
+  ))}</>
+}

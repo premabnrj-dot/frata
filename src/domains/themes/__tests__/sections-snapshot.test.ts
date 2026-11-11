@@ -1,16 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
-import { CollectionTilesSchema, HeroSchema, ImageTextSchema, ProductsSchema, SectionSchema, StatementSchema, StoryFanSchema } from '../sections'
+import { CollectionTilesSchema, DesignSectionSchema, HeroSchema, ImageTextSchema, ProductsSchema, SectionSchema, StatementSchema, StoryFanSchema } from '../sections'
+import { DesignSchema } from '../blocks'
 import storedV1 from './fixtures/stored-sections-v1.json'
 import storedV2 from './fixtures/stored-sections-v2.json'
 import storedV3 from './fixtures/stored-sections-v3.json'
+import storedV4 from './fixtures/stored-sections-v4.json'
 
-const stored = [...storedV1, ...storedV2, ...storedV3]
+const stored = [...storedV1, ...storedV2, ...storedV3, ...storedV4]
 
 // Section schemas change ADDITIVELY only (themes plan, architecture review): a stored layer must stay valid
 // forever. A new optional field with a default updates this snapshot on purpose; anything else is a new section key.
 describe('section schemas', () => {
-  it.each([['hero', HeroSchema], ['collection_tiles', CollectionTilesSchema], ['products', ProductsSchema], ['image_text', ImageTextSchema], ['story_fan', StoryFanSchema], ['statement', StatementSchema]] as const)('%s keeps its shape', (_k, s) => {
+  it.each([['hero', HeroSchema], ['collection_tiles', CollectionTilesSchema], ['products', ProductsSchema], ['image_text', ImageTextSchema], ['story_fan', StoryFanSchema], ['statement', StatementSchema], ['design', DesignSectionSchema], ['block catalogue (TS0b)', DesignSchema]] as const)('%s keeps its shape', (_k, s) => {
     expect(z.toJSONSchema(s, { io: 'input' })).toMatchSnapshot()
   })
 })

@@ -23,6 +23,8 @@ const BUDGET_KB = 120
 const TIGHT = { '/s/[host]/(shop)/products/[handle]/page': 121, '/s/[host]/(checkout)/checkout/page': 121 }
 // The shop's stylesheet (shared, render-blocking): every theme's rules land in it, so it has a ceiling too.
 const CSS_BUDGET_KB = 15.9 // 14.9 measured 2026-11-09 after Signal S2 (story sections, Caveat, scale; console rules moved to the app sheet) + 1 kB; was 22.5 before the shop's own sheet
+// Theme Studio TS0b: a design's block rules (.store-b-*, src/app/base.css) have their own ceiling inside the sheet.
+const BLOCK_CSS_KB = 1.0
 const failures = []
 const read = (f) => JSON.parse(readFileSync(join('.next', f), 'utf8'))
 if (!existsSync('.next/prerender-manifest.json')) { console.error('check:storefront-build — no .next to read; run it after next build.'); process.exit(1) }
@@ -77,6 +79,17 @@ for (const [k, files] of Object.entries(build)) {
   }
   if (!pages.length) failures.push('no app pages found to check for the app stylesheet')
 }
+
+// TS0b: the block rules alone, gzipped (speed review 7): every .store-b- rule in the shop's sheets, @media included.
+{
+  // The shop's own sheet (src/app/shop.css) is the root layout's: every built sheet without the app's marker.
+  const sheets = [...new Set(Object.values(build).flat().filter((f) => f.endsWith('.css') && !readFileSync(join('.next', f), 'utf8').includes('--frrata-sheet-app')))]
+  const rules = sheets.flatMap((f) => readFileSync(join('.next', f), 'utf8').match(/[^{}]*\.store-b-[^{}]*\{[^{}]*\}/g) ?? [])
+  const kb = gzipSync(Buffer.from([...new Set(rules)].join(''))).length / 1024
+  if (process.env.SHOW_BUDGETS) console.log(`  block rules: ${kb.toFixed(2)} kB CSS`)
+  if (kb > BLOCK_CSS_KB) failures.push(`the design blocks' rules (.store-b-) are ${kb.toFixed(2)} kB gzipped (budget ${BLOCK_CSS_KB} kB)`)
+}
+
 if (failures.length) {
   console.error('check:storefront-build:')
   for (const f of failures) console.error('  ' + f)

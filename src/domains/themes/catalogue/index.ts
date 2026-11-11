@@ -15,6 +15,7 @@ import { signal_1_0_0 } from './signal/1.0.0'
 import { signal_1_1_0 } from './signal/1.1.0'
 import { signal_1_2_0 } from './signal/1.2.0'
 import { signal_1_3_0 } from './signal/1.3.0'
+import { signal_1_4_0 } from './signal/1.4.0'
 
 // The themes in this build. A version is added as a new file and listed here; a listed file never changes (T3's
 // git gate enforces it).
@@ -24,7 +25,7 @@ export const CATALOGUE: Record<string, Record<string, ThemeManifest>> = {
   bazaar: { '1.0.0': bazaar_1_0_0, '2.0.0': bazaar_2_0_0, '2.1.0': bazaar_2_1_0 },
   minimal: { '1.0.0': minimal_1_0_0, '2.0.0': minimal_2_0_0, '2.1.0': minimal_2_1_0 },
   atelier: { '1.0.0': atelier_1_0_0 },
-  signal: { '1.0.0': signal_1_0_0, '1.1.0': signal_1_1_0, '1.2.0': signal_1_2_0, '1.3.0': signal_1_3_0 },
+  signal: { '1.0.0': signal_1_0_0, '1.1.0': signal_1_1_0, '1.2.0': signal_1_2_0, '1.3.0': signal_1_3_0, '1.4.0': signal_1_4_0 },
 }
 
 // Reading a manifest: through a ManifestSource (../source.ts), never from CATALOGUE directly (Theme Studio TS0a).

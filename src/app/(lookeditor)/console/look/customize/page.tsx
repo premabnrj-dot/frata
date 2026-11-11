@@ -23,6 +23,8 @@ import { editorData, justPublished } from '@/lib/queries/look'
 import { previewShop } from '@/lib/queries/storefront'
 import { Editor } from './editor'
 import { Published } from './published'
+import { DesignThumb } from './design-thumb'
+import { DesignSchema, type Design } from '@/domains/themes/blocks'
 
 // The customizer page: its own route group (no console chrome: the shop is the canvas). Only an editor of the look
 // (owner, admin, partner; not a support visit) gets here; the draft must exist (Look's Customize makes it).
@@ -64,6 +66,8 @@ export default async function Customize() {
   const sampled = !!m.samples && needsSamples(data.products.length)
   const first = sampleFirst(sampleSetFor(f.sells))
   const schemeNames = m.styles.find((s) => s.key === draft.style)?.schemeNames ?? {}
+  // TS0b: the theme's designs (parsed), and each one's picture drawn here (never the drawing code in the browser).
+  const designs = (m.designs ?? []).flatMap((d): Design[] => { const r = DesignSchema.safeParse(d); return r.success ? [r.data] : [] })
   return (
     <div className={STORE_FONT_VARS}>
       <Editor
@@ -78,13 +82,14 @@ export default async function Customize() {
         allowed={{ pairings: m.allowed.pairings, headers: m.allowed.headers, footers: m.allowed.footers, sections: m.allowed.sections }} made={m.made ?? {}}
         facts={{ collections: f.collections, codOn: f.codOn, freeShippingAbove: f.freeShippingAbove, returnDays: f.returnDays, dispatchDays: f.dispatchDays }}
         formCtx={{ tenantId: t, targets, collections: data.collections, products: data.products, photos: data.photos, shopName: shop.shopName, masks: m.allowed.heroMasks ?? ['none'], layouts: m.allowed.productLayouts ?? PRODUCT_LAYOUTS, labels: (choicesFor(m, 'labels') ?? ['none']).some((x) => x !== 'none'), promiseWords,
-          video: { sections: m.allowed.videoSections ?? [], on: isVideoConfigured() }, spotlight: (m.allowed.imageTextLayouts ?? []).includes('spotlight'), heroScript: !!m.allowed.heroScript,
+          video: { sections: m.allowed.videoSections ?? [], on: isVideoConfigured() }, spotlight: (m.allowed.imageTextLayouts ?? []).includes('spotlight'), heroScript: !!m.allowed.heroScript, designs: Object.fromEntries(designs.map((d) => [d.id, d])),
           schemes: ([{ key: 'paper', name: schemeNames.paper ?? 'Paper' }, { key: 'tint', name: schemeNames.tint ?? 'Tint' }, { key: 'ink', name: schemeNames.ink ?? 'Ink' }, { key: 'signal', name: 'Your colour' }] as const).filter((x) => (m.allowed.sectionSchemes ?? SECTION_SCHEMES).includes(x.key)) }}
         targets={targets} fonts={Object.fromEntries(PAIRINGS.map((p) => [p, displayFamily(p)])) as Record<Pairing, string>}
         address={shop.host} canPublish={(CAN_MANAGE as readonly string[]).includes(role)} shopOpen={!!shop.publishedAt} nowIso={new Date().toISOString()}
         // A theme with samples (2.0): with no piece or collection of its own yet, the page picker opens a sample one.
         firstProduct={data.products[0]?.handle ?? (sampled ? first.product : null)} firstCollection={data.collections[0]?.handle ?? (sampled ? first.collection : null)}
         choices={choicesOf(m)}
+        designs={designs.map((d) => ({ id: d.id, name: d.name, line: d.line, tags: d.tags, thumb: <DesignThumb design={d} /> }))}
       />
     </div>
   )
