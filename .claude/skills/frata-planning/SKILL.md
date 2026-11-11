@@ -2,7 +2,7 @@
 name: frata-planning
 description: Use when planning any Frata feature, enhancement, redesign or connector - before writing a spec or plan, before executing one, and when closing one - to run the spec, research, design review, mockup, sign-off, plan, execute and document loop, with the review headings (UI/UX, tenancy, modularity, SSOT/DRY, YAGNI, KISS, performance, reliability, security, motion and visuals, unit economics, blast radius).
 metadata:
-  version: 2.4.0
+  version: 2.5.0
   verified: 2026-11-08
   decisions: [ADR-0001]
 ---
@@ -162,6 +162,9 @@ Answer every heading. "n/a" says why. A review that says "yes" to each is not do
   collapsed to its count). No Unicode glyph stands in for an icon.
 - **Unit economics** — does it change what a merchant pays, what Frata pays
   (WhatsApp, Vercel, Supabase), or the profit formula? Run `unit-economics-reviewer`.
+- **Theme blocks** (Theme Studio) — a new block or token: additive only (a breaking change is a new kind),
+  ids stable across versions (a minor only adds: `themeCheck(m, previous)`), every photo-bearing fill kind in
+  `cleanImages`, page limits in `designProblems`, nothing a shop shows that the owner didn't write or choose.
 - **Blast radius** — every caller of what changes; shared resources (middleware,
   pool, layout, tokens); footguns written down before building.
 

@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.37.0
+  version: 2.38.0
   verified: 2026-11-11
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**"]
@@ -310,6 +310,20 @@ after it. A class a shop page uses from outside the shop's folders must be added
   query, `publishCandidates`, also the console's rule) and the newest body; other bodies are cached by revision id;
   withdrawn versions are a `string[]`. Publish and Undo purge `shop:<t>:look`, never the catalogue. `look.ts` runs inside
   `asMember`: never a cached loader or a second `withTenant` there (`look-p4.test.ts`).
+- **Blocks and designs (Theme Studio TS0b; plan `docs/plans/2026-11-11-theme-studio-ts0b.md`).** A theme's `designs`
+  are trees of blocks (`blocks.ts`: explicit three levels, design › columns › group › leaf, never `z.lazy`); the owner's
+  section `{ key: 'design', design, fill }` fills the blocks the theme marks, **by stable block id, with kind-tagged
+  fills** (`FillSchema`, a discriminated union; the record keyed by the id regex, reserved ids refused, read with
+  `Object.hasOwn`). `SectionSchema` stays manifest-free; **`resolveDesign(design, fill, 'shop' | 'preview')`** merges,
+  and on the shop never yields a theme's sample photo or an `example` (a claim the owner must write: readiness blocks
+  Publish). `ResolvedTheme.home` keeps stored shapes; `ResolvedTheme.designs` holds only the designs in use. The save
+  (`saveLookAction`) runs `designProblems` after the manifest is read, prunes fills to (id, kind), and refuses a layer
+  over 60 kB of JSON bytes in words. `cleanImages` maps every fill by kind (`satisfies never`). A design carries over
+  only within its theme (`carryOver`), else a `lost` line names it. Blocks render in
+  `src/components/storefront/blocks/` (server only; `check:tenant` 6e: no loader or db import), styled by `.store-b-*`
+  rules (≤ 1.0 kB gz, `check-storefront-build`). The tree walk (`design-tree.ts`) has no Zod, for the customizer's
+  bundle (gated at 208 kB). Commerce, video and date blocks arrive in TS1 with the per-source loader; a fill never holds
+  a video (a design's video will be the section's own `video`).
 - **Manifests** are typed files `src/domains/themes/catalogue/<theme>/<semver>.ts`, listed in `catalogue/index.ts`.
   A released file never changes; a new version is a new file. Theme colours live there and nowhere else
   (`check:hex` QUOTED rule).
