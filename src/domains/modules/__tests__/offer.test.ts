@@ -37,7 +37,7 @@ describe('offerFor', () => {
     built('rto_shield', 'now')
     expect(offerFor('rto_shield', moduleAccess(none, now).rto_shield, null, now).action).toEqual({ kind: 'plans', label: 'See Growth' })
     expect(offerFor('rto_shield', moduleAccess({ ...none, planFeatures: ['rto_shield'], switchedOn: ['rto_shield', 'communication'] }, now).rto_shield, null, now))
-      .toMatchObject({ footer: 'Included', filter: 'included', state: { label: 'On' }, action: { kind: 'switch', on: true } })
+      .toMatchObject({ footer: 'Included', filter: 'included', state: { label: 'Working' }, action: { kind: 'switch', on: true } })
     built('rto_shield', 'next')
   })
   it('a paused module says so and keeps its switch', () => {

@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
@@ -10,9 +9,10 @@ import { CONSOLE_ROLES } from '@/domains/tenancy/roles'
 import { CAN_SEE_GST } from '@/domains/tenancy/roles'
 import { dayIN } from '@/lib/format-date'
 import { gstPeriod, type Fix } from '@/lib/queries/gst'
-import { appsPage, shopModules } from '@/lib/queries/modules'
+import { appsPage } from '@/lib/queries/modules'
 import { AppAbout } from '../_components/app-about'
-import { aboutProps } from '../_components/about-data'
+import { aboutProps, mayTurnOff } from '../_components/about-data'
+import { AppHome } from '../_components/app-home'
 import { ReviewTabs } from './review-tabs'
 import { FilePanel } from './file-panel'
 import { gsp } from '@/lib/gst/gsp'
@@ -32,28 +32,39 @@ const FIX_WORDS: Record<Fix['kind'], { title: string; href: string; action: stri
 }
 
 /** Console › GST (GST app G1; approved mockup "The month", "Review", "For your CA"). */
-export default async function GstPage({ searchParams }: { searchParams: Promise<{ p?: string }> }) {
+export default async function GstPage({ searchParams }: { searchParams: Promise<{ p?: string; tab?: string }> }) {
   const auth = await requireMember(CONSOLE_ROLES)
   if (!auth.ok) return <Panel title={auth.message} />
   const now = new Date()
   // GST (the app) is a module: in Growth and Scale, on once the shop switches it on in Apps. Invoices are GST-correct either way.
   // Not in use: the app's page, for any member (Apps gallery A1; review A4). In use: the owner, an admin or the accountant.
-  const gate = (await shopModules(auth.membership.tenantId, now.toISOString())).access.gst
+  // One read for the state, the price and the about page (A1 impact review: never the facts twice).
+  const apps = await appsPage(auth.membership.tenantId, auth.userId, now.toISOString()).catch((err) => { console.error('[gst apps]', err instanceof Error ? err.name : 'error'); return null })
+  if (!apps) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  const gate = apps.access.gst
+  const about = aboutProps('gst', apps, now, (CAN_MANAGE as readonly string[]).includes(auth.membership.role), auth.membership.tenantName)
   if (!gate.usable) {
-    const d = await appsPage(auth.membership.tenantId, auth.userId, now.toISOString())
-    return <AppAbout {...aboutProps('gst', d, now, (CAN_MANAGE as readonly string[]).includes(auth.membership.role), auth.membership.tenantName)}
+    return <AppAbout {...about}
       notice={gate.why === 'paused' ? <p role="status" className="mb-4 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">GST is paused by Frrata. We’re on it.</p> : undefined} />
   }
   if (!(CAN_SEE_GST as readonly string[]).includes(auth.membership.role)) return <Panel title="Only the owner, an admin or the accountant sees GST" />
-  const { p } = await searchParams
+  // Its home (Apps A2): Usage and billing is not the accountant's (GST and documents only); Turn off needs CAN_MANAGE.
+  const accountant = auth.membership.role === 'accountant'
+  const sp = await searchParams
+  const tab = sp.tab === 'billing' && !accountant ? 'billing' : 'overview'
+  const home = (body?: React.ReactNode, top?: { badge?: React.ReactNode; meta?: React.ReactNode }) => (
+    <AppHome k="gst" tab={tab} offer={about.offer} worksWith={about.worksWith} billing={!accountant} canTurnOff={mayTurnOff(auth.membership)}
+      badge={top?.badge} meta={top?.meta}>{body}</AppHome>
+  )
+  if (tab === 'billing') return home()
+  const { p } = sp
   const d = await gstPeriod(auth.membership.tenantId, p ?? null, now).catch((err) => { console.error('[gst]', err instanceof Error ? err.name : 'error'); return undefined })
-  if (d === undefined) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
-  if (!d) return <Panel title="Nothing to file for that period yet" action={<Link href="/console/apps/gst" className={button({ variant: 'secondary' })}>Last period</Link>} />
+  if (d === undefined) return home(<Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>)
+  if (!d) return home(<Panel title="Nothing to file for that period yet" action={<Link href="/console/apps/gst" className={button({ variant: 'secondary' })}>Last period</Link>} />)
   const { shop, period, gstr, fixes } = d
   if (!shop.gstin || shop.scheme !== 'regular') {
-    return (
+    return home(
       <>
-        <PageHeader title="GST" />
         <Panel title={!shop.gstin ? 'Your shop isn’t registered for GST' : 'Your shop is on the composition scheme'}
           action={auth.membership.role !== 'accountant' ? <Link href="/console/settings/taxes" className={button({ variant: 'secondary' })}>Settings › Taxes</Link> : undefined}>
           {!shop.gstin ? 'It issues bills of supply and delivers within its state. GSTR-1 is for registered shops.' : 'It issues bills of supply; your CA files CMP-08 each quarter. GSTR-1 is for the regular scheme.'}
@@ -70,10 +81,8 @@ export default async function GstPage({ searchParams }: { searchParams: Promise<
   const filer = auth.membership.supportSessionId ? null : gsp()
   const ours = liabilityOf(gstr)
   const filed = !!d.filing.filedAt
-  return (
+  return home(
     <div className="space-y-4">
-      <PageHeader title="GST" badges={<Badge tone={filed || !toFix ? 'ok' : 'warn'}>{filed ? 'Filed' : toFix ? `${toFix} to fix` : 'Ready'}</Badge>}
-        meta={<>GSTIN <span className="font-mono">{shop.gstin}</span> · {shop.filing === 'monthly' ? 'Monthly' : 'Quarterly (IFF)'} · due {dayIN(due)}</>} />
       <nav aria-label="Period" className="flex items-center gap-1">
         <Link href={`/console/apps/gst?p=${d.prev}`} aria-label="Previous period" className="grid size-9 place-items-center rounded-md border border-input">‹</Link>
         <span className="min-w-40 px-2 text-center font-semibold">{period.label}</span>
@@ -129,6 +138,8 @@ export default async function GstPage({ searchParams }: { searchParams: Promise<
           ))}
         </ul>
       </Section>
-    </div>
+    </div>,
+    { badge: <Badge tone={filed || !toFix ? 'ok' : 'warn'}>{filed ? 'Filed' : toFix ? `${toFix} to fix` : 'Ready'}</Badge>,
+      meta: <>GSTIN <span className="font-mono">{shop.gstin}</span> · {shop.filing === 'monthly' ? 'Monthly' : 'Quarterly (IFF)'} · due {dayIN(due)}</> },
   )
 }

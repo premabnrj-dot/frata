@@ -1,9 +1,9 @@
 import { PageHeader } from '@/components/layout/page-header'
-import { Badge } from '@/components/ui/badge'
 import type { Offer } from '@/domains/modules/offer'
 import { GROUPS, MODULES, type ModuleKey } from '@/domains/modules/registry'
 import { SHOWCASE } from '@/domains/modules/showcase'
 import { AppAction } from './app-action'
+import { AppFacts } from './app-facts'
 import { ShowcaseShot } from '@/components/modules/showcase-shot'
 import { AppTile } from './tile'
 
@@ -27,15 +27,6 @@ export type AboutProps = {
 export function AppAbout({ k, offer, worksWith, canManage, askHref, notice, after }: AboutProps) {
   const def = MODULES[k], show = SHOWCASE[k]
   const group = GROUPS.find(([g]) => g === def.group)?.[1]
-  const box = (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <p className="text-xs font-semibold tracking-wide text-muted-foreground">PRICE</p>
-      <p className="mt-1 font-mono text-xl font-semibold">{offer.price}</p>
-      {offer.action.kind === 'ask' ? <p className="mt-1 text-xs text-muted-foreground">On your Frrata bill · stop any time</p> : null}
-      {offer.state ? <p className="mt-2"><Badge tone={offer.state.tone}>{offer.state.label}</Badge></p> : null}
-      <div className="mt-3"><AppAction k={k} name={def.name} action={offer.action} canManage={canManage} askHref={askHref} block /></div>
-    </div>
-  )
   return (
     <>
       <PageHeader title={def.name} back={{ href: '/console/apps', label: 'Apps' }} />
@@ -70,24 +61,9 @@ export function AppAbout({ k, offer, worksWith, canManage, askHref, notice, afte
           ) : null}
         </div>
         <aside className="space-y-3">
-          <div className="max-md:hidden">{box}</div>
+          <AppFacts k={k} offer={offer} worksWith={worksWith} priceClass="max-md:hidden"
+            action={<AppAction k={k} name={def.name} action={offer.action} canManage={canManage} askHref={askHref} block />} />
           {after}
-          {worksWith.length ? (
-            <div className="rounded-xl border border-border bg-card p-4 text-sm">
-              <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground">WORKS WITH</p>
-              <ul className="space-y-1.5">{worksWith.map((w) => <li key={w.key} className="flex items-center justify-between"><span>{w.name}</span><Badge tone={w.on ? 'ok' : 'neutral'}>{w.on ? 'On' : 'Off'}</Badge></li>)}</ul>
-            </div>
-          ) : null}
-          <div className="rounded-xl border border-border bg-card p-4 text-sm">
-            <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground">WHAT IT USES</p>
-            <ul className="list-disc space-y-1 pl-4">{show.uses.map((u) => <li key={u}>{u}</li>)}</ul>
-          </div>
-          {def.usage ? (
-            <div className="rounded-xl border border-border bg-card p-4 text-sm">
-              <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground">BILLED BY OTHERS</p>
-              <p className="text-muted-foreground">{def.usage}</p>
-            </div>
-          ) : null}
         </aside>
       </div>
       {/* Phone: the price and the button in a bar above the bottom nav (architecture review A9). */}

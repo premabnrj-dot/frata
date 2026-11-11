@@ -32,7 +32,7 @@ export function AppsGallery({ cards, groups, featured }: { cards: AppCard[]; gro
               <li key={c.key}>
                 <CardLink href={c.href} className="flex items-center gap-3 rounded-lg p-3">
                   <AppTile k={c.key} />
-                  <span className="min-w-0 flex-1"><span className="block font-semibold">{c.name}</span><span className="flex items-center gap-1.5 text-xs text-muted-foreground"><span aria-hidden="true" className="size-1.5 rounded-full bg-ok-mark" />{c.state?.label ?? 'On'}</span></span>
+                  <span className="min-w-0 flex-1"><span className="block font-semibold">{c.name}</span><span className="flex items-center gap-1.5 text-xs text-muted-foreground"><span aria-hidden="true" className={`size-1.5 rounded-full ${c.state?.tone === 'warn' ? 'bg-warn-mark' : 'bg-ok-mark'}`} />{c.state?.label ?? 'Working'}</span></span>
                   <Icon name="chevron" className="size-4 text-muted-foreground" />
                 </CardLink>
               </li>

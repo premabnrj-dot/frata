@@ -3,6 +3,7 @@ import { addOnAllowed } from '@/domains/modules/access'
 import { offerFor, type Offer } from '@/domains/modules/offer'
 import { MODULES, type ModuleKey } from '@/domains/modules/registry'
 import { frataWhatsappLink } from '@/lib/site'
+import { CAN_MANAGE } from '@/domains/tenancy/roles'
 import type { appsPage } from '@/lib/queries/modules'
 
 type Page = Awaited<ReturnType<typeof appsPage>>
@@ -18,4 +19,10 @@ export function aboutProps(k: ModuleKey, d: Page, now: Date, canManage: boolean,
     worksWith: MODULES[k].dependsOn.map((x) => ({ key: x, name: MODULES[x].name, on: d.access[x].usable })),
     askHref: frataWhatsappLink(`Hi Frrata, please add ${MODULES[k].name} to ${shopName}.`),
   }
+}
+
+/** Who sees Turn off on an app's home: exactly who setModuleAction lets turn one off (owners and admins, never a
+ *  Frrata support visit; Apps A2). */
+export function mayTurnOff(m: { role: string; supportSessionId: string | null }): boolean {
+  return (CAN_MANAGE as readonly string[]).includes(m.role) && !m.supportSessionId
 }

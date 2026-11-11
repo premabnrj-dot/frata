@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { MODULE_KEYS, MODULES } from '@/domains/modules/registry'
 import { asMember } from '@/lib/auth/as-member'
-import { ANY_MEMBER, CAN_MANAGE } from '@/lib/auth/require-member'
+import { ANY_MEMBER, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { auditEvents } from '@/lib/db/schema'
 import { appInterest, tenantModules } from '@/lib/db/schema-modules'
 import { cancelQueued } from '@/lib/outbox'
@@ -23,6 +23,12 @@ export async function setModuleAction(input: unknown): Promise<{ ok: true } | { 
   if (!p.success) return { ok: false, error: 'Unknown app.' }
   const { module, on } = p.data
   const def = MODULES[module]
+  // A Frrata support visit never turns a shop's app off (Apps A2, security review: it cancels queued messages to
+  // shoppers); Admin › Modules pauses instead. Refused before any write, so no audit row says it happened.
+  if (!on) {
+    const me = await requireMember(CAN_MANAGE)
+    if (me.ok && me.membership.supportSessionId) return { ok: false, error: 'A Frrata support visit cannot turn an app off.' }
+  }
   try {
     const r = await asMember(CAN_MANAGE, { action: on ? 'module.on' : 'module.off', target: module }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId

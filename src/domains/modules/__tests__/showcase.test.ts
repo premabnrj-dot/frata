@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MODULE_KEYS } from '../registry'
-import { SHOWCASE } from '../showcase'
+import { OFF, SHOWCASE } from '../showcase'
 
 describe('every app has a page worth showing', () => {
   for (const k of MODULE_KEYS) {
@@ -18,5 +18,15 @@ describe('every app has a page worth showing', () => {
   it('no third-party price in the copy (architecture review A6)', () => {
     const text = JSON.stringify(SHOWCASE)
     expect(text).not.toMatch(/₹0\.\d|paise|per message/i)
+  })
+})
+
+describe('OFF: what turning an app off does', () => {
+  it('every app says it in 1–3 short lines', () => {
+    for (const k of MODULE_KEYS) {
+      expect(OFF[k].length, k).toBeGreaterThanOrEqual(1)
+      expect(OFF[k].length, k).toBeLessThanOrEqual(3)
+      for (const l of OFF[k]) expect(l.length, `${k}: ${l}`).toBeLessThanOrEqual(70)
+    }
   })
 })

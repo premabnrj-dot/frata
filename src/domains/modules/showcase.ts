@@ -125,3 +125,18 @@ export const SHOWCASE: Record<ModuleKey, Showcase> = {
     uses: ['The videos you upload'],
   },
 }
+
+/** What turning an app off does, in the confirm only (Rule 0: never on the page; Apps A2). 1–3 short lines each. */
+export const OFF: Record<ModuleKey, readonly string[]> = {
+  communication: ['COD confirmations and order updates stop.', 'Messages waiting to send are cancelled.', 'Your number stays connected to Meta; chats wait here.'],
+  rto_shield: ['COD orders go to To pack without a confirm.', 'Confirms waiting are cancelled.'],
+  ship: ['Labels and tracking stop from the Pack button.', 'Labels already made stay with Shiprocket.'],
+  true_profit: ['Profit per order leaves Orders and Analytics.', 'Nothing it read is deleted.'],
+  reviews: ['Review asks stop.', 'Reviews already on your products stay.'],
+  marketplace_export: ['Exports stop.', 'Files you downloaded stay yours.'],
+  size_fit: ['The size finder leaves your product pages.'],
+  gst: ['GST returns leave the console.', 'Your invoices stay GST-correct.'],
+  ekcode: ['The EkCode button leaves your checkout.', 'Shoppers’ rows stay.'],
+  product_video: ['Videos leave your product pages.', 'Uploaded videos stay.'],
+  cart_flows: ['Bag reminders stop.', 'Reminders waiting to send are cancelled.'],
+}

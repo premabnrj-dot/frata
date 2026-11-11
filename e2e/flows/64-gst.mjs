@@ -6,7 +6,7 @@
 // the previous month and removes them, and the filing rows, at the end.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, signedIn, until } from '../lib.mjs'
+import { CONSOLE, USERS, signedIn, until } from '../lib.mjs'
 
 /** The previous month in IST, as a GST period key, and a moment inside it. */
 function lastMonth(now = new Date()) {
@@ -91,6 +91,26 @@ export default {
         assert.match(reg, /KS\/\d\d-\d\d\/90001/)
         const bad = await p.request.get(CONSOLE + `/console/apps/gst/export?p=${key}&f=pdf`)
         assert.equal(bad.status(), 400)
+      })
+
+      await t.step('A2 home: Usage and billing and Turn off for the owner; the accountant sees GST, neither of them', async () => {
+        await p.goto(CONSOLE + `/console/apps/gst?p=${key}`)
+        await p.getByRole('link', { name: 'Usage and billing' }).waitFor()
+        await p.getByRole('button', { name: 'Turn off GST' }).waitFor()
+        const A = USERS.accountant
+        await db`insert into auth.users (id, email, email_confirmed_at) values (${A.id}, ${A.email}, now()) on conflict (id) do nothing`
+        await db`insert into members (tenant_id, user_id, role) values (${T}, ${A.id}, 'accountant') on conflict do nothing`
+        try {
+          const ca = await signedIn(t.browser, 'accountant', { viewport: { width: 1280, height: 900 } })
+          const c = await ca.newPage(); c.setDefaultTimeout(10_000); c.on('pageerror', (e) => t.errors.push(e.message))
+          await c.goto(CONSOLE + `/console/apps/gst?p=${key}`)
+          await c.getByRole('heading', { name: 'For your CA' }).waitFor()
+          assert.equal(await c.getByRole('link', { name: 'Usage and billing' }).count(), 0, 'no billing tab for the accountant')
+          assert.equal(await c.getByRole('button', { name: 'Turn off GST' }).count(), 0, 'no Turn off for the accountant')
+          await ca.close()
+        } finally {
+          await db`delete from members where tenant_id = ${T} and user_id = ${A.id}`
+        }
       })
 
       await t.step('File from Frrata (fake GSP): connect with the OTP, push, totals match, file with the EVC OTP', async () => {

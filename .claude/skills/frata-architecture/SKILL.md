@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.41.0
+  version: 2.42.0
   verified: 2026-11-11
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -260,6 +260,10 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   switched on; not paused; dependencies usable). Badges and buttons come from
   `offerFor()` (the gallery card's footer, state and filter, the price box and the ONE action: switch, needs, ask,
   plans, interest). Never test a plan feature or an add-on row anywhere else.
+- **A money read outside Plan and billing** (Apps A2): it runs inside the page's one transaction (`featuredBillWith`
+  in `appsPage`), refuses outside CAN_MANAGE itself (`mayReadMoney`) and on a support visit, fails closed, and its
+  importer is named in `scripts/check-billing-read.mjs` with the reason. Type imports count: take a type from the
+  caller's return, never from `@/lib/queries/billing`.
 - **Every app has a page** (Apps gallery, 2026-11-11): `/console/apps/[app]` renders `AppAbout` (features drawn from
   `src/domains/modules/showcase.ts`, no screenshots); an app with a home of its own is a static folder that renders the
   same `AppAbout` while not usable (static folders win over `[app]`; `app-pages.test.ts` holds it). The gallery and an
