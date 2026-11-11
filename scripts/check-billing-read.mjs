@@ -12,7 +12,9 @@ import { join } from 'node:path'
 const ALLOWED = [/^src\/app\/\(console\)\/console\/settings\/billing\//, /^src\/app\/\(console\)\/console\/_components\/billing-banner\.tsx$/, /^src\/lib\/queries\/billing\.ts$/, /^src\/lib\/queries\/modules\.ts$/, /\/__tests__\//]
 const IMPORT = /(?:from\s+|import\(\s*)['"]@\/lib\/queries\/billing['"]/
 const walk = (d) => readdirSync(d).flatMap((n) => { const p = join(d, n).replaceAll('\\', '/'); return statSync(p).isDirectory() ? walk(p) : /\.(ts|tsx)$/.test(n) ? [p] : [] })
-const bad = walk('src').filter((f) => !ALLOWED.some((re) => re.test(f)))
-  .filter((f) => readFileSync(f, 'utf8').split(/\r?\n/).some((l) => !/^\s*(\/\/|\*|\/\*)/.test(l) && IMPORT.test(l)))
+// modules.ts may take featuredBillWith and nothing else (security review A2 LOW-1).
+const ONLY = { 'src/lib/queries/modules.ts': /^\s*import\s*\{\s*featuredBillWith\s*\}\s*from\s*['"]@\/lib\/queries\/billing['"]\s*$/ }
+const bad = walk('src').filter((f) => !ALLOWED.some((re) => re.test(f)) || ONLY[f])
+  .filter((f) => readFileSync(f, 'utf8').split(/\r?\n/).some((l) => !/^\s*(\/\/|\*|\/\*)/.test(l) && IMPORT.test(l) && !(ONLY[f] && ONLY[f].test(l))))
 if (bad.length) { console.error(`check:billing-read — billing reads imported outside console/settings/billing:\n  ${bad.join('\n  ')}`); process.exit(1) }
 console.log('check:billing-read — clean')

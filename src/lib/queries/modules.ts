@@ -74,12 +74,15 @@ export async function appsPage(tenantId: string, userId: string, at: string, bil
   const now = new Date(at)
   return withTenant(tenantId, async (tx) => {
     const facts = await readFactsIn(tx, tenantId, now)
-    const [prices, asked, featured] = await Promise.all([
+    const [prices, asked] = await Promise.all([
       pricesIn(tx),
       tx.select({ module: appInterest.module }).from(appInterest).where(and(eq(appInterest.tenantId, tenantId), eq(appInterest.userId, userId))),
-      // The card fails closed: an error here never fails the page (logged by name).
-      bill ? featuredBillWith(tx, bill, now).catch((err) => { console.error('[apps featured]', err instanceof Error ? err.name : 'error'); return null }) : Promise.resolve(null),
     ])
+    // The card fails closed, in its own savepoint after the page's reads, so its error can never abort the page's
+    // transaction (security review A2 LOW-3); logged by name.
+    const featured = bill
+      ? await tx.transaction((sp) => featuredBillWith(sp, bill, now)).catch((err) => { console.error('[apps featured]', err instanceof Error ? err.name : 'error'); return null })
+      : null
     return { facts, access: moduleAccess(facts, now), prices, asked: new Set(asked.map((r) => r.module).filter(isModuleKey)), featured }
   })
 }

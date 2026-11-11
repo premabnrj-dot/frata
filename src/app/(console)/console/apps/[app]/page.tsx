@@ -2,10 +2,10 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Panel } from '@/components/ui/panel'
 import { isModuleKey, MODULES } from '@/domains/modules/registry'
-import { ANY_MEMBER, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
+import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { appsPage } from '@/lib/queries/modules'
 import { AppAbout } from '../_components/app-about'
-import { aboutProps } from '../_components/about-data'
+import { aboutProps, mayTurnOff } from '../_components/about-data'
 
 // An app's page (Apps gallery A1). Apps with a home of their own (communication, ekcode, gst) are static folders that
 // render the same AppAbout until they are on; this route serves the rest, and refuses keys that aren't apps.
@@ -23,6 +23,6 @@ export default async function AppPage({ params }: { params: Promise<{ app: strin
   const d = await appsPage(auth.membership.tenantId, auth.userId, now.toISOString())
     .catch((err) => { console.error('[app]', err instanceof Error ? err.name : 'error'); return null })
   if (!d) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
-  const canManage = (CAN_MANAGE as readonly string[]).includes(auth.membership.role)
-  return <AppAbout {...aboutProps(app, d, now, canManage, auth.membership.tenantName)} />
+  // An app without a home of its own may be on here: its Turn off follows setModuleAction's rule (never a support visit).
+  return <AppAbout {...aboutProps(app, d, now, mayTurnOff(auth.membership), auth.membership.tenantName)} />
 }
