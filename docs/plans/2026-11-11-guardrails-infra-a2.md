@@ -423,3 +423,17 @@ Computed with `orderProfit`; the scratch model is in the session scratchpad.
   the tags of shops whose time boundary has passed, then `revalidate` rises to 3600.
 - **LOW:** a project default Max Duration in the dashboard (owner step); the ingest gets 5 s.
 - **Cost:** the beacon adds $1.9–4.6/M page views; after fixes 5 and 6 about ⅓ of that. Affordable.
+
+## Owner, 2026-11-11 (after the release of G and I)
+- **G:** Bot Protection set to Log and published; the project Default Max Duration set to 60 s. The firewall API still
+  answers 404 for the config, so the two bypass rules in `ops/firewall.json` go in by hand (custom rules) before
+  Bot Protection ever moves to Challenge.
+- **A·2:** the mockup is approved; calls as recommended:
+  1. a separate Supabase project for analytics (Free now, Pro at launch), with a disk alert in Infrastructure;
+  2. after the prerequisites;
+  3. separate, about $10 a month on Pro;
+  4. raw events 90 days, rollups 2 years. The DPDP Rule 8(3) one-year question stays with the lawyer;
+  5. visitor counts in every plan (unit-economics review).
+
+  Build order: A2·0 (the owner creates the project) and A2·1 (the database and its locks), then PV1-4a (the island
+  split frees room on the product page: the beacon adds 0.8–0.9 kB), then A2·2 → A2·5.
