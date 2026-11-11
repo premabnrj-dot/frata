@@ -10,6 +10,8 @@ import { BagPage } from './bag-page'
 import { Checkout } from './checkout'
 import { checkoutReturnLine } from './checkout-lines'
 import { AllView, CollectionView, GoneView, HomeView, PolicyView, ShopNotFound } from './pages'
+import { PageView } from './shop-pages'
+import { previewPages } from '@/lib/queries/pages'
 import { POLICY_TITLE } from './policy'
 import { ProductView } from './product-view'
 import type { Href } from './shell'
@@ -56,6 +58,12 @@ export async function previewPage(o: { tenantId: string; shop: StoreShop; path: 
   // own (empty), and the shop APIs answer only on the shop's host, so nothing is priced or placed from a preview.
   if (a === 'bag' && !b) return { body: <BagPage />, note: null }
   if (a === 'checkout' && !b) return { body: <Checkout shopName={shop.shopName} legalName={shop.legalName} privacyHref={href('/policies/privacy')} returnLine={checkoutReturnLine(shop.returnKind, shop.returnDays)} gst={shop.gst} />, note: null }
-  if (a === 'policies' && b && Object.hasOwn(POLICY_TITLE, b)) return { body: <PolicyView shop={shop} page={b as keyof typeof POLICY_TITLE} />, note: null }
+  // TS1a: a page as its draft stands (hidden and unpublished too; the customizer marks examples, /console/preview not).
+  if (a === 'pages' && b) {
+    const p = (await previewPages(tenantId)).find((x) => x.handle === b)
+    const note = p?.hidden ? 'Hidden: shoppers get "page not found" here.' : null
+    return { body: p ? <PageView shop={shop} page={p} href={href} examples={examples} /> : <ShopNotFound href={href} lang={shop.shopLanguage} />, note }
+  }
+  if (a === 'policies' && b && Object.hasOwn(POLICY_TITLE, b)) return { body: <PolicyView shop={shop} page={b as keyof typeof POLICY_TITLE} contact={theme.contact} />, note: null }
   return { body: <ShopNotFound href={href} lang={shop.shopLanguage} />, note: null }
 }

@@ -24,7 +24,7 @@ import { costsVisibleIn } from '@/lib/queries/settings'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { BLOB_READ_WRITE_TOKEN, BLOB_STORE_ID } from '@/lib/env'
 import { shopSettings, tenants } from '@/lib/db/schema'
-import { shopThemeRevisions } from '@/lib/db/schema-themes'
+import { shopPages, shopThemeRevisions } from '@/lib/db/schema-themes'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { archivedVariants, retireVariants } from '@/lib/catalogue/retire-variants'
 import { ensureTypes, freeHandle, handleFree } from '@/lib/catalogue/handles'
@@ -311,7 +311,10 @@ export async function editPhoto(imageId: string, change: { move?: -1 | 1; option
           .where(and(eq(shopThemeRevisions.tenantId, tenantId), sql`position(${img.base} in ${shopThemeRevisions.settings}::text) > 0`)).limit(1)
         const [inStory] = used ? [used] : await tx.select({ id: products.id }).from(products) // or a story (Signal S3)
           .where(and(eq(products.tenantId, tenantId), sql`position(${img.base} in ${products.stories}::text) > 0`)).limit(1)
-        return { ...img, inLook: !!(used || inStory) }
+        // or a page (TS1a: About's photo may be one of the shop's product photos): draft, live or the one Undo restores.
+        const [inPage] = used || inStory ? [used ?? inStory] : await tx.select({ id: shopPages.id }).from(shopPages)
+          .where(and(eq(shopPages.tenantId, tenantId), sql`position(${img.base} in (${shopPages.draft}::text || coalesce(${shopPages.live}::text, '') || coalesce(${shopPages.previous}::text, ''))) > 0`)).limit(1)
+        return { ...img, inLook: !!(used || inStory || inPage) }
       }
       if (change.move) {
         const all = await tx.select({ id: productImages.id }).from(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, img.productId))).orderBy(productImages.position)

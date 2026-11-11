@@ -1,6 +1,7 @@
 import { pick, urlFor } from '@/domains/media/sizes'
 import { inCollection, isListed } from '@/domains/storefront/listing'
 import { shopCatalogue } from '@/lib/queries/storefront'
+import { shopPages } from '@/lib/queries/pages'
 import { shopForRoute } from '../_shop'
 
 // Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
@@ -12,7 +13,7 @@ export const dynamic = 'force-dynamic'
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;')
 
-/** Home, listed products and collections, policies — from the shop's own address. Empty while opening soon. */
+/** Home, listed products and collections, policies, pages — from the shop's own address. Empty while opening soon. */
 export async function GET(_req: Request, { params }: { params: Promise<{ host: string }> }) {
   const shop = await shopForRoute(params)
   if (!shop) return new Response('Not found', { status: 404, headers: { 'cache-control': 'no-store' } })
@@ -26,6 +27,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ host: s
     for (const p of cat.products) if (isListed(p, now)) urls.push({ loc: `${base}/products/${p.handle}`, lastmod: p.since.slice(0, 10), images: p.images.slice(0, 3).map((i) => urlFor(i.base, pick(i.widths, 1200))) })
     for (const c of cat.collections) if (inCollection(c, cat.products, now).length) urls.push({ loc: `${base}/collections/${c.handle}` })
     for (const k of ['shipping', 'returns', 'privacy', 'terms', 'contact']) urls.push({ loc: `${base}/policies/${k}` })
+    // TS1a: the shop's live pages (About, FAQ), from the cached list.
+    for (const p of await shopPages(shop.id)) urls.push({ loc: `${base}/pages/${p.handle}` })
   }
   const body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${urls.map((u) => `<url><loc>${esc(u.loc)}</loc>${u.lastmod ? `<lastmod>${u.lastmod}</lastmod>` : ''}${(u.images ?? []).map((i) => `<image:image><image:loc>${esc(i)}</image:loc></image:image>`).join('')}</url>`).join('\n')}\n</urlset>\n`
   return new Response(body, { headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, s-maxage=300, stale-while-revalidate=60' } })

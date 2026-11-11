@@ -147,7 +147,7 @@ export type ThemeManifest = {
 
 /** The merchant's layer. Content, never state (which revision is live is a publish row). */
 /** site and menus (Look v4): stored as parsed, read part by part (readSite, readMenus). */
-export type ThemeLayer = { style: string; settings?: Partial<ThemeSettings>; home?: unknown[]; site?: unknown; menus?: unknown }
+export type ThemeLayer = { style: string; settings?: Partial<ThemeSettings>; home?: unknown[]; site?: unknown; menus?: unknown; contact?: unknown }
 
 export type ResolvedTheme = {
   key: string; version: string; style: string
@@ -164,6 +164,8 @@ export type ResolvedTheme = {
   site: SiteSettings
   /** The menus the merchant made (absent: the shop's default; menusOf). */
   menus: Partial<Menus>
+  /** TS1a: the Contact page's line (absent: none). */
+  contact?: { line: string }
   /** TS0b: the designs this look's sections use (absent: none), by id; renderers and readiness merge the owner's
    *  words with resolveDesign. Never the theme's whole list: only what the page draws. */
   designs?: Record<string, Design>

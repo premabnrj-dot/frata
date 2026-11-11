@@ -75,6 +75,8 @@ export function pathShape(path: string | undefined): string | undefined {
   if (parts.length === 1 && (a === 'products' || a === 'collections' || a === 'bag' || a === 'checkout' || a === 'orders')) return `/${a}`
   if (parts.length === 2 && (a === 'products' || a === 'collections') && HANDLE.test(b!)) return `/${a}/${b}`
   if (parts.length === 2 && a === 'policies' && /^[a-z-]{1,40}$/.test(b!)) return `/policies/${b}`
+  // TS1a: a shop's About or FAQ page, by its address.
+  if (parts.length === 2 && a === 'pages' && /^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$/.test(b!)) return `/pages/${b}`
   if (parts.length === 3 && a === 'products' && b === 'page' && PAGE.test(c!)) return '/products/page'
   if (parts.length === 4 && a === 'collections' && HANDLE.test(b!) && c === 'page' && PAGE.test(d!)) return `/collections/${b}`
   return 'other'

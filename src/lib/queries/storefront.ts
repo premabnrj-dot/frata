@@ -47,9 +47,10 @@ type Loader<A extends unknown[], R> = (tenantId: string, ...a: A) => Promise<R>
 const productKey = (v: unknown) => { if (typeof v !== 'string' || !v) throw new Error('a product scope needs the product id or handle first'); return v }
 // 'catalogue:product' (PV·1, speed review): a product's own entry also carries its handle's tag, so its video turning
 // playable or going purges that one product, never the catalogue.
-function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop' | 'look' | 'catalogue' | 'catalogue:product' | 'reviews' | 'reviews:product' | 'videos', fn: Loader<A, R>, revalidate = 60): Loader<A, R> {
+// 'pages' (TS1a): a shop's live pages; Publish and Undo purge it with the look (queries/pages.ts).
+export function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop' | 'look' | 'catalogue' | 'catalogue:product' | 'reviews' | 'reviews:product' | 'videos' | 'pages', fn: Loader<A, R>, revalidate = 60): Loader<A, R> {
   return cache((tenantId: string, ...a: A) => unstable_cache(() => fn(tenantId, ...a), ['sf', name, tenantId, ...a.map(String)], {
-    tags: [`shop:${tenantId}`, ...(scope === 'catalogue' || scope === 'videos' || scope === 'look' ? [`shop:${tenantId}:${scope}`] : scope === 'catalogue:product' ? [`shop:${tenantId}:catalogue`, `shop:${tenantId}:product:${productKey(a[0])}`] : scope === 'reviews' ? [`shop:${tenantId}:reviews`] : scope === 'reviews:product' ? [`shop:${tenantId}:reviews:${productKey(a[0])}`] : [])], revalidate,
+    tags: [`shop:${tenantId}`, ...(scope === 'catalogue' || scope === 'videos' || scope === 'look' || scope === 'pages' ? [`shop:${tenantId}:${scope}`] : scope === 'catalogue:product' ? [`shop:${tenantId}:catalogue`, `shop:${tenantId}:product:${productKey(a[0])}`] : scope === 'reviews' ? [`shop:${tenantId}:reviews`] : scope === 'reviews:product' ? [`shop:${tenantId}:reviews:${productKey(a[0])}`] : [])], revalidate,
   })())
 }
 

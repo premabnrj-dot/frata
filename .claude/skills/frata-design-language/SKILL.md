@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.13.0
+  version: 5.14.0
   verified: 2026-11-11
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -220,6 +220,11 @@ from it).
   placeholders marked **Example** with "Write your own"; Publish names each one still to write. A theme's photo is a
   sample: shown greyed in the customizer's preview only; on the shop an unfilled photo leaves its block out.
 - **A drop is a date, never a ticking count** (rule 48): "Drops Fri 14 Nov, 7 pm", hidden once passed.
+- **Pages in Look (TS1a, board https://claude.ai/artifact/X2TEDZRd7FyYvbiM6h6Jno v2, approved 2026-11-11):** the page
+  picker's **Pages** group: Contact (always, at /policies/contact), each page by title, "Add a page…" (About, FAQ: one;
+  pictures drawn from their blocks; the count of 20). What comes from Settings is a read-only box headed "From your
+  Settings" with **Change in Settings**, never a field. An FAQ answer from Settings carries a "From your settings" chip.
+  A page's address is set while it is a draft and fixed once published; Hide and Remove take effect at Publish.
 
 ## Partner workspace (approved mockup 2026-11-07)
 

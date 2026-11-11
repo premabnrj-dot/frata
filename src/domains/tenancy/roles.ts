@@ -21,7 +21,8 @@ export const CONSOLE_ROLES = ['owner', 'admin', 'staff', 'partner', 'accountant'
 export const CAN_SEE_GST = ['owner', 'admin', 'accountant'] as const satisfies readonly MemberRole[]
 /** Who may invite or remove the accountant. */
 export const CAN_INVITE_ACCOUNTANT = ['owner', 'admin'] as const satisfies readonly MemberRole[]
-/** Owners and admins: payments, people, the shop's address, opening and closing it. Never a partner. */
+/** Owners and admins: payments, people, the shop's address, opening and closing it, and publishing (or undoing) the
+ *  look and its pages (Theme Studio TS1a). Never a partner. */
 export const CAN_MANAGE = ['owner', 'admin'] as const satisfies readonly MemberRole[]
 
 /** Who may set the shop's shipping costs: owners and admins, and a partner while the shop has no owner (owner,

@@ -85,7 +85,7 @@ export async function trafficNames(tenantId: string, productIds: readonly string
   return withTenant(tenantId, async (tx) => {
     const [labels, named, cities] = await Promise.all([
       tx.execute<{ code: string; label: string }>(sql`select upper(code) code, label from ${discountCodes} where tenant_id = ${tenantId} and label is not null`),
-      // One grouped join driven by the window's standing orders (order_lines_product, drizzle/0099), never a count per
+      // One grouped join driven by the window's standing orders (order_lines_product, drizzle/0101), never a count per
       // product (speed review 2026-11-11: 40 scans of order_lines, 1.8 s at 10×).
       ids.length ? tx.execute<{ id: string; title: string; handle: string; ordered: number }>(sql`
         with w as (select o.id from ${orders} o where o.tenant_id = ${tenantId} and o.placed_at >= ${start.toISOString()}::timestamptz and ${standingSql('o')}),

@@ -90,12 +90,16 @@ export function CollectionView({ c, cat, href, now, top = 'title', lang, page = 
   )
 }
 
-export function PolicyView({ shop, page }: { shop: StoreShop; page: PolicyPage }) {
+/** A policy page. Contact (Theme Studio TS1a, board v2) is the shop's Contact page too: the owner's line, Chat on
+ *  WhatsApp to the shop's own number, then the business details from Settings (or the owner's rewrite). */
+export function PolicyView({ shop, page, contact }: { shop: StoreShop; page: PolicyPage; contact?: { line: string } }) {
+  const wa = page === 'contact' ? waLink(shop.whatsapp) : null
   return (
     <article className={`${wrap} max-w-3xl space-y-4 py-10 leading-relaxed`}>
       <h1 className="text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{POLICY_TITLE[page]}</h1>
+      {page === 'contact' && contact?.line && <p className="text-lg text-store-sub">{contact.line}</p>}
+      {wa && <p><a className="store-btn inline-flex min-h-11 items-center gap-2 rounded-[var(--store-radius)] bg-store-button px-5 text-sm font-medium text-store-on-button" href={wa} rel="noopener">Chat on WhatsApp</a></p>}
       <PolicyBody page={page} facts={shop} override={Object.hasOwn(shop.overrides, page) ? shop.overrides[page] : null} shopper />
-      {page === 'contact' && waLink(shop.whatsapp) && <p><a className="underline underline-offset-4" href={waLink(shop.whatsapp)!} rel="noopener">Message {shop.shopName} on WhatsApp</a></p>}
     </article>
   )
 }

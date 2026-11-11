@@ -793,7 +793,7 @@ With 0.8–0.9 kB more, checkout fails too, and PV1-4a only frees room on the pr
     by lower-case name only (Bengaluru vs Bangalore); shared predicates for returns by city are not extracted yet.
   - **speed-reviewer on A2·4 (measured at 10×; a big shop's 90-day page was about 2.6 s against 1 s), folded:**
     - **H1:** the products' orders are now one grouped join driven by the window, with `order_lines_product`
-      (drizzle/0099): 1.8 s → about 0.2 s.
+      (drizzle/0101): 1.8 s → about 0.2 s.
     - **H2:** the rollups' day indexes are BRIN (drizzle-analytics/0004), so the planner takes the tenant-first key for
       the busiest shop: 920 → 290 ms at 90 days.
     - **M1:** names are chained to the visits read, so both run beside A·1's.

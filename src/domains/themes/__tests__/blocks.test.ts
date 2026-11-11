@@ -189,3 +189,23 @@ describe('impact review (2026-11-11): the save step, version rules, names', () =
   })
 })
 
+
+describe('TS1a: cleanFill and Contact\'s line', () => {
+  it('a page\'s photos are this shop\'s own; its FAQ passes through', async () => {
+    const { cleanFill } = await import('../clean-images')
+    const faq = { kind: 'faq', items: [{ q: 'x', a: 'y' }] }
+    expect(cleanFill({ photo: { kind: 'image', image: photo() }, questions: faq } as never, T, HOST)).not.toBeNull()
+    expect(cleanFill({ photo: { kind: 'image', image: photo(OTHER) } } as never, T, HOST)).toBeNull()
+    expect(cleanFill({ photo: { kind: 'image', image: { ...photo(), base: 'https://evil.example/x' } } } as never, T, HOST)).toBeNull()
+    const productPhoto = { ...photo(), base: photo().base.replace('/theme/', '/products/') }
+    expect(cleanFill({ photo: { kind: 'image', image: productPhoto } } as never, T, HOST)).not.toBeNull()
+  })
+  it('Contact\'s line: kept across a theme change, plain words only, in words when refused', async () => {
+    const { readContact, ContactSchema } = await import('../layer')
+    expect(carryOver({ manifest: signal_1_4_0, layer: { style: 'cobalt', contact: { line: 'We reply on WhatsApp.' } } }, atelier_1_0_0).layer.contact).toEqual({ line: 'We reply on WhatsApp.' })
+    expect(resolveTheme(signal_1_4_0, { style: 'cobalt', contact: { line: 'Hello' } }).contact).toEqual({ line: 'Hello' })
+    expect(readContact({ line: '   ' })).toBeUndefined()
+    for (const line of ['<b>x</b>', 'a‮b', 'x{y}']) expect(ContactSchema.safeParse({ line }).success).toBe(false)
+    expect(layerProblems({ contact: { line: '<x>' } })[0]).toMatch(/^Contact’s line: plain words/)
+  })
+})
