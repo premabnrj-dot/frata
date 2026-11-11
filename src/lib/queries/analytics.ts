@@ -34,6 +34,8 @@ import { costsVisibleIn, planHistoryIn, shipCostsIn } from './settings'
 export const PERIODS = [7, 30, 90] as const
 export type Period = (typeof PERIODS)[number]
 export const isPeriod = (n: number): n is Period => (PERIODS as readonly number[]).includes(n)
+/** A period's first moment and the period before's, as IST days (today included): one copy for orders and visits. */
+export const windowOf = (period: Period, now: Date) => ({ start: istDayStart(now, -(period - 1)), prevStart: istDayStart(now, -(2 * period - 1)) })
 
 export type Stage = 'delivered' | 'rto' | 'lost' | 'on_the_way' | 'not_sent'
 export type { Totals }
@@ -109,7 +111,7 @@ export async function analyticsIn(tx: Tx, tenantId: string, role: MemberRole, pe
 async function windowIn(tx: Tx, tenantId: string, role: MemberRole, period: Period, now: Date, opts: { pincodes: boolean } = { pincodes: true }): Promise<{ analytics: Analytics; rows: Row[] }> {
   {
     const { costs, history, est } = await setUp(tx, tenantId, role)
-    const start = istDayStart(now, -(period - 1)), prevStart = istDayStart(now, -(2 * period - 1))
+    const { start, prevStart } = windowOf(period, now)
     const rows = await tx.execute<Row>(windowSql(tenantId, now, start, prevStart, history.map((h) => h.startsAt)))
     // Returns by pincode, counts only (₹ by pincode is True Profit's): the covering partial index makes it index-only.
     // (Not on a source's page, which never shows them: speed review A1·7.)

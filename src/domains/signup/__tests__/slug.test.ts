@@ -27,6 +27,7 @@ describe('slugProblem', () => {
     expect(slugProblem('Kesar')).toBe('shape')
     expect(slugProblem('admin')).toBe('reserved')
     expect(slugProblem('frata')).toBe('reserved')
+    for (const s of ['notify', 'notices', 'bounce']) expect(slugProblem(s)).toBe('reserved') // the notices sender's mail DNS
   })
 })
 

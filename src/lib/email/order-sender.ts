@@ -29,12 +29,23 @@ import { sendEmail, setUpTenant, tenantName } from './ses'
 type Payload = { orderId?: unknown; eventId?: unknown; kind?: unknown }
 const UUID = /^[0-9a-f-]{36}$/
 
+/** The shop's SES tenant (`t-<tenant id>`, with the shops' identity and configuration set), created once and marked
+ *  ready in email_shops. Idempotent: an existing tenant or association counts as done. Every send under a shop's tenant
+ *  needs it first (a missing tenant is SES's NotFoundException). */
+export async function ensureShopTenant(tenantId: string): Promise<{ ok: true } | { ok: false; retry: boolean; code: string }> {
+  const [es] = await withTenant(tenantId, (tx) => tx.select({ ready: emailShops.sesReadyAt }).from(emailShops).where(eq(emailShops.tenantId, tenantId)).limit(1))
+  if (es?.ready) return { ok: true }
+  const r = await setUpTenant(tenantName(tenantId), EMAIL_SHOP_DOMAIN, SES_CONFIG_SHOPS, new Date())
+  if (!r.ok) return r
+  await withTenant(tenantId, (tx) => tx.insert(emailShops).values({ tenantId, sesReadyAt: new Date() })
+    .onConflictDoUpdate({ target: emailShops.tenantId, set: { sesReadyAt: new Date() } }))
+  return { ok: true }
+}
+
 /** The shop's SES tenant, set up ahead (paced: SES's control calls are 1 a second). */
 export async function sendTenantSetup(row: OutboxRow): Promise<void> {
-  const r = await setUpTenant(tenantName(row.tenantId), EMAIL_SHOP_DOMAIN, SES_CONFIG_SHOPS, new Date())
+  const r = await ensureShopTenant(row.tenantId)
   if (!r.ok) { if (r.retry) throw new Later(r.code, 2); throw new Error(r.code) }
-  await withTenant(row.tenantId, (tx) => tx.insert(emailShops).values({ tenantId: row.tenantId, sesReadyAt: new Date() })
-    .onConflictDoUpdate({ target: emailShops.tenantId, set: { sesReadyAt: new Date() } }))
 }
 
 export async function sendOrderEmail(row: OutboxRow): Promise<void> {

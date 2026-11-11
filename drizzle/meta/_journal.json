@@ -708,6 +708,13 @@
       "when": 1794417189970,
       "tag": "0100_shop_pages_access",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1794421219823,
+      "tag": "0101_traffic_indexes",
+      "breakpoints": true
     }
   ]
 }

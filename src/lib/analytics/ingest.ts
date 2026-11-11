@@ -8,6 +8,7 @@ import { ingestBatch } from '@/lib/db/analytics'
 import { isCountingVisits } from '@/lib/env'
 import { ipBucket } from '@/lib/http/client-ip'
 import { errName } from '@/lib/log'
+import { urlProblem } from '@/lib/db/url'
 
 // =============================================================================
 // FILE: src/lib/analytics/ingest.ts — /api/shop/e, the visit beacon's ingest (A·2; plan docs/plans/2026-11-11-guardrails-infra-a2.md,
@@ -97,6 +98,6 @@ export async function ingest(request: Request): Promise<Response> {
   const tenantId = shop.tenantId
   const input = visitorInput(ip, ua)
   const batch = toBatch(beacon.data, agentOf(ua), cityOf(h.get('x-vercel-ip-city')))
-  after(() => ingestBatch(tenantId, input, batch).then(() => undefined, (e) => console.error('[ingest]', errName(e))))
+  after(() => ingestBatch(tenantId, input, batch).then(() => undefined, (e) => console.error('[ingest]', errName(e), urlProblem(e))))
   return empty(204)
 }

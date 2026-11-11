@@ -355,6 +355,12 @@ plan will use; the plan may rename one, and this list follows it.
 - Confirm the allowances (600 / 6,000 / 20,000) after the pricing review.
 
 ### Email — Amazon SES (ADR-0011, plan `docs/plans/2026-11-11-email.md`)
+**Status (2026-11-11): live.** ap-south-1; frratamail.app and notify.frrata.shop verified (SPF, DKIM, DMARC pass);
+SNS `frrata-ses` (SignatureVersion 2) confirmed to `/api/webhooks/ses`; sets `shops` and `notices`; tenant `frrata`;
+OIDC role `frrata-ses`; sign-in codes through the Supabase Send Email hook from `Frrata <notices@notify.frrata.shop>`.
+**Production access granted (2026-11-11, case 179441775400698):** 50,000 a day, 14 a second; enforcement healthy. A send
+over 14 a second is throttled (429) and waits in the outbox (`Later`, no attempt spent). Ask for more in SES → Account
+dashboard before a festive sale nears either limit. **Open:** the notices domain moves to Frrata's main domain when the shop domain moves (owner's plan: frrata.shop main site, frrata.store shops).
 Nothing here passes through an agent: no AWS key exists anywhere (the app reaches SES through Vercel OIDC). Region
 **Asia Pacific (Mumbai) ap-south-1** for every step.
 
@@ -366,7 +372,8 @@ Nothing here passes through an agent: no AWS key exists anywhere (the app reache
 3. **Identities** (SES → Identities → Create identity → Domain): `frratamail.app` (shops' order emails) and the notices
    domain (`notify.<Frrata's domain>`), each with Easy DKIM 2048 and a custom MAIL FROM (`bounce.<domain>`). Paste the
    records SES shows to the agent: frratamail.app is on Vercel DNS, so the agent adds them (3 DKIM CNAMEs, MX + SPF for
-   bounce, and `_dmarc` TXT `v=DMARC1; p=none; rua=mailto:dmarc@frratamail.app`).
+   bounce, and `_dmarc` TXT `v=DMARC1; p=none;` — no `rua`: frratamail.app has no inbox to receive reports).
+   **Done for frratamail.app (2026-11-11, ap-south-1):** identity created by the owner, six records added and resolving.
 4. **SNS topic** (SNS → Topics → Standard, name `frrata-ses`): Edit → Message signing → **SignatureVersion 2**. Copy its
    ARN → Vercel `SES_SNS_TOPIC_ARN`.
 5. **Configuration sets** (SES → Configuration sets): `shops` and `notices`. In each: Suppression list → **account-level
@@ -383,6 +390,8 @@ Nothing here passes through an agent: no AWS key exists anywhere (the app reache
    `*`. Copy the role ARN → Vercel `SES_ROLE_ARN`; your 12-digit account id → `SES_ACCOUNT_ID`.
 9. **Vercel env (Production only):** `SES_ROLE_ARN`, `SES_ACCOUNT_ID`, `SES_SNS_TOPIC_ARN`,
    `EMAIL_SHOP_DOMAIN=frratamail.app`, `EMAIL_NOTICES_FROM=Frrata <notices@notify.<Frrata's domain>>`, `EMAIL_KEYS`
+   **For now (owner, 2026-11-11): the notices domain is `notify.frrata.shop` until frrata.com is ready** (`notify`,
+   `notices` and `bounce` are reserved shop names, `src/domains/signup/slug.ts`).
    (`e1:` + 40 random characters; generate with `openssl rand -base64 30`).
 
 **B. When the agent says the email routes are deployed**
