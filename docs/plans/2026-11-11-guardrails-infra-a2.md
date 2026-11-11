@@ -172,3 +172,43 @@ The runbook and the A·2 replan are corrected in G·0.
 `architecture-reviewer`, `tenancy-auditor`, `security-reviewer` (the public ingest, the webhook, tokens, the definer),
 `speed-reviewer` (the ingest's cost, the island's bytes, the Admin page) and `unit-economics-reviewer` (A·2's cost and
 visitor counts in every plan) run on this plan. Their findings are folded in here before G·1.
+
+## Reviews (2026-11-11), folded into the phases
+### tenancy-auditor: fix before merge (baseline `verify:tenancy`: 64 pass)
+- **Rollups** run through a definer `analytics_rollup(day)` (`search_path ''`, tenant first in GROUP BY and ON
+  CONFLICT, top-N ranked `over (partition by tenant_id, day …)`). EXECUTE goes to a dedicated cron role only, never
+  `postgres` in Vercel and never `frata_app` reading all tenants. Rollup tables give `frata_app` SELECT;
+  `events` gives `frata_app` INSERT only; every partition has RLS on with no policy; schema `ev` has usage and default
+  privileges revoked from everyone.
+- **`check:tenant` learns the analytics pool:**
+  - the raw analytics pool only in `src/lib/db/analytics.ts`;
+  - `withAnalyticsTenant` only from `src/lib/queries/analytics.ts` and the ingest route, each listed with its reason;
+  - an analytics Admin connection (`frata_admin` in that database, a Production-only URL) fenced like `adminDb`;
+  - `admin_traffic_by_shop(since)` → (tenant_id, count), EXECUTE to `frata_admin` only.
+- **`admin_db_health()`:**
+  - query shapes only for `userid` in (`frata_app`, `frata_admin`), `toplevel`, and SELECT, INSERT, UPDATE, DELETE or
+    WITH only;
+  - quoted strings and numbers stripped before the 80-character cut;
+  - from `pg_stat_activity`, counts by role and state only (never `query`, `client_addr` or `application_name`);
+  - revoked from public, anon, authenticated and service_role;
+  - the ADR-0007 amendment names the function and its columns.
+- **Ingest:**
+  - capture `tenantId` before `after()`, one `withAnalyticsTenant` per request, no buffer shared across requests, the
+    cap Map keyed by tenant;
+  - the beacon sends `location.pathname` and the allowed UTM keys only, and Zod refuses `#` (`/orders#t=` is a bearer
+    token);
+  - forged product ids resolve to names only under `withTenant(A)`, with unknown ids shown as "other";
+  - errors log `errName` only (Postgres row messages carry data).
+- **`infra_*`:**
+  - RLS with a `frata_admin` policy and no `frata_app` policy;
+  - writer definers granted to the cron role only;
+  - Mux's "one video over 25%" needs an aggregate definer (`frata_admin` holds nothing on `videos`).
+- **e2e roles are shared across the instance:** the analytics roles' settings use `alter role … in database`, and their
+  attributes are proved from inside the analytics database.
+- **`verify:tenancy` proves:**
+  - ingest isolation (A invisible to B; inserting B under A fails; unset gives zero rows);
+  - `ev.*` refused; SELECT on `events` refused; no BYPASSRLS;
+  - rollups: two tenants stay two rows, a re-run is idempotent, A's top-N ignores B;
+  - every definer refused to public, anon, authenticated, service_role and `frata_app`;
+  - `admin_db_health()` has no text from `pg_stat_activity`, and a planted literal is absent;
+  - `infra_*` refused to `frata_app`.
