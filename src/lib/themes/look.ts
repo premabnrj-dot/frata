@@ -3,6 +3,7 @@ import { and, desc, eq, inArray, notExists, sql } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
 import { shopThemePublishes, shopThemeRevisions, themeVersionStages, themeVersions } from '@/lib/db/schema-themes'
 import { availableTo, liveOf, withdrawnKeys, type VersionRow } from '@/domains/themes/release'
+import { discardPages, preparePages, undoPages } from './pages'
 
 // =============================================================================
 // FILE: src/lib/themes/look.ts — the one module that reads or writes a shop's looks (themes plan § Review findings).
@@ -153,7 +154,9 @@ export async function saveDraft(tx: Tx, tenantId: string, who: Who, d: { revisio
 }
 
 /** Publish the draft the editor saw (its `version`). A shop with no publish row first records the look it has today. */
-export async function publishRevision(tx: Tx, tenantId: string, who: Who, d: { revisionId: string; version: number; baseline: () => { themeKey: string; themeVersion: string; styleKey: string; settings: object } }): Promise<'ok' | 'gone' | 'stale' | 'unavailable'> {
+/** TS1a: the shop's pages publish with the look, in this transaction (`pages`: the version of each page the editor
+ *  holds; a page changed elsewhere refuses with 'stale'). */
+export async function publishRevision(tx: Tx, tenantId: string, who: Who, d: { revisionId: string; version: number; baseline: () => { themeKey: string; themeVersion: string; styleKey: string; settings: object }; pages?: Record<string, number> }): Promise<'ok' | 'gone' | 'stale' | 'unavailable' | 'too_long'> {
   await lockShop(tx, tenantId)
   const [r] = await tx.select().from(shopThemeRevisions).where(and(eq(shopThemeRevisions.tenantId, tenantId), eq(shopThemeRevisions.id, d.revisionId))).for('update')
   if (!r) return 'gone'
@@ -161,6 +164,8 @@ export async function publishRevision(tx: Tx, tenantId: string, who: Who, d: { r
   // A version recalled or withdrawn (or never offered to this shop) can't go live (T3). A withdraw racing this needs
   // no lock: render skips a withdrawn version anyway (liveOf).
   if (!(await themeAccess(tx, tenantId)).may(r.themeKey, r.themeVersion)) return 'unavailable'
+  const pages = await preparePages(tx, tenantId, d.pages)
+  if (typeof pages === 'string') return pages
   // No publish row at all (not "nothing live": every version withdrawn still has rows, and History has the baseline).
   if (!(await published(tx, tenantId, 1)).length) {
     // Lazy baseline (plan § T1·1): the shop's look before its first publish, so History and Undo have it.
@@ -168,7 +173,8 @@ export async function publishRevision(tx: Tx, tenantId: string, who: Who, d: { r
     const [base] = await tx.insert(shopThemeRevisions).values({ tenantId, ...b, createdAt: new Date(Date.now() - 1000), createdBy: SYSTEM, updatedBy: SYSTEM }).returning()
     await tx.insert(shopThemePublishes).values({ tenantId, revisionId: base!.id, publishedAt: new Date(Date.now() - 1000), publishedBy: SYSTEM })
   }
-  await tx.insert(shopThemePublishes).values({ tenantId, revisionId: r.id, publishedBy: who.userId, publishedByEmail: who.email })
+  const [pub] = await tx.insert(shopThemePublishes).values({ tenantId, revisionId: r.id, publishedBy: who.userId, publishedByEmail: who.email }).returning({ id: shopThemePublishes.id })
+  await pages(pub!.id)
   return 'ok'
 }
 
@@ -182,7 +188,9 @@ export async function undoPublish(tx: Tx, tenantId: string, who: Who, expectLive
   const l = await lookFor(tx, tenantId)
   if (l.live?.revision.id !== expectLive) return 'moved'
   if (!l.previous) return 'none'
-  await tx.insert(shopThemePublishes).values({ tenantId, revisionId: l.previous.id, publishedBy: who.userId, publishedByEmail: who.email })
+  const [pub] = await tx.insert(shopThemePublishes).values({ tenantId, revisionId: l.previous.id, publishedBy: who.userId, publishedByEmail: who.email }).returning({ id: shopThemePublishes.id })
+  // TS1a: the pages the undone publish changed go back with it.
+  await undoPages(tx, tenantId, l.live.publishId, pub!.id)
   return l.previous
 }
 
@@ -191,6 +199,8 @@ export async function discardDraft(tx: Tx, tenantId: string): Promise<boolean> {
   await lockShop(tx, tenantId)
   const d = await openDraft(tx, tenantId)
   if (!d) return false
+  // TS1a: the pages' drafts go back to what is live; a page never published goes.
+  await discardPages(tx, tenantId)
   await tx.delete(shopThemeRevisions).where(and(eq(shopThemeRevisions.tenantId, tenantId), eq(shopThemeRevisions.id, d.id)))
   return true
 }

@@ -1,0 +1,244 @@
+{
+ "about": {
+  "id": "about",
+  "name": "About",
+  "line": "Your story, makers and materials",
+  "tags": [
+   "about",
+   "story",
+   "brand",
+   "makers",
+   "materials",
+   "founder"
+  ],
+  "children": [
+   {
+    "id": "story",
+    "kind": "text",
+    "body": [
+     [
+      {
+       "text": "Tell shoppers how your brand began, who makes your pieces and where."
+      }
+     ]
+    ],
+    "fill": {
+     "label": "Your story",
+     "example": true
+    }
+   },
+   {
+    "id": "photo",
+    "kind": "image",
+    "ratio": "4:5",
+    "image": {
+     "base": "/themes/samples/ivory-chikan-b",
+     "widths": [
+      400,
+      800
+     ],
+     "width": 800,
+     "height": 1000,
+     "alt": "A workshop",
+     "decorative": false,
+     "focus": null
+    },
+    "fill": {
+     "label": "Photo"
+    }
+   },
+   {
+    "id": "makers-heading",
+    "kind": "heading",
+    "size": "m",
+    "text": "How we make it",
+    "fill": {
+     "label": "Cards heading"
+    }
+   },
+   {
+    "id": "makers",
+    "kind": "columns",
+    "phone": "swipe",
+    "children": [
+     {
+      "id": "maker-1",
+      "kind": "group",
+      "children": [
+       {
+        "id": "maker-photo-1",
+        "kind": "image",
+        "ratio": "4:5",
+        "image": {
+         "base": "/themes/samples/haldi-kurta",
+         "widths": [
+          400,
+          800
+         ],
+         "width": 800,
+         "height": 1000,
+         "alt": "Handloom",
+         "decorative": false,
+         "focus": null
+        },
+        "fill": {
+         "label": "Card 1: photo"
+        }
+       },
+       {
+        "id": "maker-heading-1",
+        "kind": "heading",
+        "size": "s",
+        "text": "Handloom",
+        "fill": {
+         "label": "Card 1: title",
+         "example": true
+        }
+       },
+       {
+        "id": "maker-words-1",
+        "kind": "text",
+        "body": [
+         [
+          {
+           "text": "Woven on frame looms, a metre a day."
+          }
+         ]
+        ],
+        "fill": {
+         "label": "Card 1: words",
+         "example": true
+        }
+       }
+      ]
+     },
+     {
+      "id": "maker-2",
+      "kind": "group",
+      "children": [
+       {
+        "id": "maker-photo-2",
+        "kind": "image",
+        "ratio": "4:5",
+        "image": {
+         "base": "/themes/samples/mehndi-saree",
+         "widths": [
+          400,
+          800
+         ],
+         "width": 800,
+         "height": 1000,
+         "alt": "Natural dyes",
+         "decorative": false,
+         "focus": null
+        },
+        "fill": {
+         "label": "Card 2: photo"
+        }
+       },
+       {
+        "id": "maker-heading-2",
+        "kind": "heading",
+        "size": "s",
+        "text": "Natural dyes",
+        "fill": {
+         "label": "Card 2: title",
+         "example": true
+        }
+       },
+       {
+        "id": "maker-words-2",
+        "kind": "text",
+        "body": [
+         [
+          {
+           "text": "Indigo, madder and pomegranate rind."
+          }
+         ]
+        ],
+        "fill": {
+         "label": "Card 2: words",
+         "example": true
+        }
+       }
+      ]
+     },
+     {
+      "id": "maker-3",
+      "kind": "group",
+      "children": [
+       {
+        "id": "maker-photo-3",
+        "kind": "image",
+        "ratio": "4:5",
+        "image": {
+         "base": "/themes/samples/rani-anarkali",
+         "widths": [
+          400,
+          800
+         ],
+         "width": 800,
+         "height": 1000,
+         "alt": "Hand-finished",
+         "decorative": false,
+         "focus": null
+        },
+        "fill": {
+         "label": "Card 3: photo"
+        }
+       },
+       {
+        "id": "maker-heading-3",
+        "kind": "heading",
+        "size": "s",
+        "text": "Hand-finished",
+        "fill": {
+         "label": "Card 3: title",
+         "example": true
+        }
+       },
+       {
+        "id": "maker-words-3",
+        "kind": "text",
+        "body": [
+         [
+          {
+           "text": "Hemmed and buttoned by hand."
+          }
+         ]
+        ],
+        "fill": {
+         "label": "Card 3: words",
+         "example": true
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "faq": {
+  "id": "faq",
+  "name": "FAQ",
+  "line": "Answers that follow your settings",
+  "tags": [
+   "faq",
+   "questions",
+   "help",
+   "returns",
+   "delivery",
+   "pay on delivery"
+  ],
+  "children": [
+   {
+    "id": "intro",
+    "kind": "text",
+    "body": [],
+    "fill": {
+     "label": "A line above (optional)"
+    }
+   }
+  ]
+ }
+}

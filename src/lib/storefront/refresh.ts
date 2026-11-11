@@ -4,7 +4,7 @@ import { revalidateTag } from 'next/cache'
 // What a shop's caches are told after a write (tags: shopCached in src/lib/queries/storefront.ts).
 
 /** After a console write commits: the shop's pages read fresh rows. */
-export function refreshShop(tenantId: string, scope: 'shop' | 'look' | 'catalogue' | 'videos') {
+export function refreshShop(tenantId: string, scope: 'shop' | 'look' | 'catalogue' | 'videos' | 'pages') {
   revalidateTag(scope === 'shop' ? `shop:${tenantId}` : `shop:${tenantId}:${scope}`)
 }
 /**

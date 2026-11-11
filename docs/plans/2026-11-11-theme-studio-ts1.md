@@ -1,5 +1,5 @@
 # Plan: Theme Studio TS1 — pages and templates in Look
-Status: draft (TS1a board for the owner; reviews on this plan) · Date: 2026-11-11 · Spec: `docs/specs/2026-11-11-theme-studio.md`
+Status: TS1a active (board v2 approved by the owner 2026-11-11; addresses fixed once published, owner 2026-11-11) · Date: 2026-11-11 · Spec: `docs/specs/2026-11-11-theme-studio.md`
 (active; § 3 Pages and templates) · Mockup: https://claude.ai/artifact/X2TEDZRd7FyYvbiM6h6Jno (TS1a v2: Contact at /policies/contact; addresses fixed at first publish) · Reviews: architecture, tenancy, security, speed (2026-11-11, folded in below) · Legal: G.S.R. 789(E) read (frata-integrations § Consumer protection) · Builds on TS0b (blocks, designs)
 
 ## Goal

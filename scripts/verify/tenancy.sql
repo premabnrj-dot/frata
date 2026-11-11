@@ -2559,4 +2559,58 @@ do $$ begin
 end $$;
 rollback;
 
-\echo 'tenancy proof — all 69 checks passed'
+-- 70. Shop pages (Theme Studio TS1a, 0099–0100; tenancy-auditor 2026-11-11): own shop only; no delete or edit across
+-- shops; tenant, id and template never change; a page's live publish must be its own shop's; at most 20 pages and
+-- one FAQ a shop (B's don't count against A); no API role or frata_admin reaches the table.
+begin; set local role frata_app;
+do $$ declare n int; pa uuid; pb uuid; pubb uuid; rb uuid; i int; begin
+  perform set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+  insert into shop_pages (tenant_id, template, draft) values ('22222222-2222-2222-2222-222222222222', 'faq', '{"handle":"faq","title":"FAQ","fill":{}}') returning id into pb;
+  insert into shop_theme_revisions (tenant_id, theme_key, theme_version, style_key, settings, created_by, updated_by)
+    values ('22222222-2222-2222-2222-222222222222', 'bazaar', '1.0.0', 'sindoor', '{}', '99999999-9999-9999-9999-999999999999', '99999999-9999-9999-9999-999999999999') returning id into rb;
+  insert into shop_theme_publishes (tenant_id, revision_id, published_by) values ('22222222-2222-2222-2222-222222222222', rb, '99999999-9999-9999-9999-999999999999') returning id into pubb;
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  if exists (select 1 from shop_pages where tenant_id = '22222222-2222-2222-2222-222222222222') then raise exception 'FAIL: A sees B''s pages'; end if;
+  begin insert into shop_pages (tenant_id, template, draft) values ('22222222-2222-2222-2222-222222222222', 'about', '{"handle":"x","title":"x","fill":{}}'); raise exception 'FAIL: A wrote a page for B';
+  exception when insufficient_privilege then null; end;
+  update shop_pages set draft = '{"handle":"faq","title":"Mine","fill":{}}' where id = pb; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A edited B''s page'; end if;
+  update shop_pages set removed_at = now() where id = pb; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A removed B''s page'; end if;
+  delete from shop_pages where id = pb; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A deleted B''s page'; end if;
+  -- A's own FAQ, with B's handle: allowed (handles are per shop); a second FAQ in A is refused; B's doesn't count.
+  insert into shop_pages (tenant_id, template, draft) values ('11111111-1111-1111-1111-111111111111', 'faq', '{"handle":"faq","title":"FAQ","fill":{}}') returning id into pa;
+  begin insert into shop_pages (tenant_id, template, draft) values ('11111111-1111-1111-1111-111111111111', 'faq', '{"handle":"faq-2","title":"FAQ","fill":{}}'); raise exception 'FAIL: two FAQs in one shop';
+  exception when unique_violation then null; end;
+  begin insert into shop_pages (tenant_id, template, draft) values ('11111111-1111-1111-1111-111111111111', 'about', '{"handle":"faq","title":"x","fill":{}}'); raise exception 'FAIL: two pages at one address';
+  exception when unique_violation then null; end;
+  begin insert into shop_pages (tenant_id, template, draft) values ('11111111-1111-1111-1111-111111111111', 'about', '{"handle":"Bad Handle","title":"x","fill":{}}'); raise exception 'FAIL: a bad address';
+  exception when check_violation then null; end;
+  begin insert into shop_pages (tenant_id, template, draft) values ('11111111-1111-1111-1111-111111111111', 'contact', '{"handle":"c","title":"x","fill":{}}'); raise exception 'FAIL: a contact page row';
+  exception when check_violation then null; end;
+  begin update shop_pages set tenant_id = '22222222-2222-2222-2222-222222222222' where id = pa; raise exception 'FAIL: A moved a page to B';
+  exception when insufficient_privilege then null; end;
+  begin update shop_pages set template = 'about' where id = pa; raise exception 'FAIL: a page changed its template';
+  exception when insufficient_privilege then null; end;
+  -- a page's live publish must be its own shop's
+  begin update shop_pages set live_publish_id = pubb where id = pa; raise exception 'FAIL: A pointed a page at B''s publish';
+  exception when foreign_key_violation then null; end;
+  -- at most 20 pages (A has 1; 19 more fit, the 21st is refused)
+  for i in 1..19 loop
+    insert into shop_pages (tenant_id, template, draft) values ('11111111-1111-1111-1111-111111111111', 'about', jsonb_build_object('handle', 'p' || i, 'title', 'P', 'fill', '{}'::jsonb));
+  end loop;
+  begin insert into shop_pages (tenant_id, template, draft) values ('11111111-1111-1111-1111-111111111111', 'about', '{"handle":"p20","title":"P","fill":{}}'); raise exception 'FAIL: a 21st page';
+  exception when check_violation then null; end;
+end $$;
+rollback;
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['select', 'insert', 'update', 'delete']) p
+              where has_table_privilege(r, 'shop_pages', p)) then raise exception 'FAIL: another role reaches shop_pages'; end if;
+  if has_column_privilege('frata_app', 'shop_pages', 'tenant_id', 'update') or has_column_privilege('frata_app', 'shop_pages', 'template', 'update')
+     or has_column_privilege('frata_app', 'shop_pages', 'id', 'update') then raise exception 'FAIL: the app changes a page''s shop, id or template'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r where has_function_privilege(r, 'app_shop_pages_cap()', 'execute'))
+  then raise exception 'FAIL: an API role runs the pages cap'; end if;
+end $$;
+
+\echo 'tenancy proof — all 70 checks passed'

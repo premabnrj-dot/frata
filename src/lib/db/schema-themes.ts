@@ -48,6 +48,38 @@ export const shopThemePublishes = pgTable('shop_theme_publishes', {
   foreignKey({ columns: [t.tenantId, t.revisionId], foreignColumns: [shopThemeRevisions.tenantId, shopThemeRevisions.id], name: 'shop_theme_publishes_revision' }).onDelete('no action'), // checked at statement end, so deleting a shop cascades; the trigger refuses deleting a published revision
   index('shop_theme_publishes_latest').on(t.tenantId, t.publishedAt, t.id),
   index('shop_theme_publishes_revision_idx').on(t.tenantId, t.revisionId),
+  // Theme Studio TS1a: a page's live content names the publish that put it there (tenancy review: composite FK).
+  unique('shop_theme_publishes_tenant_id').on(t.tenantId, t.id),
+])
+
+/**
+ * Theme Studio TS1a (plan docs/plans/2026-11-11-theme-studio-ts1.md): a shop's About and FAQ pages, made in Look.
+ * Contact is not a row here: it is the Contact policy at /policies/contact, its line in the look's layer. `draft` and
+ * `live` are each { title, handle, fill, hidden }; a change reaches the shop only by the look's Publish (live := draft,
+ * previous := live, live_publish_id := that publish) and Undo swaps them back. The handle is fixed once live. Access:
+ * drizzle/0100_shop_pages_access.sql.
+ */
+export const PAGE_TEMPLATES = ['about', 'faq'] as const
+export const shopPages = pgTable('shop_pages', {
+  id: id(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  template: text('template', { enum: PAGE_TEMPLATES }).notNull(),
+  draft: jsonb('draft').notNull(),
+  live: jsonb('live'),
+  previous: jsonb('previous'),
+  livePublishId: uuid('live_publish_id'),
+  version: integer('version').notNull().default(1),
+  removedAt: at('removed_at'),
+  createdAt: at('created_at').notNull().defaultNow(),
+  updatedAt: at('updated_at').notNull().defaultNow(),
+}, (t) => [
+  unique('shop_pages_tenant_id').on(t.tenantId, t.id),
+  foreignKey({ columns: [t.tenantId, t.livePublishId], foreignColumns: [shopThemePublishes.tenantId, shopThemePublishes.id], name: 'shop_pages_live_publish' }).onDelete('no action'),
+  check('shop_pages_template', sql`${t.template} in ('about','faq')`),
+  check('shop_pages_draft_size', sql`octet_length(${t.draft}::text) <= 32768`),
+  check('shop_pages_live_size', sql`${t.live} is null or octet_length(${t.live}::text) <= 32768`),
+  check('shop_pages_previous_size', sql`${t.previous} is null or octet_length(${t.previous}::text) <= 32768`),
+  index('shop_pages_tenant').on(t.tenantId, t.createdAt),
 ])
 
 /**
