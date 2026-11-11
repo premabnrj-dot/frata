@@ -28,7 +28,7 @@ const PUBLIC_PAGES = [['site', '/'], ['login', '/login']]
 const SIZES = [['phone', { width: 390, height: 844 }], ['desktop', { width: 1280, height: 800 }]]
 const DATES = /\b\d{1,2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/
 /** The console also says relative times and weekdays (they move): masked there only. */
-const MOVING = /\b\d{1,2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b|\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)day\b|\b(just now|\d+ (min|mins|hours?|days?) ago|yesterday|today)\b/i
+const MOVING = /\b\d{1,2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\b|\b(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day\b|\b(just now|\d+ (min|mins|hours?|days?) ago|yesterday|today)\b/i
 
 // A cached shop page may be stale on its first visit (built against an older database; regenerated in the
 // background). Fetch it until two answers agree, so the screenshot is of today's data, not of the build's.
@@ -66,6 +66,11 @@ function compare(name, buf, t) {
     assert.fail(`${name}: size ${b.width}×${b.height}, baseline ${a.width}×${a.height}`)
   }
   const diff = new PNG({ width: a.width, height: a.height })
+  // A masked date's box changes width with the time of day: a pixel masked in either image is masked in both.
+  const pink = (d, i) => d[i] === 255 && d[i + 1] === 0 && d[i + 2] === 255
+  for (let i = 0; i < a.data.length; i += 4) {
+    if (pink(a.data, i) || pink(b.data, i)) for (let j = 0; j < 4; j++) b.data[i + j] = a.data[i + j] = j === 1 ? 0 : 255
+  }
   const n = pixelmatch(a.data, b.data, diff.data, a.width, a.height, { threshold: 0.1 })
   if (n > 0) {
     writeFileSync(t.out(`${name}-actual`), buf); writeFileSync(t.out(`${name}-diff`), PNG.sync.write(diff))

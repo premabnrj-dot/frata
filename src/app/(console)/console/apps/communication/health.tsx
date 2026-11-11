@@ -10,6 +10,7 @@ import { Dialog } from '@/components/ui/dialog'
 import { Menu } from '@/components/ui/menu'
 import { limitWords, qualityWords, WA_MANAGER, type Need } from '@/domains/communication/health'
 import { checkWhatsAppAction, disconnectWhatsAppAction } from './actions'
+import { settle } from '@/lib/settle'
 
 // The connected number (C1 · mockup Health): who it is, its health in words, and what it needs from you.
 
@@ -25,7 +26,7 @@ export function NumberHealth({ c, needs, canManage }: { c: View; needs: Need[]; 
     setError(null)
     const r = await f()
     if (!r.ok) { setError(r.error ?? 'Something went wrong.'); return }
-    setConfirm(false); router.refresh()
+    setConfirm(false); settle(router)
   })
   const limit = limitWords(c.limitTier)
   return (

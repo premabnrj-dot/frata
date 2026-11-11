@@ -8,6 +8,7 @@ import { Dialog } from '@/components/ui/dialog'
 import type { OfferAction } from '@/domains/modules/offer'
 import type { ModuleKey } from '@/domains/modules/registry'
 import { setInterestAction, setModuleAction } from '../actions'
+import { settle } from '@/lib/settle'
 
 /**
  * An app's ONE button, matching its state (Apps gallery; offerFor decides which): Turn on / Turn off (with a confirm),
@@ -27,7 +28,7 @@ export function AppAction({ k, name, action, canManage, askHref, block = false }
     const r = await fn().catch(() => ({ ok: false, error: 'We could not change it. Nothing was changed.' }))
     setBusy(false)
     if (!r.ok) { setError(r.error ?? 'We could not change it. Nothing was changed.'); return false }
-    setConfirmOff(false); router.refresh(); return true
+    setConfirmOff(false); settle(router); return true
   }
   const err = error ? <p role="alert" className="mt-2 text-sm text-danger-text">{error}</p> : null
   const owner = <p className="text-sm text-muted-foreground">Ask the shop’s owner to change this.</p>
