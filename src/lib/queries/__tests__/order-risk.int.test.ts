@@ -35,7 +35,7 @@ describe.skipIf(!host)('risk facts', () => {
     const second = await place(A, 2, {}, vl!.id)   // other items: not a duplicate
     const third = await place(A, 3, {}, vm!.id)    // the same items as the first, 2 hours later: a duplicate
     const f = await riskFactsFor(A, [first, second, third], at(4))
-    expect(f.get(first)).toMatchObject({ earlierOrders: 0, cancelledAsFake: 0, codFromPhoneToday: 1, sameItemsWithin24h: 0 })
+    expect(f.get(first)).toMatchObject({ earlierOrders: 0, cancelledAsFake: 0, cameBack: 0, codFromPhoneToday: 1, sameItemsWithin24h: 0 })
     expect(f.get(second)).toMatchObject({ earlierOrders: 1, codFromPhoneToday: 2, sameItemsWithin24h: 0 })
     expect(f.get(third)).toMatchObject({ codFromPhoneToday: 3, sameItemsWithin24h: 1 })
     expect(risk(f.get(third)!).level).toBe('high')

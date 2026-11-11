@@ -45,6 +45,7 @@ export async function riskFactsWith(tx: Tx, tenantId: string, scope: { ids: stri
       and (o2.payment_method = 'cod' or o2.switched_to_cod_at is not null) and o2.placed_at <= "orders"."placed_at"
       and (o2.placed_at at time zone 'Asia/Kolkata')::date = ("orders"."placed_at" at time zone 'Asia/Kolkata')::date)`,
     fake: sql<number>`(select count(*)::int from orders o2 where ${hasPhone} and o2.tenant_id = ${tenantId} and o2.phone = "orders"."phone" and o2.cancel_reason = 'fake' and o2.placed_at < "orders"."placed_at")`,
+    cameBack: sql<number>`(select count(*)::int from orders o2 where ${hasPhone} and o2.tenant_id = ${tenantId} and o2.phone = "orders"."phone" and o2.rto_initiated_at is not null and o2.placed_at < "orders"."placed_at")`,
     earlier: sql<number>`(select count(*)::int from orders o2 where ${hasPhone} and o2.tenant_id = ${tenantId} and o2.phone = "orders"."phone" and ${placedSql('o2')} and o2.placed_at < "orders"."placed_at")`,
   }).from(orders).leftJoin(pincodes, eq(pincodes.pincode, orders.pincode))
     .where(and(eq(orders.tenantId, tenantId), 'ids' in scope ? inArray(orders.id, scope.ids) : inTabSql(scope.tab, now)))
@@ -54,7 +55,7 @@ export async function riskFactsWith(tx: Tx, tenantId: string, scope: { ids: stri
       cod: !r.paidAt && (r.method === 'cod' || !!r.switchedAt), total: Number(r.total), customerName: r.customerName,
       // Before 1D the area was joined onto the line: the rule then reads the whole line (more lenient, never stricter).
       addressLine: r.addressLine, city: r.city, pincodeCity: r.pincodeCity ?? null,
-      sameItemsWithin24h: known ? r.sameItems : 0, codFromPhoneToday: known ? r.codToday : 1, cancelledAsFake: known ? r.fake : 0, earlierOrders: known ? r.earlier : 1,
+      sameItemsWithin24h: known ? r.sameItems : 0, codFromPhoneToday: known ? r.codToday : 1, cancelledAsFake: known ? r.fake : 0, cameBack: known ? r.cameBack : 0, earlierOrders: known ? r.earlier : 1,
       medianCod,
     } satisfies RiskFacts]
   }))

@@ -40,10 +40,12 @@ export const bag = {
   },
   set(variantId: string, qty: number) { write(qty <= 0 ? bag.get().filter((i) => i.variantId !== variantId) : bag.get().map((i) => (i.variantId === variantId ? { ...i, qty: Math.min(MAX_QTY, qty) } : i))) },
   remove(variantId: string) { write(bag.get().filter((i) => i.variantId !== variantId)) },
-  /** Make the bag what the server says can be bought (gone lines out, quantities cut). */
+  /** Make the bag what the server says can be bought: missing ids out, each given line set to its quantity (0 takes it
+   * out: sold out or gone). Lines not given are left as they are. */
   reconcile(lines: { variantId: string; qty: number }[], missing: string[]) {
     const keep = new Map(lines.map((l) => [l.variantId, l.qty]))
-    write(bag.get().filter((i) => !missing.includes(i.variantId)).map((i) => (keep.has(i.variantId) && keep.get(i.variantId)! > 0 ? { ...i, qty: keep.get(i.variantId)! } : i)))
+    write(bag.get().filter((i) => !missing.includes(i.variantId) && keep.get(i.variantId) !== 0)
+      .map((i) => (keep.has(i.variantId) ? { ...i, qty: keep.get(i.variantId)! } : i)))
   },
   clear() { write([]) },
 }

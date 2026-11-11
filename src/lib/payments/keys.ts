@@ -26,14 +26,19 @@ export type PaymentStatus =
  *  "Razorpay must approve an address first" (D1·8), on Settings and on the address page alike. */
 export const takesLivePayments = (p: PaymentStatus | null): boolean => !!p && p.connected && p.mode === 'live' && !!p.webhookSeenAt
 
-/** Save checked keys. A reconnect keeps the webhook (key and secret) so the merchant does not redo it in Razorpay. */
+/** Save checked keys. A reconnect keeps the webhook (key and secret) so the merchant does not redo it in Razorpay.
+ * A change of mode (test → live) forgets that the webhook worked: Razorpay keeps test and live webhooks apart, so a
+ * test event proves nothing about live. Before, live keys inherited "Working" from the test webhook, the shop offered
+ * online payment with no live webhook, and the secret she needed to make one stayed hidden (shop stress test
+ * 2026-11-11). */
 export async function saveKeys(tx: Tx, tenantId: string, k: Keys): Promise<void> {
   const mode = modeOf(k.keyId)
   if (!mode) throw new Error('bad key id')
-  const [cur] = await tx.select({ webhookKey: paymentKeys.webhookKey, webhookSecretEnc: paymentKeys.webhookSecretEnc }).from(paymentKeys).where(eq(paymentKeys.tenantId, tenantId))
+  const [cur] = await tx.select({ webhookKey: paymentKeys.webhookKey, webhookSecretEnc: paymentKeys.webhookSecretEnc, mode: paymentKeys.mode }).from(paymentKeys).where(eq(paymentKeys.tenantId, tenantId))
   const webhookKey = cur?.webhookKey ?? `k_${randomBytes(16).toString('hex')}`
   const webhookSecretEnc = cur?.webhookSecretEnc ?? seal(`whsec_${randomBytes(24).toString('hex')}`, tenantId, 'webhook_secret')
-  const row = { keyId: k.keyId, keySecretEnc: seal(k.keySecret, tenantId, 'key_secret'), webhookSecretEnc, webhookKey, mode, connectedAt: new Date(), problem: null }
+  const newMode = cur && cur.mode !== mode ? { webhookSeenAt: null, lastEventAt: null } : {}
+  const row = { keyId: k.keyId, keySecretEnc: seal(k.keySecret, tenantId, 'key_secret'), webhookSecretEnc, webhookKey, mode, connectedAt: new Date(), problem: null, ...newMode }
   await tx.insert(paymentKeys).values({ tenantId, ...row }).onConflictDoUpdate({ target: paymentKeys.tenantId, set: row })
 }
 

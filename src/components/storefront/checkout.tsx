@@ -8,7 +8,7 @@ import { cleanGstin } from '@/domains/tax/gstin-clean'
 import type { Biz, BizCheck } from './checkout-biz'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { OfferProgress, OfferRows, useQuote } from './bag'
-import { ATTR_KEY, bag, offerCode, useOfferCode } from './bag-store'
+import { ATTR_KEY, bag, offerCode, useBag, useOfferCode } from './bag-store'
 import { api, codWhyNotText, dayRange, inr, type Pay, type PublicListed, type PublicQuote } from './shop-client'
 
 // =============================================================================
@@ -60,7 +60,16 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   // The Pay on delivery total of the order already placed, when the server says it differs from the bag's (an offer ran
   // out or ended during the hold): shown first, then sent as the total the shopper agreed to.
   const [codTotal, setCodTotal] = useState<number | null>(null)
-  const { q, online, error: quoteError, refresh } = useQuote(f.pincode)
+  const { q: live, online, error: quoteError, refresh } = useQuote(f.pincode)
+  // The price the server gave THIS phone (a 409 "changed" from placement). /api/shop/quote has no phone, so it can't
+  // know a first-order offer or a per-phone limit doesn't fit a returning shopper; re-asking it priced the next tap
+  // wrong again, and the shopper looped on "The total changed" for good (shop stress test 2026-11-11). Until the bag,
+  // phone, pincode or code changes, the placement's own quote is the one shown and sent.
+  const items = useBag()
+  const typedCode = useOfferCode()
+  const [fitted, setFitted] = useState<{ sig: string; quote: PublicQuote } | null>(null)
+  const fitSig = JSON.stringify([items, f.phone, f.pincode, typedCode])
+  const q = fitted && fitted.sig === fitSig ? fitted.quote : live
   const seen = useRef<PublicQuote | null>(null)
   const attempt = useRef<{ sig: string; key: string } | null>(null)
 
@@ -73,13 +82,19 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   useEffect(() => { if (q && !seen.current) seen.current = q }, [q])
   const set = (k: keyof Form, v: string) => { setF((x) => ({ ...x, [k]: v })); setErrors((e) => { const n = { ...e }; delete n[k]; return n }) }
 
-  // City and state from the pincode, when the directory knows it (no delivery promise).
+  // City and state from the pincode, when the directory knows it (no delivery promise). A new pincode replaces the state
+  // (it decides the place of supply, so GST, and where a shop that delivers within its state can deliver) and a city
+  // that was filled from the old pincode; a city the shopper typed stays. Before, both were filled only when empty, so
+  // a changed pincode kept the old state (shop stress test 2026-11-11).
+  const filledCity = useRef('')
   useEffect(() => {
     if (!/^[1-9][0-9]{5}$/.test(f.pincode)) return
     let gone = false
     void api<{ city: string | null; state: string | null }>('/api/shop/pincode', { pincode: f.pincode }).then((r) => {
       if (gone || !r.ok) return
-      setF((x) => ({ ...x, city: x.city || r.data.city || '', state: x.state || r.data.state || '' }))
+      const city = r.data.city, state = r.data.state
+      setF((x) => ({ ...x, city: city && (!x.city || x.city === filledCity.current) ? city : x.city, state: state || x.state }))
+      if (city) filledCity.current = city
     })
     return () => { gone = true }
   }, [f.pincode])
@@ -127,7 +142,10 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
       if (r.data.quote) {
         const { changedText } = await import('./checkout-place')
         setMsg({ tone: 'changed', text: changedText(seen.current, r.data.quote) })
-        bag.reconcile(r.data.quote.lines.filter((l) => l.problem === 'reduced'), r.data.quote.missing)
+        setFitted({ sig: JSON.stringify([items, f.phone, f.pincode, code]), quote: r.data.quote })
+        // Sold-out and gone lines leave the bag too: checkout hides a line it can't sell, so one left in the bag was
+        // refused on every tap with no way to remove it here (shop stress test 2026-11-11).
+        bag.reconcile(r.data.quote.lines.filter((l) => l.problem), r.data.quote.missing)
         seen.current = r.data.quote; await refresh()
         return
       }

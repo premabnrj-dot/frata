@@ -25,6 +25,8 @@ export type RiskFacts = {
   codFromPhoneToday: number
   /** Earlier orders from this phone the shop cancelled as "Fake order". */
   cancelledAsFake: number
+  /** Earlier parcels to this phone that came back (RTO) at this shop: the refusal that costs two-way freight. */
+  cameBack: number
   /** Earlier orders from this phone, any state. */
   earlierOrders: number
   /** This shop's median COD order over the last 90 days; null below MIN_FOR_MEDIAN orders. */
@@ -37,6 +39,11 @@ export const MIN_FOR_MEDIAN = 10
 const TEST_NAME = /^(test|testing|abc|xyz|asdf|qwerty|na|n\/a|.)$/i
 
 const normal = (s: string) => s.toLowerCase().replace(/[^a-z]/g, '')
+/** Latin letters only: the pincode directory's city is in English, so a city typed in another script can't be compared
+ * (shop stress test 2026-11-11: a genuine Hindi address read "the city typed is not the pincode's city"). */
+const latin = (s: string) => /^[\p{Script=Latin}\s.'()-]+$/u.test(s.trim())
+/** A house or building number in any digits: ASCII or Devanagari (०–९). */
+const HAS_NUMBER = /[0-9\u0966-\u096F]/
 
 export function risk(f: RiskFacts): Risk {
   if (!f.cod) return { level: 'low', reasons: [], next: null }
@@ -44,13 +51,16 @@ export function risk(f: RiskFacts): Risk {
   if (f.sameItemsWithin24h > 0) high.push('Possible duplicate: the same items from this phone in the last 24 hours')
   if (f.codFromPhoneToday >= 3) high.push(`${f.codFromPhoneToday} pay-on-delivery orders from this phone today`)
   if (f.cancelledAsFake > 0) high.push('An earlier order from this phone was cancelled as fake')
+  // Shop stress test 2026-11-11: a phone that refused before read Low (its refusals even counted as "not a first
+  // order") and went through bulk confirm. Still advice, never a block: an RTO alone does not prove fraud.
+  if (f.cameBack > 0) high.push(f.cameBack === 1 ? 'An earlier parcel to this phone came back' : `${f.cameBack} earlier parcels to this phone came back`)
   if (high.length) return { level: 'high', reasons: high.slice(0, 3), next: 'Call before confirming. Cancel if unreachable.' }
 
   const medium: string[] = []
   if (f.earlierOrders === 0) medium.push('First order from this phone')
   const line = f.addressLine.trim()
-  if (!/\d/.test(line) || line.length < 15) medium.push('The address has no house or building number, or is very short')
-  if (f.pincodeCity && f.city && normal(f.pincodeCity) !== normal(f.city)) medium.push(`The city typed is not the pincode's city (${f.pincodeCity})`)
+  if (!HAS_NUMBER.test(line) || line.length < 15) medium.push('The address has no house or building number, or is very short')
+  if (f.pincodeCity && f.city && latin(f.city) && normal(f.pincodeCity) !== normal(f.city)) medium.push(`The city typed is not the pincode's city (${f.pincodeCity})`)
   if (f.medianCod !== null && f.total > 2 * f.medianCod) medium.push('Over twice your usual pay-on-delivery order')
   if (TEST_NAME.test(f.customerName.trim())) medium.push('The name looks like a test')
   if (medium.length >= 2) return { level: 'medium', reasons: medium.slice(0, 3), next: 'Call or WhatsApp to confirm.' }

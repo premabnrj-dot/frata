@@ -59,7 +59,7 @@ export function Today({ s, setup, now, share }: { s: TodaySummary | null; setup:
 
   return (
     <div className="space-y-4">
-      {s && !next && s.counts.to_pack === 0 && s.counts.on_hold === 0 && <p className="font-semibold">You’re up to date.</p>}
+      {s && !next && s.counts.to_pack === 0 && s.counts.to_ship === 0 && s.counts.on_hold === 0 && <p className="font-semibold">You’re up to date.</p>}
       {next && (
         // On a phone the next order comes first: it is the one tap the page exists for.
         <CardLink href={`/console/orders/${next.number}`} data-next-order className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5">
