@@ -2,7 +2,7 @@ import 'server-only'
 import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
 import { shopPages } from '@/lib/db/schema-themes'
-import { PageDraftSchema, type PageDraft, type PageTemplate } from '@/domains/pages/templates'
+import { PageDraftSchema, type PageDraft } from '@/domains/pages/templates'
 
 // =============================================================================
 // FILE: src/lib/themes/pages.ts — a shop's pages inside the look's transaction (Theme Studio TS1a; plan § Decisions).
@@ -20,17 +20,19 @@ export type LivePage = { title: string; handle: string; fill: PageDraft['fill'] 
 export const draftOf = (row: Pick<PageRow, 'draft'>): PageDraft | null => { const r = PageDraftSchema.safeParse(row.draft); return r.success ? r.data : null }
 /** What the draft would make live: null when hidden or removed. */
 export const targetOf = (d: PageDraft | null): LivePage | null => (!d || d.hidden || d.removed ? null : { title: d.title, handle: d.handle, fill: d.fill })
-const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
-
-/** The shop's pages for the editor (not removed at a publish yet), oldest first. */
-export async function pagesForEdit(tx: Tx, tenantId: string) {
-  return tx.select().from(shopPages).where(and(eq(shopPages.tenantId, tenantId), isNull(shopPages.removedAt))).orderBy(shopPages.createdAt)
-}
+/** JSON with its keys sorted: Postgres's jsonb hands keys back in its own order, so a plain stringify of a live page
+ *  never equals its draft's (impact review 2026-11-11 HIGH). */
+export const canon = (x: unknown): string => JSON.stringify(x ?? null, (_k, v) => (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, (v as Record<string, unknown>)[k]])) : v))
+const same = (a: unknown, b: unknown) => canon(a) === canon(b)
 
 /** Pages whose draft differs from live, with the version each holds (Publish lists and checks them). */
-export async function pendingPages(tx: Tx, tenantId: string): Promise<{ row: PageRow; target: LivePage | null; removed: boolean }[]> {
-  const rows = await tx.select().from(shopPages).where(and(eq(shopPages.tenantId, tenantId), isNull(shopPages.removedAt))).for('update')
-  return rows.flatMap((row) => { const d = draftOf(row); const target = targetOf(d); return same(target, row.live) && !d?.removed ? [] : [{ row, target, removed: !!d?.removed }] })
+/** `lock`: inside the publish (after the shop's lock: impact review, lock order) the rows are locked too; the
+ *  readiness check before it reads without locking. A draft that no longer parses is left as it is: its live page
+ *  stays (a stricter schema never takes a page off the shop). */
+export async function pendingPages(tx: Tx, tenantId: string, lock = true): Promise<{ row: PageRow; target: LivePage | null; removed: boolean }[]> {
+  const q = tx.select().from(shopPages).where(and(eq(shopPages.tenantId, tenantId), isNull(shopPages.removedAt)))
+  const rows = lock ? await q.for('update') : await q
+  return rows.flatMap((row) => { const d = draftOf(row); if (!d) return []; const target = targetOf(d); return same(target, row.live) && !d.removed ? [] : [{ row, target, removed: !!d.removed }] })
 }
 
 /** Below the 64 kB a shop's live pages may hold (bytes of the jsonb text; checked here, under the lock). */
@@ -63,8 +65,12 @@ export async function preparePages(tx: Tx, tenantId: string, versions: Record<st
 
 /** Undo: the pages the undone publish changed go back (live ↔ previous), under the Undo's own publish row. */
 export async function undoPages(tx: Tx, tenantId: string, undone: string, undoPublishId: string) {
-  // A page that publish removed comes back too (removed_at cleared); one it added goes back to nothing live.
-  await tx.execute(sql`update ${shopPages} set live = previous, previous = live, live_publish_id = ${undoPublishId}, removed_at = null, updated_at = now()
+  // A page that publish removed comes back too (removed_at cleared); one it added goes back to nothing live. The draft
+  // follows what is live again (impact review: else the next Publish would put the undone words back unseen); a page
+  // with nothing live keeps its words, hidden.
+  await tx.execute(sql`update ${shopPages} set
+      draft = case when previous is not null then previous || '{"hidden": false}'::jsonb else (draft - 'removed') || '{"hidden": true}'::jsonb end,
+      live = previous, previous = live, live_publish_id = ${undoPublishId}, removed_at = null, version = version + 1, updated_at = now()
     where tenant_id = ${tenantId} and live_publish_id = ${undone}`)
 }
 
@@ -79,4 +85,3 @@ export async function discardPages(tx: Tx, tenantId: string) {
   }
 }
 
-export type { PageTemplate }

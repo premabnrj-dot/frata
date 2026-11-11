@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Dialog } from '@/components/ui/dialog'
 import { Icon } from '@/components/icons/icon'
 import { BOUND_QUESTION, type Bound } from '@/domains/policies/answers'
-import { FAQ_DEFAULT, FAQ_ID, MAX_FAQ, TEMPLATES, TEMPLATE_NAMES, type FaqItem, type PageDraft, type PageFill, type PageTemplate } from '@/domains/pages/templates'
+import { FAQ_DEFAULT, FAQ_ID, MAX_FAQ, TEMPLATES, TEMPLATE_NAMES, handleOf, type FaqItem, type PageDraft, type PageFill, type PageTemplate } from '@/domains/pages/templates'
 import type { SectionOf } from '@/domains/themes/sections'
 import { addPageAction, removePageAction, savePageAction } from '@/app/(console)/console/look/page-actions'
 import type { EditorPage } from '@/lib/queries/pages'
@@ -77,9 +77,11 @@ function Questions({ items, set, answers }: { items: FaqItem[]; set: (x: FaqItem
 }
 
 /** An About or FAQ page's form; saves its own draft. `onSaved` gives the new version (the editor publishes it). */
-export function PagePanel({ page, c, answers, address, onSaved, onRemoved }: {
+export function PagePanel({ page, c, answers, address, onSaved, onRemoved, registerFlush }: {
   page: EditorPage; c: FormCtx; answers: Record<Bound, string | null>; address: string
   onSaved: (p: EditorPage) => void; onRemoved: (id: string, version: number | null) => void
+  /** The editor's Publish saves a waiting change first (impact review: an edit in the last 800 ms was dropped). */
+  registerFlush: (f: (() => Promise<void>) | null) => void
 }) {
   const [draft, setDraft] = useState<PageDraft>(page.draft)
   const [error, setError] = useState<string | null>(null)
@@ -87,14 +89,22 @@ export function PagePanel({ page, c, answers, address, onSaved, onRemoved }: {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latest = useRef(draft)
   latest.current = draft
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
   const save = async () => {
     timer.current = null
-    const r = await savePageAction({ id: page.id, version: version.current, draft: latest.current })
+    // An address with a dash at either end is saved without it (typing "our-" mid-word never errors).
+    const d = latest.current, handle = d.handle.replace(/^-+|-+$/g, '') || 'page'
+    const r = await savePageAction({ id: page.id, version: version.current, draft: { ...d, handle } })
     if (!r.ok) { setError(r.error); return }
     setError(null); version.current = r.version
-    onSaved({ ...page, version: r.version, draft: latest.current, dirty: true })
+    onSaved({ ...page, version: r.version, draft: { ...d, handle }, dirty: true })
   }
+  const flush = async () => { if (timer.current) { clearTimeout(timer.current); await save() } }
+  // Closing the page (another page, Home) saves a waiting change instead of dropping it; Publish flushes it too.
+  const saveNow = useRef(save)
+  saveNow.current = save
+  useEffect(() => { registerFlush(flush) })
+  // Only when the page closes (another page, Home): a waiting change saves instead of being dropped.
+  useEffect(() => () => { registerFlush(null); if (timer.current) { clearTimeout(timer.current); void saveNow.current() } }, [])
   const set = (d: PageDraft) => { setDraft(d); if (timer.current) clearTimeout(timer.current); timer.current = setTimeout(save, 800) }
   const t: PageTemplate = page.template
   const asSection = { id: page.id, key: 'design', hidden: false, scheme: 'paper', label: '', design: t, fill: Object.fromEntries(Object.entries(draft.fill).filter(([, f]) => f.kind !== 'faq')) } as SectionOf<'design'>
@@ -109,7 +119,7 @@ export function PagePanel({ page, c, answers, address, onSaved, onRemoved }: {
     <div className="space-y-4">
       <h2 className="text-base font-semibold">{draft.title || TEMPLATE_NAMES[t]}</h2>
       <div className="space-y-1.5">
-        <Text label="Title" value={draft.title} max={60} onChange={(title) => set({ ...draft, title })} />
+        <Text label="Title" value={draft.title} max={60} onChange={(title) => set({ ...draft, title, ...(!page.fixed && draft.handle === handleOf(draft.title) ? { handle: handleOf(title) } : {}) })} />
         {page.fixed
           ? <p className="font-mono text-xs text-muted-foreground">{address}/pages/{draft.handle}</p>
           : <label className="flex items-center gap-1 font-mono text-xs text-muted-foreground">{address}/pages/<input aria-label="Address" value={draft.handle} maxLength={60} onChange={(e) => set({ ...draft, handle: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })} className="min-w-0 flex-1 rounded border border-input bg-card px-1.5 py-0.5" /></label>}

@@ -18,7 +18,7 @@ import { draftOf, pendingPages } from './pages'
 // =============================================================================
 
 export async function pagesReadiness(tx: Tx, tenantId: string, draftLayer: { contact?: unknown }, liveSettings: unknown): Promise<string | null> {
-  for (const p of await pendingPages(tx, tenantId)) {
+  for (const p of await pendingPages(tx, tenantId, false)) {
     if (!p.target) continue
     const d = draftOf(p.row)
     const why = d ? pageIssues(p.row.template as PageTemplate, d).find((i) => i.blocks) : null

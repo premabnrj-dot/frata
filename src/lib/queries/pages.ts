@@ -3,7 +3,7 @@ import { cache } from 'react'
 import { and, eq, isNotNull, isNull } from 'drizzle-orm'
 import { withTenant } from '@/lib/db/tenant'
 import { shopPages as pagesTable } from '@/lib/db/schema-themes'
-import { draftOf, targetOf, type LivePage } from '@/lib/themes/pages'
+import { canon, draftOf, targetOf, type LivePage } from '@/lib/themes/pages'
 import type { PageDraft } from '@/domains/pages/templates'
 import type { PageTemplate } from '@/domains/pages/templates'
 import { shopCached } from './storefront'
@@ -42,6 +42,6 @@ export const pagesForEditor = (tenantId: string) => withTenant(tenantId, async (
     const d = draftOf(r)
     if (!d) return []
     const fixed = !!(r.live || r.previous || r.livePublishId)
-    return [{ id: r.id, template: r.template as PageTemplate, version: r.version, draft: d, fixed, dirty: JSON.stringify(targetOf(d)) !== JSON.stringify(r.live ?? null) || !!d.removed }]
+    return [{ id: r.id, template: r.template as PageTemplate, version: r.version, draft: d, fixed, dirty: canon(targetOf(d)) !== canon(r.live) || !!d.removed }]
   })
 })

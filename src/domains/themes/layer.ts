@@ -84,8 +84,10 @@ export const layerTooLong = (layer: unknown) => layerBytes(layer) > MAX_LAYER_BY
 /** Why a layer can't be saved as it is (shape and limits only). Empty: it can be saved. */
 export function layerProblems(layer: unknown): string[] {
   // Site settings and menus first: their problems in the merchant's words.
-  const lr = (layer ?? {}) as { site?: unknown; menus?: unknown }
-  const own = [siteProblem(lr.site), menusProblem(lr.menus)].filter((x): x is string => !!x)
+  const lr = (layer ?? {}) as { site?: unknown; menus?: unknown; contact?: unknown }
+  // TS1a: Contact's line in words, never Zod's (impact review).
+  const contactWhy = lr.contact !== undefined && !ContactSchema.safeParse(lr.contact).success ? 'Contact’s line: plain words, up to 160 characters (no < > { } or \\).' : null
+  const own = [siteProblem(lr.site), menusProblem(lr.menus), contactWhy].filter((x): x is string => !!x)
   if (own.length) return own
   const p = LayerSchema.safeParse(layer)
   if (!p.success) return p.error.issues.map((i) => `${i.path.join('.') || 'look'}: ${i.message}`)

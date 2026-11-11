@@ -48,9 +48,36 @@ describe.skipIf(!host)('a shop’s pages ride the look’s Publish, Undo and Dis
     expect(await run(async (tx) => L.undoPublish(tx, A, who, await liveId()))).not.toBe('none')
     expect(((await page(p!.id)).live as { title: string }).title).toBe('How we weave')
 
+    // An untouched page isn't republished: its live_publish_id stays (jsonb's key order is no change: impact review).
+    const before = (await page(p!.id)).livePublishId
+    expect(await publish({ [p!.id]: (await page(p!.id)).version })).toBe('ok')
+    expect((await page(p!.id)).livePublishId).toBe(before)
+    // The draft follows Undo: after an Undo the next Publish doesn't put the undone words back.
+    const v1 = (await page(p!.id)).version
+    await run((tx) => tx.update(shopPages).set({ draft: { ...draft, title: 'Undone title' }, version: v1 + 1 }).where(and(eq(shopPages.tenantId, A), eq(shopPages.id, p!.id))))
+    expect(await publish({ [p!.id]: v1 + 1 })).toBe('ok')
+    expect(await run(async (tx) => L.undoPublish(tx, A, who, await liveId()))).not.toBe('none')
+    const afterUndo = await page(p!.id)
+    expect((afterUndo.draft as { title: string }).title).toBe('How we weave')
+    expect(await publish({ [p!.id]: afterUndo.version })).toBe('ok')
+    expect(((await page(p!.id)).live as { title: string }).title).toBe('How we weave')
+    // A draft that no longer parses leaves the live page as it is.
+    const vv = (await page(p!.id)).version
+    await run((tx) => tx.update(shopPages).set({ draft: { handle: 'our-story', title: '<bad>', fill: {} }, version: vv + 1 }).where(and(eq(shopPages.tenantId, A), eq(shopPages.id, p!.id))))
+    expect(await publish({ [p!.id]: vv + 1 })).toBe('ok')
+    expect(((await page(p!.id)).live as { title: string }).title).toBe('How we weave')
+    await run((tx) => tx.update(shopPages).set({ draft: { ...draft, title: 'How we weave' }, version: vv + 2 }).where(and(eq(shopPages.tenantId, A), eq(shopPages.id, p!.id))))
+
+    // Discard puts an edited live page's draft back to what is live.
+    await run((tx) => tx.update(shopPages).set({ draft: { ...draft, title: 'Not kept' }, version: vv + 3 }).where(and(eq(shopPages.tenantId, A), eq(shopPages.id, p!.id))))
+    await run((tx) => L.newDraft(tx, A, who, look, { reuse: true }))
+    await run((tx) => L.discardDraft(tx, A))
+    expect(((await page(p!.id)).draft as { title: string }).title).toBe('How we weave')
+
     // Hidden at Publish: nothing live; the words stay in the draft.
-    await run((tx) => tx.update(shopPages).set({ draft: { ...draft, title: 'How we weave', hidden: true }, version: 3 }).where(and(eq(shopPages.tenantId, A), eq(shopPages.id, p!.id))))
-    expect(await publish({ [p!.id]: 3 })).toBe('ok')
+    const vh = (await page(p!.id)).version
+    await run((tx) => tx.update(shopPages).set({ draft: { ...draft, title: 'How we weave', hidden: true }, version: vh + 1 }).where(and(eq(shopPages.tenantId, A), eq(shopPages.id, p!.id))))
+    expect(await publish({ [p!.id]: vh + 1 })).toBe('ok')
     expect((await page(p!.id)).live).toBeNull()
 
     // Discard: a draft edit goes back to live; a page never published goes.
@@ -60,10 +87,11 @@ describe.skipIf(!host)('a shop’s pages ride the look’s Publish, Undo and Dis
     expect(await run(async (tx) => (await tx.select().from(shopPages).where(and(eq(shopPages.tenantId, A), eq(shopPages.id, q!.id)))).length)).toBe(0)
 
     // Removed at Publish; the next Publish deletes the row for good.
-    await run((tx) => tx.update(shopPages).set({ draft: { ...draft, hidden: false }, version: 4 }).where(and(eq(shopPages.tenantId, A), eq(shopPages.id, p!.id))))
-    expect(await publish({ [p!.id]: 4 })).toBe('ok')
-    await run((tx) => tx.update(shopPages).set({ draft: { ...draft, removed: true }, version: 5 }).where(and(eq(shopPages.tenantId, A), eq(shopPages.id, p!.id))))
-    expect(await publish({ [p!.id]: 5 })).toBe('ok')
+    const vr = (await page(p!.id)).version
+    await run((tx) => tx.update(shopPages).set({ draft: { ...draft, hidden: false }, version: vr + 1 }).where(and(eq(shopPages.tenantId, A), eq(shopPages.id, p!.id))))
+    expect(await publish({ [p!.id]: vr + 1 })).toBe('ok')
+    await run((tx) => tx.update(shopPages).set({ draft: { ...draft, removed: true }, version: vr + 2 }).where(and(eq(shopPages.tenantId, A), eq(shopPages.id, p!.id))))
+    expect(await publish({ [p!.id]: vr + 2 })).toBe('ok')
     const removed = await page(p!.id)
     expect(removed.live).toBeNull(); expect(removed.removedAt).not.toBeNull()
     expect(await publish({})).toBe('ok')

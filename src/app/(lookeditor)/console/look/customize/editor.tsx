@@ -100,6 +100,10 @@ export function Editor(p: EditorProps) {
   // TS1a: 'contact' and `page:<id>` too (the Pages group of the page picker).
   const [page, setPage] = useState<EditPage | 'contact' | `page:${string}`>('home')
   const [pages, setPages] = useState(p.pages)
+  // Publish reads the versions now, after a waiting page save (state would lag a render behind).
+  const pagesNow = useRef(pages)
+  pagesNow.current = pages
+  const flushPage = useRef<(() => Promise<void>) | null>(null)
   const [adding, setAdding] = useState(false)
   const shown = page.startsWith('page:') ? pages.find((x) => `page:${x.id}` === page) ?? null : null
   const pageName = page === 'contact' ? 'Contact' : shown ? shown.draft.title : PAGE_NAMES[page as EditPage]
@@ -208,7 +212,8 @@ export function Editor(p: EditorProps) {
   const go = () => start(async () => {
     try {
       if (timer.current) { clearTimeout(timer.current); timer.current = null; await save() }
-      const [r] = await Promise.all([publishLookAction({ revisionId: p.revisionId, version: version.current, pages: Object.fromEntries(pages.map((x) => [x.id, x.version])) }), new Promise((ok) => setTimeout(ok, GOING_LIVE_MS))])
+      await flushPage.current?.()
+      const [r] = await Promise.all([publishLookAction({ revisionId: p.revisionId, version: version.current, pages: Object.fromEntries(pagesNow.current.map((x) => [x.id, x.version])) }), new Promise((ok) => setTimeout(ok, GOING_LIVE_MS))])
       if (!r.ok) { setGoing(false); setPubError(r.error); setAsk(true) }
     } catch { setGoing(false); setPubError('We couldn’t publish. Your draft is safe; try again.'); setAsk(true) }
   })
@@ -232,7 +237,8 @@ export function Editor(p: EditorProps) {
       {tab === 'sections' && page === 'contact' && <ContactPanel line={layer.contact?.line ?? ''} rows={p.contactRows} address={p.address}
         setLine={(line) => { const { contact: _old, ...rest } = layer; change(line.trim() ? { ...rest, contact: { line } } : rest) }} />}
       {tab === 'sections' && shown && <PagePanel key={shown.id} page={shown} c={p.formCtx} answers={p.answers} address={p.address}
-        onSaved={(x) => { setPages((ps) => ps.map((y) => (y.id === x.id ? x : y))); post({ type: 'refresh' }) }}
+        registerFlush={(f) => { flushPage.current = f }}
+        onSaved={(x) => { pagesNow.current = pagesNow.current.map((y) => (y.id === x.id ? x : y)); setPages(pagesNow.current); post({ type: 'refresh' }) }}
         onRemoved={(id, v) => { setPages((ps) => (v === null ? ps.filter((y) => y.id !== id) : ps.map((y) => (y.id === id ? { ...y, version: v, draft: { ...y.draft, removed: true } } : y)))); setPage('home'); say('Page removed') }} />}
       {tab === 'menus' && <MenusForm menus={menus} own={layer.menus ?? {}} rowLimit={layer.settings.header === 'split' ? 5 : null} targets={p.targets} icons={icons} set={(m) => change({ ...layer, menus: m })} />}
       {tab === 'sections' && page === 'home' && (sel ? (
@@ -301,7 +307,7 @@ export function Editor(p: EditorProps) {
               <option value="+page">Add a page…</option></optgroup>
             </select>
             <span className="text-sm text-muted-foreground">Editing: <b className="font-medium text-foreground">{pageName}</b></span>
-            {adding && <AddPage open={adding} onClose={() => setAdding(false)} hasFaq={pages.some((x) => x.template === 'faq' && !x.draft.removed)} count={pages.length} thumbs={p.pageThumbs}
+            {adding && <AddPage open={adding} onClose={() => setAdding(false)} hasFaq={pages.some((x) => x.template === 'faq')} count={pages.length} thumbs={p.pageThumbs}
               onAdded={(x) => { setPages((ps) => [...ps, x]); setAdding(false); setPage(`page:${x.id}`); setTab('sections') }} />}
             <span className="ml-auto hidden font-mono text-xs text-muted-foreground sm:inline">{d.w} px · {Math.round(scale * 100)}%</span>
           </div>

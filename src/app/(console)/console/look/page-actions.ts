@@ -33,9 +33,10 @@ export async function addPageAction(input: unknown): Promise<R<{ id: string; ver
     if (auth.membership.supportSessionId) return { error: SUPPORT }
     const t = auth.membership.tenantId
     await lock(tx, t)
-    const rows = await tx.select({ draft: shopPages.draft, template: shopPages.template }).from(shopPages).where(eq(shopPages.tenantId, t))
+    const rows = await tx.select({ draft: shopPages.draft, template: shopPages.template, removedAt: shopPages.removedAt }).from(shopPages).where(eq(shopPages.tenantId, t))
     if (rows.length >= 20) return { error: 'A shop has at most 20 pages. Remove one first.' }
-    if (p.data.template === 'faq' && rows.some((x) => x.template === 'faq')) return { error: 'Your shop has its FAQ already.' }
+    // One FAQ (a FAQ removed at a publish no longer counts; one marked for removal does until that publish).
+    if (p.data.template === 'faq' && rows.some((x) => x.template === 'faq' && !x.removedAt)) return { error: 'Your shop has its FAQ already. Publish to finish removing it first.' }
     const title = p.data.template === 'faq' ? 'Questions, answered' : 'Our story'
     const taken = new Set(rows.map((x) => (x.draft as { handle?: string }).handle))
     const base = p.data.template === 'faq' ? 'faq' : handleOf(title)
