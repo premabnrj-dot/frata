@@ -117,13 +117,13 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 </style>
 
 <div class="wrap">
-  <p class="k mono">Mockup · 8 Nov 2026 · spec docs/specs/2026-11-08-messaging.md · for the owner's approval</p>
-  <h1>Messages: Frrata to merchants, merchants to shoppers</h1>
+  <p class="k mono">Mockup v2 · 11 Nov 2026 (v1 8 Nov) · spec docs/specs/2026-11-08-messaging.md · for the owner's approval · campaigns and the wallet held for later (owner, 11 Nov)</p>
+  <h1>Email: Frrata to merchants, shops to their shoppers</h1>
   <p class="sub">Two directions, two brands. Order emails start on their own; the merchant changes words, never code. Amazon SES in Mumbai sends every email, one tenant per shop, so one shop's trouble never stops another's mail.</p>
   <nav class="toc" aria-label="Screens">
     <a href="#map">1 Boundaries</a><a href="#checkout">2 Checkout</a><a href="#settings">3 Emails to shoppers</a><a href="#editor">4 Edit an email</a>
-    <a href="#emails">5 The emails</a><a href="#order">6 Order page</a><a href="#domain">7 Your domain</a><a href="#wallet">8 Wallet and campaigns</a>
-    <a href="#notices">9 Frrata notices</a><a href="#admin">10 Admin</a><a href="#stress">11 Stress test</a><a href="#phases">12 Phases and calls</a>
+    <a href="#emails">5 The emails</a><a href="#order">6 Order page</a><a href="#domain">7 Your domain</a>
+    <a href="#notices">8 Frrata notices</a><a href="#admin">9 Admin</a><a href="#stress">10 Stress test</a><a href="#phases">11 Phases and calls</a>
   </nav>
 
   <h2 id="map">1 · Who sends what, in whose brand</h2>
@@ -133,7 +133,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       <div class="who"><span class="pill">Frrata</span><span class="arrow">→</span><span class="pill">Owner · Admin · Staff</span><span class="pill">Partners</span></div>
       <dl class="kv">
         <dt>Brand</dt><dd>Frrata wordmark, rani thread</dd>
-        <dt>From</dt><dd class="mono">Frrata &lt;notices@notify.frrata.com&gt;</dd>
+        <dt>From</dt><dd class="mono">Frrata &lt;notices@notify.&lt;Frrata's domain&gt;&gt;</dd>
         <dt>Lands in</dt><dd>Console › Notices first; email per type</dd>
         <dt>Can't switch off</dt><dd>Billing, security, Frrata acted on your shop</dd>
         <dt>Examples</dt><dd>Debit on 3 Dec · ₹6,240 · Support visit opened · Offer stopped by Frrata · Payment keys stopped working</dd>
@@ -144,19 +144,19 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       <div class="who"><span class="pill">Kesar Studio</span><span class="arrow">→</span><span class="pill">Shoppers who gave an email</span></div>
       <dl class="kv">
         <dt>Brand</dt><dd>The shop's logo, colour and name. No Frrata mark anywhere</dd>
-        <dt>From</dt><dd class="mono">Kesar Studio &lt;kesar-studio@frratamail.com&gt; → orders@kesarstudio.in once verified</dd>
+        <dt>From</dt><dd class="mono">Kesar Studio &lt;kesar-studio@frratamail.app&gt; → orders@kesarstudio.in once verified</dd>
         <dt>Reply-To</dt><dd>The shop's support email</dd>
         <dt>Order emails</dt><dd>Included on every plan; no consent needed; never capped</dd>
-        <dt>Marketing</dt><dd>Only to shoppers who tapped "Email me new drops"; from the Messages wallet</dd>
+        <dt>Marketing</dt><dd>Not in this plan. The "Email me new drops" tap is collected now, for campaigns later</dd>
       </dl>
     </div>
   </div>
   <div class="grid3" style="margin-top:12px">
     <div class="card"><h3>Order emails</h3><p class="sub">About one order. No offers inside, so Gmail treats them as transactional: no unsubscribe, no consent (DPDP s.7(a)).</p></div>
-    <div class="card"><h3>Marketing</h3><p class="sub">Campaigns and automations. One-click unsubscribe, a 16-hour gap per shopper, its own stream and domain.</p></div>
-    <div class="card"><h3>Frrata notices</h3><p class="sub">From frrata.com only. Shops never send from it, so their mail can't touch Frrata's own.</p></div>
+    <div class="card"><h3>Marketing · later</h3><p class="sub">Campaigns are held to be planned on their own (owner, 11 Nov). Their own stream and domain when they come.</p></div>
+    <div class="card"><h3>Frrata notices</h3><p class="sub">From Frrata's own domain only. Shops never send from it, so their mail can't touch Frrata's own.</p></div>
   </div>
-  <p class="k" style="margin-top:10px">Later, the same events reach shoppers on WhatsApp (M2·1 C2) and the merchant's team by push (P·1). Each event: a row in the outbox, one channel at a time or both.</p>
+  <p class="k" style="margin-top:10px">Order emails go to every shopper who gave an email, whatever WhatsApp does: email is where the invoice link lives, and it costs a paisa. WhatsApp order updates (Messages M·1) later ride the same queue and templates; push to the team (P·1) after that.</p>
 
   <h2 id="checkout">2 · Checkout: an optional email, no checkbox</h2>
   <div class="grid2">
@@ -184,11 +184,11 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     <div class="card">
       <div class="row between"><h3 style="margin:0">Sender</h3><span class="chip c-n">Frrata's address</span></div>
       <dl class="kv" style="margin:10px 0">
-        <dt>From</dt><dd><b>Kesar Studio</b> <span class="mono sub">kesar-studio@frratamail.com</span></dd>
+        <dt>From</dt><dd><b>Kesar Studio</b> <span class="mono sub">kesar-studio@frratamail.app</span></dd>
         <dt>Replies go to</dt><dd class="mono">care@kesarstudio.in</dd>
       </dl>
       <div class="row"><a class="btn">Send from your own domain</a><a class="btn ghost">Change sender name</a></div>
-      <p class="k" style="margin-top:10px">Logo and colour come from Settings › Brand and Look. Nothing to set twice.</p>
+      <p class="k" style="margin-top:10px">Logo and colour come from Settings › Brand and Look. Nothing to set twice. Included on every plan: no app to switch on.</p>
     </div>
     <div class="card">
       <h3>Last 7 days</h3>
@@ -300,69 +300,23 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   <h2 id="domain">7 · Send from your own domain</h2>
   <div class="card">
     <div class="row between"><h3 style="margin:0">kesarstudio.in</h3><span class="chip c-warn">Waiting for records</span></div>
-    <p class="sub" style="margin-top:6px">Add these at your domain provider (GoDaddy, Hostinger, BigRock…), then check. It can take up to 48 hours. Until then, emails go from kesar-studio@frratamail.com: nothing is lost.</p>
+    <p class="sub" style="margin-top:6px">Add these at your domain provider (GoDaddy, Hostinger, BigRock…), then check. It can take up to 48 hours. Until then, emails go from kesar-studio@frratamail.app: nothing is lost.</p>
     <div class="rec" style="font-weight:500;color:var(--sub)"><span>Type</span><span>Name</span><span class="v">Value</span><span class="cp"></span></div>
     <div class="rec"><span class="mono">CNAME</span><code>a1b2…._domainkey</code><code class="v">a1b2….dkim.amazonses.com</code><a class="btn cp">Copy</a></div>
     <div class="rec"><span class="mono">CNAME</span><code>c3d4…._domainkey</code><code class="v">c3d4….dkim.amazonses.com</code><a class="btn cp">Copy</a></div>
     <div class="rec"><span class="mono">CNAME</span><code>e5f6…._domainkey</code><code class="v">e5f6….dkim.amazonses.com</code><a class="btn cp">Copy</a></div>
     <div class="rec"><span class="mono">MX</span><code>bounce</code><code class="v">10 feedback-smtp.ap-south-1.amazonses.com</code><a class="btn cp">Copy</a></div>
     <div class="rec"><span class="mono">TXT</span><code>bounce</code><code class="v">v=spf1 include:amazonses.com ~all</code><a class="btn cp">Copy</a></div>
-    <div class="rec"><span class="mono">TXT</span><code>_dmarc</code><code class="v">v=DMARC1; p=none; rua=mailto:dmarc@frratamail.com</code><a class="btn cp">Copy</a></div>
+    <div class="rec"><span class="mono">TXT</span><code>_dmarc</code><code class="v">v=DMARC1; p=none; rua=mailto:dmarc@frratamail.app</code><a class="btn cp">Copy</a></div>
     <div class="row" style="margin-top:12px"><a class="btn primary">Check records</a><span class="k">Checked 2 min ago · 3 of 6 found</span></div>
   </div>
   <div class="grid3" style="margin-top:12px">
     <div class="card"><span class="chip c-ok">Sending from orders@kesarstudio.in</span><p class="k" style="margin-top:6px">All records found. Checked every day.</p></div>
-    <div class="card"><span class="chip c-danger">Records missing</span><p class="k" style="margin-top:6px">Sending from kesar-studio@frratamail.com until fixed. The owner gets a notice.</p></div>
+    <div class="card"><span class="chip c-danger">Records missing</span><p class="k" style="margin-top:6px">Sending from kesar-studio@frratamail.app until fixed. The owner gets a notice.</p></div>
     <div class="card"><span class="chip c-n">Address</span><p class="k" style="margin-top:6px">orders@ by default; any name before @kesarstudio.in.</p></div>
   </div>
 
-  <h2 id="wallet">8 · Messages wallet and campaigns (E·4)</h2>
-  <div class="grid2">
-    <div class="card">
-      <div class="row between"><h3 style="margin:0">Messages wallet</h3><span class="k">Settings › Billing</span></div>
-      <div class="row" style="margin:8px 0 12px;align-items:baseline"><span class="big">₹1,500</span><span class="k">valid till 8 Nov 2027 (12 months from your last recharge)</span></div>
-      <p class="k" style="margin-bottom:8px">Included with Growth: 10,000 emails this month · 3,180 left · resets 1 Dec</p>
-      <div class="grid3">
-        <div class="pack"><b>₹500</b><div class="k">5,000 emails · 10 paise each</div></div>
-        <div class="pack on"><b>₹1,600</b><div class="k">20,000 · 8 paise each</div></div>
-        <div class="pack"><b>₹5,000</b><div class="k">1,00,000 · 5 paise each</div></div>
-      </div>
-      <p class="k" style="margin-top:8px">+ 18% GST. Paid with your saved UPI Autopay or card. Auto-recharge: off · when on, we tell you a day before each debit.</p>
-      <p class="k">Order emails never use the wallet. WhatsApp and SMS join this wallet later.</p>
-    </div>
-    <div class="card">
-      <div class="row between"><h3 style="margin:0">Review: Diwali drop</h3><span class="chip c-n">Draft</span></div>
-      <ul class="list checks" style="margin-top:6px">
-        <li class="ok">To 4,812 subscribed shoppers (812 left out: emailed in the last 16 hours or unsubscribed)</li>
-        <li class="ok">Every link opens kesarstudio.in, tagged for Analytics</li>
-        <li class="ok">Unsubscribe in one click, added by Frrata</li>
-        <li class="ok">38 kB · reads in dark mode</li>
-        <li class="ok">Offer DIWALI10 ends 15 Nov (from Offers)</li>
-      </ul>
-      <p style="margin:10px 0 4px"><b>Uses 4,812 emails</b> · 3,180 included + 1,632 from the wallet at 8 paise (₹131) · balance after ₹1,369</p>
-      <div class="row"><a class="btn primary">Send now</a><a class="btn">Schedule</a></div>
-    </div>
-  </div>
-  <div class="grid2" style="margin-top:12px">
-    <div class="card">
-      <h3>Build: blocks, no code</h3>
-      <div class="blocks">
-        <div class="block"><span>Heading · "The Diwali drop is here"</span><span class="k">Edit</span></div>
-        <div class="block"><span>Image · festive-banner.jpg</span><span class="k">Edit</span></div>
-        <div class="block"><span>Products · 4 from Festive edit · live prices</span><span class="k">Edit</span></div>
-        <div class="block"><span>Offer · DIWALI10 · 10% off · till 15 Nov</span><span class="k">Edit</span></div>
-        <div class="block"><span>Button · Shop the drop</span><span class="k">Edit</span></div>
-      </div>
-      <p class="k" style="margin-top:8px">Audience: Everyone subscribed · Bought in the last 90 days · Bought from a collection · Never bought</p>
-    </div>
-    <div class="card">
-      <h3>Results, judged like Offers and Analytics</h3>
-      <div class="strip"><div><span class="k">Delivered</span><b>4,771</b></div><div><span class="k">Clicks</span><b>402</b></div><div><span class="k">Orders</span><b>37</b></div><div><span class="k">₹ kept after returns</span><b>₹18,420</b></div></div>
-      <p class="k" style="margin-top:8px">No "opens": Apple hides them. Orders and ₹ kept count once delivered.</p>
-    </div>
-  </div>
-
-  <h2 id="notices">9 · Frrata → merchants: Notices (Frrata's brand)</h2>
+  <h2 id="notices">8 · Frrata → merchants: Notices (Frrata's brand)</h2>
   <div class="grid2">
     <div class="card">
       <div class="row between"><h3 style="margin:0">Notices</h3><span class="bell" aria-label="3 unread notices"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg><b>3</b></span></div>
@@ -379,7 +333,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
         <p><span class="fbtn">See the bill</span></p>
         <p style="font-size:12.5px;color:#5F5A55">UPI Autopay ···@okhdfc. Nothing to do if this looks right.</p>
       </div>
-      <div class="ft">Frrata · notices@notify.frrata.com · Billing and security emails always reach owners and admins.</div>
+      <div class="ft">Frrata · notices@notify.&lt;Frrata's domain&gt; · Billing and security emails always reach owners and admins.</div>
     </div></div>
   </div>
   <div class="card" style="margin-top:12px">
@@ -397,7 +351,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
     <p class="k">No email when you already read it in the console within 10 minutes. Partners get their own list: application, handover, payouts.</p>
   </div>
 
-  <h2 id="admin">10 · Frrata Admin: notices and email health</h2>
+  <h2 id="admin">9 · Frrata Admin: notices and email health</h2>
   <div class="grid2">
     <div class="card">
       <h3>Admin › Notices › New</h3>
@@ -413,61 +367,58 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
         <thead><tr><th>Shop</th><th class="n">Sent 7d</th><th class="n">Bounced</th><th class="n">Spam</th><th></th></tr></thead>
         <tbody>
           <tr><td>Kesar Studio</td><td class="n">1,214</td><td class="n">0.7%</td><td class="n">0.00%</td><td><span class="chip c-ok">Healthy</span></td></tr>
-          <tr><td>Rang Threads</td><td class="n">22,410</td><td class="n">3.9%</td><td class="n">0.41%</td><td><span class="chip c-danger">Campaigns paused</span></td></tr>
+          <tr><td>Rang Threads</td><td class="n">2,410</td><td class="n">6.9%</td><td class="n">0.12%</td><td><span class="chip c-warn">Bounces high</span></td></tr>
           <tr><td>Noor Label</td><td class="n">640</td><td class="n">1.1%</td><td class="n">0.05%</td><td><span class="chip c-ok">Healthy</span></td></tr>
         </tbody>
       </table></div>
-      <p class="k" style="margin-top:8px">SES pauses one shop's marketing on its own; order emails go on. Admin can resume with a reason.</p>
+      <div class="strip" style="margin-top:10px"><div><span class="k">SES quota today</span><b>3.1k / 50k</b></div><div><span class="k">Waiting to send</span><b>0</b></div><div><span class="k">Delivered 7d</span><b>99.1%</b></div></div>
+      <p class="k" style="margin-top:8px">SES pauses one shop on its own when its complaints rise; Admin sees why and can resume it with a reason. An alarm when mail waits more than 15 minutes.</p>
     </div>
   </div>
 
-  <h2 id="stress">11 · Stress test</h2>
+  <h2 id="stress">10 · Stress test</h2>
   <div class="tablewrap"><table>
     <thead><tr><th>When…</th><th>What happens</th><th>Who sees it</th></tr></thead>
     <tbody>
       <tr><td>No email at checkout (most COD)</td><td>Nothing sent; WhatsApp and the order page carry the news</td><td>Order: "No email"</td></tr>
       <tr><td>A typo that bounces</td><td>Suppressed for this shop; later emails held</td><td>Order: Fix the address · Send again</td></tr>
       <tr><td>Marked as spam</td><td>Stopped for this shop only, not the shopper's other Frrata shops</td><td>Order; the shop's rate</td></tr>
-      <tr><td>One shop's campaign draws complaints</td><td>That shop's marketing pauses alone; order emails go on</td><td>Shop banner; Admin</td></tr>
-      <tr><td>Domain records break after verifying</td><td>Falls back to kesar-studio@frratamail.com at once</td><td>Settings; owner notice</td></tr>
+      <tr><td>One shop's emails draw complaints</td><td>SES pauses that shop alone; other shops' mail is untouched</td><td>Shop banner; Admin</td></tr>
+      <tr><td>Domain records break after verifying</td><td>Falls back to kesar-studio@frratamail.app at once</td><td>Settings; owner notice</td></tr>
       <tr><td>Shipped, then Undo in 5 minutes</td><td>The email waits 5 minutes and re-reads the order; nothing sent</td><td>Undo toast</td></tr>
       <tr><td>Confirmed, then cancelled a minute later</td><td>Only "Cancelled" goes</td><td>Order</td></tr>
-      <tr><td>Festive peak, 10× orders</td><td>Order emails jump the queue; campaigns slow; SES quota raised before the season</td><td>Admin › Email health</td></tr>
+      <tr><td>Festive peak, 10× orders</td><td>Emails queue and drain after each order; SES quota raised before the season</td><td>Admin › Email health</td></tr>
       <tr><td>SES is down</td><td>The outbox retries 8 times; orders never wait; Admin alerted after 15 minutes</td><td>Admin</td></tr>
       <tr><td>Partner building a shop</td><td>Shop not open: only tests, to the partner</td><td>Settings note</td></tr>
       <tr><td>Frrata support visiting</td><td>Can read and preview; can't change, test or send</td><td>Support banner</td></tr>
       <tr><td>Support email is a Gmail address</td><td>Reply-To only, never From</td><td>Sender card</td></tr>
-      <tr><td>The wallet can't cover a campaign</td><td>Blocked at review: "Needs ₹240 more"; never sent half</td><td>Campaign review</td></tr>
       <tr><td>Shopper erased (abandoned order, 90 days)</td><td>The address goes with the order; messages keep type and state only</td><td>—</td></tr>
-      <tr><td>A link to another site in a campaign</td><td>Refused at review</td><td>Review checks</td></tr>
+      <tr><td>A link to another site in an email's message</td><td>Refused when saving: links only to the shop</td><td>Email editor</td></tr>
     </tbody>
   </table></div>
 
-  <h2 id="phases">12 · Phases and the owner's calls</h2>
+  <h2 id="phases">11 · Phases and the owner's calls</h2>
   <div class="tablewrap"><table>
     <thead><tr><th>Phase</th><th>A merchant can…</th></tr></thead>
     <tbody>
-      <tr><td><b>E·0 Foundation</b></td><td>Sign in without the hourly limit (SES, Mumbai; frrata.com and frratamail.com records; events; suppression)</td></tr>
+      <tr><td><b>E·0 Foundation</b></td><td>Sign in without the hourly limit (SES, Mumbai; frratamail.app and Frrata's domain records; events; suppression)</td></tr>
       <tr><td><b>E·1 Notices</b></td><td>See every Frrata notice in the console; get billing, security and Frrata-action emails</td></tr>
       <tr><td><b>E·2 Order emails</b></td><td>Have shoppers emailed at each step in the shop's brand; change the words; see bounces</td></tr>
       <tr><td><b>E·3 Own domain</b></td><td>Send from orders@theirbrand.in</td></tr>
-      <tr><td><b>E·4 Campaigns + wallet</b></td><td>Recharge the Messages wallet; email shoppers who asked; judged on delivered orders</td></tr>
-      <tr><td><b>E·5 Automations</b></td><td>Welcome, finish paying, thank-you, win-back (Cart flows)</td></tr>
+      <tr><td>Held</td><td>Email campaigns, the Messages wallet and automations: planned on their own later (owner, 11 Nov)</td></tr>
       <tr><td><b>P·1 Team push</b></td><td>"New COD order KS-1043 · Confirm" on the phone</td></tr>
       <tr><td>Later</td><td>WhatsApp order updates (M2·1 C2), shopper push, SMS (DLT)</td></tr>
     </tbody>
   </table></div>
   <div class="card" style="margin-top:12px">
     <h3>Decided</h3>
-    <p class="sub">Merchant's brand to shoppers, Frrata's to merchants and partners · email at checkout, no consent box · Amazon SES from the start · charge above cost in a prepaid wallet.</p>
+    <p class="sub">Merchant's brand to shoppers, Frrata's to merchants and partners · email at checkout, no consent box · Amazon SES from the start · frratamail.app for shops' mail · marketing only to shoppers who tap "Email me new drops" · the invoice as a link · new-order email off by default · no Frrata mark in shoppers' emails (owner, 8–11 Nov). Campaigns and the wallet held.</p>
     <h3 style="margin-top:12px">For you to approve</h3>
     <ol class="sub" style="padding-left:18px;margin:0">
-      <li>Buy <b>frratamail.com</b> for shops' order emails (frrata.shop stays storefronts only); Frrata's notices from notify.frrata.com.</li>
-      <li>Marketing only to shoppers who tap "Email me new drops" (no box; ready for DPDP from 12 May 2027).</li>
-      <li>No Frrata mark in shoppers' emails on any plan.</li>
-      <li>The invoice as a link, not an attachment.</li>
-      <li>New-order email off by default; push (P·1) instead.</li>
-      <li>Wallet packs ₹500 / ₹1,600 / ₹5,000 (10 / 8 / 5 paise an email) + GST, 3.5–7× our cost; included each month: Launch 5,000, Growth 10,000, Scale 25,000, so small shops pay no more than on Shopify.</li>
+      <li>Order emails and Frrata notices are included on every plan, on by default, with no app to switch on.</li>
+      <li>Order emails go to everyone who gave an email, alongside WhatsApp updates when those come.</li>
+      <li>Build E·0 → E·1 → E·2 now; WhatsApp order updates (M·1) after, on the same queue.</li>
+      <li>Frrata's own domain for notices arrives this evening; until then E·0–E·2 are built and tested against a fake SES.</li>
     </ol>
   </div>
 </div>
