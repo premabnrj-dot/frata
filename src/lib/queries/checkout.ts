@@ -149,7 +149,7 @@ export async function orderPage(tx: Tx, tenantId: string, tokenHash: string) {
     imageWidths: orderLines.imageWidths, kind: orderLines.kind, shipsBy: orderLines.shipsBy })
     .from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id))).orderBy(orderLines.position)
   // The offers it got: title, class and amount only (never an offer's id, limits or budget).
-  const offers = (await tx.select({ title: orderDiscounts.title, class: orderDiscounts.class, amount: orderDiscounts.amount }).from(orderDiscounts)
+  const offers = (await tx.select({ title: orderDiscounts.title, class: orderDiscounts.class, amount: orderDiscounts.amount, method: orderDiscounts.method }).from(orderDiscounts)
     .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, o.id)))).map((d) => ({ ...d, amount: Number(d.amount) }))
   return { ...o, lines, offers }
 }

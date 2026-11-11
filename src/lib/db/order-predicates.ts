@@ -1,6 +1,6 @@
 import 'server-only'
 import { sql, type SQL } from 'drizzle-orm'
-import { SHIP_TABS, type OrderState, type QueueTab } from '@/domains/orders/order-state'
+import { SHIP_TABS, type OfferWay, type OrderState, type QueueTab } from '@/domains/orders/order-state'
 import { ASSUME_DELIVERED_DAYS } from '@/domains/orders/outcomes'
 import { orderLines, orders, shipments } from '@/lib/db/schema-orders'
 
@@ -124,13 +124,15 @@ export const priorOrderSql = (now: Date, tenantId: string, phone: SQL | string, 
 export const onlineTotalCol = sql<number | null>`(${orders.checkout}->>'onlineTotal')::bigint`.mapWith((v) => (v == null ? null : Number(v)))
 
 /**
- * usesDiscount() in SQL: whether the order at `a` is using an offer of `cls` (limits, budgets, ₹ given).
- * KNOWN COPY: app_admin_offer_totals (drizzle/0042) restates it; its int test holds it to discountUses.
+ * usesDiscount() in SQL: whether the order at `a` is using an offer row of `way` (limits, budgets, ₹ given).
+ * KNOWN COPY: app_admin_offer_totals (drizzle/0105) restates it; its int test holds it to discountUses.
  */
-export const discountUseSql = (now: Date, cls: 'product' | 'order' | 'shipping' | 'payment', a = '"orders"'): SQL =>
-  cls === 'payment'
+export const discountUseSql = (now: Date, way: OfferWay, a = '"orders"'): SQL =>
+  way === 'prepaid'
     ? sql`((${c(a, 'paid_at')} is not null and ${c(a, 'cancelled_at')} is null) or ${holdingSql(now, a)})`
-    : sql`(${standingSql(a)} or ${holdingSql(now, a)})`
+    : way === 'cod'
+      ? sql`((${standingSql(a)} and ${c(a, 'paid_at')} is null) or ${holdingSql(now, a)})`
+      : sql`(${standingSql(a)} or ${holdingSql(now, a)})`
 
 /**
  * Units of the variant at `variantCol` owed to pre-orders not yet packed: stock that arrives for them is not for

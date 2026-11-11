@@ -629,6 +629,12 @@ Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
   payment, prepaid only), `priceMethod` (the stored `productDiscount` first, then the rest) (spread by value to the
   paise; each line's GST rate on its own discounted piece, **per way of paying**: line tax lives in
   `MethodTotal`, never on `QuoteLine`).
+- **Each way of paying gets its best** (shop stress test 2026-11-11): when the best order offer does not combine,
+  online also tries the best one that does (or none) with the saving (`plan.online`), taken by `quote()` only at a
+  LOWER prepaid total (a tie keeps the order offer); on delivery always keeps the best order offer; one delivery charge
+  for both. Placement stores `keptOffers(q, method)`: placed online with two order offers, `order_discounts.method`
+  marks them 'prepaid' and 'cod', so `reprice()` prices either way, and uses follow the row's way (`offerWay`;
+  `discountUseSql(now, 'both' | 'prepaid' | 'cod')`; a hold holds both).
 - **One repricer and one writer:** a placed order is priced again only by `amounts.reprice()` from
   its stored lines and `order_discounts` (never today's offers), and written only by
   `lib/orders/reprice.ts writeReprice()` — every money column of the order and its lines together.

@@ -7,7 +7,7 @@ import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import type { CleanAddress } from '@/domains/checkout/address'
 import { amountFor, candidates, classOf, normalCode, stepReached, type DiscountTerms, type TypedCode } from '@/domains/checkout/discounts'
 import { priorOrderSql } from '@/lib/db/order-predicates'
-import { quote, totalFor, type BagLine, type Quote } from '@/domains/checkout/quote'
+import { keptOffers, quote, totalFor, type BagLine, type Quote } from '@/domains/checkout/quote'
 import { gstinState } from '@/domains/tax/gst'
 import { b2bProblem, cleanGstin, stateName } from '@/domains/tax/gstin'
 import { stateCode } from '@/domains/checkout/states'
@@ -155,8 +155,11 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     })))
     // What the order got, with its value terms copied (a tier: the step reached). Buy X get Y, gift and target terms are
     // not copied: what they gave is fixed on each line (order_lines.product_discount), which is what a reprice keeps.
-    if (m.applied.length) await tx.insert(orderDiscounts).values(m.applied.map((a) => ({
-      tenantId, orderId: id, discountId: a.discountId, class: a.class, amount: a.amount, title: a.title, style: a.terms.style,
+    // Placed online with an order offer other than paying on delivery's, both are kept, each marked with its way
+    // (keptOffers, shop stress test 2026-11-11): a switch to COD reprices to the one paying on delivery gets.
+    const kept = keptOffers(q, input.method)
+    if (kept.length) await tx.insert(orderDiscounts).values(kept.map((a) => ({
+      tenantId, orderId: id, discountId: a.discountId, class: a.class, amount: a.amount, title: a.title, style: a.terms.style, method: a.method,
       ...termsCopy(a.terms, q.subtotal - m.lines.reduce((s, l) => s + l.productDiscount, 0)), via: typed?.discountId === a.discountId ? (input.via ?? 'typed') : 'auto',
       codeId: typed?.discountId === a.discountId ? typed.codeId : a.codeId,
     })))
@@ -206,7 +209,8 @@ async function fitOffers(tx: Tx, tenantId: string, offers: DiscountTerms[], pric
   const out = new Set(limited.filter((l) => !fits({ ...l, budget: null }, used.get(l.id), 0)).map((l) => l.id))
   for (let pass = 0; pass <= limited.length; pass++) {
     const q = price(offers.filter((t) => !out.has(t.id)))
-    const over = (input.method === 'cod' ? q.cod : q.prepaid).applied.filter((a) => { const l = limited.find((x) => x.id === a.discountId); return l && !fits(l, used.get(l.id), a.amount) })
+    // Every offer the order will keep — online, also the one paying on delivery would get (it is held for a switch).
+    const over = keptOffers(q, input.method).filter((a) => { const l = limited.find((x) => x.id === a.discountId); return l && !fits(l, used.get(l.id), a.amount) })
     if (!over.length) break
     for (const a of over) out.add(a.discountId)
   }

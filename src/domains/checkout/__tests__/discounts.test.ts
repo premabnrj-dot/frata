@@ -47,7 +47,7 @@ describe('planOffers', () => {
     ])
     expect(planOffers(380000, [diwali, t({ id: 'd-small', percentBps: 500 })], null).listed.map((l) => l.title)).toEqual(['Diwali'])
   })
-  it('withholds the payment saving for both ways of paying when the order offer does not combine', () => {
+  it('withholds the payment saving beside an order offer that does not combine (online then tries it alone: offers-per-method)', () => {
     expect(planOffers(370000, [t({ ...diwali, combinesWithPayment: false }), online], null).payment).toBeNull()
     expect(planOffers(370000, [diwali, online], null).payment?.amount).toBe(5000)
   })

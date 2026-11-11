@@ -70,7 +70,8 @@ export type MethodTotal = {
   discount: number; lines: MethodLine[]
   /** The lines' taxable value: Frrata's fee base and the merchandise net. */
   merchandiseNet: number
-  /** The offers this way of paying gets (order, shipping, payment), with their amounts. */
+  /** The offers this way of paying gets (product, order, shipping, payment), with their amounts. The order offer can
+   *  differ between the two (one that does not combine with the pay-online saving: discounts.ts `online`). */
   applied: Applied[]
 }
 export type Quote = {
@@ -144,8 +145,9 @@ export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Dat
   })
   const live = draft.filter((d) => d.qty > 0)
   const subtotal = live.reduce((a, d) => a + d.v.price * d.qty, 0)
-  // Offers (discounts.ts): the order class first, then the thresholds on what is left, then the payment class.
-  const plan = planOffers(live.map((d) => ({ productId: d.v.productId, variantId: d.v.variantId, unitPrice: d.v.price, qty: d.qty })), live.length ? o.offers ?? [] : [], o.code ?? null)
+  // Offers (discounts.ts): product, then the order class, then the thresholds on what is left, then the payment class.
+  const plan = planOffers(live.map((d) => ({ productId: d.v.productId, variantId: d.v.variantId, unitPrice: d.v.price, qty: d.qty })), live.length ? o.offers ?? [] : [], o.code ?? null,
+    { codOffered: (base) => codFor(base, r, pincode).offered })
   const afterOrder = subtotal - plan.productDisc.reduce((a, b) => a + b, 0) - (plan.order?.amount ?? 0)
   const charged = live.length ? shippingFor(afterOrder, r) : 0
   const waived = plan.freeShipping && charged > 0 ? charged : 0
@@ -155,7 +157,12 @@ export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Dat
   const codCharge = offer.offered ? offer.charge : 0
   const priced = live.map((d, i) => ({ gross: d.v.price * d.qty, qty: d.qty, hsn: d.v.hsn, productDiscount: plan.productDisc[i]!, own: d.v.ownBps ?? null }))
   const tax = { registered: r.registered, pricesIncludeGst: r.pricesIncludeGst, date: now }
-  const pre = priceMethod(priced, plan.order?.amount ?? 0, plan.payment?.amount ?? 0, shipping, tax)
+  // Paying online takes the plan's other way only when it costs the shopper less, to the paisa, GST and all; a tie
+  // keeps the order offer on both cards (shop stress test 2026-11-11, rule 46).
+  const asPlanned = priceMethod(priced, plan.order?.amount ?? 0, plan.payment?.amount ?? 0, shipping, tax)
+  const other = plan.online && priceMethod(priced, plan.online.order?.amount ?? 0, plan.online.payment.amount, shipping, tax)
+  const online = other && other.total < asPlanned.total ? plan.online : null
+  const pre = online && other ? other : asPlanned
   const cod = priceMethod(priced, plan.order?.amount ?? 0, 0, shipping + codCharge, tax)
   const appliedFor = (...a: (Applied | null)[]) => a.filter((x): x is Applied => x !== null)
   // A typed code that applies only when paying online still counts as applied (the saving shows on that card).
@@ -168,12 +175,31 @@ export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Dat
   const shares = (m: typeof pre) => m.lines.map(({ chargeTaxable, chargeGst }) => ({ chargeTaxable, chargeGst }))
   return {
     lines, subtotal, shipping,
-    prepaid: { codCharge: 0, gst: pre.gst, total: pre.total, shares: shares(pre), discount: pre.discount, lines: pre.lines, merchandiseNet: pre.merchandiseNet, applied: appliedFor(...plan.products, plan.order, shipApplied, plan.payment) },
+    prepaid: { codCharge: 0, gst: pre.gst, total: pre.total, shares: shares(pre), discount: pre.discount, lines: pre.lines, merchandiseNet: pre.merchandiseNet,
+      applied: online ? appliedFor(...plan.products, online.order, shipApplied, online.payment) : appliedFor(...plan.products, plan.order, shipApplied, plan.payment) },
     cod: { offer, codCharge, gst: cod.gst, total: offer.offered ? cod.total : 0, shares: shares(cod), discount: cod.discount, lines: cod.lines, merchandiseNet: cod.merchandiseNet, applied: appliedFor(...plan.products, plan.order, shipApplied) },
     arrives: arrivalRange(lines.filter((l) => l.qty > 0), r, now),
     empty: live.length === 0, missing,
-    offers: { listed: plan.listed, code: plan.code },
+    offers: online ? { listed: online.listed, code: online.code } : { listed: plan.listed, code: plan.code },
   }
+}
+
+/** Which way of paying a kept offer is for: null for both (as its class says: the pay-online saving is online only). */
+export type KeptOffer = Applied & { method: 'cod' | 'prepaid' | null }
+
+/**
+ * The offers an order placed with `method` keeps (order_discounts): what that way of paying got, and — placed online
+ * when the two ways took different order offers (shop stress test 2026-11-11) — the order offer online marked
+ * 'prepaid' and the one paying on delivery would get marked 'cod', so reprice() can price either way from the order
+ * alone (a switch to COD; a capture after it). Placement counts and stores exactly these; uses follow `method`.
+ */
+export function keptOffers(q: Quote, method: 'cod' | 'prepaid'): KeptOffer[] {
+  const both = (a: Applied): KeptOffer => ({ ...a, method: null })
+  if (method === 'cod') return q.cod.applied.map(both)
+  const onCod = q.cod.applied.find((a) => a.class === 'order') ?? null
+  const online = q.prepaid.applied.find((a) => a.class === 'order') ?? null
+  if (onCod?.discountId === online?.discountId) return q.prepaid.applied.map(both)
+  return [...q.prepaid.applied.map((a): KeptOffer => ({ ...a, method: a.class === 'order' ? 'prepaid' : null })), ...(onCod ? [{ ...onCod, method: 'cod' as const }] : [])]
 }
 
 /** The total the shopper is asked to pay for a method (0 when that method is not offered). */

@@ -743,6 +743,20 @@
       "when": 1794433901106,
       "tag": "0105_famous_warbound",
       "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1794434556544,
+      "tag": "0106_chemical_rattler",
+      "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "7",
+      "when": 1794434563431,
+      "tag": "0107_offer_method_totals",
+      "breakpoints": true
     }
   ]
 }

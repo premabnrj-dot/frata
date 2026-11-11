@@ -66,6 +66,9 @@ export function publicQuote(q: Quote) {
       compareAt: l.compareAt, requested: l.requested, qty: l.qty, kind: l.kind, shipsBy: l.shipsBy, leadMinDays: l.leadMinDays, leadMaxDays: l.leadMaxDays, problem: l.problem })),
     subtotal: q.subtotal, shipping: q.shipping, prepaid: q.prepaid.total, gstPrepaid: q.prepaid.gst,
     discountPrepaid: q.prepaid.discount, appliedPrepaid: publicApplied(q.prepaid.applied),
+    // What paying online saves on the items against paying on delivery (rule 45: said on both cards). Not the saving's
+    // own amount: when it replaces an order offer that does not combine, the shopper gains only the difference.
+    savesOnline: Math.max(0, q.prepaid.discount - q.cod.discount),
     cod: q.cod.offer.offered ? { total: q.cod.total, charge: q.cod.codCharge, gst: q.cod.gst, discount: q.cod.discount, applied: publicApplied(q.cod.applied) } : null,
     offers: { listed: q.offers.listed.map((l) => ({ title: l.title, code: l.code, style: l.style, applied: l.applied, need: l.need })), code: q.offers.code },
     codWhyNot: q.cod.offer.offered ? null : q.cod.offer, arrives: q.arrives, empty: q.empty, missing: q.missing,

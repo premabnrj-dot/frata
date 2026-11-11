@@ -131,9 +131,10 @@ export const discountCodes = pgTable('discount_codes', {
 ])
 
 /**
- * What an order got: one row per class, with the terms it was sold on copied as typed columns (the order keeps
+ * What an order got: one row per offer — one per class, except two order offers when the ways of paying took different
+ * ones (`method`) — with the terms it was sold on copied as typed columns (the order keeps
  * them whatever the offer becomes). The payment row stays after a switch to COD: whether it applies is derived from
- * the way the order is paid now (discountUseSql).
+ * the way the order is paid now (discountUseSql, by the row's way: offerWay of its class and `method`).
  */
 export const orderDiscounts = pgTable('order_discounts', {
   id: id(),
@@ -152,6 +153,13 @@ export const orderDiscounts = pgTable('order_discounts', {
   minSubtotal: money('min_subtotal').notNull(),
   /** How it reached the order: by itself, a typed code, or a code from a link (?code=). For O·3's leak alert. */
   via: text('via').notNull().default('auto'),
+  /**
+   * An order offer for one way of paying only (shop stress test 2026-11-11): placed online when the best order offer
+   * does not combine with the pay-online saving and the saving (with any order offer that combines) costs less, the
+   * one that went with it is 'prepaid' and the one paying on delivery gets is 'cod' — so a switch to COD and a capture
+   * after it reprice from the order alone. Null: as its class says (the saving online, everything else both ways).
+   */
+  method: text('method'),
   createdAt: createdAt(),
 }, (t) => [
   foreignKey({ name: 'order_discounts_order_fk', columns: [t.tenantId, t.orderId], foreignColumns: [orders.tenantId, orders.id] }).onDelete('cascade'),
@@ -162,6 +170,7 @@ export const orderDiscounts = pgTable('order_discounts', {
   check('order_discounts_class', sql`${t.class} in ('product','order','shipping','payment')`),
   check('order_discounts_via', sql`${t.via} in ('auto','typed','link')`),
   check('order_discounts_amount', sql`${t.amount} > 0`),
+  check('order_discounts_method', sql`${t.method} is null or (${t.class} = 'order' and ${t.method} in ('cod','prepaid'))`),
 ])
 
 /**

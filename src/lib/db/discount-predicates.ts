@@ -35,9 +35,10 @@ export async function runningOffers(tx: { execute: Tx['execute'] }, tenantId: st
   return r?.n ?? 0
 }
 
-/** Whether the order at `o` is using the order_discounts row at `od` (its class decides the rule). */
+/** Whether the order at `o` is using the order_discounts row at `od` (its way decides the rule: offerWay of class and method). */
 export const useOfRowSql = (now: Date, od = 'od', o = 'o'): SQL =>
-  sql`(case when ${c(od, 'class')} = 'payment' then ${discountUseSql(now, 'payment', o)} else ${discountUseSql(now, 'order', o)} end)`
+  sql`(case when ${c(od, 'class')} = 'payment' or ${c(od, 'method')} = 'prepaid' then ${discountUseSql(now, 'prepaid', o)}
+    when ${c(od, 'method')} = 'cod' then ${discountUseSql(now, 'cod', o)} else ${discountUseSql(now, 'both', o)} end)`
 
 /**
  * The creator code an order (alias `o`) uses now, as `dc.label` and `dc.code` (null when none): a labelled code joined

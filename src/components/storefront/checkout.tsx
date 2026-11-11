@@ -36,6 +36,7 @@ function needText(n: PublicListed['need']): string {
   if (n.kind === 'add_items') return `Add ${n.n} more ${n.n === 1 ? 'piece' : 'pieces'}`
   if (n.kind === 'gift') return 'Your free gift: add it to the bag'
   if (n.kind === 'first_order') return 'For your first order'
+  if (n.kind === 'pay_on_delivery') return 'When you pay on delivery'
   return 'When you pay online'
 }
 
@@ -122,8 +123,9 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
 
   const total = q ? (method === 'cod' ? q.cod?.total ?? 0 : method === 'prepaid' ? q.prepaid : q.prepaid) : 0
   const codOk = !!q?.cod
-  // The pay-online saving, said on both cards (never a COD surcharge: drip-pricing rule, spec § Rules).
-  const saving = q?.appliedPrepaid.find((a) => a.class === 'payment') ?? null
+  // The pay-online saving, said on both cards (never a COD surcharge: drip-pricing rule, spec § Rules): what paying
+  // online really saves, from the server (less than the saving when it replaces an order offer paying on delivery keeps).
+  const saving = q?.savesOnline ? { amount: q.savesOnline } : null
   const [typing, setTyping] = useState(false)
   const [draftCode, setDraftCode] = useState('')
   const lines = q?.lines.filter((l) => l.qty > 0) ?? []

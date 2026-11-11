@@ -138,6 +138,76 @@ describe.skipIf(!host)('offers at placement and after', () => {
       throw ROLLBACK
     }).catch((e) => { if (e !== ROLLBACK) throw e })
   })
+  it('an order offer that does not combine (shop stress test 2026-11-11): online the saving alone, on delivery the offer; a switch and a capture move between them, and each row is used only its way', async () => {
+    process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
+    process.env.PAYMENT_KEYS_SECRET ??= 'int-test-only'
+    const { withTenant } = await import('@/lib/db/tenant')
+    const { orders, orderLines } = await import('@/lib/db/schema-orders')
+    const { discounts, orderDiscounts } = await import('@/lib/db/schema-discounts')
+    const { markPaid } = await import('@/lib/orders/payment')
+    const { storedPricing, writeReprice } = await import('@/lib/orders/reprice')
+    const { reprice } = await import('@/domains/orders/amounts')
+    const { keptOffers, quote } = await import('@/domains/checkout/quote')
+    const { discountUses, useOfRowSql } = await import('@/lib/db/discount-predicates')
+    const { asc, eq, sql } = await import('drizzle-orm')
+    const ROLLBACK = new Error('rollback')
+    await withTenant(A, async (tx) => {
+      const now = new Date()
+      const [five] = await tx.insert(discounts).values({ tenantId: A, title: '5% off', style: 'order_off', percentBps: 500, combinesWithPayment: false, startsAt: now, startedAt: now, startedBy: ME, createdBy: ME }).returning({ id: discounts.id })
+      const [save] = await tx.insert(discounts).values({ tenantId: A, title: 'Pay online', style: 'pay_online', amountOff: 10000, startsAt: now, startedAt: now, startedBy: ME, createdBy: ME }).returning({ id: discounts.id })
+      const base = { cap: null, minSubtotal: 0, listed: true, code: null, codeId: null }
+      const offers = [{ ...base, id: five!.id, title: '5% off', style: 'order_off' as const, percentBps: 500, amountOff: null, combinesWithPayment: false },
+        { ...base, id: save!.id, title: 'Pay online', style: 'pay_online' as const, percentBps: null, amountOff: 10000, combinesWithPayment: true }]
+      const rules = { shippingFlat: 0, freeShippingAbove: 0, codOn: true, codMin: 0, codMax: 0, codCharge: 4900, pricesIncludeGst: true, registered: true, dispatchDays: 2, metroDays: 2, restDays: 5 }
+      const row = { variantId: 'v', productId: 'p', handle: 'h', title: 'Bag', status: 'active', publishAt: null, options: [], values: [], sku: null, price: 99900, compareAt: null,
+        stock: 5, whenOut: 'stop' as const, shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderCap: null, held: 0, preordered: 0, owed: 0, hsn: '6211', image: null }
+      const q = quote([{ variantId: 'v', qty: 1 }], [row], rules, now, null, { offers })
+      expect([q.prepaid.total, q.cod.total]).toEqual([89900, 99900 - 4995 + 4900])
+      // Placed online, written as placeOrder writes it: the order, its line, and keptOffers.
+      const m = q.prepaid
+      const [o] = await tx.insert(orders).values({ tenantId: A, number: 930_201, paymentMethod: 'prepaid', placedAt: now, payBy: new Date(now.getTime() + 600_000),
+        subtotal: q.subtotal, discount: m.discount, shipping: 0, codCharge: 0, gstTotal: m.gst, total: m.total, merchandiseNet: m.merchandiseNet, sellerGstin: '08ABCDE1234F1Z5', pricesIncludeGst: true,
+        checkout: { onlineTotal: m.total } }).returning({ id: orders.id })
+      await tx.insert(orderLines).values({ tenantId: A, orderId: o!.id, title: 'Bag', qty: 1, unitPrice: 99900, hsn: '6211', position: 0, kind: 'in_stock', stockTakenAt: now,
+        lineDiscount: m.lines[0]!.discount, taxableValue: m.lines[0]!.taxable, gstBps: m.lines[0]!.gstBps, gst: m.lines[0]!.gst, chargeTaxable: 0, chargeGst: 0 })
+      await tx.insert(orderDiscounts).values(keptOffers(q, 'prepaid').map((a) => ({ tenantId: A, orderId: o!.id, discountId: a.discountId, class: a.class, method: a.method, amount: a.amount,
+        title: a.title, style: a.terms.style, percentBps: a.terms.percentBps, amountOff: a.terms.amountOff, minSubtotal: 0 })))
+      const rows = await tx.select({ cls: orderDiscounts.class, method: orderDiscounts.method, amount: orderDiscounts.amount }).from(orderDiscounts).where(eq(orderDiscounts.orderId, o!.id)).orderBy(asc(orderDiscounts.class))
+      expect(rows.map((r) => [r.cls, r.method, Number(r.amount)])).toEqual([['order', 'cod', 4995], ['payment', null, 10000]])
+      // A row of one way only can only be an order offer's.
+      await expect(tx.transaction((sp) => sp.insert(orderDiscounts).values({ tenantId: A, orderId: o!.id, discountId: save!.id, class: 'payment', method: 'cod', amount: 1, title: 'x', style: 'pay_online', minSubtotal: 0 })))
+        .rejects.toThrow()
+      const inUse = async () => (await tx.execute<{ cls: string }>(sql`select od.class cls from order_discounts od join orders o on o.tenant_id = od.tenant_id and o.id = od.order_id
+        where od.order_id = ${o!.id} and ${useOfRowSql(new Date())} order by od.class`)).map((r) => r.cls)
+      const given = async () => { const u = await discountUses(tx, A, [five!.id, save!.id], new Date()); return [u.get(five!.id)?.given ?? 0, u.get(save!.id)?.given ?? 0] }
+      expect(await inUse()).toEqual(['order', 'payment']) // holding: both held (it may yet be paid, or switched)
+      const read = async () => {
+        const [x] = await tx.select({ total: orders.total, discount: orders.discount, cod: orders.codCharge }).from(orders).where(eq(orders.id, o!.id))
+        const [l] = await tx.select({ d: orderLines.lineDiscount, t: orderLines.taxableValue, gst: orderLines.gst }).from(orderLines).where(eq(orderLines.orderId, o!.id))
+        return { total: Number(x!.total), discount: Number(x!.discount), cod: Number(x!.cod), d: Number(l!.d), t: Number(l!.t), gst: Number(l!.gst) }
+      }
+      const placedAs = await read()
+      expect(placedAs).toMatchObject({ total: 89900, discount: 10000 })
+
+      // The switch: the 5% paying on delivery gets, never the saving.
+      const sp = await storedPricing(tx, A, o!.id, { shipping: 0, sellerGstin: '08ABCDE1234F1Z5', pricesIncludeGst: true })
+      const cod = reprice(sp, 'cod', rules, null).price!
+      expect(cod.total).toBe(q.cod.total)
+      expect(cod.lines).toEqual(q.cod.lines)
+      await tx.update(orders).set({ switchedToCodAt: now, payBy: null }).where(eq(orders.id, o!.id))
+      await writeReprice(tx, A, o!.id, sp.lineIds, cod)
+      expect(await read()).toMatchObject({ total: 99900 - 4995 + 4900, discount: 4995, cod: 4900 })
+      expect(await inUse()).toEqual(['order'])
+      expect(await given()).toEqual([4995, 0])
+
+      // A capture after the switch: the saving alone again, the 5% given back.
+      expect(await markPaid(tx, { id: o!.id, tenantId: A }, { paymentId: 'pay_int_ways' })).toBe('paid')
+      expect(await read()).toEqual(placedAs)
+      expect(await inUse()).toEqual(['payment'])
+      expect(await given()).toEqual([0, 10000])
+      throw ROLLBACK
+    }).catch((e) => { if (e !== ROLLBACK) throw e })
+  })
   it('a per-phone limit and a budget each drop the offer for the order that would cross them; liveDiscountSql = offerStatus', async () => {
     process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
     process.env.PAYMENT_KEYS_SECRET ??= 'int-test-only'
