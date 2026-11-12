@@ -4,7 +4,6 @@ import { z } from 'zod'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { staffProof } from '@/lib/auth/session'
 import { passkeySite, staffCookieName, staffCookieSecure } from '@/lib/auth/staff-cookie'
-import { CONSOLE_HOST } from '@/lib/public-env'
 import {
   addOptions, addVerify, approveRequest, confirmOptions, confirmVerify, removePasskey, requestPasskey, type Result,
 } from '@/lib/admin/passkeys'
@@ -33,9 +32,8 @@ const no = (error: string, status = 400) => NextResponse.json({ error }, { statu
 const send = <T>(r: Result<T>) => (r.ok ? NextResponse.json({ ok: true, value: r.value }, { headers: { 'cache-control': 'no-store' } }) : no(r.error, 409))
 
 export async function POST(request: Request) {
-  const site = passkeySite()
-  const host = (request.headers.get('host') ?? '').toLowerCase()
-  if (!site || host !== CONSOLE_HOST.toLowerCase() || request.headers.get('origin') !== site.origin) return no('Not here', 403)
+  const site = passkeySite(request.headers.get('host') ?? '')
+  if (!site || request.headers.get('origin') !== site.origin) return no('Not here', 403)
   if (Number(request.headers.get('content-length') ?? 0) > MAX) return no('Too large', 413)
   const text = await request.text()
   if (text.length > MAX) return no('Too large', 413)
@@ -48,18 +46,18 @@ export async function POST(request: Request) {
   const proof = staff.ok ? await staffProof(staff.userId) : null
 
   switch (parsed.op) {
-    case 'confirm-options': return send(await confirmOptions(identity))
+    case 'confirm-options': return send(await confirmOptions(identity, site))
     case 'confirm-verify': {
       if (!parsed.response) return no('Bad request')
-      const r = await confirmVerify(identity, parsed.response as never)
+      const r = await confirmVerify(identity, parsed.response as never, site)
       if (!r.ok) return no(r.error, 409)
       ;(await cookies()).set(staffCookieName(), r.value, { httpOnly: true, secure: staffCookieSecure(), sameSite: 'strict', path: '/', maxAge: 12 * 3600 })
       return NextResponse.json({ ok: true }, { headers: { 'cache-control': 'no-store' } })
     }
-    case 'add-options': return send(await addOptions(identity, proof))
+    case 'add-options': return send(await addOptions(identity, proof, site))
     case 'add-verify': {
       if (!parsed.response || !parsed.name) return no('Bad request')
-      return send(await addVerify(identity, proof, parsed.response as never, parsed.name))
+      return send(await addVerify(identity, proof, parsed.response as never, parsed.name, site))
     }
     case 'request': return send(await requestPasskey(identity))
     case 'approve': {

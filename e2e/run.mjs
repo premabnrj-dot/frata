@@ -7,7 +7,7 @@
 // flow (later steps depend on it); the other flows still run.
 // =============================================================================
 import { readdirSync, writeFileSync } from 'node:fs'
-import { OUT, SHOP_DOMAIN, PORTS, playwright } from './lib.mjs'
+import { OUT, SHOP_DOMAIN, PORTS, playwright, useStackDb } from './lib.mjs'
 import { EKCODE, OWN_DOMAIN } from './constants.mjs'
 const { chromium } = playwright
 import { down, up } from './stack.mjs'
@@ -22,6 +22,7 @@ if (only && files.length === 0) { console.error(`--only ${only.join(',')} matche
 let failed = 0, passed = 0, stack
 try {
   stack = await up({ build: !process.argv.includes('--no-build') })
+  useStackDb(stack.db)
   for (const f of files) {
     const flow = (await import(`./flows/${f}`)).default
     const browser = await chromium.launch({ args: [`--host-resolver-rules=MAP *.${SHOP_DOMAIN} 127.0.0.1:${PORTS.app}, MAP ${OWN_DOMAIN} 127.0.0.1:${PORTS.app}, MAP www.${OWN_DOMAIN} 127.0.0.1:${PORTS.app}, MAP ${EKCODE.host} 127.0.0.1:${PORTS.app}`] })

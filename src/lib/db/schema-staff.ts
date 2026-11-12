@@ -69,10 +69,15 @@ export const staffStepups = pgTable('staff_stepups', {
   index('staff_stepups_user').on(t.userId, t.sessionId),
 ])
 
-/** Tries, counted inside the definers: 5 per session in 10 minutes, 20 per person an hour, failing closed. */
+/** Tries, counted inside the definers by kind, failing closed: passkey checks 20 per session in 10 minutes and 60 per
+ *  person an hour; requests 5 and 10; approvals (a wrong code is a guess) 5 and 10. */
 export const staffPasskeyTries = pgTable('staff_passkey_tries', {
   id: id(),
   userId: uuid('user_id').notNull().references(() => platformStaff.userId, { onDelete: 'cascade' }),
   sessionId: uuid('session_id').notNull(),
+  kind: text('kind').notNull(),
   at: at('at').notNull().defaultNow(),
-}, (t) => [index('staff_passkey_tries_user').on(t.userId, t.at)])
+}, (t) => [
+  index('staff_passkey_tries_user').on(t.userId, t.kind, t.at),
+  check('staff_passkey_tries_kind', sql`${t.kind} in ('check','request','approve')`),
+])

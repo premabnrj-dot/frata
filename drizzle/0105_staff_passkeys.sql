@@ -14,7 +14,9 @@ CREATE TABLE "staff_passkey_tries" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"session_id" uuid NOT NULL,
-	"at" timestamp with time zone DEFAULT now() NOT NULL
+	"kind" text NOT NULL,
+	"at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "staff_passkey_tries_kind" CHECK ("staff_passkey_tries"."kind" in ('check','request','approve'))
 );
 --> statement-breakpoint
 CREATE TABLE "staff_passkeys" (
@@ -60,7 +62,7 @@ ALTER TABLE "staff_stepups" ADD CONSTRAINT "staff_stepups_user_id_platform_staff
 ALTER TABLE "staff_stepups" ADD CONSTRAINT "staff_stepups_passkey_id_staff_passkeys_id_fk" FOREIGN KEY ("passkey_id") REFERENCES "public"."staff_passkeys"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "staff_webauthn_challenges" ADD CONSTRAINT "staff_webauthn_challenges_user_id_platform_staff_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."platform_staff"("user_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "staff_enrolment_requests_user" ON "staff_enrolment_requests" USING btree ("user_id","created_at");--> statement-breakpoint
-CREATE INDEX "staff_passkey_tries_user" ON "staff_passkey_tries" USING btree ("user_id","at");--> statement-breakpoint
+CREATE INDEX "staff_passkey_tries_user" ON "staff_passkey_tries" USING btree ("user_id","kind","at");--> statement-breakpoint
 CREATE UNIQUE INDEX "staff_passkeys_credential" ON "staff_passkeys" USING btree ("credential_id");--> statement-breakpoint
 CREATE INDEX "staff_passkeys_user" ON "staff_passkeys" USING btree ("user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "staff_stepups_token" ON "staff_stepups" USING btree ("token_hash");--> statement-breakpoint
@@ -91,16 +93,18 @@ create or replace function app_staff_live_stepup(p_uid uuid, p_session uuid, p_h
    order by s.created_at desc limit 1
 $$;--> statement-breakpoint
 
--- Tries: 5 per session in 10 minutes, 20 per person an hour. Counted before the work; fails closed.
-create or replace function app_staff_try(p_uid uuid, p_session uuid) returns void
+-- Tries by kind, counted before the work, failing closed: 'check' (a passkey prompt) 20 per session in 10 minutes and
+-- 60 per person an hour; 'request' and 'approve' (a wrong code is a guess) 5 and 10.
+create or replace function app_staff_try(p_uid uuid, p_session uuid, p_kind text) returns void
   language plpgsql security definer set search_path = '' as $$
+declare v_session int := case when p_kind = 'check' then 20 else 5 end; v_person int := case when p_kind = 'check' then 60 else 10 end;
 begin
   delete from public.staff_passkey_tries where at < now() - interval '1 day';
-  if (select count(*) from public.staff_passkey_tries t where t.user_id = p_uid and t.session_id = p_session and t.at > now() - interval '10 minutes') >= 5
-     or (select count(*) from public.staff_passkey_tries t where t.user_id = p_uid and t.at > now() - interval '1 hour') >= 20 then
+  if (select count(*) from public.staff_passkey_tries t where t.user_id = p_uid and t.kind = p_kind and t.session_id = p_session and t.at > now() - interval '10 minutes') >= v_session
+     or (select count(*) from public.staff_passkey_tries t where t.user_id = p_uid and t.kind = p_kind and t.at > now() - interval '1 hour') >= v_person then
     raise exception 'too_many' using errcode = 'P0001';
   end if;
-  insert into public.staff_passkey_tries (user_id, session_id) values (p_uid, p_session);
+  insert into public.staff_passkey_tries (user_id, session_id, kind) values (p_uid, p_session, p_kind);
 end $$;--> statement-breakpoint
 
 -- ── Who may reach what: the step-up joins the access answer every signed-in request already asks for (no extra round
@@ -154,7 +158,7 @@ create or replace function app_staff_challenge(p_uid uuid, p_session uuid, p_pur
 begin
   if not exists (select 1 from public.platform_staff ps where ps.user_id = p_uid) then raise exception 'not_staff' using errcode = 'P0001'; end if;
   if p_purpose not in ('confirm', 'add') or p_challenge is null or length(p_challenge) < 40 then raise exception 'bad_input' using errcode = 'P0001'; end if;
-  perform public.app_staff_try(p_uid, p_session);
+  perform public.app_staff_try(p_uid, p_session, 'check');
   if p_purpose = 'confirm' and not exists (select 1 from public.staff_passkeys k where k.user_id = p_uid) then
     raise exception 'no_passkey' using errcode = 'P0001';
   end if;
@@ -254,7 +258,7 @@ declare v_email text; v_exp timestamptz;
 begin
   select ps.email into v_email from public.platform_staff ps where ps.user_id = p_uid;
   if v_email is null then raise exception 'not_staff' using errcode = 'P0001'; end if;
-  perform public.app_staff_try(p_uid, p_session);
+  perform public.app_staff_try(p_uid, p_session, 'request');
   delete from public.staff_enrolment_requests r where r.user_id = p_uid and r.used_at is null and r.approved_at is null;
   insert into public.staff_enrolment_requests (user_id, session_id, code_hash, expires_at)
     values (p_uid, p_session, p_code_hash, now() + interval '15 minutes') returning expires_at into v_exp;
@@ -276,7 +280,7 @@ begin
   select ps.user_id into v_target from public.platform_staff ps where ps.email = lower(btrim(p_email));
   if v_target is null then raise exception 'not_staff' using errcode = 'P0001'; end if;
   if v_target = p_admin then raise exception 'own_request' using errcode = 'P0001'; end if;
-  perform public.app_staff_try(p_admin, p_session);
+  perform public.app_staff_try(p_admin, p_session, 'approve');
   update public.staff_enrolment_requests r set approved_by = p_admin, approved_at = now()
    where r.id = (select r2.id from public.staff_enrolment_requests r2 where r2.user_id = v_target and r2.used_at is null
                    and r2.approved_at is null and r2.expires_at > now() and r2.code_hash = p_code_hash order by r2.created_at desc limit 1)
@@ -354,7 +358,7 @@ begin
   return 'approved for 10 minutes';
 end $$;--> statement-breakpoint
 
-revoke all on function app_access_for(uuid, uuid, text), app_staff_live_stepup(uuid, uuid, text), app_staff_try(uuid, uuid),
+revoke all on function app_access_for(uuid, uuid, text), app_staff_live_stepup(uuid, uuid, text), app_staff_try(uuid, uuid, text),
   app_staff_state(uuid, uuid), app_staff_challenge(uuid, uuid, text, text, text), app_staff_take_challenge(uuid, uuid, text, text, text),
   app_staff_confirm(uuid, uuid, uuid, bigint, text), app_staff_add_passkey(uuid, uuid, text, text, text, bigint, text[], text),
   app_staff_request(uuid, uuid, text), app_staff_approve(uuid, uuid, text, text, text), app_staff_remove_passkey(uuid, uuid, text, uuid),

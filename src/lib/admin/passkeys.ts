@@ -7,7 +7,7 @@ import {
 } from '@simplewebauthn/server'
 import { adminDb } from '@/lib/db/admin'
 import { confirmedRecently, type StaffIdentity, type StaffOk } from '@/lib/auth/require-staff'
-import { passkeySite, tokenHash } from '@/lib/auth/staff-cookie'
+import { tokenHash, type PasskeySite } from '@/lib/auth/staff-cookie'
 import { errName } from '@/lib/log'
 
 // =============================================================================
@@ -53,7 +53,6 @@ async function run<T>(what: string, fn: () => Promise<T>): Promise<Result<T>> {
 }
 const one = async <T>(q: ReturnType<typeof sql>): Promise<T> => (await adminDb().execute<{ r: T }>(q))[0]!.r
 const who = (s: StaffIdentity | StaffOk): Who | null => (s.sessionId ? { userId: s.userId, sessionId: s.sessionId } : null)
-const site = () => { const s = passkeySite(); if (!s) throw new Error('no_site'); return s }
 /** The challenge the browser signed, read from its clientDataJSON (the definer then checks it is this person's). */
 const challengeOf = (clientDataJSON: string): string | null => {
   try { const c = JSON.parse(Buffer.from(clientDataJSON, 'base64url').toString('utf8')) as { challenge?: unknown }; return typeof c.challenge === 'string' && /^[A-Za-z0-9_-]{40,100}$/.test(c.challenge) ? c.challenge : null } catch { return null }
@@ -71,18 +70,18 @@ export async function gateState(identity: StaffIdentity): Promise<GateState | nu
 
 /** Options for "Use passkey". No credential list: the browser offers this site's passkeys; the definer then accepts
  *  only this person's. */
-export async function confirmOptions(identity: StaffIdentity | StaffOk): Promise<Result<unknown>> {
+export async function confirmOptions(identity: StaffIdentity | StaffOk, site: PasskeySite): Promise<Result<unknown>> {
   const w = who(identity)
   if (!w) return { ok: false, error: 'Sign in again.' }
   return run('confirm options', async () => {
-    const options = await generateAuthenticationOptions({ rpID: site().rpID, userVerification: 'required', timeout: 120_000 })
+    const options = await generateAuthenticationOptions({ rpID: site.rpID, userVerification: 'required', timeout: 120_000 })
     await adminDb().execute(sql`select app_staff_challenge(${w.userId}::uuid, ${w.sessionId}::uuid, 'confirm', null, ${options.challenge})`)
     return options
   })
 }
 
 /** Checks the browser's answer and makes the step-up. Returns the cookie's token. */
-export async function confirmVerify(identity: StaffIdentity | StaffOk, response: AuthenticationResponseJSON): Promise<Result<string>> {
+export async function confirmVerify(identity: StaffIdentity | StaffOk, response: AuthenticationResponseJSON, site: PasskeySite): Promise<Result<string>> {
   const w = who(identity)
   if (!w) return { ok: false, error: 'Sign in again.' }
   const challenge = challengeOf(response.response.clientDataJSON)
@@ -91,7 +90,7 @@ export async function confirmVerify(identity: StaffIdentity | StaffOk, response:
     const key = await one<{ passkeyId: string; publicKey: string; counter: number; transports: string[] } | null>(
       sql`select app_staff_take_challenge(${w.userId}::uuid, ${w.sessionId}::uuid, 'confirm', ${challenge}, ${response.id}) as r`)
     if (!key) throw Object.assign(new Error('replay'), { cause: { message: 'replay' } })
-    const { rpID, origin } = site()
+    const { rpID, origin } = site
     const v = await verifyAuthenticationResponse({
       response, expectedChallenge: challenge, expectedOrigin: origin, expectedRPID: rpID, requireUserVerification: true,
       credential: { id: response.id, publicKey: Buffer.from(key.publicKey, 'base64url'), counter: Number(key.counter), transports: key.transports as never },
@@ -105,12 +104,12 @@ export async function confirmVerify(identity: StaffIdentity | StaffOk, response:
 
 /** Options for "Add passkey": allowed with a live step-up on this session (a second device) or this session's
  *  approved request — the definer decides. */
-export async function addOptions(identity: StaffIdentity | StaffOk, proof: Proof | null): Promise<Result<unknown>> {
+export async function addOptions(identity: StaffIdentity | StaffOk, proof: Proof | null, site: PasskeySite): Promise<Result<unknown>> {
   const w = who(identity)
   if (!w) return { ok: false, error: 'Sign in again.' }
   return run('add options', async () => {
     const options = await generateRegistrationOptions({
-      rpName: 'Frrata Admin', rpID: site().rpID, userName: identity.email, userID: new TextEncoder().encode(identity.userId),
+      rpName: 'Frrata Admin', rpID: site.rpID, userName: identity.email, userID: new TextEncoder().encode(identity.userId),
       attestationType: 'none', timeout: 120_000,
       authenticatorSelection: { residentKey: 'required', userVerification: 'required' },
     })
@@ -119,7 +118,7 @@ export async function addOptions(identity: StaffIdentity | StaffOk, proof: Proof
   })
 }
 
-export async function addVerify(identity: StaffIdentity | StaffOk, proof: Proof | null, response: RegistrationResponseJSON, name: string): Promise<Result<string>> {
+export async function addVerify(identity: StaffIdentity | StaffOk, proof: Proof | null, response: RegistrationResponseJSON, name: string, site: PasskeySite): Promise<Result<string>> {
   const w = who(identity)
   if (!w) return { ok: false, error: 'Sign in again.' }
   const challenge = challengeOf(response.response.clientDataJSON)
@@ -127,7 +126,7 @@ export async function addVerify(identity: StaffIdentity | StaffOk, proof: Proof 
   return run('add verify', async () => {
     const taken = await one<{ ok: boolean } | null>(sql`select app_staff_take_challenge(${w.userId}::uuid, ${w.sessionId}::uuid, 'add', ${challenge}, '') as r`)
     if (!taken) throw Object.assign(new Error('no_challenge'), { cause: { message: 'no_challenge' } })
-    const { rpID, origin } = site()
+    const { rpID, origin } = site
     const v = await verifyRegistrationResponse({ response, expectedChallenge: challenge, expectedOrigin: origin, expectedRPID: rpID, requireUserVerification: true })
     if (!v.verified || !v.registrationInfo) throw Object.assign(new Error('no_challenge'), { cause: { message: 'no_challenge' } })
     const c = v.registrationInfo.credential

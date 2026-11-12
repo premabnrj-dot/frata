@@ -15,8 +15,12 @@ export const staffCookieName = () => (insecure() ? 'frrata_staff' : '__Host-frra
 export const staffCookieSecure = () => !insecure()
 export const tokenHash = (token: string) => createHash('sha256').update(token).digest('hex')
 
-/** The passkey's site: the console host without a port (WebAuthn's relying-party id) and its exact origin. */
-export const passkeySite = (): { rpID: string; origin: string } | null => {
-  if (!CONSOLE_HOST) return null
-  return { rpID: CONSOLE_HOST.replace(/:\d+$/, ''), origin: `${insecure() ? 'http' : 'https'}://${CONSOLE_HOST}` }
+export type PasskeySite = { rpID: string; origin: string }
+/** The passkey's site for a request to `requestHost`: only the console host (compared without a port), its
+ *  relying-party id that host name, its expected origin that scheme and host exactly. Null anywhere else. */
+export const passkeySite = (requestHost: string): PasskeySite | null => {
+  const rpID = CONSOLE_HOST.toLowerCase().replace(/:\d+$/, '')
+  const host = requestHost.toLowerCase()
+  if (!rpID || host.replace(/:\d+$/, '') !== rpID || !/^[a-z0-9.-]+(:\d{1,5})?$/.test(host)) return null
+  return { rpID, origin: `${insecure() ? 'http' : 'https'}://${host}` }
 }
