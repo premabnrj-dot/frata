@@ -11,6 +11,7 @@ import { webhookEvents } from '@/lib/db/schema'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { tokenHash } from '@/lib/crypto/secret-box'
+import { deliveryIn } from '@/lib/queries/delivery'
 import { checkoutShop, variantRows } from '@/lib/queries/checkout'
 import { keysFor, markEvent } from '@/lib/payments/keys'
 import { checkoutSignatureOk, orderPayments, toPayment } from '@/lib/payments/razorpay'
@@ -137,7 +138,9 @@ export async function switchToCod(tenantId: string, token: string, expectedTotal
     const q = quote(bag, rows, shop, now, o.pincode)
     if (q.lines.some((l) => l.problem) || q.subtotal !== Number(o.subtotal)) return { kind: 'changed', quote: q }
     const sp = await storedPricing(tx, tenantId, o.id, { shipping: Number(o.shipping), sellerGstin: o.sellerGstin, pricesIncludeGst: o.pricesIncludeGst })
-    const { price: r } = reprice(sp, 'cod', shop, o.pincode)
+    // Delivery Zones: today's zone and rule for the order's PIN code, read in this transaction (deliveryIn).
+    const { setup } = await deliveryIn(tx, tenantId, o.pincode, now)
+    const { price: r } = reprice(sp, 'cod', shop, o.pincode, setup)
     if (!r) return { kind: 'refused', status: 422, error: 'Pay on delivery is not offered for this order.' }
     if (r.total !== expectedTotal) return { kind: 'refused', status: 409, error: 'The Pay on delivery total is different. Check it and try again.', codTotal: r.total }
     const switched = await tx.update(orders).set({ switchedToCodAt: sql`now()`, payBy: null })

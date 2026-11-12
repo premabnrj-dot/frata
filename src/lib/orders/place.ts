@@ -16,6 +16,7 @@ import { variants } from '@/lib/db/schema-catalogue'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { orderToken, sha256, tokenHash } from '@/lib/crypto/secret-box'
+import { deliveryIn } from '@/lib/queries/delivery'
 import { checkoutShop, codeFor, liveOffers, variantRows } from '@/lib/queries/checkout'
 import { discountUses, fits } from '@/lib/db/discount-predicates'
 import { discounts, orderDiscounts } from '@/lib/db/schema-discounts'
@@ -126,10 +127,12 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     }
 
     const rows = await variantRows(tx, tenantId, input.bag.map((b) => b.variantId), now, { lock: true })
-    const typed = await codeFor(tx, tenantId, input.code, now)
-    const offers = await fitOffers(tx, tenantId, await liveOffers(tx, tenantId, now), (o) => quote(input.bag, rows, shop, now, input.address.pincode, { offers: o, code: typed }), input, typed, now)
-    const q = quote(input.bag, rows, shop, now, input.address.pincode, { offers, code: typed })
+    // Delivery Zones, read now in this transaction: the PIN code's place from the directory, never the address typed.
+    const [typed, delivery] = await Promise.all([codeFor(tx, tenantId, input.code, now), deliveryIn(tx, tenantId, input.address.pincode, now)])
+    const offers = await fitOffers(tx, tenantId, await liveOffers(tx, tenantId, now), (o) => quote(input.bag, rows, shop, now, input.address.pincode, { offers: o, code: typed }, delivery), input, typed, now)
+    const q = quote(input.bag, rows, shop, now, input.address.pincode, { offers, code: typed }, delivery)
     if (q.empty) return { kind: 'refused', status: 422, error: 'Nothing in your bag can be bought right now.', quote: q }
+    if (!q.deliverable) return { kind: 'refused', status: 422, error: 'This shop does not deliver to this PIN code yet.', quote: q }
     if (q.missing.length || q.lines.some((l) => l.problem) || totalFor(q, input.method) !== input.expectedTotal) return { kind: 'changed', quote: q }
     if (input.method === 'cod' && !q.cod.offer.offered) return { kind: 'refused', status: 422, error: 'Pay on delivery is not offered for this order. Pay online instead.', quote: q }
 
@@ -158,7 +161,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
       arrivesFrom: q.arrives?.from ?? null, arrivesTo: q.arrives?.to ?? null, returnDays: shop.returnDays, returnKind: shop.returnKind,
       tokenHash: tokenHash(orderToken(id)), idempotencyKey: input.idempotencyKey, requestHash: requestHashOf(input),
       payBy: cod ? null : new Date(now.getTime() + HOLD_MINUTES * 60_000),
-      checkout: { shown: { prepaid: q.prepaid.total, cod: q.cod.offer.offered ? q.cod.total : null, codCharge: shop.codCharge }, firstMethod: input.facts.firstMethod ?? null,
+      checkout: { shown: { prepaid: q.prepaid.total, cod: q.cod.offer.offered ? q.cod.total : null, codCharge: q.cod.codCharge, shipping: q.shipping }, firstMethod: input.facts.firstMethod ?? null,
         attribution: input.facts.attribution ?? {}, onlineTotal: q.prepaid.total, ...(input.facts.ekcode ? { ekcode: input.facts.ekcode } : {}) },
       placedAt: now,
     })
