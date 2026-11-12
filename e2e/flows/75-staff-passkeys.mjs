@@ -7,6 +7,7 @@
 // ends the step-up. Phone: no sideways scroll on the gate.
 // =============================================================================
 import assert from 'node:assert/strict'
+import { generateKeyPairSync, randomBytes } from 'node:crypto'
 import { CONSOLE, SHOP, USERS, signedIn, until } from '../lib.mjs'
 
 /** A page with its own virtual platform authenticator (user verification on, resident keys, auto presence). */
@@ -17,8 +18,16 @@ async function withAuthenticator(t, who, opts = {}) {
   p.on('pageerror', (e) => t.errors.push(e.message))
   const cdp = await ctx.newCDPSession(p)
   await cdp.send('WebAuthn.enable')
-  await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } })
-  return { ctx, p }
+  const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } })
+  return { ctx, p, cdp, authenticatorId }
+}
+/** A passkey the device holds for this site and person but Frrata never recorded (an earlier try that did not finish):
+ *  the first production sign-up hit it (2026-11-12). The check must name the recorded ones, so this one is never used. */
+async function addStrayPasskey(a) {
+  const privateKey = generateKeyPairSync('ec', { namedCurve: 'prime256v1' }).privateKey.export({ type: 'pkcs8', format: 'der' }).toString('base64')
+  await a.cdp.send('WebAuthn.addCredential', { authenticatorId: a.authenticatorId, credential: {
+    credentialId: randomBytes(32).toString('base64'), isResidentCredential: true, rpId: new URL(CONSOLE).hostname, privateKey,
+    userHandle: randomBytes(16).toString('base64'), signCount: 0 } }) // its own handle: the virtual authenticator keeps one per person
 }
 const codeOn = async (p) => (await p.getByText(/^\d{3} \d{3}$/).textContent()).replace(/\D/g, '')
 
@@ -53,6 +62,7 @@ export default {
         await meera.p.getByLabel('Name').fill('Meera laptop')
         await meera.p.getByRole('button', { name: 'Add passkey' }).click()
         await meera.p.getByRole('link', { name: 'Merchants' }).first().waitFor()
+        await addStrayPasskey(meera)
         const [k] = await db`select count(*)::int n from staff_passkeys where user_id = ${F.id}`
         assert.equal(k.n, 1)
         const [a] = await db`select count(*)::int n from audit_events where actor_user_id = ${F.id} and action in ('staff.passkey.bootstrap', 'staff.passkey.add', 'staff.passkey.confirm')`

@@ -233,6 +233,10 @@ begin
   perform app_staff_request(B, sB, encode(sha256(convert_to('staff-enrol:123456', 'UTF8')), 'hex'));
   begin perform app_staff_bootstrap('pk-b@proof.test', '654321'); raise exception 'FAIL: bootstrap approved without the code'; exception when raise_exception then if sqlerrm <> 'no_request_with_that_code' then raise; end if; end;
   if app_staff_bootstrap('pk-b@proof.test', '123 456') <> 'approved for 10 minutes' then raise exception 'FAIL: bootstrap with the code refused'; end if;
+  -- The passkey check names the person's own credentials: ids and transports only, never a key or counter (drizzle/0110).
+  if has_function_privilege('frata_app', 'public.app_staff_credentials(uuid)', 'execute') or not has_function_privilege('frata_admin', 'public.app_staff_credentials(uuid)', 'execute') then raise exception 'FAIL: wrong role may list passkey ids'; end if;
+  if app_staff_credentials(B)::text ~ '(publicKey|public_key|counter|key-b)' or app_staff_credentials(B)::text !~ 'cred-b' then raise exception 'FAIL: credential list wrong (%)', app_staff_credentials(B); end if;
+  if app_staff_credentials('99999999-9999-9999-9999-999999999999') <> '[]'::jsonb then raise exception 'FAIL: a non-staff id listed passkeys'; end if;
   -- A claim holds its rows: a second sender straight after gets none of them (security re-review F4).
   select count(*) into n from app_staff_notices_claim(50);
   select count(*) into m from app_staff_notices_claim(50);
