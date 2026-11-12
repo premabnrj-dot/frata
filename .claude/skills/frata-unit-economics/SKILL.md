@@ -2,7 +2,7 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.14.0
+  version: 2.15.0
   verified: 2026-11-12
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
@@ -134,6 +134,22 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
   - The first debit after a trial fails more above ₹15,000 — debit success by amount band.
 - **No credit for plan days already billed in advance** when Admin gives a live, paid shop a trial mid-month or extends
   after a 1st was invoiced: the trial's effect starts with the next invoice (impact review TR0; revisit if a shop asks).
+
+## Add-ons and self-serve trials (A3 + Delivery Zones, 2026-11-12; owner: Delivery Zones ₹999/month on Launch, in Growth and Scale)
+
+- **Add-ons bill like the plan** (`computeBill`, `src/domains/billing/bill.ts`): a row in force on the 1st is billed for
+  the month in advance; a row that began last month is made up by its days on this invoice ("<name>, last month by
+  days"); a row starting later in the month waits for the next invoice. A trial row has no price.
+- **A self-serve trial** is 14 days to 23:59:59 IST on day 14, then the paid row at the price shown (₹999 + 18% GST =
+  ₹1,178.82); one per shop and add-on, ever. End trial charges nothing. Stop (Turn off) works to the month's end and is
+  never billed again — no refund of the month billed in advance.
+- **Hypotheses** (figure · source · date · test):
+  - Delivery Zones on Launch at ₹999 pays for itself through zone charges: a ₹60 far-zone charge keeps ~₹2,763/month on a
+    ₹599 × 300 shop before lost conversion · unit-economics review · 2026-11-12 · alternate-week far-zone charges at 2–3
+    partners, and a backtest of Launch shops' PIN codes above COD break-even.
+  - A 14-day trial converts ≥ 25% · plan · 2026-11-12 · trials kept past day 14, still paid at day 60, an action within 30
+    days (a zone edited, a rule added).
+  - Against Pindrop Pro (≈₹879) and the 500-PIN floor list · review · 2026-11-12 · win/loss notes from the first 20 trials.
 
 ## The pricing ladder (owner-approved 2026-11-11; `docs/specs/2026-11-11-pricing-ladder.md`)
 

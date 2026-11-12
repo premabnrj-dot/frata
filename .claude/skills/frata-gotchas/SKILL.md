@@ -2,7 +2,7 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a PDF download that saves as pdf.txt, MODULE_NOT_FOUND in production only, a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.21.0
+  version: 1.22.0
   verified: 2026-11-08
 ---
 
@@ -10,6 +10,7 @@ metadata:
 
 | Symptom | Cause | Fix |
 |---|---|---|
+| `malformed array literal` or `syntax error at or near ","` from a query with `${list}::text[]` or `any(${list})` | Drizzle's `sql` template spreads a JS array into a list of parameters (`($1, $2, $3)::text[]`), not one array parameter | Pass the list as ONE JSON parameter: `jsonb_array_elements_text(${JSON.stringify(list)}::jsonb)`, or rows via `jsonb_to_recordset(${JSON.stringify(rows)}::jsonb) as x(...)` (Delivery Zones, 2026-11-12) |
 | A PDF download saves as `pdf.txt` (the route's text error), and the log says `Cannot find module …/pdfkit/js/standard-fonts/Helvetica.cjs`, in production only | pdfkit loads its standard fonts (and their chunks) through its package `imports` map (`#standard-fonts/…`); Next's file tracer does not follow it, so the files are on disk locally and absent from the function | List them in `next.config.ts` `outputFileTracingIncludes`; `scripts/check-pdf-trace.mjs` (postbuild) renders a PDF from the traced files alone. A new PDF route goes in its ROUTES. Never trust a local render for a dependency that loads files at run time |
 | A share card shows Hindi as broken boxes or misplaced vowel signs | Satori (next/og) cannot shape Devanagari (satori#215, open in 2026) | Draw no Devanagari in an image: `drawable()` in `src/lib/seo/card.ts` drops it; Hindi goes in og:title/og:description, which the phone lays out. Noto Devanagari is loaded only for the ₹ sign |
 | A crawler sees no og tags although the browser shows them | Next 15 streams metadata after `<head>` for user agents outside `htmlLimitedBots` when a route is dynamic (the default list lacks TelegramBot, Pinterest, meta-externalagent) | Shop pages stay ISR (force-static); if one ever turns dynamic, set `htmlLimitedBots` — it REPLACES the default list. 64-seo reads the raw head as each crawler |
