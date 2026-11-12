@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.47.0
+  version: 2.47.1
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -714,10 +714,10 @@ Look's controls, Settings' shipping costs and sections, and Admin's custom plan 
   `lib/orders/reprice.ts writeReprice()` — every money column of the order and its lines together.
   Switch to COD, a capture after a switch and a retry go through them; a retry never reprices.
 - **An order's own offers on new lines** (an order edit): only `replanKept()` (`src/domains/checkout/replan.ts`), from the terms
-  `order_discounts` kept (0109: every tier step, Buy X get Y, the gift, the products covered; `termsCopy` writes them at
+  `order_discounts` kept (0110: every tier step, Buy X get Y, the gift, the products covered; `termsCopy` writes them at
   placement and `storedTerms` reads them, `src/domains/checkout/kept-terms.ts`). Never `planOffers` with today's
   offers, never a new offer; one that gives nothing comes off; free delivery that comes off adds back what it waived.
-  A product offer on a row placed before 0109 (`targets` null) has no known terms: `storedTerms` gives null, and the
+  A product offer on a row placed before 0110 (`targets` null) has no known terms: `storedTerms` gives null, and the
   caller must not re-plan that order. A new term on an offer is copied in `termsCopy` (a typed column) the same day.
   `storedTerms` takes the row's `code_id` as `code`: a tie between product offers goes to the automatic one, as at
   placement (`productPass`, shared with `planOffers`).

@@ -162,7 +162,7 @@ export const orderDiscounts = pgTable('order_discounts', {
   method: text('method'),
   /**
    * The rest of the terms it was sold on (src/domains/checkout/kept-terms.ts), so an order edit re-plans the order's own
-   * offers (replanKept) whatever the offer becomes. Null where the style has none, and on rows placed before 0109 (a
+   * offers (replanKept) whatever the offer becomes. Null where the style has none, and on rows placed before 0110 (a
    * product offer's then: not known). A tiered order offer: its every step's minimum, and each step's % or each step's ₹
    * (the offer's kind: one of the two lists, of the same length; never a null inside a list).
    */

@@ -133,7 +133,7 @@ describe('replanKept', () => {
   })
 })
 
-describe('kept terms (order_discounts, 0109)', () => {
+describe('kept terms (order_discounts, 0110)', () => {
   const row = { discountId: 'd', title: 'x', codeId: null, percentBps: null, amountOff: null, cap: null, minSubtotal: 0, tierMins: null, tierPercentBps: null, tierAmountsOff: null,
     targets: null, targetProducts: null, buyQty: null, getQty: null, getBps: null, giftVariantId: null }
   it('copies each style\'s terms into its columns only', () => {
@@ -147,7 +147,7 @@ describe('kept terms (order_discounts, 0109)', () => {
     expect(termsCopy(t({ style: 'bxgy', buyQty: 2, getQty: 1 }), 0)).toMatchObject({ buyQty: 2, getQty: 1, getBps: 10_000, targets: 'all' })
     expect(termsCopy(payOnline, 0)).toMatchObject({ amountOff: 5000, targets: null, tierMins: null, buyQty: null })
   })
-  it('a row placed before 0109: a product offer cannot be re-planned; any other re-plans on what it stored', () => {
+  it('a row placed before 0110: a product offer cannot be re-planned; any other re-plans on what it stored', () => {
     expect(storedTerms({ ...row, style: 'product_off', percentBps: 1000 })).toBeNull()
     expect(storedTerms({ ...row, style: 'order_off', percentBps: 500, minSubtotal: 200000 })).toMatchObject({ percentBps: 500, minSubtotal: 200000, targets: 'all' })
     expect(storedTerms({ ...row, style: 'order_off', percentBps: 500, minSubtotal: 200000 })).not.toHaveProperty('tiers')

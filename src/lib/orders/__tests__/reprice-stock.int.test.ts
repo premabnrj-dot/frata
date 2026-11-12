@@ -10,7 +10,7 @@
 //     what was taken, says which variants came back from 0, and a second put-back returns nothing; a cancel that does not
 //     restock leaves it taken; an online order that never paid has nothing to put back; per line, only the lines named
 //     move, each once, a line taken whole or not at all;
-//  3. placement copies each offer's terms onto order_discounts (0109: tiers, Buy X get Y, a collection as its products);
+//  3. placement copies each offer's terms onto order_discounts (0110: tiers, Buy X get Y, a collection as its products);
 //     read back, they re-plan (replanKept) to exactly what placement kept, and a line taken out re-plans them; the
 //     table's CHECKs accept what termsCopy writes for every style (and refuse a malformed copy);
 //  4. two transactions taking stock on the same variants at once, their lines in opposite order: neither oversells,
