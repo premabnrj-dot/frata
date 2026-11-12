@@ -23,7 +23,7 @@
 
 import { cleanProduct, type CleanVariant, type ProductInput, type VariantInput } from '../product-form'
 import { combinations, handleFor, keyOf, type Option } from '../variants'
-import { OWN_RATES, OWN_RATES_TEXT, ruleOn } from '../../tax/rates'
+import { OWN_RATES, ownRatesText, ruleOn } from '../../tax/rates'
 import { isSizeOption } from '../../storefront/picker'
 import { htmlText, parseGst, parseStock, splitValues } from './cells'
 import { FIELDS, type Field, type Mapping } from './fields'
@@ -146,7 +146,7 @@ export function readImport(m: Mapping, rows: readonly SheetRow[], ctx: ReadConte
     const hsn = pick('hsn').replace(/\s/g, ''), gstCell = pick('gst')
     const known = !!hsn && ruleOn(hsn, ctx.now) !== null
     const bps = gstCell && !known ? parseGst(gstCell) : null
-    if (gstCell && !known && (bps === null || !(OWN_RATES as readonly number[]).includes(bps))) fail(mine, first.n, header('gst'), `A GST rate of ${OWN_RATES_TEXT}`)
+    if (gstCell && !known && (bps === null || !(OWN_RATES as readonly number[]).includes(bps))) fail(mine, first.n, header('gst'), `A GST rate of ${ownRatesText()}`)
 
     const tags = pick('tags') ? pick('tags').split(',').map((t) => t.trim()).filter(Boolean) : []
     const input: ProductInput = {
@@ -169,7 +169,7 @@ export function readImport(m: Mapping, rows: readonly SheetRow[], ctx: ReadConte
         const f: Field = k === 'title' ? 'title' : k === 'handle' ? 'handle' : k === 'description' ? 'description' : k === 'tags' ? 'tags'
           : k === 'tax.hsn' ? 'hsn' : k === 'tax.ownBps' ? (has('gst') ? 'gst' : 'hsn') : live[0]?.field ?? 'title'
         if (k === 'handle' && !title) continue
-        fail(mine, first.n, header(f), k === 'tax.ownBps' ? `HSN ${clip(hsn, 20)} needs its GST rate: ${OWN_RATES_TEXT}` : k === 'title' && !title ? 'Needs a product name' : message)
+        fail(mine, first.n, header(f), k === 'tax.ownBps' ? `HSN ${clip(hsn, 20)} needs its GST rate: ${ownRatesText()}` : k === 'title' && !title ? 'Needs a product name' : message)
       }
     }
 

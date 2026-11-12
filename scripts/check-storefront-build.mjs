@@ -21,7 +21,9 @@ const BUDGET_KB = 120
 // (home 112.8, product 119.4, checkout 120.2 kB JS; CSS 21.1 kB), with room for Signal's ≤ 1 kB of CSS.
 // Product page 121 after merging search and sharing (its share button and barcode work): measured 120.0 kB that day.
 // TS1a: a page (About, FAQ) has no island of its own: held at the shell's weight (speed review LOW 7).
-const TIGHT = { '/s/[host]/(shop)/products/[handle]/page': 121, '/s/[host]/(checkout)/checkout/page': 121, '/s/[host]/(shop)/pages/[handle]/page': 113 }
+// 121.5 since product import (2026-11-12): measured 121.01 kB with no shop code changed — webpack's runtime names every
+// lazily loaded chunk in the app, and import's two file readers (loaded with import()) added theirs.
+const TIGHT = { '/s/[host]/(shop)/products/[handle]/page': 121.5, '/s/[host]/(checkout)/checkout/page': 121, '/s/[host]/(shop)/pages/[handle]/page': 113 }
 // The shop's stylesheet (shared, render-blocking): every theme's rules land in it, so it has a ceiling too.
 const CSS_BUDGET_KB = 15.9 // 14.9 measured 2026-11-09 after Signal S2 (story sections, Caveat, scale; console rules moved to the app sheet) + 1 kB; was 22.5 before the shop's own sheet
 // Theme Studio TS0b: a design's block rules (.store-b-*, src/app/base.css) have their own ceiling inside the sheet.
