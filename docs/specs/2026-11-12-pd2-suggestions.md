@@ -1,5 +1,5 @@
 # Delivery Zones PD·2 — suggested rules and numbers by zone
-Status: draft · Date: 2026-11-12 · Mockup: https://claude.ai/artifact/3A2V4tn9BpMWkww43xh9pR ·
+Status: parked (owner, 2026-11-12: "keep it parked, will pick up later") · Date: 2026-11-12 · Mockup: https://claude.ai/artifact/3A2V4tn9BpMWkww43xh9pR ·
 Approved: — (awaiting the owner)
 
 ## Goal
